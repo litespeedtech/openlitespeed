@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -29,39 +29,27 @@
 #include <time.h>
 #endif
 
-enum ProfilePrecision
-{
-    PROFILE_MICRO,
-    PROFILE_NANO
-};
-
 class ProfileTime
 {
 private:
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    clock_serv_t        m_clock;
     mach_timespec_t     m_begin;
-    mach_timespec_t     m_end;
 #else
     struct timespec     m_begin;
-    struct timespec     m_end;
 #endif
     int64_t             m_diffns;
-    int                 m_iterCount;
-    int                 m_used;
-    ProfilePrecision    m_precision;
-    const char         *m_pName;
 
-private:
-    void dx();
 public:
-    ProfileTime(const char *pName, int iLoopCount,
-                ProfilePrecision p = PROFILE_MICRO);
+    ProfileTime();
     ~ProfileTime();
 
-    int64_t timeUsed();
+    void start();
+    void stop();
 
-    void printTime();
+    int64_t getTimeUsedNanoSec();
+
+    void printTime(const char *desc, int loop_count);
+    void printTimeMs(const char *desc, int loop_count);
 };
 
 #endif

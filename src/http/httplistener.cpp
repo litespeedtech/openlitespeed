@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -71,9 +71,8 @@ HttpListener::HttpListener()
     , m_iAdmin(0)
     , m_isSSL(0)
     , m_iBinding(0xffffffff)
+    , m_pAdcPortList(NULL)
 {
-    if (m_pAdcPortList)
-        delete m_pAdcPortList;
 }
 
 
@@ -84,7 +83,8 @@ HttpListener::~HttpListener()
         delete m_pMapVHost;
     if (m_pSubIpMap)
         delete m_pSubIpMap;
-
+    if (m_pAdcPortList)
+        delete m_pAdcPortList;
 }
 
 

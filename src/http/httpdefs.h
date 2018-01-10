@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -32,11 +32,11 @@
 #define MAX_DYN_RESP_LEN        LLONG_MAX
 #define MAX_DYN_RESP_HEADER_LEN 65536
 
-#define DEFAULT_URL_LEN             2048
-#define DEFAULT_REQ_HEADER_BUF_LEN  8192
-#define DEFAULT_REQ_BODY_LEN        (2 * 1024 * 1024)
-#define DEFAULT_DYN_RESP_HEADER_LEN 4096
-#define DEFAULT_DYN_RESP_LEN        (2 * 1024 * 1024)
+#define DEFAULT_URL_LEN             8192
+#define DEFAULT_REQ_HEADER_BUF_LEN  16380
+#define DEFAULT_REQ_BODY_LEN        (2047 * 1024 * 1024)
+#define DEFAULT_DYN_RESP_HEADER_LEN 16384
+#define DEFAULT_DYN_RESP_LEN        (2047 * 1024 * 1024)
 
 #define DEFAULT_CONN_LOW_MARK   5
 

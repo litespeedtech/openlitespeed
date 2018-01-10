@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -202,6 +202,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"loglevel",                                 NULL},
     {"logreferer",                               NULL},
     {"loguseragent",                             NULL},
+    {"ls_enabled",                               NULL},
     {"map",                                      NULL},
     {"maxcachedfilesize",                        NULL},
     {"maxcachesize",                             NULL},
@@ -253,11 +254,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"restrictedpermissionmask",                 NULL},
     {"retrytimeout",                             NULL},
     {"rewrite",                                  NULL},
-    {"rewritebase",                              NULL},
-    {"rewritecond",                              NULL},
-    {"rewriteengine",                            NULL},
-    {"rewriterule",                              NULL},
-    {"rewritefile",                              NULL},
     {"rollingsize",                              NULL},
     {"rubybin",                                  NULL},
     {"rules",                                    NULL},
@@ -629,15 +625,17 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
                                  XmlNode *pCurNode, const char *name, const char *value)
 {
     //if not inside a "module" and without a "::", treated as error
-    if (strcasecmp(pCurNode->getName(), "module") != 0 &&
-        strstr(name, "::") == NULL)
+    if (strcasecmp(pCurNode->getName(), "module") != 0
+        && strstr(name, "::") == NULL
+        && strcasecmp(pCurNode->getName(), "rewrite") != 0
+        && strcasecmp(pCurNode->getName(), "urlFilter") != 0)
     {
         logToMem(LOG_LEVEL_ERR, "Not support [%s %s] in file %s:%d", name, value,
                  fileName, lineNumber);
         return ;
     }
 
-    char newvalue[4096] = {0};
+    char newvalue[16384] = {0};
     XmlNode *pParamNode = new XmlNode;
     const char *attr = NULL;
     pParamNode->init(UNKNOWN_KEYWORDS, &attr);
@@ -649,31 +647,38 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
 }
 
 
-void plainconf::appendModuleParam(XmlNode *pModuleNode, const char *param)
+/**
+ * appendValueToKey will append the current NODE unknown valus to 
+ * the  specified key.
+ * The node can be module param in SERVER, VHOST, or uriFilter inside a module.
+ */
+void plainconf::appendValueToKey(XmlNode *curNode, const char *key, const char *value)
 {
-    XmlNode *pParamNode = pModuleNode->getChild("param");
+    XmlNode *pNode = curNode->getChild(key);
 
-    if (pParamNode == NULL)
+    if (pNode == NULL)
     {
-        pParamNode = new XmlNode;
+        pNode = new XmlNode;
         const char *attr = NULL;
-        pParamNode->init("param", &attr);
-        pParamNode->setValue(param, strlen(param));
-        pModuleNode->addChild(pParamNode->getName(), pParamNode);
+        pNode->init(key, &attr);
+        pNode->setValue(value, strlen(value));
+        curNode->addChild(pNode->getName(), pNode);
     }
     else
     {
-        AutoStr2 totalValue = pParamNode->getValue();
+        AutoStr2 totalValue = pNode->getValue();
         totalValue.append("\n", 1);
-        totalValue.append(param, strlen(param));
-        pParamNode->setValue(totalValue.c_str(), totalValue.len());
+        totalValue.append(value, strlen(value));
+        pNode->setValue(totalValue.c_str(), totalValue.len());
     }
 
-    logToMem(LOG_LEVEL_INFO, "[%s:%s] module [%s] add param [%s]",
-             pModuleNode->getParent()->getName(),
-             ((pModuleNode->getParent()->getValue()) ?
-              pModuleNode->getParent()->getValue() : ""),
-             pModuleNode->getValue(), param);
+    logToMem(LOG_LEVEL_INFO, "[%s:%s] %s [%s] add %s [%s]",
+             curNode->getParent()->getName(),
+             ((curNode->getParent()->getValue()) ?
+              curNode->getParent()->getValue() : ""),
+             curNode->getName(),
+             (curNode->getValue() ? curNode->getValue() : ""),
+             key, value);
 }
 
 
@@ -708,7 +713,7 @@ void plainconf::addModuleWithParam(XmlNode *pCurNode,
                  pCurNode->getName(), pCurNode->getValue(), moduleName);
     }
 
-    appendModuleParam(pModuleNode, param);
+    appendValueToKey(pModuleNode, "param", param);
 }
 
 
@@ -719,15 +724,18 @@ void plainconf::handleSpecialCase(XmlNode *pNode)
     if (!pUnknownList)
         return ;
 
-    int bModuleNode = (strcasecmp(pNode->getName(), "module") == 0);
     XmlNodeList::const_iterator iter;
 
     for (iter = pUnknownList->begin(); iter != pUnknownList->end(); ++iter)
     {
         const char *value = (*iter)->getValue();
 
-        if (bModuleNode)
-            appendModuleParam(pNode, value);
+        if (strcasecmp(pNode->getName(), "module") == 0)
+            appendValueToKey(pNode, "param", value);
+        else if (strcasecmp(pNode->getName(), "rewrite") == 0)
+            appendValueToKey(pNode, "rules", value);
+        else if (strcasecmp(pNode->getName(), "urlFilter") == 0)
+            appendValueToKey(pNode, "param", value);
         else
         {
             const char *p = strstr(value, "::");

@@ -83,6 +83,9 @@ lsi_config_key_t myParam[] =
 //return 0 for correctly parsing
 static int testparam_parseList(module_param_info_t *param, param_st *pConfig)
 {
+    if (param->val_len <= 0)
+        return 0;
+    
     int *pParam;
     ls_confparser_t confparser;
     ls_confparser(&confparser);

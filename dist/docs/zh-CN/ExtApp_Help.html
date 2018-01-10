@@ -14,7 +14,7 @@
         <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 6</h5>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 7</h5>
 <hr/>
 <div>
 <ul>
@@ -45,7 +45,7 @@
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_General_Help.html">Listener General</a></li>
         <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="Templates_Help.html">Virtual Host Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
@@ -167,7 +167,7 @@ virtual host level, it can only be used by that virtual host.</section>
 </section>
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppType"><h3>Type<span class="ls-permlink"><a href="#extAppType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the type of external application. Application types  are differentiated by the service they provide or the protocol they  use to communicate with the server. Choose from <ul> <li><span class="val">FastCGI</span>: a FastCGI application with a <span class="val">Responder</span> role.</li> <li><span class="val">FastCGI Authorizer</span>: a FastCGI application with an <span class="val">Authorizer</span> role</li> <li><span class="val">Servlet Engine</span>: a servlet engine with an AJPv13 connector, such as Tomcat.</li> <li><span class="val">Web Server</span>: a web server or application server that supports HTTP protocol.</li> <li><span class="val">LiteSpeed SAPI App</span>: an application that communicates with the web server using LSAPI protocol.</li> <li><span class="val">Load Balancer</span>: a virtual application that can balance load among worker applications.</li> <li><span class="val">Piped Logger</span>: an application that can process access log entries received on its STDIN stream.</li> </ul></p> <h4>Syntax</h4><p>Select from drop down list</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> Most applications will use either LSAPI or FastCGI protocol.  LSAPI supports PHP, Ruby, and Python. Perl can be used with FastCGI.  (PHP, Ruby, and Python can also be set up to run using FastCGI, but  they run faster using LSAPI.) Java uses servlet engines.</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

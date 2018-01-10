@@ -14,7 +14,7 @@
         <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 6</h5>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 7</h5>
 <hr/>
 <div>
 <ul>
@@ -45,7 +45,7 @@
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_General_Help.html">Listener General</a></li>
         <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="Templates_Help.html">Virtual Host Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
@@ -84,12 +84,12 @@
 <a href="#extrapathenv">Extra PATH Environment Variables</a> | <a href="#installpathprefix">Installation Path Prefix</a> | <a href="#compilerflags">Compiler Flags</a> | <a href="#configureparams">Configure Parameters</a> | <a href="#addonmodules">Add-on Modules</a></p></section>
 </section>
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="extrapathenv"><h3>Extra PATH Environment Variables<span class="ls-permlink"><a href="#extrapathenv"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Additional PATH values that will be appended to the current PATH environment variables for build scripts.</p> <h4>Syntax</h4><p>path values separated by ":"</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="installpathprefix"><h3>Installation Path Prefix<span class="ls-permlink"><a href="#installpathprefix"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the value for the "--prefix" configure option. The default installation location is under LiteSpeed Web Server's install directory.</p> <h4>Syntax</h4><p>path</p> <h4>Example</h4><div class="ls-example">/usr/local/lsws/lsphp5</div><h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> LiteSpeed Web Server can use multiple PHP versions at the same time. If you are installing multiple versions, you should give them different prefixes.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="compilerflags"><h3>Compiler Flags<span class="ls-permlink"><a href="#compilerflags"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Add additional compiler flags, like optimized compiler options.</p> <h4>Syntax</h4><p>Supported flags are CFLAGS, CXXFLAGS, CPPFLAGS, LDFLAGS. Use a space to separate different flags. Use single quotes (not double quotes) for flag values.</p> <h4>Example</h4><div class="ls-example">CFLAGS='-O3 -msse2 -msse3 -msse4.1 -msse4.2 -msse4 -mavx'</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="installpathprefix"><h3>Installation Path Prefix<span class="ls-permlink"><a href="#installpathprefix"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the value for the "--prefix" configure option. The default installation location is under LiteSpeed Web Server's  install directory.</p> <h4>Syntax</h4><p>path</p> <h4>Example</h4><div class="ls-example">/usr/local/lsws/lsphp5</div><h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> LiteSpeed Web Server can use multiple PHP versions at the same time. If you are installing multiple versions, you  should give them different prefixes.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="compilerflags"><h3>Compiler Flags<span class="ls-permlink"><a href="#compilerflags"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Add additional compiler flags, like optimized compiler options.</p> <h4>Syntax</h4><p>Supported flags are CFLAGS, CXXFLAGS, CPPFLAGS, LDFLAGS. Use a space to separate different flags.  Use single quotes (not double quotes) for flag values.</p> <h4>Example</h4><div class="ls-example">CFLAGS='-O3 -msse2 -msse3 -msse4.1 -msse4.2 -msse4 -mavx'</div></article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="configureparams"><h3>Configure Parameters<span class="ls-permlink"><a href="#configureparams"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Configure parameters for PHP build. Apache-specific parameters and "--prefix" value will be automatically  removed and "--with-litespeed" will be automatically appended when you click Next Step.  (Prefix can be set in the field above.) This way you can simply copy and paste the configure  parameters from the phpinfo() output of an existing working PHP build.</p> <h4>Syntax</h4><p>Space-delimited series of options (with or without double quotes)</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="addonmodules"><h3>Add-on Modules<span class="ls-permlink"><a href="#addonmodules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Select the add-on modules you wish to use.   If you want to use a version not listed here, you can manually update the source code.  (The location of the source code is shown in a prompt at this step of the PHP build.)</p> <h4>Syntax</h4><p>Select from checkbox</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

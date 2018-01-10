@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -21,6 +21,7 @@
 
 #include <http/expiresctrl.h>
 
+#include <sys/types.h>
 #include <stddef.h>
 
 #define MAX_MIME_LEN 256
@@ -117,8 +118,9 @@ public:
     static int  needCharset(const char *pMIME);
     static int  isValidMimeType(const char *pDescr);
     static int  shouldKeepAlive(const char *pMIME);
+    static int getExtAppGUid(const XmlNode* pExtAppNode, uid_t &udi, gid_t &gid);
     static int configScriptHandler(const XmlNodeList *pList,
-                                   HttpMime *pHttpMime);
+                                   HttpMime *pHttpMime, HttpVHost *vhost);
     static void addMimeHandler(const HttpHandler *pHdlr, char *pMime,
                                HttpMime *pHttpMime,
                                const char *pSuffix);

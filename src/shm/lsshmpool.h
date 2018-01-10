@@ -198,6 +198,7 @@ private:
 
     LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
     void releasePageLocked(LsShmOffset_t offset, LsShmSize_t pagesize);
+    void releasePageNoJoinLocked(LsShmOffset_t offset, LsShmSize_t pagesize);
 
     // for internal purpose
     void  releaseData(LsShmOffset_t offset, LsShmSize_t size);
@@ -237,6 +238,7 @@ private:
     LsShmOffset_t  alloc2Ex(LsShmSize_t size, int &remapped);
     void releasePageLockParent(LsShmOffset_t offset, LsShmSize_t size);
     void release2Ex(LsShmOffset_t offset, LsShmSize_t size);
+    void release2NoJoin(LsShmOffset_t offset, LsShmSize_t size);
 
 private:
     LsShmPool(const LsShmPool &other);

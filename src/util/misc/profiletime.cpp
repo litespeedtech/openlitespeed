@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,74 +18,79 @@
 #include "profiletime.h"
 
 
-ProfileTime::ProfileTime(const char *pName, int iLoopCount,
-                         ProfilePrecision p)
-    : m_pName(pName)
-{
-    m_used = 0;
-    m_precision = p;
-    if (iLoopCount < 1)
-        m_iterCount = 1;
-    else
-        m_iterCount = iLoopCount;
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &m_clock);
-    clock_get_time(m_clock, &m_begin);
-#else
-    clock_gettime(CLOCK_MONOTONIC, &m_begin);
+static clock_serv_t s_clock;
 #endif
+
+
+ProfileTime::ProfileTime()
+{
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    static int clock_inited = 0;
+    if (!clock_inited)
+    {
+        host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &s_clock);
+        clock_inited = 1;
+    }
+#endif
+    start();
 }
+
 
 ProfileTime::~ProfileTime()
 {
-#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    mach_port_deallocate(mach_task_self(), m_clock);
-#endif
-    if (m_used)
-        return;
-    printTime();
+// #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+//     mach_port_deallocate(mach_task_self(), s_clock);
+// #endif
 }
 
-int64_t ProfileTime::timeUsed()
+
+void ProfileTime::start()
 {
-    dx();
-    m_used = 1;
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    clock_get_time(s_clock, &m_begin);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &m_begin);
+#endif
+    m_diffns = 0;
+}
+
+
+int64_t ProfileTime::getTimeUsedNanoSec()
+{
+    if (!m_diffns)
+        stop();
     return m_diffns;
 }
 
-void ProfileTime::dx()
+
+void ProfileTime::stop()
 {
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    clock_get_time(m_clock, &m_end);
+    mach_timespec_t     end;
+    clock_get_time(s_clock, &end);
 #else
-    clock_gettime(CLOCK_MONOTONIC, &m_end);
+    struct timespec     end;
+    clock_gettime(CLOCK_MONOTONIC, &end);
 #endif
-    int64_t ns;
-    int iDiv, iMult;
-
-    if (m_precision == PROFILE_MICRO)
-    {
-        iDiv = 1e3;
-        iMult = 1e6;
-    }
-    else
-    {
-        iDiv = 1;
-        iMult = 1e9;
-    }
-    ns = (m_end.tv_nsec - m_begin.tv_nsec) / iDiv;
-    if (ns >= 0)
-        m_diffns = (m_end.tv_sec - m_begin.tv_sec) * iMult + ns;
-    else
-        m_diffns = (m_end.tv_sec - m_begin.tv_sec - 1) * iMult + (ns + iMult);
+    m_diffns = (end.tv_sec - m_begin.tv_sec) * 1e9 
+                + (end.tv_nsec - m_begin.tv_nsec);
 }
 
-void ProfileTime::printTime()
+
+void ProfileTime::printTime(const char *desc, int loop_count)
 {
-    dx();
-    const char *pType = (m_precision == PROFILE_MICRO ? "ms" : "ns");
-    printf("%s Total: %" PRId64 " %s, Average Per Loop: %" PRId64 " %s\n",
-           m_pName, m_diffns, pType, m_diffns / m_iterCount, pType);
+    int64_t time_diff = getTimeUsedNanoSec();
+    printf("%s Total: %" PRId64 " ns, Average Per Loop: %" PRId64 " ns\n",
+           desc, time_diff, time_diff / loop_count);
+}
+
+
+void ProfileTime::printTimeMs(const char *desc, int loop_count)
+{
+    int64_t time_diff = getTimeUsedNanoSec() / 1e3;
+    printf("%s Total: %" PRId64 " ms, Average Per Loop: %" PRId64 " ms\n",
+           desc, time_diff, time_diff / loop_count);
 }
 
 

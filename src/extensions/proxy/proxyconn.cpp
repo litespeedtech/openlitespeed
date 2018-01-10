@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -523,6 +523,8 @@ int ProxyConn::doRead()
 }
 
 
+
+#define RESP_HEADER_BUF_SIZE 1460
 int ProxyConn::processResp()
 {
     HttpExtConnector *pHEC = getConnector();
@@ -534,41 +536,34 @@ int ProxyConn::processResp()
     int len = 0;
     int ret = 0;
     int &respState = pHEC->getRespState();
-    if (!(respState & 0xff))
+    while(!(respState & 0xff))
     {
         char *p = HttpResourceManager::getGlobalBuf();
         const char *pBuf = p;
         if (m_iSsl)
-            len = m_ssl.read(p, 1460);
+            len = m_ssl.read(p, RESP_HEADER_BUF_SIZE);
         else
-            len = ExtConn::read(p, 1460);
+            len = ExtConn::read(p, RESP_HEADER_BUF_SIZE);
+        if (len <= 0)
+            return len;
 
-        if (len > 0)
+        m_iRespHeaderRecv += len;
+        m_iRespRecv += len;
+        LS_DBG_L(this, "Read Response %d bytes", len);
+        //debug code
+        //::write( 1, pBuf, len );
+
+        ret = pHEC->parseHeader(pBuf, len, 1);
+        switch (ret)
         {
-            int copy = len;
-            if (m_iRespHeaderRecv + copy > 4095)
-                copy = 4095 - m_iRespHeaderRecv;
-            //memmove( &m_achRespBuf[ m_iRespHeaderRecv ], pBuf, copy );
-            m_iRespHeaderRecv += copy;
-            m_iRespRecv += len;
-            LS_DBG_L(this, "Read Response %d bytes", len);
+        case -2:
+            LS_WARN(this, "Invalid Http response header, retry!");
             //debug code
             //::write( 1, pBuf, len );
-
-            ret = pHEC->parseHeader(pBuf, len, 1);
-            switch (ret)
-            {
-            case -2:
-                LS_WARN(this, "Invalid Http response header, retry!");
-                //debug code
-                //::write( 1, pBuf, len );
-                errno = ECONNRESET;
-            case -1:
-                return LS_FAIL;
-            }
+            errno = ECONNRESET;
+        case -1:
+            return LS_FAIL;
         }
-        else
-            return len;
         if (respState & 0xff)
         {
             //debug code
@@ -601,12 +596,10 @@ int ProxyConn::processResp()
             m_pBufBegin = pBuf;
             m_pBufEnd = pBuf + len;
             LS_DBG_M(this, "Process Response body %d bytes", len);
-            return readRespBody();
+            break;
         }
     }
-    else
-        return readRespBody();
-    return 0;
+    return readRespBody();
 }
 
 
@@ -907,11 +900,6 @@ void ProxyConn::dump()
             m_iRespHeaderRecv, m_iRespRecv,
             (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0,
             time(NULL) - m_lReqBeginTime);
-//    if ( m_iRespHeaderRecv > 0 )
-//    {
-//        m_achRespBuf[ m_iRespHeaderRecv ] = 0;
-//        LS_INFO(this, "Response Header Received:%s", m_achRespBuf);
-//    }
 }
 
 

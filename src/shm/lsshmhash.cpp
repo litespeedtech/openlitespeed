@@ -885,6 +885,8 @@ LsShmHash::iteroffset LsShmHash::doUpdate(iteroffset iterOff, LsShmHKey key, ls_
 //
 void LsShmHash::eraseIteratorHelper(iteroffset iterOff)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     if (iterOff.m_iOffset == 0)
         return;
 
@@ -948,6 +950,8 @@ void LsShmHash::eraseIteratorHelper(iteroffset iterOff)
 LsShmHash::iteroffset LsShmHash::find2(LsShmHKey key,
                                        ls_strpair_t *pParms)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     uint32_t hashIndx = getIndex(key, capacity());
     if (getBitMapEnt(hashIndx) == 0)     // quick check
         return end();
@@ -1015,6 +1019,8 @@ LsShmHash::iteroffset LsShmHash::insert2(
 LsShmHash::iteroffset LsShmHash::insertCopy2(LsShmHKey key,
         ls_strpair_t *pParms)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     LsShmHash::iteroffset offset;
 
     if (size() * fullFactor() > capacity())
@@ -1064,6 +1070,8 @@ LsShmHash::iteroffset LsShmHash::insertCopy2(LsShmHKey key,
 LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
                                                int size_to_grow, int front)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     LsShmHElem *pOld = (LsShmHElem *)m_pPool->offset2ptr(iterOff.m_iOffset);
     int keyLen = pOld->getKeyLen();
     int valLen = pOld->getValLen();
@@ -1278,6 +1286,8 @@ LsShmHash::iteroffset LsShmHash::doExpand(LsShmHash *pThis,
 
 LsShmHash::iteroffset LsShmHash::begin()
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     if (size() == 0)
         return end();
 
@@ -1295,6 +1305,8 @@ LsShmHash::iteroffset LsShmHash::begin()
 
 LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     if (iterOff.m_iOffset == 0)
         return iterOff;
     iterator iter = offset2iterator(iterOff);
@@ -1346,6 +1358,8 @@ LsShmHash::iteroffset LsShmHash::next(iteroffset iterOff)
 
 int LsShmHash::for_each(iteroffset beg, iteroffset end, for_each_fn fun)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+    
     if (fun == NULL)
     {
         errno = EINVAL;
@@ -1369,6 +1383,8 @@ int LsShmHash::for_each(iteroffset beg, iteroffset end, for_each_fn fun)
 int LsShmHash::for_each2(
     iteroffset beg, iteroffset end, for_each_fn2 fun, void *pUData)
 {
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
     if (fun == NULL)
     {
         errno = EINVAL;

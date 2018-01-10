@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -700,11 +700,11 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
         LS_DBG_H(getLogSession(),
                  "processDataFrame() ID: %d, input window size: %d ",
                  streamID, pH2Stream->getWindowIn());
-
-        if (pH2Stream->getWindowIn() < m_iStreamInInitWindowSize / 2)
+        int32_t consumed = m_iStreamInInitWindowSize - pH2Stream->getWindowIn();
+        if (consumed >= 32768)
         {
-            sendWindowUpdateFrame(streamID, m_iStreamInInitWindowSize / 2);
-            pH2Stream->adjWindowIn(m_iStreamInInitWindowSize / 2);
+            sendWindowUpdateFrame(streamID, consumed);
+            pH2Stream->adjWindowIn(consumed);
         }
     }
     return 0;
@@ -1226,7 +1226,7 @@ int H2Connection::sendSettingsFrame()
     {
         //{0x00, 0x01, 0x00, 0x00, 0x10, 0x00 },
         {0x00, 0x03, 0x00, 0x00, 0x00, 0x64 },
-        {0x00, 0x04, 0x00, 0x01, 0x00, 0x00 },
+        {0x00, 0x04, 0x00, 0x04, 0x00, 0x00 },
         {0x00, 0x05, 0x00, 0x00, 0x40, 0x00 },
         //{0x00, 0x06, 0x00, 0x00, 0x40, 0x00 },
     };

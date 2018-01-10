@@ -14,7 +14,7 @@
         <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 6</h5>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 7</h5>
 <hr/>
 <div>
 <ul>
@@ -45,7 +45,7 @@
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_General_Help.html">Listener General</a></li>
         <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="Templates_Help.html">Virtual Host Templates</a></li>
 	<li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
@@ -136,7 +136,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sslSessionTicketLifetime"><h3>SSL Session Ticket Lifetime (secs)<span class="ls-permlink"><a href="#sslSessionTicketLifetime"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>This value determines how long a session ticket will be valid before a renegotiation is required. Default is 3,600.</p> <h4>Syntax</h4><p>Integer number</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sslSessionTicketKeyFile"><h3>SSL Session Ticket Key File<span class="ls-permlink"><a href="#sslSessionTicketKeyFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Allows the SSL Ticket Key to be created/maintained by an administrator. The file must be 48 bytes long. If this option is left empty, the load balancer  will generate and rotate its own set of keys. <br/><br/> IMPORTANT: To maintain forward secrecy, it is strongly recommended to change the key every <b>SSL Session Ticket Lifetime</b>  seconds. If this cannot be done, it is recommended to leave this field empty.</p> <h4>Syntax</h4><p>Path</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

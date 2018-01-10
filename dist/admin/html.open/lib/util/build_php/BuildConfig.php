@@ -25,9 +25,10 @@ class BuildConfig
 
             case self::PHP_VERSION: return
                         array(
-                            '7.1.11',
-                            '7.0.25',
-                            '5.6.31',
+                            '7.2.1',
+                            '7.1.13',
+                            '7.0.27',
+                            '5.6.33',
                             '5.5.38',
                             '5.4.45',
                             '5.3.29',
@@ -46,7 +47,7 @@ class BuildConfig
 
             case self::MEMCACHED_VERSION: return '2.2.0';
 
-            case self::MEMCACHED7_VERSION: return '3.0.3'; // for php7 only
+            case self::MEMCACHED7_VERSION: return '3.0.4'; // for php7 only
 
             case self::OPCACHE_VERSION: return '7.0.5';
 
@@ -70,7 +71,7 @@ class BuildConfig
                     '7' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-mcrypt --with-pdo-mysql --enable-ftp --enable-zip --with-curl --enable-soap --enable-xml --enable-json  --with-openssl --enable-bcmath',
                     '5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-mysql --with-mcrypt --with-pdo --with-pdo-mysql --enable-ftp --enable-zip --with-curl --enable-soap --enable-xml --enable-json  --with-openssl --enable-bcmath',
                     '4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring'
-                        );
+                );
         }
     }
 

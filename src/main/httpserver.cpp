@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -2017,7 +2017,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                              0, 1, 0));
     //HTTP request/response
     config.setMaxURLLen(currentCtx.getLongValue(pNode, "maxReqURLLen", 100,
-                        MAX_URL_LEN , DEFAULT_URL_LEN + 20));
+                        MAX_URL_LEN , DEFAULT_URL_LEN));
     config.setMaxHeaderBufLen(currentCtx.getLongValue(pNode,
                               "maxReqHeaderSize",
                               1024, MAX_REQ_HEADER_BUF_LEN, DEFAULT_REQ_HEADER_BUF_LEN));
@@ -3173,7 +3173,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         const XmlNodeList *pList = p0->getChildren("add");
 
         if (pList && pList->size() > 0)
-            HttpMime::configScriptHandler(pList, NULL);
+            HttpMime::configScriptHandler(pList, NULL, NULL);
     }
 
     if (m_serverContext.isGeoIpOn())

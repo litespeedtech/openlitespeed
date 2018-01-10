@@ -71,7 +71,7 @@ static void *resizeImage(const char *buf, int bufLen, int width,
                          int height, MyData *myData, int *size);
 static int init_module();
 
-int httpRelease(void *data)
+int releaseMData(void *data)
 {
     g_api->log(NULL, LSI_LOG_DEBUG, "#### mymoduleresize %s\n", "httpRelease");
     return 0;
@@ -265,7 +265,7 @@ static lsi_serverhook_t serverHooks[] =
 
 static int init_module(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, httpRelease, LSI_DATA_HTTP);
+    g_api->init_module_data(pModule, releaseMData, LSI_DATA_HTTP);
     return 0;
 }
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -115,15 +115,28 @@ typedef ls_spinlock_t      ls_lock_t;
 
 #ifdef USE_F_MUTEX
 #define ls_mutex_setup             ls_futex_setup
-#define ls_mutex_lock              ls_futex_safe_lock
+#define ls_mutex_lock              ls_futex_lock
 #define ls_mutex_trylock           ls_futex_trylock
-#define ls_mutex_unlock            ls_futex_safe_unlock
+#define ls_mutex_unlock            ls_futex_unlock
 #else
 #define ls_mutex_setup             ls_pthread_mutex_setup
 #define ls_mutex_lock              pthread_mutex_lock
 #define ls_mutex_trylock           pthread_mutex_trylock
 #define ls_mutex_unlock            pthread_mutex_unlock
 #endif
+
+#ifdef USE_F_MUTEX
+#define ls_mutex_ipc_setup         ls_futex_setup
+#define ls_mutex_ipc_lock          ls_futex_safe_lock
+#define ls_mutex_ipc_trylock       ls_futex_safe_trylock
+#define ls_mutex_ipc_unlock        ls_futex_safe_unlock
+#else
+#define ls_mutex_ipc_setup         ls_pthread_mutex_setup
+#define ls_mutex_ipc_lock          pthread_mutex_lock
+#define ls_mutex_ipc_trylock       pthread_mutex_trylock
+#define ls_mutex_ipc_unlock        pthread_mutex_unlock
+#endif
+
 
 #ifdef USE_ATOMIC_SPIN
 #define ls_spinlock_setup         ls_atomic_spin_setup
@@ -260,7 +273,8 @@ ls_inline int ls_futex_safe_lock(ls_mutex_t *p)
         return 0;
     do
     {
-        if ((kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0) && (errno == ESRCH)
+        if (ls_spin_pid != (lockpid & LS_FUTEX_PID_MASK)
+            && (kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0) && (errno == ESRCH)
             && ls_atomic_casint(p, lockpid, ls_spin_pid | LS_FUTEX_HAS_WAITER))
             return -(lockpid & LS_FUTEX_PID_MASK);
         if ((lockpid & LS_FUTEX_HAS_WAITER)
@@ -329,6 +343,22 @@ ls_inline int ls_futex_unlock(ls_mutex_t *p)
     return (ls_atomic_setint(p, LS_LOCK_AVAIL) == LS_FUTEX_LOCKED2) ?
            ls_futex_wake(p) : 0;
 }
+
+
+/**
+ * @ls_futex_locked
+ * @brief Test if a spinlock is currently in locked state.
+ *
+ * @param[in] p - A pointer to the lock.
+ * @return 1 - locked, 0 - not locked.
+ *
+ * @see ls_futex_setup, ls_futex_lock, ls_futex_unlock, ls_futex_trylock
+ */
+ls_inline int ls_futex_locked(ls_mutex_t *p)
+{
+    return *p != 0;
+}
+
 
 /**
  * @ls_futex_setup
@@ -517,6 +547,18 @@ int ls_atomic_spin_setup(ls_atom_spinlock_t *p);
 //#endif
 
 int ls_pthread_mutex_setup(pthread_mutex_t *);
+
+
+ls_inline int ls_pthread_mutex_locked(pthread_mutex_t *p)
+{
+    if (pthread_mutex_trylock(p) == 0)
+    {
+        pthread_mutex_unlock(p);
+        return 0;
+    }
+    return 1;
+}
+
 
 int ls_pspinlock_setup(ls_pspinlock_t *p);
 

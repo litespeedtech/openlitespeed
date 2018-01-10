@@ -14,7 +14,10 @@ cd "$BASE_DIR"
 BASE_DIR=`pwd`
 
 if [ -f "$BASE_DIR"/lsws_env ] ; then
-    . "$BASE_DIR"/lsws_env
+    source "$BASE_DIR"/lsws_env
+    if [ $? -ne 0 ] ; then
+        . "$BASE_DIR"/lsws_env
+    fi
 fi
 
 # if the lsws_env is empty or not exist, still need to set the default values

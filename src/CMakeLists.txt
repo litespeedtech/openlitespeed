@@ -81,6 +81,7 @@ SET(unittest_STAT_SRCS
    ../test/spdy/spdyzlibfiltertest.cpp
    ../test/spdy/spdyconnectiontest.cpp
    ../test/spdy/dummiostream.cpp
+   ../test/spdy/pushtest.cpp
    ../test/lsiapi/moduledata.cpp
    ../test/lsiapi/moduletimertest.cpp
    ../test/lsiapi/lsiapihookstest.cpp

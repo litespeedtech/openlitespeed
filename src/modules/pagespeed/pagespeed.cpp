@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -145,7 +145,10 @@ public:
     ~LsPsGlobalCtx()
     {
         if (driverFactory)
+        {
             delete driverFactory;
+            driverFactory = NULL;
+        }
     }
 };
 
@@ -796,7 +799,7 @@ static int InitGlobalCtx()
     g_pPsGlobalCtx->driverFactory->Init();
     
     SystemRewriteDriverFactory::InitApr();
-    atexit(PageSpeedAtExit);
+    //atexit(PageSpeedAtExit);
     return 0;
 }
 
@@ -994,6 +997,8 @@ static int InitGlobalStats()
         releaseDriverFactory();
         return LS_FAIL;
     }
+
+    IgnoreSigpipe();
 
     if (global_statistics == NULL)
         LsRewriteDriverFactory::InitStats(
@@ -2831,7 +2836,7 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
                 LsUAMatcher::getInstance().getUaCode(ua));
             g_api->set_ua_code(ua, sHex + 5);
         }
-        g_api->set_req_env(rec->session, "cache-ctrl", 10, sHex, strlen(sHex));
+        g_api->set_req_env(rec->session, "cache-control", 13, sHex, strlen(sHex));
         free(ua);
     }
     

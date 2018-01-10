@@ -14,7 +14,7 @@
         <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 6</h5>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 7</h5>
 <hr/>
 <div>
 <ul>
@@ -45,7 +45,7 @@
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_General_Help.html">Listener General</a></li>
         <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="Templates_Help.html">Virtual Host Templates</a></li>
 	<li><span class="current"><a href="VirtualHosts_Help.html">Virtual Host Basic</a></span></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
@@ -107,7 +107,7 @@ changes to an existing one. Before you add a virtual host, make sure the virtual
 <div class="helpitem"><article class="ls-helpitem"><div><header id="outBandwidth"><h3>出口带宽<span class="ls-permlink"><a href="#outBandwidth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定对单个IP地址允许的最大传出吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽按4KB为单位分配。设定值为<span class="val">0</span>可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[性能建议] 按8KB单位设置带宽可获得更好的性能。<br/> [安全建议] 受信任的IP或子网不受影响。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#inBandwidth">入口带宽</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="inBandwidth"><h3>入口带宽<span class="ls-permlink"><a href="#inBandwidth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定对单个IP地址允许的最大传入吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽是按1KB单位分配。设定值为<span class="val">0</span>可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#outBandwidth">出口带宽</a></span></p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

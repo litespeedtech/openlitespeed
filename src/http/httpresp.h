@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -59,8 +59,6 @@ public:
 
     int appendHeader(const char *pName, int nameLen,
                      const char *pValue, int valLen);
-    void addLocationHeader(const HttpReq *pReq);
-
     void prepareHeaders(const HttpReq *pReq, int addAcceptRange = 0);
     void appendContentLenHeader();
 

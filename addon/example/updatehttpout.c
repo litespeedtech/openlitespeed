@@ -43,7 +43,7 @@ typedef struct _MyData
 
 
 
-int httpRelease(void *data)
+int releaseMData(void *data)
 {
     g_api->log(NULL, LSI_LOG_DEBUG, "#### mymodulehttp %s\n", "httpRelease");
     return 0;
@@ -162,7 +162,7 @@ static lsi_serverhook_t serverHooks[] =
 
 static int init_module(lsi_module_t *pModule)
 {
-    g_api->init_module_data(pModule, httpRelease, LSI_DATA_HTTP);
+    g_api->init_module_data(pModule, releaseMData, LSI_DATA_HTTP);
     return 0;
 }
 

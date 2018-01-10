@@ -56,6 +56,7 @@ SET(unittest_STAT_SRCS
    util/objarraytest.cpp
    util/objpooltest.cpp
    util/radixtreetest.cpp
+   spdy/pushtest.cpp
    spdy/huffmantest.cpp
    spdy/hpacktest.cpp
    spdy/spdyzlibfiltertest.cpp
@@ -155,12 +156,12 @@ add_executable(ols_unittest
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( unittestlib
-    modgzip lsiapi main http lsiapi spdy ssi
+    modgzip lsiapi main http lsiapi ssi
     registry cgi fcgi jk extensions lsapi proxy
     edio socket sslpp lsshm thread log4cxx GeoIP adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
-    udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a ${BSSL_ADD_LIB}
-    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB})
+    udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
+    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} spdy libssl.a libcrypto.a)
 
 target_link_libraries(ols_unittest ${unittestlib} )
 

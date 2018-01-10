@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -112,6 +112,8 @@ int LsapiReq::appendEnv(LsapiEnv *pEnv, HttpSession *pSession)
                 psTemp->len() - 1;
         ++count;
     }
+    else
+        ((lsapi_req_header *)m_bufReq.begin())->m_scriptFileOff = 0;
     pEnv->add("QUERY_STRING", 12, pReq->getQueryString(),
               pReq->getQueryStringLen());
     ((lsapi_req_header *)m_bufReq.begin())->m_queryStringOff =

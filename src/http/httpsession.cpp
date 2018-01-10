@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -78,6 +78,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define SERVERPUSHTAG           "ls_smartpush"
+#define SERVERPUSHTAGLENGTH     (sizeof(SERVERPUSHTAG) - 1)
 
 
 HttpSession::HttpSession()
@@ -246,6 +249,7 @@ int HttpSession::runEventHkpt(int hookLevel, HSPState nextState)
         m_curHookLevel = 0;
         m_processState = nextState;
     }
+
     return m_curHookRet;
 }
 
@@ -358,6 +362,10 @@ void HttpSession::nextRequest()
         }
 
         ++m_sn;
+        
+        
+        m_curHookLevel = 0;
+        m_curHookRet = 0;
         m_sessionHooks.reset();
         m_sessionHooks.disableAll();
         m_iFlag = 0;
@@ -534,12 +542,18 @@ int HttpSession::reqBodyDone()
         LS_DBG_L(getLogSession(),
                  "HttpSession::reqBodyDone, parseDone returned %d.", rc);
     }
+    
+    
+    if (getFlag(HSF_REQ_WAIT_FULL_BODY) == HSF_REQ_WAIT_FULL_BODY)
+        handlerProcess(m_request.getHttpHandler());
 
     if (m_processState == HSPS_HANDLER_PROCESSING)
         m_processState = HSPS_HKPT_RCVD_REQ_BODY_PROCESSING;
     else
         m_processState = HSPS_HKPT_RCVD_REQ_BODY;
 
+
+    
 //#define DAVID_OUTPUT_VMBUF
 #ifdef DAVID_OUTPUT_VMBUF
     VMemBuf *pVMBuf = m_request.getBodyBuf();
@@ -1523,6 +1537,7 @@ int HttpSession::processNewUri()
         m_processState = HSPS_BEGIN_HANDLER_PROCESS;
     else
         m_processState = HSPS_VHOST_REWRITE;
+
     return 0;
 }
 
@@ -1644,6 +1659,10 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         HSF_REQ_WAIT_FULL_BODY)
         return 0;
 
+    
+    
+    
+    
     int ret = assignHandler(m_request.getHttpHandler());
     if (ret)
         return ret;
@@ -1854,6 +1873,16 @@ void HttpSession::sendHttpError(const char *pAdditional)
 int HttpSession::buildErrorResponse(const char *errMsg)
 {
     int errCode = m_request.getStatusCode();
+    
+    char *location = NULL;
+    int nLocation = 0 ;
+    if ( errCode >= SC_300 && errCode < SC_400 )
+    {
+        const char *p = m_response.getRespHeaders().getHeader(
+                                HttpRespHeaders::H_LOCATION, &nLocation);
+        if (nLocation > 0)
+            location = strndup(p, nLocation);
+    }
 //     if ( m_request.getSSIRuntime() )
 //     {
 //         if (( errCode >= SC_300 )&&( errCode < SC_400 ))
@@ -1873,6 +1902,14 @@ int HttpSession::buildErrorResponse(const char *errMsg)
 
     resetResp();
     m_sendFileInfo.release();
+    
+    if (nLocation > 0)
+    {
+        m_response.getRespHeaders().add(HttpRespHeaders::H_LOCATION, location,
+                                        nLocation);
+        free(location);
+    }
+
     //m_response.prepareHeaders( &m_request );
     //register int errCode = m_request.getStatusCode();
     unsigned int ver = m_request.getVersion();
@@ -3220,9 +3257,86 @@ void HttpSession::prepareHeaders()
                          LSI_HEADEROP_ADD);
 }
 
-
-int HttpSession::pushToClient(const char *pUri, int uriLen)
+/**
+ * Every 8 bit cover 1 byte(2 bytes HEX)
+ * 
+ * xxxxxxxx xxxxxxxx  xxxxxxxx  xxxxxxxx  xxxxxxxx ...
+ * 0      7 8      15        23        31  ...
+ * 
+ * Example
+ * 1       2          3         4
+ * 1000000 01000000   11000000  00100000
+ * 
+ */
+void HttpSession::addBittoCookie(AutoStr2 &cookie, uint32_t bit)
 {
+    uint32_t i;
+    int len = cookie.len();
+    char s[3] = {'0', '0', 0};
+
+    for (i = len/2; i <= bit / 8; ++i)
+        cookie.append(s, 2);
+
+    i = bit / 8;
+    s[0] = *(cookie.c_str() + i * 2);
+    s[1] = *(cookie.c_str() + i * 2 + 1);
+
+    uint8_t bit8 = (uint8_t)strtoul(s, NULL, 16);
+    bit8 |= 1 << (bit % 8);
+    sprintf(s, "%02x", bit8);
+    char *p = (char *)(cookie.c_str());
+    memcpy(p + i * 2, s, 2);
+}
+
+/**
+ * 1 fot true, 0 for false
+ */
+int HttpSession::isCookieHaveBit(const char *cookie, uint32_t bit)
+{
+    int size = strlen(cookie);
+    if (bit / 8 >= size/2)
+        return 0;
+    
+    char s[3] = {0};
+    int i= bit / 8;
+    s[0] = cookie[i * 2];
+    s[1] = cookie[i * 2 + 1];
+    uint8_t bit8 = (uint8_t)strtoul(s, NULL, 16);
+    if (bit8 & (1 << (bit % 8)))
+        return 1;
+    else
+        return 0;
+}
+
+int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
+{
+    char buf[16384];
+    if (*pUri != '/')
+    {
+        int len = m_request.toLocalAbsUrl(pUri, uriLen, buf, sizeof(buf) - 1);
+        if (len == -1)
+            return -1;
+        pUri = buf;
+        uriLen = len;
+        buf[uriLen] = 0;
+    }
+
+    
+    HttpVHost *pVHost = (HttpVHost *) m_request.getVHost();
+    uint32_t id = pVHost->getIdBitOfUrl(pUri);
+    
+    if (id == -1)
+        id = pVHost->addUrlToUrlIdHash(pUri);
+    else
+    {
+        if (cookie.len() > 0)
+        {
+            int state = isCookieHaveBit(cookie.c_str(), id);
+            if (state == 1)
+                return 0;
+        }
+    }
+
     ls_str_t uri;
     ls_str_t host;
     uri.ptr = (char *)pUri;
@@ -3263,11 +3377,13 @@ int HttpSession::pushToClient(const char *pUri, int uriLen)
     memset(p, 0, sizeof(*p));
     p = extraHeaders;
     
+    addBittoCookie(cookie, id);
     return getStream()->push(&uri, &host, extraHeaders);
 }
 
 
-int HttpSession::processOneLink(const char *p, const char *pEnd)
+int HttpSession::processOneLink(const char *p, const char *pEnd,
+                                AutoStr2 &cookie)
 {
     p = (const char *)memchr(p, '<', pEnd - p);
     if (!p)
@@ -3276,23 +3392,7 @@ int HttpSession::processOneLink(const char *p, const char *pEnd)
     const char *pUrlBegin = p + 1;
     while(pUrlBegin < pEnd && isspace(*pUrlBegin))
         ++pUrlBegin;
-    if (*pUrlBegin != '/')
-    {
-        if (memcmp(pUrlBegin, "http://", 7) != 0)
-            return 0;
-        pUrlBegin += 7;
-        int len = m_request.getHeaderLen(HttpHeader::H_HOST);
-        if (strncasecmp(pUrlBegin, m_request.getHeader(HttpHeader::H_HOST), len)
-                        != 0)
-        {
-            return 0;
-        }
-        pUrlBegin += len;
-        if (*pUrlBegin != '/')
-            return 0;
-    }
     p = (const char *)memchr(pUrlBegin, '>', pEnd - pUrlBegin);
-
     const char *pUrlEnd = p++;
     while(isspace(pUrlEnd[-1]))
         --pUrlEnd;
@@ -3305,14 +3405,15 @@ int HttpSession::processOneLink(const char *p, const char *pEnd)
     p1 = (const char *)memmem(p, pEnd - p, "nopush", 6);
     if (p1)
         return 0;
-    return pushToClient(pUrlBegin, pUrlEnd - pUrlBegin);
+    return pushToClient(pUrlBegin, pUrlEnd - pUrlBegin, cookie);
 }
 
 //Example: 
 // Link: </css/style.css>; rel=preload;
 // Link: </dont/want/to/push/this.css>; rel=preload; as=stylesheet; nopush
 // Link: </css>; as=style; rel=preload, </js>; as=script; rel=preload;
-void HttpSession::processLinkHeader(const char* pValue, int valLen)
+void HttpSession::processLinkHeader(const char* pValue, int valLen,
+                                    AutoStr2 &cookie)
 {
     if (!getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
         return;
@@ -3320,18 +3421,17 @@ void HttpSession::processLinkHeader(const char* pValue, int valLen)
     const char *p = pValue;
     const char *pLineEnd = p + valLen;
     const char *pEnd; 
+
     while(p < pLineEnd)
     {
         pEnd = (const char *)memchr(p, ',', pLineEnd - p); 
         if (!pEnd)
             pEnd = pLineEnd;
-        
-        processOneLink(p, pEnd);    
-    
+
+        processOneLink(p, pEnd, cookie);
         p = pEnd + 1;
     }
-    
-    
+
 }
 
 
@@ -3341,10 +3441,42 @@ void HttpSession::processServerPush()
     struct iovec *p = iovs, *pEnd;
     pEnd = p + m_response.getRespHeaders().getHeader(
         HttpRespHeaders::H_LINK, iovs, 100);
+    
+    cookieval_t *cookie0 = m_request.getCookie(SERVERPUSHTAG,
+                                               SERVERPUSHTAGLENGTH);
+    AutoStr2    cookie1;
+    if (cookie0 && cookie0->valLen > 0)
+    {
+        cookie1.setStr(m_request.getHeaderBuf().getp(cookie0->valOff),
+                       cookie0->valLen);
+    }
+
     while(p < pEnd)
     {
-        processLinkHeader((const char *)p->iov_base, p->iov_len);
+        processLinkHeader((const char *)p->iov_base, p->iov_len, cookie1);
         ++p;
+    }
+    
+    if (cookie1.len() > 0)
+    {
+        if (cookie0 && cookie0->valLen > 0 && cookie1.len() == cookie0->valLen
+            && strncasecmp(cookie1.c_str(),
+                           m_request.getHeaderBuf().getp(cookie0->valOff),
+                           cookie0->valLen) ==0)
+        {
+            LS_DBG_L(getLogSession(),
+                     "processServerPush bypassed since no new url bit set.");
+        }
+        else
+        {
+    
+            AutoStr2    cookie2(SERVERPUSHTAG, SERVERPUSHTAGLENGTH);
+            cookie2.append("=", 1);
+            cookie2.append(cookie1.c_str(), cookie1.len());
+            m_response.getRespHeaders().add( HttpRespHeaders::H_SET_COOKIE,
+                                             cookie2.c_str(), cookie2.len(),
+                                             LSI_HEADEROP_MERGE);
+        }
     }
 }
 
@@ -3368,12 +3500,13 @@ int HttpSession::sendRespHeaders()
             m_response.appendContentLenHeader();
         else
             setupChunkOS(0);
-        if (m_response.getRespHeaders().hasPush()
-            && getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
-            processServerPush();
     }
     prepareHeaders();
 
+    if (!isNoBody && m_response.getRespHeaders().hasPush()
+        && getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
+        processServerPush();
+    
     if (finalizeHeader(m_request.getVersion(), m_request.getStatusCode()))
         return 1;
 
@@ -4220,9 +4353,10 @@ int HttpSession::smProcessReq()
                 break;
         //fall through
         case HSPS_HKPT_RCVD_REQ_BODY:
-            ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_PROCESS_NEW_URI);
-            if (ret || m_processState != HSPS_PROCESS_NEW_URI)
-                break;
+            m_processState = HSPS_PROCESS_NEW_URI;
+//             ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_PROCESS_NEW_URI);
+//             if (ret || m_processState != HSPS_PROCESS_NEW_URI)
+//                 break;
         //fall through
         case HSPS_PROCESS_NEW_URI:
             ret = processNewUri();
@@ -4248,6 +4382,17 @@ int HttpSession::smProcessReq()
             ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
             if (ret || m_processState != HSPS_FILE_MAP)
                 break;
+            
+            /**
+             * In this state, if req body done or no req body, go through the hook
+             */
+            if (getFlag(HSF_REQ_BODY_DONE) == HSF_REQ_BODY_DONE)
+            {
+                ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_FILE_MAP);
+                if (ret || m_processState != HSPS_FILE_MAP)
+                    break;
+            }
+
         //fall through
         case HSPS_FILE_MAP:
             ret = processFileMap();

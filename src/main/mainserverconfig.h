@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -21,6 +21,15 @@
 #include <util/tsingleton.h>
 #include <util/stringlist.h>
 
+struct app_node_st
+{
+    AutoStr key;
+    void   *xml_node;
+    void   *worker;
+};
+
+#define MAX_EXT_APP_NUMBER          100
+
 class MainServerConfig: public TSingleton<MainServerConfig>
 {
     friend class TSingleton<MainServerConfig>;
@@ -38,8 +47,11 @@ private:
     int             m_iEnableCoreDump;
     int             m_iDisableLogRotate;
     StringList      m_sSuspendedVhosts;
-    int m_iDisableWebAdmin;
+    int             m_iDisableWebAdmin;
     
+    app_node_st  m_stExtAppXmlNodeS[MAX_EXT_APP_NUMBER];
+    int             m_iEextAppXmlNodeSSize;
+
     void operator=(const MainServerConfig &rhs);
     MainServerConfig(const MainServerConfig &rhs);
     MainServerConfig()
@@ -50,6 +62,7 @@ private:
         , m_iEnableCoreDump(0)
         , m_iDisableLogRotate(0)
         , m_iDisableWebAdmin(0)
+        , m_iEextAppXmlNodeSSize(0)
     {}
 public:
     int  getCrashGuard() const          {   return m_iCrashGuard;   }
@@ -81,6 +94,30 @@ public:
 
     void setDisableWebAdmin(int v)         {   m_iDisableWebAdmin = v;          }
     int getDisableWebAdmin() const         {   return m_iDisableWebAdmin;            }
+    
+    int insertExtAppXmlNode(app_node_st *key_pointer)
+    {
+        if (m_iEextAppXmlNodeSSize < MAX_EXT_APP_NUMBER - 1)
+        {
+            m_stExtAppXmlNodeS[m_iEextAppXmlNodeSSize ++] = *key_pointer;
+            return 0;
+        }
+        return -1;
+    }
+
+
+    app_node_st *getExtAppXmlNode(char *extAppName)
+    {
+        for (int i=0; i<m_iEextAppXmlNodeSSize; ++i)
+        {
+            if (strcmp(m_stExtAppXmlNodeS[i].key.c_str(), extAppName) == 0)
+                return &m_stExtAppXmlNodeS[i];
+        }
+        return NULL;
+    }
+    
+    int getExtAppXmlNodeCount() { return m_iEextAppXmlNodeSSize; }
+
 };
 
 #endif // MAINSERVERCONFIG_H
