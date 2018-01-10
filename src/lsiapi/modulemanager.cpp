@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -157,7 +157,7 @@ int ModuleManager::loadPrelinkedModules()
         pModule = getPrelinkedModuleByIndex(i, &pName);
         if (pModule)
         {
-            if (addModule(pName, "Intenal", pModule) != end())
+            if (addModule(pName, "Internal", pModule) != end())
             {
                 ModuleConfig::parsePriority(NULL, MODULE_PRIORITY(pModule));
                 ++count;
@@ -334,39 +334,40 @@ int ModuleManager::runModuleInit()
     for (int i = 0; i < getModuleCount(); ++i)
     {
         pModule = m_pModuleArray[i];
+        checkModuleDef(pModule);
+        
         if (pModule->init_pf)
         {
-            checkModuleDef(pModule);
             int ret = pModule->init_pf(pModule);
             if (ret != 0)
             {
                 disableModule(pModule);
                 LS_ERROR("[%s] initialization failure, disabled",
                          MODULE_NAME(pModule));
-            }
-            else
-            {
-                //add global level hooks here
-                if (pModule->serverhook)
-                {
-                    int count = 0;
-                    while (pModule->serverhook[count].cb)
-                    {
-                        add_global_hook(pModule->serverhook[count].index,
-                                        pModule,
-                                        pModule->serverhook[count].cb,
-                                        pModule->serverhook[count].priority,
-                                        pModule->serverhook[count].flag);
-                        ++count;
-                    }
-                }
-
-                LS_INFO("[Module: %s %s] has been initialized successfully",
-                        MODULE_NAME(pModule),
-                        ((pModule->about) ? pModule->about : ""));
+                continue;
             }
         }
+        
+        //add global level hooks here
+        if (pModule->serverhook)
+        {
+            int count = 0;
+            while (pModule->serverhook[count].cb)
+            {
+                add_global_hook(pModule->serverhook[count].index,
+                                pModule,
+                                pModule->serverhook[count].cb,
+                                pModule->serverhook[count].priority,
+                                pModule->serverhook[count].flag);
+                ++count;
+            }
+        }
+
+        LS_INFO("[Module: %s %s] has been initialized successfully",
+                MODULE_NAME(pModule),
+                ((pModule->about) ? pModule->about : ""));
     }
+
     return 0;
 }
 
@@ -588,7 +589,10 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
     const char *pValue = NULL;
 
     assert(module_config->module == pModule);
-    pValue = pNode->getChildValue("enabled");
+    pValue = pNode->getChildValue("ls_enabled");
+    if (!pValue)
+        pValue = pNode->getChildValue("enabled");
+
     if (pValue)
         module_config->filters_enable = (int16_t)atoi(pValue);
     else
@@ -660,13 +664,13 @@ static int checkConfigKeys(lsi_config_key_t *keys)
     return p - keys;
 }
 
-int ModuleConfig::getKeyIndex(lsi_config_key_t *keys, const char *str)
+int ModuleConfig::getKeyIndex(lsi_config_key_t *keys, const char *key, int key_len)
 {
     for (int i=0;; ++i)
     {
         if (keys[i].config_key)
         {
-            if (strcasecmp(keys[i].config_key, str) == 0)
+            if (strncasecmp(keys[i].config_key, key, key_len) == 0)
                 return i;
         }
         else
@@ -681,7 +685,7 @@ void ModuleConfig::releaseModuleParamInfo(module_param_info_t *param_arr,
     for (int i=0; i<param_count; ++i)
     {
         if (param_arr[i].val)
-            delete []param_arr[i].val;
+            free(param_arr[i].val);
     }
 }
 
@@ -736,6 +740,91 @@ int ModuleConfig::escapeParamVal(const char *val_in, int len, char *val)
     return count;
 }
 
+/**
+ * ls_getconfkey return the key of the line, 
+ * Comments: key can not be multiple line and should be have space inside
+ */
+const char *ModuleConfig::ls_getconfkey(const char **pParseBegin,
+                                        const char *pParseEnd,
+                                        const char **pKeyEnd)
+{
+    ls_strtrim2(pParseBegin, &pParseEnd);
+    const char *pKeyBegin = *pParseBegin;
+
+    if (*pParseBegin < pParseEnd)
+    {
+        while(!isspace(**pParseBegin))
+            ++ *pParseBegin;
+    }
+
+    *pKeyEnd = *pParseBegin;
+    return pKeyBegin;
+}
+
+
+/**
+ * ls_get_escconfval is used to get the conf value which may be in multiple line
+ * and has quote charactor inside and may be have more than one items.
+ * Comments: return the val length, and val need to be malloc'd first.
+ */
+int ModuleConfig::ls_get_escconfval(const char **pParseBegin,
+                                    const char *pParseEnd,
+                                    char *val)
+{
+    char escapedChar = 0x00;
+    int count =0;
+    const char *pValStr = *pParseBegin;
+
+    while(pValStr < pParseEnd)
+    {
+        switch (*pValStr)
+        {
+        case '`':
+        case '\'':
+        case '\"':
+            if (escapedChar == 0x00)
+                escapedChar = *pValStr;
+            else if (escapedChar == *pValStr)
+                escapedChar = 0x00;
+            else
+                val[count++] = *pValStr;
+            break;
+
+        case '\\':
+            //If Last char(does not have the next char) copy it
+            if (pValStr == pParseEnd -1 || escapedChar == 0x00)
+                val[count++] = '\\';
+            else
+            {
+                if (*(pValStr + 1) == escapedChar)
+                {
+                    ++pValStr;
+                    val[count++] = escapedChar;
+                }
+                else
+                    val[count++] = '\\';
+            }
+            break;
+
+        case '\r':
+        case '\n':
+            if (escapedChar == 0x00)
+                pParseEnd = pValStr;
+            else
+                val[count++] = *pValStr;
+            break;
+
+        default:
+            val[count++] = *pValStr;
+            break;
+        }
+        ++pValStr;
+    }
+
+    *pParseBegin = pParseEnd + 1;
+    return count;
+}
+
 
 /***
  * Server will parse module param for module, to better using this feature,
@@ -766,69 +855,50 @@ int ModuleConfig::preParseModuleParam(const char *param, int paramLen,
                                       int *param_count)
 {
     int max_param_count = *param_count;
-    
-    //If the id/level not defined, changes to default values
-    //int count = checkConfigKeys(keys);
-            
-    const char *pLineBegin;
-    const char *pLineEnd;
-    const char *pValue = param;
-    const char *pParamEnd = param + paramLen;
-    ls_confparser_t cp;
-    ls_objarray_t *pList;
+    const char *pKey;
+    char pVal[8192] = {0};
+    const char *pKeyEnd;
+    const char *pConf = param;
+    const char *pConfEnd = param + paramLen;
     int param_arr_sz = 0;
-    
-    ls_confparser(&cp);
-    while ((pLineBegin = ls_getconfline(&pValue, pParamEnd, &pLineEnd)) != NULL)
+
+    while(pConf < pConfEnd)
     {
-        pList = ls_confparser_linekv(&cp, pLineBegin, pLineEnd);
-        if (!pList)
-            continue;
-
-        ls_str_t *pKey = (ls_str_t *)ls_objarray_getobj(pList, 0);
-        ls_str_t *pVal = (ls_str_t *)ls_objarray_getobj(pList, 1);
-        const char *pValStr = ls_str_cstr(pVal);
-        if (pValStr == NULL)
-            continue;
-
-        int valLen = ls_str_len(pVal);
-        if (valLen == 0)
-            continue;
-
-        int key_index = getKeyIndex(keys, ls_str_cstr(pKey));
-        if (key_index != -1)
+        pKey = ls_getconfkey(&pConf, pConfEnd, &pKeyEnd);
+        if (pKey)
         {
-            char *val = new char[valLen + 1];
-            if (val == NULL)
+            LS_DBG_H("Key:[%.*s]\n", (int)(pKeyEnd - pKey), pKey );
+
+            while(*pConf == ' ' || *pConf == '\t')
+                ++ pConf;
+
+            int valLen = ls_get_escconfval(&pConf, pConfEnd, pVal);
+            LS_DBG_H("Val:[%.*s]\n", valLen, pVal );
+
+            int key_index = getKeyIndex(keys, pKey, pKeyEnd - pKey);
+            if (key_index != -1)
             {
-                LS_ERROR("Error: ModuleConfig::preParseModuleParam malloc failed, size %d.\n",
-                         valLen);
-                return -1;
-            }
-            
-            int count = escapeParamVal(pValStr, valLen, val);
-            val[count] = 0x00; //Add a NULL for easily use the strxxx function
-        
-            if (keys[key_index].level & level)
-            {
-                if (param_arr_sz < max_param_count)
+                if (keys[key_index].level & level)
                 {
-                    param_arr[param_arr_sz].key_index = key_index;
-                    param_arr[param_arr_sz].val_len = count;
-                    param_arr[param_arr_sz].val = val;
-                    ++param_arr_sz;
-                }
-                else
-                {
-                    LS_ERROR("Error: ModuleConfig::preParseModuleParam get more items than defined max count %d, have to give up.\n",
-                             max_param_count);
-                    break;
+                    if (param_arr_sz < max_param_count)
+                    {
+                        param_arr[param_arr_sz].key_index = key_index;
+                        param_arr[param_arr_sz].val_len = valLen;
+                        param_arr[param_arr_sz].val = strndup(pVal, valLen);
+                        ++param_arr_sz;
+                    }
+                    else
+                    {
+                        LS_ERROR("Error: preParseModuleParam get more items "
+                            "than defined max count %d, have to give up.\n",
+                            max_param_count);
+                        break;
+                    }
                 }
             }
         }
     }
     
-    ls_confparser_d(&cp);
     *param_count = param_arr_sz;
     return 0;
 }
@@ -844,8 +914,14 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
     lsi_module_config_t *config = pModuleConfig->get(module_id);
     config->module = pModule;
 
-    pValue = pNode->getChildValue("enabled");
-    iValueLen = pNode->getChildValueLen("enabled");
+    pValue = pNode->getChildValue("ls_enabled");
+    iValueLen = pNode->getChildValueLen("ls_enabled");
+    if (!pValue)
+    {
+        pValue = pNode->getChildValue("enabled");
+        iValueLen = pNode->getChildValueLen("enabled");
+    }
+
     if (pValue)
         ModuleConfig::setFilterEnable(config, atoi(pValue));
 
@@ -860,18 +936,15 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
         {
             //If the id/level not defined, changes to default values
             checkConfigKeys(keys);
-            
-            //FIXME:Use a vector may be better
+
             module_param_info_t param_arr[MAX_MODULE_CONFIG_LINES];
             int param_arr_sz = MAX_MODULE_CONFIG_LINES;
             preParseModuleParam(pValue, iValueLen, level, keys,
                                 param_arr, &param_arr_sz);
-            
-            if (param_arr_sz > 0)
+            if (param_arr_sz > 0 || LSI_CFG_SERVER == level)
             {
                 config->config = pModule->config_parser->parse_config(param_arr, param_arr_sz,
                                                      config->config, level, name);
-                
                 releaseModuleParamInfo(param_arr, param_arr_sz);
                 config->data_flag = LSI_CONFDATA_PARSED;
             }

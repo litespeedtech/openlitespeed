@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -53,6 +53,7 @@ END_LOG4CXX_NS
 #define VH_GZIP             256
 #define VH_BR               512
 
+#define MAX_VHOST_PHP_NUM    100
 
 #define DEFAULT_ADMIN_SERVER_NAME   "_AdminVHost"
 
@@ -87,6 +88,13 @@ template< class T >
 class THash;
 class StaticFileCacheData;
 
+
+struct php_xml_st
+{
+    AutoStr suffix;
+    XmlNode *xml_node;
+};
+
 class RealmMap : public HashStringMap< UserDir * >
 {
     typedef HashStringMap< UserDir * > _shmap;
@@ -107,6 +115,18 @@ typedef struct _static_file_data
 } static_file_data_t;
 
 typedef  THash<static_file_data_t *> UrlStxFileHash;
+
+
+typedef struct _url_id_data
+{
+    AutoStr2 url;
+    u_int32_t  id;
+} url_id_data_t;
+
+/**
+ * UrlIdHash define a url ---> id mapping hash
+ */
+typedef  THash<url_id_data_t *> UrlIdHash;
 
 class HttpVHost : public RefCounter, public HttpLogSource
 {
@@ -151,9 +171,15 @@ private:
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
+    php_xml_st          m_pPhpXmlNodeS[MAX_VHOST_PHP_NUM];
+    int                 m_PhpXmlNodeSSize;
+
+    UrlIdHash          *m_pUrlIdHash;
 
     HttpVHost(const HttpVHost &rhs);
     void operator=(const HttpVHost &rhs);
+    
+    
 
 
 public:
@@ -284,6 +310,24 @@ public:
     void contextInherit()
     {   m_contexts.contextInherit();     }
 
+    int getPhpXmlNodeSSize() { return m_PhpXmlNodeSSize; }
+    php_xml_st *getPhpXmlNodeS(int index)
+    {
+        if (index < m_PhpXmlNodeSSize)
+            return &m_pPhpXmlNodeS[index];
+        else
+            return NULL;
+    }
+    int addPhpXmlNodeSSize(char *suffix, XmlNode *pNode)
+    {
+        if(m_PhpXmlNodeSSize >= MAX_VHOST_PHP_NUM - 1)
+            return -1;
+        m_pPhpXmlNodeS[m_PhpXmlNodeSSize].suffix.setStr(suffix);
+        m_pPhpXmlNodeS[m_PhpXmlNodeSSize].xml_node = pNode;
+        ++m_PhpXmlNodeSSize;
+        return 0;
+    }
+    
     void setUid(uid_t uid)    {   m_uid = uid;    }
     uid_t getUid() const        {   return m_uid;   }
 
@@ -415,6 +459,9 @@ public:
                              const XmlNodeList *pModuleList, int saveParam);
 
     int config(const XmlNode *pVhConfNode, int is_uid_set);
+    int getExtAppGUid(const XmlNode *pExtAppNode);
+    void getAppName(const char *suffix, char *appName, int maxLen);
+    int configVHScriptHandler2();
     int configVHScriptHandler(const XmlNode *pVhConfNode);
     const HttpHandler *isHandlerAllowed(const HttpHandler *pHdlr, int type,
                                         const char *pHandler);
@@ -440,6 +487,14 @@ public:
     void removeurlStaticFile(static_file_data_t *data);
     static_file_data_t *getUrlStaticFileData(const char *url);
     void urlStaticFileHashClean();
+    
+    uint32_t addUrlToUrlIdHash(const char *url);
+    
+    /**
+     * return the bit of the url added to the hash
+     */
+    int getIdBitOfUrl(const char *url);
+    
 };
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -20,8 +20,10 @@
 #include <http/handlerfactory.h>
 #include <http/handlertype.h>
 #include <http/serverprocessconfig.h>
+#include <http/httpvhost.h>
 #include <log4cxx/logger.h>
 #include <main/configctx.h>
+#include <main/mainserverconfig.h>
 #include <socket/gsockaddr.h>
 #include <util/hashstringmap.h>
 #include <util/rlimits.h>
@@ -336,7 +338,6 @@ void ExtAppRegistry::runOnStartUp()
         if (i != EA_LOGGER)
             s_registry[i]()->runOnStartUp();
     }
-
 }
 
 
@@ -350,8 +351,125 @@ int ExtAppRegistry::generateRTReport(int fd)
     return 0;
 }
 
+/**
+ * This is only for php which set different user/group in vhost and server level
+ * and which is defined as extApp in server level
+ */
+int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
+{
+    int iType = HandlerType::HT_LSAPI - HandlerType::HT_CGI;
+    char achAddress[256];
+    GSockAddr addr;
+    char appName[256];
+    const char *pUri;
+    char buf[MAX_PATH_LEN];
+    int iAutoStart = 0;
+    const char *pPath = NULL;
+    ExtWorker *pWorker = NULL;
+    ExtWorkerConfig *pConfig = NULL;
+    int len = 0;
+    if (ServerProcessConfig::getInstance().getChroot() != NULL)
+        len = ServerProcessConfig::getInstance().getChroot()->len();
 
-ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode)
+    int count = ((HttpVHost *)pVHost)->getPhpXmlNodeSSize();
+    php_xml_st *pPhpXmlNodeS;
+    XmlNode *pNode;
+    for (int i=0; i<count; ++i)
+    {
+        pPhpXmlNodeS = pVHost->getPhpXmlNodeS(i);
+        pVHost->getAppName(pPhpXmlNodeS->suffix.c_str(), appName, 256);
+
+        ConfigCtx currentCtx(appName);
+        pNode = pPhpXmlNodeS->xml_node;
+        pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
+                                                            achAddress, 128);
+        strcat(achAddress, "_");
+        strncat(achAddress, pVHost->getName(), 2556- strlen(pUri));
+
+        if (addr.set(pUri, NO_ANY | DO_NSLOOKUP))
+        {
+            LS_ERROR(&currentCtx, "failed to set socket address %s!", pUri);
+            return -1;
+        }
+
+        iAutoStart = ConfigCtx::getCurConfigCtx()->
+                                getLongValue(pNode, "autoStart", 0, 2, 0);
+    
+        pPath = pNode->getChildValue("path");
+        
+        if (iAutoStart)
+        {
+            if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(buf, pPath) != 0)
+                return -1;
+
+            char *pCmd = buf;
+            char *p = (char *) StringTool::strNextArg(pCmd);
+
+            if (p)
+                *p = 0;
+
+            if (access(pCmd, X_OK) == -1)
+            {
+                LS_ERROR(&currentCtx, "invalid path - %s, "
+                         "it cannot be started by Web server!", buf);
+                return -1;
+            }
+
+            if (p)
+                *p = ' ';
+
+            if (pCmd != buf)
+                buf[len] = *buf;
+
+            pPath = &buf[len];
+        }
+        pWorker = addApp(iType, (const char *)appName);
+
+        if (!pWorker)
+        {
+            LS_ERROR(&currentCtx, "failed to add external processor!");
+            return -1;
+        }
+        pConfig = pWorker->getConfigPointer();
+        assert(pConfig);
+
+        if (pUri)
+        {
+            if (pWorker->setURL(pUri))
+            {
+                LS_ERROR(&currentCtx, "failed to set socket address to %s!",
+                         appName);
+                return -1;
+            }
+        }
+
+        pWorker->setRole(HandlerType::ROLE_RESPONDER);
+        pWorker->getConfigPointer()->setVHost(pVHost);
+
+        pConfig->config(pNode);
+
+        if (!iAutoStart)
+        {
+            pConfig->getEnv()->add(0, 0, 0, 0);
+            continue;
+        }
+
+        LocalWorker *pApp = static_cast<LocalWorker *>(pWorker);
+        if (pApp)
+        {
+            LocalWorkerConfig &config = pApp->getConfig();
+            config.setAppPath(pPath);
+            config.setStartByServer(iAutoStart);
+
+            config.config(pNode);
+            config.setUGid(pVHost->getUid(), pVHost->getGid());
+        }
+    }
+    
+    return 0;
+}
+
+ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel)
 {
     int iType;
     int role;
@@ -394,6 +512,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode)
 
     if (HandlerType::HT_LOADBALANCER == iType)
         return NULL;
+
 
     iType -= HandlerType::HT_CGI;
 
@@ -516,6 +635,27 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode)
         config.configExtAppUserGroup(pNode, iType);
     }
 
+        
+    /***
+     * If is server level, need to save the XmlNode
+     * 
+     */
+    if (bServerLevel)
+    {
+        app_node_st key_ptr;
+        key_ptr.key.setStr(pName);
+        key_ptr.xml_node = (void *)pNode;
+        key_ptr.worker = (void *)pWorker;
+        int ret = MainServerConfig::getInstance().insertExtAppXmlNode(&key_ptr);
+        if (ret == -1)
+        {
+            LS_ERROR(&currentCtx, "Failed to isert extApp '%s' with Node %p due"
+                      " to  too many items(> %d defined as MAX_EXT_APP_NUMBER).",
+                      pName, pNode, MAX_EXT_APP_NUMBER);
+        }
+    }
+    
+    
     return pWorker;
 
 }
@@ -636,7 +776,7 @@ int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
     for (int i = 0 ; i < c ; ++ i)
     {
         pExtAppNode = list[i];
-        ExtWorker *pWorker = configExtApp(pExtAppNode);
+        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost == NULL);
         if (pWorker != NULL)
         {
             if (pVHost)

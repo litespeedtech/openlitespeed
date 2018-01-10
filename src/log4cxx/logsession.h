@@ -26,6 +26,7 @@
 #include <lsr/ls_lock.h>
 #include <lsr/ls_str.h>
 #include <string.h>
+#include <stdio.h>
 
 #define MAX_LOGID_LEN   127
 
@@ -86,18 +87,23 @@ public:
     void appendLogId(const char * str, bool updateLength = false, 
                      size_t reserveChars = 0)
     {
-        assert(reserveChars < MAX_LOGID_LEN - m_logId.len);
+         if (MAX_LOGID_LEN - m_logId.len - reserveChars <= 0)
+         {
+             fprintf(stderr, "appendLogId error: want to reserve %zd, id length: %zd, id: %.*s\n",
+                     reserveChars, m_logId.len, (int)m_logId.len, m_logId.ptr);
+             return;
+         }
+//        assert(reserveChars < MAX_LOGID_LEN - m_logId.len);
         // WARNING: assumes LOCKED
-        char * end = 
-            (char *) memccpy(m_logId.ptr + m_logId.len, str, 0, 
-                             MAX_LOGID_LEN - m_logId.len - reserveChars);
+        char *end = (char *) memccpy(m_logId.ptr + m_logId.len, str, 0, 
+                                     MAX_LOGID_LEN - m_logId.len - reserveChars);
 
         if (updateLength) {
             if (end) {
                 m_logId.len = end - m_logId.ptr - 1;
             }
             else {
-                m_logId.len = MAX_LOGID_LEN;
+                m_logId.len = MAX_LOGID_LEN - reserveChars;
             }
         }
     }
@@ -127,7 +133,13 @@ public:
                           bool updateLength = false, size_t reserveChars = 0)
     {
         // WARNING: assumes LOCKED
-        assert(offset < MAX_LOGID_LEN);
+         if (MAX_LOGID_LEN <= offset)
+         {
+             fprintf(stderr, "addOrReplaceFrom error: offset %zd, reserve: %zd, id length: %zd, id: %.*s\n",
+                     offset, reserveChars, m_logId.len, (int)m_logId.len, 
+                     m_logId.ptr);
+             return;
+         }
         char * p = m_logId.ptr + offset;
         
         while (*p && *p != anchor)
@@ -145,7 +157,7 @@ public:
                     m_logId.len = end - m_logId.ptr - 1;
                 }
                 else {
-                    m_logId.len = MAX_LOGID_LEN;
+                    m_logId.len = MAX_LOGID_LEN - reserveChars;
                 }
             }
         }

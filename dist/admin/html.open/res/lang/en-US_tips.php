@@ -669,7 +669,7 @@ $_tipsdb['EDTP:accessControl_allow'] = array('You can set up access control at s
 
 $_tipsdb['EDTP:accessControl_deny'] = array('To deny access from certain address, put &quot;ALL&quot; in allowed list, and put subnet or IP in denied  list. To allow only certain IP or subnet to access the site, put &quot;ALL&quot; in denied list and specify the address in the allowed list.');
 
-$_tipsdb['EDTP:accessDenyDir'] = array('Enter a full path if you want to deny access for specific directory; entering a path followed by * will disable all the sub directories.','Path can be either absolute or relative to $SERVER_ROOT, use comma to separate.','If both <b>Follow Symbolic Link</b> and <b>Check Symbolic Link</b> are enabled, symbolic links will be checked against the denied directories.');
+$_tipsdb['EDTP:accessDenyDir'] = array('Enter a full path if you want to deny access for specific directory; entering a path followed by * will disable all the  sub directories.','Path can be either absolute or relative to $SERVER_ROOT, use comma to separate.','If both <b>Follow Symbolic Link</b> and <b>Check Symbolic Link</b> are enabled, symbolic links will be checked  against the denied directories.');
 
 $_tipsdb['EDTP:accessLog_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT.');
 

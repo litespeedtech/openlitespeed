@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -264,7 +264,7 @@ static void stackBenchTest(int iNumThreads, const char *pName)
         aThread = new Thread[iNumThreads];
     else
         aThread = NULL;
-    ProfileTime timer(pName, loopCount, PROFILE_MICRO);
+    ProfileTime timer;
     while (--loopCount > 0)
     {
         for (i = 0; i < iNumThreads; ++i)
@@ -275,7 +275,7 @@ static void stackBenchTest(int iNumThreads, const char *pName)
         for (i = 0; i < iNumThreads; ++i)
             aThread[i].join(&pRet);
     }
-//     timer.printTime();
+    timer.printTime(pName, loopCount);
 }
 
 static void *tsstackBenchRun(void *arg)
@@ -317,7 +317,7 @@ static void tsstackBenchTest(int iNumThreads, const char *pName)
         aThread = new Thread[iNumThreads];
     else
         aThread = NULL;
-    ProfileTime timer(pName, loopCount, PROFILE_MICRO);
+    ProfileTime timer;
     while (--loopCount > 0)
     {
         for (i = 0; i < iNumThreads; ++i)
@@ -328,7 +328,7 @@ static void tsstackBenchTest(int iNumThreads, const char *pName)
         for (i = 0; i < iNumThreads; ++i)
             aThread[i].join(&pRet);
     }
-//     timer.printTime();
+    timer.printTime(pName, loopCount);
 }
 
 static int doStackTest = 0;

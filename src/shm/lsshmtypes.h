@@ -80,11 +80,11 @@ typedef ls_spinlock_t           ls_shmlock_t;
 #endif
 #else
 typedef ls_mutex_t              ls_shmlock_t;
-#define ls_shmlock_setup        ls_mutex_setup
-#define ls_shmlock_lock         ls_mutex_lock
-#define ls_shmlock_trylock      ls_mutex_trylock
-#define ls_shmlock_unlock       ls_mutex_unlock
-#define ls_shmlock_locked       ls_mutex_locked
+#define ls_shmlock_setup        ls_mutex_ipc_setup
+#define ls_shmlock_lock         ls_mutex_ipc_lock
+#define ls_shmlock_trylock      ls_mutex_ipc_trylock
+#define ls_shmlock_unlock       ls_mutex_ipc_unlock
+#define ls_shmlock_locked       ls_mutex_ipc_locked
 #endif
 
 

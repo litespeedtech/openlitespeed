@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -183,13 +183,18 @@ public:
     
     
     
-    static int getKeyIndex(lsi_config_key_t *keys, const char *str);
+    static int getKeyIndex(lsi_config_key_t *keys, const char *key, int key_len);
     static void releaseModuleParamInfo(module_param_info_t *param_arr,
                                        int param_count);
     
-    
+    static const char *ls_getconfkey(const char **pParseBegin,
+                                 const char *pParseEnd, const char **pKeyEnd);
     //return the val_out length
     static int escapeParamVal(const char *val_in, int len, char *val);
+    
+    static int ls_get_escconfval(const char **pParseBegin,
+                                    const char *pParseEnd,
+                                    char *val);
     
     static int preParseModuleParam(const char *param, int paramLen,
                                    int level, lsi_config_key_t *keys,

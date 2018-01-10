@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -295,7 +295,7 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
     if (pKv->valLen > 0 && method != LSI_HEADEROP_ADD)
     {
         assert(pKv->keyLen > 0);
-        m_flags |= HRH_F_HAS_PUSH;
+        m_flags |= HRH_F_HAS_HOLE;
     }
 
     return appendHeader(pKv, pName, nameLen, pVal, valLen, method);
@@ -404,7 +404,7 @@ void HttpRespHeaders::_del(int kvOrderNum)
         _del((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
 
     memset(pKv, 0, sizeof(resp_kvpair));
-    m_flags |= HRH_F_HAS_PUSH;
+    m_flags |= HRH_F_HAS_HOLE;
     ++m_iHeaderRemovedCount;
 }
 

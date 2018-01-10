@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -105,7 +105,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
             RewriteRule *pRule = new RewriteRule();
             if (!pRule)
             {
-                LS_ERR_NO_MEM("new RewriteRule()");
+                LS_ERR_NO_MEM("Malloc new RewriteRule() failed.\n");
                 return LS_FAIL;
             }
             int ret = pRule->parse(pRules, pMapList);
@@ -885,6 +885,8 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                                         pValue);
                             RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE", 
                                                 18, pValue, pValEnd - pValue);
+                            //recover the pValue which need "vary="
+                            pValue -= 5;
                         }
                         else if (pValEnd > pValue)
                         {

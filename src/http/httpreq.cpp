@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -2385,10 +2385,12 @@ ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
         if (m_pEnv->insert(m_pPool, ls_str_cstr(&sp->key),
                            ls_str_len(&sp->key), sp) == NULL)
             return NULL;
+
+        ++m_iEnvCount;
     }
     else if (strncasecmp(ls_str_cstr(&sp->val), pValue, valLen) != 0)
         ls_str_xsetstr(&sp->val, pValue, valLen, m_pPool);
-    ++m_iEnvCount;
+
     return sp;
 }
 
@@ -3039,5 +3041,61 @@ int HttpReq::checkUrlStaicFileCache()
     m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
     return 0;
 }
+
+
+int HttpReq::toLocalAbsUrl(const char *pOrgUrl, int urlLen, 
+                           char *pAbsUrl, int absLen)
+{
+    const char *p1 = pOrgUrl, *p2;
+    int hostLen;
+    if ((strncasecmp(p1, "http", 4) == 0) &&
+        ((*(p1 + 4) == ':') ||
+         (((*(p1 + 4) | 0x20) == 's') && (*(p1 + 5) == ':'))))
+    {
+        p1 += 5;
+        if (*p1 == ':')
+            ++p1;
+        p1 += 2;
+        p2 = (const char *)memchr(p1, '/', pOrgUrl + urlLen - p1);
+        if (!p2)
+            return -1;
+        hostLen = p2 - p1;
+        if (getHeaderLen(HttpHeader::H_HOST) < hostLen)
+            hostLen = getHeaderLen(HttpHeader::H_HOST);
+        if (strncasecmp(p1, getHeader(HttpHeader::H_HOST),
+                        hostLen) == 0)
+        {
+            p1 += hostLen;
+            if (*p1 == ':')
+            {
+                const char *p = p1 + 1;
+                while (isdigit(*p))
+                    ++p;
+                if (*p == '/')
+                    p1 = p;
+            }
+            else if (*p1 != '/')
+                return -1;
+        }
+        else
+            return -1;
+        memmove(pAbsUrl, p1, pOrgUrl + urlLen - p1 + 1);
+        return pOrgUrl + urlLen - p1;
+    }
+    const char *pURI = getURI();
+    p1 = pURI + getURILen() - getPathInfoLen();
+    while ((p1 > pURI) && p1[-1] != '/')
+        --p1;
+    int prefix_len = p1 - pURI;
+    if (absLen <= urlLen + prefix_len)
+        return -1;
+    memmove(pAbsUrl + prefix_len, pOrgUrl, urlLen);
+    memmove(pAbsUrl, pURI, prefix_len);
+    pAbsUrl[urlLen + prefix_len] = 0;
+    return urlLen + prefix_len;
+}
+
+
+
 
 

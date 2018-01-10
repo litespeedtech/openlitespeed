@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -90,9 +90,10 @@ void LsiBaseFetch::Unlock()
 bool LsiBaseFetch::HandleWrite(const StringPiece &sp,
                                MessageHandler *handler)
 {
-    g_api->log(NULL, LSI_LOG_DEBUG, 
-               "[Thr:PAGESPEED] LsiBaseFetch::HandleWrite(), "
-               "Response body: %zd bytes.\n", sp.size());
+//This will create a lot of log, disable it currently
+//     g_api->log(NULL, LSI_LOG_DEBUG, 
+//                "[Thr:PAGESPEED] LsiBaseFetch::HandleWrite(), "
+//                "Response body: %zd bytes.\n", sp.size());
     Lock();
     m_buffer.append(sp.data(), sp.size());
     Unlock();

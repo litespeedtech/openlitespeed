@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -79,7 +79,9 @@ public:
     static void init();
     static void shutdown();
     static int generateRTReport(int fd);
-    static ExtWorker *configExtApp(const XmlNode *pNode);
+    
+    static int configVhostOwnPhp(HttpVHost *pVHost);
+    static ExtWorker *configExtApp(const XmlNode *pNode, bool bServerLevel);
     static int configLoadBalacner(const XmlNode *pNode,
                                   const HttpVHost *pVHost);
     static int configExtApps(const XmlNode *pRoot, const HttpVHost *pVHost);

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -20,8 +20,10 @@
 #include <http/handlerfactory.h>
 #include <http/httphandler.h>
 #include <http/httplog.h>
+#include <http/httpvhost.h>
 #include <log4cxx/logger.h>
 #include <main/configctx.h>
+#include <main/mainserverconfig.h>
 #include <util/autostr.h>
 #include <util/hashstringmap.h>
 #include <util/stringlist.h>
@@ -33,6 +35,9 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include "extensions/localworkerconfig.h"
+#include "extensions/localworker.h"
+
 
 static char DEFAULT_MIME_TYPE[] = "application/octet-stream";
 
@@ -1131,9 +1136,8 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
     return 0;
 }
 
-
-int HttpMime::configScriptHandler(const XmlNodeList *pList,
-                                  HttpMime *pHttpMime)
+int HttpMime::configScriptHandler(const XmlNodeList *pList, HttpMime *pHttpMime,
+                                    HttpVHost *vhost)
 {
     ConfigCtx currentCtx("scripthandler", "add");
     XmlNodeList::const_iterator iter;
@@ -1182,6 +1186,39 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
                       "add String is too long for scripthandler, value: %s",
                       handler);
             continue;
+        }
+
+        if (vhost)
+        {
+            app_node_st *app_node_ptr = MainServerConfig::getInstance().
+                                            getExtAppXmlNode(achHandler);
+            if (app_node_ptr)
+            {
+                LocalWorker *pApp = static_cast<LocalWorker *>(app_node_ptr->worker);
+                if (vhost->getUid() != pApp->getConfig().getUid() ||
+                    vhost->getGid() != pApp->getConfig().getGid())
+                {
+                    /**
+                     * Since the uid /gid not match with the setting in
+                     * server level, need to set up an own extApp and connect
+                     * to the suffix
+                     */
+                    int ret = vhost->addPhpXmlNodeSSize((char *)suffix,
+                                   (XmlNode*)app_node_ptr->xml_node);
+                    if (ret == -1)
+                    {
+                        LS_NOTICE(&currentCtx,
+                                  "Failed to addPhpXmlNodeSSize() due to too "
+                                  "many items > %d defined as"
+                                  " MAX_VHOST_PHP_NUM.",
+                                  MAX_VHOST_PHP_NUM);
+                        LS_NOTICE(&currentCtx, "and will use SEREVR defined "
+                                    "user/group for this extApp.");
+                    }
+                    else
+                        continue;
+                }
+            }
         }
 
         const HttpHandler *pHdlr = HandlerFactory::getHandler(pType, achHandler);

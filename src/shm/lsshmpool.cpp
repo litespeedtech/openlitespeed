@@ -483,9 +483,9 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
                  s_pid, m_pShm->getfd(), this, offset, size, 
                  firstpart_size, size - firstpart_size);
 
-        release2Ex(offset, firstpart_size);
+        release2NoJoin(offset, firstpart_size);
         offset += firstpart_size;
-        release2Ex(offset, size - firstpart_size);
+        release2NoJoin(offset, size - firstpart_size);
         getDataMap()->x_stat.m_iPoolInUse -= size;
     } while(1);
     autoUnlock();
@@ -512,6 +512,28 @@ void LsShmPool::release2Ex(LsShmOffset_t offset, LsShmSize_t size)
         }
         else
             releasePageLocked(offset, size);
+        incrCheck(&getDataMap()->x_stat.m_iPgReleased, roundSize2pages(size));
+    }
+    else
+    {
+        releaseData(offset, size);
+        getDataMap()->x_stat.m_iPoolInUse -= size;
+    }
+}
+
+
+void LsShmPool::release2NoJoin(LsShmOffset_t offset, LsShmSize_t size)
+{
+    if (size >= LSSHM_SHM_UNITSIZE)
+    {
+        if (m_pParent)
+        {
+            m_pParent->autoLock();
+            m_pParent->releasePageNoJoinLocked(offset, size);
+            m_pParent->autoUnlock();
+        }
+        else
+            releasePageNoJoinLocked(offset, size);
         incrCheck(&getDataMap()->x_stat.m_iPgReleased, roundSize2pages(size));
     }
     else
@@ -1259,6 +1281,16 @@ void LsShmPool::releasePageLocked(LsShmOffset_t offset, LsShmSize_t pagesize)
     }
     if (isFreeBlockBelow(offset, pagesize, 1))
         return;
+    joinFreeList(offset, pagesize);
+}
+
+
+void LsShmPool::releasePageNoJoinLocked(LsShmOffset_t offset, LsShmSize_t pagesize)
+{
+    pagesize = roundPageSize(pagesize);
+
+    incrCheck(&getDataMap()->x_stat.m_iGpReleased,
+        (pagesize / LSSHM_SHM_UNITSIZE));
     joinFreeList(offset, pagesize);
 }
 

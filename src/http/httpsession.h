@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -237,8 +237,11 @@ public:
 
     void extCmdDone();
 
-    int pushToClient(const char *pUri, int uriLen);
-    void processLinkHeader(const char* pValue, int valLen);
+    void addBittoCookie(AutoStr2 &cookie, uint32_t bit);
+    int isCookieHaveBit(const char *cookies, uint32_t bit);
+    
+    int pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie);
+    void processLinkHeader(const char* pValue, int valLen, AutoStr2 &cookie);
     
     static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
 
@@ -293,7 +296,7 @@ private:
     int getModuleDenyCode(int iHookLevel);
     int processHkptResult(int iHookLevel, int ret);
 
-    int processOneLink(const char* p, const char* pEnd);
+    int processOneLink(const char* p, const char* pEnd, AutoStr2 &cookie);
     
     int restartHandlerProcess();
     int runFilter(int hookLevel, filter_term_fn pfTerm,

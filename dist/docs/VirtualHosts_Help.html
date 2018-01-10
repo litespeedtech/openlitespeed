@@ -14,7 +14,7 @@
         <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 6</h5>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 7</h5>
 <hr/>
 <div>
 <ul>
@@ -45,7 +45,7 @@
 	<li><a href="Module_Help.html">Module Configuration</a></li>
 	<li><a href="Listeners_General_Help.html">Listener General</a></li>
         <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-	<li><a href="Templates_Help.html">Templates</a></li>
+	<li><a href="Templates_Help.html">Virtual Host Templates</a></li>
 	<li><span class="current"><a href="VirtualHosts_Help.html">Virtual Host Basic</a></span></li>
 	<li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
 	<li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
@@ -107,7 +107,7 @@ changes to an existing one. Before you add a virtual host, make sure the virtual
 <div class="helpitem"><article class="ls-helpitem"><div><header id="outBandwidth"><h3>Outbound Bandwidth (bytes/sec)<span class="ls-permlink"><a href="#outBandwidth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The maximum allowed outgoing throughput to a single IP address, regardless of the number of connections established. The real bandwidth may end up being slightly higher than this setting for efficiency reasons.  Bandwidth is allocated in 4KB units. Set to <span class="val">0</span> to disable throttling. Per-client bandwidth limits (bytes/sec) can be set at the server or virtual host level where virtual host level settings override server level settings.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> Set the bandwidth in 8KB units for better performance.<br/><br/> <span title="Security" class="ls-icon-security"></span> Trusted IPs or sub-networks are not affected.</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#inBandwidth">Inbound Bandwidth (bytes/sec)</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="inBandwidth"><h3>Inbound Bandwidth (bytes/sec)<span class="ls-permlink"><a href="#inBandwidth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The maximum allowed incoming throughput from a single IP address, regardless of the number of connections established. The real bandwidth may end up being slightly higher than this setting for efficiency reasons.  Bandwidth is allocated in 1KB units. Set to <span class="val">0</span> to disable throttling. Per-client bandwidth limits (bytes/sec) can be set at the server or virtual host level where virtual host level settings override server level settings.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Trusted IPs or sub-networks are not affected.</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#outBandwidth">Outbound Bandwidth (bytes/sec)</a></span></p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2017. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -88,7 +88,7 @@ public:
 
     static void saveUnknownItems(const char *fileName, int lineNumber,
                                  XmlNode *pCurNode, const char *name, const char *value);
-    static void appendModuleParam(XmlNode *pModuleNode, const char *param);
+    static void appendValueToKey(XmlNode *pModuleNode, const char *key, const char *param);
     static void addModuleWithParam(XmlNode *pCurNode, const char *moduleName,
                                    const char *param);
 

@@ -12,7 +12,7 @@ class XmlParser
 
 		$filename = $root->Get(CNode::FLD_VAL);
 		$xmlstring = file_get_contents($filename);
-		if ( $xmlstring === FALSE )	{
+		if ( $xmlstring === false )	{
 			$root->SetErr("failed to read file $filename", CNode::E_FATAL);
 			return $root;
 		}
@@ -24,7 +24,7 @@ class XmlParser
 		xml_set_character_data_handler($parser, 'characterData');
 
 		// Build a Root node and initialize the node_stack...
-		$this->node_stack = array();
+		$this->node_stack = [];
 		$this->cur_node = $root;
 
 		// parse the data and free the parser...
@@ -42,7 +42,7 @@ class XmlParser
 
 	private function startElement($parser, $name, $attrs)
 	{
-		if ( $this->cur_node != NULL )
+		if ( $this->cur_node != null )
 			$this->node_stack[] = $this->cur_node;
 
 		$this->cur_node = new CNode($name, '');
@@ -91,7 +91,7 @@ class XmlParser
 			$filemap->Convert($root, $newxml, 1, 0);
 			$newxml->PrintXmlBuf($buf1);
 			echo $buf1;
-			return TRUE;
+			return true;
 			//$this->ExportData($root);
 */
 	}

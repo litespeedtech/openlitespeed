@@ -489,6 +489,14 @@ else
             rm -rf $LSWS_HOME/admin/fcgi-bin
         fi
     fi
+    
+    cat >> "$LSWS_HOME/conf/php.ini" <<END 
+[PHP]
+post_max_size = 80M
+upload_max_filesize = 20M
+
+END
+
 fi
 
 

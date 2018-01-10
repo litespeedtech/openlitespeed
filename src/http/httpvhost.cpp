@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -247,6 +247,7 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_pRewriteMaps(NULL)
     , m_pSSLCtx(NULL)
     , m_pSSITagConfig(NULL)
+    , m_PhpXmlNodeSSize(0)
 {
     char achBuf[10] = "/";
     m_rootContext.set(achBuf, "/nON eXIST",
@@ -255,6 +256,8 @@ HttpVHost::HttpVHost(const char *pHostName)
     m_contexts.setRootContext(&m_rootContext);
     m_pUrlStxFileHash = new UrlStxFileHash(30, GHash::hfString,
                                            GHash::cmpString);
+
+    m_pUrlIdHash = new UrlIdHash(64, GHash::hfString, GHash::cmpCiString);
 }
 
 
@@ -279,6 +282,8 @@ HttpVHost::~HttpVHost()
         delete m_pSSLCtx;
     m_pUrlStxFileHash->release_objects();
     delete m_pUrlStxFileHash;
+    m_pUrlIdHash->release_objects();
+    delete m_pUrlIdHash;
     LsiapiBridge::releaseModuleData(LSI_DATA_VHOST, &m_moduleData);
 }
 
@@ -2129,6 +2134,12 @@ int HttpVHost::parseVHModulesParams(const XmlNode *pVhConfNode,
     return ret;
 }
 
+/**
+ * ON default "php" handler, since server level have set such a hanlder
+ * all Vhost will ingerite it.
+ * But if VHost set a different user/group other than that extApp
+ * Need to susExec a php with this set user/group.
+ */
 
 int HttpVHost::configUserGroup(const XmlNode *pNode)
 {
@@ -2183,6 +2194,17 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
         &HttpServer::getInstance().getServerContext());
     initAccessLog(pVhConfNode, 0);
     configVHScriptHandler(pVhConfNode);
+    
+    /**
+     * Check if we have server level php with different guid,
+     * if yes, need set the extApp and config scriptHanlder
+     */
+    if (getPhpXmlNodeSSize() > 0)
+    {
+        ExtAppRegistry::configVhostOwnPhp(this);
+        configVHScriptHandler2();
+    }
+    
     configAwstats(ConfigCtx::getCurConfigCtx()->getVhDomain()->c_str(),
                   ConfigCtx::getCurConfigCtx()->getVhAliases()->len(),
                   pVhConfNode);
@@ -2282,19 +2304,54 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 }
 
 
+void HttpVHost::getAppName(const char *suffix, char *appName, int maxLen)
+{
+    assert(maxLen >= 255);
+    strcpy(appName, suffix);
+    strcat(appName, "_");
+    strcat(appName, getName());
+}
+
+/**
+ * Only for a special case, we need to handler spcially, otherwise
+ * use the existing routing
+ * For the php script handler, which is defined in Server level
+ * and if VHost has defifferent User/Group
+ * 1, VHost defined to use the ExtAPP for PHP
+ * 2, Vhsot does not define any ExtApp for PHP
+ * 
+ */
+
+int HttpVHost::configVHScriptHandler2()
+{
+    HttpMime *pHttpMime = getMIME();
+    const char *suffix  = NULL;
+    php_xml_st *pPhpXmlNodeS;
+    char appName[256];
+    
+    //HttpMime::configScriptHandler(pList, getMIME(), this);
+    for (int i=0; i<getPhpXmlNodeSSize(); ++i)
+    {
+        pPhpXmlNodeS = getPhpXmlNodeS(i);
+        suffix = pPhpXmlNodeS->suffix.c_str();
+        getAppName(suffix, appName, 256);
+        const HttpHandler *pHdlr = HandlerFactory::getHandler("lsapi", appName);
+        HttpMime::addMimeHandler(pHdlr, NULL, pHttpMime, suffix);
+    }
+    return 0;
+}
+
 int HttpVHost::configVHScriptHandler(const XmlNode *pVhConfNode)
 {
     const XmlNode *p0 = pVhConfNode->getChild("scriptHandler");
-
     if (p0 == NULL)
         return 0;
 
     const XmlNodeList *pList = p0->getChildren("add");
-
     if (pList && pList->size() > 0)
     {
         getRootContext().initMIME();
-        HttpMime::configScriptHandler(pList, getMIME());
+        HttpMime::configScriptHandler(pList, getMIME(), this);
     }
 
     return 0;
@@ -2608,7 +2665,6 @@ void HttpVHost::addUrlStaticFileMatch(StaticFileCacheData *pData,
     GHash::iterator it = m_pUrlStxFileHash->insert(data->url.c_str(), data);
     if (!it)
     {
-        LS_INFO("[HttpVHost::addUrlStaticFileMatch] try to insert but failed, may be a code bug, NEED TO CHECK CODE.");
         it = m_pUrlStxFileHash->find(data->url.c_str());
         m_pUrlStxFileHash->erase(it);
         it = m_pUrlStxFileHash->insert(data->url.c_str(), data);
@@ -2680,3 +2736,30 @@ void HttpVHost::removeurlStaticFile(static_file_data_t *data)
     }
 }
 
+/**
+ * return the just assigned id
+ */
+uint32_t HttpVHost::addUrlToUrlIdHash(const char *url)
+{
+    uint32_t size = m_pUrlIdHash->size();
+    url_id_data_t *data = new url_id_data_t;
+    data->id = size;
+    data->url.setStr(url);
+    m_pUrlIdHash->insert(data->url.c_str(), data);
+    return size;
+}
+    
+/**
+ * return the bit of the url added to the hash
+ */
+int HttpVHost::getIdBitOfUrl(const char *url)
+{
+    UrlIdHash::iterator itr = m_pUrlIdHash->find(url);
+    if (itr != m_pUrlIdHash->end())
+    {
+        url_id_data_t *data = itr.second();
+        return data->id;
+    }
+    
+    return -1;
+}

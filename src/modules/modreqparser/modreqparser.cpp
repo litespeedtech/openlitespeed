@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2017  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -50,10 +50,10 @@ typedef struct param_st
 //Setup the below array to let web server know these params
 lsi_config_key_t myParam[] =
 {
-    {TMPDIR,        0,},
-    {TMPPERMISSON,  1,},
-    {BYPATH,        2,},
-    {NULL} //Must have NULL in the last item
+    {TMPDIR,        0,  0},
+    {TMPPERMISSON,  1,  0},
+    {BYPATH,        2,  0},
+    {NULL,          0,  0} //Must have NULL in the last item
 };
 
 uint16_t paramArrayCount = sizeof(myParam) / sizeof(lsi_config_key_t) - 1;
@@ -146,4 +146,3 @@ lsi_confparser_t _dealConfig = { _parseConfig, _freeConfig, myParam };
 lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, &_dealConfig,
                        MODULE_VERSION_INFO, server_hooks, {0} };
 
-                       

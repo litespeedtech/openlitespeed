@@ -34,6 +34,7 @@ class DAttrBase
     const BM_NOEDIT = 2;
     const BM_HIDE = 4;
     const BM_NOFILE = 8;
+    const BM_RAWDATA = 16;
 
     public function __construct($key, $type, $label, $inputType = null, $allowNull = true, $min = null, $max = null, $inputAttr = null, $multiInd = 0, $helpKey = null)
     {
@@ -246,9 +247,11 @@ class DAttrBase
             $value = $this->extractCheckBoxOr();
         else {
             $value = UIBase::GrabInput("post", $this->_key);
-            if (get_magic_quotes_gpc())
+            if (get_magic_quotes_gpc()) {
                 $value = stripslashes($value);
+            }
         }
+        $value = str_replace("\r\n", "\n", $value);
 
         $key = $this->_key;
         $node = $parent;
