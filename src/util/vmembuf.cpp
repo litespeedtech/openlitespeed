@@ -553,9 +553,12 @@ void VMemBuf::rewindReadBuf()
             releaseBlock(*m_pCurRBlock);
     }
 #endif
-    m_pCurRBlock = m_bufList.begin();
-    m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
-    m_pCurRPos = (*m_pCurRBlock)->getBuf();
+    if (!m_bufList.empty())
+    {
+        m_pCurRBlock = m_bufList.begin();
+        m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
+        m_pCurRPos = (*m_pCurRBlock)->getBuf();
+    }
 }
 
 

@@ -533,6 +533,7 @@ bool HttpSession::endOfReqBody()
 
 int HttpSession::reqBodyDone()
 {
+    int ret = 0;
     getStream()->wantRead(0);
     setFlag(HSF_REQ_BODY_DONE, 1);
 
@@ -545,7 +546,11 @@ int HttpSession::reqBodyDone()
     
     
     if (getFlag(HSF_REQ_WAIT_FULL_BODY) == HSF_REQ_WAIT_FULL_BODY)
-        handlerProcess(m_request.getHttpHandler());
+    {
+        ret = handlerProcess(m_request.getHttpHandler());
+        if (ret)
+            return ret;
+    }
 
     if (m_processState == HSPS_HANDLER_PROCESSING)
         m_processState = HSPS_HKPT_RCVD_REQ_BODY_PROCESSING;
@@ -589,7 +594,7 @@ int HttpSession::reqBodyDone()
 //         }
 //     }
 
-    return 0;
+    return ret;
 }
 
 
@@ -1613,6 +1618,10 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     m_processState = HSPS_HANDLER_PROCESSING;
     if (m_pHandler)
         cleanUpHandler();
+
+    if (pHandler == NULL)
+        return SC_403;
+
     int type = pHandler->getType();
     if ((type >= HandlerType::HT_DYNAMIC) &&
         (type != HandlerType::HT_PROXY))
@@ -3316,12 +3325,19 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
         int len = m_request.toLocalAbsUrl(pUri, uriLen, buf, sizeof(buf) - 1);
         if (len == -1)
             return -1;
-        pUri = buf;
         uriLen = len;
-        buf[uriLen] = 0;
     }
+    else
+    {
+        int maxSz = sizeof(buf) - 1;
+        if (uriLen > maxSz)
+            uriLen = maxSz;
 
-    
+        memcpy(buf, pUri, uriLen);
+    }
+    pUri = buf;
+    buf[uriLen] = 0;
+
     HttpVHost *pVHost = (HttpVHost *) m_request.getVHost();
     uint32_t id = pVHost->getIdBitOfUrl(pUri);
     
