@@ -347,6 +347,9 @@ static int parseNoCacheUrl(CacheConfig *pConfig, const char *pValStr,
                    "parameter.\n", ModuleNameStr, name);
         return 0;
     }
+    
+    if (valLen == 0)
+        return 0;
 
     bool bClear = (valLen == 7 && strncasecmp(pValStr, "<clear>", 7) == 0);
     if (bClear)
