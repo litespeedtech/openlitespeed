@@ -17,6 +17,8 @@
 *****************************************************************************/
 #include "httpresp.h"
 
+#include <http/expiresctrl.h>
+
 // #include <http/httpheader.h> //setheader commented out.
 #include <lsr/ls_strtool.h>
 #include <util/datetime.h>
@@ -56,15 +58,17 @@ void HttpResp::appendContentLenHeader()
     }
 }
 
+int HttpResp::addExpiresHeader(int age)
+{
+    char sTemp[RFC_1123_TIME_LEN + 1] = {0};
+    getRespHeaders().add(HttpRespHeaders::H_CACHE_CTRL, "public, max-age=", 16);
+    int n = ls_snprintf(sTemp, RFC_1123_TIME_LEN, "%d", age);
+    getRespHeaders().appendLastVal(sTemp, n);
 
-// void HttpResp::outputHeader()
-// {
-//     m_respHeaders.getHeaders(&m_iovec);
-//     int bufSize = m_iovec.bytes();
-//     m_iHeaderLeft += bufSize;
-//     m_iHeaderTotalLen = m_iHeaderLeft;
-// }
-
+    DateTime::getRFCTime(DateTime::s_curTime + age, sTemp);
+    getRespHeaders().add(HttpRespHeaders::H_EXPIRES, sTemp, RFC_1123_TIME_LEN);
+    return 0;
+}
 
 int HttpResp::appendHeader(const char *pName, int nameLen,
                            const char *pValue, int valLen)

@@ -30,7 +30,7 @@ TEST(VHOST_URL_HASH)
     int id = vhost->getIdBitOfUrl(url);
     CHECK(id == -1);
     
-    uint32_t id1 = vhost->addUrlToUrlIdHash(url);
+    int id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 0);
     id = vhost->getIdBitOfUrl(url);
     CHECK(id == id1);
@@ -57,8 +57,8 @@ TEST(VHOST_URL_HASH)
     id = vhost->getIdBitOfUrl(url);
     CHECK(id == id1);
     
-    char *s="abcdefghji";
-    char *s2="jklmnopqrest";
+    const char *s="abcdefghji";
+    const char *s2="jklmnopqrest";
     char ss[3] = {0};
     
     for(int i=0; i<10; ++i)

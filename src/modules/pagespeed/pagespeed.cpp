@@ -29,13 +29,13 @@
 #include "ls_rewrite_options.h"
 #include "ls_server_context.h"
 #include "ls_uamatcher.h"
+#include "ls_base_fetch.h"
 
 #include <sys/uio.h>
 #include <apr_poll.h>
-#include "autostr.h"
-#include "stringtool.h"
-#include <autobuf.h>
-#include "ls_base_fetch.h"
+#include <util/autostr.h>
+#include <util/stringtool.h>
+#include <util/autobuf.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,8 +43,7 @@
 #include <unistd.h>
 #include "log_message_handler.h"
 #include <signal.h>
-#include <http/httpsession.h>
-#include "../../src/http/serverprocessconfig.h"
+#include "http/serverprocessconfig.h"
 
 #include "net/instaweb/http/public/async_fetch.h"
 #include "net/instaweb/http/public/cache_url_async_fetcher.h"

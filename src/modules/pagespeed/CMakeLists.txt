@@ -14,21 +14,20 @@ else()
 endif()
 
 
-include_directories(./;../;../../;../../util/;
-                ./psol/include/;
-                ./psol/include/url;
-                ./psol/include/third_party/apr/src/include/;
-                ./psol/include/third_party/aprutil/src/include/;
-                ./psol/include/third_party/chromium/src/;
-                ./psol/include/third_party/protobuf/src/;
-                ./psol/include/third_party/protobuf/src/src;
-                ./psol/include/third_party/google-sparsehash/src/;
-                ./psol/include/third_party/re2/src/;
-                ./psol/include/out/Debug/obj/gen/protoc_out/instaweb/;
-                ./psol/include/third_party/apr/gen/arch/linux/${OSVERSION}/include/;
-                ./psol/include/third_party/aprutil/gen/arch/linux/${OSVERSION}/include/;
-                ./psol/include/third_party/css_parser/src;
-                ./psol/include/third_party/google-sparsehash/gen/arch/linux/${OSVERSION}/include/)
+set(PSOL_LIB ${PROJECT_SOURCE_DIR}/../thirdparty/psol)
+
+include_directories(
+                ${PSOL_LIB}/include
+                ${PSOL_LIB}/include/url
+                ${PSOL_LIB}/include/third_party/apr/src/include
+                ${PSOL_LIB}/include/third_party/chromium/src
+                ${PSOL_LIB}/include/third_party/protobuf/src/src
+                ${PSOL_LIB}/include/third_party/google-sparsehash/src
+                ${PSOL_LIB}/include/third_party/re2/src
+                ${PSOL_LIB}/include/out/Debug/obj/gen/protoc_out/instaweb
+                ${PSOL_LIB}/include/third_party/apr/gen/arch/linux/${OSVERSION}/include
+                ${PSOL_LIB}/include/third_party/css_parser/src
+                ${PSOL_LIB}/include/third_party/google-sparsehash/gen/arch/linux/${OSVERSION}/include/)
 
 execute_process( COMMAND getconf LFS_CFLAGS
             OUTPUT_VARIABLE  LFS_CFLAGS )
@@ -45,6 +44,6 @@ add_library(modpagespeed SHARED  pagespeed.cpp  log_message_handler.cpp
             ls_uamatcher.cpp
             )
 
-target_link_libraries(modpagespeed ${PROJECT_SOURCE_DIR}/src/modules/pagespeed/psol/lib/Debug/linux/${OSVERSION}/pagespeed_automatic.a)
+target_link_libraries(modpagespeed ${PSOL_LIB}/lib/Debug/linux/${OSVERSION}/pagespeed_automatic.a)
 set_target_properties(modpagespeed PROPERTIES PREFIX "")
 

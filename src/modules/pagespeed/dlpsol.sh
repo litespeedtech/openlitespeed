@@ -2,13 +2,22 @@
 #
 # This script is to download PSOL and extract it to right location
 #
-#
 
+
+pushd .
 cd `dirname "$0"`
 
-PSOLVERSION=1.11.33.4
+if [ ! -d ../../../../thirdparty ] ; then
+   mkdir ../../../../thirdparty
+fi
+
+if [ ! -d ./psol ] ; then
+    ln -sf ../../../../thirdparty/psol psol
+fi
 
 if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; then
+
+    PSOLVERSION=1.11.33.4
 
     USEOLDLIB=no
 
@@ -33,15 +42,20 @@ if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; the
 
     TARGET=$PSOLVERSION.tar.gz
 
-    if [ ! -f ../../../../$TARGET ]; then
-        curl -O -k  https://dl.google.com/dl/page-speed/psol/$TARGET
-        mv $TARGET ../../../..
+    pushd .
+    cd ../../../../thirdparty
+
+    DL=`which curl`
+    DLCMD="$DL -O -k "
+    if [ ! -f $TARGET ] ; then
+        $DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET
     fi
-    tar -xzvf ../../../../$TARGET # expands to psol/
+    tar -xzvf $TARGET # expands to psol/
+    popd
 
-
+    
     if [ "x$USEOLDLIB" = "xyes" ] ; then
-
+   
     #fix a file which stop the compiling of pagespeed module
     echo .
     cat << EOF > psol/include/pagespeed/kernel/base/scoped_ptr.h
@@ -64,5 +78,6 @@ public:
 EOF
     fi
 fi
-cd -
+popd
+
 

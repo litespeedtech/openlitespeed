@@ -72,11 +72,11 @@ void SendFileInfo::release()
 {
     if (m_pFileData)
     {
-        if (m_pFileData->decRef() == 0)
+        if (m_pFileData->decRef() <= 0)
             m_pFileData->setLastAccess(DateTime::s_curTime);
         //m_pFileData->keepOrigFileClosed();
     }
-    if (m_pECache && m_pECache->decRef() == 0)
+    if (m_pECache && m_pECache->decRef() <= 0)
     {
         if (m_pECache->getfd() != -1)
             m_pECache->closefd();

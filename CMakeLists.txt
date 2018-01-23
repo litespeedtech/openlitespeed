@@ -11,8 +11,8 @@ set(openlitespeed_VERSION
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories( include ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include/)
-link_directories( ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/)
+include_directories( include ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
+link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
 
 SET (CMAKE_C_COMPILER         "/usr/bin/clang")
 SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")

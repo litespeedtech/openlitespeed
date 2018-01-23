@@ -255,12 +255,13 @@ const char *FileCacheDataEx::getCacheData(
     else
     {
         assert(m_fd != -1);
-        off_t off = ls_fio_lseek(m_fd, offset, SEEK_SET);
-//        LS_DBG_H( "lseek() return %d", (int)off );
-        if (off == offset)
-            wanted = ls_fio_read(m_fd, pBuf, len);
-        else
-            wanted = -1;
+//         off_t off = ls_fio_lseek(m_fd, offset, SEEK_SET);
+// //        LS_DBG_H( "lseek() return %d", (int)off );
+//         if (off == offset)
+//             wanted = ls_fio_read(m_fd, pBuf, len);
+//         else
+//             wanted = -1;
+        wanted = pread(m_fd, pBuf, len, offset);
         return pBuf;
     }
 

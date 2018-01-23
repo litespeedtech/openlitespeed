@@ -306,9 +306,16 @@ int H2Stream::onWrite()
     setFlag(HIO_FLAG_BUFF_FULL, 0);
 
     if (isWantWrite())
+    {
+        if (!getHandler())
+        {
+            setFlag(HIO_FLAG_WANT_WRITE, 0);
+            return 0;
+        }
         getHandler()->onWriteEx();
-    if (isWantWrite())
-        m_pH2Conn->setPendingWrite();
+        if (isWantWrite())
+            m_pH2Conn->setPendingWrite();
+    }
     return 0;
 }
 

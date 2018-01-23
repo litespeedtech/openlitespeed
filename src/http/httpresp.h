@@ -25,6 +25,8 @@
 #define LSI_RSP_BODY_SIZE_CHUNKED (-1)
 #define LSI_RSP_BODY_SIZE_UNKNOWN (-2)
 
+class ExpiresCtrl;
+
 class HttpReq;
 typedef struct ls_xpool_s ls_xpool_t;
 
@@ -94,6 +96,10 @@ public:
     }
 
 
+    int addExpiresHeader(int age);
+
+    
+    
 
     off_t getTotalLen()    {   return m_lEntityFinished + m_respHeaders.getTotalLen();   }
     //int  isRespHeaderBuilt()      {   return m_respHeaders.isRespHeadersBuilt();   }
