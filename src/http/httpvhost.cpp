@@ -2739,9 +2739,9 @@ void HttpVHost::removeurlStaticFile(static_file_data_t *data)
 /**
  * return the just assigned id
  */
-uint32_t HttpVHost::addUrlToUrlIdHash(const char *url)
+int HttpVHost::addUrlToUrlIdHash(const char *url)
 {
-    uint32_t size = m_pUrlIdHash->size();
+    int size = m_pUrlIdHash->size();
     url_id_data_t *data = new url_id_data_t;
     data->id = size;
     data->url.setStr(url);

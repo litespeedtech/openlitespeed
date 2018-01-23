@@ -50,7 +50,7 @@ SOURCES =pagespeed.cpp log_message_handler.cpp ls_message_handler.cpp \
         ls_base_fetch.cpp \
         ls_uamatcher.cpp
         
-DLPSOL:= $(shell ./dlpsol.sh )
+DLPSOL:= $(shell ./dlpsol.sh 1)
 $(shell rm *.o ../../util/*.o)
 
 OBJECTS=$(SOURCES:.cpp=.o)

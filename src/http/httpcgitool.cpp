@@ -109,6 +109,8 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     case HttpRespHeaders::H_CONTENT_TYPE:
         if (pReq->getStatusCode() == SC_304)
             return 0;
+        
+        HttpCgiTool::processExpires(pReq, pResp, pValue);
         p = (char *)memchr(pValue, ';', pLineEnd - pValue);
         if (pReq->gzipAcceptable() == GZIP_REQUIRED)
         {
@@ -146,6 +148,8 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             str.append("\r\n", 2);
             buf.parseAdd(str.c_str(), str.len());
         }
+        
+        
         return 0;
     case HttpRespHeaders::H_CONTENT_ENCODING:
         if (pReq->getStatusCode() == SC_304
@@ -753,6 +757,27 @@ int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
             pEnv->add(achHeaderName, keyLen, pVal, valLen);
         }
     }
+    return 0;
+}
+
+int HttpCgiTool::processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue)
+{
+    HttpContext *pContext = &(pReq->getVHost()->getRootContext());
+    const MimeSetting *pMIMESetting = pContext->lookupMimeSetting((char *)pValue);
+    int enbale = pContext->getExpires().isEnabled();
+    if (enbale)
+    {
+        ExpiresCtrl *pExpireDefault = NULL;//&pContext->getExpires();
+        if (pMIMESetting)
+            pExpireDefault = (ExpiresCtrl *)pMIMESetting->getExpires();
+        
+        if (pExpireDefault == NULL)
+            pExpireDefault = &pContext->getExpires();
+            
+        if (pExpireDefault->getBase())
+            pResp->addExpiresHeader(pExpireDefault->getAge());
+    }
+
     return 0;
 }
 

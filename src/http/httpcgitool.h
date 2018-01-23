@@ -36,6 +36,8 @@ class HttpCgiTool
 public:
     static int processContentType(HttpReq *pReq, HttpResp *pResp,
                                   const char *pValue, int valLen);
+    static int processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue);
+    
     static int processHeaderLine(HttpExtConnector *pLB,
                                  const char *pValue, const char *pLineEnd, int &status);
     static int parseRespHeader(HttpExtConnector *pLB,

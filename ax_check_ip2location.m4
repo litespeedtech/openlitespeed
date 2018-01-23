@@ -15,7 +15,7 @@ AC_DEFUN([AC_IP2LOCATION_CHECK],[
         save_CPPFLAGS="$CPPFLAGS"
     fi
 
-    AC_CHECK_HEADERS(IP2Location.h IP2Loc_DBInterface.h ,,
+    AC_CHECK_HEADER(IP2Location.h,, 
     [
         if test "x$ip2location_dir" != "x"
         then

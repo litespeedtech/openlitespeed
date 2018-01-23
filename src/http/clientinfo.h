@@ -18,6 +18,7 @@
 #ifndef CLIENTINFO_H
 #define CLIENTINFO_H
 
+#include <config.h>
 #include <lsdef.h>
 
 #include <http/throttlecontrol.h>

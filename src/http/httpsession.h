@@ -116,7 +116,7 @@ enum HSPState
 #define HSF_SUSPENDED               (1<<15)
 #define HSF_SC_404                  (1<<16)
 #define HSF_AIO_READING             (1<<17)
-
+#define HSF_URI_MAPPED              (1<<18)
 #define HSF_STX_FILE_CACHE_READY    (1<<19)
 
 
@@ -237,8 +237,8 @@ public:
 
     void extCmdDone();
 
-    void addBittoCookie(AutoStr2 &cookie, uint32_t bit);
-    int isCookieHaveBit(const char *cookies, uint32_t bit);
+    void addBittoCookie(AutoStr2 &cookie, int bit);
+    int isCookieHaveBit(const char *cookies, int bit);
     
     int pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie);
     void processLinkHeader(const char* pValue, int valLen, AutoStr2 &cookie);

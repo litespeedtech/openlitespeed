@@ -57,12 +57,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the <IP2Location.h> header file. */
-#undef HAVE_IP2LOCATION_H
-
-/* Define to 1 if you have the <IP2Loc_DBInterface.h> header file. */
-#undef HAVE_IP2LOC_DBINTERFACE_H
-
 /* Define to 1 if you have the <lauxlib.h> header file. */
 #undef HAVE_LAUXLIB_H
 

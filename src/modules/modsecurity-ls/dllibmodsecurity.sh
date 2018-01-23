@@ -57,6 +57,10 @@ if [ ! -f $MOD_SEC_HOME/modsecurity/modsecurity.h ] ; then
               automake pcre-devel"
       elif [ $APP_MGR_CMD = 'yum' ] ; then
           OS_VERSION=`cat /etc/centos-release | awk '{print $3}' | cut -c1`
+          if [ $OS_VERSION = 'r' ] ; then
+              #Centos 7 or later?
+              OS_VERSION=`cat /etc/centos-release | awk '{print $4}' | cut -c1`
+          fi
           if [ $OS_VERSION -le 6 ] ; then
               echo 'CentOS 6 and below requires manual compilation as the packages'
               echo 'are too out dated.'
@@ -109,7 +113,7 @@ if [ ! -f $MOD_SEC_HOME/modsecurity/modsecurity.h ] ; then
   $EXEC $PKGS
   echo "Install packages done, exit code $?"
 
-  git clone https://github.com/SpiderLabs/ModSecurity
+  git clone https://github.com/SpiderLabs/ModSecurity 
   cd ModSecurity
   git checkout -b v3/master origin/v3/master
   ./build.sh

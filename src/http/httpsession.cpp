@@ -545,7 +545,8 @@ int HttpSession::reqBodyDone()
     }
     
     
-    if (getFlag(HSF_REQ_WAIT_FULL_BODY) == HSF_REQ_WAIT_FULL_BODY)
+    if (getFlag(HSF_REQ_WAIT_FULL_BODY) == HSF_REQ_WAIT_FULL_BODY
+        && (m_iFlag & HSF_URI_MAPPED))
     {
         ret = handlerProcess(m_request.getHttpHandler());
         if (ret)
@@ -749,7 +750,7 @@ int HttpSession::restartHandlerProcess()
                                           (LsiSession *)this);
 
     m_iFlag &= ~(HSF_RESP_HEADER_DONE | HSF_RESP_WAIT_FULL_BODY |
-                 HSF_RESP_FLUSHED
+                 HSF_RESP_FLUSHED | HSF_URI_MAPPED
                  | HSF_HANDLER_DONE);
 
     if (m_pHandler)
@@ -1326,6 +1327,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
     m_request.setContext(NULL);
     m_response.reset();
     m_processState = HSPS_PROCESS_NEW_URI;
+    m_iFlag &= ~HSF_URI_MAPPED;
     return smProcessReq();
 }
 
@@ -2179,6 +2181,7 @@ void HttpSession::closeConnection()
         if (m_sessionHooks.isEnabled(LSI_HKPT_HTTP_END))
             m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
     }
+    m_iFlag &= ~HSF_URI_MAPPED;
 
     m_request.keepAlive(0);
 
@@ -3277,9 +3280,9 @@ void HttpSession::prepareHeaders()
  * 1000000 01000000   11000000  00100000
  * 
  */
-void HttpSession::addBittoCookie(AutoStr2 &cookie, uint32_t bit)
+void HttpSession::addBittoCookie(AutoStr2 &cookie, int bit)
 {
-    uint32_t i;
+    int i;
     int len = cookie.len();
     char s[3] = {'0', '0', 0};
 
@@ -3300,7 +3303,7 @@ void HttpSession::addBittoCookie(AutoStr2 &cookie, uint32_t bit)
 /**
  * 1 fot true, 0 for false
  */
-int HttpSession::isCookieHaveBit(const char *cookie, uint32_t bit)
+int HttpSession::isCookieHaveBit(const char *cookie, int bit)
 {
     int size = strlen(cookie);
     if (bit / 8 >= size/2)
@@ -3339,7 +3342,7 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
     buf[uriLen] = 0;
 
     HttpVHost *pVHost = (HttpVHost *) m_request.getVHost();
-    uint32_t id = pVHost->getIdBitOfUrl(pUri);
+    int id = pVHost->getIdBitOfUrl(pUri);
     
     if (id == -1)
         id = pVHost->addUrlToUrlIdHash(pUri);
@@ -4395,6 +4398,7 @@ int HttpSession::smProcessReq()
                 break;
         //fall through
         case HSPS_HKPT_URI_MAP:
+            m_iFlag |= HSF_URI_MAPPED;
             ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
             if (ret || m_processState != HSPS_FILE_MAP)
                 break;

@@ -124,7 +124,6 @@ static int addExpiresHeader(HttpResp *pResp, StaticFileCacheData *pData,
     {
     case EXPIRES_ACCESS:
         age = pExpires->getAge();
-        expire = DateTime::s_curTime + age;
         break;
     case EXPIRES_MODIFY:
         expire = pData->getLastMod() + pExpires->getAge();
@@ -134,14 +133,7 @@ static int addExpiresHeader(HttpResp *pResp, StaticFileCacheData *pData,
         return 0;
     }
 
-    char sTemp[RFC_1123_TIME_LEN + 1] = {0};
-    HttpRespHeaders &buf = pResp->getRespHeaders();
-    buf.add(HttpRespHeaders::H_CACHE_CTRL, "public, max-age=", 16);
-    int n = ls_snprintf(sTemp, RFC_1123_TIME_LEN, "%d", age);
-    buf.appendLastVal(sTemp, n);
-
-    DateTime::getRFCTime(expire, sTemp);
-    buf.add(HttpRespHeaders::H_EXPIRES, sTemp, RFC_1123_TIME_LEN);
+    pResp->addExpiresHeader(age);
     return 0;
 }
 

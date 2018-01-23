@@ -488,7 +488,7 @@ public:
     static_file_data_t *getUrlStaticFileData(const char *url);
     void urlStaticFileHashClean();
     
-    uint32_t addUrlToUrlIdHash(const char *url);
+    int addUrlToUrlIdHash(const char *url);
     
     /**
      * return the bit of the url added to the hash

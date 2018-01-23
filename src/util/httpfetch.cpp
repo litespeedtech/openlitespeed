@@ -130,6 +130,11 @@ void HttpFetch::reset()
         free(m_pExtraReqHdrs);
         m_pExtraReqHdrs = NULL;
     }
+    if (m_pAdnsReq)
+    {
+        m_pAdnsReq->setCallback(NULL);
+        m_pAdnsReq = NULL;
+    }
     releaseResult();
     m_iStatusCode    = 0;
     m_iReqBufLen     = 0;

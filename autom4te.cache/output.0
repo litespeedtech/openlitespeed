@@ -16222,15 +16222,9 @@ _ACEOF
         save_CPPFLAGS="$CPPFLAGS"
     fi
 
-    for ac_header in IP2Location.h IP2Loc_DBInterface.h 
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-@%:@define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
- 
+    ac_fn_c_check_header_mongrel "$LINENO" "IP2Location.h" "ac_cv_header_IP2Location_h" "$ac_includes_default"
+if test "x$ac_cv_header_IP2Location_h" = xyes; then :
+  
 else
   
         if test "x$ip2location_dir" != "x"
@@ -16247,7 +16241,6 @@ else
     
 fi
 
-done
 
 
     if test "x$need_ip2location" != "xno"
