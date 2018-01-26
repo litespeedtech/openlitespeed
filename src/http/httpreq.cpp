@@ -195,6 +195,7 @@ void HttpReq::reset()
     ls_xpool_skipfree(m_pPool);
     m_unknHeaders.init();
     m_cookies.reset();
+    m_cookies.init();
     uSetURI(NULL, 0);
     ls_str_set(&m_curUrl.val, NULL, 0);
     memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
