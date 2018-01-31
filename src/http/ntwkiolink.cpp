@@ -21,6 +21,7 @@
 #include <lsdef.h>
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <http/clientinfo.h>
 #include <http/connlimitctrl.h>
 #include <http/hiohandlerfactory.h>
 #include <http/httpaiosendfile.h>
@@ -351,7 +352,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
 
     }
     pInfo->incConn();
-    LS_DBG_L(this, "concurrent conn: %zd", pInfo->getConns());
+    LS_DBG_L(this, "concurrent conn: %d", (int)pInfo->getConns());
     return 0;
 }
 
@@ -401,14 +402,17 @@ int NtwkIOLink::handleEvents(short evt)
     if (event & (POLLHUP | POLLERR))
     {
         m_iInProcess = 0;
-        onPeerClose();
+        if (getState() != HIOS_SHUTDOWN)
+            onPeerClose();
+        // FIXME: ols orig code
+//         onPeerClose();
         return 0;
     }
     if (event & POLLOUT)
         (*m_pFpList->m_onWrite_fp)(this);
     m_iInProcess = 0;
 
-    switch (getState())
+    switch(getState())
     {
     case HIOS_CLOSING:
         onPeerClose();
@@ -474,6 +478,9 @@ void NtwkIOLink::continueWrite()
                 else*/
         MultiplexerFactory::getMultiplexer()->continueWrite(this);
     }
+    else
+        LS_DBG_L(this, "Throttled!");
+
 }
 
 
@@ -602,6 +609,7 @@ int NtwkIOLink::writevExSSL(LsiSession *pOS, const iovec *vector,
         }
         else if (!written)
         {
+            // lslb uses commented out version.
             if (pThis->m_ssl.wantRead())
                 MultiplexerFactory::getMultiplexer()->continueRead(pThis);
             //pThis->setSSLAgain();
@@ -802,7 +810,7 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
             pThis->m_iPeerShutdown |= IO_COUNTED;
             LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %zd.",
                      ConnLimitCtrl::getInstance().availConn(),
-                     pThis->m_pClientInfo->getConns());
+                     (int)pThis->m_pClientInfo->getConns());
         }
     }
 //    pThis->closeSocket();
@@ -833,8 +841,9 @@ void NtwkIOLink::closeSocket()
     {
         ctrl.decConn();
         m_pClientInfo->decConn();
-        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %zd",
-                 ctrl.availConn(), m_pClientInfo->getConns());
+
+        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %d",
+                 ctrl.availConn(), (int)m_pClientInfo->getConns());
     }
 
 
@@ -1510,7 +1519,9 @@ int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri,
     return 0;
 }
 
-
+#ifdef OPENSSL_IS_BORINGSSL
+#include <openssl/internal.h>
+#endif
 void NtwkIOLink::handle_acceptSSL_EIO_Err()
 {
     //The buf is null terminated string
@@ -1837,5 +1848,35 @@ int NtwkIOLink::isFromLocalAddr() const
     const struct sockaddr *pServer = (struct sockaddr *) achAddr;
     const struct sockaddr *pClient =  getClientInfo()->getAddr();
     return (GSockAddr::compareAddr(pServer, pClient) == 0);
+}
+
+bool NtwkIOLink::allowWrite() const
+{
+    return m_pClientInfo->allowWrite();
+}
+
+bool NtwkIOLink::allowRead() const
+{
+    return m_pClientInfo->allowRead();
+}
+
+const char *NtwkIOLink::getPeerAddrString() const
+{
+    return m_pClientInfo->getAddrString();
+}
+
+int NtwkIOLink::getPeerAddrStrLen() const
+{
+    return m_pClientInfo->getAddrStrLen();
+}
+
+const struct sockaddr *NtwkIOLink::getPeerAddr() const
+{
+    return m_pClientInfo->getAddr();
+}
+
+ThrottleControl *NtwkIOLink::getThrottleCtrl() const
+{
+    return  &(m_pClientInfo->getThrottleCtrl());
 }
 

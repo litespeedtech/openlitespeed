@@ -215,11 +215,11 @@ int HttpExtConnector::processRespData(const char *pBuf, int len)
 
 char *HttpExtConnector::getRespBuf(size_t &len)
 {
-    if ((m_iRespState & 0xff) && m_pSession->getRespCache()
+    if ((m_iRespState & 0xff) && m_pSession->getRespBodyBuf()
         && m_pSession->isHookDisabled(LSI_HKPT_RECV_RESP_BODY))
     {
         if (!m_pSession->getGzipBuf())
-            return m_pSession->getRespCache()->getWriteBuffer(len);
+            return m_pSession->getRespBodyBuf()->getWriteBuffer(len);
     }
 
     len = GLOBAL_BUF_SIZE;
@@ -233,9 +233,22 @@ int HttpExtConnector::flushResp()
         return 0;
     //return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
     int finished = m_iState & (HEC_ABORT_REQUEST | HEC_ERROR | HEC_COMPLETE);
-    int ret = m_pSession->flush();
+    int save_errno = errno;
+    int ret;
+    if (m_pSession->shouldSuspendReadingResp())
+    {
+        LS_DBG_M(getLogger(),
+                    "[%s] too much pending data, suspend reading response from extapp",
+                    getLogId());
+        m_pProcessor->suspendRead();
+    }
+    ret = m_pSession->flush();
     if ((ret == 0) && (!finished) && m_pProcessor)
+    {
+        m_pSession->rewindRespBodyBuf();
         m_pProcessor->continueRead();
+    }
+    errno = save_errno;
     return ret;
 }
 
@@ -268,7 +281,11 @@ void HttpExtConnector::abortReq()
         LS_DBG_M(this, "Abort request... ");
         m_iState |= HEC_ABORT_REQUEST;
         if (m_pProcessor)
+        {
+            if (getHttpSession()->isExtAppNoAbort())
+                m_iState |= HEC_NO_EXTAPP_ABORT;
             m_pProcessor->abort();
+        }
     }
 }
 
@@ -353,7 +370,7 @@ int HttpExtConnector::endResponse(int endCode, int protocolStatus)
         !(m_iState & (HEC_ERROR | HEC_REDIRECT)))
         return m_pSession->endResponse(!(m_iState & HEC_ABORT_REQUEST));
     else
-        m_pSession->continueWrite();
+        m_pSession->wantWrite(1);
     return ret;
 }
 
@@ -364,7 +381,8 @@ int HttpExtConnector::onWrite(HttpSession *pSession)
     {
         LS_DBG_M(this, "Response buffer is empty, suspend HttpSession write!");
         //m_pHttpSession->resetRespBodyBuf();
-        getHttpSession()->suspendWrite();
+        m_pSession->rewindRespBodyBuf();
+        getHttpSession()->wantWrite(0);
         m_pProcessor->continueRead();
         return 1;
     }
@@ -374,6 +392,17 @@ int HttpExtConnector::onWrite(HttpSession *pSession)
                  (long long)m_iReqBodySent,
                  (long long)m_pSession->getDynBodySent());
         return 0;
+    }
+}
+
+void HttpExtConnector::detectNoabortReq(HttpSession *pSession)
+{
+    const char *pURI = pSession->getReq()->getURI();
+    int len = pSession->getReq()->getURILen();
+    if (len >= 12 && strncmp(pURI + len - 11 , "wp-cron.php", 11) == 0)
+    {
+        LS_DBG_L(this, "WordPress cron job detected, mark request NO-ABORT!");
+        pSession->setFlag(HSF_NO_ABORT);
     }
 }
 
@@ -408,6 +437,8 @@ int HttpExtConnector::process(HttpSession *pSession,
         LS_ERROR(this, "External processor is not available!");
         return SC_500; //Fast cgi App Not found
     }
+    if (!pSession->getFlag(HSF_NO_ABORT))
+        detectNoabortReq(pSession);
     int ret = m_pWorker->processRequest(this);
     if (ret > 1)
     {
@@ -440,6 +471,7 @@ int  HttpExtConnector::tryRecover()
         else
             maxAttempts = 3;
         resetConnector();
+        m_pSession->resetResp();
         if (attempts < maxAttempts)
         {
             LS_DBG_L(this, "Trying to recover from connection problem, attempt: #%d!",
@@ -553,7 +585,7 @@ int HttpExtConnector::sendReqBody()
     else
     {
         getProcessor()->suspendWrite();
-        getHttpSession()->continueRead();
+        getHttpSession()->wantRead(1);
         LS_DBG_M(this, "All received request body sent, suspend write\n");
 
     }
@@ -568,7 +600,7 @@ int HttpExtConnector::onRead(HttpSession *pSession)
     if ((getState() & (HEC_FWD_REQ_BODY | HEC_COMPLETE)) == HEC_FWD_REQ_BODY)
         return sendReqBody();
     else
-        getHttpSession()->suspendRead();
+        getHttpSession()->wantRead(0);
     return 0;
 }
 
@@ -594,7 +626,9 @@ int HttpExtConnector::errResponse(int code, const char *pErr)
             getHttpSession()->getReq()->setStatusCode(code);
             getHttpSession()->changeHandler();
         }
-        getHttpSession()->continueWrite();
+        else
+            getHttpSession()->setState(HSS_IO_ERROR);
+        getHttpSession()->wantWrite(1);
     }
     return LS_FAIL;
 }
@@ -654,14 +688,13 @@ void HttpExtConnector::dump()
 {
     LS_INFO(this, "HttpExtConnector state: %d, request body sent: %lld, "
             "response body size: %lld, response body sent:%lld, "
-            "left in buffer: %lld, attempts: %d.",
-            m_iState, (long long)m_iReqBodySent, 
-            (long long)m_pSession->getResp()->getContentLen(),
-            (long long)m_pSession->getDynBodySent(),
-            (long long)((m_pSession->getRespCache()) 
-                         ? m_pSession->getRespCache()->writeBufSize() 
-                         : 0), 
-            getAttempts());
+            "left in buffer: %lld, attempts: %d."
+            , m_iState, (long long)m_iReqBodySent 
+            , (long long)m_pSession->getResp()->getContentLen()
+            , (long long)m_pSession->getDynBodySent()
+            , (long long)((m_pSession->getRespBodyBuf())
+                        ? m_pSession->getRespBodyBuf()->writeBufSize() : 0)
+            , getAttempts());
     if (m_pProcessor)
         m_pProcessor->dump();
     else

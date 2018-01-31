@@ -27,7 +27,7 @@
 #define MOD_QS_LEN          (sizeof(MOD_QS) -1)
 #define MAX_BUF_LENG        20
 #define EXPIRE_TIME         (30 * 1000)
-#define MODULE_VERSION_INFO  "1.1"
+#define MODULE_VERSION_INFO  LSIAPI_VERSION_STRING
 
 DECL_COMPONENT_LOG(ModuleNameStr);
 
@@ -274,8 +274,8 @@ static lsi_serverhook_t server_hooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME =
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME =
 { LSI_MODULE_SIGNATURE, _init, &myhandler, NULL, MODULE_VERSION_INFO, server_hooks, {0} };
 
 

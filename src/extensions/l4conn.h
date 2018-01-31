@@ -38,7 +38,7 @@ public:
     L4conn(L4Handler  *pL4Handler);
     virtual ~L4conn();
 
-    int onEventDone();
+    int onEventDone(short event);
     int onError();
     int onWrite();
     int onRead();

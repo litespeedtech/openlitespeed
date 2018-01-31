@@ -22,40 +22,63 @@
 
 #include <pthread.h>
 #include <sys/time.h>
+#include <signal.h>
+#include <assert.h>
+
+class Thread;
 
 typedef void *(*entryFn)(void *arg);
 
 /**
  * NOTICE: Any clean up routines need to be in the entry function.
  * The clean up should use the pthread cleanup routines.
+ *
+ * Our own cleanup routine just marks the thread has having exited
+ * pthreads exit
+ *      by calling pthread_exit, which will trigger our cleanup
+ *      by returning from start_routine, which we watch for
+ *      by getting canceled, which will trigger the cleanup
+ *
  */
 
 class Thread
 {
-    pthread_t       m_tid;
-    pthread_attr_t  m_attr;
 
 public:
     Thread()
-        : m_tid(0)
+        : m_sigBlock(NULL)
+        , m_arg(NULL)
+        , m_thread(0)
     {
         pthread_attr_init(&m_attr);
     }
 
-    ~Thread()
-    {}
 
-    pthread_t getId()
-    {   return m_tid;  }
+    virtual ~Thread()
+    {
+        pthread_attr_destroy(&m_attr);
+    }
 
-    const pthread_attr_t *getAttr()
-    {   return &m_attr; }
+    void blockSigs(sigset_t * block)    {   m_sigBlock =  block;    }
 
-    int run(entryFn entry, void *arg)
-    {   return pthread_create(&m_tid, &m_attr, entry, arg);    }
 
+    pthread_t getHandle() const
+    {   return m_thread;  }
+
+    int start(void *arg)
+    {
+        if (m_thread) {
+            return LS_FAIL;
+        }
+        m_arg = arg;
+        int ret = pthread_create(&m_thread, &m_attr, start_routine, this);
+        return ret;
+    }
+
+    void * getArg() const   {   return m_arg;   }
+    
     int cancel()
-    {   return pthread_cancel(m_tid); }
+    {   return pthread_cancel(m_thread); }
 
     int setCancelState(int state, int *pOldState)
     {   return pthread_setcancelstate(state, pOldState);  }
@@ -64,7 +87,7 @@ public:
     {   return pthread_setcanceltype(type, pOldType);  }
 
     int isEqualTo(pthread_t rhs)
-    {   return pthread_equal(m_tid, rhs); }
+    {   return pthread_equal(m_thread, rhs); }
 
     int isJoinable()
     {
@@ -75,63 +98,67 @@ public:
     }
 
     int detach()
-    {   return pthread_detach(m_tid); }
+    {   return pthread_detach(m_thread); }
 
-    int join(void **pRetVal)
-    {   return pthread_join(m_tid, pRetVal); }
+    virtual int join(void **pRetVal)
+    {
+        int ret = pthread_join(m_thread, pRetVal);
+        m_thread = 0;
+        return ret;
+    }
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     int tryJoin(void **pRetVal)
-    {   return pthread_tryjoin_np(m_tid, pRetVal); }
+    {   return pthread_tryjoin_np(m_thread, pRetVal); }
 
     int timedJoin(void **pRetVal, struct timespec *timeout)
-    {   return pthread_timedjoin_np(m_tid, pRetVal, timeout);    }
+    {   return pthread_timedjoin_np(m_thread, pRetVal, timeout);    }
 
     int attrSetAffinity(size_t cpusetsize, const cpu_set_t *cpuset)
-    {   return pthread_attr_setaffinity_np(&m_attr, cpusetsize, cpuset);  }
+    {   return m_thread ? LS_FAIL : pthread_attr_setaffinity_np(&m_attr, cpusetsize, cpuset);  }
 
     int attrGetAffinity(size_t cpusetsize, cpu_set_t *pCpuSet)
     {   return pthread_attr_getaffinity_np(&m_attr, cpusetsize, pCpuSet);  }
 #endif
 
     int attrSetDetachState(int detachstate)
-    {   return pthread_attr_setdetachstate(&m_attr, detachstate);    }
+    {   return m_thread ? LS_FAIL : pthread_attr_setdetachstate(&m_attr, detachstate);    }
 
     int attrGetDetachState(int *pDetachState)
     {   return pthread_attr_getdetachstate(&m_attr, pDetachState);    }
 
     int attrSetGuardSize(size_t guardsize)
-    {   return pthread_attr_setguardsize(&m_attr, guardsize); }
+    {   return m_thread ? LS_FAIL : pthread_attr_setguardsize(&m_attr, guardsize); }
 
     int attrGetGuardSize(size_t *pGuardSize)
     {   return pthread_attr_getguardsize(&m_attr, pGuardSize); }
 
     int attrSetInheritSched(int inheritsched)
-    {   return pthread_attr_setinheritsched(&m_attr, inheritsched); }
+    {   return m_thread ? LS_FAIL : pthread_attr_setinheritsched(&m_attr, inheritsched); }
 
     int attrGetInheritSched(int *pInheritSched)
     {   return pthread_attr_getinheritsched(&m_attr, pInheritSched); }
 
     int attrSetSchedParam(const struct sched_param *param)
-    {   return pthread_attr_setschedparam(&m_attr, param); }
+    {   return m_thread ? LS_FAIL : pthread_attr_setschedparam(&m_attr, param); }
 
     int attrGetSchedParam(struct sched_param *param)
     {   return pthread_attr_getschedparam(&m_attr, param); }
 
     int attrSetSchedPolicy(int policy)
-    {   return pthread_attr_setschedpolicy(&m_attr, policy); }
+    {   return m_thread ? LS_FAIL : pthread_attr_setschedpolicy(&m_attr, policy); }
 
     int attrGetSchedPolicy(int *pPolicy)
     {   return pthread_attr_getschedpolicy(&m_attr, pPolicy); }
 
     int attrSetScope(int scope)
-    {   return pthread_attr_setscope(&m_attr, scope); }
+    {   return m_thread ? LS_FAIL : pthread_attr_setscope(&m_attr, scope); }
 
     int attrGetScope(int *pScope)
     {   return pthread_attr_getscope(&m_attr, pScope); }
 
     int attrSetStack(void *stackaddr, size_t stacksize)
-    {   return pthread_attr_setstack(&m_attr, stackaddr, stacksize); }
+    {   return m_thread ? LS_FAIL : pthread_attr_setstack(&m_attr, stackaddr, stacksize); }
 
     int attrGetStack(void **pStackAddr, size_t *pStackSize)
     {   return pthread_attr_getstack(&m_attr, pStackAddr, pStackSize); }
@@ -139,7 +166,7 @@ public:
     int attrSetStackSize(int stacksize)
     {
 #ifdef _POSIX_THREAD_ATTR_STACKSIZE
-        return pthread_attr_setstacksize(&m_attr, stacksize);
+        return m_thread ? LS_FAIL : pthread_attr_setstacksize(&m_attr, stacksize);
 #else
         return LS_FAIL;
 #endif
@@ -155,10 +182,28 @@ public:
 #endif
     }
 
+protected:
+    
+    sigset_t       *m_sigBlock; // if not NULL, block in new thread - set in derived classes
+                                // at least have a good reason if not blocking SIGCHLD, which
+                                // should be handled by main thread
+
+    void           *m_arg;
 
 
+    virtual void thr_cleanup()      {   return;         } 
 
+    virtual void *thr_main(void *)  {   return NULL;    };
 
+private:
+    static void cleanup(void * arg);
+    static void *start_routine(void * arg);
+    static void *ext_routine(void * arg);
+    void sigBlock();
+
+    
+    pthread_t       m_thread;
+    pthread_attr_t  m_attr;
 
     LS_NO_COPY_ASSIGN(Thread);
 };

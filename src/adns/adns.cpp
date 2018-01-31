@@ -28,8 +28,9 @@ static int s_inited = 0;
 
 
 Adns::Adns()
-    :m_pCtx( NULL )
+    : m_pCtx( NULL )
     , m_iCounter(0)
+    , m_iPendingEvt(0)
     , m_pShmHash(NULL)
     , m_tmLastTrim(0)
 {
@@ -157,6 +158,43 @@ void Adns::printLookupError(struct dns_ctx *ctx, AdnsReq *pAdnsReq)
 }
 
 
+void Adns::release(AdnsReq *pReq)
+{
+    if (!pReq)
+        return;
+    if (--pReq->ref_count == 0)
+    {
+        //fprintf(stderr, "release AdnsReq %p\n", pReq); 
+        delete pReq;
+    }
+}
+
+
+int Adns::setResult(struct sockaddr *result, 
+                     const void *ip, int len)
+{
+    if (!result || !ip)
+        return -1;
+    void *dest = NULL;
+    if (result->sa_family == PF_INET)
+    {
+        if (len == sizeof(in_addr))
+            dest = &((sockaddr_in *)result)->sin_addr;
+    }
+    else
+    {
+        if (len == sizeof(in6_addr))
+            dest = &((sockaddr_in6 *)result)->sin6_addr;
+    }
+    if (dest)
+    {
+        memmove(dest, ip, len);
+        return 0;
+    }
+    return -1;
+}
+
+
 void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
 {
     AdnsReq *pAdnsReq = (AdnsReq *)param;
@@ -170,18 +208,12 @@ void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
             struct dns_rr_a4 * rr = (struct dns_rr_a4 *)rr_unknown;
             sIp = (char *)rr->dnsa4_addr;
             ipLen = sizeof(in_addr);
-            if (pAdnsReq->result)
-                ((sockaddr_in *)pAdnsReq->result)->sin_addr 
-                        = *(rr->dnsa4_addr);
         }
         else
         {
             struct dns_rr_a6 * rr = (struct dns_rr_a6 *)rr_unknown;
             sIp = (char *)rr->dnsa6_addr;
             ipLen = sizeof(in6_addr);
-            if (pAdnsReq->result)
-                memmove(&(((sockaddr_in6 *)pAdnsReq->result)->sin6_addr), 
-                        sIp, sizeof(in6_addr));
         }
     }
     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
@@ -195,7 +227,7 @@ void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
 
     if (rr_unknown)
         free(rr_unknown);
-    delete pAdnsReq;
+    release(pAdnsReq);
 }
 
 
@@ -235,10 +267,13 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
         pCache->insert(pAdnsReq->name, nameLen, p, n);
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, n, p);
+    //else
+    //    fprintf(stderr, "AdnsReq %p for %s skip callback, cb: %p, arg: %p\n", 
+    //            pAdnsReq, pAdnsReq->name, pAdnsReq->cb, pAdnsReq->arg); 
 
     if (rr)
         free(rr);
-    delete pAdnsReq;
+    release(pAdnsReq);
 }
 
 
@@ -263,38 +298,32 @@ const char *Adns::getHostByNameInCache( const char * pName, int &length, int typ
 
 
 AdnsReq *Adns::getHostByName(const char * pName, int type, 
-                             struct sockaddr *result,
                              lookup_pf cb, void *arg)
 {
     dns_query * pQuery;
     init();
     AdnsReq *pAdnsReq = new AdnsReq;
-    if (pAdnsReq)
+    if (!pAdnsReq)
+        return NULL;
+    //fprintf(stderr, "AdnsReq %p created for getHostByName %s\n", 
+    //        pAdnsReq, pName); 
+    pAdnsReq->type = type;
+    pAdnsReq->name = getCacheName(pName, type);
+    pAdnsReq->cb = cb;
+    pAdnsReq->arg = arg;
+    pAdnsReq->start_time = DateTime::s_curTime;
+    if (type != PF_INET6)
+        pQuery = dns_submit_a4( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV4)getHostByNameCb, pAdnsReq);
+    else
+        pQuery = dns_submit_a6( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV6)getHostByNameCb, pAdnsReq);
+    if (pQuery == NULL)
     {
-        pAdnsReq->type = type;
-        pAdnsReq->name = getCacheName(pName, type);
-        pAdnsReq->result = result;
-        pAdnsReq->cb = cb;
-        pAdnsReq->arg = arg;
-        pAdnsReq->start_time = DateTime::s_curTime;
-        if (type != PF_INET6)
-            pQuery = dns_submit_a4( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV4)getHostByNameCb, pAdnsReq);
-        else
-            pQuery = dns_submit_a6( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV6)getHostByNameCb, pAdnsReq);
-        if (pQuery == NULL)
-        {
-            delete pAdnsReq;
-            pAdnsReq = NULL;
-        }
-        else
-            checkDnsEvents();
-        return pAdnsReq;
+        delete pAdnsReq;
+        pAdnsReq = NULL;
     }
     else
-    {
-        ;//ERROR: out of memory
-        return NULL;
-    }
+        m_iPendingEvt = 1;
+    return pAdnsReq;
 }
 
 
@@ -313,7 +342,7 @@ static void *getInAddr(const struct sockaddr * pAddr, int& length)
 }
 
 
-const char *Adns::getHostByAddrInCache( const struct sockaddr * pAddr, int &length )
+const char *Adns::getHostByAddrInCache(const struct sockaddr * pAddr, int &length )
 {
     int keyLen;
     const char *key = (const char *)getInAddr(pAddr, keyLen);
@@ -322,7 +351,7 @@ const char *Adns::getHostByAddrInCache( const struct sockaddr * pAddr, int &leng
 }
 
 
-AdnsReq * Adns::getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_pf cb)
+AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_pf cb)
 {
     dns_query * pQuery;
     init();
@@ -330,6 +359,7 @@ AdnsReq * Adns::getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_
     if (!pAdnsReq)
         return NULL;
 
+    //fprintf(stderr, "AdnsReq %p created for getHostByAddr\n", pAdnsReq); 
     int type = pAddr->sa_family;
     pAdnsReq->type = type;
     int length;
@@ -350,7 +380,7 @@ AdnsReq * Adns::getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_
         pAdnsReq = NULL;
     }
     else
-        checkDnsEvents();
+        m_iPendingEvt = 1;
     return pAdnsReq;
 }
 

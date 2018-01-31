@@ -1,8 +1,8 @@
+#! /bin/sh
 #
 # This script is to gather pre-defined modules version info
 #
 #
-#! /bin/sh
 
 OS=`uname -s`
 ALL_VER_INFO=
@@ -15,7 +15,7 @@ get_file_defined_value()
 MODULESPACE=
 if [ "x$OS" = "xLinux" ] ; then
     MODULESPACE="\n"
-    get_file_defined_value src/modules/pagespeed/pagespeed.h MODULE_VERSION_INFO
+    get_file_defined_value src/modules/pagespeed/pagespeed.cpp MODPAGESPEEDVERSION
     ALL_VER_INFO="$ALL_VER_INFO\tmodpagespeed $DEFINED_VALUE$MODULESPACE"
 fi
 

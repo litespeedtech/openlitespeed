@@ -193,7 +193,9 @@ int ls_offset2string(char *pBuf, int len, off_t val)
 
     do
     {
-        *--p1 = '0' + (val % 10);
+        /** Do not use *(-- to avoid trigger compiler bug */
+        --p1;
+        *p1 = '0' + (val % 10);
         val = val / 10;
     }
     while (val > 0);

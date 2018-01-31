@@ -41,8 +41,10 @@ int ls_objpool_alloc(ls_objpool_t *pThis, int size)
 }
 
 
+#ifdef USE_OBJPOOL_CLEAR
 ls_inline void ls_objpool_clear(ls_objpool_t *pThis)
 {   ls_ptrlist_clear(&pThis->freelist);    }
+#endif
 
 
 void ls_objpool(ls_objpool_t *pThis,

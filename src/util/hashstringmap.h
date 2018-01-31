@@ -59,7 +59,7 @@ public:
 
     HashStringMap(int initsize = 29,
                   GHash::hasher hf = GHash::hfString,
-                  GHash::value_compare vc = GHash::cmpString)
+                  GHash::kcmp_ne vc = GHash::cmpString)
         : GHash(initsize, hf, vc)
     {};
     ~HashStringMap() {};
@@ -110,7 +110,7 @@ class StrStrHashMap : public HashStringMap<StrStr *>
 {
 public:
     StrStrHashMap(int initsize = 29, GHash::hasher hf = GHash::hfString,
-                  GHash::value_compare vc = GHash::cmpString)
+                  GHash::kcmp_ne vc = GHash::cmpString)
         : HashStringMap<StrStr * >(initsize, hf, vc)
     {};
     ~StrStrHashMap() {  release_objects();   };

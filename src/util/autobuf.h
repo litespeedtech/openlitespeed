@@ -23,6 +23,55 @@
 
 #include <string.h>
 
+class Buffer
+{
+public:
+    Buffer()
+        : m_pBuf(NULL)
+        , m_pEnd(NULL)
+    {}
+
+    Buffer(char *pBegin, int len)
+        : m_pBuf(pBegin)
+        , m_pEnd(pBegin + len)
+    {}
+    Buffer(char *pBegin, char *pEnd)
+        : m_pBuf(pBegin)
+        , m_pEnd(pEnd)
+    {}
+    ~Buffer()
+    {}
+
+    void set(char *pBegin, int len)
+    {   m_pBuf = pBegin; m_pEnd = pBegin + len; }
+
+    void set(char *pBegin, char *pEnd)
+    {   m_pBuf = pBegin; m_pEnd = pEnd;     }
+
+    void set(const char *pBegin, int len)
+    {   m_pBuf = (char *)pBegin; m_pEnd = m_pBuf + len;  }
+
+    void set(const char *pBegin, const char *pEnd)
+    {   m_pBuf = (char *)pBegin; m_pEnd = (char *)pEnd;   }
+
+
+    void copy(const Buffer &rhs)
+    {   m_pBuf = rhs.m_pBuf;    m_pEnd = rhs.m_pEnd;    }
+
+    char *begin() const {   return m_pBuf;              }
+    char *end() const   {   return m_pEnd;              }
+    size_t len() const  {   return m_pEnd - m_pBuf;     }
+    size_t size() const {   return m_pEnd - m_pBuf;     }
+
+private:
+    char *m_pBuf;
+    char *m_pEnd;
+
+    Buffer(const Buffer &rhs);
+    void operator=(const Buffer &rhs);
+};
+
+
 class AutoBuf : private ls_buf_t
 {
 private:

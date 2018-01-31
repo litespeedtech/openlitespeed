@@ -35,10 +35,10 @@ static int begin_process(const lsi_session_t *session)
 
 
 /**
- * Define a handler, need to provide a struct _handler_st object, in which
+ * Define a handler, need to provide a lsi_reqhdlr_t object, in which
  * the first function pointer should not be NULL
  */
-static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL, NULL, NULL, {0} };
 
 

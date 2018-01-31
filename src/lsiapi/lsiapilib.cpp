@@ -22,18 +22,26 @@
 #include <http/accesslog.h>
 #include <http/handlertype.h>
 #include <http/httplog.h>
+#include <http/httpmethod.h>
 #include <http/httpresourcemanager.h>
 #include <http/httprespheaders.h>
+#include <http/httpserverversion.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
+#include <http/httpver.h>
 #include <http/httpvhost.h>
+#include <http/mtsessdata.h>
+#include <http/phpconfig.h>
+#include <http/reqparser.h>
 #include <http/requestvars.h>
 #include <http/staticfilecachedata.h>
 #include <http/reqparser.h>
+#include <http/clientinfo.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsiapi.h>
+#include <lsiapi/lsiapi_const.h>
 #include <lsiapi/lsiapihooks.h>
 #include <lsiapi/modulehandler.h>
 #include <lsiapi/modulemanager.h>
@@ -42,11 +50,100 @@
 #include <main/configctx.h>
 #include <main/httpserver.h>
 #include <main/mainserverconfig.h>
+#include <sslpp/sslconnection.h>
+#include <thread/mtnotifier.h>
+#include <thread/workcrew.h>
 #include <util/datetime.h>
+#include <util/filtermatch.h>
 #include <util/httputil.h>
+#include <util/radixtree.h>
+#include <util/stringtool.h>
 #include <util/vmembuf.h>
 #include <util/accessdef.h>
 #include <unistd.h>
+#include <openssl/x509.h>
+
+static long schedule_mt_notify_event(const lsi_session_t *session);
+static long schedule_mt_notify_event_params(const lsi_session_t *session,
+                                           long lParam, void * pParam);
+static int blocking_mt_notify_event(const lsi_session_t *session, int32_t flag,
+                                    void *pParam);
+
+static char * lsi_new_local_buf_ts(HttpSession * pSession, size_t &size, MtWriteMode writeMode)
+{
+    if (WRITE_THROUGH == writeMode)
+    {
+        size_t reqSize = size;
+        // beginMtHandler sets up the VMemBuf in HttpSession so we
+        // never expect the getRespBodyBuf to fail. TODO: beginMtHandler does
+        // not check return values from setup funcs
+        pSession->getMtSessData()->m_mtWrite.m_curVMemBuf = pSession->getRespBodyBuf();
+        char * localBufPtr = pSession->getMtSessData()->m_mtWrite.m_curVMemBuf->getWriteBuffer(size);
+        LSI_DBGH(pSession, "%s: got new writeBuffer i%p, wanted %lu got %lu)\n",
+                 __func__, localBufPtr, reqSize, size);
+        //assert(reqSize == size && "did NOT get requested size!");
+        return localBufPtr;
+    }
+    else
+    {
+        char * lBuf = new char[size]; // TODO: get rid of magic number
+        assert(lBuf && "lBuf new failed");
+        if (!lBuf)
+        {
+            LSI_ERR(pSession, "%s: failed allocating local buf\n", __func__);
+            return NULL;
+        }
+        else {
+            LSI_DBGH(pSession, "%s: got new heap bufer (%p, %lu)\n",
+                     __func__, lBuf, size);
+            return lBuf;
+        }
+    }
+}
+
+static void lsi_flush_local_buf_ts(HttpSession * pSession)
+{
+    LSI_DBGH(pSession, "enter %s\n", __func__);
+
+    MtWriteMode & writeMode = pSession->getMtSessData()->m_mtWrite.m_writeMode;
+    MtWriteBuf & wBuf = pSession->getMtSessData()->m_mtWrite.m_writeBuf;
+    if (wBuf.getBuf() && wBuf.getCurPos() != wBuf.getBuf())
+    {
+        if (WRITE_THROUGH == writeMode)
+        {
+            VMemBuf * curVMemBuf = pSession->getMtSessData()->m_mtWrite.m_curVMemBuf;
+            LSI_DBGH(pSession, "%s: calling writeUsed (vMemBuf ptr %p size %lu)\n",
+                     __func__, curVMemBuf, wBuf.getCurPos() - wBuf.getBuf());
+            curVMemBuf->writeUsed(wBuf.getCurPos() - wBuf.getBuf());
+            wBuf.set(NULL, 0, NULL);
+        }
+        else
+        {
+            if (wBuf.getBuf())
+            {
+                MtSessData * sd = pSession->getMtSessData();
+                ls_mutex_lock(&sd->m_mtWrite.m_bufQ_lock);
+                if (NULL == sd->m_mtWrite.m_bufQ)
+                {
+                    sd->m_mtWrite.m_bufQ = new MtLocalBufQ;
+                }
+                sd->m_mtWrite.m_bufQ->append(wBuf); // copies to new instance of MtWriteBuf, deleted in HttpSession
+
+                MtLocalBufQ * lbq = sd->m_mtWrite.m_bufQ;
+
+                ls_mutex_unlock(&sd->m_mtWrite.m_bufQ_lock);
+                LSI_DBGH(pSession, "%s: pushed on bufQ %p buf %p size %ld\n",
+                         __func__, lbq, wBuf.getBuf(), wBuf.getCurPos() - wBuf.getBuf());
+
+                LSI_DBGH(pSession, "%s: notified main thread\n", __func__);
+                schedule_mt_notify_event_params((lsi_session_t *)(LsiSession *)pSession,
+                                                HSF_MT_FLUSH_RBDY_LBUF_Q, NULL);
+
+                wBuf.set(NULL, 0, NULL);
+            }
+        }
+    }
+}
 
 static int is_release_cb_added(const lsi_module_t *pModule, int level)
 {
@@ -227,7 +324,7 @@ static  void lograw(const lsi_session_t *session, const char *buf, int len)
 }
 
 
-static void module_log(const lsi_module_t *pMod, const lsi_session_t *session, 
+static void module_log(const lsi_module_t *pMod, const lsi_session_t *session,
                        int level, const char *fmt, ...)
 {
     if (log4cxx::Level::isEnabled(level) && level <= MODULE_LOG_LEVEL(pMod))
@@ -240,12 +337,12 @@ static void module_log(const lsi_module_t *pMod, const lsi_session_t *session,
         va_start(ap, fmt);
         LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
         va_end(ap);
-        
+
     }
 }
 
-    
-static void c_log(const char *pComponent, const lsi_session_t *session, 
+
+static void c_log(const char *pComponent, const lsi_session_t *session,
                        int level, const char *fmt, ...)
 {
     if (log4cxx::Level::isEnabled(level))
@@ -258,11 +355,11 @@ static void c_log(const char *pComponent, const lsi_session_t *session,
         va_start(ap, fmt);
         LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
         va_end(ap);
-        
+
     }
 }
 
-    
+
 static int lsiapi_register_env_handler(const char *env_name,
                                        unsigned int env_name_len, lsi_callback_pf cb)
 {
@@ -540,6 +637,8 @@ static int set_resp_header(const lsi_session_t *session,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (pSession->isRespHeaderSent())
+        return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
     if (header_index < LSI_RSPHDR_END)
     {
@@ -554,13 +653,15 @@ static int set_resp_header(const lsi_session_t *session,
 }
 
 
-//multi headers supportted.
+//multi headers supported.
 static int set_resp_header2(const lsi_session_t *session, const char *s, int len,
                             int add_method)
 {
     int len0, len1;
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
+        return LS_FAIL;
+    if (pSession->isRespHeaderSent())
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
 
@@ -593,6 +694,31 @@ static int set_resp_cookies(const lsi_session_t *session, const char *pName,
         return LS_FAIL;
     return pResp->addCookie(pName, pVal, path, domain, expires, secure,
                             httponly);
+}
+
+
+static int set_resp_cookies_ts(const lsi_session_t *session, const char *pName,
+                            const char *pVal, const char *path,
+                            const char *domain, int expires,
+                            int secure, int httponly)
+{
+    LSI_DBGH(session, "enter %s: pName %s pVal %s path %s domain %s expires %d secure %d httponly %d\n",
+             __func__,  pName, pVal, path, domain, expires, secure, httponly);
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    HttpResp *pResp = pSession->getResp();
+    if (pResp == NULL)
+        return LS_FAIL;
+    MtLock lk(pSession->getMtSessData()->m_respHeaderLock);
+    if (pSession->isRespHeaderSent())
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    int res = pResp->addCookie(pName, pVal, path, domain, expires, secure,
+                            httponly);
+    return res;
 }
 
 
@@ -662,7 +788,7 @@ static int remove_resp_header(const lsi_session_t *session,
 }
 
 
-static void end_resp_headers(const lsi_session_t *session)
+static void send_resp_headers(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
@@ -818,6 +944,7 @@ static const char *get_mapped_context_uri(const lsi_session_t *session,
     return pReq->getContext()->getURI();
 }
 
+
 static int is_req_handler_registered(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -831,6 +958,7 @@ static int is_req_handler_registered(const lsi_session_t *session)
 
     return LS_FALSE;
 }
+
 
 static int register_req_handler(const lsi_session_t *session,
                                 lsi_module_t *pModule, int scriptLen)
@@ -894,20 +1022,31 @@ static int lsi_remove_timer(int timer_id)
 }
 
 
+/*
 static long create_event(evtcb_pf cb,
                          const lsi_session_t *session, long lParam, void *pParam)
 {
     return (long)EvtcbQue::getInstance().schedule(cb, session,
             lParam, pParam);
 }
+*/
+
+static long create_event(evtcb_pf cb,
+                         const lsi_session_t *session, long lParam, void *pParam, int nowait)
+{
+    return (long)EvtcbQue::getInstance().schedule(cb, session,
+            lParam, pParam, nowait);
+}
+
 
 static long create_session_resume_event(const lsi_session_t *session,
                                         lsi_module_t *pModule)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     evtcb_pf cb = (evtcb_pf)(&HttpSession::hookResumeCallback);
-    return create_event(cb, session, pSession->getSn(), NULL);
+    return create_event(cb, session, pSession->getSn(), NULL, true);
 }
+
 
 static long get_event_obj(evtcb_pf cb, const lsi_session_t *session,
                          long lParam, void *pParam)
@@ -926,11 +1065,13 @@ static void schedule_event(long event_obj, int nowait)
     EvtcbQue::getInstance().schedule((evtcbnode_s *)event_obj, nowait);
 }
 
+
 static void cancel_event(const lsi_session_t *session, long event_obj)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     pSession->cancelEvent((evtcbnode_s *)event_obj);
 }
+
 
 static const char *get_req_header(const lsi_session_t *session, const char *key,
                                   int keyLen, int *valLen)
@@ -1018,6 +1159,7 @@ static const char *get_cookie_value(const lsi_session_t *session,
     return RequestVars::getCookieValue(pReq, cookie_name, nameLen, *valLen);
 }
 
+
 static int get_cookie_by_index(const lsi_session_t *session, int index, ls_strpair_t *cookie)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1028,7 +1170,7 @@ static int get_cookie_by_index(const lsi_session_t *session, int index, ls_strpa
     const CookieList &list = pReq->getCookieList();
     if (index < 0 || index >= list.getSize())
       return LS_FALSE;
-    
+
     const cookieval_t val = list.begin()[index];
     cookie->key.ptr = pReq->getHeaderBuf().getp(val.keyOff);
     cookie->key.len = val.keyLen;
@@ -1130,7 +1272,7 @@ static const char *lsi_req_env[LSI_VAR_COUNT] =
 };
 
 
-int getVarNameStr(const char *name, unsigned int len)
+static int getVarNameStr(const char *name, unsigned int len)
 {
     int ret = -1;
     for (int i = 0; i < LSI_VAR_COUNT; ++i)
@@ -1278,7 +1420,7 @@ static int get_req_args_count(const lsi_session_t *session)
 }
 
 
-static int get_req_arg_by_idx(const lsi_session_t *session, int index, 
+static int get_req_arg_by_idx(const lsi_session_t *session, int index,
                              ls_strpair_t *pArg, char **filePath)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1297,7 +1439,7 @@ static int get_qs_args_count(const lsi_session_t *session)
 }
 
 
-static int get_qs_arg_by_idx(const lsi_session_t *session, int index, 
+static int get_qs_arg_by_idx(const lsi_session_t *session, int index,
                              ls_strpair_t *pArg)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1316,7 +1458,7 @@ static int get_post_args_count(const lsi_session_t *session)
 }
 
 
-static int get_post_arg_by_idx(const lsi_session_t *session, int index, 
+static int get_post_arg_by_idx(const lsi_session_t *session, int index,
                              ls_strpair_t *pArg, char **filePath)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
@@ -1375,9 +1517,9 @@ static int is_resp_buffer_available(const lsi_session_t *session)
     if (pSession == NULL)
         return LS_FALSE;
 
-    if (pSession->getRespCache()
-        && pSession->getRespCache()->getCurWBlkPos() -
-        pSession->getRespCache()->getCurRBlkPos() > LSI_MAX_RESP_BUFFER_SIZE)
+    if (pSession->getRespBodyBuf()
+        && pSession->getRespBodyBuf()->getCurWBlkPos() -
+        pSession->getRespBodyBuf()->getCurRBlkPos() > LSI_MAX_RESP_BUFFER_SIZE)
         return LS_FALSE;
     return LS_TRUE;
 }
@@ -1511,13 +1653,13 @@ static int send_file2(const lsi_session_t *session, int fd,
 }
 
 
-static void lsi_flush(const lsi_session_t *session)
+static int lsi_flush(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
-        return;
+        return LS_FAIL;
     pSession->setFlag(HSF_RESP_FLUSHED, 0);
-    pSession->flush();
+    return pSession->flush();
 }
 
 
@@ -1530,150 +1672,16 @@ static void lsi_end_resp(const lsi_session_t *session)
 }
 
 
-#define URI_OP_MASK     15
-#define URL_QS_OP_MASK  112
 static int set_uri_qs(const lsi_session_t *session, int action, const char *uri,
                       int uri_len, const char *qs, int qs_len)
 {
-#define MAX_URI_QS_LEN 8192
-    char tmpBuf[MAX_URI_QS_LEN];
-    char *pStart = tmpBuf;
-    char *pQs = NULL;
-    int final_qs_len = 0;
-    int len = 0;
-    int urlLen;
-
-    int code;
-    int uri_act;
-    int qs_act;
 
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
     if (!action)
         return LS_OK;
-    uri_act = action & URI_OP_MASK;
-    if ((uri_act == LSI_URL_REDIRECT_INTERNAL) &&
-        (pSession->getState() <= HSS_READING_BODY))
-        uri_act = LSI_URL_REWRITE;
-    if ((uri_act == LSI_URL_NOCHANGE) || (!uri) || (uri_len == 0))
-    {
-        uri = pSession->getReq()->getURI();
-        uri_len = pSession->getReq()->getURILen();
-        action &= ~LSI_URL_ENCODED;
-    }
-    if ((size_t)uri_len > sizeof(tmpBuf) - 1)
-        uri_len = sizeof(tmpBuf) - 1;
-
-    switch (uri_act)
-    {
-    case LSI_URL_REDIRECT_INTERNAL:
-    case LSI_URL_REDIRECT_301:
-    case LSI_URL_REDIRECT_302:
-    case LSI_URL_REDIRECT_303:
-    case LSI_URL_REDIRECT_307:
-        if (!(action & LSI_URL_ENCODED))
-            len = HttpUtil::escape(uri, uri_len, tmpBuf, sizeof(tmpBuf) - 1);
-        else
-        {
-            memcpy(tmpBuf, uri, uri_len);
-            len = uri_len;
-        }
-        break;
-    default:
-        if (action & LSI_URL_ENCODED)
-            len = HttpUtil::unescape(uri, tmpBuf, uri_len);
-        else
-        {
-            memcpy(tmpBuf, uri, uri_len);
-            len = uri_len;
-        }
-    }
-    urlLen = len;
-
-    pStart = &tmpBuf[len];
-    qs_act = action & URL_QS_OP_MASK;
-    if (!qs || qs_len == 0)
-    {
-        if ((qs_act == LSI_URL_QS_DELETE) ||
-            (qs_act == LSI_URL_QS_SET))
-        {
-            pQs = NULL;
-            final_qs_len = 0;
-        }
-        else if (qs_act == LSI_URL_QS_APPEND)
-            qs_act = LSI_URL_QS_NOCHANGE;
-    }
-    else
-    {
-        *pStart++ = '?';
-        pQs = pStart;
-        if (qs_act == LSI_URL_QS_DELETE)
-        {
-            //TODO: remove parameter from query string match the input
-            //         {
-            //             pQs = pSession->getReq()->getQueryString();
-            //             final_qs_len = pSession->getReq()->getQueryString();
-            //         }
-            qs = NULL;
-            qs_len = 0;
-        }
-        else if (qs_act == LSI_URL_QS_APPEND)
-        {
-            final_qs_len = pSession->getReq()->getQueryStringLen();
-            if (final_qs_len > 0)
-            {
-                memcpy(pStart, pSession->getReq()->getQueryString(),
-                       final_qs_len);
-                pStart += final_qs_len++;
-                *pStart++ = '&';
-            }
-        }
-        else
-            qs_act = LSI_URL_QS_SET;
-        if (qs)
-        {
-            memcpy(pStart, qs, qs_len);
-            final_qs_len += qs_len;
-            pStart += qs_len;
-        }
-    }
-    len = pStart - tmpBuf;
-
-    switch (uri_act)
-    {
-    case LSI_URL_NOCHANGE:
-    case LSI_URL_REWRITE:
-        if (uri_act != LSI_URL_NOCHANGE)
-            pSession->getReq()->setRewriteURI(tmpBuf, urlLen, 1);
-        if (qs_act & URL_QS_OP_MASK)
-            pSession->getReq()->setRewriteQueryString(pQs, final_qs_len);
-//        pSession->getReq()->addEnv(11);
-        break;
-    case LSI_URL_REDIRECT_INTERNAL:
-        pSession->getReq()->setLocation(tmpBuf, len);
-        pSession->setState(HSS_REDIRECT);
-        pSession->continueWrite();
-        break;
-    case LSI_URL_REDIRECT_301:
-    case LSI_URL_REDIRECT_302:
-    case LSI_URL_REDIRECT_303:
-    case LSI_URL_REDIRECT_307:
-        pSession->getReq()->setLocation(tmpBuf, len);
-
-        if (uri_act == LSI_URL_REDIRECT_307)
-            code = SC_307;
-        else
-            code = SC_301 + uri_act - LSI_URL_REDIRECT_301;
-        pSession->getReq()->setStatusCode(code);
-        pSession->setState(HSS_EXT_REDIRECT);
-        pSession->continueWrite();
-        break;
-    default:
-        break;
-    }
-
-    return LS_OK;
+    return pSession->setUriQueryString(action, uri, uri_len, qs, qs_len);
 }
 
 
@@ -1768,6 +1776,15 @@ static int exec_ext_cmd(const lsi_session_t *session, const char *cmd, int len,
     pSession->execExtCmd(cmd, len, EXEC_CMD_PARSE_RES);
     return LS_OK;
 }
+
+
+static int exec_ext_cmd_ts(const lsi_session_t *session, const char *cmd, int len,
+                        evtcb_pf cb, const long lParam, void *pParam)
+{
+    assert(0); // not supported
+    return LS_FAIL;
+}
+
 
 static char *get_ext_cmd_res_buf(const lsi_session_t *session, int *length)
 {
@@ -1942,7 +1959,7 @@ static void *get_resp_body_buf(const lsi_session_t *session)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return NULL;
-    return pSession->getRespCache();
+    return pSession->getRespBodyBuf();
 }
 
 
@@ -2102,7 +2119,7 @@ static void *get_vhost_module_data(const void *vhost,
 }
 
 
-static void *get_vhost_module_param(const void *vhost,
+static void *get_vhost_module_conf(const void *vhost,
                                     const lsi_module_t *pModule)
 {
     if (vhost == NULL)
@@ -2195,12 +2212,13 @@ void free_uacode_item(uacode_item *item)
     }
 }
 
+
 static ls_hash_t *s_uacode_hasht = NULL;
 void init_uacode_hasht()
 {
     if (!s_uacode_hasht)
     {
-        s_uacode_hasht = ls_hash_new(100, _ua_hash, (ls_hash_value_compare)strcmp,
+        s_uacode_hasht = ls_hash_new(100, _ua_hash, (ls_hash_keycmp_ne)strcmp,
                                      NULL);
         assert(s_uacode_hasht);
     }
@@ -2254,9 +2272,1352 @@ void freeUaCodeT()
 }
 
 
+static void foreach_req_header(const HttpSession *session, const char *filter,
+                               lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    const HttpReq *pReq = session->getReq();
+    int i, n;
+    const char *pTemp;
+    FilterMatch fm(filter);
+
+    for (i = 0; i <= HttpHeader::H_TRANSFER_ENCODING; ++i)
+    {
+        pTemp = pReq->getHeader(i);
+        if (*pTemp)
+        {
+            if (!filter || fm.match(RequestVars::getHeaderString(i), 
+                         HttpHeader::getHeaderStringLen(i)))
+            {
+                cb(i, RequestVars::getHeaderString(i), 
+                   HttpHeader::getHeaderStringLen(i), 
+                   pTemp, pReq->getHeaderLen(i), arg);
+            }
+        }
+    }
+
+    n = pReq->getUnknownHeaderCount();
+    for (i = 0; i < n; ++i)
+    {
+        const char *pKey;
+        const char *pVal;
+        int keyLen;
+        int valLen;
+        pKey = pReq->getUnknownHeaderByIndex(i, keyLen, pVal, valLen);
+        if (pKey)
+        {
+            // if we check both key and val, change the conditional
+            // per negation. can be removed if we only check one of the two
+            bool match = !filter || fm.isNegated()
+                ? (fm.match(pKey, keyLen) && fm.match(pVal, valLen))
+                : (fm.match(pKey, keyLen) || fm.match(pVal, valLen));
+            if (match)
+            {
+                cb(-1, pKey, keyLen, pVal, valLen, arg);
+            }
+        }
+    }
+}
+
+
+static void foreach_special_env(const HttpSession *session, const char *filter,
+                                lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    PHPConfig *pConfig = session->getReq()->getContext()->getPHPConfig();
+    if (!pConfig)
+        return;
+    FilterMatch fm(filter);
+    PHPConfig::iterator iter;
+    const char *pKey;
+    const char *pVal;
+    int keyLen;
+    int valLen;
+    for(iter = pConfig->begin(); iter!= pConfig->end(); pConfig->next(iter))
+    {
+        PHPValue * phpval = iter.second();
+        pKey = phpval->getKey();
+        keyLen = phpval->getKeyLen();
+        pVal = phpval->getValue();
+        valLen = phpval->getValLen();
+        // if we check both key and val, change the conditional
+        // per negation. can be removed if we only check one of the two
+        bool match = !filter || fm.isNegated()
+            ? (fm.match(pKey, keyLen) && fm.match(pVal, valLen))
+            : (fm.match(pKey, keyLen) || fm.match(pVal, valLen));
+        if (match)
+        {
+            cb(-1, pKey, keyLen, pVal, valLen, arg);
+        }
+    }    
+}
+
+
+static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
+{
+    BIO *bio;
+    int n;
+
+    if ((bio = BIO_new(BIO_s_mem())) == NULL)
+        return LS_FAIL;
+    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
+    //n = BIO_pending(bio);
+    n = BIO_read(bio, pBuf, len);
+    pBuf[n] = '\0';
+    BIO_free(bio);
+    return n;
+}
+
+
+static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb, 
+                           void *arg, SslConnection *pSSL)
+{
+    char buf[128];
+    const char *pVersion = pSSL->getVersion();
+    int n = strlen(pVersion);
+    cb(-1, "SSL_VERSION", 11, pVersion, n, arg);
+    SSL_SESSION *pSession = pSSL->getSession();
+    if (pSession)
+    {
+        int idLen = SslConnection::getSessionIdLen(pSession);
+        n = idLen * 2;
+        assert(n < (int)sizeof(buf));
+        StringTool::hexEncode(
+            (char *)SslConnection::getSessionId(pSession),
+            idLen, buf);
+        cb(-1, "SSL_SESSION_ID", 14, buf, n, arg);
+    }
+
+    const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
+    if (pCipher)
+    {
+        const char *pName = pSSL->getCipherName();
+        n = strlen(pName);
+        cb(-1, "SSL_CIPHER", 10, pName, n, arg);
+        int algkeysize;
+        int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
+        n = ls_snprintf(buf, 20, "%d", keysize);
+        cb(-1, "SSL_CIPHER_USEKEYSIZE", 21, buf, n, arg);
+        n = ls_snprintf(buf, 20, "%d", algkeysize);
+        cb(-1, "SSL_CIPHER_ALGKEYSIZE", 21, buf, n, arg);
+    }
+
+    int i = pSSL->getVerifyMode();
+    if (i != 0)
+    {
+        char achBuf[4096];
+        X509 *pClientCert = pSSL->getPeerCertificate();
+        if (pSSL->isVerifyOk())
+        {
+            if (pClientCert)
+            {
+                //IMPROVE: too many deep copy here.
+                //n = SslCert::PEMWriteCert( pClientCert, achBuf, 4096 );
+                //if ((n>0)&&( n <= 4096 ))
+                //{
+                //    cb(-1,  "SSL_CLIENT_CERT", 15, achBuf, n );
+                //    ++count;
+                //}
+                n = snprintf(achBuf, sizeof(achBuf), "%lu",
+                                X509_get_version(pClientCert) + 1);
+                cb(-1, "SSL_CLIENT_M_VERSION", 20, achBuf, n, arg);
+                n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
+                if (n != -1)
+                {
+                    cb(-1, "SSL_CLIENT_M_SERIAL", 19, achBuf, n, arg);
+                }
+                X509_NAME_oneline(X509_get_subject_name(pClientCert), achBuf, 4096);
+                cb(-1, "SSL_CLIENT_S_DN", 15, achBuf, strlen(achBuf), arg);
+                X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
+                cb(-1, "SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf), arg);
+                if (SslConnection::isClientVerifyOptional(i))
+                {
+                    strcpy(achBuf, "GENEROUS");
+                    n = 8;
+                }
+                else
+                {
+                    strcpy(achBuf, "SUCCESS");
+                    n = 7;
+                }
+            }
+            else
+            {
+                strcpy(achBuf, "NONE");
+                n = 4;
+            }
+        }
+        else
+            n = pSSL->buildVerifyErrorString(achBuf, sizeof(achBuf));
+        cb(-1, "SSL_CLIENT_VERIFY", 17, achBuf, n, arg);
+    }
+}
+
+
+static void foreach_req_var_full(HttpSession *pSession, 
+                                 lsi_foreach_cb cb, void *arg)
+{
+    HttpReq *pReq = pSession->getReq();
+    const char *pTemp;
+    int n;
+    char buf[128];
+    //RadixNode *pNode;
+
+    pTemp = pReq->getAuthUser();
+    if (pTemp)
+    {
+        //NOTE: only Basic is support now
+        cb(-1, "AUTH_TYPE", 9, "Basic", 5, arg);
+        cb(-1, "REMOTE_USER", 11, pTemp, strlen(pTemp), arg);
+    }
+    const AutoStr2 *pDocRoot = pReq->getDocRoot();
+    cb(-1, "DOCUMENT_ROOT", 13,
+              pDocRoot->c_str(), pDocRoot->len() - 1, arg);
+    cb(-1, "REMOTE_ADDR", 11, pSession->getPeerAddrString(),
+              pSession->getPeerAddrStrLen(), arg);
+
+    n = ls_snprintf(buf, 10, "%hu", pSession->getRemotePort());
+    cb(-1, "REMOTE_PORT", 11, buf, n, arg);
+
+    n = pSession->getServerAddrStr(buf, 128);
+
+    cb(-1, "SERVER_ADDR", 11, buf, n, arg);
+
+    cb(-1, "SERVER_NAME", 11, pReq->getHostStr(),  pReq->getHostStrLen(), arg);
+    const AutoStr2 &sPort = pReq->getPortStr();
+    cb(-1, "SERVER_PORT", 11, sPort.c_str(), sPort.len(), arg);
+    cb(-1, "REQUEST_URI", 11, pReq->getOrgReqURL(),
+              pReq->getOrgReqURLLen(), arg);
+
+    n = pReq->getPathInfoLen();
+    if (n > 0)
+    {
+        int m;
+        char achTranslated[10240];
+        m =  pReq->translatePath(pReq->getPathInfo(), n,
+                                 achTranslated, sizeof(achTranslated));
+        if (m != -1)
+        {
+            cb(-1, "PATH_TRANSLATED", 15, achTranslated, m, arg);
+        }
+        cb(-1, "PATH_INFO", 9, pReq->getPathInfo(), n, arg);
+
+        if (pReq->getRedirects() > 0)
+        {
+            cb(-1, "ORIG_PATH_INFO", 14, pReq->getPathInfo(), n, arg);
+        }
+    }
+
+    if (pReq->getRedirects() > 0)
+    {
+        pTemp = pReq->getRedirectURL(n);
+        if (pTemp && (n > 0))
+        {
+            cb(-1, "REDIRECT_URL", 12, pTemp, n, arg);
+        }
+        pTemp = pReq->getRedirectQS(n);
+        if (pTemp && (n > 0))
+        {
+            cb(-1, "REDIRECT_QUERY_STRING", 21, pTemp, n, arg);
+        }
+    }
+    
+    //add geo IP env here
+    if (pReq->isGeoIpOn())
+    {
+        GeoInfo *pInfo = pSession->getClientInfo()->getGeoInfo();
+        if (pInfo)
+        {
+            cb(-1, "GEOIP_ADDR", 10, pSession->getPeerAddrString(),
+                      pSession->getPeerAddrStrLen(), arg);
+            //FIXME: go through GEO ENV
+            //count += pInfo->addGeoEnv(pEnv) + 1;
+        }
+    }
+#ifdef USE_IP2LOCATION
+    //add IP2Location env here
+    if (pReq->isIpToLocOn())
+    {
+        LocInfo *pInfo = pSession->getClientInfo()->getLocInfo();
+        if (pInfo)
+        {
+            cb(-1, "IP2LOCATION_ADDR", 16, pSession->getPeerAddrString(),
+                      pSession->getPeerAddrStrLen(), arg);
+            //FIXME: go through GEO ENV
+            //count += pInfo->addLocEnv(pEnv) + 1;
+        }
+    }
+#endif
+    if (pSession->getStream()->isSpdy())
+    {
+        const char *pProto = HioStream::getProtocolName((HiosProtocol)
+                             pSession->getStream()->getProtocol());
+        cb(-1, "X_SPDY", 6, pProto, strlen(pProto), arg);
+    }
+
+    if (pSession->isSSL())
+    {
+        //cb(-1, "HTTPS", 5, "on",  2);
+        SslConnection *pSSL = pSession->getSSL();
+        if (pSSL)
+        {
+            foreach_ssl_env(pSession, cb, arg, pSSL);
+        }
+    }
+
+    char sVer[40];
+    n = snprintf(sVer, 40, "Openlitespeed %s", PACKAGE_VERSION);
+    cb(-1, "LSWS_EDITION", 12, sVer, n, arg);
+    cb(-1, "X-LSCACHE", 9, "1", 1, arg);
+    
+    const AutoStr2 *psTemp = pReq->getRealPath();
+    if (psTemp)
+    {
+        cb(-1, "SCRIPT_FILENAME", 15, psTemp->c_str(), psTemp->len(), arg);
+    }
+    cb(-1, "QUERY_STRING", 12, pReq->getQueryString(),
+              pReq->getQueryStringLen(), arg);
+    pTemp = pReq->getURI();
+    cb(-1, "SCRIPT_NAME", 11, pTemp, pReq->getScriptNameLen(), arg);
+    n = pReq->getVersion();
+    cb(-1, "SERVER_PROTOCOL", 15, HttpVer::getVersionString(n),
+              HttpVer::getVersionStringLen(n), arg);
+    cb(-1, "SERVER_SOFTWARE", 15, HttpServerVersion::getVersion(),
+              HttpServerVersion::getVersionLen(), arg);
+    n = pReq->getMethod();
+    cb(-1, "REQUEST_METHOD", 14, HttpMethod::get(n),
+              HttpMethod::getLen(n), arg);
+}
+
+
+// does value only filtering - will have to add string array if
+// we want key filtering as well
+static void foreach_req_var(const HttpSession *session, const char *filter,
+                                lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    int i;
+#define VALMAXSIZE 4096
+    char val[VALMAXSIZE];
+    int ret = -1;
+    char *p = val;
+    FilterMatch fm(filter);
+
+    if (session == NULL)
+        return;
+
+    if (filter == NULL)
+    {
+        foreach_req_var_full(const_cast<HttpSession *>(session), cb, arg);
+        return;
+    }
+    
+    for (i = LSI_VAR_REMOTE_ADDR; i < LSI_VAR_COUNT; ++i)
+    {
+        p = val;
+        memset(val, 0, VALMAXSIZE);
+        ret = (i < LSI_VAR_HTTPS)
+            ? RequestVars::getReqVar(const_cast<HttpSession *>(session),
+                                     i - LSI_VAR_REMOTE_ADDR + REF_REMOTE_ADDR,
+                                     p, VALMAXSIZE)
+            : RequestVars::getReqVar2(const_cast<HttpSession *>(session), i, p, VALMAXSIZE);
+
+        if (ret >= VALMAXSIZE && ret <= 0)
+            continue;
+
+        if (p == val)
+        {
+            val[ret] = 0;
+        }
+        if (!filter || fm.match(p, ret))
+        {
+            //TODO add the keys - make up strings?
+            cb(i, NULL, 0, p, ret, arg);
+        }
+    }
+}
+
+
+static void foreach_req_cookie(const HttpSession *session, const char *filter,
+                                lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    if (session == NULL)
+        return;
+
+    FilterMatch fm(filter);
+    ls_strpair_t cookie;
+
+    const HttpReq *pReq = session->getReq();
+    if (NULL == pReq)
+        return;
+
+    const_cast<HttpReq *>(pReq)->parseCookies();
+    const CookieList &list = const_cast<HttpReq *>(pReq)->getCookieList();
+
+    for (int index = 0; index < list.getSize(); ++index)
+    {
+        const cookieval_t val = list.begin()[index];
+        cookie.key.ptr = const_cast<HttpReq *>(pReq)->getHeaderBuf().getp(val.keyOff);
+        cookie.key.len = val.keyLen;
+        cookie.val.ptr = const_cast<HttpReq *>(pReq)->getHeaderBuf().getp(val.valOff);
+        cookie.val.len = val.valLen;
+        bool match = !filter || fm.isNegated() ?
+            (fm.match(cookie.key.ptr, cookie.key.len) && fm.match(cookie.val.ptr, cookie.val.len)) :
+            (fm.match(cookie.key.ptr, cookie.key.len) || fm.match(cookie.val.ptr, cookie.val.len));
+        if (match)
+        {
+            cb(index, cookie.key.ptr, cookie.key.len, cookie.val.ptr, cookie.val.len, arg);
+        }
+    }
+}
+
+
+struct cb_arg_s
+{
+    lsi_foreach_cb cb;
+    void *arg;
+    const char * filter;
+};
+
+
+static int req_env_cb(void *pObj, void *pUData, const char *pKey, int iKeyLen)
+{
+    cb_arg_s *arg = (cb_arg_s *)pUData;
+    ls_strpair_t *pPair = (ls_strpair_t *)pObj;
+
+    FilterMatch fm(arg->filter);
+
+    const char *key = ls_str_cstr(&pPair->key),
+          *val = ls_str_cstr(&pPair->val);
+    size_t keyLen = ls_str_len(&pPair->key),
+           valLen = ls_str_len(&pPair->val);
+
+    bool match = !arg->filter || fm.isNegated() ?
+        (fm.match(key, keyLen) && fm.match(val, valLen)) :
+        (fm.match(key, keyLen) || fm.match(val, valLen));
+    if (match)
+    {
+        arg->cb(-1, key, keyLen, val, valLen, arg->arg);
+    }
+    return 0;
+}
+
+static void foreach_req_env(const HttpSession *session, const char *filter, 
+                            lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    RadixNode *pNode;
+    
+    if ((pNode = (RadixNode *)session->getReq()->getEnvNode()) != NULL)
+    {
+        struct cb_arg_s new_arg = { cb, arg, filter };
+        pNode->for_each2(req_env_cb, &new_arg);
+    }
+}
+
+static void foreach_req_cgi_header(const HttpSession *session, const char *filter,
+                                   lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    LsiApiConst lsiApiConst;
+    int headers = lsiApiConst.get_cgi_header_count();
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    FilterMatch fm(filter);
+    
+    if (session == NULL)
+        return;
+    
+    HttpReq *pReq = pSession->getReq();
+    if (!pReq) 
+        return;
+    
+    for (int i = 0; i < headers; ++i)
+    {
+        const char *val = pReq->getHeader(i);
+        if (*val)
+        {
+            const char *key = lsiApiConst.get_cgi_header(i);
+            const int  key_len = lsiApiConst.get_cgi_header_len(i);
+            int val_len = pReq->getHeaderLen(i);
+            //Note: WARNING: web server does not send authorization info to cgi 
+            //for security reasons
+            //pass AUTHORIZATION header only when server does not check it.
+            if ((i == HttpHeader::H_AUTHORIZATION)
+                && (pReq->getAuthUser()))
+                continue;
+            if (filter)
+            {
+                bool match = fm.isNegated() ?
+                             (fm.match(key, key_len) && fm.match(val, val_len)) :
+                             (fm.match(key, key_len) || fm.match(val, val_len));
+                if (!match)
+                    continue;
+            }
+
+            cb(i, key, key_len, val, val_len, arg);
+        }
+    }
+}
+
+static void foreach_resp_header(const HttpSession *session, const char *filter,
+                                   lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
+                              __func__, filter, cb, arg);
+    if (session == NULL)
+        return;
+
+    FilterMatch fm(filter);
+
+    // have it work for both MT and normal handlers
+    ls_mutex_t dummyLock;
+    ls_mutex_setup(&dummyLock);
+    ls_mutex_t * ptr =  session->getMtFlag(HSF_MT_HANDLER) ?
+        &const_cast<HttpSession *>(session)->getMtSessData()->m_respHeaderLock : &dummyLock;
+    MtLock lk(*ptr);
+    HttpRespHeaders &respHeaders = const_cast<HttpSession *>(session)->getResp()->getRespHeaders();
+    int count = respHeaders.getCount();
+    struct iovec keys[count], vals[count];
+    int found = respHeaders.getAllHeaders(keys, vals, count);
+    LSI_DBGH(session, "foreach_resp_header: count %d, found %d\n", count, found);
+    for (int i = 0; i < found; i++)
+    {
+        const char * pKey = (const char *) keys[i].iov_base;
+        int keyLen = keys[i].iov_len;
+        const char * pVal = (const char *) vals[i].iov_base;
+        int valLen = vals[i].iov_len;
+        bool match = !filter || fm.isNegated()
+            ? (fm.match(pKey, keyLen) && fm.match(pVal, valLen))
+            : (fm.match(pKey, keyLen) || fm.match(pVal, valLen));
+        if (match)
+        {
+            cb(i, pKey, keyLen, pVal, valLen, arg);
+        }
+    }
+}
+
+static void lsi_foreach(const lsi_session_t *session, LSI_DATA_TYPE type, 
+                        const char *filter, lsi_foreach_cb cb, void *arg)
+{
+    LSI_DBGH(session, "enter %s: type %d, filter %s, cb %p, arg %p\n",
+                              __func__, type, filter, cb, arg);
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (!pSession)
+        return;
+    switch(type)
+    {
+    case LSI_DATA_REQ_HEADER:
+        foreach_req_header(pSession, filter, cb, arg);
+        break;
+    case LSI_DATA_REQ_VAR:
+        foreach_req_var(pSession, filter, cb, arg);
+        break;
+    case LSI_DATA_REQ_ENV:
+        foreach_req_env(pSession, filter, cb, arg);
+        break;
+    case LSI_DATA_REQ_SPECIAL_ENV:
+        foreach_special_env(pSession, filter, cb, arg);
+        break;
+    case LSI_DATA_REQ_CGI_HEADER:
+        foreach_req_cgi_header(pSession, filter, cb, arg);
+        break;
+    case LSI_DATA_REQ_COOKIE:
+        foreach_req_cookie(pSession, filter, cb, arg);
+        break;
+    case LSI_DATA_RESP_HEADER:
+        foreach_resp_header(pSession, filter, cb, arg);
+        break;
+    }
+}    
+
+void register_thread_cleanup(const lsi_module_t *pModule, void (*routine)(void *), void * arg)
+{
+}
+
+
+void register_thread_cleanup_ts(const lsi_module_t *pModule, void (*routine)(void *), void * arg)
+{
+    if (!pModule
+        || !pModule->reqhandler
+        || LSI_HDLR_DEFAULT_POOL != pModule->reqhandler->ts_hdlr_ctx)
+    {
+        return;
+    }
+    WorkCrew * pWC = ModuleHandler::getGlobalWorkCrew();
+    if (!pWC)
+    {
+        LSI_ERR(NULL, "Global work crew pointer is NULL!\n");
+        return;
+    }
+    pWC->pushCleanup(routine, arg);
+}
+
+static time_t get_cur_time_ts(int32_t *usec)
+{
+    LS_TH_IGN_RD_BEG();
+    if (usec)
+        *usec = ls_atomic_fetch_add(&DateTime::s_curTimeUs, 0);
+    time_t now = ls_atomic_fetch_add(&DateTime::s_curTime, 0);
+    LS_TH_IGN_RD_END();
+    return now;
+}
+
+
+static int remove_resp_header_ts(const lsi_session_t *session,
+                              unsigned int header_index, const char *name,
+                              int nameLen)
+{
+    LSI_DBGH(session, "enter %s: header_index %d, name %s, nameLen %d\n",
+                              __func__, header_index, name, nameLen);
+
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
+
+    MtLock lk(pSession->getMtSessData()->m_respHeaderLock);
+    if (pSession->isMtHandlerCancelled())
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    if (pSession->getMtFlag(HSF_MT_RESP_HDR_SENT))
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+
+    if (header_index < LSI_RSPHDR_END)
+        respHeaders.del((HttpRespHeaders::INDEX)header_index);
+    else
+        respHeaders.del(name, nameLen);
+    return LS_OK;
+}
+
+
+static int set_resp_content_length_ts(const lsi_session_t *session, int64_t len)
+{
+    LSI_DBGH(session, "enter %s: len %d\n", __func__, (int) len);
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    assert(pSession->getMtFlag(HSF_MT_HANDLER));
+    HttpResp *pResp = ((HttpSession *)((LsiSession *)session))->getResp();
+
+    MtLock lk(pSession->getMtSessData()->m_respHeaderLock);
+    if (pSession->isMtHandlerCancelled())
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    if (pSession->getMtFlag(HSF_MT_RESP_HDR_SENT))
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    pResp->setContentLen(len);
+    pResp->appendContentLenHeader();
+    return LS_OK;
+}
+
+
+static int set_resp_header_ts(const lsi_session_t *session,
+                           unsigned int header_index, const char *name,
+                           int nameLen, const char *val, int valLen,
+                           int add_method)
+{
+    LSI_DBGH(session,
+             "enter %s: header_index %d, name %.*s, nameLen %d, val %.*s, valLen %d, add_method %d\n",
+             __func__, header_index, nameLen, name, nameLen, valLen, val, valLen, add_method);
+
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    assert(pSession->getMtFlag(HSF_MT_HANDLER));
+    HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
+
+    MtLock lk(pSession->getMtSessData()->m_respHeaderLock);
+    if (pSession->isMtHandlerCancelled())
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    if (pSession->getMtFlag(HSF_MT_RESP_HDR_SENT))
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    if (header_index < LSI_RSPHDR_END)
+    {
+        respHeaders.add((HttpRespHeaders::INDEX)header_index, val, valLen,
+                add_method);
+        if (header_index == HttpRespHeaders::H_CONTENT_TYPE)
+            pSession->updateContentCompressible();
+    }
+    else
+    {
+        respHeaders.add(name, nameLen, val, valLen, add_method);
+    }
+    return LS_OK;
+}
+
+
+static int set_resp_header2_ts(const lsi_session_t *session, const char *s, int len,
+        int add_method)
+{
+    LSI_DBGH(session, "enter %s: s %.*s, len %d,  add_method %d\n",
+             __func__, len, s, len,  add_method);
+
+    int len0, len1;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
+
+    //Save and check if the contenttype updated, if yes, processContentType
+    //most case is change from NULL to a valid type.
+
+    MtLock lk(pSession->getMtSessData()->m_respHeaderLock);
+    if (pSession->isMtHandlerCancelled())
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    if (pSession->getMtFlag(HSF_MT_RESP_HDR_SENT))
+    {
+        LS_TH_BENIGN(lk.getPtr(), "ok exiting");
+        return LS_FAIL;
+    }
+    char *type0 = respHeaders.getContentTypeHeader(len0);
+    respHeaders.parseAdd(s, len, add_method);
+    char *type1 = respHeaders.getContentTypeHeader(len1);
+
+    if (type0 != type1 || len0 != len1)
+        pSession->updateContentCompressible();
+
+    return LS_OK;
+}
+
+
+
+
+#define MAX_RESP_BODY_BUF (128 * 1024)
+static int append_resp_body_ts_ex(HttpSession *pSession, const char *buf,
+                                  int len)
+{
+    MtNotifier *pNotifier;
+    const char *pEnd = buf + len;
+    const char *p = buf;
+    size_t buffered;
+    LSI_DBGH(pSession, "enter %s: begin write buf %p, %d bytes\n", __func__, buf, len);
+
+    MtWriteMode & writeMode = pSession->getMtSessData()->m_mtWrite.m_writeMode;
+
+    pNotifier = pSession->getMtSessData()->getWriteNotifier();
+    while (p < pEnd)
+    {
+        if (pSession->isMtHandlerCancelled())
+            return LS_FAIL;
+
+        MtWriteBuf & wBuf = pSession->getMtSessData()->m_mtWrite.m_writeBuf;
+        size_t availSize = wBuf.getBuf() ?  wBuf.getBufEnd() - wBuf.getCurPos() : 0;
+        size_t size = 8192; // FIXME get rid of magic number
+
+        if (wBuf.getBuf() && 0 == availSize)
+        {
+            // we've filled the buffer, flush it and replace
+            LSI_DBGH(pSession, "%s: calling flush local buf\n", __func__);
+
+            lsi_flush_local_buf_ts(pSession);
+        }
+
+        if (NULL == wBuf.getBuf())
+        {
+            // first time through or we just flushed
+            char * buf = lsi_new_local_buf_ts(pSession, size, writeMode);
+            availSize = size;
+
+            assert(buf && "got NULL buf!");
+
+            wBuf.set(buf, size, buf);
+        }
+
+        // have a writable local buffer
+
+        size_t wantSize = pEnd - p;
+        size_t copySize = wantSize <= availSize ? wantSize : availSize;
+
+        LSI_DBGH(pSession, "%s: appending (%p, %lu) to wBuf: %p, %lu, %p\n",
+                 __func__, p, copySize, wBuf.getBuf(), wBuf.getBlockSize(), wBuf.getCurPos());
+
+        memmove(wBuf.getCurPos(), p, copySize);
+        p += copySize;
+        wBuf.set(wBuf.getBuf(), wBuf.getBufEnd() - wBuf.getBuf(), wBuf.getCurPos() + copySize);
+
+
+        buffered = pSession->getRespBodyBuffered();
+        if (buffered >= MAX_RESP_BODY_BUF)
+        {
+            // time to flush, do our local buf first
+            LSI_DBGH(pSession, "%s: calling flush (partial) local buf\n", __func__);
+
+            lsi_flush_local_buf_ts(pSession); // marks wBuf empty, will get new next loop iter
+
+            pNotifier->lock();
+            buffered = pSession->getRespBodyBuffered();
+            if (buffered >= MAX_RESP_BODY_BUF
+                && !pSession->isMtHandlerCancelled())
+            {
+                // need to write out the response buffer
+                if (buffered == HS_RESP_NOT_READY)
+                {
+                    // beginMtHandler sets up the VMemBuf in HttpSession so this should
+                    // never happen
+                    pSession->setMtFlag(HSF_MT_INIT_RESP_BUF);
+                    // will call setupDynRespBodyBuf, setupRespCache, setRespBodyBuf, HttpResourceManager::getInstance().getVMemBuf()
+                }
+                else
+                    pSession->setMtFlag(HSF_MT_FLUSH, 1);
+                    // processMtEvents clears HSF_MT_FLUSH, CLEARS HSF_RESP_FLUSHED, calls flush()
+                schedule_mt_notify_event(pSession);
+
+                LSI_DBGH(pSession, "%s finished: %ld, begin wait...\n",
+                         __func__, p - buf );
+                pNotifier->wait();
+                LSI_DBGH(pSession, "%s end wait\n", __func__);
+            }
+            pNotifier->unlock();
+        }
+    }
+    LSI_DBGH(pSession, "%s finish write %ld bytes\n", __func__, p - buf);
+    return p - buf;
+}
+
+
+//return 0 is OK, -1 error
+static int append_resp_body_ts(const lsi_session_t *session, const char *buf,
+                            int len)
+{
+    LSI_DBGH(session, "enter %s: buf %p, len %d\n", __func__, buf, len);
+
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    assert(pSession->getMtFlag(HSF_MT_HANDLER));
+    if (pSession->isEndResponse() || pSession->isMtHandlerCancelled())
+        return LS_FAIL;
+
+    ls_mutex_lock(&pSession->getMtSessData()->m_mutex_writer);
+    int ret = append_resp_body_ts_ex(pSession, buf, len);
+    ls_mutex_unlock(&pSession->getMtSessData()->m_mutex_writer);
+    return ret;
+}
+
+
+static int append_resp_bodyv_ts(const lsi_session_t *session,
+                             const struct iovec *vector, int count)
+{
+    LSI_DBGH(session, "enter %s: vector %p, count %d\n", __func__, vector, count);
+
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    //FIXME: determine what handling is needed for filter hooks - if
+    // filters try to lock mutex_writer, this will hang!
+    ls_mutex_lock(&pSession->getMtSessData()->m_mutex_writer);
+    bool error = 0;
+    for (int i = 0; i < count; ++i)
+    {
+        if (pSession->isEndResponse() || pSession->isMtHandlerCancelled())
+        {
+            error = LS_FAIL;
+            break;
+        }
+
+        if (append_resp_body_ts_ex(pSession, (char *)((*vector).iov_base),
+                    (int)(*vector).iov_len) <= 0)
+        {
+            error = 1;
+            break;
+        }
+        ++vector;
+    }
+
+    ls_mutex_unlock(&pSession->getMtSessData()->m_mutex_writer);
+    return error;
+}
+
+
+static int read_req_body_ts(const lsi_session_t *session, char *buf, int bufLen)
+{
+    LSI_DBGH(session, "enter %s: buf %p, bufLen %d\n", __func__, buf, bufLen);
+
+    MtNotifier *pNotifier;
+    VMemBuf *pReqBuf;
+    char *p;
+    size_t size;
+    int iReqBodyDone = 0, iSpaceRemain = bufLen;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    if (NULL == (pReqBuf = pSession->getReq()->getBodyBuf()))
+        return LS_FAIL;
+
+    // Someone else is already reading.
+    if (!pSession->testAndSetMtFlag(HSF_MT_READING))
+        return LS_FAIL;
+
+    LSI_DBGH(pSession, "read_req_body_ts(), begin read %d bytes\n", bufLen);
+    pNotifier = pSession->getMtSessData()->getReadNotifier();
+    while ((!pSession->isMtHandlerCancelled()) // Session is not cancelled.
+        && (iSpaceRemain > 0)) // I still want more data.
+    {
+        iReqBodyDone = pSession->getFlag(HSF_REQ_BODY_DONE);
+        p = pReqBuf->getReadBuffer(size);
+        LSI_DBGH(pSession, "read_req_body_ts(), getReadBuffer() size: %ld\n", size);
+        if (size > 0)
+        {
+            if ((int)size > iSpaceRemain)
+                size = iSpaceRemain;
+            memcpy(buf, p, size);
+            pReqBuf->readUsed(size);
+            buf += size; // update pointer
+            iSpaceRemain = iSpaceRemain - (int)size; // update how much data needs to be read
+        }
+        else
+        {
+            if (iReqBodyDone)
+                break;
+            pNotifier->lock(); // lock
+            // NOTICE: Checking if the req body is done MUST be done before updating the size.
+            iReqBodyDone = pSession->getFlag(HSF_REQ_BODY_DONE);
+            p = pReqBuf->getReadBuffer(size);
+
+            if (0 == size && !iReqBodyDone && !pSession->isMtHandlerCancelled())
+            {
+                LSI_DBGH(pSession, "read_req_body_ts(), begin wait ...\n");
+                pNotifier->wait();
+                LSI_DBGH(pSession, "read_req_body_ts(), end wait\n");
+            }
+            pNotifier->unlock();
+        }
+    }
+
+    pSession->clearMtFlag(HSF_MT_READING);
+    if (pSession->isMtHandlerCancelled())
+    {
+        LSI_DBGH(pSession, "read_req_body_ts(), MT handler canceled\n");
+        return LS_FAIL;
+    }
+    LSI_DBGH(pSession, "read_req_body_ts(), read %d bytes\n", bufLen - iSpaceRemain);
+
+    return bufLen - iSpaceRemain;
+}
+
+
+static long schedule_mt_notify_event(const lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession->testAndSetMtFlag(HSF_MT_NOTIFIED))
+    {
+        evtcb_pf cb = (evtcb_pf)(&HttpSession::mtNotifyCallback);
+        return create_event(cb, session, pSession->getSn(), NULL, true);
+    }
+    return 0;
+}
+
+
+// DEBUG TEMP:
+long schedule_remove_session_cbs_event(const lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    evtcb_pf cb = (evtcb_pf)(&HttpSession::removeSessionCbsEvent);
+    return create_event(cb, session, pSession->getSn(), NULL, 0); // nowait = false
+}
+
+
+static long schedule_mt_notify_event_params(const lsi_session_t *session,
+                                           long lParam, void * pParam)
+{
+    evtcb_pf cb = (evtcb_pf)(&HttpSession::mtNotifyCallbackEvent);
+    return create_event(cb, session, lParam, pParam, true);
+}
+
+
+static int blocking_mt_notify_event(const lsi_session_t *session, int32_t flag,
+                                    void *pParam = NULL)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    MtNotifier *pNotifier = &pSession->getMtSessData()->m_event;
+    int32_t flaggedAndNotified = flag | (pParam ? 0 : HSF_MT_NOTIFIED);
+
+    while (!pSession->isMtHandlerCancelled()
+        && pSession->testMtFlag(flag))
+    {
+        if (NULL == pParam)
+            schedule_mt_notify_event(pSession);
+        else
+            schedule_mt_notify_event_params(pSession, flag, pParam);
+        LSI_DBGM(pSession, "lock event waiters lock.\n");
+        pNotifier->lock();
+        if ((!pSession->isMtHandlerCancelled())
+            && (flaggedAndNotified == pSession->testMtFlag(flaggedAndNotified)))
+        {
+            LSI_DBGM(pSession, "enter event wait.\n");
+            pNotifier->wait();
+            LSI_DBGM(pSession, "exited event wait.\n");
+        }
+        LSI_DBGM(pSession, "unlock event waiters lock.\n");
+        pNotifier->unlock();
+    }
+
+    return (pSession->isMtHandlerCancelled() ? LS_FAIL : LS_OK);
+}
+
+
+static int parse_req_args_ts(const lsi_session_t *session, int parse_req_body,
+                          int uploadPassByPath, const char *uploadTmpDir,
+                          int uploadTmpFilePermission)
+{
+    LSI_DBGH(session,
+             "enter %s: parse_req_body %d, uploadPassByPath %d, uploadTmpDir %s, uploadTmpFilePermission %d\n",
+             __func__, parse_req_body, uploadPassByPath, uploadTmpDir, uploadTmpFilePermission);
+
+    MtParamParseReqArgs params;
+    MtSessData *pMtData;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    assert(pSession->getMtFlag(HSF_MT_HANDLER));
+    if (pSession->isMtHandlerCancelled())
+        return LS_FAIL;
+    if (!pSession->testAndSetMtFlag(HSF_MT_PARSE_REQ_ARGS))
+    {
+        LSI_ERR(pSession, "Another thread already requested parsing request args.\n");
+        return LS_FAIL;
+    }
+
+    pMtData = pSession->getMtSessData();
+    params.m_pUploadTmpDir = uploadTmpDir;
+    params.m_parseReqBody = parse_req_body;
+    params.m_uploadPassByPath = uploadPassByPath;
+    params.m_tmpFilePerms = uploadTmpFilePermission;
+
+    if (LS_FAIL == blocking_mt_notify_event(pSession, HSF_MT_PARSE_REQ_ARGS, &params))
+    {
+        pSession->clearMtFlag(HSF_MT_PARSE_REQ_ARGS);
+        return LS_FAIL;
+    }
+    return params.m_ret;
+}
+
+
+/**
+ * The various calls to getRemain() used in send_file_ts_ex are all safe.
+ * Currently, the only way the remaining value is going to change is by decreasing
+ * as more data is written. If both getRemain calls return > 0, I will wait and
+ * I am guaranteed to be notified because I have the notify lock.
+ * If the first returns > 0 and the second returns 0, I will not wait.
+ * If the first returns 0, then I am done.
+ */
+static inline off_t get_sendfile_remain_ign_helper(SendFileInfo *pSendFileInfo)
+{
+    off_t ret;
+    LS_TH_IGN_RD_BEG();
+    ret = pSendFileInfo->getRemain();
+    LS_TH_IGN_RD_END();
+    return ret;
+}
+
+
+static int send_file_ts_ex(HttpSession *pSession, const char *path,
+                    int fd, int64_t start, int64_t size)
+{
+    LSI_DBGH(pSession, "enter %s: path %p, fd %d, start  %ld, size %ld\n",
+             __func__, path, fd, start, size);
+    MtParamSendfile params;
+    MtSessData *pMtData = pSession->getMtSessData();
+    MtNotifier *pNotifier;
+    SendFileInfo *pSendFileInfo;
+
+    if (!pSession->testAndSetMtFlag(HSF_MT_SENDFILE))
+    {
+        LSI_ERR(pSession, "Another thread is in the middle of sending a file.\n");
+        return LS_FAIL;
+    }
+
+    params.m_pFile = path;
+    params.m_fd = fd;
+    params.m_start = start;
+    params.m_size = size;
+    params.m_ret = 0;
+
+    if (LS_FAIL == blocking_mt_notify_event(pSession, HSF_MT_SENDFILE, &params))
+    {
+        LSI_ERR(pSession, "Blocking notify failed. Perhaps session cancelled?\n");
+        pSession->clearMtFlag(HSF_MT_SENDFILE);
+        return LS_FAIL;
+    }
+
+    if (LS_FAIL == params.m_ret)
+    {
+        LSI_ERR(pSession, "lsi_sendfile_ts_ex() failed to send.\n");
+        return LS_FAIL;
+    }
+
+    pNotifier = pMtData->getWriteNotifier();
+    pSendFileInfo = pSession->getSendFileInfo();
+    while (get_sendfile_remain_ign_helper(pSendFileInfo) > 0)
+    {
+        if (pSession->isMtHandlerCancelled())
+        {
+            LSI_ERR(pSession, "Handler cancelled in the middle of sending a file.\n");
+            return LS_FAIL;
+        }
+        pNotifier->lock();
+        if (!pSession->isMtHandlerCancelled()
+           && (get_sendfile_remain_ign_helper(pSendFileInfo) > 0))
+        {
+            pSession->setMtFlag(HSF_MT_FLUSH, 1);
+            schedule_mt_notify_event(pSession);
+            LSI_DBGH(pSession, "send_file_ts_ex(), wait for remaining %lu bytes\n",
+                     get_sendfile_remain_ign_helper(pSendFileInfo));
+            pNotifier->wait();
+            LSI_DBGH(pSession, "send_file_ts_ex(), out of wait\n");
+        }
+        pNotifier->unlock();
+    }
+
+    return LS_OK;
+}
+
+
+static int send_file_ts(const lsi_session_t *session, const char *path,
+                     int64_t start, int64_t size)
+{
+    LSI_DBGH(session, "enter %s: path %p, start  %ld, size %ld\n",
+             __func__, path, start, size);
+    int ret = LS_FAIL;
+    MtSessData *pMtData;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    if (pSession->isEndResponse())
+        return LS_FAIL;
+    pMtData = pSession->getMtSessData();
+
+    ls_mutex_lock(&pMtData->m_mutex_writer);
+    if (!pSession->isEndResponse())
+        ret = send_file_ts_ex(pSession, path, 0, start, size);
+    ls_mutex_unlock(&pMtData->m_mutex_writer);
+    return ret;
+}
+
+
+static int send_file2_ts(const lsi_session_t *session, int fd,
+                      int64_t start, int64_t size)
+{
+    LSI_DBGH(session, "enter %s: fd %d, start  %ld, size %ld\n",
+             __func__, fd, start, size);
+    int ret = LS_FAIL;
+    MtSessData *pMtData;
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+
+    if (pSession->isEndResponse())
+        return LS_FAIL;
+    pMtData = pSession->getMtSessData();
+
+    ls_mutex_lock(&pMtData->m_mutex_writer);
+    if (!pSession->isEndResponse())
+        ret = send_file_ts_ex(pSession, NULL, fd, start, size);
+    ls_mutex_unlock(&pMtData->m_mutex_writer);
+    return ret;
+}
+
+
+ls_inline int notifyCollapsibleMtFlag(HttpSession *pSession, int flag)
+{
+    assert(pSession->getMtFlag(HSF_MT_HANDLER));
+    if (pSession->isMtHandlerCancelled())
+        return LS_FAIL;
+
+    if (pSession->testAndSetMtFlag(flag))
+    {
+        LSI_DBGH(pSession, "mark MT flag %X\n", flag);
+        schedule_mt_notify_event(pSession);
+    }
+    else
+        LSI_DBGH(pSession, "pending MT flag %X, skip ntofication\n", flag);
+    return 0;
+}
+
+
+static int lsi_flush_ts(const lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    LSI_DBGH(pSession, "lsi_flush_ts() called\n");
+    
+//    lsi_flush_local_buf_ts(pSession);
+
+    return notifyCollapsibleMtFlag(pSession, HSF_MT_FLUSH);
+}
+
+
+static void send_resp_headers_ts(const lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return;
+    LSI_DBGH(pSession, "enter %s\n", __func__);
+    (void) notifyCollapsibleMtFlag(pSession, HSF_MT_SND_RSP_HDRS);
+}
+
+
+static void lsi_end_resp_ts(const lsi_session_t *session)
+{
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return;
+
+
+    LSI_DBGH(pSession, "enter %s\n", __func__);
+
+//    lsi_flush_local_buf_ts(pSession);
+
+    (void) notifyCollapsibleMtFlag(pSession, HSF_MT_END_RESP);
+}
+
+
+static int set_uri_qs_ts(const lsi_session_t *session, int action, const char *uri,
+                      int uri_len, const char *qs, int qs_len)
+{
+
+    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    if (pSession == NULL)
+        return LS_FAIL;
+    if (!action)
+        return LS_OK;
+    // 2 ways to handle the data - either do a blocking wait
+    // to make sure strings remain valid until processed, and
+    // then when waking unlock here, or dynamically alloc
+    // safe copies for the main thread to use and let main
+    // thread unlock when it's done with them
+    // since this func always returned LS_OK, skip the wait
+    MtParamUriQs * pParam = (MtParamUriQs *) malloc(sizeof(MtParamUriQs));
+    pParam->m_action = action;
+    pParam->m_uri = ls_str_new(uri, uri_len);
+    pParam->m_qs = ls_str_new(qs, qs_len);
+    schedule_mt_notify_event_params(pSession, HSF_MT_SET_URI_QS, pParam);
+    return LS_OK;
+}
+
+
+// Timer is not available for MT handler.
+static int lsi_set_timer_ts(unsigned int timeout_ms, int repeat,
+                         lsi_timercb_pf timer_cb, const void *timer_cb_param)
+{
+    return LS_FAIL;
+}
+
+
+static int lsi_remove_timer_ts(int timer_id)
+{
+    return LS_FAIL;
+}
+
+
+static  void log_ts(const lsi_session_t *session, int level, const char *fmt, ...)
+{
+    if (log4cxx::Level::isEnabled(level))
+    {
+        char new_fmt[8192];
+        snprintf(new_fmt, 8191, "[T%d] %s", ls_thr_seq(), fmt);
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        va_list ap;
+        va_start(ap, fmt);
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
+        va_end(ap);
+    }
+
+}
+
+
+static  void vlog_ts(const lsi_session_t *session, int level, const char *fmt,
+                  va_list vararg, int no_linefeed)
+{
+    if (log4cxx::Level::isEnabled(level))
+    {
+        char new_fmt[8192];
+        snprintf(new_fmt, 8191, "[T%d] %s", ls_thr_seq(), fmt);
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, vararg, no_linefeed);
+    }
+
+}
+
+
+static void module_log_ts(const lsi_module_t *pMod, const lsi_session_t *session,
+                       int level, const char *fmt, ...)
+{
+    if (log4cxx::Level::isEnabled(level) && level <= MODULE_LOG_LEVEL(pMod))
+    {
+        char new_fmt[8192];
+        snprintf(new_fmt, 8191, "[%s] [T%d] %s", MODULE_NAME(pMod), 
+                 ls_thr_seq(), fmt);
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        va_list ap;
+        va_start(ap, fmt);
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
+        va_end(ap);
+
+    }
+}
+
+
+static void c_log_ts(const char *pComponent, const lsi_session_t *session,
+                       int level, const char *fmt, ...)
+{
+    if (log4cxx::Level::isEnabled(level))
+    {
+        char new_fmt[8192];
+        snprintf(new_fmt, 8191, "[%s] [T%d] %s", pComponent, ls_thr_seq(), fmt);
+        HttpSession *pSess = (HttpSession *)((LsiSession *)session);
+        LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
+        va_list ap;
+        va_start(ap, fmt);
+        LOG4CXX_NS::Logger::s_vlog(level, pLogSess, new_fmt, ap, 1);
+        va_end(ap);
+
+    }
+}
+
+
+static lsi_api_t g_lsiapi;
+static lsi_api_t g_lsiapi_ts;
+__thread const lsi_api_t *g_api = &g_lsiapi_ts;
+
+
 void lsiapi_init_server_api()
 {
-    lsi_api_t *pApi = LsiapiBridge::getLsiapiFunctions();
+    lsi_api_t *pApi = &g_lsiapi;
     pApi->enable_hook = enable_hook;
     pApi->get_hook_level = get_hook_level;
     pApi->get_hook_flag = get_hook_flag;
@@ -2293,7 +3654,7 @@ void lsiapi_init_server_api()
 
     pApi->create_event = create_event;
     pApi->create_session_resume_event = create_session_resume_event;
-    
+
     pApi->get_event_obj = get_event_obj;
     pApi->schedule_event = schedule_event;
     pApi->cancel_event = cancel_event;
@@ -2362,7 +3723,7 @@ void lsiapi_init_server_api()
     pApi->get_resp_header_id = get_resp_header_id;
     pApi->get_resp_headers = get_resp_headers;
     pApi->remove_resp_header = remove_resp_header;
-    pApi->end_resp_headers = end_resp_headers;
+    pApi->send_resp_headers = send_resp_headers;
     pApi->is_resp_headers_sent = is_resp_headers_sent;
 
     pApi->get_multiplexer = lsiapi_get_multiplexer;
@@ -2411,7 +3772,7 @@ void lsiapi_init_server_api()
     pApi->get_vhost = get_vhost;
     pApi->set_vhost_module_data = set_vhost_module_data;
     pApi->get_vhost_module_data = get_vhost_module_data;
-    pApi->get_vhost_module_param = get_vhost_module_param;
+    pApi->get_vhost_module_conf = get_vhost_module_conf;
     pApi->get_session_pool = get_session_pool;
 
     pApi->handoff_fd = handoff_fd;
@@ -2420,13 +3781,43 @@ void lsiapi_init_server_api()
 
     pApi->set_ua_code = set_uacode;
     pApi->get_ua_code = get_uacode;
-    
+
+    pApi->foreach = lsi_foreach;
     
     pApi->module_log = module_log;
     pApi->c_log      = c_log;
     pApi->_log_level_ptr = log4cxx::Level::getDefaultLevelPtr();
+    pApi->schedule_remove_session_cbs_event = schedule_remove_session_cbs_event;
+    pApi->register_thread_cleanup = register_thread_cleanup_ts;
 
-    
-    
+    g_lsiapi_ts = g_lsiapi;
 
+    pApi = &g_lsiapi_ts;
+    //override functions need MT safe version.
+    pApi->set_resp_content_length = set_resp_content_length_ts;
+    pApi->set_resp_header = set_resp_header_ts;
+    pApi->set_resp_header2 = set_resp_header2_ts;
+    pApi->set_resp_cookies = set_resp_cookies_ts;
+    pApi->send_resp_headers = send_resp_headers_ts;
+    pApi->remove_resp_header = remove_resp_header_ts;
+    pApi->parse_req_args = parse_req_args_ts;
+    pApi->append_resp_body = append_resp_body_ts;
+    pApi->append_resp_bodyv = append_resp_bodyv_ts;
+    pApi->read_req_body = read_req_body_ts;
+    pApi->send_file = send_file_ts;
+    pApi->send_file2 = send_file2_ts;
+    pApi->flush = lsi_flush_ts;
+    pApi->end_resp = lsi_end_resp_ts;
+    pApi->set_uri_qs = set_uri_qs_ts;
+    pApi->set_timer = lsi_set_timer_ts;
+    pApi->remove_timer = lsi_remove_timer_ts;
+    pApi->exec_ext_cmd = exec_ext_cmd_ts;
+    pApi->get_cur_time = get_cur_time_ts;
+    pApi->vlog = vlog_ts;
+    pApi->log = log_ts;
+    pApi->module_log = module_log_ts;
+    pApi->c_log      = c_log_ts;
+    pApi->register_thread_cleanup = register_thread_cleanup_ts;
+
+    g_api = &g_lsiapi;
 }

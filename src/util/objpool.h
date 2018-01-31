@@ -22,6 +22,7 @@
 
 
 #include <util/gpointerlist.h>
+#include <lsr/ls_threadcheck.h>
 
 #include <assert.h>
 typedef int (*ForEachObj)(void *pObj, void *param);
@@ -51,6 +52,7 @@ public:
                 return NULL;
         }
         void *pObj = m_freeList.back();
+        LS_TH_NEWMEM(pObj, sizeof(void *));
         m_freeList.pop_back();
         return pObj;
 #else

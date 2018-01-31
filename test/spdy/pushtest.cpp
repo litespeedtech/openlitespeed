@@ -28,7 +28,7 @@ TEST(VHOST_URL_HASH)
     const char *url = "http://test.com/";
     
     int id = vhost->getIdBitOfUrl(url);
-    CHECK(id == -1);
+    CHECK(id == (uint32_t) -1);
     
     int id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 0);
@@ -40,7 +40,7 @@ TEST(VHOST_URL_HASH)
     
     url = "http://test1.com/";
     id = vhost->getIdBitOfUrl(url);
-    CHECK(id == -1);
+    CHECK(id == (uint32_t) -1);
     
     id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 1);
@@ -50,7 +50,7 @@ TEST(VHOST_URL_HASH)
     
     url = "http://test2.com/";
     id = vhost->getIdBitOfUrl(url);
-    CHECK(id == -1);
+    CHECK(id == (uint32_t) -1);
     
     id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 2);
@@ -69,7 +69,7 @@ TEST(VHOST_URL_HASH)
             ss[1] = s2[j];
             url = ss;
             id = vhost->getIdBitOfUrl(url);
-            CHECK(id == -1);
+            CHECK(id == (uint32_t) -1);
             
             id1 = vhost->addUrlToUrlIdHash(url);
             id = vhost->getIdBitOfUrl(url);

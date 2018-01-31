@@ -23,7 +23,8 @@
 
 Aiosfcb *Aiosfcb::getCbPtr(ls_lfnodei_t *pNode)
 {
-    return (Aiosfcb *)((char *)pNode - offsetof(Aiosfcb, m_node));
+    //return (Aiosfcb *)((char *)pNode - offsetof(Aiosfcb, m_node));
+    return (Aiosfcb *)((char *)pNode - (char *)(&(((Aiosfcb *) 0)->m_node)));
 }
 
 
@@ -52,9 +53,11 @@ void *AioSendFile::aioSendFile(ls_lfnodei_t *item)
 
 
 AioSendFile::AioSendFile()
-    : m_wc(this)
+    : m_pFinishedQueue(ls_lfqueue_new())
+      , m_wc(LS_AIOSENDFILE_NUMWORKERS, aioSendFile, m_pFinishedQueue, this)
+
 {
-    m_pFinishedQueue = ls_lfqueue_new();
+    m_wc.blockSig(SIGCHLD);
 }
 
 

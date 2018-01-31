@@ -56,15 +56,6 @@ static inline void appendNbo4Bytes(LoopBuf *pBuf, uint32_t val)
 }
 
 
-// static inline void append4Bytes(LoopBuf *pBuf, const char *val)
-// {
-//     pBuf->append(*val++);
-//     pBuf->append(*val++);
-//     pBuf->append(*val++);
-//     pBuf->append(*val);
-// }
-
-
 H2Connection::H2Connection()
     : m_bufInput(4096)
     , m_uiPushStreamId(2)
@@ -340,9 +331,9 @@ void H2Connection::printLogMsg(H2FrameHeader *pHeader)
             message = (const char *)m_bufInput.begin() + 8;
             messageLen = pHeader->getLength() - 8;
         }
-        LS_DBG_L(getLogger(),
+        LS_DBG_L(getStream()->getLogger(),
                  "[%s-%d] Received %s, size: %d, flag: 0x%hhx, Message: '%.*s'",
-                 getLogId(), pHeader->getStreamId(),
+                 getStream()->getLogId(), pHeader->getStreamId(),
                  getH2FrameName(pHeader->getType()), pHeader->getLength(),
                  pHeader->getFlags(), messageLen, message);
     }
@@ -1060,9 +1051,9 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
     if (!pSession)
         return NULL;
 
-    LS_DBG_H(getLogger(),
+    LS_DBG_H(getStream()->getLogger(),
              "[%s-%d] getNewStream(), stream map size: %d, shutdown streams: %d, flag: %d ",
-             getLogId(), m_uiLastStreamId, (int)m_mapStream.size(),
+             getStream()->getLogId(), m_uiLastStreamId, (int)m_mapStream.size(),
              m_uiShutdownStreams, (int)ubH2_Flags);
 
     if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams 
@@ -1125,8 +1116,8 @@ void H2Connection::recycleStream(StreamMap::iterator it)
     if (pH2Stream->getHandler())
         pH2Stream->getHandler()->recycle();
 
-    LS_DBG_H(getLogger(), "[%s-%d] recycleStream(), stream map size: %zd ",
-             getLogId(), pH2Stream->getStreamID(), m_mapStream.size());
+    LS_DBG_H(pH2Stream, "recycleStream(), stream map size: %zd ",
+             m_mapStream.size());
     //H2StreamPool::recycle( pH2Stream );
     delete pH2Stream;
 }
@@ -1177,8 +1168,8 @@ int H2Connection::sendFrame8Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 8, 0, uiStreamId);
     appendNbo4Bytes(getBuf(), uiVal1);
     appendNbo4Bytes(getBuf(), uiVal2);
-    LS_DBG_H(getLogger(), "[%s-%d] send %s frame, stream: %d, value: %d",
-             getLogId(), uiStreamId, getH2FrameName(type), uiVal1, uiVal2);
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] send %s frame, stream: %d, value: %d",
+             getStream()->getLogId(), uiStreamId, getH2FrameName(type), uiVal1, uiVal2);
     return 0;
 }
 
@@ -1190,8 +1181,8 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 4, 0, uiStreamId);
 
     appendNbo4Bytes(getBuf(), uiVal1);
-    LS_DBG_H(getLogger(), "[%s-%d] send %s frame, value: %d", getLogId(),
-             uiStreamId, getH2FrameName(type), uiVal1);
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] send %s frame, value: %d", 
+             getStream()->getLogId(), uiStreamId, getH2FrameName(type), uiVal1);
     return 0;
 }
 
@@ -1201,8 +1192,8 @@ int H2Connection::sendFrame0Bytes(H2FrameType type, unsigned char flags,
 {
     getBuf()->guarantee(9);
     appendCtrlFrameHeader(type, 0, flags, uiStreamId);
-    LS_DBG_H(getLogger(), "[%s-%d] send %s frame, with Flag: %d",
-             getLogId(), uiStreamId, getH2FrameName(type), flags);
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] send %s frame, with Flag: %d",
+             getStream()->getLogId(), uiStreamId, getH2FrameName(type), flags);
     return 0;
 }
 
@@ -1494,8 +1485,8 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
 int H2Connection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
                                   uint32_t uiStreamID, uint8_t flag)
 {
-    LS_DBG_H(getLogger(), "[%s-%d] sendRespHeaders()",
-             getLogId(), uiStreamID);
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] sendRespHeaders()",
+             getStream()->getLogId(), uiStreamID);
 
     unsigned char achHdrBuf[H2_TMP_HDR_BUFF_SIZE];
     int rc = encodeHeaders(pRespHeaders, achHdrBuf, H2_TMP_HDR_BUFF_SIZE);
@@ -1535,7 +1526,6 @@ int H2Connection::sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
     }
     return 0;
 }
-
 
 int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId, 
                                   ls_str_t* pUrl, ls_str_t* pHost, 
@@ -1651,8 +1641,8 @@ void H2Connection::add2PriorityQue(H2Stream *pH2Stream)
 {
     if (pH2Stream->next())
         pH2Stream->remove();
-    LS_DBG_H(getLogger(), "[%s-%d] add to priority queue: %d",
-             getLogId(), pH2Stream->getStreamID(), pH2Stream->getPriority());
+    LS_DBG_H(pH2Stream, "add to priority queue: %d",
+             pH2Stream->getPriority());
 
     m_priQue[pH2Stream->getPriority()].append(pH2Stream);
     m_iFlag |= H2_CONN_FLAG_WAIT_PROCESS;

@@ -53,6 +53,7 @@ public:
     virtual int handleEvents(short int event);
     int initNotifier(Multiplexer *pMultiplexer);
     void notify();
+    void collapsibleNotify();
 #ifndef LSEFD_AVAIL
     int getFdIn()
     {

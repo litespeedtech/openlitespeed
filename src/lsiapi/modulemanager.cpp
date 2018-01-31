@@ -182,7 +182,7 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
     //prelinked checked, now, check file
     char sFilePath[512];
     getModulePath(name, sFilePath, sizeof(sFilePath));
-    dlLib = dlopen(sFilePath, RTLD_LAZY);
+    dlLib = dlopen(sFilePath, RTLD_LAZY | RTLD_GLOBAL);
     if (dlLib)
         pModule = (lsi_module_t *) dlsym(dlLib, name);
     if (!pModule || !dlLib)

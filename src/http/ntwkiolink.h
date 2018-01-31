@@ -21,7 +21,6 @@
 
 
 #include <edio/eventreactor.h>
-#include <http/clientinfo.h>
 #include <http/hiostream.h>
 
 #include <sslpp/sslconnection.h>
@@ -34,11 +33,13 @@
 #include <lsiapi/lsimoduledata.h>
 #include <lsiapi/lsiapihooks.h>
 
+class ClientInfo;
 class Aiosfcb;
 class HttpListener;
 class VHostMap;
 class SslContext;
 struct sockaddr;
+class ThrottleControl;
 
 typedef int (*writev_fp)(LsiSession *pThis, const struct iovec *vector,
                          int count);
@@ -161,6 +162,7 @@ private:
                 return getHandler()->onWriteEx();
             else
                 return 0;
+            //FIXME lslb does not have an else
         else
         {
             suspendWrite();
@@ -203,8 +205,7 @@ private:
 
     void drainReadBuf();
 
-    bool allowWrite() const
-    {   return m_pClientInfo->allowWrite();  }
+    bool allowWrite() const;
 
 
     void updateSSLEvent();
@@ -252,8 +253,7 @@ public:
 
 public:
     void closeSocket();
-    bool allowRead() const
-    {   return m_pClientInfo->allowRead();   }
+    bool allowRead() const;
     int close();
     int  shutdown();
     int  detectClose();
@@ -314,13 +314,9 @@ public:
     int setLink(HttpListener *pListener, int fd, ClientInfo *pInfo,
                 SslContext  *pSslContext);
 
-    const char *getPeerAddrString() const
-    {   return m_pClientInfo->getAddrString();   }
-    int getPeerAddrStrLen() const
-    {   return m_pClientInfo->getAddrStrLen();   }
-
-    const struct sockaddr *getPeerAddr() const
-    {   return m_pClientInfo->getAddr();   }
+    const char *getPeerAddrString() const;
+    int getPeerAddrStrLen() const;
+    const struct sockaddr *getPeerAddr() const;
 
     void changeClientInfo(ClientInfo *pInfo);
 
@@ -349,8 +345,9 @@ public:
 
     ClientInfo *getClientInfo() const
     {   return m_pClientInfo;               }
-    ThrottleControl *getThrottleCtrl() const
-    {   return  &(m_pClientInfo->getThrottleCtrl());  }
+    
+    ThrottleControl *getThrottleCtrl() const;
+    
     static void enableThrottle(int enable);
     int isThrottle() const
     {   return m_pFpList->m_onTimer_fp != onTimer_; }

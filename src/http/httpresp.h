@@ -25,9 +25,12 @@
 #define LSI_RSP_BODY_SIZE_CHUNKED (-1)
 #define LSI_RSP_BODY_SIZE_UNKNOWN (-2)
 
-class ExpiresCtrl;
 
+class AutoStr2;
+class GzipBuf;
+class ExpiresCtrl;
 class HttpReq;
+class VMemBuf;
 typedef struct ls_xpool_s ls_xpool_t;
 
 class HttpResp
@@ -40,6 +43,9 @@ private:
     off_t           m_lEntityLength;
     off_t           m_lEntityFinished;
 
+    VMemBuf        *m_pRespBodyBuf;
+    GzipBuf        *m_pGzipBuf;
+
     HttpResp(const HttpResp &rhs);
     void operator=(const HttpResp &rhs);
 
@@ -50,19 +56,28 @@ public:
     HttpResp();
     ~HttpResp();
 
-    void reset();
+    void reset(int delCookies = 0);
 //    {
 //        m_outputBuf.clear();
 //        m_iovec.clear();
 //        memset( &m_iGotDate, 0,
 //                (char *)((&m_iHeaderLeft) + 1) - (char*)&m_iGotDate );
 //    }
+    void clearSetCookie()
+    {   m_respHeaders.clearSetCookieIndex();   }
 
 
     int appendHeader(const char *pName, int nameLen,
                      const char *pValue, int valLen);
     void prepareHeaders(const HttpReq *pReq, int addAcceptRange = 0);
     void appendContentLenHeader();
+
+    VMemBuf *getRespBodyBuf() const        {   return m_pRespBodyBuf;  }
+    void setRespBodyBuf(VMemBuf *pBuf)    {   m_pRespBodyBuf = pBuf;  }
+    void resetRespBody();
+
+    GzipBuf *getGzipBuf() const            {   return m_pGzipBuf;      }
+    void setGzipBuf(GzipBuf *pGzip)      {   m_pGzipBuf = pGzip;     }
 
     HttpRespHeaders &getRespHeaders()
     {   return m_respHeaders;  }
@@ -106,9 +121,15 @@ public:
     const char *getContentTypeHeader(int &len)  {    return m_respHeaders.getContentTypeHeader(len);  }
 
     int  appendLastMod(long tmMod);
+    int setContentTypeHeader(const char *pType, int typeLen,
+                             const AutoStr2 *pCharset);
     int addCookie(const char *pName, const char *pVal,
                   const char *path, const char *domain, int expires,
                   int secure, int httponly);
+
+    int appendDynBody(VMemBuf *pvBuf, int offset, int len);
+    int appendDynBody(const char *pBuf, int len);
+    int appendDynBodyEx(const char *pBuf, int len);
 
 };
 

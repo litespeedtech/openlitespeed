@@ -1,0 +1,81 @@
+.PHONY: clean
+
+clean:
+	rm -f $(OBJS)
+	rm -f $(SOS)
+
+DEPDIR := .d
+$(shell mkdir -p $(DEPDIR) >/dev/null)
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
+
+COMPILE.c = $(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+COMPILE.cc = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+
+POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
+
+%.o : %.c
+%.o : %.c $(DEPDIR)/%.d
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
+	$(POSTCOMPILE)
+
+%.o : %.cc
+%.o : %.cc $(DEPDIR)/%.d
+	$(COMPILE.cc) $(OUTPUT_OPTION) $<
+	$(POSTCOMPILE)
+
+%.o : %.cxx
+%.o : %.cxx $(DEPDIR)/%.d
+	$(COMPILE.cc) $(OUTPUT_OPTION) $<
+	$(POSTCOMPILE)
+
+%.o : %.cpp
+%.o : %.cpp $(DEPDIR)/%.d
+	$(COMPILE.cc) $(OUTPUT_OPTION) $<
+	$(POSTCOMPILE)
+
+%.so : %.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -shared $(LDFLAGS)
+
+### %.so : %.cpp
+### 	$(COMPILE.cc) $(OUTPUT_OPTION) $<
+### 	$(POSTCOMPILE)
+
+### %.so : %.c
+### 	$(COMPILE.c) $(OUTPUT_OPTION) $<
+### 	$(POSTCOMPILE)
+### 	$(CC) $(CFLAGS) -o $@ $< -shared $(LDFLAGS)
+
+$(DEPDIR)/%.d: ;
+.PRECIOUS: $(DEPDIR)/%.d
+
+-include $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS)))
+
+####
+####	DEPDIR = ...
+####	    This implementation places dependency files into a subdirectory named .d.
+####	$(shell mkdir -p $(DEPDIR) >/dev/null)
+####	    Unfortunately GCC will not create subdirectories, so this line ensures that the DEPDIR directory always exists.
+####	DEPFLAGS = ...
+####	    These are the special GCC-specific flags which convince the compiler to generate the dependency file. Full descriptions can be found in the GCC manual section Options Controlling the Preprocessor:
+####
+####	    -MT $@
+####		Set the name of the target in the generated dependency file.
+####	    -MMD
+####		Generate dependency information as a side-effect of compilation, not instead of compilation. This version omits system headers from the generated dependencies: if you prefer to preserve system headers as prerequisites, use -MD.
+####	    -MP
+####		Adds a target for each prerequisite in the list, to avoid errors when deleting files.
+####	    -MF $(DEPDIR)/$*.Td
+####		Write the generated dependency file to a temporary location $(DEPDIR)/$*.Td.
+####
+####	POSTCOMPILE = ...
+####	    Rename the generated temporary dependency file to the real dependency file. We do this in a separate step so that failures during the compilation won’t leave a corrupted dependency file.
+####	%.o : %.c
+####	    Delete the built-in rules for building object files from .c files, so that our rule is used instead. Do the same for the other built-in rules.
+####	... $(DEPDIR)/%.d
+####	    Declare the generated dependency file as a prerequisite of the target, so that if it’s missing the target will be rebuilt.
+####	$(DEPDIR)/%.d: ;
+####	    Create a pattern rule with an empty recipe, so that make won’t fail if the dependency file doesn’t exist.
+####	.PRECIOUS: $(DEPDIR)/%.d
+####	    Mark the dependency files precious to make, so they won’t be automatically deleted as intermediate files.
+####	-include ...
+####	    Include the dependency files that exist: translate each file listed in SRCS into its dependency file. Use -include to avoid failing on non-existent files.

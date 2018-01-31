@@ -115,9 +115,7 @@ public:
     int startProcessor()
     {
 #if !defined( NO_SENDFILE )
-        return m_wc.startJobProcessor(LS_AIOSENDFILE_NUMWORKERS,
-                                      m_pFinishedQueue,
-                                      aioSendFile);
+        return m_wc.startProcessing();
 #else
         return LS_FAIL;
 #endif

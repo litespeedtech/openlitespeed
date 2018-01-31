@@ -224,5 +224,5 @@ static int init_module(lsi_module_t *pModule)
     return LS_OK;
 }
 
-lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", serverHooks};
+static lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", serverHooks, {0}};

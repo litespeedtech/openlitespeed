@@ -141,10 +141,10 @@ int PatternLayout::format(LoggingEvent *pEvent, char *pBuf, int len)
                 if (*fmtDate == 0)
                 {
                     pBuf += snprintf(pBuf, pEnd - pBuf,
-                                     "%04d-%02d-%02d %02d:%02d:%02d.%03d",
+                                     "%04d-%02d-%02d %02d:%02d:%02d.%06d",
                                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                                      tm.tm_hour, tm.tm_min, tm.tm_sec,
-                                     (int)(pEvent->m_timestamp.tv_usec / 1000));
+                                     (int)(pEvent->m_timestamp.tv_usec));
                 }
                 else
                 {

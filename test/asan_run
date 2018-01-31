@@ -1,0 +1,11 @@
+#!/bin/bash
+SYMBOLIZER=$(ls -l /usr/lib/llvm-*/bin/llvm-symbolizer | tail -1 | sed s'/.*\/usr/\/usr/')
+#export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-4.0/bin/llvm-symbolizer
+export ASAN_SYMBOLIZER_PATH=$SYMBOLIZER
+# keep running:
+export ASAN_OPTIONS="halt_on_error=0:strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
+export TSAN_OPTIONS="history_size=7 suppressions=../thread_sanitizer_suppress" 
+# get a core dump:
+#ulimit -c unlimited
+#export ASAN_OPTIONS=abort_on_error=1
+exec $*

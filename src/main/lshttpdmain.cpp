@@ -28,6 +28,7 @@
 #include <log4cxx/logger.h>
 #include <log4cxx/logrotate.h>
 #include <lsiapi/lsiapihooks.h>
+#include <lsiapi/modulehandler.h>
 #include <lsr/ls_time.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
@@ -86,7 +87,7 @@ LshttpdMain::LshttpdMain()
     , m_fdAdmin(-1)
 {
     m_pServer = &HttpServer::getInstance();
-    
+
 #ifndef IS_LSCPD
     m_pBuilder = new HttpConfigLoader();
 #endif
@@ -668,7 +669,7 @@ const char *LshttpdMain::getPidFile()
     const char *pidFile = getenv("OLS_PID_FILE");
     if (!pidFile)
         pidFile = PID_FILE;
-    
+
     return pidFile;
 }
 
@@ -693,7 +694,7 @@ int LshttpdMain::testRunningServer()
             }
             else
             {
-                fprintf(stderr, "[ERROR] Failed to write to pid file:%s!\n", 
+                fprintf(stderr, "[ERROR] Failed to write to pid file:%s!\n",
                     getPidFile());
                 return ret;
             }
@@ -824,7 +825,7 @@ int LshttpdMain::init(int argc, char *argv[])
     if (m_pServer->initLscpd())
         return 1;
 #endif
-    
+
     if (!MainServerConfig::getInstance().getDisableLogRotateAtStartup())
         LOG4CXX_NS::LogRotate::roll(HttpLog::getErrorLogger()->getAppender(),
                                     procConfig.getUid(),
@@ -873,7 +874,7 @@ int LshttpdMain::init(int argc, char *argv[])
 
     if (!MainServerConfig::getInstance().getDisableWebAdmin())
         startAdminSocket();
-    
+
 #ifndef IS_LSCPD
     ret = config();
     if (ret)
@@ -925,6 +926,9 @@ int LshttpdMain::init(int argc, char *argv[])
         allocatePidTracker();
         m_pServer->initAdns();
         m_pServer->enableAioLogging();
+        cleanEnvVars();
+        WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
+        pGWC->startProcessing();
         if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
             && (m_pServer->initAioSendFile() != 0))
             return LS_FAIL;
@@ -1100,6 +1104,8 @@ int LshttpdMain::startChild(ChildProc *pProc)
         //child process
         cpu_set_t       cpu_affinity;
 
+        cleanEnvVars();
+
         PCUtil::getAffinityMask(s_iCpuCount, pProc->m_iProcNo - 1, 1,
                                 &cpu_affinity);
         PCUtil::setCpuAffinity(&cpu_affinity);
@@ -1109,11 +1115,13 @@ int LshttpdMain::startChild(ChildProc *pProc)
         releaseExcept(pProc);
         m_pServer->reinitMultiplexer();
         m_pServer->enableAioLogging();
+        WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
+        pGWC->startProcessing();
         if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
             && (m_pServer->initAioSendFile() != 0))
             return LS_FAIL;
         close(m_fdAdmin);
-        
+
 #ifdef IS_LSCPD
         snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
 #else
@@ -1286,16 +1294,19 @@ void LshttpdMain::broadcastSig(int sig, int changeState)
 }
 
 
-void LshttpdMain::stopAllChildren()
+void LshttpdMain::stopAllChildren(int nowait)
 {
     ChildProc *pProc;
     broadcastSig(SIGTERM, 0);
 
     long tmBeginWait = time(NULL);
-    long tmEndWait = tmBeginWait + 300 +
-                     HttpServerConfig::getInstance().getRestartTimeout();
-
-    while ((s_iRunning != -1) && (m_childrenList.size() > 0) &&
+    long tmEndWait;
+    if (nowait)
+        tmEndWait = tmBeginWait + 10;
+    else
+        tmEndWait = tmBeginWait + 300 +
+                    HttpServerConfig::getInstance().getRestartTimeout();
+    while ((m_childrenList.size() > 0) &&
            (time(NULL) < tmEndWait))
     {
         sleep(1);
@@ -1382,7 +1393,7 @@ int LshttpdMain::guardCrash()
     }
     else
         m_fdAdmin = -1;
-    
+
     pfds[0].fd = m_fdAdmin;
     pfds[0].events = POLLIN;
     pfds[1].fd = -1;
@@ -1440,7 +1451,7 @@ int LshttpdMain::guardCrash()
             processSignal();
     }
     if (m_childrenList.size() > 0)
-        stopAllChildren();
+        stopAllChildren(s_iRunning < 0);
 
     //Server Exit hookpoint called here
     if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_MAIN_ATEXIT))
@@ -1526,3 +1537,42 @@ void LshttpdMain::setAffinity( pid_t pid, int cpuId )
 #endif
 }
 */
+
+
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+#include <crt_externs.h>
+#else
+extern char ** environ;
+#endif
+void LshttpdMain::cleanEnvVars()
+{
+    char **env;
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+    env = *_NSGetEnviron();
+#else
+    env = environ;
+#endif
+    while( env != NULL && *env != NULL )
+    {
+        if (
+                !strncmp( *env, "PATH=", sizeof("PATH=") - 1)
+            // ||  !strncmp( *env, "HOME=", sizeof("HOME=") - 1 )
+            ||  !strncmp( *env, "CWD=", sizeof("CWD=") - 1 )
+            // ||  !strncmp( *env, "IFS=", sizeof("IFS=") - 1 )
+            ||  !strncmp( *env, "LD_LIBRARY_PATH=", sizeof("LD_LIBRARY_PATH=") - 1)
+            )
+        {
+            ++env;
+        }
+        else {
+            char ** del = env;
+            do
+                *del = del[1];
+            while( *del++ );
+        }
+        if (-1 == setenv("IFS", " \t\n", 1))
+        {
+                LS_ERROR("Could not reset IFS!");
+        }
+    }
+}

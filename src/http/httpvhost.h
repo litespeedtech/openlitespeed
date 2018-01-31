@@ -79,7 +79,7 @@ class LsiApiHooks;
 class ModUserdir;
 class RewriteMapList;
 class RLimits;
-class SSITagConfig;
+class SsiTagConfig;
 class SslContext;
 class UserDir;
 class XmlNodeList;
@@ -167,7 +167,7 @@ private:
     AutoStr2            m_sChroot;
     RewriteMapList     *m_pRewriteMaps;
     SslContext         *m_pSSLCtx;
-    SSITagConfig       *m_pSSITagConfig;
+    SsiTagConfig       *m_pSSITagConfig;
     LsiModuleData       m_moduleData;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
@@ -396,10 +396,10 @@ public:
         len = m_sName.len();
         return m_sName.c_str();
     }
-    void setSSITagConfig(SSITagConfig *pConfig)
+    void setSsiTagConfig(SsiTagConfig *pConfig)
     {   m_pSSITagConfig = pConfig;  }
 
-    SSITagConfig *getSSITagConfig() const
+    SsiTagConfig *getSsiTagConfig() const
     {   return m_pSSITagConfig;     }
     void setSslContext(SslContext *pCtx);
 

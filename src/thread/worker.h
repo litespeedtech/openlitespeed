@@ -20,69 +20,91 @@
 
 #include <lsdef.h>
 #include <thread/thread.h>
+#include <lsr/ls_atomic.h>
+#include <lsr/ls_lock.h>
 
 #include <assert.h>
+#include <lsr/ls_threadcheck.h>
 
 typedef void *(*workFn)(void *arg);
 
+class Worker;
+
 class Worker : public Thread
 {
-    int     m_iRunning;
-    workFn  m_pWork;
-    void   *m_pArg;
 
-    // given to Thread::run so signature must conform
-    static void *setWorker(void *pWorker)
+public:
+    enum
     {
-        // Thread::run is given 'this' as arg, which it will
-        // pass to setWorker, so expecting a Worker *:
-        return ((Worker *)pWorker)->doWork();
-    }
+        TO_START,
+        RUNNING,
+        TO_STOP,
+        STOPPED
+    };
 
-    void *doWork()
-    {
-        void *ret = NULL;
-        while (running())
-        {
-            if ((ret = m_pWork(m_pArg)))
-                break;
-        }
-        m_iRunning = 0;
-        return ret;
-    }
-
-    public:
     Worker(workFn work = NULL)
-        : m_iRunning(0)
-          , m_pWork(work)
-          , m_pArg(NULL)
-    {}
+        : m_pWorkFn(work)
+        , m_isWorking(TO_START)
+    {
+    }
 
     ~Worker()
-    {   assert(!m_iRunning);  }
+    {   assert(m_isWorking != RUNNING);  }
 
-    void setWorkFn(workFn work)
-    {   m_pWork = work; }
+    void setWorkFn(workFn work) {   m_pWorkFn = work; }
 
-    int running()
-    {   return m_iRunning; }
+    int requestStop()
+    {   return ls_atomic_casint(&m_isWorking, RUNNING, TO_STOP);  }
 
-    void setRunning()
-    {   m_iRunning = 1; }
+    int  isWorking() const
+    {
+        return ls_atomic_casint((volatile int *)&m_isWorking, RUNNING, RUNNING);
+    }
 
-    void setStop()
-    {   m_iRunning = 0; }
+    int start(void *arg)
+    {
+        if (ls_atomic_casint(&m_isWorking, TO_START, RUNNING))
+            return Thread::start(arg);
+        return LS_FAIL;
+    }
 
     int run(void *arg)
     {
-        if (!m_pWork)
+        if (!m_pWorkFn)
             return LS_FAIL;
-        m_pArg = arg;
-        setRunning();
-        return Thread::run(setWorker, this);
+
+        int ret = start(arg);
+        assert(ret == 0);
+        return ret;
     }
 
+    virtual int join(void **pRetVal)
+    {
+        int ret = Thread::join(pRetVal);
+        return ret;
+    }
 
+protected:
+    void * thr_main(void * arg)
+    {
+        void *ret = NULL;
+        ls_atomic_casint(&m_isWorking, TO_START, RUNNING);
+
+        while (isWorking())
+        {
+            if ((ret = m_pWorkFn(this))) {
+                // DESIGN CHANGE - ignore return code
+                // and continue running
+                //break;
+            }
+        }
+        ls_atomic_setint(&m_isWorking, STOPPED);
+        return ret;
+    }
+
+private:
+    workFn          m_pWorkFn;
+    int             m_isWorking;
 
     LS_NO_COPY_ASSIGN(Worker);
 };

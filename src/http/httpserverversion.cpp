@@ -20,7 +20,7 @@
 #include <config.h>
 
 const char HttpServerVersion::s_pVersion[] = "LiteSpeed/" PACKAGE_VERSION
-        " Open";
+        " Open\n\tmodule versions:\n" LS_MODULE_VERSION_INFO;
 
 int        HttpServerVersion::s_iVersionLen =
     9; //sizeof( s_pVersion ) - 1;

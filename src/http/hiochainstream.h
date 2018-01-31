@@ -33,7 +33,7 @@ public:
     virtual void suspendWrite();
     virtual void continueRead();
     virtual void suspendRead();
-    virtual int sendRespHeaders(HttpRespHeaders *pHeaders);
+    virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
     virtual int sendfile(int fdSrc, off_t off, off_t size);
     virtual int read(char *pBuf, int size);
     virtual int close();
@@ -45,6 +45,7 @@ public:
     virtual uint16_t getEvents() const  {   return 0;   }
     virtual int isFromLocalAddr() const {   return 1;   }
     virtual NtwkIOLink *getNtwkIoLink() {  return NULL;    }
+    virtual int shutdown();
 
     int onWrite();
 

@@ -116,7 +116,7 @@ NICDetect::get_ifi_info(int family, int doaliases)
                 {
                     sdl = (struct sockaddr_dl *) sa;
                     if (sdl->sdl_nlen > 0)
-                        ls_snprintf(ifi->ifi_name, IFI_NAME, "%*s",
+                        ls_snprintf(ifi->ifi_name, IFI_NAME, "%.*s",
                                     sdl->sdl_nlen, &sdl->sdl_data[0]);
                     else
                         ls_snprintf(ifi->ifi_name, IFI_NAME, "index %d",

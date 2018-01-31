@@ -88,6 +88,7 @@ int LsapiConn::connect(Multiplexer *pMplx)
     if (pWorker->selfManaged())
         return ExtConn::connect(pMplx);
     int fds[2];
+    // FIXME lslb commented this out.  Not sure if it applies.
     errno = ECONNRESET;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
@@ -218,9 +219,16 @@ int  LsapiConn::sendReqBody(const char *pBuf, int size)
 
 void LsapiConn::abort()
 {
+    if (getState() == DISCONNECTED)
+        return;
+
+    incReqProcessed();
     setState(ABORT);
-    sendAbortReq();
-    //::shutdown( getfd(), SHUT_RDWR );
+    continueWrite();
+    // FIXME ols orig code
+//     setState(ABORT);
+//     sendAbortReq();
+//     //::shutdown( getfd(), SHUT_RDWR );
 }
 
 

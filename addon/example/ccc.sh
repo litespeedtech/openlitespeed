@@ -58,7 +58,7 @@ else
 fi
 
 
-gcc -g -Wall -fPIC -c -D_REENTRANT $(getconf LFS_CFLAGS)   $TARGET.c -I "$LSIAPIDIR/src" -I "$LSIAPIDIR/include"
+gcc -g -Wall -fPIC  -fvisibility=hidden -c -D_REENTRANT $(getconf LFS_CFLAGS)   $TARGET.c -I "$LSIAPIDIR/src" -I "$LSIAPIDIR/include"
 gcc -g -Wall -fPIC $UNDEFINED_FLAG  $(getconf LFS_CFLAGS)  -o $TARGET.so $TARGET.o -shared $GDLIB
 
 if [ -f $(pwd)/$TARGET.so ] ; then

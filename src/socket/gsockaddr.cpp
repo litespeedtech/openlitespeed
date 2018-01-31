@@ -385,8 +385,8 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
         return 0;
 
     if (lookup_pf &&
-        (*pReq = Adns::getInstance().getHostByName(achDest, family, m_pSockAddr,
-                                                  lookup_pf, ctx)) != NULL)
+        (*pReq = Adns::getInstance().getHostByName(achDest, family,
+                                                   lookup_pf, ctx)) != NULL)
             return 1;
     return doLookup(family, achDest, tag);
 

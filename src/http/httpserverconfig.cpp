@@ -99,7 +99,7 @@ void HttpServerConfig::setMaxDynRespLen(int64_t len)
 }
 
 
-void HttpServerConfig::setMaxDynRespHeaderLen(int len)
+void HttpServerConfig::setMaxDynRespHeaderLen(uint32_t len)
 {
     if ((len >= 200) && (len <= MAX_DYN_RESP_HEADER_LEN))
         m_iMaxDynRespHeaderLen = len;

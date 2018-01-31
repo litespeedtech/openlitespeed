@@ -56,7 +56,7 @@ public:
     typedef const HashElem *const_iterator;
 
     typedef hash_key_t (*hasher)(const void *);
-    typedef int (*value_compare)(const void *pVal1, const void *pVal2);
+    typedef int (*kcmp_ne)(const void *pVal1, const void *pVal2);
     //typedef int (*for_each_fn)( iterator iter);
     //typedef int (*for_each_fn2)( iterator iter, void *pUData);
     typedef ls_hash_foreach_fn for_each_fn;
@@ -71,7 +71,7 @@ public:
     static int  cmpIpv6(const void *pVal1, const void *pVal2);
     static hash_key_t hfIpv6(const void *pKey);
 
-    GHash(size_t init_size, hasher hf, value_compare vc,
+    GHash(size_t init_size, hasher hf, kcmp_ne vc,
           ls_xpool_t *pool = NULL)
     {   ls_hash(this, init_size, hf, vc, pool);    }
 
@@ -81,13 +81,13 @@ public:
     }
 
     void        clear()                     {   ls_hash_clear(this); }
-    void        erase(iterator iter)      {   ls_hash_erase(this, iter);   }
-    void        swap(GHash &rhs)         {   ls_hash_swap(this, &rhs);    }
+    void        erase(iterator iter)        {   ls_hash_erase(this, iter);   }
+    void        swap(GHash &rhs)            {   ls_hash_swap(this, &rhs);    }
 
-    hasher     hash_function() const        {   return hf_fn;    }
-    value_compare    value_comp() const     {   return vc_fn;    }
-    void        setLoadFactor(int f)      {   if (f > 0)    load_factor = f;  }
-    void        setGrowFactor(int f)      {   if (f > 0)    grow_factor = f;  }
+    hasher      hash_function() const       {   return hf_fn;    }
+    kcmp_ne     key_comp() const            {   return kc_fn;    }
+    void        setLoadFactor(int f)        {   if (f > 0) load_factor = f;  }
+    void        setGrowFactor(int f)        {   if (f > 0) grow_factor = f;  }
 
     bool        empty() const               {   return sizenow == 0; }
     size_t      size() const                {   return sizenow;      }
@@ -176,7 +176,7 @@ public:
     };
     typedef iterator const_iterator;
 
-    THash(int initsize, GHash::hasher hf, GHash::value_compare cf)
+    THash(int initsize, GHash::hasher hf, GHash::kcmp_ne cf)
         : GHash(initsize, hf, cf)
     {};
     ~THash() {};

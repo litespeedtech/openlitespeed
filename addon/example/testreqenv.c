@@ -88,7 +88,7 @@ static int begin_process(const lsi_session_t *session)
         {
             g_api->log(session, LSI_LOG_INFO,
                        "Not a match.  Key: %.*s, Orig Val: %.*s, Current Val: %.*s\n",
-                       strlen(pKeys[i]), pKeys[i], strlen(pVals[i]), pVals[i],
+                       (int)strlen(pKeys[i]), pKeys[i], (int)strlen(pVals[i]), pVals[i],
                        iOut, outBuf);
         }
     }
@@ -111,12 +111,12 @@ static int beginSession(lsi_param_t *rec)
     {
         g_api->set_req_env(pSession, pKeys[i], strlen(pKeys[i]), pVals[i],
                            strlen(pVals[i]));
-        printf("After addEnv: %.*s\n", strlen(pKeys[i]), pKeys[i]);
+        printf("After addEnv: %.*s\n", (int)strlen(pKeys[i]), pKeys[i]);
     }
     //Delete the ToBeDeleted one
     g_api->set_req_env(pSession, pKeys[i], strlen(pKeys[i]), pVals[4],
                        strlen(pVals[4]));
-    printf("After addEnv: %.*s\n", strlen(pKeys[i]), pKeys[i]);
+    printf("After addEnv: %.*s\n", (int)strlen(pKeys[i]), pKeys[i]);
     return 0;
 }
 
@@ -133,9 +133,8 @@ static lsi_serverhook_t serverHooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "v1.0",
-                       serverHooks
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "v1.0",
+                       serverHooks, {0}
                      };
-
 

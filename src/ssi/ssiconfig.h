@@ -22,15 +22,16 @@
 #include <lsdef.h>
 #include <util/autostr.h>
 
+#define SSI_BIT_LASTMOD_ON   1
+#define SSI_BIT_ETAG_ON      2
 
 
-
-class SSITagConfig
+class SsiTagConfig
 {
 public:
-    SSITagConfig() {}
+    SsiTagConfig() {}
 
-    ~SSITagConfig() {}
+    ~SsiTagConfig() {}
 
     const AutoStr2 &getStartTag() const {   return m_sStartTag;     }
     const AutoStr2 &getEndTag() const   {   return m_sEndTag;       }
@@ -39,15 +40,15 @@ private:
     AutoStr2    m_sEndTag;
 
 
-    LS_NO_COPY_ASSIGN(SSITagConfig);
+    LS_NO_COPY_ASSIGN(SsiTagConfig);
 };
 
-class SSIConfig
+class SsiConfig
 {
 public:
-    SSIConfig();
+    SsiConfig();
 
-    ~SSIConfig();
+    ~SsiConfig();
 
 
     void setEchoMsg(const char *pVal, int len)
@@ -60,14 +61,24 @@ public:
 
     const AutoStr2 *getEchoMsg() const
     {   return &m_sEchoMsg;     }
-    const AutoStr2 *getErrMsg() const
-    {   return &m_sErrMsg;      }
+    const AutoStr2 *getErrMsg() const;
     const AutoStr2   *getTimeFmt() const
     {   return &m_sTimeFmt;     }
     int getSizeFmt() const
     {   return m_iSizeFmt;      }
 
-    void copy(const SSIConfig *config);
+    void setLastModOn(int on_off)
+    {   m_iFlags = (m_iFlags & ~SSI_BIT_LASTMOD_ON) | (on_off ? SSI_BIT_LASTMOD_ON : 0);  }
+    char isLastModOn() const
+    {   return m_iFlags & SSI_BIT_LASTMOD_ON;    }
+
+    void setEtagOn(int on_off)
+    {   m_iFlags = (m_iFlags & ~SSI_BIT_ETAG_ON) | (on_off ? SSI_BIT_ETAG_ON : 0);  }
+    char isEtagOn() const
+    {   return m_iFlags & SSI_BIT_ETAG_ON;   }
+
+
+    void copy(const SsiConfig *config);
 
 
 private:
@@ -75,9 +86,10 @@ private:
     AutoStr2    m_sErrMsg;
     AutoStr2    m_sTimeFmt;
     int         m_iSizeFmt;   // 0: abbrev, 1:bytes
+    char        m_iFlags;
 
 
-    LS_NO_COPY_ASSIGN(SSIConfig);
+    LS_NO_COPY_ASSIGN(SsiConfig);
 };
 
 #endif

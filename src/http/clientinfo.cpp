@@ -189,8 +189,8 @@ int ClientInfo::checkAccess()
             }
             else
             {
-                LS_DBG_L("[%s] %zd connections established, limit: %d.",
-                         getAddrString(), getConns(), iSoftLimit);
+                LS_DBG_L("[%s] %d connections established, limit: %d.",
+                         getAddrString(), (int)getConns(), iSoftLimit);
             }
         }
         else if ((int)getConns() >= iSoftLimit)
@@ -280,7 +280,7 @@ void ClientInfo::verifyIp(void *ip, const long length)
     {
         char ipAddr[INET6_ADDRSTRLEN];
         inet_ntop(pAddr->sa_family, ip, ipAddr, INET6_ADDRSTRLEN);
-        LS_NOTICE("Client attempted to fake being google. Host: %s, REAL Ip %*s",
+        LS_NOTICE("Client attempted to fake being google. Host: %s, REAL Ip %.*s",
                   m_sHostName.c_str(), (int)length, ipAddr);
     }
 }

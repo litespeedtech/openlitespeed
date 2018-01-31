@@ -50,7 +50,7 @@ class IPAccessControl : private GHash
 {
 public:
     explicit IPAccessControl(int initSize, GHash::hasher hf = NULL,
-                             GHash::value_compare vc = NULL)
+                             GHash::kcmp_ne vc = NULL)
         : GHash(initSize, hf, vc)
     {}
 

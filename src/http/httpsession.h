@@ -15,14 +15,16 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef HTTPCONNECTION_H
-#define HTTPCONNECTION_H
+#ifndef HTTPSESSION_H
+#define HTTPSESSION_H
 
 #include <ls.h>
+#include <lsr/ls_atomic.h>
 #include <edio/aioeventhandler.h>
 #include <edio/aiooutputstream.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
+#include <http/httpsessionmt.h>
 #include <http/ntwkiolink.h>
 #include <http/sendfileinfo.h>
 #include <lsiapi/internal.h>
@@ -35,11 +37,20 @@ class ChunkOutputStream;
 class ExtWorker;
 class VMemBuf;
 class GzipBuf;
-class SSIScript;
+class SsiBlock;
+class SsiRuntime;
+class SsiScript;
+class SsiStack;
 class LsiApiHooks;
 class Aiosfcb;
 class ReqParser;
 class CallbackLinkedObj;
+class MtSessData;
+class MtParamUriQs;
+class MtParamSendfile;
+class MtParamParseReqArgs;
+class MtLocalBufQ;
+
 
 enum  HttpSessionState
 {
@@ -56,12 +67,15 @@ enum  HttpSessionState
     HSS_WRITING,
     HSS_AIO_PENDING,
     HSS_AIO_COMPLETE,
+    HSS_IO_ERROR,
     HSS_COMPLETE,
     HSS_RECYCLING,
+    HSS_TOBERECYCLED
 };
 
 enum HSPState
 {
+    HSPS_START,
     HSPS_READ_REQ_HEADER,
     HSPS_NEW_REQ,
     HSPS_MATCH_VHOST,
@@ -76,7 +90,7 @@ enum HSPState
     HSPS_CONTEXT_REWRITE,
     HSPS_HKPT_URI_MAP,
     HSPS_FILE_MAP,
-    HSPS_CONTEXT_AUTH,
+    HSPS_CHECK_AUTH_ACCESS,
     HSPS_AUTHORIZER,
     HSPS_HKPT_HTTP_AUTH,
     HSPS_AUTH_DONE,
@@ -89,12 +103,21 @@ enum HSPState
     HSPS_HKPT_SEND_RESP_HEADER,
     HSPS_SEND_RESP_HEADER_DONE,
     HSPS_HKPT_HANDLER_RESTART,
+    HSPS_HANDLER_RESTART_CANCEL_MT,
     HSPS_HANDLER_RESTART_DONE,
     HSPS_HKPT_HTTP_END,
     HSPS_HTTP_END_DONE,
+    HSPS_WAIT_MT_CANCEL,
+    HSPS_REDIRECT,
+    HSPS_EXEC_EXT_CMD,
+    HSPS_NEXT_REQUEST,
+    HSPS_CLOSE_SESSION,
+    HSPS_RELEASE_RESOURCE,
     HSPS_HANDLER_PROCESSING,
     HSPS_WEBSOCKET,
-    HSPS_HTTP_ERROR
+    HSPS_DROP_CONNECTION,
+    HSPS_HTTP_ERROR,
+    HSPS_END
 
 };
 
@@ -104,31 +127,59 @@ enum HSPState
 #define HSF_HANDLER_WRITE_SUSPENDED (1<<3)
 #define HSF_RESP_FLUSHED            (1<<4)
 #define HSF_REQ_BODY_DONE           (1<<5)
-#define HSF_REQ_WAIT_FULL_BODY      (1<<6)
-#define HSF_RESP_WAIT_FULL_BODY     (1<<7)
-#define HSF_RESP_HEADER_DONE        (1<<8)
-#define HSF_ACCESS_LOG_OFF          (1<<9)
-#define HSF_HOOK_SESSION_STARTED    (1<<10)
-#define HSF_RECV_RESP_BUFFERED      (1<<11)
-#define HSF_SEND_RESP_BUFFERED      (1<<12)
-#define HSF_CHUNK_CLOSED            (1<<13)
-#define HSF_RESP_BODY_COMPRESSED    (1<<14)
-#define HSF_SUSPENDED               (1<<15)
-#define HSF_SC_404                  (1<<16)
-#define HSF_AIO_READING             (1<<17)
-#define HSF_URI_MAPPED              (1<<18)
-#define HSF_STX_FILE_CACHE_READY    (1<<19)
+#define HSF_AIO_READING             (1<<6)
+#define HSF_ACCESS_LOG_OFF          (1<<7)
+#define HSF_NO_ERROR_PAGE           (1<<8)
+#define HSF_EXEC_EXT_CMD            (1<<9)
+#define HSF_EXEC_POPEN              (1<<10)
+#define HSF_HOOK_SESSION_STARTED    (1<<11)
+#define HSF_NO_ABORT                (1<<12)
+
+#define HSF_RECV_RESP_BUFFERED      (1<<13)
+#define HSF_SEND_RESP_BUFFERED      (1<<14)
+#define HSF_RESP_BODY_COMPRESSED    (1<<15)
+
+#define HSF_REQ_WAIT_FULL_BODY      (1<<16)
+#define HSF_RESP_WAIT_FULL_BODY     (1<<17)
+#define HSF_RESP_HEADER_DONE        (1<<18)
+#define HSF_SUSPENDED               (1<<19)
+
+#define HSF_RESUME_SSI              (1<<21)
+
+#define HSF_CHUNK_CLOSED            (1<<23)
+
+#define HSF_SUB_SESSION             (1<<24)
+#define HSF_SC_404                  (1<<25)
+
+#define HSF_CAPTURE_RESP_BODY       (1<<26)
+#define HSF_WAIT_SUBSESSION         (1<<27)
+#define HSF_CUR_SUB_SESSION_DONE    (1<<28)
+#define HSF_STX_FILE_CACHE_READY    (1<<29)
+
+#define HSF_URI_MAPPED              (1<<30)
 
 
-class HttpSession : public LsiSession, public InputStream,
-    public HioHandler,
-    public AioEventHandler
+typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,
+                            int flag);
+
+#define HSF_MT_HANDLER              (1<<0)
+
+#define HS_RESP_NOT_READY           ((size_t)-1ll)
+
+class HttpSession
+    : public LsiSession
+    , public InputStream
+    , public HioHandler
+    , public AioEventHandler
+    , public ls_lfnodei_t
+    , public LogSession
 {
     HttpReq               m_request;
     HttpResp              m_response;
 
     LsiModuleData         m_moduleData; //lsiapi user data of http level
     const lsi_reqhdlr_t  *m_pModHandler;
+    MtSessData           *m_pMtSessData;
 
     HttpSessionHooks      m_sessionHooks;
     HSPState              m_processState;
@@ -137,30 +188,40 @@ class HttpSession : public LsiSession, public InputStream,
 
     ChunkInputStream     *m_pChunkIS;
     ChunkOutputStream    *m_pChunkOS;
+    HttpSession          *m_pCurSubSession;
     ReqHandler           *m_pHandler;
 
     lsi_hookinfo_t        m_curHookInfo;
     lsi_param_t           m_curHkptParam;
     int                   m_curHookRet;
 
+    SubSessionCb         *m_pSubSessionCb;
+    void                 *m_pSubSessionCbParam;
+    HttpSession          *m_pParent;
+
+    SsiStack             *m_pSsiStack;
+    SsiRuntime           *m_pSsiRuntime;
+
     off_t                 m_lDynBodySent;
 
-    VMemBuf              *m_pRespBodyBuf;
-    GzipBuf              *m_pGzipBuf;
     ClientInfo           *m_pClientInfo;
 
     NtwkIOLink           *m_pNtwkIOLink;
     uint16_t              m_iRemotePort;
+    uint16_t              m_iSubReqSeq;
 
     SendFileInfo          m_sendFileInfo;
 
     long                  m_lReqTime;
     int32_t               m_iReqTimeUs;
 
-    int32_t               m_iFlag;
+    uint32_t              m_iFlag;
     short                 m_iState;
     unsigned short        m_iReqServed;
     //int                   m_accessGranted;
+    uint32_t              m_iMtFlag;
+    ls_spinlock_t         m_lockMtRace;
+    pthread_t             m_lockMtHolder;
 
     AioReq                m_aioReq;
     Aiosfcb              *m_pAiosfcb;
@@ -172,10 +233,17 @@ class HttpSession : public LsiSession, public InputStream,
     evtcb_pf              m_cbExtCmd;
     long                  m_lExtCmdParam;
     void                 *m_pExtCmdParam;
+    ls_atom_u32_t         m_sessSeq;
+
+    static ls_atom_u32_t  s_m_sessSeq; // monotonically increasing sequence number across
+                                      // all sessions (ok to wrap-around) for hashing into
+                                      // queue+lock in eventcallback code
 
 
     HttpSession(const HttpSession &rhs);
     void operator=(const HttpSession &rhs);
+
+    virtual const char *buildLogId();
 
     void processPending(int ret);
 
@@ -183,7 +251,9 @@ class HttpSession : public LsiSession, public InputStream,
 
     int  buildErrorResponse(const char *errMsg);
 
-    void cleanUpHandler();
+    int  doRedirect();
+    void postWriteEx();
+    int  cleanUpHandler(HSPState nextState);
     void nextRequest();
     int  updateClientInfoFromProxyHeader(const char *pHeaderName,
                                          const char *pProxyHeader,
@@ -192,6 +262,9 @@ class HttpSession : public LsiSession, public InputStream,
     static int readReqBodyTermination(LsiSession *pSession, char *pBuf,
                                       int size);
 
+    char getSsiStackDepth() const;
+
+    //FIXME:stx_nextRequest or call_nextRequest, need to choose one
     static int stx_nextRequest(lsi_session_t *p, long , void *)
     {
         HttpSession *pSession = (HttpSession *)p;
@@ -200,32 +273,85 @@ class HttpSession : public LsiSession, public InputStream,
         return 0;
     }
 
-public:
+    static int call_nextRequest(lsi_session_t *p, long , void *);
+    void markComplete();
 
-    uint32_t getSn()    { return m_sn;}
+    void releaseResources();
+    void releaseReqParser();
+
+    int broadcastMtWaiters(int32_t flags);
+    int processMtEvent(long lParam, void *pParam);
+    int processMtEvents(long lParam, void *pParam);
+    int processMtRecycle();
+    int processMtCancel();
+    void mtParseReqArgs(MtParamParseReqArgs *pParam);
+    void mtSendfile(MtParamSendfile *pParam);
+    int mtFlushLocalRespBodyBuf(void * pParam);
+    int mtFlushLocalRespBodyBufQueue();
+    int mtFlushLocalRespBodyBufQueue(MtLocalBufQ *q);
+    int mtFlushLocalBuf();
+
+public:
+    void reset() {
+        resetEvtcb();
+        memset(&m_pChunkIS, 0, 
+               (char *)(&m_iReqServed + 1) - (char *)&m_pChunkIS);
+    }
+
+    void cleanUpSubSessions();
+    
+    int removeSessionCbs(long lParam, void * pParam);
+
+    uint32_t getSn()    { return ls_atomic_fetch_add(&m_sn, 0);}
+    uint32_t getSessSeq() const   { return ls_atomic_fetch_add((volatile ls_atom_u32_t *)&m_sessSeq, 0);}
 
     void runAllCallbacks();
 
-    void closeConnection();
+    void closeSession();
     void recycle();
 
     int isHookDisabled(int level) const
     {   return m_sessionHooks.isDisabled(level);  }
 
+    uint32_t testAndSetFlag(uint32_t f)
+    {
+        uint32_t flag;
+        flag = ls_atomic_fetch_or(&m_iFlag, f);
+        return ((flag & f) == 0);
+    }
+
+    uint32_t testFlag(uint32_t f) const
+    {
+        uint32_t flag;
+        flag = ls_atomic_add_fetch((volatile uint32_t*)&m_iFlag, 0);
+        return flag & f;
+    }
+
+    void setFlag(uint32_t f, int v)
+    {
+        if (v)
+            ls_atomic_fetch_or(&m_iFlag, f);
+        else
+            ls_atomic_fetch_and(&m_iFlag, ~f);
+    }
+
+
+    void setFlag(uint32_t f)            {   setFlag(f, 1);          }
+    void clearFlag(uint32_t f)          {   setFlag(f, 0);          }
+
+    uint32_t getFlag(uint32_t f) const  {   return testFlag(f);     }
+
+
     int isRespHeaderSent() const
-    {   return m_iFlag & HSF_RESP_HEADER_SENT;   }
+    {   return getFlag(HSF_RESP_HEADER_SENT);   }
 
-    void setFlag(int f)       {   m_iFlag |= f;               }
-    void setFlag(int f, int v)
-    {   m_iFlag = (m_iFlag & ~f) | (v ? f : 0);               }
-    void clearFlag(int f)     {   m_iFlag &= ~f;               }
-    int32_t getFlag() const       {   return m_iFlag;             }
-    int32_t getFlag(int mask)    {   return m_iFlag & mask;      }
+    ReqParser  *getReqParser()
+    {   return ls_atomic_add_fetch(&m_pReqParser,0);  }
 
-    ReqParser  *getReqParser()  {   return m_pReqParser;    }
+    void setReqParser(ReqParser *reqParser)
+    {   ls_atomic_setptr(&m_pReqParser, reqParser);             }
 
-
-    AutoBuf &getExtCmdBuf()   { return m_sExtCmdResBuf;    }
+    AutoBuf &getExtCmdBuf()     { return m_sExtCmdResBuf;       }
 
     void setExtCmdNotifier(evtcb_pf cb, const long lParam,
                            void *pParam)
@@ -244,17 +370,27 @@ public:
     void processLinkHeader(const char* pValue, int valLen, AutoStr2 &cookie);
     
     static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
+    static int removeSessionCbsEvent(lsi_session_t *session, long lParam,
+                                void *pParam);
+    static int mtNotifyCallbackEvent(lsi_session_t *session, long lParam,
+            void *pParam);
+    static int mtNotifyCallback(lsi_session_t *session, long lParam,
+                                  void *pParam);
 
+    int setUriQueryString(MtParamUriQs * param);
+    int setUriQueryString(int action, const char *uri,
+                          int uri_len, const char *qs, int qs_len);
 
 private:
-    int checkAuthorizer(const HttpHandler *pHandler);
+    int runExtAuthorizer(const HttpHandler *pHandler);
     int assignHandler(const HttpHandler *pHandler);
     int readReqBody();
     int reqBodyDone();
     int processURI(const char *pURI);
     int readToHeaderBuf();
-    void sendHttpError(const char *pAdditional);
+    int sendHttpError(const char *pAdditional);
     int sendDefaultErrorPage(const char *pAdditional);
+
     int detectTimeout();
 
     //int cacheWrite( const char * pBuf, int size );
@@ -272,6 +408,8 @@ private:
                             const AuthRequired *pRequired, int resume);
 
     void logAccess(int cancelled);
+    void incReqProcessed();
+    void setHandler(ReqHandler *pHandler);
     int  detectKeepAliveTimeout(int delta);
     int  detectConnectionTimeout(int delta);
     void resumeSSI();
@@ -296,9 +434,18 @@ private:
     int getModuleDenyCode(int iHookLevel);
     int processHkptResult(int iHookLevel, int ret);
 
+    int detachSubSession(HttpSession *pSubSess);
+    int  passSendFileToParent(SendFileInfo *pData);
+    int  setSendFile(SendFileInfo *pData);
+    int detectLoopSubSession(lsi_subreq_t *pSubSessInfo);
+    int processSubReq();
+    int processSubSessionResponse(HttpSession *pSubSess);
+    int includeSubSession();
+    int curSubSessionCleanUp();
+
     int processOneLink(const char* p, const char* pEnd, AutoStr2 &cookie);
-    
     int restartHandlerProcess();
+    int restartHandlerProcessEx();
     int runFilter(int hookLevel, filter_term_fn pfTerm,
                   const char *pBuf,
                   int len, int flagIn);
@@ -317,7 +464,8 @@ private:
 
     void resetEvtcb();
     void processServerPush();
- 
+    int execExtCmdEx();
+
 
 
 public:
@@ -339,6 +487,8 @@ public:
     void continueRead()         {    getStream()->continueRead();       };
     void suspendWrite()         {    getStream()->suspendWrite();       };
     void continueWrite()        {    getStream()->continueWrite();      };
+    void wantRead(int want)     {   getStream()->wantRead(want);      }
+    void wantWrite(int want)    {   getStream()->wantWrite(want);     }
     void switchWriteToRead()    {    getStream()->switchWriteToRead();  };
 
     void suspendEventNotify()   {    getStream()->suspendEventNotify(); };
@@ -347,17 +497,17 @@ public:
     off_t getBytesRecv() const  {   return getStream()->getBytesRecv();    }
     off_t getBytesSent() const  {   return getStream()->getBytesSent();    }
 
-    void setClientInfo(ClientInfo *p)   {   m_pClientInfo = p;      }
-    ClientInfo *getClientInfo() const   {   return m_pClientInfo;  }
+    void setClientInfo(ClientInfo *p)       {   m_pClientInfo = p;                  };
+    ClientInfo *getClientInfo() const       {   return m_pClientInfo;               };
 
-    HttpSessionState getState() const       {   return (HttpSessionState)m_iState;    }
-    void setState(HttpSessionState state) {   m_iState = (short)state;   }
+    HttpSessionState getState() const       {   return (HttpSessionState)ls_atomic_fetch_or(const_cast<short *>(&m_iState), 0);  };
+    void setState(HttpSessionState state)   {   ls_atomic_setshort(&m_iState, (short)state);            };
     int getServerAddrStr(char *pBuf, int len);
     int isAlive();
     int setUpdateStaticFileCache(const char *pPath, int pathLen,
                                  int fd, struct stat &st);
 
-    int isEndResponse() const   { return (m_iFlag & HSF_HANDLER_DONE);     }
+    int isEndResponse() const               { return testFlag(HSF_HANDLER_DONE);     };
 
     int resumeProcess(int resumeState, int retcode);
 
@@ -377,8 +527,8 @@ public:
         m_request.setVHostMap(pMap);
     }
 
-    HttpReq *getReq()
-    {   return &m_request;  }
+    HttpReq *getReq()               {   return &m_request;  }
+    const HttpReq *getReq() const   {   return &m_request;  }
 //     HttpResp* getResp()
 //     {   return &m_response; }
 
@@ -398,6 +548,8 @@ public:
     int onCloseEx();
 
     int redirect(const char *pNewURL, int len, int alloc = 0);
+    int redirectEx();
+
     int getHandler(const char *pURI, ReqHandler *&pHandler);
     //int setLocation( const char * pLoc );
 
@@ -416,7 +568,7 @@ public:
 
     //const char * buildLogId();
 
-    void httpError(int code, const char *pAdditional = NULL);
+    int httpError(int code, const char *pAdditional = NULL);
     int read(char *pBuf, int size);
     int readv(struct iovec *vector, size_t count);
     ReqHandler *getCurHandler() const  {   return m_pHandler;  }
@@ -428,15 +580,19 @@ public:
     void addEnv(const char *pKey, int keyLen, const char *pValue, long valLen);
 
     off_t writeRespBodySendFile(int fdFile, off_t offset, off_t size);
-    int setupRespCache();
-    void releaseRespCache();
+    void rewindRespBodyBuf();
+    int setupRespBodyBuf();
+    void releaseRespBody();
     int sendDynBody();
-    int setupGzipFilter();
-    int setupGzipBuf();
-    void releaseGzipBuf();
-    int appendDynBody(const char *pBuf, int len);
-    int appendDynBodyEx(const char *pBuf, int len);
 
+    int appendDynBody(VMemBuf *pvBuf, int offset, int len)
+    {
+        int ret = getResp()->appendDynBody(pvBuf, offset, len);
+        if (ret > 0)
+            setFlag(HSF_RESP_FLUSHED, 0);
+        return ret;
+    }
+    int appendDynBody(const char *pBuf, int len);
     int appendRespBodyBuf(const char *pBuf, int len);
     int appendRespBodyBufV(const iovec *vector, int count);
 
@@ -448,7 +604,7 @@ public:
 
     void setRespBodyDone()
     {
-        m_iFlag |= HSF_HANDLER_DONE;
+        setFlag(HSF_HANDLER_DONE);
         if (m_pChunkOS)
         {
             setFlag(HSF_RESP_FLUSHED, 0);
@@ -457,24 +613,48 @@ public:
     }
 
     int endResponse(int success);
+    int detectSsiStackLoop(const SsiBlock *m_pBlock);
+
     int setupDynRespBodyBuf();
-    GzipBuf *getGzipBuf() const    {   return m_pGzipBuf;  }
-    VMemBuf *getRespCache() const  {   return m_pRespBodyBuf; }
+
+    VMemBuf *getRespBodyBuf() const  {   return getResp()->getRespBodyBuf(); }
+    void setRespBodyBuf(VMemBuf *pBuf)   {   getResp()->setRespBodyBuf(pBuf);  }
     off_t getDynBodySent() const    {   return m_lDynBodySent; }
     //int flushDynBody( int nobuff );
-    int execExtCmd(const char *pCmd, int len, int mode = EXEC_EXT_CMD);
+
+    int useGzip();
+    int setupGzipFilter();
+    int setupGzipBuf();
+    void releaseGzipBuf();
+    GzipBuf *getGzipBuf() const     {   return getResp()->getGzipBuf();     }
+    void setGzipBuf(GzipBuf *pGzip) {   getResp()->setGzipBuf(pGzip);       }
+
+    int execExtCmd(const char *pCmd, int len, int mode = HSF_EXEC_EXT_CMD);
+
     int handlerProcess(const HttpHandler *pHandler);
-    int getParsedScript(SSIScript *&pScript);
+    int getParsedScript(SsiScript *&pScript);
     int startServerParsed();
-    HttpResp *getResp()
-    {   return &m_response; }
+
+    int isExtAppNoAbort();
+
+    SsiRuntime *getSsiRuntime() const       {   return m_pSsiRuntime;       }
+    void setSsiRuntime(SsiRuntime *p)       {   m_pSsiRuntime = p;          }
+    void releaseSsiRuntime();
+    int setupSsiRuntime();
+
+    int isDropConnection() const
+    {   return m_processState == HSPS_DROP_CONNECTION;  }
+
+    const HttpResp *getResp() const {   return &m_response;     }
+    HttpResp *getResp()             {   return &m_response;     }
     int flushDynBodyChunk();
     //int writeConnStatus( char * pBuf, int bufLen );
 
     void resetResp()
-    {   getResp()->reset(); }
+    {   getResp()->reset();
+        m_iFlag &= ~HSF_RESP_HEADER_DONE; }
 
-    LogSession *getLogSession()    {   return getStream();     }
+    LogSession *getLogSession()     {   return this;     }
 
     SendFileInfo *getSendFileInfo() {   return &m_sendFileInfo;   }
 
@@ -515,9 +695,37 @@ public:
     int sendRespHeaders();
     void addLocationHeader();
 
-    void setAccessLogOff()      {   m_iFlag |= HSF_ACCESS_LOG_OFF;  }
-    int shouldLogAccess() const
-    {   return !(m_iFlag & HSF_ACCESS_LOG_OFF);    }
+    void setAccessLogOff()      {   setFlag(HSF_ACCESS_LOG_OFF);    }
+    int shouldLogAccess() const {   return !getFlag(HSF_ACCESS_LOG_OFF);    }
+
+    void prepareSsiStack(const SsiScript *pScript);
+    SsiStack *getSsiStack() const       {    return m_pSsiStack;     }
+    SsiStack *popSsiStack();
+
+    //subrequest routines.
+
+    HttpSession *newSubSession(lsi_subreq_t *pSubSessInfo);
+
+    int setReqBody(const char *pBodyBuf, int len);
+
+    int attachSubSession(HttpSession *pSubSess);
+
+    int execSubSession();
+
+    int onSubSessionRespIncluded(HttpSession *pSubSess);
+
+    int onSubSessionEndResp(HttpSession *pSubSess);
+
+    int cancelSubSession(HttpSession *pSubSess);
+
+    int closeSubSession(HttpSession *pSubSess);
+
+    HttpSession *getParent() const      {   return m_pParent;   }
+
+    void mergeRespHeaders(HttpRespHeaders::INDEX headerIndex,
+                const char *pName, int nameLen, struct iovec *pIov, int count);
+
+    const char *getOrgReqUrl(int *n);
 
     int updateContentCompressible();
     int handoff(char **pData, int *pDataLen);
@@ -527,15 +735,77 @@ public:
     int handleAioSFEvent(Aiosfcb *event);
 
     void setModHandler(const lsi_reqhdlr_t *pHandler)
-    {   m_pModHandler = pHandler;   }
+    {   ls_atomic_setptr(&m_pModHandler, pHandler);   }
 
     const lsi_reqhdlr_t *getModHandler()
-    {   return m_pModHandler;}
-    
-    void setBackRefPtr(evtcbhead_t ** v);
+    {   return ls_atomic_fetch_add(&m_pModHandler,0);}
+
+    void setBackRefPtr(evtcbtail_t ** v);
     void resetBackRefPtr();
     void cancelEvent(evtcbnode_s * v);
 
+    size_t getRespBodyBuffered();
+
+    int testAndSetMtFlag(int32_t f)
+    {
+        uint32_t flag;
+        flag = ls_atomic_fetch_or(&m_iMtFlag, f);
+        return ((flag & f) == 0);
+    }
+
+    int32_t testMtFlag(int32_t f) const
+    {
+        uint32_t flag;
+        flag = ls_atomic_add_fetch((volatile uint32_t *)&m_iMtFlag, 0);
+        return flag & f;
+    }
+
+    void setMtFlag(int32_t f, int v)
+    {
+        if (v)
+            ls_atomic_fetch_or(&m_iMtFlag, f);
+        else
+            ls_atomic_fetch_and(&m_iMtFlag, ~f);
+    }
+
+
+    void setMtFlag(int32_t f)               {   setMtFlag(f, 1);                            }
+    void clearMtFlag(int32_t f)             {   setMtFlag(f, 0);                            }
+
+    int32_t getMtFlag(int32_t f) const      {   return testMtFlag(f);                       }
+
+    int  beginMtHandler(const lsi_reqhdlr_t *pHandler);
+    void releaseMtSessData();
+    
+    int cancelMtHandler();
+    int isMtHandlerCancelled() const        {   return testMtFlag(HSF_MT_CANCEL);           }
+
+    void mtNotifyWriters();
+
+    void setMtNotifiers(MtSessData *pNotifiers)
+    {   ls_atomic_setptr(&m_pMtSessData, pNotifiers);  }
+    MtSessData *getMtSessData() const
+    {   return m_pMtSessData;  }
+
+    void lockMtRace()
+    {
+        ls_spinlock_lock(&m_lockMtRace);
+        m_lockMtHolder = pthread_self();
+    }
+    int trylockMtRace()
+    {
+        int ret = ls_spinlock_trylock(&m_lockMtRace);
+        if (0 == ret)
+        {
+            m_lockMtHolder = pthread_self();
+        }
+        return ret;
+    }
+    void unlockMtRace()
+    {
+        m_lockMtHolder = 0;
+        ls_spinlock_unlock(&m_lockMtRace);
+    }
 };
 
 #endif

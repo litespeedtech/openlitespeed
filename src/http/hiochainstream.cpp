@@ -88,7 +88,7 @@ int HioChainStream::passSetCookieToParent()
     return 0;
 }
 
-int HioChainStream::sendRespHeaders(HttpRespHeaders *pHeaders)
+int HioChainStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
 {
     m_pRespHeaders = pHeaders;
     if (m_pParentSession && getFlag(HIO_FLAG_PASS_SETCOOKIE))
@@ -126,6 +126,17 @@ int HioChainStream::close()
     */
     return 0;
 }
+
+
+int HioChainStream::shutdown()
+{
+    if (getState() == HIOS_SHUTDOWN)
+        return 0;
+
+    setState(HIOS_SHUTDOWN);
+    return 0;
+}
+
 
 int HioChainStream::flush()
 {
@@ -175,12 +186,10 @@ int HioChainStream::sendfile(int fdSrc, off_t off, off_t size)
 
 }
 
-// TODO: Warning: not compiled in ols, verify in lslbd
 const char *HioChainStream::buildLogId()
 {
     HttpSession *pSession = (HttpSession *)getHandler();
     pSession = pSession->getParent();
-    int len ;
     if (!pSession)
     {
         appendLogId("Detached:S-", true);

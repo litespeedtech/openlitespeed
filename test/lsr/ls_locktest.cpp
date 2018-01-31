@@ -37,6 +37,8 @@ int numThreads      = 5;
 #define barrier() asm volatile("": : :"memory")
 #endif
 
+
+/* not used
 static inline int ls_xxx_spin_unlock(ls_spinlock_t *p)
 {
     __sync_lock_release(p);
@@ -81,6 +83,8 @@ static inline int ls_zzz_spin_lock(ls_spinlock_t *p)
             return 0;
     }
 }
+*/
+
 
 #define LSI_SETUP1   ls_atomic_spin_setup
 #define LSI_TRYLOCK1 ls_atomic_spin_trylock

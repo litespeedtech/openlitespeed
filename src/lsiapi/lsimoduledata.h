@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <lsr/ls_atomic.h>
 
 
 class LsiModuleData
@@ -46,12 +47,12 @@ public:
     void set(short _data_id, void *data)
     {
         if ((_data_id >= 0) && (_data_id < m_iCount))
-            m_pData[_data_id] = data;
+            ls_atomic_setptr(&m_pData[_data_id], data);
     }
     void *get(short _data_id) const
     {
         if ((_data_id >= 0) && (_data_id < m_iCount))
-            return m_pData[_data_id];
+            return ls_atomic_fetch_add(&m_pData[_data_id], 0);
         return NULL;
     }
     void reset()

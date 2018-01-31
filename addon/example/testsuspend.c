@@ -125,5 +125,6 @@ static int PsHandlerProcess(const lsi_session_t *session)
     return 0;
 }
 
-lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", serverHooks};
+lsi_reqhdlr_t myhandler = { PsHandlerProcess, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module,
+    &myhandler, NULL, "", serverHooks, {0}};

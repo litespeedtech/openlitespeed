@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 
 
-
-
+#include_directories ("${PROJECT_SOURCE_DIR}/../include")
+#include_directories ("${PROJECT_SOURCE_DIR}/../src")
+#include_directories ("${PROJECT_SOURCE_DIR}/../../thirdparty/include")
+#link_directories ("${PROJECT_SOURCE_DIR}/../build/src/modules/modgzip")
 
 ########### next target ###############
 
@@ -37,9 +39,11 @@ SET(unittest_STAT_SRCS
    util/pcregextest.cpp
    util/ghashtest.cpp
    util/linkedobjtest.cpp
+   util/dlinkqueuetest.cpp
    util/gzipbuftest.cpp
    util/brotlibuftest.cpp
    util/vmembuftest.cpp
+   util/filtermatchtest.cpp
    util/gpathtest.cpp
    util/poolalloctest.cpp
    util/xmlnodetest.cpp
@@ -90,6 +94,7 @@ SET(unittest_STAT_SRCS
    thread/pthreadworkqueuetest.cpp
    thread/threadtest.cpp
    thread/workcrewtest.cpp
+   thread/mtnotifiertest.cpp
    shm/shmbaselrutest.cpp
    shm/shmxtest.cpp
    unittest_main.cpp
@@ -97,7 +102,7 @@ SET(unittest_STAT_SRCS
 
 link_directories(${PROJECT_SOURCE_DIR}/ssl/ /usr/local/lib ${PROJECT_SOURCE_DIR}/test/unittest-cpp/UnitTest++)
 
-add_executable(ols_unittest 
+add_executable(ols_unittest
     ../src/httpdtest.cpp
     ../src/modules/prelinkedmods.cpp
     ../src/main/configctx.cpp
@@ -171,11 +176,20 @@ target_link_libraries(ols_unittest ${unittestlib} )
 
 # target_link_libraries(shmlru_test ${litespeedlib} )
 
+add_executable(POSTtest2
+mthandler/POSTtest2.cpp
+)
+target_link_libraries(POSTtest2 pthread )
+
+add_executable(POSTtest
+mthandler/POSTtest.cpp
+)
+
 add_executable(ls_lfqueuetest
 lsr/ls_lfqueuetest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_lfqueuetest lsr pthread pcre )
+target_link_libraries(ls_lfqueuetest lsr thread pthread pcre )
 
 add_executable(ls_lfstacktest
 lsr/ls_lfstacktest.cpp
@@ -183,19 +197,19 @@ lsr/ls_lfstacktest.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_lfstacktest lsr pthread pcre )
+target_link_libraries(ls_lfstacktest lsr thread pthread pcre )
 
 add_executable(ls_llmqtest
 lsr/ls_llmqtest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_llmqtest lsr pthread pcre )
+target_link_libraries(ls_llmqtest lsr thread pthread pcre )
 
 add_executable(ls_locktest
 lsr/ls_locktest.cpp
 ${lsr_SRCS}
 )
-target_link_libraries(ls_locktest lsr pthread pcre )
+target_link_libraries(ls_locktest lsr thread pthread pcre )
 
 add_executable(ls_stacktest
 lsr/ls_stacktest.cpp
@@ -203,18 +217,18 @@ lsr/ls_stacktest.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_stacktest lsr pthread pcre )
+target_link_libraries(ls_stacktest lsr thread pthread pcre )
 
 add_executable(ls_thrsafetest
 lsr/ls_thrsafetest.cpp
 ${lsr_SRCS}
 )
-target_link_libraries(ls_thrsafetest lsr pthread pcre )
+target_link_libraries(ls_thrsafetest lsr thread pthread pcre )
 
 add_executable(ls_valgrindtest
 lsr/ls_valgrindtest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_valgrindtest lsr pthread pcre )
+target_link_libraries(ls_valgrindtest lsr thread pthread pcre )
 
 

@@ -7,6 +7,7 @@ SET(lsiapi_STAT_SRCS
     lsiapihooks.cpp
     modulehandler.cpp
     lsiapi.cpp
+    lsiapi_const.cpp
     lsiapilib.cpp
     lsiapigd.cpp
     modulemanager.cpp

@@ -141,7 +141,7 @@ public:
 
     virtual int onHangup();
     virtual int onError() = 0;
-    virtual int onEventDone() = 0;
+    virtual int onEventDone(short event) = 0;
 //    virtual bool wantRead() = 0;
 //    virtual bool wantWrite() = 0;
 //    void updateEvents();

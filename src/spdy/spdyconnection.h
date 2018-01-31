@@ -46,6 +46,9 @@ public:
     SpdyConnection();
     virtual ~SpdyConnection();
 
+    LogSession *getLogSession() const
+    {   return getStream();   }
+
     static HioHandler *get(HiosProtocol proto);
 
     int onReadEx();

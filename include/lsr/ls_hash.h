@@ -52,16 +52,15 @@ typedef ls_hashelem_t *ls_hash_iter;
 typedef ls_hash_key_t (*ls_hash_hasher)(const void *p);
 
 /**
- * @typedef ls_hash_value_compare
+ * @typedef ls_hash_keycmp_ne
  * @brief The user must provide a comparison function for the key structure.
  *  It will be used whenever comparisons need to be made.
  *
- * @param[in] pVal1 - A pointer to the first key to compare.
- * @param[in] pVal2 - A pointer to the second key to compare.
- * @return < 0 for pVal1 before pVal2, 0 for equal,
- *  \> 0 for pVal1 after pVal2.
+ * @param[in] pKey1 - A pointer to the first key to compare.
+ * @param[in] pKey2 - A pointer to the second key to compare.
+ * @return 0 if the keys are equal, non-zero value otherwise.
  */
-typedef int (*ls_hash_value_compare)(const void *pVal1, const void *pVal2);
+typedef int (*ls_hash_keycmp_ne)(const void *pKey1, const void *pKey2);
 
 /**
  * @typedef ls_hash_foreach_fn
@@ -108,7 +107,7 @@ struct ls_hash_s
     size_t              sizenow;
     int                 load_factor;
     ls_hash_hasher      hf_fn;
-    ls_hash_value_compare vc_fn;
+    ls_hash_keycmp_ne   kc_fn;
     int                 grow_factor;
     ls_xpool_t         *xpool;
 
@@ -137,10 +136,10 @@ struct ls_hash_s
  *
  * @see ls_hash_delete, ls_hash_hf_string, ls_hash_hf_ci_string,
  *  ls_hash_hf_ipv6, ls_hash_hash_fn, ls_hash_cmp_string,
- *  ls_hash_cmp_ci_string, ls_hash_cmp_ipv6, ls_hash_val_comp
+ *  ls_hash_cmp_ci_string, ls_hash_cmp_ipv6, ls_hash_key_comp
  */
 ls_hash_t *ls_hash_new(size_t init_size,
-                       ls_hash_hasher hf, ls_hash_value_compare vc, ls_xpool_t *pool);
+                       ls_hash_hasher hf, ls_hash_keycmp_ne vc, ls_xpool_t *pool);
 
 /** @ls_hash
  * @brief Initializes the hash table.  Allocates from the global pool
@@ -161,10 +160,10 @@ ls_hash_t *ls_hash_new(size_t init_size,
  *
  * @see ls_hash_d, ls_hash_hfstring, ls_hash_hfcistring,
  *  ls_hash_hfipv6, ls_hash_hashfn, ls_hash_cmpstring,
- *  ls_hash_cmpcistring, ls_hash_cmpipv6, ls_hash_val_comp
+ *  ls_hash_cmpcistring, ls_hash_cmpipv6, ls_hash_key_comp
  */
 ls_hash_t *ls_hash(ls_hash_t *pThis, size_t init_size,
-                   ls_hash_hasher hf, ls_hash_value_compare vc, ls_xpool_t *pool);
+                   ls_hash_hasher hf, ls_hash_keycmp_ne vc, ls_xpool_t *pool);
 
 /** @ls_hash_d
  * @brief Destroys the table.
@@ -239,7 +238,7 @@ ls_hash_key_t ls_hash_hfstring(const void *__s);
  *
  * @param[in] pVal1 - The first string to compare.
  * @param[in] pVal2 - The second string to compare.
- * @return Result according to #ls_hash_val_comp.
+ * @return Result according to #ls_hash_key_comp.
  */
 int ls_hash_cmpstring(const void *pVal1, const void *pVal2);
 
@@ -256,7 +255,7 @@ ls_hash_key_t ls_hash_hfcistring(const void *__s);
  *
  * @param[in] pVal1 - The first string to compare.
  * @param[in] pVal2 - The second string to compare.
- * @return Result according to #ls_hash_val_comp.
+ * @return Result according to #ls_hash_key_comp.
  */
 int ls_hash_cmpcistring(const void *pVal1, const void *pVal2);
 
@@ -273,7 +272,7 @@ ls_hash_key_t ls_hash_hfipv6(const void *pKey);
  *
  * @param[in] pVal1 - The first value to compare.
  * @param[in] pVal2 - The second value to compare.
- * @return Result according to #ls_hash_val_comp.
+ * @return Result according to #ls_hash_key_comp.
  */
 int ls_hash_cmpipv6(const void *pVal1, const void *pVal2);
 
@@ -351,14 +350,14 @@ ls_inline ls_hash_iter ls_hash_update(
 ls_inline ls_hash_hasher ls_hash_hash_function(ls_hash_t *pThis)
 {   return pThis->hf_fn;    }
 
-/** @ls_hash_val_comp
+/** @ls_hash_key_comp
  * @brief Gets the comparison function of the hash table.
  *
  * @param[in] pThis - A pointer to an initialized hash table object.
  * @return A pointer to the comparison function.
  */
-ls_inline ls_hash_value_compare ls_hash_val_comp(ls_hash_t *pThis)
-{   return pThis->vc_fn;    }
+ls_inline ls_hash_keycmp_ne ls_hash_key_comp(ls_hash_t *pThis)
+{   return pThis->kc_fn;    }
 
 /** @ls_hash_setloadfactor
  * @brief Sets the load factor of the hash table.
@@ -466,6 +465,12 @@ int ls_hash_foreach(ls_hash_t *pThis,
 int ls_hash_foreach2(ls_hash_t *pThis,
                      ls_hash_iter beg, ls_hash_iter end, ls_hash_foreach2_fn fun,
                      void *pUData);
+
+
+void ls_hash_release_objects(ls_hash_t *pThis, 
+                             void (*release_object)(void *pKey, void *pData, 
+                                                    void *ctx), 
+                             void *ctx);
 
 
 #if defined( __x86_64 )||defined( __x86_64__ )

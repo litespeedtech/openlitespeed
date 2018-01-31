@@ -48,7 +48,7 @@ static int addoutput(lsi_param_t *rec, const char *level)
     pBuf = ls_xpool_alloc(g_api->get_session_pool(rec->session),
                           rec->len1 + strlen(level) + 1);
     snprintf(pBuf, rec->len1 + strlen(level) + 1, "%.*s%.*s",
-             rec->len1, (const char *)rec->ptr1, strlen(level) + 1, level);
+             rec->len1, (const char *)rec->ptr1, (int)strlen(level) + 1, level);
     lenNew = rec->len1 + strlen(level);
     len = g_api->stream_write_next(rec, pBuf, lenNew);
     if (len < lenNew)
@@ -93,4 +93,4 @@ static int init_module()
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", serverHooks};
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", serverHooks, {0} };

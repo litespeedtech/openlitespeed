@@ -38,7 +38,7 @@ public:
     PThreadMutex() : m_obj(s_proto) {}
     //PThreadMutex()
     //{   ::pthread_mutex_init( &m_obj, NULL ); }
-    pthread_mutex_t *operator&()   {   return &m_obj;  }
+    pthread_mutex_t *get()   {   return &m_obj;  }
 #ifndef NDEBUG
     ~PThreadMutex()
     {

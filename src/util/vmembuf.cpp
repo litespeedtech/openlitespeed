@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <lsr/ls_atomic.h>
 #include <lsr/ls_strtool.h>
 
 #define _RELEASE_MMAP
@@ -38,17 +39,30 @@ int  VMemBuf::s_iKeepOpened = 0;
 int  VMemBuf::s_iFdSpare = -1; //open( "/dev/null", O_RDWR );
 char VMemBuf::s_aTmpFileTemplate[256] = "/tmp/tmp-XXXXXX";
 BufList *s_pAnonPool = NULL;
+ls_spinlock_t   s_LockAnonPool;
 
 void VMemBuf::initAnonPool()
 {
+    ls_atomic_spin_lock(&s_LockAnonPool);
     s_pAnonPool = new BufList();
+    ls_atomic_spin_unlock(&s_LockAnonPool);
 }
 
 
 void VMemBuf::setMaxAnonMapSize(int sz)
 {
+    ls_atomic_spin_lock(&s_LockAnonPool);
     if (sz >= 0)
         s_iMaxAnonMapBlocks = sz / s_iBlockSize;
+    ls_atomic_spin_unlock(&s_LockAnonPool);
+}
+
+int VMemBuf::lowOnAnonMem() 
+{   
+    ls_atomic_spin_lock(&s_LockAnonPool);
+    int mem = s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks < s_iMaxAnonMapBlocks / 4; 
+    ls_atomic_spin_unlock(&s_LockAnonPool);
+    return mem;
 }
 
 
@@ -65,7 +79,7 @@ void VMemBuf::setTempFileTemplate(const char *pTemp)
 }
 
 
-VMemBuf::VMemBuf(int target_size)
+VMemBuf::VMemBuf()
     : m_bufList(4)
 {
     reset();
@@ -78,10 +92,14 @@ VMemBuf::~VMemBuf()
 }
 
 
-void VMemBuf::releaseBlocks()
+void VMemBuf::releaseBlocks(bool locked)
 {
+    if (!locked) {
+        ls_atomic_spin_lock(&m_lock);
+    }
     if (m_iType == VMBUF_ANON_MAP)
     {
+        ls_atomic_spin_lock(&s_LockAnonPool);
         s_iCurAnonMapBlocks -= m_iCurTotalSize / s_iBlockSize;
         if (m_iNoRecycle)
             m_bufList.release_objects();
@@ -90,17 +108,22 @@ void VMemBuf::releaseBlocks()
             s_pAnonPool->push_back(m_bufList);
             m_bufList.clear();
         }
+        ls_atomic_spin_unlock(&s_LockAnonPool);
     }
     else
         m_bufList.release_objects();
     memset(&m_curWBlkPos, 0,
            (char *)(&m_pCurRPos + 1) - (char *)&m_curWBlkPos);
     m_iCurTotalSize = 0;
+    if (!locked) {
+        ls_atomic_spin_unlock(&m_lock);
+    }
 }
 
 
 void VMemBuf::deallocate()
 {
+    ls_atomic_spin_lock(&m_lock);
     if (VMBUF_FILE_MAP == m_iType)
     {
         if (m_iFd != -1)
@@ -110,12 +133,14 @@ void VMemBuf::deallocate()
         }
         unlink(m_fileName.c_str());
     }
-    releaseBlocks();
+    releaseBlocks(true);
+    ls_atomic_spin_unlock(&m_lock);
 }
 
 
 void VMemBuf::recycle(BlockBuf *pBuf)
 {
+    ls_atomic_spin_lock(&s_LockAnonPool);
     if (m_iType == VMBUF_ANON_MAP)
     {
         if (pBuf->getBlockSize() == s_iBlockSize)
@@ -130,6 +155,7 @@ void VMemBuf::recycle(BlockBuf *pBuf)
         s_iCurAnonMapBlocks -= pBuf->getBlockSize() / s_iBlockSize;
     }
     delete pBuf;
+    ls_atomic_spin_unlock(&s_LockAnonPool);
 }
 
 
@@ -234,15 +260,21 @@ int VMemBuf::remapBlock(BlockBuf *pBlock, off_t pos)
 
 int VMemBuf::reinit(off_t TargetSize)
 {
+    ls_atomic_spin_lock(&s_LockAnonPool);
     if (m_iType == VMBUF_ANON_MAP)
     {
         if ((TargetSize >=
              (off_t)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) * s_iBlockSize)) ||
             (TargetSize > 1024 * 1024))
         {
-            releaseBlocks();
-            if (set(VMBUF_FILE_MAP , getBlockSize()) == -1)
+            ls_atomic_spin_unlock(&s_LockAnonPool);
+            releaseBlocks(false);
+            if (set(VMBUF_FILE_MAP , getBlockSize()) == -1) {
                 return LS_FAIL;
+            }
+        }
+        else {
+            ls_atomic_spin_unlock(&s_LockAnonPool);
         }
     }
     else if (m_iType == VMBUF_FILE_MAP)
@@ -252,9 +284,14 @@ int VMemBuf::reinit(off_t TargetSize)
             (TargetSize < (off_t)((s_iMaxAnonMapBlocks - s_iCurAnonMapBlocks) *
                                   s_iBlockSize)))
         {
+            ls_atomic_spin_unlock(&s_LockAnonPool);
             deallocate();
-            if (set(VMBUF_ANON_MAP , getBlockSize()) == -1)
+            if (set(VMBUF_ANON_MAP , getBlockSize()) == -1) {
                 return LS_FAIL;
+            }
+        }
+        else {
+            ls_atomic_spin_unlock(&s_LockAnonPool);
         }
 
 #ifdef _RELEASE_MMAP
@@ -275,7 +312,10 @@ int VMemBuf::reinit(off_t TargetSize)
 #endif
 
     }
-
+    else {
+        ls_atomic_spin_unlock(&s_LockAnonPool);
+    }
+    // All locks are off now.
     if (!m_bufList.empty())
     {
 
@@ -311,12 +351,14 @@ void VMemBuf::reset()
 BlockBuf *VMemBuf::getAnonMapBlock(size_t size)
 {
     BlockBuf *pBlock;
+    ls_atomic_spin_lock(&s_LockAnonPool);
     if (size == s_iBlockSize)
     {
         if (!s_pAnonPool->empty())
         {
             pBlock = s_pAnonPool->pop_back();
             ++s_iCurAnonMapBlocks;
+            ls_atomic_spin_unlock(&s_LockAnonPool);
             return pBlock;
         }
     }
@@ -327,6 +369,7 @@ BlockBuf *VMemBuf::getAnonMapBlock(size_t size)
     if (pBuf == MAP_FAILED)
     {
         perror("Anonymous mmap() failed");
+        ls_atomic_spin_unlock(&s_LockAnonPool);
         return NULL;
     }
     pBlock = new MmapBlockBuf(pBuf, size);
@@ -334,10 +377,20 @@ BlockBuf *VMemBuf::getAnonMapBlock(size_t size)
     {
         perror("new MmapBlockBuf failed in getAnonMapBlock()");
         munmap(pBuf, size);
+        ls_atomic_spin_unlock(&s_LockAnonPool);
         return NULL;
     }
     s_iCurAnonMapBlocks += blocks;
+    ls_atomic_spin_unlock(&s_LockAnonPool);
     return pBlock;
+}
+
+
+void VMemBuf::initBlank(int type)
+{
+    m_iType = type;
+    if (type != VMBUF_MALLOC)
+        m_iAutoGrow = 1;
 }
 
 
@@ -405,22 +458,27 @@ int VMemBuf::set(int type, int size)
 
 int VMemBuf::appendBlock(BlockBuf *pBlock)
 {
+    ls_atomic_spin_lock(&m_lock);
     if (m_bufList.full())
     {
         BlockBuf **pOld = m_bufList.begin();
+        
         m_bufList.push_back(pBlock);
+        
         if (m_pCurWBlock)
             m_pCurWBlock = m_pCurWBlock - pOld + m_bufList.begin();
         if (m_pCurRBlock)
             m_pCurRBlock = m_pCurRBlock - pOld + m_bufList.begin();
+        ls_atomic_spin_unlock(&m_lock);
         return 0;
     }
     else
     {
         m_bufList.unsafe_push_back(pBlock);
+        ls_atomic_spin_unlock(&m_lock);
         return 0;
     }
-
+    ls_atomic_spin_unlock(&m_lock);
 }
 
 
@@ -469,10 +527,10 @@ int VMemBuf::convertFileBackedToInMemory()
 }
 
 
-int VMemBuf::set(BlockBuf *pBlock)
+int VMemBuf::set(int type, BlockBuf *pBlock)
 {
     assert(pBlock);
-    m_iType = VMBUF_MALLOC;
+    m_iType = type;
     appendBlock(pBlock);
     m_pCurRBlock = m_pCurWBlock = m_bufList.begin();
     m_pCurRPos = m_pCurWPos = pBlock->getBuf();
@@ -516,8 +574,26 @@ int VMemBuf::setFd(const char *pFileName, int fd)
 }
 
 
-void VMemBuf::rewindWriteBuf()
+void VMemBuf::rewindReadWriteBuf()
 {
+#ifdef _RELEASE_MMAP
+    if (m_iType == VMBUF_FILE_MAP)
+    {
+        if (!(*m_bufList.begin())->getBuf())
+        {
+            if (remapBlock(*m_bufList.begin(), 0) == -1)
+                return;
+        }
+        if ((m_pCurRBlock) &&
+            (m_pCurRBlock != m_bufList.begin()) &&
+            (m_pCurRBlock != m_pCurWBlock))
+            releaseBlock(*m_pCurRBlock);
+    }
+#endif
+    ls_atomic_spin_lock(&m_lock);
+    m_pCurRBlock = m_bufList.begin();
+    m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
+    m_pCurRPos = (*m_pCurRBlock)->getBuf();
     if (m_pCurRBlock)
     {
         if (m_pCurWBlock != m_pCurRBlock)
@@ -533,6 +609,29 @@ void VMemBuf::rewindWriteBuf()
         m_curRBlkPos = m_curWBlkPos;
         m_pCurRPos = m_pCurWPos;
     }
+    ls_atomic_spin_unlock(&m_lock);
+}
+
+
+void VMemBuf::rewindWriteBuf()
+{
+    ls_atomic_spin_lock(&m_lock);
+    if (m_pCurRBlock)
+    {
+        if (m_pCurWBlock != m_pCurRBlock)
+        {
+            m_pCurWBlock = m_pCurRBlock;
+            m_curWBlkPos = m_curRBlkPos;
+        }
+        m_pCurWPos = m_pCurRPos;
+    }
+    else
+    {
+        m_pCurRBlock = m_pCurWBlock;
+        m_curRBlkPos = m_curWBlkPos;
+        m_pCurRPos = m_pCurWPos;
+    }
+    ls_atomic_spin_unlock(&m_lock);
 
 }
 
@@ -553,12 +652,14 @@ void VMemBuf::rewindReadBuf()
             releaseBlock(*m_pCurRBlock);
     }
 #endif
+    ls_atomic_spin_lock(&m_lock);
     if (!m_bufList.empty())
     {
         m_pCurRBlock = m_bufList.begin();
         m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
         m_pCurRPos = (*m_pCurRBlock)->getBuf();
     }
+    ls_atomic_spin_unlock(&m_lock);
 }
 
 
@@ -588,6 +689,9 @@ int VMemBuf::mapNextWBlock()
     if (m_pCurWBlock)
     {
 #ifdef _RELEASE_MMAP
+        void *pRelease = NULL;
+        int size = 0;
+        
         if (m_iType == VMBUF_FILE_MAP)
         {
             if (!(*(m_pCurWBlock + 1))->getBuf())
@@ -595,11 +699,25 @@ int VMemBuf::mapNextWBlock()
                 if (remapBlock(*(m_pCurWBlock + 1), m_curWBlkPos) == -1)
                     return LS_FAIL;
             }
-            if (m_pCurWBlock != m_pCurRBlock)
-                releaseBlock(*m_pCurWBlock);
+        }
+#endif
+        ls_atomic_spin_lock(&m_lock);
+#ifdef _RELEASE_MMAP
+        if (m_iType == VMBUF_FILE_MAP && m_pCurRBlock != m_pCurWBlock)
+        {
+            pRelease = (*m_pCurWBlock)->getBuf();
+            size = (*m_pCurWBlock)->getBlockSize();
+            (*m_pCurWBlock)->setBlockBuf(NULL, size);
         }
 #endif
         ++m_pCurWBlock;
+        m_curWBlkPos += (*m_pCurWBlock)->getBlockSize();
+        m_pCurWPos = (*m_pCurWBlock)->getBuf();
+        ls_atomic_spin_unlock(&m_lock);
+#ifdef _RELEASE_MMAP
+        if (pRelease)
+            munmap( pRelease, size);
+#endif
     }
     else
     {
@@ -610,13 +728,15 @@ int VMemBuf::mapNextWBlock()
                 return LS_FAIL;
         }
 #endif
+        ls_atomic_spin_lock(&m_lock);
         m_pCurWBlock = m_pCurRBlock = m_bufList.begin();
         m_curWBlkPos = 0;
         m_curRBlkPos = (*m_pCurWBlock)->getBlockSize();
         m_pCurRPos = (*m_pCurWBlock)->getBuf();
+        m_curWBlkPos += (*m_pCurWBlock)->getBlockSize();
+        m_pCurWPos = (*m_pCurWBlock)->getBuf();
+        ls_atomic_spin_unlock(&m_lock);
     }
-    m_curWBlkPos += (*m_pCurWBlock)->getBlockSize();
-    m_pCurWPos = (*m_pCurWBlock)->getBuf();
     return 0;
 }
 
@@ -676,16 +796,27 @@ int VMemBuf::grow()
 
 char *VMemBuf::getReadBuffer(size_t &size)
 {
+    ls_atomic_spin_lock(&m_lock);
     if ((!m_pCurRBlock) || (m_pCurRPos >= (*m_pCurRBlock)->getBufEnd()))
     {
         size = 0;
-        if (mapNextRBlock() != 0)
+        ls_atomic_spin_unlock(&m_lock);
+        int ret = mapNextRBlock();
+        if (ret != 0)
             return NULL;
+        ls_atomic_spin_lock(&m_lock);
     }
     if (m_curRBlkPos == m_curWBlkPos)
+    {
         size = m_pCurWPos - m_pCurRPos;
+        assert(size >= 0 && size <= 8192);
+    }
     else
+    {
         size = (*m_pCurRBlock)->getBufEnd() - m_pCurRPos;
+        assert(size >= 0 && size <= 8192);
+    }
+    ls_atomic_spin_unlock(&m_lock);
     return m_pCurRPos;
 }
 
@@ -695,7 +826,9 @@ char *VMemBuf::getWriteBuffer(size_t &size)
     if ((!m_pCurWBlock) || (m_pCurWPos >= (*m_pCurWBlock)->getBufEnd()))
     {
         if (mapNextWBlock() != 0)
+        {
             return NULL;
+        }
     }
     size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
     return m_pCurWPos;
@@ -720,28 +853,49 @@ off_t VMemBuf::getCurWOffset() const
 
 int VMemBuf::mapNextRBlock()
 {
-    if (m_curRBlkPos >= m_curWBlkPos)
+    ls_atomic_spin_lock(&m_lock);
+    if (m_curRBlkPos >= m_curWBlkPos) {
+        ls_atomic_spin_unlock(&m_lock);
         return LS_FAIL;
+    }
     if (m_pCurRBlock)
     {
 #ifdef _RELEASE_MMAP
-        if (m_iType == VMBUF_FILE_MAP)
+        void *pRelease = NULL;
+        int size = 0;
+        
+        if (m_iType == VMBUF_FILE_MAP && m_pCurRBlock != m_pCurWBlock)
         {
-            if (!(*(m_pCurRBlock + 1))->getBuf())
-            {
-                if (remapBlock(*(m_pCurRBlock + 1), m_curRBlkPos) == -1)
-                    return LS_FAIL;
-            }
-            if (m_pCurWBlock != m_pCurRBlock)
-                releaseBlock(*m_pCurRBlock);
+            pRelease = (*m_pCurRBlock)->getBuf();
+            size = (*m_pCurRBlock)->getBlockSize();
+            (*m_pCurRBlock)->setBlockBuf(NULL, size);
+        }
+        BlockBuf *pBuf = *(m_pCurRBlock + 1);
+        if (pBuf->getBuf() == NULL)
+        {
+            off_t pos = m_curRBlkPos;
+            ls_atomic_spin_unlock(&m_lock);
+            if (remapBlock(pBuf, pos) == -1)
+                return LS_FAIL;
+            ls_atomic_spin_lock(&m_lock);
         }
 #endif
         ++m_pCurRBlock;
+        m_curRBlkPos += (*m_pCurRBlock)->getBlockSize();
+        m_pCurRPos = (*m_pCurRBlock)->getBuf();
+        ls_atomic_spin_unlock(&m_lock);
+#ifdef _RELEASE_MMAP
+        if (pRelease)
+            munmap(pRelease, size);
+#endif
     }
     else
+    {
         m_pCurRBlock = m_bufList.begin();
-    m_curRBlkPos += (*m_pCurRBlock)->getBlockSize();
-    m_pCurRPos = (*m_pCurRBlock)->getBuf();
+        m_curRBlkPos += (*m_pCurRBlock)->getBlockSize();
+        m_pCurRPos = (*m_pCurRBlock)->getBuf();
+        ls_atomic_spin_unlock(&m_lock);
+    }
     return 0;
 
 }
@@ -749,13 +903,21 @@ int VMemBuf::mapNextRBlock()
 
 off_t  VMemBuf::writeBufSize() const
 {
+    off_t  diff;
+    ls_atomic_spin_lock(&((VMemBuf *)this)->m_lock);
     if (m_pCurWBlock == m_pCurRBlock)
-        return m_pCurWPos - m_pCurRPos;
-    off_t  diff = m_curWBlkPos - m_curRBlkPos;
-    if (m_pCurWBlock)
-        diff += m_pCurWPos - (*m_pCurWBlock)->getBuf();
-    if (m_pCurRBlock)
-        diff -= m_pCurRPos - (*m_pCurRBlock)->getBuf();
+    {
+        diff = m_pCurWPos - m_pCurRPos;
+    }
+    else
+    {
+        diff = m_curWBlkPos - m_curRBlkPos;
+        if (m_pCurWBlock)
+            diff += m_pCurWPos - (*m_pCurWBlock)->getBuf();
+        if (m_pCurRBlock)
+            diff -= m_pCurRPos - (*m_pCurRBlock)->getBuf();
+    }
+    ls_atomic_spin_unlock(&((VMemBuf *)this)->m_lock);
     return diff;
 }
 
@@ -818,7 +980,7 @@ int VMemBuf::close()
 {
     if (m_iFd != -1)
         ::close(m_iFd);
-    releaseBlocks();
+    releaseBlocks(false);
     reset();
     return 0;
 }
@@ -997,6 +1159,21 @@ int VMemBuf::copyToFile(off_t  startOff, off_t  len,
     releaseBlock(&destBlock);
     return ret;
 
+}
+
+
+int VMemBuf::empty() {
+    int ret;
+    
+    ls_atomic_spin_lock(&m_lock);
+    if (m_curRBlkPos < m_curWBlkPos)
+        ret = 0;
+    else if (!m_pCurWBlock)
+        ret = 1;
+    else 
+        ret = (m_pCurRPos >= m_pCurWPos);
+    ls_atomic_spin_unlock(&m_lock);
+    return(ret);
 }
 
 

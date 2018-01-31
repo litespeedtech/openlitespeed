@@ -21,58 +21,79 @@
 #include <lsdef.h>
 #include <util/pcregex.h>
 #include <ssi/ssiconfig.h>
+#include <ssi/ssiscript.h>
 
 #include <lsr/ls_str.h>
 
 #define SSI_STACK_SIZE 10
 
-class SSIScript;
+class HttpReq;
 
 
 #define SSI_REQ_CGI 1
 #define SSI_REQ_CMD 2
 
-class SSIRuntime
+
+class SsiStack
 {
 public:
-    SSIRuntime();
+    explicit SsiStack(SsiStack *pPrevious, int depth)
+        : m_pCurBlock(NULL)
+        , m_pCurComponent(NULL)
+        , m_pScript(NULL)
+        , m_flag(0)
+        , m_iDepth(depth)
+        , m_pPrevious(pPrevious)
+    {}
 
-    ~SSIRuntime();
+    const SsiScript *getScript() const
+    {   return m_pScript;       }
 
-    void init()
+    const SsiComponent *getCurrentComponent() const
+    {   return m_pCurComponent;    }
+    const SsiBlock *getCurrentBlock() const
+    {   return m_pCurBlock;    }
+
+    void  setScript(const SsiScript *p)
     {
-        m_pCurScript = &m_stack[0] - 1;
-        memset(m_stkPathInfo, 0, sizeof(ls_str_t) * SSI_STACK_SIZE);
+        m_pScript = p;
+        m_pCurBlock = p->getMainBlock();
+        m_pCurComponent = m_pCurBlock->getFirstComponent();
     }
 
-    int  push(SSIScript *pScript)
-    {
-        if (m_pCurScript < &m_stack[SSI_STACK_SIZE - 1])
-        {
-            *(++m_pCurScript) = pScript;
-            return 0;
-        }
-        else
-            return LS_FAIL;
-    }
+    void  setCurrentBlock(const SsiBlock *pBlock);
+    const SsiComponent *nextComponentOfCurScript();
 
-    void pop()
-    {
-        if (m_pCurScript > &m_stack[0] - 1)
-            -- m_pCurScript;
-    }
-    int  full()
-    {   return m_pCurScript >= &m_stack[SSI_STACK_SIZE];    }
+    void clearFlag()    {   m_flag = 0;     }
+    void requireCGI()   {   m_flag = SSI_REQ_CGI;   }
+    void requireCmd()   {   m_flag = SSI_REQ_CMD;   }
+    int  isCGIRequired() const {   return m_flag > 0;      }
 
-    int  done()
-    {   return m_pCurScript == &m_stack[0] - 1;    }
+    SsiStack *getPrevious() const   {   return m_pPrevious; }
 
-    int initConfig(SSIConfig *pConfig);
+    char getDepth() const           {   return m_iDepth;    }
 
-    SSIScript *getCurrentScript() const
-    {   return *m_pCurScript;   }
+private:
+    const SsiBlock       *m_pCurBlock;
+    const SsiComponent   *m_pCurComponent;
+    const SsiScript      *m_pScript;
+    short                 m_flag;
+    char                  m_iDepth;
+    SsiStack             *m_pPrevious;
+};
 
-    SSIConfig *getConfig()
+
+class SsiRuntime
+{
+public:
+    SsiRuntime();
+
+    ~SsiRuntime();
+
+
+    int initConfig(SsiConfig *pConfig);
+
+    SsiConfig *getConfig()
     {   return &m_config;       }
 
     const RegexResult *getRegexResult() const
@@ -83,37 +104,24 @@ public:
 
     int execRegex(Pcregex *pReg, const char *pSubj, int len);
 
-    void clearFlag()    {   m_flag = 0;     }
-    void requireCGI()   {   m_flag = SSI_REQ_CGI;   }
-    void requireCmd()   {   m_flag = SSI_REQ_CMD;   }
-    int  isCGIRequired() const {   return m_flag > 0;      }
+    void setMainReq(HttpReq *pReq)  {   m_pMainReq = pReq;  }
+    HttpReq *getMainReq() const     {   return m_pMainReq;  }
+    int setVar(const char *pKey, int keyLen, const char *pValue, int valLen);
 
-    void savePathInfo(ls_str_t pathInfo, int redirects)
-    {
-        m_stkPathInfo[ m_pCurScript - m_stack ] = pathInfo;
-        m_stkRedirectIdx[ m_pCurScript - m_stack ] = redirects;
-    }
-
-    void restorePathInfo(ls_str_t &pathInfo, short int &redirects)
-    {
-        pathInfo = m_stkPathInfo[ m_pCurScript - m_stack ];
-        redirects = m_stkRedirectIdx[ m_pCurScript - m_stack ];
-    }
-
+    int  isInSsiEngine() const      {   return m_iInSsiEngine;  }
+    void incInSsiEngine()           {   ++m_iInSsiEngine;       }
+    void decInSsiEngine()           {   --m_iInSsiEngine;       }
 
 private:
-    SSIScript     **m_pCurScript;
-    SSIScript      *m_stack[SSI_STACK_SIZE];
-    ls_str_t       m_stkPathInfo[SSI_STACK_SIZE];
-    short int       m_stkRedirectIdx[SSI_STACK_SIZE];
-    SSIConfig       m_config;
+    SsiConfig       m_config;
     AutoStr2        m_strRegex;
     RegexResult     m_regexResult;
-    int             m_flag;
+    HttpReq        *m_pMainReq;
+    int             m_iInSsiEngine;
 
 
 
-    LS_NO_COPY_ASSIGN(SSIRuntime);
+    LS_NO_COPY_ASSIGN(SsiRuntime);
 };
 
 #endif

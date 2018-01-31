@@ -31,9 +31,8 @@
 
 class PHPValue
 {
-    AutoStr m_sKey;
-    AutoStr m_sVal;
-    int     m_iType;
+    AutoStr2 m_sKey;
+    AutoStr2 m_sVal;
 
     void operator=(const PHPValue &rhs);
 public:
@@ -41,24 +40,25 @@ public:
     PHPValue(const PHPValue &rhs)
         : m_sKey(rhs.m_sKey)
         , m_sVal(rhs.m_sVal)
-        , m_iType(rhs.m_iType)
     {}
 
     ~PHPValue() {}
     int setValue(const char *pKey, const char *pValue,
                  short iType);
-    const char *getKey() const     {   return m_sKey.c_str();  }
-    const char *getValue() const   {   return m_sVal.c_str();  }
-    void setValue(const char *v)  {   m_sVal = v;             }
+    const char *getConfigKey() const{   return m_sKey.c_str() + 2;  }
+    const char *getKey() const      {   return m_sKey.c_str();  }
+    const char *getValue() const    {   return m_sVal.c_str();  }
+    int getKeyLen() const           {   return m_sKey.len();    }
+    int getValLen() const           {   return m_sVal.len();    }
+    void setValue(const char *v)    {   m_sVal = v;             }
 
-    void setType(short t)         {   m_iType = t;            }
-    short getType() const           {   return m_iType;         }
+    void setType(char type)         {   *(m_sKey.buf() + 1) = type;     }
+    char getType() const            {   return *(m_sKey.c_str() + 1);   }
 
 };
 
-class PHPConfig
+class PHPConfig : public HashStringMap<PHPValue *>
 {
-    HashStringMap<PHPValue *>   m_config;
     AutoBuf                     m_lsapiEnv;
 
     void operator=(const PHPConfig &rhs);
@@ -73,7 +73,7 @@ public:
               char *pErr, int errBufLen);
     int buildLsapiEnv();
     const AutoBuf &getLsapiEnv()    {   return m_lsapiEnv;  }
-    int getCount() const        {   return m_config.size(); }
+    int getCount() const            {   return size();      }
 };
 
 #endif

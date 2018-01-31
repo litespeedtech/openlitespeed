@@ -122,9 +122,9 @@ public:
     virtual NtwkIOLink *getNtwkIoLink() = 0;
 
     virtual void cork(int doCork) {}
-    virtual int detectClose()       {   return 0;   } 
-    
-    virtual int push(ls_str_t *pUrl, ls_str_t *pHost, 
+    virtual int detectClose()       {   return 0;   }
+
+    virtual int push(ls_str_t *pUrl, ls_str_t *pHost,
                      ls_strpair_t *pHeaders)
     {   return -1;      }
 
@@ -202,10 +202,10 @@ public:
     void handlerReadyToRelease() {   m_iFlag |= HIO_FLAG_HANDLER_RELEASE;    }
     short canWrite()  const     {   return m_iFlag & HIO_FLAG_BUFF_FULL;    }
 
-    char  getProtocol() const   {   return m_iProtocol;     }
-    void  setProtocol(int p)    {   m_iProtocol = p;        }
+    char  getProtocol() const   {   return ls_atomic_fetch_add(const_cast<char *>(&m_iProtocol), 0);;     }
+    void  setProtocol(int p)    {   ls_atomic_setchar(&m_iProtocol, p);        }
 
-    int   isSpdy() const        {   return m_iProtocol;     }
+    int   isSpdy() const        {   return ls_atomic_fetch_add((volatile char*)&m_iProtocol, 0);     }
 
     char  getState() const      {   return m_iState;        }
     void  setState(HioState st) {   m_iState = st;          }
@@ -221,7 +221,7 @@ public:
         m_lBytesRecv = 0;
         m_lBytesSent = 0;
     }
-    
+
     void setActiveTime(uint32_t lTime)
     {   m_tmLastActive = lTime;              }
     uint32_t getActiveTime() const
@@ -239,6 +239,7 @@ public:
     {
         if (m_iState < HIOS_SHUTDOWN)
             m_iState = HIOS_CLOSING;
+        wantRead(0);
     }
 
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
@@ -294,16 +295,6 @@ public:
         }
         return pStream;
     }
-
-    LOG4CXX_NS::Logger *getLogger() const
-    {   return m_pStream ? m_pStream->getLogger() : NULL;   }
-
-    const char *getLogId()
-    {   return m_pStream ? m_pStream->getLogId() : "DETACHED";     }
-
-    LogSession *getLogSession() const
-    {   return m_pStream;   }
-
 
     virtual int onInitConnected() = 0;
     virtual int onReadEx()  = 0;

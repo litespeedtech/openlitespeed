@@ -37,6 +37,7 @@ extern "C" {
 
 // User code should use macros instead of functions.
 #if  __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#define HAVE_ASAN
 #define ASAN_POISON_MEMORY_REGION(addr, size) \
   __asan_poison_memory_region((addr), (size))
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) \
@@ -93,3 +94,4 @@ extern "C" {
     
         
 #endif      //_LS_MEMCEHCK_H_
+

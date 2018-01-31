@@ -29,7 +29,7 @@ public:
     static int getHttpBufIncreaseSize()   { return 1024; }
     static int getMaxHeaderBufSize()      { return 4096; }
     static int getMaxHttpBufSize()        { return 4096; }
-    static int getSockBacklog()           { return 200;  }
+    static int getSockBacklog()           { return 65535;  }
 };
 
 #endif

@@ -33,6 +33,7 @@ lsi_module_t MNAME;
 static char testuri[] = "/sendfile";
 
 
+/*
 static int dummycall(lsi_param_t *param)
 {
     const char *in = (const char *)param->ptr1;
@@ -40,6 +41,7 @@ static int dummycall(lsi_param_t *param)
     int sent = g_api->stream_write_next(param,  in, len);
     return sent;
 }
+*/
 
 
 static int rcvd_req_header_cbf(lsi_param_t *param)
@@ -96,10 +98,10 @@ static lsi_serverhook_t server_hooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL, NULL, NULL, NULL };
 
-lsi_module_t MNAME =
+LSMODULE_EXPORT lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks, {0}
 };
 

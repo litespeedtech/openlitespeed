@@ -19,6 +19,7 @@
 #define DLINKQUEUE_H
 
 
+#include <stdlib.h>
 #include <util/linkedobj.h>
 
 class LinkQueue
@@ -56,11 +57,18 @@ public:
 
 class DLinkQueue
 {
+private:
     DLinkedObj      m_head;
     int             m_iTotal;
 
     DLinkQueue(const DLinkQueue &rhs);
     DLinkQueue &operator=(const DLinkQueue &rhs);
+    void reset()
+    {
+        m_head.setPrev(&m_head);
+        m_head.setNext(&m_head);
+        m_iTotal = 0;
+    }
 
 public:
     DLinkQueue()
@@ -72,16 +80,51 @@ public:
     int size() const    {   return m_iTotal;    }
     bool empty() const  {   return m_head.next() == &m_head;   }
 
+    DLinkedObj *head()   {   return  &m_head;      }
+
     void append(DLinkedObj *pReq)
     {
         m_head.prev()->addNext(pReq);
         ++m_iTotal;
     }
 
+    void append(DLinkQueue *pDLQ)
+    {
+        assert(pDLQ && "NULL append Q ptr");
+        assert(0 != pDLQ->size() && "Empty append Q ptr");
+        if ( pDLQ->size() > 1)
+        {
+            m_head.prev()->addNext(pDLQ->begin(), pDLQ->rbegin());
+        }
+        else
+        {
+            m_head.prev()->addNext(pDLQ->begin());
+        }
+        m_iTotal += pDLQ->size();
+        pDLQ->reset();
+    }
+
     void push_front(DLinkedObj *pReq)
     {
         m_head.next()->addPrev(pReq);
         ++m_iTotal;
+    }
+
+    void push_front(DLinkQueue *pDLQ)
+    {
+        assert(pDLQ && "NULL push_front Q ptr");
+        assert(0 != pDLQ->size() && "Empty push_front Q ptr");
+
+        if ( pDLQ->size() > 1 )
+        {
+            m_head.next()->addPrev(pDLQ->begin(), pDLQ->rbegin());
+        }
+        else
+        {
+            m_head.next()->addPrev(pDLQ->begin());
+        }
+        m_iTotal += pDLQ->size();
+        pDLQ->reset();
     }
 
     void insert(DLinkedObj *pReq, DLinkedObj *pReqToInsert)
@@ -113,6 +156,10 @@ public:
             --m_iTotal;
             return m_head.removeNext();
         }
+        if (m_iTotal)
+        {
+            abort();
+        }
         assert(m_iTotal == 0);
         return NULL;
     }
@@ -131,6 +178,28 @@ public:
     {   return m_head.next();    }
     DLinkedObj *end()
     {   return &m_head;          }
+
+    DLinkedObj *rbegin()
+    {   return m_head.prev();    }
+    DLinkedObj *rend()
+    {   return &m_head;          }
+
+    const DLinkedObj *begin() const
+    {   return m_head.next();    }
+    const DLinkedObj *end() const
+    {   return &m_head;          }
+
+    const DLinkedObj *rbegin() const
+    {   return m_head.prev();    }
+    const DLinkedObj *rend() const
+    {   return &m_head;          }
+
+    void swap(DLinkQueue &rhs)
+    {
+        int tmp;
+        m_head.swap(rhs.m_head);
+        GSWAP(m_iTotal, rhs.m_iTotal, tmp);
+    }
 
 };
 
@@ -152,8 +221,14 @@ public:
     void append(T *pReq)
     {   DLinkQueue::append(pReq);     }
 
+    void append(TDLinkQueue<T> *pQ)
+    {   DLinkQueue::append((DLinkQueue *) pQ);     }
+
     void push_front(T *pReq)
     {   DLinkQueue::push_front(pReq); }
+
+    void push_front(TDLinkQueue<T> *pQ)
+    {   DLinkQueue::push_front((DLinkQueue *) pQ); }
 
     void remove(T *pReq)
     {   DLinkQueue::remove(pReq);     }
@@ -170,6 +245,23 @@ public:
     T *end()
     {   return (T *)DLinkQueue::end();    }
 
+    const T *begin() const
+    {   return (const T *)DLinkQueue::begin();      }
+
+    const T *end() const
+    {   return (const T *)DLinkQueue::end();    }
+
+    T *rbegin()
+    {   return (T *)DLinkQueue::rbegin();      }
+
+    T *rend()
+    {   return (T *)DLinkQueue::rend();    }
+
+    const T *rbegin() const
+    {   return (const T *)DLinkQueue::rbegin();      }
+
+    const T *rend() const
+    {   return (const T *)DLinkQueue::rend();    }
 };
 
 

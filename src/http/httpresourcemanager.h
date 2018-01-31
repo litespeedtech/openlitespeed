@@ -71,16 +71,16 @@ public:
     void recycleGunzip(GzipBuf *pBuf)
     {   m_poolGunzipBuf.recycle(pBuf);      }
 
-    MMapVMemBuf *getVMemBuf()
-    {   return m_poolVMemBuf.get();         }
+    MMapVMemBuf *getVMemBuf();
+    //{   return m_poolVMemBuf.get();         }
 
     int getVMemBufPoolSize()
     {   return m_poolVMemBuf.getPoolSize();         }
     int getVMemBufPoolCapacity()
     {   return m_poolVMemBuf.getPoolCapacity();     }
 
-    void recycle(VMemBuf *pBuf)
-    {   m_poolVMemBuf.recycle((MMapVMemBuf *) pBuf);    }
+    void recycle(VMemBuf *pBuf);
+    //{   m_poolVMemBuf.recycle((MMapVMemBuf *) pBuf);    }
 
     ChunkInputStream *getChunkInputStream()
     {   return m_poolChunkInputStream.get();    }
@@ -111,16 +111,20 @@ public:
 
 
     void recycle(HttpSession *pSession)
-    {   m_poolHttpSession.recycle(pSession);    }
-
+    ;
+//    {   m_poolHttpSession.recycle(pSession);    }
+        
     HttpSession *getConnection()
-    {    return m_poolHttpSession.get();   }
-
+    ;
+ //   {    return m_poolHttpSession.get();   }
+ 
     void recycle(HttpSession **pSession, int n)
-    {   m_poolHttpSession.recycle((void **)pSession, n);    }
+    ;
+//    {   m_poolHttpSession.recycle((void **)pSession, n);    }
 
     int getConnections(HttpSession **pSession, int n)
-    {   return m_poolHttpSession.get(pSession, n);          }
+    ;
+//    {   return m_poolHttpSession.get(pSession, n);          }
 
     int initAiosfcbPool();
     void recycle(Aiosfcb *pAiosfcb)

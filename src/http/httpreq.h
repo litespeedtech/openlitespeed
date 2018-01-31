@@ -31,6 +31,7 @@ enum
 #include "httpvhost.h"
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
+#include <lsr/ls_atomic.h>
 #include <util/autobuf.h>
 #include <util/autostr.h>
 #include <log4cxx/logsession.h>
@@ -85,6 +86,16 @@ enum
 #define BR_REQUIRED             (BR_ENABLED | REQ_BR_ACCEPT)
 #define UPSTREAM_BR             4
 
+#define IS_KEEPALIVE            1
+#define IS_FORWARDED_HTTPS      2
+#define IS_HTTPS                4
+#define IS_HTTPS_MASK           6
+
+#define SUB_REQ_DETACHED        1
+#define SUB_REQ_NOABORT         2
+#define SUB_REQ_SETREFERER      4
+
+
 struct AAAData;
 class AuthRequired;
 class ClientInfo;
@@ -100,13 +111,12 @@ class HttpVHost;
 class IOVec;
 class MimeSetting;
 class RadixNode;
-class SSIConfig;
-class SSIRuntime;
+class SsiConfig;
 class StaticFileCacheData;
 class VHostMap;
 class VMemBuf;
 typedef struct ls_hash_s ls_hash_t;
-
+struct ls_subreq_s;
 
 typedef struct
 {
@@ -178,6 +188,8 @@ private:
     int                 m_iReqHeaderBufFinished;
     int                 m_iReqHeaderBufRead;
 
+    key_value_pair      m_curURL;
+
     const MimeSetting  *m_pMimeType;
 
     ls_xpool_t         *m_pPool;
@@ -207,12 +219,15 @@ private:
     short               m_iCfIpHeader;
     short               m_method;
     int                 m_iEnvCount;
+
     unsigned short      m_ver;
     short               m_iRedirects;
-    int                 m_iAcceptGzip:8;
-    int                 m_iAcceptBr:8;
-    int                 m_iKeepAlive:8;
-    int                 m_iNoRespBody:8;
+
+    char                 m_iAcceptGzip;
+    char                 m_iAcceptBr;
+    char                 m_iKeepAlive;
+    char                 m_iNoRespBody;
+
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
     int                 m_iContextState;
@@ -229,7 +244,6 @@ private:
     const char         *m_pForcedType;
     const HTAuth       *m_pHTAuth;
     const AuthRequired *m_pAuthRequired;
-    SSIRuntime         *m_pSSIRuntime;
     int                 m_iHostOff;
     int                 m_iHostLen;
     const AutoStr2     *m_pRealPath;
@@ -244,8 +258,13 @@ private:
     struct stat         m_fileStat;
     int                 m_iScriptNameLen;
     short               m_iBodyType;
+
+    LogSession         *m_pLogSession;
     LogSession         *m_pILog;
     CookieList          m_cookies;
+    AutoStr2            m_lastStatPath;
+    struct stat         m_lastStat;
+    int                 m_lastStatRes;
 
     static_file_data_t *m_pUrlStaticFileData;
 
@@ -270,6 +289,7 @@ private:
 
     int checkSuffixHandler(const char *pURI, int len, int &cacheable);
 
+    
 
 
     //parse headers
@@ -297,7 +317,7 @@ private:
     key_value_pair *getUnknHeaderByKey(const AutoBuf &buf, const char *pName,
                                        int namelen) const;
 
-    key_value_pair *getUnknHeaderPair(int index)
+    key_value_pair *getUnknHeaderPair(int index) const
     {   return m_unknHeaders.getObj(index); }
 
     int appendIndexToUri(const char *pIndex, int indexLen);
@@ -339,13 +359,13 @@ public:
 
     int processHeader();
     int processNewReqData(const struct sockaddr *pAddr);
-    void reset();
-    void reset2();
+    void reset(int discard = 0);
+//     void reset2();
 
-    void setILog(LogSession *pILog)         {   m_pILog = pILog;            }
-    LOG4CXX_NS::Logger *getLogger() const   {   return m_pILog->getLogger();}
-    const char   *getLogId()                {   return m_pILog->getLogId(); }
-    LogSession *getLogSession() const       {   return m_pILog;             }
+    void setILog(LogSession *pILog)         {   m_pLogSession = pILog;            }
+    LOG4CXX_NS::Logger *getLogger() const   {   return m_pLogSession->getLogger();}
+    const char   *getLogId()                {   return m_pLogSession->getLogId(); }
+    LogSession *getLogSession() const       {   return m_pLogSession;             }
 
     void setVHostMap(const VHostMap *pMap)  {   m_pVHostMap = pMap;         }
     const VHostMap *getVHostMap() const     {   return m_pVHostMap;         }
@@ -354,6 +374,7 @@ public:
 
     char getStatus() const                  {   return m_iHeaderStatus;     }
     int getMethod() const                   {   return m_method;            }
+    void setMethod(int method)              {   m_method = method;      }
 
     unsigned int getVersion() const         {   return m_ver;               }
 
@@ -459,7 +480,7 @@ public:
     int  redirect(const char *pURL, int len, int alloc = 0);
     int  postRewriteProcess(const char *pURI, int len);
     int  processContextPath();
-    int  processContext(const HttpContext *&pOldCtx);
+    int  processContext();
     int  checkPathInfo(const char *pURI, int iURILen, int &pathLen,
                        short &scriptLen, short &pathInfoLen,
                        const HttpContext *pContext);
@@ -472,8 +493,8 @@ public:
     int  isErrorPage() const
     {   return m_iContextState & IS_ERROR_PAGE; }
 
-    short isKeepAlive() const               {   return m_iKeepAlive;        }
-    void keepAlive(short keepalive)         {   m_iKeepAlive = keepalive;   }
+    short isKeepAlive() const               {   return ls_atomic_fetch_or((volatile char*)&m_iKeepAlive, 0);        }
+    void keepAlive(short keepalive)         {   ls_atomic_setchar(&m_iKeepAlive, keepalive);   }
 
     int getPort() const;
     const AutoStr2 &getPortStr() const;
@@ -482,20 +503,20 @@ public:
 
     const AutoStr2 *getRealPath() const     {   return m_pRealPath;         }
 
-    int  getLocationLen()
+    int  getLocationLen() const
     {   return ls_str_len(&m_location); }
     int  setLocation(const char *pLoc, int len);
-    const char *getLocation()
+    const char *getLocation() const
     {   return ls_str_cstr(&m_location);    }
     void clearLocation()
     {   ls_str_set(&m_location, NULL, 0); }
 
     int  appendRedirHdr(const char *pDisp, int len);
-    int  getRedirHdrsLen() const      
+    int  getRedirHdrsLen() const
     {   return ls_str_len(&m_redirHdrs);   }
     const char *getRedirHdrs() const
     {  return ls_str_cstr(&m_redirHdrs);   }
-    
+
     int  addWWWAuthHeader(HttpRespHeaders &buf) const;
     const AuthRequired *getAuthRequired() const
     {   return m_pAuthRequired; }
@@ -521,11 +542,11 @@ public:
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
     void updateBodyType(const char *buf);
-    
 
-    char gzipAcceptable() const             {   return m_iAcceptGzip;       }
-    void andGzip(char b)                    {   m_iAcceptGzip &= b;         }
-    void orGzip(char b)                     {   m_iAcceptGzip |= b;         }
+
+    char gzipAcceptable() const             {   return ls_atomic_fetch_or((volatile char*)&m_iAcceptGzip, 0);       }
+    void andGzip(char b)                    {   (void) ls_atomic_fetch_and(&m_iAcceptGzip, b);      }
+    void orGzip(char b)                     {   (void) ls_atomic_fetch_or(&m_iAcceptGzip, b);       }
 
     char brAcceptable() const               {   return m_iAcceptBr;       }
     void andBr(char b)                      {   m_iAcceptBr &= b;         }
@@ -551,7 +572,7 @@ public:
 
 
     void processReqBodyInReqHeaderBuf();
-    void resetHeaderBuf();
+    void resetHeaderBuf(int discard);
     int  pendingHeaderDataLen() const
     {   return m_iReqHeaderBufRead - m_iReqHeaderBufFinished;  }
 
@@ -571,8 +592,10 @@ public:
     void pendingDataProcessed(int len)
     {   m_iReqHeaderBufFinished += len; }
 
-    void setStatusCode(int code)            {   m_code = code;              }
-    int  getStatusCode() const              {   return m_code;              }
+    void setStatusCode(int code)
+    {   ls_atomic_setint(&m_code, code);        }
+    int  getStatusCode() const
+    {   return ls_atomic_add_fetch((volatile int *)&m_code, 0); }
     void tranEncodeToContentLen();
 
     const AutoStr2 *getDocRoot() const;
@@ -603,12 +626,12 @@ public:
     int  getEnvCount();
     void unsetEnv(const char *pKey, int keyLen);
 
-    int  getUnknownHeaderCount()
+    int  getUnknownHeaderCount() const
     {
         return m_unknHeaders.getSize();
     }
     const char *getUnknownHeaderByIndex(int idx, int &keyLen,
-                                        const char *&pValue, int &valLen);
+                                        const char *&pValue, int &valLen) const;
     char isCfIpSet() const                      {   return m_iCfIpHeader;   }
     const char *getCfIpHeader(int &len);
 
@@ -616,6 +639,7 @@ public:
     SslConnection *getSsl() const  {   return m_pSslConn;      }
     int isHttps() const
     {   return m_pSslConn || (m_iContextState & X_FORWARD_HTTPS);    }
+    void setHttps()     {    m_iKeepAlive |= IS_HTTPS;   }
 
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)
@@ -637,7 +661,12 @@ public:
     int getContextState(int s) const    {   return m_iContextState & s; }
     int detectLoopRedirect(const char *pURI, int uriLen,
                            const char *pArg, int qsLen, int isSSL);
-    int detectLoopRedirect();
+    int detectLoopRedirect(int cmpCurUrl, const char *pUri, int uriLen,
+                           const char *pArg, int argLen);
+
+    int detectLoopRedirect()
+    {    return detectLoopRedirect(0, getURI(), getURILen(),
+                                   getQueryString(), getQueryStringLen());   }
     int saveCurURL();
     const char *getOrgURI()
     {
@@ -672,15 +701,30 @@ public:
     char isGeoIpOn() const;
     uint32_t isIpToLocOn() const;
     int getDecodedOrgReqURI(char *&pValue);
-    SSIRuntime *getSSIRuntime() const       {   return m_pSSIRuntime;       }
-    void setSSIRuntime(SSIRuntime *p)       {   m_pSSIRuntime = p;          }
-    SSIConfig *getSSIConfig();
+    SsiConfig *getSsiConfig();
     uint32_t isXbitHackFull() const;
     uint32_t isIncludesNoExec() const;
+
     long getLastMod() const
     {   return m_fileStat.st_mtime;    }
-    void backupPathInfo();
-    void restorePathInfo();
+
+    void backupRealPath()
+    {
+        if (m_pRealPath)
+        {
+            if ((m_pRealPath->len() != m_lastStatPath.len())
+                || (memcmp(m_lastStatPath.c_str(), m_pRealPath->c_str(),
+                           m_pRealPath->len()) != 0))
+            {
+                m_lastStatPath.setStr(m_pRealPath->c_str(), m_pRealPath->len());
+            }
+        }
+    }
+
+    void restoreRealPath()
+    {
+        m_pRealPath = &m_lastStatPath;
+    }
     void setRealPath(const char *pRealPath, int len)
     {
         m_sRealPathStore.setStr(pRealPath, len);
@@ -720,6 +764,8 @@ public:
 
     int locationToUrl(const char *pLocation, int len);
 
+    int fileStat(const char *pPath, struct stat *st);
+
     int internalRedirectURI(const char *pURI, int len, int resetPathInfo = 1,
                             int no_escape = 1);
 //     void setErrorPage( )
@@ -739,6 +785,13 @@ public:
     ls_xpool_t *getPool()
     {   return m_pPool; }
 
+    void setNewOrgUrl(const char *pUrl, int len, const char *pQS, int qsLen);
+    int cloneReqBody(const char *pBuf, int32_t len);
+    int clone(HttpReq *getReq, struct lsi_subreq_s *pSubSessInfo);
+    void addContentLenHeader(size_t len);
+    void updateReqHeader(int index, const char *pNewValue, int newValueLen);
+    void setReferer(const char *getOrgReqURL, int getOrgReqURLLen);
+
     int removeCookie(const char *pName, int nameLen);
     cookieval_t *setCookie(const char *pName, int nameLen, const char *pValue,
                            int valLen);
@@ -749,7 +802,6 @@ public:
     int copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
                                  int cookieLen);
     CookieList  &getCookieList() { return   m_cookies; }
-
 
     int checkUrlStaicFileCache();
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}

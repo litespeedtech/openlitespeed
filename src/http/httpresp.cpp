@@ -20,15 +20,25 @@
 #include <http/expiresctrl.h>
 
 // #include <http/httpheader.h> //setheader commented out.
+#include <http/httpreq.h>
 #include <lsr/ls_strtool.h>
 #include <util/datetime.h>
+#include <util/gzipbuf.h>
 #include <util/stringtool.h>
+#include <util/vmembuf.h>
 
 #include <string.h>
 
+static const char *s_protocol[] =
+{
+    "http://",
+    "https://"
+};
 
 HttpResp::HttpResp(ls_xpool_t *pool)
     : m_respHeaders(pool)
+    , m_pRespBodyBuf(NULL)
+    , m_pGzipBuf(NULL)
 {
     m_lEntityLength = 0;
     m_lEntityFinished = 0;
@@ -40,11 +50,27 @@ HttpResp::~HttpResp()
 }
 
 
-void HttpResp::reset()
+void HttpResp::reset(int delCookies)
 {
-    m_respHeaders.reset();
+    if (delCookies)
+        m_respHeaders.reset();
+    else
+        m_respHeaders.reset2();
+
     m_lEntityLength = LSI_RSP_BODY_SIZE_UNKNOWN;
     m_lEntityFinished = 0;
+    resetRespBody();
+}
+
+void HttpResp::resetRespBody()
+{
+    if (m_pGzipBuf)
+        m_pGzipBuf->reinit();
+    if (m_pRespBodyBuf)
+    {
+        m_pRespBodyBuf->rewindReadBuf();
+        m_pRespBodyBuf->rewindWriteBuf();
+    }
 }
 
 
@@ -52,11 +78,24 @@ void HttpResp::appendContentLenHeader()
 {
     if (m_lEntityLength >= 0)
     {
-        static char sLength[44] = {0};
-        int n = StringTool::offsetToStr(sLength, 43, m_lEntityLength);
-        m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, sLength, n);
+        char achLength[44] = {0};
+        int n = StringTool::offsetToStr(achLength, 43, m_lEntityLength);
+        m_respHeaders.add(HttpRespHeaders::H_CONTENT_LENGTH, achLength, n);
     }
 }
+
+
+int HttpResp::setContentTypeHeader(const char *pType, int typeLen,
+                                   const AutoStr2 *pCharset)
+{
+    int ret = m_respHeaders.add(HttpRespHeaders::H_CONTENT_TYPE,
+                                "Content-Type",
+                                12, pType, typeLen);
+    if (ret == 0 && pCharset)
+        m_respHeaders.appendLastVal(pCharset->c_str(), pCharset->len());
+    return ret;
+}
+
 
 int HttpResp::addExpiresHeader(int age)
 {
@@ -106,6 +145,10 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
     if (!pName || !pVal || !domain)
         return LS_FAIL;
 
+//     // FIXME ols orig code - originally had nothing, added following two lines
+//     if (!m_respHeaders.isHeaderSet(HttpRespHeaders::H_SET_COOKIE))
+//         m_respHeaders.reset();
+
     if (path == NULL)
         path = "/";
     p += ls_snprintf(achBuf, 8091, "%s=%s; path=%s; domain=%s",
@@ -134,3 +177,89 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
 }
 
 
+int HttpResp::appendDynBody(VMemBuf *pvBuf, int offset, int len)
+{
+    char *pBuf;
+    size_t iBufLen;
+    int ret, total = 0;
+    if (pvBuf->setROffset(offset) == -1)
+        return -1;
+    while (len > 0)
+    {
+        pBuf = pvBuf->getReadBuffer(iBufLen);
+        if ((int)iBufLen > len)
+            iBufLen = len;
+        ret = appendDynBody(pBuf, iBufLen);
+        if (ret > 0)
+        {
+            total += ret;
+            pvBuf->readUsed(ret);
+        }
+        if (ret < (int)iBufLen)
+            break;
+        len -= iBufLen;
+    }
+    return total;
+}
+
+
+int HttpResp::appendDynBody(const char *pBuf, int len)
+{
+    int ret = 0;
+    if ((getGzipBuf()) && (getGzipBuf()->getType() == GzipBuf::COMPRESSOR_COMPRESS))
+    {
+        ret = getGzipBuf()->write(pBuf, len);
+
+        //end of written response body
+        //FIXME: not sure the logic is right or not
+        //if (( ret == 1 )&&(getGzipBuf()->getType() == GzipBuf::GZIP_DEFLATE ))
+        //    ret = 0;
+        //end of written response body
+        if (ret == 1)
+            ret = 0;
+    }
+    else
+    {
+        // FIXME: ols orig code
+//         if (!getRespBodyBuf())
+//         {
+//             setupDynRespBodyBuf();
+//             if (!getRespBodyBuf())
+//                 return len;
+//         }
+        ret = appendDynBodyEx(pBuf, len);
+    }
+
+    return ret;
+
+}
+
+
+int HttpResp::appendDynBodyEx(const char *pBuf, int len)
+{
+    char *pCache;
+    size_t iCacheSize;
+    const char *pBufOrg = pBuf;
+
+    while (len > 0)
+    {
+        pCache = getRespBodyBuf()->getWriteBuffer(iCacheSize);
+        if (pCache)
+        {
+            int ret = len;
+            if (iCacheSize < (size_t)ret)
+                ret = iCacheSize;
+            if (pCache != pBuf)
+                memmove(pCache, pBuf, ret);
+            pBuf += ret;
+            len -= ret;
+            getRespBodyBuf()->writeUsed(ret);
+        }
+        else
+        {
+            //LS_ERROR( getLogger(), "[%s] out of swapping space while appending to response buffer!", getLogId() ));
+            return -1;
+        }
+    }
+    return pBuf - pBufOrg;
+}

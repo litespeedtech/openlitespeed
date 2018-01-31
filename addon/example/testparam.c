@@ -141,6 +141,8 @@ static void *testparam_parseConfig(module_param_info_t *param, int param_count,
     int i;
     param_st *pInitConfig = (param_st *)_initial_config;
     param_st *pConfig = (param_st *) malloc(sizeof(struct _param_st));
+    g_api->log(NULL,  LSI_LOG_INFO,
+               "[testparam]parseConfig entry\n");
     if (!pConfig)
         return NULL;
 
@@ -232,6 +234,9 @@ static int testparam_init(lsi_module_t *pModule)
     return 0;
 }
 
-lsi_reqhdlr_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
-lsi_confparser_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1", serverHooks };
+lsi_reqhdlr_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL,
+    NULL, NULL, NULL, NULL };
+lsi_confparser_t testparam_dealConfig = { testparam_parseConfig,
+    testparam_freeConfig, myParam };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init,
+    &testparam_myhandler, &testparam_dealConfig, "Version 1.1", serverHooks, {0} };

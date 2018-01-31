@@ -86,9 +86,6 @@
 
 #define MODPAGESPEEDVERSION  "2.1-1.11.33.4"
 
-#define MODPAGESPEEDVERSION_0  MODPAGESPEEDVERSION "-0"
-
-
 #define DBG(session, args...) g_api->log(session, LSI_LOG_DEBUG, args)
 
 #define  POST_BUF_READ_SIZE 65536
@@ -124,7 +121,7 @@ using namespace net_instaweb;
  * ************************************************************************************************/
 
 //All of the parameters should have "pagespeed" as the first word.
-lsi_config_key_s paramArray[] =
+static lsi_config_key_s paramArray[] =
 {
     {"pagespeed", 0, 0},
     {NULL,0,0} //Must have NULL in the last item
@@ -1016,7 +1013,7 @@ static LsPsVhCtx *initVhostContext(const void *vhost)
     if (g_pPsGlobalCtx->driverFactory == NULL)
         return NULL;
     LsRewriteOptions *vhost_option;
-    vhost_option = (LsRewriteOptions *) g_api->get_vhost_module_param(vhost, 
+    vhost_option = (LsRewriteOptions *) g_api->get_vhost_module_conf(vhost, 
                                                                       &MNAME);
 
     //Comment: when Amdin/html parse, this will be NULL, we need not to add it
@@ -1097,7 +1094,7 @@ static int PostConfig(lsi_param_t *rec)
 //         const void *vhost = g_api->get_vhost(s);
 // 
 //         LsRewriteOptions *vhost_option = (LsRewriteOptions *)
-//                                           g_api->get_vhost_module_param(vhost, &MNAME);
+//                                           g_api->get_vhost_module_conf(vhost, &MNAME);
 // 
 //         //Comment: when Amdin/html parse, this will be NULL, we need not to add it
 //         if (vhost_option != NULL)
@@ -1195,7 +1192,7 @@ static int ChildInit(lsi_param_t *rec)
     return 0;
 }
 
-static int BaseFetchDoneCb(evtcbhead_s *session_, long, void *);
+static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *);
 static int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
                     RequestContextPtr request_context,
                     RequestHeaders *request_headers,
@@ -1793,7 +1790,7 @@ static int StartRecordForInPlace(PsMData *pMyData, lsi_session_t *session)
 
 
 static int BaseFetchHandler(PsMData *pMyData, lsi_session_t *session);
-static int InPlaceBaseFetchDoneCb(evtcbhead_s *session_, long param, void *pParam)
+static int InPlaceBaseFetchDoneCb(evtcbtail_s *session_, long param, void *pParam)
 {
     g_api->log((lsi_session_t *)session_, LSI_LOG_DEBUG,
                "[%s] InPlaceBaseFetchDoneCb(), session=%p.\n", ModuleName, 
@@ -2437,9 +2434,9 @@ static void UpdateEtag(lsi_session_t *session)
         g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0,
                                (const char *) iov[0].iov_base,
                                iov[0].iov_len, LSI_HEADEROP_SET);
-        //If etag not PAGESPEED style, meas not optimized, so not cahce it
-        if (strncasecmp((const char *) iov[0].iov_base, "W/", 2) == 0)
-            g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
+//         //If etag not PAGESPEED style, meas not optimized, so not cahce it
+//         if (strncasecmp((const char *) iov[0].iov_base, "W/", 2) == 0)
+//             g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
     }
 }
 
@@ -3042,7 +3039,7 @@ static int CopyRespBody(PsMData *pMyData, lsi_session_t *session)
 
 
 //This event shoule occur only once!
-static int BaseFetchDoneCb(evtcbhead_s *session_, long, void *)
+static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *)
 {
     g_api->log((lsi_session_t *)session_, LSI_LOG_DEBUG,
                "[%s] BaseFetchDoneCb(), session=%p.\n", ModuleName, 
@@ -3154,8 +3151,8 @@ static int PsHandlerProcess(const lsi_session_t *session)
 
     g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER, 
                            sizeof(PAGESPEED_RESP_HEADER) - 1,
-                           MODPAGESPEEDVERSION_0, 
-                           sizeof(MODPAGESPEEDVERSION_0) - 1,
+                           MODPAGESPEEDVERSION "-0", 
+                           sizeof(MODPAGESPEEDVERSION "-0") - 1,
                            LSI_HEADEROP_SET);
 
 //     //TEST
@@ -3217,9 +3214,9 @@ static int Init(lsi_module_t *pModule)
 }
 
 
-lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };/*MergeConfig*/
-lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
+static lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };/*MergeConfig*/
+static lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
                        MODPAGESPEEDVERSION, serverHooks, {0}
                      };
 

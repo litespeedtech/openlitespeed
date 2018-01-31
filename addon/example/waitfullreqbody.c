@@ -237,10 +237,10 @@ static lsi_serverhook_t server_hooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-static lsi_reqhdlr_t myhandler = { begin_process, on_read, NULL, clean_up };
+static lsi_reqhdlr_t myhandler = { begin_process, on_read, NULL, clean_up, NULL, NULL, NULL };
 
-lsi_module_t MNAME =
+LSMODULE_EXPORT lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "", server_hooks, {0}
 };
 

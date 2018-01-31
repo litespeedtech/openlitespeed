@@ -158,5 +158,7 @@ static int onCleanUp(const lsi_session_t *session)
     return 0;
 }
 
-lsi_reqhdlr_t myhandler = { PsHandlerProcess, onReadEvent, onWriteEvent, onCleanUp };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler, NULL, "", serverHooks};
+static lsi_reqhdlr_t myhandler = { PsHandlerProcess, onReadEvent, onWriteEvent,
+    onCleanUp, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &myhandler,
+    NULL, "", serverHooks, {0} };

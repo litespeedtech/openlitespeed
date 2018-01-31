@@ -18,6 +18,8 @@
 #ifndef LS_LOCK_H
 #define LS_LOCK_H
 
+#include <lsr/ls_threadcheck.h>
+
 #include <lsr/ls_atomic.h>
 #include <lsr/ls_types.h>
 
@@ -28,6 +30,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <limits.h>
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include <linux/futex.h>
@@ -169,9 +172,17 @@ typedef ls_spinlock_t      ls_lock_t;
 #include <errno.h>
 #include <machine/atomic.h>
 #include <sys/umtx.h>
+#define ls_futex_wait_priv         ls_futex_wait
+#define ls_futex_wake_priv         ls_futex_wake
+#define ls_futex_wakeall_priv      ls_futex_wakeall
 ls_inline int ls_futex_wake(int *futex)
 {
     return _umtx_op(futex, UMTX_OP_WAKE, 1, 0, 0);
+}
+
+ls_inline int ls_futex_wakeall(int *futex)
+{
+    return _umtx_op(futex, UMTX_OP_WAKE, INT_MAX, 0, 0);
 }
 
 ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
@@ -190,10 +201,30 @@ ls_inline int ls_futex_wake(int *futex)
     return syscall(SYS_futex, futex, FUTEX_WAKE, 1, NULL, NULL, 0);
 }
 
+ls_inline int ls_futex_wakeall(int *futex)
+{
+    return syscall(SYS_futex, futex, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+}
 
 ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 {
     return syscall(SYS_futex, futex, FUTEX_WAIT, val, timeout, NULL, 0);
+}
+
+ls_inline int ls_futex_wake_priv(int *futex)
+{
+    return syscall(SYS_futex, futex, FUTEX_WAKE_PRIVATE, 1, NULL, NULL, 0);
+}
+
+ls_inline int ls_futex_wakeall_priv(int *futex)
+{
+    return syscall(SYS_futex, futex, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+}
+
+
+ls_inline int ls_futex_wait_priv(int *futex, int val, struct timespec *timeout)
+{
+    return syscall(SYS_futex, futex, FUTEX_WAIT_PRIVATE, val, timeout, NULL, 0);
 }
 
 #endif
@@ -224,7 +255,10 @@ ls_inline int ls_futex_lock(ls_mutex_t *p)
     {
         if ((val = ls_atomic_casvint(p, LS_LOCK_AVAIL, LS_FUTEX_LOCKED1))
             == LS_LOCK_AVAIL)
+        {
+            LS_TH_LOCKED(p, 1); // call it a write lock
             return 0;
+        }
         if (val == LS_FUTEX_LOCKED2)   /* do not spin if other waiters exist */
             break;
     }
@@ -243,6 +277,8 @@ ls_inline int ls_futex_lock(ls_mutex_t *p)
         while ((val = ls_atomic_casvint(p, LS_LOCK_AVAIL, LS_FUTEX_LOCKED2))
                != LS_LOCK_AVAIL);
     }
+
+    LS_TH_LOCKED(p, 1); // call it a write lock
     return 0;
 }
 
@@ -269,21 +305,37 @@ ls_inline int ls_futex_safe_lock(ls_mutex_t *p)
         ls_atomic_pidspin_init();
 
     lockpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
-    if (lockpid == LS_LOCK_AVAIL)
+    if (lockpid == LS_LOCK_AVAIL) // == 0
+    {
+        LS_TH_LOCKED(p, 1); // call it a write lock
         return 0;
+    }
     do
     {
         if (ls_spin_pid != (lockpid & LS_FUTEX_PID_MASK)
             && (kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0) && (errno == ESRCH)
             && ls_atomic_casint(p, lockpid, ls_spin_pid | LS_FUTEX_HAS_WAITER))
+                // successfully swapped old process id lockpid to (ours + has waiter),
+                // (would fail if lock was changed by someone else)
+        {
+            // was already locked, we stole it: LS_TH_LOCKED(p, 1); // call it a write lock
             return -(lockpid & LS_FUTEX_PID_MASK);
+                // return (- old lockpid ), we have it (swapped OK), but leave it marked with HAS_WAITER?
+        }
+
+        // either the lock holder pid exists, or the lock has changed since we got lockpid
+        // and we failed to do the casint
         if ((lockpid & LS_FUTEX_HAS_WAITER)
             || ls_atomic_casint(p, lockpid, lockpid | LS_FUTEX_HAS_WAITER) != 0)
+            // either already marked as having waiter or we just marked it so
             ls_futex_wait(p, lockpid | LS_FUTEX_HAS_WAITER, &x_time);
+            // wait for a wake(), continue immed if p != lockpid+ has waiter
+            // can wake spuriously or from timeout
     }
     while ((lockpid = ls_atomic_casvint(p, LS_LOCK_AVAIL,
                                         ls_spin_pid | LS_FUTEX_HAS_WAITER)) != LS_LOCK_AVAIL);
 
+    LS_TH_LOCKED(p, 1); // call it a write lock
     return 0;
 }
 
@@ -304,10 +356,38 @@ ls_inline int ls_futex_safe_unlock(ls_mutex_t *p)
     int old = ls_atomic_setint(p, 0);
     assert((old & LS_FUTEX_PID_MASK) == ls_spin_pid);
     if ((old & LS_FUTEX_HAS_WAITER) == 0)
+    {
+        LS_TH_UNLOCKED(p, 1); // call it a write lock
         return 0;
+    }
 
     //return syscall(SYS_futex, p, FUTEX_WAKE, 1, NULL, NULL, 0);
+    LS_TH_UNLOCKED(p, 1); // call it a write lock
     return ls_futex_wake(p);
+}
+
+/**
+ * @ls_futex_safe_trylock
+ * @brief Tries to lock
+ *   a lock set up using futexes.
+ * @details The routine actually uses the built-in functions for
+ *   atomic memory access.
+ *
+ * @param[in] p - A pointer to the lock.
+ * @return 0 on success, else 1 if unable to acquire the lock.
+ *
+ * @see ls_futex_setup, ls_futex_safe_lock, ls_futex_safe_unlock
+ */
+ls_inline int ls_futex_safe_trylock(ls_mutex_t *p)
+{
+    if (ls_spin_pid == 0)
+        ls_atomic_pidspin_init();
+    int ret = !ls_atomic_casint(p, 0, ls_spin_pid);
+    if (0 == ret)
+    {
+        LS_TH_LOCKED(p, 1); // call it a write lock
+    }
+    return ret;
 }
 
 /**
@@ -324,7 +404,12 @@ ls_inline int ls_futex_safe_unlock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_trylock(ls_mutex_t *p)
 {
-    return !ls_atomic_casint(p, 0, 1);
+    int ret = !ls_atomic_casint(p, 0, 1);
+    if (0 == ret)
+    {
+        LS_TH_LOCKED(p, 1); // call it a write lock
+    }
+    return ret;
 }
 
 /**
@@ -339,7 +424,8 @@ ls_inline int ls_futex_trylock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_unlock(ls_mutex_t *p)
 {
-    assert(*(int *)p != 0);
+    assert(ls_atomic_fetch_add(p, 0) != 0);
+    LS_TH_UNLOCKED(p, 1); // call it a write lock
     return (ls_atomic_setint(p, LS_LOCK_AVAIL) == LS_FUTEX_LOCKED2) ?
            ls_futex_wake(p) : 0;
 }
@@ -356,7 +442,7 @@ ls_inline int ls_futex_unlock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_locked(ls_mutex_t *p)
 {
-    return *p != 0;
+    return ls_atomic_fetch_add(p, 0) != 0;
 }
 
 
@@ -395,6 +481,7 @@ ls_inline int ls_atomic_spin_lock(ls_atom_spinlock_t *p)
     {
         cpu_relax();
     }
+    LS_TH_LOCKED(p, 1); // call it a write lock
     return 0;
 }
 
@@ -425,6 +512,7 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
     waitpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
     if (waitpid == LS_LOCK_AVAIL)
     {
+        LS_TH_LOCKED(p, 1); // call it a write lock
         return 0;
     }
     return ls_atomic_spin_pidwait(p);
@@ -444,7 +532,11 @@ ls_inline int ls_atomic_spin_pidlock(ls_atom_spinlock_t *p)
  */
 ls_inline int ls_atomic_spin_trylock(ls_atom_spinlock_t *p)
 {
-    return !ls_atomic_casint(p, LS_LOCK_AVAIL, LS_LOCK_INUSE);
+    int ret = !ls_atomic_casint(p, LS_LOCK_AVAIL, LS_LOCK_INUSE);
+#ifdef USE_THREADCHECK
+    if (!ret) { LS_TH_LOCKED(p, 1); } // call it a write lock
+#endif
+    return ret;
 }
 
 /**
@@ -462,7 +554,11 @@ ls_inline int ls_atomic_pidspin_trylock(ls_atom_spinlock_t *p)
 {
     if (ls_spin_pid == 0)
         ls_atomic_pidspin_init();
-    return !ls_atomic_casint(p, LS_LOCK_AVAIL, ls_spin_pid);
+    int ret = !ls_atomic_casint(p, LS_LOCK_AVAIL, ls_spin_pid);
+#ifdef USE_THREADCHECK
+    if (!ret) { LS_TH_LOCKED(p, 1); } // call it a write lock
+#endif
+    return ret;
 }
 
 /**
@@ -477,6 +573,7 @@ ls_inline int ls_atomic_pidspin_trylock(ls_atom_spinlock_t *p)
  */
 ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
 {
+    LS_TH_UNLOCKED(p, 1);
     ls_atomic_clrint(p);
     return 0;
 }
@@ -509,10 +606,10 @@ ls_inline int ls_atomic_spin_locked(ls_atom_spinlock_t *p)
 ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
 {
     assert(*p == ls_spin_pid);
+    LS_TH_UNLOCKED(p, 1);
     ls_atomic_clrint(p);
     return 0;
 }
-
 
 /**
  * @ls_atomic_pidlocked

@@ -192,6 +192,8 @@ void   ls_psavepending(ls_xpool_bblk_t *plist);
  */
 void   ls_pfreepending();
 
+
+int ls_thr_seq();
 #ifdef __cplusplus
 }
 #endif

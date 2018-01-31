@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8)
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -O2 -g")
 #set(CMAKE_CSS_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -O2 -g")
 
+execute_process( COMMAND ${PROJECT_SOURCE_DIR}/src/modules/pagespeed/dlpsol.sh )
+
 execute_process( COMMAND uname -m
                 OUTPUT_VARIABLE  MACHINE_TYPE )
 string(STRIP ${MACHINE_TYPE} MACHINE_TYPE)
@@ -13,8 +15,8 @@ else()
     set(OSVERSION "ia32")
 endif()
 
-
-set(PSOL_LIB ${PROJECT_SOURCE_DIR}/../thirdparty/psol)
+set(PSOL_VER 1.11.33.4)
+set(PSOL_LIB ${PROJECT_SOURCE_DIR}/../thirdparty/psol-${PSOL_VER})
 
 include_directories(
                 ${PSOL_LIB}/include

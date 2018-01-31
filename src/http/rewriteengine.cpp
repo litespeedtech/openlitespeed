@@ -22,6 +22,7 @@
 #include <http/httpcontext.h>
 #include <http/httpresourcemanager.h>
 #include <http/httpsession.h>
+#include <http/mtsessdata.h>
 #include <http/httpstatuscode.h>
 #include <http/requestvars.h>
 #include <http/rewritemap.h>
@@ -565,7 +566,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
     else if ((code >= COND_OP_DIR) && (code <= COND_OP_FILE_ACC))
     {
         if (m_noStat == 1)
-            m_noStat = ls_fio_stat(pTest, &m_st);
+            m_noStat = pSession->getReq()->fileStat(pTest, &m_st);
         if (m_noStat == 0)
         {
             switch (code)
@@ -819,9 +820,16 @@ int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
                     || (strncasecmp("HttpOnly", p, 8) == 0));
     }
     pSession->getReq()->setCookie(pName, strlen(pName), pVal, strlen(pVal));
-    return pSession->getResp()->addCookie(pName, pVal, pPath, pDomain, age,
-                                          secure, httponly);
+    MtSessData * psd = pSession->getMtSessData();
+    if (psd)
+        ls_mutex_lock(&psd->m_respHeaderLock);
 
+    int ret = pSession->getResp()->addCookie(pName, pVal, pPath, pDomain, age,
+                                          secure, httponly);
+    if (psd)
+        ls_mutex_unlock(&psd->m_respHeaderLock);
+
+    return ret;
 }
 
 
@@ -1136,6 +1144,8 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
 //            ret = -1;
 //        else
         ret = processRule(pRule, pSession, cacheCtlStr);
+        if (pSession->isDropConnection())
+            return SC_403;
         if (ret)
         {
             pRule = getNextRule(pRule, pContext, pRootContext);

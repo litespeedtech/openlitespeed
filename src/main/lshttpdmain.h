@@ -123,7 +123,7 @@ class LshttpdMain
 
     int             startChild(ChildProc *pProc);
     int             childDead(int pid);
-    void            stopAllChildren();
+    void            stopAllChildren(int nowait);
     void            waitChildren();
     void            broadcastSig(int sig, int changeState);
     void            releaseExcept(ChildProc *pCurProc);
@@ -143,6 +143,7 @@ class LshttpdMain
 
     int             getNumCores();
     void            setAffinity(pid_t pid, int cpuId);
+    void            cleanEnvVars();
 
     LshttpdMain(const LshttpdMain &rhs);
     void operator=(const LshttpdMain &rhs);

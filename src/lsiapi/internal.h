@@ -17,6 +17,8 @@
 *****************************************************************************/
 #include <lsdef.h>
 #include <ls.h>
+#include <lsr/ls_atomic.h>
+#include <lsr/ls_lock.h>
 
 #ifndef LSAPI_INTERNAL_H
 #define LSAPI_INTERNAL_H
@@ -51,7 +53,7 @@ typedef struct lsi_module_internal_s
      * @since 1.0
      */
     const char                  *name;
-    
+
     /**
      * @brief Initially set to 0.  After a module is loaded,
      * it will be set to the user data id.
@@ -91,8 +93,7 @@ typedef struct lsi_module_internal_s
 //# error not enough space reserved for internal data in struct lsi_module_t
 //#endif
 
-
-class LsiSession : public evtcbhead_s
+class LsiSession : public evtcbtail_s
 {
 public:
     LsiSession() {};
@@ -100,15 +101,8 @@ public:
     ModuleConfig *getModuleConfig()    { return m_pModuleConfig; };
     virtual LogSession *getLogSession() = 0;
 
-
 protected:
     ModuleConfig *m_pModuleConfig;
-
-    void setEvtcbHead(evtcbnode_s *pNode)
-    {   evtcbhead_s::evtcb_head = pNode;    }
-
-    evtcbnode_s *getEvtcbHead() const
-    {   return evtcbhead_s::evtcb_head;    }
 
     LS_NO_COPY_ASSIGN(LsiSession);
 };

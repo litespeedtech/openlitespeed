@@ -3,22 +3,28 @@
 #
 # For the special case "if", we nees to update the astyle/ASFormatter.cpp, in this way, we bypass the for, while and switch. 
 #                if (shouldPadHeader
-#                        && (!isNonParenHeader
-#                            || (currentHeader == &AS_CASE && peekNextChar() == '(')
-#                            || (currentHeader == &AS_CATCH && peekNextChar() == '('))
-#                        && charNum < (int) currentLine.length() - 1 && !isWhiteSpace(currentLine[charNum + 1]))
-#-                    appendSpacePad();
+#                    && (!isNonParenHeader
+#                        || (currentHeader == &AS_CASE && peekNextChar() == '(')
+#                        || (currentHeader == &AS_CATCH && peekNextChar() == '('))
+#                    && charNum < (int) currentLine.length() - 1 
+#                    && !isWhiteSpace(currentLine[charNum + 1]))
 #+                {
-#+                    if ( currentHeader != &AS_SWITCH && currentHeader != &AS_WHILE && currentHeader != &AS_FOR )
+#+                    if (currentHeader != &AS_SWITCH 
+#                         && currentHeader != &AS_WHILE 
+#                         && currentHeader != &AS_FOR)
+#                      {
 #+                        appendSpacePad();
+#                      }
 #+                }
 #
 #void ASFormatter::padParens(void)
 # ...
 #                    if (shouldPadHeader
-#                            && prevWord.length() > 0
-#                            && isCharPotentialHeader(prevWord, 0))
+#                        && prevWord.length() > 0
+#                        && isCharPotentialHeader(prevWord, 0))
+#                    {
 #                        prevWordH = ASBeautifier::findHeader(prevWord, 0, headers);
+#                    }
 #                    if (prevWordH != NULL)
 #+                    {
 #+                        //We treat while and for and switch not a header

@@ -53,7 +53,6 @@ TEST(hapck_test_1)
     dynTable.updateMaxCapacity(256);
 
     printf("size of DynTblEntry is %zd\n", sizeof(DynTblEntry));
-
     addEntry(dynTable, ":authority", "www.example.com", 1);
     printTable(dynTable);
 

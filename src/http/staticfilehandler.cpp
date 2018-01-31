@@ -413,7 +413,7 @@ int StaticFileHandler::process(HttpSession *pSession,
     struct stat &st = pReq->getFileStat();
     int code = pReq->getStatusCode();
 
-    int isSSI = (pReq->getSSIRuntime() != NULL);
+    int isSSI = (pSession->getSsiRuntime() != NULL);
 
 //     if (pReq->getMethod() >= HttpMethod::HTTP_POST)
 //         return SC_405;
@@ -491,7 +491,13 @@ int StaticFileHandler::process(HttpSession *pSession,
                 }
             }
         }
-        if (pReq->isHeaderSet(HttpHeader::H_RANGE))
+        if (pCache->testMod(pReq))
+        {
+            pReq->setStatusCode(SC_304);
+            pReq->setNoRespBody();
+            code = SC_304;
+        }
+        else if (pReq->isHeaderSet(HttpHeader::H_RANGE))
         {
             const char *pRange = pReq->getHeader(HttpHeader::H_RANGE);
             if (pReq->isHeaderSet(HttpHeader::H_IF_RANGE))
@@ -508,15 +514,6 @@ int StaticFileHandler::process(HttpSession *pSession,
             }
             if (!ret && pInfo->getFileData()->getFileSize() > 0)
                 return processRange(pSession, pReq, pRange);
-        }
-        else
-        {
-            if (pCache->testMod(pReq))
-            {
-                pReq->setStatusCode(SC_304);
-                pReq->setNoRespBody();
-                code = SC_304;
-            }
         }
     }
 
