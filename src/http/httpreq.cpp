@@ -124,13 +124,13 @@ HttpReq::HttpReq()
     : m_pSslConn(NULL)
     , m_headerBuf(HEADER_BUF_INIT_SIZE)
     , m_fdReqFile(-1)
+    , m_lastStatPath("")
 {
     m_headerBuf.resize(HEADER_BUF_PAD);
     *((int *)m_headerBuf.begin()) = 0;
     m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     //m_pHTAContext = NULL;
     m_pContext = NULL;
-    m_pSSIRuntime = NULL;
     ::memset(m_commonHeaderLen, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderLen);
     m_upgradeProto = UPD_PROTO_NONE;
@@ -171,7 +171,7 @@ HttpReq::~HttpReq()
 }
 
 
-void HttpReq::reset()
+void HttpReq::reset(int discard)
 {
     if (m_fdReqFile != -1)
     {
@@ -185,11 +185,12 @@ void HttpReq::reset()
         else
             HttpResourceManager::getInstance().recycle(m_pReqBodyBuf);
     }
+
     ::memset(m_commonHeaderOffset, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderOffset);
     m_pHttpHandler = NULL;
     m_pSslConn = NULL;
-    resetHeaderBuf();
+    resetHeaderBuf(discard);
     m_pRealPath = NULL;
     ls_xpool_reset(m_pPool);
     ls_xpool_skipfree(m_pPool);
@@ -202,23 +203,17 @@ void HttpReq::reset()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
+    m_lastStatPath.setStr("");
 }
 
 
-void HttpReq::resetHeaderBuf()
-{
-    m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
-    m_headerBuf.resize(HEADER_BUF_PAD);
-}
 
-
-void HttpReq::reset2()
+void HttpReq::resetHeaderBuf(int discard)
 {
     if (m_iReqHeaderBufFinished == HEADER_BUF_PAD)
         return;
 
-    reset();
-    if (m_iReqHeaderBufRead - m_iReqHeaderBufFinished > 0)
+     if (!discard && m_iReqHeaderBufRead - m_iReqHeaderBufFinished > 0)
     {
         memmove(m_headerBuf.begin() + HEADER_BUF_PAD,
                 m_headerBuf.begin() + m_iReqHeaderBufFinished,
@@ -229,8 +224,72 @@ void HttpReq::reset2()
         m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     }
     else
-        resetHeaderBuf();
+    {
+        m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
+        m_headerBuf.resize(HEADER_BUF_PAD);
+    }
 }
+
+
+// void HttpReq::reset()
+// {
+//     if (m_fdReqFile != -1)
+//     {
+//         ::close(m_fdReqFile);
+//         m_fdReqFile = -1;
+//     }
+//     if (m_pReqBodyBuf)
+//     {
+//         if (!m_pReqBodyBuf->isMmaped())
+//             delete m_pReqBodyBuf;
+//         else
+//             HttpResourceManager::getInstance().recycle(m_pReqBodyBuf);
+//     }
+//     ::memset(m_commonHeaderOffset, 0,
+//              (char *)(&m_code + 1) - (char *)m_commonHeaderOffset);
+//     m_pRealPath = NULL;
+//     m_cookies.clear();
+//     ls_xpool_reset(m_pPool);
+//     ls_xpool_skipfree(m_pPool);
+//     m_unknHeaders.init();
+//     uSetURI(NULL, 0);
+//     ls_str_set(&m_curUrl.value, NULL, 0);
+//     ls_str_set(&m_location, NULL, 0);
+//     ls_str_set(&m_pathInfo, NULL, 0);
+//     ls_str_set(&m_newHost, NULL, 0);
+//     memset(m_pUrls, 0, sizeof(ls_strpair_t) * (MAX_REDIRECTS + 1));
+//     m_pEnv = NULL;
+//     m_pAuthUser = NULL;
+//     m_pRange = NULL;
+//     m_cookies.init();
+// }
+//
+//
+// void HttpReq::resetHeaderBuf()
+// {
+//     m_iReqHeaderBufFinished = HEADER_BUF_PAD;
+//     m_headerBuf.resize(HEADER_BUF_PAD);
+// }
+//
+//
+// void HttpReq::reset2()
+// {
+//     if (m_iReqHeaderBufFinished == HEADER_BUF_PAD)
+//         return;
+//
+//     reset();
+//     if (m_headerBuf.size() - m_iReqHeaderBufFinished > 0)
+//     {
+//         memmove(m_headerBuf.begin() + HEADER_BUF_PAD,
+//                 m_headerBuf.begin() + m_iReqHeaderBufFinished,
+//                 m_headerBuf.size() - m_iReqHeaderBufFinished);
+//         m_headerBuf.resize(HEADER_BUF_PAD + m_headerBuf.size() -
+//                            m_iReqHeaderBufFinished);
+//         m_iReqHeaderBufFinished = HEADER_BUF_PAD;
+//     }
+//     else
+//         resetHeaderBuf();
+// }
 
 
 int HttpReq::setQS(const char *qs, int qsLen)
@@ -256,6 +315,7 @@ int HttpReq::appendPendingHeaderData(const char *pBuf, int len)
 }
 
 
+/* NOT USED
 static inline int growBuf(AutoBuf &buf, int len)
 {
     int g = 1024;
@@ -265,6 +325,7 @@ static inline int growBuf(AutoBuf &buf, int len)
         return SC_500;
     return 0;
 }
+*/
 
 
 int HttpReq::processHeader()
@@ -360,7 +421,7 @@ int HttpReq::processRequestLine()
     const char *pBEnd = m_headerBuf.end();
     int iBufLen = pBEnd - pCur;
     assert(iBufLen >= 0);
-    
+
     if (pBEnd > HttpServerConfig::getInstance().getMaxURLLen() +
         m_headerBuf.begin())
         pBEnd = HttpServerConfig::getInstance().getMaxURLLen() +
@@ -385,7 +446,11 @@ int HttpReq::processRequestLine()
         if (iBufLen < MAX_BUF_SIZE + 20)
             return 1;
         else
+        {
+             LS_DBG_L(getLogSession(), "processRequestLine error 1.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
             return SC_400;
+        }
     }
     m_reqLineOff = pCur - m_headerBuf.begin();
 
@@ -394,7 +459,11 @@ int HttpReq::processRequestLine()
         ++p;
     result = parseMethod(pCur, p);
     if (result)
+    {
+        LS_DBG_L(getLogSession(), "processRequestLine Method error.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
         return result;
+    }
 
     pCur = p + 1;
     while ((p < pLineEnd) && ((*p == ' ') || (*p == '\t')))
@@ -402,20 +471,36 @@ int HttpReq::processRequestLine()
     pCur = p;
     result = parseHost(pCur, pLineEnd);
     if (result)
+    {
+        LS_DBG_L(getLogSession(), "processRequestLine host error.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
         return result;
+    }
     p += m_iHostLen;
     pCur = (char *)memchr(p, '/', (pLineEnd - p));
     //FIXME:should we handle other cases?
     if (!pCur || pCur > pLineEnd)
+    {
+        LS_DBG_L(getLogSession(), "processRequestLine format error 1.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
         return SC_400;
+    }
     while ((p < pLineEnd) && ((*p != ' ') && (*p != '\t')))
         ++p;
     if (p >= pLineEnd || pCur > p)
+    {
+        LS_DBG_L(getLogSession(), "processRequestLine format error 2.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
         return SC_400;
+    }
     m_reqURLOff = pCur - m_headerBuf.begin();
     result = parseURL(pCur, p);
     if (result)
+    {
+        LS_DBG_L(getLogSession(), "processRequestLine url error.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
         return result;
+    }
 
     pCur = p + 1;
     while ((p < pLineEnd) && ((*p == ' ') || (*p == '\t')))
@@ -424,7 +509,11 @@ int HttpReq::processRequestLine()
 
     result = parseProtocol(pCur, pLineEnd);
     if (result)
+    {
+        LS_DBG_L(getLogSession(), "processRequestLine Protocol error.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
         return result;
+    }
     m_reqLineLen = pLineEnd - m_headerBuf.begin() - m_reqLineOff;
     if (*(pLineEnd - 1) == '\r')
         m_reqLineLen --;
@@ -661,7 +750,7 @@ int HttpReq::processHeaderLines()
                          && strncasecmp(pLineBegin, "X-Forwarded-Proto", 17) == 0)
                 {
                     if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
-                        m_iContextState |= X_FORWARD_HTTPS;
+                        m_iKeepAlive |= IS_FORWARDED_HTTPS;
                 }
                 else if (pCurHeader->keyLen == 18
                          && strncasecmp(pLineBegin, "X-Forwarded-scheme", 18) == 0)
@@ -695,6 +784,11 @@ int HttpReq::processHeaderLines()
         m_iReqHeaderBufRead = m_headerBuf.size();
         m_iHeaderStatus = HEADER_OK;
         return 0;
+    }
+    else
+    {
+        LS_DBG_L(getLogSession(), "Request header not finished. \n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
     }
     return 1;
 }
@@ -1048,9 +1142,10 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
         return SC_400;    //invalid url format
     }
     uSetURI(pURI, iURILen);
-    if ((alloc) || (n - 1 - (pArgs - pURI) > 0) || (!m_pSSIRuntime))
+    if ((alloc) || (n - 1 - (pArgs - pURI) > 0)
+        //|| (!m_pSsiRuntime)
+    )
         setQS(getURI() + (pArgs - pURI), n - 1 - (pArgs - pURI));
-
     else
         m_curUrl.val = m_pUrls[m_iRedirects - 1].val;
     m_iScriptNameLen = getURILen();
@@ -1106,7 +1201,7 @@ static void sanitizeHeaderValue(char *pHeaderVal, int len)
             *pHeaderVal = ' ';
         ++pHeaderVal;
     }
-}    
+}
 
 
 int HttpReq::setRewriteLocation(char *pURI, int uriLen,
@@ -1163,6 +1258,7 @@ int HttpReq::internalRedirect(const char *pURL, int len, int alloc)
     if (ret)
         return ret;
     setCurrentURL(pURL, len, alloc);
+    ls_str_setlen(&m_pathInfo, 0);
     return detectLoopRedirect();
 }
 
@@ -1183,24 +1279,94 @@ int HttpReq::internalRedirectURI(const char *pURI, int len,
     return 0;
 }
 
-
-int HttpReq::detectLoopRedirect()
+int HttpReq::detectLoopRedirect(const char *pURI, int uriLen,
+                                const char *pArg, int qsLen, int isSSL)
 {
-    const char *pURI = getURI();
-    const char *pArg = getQueryString();
     //detect loop
     int i;
+    const char *p = pURI;
+    int relativeLen = uriLen;
+
+    if (isHttps())
+        isSSL = 1;
+
+    if (strncasecmp(p, "http", 4) == 0)
+    {
+        int isHttps;
+        p += 4;
+        isHttps = (*p == 's');
+        if (isHttps != isSSL)
+            return 0;
+        if (isHttps)
+            ++p;
+        if (strncmp(p, "://", 3) == 0)
+            p += 3;
+        const char *pOldHost = getHeader(HttpHeader::H_HOST);
+        int oldHostLen = getHeaderLen(HttpHeader::H_HOST);
+        if ((*pOldHost) &&
+            (strncasecmp(p, pOldHost, oldHostLen) != 0))
+            return 0;
+        p += oldHostLen;
+        if (*p != '/')
+            return 0;
+        relativeLen -= p - pURI;
+    }
+
+    const char *pCurURI = getURI();
+    const char *pCurArg = getQueryString();
+    int         iCurURILen = getURILen();
+    int         iCurQSLen = getQueryStringLen();
+    if ((iCurURILen == relativeLen) && (iCurQSLen == qsLen)
+        && (pCurURI != p) &&
+        (strncmp(p, pCurURI, iCurURILen) == 0) &&
+        (strncmp(pArg, pCurArg, iCurQSLen) == 0))
+        return 1;
     for (i = 0; i < m_iRedirects; ++i)
     {
         ls_strpair_t tmp = m_pUrls[i];
+        if (((((int)ls_str_len(&tmp.key) == uriLen)
+              && (strncmp(ls_str_cstr(&tmp.key), pURI,
+                          ls_str_len(&tmp.key)) == 0))
+             || (((int)ls_str_len(&tmp.key) == relativeLen)
+                 && (strncmp(ls_str_cstr(&tmp.key), p,
+                             ls_str_len(&tmp.key)) == 0)))
+            && ((int)ls_str_len(&tmp.val) == qsLen)
+            && (strncmp(ls_str_cstr(&tmp.val), pArg,
+                        ls_str_len(&tmp.val)) == 0))
+            break;
+    }
+    if (i < m_iRedirects)   //loop detected
+        return 1;
+
+    return 0;
+}
+
+int HttpReq::detectLoopRedirect(int cmpCurUrl, const char *pUri,
+                                int uriLen,
+                                const char *pArg, int argLen)
+{
+    int i = 0;
+    ls_strpair_t *pUrlQs;
+
+    if (cmpCurUrl)
+    {
+        i = -1;
+        pUrlQs = &m_curUrl;
+    }
+    else
+        pUrlQs = &m_pUrls[i];
+    while (i < m_iRedirects)
+    {
         if
         (
-            ((int)ls_str_len(&tmp.key) == getURILen())
-            && (strncmp(ls_str_cstr(&tmp.key), pURI, ls_str_len(&tmp.key)) == 0)
-            && ((int)ls_str_len(&tmp.val) == getQueryStringLen())
-            && (strncmp(ls_str_cstr(&tmp.val), pArg, ls_str_len(&tmp.val)) == 0)
+            ((int)ls_str_len(&pUrlQs->key) == getURILen())
+            && (strncmp(ls_str_cstr(&pUrlQs->key), pUri, ls_str_len(&pUrlQs->key)) == 0)
+            && ((int)ls_str_len(&pUrlQs->val) == getQueryStringLen())
+            && (strncmp(ls_str_cstr(&pUrlQs->val), pArg, ls_str_len(&pUrlQs->val)) == 0)
         )
             break;
+        ++i;
+        pUrlQs = &m_pUrls[i];
 
     }
     if (i < m_iRedirects)   //loop detected
@@ -1208,12 +1374,12 @@ int HttpReq::detectLoopRedirect()
         m_curUrl.key = m_pUrls[--m_iRedirects].key;
         m_curUrl.val = m_pUrls[m_iRedirects].val;
         LS_ERROR(getLogSession(), "Detected loop redirection.");
-        //TODO:
+        //FIXME:
         // print the redirect url stack.
         return SC_500;
     }
-    LS_DBG_L(getLogSession(), "Redirect to: \n\tURI=[%s],\n"
-             "\tQueryString=[%s]", getURI(), getQueryString());
+    LS_DBG_L(getLogSession(), "Redirect to: \n\tURI=[%.*s],\n"
+             "\tQueryString=[%.*s]", uriLen, pUri, argLen, pArg);
     if (m_pReqBodyBuf)
         m_pReqBodyBuf->rewindReadBuf();
 
@@ -1498,11 +1664,11 @@ int HttpReq::postRewriteProcess(const char *pURI, int len)
 }
 
 
-int HttpReq::processContext(const HttpContext *&pOldCtx)
+int HttpReq::processContext()
 {
     const char *pURI;
     int   iURILen;
-    pOldCtx = m_pContext;
+    const HttpContext *pOldCtx = m_pContext;
     pURI = getURI();
     iURILen = getURILen();
     m_pMimeType = NULL;
@@ -1688,7 +1854,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
         while ((p > pBegin) && (*(p - 1) == '/'))
             --p;
         *p = 0;
-        ret = ls_fio_stat(pBuf, &m_fileStat);
+        ret = fileStat(pBuf, &m_fileStat);
 
         if (p != pEnd)
             *p = '/';
@@ -1963,7 +2129,7 @@ int HttpReq::checkPathInfo(const char *pURI, int iURILen, int &pathLen,
         while ((pTest > pBegin) && (*(pTest - 1) == '/'))
             --pTest;
         *pTest = 0;
-        ret = ls_fio_stat(pBuf, &m_fileStat);
+        ret = fileStat(pBuf, &m_fileStat);
 
         if (pTest != pEnd)
             *pTest = '/';
@@ -2081,14 +2247,15 @@ void HttpReq::updateNoRespBodyByStatus(int code)
 {
     if (!(m_iContextState & KEEP_AUTH_INFO))
     {
-        switch (m_code = code)
+        ls_atomic_setint(&m_code, code);
+        switch (code)
         {
         case SC_100:
         case SC_101:
         case SC_204:
         case SC_205:
         case SC_304:
-            m_iNoRespBody = 1;
+            ls_atomic_setchar(&m_iNoRespBody, 1);
         }
     }
 }
@@ -2131,7 +2298,7 @@ void HttpReq::tranEncodeToContentLen()
         return;
     pBegin -= 17;
     len += 17;
-    int n = ls_snprintf(pBegin, len, "Content-length: %lld", 
+    int n = ls_snprintf(pBegin, len, "Content-length: %lld",
                         (long long)m_lEntityFinished);
     memset(pBegin + n, ' ', len - n);
     m_commonHeaderOffset[HttpHeader::H_CONTENT_LENGTH] =
@@ -2278,6 +2445,7 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
             return SC_403;
         }
     }
+
     if (m_pVHost && !m_pContext)
         m_pContext = &m_pVHost->getRootContext();
     char chMode = UID_FILE;
@@ -2313,6 +2481,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
     *pChroot = NULL;
     if (m_pVHost)
     {
+        if (!m_pContext)
+            m_pContext = &m_pVHost->getRootContext();
         chMode = m_pContext->getChrootMode();
         switch (chMode)
         {
@@ -2443,7 +2613,7 @@ void HttpReq::unsetEnv(const char *pKey, int keyLen)
 
 
 const char *HttpReq::getUnknownHeaderByIndex(int idx, int &keyLen,
-        const char *&pValue, int &valLen)
+        const char *&pValue, int &valLen) const
 {
     key_value_pair *pIdx = getUnknHeaderPair(idx);
     if (pIdx)
@@ -2545,10 +2715,10 @@ int HttpReq::getDecodedOrgReqURI(char *&pValue)
 }
 
 
-SSIConfig *HttpReq::getSSIConfig()
+SsiConfig *HttpReq::getSsiConfig()
 {
     if (m_pContext)
-        return m_pContext->getSSIConfig();
+        return m_pContext->getSsiConfig();
     return NULL;
 }
 
@@ -2566,22 +2736,22 @@ uint32_t HttpReq::isIncludesNoExec() const
 }
 
 
-void HttpReq::backupPathInfo()
-{
-    m_pSSIRuntime->savePathInfo(m_pathInfo, m_iRedirects);
-}
-
-
-void HttpReq::restorePathInfo()
-{
-    int oldRedirects = m_iRedirects;
-    m_pSSIRuntime->restorePathInfo(m_pathInfo, m_iRedirects);
-    if (m_iRedirects < oldRedirects)
-    {
-        m_curUrl.key = m_pUrls[m_iRedirects].key;
-        m_curUrl.val = m_pUrls[m_iRedirects].val;
-    }
-}
+// void HttpReq::backupPathInfo()
+// {
+//     getReq()->getSsi->savePathInfo(m_pathInfo, m_iRedirects);
+// }
+//
+//
+// void HttpReq::restorePathInfo()
+// {
+//     int oldRedirects = m_iRedirects;
+//     m_pSsiRuntime->restorePathInfo(m_pathInfo, m_iRedirects);
+//     if (m_iRedirects < oldRedirects)
+//     {
+//         m_curUrl.key = m_pUrls[m_iRedirects].key;
+//         m_curUrl.val = m_pUrls[m_iRedirects].val;
+//     }
+// }
 
 
 void HttpReq::stripRewriteBase(const HttpContext *pCtx,
@@ -2597,62 +2767,29 @@ void HttpReq::stripRewriteBase(const HttpContext *pCtx,
 }
 
 
-int HttpReq::detectLoopRedirect(const char *pURI, int uriLen,
-                                const char *pArg, int qsLen, int isSSL)
+int HttpReq::fileStat(const char *pPath, struct stat *st)
 {
-    //detect loop
-    int i;
-    const char *p = pURI;
-    int relativeLen = uriLen;
-    if (strncasecmp(p, "http", 4) == 0)
+    int ret = 0;
+    if (!st || !pPath)
+        return -1;
+    if (strcmp(pPath, m_lastStatPath.c_str()) != 0)
     {
-        int isHttps;
-        p += 4;
-        isHttps = (*p == 's');
-        if (isHttps != isSSL)
-            return 0;
-        if (isHttps)
-            ++p;
-        if (strncmp(p, "://", 3) == 0)
-            p += 3;
-        const char *pOldHost = getHeader(HttpHeader::H_HOST);
-        int oldHostLen = getHeaderLen(HttpHeader::H_HOST);
-        if ((*pOldHost) &&
-            (strncasecmp(p, pOldHost, oldHostLen) != 0))
-            return 0;
-        p += oldHostLen;
-        if (*p != '/')
-            return 0;
-        relativeLen -= p - pURI;
+        m_lastStatPath.setStr(pPath);
+        m_lastStatRes = ls_fio_stat(pPath, &m_lastStat);
+        if (m_lastStatRes == -1)
+        {
+            m_lastStatRes = errno;
+            return -1;
+        }
     }
-
-    const char *pCurURI = getURI();
-    const char *pCurArg = getQueryString();
-    int         iCurURILen = getURILen();
-    int         iCurQSLen = getQueryStringLen();
-    if ((iCurURILen == relativeLen) && (iCurQSLen == qsLen)
-        && (pCurURI != p) &&
-        (strncmp(p, pCurURI, iCurURILen) == 0) &&
-        (strncmp(pArg, pCurArg, iCurQSLen) == 0))
-        return 1;
-    for (i = 0; i < m_iRedirects; ++i)
+    if (!m_lastStatRes)
+        memmove(st, &m_lastStat, sizeof(m_lastStat));
+    else
     {
-        ls_strpair_t tmp = m_pUrls[i];
-        if (((((int)ls_str_len(&tmp.key) == uriLen)
-              && (strncmp(ls_str_cstr(&tmp.key), pURI,
-                          ls_str_len(&tmp.key)) == 0))
-             || (((int)ls_str_len(&tmp.key) == relativeLen)
-                 && (strncmp(ls_str_cstr(&tmp.key), p,
-                             ls_str_len(&tmp.key)) == 0)))
-            && ((int)ls_str_len(&tmp.val) == qsLen)
-            && (strncmp(ls_str_cstr(&tmp.val), pArg,
-                        ls_str_len(&tmp.val)) == 0))
-            break;
+        errno = m_lastStatRes;
+        ret = -1;
     }
-    if (i < m_iRedirects)   //loop detected
-        return 1;
-
-    return 0;
+    return ret;
 }
 
 

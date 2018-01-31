@@ -78,6 +78,9 @@ int CacheKey::getPrivateId(char *pBuf, char *pBufEnd)
 
 int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
 {
+    if (!pKey->m_pUri || pKey->m_iUriLen <= 0)
+        return -1;
+
     m_hashKey.copy(hash);
     int len = pKey->m_iUriLen + ((pKey->m_iQsLen > 0) ? pKey->m_iQsLen + 1 :
                                  0);
@@ -99,6 +102,10 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
     char *pBuf = m_sKey.prealloc(len + 1);
     if (!pBuf)
         return -1;
+    
+    if (!pKey->m_pUri)
+        return -1;
+
     memmove(pBuf, pKey->m_pUri, pKey->m_iUriLen + 1);
     l = pKey->m_iUriLen;
     if (pKey->m_iQsLen > 0)

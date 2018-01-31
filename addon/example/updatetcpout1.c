@@ -136,4 +136,4 @@ static int init(lsi_module_t *pModule)
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, NULL, "", serverHooks};
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, NULL, "", serverHooks, {0} };

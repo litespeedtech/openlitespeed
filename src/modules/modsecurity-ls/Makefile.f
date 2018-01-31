@@ -1,7 +1,7 @@
 CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++11
 INCLUDEPATH= -I../../util/ -I./ -I../../../include  -I../ -I../../ -I./ModSecurity/headers/
-CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
+CFLAGS= -fPIC -fvisibility=hidden -g  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
 
 
 OS := $(shell uname)

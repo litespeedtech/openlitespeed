@@ -577,16 +577,25 @@ int  SslContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * 
 
 
 extern SslContext *VHostMapFindSslContext(void *arg, const char *pName);
-static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
+/**
+ * The cert callback is expected to return the following:
+ * < 0 If the server needs to look for a certificate
+ *  0  On error.
+ *  1  If success, regardless of if a certificate was set or not.
+ */
+#define CERTCB_RET_OK 1
+#define CERTCB_RET_ERR 0
+#define CERTCB_RET_WAIT -1
+static int SslConnection_ssl_servername_cb(SSL *pSSL, void *arg)
 {
     SSL_CTX *pOldCtx, *pNewCtx;
     const char *servername = SSL_get_servername(pSSL,
                              TLSEXT_NAMETYPE_host_name);
     if (!servername || !*servername)
-        return SSL_TLSEXT_ERR_NOACK;
+        return CERTCB_RET_OK;
     SslContext *pCtx = VHostMapFindSslContext(arg, servername);
     if (!pCtx)
-        return SSL_TLSEXT_ERR_NOACK;
+        return CERTCB_RET_OK;
 #ifdef OPENSSL_IS_BORINGSSL
     // Check OCSP again when the context needs to be changed.
     pCtx->initOCSP();
@@ -594,7 +603,7 @@ static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
     pOldCtx = SSL_get_SSL_CTX(pSSL);
     pNewCtx = pCtx->get();
     if (pOldCtx == pNewCtx)
-        return SSL_TLSEXT_ERR_OK;
+        return CERTCB_RET_OK;
     SSL_set_SSL_CTX(pSSL, pNewCtx);
     SSL_set_verify(pSSL, SSL_CTX_get_verify_mode(pNewCtx), NULL);
     SSL_set_verify_depth(pSSL, SSL_CTX_get_verify_depth(pNewCtx));
@@ -606,16 +615,14 @@ static int SslConnection_ssl_servername_cb(SSL *pSSL, int *ad, void *arg)
     // If listener does not have it set, set will not set it.
     SSL_set_options(pSSL, SSL_CTX_get_options(pNewCtx) & ~SSL_OP_NO_TICKET);
 
-    return SSL_TLSEXT_ERR_OK;
+    return CERTCB_RET_OK;
 }
 
 
 int SslContext::initSNI(void *param)
 {
 #ifdef SSL_TLSEXT_ERR_OK
-    SSL_CTX_set_tlsext_servername_callback(m_pCtx,
-                                           SslConnection_ssl_servername_cb);
-    SSL_CTX_set_tlsext_servername_arg(m_pCtx, param);
+    SSL_CTX_set_cert_cb(m_pCtx, SslConnection_ssl_servername_cb, param);
 
     return 0;
 #else

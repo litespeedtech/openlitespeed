@@ -26,8 +26,6 @@
 #include <util/ghash.h>
 
 
-lsi_api_t LsiapiBridge::g_lsiapiFunctions;
-const lsi_api_t *g_api = &LsiapiBridge::g_lsiapiFunctions;
 //GDataContainer *LsiapiBridge::g_aGDataContainer[LSI_CONTAINER_COUNT] = {0};
 
 

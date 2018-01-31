@@ -42,7 +42,7 @@ class StringList;
 class URIMatch;
 class StatusUrlMap;
 class AutoBuf;
-class SSIConfig;
+class SsiConfig;
 class ConfigCtx;
 class HttpVHost;
 class RewriteMapList;
@@ -185,7 +185,7 @@ typedef struct _CTX_INT
     StatusUrlMap         *m_pCustomErrUrls;
     ContextList          *m_pFilesMatchList;
     AutoBuf              *m_pExtraHeader;
-    SSIConfig            *m_pSSIConfig;
+    SsiConfig            *m_pSsiConfig;
 
     HttpSessionHooks    *m_pSessionHooks;
     ModuleConfig        *m_pModuleConfig;
@@ -484,8 +484,8 @@ public:
     }
     uint32_t isIpToLocOn() const     {   return m_iFeatures & BIT_F_IPTOLOC_ON;   }
 
-    SSIConfig *getSSIConfig() const
-    {   return m_pInternal->m_pSSIConfig;   }
+    SsiConfig *getSsiConfig() const
+    {   return m_pInternal->m_pSsiConfig;   }
 
     void setXbitHackOn(int a)
     {

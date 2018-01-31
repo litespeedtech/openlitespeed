@@ -716,8 +716,8 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
     m_mapStream.insert((void *)(long)uiStreamID, pStream);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
-    LS_DBG_H(getLogger(), "[%s-%d] getNewStream(), stream map size: %zd",
-             getLogId(), uiStreamID, m_mapStream.size());
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] getNewStream(), stream map size: %zd",
+             getStream()->getLogId(), uiStreamID, m_mapStream.size());
     pStream->init(uiStreamID, iPriority, this, ubSpdy_Flags, pSession);
     pStream->setProtocol(getStream()->getProtocol());
     if (m_bVersion == 3)
@@ -1142,7 +1142,8 @@ int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     uint32_t temp32;
     int headerOffset = getBuf()->size();
 
-    LS_DBG_H(getLogger(), "[%s-%d] sendRespHeaders()", getLogId(), uiStreamID);
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] sendRespHeaders()", 
+             getStream()->getLogId(), uiStreamID);
 
     getBuf()->guarantee(28);
     appendCtrlFrameHeader(SPDY_FRAME_SYN_REPLY, 0);
@@ -1185,7 +1186,6 @@ int SpdyConnection::onWriteEx()
 
     TDLinkQueue<SpdyStream> *pQue = &m_priQue[0];
     TDLinkQueue<SpdyStream> *pEnd = &m_priQue[SPDY_STREAM_PRIORITYS];
-
 
     for (; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
     {

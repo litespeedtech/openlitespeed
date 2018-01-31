@@ -104,6 +104,9 @@ void ls_str_append(ls_str_t *pThis, const char *pStr, size_t len)
 
 int ls_str_cmp(const void *pVal1, const void *pVal2)
 {
+    if (((ls_str_t *)pVal1)->len != ((ls_str_t *)pVal2)->len)
+        return ((ls_str_t *)pVal1)->len - ((ls_str_t *)pVal2)->len;
+
     return strncmp(
                ((ls_str_t *)pVal1)->ptr,
                ((ls_str_t *)pVal2)->ptr,

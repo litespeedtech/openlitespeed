@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "eventdispatcher.h"
+#include <adns/adns.h>
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
@@ -198,7 +199,8 @@ static inline void processTimerNew()
     //TEST: debug code
     //int n = tv.tv_usec / ( 1000000 / TIMER_PRECISION );
 
-    DateTime::s_curTime = tv.tv_sec;
+    // WARNING: size of time_t may change
+    ls_atomic_setlong(&DateTime::s_curTime, tv.tv_sec);
     DateTime::s_curTimeUs = tv.tv_usec;
     NtwkIOLink::setPrevToken(NtwkIOLink::getToken());
     NtwkIOLink::setToken(tv.tv_usec / (1000000 / TIMER_PRECISION));
@@ -237,6 +239,7 @@ int EventDispatcher::run()
                 return 1;
             }
         }
+        Adns::getInstance().processPendingEvt();
         processTimerNew();
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
@@ -281,6 +284,7 @@ int EventDispatcher::linger(int timeout)
                 return 1;
             }
         }
+        Adns::getInstance().processPendingEvt();
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif

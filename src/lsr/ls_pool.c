@@ -190,6 +190,7 @@ ls_inline void ls_sys_putblk(size_t size, ls_blkctrl_t *p, void *pNew)
 }
 
 
+#ifdef DEBUG_POOL
 /**
  * @ls_sys_putnblk
  */
@@ -206,6 +207,7 @@ ls_inline void ls_sys_putnblk(size_t size, ls_blkctrl_t *p, void *pNew, void *pT
     while (pPtr != pTail);
     return;
 }
+#endif /* DEBUG_POOL */
 
 
 #ifdef DEBUG_LKSTD
@@ -611,6 +613,7 @@ void *ls_palloc(size_t size)
         ptr->header.size = rndnum;
         ptr->header.magic = MAGIC;
         MEMCHK_POISON(ptr, sizeof(*ptr)); 
+        LS_TH_NEWMEM(ptr+1, size);
         return (void *)(ptr + 1);
     }
     return NULL;
@@ -671,6 +674,7 @@ ls_inline void *ls_prealloc_int(void *old_p, size_t new_sz, int copy)
         pBlk->header.size = val_sz;
         pBlk->header.magic = MAGIC;
         MEMCHK_POISON(pBlk, sizeof(*pBlk)); 
+        LS_TH_NEWMEM(pBlk+1, val_sz);
         return (void *)(pBlk + 1);
     }
     return NULL;
@@ -833,7 +837,9 @@ void ls_plistfree(ls_pool_blk_t *plist, size_t size)
     MEMCHK_UNPOISON(pNext, sizeof(ls_pool_blk_t)); 
     while (pNext->next != NULL)         /* find last in list */
     {
+#if defined(USE_VALGRIND) || defined(HAVE_ASAN)
         ls_pool_blk_t *pTmp = pNext;
+#endif
         count++;
         pNext = pNext->next;
         MEMCHK_UNPOISON(pNext, sizeof(ls_pool_blk_t)); 
@@ -844,6 +850,14 @@ void ls_plistfree(ls_pool_blk_t *plist, size_t size)
 
     return;
 }
+
+
+int ls_thr_seq()
+{   
+    chk_tid_seq();
+    return _tls.thr_seq;   
+}
+
 
 
 

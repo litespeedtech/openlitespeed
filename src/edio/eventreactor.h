@@ -57,6 +57,7 @@ public:
     virtual void onTimer()  {}
 
     int getfd() const                   {   return m_pollfd.fd;     }
+
     void setfd(int fd)
     {
         m_pollfd.fd = fd;
@@ -88,7 +89,7 @@ public:
     int  isApplyEvents() const          {   return m_eventSet != m_pfd->events;  }
 
     void addFlag(unsigned short flag)   {   m_flags |= flag;        }
-    void removeFlag(unsigned short flag) {   m_flags &= ~flag;       }
+    void removeFlag(unsigned short flag){   m_flags &= ~flag;       }
     unsigned short getEvtFlag() const   {   return m_flags;         }
 
     LS_NO_COPY_ASSIGN(EventReactor);

@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
+#include <lsr/ls_swap.h>
 
 class LinkedObj
 {
@@ -52,6 +53,18 @@ public:
         pNext->setNext(pTemp);
     }
 
+
+    void addNext(LinkedObj *pFirst, LinkedObj * pLast)
+    {
+        assert(pFirst);
+        assert(pLast);
+        assert(pFirst != pLast);
+        LinkedObj *pTemp = next();
+
+        setNext(pFirst);
+        pLast->setNext(pTemp);
+    }
+
     LinkedObj *removeNext()
     {
         LinkedObj *pNext = m_pNext;
@@ -61,6 +74,12 @@ public:
             pNext->setNext(NULL);
         }
         return pNext;
+    }
+
+    void swap(LinkedObj &rhs)
+    {
+        LinkedObj *temp;
+        GSWAP(m_pNext, rhs.m_pNext, temp);
     }
 };
 
@@ -94,6 +113,40 @@ public:
         if (pTemp)
             pTemp->m_pPrev = pNext;
     }
+
+    void addNext(DLinkedObj *pFirst, DLinkedObj * pLast)
+    {
+        assert(pFirst);
+        assert(pLast);
+        assert(pFirst != pLast);
+        DLinkedObj *pTemp = next();
+
+        LinkedObj::addNext(pFirst, pLast);
+        pFirst->setPrev(this);
+        if (pTemp)
+            pTemp->setPrev(pLast);
+    }
+
+
+    void addPrev(DLinkedObj *pFirst, DLinkedObj * pLast)
+    {
+        assert(pFirst && "NULL pFirst");
+        assert(pLast && "NULL pLast");
+        assert(pFirst != pLast);
+        DLinkedObj *pTemp = prev();
+
+        if (pTemp)
+        {
+            pTemp->addNext(pFirst, pLast);
+            return;
+        }
+
+        // first in the chain (should not happen if DlinkQueue)
+        pFirst->setPrev(NULL);
+        pLast->setNext(this);
+        setPrev(pLast);
+    }
+
 
     DLinkedObj *removeNext()
     {
@@ -144,6 +197,12 @@ public:
         return pNext;
     }
 
+    void swap(DLinkedObj &rhs)
+    {
+        DLinkedObj *temp;
+        LinkedObj::swap(rhs);
+        GSWAP(m_pPrev, rhs.m_pPrev, temp);
+    }
 
 
     LS_NO_COPY_ASSIGN(DLinkedObj);

@@ -27,6 +27,8 @@
 #include <http/httpvhost.h>
 #include <http/iptogeo.h>
 #include <http/iptoloc.h>
+#include <http/clientinfo.h>
+
 #include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <ssi/ssiruntime.h>
@@ -36,6 +38,7 @@
 #include <util/datetime.h>
 #include <util/httputil.h>
 #include <util/stringtool.h>
+#include <http/mtsessdata.h>
 
 #include <ctype.h>
 #include <grp.h>
@@ -152,7 +155,6 @@ int SubstItem::parseServerVar(const char *pCurLine,
 {
     const char *pName = pFormatStr;
     const char *pClose = findEndOfVarName(pName, pEnd);
-    int len;
     if (*pName == '{')
     {
         if (pClose == pEnd)
@@ -175,7 +177,18 @@ int SubstItem::parseServerVar(const char *pCurLine,
         (strncasecmp(pName, "LA-F:", 5) == 0))
         pName += 5;
 
-    if (!isSSI && (pName + 3 > pClose))
+    return parseServerVar2(pCurLine, pName, pClose - pName, isSSI);
+}
+
+
+int SubstItem::parseServerVar2(const char *pCurLine, const char *pName,
+                               int len, int isSSI)
+{
+    if ((strncasecmp(pName, "LA-U:", 5) == 0) ||
+        (strncasecmp(pName, "LA-F:", 5) == 0))
+        pName += 5;
+
+    if (!isSSI && (len < 3))
     {
         HttpLog::parse_error(pCurLine,  "missing variable name");
         return LS_FAIL;
@@ -184,7 +197,7 @@ int SubstItem::parseServerVar(const char *pCurLine,
         (strncasecmp(pName, "HTTP:", 5) == 0))
     {
         pName += 5;
-        len = pClose - pName;
+        len -= 5;
         const char *pHeaderStr = NULL;
         int HeaderLen;
         int type = RequestVars::parseHttpHeader(pName, len, pHeaderStr, HeaderLen);
@@ -203,19 +216,18 @@ int SubstItem::parseServerVar(const char *pCurLine,
     else if (strncasecmp(pName, "ENV:", 4) == 0)
     {
         setType(REF_ENV);
-        if (setStr(pName + 4, pClose - pName - 4) == NULL)
+        if (setStr(pName + 4, len - 4) == NULL)
             return LS_FAIL;
     }
     else
     {
-        int len = pClose - pName;
         int type = RequestVars::parseBuiltIn(pName, len, isSSI);
         if (type != -1)
             setType(type);
         else if (isSSI)
         {
             setType(REF_ENV);
-            if (setStr(pName, pClose - pName) == NULL)
+            if (setStr(pName, len) == NULL)
                 return LS_FAIL;
         }
         else
@@ -565,15 +577,63 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                     return snprintf(pValue, bufLen, "%o", st.st_mode);
                 else if (type == REF_SCRIPT_USERNAME)
                 {
-                    struct passwd *pw = getpwuid(st.st_uid);
-                    if (pw)
-                        return snprintf(pValue, bufLen, "%s", pw->pw_name);
+                    struct passwd pw;
+                    char *buffer;
+                    struct passwd *ppw;
+                    ssize_t bufsize;
+                    int    retry;
+                    bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
+                    if (bufsize == -1)          /* Value was indeterminate */
+                        bufsize = 16384;        /* Should be more than enough */
+                    do {
+                        retry = 0;
+                        buffer = (char *)malloc(bufsize);
+                        if (buffer != NULL) {                    
+                            errno = 0;
+                            if ((getpwuid_r(st.st_uid, &pw, buffer, bufsize, &ppw) == -1) &&
+                                (errno == ERANGE)) {
+                                bufsize *= 2;
+                                retry = 1;
+                            }
+                            else if (ppw) {
+                                int ret_len;
+                                ret_len = snprintf(pValue, bufLen, "%s", pw.pw_name);
+                                free(buffer);
+                                return ret_len;
+                            }
+                            free(buffer);
+                        }
+                    } while (retry);
                 }
                 else
                 {
-                    struct group *gr = getgrgid(st.st_gid);
-                    if (gr)
-                        return snprintf(pValue, bufLen, "%s", gr->gr_name);
+                    struct group gr;
+                    char *buffer;        
+                    struct group *pgr;
+                    ssize_t bufsize;
+                    int retry = 0;
+                    bufsize = sysconf(_SC_GETGR_R_SIZE_MAX);
+                    if (bufsize == -1)
+                        bufsize = 16384;
+                    do {
+                        retry = 0;
+                        buffer = (char *)malloc(bufsize);
+                        if (buffer != NULL) {
+                            errno = 0;
+                            if ((getgrgid_r(st.st_gid, &gr, buffer, sizeof(buffer), &pgr) == -1) &&
+                                (errno == ERANGE)) {
+                                bufsize *= 2;
+                                retry = 1;
+                            }
+                            else if (pgr) {
+                                int ret_len;
+                                ret_len = snprintf(pValue, bufLen, "%s", gr.gr_name);
+                                free(buffer);
+                                return ret_len;
+                            }
+                            free(buffer);
+                        }
+                    } while (retry);
                 }
             }
             return 0;
@@ -714,18 +774,19 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
     case REF_LAST_MODIFIED:
         {
             time_t mtime = DateTime::s_curTime;
-            struct tm *tm;
+            struct tm tstm;
+            struct tm *tm = &tstm;
             if (type == REF_LAST_MODIFIED)
             {
-                if (pReq->getSSIRuntime() && pReq->getSSIRuntime()->getCurrentScript())
-                    mtime = pReq->getSSIRuntime()->getCurrentScript()->getLastMod();
+                if (pSession->getSsiStack() && pSession->getSsiStack()->getScript())
+                    mtime = pSession->getSsiStack()->getScript()->getLastMod();
                 else
                     mtime = pReq->getFileStat().st_mtime;
             }
             if (type == REF_DATE_GMT)
-                tm = gmtime(&mtime);
+                gmtime_r(&mtime,tm);
             else
-                tm = localtime(&mtime);
+                localtime_r(&mtime,tm);
             char fmt[101];
             memccpy(fmt, pValue, 0, 100);
             fmt[100] = 0;
@@ -779,7 +840,9 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         if (type >= REF_TIME)
         {
             time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
+            struct tm tstm;
+            struct tm *tm = &tstm;
+            localtime_r(&t,tm);
             switch (type)
             {
             case REF_TIME:
@@ -965,11 +1028,17 @@ const char *RequestVars::getEnv(HttpSession *pSession, const char *pKey,
         }
     }
 #endif
-    return pSession->getReq()->getEnv(pKey, keyLen, valLen);
+    MtSessData * p = pSession->getMtSessData();
+    if (p)
+        ls_mutex_lock(&p->m_respHeaderLock);
+    const char * ret = pSession->getReq()->getEnv(pKey, keyLen, valLen);
+    if (p)
+        ls_mutex_unlock(&p->m_respHeaderLock);
+    return ret;
 }
 
 
-int RequestVars::getCookieCount(HttpReq *pReq)
+int RequestVars::getCookieCount(const HttpReq *pReq)
 {
     const char *pCookie = pReq->getHeader(HttpHeader::H_COOKIE);
     if (!*pCookie)
@@ -1113,6 +1182,10 @@ int RequestVars::getSubstValue(const SubstItem *pItem,
         pValue = (char *)pItem->getStr()->c_str();
         return pItem->getStr()->len();
 
+    case REF_SSI_VAR:
+        while (pSession->getParent())
+            pSession = pSession->getParent();
+    //fall through
     case REF_ENV:
         pValue = (char *)RequestVars::getEnv(pSession, pItem->getStr()->c_str(),
                                              pItem->getStr()->len(), i);
@@ -1220,6 +1293,7 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
                         int nameLen,
                         const char *pValue, int valLen)
 {
+    MtSessData * p = pSession->getMtSessData();
     if (*pName == '!')
     {
         ++pName;
@@ -1230,7 +1304,11 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
             pSession->getReq()->andGzip(~GZIP_OFF);
             return 0;
         }
+        if (p)
+            ls_mutex_lock(&p->m_respHeaderLock);
         pSession->getReq()->unsetEnv(pName, nameLen);
+        if (p)
+            ls_mutex_unlock(&p->m_respHeaderLock);
         LS_DBG_M(pSession->getLogSession(), "Remove ENV: '%s' ", pName);
         return 0;
     }
@@ -1273,9 +1351,20 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
                 pSession->getReq()->andGzip(~GZIP_OFF);
             return 0;
         }
+        else if (strcasecmp(pName, "noabort") == 0)
+        {
+            LS_DBG_M(pSession->getLogSession(),
+                     "do not abort external app for this requst.");
+            pSession->setFlag(HSF_NO_ABORT);
+
+        }
     }
 
+    if (p)
+        ls_mutex_lock(&p->m_respHeaderLock);
     pSession->addEnv(pName, nameLen, pValue, valLen);
+    if (p)
+        ls_mutex_unlock(&p->m_respHeaderLock);
 
     LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%s' ", pName, pValue);
     return 0;

@@ -18,3 +18,31 @@
 #include <thread/thread.h>
 
 
+void Thread::cleanup(void * arg)
+{
+    ((Thread *)arg)->thr_cleanup();
+}
+
+
+void Thread::sigBlock()
+{
+    if (m_sigBlock) {
+        pthread_sigmask(SIG_BLOCK, m_sigBlock, NULL);
+    }
+}
+
+
+void * Thread::start_routine(void * arg)
+{
+    Thread *pThread = (Thread *)arg;
+
+    pThread->sigBlock();
+
+    void * ret = NULL;
+    pthread_cleanup_push(cleanup, pThread);
+    ret = pThread->thr_main(pThread->m_arg);
+    pthread_cleanup_pop(1);
+    return ret;
+}
+
+

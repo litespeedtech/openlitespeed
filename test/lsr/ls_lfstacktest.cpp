@@ -37,6 +37,15 @@
 static int doLfStackTest = 0;
 static int doLfStackBenchTest = 1;
 
+static void *benchRun(void *arg);
+
+class TestThread : public Thread
+{
+private:
+    virtual void *thr_main(void *)  {   return benchRun(m_arg);    };
+
+};
+
 class StackNode
 {
 private:
@@ -181,7 +190,7 @@ static int lfstackTest()
 
     for (i = 0; i < LFSTACK_NUMWORKERS; ++i)
     {
-        aWorker[i]->setStop();
+        aWorker[i]->requestStop();
         aWorker[i]->join(&ret);
         delete aWorker[i];
     }
@@ -247,14 +256,14 @@ static void benchTest(int iNumThreads, const char *pName)
     ls_lfstack_t *pStack = ls_lfstack_new();
     Thread *aThread;
     if (iNumThreads)
-        aThread = new Thread[iNumThreads];
+        aThread = new TestThread[iNumThreads];
     else
         aThread = NULL;
     ProfileTime timer;
     while (--loopCount > 0)
     {
         for (i = 0; i < iNumThreads; ++i)
-            aThread[i].run(benchRun, pStack);
+            aThread[i].start(pStack);
         pRet = benchRun(pStack);
         if (pRet)
             printf("Something's wrong!\n");

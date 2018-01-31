@@ -23,7 +23,7 @@
 
 #include "../include/ls.h"
 #include "ls_rewrite_driver_factory.h"
-#include "psol/include/out/Release/obj/gen/net/instaweb/public/version.h"
+#include "out/Release/obj/gen/net/instaweb/public/version.h"
 #include "base/logging.h"
 #include "pagespeed/kernel/base/string_util.h"
 #include "pagespeed/kernel/http/response_headers.h"

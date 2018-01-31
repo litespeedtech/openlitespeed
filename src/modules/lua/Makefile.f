@@ -1,6 +1,6 @@
 CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0
-CFLAGS= -fPIC -g  -Wall -c -D_REENTRANT  -I../../../include/ -I./ -I../ -I../../  -I/usr/local/include/luajit-2.0/  $(LFSFLAGS)
+CFLAGS= -fPIC -fvisibility=hidden -g  -Wall -c -D_REENTRANT  -I../../../include/ -I./ -I../ -I../../  -I/usr/local/include/luajit-2.0/  $(LFSFLAGS)
 
 
 OS := $(shell uname)

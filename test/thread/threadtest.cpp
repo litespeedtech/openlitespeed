@@ -29,6 +29,11 @@ static void *threadtest(void *arg)
     return arg;
 }
 
+class TestThread : public Thread
+{
+private:
+    virtual void *thr_main(void *)  {   return threadtest(m_arg);    };
+};
 
 TEST(THREAD_THREAD_TEST)
 {
@@ -36,18 +41,18 @@ TEST(THREAD_THREAD_TEST)
     void *arg = (void *)10;
     void *ret = NULL;
     pthread_t cmp = 0;
-    Thread *thread = new Thread();
+    Thread *thread = new TestThread();
 
     CHECK(thread->isEqualTo(cmp));
-    CHECK(thread->getAttr() != NULL);
-    pthread_attr_t *myattr = const_cast<pthread_attr_t *>(thread->getAttr());
-    CHECK(myattr != NULL);
+    // CHECK(thread->getAttr() != NULL);
+    // const pthread_attr_t *myattr = thread->getAttr();
+    // CHECK(myattr != NULL);
     CHECK(thread->isJoinable());
     thread->attrSetDetachState(PTHREAD_CREATE_DETACHED);
     CHECK(!thread->isJoinable());
     thread->attrSetDetachState(PTHREAD_CREATE_JOINABLE);
 
-    CHECK(thread->run(threadtest, arg) == 0);
+    CHECK(thread->start(arg) == 0);
     CHECK(thread->join(&ret) == 0);
     CHECK(arg == ret);
 }

@@ -96,9 +96,10 @@ public:
     virtual int  close();
 
     int  onRead();
+    int  onHangup();
     int  onWrite();
     int  onError();
-    int  onEventDone();
+    int  onEventDone(short event);
     int  onInitConnected();
     void onSecTimer();
     void onTimer();

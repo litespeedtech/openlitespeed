@@ -21,6 +21,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#define DEBUG_PENDING
+#ifdef DEBUG_PENDING
+#include <log4cxx/logger.h>
+#include <lsr/ls_internal.h>
+#endif
 
 EventNotifier::~EventNotifier()
 {
@@ -36,7 +41,13 @@ EventNotifier::~EventNotifier()
 int EventNotifier::handleEvents(short int event)
 {
     int count = 0;
-    ls_atomic_setint( &m_pending, 0);
+#ifdef DEBUG_PENDING
+    LS_DBG_M("[T%d %s] zeroing m_pending\n", ls_thr_seq(), __PRETTY_FUNCTION__);
+#endif
+    ls_atomic_casint(&m_pending, 1, 0);
+#ifdef DEBUG_PENDING
+    LS_DBG_M("[T%d %s] zeroed m_pending\n", ls_thr_seq(), __PRETTY_FUNCTION__);
+#endif
     if (event & POLLIN)
     {
 #ifdef LSEFD_AVAIL
@@ -87,17 +98,28 @@ int EventNotifier::initNotifier(Multiplexer *pMultiplexer)
 }
 
 
+
 void EventNotifier::notify()
 {
-    char succ = ls_atomic_casint(&m_pending, 0, 1);       
-    if (succ)
-    {
 #ifdef LSEFD_AVAIL
-        eventfd_write(getfd(), 1);
+    eventfd_write(getfd(), 1);
 #else
-        write(m_fdIn, "a", 1);
+    write(m_fdIn, "a", 1);
 #endif
+}
+
+void EventNotifier::collapsibleNotify()
+{
+    char succ = ls_atomic_casint(&m_pending, 0, 1);
+#ifdef DEBUG_PENDING
+    if (!succ)
+    {
+        LS_DBG_M("[T%d %s] m_pending already set, returning\n", ls_thr_seq(), __PRETTY_FUNCTION__);
+        return;
     }
+    LS_DBG_M("[T%d %s] set m_pending\n", ls_thr_seq(), __PRETTY_FUNCTION__);
+#endif
+    notify();
 }
 
 

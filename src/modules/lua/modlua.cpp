@@ -264,29 +264,29 @@ static int _init(lsi_module_t *pModule)
 
 lsi_config_key_t myParam[] =
 {
-    {"luarewritepath", },
-    {"luaauthpath", },
-    {"luaheaderfilterpath", },
-    {"luabodyfilterpath", },
-    {"luapath", },
-    {"lib", },
-    {"maxruntime", },
-    {"maxlinecount", },
-    {"jitlinemod", },
-    {"pause", }, 
-    {NULL, }
+    {"luarewritepath", 0, 0},
+    {"luaauthpath", 0, 0},
+    {"luaheaderfilterpath", 0, 0},
+    {"luabodyfilterpath", 0, 0},
+    {"luapath", 0, 0},
+    {"lib", 0, 0},
+    {"maxruntime", 0, 0},
+    {"maxlinecount", 0, 0},
+    {"jitlinemod", 0, 0},
+    {"pause", 0, 0}, 
+    {NULL, 0, 0}
 };
 
 static lsi_reqhdlr_t lslua_mod_handler = { luaHandler, onReadEvent,
-                                           onWriteEvent, onCleanupEvent
-                                         };
+                                           onWriteEvent, onCleanupEvent,
+                                           NULL, NULL, NULL };
 
 static lsi_confparser_t lslua_mod_config = { LsLuaEngine::parseParam,
                                              LsLuaEngine::removeParam,
                                              myParam
                                            };
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,
                        &lslua_mod_handler,
                        &lslua_mod_config,

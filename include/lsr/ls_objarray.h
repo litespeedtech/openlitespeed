@@ -151,7 +151,7 @@ ls_inline void ls_objarray_setsize(ls_objarray_t *pThis, int size)
  * objects will only be used within a session, a session pool pointer may
  * be specified; otherwise, it should be NULL.
  *
- * @param[in] pThis - A pointer to an initalized objarray object.
+ * @param[in] pThis - A pointer to an initialized objarray object.
  * @param[in] pool - A pointer to the session pool if the user wishes to use one.  NULL if not.
  * @param[in] numObj - The number of objects to set the capacity to.
  * @return Void.
@@ -165,7 +165,7 @@ void ls_objarray_setcapacity(ls_objarray_t *pThis, ls_xpool_t *pool,
  * objects will only be used within a session, a session pool pointer may
  * be specified; otherwise, it should be NULL.
  *
- * @param[in] pThis - A pointer to an initalized objarray object.
+ * @param[in] pThis - A pointer to an initialized objarray object.
  * @param[in] pool - A pointer to the session pool if the user wishes to use one.  NULL if not.
  * @param[in] numObj - The number of objects to guarantee.
  * @return Void.

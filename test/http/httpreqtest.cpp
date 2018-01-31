@@ -66,7 +66,7 @@ SUITE(HttpReqTest)
             "parentWin=YB_conf&objName=ESgeneral&objId=&finishPage=servGeneral.php%3Fid%3D1&nextPage=servGeneral1.php\r\n";
         HttpReqTst req;
         req.appendLogId("testFragment");
-        req.reset();
+        req.reset(0);
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost lookup while parsing header
         CHECK(1 == req.append(pFrag1, strlen(pFrag1)));
@@ -116,7 +116,7 @@ SUITE(HttpReqTest)
             "\r\n";
         HttpReqTst req;
         req.appendLogId("testParseHeader");
-        req.reset();
+        req.reset(0);
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
         CHECK(1 == req.append(pGarbage, strlen(pGarbage)));
@@ -203,7 +203,7 @@ SUITE(HttpReqTest)
             "\r\n";
         HttpReqTst req;
         req.appendLogId("testParseHeader1");
-        req.reset();
+        req.reset(0);
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
 
@@ -271,7 +271,7 @@ SUITE(HttpReqTest)
         };
         HttpReqTst req;
         req.appendLogId("testParseHeader1");
-        req.reset();
+        req.reset(0);
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
 
@@ -333,7 +333,7 @@ SUITE(HttpReqTest)
         };
         HttpReqTst req;
         req.appendLogId("testParseHeader1");
-        req.reset();
+        req.reset(0);
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
 

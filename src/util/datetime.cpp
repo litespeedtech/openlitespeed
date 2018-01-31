@@ -19,6 +19,8 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <lsr/ls_atomic.h>
+#include <lsr/ls_threadcheck.h>
 
 time_t DateTime::s_curTime = time(NULL);
 int    DateTime::s_curTimeUs = 0;
@@ -237,16 +239,21 @@ DateTime::~DateTime()
 static const char aMonths[56] =
     "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec ";
 
+        
 char *DateTime::getLogTime(time_t lTime, char *pBuf, int bGMT)
 {
-    static char lastTimeStr[40];
-    static long lastTime = 0;
+    static char     bufs[2][40];
+    static ls_atom_xptr_t time_and_str = {  {bufs[0], 0} };
+    static char    *freeBuf = bufs[1];
+    static ls_atom_xptr_t zero = {  {NULL, 0} };
     //static bool lastGMT = 0;
-    if (lastTime == lTime
-        //&&( lastGMT == bGMT )
-       )
+    ls_atom_xptr_t cur_value;
+    ls_atomic_dcasv(&time_and_str, &zero, &zero, &cur_value);
+    if (cur_value.m_seq == lTime)
     {
-        strcpy(pBuf, lastTimeStr);
+        LS_TH_IGN_RD_BEG();
+        strcpy(pBuf, (char *)cur_value.m_ptr);
+        LS_TH_IGN_RD_END();
         return pBuf;
     }
     else
@@ -310,11 +317,20 @@ char *DateTime::getLogTime(time_t lTime, char *pBuf, int bGMT)
 
         //strftime( pBuf, 30, "%d/%b/%Y:%H:%M:%S", pTm );
         //sprintf( pBuf, "%s %c%02d%02d",
-        lastTime = lTime;
+
+        // write to non-current buf - only one thread gets through
+        ls_atom_xptr_t new_value;
+        new_value.m_ptr = ls_atomic_setptr(&freeBuf, NULL);
+        if (new_value.m_ptr)
+        {
+            ls_atom_xptr_t old_value;
+            strcpy((char *)new_value.m_ptr, pBuf);
+            new_value.m_seq = lTime;
+            ls_atomic_dcasv(&time_and_str, &cur_value, &new_value, &old_value);
+            ls_atomic_setptr(&freeBuf, (char *)old_value.m_ptr);
+        }
+
         //lastGMT = bGMT;
-        strcpy(lastTimeStr, pBuf);
     }
     return pBuf;
 }
-
-

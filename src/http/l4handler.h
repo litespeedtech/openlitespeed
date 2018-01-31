@@ -61,6 +61,8 @@ private:
 public:
     LOG4CXX_NS::Logger *getLogger() const   {   return getStream()->getLogger();   }
     const char *getLogId() {   return getStream()->getLogId();     }
+    LogSession *getLogSession() const
+    {   return getStream();   }
 
     LS_NO_COPY_ASSIGN(L4Handler);
 };

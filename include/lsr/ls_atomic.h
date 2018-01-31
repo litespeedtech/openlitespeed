@@ -27,16 +27,16 @@
 
 #define ls_atomic_inline ls_always_inline
 
-typedef volatile int32_t  ls_atom_32_t;
-typedef volatile int64_t  ls_atom_64_t;
-typedef volatile int      ls_atom_int_t;
-typedef volatile long     ls_atom_long_t;
-typedef volatile void    *ls_atom_ptr_t;
+typedef int32_t  ls_atom_32_t;
+typedef int64_t  ls_atom_64_t;
+typedef int      ls_atom_int_t;
+typedef long     ls_atom_long_t;
+typedef void    *ls_atom_ptr_t;
 
-typedef volatile uint32_t ls_atom_u32_t;
-typedef volatile uint64_t ls_atom_u64_t;
-typedef volatile unsigned int    ls_atom_uint_t;
-typedef volatile unsigned long   ls_atom_ulong_t;
+typedef uint32_t ls_atom_u32_t;
+typedef uint64_t ls_atom_u64_t;
+typedef unsigned int    ls_atom_uint_t;
+typedef unsigned long   ls_atom_ulong_t;
 
 typedef union
 {
@@ -62,22 +62,40 @@ typedef union
 #endif
                  ))) ls_atom_xptr_t;
 
+#define ls_atomic_and_fetch         __sync_and_and_fetch
+#define ls_atomic_or_fetch          __sync_or_and_fetch
+
+#define ls_atomic_fetch_and         __sync_fetch_and_and
+#define ls_atomic_fetch_or          __sync_fetch_and_or
+
+#define ls_atomic_xor_fetch         __sync_xor_and_fetch
+#define ls_atomic_nand_fetch        __sync_nand_and_fetch
+
+#define ls_atomic_fetch_xor         __sync_fetch_and_xor
+#define ls_atomic_fetch_nand        __sync_fetch_and_nand
+
 #define USE_GCC_ATOMIC
 #ifdef USE_GCC_ATOMIC
 
+#define ls_atomic_setchar           __sync_lock_test_and_set
+#define ls_atomic_setshort          __sync_lock_test_and_set
 #define ls_atomic_setint            __sync_lock_test_and_set
 #define ls_atomic_setlong           __sync_lock_test_and_set
 #define ls_atomic_setptr            __sync_lock_test_and_set
+#define ls_atomic_set32             __sync_lock_test_and_set
+#define ls_atomic_set64             __sync_lock_test_and_set
 
 #define ls_atomic_clrint            __sync_lock_release
 #define ls_atomic_clrlong           __sync_lock_release
 #define ls_atomic_clrptr            __sync_lock_release
 #define ls_atomic_clr32             __sync_lock_release
+#define ls_atomic_clr64             __sync_lock_release
 
 #define ls_atomic_casint            __sync_bool_compare_and_swap
 #define ls_atomic_caslong           __sync_bool_compare_and_swap
 #define ls_atomic_casptr            __sync_bool_compare_and_swap
 #define ls_atomic_cas32             __sync_bool_compare_and_swap
+#define ls_atomic_cas64             __sync_bool_compare_and_swap
 
 #define ls_atomic_casvint           __sync_val_compare_and_swap
 #define ls_atomic_casvlong          __sync_val_compare_and_swap
@@ -121,6 +139,10 @@ ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
 
 #if defined( __i386__ )
 
+#define ls_atomic_setchar(ptr, val) \
+    (int)ls_atomic_set8((uint8_t *)ptr, (uint8_t)val)
+#define ls_atomic_setshort(ptr, val) \
+    (int)ls_atomic_set16((uint16_t *)ptr, (uint16_t)val)
 #define ls_atomic_setint(ptr, val) \
     (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setlong(ptr, val) \
@@ -148,6 +170,10 @@ ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
 
 #elif defined( __x86_64 )||defined( __x86_64__ )
 
+#define ls_atomic_setchar(ptr, val) \
+    (int)ls_atomic_set8((uint8_t *)ptr, (uint8_t)val)
+#define ls_atomic_setshort(ptr, val) \
+    (int)ls_atomic_set16((uint16_t *)ptr, (uint16_t)val)
 #define ls_atomic_setint(ptr, val) \
     (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setlong(ptr, val) \
@@ -189,8 +215,7 @@ ls_atomic_inline void ls_atomic_sub(ls_atom_32_t *ptr, int32_t val)
 }
 
 
-ls_atomic_inline int32_t ls_atomic_fetch_add(ls_atom_32_t *ptr,
-        int32_t val)
+ls_atomic_inline int32_t ls_atomic_fetch_add(ls_atom_32_t *ptr, int32_t val)
 {
     register int32_t result;
     __asm__ __volatile__(
@@ -200,27 +225,23 @@ ls_atomic_inline int32_t ls_atomic_fetch_add(ls_atom_32_t *ptr,
     return result;
 }
 
-ls_atomic_inline int32_t ls_atomic_add_fetch2(ls_atom_32_t *ptr,
-        int32_t val)
+ls_atomic_inline int32_t ls_atomic_add_fetch2(ls_atom_32_t *ptr, int32_t val)
 {
     return ls_atomic_fetch_add(ptr, val) + val;
 }
 
-ls_atomic_inline int32_t ls_atomic_fetch_sub(ls_atom_32_t *ptr,
-        int32_t val)
+ls_atomic_inline int32_t ls_atomic_fetch_sub(ls_atom_32_t *ptr, int32_t val)
 {
     return ls_atomic_fetch_add(ptr, -val);
 }
 
-ls_atomic_inline int32_t ls_atomic_sub_fetch2(ls_atom_32_t *ptr,
-        int32_t val)
+ls_atomic_inline int32_t ls_atomic_sub_fetch2(ls_atom_32_t *ptr, int32_t val)
 {
     return ls_atomic_fetch_add(ptr, -val) - val;
 }
 
 
-ls_atomic_inline int32_t ls_atomic_add_fetch(ls_atom_32_t *ptr,
-        int32_t val)
+ls_atomic_inline int32_t ls_atomic_add_fetch(ls_atom_32_t *ptr, int32_t val)
 {
     int32_t save = 0;
     __asm__ __volatile__(
@@ -233,8 +254,7 @@ ls_atomic_inline int32_t ls_atomic_add_fetch(ls_atom_32_t *ptr,
     return val + save;
 }
 
-ls_atomic_inline int32_t ls_atomic_sub_fetch(ls_atom_32_t *ptr,
-        int32_t val)
+ls_atomic_inline int32_t ls_atomic_sub_fetch(ls_atom_32_t *ptr, int32_t val)
 {
     int32_t save = 0;
     __asm__ __volatile__(
@@ -246,6 +266,16 @@ ls_atomic_inline int32_t ls_atomic_sub_fetch(ls_atom_32_t *ptr,
         , "+r"(save)
     );
     return val + save;
+}
+
+ls_atomic_inline uint8_t ls_atomic_set8(uint8_t *ptr, uint8_t val)
+{
+    __asm__ __volatile__(
+        "xchg %0,%1\n"
+        : "+r"(val)
+        , "+m"(*ptr)
+    );
+    return val;
 }
 
 ls_atomic_inline uint32_t ls_atomic_set32(uint32_t *ptr, uint32_t val)

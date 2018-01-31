@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "ls_rewrite_options.h"
 #include "ls_rewrite_driver_factory.h"
-#include "psol/include/out/Release/obj/gen/net/instaweb/public/version.h"
+#include "out/Release/obj/gen/net/instaweb/public/version.h"
 #include "net/instaweb/rewriter/public/file_load_policy.h"
 #include "net/instaweb/rewriter/public/rewrite_options.h"
 #include "pagespeed/kernel/base/message_handler.h"

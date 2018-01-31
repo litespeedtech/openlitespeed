@@ -30,8 +30,8 @@
 #include <util/vmembuf.h>
 #include <fcntl.h>
 
-//TEST(httpfetchTest_Test)
-void VOID_TEST()//httpfetchTest_Test)
+TEST(httpfetchTest_Test)
+//void VOID_TEST()//httpfetchTest_Test)
 {
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     printf("THIS TEST CAN ONLY TEST BY DEBUG with breakpoints\n");

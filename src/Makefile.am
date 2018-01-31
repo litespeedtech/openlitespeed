@@ -6,7 +6,7 @@ else
 if USE_BSSL
 AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a ../ssl/libdecrepit.a
 else
-AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a 
+AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a
 endif
 endif
 
@@ -69,6 +69,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/sysinfo/nicdetect.cpp \
    util/sysinfo/systeminfo.cpp \
    util/ni_fio.c \
+   util/filtermatch.cpp \
    lsr/ls_aho.c \
    lsr/ls_base64.c \
    lsr/ls_buf.c \
@@ -100,12 +101,15 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
+   thread/mtnotifier.cpp \
    thread/pthreadcond.cpp \
    thread/pthreadmutex.cpp \
    thread/pthreadworkqueue.cpp \
    thread/thread.cpp \
    thread/workcrew.cpp \
-   thread/worker.cpp
+   thread/worker.cpp \
+   thread/crewworker.cpp
+   
 
 
 openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \

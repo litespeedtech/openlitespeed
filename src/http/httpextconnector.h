@@ -43,6 +43,7 @@ class VMemBuf;
 #define HEC_COMPLETE            32
 #define HEC_ERROR               64
 #define HEC_REDIRECT            128
+#define HEC_NO_EXTAPP_ABORT     256
 
 
 class HttpExtConnector : public ReqHandler, public ExtRequest
@@ -55,7 +56,7 @@ protected:
     int                   m_iState;
     int                   m_iRespState;
     int64_t               m_iReqBodySent;
-    int                   m_iRespHeaderSize;
+    unsigned int          m_iRespHeaderSize;
     int64_t               m_iRespBodyLen;
     int64_t               m_iRespBodySent;
 
@@ -142,8 +143,12 @@ public:
     bool wantWrite() const
     {   return (m_iState & (HEC_FWD_REQ_HEADER | HEC_FWD_REQ_BODY));  }
     int getRespBodyLen() const {   return m_iRespBodyLen;   }
+    int isNoExtAppAbort() const
+    {   return m_iState & HEC_NO_EXTAPP_ABORT;      }
     int flushResp();
     LS_NO_COPY_ASSIGN(HttpExtConnector);
+private:
+    void detectNoabortReq(HttpSession *pSession);
 };
 
 #endif

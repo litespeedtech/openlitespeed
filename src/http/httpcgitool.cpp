@@ -29,7 +29,10 @@
 #include <http/httpver.h>
 #include <http/iptogeo.h>
 #include <http/iptoloc.h>
+#include <http/clientinfo.h>
+
 #include <http/requestvars.h>
+#include <lsiapi/lsiapi_const.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
@@ -323,31 +326,6 @@ static char DEFAULT_PATH[] =
     "/bin:/usr/bin:/usr/ucb:/usr/bsd:/usr/local/bin";
 static int DEFAULT_PATHLEN = sizeof(DEFAULT_PATH) - 1;
 #define CGI_FWD_HEADERS 12
-static const char *CGI_HEADERS[HttpHeader::H_TRANSFER_ENCODING ] =
-{
-    "HTTP_ACCEPT", "HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT_ENCODING",
-    "HTTP_ACCEPT_LANGUAGE", "HTTP_AUTHORIZATION", "HTTP_CONNECTION",
-    "CONTENT_TYPE", "CONTENT_LENGTH", "HTTP_COOKIE", "HTTP_COOKIE2",
-    "HTTP_HOST", "HTTP_PRAGMA", "HTTP_REFERER", "HTTP_USER_AGENT",
-    "HTTP_CACHE_CONTROL",
-    "HTTP_IF_MODIFIED_SINCE", "HTTP_IF_MATCH",
-    "HTTP_IF_NONE_MATCH",
-    "HTTP_IF_RANGE",
-    "HTTP_IF_UNMODIFIED_SINCE",
-    "HTTP_KEEPALIVE",
-    "HTTP_RANGE",
-    "HTTP_X_FORWARDED_FOR",
-    "HTTP_VIA",
-
-    //"HTTP_TRANSFER_ENCODING"
-};
-static int CGI_HEADER_LEN[HttpHeader::H_TRANSFER_ENCODING ] =
-{
-    11, 19, 20, 20, 18, 15, 12, 14, 11, 12, 9, 11, 12, 15, 18,
-    22, 13, 18, 13, 24, 14, 10, 20, 8
-};
-
-
 int HttpCgiTool::buildEnv(IEnv *pEnv, HttpSession *pSession)
 {
     HttpReq *pReq = pSession->getReq();
@@ -524,8 +502,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     pEnv->add("SERVER_NAME", 11, pReq->getHostStr(),  pReq->getHostStrLen());
     const AutoStr2 &sPort = pReq->getPortStr();
     pEnv->add("SERVER_PORT", 11, sPort.c_str(), sPort.len());
-    pEnv->add("REQUEST_URI", 11, pReq->getOrgReqURL(),
-              pReq->getOrgReqURLLen());
+    pTemp = pSession->getOrgReqUrl(&n);
+    pEnv->add("REQUEST_URI", 11, pTemp, n);;
     count += 7;
 
     n = pReq->getPathInfoLen();
@@ -712,7 +690,9 @@ int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
 {
     int i, n;
     const char *pTemp;
-    for (i = 0; i < HttpHeader::H_TRANSFER_ENCODING; ++i)
+    LsiApiConst lsiApiConst;
+    int headers = lsiApiConst.get_cgi_header_count();
+    for (i = 0; i < headers; ++i)
     {
         pTemp = pReq->getHeader(i);
         if (*pTemp)
@@ -723,7 +703,8 @@ int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
             if ((i == HttpHeader::H_AUTHORIZATION)
                 && (pReq->getAuthUser()))
                 continue;
-            pEnv->add(CGI_HEADERS[i], CGI_HEADER_LEN[i],
+            pEnv->add(lsiApiConst.get_cgi_header(i), 
+                      lsiApiConst.get_cgi_header_len(i),
                       pTemp, pReq->getHeaderLen(i));
         }
     }

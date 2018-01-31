@@ -30,7 +30,7 @@
 //class HttpReq;
 class IEnv;
 class IpToLoc;
-class XmlNodeList;
+class XmlNode;
 class ConfigCtx;
 
 class LocInfo
@@ -61,7 +61,7 @@ public:
     int setIpToLocDbFile(char *pFile, const char *cacheMode);
 
     int lookUp(const char *pIp, int ipLen, LocInfo *pInfo);
-    int config(const XmlNodeList *pList);
+    int config(const XmlNode *pNode);
 
     static void setIpToLoc(IpToLoc *pItl)
     {   s_pIpToLoc = pItl;  }

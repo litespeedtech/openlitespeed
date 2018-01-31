@@ -65,6 +65,7 @@ class ClientInfo
     uint32_t    m_iFlags;
     int32_t     m_iConns;
     GeoInfo    *m_pGeoInfo;
+
 #ifdef USE_IP2LOCATION
     LocInfo    *m_pLocInfo;
 #endif
@@ -158,6 +159,7 @@ public:
     void  setSslNewConn(int n)   {   m_sslNewConn = n;    }
     GeoInfo *allocateGeoInfo();
     GeoInfo *getGeoInfo() const        {   return m_pGeoInfo;      }
+    
 
 #ifdef USE_IP2LOCATION
     LocInfo *allocateLocInfo();

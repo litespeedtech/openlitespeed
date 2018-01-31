@@ -757,11 +757,7 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
                            ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", 0,
                                    1,
                                    0) : 0);
-    m_rootContext.setIpToLoc((
-                               HttpServer::getInstance().getServerContext().isIpToLocOn()) ?
-                           ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpToLoc", 0,
-                                   1,
-                                   0) : 0);
+    m_rootContext.setIpToLoc(HttpServer::getInstance().getServerContext().isIpToLocOn());
 
 
     const char *pAdminEmails = pVhConfNode->getChildValue("adminEmails");
@@ -1717,9 +1713,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         pContext->setGeoIP((m_rootContext.isGeoIpOn()) ?
                            ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                                    "enableIpGeo", 0, 1, 0) : 0);
-        pContext->setIpToLoc((m_rootContext.isIpToLocOn()) ?
-                           ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
-                                   "enableIpToLoc", 0, 1, 0) : 0);
+        pContext->setIpToLoc(m_rootContext.isIpToLocOn());
         return pContext->config(getRewriteMaps(), pContextNode, type);
     }
 
@@ -2194,7 +2188,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
         &HttpServer::getInstance().getServerContext());
     initAccessLog(pVhConfNode, 0);
     configVHScriptHandler(pVhConfNode);
-    
+
     /**
      * Check if we have server level php with different guid,
      * if yes, need set the extApp and config scriptHanlder
@@ -2204,7 +2198,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
         ExtAppRegistry::configVhostOwnPhp(this);
         configVHScriptHandler2();
     }
-    
+
     configAwstats(ConfigCtx::getCurConfigCtx()->getVhDomain()->c_str(),
                   ConfigCtx::getCurConfigCtx()->getVhAliases()->len(),
                   pVhConfNode);
@@ -2319,7 +2313,7 @@ void HttpVHost::getAppName(const char *suffix, char *appName, int maxLen)
  * and if VHost has defifferent User/Group
  * 1, VHost defined to use the ExtAPP for PHP
  * 2, Vhsot does not define any ExtApp for PHP
- * 
+ *
  */
 
 int HttpVHost::configVHScriptHandler2()
@@ -2328,7 +2322,7 @@ int HttpVHost::configVHScriptHandler2()
     const char *suffix  = NULL;
     php_xml_st *pPhpXmlNodeS;
     char appName[256];
-    
+
     //HttpMime::configScriptHandler(pList, getMIME(), this);
     for (int i=0; i<getPhpXmlNodeSSize(); ++i)
     {
@@ -2484,7 +2478,7 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
 
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
-        
+
         int is_uid_set = (pVHnew->configUserGroup(pNode) == LS_OK);
 
 
@@ -2748,7 +2742,7 @@ int HttpVHost::addUrlToUrlIdHash(const char *url)
     m_pUrlIdHash->insert(data->url.c_str(), data);
     return size;
 }
-    
+
 /**
  * return the bit of the url added to the hash
  */
@@ -2760,6 +2754,6 @@ int HttpVHost::getIdBitOfUrl(const char *url)
         url_id_data_t *data = itr.second();
         return data->id;
     }
-    
+
     return -1;
 }

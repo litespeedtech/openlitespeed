@@ -38,7 +38,7 @@ SUITE(VMemBufTest)
         char achBuf2[4096];
         BlockBuf *pBlock = new BlockBuf(achBuf1, 1);
         VMemBuf *pVmemBuf = new VMemBuf();
-        pVmemBuf->set(pBlock);
+        pVmemBuf->set(VMBUF_MALLOC, pBlock);
         char *pBuf;
         size_t size;
 
@@ -69,7 +69,7 @@ SUITE(VMemBufTest)
         pVmemBuf->deallocate();
 
         pBlock = new BlockBuf(achBuf2, 4096);
-        pVmemBuf->set(pBlock);
+        pVmemBuf->set(VMBUF_MALLOC, pBlock);
 
         pBuf = pVmemBuf->getWriteBuffer(size);
         CHECK(pBuf == achBuf2);
@@ -121,7 +121,7 @@ SUITE(VMemBufTest)
         CHECK(pMallocBuf);
         BlockBuf *pBlock = new MallocBlockBuf(pMallocBuf, 4096);
         VMemBuf *pVmemBuf = new VMemBuf();
-        pVmemBuf->set(pBlock);
+        pVmemBuf->set(VMBUF_MALLOC, pBlock);
         char *pBuf;
         size_t size;
 

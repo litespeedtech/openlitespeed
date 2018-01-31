@@ -27,7 +27,7 @@
 
 #include <fcntl.h>
 
-int L4conn::onEventDone()
+int L4conn::onEventDone(short event)
 {
     switch (m_iState)
     {
@@ -63,6 +63,8 @@ int L4conn::onError()
 int L4conn::onWrite()
 {
     LS_DBG_L(getLogSession(), "L4conn::onWrite()");
+    if (getfd() == -1)  //event pending before close() called.
+        return -1;
 
     int ret;
     switch (m_iState)
@@ -98,6 +100,7 @@ int L4conn::onInitConnected()
         return LS_FAIL;
     }
     m_iState = PROCESSING;
+    m_pL4Handler->continueRead();
 //     if ( LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_LESS ))
 //     {
 //         char        achSockAddr[128];
@@ -149,7 +152,7 @@ int L4conn::close()
     if (m_iState != DISCONNECTED)
     {
         m_iState = DISCONNECTED;
-        LS_DBG_L(getLogSession(), "[ExtConn] close()");
+        LS_DBG_L(getLogSession(), "[L4Conn] close()");
         EdStream::close();
         delete m_buf;
     }
@@ -299,6 +302,6 @@ const char *L4conn::getLogId()
 
 LogSession *L4conn::getLogSession() const
 {
-    return m_pL4Handler->getLogSession();
+    return m_pL4Handler->getStream();
 }
 

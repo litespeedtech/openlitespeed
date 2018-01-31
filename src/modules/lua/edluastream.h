@@ -42,7 +42,7 @@ public:
     EdLuaStream();
     ~EdLuaStream();
     int onInitialConnected();
-    virtual int onEventDone();
+    virtual int onEventDone(short event);
     virtual int onError();
     virtual int onWrite();
     virtual int onRead();

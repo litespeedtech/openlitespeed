@@ -654,6 +654,6 @@ static int init(lsi_module_t *pModule)
 }
 
 lsi_confparser_t configSt = { ParseConfig, FreeConfig, paramArray };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, &configSt,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, &configSt,
                         MODULE_VERSION_INFO, serverHooks, {0} };
 

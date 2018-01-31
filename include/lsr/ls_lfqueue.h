@@ -212,7 +212,7 @@ ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis,
 
 /**
  * @ls_lfqueue_empty
- * @brief Checks if the mpsc lockless queue is empty.
+ * @brief Checks if the mpmc lockless queue is empty.
  *
  * @param[in] pThis - A pointer to an initialized mpmc lockless queue object.
  * @return true if empty, else false if not.

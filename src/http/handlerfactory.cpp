@@ -38,7 +38,7 @@
 // extern ModuleHandler           s_ModuleHandler;
 StaticFileHandler        s_staticFileHandler;
 RedirectHandler          s_redirectHandler;
-SSIEngine                s_ssiHandler;
+SsiEngine                s_ssiHandler;
 ModuleHandler            s_ModuleHandler;
 
 typedef ObjPool<HttpExtConnector>   ExtConnectorPool;

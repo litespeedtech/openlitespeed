@@ -424,7 +424,7 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
                     fileStrType = 1;
 
                     ret = appendArgKey(pName, nameLen);
-                    if (ret == 0)
+                    if (ret == 0 && m_pFileUploadConfig)
                     {
                         m_decodeBuf.append(fileStr, fileStrLen);
                         fileStrLen = normalisePath(m_pArgs[m_args - 1].valueOffset, fileStrLen);

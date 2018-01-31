@@ -31,6 +31,23 @@
 #define STACK_NUMITEMS (STACK_NUMPRODUCERS + 1) * STACK_LOOPCOUNTER
 #define STACK_OFFSET 5
 
+static void *stackBenchRun(void *arg);
+static void *tsstackBenchRun(void *arg);
+
+class TestThread : public Thread
+{
+private:
+    virtual void *thr_main(void *)  {   return stackBenchRun(m_arg);    };
+
+};
+
+class TsTestThread : public Thread
+{
+private:
+    virtual void *thr_main(void *)  {   return tsstackBenchRun(m_arg);    };
+
+};
+
 
 class StackNode
 {
@@ -176,7 +193,7 @@ static int multiThreadTest()
 
     for (i = 0; i < STACK_NUMWORKERS; ++i)
     {
-        aWorker[i]->setStop();
+        aWorker[i]->requestStop();
         aWorker[i]->join(&ret);
         delete aWorker[i];
     }
@@ -261,14 +278,14 @@ static void stackBenchTest(int iNumThreads, const char *pName)
     ls_stack_t *pStack = ls_stack_new();
     Thread *aThread;
     if (iNumThreads)
-        aThread = new Thread[iNumThreads];
+        aThread = new TestThread[iNumThreads];
     else
         aThread = NULL;
     ProfileTime timer;
     while (--loopCount > 0)
     {
         for (i = 0; i < iNumThreads; ++i)
-            aThread[i].run(stackBenchRun, pStack);
+            aThread[i].start(pStack);
         pRet = stackBenchRun(pStack);
         if (pRet)
             printf("Something's wrong!\n");
@@ -314,14 +331,14 @@ static void tsstackBenchTest(int iNumThreads, const char *pName)
     ls_tsstack_t *pStack = ls_tsstack_new();
     Thread *aThread;
     if (iNumThreads)
-        aThread = new Thread[iNumThreads];
+        aThread = new TsTestThread[iNumThreads];
     else
         aThread = NULL;
     ProfileTime timer;
     while (--loopCount > 0)
     {
         for (i = 0; i < iNumThreads; ++i)
-            aThread[i].run(tsstackBenchRun, pStack);
+            aThread[i].start(pStack);
         pRet = tsstackBenchRun(pStack);
         if (pRet)
             printf("Something's wrong!\n");

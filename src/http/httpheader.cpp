@@ -34,7 +34,7 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
     0
 };
 
-static int s_iMaxHdrLen = 0;
+// not used static int s_iMaxHdrLen = 0;
 
 const char *HttpHeader::s_pHeaderNames[H_HEADER_END + 1] =
 {
@@ -142,6 +142,7 @@ const char *HttpHeader::s_pHeaderNamesLowercase[H_HEADER_END + 1] =
 };
 
 
+/* not used
 static void normalizeHeader(const char *pSrc, char *pDest)
 {
     int i, len;
@@ -165,11 +166,15 @@ static void normalizeHeader(const char *pSrc, char *pDest)
     len = pTotal - p;
     StringTool::strLower(p, pDestPtr, len);
 }
+*/
 
 
 size_t HttpHeader::getIndex(const char *pHeader)
 {
+    //char achHdr[0x100];
     size_t idx = H_HEADER_END;
+    //normalizeHeader(pHeader, achHdr);
+    //pHeader = achHdr;
     switch (*pHeader++ | 0x20)
     {
     case 'a':

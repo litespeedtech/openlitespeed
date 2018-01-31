@@ -20,6 +20,7 @@
 
 #include <ls.h>
 #include <lsdef.h>
+#include <lsr/ls_atomic.h>
 
 #include <stdlib.h>
 
@@ -205,7 +206,7 @@ private:
     {
         int i, level, iLevelSize;
         assert(m_iStatus != UNINIT);
-        if (m_iStatus == HASOWN)
+        if (ls_atomic_fetch_or(&m_iStatus, 0) == HASOWN)
             return;
 
         for (i = 0; i < S; ++i)
@@ -252,7 +253,7 @@ private:
         lsiapi_hook_t *pHook;
         int8_t *pEnableArray;
         assert(m_iStatus != UNINIT);
-        if (m_iStatus == HASOWN)
+        if (ls_atomic_fetch_or(&m_iStatus, 0) == HASOWN)
             return;
 
         for (i = 0; i < S; ++i)
@@ -278,7 +279,7 @@ private:
     int initSessionHooks()
     {
         int iSize;
-        if (m_iStatus != UNINIT)
+        if (ls_atomic_fetch_or(&m_iStatus, 0) != UNINIT)
             return 1;
 
         for (int i = 0; i < S; ++i)
@@ -288,7 +289,7 @@ private:
             m_pEnableArray[i] = new int8_t[iSize];
             memset(m_pEnableArray[i], 0, iSize);
         }
-        m_iStatus = INITED;
+        ls_atomic_setshort(&m_iStatus, INITED);
 
         return 0;
     }
@@ -313,7 +314,7 @@ public:
     void disableAll()
     {
         int iLevelSize;
-        if (m_iStatus > UNINIT)
+        if (ls_atomic_fetch_or(&m_iStatus, 0) > UNINIT)
         {
             for (int i = 0; i < S; ++i)
             {
@@ -322,14 +323,14 @@ public:
                 memset(m_pEnableArray[i], 0, iLevelSize * sizeof(int8_t));
                 m_iFlag[i] = 0;
             }
-            m_iStatus = INITED;
+            ls_atomic_setshort(&m_iStatus,INITED);
         }
     }
 
 
     void inherit(SessionHooks<B, S> *parentRt, int isGlobal)
     {
-        switch (m_iStatus)
+        switch (ls_atomic_fetch_or(&m_iStatus, 0))
         {
         case UNINIT:
             initSessionHooks();
@@ -356,7 +357,7 @@ public:
     int setEnable(const lsi_module_t *pModule, int enable,
                   int *aEnableHkpts, int iEnableCount)
     {
-        if (m_iStatus < INITED)
+        if (ls_atomic_fetch_or(&m_iStatus, 0) < INITED)
             return LS_FAIL;
         int i, iModIdx;
         ModIndex *p;
@@ -386,7 +387,7 @@ public:
                 updateFlag(aEnableHkpts[i]);
             }
         }
-        m_iStatus = HASOWN;
+        ls_atomic_setshort(&m_iStatus, HASOWN);
         return LS_OK;
     }
 
@@ -408,8 +409,8 @@ public:
 
     void reset()
     {
-        if (m_iStatus >= INITED)
-            m_iStatus = INITED;
+        if (ls_atomic_fetch_or(&m_iStatus, 0) >= INITED)
+            ls_atomic_setshort(&m_iStatus, INITED);
     };
 
 
@@ -422,7 +423,7 @@ public:
 //     {   m_iFlag[hookLevel - B] |= f;               }
 
 
-    int isNotInited() const             {   return (m_iStatus == UNINIT);   }
+    int isNotInited() const             {   return ((ls_atomic_fetch_or((volatile short*)&m_iStatus, 0) == UNINIT));   }
     int isAllDisabled() const           {   return isNotInited();           }
 
     int isDisabled(int hookLevel) const

@@ -112,7 +112,7 @@ static int mycb4(lsi_param_t *rec)
             {
                 char save[256];
                 sprintf(save, "SavedHeader: %.*s\r\n",
-                        iov_val[i].iov_len, (char *)iov_val[i].iov_base
+                        (int)iov_val[i].iov_len, (char *)iov_val[i].iov_base
                        );
                 g_api->set_resp_header2(rec->session, save, strlen(save),
                                         LSI_HEADEROP_ADD);
@@ -171,8 +171,8 @@ static lsi_serverhook_t server_hooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-lsi_module_t MNAME =
+LSMODULE_EXPORT lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", server_hooks, {0}
 };
 

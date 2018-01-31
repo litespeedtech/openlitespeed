@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
 
-
 add_subdirectory(adns)
 add_subdirectory(edio)
 add_subdirectory(extensions)
@@ -57,6 +56,7 @@ SET(unittest_STAT_SRCS
    ../test/util/pcregextest.cpp
    ../test/util/ghashtest.cpp
    ../test/util/linkedobjtest.cpp
+   ../test/util/dlinkqueuetest.cpp
    ../test/util/gzipbuftest.cpp
    ../test/util/brotlibuftest.cpp
    ../test/util/vmembuftest.cpp
@@ -69,6 +69,7 @@ SET(unittest_STAT_SRCS
    ../test/util/stringmaptest.cpp
    ../test/util/httpfetchtest.cpp
    ../test/util/partitioninfotest.cpp
+   ../test/util/filtermatchtest.cpp
    ../test/util/gmaptest.cpp
    ../test/util/ahotest.cpp
    ../test/util/stringtooltest.cpp

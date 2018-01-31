@@ -16,17 +16,19 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/httpsession.h>
+#include <http/hiochainstream.h>
+#include <http/httpdefs.h>
+#include <http/httpmethod.h>
+#include <http/httpresourcemanager.h>
+#include <http/httpvhost.h>
+#include <http/httpstatuscode.h>
+#include <ssi/ssiruntime.h>
 
-typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,
-                            int flag);
-
-//     SubSessionCb        * m_pSubSessionCb;
-//     void                * m_pSubSessionCbParam;
-//     HttpSession         * m_pParent;
+#include <log4cxx/logger.h>
+#include <util/datetime.h>
 
 
-
-//subreqeust mode
+//subrequest mode
 //  1. background mode, we do not care the result, result is discarded
 //  2. capture mode, result is captured, save in its buffer,
 //     we can use API to retrieve it. for example, LUA issue subrequest
@@ -43,13 +45,13 @@ typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,
 //     to combine them into the main response.
 
 
-int HttpSession::detectLoopSubSession(SubSessInfo_t *pSubSessInfo)
+int HttpSession::detectLoopSubSession(lsi_subreq_t *pSubSessInfo)
 {
     //check if parent subsession has the same URL,
     //check if parent subsession has same redirect URL.
-    if (m_request.detectLoopRedirect(1, pSubSessInfo->m_cacheKey.m_pUri,
-                                     pSubSessInfo->m_cacheKey.m_iUriLen, pSubSessInfo->m_cacheKey.m_pQs,
-                                     pSubSessInfo->m_cacheKey.m_iQsLen))
+    if (m_request.detectLoopRedirect(1, pSubSessInfo->m_pUri,
+                    pSubSessInfo->m_uriLen, pSubSessInfo->m_pQs,
+                    pSubSessInfo->m_qsLen))
         return 1;
     if (m_pParent)
         return m_pParent->detectLoopSubSession(pSubSessInfo);
@@ -58,7 +60,7 @@ int HttpSession::detectLoopSubSession(SubSessInfo_t *pSubSessInfo)
 }
 
 
-HttpSession *HttpSession::newSubSession(SubSessInfo_t *pSubSessInfo)
+HttpSession *HttpSession::newSubSession(lsi_subreq_t *pSubSessInfo)
 {
     //for subsession, we intentionally turn off
     //   keepalive
@@ -78,17 +80,21 @@ HttpSession *HttpSession::newSubSession(SubSessInfo_t *pSubSessInfo)
     if (detectLoopSubSession(pSubSessInfo) == 1)
         return NULL;
 
-    HttpSession *pSession = HttpSessionPool::getSession();
+    HttpSession *pSession = HttpResourceManager::getInstance().getConnection();
     if (! pSession)
         return NULL;
 
+    pSession->reset();
+    pSession->m_lReqTime = DateTime::s_curTime;
+    pSession->m_iReqTimeUs = DateTime::s_curTimeUs;
+    pSession->m_pClientInfo = m_pClientInfo;
+    pSession->m_iRemotePort = m_iRemotePort;
+    pSession->getReq()->setSsl(m_request.getSsl());
+
     //pSession->setSsiRuntime( m_pSsiRuntime );
     HioChainStream *pStream = new HioChainStream();
-    pStream->setHandler(pSession);
-    pSession->setStream(pStream);
+    pSession->attachStream(pStream);
     pSession->getReq()->setILog(pStream);
-    pSession->m_pClientInfo = m_pClientInfo;
-    pSession->getReq()->setSsl(getSSL());
 
     pStream->setDepth(depth);
 
@@ -97,26 +103,22 @@ HttpSession *HttpSession::newSubSession(SubSessInfo_t *pSubSessInfo)
     {
         pStream->setHandler(NULL);
         delete pStream;
-        HttpSessionPool::recycle(pSession);
+        HttpResourceManager::getInstance().recycle(pSession);
         return NULL;
     }
 
-    pSession->setFlag(HSF_SEC_CLEARED | HSF_SEC_RESP_CLEARED |
-                      HSF_SUB_SESSION);
+    pSession->setFlag(HSF_SUB_SESSION);
     pSession->getResp()->reset();
 
-#ifdef _ENTERPRISE_
-    pSession->getResp()->setCacheStore(getCacheStore());
-#endif
-
+    const char *pSrcQs = pSubSessInfo->m_pQs;
     LS_DBG_M(getLogSession(), "Create SUB SESSION: %d, flag: %d, "
-             "method: %s, URI: %s, len: %d, QS: %s, len: %d",
+             "method: %s, URI: %s, len: %d, QS: %s, len: %d\n",
              m_iSubReqSeq, pSubSessInfo->m_flag,
              HttpMethod::get(pSubSessInfo->m_method),
-             pSubSessInfo->m_cacheKey.m_pUri,
-             pSubSessInfo->m_cacheKey.m_iUriLen,
-             pSubSessInfo->m_cacheKey.m_pQs ? pSubSessInfo->m_cacheKey.m_pQs : "",
-             pSubSessInfo->m_cacheKey.m_iQsLen);
+             pSubSessInfo->m_pUri,
+             pSubSessInfo->m_uriLen,
+             pSrcQs ? pSrcQs : "",
+             pSubSessInfo->m_qsLen);
     HttpSession *parent = NULL;
     if (pSubSessInfo->m_flag & SUB_REQ_DETACHED)
     {
@@ -130,14 +132,13 @@ HttpSession *HttpSession::newSubSession(SubSessInfo_t *pSubSessInfo)
     {
         pStream->setSequence(m_iSubReqSeq++);
 
+        //Attach stream to parant session may cause trouble?
+        pStream->setParentSession(this);
         parent = this;
     }
 
     if (pSubSessInfo->m_flag & SUB_REQ_NOABORT)
         pSession->setFlag(HSF_NO_ABORT, 1);
-
-    if (pSubSessInfo->m_flag & SUB_REQ_NOCACHE)
-        pSession->setFlag(HSF_NOCACHE, 1);
 
     pSession->m_pParent = parent;
 
@@ -154,18 +155,57 @@ int HttpSession::setReqBody(const char *pBodyBuf, int len)
     return -1;
 }
 
-int HttpSession::execSubSession(HttpSession *pSubSess, int iHttpError)
+
+int HttpSession::processSubReq()
+{
+    int ret;
+    m_lReqTime = DateTime::s_curTime;
+    m_iReqTimeUs = DateTime::s_curTimeUs;
+    m_lDynBodySent = 0;
+
+    const HttpVHost *pVHost = m_request.getVHost();
+    if (!pVHost)
+        m_request.matchVHost();
+    else
+        ((HttpVHost *)pVHost)->incRef();
+    if (!pVHost)
+    {
+        LS_DBG_L(getLogSession(), "can not find a matching VHost for [%.*s]",
+                 m_request.getHostStrLen(), m_request.getHostStr());
+        return SC_404;
+    }
+    getStream()->setLogger(pVHost->getLogger());
+    if (getStream()->isLogIdBuilt())
+    {
+        getStream()->lockAddOrReplaceFrom('#', pVHost->getName());
+    }
+
+    ret = m_request.processNewReqData(getPeerAddr());
+    if (ret)
+        return ret;
+
+    m_request.setStatusCode(SC_200);
+    LS_DBG_M(getLogSession(),
+             "processSubReq(): set state to HSPS_HKPT_HTTP_BEGIN");
+    m_processState = HSPS_HKPT_HTTP_BEGIN;
+    return 0;
+}
+
+
+int HttpSession::execSubSession()
 {
     //pause current session
     //assign current stream to the subsession stream
 
     LS_DBG_M(getLogSession(), "Execute SUB SESSION: %d",
-             ((HioChainStream *)pSubSess->getStream())->getSequence());
+             ((HioChainStream *)getStream())->getSequence());
 
     //init sub session data
-    int ret = pSubSess->processSubReq();
-    if (ret && iHttpError)
-        pSubSess->httpError(ret);
+    int ret = processSubReq();
+    if (!ret)
+        ret = smProcessReq();
+    else
+        ret = httpError(ret);
     return ret;
 }
 
@@ -213,14 +253,14 @@ int HttpSession::includeSubSession()
         if (ret != 0)
             return ret;
 
-        if (m_iFlag & HSF_AIO_PENDING)
+        if (m_iFlag & HSF_AIO_READING)
         {
             wantWrite(0);
             return 0;
         }
 
-        if (m_pCurSubSession->m_iFlag & HSF_RESP_DONE)
-            onSubSessionRespIncluded(m_pCurSubSession);
+//         if (m_pCurSubSession->m_iFlag & HSF_RESP_DONE)
+//             onSubSessionRespIncluded(m_pCurSubSession);
     }
     return 0;
 }
@@ -287,8 +327,9 @@ int HttpSession::onSubSessionRespIncluded(HttpSession *pSubSess)
 
     if (pSubSess == m_pCurSubSession)
     {
-        m_iFlag |= HSF_CUR_SUB_SESSION_DONE;
-        wantWrite(1);
+        curSubSessionCleanUp();
+//         m_iFlag |= HSF_CUR_SUB_SESSION_DONE;
+//         wantWrite(1);
 
     }
     else
@@ -315,7 +356,15 @@ int HttpSession::curSubSessionCleanUp()
         // start send out next sub request response.
         // If AIO pending, just wait AIO to finished
         if (getSsiRuntime())
+        {
+            if (m_sendFileInfo.getRemain() > 0)
+            {
+                setFlag(HSF_RESUME_SSI);
+                getStream()->wantWrite(1);
+                return 1;
+            }
             resumeSSI();
+        }
         else
         {
             //If we have multiple sub sessions, activate another one.
@@ -329,11 +378,6 @@ int HttpSession::closeSubSession(HttpSession *pSubSess)
 {
     LS_DBG_M(getLogSession(), "Close SUB SESSION: %d",
              ((HioChainStream *)pSubSess->getStream())->getSequence());
-    if (pSubSess->getFlag() & HSF_CAPTURE_RESP_BODY)
-    {
-        if (pSubSess->getSsiRuntime())
-            pSubSess->tryCaptureDynBody();
-    }
 
     pSubSess->setSsiRuntime(NULL);
     pSubSess->closeSession();
@@ -342,12 +386,9 @@ int HttpSession::closeSubSession(HttpSession *pSubSess)
         m_iFlag &= ~HSF_CUR_SUB_SESSION_DONE;
         m_pCurSubSession = NULL;
     }
-    HioStream *pStream = pSubSess->getStream();
+    HioStream *pStream = pSubSess->detachStream();
     if (pStream)
-    {
         delete pStream;
-        pSubSess->setStream(NULL);
-    }
     pSubSess->recycle();
     return 0;
 }
@@ -356,7 +397,7 @@ int HttpSession::cancelSubSession(HttpSession *pSubSess)
 {
     LS_DBG_M(getLogSession(), "Cancel SUB SESSION: %d",
              ((HioChainStream *)pSubSess->getStream())->getSequence());
-    if (pSubSess->getFlag() & HSF_NO_ABORT)
+    if (pSubSess->getFlag(HSF_NO_ABORT) & HSF_NO_ABORT)
     {
         // if sub session can not be interrupted, detach it, add it to global lingering session list
         detachSubSession(pSubSess);
@@ -404,16 +445,29 @@ void HttpSession::mergeRespHeaders(HttpRespHeaders::INDEX headerIndex,
                 ++pIov;
                 continue;
             }
+
         }
         m_response.getRespHeaders().add(
             headerIndex, pName, nameLen,
             (const char *)pIov->iov_base, pIov->iov_len,
-            LSI_HEADEROP_OP_APPEND);
+            LSI_HEADEROP_APPEND);
         ++pIov;
     }
 }
 
 
+const char *HttpSession::getOrgReqUrl(int *n)
+{
+    HttpReq *pReq = &m_request;
+    if (m_iFlag & HSF_SUB_SESSION)
+    {
+        if (m_pParent && m_pParent->m_pSsiStack
+            && m_pParent->m_pSsiStack->getScript())
+            pReq = m_pSsiRuntime->getMainReq();
+    }
+    *n = pReq->getOrgReqURLLen();
+    return pReq->getOrgReqURL();
+}
 
 
 void HttpReq::setNewOrgUrl(const char *pUrl, int len, const char *pQS,
@@ -448,31 +502,29 @@ void HttpReq::setNewOrgUrl(const char *pUrl, int len, const char *pQS,
 }
 
 
-int HttpReq::cloneReqBody(AutoBuf *pBuf)
+int HttpReq::cloneReqBody(const char *pBuf, int32_t len)
 {
-    int iBodyBegin = m_headerBuf.size();
-    m_lEntityLength = pBuf->size();
-    m_headerBuf.append(pBuf->begin(), pBuf->size());
-    m_iReqHeaderBufRead = m_headerBuf.size();
+    //int iBodyBegin = m_headerBuf.size();
+    m_lEntityLength = len;
+    m_headerBuf.append(pBuf, m_lEntityLength);
     return 0;
     //return memBlockToReqBodyBuf(m_headerBuf.begin() + iBodyBegin, pBuf->size());
 }
 
 
-int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
+int HttpReq::clone(HttpReq *pProto, lsi_subreq_t *pSubSessInfo)
 {
     int ret = 0;
     //copy request headers
     m_pVHostMap = pProto->m_pVHostMap;
     m_pVHost = pProto->m_pVHost;
 
-    m_iHttpHeaderEnd = m_iReqHeaderBufRead = m_iReqHeaderBufFinished
-                       = pProto->m_iHttpHeaderEnd;
+    m_iHttpHeaderEnd = m_iReqHeaderBufFinished = pProto->m_iHttpHeaderEnd;
     m_headerBuf.resize(HEADER_BUF_PAD);
 
     int begin = m_headerBuf.size();
 
-    m_headerBuf.append(pProto->m_headerBuf.getPointer(begin),
+    m_headerBuf.append(pProto->m_headerBuf.getp(begin),
                        m_iHttpHeaderEnd - begin);
 
     memmove(&m_reqLineOff, &pProto->m_reqLineOff,
@@ -483,15 +535,14 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
 
     m_iLeadingWWW = pProto->m_iLeadingWWW;
     m_iBodyType = pProto->m_iBodyType;
-    m_iContextState = pProto->getContextState(DUM_BENCHMARK_TOOL);
     m_lEntityLength = pProto->m_lEntityLength;
     m_iKeepAlive = pProto->m_iKeepAlive & ~IS_KEEPALIVE;
-#ifdef _ENTERPRISE_
-    m_pCacheVary = pProto->m_pCacheVary;
-#endif
     m_iAcceptGzip = 0; //pProto->m_iAcceptGzip &
     m_iAcceptBr = 0;
     m_iRedirects = 0;
+    m_iHostOff = pProto->m_iHostOff;
+    m_iHostLen = pProto->m_iHostLen;
+
     clearContextState(LOG_ACCESS_404);
 
 
@@ -503,7 +554,7 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
     if (pProto->m_iContextState & COOKIE_PARSED)
     {
         m_iContextState |= COOKIE_PARSED;
-        m_cookies.copy(pProto->m_cookies);
+        m_cookies.copy(pProto->m_cookies, m_pPool);
     }
     if (pProto->m_commonHeaderOffset[ HttpHeader::H_COOKIE ] >
         m_iHttpHeaderEnd)
@@ -517,7 +568,7 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
     else if (pProto->m_commonHeaderOffset[ HttpHeader::H_COOKIE ]
              + pProto->m_commonHeaderLen[ HttpHeader::H_COOKIE ] > m_iHttpHeaderEnd)
     {
-        m_headerBuf.append(pProto->m_headerBuf.getPointer(m_iHttpHeaderEnd),
+        m_headerBuf.append(pProto->m_headerBuf.getp(m_iHttpHeaderEnd),
                            pProto->m_commonHeaderOffset[ HttpHeader::H_COOKIE ]
                            + pProto->m_commonHeaderLen[ HttpHeader::H_COOKIE ]
                            + 2 - m_iHttpHeaderEnd);
@@ -527,9 +578,9 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
         setReferer(pProto->getOrgReqURL(), pProto->getOrgReqURLLen());
 
     if ((pSubSessInfo->m_method == HttpMethod::HTTP_POST)
-        && (pSubSessInfo->m_bufReqBody != NULL))
+        && (pSubSessInfo->m_pReqBody != NULL))
     {
-        addContentLenHeader(pSubSessInfo->m_bufReqBody->size());
+        addContentLenHeader(pSubSessInfo->m_reqBodyLen);
         updateReqHeader(HttpHeader::H_CONTENT_TYPE,
                         "application/x-www-form-urlencoded", 33);
 
@@ -537,30 +588,30 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
 
     m_iHeaderStatus = HEADER_OK;
 
-    int totalUrlLen = pSubSessInfo->m_cacheKey.m_iUriLen;
+    int totalUrlLen = pSubSessInfo->m_uriLen;
     char *p, *pURL;
-    if (pSubSessInfo->m_cacheKey.m_pQs)
-        totalUrlLen += pSubSessInfo->m_cacheKey.m_iQsLen + 1;
+    const char *pSrcUrl = pSubSessInfo->m_pUri;
+    const char *pSrcQs = pSubSessInfo->m_pQs;
+    int iSrcUrlLen = totalUrlLen;
+    int iSrcQsLen = pSubSessInfo->m_qsLen;
+    if (iSrcQsLen > 0)
+        totalUrlLen += iSrcQsLen + 1;
     if (totalUrlLen <= pProto->getOrgReqURLLen())
     {
         char *pOrgEnd;
-        p = pURL = m_headerBuf.getPointer(pProto->m_reqURLOff);
+        p = pURL = m_headerBuf.getp(pProto->m_reqURLOff);
         pOrgEnd = p + pProto->m_reqURLLen;
 
-        memmove(p, pSubSessInfo->m_cacheKey.m_pUri,
-                pSubSessInfo->m_cacheKey.m_iUriLen);
-        p += pSubSessInfo->m_cacheKey.m_iUriLen;
-        if (pSubSessInfo->m_cacheKey.m_pQs
-            && pSubSessInfo->m_cacheKey.m_iQsLen > 0)
+        memmove(p, pSrcUrl, iSrcUrlLen);
+        p += iSrcUrlLen;
+        if ((pSrcQs != NULL) && (iSrcQsLen > 0))
         {
-            if (memchr(pSubSessInfo->m_cacheKey.m_pUri, '?',
-                       pSubSessInfo->m_cacheKey.m_iUriLen))
+            if (memchr(pSrcUrl, '?', iSrcUrlLen))
                 *p++ = '&';
             else
                 *p++ = '?';
-            memmove(p, pSubSessInfo->m_cacheKey.m_pQs,
-                    pSubSessInfo->m_cacheKey.m_iQsLen);
-            p += pSubSessInfo->m_cacheKey.m_iQsLen;
+            memmove(p, pSrcQs, iSrcQsLen);
+            p += iSrcQsLen;
         }
         while (p < pOrgEnd)
             *p++ = ' ';
@@ -568,23 +619,23 @@ int HttpReq::clone(HttpReq *pProto, SubSessInfo_t *pSubSessInfo)
     }
     else
     {
-        setNewOrgUrl(pSubSessInfo->m_cacheKey.m_pUri,
-                     pSubSessInfo->m_cacheKey.m_iUriLen,
-                     pSubSessInfo->m_cacheKey.m_pQs,
-                     pSubSessInfo->m_cacheKey.m_iQsLen);
+        setNewOrgUrl(pSrcUrl, iSrcUrlLen, pSrcQs, iSrcQsLen);
 
     }
-    m_iHttpHeaderEnd = m_iReqHeaderBufRead = m_iReqHeaderBufFinished
+    m_iHttpHeaderEnd = m_iReqHeaderBufFinished
                        = m_headerBuf.size();
 
     if ((pSubSessInfo->m_method == HttpMethod::HTTP_POST)
-        && (pSubSessInfo->m_bufReqBody != NULL))
-        cloneReqBody(pSubSessInfo->m_bufReqBody);
+        && (pSubSessInfo->m_pReqBody != NULL))
+        cloneReqBody(pSubSessInfo->m_pReqBody, pSubSessInfo->m_reqBodyLen);
 
-    pURL = m_headerBuf.getPointer(m_reqURLOff);
+    pURL = m_headerBuf.getp(m_reqURLOff);
     ret = setCurrentURL(pURL, totalUrlLen, 1);
     if (ret == 0)
-        m_urls[0] = m_curURL;
+    {
+        m_pUrls[0].key = m_curUrl.key;
+        m_pUrls[0].val = m_curUrl.val;
+    }
     return ret;
 }
 
@@ -616,12 +667,12 @@ void HttpReq::updateReqHeader(int index, const char *pNewValue,
         if (m_headerBuf.available() < newValueLen + iNameLen + 4)
             m_headerBuf.grow(newValueLen + iNameLen + 4 - m_headerBuf.available());
         m_headerBuf.append(pName, iNameLen);
-        m_headerBuf.append(':');
-        m_headerBuf.append(' ');
+        m_headerBuf.appendUnsafe(':');
+        m_headerBuf.appendUnsafe(' ');
         m_commonHeaderOffset[ index ] = m_headerBuf.size();
         m_headerBuf.append(pNewValue, newValueLen);
-        m_headerBuf.append('\r');
-        m_headerBuf.append('\n');
+        m_headerBuf.appendUnsafe('\r');
+        m_headerBuf.appendUnsafe('\n');
 
     }
     m_commonHeaderLen[index] = newValueLen;
@@ -629,48 +680,10 @@ void HttpReq::updateReqHeader(int index, const char *pNewValue,
 
 void HttpReq::setReferer(const char *pNewReferer, int newRefererLen)
 {
-    updateReqHeader(HttpHeader::H_REFERER, pNewReferer, newRefererLen);
+    //updateReqHeader(HttpHeader::H_REFERER, pNewReferer, newRefererLen );
 
-    addEnv("ESI_INCLUDED_BY", 15, pNewReferer, newRefererLen);
+    //addEnv( "ESI_INCLUDED_BY", 15, pNewReferer, newRefererLen );
     addEnv("ESI_REFERER", 11, pNewReferer, newRefererLen);
-
-}
-
-
-
-int HttpReq::copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
-                                      int cookieLen)
-{
-    int offset, diff;
-    char *pBuf;
-    m_headerBuf.append("Cookie: ", 8);
-    offset = m_headerBuf.size();
-    m_headerBuf.appendAllocOnly(cookieLen + 2);
-
-    if (!pCookie)
-        pCookie = m_headerBuf.getPointer(
-                      m_commonHeaderOffset[ HttpHeader::H_COOKIE ]);
-
-    m_commonHeaderOffset[ HttpHeader::H_COOKIE ] = offset;
-
-    pBuf = m_headerBuf.getPointer(offset);
-    memmove(pBuf, pCookie, cookieLen);
-    pBuf += cookieLen;
-    *pBuf++ = '\r';
-    *pBuf++ = '\n';
-
-    diff = offset - oldOff;
-    if (diff == 0)
-        return 0;
-
-    cookieval_t *p = m_cookies.begin();
-    while (p < m_cookies.end())
-    {
-        p->keyOff += diff;
-        p->valOff += diff;
-        ++p;
-    }
-    return 0;
 }
 
 

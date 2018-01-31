@@ -62,6 +62,7 @@ SET(util_STAT_SRCS
    sysinfo/nicdetect.cpp
    sysinfo/systeminfo.cpp
    ni_fio.c
+   filtermatch.cpp
 )
 
 add_library(util STATIC ${util_STAT_SRCS} )

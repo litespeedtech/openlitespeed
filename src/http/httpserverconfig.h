@@ -36,7 +36,7 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int32_t         m_iMaxHeaderBufLen;
     int64_t         m_iMaxReqBodyLen;
     int64_t         m_iMaxDynRespLen;
-    int32_t         m_iMaxDynRespHeaderLen;
+    uint32_t        m_iMaxDynRespHeaderLen;
     int16_t         m_iMaxKeepAliveRequests;
     int8_t          m_iSmartKeepAlive;
     int8_t          m_iUseSendfile;
@@ -125,13 +125,13 @@ public:
     void setMaxHeaderBufLen(int len);
     void setMaxReqBodyLen(int64_t len);
     void setMaxDynRespLen(int64_t len);
-    void setMaxDynRespHeaderLen(int len);
+    void setMaxDynRespHeaderLen(uint32_t len);
 
     int32_t getMaxURLLen() const            {   return m_iMaxURLLen;        }
     int32_t getMaxHeaderBufLen() const      {   return m_iMaxHeaderBufLen;  }
     int64_t getMaxReqBodyLen() const        {   return m_iMaxReqBodyLen;    }
     int64_t getMaxDynRespLen() const        {   return m_iMaxDynRespLen;    }
-    int32_t getMaxDynRespHeaderLen() const
+    uint32_t getMaxDynRespHeaderLen() const
     {   return m_iMaxDynRespHeaderLen;  }
 
     int32_t getMaxFcgiInstances() const     {   return m_iMaxFcgiInstances; }

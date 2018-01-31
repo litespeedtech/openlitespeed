@@ -96,3 +96,24 @@ void HttpResourceManager::onTimer()
 }
 
 
+MMapVMemBuf *HttpResourceManager::getVMemBuf()
+{   return new MMapVMemBuf();           }
+
+    
+void HttpResourceManager::recycle(VMemBuf *pBuf)
+{   delete pBuf;                        }
+    
+
+void HttpResourceManager::recycle(HttpSession *pSession)
+{   
+    delete pSession;    
+}
+      
+      
+HttpSession *HttpResourceManager::getConnection()
+{
+    return new HttpSession();
+}
+    
+
+    

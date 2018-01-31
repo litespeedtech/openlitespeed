@@ -21,6 +21,7 @@
 #include <http/httpstatusline.h>
 #include <http/httpver.h>
 #include <http/httpserverconfig.h>
+#include <log4cxx/logger.h>
 #include <util/datetime.h>
 #include <util/iovec.h>
 #include <ctype.h>
@@ -31,10 +32,10 @@
 /*******************************************************************************
  *          Some comments about the resp_kvpair
  * keyOff is the real offset of the key/name,  valOff is the real offset of the value
- * next_index is 0 for sigle line case
+ * next_index is 0 for single line case
  * FOR MULTIPLE LINE CASE, next_index is relative with the next kvpair position
  * The next_index of the first KVpair of the multiple line is (the next kvpair position + 1)
- * Then in all the chlidren KVPair, the next_index is (the next kvpair position + 1) | 0x80000000
+ * Then in all the children KVPair, the next_index is (the next kvpair position + 1) | 0x80000000
  * The last one (does not have a child) is 0x80000000
  * ****************************************************************************/
 
@@ -104,10 +105,34 @@ HttpRespHeaders::HttpRespHeaders(ls_xpool_t *pool)
     : m_buf()
     , m_aKVPairs()
     , m_iHttpCode(SC_200)
+    , m_hLastHeaderKVPairIndex(0) // NOTICE: set to 0 first so reset works.
 {
     m_pool = pool;
     incKVPairs(16); //init 16 kvpair spaces
-    memset(&m_flags, 0, &m_iKeepAlive + 1 - &m_flags);
+    reset();
+}
+
+void HttpRespHeaders::reset2()
+{
+    if (m_KVPairindex[H_SET_COOKIE] == 0xFF)
+    {
+        reset();
+        return;
+    }
+    if (m_iHeaderUniqueCount == 1)
+        return;
+
+    struct iovec iov[100], *pIov, *pIovEnd;
+    int max = 100;
+    max = getHeader(H_SET_COOKIE, iov, 100);
+    AutoBuf tmp;
+    tmp.swap(m_buf);
+    reset();
+    pIovEnd = &iov[max];
+    for (pIov = iov; pIov < pIovEnd; ++pIov)
+        add(H_SET_COOKIE, "Set-Cookie", 10, (char *)pIov->iov_base,
+            pIov->iov_len, LSI_HEADEROP_ADD);
+
 }
 
 
@@ -157,13 +182,15 @@ void HttpRespHeaders::replaceHeader(resp_kvpair *pKv, const char *pVal,
 }
 
 
+#define HRH_SVR_RESERVE 127
+
 int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
                                   unsigned int nameLen, const char *pVal,
                                   unsigned int valLen, int method)
 {
     if (nameLen + valLen > MAX_RESP_HEADER_LEN
-        || m_buf.size() >=
-        HttpServerConfig::getInstance().getMaxDynRespHeaderLen())
+        || (!m_isFinalize && m_buf.size() + nameLen + valLen + HRH_SVR_RESERVE >=
+            HttpServerConfig::getInstance().getMaxDynRespHeaderLen()))
         return LS_FAIL;
 
     if (method == LSI_HEADEROP_SET)
@@ -254,17 +281,39 @@ static int hasValue(const char *existVal, int existValLen, const char *val,
 
 
 //method: 0 replace,1 append, 2 merge, 3 add
-//headerIndex may be a invalid index, so just for compare with Set-cookie,
-//              Can not use to retrive name and nameLen
-int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
-                          const char *pVal, unsigned int valLen, int method,
-                          INDEX headerIndex)
+int HttpRespHeaders::add(INDEX index, const char *pName, int nameLen,
+                          const char *pVal, unsigned int valLen, int method)
 {
-    assert(kvOrderNum >= 0);
-    resp_kvpair *pKv;
+    if ((nameLen <= 0) || (index > H_HEADER_END))
+        return -1;
+
+    int kvOrderNum = -1;
+    resp_kvpair *pKv = NULL;
+
+    if (index != H_HEADER_END)
+    {
+        if ((int)nameLen != getHeaderStringLen(index))
+            index = H_HEADER_END;
+    }
+    if (index == H_HEADER_END)   // || index == H_UNKNOWN )
+    {
+        int ret = getHeaderKvOrder(pName, nameLen);
+        if (ret != -1)
+            kvOrderNum = ret;
+        else
+            kvOrderNum = getTotalCount();
+    }
+    else
+    {
+        verifyHeaderLength(index,  pName, nameLen);
+        if (m_KVPairindex[index] == 0xFF)
+            m_KVPairindex[index] = getTotalCount();
+        kvOrderNum = m_KVPairindex[index];
+    }
+
     if (kvOrderNum == getTotalCount())
     {
-        //Add a new header
+        // Add a new header
         if (getFreeSpaceCount() == 0)
             incKVPairs(10);
         pKv = getNewKV();
@@ -273,7 +322,8 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
     else
         pKv = getKV(kvOrderNum);
 
-    //enough space for replace, use the same keyoff, and update valoff, add padding, make it is the same length as before
+    // enough space for replace, use the same keyoff, and update valoff,
+    // add padding, make it the same length as before
     if (method == LSI_HEADEROP_SET && pKv->keyLen == (int)nameLen
         && pKv->valLen >= (int)valLen)
     {
@@ -284,14 +334,14 @@ int HttpRespHeaders::_add(int kvOrderNum, const char *pName, int nameLen,
     if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD) 
         && (pKv->valLen > 0))
     {
-        if ( (headerIndex != H_SET_COOKIE || method != LSI_HEADEROP_ADD)
+        if ( (index != H_SET_COOKIE || method != LSI_HEADEROP_ADD)
             && hasValue(getVal(pKv), pKv->valLen, pVal, valLen))
             return 0;//if exist when merge, ignor, otherwise same as append
     }
 
     m_hLastHeaderKVPairIndex = kvOrderNum;
 
-    //Under append situation, if has existing key and valLen > 0, then makes a hole
+    // Under append situation, if has existing key and valLen > 0, then makes a hole
     if (pKv->valLen > 0 && method != LSI_HEADEROP_ADD)
     {
         assert(pKv->keyLen > 0);
@@ -307,41 +357,21 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pVal,
 {
     if ((int)headerIndex < 0 || headerIndex >= H_HEADER_END)
         return LS_FAIL;
-
     if (headerIndex == H_LINK)
     {
         if (memmem(pVal, valLen, "preload", 7) != NULL)
             m_flags |= HRH_F_HAS_PUSH;
     }
-    if (m_KVPairindex[headerIndex] == 0xFF)
-        m_KVPairindex[headerIndex] = getTotalCount();
-    return _add(m_KVPairindex[headerIndex], m_sPresetHeaders[headerIndex],
-                s_iHeaderLen[headerIndex], pVal, valLen, method, headerIndex);
+    return add(headerIndex, m_sPresetHeaders[headerIndex],
+               s_iHeaderLen[headerIndex], pVal, valLen, method);
 }
 
 
 int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
                          unsigned int valLen, int method)
 {
-    int kvOrderNum = -1;
     INDEX headerIndex = getIndex(pName);
-    if (headerIndex != H_HEADER_END)
-    {
-        if (s_iHeaderLen[headerIndex] == nameLen)
-        {
-            //assert(strncasecmp(m_sPresetHeaders[headerIndex], pName, nameLen) == 0);
-            return add(headerIndex, pVal, valLen, method);
-        }
-        headerIndex = H_HEADER_END;
-    }
-
-    int ret = getHeaderKvOrder(pName, nameLen);
-    if (ret != -1)
-        kvOrderNum = ret;
-    else
-        kvOrderNum = getTotalCount();
-
-    return _add(kvOrderNum, pName, nameLen, pVal, valLen, method, headerIndex);
+    return add(headerIndex, pName, nameLen, pVal, valLen, method);
 }
 
 
@@ -458,7 +488,7 @@ char *HttpRespHeaders::getContentTypeHeader(int &len)
 }
 
 
-//The below calling will not maintance the kvpaire when regular case
+//The below calling will not maintain the kvpaire when regular case
 int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
 {
     //When SPDY format, we need to parse it and add one by one
@@ -472,9 +502,12 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
     const char *pLineEnd = NULL;
     const char *pLineBegin  = pStr;
 
-    while ((pLineEnd  = (const char *)memchr(pLineBegin, '\n',
-                        pBEnd - pLineBegin)) != NULL)
+    while (pBEnd > pLineBegin)
     {
+        pLineEnd  = (const char *)memchr(pLineBegin, '\n',
+                        pBEnd - pLineBegin);
+        if (pLineEnd == NULL)
+            pLineEnd = pBEnd;
         pMark = (const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
         if (pMark != NULL)
         {
@@ -851,6 +884,28 @@ int HttpRespHeaders::mergeAll()
     }
     m_buf.swap(tmp);
     return total;
+}
+
+
+void HttpRespHeaders::dump(LogSession *pILog, int dump_header)
+{
+    LS_DBG_H(pILog, "Resp headers, total: %d, removed: %d, unique:%d, " 
+                    "has hole: %d, buffer size: %d",
+        (int)getTotalCount(), (int)m_iHeaderRemovedCount,
+        (int)m_iHeaderUniqueCount, (int)m_flags,
+        (int)m_buf.size() );
+    resp_kvpair *pKv = getKV(0);
+    resp_kvpair *pKvEnd = pKv + getTotalCount();
+
+    while (pKv < pKvEnd)
+    {
+        if (pKv->keyLen > 0)
+        {
+            int len = pKv->keyLen + pKv->valLen + 4;
+            LS_DBG_H(pILog, "    %.*s", len, m_buf.begin() + pKv->keyOff);
+        }
+        ++pKv;
+    }
 }
 
 

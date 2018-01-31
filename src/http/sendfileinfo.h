@@ -45,13 +45,15 @@ public:
     SendFileInfo();
     ~SendFileInfo();
 
-    void reset()
-    {
-        //m_pCache = NULL;
-        //memset( &m_pCache, 0, (char *)(&m_pECache + 1) - (char *)&m_pCache );
-        memset(this, 0, sizeof(*this));
-    }
+//     void reset()
+//     {
+//         //m_pCache = NULL;
+//         //memset( &m_pCache, 0, (char *)(&m_pECache + 1) - (char *)&m_pCache );
+//         memset(this, 0, sizeof(*this));
+//     }
 
+    void release();
+    void releaseECache();
 
     void *getParam() const     {   return m_pParam;    }
     void setParam(void *p)   {   m_pParam = p;       }
@@ -82,7 +84,8 @@ public:
     }
     int readyCacheData(char compress, char mode = 1);
     
-    void release();
+    void copy(const SendFileInfo &rhs)
+    {   memcpy(this, &rhs, sizeof(SendFileInfo));      }
 
 };
 

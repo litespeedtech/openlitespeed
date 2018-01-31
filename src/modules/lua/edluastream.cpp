@@ -419,7 +419,7 @@ int EdLuaStream::onRead()
 }
 
 
-int EdLuaStream::onEventDone()
+int EdLuaStream::onEventDone(short event)
 {
     if (m_iFlag & EDLUA_FLAG_RECYCLE)
         delete this;

@@ -118,7 +118,7 @@ int EdStream::handleEvents(short event)
     {
         ret = onRead();
         if (!getAssignedRevent())
-            return 0;
+            goto EVENT_DONE;
     }
     if (event & POLLHUP)
     {
@@ -127,8 +127,7 @@ int EdStream::handleEvents(short event)
         else if (getHupCounter() > 100)
             abort();
         if (!getAssignedRevent())
-            return 0;
-
+            goto EVENT_DONE;
     }
     if ((ret != -1) && (event & POLLHUP))
     {
@@ -140,7 +139,7 @@ int EdStream::handleEvents(short event)
     {
         ret = onWrite();
         if (!getAssignedRevent())
-            return 0;
+            goto EVENT_DONE;
     }
     if ((ret != -1) && (event & POLLERR))
     {
@@ -148,8 +147,9 @@ int EdStream::handleEvents(short event)
         if (!getAssignedRevent())
             return LS_OK;
     }
+EVENT_DONE:
     if (ret != -1)
-        onEventDone();
+        onEventDone(event);
     return LS_OK;
 }
 

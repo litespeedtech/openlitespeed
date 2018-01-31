@@ -36,6 +36,16 @@ SendFileInfo::SendFileInfo()
 SendFileInfo::~SendFileInfo()
 {}
 
+void SendFileInfo::releaseECache()
+{
+    if (m_pECache && m_pECache->decRef() == 0)
+    {
+        if (m_pECache->getfd() != -1)
+            m_pECache->closefd();
+    }
+}
+
+
 int SendFileInfo::getfd()
 {
     if (!m_pECache)

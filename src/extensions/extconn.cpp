@@ -94,13 +94,15 @@ int ExtConn::assignReq(ExtRequest *pReq)
     if (getState() == PROCESSING)
     {
         ret = doWrite();
-        onEventDone();
+        onEventDone(-1);
         //pConn->continueWrite();
     }
     else if (getState() != CONNECTING)
         ret = reconnect();
     if (ret == -1)
         return connError(errno);
+    if (ret < -1)
+        return -ret;
     return 0;
 
 }
@@ -108,10 +110,13 @@ int ExtConn::assignReq(ExtRequest *pReq)
 
 int ExtConn::close()
 {
-    LS_DBG_L(this, "[ExtConn] close()");
-    EdStream::close();
-    m_iState = DISCONNECTED;
-    m_iInProcess = 0;
+    if (m_iState != DISCONNECTED)
+    {
+        LS_DBG_L(this, "[ExtConn] close()");
+        EdStream::close();
+        m_iState = DISCONNECTED;
+        m_iInProcess = 0;
+    }
     return 0;
 }
 
@@ -224,6 +229,16 @@ int ExtConn::onRead()
 }
 
 
+int ExtConn::onHangup()
+{
+    //When connection is used, but there are pending data to read,
+    //POLLIN is off, then POLLHUP will be returned in tight loop.
+    LS_DBG_L(this, "ExtConn::onHangup(), state: %d, treat as onRead()",
+             (int)m_iState);
+    return onRead();
+}
+
+
 int ExtConn::onWrite()
 {
     LS_DBG_L(this, "ExtConn::onWrite()");
@@ -314,6 +329,7 @@ void ExtConn::onSecTimer()
     {
         LS_DBG_L(this, "Idle connection timed out, close!");
         close();
+        m_pWorker->getConnPool().removeConn(this);
     }
 
 }
@@ -352,8 +368,11 @@ int ExtConn::connError(int errCode)
 }
 
 
-int ExtConn::onEventDone()
+int ExtConn::onEventDone(short event)
 {
+    LS_DBG_L(this,
+             "ExtConn::onEventDone(), fd: %d, state: %d, event: %hd, revents: %hd.",
+             getfd(), (int)m_iState, event, getRevents());
     switch (m_iState)
     {
     case ABORT:

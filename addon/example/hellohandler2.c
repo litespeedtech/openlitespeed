@@ -71,8 +71,8 @@ static lsi_serverhook_t server_hooks[] =
  * Define a handler, need to provide a struct lsi_reqhdlr_t object, in which
  * the first function pointer should not be NULL
  */
-static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME =
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME =
 {
-    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "v1.0", server_hooks
+    LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "v1.0", server_hooks, {0}
 };

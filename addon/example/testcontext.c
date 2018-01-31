@@ -68,7 +68,8 @@ static int begin_process(const lsi_session_t *session)
     return 0;
 }
 
-static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL };
+static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL, NULL, NULL, NULL };
+
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL , NULL, NULL, {0} };
 
 

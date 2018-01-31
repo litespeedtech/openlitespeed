@@ -108,7 +108,7 @@ am_liblsiapi_a_OBJECTS = ediohandler.$(OBJEXT) lsiapi.$(OBJEXT) \
 	lsimoduledata.$(OBJEXT) lsiapihooks.$(OBJEXT) \
 	modulehandler.$(OBJEXT) modulemanager.$(OBJEXT) \
 	lsiapilib.$(OBJEXT) lsiapigd.$(OBJEXT) envmanager.$(OBJEXT) \
-	moduletimer.$(OBJEXT)
+	moduletimer.$(OBJEXT) lsiapi_const.$(OBJEXT)
 liblsiapi_a_OBJECTS = $(am_liblsiapi_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -337,7 +337,7 @@ noinst_LIBRARIES = liblsiapi.a
 AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 liblsiapi_a_METASOURCES = AUTO
 liblsiapi_a_SOURCES = ediohandler.cpp lsiapi.cpp lsimoduledata.cpp lsiapihooks.cpp modulehandler.cpp modulemanager.cpp lsiapilib.cpp lsiapigd.cpp envmanager.cpp \
-moduletimer.cpp
+moduletimer.cpp lsiapi_const.cpp
 
 all: all-am
 
@@ -391,6 +391,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ediohandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/envmanager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapi.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapi_const.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapigd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapihooks.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsiapilib.Po@am__quote@

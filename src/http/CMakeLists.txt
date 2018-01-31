@@ -81,12 +81,14 @@ SET(http_STAT_SRCS
    #requestvars.cpp
    hiostream.cpp
    hiohandlerfactory.cpp
+   hiochainstream.cpp
    httprespheaders.cpp
    l4handler.cpp
    httpaiosendfile.cpp
    serverprocessconfig.cpp
    httpstats.cpp
    reqparser.cpp
+   subrequest.cpp
 )
 
 add_library(http STATIC ${http_STAT_SRCS})

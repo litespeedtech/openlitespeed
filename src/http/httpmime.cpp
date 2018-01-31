@@ -91,12 +91,13 @@ static AutoStr2 *getMIME(const char *pMIME)
 //}
 
 
+/* not used?
 static const char SEPARATORS[] =
 {
     '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?', '=',
     '{', '}', ' ', '\t'
 };
-
+*/
 
 static bool isValidToken(const char *pToken, int len)
 {

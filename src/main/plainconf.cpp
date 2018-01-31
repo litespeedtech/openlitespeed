@@ -130,7 +130,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"enablehotlinkctrl",                        NULL},
     {"enableh2c",                                NULL},
     {"enableipgeo",                              NULL},
-    {"enableiptoloc",                            NULL},
     {"enablescript",                             NULL},
     {"enablespdy",                               NULL},
     {"enablestapling",                           NULL},
@@ -183,9 +182,9 @@ plainconfKeywords plainconf::sKeywords[] =
     {"inmembufsize",                             NULL},
     {"instances",                                NULL},
     {"iptogeo",                                  NULL},
-    {"iptolocdb",                                 NULL},
-    {"iptolocdbcache",                            NULL},
-    {"iptolocdbfile",                             NULL},
+    {"ip2locdb",                                 NULL},
+    {"ip2locdbcache",                            NULL},
+    {"ip2locdbfile",                             NULL},
     {"keepalivetimeout",                         NULL},
     {"keepdays",                                 NULL},
     {"keyfile",                                  NULL},
@@ -648,7 +647,7 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
 
 
 /**
- * appendValueToKey will append the current NODE unknown valus to 
+ * appendValueToKey will append the current NODE unknown valus to
  * the  specified key.
  * The node can be module param in SERVER, VHOST, or uriFilter inside a module.
  */

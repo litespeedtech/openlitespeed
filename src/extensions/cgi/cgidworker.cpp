@@ -281,13 +281,14 @@ int CgidWorker::config(const XmlNode *pNode1)
 
     char achMIME[] = "application/x-httpd-cgi";
     HttpMime::getMime()->addMimeHandler("", achMIME,
-                                        HandlerFactory::getInstance(HandlerType::HT_CGI, NULL), NULL,
-                                        TmpLogId::getLogId());
+                    HandlerFactory::getInstance(HandlerType::HT_CGI, NULL),
+                    NULL, TmpLogId::getLogId());
 
 
-//    char achMIME_SSI[] = "application/x-httpd-shtml";
-//    HttpMime::getMime()->addMimeHandler( "", achMIME_SSI,
-//                                            HandlerFactory::getInstance( HandlerType::HT_SSI, NULL ), NULL,  LogIdTracker::getLogId() );
+   char achMIME_SSI[] = "application/x-httpd-shtml";
+   HttpMime::getMime()->addMimeHandler("", achMIME_SSI,
+                    HandlerFactory::getInstance(HandlerType::HT_SSI, NULL),
+                    NULL, TmpLogId::getLogId());
 
     CgidWorker::setCgidWorkerPid(
         start(MainServerConfig::getInstance().getServerRoot(), psChroot,

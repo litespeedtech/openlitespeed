@@ -86,14 +86,14 @@ static size_t round_up(size_t sz)
 
 
 ls_hash_t *ls_hash_new(
-    size_t init_size, ls_hash_hasher hf, ls_hash_value_compare vc,
+    size_t init_size, ls_hash_hasher hf, ls_hash_keycmp_ne kc,
     ls_xpool_t *pool)
 {
     ls_hash_t *hash;
     if ((hash = (ls_hash_t *)ls_hash_do_alloc(pool,
                 sizeof(ls_hash_t))) != NULL)
     {
-        if (ls_hash(hash, init_size, hf, vc, pool) == 0)
+        if (ls_hash(hash, init_size, hf, kc, pool) == 0)
         {
             ls_hash_do_free(pool, (void *)hash);
             return NULL;
@@ -104,20 +104,20 @@ ls_hash_t *ls_hash_new(
 
 
 ls_hash_t *ls_hash(ls_hash_t *hash,
-                   size_t init_size, ls_hash_hasher hf, ls_hash_value_compare vc,
+                   size_t init_size, ls_hash_hasher hf, ls_hash_keycmp_ne kc,
                    ls_xpool_t *pool)
 {
     hash->sizemax = 0;
     hash->sizenow = 0;
     hash->load_factor = 2;
     hash->hf_fn = hf;
-    hash->vc_fn = vc;
+    hash->kc_fn = kc;
     hash->grow_factor = 2;
     hash->xpool = pool;
 
     if (hash->hf_fn != NULL)
     {
-        assert(hash->vc_fn);
+        assert(hash->kc_fn);
         hash->insert_fn = ls_hash_insert_p;
         hash->update_fn = ls_hash_update_p;
         hash->find_fn = ls_hash_find_p;
@@ -442,7 +442,7 @@ static ls_hash_iter ls_hash_find2(
     while (pElem != NULL)
     {
         assert(pElem->pkey);
-        if ((*pThis->vc_fn)(pKey, pElem->pkey) != 0)
+        if ((*pThis->kc_fn)(pKey, pElem->pkey) != 0)
             pElem = pElem->next;
         else
         {
@@ -528,6 +528,26 @@ static ls_hash_iter ls_hash_update_p(
 static ls_hash_iter ls_hash_find_p(ls_hash_t *pThis, const void *pKey)
 {
     return ls_hash_find2(pThis, pKey, (*pThis->hf_fn)(pKey));
+}
+
+
+void ls_hash_release_objects(ls_hash_t *pThis, 
+                             void (*release_object)(void *pKey, void *pData, 
+                                                    void *ctx), 
+                             void *ctx)
+{
+    if (release_object == NULL)
+        return;
+    ls_hash_iter end = ls_hash_end(pThis);
+    ls_hash_iter iterNext = ls_hash_begin(pThis);
+    ls_hash_iter iter ;
+    while ((iterNext != NULL) && (iterNext != end))
+    {
+        iter = iterNext;
+        iterNext = ls_hash_next(pThis, iterNext);
+        (*release_object)((void *)iter->pkey, iter->pdata, ctx);
+    }
+    
 }
 
 

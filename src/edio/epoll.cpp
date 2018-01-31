@@ -124,9 +124,9 @@ int epoll::add(EventReactor *pHandler, short mask)
 {
     int fd = pHandler->getfd();
     if (fd == -1)
-        return LS_OK;
+        return LS_FAIL;
     //assert( fd > 1 );
-    if (fd > 1000000)
+    if (fd > 10000000)
         return LS_FAIL;
     m_reactorIndex.set(fd, pHandler);
     pHandler->setPollfd();
@@ -137,7 +137,7 @@ int epoll::add(EventReactor *pHandler, short mask)
         pHandler->updateEventSet();
         return 0;
     }
-    return -1;
+    return LS_FAIL;
 }
 
 
@@ -381,7 +381,7 @@ void epoll::applyEvents()
 
     int *p = m_pUpdates->begin();
     int *pEnd = m_pUpdates->end();
-    while (p < pEnd)
+    while(p < pEnd)
     {
         epevt.data.fd = *p++;
         EventReactor *pReactor = m_reactorIndex.get(epevt.data.fd);
@@ -391,8 +391,10 @@ void epoll::applyEvents()
             if (pReactor->isApplyEvents())
             {
                 epevt.events = pReactor->getEvents();
-                if (epoll_ctl(m_epfd, EPOLL_CTL_MOD, epevt.data.fd, &epevt) == 0)
+                if ( epoll_ctl(m_epfd, EPOLL_CTL_MOD, epevt.data.fd, &epevt) == 0)
+                {
                     pReactor->updateEventSet();
+                }
             }
         }
     }
@@ -403,7 +405,9 @@ void epoll::applyEvents()
 void epoll::appendEvent(int fd)
 {
     if (m_pUpdates->getSize() >= m_pUpdates->getCapacity())
+    {
         m_pUpdates->guarantee(NULL, m_pUpdates->getCapacity() << 1);
+    }
     int *p = m_pUpdates->getNew();
     *p = fd;
 }

@@ -313,19 +313,19 @@ static int onWriteEvent(const lsi_session_t *session)
 //
 lsi_config_key_t myParam[] =
 {
-    {"nodepath",},
-    NULL   //The last position must have a NULL to indicate end of the array
+    {"nodepath", 0, 0},
+    {NULL, 0, 0}   //The last position must have a NULL to indicate end of the array
 };
 
 /**
  * Define a handler, need to provide a struct _handler_functions_st object, in which
  * the first function pointer should not be NULL
  */
-static lsi_reqhdlr_t lsjs_mod_handler = { jsHandler, onReadEvent, onWriteEvent , onCleanupEvent};
+static lsi_reqhdlr_t lsjs_mod_handler = { jsHandler, onReadEvent, onWriteEvent , onCleanupEvent, NULL, NULL, NULL };
 
 static lsi_confparser_t lsjs_mod_config = { LsJsEngine::parseParam, LsJsEngine::removeParam , myParam };
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,
                        &lsjs_mod_handler,
                        &lsjs_mod_config,

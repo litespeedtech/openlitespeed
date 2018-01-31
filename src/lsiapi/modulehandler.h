@@ -19,9 +19,11 @@
 #define MODULEHANDLER_H
 
 #include <http/reqhandler.h>
+#include <ls.h>
 
 class HttpHandler;
 class HttpSession;
+class WorkCrew;
 
 class ModuleHandler : public ReqHandler
 {
@@ -34,6 +36,16 @@ public:
     virtual int process(HttpSession *pSession, const HttpHandler *pHandler);
     virtual void onTimer() {};
     virtual int onRead(HttpSession *pSession);
+    
+    static  void initGlobalWorkCrew();
+    static  WorkCrew *getGlobalWorkCrew();
+
+private:
+    int mt_cleanUp(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
+    int mt_onWrite(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
+    int mt_process(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
+    int mt_onRead(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
+    
 };
 
 #endif // MODULEHANDLER_H

@@ -91,7 +91,6 @@ int PCUtil::getNumProcessors()
         s_nCpu = 1;
     getAffinityMask(s_nCpu, s_nCpu, s_nCpu, &s_maskAll);
     return s_nCpu;
-
 #endif
 }
 

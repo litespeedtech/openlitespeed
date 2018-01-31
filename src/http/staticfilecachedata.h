@@ -35,7 +35,7 @@
 class HttpReq;
 class StaticFileCacheData;
 class MimeSetting;
-class SSIScript;
+class SsiScript;
 
 class FileCacheDataEx : public RefCounter
 {
@@ -128,7 +128,7 @@ class StaticFileCacheData : public CacheElement
     int             m_iETagLen;
     short           m_iFileETag;
     int             m_iValidateHeaderLen;
-    SSIScript      *m_pSSIScript;
+    SsiScript      *m_pSSIScript;
 
 
     unsigned char  *m_pMiniMoov;
@@ -175,13 +175,14 @@ public:
     virtual const char *getKey() const  {   return m_real.c_str();      }
     int build(int fd, const char   *pPath, int pathLen,
               const struct stat &fileStat);
+
     FileCacheDataEx *getGzip() const    {   return m_pGzip;             }
     FileCacheDataEx *getBrotli() const  {   return m_pBrotli;           }
     const FileCacheDataEx *getFileData() const {   return &m_fileData;  }
     FileCacheDataEx *getFileData()      {   return &m_fileData;         }
 
-    SSIScript *getSSIScript() const     {   return m_pSSIScript;        }
-    void setSSIScript(SSIScript *p)     {   m_pSSIScript = p;           }
+    SsiScript *getSsiScript() const        {   return m_pSSIScript;    }
+    void setSsiScript(SsiScript *p)       {   m_pSSIScript = p;       }
 
     void setMiniMoov(unsigned char *p, int size)
     {   m_pMiniMoov = p;  m_iMiniMoovSize = size;      }

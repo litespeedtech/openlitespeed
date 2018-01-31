@@ -23,14 +23,7 @@
 #include <util/iovec.h>
 #include <ls.h>
 
-// namespace RespHeader {
-//     enum ADD_METHOD {
-//         REPLACE = LSI_ADD_RESPHEADER_REPLACE,
-//         APPEND = LSI_ADD_RESPHEADER_APPEND, //Add with a comma to seperate
-//         MERGE = LSI_ADD_RESPHEADER_MERGE,   //append unless exist
-//         ADD = LSI_ADD_RESPHEADER_ADD,       //add a new line
-//     };
-// };
+// enum LSI_HEADER_OP is in ls.h
 
 typedef struct
 {
@@ -45,6 +38,7 @@ typedef struct
 struct http_header_t;
 struct iovec;
 class IOVec;
+class LogSession;
 
 #define HRH_F_HAS_HOLE  1
 #define HRH_F_HAS_PUSH  2
@@ -116,9 +110,12 @@ public:
     ~HttpRespHeaders() {};
 
     void reset();
+    void reset2();
 
     int add(INDEX headerIndex, const char *pVal, unsigned int valLen,
             int method = LSI_HEADEROP_SET);
+    int add(INDEX headerIndex, const char *pName, int nameLen,
+            const char *pVal, unsigned int valLen, int method = LSI_HEADEROP_SET);
     int add(const char *pName, int nameLen, const char *pVal,
             unsigned int valLen, int method = LSI_HEADEROP_SET);
 
@@ -170,6 +167,9 @@ public:
     int  getHeader(int pos, char **pName, int *nameLen, struct iovec *iov,
                    int maxIovCount)
     {   return _getHeader(pos, pName, nameLen, iov, maxIovCount); }
+    
+    void prepareFinalize()
+    {   m_isFinalize = 1;    }
 
 public:
 
@@ -179,6 +179,7 @@ public:
     int getTotalLen()       { return m_iHeadersTotalLen; }
     int appendToIov(IOVec *iovec, int &addCrlf);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
+    void dump(LogSession *pILog, int dump_header);
 
     static INDEX getIndex(const char *pHeader);
     static int getHeaderStringLen(INDEX index)  {    return s_iHeaderLen[(int)index];  }
@@ -212,7 +213,11 @@ public:
 
     void dropConnectionHeaders();
 
+    void clearSetCookieIndex()
+    {   m_KVPairindex[H_SET_COOKIE] = 0xff;    }
+
     unsigned char hasPush() const   {   return m_flags & HRH_F_HAS_PUSH;    }
+
 
 public:
     static const char *m_sPresetHeaders[H_HEADER_END];
@@ -232,6 +237,7 @@ private:
     short           m_hLastHeaderKVPairIndex;
     int             m_iHeadersTotalLen;
 
+    unsigned char   m_isFinalize;
     char            m_iHttpVersion;
     char            m_iKeepAlive;
 
@@ -248,9 +254,6 @@ private:
     const char     *getVal(resp_kvpair *pKv) const   { return getHeaderStr(pKv->valOff); }
     int  _getHeader(int kvOrderNum, char **pName, int *nameLen,
                     struct iovec *iov, int maxIovCount);
-
-    int _add(int kvOrderNum, const char *pName, int nameLen, const char *pVal,
-             unsigned int valLen, int method, INDEX headerIndex);
 
     void            _del(int kvOrderNum);
     void            replaceHeader(resp_kvpair *pKv, const char *pVal,

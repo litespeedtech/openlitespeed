@@ -52,6 +52,10 @@ class H2Connection: public HioHandler, public BufferedOS
 public:
     H2Connection();
     virtual ~H2Connection();
+
+    LogSession *getLogSession() const
+    {   return getStream();   }
+
     int onReadEx();
     int onReadEx2();
     int onWriteEx();
@@ -71,7 +75,7 @@ public:
             wanted = 2048;
         return wanted;
     }
-
+    
     int flush();
 
     int onCloseEx();

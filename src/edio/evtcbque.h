@@ -19,10 +19,10 @@
 #define CALLBACKQUEUE_H
 
 #include <lsr/ls_evtcb.h>
+#include <lsr/ls_lock.h>
 #include <util/dlinkqueue.h>
 #include <util/tsingleton.h>
 #include <edio/eventnotifier.h>
-
 
 struct evtcbnode_s;
 
@@ -32,37 +32,53 @@ public:
     virtual int onNotified(int count){return 0;};
 };
 
+#define NUM_SESS_QUES 64
+
 class EvtcbQue : public TSingleton<EvtcbQue>
 {
+private:
+    // These locks protects the session queues
+    // (except the head - which is static)
+    ls_mutex_t m_sessLks[NUM_SESS_QUES];
+    ls_mutex_t m_runQlock;
+    ls_mutex_t m_nodePoolLock;
+
+    ls_atom_32_t      m_notified;
+    EvtcbQueNotifier *m_pNotifier;
+
     friend class TSingleton<EvtcbQue>;
 
     EvtcbQue();
     ~EvtcbQue();
 
-    DLinkQueue  m_callbackObjList;
+    TDLinkQueue<evtcbnode_s>  m_sessCallbackObjList[NUM_SESS_QUES];
+    TDLinkQueue<evtcbnode_s>  m_curRunQ; // have to keep as member rather than local/auto
+                                         // to support removeSessionCb
 
-    static void logState(const char *s, evtcbnode_s *p);
+    static void logState(const char *s, evtcbnode_s *p, const char * extra = NULL);
     void runOne(evtcbnode_s *pObj);
+    void appendCur(TDLinkQueue<evtcbnode_s>  *tmpQ);
+    void runCur();
+
 
 public:
-    void run(evtcbhead_t *session);
+    void run(evtcbtail_t * pSession);
     void run();
     void recycle(evtcbnode_s *pObj);
 
-    evtcbnode_s * getNodeObj(evtcb_pf cb, const evtcbhead_t *session,
+    evtcbnode_s * getNodeObj(evtcb_pf cb, const evtcbtail_t *session,
                              long lParam, void *pParam);
-    
-    void schedule(evtcbnode_s *pObj, bool nowait = true);
-    evtcbnode_s *schedule(evtcb_pf cb, const evtcbhead_t *session,
-                          long lParam, void *pParam);
-    void removeSessionCb(evtcbhead_t *session);
 
-    static evtcbhead_t **getSessionRefPtr(evtcbnode_s *nodeObj);
+    void schedule(evtcbnode_s *pObj, bool nowait = true);
+    evtcbnode_s *schedule(evtcb_pf cb, const evtcbtail_t *session,
+                          long lParam, void *pParam, bool nowait = true);
+    int removeSessionCb(evtcbtail_t * pSession);
+
+    static evtcbtail_t **getSessionRefPtr(evtcbnode_s *nodeObj);
+
+    void resetEvtcbTail(evtcbtail_t * session); // should really have a lock in session
 
     LS_NO_COPY_ASSIGN(EvtcbQue);
-    
-private:
-    int lock_add;
-    EvtcbQueNotifier *m_pNotifier;
+
 };
 #endif  //CALLBACKQUEUE_H

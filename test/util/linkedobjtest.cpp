@@ -216,6 +216,127 @@ SUITE(LinkedObjTest)
         CHECK(obj3.next() == NULL);
         CHECK(obj3.prev() == NULL);
     }
+
+    TEST(testLinkedObjChain2Next)
+    {
+        LinkedObj obj1, obj2, obj3;
+        LinkedObj obj4, obj5;
+
+        obj1.addNext(&obj2);
+        obj2.addNext(&obj3);
+
+        obj4.addNext(&obj5);
+
+        obj1.addNext(&obj4, &obj5);
+
+        CHECK(obj1.next() == &obj4);
+        CHECK(obj4.next() == &obj5);
+        CHECK(obj5.next() == &obj2);
+        CHECK(obj2.next() == &obj3);
+        CHECK(obj3.next() == NULL);
+    }
+
+    TEST(testLinkedObjChain3Next)
+    {
+        LinkedObj obj1, obj2, obj3;
+        LinkedObj obj4, obj5, obj6;
+        obj1.addNext(&obj2);
+        obj2.addNext(&obj3);
+
+        obj4.addNext(&obj5);
+        obj5.addNext(&obj6);
+
+        obj1.addNext(&obj4, &obj6);
+
+        CHECK(obj1.next() == &obj4);
+        CHECK(obj4.next() == &obj5);
+        CHECK(obj5.next() == &obj6);
+        CHECK(obj6.next() == &obj2);
+        CHECK(obj2.next() == &obj3);
+        CHECK(obj3.next() == NULL);
+    }
+
+    TEST(testDLinkedObjChain2Next)
+    {
+        DLinkedObj obj1, obj2, obj3;
+        DLinkedObj obj4, obj5;
+        obj1.addNext(&obj2);
+        obj2.addNext(&obj3);
+
+        obj4.addNext(&obj5);
+
+        obj1.addNext(&obj4, &obj5);
+
+        CHECK(obj1.next() == &obj4);
+        CHECK(obj4.next() == &obj5);
+        CHECK(obj5.next() == &obj2);
+        CHECK(obj2.next() == &obj3);
+        CHECK(obj3.next() == NULL);
+
+
+        CHECK(obj3.prev() == &obj2);
+        CHECK(obj2.prev() == &obj5);
+        CHECK(obj5.prev() == &obj4);
+        CHECK(obj4.prev() == &obj1);
+        CHECK(obj1.prev() == NULL);
+    }
+
+    TEST(testDLinkedObjChain3Next)
+    {
+        DLinkedObj obj1, obj2, obj3;
+        DLinkedObj obj4, obj5, obj6;
+        obj1.addNext(&obj2);
+        obj2.addNext(&obj3);
+
+        obj4.addNext(&obj5);
+        obj5.addNext(&obj6);
+
+        obj1.addNext(&obj4, &obj6);
+
+        CHECK(obj1.next() == &obj4);
+        CHECK(obj4.next() == &obj5);
+        CHECK(obj5.next() == &obj6);
+        CHECK(obj6.next() == &obj2);
+        CHECK(obj2.next() == &obj3);
+        CHECK(obj3.next() == NULL);
+
+
+        CHECK(obj3.prev() == &obj2);
+        CHECK(obj2.prev() == &obj6);
+        CHECK(obj6.prev() == &obj5);
+        CHECK(obj5.prev() == &obj4);
+        CHECK(obj4.prev() == &obj1);
+        CHECK(obj1.prev() == NULL);
+
+    }
+
+    TEST(testDLinkedObjChain3Prev)
+    {
+        DLinkedObj obj1, obj2, obj3;
+        DLinkedObj obj4, obj5, obj6;
+        obj1.addNext(&obj2);
+        obj2.addNext(&obj3);
+
+        obj4.addNext(&obj5);
+        obj5.addNext(&obj6);
+
+        obj1.addPrev(&obj4, &obj6);
+
+        CHECK(obj4.next() == &obj5);
+        CHECK(obj5.next() == &obj6);
+        CHECK(obj6.next() == &obj1);
+        CHECK(obj1.next() == &obj2);
+        CHECK(obj2.next() == &obj3);
+        CHECK(obj3.next() == NULL);
+
+        CHECK(obj3.prev() == &obj2);
+        CHECK(obj2.prev() == &obj1);
+        CHECK(obj1.prev() == &obj6);
+        CHECK(obj6.prev() == &obj5);
+        CHECK(obj5.prev() == &obj4);
+        CHECK(obj4.prev() == NULL);
+    }
+
 }
 
 #endif

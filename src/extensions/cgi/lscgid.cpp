@@ -660,6 +660,11 @@ static int new_conn(int fd)
     return pid;
 }
 
+static int s_got_sigchild = 0;
+
+
+static void processSigchild();
+
 
 static int run(int fdServerSock)
 {
@@ -683,6 +688,8 @@ static int run(int fdServerSock)
             if (getppid() != s_parent)
                 return 1;
         }
+        if (s_got_sigchild)
+            processSigchild();
     }
     return 0;
 }
@@ -704,6 +711,13 @@ static void sigusr1(int sig)
 
 static void sigchild(int sig)
 {
+    s_got_sigchild = 1;
+}
+
+
+static void processSigchild()
+{
+    s_got_sigchild = 0;
     int status[2];
     while (1)
     {

@@ -135,7 +135,7 @@ public:
                 if (m_queue.empty())
                 {
                     m_iWaiting++;
-                    m_ready.wait(&m_mutex, lMilliSec);
+                    m_ready.wait(m_mutex.get(), lMilliSec);
                     m_iWaiting--;
                 }
                 ret = doGet(pWork, size);
@@ -182,6 +182,11 @@ public:
     {
         LockMutex lock(m_mutex);
         m_bShutdown = false;
+    }
+
+    int empty()
+    {
+        return m_queue.empty();
     }
 };
 

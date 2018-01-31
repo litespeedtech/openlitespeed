@@ -35,6 +35,7 @@ int ls_futex_setup(ls_mutex_t *p)
 #endif
 
     *((int *)p) = LS_LOCK_AVAIL;
+    LS_TH_CREATE(p);
     return 0;
 }
 
@@ -49,6 +50,7 @@ int ls_futex_setup(ls_mutex_t *p)
 int ls_atomic_spin_setup(ls_atom_spinlock_t *p)
 {
     *((int *)p) = LS_LOCK_AVAIL;
+    LS_TH_CREATE(p);
     return 0;
 }
 
@@ -80,6 +82,7 @@ int ls_atomic_spin_pidwait(ls_atom_spinlock_t *p)
         waitpid = ls_atomic_casvint(p, LS_LOCK_AVAIL, ls_spin_pid);
         if (waitpid == LS_LOCK_AVAIL)
         {
+            LS_TH_LOCKED(p, 1); // call it a write lock
             return 0;
         }
         else if (waitpid < LS_SPIN_MIN_PID)
@@ -158,6 +161,7 @@ int ls_pspinlock_setup(ls_pspinlock_t   *p)
     if ((!code) || (code == EBUSY))
     {
         // already inited... ok..
+        LS_TH_CREATE(p); // is this right?
         return 0;
     }
     return LS_FAIL;

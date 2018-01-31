@@ -63,7 +63,6 @@ public:
     LsiapiBridge() {};
     ~LsiapiBridge() {};
 
-    static lsi_api_t  g_lsiapiFunctions;
     //static GDataContainer *g_aGDataContainer[LSI_CONTAINER_COUNT];
 
 
@@ -71,8 +70,6 @@ public:
     static void uninitLsiapi();
     //static void checkExpiredGData();
     static void releaseModuleData(int level, LsiModuleData *pData);
-    static lsi_api_t *getLsiapiFunctions()
-    { return &LsiapiBridge::g_lsiapiFunctions; };
 
 };
 

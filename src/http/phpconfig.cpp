@@ -30,12 +30,16 @@ int PHPValue::setValue(const char *pKey, const char *pValue,
 {
     if ((!pKey) || (!pValue))
         return LS_FAIL;
-    m_sKey = pKey;
-    m_sVal = pValue;
     if (iType != PHP_CONF_SYSTEM)
-        m_iType = PHP_CONF_PERDIR;
-    else
-        m_iType = PHP_CONF_SYSTEM;
+        iType = PHP_CONF_PERDIR;
+    int keyLen = strlen(pKey);
+    m_sKey.prealloc(keyLen + 3);
+    char *keyBuf = m_sKey.buf();
+    *keyBuf++ = PHP_CONFIG_ENV;
+    *keyBuf++ = iType;
+    memmove(keyBuf, pKey, keyLen + 1);
+    m_sKey.setLen(keyLen + 2);
+    m_sVal = pValue;
     return 0;
 }
 
@@ -49,13 +53,13 @@ PHPConfig::PHPConfig(const PHPConfig &rhs)
     : m_lsapiEnv(256)
 {
     HashStringMap< PHPValue *>::iterator iter;
-    for (iter = rhs.m_config.begin();
-         iter != rhs.m_config.end();
-         iter = rhs.m_config.next(iter))
+    for (iter = rhs.begin();
+         iter != rhs.end();
+         iter = rhs.next(iter))
     {
         PHPValue *pVal = new PHPValue(*(iter.second()));
         if (pVal)
-            m_config.insert(pVal->getKey(), pVal);
+            insert(pVal->getConfigKey(), pVal);
     }
     buildLsapiEnv();
 }
@@ -63,7 +67,7 @@ PHPConfig::PHPConfig(const PHPConfig &rhs)
 
 PHPConfig::~PHPConfig()
 {
-    m_config.release_objects();
+    release_objects();
 }
 
 
@@ -74,12 +78,12 @@ int PHPConfig::merge(const PHPConfig *pParent)
     if (!pParent)
         return 0;
     HashStringMap< PHPValue *>::iterator iter, iter1;
-    for (iter = pParent->m_config.begin();
-         iter != pParent->m_config.end();
-         iter = pParent->m_config.next(iter))
+    for (iter = pParent->begin();
+         iter != pParent->end();
+         iter = pParent->next(iter))
     {
-        iter1 = m_config.find(iter.first());
-        if (iter1 != m_config.end())
+        iter1 = find(iter.first());
+        if (iter1 != end())
         {
             short parentType = iter.second()->getType();
             if ((parentType == PHP_CONF_SYSTEM) &&
@@ -93,7 +97,7 @@ int PHPConfig::merge(const PHPConfig *pParent)
         {
             PHPValue *pVal = new PHPValue(*(iter.second()));
             if (pVal)
-                m_config.insert(pVal->getKey(), pVal);
+                insert(pVal->getConfigKey(), pVal);
         }
     }
     return 1;
@@ -149,9 +153,8 @@ int PHPConfig::parse(int id, const char *pArgs,
     else
         iType = PHP_CONF_PERDIR;
 
-    HashStringMap< PHPValue *>::iterator iter =
-        m_config.find(pArg1);
-    if (iter != m_config.end())
+    iterator iter = find(pArg1);
+    if (iter != end())
     {
         iter.second()->setType(iType);
         iter.second()->setValue(pArg2);
@@ -165,31 +168,22 @@ int PHPConfig::parse(int id, const char *pArgs,
             return 1;
         }
         pVal->setValue(pArg1, pArg2, iType);
-        m_config.insert(pVal->getKey(), pVal);
+        insert(pVal->getConfigKey(), pVal);
     }
     return 0;
 }
 
 int PHPConfig::buildLsapiEnv()
 {
-    char achBufKey[1024];
-    int keyLen;
-    int valLen;
-    HashStringMap< PHPValue *>::iterator iter;
+    iterator iter;
     m_lsapiEnv.clear();
-    for (iter = m_config.begin();
-         iter != m_config.end();
-         iter = m_config.next(iter))
+    for (iter = begin();
+         iter != end();
+         iter = next(iter))
     {
         PHPValue *pVal = iter.second();
-        achBufKey[0] = PHP_CONFIG_ENV;
-        achBufKey[1] = pVal->getType();
-        memccpy(&achBufKey[2], pVal->getKey(), 0, 1021);
-        achBufKey[1023] = 0;
-        keyLen = strlen(achBufKey);
-        valLen = strlen(pVal->getValue());
-        if (LsapiReq::addEnv(&m_lsapiEnv, achBufKey, keyLen,
-                             pVal->getValue(), valLen) == -1)
+        if (LsapiReq::addEnv(&m_lsapiEnv, pVal->getKey(), pVal->getKeyLen(),
+                             pVal->getValue(), pVal->getValLen()) == -1)
             return LS_FAIL;
     }
     return 0;

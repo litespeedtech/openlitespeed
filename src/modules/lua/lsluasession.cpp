@@ -1895,7 +1895,7 @@ static int  LsLuaSessSendHeaders(lua_State *L)
         LsLuaApi::pushstring(L, "Send Headers: Headers already sent.");
         return 2;
     }
-    g_api->end_resp_headers(pSession->getHttpSession());
+    g_api->send_resp_headers(pSession->getHttpSession());
     LsLuaApi::pushinteger(L, 1);
     return 1;
 }

@@ -21,9 +21,11 @@
 #include <http/requestvars.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
+#include <util/blockbuf.h>
 #include <util/gpointerlist.h>
 #include <util/pcregex.h>
 #include <util/stringtool.h>
+#include <util/vmembuf.h>
 
 #include <pcreposix.h>
 
@@ -350,7 +352,7 @@ int Expression::buildPrefix()
                 op = stack.pop_back();
                 push_front(op);
             }
-            if (stack.empty())
+            if (!stack.empty())
             {
                 op = stack.pop_back();
                 delete op;
@@ -371,9 +373,9 @@ int Expression::buildPrefix()
 }
 
 
-SSIComponent::~SSIComponent()
+SsiComponent::~SsiComponent()
 {
-    LinkedObj *pNext, *p1 = m_parsed;
+    LinkedObj *pNext, *p1 = m_pAttrs;
     while (p1)
     {
         pNext = p1->next();
@@ -384,15 +386,15 @@ SSIComponent::~SSIComponent()
 }
 
 
-void SSIComponent::appendPrased(LinkedObj *p)
+void SsiComponent::appendParsed(LinkedObj *p)
 {
     if (!p)
         return;
-    if (!m_parsed)
-        m_parsed = p;
+    if (!m_pAttrs)
+        m_pAttrs = p;
     else
     {
-        LinkedObj *p1 = m_parsed;
+        LinkedObj *p1 = m_pAttrs;
         while (p1->next())
             p1 = p1->next();
         p1->setNext(p);
@@ -400,45 +402,60 @@ void SSIComponent::appendPrased(LinkedObj *p)
 }
 
 
-SSI_If::SSI_If()
-    : m_blockIf(NULL)
-    , m_blockElse(NULL)
-{}
+// Ssi_If::Ssi_If()
+//     : m_blockIf(NULL)
+//     , m_blockElse(NULL)
+// {}
+//
+//
+// Ssi_If::~Ssi_If()
+// {
+//     if (m_blockIf)
+//         delete m_blockIf;
+//     if (m_blockElse)
+//         delete m_blockElse;
+// }
 
 
-SSI_If::~SSI_If()
-{
-    if (m_blockIf)
-        delete m_blockIf;
-    if (m_blockElse)
-        delete m_blockElse;
-}
-
-
-SSIScript::SSIScript()
+SsiScript::SsiScript()
 //    : m_pConfig( NULL )
+    : m_pContent(NULL)
 {
 }
 
 
-SSIScript::~SSIScript()
+SsiScript::~SsiScript()
 {
+    if (m_pContent)
+        delete m_pContent;
 }
 
 
-int SSIScript::append_html_content(const char *pBegin, const char *pEnd)
+int SsiScript::appendHtmlContent(int offset, int len)
 {
-    if ((!m_pCurComponent) ||
-        (m_pCurComponent->getType() != SSIComponent::SSI_String))
+    if (m_pCurComponent)
     {
-        m_pCurComponent = new SSIComponent();
+        if (m_pCurComponent->getContentEndOffset() == offset)
+        {
+            m_pCurComponent->setContentLen(len + m_pCurComponent->getContentLen());
+            return LS_OK;
+        }
+        else
+            m_pCurComponent = NULL;
+    }
+    if ((!m_pCurComponent) ||
+        (m_pCurComponent->getType() != SsiComponent::SSI_String))
+    {
+        m_pCurComponent = new SsiComponent();
         if (!m_pCurComponent)
             return LS_FAIL;
-        m_pCurComponent->setType(SSIComponent::SSI_String);
+        m_pCurComponent->setType(SsiComponent::SSI_String);
         m_pCurBlock->append(m_pCurComponent);
     }
-    m_pCurComponent->getContentBuf()->append(pBegin, pEnd - pBegin);
-    return 0;
+    //m_pCurComponent->getContentBuf()->append( pBegin, pEnd - pBegin );
+    m_pCurComponent->setContentOffset(offset);
+    m_pCurComponent->setContentLen(len);
+    return LS_OK;
 }
 
 
@@ -463,10 +480,10 @@ static int s_SSI_Attrs_len[] =
 {   0, 7, 6, 7, 7, 3, 8, 3, 3, 4, 7, 5, 4, 3, 4, 3, 6  };
 
 
-int SSIScript::getAttr(const char *&pBegin, const char *pEnd,
+int SsiScript::getAttr(const char *&pBegin, const char *pEnd,
                        char *pAttrName, const char *&pValue, int &valLen)
 {
-    while (isspace(*pBegin))
+    while ((pBegin < pEnd) && isspace(*pBegin))
         ++pBegin;
     if (pBegin >= pEnd)
         return -2;
@@ -495,7 +512,7 @@ int SSIScript::getAttr(const char *&pBegin, const char *pEnd,
 }
 
 
-int SSIScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
+int SsiScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
 {
     char achAttr[100];
     const char *pValue;
@@ -509,39 +526,39 @@ int SSIScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
         if (ret == -2)
             break;
         int attr = 1;
-        for (; attr <= SSI_EXPR; attr++)
+        for (; attr <= SSI_ATTR_EXPR; attr++)
         {
             if (strcasecmp(s_SSI_Attrs[attr], achAttr) == 0)
                 break;
         }
-        if (attr > SSI_EXPR)
+        if (attr > SSI_ATTR_EXPR)
         {
             //error: unknown SSI attribute
             continue;
         }
-        if (attr == SSI_ENCODING)
+        if (attr == SSI_ATTR_ENCODING)
         {
-            attr = SSI_ENC_NONE;
-            for (; attr <= SSI_ENC_ENTITY; attr++)
+            attr = SSI_ATTR_ENC_NONE;
+            for (; attr <= SSI_ATTR_ENC_ENTITY; attr++)
             {
                 if ((strncasecmp(s_SSI_Attrs[attr], pValue, valLen) == 0)
                     && (s_SSI_Attrs_len[attr] == valLen))
                     break;
             }
-            if (attr > SSI_ENC_ENTITY)
+            if (attr > SSI_ATTR_ENC_ENTITY)
                 continue;
         }
-        if (attr == SSI_EXPR)
+        if (attr == SSI_ATTR_EXPR)
         {
-            if ((cmd != SSIComponent::SSI_If) &&
-                (cmd != SSIComponent::SSI_Elif))
+            if ((cmd != SsiComponent::SSI_If) &&
+                (cmd != SsiComponent::SSI_Elif))
                 continue;
         }
 
 
         SubstItem *pItem = new SubstItem();
 
-        if (attr == SSI_EXPR)
+        if (attr == SSI_ATTR_EXPR)
         {
             Expression *pExpr = new Expression();
             pExpr->parse(pValue, pValue + valLen);
@@ -549,26 +566,24 @@ int SSIScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
             pItem->setAny(pExpr);
 
         }
-        else if (attr == SSI_ECHO_VAR)
+        else if (attr == SSI_ATTR_ECHO_VAR)
         {
-            if (cmd == SSIComponent::SSI_Set)
+            if (cmd == SsiComponent::SSI_Set)
             {
-                attr = SSI_SET_VAR;
+                attr = SSI_ATTR_SET_VAR;
                 pItem->setType(REF_STRING);
                 pItem->setStr(pValue, valLen);
             }
             else
             {
-                int id = RequestVars::parseBuiltIn(pValue, valLen, 1);
-                if (id == -1)
+                if (pItem->parseServerVar2(pValue, pValue, valLen, 1) == -1)
                 {
-                    id = REF_ENV;
+                    pItem->setType(REF_SSI_VAR);
                     pItem->setStr(pValue, valLen);
                 }
-                pItem->setType(id);
             }
         }
-        else if (attr < SSI_ENC_NONE)
+        else if (attr < SSI_ATTR_ENC_NONE)
         {
             if (memchr(pValue, '$', valLen))
             {
@@ -587,100 +602,155 @@ int SSIScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
         }
         pItem->setSubType(attr);
 
-        m_pCurComponent->appendPrased(pItem);
+        m_pCurComponent->appendParsed(pItem);
 
     }
     return 0;
 }
 
 
-int SSIScript::addBlock(SSI_If *pSSI_If, int is_else)
-{
-    SSIBlock *pBlock = new SSIBlock(m_pCurBlock, pSSI_If);
-    if (!is_else)
-        pSSI_If->setIfBlock(pBlock);
-    else
-        pSSI_If->setElseBlock(pBlock);
-    m_pCurComponent = NULL;
-    m_pCurBlock = pBlock;
-    return 0;
-}
+// int SsiScript::addBlock(Ssi_If *pSSI_If, int is_else)
+// {
+//     SsiBlock *pBlock = new SsiBlock(m_pCurBlock, pSSI_If);
+//     if (!is_else)
+//         pSSI_If->setIfBlock(pBlock);
+//     else
+//         pSSI_If->setElseBlock(pBlock);
+//     m_pCurComponent = NULL;
+//     m_pCurBlock = pBlock;
+//     return 0;
+// }
 
 
-SSI_If *SSIScript::getComponentIf(SSIBlock *&pBlock)
+// Ssi_If *SsiScript::getComponentIf(SsiBlock *&pBlock)
+// {
+//     Ssi_If *pComp = m_pCurBlock->getParentComp();
+//     pBlock = m_pCurBlock->getParentBlock();
+//     while (pComp &&
+//            (pComp->getType() != SsiComponent::SSI_If))
+//     {
+//         pComp = pBlock->getParentComp();
+//         pBlock = pBlock->getParentBlock();
+//     }
+//     return pComp;
+// }
+
+
+int SsiScript::parseIf(int cmd, const char *pBegin, const char *pEnd)
 {
-    SSI_If *pComp = m_pCurBlock->getParentComp();
-    pBlock = m_pCurBlock->getParentBlock();
-    while (pComp &&
-           (pComp->getType() != SSIComponent::SSI_If))
+    int falseBlock = 0;
+    if ((cmd == SsiComponent::SSI_Endif)
+        || (cmd == SsiComponent::SSI_Else)
+        || (cmd == SsiComponent::SSI_Elif))
     {
-        pComp = pBlock->getParentComp();
-        pBlock = pBlock->getParentBlock();
-    }
-    return pComp;
-}
-
-
-int SSIScript::parseIf(int cmd, const char *pBegin, const char *pEnd)
-{
-    if ((cmd == SSIComponent::SSI_Elif) ||
-        (cmd == SSIComponent::SSI_Else))
-    {
-        SSIBlock *pBlock = m_pCurBlock->getParentBlock();
-        SSI_If *pSSI_If = m_pCurBlock->getParentComp();
-        if (!pSSI_If)
+        int blockType = m_pCurBlock->getType();
+        if ((blockType == SsiComponent::SSI_If)
+            || (blockType == SsiComponent::SSI_Else)
+            || (blockType == SsiComponent::SSI_False)
+            || (blockType  == SsiComponent::SSI_Elif))
         {
-            if (cmd == SSIComponent::SSI_Elif)
-            {
-                //Error: Elif block without matching If, treated as If block
-                cmd = SSIComponent::SSI_If;
-            }
-            else
-            {
-                //Error: Else block without matching If, ignore
-                return 0;
-            }
-        }
-        else
-        {
-            m_pCurComponent = pSSI_If;
-            m_pCurBlock = pBlock;
-            addBlock(pSSI_If, 1);
+            m_pCurComponent = m_pCurBlock;
+            m_pCurBlock = m_pCurBlock->getParentBlock();
         }
     }
 
-    if (cmd == SSIComponent::SSI_Endif)
+    if (m_pCurBlock->getType() != SsiComponent::SSI_Switch)
     {
-        SSIBlock *pBlock;
-        SSI_If *pSSI_If = getComponentIf(pBlock);
-        if (!pSSI_If)
-        {
-            //Error: Endif without matching If, ignore
+        if (cmd == SsiComponent::SSI_Else)
+            falseBlock = 1;
+        if (cmd == SsiComponent::SSI_Endif)
             return 0;
-        }
+        if (cmd == SsiComponent::SSI_Elif)
+            cmd = SsiComponent::SSI_If;
+    }
+    if (cmd == SsiComponent::SSI_If)
+    {
+        SsiBlock *pBlock = new SsiBlock(m_pCurBlock);
+        pBlock->setType(SsiComponent::SSI_Switch);
+        m_pCurBlock->append(pBlock);
         m_pCurBlock = pBlock;
-        m_pCurComponent = NULL;
+    }
+
+    if (cmd == SsiComponent::SSI_Endif)
+    {
+        m_pCurComponent = m_pCurBlock;
+        m_pCurBlock = m_pCurBlock->getParentBlock();
         return 0;
     }
+    SsiBlock *pBlock = new SsiBlock(m_pCurBlock);
+    m_pCurBlock->append(pBlock);
+    m_pCurBlock = pBlock;
+    m_pCurComponent = pBlock;
 
-    if ((cmd == SSIComponent::SSI_Elif) ||
-        (cmd == SSIComponent::SSI_If))
+    if (cmd != SsiComponent::SSI_Else)
     {
-        SSI_If *pSSI_If = new SSI_If();
-        m_pCurComponent = pSSI_If;
-        m_pCurComponent->setType(cmd);
-        m_pCurBlock->append(m_pCurComponent);
         while (isspace(*pBegin))
             ++pBegin;
         parseAttrs(cmd, pBegin, pEnd);
-
-        addBlock(pSSI_If, 0);
     }
+    else
+    {
+        if (falseBlock)
+            cmd = SsiComponent::SSI_False;
+    }
+    pBlock->setType(cmd);
+
+    return 0;
+//         SsiBlock *pBlock = m_pCurBlock->getParentBlock();
+//         Ssi_If *pSSI_If = m_pCurBlock->getParentComp();
+//         if (!pSSI_If)
+//         {
+//             if (cmd == SsiComponent::SSI_Elif)
+//             {
+//                 //Error: Elif block without matching If, treated as If block
+//                 cmd = SsiComponent::SSI_If;
+//             }
+//             else
+//             {
+//                 //Error: Else block without matching If, ignore
+//                 return 0;
+//             }
+//         }
+//         else
+//         {
+//             m_pCurComponent = pSSI_If;
+//             m_pCurBlock = pBlock;
+//             addBlock(pSSI_If, 1);
+//         }
+//     }
+
+//     if (cmd == SsiComponent::SSI_Endif)
+//     {
+//         SsiBlock *pBlock;
+//         Ssi_If *pSSI_If = getComponentIf(pBlock);
+//         if (!pSSI_If)
+//         {
+//             //Error: Endif without matching If, ignore
+//             return 0;
+//         }
+//         m_pCurBlock = pBlock;
+//         m_pCurComponent = NULL;
+//         return 0;
+//     }
+
+//     if ((cmd == SsiComponent::SSI_Elif) ||
+//         (cmd == SsiComponent::SSI_If))
+//     {
+//         Ssi_If *pSSI_If = new Ssi_If();
+//         m_pCurComponent = pSSI_If;
+//         m_pCurComponent->setType(cmd);
+//         m_pCurBlock->append(m_pCurComponent);
+//         while (isspace(*pBegin))
+//             ++pBegin;
+//         parseAttrs(cmd, pBegin, pEnd);
+//
+//         addBlock(pSSI_If, 0);
+//     }
     return 0;
 }
 
 
-int SSIScript::parse_ssi_directive(const char *pBegin, const char *pEnd)
+int SsiScript::parseSsiDirective(const char *pBegin, const char *pEnd)
 {
     while (isspace(*pBegin))
         ++pBegin;
@@ -696,7 +766,7 @@ int SSIScript::parse_ssi_directive(const char *pBegin, const char *pEnd)
                 break;
         }
     }
-    if (cmd > SSIComponent::SSI_Endif)
+    if (cmd > SsiComponent::SSI_Endif)
     {
         //error: unknown SSI command
         return LS_FAIL;
@@ -704,32 +774,30 @@ int SSIScript::parse_ssi_directive(const char *pBegin, const char *pEnd)
     pBegin += s_SSI_Cmd_len[cmd] + 1;
     while (isspace(*pBegin))
         ++pBegin;
-    if ((cmd == SSIComponent::SSI_If) ||
-        (cmd == SSIComponent::SSI_Elif) ||
-        (cmd == SSIComponent::SSI_Else) ||
-        (cmd == SSIComponent::SSI_Endif))
+    if ((cmd == SsiComponent::SSI_If) ||
+        (cmd == SsiComponent::SSI_Elif) ||
+        (cmd == SsiComponent::SSI_Else) ||
+        (cmd == SsiComponent::SSI_Endif))
         return parseIf(cmd, pBegin, pEnd);
 
-    m_pCurComponent = new SSIComponent();
+    m_pCurComponent = new SsiComponent();
     if (!m_pCurComponent)
         return LS_FAIL;
     m_pCurComponent->setType(cmd);
     m_pCurBlock->append(m_pCurComponent);
     return parseAttrs(cmd, pBegin, pEnd);
-
-    return 0;
 }
 
 
-int SSIScript::parse(SSITagConfig *pConfig, char *pBegin, char *pEnd,
-                     int finish)
+int SsiScript::parse(SsiTagConfig *pConfig, const char *pBegin,
+                     const char *pEnd, int finish, int curOffset)
 {
     static AutoStr2 sStart("<!--#");
     static AutoStr2 sEnd("-->");
     const AutoStr2 *pattern[2] = { NULL, NULL };
-    char *p = pBegin;
-    char *pTag;
-    char *pContentBegin = pBegin;
+    const char *p = pBegin;
+    const char *pTag;
+    const char *pContentBegin = pBegin;
     if (pConfig)
     {
         pattern[0] = &pConfig->getStartTag();
@@ -750,14 +818,12 @@ int SSIScript::parse(SSITagConfig *pConfig, char *pBegin, char *pEnd,
                        pattern[m_iParserState]->len()) == 0)
             {
                 if (m_iParserState)
-                {
-                    *pTag = 0;
-                    parse_ssi_directive(pContentBegin, pTag);
-                }
+                    parseSsiDirective(pContentBegin, pTag);
                 else
                 {
                     if (pContentBegin != pTag)
-                        append_html_content(pContentBegin, pTag);
+                        appendHtmlContent(pContentBegin - pBegin + curOffset,
+                                          pTag - pContentBegin);
                 }
                 p = pTag + pattern[m_iParserState]->len();
                 pContentBegin = p;
@@ -786,118 +852,132 @@ int SSIScript::parse(SSITagConfig *pConfig, char *pBegin, char *pEnd,
                 p = pEnd + 1 - pattern[m_iParserState]->len();
         }
         if (p > pContentBegin)
-            append_html_content(pContentBegin, p);
+            appendHtmlContent(pContentBegin - pBegin + curOffset,
+                              p - pContentBegin);
         pContentBegin = p;
     }
     return pContentBegin - pBegin;
 }
 
 
-int SSIScript::processSSIFile(SSITagConfig *pConfig, int fd)
+int SsiScript::processSsiFile(SsiTagConfig *pConfig, int fd,
+                              struct stat *pStat)
 {
     int ret;
-    int left;
-    int finish = 0;
+    int finish = 1;
     char *pBegin;
     char *pEnd;
-    char *pBufEnd;
+    int curOffset = 0;
 
-    char achBuf[8192];
-
+    m_lModify = pStat->st_mtime;
+    m_lSize = pStat->st_size;
     m_iParserState = 0;
-    pEnd = pBegin = achBuf;
     m_pCurComponent = NULL;
     m_pCurBlock = &m_main;
 
-    pBufEnd = pBegin + sizeof(achBuf);
-    while (!finish)
-    {
-        ret = ls_fio_read(fd, pEnd, pBufEnd - pEnd);
-        if (ret < pBufEnd - pEnd)
-            finish = 1;
-        if (ret > 0)
-            pEnd += ret;
-        ret = parse(pConfig, pBegin, pEnd, finish);
-        pBegin += ret;
-        left = pEnd - pBegin;
-        if (left > 0)
-        {
-            if (pBegin != achBuf)
-            {
-                memmove(achBuf, pBegin, left);
-                pBegin = achBuf;
-                pEnd = &achBuf[left];
-            }
-        }
-        else
-            pEnd = pBegin = achBuf;
-    }
+    pBegin = (char *)mmap(NULL, pStat->st_size, PROT_READ,
+                          MAP_SHARED | MAP_FILE, fd, 0);
+
+    m_pContent = new VMemBuf();
+    m_pContent->set(VMBUF_FILE_MAP, new MmapBlockBuf(pBegin, pStat->st_size));
+    m_pContent->writeUsed(pStat->st_size);
+
+    pEnd = pBegin + pStat->st_size;
+
+    ret = parse(pConfig, pBegin, pEnd, finish, curOffset);
+
+//     pBufEnd = pBegin + sizeof(achBuf);
+//     while (!finish)
+//     {
+//         ret = ls_fio_read(fd, pEnd, pBufEnd - pEnd);
+//         if (ret < pBufEnd - pEnd)
+//             finish = 1;
+//         if (ret > 0)
+//             pEnd += ret;
+//         ret = parse(pConfig, pBegin, pEnd, finish);
+//         pBegin += ret;
+//         left = pEnd - pBegin;
+//         if (left > 0)
+//         {
+//             if (pBegin != achBuf)
+//             {
+//                 memmove(achBuf, pBegin, left);
+//                 pBegin = achBuf;
+//                 pEnd = &achBuf[left];
+//             }
+//         }
+//         else
+//             pEnd = pBegin = achBuf;
+//     }
     return ret;
 
 }
 
 
-int SSIScript::parse(SSITagConfig *pConfig, const char *pScriptPath)
+int SsiScript::parse(SsiTagConfig *pConfig, const char *pScriptPath)
 {
     struct stat st;
     int fd;
-    int ret;
+    int ret = 0;
     fd = ls_fio_open(pScriptPath, O_RDONLY, 0644);
-    if (fd != -1)
-    {
-        m_sPath.setStr(pScriptPath);
-        if (fstat(fd, &st) == 0)
-        {
-            m_lModify = st.st_mtime;
-            m_lSize = st.st_size;
-        }
-        ret = processSSIFile(pConfig, fd);
-        close(fd);
-        return ret;
-    }
-    else
+    if (fd == -1)
     {
         LS_ERROR("[%s] Failed to open SSI script: %s",
                  pScriptPath, strerror(errno));
+        return LS_FAIL;
     }
-    return LS_FAIL;
+    m_sPath.setStr(pScriptPath);
+    if (fstat(fd, &st) == 0)
+    {
+        if (st.st_size < 10240 * 1024)
+            ret = processSsiFile(pConfig, fd, &st);
+        else
+        {
+            ret = -1;
+            LS_ERROR("[%s] Cannot parse SSI script, file is too big, size: %zd.",
+                     pScriptPath, st.st_size);
+        }
+    }
+    close(fd);
+    return ret;
 
 }
 
 
-int SSIScript::testParse()
+int SsiScript::testParse()
 {
-    SSIScript script;
+    SsiScript script;
     script.parse(NULL, "/home/gwang/proj/httpd/test_data/local_time.shtml");
     return 0;
 }
 
 
-SSIComponent *SSIScript::nextComponent()
-{
-    if (!m_pCurComponent)
-        return NULL;
-    SSIComponent *pComponent = m_pCurComponent;
-    m_pCurComponent = (SSIComponent *)m_pCurComponent->next();
-    while (!m_pCurComponent)
-    {
-        if (m_pCurBlock)
-        {
-            m_pCurComponent = m_pCurBlock->getParentComp();
-            if (m_pCurComponent)
-                m_pCurComponent = (SSIComponent *)m_pCurComponent->next();
-            m_pCurBlock = m_pCurBlock->getParentBlock();
-        }
-        else
-            break;
-    }
-    return pComponent;
-}
+// const SsiComponent *SsiScript::nextComponent(
+//     const SsiComponent  *&pComponent,
+//     const SsiBlock      *&pCurBlock) const
+// {
+//     if (!pComponent)
+//         return NULL;
+//     pComponent = (SsiComponent *)pComponent->next();
+//     while (!pComponent)
+//     {
+//         if (pCurBlock)
+//         {
+//             pComponent = pCurBlock;
+//             pCurBlock = pCurBlock->getParentBlock();
+//             if (pComponent)
+//                 pComponent = (SsiComponent *)pComponent->next();
+//         }
+//         else
+//             break;
+//     }
+//     return pComponent;
+// }
 
 
-void SSIScript::setCurrentBlock(SSIBlock *pBlock)
+void SsiScript::setCurrentBlock(SsiBlock *pBlock)
 {
-    SSIComponent *pComponent = (SSIComponent *)pBlock->head()->next();
+    SsiComponent *pComponent = (SsiComponent *)pBlock->head()->next();
     if (!pComponent)
         return;
     m_pCurBlock = pBlock;

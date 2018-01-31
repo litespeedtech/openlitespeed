@@ -395,7 +395,8 @@ static int verifyApMD5(const char *pStored, const char *pPasswd)
     char result[120];
     const char *pSaltEnd = strchr(pStored + 6, '$');
     if (!pSaltEnd)
-        pSaltEnd = pStored + 14;
+        return 1;
+        //pSaltEnd = pStored + 14;
 
     ApMD5Encode((const unsigned char *)pPasswd,
                 (const unsigned char *)pStored, pSaltEnd - pStored,

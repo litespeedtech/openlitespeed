@@ -45,7 +45,8 @@ static ptwq_t *getPTWQPtr(ls_lfnodei_t *pNode)
 
 static void *testGuaranteed(void *arg)
 {
-    PThreadWorkQueue *pQueue = (PThreadWorkQueue *)arg;
+    Worker * pWorker = (Worker *) arg;
+    PThreadWorkQueue *pQueue = (PThreadWorkQueue *)pWorker->getArg();
     int size = 1;
     ls_lfnodei_t *item;
     CHECK(pQueue->get(&item, size) == 0);
@@ -58,7 +59,9 @@ static void *testGuaranteed(void *arg)
 
 static void *testTry(void *arg)
 {
-    PThreadWorkQueue *pQueue = (PThreadWorkQueue *)arg;
+    Worker * pWorker = (Worker *) arg;
+    PThreadWorkQueue *pQueue = (PThreadWorkQueue *)pWorker->getArg();
+    //PThreadWorkQueue *pQueue = (PThreadWorkQueue *)arg;
     int ret, size = 1;
     ls_lfnodei_t *item;
     ret = pQueue->tryget(&item, size);
@@ -93,8 +96,8 @@ TEST(pthreadworkqueue_test)
 
     CHECK(wq->append(aNodes, PTHREADWORKQUEUE_LOOP_COUNT) == 0);
 
-    worker1.run(wq);
-    worker2.run(wq);
+    worker1.start(wq);
+    worker2.start(wq);
     sched_yield(); //Yield to provide a more random result.
     for (i = 0; i < PTHREADWORKQUEUE_LOOP_COUNT; ++i)
     {
@@ -107,8 +110,8 @@ TEST(pthreadworkqueue_test)
         CHECK(wq->append(aTmpNodes, iTmpSize) == 0);
     }
 
-    worker1.setStop();
-    worker2.setStop();
+    worker1.requestStop();
+    worker2.requestStop();
     CHECK(worker1.join(aRet) == 0);
     CHECK(worker2.join(aRet) == 0);
 
@@ -135,8 +138,8 @@ TEST(pthreadworkqueue_test)
 
     CHECK(wq->append(aNodes, PTHREADWORKQUEUE_LOOP_COUNT) == 0);
 
-    worker1.run(wq);
-    worker2.run(wq);
+    worker1.start(wq);
+    worker2.start(wq);
 
     for (i = 0; i < PTHREADWORKQUEUE_LOOP_COUNT; ++i)
     {
@@ -150,8 +153,8 @@ TEST(pthreadworkqueue_test)
         }
     }
 
-    worker1.setStop();
-    worker2.setStop();
+    worker1.requestStop();
+    worker2.requestStop();
     CHECK(worker1.join(aRet) == 0);
     CHECK(worker2.join(aRet) == 0);
 

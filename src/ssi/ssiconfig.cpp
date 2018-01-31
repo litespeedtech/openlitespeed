@@ -18,24 +18,26 @@
 #include "ssiconfig.h"
 #include <string.h>
 
-SSIConfig::SSIConfig()
+SsiConfig::SsiConfig()
+    : m_iSizeFmt(0)
+    , m_iFlags(0)
 {
 }
 
 
-SSIConfig::~SSIConfig()
+SsiConfig::~SsiConfig()
 {
 }
 
 
-void SSIConfig::setSizeFmt(const char *pVal, int len)
+void SsiConfig::setSizeFmt(const char *pVal, int len)
 {
     if (strncasecmp(pVal, "bytes", 4) == 0)
         m_iSizeFmt = 1;
 }
 
 
-void SSIConfig::copy(const SSIConfig *config)
+void SsiConfig::copy(const SsiConfig *config)
 {
     if (!config)
         return;
@@ -46,6 +48,18 @@ void SSIConfig::copy(const SSIConfig *config)
     if (config->m_sTimeFmt.c_str())
         m_sTimeFmt.setStr(config->m_sTimeFmt.c_str());
     m_iSizeFmt = config->m_iSizeFmt;
+
+}
+
+
+const AutoStr2 *SsiConfig::getErrMsg() const
+{
+    static AutoStr2
+    s_default("[an error occurred while processing this directive]\n");
+    if (m_sErrMsg.c_str())
+        return &m_sErrMsg;
+    else
+        return &s_default;
 
 }
 
