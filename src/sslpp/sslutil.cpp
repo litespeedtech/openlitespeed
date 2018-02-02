@@ -740,8 +740,7 @@ int SslUtil::setCipherList(SSL_CTX *pCtx, const char *pList)
             pBegin = p + 1;
         }
         if (!p || strncasecmp(pList, "ECDHE", 5) != 0
-            || memmem(pList, p - pList, "GCM", 3) == NULL
-            || memmem(pList, p - pList, "SHA384", 6) != NULL)
+            || memmem(pList, p - pList, "GCM", 3) == NULL)
         {
             if (!p)
                 p = ":";
