@@ -140,4 +140,5 @@ static int handlerBeginProcess(const lsi_session_t *session)
 }
 
 lsi_reqhdlr_t myhandler = { handlerBeginProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "test  redirect v1.0", serverHooks };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module,
+    &myhandler, NULL, "test  redirect v1.0", serverHooks };

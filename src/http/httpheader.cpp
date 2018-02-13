@@ -34,8 +34,6 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
     0
 };
 
-static int s_iMaxHdrLen = 0;
-
 const char *HttpHeader::s_pHeaderNames[H_HEADER_END + 1] =
 {
     //Most common headers
@@ -142,29 +140,29 @@ const char *HttpHeader::s_pHeaderNamesLowercase[H_HEADER_END + 1] =
 };
 
 
-static void normalizeHeader(const char *pSrc, char *pDest)
-{
-    int i, len;
-    const char *pTotal, *pDash, *p = pSrc;
-    char *pDestPtr = pDest;
-    if (s_iMaxHdrLen == 0)
-    {
-        for (i = 0; i < HttpHeader::H_HEADER_END + 1; ++i)
-            if (HttpHeader::getHeaderStringLen(i) > s_iMaxHdrLen)
-                s_iMaxHdrLen = HttpHeader::getHeaderStringLen(i);
-    }
-    pTotal = pSrc + s_iMaxHdrLen;
-    while ((pDash = (const char *)memchr(p, '_', pTotal - p)) != NULL)
-    {
-        len = pDash - p;
-        StringTool::strLower(p, pDestPtr, len);
-        pDestPtr += len;
-        *pDestPtr++ = '-';
-        p += len + 1;
-    }
-    len = pTotal - p;
-    StringTool::strLower(p, pDestPtr, len);
-}
+// static void normalizeHeader(const char *pSrc, char *pDest)
+// {
+//     int i, len;
+//     const char *pTotal, *pDash, *p = pSrc;
+//     char *pDestPtr = pDest;
+//     if (s_iMaxHdrLen == 0)
+//     {
+//         for (i = 0; i < HttpHeader::H_HEADER_END + 1; ++i)
+//             if (HttpHeader::getHeaderStringLen(i) > s_iMaxHdrLen)
+//                 s_iMaxHdrLen = HttpHeader::getHeaderStringLen(i);
+//     }
+//     pTotal = pSrc + s_iMaxHdrLen;
+//     while ((pDash = (const char *)memchr(p, '_', pTotal - p)) != NULL)
+//     {
+//         len = pDash - p;
+//         StringTool::strLower(p, pDestPtr, len);
+//         pDestPtr += len;
+//         *pDestPtr++ = '-';
+//         p += len + 1;
+//     }
+//     len = pTotal - p;
+//     StringTool::strLower(p, pDestPtr, len);
+// }
 
 
 size_t HttpHeader::getIndex(const char *pHeader)

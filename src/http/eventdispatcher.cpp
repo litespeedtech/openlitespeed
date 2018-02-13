@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "eventdispatcher.h"
+#include <adns/adns.h>
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
@@ -237,6 +238,7 @@ int EventDispatcher::run()
                 return 1;
             }
         }
+        Adns::getInstance().processPendingEvt();
         processTimerNew();
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
@@ -281,6 +283,7 @@ int EventDispatcher::linger(int timeout)
                 return 1;
             }
         }
+        Adns::getInstance().processPendingEvt();
 #ifdef LS_AIO_USE_SIGNAL
         SigEventDispatcher::processSigEvent();
 #endif

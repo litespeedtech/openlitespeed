@@ -22,7 +22,6 @@
 #include <string.h>
 #include <util/loopbuf.h>
 
-
 #include "ls_caching_headers.h"
 #include "ls_message_handler.h"
 #include "ls_rewrite_driver_factory.h"
@@ -86,9 +85,6 @@
 
 #define MODPAGESPEEDVERSION  "2.1-1.11.33.4"
 
-#define MODPAGESPEEDVERSION_0  MODPAGESPEEDVERSION "-0"
-
-
 #define DBG(session, args...) g_api->log(session, LSI_LOG_DEBUG, args)
 
 #define  POST_BUF_READ_SIZE 65536
@@ -124,7 +120,7 @@ using namespace net_instaweb;
  * ************************************************************************************************/
 
 //All of the parameters should have "pagespeed" as the first word.
-lsi_config_key_s paramArray[] =
+static lsi_config_key_s paramArray[] =
 {
     {"pagespeed", 0, 0},
     {NULL,0,0} //Must have NULL in the last item
@@ -950,15 +946,15 @@ static void FreeConfig(void *_config)
     delete(LsRewriteOptions *) _config;
 }
 
-static void *MergeConfig(void *child, const void *parent)
-{
-    const LsRewriteOptions *parent_options = (LsRewriteOptions *)parent;
-    
-    LsRewriteOptions *options;
-    options = parent_options->Clone();
-    options->Merge(*(LsRewriteOptions *)child);
-    return options;
-}
+// static void *MergeConfig(void *child, const void *parent)
+// {
+//     const LsRewriteOptions *parent_options = (LsRewriteOptions *)parent;
+//     
+//     LsRewriteOptions *options;
+//     options = parent_options->Clone();
+//     options->Merge(*(LsRewriteOptions *)child);
+//     return options;
+// }
 
 
 
@@ -2437,9 +2433,9 @@ static void UpdateEtag(lsi_session_t *session)
         g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0,
                                (const char *) iov[0].iov_base,
                                iov[0].iov_len, LSI_HEADEROP_SET);
-        //If etag not PAGESPEED style, meas not optimized, so not cahce it
-        if (strncasecmp((const char *) iov[0].iov_base, "W/", 2) == 0)
-            g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
+//         //If etag not PAGESPEED style, meas not optimized, so not cahce it
+//         if (strncasecmp((const char *) iov[0].iov_base, "W/", 2) == 0)
+//             g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
     }
 }
 
@@ -3154,8 +3150,8 @@ static int PsHandlerProcess(const lsi_session_t *session)
 
     g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER, 
                            sizeof(PAGESPEED_RESP_HEADER) - 1,
-                           MODPAGESPEEDVERSION_0, 
-                           sizeof(MODPAGESPEEDVERSION_0) - 1,
+                           MODPAGESPEEDVERSION "-0", 
+                           sizeof(MODPAGESPEEDVERSION "-0") - 1,
                            LSI_HEADEROP_SET);
 
 //     //TEST
@@ -3208,7 +3204,6 @@ static int Init(lsi_module_t *pModule)
 
 //#define TEST_UAMATCHER
 #ifdef  TEST_UAMATCHER
-    
     extern void UAMatcherTest();
     UAMatcherTest();
 #endif
@@ -3217,9 +3212,8 @@ static int Init(lsi_module_t *pModule)
 }
 
 
-lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };/*MergeConfig*/
-lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler, &dealConfig,
-                       MODPAGESPEEDVERSION, serverHooks, {0}
-                     };
+static lsi_confparser_t dealConfig = { ParseConfig, FreeConfig, paramArray };/*MergeConfig*/
+static lsi_reqhdlr_t _handler = { PsHandlerProcess, NULL, NULL, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, Init, &_handler,
+                &dealConfig, MODPAGESPEEDVERSION, serverHooks, {0} };
 

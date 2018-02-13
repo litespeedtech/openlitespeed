@@ -325,7 +325,7 @@ static lsi_reqhdlr_t lsjs_mod_handler = { jsHandler, onReadEvent, onWriteEvent ,
 
 static lsi_confparser_t lsjs_mod_config = { LsJsEngine::parseParam, LsJsEngine::removeParam , myParam };
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,
                        &lsjs_mod_handler,
                        &lsjs_mod_config,

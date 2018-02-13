@@ -269,7 +269,8 @@ static int init_module(lsi_module_t *pModule)
     return 0;
 }
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "imgresize", serverHooks};
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module,
+    NULL, NULL, "imgresize", serverHooks};
 
 
 

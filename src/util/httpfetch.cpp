@@ -59,6 +59,7 @@ HttpFetch::HttpFetch()
     , m_pReqBody(NULL)
     , m_iReqBodyLen(0)
     , m_iConnTimeout(20)
+    , m_iRespBodyLen(-1)
     , m_pRespContentType(NULL)
     , m_psProxyServerAddr(NULL)
     , m_pServerAddr(NULL)
@@ -87,8 +88,7 @@ HttpFetch::~HttpFetch()
         free(m_pExtraReqHdrs);
     if (m_pRespContentType)
         free(m_pRespContentType);
-    if (m_pAdnsReq)
-        m_pAdnsReq->setCallback(NULL);
+    setAdnsReq(NULL);
     if (m_psProxyServerAddr)
         free(m_psProxyServerAddr);
     if (m_pServerAddr)
@@ -99,6 +99,22 @@ HttpFetch::~HttpFetch()
     if (m_ssl.getSSL())
         m_ssl.release();
 }
+
+
+void HttpFetch::setAdnsReq(AdnsReq *req)
+{
+    if (m_pAdnsReq == req)
+        return;
+    if (m_pAdnsReq)
+    {
+        m_pAdnsReq->setCallback(NULL);
+        Adns::release(m_pAdnsReq);
+    }
+    if (req)
+        req->incRefCount();
+    m_pAdnsReq = req;
+}
+
 
 void HttpFetch::releaseResult()
 {
@@ -113,6 +129,7 @@ void HttpFetch::releaseResult()
         free(m_pRespContentType);
         m_pRespContentType = NULL;
     }
+    m_iRespBodyLen = -1;
     m_respHeaders.release_objects();
 
 }
@@ -130,11 +147,7 @@ void HttpFetch::reset()
         free(m_pExtraReqHdrs);
         m_pExtraReqHdrs = NULL;
     }
-    if (m_pAdnsReq)
-    {
-        m_pAdnsReq->setCallback(NULL);
-        m_pAdnsReq = NULL;
-    }
+    setAdnsReq(m_pAdnsReq);
     releaseResult();
     m_iStatusCode    = 0;
     m_iReqBufLen     = 0;
@@ -216,8 +229,11 @@ int HttpFetch::initReq(const char *pURL, const char *pBody, int bodyLen,
 int HttpFetch::asyncDnsLookupCb(void *arg, const long lParam, void *pParam)
 {
     HttpFetch *pFetch = (HttpFetch *)arg;
-    if (pFetch)
-        pFetch->m_pAdnsReq = NULL;
+    if (!pFetch)
+        return 0;
+    Adns::setResult(pFetch->m_pServerAddr->get(), pParam, lParam);
+    pFetch->setAdnsReq(NULL);
+
     if (lParam > 0)
     {
         pFetch->startProcess();
@@ -241,9 +257,15 @@ int HttpFetch::startDnsLookup(const char *addrServer)
         ret = m_pServerAddr->set(PF_INET, addrServer, flag);
     }
     else
+    {
+        AdnsReq *req = NULL;
         ret = m_pServerAddr->asyncSet(PF_INET, addrServer, flag,
-                                      asyncDnsLookupCb, this, &m_pAdnsReq );
-
+                                      asyncDnsLookupCb, this, &req);
+        if (req)
+        {
+            setAdnsReq(req);
+        }
+    }
     if (ret == 0)
         return startProcess();
      return ret;
@@ -767,7 +789,7 @@ int HttpFetch::recvResp()
         m_pHttpFetchDriver->continueWrite();
         return 0;
     }
-    while (m_iStatusCode != -1)
+    while (m_iStatusCode >= 0)
     {
         ret = pollEvent(POLLIN, 1);
         if (ret != 1)
@@ -835,7 +857,6 @@ int HttpFetch::recvResp()
                                     (*(pLineBegin + 1) - '0') * 10 +
                                     *(pLineBegin + 2) - '0';
                     m_iReqState = 5;
-                    m_iRespBodyLen = -1;
                 }
                 else
                     break;

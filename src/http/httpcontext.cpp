@@ -834,7 +834,6 @@ const MimeSetting *HttpContext::lookupMimeSetting(char *pValue) const
     const MimeSetting *pSetting = NULL;
     HttpMime *pMIME = m_pInternal->m_pMIME;
     const HttpContext *pCtx = this;
-    StringTool::strLower(pValue, pValue);
     while (pCtx && !pSetting)
     {
         pMIME = pCtx->m_pInternal->m_pMIME;

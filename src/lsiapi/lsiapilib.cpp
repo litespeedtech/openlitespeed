@@ -30,6 +30,8 @@
 #include <http/requestvars.h>
 #include <http/staticfilecachedata.h>
 #include <http/reqparser.h>
+#include <http/clientinfo.h>
+
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
 #include <lsiapi/internal.h>

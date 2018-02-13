@@ -11,39 +11,41 @@ if [ ! -d ../../../../thirdparty ] ; then
    mkdir ../../../../thirdparty
 fi
 
-if [ ! -d ./psol ] ; then
-    ln -sf ../../../../thirdparty/psol psol
+PSOLVERSION=1.11.33.4
+
+USEOLDLIB=no
+
+GCCVER=`gcc -dumpfullversion -dumpversion`
+IFS='.';
+parts=( $GCCVER )
+unset IFS;
+if [ x${parts[2]} = 'x' ] ; then
+    verval=$(( 1000000 * ${parts[0]} + 1000 * ${parts[1]} ))
+else
+    verval=$(( 1000000 * ${parts[0]} + 1000 * ${parts[1]} + ${parts[2]} ))
 fi
 
-if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; then
+if [ $verval -lt 4008000 ] ; then
+    echo "Warning: your gcc $GCCVER is too low(less than 4.8.0) to use PSOL $PSOLVERSION"
+    PSOLVERSION=1.11.33.3
+    echo "         Will use PSOL $PSOLVERSION instead."
+    USEOLDLIB=yes
+else
+    echo
+fi
 
-    PSOLVERSION=1.11.33.4
+if [ "x$1" != "x" ]; then
+   ln -sf ../../../../thirdparty/psol-$PSOLVERSION psol
+fi
 
-    USEOLDLIB=no
 
-    GCCVER=`gcc -dumpfullversion -dumpversion`
-    IFS='.';
-    parts=( $GCCVER )
-    unset IFS;
-    if [ x${parts[2]} = 'x' ] ; then
-        verval=$(( 1000000 * ${parts[0]} + 1000 * ${parts[1]} ))
-    else
-        verval=$(( 1000000 * ${parts[0]} + 1000 * ${parts[1]} + ${parts[2]} ))
-    fi
+cd ../../../../thirdparty
 
-    if [ $verval -lt 4008000 ] ; then
-        echo "Warning: your gcc $GCCVER is too low(less than 4.8.0) to use PSOL $PSOLVERSION"
-        PSOLVERSION=1.11.33.3
-        echo "         Will use PSOL $PSOLVERSION instead."
-        USEOLDLIB=yes
-    else
-        echo
-    fi
+if [ ! -f psol-$PSOLVERSION/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; then
+
 
     TARGET=$PSOLVERSION.tar.gz
 
-    pushd .
-    cd ../../../../thirdparty
 
     DL=`which curl`
     DLCMD="$DL -O -k "
@@ -51,14 +53,14 @@ if [ ! -f psol/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; the
         $DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET
     fi
     tar -xzvf $TARGET # expands to psol/
-    popd
+    mv psol psol-$PSOLVERSION
 
     
     if [ "x$USEOLDLIB" = "xyes" ] ; then
    
     #fix a file which stop the compiling of pagespeed module
     echo .
-    cat << EOF > psol/include/pagespeed/kernel/base/scoped_ptr.h
+    cat << EOF > psol-$PSOLVERSION/include/pagespeed/kernel/base/scoped_ptr.h
 /**
 * Due the compiling issue, this file was updated from the original file.
 */

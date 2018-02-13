@@ -171,7 +171,7 @@ static lsi_serverhook_t server_hooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-lsi_module_t MNAME =
+LSMODULE_EXPORT lsi_module_t MNAME =
 {
     LSI_MODULE_SIGNATURE, init_module, NULL, NULL, "", server_hooks
 };

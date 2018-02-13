@@ -134,8 +134,7 @@ static lsi_serverhook_t serverHooks[] =
 };
 
 static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module, &myhandler, NULL, "v1.0",
-                       serverHooks
-                     };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init_module,
+    &myhandler, NULL, "v1.0", serverHooks };
 
 

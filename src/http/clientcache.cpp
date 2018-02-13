@@ -321,9 +321,11 @@ void ClientCache::dirtyAll()
 static int namelookupCb(void *arg, const long length, void *ip)
 {
     ClientInfo *pInfo = (ClientInfo *)arg;
+    Adns::setResult(pInfo->getAddr(), ip, length);
     pInfo->verifyIp(ip, length);
     return 0;
 }
+
 
 /***
  * host will have a format as host1,host2,...
@@ -363,10 +365,10 @@ static int addrlookupCb(void *arg, const long length, void *hosts)
             pInfo->getHostName(), ipLen, type);
         if (pIp == NULL)
             Adns::getInstance().getHostByName(pInfo->getHostName(), type,
-                                            pInfo->getAddr(), namelookupCb, pInfo);
+                                              namelookupCb, pInfo);
         else
         {
-            addrlookupCb(pInfo, ipLen, (void *)pIp);
+            namelookupCb(pInfo, ipLen, (void *)pIp);
         }
     }
     return 0;

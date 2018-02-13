@@ -21,6 +21,7 @@
 #include <lsdef.h>
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <http/clientinfo.h>
 #include <http/connlimitctrl.h>
 #include <http/hiohandlerfactory.h>
 #include <http/httpaiosendfile.h>
@@ -1837,5 +1838,35 @@ int NtwkIOLink::isFromLocalAddr() const
     const struct sockaddr *pServer = (struct sockaddr *) achAddr;
     const struct sockaddr *pClient =  getClientInfo()->getAddr();
     return (GSockAddr::compareAddr(pServer, pClient) == 0);
+}
+
+bool NtwkIOLink::allowWrite() const
+{
+    return m_pClientInfo->allowWrite();
+}
+
+bool NtwkIOLink::allowRead() const
+{
+    return m_pClientInfo->allowRead();
+}
+
+const char *NtwkIOLink::getPeerAddrString() const
+{
+    return m_pClientInfo->getAddrString();
+}
+
+int NtwkIOLink::getPeerAddrStrLen() const
+{
+    return m_pClientInfo->getAddrStrLen();
+}
+
+const struct sockaddr *NtwkIOLink::getPeerAddr() const
+{
+    return m_pClientInfo->getAddr();
+}
+
+ThrottleControl *NtwkIOLink::getThrottleCtrl() const
+{
+    return  &(m_pClientInfo->getThrottleCtrl());
 }
 

@@ -232,6 +232,9 @@ static int testparam_init(lsi_module_t *pModule)
     return 0;
 }
 
-lsi_reqhdlr_t testparam_myhandler = { testparam_handlerBeginProcess, NULL, NULL, NULL };
-lsi_confparser_t testparam_dealConfig = { testparam_parseConfig, testparam_freeConfig, myParam };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init, &testparam_myhandler, &testparam_dealConfig, "Version 1.1", serverHooks };
+lsi_reqhdlr_t testparam_myhandler = { testparam_handlerBeginProcess, NULL,
+    NULL, NULL };
+lsi_confparser_t testparam_dealConfig = { testparam_parseConfig,
+    testparam_freeConfig, myParam };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, testparam_init,
+    &testparam_myhandler, &testparam_dealConfig, "Version 1.1", serverHooks };

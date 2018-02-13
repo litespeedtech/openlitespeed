@@ -25,7 +25,7 @@ class Adns;
 
 typedef void (* addrLookupCbV4)(struct dns_ctx *, struct dns_rr_a4 *, void *);
 typedef void (* addrLookupCbV6)(struct dns_ctx *, struct dns_rr_a6 *, void *);
-typedef int (* lookup_pf)(void *arg, const long lParam, void *pParam);
+typedef int (* lookup_pf)(void *arg, long lParam, void *pParam);
 typedef void (* unknownCb)();
 
 class AdnsReq
@@ -33,12 +33,23 @@ class AdnsReq
     friend class Adns;
 public:
     AdnsReq()
-       : type(0)
-       , cb(NULL)
+       : cb(NULL)
        , name(NULL)
        , arg(NULL)
        , start_time(0)
+       , ref_count(1)
+       , type(0)
        {}
+
+
+    void **getArgAddr()                     {   return &arg;        }
+    time_t getStartTime()                   {   return start_time;  }
+
+    void setCallback(lookup_pf callback)    {   cb = callback;      }
+    unsigned short getRefCount() const      {   return ref_count;   }
+    void incRefCount()                      {   ++ref_count;        }
+
+private:
 
     ~AdnsReq()
     {
@@ -46,18 +57,12 @@ public:
             free(name);
     }
 
-    void **getArgAddr()                     {   return &arg;        }
-    time_t getStartTime()                   {   return start_time;  }
-
-    void setCallback(lookup_pf callback)    {   cb = callback;      }
-
-private:
-    int              type;//PF_INET, PF_INET6
     lookup_pf        cb;
-    struct sockaddr *result;
     char            *name;
     void            *arg;
     long             start_time;
+    unsigned short   ref_count;
+    unsigned short   type;//PF_INET, PF_INET6
 };
 
 
@@ -81,11 +86,14 @@ public:
     //Sync mode, return the ip
     const char *getHostByNameInCache( const char * pName, int &length, int type );
     //Async mode, when done will call the cb
-    AdnsReq *getHostByName(const char * pName, int type, struct sockaddr *result,
-                           lookup_pf cb, void *arg);
+    AdnsReq *getHostByName(const char * pName, int type, lookup_pf cb, void *arg);
 
     const char *getHostByAddrInCache( const struct sockaddr * pAddr, int &length );
     AdnsReq *getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_pf cb );
+    
+    static int setResult(struct sockaddr *result, const void *ip, int len);
+    static void release(AdnsReq *pReq);
+    
 
     int  handleEvents( short events );
     void onTimer();
@@ -96,6 +104,16 @@ public:
 
     LsShmHash  *getShmHash()    {   return m_pShmHash;  }
     void       checkCacheTTL();
+    
+    void       processPendingEvt()  
+    {
+        if (m_iPendingEvt)
+        {
+            checkDnsEvents();
+            m_iPendingEvt = 0;
+        }
+    }
+    
 private:
     Adns();
     ~Adns();
@@ -108,7 +126,8 @@ private:
 
 
     struct dns_ctx *    m_pCtx;
-    int                 m_iCounter;
+    short               m_iCounter;
+    short               m_iPendingEvt;
     LsShmHash          *m_pShmHash;
     time_t              m_tmLastTrim;
 

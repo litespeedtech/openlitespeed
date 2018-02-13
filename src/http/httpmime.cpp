@@ -91,11 +91,11 @@ static AutoStr2 *getMIME(const char *pMIME)
 //}
 
 
-static const char SEPARATORS[] =
-{
-    '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?', '=',
-    '{', '}', ' ', '\t'
-};
+// static const char SEPARATORS[] =
+// {
+//     '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?', '=',
+//     '{', '}', ' ', '\t'
+// };
 
 
 static bool isValidToken(const char *pToken, int len)
@@ -424,6 +424,7 @@ MIMEMap::iterator MIMEMap::findSubMap(const char *pMIME, char *&p) const
     if (!p)
         return end();
     *p = 0;
+    StringTool::strLower(pMIME, (char *)pMIME);
     iterator iter = find(pMIME);
     *p = '/';
     return iter;

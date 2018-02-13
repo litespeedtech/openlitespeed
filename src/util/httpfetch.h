@@ -91,6 +91,7 @@ class HttpFetch
     int startProcess();
     static int asyncDnsLookupCb(void *arg, const long lParam, void *pParam);
     int startDnsLookup(const char *addrServer);
+    void setAdnsReq(AdnsReq *req);
 
     int connectSSL();
 

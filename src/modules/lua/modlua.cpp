@@ -286,7 +286,7 @@ static lsi_confparser_t lslua_mod_config = { LsLuaEngine::parseParam,
                                              myParam
                                            };
 
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE,
                        _init,
                        &lslua_mod_handler,
                        &lslua_mod_config,

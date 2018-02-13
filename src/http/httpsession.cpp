@@ -45,6 +45,7 @@
 #include <http/staticfilecachedata.h>
 #include <http/userdir.h>
 #include <http/vhostmap.h>
+#include <http/clientinfo.h>
 #include "reqparser.h"
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
@@ -949,8 +950,8 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
 
 int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
 {
-    HttpContext *pContext = pVHost->getContext(m_request.getURI(),
-                            m_request.getURILen(), 0);
+    const HttpContext *pContext = pVHost->bestMatch(m_request.getURI(), 
+                                                    m_request.getURILen());
     LS_DBG_L(getLogSession(),
              "Request web socket upgrade, VH name: [%s] URI: [%s]",
              pVHost->getName(), m_request.getURI());

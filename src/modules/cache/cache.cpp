@@ -58,7 +58,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.55"
+#define MODULE_VERSION_INFO         "1.56"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -178,7 +178,7 @@ struct MyMData
 };
 
 
-lsi_config_key_t paramArray[] =
+static lsi_config_key_t paramArray[] =
 {
     /***
      * The id is base on 0, added some just for reference
@@ -890,14 +890,16 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
         *pEntry = pDirHashCacheStore->getCacheEntry(*cePublicHash,
                   &myData->cacheKey, pConfig->getMaxStale(), -1);
         myData->cacheKey.m_ipLen = savedIpLen;
-        if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating()))
-            return CE_STATE_HAS_PUBLIC_CACHE;
-
-        if (*pEntry && (*pEntry)->isStale() && !(*pEntry)->isUpdating())
+        if (*pEntry)
         {
-            myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                             myData->cePublicHash, &myData->cacheKey, 0);
-            return CE_STATE_UPDATE_STALE;
+            if ((*pEntry)->isStale() && !(*pEntry)->isUpdating())
+            {
+                myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
+                                 myData->cePublicHash, &myData->cacheKey, 0);
+                return CE_STATE_UPDATE_STALE;
+            }
+            else
+                return CE_STATE_HAS_PUBLIC_CACHE;
         }
     }
 
@@ -1007,7 +1009,7 @@ void getRespHeader(const lsi_session_t *session, int header_index, char **buf,
     }
 }
 
-static int bypassUrimapHook(lsi_param_t *rec)
+static int bypassUrimapHook(lsi_param_t *rec, MyMData *myData)
 {
 #ifdef USE_RECV_REQ_HEADER_HOOK
     if (g_api->get_hook_level(rec) == LSI_HKPT_RCVD_REQ_HEADER)
@@ -1016,6 +1018,9 @@ static int bypassUrimapHook(lsi_param_t *rec)
         g_api->enable_hook(rec->session, &MNAME, 0, &disableHkpt, 1);
     }
 #endif
+
+    if (myData)
+        g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP, releaseMData);
     return 0;
 }
 
@@ -1290,6 +1295,15 @@ static int createEntry(lsi_param_t *rec)
                        ModuleNameStr);
             return 0;
         }
+    }
+    
+    
+    if (myData->cacheCtrl.isCacheOff())
+    {
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s] createEntry abort due to cache is off.\n", ModuleNameStr);
+        return 0;
     }
 
     if (myData->cacheCtrl.isPrivateCacheable())
@@ -1809,20 +1823,43 @@ MyMData *createMData(lsi_param_t *rec)
                                rec->session, &MNAME);
     int flag = getControlFlag(pConfig);
     myData->cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
-    
     myData->pConfig = (CacheConfig *)g_api->get_config(rec->session, &MNAME);
+    int uriLen = g_api->get_req_org_uri(rec->session, NULL, 0);
+    if (uriLen > 0)
+    {
+        char host[512] = {0};
+        int hostLen = g_api->get_req_var_by_id(rec->session,
+                                               LSI_VAR_SERVER_NAME, host, 512);
+        char port[12] = {0};
+        int portLen = g_api->get_req_var_by_id(rec->session,
+                                               LSI_VAR_SERVER_PORT, port, 12);
+
+        //host:port uri
+        char *uri = new char[uriLen + hostLen + portLen + 2];
+        strncpy(uri, host, hostLen);
+        uri[hostLen] = ':';
+        strncpy(uri + hostLen + 1, port, portLen);
+        g_api->get_req_org_uri(rec->session, uri + hostLen + 1 + portLen,
+                               uriLen + 1);
+        uriLen += (hostLen + 1 + portLen); //Set the the right uriLen
+        uri[uriLen] = 0x00; //NULL terminated
+        myData->pOrgUri = uri;
+    }
+
     return myData;
 }
 
 static int checkAssignHandler(lsi_param_t *rec)
 {
+    MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
+                      LSI_DATA_HTTP);
     CacheConfig *pConfig = (CacheConfig *)g_api->get_config(
                                rec->session, &MNAME);
     if (!pConfig)
     {
         g_api->log(rec->session, LSI_LOG_ERROR,
                    "[%s]checkAssignHandler error 2.\n", ModuleNameStr);
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, myData);
     }
 
     int uriLen = g_api->get_req_org_uri(rec->session, NULL, 0);
@@ -1830,16 +1867,16 @@ static int checkAssignHandler(lsi_param_t *rec)
     {
         g_api->log(rec->session, LSI_LOG_ERROR,
                    "[%s]checkAssignHandler error 1.\n", ModuleNameStr);
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, myData);
     }
 
     int cur_uri_len;
     const char *cur_uri = g_api->get_req_uri(rec->session, &cur_uri_len);
     if (isUrlExclude(rec->session, pConfig, cur_uri, cur_uri_len))
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, myData);
 
     if (isDomainExclude(rec->session, pConfig))
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, myData);
 
     char httpMethod[10] = {0};
     int method = getHttpMethod(rec, httpMethod);
@@ -1854,7 +1891,7 @@ static int checkAssignHandler(lsi_param_t *rec)
         g_api->log(rec->session, LSI_LOG_DEBUG,
                    "[%s]checkAssignHandler returned, method %s[%d].\n",
                    ModuleNameStr, httpMethod, method);
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, myData);
     }
 
     //If it is range request, quit
@@ -1866,7 +1903,7 @@ static int checkAssignHandler(lsi_param_t *rec)
         g_api->log(rec->session, LSI_LOG_DEBUG,
                    "[%s]checkAssignHandler returned, not support rangeRequest [%s].\n",
                    ModuleNameStr, rangeRequest);
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, myData);
     }
 
     CacheCtrl cacheCtrl;
@@ -1900,33 +1937,12 @@ static int checkAssignHandler(lsi_param_t *rec)
         }
     }
 
-    MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
-                      LSI_DATA_HTTP);
+    
     if (myData == NULL)
         myData = createMData(rec);
 
-    char host[512] = {0};
-    int hostLen = g_api->get_req_var_by_id(rec->session,
-                                           LSI_VAR_SERVER_NAME, host, 512);
-    char port[12] = {0};
-    int portLen = g_api->get_req_var_by_id(rec->session,
-                                           LSI_VAR_SERVER_PORT, port, 12);
-
-    //host:port uri
-    char *uri = new char[uriLen + hostLen + portLen + 2];
-    strncpy(uri, host, hostLen);
-    uri[hostLen] = ':';
-    strncpy(uri + hostLen + 1, port, portLen);
-    g_api->get_req_org_uri(rec->session, uri + hostLen + 1 + portLen,
-                           uriLen + 1);
-    uriLen += (hostLen + 1 + portLen); //Set the the right uriLen
-    uri[uriLen] = 0x00; //NULL terminated
-
-    
     myData->pConfig = pConfig;
-    myData->pOrgUri = uri;
     myData->iMethod = method;
-    
 
     //Set to true but not the below just for not to re-check cache state or
     //re-store it
@@ -1934,7 +1950,7 @@ static int checkAssignHandler(lsi_param_t *rec)
     bool doPublic = true;
     myData->iCacheState = lookUpCache(rec, myData,
                                    cacheCtrl.getFlags() & CacheCtrl::no_vary,
-                                   myData->pOrgUri, uriLen,
+                                   myData->pOrgUri, strlen(myData->pOrgUri),
                                    myData->pConfig->getStore(),
                                    &myData->cePublicHash,
                                    &myData->cePrivateHash,
@@ -1961,7 +1977,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                                     releaseMData);
         }
         disableRcvdRespHeaderFilter(rec);
-        return bypassUrimapHook(rec);
+        return bypassUrimapHook(rec, NULL);
     }
 
 
@@ -2003,7 +2019,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                            ModuleNameStr);
             }
             disableRcvdRespHeaderFilter(rec);
-            bypassUrimapHook(rec);
+            bypassUrimapHook(rec, NULL);
         }
         else
         {
@@ -2027,7 +2043,7 @@ static int checkAssignHandler(lsi_param_t *rec)
             //g_api->set_session_hook_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
             g_api->log(rec->session, LSI_LOG_DEBUG,
                        "[%s]checkAssignHandler Add Hooks.\n", ModuleNameStr);
-            bypassUrimapHook(rec);
+            bypassUrimapHook(rec, NULL);
         }
         else
         {
@@ -2475,7 +2491,7 @@ static int handlerProcess(const lsi_session_t *session)
 
 lsi_reqhdlr_t cache_handler = { handlerProcess, NULL, NULL, NULL };
 lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
                        &cacheDealConfig, MODULE_VERSION_INFO, serverHooks, {0}
                      };
 

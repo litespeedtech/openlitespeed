@@ -143,6 +143,6 @@ static lsi_serverhook_t server_hooks[] =
 };
 
 lsi_confparser_t _dealConfig = { _parseConfig, _freeConfig, myParam };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, &_dealConfig,
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, _init, NULL, &_dealConfig,
                        MODULE_VERSION_INFO, server_hooks, {0} };
 

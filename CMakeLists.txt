@@ -41,8 +41,7 @@ find_package(EXPAT REQUIRED)
 #find_package(OpenSSL REQUIRED)
 
 
-execute_process( COMMAND ${PROJECT_SOURCE_DIR}/dlossl.sh )
-execute_process( COMMAND ${PROJECT_SOURCE_DIR}/src/modules/pagespeed/dlpsol.sh )
+#execute_process( COMMAND ${PROJECT_SOURCE_DIR}/dlossl.sh )
 
 ##########################################################################################
 #If you want to link libUnitTest++, just un-comment out the following commands

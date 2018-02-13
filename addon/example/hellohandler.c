@@ -39,6 +39,6 @@ static int begin_process(const lsi_session_t *session)
  * the first function pointer should not be NULL
  */
 static lsi_reqhdlr_t myhandler = { begin_process, NULL, NULL, NULL };
-lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL };
+LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, NULL, &myhandler, NULL };
 
 

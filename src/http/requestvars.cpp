@@ -27,6 +27,8 @@
 #include <http/httpvhost.h>
 #include <http/iptogeo.h>
 #include <http/iptoloc.h>
+#include <http/clientinfo.h>
+
 #include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <ssi/ssiruntime.h>

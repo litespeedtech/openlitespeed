@@ -29,6 +29,9 @@
 #include <stdarg.h>
 
 
+#define LSMODULE_EXPORT  __attribute__ ((visibility ("default")))
+
+
 /**
  * @file ls.h
  */

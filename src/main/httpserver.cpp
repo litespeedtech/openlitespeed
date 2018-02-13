@@ -70,6 +70,7 @@
 #include <http/staticfilecachedata.h>
 #include <http/stderrlogger.h>
 #include <http/vhostmap.h>
+#include <http/clientinfo.h>
 
 #include <log4cxx/appender.h>
 #include <log4cxx/logger.h>
@@ -2425,9 +2426,6 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         HttpServer::getInstance().getServerContext().setGeoIP(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpGeo", 0, 1, 0));
 
-        HttpServer::getInstance().getServerContext().setIpToLoc(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpToLoc", 0, 1, 0));
-
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "useIpInProxyHeader", 0, 2, 0));
@@ -2990,18 +2988,27 @@ int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 
 int HttpServerImpl::configIpToLoc(const XmlNode *pNode)
 {
-    const XmlNodeList *pList = pNode->getChildren("iptolocDB");
+    const XmlNode *p = pNode->getChild("ip2locDB");
 
-    if ((!pList) || (pList->size() == 0))
+    if (!p)
         return 0;
 
 #ifdef USE_IP2LOCATION
+    LS_DBG_H("Try to configure IP2Location.");
     IpToLoc *pIpToLoc = new IpToLoc();
 
     if (!pIpToLoc)
+    {
+        LS_NOTICE("Failed to create IpToLoc instance.");
         return LS_FAIL;
-    if (pIpToLoc->config(pList) == -1)
+    }
+    if (pIpToLoc->config(p) == LS_FAIL)
         delete pIpToLoc;
+    else
+    {
+        LS_DBG_H("Successfully set up an IP2Location DB!");
+        m_serverContext.setIpToLoc(1);
+    }
 #endif
 
     return 0;

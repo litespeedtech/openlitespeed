@@ -393,37 +393,24 @@ int IpToLoc::lookUp(const char *pIpStr, int ipStrLen, LocInfo *pInfo)
 }
 
 
-int IpToLoc::config(const XmlNodeList *pList)
+int IpToLoc::config(const XmlNode *pNode)
 {
-    XmlNodeList::const_iterator iter;
-    int succ = 0;
+    const char * pFile = pNode->getChildValue( "ip2locDBFile" );
+    char achBufFile[MAX_PATH_LEN];
 
-    for (iter = pList->begin(); iter != pList->end(); ++iter)
+    if (pFile && ConfigCtx::getCurConfigCtx()->getValidFile(achBufFile,
+                pFile, "IP2Location DB") != 0)
     {
-        XmlNode *p = *iter;
-        const char *pFile = p->getValue();
-        char achBufFile[MAX_PATH_LEN];
-
-        if ((!pFile) ||
-            (ConfigCtx::getCurConfigCtx()->getValidFile(achBufFile, pFile,
-                    "IpToLoc DB") != 0))
-            continue;
-
-        if (setIpToLocDbFile(achBufFile, p->getChildValue("iptolocDBCache")) == 0)
-            succ = 1;
-    }
-
-    if (succ)
-    {
-        IpToLoc::setIpToLoc(this);
-    }
-    else
-    {
-        LS_WARN(ConfigCtx::getCurConfigCtx(),
-                "Failed to setup a valid IP2Location DB file, Geolocation is disabled!");
+        LS_WARN("IP2Location DB File not valid.");
         return LS_FAIL;
     }
-    return 0;
+    if (setIpToLocDbFile(achBufFile, pNode->getChildValue("ip2locDBCache")) != 0)
+    {
+        LS_WARN("Failed to setup IP2Location, IP2Location is disabled!");
+        return LS_FAIL;
+    }
+    setIpToLoc(this);
+    return LS_OK;
 }
 
 #endif // USE_IP2LOCATION
