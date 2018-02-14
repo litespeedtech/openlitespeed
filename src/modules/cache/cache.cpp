@@ -1461,8 +1461,9 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     }
 
     const char *phandlerType = g_api->get_req_handler_type(rec->session);
-    if (needGzip && phandlerType && memcmp("static", phandlerType, 6) == 0 &&
-         sb.st_size > 0 && sb.st_size < 200)
+    if (needGzip && phandlerType && strlen(phandlerType) == 6 &&
+        memcmp("static", phandlerType, 6) == 0 &&
+        sb.st_size > 0 && sb.st_size < 200)
         needGzip = false;
 
     if (needGzip)
