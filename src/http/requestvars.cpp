@@ -1279,7 +1279,7 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
 
     pSession->addEnv(pName, nameLen, pValue, valLen);
 
-    LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%s' ", pName, pValue);
+    LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%.*s' ", pName, valLen, pValue);
     return 0;
 }
 
