@@ -88,8 +88,7 @@ int SsiEngine::beginExecute(HttpSession *pSession,
         //pSession->setupChunkOS( 0 );
         if (!pSession->getResp()->getRespHeaders()
             .isHeaderSet(HttpRespHeaders::H_CONTENT_TYPE))
-            HttpCgiTool::processContentType(pReq, pSession->getResp(),
-                                            ct , 9);
+            HttpCgiTool::processContentType( pSession, ct , 9);
         //pSession->setupRespCache();
         if (pReq->isXbitHackFull() || pRuntime->getConfig()->isLastModOn())
             pSession->getResp()->appendLastMod(pReq->getLastMod());

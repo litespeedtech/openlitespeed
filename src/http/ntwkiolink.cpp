@@ -810,7 +810,7 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
             pThis->m_iPeerShutdown |= IO_COUNTED;
             LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %zd.",
                      ConnLimitCtrl::getInstance().availConn(),
-                     (int)pThis->m_pClientInfo->getConns());
+                     pThis->m_pClientInfo->getConns());
         }
     }
 //    pThis->closeSocket();
@@ -1521,6 +1521,8 @@ int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri,
 
 #ifdef OPENSSL_IS_BORINGSSL
 #include <openssl/internal.h>
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
+#include <openssl/ssl_local.h>
 #endif
 void NtwkIOLink::handle_acceptSSL_EIO_Err()
 {
@@ -1539,6 +1541,8 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->rbuf;
     length = read_buffer.len;
     p = (char *)read_buffer.buf + read_buffer.offset;
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
+    length = BIO_get_mem_data(m_ssl.getSSL()->s3->handshake_buffer, &p)
 #else
     length = m_ssl.getSSL()->packet_length;
     p = (char *)m_ssl.getSSL()->packet;

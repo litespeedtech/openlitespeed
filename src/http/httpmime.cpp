@@ -425,6 +425,7 @@ MIMEMap::iterator MIMEMap::findSubMap(const char *pMIME, char *&p) const
     if (!p)
         return end();
     *p = 0;
+    StringTool::strLower(pMIME, (char *)pMIME);
     iterator iter = find(pMIME);
     *p = '/';
     return iter;

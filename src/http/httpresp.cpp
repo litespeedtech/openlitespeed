@@ -22,6 +22,7 @@
 // #include <http/httpheader.h> //setheader commented out.
 #include <http/httpreq.h>
 #include <lsr/ls_strtool.h>
+#include <util/autostr.h>
 #include <util/datetime.h>
 #include <util/gzipbuf.h>
 #include <util/stringtool.h>
@@ -85,29 +86,46 @@ void HttpResp::appendContentLenHeader()
 }
 
 
+int HttpResp::addExpiresHeader(time_t lastMod, const ExpiresCtrl *pExpires)
+{
+    char achTmp[128];
+    time_t expire;
+    int    age;
+    if (m_respHeaders.isHeaderSet(HttpRespHeaders::H_CACHE_CTRL))
+        return 0;
+    switch (pExpires->getBase())
+    {
+    case EXPIRES_ACCESS:
+        age = pExpires->getAge();
+        expire = DateTime::s_curTime + age;
+        break;
+    case EXPIRES_MODIFY:
+        expire = lastMod + pExpires->getAge();
+        age = (int)expire - (int)DateTime::s_curTime;
+        break;
+    default:
+        return 0;
+    }
+    int n = snprintf(achTmp, 128,
+                     "public, max-age=%d", age);
+    m_respHeaders.add(HttpRespHeaders::H_CACHE_CTRL, achTmp, n);
+    DateTime::getRFCTime(expire, achTmp);
+    m_respHeaders.add(HttpRespHeaders::H_EXPIRES, achTmp, RFC_1123_TIME_LEN);
+
+    return 0;
+}
+
+
 int HttpResp::setContentTypeHeader(const char *pType, int typeLen,
                                    const AutoStr2 *pCharset)
 {
     int ret = m_respHeaders.add(HttpRespHeaders::H_CONTENT_TYPE,
-                                "Content-Type",
-                                12, pType, typeLen);
+                                pType, typeLen);
     if (ret == 0 && pCharset)
         m_respHeaders.appendLastVal(pCharset->c_str(), pCharset->len());
     return ret;
 }
 
-
-int HttpResp::addExpiresHeader(int age)
-{
-    char sTemp[RFC_1123_TIME_LEN + 1] = {0};
-    getRespHeaders().add(HttpRespHeaders::H_CACHE_CTRL, "public, max-age=", 16);
-    int n = ls_snprintf(sTemp, RFC_1123_TIME_LEN, "%d", age);
-    getRespHeaders().appendLastVal(sTemp, n);
-
-    DateTime::getRFCTime(DateTime::s_curTime + age, sTemp);
-    getRespHeaders().add(HttpRespHeaders::H_EXPIRES, sTemp, RFC_1123_TIME_LEN);
-    return 0;
-}
 
 int HttpResp::appendHeader(const char *pName, int nameLen,
                            const char *pValue, int valLen)

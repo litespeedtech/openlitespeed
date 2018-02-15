@@ -115,29 +115,6 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
 }
 
 
-static int addExpiresHeader(HttpResp *pResp, StaticFileCacheData *pData,
-                            const ExpiresCtrl *pExpires)
-{
-    time_t expire;
-    int    age;
-    switch (pExpires->getBase())
-    {
-    case EXPIRES_ACCESS:
-        age = pExpires->getAge();
-        break;
-    case EXPIRES_MODIFY:
-        expire = pData->getLastMod() + pExpires->getAge();
-        age = (int)expire - (int)DateTime::s_curTime;
-        break;
-    default:
-        return 0;
-    }
-
-    pResp->addExpiresHeader(age);
-    return 0;
-}
-
-
 #define FLV_MIME "video/x-flv"
 #define FLV_HEADER "FLV\x1\x1\0\0\0\x9\0\0\0\x9"
 #define FLV_HEADER_LEN (sizeof(FLV_HEADER)-1)
@@ -550,7 +527,8 @@ int StaticFileHandler::process(HttpSession *pSession,
                     const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
                     if (pExpireDefault)
                     {
-                        ret = addExpiresHeader(pResp, pCache, pExpireDefault);
+                        ret = pResp->addExpiresHeader(pCache->getLastMod(), 
+                                                      pExpireDefault);
                         if (ret)
                             return ret;
                     }

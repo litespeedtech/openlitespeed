@@ -58,7 +58,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.55"
+#define MODULE_VERSION_INFO         "1.56"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -1462,8 +1462,9 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     }
 
     const char *phandlerType = g_api->get_req_handler_type(rec->session);
-    if (needGzip && phandlerType && memcmp("static", phandlerType, 6) == 0 &&
-         sb.st_size > 0 && sb.st_size < 200)
+    if (needGzip && phandlerType && strlen(phandlerType) == 6 &&
+        memcmp("static", phandlerType, 6) == 0 &&
+        sb.st_size > 0 && sb.st_size < 200)
         needGzip = false;
 
     if (needGzip)

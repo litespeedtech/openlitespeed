@@ -1366,7 +1366,7 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
     if (p)
         ls_mutex_unlock(&p->m_respHeaderLock);
 
-    LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%s' ", pName, pValue);
+    LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%.*s' ", pName, valLen, pValue);
     return 0;
 }
 
