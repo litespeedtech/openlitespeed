@@ -2504,8 +2504,11 @@ int HttpSession::detectTimeout()
 
 int HttpSession::onTimerEx()
 {
-    ThrottleControl *pTC = &getClientInfo()->getThrottleCtrl();
-    pTC->resetQuotas();
+    if (getClientInfo())
+    {
+        ThrottleControl *pTC = &getClientInfo()->getThrottleCtrl();
+        pTC->resetQuotas();
+    }
     if (getState() ==  HSS_THROTTLING)
         onWriteEx();
     if (detectTimeout())
