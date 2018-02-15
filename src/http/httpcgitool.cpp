@@ -33,12 +33,14 @@
 
 #include <http/requestvars.h>
 #include <lsiapi/lsiapi_const.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
 #include <sslpp/sslconnection.h>
 // #include <sslpp/sslcert.h>
 #include <util/autostr.h>
+#include <util/datetime.h>
 #include <util/ienv.h>
 #include <util/radixtree.h>
 #include <util/stringtool.h>
@@ -50,6 +52,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <config.h>
+
+
+int HttpCgiTool::processContentType(HttpSession *pSession,
+                                    const char *pValue, int valLen)
+{
+    HttpResp *pResp = pSession->getResp();
+    HttpReq *pReq = pSession->getReq();
+    const char *p;
+    const AutoStr2 *pCharset = NULL;
+    if (pReq->getStatusCode() == SC_304)
+        return 0;
+    const MimeSetting *pMIME = NULL;
+    p = (char *)memchr(pValue, ';', valLen);
+    int gzipAccept = pReq->gzipAcceptable();
+    HttpContext *pContext = &(pReq->getVHost()->getRootContext());
+    //const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
+    int enbale = pContext->getExpires().isEnabled();
+    
+    if (gzipAccept || enbale)
+    {
+        char *pEnd;
+        if (p)
+            pEnd = (char *)p;
+        else
+            pEnd = (char *)pValue + valLen;
+        char ch = *pEnd;
+        *pEnd = 0;
+        
+        pMIME = pContext->lookupMimeSetting((char *)pValue);
+        LS_DBG_L(pReq->getLogSession(), "content type: [%s], pMIME: %p\n",
+                    pValue, pMIME);
+        *pEnd = ch;
+
+    }
+    if (gzipAccept)
+    {
+        if (!pMIME || !pMIME->getExpires()->compressible())
+            pReq->andGzip(~GZIP_ENABLED);
+    }
+    
+    if (enbale)
+    {
+        ExpiresCtrl *pExpireDefault = NULL;
+        if (pMIME && pMIME->getExpires()->getBase())
+            pExpireDefault = (ExpiresCtrl *)pMIME->getExpires();
+        if (pExpireDefault == NULL)
+            pExpireDefault = &pContext->getExpires();
+
+        if (pExpireDefault->getBase())
+            pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
+    }
+
+    if (pReq->isKeepAlive())
+        pReq->smartKeepAlive(pValue);
+    
+    if (HttpMime::needCharset(pValue))
+    {
+        pCharset = pReq->getDefaultCharset();
+        if (pCharset && p)
+        {
+            while (isspace(*(++p)))
+                ;
+            if (strncmp(p, "charset=", 8) == 0)
+            {
+                pCharset = NULL;
+            }
+        }
+    }
+    return pResp->setContentTypeHeader(pValue, valLen, pCharset);
+}
+
 
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char  *pLineBegin,
@@ -112,48 +185,9 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     case HttpRespHeaders::H_CONTENT_TYPE:
         if (pReq->getStatusCode() == SC_304)
             return 0;
-        
-        HttpCgiTool::processExpires(pReq, pResp, pValue);
-        p = (char *)memchr(pValue, ';', pLineEnd - pValue);
-        if (pReq->gzipAcceptable() == GZIP_REQUIRED)
-        {
-            char ch = 0;
-            char *p1;
-            if (p)
-                p1 = (char *)p;
-            else
-                p1 = (char *)pLineEnd;
-            ch = *p1;
-            *p1 = 0;
-            if (!HttpMime::getMime()->compressible(pValue))
-                pReq->andGzip(~GZIP_ENABLED);
-            *p1 = ch;
-        }
-        if (pReq->isKeepAlive())
-            pReq->smartKeepAlive(pValue);
-        {
-            if (!HttpMime::needCharset(pValue))
-                break;
-            const AutoStr2 *pCharset = pReq->getDefaultCharset();
-            if (!pCharset)
-                break;
-            if (p)
-            {
-                while (isspace(*(++p)))
-                    ;
-                if (strncmp(p, "charset=", 8) == 0)
-                    break;
-            }
-            HttpRespHeaders &buf = pResp->getRespHeaders();
-            AutoStr2 str = "";
-            str.append(pLineBegin, pLineEnd - pLineBegin);
-            str.append(pCharset->c_str(), pCharset->len());
-            str.append("\r\n", 2);
-            buf.parseAdd(str.c_str(), str.len());
-        }
-        
-        
-        return 0;
+        //HttpCgiTool::processExpires(pReq, pResp, pValue);
+        return processContentType(pExtConn->getHttpSession(), pValue,
+                                  pLineEnd - pValue);
     case HttpRespHeaders::H_CONTENT_ENCODING:
         if (pReq->getStatusCode() == SC_304
             || strncasecmp(pValue, "none", 4) == 0)
@@ -756,63 +790,10 @@ int HttpCgiTool::processExpires(HttpReq *pReq, HttpResp *pResp, const char *pVal
             pExpireDefault = &pContext->getExpires();
             
         if (pExpireDefault->getBase())
-            pResp->addExpiresHeader(pExpireDefault->getAge());
+            pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
     }
 
     return 0;
-}
-
-
-//Fix me:   Xuedong copy this new function from litespeed side, since this function
-//          is calling the new function "void setContentTypeHeaderInfo( int offset, int len )"
-//          in "class HttpResp", which is related to the new variable "m_iContentTypeStarts",
-//          and "m_iContentTypeLen". George may need to review this.
-
-int HttpCgiTool::processContentType(HttpReq *pReq, HttpResp *pResp,
-                                    const char *pValue, int valLen)
-{
-    const char *p;
-    do
-    {
-        p = (char *)memchr(pValue, ';', valLen);
-        if (pReq->gzipAcceptable())
-        {
-            char ch = 0;
-            char *p1;
-            if (p)
-                p1 = (char *)p;
-            else
-                p1 = (char *)pValue + valLen;
-            ch = *p1;
-            *p1 = 0;
-            if (!HttpMime::getMime()->compressible(pValue))
-                pReq->andGzip(~GZIP_ENABLED);
-            *p1 = ch;
-        }
-        if (pReq->isKeepAlive())
-            pReq->smartKeepAlive(pValue);
-        {
-            if (!HttpMime::needCharset(pValue))
-                break;
-            const AutoStr2 *pCharset = pReq->getDefaultCharset();
-            if (!pCharset)
-                break;
-            if (p)
-            {
-                while (isspace(*(++p)))
-                    ;
-                if (strncmp(p, "charset=", 8) == 0)
-                    break;
-            }
-            HttpRespHeaders &buf = pResp->getRespHeaders();
-            buf.add(HttpRespHeaders::H_CONTENT_TYPE, pValue, valLen);
-            buf.appendLastVal(pCharset->c_str(), pCharset->len());
-        }
-        return 0;
-    }
-    while (0);
-
-    return pResp->appendHeader("Content-Type", 12, pValue, valLen);
 }
 
 

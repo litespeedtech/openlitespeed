@@ -22,7 +22,6 @@
 #include <string.h>
 #include <util/loopbuf.h>
 
-
 #include "ls_caching_headers.h"
 #include "ls_message_handler.h"
 #include "ls_rewrite_driver_factory.h"
@@ -947,15 +946,15 @@ static void FreeConfig(void *_config)
     delete(LsRewriteOptions *) _config;
 }
 
-static void *MergeConfig(void *child, const void *parent)
-{
-    const LsRewriteOptions *parent_options = (LsRewriteOptions *)parent;
-    
-    LsRewriteOptions *options;
-    options = parent_options->Clone();
-    options->Merge(*(LsRewriteOptions *)child);
-    return options;
-}
+// static void *MergeConfig(void *child, const void *parent)
+// {
+//     const LsRewriteOptions *parent_options = (LsRewriteOptions *)parent;
+//     
+//     LsRewriteOptions *options;
+//     options = parent_options->Clone();
+//     options->Merge(*(LsRewriteOptions *)child);
+//     return options;
+// }
 
 
 
@@ -3205,7 +3204,6 @@ static int Init(lsi_module_t *pModule)
 
 //#define TEST_UAMATCHER
 #ifdef  TEST_UAMATCHER
-    
     extern void UAMatcherTest();
     UAMatcherTest();
 #endif

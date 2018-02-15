@@ -56,6 +56,18 @@ static void *modinspector_parseConfig(module_param_info_t *param, int param_coun
     if (!myConf)
         return NULL;
 
+    
+    memset(myConf, 0, sizeof(scanner_param_st));
+    if (param == NULL || param_count <= 0)
+    {
+        if (access(DEF_SCANNER_PATH, 0) != -1)
+        {
+            myConf->path = strdup(DEF_SCANNER_PATH);
+            myConf->prefix = strdup(DEF_SCANNER_PREFIX);
+        }
+        return (void *)myConf;
+    }
+
     for (int i=0 ;i<param_count; ++i)
     {
         switch(paramArray[i].id)

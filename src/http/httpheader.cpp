@@ -34,7 +34,6 @@ int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
     0
 };
 
-// not used static int s_iMaxHdrLen = 0;
 
 const char *HttpHeader::s_pHeaderNames[H_HEADER_END + 1] =
 {

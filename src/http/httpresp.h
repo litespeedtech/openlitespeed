@@ -25,7 +25,6 @@
 #define LSI_RSP_BODY_SIZE_CHUNKED (-1)
 #define LSI_RSP_BODY_SIZE_UNKNOWN (-2)
 
-
 class AutoStr2;
 class GzipBuf;
 class ExpiresCtrl;
@@ -110,19 +109,17 @@ public:
         m_respHeaders.appendChunked();
     }
 
-
-    int addExpiresHeader(int age);
-
+    int addExpiresHeader(time_t getLastMod, const ExpiresCtrl *pExpireDefault);
     
-    
+    int setContentTypeHeader(const char *pType, int typeLen,
+                             const AutoStr2 *pCharset);
 
     off_t getTotalLen()    {   return m_lEntityFinished + m_respHeaders.getTotalLen();   }
     //int  isRespHeaderBuilt()      {   return m_respHeaders.isRespHeadersBuilt();   }
     const char *getContentTypeHeader(int &len)  {    return m_respHeaders.getContentTypeHeader(len);  }
 
     int  appendLastMod(long tmMod);
-    int setContentTypeHeader(const char *pType, int typeLen,
-                             const AutoStr2 *pCharset);
+    
     int addCookie(const char *pName, const char *pVal,
                   const char *path, const char *domain, int expires,
                   int secure, int httponly);

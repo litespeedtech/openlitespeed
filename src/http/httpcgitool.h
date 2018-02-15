@@ -34,7 +34,7 @@ class HttpCgiTool
     static int addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq);
     static int addSpecialEnv(IEnv *pEnv, HttpReq *pReq);
 public:
-    static int processContentType(HttpReq *pReq, HttpResp *pResp,
+    static int processContentType(HttpSession *pSession,
                                   const char *pValue, int valLen);
     static int processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue);
     
