@@ -290,7 +290,8 @@ public:
         if (pStream)
         {
             m_pStream = NULL;
-            pStream->setHandler(NULL);
+            if (pStream->getHandler() == this)
+                pStream->setHandler(NULL);
         }
         return pStream;
     }
