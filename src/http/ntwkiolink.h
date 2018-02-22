@@ -131,7 +131,7 @@ private:
 
     int doRead()
     {
-        if (isWantRead())
+        if (isWantRead() && getHandler())
             return getHandler()->onReadEx();
         else
             suspendRead();
