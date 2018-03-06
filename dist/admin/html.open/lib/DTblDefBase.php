@@ -101,7 +101,7 @@ class DTblDefBase
 
     protected static function NewParseTextAttr($key, $label, $parseformat, $parsehelp, $allowNull = true, $helpKey = null, $multiInd = 0)
     {
-        return new DAttr($key, 'parse', $label, 'text', $allowNull, $parseformat, $parsehelp, null, 0, $helpKey);
+        return new DAttr($key, 'parse', $label, 'text', $allowNull, $parseformat, $parsehelp, null, $multiInd, $helpKey);
     }
 
     protected static function NewParseTextAreaAttr($key, $label, $parseformat, $parsehelp, $allowNull = true, $row, $helpKey = null, $viewtextarea = 1, $wrapoff = 0, $multiInd = 0)
@@ -1423,7 +1423,7 @@ class DTblDefBase
     protected function add_S_MIME($id)
     {
         $attrs = array(
-            $this->_attrs['suffix']->dup('suffix', DMsg::ALbl('l_suffix'), mimesuffix),
+            $this->_attrs['suffix']->dup('suffix', DMsg::ALbl('l_suffix'), 'mimesuffix'),
             self::NewParseTextAttr('type', DMsg::ALbl('l_mimetype'), "/^[A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+(\s*;?.*)$/", DMsg::ALbl('parse_mimetype'), false, 'mimetype')
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_mimetypeentry'), $attrs, 'suffix');

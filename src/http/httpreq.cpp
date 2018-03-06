@@ -102,6 +102,7 @@ static char *escape_uri(char *p, char *pEnd, const char *pURI, int uriLen)
             case '/':
             case '\'':
             case ';':
+            case ':':
             case '$':
             case '.':
                 *p++ = ch;

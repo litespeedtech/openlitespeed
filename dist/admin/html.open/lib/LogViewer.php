@@ -218,20 +218,20 @@ class LogViewer
 
         while ($buffer = fgets($fd)) {
             // check if new line
-            $c25 = substr($buffer, 25, 3);
-            if ($c25 && strstr($newlineTag, $c25)) {
+            $c28 = substr($buffer, 28, 3);
+            if ($c28 && strstr($newlineTag, $c28)) {
                 // is new line
                 $totalLine ++;
                 if ($found) { // finish prior line
                     $filter->AddLogEntry($cur_level, $cur_time, $cur_mesg);
                     $found = false;
                 }
-                $cur_level = $levels[$c25{0}];
+                $cur_level = $levels[$c28{0}];
                 if ($cur_level <= $filterlevel && preg_match("/^\d{4}-\d{2}-\d{2} /", $buffer)) {
                     // start a new line
                     $found = true;
-                    $cur_time = substr($buffer, 0, 23);
-                    $cur_mesg = htmlspecialchars(substr($buffer, strpos($buffer, ']', 24) + 2));
+                    $cur_time = substr($buffer, 0, 26);
+                    $cur_mesg = htmlspecialchars(substr($buffer, strpos($buffer, ']', 27) + 2));
                 }
             } elseif ($found) { // multi-line output
                 $cur_mesg .= '<br>' . htmlspecialchars($buffer);

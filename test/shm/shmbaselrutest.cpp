@@ -129,16 +129,16 @@ static void doit(LsShm *pShm)
     CHECK((iterOffX = pHash->getIterator(&parms, &flags)).m_iOffset != 0);
     CHECK(flags == LSSHM_VAL_CREATED);
 
-    CHECK(pHash->check() == SHMLRU_CHECKOK);
+    CHECK(pHash->checkLru() == SHMLRU_CHECKOK);
     CHECK(pHash->size() == 3);
-    CHECK(pHash->getLruTop().m_iOffset == iterOffX.m_iOffset);
+    CHECK(pHash->getLruNewest().m_iOffset == iterOffX.m_iOffset);
 
     ls_str_set(&parms.key, (char *)key0, sizeof(key0) - 1);
     flags = LSSHM_VAL_NONE;
     CHECK(pHash->getIterator(&parms, &flags).m_iOffset == iterOff0.m_iOffset);
     CHECK(flags == LSSHM_VAL_NONE);
 
-    offTop = pHash->getLruTop();
+    offTop = pHash->getLruNewest();
     CHECK(offTop.m_iOffset == iterOff0.m_iOffset);
     if ((int)offTop.m_iOffset > 0)
     {
@@ -152,7 +152,7 @@ static void doit(LsShm *pShm)
         CHECK(pHash->size() == (size_t)num);
         CHECK(pHash->trim(tmval + 1, trimfunc, (void *)pHash) == num);
         CHECK(pHash->size() == (size_t)0);
-        CHECK(pHash->getLruTop().m_iOffset == 0);
+        CHECK(pHash->getLruNewest().m_iOffset == 0);
     }
 
     // large hash test
@@ -180,7 +180,7 @@ static void doit(LsShm *pShm)
             break;
     }
     CHECK(pHash->size() == (size_t)num);
-    offTop = pHash->getLruTop();
+    offTop = pHash->getLruNewest();
     pTop = pHash->offset2iterator(offTop);
     time_t tmval = pTop->getLruLasttime();
     CHECK(pHash->trim(tmval + 1, NULL, NULL) == num);

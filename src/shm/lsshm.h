@@ -103,6 +103,7 @@ public:
     void close();
 
     void deleteFile();
+    void backupBrokenFile();
 
 
 private:

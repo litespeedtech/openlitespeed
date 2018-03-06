@@ -67,7 +67,7 @@ typedef struct
     LsShmHIterOff        x_iLinkNext;     // offset to next in linked list
     LsShmHIterOff        x_iLinkPrev;     // offset to prev in linked list
     time_t               x_lasttime;      // last update time (sec)
-} LsShmHElemLink;
+} LsShmLruLink;
 
 typedef struct ls_vardata_s
 {
@@ -98,8 +98,8 @@ typedef struct lsShm_hElem_s
     void             setValLen(int32_t len)
     { ((ls_vardata_t *)((uint8_t*)x_aData + x_iValOff))->x_size = len; }
 
-    LsShmHElemLink  *getLruLinkPtr() const
-    { return ((LsShmHElemLink *)((uint8_t*)x_aData + x_iValOff) - 1); }
+    LsShmLruLink  *getLruLinkPtr() const
+    { return ((LsShmLruLink *)((uint8_t*)x_aData + x_iValOff) - 1); }
     LsShmHIterOff    getLruLinkNext() const
     { return getLruLinkPtr()->x_iLinkNext; }
     LsShmHIterOff    getLruLinkPrev() const
@@ -363,7 +363,7 @@ public:
 
     int touchLru(iteroffset iterOff);
 
-    int linkSetTopTime(iteroffset offset, time_t lasttime);
+    int lruSetNewestTime(iteroffset offset, time_t lasttime);
 
     int linkMvTopTime(iteroffset offset, time_t lasttime);
 
@@ -488,7 +488,7 @@ public:
             return iterOff;
         }
         return ((iterOff.m_iOffset == 0) ?
-            getLruBottom() : (offset2iterator(iterOff))->getLruLinkNext());
+            getLruOldest() : (offset2iterator(iterOff))->getLruLinkNext());
     }
 
     iteroffset prevLruIterOff(iteroffset iterOff)
@@ -499,7 +499,7 @@ public:
             return iterOff;
         }
         return ((iterOff.m_iOffset == 0) ?
-            getLruTop() : (offset2iterator(iterOff))->getLruLinkPrev());
+            getLruNewest() : (offset2iterator(iterOff))->getLruLinkPrev());
     }
 
     iteroffset nextTmLruIterOff(time_t tmCutoff);
@@ -510,7 +510,7 @@ public:
         if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
             return NULL;
         return offset2iterator((iter == NULL) ?
-            getLruBottom() : iter->getLruLinkNext());
+            getLruOldest() : iter->getLruLinkNext());
     }
 
     iterator prevLruIterator(iterator iter)
@@ -518,7 +518,7 @@ public:
         if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
             return NULL;
         return offset2iterator((iter == NULL) ?
-            getLruTop() : iter->getLruLinkPrev());
+            getLruNewest() : iter->getLruLinkPrev());
     }
 
     LsShmHasher_fn getHashFn() const   {   return m_hf;    }
@@ -552,8 +552,8 @@ public:
     // LRU stuff
     LsHashLruInfo *getLru();
 
-    iteroffset getLruTop();    
-    iteroffset getLruBottom();
+    iteroffset getLruNewest();    
+    iteroffset getLruOldest();
     int32_t getLruTotal();
     int32_t getLruTrimmed(); 
 
@@ -561,7 +561,8 @@ public:
     int trimsize(int need, LsShmHash::TrimCb cb, void *arg);
     int trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg);
     
-    int check();
+    int checkLru();
+    int checkLruLink();
 
     void enableAutoLock()
     {   m_iAutoLock = 1; };
@@ -608,9 +609,9 @@ protected:
     LsShmSize_t fullFactor() const;
     LsShmSize_t growFactor() const;
 
-    ls_attr_inline LsShmHIterOff *getHIdx() const;
+    ls_attr_inline LsShmHIterOff *getHidx(uint32_t idx) const;
 
-    ls_attr_inline uint8_t *getBitMap() const;
+    ls_attr_inline uint8_t *getBitMap(uint32_t indx) const;
     int getBitMapEnt(uint32_t indx);
     void setBitMapEnt(uint32_t indx);
     void clrBitMapEnt(uint32_t indx);
@@ -691,11 +692,11 @@ protected:
         (offset2iterator(offThis))->setLruLinkPrev(offPrev);
     }
 
-    void linkHElem(LsShmHElem *pElem, iteroffset offElem);
+    void addToLru(LsShmHElem *pElem, iteroffset offElem);
 
-    void unlinkHElem(LsShmHElem *pElem);
+    void removeFromLru(LsShmHElem *pElem);
 
-    void linkSetTop(LsShmHElem *pElem, iteroffset offElem);
+    void lruMarkNewest(LsShmHElem *pElem, iteroffset offElem);
     int8_t addExtraSpace(uint8_t iterExtra, uint8_t dataExtra)
     {
         m_dataExtraSpace += dataExtra;
