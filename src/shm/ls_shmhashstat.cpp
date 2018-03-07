@@ -209,7 +209,7 @@ void doStatShmHash(LsShmHash *pHash)
         fprintf(stdout, "LRU linked list... ");
         fflush(stdout);
         const char *str;
-        switch (pHash->check())
+        switch (pHash->checkLru())
         {
             case SHMLRU_BADINIT:
                 str = "Not an LRU Hash.";
