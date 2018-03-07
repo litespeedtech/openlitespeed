@@ -98,7 +98,7 @@ typedef h2_32_fn                LsShmHasher_fn;
 typedef v2_comp                 LsShmValComp_fn;
 
 
-#define LSSHM_MAGIC             0x20151012   // 32 bits
+#define LSSHM_MAGIC             0x20181012   // 32 bits
 #define LSSHM_LOCK_MAGIC        0x20150505   // 32 bits
 #define LSSHM_HASH_MAGIC        0x20150915   // 32 bits
 #define LSSHM_POOL_MAGIC        0x20150930   // 32 bits

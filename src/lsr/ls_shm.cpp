@@ -316,7 +316,7 @@ int ls_shmhash_trim(ls_shmhash_t *hashhandle,
 
 int ls_shmhash_check(ls_shmhash_t *hashhandle)
 {
-    return ((LsShmHash *)hashhandle)->check();
+    return ((LsShmHash *)hashhandle)->checkLru();
 }
 
 

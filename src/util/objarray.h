@@ -83,6 +83,13 @@ public:
         setSize(other.getSize());
         memmove(getArray(), other.getArray(), getSize() * sizeof(T));
     }
+
+    void guarantee(ls_xpool_t *pool, int numObj)
+    {    ObjArray::guarantee(pool, numObj);   }
+    
+    void guarantee(int numObj)
+    {    ObjArray::guarantee(NULL, numObj);   }
+
 };
 
 

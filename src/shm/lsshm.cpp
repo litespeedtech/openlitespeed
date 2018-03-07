@@ -360,6 +360,24 @@ void LsShm::deleteFile()
 }
 
 
+void LsShm::backupBrokenFile()
+{
+    if (m_pFileName == NULL)
+        return;
+    char target[4096];
+    int len = snprintf(target, 4096, "%s.bad", m_pFileName);
+    rename(m_pFileName, target);
+
+    char lock_target[4096];
+    len -= 7;
+    strcpy(&target[len], "lock");
+    snprintf(lock_target, 4096, "%s.bad", target);
+    rename(target, lock_target);
+    if (s_fatalErrorCb)
+        (*s_fatalErrorCb)();    
+}
+
+
 int LsShm::deleteFile(const char *pName, const char *pBaseDir)
 {
     char buf[0x1000];
