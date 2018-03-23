@@ -131,7 +131,6 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     int tmpIndex;
     const char *pKeyEnd = NULL;
     const char *pValue = pLineBegin;
-    char *p;
     HttpResp *pResp = pExtConn->getHttpSession()->getResp();
     HttpReq *pReq = pExtConn->getHttpSession()->getReq();
 
@@ -209,6 +208,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     case HttpRespHeaders::H_LOCATION:
         if ((status & HEC_RESP_PROXY) || (pReq->getStatusCode() != SC_200))
             break;
+        //fall through
     case HttpRespHeaders::H_LITESPEED_LOCATION:
         if (*pValue != '/')
         {

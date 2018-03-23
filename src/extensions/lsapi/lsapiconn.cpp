@@ -670,6 +670,7 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
         }
         else
             return 0;
+        //fall through
     case LSAPI_CONN_READ_HEADER_LEN:
         if (pEnd - m_pRespHeaderProcess >= (int)sizeof(short) *
             m_respInfo.m_cntHeaders)
@@ -691,6 +692,7 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
         }
         else
             return 0;
+        //fall through
     case LSAPI_CONN_READ_HEADER:
         if (m_respInfo.m_cntHeaders > 0)
         {
@@ -749,6 +751,7 @@ int LsapiConn::processRespHeader()
                     //debug code
                     //::write( 1, pBuf, len );
                     errno = ECONNRESET;
+                    //fall through
                 case -1:
                     return LS_FAIL;
                 }

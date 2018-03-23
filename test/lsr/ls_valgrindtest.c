@@ -22,6 +22,7 @@
 #include <lsr/ls_pool.h>
 #include <lsr/ls_xpool.h>
 #include <lsr/ls_internal.h>
+#include <lsr/ls_memcheck.h>
 #include <valgrind/memcheck.h>
 
 /*

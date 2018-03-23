@@ -664,6 +664,7 @@ int VMemBuf::grow()
     case VMBUF_ANON_MAP:
         if ((pBlock = getAnonMapBlock(s_iBlockSize)))
             break;
+        //fall through
     default:
         return LS_FAIL;
     }

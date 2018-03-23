@@ -454,6 +454,7 @@ int LsLuaEngine::runScript(const lsi_session_t *session, const char *scriptpath,
                 ret = LsLuaApi::tointeger(L, 1);
             break;
         }
+        //fall through
     default:
         ret = LsLuaEngine::checkResume(pSandbox, ret);
         break;

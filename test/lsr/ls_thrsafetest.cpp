@@ -343,6 +343,7 @@ int main(int ac, char *av[])
                     fprintf (stderr,
                             "Unknown option character `\\x%x'.\n",
                             optopt);
+                //fall through
             default:
                 usage(av[0]);
                 break;

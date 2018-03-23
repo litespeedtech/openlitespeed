@@ -242,6 +242,7 @@ int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
     //fall through
     case RESP_HEADER:
         ret = readRespHeader(p, pEnd);
+        //fall through
     default:
         p = pEnd;
         break;

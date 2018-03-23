@@ -67,7 +67,8 @@ void ls_modSecLogCb(void *_session, const void *data)
         return ;
 
     lsi_session_t *session = (lsi_session_t *)_session;
-    g_api->log(session, LSI_LOG_DEBUG, "[Module:%s]%s\n", ModuleNameStr, data);
+    g_api->log(session, LSI_LOG_DEBUG, "[Module:%s] %s\n", ModuleNameStr,
+               (const char *)data);
 }
 
 

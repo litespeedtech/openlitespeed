@@ -283,7 +283,7 @@ int main(int ac, char *av[])
         ptimeoutcons = str2timespec(av[4], &timeoutcons);
         numproducers = atoi(av[3]);
         numconsumers = atoi(av[2]);
-    /* no break */
+        //fall through
     case 2:
         if (av[1][0] == '1')
         {

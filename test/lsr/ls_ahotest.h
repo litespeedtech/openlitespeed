@@ -27,7 +27,7 @@
 
 
 ls_aho_t *ls_aho_initTree(const char *acceptBuf[], int bufCount,
-                          int sensitive);
+                          int sensitive, int seq);
 
 const int ls_aho_TestOneLen = 86;
 const char *ls_aho_TestOne =

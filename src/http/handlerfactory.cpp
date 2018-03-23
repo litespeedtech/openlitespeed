@@ -100,6 +100,7 @@ const HttpHandler *HandlerFactory::getInstance(int type, const char *pName)
 
     case HandlerType::HT_CGI:
         pName = "lscgid";
+        //fall through
     case HandlerType::HT_FASTCGI:
     case HandlerType::HT_PROXY:
     case HandlerType::HT_SERVLET:

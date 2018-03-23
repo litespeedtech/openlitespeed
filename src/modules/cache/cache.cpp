@@ -358,7 +358,7 @@ static int parseNoCacheUrl(CacheConfig *pConfig, const char *pValStr,
     if (!pConfig->getUrlExclude())
         pConfig->setUrlExclude(new Aho(1));
 
-    pConfig->getUrlExclude()->addPattern(pValStr, valLen);
+    pConfig->getUrlExclude()->addPattern(pValStr, valLen, NULL);
     return 0;
 }
 
@@ -570,7 +570,7 @@ static int isUrlExclude(const lsi_session_t *session, CacheConfig *pConfig,
             AhoState *out_last_state;
             int ret = ahos[i]->search(NULL, url, urlLen, 0,
                                       &out_start, &out_end,
-                                      &out_last_state);
+                                      &out_last_state, NULL);
             if (ret)
             {
                 g_api->log(session, LSI_LOG_INFO, "Cache excluded by URL: %.*s\n",

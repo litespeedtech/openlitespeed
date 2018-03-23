@@ -482,7 +482,7 @@ static void checkErr()
     ls_aho_t *ac = ls_aho_new(1);
     for (i = 0; i < count; ++i)
     {
-        if ((ls_aho_addpattern(ac, inputErr[i], strlen(inputErr[i])) == 0))
+        if ((ls_aho_addpattern(ac, inputErr[i], strlen(inputErr[i]), NULL) == 0))
 //         if ((ac->addPattern( inputErr[i], strlen( inputErr[i] ) )) == 0 )
         {
             std::cout << "Add patterns failed." << std::endl;
@@ -490,20 +490,14 @@ static void checkErr()
             return;
         }
     }
-    if (ls_aho_maketree(ac) == 0)
+    if (ls_aho_maketree(ac, 1) == 0)
     {
         std::cout << "Make tree failed." << std::endl;
         ls_aho_delete(ac);
         return;
     }
 
-    if (ls_aho_optimizetree(ac) == 0)
-    {
-        std::cout << "Optimize failed." << std::endl;
-        ls_aho_delete(ac);
-        return;
-    }
-    ls_aho_search(ac, NULL, "_wpnonce", 8, 0, &iOutStart, &iOutEnd, outlast);
+    ls_aho_search(ac, NULL, "_wpnonce", 8, 0, &iOutStart, &iOutEnd, outlast, NULL);
     ls_aho_delete(ac);
     return;
 }
@@ -544,7 +538,7 @@ Aho *getTree(const char *acceptBuf[], int bufCount, int sensitive)
 
     for (i = 0; i < bufCount; ++i)
     {
-        if ((ac->addPattern(acceptBuf[i], strlen(acceptBuf[i]))) == 0)
+        if ((ac->addPattern(acceptBuf[i], strlen(acceptBuf[i]), NULL)) == 0)
         {
             std::cout << "Add patterns failed." << std::endl;
             delete(ac);

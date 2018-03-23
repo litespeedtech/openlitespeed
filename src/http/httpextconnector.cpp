@@ -243,6 +243,7 @@ int HttpExtConnector::flushResp()
 int HttpExtConnector::processRespBodyData(const char *pBuf, int len)
 {
     LS_DBG_M(this, "HttpExtConnector::processRespBodyData(%d)", len);
+
     int ret = m_pSession->appendDynBody(pBuf, len);
     if (ret == -1)
         errResponse(SC_500, NULL);

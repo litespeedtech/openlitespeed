@@ -954,6 +954,7 @@ int NtwkIOLink::checkReadRet(int ret, int size)
             // and waiting for the response, we can't close the connection before
             // we finish write the response back.
             LS_DBG_L(this, "Read error: %s", strerror(errno));
+            //fall through
         case EAGAIN:
         case EINTR:
             ret = 0;

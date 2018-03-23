@@ -333,7 +333,7 @@ public:
         {
         case UNINIT:
             initSessionHooks();
-        //No break, follow with the next
+            //fall through
         case INITED:
             if (parentRt && !parentRt->isAllDisabled())
                 inheritFromParent(parentRt);

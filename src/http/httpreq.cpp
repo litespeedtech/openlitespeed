@@ -2297,6 +2297,7 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
             *pGid = m_pVHost->getGid();
             break;
         }
+        //fall through
     case UID_SERVER:
     default:
         *pUid = procConfig.getUid();

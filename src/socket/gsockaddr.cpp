@@ -317,6 +317,7 @@ int GSockAddr::set(int family, const char *pURL, int tag)
         if ((tag & ADDR_ONLY) == 0
             && (tag & (DO_NSLOOKUP | DO_NSLOOKUP_DIRECT)) != 0)
             return doLookup(family, achDest, tag);
+        //fall through
     case -1:
     default:
         return -1;

@@ -82,6 +82,7 @@ SubstItem::SubstItem(const SubstItem &rhs)
             break;
         case REF_FORMAT_STR:
             m_value.m_pAny = new SubstFormat(*rhs.getFormatStr());
+            //fall through
         default:
             m_value.m_index = rhs.m_value.m_index;
             break;
