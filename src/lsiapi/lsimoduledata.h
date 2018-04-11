@@ -47,7 +47,7 @@ public:
     void set(short _data_id, void *data)
     {
         if ((_data_id >= 0) && (_data_id < m_iCount))
-            ls_atomic_setptr(&m_pData[_data_id], data);
+            (void)ls_atomic_setptr(&m_pData[_data_id], data);
     }
     void *get(short _data_id) const
     {

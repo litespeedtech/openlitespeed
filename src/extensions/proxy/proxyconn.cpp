@@ -561,6 +561,7 @@ int ProxyConn::processResp()
             //debug code
             //::write( 1, pBuf, len );
             errno = ECONNRESET;
+            //fall through
         case -1:
             return LS_FAIL;
         }

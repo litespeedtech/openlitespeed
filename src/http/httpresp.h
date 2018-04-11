@@ -68,6 +68,13 @@ public:
 
     int appendHeader(const char *pName, int nameLen,
                      const char *pValue, int valLen);
+    int appendHeader(int index, const char *pName, int nameLen,
+                     const char *pValue, int valLen)
+    {
+        return m_respHeaders.add((HttpRespHeaders::INDEX)index,
+                                 pValue, valLen, LSI_HEADEROP_ADD);
+    }
+
     void prepareHeaders(const HttpReq *pReq, int addAcceptRange = 0);
     void appendContentLenHeader();
 

@@ -38,9 +38,17 @@ public:
                                   const char *pValue, int valLen);
     static int processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue);
     
-    static int processHeaderLine(HttpExtConnector *pLB,
+    static int processHeaderLine(HttpExtConnector *pExtConn,
+                                 const char *pName, int nameLen,
+                                 const char *pValue, int valLen, int &status);
+    static int processHeaderLine(HttpExtConnector *pExtConn, int index,
+                                 const char *pLineBegin, int nameLen,
+                                 const char *pValue, int valLen, int &status);
+    static int processHeaderLine(HttpExtConnector *pExtConn,
                                  const char *pValue, const char *pLineEnd, int &status);
-    static int parseRespHeader(HttpExtConnector *pLB,
+    static int parseRespHeader(HttpExtConnector *pExtConn,
+                               char *pBuf, int size, int &status);
+    static int parseRespHeader(HttpExtConnector *pExtConn,
                                const char *pBuf, int size, int &status);
     static int buildEnv(IEnv *pEnv, HttpSession *pSession);
     static int buildFcgiEnv(FcgiEnv *pEnv, HttpSession *pSession);

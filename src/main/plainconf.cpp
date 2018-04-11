@@ -411,7 +411,8 @@ GPointerList plainconf::gModuleList;
  */
 void plainconf::logToMem(char errorLevel, const char *format, ...)
 {
-    char buf[512];
+#define MAX_LOG_LINE_LENGTH     1024
+    char buf[MAX_LOG_LINE_LENGTH];
     sprintf(buf, "%c[PlainConf] ", errorLevel);
     int len = strlen(buf);
 
@@ -425,7 +426,7 @@ void plainconf::logToMem(char errorLevel, const char *format, ...)
     len = strlen(buf);
     va_list ap;
     va_start(ap, format);
-    int ret = vsnprintf(buf + len, 512 - len, format, ap);
+    int ret = vsnprintf(buf + len, MAX_LOG_LINE_LENGTH - len, format, ap);
     va_end(ap);
 
     if (!bErrorLogSetup)
@@ -465,8 +466,7 @@ static int for_each_fn(void *s)
 void plainconf::flushErrorLog()
 {
     //int n = errorLogList.size();
-    errorLogList.for_each(errorLogList.begin(), errorLogList.end(),
-                          for_each_fn);
+    errorLogList.for_each(errorLogList.begin(), errorLogList.end(), for_each_fn);
     errorLogList.clear();
     bErrorLogSetup = true;
 }
@@ -1359,7 +1359,7 @@ XmlNode *plainconf::parseFile(const char *configFilePath,
 
     handleSpecialCaseLoop(rootNode);
 
-
+//#define TEST_OUTPUT_PLAIN_CONF 1
 #ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
     strcpy(sPlainFile, configFilePath);

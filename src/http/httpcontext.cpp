@@ -1271,6 +1271,22 @@ int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
 }
 
 
+void HttpContext::configPhpConfig(char* config)
+{
+//     PHPConfig *pConfig = getPHPConfig();
+//     if (pConfig == NULL)
+//     {
+//         pConfig = new PHPConfig();
+//         if (!pConfig)
+//             return -1;
+//         setPHPConfig(pConfig);
+//     }
+//     LS_DBG_L(ConfigCtx::getCurConfigCtx(), "add PHP config: %s",
+//               pBegin);
+//     return pConfig->parse(id, pBegin, m_achError, sizeof(m_achError));
+}
+
+
 int HttpContext::config(const RewriteMapList *pMapList,
                         const XmlNode *pContextNode,
                         int type)
@@ -1360,6 +1376,11 @@ int HttpContext::config(const RewriteMapList *pMapList,
         configErrorPages(pNode);
     }
 
+    pValue = pNode->getChildValue("phpConfig");
+    if (pValue)
+    {
+        configPhpConfig((char *) pValue);
+    }
     return 0;
 }
 

@@ -19,6 +19,7 @@
 
 #include <extensions/extworker.h>
 
+#include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
 #include <http/httpmime.h>
 #include <http/httpstatuscode.h>
@@ -129,6 +130,17 @@ int JConn::processPacketHeader(unsigned char *&p)
         }
         break;
     case AJP13_MORE_REQ_BODY:
+        if (getConnector())
+        {
+            if ((getConnector()->getState() & HEC_FWD_REQ_BODY) == 0)
+            {
+                LS_DBG_L(this, "REQ_BODY finished, container asking for more, "
+                        "send blank packet for EOF.");
+                JkAjp13::buildAjpHeader( m_pBufEnd, 0 );
+                write( m_pBufEnd, 4 );
+            }
+        }
+        break;
     default:
         break;
     }
@@ -163,6 +175,8 @@ int JConn::processPacketData(unsigned char *&p)
         p = pEnd;
     if (ret == -1)
         return ret;
+    if (pCur == p)
+        return 1;
     m_packetLeft -= p - pCur;
     if (m_packetLeft == 0)
         m_iPacketState = PACKET_HEADER;
@@ -242,6 +256,7 @@ int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
     //fall through
     case RESP_HEADER:
         ret = readRespHeader(p, pEnd);
+        //fall through
     default:
         p = pEnd;
         break;
@@ -253,6 +268,7 @@ int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
 
 int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
 {
+    int &status = getConnector()->getRespState();
     while (m_iNumHeader > 0)
     {
         if (pEnd - p < 4)
@@ -291,32 +307,15 @@ int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
         char *pHeaderVal = (char *)p1 + 2;
         p = p1 + headerValLen + 3;
         --m_iNumHeader;
-        HttpResp *pResp = getConnector()->getHttpSession()->getResp();
-        int ret = pResp->appendHeader(
-                      pHeaderName, headerNameLen, pHeaderVal, headerValLen);
-        if (ret)
-            return ret;
-        HttpReq *pReq = getConnector()->getHttpSession()->getReq();
-        if (pReq->gzipAcceptable() == GZIP_REQUIRED)
-        {
-            if (*pHeaderName == 'C' || *pHeaderName == 'c')
-            {
-                if (strcasecmp(pHeaderName, "content-type") == 0)
-                {
-                    char *p = (char *)memchr(pHeaderVal, ';', headerValLen);
-                    if (!p)
-                        p = pHeaderVal + headerValLen;
-                    char ch;
-                    ch = *p;
-                    *p = 0;
-                    if (!HttpMime::getMime()->compressible(pHeaderVal))
-                        pReq->andGzip(~GZIP_ENABLED);
-                    *p = ch;
-                }
-                else if (strcasecmp(pHeaderName, "content-encoding") == 0)
-                    pReq->andGzip(~GZIP_ENABLED);
-            }
-        }
+        *(p1 - 1) = ':';
+        *p1 = ' ';
+        *(p1 + 1) = ' ';
+        if (HttpCgiTool::processHeaderLine(
+                getConnector(),
+                pHeaderName, headerNameLen,
+                pHeaderVal, headerValLen, status) == -1)
+            return LS_FAIL;
+
     }
     getConnector()->getRespState() |= HttpReq::HEADER_OK;
     return getConnector()->respHeaderDone();
@@ -458,46 +457,61 @@ int  JConn::beginReqBody()
 }
 
 
-int  JConn::sendReqBodyPacket()
-{
-    JkAjp13::buildAjpReqBodyHeader(m_pBufEnd, m_iPendingBody);
-    m_iTotalPending = m_iPendingBody + 6;
-    m_iPendingBody = 0;
-    return 0;
-}
-
+// m_iPendingHeader = -1, no half body packet sent
+//                    0, no header left
+//                    1-6, header need to be sent
 
 int  JConn::sendReqBody(const char *pBuf, int size)
 {
-    int len = 0;
     if (m_iTotalPending > 0)
         if (flush() == -1)
             return LS_FAIL;
     if (m_iTotalPending > 0)
         return 0;
-    if (!m_iPendingBody)
+    if (size > m_iPacketRemain)
+        size = m_iPacketRemain;
+    int total = size;
+    if (m_iPendingHeader == -1)
+    {
+        JkAjp13::buildAjpReqBodyHeader(m_pBufEnd, size);
         m_iovec.append(m_pBufEnd, 6);
-    if (size + m_iPendingBody > AJP_MAX_PKT_BODY_SIZE - 2)
-    {
-        len = AJP_MAX_PKT_BODY_SIZE - 2 - m_iPendingBody;
-        m_iovec.append(pBuf, len);
-        m_iPendingBody += len;
-        sendReqBodyPacket();
-        return len;
+        m_iPendingHeader = 6;
     }
-    else
+    if (m_iPendingHeader > 0)
+        total += m_iPendingHeader;
+    m_iovec.append(pBuf, size);
+    int ret = writev(m_iovec, total);
+    if (ret >= total)
     {
-        m_iPendingBody += size;
-        m_iovec.append(pBuf, size);
+        m_iPendingHeader = -1;
+        m_iovec.clear();
+        m_iPacketRemain = AJP_MAX_PKT_BODY_SIZE - 2;
         return size;
     }
+    else if (ret > 0)
+    {
+        if (ret < m_iPendingHeader)
+        {
+            m_iPendingHeader -= ret;
+            m_iovec.pop_back(1);
+            m_iovec.finish(ret);
+            ret = 0;
+        }
+        else
+        {
+            ret -= m_iPendingHeader;
+            m_iPendingHeader = 0;
+            m_iovec.clear();
+        }
+    }
+    return ret;
 }
 
 
 int  JConn::endOfReqBody()
 {
-    if (m_iPendingBody)
-        sendReqBodyPacket();
+    //if ( m_iPendingBody )
+    //    sendReqBodyPacket();
     if (m_iTotalPending)
     {
         int ret = flush();
@@ -591,6 +605,8 @@ int JConn::sendReqHeader()
     m_iovec.clear();
     m_iovec.append(m_buf, m_pBufEnd - m_buf);
     m_iTotalPending = m_pBufEnd - m_buf;
+    m_iPendingHeader = -1;
+    m_iPacketRemain = AJP_MAX_PKT_BODY_SIZE - 2;
     setInProcess(1);
     return 1;
 }

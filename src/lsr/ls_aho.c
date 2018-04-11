@@ -31,6 +31,7 @@ struct ls_aho_state_s
 {
     unsigned int        id;
     size_t              output;
+    void               *ctx;
     ls_aho_state_t     *fail;
     ls_aho_state_t     *next;
     ls_aho_gotonode_t  *first;
@@ -96,7 +97,8 @@ void ls_aho_delete(ls_aho_t *pThis)
 }
 
 
-int ls_aho_addpattern(ls_aho_t *pThis, const char *pattern, size_t size)
+int ls_aho_addpattern(ls_aho_t *pThis, const char *pattern, size_t size,
+                      void *pattern_ctx)
 {
     ls_aho_state_t *pState, *ptr = NULL;
     size_t j = 0;
@@ -169,6 +171,7 @@ int ls_aho_addpattern(ls_aho_t *pThis, const char *pattern, size_t size)
         pState = ptr;
         ++j;
     }
+    ptr->ctx = pattern_ctx;
     ptr->output = size;
     return 1;
 }
@@ -203,7 +206,7 @@ int ls_aho_addfromfile(ls_aho_t *pThis, const char *filename)
         while (isspace(*pEnd))
             --pEnd;
         *(++pEnd) = '\0';   /* needed later for strstr() */
-        ret = ls_aho_addpattern(pThis, pStart, pEnd - pStart);
+        ret = ls_aho_addpattern(pThis, pStart, pEnd - pStart, NULL);
         /* not include the last '\0' */
         if (ret == 0)
             return 0;
@@ -213,7 +216,7 @@ int ls_aho_addfromfile(ls_aho_t *pThis, const char *filename)
 }
 
 
-int ls_aho_maketree(ls_aho_t *pThis)
+int ls_aho_maketree(ls_aho_t *pThis, int optimize)
 {
     ls_aho_state_t *pState, *ptr, *pIter, *pHead, *pTail;
     ls_aho_gotonode_t *pNode;
@@ -264,6 +267,8 @@ int ls_aho_maketree(ls_aho_t *pThis)
             //}
         }
     }
+    if (optimize)
+        return ls_aho_optimize(pThis->zero_state, pThis->case_sensitive);
     return 1;
 }
 
@@ -289,10 +294,10 @@ ls_aho_t *ls_aho_copy(ls_aho_t *pThis)
 }
 
 
-unsigned int ls_aho_search(ls_aho_t *pThis,
-                           ls_aho_state_t *start_state, const char *string, size_t size,
-                           size_t startpos,
-                           size_t *out_start, size_t *out_end, ls_aho_state_t **out_last_state)
+unsigned int ls_aho_search(ls_aho_t *pThis, ls_aho_state_t *start_state, 
+                           const char *string, size_t size, size_t startpos, 
+                           size_t *out_start, size_t *out_end, 
+                           ls_aho_state_t **out_last_state, void **pattern_ctx)
 {
     ls_aho_state_t *pZero = pThis->zero_state;
     ls_aho_state_t *aAccept[LS_AHO_MAX_FIRST_CHARS];
@@ -358,6 +363,8 @@ unsigned int ls_aho_search(ls_aho_t *pThis,
                 *out_start = iStringIter - start_state->output + 1;
                 *out_end = iStringIter + 1;
                 *out_last_state = start_state;
+                if (pattern_ctx != NULL)
+                    *pattern_ctx = start_state->ctx;
                 return start_state->id;
             }
         }
@@ -554,7 +561,7 @@ static void ls_aho_copy_helper(ls_aho_state_t *pState, char *pBuf,
     if (pState->goto_size == 0)
     {
         // pattern is finished
-        ls_aho_addpattern(pThis, pBuf, iCurLen);
+        ls_aho_addpattern(pThis, pBuf, iCurLen, NULL);
         return;
     }
     for (i = 0; i < pState->goto_size; i += inc)

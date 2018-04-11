@@ -394,6 +394,7 @@ int HttpUtil::unescape(const char *pSrc, char *pDest, int iDestLen)
             //get rid of duplicate '/'s.
             if (*pSrc == '/')
                 break;
+            //fall through
         default:
             *p++ = c;
         }

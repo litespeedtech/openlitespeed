@@ -2332,7 +2332,7 @@ int HttpSession::onReadEx()
     case HSS_WAITING:
         HttpStats::decIdleConns();
         setState(HSS_READING);
-    //fall through;
+        //fall through
     case HSS_READING:
         if (getFlag(HSF_SUSPENDED))
             getStream()->wantRead(0);
@@ -2376,6 +2376,7 @@ int HttpSession::onReadEx()
                     return 0;
             }
         }
+        //fall through
     default:
         getStream()->wantRead(0);
         return 0;
@@ -5092,6 +5093,7 @@ int HttpSession::smProcessReq()
             }
             else
                 setProcessState(HSPS_BEGIN_HANDLER_PROCESS);
+            //fall through
         case HSPS_BEGIN_HANDLER_PROCESS:
             ret = handlerProcess(m_request.getHttpHandler());
             break;

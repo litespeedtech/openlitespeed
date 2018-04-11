@@ -18,11 +18,10 @@
 #ifndef JCONN_H
 #define JCONN_H
 
-#include "jkajp13.h"
-
 #include <lsdef.h>
 #include <extensions/extconn.h>
 #include <extensions/httpextprocessor.h>
+#include <extensions/jk/jkajp13.h>
 #include <util/iovec.h>
 
 #define AJP_MIN_PACKET_SIZE 6
@@ -32,7 +31,9 @@ class JConn : public ExtConn
 {
     char           *m_pReqHeaderEnd;
     char           *m_pBufEnd;
-    int             m_iPendingBody;
+    int             m_iPendingHeader;
+    int             m_iPacketRemain;
+    //int             m_iPendingBody;
     int             m_iTotalPending;
     IOVec           m_iovec;
     char            m_buf[AJP_MAX_PACKET_SIZE + 8];

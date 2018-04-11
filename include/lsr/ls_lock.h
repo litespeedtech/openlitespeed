@@ -312,7 +312,7 @@ ls_inline int ls_futex_safe_lock(ls_mutex_t *p)
     }
     do
     {
-        if (ls_spin_pid != (lockpid & LS_FUTEX_PID_MASK)
+        if (ls_spin_pid != (int)(lockpid & LS_FUTEX_PID_MASK)
             && (kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0) && (errno == ESRCH)
             && ls_atomic_casint(p, lockpid, ls_spin_pid | LS_FUTEX_HAS_WAITER))
                 // successfully swapped old process id lockpid to (ours + has waiter),

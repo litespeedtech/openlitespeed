@@ -150,7 +150,7 @@ int LsiBaseFetch::CollectHeaders(const lsi_session_t *session)
 
 void LsiBaseFetch::RequestCollection()
 {
-    long tmp  = AtomicSetEventObj(NULL);
+    long tmp  = AtomicSetEventObj(0);
     if (tmp == 0)
         return ;
     ls_atomic_add(&m_iReferences, 1);

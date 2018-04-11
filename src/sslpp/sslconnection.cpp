@@ -354,6 +354,7 @@ int SslConnection::checkError(int ret)
                 break;
             }
         }
+        //fall through
     default:
         errno = EIO;
         //printf( "SslError:%s\n", SslError(err).what() );

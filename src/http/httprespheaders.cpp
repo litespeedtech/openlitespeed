@@ -366,6 +366,13 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pVal,
                s_iHeaderLen[headerIndex], pVal, valLen, method);
 }
 
+int HttpRespHeaders::addWithUnknownHeader(const char *pName, int nameLen, const char *pVal,
+                         unsigned int valLen, int method)
+
+{
+    return add(H_HEADER_END, pName, nameLen, pVal, valLen, method);
+}
+
 
 int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
                          unsigned int valLen, int method)

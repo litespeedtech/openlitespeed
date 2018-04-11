@@ -125,6 +125,29 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
 
 
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
+                                   const char *pName, int nameLen,
+                                   const char *pValue, int valLen, int &status)
+{
+    HttpRespHeaders::INDEX index;
+
+    index = HttpRespHeaders::getIndex(pName);
+    if ((index < HttpRespHeaders::H_HEADER_END) &&
+        (nameLen == HttpRespHeaders::getHeaderStringLen(index)))
+    {
+        return processHeaderLine(pExtConn, index, pName, nameLen, pValue,
+                                 valLen, status);
+
+    }
+//    if (( pName < pValue )&&(pValue - (pName + nameLen) < 5 ))
+//        return pExtConn->getHttpSession()->getResp()
+//                    ->appendHeaderLine( pName, pValue + valLen );
+//    else
+    return pExtConn->getHttpSession()->getResp()->appendHeader(
+                    pName, nameLen, pValue, valLen);
+}
+
+
+int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char  *pLineBegin,
                                    const char *pLineEnd, int &status)
 {
@@ -132,9 +155,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     int tmpIndex;
     const char *pKeyEnd = NULL;
     const char *pValue = pLineBegin;
-    char *p;
-    HttpResp *pResp = pExtConn->getHttpSession()->getResp();
-    HttpReq *pReq = pExtConn->getHttpSession()->getReq();
+    int nameLen = 0;
 
     index = HttpRespHeaders::getIndex(pValue);
     if (index < HttpRespHeaders::H_HEADER_END)
@@ -148,6 +169,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             index = HttpRespHeaders::H_HEADER_END;
         else
         {
+            nameLen = HttpRespHeaders::getHeaderStringLen(index);
             do { ++pValue; }
             while ((pValue < pLineEnd) && isspace(*pValue));
         }
@@ -162,6 +184,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                 ++pValue;
             while (isspace(pKeyEnd[-1]))
                 --pKeyEnd;
+            nameLen = pKeyEnd - pLineBegin;
             //ignore empty response header
             //if ( pValue == pLineEnd )
             //    return 0;
@@ -173,21 +196,45 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             if (!isspace(*pLineBegin))
                 return 0;
         }
+        if (status & HEC_RESP_AUTHORIZED)
+        {
+            if (strncasecmp(pLineBegin, "Variable-", 9) == 0)
+            {
+                if (pKeyEnd > pLineBegin + 9)
+                    pExtConn->getHttpSession()->getReq()->addEnv(
+                        pLineBegin + 9, pKeyEnd - pLineBegin - 9,
+                        pValue, pLineEnd - pValue);
+            }
+            return 0;
+        }
     }
+    HttpReq *pReq = pExtConn->getHttpSession()->getReq();
     if (pExtConn->getHttpSession()->getState() == HSS_REDIRECT
         && pReq->getRedirHdrs() )
     {
         pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin + 2);
         return 0;
     }
+    return processHeaderLine(pExtConn, index, pLineBegin, nameLen, pValue,
+                             pLineEnd - pValue, status);
+}
+
+
+int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
+                                   int index, const char *pName, int nameLen,
+                                   const char *pValue, int valLen, int &status)
+{
+    HttpResp *pResp = pExtConn->getHttpSession()->getResp();
+    HttpReq *pReq = pExtConn->getHttpSession()->getReq();
+    int tmpIndex;
+
     switch (index)
     {
     case HttpRespHeaders::H_CONTENT_TYPE:
         if (pReq->getStatusCode() == SC_304)
             return 0;
         //HttpCgiTool::processExpires(pReq, pResp, pValue);
-        return processContentType(pExtConn->getHttpSession(), pValue,
-                                  pLineEnd - pValue);
+        return processContentType(pExtConn->getHttpSession(), pValue, valLen);
     case HttpRespHeaders::H_CONTENT_ENCODING:
         if (pReq->getStatusCode() == SC_304
             || strncasecmp(pValue, "none", 4) == 0)
@@ -205,11 +252,12 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 //         }
         break;
     case HttpRespHeaders::H_CONTENT_DISPOSITION:
-        pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin + 2);
+        pReq->appendRedirHdr(pName, pValue + valLen - pName);
         break;
     case HttpRespHeaders::H_LOCATION:
         if ((status & HEC_RESP_PROXY) || (pReq->getStatusCode() != SC_200))
             break;
+        //fall through
     case HttpRespHeaders::H_LITESPEED_LOCATION:
         if (*pValue != '/')
         {
@@ -223,13 +271,13 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                 pReq->setStatusCode(SC_200);
             if (index == HttpRespHeaders::H_LITESPEED_LOCATION)
             {
-                char ch = *pLineEnd;
-                *((char *)pLineEnd) = 0;
-                pReq->locationToUrl(pValue, pLineEnd - pValue);
-                *((char *)pLineEnd) = ch;
+                char ch = *(pValue + valLen);
+                *((char *)(pValue + valLen)) = 0;
+                pReq->locationToUrl(pValue, valLen);
+                *((char *)(pValue + valLen)) = ch;
             }
             else
-                pReq->setLocation(pValue, pLineEnd - pValue);
+                pReq->setLocation(pValue, valLen);
             pExtConn->getHttpSession()->changeHandler();
             //status |= HEC_RESP_LOC_SET;
             return 0;
@@ -262,7 +310,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 
     case HttpRespHeaders::H_SET_COOKIE:
         //pReq->getRespCacheCtrl().setHasCookie();
-        pReq->processSetCookieHeader(pValue, pLineEnd - pValue);
+        pReq->processSetCookieHeader(pValue, valLen);
         break;
 
     case HttpRespHeaders::H_PROXY_CONNECTION:
@@ -290,20 +338,14 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         //"script-control: no-abort" is not supported
         break;
     }
-    if (status & HEC_RESP_AUTHORIZED)
+    if (index != HttpRespHeaders::H_HEADER_END)
+        return pResp->appendHeader(index, pName, nameLen, pValue, valLen);
+    else
     {
-        if (strncasecmp(pLineBegin, "Variable-", 9) == 0)
-        {
-            if (pKeyEnd > pLineBegin + 9)
-                RequestVars::setEnv(pExtConn->getHttpSession(), pLineBegin + 9,
-                                    pKeyEnd - pLineBegin - 9,
-                                    pValue, pLineEnd - pValue);
-        }
-        return 0;
+        return pResp->getRespHeaders().addWithUnknownHeader(pName, nameLen,
+                                                            pValue, valLen,
+                                                            LSI_HEADEROP_ADD);
     }
-    assert(pKeyEnd);
-    return pResp->appendHeader(pLineBegin, pKeyEnd - pLineBegin, pValue,
-                               pLineEnd - pValue);
 }
 
 

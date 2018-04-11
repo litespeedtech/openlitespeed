@@ -475,7 +475,7 @@ LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
             break;
         int end_page = (offset + size - 1) >> LARGE_PAGE_BITS;
         int firstpart_size;
-        if ((offset >> LARGE_PAGE_BITS) == end_page)
+        if ((int)(offset >> LARGE_PAGE_BITS) == end_page)
             break;
         firstpart_size = (end_page << LARGE_PAGE_BITS) - offset;
         LS_WARN("[SHM] [%d-%d:%p] alloc2 cross large page boundary, "

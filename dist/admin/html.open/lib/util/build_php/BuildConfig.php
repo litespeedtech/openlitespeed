@@ -25,17 +25,17 @@ class BuildConfig
 
             case self::PHP_VERSION: return
                         array(
-                            '7.2.3',
-                            '7.1.15',
-                            '7.0.28',
-                            '5.6.34',
+                            '7.2.4',
+                            '7.1.16',
+                            '7.0.29',
+                            '5.6.35',
                             '5.5.38',
                             '5.4.45',
                             '5.3.29',
                             '5.2.17',
                             '4.4.9');
 
-            case self::LSAPI_VERSION: return '7.0';
+            case self::LSAPI_VERSION: return '7.1';
 
             case self::SUHOSIN_VERSION: return '0.9.38';
 

@@ -227,7 +227,7 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
             case 1:
                 range.setBegin(lValue);
                 lValue = 0;
-            //don't break, fall through
+                //fall through
             case 0:
             case 4:
                 state = 2;
@@ -250,7 +250,7 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
             case 3:
                 range.setEnd(lValue);
                 lValue = 0;
-            //don't break, fall through
+                //fall through
             case 2:
             case 5:
                 if (checkAndInsert(range, pool) == -1)
