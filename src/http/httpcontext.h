@@ -234,6 +234,7 @@ class HttpContext
     const MimeSetting *lookupMimeBySuffix(const char *achSuffix) const;
 
     const MimeSetting *getMimeBySuffix(const char *pSuffix, int forceAddMime);
+    void configPhpConfig(char* config);
 
 
 public:

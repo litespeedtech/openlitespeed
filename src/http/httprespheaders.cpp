@@ -319,6 +319,21 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pVal,
                 s_iHeaderLen[headerIndex], pVal, valLen, method, headerIndex);
 }
 
+int HttpRespHeaders::addWithUnknownHeader(const char *pName, int nameLen, const char *pVal,
+                         unsigned int valLen, int method)
+
+{
+    int kvOrderNum = -1;
+    INDEX headerIndex = H_HEADER_END;
+    int ret = getHeaderKvOrder(pName, nameLen);
+    if (ret != -1)
+        kvOrderNum = ret;
+    else
+        kvOrderNum = getTotalCount();
+
+    return _add(kvOrderNum, pName, nameLen, pVal, valLen, method, headerIndex);
+}
+
 
 int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
                          unsigned int valLen, int method)

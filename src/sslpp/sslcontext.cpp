@@ -208,7 +208,6 @@ void SslContext::release()
 SSL *SslContext::newSSL()
 {
     init(m_iMethod);
-    seedRand(128);
     return SSL_new(m_pCtx);
 }
 

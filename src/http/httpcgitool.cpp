@@ -168,6 +168,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             index = HttpRespHeaders::H_HEADER_END;
         else
         {
+            nameLen = HttpRespHeaders::getHeaderStringLen(index);
             do { ++pValue; }
             while ((pValue < pLineEnd) && isspace(*pValue));
         }
@@ -336,7 +337,14 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         //"script-control: no-abort" is not supported
         break;
     }
-    return pResp->appendHeader(index, pName, nameLen, pValue, valLen);
+    if (index != HttpRespHeaders::H_HEADER_END)
+        return pResp->appendHeader(index, pName, nameLen, pValue, valLen);
+    else
+    {
+        return pResp->getRespHeaders().addWithUnknownHeader(pName, nameLen,
+                                                            pValue, valLen,
+                                                            LSI_HEADEROP_ADD);
+    }
 }
 
 
