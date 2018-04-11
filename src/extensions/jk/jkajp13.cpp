@@ -39,23 +39,25 @@ JkAjp13::~JkAjp13()
 }
 
 
-static const char *s_pForwardHeaderName[9] =
+static const char *s_pForwardHeaderName[11] =
 {
-    "cache-control",
-    "if-modified-since",
-    "if-match",
-    "if-none-match",
-    "if-unmodified-since",
-    "if-range",
-    "keep-alive",
-    "range",
-    "transfer-encoding"
+    "Cache-Control",
+    "If-Modified-Since",
+    "If-Match",
+    "If-None-Match",
+    "If-Unmodified-Since",
+    "If-Range",
+    "Keep-Alive",
+    "Range",
+    "X-Forwarded-For",
+    "Via",
+    "Transfer-Encoding"
 };
 
 
-static int s_iForwardHeaderLen[9] =
+static int s_iForwardHeaderLen[11] =
 {
-    13, 17, 8, 13, 19, 8, 10, 5, 17
+    13, 17, 8, 13, 19, 8, 10, 5, 15, 3, 17
 };
 
 
@@ -239,6 +241,25 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
             appendString(p, s_pForwardHeaderName[i - HttpHeader::H_CACHE_CTRL],
                          s_iForwardHeaderLen[ i - HttpHeader::H_CACHE_CTRL]);
             appendString(p, pHeader, n);
+            ++headerCounts;
+        }
+    }
+    n = pReq->getUnknownHeaderCount();
+    for (i = 0; i < (size_t)n; ++i)
+    {
+        const char *pKey;
+        const char *pVal;
+        int keyLen;
+        int valLen;
+        pKey = pReq->getUnknownHeaderByIndex(i, keyLen, pVal, valLen);
+        if (pKey)
+        {
+            if (keyLen > 250)
+                keyLen = 250;
+            if (pEnd2 - p < keyLen + valLen)
+                return -1;
+            appendString(p, pKey, keyLen);
+            appendString(p, pVal, valLen);
             ++headerCounts;
         }
     }

@@ -25,8 +25,10 @@
 
 TEST(ls_AhoTest_test)
 {
+    void *ctx;
     int iNumTests = 9;
     size_t iOutStart = 0, iOutEnd = 0;
+    int ret;
     ls_aho_t *pThis;
     ls_aho_state_t **outlast = (ls_aho_state_t **)ls_palloc(sizeof(
                                    ls_aho_state_t **));
@@ -36,7 +38,7 @@ TEST(ls_AhoTest_test)
     for (int i = 0; i < iNumTests; ++i)
     {
         pThis = ls_aho_initTree(ls_aho_TestAccept[i], ls_aho_TestAcceptLen[i],
-                                ls_aho_Sensitive[i]);
+                                ls_aho_Sensitive[i], i+1);
         if (pThis == NULL)
         {
             printf("Init Tree failed.");
@@ -44,11 +46,14 @@ TEST(ls_AhoTest_test)
             return;
         }
 
-        ls_aho_search(pThis, NULL, ls_aho_TestInput[i], ls_aho_TestInputLen[i], 0,
-                      &iOutStart, &iOutEnd, outlast);
+        ret = ls_aho_search(pThis, NULL, ls_aho_TestInput[i], 
+                            ls_aho_TestInputLen[i], 0,
+                            &iOutStart, &iOutEnd, outlast, &ctx);
 
         CHECK(iOutStart == ls_aho_OutStartRes[i]
               && iOutEnd == ls_aho_OutEndRes[i]);
+        if (ret != 0)
+            CHECK((long)ctx == i+1);
         iOutStart = 0;
         iOutEnd = 0;
         ls_aho_delete(pThis);
@@ -58,7 +63,7 @@ TEST(ls_AhoTest_test)
 }
 
 ls_aho_t *ls_aho_initTree(const char *acceptBuf[], int bufCount,
-                          int sensitive)
+                          int sensitive, int seq)
 {
     int i;
     ls_aho_t *pThis;
@@ -70,22 +75,17 @@ ls_aho_t *ls_aho_initTree(const char *acceptBuf[], int bufCount,
     }
     for (i = 0; i < bufCount; ++i)
     {
-        if ((ls_aho_addpattern(pThis, acceptBuf[i], strlen(acceptBuf[i]))) == 0)
+        if (ls_aho_addpattern(pThis, acceptBuf[i], strlen(acceptBuf[i]), 
+                              (void *)(long)seq) == 0)
         {
             printf("Add patterns failed.");
             ls_aho_delete(pThis);
             return NULL;
         }
     }
-    if ((ls_aho_maketree(pThis)) == 0)
+    if ((ls_aho_maketree(pThis, 1)) == 0)
     {
         printf("Make tree failed.");
-        ls_aho_delete(pThis);
-        return NULL;
-    }
-    if ((ls_aho_optimizetree(pThis)) == 0)
-    {
-        printf("Optimize failed.");
         ls_aho_delete(pThis);
         return NULL;
     }

@@ -349,7 +349,7 @@ public:
     {   return ls_atomic_add_fetch(&m_pReqParser,0);  }
 
     void setReqParser(ReqParser *reqParser)
-    {   ls_atomic_setptr(&m_pReqParser, reqParser);             }
+    {   (void)ls_atomic_setptr(&m_pReqParser, reqParser);             }
 
     AutoBuf &getExtCmdBuf()     { return m_sExtCmdResBuf;       }
 
@@ -735,7 +735,7 @@ public:
     int handleAioSFEvent(Aiosfcb *event);
 
     void setModHandler(const lsi_reqhdlr_t *pHandler)
-    {   ls_atomic_setptr(&m_pModHandler, pHandler);   }
+    {   (void)ls_atomic_setptr(&m_pModHandler, pHandler);   }
 
     const lsi_reqhdlr_t *getModHandler()
     {   return ls_atomic_fetch_add(&m_pModHandler,0);}
@@ -783,7 +783,7 @@ public:
     void mtNotifyWriters();
 
     void setMtNotifiers(MtSessData *pNotifiers)
-    {   ls_atomic_setptr(&m_pMtSessData, pNotifiers);  }
+    {   (void)ls_atomic_setptr(&m_pMtSessData, pNotifiers);  }
     MtSessData *getMtSessData() const
     {   return m_pMtSessData;  }
 

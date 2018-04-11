@@ -31,12 +31,10 @@
 #define MAX_FIRST_CHARS 256
 
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 typedef ls_aho_state_t AhoState;
+typedef ls_aho_state_t ac_state_t;
+typedef struct ls_aho_s  ls_aho_t;
 
 class Aho : private ls_aho_t
 {
@@ -53,31 +51,26 @@ public:
     AhoState *getZeroState()
     {   return zero_state;    }
 
-    int addPattern(const char *pattern, size_t size)
-    {   return ls_aho_addpattern(this, pattern, size);   }
+    int addPattern(const char *pattern, size_t size, void *ctx)
+    {   return ls_aho_addpattern(this, pattern, size, ctx);   }
 
     int addPatternsFromFile(const char *filename)
     {   return ls_aho_addfromfile(this, filename);    }
 
     int makeTree()
-    {   return ls_aho_maketree(this);   }
+    {   return ls_aho_maketree(this, 1);   }
 
     int optimizeTree()
     {   return ls_aho_optimizetree(this);    }
 
     /* search for matches in an aho corasick tree. */
     unsigned int search(AhoState *start_state, const char *string, size_t size,
-                        size_t startpos,
-                        size_t *out_start, size_t *out_end, AhoState **out_last_state)
+                        size_t startpos, size_t *out_start, size_t *out_end, 
+                        AhoState **out_last_state, void **pattern_ctx)
     {
         return ls_aho_search(this, start_state, string, size, startpos,
-                             out_start, out_end, out_last_state);
+                             out_start, out_end, out_last_state, pattern_ctx);
     }
 };
-
-#ifdef __cplusplus
-}
-#endif
-
 
 #endif

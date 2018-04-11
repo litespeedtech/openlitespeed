@@ -117,11 +117,13 @@ void ls_aho_delete(ls_aho_t *pThis);
  * @param[in] pThis - A pointer to an initialized Aho tree object.
  * @param[in] pattern - A pointer to the pattern to add to the tree.
  * @param[in] size - The length of the pattern.
+ * @param[in] pattern_ctx - The optional context associated with the pattern.
  * @return 1 for success, 0 for failure.
  *
  * @see ls_aho_new, ls_aho, ls_aho_maketree
  */
-int ls_aho_addpattern(ls_aho_t *pThis, const char *pattern, size_t size);
+int ls_aho_addpattern(ls_aho_t *pThis, const char *pattern, size_t size, 
+                      void *pattern_ctx);
 
 /** @ls_aho_addfromfile
  * @brief Adds patterns found in the file to the Aho tree.
@@ -150,11 +152,12 @@ int ls_aho_addfromfile(ls_aho_t *pThis, const char *filename);
  *  \link #ls_aho_optimizetree optimize tree.\endlink
  *
  * @param[in] pThis - A pointer to an initialized Aho tree object to complete.
+ * @param[in] optimize - whether to optimize the tree.
  * @return 1 for success, 0 for failure.
  *
  * @see ls_aho_addpattern, ls_aho_addfromfile, ls_aho_optimizetree
  */
-int ls_aho_maketree(ls_aho_t *pThis);
+int ls_aho_maketree(ls_aho_t *pThis, int optimize);
 
 /** @ls_aho_optimizetree
  * @brief Optimizes the tree for searches.  Must be called after make tree.
@@ -192,9 +195,10 @@ int ls_aho_optimizetree(ls_aho_t *pThis);
  * @see ls_aho_optimizetree
  */
 unsigned int ls_aho_search(ls_aho_t *pThis,
-                           ls_aho_state_t *start_state, const char *string, size_t size,
-                           size_t startpos,
-                           size_t *out_start, size_t *out_end, ls_aho_state_t **out_last_state);
+                           ls_aho_state_t *start_state, const char *string, 
+                           size_t size, size_t startpos,
+                           size_t *out_start, size_t *out_end, 
+                           ls_aho_state_t **out_last_state, void **pattern_ctx);
 
 ls_aho_t *ls_aho_copy(ls_aho_t *pThis);
 

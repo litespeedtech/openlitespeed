@@ -359,7 +359,7 @@ static int parseNoCacheUrl(CacheConfig *pConfig, const char *pValStr,
     if (!pConfig->getUrlExclude())
         pConfig->setUrlExclude(new Aho(1));
 
-    pConfig->getUrlExclude()->addPattern(pValStr, valLen);
+    pConfig->getUrlExclude()->addPattern(pValStr, valLen, NULL);
     return 0;
 }
 
@@ -571,7 +571,7 @@ static int isUrlExclude(const lsi_session_t *session, CacheConfig *pConfig,
             AhoState *out_last_state;
             int ret = ahos[i]->search(NULL, url, urlLen, 0,
                                       &out_start, &out_end,
-                                      &out_last_state);
+                                      &out_last_state, NULL);
             if (ret)
             {
                 g_api->log(session, LSI_LOG_INFO, "Cache excluded by URL: %.*s\n",
@@ -1438,11 +1438,29 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
      * If already gzipped, no need to gzip 
      */
     int needGzip = !g_api->is_resp_buffer_gzippped(rec->session);
+    
+    /**
+     * For ab test, no need to gzip
+     */
+    if (needGzip)
+    {
+#define AB_USERAGENT        "ApacheBench"
+#define AB_USERAGENT_LEN    (sizeof(AB_USERAGENT) - 1)
+        int uaLen;
+        const char * pUA = g_api->get_req_header_by_id(rec->session,
+                                                       LSI_HDR_USERAGENT,
+                                                       &uaLen);
+        if (pUA && uaLen > AB_USERAGENT_LEN && 
+            strncasecmp(pUA, AB_USERAGENT, AB_USERAGENT_LEN) == 0)
+        {
+            needGzip = false;
+        }
+    }
+
     /**
      * If need to gzip but it is a a samll static file, no need
      * Or it is not compressible, no need
      */
-    
     if (needGzip)
     {
         int contentTypelen;

@@ -1,7 +1,7 @@
 <?php if (!$no_main_header) { ?>
 <!DOCTYPE html>
 <html lang="en-us">
-<?php } ?>    
+<?php } ?>
 	<head>
 		<meta charset="utf-8">
 		<!--<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">-->
@@ -30,6 +30,7 @@
 		<!-- iOS web-app metas : hides Safari UI Components and Changes Status Bar Appearance -->
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <meta name="robots" content="noindex">
 
 		<!-- Link to Google CDN's jQuery + jQueryUI; fall back to local -->
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
@@ -59,10 +60,10 @@
 		<!-- HEADER -->
 		<header id="header">
 			<div id="logo-group">
-                            <span id="logo"> 
+                            <span id="logo">
                                 <object type="image/svg+xml" data="/res/img/product_logo.svg"  height="35" width="200">
 Your browser doesn't support SVG
-                                </object> 
+                                </object>
                             </span>
 			</div>
 
@@ -75,7 +76,7 @@ Your browser doesn't support SVG
 			$new_version = $prod->getNewVersion();
 
 			$ver_notice = DMsg::UIStr('note_curver') . ':</span><span>'
-				. Product::PROD_NAME . ' ' . $version; 
+				. Product::PROD_NAME . ' ' . $version;
 			if ($new_version) {
 				$ver_notice .= ' &nbsp;&nbsp;<a href="http://open.litespeedtech.com/releaselog" rel="noopener noreferrer" target="_blank"><i>'
 						. DMsg::UIStr('note_newver') . ' ' . $new_version . '</i></a>';

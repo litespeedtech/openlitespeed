@@ -112,6 +112,9 @@ public:
     void reset();
     void reset2();
 
+    
+    int addWithUnknownHeader(const char *pName, int nameLen, const char *pVal,
+                             unsigned int valLen, int method);
     int add(INDEX headerIndex, const char *pVal, unsigned int valLen,
             int method = LSI_HEADEROP_SET);
     int add(INDEX headerIndex, const char *pName, int nameLen,

@@ -784,6 +784,7 @@ int VMemBuf::grow()
     case VMBUF_ANON_MAP:
         if ((pBlock = getAnonMapBlock(s_iBlockSize)))
             break;
+        //fall through
     default:
         return LS_FAIL;
     }
@@ -809,12 +810,12 @@ char *VMemBuf::getReadBuffer(size_t &size)
     if (m_curRBlkPos == m_curWBlkPos)
     {
         size = m_pCurWPos - m_pCurRPos;
-        assert(size >= 0 && size <= 8192);
+        assert(size <= 8192);
     }
     else
     {
         size = (*m_pCurRBlock)->getBufEnd() - m_pCurRPos;
-        assert(size >= 0 && size <= 8192);
+        assert(size <= 8192);
     }
     ls_atomic_spin_unlock(&m_lock);
     return m_pCurRPos;

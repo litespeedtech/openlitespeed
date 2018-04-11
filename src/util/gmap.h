@@ -69,7 +69,7 @@ public:
     const_iterator  begin() const       {   return ((GMap *)this)->begin(); }
     const_iterator  end() const         {   return ((GMap *)this)->end();   }
 
-    iterator find(const void *pKey)
+    iterator find(const void *pKey) const
     {
         return (iterator)(*find_fn)((GMap *)this, pKey);
     }

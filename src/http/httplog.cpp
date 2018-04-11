@@ -450,6 +450,9 @@ void syntax_check()
 
 void HttpLog::onTimer()
 {
+    if (!logger() || !logger()->getAppender())
+        return;
+
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
     if (HttpServerConfig::getInstance().getProcNo())
     {
