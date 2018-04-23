@@ -26,7 +26,9 @@
 
 #define MNAME                       mod_security
 #define ModuleNameStr               "Mod_Security"
-#define MODULE_VERSION_INFO         ModuleNameStr " 1.0"
+#define VERSIONNUMBER               "1.1"
+
+#define MODULE_VERSION_INFO         ModuleNameStr " " VERSIONNUMBER
 
 #define MAX_RESP_HEADERS_NUMBER     50
 #define MAX_REQ_HEADERS_NUMBER      50

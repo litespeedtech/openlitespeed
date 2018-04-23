@@ -517,11 +517,11 @@ void *ls_palloc_slab(size_t size)
     size_t rndnum;
     void *ptr;
 
+    rndnum = pool_roundup(size);
     if (size > (size_t)LGFREELIST_MAXBYTES)
-        return malloc(size);
+        return malloc(rndnum);
     else
     {
-        rndnum = pool_roundup(size);
         ptr = freelist_get(rndnum);
         if (ptr == NULL)
         {

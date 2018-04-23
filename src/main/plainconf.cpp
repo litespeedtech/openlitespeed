@@ -634,7 +634,8 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
         return ;
     }
 
-    char newvalue[16384] = {0};
+    const int MAX_NAME_LENGTH = 1024 << 6;
+    char newvalue[MAX_NAME_LENGTH * 2 + 2] = {0};
     XmlNode *pParamNode = new XmlNode;
     const char *attr = NULL;
     pParamNode->init(UNKNOWN_KEYWORDS, &attr);

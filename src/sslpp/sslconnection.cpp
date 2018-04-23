@@ -17,12 +17,9 @@
 *****************************************************************************/
 #include "sslconnection.h"
 // #include "sslerror.h"
+#include <log4cxx/logger.h>
 
 #include <lsdef.h>
-
-#include <openssl/ssl.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
 
 #include <errno.h>
 #include <string.h>
@@ -30,8 +27,64 @@
 #include <config.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <poll.h>
+#include <lsr/ls_pool.h>
+
+//#define DEBUGGING
+
+#ifdef DEBUGGING
+#include <stdio.h>
+#include <time.h>
+#include <stdarg.h>
+#include <sys/timeb.h>
 
 
+static void debug_message (const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    char buf[0x1000];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    FILE *f;
+    int ctr = 0;
+    do {
+        f = fopen("/home/user/olsws/logs/ssl.log","a");
+        if (!f) {
+            ctr++;
+            usleep(0);
+        }
+    } while ((!f) && (ctr < 10));
+    if (f) {
+        struct timeb tb;
+        struct tm lt;
+        ftime(&tb);
+        localtime_r(&tb.time,&lt);
+        fprintf(f,"%d: %02d/%02d/%04d %02d:%02d:%02d:%03d %s", getpid(), 
+                lt.tm_mon + 1, lt.tm_mday, lt.tm_year + 1900, lt.tm_hour, 
+                lt.tm_min, lt.tm_sec, tb.millitm, buf);
+        fclose(f);
+    }
+    else 
+        fprintf(stderr,"Unable to write to debug log: %s", buf);
+}
+#define DEBUG_MESSAGE(fmt, ...) /*if (s_criu_debug) { */    \
+    debug_message("sslconnection Line #%d " fmt, __LINE__, ##__VA_ARGS__); \
+    /*}*/
+/*
+#define DEBUG_MESSAGE(fmt, ...) if (s_criu_debug) \
+        fprintf(stderr,"(DEBUG) CRIU_CTRL Line #%d " fmt, __LINE__, ##__VA_ARGS__) 
+//*/
+#else
+#define DEBUG_MESSAGE( ...)  LS_LOG(log4cxx::Level::DEBUG, __VA_ARGS__);
+//#define DEBUG_MESSAGE(...)
+
+#endif
+
+
+const int RBIO_BUF_SIZE = 1024;
 int32_t SslConnection::s_iConnIdx = -1;
 
 //static const char * s_pErrInvldSSL = "Invalid Parameter, SSL* ssl is null\n";
@@ -43,6 +96,9 @@ SslConnection::SslConnection()
     , m_iFlag(0)
     , m_iFreeCtx(0)
     , m_iFreeSess(0)
+    , m_iUseRbio(0)
+    , m_rbioBuf(NULL)
+    , m_rbioBuffered(0)
 {
 }
 
@@ -54,6 +110,9 @@ SslConnection::SslConnection(SSL *ssl)
     , m_iFlag(0)
     , m_iFreeCtx(0)
     , m_iFreeSess(0)
+    , m_iUseRbio(0)
+    , m_rbioBuf(NULL)
+    , m_rbioBuffered(0)
 {
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
@@ -66,8 +125,12 @@ SslConnection::SslConnection(SSL *ssl, int fd)
     , m_iFlag(0)
     , m_iFreeCtx(0)
     , m_iFreeSess(0)
+    , m_iUseRbio(0)
+    , m_rbioBuf(NULL)
+    , m_rbioBuffered(0)
 {
-    SSL_set_fd(m_ssl, fd);
+    m_iRFd = fd;
+    SSL_set_wfd(m_ssl, fd);
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
 
@@ -79,8 +142,10 @@ SslConnection::SslConnection(SSL *ssl, int rfd, int wfd)
     , m_iFlag(0)
     , m_iFreeCtx(0)
     , m_iFreeSess(0)
+    , m_rbioBuf(NULL)
+    , m_rbioBuffered(0)
 {
-    SSL_set_rfd(m_ssl, rfd);
+    m_iRFd = rfd;
     SSL_set_wfd(m_ssl, wfd);
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
@@ -88,6 +153,8 @@ SslConnection::SslConnection(SSL *ssl, int rfd, int wfd)
 
 SslConnection::~SslConnection()
 {
+    if (m_rbioBuf)
+        ls_pfree(m_rbioBuf);
     if (m_ssl)
         release();
 }
@@ -111,46 +178,167 @@ void SslConnection::release()
         SSL_SESSION_free(SSL_get_session(m_ssl));
     if (m_iFreeCtx != 0)
         SSL_CTX_free(SSL_get_SSL_CTX(m_ssl));
-    SSL_free(m_ssl);
+
+    SSL_free(m_ssl); // This frees the bound BIOs
+    // All buffer counters must be set to 0 to reset everything.
+    m_rbioBuffered = 0;
+    m_iRFd = -1;
     m_ssl = NULL;
+    
+    if (m_rbioBuf)
+    {
+        ls_pfree(m_rbioBuf);
+        m_rbioBuf = NULL;
+    }
+}
+
+
+int SslConnection::installRbio(int rfd, int wfd)
+{
+    DEBUG_MESSAGE("beginBIO, this: %p\n", this);
+    assert(m_ssl);
+    /**
+     * Even though this is only used for the first read, we're setting and 
+     * creating a BIO for both sides.  As it's necessary for negotiation. */
+    
+    BIO *rbio = BIO_new(BIO_s_mem());
+    if (!rbio)
+    {
+        DEBUG_MESSAGE("beginBIO - first BIO_new failed!\n");
+        errno = ENOMEM;
+        m_iUseRbio = 0;
+        return -1;
+    }
+    if (!(m_rbioBuf = (char *)ls_palloc(RBIO_BUF_SIZE)))
+    {
+        DEBUG_MESSAGE("Insufficient memory allocating %d bytes\n",
+                        RBIO_BUF_SIZE);
+        BIO_free(rbio);
+        errno = ENOMEM;
+        m_iUseRbio = 0;
+        return -1;
+    }
+
+    m_iRFd = rfd;
+#ifndef OPENSSL_IS_BORINGSSL
+    SSL_set_fd(m_ssl, rfd);
+    m_saved_rbio = m_ssl->rbio;
+    m_ssl->rbio = rbio;
+#else
+    SSL_set_bio(m_ssl, rbio, NULL);
+    SSL_set_wfd(m_ssl, wfd);
+#endif
+    DEBUG_MESSAGE("beginBIO - Ok\n");
+    return 0;
 }
 
 
 int SslConnection::setfd(int fd)
 {
     m_iWant = 0;
-    int ret = SSL_set_fd(m_ssl, fd);
-    if (ret)
-        m_iStatus = DISCONNECTED;
-    return ret == 0;
+
+    if (m_iUseRbio && installRbio(fd,fd) == 0)
+        return 1;
+    if (SSL_set_fd(m_ssl, fd) == -1)
+        ;
+    return 1;
 }
 
 
 int SslConnection::setfd(int rfd, int wfd)
 {
     m_iWant = 0;
-    int ret = SSL_set_rfd(m_ssl, rfd);
-    if (!ret)
-        return ret == 0;
-    m_iStatus = DISCONNECTED;
+    if (m_iUseRbio && installRbio(rfd,wfd) == 0)
+        return 1;
+    if (SSL_set_rfd(m_ssl, rfd) == -1 || SSL_set_wfd(m_ssl, wfd) == -1)
+    {
+        m_iStatus = DISCONNECTED;
+        return 0;
+    }
+    return 1;
+}
 
-    return SSL_set_wfd(m_ssl, wfd) == 0;
+
+int SslConnection::readRbioClientHello()
+{
+    int ret;
+
+    // Go through the state machine...
+    DEBUG_MESSAGE("readBIO state: 0x%x\n", SSL_get_state(m_ssl));
+    
+    ssize_t dataRead;
+    DEBUG_MESSAGE("readBIO buffered: %d\n", m_rbioBuffered);
+    // Return if no data to service the next request.
+    dataRead = recv(m_iRFd, &m_rbioBuf[m_rbioBuffered],
+                    RBIO_BUF_SIZE - m_rbioBuffered, 0);
+    if (dataRead == -1)
+    {
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+        {
+            DEBUG_MESSAGE("readBIO retry recv\n");
+            return 0; 
+        }
+        DEBUG_MESSAGE("recv failed, errno: %d\n", errno);
+        return -1;    
+    }
+    else if (dataRead == 0)
+    {
+        DEBUG_MESSAGE("recv closed.  Handle it as an error\n");
+        errno = ECONNRESET; // Just something somewhat descriptive
+        return -1;    
+    }
+    DEBUG_MESSAGE("readBIO received %d bytes\n", (int)dataRead);
+    
+    ERR_clear_error();
+    ret = BIO_write(SSL_get_rbio(m_ssl), &m_rbioBuf[m_rbioBuffered], dataRead);
+    m_rbioBuffered += (int)dataRead;
+     
+    if (ret <= 0) 
+    {
+        DEBUG_MESSAGE("readBIO BIO_write FAILED (unrecoverable)!\n");
+        return -1;
+    }
+    return 1;
+}
+
+
+void SslConnection::restoreRbio()
+{
+    DEBUG_MESSAGE("remove recv BIO layer.\n");
+#ifdef OPENSSL_IS_BORINGSSL
+    SSL_set_rfd(m_ssl, m_iRFd);
+#else
+    BIO_free_all(m_ssl->rbio);
+    m_ssl->rbio = m_saved_rbio;
+#endif
+    ls_pfree(m_rbioBuf);
+    m_rbioBuf = NULL;
+    m_iUseRbio = 0;
 }
 
 
 int SslConnection::read(char *pBuf, int len)
 {
+    int ret;
     assert(m_ssl);
     m_iWant = 0;
-    int ret = SSL_read(m_ssl, pBuf, len);
+  
+    ret = SSL_read(m_ssl, pBuf, len);
     if (ret > 0)
+    {
+        if (ret < len) 
+        {
+            pBuf[ret] = 0;
+        }
         return ret;
+    }
     else
     {
         m_iWant = LAST_READ;
         return checkError(ret);
     }
 }
+
 
 #define MAX_SSL_WRITE_SIZE 8192
 int SslConnection::write(const char *pBuf, int len)
@@ -202,6 +390,7 @@ int SslConnection::writev(const struct iovec *vect, int count,
     char *pBufEnd;
     char *pCurEnd;
     char achBuf[4096];
+    
     pBufEnd = achBuf + 4096;
     pCurEnd = achBuf;
     for (; vect < pEnd ;)
@@ -250,7 +439,7 @@ int SslConnection::writev(const struct iovec *vect, int count,
 
 int SslConnection::wpending()
 {
-    BIO *pBIO = SSL_get_wbio(m_ssl);
+    BIO *pBIO = SSL_get_wbio(m_ssl); // This should work either way
     return BIO_wpending(pBIO);
 }
 
@@ -282,6 +471,7 @@ int SslConnection::flush()
 int SslConnection::shutdown(int bidirectional)
 {
     assert(m_ssl);
+    
     m_iFlag = 0;
     if (m_iStatus == ACCEPTING)
     {
@@ -318,31 +508,74 @@ void SslConnection::toAccept()
 
 int SslConnection::accept()
 {
+    int ret;
+    DEBUG_MESSAGE("accept\n");
     assert(m_ssl);
-    m_iWant = 0;
-    int ret = SSL_accept(m_ssl);
+    if (m_iStatus != ACCEPTING) {
+        DEBUG_MESSAGE("In accept but not in ACCEPTING status\n");
+        return -1;
+    }
+    if (m_iUseRbio && (m_iWant & READ))
+    {
+        DEBUG_MESSAGE("Accept want to read more data, so read and save\n");
+        ret = readRbioClientHello();
+        if (ret < 0)
+            return ret;
+    }
+    ret = SSL_accept(m_ssl);
+    DEBUG_MESSAGE("SSL_accept rc: %d\n",ret);
     if (ret == 1)
     {
-        //printf("%d\n", getSpdyVersion());
+        DEBUG_MESSAGE("SSL_accept worked - move to connected status\n");
         m_iStatus = CONNECTED;
-        return ret;
+        m_iWant = READ;
     }
     else
-        return checkError(ret);
+    {
+        ret = checkError(ret);
+        if (m_iWant & READ)
+        {
+            DEBUG_MESSAGE("accept wants read more data\n");
+        }
+        if (m_iWant & WRITE)
+        {
+            DEBUG_MESSAGE("accept wants write more data\n");
+        }
+    }
+    if (m_iUseRbio && ret != -1 && m_rbioBuffered > 100)
+    {
+        restoreRbio();
+    }
+    return ret;
 }
 
 
 int SslConnection::checkError(int ret)
 {
     int err = SSL_get_error(m_ssl, ret);
+#ifdef DEBUGGING
+    char errorString1[1024];
+    char errorString2[1024];
+    DEBUG_MESSAGE("checkError returned %d, first error: %s, last error: %s\n",
+                  err, ERR_error_string(ERR_peek_error(), errorString1), 
+                  ERR_error_string(ERR_peek_last_error(), errorString2));
+#endif
     switch (err)
     {
+    case SSL_ERROR_NONE:
+        ERR_clear_error();
+        return 0;
+        
     case SSL_ERROR_WANT_READ:
     case SSL_ERROR_WANT_WRITE:
         if (err == SSL_ERROR_WANT_READ)
+        {
             m_iWant |= READ;
+        }
         else
+        {
             m_iWant |= WRITE;
+        }
         ERR_clear_error();
         return 0;
     case SSL_ERROR_SYSCALL:
@@ -354,7 +587,6 @@ int SslConnection::checkError(int ret)
                 break;
             }
         }
-        //fall through
     default:
         errno = EIO;
         //printf( "SslError:%s\n", SslError(err).what() );
@@ -380,7 +612,7 @@ int SslConnection::connect()
 
 
 int SslConnection::tryagain()
-{
+{    
     assert(m_ssl);
     switch (m_iStatus)
     {
@@ -503,3 +735,9 @@ int SslConnection::setTlsExtHostName(const char *pName)
 }
 
 
+char* SslConnection::getRawBuffer(int *len)
+{
+    DEBUG_MESSAGE("getRawBuffer: len: %d\n", m_rbioBuffered);
+    *len = m_rbioBuffered;
+    return m_rbioBuf;
+}
