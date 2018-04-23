@@ -962,7 +962,6 @@ int NtwkIOLink::checkReadRet(int ret, int size)
             // and waiting for the response, we can't close the connection before
             // we finish write the response back.
             LS_DBG_L(this, "Read error: %s", strerror(errno));
-            //fall through
         case EAGAIN:
         case EINTR:
             ret = 0;
@@ -1530,28 +1529,16 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
     //The buf is null terminated string
     char buf[8192 + 1] = {0};
     unsigned int length = 0;
-    char *p = NULL;
+    char *p = m_ssl.getRawBuffer((int *)&length);
 
-#if defined(OPENSSL_IS_BORINGSSL)
-    //FIXME: new bssl changed, below code not works
-    SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->read_buffer;
-    length = read_buffer.len;
-    p = (char *)read_buffer.buf + read_buffer.offset;
-#elif defined(LIBRESSL_VERSION_NUMBER)
-    //LIBRESSL 2.5+
-    SSL3_BUFFER &read_buffer = m_ssl.getSSL()->s3->rbuf;
-    length = read_buffer.len;
-    p = (char *)read_buffer.buf + read_buffer.offset;
-#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
-    length = BIO_get_mem_data(m_ssl.getSSL()->s3->handshake_buffer, &p)
-#else
-    length = m_ssl.getSSL()->packet_length;
-    p = (char *)m_ssl.getSSL()->packet;
-#endif
-
-    if (length > 8192)
-        length = 8192;
-    memcpy(buf, p, length);
+    if (p)
+    {
+        if (length > 8192)
+            length = 8192;
+        memcpy(buf, p, length);
+    }
+    else
+        length = 0;
 
     //Normally it is 5 bytes in bssl, 11 bytes in ossl, checking with 8192,
     //just to avoid buffer overflow
