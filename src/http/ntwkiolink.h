@@ -294,6 +294,7 @@ public:
     {
         m_pFpList = s_pCur_fp_list_list->m_pSSL;
         m_ssl.setSSL(pSSL);
+        m_ssl.enableRbio();
         m_ssl.setfd(getfd());
     }
 

@@ -8,7 +8,7 @@ m4_include(ax_check_brotli.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-AC_PREREQ([2.69])
+#AC_PREREQ([2.69])
 AC_INIT([openlitespeed],[1.5.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
@@ -397,7 +397,6 @@ AC_CHECK_LIB(crypt,crypt,LIBS="-lcrypt $LIBS")
       
       
 # Checks for typedefs, structures, and compiler characteristics.
-AC_CHECK_HEADER_STDBOOL
 AC_TYPE_UID_T
 AC_C_INLINE
 AC_TYPE_INT16_T

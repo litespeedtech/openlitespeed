@@ -177,9 +177,6 @@ public:
     iterator find(const void *pKey)
     {   return GMap::find(pKey);   }
 
-    const_iterator find(const void *pKey) const
-    {   return GMap::find(pKey);   }
-
     T *detachNode(TMap::iterator node)
     {   return GMap::detachNode(node);  }
 

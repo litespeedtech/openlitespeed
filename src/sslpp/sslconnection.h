@@ -15,11 +15,25 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+/**
+ * WARNING, WARNING, WARNING!
+ * The big consumer of this class is ntwkiolink.cpp and in line 321 it STOMPS
+ * with a memset to 0 of basically every local variable here AFTER construction
+ * but before it's used.  So DO NOT COUNT ON CONSTRUCTORS!
+ */
+/**
+ * NOTE: Enable blocking non BIO I/O by setting the environment variable
+ * "LSAPI_SSLBLOCKING" to any value.
+ */
+
 #ifndef SSLCONNECTION_H
 #define SSLCONNECTION_H
 #include <lsdef.h>
 
-
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <signal.h>
 
 typedef struct x509_st X509;
 typedef struct ssl_cipher_st SSL_CIPHER;
@@ -35,7 +49,16 @@ class SslConnection
     int     m_iFlag;
     char    m_iFreeCtx;
     char    m_iFreeSess;
+    char    m_iUseRbio;
     static int32_t s_iConnIdx;
+    int     m_iRFd;
+    BIO    *m_saved_rbio;
+    char   *m_rbioBuf;
+    int     m_rbioBuffered;
+
+    int     installRbio(int rfd, int wfd);
+    int     readRbioClientHello();
+    void    restoreRbio();
 
 public:
     enum
@@ -120,6 +143,12 @@ public:
     static const unsigned char *getSessionId(SSL_SESSION *s);
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
+    
+    // Can only be called after the first failed accept or read, to obtain the
+    // raw data which can be used in a redirect (see ntwkiolink.cpp).
+    char *getRawBuffer(int *len);
+
+    void  enableRbio()      {   m_iUseRbio = 1;     }
 
     LS_NO_COPY_ASSIGN(SslConnection);
 };
