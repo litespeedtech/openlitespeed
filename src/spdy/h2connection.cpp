@@ -86,24 +86,13 @@ H2Connection::H2Connection()
 HioHandler *H2Connection::get()
 {
     H2Connection *pConn = new H2Connection();
-    //pConn->init();
+    if (0 != lshpack_enc_init(&pConn->m_hpack_enc))
+    {
+        delete pConn;
+        return NULL;
+    }
+    lshpack_dec_init(&pConn->m_hpack_dec);
     return pConn;
-}
-
-
-int H2Connection::init()
-{
-    m_iCurDataOutWindow = H2_FCW_INIT_SIZE;
-    m_uiLastStreamId = 0;
-    m_iStreamOutInitWindowSize = H2_FCW_INIT_SIZE;
-    m_iServerMaxStreams = 100;
-    m_iMaxPushStreams = 100;
-    m_tmIdleBegin = 0;
-    m_uiShutdownStreams = 0;
-    m_iCurPushStreams = 0;
-    m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
-    m_pCurH2Header = (H2FrameHeader *)m_iaH2HeaderMem;
-    return 0;
 }
 
 
@@ -118,6 +107,8 @@ int H2Connection::onInitConnected()
 
 H2Connection::~H2Connection()
 {
+    lshpack_enc_cleanup(&m_hpack_enc);
+    lshpack_dec_cleanup(&m_hpack_dec);
 }
 
 
@@ -432,7 +423,7 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
                          iEntryValue);
                 return LS_FAIL;
             }
-            m_hpack.getReqDynTbl().updateMaxCapacity(iEntryValue);
+            lshpack_dec_set_max_capacity(&m_hpack_dec, iEntryValue);
             break;
         case H2_SETTINGS_MAX_FRAME_SIZE:
             if ((iEntryValue < H2_DEFAULT_DATAFRAME_SIZE) ||
@@ -891,9 +882,9 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 }
 
 
-int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
-                             char *method, int *methodLen, char **uri,
-                             int *uriLen)
+int H2Connection::decodeData(const unsigned char *pSrc,
+            const unsigned char *bufEnd, char *method, int *methodLen,
+            char **uri, int *uriLen)
 {
     int rc, n = 0;
     m_bufInflate.clear();
@@ -907,8 +898,9 @@ int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
     bool authority = false;
     bool scheme = false;
     bool error = false;
-    while ((rc = m_hpack.decHeader(pSrc, bufEnd, out, out + sizeof(out),
-                                   name_len, val_len)) > 0)
+    while (pSrc < bufEnd &&
+           (0 == (rc = lshpack_dec_decode(&m_hpack_dec, &pSrc, bufEnd, out,
+                                    out + sizeof(out), &name_len, &val_len))))
     {
         char *name = out;
         char *val = name + name_len;
@@ -1443,7 +1435,7 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
 
     char *p = (char *)HttpStatusCode::getInstance().getCodeString(
                   pRespHeaders->getHttpCode()) + 1;
-    pCur = m_hpack.encHeader(pCur, pBufEnd, (char *)":status", 7, p, 3, 0);
+    pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, ":status", 7, p, 3, 0);
 
     pRespHeaders->dropConnectionHeaders();
 
@@ -1474,8 +1466,8 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
         pIov = iov;
         pIovEnd = &iov[count];
         for (pIov = iov; pIov < pIovEnd; ++pIov)
-            pCur = m_hpack.encHeader(pCur, pBufEnd, key, keyLen,
-                                     (char *)pIov->iov_base, pIov->iov_len, 0);
+            pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, key, keyLen,
+                              (const char *) pIov->iov_base, pIov->iov_len, 0);
     }
 
     return pCur - buf;
@@ -1537,12 +1529,14 @@ int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
     uint32_t sid = htonl(promise_streamId);
     memcpy(pCur, &sid, 4);
     pCur += 4;
-    pCur = m_hpack.encHeader(pCur, pBufEnd, ":method", 7, "GET", 3, 0);
-    pCur = m_hpack.encHeader(pCur, pBufEnd, ":path",   5, pUrl->ptr, 
-                             pUrl->len, 0);
-    pCur = m_hpack.encHeader(pCur, pBufEnd, ":authority", 10, pHost->ptr, 
-                             pHost->len, 0);
-    pCur = m_hpack.encHeader(pCur, pBufEnd, ":scheme", 7, "https", 5, 0);
+    pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, ":method", 7,
+                                    "GET", 3, 0);
+    pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, ":path",   5,
+                                    pUrl->ptr, pUrl->len, 0);
+    pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, ":authority", 10,
+                                    pHost->ptr, pHost->len, 0);
+    pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, ":scheme", 7,
+                                    "https", 5, 0);
     
 //     if (etag)
 //         pCur = m_hpack.encHeader(pCur, pBufEnd, "if-match", 8, etag->ptr, 
@@ -1554,7 +1548,7 @@ int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
     {
         while(headers->key.ptr)
         {
-            pCur = m_hpack.encHeader(pCur, pBufEnd, 
+            pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd,
                                      headers->key.ptr,
                                      headers->key.len,
                                      headers->val.ptr,
