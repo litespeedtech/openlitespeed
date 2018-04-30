@@ -77,8 +77,6 @@ SET(unittest_STAT_SRCS
    ../test/util/objarraytest.cpp
    ../test/util/objpooltest.cpp
    ../test/util/radixtreetest.cpp
-   ../test/spdy/huffmantest.cpp
-   ../test/spdy/hpacktest.cpp
    ../test/spdy/spdyzlibfiltertest.cpp
    ../test/spdy/spdyconnectiontest.cpp
    ../test/spdy/dummiostream.cpp
@@ -150,6 +148,7 @@ SET( litespeedlib
     edio socket sslpp lsshm thread log4cxx  adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive sslpp GeoIP udns
     pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a
+    libls-hpack.a
     ${BSSL_ADD_LIB} ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB})
 
 target_link_libraries(openlitespeed ${litespeedlib} )
