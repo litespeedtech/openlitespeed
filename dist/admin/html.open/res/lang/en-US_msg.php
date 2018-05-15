@@ -383,6 +383,7 @@ $_gmsg['l_path'] = 'Path';
 $_gmsg['l_pckeepalivetimeout'] = 'Connection Keep-Alive Timeout';
 $_gmsg['l_perclientthrottle'] = 'Per Client Throttling';
 $_gmsg['l_persistconn'] = 'Persistent Connection';
+$_gmsg['l_phpinioverride'] = 'php.ini Override';
 $_gmsg['l_phpsuexec'] = 'PHP suEXEC';
 $_gmsg['l_phpsuexecmaxconn'] = 'PHP suEXEC Max Conn';
 $_gmsg['l_pipedlogger'] = 'Piped Logger';

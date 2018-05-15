@@ -2248,6 +2248,13 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
         ConfigCtx currentCtx("errorpages");
         pRootContext->configErrorPages(p0);
     }
+    
+    p0 = pVhConfNode->getChild("phpIniOverride");
+    if (p0)
+    {
+        pRootContext->configPhpConfig(p0);
+    }
+    
 
     pRootContext->inherit(NULL);
 

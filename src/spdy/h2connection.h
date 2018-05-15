@@ -179,6 +179,7 @@ private:
     int processContinuationFrame(H2FrameHeader *pHeader);
 
     int processReqHeader(unsigned char iHeaderFlag);
+    int processPriority(uint32_t id);
 
     int sendPingFrame(uint8_t flags, uint8_t *pPayload);
     int sendSettingsFrame();

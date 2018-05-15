@@ -234,14 +234,14 @@ class HttpContext
     const MimeSetting *lookupMimeBySuffix(const char *achSuffix) const;
 
     const MimeSetting *getMimeBySuffix(const char *pSuffix, int forceAddMime);
-    void configPhpConfig(char* config);
-
 
 public:
     HttpContext();
     ~HttpContext();
 
 
+    int configPhpConfig(const XmlNode *pNode);
+    
     int set(const char *pURI, const char *pRoot,
             const HttpHandler *pHandler, bool allowBrowse = true, int regex = 0);
 

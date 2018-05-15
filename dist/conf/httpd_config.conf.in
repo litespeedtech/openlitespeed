@@ -51,7 +51,7 @@ tuning{
     sndBufSize                   0 
     rcvBufSize                   0 
     gzipStaticCompressLevel      6 
-    gzipMaxFileSize              1M 
+    gzipMaxFileSize              10M 
     eventDispatcher              best 
     maxCachedFileSize            4096 
     totalInMemCacheSize          20M 

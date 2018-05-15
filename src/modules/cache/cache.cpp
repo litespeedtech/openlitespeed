@@ -169,7 +169,8 @@ struct MyMData
     CacheHash       cePublicHash;
     CacheHash       cePrivateHash;
     CacheKey        cacheKey;
-    int             hkptIndex;
+    int16_t         hkptIndex;
+    int16_t         hasCacheFrontend;
     XXH64_state_t   contentState;
     z_stream       *zstream;
     off_t           orgFileLength;
@@ -1183,9 +1184,6 @@ static int createEntry(lsi_param_t *rec)
         if (pVal && valLen > 0)
             processPurge(rec->session, pVal, valLen);
     }
-    if (count > 0)
-        g_api->remove_resp_header(rec->session, LSI_RSPHDR_LITESPEED_PURGE, NULL,
-                                  0);
 
     MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
                                                         LSI_DATA_HTTP);
@@ -1196,6 +1194,10 @@ static int createEntry(lsi_param_t *rec)
                    "[%s]createEntry quit, code 2.\n", ModuleNameStr);
         return 0;
     }
+
+    if (count > 0 && myData->hasCacheFrontend == 0)
+        g_api->remove_resp_header(rec->session, LSI_RSPHDR_LITESPEED_PURGE,
+                                  NULL, 0);
 
 
     CacheConfig *pContextConfig = (CacheConfig *)g_api->get_config(
@@ -1236,7 +1238,14 @@ static int createEntry(lsi_param_t *rec)
             return 0;
         }
     }
-    
+    else if (myData->hasCacheFrontend == 0)
+    {
+        g_api->remove_resp_header(rec->session,
+                                  LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
+                                  NULL,
+                                  0);
+    }
+
     bool needRebuildCacheKey = false;
 
     count = g_api->get_resp_header(rec->session, -1, s_x_vary,
@@ -1328,12 +1337,14 @@ static int createEntry(lsi_param_t *rec)
 
     //Now we can store it
     myData->iCacheState = CE_STATE_WILLCACHE;
-    g_api->enable_hook(rec->session, &MNAME, 1, &myData->hkptIndex, 1);
+
+    int ids = myData->hkptIndex;
+    g_api->enable_hook(rec->session, &MNAME, 1, &ids, 1);
     myData->iHaveAddedHook = 2;
-    
-    
-    
-    
+    //When will cache store it, add miss header
+    g_api->set_resp_header(rec->session, LSI_RSPHDR_UNKNOWN,
+                           s_x_cached, sizeof(s_x_cached) - 1,
+                           "miss", 4, LSI_HEADEROP_SET);
     
     return 0;
 }
@@ -2003,7 +2014,14 @@ static int checkAssignHandler(lsi_param_t *rec)
     //need to  re-set the cacheCtrl and pConfig since it may be updated in diff level
     myData->cacheCtrl = cacheCtrl;
     myData->pConfig = pConfig;
-
+    
+    char val[3] = {0};
+    if (g_api->get_req_env(rec->session, "LSCACHE_FRONTEND", 16, val, 2) > 0
+        && strncasecmp(val, "1", 1) ==  0)
+    {
+        myData->hasCacheFrontend = 1;
+    }
+    
     if (myData->iCacheState != CE_STATE_NOCACHE)
         checkFileUpdateWithCache(rec, myData);//may change state
 
@@ -2458,6 +2476,18 @@ static int handlerProcess(const lsi_session_t *session)
         len = part2offset - part1offset -
               CeHeader.m_lenETag - CeHeader.m_lenStxFilePath;
         g_api->set_resp_header2(session, buff, len, LSI_HEADEROP_SET);
+        
+        
+        if (myData->hasCacheFrontend == 0)
+        {
+            g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
+                                      NULL, 0);
+            g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_TAG,
+                                      NULL, 0);
+            g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_VARY,
+                                      NULL, 0);
+            
+        }
     }
 
     if (CeHeader.m_tmLastMod != 0)

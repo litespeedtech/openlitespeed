@@ -396,7 +396,7 @@ $_tipsdb['maxReqURLLen'] = new DAttrHelp("最大请求URL长度", '指定请求U
 
 $_tipsdb['maxSSLConnections'] = new DAttrHelp("最大SSL连接数", '指定服务器接受的并发SSL连接的最大数量。 由于总的并发SSL和非SSL连接不能超过&quot;Max Connections&quot;规定的限额， 允许的并发SSL连接的实际数量必须低于此限制。', '', '无符号整数', '');
 
-$_tipsdb['memHardLimit'] = new DAttrHelp("内存硬限制", '与&quot;内存软限制&quot;非常相同，但是在一个用户进程中，软限制 可以被放宽到硬限制的数值。硬限制可以在服务器级别或独立的外部应用程序级别设 置。如果未在独立的外部应用程序级别设定限制，将使用服务器级别的限制。<br/><br/>如果在两个级别都没有设置该限制，或者限制值设为0，将使用操 作系统的默认设置。', '', '无符号整数', '[注意] 不要过度调整这个限制。如果您的应用程序需要更多的内存， 这可能会导致503错误。');
+$_tipsdb['memHardLimit'] = new DAttrHelp("内存硬限制", '与&quot;内存软限制&quot;非常相同，但是在一个用户进程中，软限制 可以被放宽到硬限制的数值。硬限制可以在服务器级别或独立的外部应用程序级别设 置。如果未在独立的外部应用程序级别设定限制，将使用服务器级别的限制。<br/><br/>如果在两个级别都没有设置该限制，或者限制值设为0，将使用操 作系统的默认设置。', ' Do not over adjust this limit. This may result in 503 errors if your application need more memory.', '无符号整数', '');
 
 $_tipsdb['memSoftLimit'] = new DAttrHelp("内存软限制", '以字节为单位指定服务器启动的外部应用进程或程序的内存占用限制。<br/><br/>此限制的目的主要是为了防范软件缺陷或蓄意攻击造成的过度内存使用， 而不是限制正常使用。确保留有足够的内存，否则您的应用程序可能故障并 返回503错误。限制可以在服务器级别或独立的外部应用程序级别设置。如 果未在独立的外部应用程序级别设定限制，将使用服务器级别的限制。<br/><br/>如果在两个级别都没有设置该限制，或者限制值设为0，将使用操 作系统的默认设置。', '[注意] 不要过度调整这个限制。如果您的应用程序需要更多的内存， 这可能会导致503错误。', '无符号整数', '');
 
@@ -436,11 +436,13 @@ $_tipsdb['ocspResponder'] = new DAttrHelp("OCSP Responder", 'Specifies the URL o
 
 $_tipsdb['outBandwidth'] = new DAttrHelp("出口带宽", '指定对单个IP地址允许的最大传出吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽按4KB为单位分配。设定值为0可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。', '[性能建议] 按8KB单位设置带宽可获得更好的性能。<br/>[安全建议] 受信任的IP或子网不受影响。', '无符号整数', '');
 
-$_tipsdb['pcKeepAliveTimeout'] = new DAttrHelp("Keep Alive Timeout (secs)", 'Specifies the maximum time to keep an idle persistent connection open. When set to &quot;-1&quot;, the connection will never timeout. When set to greater than or equal to 0, the connection will be closed after this time in seconds has passed.', '', 'int', '');
+$_tipsdb['pcKeepAliveTimeout'] = new DAttrHelp("Connection Keepalive Timeout", 'Specifies the maximum time in seconds to keep an idle persistent connection open. <br/><br/>When set to &quot;-1&quot;, the connection will never timeout. When set to 0 or greater, the connection will be closed after this time in seconds has passed.', '', 'int', '');
 
 $_tipsdb['perClientConnLimit'] = new DAttrHelp("Per Client Throttling", 'These are connection control settings are based on client IP.  These settings help to mitigate DoS (Denial of Service) and DDoS (Distributed Denial of Service) attacks.', '', '', '');
 
 $_tipsdb['persistConn'] = new DAttrHelp("Persistent Connection", 'Specifies whether to keep the connection open after a request has been processed. Persistent connections can increase performance,  but some FastCGI external applications do not support persistent connections  fully. The default is &quot;On&quot;.', '', 'Select from radio box', '');
+
+$_tipsdb['phpIniOverride'] = new DAttrHelp("php.ini Override", 'Used to overwrite php.ini settings in the current context (Virtual Host level or Context level).<br/><br/>Supported directives are:<br/>php_value<br/>php_flag<br/>php_admin_value<br/>php_admin_flag<br/><br/>All other lines/directives will be ignored.', '', 'Override syntax is similar to Apache, a newline separated list of directives and their values with each directive  being prepended by php_value, php_flag, php_admin_value, or php_admin_flag appropriately.', 'php_value include_path &quot;.:/usr/local/lib/php&quot;<br/>php_admin_flag engine on<br/>php_admin_value open_basedir &quot;/home&quot;');
 
 $_tipsdb['pid'] = new DAttrHelp("PID", 'PID (Process ID) of the current server process.', 'The PID will change each time the server is restarted.', '', '');
 
@@ -752,6 +754,8 @@ $_tipsdb['EDTP:maxCGIInstances'] = array('Limits resources that a CGI program ca
 $_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 10K or 1M.');
 
 $_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative  to $SERVER_ROOT.');
+
+$_tipsdb['EDTP:phpIniOverride'] = array('');
 
 $_tipsdb['EDTP:procSoftLimit'] = array('Process soft/hard limit controls how many processes are allowed for one user. This includes all the processes spawned by CGI application. OS level limit is used if not set.','Set to 0 or empty will use operation system default value for all soft/hard limits.','The soft limit is the value that the kernel enforces for the corresponding resource. The hard limit acts as a ceiling for the soft limit');
 

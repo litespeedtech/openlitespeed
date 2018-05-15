@@ -674,6 +674,14 @@ int HttpReq::processHeaderLines()
                         m_iContextState |= X_FORWARD_HTTPS;
                     }
                 }
+                else if ((pCurHeader->keyLen == 9
+                          && strncasecmp(pLineBegin, "X-LSCACHE", 9) == 0)
+                         || (pCurHeader->keyLen == 10
+                             &&strncasecmp(pLineBegin, "X-LITEMAGE", 10) == 0))
+                {
+                    m_iContextState |= LSCACHE_FRONTEND;
+                    addEnv("LSCACHE_FRONTEND", 16, "1", 1);
+                }
                 else if (pCurHeader->keyLen == 5
                          && (strncasecmp(pLineBegin, "proxy", 5) == 0))
                 {

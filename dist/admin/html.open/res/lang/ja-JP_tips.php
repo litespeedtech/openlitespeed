@@ -396,7 +396,7 @@ $_tipsdb['maxReqURLLen'] = new DAttrHelp("最大リクエストURLの長さ（�
 
 $_tipsdb['maxSSLConnections'] = new DAttrHelp("最大SSL接続数", 'サーバーが受け入れる同時SSL接続の最大数を指定します。 同時SSL接続と非SSL接続の合計が&quot;最大接続数&quot;で指定された制限を超えることはできないため、許可される同時SSL接続の実際の数はこの制限より小さくなければなりません。', '', '整数', '');
 
-$_tipsdb['memHardLimit'] = new DAttrHelp("メモリハードリミット", 'ソフトリミットをユーザープロセス内のハードリミットまで上げることができることを除けば、&quot;メモリソフトリミット（バイト）&quot;と同じくらい同じです。 ハード・リミットは、サーバー・レベルまたは個々の外部アプリケーション・レベルで設定できます。 サーバーレベルの制限は、個々のアプリケーションレベルで設定されていない場合に使用されます。 <br/><br/>値が両方のレベルにないか、0に設定されている場合、オペレーティングシステムのデフォルトが使用されます。', '', '整数', '[注意]この制限を過度に調整しないでください。 アプリケーションでより多くのメモリが必要な場合は、503のエラーが発生する可能性があります。');
+$_tipsdb['memHardLimit'] = new DAttrHelp("メモリハードリミット", 'ソフトリミットをユーザープロセス内のハードリミットまで上げることができることを除けば、&quot;メモリソフトリミット（バイト）&quot;と同じくらい同じです。 ハード・リミットは、サーバー・レベルまたは個々の外部アプリケーション・レベルで設定できます。 サーバーレベルの制限は、個々のアプリケーションレベルで設定されていない場合に使用されます。 <br/><br/>値が両方のレベルにないか、0に設定されている場合、オペレーティングシステムのデフォルトが使用されます。', ' Do not over adjust this limit. This may result in 503 errors if your application need more memory.', '整数', '');
 
 $_tipsdb['memSoftLimit'] = new DAttrHelp("メモリソフトリミット（バイト）", '外部アプリケーション・プロセスまたはサーバーによって開始された外部アプリケーションのメモリー消費制限をバイト単位で指定します。<br/><br/>この制限の主な目的は、ソフトウェアのバグや意図的な攻撃のために過度のメモリ使用を防止し、通常の使用に制限を設けないことです。 十分なヘッドスペースを確保してください。そうしないと、アプリケーションが失敗し、503エラーが返される可能性があります。 サーバーレベルまたは個々の外部アプリケーションレベルで設定できます。 サーバーレベルの制限は、個々のアプリケーションレベルで設定されていない場合に使用されます。<br/><br/>オペレーティングシステムのデフォルト設定は、値が両方のレベルにないか、0に設定されている場合に使用されます。', '[注意]この制限を過度に調整しないでください。 アプリケーションでより多くのメモリが必要な場合は、503のエラーが発生する可能性があります。', '整数', '');
 
@@ -441,6 +441,8 @@ $_tipsdb['pcKeepAliveTimeout'] = new DAttrHelp("キープアライブタイム�
 $_tipsdb['perClientConnLimit'] = new DAttrHelp("クライアント単位のスロットル", 'これらは、クライアントIPに基づいた接続制御設定です。 これらの設定は、DoS（サービス拒否）攻撃とDDoS（分散サービス拒否）攻撃を緩和するのに役立ちます。', '', '', '');
 
 $_tipsdb['persistConn'] = new DAttrHelp("永続的な接続", '要求後に接続を開いたままにするかどうかを指定します。 処理されました。 永続的接続はパフォーマンスを向上させる可能性がありますが、一部のFastCGI外部アプリケーションは永続的接続を完全にサポートしません。 デフォルトは &quot;オン&quot;です。', '', 'ラジオボックスから選択', '');
+
+$_tipsdb['phpIniOverride'] = new DAttrHelp("php.ini Override", 'Used to overwrite php.ini settings in the current context (Virtual Host level or Context level).<br/><br/>Supported directives are:<br/>php_value<br/>php_flag<br/>php_admin_value<br/>php_admin_flag<br/><br/>All other lines/directives will be ignored.', '', 'Override syntax is similar to Apache, a newline separated list of directives and their values with each directive  being prepended by php_value, php_flag, php_admin_value, or php_admin_flag appropriately.', 'php_value include_path &quot;.:/usr/local/lib/php&quot;<br/>php_admin_flag engine on<br/>php_admin_value open_basedir &quot;/home&quot;');
 
 $_tipsdb['pid'] = new DAttrHelp("PID", '現在のサーバープロセスのPID（プロセスID）。', 'PIDは、サーバーが再起動されるたびに変更されます。', '', '');
 
@@ -752,6 +754,8 @@ $_tipsdb['EDTP:maxCGIInstances'] = array('CGIプログラムが使用できる�
 $_tipsdb['EDTP:maxReqHeaderSize'] = array('数字は、10240,10K、または1Mとして表すことができます。');
 
 $_tipsdb['EDTP:mime'] = array('MIME設定は前のページから編集できます。 mime構成ファイルの場所は、絶対パスでも、$SERVER_ROOTからの相対パスでも指定できます。');
+
+$_tipsdb['EDTP:phpIniOverride'] = array('');
 
 $_tipsdb['EDTP:procSoftLimit'] = array('プロセスソフト/ハードリミットは、1人のユーザーに許可されるプロセスの数を制御します。 これには、CGIアプリケーションによって生成されたすべてのプロセスが含まれます。 設定されていない場合、OSレベル制限が使用されます。','0または空に設定すると、すべてのソフト/ハードリミットにオペレーティングシステムのデフォルト値が使用されます。','ソフトリミットは、カーネルが対応するリソースに対して実施する値です。 ハードリミットは、ソフトリミットの上限として機能します。');
 

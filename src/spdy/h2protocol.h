@@ -144,7 +144,7 @@ public:
 
     uint32_t getStreamId() const
     {
-        return (((uint32_t)m_iStreamId[0]) << 24) |
+        return (((uint32_t)m_iStreamId[0] & 0x7f) << 24) |
                (((uint32_t)m_iStreamId[1]) << 16) |
                (((uint32_t)m_iStreamId[2]) << 8) |
                (m_iStreamId[3]);

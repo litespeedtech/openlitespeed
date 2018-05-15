@@ -55,7 +55,7 @@ enum
 #define CACHE_DECOMPRESS        (1<<11)
 #define NO_RESP_BODY            (1<<12)
 #define IS_ERROR_PAGE           (1<<13)
-#define STAGE_V1                (1<<14)
+#define LSCACHE_FRONTEND        (1<<14)
 #define AUTH_DIGEST_STALE       (1<<15)
 #define VERIFY_SIG              (1<<16)
 #define CACHE_KEY               (1<<17)
