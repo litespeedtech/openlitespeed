@@ -15,7 +15,7 @@
         <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 8</h5>
+<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 10</h5>
 <hr/>
 <div>
 <ul>
@@ -99,6 +99,8 @@
 <a href="#suffix">Suffix</a> | <a href="#shType">类型</a> | <a href="#shHandlerName">处理器名称</a></p></section>
 <section class="toc-row"><header>Expire Settings</header><p>
 <a href="#enableExpires">启用过期</a> | <a href="#expiresDefault">默认过期</a> | <a href="#expiresByType">按类型过期</a></p></section>
+<section class="toc-row"><header>php.ini Override</header><p>
+<a href="#phpIniOverride">php.ini Override</a></p></section>
 </section>
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="docRoot"><h3>文档根<span class="ls-permlink"><a href="#docRoot"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定此虚拟主机的文档根目录。 推荐使用<span class="val">$VH_ROOT/html</span>。在context中，此目录可以用$DOC_ROOT来引用。</p> <h4>Syntax</h4><p>路径3</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhadminEmails"><h3>管理员邮箱<span class="ls-permlink"><a href="#vhadminEmails"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定这个虚拟主机管理员的电子邮箱地址。</p> <h4>Syntax</h4><p>Comma separated list of email addresses</p> </article> </div>
@@ -133,6 +135,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="suffix"><h3>Suffix<span class="ls-permlink"><a href="#suffix"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the script file suffixes that will be handled by this  script handler. Suffixes must be unique.</p> <h4>Syntax</h4><p>Comma delimited list with period "." character prohibited.</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> The server will automatically add a special MIME type ("application/x-httpd-[suffix]") for the first  suffix in the list. For example, MIME type "application/x-httpd-php53" will be added  for suffix "php53". Suffixes after the first need to set up in the <span class="tagl"><a href="#mime">MIME设置</a></span> settings.<br/> Though we list suffixes in this field, the script handlers use MIME types, not suffixes,  to decide which scripts to handle. <br/> <span title="Performance" class="ls-icon-performance"></span><span title="Security" class="ls-icon-security"></span> Only specify the suffixes you really need.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="shType"><h3>类型<span class="ls-permlink"><a href="#shType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定处理这些脚本文件的外部程序类型。 可用类型有：<span class="val">CGI</span>, <span class="val">FastCGI</span>, <span class="val">Web服务器</span>, <span class="val">LSAPI应用程序</span>, <span class="val">负载均衡器</span>, 或 <span class="val">Servlet引擎</span>。 对于FastCGI, Web服务器和Servlet引擎，需要指定<span class="tagl"><a href="#shHandlerName">处理器名称</a></span>。 这是在<span class="tagP"><a href="#ExtApp_Help">External Application</a></span>部分预设定的外部程序名称。</p> <h4>Syntax</h4><p>选项</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="shHandlerName"><h3>处理器名称<span class="ls-permlink"><a href="#shHandlerName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>当处理器类型为FastCGI，Web服务器，LSAPI，负载均衡器或Servlet引擎时， 指定处理脚本文件的外部程序名称。</p> <h4>Syntax</h4><p>选项</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="phpIniOverride"><h3>php.ini Override<span class="ls-permlink"><a href="#phpIniOverride"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Used to overwrite php.ini settings in the current context (Virtual Host level or Context level).<br/><br/> Supported directives are:<br/> php_value<br/> php_flag<br/> php_admin_value<br/> php_admin_flag<br/><br/> All other lines/directives will be ignored.</p> <h4>Syntax</h4><p>Override syntax is similar to Apache, a newline separated list of directives and their values with each directive  being prepended by php_value, php_flag, php_admin_value, or php_admin_flag appropriately.</p> <h4>Example</h4><div class="ls-example">php_value include_path ".:/usr/local/lib/php"<br/> php_admin_flag engine on<br/> php_admin_value open_basedir "/home"</div></article> </div>
 </section>
 </article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>

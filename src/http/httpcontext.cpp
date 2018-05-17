@@ -1270,20 +1270,55 @@ int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
     return 0;
 }
 
-
-void HttpContext::configPhpConfig(char* config)
+static bool isKey(const char *curkey, int len, const char *key)
 {
-//     PHPConfig *pConfig = getPHPConfig();
-//     if (pConfig == NULL)
-//     {
-//         pConfig = new PHPConfig();
-//         if (!pConfig)
-//             return -1;
-//         setPHPConfig(pConfig);
-//     }
-//     LS_DBG_L(ConfigCtx::getCurConfigCtx(), "add PHP config: %s",
-//               pBegin);
-//     return pConfig->parse(id, pBegin, m_achError, sizeof(m_achError));
+    if (len != (int)strlen(key))
+        return false;
+    
+    if (strncasecmp(curkey, key, len) == 0)
+        return true;
+    
+    return false;
+}
+ 
+
+int HttpContext::configPhpConfig(const XmlNode *pNode)
+{
+    PHPConfig *pConfig = getPHPConfig();
+    if (pConfig == NULL)
+    {
+        pConfig = new PHPConfig();
+        if (!pConfig)
+            return -1;
+        setPHPConfig(pConfig);
+    }
+    
+    char m_achError[1024] = {0};
+    char m_achValue[1024] = {0};
+    int id;
+    const char *tags[] = {"php_value",  "php_flag",
+                          "php_admin_value", "php_admin_flag"};
+    for (int i = 0; i < 4; ++i)
+    {
+        const char* config = pNode->getChildValue(tags[i]);
+        if (config)
+        {
+            if (ConfigCtx::getCurConfigCtx()->expandVariable(config, 
+                m_achValue, 1024, 1) < 0)
+            {
+                LS_ERROR(ConfigCtx::getCurConfigCtx(), "expand #%d: %s %s error",
+                         i, tags[i], config);
+                continue;
+            }
+            
+            config = m_achValue;
+            id = i + 1;
+            LS_DBG_L(ConfigCtx::getCurConfigCtx(), "add PHP config: #%d: %s %s",
+                 i, tags[i], config);
+            pConfig->parse(id, config, m_achError, sizeof(m_achError));
+        }
+    }
+    return 0;
 }
 
 
@@ -1376,10 +1411,10 @@ int HttpContext::config(const RewriteMapList *pMapList,
         configErrorPages(pNode);
     }
 
-    pValue = pNode->getChildValue("phpConfig");
-    if (pValue)
+    pNode = pNode->getChild("phpIniOverride");
+    if (pNode)
     {
-        configPhpConfig((char *) pValue);
+        configPhpConfig(pNode);
     }
     return 0;
 }

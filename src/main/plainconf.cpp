@@ -390,7 +390,13 @@ plainconfKeywords plainconf::sKeywords[] =
     {"uploadtmpdir",          NULL},
     {"uploadtmpfilepermission",          NULL},
 
-
+    {"phpinioverride",                    NULL},
+    {"php_value",                    NULL},
+    {"php_flag",                    NULL},
+    {"php_admin_value",                    NULL},
+    {"php_admin_flag",                    NULL},
+    
+    
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

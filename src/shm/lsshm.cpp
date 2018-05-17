@@ -792,28 +792,31 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
 
     // Allocate from heap space
     availSize = avail();
-    if (pagesize > availSize)
+    LsShmSize_t availAddrSize = m_addrMap.getAvailAddrSpace(
+        x_pShmMap->x_stat.m_iUsedSize, pagesize);
+    if (pagesize > availSize || pagesize > availAddrSize)
     {
-        LsShmXSize_t needSize;
+        LsShmXSize_t needSize = 0;
         // min 16 unit at a time
 
-        LsShmSize_t availAddrSize = m_addrMap.getAvailAddrSpace(
-            x_pShmMap->x_stat.m_iUsedSize, pagesize);
         LS_DBG("[SHM] [PID:%d] To alloc page: %d bytes at offset: %ld, availAddr: %d\n",
                 getpid(), pagesize, (long)x_pShmMap->x_stat.m_iUsedSize, availAddrSize);
-        needSize = (pagesize - availSize);
         if (pagesize > availAddrSize)
+            needSize = availAddrSize;
+        if (pagesize + needSize > availSize)
+            needSize += (pagesize + needSize - availSize);
+
+        if (needSize > 0)
         {
-            needSize += availAddrSize; 
-        }
-        LsShmXSize_t targetSize = x_pShmMap->x_stat.m_iFileSize + needSize;
-        targetSize = (targetSize + (16 * LSSHM_SHM_UNITSIZE - 1)) &
-                        ~(16 * LSSHM_SHM_UNITSIZE - 1);
-        
-        if (expand(targetSize - x_pShmMap->x_stat.m_iFileSize) != LSSHM_OK)
-        {
-            offset = 0;
-            goto out;
+            LsShmXSize_t targetSize = x_pShmMap->x_stat.m_iFileSize + needSize;
+            targetSize = (targetSize + (16 * LSSHM_SHM_UNITSIZE - 1)) &
+                            ~(16 * LSSHM_SHM_UNITSIZE - 1);
+
+            if (expand(targetSize - x_pShmMap->x_stat.m_iFileSize) != LSSHM_OK)
+            {
+                offset = 0;
+                goto out;
+            }
         }
         if (pagesize > availAddrSize)
         {

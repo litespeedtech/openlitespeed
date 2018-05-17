@@ -396,7 +396,7 @@ $_tipsdb['maxReqURLLen'] = new DAttrHelp("Max Request URL Length (bytes)", 'Spec
 
 $_tipsdb['maxSSLConnections'] = new DAttrHelp("Max SSL Connections", 'Specifies the maximum number of concurrent SSL connections the server will accept.  Since total concurrent SSL and non-SSL connections cannot exceed the limit specified by  &quot;Max Connections&quot;, the actual number of concurrent SSL connections allowed  must be lower than this limit.', '', 'Integer number', '');
 
-$_tipsdb['memHardLimit'] = new DAttrHelp("Memory Hard Limit", 'Much the same as &quot;Memory Soft Limit (bytes)&quot;, except the soft limit can be raised up to the hard limit from within a user process. The hard limit can be set at server level or at an individual external application level. The server-level limit will be used if   it is not set at an individual application level. <br/><br/>The operating system&#039;s default will be used if the value is absent at both levels or set to 0.', '', 'Integer number', '[A] Do not over adjust this limit. This may result in 503 errors if your application need more memory.');
+$_tipsdb['memHardLimit'] = new DAttrHelp("Memory Hard Limit (bytes)", 'Much the same as &quot;Memory Soft Limit (bytes)&quot;, except the soft limit can be raised up to the hard limit from within a user process. The hard limit can be set at server level or at an individual external application level. The server-level limit will be used if   it is not set at an individual application level. <br/><br/>The operating system&#039;s default will be used if the value is absent at both levels or set to 0.', ' Do not over adjust this limit. This may result in 503 errors if your application need more memory.', 'Integer number', '');
 
 $_tipsdb['memSoftLimit'] = new DAttrHelp("Memory Soft Limit (bytes)", 'Specifies the memory consumption limit in bytes for an external application process or an external application started by the server.  <br/><br/>The main purpose of this limit is to prevent excessive memory usage because of software bugs or intentional attacks, not to impose a limit on normal usage. Make sure to leave enough head room, otherwise your application may fail and 503 error may be returned. It can be set at the server- level or at an individual external application level. The server-level limit will be used if it is not set at the individual application level.<br/><br/>The operating system&#039;s default setting will be used if the value is absent at both levels or set to 0.', ' Do not over adjust this limit. This may result in 503 errors if your application needs more memory.', 'Integer number', '');
 
@@ -436,11 +436,13 @@ $_tipsdb['ocspResponder'] = new DAttrHelp("OCSP Responder", 'Specifies the URL o
 
 $_tipsdb['outBandwidth'] = new DAttrHelp("Outbound Bandwidth (bytes/sec)", 'The maximum allowed outgoing throughput to a single IP address, regardless of the number of connections established. The real bandwidth may end up being slightly higher than this setting for efficiency reasons.  Bandwidth is allocated in 4KB units. Set to 0 to disable throttling. Per-client bandwidth limits (bytes/sec) can be set at the server or virtual host level where virtual host level settings override server level settings.', ' Set the bandwidth in 8KB units for better performance.<br/><br/> Trusted IPs or sub-networks are not affected.', 'Integer number', '');
 
-$_tipsdb['pcKeepAliveTimeout'] = new DAttrHelp("Keep Alive Timeout (secs)", 'Specifies the maximum time to keep an idle persistent connection open. When set to &quot;-1&quot;, the connection will never timeout. When set to greater than or equal to 0, the connection will be closed after this time in seconds has passed.', '', 'int', '');
+$_tipsdb['pcKeepAliveTimeout'] = new DAttrHelp("Connection Keepalive Timeout", 'Specifies the maximum time in seconds to keep an idle persistent connection open. <br/><br/>When set to &quot;-1&quot;, the connection will never timeout. When set to 0 or greater, the connection will be closed after this time in seconds has passed.', '', 'int', '');
 
 $_tipsdb['perClientConnLimit'] = new DAttrHelp("Per Client Throttling", 'These are connection control settings are based on client IP.  These settings help to mitigate DoS (Denial of Service) and DDoS (Distributed Denial of Service) attacks.', '', '', '');
 
 $_tipsdb['persistConn'] = new DAttrHelp("Persistent Connection", 'Specifies whether to keep the connection open after a request has been processed. Persistent connections can increase performance,  but some FastCGI external applications do not support persistent connections  fully. The default is &quot;On&quot;.', '', 'Select from radio box', '');
+
+$_tipsdb['phpIniOverride'] = new DAttrHelp("php.ini Override", 'Used to overwrite php.ini settings in the current context (Virtual Host level or Context level).<br/><br/>Supported directives are:<br/>php_value<br/>php_flag<br/>php_admin_value<br/>php_admin_flag<br/><br/>All other lines/directives will be ignored.', '', 'Override syntax is similar to Apache, a newline separated list of directives and their values with each directive  being prepended by php_value, php_flag, php_admin_value, or php_admin_flag appropriately.', 'php_value include_path &quot;.:/usr/local/lib/php&quot;<br/>php_admin_flag engine on<br/>php_admin_value open_basedir &quot;/home&quot;');
 
 $_tipsdb['pid'] = new DAttrHelp("PID", 'PID (Process ID) of the current server process.', 'The PID will change each time the server is restarted.', '', '');
 
@@ -752,6 +754,8 @@ $_tipsdb['EDTP:maxCGIInstances'] = array('Limits resources that a CGI program ca
 $_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 10K or 1M.');
 
 $_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative  to $SERVER_ROOT.');
+
+$_tipsdb['EDTP:phpIniOverride'] = array('');
 
 $_tipsdb['EDTP:procSoftLimit'] = array('Process soft/hard limit controls how many processes are allowed for one user. This includes all the processes spawned by CGI application. OS level limit is used if not set.','Set to 0 or empty will use operation system default value for all soft/hard limits.','The soft limit is the value that the kernel enforces for the corresponding resource. The hard limit acts as a ceiling for the soft limit');
 

@@ -20,8 +20,12 @@ class DTblDef extends DTblDefBase
     {
         // define special block contains raw data
         parent::loadSpecials();
+
+        $this->addSpecial('phpIniOverride', [], 'data');
+
         $tags = array_merge(['ls_enabled', 'note', 'internal', 'urlFilter'], $this->getModuleTags());
         $this->addSpecial('module', $tags, 'param');
+
         $this->addSpecial('urlFilter', ['ls_enabled'], 'param');
     }
 
@@ -122,6 +126,16 @@ class DTblDef extends DTblDefBase
             self::NewBoolAttr('uploadPassByPath', DMsg::ALbl('l_uploadpassbypath'))
 		);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_uploadfile'), $attrs, 'fileUpload');
+    }
+
+    protected function add_VT_PHPINIOVERRIDE($id)
+    {
+        $override =  self::NewTextAreaAttr('data', null, 'cust', true, 6, null, 1, 1);
+        $override->SetFlag(DAttr::BM_RAWDATA);
+        $attrs = array(
+           $override,
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_phpinioverride'), $attrs, 'phpIniOverride', 1);
     }
 
 	protected function add_S_TUNING_OS($id) //keep
@@ -369,6 +383,9 @@ class DTblDef extends DTblDefBase
 
 	protected function add_VT_CTXG($id)
 	{
+        $override =  self::NewTextAreaAttr('phpIniOverride:data', DMsg::ALbl('l_phpinioverride'), 'cust', true, 6, 'phpIniOverride', 1, 1);
+        $override->SetFlag(DAttr::BM_RAWDATA);
+
 		$attrs = array_merge(
 				$this->get_ctx_attrs('uri'),
 				array(
@@ -389,8 +406,11 @@ class DTblDef extends DTblDefBase
 						$this->_attrs['autoIndex']),
 				$this->get_ctx_attrs('auth'),
 				$this->get_ctx_attrs('rewrite'),
-				$this->get_ctx_attrs('charset')
-		);
+				$this->get_ctx_attrs('charset'),
+                array(
+                    $override,
+                )
+        );
 		$defaultExtract = array('type'=>'null');
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_ctxg'), $attrs, 'uri', 'generalContext', $defaultExtract);
 	}
