@@ -313,7 +313,7 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
     case H2_FRAME_PING:
         return processPingFrame(pHeader);
     default:
-        sendPingFrame(0, (uint8_t *)"01234567");
+        sendPingFrame(1, (uint8_t *)"\0\0\0\0\0\0\0\0");
         break;
     }
     return 0;
@@ -347,6 +347,8 @@ int H2Connection::processPriorityFrame(H2FrameHeader *pHeader)
         LS_DBG_L(getLogSession(), "Bad PRIORITY frame, stream ID is zero.");
         return LS_FAIL;
     }
+    if (processPriority(pHeader->getStreamId()))
+        return H2_ERROR_PROTOCOL_ERROR;
 
     return 0;
 }
@@ -450,14 +452,14 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
                 doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
                 return 0;
             }
-            if (iEntryValue < H2_FCW_MIN_SIZE)
-            {
-                LS_WARN(getLogSession(), "SETTINGS_INITIAL_WINDOW_SIZE value is too low, %d,"
-                        " possible Slow Read Attack. Close connection.",
-                         iEntryValue);
-                doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
-                return 0;
-            }
+//             if (iEntryValue < H2_FCW_MIN_SIZE)
+//             {
+//                 LS_WARN(getLogSession(), "SETTINGS_INITIAL_WINDOW_SIZE value is too low, %d,"
+//                         " possible Slow Read Attack. Close connection.",
+//                          iEntryValue);
+//                 doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
+//                 return 0;
+//             }
             windowsSizeDiff = (int32_t)iEntryValue - m_iStreamOutInitWindowSize;
             m_iStreamOutInitWindowSize = iEntryValue ;
             break;
@@ -647,8 +649,9 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
         LS_DBG_L(getLogSession(), "stream: %p, isPeerShutdown: %d ",
                  pH2Stream, pH2Stream ? pH2Stream->isPeerShutdown() : 0);
         skipRemainData();
-        resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
-        return 0;
+        //resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
+        doGoAway(H2_ERROR_STREAM_CLOSED);
+        return LS_FAIL;
     }
 
     uint8_t padLen = 0;
@@ -789,6 +792,13 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
         return LS_FAIL;
     }
 
+    if (methodLen == 0 || uriLen == 0)
+    {
+        sendRstFrame(m_uiLastStreamId, H2_ERROR_PROTOCOL_ERROR);
+        return 0;
+    }
+
+
     H2Stream *pStream = NULL;
     pStream = getNewStream(iHeaderFlag);
     if (!pStream)
@@ -814,6 +824,25 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
 
     return 0;
 }
+
+
+int H2Connection::processPriority(uint32_t id)
+{
+    unsigned char buf[5];
+    m_bufInput.moveTo((char *)buf, 5);
+    m_iCurrentFrameRemain -= 5;
+
+    unsigned char *pSrc = buf;
+    m_priority.m_exclusive = *pSrc >> 7;
+    m_priority.m_dependStreamId = beReadUint32((const unsigned char *)pSrc) &
+                                    0x7FFFFFFFu;
+    if (m_priority.m_dependStreamId == id)
+        return H2_ERROR_PROTOCOL_ERROR;
+    //Add one to the value to obtain a weight between 1 and 256.
+    m_priority.m_weight = *(pSrc + 4) + 1;
+    return 0;
+}
+
 
 int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 {
@@ -866,19 +895,8 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 
     if (iHeaderFlag & H2_FLAG_PRIORITY)
     {
-        unsigned char buf[5];
-        m_bufInput.moveTo((char *)buf, 5);
-        m_iCurrentFrameRemain -= 5;
-        
-        pSrc = buf;
-        m_priority.m_exclusive = *pSrc >> 7;
-        m_priority.m_dependStreamId = beReadUint32((const unsigned char *)pSrc) &
-                                      0x7FFFFFFFu;
-        if (m_priority.m_dependStreamId == id)
+        if (processPriority(id))
             return H2_ERROR_PROTOCOL_ERROR;
-
-        //Add one to the value to obtain a weight between 1 and 256.
-        m_priority.m_weight = *(pSrc + 4) + 1;
     }
     else
         memset(&m_priority, 0, sizeof(m_priority));
@@ -957,7 +975,7 @@ int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
             }
             else if (memcmp(name, ":scheme", 7) == 0)
             {
-                if (scheme)
+                if (scheme || val_len == 0)
                 {
                     error = true;
                     break;
@@ -999,7 +1017,7 @@ int H2Connection::decodeData(unsigned char *pSrc, unsigned char *bufEnd,
         }
     }
 
-    if (error || rc < 0 || methodLen == 0 || uriLen == 0 || *uri == NULL)
+    if (error || rc < 0 || methodLen == 0 || uriLen == 0 || *uri == NULL || !scheme)
     {
         if (*uri)
         {

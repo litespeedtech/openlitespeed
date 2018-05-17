@@ -29,6 +29,12 @@
 
 #define PHP_CONFIG_ENV  1
 
+
+#define PHP_VALUE       1
+#define PHP_FLAG        2
+#define PHP_ADMIN_VALUE 3
+#define PHP_ADMIN_FLAG  4
+
 class PHPValue
 {
     AutoStr2 m_sKey;

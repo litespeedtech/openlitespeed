@@ -219,7 +219,9 @@ static lsi_serverhook_t server_hooks[] =
     LSI_HOOK_END   //Must put this at the end position
 };
 
-lsi_confparser_t testparam_dealConfig = { modinspector_parseConfig, modinspector_freeConfig, paramArray };
+lsi_confparser_t testparam_dealConfig = { modinspector_parseConfig,
+                                         modinspector_freeConfig,
+                                         paramArray };
 LSMODULE_EXPORT lsi_module_t MNAME =
 {
     LSI_MODULE_SIGNATURE, _init, NULL, &testparam_dealConfig, MODULE_VERSION_INFO, server_hooks, { 0 }

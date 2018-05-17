@@ -103,11 +103,6 @@ int PHPConfig::merge(const PHPConfig *pParent)
     return 1;
 }
 
-#define PHP_VALUE       1
-#define PHP_FLAG        2
-#define PHP_ADMIN_VALUE 3
-#define PHP_ADMIN_FLAG  4
-
 int PHPConfig::parse(int id, const char *pArgs,
                      char *pErr, int errBufLen)
 {

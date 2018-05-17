@@ -6058,7 +6058,7 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
     if (src == srcEnd)
         return 0;
 
-    if ((*src & 0xe0) == 0x20)    //001 xxxxx
+    while ((*src & 0xe0) == 0x20)    //001 xxxxx
     {
         uint32_t newCapcity;
         if (0 != decInt(src, srcEnd, 5, newCapcity))
@@ -6069,7 +6069,7 @@ int Hpack::decHeader(unsigned char *&src, unsigned char *srcEnd,
         else 
             return -1;
         if (src == srcEnd)
-            return 0;
+            return -1;
     }
 
     if (*src & 0x80) //1 xxxxxxx

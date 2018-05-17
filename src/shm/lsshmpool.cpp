@@ -997,7 +997,10 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
     if (releaseOffset != 0)
     {
         // merging leftover and newly allocated memory
-        if (releaseOffset + releaseSize == offset)
+        // if they fall in the same large page
+        if ((releaseOffset >> LARGE_PAGE_BITS)
+              == ((offset + needed - 1) >> LARGE_PAGE_BITS)
+            && releaseOffset + releaseSize == offset)
         {
             offset = releaseOffset;
             needed += releaseSize;

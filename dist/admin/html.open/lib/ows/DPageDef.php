@@ -84,6 +84,7 @@ class DPageDef
 								new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
 						new DTblMap('expires', 'A_EXPIRES'),
                     'VT_FILEUPLOAD',
+                        new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
 						new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
 						new DTblMap(['security:realmList:*realm','*realm$name'], 'V_REALM_FILE'),
 						new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'A_EXT_SEL'),
@@ -115,6 +116,8 @@ class DPageDef
 										new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
 										new DTblMap(['scriptHandlerList','scripthandler'],
 												new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
+                                        'VT_FILEUPLOAD',
+                                        new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
 										new DTblMap('expires', 'A_EXPIRES'),
 										new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
 										new DTblMap(['security:realmList:*realm','*realm$name'], 'T_REALM_FILE'),
@@ -164,14 +167,14 @@ class DPageDef
 	protected function defineAll()
 	{
 		$id = 'g';
-		$page = new DPage($id, DMsg::UIStr('tab_g'), 
-                new DTblMap('', 
+		$page = new DPage($id, DMsg::UIStr('tab_g'),
+                new DTblMap('',
                         ['S_PROCESS', 'S_GENERAL', 'S_INDEX',
                         new DTblMap('expires', 'A_EXPIRES'),
                         'S_FILEUPLOAD',
                         new DTblMap('*geoipdb$geoipDBFile', 'S_GEOIP_TOP', 'S_GEOIP'),
                         new DTblMap('ip2locDB', 'S_IP2LOCATION'),
-                            ], 
+                            ],
                 new DTblMap('*index', ['S_MIME_TOP', 'S_MIME'])));
         $this->_pageDef['serv'][$id] = $page;
 
@@ -255,7 +258,9 @@ class DPageDef
 						new DTblMap('index', 'VT_INDXF'),
 						new DTblMap('*errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
 						new DTblMap('expires', 'A_EXPIRES'),
-                    'VT_FILEUPLOAD']));
+                    'VT_FILEUPLOAD',
+                        new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
+                    ]));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
@@ -265,7 +270,9 @@ class DPageDef
 								new DTblMap('*errorpage$errCode',  'VT_ERRPG_TOP', 'VT_ERRPG'),
 								new DTblMap('scripthandler', new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
 								new DTblMap('expires', 'A_EXPIRES'),
-                            'VT_FILEUPLOAD'])]));
+                            'VT_FILEUPLOAD',
+                            new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
+                            ])]));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'log';
