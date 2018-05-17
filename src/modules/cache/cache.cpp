@@ -58,7 +58,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.56"
+#define MODULE_VERSION_INFO         "1.57"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096

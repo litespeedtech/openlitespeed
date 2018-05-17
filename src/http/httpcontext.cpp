@@ -1293,15 +1293,25 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
         setPHPConfig(pConfig);
     }
     
-    char m_achError[8192] = {0};
+    char m_achError[1024] = {0};
+    char m_achValue[1024] = {0};
     int id;
     const char *tags[] = {"php_value",  "php_flag",
-                            "php_admin_value", "php_admin_flag"};
+                          "php_admin_value", "php_admin_flag"};
     for (int i = 0; i < 4; ++i)
     {
         const char* config = pNode->getChildValue(tags[i]);
         if (config)
         {
+            if (ConfigCtx::getCurConfigCtx()->expandVariable(config, 
+                m_achValue, 1024, 1) < 0)
+            {
+                LS_ERROR(ConfigCtx::getCurConfigCtx(), "expand #%d: %s %s error",
+                         i, tags[i], config);
+                continue;
+            }
+            
+            config = m_achValue;
             id = i + 1;
             LS_DBG_L(ConfigCtx::getCurConfigCtx(), "add PHP config: #%d: %s %s",
                  i, tags[i], config);
