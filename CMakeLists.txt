@@ -55,8 +55,8 @@ set(libUnitTest  libUnitTest++.a)
 set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
 #If you want to use Brotli Compression, just un-comment out the following commands
-#set(BROTLI_ADD_LIB  libbrotlidec.a libbrotlienc.a libbrotlicommon.a)
-#add_definitions(-DUSE_BROTLI)
+set(BROTLI_ADD_LIB  libbrotlidec.a libbrotlienc.a libbrotlicommon.a)
+add_definitions(-DUSE_BROTLI)
 ##########################################################################################
 #If you want to use IP2Location, just un-comment out the following commands
 set(IP2LOC_ADD_LIB  libIP2Location.a)

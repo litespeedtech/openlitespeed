@@ -106,6 +106,7 @@ void Logger::vlog(int level, const char *pId, const char *format,
                   va_list args,
                   int no_linefeed)
 {
+    int errno_save = errno;
     char achBuf[8192];
     int messageLen = 0;
     if (pId != NULL)
@@ -143,19 +144,25 @@ void Logger::vlog(int level, const char *pId, const char *format,
             break;
         pLogger = m_pParent;
     }
+    errno = errno_save;
 }
 
 
 void Logger::lograw(const char *pBuf, int len)
 {
+    int errno_save = errno;
     if (m_pAppender)
     {
         if (m_pAppender->append(pBuf, len) == -1)
+        {
+            errno = errno_save;
             return;
+        }
         m_pAppender->flush();
     }
     if (m_pParent && m_iAdditive)
         m_pParent->lograw(pBuf, len);
+    errno = errno_save;
 }
 
 

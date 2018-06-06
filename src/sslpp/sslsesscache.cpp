@@ -41,7 +41,7 @@ typedef struct SslSessData_s
 } SslSessData_t;
 
 static int checkStatElem(LsShmHash::iteroffset iIterOff, void *pData);
-static void printId(const char *tag, unsigned char *pId, int iIdLen);
+static void printId(const char *tag, const unsigned char *pId, int iIdLen);
 // static int printAll(LsShmHash::iteroffset iIterOff, void *pUData);
 
 static int isExpired(SslSessData_t *pObj)
@@ -119,7 +119,10 @@ static int newSessionCb(SSL *pSSL, SSL_SESSION *pSess)
     pObj->x_iValueLen = iDataLen;
     pObj->x_iExpireTime = DateTime::s_curTime + cache.getExpireSec();
 
-    return cache.addSession(pSess->session_id, pSess->session_id_length,
+    unsigned int len;
+    const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSSL, &len);
+    
+    return cache.addSession((unsigned char *)id, (int)len,
                             data, iDataLen + sizeof(*pObj));
 }
 
@@ -129,7 +132,13 @@ static int newSessionCb(SSL *pSSL, SSL_SESSION *pSess)
  * This function will go into shm to look for the ID and if found,
  * will convert it to, and return as a SSL_SESSION object.
  */
-static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len,
+static SSL_SESSION *getSessionCb(SSL *pSSL, 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+                                 const unsigned char *id, 
+#else
+                                 unsigned char *id,
+#endif                                 
+                                 int len,
                                  int *ref)
 {
     SslSessCache &cache = SslSessCache::getInstance();
@@ -182,13 +191,15 @@ static SSL_SESSION *getSessionCb(SSL *pSSL, unsigned char *id, int len,
 static void removeCb(SSL_CTX *pCtx, SSL_SESSION *pSess)
 {
     SslSessCache &cache = SslSessCache::getInstance();
+    unsigned int len;
+    const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSess, &len);
 #ifdef DEBUG_SHOW_MORE
-    printId("Remove Session", pSess->session_id, pSess->session_id_length);
+    printId("Remove Session", id, (int)len);
 #endif
     LsShmHash *pStore = cache.getSessStore();
 
     pStore->lock();
-    pStore->remove(pSess->session_id, pSess->session_id_length);
+    pStore->remove((unsigned char *)id, (int)len);
     pStore->unlock();
 
     cache.sessionFlush(); // flush out the SHM expired sessions
@@ -246,7 +257,7 @@ void SslSessCache::unlock()
  * NOTICE: if this function succeeds, the hash table \b must be unlocked
  * afterwards.
  */
-SslSessData_t *SslSessCache::getLockedSessionData(unsigned char *id,
+SslSessData_t *SslSessCache::getLockedSessionData(const unsigned char *id,
         int len)
 {
     int valLen;
@@ -323,7 +334,7 @@ int checkStatElem(LsShmHash::iteroffset iIterOff, void *pData)
 }
 
 
-void printId(const char *tag, unsigned char *pId, int iIdLen)
+void printId(const char *tag, const unsigned char *pId, int iIdLen)
 {
     if (LS_LOG_ENABLED(log4cxx::Level::DBG_LOW))
     {
@@ -354,4 +365,27 @@ void printId(const char *tag, unsigned char *pId, int iIdLen)
 //
 //     return 0;
 // }
+
+
+SslClientSessCache::~SslClientSessCache()
+{
+    if (m_pSession)
+        SSL_SESSION_free(m_pSession);
+}
+
+
+int SslClientSessCache::saveSession(const char *id, int len, SSL_SESSION *session)
+{
+    if (m_pSession)
+        SSL_SESSION_free(m_pSession);
+    m_pSession = session;
+    return 0;
+}
+
+
+SSL_SESSION *SslClientSessCache::getSession(const char *id, int len)
+{
+    return m_pSession;
+}
+
 

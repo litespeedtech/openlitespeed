@@ -2069,7 +2069,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
     // GZIP compression
     config.setGzipCompress(currentCtx.getLongValue(pNode, "enableGzipCompress",
-                           0, 1, 0));
+                           0, 1, 1));
     config.setDynGzipCompress(currentCtx.getLongValue(pNode,
                               "enableDynGzipCompress",
                               0, 1, 0));
@@ -2077,7 +2077,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                             1, 9, 4));
     config.setBrCompress(
 #ifdef USE_BROTLI
-        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 1, 0)
+        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 1, 1)
 #else
         0
 #endif

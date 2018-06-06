@@ -502,10 +502,11 @@ int StaticFileHandler::process(HttpSession *pSession,
                        ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
                          | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
                         & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
-    char mode = (pReq->gzipAcceptable() == GZIP_REQUIRED); // MODE_GZIP = 1
-    if (pReq->brAcceptable() == BR_REQUIRED
-        && !(pReq->gzipAcceptable() & (GZIP_ADD_ENCODING | GZIP_OFF)))
-        mode |= SFCD_MODE_BROTLI;
+
+    char mode = (pReq->brAcceptable() == BR_REQUIRED ? SFCD_MODE_BROTLI : 0);
+    if (pReq->gzipAcceptable() == GZIP_REQUIRED && !pReq->brAcceptable())
+        mode |= SFCD_MODE_GZIP;
+
     ret = pInfo->readyCacheData(compressed, mode);
     LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
     FileCacheDataEx *pECache = pInfo->getECache();

@@ -32,7 +32,7 @@ AC_DEFUN([AC_BROTLI_CHECK],[
 
     if test "x$need_brotli" != "xno"
     then
-        BROTLI_LIBS="-lbrotlidec -lbrotlienc -lbrotlicommon"
+        BROTLI_LIBS=" -lbrotlidec -lbrotlienc "
         CFLAGS="$save_CFLAGS"
         CPPFLAGS="$save_CPPFLAGS"
         AC_SUBST(BROTLI_INCLUDES)

@@ -31,9 +31,7 @@
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 
-#ifdef OPENSSL_IS_BORINGSSL
-#include <openssl/internal.h>
-#endif
+#include <openssl/evp.h>
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -147,6 +145,24 @@ int SslContext::initECDH()
     return SslUtil::initECDH(m_pCtx);
 }
 
+static int s_ctx_ex_index = -1;
+
+void SslContext::linkSslContext()
+{
+    if (s_ctx_ex_index == -1)
+    {
+        s_ctx_ex_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    }
+    SSL_CTX_set_ex_data(m_pCtx, s_ctx_ex_index, this);
+}
+
+
+SslContext *SslContext::getSslContext(SSL_CTX *ctx)
+{
+    return (SslContext *)SSL_CTX_get_ex_data(ctx, s_ctx_ex_index);
+}
+
+
 int SslContext::init(int iMethod)
 {
     if (m_pCtx != NULL)
@@ -164,6 +180,7 @@ int SslContext::init(int iMethod)
         SslUtil::initCtx(m_pCtx, iMethod, m_iRenegProtect);
         //initDH( NULL );
         //initECDH();
+        linkSslContext();
         return 0;
     }
     else
@@ -575,6 +592,21 @@ int  SslContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * 
 */
 
 
+int newClientSessionCb(SSL * ssl, SSL_SESSION * session){
+    SslConnection *c = (SslConnection *)SSL_get_ex_data(ssl,SslConnection::getConnIdx());
+    c->cacheClientSession(session);
+    return 1;
+}
+
+
+void SslContext::enableClientSessionReuse()
+{
+    init(m_iMethod);
+    SSL_CTX_set_session_cache_mode(m_pCtx, SSL_SESS_CACHE_CLIENT);
+    SSL_CTX_sess_set_new_cb(m_pCtx, newClientSessionCb);
+}
+
+
 extern SslContext *VHostMapFindSslContext(void *arg, const char *pName);
 /**
  * The cert callback is expected to return the following:
@@ -720,6 +752,14 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
     return SSL_TLSEXT_ERR_OK;
 }
 #endif
+
+void SslContext::setAlpnCb(SSL_CTX *ctx, void *arg)
+{
+#ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
+    SSL_CTX_set_alpn_select_cb(ctx, SSLConntext_alpn_select_cb, arg);
+#endif
+}
+
 
 int SslContext::enableSpdy(int level)
 {
@@ -898,7 +938,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
         return NULL;
 
     protocol = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "sslProtocol",
-               1, 31, 30);
+               1, 31, 28);
     setProtocol(protocol);
 
     int enableDH = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
@@ -1056,37 +1096,61 @@ void SslContext::configCRL(const XmlNode *pNode, SslContext *pSSL)
 int SslContext::setupIdContext(SSL_CTX *pCtx, const void *pDigest,
                                size_t iDigestLen)
 {
-    EVP_MD_CTX md;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    EVP_MD_CTX *pmd;
+#else
+    EVP_MD_CTX md;    
+    EVP_MD_CTX *pmd = &md;
+#endif
     unsigned int len;
     unsigned char buf[EVP_MAX_MD_SIZE];
 
-    EVP_MD_CTX_init(&md);
-
-    if (EVP_DigestInit_ex(&md, EVP_sha1(), NULL) != 1)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    pmd = EVP_MD_CTX_new();
+#endif
+    
+    if (EVP_DigestInit_ex(pmd, EVP_sha1(), NULL) != 1)
     {
         LS_DBG_L("Init EVP Digest failed.");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
-    else if (EVP_DigestUpdate(&md, pDigest, iDigestLen) != 1)
+    else if (EVP_DigestUpdate(pmd, pDigest, iDigestLen) != 1)
     {
         LS_DBG_L("Update EVP Digest failed");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
-    else if (EVP_DigestFinal_ex(&md, buf, &len) != 1)
+    else if (EVP_DigestFinal_ex(pmd, buf, &len) != 1)
     {
         LS_DBG_L("EVP Digest Final failed.");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
-    else if (EVP_MD_CTX_cleanup(&md) != 1)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    else if (EVP_MD_CTX_cleanup(pmd) != 1)
     {
         LS_DBG_L("EVP Digest Cleanup failed.");
         return LS_FAIL;
     }
+#endif        
     else if (SSL_CTX_set_session_id_context(pCtx, buf, len) != 1)
     {
         LS_DBG_L("Set Session Id Context failed.");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    EVP_MD_CTX_free(pmd);
+#endif
     return LS_OK;
 }
 
