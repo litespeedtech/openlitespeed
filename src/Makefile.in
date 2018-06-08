@@ -88,7 +88,6 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_path_lib_pcre.m4 \
 	$(top_srcdir)/ax_lib_expat.m4 $(top_srcdir)/ax_check_liblua.m4 \
 	$(top_srcdir)/ax_check_libudns.m4 \
-	$(top_srcdir)/ax_check_brotli.m4 \
 	$(top_srcdir)/ax_check_ip2location.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -149,7 +148,7 @@ openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./log4cxx/liblog4cxx.a ./socket/libsocket.a ./sslpp/libsslpp.a \
 	./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
 	./modules/libmodules.a ./shm/liblsshm.a ./adns/libadns.a \
-	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
@@ -291,8 +290,6 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-BROTLI_INCLUDES = @BROTLI_INCLUDES@
-BROTLI_LIBS = @BROTLI_LIBS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -330,6 +327,7 @@ IP2LOCATION_LIBS = @IP2LOCATION_LIBS@
 IS_LSCPD = @IS_LSCPD@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBBROTLI = @LIBBROTLI@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -396,7 +394,6 @@ am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
 bindir = @bindir@
-brotli_dir = @brotli_dir@
 build = @build@
 build_alias = @build_alias@
 build_cpu = @build_cpu@
@@ -424,7 +421,6 @@ localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
-need_brotli = @need_brotli@
 need_ip2location = @need_ip2location@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
@@ -542,10 +538,11 @@ openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
-        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) $(BROTLI_LIBS) ${IP2LOCATION_LIBS} \
+        $(LIBBROTLI) \
+        $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) ${IP2LOCATION_LIBS} \
         -ludns -lGeoIP -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
-AM_LDFLAGS = -L/usr/lib $(OPENSSL_LDFLAGS)
+AM_LDFLAGS = -L/usr/lib -L/usr/local/lib $(OPENSSL_LDFLAGS)
 AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns
 
