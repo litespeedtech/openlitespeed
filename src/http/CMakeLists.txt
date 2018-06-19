@@ -76,6 +76,7 @@ SET(http_STAT_SRCS
    httpreq.cpp
    httpsession.cpp
    iptogeo.cpp
+   iptogeo2.cpp
    iptoloc.cpp
    moov.cpp
    #requestvars.cpp

@@ -195,3 +195,6 @@ vhTemplate EasyRailsWithSuEXEC{
     listeners                Default
 }
 
+module cache {
+  ls_enabled              0
+}

@@ -253,6 +253,31 @@ else
 fi
 AC_SUBST([LIBBROTLI])
 
+LIBMMDB=
+AC_ARG_ENABLE([iptogeo2],
+              [AC_HELP_STRING([--enable-iptogeo2=@<:@yes/no@:>@],
+                              [enable iptogeo2, need to build maxminddb which need to have autotool installed @<:@default=no@:>@])],
+               [OPENLSWS_IPTOGEO2="$enableval"], [OPENLSWS_IPTOGEO2=no])
+if test "$OPENLSWS_IPTOGEO2" = "no" ; then 
+    echo "iptogeo2 disabled!!!"
+else
+    echo "iptogeo2 enabled, libmaxminddb start to build ..."
+    BUILDMAXMINDDB=`. $srcdir/dlmaxminddb.sh`
+
+    LIBMMDBEXIST=
+    AC_CHECK_FILE([$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a],[LIBMMDBEXIST=yes],[LIBMMDBEXIST=no])
+    if test "$LIBMMDBEXIST" = no ; then
+        echo It seems libmaxminddb library not eixts, please check and ty again.
+        echo Or you can continue to make and iptogeo2 will be disabled.
+        echo
+    else
+        LIBMMDB=" $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a "
+        CPPFLAGS="$CPPFLAGS -I$TOPDIR/libmaxminddb/include/ "
+        AC_DEFINE_UNQUOTED([ENABLE_IPTOGEO2], [1], [Defined to compile with iptogeo2 enabled])
+    fi
+fi
+AC_SUBST([LIBMMDB])
+
 
 ## ##Set option --with-bssl
 AC_ARG_WITH(bssl,

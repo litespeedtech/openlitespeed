@@ -7,7 +7,7 @@
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014-2017
+* @copyright  Copyright (c) LiteSpeed 2014-2018
 * @link       http://www.litespeedtech.com/
 */
 
@@ -97,6 +97,7 @@ $_gmsg['note_example'] = 'Example';
 $_gmsg['note_tips'] = 'Tip(s)';
 $_gmsg['note_numvalidrange'] = 'Number valid range';
 $_gmsg['note_number'] = 'Number';
+$_gmsg['note_select_option'] = 'Please select';
 
 
 $_gmsg['err_faildetectdlmethod'] = 'Unable to detect download method (install curl, fetch, or wget)';
@@ -245,6 +246,7 @@ $_gmsg['l_enablespdy'] = 'Enable SPDY/HTTP2';
 $_gmsg['l_enablestapling'] = 'Enable OCSP Stapling';
 $_gmsg['l_enablestderrlog'] = 'Enable stderr Log';
 $_gmsg['l_env'] = 'Environment';
+$_gmsg['l_envvariable'] = 'Environment Variables';
 $_gmsg['l_errcode'] = 'Error Code';
 $_gmsg['l_expires'] = 'Expires Settings';
 $_gmsg['l_expiresByType'] = 'Expires By Type';
@@ -273,7 +275,7 @@ $_gmsg['l_forcemimetype'] = 'Force MIME Type';
 $_gmsg['l_forcestrictownership'] = 'Force Strict Ownership';
 $_gmsg['l_generalsettings'] = 'General Settings';
 $_gmsg['l_geoipdb'] = 'IP to GeoLocation DB';
-$_gmsg['l_dbcache'] = 'DB Cache Type';
+$_gmsg['l_dbname'] = 'DB Name';
 $_gmsg['l_geoipdbfile'] = 'DB File Path';
 $_gmsg['l_gracefulrestarttimeout'] = 'Graceful Restart Timeout (secs)';
 $_gmsg['l_graceperiod'] = 'Grace Period (sec)';
@@ -421,6 +423,7 @@ $_gmsg['l_rewritecontrol'] = 'Rewrite Control';
 $_gmsg['l_rewriteinherit'] = 'Rewrite Inherit';
 $_gmsg['l_rewritemap'] = 'Rewrite Map';
 $_gmsg['l_rewriterules'] = 'Rewrite Rules';
+$_gmsg['l_rewritedocrootrules'] = 'Document Root Rewrite Rules';
 $_gmsg['l_rollingsize'] = 'Rolling Size (bytes)';
 $_gmsg['l_rubybin'] = 'Ruby Path';
 $_gmsg['l_wsgibin'] = 'WSGI Path';
@@ -576,6 +579,7 @@ $_gmsg['parse_awstatsuri'] = 'starts with / and ends with /';
 $_gmsg['parse_compressibletypes'] = '(!)MIME types, like */*, text/*, text/html, text/*, !text/css';
 $_gmsg['parse_defaultmimetype'] = 'MEME_type like text/html';
 $_gmsg['parse_env'] = 'PROPERTY=VALUE';
+$_gmsg['parse_geodbenv'] = 'Variable_Name mapped_DB_data';
 $_gmsg['parse_expiresByType'] = 'MIME_type=A|Mseconds, MIME type can be like */*, text/*, text/html';
 $_gmsg['parse_expiresdefault'] = '[A|M]###, A means client access time, M means file modified time, ### is number of seconds';
 $_gmsg['parse_forcemimetype'] = 'MEME_type like text/html, or put \"NONE\" to disable inherited Force Type.';

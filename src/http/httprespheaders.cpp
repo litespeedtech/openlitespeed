@@ -126,6 +126,30 @@ void HttpRespHeaders::reset()
     m_aKVPairs.clear();
 }
 
+void HttpRespHeaders::updateEtag(int compress_type)
+{
+    int etagLen;
+    const char *pETag = getHeader(H_ETAG, &etagLen);
+    char * pUpdate; 
+    if (!pETag)
+        return;
+    pUpdate = (char *)pETag + etagLen - 4;
+    if (*pUpdate++ == ';')
+    {
+        if (compress_type == 0)
+        {
+            *pUpdate++ = 'g';
+            *pUpdate++ = 'z';
+        }
+        else
+        {
+            *pUpdate++ = 'b';
+            *pUpdate++ = 'r';
+        }
+    }
+}
+
+
 
 inline void HttpRespHeaders::incKVPairs(int num)
 {

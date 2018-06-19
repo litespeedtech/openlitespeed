@@ -19,6 +19,7 @@
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslerror.h>
 
+#include <log4cxx/logger.h>
 #include <lsr/ls_base64.h>
 #include <main/configctx.h>
 #include <util/httpfetch.h>
@@ -430,7 +431,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         }
     }
     else
-        Logger::getRootLogger()->error("OCSP_basic_verify() failed: %s\n",
+        log4cxx::Logger::getRootLogger()->error("OCSP_basic_verify() failed: %s\n",
                                        SslError().what());
     if (iResult)
     {

@@ -33,6 +33,7 @@
 #include <util/httputil.h>
 #include <util/stringtool.h>
 
+#include <main/configctx.h>
 #include <extensions/proxy/proxyworker.h>
 #include <extensions/proxy/proxyconfig.h>
 
@@ -57,6 +58,21 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
                                    const RewriteMapList *pMaps,
                                    HttpContext *pContext)
 {
+    /*
+     * If path not start with $ and /, will add $DOC_ROOT to it
+     * start with $ will be exapnded
+     */
+    if (*path != '/' )
+    {
+        AutoStr2 sPath = "";
+        char pathBuf[4096] = {0};
+        if (*path != '$' )
+            sPath = "$DOC_ROOT/";
+        sPath.append(path, strlen(path));
+        ConfigCtx::getCurConfigCtx()->getAbsoluteFile(pathBuf, sPath.c_str());
+        path = pathBuf;
+    }
+
     int fd = open(path, O_RDONLY);
     if (fd == -1)
     {

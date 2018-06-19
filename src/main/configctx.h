@@ -59,7 +59,7 @@ public:
     void logErrorInvalTag(const char *pstr1,  const char *pstr2);
     void logErrorMissingTag(const char *pstr1);
     const char *getTag(const XmlNode *pNode, const char *pName,
-                       int bKeyName = 0);
+                       int bKeyName = 0, int errorIfNotExist = 1);
     long long getLongValue(const XmlNode *pNode, const char *pTag,
                            long long min, long long max, long long def, int base = 10);
     int getRootPath(const char *&pRoot, const char *&pFile);

@@ -24,14 +24,13 @@ class DTblDefBase
     {
         // define special block contains raw data
         $this->addSpecial('rewrite', ['enable', 'logLevel', 'inherit', 'base'], 'rules');
+        $this->addSpecial('virtualHostConfig:rewrite', ['enable', 'logLevel', 'inherit', 'base'], 'rules'); // for template
     }
 
     protected function addSpecial($key, $attrList, $catchAllTag)
     {
         $key = strtolower($key);
-        if (!isset($this->_specials[$key])) {
-            $this->_specials[$key] = [];
-        }
+        $this->_specials[$key] = []; // allow later ones override previous one
         foreach($attrList as $attr) {
             $this->_specials[$key][] = strtolower($attr);
         }
@@ -298,10 +297,6 @@ class DTblDefBase
             'ctx_shandler' => self::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
             'appserverEnv' => self::NewSelAttr('envType', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
             'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
-            'geoipDBCache' => self::NewSelAttr('geoipDBCache', DMsg::ALbl('l_dbcache'), array(''            => '', 'Standard'    => 'Standard',
-                'MemoryCache' => 'MemoryCache',
-                'CheckCache'  => 'CheckCache',
-                'IndexCache'  => 'IndexCache')),
             'enableIpGeo'  => self::NewBoolAttr('enableIpGeo', DMsg::ALbl('l_enableipgeo')),
             'note'         => self::NewTextAreaAttr('note', DMsg::ALbl('l_notes'), 'cust', true, 4, null, 0),
         );
@@ -366,7 +361,7 @@ class DTblDefBase
 
         $attrs = array(
             $this->_attrs['geoipDBFile'],
-            $this->_attrs['geoipDBCache'],
+            self::NewViewAttr('geoipDBName', DMsg::ALbl('l_dbname')),
             self::NewActionAttr('S_GEOIP', 'Ed')
         );
         $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'S_GEOIP', $align, 'geolocationDB', 'database', true);
@@ -376,7 +371,8 @@ class DTblDefBase
     {
         $attrs = array(
             $this->_attrs['geoipDBFile'],
-            $this->_attrs['geoipDBCache'],
+            self::NewTextAttr('geoipDBName', DMsg::ALbl('l_dbname'), 'dbname', false),
+            self::NewParseTextAreaAttr('maxMindDBEnv', DMsg::ALbl('l_envvariable'), "/^\S+[ \t]+\S+$/", DMsg::ALbl('parse_geodbenv'), true, 5, null, 0, 1, 2),
             $this->_attrs['note'],
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'geolocationDB');
@@ -386,7 +382,8 @@ class DTblDefBase
     {
         $attrs = array(
             self::NewPathAttr('ip2locDBFile', DMsg::ALbl('l_ip2locDBFile'), 'filep', 2, 'r'),
-            self::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_dbcache'), array(''                  => '', 'FileIo'            => 'File System',
+            self::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_dbcache'), array(''=> '',
+                'FileIo'=> 'File System',
                 'MemoryCache'       => 'Memory',
                 'SharedMemoryCache' => 'Shared Memory')),
         );
@@ -1228,7 +1225,7 @@ class DTblDefBase
     protected function add_VT_REWRITE_RULE($id)
     {
         $attrs = array(
-            self::NewTextAreaAttr('rules', null, 'cust', true, 15, null, 1, 1)
+            self::NewTextAreaAttr('rules', null, 'cust', true, 5, null, 1, 1)
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewriterules'), $attrs, 'rewriteRules', 1);
     }

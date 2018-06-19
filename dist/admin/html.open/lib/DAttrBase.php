@@ -449,9 +449,15 @@ class DAttrBase
 
     public function SetDerivedSelOptions($derived)
     {
-        $options = ($derived) ? $derived : array();
-        if (!$this->IsFlagOn(self::BM_NOTNULL))
+        $options = [];
+        if ($this->IsFlagOn(self::BM_NOTNULL)) {
+            $options['forcesel'] = '-- ' . DMsg::UIStr('note_select_option') . ' --';
+        } else {
             $options[''] = '';
+        }
+        if ($derived) {
+            $options = array_merge($options, $derived);
+        }
         $this->_maxVal = $options;
     }
 

@@ -122,9 +122,9 @@ class DInfo
         $this->_sort = UIBase::GrabGoodInput("request", 'sort');
 
         $this->_allActions = array(
-            'a' => array(DMsg::UIStr('btn_add'), 'fa-indent'),
+            'a' => array(DMsg::UIStr('btn_add'), 'fa-plus'),
             'v' => array(DMsg::UIStr('btn_view'), 'fa-search-plus'),
-            'E' => array(DMsg::UIStr('btn_edit'), 'fa-edit'),
+            'E' => array(DMsg::UIStr('btn_edit'), 'fa-edit'), 
             's' => array(DMsg::UIStr('btn_save'), 'fa-save'),
             'B' => array(DMsg::UIStr('btn_back'), 'fa-reply'), //'fa-level-up'
             'n' => array(DMsg::UIStr('btn_next'), 'fa-step-forward'),

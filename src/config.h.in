@@ -3,6 +3,9 @@
 /* Defined the temprary directory */
 #undef DEFAULT_TMP_DIR
 
+/* Defined to compile with iptogeo2 enabled */
+#undef ENABLE_IPTOGEO2
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 

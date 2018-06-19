@@ -62,6 +62,7 @@
 #include <http/httpvhost.h>
 #include <http/httpvhostlist.h>
 #include <http/iptogeo.h>
+#include <http/iptogeo2.h>
 #include <http/iptoloc.h>
 #include <http/ntwkiolink.h>
 #include <http/platforms.h>
@@ -2968,20 +2969,55 @@ int HttpServerImpl::loadAdminConfig(XmlNode *pRoot)
 }
 
 
+/**
+ * detectMmdb: With XmlNodeList
+ * "GeoIP DB": If the old keyword is generated with a mmdb file, let's
+ *             offer this option to support it.  This function lets you know
+ *             which object to instantiate (iptogeo2 or iptogeo).
+ * returns 1 if new file, something else (0 or -1 if not).
+ */
+static int detectMmdb(const XmlNodeList *pList)
+{
+    XmlNodeList::const_iterator iter;
+
+    LS_DBG("[GEO] configOldKeywordNewFile?\n");
+    for (iter = pList->begin(); iter != pList->end(); ++iter)
+    {
+        XmlNode *p = *iter;
+        const char *pFile = p->getValue();
+
+        if (pFile && strstr(pFile, ".mmdb"))
+        {
+            LS_DBG("[GEO] detects MMDB file: %s\n", pFile);
+            return 1;
+        }
+    }
+    LS_DBG("[GEO] Did not find new file format\n");
+    return 0;
+}
+
+
 int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 {
     const XmlNodeList *pList = pNode->getChildren("geoipDB");
-
+    Ip2Geo *pIp2Geo;
+    
     if ((!pList) || (pList->size() == 0))
         return 0;
-
-    IpToGeo *pIpToGeo = new IpToGeo();
-
-    if (!pIpToGeo)
+#ifdef ENABLE_IPTOGEO2
+    if (detectMmdb(pList))
+        pIp2Geo = new IpToGeo2();
+    else
+#endif
+        pIp2Geo = new IpToGeo();
+    if (!pIp2Geo)
         return LS_FAIL;
-    if (pIpToGeo->config(pList) == -1)
-        delete pIpToGeo;
-
+    if (pIp2Geo->config(pList) == -1)
+    {
+        delete pIp2Geo;
+        return LS_FAIL;
+    }
+    ClientCache::setIp2Geo(pIp2Geo);
     return 0;
 }
 

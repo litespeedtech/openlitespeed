@@ -78,7 +78,7 @@ Your browser doesn't support SVG
 			$ver_notice = DMsg::UIStr('note_curver') . ':</span><span>'
 				. Product::PROD_NAME . ' ' . $version;
 			if ($new_version) {
-				$ver_notice .= ' &nbsp;&nbsp;<a href="http://open.litespeedtech.com/releaselog" rel="noopener noreferrer" target="_blank"><i>'
+				$ver_notice .= ' &nbsp;&nbsp;<a href="https://openlitespeed.org/releaselog?utm_source=Open&utm_medium=WebAdmin" rel="noopener noreferrer" target="_blank"><i>'
 						. DMsg::UIStr('note_newver') . ' ' . $new_version . '</i></a>';
 			}
 			echo $ver_notice;

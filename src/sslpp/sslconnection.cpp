@@ -732,10 +732,14 @@ char* SslConnection::getRawBuffer(int *len)
 
 
 
-void SslConnection::cacheClientSession(SSL_SESSION* session)
+int SslConnection::cacheClientSession(SSL_SESSION* session)
 {
     if (m_pSessCache)
+    {
         m_pSessCache->saveSession(NULL, 0, session);
+        return 1;
+    }
+    return 0;
 }
 
 

@@ -132,7 +132,7 @@ public:
     int isSessionReused() const;
     void setClientSessCache(SslClientSessCache *cache)
     {   m_pSessCache = cache;     }
-    void cacheClientSession(SSL_SESSION* session);
+    int cacheClientSession(SSL_SESSION* session);
     void tryReuseCachedSession();
 
     const char *getVersion() const;

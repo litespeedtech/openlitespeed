@@ -1132,7 +1132,10 @@ static int endCache(lsi_param_t *rec)
                              (long long)XXH64_digest(&myData->contentState));
                     //Update the HASH64
                     
-                    nio_lseek(fd, myData->pEntry->getPart1Offset(),
+                    /**
+                     * Add 1 to offset because Hash has a \" in the beginning
+                     */
+                    nio_lseek(fd, myData->pEntry->getPart1Offset() + 1,
                               SEEK_SET);
                     write(fd, s, 16);
                 }
@@ -1413,7 +1416,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     {
         if (CeHeader.m_lenStxFilePath > 0)
         {
-            snprintf(sTmpEtag, 127, "%llx-%llx",
+            snprintf(sTmpEtag, 127, "\"%llx-%llx;;;\"",
                      (long long)sb.st_size, (long long)sb.st_mtime);
             sETag = sTmpEtag;
             nETagLen = strlen(sETag);
@@ -1422,8 +1425,8 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     }
     else if (myData->pConfig->getAddEtagType() == 2)  //XXH64_digest
     {
-        sETag = (char *)"0000000000000000";
-        nETagLen = 16;
+        sETag = (char *)"\"0000000000000000;;;\"";
+        nETagLen = 16 + 5;
         CeHeader.m_lenETag = nETagLen;
         XXH64_reset(&myData->contentState, 0);
     }
@@ -1447,7 +1450,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     /**
      * If already gzipped, no need to gzip 
      */
-    int needGzip = !g_api->is_resp_buffer_gzippped(rec->session);
+    int needGzip = (g_api->get_resp_buffer_compress_method(rec->session) == 0);
     
     /**
      * For ab test, no need to gzip
@@ -1516,8 +1519,10 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
             needGzip = false;
     }
 
-    myData->pEntry->markReady(g_api->is_resp_buffer_gzippped(rec->session) ||
-                              needGzip);
+    int compress_method = g_api->get_resp_buffer_compress_method(rec->session);
+    if (compress_method == 0 && needGzip)
+        compress_method  = 1;
+    myData->pEntry->markReady(compress_method);
 
     myData->pEntry->saveCeHeader();
 
@@ -2192,7 +2197,7 @@ static int init(lsi_module_t *pModule)
 
 
 int isModified(const lsi_session_t *session, CeHeader &CeHeader, char *etag,
-               int etagLen)
+               int etagLen, AutoStr2 &str)
 {
     int len;
     const char *buf = NULL;
@@ -2200,12 +2205,16 @@ int isModified(const lsi_session_t *session, CeHeader &CeHeader, char *etag,
     if (etagLen > 0)
     {
         buf = g_api->get_req_header(session, "If-None-Match", 13, &len);
-        if (buf && len == etagLen && memcmp(etag, buf, etagLen) == 0)
+        if (buf && len == etagLen &&
+            memcmp(etag, buf, etagLen > 3 ? etagLen - 3 : etagLen) == 0)
+        {
+            str.setStr(buf, len);
             return 0;
+        }
     }
 
     buf = g_api->get_req_header(session, "If-Modified-Since", 17, &len);
-    if (buf && len >= RFC_1123_TIME_LEN &&
+    if (!*buf && len >= RFC_1123_TIME_LEN &&
         CeHeader.m_tmLastMod <= DateTime::parseHttpTime(buf))
         return 0;
 
@@ -2454,10 +2463,15 @@ static int handlerProcess(const lsi_session_t *session)
 
         if (CeHeader.m_lenETag > 0)
         {
-            g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0, buff,
-                                   CeHeader.m_lenETag, LSI_HEADEROP_SET);
-            if (!isModified(session, CeHeader, buff, CeHeader.m_lenETag))
+            char *pEtag = buff;
+            AutoStr2 str;
+            if (!isModified(session, CeHeader, buff, CeHeader.m_lenETag, str))
             {
+                if (CeHeader.m_lenETag > 0)
+                    g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0,
+                                           str.c_str(), CeHeader.m_lenETag,
+                                           LSI_HEADEROP_SET);
+                
                 g_api->set_resp_header(session, LSI_RSPHDR_UNKNOWN,
                                        s_x_cached, sizeof(s_x_cached) - 1,
                                        s_hits[hitIdx], s_hitsLen[hitIdx],
@@ -2470,6 +2484,31 @@ static int handlerProcess(const lsi_session_t *session)
                 decref_and_free_data(myData, session);
                 return 0;
             }
+
+            int compressType = myData->pEntry->getCompressType();
+            if (compressType)  //1 gz,  2 br
+            {
+                str.setStr(buff, CeHeader.m_lenETag);
+                pEtag = (char *)str.c_str();
+
+                char *pUpdate = pEtag + str.len() - 4;
+                if (*pUpdate++ == ';')
+                {
+                    if (compressType == 1)
+                    {
+                        *pUpdate++ = 'g';
+                        *pUpdate++ = 'z';
+                    }
+                    else
+                    {
+                        *pUpdate++ = 'b';
+                        *pUpdate++ = 'r';
+                    }
+                }
+            }
+
+            g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0, pEtag,
+                                   CeHeader.m_lenETag, LSI_HEADEROP_SET);
         }
 
         buff += CeHeader.m_lenETag + CeHeader.m_lenStxFilePath;
@@ -2510,17 +2549,25 @@ static int handlerProcess(const lsi_session_t *session)
         off_t length = myData->pEntry->getContentTotalLen() -
                        (part2offset - part1offset);
 
-        if (myData->pEntry->isGzipped())
+
+        int compressType = myData->pEntry->getCompressType();
+        if (compressType == 1)
         {
             g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_ENCODING,
                                    NULL, 0, "gzip", 4, LSI_HEADEROP_SET);
             g_api->log(session, LSI_LOG_DEBUG,
                        "[%s]set_resp_header [Content-Encoding: gzip].\n",
                        ModuleNameStr);
-            g_api->set_resp_buffer_gzip_flag(session, 1);
         }
-        else
-            g_api->set_resp_buffer_gzip_flag(session, 0);
+        else if (compressType == 2)
+        {
+            g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_ENCODING,
+                                   NULL, 0, "br", 2, LSI_HEADEROP_SET);
+            g_api->log(session, LSI_LOG_DEBUG,
+                       "[%s]set_resp_header [Content-Encoding: br].\n",
+                       ModuleNameStr);
+        }
+        g_api->set_resp_buffer_compress_method(session, compressType);
 
         g_api->set_resp_content_length(session, length);
         int fd = myData->pEntry->getFdStore();

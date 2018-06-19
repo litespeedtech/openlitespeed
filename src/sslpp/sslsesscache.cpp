@@ -122,8 +122,9 @@ static int newSessionCb(SSL *pSSL, SSL_SESSION *pSess)
     unsigned int len;
     const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSSL, &len);
     
-    return cache.addSession((unsigned char *)id, (int)len,
-                            data, iDataLen + sizeof(*pObj));
+    cache.addSession((unsigned char *)id, (int)len,
+                     data, iDataLen + sizeof(*pObj));
+    return 0;
 }
 
 

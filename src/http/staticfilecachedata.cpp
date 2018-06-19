@@ -299,10 +299,20 @@ int StaticFileCacheData::testMod(HttpReq *pReq)
             len -= 2;
             pNonMatch += 2;
         }
-        if (((m_iETagLen == len)
-             && (memcmp(pNonMatch, m_pETag, m_iETagLen) == 0))
-            || (*pNonMatch == '*'))
+        if ( m_iETagLen > 0 && *pNonMatch == '*' )
             return SC_304;
+        if (m_iETagLen == len)
+        {
+            //ignore trialing ";gz" ";br" .
+            if (len > 3)
+                len -= 3;
+            if (memcmp(pNonMatch, m_pETag, len) == 0)
+            {
+                //Since we will return 304, but should use the original Etag
+                memcpy(m_pETag, pNonMatch, m_iETagLen);
+                return SC_304;
+            }
+        }
     }
     else
     {
@@ -414,8 +424,8 @@ int StaticFileCacheData::buildFixedHeaders(int etag)
         if (m_iFileETag & ETAG_INODE)
             p += appendEtagPart(p, pEnd - p, firstPartExist, m_fileData.getINode());
 
-        memcpy(p, "\"\r\n", 3);
-        p += 3;
+        memcpy(p, ";;;\"\r\n", 6);
+        p += 6;
         m_iETagLen = p - m_pETag - 2; //the \r\n not belong to etag
     }
     else

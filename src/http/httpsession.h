@@ -112,12 +112,13 @@ enum HSPState
 #define HSF_RECV_RESP_BUFFERED      (1<<11)
 #define HSF_SEND_RESP_BUFFERED      (1<<12)
 #define HSF_CHUNK_CLOSED            (1<<13)
-#define HSF_RESP_BODY_COMPRESSED    (1<<14)
-#define HSF_SUSPENDED               (1<<15)
-#define HSF_SC_404                  (1<<16)
-#define HSF_AIO_READING             (1<<17)
-#define HSF_URI_MAPPED              (1<<18)
-#define HSF_STX_FILE_CACHE_READY    (1<<19)
+#define HSF_RESP_BODY_GZIPCOMPRESSED    (1<<14)
+#define HSF_RESP_BODY_BRCOMPRESSED    (1<<15)
+#define HSF_SUSPENDED               (1<<16)
+#define HSF_SC_404                  (1<<17)
+#define HSF_AIO_READING             (1<<18)
+#define HSF_URI_MAPPED              (1<<19)
+#define HSF_STX_FILE_CACHE_READY    (1<<20)
 
 
 class HttpSession : public LsiSession, public InputStream,

@@ -80,6 +80,8 @@ static SSL *getSslConn()
         {
             s_pProxyCtx->enableClientSessionReuse();
             s_pProxyCtx->setRenegProtect(0);
+            //NOTE: Turn off TLSv13 for now, 0-RTT handshake is broken
+            s_pProxyCtx->setProtocol(14);
             //s_pProxyCtx->setCipherList();
         }
         else

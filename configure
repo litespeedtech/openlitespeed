@@ -663,6 +663,7 @@ USE_BSSL_TRUE
 USE_DYN_OSSL_FALSE
 USE_DYN_OSSL_TRUE
 OPENLSWS_BSSL
+LIBMMDB
 LIBBROTLI
 HAVE_LIBLUA_FALSE
 HAVE_LIBLUA_TRUE
@@ -831,6 +832,7 @@ enable_debug
 enable_profiling
 with_lua
 enable_brotli
+enable_iptogeo2
 with_bssl
 with_ip2loc
 enable_rpath
@@ -1497,6 +1499,9 @@ Optional Features:
                           default)
   --enable-brotli=[yes/no]
                           enable brotli compression [default=no]
+  --enable-iptogeo2=[yes/no]
+                          enable iptogeo2, need to build maxminddb which need
+                          to have autotool installed [default=no]
   --disable-rpath         Disable rpath (It is 'no' by default)
 
 Optional Packages:
@@ -2846,8 +2851,8 @@ test "$program_suffix" != NONE &&
 ac_script='s/[\\$]/&&/g;s/;s,x,x,$//'
 program_transform_name=`$as_echo "$program_transform_name" | sed "$ac_script"`
 
-# Expand $ac_aux_dir to an absolute path.
-am_aux_dir=`cd "$ac_aux_dir" && pwd`
+# expand $ac_aux_dir to an absolute path
+am_aux_dir=`cd $ac_aux_dir && pwd`
 
 if test x"${MISSING+set}" != xset; then
   case $am_aux_dir in
@@ -7186,7 +7191,7 @@ ia64-*-hpux*)
   rm -rf conftest*
   ;;
 
-x86_64-*kfreebsd*-gnu|x86_64-*linux*|powerpc*-*linux*| \
+x86_64-*kfreebsd*-gnu|x86_64-*linux*|ppc*-*linux*|powerpc*-*linux*| \
 s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
   # Find out which ABI we are using.
   echo 'int i;' > conftest.$ac_ext
@@ -7204,10 +7209,7 @@ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
 	  x86_64-*linux*)
 	    LD="${LD-ld} -m elf_i386"
 	    ;;
-	  powerpc64le-*linux*)
-	    LD="${LD-ld} -m elf32lppclinux"
-	    ;;
-	  powerpc64-*linux*)
+	  ppc64-*linux*|powerpc64-*linux*)
 	    LD="${LD-ld} -m elf32ppclinux"
 	    ;;
 	  s390x-*linux*)
@@ -7226,10 +7228,7 @@ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
 	  x86_64-*linux*)
 	    LD="${LD-ld} -m elf_x86_64"
 	    ;;
-	  powerpcle-*linux*)
-	    LD="${LD-ld} -m elf64lppc"
-	    ;;
-	  powerpc-*linux*)
+	  ppc*-*linux*|powerpc*-*linux*)
 	    LD="${LD-ld} -m elf64ppc"
 	    ;;
 	  s390*-*linux*|s390*-*tpf*)
@@ -16067,6 +16066,60 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define USE_BROTLI 1
+_ACEOF
+
+    fi
+fi
+
+
+LIBMMDB=
+# Check whether --enable-iptogeo2 was given.
+if test "${enable_iptogeo2+set}" = set; then :
+  enableval=$enable_iptogeo2; OPENLSWS_IPTOGEO2="$enableval"
+else
+  OPENLSWS_IPTOGEO2=no
+fi
+
+if test "$OPENLSWS_IPTOGEO2" = "no" ; then
+    echo "iptogeo2 disabled!!!"
+else
+    echo "iptogeo2 enabled, libmaxminddb start to build ..."
+    BUILDMAXMINDDB=`. $srcdir/dlmaxminddb.sh`
+
+    LIBMMDBEXIST=
+    as_ac_File=`$as_echo "ac_cv_file_$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a" >&5
+$as_echo_n "checking for $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  LIBMMDBEXIST=yes
+else
+  LIBMMDBEXIST=no
+fi
+
+    if test "$LIBMMDBEXIST" = no ; then
+        echo It seems libmaxminddb library not eixts, please check and ty again.
+        echo Or you can continue to make and iptogeo2 will be disabled.
+        echo
+    else
+        LIBMMDB=" $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a "
+        CPPFLAGS="$CPPFLAGS -I$TOPDIR/libmaxminddb/include/ "
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_IPTOGEO2 1
 _ACEOF
 
     fi

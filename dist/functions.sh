@@ -682,6 +682,15 @@ util_cpdir()
 	done
 }
 
+util_cp_htaccess()
+{
+    OWNER=$1
+    PERM=$2
+    arg=$3
+    cp -R "$LSINSTALL_DIR/$arg/".htaccess "$LSWS_HOME/$arg/"
+    chown -R "$OWNER" "$LSWS_HOME/$arg/".htaccess
+}
+
 
 
 util_cpdirv()
@@ -995,6 +1004,7 @@ installation()
         if [ ! -d "$LSWS_HOME/Example/html" ]; then
             util_mkdir "$SDIR_OWN" $DIR_MOD Example/html
             util_cpdir "$SDIR_OWN" $DOC_MOD Example/html
+            util_cp_htaccess "$SDIR_OWN" $DOC_MOD Example/html
         fi
         if [ ! -d "$LSWS_HOME/Example/cgi-bin" ]; then
             util_mkdir "$SDIR_OWN" $DIR_MOD Example/cgi-bin
@@ -1009,6 +1019,7 @@ installation()
         util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
 		util_mkdir "$SDIR_OWN" $DIR_MOD Example/html Example/cgi-bin 
 		util_cpdir "$SDIR_OWN" $DOC_MOD Example/html Example/cgi-bin
+		util_cp_htaccess "$SDIR_OWN" $DOC_MOD Example/html
 	fi
 
     chown -R "$CONF_OWN" "$LSWS_HOME/conf/"

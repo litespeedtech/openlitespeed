@@ -1270,17 +1270,6 @@ int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
     return 0;
 }
 
-static bool isKey(const char *curkey, int len, const char *key)
-{
-    if (len != (int)strlen(key))
-        return false;
-    
-    if (strncasecmp(curkey, key, len) == 0)
-        return true;
-    
-    return false;
-}
- 
 
 int HttpContext::configPhpConfig(const XmlNode *pNode)
 {
@@ -1324,7 +1313,8 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
 
 int HttpContext::config(const RewriteMapList *pMapList,
                         const XmlNode *pContextNode,
-                        int type)
+                        int type,
+                        HttpContext &pRootContext)
 {
     const char *pValue;
     configAutoIndex(pContextNode);
@@ -1377,8 +1367,9 @@ int HttpContext::config(const RewriteMapList *pMapList,
 
     if (pNode)
     {
+        int defRewriteEnable = pRootContext.isRewriteEnabled();
         enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enable",
-                      0, 1, 0));
+                      0, 1, defRewriteEnable));
         pValue = pNode->getChildValue("inherit");
 
         if ((pValue) && (strcasestr(pValue, "1")))

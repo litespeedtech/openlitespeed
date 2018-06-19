@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "clientinfo.h"
 
-#include <http/iptogeo.h>
+#include <http/ip2geo.h>
 #include <http/iptoloc.h>
 #include <log4cxx/logger.h>
 #include <util/accessdef.h>
@@ -209,14 +209,6 @@ int ClientInfo::checkAccess()
         break;
     }
     return 0;
-}
-
-
-GeoInfo *ClientInfo::allocateGeoInfo()
-{
-    if (!m_pGeoInfo)
-        m_pGeoInfo = new GeoInfo();
-    return m_pGeoInfo;
 }
 
 

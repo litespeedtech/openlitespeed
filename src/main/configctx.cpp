@@ -95,7 +95,7 @@ void ConfigCtx::logErrorMissingTag(const char *pstr1)
 
 
 const char *ConfigCtx::getTag(const XmlNode *pNode, const char *pName,
-                              int bKeyName)
+                              int bKeyName, int errorIfNotExist)
 {
     if (pNode == NULL)
     {
@@ -104,7 +104,7 @@ const char *ConfigCtx::getTag(const XmlNode *pNode, const char *pName,
     }
 
     const char *pRet = pNode->getChildValue(pName, bKeyName);
-    if (!pRet)
+    if (!pRet && errorIfNotExist)
         LS_ERROR(this, MISSING_TAG_IN, pName, pNode->getName());
 
     return pRet;

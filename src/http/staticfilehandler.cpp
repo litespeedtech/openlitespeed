@@ -406,6 +406,13 @@ int StaticFileHandler::process(HttpSession *pSession,
             return ret;
     }
     StaticFileCacheData *pCache = pInfo->getFileData();
+    
+    if (!pCache)
+    {
+        LS_ERROR(pReq->getLogSession(), "pCache is NULL, pInfo is %p, pReq is"
+                    " %p, pPath is %p.", pInfo, pReq, pPath);
+        return SC_500;
+    }
 
     if (pSession->getFlag(HSF_STX_FILE_CACHE_READY))
         pReq->setMimeType(pCache->getMimeType());

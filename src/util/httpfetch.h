@@ -19,22 +19,26 @@
 #define HTTPFETCH_H
 
 #include <lsdef.h>
-#include <log4cxx/logger.h>
 #include <sslpp/sslconnection.h>
 #include <util/autobuf.h>
 #include <util/hashstringmap.h>
 #include <stddef.h>
 #include <time.h>
 
+class AdnsReq;
 class GSockAddr;
 class HttpFetch;
 class HttpFetchDriver;
-using namespace LOG4CXX_NS;
+namespace log4cxx
+{
+class Logger;
+};
+
+class SslClientSessCache;
+class VMemBuf;
 
 typedef int (*HFProcessFn)(void *, HttpFetch *);
 
-class AdnsReq;
-class VMemBuf;
 class HttpFetch
 {
     int         m_iFdHttp;
@@ -75,7 +79,7 @@ class HttpFetch
     time_t      m_tmStart;
     int         m_iTimeoutSec;
     int         m_iReqInited;
-    Logger     *m_pLogger;
+    log4cxx::Logger     *m_pLogger;
     int         m_iLoggerId;
     int         m_iEnableDebug;
 
@@ -155,8 +159,7 @@ public:
     void closeConnection();
     void setTimeout(int timeoutSec)         {   m_iTimeoutSec = timeoutSec; }
     int getTimeout()                        {   return m_iTimeoutSec;   }
-    void writeLog(const char *s)
-    {   LS_INFO(m_pLogger, "HttpFetch[%d]: %s", getLoggerId(), s);    }
+    void writeLog(const char *s);
     void enableDebug(int d)                 {   m_iEnableDebug = d;     }
     time_t getTimeStart() const             {   return m_tmStart;       }
 
@@ -164,6 +167,9 @@ public:
     int isUseSsl() const                    {   return m_iSsl;          }
 
     void setVerifyCert(int s)               {   m_iVerifyCert = s;      }
+
+    void setClientSessCache(SslClientSessCache *c)
+    {   m_ssl.setClientSessCache(c);    }
 
     int setExtraHeaders(const char *pHdrs, int len);
     const char *getRespHeader(const char *pName) const;

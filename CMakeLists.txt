@@ -62,6 +62,10 @@ add_definitions(-DUSE_BROTLI)
 set(IP2LOC_ADD_LIB  libIP2Location.a)
 add_definitions(-DUSE_IP2LOCATION)
 ##########################################################################################
+#If you want to use IPTOGEO2, just un-comment out the following commands
+set(MMDB_LIB  maxminddb)
+add_definitions(-DENABLE_IPTOGEO2)
+##########################################################################################
 
 
 add_definitions(-DTEST_OUTPUT_PLAIN_CONF)

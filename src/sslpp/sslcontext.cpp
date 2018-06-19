@@ -594,8 +594,7 @@ int  SslContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * 
 
 int newClientSessionCb(SSL * ssl, SSL_SESSION * session){
     SslConnection *c = (SslConnection *)SSL_get_ex_data(ssl,SslConnection::getConnIdx());
-    c->cacheClientSession(session);
-    return 1;
+    return c->cacheClientSession(session);
 }
 
 

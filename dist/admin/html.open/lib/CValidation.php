@@ -278,7 +278,7 @@ class CValidation
             return 1;
         }
 
-        $chktype = array('uint', 'name', 'vhname', 'sel', 'sel1', 'sel2',
+        $chktype = array('uint', 'name', 'vhname', 'dbname', 'sel', 'sel1', 'sel2',
             'bool', 'file', 'filep', 'file0', 'file1', 'filetp', 'filevh', 'path',
             'uri', 'expuri', 'url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse');
 
@@ -351,6 +351,11 @@ class CValidation
             return -1;
         }
         return 1;
+    }
+
+    protected function chkAttr_dbname($attr, $node)
+    {
+        return $this->chkAttr_vhname($attr, $node);
     }
 
     protected function chkAttr_vhname($attr, $node)
