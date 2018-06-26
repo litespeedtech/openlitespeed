@@ -1949,7 +1949,8 @@ int HttpSession::buildErrorResponse(const char *errMsg)
 
             int ret = appendDynBody(pHtml, len);
             if (ret < len)
-                LS_ERROR(getLogSession(), "Failed to create error resp body.");
+                LS_ERROR(getLogSession(), "Failed to create error resp"
+                    " body %d %d.", ret, len);
 
             return 0;
         }
@@ -1995,7 +1996,8 @@ int HttpSession::onReadEx()
     case HSS_READING_BODY:
     case HSS_PROCESSING:
     case HSS_WRITING:
-        if (m_request.getBodyBuf() && !getFlag(HSF_REQ_BODY_DONE))
+        if (m_request.getBodyBuf() && !getFlag(HSF_REQ_BODY_DONE)
+            && !(m_iFlag & HSF_HANDLER_DONE))
         {
             ret = readReqBody();
             //TODO: This is a temp fix.  Cannot put smProcessReq in reqBodyDone

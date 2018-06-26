@@ -518,7 +518,7 @@ $_tipsdb['servAction'] = new DAttrHelp("Actions", 'Six actions are available fro
 
 $_tipsdb['servModules'] = new DAttrHelp("Server Modules", 'The Server module configuration globally defines the module configuration data.  Once defined, the Listeners and Virtual Hosts have access to the modules and module configurations. <br/><br/>All modules that are to be processed must be registered in the Server configuration. The Server configuration also  defines the default values for module parameter data.  These values can be inherited  or overridden by the Listener and Virtual Host configuration data.<br/><br/>Module priority is only defined at server level and is inherited by the Listener and Virtual Host configurations.', '', '', '');
 
-$_tipsdb['serverName'] = new DAttrHelp("Server Name", 'A unique name for this server. You can use $HOSTNAME as value.', '', '', '');
+$_tipsdb['serverName'] = new DAttrHelp("Server Name", 'A unique name for this server. If empty, server hostname will be used by default.', '', '', '');
 
 $_tipsdb['serverPriority'] = new DAttrHelp("Priority", 'Specifies priority of the server processes. Value ranges from -20 to 20. A lower number means higher priority.', ' Usually a higher priority leads to slightly higher web performance on a busy server. Do not set priority higher than that of database processes.', 'Integer number', '');
 

@@ -819,6 +819,15 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
     appendReqHeaders(pStream, method, methodLen, uri, uriLen);
     pStream->appendInputData("\r\n", 2);
     free(uri);
+    
+    if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) )
+    {
+        LoopBuf *buf = pStream->getBufIn();
+        buf->straight();
+        LS_DBG_H(getLogSession(), "decodeHeaders():\r\n%.*s",
+                 buf->blockSize(), buf->begin());
+    }
+    
 
     if (pStream->getHandler())
         pStream->onInitConnected();
@@ -1474,6 +1483,7 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
 
     pRespHeaders->dropConnectionHeaders();
 
+    AutoStr2 str = "";
     for (int pos = pRespHeaders->HeaderBeginPos();
          pos != pRespHeaders->HeaderEndPos();
          pos = pRespHeaders->nextHeaderPos(pos))
@@ -1500,10 +1510,22 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
 
         pIov = iov;
         pIovEnd = &iov[count];
+        
+        
         for (pIov = iov; pIov < pIovEnd; ++pIov)
+        {
+            if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ))
+            {
+                str.append(key, keyLen);
+                str.append(": ", 2);
+                str.append((char *)pIov->iov_base, pIov->iov_len);
+                str.append("\r\n", 2);
+            }
             pCur = m_hpack.encHeader(pCur, pBufEnd, key, keyLen,
                                      (char *)pIov->iov_base, pIov->iov_len, 0);
+        }
     }
+    LS_DBG_H(getLogger(), "encodeHeaders():\r\n%.*s", str.len(), str.c_str());
 
     return pCur - buf;
 }

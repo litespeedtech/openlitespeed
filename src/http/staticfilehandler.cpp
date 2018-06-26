@@ -583,7 +583,8 @@ int StaticFileHandler::process(HttpSession *pSession,
         //ret = pSession->flush();
         ret = pSession->endResponse(1);
     }
-    if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
+    if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY)
+        && code == SC_200 )
     {
         HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
         host->addUrlStaticFileMatch(pInfo->getFileData(),
