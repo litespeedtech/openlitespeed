@@ -270,6 +270,7 @@ class DPageDef
                     'VT_FILEUPLOAD',
                     new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
                 ]));
+
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
@@ -327,18 +328,6 @@ class DPageDef
 
 		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('virtualHostConfig:scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
 		$this->_pageDef['tp_'][$id] = $page;
-
-		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
-				[
-                    'V_GENERAL',
-                    new DTblMap('index', 'VT_INDXF'),
-                    new DTblMap('*errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
-                    new DTblMap('expires', 'A_EXPIRES'),
-                    'VT_FILEUPLOAD',
-                    new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-                ]));
-		$this->_pageDef['vh_'][$id] = $page;
-
 
 		$id = 'rw' ;
 		$page = new DPage($id, DMsg::UIStr('tab_rewrite'), new DTblMap('rewrite',

@@ -23,8 +23,8 @@ class DTblDefBase
     protected function loadSpecials()
     {
         // define special block contains raw data
-        $this->addSpecial('rewrite', ['enable', 'logLevel', 'inherit', 'base'], 'rules');
-        $this->addSpecial('virtualHostConfig:rewrite', ['enable', 'logLevel', 'inherit', 'base'], 'rules'); // for template
+        $this->addSpecial('rewrite', ['enable', 'logLevel', 'map', 'inherit', 'base'], 'rules');
+        $this->addSpecial('virtualHostConfig:rewrite', ['enable', 'logLevel', 'map', 'inherit', 'base'], 'rules'); // for template
     }
 
     protected function addSpecial($key, $attrList, $catchAllTag)
@@ -239,7 +239,7 @@ class DTblDefBase
             'logFormat'       => self::NewTextAttr('logFormat', DMsg::ALbl('l_logformat'), 'cust', true, 'accessLog_logFormat'),
             'logHeaders'      => self::NewCheckBoxAttr('logHeaders', DMsg::ALbl('l_logheaders'), array('1' => 'Referrer', '2' => 'UserAgent', '4' => 'Host', '0' => DMsg::ALbl('o_none')), true, 'accessLog_logHeader'),
             'compressArchive' => self::NewBoolAttr('compressArchive', DMsg::ALbl('l_compressarchive'), true, 'accessLog_compressArchive'),
-            'extraHeaders' => self::NewTextAreaAttr('extraHeaders', DMsg::ALbl('l_extraHeaders'), 'cust', true, 2, null, 1, 1),
+            'extraHeaders' => self::NewTextAreaAttr('extraHeaders', DMsg::ALbl('l_extraHeaders'), 'cust', true, 5, null, 1, 1),
             'scriptHandler_type' => self::NewSelAttr('type', DMsg::ALbl('l_handlertype'), $this->_options['scriptHandler'], false, 'shType', 'onChange="lst_conf(\'c\')"'),
             'scriptHandler' => self::NewSelAttr('handler', DMsg::ALbl('l_handlername'), 'extprocessor:$$type', false, 'shHandlerName'),
             'ext_type'           => self::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['extType'], false, 'extAppType'),

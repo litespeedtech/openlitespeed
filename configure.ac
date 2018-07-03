@@ -298,10 +298,10 @@ AC_SUBST([OPENLSWS_BSSL])
 if test "$OPENLSWS_BSSL" = no ; then
     if test "$OSNAME" = Darwin ; then
         usedynossl=yes
-        CPPFLAGS="$CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        CPPFLAGS=" $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
     else
         usedynossl=no
-        CPPFLAGS="$CPPFLAGS -I../../ssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
         echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
         OSSL=`. $srcdir/dlossl.sh`
         echo "Finsihed building openssl."
