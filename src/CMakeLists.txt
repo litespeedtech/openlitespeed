@@ -148,7 +148,7 @@ SET( litespeedlib
     modgzip lsiapi main http lsiapi spdy ssi
     registry cgi fcgi jk extensions lsapi proxy
     edio socket sslpp lsshm thread log4cxx  adns
-    -Wl,--whole-archive util lsr -Wl,--no-whole-archive sslpp GeoIP udns
+    -Wl,--whole-archive util lsr -Wl,--no-whole-archive sslpp GeoIP ${MMDB_LIB} udns
     pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a
     ${BSSL_ADD_LIB} ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB})
 

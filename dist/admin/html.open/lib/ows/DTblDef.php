@@ -73,7 +73,7 @@ class DTblDef extends DTblDefBase
 	protected function add_S_PROCESS($id) //keep
 	{
 		$attrs = array(
-				self::NewTextAttr('serverName', DMsg::ALbl('l_servername'), 'name', false),
+				self::NewTextAttr('serverName', DMsg::ALbl('l_servername'), 'name'),
 				self::NewIntAttr('httpdWorkers', DMsg::ALbl('l_numworkers'), true, 1, 16),
 				self::NewCustFlagAttr('runningAs', DMsg::ALbl('l_runningas'), (DAttr::BM_NOFILE | DAttr::BM_NOEDIT)),
 				self::NewCustFlagAttr('user', null, (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),

@@ -1636,10 +1636,10 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     //int len = strlen( pUri );
 
     const char *pValue = ConfigCtx::getCurConfigCtx()->getTag(pContextNode,
-                         "type");
+                         "type", 0, 0);
 
     if (pValue == NULL)
-        return LS_FAIL;
+        pValue = "null";
 
     int role = HandlerType::ROLE_RESPONDER;
     int type = HandlerType::getHandlerType(pValue, role);
@@ -1714,7 +1714,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
                            ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                                    "enableIpGeo", 0, 1, 0) : 0);
         pContext->setIpToLoc(m_rootContext.isIpToLocOn());
-        return pContext->config(getRewriteMaps(), pContextNode, type);
+        return pContext->config(getRewriteMaps(), pContextNode, type,
+                                getRootContext());
     }
 
     return LS_FAIL;

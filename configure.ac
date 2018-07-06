@@ -4,7 +4,6 @@ m4_include(ax_path_lib_pcre.m4)
 m4_include(ax_lib_expat.m4)
 m4_include(ax_check_liblua.m4)
 m4_include(ax_check_libudns.m4)
-m4_include(ax_check_brotli.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
@@ -36,6 +35,8 @@ LT_INIT
 
 OSTYPE=`uname -m`
 OSNAME=`uname -s`
+TOPDIR=`pwd`
+echo Current dir is $TOPDIR
 
 # Checks for header files.
 AC_CHECK_HEADER([pthread.h],
@@ -226,6 +227,58 @@ echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"
 CFLAGS="$CFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 
+
+LIBBROTLI=
+AC_ARG_ENABLE([brotli],
+              [AC_HELP_STRING([--enable-brotli=@<:@yes/no@:>@],
+                              [enable brotli compression @<:@default=no@:>@])],
+               [OPENLSWS_BROTLI="$enableval"], [OPENLSWS_BROTLI=no])
+if test "$OPENLSWS_BROTLI" = "no" ; then 
+    echo "Brotli compression disabled!!!"
+else
+    echo "Brotli start to build ..."
+    BUILDBROTLI=`. $srcdir/dlbrotli.sh`
+    
+    LIBBROTLI=" $TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/out/libbrotlienc-static.a $TOPDIR/brotli-master/out/libbrotlicommon-static.a "
+    AC_CHECK_FILES([$TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/c/include/brotli/decode.h],,[LIBBROTLI=])
+    
+    if test "x$LIBBROTLI" = x ; then
+        echo "Brotli built failed. If continue, brotli compression will be disabled."
+    else
+        echo "Brotli built and enabled!!!"
+        CPPFLAGS="$CPPFLAGS -I$TOPDIR/brotli-master/c/include "
+        LIBBROTLI=" $TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/out/libbrotlienc-static.a $TOPDIR/brotli-master/out/libbrotlicommon-static.a "
+        AC_DEFINE_UNQUOTED([USE_BROTLI], [1], [Defined to compile with Brotli compression included])
+    fi
+fi
+AC_SUBST([LIBBROTLI])
+
+LIBMMDB=
+AC_ARG_ENABLE([iptogeo2],
+              [AC_HELP_STRING([--enable-iptogeo2=@<:@yes/no@:>@],
+                              [enable iptogeo2, need to build maxminddb which need to have autotool installed @<:@default=no@:>@])],
+               [OPENLSWS_IPTOGEO2="$enableval"], [OPENLSWS_IPTOGEO2=no])
+if test "$OPENLSWS_IPTOGEO2" = "no" ; then 
+    echo "iptogeo2 disabled!!!"
+else
+    echo "iptogeo2 enabled, libmaxminddb start to build ..."
+    BUILDMAXMINDDB=`. $srcdir/dlmaxminddb.sh`
+
+    LIBMMDBEXIST=
+    AC_CHECK_FILE([$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a],[LIBMMDBEXIST=yes],[LIBMMDBEXIST=no])
+    if test "$LIBMMDBEXIST" = no ; then
+        echo It seems libmaxminddb library not eixts, please check and ty again.
+        echo Or you can continue to make and iptogeo2 will be disabled.
+        echo
+    else
+        LIBMMDB=" $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a "
+        CPPFLAGS="$CPPFLAGS -I$TOPDIR/libmaxminddb/include/ "
+        AC_DEFINE_UNQUOTED([ENABLE_IPTOGEO2], [1], [Defined to compile with iptogeo2 enabled])
+    fi
+fi
+AC_SUBST([LIBMMDB])
+
+
 ## ##Set option --with-bssl
 AC_ARG_WITH(bssl,
             [  --with-bssl[[=DIR]]       Set to use BoringSSL instead of OpenSSL [[default=no]]],
@@ -245,10 +298,10 @@ AC_SUBST([OPENLSWS_BSSL])
 if test "$OPENLSWS_BSSL" = no ; then
     if test "$OSNAME" = Darwin ; then
         usedynossl=yes
-        CPPFLAGS="$CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        CPPFLAGS=" $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
     else
         usedynossl=no
-        CPPFLAGS="$CPPFLAGS -I../../ssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
         echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
         OSSL=`. $srcdir/dlossl.sh`
         echo "Finsihed building openssl."
@@ -270,42 +323,8 @@ fi
 AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
 AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
 
-AC_ARG_WITH(brotli,
-[  --with-brotli[[=DIR]]        enable brotli compression (located in directory DIR, if supplied).  [[default=no]]],
-[
-    if test "x$withval" = "x" ; then
-        need_brotli=no
-    elif test $withval = no ; then
-        need_brotli=no
-    elif test $withval = yes ; then
-        need_brotli=yes
-    else
-        need_brotli=yes
-        brotli_dir=$withval
-    fi
-],[
-    need_brotli=no
-    brotli_dir=
-])
-AC_SUBST([need_brotli])
-AC_SUBST([brotli_dir])
 
-AC_MSG_CHECKING(whether to check if brotli library exists)
-if test "x$need_brotli" = "xno" ; then
-    AC_MSG_RESULT(no)
-else
-    AC_MSG_RESULT(yes)
-    AC_DEFINE_UNQUOTED([USE_BROTLI], [1], [Defined to compile with Brotli compression included])
-    AC_BROTLI_CHECK
-    if test "x$need_brotli" = "xno" ; then
-        AC_MSG_RESULT(brotli header files not found - disabling brotli)
-    elif test "x$need_brotli" = "xcheck" ; then
-        need_brotli=yes
-        AC_MSG_RESULT(brotli header files found - enable brotli)
-    fi
-fi
-AM_CONDITIONAL([HAVE_BROTLI], [test x$need_brotli = xyes])
-echo "Brotli include = $BROTLI_INCLUDES, need_brotli = $need_brotli"
+
 
 AC_ARG_WITH(ip2loc,
 [  --with-ip2loc[[=DIR]]        enable ip2location (located in directory DIR, if supplied).  [[default=no]]],

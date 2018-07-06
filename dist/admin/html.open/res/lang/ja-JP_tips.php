@@ -270,9 +270,9 @@ $_tipsdb['forceType'] = new DAttrHelp("強制MIMEタイプ", 'このコンテキ
 
 $_tipsdb['generalContext'] = new DAttrHelp("静的コンテキスト", 'コンテキスト設定は、特定の場所にあるファイルの特別な設定を指定するために使用されます。 これらの設定は、ApacheのAliasやAliasMatchディレクティブのようなドキュメントルートの外部にファイルを持ち込み、認可領域を使用して特定のディレクトリを保護したり、ドキュメントルート内の特定のディレクトリへのアクセスをブロックまたは制限するために使用できます。', '', '', '');
 
-$_tipsdb['geoipDBCache'] = new DAttrHelp("DBキャッシュタイプ", '使用するキャッシュモードの種類を指定します。 キャッシュモードは、Standard、MemoryCache、CheckCache、およびIndexCacheです。 MemoryCacheが推奨されており、これがデフォルトです。', '', 'ドロップダウンリストから選択', '');
+$_tipsdb['geoipDBFile'] = new DAttrHelp("DBファイルのパス", ' MaxMind GeoIPデータベースへのパスを指定します。', '', 'ファイルパス', '/usr/local/share/GeoIP/GeoLite2-Country.mmdb');
 
-$_tipsdb['geoipDBFile'] = new DAttrHelp("DBファイルのパス", ' MaxMind GeoIPデータベースへのパスを指定します。', '', 'ファイルパス', '');
+$_tipsdb['geoipDBName'] = new DAttrHelp("DB Name", 'MaxMind GeoIP database name.', '', '', 'COUNTRY_DB');
 
 $_tipsdb['geolocationDB'] = new DAttrHelp("IPからジオロケーションDB", ' 複数のMaxMindジオロケーションデータベースをここで指定できます。 MaxMindには、国、地域、市区町村、組織、ISP、Netspeedの各タイプのDBがあります。 「国」、「地域」、および「都市」タイプの複数のデータベースが構成されている場合は、最後のデータベースが有効になります。', '', '', '');
 
@@ -387,6 +387,8 @@ $_tipsdb['maxDynRespSize'] = new DAttrHelp("最大動的応答ボディサイズ
 $_tipsdb['maxKeepAliveReq'] = new DAttrHelp("最大キープアライブ要求", 'キープアライブ（永続的）セッションを介して処理できる要求の最大数を指定します。 この制限に達すると接続は終了します。 バーチャルホストごとにこの制限を設定することもできます。', '[パフォーマンス]適度に高い値に設定します。 &quot;1&quot;または &quot;0&quot;の値はキープアライブを無効にします。', '整数', '');
 
 $_tipsdb['maxMMapFileSize'] = new DAttrHelp("最大MMAPファイルサイズ（バイト）", 'メモリマップされる最大の静的ファイル（MMAP）を指定します。   静的ファイルは、メモリバッファキャッシュ、メモリマップキャッシュ、プレーンリード/ライト、およびsendfile（）の4つの方法で提供できます。 サイズが&quot;最大キャッシュサイズの小さいファイルサイズ（バイト）&quot;より小さいファイルはメモリバッファキャッシュから提供されます。 サイズが&quot;最大キャッシュサイズの小さいファイルサイズ（バイト）&quot;よりも大きいが最大MAPファイルサイズより小さいファイルは、メモリマップドキャッシュから提供されます。 最大MMAPファイルサイズよりも大きいファイルは、プレーンな読み取り/書き込みまたはsendfile（）を介して提供されます。 サーバは32ビットのアドレス空間（2GB）を持っているので、非常に大きなファイルをメモリに格納することは推奨されません。', '', '整数', '');
+
+$_tipsdb['maxMindDBEnv'] = new DAttrHelp("Environment Variables", 'Assign the results of database lookups to environment variables.', '', 'Variable_Name mapped_DB_data<br/><br/>One entry per line. Path to data can use map keys or 0-based array indexes, both being separated by /.', 'COUNTRY_CODE COUNTRY_DB/country/iso_code<br/>REGION_CODE  CITY_DB/subdivisions/0/iso_code');
 
 $_tipsdb['maxReqBodySize'] = new DAttrHelp("最大リクエストボディサイズ（バイト）", 'HTTPリクエスト本文の最大サイズを指定します。 32ビットOSの場合、2GBはハード制限です。 64ビットOSの場合、実質的に無制限です。', '[セキュリティ] DoS攻撃を防ぐには、この制限を実際に必要なものだけに制限してください。 スワッピング空間には、この制限に対応するための十分な空き領域が必要です。', '整数', '');
 
@@ -770,6 +772,8 @@ $_tipsdb['EDTP:realmName'] = array('ここであなたのHT Accessレルムを�
 $_tipsdb['EDTP:restrained'] = array('共有ホスティング環境での拘束をオンにします。');
 
 $_tipsdb['EDTP:rewriteMapLocation'] = array('場所のURIを入力します。 URIは「/」で始まる必要があります。');
+
+$_tipsdb['EDTP:rewriteRules'] = array('Only virtual host level rewrite rules should be used here, such as those found in an Apache virtual host  config file. Do NOT add any document root level rewrite rules here. If you have any document root level rewrite rules from  .htaccess, you should instead create a static context with uri &quot;/&quot; and add the rewrite rules there.');
 
 $_tipsdb['EDTP:rubyBin'] = array('<b>Rubyパス</b>は、Ruby実行ファイルの絶対パスです。 たとえば、/usr/local/bin/ruby');
 

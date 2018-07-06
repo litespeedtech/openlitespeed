@@ -18,6 +18,7 @@
 #include "httpfetch.h"
 
 #include <adns/adns.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
 #include <log4cxx/logger.h>
@@ -72,7 +73,7 @@ HttpFetch::HttpFetch()
     , m_iReqInited(0)
     , m_iEnableDebug(0)
 {
-    m_pLogger = Logger::getRootLogger();
+    m_pLogger = log4cxx::Logger::getRootLogger();
     m_iLoggerId = HttpFetchCounter ++;
     //m_pLogger->debug( "HttpFetch[%d]::HttpFetch()", getLoggerId() );
 }
@@ -98,6 +99,12 @@ HttpFetch::~HttpFetch()
     m_respHeaders.release_objects();
     if (m_ssl.getSSL())
         m_ssl.release();
+}
+
+
+void HttpFetch::writeLog(const char *s)
+{
+    LS_INFO(m_pLogger, "HttpFetch[%d]: %s", getLoggerId(), s);
 }
 
 
@@ -280,7 +287,9 @@ static SSL *getSslContext()
         s_pFetchCtx = new SslContext();
         if (s_pFetchCtx)
         {
+            s_pFetchCtx->enableClientSessionReuse();
             s_pFetchCtx->setRenegProtect(0);
+            s_pFetchCtx->setProtocol(14);
         }
         else
             return NULL;
@@ -353,6 +362,7 @@ int HttpFetch::connectSSL()
         m_achHost[m_iHostLen] = 0;
         m_ssl.setTlsExtHostName(m_achHost);
         m_achHost[m_iHostLen] = ch;
+        m_ssl.tryReuseCachedSession();
     }
     int ret = m_ssl.connect();
     int verifyOk;

@@ -419,6 +419,20 @@ class CData
             }
         }
 
+        if ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
+            $loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
+            if (($ctxs = $root->GetChildren($loc)) != null) {
+                if (!is_array($ctxs))
+                    $ctxs = array($ctxs);
+                $order = 1;
+                foreach ($ctxs as $ctx) {
+                    if ($ctx->GetChildVal('type') === 'null') {
+                        $ctx->RemoveChild('type'); // default is static (null), do not write to file
+                    }
+                }
+            }
+        }
+
         if ($this->_type == DInfo::CT_TP) {
             $vhconf = $root->GetChildVal('configFile');
             if (($pos = strpos($vhconf, '.xml')) > 0) {
@@ -505,6 +519,20 @@ class CData
             }
         }
 
+        if ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
+            $loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
+            if (($ctxs = $root->GetChildren($loc)) != null) {
+                if (!is_array($ctxs))
+                    $ctxs = array($ctxs);
+                $order = 1;
+                foreach ($ctxs as $ctx) {
+                    if ($ctx->GetChildVal('type') === 'null') {
+                        $ctx->RemoveChild('type'); // default is static (null), do not write to file
+                    }
+                }
+            }
+        }
+
         if ($this->_type == DInfo::CT_TP) {
             $vhconf = $root->GetChildVal('configFile');
             if (($pos = strpos($vhconf, '.conf')) > 0) {
@@ -568,6 +596,9 @@ class CData
                     $ctxs = array($ctxs);
                 $order = 1;
                 foreach ($ctxs as $ctx) {
+                    if ($ctx->GetChildren('type') == null) {
+                        $ctx->AddChild(new CNode('type', 'null')); // default is static (null)
+                    }
                     $ctx->AddChild(new CNode('order', $order++));
                 }
             }

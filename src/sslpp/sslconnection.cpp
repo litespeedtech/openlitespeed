@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "sslconnection.h"
 // #include "sslerror.h"
+#include "sslsesscache.h"
 #include <log4cxx/logger.h>
 
 #include <lsdef.h>
@@ -35,51 +36,12 @@
 //#define DEBUGGING
 
 #ifdef DEBUGGING
-#include <stdio.h>
-#include <time.h>
-#include <stdarg.h>
-#include <sys/timeb.h>
 
-
-static void debug_message (const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    char buf[0x1000];
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    FILE *f;
-    int ctr = 0;
-    do {
-        f = fopen("/home/user/olsws/logs/ssl.log","a");
-        if (!f) {
-            ctr++;
-            usleep(0);
-        }
-    } while ((!f) && (ctr < 10));
-    if (f) {
-        struct timeb tb;
-        struct tm lt;
-        ftime(&tb);
-        localtime_r(&tb.time,&lt);
-        fprintf(f,"%d: %02d/%02d/%04d %02d:%02d:%02d:%03d %s", getpid(), 
-                lt.tm_mon + 1, lt.tm_mday, lt.tm_year + 1900, lt.tm_hour, 
-                lt.tm_min, lt.tm_sec, tb.millitm, buf);
-        fclose(f);
-    }
-    else 
-        fprintf(stderr,"Unable to write to debug log: %s", buf);
-}
-#define DEBUG_MESSAGE(fmt, ...) /*if (s_criu_debug) { */    \
-    debug_message("sslconnection Line #%d " fmt, __LINE__, ##__VA_ARGS__); \
-    /*}*/
-/*
-#define DEBUG_MESSAGE(fmt, ...) if (s_criu_debug) \
-        fprintf(stderr,"(DEBUG) CRIU_CTRL Line #%d " fmt, __LINE__, ##__VA_ARGS__) 
-//*/
-#else
 #define DEBUG_MESSAGE( ...)  LS_LOG(log4cxx::Level::DEBUG, __VA_ARGS__);
-//#define DEBUG_MESSAGE(...)
+
+#else
+
+#define DEBUG_MESSAGE(...)
 
 #endif
 
@@ -222,13 +184,17 @@ int SslConnection::installRbio(int rfd, int wfd)
     m_iRFd = rfd;
 #ifndef OPENSSL_IS_BORINGSSL
     SSL_set_fd(m_ssl, rfd);
-    m_saved_rbio = m_ssl->rbio;
+    m_saved_rbio = SSL_get_rbio(m_ssl);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    BIO_up_ref(m_saved_rbio);
+    SSL_set0_rbio(m_ssl, rbio);
+#else
     m_ssl->rbio = rbio;
+#endif //OPENSSL_VERSION_NUMBER >= 0x10100000L
 #else
     SSL_set_bio(m_ssl, rbio, NULL);
     SSL_set_wfd(m_ssl, wfd);
 #endif
-    DEBUG_MESSAGE("beginBIO - Ok\n");
     return 0;
 }
 
@@ -308,8 +274,13 @@ void SslConnection::restoreRbio()
 #ifdef OPENSSL_IS_BORINGSSL
     SSL_set_rfd(m_ssl, m_iRFd);
 #else
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    SSL_set0_rbio(m_ssl,m_saved_rbio);
+    BIO_free(m_saved_rbio);
+#else
     BIO_free_all(m_ssl->rbio);
     m_ssl->rbio = m_saved_rbio;
+#endif
 #endif
     ls_pfree(m_rbioBuf);
     m_rbioBuf = NULL;
@@ -651,6 +622,14 @@ SSL_SESSION *SslConnection::getSession() const
 {   return SSL_get_session(m_ssl);        }
 
 
+int SslConnection::setSession(SSL_SESSION *session) const
+{   return SSL_set_session(m_ssl, session);     }
+
+
+int SslConnection::isSessionReused() const
+{   return SSL_session_reused(m_ssl);       }
+
+
 const char *SslConnection::getVersion() const
 {   return SSL_get_version(m_ssl);        }
 
@@ -698,11 +677,20 @@ void SslConnection::initConnIdx()
 
 
 int SslConnection::getSessionIdLen(SSL_SESSION *s)
-{   return s->session_id_length;     }
+//{   return s->session_id_length;     }
+{
+    unsigned int len;
+    SSL_SESSION_get_id((const SSL_SESSION *)s, &len);
+    return len;
+}
 
 
 const unsigned char *SslConnection::getSessionId(SSL_SESSION *s)
-{   return s->session_id;           }
+//{   return s->session_id;           }
+{   
+    unsigned int len;
+    return SSL_SESSION_get_id((const SSL_SESSION *)s, &len);
+}
 
 
 int SslConnection::getCipherBits(const SSL_CIPHER *pCipher,
@@ -741,3 +729,30 @@ char* SslConnection::getRawBuffer(int *len)
     *len = m_rbioBuffered;
     return m_rbioBuf;
 }
+
+
+
+int SslConnection::cacheClientSession(SSL_SESSION* session)
+{
+    if (m_pSessCache)
+    {
+        m_pSessCache->saveSession(NULL, 0, session);
+        return 1;
+    }
+    return 0;
+}
+
+
+void SslConnection::tryReuseCachedSession()
+{
+    if (!m_pSessCache)
+        return;
+    SSL_SESSION *session = m_pSessCache->getSession(NULL, 0);
+    if (session)
+        SSL_set_session(m_ssl, session);
+}
+
+
+
+
+

@@ -22,6 +22,7 @@
 #include <inttypes.h>
 
 #include <lsdef.h>
+#include <http/ip2geo.h>
 #include "GeoIP.h"
 #include "GeoIPCity.h"
 
@@ -31,12 +32,12 @@ class IpToGeo;
 class XmlNodeList;
 class ConfigCtx;
 
-class GeoInfo
+class GeoIpData : public GeoInfo
 {
     friend class IpToGeo;
 public:
-    GeoInfo();
-    ~GeoInfo();
+    GeoIpData();
+    ~GeoIpData();
     const char *getGeoEnv(const char *pEnvName);
     int addGeoEnv(IEnv *pEnv);
     //void addGeoEnv( HttpReq * pReq );
@@ -53,10 +54,10 @@ private:
 
     char *m_pOrg;
     char *m_pIsp;
-    LS_NO_COPY_ASSIGN(GeoInfo);
+    LS_NO_COPY_ASSIGN(GeoIpData);
 };
 
-class IpToGeo
+class IpToGeo : public Ip2Geo
 {
 
 public:
@@ -65,15 +66,9 @@ public:
 
     int setGeoIpDbFile(const char *pFile, const char *cacheMode);
 
-    int lookUp(uint32_t addr, GeoInfo *pInfo);
-    int lookUp(const char *pIP, GeoInfo *pInfo);
-    int lookUpV6(in6_addr addr, GeoInfo *pInfo);
+    GeoInfo *lookUp(uint32_t addr);
+    GeoInfo *lookUpV6(in6_addr addr);
     int config(const XmlNodeList *pList);
-
-    static void setIpToGeo(IpToGeo *pItg)
-    {   s_pIpToGeo = pItg;  }
-    static IpToGeo *getIpToGeo()
-    {   return s_pIpToGeo;  }
 
 private:
     int loadGeoIpDbFile(const char *pFile, int flag);
@@ -84,7 +79,6 @@ private:
     GeoIP *m_pOrg;
     GeoIP *m_pIsp;
     GeoIP *m_pNetspeed;
-    static IpToGeo *s_pIpToGeo;
     LS_NO_COPY_ASSIGN(IpToGeo);
 };
 

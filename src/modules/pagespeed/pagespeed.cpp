@@ -742,6 +742,8 @@ void InitDir(const StringPiece &directive,
         return ;
     }
 
+    //TO fix some permission issue
+    chmod(gs_path.c_str(), S_IRWXO);
     if (gs_stat.st_uid != user)
     {
         if (chown(gs_path.c_str(), user, group) != 0)
@@ -1085,96 +1087,6 @@ static int PostConfig(lsi_param_t *rec)
 {
     InitGlobalCtx();
     return InitGlobalStats();
-//     std::vector<SystemServerContext *> server_contexts;
-//     int vhost_count = g_api->get_vhost_count();
-// 
-//     for (int s = 0; s < vhost_count; s++)
-//     {
-//         const void *vhost = g_api->get_vhost(s);
-// 
-//         LsRewriteOptions *vhost_option = (LsRewriteOptions *)
-//                                           g_api->get_vhost_module_conf(vhost, &MNAME);
-// 
-//         //Comment: when Amdin/html parse, this will be NULL, we need not to add it
-//         if (vhost_option != NULL)
-//         {
-//             LsPsVhCtx *vhCtx = new LsPsVhCtx;
-//             vhCtx->serverContext = g_pPsGlobalCtx->driverFactory->MakeLsServerContext(
-//                                        "dummy_hostname", --dummy_port);
-// 
-//             vhCtx->serverContext->global_options()->Merge(*vhost_option);
-//             vhCtx->handler =
-//                 g_pPsGlobalCtx->driverFactory->message_handler();
-//             // LsiMessageHandler(pMainConf->driver_factory->thread_system()->NewMutex());
-//             //Why GoogleMessageHandler() but not LsMessageHandler
-// 
-//             if (vhCtx->serverContext->global_options()->enabled())
-//             {
-//                 //GoogleMessageHandler handler;
-//                 const char *file_cache_path =
-//                     vhCtx->serverContext->Config()->file_cache_path().c_str();
-// 
-//                 if (file_cache_path[0] == '\0')
-//                 {
-//                     g_api->log(NULL, LSI_LOG_ERROR,
-//                                "mod_pagespeed post_config ERROR, file_cache_path is NULL\n");
-//                     return LS_FAIL;
-//                 }
-//                 else if (!g_pPsGlobalCtx->driverFactory->file_system()->IsDir(
-//                              file_cache_path, vhCtx->handler).is_true())
-//                 {
-//                     g_api->log(NULL, LSI_LOG_ERROR,
-//                                "mod_pagespeed post_config ERROR, FileCachePath must be an writeable directory.\n");
-//                     return LS_FAIL;
-//                 }
-// 
-//                 g_api->log(NULL, LSI_LOG_DEBUG,
-//                            "mod_pagespeed post_config OK, file_cache_path is %s\n",
-//                            file_cache_path);
-//             }
-// 
-//             g_api->set_vhost_module_data(vhost, &MNAME, vhCtx);
-//             server_contexts.push_back(vhCtx->serverContext);
-//         }
-//     }
-// 
-// 
-//     GoogleString error_message = "";
-//     int error_index = -1;
-//     Statistics *global_statistics = NULL;
-// 
-//     g_api->log(NULL, LSI_LOG_DEBUG,
-//                "mod_pagespeed post_config call PostConfig()\n");
-//     g_pPsGlobalCtx->driverFactory->PostConfig(
-//         server_contexts, &error_message, &error_index, &global_statistics);
-// 
-//     if (error_index != -1)
-//     {
-//         server_contexts[error_index]->message_handler()->Message(
-//             kError, "mod_pagespeed is enabled. %s", error_message.c_str());
-//         //g_api->log( NULL, LSI_LOG_ERROR, "mod_pagespeed is enabled. %s\n", error_message.c_str() );
-//         return LS_FAIL;
-//     }
-// 
-// 
-//     if (!server_contexts.empty())
-//     {
-//         IgnoreSigpipe();
-// 
-//         if (global_statistics == NULL)
-//             LsRewriteDriverFactory::InitStats(
-//                 g_pPsGlobalCtx->driverFactory->statistics());
-// 
-//         g_pPsGlobalCtx->driverFactory->LoggingInit();
-//         g_pPsGlobalCtx->driverFactory->RootInit();
-//     }
-//     else
-//     {
-//         delete g_pPsGlobalCtx->driverFactory;
-//         g_pPsGlobalCtx->driverFactory = NULL;
-//     }
-// 
-
 }
 
 static int ChildInit(lsi_param_t *rec)
@@ -1806,25 +1718,10 @@ static int InPlaceBaseFetchDoneCb(evtcbtail_s *session_, long param, void *pPara
     if (!pMyData)
         return 0;
 
-    //pMyData->ctx->session can be updated to NULL when httpsession releaseresources
-//     if (pMyData->ctx->session != session_)
-//     {
-//         g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP);
-//         return 0;
-//     }
     LsPsReqCtx *ctx = pMyData->reqCtx;
-
     assert(ctx->inPlace);
     assert(ctx->baseFetch);
-//     if (!pMyData->reqCtx->fetchDone)
-//         BaseFetchHandler(pMyData, session);
-//     else
-//     {
-//         CHECK(0);//should NEVER BE HERE since call only once
-//         pMyData->reqCtx->baseFetch->CollectAccumulatedWrites(session);
-//     }
-    
- 
+
     g_api->log(session, LSI_LOG_DEBUG,
                "[modpagespeed] in place check base fetch resp header: %s\n",
                pMyData->request->urlString.c_str());
@@ -1871,11 +1768,6 @@ static int InPlaceBaseFetchDoneCb(evtcbtail_s *session_, long param, void *pPara
                    "Could not rewrite resource in-place: %s\n",
                    pMyData->request->urlString.c_str());
     }
-    
-    //ctx->driver->Cleanup();
-    //ctx->driver = NULL;
-    // enable html_rewrite
-
     // re init ctx
     //ctx->fetchDone = false;
     if (ctx->fetchDone)

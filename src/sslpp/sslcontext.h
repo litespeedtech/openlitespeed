@@ -50,6 +50,8 @@ private:
 
     void release();
     int init(int method = SSL_TLS);
+    void linkSslContext();
+
     static int seedRand(int len);
     void updateProtocol(int method);
 
@@ -88,6 +90,7 @@ public:
     long setOptions(long options);
     long getOptions();
     void setProtocol(int method);
+    void enableClientSessionReuse();
     void setRenegProtect(int p)   {   m_iRenegProtect = p;    }
     static void setUseStrongDH(int use);
     int  setCipherList(const char *pList);
@@ -135,6 +138,9 @@ public:
     int  enableShmSessionCache();
     int  enableSessionTickets();
     void disableSessionTickets();
+
+    static SslContext *getSslContext(SSL_CTX *ctx);
+    static void setAlpnCb(SSL_CTX *ctx, void *arg);
 
     LS_NO_COPY_ASSIGN(SslContext);
 };

@@ -29,6 +29,7 @@
 #include <util/ghash.h>
 #include <util/gpointerlist.h>
 #include <util/tsingleton.h>
+#include <http/ip2geo.h>
 
 class AutoBuf;
 class ClientInfo;
@@ -47,6 +48,7 @@ private:
     Cache                   m_v6;
     ClientList              m_toBeRemoved;
     static ClientCache     *s_pClients;
+    static Ip2Geo          *s_ip2geo;
 
     static int appendDirtyList(const void *pKey, void *pData, void *pList);
     void       clean(Cache *pCache);
@@ -80,8 +82,11 @@ public:
     static void initClientCache(int iInitSize)
     {   s_pClients = new ClientCache(iInitSize);    }
     static ClientCache *getClientCache()
-    {   return s_pClients;      }
-
+    {   return s_pClients;          }
+    static void setIp2Geo(Ip2Geo *ip2geo)
+    {   s_ip2geo = ip2geo;          }
+    static Ip2Geo *getIp2Geo() 
+    {   return s_ip2geo;            }
     LS_NO_COPY_ASSIGN(ClientCache);
 };
 

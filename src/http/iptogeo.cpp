@@ -34,29 +34,26 @@
 #include <unistd.h>
 
 
-IpToGeo *IpToGeo::s_pIpToGeo = NULL;
-
-
-GeoInfo::GeoInfo()
+GeoIpData::GeoIpData()
     : m_netspeed(-1)
 {
     memset(&m_countryId, 0, (char *)(&m_pIsp + 1) - (char *)&m_countryId);
 }
 
 
-GeoInfo::~GeoInfo()
+GeoIpData::~GeoIpData()
 {
     release();
 }
 
-void GeoInfo::reset()
+void GeoIpData::reset()
 {
     release();
     m_netspeed = -1;
     memset(&m_countryId, 0, (char *)(&m_pIsp + 1) - (char *)&m_countryId);
 }
 
-void GeoInfo::release()
+void GeoIpData::release()
 {
     if (m_pRegion)
         GeoIPRegion_delete(m_pRegion);
@@ -69,7 +66,7 @@ void GeoInfo::release()
 }
 
 
-const char *GeoInfo::getGeoEnv(const char *pEnvName)
+const char *GeoIpData::getGeoEnv(const char *pEnvName)
 {
     static char s_achBuf[15];
     if (strncasecmp(pEnvName, "GEOIP_", 6) == 0)
@@ -179,7 +176,7 @@ const char *GeoInfo::getGeoEnv(const char *pEnvName)
 }
 
 
-int GeoInfo::addGeoEnv(IEnv *pEnv)
+int GeoIpData::addGeoEnv(IEnv *pEnv)
 {
     int count = 0;
     const char *pStr;
@@ -478,6 +475,7 @@ int IpToGeo::loadGeoIpDbFile(const char *pFile, int flag)
 
     default:
         GeoIP_delete(pGip);
+        LS_ERROR("Unrecognized GeoIP DB file type (%d) in: %s", flag, pFile);
         return LS_FAIL;
     }
     return 0;
@@ -495,8 +493,11 @@ int IpToGeo::testGeoIpDbFile(const char *pFile, int flag)
         if (ret == 0)
         {
             unsigned char addr[4] = { 88, 252, 206, 167 };
-            GeoInfo info;
-            lookUp(*((int *)&addr), &info);
+            GeoInfo *info = NULL;
+            info = lookUp(*((int *)&addr));
+            ret = (info == NULL);
+            if (info)
+                delete info;
         }
         exit(ret != 0);
     }
@@ -506,7 +507,7 @@ int IpToGeo::testGeoIpDbFile(const char *pFile, int flag)
         int wpid = waitpid(pid, &status, 0);
         if (wpid == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0)
             return 0;
-        LS_ERROR("GeoIP DB file test failed: '%s'.", pFile);
+        LS_ERROR("GeoIP DB file test failed: '%s'\n", pFile);
     }
     return -1;
 }
@@ -534,8 +535,14 @@ int IpToGeo::setGeoIpDbFile(const char *pFile, const char *cacheMode)
 }
 
 
-int IpToGeo::lookUp(uint32_t addr, GeoInfo *pInfo)
+GeoInfo *IpToGeo::lookUp(uint32_t addr)
 {
+    GeoIpData *pInfo = new GeoIpData();
+    if (!pInfo)
+    {
+        LS_ERROR("Error allocating GeoIpData\n");
+        return NULL;
+    }
     addr = htonl(addr);
     if (m_pLocation)
     {
@@ -563,11 +570,17 @@ int IpToGeo::lookUp(uint32_t addr, GeoInfo *pInfo)
         pInfo->m_pIsp = GeoIP_name_by_ipnum(m_pIsp, addr);
     if (m_pNetspeed)
         pInfo->m_netspeed = GeoIP_id_by_ipnum(m_pNetspeed, addr);
-    return 0;
+    return pInfo;
 }
 
-int IpToGeo::lookUpV6(in6_addr addr, GeoInfo *pInfo)
+GeoInfo *IpToGeo::lookUpV6(in6_addr addr)
 {
+    GeoIpData *pInfo = new GeoIpData();
+    if (!pInfo)
+    {
+        LS_ERROR("Insufficient memory to lookup v6 addr\n");
+        return NULL;
+    }
     if (m_pLocation)
     {
         switch (m_locDbType)
@@ -588,17 +601,8 @@ int IpToGeo::lookUpV6(in6_addr addr, GeoInfo *pInfo)
         pInfo->m_pIsp = GeoIP_name_by_ipnum_v6(m_pIsp, addr);
     if (m_pNetspeed)
         pInfo->m_netspeed = GeoIP_id_by_ipnum_v6(m_pNetspeed, addr);
-    return 0;
+    return pInfo;
 }
-
-int IpToGeo::lookUp(const char *pIP, GeoInfo *pInfo)
-{
-    in_addr_t addr = inet_addr(pIP);
-    if (addr == INADDR_BROADCAST)
-        return LS_FAIL;
-    return lookUp(addr, pInfo);
-}
-
 
 int IpToGeo::config(const XmlNodeList *pList)
 {
@@ -620,12 +624,10 @@ int IpToGeo::config(const XmlNodeList *pList)
             succ = 1;
     }
 
-    if (succ)
-        IpToGeo::setIpToGeo(this);
-    else
+    if (!succ)
     {
         LS_WARN(ConfigCtx::getCurConfigCtx(),
-                "Failed to setup a valid GeoIP DB file, Geolocation is disable!");
+                "Failed to setup a valid GeoIP DB file, Geolocation is disabled!");
         return LS_FAIL;
     }
     return 0;

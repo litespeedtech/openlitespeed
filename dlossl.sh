@@ -1,8 +1,9 @@
+#! /bin/sh
 #
 # This script is to download openssl latest stable and make the static library ready
 # Or,
 # Use your pre-built boringSSL
-#! /bin/sh
+
 
 if [ "x$1" = "xuse_bssl" ] ; then 
     if [ "x$2" != "x" ] ; then 

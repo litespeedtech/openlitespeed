@@ -21,6 +21,8 @@
 
 #include <lsdef.h>
 #include <extensions/extworker.h>
+
+class SslClientSessCache;
 class ProxyConfig;
 class ProxyWorker : public ExtWorker
 {
@@ -33,6 +35,10 @@ public:
     ~ProxyWorker();
     ProxyConfig &getConfig()
     {   return *((ProxyConfig *)getConfigPointer());  }
+    SslClientSessCache *getSslSessCache();
+
+private:
+    SslClientSessCache *m_pSslClientSessCache;
 
     LS_NO_COPY_ASSIGN(ProxyWorker);
 };

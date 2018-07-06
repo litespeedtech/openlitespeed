@@ -1670,7 +1670,8 @@ static int process_req( lsi_session_t *session, mod_lsphp_t *mod_data TSRMLS_DC 
         }
     } zend_end_try();
     LSM_DBG((&MNAME), session, "process_req finishing, ret: %d, Response is %s\n",
-            ret, g_api->is_resp_buffer_gzippped(session) ? "ZIPPED" : "NOT COMPRESSED");
+            ret, g_api->get_resp_buffer_compress_method(session) == 1 ?
+                         "GZIPPED" : "NOT GZIPPED");
     //UNLOCK_TEST_AND_SET(mod_data->m_ScriptRunning);
     //free_request(session, mod_data TSRMLS_CC);
     return ret;

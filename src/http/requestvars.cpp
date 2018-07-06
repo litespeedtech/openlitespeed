@@ -25,7 +25,6 @@
 #include <http/httpstatuscode.h>
 #include <http/httpver.h>
 #include <http/httpvhost.h>
-#include <http/iptogeo.h>
 #include <http/iptoloc.h>
 #include <http/clientinfo.h>
 

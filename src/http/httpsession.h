@@ -127,6 +127,7 @@ enum HSPState
 #define HSF_HANDLER_WRITE_SUSPENDED (1<<3)
 #define HSF_RESP_FLUSHED            (1<<4)
 #define HSF_REQ_BODY_DONE           (1<<5)
+
 #define HSF_AIO_READING             (1<<6)
 #define HSF_ACCESS_LOG_OFF          (1<<7)
 #define HSF_NO_ERROR_PAGE           (1<<8)
@@ -137,12 +138,15 @@ enum HSPState
 
 #define HSF_RECV_RESP_BUFFERED      (1<<13)
 #define HSF_SEND_RESP_BUFFERED      (1<<14)
-#define HSF_RESP_BODY_COMPRESSED    (1<<15)
 
-#define HSF_REQ_WAIT_FULL_BODY      (1<<16)
-#define HSF_RESP_WAIT_FULL_BODY     (1<<17)
-#define HSF_RESP_HEADER_DONE        (1<<18)
-#define HSF_SUSPENDED               (1<<19)
+#define HSF_RESP_BODY_GZIPCOMPRESSED    (1<<15)
+#define HSF_RESP_BODY_BRCOMPRESSED    (1<<16)
+
+
+#define HSF_REQ_WAIT_FULL_BODY      (1<<17)
+#define HSF_RESP_WAIT_FULL_BODY     (1<<18)
+#define HSF_RESP_HEADER_DONE        (1<<19)
+#define HSF_SUSPENDED               (1<<20)
 
 #define HSF_RESUME_SSI              (1<<21)
 

@@ -250,8 +250,9 @@ class DTbl
                     continue;
 
                 $buf .= '<th';
-                if (isset($this->_align[$i]))
-                    $buf .= ' align="' . $this->_align[$i] . '"';
+                if (isset($this->_align[$i]) && $this->_align[$i] != 'left') {
+                    $buf .= ' class="text-' . $this->_align[$i] . '"';
+                }
 
                 $buf .= '>' . $attr->_label;
                 if ($hasSort && $attr->_type != 'action') {

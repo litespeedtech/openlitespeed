@@ -24,7 +24,7 @@
 #include <http/throttlecontrol.h>
 #include <lsiapi/lsimoduledata.h>
 #include <util/autostr.h>
-
+#include <http/ip2geo.h>
 
 #define CLIENTINFO_NEED_RESET   (1<<0)
 #define CLIENTINFO_GOOG_TEST    (1<<1)
@@ -55,7 +55,6 @@ typedef LsShmCache                  TShmClientPool;
 #endif
 
 struct sockaddr;
-class GeoInfo;
 class LocInfo;
 class ClientInfo
 {
@@ -120,7 +119,7 @@ public:
     void verifyIp(void *ip, const long length);
 
     const char *getAddrString() const  {   return m_sAddr.c_str();     }
-    int          getAddrStrLen() const  {   return m_sAddr.len();       }
+    int         getAddrStrLen() const  {   return m_sAddr.len();       }
 
     void setHostName(const char *p)
     {
@@ -128,28 +127,28 @@ public:
         else     m_sHostName.setStr("", 0);
     }
     const char *getHostName() const    {   return m_sHostName.c_str(); }
-    int getHostNameLen() const          {   return m_sHostName.len();   }
+    int getHostNameLen() const         {   return m_sHostName.len();   }
 
-    size_t incConn()                    {   return ++m_iConns;      }
-    size_t decConn()                    {   return --m_iConns;      }
-    size_t getConns() const             {   return m_iConns;        }
+    size_t incConn()                   {   return ++m_iConns;      }
+    size_t decConn()                   {   return --m_iConns;      }
+    size_t getConns() const            {   return m_iConns;        }
 
     void hit(time_t t)                 {   ++m_iHits; m_lastConnect = t;    }
-    void resetHits()                    {   m_iHits = 0;            }
-    int  getHits() const                {   return m_iHits;         }
+    void resetHits()                   {   m_iHits = 0;            }
+    int  getHits() const               {   return m_iHits;         }
 
-    void setLastConnTime(time_t t)    {   m_lastConnect = t ;     }
-    time_t getLastConnTime() const      {   return m_lastConnect;   }
+    void setLastConnTime(time_t t)     {   m_lastConnect = t ;     }
+    time_t getLastConnTime() const     {   return m_lastConnect;   }
 
-    void setOverLimitTime(time_t t)   {   m_tmOverLimit = t ;     }
-    time_t getOverLimitTime() const     {   return m_tmOverLimit;   }
+    void setOverLimitTime(time_t t)    {   m_tmOverLimit = t ;     }
+    time_t getOverLimitTime() const    {   return m_tmOverLimit;   }
 
-    void setAccess(int access)        {   m_iAccess = access;     }
-    int getAccess() const               {   return m_iAccess;       }
+    void setAccess(int access)         {   m_iAccess = access;     }
+    int getAccess() const              {   return m_iAccess;       }
 
     int checkAccess();
 
-    ThrottleControl &getThrottleCtrl()  {   return m_ctlThrottle;   }
+    ThrottleControl &getThrottleCtrl() {   return m_ctlThrottle;   }
 
     bool allowRead() const      {   return m_ctlThrottle.allowRead();   }
     bool allowWrite() const     {   return m_ctlThrottle.allowWrite();  }
@@ -157,9 +156,8 @@ public:
     short incSslNewConn()   {   return ++m_sslNewConn;  }
     short getSslNewConn()   {   return m_sslNewConn;    }
     void  setSslNewConn(int n)   {   m_sslNewConn = n;    }
-    GeoInfo *allocateGeoInfo();
-    GeoInfo *getGeoInfo() const        {   return m_pGeoInfo;      }
-    
+    void  setGeoInfo(GeoInfo *geoInfo)  {   m_pGeoInfo = geoInfo;       }
+    GeoInfo *getGeoInfo() const         {   return m_pGeoInfo;          }
 
 #ifdef USE_IP2LOCATION
     LocInfo *allocateLocInfo();

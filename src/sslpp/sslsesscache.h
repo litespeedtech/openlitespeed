@@ -52,7 +52,7 @@ public:
     int     addSession(unsigned char *pId, int idLen,
                        unsigned char *pData, int iDataLen);
     SSL_SESSION *getSession(unsigned char *id, int len);
-    SslSessData_t *getLockedSessionData(unsigned char *id, int len);
+    SslSessData_t *getLockedSessionData(const unsigned char *id, int len);
 
     void    unlock();
     LsShmHash *getSessStore() const
@@ -71,6 +71,24 @@ private:
 
     LS_NO_COPY_ASSIGN(SslSessCache);
 };
+
+
+class SslClientSessCache
+{
+public:
+    SslClientSessCache()
+        : m_pSession(NULL)
+        {}
+    ~SslClientSessCache();
+
+    int saveSession(const char *id, int len, SSL_SESSION *session);
+    SSL_SESSION *getSession(const char *id, int len);
+
+private:
+    SSL_SESSION *m_pSession;
+    LS_NO_COPY_ASSIGN(SslClientSessCache);
+};
+
 
 #endif // SSLSESSCACHE_H
 

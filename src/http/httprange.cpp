@@ -47,14 +47,14 @@ public:
     off_t getEnd() const     { return m_lEnd;    }
     void setBegin(off_t b) { m_lBegin = b;     }
     void setEnd(off_t e)    { m_lEnd = e;       }
-    int check(int entityLen);
+    int check(off_t entityLen);
     off_t getLen() const     { return m_lEnd - m_lBegin + 1;   }
     LS_NO_COPY_ASSIGN(ByteRange);
 };
 
 
 
-int ByteRange::check(int entityLen)
+int ByteRange::check(off_t entityLen)
 {
     if (entityLen > 0)
     {

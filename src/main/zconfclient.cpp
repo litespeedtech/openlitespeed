@@ -24,6 +24,7 @@
 
 #include <http/connlimitctrl.h>
 #include <http/httpvhost.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_base64.h>
 #include <lsr/ls_strtool.h>
 #include <util/autobuf.h>

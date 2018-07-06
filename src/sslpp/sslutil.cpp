@@ -206,9 +206,20 @@ static DH *getTmpDhParam(int size)
 
     if ((s_pDHs[index] = DH_new()) != NULL)
     {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        BIGNUM *p, *q, *g;
+        DH_set0_pqg(s_pDHs[index], 
+                    BN_bin2bn(s_dh_p[index], s_dh_p_size[index], NULL), //p
+                    NULL,                                               //q
+                    BN_bin2bn(dh_g, sizeof(dh_g), NULL));               //g
+        DH_get0_pqg(s_pDHs[index], (const BIGNUM **)&p, (const BIGNUM **)&q, 
+                    (const BIGNUM **)&g);
+        if ((p == NULL) || (g == NULL))
+#else        
         s_pDHs[index]->p = BN_bin2bn(s_dh_p[index], s_dh_p_size[index], NULL);
         s_pDHs[index]->g = BN_bin2bn(dh_g, sizeof(dh_g), NULL);
         if ((s_pDHs[index]->p == NULL) || (s_pDHs[index]->g == NULL))
+#endif            
         {
             DH_free(s_pDHs[index]);
             s_pDHs[index] = NULL;
@@ -363,37 +374,62 @@ int SslUtil::loadPemWithMissingDash(const char *pFile, char *buf, int bufLen,
 int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
                              size_t iDigestLen)
 {
-    EVP_MD_CTX md;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    EVP_MD_CTX *pmd;
+#else
+    EVP_MD_CTX md;    
+    EVP_MD_CTX *pmd = &md;
+#endif
     unsigned int len;
     unsigned char buf[EVP_MAX_MD_SIZE];
 
-    EVP_MD_CTX_init(&md);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    pmd = EVP_MD_CTX_new();
+#endif
+    EVP_MD_CTX_init(pmd);
 
-    if ( EVP_DigestInit_ex(&md, EVP_sha1(), NULL) != 1 )
+    if ( EVP_DigestInit_ex(pmd, EVP_sha1(), NULL) != 1 )
     {
         LS_DBG_L( "Init EVP Digest failed.");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
-    else if ( EVP_DigestUpdate(&md, pDigest, iDigestLen) != 1 )
+    else if ( EVP_DigestUpdate(pmd, pDigest, iDigestLen) != 1 )
     {
         LS_DBG_L( "Update EVP Digest failed");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
-    else if ( EVP_DigestFinal_ex(&md, buf, &len ) != 1 )
+    else if ( EVP_DigestFinal_ex(pmd, buf, &len ) != 1 )
     {
         LS_DBG_L( "EVP Digest Final failed.");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
-    else if ( EVP_MD_CTX_cleanup(&md) != 1 )
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    else if ( EVP_MD_CTX_cleanup(pmd) != 1 )
     {
         LS_DBG_L( "EVP Digest Cleanup failed.");
         return LS_FAIL;
     }
+#endif    
     else if ( SSL_CTX_set_session_id_context(pCtx, buf, len) != 1 )
     {
         LS_DBG_L( "Set Session Id Context failed.");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        EVP_MD_CTX_free(pmd);
+#endif        
         return LS_FAIL;
     }
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    EVP_MD_CTX_free(pmd);
+#endif        
     return LS_OK;
 }
 
@@ -581,12 +617,16 @@ int SslUtil::setCertificateChain(SSL_CTX *pCtx, BIO * bio)
     int n;
 
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    SSL_CTX_clear_extra_chain_certs(pCtx);
+#else                                                   
     pExtraCerts = pCtx->extra_certs;
     if (pExtraCerts != NULL)
     {
         sk_X509_pop_free((STACK_OF(X509) *)pExtraCerts, X509_free);
         pCtx->extra_certs = NULL;
     }
+#endif    
 #else
     SSL_CTX_clear_extra_chain_certs(pCtx);
 #endif
@@ -621,7 +661,11 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
     {
         close(SSL_get_fd(pSSL));
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        SSLerr(SSL_F_SSL_DO_HANDSHAKE, SSL_R_SSL_HANDSHAKE_FAILURE);
+#else
         ((SSL *)pSSL)->error_code = SSL_R_SSL_HANDSHAKE_FAILURE;
+#endif        
 #else
         OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
 #endif
@@ -631,7 +675,14 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
     if ((where & SSL_CB_HANDSHAKE_DONE) != 0)
     {
 #ifdef SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#ifndef SSL_OP_NO_RENEGOTIATION
+#define SSL_OP_NO_RENEGOTIATION 0x40000000U /* Requires 1.1.0h or later library */
+#endif
+        SSL_set_options((SSL *)pSSL, SSL_OP_NO_RENEGOTIATION);
+#else        
         pSSL->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
+#endif        
 #endif
         pConnection->setFlag(1);
     }
@@ -661,6 +712,9 @@ void SslUtil::initCtx(SSL_CTX *pCtx, int method, char renegProtect)
         setOptions(pCtx, SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
         SSL_CTX_set_info_callback(pCtx, SslConnection_ssl_info_cb);
     }
+#ifdef OPENSSL_IS_BORINGSSL
+    SSL_CTX_set_early_data_enabled(pCtx, 1);
+#endif // OPENSSL_IS_BORINGSSL
 
 }
 

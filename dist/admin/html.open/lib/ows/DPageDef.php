@@ -75,31 +75,32 @@ class DPageDef
 	private function add_FileMap_vh_()
 	{
 		$map = new DTblMap(['virtualHostConfig', ''],
-				['V_GENERAL',
-						new DTblMap(['logging:log','errorlog$fileName'], 'V_LOG'),
-						new DTblMap(['logging:accessLog','accesslog$fileName'], 'V_ACLOG'),
-						new DTblMap('index', 'VT_INDXF'),
-						new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
-						new DTblMap(['scriptHandlerList','scripthandler'],
-								new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
-						new DTblMap('expires', 'A_EXPIRES'),
+				[
+                    'V_GENERAL',
+                    new DTblMap(['logging:log','errorlog$fileName'], 'V_LOG'),
+                    new DTblMap(['logging:accessLog','accesslog$fileName'], 'V_ACLOG'),
+                    new DTblMap('index', 'VT_INDXF'),
+                    new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
+                    new DTblMap(['scriptHandlerList','scripthandler'],
+                            new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
+                    new DTblMap('expires', 'A_EXPIRES'),
                     'VT_FILEUPLOAD',
-                        new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-						new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
-						new DTblMap(['security:realmList:*realm','*realm$name'], 'V_REALM_FILE'),
-						new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'A_EXT_SEL'),
-						new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
-						new DTblMap('rewrite',
-								['VT_REWRITE_CTRL',
-										new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
-						'VT_REWRITE_RULE']),
-						new DTblMap('vhssl',
-								['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
-						new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
-						new DTblMap(['moduleList:*module','*module$name'],
-								['VT_MOD',
-										new DTblMap(['urlFilterList:*urlFilter', '*urlFilter$uri'], 'VT_MOD_FILTER')])
-						]);
+                    new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
+                    new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
+                    new DTblMap(['security:realmList:*realm','*realm$name'], 'V_REALM_FILE'),
+                    new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'A_EXT_SEL'),
+                    new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
+                    new DTblMap('rewrite',
+                            ['VT_REWRITE_CTRL',
+                                new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
+                                'VT_REWRITE_RULE']),
+                    new DTblMap('vhssl',
+                            ['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
+                    new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
+                    new DTblMap(['moduleList:*module','*module$name'],
+                            ['VT_MOD',
+                                    new DTblMap(['urlFilterList:*urlFilter', '*urlFilter$uri'], 'VT_MOD_FILTER')])
+				]);
 
 		$this->_fileDef['vh_'] = $map;
 	}
@@ -107,33 +108,40 @@ class DPageDef
 	private function add_FileMap_tp_()
 	{
 		$map = new DTblMap(['virtualHostTemplate', ''],
-				['T_GENERAL1', 'T_SEC_FILE', 'T_SEC_CONN', 'T_SEC_CGI',
-						new DTblMap('virtualHostConfig',
-								['T_GENERAL2',
-										new DTblMap(['logging:log','errorlog$fileName'], 'T_LOG'),
-										new DTblMap(['logging:accessLog','accesslog$fileName'], 'T_ACLOG'),
-										new DTblMap('index', 'VT_INDXF'),
-										new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
-										new DTblMap(['scriptHandlerList','scripthandler'],
-												new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
-                                        'VT_FILEUPLOAD',
-                                        new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-										new DTblMap('expires', 'A_EXPIRES'),
-										new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
-										new DTblMap(['security:realmList:*realm','*realm$name'], 'T_REALM_FILE'),
-										new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'T_EXT_SEL'),
-										new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
-										new DTblMap('rewrite',
-												['VT_REWRITE_CTRL',
-														new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
-										'VT_REWRITE_RULE']),
-										new DTblMap('vhssl',
-                                                ['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
-										new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
-										new DTblMap(['moduleList:*module','*module$name'],
-												['VT_MOD',
-														new DTblMap(['urlFilterList:*urlFilter', '*urlFilter$uri'], 'VT_MOD_FILTER')])
-								])]);
+				[
+                    'T_GENERAL1',
+                    'T_SEC_FILE',
+                    'T_SEC_CONN',
+                    'T_SEC_CGI',
+                    new DTblMap('virtualHostConfig',
+                            [
+                                'T_GENERAL2',
+                                new DTblMap(['logging:log','errorlog$fileName'], 'T_LOG'),
+                                new DTblMap(['logging:accessLog','accesslog$fileName'], 'T_ACLOG'),
+                                new DTblMap('index', 'VT_INDXF'),
+                                new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
+                                new DTblMap(['scriptHandlerList','scripthandler'],
+                                        new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
+                                'VT_FILEUPLOAD',
+                                new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
+                                new DTblMap('expires', 'A_EXPIRES'),
+                                new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
+                                new DTblMap(['security:realmList:*realm','*realm$name'], 'T_REALM_FILE'),
+                                new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'T_EXT_SEL'),
+                                new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
+                                new DTblMap('rewrite',
+                                        ['VT_REWRITE_CTRL',
+                                            new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
+                                            'VT_REWRITE_RULE']),
+                                new DTblMap('vhssl',
+                                        ['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
+                                new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
+                                new DTblMap(['moduleList:*module','*module$name'],
+                                        ['VT_MOD',
+                                                new DTblMap(['urlFilterList:*urlFilter', '*urlFilter$uri'], 'VT_MOD_FILTER')])
+                            ]
+                        ),
+                    ]);
 
 		$this->_fileDef['tp_'] = $map;
 	}
@@ -254,25 +262,28 @@ class DPageDef
 
 		$id = 'g';
 		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
-				['V_GENERAL',
-						new DTblMap('index', 'VT_INDXF'),
-						new DTblMap('*errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
-						new DTblMap('expires', 'A_EXPIRES'),
+				[
+                    'V_GENERAL',
+                    new DTblMap('index', 'VT_INDXF'),
+                    new DTblMap('*errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
+                    new DTblMap('expires', 'A_EXPIRES'),
                     'VT_FILEUPLOAD',
-                        new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-                    ]));
+                    new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
+                ]));
+
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_g'), new DTblMap('',
 				['T_GENERAL1', new DTblMap('virtualHostConfig',
-						['T_GENERAL2',
-								new DTblMap('index', 'VT_INDXF'),
-								new DTblMap('*errorpage$errCode',  'VT_ERRPG_TOP', 'VT_ERRPG'),
-								new DTblMap('scripthandler', new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
-								new DTblMap('expires', 'A_EXPIRES'),
+						[
+                            'T_GENERAL2',
+                            new DTblMap('index', 'VT_INDXF'),
+                            new DTblMap('*errorpage$errCode',  'VT_ERRPG_TOP', 'VT_ERRPG'),
+                            new DTblMap('scripthandler', new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
+                            new DTblMap('expires', 'A_EXPIRES'),
                             'VT_FILEUPLOAD',
                             new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-                            ])]));
+                       ])]));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'log';
@@ -319,14 +330,18 @@ class DPageDef
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'rw' ;
-		$page = new DPage($id, DMsg::UIStr('tab_rewrite'), new DTblMap('rewrite', ['VT_REWRITE_CTRL',
-			new DTblMap('*map$name', 'VT_REWRITE_MAP_TOP', 'VT_REWRITE_MAP'),
-			'VT_REWRITE_RULE' ])) ;
+		$page = new DPage($id, DMsg::UIStr('tab_rewrite'), new DTblMap('rewrite',
+                ['VT_REWRITE_CTRL',
+                    new DTblMap('*map$name', 'VT_REWRITE_MAP_TOP', 'VT_REWRITE_MAP'),
+                    'VT_REWRITE_RULE',
+                ]));
 		$this->_pageDef['vh_'][$id] = $page ;
 
-		$page = new DPage($id, DMsg::UIStr('tab_rewrite'), new DTblMap('virtualHostConfig:rewrite', ['VT_REWRITE_CTRL',
-			new DTblMap('*map$name', 'VT_REWRITE_MAP_TOP', 'VT_REWRITE_MAP'),
-			'VT_REWRITE_RULE' ])) ;
+		$page = new DPage($id, DMsg::UIStr('tab_rewrite'), new DTblMap('virtualHostConfig:rewrite',
+                ['VT_REWRITE_CTRL',
+                    new DTblMap('*map$name', 'VT_REWRITE_MAP_TOP', 'VT_REWRITE_MAP'),
+                    'VT_REWRITE_RULE',
+                ]));
 		$this->_pageDef['tp_'][$id] = $page ;
 
 		$id = 'ctx';

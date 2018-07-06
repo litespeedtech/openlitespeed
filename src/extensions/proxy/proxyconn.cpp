@@ -57,8 +57,12 @@ void ProxyConn::init(int fd, Multiplexer *pMplx)
     EdStream::init(fd, pMplx, POLLIN | POLLOUT | POLLHUP | POLLERR);
     reset();
     m_iSsl = ((ProxyWorker *)getWorker())->getConfig().getSsl();
-    if ((m_iSsl) && (m_ssl.getSSL()))
-        m_ssl.release();
+    if (m_iSsl)
+    {
+        if(m_ssl.getSSL())
+            m_ssl.release();
+        m_ssl.setClientSessCache(((ProxyWorker *)getWorker())->getSslSessCache());
+    }
     m_lReqBeginTime = time(NULL);
 
     //Increase the number of successful request to avoid max connections reduction.
@@ -74,7 +78,10 @@ static SSL *getSslConn()
         s_pProxyCtx = new SslContext();
         if (s_pProxyCtx)
         {
+            s_pProxyCtx->enableClientSessionReuse();
             s_pProxyCtx->setRenegProtect(0);
+            //NOTE: Turn off TLSv13 for now, 0-RTT handshake is broken
+            s_pProxyCtx->setProtocol(14);
             //s_pProxyCtx->setCipherList();
         }
         else
@@ -118,6 +125,7 @@ int ProxyConn::connectSSL()
             m_ssl.setTlsExtHostName(pHostName);
             *(pHostName + hostLen) = ch;
         }
+        m_ssl.tryReuseCachedSession();
     }
     int ret = m_ssl.connect();
     switch (ret)
@@ -126,7 +134,8 @@ int ProxyConn::connectSSL()
         setSSLAgain();
         break;
     case 1:
-        LS_DBG_L(this, "[SSL] connected!");
+        LS_DBG_L(this, "[SSL] connected, session reuse: %d.\n",
+                 m_ssl.isSessionReused());
         break;
     default:
         if (errno == EIO)

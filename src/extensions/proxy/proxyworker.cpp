@@ -19,15 +19,21 @@
 #include "proxyconfig.h"
 #include "proxyconn.h"
 #include <http/handlertype.h>
+#include <sslpp/sslsesscache.h>
+
 ProxyWorker::ProxyWorker(const char *pName)
     : ExtWorker(HandlerType::HT_PROXY)
+    , m_pSslClientSessCache(NULL)
 {
     setConfigPointer(new ProxyConfig(pName));
 }
 
 
 ProxyWorker::~ProxyWorker()
-{}
+{
+    if (m_pSslClientSessCache)
+        delete m_pSslClientSessCache;
+}
 
 
 ExtConn *ProxyWorker::newConn()
@@ -37,5 +43,15 @@ ExtConn *ProxyWorker::newConn()
     //    pConn->setUseSsl( 1 );
 
     return pConn;
+}
+
+
+SslClientSessCache *ProxyWorker::getSslSessCache()
+{
+    if (!m_pSslClientSessCache)
+    {
+        m_pSslClientSessCache = new SslClientSessCache();
+    }
+    return m_pSslClientSessCache;
 }
 

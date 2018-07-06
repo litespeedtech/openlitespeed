@@ -1283,6 +1283,14 @@ enum LSI_RESP_HEADER_ID
 };
 
 
+enum LSI_COMPRESS_METHOD
+{
+    LSI_NO_COMPRESS = 0,
+    LSI_GZIP_COMPRESS,
+    LSI_BR_COMPRESS,
+};
+
+
 /**
  * @enum LSI_ACL_LEVEL
  * @brief The access control level definitions.
@@ -3013,22 +3021,23 @@ struct lsi_api_s
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the session.
-     * @return 0 false, 1 true.
+     * @return 0 no compress, 1 gzip, 2, br.
      */
-    int (*is_resp_buffer_gzippped)(const lsi_session_t *pSession);
+    int (*get_resp_buffer_compress_method)(const lsi_session_t *pSession);
 
     /**
-     * @brief set_resp_buffer_gzip_flag is used to set the response buffer gzip
-     * flag.
+     * @brief set_resp_buffer_compress_method is used to set the response buffer
+     * gzip flag.
      * @ingroup response
      * @since 1.0
      *
      * @param[in] pSession - a pointer to the session.
-     * @param[in] set - gzip flag; set 1 if gzipped (compressed), 0 to clear the
-     * flag.
+     * @param[in] compress_method - compress method;
+     *               set 1 if gzip compressed, 2 if br compressed,
+     *               0 to clear the flag.
      * @return 0 if success, -1 if failure.
      */
-    int (*set_resp_buffer_gzip_flag)(const lsi_session_t *pSession, int set);
+    int (*set_resp_buffer_compress_method)(const lsi_session_t *pSession, int method);
 
     /**
      * @brief append_resp_body is used to append a buffer to the response body.
