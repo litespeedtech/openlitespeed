@@ -19,6 +19,7 @@
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslerror.h>
 
+#include <log4cxx/logger.h>
 #include <lsr/ls_base64.h>
 #include <main/configctx.h>
 #include <util/httpfetch.h>
@@ -248,7 +249,11 @@ int SslOcspStapling::getResponder(X509 *pCert)
     if (strResp == NULL)
     {
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
+#else        
         pXchain = m_pCtx->extra_certs;
+#endif        
 #else
         SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
 #endif
@@ -313,7 +318,13 @@ int SslOcspStapling::getRequestData(unsigned char **pReqData)
     id = OCSP_CERTID_dup(m_pCertId);
     if (OCSP_request_add0_id(ocsp, id) != NULL)
     {
-        len = i2d_OCSP_REQUEST(ocsp, pReqData);
+        len = i2d_OCSP_REQUEST(ocsp, NULL);
+        if (len > 0)
+        {
+            unsigned char *buf = (unsigned char *)malloc(len + 1);
+            *pReqData = buf;
+            len = i2d_OCSP_REQUEST(ocsp, &buf);
+        }
     }
     OCSP_REQUEST_free(ocsp);
     return  len;
@@ -395,7 +406,11 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     struct stat         st;
 
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+        SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
+#else        
     pXchain = m_pCtx->extra_certs;
+#endif    
 #else
     SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
 #endif
@@ -416,7 +431,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         }
     }
     else
-        Logger::getRootLogger()->error("OCSP_basic_verify() failed: %s\n",
+        log4cxx::Logger::getRootLogger()->error("OCSP_basic_verify() failed: %s\n",
                                        SslError().what());
     if (iResult)
     {
@@ -482,7 +497,11 @@ int SslOcspStapling::getCertId(X509 *pCert)
     X509_STORE_CTX      *pXstore_ctx;
 
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
+#else        
     pXchain = m_pCtx->extra_certs;
+#endif    
 #else
     SSL_CTX_get0_chain_certs(m_pCtx, &pXchain);
 #endif
@@ -493,7 +512,11 @@ int SslOcspStapling::getCertId(X509 *pCert)
         if (X509_check_issued(pXissuer, pCert) == X509_V_OK)
         {
 #ifndef OPENSSL_IS_BORINGSSL
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+            X509_up_ref(pXissuer);
+#else            
             CRYPTO_add(&pXissuer->references, 1, CRYPTO_LOCK_X509);
+#endif            
 #else
             X509_up_ref(pXissuer);
 #endif

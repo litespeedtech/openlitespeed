@@ -270,9 +270,9 @@ $_tipsdb['forceType'] = new DAttrHelp("Force MIME Type", 'When specified, all fi
 
 $_tipsdb['generalContext'] = new DAttrHelp("Static Context", 'Context settings are used to specify special settings for files in a  certain location. These settings can be used to bring in files outside of  the document root (like Apache&#039;s Alias or AliasMatch directives),  to protect a particular directory using authorization realms, or to  block or restrict access to a particular directory within the document root.', '', '', '');
 
-$_tipsdb['geoipDBCache'] = new DAttrHelp("数据库缓存类型", ' 指定应该使用什么样的缓存模式。缓存模式包括:  标准缓存、内存缓存、检查缓存和索引缓存。内存缓存是推荐的模式，也是默认模式。', '', '选项', '');
+$_tipsdb['geoipDBFile'] = new DAttrHelp("数据库文件路径", ' 指定MaxMind GeoIP数据库路径。', '', '文件路径', '/usr/local/share/GeoIP/GeoLite2-Country.mmdb');
 
-$_tipsdb['geoipDBFile'] = new DAttrHelp("数据库文件路径", ' 指定MaxMind GeoIP数据库路径。', '', '文件路径', '');
+$_tipsdb['geoipDBName'] = new DAttrHelp("DB Name", 'MaxMind GeoIP database name.', '', '', 'COUNTRY_DB');
 
 $_tipsdb['geolocationDB'] = new DAttrHelp("IP地理定位数据库", '多个MaxMind地理定位数据库可以在这里指定。MaxMind有以下数据库类型: 国家，地区，城市，组织，ISP和NETSPEED。如果混合配置“国家”，“地区”，和“城市”类型数据库，则最后一项将会生效。', '', '', '');
 
@@ -387,6 +387,8 @@ $_tipsdb['maxDynRespSize'] = new DAttrHelp("动态回应主内容最大大小", 
 $_tipsdb['maxKeepAliveReq'] = new DAttrHelp("最大持续连接请求数", '指定通过持续连接（持久）会话处理的请求的最大数量。一旦达 到此限制，连接将被关闭。您也可以为每个虚拟主机单独设置限制。', '[性能建议] 设置为合理的较高的值。值为“1”或“0”时将禁用持续连接。', '无符号整数', '');
 
 $_tipsdb['maxMMapFileSize'] = new DAttrHelp("最大MMAP文件大小", '指定使用内存映射（MMAP）的最大静态文件大小。 静态文件可以用四种不同的方式服务：内存缓存、内存映射缓存、直接读写和 sendfile()。 尺寸小于&quot;最大小文件缓存&quot;的文件将使用内存缓存服务。尺寸大于该限制、但小于 &quot;最大MMAP文件大小&quot;的文件，将使用内存映射缓存服务。 尺寸大于&quot;最大MMAP文件大小&quot;的文件将通过直接读写或sendfile() 服务。 由于服务器有一个32位的地址空间（2GB），不建议使用内存映射非常大的文件。', '', '无符号整数', '');
+
+$_tipsdb['maxMindDBEnv'] = new DAttrHelp("Environment Variables", 'Assign the results of database lookups to environment variables.', '', 'Variable_Name mapped_DB_data<br/><br/>One entry per line. Path to data can use map keys or 0-based array indexes, both being separated by /.', 'COUNTRY_CODE COUNTRY_DB/country/iso_code<br/>REGION_CODE  CITY_DB/subdivisions/0/iso_code');
 
 $_tipsdb['maxReqBodySize'] = new DAttrHelp("最大请求主内容大小", '指定HTTP请求主内容最大尺寸。对于32位操作系统， 硬限制为2GB。对于64位操作系统，几乎是无限的。', '[安全建议] 为了防止拒绝服务攻击，尽量将限制值设定到实际需求的大小。 交换空间的剩余空间必须比这个限制值大。', '无符号整数', '');
 
@@ -504,7 +506,7 @@ $_tipsdb['rewriteMapLocation'] = new DAttrHelp("Location", 'Specifies the locati
 
 $_tipsdb['rewriteMapName'] = new DAttrHelp("Name", 'Specifies a unique name for the rewrite map at the virtual host  level. This name will be used by a mapping-reference in rewrite rules. When referencing this name, one of the following syntaxes should be used: <blockquote><code> $\{MapName:LookupKey\}<br/>$\{MapName:LookupKey|DefaultValue\} </code></blockquote><br/>The implementation of LiteSpeed&#039;s rewrite engine follows the specifications of Apache&#039;s rewrite engine. For more details about rewrite maps, please refer to <a href="http://httpd.apache.org/docs/current/mod/mod_rewrite.html" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_rewrite document</a>.', '', 'string', '');
 
-$_tipsdb['rewriteRules'] = new DAttrHelp("Rewrite Rules", 'Specifies a list of rewrite rules at the virtual host or context level. A rewrite rule is comprised of one RewriteRule directive and optionally preceded by multiple RewriteCond directives.  <ul> <li>Each directive should take only one line. </li> <li>RewriteCond and RewriteRule follow Apache&#039;s rewrite directive syntax. Just copy and paste rewrite directives from your Apache configuration files.</li> <li>There are minor differences between LiteSpeed and Apache mod_rewrite implementation:  <ul><li>%\{LA-U:variable\} and %\{LA-F:variable\} are ignored by the LiteSpeed rewrite engine </li>   <li>two new server variables are added in the LiteSpeed rewrite engine:    %\{CURRENT_URI\} represents the current URI being processed by the rewrite engine and %\{SCRIPT_NAME\} has the same  meaning as the corresponding CGI environment variable. </li> </ul></li> </ul> The implementation of LiteSpeed&#039;s rewrite engine follows the  Apache&#039;s rewrite engine specifications. For more details about rewrite rules, please refer to <a href="http://httpd.apache.org/docs/current/mod/mod_rewrite.html" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_rewrite document</a> and <a href="http://httpd.apache.org/docs/current/rewrite/" target="_blank" rel="noopener noreferrer">Apache&#039;s URL  rewriting guide</a>.', '', 'string', '');
+$_tipsdb['rewriteRules'] = new DAttrHelp("Rewrite Rules", 'Specifies a list of rewrite rules at the virtual host level.<br/><br/>Do NOT add any document root level rewrite rules here. If you have any document root level rewrite rules from .htaccess,  you should instead create a static context with uri &quot;/&quot; and add the rewrite rules there.<br/><br/>A rewrite rule is comprised of one RewriteRule directive and optionally preceded by multiple RewriteCond directives.  <ul> <li>Each directive should take only one line. </li> <li>RewriteCond and RewriteRule follow Apache&#039;s rewrite directive syntax. Just copy and paste rewrite directives from your Apache configuration files.</li> <li>There are minor differences between LiteSpeed and Apache mod_rewrite implementation:  <ul><li>%\{LA-U:variable\} and %\{LA-F:variable\} are ignored by the LiteSpeed rewrite engine </li>   <li>two new server variables are added in the LiteSpeed rewrite engine:    %\{CURRENT_URI\} represents the current URI being processed by the rewrite engine and %\{SCRIPT_NAME\} has the same  meaning as the corresponding CGI environment variable. </li> </ul></li> </ul> The implementation of LiteSpeed&#039;s rewrite engine follows the  Apache&#039;s rewrite engine specifications. For more details about rewrite rules, please refer to <a href="http://httpd.apache.org/docs/current/mod/mod_rewrite.html" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_rewrite document</a> and <a href="http://httpd.apache.org/docs/current/rewrite/" target="_blank" rel="noopener noreferrer">Apache&#039;s URL  rewriting guide</a>.', '', 'string', '');
 
 $_tipsdb['rubyBin'] = new DAttrHelp("Ruby Path", 'Specifies path to Ruby executable. Generally, it is /usr/bin/ruby or /usr/local/bin/ruby depending on where Ruby has been installed to.', '', '绝对路径', '');
 
@@ -770,6 +772,8 @@ $_tipsdb['EDTP:realmName'] = array('Define your HT Access realm here, this can b
 $_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.');
 
 $_tipsdb['EDTP:rewriteMapLocation'] = array('Enter URI for location. URI must start with &quot;/&quot;.');
+
+$_tipsdb['EDTP:rewriteRules'] = array('Only virtual host level rewrite rules should be used here, such as those found in an Apache virtual host  config file. Do NOT add any document root level rewrite rules here. If you have any document root level rewrite rules from  .htaccess, you should instead create a static context with uri &quot;/&quot; and add the rewrite rules there.');
 
 $_tipsdb['EDTP:rubyBin'] = array('<b>Ruby Path</b> is the absolute path of a ruby executable. For e.g., /usr/local/bin/ruby.');
 

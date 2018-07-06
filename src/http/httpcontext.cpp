@@ -1270,17 +1270,6 @@ int HttpContext::configExtAuthorizer(const XmlNode *pContextNode)
     return 0;
 }
 
-static bool isKey(const char *curkey, int len, const char *key)
-{
-    if (len != (int)strlen(key))
-        return false;
-    
-    if (strncasecmp(curkey, key, len) == 0)
-        return true;
-    
-    return false;
-}
- 
 
 int HttpContext::configPhpConfig(const XmlNode *pNode)
 {
@@ -1296,26 +1285,35 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
     char m_achError[1024] = {0};
     char m_achValue[1024] = {0};
     int id;
+    XmlNodeList::const_iterator iter;
     const char *tags[] = {"php_value",  "php_flag",
                           "php_admin_value", "php_admin_flag"};
     for (int i = 0; i < 4; ++i)
     {
-        const char* config = pNode->getChildValue(tags[i]);
-        if (config)
+        id = i + 1;
+        const XmlNodeList *pList = pNode->getChildren(tags[i]);
+        if (pList)
         {
-            if (ConfigCtx::getCurConfigCtx()->expandVariable(config, 
-                m_achValue, 1024, 1) < 0)
+            for (iter = pList->begin(); iter != pList->end(); ++iter)
             {
-                LS_ERROR(ConfigCtx::getCurConfigCtx(), "expand #%d: %s %s error",
-                         i, tags[i], config);
-                continue;
+                const char* config;
+                const XmlNode *pItem = *iter;
+                if ((config = pItem->getValue()) != NULL)
+                {
+                    if (ConfigCtx::getCurConfigCtx()->expandVariable(config, 
+                        m_achValue, 1024, 1) < 0)
+                    {
+                        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                                 "expand #%d: %s %s error", i, tags[i], config);
+                        continue;
+                    }
+
+                    config = m_achValue;
+                    LS_DBG_L(ConfigCtx::getCurConfigCtx(),
+                             "add PHP config: #%d: %s %s", i, tags[i], config);
+                    pConfig->parse(id, config, m_achError, sizeof(m_achError));
+                }
             }
-            
-            config = m_achValue;
-            id = i + 1;
-            LS_DBG_L(ConfigCtx::getCurConfigCtx(), "add PHP config: #%d: %s %s",
-                 i, tags[i], config);
-            pConfig->parse(id, config, m_achError, sizeof(m_achError));
         }
     }
     return 0;
@@ -1324,7 +1322,8 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
 
 int HttpContext::config(const RewriteMapList *pMapList,
                         const XmlNode *pContextNode,
-                        int type)
+                        int type,
+                        HttpContext &pRootContext)
 {
     const char *pValue;
     configAutoIndex(pContextNode);
@@ -1377,8 +1376,9 @@ int HttpContext::config(const RewriteMapList *pMapList,
 
     if (pNode)
     {
+        int defRewriteEnable = pRootContext.isRewriteEnabled();
         enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enable",
-                      0, 1, 0));
+                      0, 1, defRewriteEnable));
         pValue = pNode->getChildValue("inherit");
 
         if ((pValue) && (strcasestr(pValue, "1")))

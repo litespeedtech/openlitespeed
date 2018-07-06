@@ -27,7 +27,7 @@
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
 #include <http/httpver.h>
-#include <http/iptogeo.h>
+#include <http/ip2geo.h>
 #include <http/iptoloc.h>
 #include <http/clientinfo.h>
 
@@ -152,7 +152,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char *pLineEnd, int &status)
 {
     HttpRespHeaders::INDEX index;
-    int tmpIndex;
+    //int tmpIndex;
     const char *pKeyEnd = NULL;
     const char *pValue = pLineBegin;
     int nameLen = 0;

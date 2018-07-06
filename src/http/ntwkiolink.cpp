@@ -51,10 +51,6 @@
 #include <netinet/tcp.h>
 #include <openssl/ssl.h>
 
-#ifdef OPENSSL_IS_BORINGSSL
-    #include <openssl/internal.h>
-#endif
-
 #if !defined(NO_SENDFILE)
 #include <util/gsendfile.h>
 #endif
@@ -1519,11 +1515,6 @@ int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri,
     return 0;
 }
 
-#ifdef OPENSSL_IS_BORINGSSL
-#include <openssl/internal.h>
-#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
-#include <openssl/ssl_local.h>
-#endif
 void NtwkIOLink::handle_acceptSSL_EIO_Err()
 {
     //The buf is null terminated string

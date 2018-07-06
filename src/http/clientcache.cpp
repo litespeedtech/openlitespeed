@@ -21,7 +21,7 @@
 #include <http/clientinfo.h>
 #include <http/httplog.h>
 #include <http/httpserverconfig.h>
-#include <http/iptogeo.h>
+#include <http/ip2geo.h>
 #include <http/iptoloc.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/lsiapi.h>
@@ -34,6 +34,7 @@
 
 #include <unistd.h>
 
+Ip2Geo *ClientCache::s_ip2geo = NULL;
 static StaticObj< ObjPool< ClientInfo > > s_pool;
 
 ClientCache *ClientCache::s_pClients = NULL;
@@ -389,27 +390,21 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
         }
 
         // GeoIP lookup
-        if (IpToGeo::getIpToGeo() != NULL)
+        if (getIp2Geo() != NULL)
         {
+            GeoInfo *pGeoInfo = NULL;
             if (pPeer->sa_family == AF_INET)
             {
-                GeoInfo *pGeoInfo = pInfo->allocateGeoInfo();
-                if (pGeoInfo)
-                {
-                    IpToGeo::getIpToGeo()->lookUp(
-                        ((struct sockaddr_in *)pPeer)->sin_addr.s_addr, pGeoInfo);
-                }
+                pGeoInfo = getIp2Geo()->lookUp(
+                    ((struct sockaddr_in *)pPeer)->sin_addr.s_addr);
             }
             else if (pPeer->sa_family == AF_INET6)
             {
-                GeoInfo *pGeoInfo = pInfo->allocateGeoInfo();
-                if (pGeoInfo)
-                {
-                    IpToGeo::getIpToGeo()->lookUpV6(
-                        ((struct sockaddr_in6 *)pPeer)->sin6_addr, pGeoInfo);
-                }
-
+                pGeoInfo = getIp2Geo()->lookUpV6(
+                    ((struct sockaddr_in6 *)pPeer)->sin6_addr);
             }
+            if (pGeoInfo)
+                pInfo->setGeoInfo(pGeoInfo);
         }
 
 #ifdef USE_IP2LOCATION

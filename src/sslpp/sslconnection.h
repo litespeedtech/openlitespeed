@@ -21,10 +21,6 @@
  * with a memset to 0 of basically every local variable here AFTER construction
  * but before it's used.  So DO NOT COUNT ON CONSTRUCTORS!
  */
-/**
- * NOTE: Enable blocking non BIO I/O by setting the environment variable
- * "LSAPI_SSLBLOCKING" to any value.
- */
 
 #ifndef SSLCONNECTION_H
 #define SSLCONNECTION_H
@@ -41,9 +37,11 @@ typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_session_st SSL_SESSION;
 
+class SslClientSessCache;
 class SslConnection
 {
     SSL    *m_ssl;
+    SslClientSessCache *m_pSessCache;
     int     m_iStatus;
     int     m_iWant;
     int     m_iFlag;
@@ -130,6 +128,12 @@ public:
     const SSL_CIPHER *getCurrentCipher() const;
 
     SSL_SESSION *getSession() const;
+    int setSession(SSL_SESSION *session) const;
+    int isSessionReused() const;
+    void setClientSessCache(SslClientSessCache *cache)
+    {   m_pSessCache = cache;     }
+    int cacheClientSession(SSL_SESSION* session);
+    void tryReuseCachedSession();
 
     const char *getVersion() const;
 

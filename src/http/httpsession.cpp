@@ -2355,7 +2355,8 @@ int HttpSession::onReadEx()
     case HSS_READING_BODY:
     case HSS_PROCESSING:
     case HSS_WRITING:
-        if (m_request.getBodyBuf() && !testFlag(HSF_REQ_BODY_DONE))
+        if (m_request.getBodyBuf() && !testFlag(HSF_REQ_BODY_DONE)
+            && !(m_iFlag & HSF_HANDLER_DONE))
         {
             ret = readReqBody();
             //TODO: This is a temp fix.  Cannot put smProcessReq in reqBodyDone
@@ -3175,7 +3176,7 @@ int HttpSession::setupGzipFilter()
                       & LSI_FLAG_DECOMPRESS_REQUIRED;
     if (gz & (UPSTREAM_GZIP | UPSTREAM_DEFLATE))
     {
-        setFlag(HSF_RESP_BODY_COMPRESSED);
+        setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
         if (recvhkptNogzip || hkptNogzip || !(gz & REQ_GZIP_ACCEPT))
         {
             //setup decompression filter at RECV_RESP_BODY filter
@@ -3184,11 +3185,11 @@ int HttpSession::setupGzipFilter()
             m_response.getRespHeaders().del(
                 HttpRespHeaders::H_CONTENT_ENCODING);
             gz &= ~(UPSTREAM_GZIP | UPSTREAM_DEFLATE);
-            clearFlag(HSF_RESP_BODY_COMPRESSED);
+            clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
         }
     }
     else
-        clearFlag(HSF_RESP_BODY_COMPRESSED);
+        clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
 
     if (gz == GZIP_REQUIRED)
     {
@@ -3207,7 +3208,7 @@ int HttpSession::setupGzipFilter()
                 return LS_FAIL;
             m_response.addGzipEncodingHeader();
             //The below do not set the flag because compress won't update the resp VMBuf to decompressed
-            //setFlag(HSF_RESP_BODY_COMPRESSED);
+            //setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
         }
     }
     return 0;
@@ -3241,7 +3242,7 @@ int HttpSession::setupGzipBuf()
                 m_response.setContentLen(LSI_RSP_BODY_SIZE_UNKNOWN);
                 m_response.addGzipEncodingHeader();
                 m_request.orGzip(UPSTREAM_GZIP);
-                setFlag(HSF_RESP_BODY_COMPRESSED);
+                setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
                 return 0;
             }
             else
@@ -3249,7 +3250,7 @@ int HttpSession::setupGzipBuf()
                 LS_ERROR(getLogSession(), "Ran out of swapping space while "
                          "initializing GZIP stream!");
                 delete getGzipBuf();
-                clearFlag(HSF_RESP_BODY_COMPRESSED);
+                clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
                 setGzipBuf(NULL);
             }
         }
@@ -4786,7 +4787,7 @@ int HttpSession::contentEncodingFixup()
             if (addModgzipFilter((LsiSession *)this, 1, 0) == -1)
                 return LS_FAIL;
             m_response.getRespHeaders().del(HttpRespHeaders::H_CONTENT_ENCODING);
-            clearFlag(HSF_RESP_BODY_COMPRESSED);
+            clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
             requireChunk = 1;
         }
     }
@@ -4799,7 +4800,7 @@ int HttpSession::contentEncodingFixup()
                 return LS_FAIL;
             m_response.addGzipEncodingHeader();
             //The below do not set the flag because compress won't update the resp VMBuf to decompressed
-            //setFlag(HSF_RESP_BODY_COMPRESSED);
+            //setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
             requireChunk = 1;
         }
     }

@@ -118,15 +118,26 @@ public:
     void appendToWaitQ(DLinkedObj *pObj);
     DLinkQueue *getWaitQ() const    {   return m_pWaitQue;      }
 
-    void markReady(int compressed)
+    void markReady(int compressed_method)
     {
-        m_header.m_flag = (m_header.m_flag & ~CeHeader::CEH_IN_CONSTRUCT)
-                          | (compressed ? CeHeader::CEH_COMPRESSED : 0) ;
+        m_header.m_flag = (m_header.m_flag & ~CeHeader::CEH_IN_CONSTRUCT);
+        if (compressed_method == 2)
+            m_header.m_flag |= CeHeader::CEH_BR;
+        else if (compressed_method == 1)
+            m_header.m_flag |= CeHeader::CEH_GZIP;
     }
 
-    int isGzipped() const
-    {   return m_header.m_flag & CeHeader::CEH_COMPRESSED;  }
-
+    //Return 0, no compressed, 1 Gzip, 2 Br
+    int getCompressType() const
+    {
+        if (m_header.m_flag & CeHeader::CEH_BR)
+            return 2;
+        else if (m_header.m_flag & CeHeader::CEH_GZIP)
+            return 1;
+        else
+            return 0;
+    }
+    
 
     int isUpdating() const
     {   return m_header.m_flag & CeHeader::CEH_UPDATING;    }

@@ -186,9 +186,9 @@ void HttpReq::reset(int discard)
         else
             HttpResourceManager::getInstance().recycle(m_pReqBodyBuf);
     }
+    ::memset(m_commonHeaderLen, 0,
+             (char *)(&m_code + 1) - (char *)m_commonHeaderLen);
 
-    ::memset(m_commonHeaderOffset, 0,
-             (char *)(&m_code + 1) - (char *)m_commonHeaderOffset);
     m_pHttpHandler = NULL;
     m_pSslConn = NULL;
     resetHeaderBuf(discard);

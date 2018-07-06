@@ -23,23 +23,23 @@ ex:
 $page_nav = array(
 		'dashboard' => array(
 				'title' => DMsg::UIStr('menu_dashboard'),
-				'url' => 'view/dashboard.php',
+				'url' => '#view/dashboard.php',
 				'icon' => 'fa-home'),
 		'serv' => array(
 				'title' => DMsg::UIStr('menu_serv'),
 				'icon' => 'fa-globe',
-				'url' => 'view/confMgr.php?m=serv'),
+				'url' => '#view/confMgr.php?m=serv'),
 		'sl' => array(
 				'title' => DMsg::UIStr('menu_sl'),
 				'icon' => 'fa-chain',
-				'url' => 'view/confMgr.php?m=sl'),
+				'url' => '#view/confMgr.php?m=sl'),
 		'vh' => array(
 				'title' => DMsg::UIStr('menu_vh'),
 				'icon' => 'fa-cubes',
-				'url' => 'view/confMgr.php?m=vh'),
+				'url' => '#view/confMgr.php?m=vh'),
 		'tp' => array(
 				'title' => DMsg::UIStr('menu_tp'),
-				'url' => 'view/confMgr.php?m=tp',
+				'url' => '#view/confMgr.php?m=tp',
 				'icon' => 'fa-files-o'),
 		'tools' => array(
 				'title' => DMsg::UIStr('menu_tools'),
@@ -47,13 +47,13 @@ $page_nav = array(
 				'sub' => array(
 						'buildphp' => array(
 								'title' => DMsg::UIStr('menu_compilephp'),
-								'url' => 'view/compilePHP.php'),
+								'url' => '#view/compilePHP.php'),
 						'logviewer' => array(
 								'title' => DMsg::UIStr('menu_logviewer'),
-								'url' => 'view/logviewer.php'),
+								'url' => '#view/logviewer.php'),
 						'stats' => array(
 								'title' => DMsg::UIStr('menu_rtstats'),
-								'url' => 'view/realtimestats.php'),
+								'url' => '#view/realtimestats.php'),
 				)
 		),
 		'webadmin' => array(
@@ -62,10 +62,10 @@ $page_nav = array(
 				'sub' => array(
 						'lg' => array(
 								'title' => DMsg::UIStr('menu_general'),
-								'url' => 'view/confMgr.php?m=admin'),
+								'url' => '#view/confMgr.php?m=admin'),
 						'al' => array(
 								'title' => DMsg::UIStr('menu_sl'),
-								'url' => 'view/confMgr.php?m=al')
+								'url' => '#view/confMgr.php?m=al')
 				)
 		),
 		'help' => array(
@@ -78,7 +78,7 @@ $page_nav = array(
 								'url' => DMsg::DocsUrl()),
 						'guides' => array(
 								'title' => DMsg::UIStr('menu_guides'),
-								'url' => 'http://open.litespeedtech.com/mediawiki/?utm_source=Open&utm_medium=WebAdmin',
+								'url' => 'https://openlitespeed.org/kb/?utm_source=Open&utm_medium=WebAdmin',
 								'url_target' => '_blank'),
 						'community' => array(
 								'title' => DMsg::UIStr('menu_community'),
@@ -96,7 +96,7 @@ $no_main_header = false; //set true for lock.php and login.php
 
 $footer_lic_info = '
 		Open LiteSpeed is an open source HTTP server.
-				Copyright (C) 2013-2015  Lite Speed Technologies, Inc.
+				Copyright (C) 2013-2018  Lite Speed Technologies, Inc.
 
 				This program is free software: you can redistribute it and/or modify
 				it under the terms of the GNU General Public License as published by

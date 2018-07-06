@@ -176,30 +176,37 @@ class UIBase
 		return '<div class="alert alert-warning">' . $msg .'</div>';
 	}
 
-	public static function genOptions($options, $selValue, $keyIsValue=false)
-	{
-		$o = '';
-		if ( $options )
-		{
-			foreach ( $options as $key => $value )
-			{
-				if ($keyIsValue)
-					$key = $value;
-				$o .= '<option value="' . $key .'"';
-				if ( $key == $selValue ) {
-					if (!($selValue === '' && $key === 0)
-					&& !($selValue === NULL && $key === 0)
-					&& !($selValue === '0' && $key === '')
-					&& !($selValue === 0 && $key === ''))
-						$o .= ' selected="selected"';
-				}
-				$o .= ">$value</option>\n";
-			}
-		}
-		return $o;
-	}
+	public static function genOptions($options, $selValue, $keyIsValue = false)
+    {
+        $o = '';
+        if ($options) {
+            foreach ($options as $key => $value) {
+                if ($keyIsValue) {
+                    $key = $value;
+                }
+                if ($key === 'forcesel') {
+                    $o .= '<option disabled ';
+                    if ($selValue === null || $selValue === '') {
+                        $o .= 'selected';
+                    }
+                } else {
+                    $o .= '<option value="' . $key . '"';
 
-	// for plot
+                    if (($key == $selValue)
+                            && !($selValue === '' && $key === 0)
+                            && !($selValue === NULL && $key === 0)
+                            && !($selValue === '0' && $key === '')
+                            && !($selValue === 0 && $key === '')) {
+                        $o .= ' selected="selected"';
+                    }
+                }
+                $o .= ">$value</option>\n";
+            }
+        }
+        return $o;
+    }
+
+    // for plot
 	// tabstatus = 1: active, 0: not active, -1: not tab
 
 	public static function GenPlotTab($tab_id, $bottomdef, $plotdef, $tabstatus)

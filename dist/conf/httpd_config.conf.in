@@ -65,7 +65,8 @@ tuning{
     maxReqBodySize               2047M 
     maxDynRespHeaderSize         8192 
     maxDynRespSize               2047M 
-    enableGzipCompress           1 
+    enableGzipCompress           1
+    enableBrCompress             1
     enableDynGzipCompress        1 
     gzipCompressLevel            6 
     compressibleTypes            text/*,application/x-javascript,application/javascript,application/xml, image/svg+xml 
@@ -106,8 +107,8 @@ CGIRLimit{
     priority                                0 
     CPUSoftLimit                            10 
     CPUHardLimit                            50 
-    memSoftLimit                            460M 
-    memHardLimit                            470M 
+    memSoftLimit                            1460M
+    memHardLimit                            1470M
     procSoftLimit                           400 
     procHardLimit                           450 
 }
@@ -121,7 +122,6 @@ extProcessor lsphp{
     type                            lsapi 
     address                         uds:/%DEFAULT_TMP_DIR%/lsphp.sock 
     maxConns                        35 
-    env                             PHP_LSAPI_MAX_REQUESTS=500 
     env                             PHP_LSAPI_CHILDREN=35 
     initTimeout                     60 
     retryTimeout                    0 
@@ -147,7 +147,6 @@ railsDefaults{
     rubyBin                  %RUBY_BIN%
     railsEnv                 1 
     maxConns                 5 
-    env                      LSAPI_MAX_REQS=1000 
     env                      LSAPI_MAX_IDLE=60 
     initTimeout              60 
     retryTimeout             0 
@@ -196,3 +195,6 @@ vhTemplate EasyRailsWithSuEXEC{
     listeners                Default
 }
 
+module cache {
+  ls_enabled              0
+}

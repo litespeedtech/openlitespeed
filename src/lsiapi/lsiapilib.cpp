@@ -1525,27 +1525,33 @@ static int is_resp_buffer_available(const lsi_session_t *session)
 }
 
 
-static int is_resp_buffer_gzippped(const lsi_session_t *session)
+static int get_resp_buffer_compress_method(const lsi_session_t *session)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FALSE;
 
-    //if (pSession->getReq()->gzipAcceptable() & ( UPSTREAM_GZIP | UPSTREAM_DEFLATE ))
-    return pSession->getFlag(HSF_RESP_BODY_COMPRESSED) != 0;
+    if (pSession->getFlag(HSF_RESP_BODY_BRCOMPRESSED))
+        return LSI_BR_COMPRESS;
+    else if (pSession->getFlag(HSF_RESP_BODY_GZIPCOMPRESSED))
+        return LSI_GZIP_COMPRESS;
+    return LSI_NO_COMPRESS;//0
 }
 
 
-static int set_resp_buffer_gzip_flag(const lsi_session_t *session, int set)
+static int set_resp_buffer_compress_method(const lsi_session_t *session, int method)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
 
-    if (set)
-        pSession->setFlag(HSF_RESP_BODY_COMPRESSED);
-    else
-        pSession->clearFlag(HSF_RESP_BODY_COMPRESSED);
+    pSession->clearFlag(HSF_RESP_BODY_BRCOMPRESSED);
+    pSession->clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
+    if (method == LSI_BR_COMPRESS)
+        pSession->setFlag(HSF_RESP_BODY_BRCOMPRESSED);
+    else if (method == LSI_GZIP_COMPRESS)
+        pSession->setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
+
     return LS_OK;
 }
 
@@ -3684,7 +3690,7 @@ void lsiapi_init_server_api()
     pApi->get_req_content_length = get_req_content_length;
     pApi->read_req_body = read_req_body;
     pApi->is_req_body_finished = is_req_body_finished;
-    pApi->is_resp_buffer_gzippped = is_resp_buffer_gzippped;
+    pApi->get_resp_buffer_compress_method = get_resp_buffer_compress_method;
 
     pApi->get_req_args_count = get_req_args_count;
     pApi->get_req_arg_by_idx = get_req_arg_by_idx;
@@ -3694,7 +3700,7 @@ void lsiapi_init_server_api()
     pApi->get_post_arg_by_idx = get_post_arg_by_idx;
     pApi->is_post_file_upload = is_post_file_upload;
 
-    pApi->set_resp_buffer_gzip_flag = set_resp_buffer_gzip_flag;
+    pApi->set_resp_buffer_compress_method = set_resp_buffer_compress_method;
     pApi->set_req_wait_full_body = set_req_wait_full_body;
     pApi->parse_req_args = parse_req_args;
     pApi->set_resp_wait_full_body = set_resp_wait_full_body;

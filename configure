@@ -658,17 +658,13 @@ IP2LOCATION_LIBS
 IP2LOCATION_INCLUDES
 ip2location_dir
 need_ip2location
-HAVE_BROTLI_FALSE
-HAVE_BROTLI_TRUE
-BROTLI_LIBS
-BROTLI_INCLUDES
-brotli_dir
-need_brotli
 USE_BSSL_FALSE
 USE_BSSL_TRUE
 USE_DYN_OSSL_FALSE
 USE_DYN_OSSL_TRUE
 OPENLSWS_BSSL
+LIBMMDB
+LIBBROTLI
 HAVE_LIBLUA_FALSE
 HAVE_LIBLUA_TRUE
 LUA_INCLUDES
@@ -835,8 +831,9 @@ enable_http2
 enable_debug
 enable_profiling
 with_lua
+enable_brotli
+enable_iptogeo2
 with_bssl
-with_brotli
 with_ip2loc
 enable_rpath
 with_libdir
@@ -1500,6 +1497,11 @@ Optional Features:
                           default)
   --enable-profiling      Enable cpu profiling (profiling is disabled by
                           default)
+  --enable-brotli=[yes/no]
+                          enable brotli compression [default=no]
+  --enable-iptogeo2=[yes/no]
+                          enable iptogeo2, need to build maxminddb which need
+                          to have autotool installed [default=no]
   --disable-rpath         Disable rpath (It is 'no' by default)
 
 Optional Packages:
@@ -1528,7 +1530,6 @@ Optional Packages:
                           yes]
   --with-lua[=DIR]        use liblua (located in directory DIR, if supplied) for compiling mod_lua module.  [default=no]
   --with-bssl[=DIR]       Set to use BoringSSL instead of OpenSSL [default=no]
-  --with-brotli[=DIR]        enable brotli compression (located in directory DIR, if supplied).  [default=no]
   --with-ip2loc[=DIR]        enable ip2location (located in directory DIR, if supplied).  [default=no]
   --with-libdir           Set system lib directory. It is lib or lib64 and
                           will be automatically checked by default
@@ -15566,6 +15567,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 OSTYPE=`uname -m`
 OSNAME=`uname -s`
+TOPDIR=`pwd`
+echo Current dir is $TOPDIR
 
 # Checks for header files.
 ac_fn_c_check_header_mongrel "$LINENO" "pthread.h" "ac_cv_header_pthread_h" "$ac_includes_default"
@@ -15990,6 +15993,146 @@ echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"
 CFLAGS="$CFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 
+
+LIBBROTLI=
+# Check whether --enable-brotli was given.
+if test "${enable_brotli+set}" = set; then :
+  enableval=$enable_brotli; OPENLSWS_BROTLI="$enableval"
+else
+  OPENLSWS_BROTLI=no
+fi
+
+if test "$OPENLSWS_BROTLI" = "no" ; then
+    echo "Brotli compression disabled!!!"
+else
+    echo "Brotli start to build ..."
+    BUILDBROTLI=`. $srcdir/dlbrotli.sh`
+
+    LIBBROTLI=" $TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/out/libbrotlienc-static.a $TOPDIR/brotli-master/out/libbrotlicommon-static.a "
+    as_ac_File=`$as_echo "ac_cv_file_$TOPDIR/brotli-master/out/libbrotlidec-static.a" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $TOPDIR/brotli-master/out/libbrotlidec-static.a" >&5
+$as_echo_n "checking for $TOPDIR/brotli-master/out/libbrotlidec-static.a... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$TOPDIR/brotli-master/out/libbrotlidec-static.a"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$TOPDIR/brotli-master/out/libbrotlidec-static.a" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  LIBBROTLI=
+fi
+as_ac_File=`$as_echo "ac_cv_file_$TOPDIR/brotli-master/c/include/brotli/decode.h" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $TOPDIR/brotli-master/c/include/brotli/decode.h" >&5
+$as_echo_n "checking for $TOPDIR/brotli-master/c/include/brotli/decode.h... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$TOPDIR/brotli-master/c/include/brotli/decode.h"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$TOPDIR/brotli-master/c/include/brotli/decode.h" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  LIBBROTLI=
+fi
+
+
+    if test "x$LIBBROTLI" = x ; then
+        echo "Brotli built failed. If continue, brotli compression will be disabled."
+    else
+        echo "Brotli built and enabled!!!"
+        CPPFLAGS="$CPPFLAGS -I$TOPDIR/brotli-master/c/include "
+        LIBBROTLI=" $TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/out/libbrotlienc-static.a $TOPDIR/brotli-master/out/libbrotlicommon-static.a "
+
+cat >>confdefs.h <<_ACEOF
+#define USE_BROTLI 1
+_ACEOF
+
+    fi
+fi
+
+
+LIBMMDB=
+# Check whether --enable-iptogeo2 was given.
+if test "${enable_iptogeo2+set}" = set; then :
+  enableval=$enable_iptogeo2; OPENLSWS_IPTOGEO2="$enableval"
+else
+  OPENLSWS_IPTOGEO2=no
+fi
+
+if test "$OPENLSWS_IPTOGEO2" = "no" ; then
+    echo "iptogeo2 disabled!!!"
+else
+    echo "iptogeo2 enabled, libmaxminddb start to build ..."
+    BUILDMAXMINDDB=`. $srcdir/dlmaxminddb.sh`
+
+    LIBMMDBEXIST=
+    as_ac_File=`$as_echo "ac_cv_file_$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a" >&5
+$as_echo_n "checking for $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  LIBMMDBEXIST=yes
+else
+  LIBMMDBEXIST=no
+fi
+
+    if test "$LIBMMDBEXIST" = no ; then
+        echo It seems libmaxminddb library not eixts, please check and ty again.
+        echo Or you can continue to make and iptogeo2 will be disabled.
+        echo
+    else
+        LIBMMDB=" $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a "
+        CPPFLAGS="$CPPFLAGS -I$TOPDIR/libmaxminddb/include/ "
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_IPTOGEO2 1
+_ACEOF
+
+    fi
+fi
+
+
+
 ## ##Set option --with-bssl
 
 # Check whether --with-bssl was given.
@@ -16014,10 +16157,10 @@ fi
 if test "$OPENLSWS_BSSL" = no ; then
     if test "$OSNAME" = Darwin ; then
         usedynossl=yes
-        CPPFLAGS="$CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        CPPFLAGS=" $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
     else
         usedynossl=no
-        CPPFLAGS="$CPPFLAGS -I../../ssl/include -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+        CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
         echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
         OSSL=`. $srcdir/dlossl.sh`
         echo "Finsihed building openssl."
@@ -16058,113 +16201,7 @@ fi
 
 
 
-# Check whether --with-brotli was given.
-if test "${with_brotli+set}" = set; then :
-  withval=$with_brotli;
-    if test "x$withval" = "x" ; then
-        need_brotli=no
-    elif test $withval = no ; then
-        need_brotli=no
-    elif test $withval = yes ; then
-        need_brotli=yes
-    else
-        need_brotli=yes
-        brotli_dir=$withval
-    fi
 
-else
-
-    need_brotli=no
-    brotli_dir=
-
-fi
-
-
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to check if brotli library exists" >&5
-$as_echo_n "checking whether to check if brotli library exists... " >&6; }
-if test "x$need_brotli" = "xno" ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define USE_BROTLI 1
-_ACEOF
-
-
-
-    if test "x$brotli_dir" != "x"
-    then
-        BROTLI_INCLUDES="$brotli_dir"
-        save_CFLAGS="$CFLAGS"
-        CFLAGS="$CFLAGS -I$brotli_dir"
-        save_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS -I$brotli_dir"
-    else
-        save_CFLAGS="$CFLAGS"
-        save_CPPFLAGS="$CPPFLAGS"
-    fi
-
-    for ac_header in brotli/encode.h brotli/decode.h
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
-
-else
-
-        if test "x$brotli_dir" != "x"
-        then
-            as_fn_error $? "brotli header not found in directory specified in --with-brotli" "$LINENO" 5
-        else
-            if test "x$need_brotli" = "xyes"
-            then
-                as_fn_error $? "Header file brotli/encode.h not found." "$LINENO" 5
-            else
-                need_brotli=no
-            fi
-        fi
-
-fi
-
-done
-
-
-    if test "x$need_brotli" != "xno"
-    then
-        BROTLI_LIBS="-lbrotlidec -lbrotlienc -lbrotlicommon"
-        CFLAGS="$save_CFLAGS"
-        CPPFLAGS="$save_CPPFLAGS"
-
-
-
-    fi
-
-    if test "x$need_brotli" = "xno" ; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: brotli header files not found - disabling brotli" >&5
-$as_echo "brotli header files not found - disabling brotli" >&6; }
-    elif test "x$need_brotli" = "xcheck" ; then
-        need_brotli=yes
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: brotli header files found - enable brotli" >&5
-$as_echo "brotli header files found - enable brotli" >&6; }
-    fi
-fi
- if test x$need_brotli = xyes; then
-  HAVE_BROTLI_TRUE=
-  HAVE_BROTLI_FALSE='#'
-else
-  HAVE_BROTLI_TRUE='#'
-  HAVE_BROTLI_FALSE=
-fi
-
-echo "Brotli include = $BROTLI_INCLUDES, need_brotli = $need_brotli"
 
 
 # Check whether --with-ip2loc was given.
@@ -18466,10 +18503,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${USE_BSSL_TRUE}" && test -z "${USE_BSSL_FALSE}"; then
   as_fn_error $? "conditional \"USE_BSSL\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_BROTLI_TRUE}" && test -z "${HAVE_BROTLI_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_BROTLI\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_IP2LOCATION_TRUE}" && test -z "${HAVE_IP2LOCATION_FALSE}"; then

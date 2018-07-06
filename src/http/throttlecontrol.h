@@ -43,8 +43,10 @@ public:
     int     getAvail() const    {   return m_iAvailable;        }
     int     getLimit() const    {   return m_iLimit;            }
     void    reset()             {   m_iAvailable = m_iLimit;    }
-    void    setLimit(int n)   {   m_iLimit = n;               }
-    void    used(int n)       {   m_iAvailable -= n;          }
+    void    setLimit(int n)     {   m_iLimit = n;               }
+    void    used(int n)
+    {   if (m_iLimit != THROTTLE_MAX)
+            m_iAvailable -= n;          }
     void    adjustLimit(int n)
     {   m_iAvailable += (n - m_iLimit);   m_iLimit = (n > 0) ? n : THROTTLE_MAX;       }
 

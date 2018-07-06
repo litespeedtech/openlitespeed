@@ -35,12 +35,13 @@ public:
     enum
     {
         CEH_COMPRESSIBLE = 1,
-        CEH_COMPRESSED   = 1 << 1,
+        CEH_GZIP   = 1 << 1,
         CEH_IN_CONSTRUCT = 1 << 2,
         CEH_PRIVATE      = 1 << 3,
         CEH_STALE        = 1 << 4,
         CEH_UPDATING     = 1 << 5,
-        CEH_ESI          = 1 << 6
+        CEH_ESI          = 1 << 6,
+        CEH_BR           = 1 << 7
     };
 
     int32_t m_tmCreated;        //Created Time
