@@ -8,7 +8,7 @@ m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
 #AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.34],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.35],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AM_CONFIG_HEADER(src/config.h:src/config.h.in)

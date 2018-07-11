@@ -22,14 +22,7 @@ if [ "x$1" = "xuse_bssl" ] ; then
     exit 0;
 fi
 
-VERSION=OpenSSL_1_0_2-stable
-
-#a bug fix of openssl 1.0.2
-fixbug()
-{
-    sed -i -e "s/], s->s3->wpend_tot/], len - tot/" ssl/s3_pkt.c
-}
-
+VERSION=OpenSSL_1_1_0h
 
 cd `dirname "$0"`
 echo "Checking openssl ..."
@@ -45,7 +38,6 @@ if [ ! -f ssl/libcrypto.a ] ; then
     mv openssl-$VERSION ssl
     rm ossl.tar.gz
     cd ssl
-    fixbug
     ./config
     make depend
     make

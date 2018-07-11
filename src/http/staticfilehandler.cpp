@@ -511,11 +511,13 @@ int StaticFileHandler::process(HttpSession *pSession,
                         & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
 
     char mode = (pReq->brAcceptable() == BR_REQUIRED ? SFCD_MODE_BROTLI : 0);
-    if (pReq->gzipAcceptable() == GZIP_REQUIRED && !pReq->brAcceptable())
+    if (pReq->gzipAcceptable() == GZIP_REQUIRED &&
+        pReq->brAcceptable() != BR_REQUIRED)
         mode |= SFCD_MODE_GZIP;
 
     ret = pInfo->readyCacheData(compressed, mode);
-    LS_DBG_L(pReq->getLogSession(), "readyCacheData() return %d", ret);
+    LS_DBG_L(pReq->getLogSession(), "readyCacheData(%d, %d) return %d",
+             compressed, mode, ret);
     FileCacheDataEx *pECache = pInfo->getECache();
     
     
