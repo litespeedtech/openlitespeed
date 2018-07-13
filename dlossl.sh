@@ -4,6 +4,9 @@
 # Or,
 # Use your pre-built boringSSL
 
+#For openssl, always use the latest officially released version
+VERSION=OpenSSL_1_1_1-pre8
+
 
 if [ "x$1" = "xuse_bssl" ] ; then 
     if [ "x$2" != "x" ] ; then 
@@ -22,16 +25,20 @@ if [ "x$1" = "xuse_bssl" ] ; then
     exit 0;
 fi
 
-VERSION=OpenSSL_1_1_0h
+
+
+
 
 cd `dirname "$0"`
 echo "Checking openssl ..."
 
 if [ ! -f ssl/libcrypto.a ] ; then
     echo -e "\033[38;5;148mDownload openssl $VERSION and building, it will take several minutes ...\033[39m"
+    echo -e "\033[38;5;148mThe url is https://github.com/openssl/openssl/archive/$VERSION.tar.gz\033[39m"
 
     DL=`which curl`
     DLCMD="$DL -k -L -o ossl.tar.gz"
+    
     $DLCMD https://github.com/openssl/openssl/archive/$VERSION.tar.gz
     tar xf ossl.tar.gz
     rm -rf ssl

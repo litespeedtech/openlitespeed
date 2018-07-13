@@ -114,8 +114,6 @@ SET(unittest_STAT_SRCS
    ../test/shm/shmxtest.cpp
 )
 
-link_directories(${PROJECT_SOURCE_DIR}/ssl/ /usr/local/lib ${PROJECT_SOURCE_DIR}/src/test/unittest-cpp/UnitTest++)
-
 add_executable(openlitespeed ${openlitespeed_SRCS}
     ${unittest_STAT_SRCS}
 )
