@@ -76,8 +76,6 @@ SET(unittest_STAT_SRCS
    ../test/util/objarraytest.cpp
    ../test/util/objpooltest.cpp
    ../test/util/radixtreetest.cpp
-   ../test/spdy/huffmantest.cpp
-   ../test/spdy/hpacktest.cpp
    ../test/spdy/spdyzlibfiltertest.cpp
    ../test/spdy/spdyconnectiontest.cpp
    ../test/spdy/dummiostream.cpp
