@@ -195,7 +195,7 @@ int H2Stream::shutdown()
     LS_DBG_L(this, "H2Stream::shutdown()");
     m_pH2Conn->sendFinFrame(m_uiStreamId);
     setActiveTime(DateTime::s_curTime);
-    m_pH2Conn->flush();
+    m_pH2Conn->wantFlush();
     return 0;
 }
 

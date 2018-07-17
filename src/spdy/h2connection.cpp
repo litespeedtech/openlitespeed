@@ -125,10 +125,12 @@ int H2Connection::onReadEx()
 {
     int ret;
     m_iFlag &= ~H2_CONN_FLAG_WAIT_PROCESS;
+    m_iFlag |= H2_CONN_FLAG_IN_EVENT;
     ret = onReadEx2();
     if ((m_iFlag & H2_CONN_FLAG_WAIT_PROCESS) != 0)
         onWriteEx();
-    if (getBuf()->size() > 1024)
+    m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
+    if (getBuf()->size() > 1024 || m_iFlag & H2_CONN_FLAG_WANT_FLUSH)
         flush();
     return ret;
 }
@@ -1314,8 +1316,20 @@ int H2Connection::flush()
     BufferedOS::flush();
     if (!isEmpty())
         getStream()->continueWrite();
+    else
+        m_iFlag &= ~H2_CONN_FLAG_WANT_FLUSH;
     getStream()->flush();
     return LS_DONE;
+}
+
+
+void H2Connection::wantFlush()
+{
+    if (m_iFlag & H2_CONN_FLAG_WANT_FLUSH)
+        return;
+    flush();
+    if (m_iFlag & H2_CONN_FLAG_IN_EVENT)
+        m_iFlag |= H2_CONN_FLAG_WANT_FLUSH;
 }
 
 
@@ -1716,6 +1730,7 @@ int H2Connection::onWriteEx()
     TDLinkQueue<H2Stream> *pQue = &m_priQue[0];
     TDLinkQueue<H2Stream> *pEnd = &m_priQue[H2_STREAM_PRIORITYS];
 
+    m_iFlag |= H2_CONN_FLAG_IN_EVENT;
 
     for (; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
     {
@@ -1744,10 +1759,15 @@ int H2Connection::onWriteEx()
                 recycleStream(pH2Stream->getStreamID());
         }
         if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
+        {
+            m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
+            flush();
             return 0;
+        }
         if (wantWrite > 0)
             break;
     }
+    m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
 
     if (!isEmpty())
         flush();

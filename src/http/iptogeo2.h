@@ -108,12 +108,13 @@ private:
     void normalize_address(in6_addr addr, struct sockaddr_in6 *sa);
     int loadGeoIpDbFile(const char *pFile, const char *pDbLogical);
     int testGeoIpDbFile(const char *pFile);
+    const char *getDefaultLogicalName(const char *fileName);
     int parseEnvLine(const char *pEnvAliasMap,
                      char *variable, int var_len,
                      char *database, int database_len,
                      char *map, int map_len);
     int validateEnv(const char *pEnvAliasMap, const char *variable, 
-                    const char *database, const char *map, int *db);
+                    const char *database, const char *map, int *db, int *found);
     int addEnv(const char *pEnvAliasMap, const char *variable, 
                const char *database, const char *map, const int db);
     int defaultEnv();
@@ -126,6 +127,7 @@ private:
     int    m_ndbs;
     dbs_t *m_dbs;
     int    m_did_add_env;
+    int    m_did_add_env_default;
     static IpToGeo2 *s_pIpToGeo2;
     LS_NO_COPY_ASSIGN(IpToGeo2);
 };

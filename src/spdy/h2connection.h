@@ -42,6 +42,8 @@
 #define H2_CONN_HEADERS_START       (1<<6)
 #define H2_CONN_FLAG_WAIT_PROCESS   (1<<7)
 #define H2_CONN_FLAG_NO_PUSH        (1<<8)
+#define H2_CONN_FLAG_WANT_FLUSH     (1<<9)
+#define H2_CONN_FLAG_IN_EVENT       (1<<10)
 
 #define H2_STREAM_PRIORITYS         (8)
 
@@ -150,6 +152,7 @@ public:
     void decShutdownStream()    {   --m_uiShutdownStreams;  }
     int pushPromise(uint32_t streamId, ls_str_t* pUrl, ls_str_t* pHost, 
                     ls_strpair_t *headers);
+    void wantFlush();
 
 private:
     typedef THash< H2Stream * > StreamMap;
