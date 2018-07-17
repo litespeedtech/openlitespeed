@@ -214,11 +214,11 @@ void EvtcbQue::schedule(evtcbnode_s *pObj, bool nowait)
 
 
 evtcbnode_s *EvtcbQue::schedule(evtcb_pf cb, const evtcbhead_t *session,
-                          long lParam, void *pParam)
+                          long lParam, void *pParam, bool nowait)
 {
     evtcbnode_s *pObj = getNodeObj(cb, session, lParam, pParam);
     if (pObj)
-        schedule(pObj);
+        schedule(pObj, nowait);
     
     return pObj;
 }

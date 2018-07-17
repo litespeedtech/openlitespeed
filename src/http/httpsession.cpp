@@ -993,7 +993,7 @@ void HttpSession::extCmdDone()
     EvtcbQue::getInstance().schedule(m_cbExtCmd,
                                      this,
                                      m_lExtCmdParam,
-                                     m_pExtCmdParam);
+                                     m_pExtCmdParam, false);
 }
 
 int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
@@ -3219,7 +3219,7 @@ int HttpSession::flush()
                 EvtcbQue::getInstance().schedule(stx_nextRequest,
                                                  (lsi_session_t *)this,
                                                  getSn(),
-                                                 NULL);
+                                                 NULL, false);
             }
             return ret;
         }

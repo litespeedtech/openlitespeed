@@ -76,8 +76,6 @@ SET(unittest_STAT_SRCS
    ../test/util/objarraytest.cpp
    ../test/util/objpooltest.cpp
    ../test/util/radixtreetest.cpp
-   ../test/spdy/huffmantest.cpp
-   ../test/spdy/hpacktest.cpp
    ../test/spdy/spdyzlibfiltertest.cpp
    ../test/spdy/spdyconnectiontest.cpp
    ../test/spdy/dummiostream.cpp
@@ -144,7 +142,7 @@ add_executable(ls_shmhashstat
 SET( litespeedlib
     modgzip lsiapi main http lsiapi spdy ssi
     registry cgi fcgi jk extensions lsapi proxy
-    edio socket sslpp lsshm thread log4cxx  adns
+    edio socket sslpp lsshm thread log4cxx adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive sslpp GeoIP ${MMDB_LIB} udns
     pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} libssl.a libcrypto.a
     ${BSSL_ADD_LIB} ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB})

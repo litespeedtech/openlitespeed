@@ -17,13 +17,14 @@ link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
 SET (CMAKE_C_COMPILER         "/usr/bin/clang")
 SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 
-#set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter")
-#set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter -fsanitize=address -fno-omit-frame-pointer")
-#set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter -fno-omit-frame-pointer")
-set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
-#set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter")
+IF (CMAKE_BUILD_TYPE MATCHES "Debug")
+set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter -fsanitize=address -fno-omit-frame-pointer")
+#set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
 set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
 #set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING")
+ELSE ()
+set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter ")
+ENDIF()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_POOL_FLAG}")
 #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${MY_CMAKE_WARNING_FLAG}")
@@ -55,7 +56,7 @@ set(libUnitTest  libUnitTest++.a)
 set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
 #If you want to use Brotli Compression, just un-comment out the following commands
-set(BROTLI_ADD_LIB  libbrotlidec.a libbrotlienc.a libbrotlicommon.a)
+set(BROTLI_ADD_LIB  libbrotlidec-static.a libbrotlienc-static.a libbrotlicommon-static.a)
 add_definitions(-DUSE_BROTLI)
 ##########################################################################################
 #If you want to use IP2Location, just un-comment out the following commands
@@ -63,8 +64,8 @@ set(IP2LOC_ADD_LIB  libIP2Location.a)
 add_definitions(-DUSE_IP2LOCATION)
 ##########################################################################################
 #If you want to use IPTOGEO2, just un-comment out the following commands
-set(MMDB_LIB  maxminddb)
-add_definitions(-DENABLE_IPTOGEO2)
+#set(MMDB_LIB  maxminddb)
+#add_definitions(-DENABLE_IPTOGEO2)
 ##########################################################################################
 
 

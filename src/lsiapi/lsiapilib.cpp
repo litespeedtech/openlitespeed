@@ -900,7 +900,7 @@ static long create_event(evtcb_pf cb,
                          const lsi_session_t *session, long lParam, void *pParam)
 {
     return (long)EvtcbQue::getInstance().schedule(cb, session,
-            lParam, pParam);
+            lParam, pParam, false);
 }
 
 static long create_session_resume_event(const lsi_session_t *session,
