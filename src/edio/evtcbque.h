@@ -54,7 +54,7 @@ public:
     
     void schedule(evtcbnode_s *pObj, bool nowait = true);
     evtcbnode_s *schedule(evtcb_pf cb, const evtcbhead_t *session,
-                          long lParam, void *pParam, bool nowiat);
+                          long lParam, void *pParam, bool nowait);
     void removeSessionCb(evtcbhead_t *session);
 
     static evtcbhead_t **getSessionRefPtr(evtcbnode_s *nodeObj);
