@@ -15862,7 +15862,7 @@ fi
 
 
 #AC_ARG_ENABLE([cacheredis],
-#              [AC_HELP_STRING([--enable-redis],
+#              [AS_HELP_STRING([--enable-redis],
 #                              [Enable redis for cache module (Using redis is disabled by default)])],
 #               [ AC_DEFINE([LS_ENABLE_REDIS], [1], [Define if cache module needs redis feature])
 #                 echo "Cache redis enabled!!!" ], [])
