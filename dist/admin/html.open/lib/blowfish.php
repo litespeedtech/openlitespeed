@@ -1,6 +1,5 @@
 <?php
 
-/* $Id: blowfish.php,v 1.3 2008/02/20 23:24:59 gwang Exp $ */
 // vim: expandtab sw=4 ts=4 sts=4:
 
 /**
