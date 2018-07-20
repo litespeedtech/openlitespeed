@@ -278,7 +278,7 @@ class HttpSession
     }
 
     static int call_nextRequest(lsi_session_t *p, long , void *);
-    void markComplete();
+    void markComplete(bool nowait);
 
     void releaseResources();
     void releaseReqParser();

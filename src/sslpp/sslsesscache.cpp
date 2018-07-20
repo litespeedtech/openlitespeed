@@ -120,7 +120,7 @@ static int newSessionCb(SSL *pSSL, SSL_SESSION *pSess)
     pObj->x_iExpireTime = DateTime::s_curTime + cache.getExpireSec();
 
     unsigned int len;
-    const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSSL, &len);
+    const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSess, &len);
     
     cache.addSession((unsigned char *)id, (int)len,
                      data, iDataLen + sizeof(*pObj));

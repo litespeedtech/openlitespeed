@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/errno.h>
 
 #define MAX_KEY_LENGTH 256
 
@@ -516,6 +517,7 @@ IpToGeo2::IpToGeo2()
     : m_ndbs(0)
     , m_dbs(NULL)
     , m_did_add_env(0)
+    , m_did_add_env_default(0)
 {
 }
 
@@ -554,6 +556,7 @@ void IpToGeo2::release_all()
     ls_pfree(m_dbs);
     m_dbs = NULL;
     m_did_add_env = 0;
+    m_did_add_env_default = 0;
 }
 
 
@@ -576,7 +579,7 @@ void IpToGeo2::normalize_address(in6_addr addr, struct sockaddr_in6 *sa)
 int IpToGeo2::loadGeoIpDbFile(const char *pFile, const char *pDbLogical)
 {
     int ret;
-    LS_DBG("[GEO] loadGeoIpDbFile: %s\n", pFile);
+    LS_DBG("[GEO] loadGeoIpDbFile: %s, total dbs: %d\n", pFile, m_ndbs + 1);
     void *arr = ls_prealloc(m_dbs, ((m_ndbs + 1) * sizeof(dbs_t)));
     if (!arr)
     {
@@ -621,13 +624,17 @@ int IpToGeo2::loadGeoIpDbFile(const char *pFile, const char *pDbLogical)
 
 int IpToGeo2::testGeoIpDbFile(const char *pFile)
 {
-    pid_t pid = fork();
-    if (pid < 0)
-        return -1;
-    if (pid == 0)
-    {
+    // Was done in a fork, but did not work reliably that way.
+    //pid_t pid = fork();
+    //if (pid < 0)
+    //{
+    //    LS_ERROR("[GEO] testGeoIpDbFile fork failed, errno: %d\n", errno);
+    //    return -1;
+    //}
+    //if (pid == 0)
+    //{
         MMDB_s mmdb;
-        int ret = MMDB_open(pFile, MMDB_MODE_MMAP, &mmdb);
+        int ret = MMDB_open(pFile, 0/*MMDB_MODE_MMAP*/, &mmdb);
         if (ret == 0)
         {
             unsigned char addr[4] = { 88, 252, 206, 167 };
@@ -637,25 +644,33 @@ int IpToGeo2::testGeoIpDbFile(const char *pFile)
             normalize_address(*(int32_t *)addr, &sa);
             res = MMDB_lookup_sockaddr(&mmdb, (struct sockaddr *)&sa, &dberr);
             if (dberr != 0)
+            {
                 ret = dberr;
+            }
             else if (!res.found_entry)
+            {
                 ret = 0xff;
+            }
             else
             {
                 // Found
             }
             MMDB_close(&mmdb);
         }
-        exit(ret != 0);
-    }
-    else
-    {
-        int status;
-        int wpid = waitpid(pid, &status, 0);
-        if (wpid == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0)
+    //    exit(ret);
+    //}
+    //else
+    //{
+    //    int status;
+    //    int wpid = waitpid(pid, &status, 0);
+    //    if (wpid == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0)
+    if (!ret)
             return 0;
-        LS_ERROR("[GEO] GeoIP DB file test failed: '%s'.", pFile);
-    }
+    LS_ERROR("[GEO] GeoIP DB file test failed: '%s'.  ret: %d\n", pFile, ret);
+
+    //    LS_ERROR("[GEO] GeoIP DB file test failed: '%s'.  Exited: %d, Status: %d\n", 
+    //             pFile, WIFEXITED(status), WEXITSTATUS(status));
+    //}
     return -1;
 }
 
@@ -690,58 +705,129 @@ int IpToGeo2::setGeoIpDbFile(const char *pFile, const char *pDbLogical)
 }
 
 
+const char *IpToGeo2::getDefaultLogicalName(const char *fileName)
+{
+    int dblen = strlen(fileName);
+    for (int i = 0; i < (int)(sizeof(s_db_default) / sizeof(dbs_t)); ++i)
+    {
+        int defDbLen = strlen(s_db_default[i].m_file);
+        if ((dblen > defDbLen) && 
+            (!(strcmp(s_db_default[i].m_file, 
+                      &fileName[dblen - defDbLen]))))
+        {
+            return s_db_default[i].m_logical;
+        }
+    }
+    return NULL;
+}
+
+
 /**
  * config: With XmlNodeList
  * "GeoIP DB": Allows you a user to specify a NEW DB name in the OLD form.
- *             We have to validate the name and then try to apply a logical 
- *             name.  Not easy, but we'll give it a shot.
+ *             User interface nests environment variables within the XML 
+ *             definition.  Process the name, then the nested stuff and then
+ *             do the defaults so that they will NOT overwrite the user's
+ *             specifications.
  */
 int IpToGeo2::config(const XmlNodeList *pList)
 {
     XmlNodeList::const_iterator iter;
     int succ = 0;
+    const char *logicalName = NULL;
 
     for (iter = pList->begin(); iter != pList->end(); ++iter)
     {
         XmlNode *p = *iter;
         const char *pFile = p->getValue();
-        char achBufFile[MAX_PATH_LEN];
 
-        if ((!pFile) ||
-            (ConfigCtx::getCurConfigCtx()->getValidFile(achBufFile, pFile,
-                    "GeoIP DB") != 0))
-            continue;
-
-        // This is a compatibility mode so we'll validate some things and try 
-        // to use it.
-        int dblen = strlen(achBufFile);
-        for (int i = 0; i < (int)(sizeof(s_db_default) / sizeof(dbs_t)); ++i)
+        LS_DBG_M("[GEO] config test pList: name: %s, value: %s, has child: %d\n",
+                 p->getName(), p->getValue(), p->hasChild());
+        if (!(strcasecmp(p->getName(), "maxminddbenable")))
         {
-            int defDbLen = strlen(s_db_default[i].m_file);
-            if ((dblen > defDbLen) && 
-                (!(strcmp(s_db_default[i].m_file, 
-                          &achBufFile[dblen - defDbLen]))))
+            if (strcasecmp(p->getValue(), "off"))
             {
-                if (setGeoIpDbFile(achBufFile, s_db_default[i].m_logical) == 0)
+                LS_NOTICE("[GEO] Geolocation disabled by configuration\n");
+                return -1;
+            }
+        }
+        else if (!strcasecmp(p->getName(), "maxminddbfile"))
+        {
+            if (configSetFile(p->getValue()) == -1)
+                return -1;
+            succ = 1;
+        }
+        else if (!strcasecmp(p->getName(), "geoipdb"))
+        {
+            int hasEnv = 0;
+            if (!pFile)
+            {
+                LS_ERROR("[GEO] for %s you must specify a valid file name\n",
+                         p->getName());
+                return -1;
+            }
+            LS_DBG_M("[GEO] geoipdb found, hasChild: %d\n", p->hasChild());
+            if (p->hasChild())
+            {
+                XmlNodeList children;
+                p->getAllChildren(children);
+                XmlNodeList::const_iterator iterChild;
+                
+                for (iterChild = children.begin(); iterChild != children.end(); 
+                     ++iterChild)
                 {
-                    succ = 1;
-                    for (int e = 0; e < s_db_default[i].m_nenv; ++e)
+                    XmlNode *parm = *iterChild;
+                    LS_DBG_M("[GEO] check child name: %s, value: %s\n",
+                             parm->getName(), parm->getValue());
+                    if (!strcasecmp(parm->getName(), "geoipdbname"))
                     {
-                        char env[MAX_PATH_LEN * 3];
-                        snprintf(env, sizeof(env), "%s %s%s", 
-                                 s_db_default[i].m_env[e].m_var,
-                                 s_db_default[i].m_logical,
-                                 s_db_default[i].m_env[e].m_key);
-                        if (configSetEnv(env) != 0)
-                        {
-                            succ = 0;
-                            break;
-                        }
+                        logicalName = parm->getValue();
+                        LS_DBG_M("[GEO] geoipdb found logical name: %s\n", 
+                                 logicalName);
                     }
-                    if (!succ)
-                        return -1; // Already reported
+                    else if (!strcasecmp(parm->getName(),"maxminddbenv"))
+                    {
+                        hasEnv = 1;
+                        LS_DBG_M("[GEO] geoipdb found env var for later\n");
+                    }
                 }
             }
+            if (!logicalName) 
+            {
+                // Use a default logical name?
+                if (!(logicalName = getDefaultLogicalName(pFile)))
+                    LS_ERROR("[GEO] no logical name specified for unknown "
+                             "database %s\n", pFile);
+                    return -1;
+            }
+            if (setGeoIpDbFile(pFile, logicalName) == -1)
+                return -1;
+            if (hasEnv)
+            {
+                XmlNodeList children;
+                p->getAllChildren(children);
+                XmlNodeList::const_iterator iterChild;
+                
+                for (iterChild = children.begin(); iterChild != children.end(); 
+                     ++iterChild)
+                {
+                    XmlNode *parm = *iterChild;
+                    LS_DBG_M("[GEO] check child name for env: %s, value: %s\n",
+                             parm->getName(), parm->getValue());
+                    if (!strcasecmp(parm->getName(),"maxminddbenv"))
+                    {
+                        LS_DBG_M("[GEO] process env override now\n");
+                        if (configSetEnv(parm->getValue()))
+                            return -1;
+                    }
+                }
+            }
+            succ = 1;
+        }
+        else if (!strcasecmp(p->getName(), "maxminddbenv"))
+        {
+            if (configSetEnv(p->getValue()))
+                return -1;
         }
     }
     if (succ)
@@ -902,9 +988,11 @@ int IpToGeo2::parseEnvLine(const char *pEnvAliasMap,
 
 
 int IpToGeo2::validateEnv(const char *pEnvAliasMap, const char *variable, 
-                          const char *database, const char *map, int *db)
+                          const char *database, const char *map, int *db, 
+                          int *found)
 {
     const char *env_title = "MaxMindDBEnv";
+    *found = 0;
     for (int i = 0; i < m_ndbs; ++i)
     {
         if (!(strcasecmp(database, m_dbs[i].m_logical)))
@@ -921,9 +1009,10 @@ int IpToGeo2::validateEnv(const char *pEnvAliasMap, const char *variable,
             {
                 if (strcasecmp(variable, m_dbs[i].m_env[e].m_var) == 0)
                 {
-                    LS_ERROR("[GEO] In %s Environment variable %s can not be "
-                             "defined twice", env_title, variable);
-                    return -1;
+                    LS_DBG_M("[GEO] In %s Environment variable %s 2nd definition"
+                             "being ignored", env_title, variable);
+                    *found = 1;
+                    break;
                 }
             }
             LS_DBG("[GEO] Env FOUND! %s=%s%s DB #%d\n", variable, database, 
@@ -983,21 +1072,27 @@ int IpToGeo2::configSetEnv(const char *pEnvAliasMap)
     char database[MAX_PATH_LEN];
     char map[MAX_PATH_LEN];
     int  db;
+    int  found;
     if (parseEnvLine(pEnvAliasMap, variable, sizeof(variable),
                      database, sizeof(database), map, sizeof(map)) == -1)
         return -1;
-    if (validateEnv(pEnvAliasMap, variable, database, map, &db) == -1)
+    if (validateEnv(pEnvAliasMap, variable, database, map, &db, &found) == -1)
         return -1;
-    if (addEnv(pEnvAliasMap, variable, database, map, db) == -1)
-        return -1;
-    m_did_add_env = 1;
+    if (!found)
+    {
+        if (addEnv(pEnvAliasMap, variable, database, map, db) == -1)
+            return -1;
+        m_did_add_env = 1;
+    }
     return 0;
 }
 
 
 int IpToGeo2::defaultEnv()
 {
-    LS_DBG("[GEO] defaultEnv\n");
+    LS_DBG("[GEO] defaultEnv %d DBs, default DBs: %d\n", m_ndbs, 
+           (int)(sizeof(s_db_default) / sizeof(dbs_t)));
+    m_did_add_env_default = 1;
     for (int i = 0; i < m_ndbs; ++i)
     {
         for (int defDb = 0; defDb < (int)(sizeof(s_db_default) / sizeof(dbs_t));
@@ -1050,7 +1145,7 @@ GeoInfo * IpToGeo2::lookUpSA(struct sockaddr *sa)
                  "file\n");
         return NULL;
     }
-    if ((m_ndbs) && (!m_did_add_env))
+    if ((m_ndbs) && (!m_did_add_env_default))
         if (defaultEnv() == -1)
         {
             LS_ERROR("[GEO] Error setting default ENV\n");

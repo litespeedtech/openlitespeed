@@ -383,8 +383,8 @@ static int check_resp_misc(const lsi_session_t *session)
 
     if (!g_api->is_resp_buffer_available(session))
         LSM_DBGH((&MNAME), session, "resp buffer not available\n");
-    else if(!g_api->is_resp_buffer_gzippped(session))
-        LSM_DBGH((&MNAME), session, "resp buffer not gzipped\n");
+    else if(g_api->get_resp_buffer_compress_method(session) == 0)
+        LSM_DBGH((&MNAME), session, "resp buffer not compressed\n");
     LSM_DBGH((&MNAME), session, "resp buffer avail and gzipped\n");
 
     if (g_api->is_suspended(session) <= 0)

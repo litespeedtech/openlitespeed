@@ -276,11 +276,11 @@ void SslConnection::restoreRbio()
 #else
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     SSL_set0_rbio(m_ssl,m_saved_rbio);
-    BIO_free(m_saved_rbio);
 #else
     BIO_free_all(m_ssl->rbio);
     m_ssl->rbio = m_saved_rbio;
 #endif
+    m_saved_rbio = NULL;
 #endif
     ls_pfree(m_rbioBuf);
     m_rbioBuf = NULL;

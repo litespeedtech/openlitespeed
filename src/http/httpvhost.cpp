@@ -752,11 +752,10 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     enableBr((HttpServerConfig::getInstance().getBrCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableBr", 0, 1,
                        1) : 0);
-    m_rootContext.setGeoIP((
-                               HttpServer::getInstance().getServerContext().isGeoIpOn()) ?
-                           ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", 0,
-                                   1,
-                                   0) : 0);
+    int val = ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", -1, 1, -1);
+    if (val == -1)
+        val = HttpServer::getInstance().getServerContext().isGeoIpOn();
+    m_rootContext.setGeoIP(val);
     m_rootContext.setIpToLoc(HttpServer::getInstance().getServerContext().isIpToLocOn());
 
 
@@ -1710,9 +1709,10 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     {
         if (configContextAuth(pContext, pContextNode) == -1)
             return LS_FAIL;
-        pContext->setGeoIP((m_rootContext.isGeoIpOn()) ?
-                           ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
-                                   "enableIpGeo", 0, 1, 0) : 0);
+        int val = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
+                                   "enableIpGeo", -1, 1, -1);
+        if (val != -1)
+            pContext->setGeoIP(val);
         pContext->setIpToLoc(m_rootContext.isIpToLocOn());
         return pContext->config(getRewriteMaps(), pContextNode, type,
                                 getRootContext());

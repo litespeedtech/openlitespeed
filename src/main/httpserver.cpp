@@ -2426,8 +2426,6 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                     " in the response header.");
         }
 
-        HttpServer::getInstance().getServerContext().setGeoIP(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpGeo", 0, 1, 0));
 
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
@@ -3222,12 +3220,12 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
             HttpMime::configScriptHandler(pList, NULL, NULL);
     }
 
-    if (m_serverContext.isGeoIpOn())
-    {
-        configIpToGeo(pRoot);
-        configIpToLoc(pRoot);
-    }
-
+    int val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableIpGeo", -1, 1, -1);
+    configIpToGeo(pRoot);
+    configIpToLoc(pRoot);
+    if (val == -1)
+        val = ClientCache::getIp2Geo() != NULL;
+    HttpServer::getInstance().getServerContext().setGeoIP(val);
 
     const char *pVal = pRoot->getChildValue("suspendedVhosts");
     if (pVal)

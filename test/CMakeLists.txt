@@ -62,8 +62,6 @@ SET(unittest_STAT_SRCS
    util/objpooltest.cpp
    util/radixtreetest.cpp
    spdy/pushtest.cpp
-   spdy/huffmantest.cpp
-   spdy/hpacktest.cpp
    spdy/spdyzlibfiltertest.cpp
    spdy/spdyconnectiontest.cpp
    spdy/dummiostream.cpp
@@ -164,10 +162,11 @@ add_executable(ols_unittest
 SET( unittestlib
     modgzip lsiapi main http lsiapi ssi
     registry cgi fcgi jk extensions lsapi proxy
-    edio socket sslpp lsshm thread log4cxx GeoIP maxminddb adns
+    edio socket sslpp lsshm thread log4cxx GeoIP adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
-    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} spdy libssl.a libcrypto.a 
+    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB}
+    spdy libssl.a libcrypto.a
     -Wl,-Map=ols_unittest.map)
 
 target_link_libraries(ols_unittest ${unittestlib} )

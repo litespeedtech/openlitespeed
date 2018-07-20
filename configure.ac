@@ -11,7 +11,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([openlitespeed],[1.5.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
-AM_CONFIG_HEADER(src/config.h:src/config.h.in)
+AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
 
 dnl NOW change the default installation directory!
 AC_PREFIX_DEFAULT('/usr/local/lsws')
@@ -91,7 +91,7 @@ AC_SUBST([OPENLSWS_EMAIL])
 
 
 AC_ARG_ENABLE([adminssl],
-              [AC_HELP_STRING([--enable-adminssl=@<:@yes/no@:>@],
+              [AS_HELP_STRING([--enable-adminssl=@<:@yes/no@:>@],
                               [Enable HTTPS for admin console (modify adminssl.conf before installation) @<:@default=yes@:>@])],
               [OPENLSWS_ADMINSSL="$enableval"], [OPENLSWS_ADMINSSL=yes])
 AC_SUBST([OPENLSWS_ADMINSSL])
@@ -144,12 +144,12 @@ echo PID_FILE=$PID_FILE
 
 OPENLSWS_HTTP2="?"
 AC_ARG_ENABLE([spdy],
-              [AC_HELP_STRING([--enable-spdy=@<:@yes/no@:>@],
+              [AS_HELP_STRING([--enable-spdy=@<:@yes/no@:>@],
                               [Enable SPDY and http2 over HTTPS @<:@default=yes@:>@])],
                [OPENLSWS_HTTP2="$enableval"], [])
 
 AC_ARG_ENABLE([http2],
-              [AC_HELP_STRING([--enable-http2=@<:@yes/no@:>@],
+              [AS_HELP_STRING([--enable-http2=@<:@yes/no@:>@],
                               [Enable SPDY and http2 over HTTPS @<:@default=yes@:>@])],
                [OPENLSWS_HTTP2="$enableval"], [])
 if test "$OPENLSWS_HTTP2" = "no" ; then 
@@ -161,13 +161,13 @@ fi
 
 
 #AC_ARG_ENABLE([cacheredis],
-#              [AC_HELP_STRING([--enable-redis],
+#              [AS_HELP_STRING([--enable-redis],
 #                              [Enable redis for cache module (Using redis is disabled by default)])],
 #               [ AC_DEFINE([LS_ENABLE_REDIS], [1], [Define if cache module needs redis feature]) 
 #                 echo "Cache redis enabled!!!" ], [])
 
 AC_ARG_ENABLE([debug],
-              [AC_HELP_STRING([--enable-debug],
+              [AS_HELP_STRING([--enable-debug],
                               [Enable debugging symbols (Debug is disabled by default)])],
               [OPENLSWS_DEBUG="$enableval"
                 if test "$OPENLSWS_DEBUG" = "yes" ; then 
@@ -181,7 +181,7 @@ AC_ARG_ENABLE([debug],
                 ], [])
                 
 AC_ARG_ENABLE([profiling],
-              [AC_HELP_STRING([--enable-profiling],
+              [AS_HELP_STRING([--enable-profiling],
                               [Enable cpu profiling (profiling is disabled by default)])],
               [OPENLSWS_PROF="$enableval"
                 if test "$OPENLSWS_PROF" = "yes" ; then 
@@ -230,7 +230,7 @@ CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_C
 
 LIBBROTLI=
 AC_ARG_ENABLE([brotli],
-              [AC_HELP_STRING([--enable-brotli=@<:@yes/no@:>@],
+              [AS_HELP_STRING([--enable-brotli=@<:@yes/no@:>@],
                               [enable brotli compression @<:@default=no@:>@])],
                [OPENLSWS_BROTLI="$enableval"], [OPENLSWS_BROTLI=no])
 if test "$OPENLSWS_BROTLI" = "no" ; then 
@@ -255,7 +255,7 @@ AC_SUBST([LIBBROTLI])
 
 LIBMMDB=
 AC_ARG_ENABLE([iptogeo2],
-              [AC_HELP_STRING([--enable-iptogeo2=@<:@yes/no@:>@],
+              [AS_HELP_STRING([--enable-iptogeo2=@<:@yes/no@:>@],
                               [enable iptogeo2, need to build maxminddb which need to have autotool installed @<:@default=no@:>@])],
                [OPENLSWS_IPTOGEO2="$enableval"], [OPENLSWS_IPTOGEO2=no])
 if test "$OPENLSWS_IPTOGEO2" = "no" ; then 
@@ -364,7 +364,7 @@ AM_CONDITIONAL([HAVE_IP2LOCATION], [test x$need_ip2location = xyes])
 echo "IP2Location include = $IP2LOCATION_INCLUDES, need_ip2location = $need_ip2location"
 
 AC_ARG_ENABLE([rpath],
-              [AC_HELP_STRING([--disable-rpath], 
+              [AS_HELP_STRING([--disable-rpath], 
                               [Disable rpath (It is 'no' by default)])],
               [OPENLSWS_DISABLE_RPATH=yes              
                echo "OPENLSWS_DISABLE_RPATH=yes"], [OPENLSWS_DISABLE_RPATH=no])                

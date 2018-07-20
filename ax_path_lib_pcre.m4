@@ -73,16 +73,21 @@ else
      AC_MSG_RESULT([$PCRE_LIBS])
      m4_ifval($1,$1)
   else
-     PCRE_LDFLAGS="-L$with_pcre/$OPENLSWS_LIBDIR"
+    pcrevalue=$with_pcre
+    if test "$pcrevalue" = "yes" ; then
+      pcrevalue=/usr/local
+    fi
+    
+     PCRE_LDFLAGS="-L$pcrevalue/$OPENLSWS_LIBDIR"
      OLDLDFLAGS="$LDFLAGS" ; LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
-     OLDCPPFLAGS="$CPPFLAGS" ; CPPFLAGS="$CPPFLAGS -I$with_pcre/include"
+     OLDCPPFLAGS="$CPPFLAGS" ; CPPFLAGS="$CPPFLAGS -I$pcrevalue/include"
      AC_CHECK_LIB(pcre, pcre_compile)
      CPPFLAGS="$OLDCPPFLAGS"
      LDFLAGS="$OLDLDFLAGS"
      if test "$ac_cv_lib_pcre_pcre_compile" = "yes" ; then
         AC_MSG_RESULT(.setting PCRE_LIBS $PCRE_LDFLAGS -lpcre)
         PCRE_LIBS="$PCRE_LDFLAGS -lpcre"
-        test -d "$with_pcre/include" && PCRE_CFLAGS="-I$with_pcre/include"
+        test -d "$pcrevalue/include" && PCRE_CFLAGS="-I$pcrevalue/include"
         AC_MSG_CHECKING([$OPENLSWS_LIBDIR pcre])
         AC_MSG_RESULT([$PCRE_LIBS])
         m4_ifval($1,$1)

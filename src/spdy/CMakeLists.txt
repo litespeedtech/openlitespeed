@@ -13,7 +13,7 @@ spdydebug.cpp
 h2connection.cpp
 h2protocol.cpp
 h2stream.cpp
-hpack.cpp
+lshpack.c
 )
 
 add_library(spdy STATIC ${spdy_STAT_SRCS})

@@ -40,6 +40,8 @@ static char s_achForwardHttps[] = "X-Forwarded-Proto: https\r\n";
 static char s_achForwardHost[] = "X-Forwarded-Host: ";
 
 ProxyConn::ProxyConn()
+    : m_iSsl(0)
+    , m_flag(0)
 {
     strcpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ");
     memset(&m_iTotalPending, 0,
@@ -518,7 +520,7 @@ int ProxyConn::doRead()
             return ret;
         return doWrite();
     }
-
+    m_flag |= PCF_IN_DO_READ;
     ret = processResp();
     if (getState() == ABORT)
     {
@@ -528,6 +530,7 @@ int ProxyConn::doRead()
             getConnector()->endResponse(0, 0);
         }
     }
+    m_flag &= ~PCF_IN_DO_READ;
     return ret;
 }
 
@@ -640,13 +643,16 @@ int ProxyConn::readRespBody()
                     if (ret > 1024 || (ret < (int)bufLen))
                         pHEC->flushResp();
                 }
-                if (m_pChunkIS->eos())
+                if (!m_pChunkIS || m_pChunkIS->eos())
                 {
                     ret = 0;
                     break;
                 }
-                pHEC->flushResp();
-                return ret;
+                else if (ret == 0 || m_iSsl == 0)
+                {
+                    pHEC->flushResp();
+                    return 0;
+                }
             }
             else
             {
@@ -913,4 +919,13 @@ void ProxyConn::dump()
 }
 
 
+void ProxyConn::continueRead()
+{
+    LS_DBG_L(getLogger(), "[%s] ProxyConn::continueRead(), fd: %d", getLogId(), getfd());
+    EdStream::continueRead();
+    if (!isInDoRead() && m_ssl.isConnected())
+    {
+        doRead();
+    }
+}
 

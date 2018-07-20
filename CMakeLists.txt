@@ -18,6 +18,7 @@ link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
 SET (CMAKE_C_COMPILER         "/usr/bin/clang")
 SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 
+
 ## thread sanitizer
 #set (TSAN "1")
 IF(TSAN)
@@ -26,6 +27,7 @@ ELSE(TSAN)
     #set (ASAN "1")
     set(MY_CMAKE_TSAN_FLAG  " ")
 ENDIF(TSAN)
+
 
 ## address sanitizer
 IF(ASAN)
@@ -71,7 +73,7 @@ set(libUnitTest  libUnitTest++.a)
 set(BSSL_ADD_LIB  libdecrepit.a)
 ##########################################################################################
 #If you want to use Brotli Compression, just un-comment out the following commands
-set(BROTLI_ADD_LIB  libbrotlidec.a libbrotlienc.a libbrotlicommon.a)
+set(BROTLI_ADD_LIB  libbrotlidec-static.a libbrotlienc-static.a libbrotlicommon-static.a)
 add_definitions(-DUSE_BROTLI)
 ##########################################################################################
 #If you want to use IP2Location, just un-comment out the following commands

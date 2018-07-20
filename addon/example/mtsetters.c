@@ -244,7 +244,7 @@ static int process_req(const lsi_session_t *session)
     if (LS_FAIL == g_api->set_resp_wait_full_body(session))
         LSM_ERR((&MNAME), session, "Failed to set resp wait full body\n");
 
-    if (LS_FAIL == g_api->set_resp_buffer_gzip_flag(session, 0))
+    if (LS_FAIL == g_api->set_resp_buffer_compress_method(session, 0))
         LSM_ERR((&MNAME), session, "Failed to set no gzip\n");
 
     if (LS_FAIL == g_api->set_force_mime_type(session, NULL))

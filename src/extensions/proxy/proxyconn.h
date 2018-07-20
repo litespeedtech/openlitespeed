@@ -24,6 +24,8 @@
 #include <extensions/httpextprocessor.h>
 #include <sslpp/sslconnection.h>
 
+#define PCF_IN_DO_READ  1
+
 class ChunkInputStream;
 class ProxyConn : public ExtConn
     , public HttpExtProcessor
@@ -48,8 +50,9 @@ class ProxyConn : public ExtConn
 
     ChunkInputStream *m_pChunkIS;
 
-    int         m_iSsl;
-    SslConnection  m_ssl;
+    short           m_iSsl;
+    short           m_flag;
+    SslConnection   m_ssl;
 
     char        m_extraHeader[256];  //X-Forwarded-For
 
@@ -75,6 +78,7 @@ protected:
 
 public:
     virtual int removeRequest(ExtRequest *pReq);
+    void continueRead();
 
 public:
     ProxyConn();
@@ -99,9 +103,9 @@ public:
     virtual int close();
     void reset();
 
-    void setUseSsl(int s)     {   m_iSsl = s;       }
-    int isUseSsl() const        {   return m_iSsl;    }
-
+    void setUseSsl(int s)       {   m_iSsl = s;       }
+    short isUseSsl() const      {   return m_iSsl;    }
+    short isInDoRead() const    {   return m_flag & PCF_IN_DO_READ;     }
 
     LS_NO_COPY_ASSIGN(ProxyConn);
 };
