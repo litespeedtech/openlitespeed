@@ -1126,7 +1126,7 @@ void HttpSession::extCmdDone()
     EvtcbQue::getInstance().schedule(m_cbExtCmd,
                                      this,
                                      m_lExtCmdParam,
-                                     m_pExtCmdParam);
+                                     m_pExtCmdParam, false);
 }
 
 
@@ -2128,7 +2128,7 @@ int HttpSession::sendHttpError(const char *pAdditional)
     {
         if (statusCode < SC_500)
             SsiEngine::printError(this, NULL);
-        markComplete();
+        markComplete(true);
         getStream()->wantWrite(1);
         return 0;
     }
@@ -3706,7 +3706,7 @@ int HttpSession::call_nextRequest(evtcbtail_t *p, long , void *)
 }
 
 
-inline void HttpSession::markComplete()
+inline void HttpSession::markComplete(bool nowait)
 {
     LS_DBG_L(getLogSession(), "mark HSS_COMPLETE.");
 
@@ -3726,7 +3726,7 @@ inline void HttpSession::markComplete()
         EvtcbQue::getInstance().schedule(call_nextRequest,
                                         this,
                                         getSn(),
-                                        NULL);
+                                        NULL, nowait);
 }
 
 
@@ -3798,7 +3798,8 @@ int HttpSession::flush()
                     | HSF_SEND_RESP_BUFFERED) == HSF_HANDLER_DONE)
         {
             LS_DBG_L(getLogSession(), "Set the HSS_COMPLETE flag.");
-            markComplete();
+            if (getState() != HSS_COMPLETE)
+                markComplete(false);
             return ret;
         }
         else

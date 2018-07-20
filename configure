@@ -16738,9 +16738,14 @@ $as_echo_n "checking $OPENLSWS_LIBDIR pcre... " >&6; }
 $as_echo "$PCRE_LIBS" >&6; }
 
   else
-     PCRE_LDFLAGS="-L$with_pcre/$OPENLSWS_LIBDIR"
+    pcrevalue=$with_pcre
+    if test "$pcrevalue" = "yes" ; then
+      pcrevalue=/usr/local
+    fi
+
+     PCRE_LDFLAGS="-L$pcrevalue/$OPENLSWS_LIBDIR"
      OLDLDFLAGS="$LDFLAGS" ; LDFLAGS="$LDFLAGS $PCRE_LDFLAGS"
-     OLDCPPFLAGS="$CPPFLAGS" ; CPPFLAGS="$CPPFLAGS -I$with_pcre/include"
+     OLDCPPFLAGS="$CPPFLAGS" ; CPPFLAGS="$CPPFLAGS -I$pcrevalue/include"
      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pcre_compile in -lpcre" >&5
 $as_echo_n "checking for pcre_compile in -lpcre... " >&6; }
 if ${ac_cv_lib_pcre_pcre_compile+:} false; then :
@@ -16792,7 +16797,7 @@ fi
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: .setting PCRE_LIBS $PCRE_LDFLAGS -lpcre" >&5
 $as_echo ".setting PCRE_LIBS $PCRE_LDFLAGS -lpcre" >&6; }
         PCRE_LIBS="$PCRE_LDFLAGS -lpcre"
-        test -d "$with_pcre/include" && PCRE_CFLAGS="-I$with_pcre/include"
+        test -d "$pcrevalue/include" && PCRE_CFLAGS="-I$pcrevalue/include"
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking $OPENLSWS_LIBDIR pcre" >&5
 $as_echo_n "checking $OPENLSWS_LIBDIR pcre... " >&6; }
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PCRE_LIBS" >&5
@@ -18447,6 +18452,7 @@ DEFS=-DHAVE_CONFIG_H
 
 ac_libobjs=
 ac_ltlibobjs=
+U=
 for ac_i in : $LIBOBJS; do test "x$ac_i" = x: && continue
   # 1. Remove the extension, and $U if already installed.
   ac_script='s/\$U\././;s/\.o$//;s/\.obj$//'

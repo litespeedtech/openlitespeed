@@ -71,7 +71,7 @@ public:
 
     void schedule(evtcbnode_s *pObj, bool nowait = true);
     evtcbnode_s *schedule(evtcb_pf cb, const evtcbtail_t *session,
-                          long lParam, void *pParam, bool nowait = true);
+                          long lParam, void *pParam, bool nowait);
     int removeSessionCb(evtcbtail_t * pSession);
 
     static evtcbtail_t **getSessionRefPtr(evtcbnode_s *nodeObj);

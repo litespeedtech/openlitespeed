@@ -11,7 +11,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([openlitespeed],[1.5.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
-AC_CONFIG_HEADERS([src/config.h:src/config.h.in])
+AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
 
 dnl NOW change the default installation directory!
 AC_PREFIX_DEFAULT('/usr/local/lsws')
@@ -364,7 +364,7 @@ AM_CONDITIONAL([HAVE_IP2LOCATION], [test x$need_ip2location = xyes])
 echo "IP2Location include = $IP2LOCATION_INCLUDES, need_ip2location = $need_ip2location"
 
 AC_ARG_ENABLE([rpath],
-              [AS_HELP_STRING([--disable-rpath],
+              [AS_HELP_STRING([--disable-rpath], 
                               [Disable rpath (It is 'no' by default)])],
               [OPENLSWS_DISABLE_RPATH=yes              
                echo "OPENLSWS_DISABLE_RPATH=yes"], [OPENLSWS_DISABLE_RPATH=no])                

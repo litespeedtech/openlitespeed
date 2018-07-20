@@ -21,7 +21,6 @@
 #include <edio/bufferedos.h>
 #include <http/hiostream.h>
 #include <spdy/h2protocol.h>
-#include <spdy/hpack.h>
 #include <util/autobuf.h>
 #include <util/dlinkqueue.h>
 #include <util/ghash.h>
@@ -30,6 +29,8 @@
 
 #include <sys/time.h>
 #include <limits.h>
+
+#include "lshpack.h"
 
 
 #define H2_CONN_FLAG_GOAWAY         (1<<0)
@@ -41,6 +42,8 @@
 #define H2_CONN_HEADERS_START       (1<<6)
 #define H2_CONN_FLAG_WAIT_PROCESS   (1<<7)
 #define H2_CONN_FLAG_NO_PUSH        (1<<8)
+#define H2_CONN_FLAG_WANT_FLUSH     (1<<9)
+#define H2_CONN_FLAG_IN_EVENT       (1<<10)
 
 #define H2_STREAM_PRIORITYS         (8)
 
@@ -49,8 +52,9 @@ class H2Stream;
 
 class H2Connection: public HioHandler, public BufferedOS
 {
-public:
+private:
     H2Connection();
+public:
     virtual ~H2Connection();
 
     LogSession *getLogSession() const
@@ -85,7 +89,6 @@ public:
     //Following functions are just placeholder
 
     //Placeholder
-    int init();
     int onInitConnected();
 
     int onTimerEx();
@@ -153,6 +156,7 @@ public:
     void decShutdownStream()    {   --m_uiShutdownStreams;  }
     int pushPromise(uint32_t streamId, ls_str_t* pUrl, ls_str_t* pHost, 
                     ls_strpair_t *headers);
+    void wantFlush();
 
 private:
     typedef THash< H2Stream * > StreamMap;
@@ -212,7 +216,7 @@ private:
     int appendReqHeaders(H2Stream *arg1, char *method = NULL,
                          int methodLen = 0,
                          char *uri = NULL, int uriLen = 0);
-    int decodeData(unsigned char *pSrc, unsigned char *bufEnd,
+    int decodeData(const unsigned char *pSrc, const unsigned char *bufEnd,
                    char *method, int *methodLen, char **uri, int *uriLen);
     void skipRemainData();
     int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
@@ -262,7 +266,8 @@ private:
     H2FrameHeader  *m_pCurH2Header;
 
 private:
-    Hpack m_hpack;
+    struct lshpack_enc  m_hpack_enc;
+    struct lshpack_dec  m_hpack_dec;
 
     LS_NO_COPY_ASSIGN(H2Connection);
 };

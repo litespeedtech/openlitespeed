@@ -657,7 +657,11 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 {
     SslConnection *pConnection = (SslConnection *)SSL_get_ex_data(pSSL,
                                                 SslConnection::getConnIdx());
-    if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1)
+    if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1
+#if OPENSSL_VERSION_NUMBER > 0x10101000L
+        && SSL_version(pSSL) != TLS1_3_VERSION
+#endif
+    )
     {
         close(SSL_get_fd(pSSL));
 #ifndef OPENSSL_IS_BORINGSSL
@@ -828,11 +832,7 @@ void SslUtil::updateProtocol(SSL_CTX *pCtx, int method)
 
 #ifdef TLS1_3_VERSION
     if (method & SslContext::SSL_TLSv13)
-#ifdef OPENSSL_IS_BORINGSSL
         SSL_CTX_set_max_proto_version(pCtx, TLS1_3_VERSION);
-#else
-        SSL_CTX_set_max_version(pCtx, TLS1_3_VERSION);
-#endif
 #endif
 
 #ifdef SSL_OP_NO_TLSv1_3

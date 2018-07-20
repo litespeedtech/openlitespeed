@@ -334,7 +334,7 @@ static void displayInfo(session_list_t_ *psession_list)
             g_api->get_req_query_string(psession_list->m_plsi_session,&queryLength),
             chUriFilePath,
             g_api->get_status_code(psession_list->m_plsi_session),
-            g_api->is_resp_buffer_gzippped(psession_list->m_plsi_session),
+            g_api->get_resp_buffer_compress_method(psession_list->m_plsi_session),
             g_api->get_resp_headers_count(psession_list->m_plsi_session),
             g_api->is_resp_headers_sent(psession_list->m_plsi_session)
            );

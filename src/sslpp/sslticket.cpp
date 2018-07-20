@@ -197,6 +197,7 @@ int SslTicket::init(const char *pFileName, long int timeout)
     if (pFileName != NULL)
         m_pFile = new AutoStr2(pFileName);
     m_iLifetime = timeout;
+    m_pKeyStore->lock();
     if ((m_iOff = m_pKeyStore->find(s_pSTTickets, strlen(s_pSTTickets),
                                     &iValLen)) == 0)
     {
@@ -215,14 +216,16 @@ int SslTicket::init(const char *pFileName, long int timeout)
         else
         {
             if (loadKeyFromFile(pFileName, &m_aKeys[0]) == LS_FAIL)
+            {
+                m_pKeyStore->unlock();
                 return LS_FAIL;
+            }
             m_aKeys[0].expireSec = DateTime::s_curTime + m_iLifetime;
             m_idxCur = 0;
             m_idxNext = 1;
             m_idxPrev = SSLTICKET_NUMKEYS - 1;
         }
 
-        m_pKeyStore->lock();
         if ((m_iOff = m_pKeyStore->insert(s_pSTTickets, strlen(s_pSTTickets),
                                           NULL, sizeof(STShmData_t))) == 0)
         {
@@ -237,7 +240,6 @@ int SslTicket::init(const char *pFileName, long int timeout)
         m_pKeyStore->unlock();
         return LS_OK;
     }
-    m_pKeyStore->lock();
     pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
     memmove(m_aKeys, pShmData->m_aKeys,
             (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);

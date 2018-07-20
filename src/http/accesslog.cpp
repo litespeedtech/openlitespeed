@@ -157,6 +157,7 @@ int CustomFormat::parseFormat(const char *psFormat)
                 itemId = REF_REQ_TIME_MS;
                 break;
             case 'e':
+            case 'x':
                 if (!pBegin)
                     break;
                 itemId = REF_ENV;
