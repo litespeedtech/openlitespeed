@@ -1,6 +1,4 @@
 dnl
-dnl $Id$
-dnl
 dnl To rebuild, for Bob with his project in /home/user/proj/openlitespeed
 dnl    cd /home/user/proj/openlitespeed/src/modules/mod_lsphp/php-7.0 (yes, there are links in there)
 dnl    ./buildconf --force
