@@ -11,7 +11,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([openlitespeed],[1.5.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
-AM_CONFIG_HEADER(src/config.h:src/config.h.in)
+AC_CONFIG_HEADERS([src/config.h:src/config.h.in])
 
 dnl NOW change the default installation directory!
 AC_PREFIX_DEFAULT('/usr/local/lsws')
