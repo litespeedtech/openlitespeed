@@ -85,6 +85,20 @@ public:
         used(size);
         return size;
     }
+    
+    int reserve_append(int size)
+    {
+        if (size == 0)
+            return 0;
+        if (size > available())
+        {
+            if (grow(size - available()) == -1)
+                return -1;
+        }
+        used(size);
+        return size;
+    }
+    
 
     int appendAllocOnly(int size)
     {
@@ -107,6 +121,24 @@ public:
 
     static void xDestroy(AutoBuf *p, ls_xpool_t *pool)
     {   ls_buf_xd(p, pool);  }
+    
+    
+    int make_room_deepcopy(int pos, int size)
+    {
+        if (size == 0)
+            return 0;
+        if (pos > this->size())
+            return -1;
+        if (size > available())
+        {
+            if (grow(size - available()) == -1)
+                return -1;
+        }
+        memmove(begin() + pos + size, begin() + pos, this->size() - pos);
+        used(size);
+        return size;
+    }
+    
 };
 
 class XAutoBuf : private ls_xbuf_t

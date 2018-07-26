@@ -643,13 +643,16 @@ int ProxyConn::readRespBody()
                     if (ret > 1024 || (ret < (int)bufLen))
                         pHEC->flushResp();
                 }
-                if (m_pChunkIS->eos())
+                if (!m_pChunkIS || m_pChunkIS->eos())
                 {
                     ret = 0;
                     break;
                 }
-                pHEC->flushResp();
-                return ret;
+                else if (ret == 0 || m_iSsl == 0)
+                {
+                    pHEC->flushResp();
+                    return 0;
+                }
             }
             else
             {

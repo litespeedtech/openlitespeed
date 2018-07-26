@@ -18,9 +18,27 @@
 #ifndef HTTPHEADER_H
 #define HTTPHEADER_H
 
+#include <util/gpointerlist.h>
+#include <util/autobuf.h>
+
+#include <inttypes.h>
 #include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
+#include <new>
+
+class AutoStr2;
 
 #define HASH_TABLE_SIZE 66
+
+enum
+{
+    LSI_HEADER_ADD = 0,    //add a new line
+    LSI_HEADER_SET,
+    LSI_HEADER_APPEND, //Add with a comma to seperate
+    LSI_HEADER_MERGE,  //append unless exist
+    LSI_HEADER_UNSET,
+};
 
 class HttpHeader
 {
@@ -101,6 +119,7 @@ public:
     };
     static size_t getIndex(const char *pHeader);
     static size_t getIndex2(const char *pHeader);
+    static size_t getIndex(const char *pHeader, int len);
 
 
     static const char *getHeaderNameLowercase(int iIndex)
@@ -122,6 +141,125 @@ public:
 
     static const char *getHeaderName(int iIndex)
     {   return s_pHeaderNames[iIndex];    }
+};
+
+class HeaderOp
+{
+public:
+    enum
+    {
+        FLAG_RELEASE_NAME  = 1,
+        FLAG_RELEASE_VALUE = 2,
+        FLAG_INHERITED     = 4,
+        FLAG_COMPLEX_VALUE = 8,
+        FLAG_RELEASE_ENV   = 32,
+        FLAG_REQ_HDR_OP    = 64,
+    };
+    
+    //static size_t getRespHeaderIndex( const char * pHeader );
+    HeaderOp()
+    {
+        memset(&m_iIndex, 0, (char *)(&m_pEnv + 1) - (char *)&m_iIndex);
+    }
+
+    HeaderOp(int16_t index, const char *pName, u_int16_t nameLen,
+               const char  *pVal,
+               u_int16_t valLen, int8_t flag = 0, int8_t op = LSI_HEADER_ADD)
+        : m_iIndex(index)
+        , m_iOperator(op)
+        , m_iFlag(flag)
+        , m_iNameLen(nameLen)
+        , m_iValLen(valLen)
+        , m_pName(pName)
+        , m_pStrVal(pVal)
+        , m_pEnv(NULL)
+    {}
+
+    ~HeaderOp();
+
+    void setInheritFlag()
+    {
+        m_iFlag = (m_iFlag & ~(FLAG_RELEASE_NAME | FLAG_RELEASE_VALUE |
+                               FLAG_RELEASE_ENV)) | FLAG_INHERITED;
+    }
+
+    void inherit(const HeaderOp &rhs)
+    {
+        memmove(&m_iIndex, &rhs.m_iIndex,
+                (char *)(&m_pEnv + 1) - (char *)&m_iIndex);
+        setInheritFlag();
+    }
+
+    char isInherited() const    {   return m_iFlag & FLAG_INHERITED;        }
+    char isComplexValue() const {   return m_iFlag & FLAG_COMPLEX_VALUE;    }
+    
+    char isReqHeader() const    {   return m_iFlag & FLAG_REQ_HDR_OP;       }
+
+    const char *getName() const     {  return m_pName;     }
+    const char *getValue() const    { return m_pStrVal;       }
+    uint16_t getNameLen() const     {  return m_iNameLen;  }
+    uint16_t getValueLen() const    {  return m_iValLen;   }
+
+    int8_t   getOperator() const    {   return m_iOperator; }
+    int16_t  getIndex() const       {   return m_iIndex;    }
+    const AutoStr2 *getEnv() const  {   return m_pEnv;      }
+    void setEnv(const char *pEnv, int len);
+    
+private:
+
+    int16_t         m_iIndex;
+    int8_t          m_iOperator;
+    int8_t          m_iFlag;
+    uint16_t        m_iNameLen;
+    uint16_t        m_iValLen;
+    const char     *m_pName;
+    const char     *m_pStrVal;
+    AutoStr2       *m_pEnv;
+    
+    LS_NO_COPY_ASSIGN(HeaderOp);
+};
+
+class HttpHeaderOps
+{
+public:
+    HttpHeaderOps()
+        : m_buf(sizeof(HeaderOp) * 1)
+        , m_has_req_op(0)
+        , m_has_resp_op(0)
+    {}
+    ~HttpHeaderOps()
+    {
+        HeaderOp *iter;
+        for (iter = begin(); iter < end(); ++iter)
+            iter->~HeaderOp();
+    }
+
+    HeaderOp *begin()
+    {   return (HeaderOp *)m_buf.begin();     }
+    const HeaderOp *begin() const
+    {   return (const HeaderOp *)m_buf.begin();     }
+
+    HeaderOp *end()
+    {   return (HeaderOp *)m_buf.end();       }
+    const HeaderOp *end() const
+    {   return (const HeaderOp *)m_buf.end();       }
+
+    int size() const
+    {   return end() - begin();     }
+
+    HeaderOp *append(int16_t index, const char *pName, u_int16_t nameLen,
+                     const char *pVal, u_int16_t valLen, 
+                     int8_t op = LSI_HEADER_ADD, int is_req = 0);
+
+    void inherit(const HttpHeaderOps &parent);
+    int parseOp(const char *pLineBegin, const char *pCurEnd, int is_req);
+    short has_req_op() const    {   return m_has_req_op;    }
+    short has_resp_op() const   {   return m_has_resp_op;   }
+    
+private:
+    AutoBuf m_buf;
+    short   m_has_req_op;
+    short   m_has_resp_op;
 };
 
 #endif

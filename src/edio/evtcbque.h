@@ -62,7 +62,7 @@ public:
     LS_NO_COPY_ASSIGN(EvtcbQue);
     
 private:
-    int lock_add;
+    int m_lock;
     EvtcbQueNotifier *m_pNotifier;
 };
 #endif  //CALLBACKQUEUE_H

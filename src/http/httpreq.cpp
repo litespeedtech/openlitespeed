@@ -33,6 +33,8 @@
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
+#include <http/httprespheaders.h>
+
 #include "staticfilecachedata.h"
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
@@ -1518,6 +1520,11 @@ int HttpReq::processContext(const HttpContext *&pOldCtx)
     m_pMimeType = NULL;
     m_iMatchedLen = 0;
 
+    if (!m_pVHost)
+    {
+        LS_DBG_H(getLogSession(), "No Vhost found");
+        return SC_404;
+    }
     if (m_pVHost->getRootContext().getMatchList())
         processMatchList(&m_pVHost->getRootContext(), pURI, iURILen);
 
@@ -2498,12 +2505,6 @@ void HttpReq::appendHeaderIndexes(IOVec *pIOV, int cntUnknown)
 }
 
 
-const AutoBuf *HttpReq::getExtraHeaders() const
-{
-    return (m_pContext) ? m_pContext->getExtraHeaders() : NULL;
-}
-
-
 char HttpReq::isGeoIpOn() const
 {
     return (m_pContext) ? m_pContext->isGeoIpOn() : 0;
@@ -3108,6 +3109,245 @@ int HttpReq::toLocalAbsUrl(const char *pOrgUrl, int urlLen,
 }
 
 
+int HttpReq::createHeaderValue(const char *pFmt, int len,
+                               char *pBuf, int maxLen)
+{
+    char *pDest = pBuf;
+    char *pDestEnd = pBuf + maxLen - 10;
+    char *pEnvNameEnd;
+    const char *pEnd = pFmt + len;
+    while (pFmt < pEnd && pDest < pDestEnd)
+    {
+        const char *p = (const char *)memchr(pFmt, '%', pEnd - pFmt);
+        if (!p || p == pEnd - 1)
+            p = pEnd;
+        if (p > pFmt)
+        {
+            int l = p - pFmt;
+            if (l > pDestEnd - pDest)
+                l = pDestEnd - pDest;
+            memmove(pDest, pFmt, l);
+            pDest += l;
+        }
+        if (p == pEnd)
+            break;
+        pFmt = p + 1;
+        switch (*pFmt)
+        {
+        case 'D':
+            *pDest++ = *pFmt++;
+            *pDest++ = '=';
 
+            break;
+        case 't':
+            *pDest++ = *pFmt++;
+            *pDest++ = '=';
+            break;
+        case '{':
+            pEnvNameEnd = (char *)memchr(pFmt + 1, '}', pEnd - pFmt - 1);
+            if (pEnvNameEnd && (*(pEnvNameEnd + 1) == 'e'
+                                || *(pEnvNameEnd + 1) == 's'))
+            {
+                int envLen;
+                const char *pEnv = getEnv(pFmt + 1, pEnvNameEnd - pFmt - 1, envLen);
+                if (pEnv)
+                {
+                    if (envLen > pDestEnd - pDest)
+                        envLen = pDestEnd - pDest;
+                    memmove(pDest, pEnv, envLen);
+                    pDest += envLen;
+                }
+                pFmt = pEnvNameEnd + 2;
+            }
+            break;
+        case '%':
+            *pDest++ = *pFmt++;
+            break;
+        default:
+            *pDest++ = '%';
+            *pDest++ = *pFmt++;
+        }
+    }
+    return pDest - pBuf;
+}
+
+
+int HttpReq::dropReqHeader(int index)
+{
+    if (m_commonHeaderOffset[index] == 0)
+        return 0;
+    char *pOld = (char *)getHeader(index);
+    int oldLen = getHeaderLen(index);
+    char *pValEnd = pOld + oldLen;
+    char *pHeaderName = pOld - HttpHeader::getHeaderStringLen(index) - 1;
+    while(pOld[-1] != '\n')
+        --pOld;
+    --pOld;
+    if (pOld[-1] == '\r')
+        --pOld;
+    memset(pOld, ' ', pValEnd - pOld);
+    m_commonHeaderOffset[index] = 0;
+    return 0;
+}
+
+
+int HttpReq::applyOp(const HeaderOp *pOp)
+{
+    switch(pOp->getOperator())
+    {
+    case LSI_HEADER_UNSET:
+        if (pOp->getIndex() < HttpHeader::H_HEADER_END)
+        {
+            dropReqHeader(pOp->getIndex());
+        }
+
+        break;
+    case LSI_HEADER_SET:
+        if (pOp->getIndex() != HttpHeader::H_HEADER_END)
+        {
+            updateReqHeader(pOp->getIndex(), pOp->getValue(), pOp->getValueLen());
+            break;
+        }
+        //fall through
+    case LSI_HEADER_ADD:    //add a new line
+    case LSI_HEADER_APPEND: //Add with a comma to seperate
+        appendReqHeader(pOp->getName(), pOp->getNameLen(), 
+                        pOp->getValue(), pOp->getValueLen());
+        break;
+    case LSI_HEADER_MERGE:  //append unless exist
+        break;
+    }
+    return 0;
+}
+
+
+int HttpReq::applyOp(HttpRespHeaders *pRespHeader,
+                     const HeaderOp *pOp)
+{
+    if (pOp->isReqHeader())
+    {
+        if (pRespHeader)
+            return 0;
+        return ((HttpReq *)this)->applyOp(pOp);
+    }
+    else if (!pRespHeader)
+        return 0;
+    
+   if (pOp->getOperator() == LSI_HEADER_UNSET)
+    {
+        if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
+            pRespHeader->del((HttpRespHeaders::INDEX)pOp->getIndex());
+        else
+            pRespHeader->del(pOp->getName(), pOp->getNameLen());
+    }
+    else
+    {
+        const char *pValue = pOp->getValue();
+        int valLen = pOp->getValueLen();
+        char achBuf[8192];
+        int maxLen = sizeof(achBuf);
+        if (pOp->isComplexValue())
+        {
+            valLen = createHeaderValue(pValue, valLen, achBuf, maxLen);
+            pValue = achBuf;
+        }
+        if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
+            pRespHeader->add((HttpRespHeaders::INDEX)pOp->getIndex(),
+                             pValue, valLen, pOp->getOperator());
+        else
+            pRespHeader->add(pOp->getName(), pOp->getNameLen(),
+                             pValue, valLen, pOp->getOperator());
+    }
+    return 0;
+}
+
+
+void HttpReq::applyOps(HttpRespHeaders *pRespHeader,
+                       const HttpHeaderOps *pHeaders, int noInherited)
+{
+    const HeaderOp *iter;
+    if (!pHeaders)
+        return;
+    if (pRespHeader)
+    {
+        if (!pHeaders->has_resp_op())
+            return;
+    }
+    else
+    {
+        if (!pHeaders->has_req_op())
+            return;
+    }
+    for (iter = pHeaders->begin(); iter < pHeaders->end(); ++iter)
+    {
+        if (!noInherited || !iter->isInherited())
+            applyOp(pRespHeader, iter);
+    }
+}
+
+
+int HttpReq::applyHeaderOps(HttpRespHeaders *pRespHeader)
+{
+    if (m_pContext && m_pContext->getHeaderOps())
+    {
+        applyOps(pRespHeader, m_pContext->getHeaderOps(), 0);
+    }
+    return 0;
+}
+
+
+void HttpReq::addContentLenHeader(size_t len)
+{
+    char sLen[40];
+    int n = snprintf(sLen, sizeof(sLen), "%ld", (unsigned long)len);
+    updateReqHeader(HttpHeader::H_CONTENT_LENGTH, sLen, n);
+}
+
+void HttpReq::popHeaderEndCrlf()
+{
+    int pop = 1;
+    if (*(m_headerBuf.end() - 2) == '\r')
+        ++pop;
+    m_headerBuf.pop_end(pop);
+}
+
+
+void HttpReq::appendReqHeader( const char *pName, int iNameLen,
+                               const char *pValue, int iValLen)
+{
+    popHeaderEndCrlf();
+    if (m_headerBuf.available() < iValLen + iNameLen + 4)
+        m_headerBuf.grow(iValLen + iNameLen + 4 - m_headerBuf.available());
+    
+    m_headerBuf.append(pName, iNameLen);
+    m_headerBuf.append(": ", 2);
+    m_headerBuf.append(pValue, iValLen);
+    m_headerBuf.append("\r\n\r\n", 4);
+    m_iReqHeaderBufFinished = m_iHttpHeaderEnd = m_headerBuf.size();
+}
+
+
+void HttpReq::updateReqHeader(int index, const char *pNewValue,
+                              int newValueLen)
+{
+    char *pOld = (char *)getHeader(index);
+    int oldLen = getHeaderLen(index);
+    int diff = oldLen - newValueLen;
+    if (*pOld && diff >= 0)
+    {
+        memmove(pOld, pNewValue, newValueLen);
+        if (diff > 0)
+            memset(pOld + newValueLen, ' ', diff);
+    }
+    else
+    {
+        const char *pName = HttpHeader::getHeaderName(index);
+        int iNameLen = HttpHeader::getHeaderStringLen(index);
+        appendReqHeader(pName, iNameLen, pNewValue, newValueLen);
+        m_commonHeaderOffset[ index ] = m_headerBuf.size() - 4 - newValueLen;
+
+    }
+    m_commonHeaderLen[index] = newValueLen;
+}
 
 

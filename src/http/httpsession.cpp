@@ -1741,10 +1741,12 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
                 m_request.getUrlStaticFileData()->pData->getFileData()->getRef());
         }
         break;
+    case HandlerType::HT_PROXY:
+        m_request.applyHeaderOps(NULL);
+        //fall through
     case HandlerType::HT_FASTCGI:
     case HandlerType::HT_CGI:
     case HandlerType::HT_SERVLET:
-    case HandlerType::HT_PROXY:
     case HandlerType::HT_LSAPI:
     case HandlerType::HT_MODULE:
     case HandlerType::HT_LOADBALANCER:
@@ -3270,10 +3272,8 @@ void HttpSession::prepareHeaders()
 
     if (m_request.getLocation() != NULL)
         addLocationHeader();
-    const AutoBuf *pExtraHeaders = m_request.getExtraHeaders();
-    if (pExtraHeaders)
-        headers.parseAdd(pExtraHeaders->begin(), pExtraHeaders->size(),
-                         LSI_HEADEROP_ADD);
+    
+    m_request.applyHeaderOps(&headers);
 }
 
 /**

@@ -248,7 +248,7 @@ $_tipsdb['extWorkers'] = new DAttrHelp("Workers", 'List of worker groups previou
 
 $_tipsdb['externalredirect'] = new DAttrHelp("External Redirect", 'Specifies whether this redirect is external.  For external redirection, &quot;Status Code&quot; may be specified and  &quot;Destination URI&quot; can start either with &quot;/&quot; or &quot;http(s)://&quot;.  For internal redirection, &quot;Destination URI&quot; must start with &quot;/&quot;.', '', '', '');
 
-$_tipsdb['extraHeaders'] = new DAttrHelp("Extra Headers", 'Specifies extra response headers to be added. Multiple headers can be added, one header per line. Put &quot;NONE&quot; to disable headers inherited from parent content.', '', '&quot;[HeaderName]: [HeaderValue]&quot; in each line.', 'Cache-control: no-cache, no-store <br/>My-header: Custom header value');
+$_tipsdb['extraHeaders'] = new DAttrHelp("Header Operations", 'Specifies additional response/request headers to be added. Multiple header directives can be added with one directive per line. &quot;NONE&quot; can be used to disable parent header inheritance. If no directive is provided &#039;Header&#039; is assumed.', ' Syntax and usage are similar to <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_headers directives</a> for supported operations.<br/><br/> The &#039;Header&#039; directive is is optional and can be excluded or left in when copying rules from elsewhere without issue.', '[Header]|RequestHeader [condition] set|append|merge|add|unset header [value] [early|env=[!]variable]', 'set Cache-control no-cache<br/>append Cache-control no-store<br/>Header set My-header cust_header_val<br/>RequestHeader set My-req-header cust_req_header_val');
 
 $_tipsdb['extrapathenv'] = new DAttrHelp("Extra PATH Environment Variables", 'Additional PATH values that will be appended to the current PATH environment variables for build scripts.', '', 'path values separated by &quot;:&quot;', '');
 
@@ -720,6 +720,8 @@ $_tipsdb['EDTP:extAppType'] = array('You can set up external Fast CGI applicatio
 $_tipsdb['EDTP:extWorkers'] = array('Load balancing workers must be previously defined.','Available ExtApp Types are fcgi(Fast CGI App), lsapi(LSAPI App), servlet(Servlet/JSP Engine), proxy(Web Server).','Different types of external applications can be mixed in one load balancing cluster.');
 
 $_tipsdb['EDTP:externalredirect'] = array('Set up redirect URI here. If it is an external redirect, you can specify the status code. Internal  redirect has to start with &quot;/&quot;, external redirect can either start with &quot;/&quot; or with &quot;http(s)://&quot;.');
+
+$_tipsdb['EDTP:extraHeaders'] = array('The Header Operations setting is backwards compatible with the old &#039;header_name: value1,value2,...&#039; syntax, which is equivalent to setting the header + values using the &#039;Header&#039; directive.');
 
 $_tipsdb['EDTP:fcgiapp'] = array('Fast CGI context is a mount point of Fast CGI application. The Fast CGI Application must be pre-defined at server level or virtual host level.');
 

@@ -15862,7 +15862,7 @@ fi
 
 
 #AC_ARG_ENABLE([cacheredis],
-#              [AC_HELP_STRING([--enable-redis],
+#              [AS_HELP_STRING([--enable-redis],
 #                              [Enable redis for cache module (Using redis is disabled by default)])],
 #               [ AC_DEFINE([LS_ENABLE_REDIS], [1], [Define if cache module needs redis feature])
 #                 echo "Cache redis enabled!!!" ], [])
@@ -18448,6 +18448,7 @@ DEFS=-DHAVE_CONFIG_H
 
 ac_libobjs=
 ac_ltlibobjs=
+U=
 for ac_i in : $LIBOBJS; do test "x$ac_i" = x: && continue
   # 1. Remove the extension, and $U if already installed.
   ac_script='s/\$U\././;s/\.o$//;s/\.obj$//'

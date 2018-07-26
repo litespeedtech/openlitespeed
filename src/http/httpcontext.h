@@ -49,6 +49,7 @@ class RewriteMapList;
 class HttpSession;
 class ModuleConfig;
 class HttpSessionHooks;
+class HttpHeaderOps;
 
 #define UID_SERVER          0
 #define UID_FILE            1
@@ -184,7 +185,7 @@ typedef struct _CTX_INT
     PHPConfig            *m_pPHPConfig;
     StatusUrlMap         *m_pCustomErrUrls;
     ContextList          *m_pFilesMatchList;
-    AutoBuf              *m_pExtraHeader;
+    HttpHeaderOps        *m_pHeaderOps;
     SSIConfig            *m_pSSIConfig;
 
     HttpSessionHooks    *m_pSessionHooks;
@@ -463,9 +464,9 @@ public:
 
     //HttpContext * dup() const;
 
-    int setExtraHeaders(const char *pLogId, const char *pHeaders, int len);
-    const AutoBuf *getExtraHeaders() const
-    {   return m_pInternal->m_pExtraHeader;     }
+    int setHeaderOps(const char *pLogId, const char *pHeaders, int len);
+    const HttpHeaderOps *getHeaderOps() const
+    {   return m_pInternal->m_pHeaderOps;     }
 
     const GSockAddr *getWebSockAddr() const { return &m_pInternal->m_GSockAddr;   }
     void setWebSockAddr(GSockAddr &gsockAddr);

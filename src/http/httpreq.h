@@ -411,6 +411,8 @@ public:
     int getHeaderLen(size_t index) const
     {   return m_commonHeaderLen[ index ];      }
 
+    int dropReqHeader(int index);
+    
     const char *getHostStr()
     {   return m_headerBuf.getp(m_iHostOff);    }
     const char *getOrgReqLine() const
@@ -657,7 +659,9 @@ public:
     off_t getTotalLen() const
     {   return m_lEntityFinished + getHttpHeaderLen();  }
 
-    const AutoBuf *getExtraHeaders() const;
+    void addContentLenHeader(size_t len);
+    void popHeaderEndCrlf();
+    int  applyHeaderOps(HttpRespHeaders *pRespHeader);
 
     int parseMethod(const char *pCur, const char *pBEnd);
     int parseHost(const char *pCur, const char *pBEnd);
@@ -750,6 +754,21 @@ public:
                                  int cookieLen);
     CookieList  &getCookieList() { return   m_cookies; }
 
+
+    int applyOp(const HeaderOp *pOp);
+    int  applyOp(HttpRespHeaders *pRespHeader,
+                 const HeaderOp *pOp);
+    void applyOps(HttpRespHeaders *pRespHeader,
+                  const HttpHeaderOps *getHeaders, int arg2);
+
+    int createHeaderValue(const char *pFmt, int len,
+                          char *pBuf, int maxLen);
+    void eraseHeader(key_value_pair * pHeader);
+    
+    void updateReqHeader(int index, const char *pNewValue,
+                         int newValueLen);
+    void appendReqHeader( const char *pName, int iNameLen,
+                          const char *pValue, int iValLen);
 
     int checkUrlStaicFileCache();
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}

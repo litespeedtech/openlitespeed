@@ -77,6 +77,11 @@ public:
                            (ls_str_t *const *)begin, (ls_str_t *const *)end, case_sens);
     }
     static StringList *parseMatchPattern(const char *pPattern);
+    static const char *memNextArg(const char **s, int len,
+                                  const char *pDelim = NULL, int delimLen = 0);
+    static char *memNextArg(char **s, int len, const char *pDelim = NULL,
+                            int delimLen = 0);
+    
     static const char *strNextArg(const char *&s, const char *pDelim = NULL)
     {   return ls_strnextarg(&s, pDelim);   }
     static char *strNextArg(char *&s, const char *pDelim = NULL)

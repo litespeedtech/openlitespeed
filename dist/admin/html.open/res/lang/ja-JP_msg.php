@@ -260,7 +260,7 @@ $_gmsg['l_extlb'] = 'ロードバランサー';
 $_gmsg['l_extlogger'] = 'Piped Logger';
 $_gmsg['l_extlsapi'] = 'LiteSpeed SAPI アプリ';
 $_gmsg['l_extproxy'] = 'Webサーバー';
-$_gmsg['l_extraHeaders'] = 'Extra Headers';
+$_gmsg['l_extraHeaders'] = 'Header Operations';
 $_gmsg['l_extservlet'] = 'サーブレットエンジン';
 $_gmsg['l_fcgiapp'] = 'FastCGI アプリ';
 $_gmsg['l_fileaccess'] = 'ファイルアクセス';
@@ -677,7 +677,7 @@ $_gmsg['buildphp_confparam'] = 'パラメータの設定';
 $_gmsg['buildphp_confsaved'] = '設定が正常に保存されました。 あなたは次のビルドのためにそれを取り出すことができます。';
 $_gmsg['buildphp_detaillog'] = '詳細ログ';
 $_gmsg['buildphp_eaccelerator'] = '(Opcode Cache) PHP 5.2〜5.4のみサポート';
-$_gmsg['buildphp_enableextnote'] = '拡張機能を有効にするには、php.ini設定ファイルに以下が追加されていることを確認してください。 
+$_gmsg['buildphp_enableextnote'] = '拡張機能を有効にするには、php.ini設定ファイルに以下が追加されていることを確認してください。
 				また、拡張機能がインストールされているディレクトリを特定するためにログの詳細を確認し、
 				php.iniの設定ファイルのextensionsパスにディレクトリを追加する必要があります。';
 

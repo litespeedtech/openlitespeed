@@ -31,6 +31,7 @@
 #include <http/statusurlmap.h>
 #include <http/urimatch.h>
 #include <http/userdir.h>
+#include <http/httpheader.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/lsiapihooks.h>
 #include <lsiapi/modulemanager.h>
@@ -98,6 +99,60 @@ HttpContext::~HttpContext()
         delete m_pInternal->m_pSessionHooks;
 }
 
+int HttpContext::setHeaderOps(const char *pLogId, const char *pHeaders,
+                              int len)
+{
+    if (allocateInternal())
+        return -1;
+    if (!(m_iConfigBits & BIT_EXTRA_HEADER))
+    {
+        m_pInternal->m_pHeaderOps = new HttpHeaderOps();
+        if (!m_pInternal->m_pHeaderOps)
+        {
+            LS_WARN("[%s] Failed to allocate header list", pLogId);
+            return -1;
+        }
+        m_iConfigBits |= BIT_EXTRA_HEADER;
+    }
+    if (strcasecmp(pHeaders, "none") == 0)
+        return 0;
+
+    const char *pEnd = pHeaders + len;
+    const char *pLineBegin, *pLineEnd;
+    pLineBegin = pHeaders;
+    while ((pLineEnd = StringTool::getLine(pLineBegin, pEnd)))
+    {
+        const char *pCurEnd = pLineEnd;
+        StringTool::strTrim(pLineBegin, pCurEnd);
+        if (pLineBegin < pCurEnd)
+        {
+            int is_req = 0;
+            if (strncasecmp(pLineBegin, "header ", 7) == 0)
+                pLineBegin += 7;
+            else if (strncasecmp(pLineBegin, "requestheader ", 14) == 0)
+            {
+                pLineBegin += 14;
+                is_req = 1;
+            }
+            StringTool::strTrim(pLineBegin, pCurEnd);
+            if (m_pInternal->m_pHeaderOps->parseOp(pLineBegin, pCurEnd, 
+                                                   is_req) == -1)
+            {
+                char *p = (char *)pCurEnd;
+                *p = '0';
+                LS_WARN("[%s] Invalid Header: %s", pLogId, pLineBegin);
+                *p = '\n';
+            }
+
+        }
+
+        pLineBegin = pLineEnd;
+        while (isspace(*pLineBegin))
+            ++pLineBegin;
+    }
+    return 0;
+}
+
 
 void HttpContext::releaseHTAConf()
 {
@@ -115,8 +170,9 @@ void HttpContext::releaseHTAConf()
             delete m_pInternal->m_pRequired;
         if ((m_iConfigBits & BIT_FILES_MATCH) && (m_pInternal->m_pFilesMatchList))
             delete m_pInternal->m_pFilesMatchList;
-        if ((m_iConfigBits & BIT_EXTRA_HEADER) && (m_pInternal->m_pExtraHeader))
-            delete m_pInternal->m_pExtraHeader;
+        if ((m_iConfigBits & BIT_EXTRA_HEADER) && (m_pInternal->m_pHeaderOps))
+            delete m_pInternal->m_pHeaderOps;
+
         releaseHTAuth();
         releaseAccessControl();
         releaseMIME();
@@ -380,59 +436,62 @@ void HttpContext::setHTAuth(HTAuth *pHTAuth)
 }
 
 
-int HttpContext::setExtraHeaders(const char *pLogId, const char *pHeaders,
-                                 int len)
-{
-    if (allocateInternal())
-        return LS_FAIL;
-    if (!(m_iConfigBits & BIT_EXTRA_HEADER))
-    {
-        m_pInternal->m_pExtraHeader = new AutoBuf(512);
-        if (!m_pInternal->m_pExtraHeader)
-        {
-            LS_WARN("[%s] Failed to allocate buffer for extra headers", pLogId);
-            return LS_FAIL;
-        }
-    }
-    m_iConfigBits |= BIT_EXTRA_HEADER;
-    if (strcasecmp(pHeaders, "none") == 0)
-        return 0;
+// int HttpContext::setExtraHeaders(const char *pLogId, const char *pHeaders,
+//                                  int len)
+// {
+//     if (allocateInternal())
+//         return LS_FAIL;
+//     if (!(m_iConfigBits & BIT_EXTRA_HEADER))
+//     {
+//         m_pInternal->m_pExtraHeader = new AutoBuf(512);
+//         if (!m_pInternal->m_pExtraHeader)
+//         {
+//             LS_WARN("[%s] Failed to allocate buffer for extra headers", pLogId);
+//             return LS_FAIL;
+//         }
+//     }
+//     m_iConfigBits |= BIT_EXTRA_HEADER;
+//     if (strcasecmp(pHeaders, "none") == 0)
+//         return 0;
+// 
+//     const char *pEnd = pHeaders + len;
+//     const char *pLineBegin, *pLineEnd;
+//     pLineBegin = pHeaders;
+//     while ((pLineEnd = StringTool::getLine(pLineBegin, pEnd)))
+//     {
+//         const char *pCurEnd = pLineEnd;
+//         StringTool::strTrim(pLineBegin, pCurEnd);
+//         if (pLineBegin < pCurEnd)
+//         {
+//             const char *pHeaderNameEnd = strpbrk(pLineBegin, ": ");
+//             if ((pHeaderNameEnd) && (pHeaderNameEnd > pLineBegin) &&
+//                 (pHeaderNameEnd + 1 < pCurEnd))
+//             {
+//                 m_pInternal->m_pExtraHeader->append(
+//                     pLineBegin, pHeaderNameEnd - pLineBegin);
+//                 m_pInternal->m_pExtraHeader->appendUnsafe(':');
+//                 m_pInternal->m_pExtraHeader->append(pHeaderNameEnd + 1,
+//                                                     pCurEnd - pHeaderNameEnd - 1);
+//                 m_pInternal->m_pExtraHeader->append("\r\n", 2);
+//             }
+//             else
+//             {
+//                 char *p = (char *)pCurEnd;
+//                 *p = '0';
+//                 LS_WARN("[%s] Invalid Header: %s", pLogId, pLineBegin);
+//                 *p = '\n';
+//             }
+//         }
+// 
+//         pLineBegin = pLineEnd;
+//         while (isspace(*pLineBegin))
+//             ++pLineBegin;
+//     }
+//     return 0;
+// }
 
-    const char *pEnd = pHeaders + len;
-    const char *pLineBegin, *pLineEnd;
-    pLineBegin = pHeaders;
-    while ((pLineEnd = StringTool::getLine(pLineBegin, pEnd)))
-    {
-        const char *pCurEnd = pLineEnd;
-        StringTool::strTrim(pLineBegin, pCurEnd);
-        if (pLineBegin < pCurEnd)
-        {
-            const char *pHeaderNameEnd = strpbrk(pLineBegin, ": ");
-            if ((pHeaderNameEnd) && (pHeaderNameEnd > pLineBegin) &&
-                (pHeaderNameEnd + 1 < pCurEnd))
-            {
-                m_pInternal->m_pExtraHeader->append(
-                    pLineBegin, pHeaderNameEnd - pLineBegin);
-                m_pInternal->m_pExtraHeader->appendUnsafe(':');
-                m_pInternal->m_pExtraHeader->append(pHeaderNameEnd + 1,
-                                                    pCurEnd - pHeaderNameEnd - 1);
-                m_pInternal->m_pExtraHeader->append("\r\n", 2);
-            }
-            else
-            {
-                char *p = (char *)pCurEnd;
-                *p = '0';
-                LS_WARN("[%s] Invalid Header: %s", pLogId, pLineBegin);
-                *p = '\n';
-            }
-        }
 
-        pLineBegin = pLineEnd;
-        while (isspace(*pLineBegin))
-            ++pLineBegin;
-    }
-    return 0;
-}
+
 
 
 void HttpContext::releaseHTAuth()
@@ -605,7 +664,12 @@ void HttpContext::inherit(const HttpContext *pRootContext)
             m_pInternal->m_pFilesMatchList = m_pParent->m_pInternal->m_pFilesMatchList;
 
         if (!(m_iConfigBits & BIT_EXTRA_HEADER))
-            m_pInternal->m_pExtraHeader = m_pParent->m_pInternal->m_pExtraHeader;
+            m_pInternal->m_pHeaderOps = m_pParent->m_pInternal->m_pHeaderOps;
+        else
+        {
+            if (m_pParent->m_pInternal->m_pHeaderOps)
+                m_pInternal->m_pHeaderOps->inherit(*m_pParent->m_pInternal->m_pHeaderOps);
+        }
 
         if (!(m_iConfigBits & BIT_MODULECONFIG))
             m_pInternal->m_pModuleConfig = m_pParent->m_pInternal->m_pModuleConfig;
@@ -1352,7 +1416,7 @@ int HttpContext::config(const RewriteMapList *pMapList,
     pValue = pContextNode->getChildValue("extraHeaders");
 
     if (pValue && (*pValue))
-        setExtraHeaders(TmpLogId::getLogId(), pValue, (int) strlen(pValue));
+        setHeaderOps( TmpLogId::getLogId(), pValue, (int)strlen(pValue));
 
     pValue = pContextNode->getChildValue("addDefaultCharset");
 
