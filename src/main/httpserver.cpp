@@ -2083,8 +2083,11 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         0
 #endif
     );
+    pValue = pNode->getChildValue("compressibleTypes");
+    if (pValue == NULL)
+        pValue = "default";
     HttpMime::getMime()->setCompressibleByType(
-        pNode->getChildValue("compressibleTypes"), NULL, TmpLogId::getLogId());
+        pValue, NULL, TmpLogId::getLogId());
     StaticFileCacheData::setUpdateStaticGzipFile(
         currentCtx.getLongValue(pNode, "gzipAutoUpdateStatic", 0, 1, 0),
         currentCtx.getLongValue(pNode, "gzipStaticCompressLevel", 1, 9, 6),

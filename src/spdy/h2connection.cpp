@@ -581,9 +581,16 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
         }
         else
         {
-            if (id > m_uiLastStreamId)
-                return LS_FAIL;
-            //sendRstFrame(id, H2_ERROR_STREAM_CLOSED);
+            if ((id & 1) == 1)
+            {
+                if (id > m_uiLastStreamId)
+                    return LS_FAIL;
+            }
+            else
+            {
+                if (id > m_uiPushStreamId)
+                    return LS_FAIL;
+            }
         }
 
         //flush();
@@ -599,7 +606,7 @@ int H2Connection::processRstFrame(H2FrameHeader *pHeader)
 
     if (streamID == 0)
         return LS_FAIL;
-    if (streamID % 2 != 0)
+    if ((streamID & 1) != 0)
     {
         if (streamID > m_uiLastStreamId)
             return LS_FAIL;
@@ -867,7 +874,7 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
         return LS_FAIL;
     }
 
-    if (id % 2 == 0)
+    if ((id & 1) == 0)
     {
         LS_DBG_L(getLogSession(), "invalid HEADER frame id %d ",
                     id);
@@ -1137,7 +1144,7 @@ void H2Connection::recycleStream(StreamMap::iterator it)
 {
     H2Stream *pH2Stream = it.second();
     
-    if (pH2Stream->getStreamID() % 2 == 0)
+    if ((pH2Stream->getStreamID() & 1) == 0)
         --m_iCurPushStreams;
 
     m_mapStream.erase(it);

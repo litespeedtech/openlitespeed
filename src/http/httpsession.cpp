@@ -1041,7 +1041,7 @@ int HttpSession::processNewReqInit()
     if (getStream()->isSpdy())
     {
         m_request.keepAlive(0);
-        m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
+        //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
     if ((httpServConf.getUseProxyHeader() == 1)
         || ((httpServConf.getUseProxyHeader() == 2)

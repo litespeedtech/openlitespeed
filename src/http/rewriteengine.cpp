@@ -675,8 +675,9 @@ int RewriteEngine::processRule(const RewriteRule *pRule,
     {
         if (processCond(pCond, pSession))
         {
-            if (!((pCond->getFlag() & COND_FLAG_OR) &&
-                  (pCond->next())))
+            if (!((pCond->getFlag() & COND_FLAG_OR)
+                //&& pCond->next()
+                ))
                 return LS_FAIL;
         }
         else
