@@ -97,7 +97,7 @@ install_lsphp7_centos()
 {
     action=install
     ND=nd
-    LSPHPVER=70
+    LSPHPVER=71
     yum -y $action epel-release
     rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
     yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
@@ -117,7 +117,7 @@ install_lsphp7_centos()
 
 install_lsphp7_debian()
 {
-    LSPHPVER=70
+    LSPHPVER=71
 
     grep -Fq  "http://rpms.litespeedtech.com/debian/" /etc/apt/sources.list.d/lst_debian_repo.list
     if [ $? != 0 ] ; then
@@ -190,6 +190,14 @@ check_os()
                     OSNAME=ubuntu
                     OSVER=xenial
                     MARIADBCPUARCH="arch=amd64,i386,ppc64el"
+                else
+                    cat /etc/lsb-release | grep "DISTRIB_RELEASE=18." >/dev/null
+                    if [ $? = 0 ] ; then
+                        OSNAMEVER=UBUNTU18
+                        OSNAME=ubuntu
+                        OSVER=bionic
+                        MARIADBCPUARCH="arch=amd64"
+                    fi
                 fi
             fi
         fi    
