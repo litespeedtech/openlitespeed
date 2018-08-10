@@ -988,9 +988,9 @@ SslContext *SslContext::config(const XmlNode *pNode)
 #endif
 
     sessionCache = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "sslSessionCache", 0, 1, 0);
+                   "sslSessionCache", 0, 1, 1);
     sessionTicket = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                    "sslSessionTickets", 0, 1, -1);
+                    "sslSessionTickets", 0, 1, 1);
 
     if (sessionCache != 0)
     {
@@ -1006,7 +1006,7 @@ SslContext *SslContext::config(const XmlNode *pNode)
             return NULL;
         }
     }
-    else if (sessionTicket == 0)
+    else// if (sessionTicket == 0)
         disableSessionTickets();
 
     if (cv)

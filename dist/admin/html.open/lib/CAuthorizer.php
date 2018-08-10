@@ -203,7 +203,9 @@ class CAuthorizer
         $auth = false;
         $authUser1 = escapeshellcmd($authUser);
 
-        if (($authUser === $authUser1) && strlen($authUser) && strlen($authPass)) {
+        if (($authUser === $authUser1)
+                && !preg_match('/[:\/]/', $authUser)
+                && strlen($authUser) && strlen($authPass)) {
             $filename = SERVER_ROOT . 'admin/conf/htpasswd';
             $fd = fopen($filename, 'r');
             if (!$fd) {
@@ -263,11 +265,12 @@ class CAuthorizer
 
         $emails = Service::ServiceData(SInfo::DATA_ADMIN_EMAIL);
         if ($emails != null) {
-            $hostname = gethostbyaddr($ip);
             $date = date("F j, Y, g:i a");
 
-            $repl = array('%%date%%'     => $date, '%%authUser%%' => $authUser, '%%ip%%'       => $ip,
-                '%%hostname%%' => $hostname, '%%url%%'      => $url);
+            $repl = array('%%date%%'     => $date,
+                '%%authUser%%' => $authUser,
+                '%%ip%%'       => $ip,
+                '%%url%%'      => $url);
 
             $subject = DMsg::UIStr('mail_failedlogin');
             $contents = DMsg::UIStr('mail_failedlogin_c', $repl);

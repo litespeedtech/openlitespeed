@@ -727,7 +727,6 @@ $_gmsg['mail_failedlogin_c'] = 'A recent login attempt to LiteSpeed web admin co
 	Date/Time: %%date%%
 	Username: %%authUser%%
 	IP Address: %%ip%%
-	Hostname: %%hostname%%
 	URL: %%url%%
 
 If you do not recognize the IP address, please follow below recommended ways to secure your admin console:

@@ -722,7 +722,6 @@ $_gmsg['mail_failedlogin_c'] = '最近のLiteSpeed Web管理コンソールへ�
 	日付/時刻: %%date%%
 	ユーザー名: %%authUser%%
 	IPアドレス: %%ip%%
-	ホスト名: %%hostname%%
 	URL: %%url%%
 
 IPアドレスがわからない場合は、管理コンソールを保護するために以下の推奨方法に従ってください:

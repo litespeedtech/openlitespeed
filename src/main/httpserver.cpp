@@ -2155,7 +2155,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
     int iSslCacheSize;
     int32_t iSslCacheTimeout;
-    if (currentCtx.getLongValue(pNode, "sslSessionCache", 0, 1, 0) != 0)
+    if (currentCtx.getLongValue(pNode, "sslSessionCache", 0, 1, 1) != 0)
     {
         iSslCacheSize = currentCtx.getLongValue(pNode, "sslSessionCacheSize",
                                                 0, INT_MAX, 1000000);
@@ -2173,7 +2173,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
     const char *pTKFile;
     char achTKFile[MAX_PATH_LEN];
-    if (currentCtx.getLongValue(pNode, "sslSessionTickets", 0, 1, 0) == 1)
+    if (currentCtx.getLongValue(pNode, "sslSessionTickets", 0, 1, 1) == 1)
     {
         if ((pTKFile = pNode->getChildValue("sslSessionTicketKeyFile")) != NULL)
         {

@@ -700,7 +700,6 @@ $_gmsg['mail_failedlogin_c'] = '近期发生了一次失败的LiteSpeed登陆。
 	日期/时间: %%date%%
 	用户名: %%authUser%%
 	IP 地址: %%ip%%
-	Hostname: %%hostname%%
 	URL: %%url%%
 
 如果你并不熟悉该IP地址，请按照下列建议来保护管理员控制台：
