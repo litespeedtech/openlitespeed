@@ -413,6 +413,12 @@ int StaticFileHandler::process(HttpSession *pSession,
                     " %p, pPath is %p.", pInfo, pReq, pPath);
         return SC_500;
     }
+    
+    /**
+     * pPath not really in use, just in case need to LOG an error.
+     */
+    if (!pPath)
+        pPath = pCache->getRealPath();
 
     if (pSession->getFlag(HSF_STX_FILE_CACHE_READY))
         pReq->setMimeType(pCache->getMimeType());
@@ -433,7 +439,7 @@ int StaticFileHandler::process(HttpSession *pSession,
             LS_INFO(pReq->getLogSession(), "Permission of file [%s] does not "
                     "meet the requirements of 'Required bits' or "
                     "'Restricted bits', access denied.",
-                    pReq->getRealPath()->c_str());
+                    pPath ? pPath->c_str() : "FILE_PATH_INVALID");
             return SC_403;
         }
     }
