@@ -25,6 +25,10 @@
  * @file
  */
 
+#if defined(__aarch64__)
+#include <bits/types.h>
+#endif
+
 #define ls_atomic_inline ls_always_inline
 
 typedef int32_t  ls_atom_32_t;
@@ -47,6 +51,8 @@ typedef union
     };
 #if defined( __i386__ )||defined( __arm__ )
     uint64_t   m_whole;
+#elif defined(__aarch64__)
+    unsigned __int128 m_whole;
 #elif defined( __x86_64 )||defined( __x86_64__ )
 #if 0
     unsigned __int128 m_whole;
@@ -57,10 +63,13 @@ typedef union
 } __attribute__((__aligned__(
 #if defined( __i386__ )||defined( __arm__ )
                      8
+#elif defined(__aarch64__)
+                     16
 #elif defined( __x86_64 )||defined( __x86_64__ )
                      16
 #endif
                  ))) ls_atom_xptr_t;
+
 
 #define ls_atomic_and_fetch         __sync_and_and_fetch
 #define ls_atomic_or_fetch          __sync_or_and_fetch
@@ -130,10 +139,29 @@ ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
     return;
 }
 
+#elif defined( __aarch64__ )
+ls_atomic_inline char ls_atomic_dcas(ls_atom_xptr_t *ptr,
+                                     ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
+{
+    return __atomic_compare_exchange(&ptr->m_whole, &cmpptr->m_whole,
+                                     &newptr->m_whole, 0, __ATOMIC_SEQ_CST,
+                                     __ATOMIC_SEQ_CST);
+}
+
+ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
+                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+{
+    oldptr->m_whole = cmpptr->m_whole;
+    __atomic_compare_exchange(&ptr->m_whole, &oldptr->m_whole,
+                                    &newptr->m_whole, 0, __ATOMIC_SEQ_CST,
+                                    __ATOMIC_SEQ_CST);
+    return;
+}
+
 #endif
 
 #else // USE_GCC_ATOMIC
-#if defined( __arm__ )
+#if defined( __arm__ )||defined( __aarch64__ )
 #error "GCC atomics required on ARM (USE_GCC_ATOMIC)."
 #endif
 

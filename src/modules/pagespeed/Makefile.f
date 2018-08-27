@@ -1,6 +1,7 @@
 CC=g++
 OS := $(shell uname)
-MACHINE_TYPE := $(shell uname -m)
+MACHINE_TYPE := $(shell getconf LONG_BIT)
+ARCH_TYPE := $(shell uname -m)
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0
 
 INCLUDE_ARCH=
@@ -12,14 +13,18 @@ ifeq ($(OS), Darwin)
 	$(shell echo Sorry, pagespeed does not support MAC OS)
 
 else
-	ifeq ($(MACHINE_TYPE), x86_64)
+	ifeq ($(MACHINE_TYPE), 64)
 	    INCLUDE_ARCH = arch/linux/x64
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/x64/
 	    CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS)
 	else
+        ifeq ($(ARCH_TYPE), x86_64)
+            ARCH_TYPE = i386
+        endif
+        
 	    INCLUDE_ARCH = arch/linux/ia32
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/ia32/
-	    CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(MACHINE_TYPE)
+	    CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(ARCH_TYPE)
 	endif
 	LDFLAGS= -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
 endif

@@ -196,5 +196,22 @@ vhTemplate EasyRailsWithSuEXEC{
 }
 
 module cache {
-  ls_enabled              0
+    ls_enabled          0
+
+    checkPrivateCache   1
+    checkPublicCache    1
+    maxCacheObjSize     10000000
+    maxStaleAge         200
+    qsCache             1
+    reqCookieCache      1
+    respCookieCache     1
+    ignoreReqCacheCtrl  1
+    ignoreRespCacheCtrl 0
+
+    enableCache         0
+    expireInSeconds     3600
+    enablePrivateCache  0
+    privateExpireInSeconds 3600
+
 }
+

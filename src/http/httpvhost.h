@@ -231,8 +231,9 @@ public:
     int addContext(HttpContext *pContext)
     {   return m_contexts.add(pContext);          }
 
-    const HttpContext *bestMatch(const char *pURI, size_t iUriLen) const
-    {   return m_contexts.bestMatch(pURI, iUriLen);        }
+    bool dirMatch(const HttpContext *pContext, const char *pURI, size_t iUriLen,
+                  AutoStr2 *missingDir) const;
+    HttpContext *bestMatch(const char *pURI, size_t iUriLen);
 
     const HttpContext *matchLocation(const char *pURI, size_t iUriLen,
                                      int regex = 0) const;

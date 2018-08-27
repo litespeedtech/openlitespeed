@@ -278,7 +278,7 @@ class CValidation
             return 1;
         }
 
-        $chktype = array('uint', 'name', 'vhname', 'dbname', 'sel', 'sel1', 'sel2',
+        $chktype = array('uint', 'name', 'vhname', 'dbname', 'admname', 'sel', 'sel1', 'sel2',
             'bool', 'file', 'filep', 'file0', 'file1', 'filetp', 'filevh', 'path',
             'uri', 'expuri', 'url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse');
 
@@ -331,6 +331,26 @@ class CValidation
         return 1;
     }
 
+    protected function chkAttr_admname($attr, $node)
+    {
+        $val = preg_replace("/\s+/", ' ', $node->Get(CNode::FLD_VAL));
+        $node->SetVal($val);
+        $err = '';
+        if (strlen($val) > 25) {
+            $err = 'name cannot be longer than 25 characters';
+        } else {
+            $v1 = escapeshellcmd($val);
+            if ($v1 !== $val) {
+                $err = 'invalid characters in name';
+            }
+        }
+        if ($err != '') {
+            $node->SetErr($err);
+            return -1;
+        }
+        return 1;
+    }
+
     protected function chkAttr_name($attr, $node)
     {
         $node->SetVal(preg_replace("/\s+/", ' ', $node->Get(CNode::FLD_VAL)));
@@ -347,7 +367,7 @@ class CValidation
             return -1;
         }
         if (strlen($val) > 100) {
-            $err = 'name can not be longer than 100 characters';
+            $err = 'name cannot be longer than 100 characters';
             return -1;
         }
         return 1;

@@ -40,7 +40,19 @@ static void ls_objarray_releasearray(ls_objarray_t *pThis,
         ls_pfree(ls_objarray_getarray(pThis));
 }
 
-void ls_objarray_release(ls_objarray_t *pThis, ls_xpool_t *pool)
+
+void ls_objarray_release(ls_objarray_t *pThis)
+{
+    if (pThis->parray != NULL)
+        ls_pfree(ls_objarray_getarray(pThis));
+    pThis->sizemax = 0;
+    pThis->sizenow = 0;
+    pThis->objsize = 0;
+    pThis->parray = NULL;
+}
+
+
+void ls_objarray_release_xpool(ls_objarray_t *pThis, ls_xpool_t *pool)
 {
     if (pThis->parray != NULL)
         ls_objarray_releasearray(pThis, pool);
@@ -50,13 +62,36 @@ void ls_objarray_release(ls_objarray_t *pThis, ls_xpool_t *pool)
     pThis->parray = NULL;
 }
 
-void ls_objarray_setcapacity(ls_objarray_t *pThis, ls_xpool_t *pool,
+
+int ls_objarray_setcapacity(ls_objarray_t *pThis, int numObj)
+{
+    if (pThis->sizemax < numObj)
+    {
+        void * array = ls_prealloc(
+                ls_objarray_getarray(pThis), numObj * ls_objarray_getobjsize(pThis));
+        if (!array)
+            return -1;
+        pThis->parray = array;
+        pThis->sizemax = numObj;
+    }
+    return 0;
+}
+
+
+int ls_objarray_setcapacity_xpool(ls_objarray_t *pThis, ls_xpool_t *pool,
                              int numObj)
 {
     if (pThis->sizemax < numObj)
-        pThis->parray = ls_objarray_alloc(pThis, pool, numObj);
-    pThis->sizemax = numObj;
+    {
+        void * array = ls_objarray_alloc(pThis, pool, numObj);
+        if (!array)
+            return -1;
+        pThis->parray = array;
+        pThis->sizemax = numObj;
+    }
+    return 0;
 }
+
 
 
 

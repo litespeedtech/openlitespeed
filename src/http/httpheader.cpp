@@ -16,7 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpheader.h"
+#include <http/httprespheaders.h>
 
+#include <util/autobuf.h>
+#include <util/autostr.h>
+#include <util/gpointerlist.h>
 #include <util/stringtool.h>
 
 #include <ctype.h>
@@ -282,6 +286,14 @@ size_t HttpHeader::getIndex2(const char *pHeader)
 }
 
 
+size_t HttpHeader::getIndex(const char *pHeader, int len)
+{
+    size_t idx = getIndex(pHeader);
+    if (idx < H_HEADER_END && getHeaderStringLen(idx) == len)
+        return idx;
+    return H_HEADER_END;
+}
+
 /*
 class HttpBuf;
 class HeaderList;
@@ -541,3 +553,218 @@ const char * HttpHeader::getHeaderKey(
 void HttpHeader::reset()
 {   m_impl->clear();   }
 */
+
+HeaderOp::~HeaderOp()
+{
+    if (m_pName && (m_iFlag & FLAG_RELEASE_NAME))
+        free((void *)m_pName);
+    if (m_pStrVal && (m_iFlag & FLAG_RELEASE_VALUE))
+        free((void *)m_pStrVal);
+    if (m_pEnv && (m_iFlag & FLAG_RELEASE_ENV))
+        delete m_pEnv;
+}
+
+
+void HeaderOp::setEnv(const char *pEnv, int len)
+{
+    m_pEnv = new AutoStr2(pEnv, len);
+    m_iFlag |= FLAG_RELEASE_ENV;
+}
+
+
+void HttpHeaderOps::inherit(const HttpHeaderOps &parent)
+{
+    HeaderOp *iter;
+    int n;
+    for (iter = begin(); iter < end(); ++iter)
+    {
+        if (!iter->isInherited())
+            break;
+    }
+    n = iter - begin() - parent.size();
+
+    if (n > 0)
+        m_buf.pop_front(n * sizeof(HeaderOp));
+    else if (n < 0)
+    {
+        if (m_buf.make_room_deepcopy((iter - begin())*sizeof(HeaderOp),
+                                     (-n)*sizeof(HeaderOp)) == -1)
+            return;
+    }
+    memmove(begin(), parent.begin(), parent.size() * sizeof(HeaderOp));
+    for (iter = begin(); iter < begin() + parent.size(); ++iter)
+        iter->setInheritFlag();
+    if (parent.m_has_req_op)
+        m_has_req_op = 1;
+    if (parent.m_has_resp_op)
+        m_has_resp_op = 1;
+
+}
+
+
+HeaderOp *HttpHeaderOps::append(int16_t index, const char *pName,
+                                   u_int16_t nameLen, const char *pVal,
+                                   u_int16_t valLen, int8_t op, int is_req)
+{
+    int flag = HeaderOp::FLAG_RELEASE_NAME;
+
+    char *pBuf = (char *)malloc(nameLen + valLen + 5);
+    memcpy(pBuf, pName, nameLen);
+    pName = pBuf;
+    if (pVal && (valLen > 0))
+    {
+        char *pVar = (char *)memchr(pVal, '%', valLen);
+        if (pVar && (*(pVar + 1) == '%' || *(pVar + 1) == '{' ||
+                     *(pVar + 1) == 't' || *(pVar + 1) == 'D'))
+            flag |= HeaderOp::FLAG_COMPLEX_VALUE;
+        pBuf += nameLen;
+        *pBuf++ = ':';
+        *pBuf++ = ' ';
+        memcpy(pBuf, pVal, valLen);
+        pVal = pBuf;
+    }
+    if (m_buf.reserve_append(sizeof(HeaderOp)) == -1)
+        return NULL;
+    HeaderOp *pHeader = end() - 1;
+    if (is_req)
+    {
+        flag |= HeaderOp::FLAG_REQ_HDR_OP;
+        m_has_req_op = 1;
+    }
+    else
+    {
+        m_has_resp_op = 1;
+    }
+    new(pHeader) HeaderOp(index, pName, nameLen, pVal, valLen, flag, op);
+    return pHeader ;
+}
+
+
+int HttpHeaderOps::parseOp(const char *pBegin, const char *pEnd, int is_req)
+{
+    int op = -1;
+    int index;
+    const char *pNameBegin;
+    const char *pNameEnd;
+    const char *pValue = NULL;
+    const char *pValEnd = NULL;
+    const char *pEnv = NULL;
+    const char *pEnvEnd = NULL;
+    pNameBegin = pBegin;
+    pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);
+
+    if (pNameEnd && (pNameEnd - pNameBegin == 12)
+        && (strncasecmp(pNameBegin, "RequestHeader", 12) == 0))
+    {
+        pNameBegin += 13;
+        while ((pNameBegin < pEnd) && (isspace(*pNameBegin)))
+            ++pNameBegin;
+        pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);
+    }
+    
+    
+    
+    if (pNameEnd && (pNameEnd - pNameBegin == 6)
+        && (strncasecmp(pNameBegin, "always", 6) == 0))
+    {
+        pNameBegin += 7;
+        while ((pNameBegin < pEnd) && (isspace(*pNameBegin)))
+            ++pNameBegin;
+        pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);
+    }
+
+    if (!pNameEnd)
+        return -1;
+    switch (pNameEnd - pNameBegin)
+    {
+    case 3:
+        if (strncasecmp(pNameBegin, "add", 3) == 0)
+            op = LSI_HEADER_ADD;
+        else if (strncasecmp(pNameBegin, "set", 3) == 0)
+            op = LSI_HEADER_SET;
+        break;
+    case 5:
+        if (strncasecmp(pNameBegin, "merge", 5) == 0)
+            op = LSI_HEADER_MERGE;
+        else if (strncasecmp(pNameBegin, "unset", 5) == 0)
+            op = LSI_HEADER_UNSET;
+        break;
+    case 6:
+        if (strncasecmp(pNameBegin, "append", 6) == 0)
+            op = LSI_HEADER_APPEND;
+        break;
+    case 7:
+        if (strncasecmp(pNameBegin, "replace", 7) == 0)
+            op = LSI_HEADER_SET;
+        break;
+    }
+
+    if (op == -1)
+        op = LSI_HEADER_ADD;
+    else
+    {
+        pNameBegin = pNameEnd + 1;
+        while ((pNameBegin < pEnd) && (isspace(*pNameBegin)))
+            ++pNameBegin;
+        pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);
+        if (!pNameEnd)
+            pNameEnd = pEnd;
+    }
+    if ((pNameEnd - pNameBegin == 0))
+        return -1;
+
+    const char *pLastParam = pEnd;
+    while (pLastParam > pNameEnd && !isspace(pLastParam[-1]))
+        --pLastParam;
+    if (pLastParam > pNameEnd)
+    {
+        pEnv = pLastParam;
+        if (*pLastParam == '"' || *pLastParam == '\'')
+            pEnvEnd = StringTool::memNextArg(&pEnv, pEnd - pEnv);
+        else
+            pEnvEnd = pEnd;
+        if (strncasecmp(pEnv, "env=", 4) == 0)
+        {
+            pEnd = pLastParam - 1;
+            pEnv += 4;
+            if (pEnv >= pEnvEnd)
+                pEnv = NULL;
+        }
+        else if (strcasecmp(pEnv, "early") == 0)
+        {
+            pEnd = pLastParam - 1;
+            pEnv = NULL;
+        }
+        else
+            pEnv = NULL;
+        if (pEnd == pLastParam - 1)
+        {
+            while (pEnd > pNameEnd && isspace(pEnd[-1]))
+                --pEnd;
+        }
+    }
+
+    if (op != LSI_HEADER_UNSET)
+    {
+        pValue = pNameEnd + 1;
+        while (isspace(*pValue))
+            ++pValue;
+        if (*pValue == '"' || *pValue == '\'')
+            pValEnd = StringTool::memNextArg(&pValue, pEnd - pValue);
+        if (!pValEnd)
+            pValEnd = pEnd;
+    }
+    if (pNameEnd[-1] == ':')
+        --pNameEnd;
+    if (is_req)
+        index = HttpHeader::getIndex(pNameBegin, pNameEnd - pNameBegin);
+    else
+        index = HttpRespHeaders::getIndex(pNameBegin);//, pNameEnd - pNameBegin);
+
+    HeaderOp *pHeader = append(index, pNameBegin, pNameEnd - pNameBegin,
+                                 pValue, pValEnd - pValue,
+                                 op, is_req);
+    if (pEnv)
+        pHeader->setEnv(pEnv, pEnvEnd - pEnv);
+    return 0;
+}

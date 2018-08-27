@@ -115,7 +115,7 @@ if [ ! -f $MOD_SEC_HOME/modsecurity/modsecurity.h ] ; then
 
   git clone https://github.com/SpiderLabs/ModSecurity 
   cd ModSecurity
-  git checkout -b v3/master origin/v3/master
+  git checkout v3.0.2
   ./build.sh
   git submodule init
   git submodule update

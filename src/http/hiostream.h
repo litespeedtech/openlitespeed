@@ -31,6 +31,7 @@ class IOVec;
 class Aiosfcb;
 class HioHandler;
 class HttpRespHeaders;
+class UnpackedHeaders;
 class HioChainStream;
 class NtwkIOLink;
 
@@ -105,6 +106,8 @@ public:
     virtual int readv(struct iovec *vector, size_t count)
     {       return -1;      }
 
+    virtual UnpackedHeaders *getReqHeaders()
+    {   return NULL;    }
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody) = 0;
 
     virtual int  shutdown() = 0;

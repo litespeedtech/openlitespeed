@@ -934,6 +934,22 @@ void HttpMime::setCompressible(MimeSetting *pSetting, void *pValue)
 }
 
 
+int HttpMime::setDefaultCompressibleType(const HttpMime *pParent,
+                                         const char *pLogId)
+{
+    static const char *types =
+        "text/*,application/x-javascript,application/javascript,"
+        "application/xml,image/svg+xml,application/rss+xml,"
+        "application/json,application/vnd.ms-fontobject,"
+        "application/x-font,"
+        "application/x-font-opentype,application/x-font-truetype,"
+        "application/x-font-ttf,font/eot,font/opentype,font/otf,"
+        "font/ttf,image/x-icon,"
+        "image/vnd.microsoft.icon,application/xhtml+xml";
+    return setCompressibleByType(types, pParent, pLogId);
+}
+
+
 int HttpMime::setCompressibleByType(const char *pValue,
                                     const HttpMime *pParent,
                                     const char *pLogId)
@@ -952,7 +968,11 @@ int HttpMime::setCompressibleByType(const char *pValue,
             compressible = 0;
             ++pType;
         }
-        if (updateMIME(pType, HttpMime::setCompressible,
+        if (strncasecmp(pType, "default", 7) == 0)
+        {
+            setDefaultCompressibleType(pParent, pLogId);
+        }
+        else if (updateMIME(pType, HttpMime::setCompressible,
                        (void *)compressible, pParent) == -1)
         {
             LS_NOTICE("[%s] Can not find compressible MIME type: %s, add it!",

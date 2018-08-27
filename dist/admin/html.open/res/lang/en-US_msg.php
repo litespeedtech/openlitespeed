@@ -262,7 +262,7 @@ $_gmsg['l_extlb'] = 'Load Balancer';
 $_gmsg['l_extlogger'] = 'Piped Logger';
 $_gmsg['l_extlsapi'] = 'LiteSpeed SAPI App';
 $_gmsg['l_extproxy'] = 'Web Server';
-$_gmsg['l_extraHeaders'] = 'Extra Headers';
+$_gmsg['l_extraHeaders'] = 'Header Operations';
 $_gmsg['l_extservlet'] = 'Servlet Engine';
 $_gmsg['l_fcgiapp'] = 'FastCGI App';
 $_gmsg['l_fileaccess'] = 'File Access';
@@ -727,7 +727,6 @@ $_gmsg['mail_failedlogin_c'] = 'A recent login attempt to LiteSpeed web admin co
 	Date/Time: %%date%%
 	Username: %%authUser%%
 	IP Address: %%ip%%
-	Hostname: %%hostname%%
 	URL: %%url%%
 
 If you do not recognize the IP address, please follow below recommended ways to secure your admin console:

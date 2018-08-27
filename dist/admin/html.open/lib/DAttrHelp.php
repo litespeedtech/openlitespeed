@@ -38,14 +38,14 @@ class DAttrHelp
         $buf .= $this->desc
                 . '<br><br>';
         if ($this->syntax) {
-            $buf .= '<strong>' . DMsg::UIStr('note_syntax') . ':</strong> '
+            $buf .= '<div class="popover-mono"><strong>' . DMsg::UIStr('note_syntax') . ':</strong> '
                     . $this->syntax
-                    . '<br><br>';
+                    . '</div><br>';
         }
         if ($this->example) {
-            $buf .= '<strong>' . DMsg::UIStr('note_example') . ':</strong> '
+            $buf .= '<div class="popover-mono"><strong>' . DMsg::UIStr('note_example') . ':</strong> '
                     . $this->example
-                    . '<br><br>';
+                    . '</div><br>';
         }
         if ($this->tips) {
             $buf .= '<strong>' . DMsg::UIStr('note_tips') . ':</strong><ul type=circle>';

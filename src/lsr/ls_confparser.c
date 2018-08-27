@@ -53,14 +53,14 @@ static inline void skipLeadingWhiteSpace(const char **p, const char *pEnd)
 void ls_confparser(ls_confparser_t *pThis)
 {
     ls_objarray_init(&pThis->plist, sizeof(ls_str_t));
-    ls_objarray_setcapacity(&pThis->plist, NULL, 5);
+    ls_objarray_setcapacity(&pThis->plist, 5);
     ls_str(&pThis->pstr, NULL, 0);
 }
 
 
 void ls_confparser_d(ls_confparser_t *pThis)
 {
-    ls_objarray_release(&pThis->plist, NULL);
+    ls_objarray_release(&pThis->plist);
     ls_str_d(&pThis->pstr);
 }
 
@@ -207,7 +207,7 @@ static void ls_add_to_list(ls_confparser_t *pThis, const char *pBegin,
         ls_objarray_getcapacity(&pThis->plist))
     {
         ls_objarray_guarantee(&pThis->plist,
-                              NULL, ls_objarray_getcapacity(&pThis->plist) + 10);
+                              ls_objarray_getcapacity(&pThis->plist) + 10);
     }
     p = ls_objarray_getnew(&pThis->plist);
 

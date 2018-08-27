@@ -41,7 +41,7 @@ TEST(ls_ObjArrayTest_test)
     CHECK(ls_objarray_getcapacity(&array) == 0);
     CHECK(ls_objarray_getsize(&array) == 0);
     CHECK(ls_objarray_getarray(&array) == NULL);
-    ls_objarray_guarantee(&array, pool, 10);
+    ls_objarray_guarantee_xpool(&array, pool, 10);
     CHECK(ls_objarray_getcapacity(&array) == 10);
     CHECK(ls_objarray_getsize(&array) == 0);
     CHECK(ls_objarray_getarray(&array) != NULL);
@@ -61,7 +61,7 @@ TEST(ls_ObjArrayTest_test)
     CHECK(ls_objarray_getobj(&array, 0) == ls_objarray_getarray(&array));
     CHECK(ls_objarray_getobj(&array, -1) == NULL);
     CHECK(ls_objarray_getobj(&array, 11) == NULL);
-    ls_objarray_guarantee(&array, pool, 20);
+    ls_objarray_guarantee_xpool(&array, pool, 20);
     CHECK(ls_objarray_getcapacity(&array) == 20);
     CHECK(ls_objarray_getsize(&array) == 10);
     CHECK(ls_objarray_getarray(&array) != NULL);
@@ -76,7 +76,7 @@ TEST(ls_ObjArrayTest_test)
         testpair_t *buf = (testpair_t *)ls_objarray_getobj(&array, i);
         CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    ls_objarray_setcapacity(&array, pool, 30);
+    ls_objarray_setcapacity_xpool(&array, pool, 30);
     CHECK(ls_objarray_getcapacity(&array) == 30);
     CHECK(ls_objarray_getsize(&array) == 20);
     CHECK(ls_objarray_getarray(&array) != NULL);
@@ -96,7 +96,7 @@ TEST(ls_ObjArrayTest_test)
         CHECK(buf->key == i - 1 && buf->val == i - 1);
     }
 
-    ls_objarray_release(&array, pool);
+    ls_objarray_release_xpool(&array, pool);
     ls_xpool_delete(pool);
 
     ls_objarray_init(&array, sizeof(testpair_t));
@@ -104,7 +104,7 @@ TEST(ls_ObjArrayTest_test)
     CHECK(ls_objarray_getcapacity(&array) == 0);
     CHECK(ls_objarray_getsize(&array) == 0);
     CHECK(ls_objarray_getarray(&array) == NULL);
-    ls_objarray_guarantee(&array, NULL, 10);
+    ls_objarray_guarantee(&array, 10);
     CHECK(ls_objarray_getcapacity(&array) == 10);
     CHECK(ls_objarray_getsize(&array) == 0);
     CHECK(ls_objarray_getarray(&array) != NULL);
@@ -124,11 +124,11 @@ TEST(ls_ObjArrayTest_test)
     CHECK(ls_objarray_getobj(&array, 0) == ls_objarray_getarray(&array));
     CHECK(ls_objarray_getobj(&array, -1) == NULL);
     CHECK(ls_objarray_getobj(&array, 11) == NULL);
-    ls_objarray_guarantee(&array, NULL, 20);
+    ls_objarray_guarantee(&array, 20);
     CHECK(ls_objarray_getcapacity(&array) == 20);
     CHECK(ls_objarray_getsize(&array) == 10);
     CHECK(ls_objarray_getarray(&array) != NULL);
-    ls_objarray_release(&array, NULL);
+    ls_objarray_release(&array);
 
 }
 
@@ -143,7 +143,7 @@ TEST(ls_ObjArrayTest_test2)
     CHECK(ls_objarray_getcapacity(&array) == 0);
     CHECK(ls_objarray_getsize(&array) == 0);
     CHECK(ls_objarray_getarray(&array) == NULL);
-    ls_objarray_guarantee(&array, pool, 20);
+    ls_objarray_guarantee_xpool(&array, pool, 20);
 
 
     for (i = 0; i < 20; ++i)
@@ -156,14 +156,14 @@ TEST(ls_ObjArrayTest_test2)
         testpair_t *buf = (testpair_t *)ls_objarray_getobj(&array, i);
         CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
-    ls_objarray_guarantee(&array, pool, 20);
-    ls_objarray_guarantee(&array, pool, 40);
-    ls_objarray_guarantee(&array, pool, 50);
-    ls_objarray_guarantee(&array, pool, 80);
-    ls_objarray_guarantee(&array, pool, 60);
-    ls_objarray_guarantee(&array, pool, 40);
-    ls_objarray_guarantee(&array, pool, 20);
-    ls_objarray_guarantee(&array, pool, 24);
+    ls_objarray_guarantee_xpool(&array, pool, 20);
+    ls_objarray_guarantee_xpool(&array, pool, 40);
+    ls_objarray_guarantee_xpool(&array, pool, 50);
+    ls_objarray_guarantee_xpool(&array, pool, 80);
+    ls_objarray_guarantee_xpool(&array, pool, 60);
+    ls_objarray_guarantee_xpool(&array, pool, 40);
+    ls_objarray_guarantee_xpool(&array, pool, 20);
+    ls_objarray_guarantee_xpool(&array, pool, 24);
 
     for (i = 0; i < 20; ++i)
     {
@@ -172,7 +172,7 @@ TEST(ls_ObjArrayTest_test2)
     }
 
 
-    ls_objarray_release(&array, pool);
+    ls_objarray_release_xpool(&array, pool);
     CHECK(1);
 }
 

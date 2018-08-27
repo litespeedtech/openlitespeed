@@ -15,10 +15,8 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "gsockaddr.h"
 
-#include <lsdef.h>
-#include <util/pool.h>
+#include "gsockaddr.h"
 
 #include <assert.h>
 #include <netdb.h>
@@ -31,6 +29,8 @@
 #include <adns/adns.h>
 #endif
 
+#include <util/pool.h>
+
 #include <ctype.h>
 
 
@@ -40,7 +40,6 @@ GSockAddr::GSockAddr(const GSockAddr &rhs)
     *this = rhs;
 }
 
-
 GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
 {
     if ((!m_pSockAddr) || (m_pSockAddr->sa_family != rhs.sa_family))
@@ -48,7 +47,6 @@ GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
     memmove(m_pSockAddr, &rhs, m_len);
     return *this;
 }
-
 
 static int sockAddrLen(int family)
 {
@@ -69,6 +67,8 @@ static int sockAddrLen(int family)
 }
 
 
+
+
 int GSockAddr::allocate(int family)
 {
     if (m_pSockAddr)
@@ -83,16 +83,14 @@ int GSockAddr::allocate(int family)
         return 0;
     }
     else
-        return LS_FAIL;
+        return -1;
 }
-
 
 void GSockAddr::release()
 {
     if (m_pSockAddr)
         Pool::deallocate(m_pSockAddr, m_len);
 }
-
 
 /**
   * @param pURL  the destination of the connection, format of the string is:
@@ -141,7 +139,6 @@ const char *parseURL(const char *pURL, int *domain)
     return pURL;
 }
 
-
 //Only deal with "http://" and "https://" cases
 //ie: "http://www.litespeedtech.com/about-litespeed-technologies-inc.html"
 //    "http://www.litespeedtech.com"
@@ -157,7 +154,7 @@ int GSockAddr::setHttpUrl(const char *pHttpUrl, const int len)
         ((*httpurl++ | 0x20) != 't') ||
         ((*httpurl++ | 0x20) != 't') ||
         ((*httpurl++ | 0x20) != 'p'))
-        return LS_FAIL;
+        return -1;
 
     if ((*httpurl | 0x20) == 's')
     {
@@ -168,7 +165,7 @@ int GSockAddr::setHttpUrl(const char *pHttpUrl, const int len)
     if (*httpurl == ':')
         p = httpurl + 3;
     else
-        return LS_FAIL;
+        return -1;
 
     q = strchr(p, '/');
     if (q)
@@ -178,7 +175,7 @@ int GSockAddr::setHttpUrl(const char *pHttpUrl, const int len)
 
     if( endPos >= (int)sizeof(url) - 5)
         return -1;
-
+    
     memcpy(url, p, endPos);
     url[endPos] = 0;
 
@@ -200,7 +197,7 @@ int GSockAddr::set(const char *pURL, int tag)
     int domain;
     const char *p = parseURL(pURL, &domain);
     if (!p)
-        return LS_FAIL;
+        return -1;
     return set(domain, p, tag);
 }
 
@@ -263,18 +260,6 @@ int GSockAddr::set2(int family, const char *pURL, int tag, char *pDest)
             if (inet_pton(AF_INET, pDest, &(m_v4->sin_addr.s_addr)) <= 0)
             {
                 gotAddr = 0;
-                /*              struct hostent * hep;
-                                hep = gethostbyname(achDest);
-                                if ((!hep) || (hep->h_addrtype != AF_INET || !hep->h_addr_list[0]))
-                                {
-                                  return -1;
-                                }
-                                if (hep->h_addr_list[1]) {
-                                  //fprintf(stderr, "Host %s has multiple addresses ---\n", host);
-                                  //fprintf(stderr, "you must choose one explicitly!!!\n");
-                                  return -1;
-                                }
-                                m_v4->sin_addr.s_addr = ((struct in_addr *)(hep->h_addr))->s_addr;*/
             }
         }
         break;
@@ -317,7 +302,6 @@ int GSockAddr::set(int family, const char *pURL, int tag)
         if ((tag & ADDR_ONLY) == 0
             && (tag & (DO_NSLOOKUP | DO_NSLOOKUP_DIRECT)) != 0)
             return doLookup(family, achDest, tag);
-        //fall through
     case -1:
     default:
         return -1;
@@ -361,7 +345,7 @@ int GSockAddr::doLookup(int family, const char *p, int tag)
             m_v4->sin_addr.s_addr = ((sockaddr_in *)(res->ai_addr))->sin_addr.s_addr;
             break;
         case AF_INET6:
-            memcpy(&m_v6->sin6_addr, &((sockaddr_in6 *)(res->ai_addr))->sin6_addr,
+            memcpy(&m_v6->sin6_addr, &((sockaddr_in6 *)(res->ai_addr))->sin6_addr, 
                    sizeof(m_v6->sin6_addr));
             break;
         }
@@ -371,11 +355,11 @@ int GSockAddr::doLookup(int family, const char *p, int tag)
 }
 
 
-int GSockAddr::asyncSet(int family, const char *pURL, int tag
+int GSockAddr::asyncSet(int family, const char *pURL, int tag 
                  , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
                  , void *ctx, AdnsReq **pReq)
 {
-
+    
 #ifdef USE_UDNS
     char achDest[128];
     int  gotAddr = set2(family, pURL, tag, achDest);
@@ -384,18 +368,28 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
         return -1;
     else if (gotAddr == 1)
         return 0;
+    
+    int ipLen;
+    const char *pIp = Adns::getInstance().getHostByNameInCache(achDest,
+                        ipLen, family);
+    if (pIp)
+    {
+        return Adns::setResult(m_pSockAddr, pIp, ipLen);
+    }
 
-    if (lookup_pf &&
+    if (lookup_pf && 
         (*pReq = Adns::getInstance().getHostByName(achDest, family,
                                                    lookup_pf, ctx)) != NULL)
-            return 1;
+        return 1;
     return doLookup(family, achDest, tag);
-
-
+    
+   
 #else
+    tag |= DO_NSLOOKUP_DIRECT;
     return set(family, pURL, tag);
 #endif
 }
+
 
 
 int GSockAddr::parseAddr(const char *pString)
@@ -435,7 +429,6 @@ const char *GSockAddr::ntop(const struct sockaddr *pAddr, char *pBuf,
 
 }
 
-
 const char *GSockAddr::toString(char *pBuf, int len) const
 {
     if (m_pSockAddr->sa_family == AF_INET6)
@@ -456,7 +449,6 @@ const char *GSockAddr::toString(char *pBuf, int len) const
     return pBuf;
 }
 
-
 const char *GSockAddr::toString() const
 {
     static char s_buf[256];
@@ -472,7 +464,6 @@ void GSockAddr::set(const in_addr_t addr, const in_port_t port)
     m_v4->sin_port = htons(port);
 }
 
-
 void GSockAddr::set(const in6_addr *addr, const in_port_t port,
                     uint32_t flowinfo)
 {
@@ -482,12 +473,10 @@ void GSockAddr::set(const in6_addr *addr, const in_port_t port,
     m_v6->sin6_flowinfo = flowinfo;
 }
 
-
 uint16_t GSockAddr::getPort() const
 {
     return getPort(m_pSockAddr);
 }
-
 
 uint16_t GSockAddr::getPort(const sockaddr *pAddr)
 {
@@ -501,7 +490,6 @@ uint16_t GSockAddr::getPort(const sockaddr *pAddr)
         return 0;
     }
 }
-
 
 void GSockAddr::setPort(uint16_t port)
 {
@@ -523,7 +511,6 @@ GSockAddr &GSockAddr::operator=(const in_addr_t addr)
     return *this;
 }
 
-
 int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
                            const struct sockaddr *pAddr2)
 {
@@ -538,8 +525,19 @@ int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
                       &((const struct sockaddr_in6 *)pAddr2)->sin6_addr,
                       sizeof(in6_addr));
     default:
-        return 0;
+        return -1;
     }
 
 }
+
+
+// unsigned long GSockAddr::hash(const struct sockaddr *pAddr)
+// {
+//     static int addr_size[11] = { 0, sizeof(sockaddr_un), sizeof(sockaddr_in),
+//         0, 0, 0, 0, 0, 0, 0, sizeof(sockaddr_in6) };
+//     assert(pAddr->sa_family <= AF_INET6);
+//     return XXH64(pAddr, addr_size[pAddr->sa_family], 0);
+//     
+// }
+
 

@@ -400,7 +400,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"php_admin_value",                          NULL},
     {"php_admin_flag",                           NULL},
     
-    
+    {"header",  NULL},
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

@@ -1,8 +1,5 @@
 <?php
 
-/* $Id: blowfish.php,v 1.3 2008/02/20 23:24:59 gwang Exp $ */
-// vim: expandtab sw=4 ts=4 sts=4:
-
 /**
  * The Cipher_blowfish:: class implements the Cipher interface enryption data
  * using the Blowfish algorithm.
@@ -389,7 +386,7 @@ class Horde_Cipher_blowfish {
         $parts = $this->_encryptBlock($L, $R);
         return pack("NN", $parts['L'], $parts['R']);
     }
-    
+
     /**
      * Encrypt a block on data.
      *

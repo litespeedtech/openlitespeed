@@ -921,8 +921,10 @@ int releaseMData(void *data)
             delete []myData->pOrgUri;
         
         if (myData->zstream)
+        {
+            deflateEnd(myData->zstream);
             delete myData->zstream;
-        
+        }
         if (myData->pCacheCtrlVary)
             delete myData->pCacheCtrlVary;
         
@@ -1063,10 +1065,19 @@ static int cancelCache(lsi_param_t *rec)
 {
     MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
                       LSI_DATA_HTTP);
-    if (myData != NULL && 
-        (myData->iCacheState == CE_STATE_WILLCACHE ||
-         myData->iCacheState == CE_STATE_UPDATE_STALE))
-        myData->pConfig->getStore()->cancelEntry(myData->pEntry, 1);
+    if (myData != NULL)
+    {
+        if (myData->iCacheState == CE_STATE_WILLCACHE
+            || myData->iCacheState == CE_STATE_UPDATE_STALE)
+            myData->pConfig->getStore()->cancelEntry(myData->pEntry, 1);
+        if (myData->zstream)
+        {
+            deflateEnd(myData->zstream);
+            delete myData->zstream;
+            myData->zstream = NULL;
+        }
+    }
+
     clearHooks(rec->session);
     g_api->log(rec->session, LSI_LOG_DEBUG, "[%s]cache cancelled.\n",
                ModuleNameStr);
@@ -1464,7 +1475,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         const char * pUA = g_api->get_req_header_by_id(rec->session,
                                                        LSI_HDR_USERAGENT,
                                                        &uaLen);
-        if (pUA && uaLen > AB_USERAGENT_LEN && 
+        if (pUA && uaLen > AB_USERAGENT_LEN &&
             strncasecmp(pUA, AB_USERAGENT, AB_USERAGENT_LEN) == 0)
         {
             needGzip = false;
@@ -1513,6 +1524,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
                 16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) != Z_OK)
             {
                 delete myData->zstream;
+                myData->zstream = NULL;
                 needGzip = false;
             }
         }

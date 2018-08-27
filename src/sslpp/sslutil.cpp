@@ -292,6 +292,16 @@ int SslUtil::initECDH(SSL_CTX *pCtx)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
 #ifndef OPENSSL_NO_ECDH
+
+    SSL_CTX_set_options(pCtx, SSL_OP_SINGLE_ECDH_USE);
+
+#if (defined SSL_CTRL_SET_ECDH_AUTO || defined SSL_CTX_set_ecdh_auto)
+    SSL_CTX_set_ecdh_auto(pCtx, 1);
+#elif (defined SSL_CTX_set1_curves_list || defined SSL_CTRL_SET_CURVES_LIST)
+    SSL_CTX_set1_curves_list(pCtx, (char *) "X25519:secp384r1:prime256v1");
+
+#else //(defined SSL_CTX_set1_curves_list || defined SSL_CTRL_SET_CURVES_LIST)
+
     EC_KEY *ecdh;
     ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
     if (ecdh == NULL)
@@ -299,7 +309,7 @@ int SslUtil::initECDH(SSL_CTX *pCtx)
     SSL_CTX_set_tmp_ecdh(pCtx, ecdh);
     EC_KEY_free(ecdh);
 
-    SSL_CTX_set_options(pCtx, SSL_OP_SINGLE_ECDH_USE);
+#endif //(defined SSL_CTX_set1_curves_list || defined SSL_CTRL_SET_CURVES_LIST)
 
 #endif
 #endif

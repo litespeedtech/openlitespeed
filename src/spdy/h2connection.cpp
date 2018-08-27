@@ -17,12 +17,14 @@
 *****************************************************************************/
 #include "h2connection.h"
 #include <http/hiohandlerfactory.h>
+#include <http/httpheader.h>
 #include <http/httprespheaders.h>
 #include <http/httpstatuscode.h>
 #include <http/httpserverconfig.h>
 #include <log4cxx/logger.h>
 #include <spdy/h2stream.h>
 #include <spdy/h2streampool.h>
+#include "unpackedheaders.h"
 #include <util/iovec.h>
 #include <util/datetime.h>
 #include <lsdef.h>
@@ -572,9 +574,16 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
         }
         else
         {
-            if (id > m_uiLastStreamId)
-                return LS_FAIL;
-            //sendRstFrame(id, H2_ERROR_STREAM_CLOSED);
+            if ((id & 1) == 1)
+            {
+                if (id > m_uiLastStreamId)
+                    return LS_FAIL;
+            }
+            else
+            {
+                if (id > m_uiPushStreamId)
+                    return LS_FAIL;
+            }
         }
 
         //flush();
@@ -590,7 +599,7 @@ int H2Connection::processRstFrame(H2FrameHeader *pHeader)
 
     if (streamID == 0)
         return LS_FAIL;
-    if (streamID % 2 != 0)
+    if ((streamID & 1) != 0)
     {
         if (streamID > m_uiLastStreamId)
             return LS_FAIL;
@@ -717,6 +726,7 @@ int H2Connection::processContinuationFrame(H2FrameHeader *pHeader)
     return processReqHeader(pHeader->getFlags());
 }
 
+
 int H2Connection::processReqHeader(unsigned char iHeaderFlag)
 {
     int iDatalen = (m_bufInput.size() < m_iCurrentFrameRemain) ?
@@ -750,7 +760,7 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag)
     if (iHeaderFlag & H2_FLAG_END_HEADERS)
     {
         unsigned char *pSrc = NULL;
-        AutoBuf tmpBuf;
+        AutoBuf tmpBuf(0);
         if (needToMove)
         {
             tmpBuf.swap(m_bufInflate);
@@ -769,49 +779,42 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag)
 int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
                                 unsigned char iHeaderFlag)
 {
-    char method[10] = {0};
-    int methodLen = 0;
-    char *uri = NULL;
-    int uriLen = 0;
+    UnpackedHeaders *headers = new UnpackedHeaders();
 
     unsigned char *bufEnd = pSrc + length;
-    int rc = decodeData(pSrc, bufEnd, method, &methodLen, &uri, &uriLen);
+    int rc = decodeData(pSrc, bufEnd, headers);
     if (rc < 0)
     {
-        if (uri)
-            free(uri);
         LS_DBG_L(getLogSession(), "decodeData() failure, return %d", rc);
         doGoAway(H2_ERROR_COMPRESSION_ERROR);
+        delete headers;
         return LS_FAIL;
     }
 
-    if (methodLen == 0 || uriLen == 0)
-    {
-        sendRstFrame(m_uiLastStreamId, H2_ERROR_PROTOCOL_ERROR);
-        return 0;
-    }
-
+//     if (!headers->isComplete())
+//     {
+//         sendRstFrame(m_uiLastStreamId, H2_ERROR_PROTOCOL_ERROR);
+//         delete headers;
+//         return 0;
+//     }
 
     H2Stream *pStream = NULL;
     pStream = getNewStream(iHeaderFlag);
     if (!pStream)
     {
         sendRstFrame(m_uiLastStreamId, H2_ERROR_PROTOCOL_ERROR);
+        delete headers;
         return 0;
     }
 
-    appendReqHeaders(pStream, method, methodLen, uri, uriLen);
-    pStream->appendInputData("\r\n", 2);
-    free(uri);
+    pStream->setReqHeaders(headers);
     
     if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) )
     {
-        LoopBuf *buf = pStream->getBufIn();
-        buf->straight();
         LS_DBG_H(getLogSession(), "decodeHeaders():\r\n%.*s",
-                 buf->blockSize(), buf->begin());
+                 headers->getBuf()->size() - 4,
+                 headers->getBuf()->begin() + 4);
     }
-    
 
     if (pStream->getHandler())
         pStream->onInitConnected();
@@ -858,7 +861,7 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
         return LS_FAIL;
     }
 
-    if (id % 2 == 0)
+    if ((id & 1) == 0)
     {
         LS_DBG_L(getLogSession(), "invalid HEADER frame id %d ",
                     id);
@@ -912,156 +915,151 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
 
 
 int H2Connection::decodeData(const unsigned char *pSrc,
-            const unsigned char *bufEnd, char *method, int *methodLen,
-            char **uri, int *uriLen)
+            const unsigned char *bufEnd, UnpackedHeaders *header)
 {
     int rc, n = 0;
-    m_bufInflate.clear();
 
-    char out[16 * 1024];
+    char buf[64 * 1024];
+    ls_str_t cookies[256];
+    int cookie_count = 0;
+    int total_cookie_size = 0;
+    char *out = buf;
+    char *out_end = buf + sizeof(buf);
     uint16_t name_len = 0 ;
     uint16_t val_len = 0;
-    AutoBuf cookieStr(0);
     int regular_header = 0;
+    uint32_t  hpack_idx;
 
-    bool authority = false;
     bool scheme = false;
-    bool error = false;
-    while (pSrc < bufEnd &&
-           (0 == (rc = lshpack_dec_decode(&m_hpack_dec, &pSrc, bufEnd, out,
-                                    out + sizeof(out), &name_len, &val_len))))
+
+    while (pSrc < bufEnd)
     {
+        rc = lshpack_dec_decode(&m_hpack_dec, &pSrc, bufEnd, out,
+                           out_end, &name_len, &val_len, &hpack_idx);
+        if (rc < 0)
+            return LS_FAIL;
+        int idx = UnpackedHeaders::convertHpackIdx(hpack_idx);
         char *name = out;
         char *val = name + name_len;
 
         if (name[0] == ':')
         {
-            if (regular_header)
-                error = true;
-            name_len = 0;
-            if (memcmp(name, ":authority", 10) == 0)
+            if (regular_header || val_len == 0)
+                return LS_FAIL;
+            if (idx == UPK_HDR_UNKNOWN)
             {
-                if (authority)
+                switch(name[1])
                 {
-                    error = true;
+                case 'a':
+                    if (name_len == 10 && memcmp(name, ":authority", 10) == 0)
+                        idx = HttpHeader::H_HOST;
                     break;
+                case 'm':
+                    if (name_len == 7 && memcmp(name, ":method", 7) == 0)
+                        idx = UPK_HDR_METHOD;
+                    break;
+                case 'p':
+                    if (name_len == 5 && memcmp(name, ":path", 5) == 0)
+                        idx = UPK_HDR_PATH;
+                    break;
+                case 's':
+                    if (name_len == 7 && memcmp(name, ":scheme", 7) == 0)
+                        idx = UPK_HDR_SCHEME;
+                    break;
+                default:
+                    return LS_FAIL;
                 }
-                name = (char *)"host";
-                name_len = 4;
-                authority = true;
             }
-            else if (memcmp(name, ":method", 7) == 0)
+            switch(idx)
             {
+            case HttpHeader::H_HOST:         //":authority",
+                if (header->setHost(val, val_len) == LS_FAIL)
+                    return LS_FAIL;
+                out = val + val_len;
+                break;
+            case UPK_HDR_METHOD:  //":method"
                 //If second time have the :method, ERROR
-                if (*methodLen)
-                {
-                    error = true;
-                    break;
-                }
-
-                if (val_len < 10 && val_len > 2)
-                {
-                    strncpy(method, val, val_len);
-                    *methodLen = val_len;
-                }
-            }
-            else if (memcmp(name, ":path", 5) == 0)
-            {
+                if (header->setMethod(val, val_len) == LS_FAIL)
+                    return LS_FAIL;
+                break;
+            case UPK_HDR_PATH:  //":path"
                 //If second time have the :path, ERROR
-                if (*uri)
-                {
-                    error = true;
-                    break;
-                }
-                *uri = strndup(val, val_len);
-                *uriLen = val_len;
-            }
-            else if (memcmp(name, ":scheme", 7) == 0)
-            {
-                if (scheme || val_len == 0)
-                {
-                    error = true;
-                    break;
-                }
+                if (header->setUrl(val, val_len) == LS_FAIL)
+                    return LS_FAIL;
+                out = val + val_len;
+                break;
+            case UPK_HDR_SCHEME:  //":scheme"
+                if (scheme)
+                    return LS_FAIL;
                 scheme = true;
                 //Do nothing
                 //We set to (char *)"HTTP/1.1"
+                break;
+            case UPK_HDR_STATUS:    //":status"
+                return LS_FAIL;
+            default:
+                return LS_FAIL;
             }
-            else
-                error = true;
+            continue;
         }
         else
         {
-            regular_header = true;
-            if (name_len == 6 && memcmp(name, "cookie", 6) == 0)
+            if (!regular_header)
             {
-                if (cookieStr.size() > 0)
-                    cookieStr.append("; ", 2);
-
-                cookieStr.append(val, val_len);
-                name_len = 0;
+                //if (!scheme || !method || !url)
+                //    return LS_FAIL;
+                regular_header = true;
+            }
+            if (idx == UPK_HDR_UNKNOWN)
+            {
+                for(const char *p = name; p < name + name_len; ++p)
+                    if (isupper(*p))
+                        return LS_FAIL;
+                if (name_len == 10 && memcmp(name, "connection", 10) == 0)
+                    return LS_FAIL;
+                else if (name_len == 6 && memcmp(name, "cookie", 6) == 0)
+                    idx = HttpHeader::H_COOKIE;
+            }
+            if (idx == HttpHeader::H_COOKIE)
+            {
+                if (cookie_count >= 256)
+                    continue;
+                cookies[cookie_count].ptr = val;
+                cookies[cookie_count].len = val_len;
+                total_cookie_size += val_len;
+                ++cookie_count;
+                out = val + val_len;
+                continue;
             }
             else if (name_len == 2 && memcmp(name, "te", 2) == 0)
             {
                 if (val_len != 8 || strncasecmp("trailers", val, 8) != 0)
                     return LS_FAIL;
             }
-        }
-
-        if (name_len > 0)
-        {
             n += name_len + val_len + 4;
             if (n >= MAX_HTTP2_HEADERS_SIZE)
                 return LS_FAIL;
-            m_bufInflate.append(name, name_len);
-            m_bufInflate.append(": ", 2);
-            m_bufInflate.append(val, val_len);
-            m_bufInflate.append("\r\n", 2);
+            header->appendHeader(idx, name, name_len, val, val_len);
         }
     }
 
-    if (error || rc < 0 || methodLen == 0 || uriLen == 0 || *uri == NULL || !scheme)
-    {
-        if (*uri)
-        {
-            free(*uri);
-            *uri = NULL;
-        }
+    if (!scheme || !header->isComplete())
         return LS_FAIL;
-    }
 
     /*TODO: we suppose cookies are in one frame, if in another frame, it will
      * create multi-line cookie in req header.
      */
-    if (cookieStr.size() > 0)
+    if (cookie_count > 0)
     {
-        n += (6 + cookieStr.size() + 4);
+        total_cookie_size += ((cookie_count - 1) << 1) ;
+        n += total_cookie_size + 6 + 4;
         if (n >= MAX_HTTP2_HEADERS_SIZE)
             return LS_FAIL;
-        m_bufInflate.append("cookie", 6);
-        m_bufInflate.append(": ", 2);
-        m_bufInflate.append(cookieStr.begin(), cookieStr.size());
-        m_bufInflate.append("\r\n", 2);
+        header->appendCookie(cookies, cookie_count, total_cookie_size);
     }
 
+    header->endHeader();
     return n;
-}
-
-
-int H2Connection::appendReqHeaders(H2Stream *pStream, char *method,
-                                   int methodLen, char *uri, int uriLen)
-{
-    if (method && methodLen && uri && uriLen)
-    {
-        pStream->appendInputData(method, methodLen);
-        pStream->appendInputData(" ", 1);
-        pStream->appendInputData(uri, uriLen);
-        pStream->appendInputData(" HTTP/1.1\r\n", 11);
-    }
-
-    pStream->appendInputData(m_bufInflate.begin(), m_bufInflate.size());
-
-    return 0;
 }
 
 
@@ -1128,7 +1126,7 @@ void H2Connection::recycleStream(StreamMap::iterator it)
 {
     H2Stream *pH2Stream = it.second();
     
-    if (pH2Stream->getStreamID() % 2 == 0)
+    if ((pH2Stream->getStreamID() & 1) == 0)
         --m_iCurPushStreams;
 
     m_mapStream.erase(it);
@@ -1637,26 +1635,22 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
     pStream->setFlag(HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_FLOWCTRL | HIO_FLAG_INIT_PUSH
                      | HIO_FLAG_WANT_WRITE, 1);
 
-    pStream->appendInputData("GET ", 4);
-    pStream->appendInputData(pUrl->ptr, pUrl->len);
-    pStream->appendInputData(" HTTP/1.1\r\n", 11);
-    pStream->appendInputData("host: ", 6);
-    pStream->appendInputData(pHost->ptr, pHost->len);
-    pStream->appendInputData("\r\n", 2);
+    UnpackedHeaders *header = new UnpackedHeaders();
+    header->appendReqLine("GET ", 4, pUrl->ptr, pUrl->len);
+    header->appendHeader(HttpHeader::H_HOST, "host", 4, pHost->ptr, pHost->len);
 
     if (headers)
     {
         while(headers->key.ptr)
         {
-            pStream->appendInputData(headers->key.ptr, headers->key.len);
-            pStream->appendInputData(": ", 2);
-            pStream->appendInputData(headers->val.ptr, headers->val.len);
-            pStream->appendInputData("\r\n", 2);
-
+            int index = -1;
+            header->appendHeader(index, headers->key.ptr, headers->key.len,
+                                 headers->val.ptr, headers->val.len);
             ++headers;
         }
     }
-    pStream->appendInputData("\r\n", 2);
+    header->endHeader();
+    pStream->setReqHeaders(header);
 
     m_priQue[pStream->getPriority()].append(pStream);
     ++m_iCurPushStreams;

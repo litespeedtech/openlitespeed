@@ -248,7 +248,7 @@ $_tipsdb['extWorkers'] = new DAttrHelp("Workers", 'List of worker groups previou
 
 $_tipsdb['externalredirect'] = new DAttrHelp("External Redirect", 'Specifies whether this redirect is external.  For external redirection, &quot;Status Code&quot; may be specified and  &quot;Destination URI&quot; can start either with &quot;/&quot; or &quot;http(s)://&quot;.  For internal redirection, &quot;Destination URI&quot; must start with &quot;/&quot;.', '', '', '');
 
-$_tipsdb['extraHeaders'] = new DAttrHelp("Extra Headers", 'Specifies extra response headers to be added. Multiple headers can be added, one header per line. Put &quot;NONE&quot; to disable headers inherited from parent content.', '', '&quot;[HeaderName]: [HeaderValue]&quot; in each line.', 'Cache-control: no-cache, no-store <br/>My-header: Custom header value');
+$_tipsdb['extraHeaders'] = new DAttrHelp("Header Operations", 'Specifies additional response/request headers to be added. Multiple header directives can be added with one directive per line. &quot;NONE&quot; can be used to disable parent header inheritance. If no directive is provided &#039;Header&#039; is assumed.', ' Syntax and usage are similar to <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_headers directives</a> for supported operations.<br/><br/> The &#039;Header&#039; directive is is optional and can be excluded or left in when copying rules from elsewhere without issue.', '[Header]|RequestHeader [condition] set|append|merge|add|unset header [value] [early|env=[!]variable]', 'set Cache-control no-cache<br/>append Cache-control no-store<br/>Header set My-header cust_header_val<br/>RequestHeader set My-req-header cust_req_header_val');
 
 $_tipsdb['extrapathenv'] = new DAttrHelp("Extra PATH Environment Variables", 'Additional PATH values that will be appended to the current PATH environment variables for build scripts.', '', 'path values separated by &quot;:&quot;', '');
 
@@ -554,7 +554,7 @@ $_tipsdb['sslProtocol'] = new DAttrHelp("Protocol Version", 'Specifies which ver
 
 $_tipsdb['sslProtocolSetting'] = new DAttrHelp("SSL Protocol", 'Customizes SSL protocols accepted by the listener.', '', '', '');
 
-$_tipsdb['sslSessionCache'] = new DAttrHelp("Enable Session Cache", 'Enables session id caching. If &quot;Not Set&quot;, defaults to  &quot;No&quot;. (Openssl Default)', '', 'Select from radio box', '');
+$_tipsdb['sslSessionCache'] = new DAttrHelp("Enable Session Cache", 'Enables session ID caching using OpenSSL&#039;s default setting. Server-level setting must be set to &quot;Yes&quot; for Virtual Host setting to take effect. Default values:<br/><br/><b>Server-level:</b> Yes<br/><b>VH-Level:</b> Yes', '', 'Select from radio box', '');
 
 $_tipsdb['sslSessionCacheSize'] = new DAttrHelp("Session Cache Size (bytes)", 'Sets the maximum number of SSL session IDs to store in the cache. Default is 1,000,000.', '', 'Integer number', '');
 
@@ -564,7 +564,7 @@ $_tipsdb['sslSessionTicketKeyFile'] = new DAttrHelp("SSL Session Ticket Key File
 
 $_tipsdb['sslSessionTicketLifetime'] = new DAttrHelp("SSL Session Ticket Lifetime (secs)", 'This value determines how long a session ticket will be valid before a renegotiation is required. Default is 3,600.', '', 'Integer number', '');
 
-$_tipsdb['sslSessionTickets'] = new DAttrHelp("Enable Session Tickets", 'Enables session tickets. If &quot;Not Set&quot;, the server will use openSSL&#039;s default ticket.', '', 'Select from radio box', '');
+$_tipsdb['sslSessionTickets'] = new DAttrHelp("Enable Session Tickets", 'Enables session tickets using OpenSSL&#039;s default session ticket setting. Server-level setting must be set to &quot;Yes&quot; for Virtual Host setting to take effect. Default values:<br/><br/><b>Server-level:</b> Yes<br/><b>VH-Level:</b> Yes', '', 'Select from radio box', '');
 
 $_tipsdb['statDir'] = new DAttrHelp("Statistics Output Directory", 'The directory where the Real-Time Stats report file will be written. The default directory is <b>/tmp/lshttpd/</b> .', 'During server operation, the .rtreport file will be written to every second.  To avoid unnecessary disk writes, set this to a RAM Disk.<br/>The .rtreport file can be used with 3rd party monitoring software to track server health.', 'Absolute path', '');
 
@@ -721,6 +721,8 @@ $_tipsdb['EDTP:extWorkers'] = array('Load balancing workers must be previously d
 
 $_tipsdb['EDTP:externalredirect'] = array('Set up redirect URI here. If it is an external redirect, you can specify the status code. Internal  redirect has to start with &quot;/&quot;, external redirect can either start with &quot;/&quot; or with &quot;http(s)://&quot;.');
 
+$_tipsdb['EDTP:extraHeaders'] = array('The Header Operations setting is backwards compatible with the old &#039;header_name: value1,value2,...&#039; syntax, which is equivalent to setting the header + values using the &#039;Header&#039; directive.');
+
 $_tipsdb['EDTP:fcgiapp'] = array('Fast CGI context is a mount point of Fast CGI application. The Fast CGI Application must be pre-defined at server level or virtual host level.');
 
 $_tipsdb['EDTP:followSymbolLink'] = array('If Follow-Symbolic-Link is enabled, you can still disable it at virtual host level.');
@@ -791,7 +793,7 @@ $_tipsdb['EDTP:softLimit'] = array('Set IP level throttle limit here. The number
 
 $_tipsdb['EDTP:sslProtocol'] = array('&quot;Yes&quot; must be selected for <b>Secure</b> in General > Address Settings.','For SSL versions and encryption levels, please select all you want to accept.');
 
-$_tipsdb['EDTP:sslSessionCache'] = array('Session caching allows a client to resume a session within a set amount of time without having to re-perform an SSL handshake. You can do this by assigning clients a  session ID using  <b>Enable Session Cache</b>, or by creating and using session tickets.');
+$_tipsdb['EDTP:sslSessionCache'] = array('Session caching allows a client to resume a session within a set amount of time without having to re-perform an SSL handshake. You can do this by assigning clients a session ID using  <b>Enable Session Cache</b>, or by creating and using session tickets.');
 
 $_tipsdb['EDTP:sslSessionTicketKeyFile'] = array('Session tickets will be rotated automatically if the tickets are being generated by the server. If using the <b>SSL Session Ticket Key File</b> option to create and manage your own session tickets, you must be rotate the tickets yourself using a cron job.');
 

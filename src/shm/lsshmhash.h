@@ -583,6 +583,14 @@ public:
     int unlock()
     {   return m_iAutoLock ? 0 : ls_shmlock_unlock(m_pShmLock); }
 
+    int lockEx()
+    {
+        return getPool()->getShm()->lockRemap(m_pShmLock);
+    }
+
+    int unlockEx()
+    {   return ls_shmlock_unlock(m_pShmLock); }
+
     void lockChkRehash();
 
     int getRef()     { return m_iRef; }
@@ -803,6 +811,31 @@ public:
     iteroffset begin()
     {   return LsShmHash::begin();  }
 
+};
+
+
+class LsShmHashLocker
+{
+public:
+    explicit LsShmHashLocker(LsShmHash *pHash)
+        : m_pHash(pHash)
+    {
+        ;
+        if ((m_isAutoLock = m_pHash->isAutoLock()) != false)
+            m_pHash->disableAutoLock();
+        m_pHash->lockEx();
+    }
+    ~LsShmHashLocker()
+    {
+        m_pHash->unlockEx();
+        if (m_isAutoLock)
+            m_pHash->enableAutoLock();
+    }
+private:
+    LsShmHash  *m_pHash;
+    bool        m_isAutoLock;
+
+    LS_NO_COPY_ASSIGN(LsShmHashLocker);
 };
 
 #endif // LSSHMHASH_H

@@ -258,7 +258,7 @@ $_gmsg['l_extlb'] = '负载均衡器';
 $_gmsg['l_extlogger'] = '管道日志器';
 $_gmsg['l_extlsapi'] = 'LiteSpeed SAPI应用程序';
 $_gmsg['l_extproxy'] = '网络服务器';
-$_gmsg['l_extraHeaders'] = '额外头部';
+$_gmsg['l_extraHeaders'] = '头部操作';
 $_gmsg['l_extservlet'] = 'Servlet引擎';
 $_gmsg['l_fcgiapp'] = 'FastCGI应用程序';
 $_gmsg['l_fileaccess'] = '文件访问';
@@ -700,7 +700,6 @@ $_gmsg['mail_failedlogin_c'] = '近期发生了一次失败的LiteSpeed登陆。
 	日期/时间: %%date%%
 	用户名: %%authUser%%
 	IP 地址: %%ip%%
-	Hostname: %%hostname%%
 	URL: %%url%%
 
 如果你并不熟悉该IP地址，请按照下列建议来保护管理员控制台：

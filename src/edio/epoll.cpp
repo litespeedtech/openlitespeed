@@ -48,7 +48,7 @@ epoll::epoll()
 {
     setFLTag(O_NONBLOCK | O_RDWR);
     m_pUpdates = new TObjArray<int>();
-    m_pUpdates->setCapacity(NULL, 100);
+    m_pUpdates->setCapacity(100);
 }
 
 
@@ -405,9 +405,7 @@ void epoll::applyEvents()
 void epoll::appendEvent(int fd)
 {
     if (m_pUpdates->getSize() >= m_pUpdates->getCapacity())
-    {
-        m_pUpdates->guarantee(NULL, m_pUpdates->getCapacity() << 1);
-    }
+        m_pUpdates->guarantee(m_pUpdates->getCapacity() << 1);
     int *p = m_pUpdates->getNew();
     *p = fd;
 }

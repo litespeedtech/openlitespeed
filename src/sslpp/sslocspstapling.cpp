@@ -359,6 +359,7 @@ int SslOcspStapling::createRequest()
     }
 
     m_pHttpFetch = new HttpFetch();
+    m_pHttpFetch->enableDebug(1);
     m_pHttpFetch->setResProcessor(OcspRespCb, this);
     m_pHttpFetch->setTimeout(30);  //Set Req timeout as 30 seconds
     m_pHttpFetch->startReq(m_sOcspResponder.c_str(), 1, 1,
