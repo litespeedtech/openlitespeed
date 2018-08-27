@@ -1298,7 +1298,7 @@ class DTblDefBase
     {
         $attrs = array(
             $this->_attrs['tp_vhRoot'],
-            self::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'), '/\$VH_NAME.+\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
+            self::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'), '/\$VH_NAME.*\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
             $this->_attrs['vh_maxKeepAliveReq'],
             $this->_attrs['vh_smartKeepAlive']
         );
@@ -1372,7 +1372,7 @@ class DTblDefBase
     protected function add_ADM_USR($id)
     {
         $attrs = array(
-            self::NewTextAttr('name', DMsg::ALbl('l_username'), 'name', false),
+            self::NewTextAttr('name', DMsg::ALbl('l_username'), 'admname', false),
             self::NewPassAttr('oldpass', DMsg::ALbl('l_oldpass'), false, 'adminOldPass'),
             self::NewPassAttr('pass', DMsg::ALbl('l_newpass'), false),
             self::NewPassAttr('pass1', DMsg::ALbl('l_retypepass'), false)
@@ -1383,7 +1383,7 @@ class DTblDefBase
     protected function add_ADM_USR_NEW($id)
     {
         $attrs = array(
-            self::NewTextAttr('name', DMsg::ALbl('l_username'), 'name', false),
+            self::NewTextAttr('name', DMsg::ALbl('l_username'), 'admname', false),
             self::NewPassAttr('pass', DMsg::ALbl('l_newpass'), false),
             self::NewPassAttr('pass1', DMsg::ALbl('l_retypepass'), false)
         );

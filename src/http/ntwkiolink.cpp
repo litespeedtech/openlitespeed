@@ -1481,7 +1481,11 @@ int NtwkIOLink::get_url_from_reqheader(char *buf, int length, char **puri,
     if (strncasecmp(buf, "GET ", 4) != 0 &&
         strncasecmp(buf, "POST", 4) != 0 &&
         strncasecmp(buf, "HEAD", 4) != 0)
+    {
+        LS_DBG_L(this, "get_url_from_reqheader not support method: %.*s.",
+                 4, buf);
         return LS_FAIL;
+    }
 
     char *pStart = strcasestr(buf, (const char *)"host:");
     if (!pStart || pBufEnd - pStart < 6)

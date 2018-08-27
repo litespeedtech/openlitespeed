@@ -142,7 +142,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
 
             //Case of "RewriteFile" and "RewriteBase"
             int type = 0;
-            if ((isspace(*(pRules + 11))) &&
+            if ( strlen(pRules) > 11 && (isspace(*(pRules + 11))) &&
                 ((type = (strncasecmp(pRules, "RewriteFile", 11) == 0 ? 1 : 0))
                 || 
                 (type = (strncasecmp(pRules, "RewriteBase", 11) == 0 ? 2 : 0))))
@@ -676,8 +676,9 @@ int RewriteEngine::processRule(const RewriteRule *pRule,
     {
         if (processCond(pCond, pSession))
         {
-            if (!((pCond->getFlag() & COND_FLAG_OR) &&
-                  (pCond->next())))
+            if (!((pCond->getFlag() & COND_FLAG_OR)
+                //&& pCond->next()
+                ))
                 return LS_FAIL;
         }
         else

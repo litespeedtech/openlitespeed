@@ -115,6 +115,7 @@ class SsiConfig;
 class StaticFileCacheData;
 class VHostMap;
 class VMemBuf;
+class UnpackedHeaders;
 typedef struct ls_hash_s ls_hash_t;
 struct ls_subreq_s;
 
@@ -142,7 +143,7 @@ typedef struct
 #define COOKIE_FLAG_RESP_UPDATE     8
 
 
-class CookieList : public TObjArray< cookieval_t >
+class CookieList : public TObjArrayXpool< cookieval_t >
 {
 public:
     CookieList()
@@ -168,7 +169,7 @@ public:
     void copy(CookieList &rhs, ls_xpool_t *pool)
     {
         m_iSessIdx = rhs.m_iSessIdx;
-        TObjArray<cookieval_t>::copy(rhs, pool);
+        TObjArrayXpool<cookieval_t>::copy(rhs, pool);
     }
 
 
@@ -176,7 +177,7 @@ private:
     int  m_iSessIdx;
 };
 
-typedef TObjArray< key_value_pair > KVPairArray;
+typedef TObjArrayXpool< key_value_pair > KVPairArray;
 
 class HttpReq
 {
@@ -432,6 +433,8 @@ public:
     int getHeaderLen(size_t index) const
     {   return m_commonHeaderLen[ index ];      }
 
+    int dropReqHeader(int index);
+    
     const char *getHostStr()
     {   return m_headerBuf.getp(m_iHostOff);    }
     const char *getOrgReqLine() const
@@ -686,7 +689,8 @@ public:
     off_t getTotalLen() const
     {   return m_lEntityFinished + getHttpHeaderLen();  }
 
-    const AutoBuf *getExtraHeaders() const;
+    void popHeaderEndCrlf();
+    int  applyHeaderOps(HttpRespHeaders *pRespHeader);
 
     int parseMethod(const char *pCur, const char *pBEnd);
     int parseHost(const char *pCur, const char *pBEnd);
@@ -696,6 +700,11 @@ public:
     int parseURI(const char *pCur, const char *pBEnd);
     const char *skipSpace(const char *pOrg, const char *pDest);
     int processHeader(int index);
+    int processUnknownHeader(key_value_pair* pCurHeader,
+                             const char* name, const char* value);
+    int processUnpackedHeaders(UnpackedHeaders *header);
+    int processUnpackedHeaderLines(UnpackedHeaders *headers);
+
     int postProcessHost(const char *pCur, const char *pBEnd);
     int skipSpaceBothSide(const char *&pHBegin, const char *&pHEnd);
     char isGeoIpOn() const;
@@ -802,6 +811,20 @@ public:
     int copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
                                  int cookieLen);
     CookieList  &getCookieList() { return   m_cookies; }
+
+
+    int applyOp(const HeaderOp *pOp);
+    int  applyOp(HttpRespHeaders *pRespHeader,
+                 const HeaderOp *pOp);
+    void applyOps(HttpRespHeaders *pRespHeader,
+                  const HttpHeaderOps *getHeaders, int arg2);
+
+    int createHeaderValue(const char *pFmt, int len,
+                          char *pBuf, int maxLen);
+    void eraseHeader(key_value_pair * pHeader);
+
+    void appendReqHeader( const char *pName, int iNameLen,
+                          const char *pValue, int iValLen);
 
     int checkUrlStaicFileCache();
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}

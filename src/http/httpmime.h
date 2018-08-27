@@ -110,6 +110,9 @@ public:
 
     void updateSuffixMimeHandler();
 
+    int setDefaultCompressibleType(const HttpMime *pParent,
+                                   const char *pLogId);
+
     static void releaseMIMEList();
     char compressible(const char *pMIME) const;
     static void setCompressible(MimeSetting *pSetting, void *pValue);

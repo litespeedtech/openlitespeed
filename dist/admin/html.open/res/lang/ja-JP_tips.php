@@ -248,7 +248,7 @@ $_tipsdb['extWorkers'] = new DAttrHelp("ワーカー", '以前に外部ロード
 
 $_tipsdb['externalredirect'] = new DAttrHelp("外部リダイレクト", 'このリダイレクトが外部かどうかを指定します。 外部リダイレクトの場合は、&quot;ステータスコード&quot;を指定し、&quot;宛先URI&quot;は &quot;/&quot;または &quot;http(s)：//&quot;で開始できます。 内部リダイレクトの場合、&quot;宛先URI&quot;は &quot;/&quot;で始まらなければなりません。', '', '', '');
 
-$_tipsdb['extraHeaders'] = new DAttrHelp("Extra Headers", '追加される余分な応答ヘッダーを指定します。 1行に1つのヘッダーを追加できます。 親コンテンツから継承したヘッダーを無効にするには、&quot;NONE&quot;を入力します。', '', '各行に &quot;[HeaderName]: [HeaderValue]&quot;', 'Cache-control: no-cache, no-store <br/>My-header: Custom header value');
+$_tipsdb['extraHeaders'] = new DAttrHelp("Extra Headers", '追加される余分な応答ヘッダーを指定します。 1行に1つのヘッダーを追加できます。 親コンテンツから継承したヘッダーを無効にするには、&quot;NONE&quot;を入力します。', ' Syntax and usage are similar to <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_headers directives</a> for supported operations.<br/><br/> The &#039;Header&#039; directive is is optional and can be excluded or left in when copying rules from elsewhere without issue.', '各行に &quot;[HeaderName]: [HeaderValue]&quot;', 'Cache-control: no-cache, no-store <br/>My-header: Custom header value');
 
 $_tipsdb['extrapathenv'] = new DAttrHelp("特別なPATH環境変数", 'ビルドスクリプトの現在のPATH環境変数に追加される追加のPATH値。', '', '&quot;：&quot;で区切られたパス値', '');
 
@@ -720,6 +720,8 @@ $_tipsdb['EDTP:extAppType'] = array('外部Fast CGIアプリケーションとAJ
 $_tipsdb['EDTP:extWorkers'] = array('ロードバランサワーカーは、事前に定義されている必要があります。','使用可能なExtAppタイプは、fcgi（高速CGIアプリケーション）、LSAPIアプリケーション（LSAPIアプリケーション）、サーブレット（サーブレット/JSPエンジン）、プロキシ（Webサーバー）です。','1つの負荷分散クラスタに異なるタイプの外部アプリケーションを混在させることができます。');
 
 $_tipsdb['EDTP:externalredirect'] = array('リダイレクトURIをここに設定します。 外部リダイレクトの場合は、ステータスコードを指定できます。 内部リダイレクトは「/」で始まり、外部リダイレクトは&quot;/&quot;または&quot;http(s)：//&quot;で始まります。');
+
+$_tipsdb['EDTP:extraHeaders'] = array('The Header Operations setting is backwards compatible with the old &#039;header_name: value1,value2,...&#039; syntax, which is equivalent to setting the header + values using the &#039;Header&#039; directive.');
 
 $_tipsdb['EDTP:fcgiapp'] = array('Fast CGIコンテキストは、Fast CGIアプリケーションのマウントポイントです。 Fast CGIアプリケーションは、サーバーレベルまたはバーチャルホストレベルであらかじめ定義されている必要があります。');
 

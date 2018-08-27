@@ -33,7 +33,7 @@ typedef struct testpair_s
 TEST(objArrayTest_test)
 {
     int i;
-    ObjArray *pArray = new ObjArray(sizeof(testpair_t));
+    ObjArrayXpool *pArray = new ObjArrayXpool(sizeof(testpair_t));
     ls_xpool_t *pool = ls_xpool_new();
 
     CHECK(pArray->getCapacity() == 0);
@@ -95,7 +95,7 @@ TEST(objArrayTest_test)
     }
     ls_xpool_delete(pool);
     //Test with global pool.
-    pArray = new ObjArray(sizeof(testpair_t));
+    pArray = new ObjArrayXpool(sizeof(testpair_t));
 
     CHECK(pArray->getCapacity() == 0);
     CHECK(pArray->getSize() == 0);
@@ -127,7 +127,7 @@ TEST(objArrayTest_test)
 TEST(TObjArrayTest_test)
 {
     int i;
-    TObjArray<testpair_t> *pArray = new TObjArray<testpair_t>();
+    TObjArrayXpool<testpair_t> *pArray = new TObjArrayXpool<testpair_t>();
     ls_xpool_t *pool = ls_xpool_new();
 
     CHECK(pArray->getCapacity() == 0);

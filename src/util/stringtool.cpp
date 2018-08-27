@@ -94,3 +94,41 @@ void *StringTool::memmem(const char *haystack, size_t haystacklen,
     return NULL;
 }
 
+char *StringTool::memNextArg(char **s, int len, const char *pDelim,
+                             int iDelimLen)
+{
+    const char *p = *s;
+    char *p1 = (char *)memNextArg(&p, len, pDelim, iDelimLen);
+    *s = (char *)p;
+    return p1;
+}
+
+
+const char *StringTool::memNextArg(const char **s, int len,
+                                   const char *pDelim, int iDelimLen)
+{
+    const char *p = *s;
+    if (!pDelim)
+    {
+        pDelim = " \t\r\n";
+        iDelimLen = 4;
+    }
+    if ((**s == '\"') || (**s == '\''))
+    {
+        char ch = *(*s)++;
+        len--;
+        while ((p = (const char *)memchr(p + 1, ch, len)) != NULL)
+        {
+            const char *p1 = p;
+            while ((p1 > *s) && ('\\' == *(p1 - 1)))
+                --p1;
+            if ((p - p1) % 2 == 0)
+                break;
+        }
+    }
+    else
+        p = mempbrk(*s, len, pDelim, iDelimLen);
+    return p;
+}
+
+

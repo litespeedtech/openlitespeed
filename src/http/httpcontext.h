@@ -49,6 +49,7 @@ class RewriteMapList;
 class HttpSession;
 class ModuleConfig;
 class HttpSessionHooks;
+class HttpHeaderOps;
 
 #define UID_SERVER          0
 #define UID_FILE            1
@@ -184,7 +185,8 @@ typedef struct _CTX_INT
     PHPConfig            *m_pPHPConfig;
     StatusUrlMap         *m_pCustomErrUrls;
     ContextList          *m_pFilesMatchList;
-    AutoBuf              *m_pExtraHeader;
+
+    HttpHeaderOps        *m_pHeaderOps;
     SsiConfig            *m_pSsiConfig;
 
     HttpSessionHooks    *m_pSessionHooks;
@@ -393,14 +395,14 @@ public:
     void enableRewrite(int a)
     {
         m_iRewriteEtag =
-            (m_iRewriteEtag & ~REWRITE_MASK) | (a & REWRITE_MASK);
+            (m_iRewriteEtag & ~REWRITE_MASK) | (a ? REWRITE_MASK : 0);
         m_iConfigBits |= BIT_REWRITE_ENGINE;
     }
     unsigned char rewriteEnabled() const     {   return m_iRewriteEtag & REWRITE_MASK;    }
     void setRewriteInherit(int a) {   setConfigBit(BIT_REWRITE_INHERIT, a); }
     int  isRewriteInherit() const   {   return m_iConfigBits & BIT_REWRITE_INHERIT; }
     int  isRewriteEnabled() const   
-    {   return m_iConfigBits & BIT_REWRITE_ENGINE ? 1 : 0;  }
+    {   return rewriteEnabled();  }
 
     RewriteRuleList *getRewriteRules() const
     {   return m_pRewriteRules;                     }
@@ -463,9 +465,9 @@ public:
 
     //HttpContext * dup() const;
 
-    int setExtraHeaders(const char *pLogId, const char *pHeaders, int len);
-    const AutoBuf *getExtraHeaders() const
-    {   return m_pInternal->m_pExtraHeader;     }
+    int setHeaderOps(const char *pLogId, const char *pHeaders, int len);
+    const HttpHeaderOps *getHeaderOps() const
+    {   return m_pInternal->m_pHeaderOps;     }
 
     const GSockAddr *getWebSockAddr() const { return &m_pInternal->m_GSockAddr;   }
     void setWebSockAddr(GSockAddr &gsockAddr);

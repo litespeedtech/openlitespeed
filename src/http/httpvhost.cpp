@@ -597,6 +597,83 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
 }
 
 
+bool HttpVHost::dirMatch(const HttpContext *pContext, const char *pURI,
+                         size_t iUriLen, AutoStr2 *missURI) const
+{
+    assert(iUriLen > 0 && pURI[0] == '/');
+    const char *curContextURI = pContext->getURI();
+    int curContextURILen = pContext->getURILen();
+    assert(curContextURILen <= iUriLen &&
+            memcmp(pURI, curContextURI, curContextURILen) == 0);
+    
+    bool ret = true;
+    const char *p = pURI + curContextURILen;
+    while(p < pURI + iUriLen)
+    {
+        if (*p == '/')
+        {
+            ret = false;
+            missURI->setStr(pURI, p - pURI + 1);
+            break;
+        }
+        ++p;
+    }
+
+    return ret;
+}
+
+
+HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
+{
+    HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
+    
+    AutoStr2 missURI;
+    while (!dirMatch(pContext, pURI, iUriLen, &missURI))
+    {
+        char achVPath[MAX_PATH_LEN];
+        char achRealPath[MAX_PATH_LEN];
+
+        strcpy(achVPath, "$DOC_ROOT");
+        strcat(achVPath, missURI.c_str());
+
+        ConfigCtx::getCurConfigCtx()->setDocRoot(getDocRoot()->c_str());
+        int ret = ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath, achVPath);
+        if (ret)
+            break;
+
+        if (access(achRealPath, F_OK) != 0)
+        {
+            LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is not accessible: %s",
+                     achRealPath);
+            break;
+        }
+
+        HttpContext *pContext0 = addContext(missURI.c_str(), HandlerType::HT_NULL,
+                              achRealPath, NULL, 1);
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "Tried to add new context: "
+                "URI %s location %s, result %p",
+                missURI.c_str(), achRealPath, pContext0);
+        if (pContext0 == NULL)
+            break;
+
+        pContext0->inherit(pContext);
+        pContext0->enableRewrite(pContext->isRewriteEnabled());
+        pContext0->setRewriteInherit(1);
+        
+        pContext = pContext0;
+        if (pContext->isRewriteEnabled())
+        {
+            //If have .htaccess in this DIR, load it
+            strcat(achRealPath, ".htaccess");
+            if (access(achRealPath, F_OK) == 0)
+                pContext->configRewriteRule(NULL, (char *) "RewriteFile .htaccess");
+        }
+    }
+
+    return pContext;
+}
+
+
 const HttpContext *HttpVHost::matchLocation(const char *pURI,
         size_t iUriLen,
         int regex) const
@@ -718,7 +795,6 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     if (pDocRoot == NULL)
         return LS_FAIL;
 
-    //ConfigCtx::getCurConfigCtx()->setVHost( this );
     char achBuf[MAX_PATH_LEN];
     char *pPath = achBuf;
 
@@ -1013,8 +1089,11 @@ void HttpVHost::configRewriteMap(const XmlNode *pNode)
 
 int HttpVHost::configRewrite(const XmlNode *pNode)
 {
-    getRootContext().enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(
-                                       pNode, "enable", 0, 1, 0));
+    long long v = ConfigCtx::getCurConfigCtx()->getLongValue(
+                                       pNode, "enable", 0, 1, 0);
+    getRootContext().enableRewrite(v);
+    //assert(getRootContext().isRewriteEnabled() == v);
+
     setRewriteLogLevel(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                        "logLevel", 0, 9, 0));
 
@@ -1772,7 +1851,12 @@ int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
         XmlNodeList::const_iterator iter;
 
         for (iter = pList->begin(); iter != pList->end(); ++iter)
+        {
+
+            LS_INFO("[%s] config conxtext %s.",
+                    TmpLogId::getLogId(), (*iter)->getValue());
             configContext(*iter);
+        }
     }
 
     /***

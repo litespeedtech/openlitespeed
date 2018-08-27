@@ -60,7 +60,9 @@ public:
 
     int flush();
     int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
-    
+
+    UnpackedHeaders * getReqHeaders();
+
     int push(ls_str_t *pUrl, ls_str_t *pHost, 
              ls_strpair_t *pExtraHeaders);
 
@@ -114,6 +116,8 @@ public:
     {
         return m_bufIn.append(ch);
     }
+    void setReqHeaders(UnpackedHeaders* headers)
+    {   m_pReqHeaders = headers;    }
 
 private:
     bool operator==(const H2Stream &other) const;
@@ -125,11 +129,12 @@ protected:
     virtual const char *buildLogId();
 
 private:
-    uint32_t    m_uiStreamId;
-    int32_t     m_iWindowOut;
-    int32_t     m_iWindowIn;
-    H2Connection *m_pH2Conn;
-    LoopBuf     m_bufIn;
+    H2Connection   *m_pH2Conn;
+    UnpackedHeaders   *m_pReqHeaders;
+    LoopBuf         m_bufIn;
+    uint32_t        m_uiStreamId;
+    int32_t         m_iWindowOut;
+    int32_t         m_iWindowIn;
 
     LS_NO_COPY_ASSIGN(H2Stream);
 };

@@ -14,17 +14,16 @@ class CAuthorizer
     // prevent an object from being constructed
     private function __construct()
     {
-        $label = preg_replace('/\W/', '_', SERVER_ROOT);
-        $this->_id_field = "{$label}_uid";
-        $this->_pass_field = "{$label}_pass";
+        $label = strtoupper(substr(md5(SERVER_ROOT), 0, 16));
+        $this->_id_field = 'LSID' . $label;
+        $this->_pass_field = 'LSPA' . $label;
 
-        session_name("{$label}WEBUI"); // to prevent conflicts with other app sessions
+        session_name('LSUI' . $label); // to prevent conflicts with other app sessions
         session_start();
 
         if (!array_key_exists('changed', $_SESSION)) {
             $_SESSION['changed'] = false;
         }
-
 
         if (!array_key_exists('valid', $_SESSION)) {
             $_SESSION['valid'] = false;
@@ -168,16 +167,14 @@ class CAuthorizer
             $userid = $result['userid'];
             $pass = $result['pass'];
         } else if ($is_https && isset($_POST['userid'])) {
-            $userid = UIBase::GrabGoodInput('POST', 'userid');
+            $userid = UIBase::GrabInput('POST', 'userid');
             $pass = UIBase::GrabInput('POST', 'pass');
         }
 
-        if ($userid != null) {
-            if ($this->authenticate($userid, $pass) === true)
-                return false;
-            else
-                $msg = DMsg::Err('err_login');
+        if ($userid != null && ($this->authenticate($userid, $pass) === true)) {
+            return false;
         }
+        $msg = DMsg::Err('err_login');
         return true;
     }
 
@@ -203,7 +200,11 @@ class CAuthorizer
     private function authenticate($authUser, $authPass)
     {
         $auth = false;
-        if (strlen($authUser) && strlen($authPass)) {
+        $authUser1 = escapeshellcmd($authUser);
+
+        if (($authUser === $authUser1)
+                && !preg_match('/[:\/]/', $authUser)
+                && strlen($authUser) && strlen($authPass)) {
             $filename = SERVER_ROOT . 'admin/conf/htpasswd';
             $fd = fopen($filename, 'r');
             if (!$fd) {
@@ -216,7 +217,7 @@ class CAuthorizer
             $lines = explode("\n", $all);
             foreach ($lines as $line) {
                 list($user, $pass) = explode(':', $line);
-                if ($user == $authUser) {
+                if ($user === $authUser) {
                     if ($pass[0] != '$')
                         $salt = substr($pass, 0, 2);
                     else
@@ -248,7 +249,7 @@ class CAuthorizer
 
             $this->updateAccessTime(array($secretKey0, $secretKey1));
         } else {
-            $this->emailFailedLogin($authUser);
+            $this->emailFailedLogin($authUser1);
         }
 
         return $auth;
@@ -263,11 +264,12 @@ class CAuthorizer
 
         $emails = Service::ServiceData(SInfo::DATA_ADMIN_EMAIL);
         if ($emails != null) {
-            $hostname = gethostbyaddr($ip);
             $date = date("F j, Y, g:i a");
 
-            $repl = array('%%date%%'     => $date, '%%authUser%%' => $authUser, '%%ip%%'       => $ip,
-                '%%hostname%%' => $hostname, '%%url%%'      => $url);
+            $repl = array('%%date%%'     => $date,
+                '%%authUser%%' => $authUser,
+                '%%ip%%'       => $ip,
+                '%%url%%'      => $url);
 
             $subject = DMsg::UIStr('mail_failedlogin');
             $contents = DMsg::UIStr('mail_failedlogin_c', $repl);

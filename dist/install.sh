@@ -3,7 +3,7 @@
 OSNAMEVER=UNKNOWN
 OSNAME=
 OSVER=
-OSTYPE=`uname -m`
+OSTYPE=`getconf LONG_BIT`
 MARIADBCPUARCH=
 
 
@@ -11,7 +11,6 @@ inst_admin_php()
 {
     # detect download method
     OS=`uname -s`
-    OSTYPE=`uname -m`
 
     DLCMD=
     DL=`which wget`
@@ -50,7 +49,7 @@ inst_admin_php()
     fi
         
     if [ "x$OS" = "xLinux" ] ; then
-        if [ "x$OSTYPE" != "xx86_64" ] ; then
+        if [ "x$OSTYPE" != "x64" ] ; then
             $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
         else
             $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
@@ -66,7 +65,7 @@ inst_admin_php()
 #        fi
 
     elif [ "x$OS" = "xFreeBSD" ] ; then
-        if [ "x$OSTYPE" != "xamd64" ] ; then
+        if [ "x$OSTYPE" != "x64" ] ; then
            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
         else
            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
@@ -97,7 +96,7 @@ install_lsphp7_centos()
 {
     action=install
     ND=nd
-    LSPHPVER=70
+    LSPHPVER=71
     yum -y $action epel-release
     rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
     yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
@@ -117,7 +116,7 @@ install_lsphp7_centos()
 
 install_lsphp7_debian()
 {
-    LSPHPVER=70
+    LSPHPVER=71
 
     grep -Fq  "http://rpms.litespeedtech.com/debian/" /etc/apt/sources.list.d/lst_debian_repo.list
     if [ $? != 0 ] ; then
@@ -190,6 +189,14 @@ check_os()
                     OSNAME=ubuntu
                     OSVER=xenial
                     MARIADBCPUARCH="arch=amd64,i386,ppc64el"
+                else
+                    cat /etc/lsb-release | grep "DISTRIB_RELEASE=18." >/dev/null
+                    if [ $? = 0 ] ; then
+                        OSNAMEVER=UBUNTU18
+                        OSNAME=ubuntu
+                        OSVER=bionic
+                        MARIADBCPUARCH="arch=amd64"
+                    fi
                 fi
             fi
         fi    

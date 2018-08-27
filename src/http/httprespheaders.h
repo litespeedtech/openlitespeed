@@ -234,7 +234,7 @@ public:
 private:
     ls_xpool_t     *m_pool;
     AutoBuf         m_buf;
-    TObjArray< resp_kvpair > m_aKVPairs;
+    TObjArrayXpool< resp_kvpair > m_aKVPairs;
     unsigned char   m_KVPairindex[H_HEADER_END];
     short           m_iHttpCode;
     char            m_flags;

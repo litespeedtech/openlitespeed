@@ -33,12 +33,15 @@
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
+#include <http/httprespheaders.h>
+
 #include "staticfilecachedata.h"
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_hash.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_xpool.h>
+#include <spdy/unpackedheaders.h>
 #include <ssi/ssiruntime.h>
 #include <util/blockbuf.h>
 #include <util/gpath.h>
@@ -415,6 +418,38 @@ int HttpReq::removeSpace(const char **pCur, const char *pBEnd)
 }
 
 
+int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
+{
+    AutoBuf *buf = header->getBuf();
+    LS_DBG_L(getLogSession(), "zero-copy unpacked headers: %d.", buf->size());
+    getHeaderBuf().swap(*buf);
+
+    int result = 0;
+    const char *pCur = m_headerBuf.begin() + HEADER_BUF_PAD;
+    const char *pBEnd = m_headerBuf.end();
+    const char *p = pCur + header->getMethodLen();
+    m_reqLineOff = HEADER_BUF_PAD;
+    result = parseMethod(pCur, p);
+    if (result)
+        return result;
+
+    pCur = p + 1;
+    m_reqURLOff = pCur - m_headerBuf.begin();
+    m_reqURLLen = header->getUrlLen();
+    p = pCur + header->getUrlLen();
+    m_reqLineLen = p - m_headerBuf.begin() - m_reqLineOff + 9;
+    result = parseURL(pCur, p);
+    if (result)
+        return result;
+
+    m_ver = HTTP_1_1;
+    keepAlive(0);
+
+    result = processUnpackedHeaderLines(header);
+    return result;
+}
+
+
 int HttpReq::processRequestLine()
 {
     int result = 0;
@@ -678,6 +713,7 @@ int HttpReq::processHeaderLines()
     key_value_pair *pCurHeader = NULL;
     bool headerfinished = false;
     int index;
+    int ret = 0;
 
     m_upgradeProto = UPD_PROTO_NONE; //0;
     while ((pLineEnd  = (const char *)memchr(pLineBegin, '\n',
@@ -721,9 +757,7 @@ int HttpReq::processHeaderLines()
             {
                 m_commonHeaderLen[ index ] = pTemp1 - pTemp;
                 m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
-                int Result = processHeader(index);
-                if (Result != 0)
-                    return Result;
+                ret = processHeader(index);
             }
             else
             {
@@ -732,52 +766,10 @@ int HttpReq::processHeaderLines()
                 pCurHeader->keyLen = skipSpace(pMark, pLineBegin) - pLineBegin;
                 pCurHeader->valOff = pTemp - m_headerBuf.begin();
                 pCurHeader->valLen = pTemp1 - pTemp;
-
-                if (pCurHeader->keyLen == 7 && strncasecmp(pLineBegin, "Upgrade", 7) == 0)
-                {
-                    if (pCurHeader->valLen == 9 && strncasecmp(pTemp, "websocket", 9) == 0)
-                        m_upgradeProto = UPD_PROTO_WEBSOCKET;
-                    else if (pCurHeader->valLen >= 3 && strncasecmp(pTemp, "h2c", 3) == 0)
-                    {
-                        m_upgradeProto = UPD_PROTO_HTTP2;
-                        //Destroy it, to avoid loop calling
-                        memset((char *)(pLineBegin - 2), 0x20, 7 + pCurHeader->valLen + 4);//
-                    }
-                }
-                else if (pCurHeader->keyLen == 16
-                         && (strncasecmp(pLineBegin, "CF-Connecting-IP", 16) == 0))
-                    m_iCfIpHeader = m_unknHeaders.getSize();
-                else if (pCurHeader->keyLen == 17
-                         && strncasecmp(pLineBegin, "X-Forwarded-Proto", 17) == 0)
-                {
-                    if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
-                        m_iKeepAlive |= IS_FORWARDED_HTTPS;
-                }
-                else if (pCurHeader->keyLen == 18
-                         && strncasecmp(pLineBegin, "X-Forwarded-scheme", 18) == 0)
-                {
-                    if (pCurHeader->valLen == 5 && strncasecmp(pTemp, "https", 5) == 0)
-                    {
-                        memcpy((char *)pTemp + 12, "Proto ", 6);
-                        pCurHeader->keyLen = 17;
-                        m_iContextState |= X_FORWARD_HTTPS;
-                    }
-                }
-                else if ((pCurHeader->keyLen == 9
-                          && strncasecmp(pLineBegin, "X-LSCACHE", 9) == 0)
-                         || (pCurHeader->keyLen == 10
-                             &&strncasecmp(pLineBegin, "X-LITEMAGE", 10) == 0))
-                {
-                    m_iContextState |= LSCACHE_FRONTEND;
-                    addEnv("LSCACHE_FRONTEND", 16, "1", 1);
-                }
-                else if (pCurHeader->keyLen == 5
-                         && (strncasecmp(pLineBegin, "proxy", 5) == 0))
-                {
-                    LS_INFO(getLogSession(), "Status 400: HTTPOXY attack detected!");
-                    return SC_400;
-                }
+                ret = processUnknownHeader(pCurHeader, pLineBegin, pTemp);
             }
+            if (ret != 0)
+                return ret;
         }
         pLineBegin = pLineEnd + 1;
         if ((*(pLineEnd - 1) == '\r') && (*(pLineEnd - 2) == '\n'))
@@ -800,6 +792,59 @@ int HttpReq::processHeaderLines()
                 m_headerBuf.size(), m_headerBuf.begin());
     }
     return 1;
+}
+
+
+int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
+{
+    const char *name;
+    const char *value;
+    key_value_pair *pCurHeader = NULL;
+    bool headerfinished = false;
+    int index;
+    int ret = 0;
+
+    const req_header_entry *begin = headers->getEntryBegin();
+    const req_header_entry *end   = headers->getEntryEnd();
+
+    m_upgradeProto = UPD_PROTO_NONE; //0;
+    while (begin < end)
+    {
+        name = m_headerBuf.begin() + begin->name_offset;
+        value = name + begin->name_len + 2;
+        if (strncmp(value, "() {", 4) == 0)
+        {
+            LS_INFO(getLogSession(), "Status 400: CVE-2014-6271, "
+                    "CVE-2014-7169 signature detected in request header!");
+            return SC_400;
+        }
+        index = begin->name_index;
+        if (index == UPK_HDR_UNKNOWN)
+            index = HttpHeader::getIndex(name);
+        if (index > 0 && index != HttpHeader::H_HEADER_END)
+        {
+            m_commonHeaderLen[ index ] = begin->val_len;
+            m_commonHeaderOffset[index] = value - m_headerBuf.begin();
+            ret = processHeader(index);
+        }
+        else
+        {
+            pCurHeader = newUnknownHeader();
+            pCurHeader->keyOff = begin->name_offset;
+            pCurHeader->keyLen = begin->name_len;
+            pCurHeader->valOff = value - m_headerBuf.begin();
+            pCurHeader->valLen = begin->val_len;
+
+            ret = processUnknownHeader(pCurHeader, name, value);
+        }
+        if (ret != 0)
+            return ret;
+        ++begin;
+    }
+    m_iHttpHeaderEnd = m_iReqHeaderBufFinished
+        = m_iReqHeaderBufRead = m_headerBuf.size();
+    m_iHeaderStatus = HEADER_OK;
+    return 0;
 }
 
 
@@ -854,6 +899,56 @@ int HttpReq::processHeader(int index)
     return 0;
 }
 
+
+int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
+                                  const char *name, const char *value)
+{
+    if (pCurHeader->keyLen == 7 && strncasecmp(name, "Upgrade", 7) == 0)
+    {
+        if (pCurHeader->valLen == 9 && strncasecmp(value, "websocket", 9) == 0)
+            m_upgradeProto = UPD_PROTO_WEBSOCKET;
+        else if (pCurHeader->valLen >= 3 && strncasecmp(value, "h2c", 3) == 0)
+        {
+            m_upgradeProto = UPD_PROTO_HTTP2;
+            //Destroy it, to avoid loop calling
+            memset((char *)(name - 2), 0x20, 7 + pCurHeader->valLen + 4);//
+        }
+    }
+    else if (pCurHeader->keyLen == 16
+                && (strncasecmp(name, "CF-Connecting-IP", 16) == 0))
+        m_iCfIpHeader = m_unknHeaders.getSize();
+    else if (pCurHeader->keyLen == 17
+                && strncasecmp(name, "X-Forwarded-Proto", 17) == 0)
+    {
+        if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
+            m_iContextState |= X_FORWARD_HTTPS;
+    }
+    else if (pCurHeader->keyLen == 18
+                && strncasecmp(name, "X-Forwarded-scheme", 18) == 0)
+    {
+        if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
+        {
+            memcpy((char *)value + 12, "Proto ", 6);
+            pCurHeader->keyLen = 17;
+            m_iContextState |= X_FORWARD_HTTPS;
+        }
+    }
+    else if ((pCurHeader->keyLen == 9
+                && strncasecmp(name, "X-LSCACHE", 9) == 0)
+                || (pCurHeader->keyLen == 10
+                    &&strncasecmp(name, "X-LITEMAGE", 10) == 0))
+    {
+        m_iContextState |= LSCACHE_FRONTEND;
+        addEnv("LSCACHE_FRONTEND", 16, "1", 1);
+    }
+    else if (pCurHeader->keyLen == 5
+                && (strncasecmp(name, "proxy", 5) == 0))
+    {
+        LS_INFO(getLogSession(), "Status 400: HTTPOXY attack detected!");
+        return SC_400;
+    }
+    return 0;
+}
 
 int HttpReq::postProcessHost(const char *pCur, const char *pBEnd)
 {
@@ -1683,6 +1778,11 @@ int HttpReq::processContext()
     m_pMimeType = NULL;
     m_iMatchedLen = 0;
 
+    if (!m_pVHost)
+    {
+        LS_DBG_H(getLogSession(), "No Vhost found");
+        return SC_404;
+    }
     if (m_pVHost->getRootContext().getMatchList())
         processMatchList(&m_pVHost->getRootContext(), pURI, iURILen);
 
@@ -2667,12 +2767,6 @@ void HttpReq::appendHeaderIndexes(IOVec *pIOV, int cntUnknown)
 }
 
 
-const AutoBuf *HttpReq::getExtraHeaders() const
-{
-    return (m_pContext) ? m_pContext->getExtraHeaders() : NULL;
-}
-
-
 char HttpReq::isGeoIpOn() const
 {
     return (m_pContext) ? m_pContext->isGeoIpOn() : 0;
@@ -3244,6 +3338,215 @@ int HttpReq::toLocalAbsUrl(const char *pOrgUrl, int urlLen,
 }
 
 
+int HttpReq::createHeaderValue(const char *pFmt, int len,
+                               char *pBuf, int maxLen)
+{
+    char *pDest = pBuf;
+    char *pDestEnd = pBuf + maxLen - 10;
+    char *pEnvNameEnd;
+    const char *pEnd = pFmt + len;
+    while (pFmt < pEnd && pDest < pDestEnd)
+    {
+        const char *p = (const char *)memchr(pFmt, '%', pEnd - pFmt);
+        if (!p || p == pEnd - 1)
+            p = pEnd;
+        if (p > pFmt)
+        {
+            int l = p - pFmt;
+            if (l > pDestEnd - pDest)
+                l = pDestEnd - pDest;
+            memmove(pDest, pFmt, l);
+            pDest += l;
+        }
+        if (p == pEnd)
+            break;
+        pFmt = p + 1;
+        switch (*pFmt)
+        {
+        case 'D':
+            *pDest++ = *pFmt++;
+            *pDest++ = '=';
+
+            break;
+        case 't':
+            *pDest++ = *pFmt++;
+            *pDest++ = '=';
+            break;
+        case '{':
+            pEnvNameEnd = (char *)memchr(pFmt + 1, '}', pEnd - pFmt - 1);
+            if (pEnvNameEnd && (*(pEnvNameEnd + 1) == 'e'
+                                || *(pEnvNameEnd + 1) == 's'))
+            {
+                int envLen;
+                const char *pEnv = getEnv(pFmt + 1, pEnvNameEnd - pFmt - 1, envLen);
+                if (pEnv)
+                {
+                    if (envLen > pDestEnd - pDest)
+                        envLen = pDestEnd - pDest;
+                    memmove(pDest, pEnv, envLen);
+                    pDest += envLen;
+                }
+                pFmt = pEnvNameEnd + 2;
+            }
+            break;
+        case '%':
+            *pDest++ = *pFmt++;
+            break;
+        default:
+            *pDest++ = '%';
+            *pDest++ = *pFmt++;
+        }
+    }
+    return pDest - pBuf;
+}
+
+
+int HttpReq::dropReqHeader(int index)
+{
+    if (m_commonHeaderOffset[index] == 0)
+        return 0;
+    char *pOld = (char *)getHeader(index);
+    int oldLen = getHeaderLen(index);
+    char *pValEnd = pOld + oldLen;
+    char *pHeaderName = pOld - HttpHeader::getHeaderStringLen(index) - 1;
+    while(pOld[-1] != '\n')
+        --pOld;
+    --pOld;
+    if (pOld[-1] == '\r')
+        --pOld;
+    memset(pOld, ' ', pValEnd - pOld);
+    m_commonHeaderOffset[index] = 0;
+    return 0;
+}
+
+
+int HttpReq::applyOp(const HeaderOp *pOp)
+{
+    switch(pOp->getOperator())
+    {
+    case LSI_HEADER_UNSET:
+        if (pOp->getIndex() < HttpHeader::H_HEADER_END)
+        {
+            dropReqHeader(pOp->getIndex());
+        }
+
+        break;
+    case LSI_HEADER_SET:
+        if (pOp->getIndex() != HttpHeader::H_HEADER_END)
+        {
+            updateReqHeader(pOp->getIndex(), pOp->getValue(), pOp->getValueLen());
+            break;
+        }
+        //fall through
+    case LSI_HEADER_ADD:    //add a new line
+    case LSI_HEADER_APPEND: //Add with a comma to seperate
+        appendReqHeader(pOp->getName(), pOp->getNameLen(), 
+                        pOp->getValue(), pOp->getValueLen());
+        break;
+    case LSI_HEADER_MERGE:  //append unless exist
+        break;
+    }
+    return 0;
+}
+
+
+int HttpReq::applyOp(HttpRespHeaders *pRespHeader,
+                     const HeaderOp *pOp)
+{
+    if (pOp->isReqHeader())
+    {
+        if (pRespHeader)
+            return 0;
+        return ((HttpReq *)this)->applyOp(pOp);
+    }
+    else if (!pRespHeader)
+        return 0;
+    
+   if (pOp->getOperator() == LSI_HEADER_UNSET)
+    {
+        if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
+            pRespHeader->del((HttpRespHeaders::INDEX)pOp->getIndex());
+        else
+            pRespHeader->del(pOp->getName(), pOp->getNameLen());
+    }
+    else
+    {
+        const char *pValue = pOp->getValue();
+        int valLen = pOp->getValueLen();
+        char achBuf[8192];
+        int maxLen = sizeof(achBuf);
+        if (pOp->isComplexValue())
+        {
+            valLen = createHeaderValue(pValue, valLen, achBuf, maxLen);
+            pValue = achBuf;
+        }
+        if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
+            pRespHeader->add((HttpRespHeaders::INDEX)pOp->getIndex(),
+                             pValue, valLen, pOp->getOperator());
+        else
+            pRespHeader->add(pOp->getName(), pOp->getNameLen(),
+                             pValue, valLen, pOp->getOperator());
+    }
+    return 0;
+}
+
+
+void HttpReq::applyOps(HttpRespHeaders *pRespHeader,
+                       const HttpHeaderOps *pHeaders, int noInherited)
+{
+    const HeaderOp *iter;
+    if (!pHeaders)
+        return;
+    if (pRespHeader)
+    {
+        if (!pHeaders->has_resp_op())
+            return;
+    }
+    else
+    {
+        if (!pHeaders->has_req_op())
+            return;
+    }
+    for (iter = pHeaders->begin(); iter < pHeaders->end(); ++iter)
+    {
+        if (!noInherited || !iter->isInherited())
+            applyOp(pRespHeader, iter);
+    }
+}
+
+
+int HttpReq::applyHeaderOps(HttpRespHeaders *pRespHeader)
+{
+    if (m_pContext && m_pContext->getHeaderOps())
+    {
+        applyOps(pRespHeader, m_pContext->getHeaderOps(), 0);
+    }
+    return 0;
+}
+
+
+void HttpReq::popHeaderEndCrlf()
+{
+    int pop = 1;
+    if (*(m_headerBuf.end() - 2) == '\r')
+        ++pop;
+    m_headerBuf.pop_end(pop);
+}
+
+
+void HttpReq::appendReqHeader( const char *pName, int iNameLen,
+                               const char *pValue, int iValLen)
+{
+    popHeaderEndCrlf();
+    if (m_headerBuf.available() < iValLen + iNameLen + 4)
+        m_headerBuf.grow(iValLen + iNameLen + 4 - m_headerBuf.available());
+    
+    m_headerBuf.append(pName, iNameLen);
+    m_headerBuf.append(": ", 2);
+    m_headerBuf.append(pValue, iValLen);
+    m_headerBuf.append("\r\n\r\n", 4);
+    m_iReqHeaderBufFinished = m_iHttpHeaderEnd = m_headerBuf.size();
+}
 
 
 

@@ -79,6 +79,5 @@ public:
     void resetEvtcbTail(evtcbtail_t * session); // should really have a lock in session
 
     LS_NO_COPY_ASSIGN(EvtcbQue);
-
 };
 #endif  //CALLBACKQUEUE_H
