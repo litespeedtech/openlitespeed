@@ -52,6 +52,14 @@ public:
     int     xReserve(int size, ls_xpool_t *pool)
     {   return ls_buf_xreserve(this, size, pool);  }
 
+    int     guarantee(int size)
+    {
+        int avail = available();
+        if (size <= avail)
+            return 0;
+        return reserve(size + this->size() + 1);
+    }
+
     void    resize(int size)        {   ls_buf_resize(this, size);  }
     int     grow(int size)          {   return ls_buf_grow(this, size);  }
     int     xGrow(int size, ls_xpool_t *pool)

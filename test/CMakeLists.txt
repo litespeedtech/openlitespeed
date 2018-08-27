@@ -160,7 +160,7 @@ SET( unittestlib
     edio socket sslpp lsshm thread log4cxx GeoIP adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
-    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB}
+    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
     spdy libssl.a libcrypto.a
     -Wl,-Map=ols_unittest.map)
 
@@ -176,7 +176,7 @@ add_executable(ls_lfqueuetest
 lsr/ls_lfqueuetest.c
 ${lsr_SRCS}
 )
-target_link_libraries(ls_lfqueuetest lsr pthread pcre )
+target_link_libraries(ls_lfqueuetest lsr pthread pcre atomic)
 
 add_executable(ls_lfstacktest
 lsr/ls_lfstacktest.cpp
@@ -184,7 +184,7 @@ lsr/ls_lfstacktest.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_lfstacktest lsr pthread pcre )
+target_link_libraries(ls_lfstacktest lsr pthread pcre atomic)
 
 add_executable(ls_llmqtest
 lsr/ls_llmqtest.c

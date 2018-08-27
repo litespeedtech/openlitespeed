@@ -55,7 +55,7 @@ WorkCrew::~WorkCrew()
 int WorkCrew::increaseTo(int numMembers)
 {
     int i;
-    m_crew.guarantee(NULL, numMembers);
+    m_crew.guarantee(numMembers);
     for (i = m_crew.getSize(); i < numMembers; ++i)
     {
         Worker *worker = new(m_crew.getNew()) Worker(wcWorkerFn);

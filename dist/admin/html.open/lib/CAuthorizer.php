@@ -14,17 +14,16 @@ class CAuthorizer
     // prevent an object from being constructed
     private function __construct()
     {
-        $label = preg_replace('/\W/', '_', SERVER_ROOT);
-        $this->_id_field = "{$label}_uid";
-        $this->_pass_field = "{$label}_pass";
+        $label = strtoupper(substr(md5(SERVER_ROOT), 0, 16));
+        $this->_id_field = 'LSID' . $label;
+        $this->_pass_field = 'LSPA' . $label;
 
-        session_name("{$label}WEBUI"); // to prevent conflicts with other app sessions
+        session_name('LSUI' . $label); // to prevent conflicts with other app sessions
         session_start();
 
         if (!array_key_exists('changed', $_SESSION)) {
             $_SESSION['changed'] = false;
         }
-
 
         if (!array_key_exists('valid', $_SESSION)) {
             $_SESSION['valid'] = false;

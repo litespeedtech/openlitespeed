@@ -105,6 +105,7 @@ class SSIRuntime;
 class StaticFileCacheData;
 class VHostMap;
 class VMemBuf;
+class UnpackedHeaders;
 typedef struct ls_hash_s ls_hash_t;
 
 
@@ -132,7 +133,7 @@ typedef struct
 #define COOKIE_FLAG_RESP_UPDATE     8
 
 
-class CookieList : public TObjArray< cookieval_t >
+class CookieList : public TObjArrayXpool< cookieval_t >
 {
 public:
     CookieList()
@@ -158,7 +159,7 @@ public:
     void copy(CookieList &rhs, ls_xpool_t *pool)
     {
         m_iSessIdx = rhs.m_iSessIdx;
-        TObjArray<cookieval_t>::copy(rhs, pool);
+        TObjArrayXpool<cookieval_t>::copy(rhs, pool);
     }
 
 
@@ -166,7 +167,7 @@ private:
     int  m_iSessIdx;
 };
 
-typedef TObjArray< key_value_pair > KVPairArray;
+typedef TObjArrayXpool< key_value_pair > KVPairArray;
 
 class HttpReq
 {
@@ -671,6 +672,11 @@ public:
     int parseURI(const char *pCur, const char *pBEnd);
     const char *skipSpace(const char *pOrg, const char *pDest);
     int processHeader(int index);
+    int processUnknownHeader(key_value_pair* pCurHeader,
+                             const char* name, const char* value);
+    int processUnpackedHeaders(UnpackedHeaders *header);
+    int processUnpackedHeaderLines(UnpackedHeaders *headers);
+
     int postProcessHost(const char *pCur, const char *pBEnd);
     int skipSpaceBothSide(const char *&pHBegin, const char *&pHEnd);
     char isGeoIpOn() const;

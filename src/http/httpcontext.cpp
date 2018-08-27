@@ -1436,11 +1436,10 @@ int HttpContext::config(const RewriteMapList *pMapList,
     }
 
     configMime(pContextNode);
+    int defRewriteEnable = pRootContext.isRewriteEnabled();
     const XmlNode *pNode = pContextNode->getChild("rewrite");
-
     if (pNode)
     {
-        int defRewriteEnable = pRootContext.isRewriteEnabled();
         enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enable",
                       0, 1, defRewriteEnable));
         pValue = pNode->getChildValue("inherit");
@@ -1465,6 +1464,11 @@ int HttpContext::config(const RewriteMapList *pMapList,
         if (pValue)
             configRewriteRule(pMapList, (char *) pValue);
 
+    }
+    else
+    {
+        enableRewrite(defRewriteEnable);
+        setRewriteInherit(1);
     }
 
     pNode = pContextNode->getChild("customErrorPages", 1);

@@ -28,11 +28,51 @@ private:
     ObjArray(const ObjArray &rhs);
     void operator=(const ObjArray &rhs);
 public:
-    ObjArray(int objSize)                     {   ls_objarray_init(this, objSize); }
-    ~ObjArray() {};
+    ObjArray(int objSize)           {   ls_objarray_init(this, objSize); }
+    ~ObjArray()                     {   release();          }
 
-    void    init(int objSize)                 {   ls_objarray_init(this, objSize); }
-    void    release(ls_xpool_t *pool)         {   ls_objarray_release(this, pool); }
+    void    init(int objSize)       {   ls_objarray_init(this, objSize); }
+    void    release()               {   ls_objarray_release(this); }
+    void    clear()                 {   sizenow = 0; }
+
+    int     getCapacity() const     {   return sizemax;     }
+    int     getSize() const         {   return sizenow;     }
+    int     getObjSize() const      {   return objsize;     }
+    void   *getArray()              {   return parray;      }
+    const void *getArray() const    {   return parray;      }
+    void   *getObj(int index) const {   return ls_objarray_getobj(this, index);}
+    void   *getNew()
+    {
+        if (sizenow >= sizemax)
+        {
+            if (setCapacity(sizemax ? (sizemax << 1) : 4) == -1)
+                return NULL;
+        }
+        return (void *)((char *)parray + (sizenow++ * objsize));
+    }
+
+    void    setSize(int size)       {   ls_objarray_setsize(this, size); }
+
+    int setCapacity(int numObj)
+    {   return ls_objarray_setcapacity(this, numObj); }
+
+    int guarantee(int numObj)
+    {   return ls_objarray_guarantee(this, numObj);   }
+};
+
+
+class ObjArrayXpool : private ls_objarray_t
+{
+private:
+    ObjArrayXpool(const ObjArrayXpool &rhs);
+    void operator=(const ObjArrayXpool &rhs);
+public:
+    ObjArrayXpool(int objSize)          {   ls_objarray_init(this, objSize); }
+    ~ObjArrayXpool() {};
+
+    void    init(int objSize)           {   ls_objarray_init(this, objSize); }
+    void    release(ls_xpool_t *pool)
+    {   ls_objarray_release_xpool(this, pool); }
     void    clear()                             {   sizenow = 0; }
 
     int     getCapacity() const                 {   return sizemax;     }
@@ -40,17 +80,18 @@ public:
     int     getObjSize() const                  {   return objsize;     }
     void   *getArray()                          {   return parray;      }
     const void *getArray() const                {   return parray;      }
-    void   *getObj(int index) const             {   return ls_objarray_getobj(this, index);}
-    void   *getNew()                            {   return ls_objarray_getnew(this); }
+    void   *getObj(int index) const     {   return ls_objarray_getobj(this, index);}
+    void   *getNew()                    {   return ls_objarray_getnew(this); }
 
-    void    setSize(int size)                 {   ls_objarray_setsize(this, size); }
+    void    setSize(int size)           {   ls_objarray_setsize(this, size); }
 
-    void setCapacity(ls_xpool_t *pool, int numObj)
-    {   ls_objarray_setcapacity(this, pool, numObj); }
+    int setCapacity(ls_xpool_t *pool, int numObj)
+    {   return ls_objarray_setcapacity_xpool(this, pool, numObj); }
 
-    void guarantee(ls_xpool_t *pool, int numObj)
-    {   ls_objarray_guarantee(this, pool, numObj);   }
+    int guarantee(ls_xpool_t *pool, int numObj)
+    {   return ls_objarray_guarantee_xpool(this, pool, numObj);   }
 };
+
 
 template< class T >
 class TObjArray : public ObjArray
@@ -77,20 +118,54 @@ public:
     const T *begin() const     {   return  getArray();    }
     const T *end() const       {   return (const T *)getArray() + getSize();   }
 
-    void copy(TObjArray &other, ls_xpool_t *pool)
+    void copy(TObjArray &other)
+    {
+        setCapacity(other.getCapacity());
+        setSize(other.getSize());
+        memmove(getArray(), other.getArray(), getSize() * sizeof(T));
+    }
+    
+    int guarantee(int numObj)
+    {   return ObjArray::guarantee(numObj);   }
+
+};
+
+
+template< class T >
+class TObjArrayXpool : public ObjArrayXpool
+{
+private:
+    TObjArrayXpool(const TObjArrayXpool &rhs);
+    void operator=(const TObjArrayXpool &rhs);
+public:
+    TObjArrayXpool()
+        : ObjArrayXpool(sizeof(T))
+    {};
+    ~TObjArrayXpool() {};
+
+    void    init()                      {   ObjArrayXpool::init(sizeof(T));   }
+    T      *getArray()                  {   return (T *)ObjArrayXpool::getArray(); }
+    const T*getArray() const            {   return (const T *)ObjArrayXpool::getArray(); }
+    T      *getObj(int index) const     {   return (T *)ObjArrayXpool::getObj(index);  }
+    T      *getNew()                    {   return (T *)ObjArrayXpool::getNew(); }
+    T      *newObj()                    {   return getNew();    }
+
+    T *begin()      {   return  getArray();    }
+    T *end()        {   return (T *)getArray() + getSize();   }
+
+    const T *begin() const     {   return  getArray();    }
+    const T *end() const       {   return (const T *)getArray() + getSize();   }
+
+    void copy(ObjArrayXpool &other, ls_xpool_t *pool)
     {
         setCapacity(pool, other.getCapacity());
         setSize(other.getSize());
         memmove(getArray(), other.getArray(), getSize() * sizeof(T));
     }
 
-    void guarantee(ls_xpool_t *pool, int numObj)
-    {    ObjArray::guarantee(pool, numObj);   }
-    
-    void guarantee(int numObj)
-    {    ObjArray::guarantee(NULL, numObj);   }
+    int guarantee(ls_xpool_t *pool, int numObj)
+    {   return ObjArrayXpool::guarantee(pool, numObj);   }
 
 };
-
 
 #endif //OBJARRAY_H

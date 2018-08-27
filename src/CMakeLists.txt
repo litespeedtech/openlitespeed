@@ -140,7 +140,7 @@ add_executable(ls_shmhashstat
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    modgzip lsiapi main http lsiapi spdy ssi
+    modgzip lsiapi main http lsiapi spdy http ssi
     registry cgi fcgi jk extensions lsapi proxy
     edio socket sslpp lsshm thread log4cxx adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive sslpp GeoIP ${MMDB_LIB} udns

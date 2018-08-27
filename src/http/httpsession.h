@@ -287,7 +287,7 @@ private:
     int writeRespBodyBlockFilterInternal(SendFileInfo *pData, const char *pBuf,
                                          int written, lsi_param_t *param = NULL);
     int chunkSendfile(int fdSrc, off_t off, off_t size);
-    int processWebSocketUpgrade(const HttpVHost *pVHost);
+    int processWebSocketUpgrade(HttpVHost *pVHost);
     int processHttp2Upgrade(const HttpVHost *pVHost);
 
     //int resumeHandlerProcess();
@@ -318,6 +318,7 @@ private:
 
     void resetEvtcb();
     void processServerPush();
+    int processUnpackedHeaders();
  
 
 

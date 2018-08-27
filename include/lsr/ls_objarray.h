@@ -54,6 +54,7 @@ struct ls_objarray_s
     void   *parray;
 };
 
+
 /** @ls_objarray_init
  * @brief Initializes the given array.  User must give the object size.
  * @details This function does not allocate for the array.  To begin allocation,
@@ -73,7 +74,20 @@ ls_inline void ls_objarray_init(ls_objarray_t *pThis, int objSize)
     pThis->parray = NULL;
 }
 
+
 /** @ls_objarray_release
+ * @brief Releases the internals of the array.
+ * DOES NOT RELEASE THE OBJARRAY STRUCTURE ITSELF.
+ *
+ * @param[in] pThis - A pointer to an initalized objarray object.
+ * @return Void.
+ *
+ * @see ls_objarray_setcapacity, ls_objarray_guarantee
+ */
+void ls_objarray_release(ls_objarray_t *pThis);
+
+
+/** @ls_objarray_release_xpool
  * @brief Releases the internals of the array.
  * DOES NOT RELEASE THE OBJARRAY STRUCTURE ITSELF.
  *
@@ -85,7 +99,8 @@ ls_inline void ls_objarray_init(ls_objarray_t *pThis, int objSize)
  *
  * @see ls_objarray_setcapacity, ls_objarray_guarantee
  */
-void ls_objarray_release(ls_objarray_t *pThis, ls_xpool_t *pool);
+void ls_objarray_release_xpool(ls_objarray_t *pThis, ls_xpool_t *pool);
+
 
 /** @ls_objarray_clear
  * @brief Resets the objarray to size 0, but DOES NOT DEALLOCATE THE ARRAY.
@@ -99,6 +114,7 @@ void ls_objarray_release(ls_objarray_t *pThis, ls_xpool_t *pool);
 ls_inline void ls_objarray_clear(ls_objarray_t *pThis)
 {   pThis->sizenow = 0;  }
 
+
 /** @ls_objarray_getcapacity
  * @brief Gets the capacity of the objarray.
  *
@@ -107,6 +123,7 @@ ls_inline void ls_objarray_clear(ls_objarray_t *pThis)
  */
 ls_inline int ls_objarray_getcapacity(const ls_objarray_t *pThis)
 {   return pThis->sizemax;   }
+
 
 /** @ls_objarray_getsize
  * @brief Gets the size of the objarray.
@@ -117,6 +134,7 @@ ls_inline int ls_objarray_getcapacity(const ls_objarray_t *pThis)
 ls_inline int ls_objarray_getsize(const ls_objarray_t *pThis)
 {   return pThis->sizenow;   }
 
+
 /** @ls_objarray_getobjsize
  * @brief Gets the object size of the objarray.
  *
@@ -126,6 +144,7 @@ ls_inline int ls_objarray_getsize(const ls_objarray_t *pThis)
 ls_inline int ls_objarray_getobjsize(const ls_objarray_t *pThis)
 {   return pThis->objsize;   }
 
+
 /** @ls_objarray_getarray
  * @brief Gets the array pointer from the objarray.
  *
@@ -134,6 +153,7 @@ ls_inline int ls_objarray_getobjsize(const ls_objarray_t *pThis)
  */
 ls_inline void *ls_objarray_getarray(ls_objarray_t *pThis)
 {   return pThis->parray;   }
+
 
 /** @ls_objarray_setsize
  * @brief Sets the size of the objarray.  Must be less than the capacity.
@@ -145,7 +165,21 @@ ls_inline void *ls_objarray_getarray(ls_objarray_t *pThis)
 ls_inline void ls_objarray_setsize(ls_objarray_t *pThis, int size)
 {   pThis->sizenow = (size > pThis->sizemax ? pThis->sizemax : size);   }
 
+
 /** @ls_objarray_setcapacity
+ * @brief Sets the capacity of the object array to the given number of objects.
+ * @details If the user wishes to use a session pool and can guarantee that the
+ * objects will only be used within a session, a session pool pointer may
+ * be specified; otherwise, it should be NULL.
+ *
+ * @param[in] pThis - A pointer to an initalized objarray object.
+ * @param[in] numObj - The number of objects to set the capacity to.
+ * @return -1 if fail, 0 if success.
+ */
+int ls_objarray_setcapacity(ls_objarray_t *pThis, int numObj);
+
+
+/** @ls_objarray_setcapacity_xpool
  * @brief Sets the capacity of the object array to the given number of objects.
  * @details If the user wishes to use a session pool and can guarantee that the
  * objects will only be used within a session, a session pool pointer may
@@ -154,10 +188,11 @@ ls_inline void ls_objarray_setsize(ls_objarray_t *pThis, int size)
  * @param[in] pThis - A pointer to an initalized objarray object.
  * @param[in] pool - A pointer to the session pool if the user wishes to use one.  NULL if not.
  * @param[in] numObj - The number of objects to set the capacity to.
- * @return Void.
+ * @return -1 if fail, 0 if success.
  */
-void ls_objarray_setcapacity(ls_objarray_t *pThis, ls_xpool_t *pool,
+int ls_objarray_setcapacity_xpool(ls_objarray_t *pThis, ls_xpool_t *pool,
                              int numObj);
+
 
 /** @ls_objarray_guarantee
  * @brief Guarantees the capacity of the object array to be the given number of objects.
@@ -166,13 +201,29 @@ void ls_objarray_setcapacity(ls_objarray_t *pThis, ls_xpool_t *pool,
  * be specified; otherwise, it should be NULL.
  *
  * @param[in] pThis - A pointer to an initalized objarray object.
+ * @param[in] numObj - The number of objects to guarantee.
+ * @return -1 if fail, 0 if success.
+ */
+ls_inline int ls_objarray_guarantee(ls_objarray_t *pThis,
+                                     int numObj)
+{   return ls_objarray_setcapacity(pThis, numObj /*+ pThis->sizenow*/);    }
+
+
+/** @ls_objarray_guarantee_xpool
+ * @brief Guarantees the capacity of the object array to be the given number of objects.
+ * @details If the user wishes to use a session pool and can guarantee that the
+ * objects will only be used within a session, a session pool pointer may
+ * be specified; otherwise, it should be NULL.
+ *
+ * @param[in] pThis - A pointer to an initalized objarray object.
  * @param[in] pool - A pointer to the session pool if the user wishes to use one.  NULL if not.
  * @param[in] numObj - The number of objects to guarantee.
- * @return Void.
+ * @return -1 if fail, 0 if success.
  */
-ls_inline void ls_objarray_guarantee(ls_objarray_t *pThis,
+ls_inline int ls_objarray_guarantee_xpool(ls_objarray_t *pThis,
                                      ls_xpool_t *pool, int numObj)
-{   ls_objarray_setcapacity(pThis, pool, numObj /*+ pThis->sizenow*/);    }
+{   return ls_objarray_setcapacity_xpool(pThis, pool, numObj /*+ pThis->sizenow*/);    }
+
 
 /** @ls_objarray_getobj
  * @brief Gets the object at a given index in the array.  The index must be
@@ -189,6 +240,7 @@ ls_inline void *ls_objarray_getobj(const ls_objarray_t *pThis, int index)
     char *ptr = (char *)pThis->parray;
     return (void *)(ptr + (index * pThis->objsize));
 }
+
 
 /** @ls_objarray_getnew
  * @brief Gets a new object pointer from the array.  If there is no
@@ -209,10 +261,6 @@ ls_inline void *ls_objarray_getnew(ls_objarray_t *pThis)
     char *ptr = (char *)pThis->parray;
     return (void *)(ptr + (pThis->sizenow++ * pThis->objsize));
 }
-
-
-
-
 
 
 #ifdef __cplusplus

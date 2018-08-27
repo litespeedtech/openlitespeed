@@ -146,9 +146,7 @@ int HttpSession::onInitConnected()
     setState(HSS_WAITING);
     HttpStats::incIdleConns();
 
-    m_processState = HSPS_READ_REQ_HEADER;
     m_curHookLevel = 0;
-    getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
     m_request.setILog(getStream());
     if (m_request.getBodyBuf())
         m_request.getBodyBuf()->reinit();
@@ -169,6 +167,11 @@ int HttpSession::onInitConnected()
     m_cbExtCmd = NULL;
     m_lExtCmdParam = 0;
     m_pExtCmdParam = NULL;
+    if (processUnpackedHeaders() == LS_FAIL)
+    {
+        m_processState = HSPS_READ_REQ_HEADER;
+        getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
+    }
     return 0;
 }
 
@@ -797,6 +800,30 @@ int HttpSession::readReqBodyTermination(LsiSession *pSession, char *pBuf,
 }
 
 
+int HttpSession::processUnpackedHeaders()
+{
+    UnpackedHeaders *header = getStream()->getReqHeaders();
+    if (!header)
+        return LS_FAIL;
+    int ret = m_request.processUnpackedHeaders(header);
+    LS_DBG_L(getLogSession(),
+                "processHeader() returned %d, header state: %d.",
+                ret, m_request.getStatus());
+    assert(m_request.getStatus() == HttpReq::HEADER_OK);
+    if (ret == 0)
+    {
+        m_iFlag &= ~HSF_URI_PROCESSED;
+        m_processState = HSPS_NEW_REQ;
+        smProcessReq();
+        return 0;
+    }
+    m_processState = HSPS_HTTP_ERROR;
+    if (getStream()->getState() < HIOS_SHUTDOWN)
+        httpError(ret);
+    return ret;
+}
+
+
 int HttpSession::readToHeaderBuf()
 {
     AutoBuf &headerBuf = m_request.getHeaderBuf();
@@ -948,9 +975,9 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
 }
 
 
-int HttpSession::processWebSocketUpgrade(const HttpVHost *pVHost)
+int HttpSession::processWebSocketUpgrade(HttpVHost *pVHost)
 {
-    const HttpContext *pContext = pVHost->bestMatch(m_request.getURI(), 
+    HttpContext *pContext = pVHost->bestMatch(m_request.getURI(), 
                                                     m_request.getURILen());
     LS_DBG_L(getLogSession(),
              "Request web socket upgrade, VH name: [%s] URI: [%s]",
@@ -1099,7 +1126,7 @@ int HttpSession::processNewReqInit()
     if (m_request.isWebsocket())
     {
         m_processState = HSPS_WEBSOCKET;
-        return processWebSocketUpgrade(pVHost);
+        return processWebSocketUpgrade((HttpVHost *)pVHost);
     }
     else if (httpServConf.getEnableH2c() == 1 && m_request.isHttp2Upgrade())
     {

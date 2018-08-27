@@ -33,7 +33,7 @@ typedef struct ls_xpool_s ls_xpool_t;
 
 class HttpRange
 {
-    TObjArray< ByteRange > m_array;
+    TObjArrayXpool< ByteRange > m_array;
     off_t   m_lEntityLen;
     int     m_iCurRange;
     char    m_boundary[20];

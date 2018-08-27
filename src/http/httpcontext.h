@@ -394,14 +394,14 @@ public:
     void enableRewrite(int a)
     {
         m_iRewriteEtag =
-            (m_iRewriteEtag & ~REWRITE_MASK) | (a & REWRITE_MASK);
+            (m_iRewriteEtag & ~REWRITE_MASK) | (a ? REWRITE_MASK : 0);
         m_iConfigBits |= BIT_REWRITE_ENGINE;
     }
     unsigned char rewriteEnabled() const     {   return m_iRewriteEtag & REWRITE_MASK;    }
     void setRewriteInherit(int a) {   setConfigBit(BIT_REWRITE_INHERIT, a); }
     int  isRewriteInherit() const   {   return m_iConfigBits & BIT_REWRITE_INHERIT; }
     int  isRewriteEnabled() const   
-    {   return m_iConfigBits & BIT_REWRITE_ENGINE ? 1 : 0;  }
+    {   return rewriteEnabled();  }
 
     RewriteRuleList *getRewriteRules() const
     {   return m_pRewriteRules;                     }

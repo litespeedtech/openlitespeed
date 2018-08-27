@@ -141,7 +141,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
 
             //Case of "RewriteFile" and "RewriteBase"
             int type = 0;
-            if ((isspace(*(pRules + 11))) &&
+            if ( strlen(pRules) > 11 && (isspace(*(pRules + 11))) &&
                 ((type = (strncasecmp(pRules, "RewriteFile", 11) == 0 ? 1 : 0))
                 || 
                 (type = (strncasecmp(pRules, "RewriteBase", 11) == 0 ? 2 : 0))))

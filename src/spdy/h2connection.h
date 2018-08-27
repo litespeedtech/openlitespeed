@@ -213,7 +213,7 @@ private:
                          int methodLen = 0,
                          char *uri = NULL, int uriLen = 0);
     int decodeData(const unsigned char *pSrc, const unsigned char *bufEnd,
-                   char *method, int *methodLen, char **uri, int *uriLen);
+                   UnpackedHeaders *header);
     void skipRemainData();
     int encodeHeaders(HttpRespHeaders *pRespHeaders, unsigned char *buf,
                       int maxSize);
