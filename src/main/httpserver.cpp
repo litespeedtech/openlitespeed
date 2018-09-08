@@ -2018,6 +2018,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         currentCtx.getLongValue(pNode, "maxKeepAliveReq", 0, 32767, 100));
     config.setSmartKeepAlive(currentCtx.getLongValue(pNode, "smartKeepAlive",
                              0, 1, 0));
+
     //HTTP request/response
     config.setMaxURLLen(currentCtx.getLongValue(pNode, "maxReqURLLen", 100,
                         MAX_URL_LEN , DEFAULT_URL_LEN));
@@ -2790,8 +2791,12 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             }
         }
 
+
         if (!reconfig)
         {
+            HttpServerConfig::getInstance().setAutoLoadHtaccess(
+                currentCtx.getLongValue(pRoot, "autoLoadHtaccess", 0, 1, 0));
+
             const char *pUser = pRoot->getChildValue("user");
             const char *pGroup = pRoot->getChildValue("group");
             if (pGroup)
@@ -3723,7 +3728,7 @@ int HttpServerImpl::initLscpd()
                    "RewriteCond %{ORG_REQ_URI} !/phpmyadmin\r\n"
                    "RewriteRule ^/(.*)$ http://" LSCPD_PROXY_APP_NAME "/$1 [P]\r\n";
 
-    pVHost->getRootContext().configRewriteRule(pVHost->getRewriteMaps(), pRules);
+    pVHost->getRootContext().configRewriteRule(pVHost->getRewriteMaps(), pRules, "");
 
     if (addVHost(pVHost) == 0)
     {

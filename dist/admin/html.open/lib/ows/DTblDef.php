@@ -22,6 +22,8 @@ class DTblDef extends DTblDefBase
         parent::loadSpecials();
 
         $this->addSpecial('phpIniOverride', [], 'data');
+        $this->addSpecial('rewrite', ['enable', 'autoLoadHtaccess', 'logLevel', 'map', 'inherit', 'base'], 'rules');
+        $this->addSpecial('virtualHostConfig:rewrite', ['enable', 'autoLoadHtaccess', 'logLevel', 'map', 'inherit', 'base'], 'rules'); // for template
 
         $tags = array_merge(['ls_enabled', 'note', 'internal', 'urlFilter'], $this->getModuleTags());
         $this->addSpecial('module', $tags, 'param');
@@ -108,6 +110,24 @@ class DTblDef extends DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_generalsettings'), $attrs);
 	}
 
+    protected function add_S_AUTOLOADHTA($id)
+    {
+		$attrs = array(
+            self::NewBoolAttr('autoLoadHtaccess', DMsg::ALbl('l_autoLoadRewriteHtaccess')),
+		);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
+    }
+
+    protected function add_VT_REWRITE_CTRL($id)
+    {
+        $attrs = array(
+            self::NewBoolAttr('enable', DMsg::ALbl('l_enablerewrite'), true, 'enableRewrite'),
+            self::NewBoolAttr('autoLoadHtaccess', DMsg::ALbl('l_autoLoadRewriteHtaccess')),
+            self::NewIntAttr('logLevel', DMsg::ALbl('l_loglevel'), true, 0, 9, 'rewriteLogLevel')
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
+    }
+
     protected function add_S_FILEUPLOAD($id)
     {
 		$attrs = array(
@@ -142,7 +162,7 @@ class DTblDef extends DTblDefBase
 	{
 		$edoptions = array( 'best'    => 'best (All platforms)',
 				    'poll'    => 'poll (All platforms)',
-				    'epoll'   => 'epoll (Linux 2.6 kernel)',
+				    'epoll'   => 'epoll (Linux)',
 				    'kqueue'  => 'kqueue (FreeBSD/Mac OS X)',
 				    'devpoll' => 'devpoll (Solaris)');
 

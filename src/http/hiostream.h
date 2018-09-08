@@ -87,15 +87,9 @@ class HioStream : public InputStream, public OutputStream,
 
 public:
     HioStream()
-        : m_pHandler(NULL)
-        , m_lBytesRecv(0)
-        , m_lBytesSent(0)
-        , m_iState(HIOS_DISCONNECTED)
-        , m_iProtocol(HIOS_PROTO_HTTP)
-        , m_iFlag(0)
-        , m_iPriority(0)
-        , m_tmLastActive(0)
-    {}
+    {
+        LS_ZERO_FILL(m_pHandler, m_tmLastActive);
+    }
     virtual ~HioStream();
 
     virtual int sendfile(int fdSrc, off_t off, off_t size) = 0;
@@ -106,8 +100,6 @@ public:
     virtual int readv(struct iovec *vector, size_t count)
     {       return -1;      }
 
-    virtual UnpackedHeaders *getReqHeaders()
-    {   return NULL;    }
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody) = 0;
 
     virtual int  shutdown() = 0;
@@ -248,10 +240,15 @@ public:
 
     static const char *getProtocolName(HiosProtocol proto);
 
+    UnpackedHeaders *getReqHeaders() const
+    {   return m_pReqHeaders;    }
+    void setReqHeaders(UnpackedHeaders *headers)
+    {   m_pReqHeaders = headers;    }
 
 private:
 
     HioHandler         *m_pHandler;
+    UnpackedHeaders    *m_pReqHeaders;
     off_t               m_lBytesRecv;
     off_t               m_lBytesSent;
     char                m_iState;

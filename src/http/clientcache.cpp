@@ -234,7 +234,7 @@ int ClientCache::generateBlockedIPReport(int fd)
     buf.append("BLOCKED_IP: ", 12);
     writeBlockedIP(&buf, &m_v4);
     writeBlockedIP(&buf, &m_v6);
-    buf.appendUnsafe('\n');
+    buf.append_unsafe('\n');
     write(fd, buf.begin(), buf.size());
     return 0;
 }

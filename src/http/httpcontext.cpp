@@ -47,6 +47,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 CtxInt HttpContext::s_defaultInternal =
 {
@@ -469,7 +470,7 @@ void HttpContext::setHTAuth(HTAuth *pHTAuth)
 //             {
 //                 m_pInternal->m_pExtraHeader->append(
 //                     pLineBegin, pHeaderNameEnd - pLineBegin);
-//                 m_pInternal->m_pExtraHeader->appendUnsafe(':');
+//                 m_pInternal->m_pExtraHeader->append_unsafe(':');
 //                 m_pInternal->m_pExtraHeader->append(pHeaderNameEnd + 1,
 //                                                     pCurEnd - pHeaderNameEnd - 1);
 //                 m_pInternal->m_pExtraHeader->append("\r\n", 2);
@@ -1240,15 +1241,32 @@ int HttpContext::configErrorPages(const XmlNode *pNode)
 
 
 int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
-                                   char *pRule)
+                                   char *pRule, const char *htaccessPath)
 {
     RewriteRuleList *pRuleList;
 
-    if (!pRule)
-        return 0;
-    AutoStr rule(pRule);
-    pRule = rule.buf();
+    AutoStr2 rule = "";
+    if (pRule)
+        rule.append(pRule, strlen(pRule));
 
+    //Usual case, htaccessPath is the path of the .htaccess file
+    //But for a function, only a simple test if have at least one char
+    //Adn if the rule contains "RewriteFile", do not include htaccessPath
+    if (htaccessPath &&
+        strlen(htaccessPath) > 1 &&
+        access(htaccessPath, F_OK) == 0)
+    {
+        if (!pRule || strcasestr(pRule, "RewriteFile") == NULL)
+        {
+            rule.append("\r\nRewriteFile ", 14);
+            rule.append(htaccessPath, strlen(htaccessPath));
+        }
+    }
+    
+    if (rule.len() == 0)
+        return 0;
+
+    pRule = rule.buf();
     pRuleList = new RewriteRuleList();
 
     if (pRuleList)
@@ -1385,11 +1403,11 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
 
 
 int HttpContext::config(const RewriteMapList *pMapList,
-                        const XmlNode *pContextNode,
-                        int type,
-                        HttpContext &pRootContext)
+                        const XmlNode *pContextNode, int type,
+                        HttpContext &pRootContext, int autoLoadHt)
 {
     const char *pValue;
+    const char *rules = NULL;
     configAutoIndex(pContextNode);
     configDirIndex(pContextNode);
 
@@ -1460,16 +1478,21 @@ int HttpContext::config(const RewriteMapList *pMapList,
                 setRewriteBase(pValue);
         }
 
-        pValue = pNode->getChildValue("rules");
-        if (pValue)
-            configRewriteRule(pMapList, (char *) pValue);
-
+        rules = pNode->getChildValue("rules");
     }
     else
     {
         enableRewrite(defRewriteEnable);
         setRewriteInherit(1);
     }
+
+    AutoStr2 htaccessPath;
+    if (autoLoadHt)
+    {
+        htaccessPath.setStr(getLocation(), getLocationLen());
+        htaccessPath.append(".htaccess", 9);
+    }
+    configRewriteRule(pMapList, (char *) rules, htaccessPath.c_str());
 
     pNode = pContextNode->getChild("customErrorPages", 1);
 

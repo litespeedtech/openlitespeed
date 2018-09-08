@@ -726,15 +726,15 @@ static unsigned int NEXT_PROTO_STRING_LEN[8] =
     9, 16, 25, 32, 12, 19, 28, 35,
 };
 
-static int SslConnection_ssl_npn_advertised_cb(SSL *pSSL,
-        const unsigned char **out,
-        unsigned int *outlen, void *arg)
-{
-    SslContext *pCtx = (SslContext *)arg;
-    *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy()];
-    *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ];
-    return SSL_TLSEXT_ERR_OK;
-}
+// static int SslConnection_ssl_npn_advertised_cb(SSL *pSSL,
+//         const unsigned char **out,
+//         unsigned int *outlen, void *arg)
+// {
+//     SslContext *pCtx = (SslContext *)arg;
+//     *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy()];
+//     *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ];
+//     return SSL_TLSEXT_ERR_OK;
+// }
 
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
 static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
@@ -767,10 +767,10 @@ int SslContext::enableSpdy(int level)
         return 0;
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
     SSL_CTX_set_alpn_select_cb(m_pCtx, SSLConntext_alpn_select_cb, this);
-#endif
-#ifdef TLSEXT_TYPE_next_proto_neg
-    SSL_CTX_set_next_protos_advertised_cb(m_pCtx,
-                                          SslConnection_ssl_npn_advertised_cb, this);
+// #endif
+// #ifdef TLSEXT_TYPE_next_proto_neg
+//     SSL_CTX_set_next_protos_advertised_cb(m_pCtx,
+//                                           SslConnection_ssl_npn_advertised_cb, this);
 #else
 #error "Openssl version is too low (openssl 1.0.1 or higher is required)!!!"
 #endif

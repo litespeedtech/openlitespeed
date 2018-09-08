@@ -228,17 +228,17 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
     pUpdKv->keyOff = m_buf.size();
     pUpdKv->keyLen = nameLen;
 
-    m_buf.appendUnsafe(pName, nameLen);
-    m_buf.appendUnsafe(": ", 2);
+    m_buf.append_unsafe(pName, nameLen);
+    m_buf.append_unsafe(": ", 2);
 
     if (pUpdKv->valLen > 0)  //only apply when append and merge
     {
-        m_buf.appendUnsafe(m_buf.begin() + pUpdKv->valOff, pUpdKv->valLen);
-        m_buf.appendUnsafe(",", 1);  //for append and merge case
+        m_buf.append_unsafe(m_buf.begin() + pUpdKv->valOff, pUpdKv->valLen);
+        m_buf.append_unsafe(",", 1);  //for append and merge case
         ++ pUpdKv->valLen;
     }
-    m_buf.appendUnsafe(pVal, valLen);
-    m_buf.appendUnsafe("\r\n", 2);
+    m_buf.append_unsafe(pVal, valLen);
+    m_buf.append_unsafe("\r\n", 2);
     pUpdKv->valOff = pUpdKv->keyOff + nameLen + 2;
     pUpdKv->valLen +=  valLen;
     return 0;
@@ -409,8 +409,8 @@ int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
     //Only update the valLen of the kvpair
     pKv->valLen += valLen;
     m_buf.used(-2);  //move back two char, to replace the \r\n at the end
-    m_buf.appendUnsafe(pVal, valLen);
-    m_buf.appendUnsafe("\r\n", 2);
+    m_buf.append_unsafe(pVal, valLen);
+    m_buf.append_unsafe("\r\n", 2);
 
     return 0;
 }

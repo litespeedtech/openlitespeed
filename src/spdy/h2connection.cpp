@@ -625,6 +625,8 @@ int H2Connection::processRstFrame(H2FrameHeader *pHeader)
 
     unsigned char p[4];
     m_bufInput.moveTo((char *)p, 4);
+    m_iCurrentFrameRemain -= 4;
+
     uint32_t errorCode = beReadUint32(p);
     LS_DBG_L(getLogSession(), "StreamID:%d processRstFrame, error code: %d",
              streamID, errorCode);
@@ -788,22 +790,20 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag)
 int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
                                 unsigned char iHeaderFlag)
 {
-    UnpackedHeaders *headers = new UnpackedHeaders();
+    UnpackedHeaders headers;
 
     unsigned char *bufEnd = pSrc + length;
-    int rc = decodeData(pSrc, bufEnd, headers);
+    int rc = decodeData(pSrc, bufEnd, &headers);
     if (rc < 0)
     {
         LS_DBG_L(getLogSession(), "decodeData() failure, return %d", rc);
         doGoAway(H2_ERROR_COMPRESSION_ERROR);
-        delete headers;
         return LS_FAIL;
     }
 
 //     if (!headers->isComplete())
 //     {
 //         sendRstFrame(m_uiLastStreamId, H2_ERROR_PROTOCOL_ERROR);
-//         delete headers;
 //         return 0;
 //     }
 
@@ -812,21 +812,23 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
     if (!pStream)
     {
         sendRstFrame(m_uiLastStreamId, H2_ERROR_PROTOCOL_ERROR);
-        delete headers;
         return 0;
     }
 
-    pStream->setReqHeaders(headers);
     
     if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) )
     {
         LS_DBG_H(getLogSession(), "decodeHeaders():\r\n%.*s",
-                 headers->getBuf()->size() - 4,
-                 headers->getBuf()->begin() + 4);
+                 headers.getBuf()->size() - 4,
+                 headers.getBuf()->begin() + 4);
     }
 
     if (pStream->getHandler())
+    {
+        pStream->setReqHeaders(&headers);
         pStream->onInitConnected();
+        pStream->setReqHeaders(NULL);
+    }
     else
     {
         resetStream(0, pStream, H2_ERROR_INTERNAL_ERROR);
@@ -1064,7 +1066,7 @@ int H2Connection::decodeData(const unsigned char *pSrc,
         n += total_cookie_size + 6 + 4;
         if (n >= MAX_HTTP2_HEADERS_SIZE)
             return LS_FAIL;
-        header->appendCookie(cookies, cookie_count, total_cookie_size);
+        header->appendCookieHeader(cookies, cookie_count, total_cookie_size);
     }
 
     header->endHeader();
@@ -1645,21 +1647,11 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
                      | HIO_FLAG_WANT_WRITE, 1);
 
     UnpackedHeaders *header = new UnpackedHeaders();
-    header->appendReqLine("GET ", 4, pUrl->ptr, pUrl->len);
-    header->appendHeader(HttpHeader::H_HOST, "host", 4, pHost->ptr, pHost->len);
-
-    if (headers)
-    {
-        while(headers->key.ptr)
-        {
-            int index = -1;
-            header->appendHeader(index, headers->key.ptr, headers->key.len,
-                                 headers->val.ptr, headers->val.len);
-            ++headers;
-        }
-    }
-    header->endHeader();
-    pStream->setReqHeaders(header);
+    ls_str_t method;
+    method.ptr = (char *)"GET";
+    method.len = 3;
+    if (header->set(&method, pUrl, pHost, headers) == LS_OK)
+        pStream->setReqHeaders(header);
 
     m_priQue[pStream->getPriority()].append(pStream);
     ++m_iCurPushStreams;

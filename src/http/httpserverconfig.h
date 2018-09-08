@@ -39,6 +39,7 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int32_t         m_iMaxDynRespHeaderLen;
     int16_t         m_iMaxKeepAliveRequests;
     int8_t          m_iSmartKeepAlive;
+    int8_t          m_iAutoLoadHtaccess;
     int8_t          m_iUseSendfile;
     int8_t          m_iFollowSymLink;
     int8_t          m_iGzipCompress;
@@ -88,7 +89,10 @@ public:
     {   m_iMaxKeepAliveRequests = max - 1;   }
     int16_t getMaxKeepAliveRequests() const
     {   return m_iMaxKeepAliveRequests; }
-
+    
+    void setAutoLoadHtaccess(int8_t val)      {   m_iAutoLoadHtaccess = val;    }
+    int8_t getAutoLoadHtaccess() const        {   return m_iAutoLoadHtaccess;   }
+    
     void setSmartKeepAlive(int8_t val)      {   m_iSmartKeepAlive = val;    }
     int8_t getSmartKeepAlive() const        {   return m_iSmartKeepAlive;   }
 

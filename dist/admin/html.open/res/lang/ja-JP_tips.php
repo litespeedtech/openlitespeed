@@ -116,6 +116,8 @@ $_tipsdb['autoIndex'] = new DAttrHelp("自動インデックス", '&quot;イン�
 
 $_tipsdb['autoIndexURI'] = new DAttrHelp("自動インデックス URI", '&quot;インデックスファイル&quot;にリストされているインデックスファイルがディレクトリで使用できない場合に、インデックスページを生成するために使用されるURIを指定します。 LiteSpeed Webサーバーは外部スクリプトを使用してインデックスページを生成し、最大限のカスタマイズの柔軟性を提供します。 デフォルトスクリプトは、Apacheと同じ外観のインデックスページを生成します。 生成されたインデックスページをカスタマイズするには、オンラインウィキHow-tosを読んでください。 索引付けされるディレクトリーは、環境変数 &quot;LS_AI_PATH&quot;を介してスクリプトに渡されます。', '', 'URI', '');
 
+$_tipsdb['autoLoadHtaccess'] = new DAttrHelp("Auto Load from .htaccess", 'Autoload rewrite rules contained in a directory&#039;s .htaccess file when first accessing that directory if an HttpContext for that directory using the <b>rewritefile</b> directive does not already exist. Once initially loaded, a graceful restart must be performed for any further changes to that .htaccess file to take effect.<br/><br/>Virtual Host-level setting overrides Server-level setting. Default values:<br/><br/><b>Server-level:</b> No<br/><br/><b>VH-Level:</b> Inherit Server-level setting', '', 'ラジオボックスから選択', '');
+
 $_tipsdb['autoStart'] = new DAttrHelp("自動スタート", 'Webサーバーでアプリケーションを自動的に開始するかどうかを指定します。 同じマシン上で実行されているFastCGIおよびLSAPIアプリケーションのみを自動的に起動することができます。 &quot;アドレス&quot;のIPはローカルIPでなければなりません。 メインサーバプロセスではなくLiteSpeed CGIデーモンを起動すると、システムのオーバーヘッドを軽減できます。', '', 'ドロップダウンリストから選択', '');
 
 $_tipsdb['backlog'] = new DAttrHelp("バックログ", 'リスニングソケットのバックログを指定します。 &quot;自動スタート&quot;が有効な場合は必須です。', '', '整数', '');

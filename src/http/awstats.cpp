@@ -609,7 +609,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     }
 
     pContext->enableRewrite(1);
-    pContext->configRewriteRule(pVHost->getRewriteMaps(), achBuf);
+    pContext->configRewriteRule(pVHost->getRewriteMaps(), achBuf, "");
 
     pValue = pAwNode->getChildValue("realm");
 

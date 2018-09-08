@@ -382,7 +382,7 @@ class DTblDefBase
     {
         $attrs = array(
             self::NewPathAttr('ip2locDBFile', DMsg::ALbl('l_ip2locDBFile'), 'filep', 2, 'r'),
-            self::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_dbcache'), array(''=> '',
+            self::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_ip2locDBCache'), array(''=> '',
                 'FileIo'=> 'File System',
                 'MemoryCache'       => 'Memory',
                 'SharedMemoryCache' => 'Shared Memory')),
@@ -1187,15 +1187,6 @@ class DTblDefBase
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_groupdbentry'), $attrs, 'name');
         $this->_tblDef[$id]->Set(DTbl::FLD_SHOWPARENTREF, true);
-    }
-
-    protected function add_VT_REWRITE_CTRL($id)
-    {
-        $attrs = array(
-            self::NewBoolAttr('enable', DMsg::ALbl('l_enablerewrite'), true, 'enableRewrite'),
-            self::NewIntAttr('logLevel', DMsg::ALbl('l_loglevel'), true, 0, 9, 'rewriteLogLevel')
-        );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
     }
 
     protected function add_VT_REWRITE_MAP_TOP($id)

@@ -662,7 +662,7 @@ public:
 
     void addContentLenHeader(size_t len);
     void popHeaderEndCrlf();
-    int  applyHeaderOps(HttpRespHeaders *pRespHeader);
+    int  applyHeaderOps(HttpSession *pSession, HttpRespHeaders *pRespHeader);
 
     int parseMethod(const char *pCur, const char *pBEnd);
     int parseHost(const char *pCur, const char *pBEnd);
@@ -761,13 +761,13 @@ public:
     CookieList  &getCookieList() { return   m_cookies; }
 
 
-    int applyOp(const HeaderOp *pOp);
-    int  applyOp(HttpRespHeaders *pRespHeader,
+    int applyOp(HttpSession *pSession, const HeaderOp *pOp);
+    int  applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
                  const HeaderOp *pOp);
-    void applyOps(HttpRespHeaders *pRespHeader,
+    void applyOps(HttpSession *pSession, HttpRespHeaders *pRespHeader,
                   const HttpHeaderOps *getHeaders, int arg2);
 
-    int createHeaderValue(const char *pFmt, int len,
+    int createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                           char *pBuf, int maxLen);
     void eraseHeader(key_value_pair * pHeader);
     

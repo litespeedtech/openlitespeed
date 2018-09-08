@@ -211,7 +211,7 @@ int ZConfManager::appendToTmpDomainList(const char *pDomainList, int iListLen)
         if (len > m_pTmpDomainList->capacity())
             m_pTmpDomainList->reserve(len);
         if (!m_pTmpDomainList->empty())
-            m_pTmpDomainList->appendUnsafe(',');
+            m_pTmpDomainList->append_unsafe(',');
     }
     else
     {
@@ -219,7 +219,7 @@ int ZConfManager::appendToTmpDomainList(const char *pDomainList, int iListLen)
         m_pTmpDomainList = new AutoBuf(len);
     }
 
-    m_pTmpDomainList->appendUnsafe(pDomainList, iListLen);
+    m_pTmpDomainList->append_unsafe(pDomainList, iListLen);
     return 1;
 }
 

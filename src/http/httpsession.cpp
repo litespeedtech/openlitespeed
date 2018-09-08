@@ -809,7 +809,6 @@ int HttpSession::processUnpackedHeaders()
     LS_DBG_L(getLogSession(),
                 "processHeader() returned %d, header state: %d.",
                 ret, m_request.getStatus());
-    assert(m_request.getStatus() == HttpReq::HEADER_OK);
     if (ret == 0)
     {
         m_iFlag &= ~HSF_URI_PROCESSED;
@@ -1769,7 +1768,7 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
         }
         break;
     case HandlerType::HT_PROXY:
-        m_request.applyHeaderOps(NULL);
+        m_request.applyHeaderOps(this, NULL);
         //fall through
     case HandlerType::HT_FASTCGI:
     case HandlerType::HT_CGI:
@@ -2414,15 +2413,11 @@ int HttpSession::writeRespBodyDirect(const char *pBuf, int size)
 
 
 static char s_errTimeout[] =
-    "HTTP/1.0 200 OK\r\n"
-    "Cache-Control: private, no-cache, max-age=0\r\n"
-    "Pragma: no-cache\r\n"
-    "Connection: Close\r\n\r\n"
-    "<html><head><title>408 Request Timeout</title></head><body>\n"
+    "<html><head><title>500 Internal Server Error</title></head><body>\n"
     "<h2>Request Timeout</h2>\n"
-    "<p>This request took too long to process, it has been timed out by the server. "
-    "If it should not be timed out, please contact the administrator of the website "
-    "to increase the 'Connection Timeout' time allotted.\n"
+    "<p>This request takes too long to process, it is timed out by the server. "
+    "If it should not be timed out, please contact administrator of this web site "
+    "to increase 'Connection Timeout'.\n"
     "</p>\n"
 //    "<hr />\n"
 //    "Powered By LiteSpeed Web Server<br />\n"
@@ -2493,9 +2488,14 @@ int HttpSession::detectConnectionTimeout(int delta)
         }
         if ((getState() == HSS_PROCESSING) && m_response.getBodySent() == 0)
         {
-            IOVec iov;
-            iov.append(s_errTimeout, sizeof(s_errTimeout) - 1);
-            getStream()->writev(iov, sizeof(s_errTimeout) - 1);
+            if (!isRespHeaderSent())
+                httpError(SC_500, s_errTimeout);
+            else
+            {
+                IOVec iov;
+                iov.append(s_errTimeout, sizeof(s_errTimeout) - 1);
+                getStream()->writev(iov, sizeof(s_errTimeout) - 1);
+            }
         }
         else
             getStream()->setAbortedFlag();
@@ -3300,7 +3300,7 @@ void HttpSession::prepareHeaders()
     if (m_request.getLocation() != NULL)
         addLocationHeader();
     
-    m_request.applyHeaderOps(&headers);
+    m_request.applyHeaderOps(this, &headers);
 }
 
 /**

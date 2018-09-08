@@ -612,10 +612,10 @@ void AccessLog::log(const char *pVHostName, int len, HttpSession *pSession)
 {
     if (pVHostName)
     {
-        m_buf.appendUnsafe('[');
+        m_buf.append_unsafe('[');
         appendStr(pVHostName, len);
-        m_buf.appendUnsafe(']');
-        m_buf.appendUnsafe(' ');
+        m_buf.append_unsafe(']');
+        m_buf.append_unsafe(' ');
     }
     log(pSession);
 }
@@ -647,9 +647,9 @@ void AccessLog::log(HttpSession *pSession)
     n = RequestVars::getReqVar(pSession, REF_REMOTE_HOST, pAddr,
                                sizeof(achTemp));
 
-    m_buf.appendUnsafe(pAddr, n);
+    m_buf.append_unsafe(pAddr, n);
     if (!pUser)
-        m_buf.appendUnsafe(" - - ", 5);
+        m_buf.append_unsafe(" - - ", 5);
     else
     {
         n = ls_snprintf(m_buf.end(), 70, " - \"%s\" ", pUser);
@@ -668,12 +668,12 @@ void AccessLog::log(HttpSession *pSession)
         m_pAppender->append(pOrgReqLine, n);
     }
     else
-        m_buf.appendUnsafe(pOrgReqLine, n);
-    m_buf.appendUnsafe('"');
-    m_buf.appendUnsafe(
+        m_buf.append_unsafe(pOrgReqLine, n);
+    m_buf.append_unsafe('"');
+    m_buf.append_unsafe(
         HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode()), 5);
     if (contentWritten == 0)
-        m_buf.appendUnsafe('-');
+        m_buf.append_unsafe('-');
     else
     {
         n = StringTool::offsetToStr(m_buf.end(), 30, contentWritten);
@@ -681,23 +681,23 @@ void AccessLog::log(HttpSession *pSession)
     }
     if (getAccessLogHeader() & LOG_REFERER)
     {
-        m_buf.appendUnsafe(' ');
+        m_buf.append_unsafe(' ');
         appendStr(pReq->getHeader(HttpHeader::H_REFERER),
                   pReq->getHeaderLen(HttpHeader::H_REFERER));
     }
     if (getAccessLogHeader() & LOG_USERAGENT)
     {
-        m_buf.appendUnsafe(' ');
+        m_buf.append_unsafe(' ');
         appendStr(pReq->getHeader(HttpHeader::H_USERAGENT),
                   pReq->getHeaderLen(HttpHeader::H_USERAGENT));
     }
     if (getAccessLogHeader() & LOG_VHOST)
     {
-        m_buf.appendUnsafe(' ');
+        m_buf.append_unsafe(' ');
         appendStr(pReq->getHeader(HttpHeader::H_HOST),
                   pReq->getHeaderLen(HttpHeader::H_HOST));
     }
-    m_buf.appendUnsafe('\n');
+    m_buf.append_unsafe('\n');
     if ((m_buf.available() < MAX_LOG_LINE_LEN)
         || !asyncAccessLog())
         flush();
@@ -708,18 +708,18 @@ int AccessLog::appendStr(const char *pStr, int len)
 {
     if (*pStr)
     {
-        m_buf.appendUnsafe('"');
+        m_buf.append_unsafe('"');
         if ((len > 4096) || (m_buf.available() <= len + 2))
         {
             flush();
             m_pAppender->append(pStr, len);
         }
         else
-            m_buf.appendUnsafe(pStr, len);
-        m_buf.appendUnsafe('"');
+            m_buf.append_unsafe(pStr, len);
+        m_buf.append_unsafe('"');
     }
     else
-        m_buf.appendUnsafe("\"-\"", 3);
+        m_buf.append_unsafe("\"-\"", 3);
     return 0;
 }
 
