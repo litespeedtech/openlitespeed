@@ -1474,7 +1474,7 @@ int HttpContext::config(const RewriteMapList *pMapList,
                 LS_ERROR(ConfigCtx::getCurConfigCtx(), "Invalid rewrite base: '%s'",
                          pValue);
             }
-            else
+            else if (*(pValue + 1) != '\0')     //ignore "/" rewrite base
                 setRewriteBase(pValue);
         }
 
