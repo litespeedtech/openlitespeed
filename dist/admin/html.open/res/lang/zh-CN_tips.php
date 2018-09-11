@@ -238,13 +238,13 @@ $_tipsdb['extAppType'] = new DAttrHelp("Type", 'Specifies the type of external a
 
 $_tipsdb['extAuthorizer'] = new DAttrHelp("Authorizer", 'Specifies an external application that can be used to generate authorized/unauthorized decisions. Currently, only the FastCGI Authorizer is available. For more details about the FastCGI Authorizer role,  please visit <a href="http://www.fastcgi.com" target="_blank" rel="noopener noreferrer">http://www.fastcgi.com</a>.', '', 'Select from drop down list', '');
 
-$_tipsdb['extGroup'] = new DAttrHelp("suEXEC Group", 'Specifies group name that the external application will run as.', '', 'Valid group name.', '');
+$_tipsdb['extGroup'] = new DAttrHelp("Run As Group", 'Specifies group name that the external application will run as.', '', 'Valid group name.', '');
 
 $_tipsdb['extMaxIdleTime'] = new DAttrHelp("Max Idle Time", 'Specifies the maximum idle time before an external application is stopped by the server, freeing idle resources. When set to &quot;-1&quot;, the external application will not be stopped by the server unless running in ProcessGroup mode where idle external applications will be stopped after 30 seconds. The default value is &quot;-1&quot;.', ' This feature is especially useful in the mass hosting environment where, in order to prevent files owned by one virtual host from being accessed by the external application scripts of another virtual host, many different applications are run at the same time in SetUID mode. Set this value low to prevent these external applications from idling unnecessarily.', 'Select from radio box', '');
 
 $_tipsdb['extUmask'] = new DAttrHelp("umask", 'Sets default umask for this external application&#039;s processes.   See  man 2 umask  for details. The default value taken from the server-level   &quot;umask&quot; setting.', '', 'value valid range [000]-[777].', '');
 
-$_tipsdb['extUser'] = new DAttrHelp("suEXEC User", 'Specifies username that the external application will run as. If not set, the external application will run as the user of the web server.', '', 'Valid username.', '');
+$_tipsdb['extUser'] = new DAttrHelp("Run As User", 'Specifies username that the external application will run as. If not set, the external application will run as the user of the web server.', '', 'Valid username.', '');
 
 $_tipsdb['extWorkers'] = new DAttrHelp("Workers", 'List of worker groups previously defined in the external load balancer.', '', 'A comma-separated list in the form ExternalAppType::ExternalAppName', 'fcgi::localPHP, proxy::backend1');
 

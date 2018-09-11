@@ -749,11 +749,7 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
             {
                 const char *pEnv = pRuleStr;
                 pRuleStr += n;
-                if (memchr(pEnv, ':', n) == NULL)
-                {
-                    HttpLog::parse_error(s_pCurLine,  "missing ':' in env string");
-                    return LS_FAIL;
-                }
+
                 RewriteSubstFormat *pFormat = new RewriteSubstFormat();
                 if (!pFormat)
                 {

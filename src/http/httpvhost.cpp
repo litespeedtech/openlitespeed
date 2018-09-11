@@ -603,10 +603,7 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
     assert(iUriLen > 0 && pURI[0] == '/');
     const char *curContextURI = pContext->getURI();
     int curContextURILen = pContext->getURILen();
-    assert(curContextURILen <= iUriLen &&
-            memcmp(pURI, curContextURI, curContextURILen) == 0);
-    
-    
+
     if (pContext->isNullContext())
     {
         pContext = (HttpContext *)pContext->getParent();
