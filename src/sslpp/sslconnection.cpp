@@ -136,17 +136,13 @@ void SslConnection::release()
     assert(m_ssl);
     if (m_iStatus != DISCONNECTED)
         shutdown(0);
-    if (m_iFreeSess != 0)
-        SSL_SESSION_free(SSL_get_session(m_ssl));
-    if (m_iFreeCtx != 0)
-        SSL_CTX_free(SSL_get_SSL_CTX(m_ssl));
 
     SSL_free(m_ssl); // This frees the bound BIOs
+    m_ssl = NULL;
     // All buffer counters must be set to 0 to reset everything.
     m_rbioBuffered = 0;
     m_iRFd = -1;
-    m_ssl = NULL;
-    
+
     if (m_rbioBuf)
     {
         ls_pfree(m_rbioBuf);

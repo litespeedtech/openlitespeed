@@ -141,9 +141,15 @@ static int ls_zmoddata_release(void *data)
     if (myData)
     {
         if (myData->recv != NULL)
+        {
             ls_zbufinfo_recycle(myData->recv);
+            myData->recv = NULL;
+        }
         if (myData->send != NULL)
+        {
             ls_zbufinfo_recycle(myData->send);
+            myData->send = NULL;
+        }
     }
     return LS_OK;
 }

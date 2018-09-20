@@ -257,7 +257,7 @@ class DTblDefBase
             'ext_path'         => self::NewPathAttr('path', DMsg::ALbl('l_command'), 'file1', 3, 'x', true, 'extAppPath'),
             'ext_backlog'      => self::NewIntAttr('backlog', DMsg::ALbl('l_backlog'), true, 1, 100),
             'ext_instances'    => self::NewIntAttr('instances', DMsg::ALbl('l_instances'), true, 0, 1000),
-            'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '0' => DMsg::ALbl('o_no'), '2' => 'suEXEC Daemon')),
+            'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_yesdaemonmode'), '0' => DMsg::ALbl('o_no'), )),
             'ext_user'         => self::NewTextAttr('extUser', DMsg::ALbl('l_suexecuser'), 'cust'),
             'ext_group'        => self::NewTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), 'cust'),
             'cgiUmask'      => self::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_umask')),

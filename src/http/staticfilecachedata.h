@@ -216,7 +216,6 @@ public:
     static void setUpdateStaticGzipFile(int enable, int level,
                                         size_t min, size_t max);
     static void setCompressCachePath(const char *pPath);
-    static const char *getCompressCachePath();
 
     static void setStaticBrOptions(int level);
 };

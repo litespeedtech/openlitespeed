@@ -531,20 +531,35 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
 {
     AutoStr2 *pPath;
     if (!s_iAutoUpdateStaticGzip)
+    {
+        LS_DBG_H("Cannot compress file %s due to setting.", m_real.c_str());
         return LS_FAIL;
+    }
     off_t size = m_fileData.getFileSize();
     if ((size > s_iMaxFileSize) || (size < s_iMinFileSize))
+    {
+        LS_DBG_H("Cannot compress file %s, file size %d!",
+                    m_real.c_str(), size);
         return LS_FAIL;
+    }
+    
     pPath = useBrotli ? &m_bredPath : &m_gzippedPath;
     char *p = pPath->buf() + pPath->len() + 4;
     int fd = createLockFile(pPath->buf(), p);
     if (fd == -1)
+    {
+        LS_WARN("createLockFile for file %s failed!", m_real.c_str());
         return LS_FAIL;
+    }
     close(fd);
     if (size < 409600)
     {
 
         long ret = compressFile(useBrotli);
+        if (ret == -1)
+            LS_WARN("Failed to compress file %s, file size %d!",
+                    m_real.c_str(), size);
+        
         *p = 'l';
         unlink(pPath->buf());
         *p = 0;
@@ -567,7 +582,8 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
 
         long ret = compressFile(useBrotli);
         if (ret == -1)
-            LS_WARN("Failed to compress file %s!", m_real.c_str());
+            LS_WARN("Failed to compress file %s, file size %d!",
+                    m_real.c_str(), size);
 
         *p = 'l';
         unlink(pPath->buf());
@@ -855,8 +871,8 @@ int StaticFileCacheData::readyCompressed(char compressMode)
             // update br
             if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr, 1)))
             {
-                LS_ERROR("readyCompressed compress br error %s.",
-                    m_bredPath.c_str());
+                LS_DBG_H("readyCompressed compress br error %s.",
+                         m_bredPath.c_str());
                 return LS_FAIL;
             }
         }
@@ -917,11 +933,6 @@ void StaticFileCacheData::setCompressCachePath(const char *pPath)
     s_compressCachePath = strdup(pPath);
 }
 
-
-const char *StaticFileCacheData::getCompressCachePath()
-{
-    return s_compressCachePath;
-}
 
 void StaticFileCacheData::setStaticBrOptions(int level)
 {

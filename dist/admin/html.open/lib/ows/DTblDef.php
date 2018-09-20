@@ -288,7 +288,6 @@ class DTblDef extends DTblDefBase
 
 		$attrs = array( self::NewViewAttr('uri', DMsg::ALbl('l_uri')),
 						$this->_attrs['mod_params'],
-						$this->_attrs['mod_enabled']->dup(null, null, 'moduleEnabled_vh'),
 				self::NewActionAttr('VT_MOD_FILTER', 'vEd')
 		);
 
@@ -300,7 +299,6 @@ class DTblDef extends DTblDefBase
 	{
 		$attrs = array($this->_attrs['ctx_uri'],
 					$this->_attrs['mod_params'],
-					$this->_attrs['mod_enabled']->dup(null, null, 'moduleEnabled_vh')
 		);
 
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'vhModuleUrlFilters');

@@ -3455,8 +3455,10 @@ int HttpServerImpl::initLscpd()
 #ifdef IS_LSCPD
 
 #define LSCPD_PROXY_APP_NAME    "gunicorn"
+#define LSCPD_FILEMANAGER_PROXY_APP_NAME    "filemanager"
 #define LSCPD_VHOST_NAME        "cyberpanel"
 #define LSCPD_PROXY_ADDRESS     "127.0.0.1:5003"
+#define LSCPD_FILEMANAGER_PROXY_ADDRESS     "localhost:80"
 #define LSCPD_LISTENER_ADDRESS  "*:8090"
 
     MainServerConfig  &mainServerConfig =  MainServerConfig::getInstance();
@@ -3627,6 +3629,16 @@ int HttpServerImpl::initLscpd()
     pProxy->getConfigPointer()->setRetryTimeout(0);
     pProxy->getConfigPointer()->setBuffering(0);
 
+    //proxy filemanager
+
+    ExtWorker *fileProxy = ExtAppRegistry::addApp(EA_PROXY, LSCPD_FILEMANAGER_PROXY_APP_NAME);
+    fileProxy->setURL(LSCPD_FILEMANAGER_PROXY_ADDRESS);
+    fileProxy->getConfigPointer()->setMaxConns(100);
+    fileProxy->getConfigPointer()->setKeepAliveTimeout(60);
+    fileProxy->getConfigPointer()->setTimeout(60);
+    fileProxy->getConfigPointer()->setRetryTimeout(0);
+    fileProxy->getConfigPointer()->setBuffering(0);
+
     //php
     LocalWorker *pPhp = (LocalWorker *)ExtAppRegistry::addApp(EA_LSAPI, "php");
     assert(pPhp);
@@ -3723,9 +3735,14 @@ int HttpServerImpl::initLscpd()
 
     pVHost->getRootContext().enableRewrite(1);
     pVHost->setRewriteLogLevel(0);
-    char *pRules = "RewriteCond %{ORG_REQ_URI} !/static\r\n"
+
+    char *pRules = "RewriteRule ^/preview/([^/]*)/(.*) http://" LSCPD_FILEMANAGER_PROXY_APP_NAME "/$2 [P,E=Proxy-Host:$1]\r\n"
+                   "RewriteRule ^/filemanager/([^/]*)/php/fileManager.php http://" LSCPD_FILEMANAGER_PROXY_APP_NAME "/.filemanager/php/fileManager.php [P,E=Proxy-Host:$1]\r\n"
+                   "RewriteRule ^/filemanager/([^/]*)/php/caller.php http://" LSCPD_FILEMANAGER_PROXY_APP_NAME "/.filemanager/php/caller.php [P,E=Proxy-Host:$1]\r\n"
+                   "RewriteCond %{ORG_REQ_URI} !/static\r\n"
                    "RewriteCond %{ORG_REQ_URI} !/rainloop\r\n"
                    "RewriteCond %{ORG_REQ_URI} !/phpmyadmin\r\n"
+                   "RewriteCond %{ORG_REQ_URI} !/noVNC\r\n"
                    "RewriteRule ^/(.*)$ http://" LSCPD_PROXY_APP_NAME "/$1 [P]\r\n";
 
     pVHost->getRootContext().configRewriteRule(pVHost->getRewriteMaps(), pRules, "");

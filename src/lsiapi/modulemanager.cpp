@@ -484,6 +484,8 @@ void ModuleManager::applyConfigToHttpRt(HttpSessionHooks *pSessionHooks,
 void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
                                       ModuleConfig *moduleConfig, int module_id)
 {
+    if (!moduleConfig)
+        return ;
     if (!moduleConfig->getFilterEnable(module_id))
         pRtHooks->setModuleEnable(m_pModuleArray[module_id], 0);
     //FIXME: shoudl th ebelow code be called?
@@ -587,16 +589,18 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
                              lsi_module_config_t *module_config)
 {
     const char *pValue = NULL;
-
     assert(module_config->module == pModule);
-    pValue = pNode->getChildValue("ls_enabled");
-    if (!pValue)
-        pValue = pNode->getChildValue("enabled");
-
-    if (pValue)
-        module_config->filters_enable = (int16_t)atoi(pValue);
-    else
-        module_config->filters_enable = -1;
+    
+//9/17/2018 diesable context level ls_enabled config, to avoid conflict
+//    with vhost config
+//     pValue = pNode->getChildValue("ls_enabled");
+//     if (!pValue)
+//         pValue = pNode->getChildValue("enabled");
+// 
+//     if (pValue)
+//         module_config->filters_enable = (int16_t)atoi(pValue);
+//     else
+//         module_config->filters_enable = -1;
 
     if (pModule->config_parser && pModule->config_parser->parse_config)
     {

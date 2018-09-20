@@ -118,9 +118,9 @@ $_tipsdb['autoIndexURI'] = new DAttrHelp("自动索引URI", '在目录中，当&
 
 $_tipsdb['autoLoadHtaccess'] = new DAttrHelp("Auto Load from .htaccess", 'Autoload rewrite rules contained in a directory&#039;s .htaccess file when first accessing that directory if an HttpContext for that directory using the <b>rewritefile</b> directive does not already exist. Once initially loaded, a graceful restart must be performed for any further changes to that .htaccess file to take effect.<br/><br/>Virtual Host-level setting overrides Server-level setting. Default values:<br/><br/><b>Server-level:</b> No<br/><br/><b>VH-Level:</b> Inherit Server-level setting', '', 'Select from radio box', '');
 
-$_tipsdb['autoStart'] = new DAttrHelp("Auto Start", 'Specifies whether you want the web server to start the application automatically. Only FastCGI and LSAPI applications running on the same machine can be started automatically. The IP in the &quot;Address&quot; must be a local IP. Starting through the LiteSpeed  CGI Daemon instead of a main server process will help reduce system overhead.', '', 'Select from drop down list', '');
+$_tipsdb['autoStart'] = new DAttrHelp("Start By Server", 'Specifies whether you want the web server to start the application automatically. Only FastCGI and LSAPI applications running on the same machine can be started automatically. The IP in the &quot;Address&quot; must be a local IP. Starting through the LiteSpeed  CGI Daemon instead of a main server process will help reduce system overhead.', '', 'Select from drop down list', '');
 
-$_tipsdb['backlog'] = new DAttrHelp("Back Log", 'Specifies the backlog of the listening socket.  Required if &quot;Auto Start&quot; is enabled.', '', '无符号整数', '');
+$_tipsdb['backlog'] = new DAttrHelp("Back Log", 'Specifies the backlog of the listening socket.  Required if &quot;Start By Server&quot; is enabled.', '', '无符号整数', '');
 
 $_tipsdb['banPeriod'] = new DAttrHelp("禁止期（秒）", '指定在&quot;宽限期（秒）&quot;之后，如果连接数仍然高于 &quot;连接软限制&quot;，来自该IP的新连接将被拒绝多长时间。如果IP 经常被屏蔽，我们建议您延长禁止期以更强硬地惩罚滥用。', '', '无符号整数', '');
 
@@ -230,7 +230,7 @@ $_tipsdb['extAppAddress'] = new DAttrHelp("Address", 'A unique socket address us
 
 $_tipsdb['extAppName'] = new DAttrHelp("Name", 'A unique name for this external application.  You will refer to it by this name when you use it in other parts of the configuration.', '', '', '');
 
-$_tipsdb['extAppPath'] = new DAttrHelp("Command", 'Specifies the full command line including parameters to execute the external application. Required value if  &quot;Auto Start&quot; is enabled. A parameter should be quoted with a double or single quote if the parameter contains space or tab characters.', '', 'Full path to the executable with optional parameters.', '');
+$_tipsdb['extAppPath'] = new DAttrHelp("Command", 'Specifies the full command line including parameters to execute the external application. Required value if  &quot;Start By Server&quot; is enabled. A parameter should be quoted with a double or single quote if the parameter contains space or tab characters.', '', 'Full path to the executable with optional parameters.', '');
 
 $_tipsdb['extAppPriority'] = new DAttrHelp("Priority", 'Specifies priority of the external application process. Value ranges from -20 to 20. A lower number means a higher priority.  An external application process cannot have a higher priority than the web server. If this priority is set to a lower number than the server&#039;s, the server&#039;s priority will be used for this value.', '', 'int', '');
 
@@ -314,9 +314,9 @@ $_tipsdb['initTimeout'] = new DAttrHelp("Initial Request Timeout (secs)", 'Speci
 
 $_tipsdb['installpathprefix'] = new DAttrHelp("Installation Path Prefix", 'Sets the value for the &quot;--prefix&quot; configure option. The default installation location is under LiteSpeed Web Server&#039;s  install directory.', 'LiteSpeed Web Server can use multiple PHP versions at the same time. If you are installing multiple versions, you  should give them different prefixes.', 'path', '/usr/local/lsws/lsphp5');
 
-$_tipsdb['instances'] = new DAttrHelp("Instances", 'Specifies the maximum instances of the external application the server will create. It is required if &quot;Auto Start&quot; is enabled. Most FastCGI/LSAPI applications can only process one request per process instance and for those types of applications, instances should be set to match the value of &quot;Max Connections&quot;. Some FastCGI/LSAPI applications can  spawn multiple child processes to handle multiple requests concurrently.  For these types of applications, instances should be set to &quot;1&quot; and   environment variables used to control how many child processes the application can spawn.', '', '无符号整数', '');
+$_tipsdb['instances'] = new DAttrHelp("Instances", 'Specifies the maximum instances of the external application the server will create. It is required if &quot;Start By Server&quot; is enabled. Most FastCGI/LSAPI applications can only process one request per process instance and for those types of applications, instances should be set to match the value of &quot;Max Connections&quot;. Some FastCGI/LSAPI applications can  spawn multiple child processes to handle multiple requests concurrently.  For these types of applications, instances should be set to &quot;1&quot; and   environment variables used to control how many child processes the application can spawn.', '', '无符号整数', '');
 
-$_tipsdb['internalmodule'] = new DAttrHelp("Is Internal", 'Specify whether the module is an internal module, which is staticaly linked, instead of being an external .so library.', '', 'Select from radio box', '');
+$_tipsdb['internalmodule'] = new DAttrHelp("Is Internal", 'Specify whether the module is an internal module, which is statically linked, instead of being an external .so library.', '', 'Select from radio box', '');
 
 $_tipsdb['ip2locDBCache'] = new DAttrHelp("DB Cache Type", 'The caching method used. The default value is Memory.', '', 'Select from drop down list', '');
 
@@ -424,7 +424,7 @@ $_tipsdb['moduleEnabled'] = new DAttrHelp("Enable Hooks", 'Enables or disables t
 
 $_tipsdb['moduleEnabled_lst'] = new DAttrHelp("Enable Hooks", 'Enables or disables the module hooks at the Listener level. Only if the module has TCP/IP level hooks  (L4_BEGSESSION, L4_ENDSESSION, L4_RECVING, L4_SENDING), this setting will take effect.<br/><br/>If the &#039;Not Set&#039; radio button is selected, the default will be inherited from the Server configuration. The user only needs to set it here to  override the default settings.', '', 'Select from radio box', '');
 
-$_tipsdb['moduleEnabled_vh'] = new DAttrHelp("Enable Hooks", 'Enables or disables the module hooks at the Virtual Host or Context level. Only if the module has HTTP level hooks,  this setting will take effect.<br/><br/>If the &#039;Not Set&#039; radio button is selected, the Virtual Host level default settings will be inherited from the Server configuration. Context level settings will be   inherited from the Virtual Host level. The user only needs to set it here to override the default settings.', '', 'Select from radio box', '');
+$_tipsdb['moduleEnabled_vh'] = new DAttrHelp("Enable Hooks", 'Enables or disables the module hooks at the Virtual Host level. Only if the module has HTTP level hooks, this setting will take effect.<br/><br/>If the &#039;Not Set&#039; radio button is selected, the Virtual Host level default settings will be inherited from the Server configuration. The user only needs to set it here to override the default settings.', '', 'Select from radio box', '');
 
 $_tipsdb['moduleNameSel'] = new DAttrHelp("Module", 'Name of the module. The module must be registered under the Server Module Configuration tab.   Once it is registered, the module name will be available in the drop down box for the Listener and Virtual Host configurations.', '', 'Select from drop down list', '');
 
@@ -452,7 +452,7 @@ $_tipsdb['pid'] = new DAttrHelp("PID", 'PID (Process ID) of the current server p
 
 $_tipsdb['procHardLimit'] = new DAttrHelp("进程硬限制", '与&quot;进程软限制&quot;非常相同，但是，在用户进程中软限制 可以被放宽到硬限制的数值。硬限制可以在服务器级别或独立的外部应用程序级别设 置。如果未在独立的外部应用程序级别设定限制，将使用服务器级别的限制。 如果在两个级别都没有设置该限制，或者限制值设为0，将使用操 作系统的默认设置。', '', '无符号整数', '');
 
-$_tipsdb['procSoftLimit'] = new DAttrHelp("进程软限制", '限制一个用户可以创建的进程总数。所有存在的进程都将被统计在内， 而不是只包括新启动的进程。如果限制被设置为10，并且一个用户下 有超过10个进程在运行，那么网站服务器将不会再为该用户（通过 suEXEC） 启动新进程。<br/><br/>此限制的主要目的是为了防范“fork炸弹”攻击或过量使用，而不是限制正常使用 （如果该限制被设置的过低，它将被服务器忽略）。确保留有足够空余。 本项目可以在服务器级别或独立的外部应用程序级别设置。如果未在独立的外部应用程 序级别设定限制，将使用服务器级别的限制。如果在两个级别都没有设置该限制， 或者限制值设为0，将使用操作系统的默认设置。', 'PHP scripts can call for forking processes. The main purpose of this limit is as a last line of defense to prevent fork bombs and  other attacks caused by PHP processes creating other processes. <br/>Setting this setting too low can severely hurt functionality. The setting will thus be ignored below certain levels.<br/>When using suEXEC Daemon mode, the actual process limit will be higher than this setting to make sure parent processes are not limited.', '无符号整数', '');
+$_tipsdb['procSoftLimit'] = new DAttrHelp("进程软限制", '限制一个用户可以创建的进程总数。所有存在的进程都将被统计在内， 而不是只包括新启动的进程。如果限制被设置为10，并且一个用户下 有超过10个进程在运行，那么网站服务器将不会再为该用户（通过 suEXEC） 启动新进程。<br/><br/>此限制的主要目的是为了防范“fork炸弹”攻击或过量使用，而不是限制正常使用 （如果该限制被设置的过低，它将被服务器忽略）。确保留有足够空余。 本项目可以在服务器级别或独立的外部应用程序级别设置。如果未在独立的外部应用程 序级别设定限制，将使用服务器级别的限制。如果在两个级别都没有设置该限制， 或者限制值设为0，将使用操作系统的默认设置。', 'PHP scripts can call for forking processes. The main purpose of this limit is as a last line of defense to prevent fork bombs and  other attacks caused by PHP processes creating other processes. <br/>Setting this setting too low can severely hurt functionality. The setting will thus be ignored below certain levels.<br/>When <b>Run On Start Up</b> is set to &quot;Yes (Daemon mode)&quot;, the actual process limit will be higher than this setting to make sure parent processes are not limited.', '无符号整数', '');
 
 $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enables this virtual host as a transparent reverse proxy server. This proxy server can run in front of any web  servers or application servers that support HTTP protocol. The External web server that this virtual host proxies for  has to be defined in &quot;External Application&quot;  before you can set up a Proxy Context.', '', '', '');
 
@@ -512,7 +512,7 @@ $_tipsdb['rewriteRules'] = new DAttrHelp("Rewrite Rules", 'Specifies a list of r
 
 $_tipsdb['rubyBin'] = new DAttrHelp("Ruby Path", 'Specifies path to Ruby executable. Generally, it is /usr/bin/ruby or /usr/local/bin/ruby depending on where Ruby has been installed to.', '', '绝对路径', '');
 
-$_tipsdb['runOnStartUp'] = new DAttrHelp("Run On Start Up", 'Specifies whether to start the external application at server start up. Only applicable to external applications that can manage their own child processes and where  &quot;Instances&quot; value is set to &quot;1&quot;. If enabled, external processes will be created at server startup instead of run-time.', ' If the configured external process has significant startup overhead, like a Rails app, then  this option should be enabled to decrease first page response time.', 'Select from radio box', '');
+$_tipsdb['runOnStartUp'] = new DAttrHelp("Run On Start Up", 'Specifies whether to start the external application at server start up. Only applicable to external applications that can manage their own child processes and where  &quot;Instances&quot; value is set to &quot;1&quot;. If enabled, external processes will be created at server startup instead of run-time.<br/><br/>Default value: No', ' If the configured external process has significant startup overhead, like a Rails app, then  this option should be enabled to decrease first page response time.', 'Select from radio box', '');
 
 $_tipsdb['runningAs'] = new DAttrHelp("Running As", 'Specifies the user/group that the server process runs as. This is set  using the parameters &quot;--with-user&quot; and &quot;--with-group&quot; when running the configure  command before installation. To reset these values, you must rerun the configure  command and reinstall.', ' Server should not run as a privileged user such as &quot;root&quot;.  It is critical that the server is configured to run with a un-privileged user/group combination  that does not have login/shell access. A user/group of nobody is generally a good choice.', '', '');
 
@@ -791,7 +791,7 @@ $_tipsdb['EDTP:shType'] = array('Script handler can be a CGI, an FCGI app, a mod
 
 $_tipsdb['EDTP:sndBufSize'] = array('Numbers can be represented as 10240, 10K or 1M.','If send/receive buffer size is 0, OS default TCP buffer size will be used.');
 
-$_tipsdb['EDTP:softLimit'] = array('Set IP level throttle limit here. The number will be rounded up to 4K units. Set to &quot;0&quot; to disable throttling.','Number of connections can temporarily exceed Soft Limit during Grace Period as long as under Hard Limit. After Grace Period, if it is  still above Soft Limit, then no more connections will be allowed from that IP for time of Banned Period.');
+$_tipsdb['EDTP:softLimit'] = array('Set IP level throttle limit here. The number will be rounded up to 4K units. Set to &quot;0&quot; to disable throttling.','Number of connections can temporarily exceed Soft Limit during Grace Period as long as under Hard Limit. After Grace Period, if it is still above Soft Limit, then no more connections will be allowed from that IP for time of Banned Period.');
 
 $_tipsdb['EDTP:sslProtocol'] = array('&quot;Yes&quot; must be selected for <b>Secure</b> in General > Address Settings.','For SSL versions and encryption levels, please select all you want to accept.');
 
