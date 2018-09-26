@@ -1239,20 +1239,18 @@ static int createEntry(lsi_param_t *rec)
     }
 
     //if no LSI_RSPHDR_LITESPEED_CACHE_CONTROL and not 200, do nothing
-    if (count == 0)
+    //if 304, do nothing
+    int code = g_api->get_status_code(rec->session);
+    if (code == 304 || (code != 200 && count == 0))
     {
-        //Error page won't be stored to cache
-        int code = g_api->get_status_code(rec->session);
-        if (code != 200)
-        {
-            clearHooks(rec->session);
-            g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
-                       ModuleNameStr, code);
-            return 0;
-        }
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
+                   ModuleNameStr, code);
+        return 0;
     }
-    else if (myData->hasCacheFrontend == 0)
+
+    if (count && myData->hasCacheFrontend == 0)
     {
         g_api->remove_resp_header(rec->session,
                                   LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
