@@ -251,7 +251,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 //         }
         break;
     case HttpRespHeaders::H_CONTENT_DISPOSITION:
-        pReq->appendRedirHdr(pName, pValue + valLen - pName);
+        pReq->appendRedirHdr(pName, pValue + valLen - pName + 2);
         break;
     case HttpRespHeaders::H_LOCATION:
         if ((status & HEC_RESP_PROXY) || (pReq->getStatusCode() != SC_200))

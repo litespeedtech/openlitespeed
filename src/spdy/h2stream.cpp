@@ -369,11 +369,6 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
             m_pH2Conn->incShutdownStream();
         }
     }
-    else
-    {
-        if (next() == NULL)
-            m_pH2Conn->add2PriorityQue(this);
-    }
     return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamId, flag);
 }
 
