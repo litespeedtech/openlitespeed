@@ -50,6 +50,9 @@ static int isExpired(SslSessData_t *pObj)
 }
 
 
+LS_SINGLETON(SslSessCache);
+
+
 SslSessCache::SslSessCache()
     : m_expireSec(0)
     , m_maxEntries(0)

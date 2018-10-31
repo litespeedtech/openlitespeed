@@ -135,6 +135,8 @@ static int loadKeyFromFile(const char *pFileName, STKey_t *pData,
     return LS_OK;
 }
 
+LS_SINGLETON(SslTicket);
+
 
 SslTicket::SslTicket()
     : m_pKeyStore(NULL)

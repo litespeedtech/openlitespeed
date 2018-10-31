@@ -52,6 +52,9 @@ void ClientCache::clearObjPool()
 }
 
 
+LS_SINGLETON(ClientCache);
+
+
 ClientCache::ClientCache(int initSize)
     : m_v4(initSize, NULL, NULL)
     , m_v6(initSize, GHash::hfIpv6, GHash::cmpIpv6)

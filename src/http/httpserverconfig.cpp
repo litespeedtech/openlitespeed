@@ -24,6 +24,9 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+
+LS_SINGLETON(HttpServerConfig);
+
 HttpServerConfig::HttpServerConfig()
     : m_iMaxURLLen(DEFAULT_URL_LEN + 20)
     , m_iMaxHeaderBufLen(DEFAULT_REQ_HEADER_BUF_LEN)

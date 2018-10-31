@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <fnmatch.h>
 
+LS_SINGLETON(EnvManager);
+
 EnvManager::EnvManager()
 {
     m_pEnvHashT = new HashStringMap<EnvHandler *>(29, 

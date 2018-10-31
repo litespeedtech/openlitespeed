@@ -42,6 +42,9 @@ LsiModule::LsiModule(lsi_module_t *pModule)
 }
 
 
+LS_SINGLETON(ModuleManager);
+
+
 ModuleManager::ModuleManager()
 {
     m_pModuleArray = NULL;
@@ -496,12 +499,15 @@ void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
 
 void ModuleConfig::init(int count)
 {
-    initData(count);
-    for (int i = 0; i < m_iCount; ++i)
+    bool need_init = initData(count);
+    if (need_init)
     {
-        lsi_module_config_t *pConfig = new lsi_module_config_t;
-        memset(pConfig, 0, sizeof(lsi_module_config_t));
-        LsiModuleData::set(i, (void *) pConfig);
+        for (int i = 0; i < m_iCount; ++i)
+        {
+            lsi_module_config_t *pConfig = new lsi_module_config_t;
+            memset(pConfig, 0, sizeof(lsi_module_config_t));
+            LsiModuleData::set(i, (void *) pConfig);
+        }
     }
 }
 

@@ -293,7 +293,7 @@ class DTblDefBase
             'ctx_order'    => $ctxOrder,
             'ctx_type'     => self::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['ctxType'], false, 'ctxType'),
             'ctx_uri'      => self::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
-            'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false),
+            'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust'),
             'ctx_shandler' => self::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
             'appserverEnv' => self::NewSelAttr('envType', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
             'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),

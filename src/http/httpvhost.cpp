@@ -657,10 +657,8 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
         }
 
         pContext0->inherit(pContext);
-        pContext0->enableRewrite(pContext->isRewriteEnabled());
-        pContext0->setRewriteInherit(1);
         pContext = pContext0;
-        if (pContext->isRewriteEnabled() && enableAutoLoadHt())
+        if (enableAutoLoadHt())
         {
             //If have .htaccess in this DIR, load it
             strcat(achRealPath, ".htaccess");
@@ -1713,6 +1711,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     if (pUri == NULL)
         return LS_FAIL;
 
+    match = (strncasecmp(pUri, "exp:", 4) == 0);
+    
     ConfigCtx currentCtx("context", pUri);
     //int len = strlen( pUri );
 
@@ -1732,6 +1732,20 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     }
 
     pLocation = pContextNode->getChildValue("location");
+    AutoStr2 defLocation;
+    if (!pLocation)
+    {
+        if (match)
+            defLocation.setStr("$DOC_ROOT$0");
+        else
+        {
+            defLocation.setStr("$DOC_ROOT");
+            defLocation.append(pUri, strlen(pUri));
+        }
+
+        pLocation = defLocation.c_str();
+    }
+
     pHandler = pContextNode->getChildValue("handler");
 
     char achHandler[256] = {0};
@@ -1753,7 +1767,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     allowBrowse = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                   "allowBrowse", 0, 1, 1);
 
-    match = (strncasecmp(pUri, "exp:", 4) == 0);
+    
 
     if ((*pUri != '/') && (!match))
     {

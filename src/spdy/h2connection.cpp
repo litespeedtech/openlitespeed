@@ -1160,6 +1160,10 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
     int ret = 0;
     H2FrameHeader header(total, H2_FRAME_DATA, flag, uiStreamId);
 
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
+        && m_buf.empty() && !getStream()->isWantWrite())
+        getStream()->continueWrite();
+
     m_buf.append((char *)&header, 9);
     if (pIov)
         ret = cacheWritev(*pIov, total);
@@ -1174,6 +1178,10 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
 {
     int ret = 0;
     H2FrameHeader header(len, H2_FRAME_DATA, flag, uiStreamId);
+
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
+        && m_buf.empty() && !getStream()->isWantWrite())
+        getStream()->continueWrite();
 
     m_buf.append((char *)&header, 9);
     if (pBuf)
@@ -1372,7 +1380,8 @@ int H2Connection::doGoAway(H2ErrorCode status)
     sendGoAwayFrame(status);
     releaseAllStream();
     getStream()->tobeClosed();
-    getStream()->continueWrite();
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0)
+        getStream()->continueWrite();
     return 0;
 }
 

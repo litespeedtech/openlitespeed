@@ -48,7 +48,6 @@ public:
 private:
     L4conn         *m_pL4conn;
     LoopBuf        *m_buf;
-    int             m_iState;
 
 
     void recycle();

@@ -18,6 +18,9 @@
 #include <ls_uamatcher.h>
 #include <string.h>
 
+LS_SINGLETON(LsUAMatcher);
+
+
 LsUAMatcher::LsUAMatcher()
 {
     m_pHash = ls_hash_new(50, ls_hash_hfcistring, ls_hash_cmpcistring, NULL);

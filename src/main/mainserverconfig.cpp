@@ -17,3 +17,4 @@
 *****************************************************************************/
 #include "mainserverconfig.h"
 
+LS_SINGLETON(MainServerConfig);

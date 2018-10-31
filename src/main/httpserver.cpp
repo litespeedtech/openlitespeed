@@ -188,6 +188,8 @@ void HttpServer::cleanPid()
 }
 
 
+LS_SINGLETON(HttpServer);
+
 
 class HttpServerImpl
 {

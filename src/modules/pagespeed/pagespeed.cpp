@@ -743,7 +743,7 @@ void InitDir(const StringPiece &directive,
     }
 
     //TO fix some permission issue
-    chmod(gs_path.c_str(), S_IRWXO);
+    chmod(gs_path.c_str(), S_IRWXU| S_IRWXG | S_IRWXO);
     if (gs_stat.st_uid != user)
     {
         if (chown(gs_path.c_str(), user, group) != 0)

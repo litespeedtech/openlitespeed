@@ -18,6 +18,10 @@
 #include "callbackqueue.h"
 #include <log4cxx/logger.h>
 
+
+LS_SINGLETON(CallbackQueue);
+
+
 void CallbackQueue::logState(const char *s, CallbackLinkedObj *p)
 {
     if (p)

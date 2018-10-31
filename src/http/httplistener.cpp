@@ -66,10 +66,12 @@ HttpListener::HttpListener(const char *pName, const char *pAddr)
 
 
 HttpListener::HttpListener()
-    : m_pMapVHost(new VHostMap())
+    : m_sName("")
+    , m_pMapVHost(new VHostMap())
     , m_pSubIpMap(NULL)
     , m_iAdmin(0)
     , m_isSSL(0)
+    , m_iSendZconf(0)
     , m_iBinding(0xffffffff)
     , m_pAdcPortList(NULL)
 {

@@ -26,7 +26,6 @@ L4Handler::L4Handler()
 {
     m_pL4conn = new L4conn(this);
     m_buf = new LoopBuf(MAX_OUTGOING_BUF_ZISE);
-    m_iState = 0;
 }
 
 
@@ -155,11 +154,7 @@ void L4Handler::doWrite()
 
 void L4Handler::closeBothConnection()
 {
-    if (m_iState != -1)
-    {
-        m_pL4conn->close();
-        getStream()->close();
-        m_iState = -1;
-    }
+    m_pL4conn->close();
+    getStream()->close();
 }
 

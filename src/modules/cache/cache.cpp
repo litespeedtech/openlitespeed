@@ -334,6 +334,9 @@ static int parseNoCacheDomain(CacheConfig *pConfig, const char *pValStr,
     pConfig->getVHostMapExclude()->mapDomainList(
         HttpServerConfig::getInstance().getGlobalVHost(), pValStr);
 
+    g_api->log(NULL, LSI_LOG_DEBUG, "[%s]noCacheDomain [%.*s] added.\n",
+               ModuleNameStr, valLen, pValStr);
+
     return 0;
 }
 
@@ -1462,7 +1465,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     int needGzip = (g_api->get_resp_buffer_compress_method(rec->session) == 0);
     
     /**
-     * For ab test, no need to gzip
+     * For ab test, no need to gzip only when it does not have gzip in encoding
      */
     if (needGzip)
     {
@@ -1475,7 +1478,12 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         if (pUA && uaLen > AB_USERAGENT_LEN &&
             strncasecmp(pUA, AB_USERAGENT, AB_USERAGENT_LEN) == 0)
         {
-            needGzip = false;
+            int encodingLen;
+            const char *encoding = g_api->get_req_header_by_id(rec->session,
+                                                         LSI_HDR_ACC_ENCODING,
+                                                         &encodingLen);
+            if (encodingLen < 4 || strcasestr(encoding, "gzip") == NULL)
+                needGzip = false;
         }
     }
 

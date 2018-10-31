@@ -47,6 +47,8 @@
 static const char *ZCONFMGR_LOG_PREFIX = "ZConfManager";
 
 
+LS_SINGLETON(ZConfManager);
+
 ZConfManager::ZConfManager()
     : m_iFlags(0)
     , m_iConfHash(0)

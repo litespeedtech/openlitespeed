@@ -108,6 +108,16 @@ $_tipsdb['allowSetUID'] = new DAttrHelp("Allow Set UID", 'Specifies whether the 
 
 $_tipsdb['allowSymbolLink'] = new DAttrHelp("跟随符号链接", '指定在这个虚拟主机内是否要跟随符号链接。 If Owner Match选项启用后，只有在链接和目标属主一致时才跟踪符号链接。 此设置将覆盖默认的服务器级设置。', '[性能和安全性建议] 为了更好的安全性，请禁用此功能。为了获得更好的性能，启用它。', '选项', '');
 
+$_tipsdb['appServerContext'] = new DAttrHelp("App Server Context", 'An App Server Context provides an easy way to configure a Ruby Rack/Rails, WSGI, or Node.js application. To add a an application through an App Server Context, only mounting the URL and the application&#039;s root directory is required. There is no need to go through all the trouble to define an external application, add a 404 handler, and rewrite rules, etc.', '', '', '');
+
+$_tipsdb['appServerDefault'] = new DAttrHelp("App Server Settings", 'Default configurations for App Server applications.', '', '', '');
+
+$_tipsdb['appType'] = new DAttrHelp("Application Type", 'The type of application used for this context. Rack/Rails, WSGI, or Node.js are supported.', '', '', '');
+
+$_tipsdb['as_location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;Location&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;Location&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
+
+$_tipsdb['as_startupfile'] = new DAttrHelp("Startup File", 'The location of file used to start the application.', '', '', '');
+
 $_tipsdb['authName'] = new DAttrHelp("认证名称", '为当前context下的realm认证指定一个替代的名称。 如果没有指定，原realm名称将被使用。 认证名称将显示在浏览器登陆弹出窗口。', '', '文本', '');
 
 $_tipsdb['autoFix503'] = new DAttrHelp("自动修复503错误", '指定是否尝试通过平滑重启LiteSpeed修复“503 服务不可用”错误。“503”错误通常是由 发生故障的外部应用程序引起的，Web服务器重新启动往往可以临时修复 错误。如果启用，当30秒内出现超过30次“503”错误时，服务器将自动 重新启动。此功能是默认启用的。', '', '布尔值', '');
@@ -123,6 +133,8 @@ $_tipsdb['autoStart'] = new DAttrHelp("Start By Server", 'Specifies whether you 
 $_tipsdb['backlog'] = new DAttrHelp("Back Log", 'Specifies the backlog of the listening socket.  Required if &quot;Start By Server&quot; is enabled.', '', '无符号整数', '');
 
 $_tipsdb['banPeriod'] = new DAttrHelp("禁止期（秒）", '指定在&quot;宽限期（秒）&quot;之后，如果连接数仍然高于 &quot;连接软限制&quot;，来自该IP的新连接将被拒绝多长时间。如果IP 经常被屏蔽，我们建议您延长禁止期以更强硬地惩罚滥用。', '', '无符号整数', '');
+
+$_tipsdb['binPath'] = new DAttrHelp("Binary Path", 'The location of the App Server application binary.', '', '', '');
 
 $_tipsdb['blockBadReq'] = new DAttrHelp("封锁坏请求", '封锁持续发送坏HTTP请求的IP&quot;禁止期（秒）&quot;所设置的时长。默认为{VAL}Yes。 这有助于封锁反复发送垃圾请求的僵尸网络攻击。', '', '布尔值', '');
 
@@ -166,7 +178,7 @@ $_tipsdb['crlFile'] = new DAttrHelp("Client Revocation File", ' Specifies the fi
 
 $_tipsdb['crlPath'] = new DAttrHelp("Client Revocation Path", ' Specifies the directory containing PEM-encoded CA CRL files for revoked  client certificates. The files in this directory have to be PEM-encoded.  These files are accessed through hash filenames, hash-value.rN. Please refer to openSSL or Apache mod_ssl documentation regarding creating the hash filename.', '', 'path', '');
 
-$_tipsdb['ctxType'] = new DAttrHelp("Context Type", 'The type of context created determines it&#039;s usage.<br><br><b>Static</b> context can be used to map a URI to a directory either outside document root or within it.<br> <b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.<br> <b>Servlet</b> context is used to import a specific servlet under a web application.<br> <b>Fast CGI</b> context is a mount point of Fast CGI application.<br> <b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.<br> <b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.<br> <b>CGI</b> context can be used to specify a directory only contains CGI scripts.<br> <b>Load Balancer</b> context can be used to assign a different cluster for that context.<br> <b>Redirect</b> context can set up an internal or external redirect URI.<br> <b>Rack/Rails</b> context is specifically used for Rack/Rails applications.<br> <b>Module handler</b> context is a mount point of hander type modules.<br>', '', '', '');
+$_tipsdb['ctxType'] = new DAttrHelp("Context Type", 'The type of context created determines it&#039;s usage.<br><br><b>Static</b> context can be used to map a URI to a directory either outside document root or within it.<br> <b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.<br> <b>Servlet</b> context is used to import a specific servlet under a web application.<br> <b>Fast CGI</b> context is a mount point of Fast CGI application.<br> <b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.<br> <b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.<br> <b>CGI</b> context can be used to specify a directory only contains CGI scripts.<br> <b>Load Balancer</b> context can be used to assign a different cluster for that context.<br> <b>Redirect</b> context can set up an internal or external redirect URI.<br> <b>App Server</b> context is specifically used for Rack/Rails, WSGI, and Node.js applications.<br> <b>Module handler</b> context is a mount point of hander type modules.<br>', '', '', '');
 
 $_tipsdb['defaultCharsetCustomized'] = new DAttrHelp("自定义默认字符集", '指定一个字符集当&quot;添加默认的字符集&quot;是On时使用。这是可选的。默认值是iso-8859-1。当&quot;添加默认的字符集&quot;是Off时本设置将不生效。', '', '字符集的名称，例如utf-8', 'utf-8');
 
@@ -209,6 +221,8 @@ $_tipsdb['enableStapling'] = new DAttrHelp("Enable OCSP Stapling", 'Determines w
 $_tipsdb['enableh2c'] = new DAttrHelp("Enable HTTP/2 Over Cleartext TCP", 'Specifies whether to enable HTTP/2 over non-encrypted TCP connections. Default is disabled.', '', 'Select from radio box', '');
 
 $_tipsdb['env'] = new DAttrHelp("Environment", 'Specifies extra environment variables for the external application.', '', 'Key=value. Multiple variables can be separated by &quot;ENTER&quot;', '');
+
+$_tipsdb['envType'] = new DAttrHelp("Run-time Mode", 'Specifies which mode the app server will be running as: &quot;Development&quot;,  &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'Select from drop down list', '');
 
 $_tipsdb['errCode'] = new DAttrHelp("错误代码", '指定错误页面的HTTP状态码。 只有特定的HTTP状态码才可以自定义错误页面。', '', '选项', '');
 
@@ -326,7 +340,7 @@ $_tipsdb['javaServletEngine'] = new DAttrHelp("Servlet Engine", 'Specifies the n
 
 $_tipsdb['javaWebAppContext'] = new DAttrHelp("Java Web App Context", 'Many people running Java applications use the servlet engine to serve static  content as well. But no servlet engine is nearly as efficient as LiteSpeed Web Server  for these processes. In order to improve the overall performance,  LiteSpeed Web Server can be configured as a gateway server, which serves static content  and forwards dynamic Java page requests to the servlet engine. <br/><br/>LiteSpeed Web Server requires certain contexts to be defined in order to run a  Java application. A Java Web App Context automatically creates all required  contexts based on the Java web application&#039;s configuration file (WEB-INF/web.xml). <br/><br/>There are a few points you need to keep in mind when setting up a Java Web App Context:<br/><ul> <li>A Servlet Engine external application must be set up in &quot;External Application&quot;  before Java Web App Context can be set up.</li>  <li>A &quot;Script Handler&quot; for .jsp files should be defined as well.</li> <li>If the web application is packed into a .war file, the .war file must be expanded.  The server cannot access compressed archive files.</li> <li>For the same resources, the same URL should be used no matter whether it is accessed  through LiteSpeed Web Server or through the servlet engine&#039;s built-in HTTP server.<br/>For example,    Tomcat 4.1 is installed under /opt/tomcat. Files for the &quot;examples&quot; web application are    located at /opt/tomcat/webapps/examples/. Through Tomcat&#039;s built-in HTTP server,    the &quot;examples&quot; web application is thus accessed with a URI like &quot;/examples/***&quot;.    The corresponding Java Web App Context should thus be configured:    &quot;URI&quot; = /examples/, &quot;Location&quot; = /opt/tomcat/webapps/examples/.</li>   </ul>', '', '', '');
 
-$_tipsdb['javaWebApp_location'] = new DAttrHelp("Location", 'Specifies the directory that contains the files for this web application.  This is the directory containing &quot;WEB-INF/web.xml&quot;.', '', 'path', '');
+$_tipsdb['javaWebApp_location'] = new DAttrHelp("Location", 'Specifies the directory that contains the files for this web application. This is the directory containing &quot;WEB-INF/web.xml&quot;.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'path', '');
 
 $_tipsdb['keepAliveTimeout'] = new DAttrHelp("持续连接超时时长", '指定持续连接请求的最长闲置时间。 如果在这段时间内没有接收到新的请求，该连接将被关闭。', '[安全和性能建议] 我们建议您将值设置得刚好足够处理单个页面 视图的所有请求。没有必要延长持续连接时间。较小的值可以减少闲置 连接，提高能力，以服务更多的用户，并防范拒绝服务攻击。2-5秒 对大多数应用是合理范围。Litespeed在非持续连接环境是非常高效的。', '无符号整数', '');
 
@@ -352,7 +366,7 @@ $_tipsdb['lmap'] = new DAttrHelp("Virtual Hosts Mappings", 'Shows currently esta
 
 $_tipsdb['lname'] = new DAttrHelp("Name - Listener", 'The unique name that identifies this listener. This is the  &quot;Listener Name&quot; you specified when setting up the listener.', '', '', '');
 
-$_tipsdb['location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;Location&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;Location&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
+$_tipsdb['location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;Location&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;Location&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
 
 $_tipsdb['logUseServer'] = new DAttrHelp("使用服务器日志", '指定是否将虚拟主机的日志信息放置到服务器日志文件中，而不是创建独自的日志文件。', '', '布尔值', '');
 
@@ -430,6 +444,8 @@ $_tipsdb['moduleNameSel'] = new DAttrHelp("Module", 'Name of the module. The mod
 
 $_tipsdb['modulename'] = new DAttrHelp("Module", 'Name of the module. The module name will be the same as the module filename.  The module file must be located under $SERVER_ROOT/modules/modulename.so in order to be loaded by the server application. The server will load the registered modules at start up. This requires that the server is restarted after new modules are registered.', '', 'the library name of .so.', '');
 
+$_tipsdb['nodeBin'] = new DAttrHelp("Node Path", 'Path to Node.js executable.', '', '绝对路径', '');
+
 $_tipsdb['note'] = new DAttrHelp("Notes", 'Add notes for yourself.', '', '', '');
 
 $_tipsdb['ocspCACerts'] = new DAttrHelp("OCSP CA Certificates", 'Specifies the location of the file where OCSP certificate authority (CA)  certificates are stored. These certificates are used to check responses  from the OCSP responder (and make sure those responses are not spoofed or  otherwise compromised). This file should contain the whole certificate chain.  If this file does not contain the root certificate, LSWS should be able to find  the root certificate in your system directory without you adding it to the file,  but, if this validation fails, you should try adding your root certificate to this file. <br/><br/>This setting is optional. If this setting is not set, the server will automatically check &quot;CA Certificate File&quot;.', '', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
@@ -457,14 +473,6 @@ $_tipsdb['procSoftLimit'] = new DAttrHelp("进程软限制", '限制一个用户
 $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enables this virtual host as a transparent reverse proxy server. This proxy server can run in front of any web  servers or application servers that support HTTP protocol. The External web server that this virtual host proxies for  has to be defined in &quot;External Application&quot;  before you can set up a Proxy Context.', '', '', '');
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web Server", 'Specifies the name of the external web server. This external web server must be defined in the &quot;External Application&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
-
-$_tipsdb['railsContext'] = new DAttrHelp("Rack/Rails Context", 'A Rack/Rails Context provides an easy way to configure a Ruby Rack/Rails application. To add a Rack/Rails application through a Rack/Rails Context,  only mounting the URL and the application&#039;s root directory is required. There is  no need to go through all the troubles to define an external application, add a 404 handler,  and rewrite rules, etc.', '', '', '');
-
-$_tipsdb['railsDefault'] = new DAttrHelp("Ruby Rack/Rails Settings", 'Default configurations for Ruby Rack/Rails applications.', '', '', '');
-
-$_tipsdb['railsEnv'] = new DAttrHelp("Run-Time Mode", 'Specifies which mode Rack/Rails will be running as: &quot;Development&quot;,  &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'Select from drop down list', '');
-
-$_tipsdb['rails_location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;Location&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;Location&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
 
 $_tipsdb['rcvBufSize'] = new DAttrHelp("接收缓冲区大小", '每个TCP套接字的接收缓冲区的大小。设定值为0使用 操作系统默认的缓冲区大小。65535是允许的最大缓冲区大小。', '[性能建议] 处理大载荷入站请求，如文件上传时，大的接收缓冲区会提高性能。', '无符号整数', '');
 
@@ -510,7 +518,7 @@ $_tipsdb['rewriteMapName'] = new DAttrHelp("Name", 'Specifies a unique name for 
 
 $_tipsdb['rewriteRules'] = new DAttrHelp("Rewrite Rules", 'Specifies a list of rewrite rules at the virtual host level.<br/><br/>Do NOT add any document root level rewrite rules here. If you have any document root level rewrite rules from .htaccess,  you should instead create a static context with uri &quot;/&quot; and add the rewrite rules there.<br/><br/>A rewrite rule is comprised of one RewriteRule directive and optionally preceded by multiple RewriteCond directives.  <ul> <li>Each directive should take only one line. </li> <li>RewriteCond and RewriteRule follow Apache&#039;s rewrite directive syntax. Just copy and paste rewrite directives from your Apache configuration files.</li> <li>There are minor differences between LiteSpeed and Apache mod_rewrite implementation:  <ul><li>%\{LA-U:variable\} and %\{LA-F:variable\} are ignored by the LiteSpeed rewrite engine </li>   <li>two new server variables are added in the LiteSpeed rewrite engine:    %\{CURRENT_URI\} represents the current URI being processed by the rewrite engine and %\{SCRIPT_NAME\} has the same  meaning as the corresponding CGI environment variable. </li> </ul></li> </ul> The implementation of LiteSpeed&#039;s rewrite engine follows the  Apache&#039;s rewrite engine specifications. For more details about rewrite rules, please refer to <a href="http://httpd.apache.org/docs/current/mod/mod_rewrite.html" target="_blank" rel="noopener noreferrer">Apache&#039;s mod_rewrite document</a> and <a href="http://httpd.apache.org/docs/current/rewrite/" target="_blank" rel="noopener noreferrer">Apache&#039;s URL  rewriting guide</a>.', '', 'string', '');
 
-$_tipsdb['rubyBin'] = new DAttrHelp("Ruby Path", 'Specifies path to Ruby executable. Generally, it is /usr/bin/ruby or /usr/local/bin/ruby depending on where Ruby has been installed to.', '', '绝对路径', '');
+$_tipsdb['rubyBin'] = new DAttrHelp("Ruby Path", 'Path to Ruby executable. Generally, it is /usr/bin/ruby or /usr/local/bin/ruby depending on where Ruby has been installed to.', '', '绝对路径', '');
 
 $_tipsdb['runOnStartUp'] = new DAttrHelp("Run On Start Up", 'Specifies whether to start the external application at server start up. Only applicable to external applications that can manage their own child processes and where  &quot;Instances&quot; value is set to &quot;1&quot;. If enabled, external processes will be created at server startup instead of run-time.<br/><br/>Default value: No', ' If the configured external process has significant startup overhead, like a Rails app, then  this option should be enabled to decrease first page response time.', 'Select from radio box', '');
 
@@ -666,6 +674,8 @@ $_tipsdb['vstatus'] = new DAttrHelp("Status - Virtual Host", 'The current status
 
 $_tipsdb['wsaddr'] = new DAttrHelp("Address", 'A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.', ' If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.', 'IPv4 or IPV6 address:port or UDS://path', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.');
 
+$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to Python Web Server Gateway Interface executable.', '', '绝对路径', '');
+
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/>Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location $DOC_ROOT/URI.', '', 'A plain URI (starting with &quot;/&quot;). If the URI ends with a &quot;/&quot;,  then this WebSocket backend will include all sub-URIs under this URI.', 'Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page&#039;s static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).');
 
 
@@ -687,9 +697,17 @@ $_tipsdb['EDTP:adminOldPass'] = array('For security reasons, if you forget the a
 
 $_tipsdb['EDTP:allowBrowse'] = array('Static context can be used to map a URI to a directory either outside document root or within it. The directory  can be absolute path or relative to document root(default), $VH_ROOT or $SERVER_ROOT.','Check &quot;Accessible&quot; will allow browsing static files in this context. You may want to disable it to prevent viewing static  files, for e.g. when you update the content.');
 
+$_tipsdb['EDTP:appType'] = array('','');
+
+$_tipsdb['EDTP:as_location'] = array('The App Server context is for easy configuration of running Rack/Rails, WSGI, or Node.js applications. You  only need to specify the root location of your application in the &quot;Location&quot; field.');
+
+$_tipsdb['EDTP:as_startupfile'] = array('','');
+
 $_tipsdb['EDTP:autoFix503'] = array('When you enable <b>Auto Fix 503 Error</b>, the monitor process will automatically launch a new server process and service will resume instantly if a crash is detected.');
 
 $_tipsdb['EDTP:backlog'] = array('Local applications can be started by the web server. In this case, you need to specify the path, backlog and number of instances.');
+
+$_tipsdb['EDTP:binPath'] = array('','');
 
 $_tipsdb['EDTP:cgi_path'] = array('A CGI context can be used to specify a directory only contains CGI scripts. Path can be absolute path or relative to $SERVER_ROOT, $VH_ROOT  or $DOC_ROOT(default). Path and URI must be ended with &quot;/&quot; for a cgi-bin directory.','If only a specific script is needed in that directory, it is recommended to create a CGI context for that script only. In this case, path and  URI need not be a directory. For e.g., path can be ~/myapp/myscript.pl, URI can be /myapp/myscript.pl. All other files will not be served as CGI.');
 
@@ -697,7 +715,7 @@ $_tipsdb['EDTP:checkSymbolLink'] = array('Check-Symbolic-Link control will take 
 
 $_tipsdb['EDTP:compressibleTypes'] = array('Compressible Types is a list of MIME types that are compressible, separated by commas. You can use wildcard &quot;*&quot; for MIME types, like */*, text/*. You  can put &quot;!&quot; in front to exclude certain types. The order of the list is important if you use &quot;!&quot;. For e.g., a list like &quot;text/*, !text/css, !text/js&quot; will  compress all text file except for css and js.');
 
-$_tipsdb['EDTP:ctxType'] = array('<b>Static</b> context can be used to map a URI to a directory either outside document root or within it.','<b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.','<b>Servlet</b> context is used to import a specific servlet under a web application.','<b>Fast CGI</b> context is a mount point of Fast CGI application.','<b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.','<b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.','<b>CGI</b> context can be used to specify a directory only contains CGI scripts.','<b>Load Balancer</b> context can be used to assign a different cluster for that context.','<b>Redirect</b> context can set up an internal or external redirect URI.','<b>Rack/Rails</b> context is specifically used for Rack/Rails applications.','<b>Module handler</b> context is a mount point of hander type modules.');
+$_tipsdb['EDTP:ctxType'] = array('<b>Static</b> context can be used to map a URI to a directory either outside document root or within it.','<b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.','<b>Servlet</b> context is used to import a specific servlet under a web application.','<b>Fast CGI</b> context is a mount point of Fast CGI application.','<b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.','<b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.','<b>CGI</b> context can be used to specify a directory only contains CGI scripts.','<b>Load Balancer</b> context can be used to assign a different cluster for that context.','<b>Redirect</b> context can set up an internal or external redirect URI.','<b>App Server</b> context is specifically used for Rack/Rails, WSGI, and Node.js applications.<br>','<b>Module handler</b> context is a mount point of hander type modules.');
 
 $_tipsdb['EDTP:docRoot'] = array('Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.');
 
@@ -737,7 +755,7 @@ $_tipsdb['EDTP:indexUseServer'] = array('You can use default server level settin
 
 $_tipsdb['EDTP:javaServletEngine'] = array('If the servlet engine runs on a different machine, it is recommended to make a copy of webapps directory locally. Otherwise you must put the  files in a common accessible network drive, which may affect performance.');
 
-$_tipsdb['EDTP:javaWebApp_location'] = array('Java web app context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine, the  servlet engine should be set up in external app section (either server or virtual host level).','Location is the directory that contains web application files, which includes WEB-INF/ sub directory.','The web server will automatically import configuration file of web application, which usually is WEB-INF/web.xml under the driectory specified by &quot;location&quot;.');
+$_tipsdb['EDTP:javaWebApp_location'] = array('Java web app context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine, the servlet engine should be set up in external app section (either server or virtual host level).','Location is the directory that contains web application files, which includes WEB-INF/ sub directory.','The web server will automatically import configuration file of web application, which usually is WEB-INF/web.xml under the driectory specified by &quot;location&quot;.');
 
 $_tipsdb['EDTP:listenerIP'] = array('Select an IP address from the list, if you don&#039;t specify a particular address, the system will bind to all the available IP address on this machine.');
 
@@ -761,13 +779,13 @@ $_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 
 
 $_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative  to $SERVER_ROOT.');
 
+$_tipsdb['EDTP:nodeBin'] = array('');
+
 $_tipsdb['EDTP:phpIniOverride'] = array('');
 
 $_tipsdb['EDTP:procSoftLimit'] = array('Process soft/hard limit controls how many processes are allowed for one user. This includes all the processes spawned by CGI application. OS level limit is used if not set.','Set to 0 or empty will use operation system default value for all soft/hard limits.','The soft limit is the value that the kernel enforces for the corresponding resource. The hard limit acts as a ceiling for the soft limit');
 
 $_tipsdb['EDTP:proxyWebServer'] = array('Proxy context enables this virtual host serving as a transparent reverse proxy server to an external web server or application server.','External web server must be pre-defined under External App at server or virtual host level.');
-
-$_tipsdb['EDTP:rails_location'] = array('Rack/Rails context is for easy configuration of running Rack/Rails application. You  only need to specify the root location of your rack/rails application in the &quot;Location&quot; field.');
 
 $_tipsdb['EDTP:realm'] = array('A Context can be protected with a predefined realm, which is set up in the virtual host security section. Optionally, an alternative name and  additional requirements can be specified.');
 
@@ -812,3 +830,5 @@ $_tipsdb['EDTP:vhadminEmails'] = array('You can enter multiple admin emails, sep
 $_tipsdb['EDTP:vhlog_fileName'] = array('Log file path can be an absolute path or relative to $SERVER_ROOT, $VH_ROOT.','If you want to set Log Level to DEBUG, you must set the server log level to DEBUG as well. The level of  debugging is controlled by Server DEBUG Level. Use DEBUG only if you have to as it has a large impact on server performance and can fill up disk space quickly.');
 
 $_tipsdb['EDTP:virtualHostName'] = array('Select the virtual hosts that you want to map to this listener.','If you have not set up the virtual host you want to map, you can skip this step and come back later.');
+
+$_tipsdb['EDTP:wsgiBin'] = array('');

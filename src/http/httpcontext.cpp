@@ -1458,10 +1458,11 @@ int HttpContext::config(const RewriteMapList *pMapList,
     const XmlNode *pNode = pContextNode->getChild("rewrite");
     if (pNode)
     {
-        enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enable",
-                      0, 1, defRewriteEnable));
-        pValue = pNode->getChildValue("inherit");
+        if (pNode->getChildValue("enable"))
+            enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(
+                pNode, "enable", 0, 1, defRewriteEnable));
 
+        pValue = pNode->getChildValue("inherit");
         if ((pValue) && (strcasestr(pValue, "1")))
             setRewriteInherit(1);
 
@@ -1479,11 +1480,6 @@ int HttpContext::config(const RewriteMapList *pMapList,
         }
 
         rules = pNode->getChildValue("rules");
-    }
-    else
-    {
-        enableRewrite(defRewriteEnable);
-        setRewriteInherit(1);
     }
 
     AutoStr2 htaccessPath;

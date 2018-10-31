@@ -786,7 +786,8 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
     if (pThis->getFlag(HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_ABORT))
     {
         pThis->setState(HIOS_SHUTDOWN);
-        pThis->closeSocket();
+        if (!pThis->m_iInProcess)
+            pThis->closeSocket();
     }
     else
     {
