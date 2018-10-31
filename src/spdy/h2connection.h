@@ -144,9 +144,13 @@ public:
 
     void setPendingWrite()
     {
-        if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
-            && isEmpty() && !getStream()->isWantWrite())
-            getStream()->continueWrite();
+        if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0)
+        {
+            if (isEmpty() && !getStream()->isWantWrite())
+                getStream()->continueWrite();
+        }
+        else
+            m_iFlag |= H2_CONN_FLAG_WAIT_PROCESS;
     }
 
     void incShutdownStream()    {   ++m_uiShutdownStreams;  }
