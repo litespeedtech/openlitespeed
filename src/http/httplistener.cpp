@@ -16,6 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httplistener.h"
+#include <http/httplistenerlist.h>
+
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <http/clientcache.h>
@@ -46,6 +48,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <lsr/ls_strtool.h>
+#include <sslpp/sslcontext.h>
 
 int32_t      HttpListener::m_iSockSendBufSize = -1;
 int32_t      HttpListener::m_iSockRecvBufSize = -1;
@@ -424,30 +427,22 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     NtwkIOLink **pConnCur = pConns;
     VHostMap *pMap;
     sockaddr_in *pAddrIn;
-    //int flag = MultiplexerFactory::getMultiplexer()->getFLTag();
+    int flag = MultiplexerFactory::getMultiplexer()->getFLTag();
     while (pCur < pEnd)
     {
         int fd = pCur->fd;
         if (fd != -1)
         {
+            ConnInfo info;
             assert(pConnCur < pConnEnd);
             NtwkIOLink *pConn = *pConnCur;
-
-            if (m_pSubIpMap)
-                pMap = getSubMap(fd);
-            else
-                pMap = getVHostMap();
-            pAddrIn = (sockaddr_in *)pCur->achPeerAddr;
-            pConn->setVHostMap(pMap);
+            setConnInfo(&info, pCur);
             pConn->setLogger(getLogger());
-            pConn->setRemotePort(ntohs(pAddrIn->sin_port));
 
-            //    if ( getDedicated() )
-            //    {
-            //        //pConn->accessGranted();
-            //    }
-            if (!pConn->setLink(this, fd, pCur->pInfo, pMap->getSslContext()))
+            if (!pConn->setLink(this, fd, &info))
             {
+                fcntl(fd, F_SETFD, FD_CLOEXEC);
+                fcntl(fd, F_SETFL, flag);
                 ++pConnCur;
                 pConn->tryRead();
             }
@@ -500,6 +495,12 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         --(*iCount);
         return LS_FAIL;
     }
+    
+    ConnInfo info;
+    if (setConnInfo(&info, pCur) == LS_FAIL)
+        return LS_FAIL;
+    
+    
     VHostMap *pMap;
     if (m_pSubIpMap)
         pMap = getSubMap(fd);
@@ -508,7 +509,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
     pConn->setVHostMap(pMap);
     pConn->setLogger(getLogger());
     pConn->setRemotePort(ntohs(pAddrIn->sin_port));
-    if (pConn->setLink(this, pCur->fd, pCur->pInfo, pMap->getSslContext()))
+    if (pConn->setLink(this, pCur->fd, &info))
     {
         HttpResourceManager::getInstance().recycle(pConn);
         close(fd);
@@ -522,6 +523,22 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
 
 void HttpListener::onTimer()
 {
+}
+
+const VHostMap *HttpListener::findVhostMap(const struct sockaddr * pAddr) const
+{
+    const VHostMap *pMap;
+    if (m_pSubIpMap)
+    {
+        pMap = m_pSubIpMap->getMap((struct sockaddr *)pAddr);
+        if (!pMap)
+            pMap = getVHostMap();
+    }
+    else
+    {
+        pMap = getVHostMap();
+    }
+    return pMap;
 }
 
 
@@ -747,3 +764,51 @@ int HttpListener::zconfAppendVHostList(AutoBuf *pBuf)
     pBuf->used(confListLen);
     return confListLen;
 }
+
+SSL *HttpListener::newSsl(SslContext *pSslContext)
+{
+    pSslContext->initOCSP();
+
+    SSL *p = pSslContext->newSSL();
+    return p;
+}
+
+int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
+{
+    socklen_t addrLen = 28;
+    char serverAddr[28];
+    struct sockaddr *pAddr = (sockaddr *)serverAddr;
+    memset(pInfo, 0, sizeof(ConnInfo));
+    if (getsockname(pCur->fd, pAddr, &addrLen) == -1)
+    {
+        return LS_FAIL;
+    }
+    
+    if ((AF_INET6 == pAddr->sa_family) &&
+        (IN6_IS_ADDR_V4MAPPED(&((sockaddr_in6 *)pAddr)->sin6_addr)))
+    {
+        pAddr->sa_family = AF_INET;
+        memmove(&((sockaddr_in *)pAddr)->sin_addr.s_addr, &((char *)pAddr)[20], 4);
+    }
+
+    
+    pInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(pAddr, this);
+    const VHostMap * pMap = pInfo->m_pServerAddrInfo->getVHostMap();
+    if (!pMap)
+    {
+        pMap = findVhostMap(pAddr);
+        if (pMap)
+            ((ServerAddrInfo *)pInfo->m_pServerAddrInfo)->setVHostMap(pMap);
+    }
+    if (pMap && pMap->getSslContext())
+    {
+        pInfo->m_pSsl = newSsl(pMap->getSslContext());
+        if (!pInfo->m_pSsl)
+            return LS_FAIL;
+    }
+    pInfo->m_remotePort = GSockAddr::getPort((sockaddr *)pCur->achPeerAddr);
+    pInfo->m_pClientInfo = pCur->pInfo;
+    return LS_OK;
+}
+
+

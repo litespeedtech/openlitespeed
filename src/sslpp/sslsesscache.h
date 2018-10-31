@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -19,10 +19,8 @@
 #define SSLSESSCACHE_H
 
 #include <lsdef.h>
+#include <util/hashstringmap.h>
 #include <util/tsingleton.h>
-
-#include <openssl/ssl.h>
-
 #include <stdint.h>
 #include <unistd.h>
 
@@ -30,11 +28,19 @@
 #define LS_SSLSESSCACHE_DEFAULTSIZE 40*1024
 
 class LsShmHash;
+
+class LsShmHashObserver;
 typedef struct SslSessData_s SslSessData_t;
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct ssl_session_st SSL_SESSION;
+
+class SslClientSessElem;
+typedef LsStrHashMap<SslClientSessElem *> SslClientSessHash;
 
 //
 //  SslSessCache
 //
+
 class SslSessCache : public TSingleton<SslSessCache>
 {
     friend class TSingleton<SslSessCache>;
@@ -42,32 +48,40 @@ class SslSessCache : public TSingleton<SslSessCache>
 public:
     static int watchCtx(SSL_CTX *pCtx);
 
-    int     init(int32_t iTimeout, int iMaxEntries);
+    int     init(int32_t iTimeout, int iMaxEntries, int uid, int gid);
     int     isReady() const              {   return m_pSessStore != NULL;   }
     int32_t getExpireSec() const         {   return m_expireSec;            }
-    void    setExpireSec(int32_t iExpire) {   m_expireSec = iExpire;         }
+    void    setExpireSec(int32_t iExpire){   m_expireSec = iExpire;         }
 
     int     sessionFlush();
     int     stat();
-    int     addSession(unsigned char *pId, int idLen,
+    int     addSession(time_t lruTm, const uint8_t *pId, int idLen,
                        unsigned char *pData, int iDataLen);
     SSL_SESSION *getSession(unsigned char *id, int len);
     SslSessData_t *getLockedSessionData(const unsigned char *id, int len);
+    int deleteSession(const char *pId, int len);
+
+    void setObserver(LsShmHashObserver *pObserver)
+    {   m_pObserver = pObserver;        }
+    LsShmHashObserver *getObserver() const
+    {   return m_pObserver;         }
 
     void    unlock();
     LsShmHash *getSessStore() const
     {   return m_pSessStore;    }
 
+    uint32_t    getSessCnt() const;
+
 private:
     SslSessCache();
     ~SslSessCache();
-
-    int     initShm();
+    int    initShm(int uid, int gid);
 
 private:
     int32_t                 m_expireSec;
     int                     m_maxEntries;
     LsShmHash              *m_pSessStore;
+    LsShmHashObserver      *m_pObserver;
 
     LS_NO_COPY_ASSIGN(SslSessCache);
 };
@@ -77,15 +91,17 @@ class SslClientSessCache
 {
 public:
     SslClientSessCache()
-        : m_pSession(NULL)
+        : m_sessions()
         {}
     ~SslClientSessCache();
 
     int saveSession(const char *id, int len, SSL_SESSION *session);
     SSL_SESSION *getSession(const char *id, int len);
 
+    static void onTimer();
+
 private:
-    SSL_SESSION *m_pSession;
+    SslClientSessHash   m_sessions;
     LS_NO_COPY_ASSIGN(SslClientSessCache);
 };
 

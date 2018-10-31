@@ -1,28 +1,14 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+// Author: Kevin Fwu
+// Date: August 6, 2015
+
 
 #include "sslticket.h"
 
 #include <lsdef.h>
 #include <log4cxx/logger.h>
-#include <lsr/ls_fileio.h>
 #include <shm/lsshmhash.h>
 #include <util/datetime.h>
+#include <util/ni_fio.h>
 
 #include <fcntl.h>
 #include <string.h>
@@ -38,15 +24,12 @@ static const char *s_pSTTickets = "SSLTickets";
 
 typedef struct STShmData_s
 {
-    STKey_t   m_aKeys[SSLTICKET_NUMKEYS];
-    short     m_idxPrev;
-    short     m_idxCur;
-    short     m_idxNext;
+    RotateKeys_t m_keys;
     long      m_tmLastAccess;
 } STShmData_t;
 
 
-static void LOGDBG(const char *format, ...)
+static void LOGDBG(const char* format, ...)
 {
     char achNewFmt[1024];
     va_list arglist;
@@ -58,7 +41,7 @@ static void LOGDBG(const char *format, ...)
 }
 
 
-static void LOGERR(const char *format, ...)
+static void LOGERR(const char* format, ...)
 {
     char achNewFmt[1024];
     va_list arglist;
@@ -118,45 +101,33 @@ static int loadKeyFromFile(const char *pFileName, STKey_t *pData,
                pStat->st_size);
         return LS_FAIL;
     }
-    if ((fd = ls_fio_open(pFileName, O_RDONLY, 0644)) < 0)
+    if ((fd = nio_open(pFileName, O_RDONLY, 0644)) < 0)
     {
         LOGERR("Open file failed!  File name '%s', error %s",
                pFileName, strerror(errno));
         return LS_FAIL;
     }
-    if (ls_fio_read(fd, pData, SSLTICKET_FILESIZE) != SSLTICKET_FILESIZE)
+    if (nio_read(fd, pData, SSLTICKET_FILESIZE) != SSLTICKET_FILESIZE)
     {
         LOGERR("Read file failed!  File name '%s', error %s",
                pFileName, strerror(errno));
-        ls_fio_close(fd);
+        nio_close(fd);
         return LS_FAIL;
     }
-    ls_fio_close(fd);
+    nio_close(fd);
     return LS_OK;
 }
 
-LS_SINGLETON(SslTicket);
+
+LsShmHash      *SslTicket::m_pKeyStore = NULL;
+AutoStr2       *SslTicket::m_pFile     = NULL;
+LsShmOffset_t   SslTicket::m_iOff      = 0;
+RotateKeys_t    SslTicket::m_keys;
+long            SslTicket::m_iLifetime = 0;
 
 
-SslTicket::SslTicket()
-    : m_pKeyStore(NULL)
-    , m_pFile(NULL)
-    , m_iOff(0)
-    , m_idxPrev(0)
-    , m_idxCur(0)
-    , m_idxNext(0)
-    , m_iLifetime(0)
-{}
 
-
-SslTicket::~SslTicket()
-{
-    if (m_pFile != NULL)
-        delete m_pFile;
-}
-
-
-int SslTicket::initShm()
+int SslTicket::initShm(int uid, int gid)
 {
     LsShm *pShm;
     LsShmPool *pShmPool;
@@ -171,14 +142,16 @@ int SslTicket::initShm()
         LOGDBG("Open LsShm Failed.");
         return LS_FAIL;
     }
+    pShm->chperm(uid, gid, 0600);   
+    
     if ((pShmPool = pShm->getGlobalPool()) == NULL)
     {
         LOGDBG("Get Global Pool Failed.");
         return LS_FAIL;
     }
     if ((m_pKeyStore = pShmPool->getNamedHash(s_pSTShmHashName, 4,
-                       LsShmHash::hashXXH32, memcmp,
-                       LSSHM_FLAG_NONE)) == NULL)
+                                        LsShmHash::hashXXH32, memcmp,
+                                        LSSHM_FLAG_NONE )) == NULL)
     {
         LOGDBG("Get Hash Failed.");
         return LS_FAIL;
@@ -188,13 +161,13 @@ int SslTicket::initShm()
 }
 
 
-int SslTicket::init(const char *pFileName, long int timeout)
+int SslTicket::init(const char* pFileName, long int timeout, int uid, int gid)
 {
     STShmData_t *pShmData;
     int iValLen;
     STKey_t newKey, *pCur;
 
-    if (initShm() == LS_FAIL)
+    if (initShm(uid, gid) == LS_FAIL)
         return LS_FAIL;
     if (pFileName != NULL)
         m_pFile = new AutoStr2(pFileName);
@@ -206,26 +179,26 @@ int SslTicket::init(const char *pFileName, long int timeout)
         //Did not find in shm
         if (pFileName == NULL)
         {
-            RAND_bytes((unsigned char *)&m_aKeys[0], SSLTICKET_KEYSIZE);
-            RAND_bytes((unsigned char *)&m_aKeys[1], SSLTICKET_KEYSIZE);
-            m_aKeys[0].expireSec = DateTime::s_curTime + m_iLifetime;
-            m_aKeys[1].expireSec = m_aKeys[0].expireSec + (m_iLifetime >> 1);
-            m_aKeys[SSLTICKET_NUMKEYS - 1].expireSec = 0;
-            m_idxCur = 0;
-            m_idxNext = 1;
-            m_idxPrev = SSLTICKET_NUMKEYS - 1;
+            RAND_bytes((unsigned char *)&m_keys.m_aKeys[0], SSLTICKET_KEYSIZE);
+            RAND_bytes((unsigned char *)&m_keys.m_aKeys[1], SSLTICKET_KEYSIZE);
+            m_keys.m_aKeys[0].expireSec = DateTime::s_curTime + m_iLifetime;
+            m_keys.m_aKeys[1].expireSec = m_keys.m_aKeys[0].expireSec + (m_iLifetime >> 1);
+            m_keys.m_aKeys[SSLTICKET_NUMKEYS - 1].expireSec = 0;
+            m_keys.m_idxCur = 0;
+            m_keys.m_idxNext = 1;
+            m_keys.m_idxPrev = SSLTICKET_NUMKEYS - 1;
         }
         else
         {
-            if (loadKeyFromFile(pFileName, &m_aKeys[0]) == LS_FAIL)
+            if (loadKeyFromFile(pFileName, &m_keys.m_aKeys[0]) == LS_FAIL)
             {
                 m_pKeyStore->unlock();
                 return LS_FAIL;
             }
-            m_aKeys[0].expireSec = DateTime::s_curTime + m_iLifetime;
-            m_idxCur = 0;
-            m_idxNext = 1;
-            m_idxPrev = SSLTICKET_NUMKEYS - 1;
+            m_keys.m_aKeys[0].expireSec = DateTime::s_curTime + m_iLifetime;
+            m_keys.m_idxCur = 0;
+            m_keys.m_idxNext = 1;
+            m_keys.m_idxPrev = SSLTICKET_NUMKEYS - 1;
         }
 
         if ((m_iOff = m_pKeyStore->insert(s_pSTTickets, strlen(s_pSTTickets),
@@ -236,17 +209,15 @@ int SslTicket::init(const char *pFileName, long int timeout)
             return LS_FAIL;
         }
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-        memmove(pShmData->m_aKeys, m_aKeys,
-                (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
+        memmove(&pShmData->m_keys, &m_keys, sizeof(m_keys) ); 
         pShmData->m_tmLastAccess = DateTime::s_curTime;
         m_pKeyStore->unlock();
         return LS_OK;
     }
     pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-    memmove(m_aKeys, pShmData->m_aKeys,
-            (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
+    memmove(&m_keys, &pShmData->m_keys, sizeof(m_keys) ); 
     m_pKeyStore->unlock();
-    pCur = &m_aKeys[m_idxCur];
+    pCur = &m_keys.m_aKeys[m_keys.m_idxCur];
     if (pCur->expireSec > (DateTime::s_curTime + (timeout >> 1)))
         return LS_OK;
 
@@ -255,8 +226,7 @@ int SslTicket::init(const char *pFileName, long int timeout)
         m_pKeyStore->lock();
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
         checkShmExpire(pShmData);
-        memmove(m_aKeys, pShmData->m_aKeys,
-                (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
+        memmove(&m_keys, &pShmData->m_keys, sizeof(m_keys) ); 
         m_pKeyStore->unlock();
         return LS_OK;
     }
@@ -277,21 +247,20 @@ int SslTicket::init(const char *pFileName, long int timeout)
         memmove(pCur, &newKey, SSLTICKET_KEYSIZE);
         m_pKeyStore->lock();
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-        memmove(&pShmData->m_aKeys[pShmData->m_idxCur], &newKey,
+        memmove(&pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxCur], &newKey,
                 SSLTICKET_KEYSIZE);
     }
     else
     {
-        rotateIndices(m_idxPrev, m_idxCur, m_idxNext);
-        memmove(&m_aKeys[m_idxCur], &newKey, SSLTICKET_KEYSIZE);
+        rotateIndices(m_keys.m_idxPrev, m_keys.m_idxCur, m_keys.m_idxNext);
+        memmove(&m_keys.m_aKeys[m_keys.m_idxCur], &newKey, SSLTICKET_KEYSIZE);
         m_pKeyStore->lock();
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-        memmove(pShmData->m_aKeys, m_aKeys,
-                (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
+        memmove(&pShmData->m_keys, &m_keys, sizeof(m_keys) ); 
     }
-    m_aKeys[m_idxCur].expireSec = DateTime::s_curTime + timeout;
-    pShmData->m_aKeys[pShmData->m_idxCur].expireSec
-        = m_aKeys[m_idxCur].expireSec;
+    m_keys.m_aKeys[m_keys.m_idxCur].expireSec = DateTime::s_curTime + timeout;
+    pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxCur].expireSec
+                                    = m_keys.m_aKeys[m_keys.m_idxCur].expireSec;
     pShmData->m_tmLastAccess = DateTime::s_curTime;
     m_pKeyStore->unlock();
     return LS_OK;
@@ -309,9 +278,9 @@ int SslTicket::onTimer()
         return LS_OK;
     m_pKeyStore->lock();
     pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-    pPrev = &pShmData->m_aKeys[pShmData->m_idxPrev];
-    pCur = &pShmData->m_aKeys[pShmData->m_idxCur];
-    pNext = &pShmData->m_aKeys[pShmData->m_idxNext];
+    pPrev = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxPrev];
+    pCur = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxCur];
+    pNext = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxNext];
     if (pCur->expireSec > (DateTime::s_curTime + (m_iLifetime >> 1)))
     {
 //         LOGDBG("Not expired");
@@ -358,26 +327,8 @@ int SslTicket::onTimer()
         RAND_bytes((unsigned char *)pPrev, SSLTICKET_KEYSIZE);
         pPrev->expireSec = pCur->expireSec + m_iLifetime;
     }
-    rotateIndices(pShmData->m_idxPrev, pShmData->m_idxCur,
-                  pShmData->m_idxNext);
+    rotateIndices(pShmData->m_keys.m_idxPrev, pShmData->m_keys.m_idxCur, pShmData->m_keys.m_idxNext);
     m_pKeyStore->unlock();
-    return LS_OK;
-}
-
-
-void SslTicket::disableCtx(SSL_CTX *pCtx)
-{
-    long options = SSL_CTX_get_options(pCtx);
-    SSL_CTX_set_options(pCtx, options | SSL_OP_NO_TICKET);
-}
-
-
-int SslTicket::enableCtx(SSL_CTX *pCtx)
-{
-    if (m_pKeyStore == NULL)
-        LOGDBG("Server level tickets not initialized, use default.");
-    else
-        SSL_CTX_set_tlsext_ticket_key_cb(pCtx, ticketCb);
     return LS_OK;
 }
 
@@ -390,18 +341,18 @@ int SslTicket::enableCtx(SSL_CTX *pCtx)
  */
 int SslTicket::checkShmExpire(STShmData_t *pShmData)
 {
-    STKey_t *pKeys = pShmData->m_aKeys;
-    STKey_t *pPrev = &pShmData->m_aKeys[pShmData->m_idxPrev];
-    STKey_t *pCur = &pShmData->m_aKeys[pShmData->m_idxCur];
-    STKey_t *pNext = &pShmData->m_aKeys[pShmData->m_idxNext];
+    STKey_t *pKeys = pShmData->m_keys.m_aKeys;
+    STKey_t *pPrev = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxPrev];
+    STKey_t *pCur = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxCur];
+    STKey_t *pNext = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxNext];
 
     if (pNext->expireSec < DateTime::s_curTime)
     {
 //         LOGDBG("All Keys Expired");
         // The expire makes this key not work.  Prev is just a placeholder.
-        pShmData->m_idxPrev = SSLTICKET_NUMKEYS - 1;
-        pShmData->m_idxCur = 0;
-        pShmData->m_idxNext = 1;
+        pShmData->m_keys.m_idxPrev = SSLTICKET_NUMKEYS - 1;
+        pShmData->m_keys.m_idxCur = 0;
+        pShmData->m_keys.m_idxNext = 1;
         RAND_bytes((unsigned char *)&pKeys[0], SSLTICKET_KEYSIZE);
         RAND_bytes((unsigned char *)&pKeys[1], SSLTICKET_KEYSIZE);
         pKeys[0].expireSec = DateTime::s_curTime + m_iLifetime;
@@ -420,23 +371,23 @@ int SslTicket::checkShmExpire(STShmData_t *pShmData)
 
     RAND_bytes((unsigned char *)pPrev, SSLTICKET_KEYSIZE);
     pPrev->expireSec = pNext->expireSec + (m_iLifetime >> 1);
-    rotateIndices(pShmData->m_idxPrev, pShmData->m_idxCur,
-                  pShmData->m_idxNext);
+    rotateIndices(pShmData->m_keys.m_idxPrev, pShmData->m_keys.m_idxCur, 
+                  pShmData->m_keys.m_idxNext);
     return LS_OK;
 }
 
 
 /**
- * doCb() is the ticket callback.  When called, if enc is 1,
+ * ticketCb() is the ticket callback.  When called, if enc is 1,
  * that means I need to create a ticket for the request.  If enc is 0,
  * I need to check the ticket to make sure it is still valid.
  */
-int SslTicket::doCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
+int SslTicket::ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
                     EVP_CIPHER_CTX *ectx, HMAC_CTX *hctx, int enc)
 {
     int ret;
     STShmData_t *pShmData;
-    STKey_t *pSessKey = &m_aKeys[m_idxCur];
+    STKey_t *pSessKey = &m_keys.m_aKeys[m_keys.m_idxCur];
 
     if (pSessKey->expireSec < (DateTime::s_curTime + (m_iLifetime >> 1)))
     {
@@ -447,10 +398,10 @@ int SslTicket::doCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
         // but current key still works.
         m_pKeyStore->lock();
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-        memmove(m_aKeys, pShmData->m_aKeys,
+        memmove(&m_keys, &pShmData->m_keys,
                 (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
         m_pKeyStore->unlock();
-        pSessKey = &m_aKeys[m_idxCur];
+        pSessKey = &m_keys.m_aKeys[m_keys.m_idxCur];
     }
 
     if (enc == 1)
@@ -480,7 +431,7 @@ int SslTicket::doCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
     {
         if (memcmp(aName, pSessKey->aName, 16) != 0)
         {
-            pSessKey = &m_aKeys[m_idxPrev];
+            pSessKey = &m_keys.m_aKeys[m_keys.m_idxPrev];
             if (memcmp(aName, pSessKey->aName, 16) != 0)
                 return 0;
         }
@@ -491,7 +442,7 @@ int SslTicket::doCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
         HMAC_Init_ex(hctx, pSessKey->aHmac, 16, EVP_sha256(), NULL);
         EVP_DecryptInit_ex(ectx, EVP_aes_128_cbc(), NULL, pSessKey->aAes, iv);
 
-        if (pSessKey != &m_aKeys[m_idxCur])
+        if (pSessKey != &m_keys.m_aKeys[m_keys.m_idxCur])
             return 2;
     }
     return 1;

@@ -146,7 +146,13 @@ int    LsJsEngine::runScript(const lsi_session_t *session
     char *xbuf = 0;
     int xbuflen = 0;
     int http_fd = 0;
-    http_fd = g_api->handoff_fd(session, &xbuf, &xbuflen);
+    
+    /**
+     * FIXME Need to be fixed
+     */
+    g_api->log(NULL, LSI_LOG_NOTICE, 
+               "LINE 154:  http_fd = g_api->handoff_fd(session, &xbuf, &xbuflen) need to be fixed.");
+//    http_fd = g_api->handoff_fd(session, &xbuf, &xbuflen);
 
     if (http_fd < 0)
     {

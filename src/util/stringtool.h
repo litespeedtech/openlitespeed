@@ -58,9 +58,9 @@ public:
     {   return ls_strupper(pSrc, pDest);   }
     static char *strUpper(const char *pSrc, char *pDest, int &n)
     {   return ls_strnupper(pSrc, pDest, &n);   }
-    static char *strLower(const char *pSrc, char *pDest)
+    static char *strlower(const char *pSrc, char *pDest)
     {   return ls_strlower(pSrc, pDest);   }
-    static char *strLower(const char *pSrc, char *pDest, int &n)
+    static char *strnlower(const char *pSrc, char *pDest, int &n)
     {   return ls_strnlower(pSrc, pDest, &n);   }
     static char *strTrim(char *p)
     {   return ls_strtrim(p);   }

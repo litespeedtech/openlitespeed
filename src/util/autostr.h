@@ -37,6 +37,7 @@ public:
         setStr(rhs.c_str());
         return *this;
     }
+    void release();
 
     int          setStr(const char *pStr);
     int          setStr(const char *pStr, int len);

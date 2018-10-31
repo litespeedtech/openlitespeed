@@ -997,7 +997,7 @@ const MimeSetting *HttpContext::determineMime(const char *pSuffix,
     {
         char achSuffix[256];
         int len = 256;
-        StringTool::strLower(pSuffix, achSuffix, len);
+        StringTool::strnlower(pSuffix, achSuffix, len);
         if (m_pInternal->m_pMIME)
         {
             pMimeType = m_pInternal->m_pMIME->getFileMimeBySuffix(achSuffix);

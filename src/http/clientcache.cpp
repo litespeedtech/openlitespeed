@@ -293,15 +293,15 @@ static int setThrottleLimit(const void *pKey, void *pData)
 
 void ClientCache::resetThrottleLimit()
 {
-    m_v4.for_each(m_v4.begin(), m_v4.end(), setThrottleLimit);
-    m_v6.for_each(m_v6.begin(), m_v6.end(), setThrottleLimit);
+    m_v4.for_each0(m_v4.begin(), m_v4.end(), setThrottleLimit);
+    m_v6.for_each0(m_v6.begin(), m_v6.end(), setThrottleLimit);
 }
 
 
 void ClientCache::onTimer()
 {
-    m_v4.for_each(m_v4.begin(), m_v4.end(), resetQuotas);
-    m_v6.for_each(m_v6.begin(), m_v6.end(), resetQuotas);
+    m_v4.for_each0(m_v4.begin(), m_v4.end(), resetQuotas);
+    m_v6.for_each0(m_v6.begin(), m_v6.end(), resetQuotas);
 }
 
 

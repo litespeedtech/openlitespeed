@@ -23,7 +23,10 @@
 #include <edio/aiooutputstream.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
-#include <http/ntwkiolink.h>
+#include <edio/eventreactor.h>
+#include <http/hiostream.h>
+#include <sslpp/sslconnection.h>
+#include <lsiapi/lsiapihooks.h>
 #include <http/sendfileinfo.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsimoduledata.h>
@@ -150,7 +153,7 @@ class HttpSession : public LsiSession, public InputStream,
     GzipBuf              *m_pGzipBuf;
     ClientInfo           *m_pClientInfo;
 
-    NtwkIOLink           *m_pNtwkIOLink;
+    
     uint16_t              m_iRemotePort;
 
     SendFileInfo          m_sendFileInfo;
@@ -325,13 +328,9 @@ private:
 public:
     int  flush();
 
-
-public:
-    NtwkIOLink *getNtwkIOLink() const      {   return m_pNtwkIOLink;   }
-    //void setNtwkIOLink( NtwkIOLink * p )    {   m_pNtwkIOLink = p;      }
-    //below are wrapper functions
-    SslConnection *getSSL() const   {   return m_request.getSsl();          }
-    int16_t isSSL() const           {   return m_request.isHttps(); }
+    int16_t isHttps() const           {   return m_request.isHttps(); }
+    HioCrypto *getCrypto() const    {   return m_request.getCrypto();  }
+    
 
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
@@ -522,7 +521,6 @@ public:
     {   return !(m_iFlag & HSF_ACCESS_LOG_OFF);    }
 
     int updateContentCompressible();
-    int handoff(char **pData, int *pDataLen);
     int suspendProcess();
 
     virtual int onAioEvent();

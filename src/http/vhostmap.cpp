@@ -517,7 +517,7 @@ int VHostMap::mapDomainList(HttpVHost    *pVHost,
             char *p;
             if (len >= 256)
                 len = 255;
-            StringTool::strLower(p0, temp, len);
+            StringTool::strnlower(p0, temp, len);
             temp[len] = 0;
             // check IPv6 IP address, inside "[..]"
             if (temp[0] == '[')
@@ -693,7 +693,7 @@ SslContext *VHostMapFindSslContext(void *arg, const char *pName)
         char *pHostEnd;
         char achBuf[1024];
         int len = 1024;
-        pHost = StringTool::strLower(pName, achBuf, len);
+        pHost = StringTool::strnlower(pName, achBuf, len);
         pHostEnd = pHost + len;
         pVHost = pMap->matchVHost(pHost, pHostEnd);
         if ((!pVHost || pVHost == pMap->getCatchAll()) && (memcmp(pHost, "www.", 4) == 0))

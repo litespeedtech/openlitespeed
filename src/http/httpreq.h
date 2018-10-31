@@ -28,6 +28,8 @@ enum
 
 
 #include <http/httpheader.h>
+#include <http/httpstatuscode.h>
+
 #include "httpvhost.h"
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
@@ -61,7 +63,6 @@ enum
 #define CACHE_KEY               (1<<17)
 #define CACHE_PRIVATE_KEY       (1<<18)
 #define AP_USER_DIR             (1<<19)
-#define X_FORWARD_HTTPS         (1<<20)
 #define LOG_ACCESS_404          (1<<21)
 #define RESP_CONT_LEN_SET       (1<<22)
 
@@ -106,6 +107,8 @@ class StaticFileCacheData;
 class VHostMap;
 class VMemBuf;
 class UnpackedHeaders;
+class HioCrypto;
+
 typedef struct ls_hash_s ls_hash_t;
 
 
@@ -173,6 +176,7 @@ class HttpReq
 {
 private:
     const VHostMap     *m_pVHostMap;
+    HioCrypto          *m_pCrypto;
     SslConnection      *m_pSslConn;
     AutoBuf             m_headerBuf;
 
@@ -210,10 +214,11 @@ private:
     int                 m_iEnvCount;
     unsigned short      m_ver;
     short               m_iRedirects;
-    int                 m_iAcceptGzip:8;
-    int                 m_iAcceptBr:8;
-    int                 m_iKeepAlive:8;
-    int                 m_iNoRespBody:8;
+    
+    char                m_iReqFlag;
+    char                 m_iAcceptGzip;
+    char                 m_iAcceptBr;
+    
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
     int                 m_iContextState;
@@ -335,6 +340,18 @@ public:
         UPD_PROTO_HTTP2 = 2,
     };
 
+    enum
+    {
+        IS_KEEPALIVE        = 1,
+        IS_FORWARDED_HTTPS  = 2,
+        IS_HTTPS            = 4,
+        IS_HTTPS_MASK       = 6,
+        IS_NO_CACHE         = 8,
+    };
+    
+    
+    
+    
     explicit HttpReq();
     ~HttpReq();
 
@@ -475,8 +492,13 @@ public:
     int  isErrorPage() const
     {   return m_iContextState & IS_ERROR_PAGE; }
 
-    short isKeepAlive() const               {   return m_iKeepAlive;        }
-    void keepAlive(short keepalive)         {   m_iKeepAlive = keepalive;   }
+    char isKeepAlive() const
+    {   return m_iReqFlag & IS_KEEPALIVE;     }
+    void keepAlive(char keepalive)
+    {
+        m_iReqFlag = keepalive ? (m_iReqFlag | IS_KEEPALIVE)
+                       : (m_iReqFlag & ~IS_KEEPALIVE);
+    }
 
     int getPort() const;
     const AutoStr2 &getPortStr() const;
@@ -534,23 +556,17 @@ public:
     void andBr(char b)                      {   m_iAcceptBr &= b;         }
     void orBr(char b)                       {   m_iAcceptBr |= b;         }
 
-    char noRespBody() const                 {   return m_iNoRespBody;       }
-    void setNoRespBody()                    {   m_iNoRespBody = 1;          }
-    void updateNoRespBodyByStatus(int code);
-//     {
-//         if (!(m_iContextState & KEEP_AUTH_INFO))
-//         {
-//             switch (m_code = code)
-//             {
-//             case SC_100:
-//             case SC_101:
-//             case SC_204:
-//             case SC_205:
-//             case SC_304:
-//                 m_iNoRespBody = 1;
-//             }
-//         }
-//     }
+    int  noRespBody() const            {   return m_iContextState & NO_RESP_BODY;   }
+    void setNoRespBody()               {   m_iContextState |= NO_RESP_BODY;      }
+    void updateNoRespBodyByStatus(int code)
+    {
+        if (!(m_iContextState & KEEP_AUTH_INFO))
+            m_code = code;
+        if ((!(m_iContextState & NO_RESP_BODY)) &&
+            ((code < SC_200) || (code == SC_204) ||
+             (code == SC_205) || (code == SC_304)))
+            setNoRespBody();
+    }
 
 
     void processReqBodyInReqHeaderBuf();
@@ -615,10 +631,14 @@ public:
     char isCfIpSet() const                      {   return m_iCfIpHeader;   }
     const char *getCfIpHeader(int &len);
 
-    void setSsl(SslConnection *p)   {    m_pSslConn = p;        }
-    SslConnection *getSsl() const  {   return m_pSslConn;      }
+    void setCrypto(HioCrypto *p)        {    m_pCrypto = p;         }
+    HioCrypto *getCrypto() const        {   return m_pCrypto;       }
     int isHttps() const
-    {   return m_pSslConn || (m_iContextState & X_FORWARD_HTTPS);    }
+    {   return m_pCrypto || (m_iReqFlag & IS_HTTPS_MASK) != 0;    }
+    int isForwardedHttps() const
+    {   return m_iReqFlag & IS_FORWARDED_HTTPS;   }
+    void setHttps()     {    m_iReqFlag |= IS_HTTPS;   }
+
 
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)

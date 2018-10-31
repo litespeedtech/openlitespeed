@@ -593,7 +593,7 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd)
         return SC_400;
 
     if (m_method == HttpMethod::HTTP_HEAD)
-        m_iNoRespBody = 1;
+        setNoRespBody();
 
     if ((m_method < HttpMethod::HTTP_OPTIONS) ||
         (m_method >= HttpMethod::HTTP_METHOD_END))
@@ -832,7 +832,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
                 && strncasecmp(name, "X-Forwarded-Proto", 17) == 0)
     {
         if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
-            m_iContextState |= X_FORWARD_HTTPS;
+            m_iReqFlag |= IS_FORWARDED_HTTPS;
     }
     else if (pCurHeader->keyLen == 18
                 && strncasecmp(name, "X-Forwarded-scheme", 18) == 0)
@@ -841,7 +841,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
         {
             memcpy((char *)value + 12, "Proto ", 6);
             pCurHeader->keyLen = 17;
-            m_iContextState |= X_FORWARD_HTTPS;
+            m_iReqFlag |= IS_FORWARDED_HTTPS;
         }
     }
     else if ((pCurHeader->keyLen == 9
@@ -2191,23 +2191,6 @@ void HttpReq::replaceBodyBuf(VMemBuf *pBuf)
 }
 
 
-void HttpReq::updateNoRespBodyByStatus(int code)
-{
-    if (!(m_iContextState & KEEP_AUTH_INFO))
-    {
-        switch (m_code = code)
-        {
-        case SC_100:
-        case SC_101:
-        case SC_204:
-        case SC_205:
-        case SC_304:
-            m_iNoRespBody = 1;
-        }
-    }
-}
-
-
 void HttpReq::processReqBodyInReqHeaderBuf()
 {
     int already = m_iReqHeaderBufRead - m_iReqHeaderBufFinished;
@@ -2459,7 +2442,7 @@ void  HttpReq::smartKeepAlive(const char *pValue)
 {
     if (m_pVHost->getSmartKA())
         if (!HttpMime::shouldKeepAlive(pValue))
-            m_iKeepAlive = 0;
+            keepAlive(0);
 }
 
 

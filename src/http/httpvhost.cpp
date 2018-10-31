@@ -2325,8 +2325,8 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     if (p0)
     {
         ConfigCtx currentCtx("ssl");
-        SslContext *pSSLCtx = new SslContext(SslContext::SSL_ALL);
-        if (pSSLCtx->config(p0))
+        SslContext *pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(p0, getName(), NULL);
+        if (pSSLCtx)
             setSslContext(pSSLCtx);
         else
             delete pSSLCtx;

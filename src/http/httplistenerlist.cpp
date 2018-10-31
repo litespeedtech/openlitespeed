@@ -20,6 +20,7 @@
 #include <http/vhostmap.h>
 #include <log4cxx/logger.h>
 
+#include <socket/gsockaddr.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -341,6 +342,98 @@ int HttpListenerList::saveInUseListnersTo(HttpListenerList &rhs)
     return add;
 }
 
+
+int ServerAddrInfo::init(const struct sockaddr *pAddr)
+{
+    char achBuf[128];
+    memset(m_serverAddr, 0, sizeof(m_serverAddr));
+    memmove(m_serverAddr, pAddr, (pAddr->sa_family == PF_INET) ? 16 : 28);
+    GSockAddr::ntop(pAddr, (char *)achBuf, 128);
+    m_serverAddrStr.setStr(achBuf);
+    return 0;
+}
+
+
+hash_key_t ServerAddrInfo::hasher(const void *pAddr)
+{
+    return XXH64(pAddr,
+                 (((const sockaddr *)pAddr)->sa_family == PF_INET)
+                    ? 16 : 28, 0);
+}
+
+
+int ServerAddrInfo::value_cmp(const void *v1, const void *v2)
+{
+    return memcmp( ((const ServerAddrInfo *)v1)->getAddr(),
+                   ((const ServerAddrInfo *)v2)->getAddr(),
+                   (((const ServerAddrInfo *)v1)->getAddr()->sa_family == PF_INET)
+                    ? 16 : 28);
+}
+
+
+LS_SINGLETON(ServerAddrRegistry);
+
+
+ServerAddrRegistry::ServerAddrRegistry()
+    : m_registry(20, ServerAddrInfo::hasher, ServerAddrInfo::value_cmp)
+    , m_pListenerList(NULL)
+{
+}
+
+
+void ServerAddrRegistry::init(HttpListenerList *pList)
+{
+    m_pListenerList = pList;
+}
+
+
+const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
+                                              const void *pProc)
+{
+    ServerAddrInfo *pInfo;
+    char sAddr[250];
+    HttpListener *pListener = (HttpListener *)pProc;
+    THash<ServerAddrInfo*>::iterator iter = m_registry.find(pAddr);
+    if (iter == m_registry.end())
+    {
+        pInfo = new ServerAddrInfo();
+        pInfo->init(pAddr);
+        if (pListener == NULL)
+        {
+            snprintf(sAddr, sizeof(sAddr), 
+                        (pAddr->sa_family == AF_INET6) ? "[%s]:%d" : "%s:%d", 
+                        pInfo->getAddrStr()->c_str(), GSockAddr::getPort(pAddr));
+
+            pListener = m_pListenerList->get(sAddr, sAddr);
+        }
+        if (!pListener)
+        {
+
+            if (pAddr->sa_family == AF_INET6)
+            {
+                snprintf(sAddr, sizeof(sAddr), 
+                        "[::]:%d", GSockAddr::getPort(pAddr));
+            }
+            else
+            {
+                snprintf(sAddr, sizeof(sAddr), "*:%d", 
+                        GSockAddr::getPort(pAddr));
+            }
+            pListener = m_pListenerList->get(sAddr, sAddr);
+            assert(pListener != NULL);
+        }
+        
+        if (pListener)
+            pInfo->setVHostMap(pListener->findVhostMap(pAddr));
+        m_registry.insert(pInfo->getAddr(), pInfo);
+    }
+    else
+    {
+        pInfo = iter.second();
+    }
+    return pInfo;
+        
+}
 
 
 

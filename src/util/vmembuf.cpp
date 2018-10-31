@@ -1000,4 +1000,51 @@ int VMemBuf::copyToFile(off_t  startOff, off_t  len,
 
 }
 
+int VMemBuf::copyToBuf(char *pBuf, int offset, int len)
+{
+    BlockBuf *pSrcBlock = NULL;
+    char *pSrcPos;
+    int mapped = 0;
+    char *pPos = pBuf;
+    int ret = 0;
+    int blk = offset / s_iBlockSize;
+    if (blk >= m_bufList.size())
+        return -1;
+    if (!pPos)
+        return -1;
+    while (!ret && (len > 0))
+    {
+        if (blk >= m_bufList.size())
+            break;
+        pSrcBlock = m_bufList[blk];
+        if (!pSrcBlock)
+        {
+            ret = -1;
+            break;
+        }
+        if (!pSrcBlock->getBuf())
+        {
+            if (remapBlock(pSrcBlock, blk * s_iBlockSize) == -1)
+                return -1;
+            mapped = 1;
+        }
+        pSrcPos = pSrcBlock->getBuf() + offset % s_iBlockSize;
 
+        int sz = len;
+        if (sz > pSrcBlock->getBufEnd() - pSrcPos)
+            sz = pSrcBlock->getBufEnd() - pSrcPos;
+        memmove(pPos, pSrcPos, sz);
+        pPos += sz;
+        len -= sz;
+
+        offset = 0;
+        if (mapped)
+        {
+            releaseBlock(pSrcBlock);
+            mapped = 0;
+        }
+        ++blk;
+    }
+    return pPos - pBuf;
+
+}

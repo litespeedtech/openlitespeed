@@ -90,9 +90,9 @@ int HioChainStream::passSetCookieToParent()
 
 int HioChainStream::sendRespHeaders(HttpRespHeaders *pHeaders)
 {
-    m_pRespHeaders = pHeaders;
-    if (m_pParentSession && getFlag(HIO_FLAG_PASS_SETCOOKIE))
-        passSetCookieToParent();
+//     m_pRespHeaders = pHeaders;
+//     if (m_pParentSession && getFlag(HIO_FLAG_PASS_SETCOOKIE))
+//         passSetCookieToParent();
     return 0;
 }
 

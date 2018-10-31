@@ -1303,7 +1303,7 @@ NEXT_RULE:
             else if (m_action == RULE_ACTION_REDIRECT)
             {
                 if (pReq->detectLoopRedirect((char *)m_pSourceURL, m_sourceURLLen,
-                                             m_pQS, m_qsLen, pSession->isSSL()) == 0)
+                                             m_pQS, m_qsLen, pSession->isHttps()) == 0)
                 {
                     pReq->setRewriteLocation((char *)m_pSourceURL, m_sourceURLLen,
                                              m_pQS, m_qsLen, m_flag & RULE_FLAG_NOESCAPE);

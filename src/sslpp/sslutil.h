@@ -1,27 +1,16 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+// Author: Kevin Fwu
+// Date: August 25, 2015
 
 #ifndef SSLUTIL_H
 #define SSLUTIL_H
 
 #include <openssl/ssl.h>
 
-class AutoBuf;
+
+typedef int (*asyncCertDoneCb)(void *arg, const char *pDomain);
+typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
+                             const char *pDomain, int iDomainLen, bool isSsl);
+
 class SslUtil
 {
     static const char *s_pDefaultCAFile;
@@ -36,6 +25,19 @@ public:
     {
         FILETYPE_PEM,
         FILETYPE_ASN1
+    };
+
+    /**
+    * The cert callback is expected to return the following:
+    * < 0 If the server needs to look for a certificate
+    *  0  On error.
+    *  1  If success, regardless of if a certificate was set or not.
+    */
+    enum
+    {
+        CERTCB_RET_WAIT = -1,
+        CERTCB_RET_ERR  =  0,
+        CERTCB_RET_OK   =  1
     };
     static void setUseStrongDH(int use);
     static int initDH(SSL_CTX *pCtx, const char *pFile, int iKeyLen);
@@ -75,12 +77,18 @@ public:
     static int setCipherList(SSL_CTX *pCtx, const char *pList);
     static void updateProtocol(SSL_CTX *pCtx, int method);
     static int enableShmSessionCache(SSL_CTX *pCtx);
-
-    static int getPrivateKeyPem(SSL_CTX *pCtx, AutoBuf *pBuf);
-    static int getCertPem(SSL_CTX *pCtx, AutoBuf *pBuf);
-    static int getCertChainPem(SSL_CTX *pCtx, AutoBuf *pBuf);
     static int enableSessionTickets(SSL_CTX *pCtx);
     static void disableSessionTickets(SSL_CTX *pCtx);
+
+    static asyncCertFunc addAsyncCertLookup;
+    static asyncCertFunc removeAsyncCertLookup;
+    static void setAsyncCertFunc(asyncCertFunc add, asyncCertFunc remove)
+    {
+        if (add)
+            addAsyncCertLookup = add;
+        if (remove)
+            removeAsyncCertLookup = remove;
+    }
 };
 
 #endif

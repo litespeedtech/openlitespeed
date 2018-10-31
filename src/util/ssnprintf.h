@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -15,59 +15,23 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "hiostream.h"
-#include <spdy/unpackedheaders.h>
+#ifndef __SAFE_SNPRINTF__
+#define __SAFE_SNPRINTF__
 
-static const char *s_sProtoName[] =
-{
-    "HTTP/1.x",
-    "SPDY/2",
-    "SPDY/3",
-    "SPDY/3.1",
-    "HTTP/2"
-};
+#include <stdio.h>
+#include <stdarg.h>
 
-const char *HioStream::getProtocolName(HiosProtocol proto)
+inline int safe_snprintf(char *str, size_t size, const char *format, ...)
 {
-    if (proto >= HIOS_PROTO_MAX)
-        return "UNKNOWN";
-    return s_sProtoName[proto];
+    va_list ap;
+    va_start(ap, format);
+    int ret = vsnprintf(str, size, format, ap);
+    va_end(ap);
+
+    if ((unsigned int)ret > size)
+        ret = size;
+
+    return ret;
 }
 
-
-HioStream::~HioStream()
-{
-    if (m_pReqHeaders)
-        delete m_pReqHeaders;
-}
-
-
-void HioStream::handlerOnClose()
-{
-    if (!isReadyToRelease())
-        m_pHandler->onCloseEx();
-    if (m_pHandler && isReadyToRelease())
-    {
-        m_pHandler->recycle();
-        m_pHandler = NULL;
-    }
-}
-
-
-HioHandler::~HioHandler()
-{
-
-}
-
-
-int HioHandler::h2cUpgrade(HioHandler *pOld)
-{
-    return LS_FAIL;
-}
-
-void HioStream::switchHandler(HioHandler *pCurrent, HioHandler *pNew)
-{
-    assert(m_pHandler == pCurrent);
-    pCurrent->detachStream();
-    pNew->attachStream(this);
-}
+#endif //__SAFE_SNPRINTF__

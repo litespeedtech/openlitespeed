@@ -23,6 +23,7 @@
 #include <util/accessdef.h>
 #include <util/datetime.h>
 
+#include <socket/gsockaddr.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -163,6 +164,10 @@ void ClientInfo::setAddr(const struct sockaddr *pAddr)
     m_iAccess = 1;
 }
 
+bool ClientInfo::isFromLocalAddr(const sockaddr* server_addr) const
+{
+    return (GSockAddr::compareAddr(server_addr, getAddr()) == 0);
+}
 
 int ClientInfo::checkAccess()
 {

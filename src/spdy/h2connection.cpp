@@ -1100,6 +1100,7 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
     if (!(m_iFlag & H2_CONN_FLAG_NO_PUSH))
         flag |= HIO_FLAG_PUSH_CAPABLE;
     pStream->setFlag(flag, 1);
+    pStream->setConnInfo(getStream()->getConnInfo());
     return pStream;
 }
 

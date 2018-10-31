@@ -72,4 +72,11 @@ AutoStr &AutoStr::operator=(const char *pStr)
     return *this;
 }
 
-
+void AutoStr::release()
+{
+    if (m_pStr)
+    {
+        Pool::deallocate2(m_pStr);
+        m_pStr = NULL;
+    }
+}

@@ -31,6 +31,7 @@
 #include <http/staticfilecachedata.h>
 #include <http/reqparser.h>
 #include <http/clientinfo.h>
+#include <http/ntwkiolink.h>
 
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
@@ -2009,7 +2010,7 @@ static int   get_body_buf_fd(void *pBuf)
 {
     if (!pBuf)
         return LS_FAIL;
-    return ((VMemBuf *)pBuf)->getFd();
+    return ((VMemBuf *)pBuf)->getfd();
 
 }
 
@@ -2124,13 +2125,13 @@ static void *get_vhost_module_param(const void *vhost,
     return pConfig->get(MODULE_ID(pModule))->config;
 }
 
-
+//Do not use it currently
 int handoff_fd(const lsi_session_t *session, char **pData, int *pDataLen)
 {
     if (!session || !pData || !pDataLen)
         return LS_FAIL;
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    return pSession->handoff(pData, pDataLen);
+    return LS_FAIL;//pSession->handoff(pData, pDataLen);
 }
 
 

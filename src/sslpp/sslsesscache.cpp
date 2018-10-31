@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -17,16 +17,18 @@
 *****************************************************************************/
 #include <sslpp/sslsesscache.h>
 #include <sslpp/sslconnection.h>
-
 #include <log4cxx/logger.h>
 #include <shm/lsshmhash.h>
-#include <shm/lsshmtypes.h>
+#include <shm/lsshmhashobserver.h>
+// #include <shm/lsshmtypes.h>
 #include <util/datetime.h>
+#include <util/objpool.h>
 #include <util/stringtool.h>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/ssl.h>
 
 #define shmSslCache "SSLCache"
 #define shmSsl  "SSL"
@@ -41,8 +43,19 @@ typedef struct SslSessData_s
 } SslSessData_t;
 
 static int checkStatElem(LsShmHash::iteroffset iIterOff, void *pData);
-static void printId(const char *tag, const unsigned char *pId, int iIdLen);
-// static int printAll(LsShmHash::iteroffset iIterOff, void *pUData);
+
+static inline void printId(const char *tag, const uint8_t *pId, int iIdLen)
+{
+    if (LS_LOG_ENABLED(log4cxx::Level::DBG_LOW))
+    {
+        char buf[0x100];
+        int len;
+
+        len = StringTool::hexEncode((const char *)pId, iIdLen, buf);
+        LS_DBG_L("[SSL SESS] [PID:%6d] %s: ID [%s] size %d", getpid(), tag,
+                 buf, len);
+    }
+}
 
 static int isExpired(SslSessData_t *pObj)
 {
@@ -57,6 +70,7 @@ SslSessCache::SslSessCache()
     : m_expireSec(0)
     , m_maxEntries(0)
     , m_pSessStore(NULL)
+    , m_pObserver(NULL)
 {
 }
 
@@ -66,27 +80,29 @@ SslSessCache::~SslSessCache()
 }
 
 
-int SslSessCache::initShm()
+int SslSessCache::initShm(int uid, int gid)
 {
     LsShm *pShm;
     LsShmPool *pPool;
 
     if ((pShm = LsShm::open(shmSsl, 0)) == NULL)
         return LS_FAIL;
+    pShm->chperm(uid, gid, 0600);
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return LS_FAIL;
     if ((m_pSessStore = pPool->getNamedHash(shmSslCache, 10000,
-                                            LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU)) != NULL)
+                        LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU)) != NULL)
     {
         m_pSessStore->disableAutoLock(); // we will be responsible for the lock
         s_numNew = 0;
+        sessionFlush();
         return LS_OK;
     }
     return LS_FAIL;
 }
 
 
-int SslSessCache::init(int32_t iTimeout, int iMaxEntries)
+int SslSessCache::init(int32_t iTimeout, int iMaxEntries, int uid, int gid)
 {
     if (isReady())
     {
@@ -95,7 +111,7 @@ int SslSessCache::init(int32_t iTimeout, int iMaxEntries)
     }
     m_expireSec = iTimeout;
     m_maxEntries = iMaxEntries;
-    return initShm();
+    return initShm(uid, gid);
 }
 
 
@@ -112,36 +128,35 @@ static int newSessionCb(SSL *pSSL, SSL_SESSION *pSess)
     unsigned char *pAsn1 = &data[sizeof(SslSessData_t)];
     SslSessData_t *pObj = (SslSessData_t *)data;
 
-    s_numNew++;
-    // flush out expired data
-    if (!(s_numNew % 0x400))
-        cache.sessionFlush();
-
     iDataLen = i2d_SSL_SESSION(pSess, &pAsn1);
     assert((unsigned int)iDataLen <= sizeof(data) - sizeof(SslSessData_t));
     pObj->x_iValueLen = iDataLen;
     pObj->x_iExpireTime = DateTime::s_curTime + cache.getExpireSec();
 
-    unsigned int len;
-    const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSess, &len);
-    
-    cache.addSession((unsigned char *)id, (int)len,
-                     data, iDataLen + sizeof(*pObj));
+    uint32_t lruTm = DateTime::s_curTime;
+
+    unsigned id_len;
+    const uint8_t *id = SSL_SESSION_get_id(pSess, &id_len);
+    int ret = cache.addSession(lruTm, id, id_len, data, iDataLen + sizeof(*pObj));
+    if (ret != 0 && cache.getObserver() != NULL)
+        cache.getObserver()->onNewEntry(id, id_len, data,
+                                        iDataLen + sizeof(*pObj), lruTm);
+    //NOTE: always return 0 as we do not take ownership of pSess.
+    // otherwise, will cause memory leak, as session wont be released.
     return 0;
 }
-
 
 /**
  * getSessionCb() is the callback that openssl will use to get the session id.
  * This function will go into shm to look for the ID and if found,
  * will convert it to, and return as a SSL_SESSION object.
  */
-static SSL_SESSION *getSessionCb(SSL *pSSL, 
+static SSL_SESSION *getSessionCb(SSL *pSSL,
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-                                 const unsigned char *id, 
+                                 const unsigned char *id,
 #else
                                  unsigned char *id,
-#endif                                 
+#endif
                                  int len,
                                  int *ref)
 {
@@ -150,22 +165,17 @@ static SSL_SESSION *getSessionCb(SSL *pSSL,
 #ifdef DEBUG_SHOW_MORE
     printId("Lookup Session", id, len);
 #endif
-    //*ref = 0;
+    *ref = 0;
     const unsigned char *cp;
     SSL_SESSION *pSess = NULL;
-    SslSessData_t *pObj = cache.getLockedSessionData(id, len);
+    SslSessData_t * pObj = cache.getLockedSessionData(id, len);
     if (pObj)
     {
         cp = (const unsigned char *) pObj->x_sessionData;
         pSess = d2i_SSL_SESSION(NULL, &cp, pObj->x_iValueLen);
         cache.unlock();
         if (pSess)
-        {
             printId("Create Session from cache succeed", id, len);
-            SslConnection *pConn = (SslConnection *)SSL_get_ex_data(pSSL,
-                                   SslConnection::getConnIdx());
-            pConn->setFreeSess();
-        }
         else
             printId("d2i_SSL_SESSION failed", id, len);
     }
@@ -198,13 +208,14 @@ static void removeCb(SSL_CTX *pCtx, SSL_SESSION *pSess)
     unsigned int len;
     const unsigned char *id = SSL_SESSION_get_id((const SSL_SESSION *)pSess, &len);
 #ifdef DEBUG_SHOW_MORE
-    printId("Remove Session", id, (int)len);
+    printId("Remove Session", (unsigned char *)id, (int)len);
 #endif
-    LsShmHash *pStore = cache.getSessStore();
-
+    LsShmHash * pStore = cache.getSessStore();
     pStore->lock();
     pStore->remove((unsigned char *)id, (int)len);
     pStore->unlock();
+    if (cache.getObserver() != NULL)
+        cache.getObserver()->onDelEntry(id, len);
 
     cache.sessionFlush(); // flush out the SHM expired sessions
 }
@@ -220,6 +231,7 @@ int SslSessCache::watchCtx(SSL_CTX *pCtx)
     SSL_CTX_sess_set_remove_cb(pCtx, removeCb);
     SSL_CTX_sess_set_get_cb(pCtx, getSessionCb);
     SSL_CTX_set_timeout(pCtx, SslSessCache::getInstance().m_expireSec);
+//     SSL_CTX_sess_set_cache_size(pCtx, SslSessCache::getInstance().m_maxEntries);
     return LS_OK;
 }
 
@@ -227,24 +239,44 @@ int SslSessCache::watchCtx(SSL_CTX *pCtx)
 /**
  * addSession() will try to insert a session into the hash.
  */
-int SslSessCache::addSession(unsigned char *pId, int idLen,
+int SslSessCache::addSession(time_t lruTm, const uint8_t *pId, int idLen,
                              unsigned char *pData, int iDataLen)
 {
-    LsShmOffset_t iObjOff;
+    LsShmHIterOff iIterOff;
+    ls_strpair_t parms;
+
+    s_numNew++;
+    // flush out expired data
+    if (!(s_numNew % 0x400))
+        sessionFlush();
 
     m_pSessStore->lock();
-    iObjOff = m_pSessStore->insert(pId, idLen, pData, iDataLen);
-    if (iObjOff != 0)
+    iIterOff = m_pSessStore->insertIterator( m_pSessStore->setParms(&parms, pId, idLen, pData, iDataLen));
+    if (iIterOff.m_iOffset != 0)
     {
+        m_pSessStore->linkMvTopTime(iIterOff, lruTm);
 #ifdef DEBUG_SHOW_MORE
         printId("New Session", pId, idLen);
 #endif
     }
     else
+    {
         printId("Failed to add to SHM hashtable", pId, idLen);
+    }
     m_pSessStore->unlock();
 
-    return (iObjOff != 0); //session will be cached
+    return (iIterOff.m_iOffset != 0); //session will be cached
+}
+
+
+int SslSessCache::deleteSession(const char * pId, int len)
+{
+    if (!m_pSessStore)
+        return 0;
+    m_pSessStore->lock();
+    int ret = m_pSessStore->remove(pId, len);
+    m_pSessStore->unlock();
+    return ret;
 }
 
 
@@ -261,8 +293,7 @@ void SslSessCache::unlock()
  * NOTICE: if this function succeeds, the hash table \b must be unlocked
  * afterwards.
  */
-SslSessData_t *SslSessCache::getLockedSessionData(const unsigned char *id,
-        int len)
+SslSessData_t *SslSessCache::getLockedSessionData(const unsigned char *id, int len)
 {
     int valLen;
     LsShmOffset_t iObjOff;
@@ -322,6 +353,17 @@ int SslSessCache::stat()
 }
 
 
+uint32_t SslSessCache::getSessCnt() const
+{
+    LsHashStat stat;
+    m_pSessStore->lock();
+    m_pSessStore->stat(&stat, checkStatElem, m_pSessStore);
+    m_pSessStore->unlock();
+    return stat.num;
+}
+
+
+
 /**
  * checkStatElem() is the callback function that checks the actual data
  * to update any statistic that the hash wouldn't know about.
@@ -330,26 +372,13 @@ int checkStatElem(LsShmHash::iteroffset iIterOff, void *pData)
 {
     LsHashStat *pHashStat = (LsHashStat *)pData;
     LsShmHash *pHash = (LsShmHash *)pHashStat->userData;
-    SslSessData_t *pObj = (SslSessData_t *)pHash->offset2iteratorData(
-                              iIterOff);
+    SslSessData_t *pObj = (SslSessData_t *)pHash->offset2iteratorData(iIterOff);
     if (isExpired(pObj))
         pHashStat->numExpired++;
     return 0;
 }
 
 
-void printId(const char *tag, const unsigned char *pId, int iIdLen)
-{
-    if (LS_LOG_ENABLED(log4cxx::Level::DBG_LOW))
-    {
-        char buf[0x100];
-        int len;
-
-        len = StringTool::hexEncode((const char *)pId, iIdLen, buf);
-        LS_DBG_L("[SSL SESS] [PID:%6d] %s: ID [%s] size %d", getpid(), tag,
-                 buf, len);
-    }
-}
 
 
 // int printAll(LsShmHash::iteroffset iIterOff, void *pUData)
@@ -371,25 +400,87 @@ void printId(const char *tag, const unsigned char *pId, int iIdLen)
 // }
 
 
+class SslClientSessElem
+{
+public:
+    ls_str_t    domain;
+    SSL_SESSION *session;
+
+    SslClientSessElem()
+    : session(NULL)
+    {
+        ls_str_blank(&domain);
+    }
+
+    ~SslClientSessElem()
+    {}
+};
+
+ObjPool<SslClientSessElem> s_clientSessElemPool(10, 20);
+
+
+static int recycleClientSessElem(GHash::iterator iter)
+{
+    SslClientSessElem *pElem = (SslClientSessElem *)iter->second();
+    ls_str_d(&pElem->domain);
+    SSL_SESSION_free(pElem->session);
+    pElem->session = NULL;
+    s_clientSessElemPool.recycle(pElem);
+    return 0;
+}
+
+
 SslClientSessCache::~SslClientSessCache()
 {
-    if (m_pSession)
-        SSL_SESSION_free(m_pSession);
+    m_sessions.for_each(m_sessions.begin(), m_sessions.end(), recycleClientSessElem);
+    m_sessions.clear();
 }
 
 
 int SslClientSessCache::saveSession(const char *id, int len, SSL_SESSION *session)
 {
-    if (m_pSession)
-        SSL_SESSION_free(m_pSession);
-    m_pSession = session;
+    ls_str_t findStr;
+    const char *pBlank = "_";
+    if (NULL == id || 0 == len)
+        ls_str_set(&findStr, (char *)pBlank, 1);
+    else
+        ls_str_set(&findStr, (char *)id, len);
+
+    SslClientSessHash::iterator iter = m_sessions.find(&findStr);
+
+    if (iter)
+    {
+        SSL_SESSION_free(iter.second()->session);
+        iter.second()->session = session;
+    }
+    else
+    {
+        SslClientSessElem *pElem = s_clientSessElemPool.get();
+        ls_str_dup(&pElem->domain, ls_str_cstr(&findStr), ls_str_len(&findStr));
+        pElem->session = session;
+        m_sessions.insert(&pElem->domain, pElem);
+    }
+
     return 0;
 }
 
 
 SSL_SESSION *SslClientSessCache::getSession(const char *id, int len)
 {
-    return m_pSession;
+    ls_str_t findStr;
+    const char *pBlank = "_";
+    if (NULL == id || 0 == len)
+        ls_str_set(&findStr, (char *)pBlank, 1);
+    else
+        ls_str_set(&findStr, (char *)id, len);
+
+    SslClientSessHash::iterator iter = m_sessions.find(&findStr);
+
+    return (iter ? iter.second()->session : NULL);
 }
 
 
+void SslClientSessCache::onTimer()
+{
+    s_clientSessElemPool.shrinkTo(100);
+}
