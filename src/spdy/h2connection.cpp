@@ -1657,7 +1657,7 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
     if (header->set(&method, pUrl, pHost, headers) == LS_OK)
         pStream->setReqHeaders(header);
 
-    m_priQue[pStream->getPriority()].append(pStream);
+    add2PriorityQue(pStream);
     ++m_iCurPushStreams;
     
     return pStream;
