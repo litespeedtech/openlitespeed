@@ -2875,11 +2875,14 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         procConf.setPriority(ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                              "priority", -20, 20, 0));
 
-        int iNumProc = PCUtil::getNumProcessors();
+        int iNumProc = 1;
+#ifndef IS_LSCPD
+        iNumProc = PCUtil::getNumProcessors();
         iNumProc = (iNumProc > 8 ? 8 : iNumProc);
         HttpServerConfig::getInstance().setChildren(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
+#endif
 
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
 
@@ -3574,7 +3577,7 @@ int HttpServerImpl::initLscpd()
 
     ls_snprintf(achBuf, 256, "%s/tmp/ocspcache/",
                 mainServerConfig.getServerRoot());
-    SslOcspStapling::setRespTempPath(achBuf);
+    SslOcspStapling::setCachePath(achBuf);
 
     HttpRespHeaders::hideServerSignature(0);
     HttpServer::getInstance().getServerContext().setGeoIP(0);
@@ -3698,26 +3701,16 @@ int HttpServerImpl::initLscpd()
     strcpy(pEnd, "/key.pem");
     HttpListener *pListener = addListener("DefaultSSL", LSCPD_LISTENER_ADDRESS);
 
-    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
-    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
-                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
-                       1, 0, 0);  //certChain is 1
-    if (pSSL == NULL)
-    {
-        LS_INFO(ConfigCtx::getCurConfigCtx(),
-                 "Failed to setup SSL cipher for listener %s, please make sure"
-                 " your certificates file %s and Key file %s can be accessed.\n",
-                 LSCPD_LISTENER_ADDRESS, achBuf1, achBuf);
-        LS_INFO(ConfigCtx::getCurConfigCtx(),
-                 "Continue to setup listener %s without SSL support.\n",
-                 LSCPD_LISTENER_ADDRESS);
-        delete pNewContext;
-    }
-    else
-    {
-        pSSL->setProtocol(31);
-        pListener->getVHostMap()->setSslContext(pSSL);
-    }
+    SslContextConfig config;
+    config.m_sName = "DefaultSSL";
+    config.m_sKeyFile[0] = achBuf1;
+    config.m_sCertFile[0] = achBuf;
+    config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
+    config.m_iProtocol = 31;
+    config.m_iEnableECDHE = 1;
+    config.m_iEnableDHE = 1;
+    config.m_iEnableTicket = -1;
+    pListener->getVHostMap()->setSslContext(SslContext::config(NULL, &config));
 
     //vhost
     HttpVHost *pVHost = new HttpVHost(LSCPD_VHOST_NAME);

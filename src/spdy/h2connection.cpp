@@ -1077,10 +1077,6 @@ int H2Connection::decodeData(const unsigned char *pSrc,
 H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
 {
     H2Stream *pStream;
-    HioHandler *pSession = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
-    if (!pSession)
-        return NULL;
-
     LS_DBG_H(getLogger(),
              "[%s-%d] getNewStream(), stream map size: %d, shutdown streams: %d, flag: %d ",
              getLogId(), m_uiLastStreamId, (int)m_mapStream.size(),
@@ -1088,6 +1084,10 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
 
     if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams 
             >= m_iServerMaxStreams)
+        return NULL;
+
+    HioHandler *pSession = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
+    if (!pSession)
         return NULL;
 
     pStream = new H2Stream();
