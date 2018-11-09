@@ -111,3 +111,8 @@ int main(int argc, char *argv[])
     exit(ret);
 }
 
+
+#ifndef WANT_LSAN
+extern "C" const char* __asan_default_options() { return "detect_leaks=0"; }
+#endif
+

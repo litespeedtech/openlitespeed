@@ -3,12 +3,18 @@ OS := $(shell uname)
 MACHINE_TYPE := $(shell getconf LONG_BIT)
 ARCH_TYPE := $(shell uname -m)
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0
+ifeq ($(BUILDSTATIC), 1)
+    ALLLIB := -nodefaultlibs $(shell g++ -print-file-name='libstdc++.a') -lm -lc -lgcc_eh  -lc_nonshared -lgcc
+endif
+
+
+
 
 INCLUDE_ARCH=
 PSOLPATH=
 
 ifeq ($(OS), Darwin)
-        LDFLAGS= -fPIC -g -undefined dynamic_lookup  -Wall $(LFSFLAGS) -shared
+        LDFLAGS= $(ALLLIB) -fPIC -g -undefined dynamic_lookup  -Wall $(LFSFLAGS) -shared
 	INCLUDE_ARCH=arch/mac/ia32
 	$(shell echo Sorry, pagespeed does not support MAC OS)
 
@@ -26,7 +32,7 @@ else
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/ia32/
 	    CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(ARCH_TYPE)
 	endif
-	LDFLAGS= -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
+	LDFLAGS= $(ALLLIB) -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
 endif
 
 INCLUDEFILES =-I. -I../.. -I.. -I../../util -I../../../  -I../../../include \

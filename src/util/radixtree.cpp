@@ -910,7 +910,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
                                    pool);
         else
-            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xh32, ls_str_cmp, pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xxh32, ls_str_cmp, pool);
         pTmp = (rnheader_t *)m_pCHeaders;
         for (i = 0; i < iExact; ++i)
         {
@@ -958,7 +958,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             pHash = new(ptr) GHash(RN_HASHSZ, ls_str_hfci, ls_str_cmpci,
                                    pool);
         else
-            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xh32, ls_str_cmp, pool);
+            pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xxh32, ls_str_cmp, pool);
 
         for (i = 0; i < iExact; ++i)
         {

@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "hiostream.h"
+#include <spdy/unpackedheaders.h>
 
 static const char *s_sProtoName[] =
 {
@@ -36,7 +37,8 @@ const char *HioStream::getProtocolName(HiosProtocol proto)
 
 HioStream::~HioStream()
 {
-
+    if (m_pReqHeaders)
+        delete m_pReqHeaders;
 }
 
 
@@ -63,4 +65,9 @@ int HioHandler::h2cUpgrade(HioHandler *pOld)
     return LS_FAIL;
 }
 
-
+void HioStream::switchHandler(HioHandler *pCurrent, HioHandler *pNew)
+{
+    assert(m_pHandler == pCurrent);
+    pCurrent->detachStream();
+    pNew->attachStream(this);
+}

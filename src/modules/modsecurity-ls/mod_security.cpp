@@ -513,6 +513,14 @@ static int reqBodyHook(lsi_param_t *rec)
     int64_t offset = 0;
     ModData *myData = (ModData *) g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);
+    if (!myData)
+    {
+        g_api->log(rec->session, LSI_LOG_WARN,
+                   "[Module:%s] reqBodyHook get module data is NULL.",
+                   ModuleNameStr);
+        return LSI_OK;
+    }
+
     void *pBuf;
     pBuf = g_api->get_req_body_buf(session);
     int64_t len = g_api->get_body_buf_size(pBuf);
@@ -568,6 +576,14 @@ static int respHeaderHook(lsi_param_t *rec)
     lsi_session_t *session = (lsi_session_t *)rec->session;
     ModData *myData = (ModData *) g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);
+    if (!myData)
+    {
+        g_api->log(rec->session, LSI_LOG_WARN,
+                   "[Module:%s] respHeaderHook get module data is NULL.",
+                   ModuleNameStr);
+        return LSI_OK;
+    }
+
     int count = g_api->get_resp_headers_count(rec->session);
     if (count >= MAX_RESP_HEADERS_NUMBER)
         g_api->log(rec->session, LSI_LOG_WARN,
@@ -606,6 +622,15 @@ static int respHeaderHook(lsi_param_t *rec)
     ModData *myData = (ModData *) g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);
 
+    if (!myData)
+    {
+        g_api->log(rec->session, LSI_LOG_WARN,
+                   "[Module:%s] respBodyHook get module data is NULL.",
+                   ModuleNameStr);
+        return LSI_OK;
+    }
+
+    
     //long iCahcedSize = 0;
     off_t offset = 0;
     const char *pBuf;

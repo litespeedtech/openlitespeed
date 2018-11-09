@@ -19,6 +19,8 @@
 
 #include <util/autobuf.h>
 
+LS_SINGLETON(ResourcePool);
+
 ResourcePool::ResourcePool()
     : m_poolAutoBuf(5, 5)
 {

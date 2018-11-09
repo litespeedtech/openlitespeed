@@ -77,13 +77,14 @@
  *
  */
 
+
 #include <sslpp/ocsp/ocsp.h>
 #include <openssl/asn1t.h>
 #include <openssl/asn1.h>
 
-#ifdef OPENSSL_IS_BORINGSSL
-
 #include <string.h>
+
+#ifdef OPENSSL_IS_BORINGSSL
 
 #ifdef  __cplusplus
 extern "C" {
@@ -819,7 +820,6 @@ int OCSP_check_validity(ASN1_GENERALIZEDTIME *thisupd,
 
 #ifdef  __cplusplus
 }
-#endif // OPENSSL_IS_BORINGSSL
-
 #endif
 
+#endif // OPENSSL_IS_BORINGSSL

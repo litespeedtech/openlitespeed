@@ -31,6 +31,7 @@
 #include <http/httpstatuscode.h>
 #include <http/httpver.h>
 #include <http/httpvhost.h>
+#include <http/requestvars.h>
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
 #include <http/httprespheaders.h>
@@ -421,7 +422,9 @@ int HttpReq::removeSpace(const char **pCur, const char *pBEnd)
 int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
 {
     AutoBuf *buf = header->getBuf();
-    LS_DBG_L(getLogSession(), "zero-copy unpacked headers: %d.", buf->size());
+    LS_DBG_L(getLogSession(), "zero-copy unpacked headers: %d, "
+            "method len: %d, url len: %d.", buf->size(),
+            header->getMethodLen(), header->getUrlLen());
     getHeaderBuf().swap(*buf);
 
     int result = 0;
@@ -678,7 +681,7 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd)
         return SC_400;
 
     if (m_method == HttpMethod::HTTP_HEAD)
-        m_iNoRespBody = 1;
+        setNoRespBody();
 
     if ((m_method < HttpMethod::HTTP_OPTIONS) ||
         (m_method >= HttpMethod::HTTP_METHOD_END))
@@ -921,7 +924,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
                 && strncasecmp(name, "X-Forwarded-Proto", 17) == 0)
     {
         if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
-            m_iContextState |= X_FORWARD_HTTPS;
+            m_iReqFlag |= IS_FORWARDED_HTTPS;
     }
     else if (pCurHeader->keyLen == 18
                 && strncasecmp(name, "X-Forwarded-scheme", 18) == 0)
@@ -930,7 +933,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
         {
             memcpy((char *)value + 12, "Proto ", 6);
             pCurHeader->keyLen = 17;
-            m_iContextState |= X_FORWARD_HTTPS;
+            m_iReqFlag |= IS_FORWARDED_HTTPS;
         }
     }
     else if ((pCurHeader->keyLen == 9
@@ -2352,24 +2355,6 @@ void HttpReq::replaceBodyBuf(VMemBuf *pBuf)
 }
 
 
-void HttpReq::updateNoRespBodyByStatus(int code)
-{
-    if (!(m_iContextState & KEEP_AUTH_INFO))
-    {
-        ls_atomic_setint(&m_code, code);
-        switch (code)
-        {
-        case SC_100:
-        case SC_101:
-        case SC_204:
-        case SC_205:
-        case SC_304:
-            ls_atomic_setchar(&m_iNoRespBody, 1);
-        }
-    }
-}
-
-
 void HttpReq::processReqBodyInReqHeaderBuf()
 {
     int already = m_iReqHeaderBufRead - m_iReqHeaderBufFinished;
@@ -2624,7 +2609,7 @@ void  HttpReq::smartKeepAlive(const char *pValue)
 {
     if (m_pVHost->getSmartKA())
         if (!HttpMime::shouldKeepAlive(pValue))
-            m_iKeepAlive = 0;
+            keepAlive(0);
 }
 
 
@@ -3338,7 +3323,7 @@ int HttpReq::toLocalAbsUrl(const char *pOrgUrl, int urlLen,
 }
 
 
-int HttpReq::createHeaderValue(const char *pFmt, int len,
+int HttpReq::createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                                char *pBuf, int maxLen)
 {
     char *pDest = pBuf;
@@ -3377,14 +3362,31 @@ int HttpReq::createHeaderValue(const char *pFmt, int len,
             if (pEnvNameEnd && (*(pEnvNameEnd + 1) == 'e'
                                 || *(pEnvNameEnd + 1) == 's'))
             {
-                int envLen;
-                const char *pEnv = getEnv(pFmt + 1, pEnvNameEnd - pFmt - 1, envLen);
-                if (pEnv)
+                const char *env_name = pFmt + 1;
+                int env_name_len = pEnvNameEnd - pFmt - 1;
+                int ret = RequestVars::parseBuiltIn(env_name, env_name_len, 0);
+                if (ret != -1)
                 {
-                    if (envLen > pDestEnd - pDest)
-                        envLen = pDestEnd - pDest;
-                    memmove(pDest, pEnv, envLen);
-                    pDest += envLen;
+                    char *p = pDest;
+                    int val_len = RequestVars::getReqVar(pSession, ret, p,
+                                                         pDestEnd - pDest);
+                    if (p!= pDest && val_len > 0)
+                    {
+                        memmove(pDest, p, val_len);
+                    }
+                    pDest += val_len;
+                }
+                else
+                {
+                    int envLen;
+                    const char *pEnv = RequestVars::getEnv(pSession, env_name, env_name_len, envLen);
+                    if (pEnv)
+                    {
+                        if (envLen > pDestEnd - pDest)
+                            envLen = pDestEnd - pDest;
+                        memmove(pDest, pEnv, envLen);
+                        pDest += envLen;
+                    }
                 }
                 pFmt = pEnvNameEnd + 2;
             }
@@ -3420,17 +3422,27 @@ int HttpReq::dropReqHeader(int index)
 }
 
 
-int HttpReq::applyOp(const HeaderOp *pOp)
+int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
 {
-    switch(pOp->getOperator())
+    if (pOp->getOperator() == LSI_HEADER_UNSET)
     {
-    case LSI_HEADER_UNSET:
         if (pOp->getIndex() < HttpHeader::H_HEADER_END)
         {
             dropReqHeader(pOp->getIndex());
         }
-
-        break;
+        return 0;
+    }
+    const char *pValue = pOp->getValue();
+    int valLen = pOp->getValueLen();
+    char achBuf[8192];
+    int maxLen = sizeof(achBuf);
+    if (pOp->isComplexValue())
+    {
+        valLen = createHeaderValue(pSession, pValue, valLen, achBuf, maxLen);
+        pValue = achBuf;
+    }
+    switch(pOp->getOperator())
+    {
     case LSI_HEADER_SET:
         if (pOp->getIndex() != HttpHeader::H_HEADER_END)
         {
@@ -3450,14 +3462,14 @@ int HttpReq::applyOp(const HeaderOp *pOp)
 }
 
 
-int HttpReq::applyOp(HttpRespHeaders *pRespHeader,
+int HttpReq::applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
                      const HeaderOp *pOp)
 {
     if (pOp->isReqHeader())
     {
         if (pRespHeader)
             return 0;
-        return ((HttpReq *)this)->applyOp(pOp);
+        return ((HttpReq *)this)->applyOp(pSession, pOp);
     }
     else if (!pRespHeader)
         return 0;
@@ -3477,7 +3489,7 @@ int HttpReq::applyOp(HttpRespHeaders *pRespHeader,
         int maxLen = sizeof(achBuf);
         if (pOp->isComplexValue())
         {
-            valLen = createHeaderValue(pValue, valLen, achBuf, maxLen);
+            valLen = createHeaderValue(pSession, pValue, valLen, achBuf, maxLen);
             pValue = achBuf;
         }
         if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
@@ -3491,7 +3503,8 @@ int HttpReq::applyOp(HttpRespHeaders *pRespHeader,
 }
 
 
-void HttpReq::applyOps(HttpRespHeaders *pRespHeader,
+void HttpReq::applyOps(HttpSession * pSession,
+                       HttpRespHeaders *pRespHeader,
                        const HttpHeaderOps *pHeaders, int noInherited)
 {
     const HeaderOp *iter;
@@ -3510,16 +3523,17 @@ void HttpReq::applyOps(HttpRespHeaders *pRespHeader,
     for (iter = pHeaders->begin(); iter < pHeaders->end(); ++iter)
     {
         if (!noInherited || !iter->isInherited())
-            applyOp(pRespHeader, iter);
+            applyOp(pSession, pRespHeader, iter);
     }
 }
 
 
-int HttpReq::applyHeaderOps(HttpRespHeaders *pRespHeader)
+int HttpReq::applyHeaderOps(HttpSession * pSession,
+                            HttpRespHeaders *pRespHeader)
 {
     if (m_pContext && m_pContext->getHeaderOps())
     {
-        applyOps(pRespHeader, m_pContext->getHeaderOps(), 0);
+        applyOps(pSession, pRespHeader, m_pContext->getHeaderOps(), 0);
     }
     return 0;
 }

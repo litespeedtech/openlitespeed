@@ -107,11 +107,11 @@ class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
 
     void onTimer()
     {
-        for_each(begin(), end(), callTimer);
+        for_each0(begin(), end(), callTimer);
     }
     void onTimer30Secs()
     {
-        for_each(begin(), end(), callTimer30Secs);
+        for_each0(begin(), end(), callTimer30Secs);
     }
     void offsetChroot(const char *pChroot, int len)
     {

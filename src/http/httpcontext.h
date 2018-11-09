@@ -144,6 +144,10 @@ class HttpHeaderOps;
 #define BIT2_IPTOLOC            (1<<22)
 
 
+//last bit, if set, is a NULL context
+#define BIT2_NULL_CONTEXT       (1<<31)
+
+
 /**********************************************************************
 *   m_sContextURI: is the root URI the context starts
 *
@@ -264,8 +268,10 @@ public:
     void releaseHTAConf();
 
     void setCacheable(int c)      {   setConfigBit2(BIT2_URI_CACHEABLE, c);  }
-    short isCacheable() const       {   return m_iConfigBits2 & BIT2_URI_CACHEABLE; }
+    uint32_t isCacheable() const       {   return m_iConfigBits2 & BIT2_URI_CACHEABLE; }
 
+    uint32_t isNullContext()           { return m_iConfigBits2 & BIT2_NULL_CONTEXT; }
+    
     const char *getLocation() const {   return m_sLocation.c_str();    }
     int getLocationLen() const       {   return m_sLocation.len();      }
 
@@ -533,9 +539,9 @@ public:
                                  | BIT_REWRITE_INHERIT);
     }
 
-    void setConfigBit2(short bit, int enable)
+    void setConfigBit2(uint32_t bit, int enable)
     {   m_iConfigBits2 = (m_iConfigBits2 & (~bit)) | ((enable) ? bit : 0); }
-    short getConfigBits2() const     {   return m_iConfigBits2;   }
+    uint32_t getConfigBits2() const     {   return m_iConfigBits2;   }
 
 
     void setFileEtag(int a)
@@ -550,11 +556,12 @@ public:
     void configAutoIndex(const XmlNode *pContextNode);
     int configDirIndex(const XmlNode *pContextNode);
     int configErrorPages(const XmlNode *pNode);
-    int configRewriteRule(const RewriteMapList *pMapList, char *pRule);
+    int configRewriteRule(const RewriteMapList *pMapList, char *pRule,
+                          const char *htaccessPath);
     int configMime(const XmlNode *pContextNode);
     int configExtAuthorizer(const XmlNode *pContextNode);
     int config(const RewriteMapList *pMapList, const XmlNode *pContextNode,
-               int type, HttpContext &pRootContext);
+               int type, HttpContext &pRootContext, int autoLoadHt);
 
     void setInternalSessionHooks(HttpSessionHooks *pHooks) { m_pInternal->m_pSessionHooks = pHooks;    }
     int initExternalSessionHooks();

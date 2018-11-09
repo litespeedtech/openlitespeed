@@ -37,7 +37,7 @@
 #include <lsr/ls_hash.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
-#include <sslpp/sslconnection.h>
+#include <sslpp/hiocrypto.h>
 // #include <sslpp/sslcert.h>
 #include <util/autostr.h>
 #include <util/datetime.h>
@@ -252,7 +252,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 //         }
         break;
     case HttpRespHeaders::H_CONTENT_DISPOSITION:
-        pReq->appendRedirHdr(pName, pValue + valLen - pName);
+        pReq->appendRedirHdr(pName, pValue + valLen - pName + 2);
         break;
     case HttpRespHeaders::H_LOCATION:
         if ((status & HEC_RESP_PROXY) || (pReq->getStatusCode() != SC_200))
@@ -553,7 +553,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     RadixNode *pNode;
 
     pTemp = pReq->getAuthUser();
-    if (pTemp)
+    if (pTemp && *pTemp)
     {
         //NOTE: only Basic is support now
         pEnv->add("AUTH_TYPE", 9, "Basic", 5);
@@ -562,9 +562,9 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     }
     //ADD_ENV("REMOTE_IDENT", "" )        //TODO: not supported yet
     //extensions of CGI/1.1
-    const AutoStr2 *pDocRoot = pReq->getDocRoot();
+    const AutoStr2 *pStr = pReq->getDocRoot();
     pEnv->add("DOCUMENT_ROOT", 13,
-              pDocRoot->c_str(), pDocRoot->len() - 1);
+              pStr->c_str(), pStr->len() - 1);
     pEnv->add("REMOTE_ADDR", 11, pSession->getPeerAddrString(),
               pSession->getPeerAddrStrLen());
 
@@ -576,11 +576,23 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     pEnv->add("SERVER_ADDR", 11, buf, n);
 
     pEnv->add("SERVER_NAME", 11, pReq->getHostStr(),  pReq->getHostStrLen());
-    const AutoStr2 &sPort = pReq->getPortStr();
-    pEnv->add("SERVER_PORT", 11, sPort.c_str(), sPort.len());
-    pTemp = pSession->getOrgReqUrl(&n);
-    pEnv->add("REQUEST_URI", 11, pTemp, n);;
-    count += 7;
+
+    count += 5;
+    pStr = pReq->getVHost()->getAdminEmails();
+    if (pStr->c_str())
+    {
+        pEnv->add("SERVER_ADMIN", 12, pStr->c_str(), pStr->len());
+        ++count;
+    }
+    
+    
+    char *pBuf = buf;
+    n = RequestVars::getReqVar(pSession, REF_SERVER_PORT, pBuf, 128);
+    pEnv->add("SERVER_PORT", 11, pBuf, n);
+    
+    pEnv->add("REQUEST_URI", 11, pReq->getOrgReqURL(),
+              pReq->getOrgReqURLLen());
+    count += 2;
 
     n = pReq->getPathInfoLen();
     if (n > 0)
@@ -603,6 +615,17 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             ++count;
         }
     }
+    
+    if (pReq->getStatusCode() && (pReq->getStatusCode() != SC_200))
+    {
+        pTemp = HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode());
+        if (pTemp)
+        {
+            pEnv->add("REDIRECT_STATUS", 15, pTemp, 3);
+            ++count;
+        }
+    }
+
 
     if (pReq->getRedirects() > 0)
     {
@@ -649,6 +672,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     if ((pNode = (RadixNode *)pReq->getEnvNode()) != NULL)
         pNode->for_each2(addEnv, pEnv);
 
+
     if (pSession->getStream()->isSpdy())
     {
         const char *pProto = HioStream::getProtocolName((HiosProtocol)
@@ -657,98 +681,99 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
         ++count;
     }
 
-    if (pSession->isSSL())
+    HioCrypto *pCrypto = pSession->getCrypto();
+    if (pCrypto)
     {
-        //pEnv->add("HTTPS", 5, "on",  2);
-        SslConnection *pSSL = pSession->getSSL();
-        if (pSSL)
+        pBuf = buf;
+        n = pCrypto->getEnv(HioCrypto::CRYPTO_VERSION, pBuf, 128);
+        pEnv->add("SSL_PROTOCOL", 12, pBuf, n);
+        ++count ;
+
+        pBuf = buf;
+        n = pCrypto->getEnv(HioCrypto::SESSION_ID, pBuf, 128);
+        if (n > 0)
         {
-            const char *pVersion = pSSL->getVersion();
-            n = strlen(pVersion);
-            pEnv->add("SSL_VERSION", 11, pVersion, n);
+            pEnv->add("SSL_SESSION_ID", 14, pBuf, n);
             ++count;
-            SSL_SESSION *pSession = pSSL->getSession();
-            if (pSession)
-            {
-                int idLen = SslConnection::getSessionIdLen(pSession);
-                n = idLen * 2;
-                assert(n < (int)sizeof(buf));
-                StringTool::hexEncode(
-                    (char *)SslConnection::getSessionId(pSession),
-                    idLen, buf);
-                pEnv->add("SSL_SESSION_ID", 14, buf, n);
-                ++count;
-            }
+        }
 
-            const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
-            if (pCipher)
-            {
-                const char *pName = pSSL->getCipherName();
-                n = strlen(pName);
-                pEnv->add("SSL_CIPHER", 10, pName, n);
-                int algkeysize;
-                int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
-                n = ls_snprintf(buf, 20, "%d", keysize);
-                pEnv->add("SSL_CIPHER_USEKEYSIZE", 21, buf, n);
-                n = ls_snprintf(buf, 20, "%d", algkeysize);
-                pEnv->add("SSL_CIPHER_ALGKEYSIZE", 21, buf, n);
-                count += 3;
-            }
+        
+        pBuf = buf;
+        n = pCrypto->getEnv(HioCrypto::CIPHER, pBuf, 128);
+        pEnv->add("SSL_CIPHER", 10, pBuf, n);
+        
+        pBuf = buf;
+        n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
+        pEnv->add("SSL_CIPHER_USEKEYSIZE", 21, pBuf, n);
+        
+        pBuf = buf;
+        n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
+        pEnv->add("SSL_CIPHER_ALGKEYSIZE", 21, pBuf, n);
+        count += 3;
 
-            int i = pSSL->getVerifyMode();
-            if (i != 0)
+#ifdef HIOS_PROTO_QUIC
+        char proto = pSession->getStream()->getProtocol();
+        if (proto == HIOS_PROTO_QUIC && pCrypto)
+        {
+            pBuf = buf;
+            n = pCrypto->getEnv(HioCrypto::TRANS_PROTOCOL_VERSION, pBuf, 128);
+            pEnv->add("QUIC", 4, pBuf, n);
+            ++count;
+        }
+#endif
+        int i = pCrypto->getVerifyMode();
+        if (i != 0)
+        {
+            char achBuf[4096];
+            X509 *pClientCert = pCrypto->getPeerCertificate();
+            if (pCrypto->isVerifyOk())
             {
-                char achBuf[4096];
-                X509 *pClientCert = pSSL->getPeerCertificate();
-                if (pSSL->isVerifyOk())
+                if (pClientCert)
                 {
-                    if (pClientCert)
+                    //IMPROVE: too many deep copy here.
+                    //n = SslCert::PEMWriteCert( pClientCert, achBuf, 4096 );
+                    //if ((n>0)&&( n <= 4096 ))
+                    //{
+                    //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
+                    //    ++count;
+                    //}
+                    n = snprintf(achBuf, sizeof(achBuf), "%lu",
+                                 X509_get_version(pClientCert) + 1);
+                    pEnv->add("SSL_CLIENT_M_VERSION", 20, achBuf, n);
+                    ++count;
+                    n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
+                    if (n != -1)
                     {
-                        //IMPROVE: too many deep copy here.
-                        //n = SslCert::PEMWriteCert( pClientCert, achBuf, 4096 );
-                        //if ((n>0)&&( n <= 4096 ))
-                        //{
-                        //    pEnv->add( "SSL_CLIENT_CERT", 15, achBuf, n );
-                        //    ++count;
-                        //}
-                        n = snprintf(achBuf, sizeof(achBuf), "%lu",
-                                     X509_get_version(pClientCert) + 1);
-                        pEnv->add("SSL_CLIENT_M_VERSION", 20, achBuf, n);
+                        pEnv->add("SSL_CLIENT_M_SERIAL", 19, achBuf, n);
                         ++count;
-                        n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
-                        if (n != -1)
-                        {
-                            pEnv->add("SSL_CLIENT_M_SERIAL", 19, achBuf, n);
-                            ++count;
-                        }
-                        X509_NAME_oneline(X509_get_subject_name(pClientCert), achBuf, 4096);
-                        pEnv->add("SSL_CLIENT_S_DN", 15, achBuf, strlen(achBuf));
-                        ++count;
-                        X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
-                        pEnv->add("SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf));
-                        ++count;
-                        if (SslConnection::isClientVerifyOptional(i))
-                        {
-                            strcpy(achBuf, "GENEROUS");
-                            n = 8;
-                        }
-                        else
-                        {
-                            strcpy(achBuf, "SUCCESS");
-                            n = 7;
-                        }
+                    }
+                    X509_NAME_oneline(X509_get_subject_name(pClientCert), achBuf, 4096);
+                    pEnv->add("SSL_CLIENT_S_DN", 15, achBuf, strlen(achBuf));
+                    ++count;
+                    X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
+                    pEnv->add("SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf));
+                    ++count;
+                    if (SslConnection::isClientVerifyOptional(i))
+                    {
+                        strcpy(achBuf, "GENEROUS");
+                        n = 8;
                     }
                     else
                     {
-                        strcpy(achBuf, "NONE");
-                        n = 4;
+                        strcpy(achBuf, "SUCCESS");
+                        n = 7;
                     }
                 }
                 else
-                    n = pSSL->buildVerifyErrorString(achBuf, sizeof(achBuf));
-                pEnv->add("SSL_CLIENT_VERIFY", 17, achBuf, n);
-                ++count;
+                {
+                    strcpy(achBuf, "NONE");
+                    n = 4;
+                }
             }
+            else
+                n = pCrypto->buildVerifyErrorString(achBuf, sizeof(achBuf));
+            pEnv->add("SSL_CLIENT_VERIFY", 17, achBuf, n);
+            ++count;
         }
     }
 

@@ -143,11 +143,15 @@ ls_hash_key_t ls_str_hf(const void *pKey)
 }
 
 
-ls_hash_key_t ls_str_xh32(const void *pKey)
+ls_hash_key_t ls_str_xxh32(const void *pKey)
 {
     return XXH32(((ls_str_t *)pKey)->ptr, ((ls_str_t *)pKey)->len, 0);
 }
 
+ls_hash_key_t ls_str_xxh64(const void *pKey)
+{
+    return XXH64(((ls_str_t *)pKey)->ptr, ((ls_str_t *)pKey)->len, 0);
+}
 
 int ls_str_cmpci(const void *pVal1, const void *pVal2)
 {

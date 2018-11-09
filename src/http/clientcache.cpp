@@ -52,6 +52,9 @@ void ClientCache::clearObjPool()
 }
 
 
+LS_SINGLETON(ClientCache);
+
+
 ClientCache::ClientCache(int initSize)
     : m_v4(initSize, NULL, NULL)
     , m_v6(initSize, GHash::hfIpv6, GHash::cmpIpv6)
@@ -234,7 +237,7 @@ int ClientCache::generateBlockedIPReport(int fd)
     buf.append("BLOCKED_IP: ", 12);
     writeBlockedIP(&buf, &m_v4);
     writeBlockedIP(&buf, &m_v6);
-    buf.appendUnsafe('\n');
+    buf.append_unsafe('\n');
     write(fd, buf.begin(), buf.size());
     return 0;
 }
@@ -290,15 +293,15 @@ static int setThrottleLimit(const void *pKey, void *pData)
 
 void ClientCache::resetThrottleLimit()
 {
-    m_v4.for_each(m_v4.begin(), m_v4.end(), setThrottleLimit);
-    m_v6.for_each(m_v6.begin(), m_v6.end(), setThrottleLimit);
+    m_v4.for_each0(m_v4.begin(), m_v4.end(), setThrottleLimit);
+    m_v6.for_each0(m_v6.begin(), m_v6.end(), setThrottleLimit);
 }
 
 
 void ClientCache::onTimer()
 {
-    m_v4.for_each(m_v4.begin(), m_v4.end(), resetQuotas);
-    m_v6.for_each(m_v6.begin(), m_v6.end(), resetQuotas);
+    m_v4.for_each0(m_v4.begin(), m_v4.end(), resetQuotas);
+    m_v6.for_each0(m_v6.begin(), m_v6.end(), resetQuotas);
 }
 
 

@@ -127,7 +127,7 @@ int ProxyConn::connectSSL()
             m_ssl.setTlsExtHostName(pHostName);
             *(pHostName + hostLen) = ch;
         }
-        m_ssl.tryReuseCachedSession();
+        m_ssl.tryReuseCachedSession(pHostName, hostLen);
     }
     int ret = m_ssl.connect();
     switch (ret)
@@ -292,7 +292,7 @@ int ProxyConn::sendReqHeader()
         m_iTotalPending += hostLen + sizeof(s_achForwardHost) + 1 ;
     }
 
-    if (pSession->isSSL())
+    if (pSession->isHttps())
     {
         m_iovec.append(s_achForwardHttps, sizeof(s_achForwardHttps) - 1);
         m_iTotalPending += sizeof(s_achForwardHttps) - 1;

@@ -52,6 +52,11 @@ public:
     }
 
     void    setSize(int size)       {   ls_objarray_setsize(this, size); }
+    void    pop()
+    {
+        if (sizenow > 0)
+            --sizenow;
+    }
 
     int setCapacity(int numObj)
     {   return ls_objarray_setcapacity(this, numObj); }

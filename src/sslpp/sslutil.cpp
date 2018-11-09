@@ -1,20 +1,5 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+// Author: Kevin Fwu
+// Date: August 25, 2015
 
 #ifndef OPENSSL_IS_BORINGSSL
 #include <openssl/err.h>
@@ -27,7 +12,6 @@
 
 #include <lsdef.h>
 #include <log4cxx/logger.h>
-#include <util/autobuf.h>
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -47,6 +31,16 @@ static DH *s_pDHs[3] = {   NULL, NULL, NULL    };
 
 const char *SslUtil::s_pDefaultCAFile = NULL;
 const char *SslUtil::s_pDefaultCAPath = NULL;
+
+static int defaultAsyncCert(asyncCertDoneCb cb, void *pParam,
+                            const char *pDomain, int iDomainLen, bool isSsl)
+{
+    return -1;
+}
+
+
+asyncCertFunc SslUtil::removeAsyncCertLookup = defaultAsyncCert;
+asyncCertFunc SslUtil::addAsyncCertLookup = defaultAsyncCert;
 
 static const int s_iSystems = 4;
 static const char *s_aSystemFiles[] =
@@ -208,18 +202,18 @@ static DH *getTmpDhParam(int size)
     {
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         BIGNUM *p, *q, *g;
-        DH_set0_pqg(s_pDHs[index], 
+        DH_set0_pqg(s_pDHs[index],
                     BN_bin2bn(s_dh_p[index], s_dh_p_size[index], NULL), //p
                     NULL,                                               //q
                     BN_bin2bn(dh_g, sizeof(dh_g), NULL));               //g
-        DH_get0_pqg(s_pDHs[index], (const BIGNUM **)&p, (const BIGNUM **)&q, 
+        DH_get0_pqg(s_pDHs[index], (const BIGNUM **)&p, (const BIGNUM **)&q,
                     (const BIGNUM **)&g);
         if ((p == NULL) || (g == NULL))
-#else        
+#else
         s_pDHs[index]->p = BN_bin2bn(s_dh_p[index], s_dh_p_size[index], NULL);
         s_pDHs[index]->g = BN_bin2bn(dh_g, sizeof(dh_g), NULL);
         if ((s_pDHs[index]->p == NULL) || (s_pDHs[index]->g == NULL))
-#endif            
+#endif
         {
             DH_free(s_pDHs[index]);
             s_pDHs[index] = NULL;
@@ -387,7 +381,7 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     EVP_MD_CTX *pmd;
 #else
-    EVP_MD_CTX md;    
+    EVP_MD_CTX md;
     EVP_MD_CTX *pmd = &md;
 #endif
     unsigned int len;
@@ -403,7 +397,7 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
         LS_DBG_L( "Init EVP Digest failed.");
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         EVP_MD_CTX_free(pmd);
-#endif        
+#endif
         return LS_FAIL;
     }
     else if ( EVP_DigestUpdate(pmd, pDigest, iDigestLen) != 1 )
@@ -411,7 +405,7 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
         LS_DBG_L( "Update EVP Digest failed");
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         EVP_MD_CTX_free(pmd);
-#endif        
+#endif
         return LS_FAIL;
     }
     else if ( EVP_DigestFinal_ex(pmd, buf, &len ) != 1 )
@@ -419,7 +413,7 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
         LS_DBG_L( "EVP Digest Final failed.");
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         EVP_MD_CTX_free(pmd);
-#endif        
+#endif
         return LS_FAIL;
     }
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -428,18 +422,18 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
         LS_DBG_L( "EVP Digest Cleanup failed.");
         return LS_FAIL;
     }
-#endif    
+#endif
     else if ( SSL_CTX_set_session_id_context(pCtx, buf, len) != 1 )
     {
         LS_DBG_L( "Set Session Id Context failed.");
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         EVP_MD_CTX_free(pmd);
-#endif        
+#endif
         return LS_FAIL;
     }
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     EVP_MD_CTX_free(pmd);
-#endif        
+#endif
     return LS_OK;
 }
 
@@ -629,14 +623,14 @@ int SslUtil::setCertificateChain(SSL_CTX *pCtx, BIO * bio)
 #ifndef OPENSSL_IS_BORINGSSL
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     SSL_CTX_clear_extra_chain_certs(pCtx);
-#else                                                   
+#else
     pExtraCerts = pCtx->extra_certs;
     if (pExtraCerts != NULL)
     {
         sk_X509_pop_free((STACK_OF(X509) *)pExtraCerts, X509_free);
         pCtx->extra_certs = NULL;
     }
-#endif    
+#endif
 #else
     SSL_CTX_clear_extra_chain_certs(pCtx);
 #endif
@@ -679,7 +673,7 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
         SSLerr(SSL_F_SSL_DO_HANDSHAKE, SSL_R_SSL_HANDSHAKE_FAILURE);
 #else
         ((SSL *)pSSL)->error_code = SSL_R_SSL_HANDSHAKE_FAILURE;
-#endif        
+#endif
 #else
         OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_HANDSHAKE_FAILURE);
 #endif
@@ -694,9 +688,9 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 #define SSL_OP_NO_RENEGOTIATION 0x40000000U /* Requires 1.1.0h or later library */
 #endif
         SSL_set_options((SSL *)pSSL, SSL_OP_NO_RENEGOTIATION);
-#else        
+#else
         pSSL->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
-#endif        
+#endif
 #endif
         pConnection->setFlag(1);
     }
@@ -727,7 +721,7 @@ void SslUtil::initCtx(SSL_CTX *pCtx, int method, char renegProtect)
         SSL_CTX_set_info_callback(pCtx, SslConnection_ssl_info_cb);
     }
 #ifdef OPENSSL_IS_BORINGSSL
-    SSL_CTX_set_early_data_enabled(pCtx, 1);
+    //SSL_CTX_set_early_data_enabled(pCtx, 1);
 #endif // OPENSSL_IS_BORINGSSL
 
 }
@@ -842,7 +836,12 @@ void SslUtil::updateProtocol(SSL_CTX *pCtx, int method)
 
 #ifdef TLS1_3_VERSION
     if (method & SslContext::SSL_TLSv13)
+    {
         SSL_CTX_set_max_proto_version(pCtx, TLS1_3_VERSION);
+#ifdef OPENSSL_IS_BORINGSSL
+        SSL_CTX_set_tls13_variant(pCtx, tls13_all);
+#endif
+    }
 #endif
 
 #ifdef SSL_OP_NO_TLSv1_3
@@ -869,16 +868,12 @@ int  SslUtil::enableShmSessionCache(SSL_CTX *pCtx)
 }
 
 
-/* Note from Kevin: This file was ported from lsr project.
- * Currently only need default CA file/path, but in future will need to change
- * SslTicket so that this works.
 int SslUtil::enableSessionTickets(SSL_CTX *pCtx)
 {
     if (SslTicket::isKeyStoreEnabled())
         SSL_CTX_set_tlsext_ticket_key_cb(pCtx, SslTicket::ticketCb);
     return 0;
 }
-*/
 
 
 void SslUtil::disableSessionTickets(SSL_CTX *pCtx)
@@ -888,76 +883,4 @@ void SslUtil::disableSessionTickets(SSL_CTX *pCtx)
 }
 
 
-static int bioToBuf(BIO *pBio, AutoBuf *pBuf)
-{
-    int len, written;
-    len = BIO_number_written(pBio);
-    pBuf->reserve(pBuf->size() + len + 1);
-    written = BIO_read(pBio, pBuf->end(), len);
-
-    if (written <= 0)
-    {
-        if (!BIO_should_retry(pBio))
-            return -1;
-        written = BIO_read(pBio, pBuf->end(), len);
-        if (written <= 0)
-            return -1;
-    }
-    if (written != len)
-        return -1;
-
-    pBuf->used(written - 1); // - 1 to get rid of extra newline.
-    return written;
-}
-
-int  SslUtil::getPrivateKeyPem(SSL_CTX *pCtx, AutoBuf *pBuf)
-{
-    int ret = -1;
-    BIO *pOut = BIO_new(BIO_s_mem());
-    EVP_PKEY *pKey = SSL_CTX_get0_privatekey(pCtx);
-
-    if (PEM_write_bio_PrivateKey(pOut, pKey, NULL, NULL, 0, NULL, NULL))
-        ret = bioToBuf(pOut, pBuf);
-    BIO_free(pOut);
-    return ret;
-}
-
-int  SslUtil::getCertPem(SSL_CTX *pCtx, AutoBuf *pBuf)
-{
-    int ret = -1;
-    BIO *pOut = BIO_new(BIO_s_mem());
-    X509 *pCert = SSL_CTX_get0_certificate(pCtx);
-
-    if (PEM_write_bio_X509(pOut, pCert))
-        ret = bioToBuf(pOut, pBuf);
-    BIO_free(pOut);
-    return ret;
-}
-
-int  SslUtil::getCertChainPem(SSL_CTX *pCtx, AutoBuf *pBuf)
-{
-    int i, cnt, ret = -1;
-    X509 *pCert;
-    STACK_OF(X509) *pChain;
-    BIO *pOut = BIO_new(BIO_s_mem());
-
-    if (!SSL_CTX_get_extra_chain_certs(pCtx, &pChain))
-    {
-        return 0;
-    }
-    else if (NULL == pChain)
-    {
-        return 0;
-    }
-    cnt = sk_X509_num(pChain);
-
-    for (i = 0; i < cnt; ++i)
-    {
-        pCert = sk_X509_value(pChain, i);
-        if (PEM_write_bio_X509(pOut, pCert))
-            ret = bioToBuf(pOut, pBuf);
-        BIO_free(pOut);
-    }
-    return ret;
-}
 

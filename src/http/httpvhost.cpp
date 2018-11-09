@@ -597,14 +597,18 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
 }
 
 
-bool HttpVHost::dirMatch(const HttpContext *pContext, const char *pURI,
+bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
                          size_t iUriLen, AutoStr2 *missURI) const
 {
     assert(iUriLen > 0 && pURI[0] == '/');
     const char *curContextURI = pContext->getURI();
     int curContextURILen = pContext->getURILen();
-    assert(curContextURILen <= iUriLen &&
-            memcmp(pURI, curContextURI, curContextURILen) == 0);
+
+    if (pContext->isNullContext())
+    {
+        pContext = (HttpContext *)pContext->getParent();
+        return true;
+    }
     
     bool ret = true;
     const char *p = pURI + curContextURILen;
@@ -630,23 +634,9 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
     AutoStr2 missURI;
     while (!dirMatch(pContext, pURI, iUriLen, &missURI))
     {
-        char achVPath[MAX_PATH_LEN];
         char achRealPath[MAX_PATH_LEN];
-
-        strcpy(achVPath, "$DOC_ROOT");
-        strcat(achVPath, missURI.c_str());
-
-        ConfigCtx::getCurConfigCtx()->setDocRoot(getDocRoot()->c_str());
-        int ret = ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath, achVPath);
-        if (ret)
-            break;
-
-        if (access(achRealPath, F_OK) != 0)
-        {
-            LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is not accessible: %s",
-                     achRealPath);
-            break;
-        }
+        strncpy(achRealPath, pContext->getLocation(), pContext->getLocationLen());
+        strcpy(achRealPath + pContext->getLocationLen(), missURI.c_str());
 
         HttpContext *pContext0 = addContext(missURI.c_str(), HandlerType::HT_NULL,
                               achRealPath, NULL, 1);
@@ -655,18 +645,24 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
                 missURI.c_str(), achRealPath, pContext0);
         if (pContext0 == NULL)
             break;
+        
+        if (access(achRealPath, F_OK) != 0)
+        {
+            pContext0->setConfigBit2(BIT2_NULL_CONTEXT, 1);
+
+            LS_DBG_L(ConfigCtx::getCurConfigCtx(),
+                     "path %s not accessible, added null context %p.",
+                     achRealPath, pContext0);
+            break;
+        }
 
         pContext0->inherit(pContext);
-        pContext0->enableRewrite(pContext->isRewriteEnabled());
-        pContext0->setRewriteInherit(1);
-        
         pContext = pContext0;
-        if (pContext->isRewriteEnabled())
+        if (enableAutoLoadHt())
         {
             //If have .htaccess in this DIR, load it
             strcat(achRealPath, ".htaccess");
-            if (access(achRealPath, F_OK) == 0)
-                pContext->configRewriteRule(NULL, (char *) "RewriteFile .htaccess");
+            pContext->configRewriteRule(NULL, NULL, achRealPath);
         }
     }
 
@@ -825,6 +821,7 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     enableGzip((HttpServerConfig::getInstance().getGzipCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableGzip", 0, 1,
                        1) : 0);
+
     enableBr((HttpServerConfig::getInstance().getBrCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableBr", 0, 1,
                        1) : 0);
@@ -1097,12 +1094,16 @@ int HttpVHost::configRewrite(const XmlNode *pNode)
     setRewriteLogLevel(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                        "logLevel", 0, 9, 0));
 
+    int defVal = (HttpServerConfig::getInstance().getAutoLoadHtaccess());
+    enableAutoLoadHt(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                                "autoLoadHtaccess", 0, 1, defVal));
+
     configRewriteMap(pNode);
 
     RewriteRule::setLogger(NULL, TmpLogId::getLogId());
     char *pRules = (char *) pNode->getChildValue("rules");
     if (pRules)
-        getRootContext().configRewriteRule(getRewriteMaps(), pRules);
+        getRootContext().configRewriteRule(getRewriteMaps(), pRules, "");
 
 
     return 0;
@@ -1710,6 +1711,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     if (pUri == NULL)
         return LS_FAIL;
 
+    match = (strncasecmp(pUri, "exp:", 4) == 0);
+    
     ConfigCtx currentCtx("context", pUri);
     //int len = strlen( pUri );
 
@@ -1729,6 +1732,20 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     }
 
     pLocation = pContextNode->getChildValue("location");
+    AutoStr2 defLocation;
+    if (!pLocation)
+    {
+        if (match)
+            defLocation.setStr("$DOC_ROOT$0");
+        else
+        {
+            defLocation.setStr("$DOC_ROOT");
+            defLocation.append(pUri, strlen(pUri));
+        }
+
+        pLocation = defLocation.c_str();
+    }
+
     pHandler = pContextNode->getChildValue("handler");
 
     char achHandler[256] = {0};
@@ -1750,7 +1767,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
     allowBrowse = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                   "allowBrowse", 0, 1, 1);
 
-    match = (strncasecmp(pUri, "exp:", 4) == 0);
+    
 
     if ((*pUri != '/') && (!match))
     {
@@ -1794,7 +1811,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
             pContext->setGeoIP(val);
         pContext->setIpToLoc(m_rootContext.isIpToLocOn());
         return pContext->config(getRewriteMaps(), pContextNode, type,
-                                getRootContext());
+                                getRootContext(), enableAutoLoadHt());
     }
 
     return LS_FAIL;
@@ -1836,6 +1853,8 @@ static int compareContext(const void *p1, const void *p2)
 int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
                                    const XmlNodeList *pModuleList)
 {
+    //we add / context specially, but not config it, such as rewrite
+    bool slashCtxCfgRewrite = false;
     addContext("/", HandlerType::HT_NULL,
                getDocRoot()->c_str(), NULL, 1);
 
@@ -1852,11 +1871,25 @@ int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
 
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
-
+            const char *ctxName = (*iter)->getValue();
             LS_INFO("[%s] config conxtext %s.",
-                    TmpLogId::getLogId(), (*iter)->getValue());
+                    TmpLogId::getLogId(), ctxName);
             configContext(*iter);
+            
+            //If we did for "/", no need to do again
+            if (strcmp(ctxName, "/") == 0)
+                slashCtxCfgRewrite = true;
         }
+    }
+    
+    if (!slashCtxCfgRewrite && enableAutoLoadHt())
+    {
+        HttpContext *pSlashContext = getContext("/", 1);
+        AutoStr2 htaccessPath;
+        htaccessPath.setStr(pSlashContext->getLocation(),
+                            pSlashContext->getLocationLen());
+        htaccessPath.append(".htaccess", 9);
+        pSlashContext->configRewriteRule(NULL, NULL, htaccessPath.c_str());
     }
 
     /***
@@ -2292,8 +2325,8 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     if (p0)
     {
         ConfigCtx currentCtx("ssl");
-        SslContext *pSSLCtx = new SslContext(SslContext::SSL_ALL);
-        if (pSSLCtx->config(p0))
+        SslContext *pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(p0, getName(), NULL);
+        if (pSSLCtx)
             setSslContext(pSSLCtx);
         else
             delete pSSLCtx;

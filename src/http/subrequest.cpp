@@ -89,7 +89,7 @@ HttpSession *HttpSession::newSubSession(lsi_subreq_t *pSubSessInfo)
     pSession->m_iReqTimeUs = DateTime::s_curTimeUs;
     pSession->m_pClientInfo = m_pClientInfo;
     pSession->m_iRemotePort = m_iRemotePort;
-    pSession->getReq()->setSsl(m_request.getSsl());
+    pSession->getReq()->setCrypto(m_request.getCrypto());
 
     //pSession->setSsiRuntime( m_pSsiRuntime );
     HioChainStream *pStream = new HioChainStream();
@@ -536,7 +536,7 @@ int HttpReq::clone(HttpReq *pProto, lsi_subreq_t *pSubSessInfo)
     m_iLeadingWWW = pProto->m_iLeadingWWW;
     m_iBodyType = pProto->m_iBodyType;
     m_lEntityLength = pProto->m_lEntityLength;
-    m_iKeepAlive = pProto->m_iKeepAlive & ~IS_KEEPALIVE;
+    keepAlive(pProto->isKeepAlive());
     m_iAcceptGzip = 0; //pProto->m_iAcceptGzip &
     m_iAcceptBr = 0;
     m_iRedirects = 0;
@@ -667,12 +667,12 @@ void HttpReq::updateReqHeader(int index, const char *pNewValue,
         if (m_headerBuf.available() < newValueLen + iNameLen + 4)
             m_headerBuf.grow(newValueLen + iNameLen + 4 - m_headerBuf.available());
         m_headerBuf.append(pName, iNameLen);
-        m_headerBuf.appendUnsafe(':');
-        m_headerBuf.appendUnsafe(' ');
+        m_headerBuf.append_unsafe(':');
+        m_headerBuf.append_unsafe(' ');
         m_commonHeaderOffset[ index ] = m_headerBuf.size();
         m_headerBuf.append(pNewValue, newValueLen);
-        m_headerBuf.appendUnsafe('\r');
-        m_headerBuf.appendUnsafe('\n');
+        m_headerBuf.append_unsafe('\r');
+        m_headerBuf.append_unsafe('\n');
 
     }
     m_commonHeaderLen[index] = newValueLen;

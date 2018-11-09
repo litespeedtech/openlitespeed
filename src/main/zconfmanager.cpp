@@ -47,6 +47,8 @@
 static const char *ZCONFMGR_LOG_PREFIX = "ZConfManager";
 
 
+LS_SINGLETON(ZConfManager);
+
 ZConfManager::ZConfManager()
     : m_iFlags(0)
     , m_iConfHash(0)
@@ -211,7 +213,7 @@ int ZConfManager::appendToTmpDomainList(const char *pDomainList, int iListLen)
         if (len > m_pTmpDomainList->capacity())
             m_pTmpDomainList->reserve(len);
         if (!m_pTmpDomainList->empty())
-            m_pTmpDomainList->appendUnsafe(',');
+            m_pTmpDomainList->append_unsafe(',');
     }
     else
     {
@@ -219,7 +221,7 @@ int ZConfManager::appendToTmpDomainList(const char *pDomainList, int iListLen)
         m_pTmpDomainList = new AutoBuf(len);
     }
 
-    m_pTmpDomainList->appendUnsafe(pDomainList, iListLen);
+    m_pTmpDomainList->append_unsafe(pDomainList, iListLen);
     return 1;
 }
 
@@ -244,7 +246,7 @@ int ZConfManager::appendSslContext(const char *pDomainList, int iListLen,
     const int iBundlePrefixLen = 18;
     const char *pBundlePrefix = "\",\n\"ca_bundle\" : \"";
     int iPreBundleSize;
-    if ((NULL == pCtx) || (!pCtx->checkPrivateKey()))
+    if ((NULL == pCtx) || !SSL_CTX_check_private_key(pCtx->get()))
         return appendToTmpDomainList(pDomainList, iListLen);
     // Beyond this point, we have a context and the priv key and cert are valid
     m_pSslConf->reserve(m_pSslConf->size() + iListLen + 31);
@@ -253,13 +255,13 @@ int ZConfManager::appendSslContext(const char *pDomainList, int iListLen,
             "{\n\"domain_list\":\n[%.*s],\n\"key\" : \"",
             iListLen, pDomainList)
     );
-    SslUtil::getPrivateKeyPem(pCtx->get(), m_pSslConf);
+    ConfigCtx::getCurConfigCtx()->getPrivateKeyPem(pCtx->get(), m_pSslConf);
     m_pSslConf->append("\",\n\"cert\" : \"");
-    SslUtil::getCertPem(pCtx->get(), m_pSslConf);
+    ConfigCtx::getCurConfigCtx()->getCertPem(pCtx->get(), m_pSslConf);
     iPreBundleSize = m_pSslConf->size();
     m_pSslConf->grow(iBundlePrefixLen);
     m_pSslConf->used(iBundlePrefixLen); // Reserve space for ca bundle prefix
-    if (SslUtil::getCertChainPem(pCtx->get(), m_pSslConf)) // If bundle exists
+    if (ConfigCtx::getCurConfigCtx()->getCertChainPem(pCtx->get(), m_pSslConf)) // If bundle exists
         memmove(m_pSslConf->getp(iPreBundleSize), pBundlePrefix, iBundlePrefixLen);
     else
         m_pSslConf->used(-iBundlePrefixLen); // no ca bundles, unreserve this space.

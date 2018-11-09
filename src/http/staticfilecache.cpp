@@ -29,6 +29,9 @@
 #define LS_STATICFILECACHE_INITSIZE 1000
 
 
+LS_SINGLETON(StaticFileCache);
+
+
 StaticFileCache::StaticFileCache()
     : HttpCache(LS_STATICFILECACHE_INITSIZE)
 {

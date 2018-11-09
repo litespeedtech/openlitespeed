@@ -87,14 +87,16 @@ public:
     void appendLogId(const char * str, bool updateLength = false, 
                      size_t reserveChars = 0)
     {
-         if (MAX_LOGID_LEN - m_logId.len - reserveChars <= 0)
-         {
-             fprintf(stderr, "appendLogId error: want to reserve %zd, id length: %zd, id: %.*s\n",
-                     reserveChars, m_logId.len, (int)m_logId.len, m_logId.ptr);
-             return;
-         }
-//        assert(reserveChars < MAX_LOGID_LEN - m_logId.len);
         // WARNING: assumes LOCKED
+        if (!isLogIdBuilt())
+            allocLogId();
+        if (MAX_LOGID_LEN - m_logId.len - reserveChars <= 0)
+        {
+            fprintf(stderr, "appendLogId error: want to reserve %zd, id length: %zd, id: %.*s\n",
+                    reserveChars, m_logId.len, (int)m_logId.len, m_logId.ptr);
+            return;
+        }
+//        assert(reserveChars < MAX_LOGID_LEN - m_logId.len);
         char *end = (char *) memccpy(m_logId.ptr + m_logId.len, str, 0, 
                                      MAX_LOGID_LEN - m_logId.len - reserveChars);
 
@@ -133,13 +135,15 @@ public:
                           bool updateLength = false, size_t reserveChars = 0)
     {
         // WARNING: assumes LOCKED
-         if (MAX_LOGID_LEN <= offset)
-         {
-             fprintf(stderr, "addOrReplaceFrom error: offset %zd, reserve: %zd, id length: %zd, id: %.*s\n",
-                     offset, reserveChars, m_logId.len, (int)m_logId.len, 
-                     m_logId.ptr);
-             return;
-         }
+        if (!isLogIdBuilt())
+            allocLogId();
+        if (MAX_LOGID_LEN <= offset)
+        {
+            fprintf(stderr, "addOrReplaceFrom error: offset %zd, reserve: %zd, id length: %zd, id: %.*s\n",
+                    offset, reserveChars, m_logId.len, (int)m_logId.len,
+                    m_logId.ptr);
+            return;
+        }
         char * p = m_logId.ptr + offset;
         
         while (*p && *p != anchor)

@@ -31,10 +31,11 @@ class SslContext;
 class VHostMap;
 class ClientInfo;
 class GSockAddr;
-
+struct ConnInfo;
 class SubIpMap;
 class HttpServerImpl;
 class AutoBuf;
+struct ssl_st;
 
 class HttpListener : public EventReactor, public LogSession
 {
@@ -102,6 +103,8 @@ public:
     VHostMap *getVHostMap()
     {   return m_pMapVHost;     }
 
+    const VHostMap *findVhostMap(const struct sockaddr * pAddr) const;
+    
     virtual int start();
 
     virtual int handleEvents(short event);
@@ -132,6 +135,12 @@ public:
     void setAdcPortList(const char *pList);
     AutoStr *getAdcPortList() const         { return m_pAdcPortList;    }
     int zconfAppendVHostList(AutoBuf *pBuf);
+    
+    int addConnection();
+    void batchAddConn();
+    
+    ssl_st *newSsl(SslContext *pSslContext);
+    int setConnInfo(ConnInfo *pInfo, struct conn_data *pCur);
 };
 
 #endif

@@ -42,6 +42,9 @@ LsiModule::LsiModule(lsi_module_t *pModule)
 }
 
 
+LS_SINGLETON(ModuleManager);
+
+
 ModuleManager::ModuleManager()
 {
     m_pModuleArray = NULL;
@@ -484,6 +487,8 @@ void ModuleManager::applyConfigToHttpRt(HttpSessionHooks *pSessionHooks,
 void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
                                       ModuleConfig *moduleConfig, int module_id)
 {
+    if (!moduleConfig)
+        return ;
     if (!moduleConfig->getFilterEnable(module_id))
         pRtHooks->setModuleEnable(m_pModuleArray[module_id], 0);
     //FIXME: shoudl th ebelow code be called?
@@ -494,12 +499,15 @@ void ModuleManager::updateHttpApiHook(HttpSessionHooks *pRtHooks,
 
 void ModuleConfig::init(int count)
 {
-    initData(count);
-    for (int i = 0; i < m_iCount; ++i)
+    bool need_init = initData(count);
+    if (need_init)
     {
-        lsi_module_config_t *pConfig = new lsi_module_config_t;
-        memset(pConfig, 0, sizeof(lsi_module_config_t));
-        LsiModuleData::set(i, (void *) pConfig);
+        for (int i = 0; i < m_iCount; ++i)
+        {
+            lsi_module_config_t *pConfig = new lsi_module_config_t;
+            memset(pConfig, 0, sizeof(lsi_module_config_t));
+            LsiModuleData::set(i, (void *) pConfig);
+        }
     }
 }
 
@@ -587,16 +595,18 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
                              lsi_module_config_t *module_config)
 {
     const char *pValue = NULL;
-
     assert(module_config->module == pModule);
-    pValue = pNode->getChildValue("ls_enabled");
-    if (!pValue)
-        pValue = pNode->getChildValue("enabled");
-
-    if (pValue)
-        module_config->filters_enable = (int16_t)atoi(pValue);
-    else
-        module_config->filters_enable = -1;
+    
+//9/17/2018 diesable context level ls_enabled config, to avoid conflict
+//    with vhost config
+//     pValue = pNode->getChildValue("ls_enabled");
+//     if (!pValue)
+//         pValue = pNode->getChildValue("enabled");
+// 
+//     if (pValue)
+//         module_config->filters_enable = (int16_t)atoi(pValue);
+//     else
+//         module_config->filters_enable = -1;
 
     if (pModule->config_parser && pModule->config_parser->parse_config)
     {

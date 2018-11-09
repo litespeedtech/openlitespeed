@@ -30,6 +30,9 @@
 
 char HttpResourceManager::g_aBuf[GLOBAL_BUF_SIZE + 8];
 
+
+LS_SINGLETON(HttpResourceManager);
+
 HttpResourceManager::HttpResourceManager()
     : m_poolChunkInputStream(0, 10)
     , m_poolChunkOutputStream(10, 10)

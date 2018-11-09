@@ -418,7 +418,7 @@ echo
 
 if [ "x$ADMIN_SSL" = "xyes" ] ; then
     echo "Admin SSL enabled!"
-    gen_selfsigned_cert ../adminssl.conf
+    gen_selfsigned_cert ./adminssl.conf
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.crt $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.crt
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.key $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.key
 else

@@ -39,7 +39,7 @@ AU_ALIAS([CHECK_SSL], [AX_CHECK_OPENSSL])
 AC_DEFUN([AX_CHECK_OPENSSL], [
     AC_ARG_WITH([openssl],
         [AS_HELP_STRING([--with-openssl=DIR],
-            [root of the OpenSSL directory])],
+            [set root of the OpenSSL directory for MAC OS only])],
         [
             case "$withval" in
             "" | y | ye | yes | n | no)
@@ -50,7 +50,7 @@ AC_DEFUN([AX_CHECK_OPENSSL], [
             esac
         ], [
             # use some default ssldirs
-            ssldirs="/usr/local /usr/local/ssl /usr /usr/ssl /usr/lib/ssl /usr/pkg "
+            ssldirs="/usr/local /usr/local/ssl /usr /usr/ssl /usr/lib/ssl /usr/pkg /opt/local/"
         ]
         )
 

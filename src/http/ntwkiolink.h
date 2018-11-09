@@ -102,7 +102,6 @@ private:
 
     LsiModuleData       m_moduleData;
 
-    ClientInfo         *m_pClientInfo;
     const VHostMap     *m_pVHostMap;
     unsigned short      m_iRemotePort;
 
@@ -312,14 +311,11 @@ public:
 
     int switchToHttp2Handler(HioHandler *pSession);
 
-    int setLink(HttpListener *pListener, int fd, ClientInfo *pInfo,
-                SslContext  *pSslContext);
+    int setLink(HttpListener *pListener, int fd, ConnInfo * pInfo);
 
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
     const struct sockaddr *getPeerAddr() const;
-
-    void changeClientInfo(ClientInfo *pInfo);
 
 
     //Event driven IO interface
@@ -344,8 +340,6 @@ public:
     //void stopThrottleTimer();
     //void startThrottleTimer();
 
-    ClientInfo *getClientInfo() const
-    {   return m_pClientInfo;               }
     
     ThrottleControl *getThrottleCtrl() const;
     

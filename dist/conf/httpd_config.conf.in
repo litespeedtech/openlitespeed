@@ -38,14 +38,14 @@ accessLog $SERVER_ROOT/logs/access.log {
     
 expires {
     enableExpires           1
-    expiresByType           image/*=A604800, text/css=A604800, application/x-javascript=A604800
+    expiresByType           image/*=A604800,text/css=A604800,application/x-javascript=A604800,application/javascript=A604800,font/*=A604800,application/x-font-ttf=A604800
 }
 
 tuning{
-    maxConnections               2000 
-    maxSSLConnections            1000 
+    maxConnections               10000
+    maxSSLConnections            5000
     connTimeout                  300 
-    maxKeepAliveReq              1000 
+    maxKeepAliveReq              10000
     smartKeepAlive               0 
     keepAliveTimeout             5 
     sndBufSize                   0 
@@ -69,7 +69,7 @@ tuning{
     enableBrCompress             1
     enableDynGzipCompress        1 
     gzipCompressLevel            6 
-    compressibleTypes            text/*,application/x-javascript,application/javascript,application/xml, image/svg+xml 
+    compressibleTypes            text/*, application/x-javascript, application/xml, application/javascript, image/svg+xml,application/rss+xml
     gzipAutoUpdateStatic         1 
     gzipMinFileSize              300 
 }

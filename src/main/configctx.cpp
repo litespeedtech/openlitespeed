@@ -25,11 +25,22 @@
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <lsr/ls_strtool.h>
+
 #include <main/mainserverconfig.h>
 // #include <main/plainconf.h>
 #include <util/accesscontrol.h>
 #include <util/gpath.h>
 #include <util/xmlnode.h>
+#include <util/autostr.h>
+#include <util/autobuf.h>
+
+#include <sslpp/sslcontext.h>
+#include <sslpp/sslcontextconfig.h>
+#include <sslpp/sslengine.h>
+#include <sslpp/sslocspstapling.h>
+#include <sslpp/sslsesscache.h>
+#include <sslpp/sslticket.h>
+#include <sslpp/sslutil.h>
 
 #include <errno.h>
 #include <limits.h>
@@ -698,6 +709,267 @@ int ConfigCtx::configSecurity(AccessControl *pCtrl, const XmlNode *pNode)
     else
         LS_DBG_L(this, "no rule for access control.");
     return 0;
+}
+
+
+
+void ConfigCtx::configCRL(const XmlNode *pNode, SslContext *pSsl)
+{
+    char achCrlFile[MAX_PATH_LEN];
+    char achCrlPath[MAX_PATH_LEN];
+    const char *pCrlPath;
+    const char *pCrlFile;
+    pCrlPath = pNode->getChildValue("crlPath");
+    pCrlFile = pNode->getChildValue("crlFile");
+    if (pCrlPath)
+    {
+        if (getValidPath(achCrlPath, pCrlPath, "CRL path") != 0)
+            return;
+        pCrlPath = achCrlPath;
+    }
+    if (pCrlFile)
+    {
+        if (getValidFile(achCrlFile, pCrlFile, "CRL file") != 0)
+            return;
+        pCrlFile = achCrlFile;
+    }
+
+#ifdef _ENTERPRISE_
+    if (pCrlPath || pCrlFile)
+        pSsl->addCRL(achCrlFile, achCrlPath);
+#endif
+}
+
+
+SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
+                                    const char *pName, SslContext *pOldContext)
+{
+    SslContextConfig config;
+    int cv;
+    SslContext *pSsl;
+    const char *pTag, *pCertFile, *pKey;
+    char achCert[MAX_PATH_LEN], achKey[MAX_PATH_LEN],
+         achCAPath[MAX_PATH_LEN], achCAFile[MAX_PATH_LEN],
+         achDHParam[MAX_PATH_LEN];
+
+    if (pNode->getChild("certFile") == NULL)
+    {
+        LS_NOTICE( "[%s] No SSL certificate configured for [%s]",
+                  getLogId(), pName);
+        return NULL;
+    }
+    if ((pCertFile = getTag(pNode, "certFile")) == NULL)
+        return NULL;
+    else if ((pKey = getTag(pNode, "keyFile")) == NULL)
+        return NULL;
+    if (m_iEnableMultiCerts != 0)
+    {
+        if (getAbsoluteFile(achCert, pCertFile) != 0)
+            return NULL;
+        else if (getAbsoluteFile(achKey, pKey) != 0)
+            return NULL;
+    }
+    else
+    {
+        if (getValidFile(achCert, pCertFile, "certificate file") != 0)
+            return NULL;
+        else if (getValidFile(achKey, pKey, "key file") != 0)
+            return NULL;
+    }
+    config.m_sCertFile[0] = achCert;
+    config.m_sKeyFile[0] = achKey;
+    config.m_iEnableMultiCerts = m_iEnableMultiCerts;
+
+    config.m_sName = pName;
+
+    const char *pCipher = pNode->getChildValue( "ciphers" );
+    if (pCipher == NULL)
+        pCipher = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
+    config.m_sCiphers = pCipher;
+
+    if (( pTag = pNode->getChildValue( "CACertPath" )) != NULL )
+    {
+        if ( getValidFile(achCAPath, pTag, "CA Certificate path" ) != 0 )
+            return NULL;
+        config.m_sCAPath = achCAPath;
+    }
+
+    if (( pTag = pNode->getChildValue( "CACertFile" )) != NULL )
+    {
+        if ( getValidFile(achCAFile, pTag, "CA Certificate file" ) != 0 )
+            return NULL;
+        config.m_sCAFile = achCAFile;
+    }
+
+
+    cv = getLongValue( pNode, "clientVerify", 0, 3, 0 );
+    config.m_iClientVerify = cv;
+
+    config.m_iCertChain = getLongValue( pNode, "certChain", 0, 1, 0 );
+    config.m_iProtocol = getLongValue(pNode, "sslProtocol", 1, 31, 28);
+    config.m_iEnableECDHE = getLongValue(pNode, "enableECDHE", 0, 1, 1);
+    config.m_iEnableDHE = getLongValue(pNode, "enableDHE", 0, 1, 0);
+
+    if ( config.m_iEnableDHE != 0 )
+    {
+        if (( pTag = pNode->getChildValue("DHParam")) != NULL )
+        {
+            if ( getValidFile(achDHParam, pTag, "DH Parameter file" ) != 0 )
+            {
+                LS_WARN( "[%s] invalid path for DH paramter: %s, "
+                         "ignore and use built-in DH parameter!",
+                         getLogId(), pTag );
+            }
+            else
+                config.m_sDHParam = achDHParam;
+        }
+    }
+
+    config.m_iEnableSpdy = getLongValue(pNode, "enableSpdy", 0, 7, 7);
+    config.m_iEnableCache = getLongValue(pNode, "sslSessionCache", 0, 1, 0);
+    config.m_iInsecReneg = !getLongValue(pNode, "regenProtection", 0, 1, 1);
+    config.m_iEnableTicket = getLongValue(pNode, "sslSessionTickets",
+                                               0, 1, 1);
+    int enableStapling = getLongValue(pNode, "enableStapling", 0, 1, 0);
+    if ((enableStapling) && (pCertFile != NULL))
+        if (configStapling(pNode, &config) != -1)
+            config.m_iEnableStapling = enableStapling;
+
+    pSsl = SslContext::config(pOldContext, &config);
+    if ( pSsl == NULL )
+    {
+        LS_ERROR( "[%s] failed to create new SSLContext for %s",
+                  getLogId(), pName );
+        return NULL;
+    }
+
+    if (cv)
+    {
+#ifdef _ENTERPRISE_
+        pSsl->setClientVerify(cv, getLongValue(pNode, "verifyDepth", 1, INT_MAX,
+                                               1));
+#endif
+        configCRL(pNode, pSsl);
+    }
+
+    return pSsl;
+}
+
+
+int ConfigCtx::initOcspCachePath()
+{
+    if (SslOcspStapling::getCachePath() == NULL)
+    {
+        char achBuf[MAX_PATH_LEN];
+        if (getAbsolutePath(achBuf, "$SERVER_ROOT/tmp/ocspcache/") != -1)
+        {
+            GPath::createMissingPath(achBuf, 0700);
+            SslOcspStapling::setCachePath(achBuf);
+        }
+        else
+            return -1;
+    }
+    return 0;
+}
+
+int ConfigCtx::configStapling(const XmlNode *pNode,
+                                      SslContextConfig *pConf)
+{
+    if (initOcspCachePath() == -1)
+        return -1;
+    pConf->m_iOcspMaxAge = getLongValue(pNode, "ocspRespMaxAge", 60,
+                                        360000, 3600);
+    const char *pResponder = pNode->getChildValue("ocspResponder");
+    if (pResponder)
+        pConf->m_sOcspResponder.setStr(pResponder);
+    const char *pCombineCAfile = pNode->getChildValue("ocspCACerts");
+    char CombineCAfile[MAX_PATH_LEN];
+    if (pCombineCAfile)
+    {
+        if (getValidFile(CombineCAfile, pCombineCAfile, "Combine CA file") != 0)
+            return 0;
+        pCombineCAfile = CombineCAfile;
+
+        //pSslOcspStapling->setCombineCAfile ( pCombineCAfile );
+    }
+    //else
+    //    pCombineCAfile = pCAFile;
+    if (pCombineCAfile)
+        pConf->m_sCaChainFile.setStr(pCombineCAfile);
+    return 0;
+}
+
+static int bioToBuf(BIO *pBio, AutoBuf *pBuf)
+{
+    int len, written;
+    len = BIO_number_written(pBio);
+    pBuf->reserve(pBuf->size() + len + 1);
+    written = BIO_read(pBio, pBuf->end(), len);
+
+    if (written <= 0)
+    {
+        if (!BIO_should_retry(pBio))
+            return -1;
+        written = BIO_read(pBio, pBuf->end(), len);
+        if (written <= 0)
+            return -1;
+    }
+    if (written != len)
+        return -1;
+
+    pBuf->used(written - 1); // - 1 to get rid of extra newline.
+    return written;
+}
+
+int  ConfigCtx::getPrivateKeyPem(SSL_CTX *pCtx, AutoBuf *pBuf)
+{
+    int ret = -1;
+    BIO *pOut = BIO_new(BIO_s_mem());
+    EVP_PKEY *pKey = SSL_CTX_get0_privatekey(pCtx);
+
+    if (PEM_write_bio_PrivateKey(pOut, pKey, NULL, NULL, 0, NULL, NULL))
+        ret = bioToBuf(pOut, pBuf);
+    BIO_free(pOut);
+    return ret;
+}
+
+int  ConfigCtx::getCertPem(SSL_CTX *pCtx, AutoBuf *pBuf)
+{
+    int ret = -1;
+    BIO *pOut = BIO_new(BIO_s_mem());
+    X509 *pCert = SSL_CTX_get0_certificate(pCtx);
+
+    if (PEM_write_bio_X509(pOut, pCert))
+        ret = bioToBuf(pOut, pBuf);
+    BIO_free(pOut);
+    return ret;
+}
+
+int  ConfigCtx::getCertChainPem(SSL_CTX *pCtx, AutoBuf *pBuf)
+{
+    int i, cnt, ret = -1;
+    X509 *pCert;
+    STACK_OF(X509) *pChain;
+    BIO *pOut = BIO_new(BIO_s_mem());
+
+    if (!SSL_CTX_get_extra_chain_certs(pCtx, &pChain))
+    {
+        return 0;
+    }
+    else if (NULL == pChain)
+    {
+        return 0;
+    }
+    cnt = sk_X509_num(pChain);
+
+    for (i = 0; i < cnt; ++i)
+    {
+        pCert = sk_X509_value(pChain, i);
+        if (PEM_write_bio_X509(pOut, pCert))
+            ret = bioToBuf(pOut, pBuf);
+        BIO_free(pOut);
+    }
+    return ret;
 }
 
 
