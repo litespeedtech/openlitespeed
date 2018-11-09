@@ -75,8 +75,8 @@ int CgidReq::add(const char *name, size_t nameLen,
     }
     else
     {
-        m_buf.appendUnsafe('\0');
-        m_buf.appendUnsafe('\0');
+        m_buf.append_unsafe('\0');
+        m_buf.append_unsafe('\0');
     }
     ++getCgidReq()->m_nenv;
     return 0;
@@ -114,8 +114,8 @@ int CgidReq::appendString(const char *pStr, size_t strlen)
     }
     else
     {
-        m_buf.appendUnsafe('\0');
-        m_buf.appendUnsafe('\0');
+        m_buf.append_unsafe('\0');
+        m_buf.append_unsafe('\0');
     }
     return 0;
 }

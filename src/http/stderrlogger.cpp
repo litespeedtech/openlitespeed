@@ -30,6 +30,9 @@
 #include <unistd.h>
 
 
+LS_SINGLETON(StdErrLogger);
+
+
 StdErrLogger::StdErrLogger()
     : m_iEnabled(0)
     , m_pAppender(NULL)

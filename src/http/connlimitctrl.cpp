@@ -25,6 +25,9 @@
 #include <stdio.h>
 
 
+LS_SINGLETON(ConnLimitCtrl);
+
+
 ConnLimitCtrl::ConnLimitCtrl()
     : m_iMaxConns(DEFAULT_MAX_CONNS)
     , m_iMaxSSLConns(DEFAULT_MAX_SSL_CONNS)

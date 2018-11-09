@@ -179,7 +179,7 @@ int ReqParser::appendArg(int beginIndex, int endIndex, int isValue)
 int ReqParser::normalisePath(int begin, int len)
 {
     int n;
-    m_decodeBuf.appendUnsafe('\0');
+    m_decodeBuf.append_unsafe('\0');
     n = GPath::clean(m_decodeBuf.getp(begin), len);
     if (n < len)
         m_decodeBuf.pop_end(len - n + 1);
@@ -225,10 +225,10 @@ void ReqParser::resumeDecode(const char *&pStr, const char *pEnd)
                 ch = (hexdigit(m_last_char) << 4) + hexdigit(*pStr++);
                 if (!ch)
                     ch = ' ';
-                m_decodeBuf.appendUnsafe(ch);
+                m_decodeBuf.append_unsafe(ch);
             }
             else
-                m_decodeBuf.appendUnsafe(m_last_char);
+                m_decodeBuf.append_unsafe(m_last_char);
             m_last_char = 0;
         }
     }
@@ -262,7 +262,7 @@ int ReqParser::parseArgs(const char *pStr, int len, int resume, int last)
         case '&':
             appendArg(m_beginIndex, m_decodeBuf.size(), m_state_kv);
             m_state_kv = (ch == '=');
-            m_decodeBuf.appendUnsafe(ch);
+            m_decodeBuf.append_unsafe(ch);
             m_beginIndex = m_decodeBuf.size();
             continue;
         case '+':
@@ -275,12 +275,12 @@ int ReqParser::parseArgs(const char *pStr, int len, int resume, int last)
         }
         if (!ch)
             ch = ' ';
-        m_decodeBuf.appendUnsafe(ch);
+        m_decodeBuf.append_unsafe(ch);
     }
     if (last)
     {
         if (isxdigit(m_last_char))
-            m_decodeBuf.appendUnsafe(ch);
+            m_decodeBuf.append_unsafe(ch);
         if (m_beginIndex != m_decodeBuf.size())
         {
             if ((!m_state_kv) || (m_args))

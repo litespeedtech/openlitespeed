@@ -257,7 +257,7 @@ class DTblDefBase
             'ext_path'         => self::NewPathAttr('path', DMsg::ALbl('l_command'), 'file1', 3, 'x', true, 'extAppPath'),
             'ext_backlog'      => self::NewIntAttr('backlog', DMsg::ALbl('l_backlog'), true, 1, 100),
             'ext_instances'    => self::NewIntAttr('instances', DMsg::ALbl('l_instances'), true, 0, 1000),
-            'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '0' => DMsg::ALbl('o_no'), '2' => 'suEXEC Daemon')),
+            'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_yesdaemonmode'), '0' => DMsg::ALbl('o_no'), )),
             'ext_user'         => self::NewTextAttr('extUser', DMsg::ALbl('l_suexecuser'), 'cust'),
             'ext_group'        => self::NewTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), 'cust'),
             'cgiUmask'      => self::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_umask')),
@@ -293,7 +293,7 @@ class DTblDefBase
             'ctx_order'    => $ctxOrder,
             'ctx_type'     => self::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['ctxType'], false, 'ctxType'),
             'ctx_uri'      => self::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
-            'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false),
+            'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust'),
             'ctx_shandler' => self::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
             'appserverEnv' => self::NewSelAttr('envType', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
             'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
@@ -382,7 +382,7 @@ class DTblDefBase
     {
         $attrs = array(
             self::NewPathAttr('ip2locDBFile', DMsg::ALbl('l_ip2locDBFile'), 'filep', 2, 'r'),
-            self::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_dbcache'), array(''=> '',
+            self::NewSelAttr('ip2locDBCache', DMsg::ALbl('l_ip2locDBCache'), array(''=> '',
                 'FileIo'=> 'File System',
                 'MemoryCache'       => 'Memory',
                 'SharedMemoryCache' => 'Shared Memory')),
@@ -1187,15 +1187,6 @@ class DTblDefBase
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_groupdbentry'), $attrs, 'name');
         $this->_tblDef[$id]->Set(DTbl::FLD_SHOWPARENTREF, true);
-    }
-
-    protected function add_VT_REWRITE_CTRL($id)
-    {
-        $attrs = array(
-            self::NewBoolAttr('enable', DMsg::ALbl('l_enablerewrite'), true, 'enableRewrite'),
-            self::NewIntAttr('logLevel', DMsg::ALbl('l_loglevel'), true, 0, 9, 'rewriteLogLevel')
-        );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
     }
 
     protected function add_VT_REWRITE_MAP_TOP($id)

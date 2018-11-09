@@ -171,11 +171,11 @@ AC_ARG_ENABLE([debug],
                               [Enable debugging symbols (Debug is disabled by default)])],
               [OPENLSWS_DEBUG="$enableval"
                 if test "$OPENLSWS_DEBUG" = "yes" ; then 
-                    CFLAGS="-g3 -O0"
-                    CXXFLAGS="-g3 -O0"
+                    CFLAGS="$CFLAGS -g3 -O0"
+                    CXXFLAGS="$CXXFLAGS -g3 -O0"
                 else
-                    CFLAGS="-g -O3"
-                    CXXFLAGS="-g -O3"
+                    CFLAGS="$CFLAGS -g -O3"
+                    CXXFLAGS="$CXXFLAGS -g -O3"
                 fi
                 echo "OPENLSWS_DEBUG='$OPENLSWS_DEBUG'"
                 ], [])
@@ -227,55 +227,85 @@ echo "Lua inlcude = $LUA_INCLUDES, need_lua = $need_lua"
 CFLAGS="$CFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 CXXFLAGS="$CXXFLAGS -D_GLIBCXX_USE_CXX11_ABI=0 -fstack-protector $(getconf LFS_CFLAGS) "
 
-
 LIBBROTLI=
-AC_ARG_ENABLE([brotli],
-              [AS_HELP_STRING([--enable-brotli=@<:@yes/no@:>@],
-                              [enable brotli compression @<:@default=no@:>@])],
-               [OPENLSWS_BROTLI="$enableval"], [OPENLSWS_BROTLI=no])
+OPENLSWS_BROTLI=no
+AC_ARG_WITH(brotli,
+            [  --with-brotli[[=DIR]]   Set to enable brotli compression [[default=no]]],
+            [
+                if test "x$withval" = "x"
+                then
+                    OPENLSWS_BROTLI=no
+                elif test $withval = no
+                then
+                    OPENLSWS_BROTLI=no
+                elif test $withval = yes
+                then
+                    echo "Brotli start to build ..."
+                    BUILDBROTLI=`. $srcdir/dlbrotli.sh`
+                    OPENLSWS_BROTLI="$TOPDIR/brotli-master"
+                else
+                    echo "Use defined brotli directory $withval."
+                    OPENLSWS_BROTLI="$withval"
+                fi
+            ],[OPENLSWS_BROTLI=no])
+            
 if test "$OPENLSWS_BROTLI" = "no" ; then 
     echo "Brotli compression disabled!!!"
 else
-    echo "Brotli start to build ..."
-    BUILDBROTLI=`. $srcdir/dlbrotli.sh`
-    
-    LIBBROTLI=" $TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/out/libbrotlienc-static.a $TOPDIR/brotli-master/out/libbrotlicommon-static.a "
-    AC_CHECK_FILES([$TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/c/include/brotli/decode.h],,[LIBBROTLI=])
-    
+    LIBBROTLI=" $OPENLSWS_BROTLI/out/libbrotlidec-static.a $OPENLSWS_BROTLI/out/libbrotlienc-static.a $OPENLSWS_BROTLI/out/libbrotlicommon-static.a "
+    AC_CHECK_FILES([$OPENLSWS_BROTLI/out/libbrotlidec-static.a $OPENLSWS_BROTLI/c/include/brotli/decode.h],,[LIBBROTLI=])
     if test "x$LIBBROTLI" = x ; then
-        echo "Brotli built failed. If continue, brotli compression will be disabled."
+        echo "Brotli files check failed. If continue, brotli compression will be disabled."
     else
-        echo "Brotli built and enabled!!!"
-        CPPFLAGS="$CPPFLAGS -I$TOPDIR/brotli-master/c/include "
-        LIBBROTLI=" $TOPDIR/brotli-master/out/libbrotlidec-static.a $TOPDIR/brotli-master/out/libbrotlienc-static.a $TOPDIR/brotli-master/out/libbrotlicommon-static.a "
+        echo "Brotli checked and enabled!!!"
+        CPPFLAGS="$CPPFLAGS -I$OPENLSWS_BROTLI/c/include "
+        LIBBROTLI=" $OPENLSWS_BROTLI/out/libbrotlidec-static.a $OPENLSWS_BROTLI/out/libbrotlienc-static.a $OPENLSWS_BROTLI/out/libbrotlicommon-static.a "
         AC_DEFINE_UNQUOTED([USE_BROTLI], [1], [Defined to compile with Brotli compression included])
     fi
 fi
+echo "LIBBROTLI=$LIBBROTLI"
 AC_SUBST([LIBBROTLI])
 
+
+
 LIBMMDB=
-AC_ARG_ENABLE([iptogeo2],
-              [AS_HELP_STRING([--enable-iptogeo2=@<:@yes/no@:>@],
-                              [enable iptogeo2, need to build maxminddb which need to have autotool installed @<:@default=no@:>@])],
-               [OPENLSWS_IPTOGEO2="$enableval"], [OPENLSWS_IPTOGEO2=no])
+OPENLSWS_IPTOGEO2=no
+AC_ARG_WITH(iptogeo2,
+            [  --with-iptogeo2[[=DIR]]   Set to enable iptogeo2, if need to build maxminddb which need to have autotool installed [[default=no]]],
+            [
+                if test "x$withval" = "x"
+                then
+                    OPENLSWS_IPTOGEO2=no
+                elif test $withval = no
+                then
+                    OPENLSWS_IPTOGEO2=no
+                elif test $withval = yes
+                then
+                    echo "libmaxminddb start to build ..."
+                    BUILDMAXMINDDB=`. $srcdir/dlmaxminddb.sh`
+                    OPENLSWS_IPTOGEO2="$TOPDIR/libmaxminddb"
+                else
+                    echo "Use defined iptogeo2 directory $withval."
+                    OPENLSWS_IPTOGEO2="$withval"
+                fi
+            ],[OPENLSWS_IPTOGEO2=no])
+
 if test "$OPENLSWS_IPTOGEO2" = "no" ; then 
     echo "iptogeo2 disabled!!!"
 else
-    echo "iptogeo2 enabled, libmaxminddb start to build ..."
-    BUILDMAXMINDDB=`. $srcdir/dlmaxminddb.sh`
-
     LIBMMDBEXIST=
-    AC_CHECK_FILE([$TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a],[LIBMMDBEXIST=yes],[LIBMMDBEXIST=no])
+    AC_CHECK_FILE([$OPENLSWS_IPTOGEO2/src/.libs/libmaxminddb.a],[LIBMMDBEXIST=yes],[LIBMMDBEXIST=no])
     if test "$LIBMMDBEXIST" = no ; then
         echo It seems libmaxminddb library not eixts, please check and ty again.
         echo Or you can continue to make and iptogeo2 will be disabled.
         echo
     else
-        LIBMMDB=" $TOPDIR/libmaxminddb/src/.libs/libmaxminddb.a "
-        CPPFLAGS="$CPPFLAGS -I$TOPDIR/libmaxminddb/include/ "
+        LIBMMDB=" $OPENLSWS_IPTOGEO2/src/.libs/libmaxminddb.a "
+        CPPFLAGS="$CPPFLAGS -I$OPENLSWS_IPTOGEO2/include/ "
         AC_DEFINE_UNQUOTED([ENABLE_IPTOGEO2], [1], [Defined to compile with iptogeo2 enabled])
     fi
 fi
+echo "LIBMMDB=$LIBMMDB"
 AC_SUBST([LIBMMDB])
 
 
@@ -411,7 +441,7 @@ AX_PATH_LIB_PCRE(, AC_MSG_ERROR(Can not find pcre. You must install it before co
 AX_PATH_LIB_UDNS(, AC_MSG_ERROR(Can not find udns library. You must install it before continuing.))
 
 AX_LIB_EXPAT(0.5)
-AC_CHECK_LIB([GeoIP], [GeoIP_id_by_addr])
+#AC_CHECK_LIB([GeoIP], [GeoIP_id_by_addr])
 AC_CHECK_LIB(crypt,crypt,LIBS="-lcrypt $LIBS")
       
       

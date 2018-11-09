@@ -517,6 +517,8 @@ class ControllerBase
 
 	protected function issueCmd($cmd)
 	{
+        CAuthorizer::singleton()->Reauthenticate();
+
 		$commandline = '';
 		if (is_array($cmd)) {
 			foreach( $cmd as $line ) {

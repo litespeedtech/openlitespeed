@@ -425,7 +425,7 @@ MIMEMap::iterator MIMEMap::findSubMap(const char *pMIME, char *&p) const
     if (!p)
         return end();
     *p = 0;
-    StringTool::strLower(pMIME, (char *)pMIME);
+    StringTool::strlower(pMIME, (char *)pMIME);
     iterator iter = find(pMIME);
     *p = '/';
     return iter;
@@ -864,8 +864,8 @@ MimeSetting *HttpMime::addUpdateMIME(char *pSuffixes, char *pDesc,
         return NULL;
     }
 
-    pSuffixes = StringTool::strLower(pSuffixes, pSuffixes);
-    pDesc = StringTool::strLower(pDesc, pDesc);
+    pSuffixes = StringTool::strlower(pSuffixes, pSuffixes);
+    pDesc = StringTool::strlower(pDesc, pDesc);
     MimeSetting *pSetting = m_pMIMEMap->findMimeIgnoreCharset(pDesc);
     if (pSetting)
     {
@@ -1032,7 +1032,7 @@ int HttpMime::addUpdateSuffixMimeMap(MimeSetting *pSetting,
                                      char *pSuffixes, int update)
 {
     pSuffixes = StringTool::strTrim(pSuffixes);
-    pSuffixes = StringTool::strLower(pSuffixes, pSuffixes);
+    pSuffixes = StringTool::strlower(pSuffixes, pSuffixes);
     char *p = pSuffixes;
     while (1)
     {

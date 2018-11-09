@@ -19,6 +19,9 @@
 #include "serverprocessconfig.h"
 
 
+LS_SINGLETON(ServerProcessConfig);
+
+
 ServerProcessConfig::ServerProcessConfig()
     : m_uid(500)
     , m_gid(500)

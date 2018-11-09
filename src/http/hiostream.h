@@ -34,6 +34,10 @@ class HttpRespHeaders;
 class UnpackedHeaders;
 class HioChainStream;
 class NtwkIOLink;
+class ClientInfo;
+class HioCrypto;
+class ServerAddrInfo;
+
 
 enum HioState
 {
@@ -80,6 +84,18 @@ enum HiosProtocol
 #define HIO_PRIORITY_PUSH           (HIO_PRIORITY_DOWNLOAD + 1)
 #define HIO_PRIORITY_LARGEFILE      (HIO_PRIORITY_LOWEST)
 
+struct ConnInfo
+{
+    ClientInfo             *m_pClientInfo;
+    union
+    {
+        HioCrypto          *m_pCrypto;
+        struct ssl_st      *m_pSsl;
+    };
+    const ServerAddrInfo   *m_pServerAddrInfo;
+    int                     m_remotePort;
+};
+
 
 class HioStream : public InputStream, public OutputStream,
     public LogSession
@@ -87,15 +103,9 @@ class HioStream : public InputStream, public OutputStream,
 
 public:
     HioStream()
-        : m_pHandler(NULL)
-        , m_lBytesRecv(0)
-        , m_lBytesSent(0)
-        , m_iState(HIOS_DISCONNECTED)
-        , m_iProtocol(HIOS_PROTO_HTTP)
-        , m_iFlag(0)
-        , m_iPriority(0)
-        , m_tmLastActive(0)
-    {}
+    {
+        LS_ZERO_FILL(m_pHandler, m_tmLastActive);
+    }
     virtual ~HioStream();
 
     virtual int sendfile(int fdSrc, off_t off, off_t size) = 0;
@@ -106,8 +116,6 @@ public:
     virtual int readv(struct iovec *vector, size_t count)
     {       return -1;      }
 
-    virtual UnpackedHeaders *getReqHeaders()
-    {   return NULL;    }
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody) = 0;
 
     virtual int  shutdown() = 0;
@@ -124,6 +132,7 @@ public:
     virtual int isFromLocalAddr() const = 0;
     virtual NtwkIOLink *getNtwkIoLink() = 0;
 
+    
     virtual void cork(int doCork) {}
     virtual int detectClose()       {   return 0;   }
 
@@ -132,6 +141,7 @@ public:
     {   return -1;      }
 
 
+    int isThrottle()    {   return 0;   }
     //virtual uint32_t GetStreamID() = 0;
 
     void reset(int32_t timeStamp)
@@ -140,6 +150,13 @@ public:
         m_tmLastActive = timeStamp;
     }
 
+    void setClientInfo(ClientInfo *p)   {   m_connInfo.m_pClientInfo = p;      }
+    ClientInfo *getClientInfo() const   {   return m_connInfo.m_pClientInfo;   }
+    
+    void setConnInfo(const ConnInfo *p)       
+    {   memmove(&m_connInfo, p, sizeof(m_connInfo));        }
+    const ConnInfo *getConnInfo() const {   return &m_connInfo;     }
+    
     int getPriority() const     {   return m_iPriority;     }
     void setPriority(int pri)
     {
@@ -157,6 +174,8 @@ public:
 
     HioHandler *getHandler() const  {   return m_pHandler;  }
     void setHandler(HioHandler *p)  {   m_pHandler = p;     }
+
+    void switchHandler(HioHandler *pCurrent, HioHandler *pNew);
 
     void wantRead(int want)
     {
@@ -219,6 +238,7 @@ public:
     off_t getBytesRecv() const  {   return m_lBytesRecv;    }
     off_t getBytesSent() const  {   return m_lBytesSent;    }
 
+
     void resetBytesCount()
     {
         m_lBytesRecv = 0;
@@ -249,10 +269,16 @@ public:
 
     static const char *getProtocolName(HiosProtocol proto);
 
+    UnpackedHeaders *getReqHeaders() const
+    {   return m_pReqHeaders;    }
+    void setReqHeaders(UnpackedHeaders *headers)
+    {   m_pReqHeaders = headers;    }
 
 private:
 
     HioHandler         *m_pHandler;
+    ConnInfo            m_connInfo;
+    UnpackedHeaders    *m_pReqHeaders;
     off_t               m_lBytesRecv;
     off_t               m_lBytesSent;
     char                m_iState;

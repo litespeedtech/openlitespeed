@@ -335,6 +335,9 @@ static int parseNoCacheDomain(CacheConfig *pConfig, const char *pValStr,
     pConfig->getVHostMapExclude()->mapDomainList(
         HttpServerConfig::getInstance().getGlobalVHost(), pValStr);
 
+    g_api->log(NULL, LSI_LOG_DEBUG, "[%s]noCacheDomain [%.*s] added.\n",
+               ModuleNameStr, valLen, pValStr);
+
     return 0;
 }
 
@@ -1240,20 +1243,18 @@ static int createEntry(lsi_param_t *rec)
     }
 
     //if no LSI_RSPHDR_LITESPEED_CACHE_CONTROL and not 200, do nothing
-    if (count == 0)
+    //if 304, do nothing
+    int code = g_api->get_status_code(rec->session);
+    if (code == 304 || (code != 200 && count == 0))
     {
-        //Error page won't be stored to cache
-        int code = g_api->get_status_code(rec->session);
-        if (code != 200)
-        {
-            clearHooks(rec->session);
-            g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
-                       ModuleNameStr, code);
-            return 0;
-        }
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
+                   ModuleNameStr, code);
+        return 0;
     }
-    else if (myData->hasCacheFrontend == 0)
+
+    if (count && myData->hasCacheFrontend == 0)
     {
         g_api->remove_resp_header(rec->session,
                                   LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
@@ -1465,7 +1466,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     int needGzip = (g_api->get_resp_buffer_compress_method(rec->session) == 0);
     
     /**
-     * For ab test, no need to gzip
+     * For ab test, no need to gzip only when it does not have gzip in encoding
      */
     if (needGzip)
     {
@@ -1478,7 +1479,12 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         if (pUA && uaLen > AB_USERAGENT_LEN &&
             strncasecmp(pUA, AB_USERAGENT, AB_USERAGENT_LEN) == 0)
         {
-            needGzip = false;
+            int encodingLen;
+            const char *encoding = g_api->get_req_header_by_id(rec->session,
+                                                         LSI_HDR_ACC_ENCODING,
+                                                         &encodingLen);
+            if (encodingLen < 4 || strcasestr(encoding, "gzip") == NULL)
+                needGzip = false;
         }
     }
 

@@ -2,6 +2,7 @@
 #define HTTPREQHEADERS_H
 
 #include <lsdef.h>
+#include <lsr/ls_str.h>
 #include <util/autobuf.h>
 #include <util/objarray.h>
 #include <util/autostr.h>
@@ -53,18 +54,34 @@ public:
         return 0;
     }
 
-    void appendUrl(const char *ptr, int len);
+    int setUrl2(const char *ptr, int len)
+    {
+        if (m_url.len)
+            return LS_FAIL;
+        if (m_buf.size() != 4)
+            appendUrl(ptr, len);
+        else
+        {
+            ls_str(&m_url, ptr, len);
+            m_alloc_str = 1;
+        }
+        m_url.len = len;
+        return 0;
+    }
+
+    int appendUrl(const char *ptr, int len);
 
     int setHost(const char *host, int len);
+    int setHost2(const char *host, int len);
 
     const AutoBuf  *getBuf() const          {   return &m_buf;      }
     AutoBuf  *getBuf()                      {   return &m_buf;      }
 
-    void appendReqLine(const char *method, int method_len,
+    int  appendReqLine(const char *method, int method_len,
                        const char *url, int url_len);
-    void appendHeader(int hpack_index, const char *name, int name_len,
-                      const char *val, int val_len);
-    void appendCookie(ls_str_t *cookies, int count, int total_len);
+    int appendHeader(int hpack_index, const char *name, int name_len,
+                     const char *val, int val_len);
+    int appendCookieHeader(ls_str_t *cookies, int count, int total_len);
 
     void endHeader();
 
@@ -73,6 +90,9 @@ public:
 
     int getMethodLen() const    {   return m_methodLen;     }
     int getUrlLen() const       {   return m_url.len;       }
+
+    int set(ls_str_t *method, ls_str_t* url,
+            ls_str_t* host, ls_strpair_t* headers);
 
     const req_header_entry *getEntryBegin() const
     {   return m_entries.begin();   }
@@ -84,7 +104,8 @@ private:
     TObjArray<req_header_entry> m_entries;
     ls_str_t                    m_url;
     ls_str_t                    m_host;
-    int                         m_methodLen;
+    int16_t                     m_alloc_str;
+    int16_t                     m_methodLen;
 
     LS_NO_COPY_ASSIGN(UnpackedHeaders);
 };

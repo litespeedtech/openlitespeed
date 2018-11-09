@@ -68,6 +68,9 @@ void ModTimerList::timerCleanup(const void *notused)
 }
 
 
+LS_SINGLETON(ModTimerList);
+
+
 ModTimerList::ModTimerList()
     : m_iTimerIds(1)
     , m_timerMap(timerCmp)

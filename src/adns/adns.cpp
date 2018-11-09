@@ -27,6 +27,9 @@
 static int s_inited = 0;
 
 
+LS_SINGLETON(Adns);
+
+
 Adns::Adns()
     : m_pCtx( NULL )
     , m_iCounter(0)

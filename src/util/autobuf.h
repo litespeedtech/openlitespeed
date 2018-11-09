@@ -134,9 +134,9 @@ public:
     int     append(const char *pBuf)
     {   return ls_buf_append(this, pBuf);  }
 
-    void    appendUnsafe(char ch)  {   *pend++ = ch;  }
+    void    append_unsafe(char ch)  {   *pend++ = ch;  }
 
-    int appendUnsafe(const char *pBuf, int size)
+    int append_unsafe(const char *pBuf, int size)
     {
         memmove(end(), pBuf, size);
         used(size);
@@ -243,9 +243,9 @@ public:
     int     append(const char *pBuf)
     {   return ls_xbuf_append(this, pBuf);  }
 
-    void    appendUnsafe(char ch)  {   *buf.pend++ = ch;  }
+    void    append_unsafe(char ch)  {   *buf.pend++ = ch;  }
 
-    int appendUnsafe(const char *pBuf, int size)
+    int append_unsafe(const char *pBuf, int size)
     {
         memmove(end(), pBuf, size);
         used(size);

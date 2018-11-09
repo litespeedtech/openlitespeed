@@ -20,7 +20,7 @@
 
 #include <lsdef.h>
 #include <log4cxx/tmplogid.h>
-
+#include <openssl/ssl.h>
 #include <stdarg.h>
 
 //class HttpContext;
@@ -28,8 +28,12 @@
 class XmlNode;
 class HttpHandler;
 class AccessControl;
+class SslContext;
+class SslContextConfig;
+class AutoBuf;
+
 #define MAX_PATH_LEN                4096
-long long getLongValue(const char *pValue, int base = 10);
+extern long long getLongValue(const char *pValue, int base = 10);
 class ConfigCtx : public TmpLogId
 {
 public:
@@ -95,6 +99,21 @@ public:
     static void setDocRoot(const char *pDocRoot)
     { memcpy(s_aDocRoot, pDocRoot, strlen(pDocRoot) + 1); }
     static const char *getDocRoot()         {   return s_aDocRoot;    }
+    
+    
+    SslContext *newSSLContext(const XmlNode *pNode, const char *pName,
+                              SslContext *pOldContext);
+    void configCRL(const XmlNode *pNode, SslContext *pSSL);
+    int initOcspCachePath();
+    int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
+    
+    static int getPrivateKeyPem(SSL_CTX *pCtx, AutoBuf *pBuf);
+    static int getCertPem(SSL_CTX *pCtx, AutoBuf *pBuf);
+    static int getCertChainPem(SSL_CTX *pCtx, AutoBuf *pBuf);
+    
+    
+    
+    void setEnableMultiCerts(int v)  { m_iEnableMultiCerts = v; }
 private:
     ConfigCtx      *m_pParent;
     static AutoStr2        s_vhName;
@@ -104,6 +123,7 @@ private:
     static ConfigCtx      *s_pCurConfigCtx;
     static char            s_aDocRoot[MAX_PATH_LEN];
 
+    int             m_iEnableMultiCerts;
 
     LS_NO_COPY_ASSIGN(ConfigCtx);
 };

@@ -753,6 +753,8 @@ int HttpHeaderOps::parseOp(const char *pBegin, const char *pEnd, int is_req)
             pValEnd = StringTool::memNextArg(&pValue, pEnd - pValue);
         if (!pValEnd)
             pValEnd = pEnd;
+        if (pValEnd < pValue)
+            pValEnd = pValue;
     }
     if (pNameEnd[-1] == ':')
         --pNameEnd;

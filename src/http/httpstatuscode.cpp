@@ -22,7 +22,7 @@
 #include <string.h>
 #include <lsr/ls_strtool.h>
 
-
+LS_SINGLETON(HttpStatusCode);
 
 int HttpStatusCode::s_codeToIndex[7] =
 {

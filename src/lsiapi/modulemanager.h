@@ -134,7 +134,12 @@ typedef struct lsi_module_config_s
 class ModuleConfig : public LsiModuleData
 {
 public:
-    ModuleConfig() {};
+    ModuleConfig()
+    {
+        m_pData = NULL;
+        m_iCount = 0;
+    };
+
     ~ModuleConfig();
 
     void copy(short _module_id, lsi_module_config_t *module_config)

@@ -265,11 +265,12 @@ int GeoIpData::addGeoEnv(IEnv *pEnv)
             pEnv->add("GEOIP_COUNTRY_NAME", 18, m_pCity->country_name,
                       strlen(m_pCity->country_name));
             pEnv->add("GEOIP_CONTINENT_CODE", 20, m_pCity->continent_code, 2);
+            count += 2;
         }
 
         len = snprintf(achBuf, 256, "%d", m_pCity->area_code);
         pEnv->add("GEOIP_AREA_CODE", 15, achBuf, len);
-        count += 9;
+        count += 7;
 
         if (m_pCity->postal_code)
         {

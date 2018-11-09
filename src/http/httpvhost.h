@@ -52,6 +52,7 @@ END_LOG4CXX_NS
 #define VH_ACC_LOG          128
 #define VH_GZIP             256
 #define VH_BR               512
+#define VH_AUTOLOADHTACCESS  1024
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -231,7 +232,7 @@ public:
     int addContext(HttpContext *pContext)
     {   return m_contexts.add(pContext);          }
 
-    bool dirMatch(const HttpContext *pContext, const char *pURI, size_t iUriLen,
+    bool dirMatch(HttpContext * &pContext, const char *pURI, size_t iUriLen,
                   AutoStr2 *missingDir) const;
     HttpContext *bestMatch(const char *pURI, size_t iUriLen);
 
@@ -281,6 +282,9 @@ public:
 
     void enableGzip(int enable)       {   setFeature(VH_GZIP, enable);    }
     int  enableGzip() const             {   return m_iFeatures & VH_GZIP;   }
+
+    void enableAutoLoadHt(int enable)       {   setFeature(VH_AUTOLOADHTACCESS, enable);    }
+    int  enableAutoLoadHt() const             {   return m_iFeatures & VH_AUTOLOADHTACCESS;   }
 
     void enableBr(int enable)         {   setFeature(VH_BR, enable);      }
     int  enableBr() const               {   return m_iFeatures & VH_BR;     }

@@ -37,6 +37,8 @@
 #include <http/staticfilecachedata.h>
 #include <http/reqparser.h>
 #include <http/clientinfo.h>
+#include <http/ntwkiolink.h>
+
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
 #include <lsiapi/internal.h>
@@ -2024,7 +2026,7 @@ static int   get_body_buf_fd(void *pBuf)
 {
     if (!pBuf)
         return LS_FAIL;
-    return ((VMemBuf *)pBuf)->getFd();
+    return ((VMemBuf *)pBuf)->getfd();
 
 }
 
@@ -2139,13 +2141,13 @@ static void *get_vhost_module_conf(const void *vhost,
     return pConfig->get(MODULE_ID(pModule))->config;
 }
 
-
+//Do not use it currently
 int handoff_fd(const lsi_session_t *session, char **pData, int *pDataLen)
 {
     if (!session || !pData || !pDataLen)
         return LS_FAIL;
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    return pSession->handoff(pData, pDataLen);
+    return LS_FAIL;//pSession->handoff(pData, pDataLen);
 }
 
 
@@ -2377,45 +2379,42 @@ static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
 }
 
 
-static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb, 
-                           void *arg, SslConnection *pSSL)
+static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
+                            void *arg)
 {
     char buf[128];
-    const char *pVersion = pSSL->getVersion();
-    int n = strlen(pVersion);
-    cb(-1, "SSL_VERSION", 11, pVersion, n, arg);
-    SSL_SESSION *pSession = pSSL->getSession();
-    if (pSession)
-    {
-        int idLen = SslConnection::getSessionIdLen(pSession);
-        n = idLen * 2;
-        assert(n < (int)sizeof(buf));
-        StringTool::hexEncode(
-            (char *)SslConnection::getSessionId(pSession),
-            idLen, buf);
-        cb(-1, "SSL_SESSION_ID", 14, buf, n, arg);
-    }
+    char *pBuf;
+    int n;
+    HioCrypto *pCrypto = pHttpSession->getCrypto();
+    if (!pCrypto)
+        return;
+    
+    pBuf = buf;
+    n = pCrypto->getEnv(HioCrypto::CRYPTO_VERSION, pBuf, 128);
+    cb(-1, "SSL_VERSION", 11, pBuf, n, arg);
 
-    const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
-    if (pCipher)
-    {
-        const char *pName = pSSL->getCipherName();
-        n = strlen(pName);
-        cb(-1, "SSL_CIPHER", 10, pName, n, arg);
-        int algkeysize;
-        int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
-        n = ls_snprintf(buf, 20, "%d", keysize);
-        cb(-1, "SSL_CIPHER_USEKEYSIZE", 21, buf, n, arg);
-        n = ls_snprintf(buf, 20, "%d", algkeysize);
-        cb(-1, "SSL_CIPHER_ALGKEYSIZE", 21, buf, n, arg);
-    }
+    pBuf = buf;
+    n = pCrypto->getEnv(HioCrypto::SESSION_ID, pBuf, 128);
+    cb(-1, "SSL_SESSION_ID", 14, buf, n, arg);
 
-    int i = pSSL->getVerifyMode();
+    pBuf = buf;
+    n = pCrypto->getEnv(HioCrypto::CIPHER, pBuf, 128);
+    cb(-1, "SSL_CIPHER", 10, buf, n, arg);
+
+    pBuf = buf;
+    n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
+    cb(-1, "SSL_CIPHER_USEKEYSIZE", 21, buf, n, arg);
+
+    pBuf = buf;
+    n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
+    cb(-1, "SSL_CIPHER_ALGKEYSIZE", 21, buf, n, arg);
+    
+    int i = pCrypto->getVerifyMode();
     if (i != 0)
     {
         char achBuf[4096];
-        X509 *pClientCert = pSSL->getPeerCertificate();
-        if (pSSL->isVerifyOk())
+        X509 *pClientCert = pCrypto->getPeerCertificate();
+        if (pCrypto->isVerifyOk())
         {
             if (pClientCert)
             {
@@ -2456,7 +2455,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
             }
         }
         else
-            n = pSSL->buildVerifyErrorString(achBuf, sizeof(achBuf));
+            n = pCrypto->buildVerifyErrorString(achBuf, sizeof(achBuf));
         cb(-1, "SSL_CLIENT_VERIFY", 17, achBuf, n, arg);
     }
 }
@@ -2563,15 +2562,8 @@ static void foreach_req_var_full(HttpSession *pSession,
         cb(-1, "X_SPDY", 6, pProto, strlen(pProto), arg);
     }
 
-    if (pSession->isSSL())
-    {
-        //cb(-1, "HTTPS", 5, "on",  2);
-        SslConnection *pSSL = pSession->getSSL();
-        if (pSSL)
-        {
-            foreach_ssl_env(pSession, cb, arg, pSSL);
-        }
-    }
+    if (pSession->isHttps())
+        foreach_ssl_env(pSession, cb, arg);
 
     char sVer[40];
     n = snprintf(sVer, 40, "Openlitespeed %s", PACKAGE_VERSION);

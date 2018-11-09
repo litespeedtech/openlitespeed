@@ -245,7 +245,18 @@ ls_hash_key_t  ls_str_hf(const void *pKey);
  * @param[in] pKey - The key to calculate.
  * @return The hash key.
  */
-ls_hash_key_t  ls_str_xh32(const void *pKey);
+ls_hash_key_t  ls_str_xxh32(const void *pKey);
+
+
+/** @ls_str_xxh64
+ * @brief A hash function for lsr str structure using xxhash. Case Sensitive.
+ * @details This may be used for lsr hash.
+ *
+ * @param[in] pKey - The key to calculate.
+ * @return The hash key.
+ */
+ls_hash_key_t  ls_str_xxh64(const void *pKey);
+
 
 /** @ls_str_cmpci
  * @brief A comparison function for lsr str. Case Insensitive.

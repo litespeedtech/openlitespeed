@@ -193,7 +193,7 @@ int RewriteMap::lookup(const char *pKey, int keyLen, char *pValue,
                 valLen = 0;
             break;
         case TYPE_INT_LOWER:
-            if (StringTool::strLower(pKey, pValue, valLen) == NULL)
+            if (StringTool::strnlower(pKey, pValue, valLen) == NULL)
                 valLen = 0;
             break;
         case TYPE_INT_ESCAPE:

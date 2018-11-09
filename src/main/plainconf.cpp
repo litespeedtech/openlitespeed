@@ -73,6 +73,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"autoindexuri",                             NULL},
     {"autorestart",                              NULL},
     {"autostart",                                NULL},
+    {"autoloadhtaccess",                         NULL},
+
     {"awstats",                                  NULL},
     {"awstatsuri",                               NULL},
     {"backlog",                                  NULL},

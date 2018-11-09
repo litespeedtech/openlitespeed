@@ -28,7 +28,6 @@
 
 H2Stream::H2Stream()
     : m_pH2Conn(NULL)
-    , m_pReqHeaders(NULL)
     , m_bufIn(0)
     , m_uiStreamId(0)
     , m_iWindowOut(H2_FCW_INIT_SIZE)
@@ -94,8 +93,6 @@ int H2Stream::onInitConnected(bool bUpgraded)
 H2Stream::~H2Stream()
 {
     m_bufIn.clear();
-    if (m_pReqHeaders)
-        delete m_pReqHeaders;
 }
 
 
@@ -372,11 +369,6 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
             m_pH2Conn->incShutdownStream();
         }
     }
-    else
-    {
-        if (next() == NULL)
-            m_pH2Conn->add2PriorityQue(this);
-    }
     return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamId, flag);
 }
 
@@ -406,11 +398,4 @@ int H2Stream::push(ls_str_t *pUrl, ls_str_t *pHost,
     return m_pH2Conn->pushPromise(m_uiStreamId, pUrl, pHost, 
                                   pExtraHeaders);
 }
-
-
-UnpackedHeaders * H2Stream::getReqHeaders()
-{
-    return m_pReqHeaders;
-}
-
 

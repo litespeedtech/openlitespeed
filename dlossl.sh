@@ -5,7 +5,7 @@
 # Use your pre-built boringSSL
 
 #For openssl, always use the latest officially released version
-VERSION=OpenSSL_1_1_1-pre8
+VERSION=OpenSSL_1_1_0i
 
 
 if [ "x$1" = "xuse_bssl" ] ; then 

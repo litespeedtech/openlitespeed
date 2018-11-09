@@ -87,6 +87,7 @@
 
 #include <shm/lsshm.h>
 #include <sslpp/sslcontext.h>
+#include <sslpp/sslcontextconfig.h>
 #include <sslpp/sslengine.h>
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslsesscache.h>
@@ -103,6 +104,7 @@
 #include <util/xmlnode.h>
 #include <util/sysinfo/nicdetect.h>
 #include <util/sysinfo/systeminfo.h>
+#include <util/ni_fio.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -141,6 +143,7 @@
 
 static int s_achPid[256];
 static int s_curPid = 0;
+//int     SslContext::s_iEnableMultiCerts = 0;
 
 const char *sStatDir = DEFAULT_TMP_DIR;
 
@@ -188,6 +191,8 @@ void HttpServer::cleanPid()
 }
 
 
+LS_SINGLETON(HttpServer);
+
 
 class HttpServerImpl
 {
@@ -229,6 +234,7 @@ private:
         m_serverContext.allocateInternal();
         HttpRespHeaders::buildCommonHeaders();
         m_sRTReportFile = DEFAULT_TMP_DIR "/.rtreport";
+        SslContext::setSniLookupCb(VHostMapFindSslContext);
     }
 
     ~HttpServerImpl()
@@ -343,6 +349,13 @@ private:
                                   const char *pVHostName);
     int configListenerVHostMap(const XmlNode *pRoot,
                                const char *pVHostName);
+    
+    void configCRL(const XmlNode *pNode, SslContext *pSsl);
+    SslContext *newSSLContext(const XmlNode *pNode,
+                              const char *pName, SslContext *pOldContext);
+    int initOcspCachePath();
+    int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
+    
     HttpListener *configListener(const XmlNode *pNode, int isAdmin);
     int configListeners(const XmlNode *pRoot, int isAdmin);
 
@@ -912,7 +925,7 @@ void HttpServerImpl::onTimer30Secs()
 
     }
     HttpStats::set503Errors(0);
-    SslTicket::getInstance().onTimer();
+    SslTicket::onTimer();
 }
 
 
@@ -1003,7 +1016,7 @@ void HttpServerImpl::checkOLSUpdate()
     }
     m_pAutoUpdFetch = new HttpFetch();
     m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
-    m_pAutoUpdFetch->setResProcessor(autoUpdCheckCb, this);
+    m_pAutoUpdFetch->setCallBack(autoUpdCheckCb, this);
     GSockAddr m_addrResponder;
     char sUrl[128];
     strcpy(sUrl, "http://open.litespeedtech.com/");
@@ -1063,6 +1076,27 @@ void HttpServerImpl::offsetChroot()
         ServerInfo::getServerInfo()->dupStr(pChroot->c_str(), pChroot->len());
     m_vhosts.offsetChroot(pChroot->c_str(), pChroot->len());
 }
+
+//FIXME: why we have this
+// int HttpServerImpl::offsetChroot( char * dest, const char *path )
+// {
+//     AutoStr2 *pChroot = ServerProcessConfig::getInstance().getChroot();
+//     if ( pChroot->c_str() &&
+//         (strncmp( pChroot->c_str(), path, pChroot->len() ) == 0) &&
+//         ( *(path + pChroot->len() ) == '/' ) )
+//     {
+//         struct stat st;
+//         if ( nio_stat( dest, &st ) == -1 )
+//         {
+//             if ( nio_stat( dest + pChroot->len(), &st ) == 0 )
+//             {
+//                 memmove( dest, dest + pChroot->len(),
+//                          strlen( dest ) - pChroot->len() + 1 );
+//             }
+//         }
+//     }
+//     return 0;
+// }
 
 
 void HttpServerImpl::releaseAll()
@@ -1426,6 +1460,8 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 }
 
 
+
+
 HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         int isAdmin)
 {
@@ -1453,8 +1489,8 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         if (secure)
         {
             ConfigCtx currentCtx("ssl");
-            pSSLCtx = new SslContext(SslContext::SSL_ALL);
-            if (!pSSLCtx->config(pNode))
+            pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(pNode, pAddr, NULL);
+            if (!pSSLCtx)
             {
                 delete pSSLCtx;
                 pSSLCtx = NULL;
@@ -2020,6 +2056,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         currentCtx.getLongValue(pNode, "maxKeepAliveReq", 0, 32767, 100));
     config.setSmartKeepAlive(currentCtx.getLongValue(pNode, "smartKeepAlive",
                              0, 1, 0));
+
     //HTTP request/response
     config.setMaxURLLen(currentCtx.getLongValue(pNode, "maxReqURLLen", 100,
                         MAX_URL_LEN , DEFAULT_URL_LEN));
@@ -2152,8 +2189,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         return -1;
     }
 
-    if (currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0) == 1)
-        SslContext::enableMultiCerts();
+    int v = currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0);
+    ConfigCtx::getCurConfigCtx()->setEnableMultiCerts(v);
 
     int iSslCacheSize;
     int32_t iSslCacheTimeout;
@@ -2166,7 +2203,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                            "sslSessionCacheTimeout",
                            0, INT_MAX, 216000);
         if (SslSessCache::getInstance().init(iSslCacheTimeout,
-                                             iSslCacheSize) != LS_OK)
+            iSslCacheSize, getuid(), getgid()) != LS_OK)
         {
             LS_WARN("Failed to init SSL Session Id Cache");
             return -1;
@@ -2185,7 +2222,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         }
         long iTicketLifetime = currentCtx.getLongValue(pNode,
                                "sslSessionTicketLifetime", 216000, INT_MAX, 216000);
-        SslTicket::getInstance().init(pTKFile, iTicketLifetime);
+        SslTicket::init(pTKFile, iTicketLifetime, getuid(), getgid());
     }
 
     const char *pCAFile;
@@ -2409,7 +2446,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         char  achBuf[4096];
         ls_snprintf(achBuf, 4096, "%s/tmp/ocspcache/",
                     MainServerConfig::getInstance().getServerRoot());
-        SslOcspStapling::setRespTempPath(achBuf);
+        SslOcspStapling::setCachePath(achBuf);
 
         m_serverContext.configAutoIndex(pRoot);
         m_serverContext.configDirIndex(pRoot);
@@ -2792,8 +2829,12 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             }
         }
 
+
         if (!reconfig)
         {
+            HttpServerConfig::getInstance().setAutoLoadHtaccess(
+                currentCtx.getLongValue(pRoot, "autoLoadHtaccess", 0, 1, 0));
+
             const char *pUser = pRoot->getChildValue("user");
             const char *pGroup = pRoot->getChildValue("group");
             if (pGroup)
@@ -2836,11 +2877,14 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         procConf.setPriority(ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                              "priority", -20, 20, 0));
 
-        int iNumProc = PCUtil::getNumProcessors();
+        int iNumProc = 1;
+#ifndef IS_LSCPD
+        iNumProc = PCUtil::getNumProcessors();
         iNumProc = (iNumProc > 8 ? 8 : iNumProc);
         HttpServerConfig::getInstance().setChildren(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
+#endif
 
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
 
@@ -3452,8 +3496,10 @@ int HttpServerImpl::initLscpd()
 #ifdef IS_LSCPD
 
 #define LSCPD_PROXY_APP_NAME    "gunicorn"
+#define LSCPD_FILEMANAGER_PROXY_APP_NAME    "filemanager"
 #define LSCPD_VHOST_NAME        "cyberpanel"
 #define LSCPD_PROXY_ADDRESS     "127.0.0.1:5003"
+#define LSCPD_FILEMANAGER_PROXY_ADDRESS     "localhost:80"
 #define LSCPD_LISTENER_ADDRESS  "*:8090"
 
     MainServerConfig  &mainServerConfig =  MainServerConfig::getInstance();
@@ -3533,7 +3579,7 @@ int HttpServerImpl::initLscpd()
 
     ls_snprintf(achBuf, 256, "%s/tmp/ocspcache/",
                 mainServerConfig.getServerRoot());
-    SslOcspStapling::setRespTempPath(achBuf);
+    SslOcspStapling::setCachePath(achBuf);
 
     HttpRespHeaders::hideServerSignature(0);
     HttpServer::getInstance().getServerContext().setGeoIP(0);
@@ -3624,6 +3670,16 @@ int HttpServerImpl::initLscpd()
     pProxy->getConfigPointer()->setRetryTimeout(0);
     pProxy->getConfigPointer()->setBuffering(0);
 
+    //proxy filemanager
+
+    ExtWorker *fileProxy = ExtAppRegistry::addApp(EA_PROXY, LSCPD_FILEMANAGER_PROXY_APP_NAME);
+    fileProxy->setURL(LSCPD_FILEMANAGER_PROXY_ADDRESS);
+    fileProxy->getConfigPointer()->setMaxConns(100);
+    fileProxy->getConfigPointer()->setKeepAliveTimeout(60);
+    fileProxy->getConfigPointer()->setTimeout(60);
+    fileProxy->getConfigPointer()->setRetryTimeout(0);
+    fileProxy->getConfigPointer()->setBuffering(0);
+
     //php
     LocalWorker *pPhp = (LocalWorker *)ExtAppRegistry::addApp(EA_LSAPI, "php");
     assert(pPhp);
@@ -3647,26 +3703,16 @@ int HttpServerImpl::initLscpd()
     strcpy(pEnd, "/key.pem");
     HttpListener *pListener = addListener("DefaultSSL", LSCPD_LISTENER_ADDRESS);
 
-    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
-    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
-                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
-                       1, 0, 0);  //certChain is 1
-    if (pSSL == NULL)
-    {
-        LS_INFO(ConfigCtx::getCurConfigCtx(),
-                 "Failed to setup SSL cipher for listener %s, please make sure"
-                 " your certificates file %s and Key file %s can be accessed.\n",
-                 LSCPD_LISTENER_ADDRESS, achBuf1, achBuf);
-        LS_INFO(ConfigCtx::getCurConfigCtx(),
-                 "Continue to setup listener %s without SSL support.\n",
-                 LSCPD_LISTENER_ADDRESS);
-        delete pNewContext;
-    }
-    else
-    {
-        pSSL->setProtocol(31);
-        pListener->getVHostMap()->setSslContext(pSSL);
-    }
+    SslContextConfig config;
+    config.m_sName = "DefaultSSL";
+    config.m_sKeyFile[0] = achBuf1;
+    config.m_sCertFile[0] = achBuf;
+    config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
+    config.m_iProtocol = 31;
+    config.m_iEnableECDHE = 1;
+    config.m_iEnableDHE = 1;
+    config.m_iEnableTicket = -1;
+    pListener->getVHostMap()->setSslContext(SslContext::config(NULL, &config));
 
     //vhost
     HttpVHost *pVHost = new HttpVHost(LSCPD_VHOST_NAME);
@@ -3720,12 +3766,17 @@ int HttpServerImpl::initLscpd()
 
     pVHost->getRootContext().enableRewrite(1);
     pVHost->setRewriteLogLevel(0);
-    char *pRules = "RewriteCond %{ORG_REQ_URI} !/static\r\n"
+
+    char *pRules = "RewriteRule ^/preview/([^/]*)/(.*) http://" LSCPD_FILEMANAGER_PROXY_APP_NAME "/$2 [P,E=Proxy-Host:$1]\r\n"
+                   "RewriteRule ^/filemanager/([^/]*)/php/fileManager.php http://" LSCPD_FILEMANAGER_PROXY_APP_NAME "/.filemanager/php/fileManager.php [P,E=Proxy-Host:$1]\r\n"
+                   "RewriteRule ^/filemanager/([^/]*)/php/caller.php http://" LSCPD_FILEMANAGER_PROXY_APP_NAME "/.filemanager/php/caller.php [P,E=Proxy-Host:$1]\r\n"
+                   "RewriteCond %{ORG_REQ_URI} !/static\r\n"
                    "RewriteCond %{ORG_REQ_URI} !/rainloop\r\n"
                    "RewriteCond %{ORG_REQ_URI} !/phpmyadmin\r\n"
+                   "RewriteCond %{ORG_REQ_URI} !/noVNC\r\n"
                    "RewriteRule ^/(.*)$ http://" LSCPD_PROXY_APP_NAME "/$1 [P]\r\n";
 
-    pVHost->getRootContext().configRewriteRule(pVHost->getRewriteMaps(), pRules);
+    pVHost->getRootContext().configRewriteRule(pVHost->getRewriteMaps(), pRules, "");
 
     if (addVHost(pVHost) == 0)
     {
@@ -3752,6 +3803,7 @@ int HttpServerImpl::initLscpd()
 int HttpServerImpl::initSampleServer()
 {
     beginConfig();
+    HttpListener *pListener;
     HttpServerConfig &serverConfig = HttpServerConfig::getInstance();
     char achBuf[256], achBuf1[256];
     char *p = achBuf;
@@ -3805,12 +3857,18 @@ int HttpServerImpl::initSampleServer()
     if (addListener("*:3080") == 0)
     {
     }
-    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
-    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
-                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
-                       0, 0, 0);
-    if (pSSL == NULL)
-        delete pNewContext;
+    SslContextConfig config;
+    config.m_sName = "*:1443";
+    config.m_sKeyFile[0] = achBuf1;
+    config.m_sCertFile[0] = achBuf;
+    config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
+    config.m_iProtocol = 14;
+    config.m_iEnableECDHE = 1;
+    config.m_iEnableDHE = 1;
+    config.m_iEnableTicket = -1;
+    pListener = addListener( "*:1443" );
+    pListener->getVHostMap()->setSslContext(SslContext::config(NULL, &config));
+
 
 
     HttpVHost *pVHost = new HttpVHost("vhost1");

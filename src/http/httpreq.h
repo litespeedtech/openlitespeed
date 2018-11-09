@@ -28,6 +28,8 @@ enum
 
 
 #include <http/httpheader.h>
+#include <http/httpstatuscode.h>
+
 #include "httpvhost.h"
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
@@ -62,7 +64,6 @@ enum
 #define CACHE_KEY               (1<<17)
 #define CACHE_PRIVATE_KEY       (1<<18)
 #define AP_USER_DIR             (1<<19)
-#define X_FORWARD_HTTPS         (1<<20)
 #define LOG_ACCESS_404          (1<<21)
 #define RESP_CONT_LEN_SET       (1<<22)
 
@@ -86,10 +87,6 @@ enum
 #define BR_REQUIRED             (BR_ENABLED | REQ_BR_ACCEPT)
 #define UPSTREAM_BR             4
 
-#define IS_KEEPALIVE            1
-#define IS_FORWARDED_HTTPS      2
-#define IS_HTTPS                4
-#define IS_HTTPS_MASK           6
 
 #define SUB_REQ_DETACHED        1
 #define SUB_REQ_NOABORT         2
@@ -116,6 +113,8 @@ class StaticFileCacheData;
 class VHostMap;
 class VMemBuf;
 class UnpackedHeaders;
+class HioCrypto;
+
 typedef struct ls_hash_s ls_hash_t;
 struct ls_subreq_s;
 
@@ -183,6 +182,7 @@ class HttpReq
 {
 private:
     const VHostMap     *m_pVHostMap;
+    HioCrypto          *m_pCrypto;
     SslConnection      *m_pSslConn;
     AutoBuf             m_headerBuf;
 
@@ -224,11 +224,11 @@ private:
     unsigned short      m_ver;
     short               m_iRedirects;
 
+    
+    char                m_iReqFlag;
     char                 m_iAcceptGzip;
     char                 m_iAcceptBr;
-    char                 m_iKeepAlive;
-    char                 m_iNoRespBody;
-
+    
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
     int                 m_iContextState;
@@ -355,6 +355,18 @@ public:
         UPD_PROTO_HTTP2 = 2,
     };
 
+    enum
+    {
+        IS_KEEPALIVE        = 1,
+        IS_FORWARDED_HTTPS  = 2,
+        IS_HTTPS            = 4,
+        IS_HTTPS_MASK       = 6,
+        IS_NO_CACHE         = 8,
+    };
+    
+    
+    
+    
     explicit HttpReq();
     ~HttpReq();
 
@@ -496,8 +508,13 @@ public:
     int  isErrorPage() const
     {   return m_iContextState & IS_ERROR_PAGE; }
 
-    short isKeepAlive() const               {   return ls_atomic_fetch_or((volatile char*)&m_iKeepAlive, 0);        }
-    void keepAlive(short keepalive)         {   ls_atomic_setchar(&m_iKeepAlive, keepalive);   }
+    char isKeepAlive() const
+    {   return m_iReqFlag & IS_KEEPALIVE;     }
+    void keepAlive(char keepalive)
+    {
+        m_iReqFlag = keepalive ? (m_iReqFlag | IS_KEEPALIVE)
+                       : (m_iReqFlag & ~IS_KEEPALIVE);
+    }
 
     int getPort() const;
     const AutoStr2 &getPortStr() const;
@@ -555,23 +572,17 @@ public:
     void andBr(char b)                      {   m_iAcceptBr &= b;         }
     void orBr(char b)                       {   m_iAcceptBr |= b;         }
 
-    char noRespBody() const                 {   return m_iNoRespBody;       }
-    void setNoRespBody()                    {   m_iNoRespBody = 1;          }
-    void updateNoRespBodyByStatus(int code);
-//     {
-//         if (!(m_iContextState & KEEP_AUTH_INFO))
-//         {
-//             switch (m_code = code)
-//             {
-//             case SC_100:
-//             case SC_101:
-//             case SC_204:
-//             case SC_205:
-//             case SC_304:
-//                 m_iNoRespBody = 1;
-//             }
-//         }
-//     }
+    int  noRespBody() const            {   return m_iContextState & NO_RESP_BODY;   }
+    void setNoRespBody()               {   m_iContextState |= NO_RESP_BODY;      }
+    void updateNoRespBodyByStatus(int code)
+    {
+        if (!(m_iContextState & KEEP_AUTH_INFO))
+            m_code = code;
+        if ((!(m_iContextState & NO_RESP_BODY)) &&
+            ((code < SC_200) || (code == SC_204) ||
+             (code == SC_205) || (code == SC_304)))
+            setNoRespBody();
+    }
 
 
     void processReqBodyInReqHeaderBuf();
@@ -638,11 +649,14 @@ public:
     char isCfIpSet() const                      {   return m_iCfIpHeader;   }
     const char *getCfIpHeader(int &len);
 
-    void setSsl(SslConnection *p)   {    m_pSslConn = p;        }
-    SslConnection *getSsl() const  {   return m_pSslConn;      }
+    void setCrypto(HioCrypto *p)        {    m_pCrypto = p;         }
+    HioCrypto *getCrypto() const        {   return m_pCrypto;       }
     int isHttps() const
-    {   return m_pSslConn || (m_iContextState & X_FORWARD_HTTPS);    }
-    void setHttps()     {    m_iKeepAlive |= IS_HTTPS;   }
+    {   return m_pCrypto || (m_iReqFlag & IS_HTTPS_MASK) != 0;    }
+    int isForwardedHttps() const
+    {   return m_iReqFlag & IS_FORWARDED_HTTPS;   }
+    void setHttps()     {    m_iReqFlag |= IS_HTTPS;   }
+
 
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)
@@ -690,7 +704,7 @@ public:
     {   return m_lEntityFinished + getHttpHeaderLen();  }
 
     void popHeaderEndCrlf();
-    int  applyHeaderOps(HttpRespHeaders *pRespHeader);
+    int  applyHeaderOps(HttpSession *pSession, HttpRespHeaders *pRespHeader);
 
     int parseMethod(const char *pCur, const char *pBEnd);
     int parseHost(const char *pCur, const char *pBEnd);
@@ -813,13 +827,13 @@ public:
     CookieList  &getCookieList() { return   m_cookies; }
 
 
-    int applyOp(const HeaderOp *pOp);
-    int  applyOp(HttpRespHeaders *pRespHeader,
+    int applyOp(HttpSession *pSession, const HeaderOp *pOp);
+    int  applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
                  const HeaderOp *pOp);
-    void applyOps(HttpRespHeaders *pRespHeader,
+    void applyOps(HttpSession *pSession, HttpRespHeaders *pRespHeader,
                   const HttpHeaderOps *getHeaders, int arg2);
 
-    int createHeaderValue(const char *pFmt, int len,
+    int createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                           char *pBuf, int maxLen);
     void eraseHeader(key_value_pair * pHeader);
 

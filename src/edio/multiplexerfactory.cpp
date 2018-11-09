@@ -41,6 +41,10 @@ static const char *s_sType[MultiplexerFactory::BEST + 1] =
 int          MultiplexerFactory::s_iMultiplexerType = 0;
 Multiplexer *MultiplexerFactory::s_pMultiplexer = NULL;
 
+
+LS_SINGLETON(MultiplexerFactory);
+
+
 int MultiplexerFactory::getType(const char *pType)
 {
     int i;
