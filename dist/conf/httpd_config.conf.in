@@ -144,7 +144,7 @@ scriptHandler{
 }
 
 railsDefaults{
-    rubyBin                  %RUBY_BIN%
+    binPath                  %RUBY_BIN%
     railsEnv                 1 
     maxConns                 5 
     env                      LSAPI_MAX_IDLE=60 
@@ -161,7 +161,45 @@ railsDefaults{
     procSoftLimit            500 
     procHardLimit            600 
 }
-   
+
+wsgiDefaults{
+    binPath                  
+    railsEnv                 1 
+    maxConns                 5 
+    env                      LSAPI_MAX_IDLE=60 
+    initTimeout              60 
+    retryTimeout             0 
+    pcKeepAliveTimeout       60 
+    respBuffer               0 
+    backlog                  50 
+    runOnStartUp             1
+    extMaxIdleTime           300
+    priority                 3 
+    memSoftLimit             2047M 
+    memHardLimit             2047M 
+    procSoftLimit            500 
+    procHardLimit            600 
+}
+
+nodeDefaults{
+    binPath                  
+    railsEnv                 1 
+    maxConns                 5 
+    env                      LSAPI_MAX_IDLE=60 
+    initTimeout              60 
+    retryTimeout             0 
+    pcKeepAliveTimeout       60 
+    respBuffer               0 
+    backlog                  50 
+    runOnStartUp             1
+    extMaxIdleTime           300
+    priority                 3 
+    memSoftLimit             2047M 
+    memHardLimit             2047M 
+    procSoftLimit            500 
+    procHardLimit            600 
+}
+
 virtualHost Example{
     vhRoot                   $SERVER_ROOT/Example/
     allowSymbolLink          1 

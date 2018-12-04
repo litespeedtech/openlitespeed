@@ -22,9 +22,9 @@
 
 
 #include <lsdef.h>
-#include <extensions/extworkerconfig.h>
+#include <extensions/localworkerconfig.h>
 
-class ProxyConfig : public ExtWorkerConfig
+class ProxyConfig : public LocalWorkerConfig
 {
     int     m_iSsl;
 public:

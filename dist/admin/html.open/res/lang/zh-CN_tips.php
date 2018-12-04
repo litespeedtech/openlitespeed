@@ -110,9 +110,9 @@ $_tipsdb['allowSymbolLink'] = new DAttrHelp("跟随符号链接", '指定在这�
 
 $_tipsdb['appServerContext'] = new DAttrHelp("App Server Context", 'An App Server Context provides an easy way to configure a Ruby Rack/Rails, WSGI, or Node.js application. To add a an application through an App Server Context, only mounting the URL and the application&#039;s root directory is required. There is no need to go through all the trouble to define an external application, add a 404 handler, and rewrite rules, etc.', '', '', '');
 
-$_tipsdb['appServerDefault'] = new DAttrHelp("App Server Settings", 'Default configurations for App Server applications.', '', '', '');
-
 $_tipsdb['appType'] = new DAttrHelp("Application Type", 'The type of application used for this context. Rack/Rails, WSGI, or Node.js are supported.', '', '', '');
+
+$_tipsdb['appserverEnv'] = new DAttrHelp("Run-Time Mode", 'Specifies which mode the application will be running as: &quot;Development&quot;, &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'Select from drop down list', '');
 
 $_tipsdb['as_location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;Location&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;Location&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
 
@@ -222,8 +222,6 @@ $_tipsdb['enableh2c'] = new DAttrHelp("Enable HTTP/2 Over Cleartext TCP", 'Speci
 
 $_tipsdb['env'] = new DAttrHelp("Environment", 'Specifies extra environment variables for the external application.', '', 'Key=value. Multiple variables can be separated by &quot;ENTER&quot;', '');
 
-$_tipsdb['envType'] = new DAttrHelp("Run-time Mode", 'Specifies which mode the app server will be running as: &quot;Development&quot;,  &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'Select from drop down list', '');
-
 $_tipsdb['errCode'] = new DAttrHelp("错误代码", '指定错误页面的HTTP状态码。 只有特定的HTTP状态码才可以自定义错误页面。', '', '选项', '');
 
 $_tipsdb['errPage'] = new DAttrHelp("Customized Error Pages", 'Whenever the server has a problem processing a request,  the server will return an error code and an html page as an error message  to the web client. Error codes are defined in the HTTP protocol (see RFC 2616).  LiteSpeed web server has a built-in default error page for each error code, but  a customized page can be configured for each error code as well.   These error pages can be even further customized to be unique for each virtual host.', '', '', '');
@@ -238,7 +236,7 @@ $_tipsdb['expiresByType'] = new DAttrHelp("按类型过期", '为各个MIME类�
 
 $_tipsdb['expiresDefault'] = new DAttrHelp("默认过期", '指定生成Expires头的默认设置。该设置在&quot;启用过期&quot; 设为“启用”时有效。它可以被&quot;按类型过期&quot;覆盖。 除非必要，否则不要在服务器或虚拟主机级别设置该默认值。 因为它会为所有网页生成Expires头。大多数时候，应该是 为不常变动的某些目录在Context级别设置。如果没有默认设置，&quot;按类型过期&quot;中未指定的类型不会生成Expires头。', '', 'A|M秒数<br/>文件将在基准时间（A|M）加指定秒数的时间后失效。 “A”代表基准时间为客户端的访问时间，“M”代表文件的最后修改时间。', '');
 
-$_tipsdb['expuri'] = new DAttrHelp("URI", 'Specifies the URI for this context.', '', 'The URI can be a plain URI (starting with &quot;/&quot;) or  a Perl compatible regular expression URI (starting with &quot;exp:&quot;). If a plain URI ends  with a &quot;/&quot;, then this context will include all sub-URIs under this URI. If the context maps to a directory on the file system, a trailing &quot;/&quot; must be added.', '');
+$_tipsdb['expuri'] = new DAttrHelp("URI", 'Specifies the URI for this context.', '', 'The URI can be a plain URI (starting with &quot;/&quot;) or a Perl compatible regular expression URI (starting with &quot;exp:&quot;). If a plain URI ends with a &quot;/&quot;, then this context will include all sub-URIs under this URI. If the context maps to a directory on the file system, a trailing &quot;/&quot; must be added.', '');
 
 $_tipsdb['extAppAddress'] = new DAttrHelp("Address", 'A unique socket address used by the external application.  IPv4/IPv6 sockets and Unix Domain Sockets (UDS) are supported.  IPv4/IPv6 sockets can be used for communication over the network.   UDS can only be used when the external application resides on the same machine as the server.', ' If the external application runs on the same machine,  UDS is preferred. If you have to use an IPv4|IPV6 socket,  set the IP address to localhost or 127.0.0.1,  so the external application is inaccessible from other machines. <br/> Unix Domain Sockets generally provide higher performance than IPv4 sockets.', 'IPv4 or IPV6 address:port or UDS://path', '127.0.0.1:5434<br/>UDS://tmp/lshttpd/php.sock.');
 
@@ -446,6 +444,8 @@ $_tipsdb['modulename'] = new DAttrHelp("Module", 'Name of the module. The module
 
 $_tipsdb['nodeBin'] = new DAttrHelp("Node Path", 'Path to Node.js executable.', '', '绝对路径', '');
 
+$_tipsdb['nodeDefaults'] = new DAttrHelp("Node.js App Default Settings", 'Default configurations for Node.js applications. These settings can be overriden at the context level.', '', '', '');
+
 $_tipsdb['note'] = new DAttrHelp("Notes", 'Add notes for yourself.', '', '', '');
 
 $_tipsdb['ocspCACerts'] = new DAttrHelp("OCSP CA Certificates", 'Specifies the location of the file where OCSP certificate authority (CA)  certificates are stored. These certificates are used to check responses  from the OCSP responder (and make sure those responses are not spoofed or  otherwise compromised). This file should contain the whole certificate chain.  If this file does not contain the root certificate, LSWS should be able to find  the root certificate in your system directory without you adding it to the file,  but, if this validation fails, you should try adding your root certificate to this file. <br/><br/>This setting is optional. If this setting is not set, the server will automatically check &quot;CA Certificate File&quot;.', '', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
@@ -473,6 +473,8 @@ $_tipsdb['procSoftLimit'] = new DAttrHelp("进程软限制", '限制一个用户
 $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enables this virtual host as a transparent reverse proxy server. This proxy server can run in front of any web  servers or application servers that support HTTP protocol. The External web server that this virtual host proxies for  has to be defined in &quot;External Application&quot;  before you can set up a Proxy Context.', '', '', '');
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web Server", 'Specifies the name of the external web server. This external web server must be defined in the &quot;External Application&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
+
+$_tipsdb['railsDefaults'] = new DAttrHelp("Rack/Rails Default Settings", 'Default configurations for Rack/Rails applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['rcvBufSize'] = new DAttrHelp("接收缓冲区大小", '每个TCP套接字的接收缓冲区的大小。设定值为0使用 操作系统默认的缓冲区大小。65535是允许的最大缓冲区大小。', '[性能建议] 处理大载荷入站请求，如文件上传时，大的接收缓冲区会提高性能。', '无符号整数', '');
 
@@ -674,7 +676,9 @@ $_tipsdb['vstatus'] = new DAttrHelp("Status - Virtual Host", 'The current status
 
 $_tipsdb['wsaddr'] = new DAttrHelp("Address", 'A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.', ' If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.', 'IPv4 or IPV6 address:port or UDS://path', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.');
 
-$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to Python Web Server Gateway Interface executable.', '', '绝对路径', '');
+$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to LiteSpeed Python Web Server Gateway Interface executable (lswsgi).<br/><br/>This executable is created by compiling Python with LiteSpeed&#039;s WSGI LSAPI module.', '', '绝对路径', '');
+
+$_tipsdb['wsgiDefaults'] = new DAttrHelp("Python WSGI Default Settings", 'Default configurations for Python WSGI applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/>Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location $DOC_ROOT/URI.', '', 'A plain URI (starting with &quot;/&quot;). If the URI ends with a &quot;/&quot;,  then this WebSocket backend will include all sub-URIs under this URI.', 'Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page&#039;s static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).');
 

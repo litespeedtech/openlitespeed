@@ -79,12 +79,13 @@ int H2Stream::onInitConnected(bool bUpgraded)
 {
     if (!bUpgraded)
         getHandler()->onInitConnected();
-
+    
     if (isWantRead())
         getHandler()->onReadEx();
     if (isWantWrite())
         if (next() == NULL)
             m_pH2Conn->add2PriorityQue(this);
+
     //getHandler()->onWriteEx();
     return 0;
 }

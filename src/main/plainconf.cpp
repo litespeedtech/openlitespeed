@@ -247,6 +247,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"prochardlimit",                            NULL},
     {"procsoftlimit",                            NULL},
     {"railsdefaults",                            NULL},
+    {"wsgiDefaults",                            NULL},
+    {"nodeDefaults",                            NULL},
     {"railsenv",                                 NULL},
     {"rcvbufsize",                               NULL},
     {"realm",                                    NULL},
@@ -260,7 +262,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"retrytimeout",                             NULL},
     {"rewrite",                                  NULL},
     {"rollingsize",                              NULL},
-    {"rubybin",                                  NULL},
     {"rules",                                    NULL},
     {"runonstartup",                             NULL},
     {"scripthandler",                            NULL},
@@ -403,6 +404,11 @@ plainconfKeywords plainconf::sKeywords[] =
     {"php_admin_flag",                           NULL},
     
     {"header",  NULL},
+    {"binpath", NULL},
+    {"apptype", NULL},
+    {"startupfile", NULL},
+    
+    
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

@@ -460,8 +460,8 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('uri'),
 				array(
                         self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false, 'as_location'),
-			self::NewPathAttr('binPath', DMsg::ALbl('l_binpath'), 'file', 1, 'x'),
-                                    self::NewSelAttr('appType', DMsg::ALbl('l_apptype'),
+                        self::NewPathAttr('binPath', DMsg::ALbl('l_binpath'), 'file', 1, 'x'),
+                        self::NewSelAttr('appType', DMsg::ALbl('l_apptype'),
 							array(''=>'', 'rails'=>'Rails', 'wsgi'=>'WSGI', 'node'=>'Node' )),
                         self::NewTextAttr('startupFile', DMsg::ALbl('l_startupfile'), 'cust', true, 'as_startupfile'),
 						$this->_attrs['note'],

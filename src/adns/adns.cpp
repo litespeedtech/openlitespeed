@@ -173,7 +173,7 @@ void Adns::release(AdnsReq *pReq)
 }
 
 
-int Adns::setResult(struct sockaddr *result, 
+int Adns::setResult(const struct sockaddr *result,
                      const void *ip, int len)
 {
     if (!result || !ip)

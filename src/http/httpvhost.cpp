@@ -57,7 +57,7 @@
 #include <extensions/localworker.h>
 #include <extensions/localworkerconfig.h>
 #include <extensions/registry/extappregistry.h>
-#include <extensions/registry/railsappconfig.h>
+#include <extensions/registry/appconfig.h>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -66,6 +66,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define MAX_URI_LEN  1024
 
 RealmMap::RealmMap(int initSize)
     : _shmap(initSize)
@@ -632,7 +633,7 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
     HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
     
     AutoStr2 missURI;
-    while (!dirMatch(pContext, pURI, iUriLen, &missURI))
+    while (pContext && !dirMatch(pContext, pURI, iUriLen, &missURI))
     {
         char achRealPath[MAX_PATH_LEN];
         strncpy(achRealPath, pContext->getLocation(), pContext->getLocationLen());
@@ -1322,6 +1323,899 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
     return addContext(match, pUri, type, pLocation, pHandler, allowBrowse);
 }
 
+static int buildUdsSocket(char *buf, int max_len, const char *pVhostName,
+                          const char *pAppName)
+{
+    char *p = buf;
+    int vhost_len = strlen(pVhostName);
+    int app_name_len = strlen(pAppName);
+    if (vhost_len + app_name_len > max_len - 24)
+        vhost_len = max_len - 24 - app_name_len;
+    memcpy(p, "uds://tmp/lshttpd/", 18);
+    p += 18;
+    if (vhost_len < 0)
+        app_name_len += vhost_len;
+    else
+    {
+        memcpy(p, pVhostName, vhost_len);
+        p += vhost_len;
+    }
+    *p++ = ':';
+    memcpy(p, pAppName, app_name_len);
+    p += app_name_len;
+    memcpy(p, ".sock", 6);
+    p += 5;
+    for (char *p1 = &buf[18]; *p1; ++p1)
+    {
+        if (*p1 == '/')
+            *p1 = '_';
+    }
+    return p - buf;
+}
+
+
+void addHomeEnv(HttpVHost *pVHost, Env *pEnv)
+{
+    if (pVHost->getVhRoot()->c_str())
+    {
+        char buf[4096];
+        // ~/nodevenv/.../<ver>/bin/activate needs $HOME
+        snprintf(buf, sizeof(buf), "HOME=%s",
+                pVHost->getVhRoot()->c_str());
+        pEnv->add(buf);
+    }
+}
+
+
+void HttpVHost::setDefaultConfig(LocalWorkerConfig &config,
+                                 const char *pBinPath,
+                                 int maxConns,
+                                 int maxIdle,
+                                 LocalWorkerConfig *pDefault)
+{
+    config.setVHost(this);
+    config.setAppPath(pBinPath);
+    config.setBackLog(pDefault->getBackLog());
+    config.setSelfManaged(1);
+    config.setStartByServer(EXTAPP_AUTOSTART_ASYNC_CGID);
+    config.setMaxConns(maxConns);
+
+    if (config.isDetached())
+    {
+        config.setKeepAliveTimeout(0);
+        config.setPersistConn(0);
+    }
+    else
+    {
+        config.setKeepAliveTimeout(pDefault->getKeepAliveTimeout());
+        config.setPersistConn(1);
+    }
+    config.setTimeout(pDefault->getTimeout());
+    config.setRetryTimeout(pDefault->getRetryTimeout());
+    config.setBuffering(pDefault->getBuffering());
+    config.setPriority(pDefault->getPriority());
+    config.setMaxIdleTime((maxIdle > 0) ? maxIdle : pDefault->getMaxIdleTime());
+    config.setRLimits(pDefault->getRLimits());
+
+    config.setInstances(1);
+}
+
+static void setDetachedAppEnv(Env *pEnv, int max_idle)
+{
+    char achBuf[200];
+    snprintf(achBuf, 200, "LSAPI_PPID_NO_CHECK=1");
+    pEnv->add(achBuf);
+    snprintf(achBuf, 200, "LSAPI_PGRP_MAX_IDLE=%d", max_idle);
+    pEnv->add(achBuf);
+}
+
+
+
+
+int HttpVHost::configRailsRunner(char *pRunnerCmd, int cmdLen,
+                                 const char *pRubyBin)
+{
+    const char *rubyBin[2] = { "/usr/local/bin/ruby", "/usr/bin/ruby" };
+    if ((pRubyBin) && (access(pRubyBin, X_OK) != 0))
+    {
+        LS_NOTICE("[%s] Ruby path is not vaild: %s",
+                  TmpLogId::getLogId(), pRubyBin);
+        pRubyBin = NULL;
+    }
+    
+    if (!pRubyBin)
+    {
+        for (int i = 0; i < 2; ++i)
+        {
+            if (access(rubyBin[i], X_OK) == 0)
+            {
+                pRubyBin = rubyBin[i];
+                break;
+            }
+        }
+    }
+    
+    if (!pRubyBin)
+    {
+        LS_NOTICE("[%s] Cannot find ruby interpreter, Rails easy configuration is turned off",
+                  TmpLogId::getLogId());
+        return LS_FAIL;
+    }
+    
+    snprintf(pRunnerCmd, cmdLen, "%s %sfcgi-bin/RackRunner.rb", pRubyBin,
+             MainServerConfig::getInstance().getServerRoot());
+    return 0;
+}
+
+
+
+LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
+                                    int maxConns, const char *pRailsEnv,
+                                    int maxIdle, const Env *pEnv,
+                                    int runOnStart, const char *pBinPath)
+{
+    char achFileName[MAX_PATH_LEN];
+    char achRunnerCmd[MAX_PATH_LEN];
+    const char *pRailsRunner = NULL;
+
+    LocalWorkerConfig* pAppDefault = (LocalWorkerConfig*)AppConfig::s_rubyAppConfig.getpAppDefault();
+    if (!pAppDefault)
+        return NULL;
+
+    int pathLen = snprintf(achFileName, MAX_PATH_LEN, "%s", appPath);
+    if (pathLen > MAX_PATH_LEN - 20)
+    {
+        LS_ERROR("[%s] path to Rack application is too long!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
+    if (access(achFileName, F_OK) != 0)
+    {
+        LS_ERROR("[%s] path to Rack application is invalid!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
+    if (!pBinPath || *pBinPath == 0x00)
+        pBinPath = AppConfig::s_rubyAppConfig.s_binPath.c_str();
+    
+    if (pBinPath
+        && configRailsRunner(achRunnerCmd, sizeof(achRunnerCmd), pBinPath) != -1)
+    {
+        pRailsRunner = achRunnerCmd;
+    }
+
+
+    if (!pRailsRunner)
+    {
+        LS_ERROR("[%s] 'Ruby path' is not set properly, Rack context is disabled!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
+    LocalWorker *pWorker;
+    char achAppName[1024];
+    char achName[MAX_PATH_LEN];
+    snprintf(achAppName, 1024, "Rack:%s:%s", getName(), pAppName);
+    
+    pWorker = (LocalWorker *)ExtAppRegistry::getApp(EA_LSAPI, achAppName);
+    if (pWorker)
+        return pWorker;
+    pWorker = (LocalWorker *)ExtAppRegistry::addApp(EA_LSAPI, achAppName);
+
+    strcpy(&achFileName[pathLen], "tmp/sockets");
+    //if ( access( achFileName, W_OK ) == -1 )
+    {
+        buildUdsSocket(achName, 108 + 5, getName(), pAppName);
+    }
+    //else
+    //{
+    //    snprintf( achName, MAX_PATH_LEN, "uds://%s/RailsRunner.sock",
+    //            &achFileName[m_sChroot.len()] );
+    //}
+    pWorker->setURL(achName);
+
+
+    LocalWorkerConfig &config = pWorker->getConfig();
+    config.setDetached(1);
+    setDefaultConfig(config, pRailsRunner, maxConns, maxIdle, pAppDefault);
+
+    config.clearEnv();
+    if (pEnv)
+        config.getEnv()->add(pEnv);
+    else
+    {
+        achFileName[pathLen] = 0;
+        snprintf(achName, MAX_PATH_LEN, "RAILS_ROOT=%s",
+                &achFileName[m_sChroot.len()]);
+        config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LS_CWD=%s",
+                &achFileName[m_sChroot.len()]);
+        config.addEnv(achName);
+        if (pRailsEnv)
+        {
+            snprintf(achName, MAX_PATH_LEN, "RAILS_ENV=%s", pRailsEnv);
+            config.addEnv(achName);
+        }
+    }
+    config.addEnv("RUBYOPT=rubygems");
+    addHomeEnv(this, config.getEnv());
+
+    if (maxConns > 1)
+    {
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+        config.addEnv(achName);
+    }
+    else
+        config.setSelfManaged(0);
+    if (config.isDetached())
+    {
+        if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
+            maxIdle = DETACH_MODE_MIN_MAX_IDLE;
+        setDetachedAppEnv(config.getEnv(), maxIdle);
+    }
+    else if (maxIdle != INT_MAX && maxIdle > 0)
+    {
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_MAX_IDLE=%d", maxIdle);
+        config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_PGRP_MAX_IDLE=%d", maxIdle);
+        config.addEnv(achName);
+    }
+
+    achFileName[pathLen] = 0;
+    snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%s/log/stderr.log",
+             &achFileName[m_sChroot.len()]);
+    config.addEnv(achName);
+
+    config.getEnv()->add(pAppDefault->getEnv());
+    config.addEnv(NULL);
+
+    config.setRunOnStartUp(runOnStart);
+
+    snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
+    pWorker->setRestartMarker(achName, 0);
+
+    return pWorker;
+}
+
+
+HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
+                                        ExtWorker *pWorker,
+                                        HttpContext *pOldCtx)
+{
+    char achURI[MAX_URI_LEN];
+    int uriLen = strlen(pURI);
+
+    strcpy(achURI, pURI);
+    if (achURI[uriLen - 1] != '/')
+    {
+        achURI[uriLen++] = '/';
+        achURI[uriLen] = 0;
+    }
+    if (uriLen > MAX_URI_LEN - 100)
+    {
+        LS_ERROR("[%s] context URI is too long!", TmpLogId::getLogId());
+        return NULL;
+    }
+    char achBuf[MAX_PATH_LEN];
+    snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
+    HttpContext *pContext = addContext(achURI, HandlerType::HT_NULL,
+                                          achBuf, NULL, 1);
+    if (!pContext)
+        return NULL;
+    strcpy(&achURI[uriLen], "dispatch.rb");
+    HttpContext *pDispatch = addContext(achURI,
+                                        HandlerType::HT_NULL,
+                                        NULL, NULL, 1);
+    if (pDispatch)
+        pDispatch->setHandler(pWorker);
+    /*
+        strcpy( &achURI[uriLen], "dispatch.cgi" );
+        pDispatch = addContext( pVHost, 0, achURI, HandlerType::HT_NULL,
+                                NULL, NULL, 1 );
+        if ( pDispatch )
+            pDispatch->setHandler( pWorker );
+        strcpy( &achURI[uriLen], "dispatch.fcgi" );
+        pDispatch = addContext( pVHost, 0, achURI, HandlerType::HT_NULL,
+                                NULL, NULL, 1 );
+        if ( pDispatch )
+            pDispatch->setHandler( pWorker );
+    */
+    strcpy(&achURI[uriLen], "dispatch.lsapi");
+    pDispatch = addContext(achURI, HandlerType::HT_NULL,
+                           NULL, NULL, 1);
+    if (pDispatch)
+    {
+        pDispatch->setHandler(pWorker);
+        pDispatch->setRailsContext();
+        pDispatch->setParent(pContext);
+    }
+    pContext->setAutoIndex(0);
+    pContext->setAutoIndexOff(1);
+    pContext->setCustomErrUrls("404", achURI);
+    pContext->setRailsContext();
+    if (pOldCtx)
+    {
+        pOldCtx->setAutoIndexOff(1);
+        pOldCtx->setCustomErrUrls("404", achURI);
+        pOldCtx->setRailsContext();
+    }
+    return pContext;
+
+}
+
+
+HttpContext *HttpVHost::configRailsContext(const char *contextUri,
+                                           const char *appPath,
+                                           int maxConns, const char *pRailsEnv,
+                                           int maxIdle, const Env *pEnv,
+                                           const char *pBinPath)
+{
+    char achFileName[MAX_PATH_LEN];
+
+    LocalWorkerConfig* pAppDefault = (LocalWorkerConfig*)AppConfig::s_rubyAppConfig.getpAppDefault();
+    if (!pAppDefault)
+        return NULL;
+    
+    int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achFileName, appPath);
+    if (ret == -1)
+    {
+        LS_ERROR("[%s] path to Rails application is invalid!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
+
+    LocalWorker *pWorker = addRailsApp(contextUri, achFileName,
+                                       maxConns, pRailsEnv, maxIdle, pEnv,
+                                       pAppDefault->getRunOnStartUp(),
+                                       pBinPath) ;
+    if (!pWorker)
+        return NULL;
+    return addRailsContext(contextUri, achFileName, pWorker, NULL);
+}
+
+
+LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
+                                     const char *pStartupFile, int maxConns,
+                                     const char *pPythonEnv,
+                                     int maxIdle, const Env *pEnv,
+                                     int runOnStart, const char *pBinPath)
+{
+    int iChrootlen = m_sChroot.len();
+    char achFileName[MAX_PATH_LEN];
+
+    LocalWorkerConfig* pAppDefault = (LocalWorkerConfig*)AppConfig::s_wsgiAppConfig.getpAppDefault();
+    if (!pAppDefault)
+        return NULL;
+
+    int pathLen = snprintf(achFileName, MAX_PATH_LEN, "%s", appPath);
+
+    if (pathLen > MAX_PATH_LEN - 20)
+    {
+        LS_ERROR("[%s] path to Python application is too long!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
+    if (access(achFileName, F_OK) != 0)
+    {
+        LS_ERROR("[%s] Path for Python application is invalid: %s",
+                 TmpLogId::getLogId(),  achFileName);
+        return NULL;
+    }
+
+    LocalWorker *pWorker;
+    char achAppName[1024];
+    char achName[MAX_PATH_LEN];
+    snprintf(achAppName, 1024, "wsgi:%s:%s", getName(), pAppName);
+    
+    /**
+     * FIXME:
+     * Nodejs use EA_PROXY here, ENT org use EA_LSAPI, so
+     * I chaged to EA_PROXY
+     */
+    pWorker = (LocalWorker *)ExtAppRegistry::getApp(EA_LSAPI, achAppName);
+    if (pWorker)
+        return pWorker;
+    pWorker = (LocalWorker *) ExtAppRegistry::addApp(EA_LSAPI, achAppName);
+    buildUdsSocket(achName, 108 + 5, getName(), pAppName);
+    pWorker->setURL(achName);
+
+    if (!pBinPath || *pBinPath == 0x00)
+        pBinPath = AppConfig::s_wsgiAppConfig.s_binPath.c_str();
+
+    achFileName[pathLen] = 0;
+    if (pStartupFile)
+    {
+        if (*pStartupFile == '/')
+            snprintf(achName, MAX_PATH_LEN, "%s -m %s", pBinPath, pStartupFile);
+        else
+            snprintf(achName, MAX_PATH_LEN, "%s -m %s%s", pBinPath,
+                     achFileName, pStartupFile);
+        pBinPath = achName;
+    }
+
+    LocalWorkerConfig &config = pWorker->getConfig();
+    config.setDetached(1);
+    setDefaultConfig(config, pBinPath, maxConns, maxIdle, pAppDefault);
+
+    config.clearEnv();
+    if (pEnv)
+        config.getEnv()->add(pEnv);
+
+    snprintf(achName, MAX_PATH_LEN, "WSGI_ROOT=%s", &achFileName[iChrootlen]);
+    config.addEnv(achName);
+
+    snprintf(achName, MAX_PATH_LEN, "PYTHONPATH=.:%s", &achFileName[iChrootlen]);
+    config.addEnv(achName);
+
+    snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%sstderr.log",
+             &achFileName[m_sChroot.len()]);
+    config.addEnv(achName);
+    addHomeEnv(this, config.getEnv());
+
+    if (pPythonEnv)
+    {
+        snprintf(achName, MAX_PATH_LEN, "WSGI_ENV=%s", pPythonEnv);
+        config.addEnv(achName);
+    }
+    if (maxConns > 1)
+    {
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+        config.addEnv(achName);
+    }
+    else
+        config.setSelfManaged(0);
+
+    if (config.isDetached())
+    {
+        if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
+            maxIdle = DETACH_MODE_MIN_MAX_IDLE;
+        setDetachedAppEnv(config.getEnv(), maxIdle);
+    }
+    else if (maxIdle != INT_MAX && maxIdle > 0)
+    {
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_MAX_IDLE=%d", maxIdle);
+        config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_PGRP_MAX_IDLE=%d", maxIdle);
+        config.addEnv(achName);
+    }
+
+    config.getEnv()->add(pAppDefault->getEnv());
+    config.addEnv(NULL);
+
+    snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
+    pWorker->setRestartMarker(achName, 0);
+
+    return pWorker;
+}
+
+HttpContext *HttpVHost::addPythonContext(const char *pURI,
+                                         const char *pLocation,
+                                         const char *pStartupFile,
+                                         ExtWorker *pWorker,
+                                         HttpContext *pOldCtx)
+{
+    char achURI[MAX_URI_LEN];
+    int uriLen = strlen(pURI);
+
+    strcpy(achURI, pURI);
+
+    if (achURI[uriLen - 1] != '/')
+    {
+        achURI[uriLen++] = '/';
+        achURI[uriLen] = 0;
+    }
+
+    if (uriLen > MAX_URI_LEN - 100)
+    {
+        LS_ERROR("[%s] context URI is too long!", TmpLogId::getLogId());
+        return NULL;
+    }
+
+    char achBuf[MAX_PATH_LEN];
+    snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
+    HttpContext *pContext;
+    if (pOldCtx)
+        pContext = pOldCtx;
+    else
+        pContext = addContext(achURI, HandlerType::HT_NULL,
+                                 achBuf, NULL, 1);
+
+    if (!pContext)
+        return NULL;
+
+    //FIXME any reason for the below code
+    pContext->setWebSockAddr(pWorker->getConfigPointer()->getServerAddr());
+    
+
+    char appURL[MAX_URI_LEN];
+    if (!pStartupFile || *pStartupFile == '\0')
+        pStartupFile = "index.wsgi";
+    memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
+    snprintf(appURL, sizeof(appURL), "%s%s", pLocation, pStartupFile);
+    
+    
+    HttpContext *pDispatch;
+    
+    pDispatch = addContext(0, achURI, HandlerType::HT_NULL, //NULL TYPE is static
+                           appURL, NULL, 1);
+    pDispatch->setHandler(pWorker);
+    pDispatch->setPythonContext();
+    pDispatch->setParent(pContext);
+
+    pContext->setAutoIndex(0);
+    pContext->setAutoIndexOff(1);
+    pContext->setCustomErrUrls("404", achURI);
+
+    pContext->setPythonContext();
+    return pContext;
+}
+
+
+
+int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
+                                   const char *pBinPath)
+{
+    const char *defaultBin[2] = { "/usr/local/bin/node", "/usr/bin/node" };
+    if (!pBinPath)
+    {
+        for (int i = 0; i < 2; ++i)
+        {
+            if (access(defaultBin[i], X_OK) == 0)
+            {
+                pBinPath = defaultBin[i];
+                break;
+            }
+        }
+    }
+    if (!pBinPath)
+    {
+        LS_NOTICE("[%s] Cannot find node interpreter, node easy configuration "
+                    "is turned off", TmpLogId::getLogId());
+        return LS_FAIL;
+    }
+    snprintf(pRunnerCmd, cmdLen, "%s %sfcgi-bin/lsnode.js", pBinPath,
+             MainServerConfig::getInstance().getServerRoot());
+    return 0;
+}
+
+
+LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
+                                     const char *appPath,
+                                     const char *pStartupFile, int maxConns,
+                                     const char *pRunModeEnv, int maxIdle,
+                                     const Env *pEnv, int runOnStart,
+                                     const char *pBinPath)
+{
+    int iChrootlen = m_sChroot.len();
+    char achFileName[MAX_PATH_LEN];
+    char achRunnerCmd[MAX_PATH_LEN];
+    const char *pNodejsStarter = NULL;
+
+    LocalWorkerConfig* pAppDefault = (LocalWorkerConfig*)AppConfig::s_nodeAppConfig.getpAppDefault();
+    if (!pAppDefault)
+        return NULL;
+
+    int pathLen = snprintf(achFileName, MAX_PATH_LEN, "%s", appPath);
+    if (pathLen > MAX_PATH_LEN - 20)
+    {
+        LS_ERROR("[%s] path to NodeJS application is too long!", TmpLogId::getLogId());
+        return NULL;
+    }
+
+    if (access(achFileName, F_OK) != 0)
+    {
+        LS_ERROR("[%s] path to NodeJS application %s not exist!",
+                 TmpLogId::getLogId(), achFileName);
+        return NULL;
+    }
+
+    if (!pBinPath || *pBinPath == 0x00)
+        pBinPath = AppConfig::s_nodeAppConfig.s_binPath.c_str();
+    
+    if (pBinPath
+        && configNodeJsStarter(achRunnerCmd, sizeof(achRunnerCmd), pBinPath) != -1)
+    {
+        pNodejsStarter = achRunnerCmd;
+    }
+
+    if (!pNodejsStarter)
+    {
+        LS_ERROR("[%s] 'Node path' is not set properly, NodeJS context is disabled!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
+    LocalWorker *pWorker;
+    char achAppName[1024];
+    char achName[MAX_PATH_LEN];
+    snprintf(achAppName, 1024, "Node:%s:%s", this->getName(), pAppName);
+    pWorker = (LocalWorker *)ExtAppRegistry::getApp(EA_PROXY, achAppName);
+    if (pWorker)
+        return pWorker;
+    pWorker = (LocalWorker *)ExtAppRegistry::addApp(EA_PROXY, achAppName);
+
+    strcpy(&achFileName[pathLen], "tmp/sockets");
+    //if ( access( achFileName, W_OK ) == -1 )
+    {
+        buildUdsSocket(achName, 108 + 5, this->getName(), pAppName);
+    }
+    //else
+    //{
+    //    snprintf( achName, MAX_PATH_LEN, "uds://%s/RailsRunner.sock",
+    //            &achFileName[m_sChroot.len()] );
+    //}
+    pWorker->setURL(achName);
+
+
+    LocalWorkerConfig &config = pWorker->getConfig();
+    config.setDetached(1);
+    setDefaultConfig(config, pNodejsStarter, maxConns, maxIdle, pAppDefault);
+
+    config.clearEnv();
+    if (pEnv)
+        config.getEnv()->add(pEnv);
+    achFileName[pathLen] = 0;
+    snprintf(achName, MAX_PATH_LEN, "LSNODE_ROOT=%s",
+            &achFileName[iChrootlen]);
+    config.addEnv(achName);
+    addHomeEnv(this, config.getEnv());
+
+    if (pStartupFile)
+    {
+        snprintf(achName, MAX_PATH_LEN, "LSNODE_STARTUP_FILE=%s", pStartupFile);
+        config.addEnv(achName);
+    }
+
+    if (pRunModeEnv)
+    {
+        snprintf(achName, MAX_PATH_LEN, "NODE_ENV=%s", pRunModeEnv);
+        config.addEnv(achName);
+    }
+
+    if (config.isDetached())
+    {
+        if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
+            maxIdle = DETACH_MODE_MIN_MAX_IDLE;
+        setDetachedAppEnv(config.getEnv(), maxIdle);
+    }
+
+//     achFileName[pathLen] = 0;
+//     snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%s/log/stderr.log",
+//              &achFileName[iChrootlen]);
+//    config.addEnv(achName);
+
+    config.getEnv()->add(pAppDefault->getEnv());
+    config.addEnv(NULL);
+
+    config.setRunOnStartUp(runOnStart);
+
+    snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
+    pWorker->setRestartMarker(achName, 0);
+
+    return pWorker;
+}
+
+
+#define PYWSGIENTRY   "passenger_wsgi.py"
+#define NODEJSENTRY   "app.js"
+
+static const char *getDefaultStartupFile(int type)
+{
+    static const char *s_pDefaults[3] = {
+        "config.ru", PYWSGIENTRY, NODEJSENTRY
+    };
+    type -= HandlerType::HT_RAILS;
+    if (type >=0 && type < 3)
+        return s_pDefaults[type];
+    return NULL;
+}
+
+
+
+HttpContext *HttpVHost::addNodejsContext(const char *pURI,
+                                         const char *pLocation,
+                                         const char *pStartupFile,
+                                         ExtWorker *pWorker,
+                                         HttpContext *pOldCtx)
+{
+    char achURI[MAX_URI_LEN];
+    int uriLen = strlen(pURI);
+
+    strcpy(achURI, pURI);
+
+    if (achURI[uriLen - 1] != '/')
+    {
+        achURI[uriLen++] = '/';
+        achURI[uriLen] = 0;
+    }
+
+    if (uriLen > MAX_URI_LEN - 100)
+    {
+        LS_ERROR("[%s] context URI is too long!", TmpLogId::getLogId());
+        return NULL;
+    }
+
+    char achBuf[MAX_PATH_LEN];
+    snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
+    HttpContext *pContext;
+    if (pOldCtx)
+        pContext = pOldCtx;
+    else
+        pContext = addContext(0, achURI, HandlerType::HT_NULL,
+                                 achBuf, NULL, 1);
+        
+
+    if (!pContext)
+        return NULL;
+
+    //pContext->setHandler(pWorker);
+    pContext->setWebSockAddr(pWorker->getConfigPointer()->getServerAddr());
+
+    HttpContext *pDispatch;
+    char appURL[MAX_URI_LEN];
+    if (!pStartupFile || *pStartupFile == '\0')
+        pStartupFile = NODEJSENTRY;
+    memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
+    snprintf(appURL, sizeof(appURL), "%s%s", pLocation, pStartupFile);
+
+    pDispatch = addContext(0, achURI, HandlerType::HT_NULL,
+                           appURL, NULL, 1);
+    pDispatch->setHandler(pWorker);
+    pDispatch->setNodejsContext();
+    pDispatch->setParent(pContext);
+
+    pContext->setCustomErrUrls("404", achURI);
+
+    pContext->setNodejsContext();
+    pContext->setAutoIndex(0);
+    pContext->setAutoIndexOff(1);
+    return pContext;
+}
+
+
+int HttpVHost::testAppType(const char *pAppRoot)
+{
+    struct stat st;
+    char achFileName[MAX_PATH_LEN];
+    int i;
+    for(i = HandlerType::HT_RAILS; i <= HandlerType::HT_NODEJS; ++i)
+    {
+        snprintf(achFileName, sizeof(achFileName), "%s/%s", pAppRoot,
+                 getDefaultStartupFile(i));
+        if (stat(achFileName, &st) == 0)
+        {
+            return i;
+        }
+    }
+    return LS_FAIL;
+}
+
+
+HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
+                                         const char *contextUri,
+                                         const char *appPath)
+{
+    char achAppRoot[MAX_PATH_LEN];
+    const char *pStartupFile = ConfigCtx::getCurConfigCtx()->getTag(pNode, "startupFile");
+    const char *pBinPath = pNode->getChildValue("binPath");
+
+    int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
+
+    int appType = HandlerType::HT_APPSERVER;
+    const char *sType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "appType");
+    if (sType)
+    {
+        switch(*sType | 0x20)
+        {
+        case 'r': //rails
+            appType = HandlerType::HT_RAILS;
+            break;
+        case 'n': //node
+            appType = HandlerType::HT_NODEJS;
+            break;
+        case 'w':  //wsgi
+            appType = HandlerType::HT_PYTHON;
+            break;
+        default:
+            break;
+        }
+    }
+
+    if (appType == HandlerType::HT_APPSERVER)
+    {
+        appType = testAppType(achAppRoot);
+        if (appType == -1)
+        {
+            LS_WARN (ConfigCtx::getCurConfigCtx(), "Cannot determine "
+                     "application type at %s, disable it.", achAppRoot);
+            return NULL;
+        }
+    }
+
+    AppConfig *pAppConfig = NULL;
+    switch(appType)
+    {
+    case HandlerType::HT_RAILS:
+        pAppConfig = &AppConfig::s_rubyAppConfig;
+        break;
+
+    case HandlerType::HT_NODEJS:
+        pAppConfig = &AppConfig::s_nodeAppConfig;
+        break;
+
+    case HandlerType::HT_PYTHON:
+        pAppConfig = &AppConfig::s_wsgiAppConfig;
+        break;
+
+    }
+    
+    const LocalWorkerConfig* pAppDefault = pAppConfig->getpAppDefault();
+    int maxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                   "maxConns", 1, 2000, pAppDefault->getMaxConns());
+    const char *pModeEnv[3] = { "development", "production", "staging" };
+    int production = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                     "appserverEnv", 0, 2, pAppConfig->getAppEnv());
+    const char *pAppMode = pModeEnv[production];
+
+    long maxIdle = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                   "extMaxIdleTime", -1, INT_MAX,
+                   pAppDefault->getMaxIdleTime());
+
+    if (maxIdle == -1)
+        maxIdle = INT_MAX;
+
+
+    
+    return configAppContext(appType, contextUri,
+            achAppRoot, pStartupFile, maxConns, pAppMode, maxIdle,
+            NULL, pAppDefault->getRunOnStartUp(), pBinPath, NULL);
+}
+
+
+HttpContext *HttpVHost::configAppContext( int appType, const char *contextUri,
+        const char *pAppRoot, const char *pStartupFile,
+        int maxConns, const char * pAppMode, int maxIdle,
+        const Env *pProcessEnv, int runOnStartup, const char *pBinPath,
+        HttpContext *pOldCtx)
+{
+    if (!pStartupFile)
+        pStartupFile = getDefaultStartupFile(appType);
+
+    LocalWorker *pWorker;
+    switch(appType)
+    {
+    case HandlerType::HT_RAILS:
+        return configRailsContext(contextUri, pAppRoot, maxConns, pAppMode,
+                                  maxIdle, pProcessEnv, pBinPath);
+        break;
+
+    case HandlerType::HT_PYTHON:
+        pWorker = addPythonApp(contextUri, pAppRoot, pStartupFile,
+                               maxConns, pAppMode, maxIdle, pProcessEnv,
+                               runOnStartup, pBinPath);
+        if (pWorker)
+             return addPythonContext(contextUri, pAppRoot,
+                                     pStartupFile, pWorker, pOldCtx);
+
+        break;
+
+    case HandlerType::HT_NODEJS:
+        pWorker = addNodejsApp(contextUri, pAppRoot, pStartupFile,
+                               maxConns, pAppMode, maxIdle, pProcessEnv,
+                               runOnStartup, pBinPath) ;
+        if (pWorker)
+            return addNodejsContext(contextUri, pAppRoot,
+                                    pStartupFile, pWorker, pOldCtx);
+        break;
+    }
+    return NULL;
+}
+
+
 
 int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
                              const XmlNode *pNode)
@@ -1405,117 +2299,6 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
     pAwstats->config(this, val, achBuf, pAwNode,
                      iconURI, vhDomain, vhAliasesLen);
     return 0;
-}
-
-
-#define MAX_URI_LEN  1024
-HttpContext *HttpVHost::addRailsContext(const char *pURI,
-                                        const char *pLocation, LocalWorker *pWorker)
-{
-    char achURI[MAX_URI_LEN];
-    int uriLen = strlen(pURI);
-
-    strcpy(achURI, pURI);
-
-    if (achURI[uriLen - 1] != '/')
-    {
-        achURI[uriLen++] = '/';
-        achURI[uriLen] = 0;
-    }
-
-    if (uriLen > MAX_URI_LEN - 100)
-    {
-        LS_ERROR(ConfigCtx::getCurConfigCtx(), "context URI is too long!");
-        return NULL;
-    }
-
-    char achBuf[MAX_PATH_LEN];
-    snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
-    HttpContext *pContext = addContext(0, achURI, HandlerType::HT_NULL,
-                                          achBuf, NULL, 1);
-
-    if (!pContext)
-        return NULL;
-
-    strcpy(&achURI[uriLen], "dispatch.rb");
-    HttpContext *pDispatch = addContext(0, achURI, HandlerType::HT_NULL,
-                                        NULL, NULL, 1);
-
-    if (pDispatch)
-        pDispatch->setHandler(pWorker);
-
-    strcpy(&achURI[uriLen], "dispatch.lsapi");
-    pDispatch = addContext(0, achURI, HandlerType::HT_NULL,
-                           NULL, NULL, 1);
-
-    if (pDispatch)
-        pDispatch->setHandler(pWorker);
-
-    pContext->setAutoIndex(0);
-    pContext->setAutoIndexOff(1);
-    pContext->setCustomErrUrls("404", achURI);
-    pContext->setRailsContext();
-    return pContext;
-}
-
-
-HttpContext *HttpVHost::configRailsContext(const char *contextUri,
-        const char *appPath,
-        int maxConns, const char *pRailsEnv, int maxIdle, const Env *pEnv,
-        const char *pRubyPath)
-{
-    char achFileName[MAX_PATH_LEN];
-
-    if (!RailsAppConfig::getpRailsDefault())
-        return NULL;
-
-    int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achFileName,
-              appPath);
-
-    if (ret == -1)
-    {
-        LS_ERROR(ConfigCtx::getCurConfigCtx(),
-                 "path to Rails application is invalid!");
-        return NULL;
-    }
-
-
-    LocalWorker *pWorker = RailsAppConfig::newRailsApp(this, contextUri,
-                           getName(), achFileName, maxConns, pRailsEnv,
-                           maxIdle, pEnv, RailsAppConfig::getpRailsDefault()->getRunOnStartUp(),
-                           pRubyPath) ;
-
-    if (!pWorker)
-        return NULL;
-
-    return addRailsContext(contextUri, achFileName,
-                           pWorker);
-}
-
-
-HttpContext *HttpVHost::configRailsContext(const XmlNode *pNode,
-        const char *contextUri, const char *appPath)
-{
-
-    int maxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "maxConns", 1, 2000,
-                   RailsAppConfig::getpRailsDefault()->getMaxConns());
-    const char *railsEnv[3] = { "development", "production", "staging" };
-    int production = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                     "railsEnv", 0, 2, RailsAppConfig::getRailsEnv());
-    const char *pRailsEnv = railsEnv[production];
-
-    const char *pRubyPath = pNode->getChildValue("rubyBin");
-
-    long maxIdle = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "extMaxIdleTime", -1, INT_MAX,
-                   RailsAppConfig::getpRailsDefault()->getMaxIdleTime());
-
-    if (maxIdle == -1)
-        maxIdle = INT_MAX;
-
-    return configRailsContext(contextUri, appPath,
-                              maxConns, pRailsEnv, maxIdle, NULL, pRubyPath);
 }
 
 
@@ -1786,9 +2569,9 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         pContext = importWebApp(pUri, pLocation, pHandler,
                                 allowBrowse);
         break;
-    case HandlerType::HT_RAILS:
+    case HandlerType::HT_APPSERVER:
         allowBrowse = true;
-        pContext = configRailsContext(pContextNode, pUri, pLocation);
+        pContext = configAppContext(pContextNode, pUri, pLocation);
         break;
     case HandlerType::HT_REDIRECT:
         if (configRedirectContext(pContextNode, pLocation, pUri, pHandler,

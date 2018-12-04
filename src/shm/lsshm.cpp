@@ -684,7 +684,8 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         m_pShmLock = offset2pLock(x_pShmMap->x_iLockOffset);
     }
 
-    getGlobalPool();
+    if (getGlobalPool() == NULL)
+        return LSSHM_BADVERSION;
     m_status = LSSHM_READY;
     m_iRef = 1;
     getBase()->insert(m_pFileName, this);

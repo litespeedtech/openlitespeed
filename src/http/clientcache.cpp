@@ -139,6 +139,7 @@ void ClientCache::recycle(ClientInfo *pInfo)
 {
     LsiapiBridge::releaseModuleData(LSI_DATA_IP,
                                     pInfo->getModuleData());
+    pInfo->release();
     s_pool()->recycle(pInfo);
 
 }

@@ -110,9 +110,9 @@ $_tipsdb['allowSymbolLink'] = new DAttrHelp("シンボリックリンク参照",
 
 $_tipsdb['appServerContext'] = new DAttrHelp("App Server Context", 'An App Server Context provides an easy way to configure a Ruby Rack/Rails, WSGI, or Node.js application. To add a an application through an App Server Context, only mounting the URL and the application&#039;s root directory is required. There is no need to go through all the trouble to define an external application, add a 404 handler, and rewrite rules, etc.', '', '', '');
 
-$_tipsdb['appServerDefault'] = new DAttrHelp("App Server Settings", 'Default configurations for App Server applications.', '', '', '');
-
 $_tipsdb['appType'] = new DAttrHelp("Application Type", 'The type of application used for this context. Rack/Rails, WSGI, or Node.js are supported.', '', '', '');
+
+$_tipsdb['appserverEnv'] = new DAttrHelp("Run-Time Mode", 'Specifies which mode the application will be running as: &quot;Development&quot;, &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'ドロップダウンリストから選択', '');
 
 $_tipsdb['as_location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;ロケーション&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;ロケーション&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
 
@@ -221,8 +221,6 @@ $_tipsdb['enableStapling'] = new DAttrHelp("OCSPステープルを有効にす�
 $_tipsdb['enableh2c'] = new DAttrHelp("HTTP/2 over Cleartext TCPを有効にする", '暗号化されていないTCP接続に対してHTTP/2を有効にするかどうかを指定します。 デフォルトは無効です。', '', 'ラジオボックスから選択', '');
 
 $_tipsdb['env'] = new DAttrHelp("環境", '外部アプリケーション用の追加の環境変数を指定します。', '', 'Key=value. 複数の変数は &quot;ENTER&quot;で区切ることができます。', '');
-
-$_tipsdb['envType'] = new DAttrHelp("Run-time Mode", 'Specifies which mode the app server will be running as: &quot;Development&quot;,  &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'ドロップダウンリストから選択', '');
 
 $_tipsdb['errCode'] = new DAttrHelp("エラーコード", 'SエラーページのHTTPステータスコードを指定します。 選択したHTTPステータスコードだけがこのカスタマイズされたエラーページを持ちます。', '', '選択', '');
 
@@ -446,6 +444,8 @@ $_tipsdb['modulename'] = new DAttrHelp("モジュール", 'モジュールの名
 
 $_tipsdb['nodeBin'] = new DAttrHelp("Node Path", 'Path to Node.js executable.', '', '絶対パス', '');
 
+$_tipsdb['nodeDefaults'] = new DAttrHelp("Node.js App Default Settings", 'Default configurations for Node.js applications. These settings can be overriden at the context level.', '', '', '');
+
 $_tipsdb['note'] = new DAttrHelp("ノート", 'あなた自身のためにメモを追加してください。', '', '', '');
 
 $_tipsdb['ocspCACerts'] = new DAttrHelp("OCSP CA証明書", 'OCSP認証局（CA）証明書が格納されるファイルの場所を指定します。 これらの証明書は、OCSPレスポンダからのレスポンスを確認するために使用されます（また、そのレスポンスが偽装されていないか、または妥協されていないことを確認してください）。 このファイルには、証明書チェーン全体が含まれている必要があります。 このファイルにルート証明書が含まれていない場合、LSWSはファイルに追加することなくシステムディレクトリのルート証明書を見つけることができますが、この検証に失敗した場合はルート証明書をこのファイルに追加してください。<br/><br/>この設定はオプションです。 この設定が設定されていない場合、サーバーは自動的に&quot;CA証明書ファイル&quot;をチェックします。', '', 'ファイル名への絶対パス又は$SERVER_ROOTからの相対パス', '');
@@ -473,6 +473,8 @@ $_tipsdb['procSoftLimit'] = new DAttrHelp("プロセスソフトリミット", '
 $_tipsdb['proxyContext'] = new DAttrHelp("プロキシコンテキスト", 'プロキシコンテキストは、このバーチャルホストを透過的なリバースプロキシサーバとして有効にします。 このプロキシサーバーは、HTTPプロトコルをサポートするWebサーバーまたはアプリケーションサーバーの前で実行できます。 このバーチャルホストがプロキシする外部Webサーバーは、プロキシコンテキストを設定する前に&quot;外部アプリケーション&quot;で定義されている必要があります。', '', '', '');
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Webサーバー", '外部Webサーバーの名前を指定します。 この外部Webサーバーは、サーバーまたはバーチャルホストレベルの&quot;外部アプリケーション&quot;セクションで定義する必要があります。', '', '選択', '');
+
+$_tipsdb['railsDefaults'] = new DAttrHelp("Rack/Rails Default Settings", 'Default configurations for Rack/Rails applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['rcvBufSize'] = new DAttrHelp("受信バッファサイズ（バイト）", '各TCPソケットの受信バッファーサイズ。 512Kは許容されるバッファの最大サイズです。', '[パフォーマンス]オペレーティングシステムのデフォルトのバッファサイズを使用するには、この値を &quot;未設定&quot;のままにするか、0に設定することをお勧めします。<br/>[パフォーマンス]大きい受信バッファは、大きなペイロード、すなわちファイルアップロードで着信要求を処理するときのパフォーマンスを向上させます。<br/>[パフォーマンス]これを低い値に設定すると、ソケットあたりのスループットとメモリ使用量が減少し、メモリがボトルネックになった場合にサーバーがより多くの同時ソケットを持つことが可能になります。', '整数', '');
 
@@ -674,7 +676,9 @@ $_tipsdb['vstatus'] = new DAttrHelp("ステータス - バーチャルホスト"
 
 $_tipsdb['wsaddr'] = new DAttrHelp("アドレス", 'WebSocketバックエンドによって使用される一意のソケットアドレス。 IPv4ソケット、IPv6ソケット、Unixドメインソケット（UDS）がサポートされています。 IPv4およびIPv6ソケットは、ネットワークを介した通信に使用できます。 UDSは、WebSocketバックエンドがサーバーと同じマシンに存在する場合にのみ使用できます。', '[セキュリティ] WebSocketバックエンドが同じマシン上で実行される場合、UDSが優先されます。 IPv4またはIPv6ソケットを使用する必要がある場合は、IPアドレスをlocalhostまたは127.0.0.1に設定して、WebSocketバックエンド 他のマシンからはアクセスできません。<br/>[パフォーマンス] Unixドメインソケットは、一般にIPv4またはIPv6ソケットよりも高いパフォーマンスを提供します。', 'IPv4またはIPV6アドレス：ポートまたはUDS：//パス', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.');
 
-$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to Python Web Server Gateway Interface executable.', '', '絶対パス', '');
+$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to LiteSpeed Python Web Server Gateway Interface executable (lswsgi).<br/><br/>This executable is created by compiling Python with LiteSpeed&#039;s WSGI LSAPI module.', '', '絶対パス', '');
+
+$_tipsdb['wsgiDefaults'] = new DAttrHelp("Python WSGI Default Settings", 'Default configurations for Python WSGI applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'このWebSocketバックエンドを使用するURIを指定します。 このURIへのトラフィックは、WebSocketのアップグレード要求が含まれている場合にのみWebSocketバックエンドに転送されます。<br/><br/>このアップグレード要求のないトラフィックは、このURIが属するコンテキストに自動的に転送されます。 このURIに対してContextが存在しない場合、LSWSはこのトラフィックを、$DOC_ROOT/URIの場所で静的コンテキストにアクセスしているものとして扱います。', '', 'URIは、プレーンURI（ &quot;/&quot;で始まる）またはPerlと互換性のある正規表現URI（ &quot;exp：&quot;で始まる）にすることができます。 プレーンURIが &quot;/&quot;で終わる場合、このWebSocketバックエンドはこのURIの下にすべてのサブURIを含みます。', 'WebSocketプロキシをコンテキストとともに使用すると、同じページでさまざまな種類のトラフィックをさまざまな方法で処理できるため、パフォーマンスが最適化されます。 WebSocketトラフィックをWebSocketバックエンドに送信し、LSWSがページの静的コンテンツまたはLSAPIコンテキストを提供できるように静的コンテキストを設定し、LSWSがPHPコンテンツ（両方ともLSSがWebSocketバックエンドより効率的に機能する）を提供できるようにします。');
 

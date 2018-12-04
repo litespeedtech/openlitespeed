@@ -7,6 +7,7 @@
 #define SSLCONNECTION_H
 #include <lsdef.h>
 #include <sslpp/hiocrypto.h>
+#include <openssl/ssl.h>
 
 typedef struct bio_st  BIO;
 typedef struct x509_st X509;
@@ -37,13 +38,19 @@ public:
         LAST_WRITE = 8
     };
 
+    enum
+    {
+        F_HANDSHAKE_DONE    = 1,
+        F_DISABLE_HTTP2     = 2,
+    };
+
     char wantRead() const   {   return m_iWant & READ;  }
     char wantWrite() const  {   return m_iWant & WRITE; }
     char lastRead() const   {   return m_iWant & LAST_READ; }
     char lastWrite() const  {   return m_iWant & LAST_WRITE; }
 
-    char getFlag() const    {   return m_iFlag;     }
-    void setFlag(int flag) {   m_iFlag = flag;     }
+    bool getFlag(int v) const   {   return m_flag & v;     }
+    void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
 
     SslConnection();
     ~SslConnection();
@@ -102,7 +109,8 @@ public:
     int updateOnGotCert();
 
     static void initConnIdx();
-    static int getConnIdx()         {   return s_iConnIdx;   }
+    static SslConnection *get(const SSL *ssl)
+    {   return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);   }
 
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
@@ -119,7 +127,7 @@ private:
     SslClientSessCache *m_pSessCache;
     char    m_iStatus;
     char    m_iWant;
-    char    m_iFlag;
+    char    m_flag;
     char    m_iUseRbio;
     static int32_t s_iConnIdx;
 

@@ -23,6 +23,18 @@
 
 #include <sys/types.h>
 
+
+#define EXTAPP_AUTOSTART_OFF        0
+#define EXTAPP_AUTOSTART_NORMAL     1
+#define EXTAPP_AUTOSTART_CGID       2
+#define EXTAPP_AUTOSTART_ASYNC_CGID 3
+
+#define EXTAPP_RUNONSTART_OFF       0
+#define EXTAPP_RUNONSTART_ON        1
+#define EXTAPP_RUNONSTART_DAEMON    2
+
+
+
 class HttpVHost;
 class GSockAddr;
 class XmlNode;
@@ -38,6 +50,7 @@ class ExtWorkerConfig
     int         m_iBuffering;
 
     short       m_iKeepAlive;
+    short       m_iDetached;
     int         m_iMaxIdleTime;
     int         m_iKeepAliveTimeout;
 
@@ -105,6 +118,11 @@ public:
 
     void setPersistConn(int keepAlive) {  m_iKeepAlive = keepAlive;   }
     short isPersistConn() const          {   return m_iKeepAlive;       }
+    
+    void setDetached(int v) {  m_iDetached = v;   }
+    short isDetached() const          {   return m_iDetached;       }
+    
+    
 
     void setKeepAliveTimeout(int to)  {   m_iKeepAliveTimeout = to;   }
     int  getKeepAliveTimeout() const    {   return m_iKeepAliveTimeout; }

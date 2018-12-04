@@ -294,6 +294,15 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
 {
     HioStream::reset(DateTime::s_curTime);
     setfd(fd);
+    if (pInfo)
+    {
+        LS_DBG_L("NtwkIOLink::setLink called pInfo is m_pClientInfo %p,  "
+                    "m_pCrypto %p, m_pServerAddrInfo %p, m_remotePort %d",
+                    pInfo->m_pClientInfo,
+                    pInfo->m_pCrypto,
+                    pInfo->m_pServerAddrInfo,
+                    pInfo->m_remotePort);
+    }
     setConnInfo(pInfo);
     setState(HIOS_CONNECTED);
     setHandler(NULL);

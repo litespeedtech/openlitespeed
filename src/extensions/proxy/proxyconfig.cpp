@@ -27,6 +27,6 @@ ProxyConfig::~ProxyConfig()
 
 
 ProxyConfig::ProxyConfig(const char *pName)
-    : ExtWorkerConfig(pName)
+    : LocalWorkerConfig(pName)
     , m_iSsl(0)
 {}

@@ -90,6 +90,7 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
     CgidWorker::setCgidWorker(this);
     config.addEnv("PATH=/bin:/usr/bin:/usr/local/bin");
     config.addEnv(NULL);
+    srand(time(NULL));
 
     char *p = achSocket;
     int i, n;

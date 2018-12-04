@@ -641,7 +641,7 @@ class CValidation
 
     protected function chkAttr_addr($attr, $node)
     {
-        if (preg_match("/^[[:alnum:]._-]+:(\d)+$/", $node->Get(CNode::FLD_VAL))) {
+        if (preg_match("/^([[:alnum:]._-]+|\[[[:xdigit:]:]+\]):(\d)+$/", $node->Get(CNode::FLD_VAL))) {
             return 1;
         } elseif (preg_match("/^UDS:\/\/.+/i", $node->Get(CNode::FLD_VAL))) {
             return 1;
@@ -653,7 +653,7 @@ class CValidation
 
     protected function chkAttr_wsaddr($attr, $node)
     {
-        if (preg_match("/^((http|https):\/\/)?[[:alnum:]._-]+(:\d+)?$/", $node->Get(CNode::FLD_VAL))) {
+        if (preg_match("/^((http|https):\/\/)?([[:alnum:]._-]+|\[[[:xdigit:]:]+\])(:\d+)?$/", $node->Get(CNode::FLD_VAL))) {
             return 1;
         } else {
             $node->SetErr('invalid address: correct syntax is "[http|https://]IPV4|IPV6_address[:port]". ');

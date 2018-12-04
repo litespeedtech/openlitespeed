@@ -295,7 +295,7 @@ class DTblDefBase
             'ctx_uri'      => self::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
             'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust'),
             'ctx_shandler' => self::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
-            'appserverEnv' => self::NewSelAttr('envType', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
+            'appserverEnv' => self::NewSelAttr('appserverEnv', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
             'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
             'enableIpGeo'  => self::NewBoolAttr('enableIpGeo', DMsg::ALbl('l_enableipgeo')),
             'note'         => self::NewTextAreaAttr('note', DMsg::ALbl('l_notes'), 'cust', true, 4, null, 0),
@@ -734,9 +734,7 @@ class DTblDefBase
     protected function add_S_RAILS($id)
     {
         $attrs = array(
-            self::NewPathAttr('rubyBin', DMsg::ALbl('l_rubybin'), 'file', 1, 'x'),
-            self::NewPathAttr('wsgiBin', DMsg::ALbl('l_wsgibin'), 'file', 1, 'x'),
-            self::NewPathAttr('nodeBin', DMsg::ALbl('l_nodebin'), 'file', 1, 'x'),
+            self::NewPathAttr('binPath', DMsg::ALbl('l_rubybin'), 'file', 1, 'x', true, 'rubyBin'),
             $this->_attrs['appserverEnv'],
             $this->_attrs['ext_maxConns'],
             $this->_attrs['ext_env'],
@@ -753,7 +751,53 @@ class DTblDefBase
             $this->_attrs['procSoftLimit'],
             $this->_attrs['procHardLimit']
         );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_railssettings'), $attrs, 'railsDefault');
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_railssettings'), $attrs, 'railsDefaults');
+    }
+
+    protected function add_S_WSGI($id)
+    {
+        $attrs = array(
+            self::NewPathAttr('binPath', DMsg::ALbl('l_wsgibin'), 'file', 1, 'x', true, 'wsgiBin'),
+            $this->_attrs['appserverEnv'],
+            $this->_attrs['ext_maxConns'],
+            $this->_attrs['ext_env'],
+            $this->_attrs['ext_initTimeout'],
+            $this->_attrs['ext_retryTimeout'],
+            $this->_attrs['pcKeepAliveTimeout'],
+            $this->_attrs['ext_respBuffer'],
+            $this->_attrs['ext_backlog'],
+            $this->_attrs['ext_runOnStartUp'],
+            self::NewIntAttr('extMaxIdleTime', DMsg::ALbl('l_maxidletime'), true, -1),
+            $this->_attrs['priority']->dup(null, null, 'extAppPriority'),
+            $this->_attrs['memSoftLimit'],
+            $this->_attrs['memHardLimit'],
+            $this->_attrs['procSoftLimit'],
+            $this->_attrs['procHardLimit']
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_wsgisettings'), $attrs, 'wsgiDefaults');
+    }
+
+    protected function add_S_NODEJS($id)
+    {
+        $attrs = array(
+            self::NewPathAttr('binPath', DMsg::ALbl('l_nodebin'), 'file', 1, 'x', true, 'nodeBin'),
+            $this->_attrs['appserverEnv'],
+            $this->_attrs['ext_maxConns'],
+            $this->_attrs['ext_env'],
+            $this->_attrs['ext_initTimeout'],
+            $this->_attrs['ext_retryTimeout'],
+            $this->_attrs['pcKeepAliveTimeout'],
+            $this->_attrs['ext_respBuffer'],
+            $this->_attrs['ext_backlog'],
+            $this->_attrs['ext_runOnStartUp'],
+            self::NewIntAttr('extMaxIdleTime', DMsg::ALbl('l_maxidletime'), true, -1),
+            $this->_attrs['priority']->dup(null, null, 'extAppPriority'),
+            $this->_attrs['memSoftLimit'],
+            $this->_attrs['memHardLimit'],
+            $this->_attrs['procSoftLimit'],
+            $this->_attrs['procHardLimit']
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_nodesettings'), $attrs, 'nodeDefaults');
     }
 
     protected function add_V_TOP($id)

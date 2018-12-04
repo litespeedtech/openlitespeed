@@ -22,7 +22,7 @@
 #include <sslpp/sslsesscache.h>
 
 ProxyWorker::ProxyWorker(const char *pName)
-    : ExtWorker(HandlerType::HT_PROXY)
+    : LocalWorker(HandlerType::HT_PROXY)
     , m_pSslClientSessCache(NULL)
 {
     setConfigPointer(new ProxyConfig(pName));
@@ -55,3 +55,10 @@ SslClientSessCache *ProxyWorker::getSslSessCache()
     return m_pSslClientSessCache;
 }
 
+int ProxyWorker::startEx()
+{
+   int ret = 1;
+   if ((getConfig().getURL()) && (getConfig().getCommand()))
+       ret = startWorker();
+   return ret;
+}

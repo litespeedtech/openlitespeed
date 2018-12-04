@@ -631,6 +631,7 @@ int H2Connection::processRstFrame(H2FrameHeader *pHeader)
     LS_DBG_L(getLogSession(), "StreamID:%d processRstFrame, error code: %d",
              streamID, errorCode);
     pH2Stream->setFlag(HIO_FLAG_PEER_RESET, 1);
+    pH2Stream->onPeerClose();
     recycleStream(streamID);
     return 0;
 }
@@ -662,9 +663,10 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
         LS_DBG_L(getLogSession(), "stream: %p, isPeerShutdown: %d ",
                  pH2Stream, pH2Stream ? pH2Stream->isPeerShutdown() : 0);
         skipRemainData();
-        //resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
-        doGoAway(H2_ERROR_STREAM_CLOSED);
-        return LS_FAIL;
+        resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
+        return 0;
+        //doGoAway(H2_ERROR_STREAM_CLOSED);
+        //return LS_FAIL;
     }
 
     uint8_t padLen = 0;
@@ -1112,6 +1114,7 @@ int H2Connection::h2cUpgrade(HioHandler *pSession)
     uint32_t uiStreamID = 1;  //Through upgrade h2c, it is 1.
     m_mapStream.insert((void *)(long)uiStreamID, pStream);
     pStream->init(uiStreamID, this, pSession);
+    pStream->setConnInfo(getStream()->getConnInfo());
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     int flag = HIO_FLAG_FLOWCTRL;
     if (!(m_iFlag & H2_CONN_FLAG_NO_PUSH))
@@ -1645,6 +1648,7 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
     pStream->init(pushStreamId, this, pSession, NULL);
+    pStream->setConnInfo(getStream()->getConnInfo());
     pStream->setPriority(HIO_PRIORITY_PUSH);
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     pStream->setFlag(HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_FLOWCTRL | HIO_FLAG_INIT_PUSH

@@ -21,7 +21,8 @@
 #include <lsdef.h>
 #include <sys/types.h>
 #include <stddef.h>
-class AutoStr;
+#include <util/autostr.h>
+
 class ConfigCtx;
 class LocalWorkerConfig;
 class LocalWorker;
@@ -30,34 +31,34 @@ class HttpVHost;
 class RLimits;
 class XmlNode;
 
-class RailsAppConfig
+
+
+class AppConfig
 {
-private:
-    static AutoStr      s_railsRunner;
-    static int          s_iRailsEnv;
-    static LocalWorkerConfig *s_pRailsDefault;
-    static int s_iRubyProcLimit;
-    static int s_iRailsAppLimit;
-    RailsAppConfig() {}
-    ~RailsAppConfig() {}
 public:
-    static int getRailsEnv()  { return s_iRailsEnv;}
-    static const LocalWorkerConfig *getpRailsDefault()  { return s_pRailsDefault; }
-    static LocalWorker *newRailsApp(HttpVHost *pvhost, const char *pAppName,
-                                    const char *pName,
-                                    const char *appPath, int maxConns, const char *pRailsEnv, int maxIdle,
-                                    const Env *pEnv,
-                                    int runOnStart, const char *pRubyPath = NULL);
-    static int configRailsRunner(char *pRunnerCmd, int cmdLen,
-                                 const char *pRubyBin);
-    static int loadRailsDefault(const XmlNode *pNode);
+    AutoStr      s_binPath;
 
-    static void setRubyProcLimit(int val)   {   s_iRubyProcLimit = val;     }
-    static int getRubyProcLimit()           {   return s_iRubyProcLimit;    }
+private:
+    int          s_iAppEnv;
+    LocalWorkerConfig *s_pAppDefault;
 
-    static void setRailsAppLimit(int val)   {   s_iRailsAppLimit = val;     }
-    static int getRailsAppLimit()           {   return s_iRailsAppLimit;    }
-    LS_NO_COPY_ASSIGN(RailsAppConfig);
+    AppConfig()
+    {
+        s_iAppEnv = 1;
+        s_pAppDefault = NULL;
+    }
+
+    ~AppConfig() {}
+public:
+    int getAppEnv()  { return s_iAppEnv;}
+    const LocalWorkerConfig *getpAppDefault()  { return s_pAppDefault; }
+    int loadAppDefault(const XmlNode *pNode);
+
+    static AppConfig s_rubyAppConfig;
+    static AppConfig s_wsgiAppConfig;
+    static AppConfig s_nodeAppConfig;
+
+    LS_NO_COPY_ASSIGN(AppConfig);
 };
 
 #endif // RAILSAPPCONFIG_H

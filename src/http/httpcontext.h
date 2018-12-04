@@ -126,9 +126,12 @@ class HttpHeaderOps;
 #define BIT_F_XBIT_HACK_ON      (1<<6)
 #define BIT_F_XBIT_HACK_FULL    (1<<7)
 
-#define BIT_F_RAILS_CONTEXT     (1<<11)
+#define BIT_F_IPTOLOC_ON        (1<<12)
 
-#define BIT_F_IPTOLOC_ON        (1<<16)
+#define BIT_F_RAILS_CTX         (1<<16)
+#define BIT_F_PYTHON_CTX        (1<<17)
+#define BIT_F_NODEJS_CTX        (1<<18)
+
 
 #define BIT2_INCLUDES           (1<<4)
 #define BIT2_INCLUDES_NOEXEC    (1<<5)
@@ -390,8 +393,17 @@ public:
     const MimeSetting *lookupMimeSetting(char *pValue) const;
     const MimeSetting *lookupMimeSetting(char *pValue, int forceAddMIME);
 
-    void setRailsContext()          {   setFeaturesBit(BIT_F_RAILS_CONTEXT, 1);   }
-    uint32_t isRailsContext() const {   return m_iFeatures & BIT_F_RAILS_CONTEXT; }
+    void setRailsContext()          {   m_iFeatures |= BIT_F_RAILS_CTX;   }
+    uint32_t isRailsContext() const {   return m_iFeatures & BIT_F_RAILS_CTX;   }
+
+    void setPythonContext()          {   m_iFeatures |= BIT_F_PYTHON_CTX;   }
+    uint32_t isPythonContext() const {   return m_iFeatures & BIT_F_PYTHON_CTX;   }
+
+    void setNodejsContext()          {   m_iFeatures |= BIT_F_NODEJS_CTX;   }
+    uint32_t isNodejsContext() const {   return m_iFeatures & BIT_F_NODEJS_CTX;   }
+
+    uint32_t isAppContext() const
+    {   return m_iFeatures & (BIT_F_PYTHON_CTX | BIT_F_RAILS_CTX | BIT_F_NODEJS_CTX);   }
 
     const AutoStr2 *getRewriteBase() const
     {   return (m_pRewriteBase) ? m_pRewriteBase : &m_sContextURI;  }
@@ -475,7 +487,7 @@ public:
     {   return m_pInternal->m_pHeaderOps;     }
 
     const GSockAddr *getWebSockAddr() const { return &m_pInternal->m_GSockAddr;   }
-    void setWebSockAddr(GSockAddr &gsockAddr);
+    void setWebSockAddr(const GSockAddr &gsockAddr);
 
     void setGeoIP(int a)
     {

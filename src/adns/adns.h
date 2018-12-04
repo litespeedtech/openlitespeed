@@ -91,7 +91,7 @@ public:
     const char *getHostByAddrInCache( const struct sockaddr * pAddr, int &length );
     AdnsReq *getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_pf cb );
     
-    static int setResult(struct sockaddr *result, const void *ip, int len);
+    static int setResult(const struct sockaddr *result, const void *ip, int len);
     static void release(AdnsReq *pReq);
     
 

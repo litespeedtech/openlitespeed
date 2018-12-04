@@ -30,7 +30,7 @@ SslConnection::SslConnection()
     , m_pSessCache(NULL)
     , m_iStatus(DISCONNECTED)
     , m_iWant(0)
-    , m_iFlag(0)
+    , m_flag(0)
     , m_iUseRbio(0)
     , m_rbioBuf(NULL)
     , m_rbioBuffered(0)
@@ -52,7 +52,7 @@ void SslConnection::setSSL(SSL *ssl)
     assert(!m_ssl);
     //m_iWant = 0;
     m_ssl = ssl;
-    m_iFlag = 0;
+    m_flag = 0;
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
 

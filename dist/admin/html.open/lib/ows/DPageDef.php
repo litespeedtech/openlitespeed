@@ -60,6 +60,8 @@ class DPageDef
 			new DTblMap(['extProcessorList:*extProcessor', '*extprocessor$name' ], 'A_EXT_SEL'),
 			new DTblMap(['scriptHandlerList', 'scripthandler' ], new DTblMap(['*scriptHandler', '*addsuffix$suffix' ], 'A_SCRIPT')),
 			new DTblMap('railsDefaults', 'S_RAILS'),
+            new DTblMap('wsgiDefaults', 'S_WSGI'),
+            new DTblMap('nodeDefaults', 'S_NODEJS'),
 			new DTblMap(['moduleList:*module', '*module$name' ], 'S_MOD'),
 			new DTblMap(['virtualHostList:*virtualHost', '*virtualhost$name' ], 'V_TOPD'),
 			new DTblMap(['listenerList:*listener', '*listener$name' ], ['L_GENERAL',
@@ -216,8 +218,11 @@ class DPageDef
 		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
 		$this->_pageDef['serv'][$id] = $page;
 
-		$id = 'rails';
-		$page = new DPage($id, DMsg::UIStr('tab_rails'), new DTblMap('railsDefaults', 'S_RAILS'));
+		$id = 'appserver';
+		$page = new DPage($id, DMsg::UIStr('tab_rails'), new DTblMap('',
+                [new DTblMap('railsDefaults', 'S_RAILS'),
+                new DTblMap('wsgiDefaults', 'S_WSGI'),
+                new DTblMap('nodeDefaults', 'S_NODEJS')]));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'mod';

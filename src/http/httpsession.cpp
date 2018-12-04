@@ -136,7 +136,10 @@ int HttpSession::onInitConnected()
     }
     else
         m_request.setCrypto(NULL);
+    assert(pInfo->m_pServerAddrInfo);
     setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
+
+    assert(pInfo->m_pClientInfo);
     setClientInfo(pInfo->m_pClientInfo);
     m_iRemotePort = pInfo->m_remotePort;
     m_iFlag = 0;
@@ -1665,6 +1668,22 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     if (pHandler == NULL)
         return SC_403;
 
+    const HttpVHost *pVHost = m_request.getVHost();
+     if (m_request.getContext()
+        && m_request.getContext()->isAppContext())
+    {
+        if (m_request.getStatusCode() == SC_404)
+        {
+            m_request.setStatusCode(SC_200);
+            setFlag(HSF_REQ_WAIT_FULL_BODY);
+            m_request.clearContextState(REWRITE_PERDIR);
+            if (m_request.getContext()->isNodejsContext())
+                m_request.clearRedirects();
+            else
+                m_request.fixRailsPathInfo();
+        }
+    }
+
     int type = pHandler->getType();
     if ((type >= HandlerType::HT_DYNAMIC) &&
         (type != HandlerType::HT_PROXY))
@@ -2705,7 +2724,7 @@ int HttpSession::setupGzipFilter()
     {
         if (!hkptNogzip)
         {
-            if (!m_pRespBodyBuf->empty())
+            if (m_pRespBodyBuf && !m_pRespBodyBuf->empty())
                 m_pRespBodyBuf->rewindWriteBuf();
             if (m_response.getContentLen() > 200)
                 if (setupGzipBuf() == -1)

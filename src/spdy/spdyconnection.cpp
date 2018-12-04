@@ -391,8 +391,10 @@ int SpdyConnection::processRstFrame(SpdyFrameHeader *pHeader)
     if (it == m_mapStream.end())
         return 0;
     SpdyStream *pSpdyStream = it.second();
+    uint32_t id = pSpdyStream->getStreamID();
     pSpdyStream->setFlag(HIO_FLAG_PEER_RESET, 1);
-    recycleStream(it);
+    pSpdyStream->onPeerClose();
+    recycleStream(id);
 
     return 0;
 }
@@ -509,6 +511,7 @@ int SpdyConnection::processSynStreamFrame(SpdyFrameHeader *pHeader)
     {
         appendReqHeaders(pStream, headerCount);
         pStream->onInitConnected();
+        pStream->setConnInfo(getStream()->getConnInfo());
         if (pStream->getState() != HIOS_CONNECTED)
             recycleStream(pStream->getStreamID());
     }
