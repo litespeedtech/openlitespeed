@@ -732,7 +732,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
         index = begin->name_index;
         if (index == UPK_HDR_UNKNOWN)
             index = HttpHeader::getIndex(name);
-        if (index > 0 && index != HttpHeader::H_HEADER_END)
+        if (index >= 0 && index != HttpHeader::H_HEADER_END)
         {
             m_commonHeaderLen[ index ] = begin->val_len;
             m_commonHeaderOffset[index] = value - m_headerBuf.begin();
