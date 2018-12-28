@@ -60,6 +60,8 @@ $_tipsdb['SSLStrongDhKey'] = new DAttrHelp("SSL強力なDHキー", 'SSLハンド
 
 $_tipsdb['URI_MAP'] = new DAttrHelp("フック::URI_MAP プライオリティ", 'このモジュールコールバックの優先度をHTTP URIマップフック内で設定します。<br/>  HTTP URI マップフックは、WebサーバーがURI要求をコンテキストにマップするときにトリガーされます。 <br/><br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
 
+$_tipsdb['VHlsrecaptcha'] = new DAttrHelp("reCaptcha Protection", 'reCaptcha Protection is a service provided as a way to mitigate heavy server load. reCaptcha Protection will activate after one of the below situations is hit. Once active, all requests by NON TRUSTED(as configured) clients will be redirected to a reCAPTCHA validation page. After validation, the client will be redirected to their desired page.<br/><br/>The following situations will activate reCaptcha Protection:<br/>1. The server or vhost concurrent requests count passes the configured connection limit.<br/>2. Anti-DDoS is enabled and a client is hitting a url in a suspicious manner. The client will redirect to reCAPTCHA first instead of getting denied when triggered.<br/>3. WP Brute Force protection is enabled and action is set to &#039;Captcha or Drop’. When a brute force attack is detected, the client will redirect to reCAPTCHA first. After max tries is reached, the connection will be dropped, as per the ‘drop’ option.<br/>4. A new rewrite rule environment is provided to activate reCAPTCHA via RewriteRules. &#039;verifycaptcha&#039; can be set to redirect clients to reCAPTCHA. A special value &#039;: deny&#039; can be set to deny the client if it failed too many times. For example, [E=verifycaptcha] will always redirect to reCAPTCHA until verified. [E=verifycaptcha: deny] will redirect to reCAPTCHA until Max Tries is hit, after which the client will be denied.', '', '', '');
+
 $_tipsdb['WORKER_ATEXIT'] = new DAttrHelp("フック::WORKER_ATEXIT プライオリティ", 'このモジュールコールバックの優先度を、終了時のワーカーのフック内で設定します。 <br/><br/>退出時のワーカーは、退出する直前のワーカープロセスによってトリガされます。 これは、ワーカーによって呼び出される最後のフックポイントです。   <br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
 
 $_tipsdb['WORKER_POSTFORK'] = new DAttrHelp("フック::WORKER_POSTFORK プライオリティ", 'Worker Postfork Hook内のこのモジュールコールバックの優先度を設定します。 <br/><br/>Worker Postfork Hookは、メイン（コントローラ）プロセスによって作成された後、ワーカープロセスによってトリガされます。 対応するMain Postfork Hookは、このコールバックの前または後のメインプロセスによって呼び出されることに注意してください。ck.   <br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
@@ -209,6 +211,8 @@ $_tipsdb['enableExpires'] = new DAttrHelp("有効期限を有効にする", '静
 $_tipsdb['enableGzipCompress'] = new DAttrHelp("圧縮を有効にする", '静的HTTP応答と動的HTTP応答の両方のGZIP圧縮を制御します。', '[パフォーマンス]ネットワーク帯域幅を節約するために有効にします。 html、css、およびjavascriptファイルなどのテキストベースの応答が最大の利益をもたらし、平均で元のサイズの半分に圧縮できます。', 'ラジオボックスから選択', '');
 
 $_tipsdb['enableIpGeo'] = new DAttrHelp("IPジオロケーションを有効にする", ' IPジオロケーション検索を有効/無効にするかどうかを指定します。 サーバ、バーチャルホスト、コンテキストレベルで設定できます。 値 「未設定」を使用すると、IPジオロケーションはデフォルトで無効になります。', '', 'ラジオボックスから選択', '');
+
+$_tipsdb['enableRecaptcha'] = new DAttrHelp("Enable reCAPTCHA", 'Enable the reCaptcha Protection feature at the current level. This setting must be set to Yes the the Server level before the reCaptcha Protection feature can be used.<br/><br/>Default values:<br/><b>Server-level:</b> Yes<br/><b>VH-Level:</b> Inherit Server level setting', '', 'ラジオボックスから選択', '');
 
 $_tipsdb['enableRewrite'] = new DAttrHelp("Rewriteを有効にする", 'LiteSpeedのURL書き換えエンジンを有効にするかどうかを指定します。 このオプションは、バーチャルホストまたはコンテキストレベルでカスタマイズでき、明示的に上書きされるまでディレクトリツリーに沿って継承されます。', '', 'ラジオボックスから選択', '');
 
@@ -382,6 +386,8 @@ $_tipsdb['lsapiContext'] = new DAttrHelp("LiteSpeed SAPIコンテキスト", '�
 
 $_tipsdb['lsapiapp'] = new DAttrHelp("LiteSpeed SAPIアプリ", 'このコンテキストに接続するLiteSpeed SAPIアプリケーションの名前を指定します。 このアプリケーションは、サーバーまたはバーチャルホストレベルの&quot;外部アプリケーション&quot;セクションで定義する必要があります。', '', '選択', '');
 
+$_tipsdb['lsrecaptcha'] = new DAttrHelp("reCaptcha Protection", 'reCaptcha Protection is a service provided as a way to mitigate heavy server load. reCaptcha Protection will activate after one of the below situations is hit. Once active, all requests by NON TRUSTED(as configured) clients will be redirected to a reCAPTCHA validation page. After validation, the client will be redirected to their desired page.<br/><br/>The following situations will activate reCaptcha Protection:<br/>1. The server or vhost concurrent requests count passes the configured connection limit.<br/>2. Anti-DDoS is enabled and a client is hitting a url in a suspicious manner. The client will redirect to reCAPTCHA first instead of getting denied when triggered.<br/>3. WP Brute Force protection is enabled and action is set to &#039;Captcha or Drop’. When a brute force attack is detected, the client will redirect to reCAPTCHA first. After max tries is reached, the connection will be dropped, as per the ‘drop’ option.<br/>4. A new rewrite rule environment is provided to activate reCAPTCHA via RewriteRules. &#039;verifycaptcha&#039; can be set to redirect clients to reCAPTCHA. A special value &#039;: deny&#039; can be set to deny the client if it failed too many times. For example, [E=verifycaptcha] will always redirect to reCAPTCHA until verified. [E=verifycaptcha: deny] will redirect to reCAPTCHA until Max Tries is hit, after which the client will be denied.', '', '', '');
+
 $_tipsdb['lstatus'] = new DAttrHelp("ステータス - リスナー", 'このリスナーの現在のステータス。 ステータスはRunningかErrorのいずれかです。', 'リスナーがError状態にある場合は、サーバーログを表示して理由を調べることができます。', '', '');
 
 $_tipsdb['mappedListeners'] = new DAttrHelp("マッピングされたリスナー", 'このテンプレートがマップするすべてのリスナーの名前を指定します。 このテンプレートのメンバーバーチャルホストのリスナー/バーチャルホストマッピングが、このフィールドで指定されたリスナーに追加されます。 このマッピングは、メンババーチャルホストの個々の設定で設定されたドメイン名とエイリアスに基づいて、リスナをバーチャルホストにマッピングします。', '', 'カンマ区切りリスト', '');
@@ -485,6 +491,22 @@ $_tipsdb['realmName'] = new DAttrHelp("レルム名", '認可レルムの一意�
 $_tipsdb['realms'] = new DAttrHelp("認可レルム", 'このバーチャルホストのすべての許可レルムをリストします。 認可レルムは、権限のないユーザーが保護されたWebページにアクセスするのをブロックするために使用されます。 レルムは、オプションのグループ分類を持つユーザー名とパスワードを含むユーザーディレクトリです。 認可は、コンテキスト・レベルで実行されます。 異なるコンテキストは同じレルム（ユーザデータベース）を共有できるため、レルムはそれらを使用するコンテキストとは別に定義されます。 コンテキスト設定では、これらの名前でレルムを参照できます。', '', '', '');
 
 $_tipsdb['realtimerpt'] = new DAttrHelp("リアルタイム統計", 'リアルタイム統計のリンクは、リアルタイムのサーバステータスレポートを含むページにつながります。 これは、システムを監視するのに便利なツールです。 <br/><br/>このレポートには、サーバー統計のスナップショットが表示されます。 このスナップショットのリフレッシュレートは、右上隅のリフレッシュインターバルドロップダウンリストによって制御されます。<br/><br/>このレポートには、次のセクションが含まれています： <ul><li>サーバーの正常性は、基本的なサーバーの統計情報、稼働時間、負荷、および阻止されたDDoS阻止IPを示します。</li>   <li>現在のトラフィックのスループット、接続、およびリクエストの統計情報を表示します。</li>  <li>バーチャルホストは、各バーチャルホストの要求処理状況と外部アプリケーションの状態を表示します</li>  <li>外部アプリケーションは、現在実行中の外部アプリケーションとその使用状況の統計情報を表示します。   CGIデーモンプロセスlscgidは、常に外部アプリケーションとして実行されます。</li> </ul><br/><br/>リアルタイム統計の行の多くにグラフアイコンがあります。 このアイコンをクリックすると、その行の統計がリアルタイムで更新されたグラフが開きます。<br/><br/>「サーバー」セクションの「要求」の横に、「詳細」というラベルの付いたリンクがあります。 このリンクをクリックすると、Requests Snapshotが表示されます。ここでは、どのクライアントが特定の種類のリクエストを行っているのか、サイトのどの部分がボトルネックになっているのかを詳しく見ることができます。 青色の領域のフィールドを使用すると、スナップショットをフィルタリングしてサーバーの特定の部分を分離したり、特定の処理を実行しているクライアントを探すことができます。', '', '', '');
+
+$_tipsdb['recaptchaAllowedRobotHits'] = new DAttrHelp("Allowed Robot Hits", 'Number of hits per 10 seconds to allow ‘good bots’ to pass. Bots will still be throttled when the server is under load.<br/><br/>Default value is 3.', '', '整数', '');
+
+$_tipsdb['recaptchaBotWhiteList'] = new DAttrHelp("Bot White List", 'List of custom user agents to allow access. Will be subject to the ‘good bots’ limitations, including allowedRobotHits.', '', 'List of user agents, one per line. Regex is supported.', '');
+
+$_tipsdb['recaptchaMaxTries'] = new DAttrHelp("Max Tries", 'Max Tries specifies the maximum number of reCAPTCHA attempts permitted before denying the visitor.<br/><br/>Default value is 3.', '', '整数', '');
+
+$_tipsdb['recaptchaRegConnLimit'] = new DAttrHelp("Non-SSL Connection Limit", 'The number of concurrent regular(non-ssl) connections to activate reCAPTCHA. reCAPTCHA will be used until the concurrent connections drop below this number.<br/><br/>Default value is 15000.', '', '整数', '');
+
+$_tipsdb['recaptchaSecretKey'] = new DAttrHelp("Secret Key", 'The secret key is the private key provided by Google via its reCAPTCHA service. A default Secret Key will be used if not set.', '', '', '');
+
+$_tipsdb['recaptchaSiteKey'] = new DAttrHelp("Site Key", 'The site key is the public key provided by Google via its reCAPTCHA service. A default Site Key will be used if not set.', '', '', '');
+
+$_tipsdb['recaptchaSslConnLimit'] = new DAttrHelp("SSL Connection Limit", 'The number of concurrent SSL connections to activate reCAPTCHA. reCAPTCHA will be used until the concurrent connections drop below this number.<br/><br/>Default value is 10000.', '', '整数', '');
+
+$_tipsdb['recaptchaType'] = new DAttrHelp("reCAPTCHA Type", 'Specify the reCAPTCHA type to use with the key pairs. If a key pair has not been provided and this setting is set to Not Set, a default key pair of type Invisible will be used.<br/>Checkbox will display a checkbox reCAPTCHA for the visitor to validate.<br/>Invisible will attempt to validate the reCAPTCHA automatically and if successful, will redirect to the desired page.<br/><br/>Default value is Invisible.', '', 'ドロップダウンリストから選択', '');
 
 $_tipsdb['redirectContext'] = new DAttrHelp("リダイレクトコンテキスト", 'リダイレクトコンテキストは、1つのURIまたはURIのグループを別の場所に転送するために使用できます。 宛先URIは、同じWebサイト（内部リダイレクト）または別のWebサイトを指す絶対URI（外部リダイレクト）のいずれかにすることができます。', '', '', '');
 
@@ -729,6 +751,8 @@ $_tipsdb['EDTP:enableDynGzipCompress'] = array('動的GZIP圧縮コントロー�
 
 $_tipsdb['EDTP:enableExpires'] = array('Expiresは、Server / Virtual Host / Contextレベルで設定できます。 低いレベルの設定は、高いレベルの設定を上書きします。 上書き優先度の観点から： <br><br> コンテキストレベル > バーチャルホストレベル > サーバーレベル <br><br>');
 
+$_tipsdb['EDTP:enableRecaptcha'] = array('When this setting is set to {val}Yes{/} at the Server level, reCaptcha Protection can still be disabled at the Virtual Host level.');
+
 $_tipsdb['EDTP:errURL'] = array('さまざまなエラーコードに対してカスタムエラーページを設定できます。');
 
 $_tipsdb['EDTP:expiresByType'] = array('タイプ別の期限のデフォルト設定を上書きします。 各エントリは、&quot;MIME-type=A|Mseconds&quot;の形式であり、間にスペースはありません。 カンマで区切って複数のエントリを入力できます。');
@@ -794,6 +818,22 @@ $_tipsdb['EDTP:proxyWebServer'] = array('プロキシコンテキストは、こ
 $_tipsdb['EDTP:realm'] = array('コンテキストは、バーチャルホストセキュリティセクションで設定されている定義済みのレルムで保護することができます。 必要に応じて、代替名と追加要件を指定することができます。');
 
 $_tipsdb['EDTP:realmName'] = array('ここであなたのHT Accessレルムを定義します。これはコンテキストに使用できます。');
+
+$_tipsdb['EDTP:recaptchaAllowedRobotHits'] = array('');
+
+$_tipsdb['EDTP:recaptchaBotWhiteList'] = array('');
+
+$_tipsdb['EDTP:recaptchaMaxTries'] = array('');
+
+$_tipsdb['EDTP:recaptchaRegConnLimit'] = array('');
+
+$_tipsdb['EDTP:recaptchaSecretKey'] = array('');
+
+$_tipsdb['EDTP:recaptchaSiteKey'] = array('The server level site/secret key pair must be configured to skip domain checking if the server manages multiple domains. Otherwise, the reCAPTCHA verification will not work properly.');
+
+$_tipsdb['EDTP:recaptchaSslConnLimit'] = array('');
+
+$_tipsdb['EDTP:recaptchaType'] = array('');
 
 $_tipsdb['EDTP:restrained'] = array('共有ホスティング環境での拘束をオンにします。');
 

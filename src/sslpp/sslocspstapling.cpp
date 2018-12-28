@@ -229,8 +229,10 @@ int SslOcspStapling::update()
             releaseRespData();
             unlink(m_sRespfile.c_str());
         }
-        else if (m_RespTime != st.st_mtime)
+        else
         {
+            if (m_RespTime == st.st_mtime)
+                return 0;
             if (verifyRespFile(0) == LS_OK)
             {
                 m_RespTime = st.st_mtime;

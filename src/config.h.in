@@ -264,6 +264,9 @@
 /* Defined to compile with IP2Location included */
 #undef USE_IP2LOCATION
 
+/* will use openssl as ssl */
+#undef USE_OPENSSL
+
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #undef _LARGEFILE_SOURCE
 

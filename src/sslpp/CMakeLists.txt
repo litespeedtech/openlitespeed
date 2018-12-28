@@ -15,6 +15,7 @@ SET(sslpp_STAT_SRCS
    sslticket.cpp
    sslutil.cpp
    ocsp/ocsp.c
+   ls_fdbuf_bio.c
 )
 
 add_library(sslpp STATIC ${sslpp_STAT_SRCS})

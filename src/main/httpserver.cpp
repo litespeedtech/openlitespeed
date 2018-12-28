@@ -2257,10 +2257,14 @@ int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const XmlNode *pDir = *iter;
+            const char *val = pDir->getValue();
+            char achDir[MAX_PATH_LEN];
 
-            if (pDir->getValue())
-                if (pDeniedDir->addDir(pDir->getValue()) == 0)
+            if (val && ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achDir, val) == 0)
+            {
+                if (pDeniedDir->addDir(achDir) == 0)
                     add ++;
+            }
         }
     }
 
@@ -2465,9 +2469,11 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         }
 
 
+        // TODO: This is temporary code. Will implement in new year.
+        int useProxyHeader = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+                    "useIpInProxyHeader", 0, 3, 0);
         HttpServerConfig::getInstance().setUseProxyHeader(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 2, 0));
+            (useProxyHeader == 3 ? 2 : useProxyHeader));
 
         denyAccessFiles(NULL, ".ht*", 0);
 

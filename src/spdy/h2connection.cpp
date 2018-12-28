@@ -1419,11 +1419,17 @@ int H2Connection::timerRoutine()
     for (; it != m_mapStream.end();)
     {
         itn = m_mapStream.next(it);
-        it.second()->onTimer();
-        if (it.second()->getState() != HIOS_CONNECTED)
-            recycleStream(it);
-        else if (it.second()->isStuckOnRead())
-            ++stuckRead;
+        H2Stream *pStream = it.second();
+        int id = pStream->getStreamID();
+        if (pStream->onTimer() == 0)
+        {
+            if (pStream->getState() != HIOS_CONNECTED)
+                recycleStream(id);
+            else if (pStream->isStuckOnRead())
+                ++stuckRead;
+        }
+        else
+            recycleStream(id);
         it = itn;
     }
     if (m_mapStream.size() == 0)

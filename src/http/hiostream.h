@@ -124,7 +124,7 @@ public:
     virtual void suspendWrite() = 0;
     virtual void continueWrite() = 0;
     virtual void switchWriteToRead() = 0;
-    virtual void onTimer() = 0;
+    virtual int onTimer() = 0;
     virtual uint16_t getEvents() const = 0;
     virtual void suspendEventNotify()  {};
     virtual void resumeEventNotify()   {};

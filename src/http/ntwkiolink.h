@@ -333,7 +333,7 @@ public:
     //void setThrottleLimit( int limit )
     //{   m_baseIO.getThrottleCtrl().setLimit( limit );    }
 
-    void onTimer();
+    int onTimer();
     int isFromLocalAddr() const;
 
     //void stopThrottleTimer();

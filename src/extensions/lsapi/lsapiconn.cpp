@@ -1010,7 +1010,7 @@ void LsapiConn::cleanUp()
 }
 
 
-void LsapiConn::onTimer()
+int LsapiConn::onTimer()
 {
     if (m_respState && !getCPState()
         && (DateTime::s_curTime - m_lReqSentTime >= 3))
@@ -1021,7 +1021,7 @@ void LsapiConn::onTimer()
             getWorker()->addNewProcess();
         else
             connError(ETIMEDOUT);
-        return;
+        return 0;
     }
     /*    if ( m_lLastRespRecvTime )
         {
@@ -1055,7 +1055,7 @@ void LsapiConn::onTimer()
             }
         }*/
 
-    ExtConn::onTimer();
+    return ExtConn::onTimer();
 }
 
 

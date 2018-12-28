@@ -2148,7 +2148,10 @@ int HttpReq::checkPathInfo(const char *pURI, int iURILen, int &pathLen,
 
 void HttpReq::fixRailsPathInfo()
 {
-    setScriptNameLen(m_pContext->getParent()->getURILen() - 1);
+    m_iScriptNameLen = m_pContext->getParent()->getURILen() - 1;
+
+    ls_str_set(&m_pathInfo, (char *)getOrgURI() + m_iScriptNameLen,
+               getOrgReqURILen() - m_iScriptNameLen);
 }
 
 

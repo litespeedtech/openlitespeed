@@ -498,8 +498,7 @@ static int UriMapHook(lsi_param_t *rec)
     int arrCount = 2;
     if (chkReqBody)
     {
-        if(!g_api->is_req_body_finished(session))
-            g_api->set_req_wait_full_body(session);
+        g_api->set_req_wait_full_body(session);
         aEnableHkpt[arrCount ++] = LSI_HKPT_RCVD_REQ_BODY;
     }
     if (chkRespBody)

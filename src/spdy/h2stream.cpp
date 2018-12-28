@@ -164,10 +164,11 @@ void H2Stream:: continueWrite()
 }
 
 
-void H2Stream::onTimer()
+int H2Stream::onTimer()
 {
     if (getState() == HIOS_CONNECTED)
-        getHandler()->onTimerEx();
+        return getHandler()->onTimerEx();
+    return 0;
 }
 
 

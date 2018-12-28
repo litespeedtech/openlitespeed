@@ -1372,6 +1372,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
     m_response.reset();
     m_processState = HSPS_PROCESS_NEW_URI;
     m_iFlag &= ~HSF_URI_MAPPED;
+    //m_iState=0;
     return smProcessReq();
 }
 

@@ -744,7 +744,9 @@ int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
         if (!pThis->m_ssl.isConnected() || (last))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
+            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
+                && pThis->m_ssl.hasPendingIn())
+                return pThis->doRead();
             return 0;
         }
     }
@@ -887,7 +889,7 @@ static int matchToken(int token)
 }
 
 
-void NtwkIOLink::onTimer()
+int NtwkIOLink::onTimer()
 {
     if (matchToken(this->m_tmToken))
     {
@@ -908,12 +910,12 @@ void NtwkIOLink::onTimer()
         }
 
         if (detectClose())
-            return;
+            return 0;
         (*m_pFpList->m_onTimer_fp)(this);
         if (getState() == HIOS_CLOSING)
             onPeerClose();
-
     }
+    return 0;
 }
 
 
@@ -1419,7 +1421,9 @@ int NtwkIOLink::onReadSSL_T(NtwkIOLink *pThis)
         if (!pThis->m_ssl.isConnected() || (last))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
+            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
+                && pThis->m_ssl.hasPendingIn())
+                return pThis->doRead();
             return 0;
         }
     }

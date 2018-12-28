@@ -8,7 +8,6 @@ class CValidation
 
     public function __construct()
     {
-
     }
 
     public function ExtractPost($disp)
@@ -551,14 +550,16 @@ class CValidation
         }
 
         if ($attr->_minVal == 1) {
-            $err = 'only accept absolute path';
+            $err = 'only accept absolute path. ';
             return -1;
         } elseif ($attr->_minVal == 2) {
-            if (strncasecmp('$SERVER_ROOT', $path, 12) != 0) {
-                $err = 'only accept absolute path or path relative to $SERVER_ROOT' . $path;
+            if (strncasecmp('$SERVER_ROOT', $path, 12) == 0) {
+                $path = SERVER_ROOT . substr($path, 13);
+            } elseif ($s == '$') {
+                $err = 'only accept absolute path or path relative to $SERVER_ROOT: ' . $path;
                 return -1;
             } else {
-                $path = SERVER_ROOT . substr($path, 13);
+                $path = SERVER_ROOT . $path; // treat as relative to SERVER_ROOT
             }
         } elseif ($attr->_minVal == 3) {
             if (strncasecmp('$SERVER_ROOT', $path, 12) == 0) {
@@ -570,9 +571,11 @@ class CValidation
                     return -1;
                 }
                 $path = $vhroot . substr($path, 9);
-            } else {
-                $err = 'only accept absolute path or path relative to $SERVER_ROOT or $VH_ROOT';
+            } elseif ($s == '$') {
+                $err = 'only accept absolute path or path relative to $SERVER_ROOT or $VH_ROOT: ' . $path;
                 return -1;
+            } else {
+                $path = SERVER_ROOT . $path; // treat as relative to SERVER_ROOT
             }
         }
 
@@ -685,7 +688,7 @@ class CValidation
         if (preg_match($attr->_minVal, $val)) {
             return 1;
         } else {
-            $err = "invalid format - $val, syntax is {$attr->_maxVal}";
+            $err = "invalid format {$attr->_minVal} - $val, syntax is {$attr->_maxVal}";
             return -1;
         }
     }

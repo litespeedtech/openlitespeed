@@ -1343,6 +1343,8 @@ static int set_req_wait_full_body(const lsi_session_t *session)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (pSession->getFlag(HSF_REQ_BODY_DONE))
+        return LS_OK;
     log(session, LSI_LOG_DEBUG, "set_req_wait_full_body called\n");
     pSession->setFlag(HSF_REQ_WAIT_FULL_BODY);
     return LS_OK;

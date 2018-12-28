@@ -422,11 +422,6 @@ int CgidConn::removeRequest(ExtRequest *pReq)
 }
 
 
-void CgidConn::onTimer()
-{
-}
-
-
 void CgidConn::dump()
 {
 }

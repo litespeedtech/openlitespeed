@@ -1524,7 +1524,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     config.clearEnv();
     if (pEnv)
         config.getEnv()->add(pEnv);
-    else
+    
     {
         achFileName[pathLen] = 0;
         snprintf(achName, MAX_PATH_LEN, "RAILS_ROOT=%s",
@@ -2000,7 +2000,7 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
 }
 
 
-#define PYWSGIENTRY   "passenger_wsgi.py"
+#define PYWSGIENTRY   "wsgi.py"
 #define NODEJSENTRY   "app.js"
 
 static const char *getDefaultStartupFile(int type)
@@ -2100,7 +2100,7 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
                                          const char *appPath)
 {
     char achAppRoot[MAX_PATH_LEN];
-    const char *pStartupFile = ConfigCtx::getCurConfigCtx()->getTag(pNode, "startupFile");
+    const char *pStartupFile = ConfigCtx::getCurConfigCtx()->getTag(pNode, "startupFile", 0, 0);
     const char *pBinPath = pNode->getChildValue("binPath");
 
     int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
@@ -2169,10 +2169,24 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
         maxIdle = INT_MAX;
 
 
-    
+    const XmlNodeList *pEnvList = pNode->getChildren("env");
+    Env env;
+    const char *pValue;
+    if (pEnvList)
+    {
+        XmlNodeList::const_iterator iter;
+        for (iter = pEnvList->begin(); iter != pEnvList->end(); ++iter)
+        {
+            pValue = (*iter)->getValue();
+            if (pValue)
+                env.add(pValue);
+        }
+    }
+
+    HttpContext *pOldCtx = getContext(contextUri, strlen(contextUri));
     return configAppContext(appType, contextUri,
             achAppRoot, pStartupFile, maxConns, pAppMode, maxIdle,
-            NULL, pAppDefault->getRunOnStartUp(), pBinPath, NULL);
+            &env, pAppDefault->getRunOnStartUp(), pBinPath, pOldCtx);
 }
 
 
@@ -2528,6 +2542,12 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
+    else if (*pLocation != '$' && *pLocation != '/' )
+    {
+        defLocation.setStr("$DOC_ROOT/");
+        defLocation.append(pLocation, strlen(pLocation));
+        pLocation = defLocation.c_str();
+    }
 
     pHandler = pContextNode->getChildValue("handler");
 
@@ -2547,6 +2567,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         pHandler = achHandler;
     }
 
+ 
     allowBrowse = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                   "allowBrowse", 0, 1, 1);
 

@@ -8,7 +8,7 @@
 *
 * @author     LiteSpeed Technoglogies
 * @copyright  Copyright (c) LiteSpeed 2014-2018
-* @link       http://www.litespeedtech.com/
+* @link       https://www.litespeedtech.com/
 */
 
 global $_gmsg;
@@ -541,6 +541,16 @@ $_gmsg['l_websocketdef'] = 'Web Socket Definition';
 $_gmsg['l_websocketsetup'] = 'Web Socket Proxy Setup';
 $_gmsg['l_workers'] = 'Workers';
 $_gmsg['l_workingdir'] = 'Working Directory';
+$_gmsg['l_lsrecaptcha'] = 'LS reCAPTCHA';
+$_gmsg['l_recapenabled'] = 'Enable reCAPTCHA';
+$_gmsg['l_sitekey'] = 'Site Key';
+$_gmsg['l_secretKey'] = 'Secret Key';
+$_gmsg['l_recaptype'] = 'reCAPTCHA Type';
+$_gmsg['l_maxTries'] = 'Max Tries';
+$_gmsg['l_allowedRobotHits'] = 'Allowed Robot Hits';
+$_gmsg['l_botWhiteList'] = 'Bot White List';
+$_gmsg['l_regConnLimit'] = 'Non-SSL Connection Limit';
+$_gmsg['l_sslConnLimit'] = 'SSL Connection Limit';
 
 
 $_gmsg['o_cagefswithoutsuexec'] = 'CageFS without suEXEC';
@@ -571,6 +581,7 @@ $_gmsg['o_showver'] = 'Show Version';
 $_gmsg['o_size'] = 'Size';
 $_gmsg['o_thrucgidaemon'] = 'Yes (Through CGI Daemon)';
 $_gmsg['o_trustediponly'] = 'Trusted IP Only';
+$_gmsg['o_keepheaderfortrusted'] = 'Keep Header from Trusted IP';
 $_gmsg['o_useapachebinwrapper'] = 'Use Apache binary wrapper';
 $_gmsg['o_userhomedironly'] = 'User\'s Home Directory Only';
 $_gmsg['o_vhroot'] = 'Virtual Host Root';
@@ -579,6 +590,8 @@ $_gmsg['o_yes'] = 'Yes';
 $_gmsg['o_yesdaemonmode'] = 'Yes (Daemon Mode)';
 $_gmsg['o_notset'] = 'Not Set';
 $_gmsg['o_ifownermatch'] = 'If Owner Match';
+$_gmsg['o_checkbox'] = 'Checkbox';
+$_gmsg['o_invisible'] = 'Invisible';
 
 $_gmsg['parse_awstatsuri'] = 'starts with / and ends with /';
 $_gmsg['parse_compressibletypes'] = '(!)MIME types, like */*, text/*, text/html, text/*, !text/css';
@@ -599,6 +612,7 @@ $_gmsg['parse_tpvhconffile'] = 'Requiring variable $VH_NAME and end with .conf. 
 $_gmsg['parse_umask'] = '[000-777]';
 $_gmsg['parse_userdblocation'] = 'start with ldap:// or ldaps://';
 $_gmsg['parse_uploadtmpfilepermission'] = '3 digits octet number, Default value is 666';
+$_gmsg['parse_recaptchakey'] = 'key string assigned from your google reCAPTCHA account';
 
 
 $_gmsg['service_active'] = 'Active';

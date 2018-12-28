@@ -72,7 +72,7 @@ public:
     virtual NtwkIOLink *getNtwkIoLink();
 
 
-    void onTimer();
+    int onTimer();
 
     int shutdown();
 

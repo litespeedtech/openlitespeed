@@ -213,10 +213,7 @@ static int jsHandler(const lsi_session_t *session)
     char buf[0x1000];
     int    n;
 
-    if (g_api->is_req_body_finished(session))
-        ;
-    else
-        g_api->set_req_wait_full_body(session);
+    g_api->set_req_wait_full_body(session);
 
     if (g_api->get_uri_file_path(session, uri, strlen(uri), jsfile,
                                  MAXFILENAMELEN))

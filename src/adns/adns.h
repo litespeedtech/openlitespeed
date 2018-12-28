@@ -48,6 +48,7 @@ public:
     void setCallback(lookup_pf callback)    {   cb = callback;      }
     unsigned short getRefCount() const      {   return ref_count;   }
     void incRefCount()                      {   ++ref_count;        }
+    const char *getName() const             {   return name;        }
 
 private:
 
@@ -96,7 +97,7 @@ public:
     
 
     int  handleEvents( short events );
-    void onTimer();
+    int  onTimer();
     void setTimeOut(int tmSec);
 
     static int getHostByNameSync(const char *pName, in_addr_t *addr);

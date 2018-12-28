@@ -59,7 +59,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"address",                                  NULL},
     {"adminconfig",                              NULL},
     {"adminemails",                              NULL},
-    {"adminroot",                                NULL},
     {"allow",                                    NULL},
     {"allowbrowse",                              NULL},
     {"allowdirectaccess",                        NULL},
@@ -466,7 +465,7 @@ static int for_each_fn(void *s)
     switch (*p)
     {
     case LOG_LEVEL_ERR:
-        LS_ERROR("%s", p + 1);
+        LS_WARN("%s", p + 1);
         break;
 
     case LOG_LEVEL_INFO:

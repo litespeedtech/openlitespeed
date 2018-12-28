@@ -37,10 +37,11 @@ HioChainStream::~HioChainStream()
 }
 
 
-void HioChainStream::onTimer()
+int HioChainStream::onTimer()
 {
     if (getHandler())
-        getHandler()->onTimerEx();
+        return getHandler()->onTimerEx();
+    return 0;
 }
 
 void HioChainStream::switchWriteToRead()

@@ -31,16 +31,18 @@ int HttpFetchDriver::handleEvents(short int event)
     return m_pHttpFetch->processEvents(event);
 }
 
-void HttpFetchDriver::onTimer()
+int HttpFetchDriver::onTimer()
 {
     if (m_pHttpFetch->getTimeout() < 0)
-        return ;
+        return 0;
 
     if (time(NULL) - m_pHttpFetch->getTimeStart() >= m_pHttpFetch->getTimeout())
     {
         m_pHttpFetch->setTimeout(-1);
         m_pHttpFetch->closeConnection();
+        return 1;
     }
+    return 0;
 }
 
 void HttpFetchDriver::start()

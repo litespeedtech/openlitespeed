@@ -540,10 +540,6 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
 }
 
 
-void HttpListener::onTimer()
-{
-}
-
 const VHostMap *HttpListener::findVhostMap(const struct sockaddr * pAddr) const
 {
     const VHostMap *pMap;

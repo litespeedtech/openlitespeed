@@ -1469,10 +1469,8 @@ static int LsLuaReqReadBody(lua_State *L)
                                         | LSLUA_HOOK_HANDLER)) != 0)
         return iRet;
 
-    if (g_api->is_req_body_finished(sess))
-        return 0;
-    g_api->set_req_wait_full_body(
-        sess);  // This is supposed to do the reading synchronously.
+    // This is supposed to do the reading synchronously.
+    g_api->set_req_wait_full_body(sess);
     return 0;
 }
 

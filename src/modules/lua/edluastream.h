@@ -46,7 +46,7 @@ public:
     virtual int onError();
     virtual int onWrite();
     virtual int onRead();
-    virtual void onTimer();
+    virtual int onTimer();
     int connectTo(lua_State *L, const char *pAddr, uint16_t port);
     int send(lua_State *L, const char *pBuf, int32_t iLen);
     int recv(lua_State *L, int32_t len);

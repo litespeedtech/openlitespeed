@@ -511,7 +511,6 @@ int SpdyConnection::processSynStreamFrame(SpdyFrameHeader *pHeader)
     {
         appendReqHeaders(pStream, headerCount);
         pStream->onInitConnected();
-        pStream->setConnInfo(getStream()->getConnInfo());
         if (pStream->getState() != HIOS_CONNECTED)
             recycleStream(pStream->getStreamID());
     }
@@ -725,6 +724,7 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
     pStream->setProtocol(getStream()->getProtocol());
     if (m_bVersion == 3)
         pStream->setFlag(HIO_FLAG_FLOWCTRL, 1);
+    pStream->setConnInfo(getStream()->getConnInfo());
     return pStream;
 }
 

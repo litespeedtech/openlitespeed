@@ -49,7 +49,6 @@ public:
     void suspendWrite() {return;};
     void continueWrite() {return;};
     void switchWriteToRead() {return;};
-    void onTimer() {};
     uint32_t GetStreamID() {return 0;};
     virtual const char *buildLogId()
     {

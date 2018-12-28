@@ -16,27 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
-#ifndef EDIOHANDLER_H
-#define EDIOHANDLER_H
-
-#include <lsdef.h>
-#include <lsr/ls_edio.h>
-#include <edio/eventreactor.h>
-
-
-class EdioHandler : public ls_edio_s, public EventReactor
-{
-public:
-    EdioHandler(int fd, void *pParam, edio_evt_cb evt_cb,
-                edio_timer_cb timer_cb);
-    virtual ~EdioHandler();
-
-    virtual int handleEvents(short event);
-    virtual int onTimer();
-
-private:
-
-    LS_NO_COPY_ASSIGN(EdioHandler);
-};
-
-#endif // EDIOHANDLER_H
+#ifdef _USE_USER_SOCK
+#include "ls_usocket.c"
+#endif

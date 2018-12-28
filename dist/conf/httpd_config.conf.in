@@ -14,21 +14,20 @@ inMemBufSize                     60M
 swappingDir                      %DEFAULT_TMP_DIR%/swap 
 autoFix503                       1 
 gracefulRestartTimeout           300
-mime                             $SERVER_ROOT/conf/mime.properties 
+mime                             conf/mime.properties 
 showVersionNumber                0 
 adminEmails                      %ADMIN_EMAIL%
-adminRoot                        $SERVER_ROOT/admin/ 
 indexFiles                       index.html, index.php
 disableWebAdmin                  0
 
-errorlog $SERVER_ROOT/logs/error.log {
+errorlog logs/error.log {
         logLevel             DEBUG
         debugLevel           0
         rollingSize          10M
         enableStderrLog      1
 }
     
-accessLog $SERVER_ROOT/logs/access.log {
+accessLog logs/access.log {
         rollingSize          10M    
         keepDays             30    
         compressArchive      0
@@ -78,8 +77,8 @@ accessDenyDir{
     dir                  /
     dir                  /etc/*
     dir                  /dev/*
-    dir                  $SERVER_ROOT/conf/*
-    dir                  $SERVER_ROOT/admin/conf/*
+    dir                  conf/*
+    dir                  admin/conf/*
 }
 
 fileAccessControl{
@@ -129,7 +128,7 @@ extProcessor lsphp{
     pcKeepAliveTimeout
     respBuffer                      0 
     autoStart                       1 
-    path                            $SERVER_ROOT/fcgi-bin/lsphp
+    path                            fcgi-bin/lsphp
     backlog                         100 
     instances                       1 
     priority                        0 
@@ -201,7 +200,7 @@ nodeDefaults{
 }
 
 virtualHost Example{
-    vhRoot                   $SERVER_ROOT/Example/
+    vhRoot                   Example/
     allowSymbolLink          1 
     enableScript             1 
     restrained               1 
@@ -209,7 +208,7 @@ virtualHost Example{
     smartKeepAlive                  
     setUIDMode               0 
     chrootMode               0 
-    configFile               $SERVER_ROOT/conf/vhosts/Example/vhconf.conf
+    configFile               conf/vhosts/Example/vhconf.conf
 }
 
 listener Default{
@@ -219,17 +218,17 @@ listener Default{
 }
     
 vhTemplate centralConfigLog{
-    templateFile             $SERVER_ROOT/conf/templates/ccl.conf
+    templateFile             conf/templates/ccl.conf
     listeners                Default
 }
 
 vhTemplate PHP_SuEXEC{
-    templateFile             $SERVER_ROOT/conf/templates/phpsuexec.conf
+    templateFile             conf/templates/phpsuexec.conf
     listeners                Default
 }
 
 vhTemplate EasyRailsWithSuEXEC{
-    templateFile             $SERVER_ROOT/conf/templates/rails.conf
+    templateFile             conf/templates/rails.conf
     listeners                Default
 }
 
