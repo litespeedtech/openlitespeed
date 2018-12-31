@@ -233,7 +233,7 @@ vhTemplate EasyRailsWithSuEXEC{
 }
 
 module cache {
-    ls_enabled          0
+    ls_enabled          1
 
     checkPrivateCache   1
     checkPublicCache    1
