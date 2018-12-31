@@ -46,9 +46,10 @@ int EdioHandler::handleEvents(short event)
 }
 
 
-void EdioHandler::onTimer()
+int EdioHandler::onTimer()
 {
     if (ls_edio_s::timerCb)
-        (*ls_edio_s::timerCb)(getfd(), this);
+        return (*ls_edio_s::timerCb)(getfd(), this);
+    return 0;
 }
 

@@ -180,13 +180,15 @@ int SubstItem::parseServerVar(const char *pCurLine,
     return parseServerVar2(pCurLine, pName, pClose - pName, isSSI);
 }
 
-
 int SubstItem::parseServerVar2(const char *pCurLine, const char *pName,
                                int len, int isSSI)
 {
     if ((strncasecmp(pName, "LA-U:", 5) == 0) ||
         (strncasecmp(pName, "LA-F:", 5) == 0))
+    {
         pName += 5;
+        len -= 5;
+    }
 
     if (!isSSI && (len < 3))
     {
@@ -217,7 +219,7 @@ int SubstItem::parseServerVar2(const char *pCurLine, const char *pName,
     {
         setType(REF_ENV);
         if (setStr(pName + 4, len - 4) == NULL)
-            return LS_FAIL;
+            return LS_FAIL; // FIXME: returns 0 in adc?
     }
     else
     {
@@ -228,7 +230,7 @@ int SubstItem::parseServerVar2(const char *pCurLine, const char *pName,
         {
             setType(REF_ENV);
             if (setStr(pName, len) == NULL)
-                return LS_FAIL;
+                return LS_FAIL; // FIXME: Returns 0 in adc?
         }
         else
         {

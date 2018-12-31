@@ -157,11 +157,12 @@ private:
     int doWrite()
     {
         if (isWantWrite())
+        {
             if (getHandler())
                 return getHandler()->onWriteEx();
             else
                 return 0;
-            //FIXME lslb does not have an else
+        }
         else
         {
             suspendWrite();
@@ -334,7 +335,7 @@ public:
     //void setThrottleLimit( int limit )
     //{   m_baseIO.getThrottleCtrl().setLimit( limit );    }
 
-    void onTimer();
+    int onTimer();
     int isFromLocalAddr() const;
 
     //void stopThrottleTimer();

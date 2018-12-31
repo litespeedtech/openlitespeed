@@ -327,8 +327,11 @@ class DTbl
                 $action_attr = null;
                 foreach ($this->_dattrs as $attr) {
                     if ($attr->_type == 'action') {
-                        if ($attr->IsFlagOn(DAttr::BM_NOTNULL) && strpos($attr->_maxVal, 'd') !== false && count($dlayer) == 1)
+                        if ($reason = $attr->blockedVersion()) {
+                            $attr->_maxVal = '';
+                        } elseif ($attr->IsFlagOn(DAttr::BM_NOTNULL) && strpos($attr->_maxVal, 'd') !== false && count($dlayer) == 1) {
                             $attr->_maxVal = str_replace('d', '', $attr->_maxVal); // do not allow delete if only one left
+                        }
                         $action_attr = $attr;
                         break;
                     }

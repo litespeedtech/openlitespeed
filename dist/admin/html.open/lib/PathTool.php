@@ -122,16 +122,29 @@ class PathTool
                     $vhrootf .= '/';
                 $filename = $vhrootf . substr($filename, 9);
             }
-        }
-        elseif ($filename[0] == '/') {
+        }elseif ($filename[0] == '/') {
             if (isset($_SERVER['LS_CHROOT'])) {
                 $root = $_SERVER['LS_CHROOT'];
                 $len = strlen($root);
                 if (strncmp($filename, $root, $len) == 0)
                     $filename = substr($filename, $len);
             }
+        } else { // treat relative path to SERVER_ROOT
+            $filename = SERVER_ROOT . $filename;
         }
         return $filename;
+    }
+
+    public static function IsCyberPanel()
+    {
+        if (!defined('CYBERP')) {
+            if (file_exists('/usr/local/CyberCP')) {
+                define('CYBERP', 1);
+            } else {
+                define('CYBERP', 0);
+            }
+        }
+        return CYBERP;
     }
 
 }

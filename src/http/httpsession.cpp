@@ -209,7 +209,10 @@ int HttpSession::onInitConnected()
     }
     else
         m_request.setCrypto(NULL);
+    assert(pInfo->m_pServerAddrInfo);
     setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
+
+    assert(pInfo->m_pClientInfo);
     setClientInfo(pInfo->m_pClientInfo);
     m_iRemotePort = pInfo->m_remotePort;
     m_iFlag = 0;
@@ -219,9 +222,8 @@ int HttpSession::onInitConnected()
     getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
     setLogger(getStream()->getLogger());
     clearLogId();
-    //FIXME: which code is better
-    m_request.setILog(this);
-    //m_request.setILog(getStream());
+    //m_request.setILog(this);
+    m_request.setILog(getStream());
 
     setState(HSS_WAITING);
     HttpStats::incIdleConns();
@@ -1558,14 +1560,6 @@ int HttpSession::doRedirect()
             if (!ret)
                 return ret;
 
-            // if ( m_request.getSSIRuntime() )
-            // {
-            //     SSIEngine::printError( this, NULL );
-            //     continueWrite();
-            //     setState( HSS_COMPLETE );
-            //     return 0;
-            // }
-
             m_request.setStatusCode(ret);
         }
         if (m_request.getStatusCode() < SC_300)
@@ -1636,12 +1630,12 @@ int HttpSession::processContextMap()
     ret = m_request.processContext();
     if (ret)
     {
-        do
+        LS_DBG_L(getLogSession(), "processContext() returned %d.", ret);
+        if (ret == -2)
         {
-            ret = m_request.processContext();
-            LS_DBG_L(getLogSession(), "processContext() returned %d.", ret);
+            setProcessState(HSPS_CHECK_AUTH_ACCESS);
+            ret = 0;
         }
-        while (ret == -1);
     }
     else
     {
@@ -1653,26 +1647,7 @@ int HttpSession::processContextMap()
             m_pModuleConfig = pCtx->getModuleConfig();
         }
     }
-    if (!ret)
-        ret = processContextRewrite();
     return ret;
-
-    // FIXME ols orig code
-//     int ret;
-//     m_iFlag |= HSF_URI_PROCESSED;
-//     ret = m_request.processContext();
-//     if (ret)
-//     {
-//         LS_DBG_L(getLogSession(), "processContext() returned %d.", ret);
-//         if (ret == -2)
-//         {
-//             setProcessState(HSPS_CHECK_AUTH_ACCESS);
-//             ret = 0;
-//         }
-//     }
-//     else
-//         setProcessState(HSPS_CONTEXT_REWRITE);
-//     return ret;
 }
 
 
@@ -1719,8 +1694,7 @@ int HttpSession::processContextRewrite()
         {
             clearFlag(HSF_URI_PROCESSED);
             m_request.orContextState(PROCESS_CONTEXT);
-            // FIXME original ols code
-//             setProcessState(HSPS_CHECK_AUTH_ACCESS);
+            setProcessState(HSPS_CHECK_AUTH_ACCESS);
         }
         else
             setProcessState(HSPS_HKPT_URI_MAP);
@@ -1957,6 +1931,22 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     if (pHandler == NULL)
         return SC_403;
 
+    const HttpVHost *pVHost = m_request.getVHost();
+    if (m_request.getContext()
+        && m_request.getContext()->isAppContext())
+    {
+        if (m_request.getStatusCode() == SC_404)
+        {
+            m_request.setStatusCode(SC_200);
+            setFlag(HSF_REQ_WAIT_FULL_BODY);
+            m_request.clearContextState(REWRITE_PERDIR);
+            if (m_request.getContext()->isNodejsContext())
+                m_request.clearRedirects();
+            else
+                m_request.fixRailsPathInfo();
+        }
+    }
+
     int type = pHandler->getType();
     if ((type >= HandlerType::HT_DYNAMIC) &&
         (type != HandlerType::HT_PROXY))
@@ -2032,7 +2022,14 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     ReqHandler *pNewHandler = NULL;
     int handlerType;
     handlerType = pHandler->getType();
-
+    pNewHandler = HandlerFactory::getHandler(handlerType);
+    if (pNewHandler == NULL)
+    {
+        LS_ERROR(getLogSession(), "Handler with type id [%d] is not implemented.",
+                 handlerType);
+        return SC_500;
+    }
+    
 //    if ( pNewHandler->notAllowed( m_request.getMethod() ) )
 //    {
 //        LS_DBG_L( getLogSession(), "Method %s is not allowed.",
@@ -2108,15 +2105,7 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     default:
         break;
     }
-    // FIXME from here until return 0, ols orig code was empty
-    if (!pNewHandler)
-        pNewHandler = HandlerFactory::getHandler(handlerType);
-    if (pNewHandler == NULL)
-    {
-        LS_ERROR(getLogSession(), "Handler with type id [%d] is not implemented.",
-                 handlerType);
-        return SC_500;
-    }
+
     setHandler(pNewHandler);
     return 0;
 }
@@ -2141,13 +2130,12 @@ int HttpSession::sendHttpError(const char *pAdditional)
                                     .getCodeString(m_request.getStatusCode()));
         m_request.dumpHeader();
     }
-    // FIXME ols orig code did not have the next two lines.
     if (m_iFlag & HSF_NO_ERROR_PAGE)
         return statusCode;
+
     if (isRespHeaderSent())
     {
-        // FIXME ols orig code
-//         endResponse(0);
+        endResponse(0);
         return 0;
     }
     if (getSsiRuntime())
@@ -2190,7 +2178,6 @@ int HttpSession::sendHttpError(const char *pAdditional)
                 m_request.orContextState(SKIP_REWRITE);
         }
 
-        m_request.orContextState(REWRITE_PERDIR);  //FIXME: Newly added, Check
         if (pErrDoc->len() < 2048)
         {
             int ret = redirect(pErrDoc->c_str(), pErrDoc->len(), 1);
@@ -2289,7 +2276,11 @@ int HttpSession::buildErrorResponse(const char *errMsg)
         {
             pBody = HttpStatusCode::getInstance().getRealHtml(errCode);
             if (pBody == NULL)
+            {
+                m_response.setContentLen(0);
+                sendRespHeaders();
                 return 0;
+            }
             len = HttpStatusCode::getInstance().getBodyLen(errCode);
             m_response.getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
                                             "text/html",
@@ -2301,46 +2292,17 @@ int HttpSession::buildErrorResponse(const char *errMsg)
                 m_response.getRespHeaders().add(HttpRespHeaders::H_PRAGMA, "no-cache", 8);
             }
         }
-        if (pBody)
+        
+        m_response.setContentLen(len);
+        sendRespHeaders();
+        int ret = writeRespBody(pBody, len);
+        if ((ret >= 0) && (ret < len))
         {
-            m_response.setContentLen(len);
-            sendRespHeaders();
-            int ret = writeRespBody(pBody, len);
-            if ((ret >= 0) && (ret < len))
-            {
-                //handle the case that cannot write the body out, need to buffer it in respbodybuf.
-                appendDynBody(&pBody[ret], len - ret);
-            }
-
-            return 0;
+            //handle the case that cannot write the body out, need to buffer it in respbodybuf.
+            appendDynBody(&pBody[ret], len - ret);
         }
-        // FIXME ols orig code
-//         const char *pHtml = HttpStatusCode::getInstance().getRealHtml(errCode);
-//         if (pHtml)
-//         {
-//             int len = HttpStatusCode::getInstance().getBodyLen(errCode);
-//             m_response.setContentLen(len);
-//             m_response.getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
-//                                             "text/html",
-//                                             9);
-//             if (errCode >= SC_307)
-//             {
-//                 m_response.getRespHeaders().add(HttpRespHeaders::H_CACHE_CTRL,
-//                                                 "private, no-cache, max-age=0", 28);
-//                 m_response.getRespHeaders().add(HttpRespHeaders::H_PRAGMA, "no-cache", 8);
-//             }
-//
-//             int ret = appendDynBody(pHtml, len);
-//             if (ret < len)
-//                 LS_ERROR(getLogSession(), "Failed to create error resp body.");
-//
-//             return 0;
-//         }
-//         else
-//         {
-//             m_response.setContentLen(0);
-//             //m_request.setNoRespBody();
-//         }
+
+        return 0;
     }
     return 0;
 }
@@ -2458,7 +2420,6 @@ int HttpSession::doWrite()
         ret = m_pHandler->onWrite(this);
         LS_DBG_H(getLogSession(), "m_pHandler->onWrite() returned %d.\n", ret);
     }
-    // FIXME: this was not in lslb
     else
         suspendWrite();
 
@@ -2529,40 +2490,9 @@ int HttpSession::onWriteEx()
             return LS_FAIL;
         }
 
+        restartHandlerProcess();
         suspendWrite();
-        if (0 == restartHandlerProcess())
-            ret = doRedirect();
-        else
-        {
-            const char *pLocation = m_request.getLocation();
-            if (pLocation)
-            {
-                if (getState() == HSS_REDIRECT)
-                {
-                    int ret = redirect(pLocation, m_request.getLocationLen());
-                    if (!ret)
-                        break;
-
-//                     if (getSsiRuntime())
-//                     {
-//                         SsiEngine::printError( this, NULL );
-//                         continueWrite();
-//                         setState( HSS_COMPLETE );
-//                         return 0;
-//                     }
-//
-                     m_request.setStatusCode(ret);
-                }
-                if (m_request.getStatusCode() < SC_300)
-                {
-                    LS_INFO(getLogSession(), "Redirect status code: %d.",
-                            m_request.getStatusCode());
-                    m_request.setStatusCode(SC_307);
-                }
-            }
-            sendHttpError(NULL);
-            LS_DBG_M(getLogSession(), "HttpSession::onWriteEx() Wait for MT cancel on redirect.");
-        }
+        doRedirect();
         break;
     default:
         suspendWrite();
@@ -2579,14 +2509,6 @@ int HttpSession::onWriteEx()
 
 void HttpSession::setHandler(ReqHandler *pHandler)
 {
-    HttpContext *pContext = (HttpContext *)m_request.getContext();
-    if (pContext)
-    {
-        // FIXME this was done in lslb
-//         if (pHandler)
-//             pContext->incRef();
-    }
-    
     if (m_pHandler)
         m_pHandler->cleanUp(this);
     m_pHandler = pHandler;
@@ -3366,20 +3288,6 @@ int HttpSession::appendDynBody(const char *pBuf, int len)
     if (ret > 0)
         setFlag(HSF_RESP_FLUSHED, 0);
     return ret;
-    //FIXME ols orig code
-//     if (!getFlag(HSF_RESP_HEADER_DONE))
-//     {
-//         int ret = respHeaderDone();
-//         if (ret)
-//             return LS_FAIL;
-//     }
-//
-//     setFlag(HSF_RESP_FLUSHED, 0);
-//
-//     if (m_sessionHooks.isDisabled(LSI_HKPT_RECV_RESP_BODY))
-//         return appendDynBodyEx(pBuf, len);
-//     return runFilter(LSI_HKPT_RECV_RESP_BODY,
-//                      (filter_term_fn)appendDynBodyTermination, pBuf, len, 0);
 }
 
 
@@ -3554,25 +3462,14 @@ int HttpSession::respHeaderDone()
         ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_RCVD_RESP_HEADER,
                                                 (LsiSession *)this);
 
-    if (processHkptResult(0, ret))
+    if (processHkptResult(LSI_HKPT_RCVD_RESP_HEADER, ret))
         return 1;
 
-    //TODO: if I should actually be returning 1, check it.
-//     if (iRespState & HEC_RESP_AUTHORIZED)
-//         return 1;
     if (m_pMtSessData && !m_sessionHooks.isDisabled(LSI_HKPT_RECV_RESP_BODY))
     {
         m_pMtSessData->m_mtWrite.m_writeMode = DBL_BUF;
     }
     return 0;
-
-
-    // FIXME ols orig code
-//     if (processHkptResult(LSI_HKPT_RCVD_RESP_HEADER, ret))
-//         return 1;
-//     return 0;
-//     //setupDynRespBodyBuf( iRespState );
-
 }
 
 
@@ -3773,7 +3670,7 @@ int HttpSession::flush()
         return 1;
     else if (m_iState == HSS_IO_ERROR)
         return -1;
-    //FIXME original code.
+
     if (getFlag(HSF_SUSPENDED))
     {
         LS_DBG_L(getLogSession(), "HSF_SUSPENDED flag is set, cannot flush.");
@@ -3784,7 +3681,7 @@ int HttpSession::flush()
     if (getFlag(HSF_RESP_FLUSHED))
     {
         LS_DBG_L(getLogSession(), "HSF_RESP_FLUSHED flag is set, skip flush.");
-        wantWrite(0);
+        suspendWrite();
         return LS_DONE;
     }
     if (isNoRespBody() && !getFlag(HSF_HANDLER_DONE))
@@ -3819,7 +3716,7 @@ int HttpSession::flush()
         ret = getStream()->flush();
     if (ret == LS_DONE)
     {
-        setFlag(HSF_RESP_FLUSHED, 1);
+        //setFlag(HSF_RESP_FLUSHED, 1);
         if (getFlag(HSF_HANDLER_DONE
                     | HSF_SUSPENDED
                     | HSF_RECV_RESP_BUFFERED
@@ -5212,8 +5109,7 @@ int HttpSession::smProcessReq()
     }
     if (ret == LSI_SUSPEND)
     {
-        // FIXME lslb had this disabled?
-//         getStream()->wantRead(0);
+        getStream()->wantRead(0);
         getStream()->wantWrite(0);
         setFlag(HSF_SUSPENDED);
         return 0;

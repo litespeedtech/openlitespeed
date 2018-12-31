@@ -223,6 +223,13 @@ int LsShmPool::init(LsShm *shm, const char *name, LsShmPool *gpool)
         }
     }
     x_pPool = (LsShmPoolMem *)offset2ptr(m_iOffset);
+    if (!x_pPool)
+    {
+        LsShm::setErrMsg(LSSHM_BADVERSION,
+                         "Failed to get SHM Pool [%s] based on offset %lld, MapFile [%s].",
+                            name, (long long)m_iOffset, shm->fileName());
+        return LS_FAIL;
+    }
 
     if (getPool()->x_iSize != 0)
     {

@@ -59,7 +59,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"address",                                  NULL},
     {"adminconfig",                              NULL},
     {"adminemails",                              NULL},
-    {"adminroot",                                NULL},
     {"allow",                                    NULL},
     {"allowbrowse",                              NULL},
     {"allowdirectaccess",                        NULL},
@@ -247,6 +246,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"prochardlimit",                            NULL},
     {"procsoftlimit",                            NULL},
     {"railsdefaults",                            NULL},
+    {"wsgiDefaults",                            NULL},
+    {"nodeDefaults",                            NULL},
     {"railsenv",                                 NULL},
     {"rcvbufsize",                               NULL},
     {"realm",                                    NULL},
@@ -260,7 +261,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"retrytimeout",                             NULL},
     {"rewrite",                                  NULL},
     {"rollingsize",                              NULL},
-    {"rubybin",                                  NULL},
     {"rules",                                    NULL},
     {"runonstartup",                             NULL},
     {"scripthandler",                            NULL},
@@ -403,6 +403,11 @@ plainconfKeywords plainconf::sKeywords[] =
     {"php_admin_flag",                           NULL},
     
     {"header",  NULL},
+    {"binpath", NULL},
+    {"apptype", NULL},
+    {"startupfile", NULL},
+    
+    
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,
@@ -460,7 +465,7 @@ static int for_each_fn(void *s)
     switch (*p)
     {
     case LOG_LEVEL_ERR:
-        LS_ERROR("%s", p + 1);
+        LS_WARN("%s", p + 1);
         break;
 
     case LOG_LEVEL_INFO:

@@ -109,8 +109,24 @@ ClientInfo::ClientInfo()
 
 ClientInfo::~ClientInfo()
 {
+    release();
+}
+
+
+void ClientInfo::release()
+{
     if (m_pGeoInfo)
+    {
         delete m_pGeoInfo;
+        m_pGeoInfo = NULL;
+    }
+#ifdef USE_IP2LOCATION
+    if (m_pLocInfo)
+    {
+        delete m_pLocInfo;
+        m_pLocInfo = NULL;
+    }
+#endif
 }
 
 

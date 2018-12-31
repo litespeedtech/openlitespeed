@@ -56,6 +56,11 @@ END_LOG4CXX_NS
 
 #define MAX_VHOST_PHP_NUM    100
 
+
+#define DETACH_MODE_MIN_MAX_IDLE 30
+
+
+
 #define DEFAULT_ADMIN_SERVER_NAME   "_AdminVHost"
 
 typedef struct lsi_module_s lsi_module_t;
@@ -84,6 +89,7 @@ class SsiTagConfig;
 class SslContext;
 class UserDir;
 class XmlNodeList;
+class ExtWorker;
 
 template< class T >
 class THash;
@@ -438,14 +444,63 @@ public:
                         const StringList *pStrList, const char *strIndexURI);
     int configAwstats(const char *vhDomain, int vhAliasesLen,
                       const XmlNode *pNode);
-    HttpContext *addRailsContext(const char *pURI,
-                                 const char *pLocation, LocalWorker *pWorker);
+
+    void setDefaultConfig(LocalWorkerConfig &config,
+                          const char *pBinPath, int maxConns,
+                          int maxIdle, LocalWorkerConfig *pDefault);
+    int testAppType(const char *pAppRoot);
+    
+    int configRailsRunner(char *pRunnerCmd, int cmdLen,
+                                 const char *pRubyBin);
+    
+    LocalWorker *addRailsApp(const char *pAppName, const char *appPath,
+                            int maxConns, const char *pRailsEnv,
+                            int maxIdle, const Env *pEnv,
+                            int runOnStart, const char *pBinPath);
     HttpContext *configRailsContext(const char *contextUri,
-                                    const char *appPath,
-                                    int maxConns, const char *pRailsEnv, int maxIdle, const Env *pEnv,
-                                    const char *pRubyPath);
-    HttpContext *configRailsContext(const XmlNode *pNode,
-                                    const char *contextUri, const char *appPath);
+                                   const char *appPath,
+                                   int maxConns, const char *pRailsEnv,
+                                   int maxIdle, const Env *pEnv,
+                                   const char *pBinPath);
+
+    HttpContext *addRailsContext(const char *pURI, const char *pLocation,
+                                        ExtWorker *pWorker,
+                                        HttpContext *pOldCtx);
+    
+    LocalWorker *addPythonApp(const char *pAppName,
+                              const char *appPath, const char *pStartupFile,
+                              int maxConns, const char *pPythonEnv, int maxIdle,
+                              const Env *pEnv, int runOnStart,
+                              const char *pBinPath);
+
+    HttpContext *addPythonContext(const char *pURI,
+                                  const char *pLocation,
+                                  const char *pStartupFile, ExtWorker *pWorker,
+                                  HttpContext *pOldCtx);
+
+    
+    int configNodeJsStarter(char *pRunnerCmd, int cmdLen, const char *pBinPath);
+    LocalWorker *addNodejsApp(const char *pAppName,
+                              const char *appPath, const char *pStartupFile,
+                              int maxConns, const char *pRunModeEnv,
+                              int maxIdle, const Env *pEnv, int runOnStart,
+                              const char *pBinPath);
+    HttpContext *addNodejsContext(const char *pURI,
+                                  const char *pLocation,
+                                  const char *pStartupFile, ExtWorker *pWorker,
+                                  HttpContext *pOldCtx);
+
+    
+    HttpContext *configAppContext(const XmlNode *pNode, 
+                                  const char *contextUri, const char *appPath);
+    HttpContext *configAppContext(int appType,
+                                  const char *contextUri, const char *pAppRoot,
+                                  const char *pStartupFile, int maxConns,
+                                  const char * pAppMode, int maxIdle,
+                                  const Env *pProcessEnv, int runOnStartup,
+                                  const char *pBinPath, HttpContext *pOldCtx);
+    
+    
     HttpContext *importWebApp(const char *contextUri, const char *appPath,
                               const char *pWorkerName, int allowBrowse);
     int configContext(const XmlNode *pContextNode);

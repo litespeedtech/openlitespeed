@@ -659,9 +659,9 @@ int SslUtil::setCertificateChain(SSL_CTX *pCtx, BIO * bio)
 
 static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 {
-    SslConnection *pConnection = (SslConnection *)SSL_get_ex_data(pSSL,
-                                                SslConnection::getConnIdx());
-    if ((where & SSL_CB_HANDSHAKE_START) && pConnection->getFlag() == 1
+    SslConnection *pConnection = SslConnection::get(pSSL);
+    if ((where & SSL_CB_HANDSHAKE_START)
+        && pConnection->getFlag(SslConnection::F_HANDSHAKE_DONE)
 #if OPENSSL_VERSION_NUMBER > 0x10101000L
         && SSL_version(pSSL) != TLS1_3_VERSION
 #endif
@@ -692,7 +692,7 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
         pSSL->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
 #endif
 #endif
-        pConnection->setFlag(1);
+        pConnection->setFlag(SslConnection::F_HANDSHAKE_DONE, 1);
     }
 }
 

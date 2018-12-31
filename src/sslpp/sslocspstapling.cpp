@@ -44,6 +44,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -106,6 +107,8 @@ int SslOcspStapling::callback(SSL *ssl)
 {
     int     iResult;
     iResult = SSL_TLSEXT_ERR_NOACK;
+    if (m_RespTime == UINT_MAX)
+        return iResult;
     update();
     if (m_pRespData && m_iDataLen > 0)
     {
@@ -134,7 +137,10 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
         && strcasecmp(pRespContentType, "application/ocsp-response") == 0)
     {
         if (verifyRespFile() != 0)
+        {
             m_pCtx->disableOscp();
+            m_RespTime = UINT_MAX;
+        }
     }
     else
     {
@@ -144,10 +150,12 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
         //printf("%s\n", s_ErrMsg.c_str());
         m_pHttpFetch->writeLog(s_ErrMsg.c_str());
         m_pCtx->disableOscp();
+        m_RespTime = UINT_MAX;
     }
 
     if (::stat(m_sRespfileTmp.c_str(), &st) == 0)
         unlink(m_sRespfileTmp.c_str());
+    pHttpFetch->releaseResult();
     return 0;
 }
 
@@ -207,6 +215,8 @@ int SslOcspStapling::update()
 {
     int ret;
     struct stat st;
+    if (m_RespTime == UINT_MAX)
+        return 0;
     if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge < DateTime::s_curTime)
     {
         return 0;
@@ -219,8 +229,10 @@ int SslOcspStapling::update()
             releaseRespData();
             unlink(m_sRespfile.c_str());
         }
-        else if (m_RespTime != st.st_mtime)
+        else
         {
+            if (m_RespTime == st.st_mtime)
+                return 0;
             if (verifyRespFile(0) == LS_OK)
             {
                 m_RespTime = st.st_mtime;
@@ -469,6 +481,8 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         log4cxx::Logger::getRootLogger()->error("%s: OCSP_basic_verify() failed: %s\n",
                                        m_sCertfile.c_str(), SslError().what());
         m_pCtx->disableOscp();
+        m_RespTime = UINT_MAX;
+
     }
     if (iResult)
     {

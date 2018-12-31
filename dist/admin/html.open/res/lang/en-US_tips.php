@@ -60,6 +60,8 @@ $_tipsdb['SSLStrongDhKey'] = new DAttrHelp("SSL Strong DH Key", 'Specifies wheth
 
 $_tipsdb['URI_MAP'] = new DAttrHelp("Hook::URI_MAP Priority", 'Sets the priority for this module callback within the HTTP URI Map Hook.<br/>  The HTTP URI Map Hook is triggered when the web server maps a URI request to a context.  <br/><br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
 
+$_tipsdb['VHlsrecaptcha'] = new DAttrHelp("reCaptcha Protection", 'reCaptcha Protection is a service provided as a way to mitigate heavy server load. reCaptcha Protection will activate after one of the below situations is hit. Once active, all requests by NON TRUSTED(as configured) clients will be redirected to a reCAPTCHA validation page. After validation, the client will be redirected to their desired page.<br/><br/>The following situations will activate reCaptcha Protection:<br/>1. The server or vhost concurrent requests count passes the configured connection limit.<br/>2. Anti-DDoS is enabled and a client is hitting a url in a suspicious manner. The client will redirect to reCAPTCHA first instead of getting denied when triggered.<br/>3. WP Brute Force protection is enabled and action is set to &#039;Captcha or Drop’. When a brute force attack is detected, the client will redirect to reCAPTCHA first. After max tries is reached, the connection will be dropped, as per the ‘drop’ option.<br/>4. A new rewrite rule environment is provided to activate reCAPTCHA via RewriteRules. &#039;verifycaptcha&#039; can be set to redirect clients to reCAPTCHA. A special value &#039;: deny&#039; can be set to deny the client if it failed too many times. For example, [E=verifycaptcha] will always redirect to reCAPTCHA until verified. [E=verifycaptcha: deny] will redirect to reCAPTCHA until Max Tries is hit, after which the client will be denied.', '', '', '');
+
 $_tipsdb['WORKER_ATEXIT'] = new DAttrHelp("Hook::WORKER_ATEXIT Priority", 'Sets the priority for this module callback within the Worker At Exit Hook. <br/><br/>The Worker At Exit Hook is triggered by a worker process just prior to exiting. It is the last hook point to be called by a worker.   <br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
 
 $_tipsdb['WORKER_POSTFORK'] = new DAttrHelp("Hook::WORKER_POSTFORK Priority", 'Sets the priority for this module callback within the Worker Postfork Hook. <br/><br/>The Worker Postfork Hook is triggered by a worker process after being created by the main (controller) process.  Note that a corresponding Main Postfork Hook may be called by the main process either before or after this callback.   <br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
@@ -110,9 +112,9 @@ $_tipsdb['allowSymbolLink'] = new DAttrHelp("Follow Symbolic Link", 'Specifies w
 
 $_tipsdb['appServerContext'] = new DAttrHelp("App Server Context", 'An App Server Context provides an easy way to configure a Ruby Rack/Rails, WSGI, or Node.js application. To add a an application through an App Server Context, only mounting the URL and the application&#039;s root directory is required. There is no need to go through all the trouble to define an external application, add a 404 handler, and rewrite rules, etc.', '', '', '');
 
-$_tipsdb['appServerDefault'] = new DAttrHelp("App Server Settings", 'Default configurations for App Server applications.', '', '', '');
-
 $_tipsdb['appType'] = new DAttrHelp("Application Type", 'The type of application used for this context. Rack/Rails, WSGI, or Node.js are supported.', '', '', '');
+
+$_tipsdb['appserverEnv'] = new DAttrHelp("Run-Time Mode", 'Specifies which mode the application will be running as: &quot;Development&quot;, &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'Select from drop down list', '');
 
 $_tipsdb['as_location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;Location&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;Location&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
 
@@ -210,6 +212,8 @@ $_tipsdb['enableGzipCompress'] = new DAttrHelp("Enable Compression", 'Controls G
 
 $_tipsdb['enableIpGeo'] = new DAttrHelp("Enable GeoLocation Lookup", ' Specifies whether to enable/disable IP Geolocation lookup.  Can be set at server, virtual host, or context level. IP Geolocation is disabled by default when using value &quot;Not Set&quot;.', '', 'Select from radio box', '');
 
+$_tipsdb['enableRecaptcha'] = new DAttrHelp("Enable reCAPTCHA", 'Enable the reCaptcha Protection feature at the current level. This setting must be set to Yes the the Server level before the reCaptcha Protection feature can be used.<br/><br/>Default values:<br/><b>Server-level:</b> Yes<br/><b>VH-Level:</b> Inherit Server level setting', '', 'Select from radio box', '');
+
 $_tipsdb['enableRewrite'] = new DAttrHelp("Enable Rewrite", 'Specifies whether to enable LiteSpeed&#039;s URL rewrite engine. This option can be customized at the virtual host or context level, and is inherited along the directory tree until it is explicitly overridden.', '', 'Select from radio box', '');
 
 $_tipsdb['enableScript'] = new DAttrHelp("Enable Script", 'Specifies whether scripting (non-static pages) is allowed in this virtual host.  If disabled, CGI, FastCGI, LSAPI, Servlet engines and other scripting languages will not be allowed in this virtual host.  Therefore, if you want to use a script handler, you need to enable it here as well.', '', 'Select from radio box', '');
@@ -221,8 +225,6 @@ $_tipsdb['enableStapling'] = new DAttrHelp("Enable OCSP Stapling", 'Determines w
 $_tipsdb['enableh2c'] = new DAttrHelp("Enable HTTP/2 Over Cleartext TCP", 'Specifies whether to enable HTTP/2 over non-encrypted TCP connections. Default is disabled.', '', 'Select from radio box', '');
 
 $_tipsdb['env'] = new DAttrHelp("Environment", 'Specifies extra environment variables for the external application.', '', 'Key=value. Multiple variables can be separated by &quot;ENTER&quot;', '');
-
-$_tipsdb['envType'] = new DAttrHelp("Run-time Mode", 'Specifies which mode the app server will be running as: &quot;Development&quot;,  &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'Select from drop down list', '');
 
 $_tipsdb['errCode'] = new DAttrHelp("Error Code", 'Specifies the HTTP status code for the error page.  Only the selected HTTP status code will have this customized error page.', '', 'Select from drop down list', '');
 
@@ -238,7 +240,7 @@ $_tipsdb['expiresByType'] = new DAttrHelp("Expires By Type", 'Specifies Expires 
 
 $_tipsdb['expiresDefault'] = new DAttrHelp("Expires Default", 'Specifies default settings for Expires header generation. This setting takes effect  when &quot;Enable Expires&quot; is set to &quot;Yes&quot;. It can be overridden by &quot;Expires By Type&quot;.  Do not set this default at the server or virtual host level unless you have to,  since it will generate Expires headers for all pages. Most of time this should be  set at the context level for certain directories that do not change often. If there is no default setting, no Expires header will be generated for types not specified in &quot;Expires By Type&quot;.', '', 'A|Mseconds<br/>The file will expire after base time(A|M) plus specified seconds.  Base time &quot;A&quot; sets the value to the client&#039;s access time and &quot;M&quot; to the file&#039;s last modified time.', '');
 
-$_tipsdb['expuri'] = new DAttrHelp("URI", 'Specifies the URI for this context.', '', 'The URI can be a plain URI (starting with &quot;/&quot;) or  a Perl compatible regular expression URI (starting with &quot;exp:&quot;). If a plain URI ends  with a &quot;/&quot;, then this context will include all sub-URIs under this URI. If the context maps to a directory on the file system, a trailing &quot;/&quot; must be added.', '');
+$_tipsdb['expuri'] = new DAttrHelp("URI", 'Specifies the URI for this context.', '', 'The URI can be a plain URI (starting with &quot;/&quot;) or a Perl compatible regular expression URI (starting with &quot;exp:&quot;). If a plain URI ends with a &quot;/&quot;, then this context will include all sub-URIs under this URI. If the context maps to a directory on the file system, a trailing &quot;/&quot; must be added.', '');
 
 $_tipsdb['extAppAddress'] = new DAttrHelp("Address", 'A unique socket address used by the external application.  IPv4/IPv6 sockets and Unix Domain Sockets (UDS) are supported.  IPv4/IPv6 sockets can be used for communication over the network.   UDS can only be used when the external application resides on the same machine as the server.', ' If the external application runs on the same machine,  UDS is preferred. If you have to use an IPv4|IPV6 socket,  set the IP address to localhost or 127.0.0.1,  so the external application is inaccessible from other machines. <br/> Unix Domain Sockets generally provide higher performance than IPv4 sockets.', 'IPv4 or IPV6 address:port or UDS://path', '127.0.0.1:5434<br/>UDS://tmp/lshttpd/php.sock.');
 
@@ -384,6 +386,8 @@ $_tipsdb['lsapiContext'] = new DAttrHelp("LiteSpeed SAPI Context", 'External app
 
 $_tipsdb['lsapiapp'] = new DAttrHelp("LiteSpeed SAPI App", 'Specifies the name of the LiteSpeed SAPI application to be connected to this context. This application must be defined in the &quot;External Application&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
+$_tipsdb['lsrecaptcha'] = new DAttrHelp("reCaptcha Protection", 'reCaptcha Protection is a service provided as a way to mitigate heavy server load. reCaptcha Protection will activate after one of the below situations is hit. Once active, all requests by NON TRUSTED(as configured) clients will be redirected to a reCAPTCHA validation page. After validation, the client will be redirected to their desired page.<br/><br/>The following situations will activate reCaptcha Protection:<br/>1. The server or vhost concurrent requests count passes the configured connection limit.<br/>2. Anti-DDoS is enabled and a client is hitting a url in a suspicious manner. The client will redirect to reCAPTCHA first instead of getting denied when triggered.<br/>3. WP Brute Force protection is enabled and action is set to &#039;Captcha or Drop’. When a brute force attack is detected, the client will redirect to reCAPTCHA first. After max tries is reached, the connection will be dropped, as per the ‘drop’ option.<br/>4. A new rewrite rule environment is provided to activate reCAPTCHA via RewriteRules. &#039;verifycaptcha&#039; can be set to redirect clients to reCAPTCHA. A special value &#039;: deny&#039; can be set to deny the client if it failed too many times. For example, [E=verifycaptcha] will always redirect to reCAPTCHA until verified. [E=verifycaptcha: deny] will redirect to reCAPTCHA until Max Tries is hit, after which the client will be denied.', '', '', '');
+
 $_tipsdb['lstatus'] = new DAttrHelp("Status - Listener", 'The current status of this listener. The status is either Running or Error.', 'If the listener is in the Error state, you can view the server log to find out why.', '', '');
 
 $_tipsdb['mappedListeners'] = new DAttrHelp("Mapped Listeners", 'Specifies the names of all listeners that this template maps to. A listener-to-virtual host mapping for this template&#039;s member virtual hosts will be added to the listeners specified in this field.  This mapping will map listeners to virtual hosts based on the domain names  and aliases set in the member virtual hosts&#039; individual configurations.', '', 'comma-separated list', '');
@@ -396,7 +400,7 @@ $_tipsdb['maxConnections'] = new DAttrHelp("Max Connections", 'Specifies the max
 
 $_tipsdb['maxConns'] = new DAttrHelp("Max Connections", 'Specifies the maximum number of concurrent connections that can be established  between the server and an external application. This setting controls how  many requests can be processed concurrently by an external application,   however, the real limit also depends on the external application itself.  Setting this value higher will not help if the external application is not fast enough or cannot scale to a large number of concurrent requests.', ' Setting a high value does not directly translate to higher performance.  Setting the limit to a value that will not overload the external  application will provide the best performance/throughput.', 'Integer number', '');
 
-$_tipsdb['maxDynRespHeaderSize'] = new DAttrHelp("Max Dynamic Response Header Size (bytes)", 'Specifies the maximum header size of a dynamically generated response. Hard limit is 8KB.', ' Set it reasonably low to help recognize bad  responses dynamically generated by external applications.', 'Integer number', '');
+$_tipsdb['maxDynRespHeaderSize'] = new DAttrHelp("Max Dynamic Response Header Size (bytes)", 'Specifies the maximum header size of a dynamically generated response. Hard limit is 8KB.', ' Set it reasonably low to help recognize bad responses dynamically generated by external applications.', 'Integer number', '');
 
 $_tipsdb['maxDynRespSize'] = new DAttrHelp("Max Dynamic Response Body Size (bytes)", 'Specifies the maximum body size of a dynamically generated response. Hard limit is 2047MB.', ' Set the limit reasonably low to help  identify bad responses. It is not uncommon to malformed scripts to contain an  infinite loop which leads to infinity-sized responses.', 'Integer number', '');
 
@@ -410,7 +414,7 @@ $_tipsdb['maxReqBodySize'] = new DAttrHelp("Max Request Body Size (bytes)", 'Spe
 
 $_tipsdb['maxReqHeaderSize'] = new DAttrHelp("Max Request Header Size (bytes)", 'Specifies the maximum size of an HTTP request header including request URL.  Hard limit is 16380 bytes.', ' Set it reasonably low to reduce memory usage and  help identify bogus requests and DoS attacks.<br/>4-8K is big enough for most web sites.', 'Integer number', '');
 
-$_tipsdb['maxReqURLLen'] = new DAttrHelp("Max Request URL Length (bytes)", 'Specifies the maximum size of a request URL. URL is the full text address used to access a server resource including the query string. 8192 bytes is the hard limit.', ' Set it reasonably low to reduce memory usage  and help identify bogus requests and DoS attacks. <br/>2-3K is big enough for most web sites unless the HTTP GET method is used with large query strings instead of POST.', 'Integer number', '');
+$_tipsdb['maxReqURLLen'] = new DAttrHelp("Max Request URL Length (bytes)", 'Specifies the maximum size of a request URL. URL is the full text address used to access a server resource including the query string. 16K bytes is the hard limit.', ' Set it reasonably low to reduce memory usage  and help identify bogus requests and DoS attacks. <br/>2-3K is big enough for most web sites unless the HTTP GET method is used with large query strings instead of POST.', 'Integer number', '');
 
 $_tipsdb['maxSSLConnections'] = new DAttrHelp("Max SSL Connections", 'Specifies the maximum number of concurrent SSL connections the server will accept.  Since total concurrent SSL and non-SSL connections cannot exceed the limit specified by  &quot;Max Connections&quot;, the actual number of concurrent SSL connections allowed  must be lower than this limit.', '', 'Integer number', '');
 
@@ -446,6 +450,8 @@ $_tipsdb['modulename'] = new DAttrHelp("Module", 'Name of the module. The module
 
 $_tipsdb['nodeBin'] = new DAttrHelp("Node Path", 'Path to Node.js executable.', '', 'Absolute path', '');
 
+$_tipsdb['nodeDefaults'] = new DAttrHelp("Node.js App Default Settings", 'Default configurations for Node.js applications. These settings can be overriden at the context level.', '', '', '');
+
 $_tipsdb['note'] = new DAttrHelp("Notes", 'Add notes for yourself.', '', '', '');
 
 $_tipsdb['ocspCACerts'] = new DAttrHelp("OCSP CA Certificates", 'Specifies the location of the file where OCSP certificate authority (CA)  certificates are stored. These certificates are used to check responses  from the OCSP responder (and make sure those responses are not spoofed or  otherwise compromised). This file should contain the whole certificate chain.  If this file does not contain the root certificate, LSWS should be able to find  the root certificate in your system directory without you adding it to the file,  but, if this validation fails, you should try adding your root certificate to this file. <br/><br/>This setting is optional. If this setting is not set, the server will automatically check &quot;CA Certificate File&quot;.', '', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
@@ -474,6 +480,8 @@ $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enabl
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web Server", 'Specifies the name of the external web server. This external web server must be defined in the &quot;External Application&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
+$_tipsdb['railsDefaults'] = new DAttrHelp("Rack/Rails Default Settings", 'Default configurations for Rack/Rails applications. These settings can be overriden at the context level.', '', '', '');
+
 $_tipsdb['rcvBufSize'] = new DAttrHelp("Receive Buffer Size (bytes)", 'The receiving buffer size of each TCP socket. 512K is the maximum allowed buffer size.', ' It is recommended to leave this value as &quot;Not Set&quot; or set to 0 to use the operating system&#039;s default  buffer size.<br/> A large receive buffer will increase performance when processing  incoming requests with large payloads, i.e. file uploads.<br/> Setting this to a lower value will reduce throughput and memory usage per socket allowing the server to have  more concurrent sockets when memory is a bottleneck.', 'Integer number', '');
 
 $_tipsdb['realm'] = new DAttrHelp("Realm", 'Specifies the authorization realm for this context. When specified,  a valid username and password must be provided in order to access this context.  &quot;Authorization Realms&quot; are set up in the &quot;Virtual Host Security&quot; section.  This setting uses each realm&#039;s &quot;Realm Name&quot;.', '', 'Select from drop down list', '');
@@ -483,6 +491,22 @@ $_tipsdb['realmName'] = new DAttrHelp("Realm Name", 'Specifies a unique name for
 $_tipsdb['realms'] = new DAttrHelp("Authorization Realms", 'Lists all authorization realms for this virtual host.  Authorization realms are used to block unauthorized users from accessing protected web pages. A realm is a user directory containing usernames and passwords with optional  group classifications. Authorization is performed at context level.  Since different contexts can share the same realm (user database), so realms are  defined separately from the contexts that use them.  You can refer to a realm by these names in context configuration.', '', '', '');
 
 $_tipsdb['realtimerpt'] = new DAttrHelp("Real-Time Statistics", 'The Real-Time Statistics link leads to a page with a real-time server status report. This is a convenient tool to monitor the system.    The report shows a snapshot of your server statistics. The refresh rate for this snapshot  is controlled by the Refresh Interval drop-down list in the upper righthand corner.   The report contains the following sections: <ul><li>Server Health shows the basic server statistics, uptime, load, and anti-DDoS blocked IPs.</li>   <li>Server lists current traffic throughput, connections, and requests statistics.</li>  <li>Virtual Host shows request processing statuses and external application statuses for each virtual host.</li>  <li>External Application lists the external applications currently running and their usage statistics.   The CGI daemon process lscgid is always running as an external application.</li> </ul>   Many of the rows in the Real-Time Statistics feature a graph icon.  Clicking on this icon will open a graph of that row&#039;s statistics updated in real-time.   In the Server section, next to Requests, there is a link labeled (Details).  This link takes you to the Requests Snapshot, where you can view detailed information  on which clients are making certain kinds of requests or which aspects of your site  are bottlenecking. The fields in the blue area allow you to filter the snapshot to isolate  certain parts of your server or look for clients that are performing certain actions.', '', '', '');
+
+$_tipsdb['recaptchaAllowedRobotHits'] = new DAttrHelp("Allowed Robot Hits", 'Number of hits per 10 seconds to allow ‘good bots’ to pass. Bots will still be throttled when the server is under load.<br/><br/>Default value is 3.', '', 'Integer number', '');
+
+$_tipsdb['recaptchaBotWhiteList'] = new DAttrHelp("Bot White List", 'List of custom user agents to allow access. Will be subject to the ‘good bots’ limitations, including allowedRobotHits.', '', 'List of user agents, one per line. Regex is supported.', '');
+
+$_tipsdb['recaptchaMaxTries'] = new DAttrHelp("Max Tries", 'Max Tries specifies the maximum number of reCAPTCHA attempts permitted before denying the visitor.<br/><br/>Default value is 3.', '', 'Integer number', '');
+
+$_tipsdb['recaptchaRegConnLimit'] = new DAttrHelp("Non-SSL Connection Limit", 'The number of concurrent regular(non-ssl) connections to activate reCAPTCHA. reCAPTCHA will be used until the concurrent connections drop below this number.<br/><br/>Default value is 15000.', '', 'Integer number', '');
+
+$_tipsdb['recaptchaSecretKey'] = new DAttrHelp("Secret Key", 'The secret key is the private key provided by Google via its reCAPTCHA service. A default Secret Key will be used if not set.', '', '', '');
+
+$_tipsdb['recaptchaSiteKey'] = new DAttrHelp("Site Key", 'The site key is the public key provided by Google via its reCAPTCHA service. A default Site Key will be used if not set.', '', '', '');
+
+$_tipsdb['recaptchaSslConnLimit'] = new DAttrHelp("SSL Connection Limit", 'The number of concurrent SSL connections to activate reCAPTCHA. reCAPTCHA will be used until the concurrent connections drop below this number.<br/><br/>Default value is 10000.', '', 'Integer number', '');
+
+$_tipsdb['recaptchaType'] = new DAttrHelp("reCAPTCHA Type", 'Specify the reCAPTCHA type to use with the key pairs. If a key pair has not been provided and this setting is set to Not Set, a default key pair of type Invisible will be used.<br/>Checkbox will display a checkbox reCAPTCHA for the visitor to validate.<br/>Invisible will attempt to validate the reCAPTCHA automatically and if successful, will redirect to the desired page.<br/><br/>Default value is Invisible.', '', 'Select from drop down list', '');
 
 $_tipsdb['redirectContext'] = new DAttrHelp("Redirect Context", 'A Redirect Context can be used to forward one URI or a group of URIs to another location.  The destination URI can be either on the same web site (an internal redirect) or an absolute URI pointing to another web site (an external redirect).', '', '', '');
 
@@ -620,7 +644,7 @@ $_tipsdb['uploadTmpFilePermission'] = new DAttrHelp("Temporary File Permissions"
 
 $_tipsdb['uri'] = new DAttrHelp("URI", 'Specifies the URI for this context. The URI should start with a &quot;/&quot;.  If a URI ends with a &quot;/&quot;, then this context will include all sub-URIs under this URI.', '', 'URI', '');
 
-$_tipsdb['useIpInProxyHeader'] = new DAttrHelp("Use Client IP in Header", 'Specifies whether to use the IP address listed in the &quot;X-Forwarded-For&quot; HTTP request header for all IP address-related features, including connection/bandwidth throttling, access control, and IP geolocation.<br/><br/>This feature is useful if your web server is behind a load balancer or a proxy server. If you select &quot;Trusted IP Only&quot;, then X-Forwarded-For IP will be used only when the request is coming from trusted IPs defined in the server-level &quot;Allowed List&quot;.', '', 'Select from drop down list', '');
+$_tipsdb['useIpInProxyHeader'] = new DAttrHelp("Use Client IP in Header", 'Specifies whether to use the IP address listed in the &quot;X-Forwarded-For&quot; HTTP  request header for all IP address-related features, including  connection/bandwidth throttling, access control, and IP geolocation.<br/><br/>This feature is useful if your web server is behind a load balancer or a proxy server.  If you select &quot;Trusted IP Only&quot;, then X-Forwarded-For IP will be used only when the request  is coming from trusted IPs defined in the server-level &quot;Allowed List&quot;.<br/><br/>&quot;Keep Header from Trusted IP&quot; is the same as &quot;Trusted IP Only&quot;, but the  X-Forwarded-For header used for the backend will not be modified to include the connecting peer address.', '', 'Select from drop down list', '');
 
 $_tipsdb['useSendfile'] = new DAttrHelp("Use sendfile()", 'Specifies whether to use the sendfile() system call to serve static files. Static files can be served in four different ways: memory buffer cache, memory-mapped cache, plain read/write, and sendfile(). Files smaller than the &quot;Max Cached Small File Size (bytes)&quot; are served from memory buffer cache.  Files larger than the &quot;Max Cached Small File Size (bytes)&quot; but smaller than the   &quot;Max MMAP File Size (bytes)&quot; will be served from memory-mapped cache.  Files larger than the &quot;Max MMAP File Size (bytes)&quot; will be served via plain read/write or sendfile(). Sendfile() is a &quot;zero copy&quot; system call that can greatly reduce CPU utilization when serving very large static files. Sendfile() requires an optimized network card kernel driver and thus may not be suitable for some small-vendor network adapters.', '', 'Select from radio box', '');
 
@@ -674,7 +698,9 @@ $_tipsdb['vstatus'] = new DAttrHelp("Status - Virtual Host", 'The current status
 
 $_tipsdb['wsaddr'] = new DAttrHelp("Address", 'A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.', ' If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.', 'IPv4 or IPV6 address:port or UDS://path', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.');
 
-$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to Python Web Server Gateway Interface executable.', '', 'Absolute path', '');
+$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to LiteSpeed Python Web Server Gateway Interface executable (lswsgi).<br/><br/>This executable is created by compiling Python with LiteSpeed&#039;s WSGI LSAPI module.', '', 'Absolute path', '');
+
+$_tipsdb['wsgiDefaults'] = new DAttrHelp("Python WSGI Default Settings", 'Default configurations for Python WSGI applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/>Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location $DOC_ROOT/URI.', '', 'A plain URI (starting with &quot;/&quot;). If the URI ends with a &quot;/&quot;,  then this WebSocket backend will include all sub-URIs under this URI.', 'Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page&#039;s static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).');
 
@@ -724,6 +750,8 @@ $_tipsdb['EDTP:domainName'] = array('Enter all the domains that you want this li
 $_tipsdb['EDTP:enableDynGzipCompress'] = array('Dynamic GZIP compression control will be effective only if GZIP Compression is enabled.');
 
 $_tipsdb['EDTP:enableExpires'] = array('Expires can be set at the Server/Virtual Host/Context level. Lower level settings will override higher  level settings. In terms of overwrite priority: <br><br> Context Level > Virtual Host Level > Server Level <br><br>');
+
+$_tipsdb['EDTP:enableRecaptcha'] = array('When this setting is set to {val}Yes{/} at the Server level, reCaptcha Protection can still be disabled at the Virtual Host level.');
 
 $_tipsdb['EDTP:errURL'] = array('You can set up customized error pages for different error codes.');
 
@@ -790,6 +818,22 @@ $_tipsdb['EDTP:proxyWebServer'] = array('Proxy context enables this virtual host
 $_tipsdb['EDTP:realm'] = array('A Context can be protected with a predefined realm, which is set up in the virtual host security section. Optionally, an alternative name and  additional requirements can be specified.');
 
 $_tipsdb['EDTP:realmName'] = array('Define your HT Access realm here, this can be used for contexts.');
+
+$_tipsdb['EDTP:recaptchaAllowedRobotHits'] = array('');
+
+$_tipsdb['EDTP:recaptchaBotWhiteList'] = array('');
+
+$_tipsdb['EDTP:recaptchaMaxTries'] = array('');
+
+$_tipsdb['EDTP:recaptchaRegConnLimit'] = array('');
+
+$_tipsdb['EDTP:recaptchaSecretKey'] = array('');
+
+$_tipsdb['EDTP:recaptchaSiteKey'] = array('The server level site/secret key pair must be configured to skip domain checking if the server manages multiple domains. Otherwise, the reCAPTCHA verification will not work properly.');
+
+$_tipsdb['EDTP:recaptchaSslConnLimit'] = array('');
+
+$_tipsdb['EDTP:recaptchaType'] = array('');
 
 $_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.');
 

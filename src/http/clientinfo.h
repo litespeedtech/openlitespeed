@@ -102,6 +102,9 @@ class ClientInfo
 public:
     ClientInfo();
     ~ClientInfo();
+
+    void release();
+
     const struct sockaddr *getAddr() const
     {   return (struct sockaddr *)m_achSockAddr;         }
 

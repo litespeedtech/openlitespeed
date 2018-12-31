@@ -766,6 +766,13 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         for (iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter)
             (*iter)->inherit(pRootContext);
     }
+
+    if (m_pParent->isRailsContext())
+        setRailsContext();
+    if (m_pParent->isPythonContext())
+        setPythonContext();
+    if (m_pParent->isNodejsContext())
+        setNodejsContext();
 }
 
 
@@ -1165,7 +1172,7 @@ void HttpContext::getAAAData(struct AAAData &data) const
 }
 
 
-void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
+void HttpContext::setWebSockAddr(const GSockAddr &gsockAddr)
 {
     if (!allocateInternal())
     {

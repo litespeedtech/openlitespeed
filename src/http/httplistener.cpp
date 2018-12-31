@@ -332,10 +332,17 @@ int HttpListener::handleEvents(short event)
     {
         int n = pCur - conns;
         iCount += n;
+        int ret;
         if (n > 1)
-            batchAddConn(conns, pCur, &iCount);
+            ret = batchAddConn(conns, pCur, &iCount);
         else
-            addConnection(conns, &iCount);
+            ret = addConnection(conns, &iCount);
+        if (ret)
+        {
+            LS_ERROR(this,
+                     "HttpListener::handleEvents(): addConnection failed, n=%d ret=%d",
+                     n, ret);
+        }
     }
     if (iCount > 0)
     {
@@ -436,20 +443,28 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
             ConnInfo info;
             assert(pConnCur < pConnEnd);
             NtwkIOLink *pConn = *pConnCur;
-            setConnInfo(&info, pCur);
-            pConn->setLogger(getLogger());
-
-            if (!pConn->setLink(this, fd, &info))
+            if (setConnInfo(&info, pCur))
             {
-                fcntl(fd, F_SETFD, FD_CLOEXEC);
-                fcntl(fd, F_SETFL, flag);
-                ++pConnCur;
-                pConn->tryRead();
+                LS_ERROR("HttpListener::batchAddConn failed, pCur = %p.", pCur);
+                close(fd);
+                --(*iCount);
             }
             else
             {
-                close(fd);
-                --(*iCount);
+                pConn->setLogger(getLogger());
+
+                if (!pConn->setLink(this, fd, &info))
+                {
+                    fcntl(fd, F_SETFD, FD_CLOEXEC);
+                    fcntl(fd, F_SETFL, flag);
+                    ++pConnCur;
+                    pConn->tryRead();
+                }
+                else
+                {
+                    close(fd);
+                    --(*iCount);
+                }
             }
         }
         ++pCur;
@@ -498,9 +513,13 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
     
     ConnInfo info;
     if (setConnInfo(&info, pCur) == LS_FAIL)
+    {
+        LS_ERROR("HttpListener::addConnection failed, pCur = %p.", pCur);
+        close(fd);
+        --(*iCount);
         return LS_FAIL;
-    
-    
+    }
+
     VHostMap *pMap;
     if (m_pSubIpMap)
         pMap = getSubMap(fd);
@@ -520,10 +539,6 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
     return 0;
 }
 
-
-void HttpListener::onTimer()
-{
-}
 
 const VHostMap *HttpListener::findVhostMap(const struct sockaddr * pAddr) const
 {

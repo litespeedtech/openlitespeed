@@ -331,7 +331,6 @@ int AccessLog::appendStrNoQuote(char *pBuf, int len, int escape, const char *pSr
                     || (pLogger->m_buf.available() <= srcLen + 100)))
     {
         pLogger->flush();
-        //FIXME: still need to scape the source.
         pLogger->m_pAppender->append(pSrc, srcLen);
         return LS_FAIL;
     }

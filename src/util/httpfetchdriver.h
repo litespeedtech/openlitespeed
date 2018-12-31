@@ -30,7 +30,7 @@ class HttpFetchDriver : public EventReactor
 
 public:
     virtual int handleEvents(short int event);
-    virtual void onTimer();
+    virtual int onTimer();
 
     HttpFetchDriver(HttpFetch *pHttpFetch);
     virtual ~HttpFetchDriver()                      {   };

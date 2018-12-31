@@ -102,7 +102,6 @@ public:
     int  onEventDone(short event);
     int  onInitConnected();
     void onSecTimer();
-    void onTimer();
 
     int  reconnect();
 

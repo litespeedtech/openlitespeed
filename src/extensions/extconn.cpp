@@ -288,11 +288,6 @@ int ExtConn::onError()
 }
 
 
-void ExtConn::onTimer()
-{
-}
-
-
 void ExtConn::onSecTimer()
 {
     int secs = DateTime::s_curTime - m_tmLastAccess;

@@ -58,7 +58,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.57"
+#define MODULE_VERSION_INFO         "1.58"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -1239,6 +1239,16 @@ static int createEntry(lsi_param_t *rec)
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
                    "[%s]createEntry abort, code 1.\n", ModuleNameStr);
+        return 0;
+    }
+
+    //For a HEAD request, do not save it
+    if (myData->iMethod == HTTP_HEAD)
+    {
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]cacheTofile to be cancelled for HEAD request.\n",
+                   ModuleNameStr);
         return 0;
     }
 

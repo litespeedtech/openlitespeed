@@ -827,7 +827,7 @@ void ProxyConn::cleanUp()
 }
 
 
-void ProxyConn::onTimer()
+int ProxyConn::onTimer()
 {
 //    if (!( getEvents() & POLLIN ))
 //    {
@@ -860,7 +860,7 @@ void ProxyConn::onTimer()
                         (long long)m_iRespBodySize, (long long)m_iRespBodyRecv);
             setState(ABORT);
             getConnector()->endResponse(0, 0);
-            return;
+            return 0;
         }
         else if ((m_pChunkIS) && (!m_pChunkIS->getChunkLen()) && (delta > 1))
         {
@@ -877,12 +877,12 @@ void ProxyConn::onTimer()
 
                 setState(CLOSING);
                 getConnector()->endResponse(0, 0);
-                return;
+                return 0;
             }
         }
     }
 
-    ExtConn::onTimer();
+    return ExtConn::onTimer();
 }
 
 

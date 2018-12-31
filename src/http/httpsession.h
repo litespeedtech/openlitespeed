@@ -274,15 +274,6 @@ class HttpSession
 
     char getSsiStackDepth() const;
 
-    //FIXME:stx_nextRequest or call_nextRequest, need to choose one
-    static int stx_nextRequest(lsi_session_t *p, long , void *)
-    {
-        HttpSession *pSession = (HttpSession *)p;
-        if (pSession)
-            pSession->nextRequest();
-        return 0;
-    }
-
     static int call_nextRequest(lsi_session_t *p, long , void *);
     void markComplete(bool nowait);
 

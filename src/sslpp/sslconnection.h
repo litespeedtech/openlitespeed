@@ -7,6 +7,8 @@
 #define SSLCONNECTION_H
 #include <lsdef.h>
 #include <sslpp/hiocrypto.h>
+#include <sslpp/ls_fdbuf_bio.h>
+#include <openssl/ssl.h>
 
 typedef struct bio_st  BIO;
 typedef struct x509_st X509;
@@ -14,6 +16,7 @@ typedef struct ssl_cipher_st SSL_CIPHER;
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_session_st SSL_SESSION;
+
 
 class SslClientSessCache;
 class SslConnection : public HioCrypto
@@ -37,13 +40,19 @@ public:
         LAST_WRITE = 8
     };
 
+    enum
+    {
+        F_HANDSHAKE_DONE    = 1,
+        F_DISABLE_HTTP2     = 2,
+    };
+
     char wantRead() const   {   return m_iWant & READ;  }
     char wantWrite() const  {   return m_iWant & WRITE; }
     char lastRead() const   {   return m_iWant & LAST_READ; }
     char lastWrite() const  {   return m_iWant & LAST_WRITE; }
 
-    char getFlag() const    {   return m_iFlag;     }
-    void setFlag(int flag) {   m_iFlag = flag;     }
+    bool getFlag(int v) const   {   return m_flag & v;     }
+    void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
 
     SslConnection();
     ~SslConnection();
@@ -59,7 +68,6 @@ public:
     int accept();
     int connect();
     int read(char *pBuf, int len);
-    //int pending()           {   return SSL_pending(m_ssl);    }
     int wpending();
     int write(const char *pBuf, int len);
     int writev(const struct iovec *vect, int count, int *finished);
@@ -100,33 +108,30 @@ public:
     int getSpdyVersion();
 
     int updateOnGotCert();
+    
+    void enableRbio() {};
 
     static void initConnIdx();
-    static int getConnIdx()         {   return s_iConnIdx;   }
+    static SslConnection *get(const SSL *ssl)
+    {   return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);   }
 
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
-
-    void  enableRbio()      {   m_iUseRbio = 1;     }
+    
+    // Can only be called after the first failed accept or read, to obtain the
+    // raw data which can be used in a redirect (see ntwkiolink.cpp).
     char *getRawBuffer(int *len);
+    bool hasPendingIn() const
+    {   return m_bio.m_rbioBuffered > m_bio.m_rbioIndex;   }
 
 private:
-    int     installRbio(int rfd, int wfd);
-    int     readRbioClientHello();
-    void    restoreRbio();
-
     SSL    *m_ssl;
     SslClientSessCache *m_pSessCache;
+    short   m_flag;
     char    m_iStatus;
     char    m_iWant;
-    char    m_iFlag;
-    char    m_iUseRbio;
     static int32_t s_iConnIdx;
-
-    BIO    *m_saved_rbio;
-    char   *m_rbioBuf;
-    int     m_iRFd;
-    int     m_rbioBuffered;
+    ls_fdbio_data m_bio;
 
     LS_NO_COPY_ASSIGN(SslConnection);
 };

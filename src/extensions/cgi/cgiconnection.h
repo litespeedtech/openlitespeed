@@ -55,7 +55,6 @@ public:
     virtual int  sendReqBody(const char *pBuf, int size);
     virtual int  readResp(char *pBuf, int size);
 
-    void onTimer() {}
     virtual void finishRecvBuf() {}
     void *operator new(size_t sz);
     void operator delete(void *p);

@@ -34,7 +34,7 @@
 #include <extensions/cgi/suexec.h>
 #include <extensions/cgi/cgidconfig.h>
 #include <extensions/registry/extappregistry.h>
-#include <extensions/registry/railsappconfig.h>
+#include <extensions/registry/appconfig.h>
 
 #include <http/accesslog.h>
 #include <http/clientcache.h>
@@ -2259,10 +2259,14 @@ int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const XmlNode *pDir = *iter;
+            const char *val = pDir->getValue();
+            char achDir[MAX_PATH_LEN];
 
-            if (pDir->getValue())
-                if (pDeniedDir->addDir(pDir->getValue()) == 0)
+            if (val && ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achDir, val) == 0)
+            {
+                if (pDeniedDir->addDir(achDir) == 0)
                     add ++;
+            }
         }
     }
 
@@ -2467,9 +2471,11 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         }
 
 
+        // TODO: This is temporary code. Will implement in new year.
+        int useProxyHeader = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+                    "useIpInProxyHeader", 0, 3, 0);
         HttpServerConfig::getInstance().setUseProxyHeader(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 2, 0));
+            (useProxyHeader == 3 ? 2 : useProxyHeader));
 
         denyAccessFiles(NULL, ".ht*", 0);
 
@@ -2877,13 +2883,14 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         procConf.setPriority(ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                              "priority", -20, 20, 0));
 
-        int iNumProc = 1;
 #ifndef IS_LSCPD
-        iNumProc = PCUtil::getNumProcessors();
+        int iNumProc = PCUtil::getNumProcessors();
         iNumProc = (iNumProc > 8 ? 8 : iNumProc);
         HttpServerConfig::getInstance().setChildren(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
+#else
+        HttpServerConfig::getInstance().setChildren(1);
 #endif
 
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
@@ -3198,7 +3205,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         return ret;
 
 
-    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    //if (!MainServerConfig::getInstance().getDisableWebAdmin())
     {
         ret = loadAdminConfig(pRoot);
         if (ret)
@@ -3252,12 +3259,22 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         ConfigCtx currentCtx("server", "epsr");
         ExtAppRegistry::configExtApps(pRoot, NULL);
     }
-
+    
     {
         ConfigCtx currentCtx("server", "rails");
-        RailsAppConfig::loadRailsDefault(pRoot->getChild("railsDefaults"));
+        AppConfig::s_rubyAppConfig.loadAppDefault(pRoot->getChild("railsDefaults"));
     }
-
+    
+    {
+        ConfigCtx currentCtx("server", "python");
+        AppConfig::s_wsgiAppConfig.loadAppDefault(pRoot->getChild("wsgiDefaults"));
+    }
+    
+    {
+        ConfigCtx currentCtx("server", "nodejs");
+        AppConfig::s_nodeAppConfig.loadAppDefault(pRoot->getChild("nodeDefaults"));
+    }
+    
     const XmlNode *p0 = pRoot->getChild("scriptHandler");
     if (p0 != NULL)
     {
@@ -3552,9 +3569,7 @@ int HttpServerImpl::initLscpd()
     mainServerConfig.setDisableWebAdmin(1);
     procConfig.setPriority(0);
 
-    int iNumProc = PCUtil::getNumProcessors();
-    iNumProc = (iNumProc > 8 ? 8 : iNumProc);
-    httpServerConfig.setChildren(iNumProc);
+    httpServerConfig.setChildren(1);
     mainServerConfig.setDisableLogRotateAtStartup(0);
     HttpStats::set503AutoFix(1);
     httpServerConfig.setEnableH2c(0);
@@ -3699,9 +3714,15 @@ int HttpServerImpl::initLscpd()
     pPhp->getConfig().addEnv("PHP_LSAPI_CHILDREN=20");
 
     //listener
-    strcat(achBuf1, "/cert.pem");
-    strcpy(pEnd, "/key.pem");
+    strcat(achBuf1, "/key.pem");
+    strcpy(pEnd, "/cert.pem");
     HttpListener *pListener = addListener("DefaultSSL", LSCPD_LISTENER_ADDRESS);
+    if (!pListener)
+    {
+        LS_ERROR("Failed to addListener <DefaultSSL> to port <%s>.",
+                 LSCPD_LISTENER_ADDRESS);
+        return LS_FAIL;
+    }
 
     SslContextConfig config;
     config.m_sName = "DefaultSSL";
@@ -3716,7 +3737,12 @@ int HttpServerImpl::initLscpd()
 
     //vhost
     HttpVHost *pVHost = new HttpVHost(LSCPD_VHOST_NAME);
-    assert(pVHost != NULL);
+    if (pVHost == NULL)
+    {
+        LS_ERROR("Failed to create VHost <%s>.", LSCPD_VHOST_NAME);
+        return LS_FAIL;
+    }
+    
     pVHost->getRootContext().setParent(
         &HttpServer::getInstance().getServerContext());
     pVHost->getRootContext().inherit(&HttpServer::getInstance().getServerContext());

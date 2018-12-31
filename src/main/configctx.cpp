@@ -153,57 +153,68 @@ long long ConfigCtx::getLongValue(const XmlNode *pNode, const char *pTag,
 
 }
 
-
 int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
 {
-    int offset = 1;
-
+    int defRootType = 0;
+    int ret = 0;
     if (*pFile == '$')
     {
         if (strncasecmp(pFile + 1, VH_ROOT, 7) == 0)
         {
-            if (s_aVhRoot[0])
-            {
-                pRoot = s_aVhRoot;
-                pFile += 8;
-            }
-            else
-            {
-                LS_ERROR(this, "Virtual host root path is not available for %s.", pFile);
-                return LS_FAIL;
-            }
+            defRootType = 2;
+            pFile += 8;
         }
         else if (strncasecmp(pFile + 1, DOC_ROOT, 8) == 0)
         {
-            if (s_aDocRoot[0])
-            {
-                pRoot = getDocRoot();
-                pFile += 9;
-            }
-            else
-            {
-                LS_ERROR(this, "Document root path is not available for %s.", pFile);
-                return LS_FAIL;
-            }
+            defRootType = 1;
+            pFile += 9;
         }
         else if (strncasecmp(pFile + 1, SERVER_ROOT, 11) == 0)
         {
-            pRoot = MainServerConfig::getInstance().getServerRoot();
+            defRootType = 0;
             pFile += 12;
         }
+        else
+            defRootType = -1;
     }
-    else
+    else if (*pFile == '/')
+        defRootType = -1;
+    
+    switch(defRootType)
     {
-        offset = 0;
-
-        if ((*pFile != '/') && (s_aDocRoot[0]))
+    case 0:
+        pRoot = MainServerConfig::getInstance().getServerRoot();
+        break;
+        
+    case 1:
+        if (s_aDocRoot[0])
             pRoot = getDocRoot();
-    }
+        else
+        {
+            LS_ERROR(this, "Document root path is not available for %s.", pFile);
+            ret = LS_FAIL;
+        }
+        break;  
+        
+    case 2:
+        if (s_aVhRoot[0])
+            pRoot = s_aVhRoot;
+        else
+        {
+            LS_ERROR(this, "Virtual host root path is not available for %s.", pFile);
+            ret = LS_FAIL;
+        }
+        break;
+        
 
-    if ((offset) && (*pFile == '/'))
+    default:
+        break;
+    }
+    
+    if (ret == 0 && (defRootType != -1) && (*pFile == '/'))
         ++pFile;
 
-    return 0;
+    return ret;
 }
 
 

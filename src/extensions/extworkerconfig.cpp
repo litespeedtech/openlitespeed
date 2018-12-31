@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define sEnvPadding "LSAPI_PADDING=leave_some_room_to_avoid_overwrite_important_env"
+
 ExtWorkerConfig::ExtWorkerConfig(const char *pName)
     : m_sURL(NULL)
     , m_sName(pName)
@@ -37,6 +39,7 @@ ExtWorkerConfig::ExtWorkerConfig(const char *pName)
     , m_iRetryTimeout(3)
     , m_iBuffering(0)
     , m_iKeepAlive(1)
+    , m_iDetached(0)
     , m_iMaxIdleTime(INT_MAX)
     , m_iKeepAliveTimeout(INT_MAX)
     , m_iSelfManaged(1)
@@ -54,12 +57,21 @@ ExtWorkerConfig::ExtWorkerConfig(const char *pName)
 ExtWorkerConfig::ExtWorkerConfig()
     : m_pVHost(NULL)
     , m_iMaxConns(1)
+    , m_iTimeout(10)
+    , m_iRetryTimeout(3)
     , m_iBuffering(0)
+    , m_iKeepAlive(1)
+    , m_iDetached(0)
+    , m_iMaxIdleTime(INT_MAX)
+    , m_iKeepAliveTimeout(INT_MAX)
+    , m_iSelfManaged(1)
+    , m_iStartByServer(0)
     , m_iRefAddr(0)
     , m_iDaemonSuEXEC(0)
     , m_uid(-1)
     , m_gid(-1)
     , m_pServerAddr(new GSockAddr())
+    , m_pOrgEnv(NULL)
 {}
 
 
@@ -173,7 +185,7 @@ void ExtWorkerConfig::config(const XmlNode *pNode)
 {
     const char *pValue;
     int iMaxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                    "maxConns", 1, 2000, 1);
+                    "maxConns", 1, 2000, 5);
     int iRetryTimeout = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                         "retryTimeout", 0, LONG_MAX, 10);
     int iInitTimeout = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
@@ -202,8 +214,11 @@ void ExtWorkerConfig::config(const XmlNode *pNode)
     setRetryTimeout(iRetryTimeout);
     setBuffering(iBuffer);
     clearEnv();
-    const XmlNodeList *pList = pNode->getChildren("env");
+    const XmlNodeList *pList = NULL;
+    if (pNode)
+        pList  = pNode->getChildren("env");
 
+    addEnv(sEnvPadding);
     if (pList)
     {
         XmlNodeList::const_iterator iter;

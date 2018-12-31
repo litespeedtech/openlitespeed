@@ -48,6 +48,7 @@ LocalWorker::LocalWorker(int type)
     , m_sigGraceStop(SIGTERM)
     , m_pidList(NULL)
     , m_pidListStop(NULL)
+    , m_pRestartMarker(NULL)
 {
     m_pidList = new PidList();
     m_pidListStop = new PidList();
@@ -568,6 +569,62 @@ void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
         pRLimits->setDataLimit(memSoft, memHard);
 }
 
+void LocalWorker::setRestartMarker(const char* path, int reset_me_path_pos)
+{
+    if (path && *path == '/')
+    {
+        if (m_pRestartMarker)
+        {
+            if (m_pRestartMarker->isSamePath(path))
+                return;
+            delete m_pRestartMarker;
+        }
+        m_pRestartMarker = new RestartMarker(path);
+        m_pRestartMarker->set_lsapi_reset_me_path_pos(reset_me_path_pos);
+        m_pRestartMarker->checkRestart(time(NULL));
+    }
+}
 
 
+bool RestartMarker::isSamePath(const char* path)
+{
+    return strcmp(path, m_markerPath.c_str()) == 0;
+}
+
+
+bool RestartMarker::checkRestart(time_t now)
+{
+    bool ret = false;
+    if ( now == m_lastCheck)
+        return false;
+    if (m_markerPath.c_str())
+    {
+        struct stat st;
+        if (stat(m_markerPath.c_str(), &st) == 0)
+        {
+            if (st.st_mtime != m_lastmod)
+            {
+                m_lastmod = st.st_mtime;
+                ret = (m_lastCheck != -1);
+            }
+        }
+        if (!ret && m_lsapi_reset_me_path_pos > 0)
+        {
+            char reset_me_path[PATH_MAX];
+            snprintf(reset_me_path, PATH_MAX, "%.*smod_lsapi_reset_me",
+                     m_lsapi_reset_me_path_pos, m_markerPath.c_str());
+            if (stat(reset_me_path, &st) == 0)
+            {
+                if (st.st_mtime != m_lastmod_reset_me)
+                {
+                    m_lastmod_reset_me = st.st_mtime;
+                    ret = (m_lastCheck != -1);
+                }
+            }
+
+        }
+    }
+    m_lastCheck = now;
+    return ret;
+}
 

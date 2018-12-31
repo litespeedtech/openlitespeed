@@ -27,7 +27,7 @@ class HioChainStream :  public HioStream
 public:
     HioChainStream();
     ~HioChainStream();
-    virtual void onTimer();
+    virtual int onTimer();
     virtual void switchWriteToRead();
     virtual void continueWrite();
     virtual void suspendWrite();

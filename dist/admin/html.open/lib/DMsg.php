@@ -258,8 +258,8 @@ class DMsg
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014-2018
-* @link       http://www.litespeedtech.com/
+* @copyright  Copyright (c) LiteSpeed 2014-2019
+* @link       https://www.litespeedtech.com/
 */
 
 global $_gmsg;';

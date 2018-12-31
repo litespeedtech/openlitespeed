@@ -88,7 +88,6 @@ int LsapiConn::connect(Multiplexer *pMplx)
     if (pWorker->selfManaged())
         return ExtConn::connect(pMplx);
     int fds[2];
-    // FIXME lslb commented this out.  Not sure if it applies.
     errno = ECONNRESET;
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == -1)
     {
@@ -224,10 +223,7 @@ void LsapiConn::abort()
 
     incReqProcessed();
     setState(ABORT);
-    continueWrite();
-    // FIXME ols orig code
-//     setState(ABORT);
-//     sendAbortReq();
+    sendAbortReq();
 //     //::shutdown( getfd(), SHUT_RDWR );
 }
 
@@ -1018,7 +1014,7 @@ void LsapiConn::cleanUp()
 }
 
 
-void LsapiConn::onTimer()
+int LsapiConn::onTimer()
 {
     if (m_respState && !getCPState()
         && (DateTime::s_curTime - m_lReqSentTime >= 3))
@@ -1029,7 +1025,7 @@ void LsapiConn::onTimer()
             getWorker()->addNewProcess();
         else
             connError(ETIMEDOUT);
-        return;
+        return 0;
     }
     /*    if ( m_lLastRespRecvTime )
         {
@@ -1063,7 +1059,7 @@ void LsapiConn::onTimer()
             }
         }*/
 
-    ExtConn::onTimer();
+    return ExtConn::onTimer();
 }
 
 

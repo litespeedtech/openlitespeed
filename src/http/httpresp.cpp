@@ -163,10 +163,6 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
     if (!pName || !pVal || !domain)
         return LS_FAIL;
 
-//     // FIXME ols orig code - originally had nothing, added following two lines
-//     if (!m_respHeaders.isHeaderSet(HttpRespHeaders::H_SET_COOKIE))
-//         m_respHeaders.reset();
-
     if (path == NULL)
         path = "/";
     p += ls_snprintf(achBuf, 8091, "%s=%s; path=%s; domain=%s",
@@ -227,29 +223,13 @@ int HttpResp::appendDynBody(const char *pBuf, int len)
     if ((getGzipBuf()) && (getGzipBuf()->getType() == GzipBuf::COMPRESSOR_COMPRESS))
     {
         ret = getGzipBuf()->write(pBuf, len);
-
-        //end of written response body
-        //FIXME: not sure the logic is right or not
-        //if (( ret == 1 )&&(getGzipBuf()->getType() == GzipBuf::GZIP_DEFLATE ))
-        //    ret = 0;
-        //end of written response body
-        if (ret == 1)
-            ret = 0;
     }
     else
     {
-        // FIXME: ols orig code
-//         if (!getRespBodyBuf())
-//         {
-//             setupDynRespBodyBuf();
-//             if (!getRespBodyBuf())
-//                 return len;
-//         }
         ret = appendDynBodyEx(pBuf, len);
     }
 
     return ret;
-
 }
 
 

@@ -73,6 +73,7 @@ enum
 #define EXEC_EXT_CMD            (1<<27)
 #define MP4_SEEK                (1<<28)
 #define EXEC_CMD_PARSE_RES      (1<<29)
+#define GLOBAL_VH_CTX           (1<<29)
 
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2
@@ -499,6 +500,7 @@ public:
     int  checkPathInfo(const char *pURI, int iURILen, int &pathLen,
                        short &scriptLen, short &pathInfoLen,
                        const HttpContext *pContext);
+    void fixRailsPathInfo();
     void saveMatchedResult();
     void restoreMatchedResult();
     char *allocateAuthUser();
@@ -672,6 +674,7 @@ public:
 
     void incRedirects()                     {   ++m_iRedirects;             }
     short getRedirects() const              {   return m_iRedirects;        }
+    void clearRedirects()                   {   m_iRedirects = 0;           }
 
     void orContextState(int s)            {   m_iContextState |= s;       }
     void clearContextState(int s)         {   m_iContextState &= ~s;      }
@@ -699,6 +702,9 @@ public:
 
     void appendHeaderIndexes(IOVec *pIOV, int cntUnknown);
     void getAAAData(struct AAAData &aaa, int &satisfyAny);
+
+    int isPythonContext() const;
+    int isAppContext() const;
 
     off_t getTotalLen() const
     {   return m_lEntityFinished + getHttpHeaderLen();  }
