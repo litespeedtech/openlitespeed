@@ -2,11 +2,18 @@
 
 class DAttr extends DAttrBase
 {
+    public $cyberpanelBlocked = false;
 
 	public function blockedVersion()
 	{
-		// no restriction
-		return false;
+		if ($this->cyberpanelBlocked) {
+            if (PathTool::IsCyberPanel()) {
+                return 'Locked due to CyberPanel';
+            }
+        }
+
+        // no other block
+        return false;
 	}
 
 	public function bypassSavePost()

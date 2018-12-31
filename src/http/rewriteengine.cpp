@@ -1386,6 +1386,8 @@ NEXT_RULE:
             if ((m_statusCode >= SC_301) && (m_statusCode < SC_400))
                 return 0;
         }
+        else if (m_action == RULE_ACTION_PROXY)
+            m_statusCode = 0;
         return m_statusCode;
     }
     return 0;

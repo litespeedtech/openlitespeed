@@ -840,7 +840,7 @@ int newClientSessionCb(SSL * ssl, SSL_SESSION * session)
     const char *pHostName = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     if (NULL == pHostName)
         pHostName = "_";
-    SslConnection *c = (SslConnection *)SSL_get_ex_data(ssl,SslConnection::getConnIdx());
+    SslConnection *c = SslConnection::get(ssl);
     return c->cacheClientSession(session, pHostName, strlen(pHostName));
 }
 
@@ -989,6 +989,9 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
                                       unsigned int inlen, void *arg)
 {
     SslContext *pCtx = (SslContext *)arg;
+    SslConnection *pConn = SslConnection::get(pSSL);
+    if (pConn->getFlag(SslConnection::F_DISABLE_HTTP2))
+        return SSL_TLSEXT_ERR_NOACK;
     if (SSL_select_next_proto((unsigned char **) out, outlen,
                               (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy() ],
                               NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ],

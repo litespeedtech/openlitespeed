@@ -427,7 +427,7 @@ int EdLuaStream::onEventDone(short event)
 }
 
 
-void EdLuaStream::onTimer()
+int EdLuaStream::onTimer()
 {
     int64_t curTime = getCurTimeMs();
     if (m_iFlag & EDLUA_FLAG_RECV)
@@ -458,6 +458,7 @@ void EdLuaStream::onTimer()
                             ETIMEDOUT);
         }
     }
+    return 0;
 }
 
 

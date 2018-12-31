@@ -1,18 +1,35 @@
 #!/usr/bin/ruby
 
-$0="RACK: #{ENV['APP_NAME'] || ENV['RAILS_ROOT']} (#{ENV['RAILS_ENV']})"
+ENV['RACK_ROOT']=ENV['RAILS_ROOT'] if ENV['RACK_ROOT'] == nil
+ENV['RACK_ENV']=ENV['RAILS_ENV'] if ENV['RACK_ENV'] == nil
+
+$0="RACK: #{ENV['APP_NAME'] || ENV['RACK_ROOT']} (#{ENV['RACK_ENV']})"
 if GC.respond_to?(:copy_on_write_friendly=)
     GC.copy_on_write_friendly = true
 end
 
-Dir.chdir( ENV['RAILS_ROOT'] )
-app_root=ENV['RAILS_ROOT']
+Dir.chdir( ENV['RACK_ROOT'] )
+app_root=ENV['RACK_ROOT']
+
+
+require 'rubygems' if !defined?(::Gem)
+
+require 'lsapi'
+
+if File.exist?('Gemfile')
+    if Kernel.respond_to?(:gem, true)
+        gem('bundler')
+    end
+    require ('bundler/setup' || 'bundler')
+end
+
+#env.each do |key, value|
+#   STDERR.puts "#{key} => #{value}"
+#end
 
 #use rack only
 require 'fileutils'
 require 'rack'
-require 'lsapi'
-require 'stringio'
 require 'rack/content_length'
 #require 'active_support'
 #require 'action_controller'
@@ -27,11 +44,11 @@ module Rack
             end
             
             def self.serve(app)
-                app = Rack::ContentLength.new(app)
                 env = ENV.to_hash
                 env.delete "HTTP_CONTENT_LENGTH"
                 env["SCRIPT_NAME"] = "" if env["SCRIPT_NAME"] == "/"
                 
+                #rack_input = StringIO.new($stdin.read.to_s)
                 rack_input = $stdin
                 
                 rack_input.set_encoding(Encoding::BINARY) if rack_input.respond_to?(:set_encoding)
@@ -52,11 +69,10 @@ module Rack
                 status, headers, body = app.call(env)
                 
                 begin
-                    if body.respond_to?(:to_path)
+                    if body.respond_to?(:to_path) and env["RACK_NO_XSENDFILE"] != "1"
                         headers['X-LiteSpeed-Location'] = body.to_path
-                        #headers['Content-Length'] = '0'
                         headers.delete('Content-Length') #Correct?
-                        send_headers status, headers             
+                        send_headers status, headers
                     else
                         send_headers status, headers
                         send_body body
@@ -90,7 +106,7 @@ end
 
 #
 options = {
-    :environment => (ENV['RAILS_ENV'] || "development").dup,
+    :environment => (ENV['RACK_ENV'] || "development").dup,
     :config => "#{app_root}/config.ru",
     :detach => false,
     :debugger => false

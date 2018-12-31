@@ -294,6 +294,15 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
 {
     HioStream::reset(DateTime::s_curTime);
     setfd(fd);
+    if (pInfo)
+    {
+        LS_DBG_L("NtwkIOLink::setLink called pInfo is m_pClientInfo %p,  "
+                    "m_pCrypto %p, m_pServerAddrInfo %p, m_remotePort %d",
+                    pInfo->m_pClientInfo,
+                    pInfo->m_pCrypto,
+                    pInfo->m_pServerAddrInfo,
+                    pInfo->m_remotePort);
+    }
     setConnInfo(pInfo);
     setState(HIOS_CONNECTED);
     setHandler(NULL);
@@ -390,10 +399,7 @@ int NtwkIOLink::handleEvents(short evt)
     if (event & (POLLHUP | POLLERR))
     {
         m_iInProcess = 0;
-        if (getState() != HIOS_SHUTDOWN)
-            onPeerClose();
-        // FIXME: ols orig code
-//         onPeerClose();
+        onPeerClose();
         return 0;
     }
     if (event & POLLOUT)
@@ -742,7 +748,9 @@ int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
         if (!pThis->m_ssl.isConnected() || (last))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
+            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
+                && pThis->m_ssl.hasPendingIn())
+                return pThis->doRead();
             return 0;
         }
     }
@@ -885,7 +893,7 @@ static int matchToken(int token)
 }
 
 
-void NtwkIOLink::onTimer()
+int NtwkIOLink::onTimer()
 {
     if (matchToken(this->m_tmToken))
     {
@@ -906,12 +914,12 @@ void NtwkIOLink::onTimer()
         }
 
         if (detectClose())
-            return;
+            return 0;
         (*m_pFpList->m_onTimer_fp)(this);
         if (getState() == HIOS_CLOSING)
             onPeerClose();
-
     }
+    return 0;
 }
 
 
@@ -1417,7 +1425,9 @@ int NtwkIOLink::onReadSSL_T(NtwkIOLink *pThis)
         if (!pThis->m_ssl.isConnected() || (last))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
+            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
+                && pThis->m_ssl.hasPendingIn())
+                return pThis->doRead();
             return 0;
         }
     }

@@ -337,6 +337,7 @@ if test "$OPENLSWS_BSSL" = no ; then
         echo "Finsihed building openssl."
     fi
     echo "Openssl: use_dyn_ossl = $usedynossl"
+    AC_DEFINE([USE_OPENSSL], [1], [will use openssl as ssl])
 else
     #### Not provide location, use default location, will not copy files
     usedynossl=no

@@ -24,12 +24,47 @@
 
 class PidList;
 class LocalWorkerConfig;
+
+class RestartMarker
+{
+public:
+    RestartMarker(const char *pPath)
+        : m_markerPath(pPath)
+        , m_lastCheck(-1)
+        , m_lastmod(-1)
+        , m_lastmod_reset_me(-1)
+        , m_lsapi_reset_me_path_pos(0)
+        {}
+
+    ~RestartMarker()
+    {
+    }
+
+    bool checkRestart(time_t now);
+    bool isSamePath(const char* path);
+    void set_lsapi_reset_me_path_pos(int pos)
+    {   m_lsapi_reset_me_path_pos = pos;    }
+    time_t getLastReset() const
+    {
+        return (m_lastmod > m_lastmod_reset_me)? m_lastmod : m_lastmod_reset_me;
+    }
+
+private:
+    AutoStr     m_markerPath;
+    time_t      m_lastCheck;
+    time_t      m_lastmod;
+    time_t      m_lastmod_reset_me;
+    int         m_lsapi_reset_me_path_pos;
+};
+
+
 class LocalWorker : public ExtWorker
 {
     int                 m_fdApp;
     int                 m_sigGraceStop;
     PidList            *m_pidList;
     PidList            *m_pidListStop;
+    RestartMarker      *m_pRestartMarker;
 
     void        moveToStopList();
 public:
@@ -63,11 +98,14 @@ public:
     int addNewProcess();
 
     int startWorker();
-
+    void setRestartMarker(const char* path, int reset_me_path_pos);
+    
     static int workerExec(LocalWorkerConfig &config, int fd);
     static void configRlimit(RLimits *pRLimits, const XmlNode *pNode);
 
     LS_NO_COPY_ASSIGN(LocalWorker);
 };
+
+
 
 #endif

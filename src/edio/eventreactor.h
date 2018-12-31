@@ -54,7 +54,7 @@ public:
 
     virtual ~EventReactor() {};
     virtual int handleEvents(short event) = 0;
-    virtual void onTimer()  {}
+    virtual int onTimer()   {   return 0;   }
 
     int getfd() const                   {   return m_pollfd.fd;     }
 

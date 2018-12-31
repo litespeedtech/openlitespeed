@@ -547,6 +547,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
 {
     int count = 0;
     HttpReq *pReq = pSession->getReq();
+    int isPython = pReq->isPythonContext();
     const char *pTemp;
     int n;
     char buf[128];
@@ -563,8 +564,9 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     //ADD_ENV("REMOTE_IDENT", "" )        //TODO: not supported yet
     //extensions of CGI/1.1
     const AutoStr2 *pStr = pReq->getDocRoot();
-    pEnv->add("DOCUMENT_ROOT", 13,
-              pStr->c_str(), pStr->len() - 1);
+    if (!isPython)
+        pEnv->add("DOCUMENT_ROOT", 13,
+                  pStr->c_str(), pStr->len() - 1);
     pEnv->add("REMOTE_ADDR", 11, pSession->getPeerAddrString(),
               pSession->getPeerAddrStrLen());
 
@@ -576,8 +578,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     pEnv->add("SERVER_ADDR", 11, buf, n);
 
     pEnv->add("SERVER_NAME", 11, pReq->getHostStr(),  pReq->getHostStrLen());
+    count += 5 - isPython;
 
-    count += 5;
     pStr = pReq->getVHost()->getAdminEmails();
     if (pStr->c_str())
     {
@@ -597,49 +599,54 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     n = pReq->getPathInfoLen();
     if (n > 0)
     {
-        int m;
-        char achTranslated[10240];
-        m =  pReq->translatePath(pReq->getPathInfo(), n,
-                                 achTranslated, sizeof(achTranslated));
-        if (m != -1)
-        {
-            pEnv->add("PATH_TRANSLATED", 15, achTranslated, m);
-            ++count;
-        }
         pEnv->add("PATH_INFO", 9, pReq->getPathInfo(), n);
         ++count;
-
-        if (pReq->getRedirects() > 0)
+        if (!isPython)
         {
-            pEnv->add("ORIG_PATH_INFO", 14, pReq->getPathInfo(), n);
-            ++count;
+            int m;
+            char achTranslated[10240];
+            m =  pReq->translatePath(pReq->getPathInfo(), n,
+                                    achTranslated, sizeof(achTranslated));
+            if (m != -1)
+            {
+                pEnv->add("PATH_TRANSLATED", 15, achTranslated, m);
+                ++count;
+            }
+
+            if (pReq->getRedirects() > 0)
+            {
+                pEnv->add("ORIG_PATH_INFO", 14, pReq->getPathInfo(), n);
+                ++count;
+            }
         }
     }
     
-    if (pReq->getStatusCode() && (pReq->getStatusCode() != SC_200))
+    if (!isPython)
     {
-        pTemp = HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode());
-        if (pTemp)
+        if (pReq->getStatusCode() && (pReq->getStatusCode() != SC_200))
         {
-            pEnv->add("REDIRECT_STATUS", 15, pTemp, 3);
-            ++count;
+            pTemp = HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode());
+            if (pTemp)
+            {
+                pEnv->add("REDIRECT_STATUS", 15, pTemp, 3);
+                ++count;
+            }
         }
-    }
 
-
-    if (pReq->getRedirects() > 0)
-    {
-        pTemp = pReq->getRedirectURL(n);
-        if (pTemp && (n > 0))
+        if (pReq->getRedirects() > 0)
         {
-            pEnv->add("REDIRECT_URL", 12, pTemp, n);
-            ++count;
-        }
-        pTemp = pReq->getRedirectQS(n);
-        if (pTemp && (n > 0))
-        {
-            pEnv->add("REDIRECT_QUERY_STRING", 21, pTemp, n);
-            ++count;
+            pTemp = pReq->getRedirectURL(n);
+            if (pTemp && (n > 0))
+            {
+                pEnv->add("REDIRECT_URL", 12, pTemp, n);
+                ++count;
+            }
+            pTemp = pReq->getRedirectQS(n);
+            if (pTemp && (n > 0))
+            {
+                pEnv->add("REDIRECT_QUERY_STRING", 21, pTemp, n);
+                ++count;
+            }
         }
     }
     

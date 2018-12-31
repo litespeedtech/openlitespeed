@@ -114,8 +114,6 @@ public:
     virtual int resume();
     virtual int stop();
 
-    void onTimer();
-
     static void setSockSendBufSize(int32_t size)
     {   m_iSockSendBufSize = size;              }
     static void setSockRecvBufSize(int32_t size)

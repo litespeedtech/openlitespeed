@@ -27,6 +27,9 @@ const char *HandlerType::s_sHandlerType[HT_END] =
     "redirect",
     "jwebapp",
     "rails",
+    "python",
+    "nodejs",
+    "appserver",
     "module",
     "cgi",
     "fcgi",
@@ -57,8 +60,8 @@ int HandlerType::getHandlerType(const char *pType, int &role)
             iType = HT_REDIRECT;
         else if (strcasecmp(pType, "webapp") == 0)
             iType = HT_JAVAWEBAPP;
-        else if (strcasecmp(pType, "rails") == 0)
-            iType = HT_RAILS;
+        else if (strcasecmp(pType, "appserver") == 0)
+            iType = HT_APPSERVER;
         else if (strcasecmp(pType, "cgi") == 0)
             iType = HT_CGI;
         else if (strcasecmp(pType, "fcgi") == 0)

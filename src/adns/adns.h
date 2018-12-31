@@ -48,6 +48,7 @@ public:
     void setCallback(lookup_pf callback)    {   cb = callback;      }
     unsigned short getRefCount() const      {   return ref_count;   }
     void incRefCount()                      {   ++ref_count;        }
+    const char *getName() const             {   return name;        }
 
 private:
 
@@ -91,12 +92,12 @@ public:
     const char *getHostByAddrInCache( const struct sockaddr * pAddr, int &length );
     AdnsReq *getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_pf cb );
     
-    static int setResult(struct sockaddr *result, const void *ip, int len);
+    static int setResult(const struct sockaddr *result, const void *ip, int len);
     static void release(AdnsReq *pReq);
     
 
     int  handleEvents( short events );
-    void onTimer();
+    int  onTimer();
     void setTimeOut(int tmSec);
 
     static int getHostByNameSync(const char *pName, in_addr_t *addr);

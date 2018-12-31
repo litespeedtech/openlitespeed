@@ -251,6 +251,10 @@ int HttpFetch::asyncDnsLookupCb(void *arg, const long lParam, void *pParam)
     //  m_pAdnsReq was not set yet as it is set when getHostByName() return
 
     Adns::setResult(pFetch->m_pServerAddr->get(), pParam, lParam);
+    LS_DBG(pFetch->m_pLogger, "[HttpFetch] [%d]: asyncDnsLookupCb '%s', "
+            "reqState: %d, %p, %ld",
+            pFetch->getLoggerId(), pFetch->m_pAdnsReq->getName(),
+            pFetch->m_reqState, pParam, lParam);
     pFetch->setAdnsReq(NULL);
 
     if (lParam > 0)
@@ -282,12 +286,15 @@ int HttpFetch::startDnsLookup(const char *addrServer)
         AdnsReq *req = NULL;
         ret = m_pServerAddr->asyncSet(PF_INET, addrServer, flag,
                                       asyncDnsLookupCb, this, &req);
+        LS_DBG(m_pLogger, "[HttpFetch] [%d]: Async DNS lookup '%s' with flag:%d return %d",
+               getLoggerId(), addrServer, flag, ret);
         if (req)
         {
             if (m_reqState != STATE_DNS)
             {
-                fprintf(stderr, "HttpFetch: %p asyncDnsLookupCb called, release AdnsReq %p.\n",
-                        this, m_pAdnsReq);
+                LS_DBG(m_pLogger, "[HttpFetch] [%d]: Async DNS lookup '%s', "
+                       "reqState: %d, asyncDnsLookupCb called, release AdnsReq %p",
+                        getLoggerId(), addrServer, m_reqState, m_pAdnsReq);
                 return 0;
             }
             setAdnsReq(req);

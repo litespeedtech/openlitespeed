@@ -103,9 +103,9 @@ class DTblDef extends DTblDefBase
 						array('0'=>DMsg::ALbl('o_hidever'), '1'=>DMsg::ALbl('o_showver'), '2'=>DMsg::ALbl('o_hidefullheader')), false),
 				$this->_attrs['enableIpGeo'],
 				self::NewSelAttr('useIpInProxyHeader', DMsg::ALbl('l_useipinproxyheader'),
-						array('0'=>DMsg::ALbl('o_no'), '1'=>DMsg::ALbl('o_yes'), '2'=>DMsg::ALbl('o_trustediponly')) ),
+						array('0'=>DMsg::ALbl('o_no'), '1'=>DMsg::ALbl('o_yes'),
+                            '2'=>DMsg::ALbl('o_trustediponly'), '3' =>DMsg::ALbl('o_keepheaderfortrusted')) ),
 				$this->_attrs['adminEmails'],
-				self::NewCustFlagAttr('adminRoot', null, (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false)
 		);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_generalsettings'), $attrs);
 	}
@@ -126,6 +126,63 @@ class DTblDef extends DTblDefBase
             self::NewIntAttr('logLevel', DMsg::ALbl('l_loglevel'), true, 0, 9, 'rewriteLogLevel')
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
+    }
+
+    protected function add_VT_REWRITE_MAP_TOP($id)
+    {
+        $align = ['left', 'left', 'center'];
+        $name = self::NewViewAttr('name', DMsg::ALbl('l_name'));
+        $location = self::NewViewAttr('location', DMsg::ALbl('l_location'));
+        $action = self::NewActionAttr('VT_REWRITE_MAP', 'Ed');
+        $name->cyberpanelBlocked = true;
+        $location->cyberpanelBlocked = true;
+        $action->cyberpanelBlocked = true;
+        $label = DMsg::ALbl('l_rewritemap');
+        if (PathTool::IsCyberPanel()) {
+            $label .= ' (Disabled by CyberPanel)';
+        }
+        $attrs = [
+            $name,
+            $location,
+            $action
+        ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, $label, $attrs, 'name', 'VT_REWRITE_MAP', $align, null, 'redirect', true);
+    }
+
+    protected function add_VT_REWRITE_MAP($id)
+    {
+        $parseFormat = "/^((txt|rnd):\/*)|(int:(toupper|tolower|escape|unescape))$/";
+        $name = self::NewTextAttr('name', DMsg::ALbl('l_name'), 'name', false, 'rewriteMapName');
+        $location = self::NewParseTextAttr('location', DMsg::ALbl('l_location'), $parseFormat, DMsg::ALbl('parse_rewritemaplocation'), true, 'rewriteMapLocation');
+        $note = $this->_attrs['note']->dup(null,null,null);
+        $name->cyberpanelBlocked = true;
+        $location->cyberpanelBlocked = true;
+        $note->cyberpanelBlocked = true;
+
+        $attrs = [
+            $name,
+            $location,
+            $note,
+        ];
+        $label = DMsg::ALbl('l_rewritemap');
+        if (PathTool::IsCyberPanel()) {
+            $label .= ' (Disabled by CyberPanel)';
+        }
+        $this->_tblDef[$id] = DTbl::NewIndexed($id, $label, $attrs, 'name');
+    }
+
+    protected function add_VT_REWRITE_RULE($id)
+    {
+        $rules = self::NewTextAreaAttr('rules', null, 'cust', true, 5, null, 1, 1);
+        $rules->cyberpanelBlocked = true;
+        $attrs = array(
+            $rules
+        );
+        $label = DMsg::ALbl('l_rewriterules');
+        if (PathTool::IsCyberPanel()) {
+            $label .= ' (Disabled by CyberPanel)';
+        }
+        $this->_tblDef[$id] = DTbl::NewRegular($id, $label, $attrs, 'rewriteRules', 1);
     }
 
     protected function add_S_FILEUPLOAD($id)
@@ -340,6 +397,8 @@ class DTblDef extends DTblDefBase
 			$this->_attrs['vh_maxKeepAliveReq'],
 			$this->_attrs['vh_smartKeepAlive'],
 			$this->_attrs['vh_setUIDMode'],
+            $this->_attrs['vh_suexec_user'],
+            $this->_attrs['vh_suexec_group'],
 			$this->_attrs['staticReqPerSec'],
 			$this->_attrs['dynReqPerSec'],
 			$this->_attrs['outBandwidth'],
@@ -354,7 +413,9 @@ class DTblDef extends DTblDefBase
 			$this->_attrs['vh_allowSymbolLink'],
 			$this->_attrs['vh_enableScript'],
 			$this->_attrs['vh_restrained'],
-			$this->_attrs['vh_setUIDMode']
+			$this->_attrs['vh_setUIDMode'],
+            $this->_attrs['vh_suexec_user'],
+            $this->_attrs['vh_suexec_group'],
 			);
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::UIStr('tab_sec'), $attrs, 'name');
 	}
@@ -460,8 +521,8 @@ class DTblDef extends DTblDefBase
 				$this->get_ctx_attrs('uri'),
 				array(
                         self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false, 'as_location'),
-			self::NewPathAttr('binPath', DMsg::ALbl('l_binpath'), 'file', 1, 'x'),
-                                    self::NewSelAttr('appType', DMsg::ALbl('l_apptype'),
+                        self::NewPathAttr('binPath', DMsg::ALbl('l_binpath'), 'file', 1, 'x'),
+                        self::NewSelAttr('appType', DMsg::ALbl('l_apptype'),
 							array(''=>'', 'rails'=>'Rails', 'wsgi'=>'WSGI', 'node'=>'Node' )),
                         self::NewTextAttr('startupFile', DMsg::ALbl('l_startupfile'), 'cust', true, 'as_startupfile'),
 						$this->_attrs['note'],
@@ -612,6 +673,8 @@ class DTblDef extends DTblDefBase
 	{
 		$attrs = array(
 			$this->_attrs['vh_setUIDMode'],
+            $this->_attrs['vh_suexec_user'],
+            $this->_attrs['vh_suexec_group'],
 			);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_extappresctl'), $attrs);
 	}

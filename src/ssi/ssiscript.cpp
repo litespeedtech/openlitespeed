@@ -576,7 +576,7 @@ int SsiScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
             }
             else
             {
-                if (pItem->parseServerVar2(pValue, pValue, valLen, 1) == -1)
+                if (pItem->parseServerVar2(pValue, pValue, valLen, 1) == LS_FAIL)
                 {
                     pItem->setType(REF_SSI_VAR);
                     pItem->setStr(pValue, valLen);
