@@ -549,8 +549,9 @@ $_gmsg['l_recaptype'] = 'reCAPTCHA Type';
 $_gmsg['l_maxTries'] = 'Max Tries';
 $_gmsg['l_allowedRobotHits'] = 'Allowed Robot Hits';
 $_gmsg['l_botWhiteList'] = 'Bot White List';
-$_gmsg['l_regConnLimit'] = 'Non-SSL Connection Limit';
+$_gmsg['l_regConnLimit'] = 'Connection Limit';
 $_gmsg['l_sslConnLimit'] = 'SSL Connection Limit';
+$_gmsg['l_concurrentReqLimit'] = 'Concurrent Request Limit';
 
 
 $_gmsg['o_cagefswithoutsuexec'] = 'CageFS without suEXEC';
