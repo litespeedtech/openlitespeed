@@ -2827,10 +2827,6 @@ static int UriMapHook(lsi_param_t *rec)
         response_category = RouteRequest(pMyData, session, true);
 
     int ret = 0;
-    g_api->set_req_wait_full_body(session);
-
-    //Disable cache module
-    //g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
 
     switch (response_category)
     {

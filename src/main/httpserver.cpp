@@ -987,7 +987,9 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
 void HttpServerImpl::checkOLSUpdate()
 {
     time_t t = time(NULL);
-    struct tm *tl = localtime(&t);
+    struct tm tstm;
+    struct tm *tl = &tstm;
+    localtime_r(&t,tl);
     if (tl->tm_hour != 2)  //Only check it between 2:00AM - 3:00AM
         return ;
 
@@ -2257,14 +2259,10 @@ int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const XmlNode *pDir = *iter;
-            const char *val = pDir->getValue();
-            char achDir[MAX_PATH_LEN];
 
-            if (val && ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achDir, val) == 0)
-            {
-                if (pDeniedDir->addDir(achDir) == 0)
+            if (pDir->getValue())
+                if (pDeniedDir->addDir(pDir->getValue()) == 0)
                     add ++;
-            }
         }
     }
 
@@ -2468,12 +2466,9 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                     " in the response header.");
         }
 
-
-        // TODO: This is temporary code. Will implement in new year.
-        int useProxyHeader = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 3, 0);
         HttpServerConfig::getInstance().setUseProxyHeader(
-            (useProxyHeader == 3 ? 2 : useProxyHeader));
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+                    "useIpInProxyHeader", 0, 3, 0));
 
         denyAccessFiles(NULL, ".ht*", 0);
 

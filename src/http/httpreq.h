@@ -616,10 +616,10 @@ public:
 
     int checkSymLink(const char *pPath, int pathLen, const char *pBegin);
 
-    const char *findEnvAlias(const char *pKey, int keyLen, int &aliasKeyLen);
+    const char *findEnvAlias(const char *pKey, int keyLen, int &aliasKeyLen) const;
     ls_strpair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
                          int valLen);
-    const char *getEnv(const char *pKey, int keyLen, int &valLen);
+    const char *getEnv(const char *pKey, int keyLen, int &valLen) const;
     const RadixNode *getEnvNode() const;
     int  getEnvCount();
     void unsetEnv(const char *pKey, int keyLen);

@@ -432,11 +432,11 @@ $_tipsdb['modParams'] = new DAttrHelp("Module Parameters", 'Set module parameter
 
 $_tipsdb['moduleContext'] = new DAttrHelp("Module Handler Context", 'A module handler context will associate a URI with a registered module.  Modules need to be registered at Server Module Configuration tab.', '', '', '');
 
-$_tipsdb['moduleEnabled'] = new DAttrHelp("Enable Hooks", 'Enables or disables the module hooks globally. <br/>If the &#039;Not Set&#039; radio button is selected and the module contains hook functions, the default is enabled.  The user can override this global setting at each level.', '', 'Select from radio box', '');
+$_tipsdb['moduleEnabled'] = new DAttrHelp("Enable Module", 'Enables module hooks globally. This setting can be overridden at the Listener and Virtual Host levels.<br/><br/>Default value: Yes', '', 'Select from radio box', '');
 
-$_tipsdb['moduleEnabled_lst'] = new DAttrHelp("Enable Hooks", 'Enables or disables the module hooks at the Listener level. Only if the module has TCP/IP level hooks  (L4_BEGSESSION, L4_ENDSESSION, L4_RECVING, L4_SENDING), this setting will take effect.<br/><br/>If the &#039;Not Set&#039; radio button is selected, the default will be inherited from the Server configuration. The user only needs to set it here to  override the default settings.', '', 'Select from radio box', '');
+$_tipsdb['moduleEnabled_lst'] = new DAttrHelp("Enable Module", 'Enables module hooks at the Listener level. This setting will only take effect if the module has TCP/IP level hooks (L4_BEGSESSION, L4_ENDSESSION, L4_RECVING, L4_SENDING).<br/><br/>Default value: Inherit Server level setting', '', 'Select from radio box', '');
 
-$_tipsdb['moduleEnabled_vh'] = new DAttrHelp("Enable Hooks", 'Enables or disables the module hooks at the Virtual Host level. Only if the module has HTTP level hooks, this setting will take effect.<br/><br/>If the &#039;Not Set&#039; radio button is selected, the Virtual Host level default settings will be inherited from the Server configuration. The user only needs to set it here to override the default settings.', '', 'Select from radio box', '');
+$_tipsdb['moduleEnabled_vh'] = new DAttrHelp("Enable Module", 'Enables module hooks at the Virtual Host level. This setting will only take effect if the module has HTTP level hooks.<br/><br/>Default value: Inherit Server level setting', '', 'Select from radio box', '');
 
 $_tipsdb['moduleNameSel'] = new DAttrHelp("Module", 'Name of the module. The module must be registered under the Server Module Configuration tab.   Once it is registered, the module name will be available in the drop down box for the Listener and Virtual Host configurations.', '', 'Select from drop down list', '');
 

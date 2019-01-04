@@ -122,6 +122,19 @@ const struct sockaddr *HttpSession::getPeerAddr() const
 {   return m_pClientInfo->getAddr(); }
 
 
+bool HttpSession::shouldIncludePeerAddr() const
+{
+    if (HttpServerConfig::getInstance().getUseProxyHeader() != 3)
+        return true;
+
+    int iProxyAddrLen;
+    const char *pProxyAddr = m_request.getEnv("PROXY_REMOTE_ADDR", 17, iProxyAddrLen);
+
+    // If behind proxy, client is trusted. Else check client info. Return NOT.
+    return !((pProxyAddr != NULL)
+                || (AC_TRUST == getClientInfo()->getAccess()));
+}
+
 
 int HttpSession::onInitConnected()
 {
@@ -1063,6 +1076,7 @@ int HttpSession::processNewReqInit()
 {
     int ret;
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
+    int useProxyHeader = httpServConf.getUseProxyHeader();
     const HttpVHost *pVHost = m_request.matchVHost();
     if (!pVHost)
     {
@@ -1086,14 +1100,15 @@ int HttpSession::processNewReqInit()
         m_request.keepAlive(0);
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
-    if ((httpServConf.getUseProxyHeader() == 1)
-        || ((httpServConf.getUseProxyHeader() == 2)
+    if ((useProxyHeader == 1)
+        || (((useProxyHeader == 2) || (useProxyHeader == 3))
             && (getClientInfo()->getAccess() == AC_TRUST)))
     {
         const char *pName;
         const char *pProxyHeader;
         int len;
-        if ((httpServConf.getUseProxyHeader() == 2) && m_request.isCfIpSet())
+        if (((useProxyHeader == 2) || (useProxyHeader == 3))
+            && m_request.isCfIpSet())
         {
             pName = "CF-Connecting-IP";
             pProxyHeader = m_request.getCfIpHeader(len);

@@ -397,8 +397,8 @@ class DTblDef extends DTblDefBase
 			$this->_attrs['vh_maxKeepAliveReq'],
 			$this->_attrs['vh_smartKeepAlive'],
 			$this->_attrs['vh_setUIDMode'],
-            $this->_attrs['vh_suexec_user'],
-            $this->_attrs['vh_suexec_group'],
+            //$this->_attrs['vh_suexec_user'],
+            //$this->_attrs['vh_suexec_group'],
 			$this->_attrs['staticReqPerSec'],
 			$this->_attrs['dynReqPerSec'],
 			$this->_attrs['outBandwidth'],
@@ -414,8 +414,8 @@ class DTblDef extends DTblDefBase
 			$this->_attrs['vh_enableScript'],
 			$this->_attrs['vh_restrained'],
 			$this->_attrs['vh_setUIDMode'],
-            $this->_attrs['vh_suexec_user'],
-            $this->_attrs['vh_suexec_group'],
+           // $this->_attrs['vh_suexec_user'],
+           // $this->_attrs['vh_suexec_group'],
 			);
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::UIStr('tab_sec'), $attrs, 'name');
 	}
@@ -673,8 +673,8 @@ class DTblDef extends DTblDefBase
 	{
 		$attrs = array(
 			$this->_attrs['vh_setUIDMode'],
-            $this->_attrs['vh_suexec_user'],
-            $this->_attrs['vh_suexec_group'],
+        //    $this->_attrs['vh_suexec_user'],
+        //    $this->_attrs['vh_suexec_group'],
 			);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_extappresctl'), $attrs);
 	}

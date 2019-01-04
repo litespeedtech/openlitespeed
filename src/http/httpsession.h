@@ -335,6 +335,7 @@ public:
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
     const struct sockaddr *getPeerAddr() const;
+    bool shouldIncludePeerAddr() const;
 
     void suspendRead()          {    getStream()->suspendRead();        };
     void continueRead()         {    getStream()->continueRead();       };

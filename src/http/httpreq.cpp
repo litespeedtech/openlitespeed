@@ -2495,7 +2495,7 @@ void  HttpReq::smartKeepAlive(const char *pValue)
 
 
 const char *HttpReq::findEnvAlias(const char *pKey, int keyLen,
-                                  int &aliasKeyLen)
+                                  int &aliasKeyLen) const
 {
     int count = sizeof(envAlias) / sizeof(envAlias_t);
     for (int i = 0; i < count; ++i)
@@ -2543,7 +2543,7 @@ ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
 
 
 const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
-                            int &valLen)
+                            int &valLen) const
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
