@@ -2,7 +2,6 @@
 
 class DMsg
 {
-
     const LANG_DIR = 'admin/html/res/lang/';
     const DEFAULT_LANG = 'english';
     const LANG_ENGLISH = 'english';
@@ -14,7 +13,7 @@ class DMsg
     private static $_supported = array(
         self::LANG_ENGLISH => array('English', 'en-US'),
         self::LANG_SIMPLIFIED_CHINESE => array('简体中文', 'zh-CN'),
-        self::LANG_TRADITIONAL_CHINESE => array('繁体中文', 'zh-TW')
+        self::LANG_TRADITIONAL_CHINESE => array('繁体中文', 'zh-TW'),
         self::LANG_JAPANES => array('日本語', 'ja-JP')
     );
     private static $_curlang = '';
@@ -50,8 +49,9 @@ class DMsg
 
     private static function init_tips()
     {
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             self::init();
+        }
 
         if (self::$_curlang != self::DEFAULT_LANG) {
             $filecode = self::$_supported[self::DEFAULT_LANG][1];
@@ -64,8 +64,9 @@ class DMsg
 
     public static function GetSupportedLang(&$cur_lang)
     {
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             self::init();
+        }
 
         $cur_lang = self::$_curlang;
         return self::$_supported;
@@ -90,8 +91,9 @@ class DMsg
 
     public static function GetAttrTip($label)
     {
-        if ($label == '')
+        if ($label == '') {
             return null;
+        }
 
         global $_tipsdb;
 
@@ -99,9 +101,9 @@ class DMsg
             self::init_tips();
         }
 
-        if (isset($_tipsdb[$label]))
+        if (isset($_tipsdb[$label])) {
             return $_tipsdb[$label];
-        else {
+        } else {
             //error_log("DMsg:undefined attr tip $label"); allow null
             return null;
         }
@@ -118,32 +120,37 @@ class DMsg
         $tips = [];
         foreach ($labels as $label) {
             $label = 'EDTP:' . $label;
-            if (isset($_tipsdb[$label]))
+            if (isset($_tipsdb[$label])) {
                 $tips = array_merge($tips, $_tipsdb[$label]);
+            }
         }
-        if (empty($tips))
+        if (empty($tips)) {
             return null;
-        else
+        } else {
             return $tips;
+        }
     }
 
     public static function UIStr($tag, $repl = '')
     {
-        if ($tag == '')
+        if ($tag == '') {
             return null;
+        }
 
         global $_gmsg;
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             DMsg::init();
+        }
 
-        if (isset($_gmsg[$tag]))
-            if ($repl == '')
+        if (isset($_gmsg[$tag])) {
+            if ($repl == '') {
                 return $_gmsg[$tag];
-            else {
+            } else {
                 $search = array_keys($repl);
                 $replace = array_values($repl);
                 return str_replace($search, $replace, $_gmsg[$tag]);
-            } else {
+            }
+        } else {
             //error_log("DMsg:undefined UIStr tag $tag");
             return 'Unknown';
         }
@@ -169,17 +176,18 @@ class DMsg
 
     public static function ALbl($tag)
     {
-        if ($tag == '')
+        if ($tag == '') {
             return null;
+        }
 
         global $_gmsg;
         if (self::$_curlang == '') {
             DMsg::init();
         }
 
-        if (isset($_gmsg[$tag]))
+        if (isset($_gmsg[$tag])) {
             return $_gmsg[$tag];
-        else {
+        } else {
             //error_log("DMsg:undefined ALbl tag $tag");
             return 'Unknown';
         }
@@ -187,15 +195,18 @@ class DMsg
 
     public static function Err($tag)
     {
-        if ($tag == '')
+        if ($tag == '') {
             return null;
+        }
 
         global $_gmsg;
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             DMsg::init();
+        }
 
-        if (isset($_gmsg[$tag]))
-            return $_gmsg[$tag] . ' '; // add extra space
+        if (isset($_gmsg[$tag])) {
+            return $_gmsg[$tag] . ' ';
+        } // add extra space
         else {
             //error_log("DMsg:undefined Err tag $tag");
             return 'Unknown';
@@ -274,7 +285,6 @@ global $_gmsg;';
             // output sorted english
             self::echo_sort_keys($english, $priority);
         } else {
-
             if ($option == 'mixed') {
                 $mixed = array_merge($english, $added);
                 self::echo_sort_keys($mixed, $priority);
@@ -290,5 +300,4 @@ global $_gmsg;';
             }
         }
     }
-
 }
