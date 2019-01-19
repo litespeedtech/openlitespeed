@@ -6,13 +6,15 @@ class DMsg
     const LANG_DIR = 'admin/html/res/lang/';
     const DEFAULT_LANG = 'english';
     const LANG_ENGLISH = 'english';
-    const LANG_CHINESE = 'chinese';
+    const LANG_SIMPLIFIED_CHINESE = 'simplified_chinese';
+    const LANG_TRADITIONAL_CHINESE = 'traditional_chinese';
     const LANG_JAPANES = 'japanes';
     const _COOKIE_LANG_ = 'litespeed_admin_lang';
 
     private static $_supported = array(
         self::LANG_ENGLISH => array('English', 'en-US'),
-        self::LANG_CHINESE => array('中文', 'zh-CN'),
+        self::LANG_SIMPLIFIED_CHINESE => array('简体中文', 'zh-CN'),
+        self::LANG_TRADITIONAL_CHINESE => array('繁体中文(台湾)', 'zh-TW')
         self::LANG_JAPANES => array('日本語', 'ja-JP')
     );
     private static $_curlang = '';
