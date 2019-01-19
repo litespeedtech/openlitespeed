@@ -14,7 +14,7 @@ class DMsg
     private static $_supported = array(
         self::LANG_ENGLISH => array('English', 'en-US'),
         self::LANG_SIMPLIFIED_CHINESE => array('简体中文', 'zh-CN'),
-        self::LANG_TRADITIONAL_CHINESE => array('繁体中文(台湾)', 'zh-TW')
+        self::LANG_TRADITIONAL_CHINESE => array('繁体中文', 'zh-TW')
         self::LANG_JAPANES => array('日本語', 'ja-JP')
     );
     private static $_curlang = '';
