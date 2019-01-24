@@ -37,6 +37,9 @@ typedef ObjPool<evtcbnode_s> CallbackObjPool;
 static CallbackObjPool *s_pCbnodePool;
 
 
+LS_SINGLETON(EvtcbQue);
+
+
 EvtcbQue::EvtcbQue()
 {
     s_pCbnodePool = new CallbackObjPool;

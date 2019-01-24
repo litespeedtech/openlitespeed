@@ -94,7 +94,7 @@ SET(unittest_STAT_SRCS
    unittest_main.cpp
 )
 
-link_directories(${PROJECT_SOURCE_DIR}/ssl/ /usr/local/lib ${PROJECT_SOURCE_DIR}/test/unittest-cpp/UnitTest++)
+link_directories(${PROJECT_SOURCE_DIR}/ssl/ /usr/local/lib)
 
 add_executable(ols_unittest 
     ../src/httpdtest.cpp

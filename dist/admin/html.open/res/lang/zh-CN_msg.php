@@ -7,16 +7,19 @@
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014
-* @link       http://www.litespeedtech.com/
+* @copyright  Copyright (c) LiteSpeed 2014-2019
+* @link       https://www.litespeedtech.com/
 */
 
 global $_gmsg;
 
 $_gmsg['menu_cluster'] = '集群';
+$_gmsg['menu_community'] = '社区';
 $_gmsg['menu_compilephp'] = '编译 PHP';
 $_gmsg['menu_dashboard'] = '主面板';
+$_gmsg['menu_docs'] = '文档';
 $_gmsg['menu_general'] = '常规';
+$_gmsg['menu_guides'] = '配置指南';
 $_gmsg['menu_help'] = '帮助';
 $_gmsg['menu_home'] = '首页';
 $_gmsg['menu_logviewer'] = '查看服务器日志';
@@ -33,9 +36,6 @@ $_gmsg['menu_versionmgr'] = '版本管理';
 $_gmsg['menu_vh'] = '虚拟主机';
 $_gmsg['menu_vh_'] = '虚拟主机';
 $_gmsg['menu_webadmin'] = '管理控制台设置';
-$_gmsg['menu_docs'] = '文档';
-$_gmsg['menu_guides'] = '配置指南';
-$_gmsg['menu_community'] = '社区';
 
 
 $_gmsg['tab_addons'] = '附加功能';
@@ -81,22 +81,23 @@ $_gmsg['note_confirm_delete'] = '你确定要删除这个条目吗？这将从�
 $_gmsg['note_confirm_instantiate'] = '你确定你想要实例化这个虚拟主机吗？这将为该虚拟主机创建一个独立的配置文件。';
 $_gmsg['note_copyrightreserved'] = '保留所有权利。';
 $_gmsg['note_curver'] = '当前版本';
-$_gmsg['note_newver'] = '新版本';
 $_gmsg['note_dataretrievedat'] = '数据接收于';
+$_gmsg['note_entfeature'] = '这个特性仅适用于企业版';
+$_gmsg['note_example'] = '范例';
 $_gmsg['note_fullscreen'] = '全屏模式';
 $_gmsg['note_inputerr'] = '检查到输入错误，请改正后继续。';
 $_gmsg['note_loadavg'] = '系统平均负载(Load)';
 $_gmsg['note_logout'] = '为进一步提高安全性，注销后请关闭浏览器窗口。';
+$_gmsg['note_multicpufeature'] = '这个特性仅适用于多CPU版';
+$_gmsg['note_newver'] = '新版本';
+$_gmsg['note_number'] = '数值';
+$_gmsg['note_numvalidrange'] = '数值有效范围';
+$_gmsg['note_select_option'] = '请选择';
 $_gmsg['note_serv_level'] = '服务器级';
 $_gmsg['note_signout'] = '注销';
-$_gmsg['note_vh_level'] = '虚拟主机级';
-$_gmsg['note_entfeature'] = '这个特性仅适用于企业版';
-$_gmsg['note_multicpufeature'] = '这个特性仅适用于多CPU版';
 $_gmsg['note_syntax'] = '语法';
-$_gmsg['note_example'] = '范例';
 $_gmsg['note_tips'] = '提示';
-$_gmsg['note_numvalidrange'] = '数值有效范围';
-$_gmsg['note_number'] = '数值';
+$_gmsg['note_vh_level'] = '虚拟主机级';
 
 
 $_gmsg['err_faildetectdlmethod'] = '无法检测下载方式(请安装curl、fetch或wget)';
@@ -112,6 +113,7 @@ $_gmsg['err_sessiontimeout'] = '你的会话已超时。';
 $_gmsg['err_valcannotempty'] = '值不能为空';
 
 
+$_gmsg['l_SSLStrongDhKey'] = '强SSL DH密钥';
 $_gmsg['l_accessallow'] = '允许列表';
 $_gmsg['l_accessallowed'] = '允许的访问';
 $_gmsg['l_accesscontrol'] = '访问控制';
@@ -131,6 +133,7 @@ $_gmsg['l_adminusers'] = '网络管理员用户';
 $_gmsg['l_aioblocksize'] = 'AIO 块大小';
 $_gmsg['l_allowbrowse'] = '可访问';
 $_gmsg['l_allowdirectaccess'] = '允许直接访问';
+$_gmsg['l_allowedRobotHits'] = '允许的机器人命中';
 $_gmsg['l_allowedhosts'] = '允许的域名';
 $_gmsg['l_allowoverride'] = '允许覆盖';
 $_gmsg['l_allowsetuid'] = '允许设置UID';
@@ -145,9 +148,11 @@ $_gmsg['l_apacheignoredmodules'] = '忽略的Apache模块';
 $_gmsg['l_apacheipoffset'] = 'Apache监听IP偏移';
 $_gmsg['l_apacheportoffset'] = 'Apache监听端口偏移';
 $_gmsg['l_apachestyleconf'] = 'Apache样式设置';
+$_gmsg['l_apptype'] = 'Application Type';
 $_gmsg['l_authname'] = '认证名称';
 $_gmsg['l_authorizer'] = '认证器';
 $_gmsg['l_authrealm'] = '认证领域';
+$_gmsg['l_autoLoadRewriteHtaccess'] = '自动加载 .htaccess';
 $_gmsg['l_autofix503'] = '自动修复503错误';
 $_gmsg['l_autoindex'] = '自动索引';
 $_gmsg['l_autoindexuri'] = '自动索引URI';
@@ -162,7 +167,10 @@ $_gmsg['l_banperiod'] = '屏蔽时长（秒）';
 $_gmsg['l_base'] = '基本';
 $_gmsg['l_base2'] = '基本 2';
 $_gmsg['l_binding'] = '绑定';
+$_gmsg['l_binpath'] = '二进制文件路径';
 $_gmsg['l_blockbadreq'] = '屏蔽坏请求';
+$_gmsg['l_botWhiteList'] = '机器人白名单';
+$_gmsg['l_brcompress'] = 'Brotli压缩';
 $_gmsg['l_byteslog'] = '字节日志';
 $_gmsg['l_cacertfile'] = 'CA 证书文件';
 $_gmsg['l_cacertpath'] = 'CA 证书路径';
@@ -185,6 +193,7 @@ $_gmsg['l_clientverify'] = '客户端校验';
 $_gmsg['l_command'] = '命令';
 $_gmsg['l_compressarchive'] = '压缩存档';
 $_gmsg['l_compressibletypes'] = '压缩类型';
+$_gmsg['l_concurrentReqLimit'] = '并发请求限制';
 $_gmsg['l_configfile'] = '配置文件';
 $_gmsg['l_connection'] = '连接';
 $_gmsg['l_conntimeout'] = '连接超时时长（秒）';
@@ -194,6 +203,7 @@ $_gmsg['l_cpuhardlimit'] = 'CPU硬限制（秒）';
 $_gmsg['l_cpusoftlimit'] = 'CPU软限制（秒）';
 $_gmsg['l_crlfile'] = '客户端回收文件';
 $_gmsg['l_crlpath'] = '客户端回收路径';
+$_gmsg['l_ctxas'] = 'App Server资源集定义';
 $_gmsg['l_ctxb'] = '负载均衡器资源集定义';
 $_gmsg['l_ctxc'] = 'CGI资源集定义';
 $_gmsg['l_ctxf'] = 'FCGI资源集定义';
@@ -203,9 +213,9 @@ $_gmsg['l_ctxl'] = 'LiteSpeed SAPI资源集定义';
 $_gmsg['l_ctxmd'] = '模块处理器资源集定义';
 $_gmsg['l_ctxp'] = '代理资源集定义';
 $_gmsg['l_ctxr'] = '重定向资源集定义';
-$_gmsg['l_ctxas'] = 'App Server资源集定义';
 $_gmsg['l_ctxs'] = 'Servlet资源集定义';
 $_gmsg['l_custerrpages'] = '自定义错误页面';
+$_gmsg['l_dbname'] = 'DB Name';
 $_gmsg['l_debuglevel'] = '调试级别';
 $_gmsg['l_defaultaction'] = '默认动作';
 $_gmsg['l_defaultcharsetcustomized'] = '自定义默认字符集';
@@ -219,9 +229,11 @@ $_gmsg['l_docroot'] = '文档根';
 $_gmsg['l_domain'] = '域名';
 $_gmsg['l_domains'] = '域名';
 $_gmsg['l_dynreqpersec'] = '动态态请求/秒';
+$_gmsg['l_enablebrcompress'] = '启用Brotli压缩';
 $_gmsg['l_enablecache'] = '启用缓存';
 $_gmsg['l_enablecensorship'] = '启用请求过滤';
 $_gmsg['l_enablechroot'] = '启用Chroot环境';
+$_gmsg['l_enablecompress'] = '启用压缩';
 $_gmsg['l_enablecoredump'] = '启用核心转储';
 $_gmsg['l_enabled'] = '已启用';
 $_gmsg['l_enabledhe'] = '启用DH密钥交换';
@@ -229,7 +241,6 @@ $_gmsg['l_enabledyngzipcompress'] = '启用动态压缩';
 $_gmsg['l_enableecdhe'] = '启用ECDH密钥交换';
 $_gmsg['l_enableexpires'] = '启用过期';
 $_gmsg['l_enablegzip'] = '启用GZIP压缩';
-$_gmsg['l_enablecompress'] = '启用压缩';
 $_gmsg['l_enableh2c'] = '在明文传输上启用HTTP/2';
 $_gmsg['l_enablehooks'] = '启用钩子(Hook)';
 $_gmsg['l_enablehotlinkctrl'] = '启用盗链防护';
@@ -243,6 +254,7 @@ $_gmsg['l_enablespdy'] = '启用SPDY/HTTP2';
 $_gmsg['l_enablestapling'] = '启用OCSP Stapling';
 $_gmsg['l_enablestderrlog'] = '启用标准错误日志（stderr）';
 $_gmsg['l_env'] = '环境变量';
+$_gmsg['l_envvariable'] = '环境变量';
 $_gmsg['l_errcode'] = '错误代码';
 $_gmsg['l_expires'] = '过期设置';
 $_gmsg['l_expiresByType'] = '按类型过期';
@@ -252,6 +264,7 @@ $_gmsg['l_extappchrootmode'] = '外部应用程序Chroot模式';
 $_gmsg['l_extappchrootpath'] = '外部应用程序Chroot路径';
 $_gmsg['l_extappresctl'] = '外部应用程序资源控制';
 $_gmsg['l_extapps'] = '外部应用程序';
+$_gmsg['l_extappsec'] = 'External App Security';
 $_gmsg['l_externalredirect'] = '外部重定向';
 $_gmsg['l_extfcgiauth'] = 'FastCGI认证器';
 $_gmsg['l_extlb'] = '负载均衡器';
@@ -271,7 +284,6 @@ $_gmsg['l_forcemimetype'] = '强制MIME类型';
 $_gmsg['l_forcestrictownership'] = '强制严格属主检查';
 $_gmsg['l_generalsettings'] = '常规设置';
 $_gmsg['l_geoipdb'] = 'IP地理定位数据库';
-$_gmsg['l_dbcache'] = '数据库缓存类型';
 $_gmsg['l_geoipdbfile'] = '数据库文件路径';
 $_gmsg['l_gracefulrestarttimeout'] = '平滑重启超时时间（秒）';
 $_gmsg['l_graceperiod'] = '宽限期（秒）';
@@ -289,9 +301,6 @@ $_gmsg['l_gzipcachedir'] = '静态GZIP缓存目录';
 $_gmsg['l_gzipcompresslevel'] = '压缩级别（动态内容）';
 $_gmsg['l_gzipmaxfilesize'] = '静态文件最大尺寸（字节）';
 $_gmsg['l_gzipminfilesize'] = '静态文件最小尺寸（字节）';
-$_gmsg['l_staticcompresslevel'] = '压缩级别（静态内容）';
-$_gmsg['l_brcompress'] = 'Brotli压缩';
-$_gmsg['l_enablebrcompress'] = '启用Brotli压缩';
 $_gmsg['l_handlername'] = '处理器名称';
 $_gmsg['l_handlertype'] = '处理器类型';
 $_gmsg['l_hardlimit'] = '连接数硬限制';
@@ -309,6 +318,7 @@ $_gmsg['l_internal'] = '是内置模块';
 $_gmsg['l_ioeventdispatcher'] = 'I/O事件调度';
 $_gmsg['l_ip'] = 'IP地址';
 $_gmsg['l_ip2locDB'] = 'IP2Location数据库';
+$_gmsg['l_ip2locDBCache'] = 'DB Cache Type';
 $_gmsg['l_ip2locDBFile'] = 'IP2Location数据库文件路径';
 $_gmsg['l_keepalivetimeout'] = '持久连接超时时间（秒）';
 $_gmsg['l_keepdays'] = '保留天数';
@@ -327,9 +337,11 @@ $_gmsg['l_loggeraddress'] = '远程日志器地址（可选）';
 $_gmsg['l_logheaders'] = '记录头部';
 $_gmsg['l_loglevel'] = '日志级别';
 $_gmsg['l_lsapiapp'] = 'LSAPI应用程序';
+$_gmsg['l_lsrecaptcha'] = 'LS reCAPTCHA';
 $_gmsg['l_mappedlisteners'] = '映射的监听器';
 $_gmsg['l_matchedhosts'] = '正则表达式匹配域名';
 $_gmsg['l_maxCGIInstances'] = '最大CGI实例数量';
+$_gmsg['l_maxTries'] = '最大尝试次数';
 $_gmsg['l_maxcachedfilesize'] = '缓存的小型文件最大大小（字节）';
 $_gmsg['l_maxconns'] = '最大连接数';
 $_gmsg['l_maxdynrespheadersize'] = '动态回应报头最大大小（字节）';
@@ -365,6 +377,8 @@ $_gmsg['l_newpass'] = '新密码';
 $_gmsg['l_newrealm'] = '创建领域';
 $_gmsg['l_nocachedomain'] = '不缓存的域名';
 $_gmsg['l_nocacheurl'] = '不缓存的网址';
+$_gmsg['l_nodebin'] = 'Node路径';
+$_gmsg['l_nodesettings'] = 'Node.js App默认设置';
 $_gmsg['l_notes'] = '备注';
 $_gmsg['l_numworkers'] = '工作器数量';
 $_gmsg['l_ocspcacerts'] = 'OCSP CA证书';
@@ -381,6 +395,7 @@ $_gmsg['l_path'] = '路径';
 $_gmsg['l_pckeepalivetimeout'] = '持续连接超时时长';
 $_gmsg['l_perclientthrottle'] = '单客户调节';
 $_gmsg['l_persistconn'] = '持久连接';
+$_gmsg['l_phpinioverride'] = 'php.ini 覆盖';
 $_gmsg['l_phpsuexec'] = 'PHP suEXEC';
 $_gmsg['l_phpsuexecmaxconn'] = 'PHP suEXEC最大连接数';
 $_gmsg['l_pipedlogger'] = '管道日志器';
@@ -400,7 +415,10 @@ $_gmsg['l_realm'] = '领域';
 $_gmsg['l_realmlist'] = '认证领域列表';
 $_gmsg['l_realmname'] = '领域名称';
 $_gmsg['l_realmtype'] = '数据库类型';
+$_gmsg['l_recapenabled'] = '启用reCAPTCHA';
+$_gmsg['l_recaptype'] = 'reCAPTCHA类型';
 $_gmsg['l_redirecturi'] = '重定向URL';
+$_gmsg['l_regConnLimit'] = '连接限制';
 $_gmsg['l_renegprotection'] = 'SSL重新协商保护';
 $_gmsg['l_reqresp'] = '请求/响应调整';
 $_gmsg['l_requestfilterruleset'] = '请求过滤规则集';
@@ -415,12 +433,13 @@ $_gmsg['l_retrytimeout'] = '重试超时时间（秒）';
 $_gmsg['l_retypepass'] = '确认新密码';
 $_gmsg['l_rewritebase'] = '重写基准';
 $_gmsg['l_rewritecontrol'] = '重写控制';
+$_gmsg['l_rewritedocrootrules'] = '文档根目录重写规则';
 $_gmsg['l_rewriteinherit'] = '重写继承';
 $_gmsg['l_rewritemap'] = '重写映射';
 $_gmsg['l_rewriterules'] = '重写规则';
 $_gmsg['l_rollingsize'] = '回滚大小（字节）';
 $_gmsg['l_rubybin'] = 'Ruby路径';
-$_gmsg['l_rubyproclimit'] = '单账号最大Ruby进程数量';
+$_gmsg['l_rubyproclimit'] = '每个的用户最大Ruby进程数';
 $_gmsg['l_ruleset'] = '规则定义';
 $_gmsg['l_runningas'] = '以此身份运行';
 $_gmsg['l_runonstartup'] = '启动时运行';
@@ -428,6 +447,7 @@ $_gmsg['l_runtimemode'] = '运行模式';
 $_gmsg['l_scanpost'] = '扫描请求主内容';
 $_gmsg['l_secauditlog'] = '安全审计日志';
 $_gmsg['l_secauditlogengine'] = '启用安全审计日志';
+$_gmsg['l_secretKey'] = 'Secret Key';
 $_gmsg['l_secure'] = '加密连接';
 $_gmsg['l_securedconn'] = '加密连接';
 $_gmsg['l_securityandfeatures'] = '安全和特性';
@@ -441,13 +461,23 @@ $_gmsg['l_servletengine'] = 'Servlet引擎';
 $_gmsg['l_sessiontimeout'] = '会话超时时间（秒）';
 $_gmsg['l_setuidmode'] = '外部应用程序设置UID模式';
 $_gmsg['l_shdef'] = '脚本处理器定义';
+$_gmsg['l_shmDefaultDir'] = '默认SHM目录';
 $_gmsg['l_sitealiases'] = '网站别名';
 $_gmsg['l_sitedomain'] = '网站域名';
+$_gmsg['l_sitekey'] = 'Site Key';
 $_gmsg['l_smartkeepalive'] = '智能持续连接';
 $_gmsg['l_sndbufsize'] = '发送缓冲区大小（字节）';
 $_gmsg['l_softlimit'] = '连接软限制';
 $_gmsg['l_spdyadheader'] = 'SPDY公告';
 $_gmsg['l_ssl'] = 'SSL私钥和证书';
+$_gmsg['l_sslConnLimit'] = 'SSL连接限制';
+$_gmsg['l_sslEnableMultiCerts'] = '启用多SSL证书';
+$_gmsg['l_sslSessionCache'] = '启用会话缓存';
+$_gmsg['l_sslSessionCacheSize'] = '会话缓存大小(字节)';
+$_gmsg['l_sslSessionCacheTimeout'] = '会话缓存超时(秒)';
+$_gmsg['l_sslSessionTicketKeyFile'] = 'SSL会话记录单Key文件路径';
+$_gmsg['l_sslSessionTicketLifetime'] = 'SSL会话记录单生命周期(秒)';
+$_gmsg['l_sslSessionTickets'] = '启用会话单';
 $_gmsg['l_sslcryptodevice'] = 'SSL硬件加速器';
 $_gmsg['l_sslopt4758cca'] = '(4758cca) IBM 4758 CCA硬件引擎支持';
 $_gmsg['l_ssloptaep'] = '(aep) Aep 硬件引擎支持';
@@ -461,11 +491,16 @@ $_gmsg['l_ssloptnuron'] = '(nuron) Nuron硬件引擎支持';
 $_gmsg['l_ssloptsureware'] = '(sureware) SureWare硬件引擎支持';
 $_gmsg['l_ssloptubsec'] = '(ubsec) UBSEC硬件引擎支持';
 $_gmsg['l_sslprotocol'] = 'SSL协议';
+$_gmsg['l_startupfile'] = '启动文件';
+$_gmsg['l_statDir'] = '状态统计输出目录';
+$_gmsg['l_staticcompresslevel'] = '压缩级别（静态内容）';
 $_gmsg['l_staticreqpersec'] = '静态请求数/秒';
 $_gmsg['l_statuscode'] = '状态码';
 $_gmsg['l_storagepath'] = '存储路径';
 $_gmsg['l_suexecgrp'] = '以此用户组身份运行';
+$_gmsg['l_suexecgrp1'] = 'suEXEC Group';
 $_gmsg['l_suexecuser'] = '以此用户身份运行';
+$_gmsg['l_suexecuser1'] = 'suEXEC User';
 $_gmsg['l_suffix'] = '后缀';
 $_gmsg['l_suspendvh'] = '冻结虚拟主机';
 $_gmsg['l_swappingdir'] = '交换目录';
@@ -475,12 +510,17 @@ $_gmsg['l_totalmmapcachesize'] = '总MMAP缓存大小（字节）';
 $_gmsg['l_tplist'] = '虚拟主机模板列表';
 $_gmsg['l_tpname'] = '模板名称';
 $_gmsg['l_tuningos'] = '操作系统优化';
+$_gmsg['l_tuningsslsettings'] = 'SSL全局设定';
 $_gmsg['l_tuningstatic'] = '静态文件传输优化';
 $_gmsg['l_type'] = '类型';
 $_gmsg['l_umask'] = '权限掩码';
 $_gmsg['l_updateinterval'] = '更新间隔';
 $_gmsg['l_updatemode'] = '更新模式';
 $_gmsg['l_updateoffsetsecs'] = '更新偏移时间（秒）';
+$_gmsg['l_uploadfile'] = '文件上传';
+$_gmsg['l_uploadpassbypath'] = '通过文件路径传递数据';
+$_gmsg['l_uploadtmpdir'] = '临时文件路径';
+$_gmsg['l_uploadtmpfilepermission'] = '临时文件权限';
 $_gmsg['l_uri'] = 'URI';
 $_gmsg['l_url'] = 'URL';
 $_gmsg['l_urlfilter'] = '资源集';
@@ -513,9 +553,12 @@ $_gmsg['l_websocketdef'] = '网络套接字定义';
 $_gmsg['l_websocketsetup'] = '网络套接字代理设置';
 $_gmsg['l_workers'] = '工作器';
 $_gmsg['l_workingdir'] = '工作路径';
+$_gmsg['l_wsgibin'] = 'WSGI 路径';
+$_gmsg['l_wsgisettings'] = 'Python WSGI默认设置';
 
 
 $_gmsg['o_cagefswithoutsuexec'] = '不包含suEXEC的CageFS';
+$_gmsg['o_checkbox'] = 'Checkbox';
 $_gmsg['o_custchrootpath'] = '自定义的Chroot路径';
 $_gmsg['o_daily'] = '每日';
 $_gmsg['o_deprecated'] = '废弃';
@@ -526,7 +569,10 @@ $_gmsg['o_hidefullheader'] = '隐藏全部头';
 $_gmsg['o_hidever'] = '隐藏版本';
 $_gmsg['o_high'] = '高';
 $_gmsg['o_hourly'] = '每小时';
+$_gmsg['o_ifownermatch'] = '仅限相同属主';
+$_gmsg['o_invisible'] = 'Invisible';
 $_gmsg['o_keepfilemapped'] = '保持文件映射（64位系统）';
+$_gmsg['o_keepheaderfortrusted'] = '在可信IP中保留头';
 $_gmsg['o_low'] = '低';
 $_gmsg['o_medium'] = '中';
 $_gmsg['o_modifiedtime'] = '修改时间';
@@ -535,6 +581,7 @@ $_gmsg['o_no'] = '否';
 $_gmsg['o_noabort'] = '不终止';
 $_gmsg['o_nofornph'] = '对不可解析的头(NPH)为否';
 $_gmsg['o_none'] = '无';
+$_gmsg['o_notset'] = '未设置';
 $_gmsg['o_overridecpanelrestartscript'] = '替代cPanel重启HTTPD的脚本';
 $_gmsg['o_ownlogfile'] = '自有日志文件';
 $_gmsg['o_sameasserver'] = '与服务器相同';
@@ -548,9 +595,7 @@ $_gmsg['o_userhomedironly'] = '只有用户主目录';
 $_gmsg['o_vhroot'] = '虚拟主机根目录';
 $_gmsg['o_weekly'] = '每周';
 $_gmsg['o_yes'] = '是';
-$_gmsg['o_notset'] = '未设置';
-$_gmsg['o_ifownermatch'] = '仅限相同属主';
-
+$_gmsg['o_yesdaemonmode'] = 'Yes (Daemon Mode)';
 
 
 $_gmsg['parse_awstatsuri'] = '以 / 开头并且以 / 结尾';
@@ -559,16 +604,19 @@ $_gmsg['parse_defaultmimetype'] = 'MEME类型, 如 text/html';
 $_gmsg['parse_env'] = 'PROPERTY=VALUE';
 $_gmsg['parse_expiresByType'] = 'MEME类型=A|Mseconds, MIME可以是 */*, text/*, text/html';
 $_gmsg['parse_expiresdefault'] = '[A|M]###, A 代表用户登入时间, M 代表文件修改时间, ### 为秒数';
-$_gmsg['parse_forcemimetype'] = 'MEME类型如text/html,或输入 \"NONE\" 来禁止强制继承的类型。';
+$_gmsg['parse_forcemimetype'] = 'MEME类型如text/html,或输入 \\\"NONE\\\" 来禁止强制继承的类型。';
+$_gmsg['parse_geodbenv'] = 'Variable_Name mapped_DB_data';
 $_gmsg['parse_mimetype'] = '如 text/html';
-$_gmsg['parse_secpermissionmask'] = '3位以上的八进制数，默认限制权限掩码为 000';
+$_gmsg['parse_recaptchakey'] = 'key string assigned from your google reCAPTCHA account';
 $_gmsg['parse_rewritemaplocation'] = 'txt:/location 或者 rnd:/location 或者 int:(toupper|tolower|escape|unescape)';
+$_gmsg['parse_secpermissionmask'] = '3位以上的八进制数，默认限制权限掩码为 000';
 $_gmsg['parse_spdyadheader'] = '格式要求: ssl_port:npn-spdy/version 如 443:npn-spdy/3';
 $_gmsg['parse_suffix'] = '逗号隔开的列表，允许字符[A-z0-9_\\-]';
 $_gmsg['parse_tpfile'] = '需要变量$VH_NAME 或 $VH_ROOT';
 $_gmsg['parse_tpname'] = '需要变量$VH_NAME';
 $_gmsg['parse_tpvhconffile'] = '需要变量 $VH_NAME 并以 .conf结尾。建议位置为 $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf';
 $_gmsg['parse_umask'] = '[000-777]';
+$_gmsg['parse_uploadtmpfilepermission'] = '3 digits octet number, Default value is 666';
 $_gmsg['parse_userdblocation'] = '以ldap:// 或 ldaps://开头';
 
 
@@ -676,7 +724,7 @@ $_gmsg['buildphp_mailheader2'] = '确认邮件源';
 $_gmsg['buildphp_mainstatus'] = '主状态';
 $_gmsg['buildphp_manualrunnotice'] = '<p>出于安全原因，请登入您的服务器并从shell运行预设置的脚本。你可以通过这个界面监控脚本运行。</p>
 	<p>如果编译成功，请根据需求更新php.ini。为了让更新生效，请进行一次平滑重启。</p>
-	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" target="_blank">LiteSpeed wiki</a></p>
+	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href=\"https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php\" target=\"_blank\">LiteSpeed wiki</a></p>
 	<p>如果你以root身份登入，你可以直接运行命令：<br><code>%%manual_script%%</code></p>
 	<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
 	<code>sudo %%manual_script%%</code></p>';
@@ -696,18 +744,14 @@ $_gmsg['buildphp_useprevconf'] = '使用上一次编译的配置文件';
 
 $_gmsg['mail_failedlogin'] = 'LiteSpeed管理员控制台登陆失败';
 $_gmsg['mail_failedlogin_c'] = '近期发生了一次失败的LiteSpeed登陆。失败登陆信息如下
-
 	日期/时间: %%date%%
 	用户名: %%authUser%%
 	IP 地址: %%ip%%
 	URL: %%url%%
-
 如果你并不熟悉该IP地址，请按照下列建议来保护管理员控制台：
-
 1. 请在管理员控制台设置中设置允许访问列表，限制特定的IP访问;
 2. 更改默认7080监听端口;
 3. 不要使用简单密码;
 4. 使用https登陆管理员控制台。';
-
 
 

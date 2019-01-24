@@ -78,4 +78,27 @@ int  GHash::cmpIpv6(const void *pVal1, const void *pVal2)
     return memcmp(pVal1, pVal2, 16);
 }
 
+int GHash::for_each(iterator beg, iterator end,
+                    for_each_fn_ex fun)
+{
+    if (!fun)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!beg)
+        return 0;
+    int n = 0;
+    iterator iterNext = beg;
+    iterator iter ;
+    while (iterNext && iterNext != end)
+    {
+        iter = iterNext;
+        iterNext = next(iterNext);
+        if (fun(iter))
+            break;
+        ++n;
+    }
+    return n;
+}
 

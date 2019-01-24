@@ -144,8 +144,13 @@ public:
 
     void setPendingWrite()
     {
-        if (isEmpty() && !getStream()->isWantWrite())
-            getStream()->continueWrite();
+        if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0)
+        {
+            if (isEmpty() && !getStream()->isWantWrite())
+                getStream()->continueWrite();
+        }
+        else
+            m_iFlag |= H2_CONN_FLAG_WAIT_PROCESS;
     }
 
     void incShutdownStream()    {   ++m_uiShutdownStreams;  }
@@ -159,6 +164,7 @@ private:
 
     H2Stream *findStream(uint32_t uiStreamID);
     int releaseAllStream();
+    int onWriteEx2();
 
     int processFrame(H2FrameHeader *pHeader);
     void printLogMsg(H2FrameHeader *pHeader);
@@ -196,8 +202,8 @@ private:
                               unsigned char flags = 0, uint32_t uiStreamID = 0)
     {
         H2FrameHeader header(len, type, flags, uiStreamID);
-        setPendingWrite();
         getBuf()->append((char *)&header, 9);
+        setPendingWrite();
         return 0;
     }
     int  sendFrame8Bytes(H2FrameType type, uint32_t uiStreamId,

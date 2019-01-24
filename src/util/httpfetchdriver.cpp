@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -17,14 +17,13 @@
 *****************************************************************************/
 #include "httpfetchdriver.h"
 #include "httpfetch.h"
-#include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <edio/multiplexer.h>
 
 
 HttpFetchDriver::HttpFetchDriver(HttpFetch *pHttpFetch)
 {
     m_pHttpFetch = pHttpFetch;
-    m_start = time(NULL);
 }
 
 int HttpFetchDriver::handleEvents(short int event)
@@ -32,16 +31,18 @@ int HttpFetchDriver::handleEvents(short int event)
     return m_pHttpFetch->processEvents(event);
 }
 
-void HttpFetchDriver::onTimer()
+int HttpFetchDriver::onTimer()
 {
     if (m_pHttpFetch->getTimeout() < 0)
-        return;
+        return 0;
 
-    if (time(NULL) - m_start >= m_pHttpFetch->getTimeout())
+    if (time(NULL) - m_pHttpFetch->getTimeStart() >= m_pHttpFetch->getTimeout())
     {
         m_pHttpFetch->setTimeout(-1);
         m_pHttpFetch->closeConnection();
+        return 1;
     }
+    return 0;
 }
 
 void HttpFetchDriver::start()

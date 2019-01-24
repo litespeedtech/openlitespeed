@@ -169,6 +169,8 @@ public:
                      const char *stopChars);
     int parseServerVar(const char *pCurLine, const char *&pFormatStr,
                        const char *pEnd, int isSSI = 0);
+    int parseServerVar2(const char *pCurLine, const char *pName, int len,
+                        int isSSI);
 
     int equal(const SubstItem &rhs) const
     {   return ((m_type == rhs.m_type) && (m_value.m_index == rhs.m_value.m_index));  }

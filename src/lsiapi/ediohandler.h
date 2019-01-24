@@ -32,7 +32,7 @@ public:
     virtual ~EdioHandler();
 
     virtual int handleEvents(short event);
-    virtual void onTimer();
+    virtual int onTimer();
 
 private:
 

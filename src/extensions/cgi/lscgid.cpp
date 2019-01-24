@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <signal.h>
+#include <config.h>
 
 #ifndef _XPG4_2
 # define _XPG4_2
@@ -374,7 +375,10 @@ static int execute_cgi(lscgid_t *pCGI)
     }
     ch = *(pCGI->m_argv[0]);
     * pCGI->m_argv[0] = 0;
-    if (chdir(pCGI->m_pCGIDir) == -1)
+    const char *dir = pCGI->m_cwdPath;
+    if (!dir)
+        dir = pCGI->m_pCGIDir;
+    if (chdir(dir) == -1)
     {
         int error = errno;
         log_cgi_error("lscgid: chdir()", pCGI->m_pCGIDir, NULL);
@@ -479,6 +483,15 @@ static int process_req_data(lscgid_t *cgi_req)
         p += sizeof(short);
 #endif
         cgi_req->m_env[i] = p;
+        if (*p == 'L')
+        {
+            if (strncasecmp(p, "LS_CWD=", 7) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_cwdPath = p + 7;
+            }
+        }
         p += len;
         if (p > pEnd)
             return 500;
@@ -612,6 +625,7 @@ static int processreq(int fd)
     lscgid_t cgi_req;
     int ret;
 
+    memset(&cgi_req, 0, sizeof(cgi_req));
     ret = recv_req(fd, &cgi_req, 10);
     if (ret)
         cgiError(fd, ret);
@@ -808,7 +822,12 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
     //setproctitle( "%s", "httpd" );
 #else
     memset(argv0, 0, strlen(argv0));
+    
+#ifdef IS_LSCPD    
+    strcpy(argv0, "lscpd (lscgid)");
+#else
     strcpy(argv0, "openlitespeed (lscgid)");
+#endif    
 #endif
 
     ret = run(fd);

@@ -208,6 +208,7 @@ void HttpReq::reset()
     m_pEnv = NULL;
     m_pAuthUser = NULL;
     m_pRange = NULL;
+    m_pUrlStaticFileData = NULL;
 }
 
 
@@ -593,7 +594,7 @@ int HttpReq::parseMethod(const char *pCur, const char *pBEnd)
         return SC_400;
 
     if (m_method == HttpMethod::HTTP_HEAD)
-        m_iNoRespBody = 1;
+        setNoRespBody();
 
     if ((m_method < HttpMethod::HTTP_OPTIONS) ||
         (m_method >= HttpMethod::HTTP_METHOD_END))
@@ -732,7 +733,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
         index = begin->name_index;
         if (index == UPK_HDR_UNKNOWN)
             index = HttpHeader::getIndex(name);
-        if (index > 0 && index != HttpHeader::H_HEADER_END)
+        if (index >= 0 && index != HttpHeader::H_HEADER_END)
         {
             m_commonHeaderLen[ index ] = begin->val_len;
             m_commonHeaderOffset[index] = value - m_headerBuf.begin();
@@ -832,7 +833,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
                 && strncasecmp(name, "X-Forwarded-Proto", 17) == 0)
     {
         if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
-            m_iContextState |= X_FORWARD_HTTPS;
+            m_iReqFlag |= IS_FORWARDED_HTTPS;
     }
     else if (pCurHeader->keyLen == 18
                 && strncasecmp(name, "X-Forwarded-scheme", 18) == 0)
@@ -841,7 +842,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
         {
             memcpy((char *)value + 12, "Proto ", 6);
             pCurHeader->keyLen = 17;
-            m_iContextState |= X_FORWARD_HTTPS;
+            m_iReqFlag |= IS_FORWARDED_HTTPS;
         }
     }
     else if ((pCurHeader->keyLen == 9
@@ -1064,6 +1065,18 @@ void HttpReq::getAAAData(struct AAAData &aaa, int &satisfyAny)
         if (m_pFMContext->getConfigBits() & BIT_SATISFY)
             satisfyAny      = m_pFMContext->isSatisfyAny();
     }
+}
+
+
+int HttpReq::isPythonContext() const
+{
+    return m_pContext && m_pContext->isPythonContext();
+}
+
+
+int HttpReq::isAppContext() const
+{
+    return m_pContext && m_pContext->isAppContext();
 }
 
 
@@ -1419,6 +1432,8 @@ int HttpReq::processMatchList(const HttpContext *pContext,
     {
         m_pContext = pMatchContext;
         m_pHttpHandler = m_pContext->getHandler();
+        if (m_pContext->isAppContext())
+            return 0;
         if (pMatchContext->getHandlerType() != HandlerType::HT_REDIRECT)
         {
             char *p = strchr(HttpResourceManager::getGlobalBuf(), '?');
@@ -1454,8 +1469,9 @@ int HttpReq::checkSuffixHandler(const char *pURI, int len, int &cacheable)
     }
     if (m_pHttpHandler->getType() == HandlerType::HT_PROXY)
         return -2;
-    LS_DBG_L(getLogSession(), "Cannot find appropriate handler for [%s].",
-             pURI);
+    if (!m_pContext->isAppContext())
+        LS_DBG_L(getLogSession(), "Cannot find appropriate handler for [%s].",
+                 pURI);
     return SC_404;
 }
 
@@ -1616,6 +1632,7 @@ int HttpReq::processContext(const HttpContext *&pOldCtx)
     iURILen = getURILen();
     m_pMimeType = NULL;
     m_iMatchedLen = 0;
+    HttpVHost *pGlobalVHost = HttpServerConfig::getInstance().getGlobalVHost();
 
     if (!m_pVHost)
     {
@@ -1624,6 +1641,10 @@ int HttpReq::processContext(const HttpContext *&pOldCtx)
     }
     if (m_pVHost->getRootContext().getMatchList())
         processMatchList(&m_pVHost->getRootContext(), pURI, iURILen);
+    if (!m_iMatchedLen && (pGlobalVHost) && pGlobalVHost->getRootContext().getMatchList())
+    {
+        processMatchList(&pGlobalVHost->getRootContext(), pURI, iURILen);
+    }
 
     if (!m_iMatchedLen)
     {
@@ -1640,6 +1661,21 @@ int HttpReq::processContext(const HttpContext *&pOldCtx)
         if ((*(m_pContext->getURI() + m_pContext->getURILen() - 1) == '/') &&
             (*(pURI + m_pContext->getURILen() - 1) != '/'))
             return redirectDir(pURI);
+        if (((m_pContext->getURILen() == 1)
+                || (m_pContext->getHandler()->getType() == HandlerType::HT_NULL))
+            && (pGlobalVHost))
+        {
+            const HttpContext *pGCtx = pGlobalVHost->bestMatch(pURI, iURILen);
+            if ((pGCtx) && (pGCtx->getURILen() > 1))
+            {
+                m_pContext = pGCtx;
+                orContextState(GLOBAL_VH_CTX);
+                LS_DBG_H(getLogSession(), "Find global context with URI: [%s], "
+                            "location: [%s]",
+                            m_pContext->getURI(),
+                            m_pContext->getLocation() ? m_pContext->getLocation() : "");
+            }
+        }
         m_pHttpHandler = m_pContext->getHandler();
 
         if (m_pContext->getMatchList())   //regular expression match
@@ -1816,7 +1852,9 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                 {
                     if (++p != pEnd)
                     {
-                        LS_DBG_L(getLogSession(), "File not found [%s].", pBuf);
+                        if ((!m_pContext->isAppContext())
+                            && (strcmp(p, "favicon.ico") != 0))
+                            LS_DBG_L(getLogSession(), "File not found [%s].", pBuf);
                         return SC_404;
                     }
                 }
@@ -1829,8 +1867,9 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
     while (p >= pBegin);
     if (ret == -1)
     {
-        //if ( strcmp( p, "/favicon.ico" ) != 0 )
-        LS_DBG_L(getLogSession(), "(stat)File not found [%s].", pBuf);
+        if ((!m_pContext->isAppContext())
+            && (strcmp(p, "/favicon.ico") != 0))
+            LS_DBG_L(getLogSession(), "(stat)File not found [%s].", pBuf);
         return checkSuffixHandler(pURI, uriLen, cacheable);
     }
     if (p != pEnd)
@@ -1890,8 +1929,9 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                     return ret;
                 return LS_FAIL;  //internal redirect
             }
-            LS_DBG_L(getLogSession(), "Index file is not available in [%s].",
-                     pBuf);
+            if (!m_pContext->isAppContext())
+                LS_DBG_L(getLogSession(), "Index file is not available in [%s].",
+                         pBuf);
             return SC_404; //can't find a index file
         }
     }
@@ -2107,6 +2147,15 @@ int HttpReq::checkPathInfo(const char *pURI, int iURILen, int &pathLen,
 }
 
 
+void HttpReq::fixRailsPathInfo()
+{
+    m_iScriptNameLen = m_pContext->getParent()->getURILen() - 1;
+
+    ls_str_set(&m_pathInfo, (char *)getOrgURI() + m_iScriptNameLen,
+               getOrgReqURILen() - m_iScriptNameLen);
+}
+
+
 int HttpReq::addWWWAuthHeader(HttpRespHeaders &buf) const
 {
     if (m_pHTAuth)
@@ -2187,23 +2236,6 @@ void HttpReq::replaceBodyBuf(VMemBuf *pBuf)
             HttpResourceManager::getInstance().recycle(pOld);
         else
             delete pOld;
-    }
-}
-
-
-void HttpReq::updateNoRespBodyByStatus(int code)
-{
-    if (!(m_iContextState & KEEP_AUTH_INFO))
-    {
-        switch (m_code = code)
-        {
-        case SC_100:
-        case SC_101:
-        case SC_204:
-        case SC_205:
-        case SC_304:
-            m_iNoRespBody = 1;
-        }
     }
 }
 
@@ -2459,12 +2491,12 @@ void  HttpReq::smartKeepAlive(const char *pValue)
 {
     if (m_pVHost->getSmartKA())
         if (!HttpMime::shouldKeepAlive(pValue))
-            m_iKeepAlive = 0;
+            keepAlive(0);
 }
 
 
 const char *HttpReq::findEnvAlias(const char *pKey, int keyLen,
-                                  int &aliasKeyLen)
+                                  int &aliasKeyLen) const
 {
     int count = sizeof(envAlias) / sizeof(envAlias_t);
     for (int i = 0; i < count; ++i)
@@ -2512,7 +2544,7 @@ ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
 
 
 const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
-                            int &valLen)
+                            int &valLen) const
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
@@ -3147,8 +3179,12 @@ int HttpReq::copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
 
 int HttpReq::checkUrlStaicFileCache()
 {
-    HttpVHost *host = (HttpVHost *)getVHost();
-    m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
+    if (!m_pUrlStaticFileData)
+    {
+        
+        HttpVHost *host = (HttpVHost *)getVHost();
+        m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
+    }
     return 0;
 }
 
@@ -3414,6 +3450,11 @@ void HttpReq::applyOps(HttpSession * pSession,
 int HttpReq::applyHeaderOps(HttpSession * pSession,
                             HttpRespHeaders *pRespHeader)
 {
+    if (getContextState(GLOBAL_VH_CTX))
+    {
+        if (m_pVHost && m_pVHost->getRootContext().getHeaderOps())
+            applyOps(pSession, pRespHeader, m_pVHost->getRootContext().getHeaderOps(), 1);
+    }
     if (m_pContext && m_pContext->getHeaderOps())
     {
         applyOps(pSession, pRespHeader, m_pContext->getHeaderOps(), 0);

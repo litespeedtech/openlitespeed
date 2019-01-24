@@ -63,6 +63,7 @@ class ProxyConn : public ExtConn
 
     int         readvSsl(const struct iovec *vector, const struct iovec *pEnd);
     void        setSSLAgain();
+    int         addForwardedFor(const char *pBegin);
 
 protected:
     virtual int doRead();
@@ -71,7 +72,7 @@ protected:
     virtual int addRequest(ExtRequest *pReq);
     virtual ExtRequest *getReq() const;
     virtual void init(int fd, Multiplexer *pMplx);
-    virtual void onTimer();
+    virtual int onTimer();
 
     int read(char *pBuf , int size);
     int readv(struct iovec *vector, size_t count);

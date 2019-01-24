@@ -90,7 +90,7 @@ public:
 
     void release_objects()
     {
-        GHash::for_each(begin(), end(), deleteObj);
+        GHash::for_each0(begin(), end(), deleteObj);
         GHash::clear();
     }
 
@@ -98,6 +98,43 @@ public:
 
     LS_NO_COPY_ASSIGN(HashStringMap);
 };
+
+template< class T >
+class LsStrHashMap
+    : public THash2<const ls_str_t *, T>
+{
+public:
+    typedef class THash2<const ls_str_t *, T>::iterator iterator;
+    typedef iterator const_iterator;
+
+    LsStrHashMap(int initsize = 29,
+                  GHash::hash_fn hf = ls_str_xxh64,
+                  GHash::val_comp vc = ls_str_bcmp)
+        : THash2<const ls_str_t *, T>(initsize, hf, vc)
+    {};
+    ~LsStrHashMap() {};
+
+    iterator find(const ls_str_t *pKey) const
+    {   return THash2<const ls_str_t *, T>::find(pKey);   }
+
+
+    T remove(const ls_str_t *pKey)
+    {
+        iterator iter = find(pKey);
+        T obj;
+        if (iter != THash2<const ls_str_t *, T>::end())
+        {
+            obj = iter.second();
+            THash2<const ls_str_t *, T>::erase(iter);
+        }
+        else
+            obj = NULL;
+        return obj;
+    }
+
+};
+
+
 
 class StrStr
 {
@@ -114,7 +151,7 @@ public:
         : HashStringMap<StrStr * >(initsize, hf, vc)
     {};
     ~StrStrHashMap() {  release_objects();   };
-    iterator update(const char *pKey, const char *pValue)
+    iterator insert_update(const char *pKey, const char *pValue)
     {
         iterator iter = find(pKey);
         if (iter != end())

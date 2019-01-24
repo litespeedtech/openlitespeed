@@ -34,7 +34,7 @@
 #include <extensions/cgi/suexec.h>
 #include <extensions/cgi/cgidconfig.h>
 #include <extensions/registry/extappregistry.h>
-#include <extensions/registry/railsappconfig.h>
+#include <extensions/registry/appconfig.h>
 
 #include <http/accesslog.h>
 #include <http/clientcache.h>
@@ -87,6 +87,7 @@
 
 #include <shm/lsshm.h>
 #include <sslpp/sslcontext.h>
+#include <sslpp/sslcontextconfig.h>
 #include <sslpp/sslengine.h>
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslsesscache.h>
@@ -103,6 +104,7 @@
 #include <util/xmlnode.h>
 #include <util/sysinfo/nicdetect.h>
 #include <util/sysinfo/systeminfo.h>
+#include <util/ni_fio.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -141,6 +143,7 @@
 
 static int s_achPid[256];
 static int s_curPid = 0;
+//int     SslContext::s_iEnableMultiCerts = 0;
 
 const char *sStatDir = DEFAULT_TMP_DIR;
 
@@ -188,6 +191,8 @@ void HttpServer::cleanPid()
 }
 
 
+LS_SINGLETON(HttpServer);
+
 
 class HttpServerImpl
 {
@@ -229,6 +234,7 @@ private:
         m_serverContext.allocateInternal();
         HttpRespHeaders::buildCommonHeaders();
         m_sRTReportFile = DEFAULT_TMP_DIR "/.rtreport";
+        SslContext::setSniLookupCb(VHostMapFindSslContext);
     }
 
     ~HttpServerImpl()
@@ -343,6 +349,13 @@ private:
                                   const char *pVHostName);
     int configListenerVHostMap(const XmlNode *pRoot,
                                const char *pVHostName);
+    
+    void configCRL(const XmlNode *pNode, SslContext *pSsl);
+    SslContext *newSSLContext(const XmlNode *pNode,
+                              const char *pName, SslContext *pOldContext);
+    int initOcspCachePath();
+    int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
+    
     HttpListener *configListener(const XmlNode *pNode, int isAdmin);
     int configListeners(const XmlNode *pRoot, int isAdmin);
 
@@ -912,7 +925,7 @@ void HttpServerImpl::onTimer30Secs()
 
     }
     HttpStats::set503Errors(0);
-    SslTicket::getInstance().onTimer();
+    SslTicket::onTimer();
 }
 
 
@@ -974,7 +987,9 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
 void HttpServerImpl::checkOLSUpdate()
 {
     time_t t = time(NULL);
-    struct tm *tl = localtime(&t);
+    struct tm tstm;
+    struct tm *tl = &tstm;
+    localtime_r(&t,tl);
     if (tl->tm_hour != 2)  //Only check it between 2:00AM - 3:00AM
         return ;
 
@@ -1001,7 +1016,7 @@ void HttpServerImpl::checkOLSUpdate()
     }
     m_pAutoUpdFetch = new HttpFetch();
     m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
-    m_pAutoUpdFetch->setResProcessor(autoUpdCheckCb, this);
+    m_pAutoUpdFetch->setCallBack(autoUpdCheckCb, this);
     GSockAddr m_addrResponder;
     char sUrl[128];
     strcpy(sUrl, "http://open.litespeedtech.com/");
@@ -1061,6 +1076,27 @@ void HttpServerImpl::offsetChroot()
         ServerInfo::getServerInfo()->dupStr(pChroot->c_str(), pChroot->len());
     m_vhosts.offsetChroot(pChroot->c_str(), pChroot->len());
 }
+
+//FIXME: why we have this
+// int HttpServerImpl::offsetChroot( char * dest, const char *path )
+// {
+//     AutoStr2 *pChroot = ServerProcessConfig::getInstance().getChroot();
+//     if ( pChroot->c_str() &&
+//         (strncmp( pChroot->c_str(), path, pChroot->len() ) == 0) &&
+//         ( *(path + pChroot->len() ) == '/' ) )
+//     {
+//         struct stat st;
+//         if ( nio_stat( dest, &st ) == -1 )
+//         {
+//             if ( nio_stat( dest + pChroot->len(), &st ) == 0 )
+//             {
+//                 memmove( dest, dest + pChroot->len(),
+//                          strlen( dest ) - pChroot->len() + 1 );
+//             }
+//         }
+//     }
+//     return 0;
+// }
 
 
 void HttpServerImpl::releaseAll()
@@ -1424,6 +1460,8 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 }
 
 
+
+
 HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         int isAdmin)
 {
@@ -1451,8 +1489,8 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         if (secure)
         {
             ConfigCtx currentCtx("ssl");
-            pSSLCtx = new SslContext(SslContext::SSL_ALL);
-            if (!pSSLCtx->config(pNode))
+            pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(pNode, pAddr, NULL);
+            if (!pSSLCtx)
             {
                 delete pSSLCtx;
                 pSSLCtx = NULL;
@@ -2151,8 +2189,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         return -1;
     }
 
-    if (currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0) == 1)
-        SslContext::enableMultiCerts();
+    int v = currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0);
+    ConfigCtx::getCurConfigCtx()->setEnableMultiCerts(v);
 
     int iSslCacheSize;
     int32_t iSslCacheTimeout;
@@ -2165,7 +2203,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                            "sslSessionCacheTimeout",
                            0, INT_MAX, 216000);
         if (SslSessCache::getInstance().init(iSslCacheTimeout,
-                                             iSslCacheSize) != LS_OK)
+            iSslCacheSize, getuid(), getgid()) != LS_OK)
         {
             LS_WARN("Failed to init SSL Session Id Cache");
             return -1;
@@ -2184,7 +2222,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         }
         long iTicketLifetime = currentCtx.getLongValue(pNode,
                                "sslSessionTicketLifetime", 216000, INT_MAX, 216000);
-        SslTicket::getInstance().init(pTKFile, iTicketLifetime);
+        SslTicket::init(pTKFile, iTicketLifetime, getuid(), getgid());
     }
 
     const char *pCAFile;
@@ -2408,7 +2446,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         char  achBuf[4096];
         ls_snprintf(achBuf, 4096, "%s/tmp/ocspcache/",
                     MainServerConfig::getInstance().getServerRoot());
-        SslOcspStapling::setRespTempPath(achBuf);
+        SslOcspStapling::setCachePath(achBuf);
 
         m_serverContext.configAutoIndex(pRoot);
         m_serverContext.configDirIndex(pRoot);
@@ -2428,10 +2466,9 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                     " in the response header.");
         }
 
-
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 2, 0));
+                    "useIpInProxyHeader", 0, 3, 0));
 
         denyAccessFiles(NULL, ".ht*", 0);
 
@@ -2839,11 +2876,15 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         procConf.setPriority(ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                              "priority", -20, 20, 0));
 
+#ifndef IS_LSCPD
         int iNumProc = PCUtil::getNumProcessors();
         iNumProc = (iNumProc > 8 ? 8 : iNumProc);
         HttpServerConfig::getInstance().setChildren(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
+#else
+        HttpServerConfig::getInstance().setChildren(1);
+#endif
 
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
 
@@ -3157,7 +3198,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         return ret;
 
 
-    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    //if (!MainServerConfig::getInstance().getDisableWebAdmin())
     {
         ret = loadAdminConfig(pRoot);
         if (ret)
@@ -3211,12 +3252,22 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         ConfigCtx currentCtx("server", "epsr");
         ExtAppRegistry::configExtApps(pRoot, NULL);
     }
-
+    
     {
         ConfigCtx currentCtx("server", "rails");
-        RailsAppConfig::loadRailsDefault(pRoot->getChild("railsDefaults"));
+        AppConfig::s_rubyAppConfig.loadAppDefault(pRoot->getChild("railsDefaults"));
     }
-
+    
+    {
+        ConfigCtx currentCtx("server", "python");
+        AppConfig::s_wsgiAppConfig.loadAppDefault(pRoot->getChild("wsgiDefaults"));
+    }
+    
+    {
+        ConfigCtx currentCtx("server", "nodejs");
+        AppConfig::s_nodeAppConfig.loadAppDefault(pRoot->getChild("nodeDefaults"));
+    }
+    
     const XmlNode *p0 = pRoot->getChild("scriptHandler");
     if (p0 != NULL)
     {
@@ -3511,9 +3562,7 @@ int HttpServerImpl::initLscpd()
     mainServerConfig.setDisableWebAdmin(1);
     procConfig.setPriority(0);
 
-    int iNumProc = PCUtil::getNumProcessors();
-    iNumProc = (iNumProc > 8 ? 8 : iNumProc);
-    httpServerConfig.setChildren(iNumProc);
+    httpServerConfig.setChildren(1);
     mainServerConfig.setDisableLogRotateAtStartup(0);
     HttpStats::set503AutoFix(1);
     httpServerConfig.setEnableH2c(0);
@@ -3538,7 +3587,7 @@ int HttpServerImpl::initLscpd()
 
     ls_snprintf(achBuf, 256, "%s/tmp/ocspcache/",
                 mainServerConfig.getServerRoot());
-    SslOcspStapling::setRespTempPath(achBuf);
+    SslOcspStapling::setCachePath(achBuf);
 
     HttpRespHeaders::hideServerSignature(0);
     HttpServer::getInstance().getServerContext().setGeoIP(0);
@@ -3658,34 +3707,35 @@ int HttpServerImpl::initLscpd()
     pPhp->getConfig().addEnv("PHP_LSAPI_CHILDREN=20");
 
     //listener
-    strcat(achBuf1, "/cert.pem");
-    strcpy(pEnd, "/key.pem");
+    strcat(achBuf1, "/key.pem");
+    strcpy(pEnd, "/cert.pem");
     HttpListener *pListener = addListener("DefaultSSL", LSCPD_LISTENER_ADDRESS);
-
-    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
-    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
-                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
-                       1, 0, 0);  //certChain is 1
-    if (pSSL == NULL)
+    if (!pListener)
     {
-        LS_INFO(ConfigCtx::getCurConfigCtx(),
-                 "Failed to setup SSL cipher for listener %s, please make sure"
-                 " your certificates file %s and Key file %s can be accessed.\n",
-                 LSCPD_LISTENER_ADDRESS, achBuf1, achBuf);
-        LS_INFO(ConfigCtx::getCurConfigCtx(),
-                 "Continue to setup listener %s without SSL support.\n",
+        LS_ERROR("Failed to addListener <DefaultSSL> to port <%s>.",
                  LSCPD_LISTENER_ADDRESS);
-        delete pNewContext;
+        return LS_FAIL;
     }
-    else
-    {
-        pSSL->setProtocol(31);
-        pListener->getVHostMap()->setSslContext(pSSL);
-    }
+
+    SslContextConfig config;
+    config.m_sName = "DefaultSSL";
+    config.m_sKeyFile[0] = achBuf1;
+    config.m_sCertFile[0] = achBuf;
+    config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
+    config.m_iProtocol = 31;
+    config.m_iEnableECDHE = 1;
+    config.m_iEnableDHE = 1;
+    config.m_iEnableTicket = -1;
+    pListener->getVHostMap()->setSslContext(SslContext::config(NULL, &config));
 
     //vhost
     HttpVHost *pVHost = new HttpVHost(LSCPD_VHOST_NAME);
-    assert(pVHost != NULL);
+    if (pVHost == NULL)
+    {
+        LS_ERROR("Failed to create VHost <%s>.", LSCPD_VHOST_NAME);
+        return LS_FAIL;
+    }
+    
     pVHost->getRootContext().setParent(
         &HttpServer::getInstance().getServerContext());
     pVHost->getRootContext().inherit(&HttpServer::getInstance().getServerContext());
@@ -3772,6 +3822,7 @@ int HttpServerImpl::initLscpd()
 int HttpServerImpl::initSampleServer()
 {
     beginConfig();
+    HttpListener *pListener;
     HttpServerConfig &serverConfig = HttpServerConfig::getInstance();
     char achBuf[256], achBuf1[256];
     char *p = achBuf;
@@ -3825,12 +3876,18 @@ int HttpServerImpl::initSampleServer()
     if (addListener("*:3080") == 0)
     {
     }
-    SslContext *pNewContext = new SslContext(SslContext::SSL_ALL);
-    SslContext *pSSL = pNewContext->setKeyCertCipher(achBuf1, achBuf, NULL,
-                       NULL, "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP",
-                       0, 0, 0);
-    if (pSSL == NULL)
-        delete pNewContext;
+    SslContextConfig config;
+    config.m_sName = "*:1443";
+    config.m_sKeyFile[0] = achBuf1;
+    config.m_sCertFile[0] = achBuf;
+    config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
+    config.m_iProtocol = 14;
+    config.m_iEnableECDHE = 1;
+    config.m_iEnableDHE = 1;
+    config.m_iEnableTicket = -1;
+    pListener = addListener( "*:1443" );
+    pListener->getVHostMap()->setSslContext(SslContext::config(NULL, &config));
+
 
 
     HttpVHost *pVHost = new HttpVHost("vhost1");

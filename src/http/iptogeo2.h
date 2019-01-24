@@ -57,15 +57,21 @@ private:
     char *strutf8(MMDB_entry_data_s *entry_data, char *key);
     char *strint(MMDB_entry_data_s *entry_data, char *key);
     char *strdouble(MMDB_entry_data_s *entry_data, char *key);
+    char *strboolean(MMDB_entry_data_s *entry_data, char *key);
     // The 'extract' functions work assuming that a lookup was done
     char *extractString(MMDB_entry_data_s *entry_data);
     char *extractInt(MMDB_entry_data_s *entry_data);
     char *extractDouble(MMDB_entry_data_s *entry_data);
+    char *extractBoolean(MMDB_entry_data_s *entry_data);
     int process_map_key(int db, char *key, 
                         MMDB_entry_data_list_s *entry_data_list);
+    int process_array_entry(int db, char *key,  
+                            MMDB_entry_data_s *entry_data);
     int check_entry_data_list(int db, MMDB_entry_data_list_s *entry_data_list, 
                               MMDB_entry_data_list_s **entry_data_list_next, 
                               char *key_full);
+    int simple_data_type(MMDB_entry_data_s *entry_data);
+    char *extract_simple_data(MMDB_entry_data_s *entry_data);
     LS_NO_COPY_ASSIGN(GeoIpData2);
 };
 

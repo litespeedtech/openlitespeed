@@ -450,7 +450,6 @@ $_gmsg['l_sitedomain'] = 'サイトドメイン';
 $_gmsg['l_smartkeepalive'] = 'スマートキープアライブ';
 $_gmsg['l_sndbufsize'] = '送信バッファサイズ(バイト)';
 $_gmsg['l_softlimit'] = '接続ソフトリミット';
-$_gmsg['l_spdyadheader'] = 'SPDY Advertisement';
 $_gmsg['l_ssl'] = 'SSL 秘密鍵 & 証明書';
 $_gmsg['l_sslcryptodevice'] = 'SSLハードウェアアクセラレータ';
 $_gmsg['l_sslEnableMultiCerts'] = '複数のSSL証明書を有効にする';

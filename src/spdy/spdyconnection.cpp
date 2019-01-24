@@ -391,8 +391,10 @@ int SpdyConnection::processRstFrame(SpdyFrameHeader *pHeader)
     if (it == m_mapStream.end())
         return 0;
     SpdyStream *pSpdyStream = it.second();
+    uint32_t id = pSpdyStream->getStreamID();
     pSpdyStream->setFlag(HIO_FLAG_PEER_RESET, 1);
-    recycleStream(it);
+    pSpdyStream->onPeerClose();
+    recycleStream(id);
 
     return 0;
 }
@@ -722,6 +724,7 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
     pStream->setProtocol(getStream()->getProtocol());
     if (m_bVersion == 3)
         pStream->setFlag(HIO_FLAG_FLOWCTRL, 1);
+    pStream->setConnInfo(getStream()->getConnInfo());
     return pStream;
 }
 

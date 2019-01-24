@@ -467,12 +467,6 @@ class CData
                     }
                 }
             }
-            if ($root->GetChildren('adminRoot') == null) {
-                // backward compatible
-                $root->AddChild(new CNode('adminRoot', '$SERVER_ROOT/admin/'));
-            } elseif ($root->GetChildVal('adminRoot') == null) {
-                $root->SetChildVal('adminRoot', '$SERVER_ROOT/admin/');
-            }
 
             if (($vhosts = $root->GetChildren('virtualhost')) != null) {
                 if (!is_array($vhosts))

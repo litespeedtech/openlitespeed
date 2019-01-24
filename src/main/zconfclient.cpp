@@ -66,7 +66,7 @@ int ZConfClient::initFetch(const char *pAuth, int iAuthLen)
 {
     m_iReqType = ZCUNKNOWN;
     m_fetch.reset();
-    m_fetch.setResProcessor(processFetch, this);
+    m_fetch.setCallBack(processFetch, this);
     return m_fetch.setExtraHeaders(pAuth, iAuthLen);
 }
 

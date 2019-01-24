@@ -27,6 +27,7 @@
 #include <http/httpextconnector.h>
 #include <http/httpreq.h>
 #include <http/httpresourcemanager.h>
+#include <http/httpserverconfig.h>
 #include <http/httpsession.h>
 #include <http/httpstatuscode.h>
 #include <log4cxx/logger.h>
@@ -127,7 +128,7 @@ int ProxyConn::connectSSL()
             m_ssl.setTlsExtHostName(pHostName);
             *(pHostName + hostLen) = ch;
         }
-        m_ssl.tryReuseCachedSession();
+        m_ssl.tryReuseCachedSession(pHostName, hostLen);
     }
     int ret = m_ssl.connect();
     switch (ret)
@@ -183,19 +184,17 @@ int ProxyConn::doWrite()
 }
 
 
-int ProxyConn::sendReqHeader()
+int ProxyConn::addForwardedFor(const char *pBegin)
 {
-    m_iovec.clear();
     HttpSession *pSession = getConnector()->getHttpSession();
     HttpReq *pReq = pSession->getReq();
-    //remove the trailing "\r\n" before adding our headers
-    const char *pBegin = pReq->getOrgReqLine();
-    m_iTotalPending = pReq->getHttpHeaderLen();
-    int newReqLineLen = 0;
     int headerLen = 17;
     char *pExtraHeader = &m_extraHeader[23];
     const char *pForward = pReq->getHeader(HttpHeader::H_X_FORWARDED_FOR);
     int len;
+    const char *psAddr = NULL;
+    int psAddrLen;
+
     if (*pForward != '\0')
     {
         len = pReq->getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
@@ -204,14 +203,50 @@ int ProxyConn::sendReqHeader()
         memmove(&pExtraHeader[headerLen], pForward, len);
         headerLen += len;
         pExtraHeader[headerLen++] = ',';
-
+        psAddr = pReq->getEnv("PROXY_REMOTE_ADDR", 17, psAddrLen);
+    }
+    if (!psAddr)
+    {
+        psAddr = pSession->getPeerAddrString();
+        psAddrLen = pSession->getPeerAddrStrLen();
     }
     //add "X-Forwarded-For" header
-    memmove(&pExtraHeader[headerLen], pSession->getPeerAddrString(),
-            pSession->getPeerAddrStrLen());
+    memmove(&pExtraHeader[headerLen], psAddr, psAddrLen);
     headerLen += pSession->getPeerAddrStrLen();
     pExtraHeader[headerLen++] = '\r';
     pExtraHeader[headerLen++] = '\n';
+    if (*pForward)
+    {
+        if ((pBegin + m_iTotalPending) -
+            (pForward + pReq->getHeaderLen(HttpHeader::H_X_FORWARDED_FOR)) == 2)
+        {
+            const char *p = pForward -= 16;
+            while (*(p - 1) != '\n')
+                --p;
+            m_iTotalPending = p - pBegin;
+        }
+    }
+    return headerLen;
+}
+
+
+int ProxyConn::sendReqHeader()
+{
+    m_iovec.clear();
+    HttpSession *pSession = getConnector()->getHttpSession();
+    HttpReq *pReq = pSession->getReq();
+    const char *pBegin = pReq->getOrgReqLine();
+    m_iTotalPending = pReq->getHttpHeaderLen();
+    int newReqLineLen = 0;
+    int headerLen = 0;
+    char *pExtraHeader = &m_extraHeader[23];
+
+    //remove the trailing "\r\n" before adding our headers
+    if (*(pBegin + --m_iTotalPending - 1) == '\r')
+        --m_iTotalPending;
+
+    if (pSession->shouldIncludePeerAddr())
+        headerLen = addForwardedFor(pBegin);
 
 #if 1       //always set "Accept-Encoding" header to "gzip"
     char *pAE = (char *)pReq->getHeader(HttpHeader::H_ACC_ENCODING);
@@ -224,26 +259,12 @@ int ProxyConn::sendReqHeader()
             memset(pAE + 4, ' ', len - 4);
         }
     }
-    else
+    else // If accept encoding header does not exist, use predefined.
     {
         pExtraHeader = m_extraHeader;
         headerLen += 23;
     }
 #endif
-
-    if (*(pBegin + --m_iTotalPending - 1) == '\r')
-        --m_iTotalPending;
-    if (*pForward)
-    {
-        if ((pBegin + m_iTotalPending) -
-            (pForward + pReq->getHeaderLen(HttpHeader::H_X_FORWARDED_FOR)) == 2)
-        {
-            const char *p = pForward -= 16;
-            while (*(p - 1) != '\n')
-                --p;
-            m_iTotalPending = p - pBegin;
-        }
-    }
 
     //reconstruct request line if URL has been rewritten
     if (pReq->getRedirects() > 0)
@@ -292,7 +313,7 @@ int ProxyConn::sendReqHeader()
         m_iTotalPending += hostLen + sizeof(s_achForwardHost) + 1 ;
     }
 
-    if (pSession->isSSL())
+    if (pSession->isHttps())
     {
         m_iovec.append(s_achForwardHttps, sizeof(s_achForwardHttps) - 1);
         m_iTotalPending += sizeof(s_achForwardHttps) - 1;
@@ -308,6 +329,11 @@ int ProxyConn::sendReqHeader()
     m_iReqHeaderSize = m_iTotalPending;
     m_iReqBodySize = pReq->getContentFinished();
     setInProcess(1);
+    LS_DBG_L("Proxy Request Headers:" );
+    log4cxx::Logger *pLogger = getLogger();
+    if (!pLogger)
+        pLogger = log4cxx::Logger::getDefault();
+    pLogger->lograw(m_iovec.begin(), m_iovec.len());
     return 1;
 }
 
@@ -827,7 +853,7 @@ void ProxyConn::cleanUp()
 }
 
 
-void ProxyConn::onTimer()
+int ProxyConn::onTimer()
 {
 //    if (!( getEvents() & POLLIN ))
 //    {
@@ -860,7 +886,7 @@ void ProxyConn::onTimer()
                         (long long)m_iRespBodySize, (long long)m_iRespBodyRecv);
             setState(ABORT);
             getConnector()->endResponse(0, 0);
-            return;
+            return 0;
         }
         else if ((m_pChunkIS) && (!m_pChunkIS->getChunkLen()) && (delta > 1))
         {
@@ -877,12 +903,12 @@ void ProxyConn::onTimer()
 
                 setState(CLOSING);
                 getConnector()->endResponse(0, 0);
-                return;
+                return 0;
             }
         }
     }
 
-    ExtConn::onTimer();
+    return ExtConn::onTimer();
 }
 
 

@@ -39,8 +39,6 @@ protected:
 public:
     static T &getInstance()
     {
-#ifdef LAZY_CREATE
-        static T *s_pInstance = NULL;
         if (s_pInstance == NULL)
         {
 #ifdef _REENTRANT
@@ -57,13 +55,13 @@ public:
             assert(s_pInstance != NULL);
         }
         return *s_pInstance;
-#else  //LAZY_CREATE
-        static T  s_instance;
-        return s_instance;
-#endif //LAZY_CREATE
     }
+private:
+    static T *s_pInstance;
 
 };
 
+
+#define LS_SINGLETON(T) template<> T *TSingleton<T>::s_pInstance = NULL
 
 #endif

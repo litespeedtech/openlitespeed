@@ -25,6 +25,7 @@ class DTblDefBase
         // define special block contains raw data
         $this->addSpecial('rewrite', ['enable', 'logLevel', 'map', 'inherit', 'base'], 'rules');
         $this->addSpecial('virtualHostConfig:rewrite', ['enable', 'logLevel', 'map', 'inherit', 'base'], 'rules'); // for template
+        $this->addSpecial('botWhiteList', [], 'list');
     }
 
     protected function addSpecial($key, $attrList, $catchAllTag)
@@ -183,6 +184,11 @@ class DTblDefBase
         $this->_options['logLevel'] = array('ERROR'  => 'ERROR', 'WARN'   => 'WARNING',
             'NOTICE' => 'NOTICE', 'INFO'   => 'INFO', 'DEBUG'  => 'DEBUG');
 
+        $this->_options['recaptcha'] = [
+            '0' => DMsg::ALbl('o_notset'),
+            '1' => DMsg::ALbl('o_checkbox'),
+            '2' => DMsg::ALbl('o_invisible')];
+
         // for shared parse format
         $this->_options['parseFormat'] = array(
             'filePermission4' => '/^0?[0-7]{3,4}$/',
@@ -281,11 +287,12 @@ class DTblDefBase
             'vh_maxKeepAliveReq' => self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
             'vh_smartKeepAlive'  => self::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), true, 'vhSmartKeepAlive'),
             'vh_enableGzip'      => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
-            'vh_spdyAdHeader'    => self::NewParseTextAttr('spdyAdHeader', DMsg::ALbl('l_spdyadheader'), "/^\d+:npn-spdy\/[23]$/", DMsg::ALbl('parse_spdyadheader')),
             'vh_allowSymbolLink' => self::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
             'vh_enableScript'    => self::NewBoolAttr('enableScript', DMsg::ALbl('l_enablescript'), false),
             'vh_restrained'      => self::NewBoolAttr('restrained', DMsg::ALbl('l_restrained'), false),
             'vh_setUIDMode'      => self::NewSelAttr('setUIDMode', DMsg::ALbl('l_setuidmode'), array('' => '', 0 => 'Server UID', 1 => 'CGI File UID', 2 => 'DocRoot UID'), true, 'setUidMode'),
+            'vh_suexec_user'         => self::NewTextAttr('user', DMsg::ALbl('l_suexecuser1'), 'cust', true, 'suexecUser'),
+            'vh_suexec_group'        => self::NewTextAttr('group', DMsg::ALbl('l_suexecgrp1'), 'cust', true, 'suexecGroup'),
             'staticReqPerSec'    => self::NewIntAttr('staticReqPerSec', DMsg::ALbl('l_staticreqpersec'), true, 0),
             'dynReqPerSec'       => self::NewIntAttr('dynReqPerSec', DMsg::ALbl('l_dynreqpersec'), true, 0),
             'outBandwidth'       => self::NewIntAttr('outBandwidth', DMsg::ALbl('l_outbandwidth'), true, 0),
@@ -293,9 +300,9 @@ class DTblDefBase
             'ctx_order'    => $ctxOrder,
             'ctx_type'     => self::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['ctxType'], false, 'ctxType'),
             'ctx_uri'      => self::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
-            'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust', false),
+            'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust'),
             'ctx_shandler' => self::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
-            'appserverEnv' => self::NewSelAttr('envType', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
+            'appserverEnv' => self::NewSelAttr('appserverEnv', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
             'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
             'enableIpGeo'  => self::NewBoolAttr('enableIpGeo', DMsg::ALbl('l_enableipgeo')),
             'note'         => self::NewTextAreaAttr('note', DMsg::ALbl('l_notes'), 'cust', true, 4, null, 0),
@@ -409,7 +416,7 @@ class DTblDefBase
     protected function add_S_TUNING_REQ($id)
     {
         $attrs = array(
-            self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 8192),
+            self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 16384),
             self::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 16380),
             self::NewIntAttr('maxReqBodySize', DMsg::ALbl('l_maxreqbodysize'), false, '1M', null),
             self::NewIntAttr('maxDynRespHeaderSize', DMsg::ALbl('l_maxdynrespheadersize'), false, 200, 8192),
@@ -502,10 +509,48 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
     }
 
+	private function add_S_SEC_RECAP($id)
+	{
+		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
+		$parseHelp = DMsg::ALbl('parse_recaptchakey');
+        $botlist = self::NewTextAreaAttr('botWhiteList:list', DMsg::ALbl('l_botWhiteList'), 'cust', true, 5, 'recaptchaBotWhiteList', 0, 1);
+        $botlist->SetFlag(DAttr::BM_RAWDATA);
+
+        $attrs = [
+            self::NewBoolAttr('enabled', DMsg::ALbl('l_recapenabled'), true, 'enableRecaptcha'),
+            self::NewParseTextAttr('siteKey', DMsg::ALbl('l_sitekey'), $parseFormat, $parseHelp, true, 'recaptchaSiteKey'),
+            self::NewParseTextAttr('secretKey', DMsg::ALbl('l_secretKey'), $parseFormat, $parseHelp, true, 'recaptchaSecretKey'),
+            self::NewSelAttr('type', DMsg::ALbl('l_recaptype'), $this->_options['lsrecaptcha'], true, 'recaptchaType'),
+            self::NewIntAttr('maxTries', DMsg::ALbl('l_maxTries'), true, 0, 65535, 'recaptchaMaxTries'),
+            self::NewIntAttr('allowedRobotHits', DMsg::ALbl('l_allowedRobotHits'), true, 0, 65535, 'recaptchaAllowedRobotHits'),
+            $botlist,
+            self::NewIntAttr('regConnLimit', DMsg::ALbl('l_regConnLimit'), true, 0, null, 'recaptchaRegConnLimit'),
+            self::NewIntAttr('sslConnLimit', DMsg::ALbl('l_sslConnLimit'), true, 0, null, 'recaptchaSslConnLimit'),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
+	}
+
+	private function add_VT_SEC_RECAP($id)
+	{
+		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
+		$parseHelp = DMsg::ALbl('parse_recaptchakey');
+
+        $attrs = [
+            self::NewBoolAttr('enabled', DMsg::ALbl('l_recapenabled'), true, 'enableRecaptcha'),
+            self::NewParseTextAttr('siteKey', DMsg::ALbl('l_sitekey'), $parseFormat, $parseHelp, true, 'recaptchaSiteKey'),
+            self::NewParseTextAttr('secretKey', DMsg::ALbl('l_secretKey'), $parseFormat, $parseHelp, true, 'recaptchaSecretKey'),
+            self::NewSelAttr('type', DMsg::ALbl('l_recaptype'), $this->_options['lsrecaptcha'], true, 'recaptchaType'),
+            self::NewIntAttr('maxTries', DMsg::ALbl('l_maxTries'), true, 0, 65535, 'recaptchaMaxTries'),
+            self::NewIntAttr('regConnLimit', DMsg::ALbl('l_concurrentReqLimit'), true, 0, null, 'recaptchaVhReqLimit'),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
+	}
+
+
     protected function add_S_SEC_DENY($id)
     {
         $attrs = array(
-            self::NewTextAreaAttr('dir', null, 'dir', true, 15, null, 0, 1, 2)
+            self::NewTextAreaAttr('dir', null, 'cust', true, 15, null, 0, 1, 2)
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_accessdenydir'), $attrs, 'accessDenyDir', 1);
     }
@@ -734,9 +779,7 @@ class DTblDefBase
     protected function add_S_RAILS($id)
     {
         $attrs = array(
-            self::NewPathAttr('rubyBin', DMsg::ALbl('l_rubybin'), 'file', 1, 'x'),
-            self::NewPathAttr('wsgiBin', DMsg::ALbl('l_wsgibin'), 'file', 1, 'x'),
-            self::NewPathAttr('nodeBin', DMsg::ALbl('l_nodebin'), 'file', 1, 'x'),
+            self::NewPathAttr('binPath', DMsg::ALbl('l_rubybin'), 'file', 1, 'x', true, 'rubyBin'),
             $this->_attrs['appserverEnv'],
             $this->_attrs['ext_maxConns'],
             $this->_attrs['ext_env'],
@@ -753,7 +796,53 @@ class DTblDefBase
             $this->_attrs['procSoftLimit'],
             $this->_attrs['procHardLimit']
         );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_railssettings'), $attrs, 'railsDefault');
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_railssettings'), $attrs, 'railsDefaults');
+    }
+
+    protected function add_S_WSGI($id)
+    {
+        $attrs = array(
+            self::NewPathAttr('binPath', DMsg::ALbl('l_wsgibin'), 'file', 1, 'x', true, 'wsgiBin'),
+            $this->_attrs['appserverEnv'],
+            $this->_attrs['ext_maxConns'],
+            $this->_attrs['ext_env'],
+            $this->_attrs['ext_initTimeout'],
+            $this->_attrs['ext_retryTimeout'],
+            $this->_attrs['pcKeepAliveTimeout'],
+            $this->_attrs['ext_respBuffer'],
+            $this->_attrs['ext_backlog'],
+            $this->_attrs['ext_runOnStartUp'],
+            self::NewIntAttr('extMaxIdleTime', DMsg::ALbl('l_maxidletime'), true, -1),
+            $this->_attrs['priority']->dup(null, null, 'extAppPriority'),
+            $this->_attrs['memSoftLimit'],
+            $this->_attrs['memHardLimit'],
+            $this->_attrs['procSoftLimit'],
+            $this->_attrs['procHardLimit']
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_wsgisettings'), $attrs, 'wsgiDefaults');
+    }
+
+    protected function add_S_NODEJS($id)
+    {
+        $attrs = array(
+            self::NewPathAttr('binPath', DMsg::ALbl('l_nodebin'), 'file', 1, 'x', true, 'nodeBin'),
+            $this->_attrs['appserverEnv'],
+            $this->_attrs['ext_maxConns'],
+            $this->_attrs['ext_env'],
+            $this->_attrs['ext_initTimeout'],
+            $this->_attrs['ext_retryTimeout'],
+            $this->_attrs['pcKeepAliveTimeout'],
+            $this->_attrs['ext_respBuffer'],
+            $this->_attrs['ext_backlog'],
+            $this->_attrs['ext_runOnStartUp'],
+            self::NewIntAttr('extMaxIdleTime', DMsg::ALbl('l_maxidletime'), true, -1),
+            $this->_attrs['priority']->dup(null, null, 'extAppPriority'),
+            $this->_attrs['memSoftLimit'],
+            $this->_attrs['memHardLimit'],
+            $this->_attrs['procSoftLimit'],
+            $this->_attrs['procHardLimit']
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_nodesettings'), $attrs, 'nodeDefaults');
     }
 
     protected function add_V_TOP($id)
@@ -981,7 +1070,6 @@ class DTblDefBase
             $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
             $this->_attrs['vh_enableGzip'],
             $this->_attrs['enableIpGeo'],
-            $this->_attrs['vh_spdyAdHeader']
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_g'), $attrs);
     }
@@ -1189,38 +1277,6 @@ class DTblDefBase
         $this->_tblDef[$id]->Set(DTbl::FLD_SHOWPARENTREF, true);
     }
 
-    protected function add_VT_REWRITE_MAP_TOP($id)
-    {
-        $align = array('left', 'left', 'center');
-
-        $attrs = array(
-            self::NewViewAttr('name', DMsg::ALbl('l_name')),
-            self::NewViewAttr('location', DMsg::ALbl('l_location')),
-            self::NewActionAttr('VT_REWRITE_MAP', 'Ed')
-        );
-        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_rewritemap'), $attrs, 'name', 'VT_REWRITE_MAP', $align, null, 'redirect', true);
-    }
-
-    protected function add_VT_REWRITE_MAP($id)
-    {
-        $parseFormat = "/^((txt|rnd):\/*)|(int:(toupper|tolower|escape|unescape))$/";
-
-        $attrs = array(
-            self::NewTextAttr('name', DMsg::ALbl('l_name'), 'name', false, 'rewriteMapName'),
-            self::NewParseTextAttr('location', DMsg::ALbl('l_location'), $parseFormat, DMsg::ALbl('parse_rewritemaplocation'), true, 'rewriteMapLocation'),
-            $this->_attrs['note'],
-        );
-        $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_rewritemap'), $attrs, 'name');
-    }
-
-    protected function add_VT_REWRITE_RULE($id)
-    {
-        $attrs = array(
-            self::NewTextAreaAttr('rules', null, 'cust', true, 5, null, 1, 1)
-        );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewriterules'), $attrs, 'rewriteRules', 1);
-    }
-
     protected function add_VT_CTX_SEL($id)
     {
         $attrs = array($this->_attrs['ctx_type']);
@@ -1303,7 +1359,6 @@ class DTblDefBase
             $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
             $this->_attrs['vh_enableGzip'],
             $this->_attrs['enableIpGeo'],
-            $this->_attrs['vh_spdyAdHeader']
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_base2'), $attrs);
     }

@@ -1,25 +1,17 @@
 #!/bin/sh
-
 #Download udns source code and install it
 
-# detect download method
 DLCMD=
-DL=`which wget`
-if [ $? -eq 0 ] ; then
-    DLCMD="wget -nv -O "
-else
-    DL=`which curl`
-    if [ $? -eq 0 ] ; then
-        DLCMD="curl -L -o "
-    else
-        if [ "x$OS" = "xFreeBSD" ] ; then
-            DL=`which fetch`
-            if [ $? -eq 0 ] ; then
-                DLCMD="fetch -o "
-            fi
-        fi
+source dist/functions.sh 2>/dev/null
+if [ $? != 0 ] ; then
+    . dist/functions.sh
+    if [ $? != 0 ] ; then
+        echo [ERROR] Can not include 'functions.sh'.
+        exit 1
     fi
 fi
+
+detectdlcmd
 
 echo Will download stable version of the udns library 0.4 and install it
 $DLCMD ./udns.tar.gz  http://www.corpit.ru/mjt/udns/udns-0.4.tar.gz

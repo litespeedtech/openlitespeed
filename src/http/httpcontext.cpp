@@ -766,6 +766,13 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         for (iter = m_pMatchList->begin(); iter != m_pMatchList->end(); ++iter)
             (*iter)->inherit(pRootContext);
     }
+
+    if (m_pParent->isRailsContext())
+        setRailsContext();
+    if (m_pParent->isPythonContext())
+        setPythonContext();
+    if (m_pParent->isNodejsContext())
+        setNodejsContext();
 }
 
 
@@ -997,7 +1004,7 @@ const MimeSetting *HttpContext::determineMime(const char *pSuffix,
     {
         char achSuffix[256];
         int len = 256;
-        StringTool::strLower(pSuffix, achSuffix, len);
+        StringTool::strnlower(pSuffix, achSuffix, len);
         if (m_pInternal->m_pMIME)
         {
             pMimeType = m_pInternal->m_pMIME->getFileMimeBySuffix(achSuffix);
@@ -1165,7 +1172,7 @@ void HttpContext::getAAAData(struct AAAData &data) const
 }
 
 
-void HttpContext::setWebSockAddr(GSockAddr &gsockAddr)
+void HttpContext::setWebSockAddr(const GSockAddr &gsockAddr)
 {
     if (!allocateInternal())
     {
@@ -1458,10 +1465,11 @@ int HttpContext::config(const RewriteMapList *pMapList,
     const XmlNode *pNode = pContextNode->getChild("rewrite");
     if (pNode)
     {
-        enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enable",
-                      0, 1, defRewriteEnable));
-        pValue = pNode->getChildValue("inherit");
+        if (pNode->getChildValue("enable"))
+            enableRewrite(ConfigCtx::getCurConfigCtx()->getLongValue(
+                pNode, "enable", 0, 1, defRewriteEnable));
 
+        pValue = pNode->getChildValue("inherit");
         if ((pValue) && (strcasestr(pValue, "1")))
             setRewriteInherit(1);
 
@@ -1479,11 +1487,6 @@ int HttpContext::config(const RewriteMapList *pMapList,
         }
 
         rules = pNode->getChildValue("rules");
-    }
-    else
-    {
-        enableRewrite(defRewriteEnable);
-        setRewriteInherit(1);
     }
 
     AutoStr2 htaccessPath;

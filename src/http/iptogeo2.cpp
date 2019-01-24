@@ -87,8 +87,8 @@ IpToGeo2::env_t s_env_City[] =
     { "GEOIP_COUNTRY_NAME", "/country/names/en" },
     { "GEOIP_CONTINENT_CODE", "/continent/code" },
     { "GEOIP_COUNTRY_CONTINENT", "/continent/code" },
-    { "GEOIP_REGION", "/subdivisions/iso_code" },
-    { "GEOIP_REGION_NAME", "/subdivisions/names/en" },
+    { "GEOIP_REGION", "/subdivisions/0/iso_code" },
+    { "GEOIP_REGION_NAME", "/subdivisions/0/names/en" },
     { "GEOIP_DMA_CODE", "/location/metro_code" },
     { "GEOIP_METRO_CODE", "/location/metro_code" },
     { "GEOIP_LATITUDE", "/location/latitude" },
@@ -230,6 +230,13 @@ char *GeoIpData2::strdouble(MMDB_entry_data_s *entry_data, char *key)
 }
 
 
+char *GeoIpData2::strboolean(MMDB_entry_data_s *entry_data, char *key)
+{
+    snprintf(key, MAX_KEY_LENGTH - 1, "%s", entry_data->boolean ? "1" : "0");
+    return(key);
+}
+
+
 char *GeoIpData2::extractString(MMDB_entry_data_s *entry_data)
 {
     LS_DBG("[GEO] extractString\n");
@@ -265,8 +272,48 @@ char *GeoIpData2::extractDouble(MMDB_entry_data_s *entry_data)
     return pstr;
 }
 
+char *GeoIpData2::extractBoolean(MMDB_entry_data_s *entry_data)
+{
+    char str[MAX_KEY_LENGTH];
+    char *pstr;
+    pstr = ls_pdupstr(strboolean(entry_data, str));
+    return pstr;
+}
+
+int GeoIpData2::simple_data_type(MMDB_entry_data_s *data)
+{
+    if ((data->type == MMDB_DATA_TYPE_UTF8_STRING) ||
+        (data->type == MMDB_DATA_TYPE_DOUBLE) ||
+        (data->type == MMDB_DATA_TYPE_INT32) ||
+        (data->type == MMDB_DATA_TYPE_UINT16) ||
+        (data->type == MMDB_DATA_TYPE_UINT32) ||
+        (data->type == MMDB_DATA_TYPE_UINT64) ||
+        (data->type == MMDB_DATA_TYPE_BOOLEAN))
+        return 1;
+    return 0;
+}
+
+
+char *GeoIpData2::extract_simple_data(MMDB_entry_data_s *data)
+{
+    if (data->type == MMDB_DATA_TYPE_UTF8_STRING)
+        return extractString(data);
+    if (data->type == MMDB_DATA_TYPE_DOUBLE)
+        return extractDouble(data);
+    if ((data->type == MMDB_DATA_TYPE_INT32) ||
+        (data->type == MMDB_DATA_TYPE_UINT16) ||
+        (data->type == MMDB_DATA_TYPE_UINT32) ||
+        (data->type == MMDB_DATA_TYPE_UINT64)) 
+        return extractInt(data);
+    if (data->type == MMDB_DATA_TYPE_BOOLEAN)
+        return extractBoolean(data);
+    LS_WARN("[GEO] Extract of type %d not simple!\n", data->type);
+    return NULL;
+}
+
+
 int GeoIpData2::process_map_key(int db, char *key,
-                              MMDB_entry_data_list_s *entry_data_list)
+                                MMDB_entry_data_list_s *entry_data_list)
 {
     int nenv =  m_IpToGeo2->m_dbs[db].m_nenv;
     db_found_t *db_found = &m_db_found[db];
@@ -279,15 +326,8 @@ int GeoIpData2::process_map_key(int db, char *key,
         {
             LS_DBG("[GEO] Found key %s, env: %s\n", key, env->m_var);
             struct MMDB_entry_data_s *data = &entry_data_list->next->entry_data;
-            if (data->type == MMDB_DATA_TYPE_UTF8_STRING)
-                env_found->m_value = extractString(data);
-            else if (data->type == MMDB_DATA_TYPE_DOUBLE)
-                env_found->m_value = extractDouble(data);
-            else if ((data->type == MMDB_DATA_TYPE_INT32) ||
-                     (data->type == MMDB_DATA_TYPE_UINT16) ||
-                     (data->type == MMDB_DATA_TYPE_UINT32) ||
-                     (data->type == MMDB_DATA_TYPE_UINT64)) 
-                env_found->m_value = extractInt(data);
+            if (simple_data_type(data))
+                env_found->m_value = extract_simple_data(data);
             else
             {
                 LS_WARN("[GEO] Unexpected data type: %d in %s\n",
@@ -301,9 +341,44 @@ int GeoIpData2::process_map_key(int db, char *key,
                          env->m_var);
                 return -1;
             }
-            else
+            else 
+            {
                 LS_DBG("[GEO] Env found: db #%d %s=%s=%s\n", db, key, env->m_var, 
                        env_found->m_value);
+                break;
+            }
+        }
+    }
+    return 0;
+}
+    
+    
+int GeoIpData2::process_array_entry(int db, char *key,
+                                    MMDB_entry_data_s *entry_data)
+{
+    int nenv =  m_IpToGeo2->m_dbs[db].m_nenv;
+    db_found_t *db_found = &m_db_found[db];
+    LS_DBG("[GEO] process_array_index: %s\n", key);
+    for (int i = 0; i < nenv; ++i)
+    {
+        IpToGeo2::env_t const *env = &m_IpToGeo2->m_dbs[db].m_env[i];
+        env_found_t *env_found = &db_found->m_env_found[i];
+        
+        if (!(strcasecmp(key, env->m_key)))
+        {
+            env_found->m_value = extract_simple_data(entry_data);
+            if (!env_found->m_value)
+            {
+                LS_ERROR("[GEO] Insufficient memory for env value of %s\n",
+                         env->m_var);
+                return -1;
+            }
+            else
+            {
+                LS_DBG("[GEO] Env found: db #%d %s=%s=%s\n", db, key, env->m_var, 
+                       env_found->m_value);
+                break;
+            }
         }
     }
     return 0;
@@ -361,16 +436,46 @@ int GeoIpData2::check_entry_data_list(
     else if (initial_type == MMDB_DATA_TYPE_ARRAY)
     {
         uint32_t count = entry_data_list->entry_data.data_size;
-
+        /* A customer found a bug where there might be multiple array elements
+         * so we need to be able to deal with an array element (as is 
+         * documented.  */
+        int implied_index = 0;
+        if (key_full == NULL)
+        {
+            key_full = (char *)"0";
+            implied_index = 1;
+        }
+        int index = 0;
         entry_data_list = entry_data_list->next; 
+        LS_DBG("[GEO] Array: Count: %d\n", count);
         while (count && entry_data_list)
         { 
+            char key_child[MAX_KEY_LENGTH];
+
+            snprintf(key_child, sizeof(key_child), "%s/%u", 
+                     key_full ? key_full : "", index);
+            LS_DBG("[GEO] Array[%d]:\n", index);
+            if (simple_data_type(&entry_data_list->entry_data))
+            {
+                LS_DBG("[GEO] Array: SIMPLE, type: %d\n", 
+                       entry_data_list->entry_data.type);
+                if (process_array_entry(db, key_child, 
+                                        &entry_data_list->entry_data) == -1)
+                    return -1;
+                entry_data_list = entry_data_list->next;
+            }
+            else
+            {
+                LS_DBG("[GEO] Array: Container, type: %d\n",
+                       entry_data_list->entry_data.type);
+                ret = check_entry_data_list(db, entry_data_list,
+                                            &entry_data_list, 
+                                            key_child);
+                if (ret)
+                    return ret;
+            }
             count--;
-            ret = check_entry_data_list(db, entry_data_list->next,
-                                        &entry_data_list, 
-                                        key_full);
-            if (ret)
-                return ret;
+            index++;
         }
         (*entry_data_list_next) = entry_data_list;
         return 0; // advanced through recursion
@@ -406,7 +511,8 @@ int GeoIpData2::parseEnv()
         }
         MMDB_entry_data_list_s *list = m_db_found[i].m_list;
         while (list)
-        {
+        {   
+
             if (check_entry_data_list(i, list, &list, NULL))
             {
                 LS_DBG("[GEO] Error in check_entry_data_list\n");

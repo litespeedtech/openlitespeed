@@ -74,7 +74,7 @@ public:
     void continueRead();
     void continueWrite();
 
-    void onTimer();
+    int onTimer();
 
     int isStuckOnRead()
     {

@@ -57,9 +57,6 @@
 /* Define to 1 if you have the <lauxlib.h> header file. */
 #undef HAVE_LAUXLIB_H
 
-/* Define to 1 if you have the `GeoIP' library (-lGeoIP). */
-#undef HAVE_LIBGEOIP
-
 /* Define to 1 if you have the `pcre' library (-lpcre). */
 #undef HAVE_LIBPCRE
 
@@ -266,6 +263,9 @@
 
 /* Defined to compile with IP2Location included */
 #undef USE_IP2LOCATION
+
+/* will use openssl as ssl */
+#undef USE_OPENSSL
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #undef _LARGEFILE_SOURCE

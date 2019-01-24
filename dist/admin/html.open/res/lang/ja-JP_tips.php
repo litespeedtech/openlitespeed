@@ -108,6 +108,16 @@ $_tipsdb['allowSetUID'] = new DAttrHelp("UIDの設定を許可する", '設定�
 
 $_tipsdb['allowSymbolLink'] = new DAttrHelp("シンボリックリンク参照", 'このバーチャルホスト内のシンボリックリンクをたどるかどうかを指定します。 IF OWNER MATCHオプションは、同じ所有権を持つ場合にのみシンボリックリンクに従います。 この設定は、デフォルトのサーバーレベルの設定よりも優先されます。', '[パフォーマンスとセキュリティ]セキュリティを強化するために、この機能を無効にしてください。 パフォーマンスを向上させるには、有効にします。', 'ドロップダウンリストから選択', '');
 
+$_tipsdb['appServerContext'] = new DAttrHelp("App Server Context", 'An App Server Context provides an easy way to configure a Ruby Rack/Rails, WSGI, or Node.js application. To add a an application through an App Server Context, only mounting the URL and the application&#039;s root directory is required. There is no need to go through all the trouble to define an external application, add a 404 handler, and rewrite rules, etc.', '', '', '');
+
+$_tipsdb['appType'] = new DAttrHelp("Application Type", 'The type of application used for this context. Rack/Rails, WSGI, or Node.js are supported.', '', '', '');
+
+$_tipsdb['appserverEnv'] = new DAttrHelp("Run-Time Mode", 'Specifies which mode the application will be running as: &quot;Development&quot;, &quot;Production&quot;, or &quot;Staging&quot;. The default is &quot;Production&quot;.', '', 'ドロップダウンリストから選択', '');
+
+$_tipsdb['as_location'] = new DAttrHelp("Location", 'Specifies the corresponding location of this context in the file system.<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT.  $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string  can be used to form the &quot;Root&quot; string. The matched sub-string can be  referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the  whole matched string. Additionally, a query string can be set by  appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;ロケーション&quot;  set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot;  to file &quot;/home/john/web_examples/foo/bar.html&quot;. <br/>To simulate Apache&#039;s mod_userdir,  set URI to exp: ^/~([A-Za-z0-9]+)(.*),  set &quot;ロケーション&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will  map to file /home/john/public_html/foo/bar.html.');
+
+$_tipsdb['as_startupfile'] = new DAttrHelp("Startup File", 'The location of file used to start the application.', '', '', '');
+
 $_tipsdb['authName'] = new DAttrHelp("認証名", '現在のコンテキストの認証レルムの代替名を指定します。 指定しない場合、元のレルム名が使用されます。 認証名は、ブラウザのログインポップアップに表示されます。', '', 'テキスト', '');
 
 $_tipsdb['autoFix503'] = new DAttrHelp("自動修正 503 エラー", '「503 Service Unavailable」エラーを修正するかどうかを指定します。 サーバーを正常に再起動します。 通常、「503」エラーは外部アプリケーションが誤動作したために発生し、Webサーバーを再起動するとエラーが一時的に修正されることがあります。 有効にすると、30秒間に50件以上の「503」エラーが発生すると、サーバーは自動的に再起動します。 この機能はデフォルトで有効になっています。', '', 'ラジオボックスから選択', '');
@@ -123,6 +133,8 @@ $_tipsdb['autoStart'] = new DAttrHelp("自動スタート", 'Webサーバーで�
 $_tipsdb['backlog'] = new DAttrHelp("バックログ", 'リスニングソケットのバックログを指定します。 &quot;自動スタート&quot;が有効な場合は必須です。', '', '整数', '');
 
 $_tipsdb['banPeriod'] = new DAttrHelp("禁止期間（秒）", '&quot;猶予期間（秒）&quot;経過後、接続数がまだ&quot;接続ソフトリミット&quot;以上の場合、新しい接続がIPから拒否される期間を指定します。 IPが繰り返し禁止されている場合は、禁止期間を延長して虐待のペナルティを強化することをお勧めします。', '', '整数', '');
+
+$_tipsdb['binPath'] = new DAttrHelp("Binary Path", 'The location of the App Server application binary.', '', '', '');
 
 $_tipsdb['blockBadReq'] = new DAttrHelp("不良リクエストをブロックする", '&quot;禁止期間（秒）&quot;に不正な形式のHTTP要求を送信し続けるIPをブロックします。 デフォルトははいです。 これは、ジャンク要求を繰り返し送信するボットネット攻撃をブロックするのに役立ちます。', '', 'ラジオボックスから選択', '');
 
@@ -141,10 +153,6 @@ $_tipsdb['cgi_path'] = new DAttrHelp("パス", 'CGIスクリプトの場所を�
 $_tipsdb['cgidSock'] = new DAttrHelp("CGIデーモンソケット", 'CGIデーモンとの通信に使用される一意のソケットアドレス。 LiteSpeedサーバーは、スタンドアロンのCGIデーモンを使用して、最高のパフォーマンスとセキュリティを実現するCGIスクリプトを生成します。 デフォルトソケットはuds：//$SERVER_ROOT/admin/conf/.cgid.sock &quot;です。 別の場所に配置する必要がある場合は、ここにUnixドメインソケットを指定します。', '', 'UDS://path', 'UDS://tmp/lshttpd/cgid.sock');
 
 $_tipsdb['checkSymbolLink'] = new DAttrHelp("シンボリックリンクを確認する", '&quot;シンボリックリンクに従う&quot;がオンになっているときに、&quot;アクセスが拒否されたディレクトリ&quot;に対するシンボリックリンクをチェックするかどうかを指定します。 有効にすると、URLで参照されるリソースのカノニカル実パスが、設定可能なアクセス拒否ディレクトリと照合されます。 アクセスが拒否されたディレクトリ内にある場合、アクセスは拒否されます。', '[パフォーマンス & セキュリティ]最高のセキュリティを実現するには、このオプションを有効にします。 最高のパフォーマンスを得るには、無効にしてください。', 'ラジオボックスから選択', '');
-
-$_tipsdb['chrootMode'] = new DAttrHelp("外部アプリ Chroot モード", 'ルートディレクトリが外部アプリケーションプロセスに対してどのように設定されるかを指定します。 機密システム・データ・ファイルが脆弱な外部アプリケーション・スクリプトによってアクセスされるのを防ぐために、新しいルート・ディレクトリ以外のファイルがアクセス不能になるように、外部アプリケーション・プロセス用の代替ルート・パスを設定できます。 これは &quot;chroot jail&quot;と呼ばれます。<br/><br/>3つの選択肢があります：  <ul><li>サーバーと同じ：外部アプリケーションプロセスは、サーバーと同じ刑務所で実行されます。</li>     <li>バーチャルホストルート：chroot jailをバーチャルホストのルートディレクトリに設定します。 外部アプリケーションスクリプトは、バーチャルホストルート内のファイルにのみアクセスできます。 </li> 	<li>カスタマイズされたChrootパス：以下のchrootパス&quot;外部アプリ Chroot パス&quot;を指定します。 </li> </ul>', 'chrootを適切に使用すると、外部アプリケーションスクリプトのセキュリティが大幅に強化されますが、chroot jail環境では、外部アプリケーションスクリプトが機能していることを確認する必要があります。', '選択', '');
-
-$_tipsdb['chrootPath'] = new DAttrHelp("外部アプリ Chroot パス", '&quot;外部アプリ Chroot モード&quot;がCustomized Chroot Pathに設定されている場合、現在のホストの外部アプリケーションスクリプトの新しいルートディレクトリを指定します。', '', '絶対パス。', '');
 
 $_tipsdb['ciphers'] = new DAttrHelp("暗号", 'SSLハンドシェイクのネゴシエーション時に使用する暗号スイートを指定します。 LSWSは、SSL v3.0、TLS v1.0、およびTLS v1.2で実装された暗号スイートをサポートしています。', '[セキュリティ] SSL暗号のベストプラクティスに従ったデフォルトの暗号を使用する場合は、このフィールドを空白のままにすることをお勧めします。', 'コロンで区切られた暗号仕様の文字列。', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
 
@@ -238,13 +246,9 @@ $_tipsdb['extAppType'] = new DAttrHelp("タイプ", '外部アプリケーショ
 
 $_tipsdb['extAuthorizer'] = new DAttrHelp("承認者", '権限のある/権限のないかの決定を生成するために使用できる外部アプリケーションを指定します。 現在、FastCGI Authorizerのみが使用可能です。 FastCGI Authorizerの役割の詳細については、<a href="http://www.fastcgi.com" target="_blank" rel="noopener noreferrer">http://www.fastcgi.com</a>を参照してください。 。', '', 'ドロップダウンリストから選択', '');
 
-$_tipsdb['extGroup'] = new DAttrHelp("suEXECグループ", '外部アプリケーションが実行されるグループ名を指定します。', '', '有効なグループ名。', '');
-
 $_tipsdb['extMaxIdleTime'] = new DAttrHelp("最大アイドル時間", 'サーバーが外部アプリケーションを停止するまでの最大アイドル時間を指定します。 &quot;-1&quot;に設定すると、外部アプリケーションはサーバーによって停止されません。 デフォルト値は &quot;-1&quot;です。 この機能により、アイドル状態のアプリケーションが使用するリソースを解放することができます。 最大限のセキュリティを確保するために、setuidモードで動作する多くのアプリケーションを定義する必要がある場合には、マスホスティング環境で特に便利です。', '[パフォーマンス]この機能は、大規模なホスティング環境で特に便利です。 あるバーチャルホストが所有するファイルが別のバーチャルホストの外部アプリケーションスクリプトによってアクセスされないようにするため、大量ホスティングではSetUIDモードで同時に多くの異なるアプリケーションを実行する必要があります。 これらの外部アプリケーションが不必要にアイドリングしないように、この最大アイドル時間を低く設定します。', 'ラジオボックスから選択', '');
 
 $_tipsdb['extUmask'] = new DAttrHelp("umask", 'この外部アプリケーションのプロセスのデフォルトumaskを設定します。 詳細は、man 2 umaskを参照してください。 デフォルト値はサーバーレベルの&quot;umask&quot;設定から取得されます。', '', '有効範囲[000]〜[777]の値。', '');
-
-$_tipsdb['extUser'] = new DAttrHelp("suEXECユーザー", '外部アプリケーションが実行されるユーザー名を指定します。 設定されていない場合、外部アプリケーションはWebサーバーのユーザーとして実行されます。', '', '有効なユーザー名。', '');
 
 $_tipsdb['extWorkers'] = new DAttrHelp("ワーカー", '以前に外部ロードバランサで定義されたワーカーグループのリスト。', '', 'ExternalAppType::ExternalAppNameという形式のカンマ区切りリスト', 'fcgi::localPHP, proxy::backend1');
 
@@ -430,6 +434,10 @@ $_tipsdb['moduleNameSel'] = new DAttrHelp("Module", 'モジュールの名前。
 
 $_tipsdb['modulename'] = new DAttrHelp("モジュール", 'モジュールの名前。 モジュール名はモジュールファイル名と同じになります。 モジュール・ファイルは、サーバー・アプリケーションによってロードされるために$SERVER_ROOT/modules/modulename.soの下になければなりません。 サーバーは起動時に登録されたモジュールをロードします。 このためには、新しいモジュールが登録された後でサーバーを再起動する必要があります。', '', '.soのライブラリ名。', '');
 
+$_tipsdb['nodeBin'] = new DAttrHelp("Node Path", 'Path to Node.js executable.', '', '絶対パス', '');
+
+$_tipsdb['nodeDefaults'] = new DAttrHelp("Node.js App Default Settings", 'Default configurations for Node.js applications. These settings can be overriden at the context level.', '', '', '');
+
 $_tipsdb['note'] = new DAttrHelp("ノート", 'あなた自身のためにメモを追加してください。', '', '', '');
 
 $_tipsdb['ocspCACerts'] = new DAttrHelp("OCSP CA証明書", 'OCSP認証局（CA）証明書が格納されるファイルの場所を指定します。 これらの証明書は、OCSPレスポンダからのレスポンスを確認するために使用されます（また、そのレスポンスが偽装されていないか、または妥協されていないことを確認してください）。 このファイルには、証明書チェーン全体が含まれている必要があります。 このファイルにルート証明書が含まれていない場合、LSWSはファイルに追加することなくシステムディレクトリのルート証明書を見つけることができますが、この検証に失敗した場合はルート証明書をこのファイルに追加してください。<br/><br/>この設定はオプションです。 この設定が設定されていない場合、サーバーは自動的に&quot;CA証明書ファイル&quot;をチェックします。', '', 'ファイル名への絶対パス又は$SERVER_ROOTからの相対パス', '');
@@ -458,13 +466,7 @@ $_tipsdb['proxyContext'] = new DAttrHelp("プロキシコンテキスト", 'プ�
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Webサーバー", '外部Webサーバーの名前を指定します。 この外部Webサーバーは、サーバーまたはバーチャルホストレベルの&quot;外部アプリケーション&quot;セクションで定義する必要があります。', '', '選択', '');
 
-$_tipsdb['railsContext'] = new DAttrHelp("Rack/Railsコンテキスト", 'Rack/Railsコンテキストは、Ruby Rack/Railsアプリケーションを簡単に設定する方法を提供します。 Rack/RailsアプリケーションをRack/Railsコンテキストに追加するには、URLとアプリケーションのルートディレクトリのみをマウントする必要があります。 外部アプリケーションを定義したり、404ハンドラを追加したり、ルールを書き直すなど、すべての問題を解決する必要はありませ', '', '', '');
-
-$_tipsdb['railsDefault'] = new DAttrHelp("Ruby Rack/Railsの設定", 'Ruby Rack/Railsアプリケーションのデフォルト設定。', '', '', '');
-
-$_tipsdb['railsEnv'] = new DAttrHelp("実行時モード", 'Rack/Railsが &quot;Development&quot;、&quot;Production&quot;、又は&quot;Staging&quot;のいずれのモードで実行されるかを指定します。 デフォルトは &quot;Production&quot;です。', '', 'ドロップダウンリストから選択', '');
-
-$_tipsdb['rails_location'] = new DAttrHelp("ロケーション", 'ファイルシステム内のこのコンテキストの対応する場所を指定します。', '', '$SERVER_ROOT、$VH_ROOT、または$DOC_ROOTに関連する絶対パスまたは相対パスにすることができます。 $DOC_ROOTはデフォルトの相対パスであり省略することができます。<br/><br/>&quot;URI&quot;が正規表現であれば、一致した部分文字列を使用して &quot;Root&quot;文字列を形成することができます。 一致した部分文字列は、値 &quot;$1&quot;-&quot;$9&quot;で参照できます。 一致した文字列全体を参照するには、 &quot;$0&quot;と &quot;＆&quot;を使用できます。 さらに、クエリ文字列は、 &quot;？&quot; その後にクエリ文字列が続きます。 注意してください。 &quot;＆&quot;はクエリ文字列で &quot;\＆&quot;としてエスケープする必要があります。', '&quot;ロケーション&quot;の/examples/のような単純なURIは、/home/john/web_examplesに設定すると、リクエスト &quot;/examples/foo/bar.html&quot;がファイル &quot;/home/john/web_examples/foo/bar.html&quot;にマップされます。 <br/>Apacheのmod_userdirをシミュレートするには、  URIをexp: ^/~([A-Za-z0-9]+)(.*)に設定し,  set &quot;ロケーション&quot;を/home/$1/public_html$2に設定します。 これらの設定では、URIの/~john/foo/bar.htmlのリクエストは/home/john/public_html/foo/bar.htmlファイルにマップされます。');
+$_tipsdb['railsDefaults'] = new DAttrHelp("Rack/Rails Default Settings", 'Default configurations for Rack/Rails applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['rcvBufSize'] = new DAttrHelp("受信バッファサイズ（バイト）", '各TCPソケットの受信バッファーサイズ。 512Kは許容されるバッファの最大サイズです。', '[パフォーマンス]オペレーティングシステムのデフォルトのバッファサイズを使用するには、この値を &quot;未設定&quot;のままにするか、0に設定することをお勧めします。<br/>[パフォーマンス]大きい受信バッファは、大きなペイロード、すなわちファイルアップロードで着信要求を処理するときのパフォーマンスを向上させます。<br/>[パフォーマンス]これを低い値に設定すると、ソケットあたりのスループットとメモリ使用量が減少し、メモリがボトルネックになった場合にサーバーがより多くの同時ソケットを持つことが可能になります。', '整数', '');
 
@@ -574,6 +576,10 @@ $_tipsdb['staticReqPerSec'] = new DAttrHelp("静的リクエスト/秒", '確立
 
 $_tipsdb['statuscode'] = new DAttrHelp("ステータスコード", '外部リダイレクトの応答ステータスコードを指定します。 ステータスコードが300〜399の場合、&quot;宛先URI&quot;を指定できます。', '', '選択', '');
 
+$_tipsdb['suexecGroup'] = new DAttrHelp("suEXEC Group", 'The group to run as at the current context level using either the group name or gid of the group. This setting will not take effect if the <b>Run As User</b> setting has not been set at the Virtual Host or External Application levels.<br/><br/>Default values:<br/><b>Virtual Host level:</b> Virtual Host level <b>Run As User</b> setting value<br/><b>External Application level:</b> External application level <b>Run As User</b> setting value if set, else inherit Virtual Host level setting', '', 'Valid group name or uid', '');
+
+$_tipsdb['suexecUser'] = new DAttrHelp("suEXEC User", 'The user to run as at the current context level using either the user name or uid of the user. This setting will override the Virtual Host level <b>ExtApp Set UID Mode</b> setting if set.<br/><br/>Default values:<br/><b>Virtual Host level:</b> Not Set<br/><b>External Application level:</b> Inherit Virtual Host level setting', '', 'Valid user name or uid.', '');
+
 $_tipsdb['suffix'] = new DAttrHelp("サフィックス", 'このスクリプトハンドラによって処理されるスクリプトファイルのサフィックスを指定します。 接尾辞は一意である必要があります。', 'サーバーは、リスト内の最初の接尾辞に特殊なMIMEタイプ（ &quot;application / x-httpd- [suffix]&quot;）を自動的に追加します。 たとえば、接尾辞 &quot;php53&quot;にMIMEタイプ &quot;application / x-httpd-php53&quot;が追加されます。 接尾辞は&quot;MIME設定&quot;設定で最初に設定する必要があります。<br/>このフィールドではサフィックスを列挙していますが、スクリプトハンドラは接尾辞ではなくMIMEタイプを使用して、処理するスクリプトを決定します。<br/>[パフォーマンスとセキュリティ]本当に必要なサフィックスのみを指定してください。', 'カンマ区切りリストでピリオド&quot;.&quot;は禁止されています。', '');
 
 $_tipsdb['swappingDir'] = new DAttrHelp("スワップディレクトリ", 'スワップファイルを配置するディレクトリを指定します。 サーバがchrootモードで起動されると、このディレクトリは新しいルートディレクトリに相対的です。それ以外の場合は、実際のルートディレクトリに相対的です。<br/>サーバーは、独自のバーチャルメモリーを使用してシステムのメモリー使用量を削減します。 バーチャルメモリとディスクスワッピングは、大きな要求本体と動的に生成された応答を格納するために使用されます。 スワッピングディレクトリは、十分なスペースを持つディスク上に配置する必要があります。', '[パフォーマンス]スワッピングディレクトリを別のディスクに配置するか、最大I/Oバッファサイズを増やしてスワッピングを排除します。', '絶対パス。', '');
@@ -666,6 +672,10 @@ $_tipsdb['vstatus'] = new DAttrHelp("ステータス - バーチャルホスト"
 
 $_tipsdb['wsaddr'] = new DAttrHelp("アドレス", 'WebSocketバックエンドによって使用される一意のソケットアドレス。 IPv4ソケット、IPv6ソケット、Unixドメインソケット（UDS）がサポートされています。 IPv4およびIPv6ソケットは、ネットワークを介した通信に使用できます。 UDSは、WebSocketバックエンドがサーバーと同じマシンに存在する場合にのみ使用できます。', '[セキュリティ] WebSocketバックエンドが同じマシン上で実行される場合、UDSが優先されます。 IPv4またはIPv6ソケットを使用する必要がある場合は、IPアドレスをlocalhostまたは127.0.0.1に設定して、WebSocketバックエンド 他のマシンからはアクセスできません。<br/>[パフォーマンス] Unixドメインソケットは、一般にIPv4またはIPv6ソケットよりも高いパフォーマンスを提供します。', 'IPv4またはIPV6アドレス：ポートまたはUDS：//パス', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.');
 
+$_tipsdb['wsgiBin'] = new DAttrHelp("WSGI Path", 'Path to LiteSpeed Python Web Server Gateway Interface executable (lswsgi).<br/><br/>This executable is created by compiling Python with LiteSpeed&#039;s WSGI LSAPI module.', '', '絶対パス', '');
+
+$_tipsdb['wsgiDefaults'] = new DAttrHelp("Python WSGI Default Settings", 'Default configurations for Python WSGI applications. These settings can be overriden at the context level.', '', '', '');
+
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'このWebSocketバックエンドを使用するURIを指定します。 このURIへのトラフィックは、WebSocketのアップグレード要求が含まれている場合にのみWebSocketバックエンドに転送されます。<br/><br/>このアップグレード要求のないトラフィックは、このURIが属するコンテキストに自動的に転送されます。 このURIに対してContextが存在しない場合、LSWSはこのトラフィックを、$DOC_ROOT/URIの場所で静的コンテキストにアクセスしているものとして扱います。', '', 'URIは、プレーンURI（ &quot;/&quot;で始まる）またはPerlと互換性のある正規表現URI（ &quot;exp：&quot;で始まる）にすることができます。 プレーンURIが &quot;/&quot;で終わる場合、このWebSocketバックエンドはこのURIの下にすべてのサブURIを含みます。', 'WebSocketプロキシをコンテキストとともに使用すると、同じページでさまざまな種類のトラフィックをさまざまな方法で処理できるため、パフォーマンスが最適化されます。 WebSocketトラフィックをWebSocketバックエンドに送信し、LSWSがページの静的コンテンツまたはLSAPIコンテキストを提供できるように静的コンテキストを設定し、LSWSがPHPコンテンツ（両方ともLSSがWebSocketバックエンドより効率的に機能する）を提供できるようにします。');
 
 
@@ -687,9 +697,17 @@ $_tipsdb['EDTP:adminOldPass'] = array('セキュリティ上の理由から、�
 
 $_tipsdb['EDTP:allowBrowse'] = array('静的コンテキストを使用して、URIをドキュメントルートの外部またはその内部のディレクトリにマップできます。 ディレクトリは、ドキュメントルート（デフォルト）、$VH_ROOTまたは$SERVER_ROOTの絶対パスまたは相対パスにすることができます。','「アクセス可能」をチェックすると、このコンテキストで静的ファイルをブラウズできます。 静的ファイルを表示しないように無効にすることができます。 例えば コンテンツを更新するとき。');
 
+$_tipsdb['EDTP:appType'] = array('','');
+
+$_tipsdb['EDTP:as_location'] = array('The App Server context is for easy configuration of running Rack/Rails, WSGI, or Node.js applications. You  only need to specify the root location of your application in the &quot;Location&quot; field.');
+
+$_tipsdb['EDTP:as_startupfile'] = array('','');
+
 $_tipsdb['EDTP:autoFix503'] = array('<b>自動修正 503 エラー</b>を有効にすると、監視プロセスによって自動的に新しいサーバープロセスが起動し、クラッシュが検出された場合にサービスが即座に再開します。');
 
 $_tipsdb['EDTP:backlog'] = array('ローカルアプリケーションは、Webサーバーによって開始できます。 この場合、パス、バックログ、インスタンス数を指定する必要があります。');
+
+$_tipsdb['EDTP:binPath'] = array('','');
 
 $_tipsdb['EDTP:cgi_path'] = array('CGIコンテキストを使用して、ディレクトリにCGIスクリプトのみを指定することができます。 パスは絶対パスでも、$SERVER_ROOT、$VH_ROOT、$DOC_ROOT（デフォルト）でもかまいません。 パスとURIは、cgi-binディレクトリのために &quot;/&quot;で終わらなければなりません。','そのディレクトリに特定のスクリプトだけが必要な場合は、そのスクリプトのCGIコンテキストを作成することをお勧めします。 この場合、pathとURIはディレクトリである必要はありません。 たとえば、pathは〜/myapp/myscript.pl、URIは/myapp/myscript.plです。 その他のファイルはすべてCGIとして提供されません。');
 
@@ -761,13 +779,13 @@ $_tipsdb['EDTP:maxReqHeaderSize'] = array('数字は、10240,10K、または1M�
 
 $_tipsdb['EDTP:mime'] = array('MIME設定は前のページから編集できます。 mime構成ファイルの場所は、絶対パスでも、$SERVER_ROOTからの相対パスでも指定できます。');
 
+$_tipsdb['EDTP:nodeBin'] = array('');
+
 $_tipsdb['EDTP:phpIniOverride'] = array('');
 
 $_tipsdb['EDTP:procSoftLimit'] = array('プロセスソフト/ハードリミットは、1人のユーザーに許可されるプロセスの数を制御します。 これには、CGIアプリケーションによって生成されたすべてのプロセスが含まれます。 設定されていない場合、OSレベル制限が使用されます。','0または空に設定すると、すべてのソフト/ハードリミットにオペレーティングシステムのデフォルト値が使用されます。','ソフトリミットは、カーネルが対応するリソースに対して実施する値です。 ハードリミットは、ソフトリミットの上限として機能します。');
 
 $_tipsdb['EDTP:proxyWebServer'] = array('プロキシコンテキストは、このバーチャルホストを透過的なリバースプロキシサーバとして機能させ、外部のWebサーバまたはアプリケーションサーバに提供します。','外部Webサーバーは、サーバーまたはバーチャルホストレベルで外部アプリケーションの下にあらかじめ定義されている必要があります。');
-
-$_tipsdb['EDTP:rails_location'] = array('Rack/Railsコンテキストは、Rack/Railsアプリケーションを簡単に設定するためのコンテキストです。 [Location]フィールドには、Rack/Railsアプリケーションのルートロケーションを指定するだけで済みます。');
 
 $_tipsdb['EDTP:realm'] = array('コンテキストは、バーチャルホストセキュリティセクションで設定されている定義済みのレルムで保護することができます。 必要に応じて、代替名と追加要件を指定することができます。');
 
@@ -812,3 +830,5 @@ $_tipsdb['EDTP:vhadminEmails'] = array('カンマで区切って複数の管理�
 $_tipsdb['EDTP:vhlog_fileName'] = array('ログファイルのパスは絶対パスでも、$SERVER_ROOT、$VH_ROOTからの相対パスでもかまいません。','ログ・レベルをDEBUGに設定する場合は、サーバー・ログ・レベルもDEBUGに設定する必要があります。 デバッグのレベルは、サーバーDEBUGレベルによって制御されます。  DEBUGを使用するのは、サーバーのパフォーマンスに大きな影響を与え、ディスクスペースをすばやく埋める必要がある場合のみです。');
 
 $_tipsdb['EDTP:virtualHostName'] = array('このリスナーにマップするバーチャルホストを選択します。','マッピングするバーチャルホストを設定していない場合は、この手順をスキップして後で戻ってください。');
+
+$_tipsdb['EDTP:wsgiBin'] = array('');

@@ -40,7 +40,7 @@ void VOID_TEST()//httpfetchTest_Test)
     Multiplexer *mult = MultiplexerFactory::getMultiplexer();
     void *p = NULL;
     HttpFetch *pHttpFetch = new HttpFetch;
-    pHttpFetch->setResProcessor(NULL, p);
+    //pHttpFetch->setResProcessor(NULL, p);
     //pHttpFetch->setTimeout(100);
 
     int nonblock = 0;

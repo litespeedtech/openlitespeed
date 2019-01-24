@@ -56,9 +56,13 @@ public:
     typedef const HashElem *const_iterator;
 
     typedef hash_key_t (*hasher)(const void *);
+    typedef hash_key_t (*hash_fn)(const void *);
     typedef int (*value_compare)(const void *pVal1, const void *pVal2);
-    //typedef int (*for_each_fn)( iterator iter);
-    //typedef int (*for_each_fn2)( iterator iter, void *pUData);
+    typedef int (*val_comp)(const void *pVal1, const void *pVal2);
+    
+    typedef int (*for_each_fn_ex)( iterator iter);
+    typedef int (*for_each_fn2_ex)( iterator iter, void *pUData);
+    
     typedef ls_hash_foreach_fn for_each_fn;
     typedef ls_hash_foreach2_fn for_each2_fn;
 
@@ -128,7 +132,9 @@ public:
         return ((GHash *)this)->next((iterator)iter);
     }
 
-    int for_each(iterator beg, iterator end, for_each_fn fun)
+    int for_each(iterator beg, iterator end, for_each_fn_ex fun);
+    
+    int for_each0(iterator beg, iterator end, for_each_fn fun)
     {
         return ls_hash_foreach(this, beg, end, fun);
     }
@@ -204,11 +210,87 @@ public:
 
     void release_objects()
     {
-        GHash::for_each(begin(), end(), deleteObj);
+        GHash::for_each0(begin(), end(), deleteObj);
         GHash::clear();
     }
 
 };
 
+
+
+
+template<class K, class T>
+class THash2
+    : public GHash
+{
+public:
+    class iterator
+    {
+        GHash::iterator m_iter;
+    public:
+        iterator()
+        {}
+
+        iterator(GHash::iterator iter) : m_iter(iter)
+        {}
+        iterator(GHash::const_iterator iter)
+            : m_iter((GHash::iterator)iter)
+        {}
+
+        iterator(const iterator &rhs) : m_iter(rhs.m_iter)
+        {}
+
+        const K first() const
+        {  return  (const K)m_iter->first();   }
+
+        T second() const
+        {   return (T)(m_iter->second());   }
+
+        operator GHash::iterator()
+        {   return m_iter;  }
+
+    };
+    typedef iterator const_iterator;
+
+    THash2(int initsize, GHash::hash_fn hf, GHash::val_comp cf)
+        : GHash(initsize, hf, cf)
+    {};
+    ~THash2() {};
+
+    iterator insert(const K pKey, const T &val)
+    {   return GHash::insert(pKey, (void *)val);  }
+
+    iterator update(const K &pKey, const T &val)
+    {   return GHash::update(pKey, (void *)val);  }
+
+    iterator find(const K &pKey)
+    {   return GHash::find(pKey);   }
+
+    const_iterator find(const K &pKey) const
+    {   return GHash::find(pKey);   }
+
+    iterator begin() const
+    {   return GHash::begin();        }
+
+    static int deleteObj(GHash::iterator iter)
+    {
+        delete(T)(iter->second());
+        return 0;
+    }
+
+    void release_objects()
+    {
+        GHash::for_each0(begin(), end(), deleteObj);
+        GHash::clear();
+    }
+
+};
+
+
+#if defined( __x86_64 )||defined( __x86_64__ )
+#define XXH   XXH64
+#else
+#define XXH   XXH32
+#endif
 
 #endif

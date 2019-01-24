@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <http/httpsession.h>
-
+#include <http/httplistenerlist.h>
 #include <lsdef.h>
 #include <edio/aiosendfile.h>
 #include <edio/evtcbque.h>
@@ -46,6 +46,7 @@
 #include <http/userdir.h>
 #include <http/vhostmap.h>
 #include <http/clientinfo.h>
+#include <http/hiohandlerfactory.h>
 #include "reqparser.h"
 #include <log4cxx/logger.h>
 #include <lsiapi/envmanager.h>
@@ -55,7 +56,6 @@
 #include <lsr/ls_strtool.h>
 #include <socket/gsockaddr.h>
 #include <ssi/ssiengine.h>
-// #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
@@ -63,7 +63,6 @@
 #include <util/gzipbuf.h>
 #include <util/vmembuf.h>
 #include <util/blockbuf.h>
-
 #include <extensions/extworker.h>
 #include <extensions/cgi/lscgiddef.h>
 #include <extensions/registry/extappregistry.h>
@@ -123,24 +122,39 @@ const struct sockaddr *HttpSession::getPeerAddr() const
 {   return m_pClientInfo->getAddr(); }
 
 
+bool HttpSession::shouldIncludePeerAddr() const
+{
+    if (HttpServerConfig::getInstance().getUseProxyHeader() != 3)
+        return true;
+
+    int iProxyAddrLen;
+    const char *pProxyAddr = m_request.getEnv("PROXY_REMOTE_ADDR", 17, iProxyAddrLen);
+
+    // If behind proxy, client is trusted. Else check client info. Return NOT.
+    return !((pProxyAddr != NULL)
+                || (AC_TRUST == getClientInfo()->getAccess()));
+}
+
 
 int HttpSession::onInitConnected()
 {
-    NtwkIOLink *pNtwkIOLink = m_pNtwkIOLink = getStream()->getNtwkIoLink();
-
+    const ConnInfo *pInfo = getStream()->getConnInfo();
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
-    if (pNtwkIOLink)
+    
+    if (pInfo->m_pCrypto)
     {
-        if (pNtwkIOLink->isSSL())
-            m_request.setSsl(pNtwkIOLink->getSSL());
-        else
-            m_request.setSsl(NULL);
-        setVHostMap(pNtwkIOLink->getVHostMap());
-        m_iRemotePort = pNtwkIOLink->getRemotePort();
-        setClientInfo(pNtwkIOLink->getClientInfo());
+        m_request.setCrypto(pInfo->m_pCrypto);
+        m_request.setHttps();
     }
+    else
+        m_request.setCrypto(NULL);
+    assert(pInfo->m_pServerAddrInfo);
+    setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
 
+    assert(pInfo->m_pClientInfo);
+    setClientInfo(pInfo->m_pClientInfo);
+    m_iRemotePort = pInfo->m_remotePort;
     m_iFlag = 0;
 
     setState(HSS_WAITING);
@@ -302,7 +316,7 @@ void HttpSession::logAccess(int cancelled)
         else
             setAccessLogOff();
     }
-    else if (m_pNtwkIOLink && shouldLogAccess())
+    else if (shouldLogAccess())
         HttpLog::logAccess(NULL, 0, this);
 }
 
@@ -381,8 +395,14 @@ void HttpSession::nextRequest()
         m_response.reset();
         m_request.reset2();
 
-        if (m_pNtwkIOLink && m_pNtwkIOLink->isSSL())
-            m_request.setSsl(m_pNtwkIOLink->getSSL());
+        const ConnInfo *pInfo = getStream()->getConnInfo();
+        if (pInfo->m_pCrypto)
+        {
+            m_request.setCrypto(pInfo->m_pCrypto);
+            m_request.setHttps();
+        }
+        else
+            m_request.setCrypto(NULL);
 
         if (m_pRespBodyBuf)
             releaseRespCache();
@@ -396,7 +416,7 @@ void HttpSession::nextRequest()
             ls_snprintf(buf, 10, "-%hu", m_iReqServed);
             getStream()->lockAppendLogId(buf);
         }
-        setClientInfo(m_pNtwkIOLink->getClientInfo());
+        setClientInfo(pInfo->m_pClientInfo);
 
         m_processState = HSPS_READ_REQ_HEADER;
         if (m_request.pendingHeaderDataLen())
@@ -896,7 +916,7 @@ void HttpSession::processPending(int ret)
     ret = m_request.processHeader();
     if (ret == 1)
     {
-        if (isSSL())
+        if (isHttps())
             smProcessReq();
         return;
     }
@@ -1010,7 +1030,17 @@ int HttpSession::processWebSocketUpgrade(HttpVHost *pVHost)
 
 int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
 {
-    getNtwkIOLink()->switchToHttp2Handler(this);
+    HioHandler *pHandler;
+    pHandler = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP2);
+    if (!pHandler)
+        return LS_FAIL;
+    HioStream *pStream = getStream();
+    pStream->clearLogId();
+    pStream->switchHandler(this, pHandler);
+    pStream->setProtocol(HIOS_PROTO_HTTP2);
+    pHandler->attachStream(pStream);
+    pHandler->h2cUpgrade(this);
+    
     return 0;
 }
 
@@ -1046,6 +1076,7 @@ int HttpSession::processNewReqInit()
 {
     int ret;
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
+    int useProxyHeader = httpServConf.getUseProxyHeader();
     const HttpVHost *pVHost = m_request.matchVHost();
     if (!pVHost)
     {
@@ -1069,14 +1100,15 @@ int HttpSession::processNewReqInit()
         m_request.keepAlive(0);
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
-    if ((httpServConf.getUseProxyHeader() == 1)
-        || ((httpServConf.getUseProxyHeader() == 2)
+    if ((useProxyHeader == 1)
+        || (((useProxyHeader == 2) || (useProxyHeader == 3))
             && (getClientInfo()->getAccess() == AC_TRUST)))
     {
         const char *pName;
         const char *pProxyHeader;
         int len;
-        if ((httpServConf.getUseProxyHeader() == 2) && m_request.isCfIpSet())
+        if (((useProxyHeader == 2) || (useProxyHeader == 3))
+            && m_request.isCfIpSet())
         {
             pName = "CF-Connecting-IP";
             pProxyHeader = m_request.getCfIpHeader(len);
@@ -1133,9 +1165,9 @@ int HttpSession::processNewReqInit()
         processHttp2Upgrade(pVHost);
     }
 
-    if ((m_pNtwkIOLink->isThrottle())
+    if ((getStream()->isThrottle())
         && (getClientInfo()->getAccess() != AC_TRUST))
-        m_pNtwkIOLink->getThrottleCtrl()->adjustLimits(
+        getClientInfo()->getThrottleCtrl().adjustLimits(
             pVHost->getThrottleLimits());
 
 
@@ -1355,6 +1387,7 @@ int HttpSession::redirect(const char *pNewURL, int len, int alloc)
     m_response.reset();
     m_processState = HSPS_PROCESS_NEW_URI;
     m_iFlag &= ~HSF_URI_MAPPED;
+    //m_iState=0;
     return smProcessReq();
 }
 
@@ -1480,6 +1513,32 @@ int HttpSession::processContextRewrite()
     return ret;
 }
 
+
+/**
+ * Return 1, will bepass URI_MAP hooks
+ */
+int HttpSession::preUriMap()
+{
+    int valLen = 0;
+    const char *pEnv = m_request.getEnv("modpagespeed", 12, valLen);
+    if (valLen == 2 && strncasecmp(pEnv, "on", 2) == 0)
+        return 0;
+    
+    m_request.checkUrlStaicFileCache();
+    int ret = (m_request.getUrlStaticFileData() ? 1 : 0);
+    if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
+    {
+        LS_DBG_L(getLogSession(), "preUriMap check serving by static url file cache: %d",
+                 ret);
+    }
+    
+    if (ret)
+    {
+        m_request.addEnv("staticcacheserve", 16, "1", 1);
+    }
+
+    return ret;
+}
 
 int HttpSession::processFileMap()
 {
@@ -1650,6 +1709,22 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
 
     if (pHandler == NULL)
         return SC_403;
+
+    const HttpVHost *pVHost = m_request.getVHost();
+     if (m_request.getContext()
+        && m_request.getContext()->isAppContext())
+    {
+        if (m_request.getStatusCode() == SC_404)
+        {
+            m_request.setStatusCode(SC_200);
+            setFlag(HSF_REQ_WAIT_FULL_BODY);
+            m_request.clearContextState(REWRITE_PERDIR);
+            if (m_request.getContext()->isNodejsContext())
+                m_request.clearRedirects();
+            else
+                m_request.fixRailsPathInfo();
+        }
+    }
 
     int type = pHandler->getType();
     if ((type >= HandlerType::HT_DYNAMIC) &&
@@ -2040,9 +2115,9 @@ int HttpSession::onReadEx()
         }
         else
         {
-            if (m_pNtwkIOLink)
+            if (getStream())
             {
-                if (m_pNtwkIOLink->detectCloseNow())
+                if (getStream()->detectClose())
                     return 0;
             }
             getStream()->wantRead(0);
@@ -2465,17 +2540,18 @@ int HttpSession::detectConnectionTimeout(int delta)
     if ((uint32_t)(DateTime::s_curTime) > getStream()->getActiveTime() +
         (uint32_t)(config.getConnTimeout()))
     {
-        if (m_pNtwkIOLink->getfd() != m_pNtwkIOLink->getPollfd()->fd)
-            LS_ERROR(getLogSession(),
-                     "BUG: fd %d does not match fd %d in pollfd!",
-                     m_pNtwkIOLink->getfd(), m_pNtwkIOLink->getPollfd()->fd);
-//            if ( LS_LOG_ENABLED( LOG4CXX_NS::Level::DBG_MEDIUM ))
-        if ((m_response.getBodySent() == 0) || !m_pNtwkIOLink->getEvents())
+//         if (pNtwkIOLink->getfd() != pNtwkIOLink->getPollfd()->fd)
+//             LS_ERROR(getLogSession(),
+//                      "BUG: fd %d does not match fd %d in pollfd!",
+//                      pNtwkIOLink->getfd(), pNtwkIOLink->getPollfd()->fd);
+
+        if ((m_response.getBodySent() == 0)// || !pNtwkIOLink->getEvents())
+            || !getStream()->getFlag(HIO_FLAG_WANT_WRITE|HIO_FLAG_WANT_READ))
         {
             LS_INFO(getLogSession(), "Connection idle time too long: %ld while"
                     " in state: %d watching for event: %d, close!",
                     DateTime::s_curTime - getStream()->getActiveTime(),
-                    getState(), m_pNtwkIOLink->getEvents());
+                    getState(), getStream()->getFlag());
             m_request.dumpHeader();
             if (m_pHandler)
                 m_pHandler->dump();
@@ -2511,7 +2587,7 @@ int HttpSession::isAlive()
 {
     if (getStream()->isSpdy())
         return 1;
-    return !m_pNtwkIOLink->detectClose();
+    return !getStream()->detectClose();
 
 }
 
@@ -2690,7 +2766,7 @@ int HttpSession::setupGzipFilter()
     {
         if (!hkptNogzip)
         {
-            if (!m_pRespBodyBuf->empty())
+            if (m_pRespBodyBuf && !m_pRespBodyBuf->empty())
                 m_pRespBodyBuf->rewindWriteBuf();
             if (m_response.getContentLen() > 200)
                 if (setupGzipBuf() == -1)
@@ -3278,7 +3354,7 @@ void HttpSession::addLocationHeader()
         const char *pHost = m_request.getHeader(HttpHeader::H_HOST);
         if (*pHost)
         {
-            if (isSSL())
+            if (isHttps())
                 headers.appendLastVal("https://", 8);
             else
                 headers.appendLastVal("http://", 7);
@@ -3708,25 +3784,12 @@ int HttpSession::execExtCmd(const char *pCmd, int len, int mode)
 
 int HttpSession::getServerAddrStr(char *pBuf, int len)
 {
-    char achAddr[128];
-    struct sockaddr *pAddr = (struct sockaddr *)achAddr;
-    sockaddr_in *pAddrIn4 = (sockaddr_in *)achAddr;
-    sockaddr_in6 *pAddrIn6 = (sockaddr_in6 *)achAddr;
-    socklen_t addrlen = 128;
-    if (getsockname(m_pNtwkIOLink->getfd(), pAddr,
-                    &addrlen) == -1)
-        return 0;
-
-    if ((AF_INET6 == pAddr->sa_family) &&
-        (IN6_IS_ADDR_V4MAPPED(&pAddrIn6->sin6_addr)))
-    {
-        pAddr->sa_family = AF_INET;
-        memmove(&pAddrIn4->sin_addr.s_addr, &achAddr[20], 4);
-    }
-
-    if (GSockAddr::ntop(pAddr, pBuf, len) == NULL)
-        return 0;
-    return strlen(pBuf);
+    const AutoStr2 *pAddr;
+    pAddr = getStream()->getConnInfo()->m_pServerAddrInfo->getAddrStr();
+    if (pAddr->len() <= len)
+        len = pAddr->len();
+    memcpy(pBuf, pAddr->c_str(), len);
+    return len;
 }
 
 
@@ -3854,9 +3917,9 @@ int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
     }
     else
         len = writeRespBodyDirect(pBuf, written);
-    LS_DBG_M(getLogSession(), "%s return %d.\n",
+    LS_DBG_M(getLogSession(), "%s tried %d return %d.\n",
              getGzipBuf() ? "appendDynBodyEx()" : "writeRespBodyDirect()",
-             len);
+             written, len);
 
     if (len > 0)
         pData->incCurPos(len);
@@ -3963,7 +4026,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 #if !defined( NO_SENDFILE )
     int fd = pData->getfd();
     int iModeSF = HttpServerConfig::getInstance().getUseSendfile();
-    if (iModeSF && fd != -1 && !isSSL() && !getStream()->isSpdy()
+    if (iModeSF && fd != -1 && !isHttps() && !getStream()->isSpdy()
         && (!getGzipBuf() ||
             (pData->getECache() == pData->getFileData()->getGzip())))
     {
@@ -4034,6 +4097,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 int HttpSession::sendStaticFile(SendFileInfo *pData)
 {
     LS_DBG_M(getLogSession(), "SendStaticFile()");
+    getStream()->resetBytesCount();
 
     if (m_sessionHooks.isDisabled(LSI_HKPT_SEND_RESP_BODY) ||
         !(m_sessionHooks.getFlag(LSI_HKPT_SEND_RESP_BODY)&
@@ -4205,26 +4269,26 @@ int HttpSession::contentEncodingFixup()
 }
 
 
-int HttpSession::handoff(char **pData, int *pDataLen)
-{
-    if (isSSL() || getStream()->isSpdy())
-        return LS_FAIL;
-    if (m_iReqServed != 0)
-        return LS_FAIL;
-    int fd = dup(getStream()->getNtwkIoLink()->getfd());
-    if (fd != -1)
-    {
-        AutoBuf &headerBuf = m_request.getHeaderBuf();
-        *pDataLen = headerBuf.size() - HEADER_BUF_PAD;
-        *pData = (char *)malloc(*pDataLen);
-        memmove(*pData, headerBuf.begin() + HEADER_BUF_PAD, *pDataLen);
-
-        getStream()->setAbortedFlag();
-        closeConnection();
-    }
-    return fd;
-
-}
+// int HttpSession::handoff(char **pData, int *pDataLen)
+// {
+//     if (isHttps() || getStream()->isSpdy())
+//         return LS_FAIL;
+//     if (m_iReqServed != 0)
+//         return LS_FAIL;
+//     int fd = dup(getStream()->getNtwkIoLink()->getfd());
+//     if (fd != -1)
+//     {
+//         AutoBuf &headerBuf = m_request.getHeaderBuf();
+//         *pDataLen = headerBuf.size() - HEADER_BUF_PAD;
+//         *pData = (char *)malloc(*pDataLen);
+//         memmove(*pData, headerBuf.begin() + HEADER_BUF_PAD, *pDataLen);
+// 
+//         getStream()->setAbortedFlag();
+//         closeConnection();
+//     }
+//     return fd;
+// 
+// }
 
 
 int HttpSession::onAioEvent()
@@ -4433,6 +4497,7 @@ int HttpSession::smProcessReq()
         //fall through
         case HSPS_HKPT_URI_MAP:
             m_iFlag |= HSF_URI_MAPPED;
+            preUriMap();
             ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
             if (ret || m_processState != HSPS_FILE_MAP)
                 break;

@@ -111,7 +111,7 @@ public:
     void rewindReadBuf();
     void rewindWOff(off_t rewind);
     int setROffset(off_t  offset);
-    int getFd() const               {   return m_iFd;            }
+    int getfd() const               {   return m_iFd;            }
     off_t  getCurFileSize() const   {   return m_iCurTotalSize;  }
     off_t  getCurRBlkPos() const    {   return m_curRBlkPos;    }
     off_t  getCurWBlkPos() const    {   return m_curWBlkPos;    }
@@ -141,6 +141,8 @@ public:
     void releaseBlockBuf(off_t offset);
 
 
+    
+    int copyToBuf(char *buf, int offset, int len);
 };
 
 class MMapVMemBuf : public VMemBuf

@@ -830,7 +830,7 @@ int StaticFileCacheData::readyCompressed(char compressMode)
 
     if (tm == m_tmLastCheck)
         return setReadiedCompressData(compressMode);
-
+    
     int statBr = -1, retGz = -1, statGz = -1;
     struct stat stGzip;
     struct stat stBr;
@@ -866,7 +866,7 @@ int StaticFileCacheData::readyCompressed(char compressMode)
         {
             // use br
         }
-        if (!(compressMode & SFCD_MODE_GZIP) || retGz)
+        else if (!(compressMode & SFCD_MODE_GZIP) || retGz)
         {
             // update br
             if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr, 1)))

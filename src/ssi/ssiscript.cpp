@@ -559,13 +559,11 @@ int SSIScript::parseAttrs(int cmd, const char *pBegin, const char *pEnd)
             }
             else
             {
-                int id = RequestVars::parseBuiltIn(pValue, valLen, 1);
-                if (id == -1)
+                if (pItem->parseServerVar2(pValue, pValue, valLen, 1) == LS_FAIL)
                 {
-                    id = REF_ENV;
+                    pItem->setType(REF_SSI_VAR);
                     pItem->setStr(pValue, valLen);
                 }
-                pItem->setType(id);
             }
         }
         else if (attr < SSI_ENC_NONE)

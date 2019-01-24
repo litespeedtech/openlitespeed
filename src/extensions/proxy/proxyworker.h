@@ -20,11 +20,11 @@
 
 
 #include <lsdef.h>
-#include <extensions/extworker.h>
+#include <extensions/localworker.h>
 
 class SslClientSessCache;
 class ProxyConfig;
-class ProxyWorker : public ExtWorker
+class ProxyWorker : public LocalWorker
 {
 protected:
 
@@ -32,6 +32,7 @@ protected:
 
 public:
     explicit ProxyWorker(const char *pName);
+    virtual int startEx();
     ~ProxyWorker();
     ProxyConfig &getConfig()
     {   return *((ProxyConfig *)getConfigPointer());  }

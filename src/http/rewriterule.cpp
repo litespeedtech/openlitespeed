@@ -659,7 +659,8 @@ int RewriteRule::parseCookieAction(const char *pCookie, const char *pEnd)
 }
 
 
-int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
+int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd,
+                              const RewriteMapList *pMaps)
 {
     switch (*pRuleStr)
     {
@@ -756,7 +757,7 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
                     ERR_NO_MEM("new SubstFormat()");
                     return LS_FAIL;
                 }
-                if (pFormat->parse(pEnv, pRuleStr, NULL))
+                if (pFormat->parse(pEnv, pRuleStr, pMaps))
                 {
                     pRuleStr += isQuoted;
                     HttpLog::parse_error(s_pCurLine,  "failed to parse env string");
@@ -999,7 +1000,8 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd)
 }
 
 
-int RewriteRule::parseRuleFlag(const char *&pRuleStr, const char *pEnd)
+int RewriteRule::parseRuleFlag(const char *&pRuleStr, const char *pEnd,
+                               const RewriteMapList *pMaps)
 {
     while ((pRuleStr < pEnd) && (isspace(*pRuleStr)))
         ++pRuleStr;
@@ -1016,7 +1018,7 @@ int RewriteRule::parseRuleFlag(const char *&pRuleStr, const char *pEnd)
     {
         while ((pRuleStr < pEnd) && isspace(*pRuleStr))
             ++pRuleStr;
-        if (parseOneFlag(pRuleStr, pEnd))
+        if (parseOneFlag(pRuleStr, pEnd, pMaps))
             return LS_FAIL;
         while ((pRuleStr < pEnd) && isspace(*pRuleStr))
             ++pRuleStr;
@@ -1080,7 +1082,7 @@ int RewriteRule::parseRule(char *pRule, const char *pEnd,
 
     if (parseRuleSubst(pRuleStr, pEnd, pMaps))
         return LS_FAIL;
-    if (parseRuleFlag(pRuleStr, pEnd))
+    if (parseRuleFlag(pRuleStr, pEnd, pMaps))
         return LS_FAIL;
     *((char *)argEnd) = '\0';
     int flag = REG_EXTENDED;

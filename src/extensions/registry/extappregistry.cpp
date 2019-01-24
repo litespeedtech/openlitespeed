@@ -469,7 +469,11 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
     return 0;
 }
 
-ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel)
+
+/**
+ * WHen it is from server level, the pVhost is NULL
+ */
+ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *pVHost)
 {
     int iType;
     int role;
@@ -640,7 +644,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
      * If is server level, need to save the XmlNode
      * 
      */
-    if (bServerLevel)
+    if (!pVHost)
     {
         app_node_st key_ptr;
         key_ptr.key.setStr(pName);
@@ -776,7 +780,7 @@ int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
     for (int i = 0 ; i < c ; ++ i)
     {
         pExtAppNode = list[i];
-        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost == NULL);
+        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost);
         if (pWorker != NULL)
         {
             if (pVHost)

@@ -81,7 +81,7 @@ public:
     static int generateRTReport(int fd);
     
     static int configVhostOwnPhp(HttpVHost *pVHost);
-    static ExtWorker *configExtApp(const XmlNode *pNode, bool bServerLevel);
+    static ExtWorker *configExtApp(const XmlNode *pNode, const HttpVHost *pVHost);
     static int configLoadBalacner(const XmlNode *pNode,
                                   const HttpVHost *pVHost);
     static int configExtApps(const XmlNode *pRoot, const HttpVHost *pVHost);

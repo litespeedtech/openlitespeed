@@ -468,7 +468,7 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
             return LS_FAIL;
         }
         else
-            memset(myData, 0, sizeof(*myData));
+            memset(myData, 0, sizeof(zmoddata_t));
     }
 
     ret = LS_FAIL;
@@ -505,11 +505,13 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
     {
         myData->recv->compresslevel = 0;
         ls_objpool_recycle(&zpooldeflate, myData->recv);
+        myData->recv = NULL;
     }
     if (myData->send != NULL)
     {
         myData->send->compresslevel = 0;
         ls_objpool_recycle(&zpooldeflate, myData->send);
+        myData->send = NULL;
     }
 
     g_api->log(session, LSI_LOG_ERROR,

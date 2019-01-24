@@ -83,7 +83,7 @@
 
 
 
-#define MODPAGESPEEDVERSION  "2.1-1.11.33.4"
+#define MODPAGESPEEDVERSION  "2.2-1.11.33.4"
 
 #define DBG(session, args...) g_api->log(session, LSI_LOG_DEBUG, args)
 
@@ -743,7 +743,7 @@ void InitDir(const StringPiece &directive,
     }
 
     //TO fix some permission issue
-    chmod(gs_path.c_str(), S_IRWXO);
+    chmod(gs_path.c_str(), S_IRWXU| S_IRWXG | S_IRWXO);
     if (gs_stat.st_uid != user)
     {
         if (chown(gs_path.c_str(), user, group) != 0)
@@ -1232,7 +1232,7 @@ static void DetermineUrl(lsi_session_t *session, GoogleString &str)
     int iQSLen;
     const char *pQS = g_api->get_req_query_string(session, &iQSLen);
     int uriLen = g_api->get_req_org_uri(session, NULL, 0);
-    char *uri = new char[uriLen + 1 + iQSLen + 1];
+    char uri[uriLen + 1 + iQSLen + 1];
     g_api->get_req_org_uri(session, uri, uriLen + 1);
     if (iQSLen > 0)
     {
@@ -1242,7 +1242,6 @@ static void DetermineUrl(lsi_session_t *session, GoogleString &str)
 
     str = StrCat(isHttps ? "https://" : "http://",
                            host, port_string, uri);
-    delete []uri;
 }
 
 
@@ -1511,12 +1510,12 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
     LsMessageHandler *message_handler = factory->GetLsiMessageHandler();
 
     int uriLen = g_api->get_req_org_uri(session, NULL, 0);
-    char *uri = new char[uriLen + 1];
+    char uri[uriLen + 1];
 
     g_api->get_req_org_uri(session, uri, uriLen + 1);
     uri[uriLen] = 0x00;
     StringPiece request_uri_path = uri;//
-
+    
     QueryParams query_params;
 
     query_params.ParseFromUrl(*pMyData->request->url);
@@ -2706,6 +2705,8 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
     {
         // Pagespeed is off, not enabled via query params or request headers.
         // Wait for response header phase to make the final decision.
+        
+        delete req;
         return LSI_OK;
     }
     
@@ -2729,7 +2730,10 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
     
     
     if (IsPagespeedSubrequest(pUA, uaLen))
+    {
+        delete req;
         return LSI_OK;
+    }
     
     
     //If URI_MAP called before, should return
@@ -2739,7 +2743,10 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
     if (pMyData)
     {
         if (pMyData->flags & PSF_NO_HOOK || pMyData->state == PS_STATE_RECV_REQ)
+        {
+            delete req;
             return LSI_OK;
+        }
         g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, ReleaseMydata);
     }
 
@@ -2750,9 +2757,15 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
         g_api->log(session, LSI_LOG_DEBUG,
                    "[%s] RcvdReqHeaderHook returned, pMyData == NULL.\n",
                    ModuleName);
+        delete req;
         return LSI_OK;
     }
 
+    /**
+     * Tell server modpagespeed is using
+     */
+    g_api->set_req_env(session, "modpagespeed", 12, "on", 2);
+    
     pMyData->state = PS_STATE_INIT;
     pMyData->sBuff = "";
     pMyData->request = req;
@@ -2819,10 +2832,6 @@ static int UriMapHook(lsi_param_t *rec)
         response_category = RouteRequest(pMyData, session, true);
 
     int ret = 0;
-    g_api->set_req_wait_full_body(session);
-
-    //Disable cache module
-    //g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
 
     switch (response_category)
     {

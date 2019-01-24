@@ -101,6 +101,9 @@ class ClientInfo
 public:
     ClientInfo();
     ~ClientInfo();
+
+    void release();
+
     const struct sockaddr *getAddr() const
     {   return (struct sockaddr *)m_achSockAddr;         }
 
@@ -108,6 +111,8 @@ public:
     {   return (struct sockaddr *)m_achSockAddr;                    }
     void setAddr(const struct sockaddr *pAddr);
 
+    bool isFromLocalAddr(const sockaddr* server_addr) const;
+    
     void clearFlag( int flag )          {   m_iFlags &= ~flag;          }
     void setFlag( int flag )            {   m_iFlags |= flag;           }
     int isFlagSet( int flag ) const     {   return m_iFlags & flag;     }

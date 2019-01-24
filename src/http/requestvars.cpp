@@ -177,7 +177,20 @@ int SubstItem::parseServerVar(const char *pCurLine,
         (strncasecmp(pName, "LA-F:", 5) == 0))
         pName += 5;
 
-    if (!isSSI && (pName + 3 > pClose))
+    return parseServerVar2(pCurLine, pName, pClose - pName, isSSI);
+}
+
+int SubstItem::parseServerVar2(const char *pCurLine, const char *pName,
+                               int len, int isSSI)
+{
+    if ((strncasecmp(pName, "LA-U:", 5) == 0) ||
+        (strncasecmp(pName, "LA-F:", 5) == 0))
+    {
+        pName += 5;
+        len -= 5;
+    }
+
+    if (!isSSI && (len < 3))
     {
         HttpLog::parse_error(pCurLine,  "missing variable name");
         return LS_FAIL;
@@ -186,7 +199,7 @@ int SubstItem::parseServerVar(const char *pCurLine,
         (strncasecmp(pName, "HTTP:", 5) == 0))
     {
         pName += 5;
-        len = pClose - pName;
+        len -= 5;
         const char *pHeaderStr = NULL;
         int HeaderLen;
         int type = RequestVars::parseHttpHeader(pName, len, pHeaderStr, HeaderLen);
@@ -205,20 +218,19 @@ int SubstItem::parseServerVar(const char *pCurLine,
     else if (strncasecmp(pName, "ENV:", 4) == 0)
     {
         setType(REF_ENV);
-        if (setStr(pName + 4, pClose - pName - 4) == NULL)
-            return LS_FAIL;
+        if (setStr(pName + 4, len - 4) == NULL)
+            return LS_FAIL; // FIXME: returns 0 in adc?
     }
     else
     {
-        int len = pClose - pName;
         int type = RequestVars::parseBuiltIn(pName, len, isSSI);
         if (type != -1)
             setType(type);
         else if (isSSI)
         {
             setType(REF_ENV);
-            if (setStr(pName, pClose - pName) == NULL)
-                return LS_FAIL;
+            if (setStr(pName, len) == NULL)
+                return LS_FAIL; // FIXME: Returns 0 in adc?
         }
         else
         {
@@ -589,7 +601,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         return pReq->getScriptNameLen();
     case REF_SCRIPT_URI:
         p = pValue;
-        if (pSession->isSSL())
+        if (pSession->isHttps())
         {
             strcpy(p, "https://");
             p += 8;
@@ -708,7 +720,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         return i;
 
     case REF_HTTPS:
-        i = snprintf(pValue, bufLen, "%s", pSession->isSSL() ? "on" : "off");
+        i = snprintf(pValue, bufLen, "%s", pSession->isHttps() ? "on" : "off");
         return i;
 
     case REF_DATE_GMT:
@@ -832,60 +844,15 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
 
     if (type >= LSI_VAR_SSL_VERSION && type <= LSI_VAR_SSL_CLIENT_CERT)
     {
-        if (!pSession->isSSL())
+        if (!pSession->isHttps())
             return 0;
 
-        SslConnection *pSSL = pSession->getSSL();
-        if (type == LSI_VAR_SSL_VERSION)
-        {
-            pValue = (char *)pSSL->getVersion();
-            ret = strlen(pValue);
-            return ret;
-        }
-        else if (type == LSI_VAR_SSL_SESSION_ID)
-        {
-            SSL_SESSION *pSession = pSSL->getSession();
-            if (pSession)
-            {
-                int idLen = SslConnection::getSessionIdLen(pSession);
-                ret = idLen * 2;
-                if (ret > bufLen)
-                    ret = bufLen;
-                StringTool::hexEncode((char *)SslConnection::getSessionId(pSession),
-                                      ret / 2, pValue);
-            }
-            return ret;
-        }
-        else if (type == LSI_VAR_SSL_CLIENT_CERT)
-        {
-            X509 *pClientCert = pSSL->getPeerCertificate();
-            if (pClientCert)
-                ret = SslCert::PEMWriteCert(pClientCert, pValue, bufLen);
-
-            return ret;
-        }
-        else
-        {
-            const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
-            if (pCipher)
-            {
-                if (type == LSI_VAR_SSL_CIPHER)
-                {
-                    pValue = (char *)pSSL->getCipherName();
-                    ret = strlen(pValue);
-                }
-                else
-                {
-                    int algkeysize;
-                    int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
-                    if (type == LSI_VAR_SSL_CIPHER_USEKEYSIZE)
-                        ret = ls_snprintf(pValue, 20, "%d", keysize);
-                    else //LSI_VAR_SSL_CIPHER_ALGKEYSIZE
-                        ret = ls_snprintf(pValue, 20, "%d", algkeysize);
-                }
-            }
-            return ret;
-        }
+        HioCrypto *pCrypto = pSession->getCrypto();
+        if (!pCrypto)
+            return 0;
+        
+        return pCrypto->getEnv((HioCrypto::ENV)(HioCrypto::CRYPTO_VERSION +
+                                (type - LSI_VAR_SSL_VERSION)), pValue, bufLen);
     }
     else if (type == LSI_VAR_GEOIP_ADDR)
     {

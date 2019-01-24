@@ -26,6 +26,10 @@
 static  char s_achBuf[STATUS_LINE_BUF_SIZE];
 static  char *s_pEnd = s_achBuf;
 
+
+LS_SINGLETON(HttpStatusLine);
+
+
 StatusLineString::StatusLineString(int version, int code)
 {
     if (code > 0)

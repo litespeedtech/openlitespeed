@@ -1,69 +1,34 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
-/**
- * WARNING, WARNING, WARNING!
- * The big consumer of this class is ntwkiolink.cpp and in line 321 it STOMPS
- * with a memset to 0 of basically every local variable here AFTER construction
- * but before it's used.  So DO NOT COUNT ON CONSTRUCTORS!
+/*
+ * Copyright 2002 Lite Speed Technologies Inc, All Rights Reserved.
+ * LITE SPEED PROPRIETARY/CONFIDENTIAL.
  */
 
 #ifndef SSLCONNECTION_H
 #define SSLCONNECTION_H
 #include <lsdef.h>
-
+#include <sslpp/hiocrypto.h>
+#include <sslpp/ls_fdbuf_bio.h>
 #include <openssl/ssl.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <signal.h>
 
+typedef struct bio_st  BIO;
 typedef struct x509_st X509;
 typedef struct ssl_cipher_st SSL_CIPHER;
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_session_st SSL_SESSION;
 
+
 class SslClientSessCache;
-class SslConnection
+class SslConnection : public HioCrypto
 {
-    SSL    *m_ssl;
-    SslClientSessCache *m_pSessCache;
-    int     m_iStatus;
-    int     m_iWant;
-    int     m_iFlag;
-    char    m_iFreeCtx;
-    char    m_iFreeSess;
-    char    m_iUseRbio;
-    static int32_t s_iConnIdx;
-    int     m_iRFd;
-    BIO    *m_saved_rbio;
-    char   *m_rbioBuf;
-    int     m_rbioBuffered;
-
-    int     installRbio(int rfd, int wfd);
-    int     readRbioClientHello();
-    void    restoreRbio();
-
 public:
     enum
     {
         DISCONNECTED,
         CONNECTING,
         ACCEPTING,
+        WAITINGCERT,
+        GOTCERT,
         CONNECTED,
         SHUTDOWN
     };
@@ -75,24 +40,22 @@ public:
         LAST_WRITE = 8
     };
 
-    int wantRead() const    {   return m_iWant & READ;  }
-    int wantWrite() const   {   return m_iWant & WRITE; }
-    int lastRead() const    {   return m_iWant & LAST_READ; }
-    int lastWrite() const   {   return m_iWant & LAST_WRITE; }
+    enum
+    {
+        F_HANDSHAKE_DONE    = 1,
+        F_DISABLE_HTTP2     = 2,
+        F_ASYNC_CERT        = 4,
+    };
 
-    char getFlag() const    {   return m_iFlag;     }
-    void setFlag(int flag) {   m_iFlag = flag;     }
+    char wantRead() const   {   return m_iWant & READ;  }
+    char wantWrite() const  {   return m_iWant & WRITE; }
+    char lastRead() const   {   return m_iWant & LAST_READ; }
+    char lastWrite() const  {   return m_iWant & LAST_WRITE; }
 
-    char getFreeCtx() const {   return m_iFreeCtx;      }
-    void setFreeCtx()       {   m_iFreeCtx = 1;         }
-
-    char getFreeSess() const    {   return m_iFreeSess;     }
-    void setFreeSess()          {   m_iFreeSess = 1;        }
+    bool getFlag(int v) const   {   return m_flag & v;     }
+    void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
 
     SslConnection();
-    explicit SslConnection(SSL *ssl);
-    SslConnection(SSL *ssl, int fd);
-    SslConnection(SSL *ssl, int rfd, int wfd);
     ~SslConnection();
 
     void setSSL(SSL *ssl);
@@ -115,13 +78,15 @@ public:
     bool isConnected()      {   return m_iStatus == CONNECTED;  }
     int tryagain();
 
-    int getStatus() const   {   return m_iStatus;   }
+    char getStatus() const   {   return m_iStatus;   }
 
     X509 *getPeerCertificate() const;
     long getVerifyResult() const;
     int  getVerifyMode() const;
     int  isVerifyOk() const;
     int  buildVerifyErrorString(char *pBuf, int len) const;
+
+    virtual int getEnv(HioCrypto::ENV id, char *&val,int maxValLen);
 
     const char *getCipherName() const;
 
@@ -132,27 +97,42 @@ public:
     int isSessionReused() const;
     void setClientSessCache(SslClientSessCache *cache)
     {   m_pSessCache = cache;     }
-    int cacheClientSession(SSL_SESSION* session);
-    void tryReuseCachedSession();
+    int cacheClientSession(SSL_SESSION* session, const char *pHost, int iHostLen);
+    void tryReuseCachedSession(const char *pHost, int iHostLen);
 
     const char *getVersion() const;
 
     int setTlsExtHostName(const char *pName);
 
+    const char *getTlsExtHostName();
+
     int getSpdyVersion();
 
+    int updateOnGotCert();
+    
+    void enableRbio() {};
+
     static void initConnIdx();
-    static int getConnIdx()         {   return s_iConnIdx;   }
-    static int getSessionIdLen(SSL_SESSION *s);
-    static const unsigned char *getSessionId(SSL_SESSION *s);
+    static SslConnection *get(const SSL *ssl)
+    {   return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);   }
+
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
     
     // Can only be called after the first failed accept or read, to obtain the
     // raw data which can be used in a redirect (see ntwkiolink.cpp).
     char *getRawBuffer(int *len);
+    bool hasPendingIn() const
+    {   return m_bio.m_rbioBuffered > m_bio.m_rbioIndex;   }
 
-    void  enableRbio()      {   m_iUseRbio = 1;     }
+private:
+    SSL    *m_ssl;
+    SslClientSessCache *m_pSessCache;
+    short   m_flag;
+    char    m_iStatus;
+    char    m_iWant;
+    static int32_t s_iConnIdx;
+    ls_fdbio_data m_bio;
 
     LS_NO_COPY_ASSIGN(SslConnection);
 };

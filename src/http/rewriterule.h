@@ -195,8 +195,10 @@ class RewriteRule : public LinkedObj
 
     int parseRuleSubst(const char *&pRuleStr, const char *pEnd,
                        const RewriteMapList *pMaps);
-    int parseRuleFlag(const char *&pRuleStr, const char *pEnd);
-    int parseOneFlag(const char *&pRuleStr, const char *pEnd);
+    int parseRuleFlag(const char *&pRuleStr, const char *pEnd,
+                      const RewriteMapList *pMaps);
+    int parseOneFlag(const char *&pRuleStr, const char *pEnd,
+                     const RewriteMapList *pMaps);
     int compilePattern();
     void operator=(const RewriteRule &rhs);
 

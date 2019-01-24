@@ -79,12 +79,13 @@ int H2Stream::onInitConnected(bool bUpgraded)
 {
     if (!bUpgraded)
         getHandler()->onInitConnected();
-
+    
     if (isWantRead())
         getHandler()->onReadEx();
     if (isWantWrite())
         if (next() == NULL)
             m_pH2Conn->add2PriorityQue(this);
+
     //getHandler()->onWriteEx();
     return 0;
 }
@@ -163,10 +164,11 @@ void H2Stream:: continueWrite()
 }
 
 
-void H2Stream::onTimer()
+int H2Stream::onTimer()
 {
     if (getState() == HIOS_CONNECTED)
-        getHandler()->onTimerEx();
+        return getHandler()->onTimerEx();
+    return 0;
 }
 
 
@@ -368,11 +370,6 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
             setState(HIOS_SHUTDOWN);
             m_pH2Conn->incShutdownStream();
         }
-    }
-    else
-    {
-        if (next() == NULL)
-            m_pH2Conn->add2PriorityQue(this);
     }
     return m_pH2Conn->sendRespHeaders(pHeaders, m_uiStreamId, flag);
 }

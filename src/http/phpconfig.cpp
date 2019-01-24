@@ -118,7 +118,7 @@ int PHPConfig::parse(int id, const char *pArgs,
         *(char *)pArg2++ = 0;
     else
         return LS_FAIL;
-    StringTool::strLower(pArg1, pArg1);
+    StringTool::strlower(pArg1, pArg1);
     const char *pArg2End = pArg2 + strlen(pArg2);
     StringTool::strTrim(pArg2, pArg2End);
     if (*pArg2 == '"')

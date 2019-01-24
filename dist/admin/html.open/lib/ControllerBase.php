@@ -72,7 +72,7 @@ class ControllerBase
 		$path = null;
 
 		if ( $type == DInfo::CT_SERV) {
-			$path = SERVER_ROOT . "conf/httpd_config.conf" ; //fixed location
+			$path = SERVER_ROOT . 'conf/httpd_config.conf' ; //fixed location
 		}
 		elseif ( $type ==  DInfo::CT_ADMIN) {
 			$adminRoot = PathTool::GetAbsFile('$SERVER_ROOT/admin/','SR'); //fixed loc
@@ -517,6 +517,8 @@ class ControllerBase
 
 	protected function issueCmd($cmd)
 	{
+        CAuthorizer::singleton()->Reauthenticate();
+
 		$commandline = '';
 		if (is_array($cmd)) {
 			foreach( $cmd as $line ) {

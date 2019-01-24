@@ -1,6 +1,6 @@
 h1 {
     margin: .67em 0;
-    font-size: 2em;
+    font-size: 3em;
     color: #888;
 
 }
@@ -38,6 +38,7 @@ ul {
     padding-left: 0px;
     margin-right: auto;
     margin-left: auto;
+    overflow-x: hidden;
 }
 
 @media (min-width: 768px) {
@@ -222,6 +223,13 @@ ul {
     border-color: #122b40;
 }
 
+.btn-lg {
+    padding: 10px 16px;
+    font-size: 18px;
+    line-height: 1.3333333;
+    border-radius: 6px;
+}
+
 .btn-warning {
   margin-bottom: 25px;
 }
@@ -359,6 +367,9 @@ li {
 	list-style:none;
 }
 
+figure {
+    padding: 15px 0px;
+}
 .panel {
 	margin-bottom: 20px;
 	background-color: #fff;
@@ -366,8 +377,7 @@ li {
 	border-radius: 5px;
 	-webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
 	box-shadow: 0 1px 1px rgba(0,0,0,.05);
-	min-height: 350px;
-	min-width: 375px;
+    min-height: 350px;
 }
 
 .panel-body {

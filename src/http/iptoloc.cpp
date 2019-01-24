@@ -173,16 +173,19 @@ int LocInfo::addLocEnv(IEnv *pEnv)
     {
         len = sprintf(achBuf, "%f", m_pRecord->latitude);
         pEnv->add("IP2LOCATION_LATITUDE", 20, achBuf, len);
+        ++count;
     }
     if (m_pRecord->longitude)
     {
         len = sprintf(achBuf, "%f", m_pRecord->longitude);
         pEnv->add("IP2LOCATION_LONGITUDE", 21, achBuf, len);
+        ++count;
     }
     if (m_pRecord->elevation)
     {
         len = sprintf(achBuf, "%f", m_pRecord->elevation);
         pEnv->add("IP2LOCATION_ELEVATION", 21, achBuf, len);
+        ++count;
     }
     if (m_pRecord->region)
     {

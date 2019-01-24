@@ -5,7 +5,17 @@
 # Use your pre-built boringSSL
 
 #For openssl, always use the latest officially released version
-VERSION=OpenSSL_1_1_0i
+VERSION=OpenSSL_1_1_1a
+
+DLCMD=
+source dist/functions.sh 2>/dev/null
+if [ $? != 0 ] ; then
+    . dist/functions.sh
+    if [ $? != 0 ] ; then
+        echo [ERROR] Can not include 'functions.sh'.
+        exit 1
+    fi
+fi
 
 
 if [ "x$1" = "xuse_bssl" ] ; then 
@@ -36,10 +46,8 @@ if [ ! -f ssl/libcrypto.a ] ; then
     echo -e "\033[38;5;148mDownload openssl $VERSION and building, it will take several minutes ...\033[39m"
     echo -e "\033[38;5;148mThe url is https://github.com/openssl/openssl/archive/$VERSION.tar.gz\033[39m"
 
-    DL=`which curl`
-    DLCMD="$DL -k -L -o ossl.tar.gz"
-    
-    $DLCMD https://github.com/openssl/openssl/archive/$VERSION.tar.gz
+    detectdlcmd
+    $DLCMD ossl.tar.gz  https://github.com/openssl/openssl/archive/$VERSION.tar.gz
     tar xf ossl.tar.gz
     rm -rf ssl
     mv openssl-$VERSION ssl

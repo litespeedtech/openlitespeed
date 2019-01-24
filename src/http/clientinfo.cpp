@@ -23,6 +23,7 @@
 #include <util/accessdef.h>
 #include <util/datetime.h>
 
+#include <socket/gsockaddr.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -108,8 +109,24 @@ ClientInfo::ClientInfo()
 
 ClientInfo::~ClientInfo()
 {
+    release();
+}
+
+
+void ClientInfo::release()
+{
     if (m_pGeoInfo)
+    {
         delete m_pGeoInfo;
+        m_pGeoInfo = NULL;
+    }
+#ifdef USE_IP2LOCATION
+    if (m_pLocInfo)
+    {
+        delete m_pLocInfo;
+        m_pLocInfo = NULL;
+    }
+#endif
 }
 
 
@@ -124,7 +141,7 @@ void ClientInfo::setAddr(const struct sockaddr *pAddr)
     else
     {
         len = 24;
-        strLen = 41;
+        strLen = 43;
     }
 
 #if 0
@@ -155,14 +172,31 @@ void ClientInfo::setAddr(const struct sockaddr *pAddr)
     m_sAddr.prealloc(strLen);
     if (m_sAddr.buf())
     {
-        inet_ntop(pAddr->sa_family, ((char *)pAddr) + ((len >> 1) - 4),
-                  m_sAddr.buf(), strLen);
-        m_sAddr.setLen(strlen(m_sAddr.c_str()));
+        char *p = m_sAddr.buf();
+        if (AF_INET6 == pAddr->sa_family)
+        {
+            *p++ = '[';
+            strLen -= 2;
+        }
+        inet_ntop(pAddr->sa_family, ((char * )pAddr) + ((len >> 1) - 4),
+                  p, strLen);
+        int l = strlen(p);
+        if (AF_INET6 == pAddr->sa_family)
+        {
+            *(p + l) = ']';
+            *(p + l + 1) = '\0';
+            l += 2;
+        }
+        m_sAddr.setLen(l);
     }
     memset(&m_iConns, 0, (char *)(&m_lastConnect + 1) - (char *)&m_iConns);
     m_iAccess = 1;
 }
 
+bool ClientInfo::isFromLocalAddr(const sockaddr* server_addr) const
+{
+    return (GSockAddr::compareAddr(server_addr, getAddr()) == 0);
+}
 
 int ClientInfo::checkAccess()
 {

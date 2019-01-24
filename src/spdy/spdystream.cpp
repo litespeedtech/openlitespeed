@@ -138,9 +138,11 @@ void SpdyStream:: continueWrite()
 }
 
 
-void SpdyStream::onTimer()
+int SpdyStream::onTimer()
 {
-    getHandler()->onTimerEx();
+    if (getHandler())
+        return getHandler()->onTimerEx();
+    return 0;
 }
 
 

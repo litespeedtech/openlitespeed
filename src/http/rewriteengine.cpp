@@ -45,6 +45,10 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 
+
+LS_SINGLETON(RewriteEngine);
+
+
 RewriteEngine::RewriteEngine()
 {
 }
@@ -169,9 +173,26 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                             pRules, pContext);
                 }
             }
+            else if (strncasecmp(pRules, "RewriteEngine", 13) == 0)
+            {
+                pRules += 14;
+                while (isspace(*pRules))
+                    ++pRules;
+                
+                int len = pLineEnd - pRules;
+                if (len >= 2 && strncasecmp(pRules, "on", 2) == 0)
+                {
+                    pContext->enableRewrite(1);
+                }
+                else if (len >= 3 && strncasecmp(pRules, "off", 3) == 0)
+                {
+                    pContext->enableRewrite(0);
+                }
+                else
+                    LS_ERROR("Invalid value of RewriteEngine: %.*s", len, pRules);
+            }
             else if (strncasecmp(pRules, "<IfModule", 9) == 0 ||
-                     strncasecmp(pRules, "</IfModule>", 11) == 0 ||
-                     strncasecmp(pRules, "RewriteEngine", 13) == 0)
+                     strncasecmp(pRules, "</IfModule>", 11) == 0)
                 LS_INFO("Rewrite directive: %s bypassed.", pRules);
             else if (*pRules != '#')
                 LS_ERROR("Invalid rewrite directive: %s", pRules);
@@ -1282,7 +1303,7 @@ NEXT_RULE:
             else if (m_action == RULE_ACTION_REDIRECT)
             {
                 if (pReq->detectLoopRedirect((char *)m_pSourceURL, m_sourceURLLen,
-                                             m_pQS, m_qsLen, pSession->isSSL()) == 0)
+                                             m_pQS, m_qsLen, pSession->isHttps()) == 0)
                 {
                     pReq->setRewriteLocation((char *)m_pSourceURL, m_sourceURLLen,
                                              m_pQS, m_qsLen, m_flag & RULE_FLAG_NOESCAPE);
@@ -1355,6 +1376,8 @@ NEXT_RULE:
             if ((m_statusCode >= SC_301) && (m_statusCode < SC_400))
                 return 0;
         }
+        else if (m_action == RULE_ACTION_PROXY)
+            m_statusCode = 0;
         return m_statusCode;
     }
     return 0;

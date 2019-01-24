@@ -71,7 +71,7 @@ protected:
     virtual int addRequest(ExtRequest *pReq);
     virtual ExtRequest *getReq() const;
     virtual void init(int fd, Multiplexer *pMplx);
-    virtual void onTimer();
+    virtual int onTimer();
     virtual int connect(Multiplexer *pMplx);
 
 

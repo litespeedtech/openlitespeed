@@ -37,10 +37,11 @@ HioChainStream::~HioChainStream()
 }
 
 
-void HioChainStream::onTimer()
+int HioChainStream::onTimer()
 {
     if (getHandler())
-        getHandler()->onTimerEx();
+        return getHandler()->onTimerEx();
+    return 0;
 }
 
 void HioChainStream::switchWriteToRead()
@@ -90,9 +91,9 @@ int HioChainStream::passSetCookieToParent()
 
 int HioChainStream::sendRespHeaders(HttpRespHeaders *pHeaders)
 {
-    m_pRespHeaders = pHeaders;
-    if (m_pParentSession && getFlag(HIO_FLAG_PASS_SETCOOKIE))
-        passSetCookieToParent();
+//     m_pRespHeaders = pHeaders;
+//     if (m_pParentSession && getFlag(HIO_FLAG_PASS_SETCOOKIE))
+//         passSetCookieToParent();
     return 0;
 }
 

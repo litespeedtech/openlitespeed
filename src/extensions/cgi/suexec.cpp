@@ -440,6 +440,11 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
                        LSCGID_TYPE_SUEXEC);
         int size = m_req.size();
         int len = write(fdReq, m_req.get(), size);
+#if 0
+        FILE *fp=fopen("/tmp/dumpreq.txt", "wb");
+        fwrite(m_req.get(), size, 1, fp);
+        fclose(fp);
+#endif
         if (len != size)
         {
             LS_ERROR("[suEXEC] Failed to write %d bytes to lscgid, written: %d",

@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "lsimoduledata.h"
 #include <lsiapi/lsiapi.h>
+#include <log4cxx/logger.h>
 
 #include <string.h>
 
@@ -24,11 +25,22 @@ typedef void *void_pointer;
 
 bool LsiModuleData::initData(int count)
 {
-    assert(m_pData == NULL);
+    //For a reuse case, it was already init-ed, needn't to do again
+    //Because m_iCount should always >= 2, we can check it here
+    if (m_pData)
+    {
+        if (m_iCount > 0)
+            return false;
+        else
+            delete m_pData;
+    }
 
     m_pData = new void_pointer[count];
     if (!m_pData)
+    {
+        LS_ERROR("LsiModuleData::initData() error, seems out of memory.");
         return false;
+    }
 
     memset(m_pData, 0, sizeof(void_pointer) * count);
     m_iCount = count;

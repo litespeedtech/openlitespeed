@@ -130,9 +130,9 @@ int H2Connection::onReadEx()
     m_iFlag |= H2_CONN_FLAG_IN_EVENT;
     ret = onReadEx2();
     if ((m_iFlag & H2_CONN_FLAG_WAIT_PROCESS) != 0)
-        onWriteEx();
+        onWriteEx2();
     m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
-    if (getBuf()->size() > 1024 || m_iFlag & H2_CONN_FLAG_WANT_FLUSH)
+    if (getBuf()->size() > 0)
         flush();
     return ret;
 }
@@ -631,6 +631,7 @@ int H2Connection::processRstFrame(H2FrameHeader *pHeader)
     LS_DBG_L(getLogSession(), "StreamID:%d processRstFrame, error code: %d",
              streamID, errorCode);
     pH2Stream->setFlag(HIO_FLAG_PEER_RESET, 1);
+    pH2Stream->onPeerClose();
     recycleStream(streamID);
     return 0;
 }
@@ -662,9 +663,10 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
         LS_DBG_L(getLogSession(), "stream: %p, isPeerShutdown: %d ",
                  pH2Stream, pH2Stream ? pH2Stream->isPeerShutdown() : 0);
         skipRemainData();
-        //resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
-        doGoAway(H2_ERROR_STREAM_CLOSED);
-        return LS_FAIL;
+        resetStream(streamID, pH2Stream, H2_ERROR_STREAM_CLOSED);
+        return 0;
+        //doGoAway(H2_ERROR_STREAM_CLOSED);
+        //return LS_FAIL;
     }
 
     uint8_t padLen = 0;
@@ -1077,10 +1079,6 @@ int H2Connection::decodeData(const unsigned char *pSrc,
 H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
 {
     H2Stream *pStream;
-    HioHandler *pSession = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
-    if (!pSession)
-        return NULL;
-
     LS_DBG_H(getLogger(),
              "[%s-%d] getNewStream(), stream map size: %d, shutdown streams: %d, flag: %d ",
              getLogId(), m_uiLastStreamId, (int)m_mapStream.size(),
@@ -1088,6 +1086,10 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
 
     if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams 
             >= m_iServerMaxStreams)
+        return NULL;
+
+    HioHandler *pSession = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
+    if (!pSession)
         return NULL;
 
     pStream = new H2Stream();
@@ -1100,6 +1102,7 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
     if (!(m_iFlag & H2_CONN_FLAG_NO_PUSH))
         flag |= HIO_FLAG_PUSH_CAPABLE;
     pStream->setFlag(flag, 1);
+    pStream->setConnInfo(getStream()->getConnInfo());
     return pStream;
 }
 
@@ -1111,6 +1114,7 @@ int H2Connection::h2cUpgrade(HioHandler *pSession)
     uint32_t uiStreamID = 1;  //Through upgrade h2c, it is 1.
     m_mapStream.insert((void *)(long)uiStreamID, pStream);
     pStream->init(uiStreamID, this, pSession);
+    pStream->setConnInfo(getStream()->getConnInfo());
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     int flag = HIO_FLAG_FLOWCTRL;
     if (!(m_iFlag & H2_CONN_FLAG_NO_PUSH))
@@ -1160,7 +1164,8 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
     int ret = 0;
     H2FrameHeader header(total, H2_FRAME_DATA, flag, uiStreamId);
 
-    if (m_buf.empty() && !getStream()->isWantWrite())
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
+        && m_buf.empty() && !getStream()->isWantWrite())
         getStream()->continueWrite();
 
     m_buf.append((char *)&header, 9);
@@ -1178,7 +1183,8 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
     int ret = 0;
     H2FrameHeader header(len, H2_FRAME_DATA, flag, uiStreamId);
 
-    if (m_buf.empty() && !getStream()->isWantWrite())
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
+        && m_buf.empty() && !getStream()->isWantWrite())
         getStream()->continueWrite();
 
     m_buf.append((char *)&header, 9);
@@ -1378,7 +1384,8 @@ int H2Connection::doGoAway(H2ErrorCode status)
     sendGoAwayFrame(status);
     releaseAllStream();
     getStream()->tobeClosed();
-    getStream()->continueWrite();
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0)
+        getStream()->continueWrite();
     return 0;
 }
 
@@ -1412,11 +1419,17 @@ int H2Connection::timerRoutine()
     for (; it != m_mapStream.end();)
     {
         itn = m_mapStream.next(it);
-        it.second()->onTimer();
-        if (it.second()->getState() != HIOS_CONNECTED)
-            recycleStream(it);
-        else if (it.second()->isStuckOnRead())
-            ++stuckRead;
+        H2Stream *pStream = it.second();
+        int id = pStream->getStreamID();
+        if (pStream->onTimer() == 0)
+        {
+            if (pStream->getState() != HIOS_CONNECTED)
+                recycleStream(id);
+            else if (pStream->isStuckOnRead())
+                ++stuckRead;
+        }
+        else
+            recycleStream(id);
         it = itn;
     }
     if (m_mapStream.size() == 0)
@@ -1641,6 +1654,7 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
     pStream->init(pushStreamId, this, pSession, NULL);
+    pStream->setConnInfo(getStream()->getConnInfo());
     pStream->setPriority(HIO_PRIORITY_PUSH);
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     pStream->setFlag(HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_FLOWCTRL | HIO_FLAG_INIT_PUSH
@@ -1653,7 +1667,7 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
     if (header->set(&method, pUrl, pHost, headers) == LS_OK)
         pStream->setReqHeaders(header);
 
-    m_priQue[pStream->getPriority()].append(pStream);
+    add2PriorityQue(pStream);
     ++m_iCurPushStreams;
     
     return pStream;
@@ -1690,28 +1704,28 @@ void H2Connection::add2PriorityQue(H2Stream *pH2Stream)
 
     m_priQue[pH2Stream->getPriority()].append(pH2Stream);
     m_iFlag |= H2_CONN_FLAG_WAIT_PROCESS;
-    if (m_iCurDataOutWindow > 0 && !getStream()->isWantWrite())
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
+        && m_iCurDataOutWindow > 0 && !getStream()->isWantWrite())
         getStream()->continueWrite();
 }
 
 
-int H2Connection::onWriteEx()
+int H2Connection::onWriteEx2()
 {
     H2Stream *pH2Stream = NULL;
     int wantWrite = 0;
 
-
     LS_DBG_H(getLogSession(),
-             "onWriteEx() state: %d, output buffer size = %d, Data Out Window: %d",
+             "onWriteEx2() state: %d, output buffer size = %d, Data Out Window: %d",
              m_iState, getBuf()->size(), m_iCurDataOutWindow);
     if (getBuf()->size() > 4096)
     {
         flush();
         if (!isEmpty())
-            return 0;
+            return 1;
     }
     if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
-        return 0;
+        return 1;
 
     TDLinkQueue<H2Stream> *pQue = &m_priQue[0];
     TDLinkQueue<H2Stream> *pEnd = &m_priQue[H2_STREAM_PRIORITYS];
@@ -1748,7 +1762,7 @@ int H2Connection::onWriteEx()
         {
             m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
             flush();
-            return 0;
+            return 1;
         }
         if (wantWrite > 0)
             break;
@@ -1757,6 +1771,18 @@ int H2Connection::onWriteEx()
 
     if (!isEmpty())
         flush();
+    if (wantWrite && !getStream()->isWantWrite() && m_iCurDataOutWindow > 0)
+        getStream()->continueWrite();
+
+    return wantWrite;
+}
+
+
+int H2Connection::onWriteEx()
+{
+    m_iFlag |= H2_CONN_FLAG_IN_EVENT;
+    int wantWrite = onWriteEx2();
+    m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
 
     if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
         getStream()->suspendWrite();

@@ -13,6 +13,7 @@ SET(main_STAT_SRCS
    configctx.cpp
    zconfclient.cpp
    zconfmanager.cpp
+   ../sslpp/sslcontextconfig.cpp
 )
 
 add_library(main STATIC ${main_STAT_SRCS})

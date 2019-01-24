@@ -22,9 +22,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define DNS_CACHE_TTL           (12 * 3600)
+#define DNS_CACHE_TTL           3600
+#define DNS_CACHE_NOTFOUND_TTL  300
 
 static int s_inited = 0;
+
+
+LS_SINGLETON(Adns);
 
 
 Adns::Adns()
@@ -60,12 +64,25 @@ const char *Adns::getCacheValue( const char * pName, int nameLen, int &valLen )
 {
     if (!m_pShmHash)
         return NULL;
-    LsShmOffset_t offset = m_pShmHash->find(pName, nameLen, &valLen);
-    if (offset)
+    LsShmHash::iteroffset iterOff;
+    ls_strpair_t parms;
+    ls_str_set(&parms.key, (char *)pName, nameLen);
+    iterOff = m_pShmHash->findIterator(&parms);
+    if (iterOff.m_iOffset != 0)
     {
-        if (valLen <= 0)
+        LsShmHash::iterator iter = m_pShmHash->offset2iterator(iterOff);
+        valLen = iter->getValLen();
+        if (valLen == 0)
+        {
+            if (iter->getLruLasttime() < DateTime::s_curTime
+                                            - DNS_CACHE_NOTFOUND_TTL)
+            {
+                m_pShmHash->eraseIterator(iterOff);
+                return NULL;
+            }
             return "";
-        return (char *)m_pShmHash->offset2ptr(offset);
+        }
+        return (char *)iter->getVal();
     }
     else
         return NULL;
@@ -170,7 +187,7 @@ void Adns::release(AdnsReq *pReq)
 }
 
 
-int Adns::setResult(struct sockaddr *result, 
+int Adns::setResult(const struct sockaddr *result,
                      const void *ip, int len)
 {
     if (!result || !ip)
@@ -394,7 +411,7 @@ int Adns::handleEvents( short events )
 }
 
 
-void Adns::onTimer()
+int Adns::onTimer()
 {
     dns_ioevent( m_pCtx, DateTime::s_curTime );
     if (++m_iCounter >= 10)
@@ -402,6 +419,7 @@ void Adns::onTimer()
         m_iCounter = 0;
         checkDnsEvents();
     }
+    return 0;
 }
 
 

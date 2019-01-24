@@ -25,8 +25,8 @@
 #include <lsr/ls_strtool.h>
 #include <sslpp/sslconnection.h>
 #include <sslpp/sslcert.h>
+#include <sslpp/hiocrypto.h>
 
-//#include <openssl/ssl.h>
 #include <stdio.h>
 
 JkAjp13::JkAjp13()
@@ -198,7 +198,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
     //port
     appendInt(p, pReq->getPort());
     //is_ssl
-    *p++ = (unsigned char)(pSession->isSSL());
+    *p++ = (unsigned char)(pSession->isHttps());
     char *pHeaderCounts = p;
     p += 2;
     int headerCounts = 0;
@@ -265,7 +265,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
     }
     appendInt(pHeaderCounts, headerCounts);
     const char *pAttr = pReq->getAuthUser();
-    if (pAttr)
+    if (pAttr && *pAttr)
     {
         n = strlen(pAttr);
         if (pEnd2 - p < n + 8)
@@ -277,7 +277,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
     }
 
     pAttr = pReq->getQueryString();
-    if (pAttr)
+    if (pAttr && *pAttr)
     {
         n = pReq->getQueryStringLen();
         if (pEnd2 - p < n)
@@ -285,44 +285,36 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
         *p++ = AJP_A_QUERY_STRING;
         appendString(p, pAttr, n);
     }
-    if (pSession->isSSL())
+    
+    HioCrypto *pCrypto = pSession->getCrypto();
+    if (pCrypto)
     {
-        SslConnection *pSSL = pSession->getSSL();
-        SSL_SESSION *pSession = pSSL->getSession();
-        if (pSession)
+        char buf[128];
+        char *pVal = buf;
+        n = pCrypto->getEnv(HioCrypto::SESSION_ID, pVal, sizeof(buf));
+        if (n > 0)
         {
-            int idLen = SslConnection::getSessionIdLen(pSession);
-            n = idLen * 2;
             if (pEnd2 - p < n)
                 return LS_FAIL;
             *p++ = AJP_A_SSL_SESSION;
-            appendInt(p, n);
-            ls_hexencode((char *)SslConnection::getSessionId(pSession),
-                         idLen, p);
-            p += n;
-            *p++ = 0;
+            appendString(p, pVal, n);
         }
-
-        const SSL_CIPHER *pCipher = pSSL->getCurrentCipher();
-        if (pCipher)
-        {
-            const char *pName = pSSL->getCipherName();
-            n = strlen(pName);
-            if (pEnd2 - p < n)
-                return LS_FAIL;
-            *p++ = AJP_A_SSL_CIPHER;
-            appendString(p, pName, n);
-            int algkeysize;
-            int keysize = SslConnection::getCipherBits(pCipher, &algkeysize);
-            if (pEnd2 - p < 20)
-                return LS_FAIL;
-            *p++ = AJP_A_SSL_KEY_SIZE;
-            n = ls_snprintf(p + 2, 16, "%d", keysize);
-            appendInt(p, n);
-            p += n + 1;
-        }
-
-        X509 *pClientCert = pSSL->getPeerCertificate();
+    
+        n = pCrypto->getEnv(HioCrypto::CIPHER, pVal, sizeof(buf));
+        if (pEnd2 - p < n)
+            return LS_FAIL;
+        *p++ = AJP_A_SSL_CIPHER;
+        appendString(p, pVal, n);
+    
+    
+        pVal = buf;
+        n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pVal, sizeof(buf));
+        if (pEnd2 - p < n)
+            return LS_FAIL;
+        *p++ = AJP_A_SSL_KEY_SIZE;
+        appendString(p, pVal, n);
+  
+        X509 *pClientCert = pCrypto->getPeerCertificate();
         if (pClientCert)
         {
             n = SslCert::PEMWriteCert(pClientCert, p + 3, pEnd - p);

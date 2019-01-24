@@ -28,6 +28,8 @@
 #include <http/httpresourcemanager.h>
 #include <http/httprespheaders.h>
 #include <http/httplistener.h>
+#include <http/httplistenerlist.h>
+
 #include <http/httpstats.h>
 #include <log4cxx/logger.h>
 #include <lsiapi/lsiapi.h>
@@ -127,9 +129,7 @@ NtwkIOLink::NtwkIOLink()
 {
     m_hasBufferedData = 0;
     m_pModuleConfig = NULL;
-    
-    m_pClientInfo = NULL;
-    
+
 }
 
 
@@ -290,13 +290,20 @@ int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
     return 0;
 }
 
-
-int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
-                        ClientInfo *pInfo, SslContext *pSslContext)
+int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
 {
     HioStream::reset(DateTime::s_curTime);
     setfd(fd);
-    m_pClientInfo = pInfo;
+    if (pInfo)
+    {
+        LS_DBG_L("NtwkIOLink::setLink called pInfo is m_pClientInfo %p,  "
+                    "m_pCrypto %p, m_pServerAddrInfo %p, m_remotePort %d",
+                    pInfo->m_pClientInfo,
+                    pInfo->m_pCrypto,
+                    pInfo->m_pServerAddrInfo,
+                    pInfo->m_remotePort);
+    }
+    setConnInfo(pInfo);
     setState(HIOS_CONNECTED);
     setHandler(NULL);
 
@@ -314,7 +321,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
     if (m_sessionHooks.isEnabled(LSI_HKPT_L4_BEGINSESSION))
         m_sessionHooks.runCallbackNoParam(LSI_HKPT_L4_BEGINSESSION, this);
 
-    memset(&m_iInProcess, 0, (char *)(&m_ssl + 1) - (char *)(&m_iInProcess));
+    memset(&m_iInProcess, 0, (char *)&m_ssl - (char *)(&m_iInProcess));
     m_iov.clear();
     HttpStats::incIdleConns();
     m_tmToken = NtwkIOLink::getToken();
@@ -322,33 +329,27 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd,
             POLLIN | POLLHUP | POLLERR) == -1)
         return LS_FAIL;
     //set ssl context
-    if (pSslContext)
+    if (pInfo->m_pSsl)
     {
-#ifdef OPENSSL_IS_BORINGSSL
-        pSslContext->initOCSP();
-#endif
-        SSL *p = pSslContext->newSSL();
-        if (p)
-        {
-            ConnLimitCtrl::getInstance().incSSLConn();
-            setSSL(p);
-            m_ssl.toAccept();
-            //acceptSSL();
-        }
-        else
-        {
-            LS_ERROR(this, "newSSL() Failed!");
-            return LS_FAIL;
-        }
+        ConnLimitCtrl::getInstance().incSSLConn();
+        setSSL(pInfo->m_pSsl);
+        ((ConnInfo *)getConnInfo())->m_pCrypto = &m_ssl;
+        m_ssl.toAccept();
     }
     else
     {
         setNoSSL();
         setupHandler(HIOS_PROTO_HTTP);
-
     }
-    pInfo->incConn();
-    LS_DBG_L(this, "concurrent conn: %zd", pInfo->getConns());
+
+    getClientInfo()->incConn();
+    LS_DBG_L(this, "concurrent conn: %zd", pInfo->m_pClientInfo->getConns());
+    
+    //FIXME below code is from lslbd, should we use this flag?
+//     if (pInfo->m_pClientInfo->isFromLocalAddr(
+//         (const sockaddr *)pInfo->m_pServerAddrInfo->getAddr()))
+//         setFlag(HIO_FLAG_FROM_LOCAL, 1);
+    
     return 0;
 }
 
@@ -681,22 +682,30 @@ int NtwkIOLink::flush()
 
     //For SSL part
     ret = getSSL()->flush();
-    if (ret == LS_AGAIN)
+    switch(ret)
     {
+    case 0:
+        //setSSLAgain();
         if (m_ssl.wantRead())
         {
             dumpState("flush", "CR");
             MultiplexerFactory::getMultiplexer()->continueRead(this);
         }
-        else
+        else if (m_ssl.wantWrite())
         {
             dumpState("flush", "CW");
             MultiplexerFactory::getMultiplexer()->continueRead(this);
         }
-    }
-    else if (ret == LS_FAIL)
+        
+        return 1;
+    case 1:
+        return 0;
+    case -1:
         tobeClosed();
-
+        break;
+    }
+    
+    
     return ret;
 }
 
@@ -735,7 +744,9 @@ int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
         if (!pThis->m_ssl.isConnected() || (last))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
+            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
+                && pThis->m_ssl.hasPendingIn())
+                return pThis->doRead();
             return 0;
         }
     }
@@ -786,7 +797,8 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
     if (pThis->getFlag(HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_ABORT))
     {
         pThis->setState(HIOS_SHUTDOWN);
-        pThis->closeSocket();
+        if (!pThis->m_iInProcess)
+            pThis->closeSocket();
     }
     else
     {
@@ -795,11 +807,11 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
         if (!(pThis->m_iPeerShutdown & IO_COUNTED))
         {
             ConnLimitCtrl::getInstance().decConn();
-            pThis->m_pClientInfo->decConn();
+            pThis->getClientInfo()->decConn();
             pThis->m_iPeerShutdown |= IO_COUNTED;
             LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %zd.",
                      ConnLimitCtrl::getInstance().availConn(),
-                     pThis->m_pClientInfo->getConns());
+                     pThis->getClientInfo()->getConns());
         }
     }
 //    pThis->closeSocket();
@@ -829,9 +841,9 @@ void NtwkIOLink::closeSocket()
     if (!(m_iPeerShutdown & IO_COUNTED))
     {
         ctrl.decConn();
-        m_pClientInfo->decConn();
+        getClientInfo()->decConn();
         LS_DBG_L(this, "Available Connections: %d, concurrent conn: %zd",
-                 ctrl.availConn(), m_pClientInfo->getConns());
+                 ctrl.availConn(), getClientInfo()->getConns());
     }
 
 
@@ -877,7 +889,7 @@ static int matchToken(int token)
 }
 
 
-void NtwkIOLink::onTimer()
+int NtwkIOLink::onTimer()
 {
     if (matchToken(this->m_tmToken))
     {
@@ -898,12 +910,12 @@ void NtwkIOLink::onTimer()
         }
 
         if (detectClose())
-            return;
+            return 0;
         (*m_pFpList->m_onTimer_fp)(this);
         if (getState() == HIOS_CLOSING)
             onPeerClose();
-
     }
+    return 0;
 }
 
 
@@ -1409,7 +1421,9 @@ int NtwkIOLink::onReadSSL_T(NtwkIOLink *pThis)
         if (!pThis->m_ssl.isConnected() || (last))
         {
             pThis->SSLAgain();
-//            if (( !pThis->m_ssl.isConnected() )||(last ))
+            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
+                && pThis->m_ssl.hasPendingIn())
+                return pThis->doRead();
             return 0;
         }
     }
@@ -1569,15 +1583,15 @@ int NtwkIOLink::acceptSSL()
     {
         LS_DBG_L(this, "[SSL] accepted!");
         if ((ClientInfo::getPerClientHardLimit() < 1000)
-            && (m_pClientInfo->getAccess() != AC_TRUST)
-            && (m_pClientInfo->incSslNewConn() >
+            && (getClientInfo()->getAccess() != AC_TRUST)
+            && (getClientInfo()->incSslNewConn() >
                 (ClientInfo::getPerClientHardLimit() << 1)))
         {
             LS_WARN(this, "[SSL] Too many new SSL connections: %d, "
                     "possible SSL negociation based attack, block!",
-                    m_pClientInfo->getSslNewConn());
-            m_pClientInfo->setOverLimitTime(DateTime::s_curTime);
-            m_pClientInfo->setAccess(AC_BLOCK);
+                    getClientInfo()->getSslNewConn());
+            getClientInfo()->setOverLimitTime(DateTime::s_curTime);
+            getClientInfo()->setAccess(AC_BLOCK);
         }
 
     }
@@ -1801,21 +1815,11 @@ void NtwkIOLink::resumeEventNotify()
 }
 
 
-void NtwkIOLink::changeClientInfo(ClientInfo *pInfo)
-{
-    if (pInfo == m_pClientInfo)
-        return;
-    m_pClientInfo->decConn();
-    pInfo->incConn();
-    m_pClientInfo = pInfo;
-}
-
-
 static const char *s_pProtoString[] = { "", ":SPDY2", ":SPDY3", ":SPDY31", ":HTTP2" };
 const char *NtwkIOLink::buildLogId()
 {
     m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%hu%s",
-                      m_pClientInfo->getAddrString(), getRemotePort(),
+                      getClientInfo()->getAddrString(), getRemotePort(),
                       s_pProtoString[(int)getProtocol() ]);
     return m_logId.ptr;
 }
@@ -1834,31 +1838,31 @@ int NtwkIOLink::isFromLocalAddr() const
 
 bool NtwkIOLink::allowWrite() const
 {
-    return m_pClientInfo->allowWrite();
+    return getClientInfo()->allowWrite();
 }
 
 bool NtwkIOLink::allowRead() const
 {
-    return m_pClientInfo->allowRead();
+    return getClientInfo()->allowRead();
 }
 
 const char *NtwkIOLink::getPeerAddrString() const
 {
-    return m_pClientInfo->getAddrString();
+    return getClientInfo()->getAddrString();
 }
 
 int NtwkIOLink::getPeerAddrStrLen() const
 {
-    return m_pClientInfo->getAddrStrLen();
+    return getClientInfo()->getAddrStrLen();
 }
 
 const struct sockaddr *NtwkIOLink::getPeerAddr() const
 {
-    return m_pClientInfo->getAddr();
+    return getClientInfo()->getAddr();
 }
 
 ThrottleControl *NtwkIOLink::getThrottleCtrl() const
 {
-    return  &(m_pClientInfo->getThrottleCtrl());
+    return  &(getClientInfo()->getThrottleCtrl());
 }
 

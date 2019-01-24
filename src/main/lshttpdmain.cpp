@@ -533,15 +533,22 @@ int LshttpdMain::testServerRoot(const char *pRoot)
 int LshttpdMain::getServerRootFromExecutablePath(const char *command,
         char  *pBuf, int len)
 {
-    char achBuf[512];
+    char achBuf[MAX_PATH_LEN] = "";
+    int left_len = MAX_PATH_LEN - 3;
     if (*command != '/')
     {
-        getcwd(achBuf, 512);
+        getcwd(achBuf, left_len - 1);
         strcat(achBuf, "/");
-        strcat(achBuf, command);
+        left_len -= strlen(achBuf);
     }
+    
+    if (left_len >= strlen(command))
+        strcat(achBuf, command);
     else
-        strcpy(achBuf, command);
+    {
+        printf("Warn: Command too long, bypass it.");
+    }
+
     char *p = strrchr(achBuf, '/');
     if (p)
         *(p + 1) = 0;
@@ -549,7 +556,6 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
     GPath::clean(achBuf);
     memccpy(pBuf, achBuf, 0, len);
     return 0;
-
 }
 
 

@@ -1,10 +1,8 @@
+#!/bin/sh
 #When using git clone to get the source code, the timestamp will be lost.
 #then when run make, it will cause re-config issue.
 
-#!/bin/sh
-
-
-touch  aclocal.m4
+touch aclocal.m4
 sleep 2
 
 touch Makefile.in

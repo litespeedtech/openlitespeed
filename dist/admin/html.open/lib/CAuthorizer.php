@@ -110,6 +110,24 @@ class CAuthorizer
             return '';
     }
 
+    public function Reauthenticate()
+    {
+        $uid = PMA_blowfish_decrypt($this->_id, $_SESSION['secret'][0]);
+        $password = PMA_blowfish_decrypt($this->_pass, $_SESSION['secret'][1]);
+        $auth = $this->authUser($uid, $password);
+
+        if (!$auth) {
+            $this->clear();
+            if (strpos($_SERVER['SCRIPT_NAME'], '/view/') !== false) {
+                echo json_encode(array('login_timeout' => 1));
+            } else {
+                header("location:/login.php?timedout=1");
+            }
+            die();
+        }
+
+    }
+
     public function GenKeyPair()
     {
         $keyfile = Service::ServiceData(SInfo::DATA_ADMIN_KEYFILE);
@@ -172,8 +190,8 @@ class CAuthorizer
         }
 
         if ($userid != null && ($this->authenticate($userid, $pass) === true)) {
-            return false;
-        }
+                return false;
+            }
         $msg = DMsg::Err('err_login');
         return true;
     }
@@ -197,7 +215,7 @@ class CAuthorizer
         setcookie(session_name(), '', $outdated, "/");
     }
 
-    private function authenticate($authUser, $authPass)
+    private function authUser($authUser, $authPass)
     {
         $auth = false;
         $authUser1 = escapeshellcmd($authUser);
@@ -230,6 +248,12 @@ class CAuthorizer
                 }
             }
         }
+        return $auth;
+    }
+
+    private function authenticate($authUser, $authPass)
+    {
+        $auth = $this->authUser($authUser, $authPass);
 
         if ($auth) {
             $temp = gettimeofday();
@@ -249,7 +273,7 @@ class CAuthorizer
 
             $this->updateAccessTime(array($secretKey0, $secretKey1));
         } else {
-            $this->emailFailedLogin($authUser1);
+            $this->emailFailedLogin(escapeshellcmd($authUser));
         }
 
         return $auth;

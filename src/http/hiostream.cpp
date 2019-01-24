@@ -65,4 +65,9 @@ int HioHandler::h2cUpgrade(HioHandler *pOld)
     return LS_FAIL;
 }
 
-
+void HioStream::switchHandler(HioHandler *pCurrent, HioHandler *pNew)
+{
+    assert(m_pHandler == pCurrent);
+    pCurrent->detachStream();
+    pNew->attachStream(this);
+}

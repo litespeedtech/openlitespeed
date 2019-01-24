@@ -156,6 +156,9 @@ int PipeAppender::flush()
               m_buf.size());
     if (!m_buf.empty())
     {
+        if (PipeAppender::getfd() == -1)
+            if (open() == -1)
+                return -1;
         IOVec iov;
         m_buf.getIOvec(iov);
         int ret = ::writev(Appender::getfd(), iov.get(), iov.len());
@@ -181,7 +184,8 @@ int PipeAppender::flush()
         }
 
     }
-    MultiplexerFactory::getMultiplexer()->suspendWrite(this);
+    if (PipeAppender::getfd() != -1)
+        MultiplexerFactory::getMultiplexer()->suspendWrite(this);
     return 0;
 }
 

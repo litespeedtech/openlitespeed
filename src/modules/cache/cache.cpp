@@ -58,7 +58,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.57"
+#define MODULE_VERSION_INFO         "1.59"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -333,6 +333,9 @@ static int parseNoCacheDomain(CacheConfig *pConfig, const char *pValStr,
         pConfig->setVHostMapExclude(new VHostMap());
     pConfig->getVHostMapExclude()->mapDomainList(
         HttpServerConfig::getInstance().getGlobalVHost(), pValStr);
+
+    g_api->log(NULL, LSI_LOG_DEBUG, "[%s]noCacheDomain [%.*s] added.\n",
+               ModuleNameStr, valLen, pValStr);
 
     return 0;
 }
@@ -795,18 +798,20 @@ void calcCacheHash2(const lsi_session_t *session, CacheKey *pKey,
     }
     pHash->setKey(XXH64_digest(&state));
 
+    
+    
+    if (pKey->m_iCookiePrivate > 0)
+    {
+        XXH64_update(&state, "~", 1);
+        XXH64_update(&state, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
+                        pKey->m_iCookiePrivate);
+    }
     if (pKey->m_pIP)
     {
-        if (pKey->m_iCookiePrivate > 0)
-        {
-            XXH64_update(&state, "~", 1);
-            XXH64_update(&state, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
-                         pKey->m_iCookiePrivate);
-        }
         XXH64_update(&state, "@", 1);
         XXH64_update(&state, pKey->m_pIP, pKey->m_ipLen);
-        pPrivateHash->setKey(XXH64_digest(&state));
     }
+    pPrivateHash->setKey(XXH64_digest(&state));
 }
 
 
@@ -1238,21 +1243,29 @@ static int createEntry(lsi_param_t *rec)
         return 0;
     }
 
-    //if no LSI_RSPHDR_LITESPEED_CACHE_CONTROL and not 200, do nothing
-    if (count == 0)
+    //For a HEAD request, do not save it
+    if (myData->iMethod == HTTP_HEAD)
     {
-        //Error page won't be stored to cache
-        int code = g_api->get_status_code(rec->session);
-        if (code != 200)
-        {
-            clearHooks(rec->session);
-            g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
-                       ModuleNameStr, code);
-            return 0;
-        }
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]cacheTofile to be cancelled for HEAD request.\n",
+                   ModuleNameStr);
+        return 0;
     }
-    else if (myData->hasCacheFrontend == 0)
+
+    //if no LSI_RSPHDR_LITESPEED_CACHE_CONTROL and not 200, do nothing
+    //if 304, do nothing
+    int code = g_api->get_status_code(rec->session);
+    if (code == 304 || (code != 200 && count == 0))
+    {
+        clearHooks(rec->session);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
+                   ModuleNameStr, code);
+        return 0;
+    }
+
+    if (count && myData->hasCacheFrontend == 0)
     {
         g_api->remove_resp_header(rec->session,
                                   LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
@@ -1464,7 +1477,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     int needGzip = (g_api->get_resp_buffer_compress_method(rec->session) == 0);
     
     /**
-     * For ab test, no need to gzip
+     * For ab test, no need to gzip only when it does not have gzip in encoding
      */
     if (needGzip)
     {
@@ -1477,7 +1490,12 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         if (pUA && uaLen > AB_USERAGENT_LEN &&
             strncasecmp(pUA, AB_USERAGENT, AB_USERAGENT_LEN) == 0)
         {
-            needGzip = false;
+            int encodingLen;
+            const char *encoding = g_api->get_req_header_by_id(rec->session,
+                                                         LSI_HDR_ACC_ENCODING,
+                                                         &encodingLen);
+            if (encodingLen < 4 || strcasestr(encoding, "gzip") == NULL)
+                needGzip = false;
         }
     }
 
@@ -1898,8 +1916,23 @@ MyMData *createMData(lsi_param_t *rec)
 
 static int checkAssignHandler(lsi_param_t *rec)
 {
+    char val[3] = {0};
+    if (g_api->get_req_env(rec->session, "staticcacheserve", 16, val, 1) > 0
+        && strncasecmp(val, "1", 1) ==  0)
+    {
+        int aHkpts[] = {LSI_HKPT_URI_MAP, LSI_HKPT_HTTP_END,
+                    LSI_HKPT_HANDLER_RESTART, LSI_HKPT_RCVD_RESP_HEADER};
+        g_api->enable_hook(rec->session, &MNAME, 0, aHkpts, 4);
+        
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s] checkAssignHandler return since req served by internal cache.\n",
+                   ModuleNameStr);
+        return 0;
+    }
+    
     MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
                       LSI_DATA_HTTP);
+    
     CacheConfig *pConfig = (CacheConfig *)g_api->get_config(
                                rec->session, &MNAME);
     if (!pConfig)
@@ -2032,7 +2065,6 @@ static int checkAssignHandler(lsi_param_t *rec)
     myData->cacheCtrl = cacheCtrl;
     myData->pConfig = pConfig;
     
-    char val[3] = {0};
     if (g_api->get_req_env(rec->session, "LSCACHE_FRONTEND", 16, val, 2) > 0
         && strncasecmp(val, "1", 1) ==  0)
     {

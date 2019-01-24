@@ -14,21 +14,20 @@ inMemBufSize                     60M
 swappingDir                      %DEFAULT_TMP_DIR%/swap 
 autoFix503                       1 
 gracefulRestartTimeout           300
-mime                             $SERVER_ROOT/conf/mime.properties 
+mime                             conf/mime.properties 
 showVersionNumber                0 
 adminEmails                      %ADMIN_EMAIL%
-adminRoot                        $SERVER_ROOT/admin/ 
 indexFiles                       index.html, index.php
 disableWebAdmin                  0
 
-errorlog $SERVER_ROOT/logs/error.log {
+errorlog logs/error.log {
         logLevel             DEBUG
         debugLevel           0
         rollingSize          10M
         enableStderrLog      1
 }
     
-accessLog $SERVER_ROOT/logs/access.log {
+accessLog logs/access.log {
         rollingSize          10M    
         keepDays             30    
         compressArchive      0
@@ -38,14 +37,14 @@ accessLog $SERVER_ROOT/logs/access.log {
     
 expires {
     enableExpires           1
-    expiresByType           image/*=A604800, text/css=A604800, application/x-javascript=A604800
+    expiresByType           image/*=A604800,text/css=A604800,application/x-javascript=A604800,application/javascript=A604800,font/*=A604800,application/x-font-ttf=A604800
 }
 
 tuning{
-    maxConnections               2000 
-    maxSSLConnections            1000 
+    maxConnections               10000
+    maxSSLConnections            5000
     connTimeout                  300 
-    maxKeepAliveReq              1000 
+    maxKeepAliveReq              10000
     smartKeepAlive               0 
     keepAliveTimeout             5 
     sndBufSize                   0 
@@ -69,7 +68,7 @@ tuning{
     enableBrCompress             1
     enableDynGzipCompress        1 
     gzipCompressLevel            6 
-    compressibleTypes            text/*,application/x-javascript,application/javascript,application/xml, image/svg+xml 
+    compressibleTypes            text/*, application/x-javascript, application/xml, application/javascript, image/svg+xml,application/rss+xml
     gzipAutoUpdateStatic         1 
     gzipMinFileSize              300 
 }
@@ -78,8 +77,8 @@ accessDenyDir{
     dir                  /
     dir                  /etc/*
     dir                  /dev/*
-    dir                  $SERVER_ROOT/conf/*
-    dir                  $SERVER_ROOT/admin/conf/*
+    dir                  conf/*
+    dir                  admin/conf/*
 }
 
 fileAccessControl{
@@ -129,7 +128,7 @@ extProcessor lsphp{
     pcKeepAliveTimeout
     respBuffer                      0 
     autoStart                       1 
-    path                            $SERVER_ROOT/fcgi-bin/lsphp
+    path                            fcgi-bin/lsphp
     backlog                         100 
     instances                       1 
     priority                        0 
@@ -144,7 +143,7 @@ scriptHandler{
 }
 
 railsDefaults{
-    rubyBin                  %RUBY_BIN%
+    binPath                  %RUBY_BIN%
     railsEnv                 1 
     maxConns                 5 
     env                      LSAPI_MAX_IDLE=60 
@@ -161,9 +160,47 @@ railsDefaults{
     procSoftLimit            500 
     procHardLimit            600 
 }
-   
+
+wsgiDefaults{
+    binPath                  
+    railsEnv                 1 
+    maxConns                 5 
+    env                      LSAPI_MAX_IDLE=60 
+    initTimeout              60 
+    retryTimeout             0 
+    pcKeepAliveTimeout       60 
+    respBuffer               0 
+    backlog                  50 
+    runOnStartUp             1
+    extMaxIdleTime           300
+    priority                 3 
+    memSoftLimit             2047M 
+    memHardLimit             2047M 
+    procSoftLimit            500 
+    procHardLimit            600 
+}
+
+nodeDefaults{
+    binPath                  
+    railsEnv                 1 
+    maxConns                 5 
+    env                      LSAPI_MAX_IDLE=60 
+    initTimeout              60 
+    retryTimeout             0 
+    pcKeepAliveTimeout       60 
+    respBuffer               0 
+    backlog                  50 
+    runOnStartUp             1
+    extMaxIdleTime           300
+    priority                 3 
+    memSoftLimit             2047M 
+    memHardLimit             2047M 
+    procSoftLimit            500 
+    procHardLimit            600 
+}
+
 virtualHost Example{
-    vhRoot                   $SERVER_ROOT/Example/
+    vhRoot                   Example/
     allowSymbolLink          1 
     enableScript             1 
     restrained               1 
@@ -171,7 +208,7 @@ virtualHost Example{
     smartKeepAlive                  
     setUIDMode               0 
     chrootMode               0 
-    configFile               $SERVER_ROOT/conf/vhosts/Example/vhconf.conf
+    configFile               conf/vhosts/Example/vhconf.conf
 }
 
 listener Default{
@@ -181,22 +218,22 @@ listener Default{
 }
     
 vhTemplate centralConfigLog{
-    templateFile             $SERVER_ROOT/conf/templates/ccl.conf
+    templateFile             conf/templates/ccl.conf
     listeners                Default
 }
 
 vhTemplate PHP_SuEXEC{
-    templateFile             $SERVER_ROOT/conf/templates/phpsuexec.conf
+    templateFile             conf/templates/phpsuexec.conf
     listeners                Default
 }
 
 vhTemplate EasyRailsWithSuEXEC{
-    templateFile             $SERVER_ROOT/conf/templates/rails.conf
+    templateFile             conf/templates/rails.conf
     listeners                Default
 }
 
 module cache {
-    ls_enabled          0
+    ls_enabled          1
 
     checkPrivateCache   1
     checkPublicCache    1
