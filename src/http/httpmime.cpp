@@ -19,6 +19,7 @@
 
 #include <http/handlerfactory.h>
 #include <http/httphandler.h>
+#include <http/handlertype.h>
 #include <http/httplog.h>
 #include <http/httpvhost.h>
 #include <log4cxx/logger.h>
@@ -1157,23 +1158,19 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
     return 0;
 }
 
-int HttpMime::configScriptHandler(const XmlNodeList *pList, HttpMime *pHttpMime,
-                                    HttpVHost *vhost)
-{
-    ConfigCtx currentCtx("scripthandler", "add");
-    XmlNodeList::const_iterator iter;
 
-    for (iter = pList->begin(); iter != pList->end(); ++iter)
-    {
-        const char *value = (char *)(*iter)->getValue();
+int HttpMime::_configScriptHandler(ConfigCtx& currentCtx, const char *value,
+                                   AutoStr *psuffix, AutoStr *psType,
+                                   char *achHandler, int max_len)
+{
         const char *pSuffixByTab = strchr(value, '\t');
         const char *pSuffixBySpace = strchr(value, ' ');
-        const char *suffix  = NULL;
+        const char *suffix;
 
         if (pSuffixByTab == NULL && pSuffixBySpace == NULL)
         {
             currentCtx.logErrorInvalTag("ScriptHandler", value);
-            continue;
+            return -1;
         }
         else if (pSuffixByTab == NULL)
             suffix = pSuffixBySpace;
@@ -1187,64 +1184,268 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList, HttpMime *pHttpMime,
         if (suffix == NULL || type == NULL || strchr(suffix, '.') || type > suffix)
         {
             currentCtx.logErrorInvalTag("suffix", suffix);
-            continue;
+            return -1;
 
         }
 
-        ++ suffix; //should all spaces be handled here?? Now only one white space handled.
+        while(isspace(*suffix))
+            ++ suffix; //should all spaces be handled here?? Now only one white space handled.
 
-        char pType[256] = {0};
-        memcpy(pType, value, type - value);
+        psType->setStr(value, type - value);
 
         char handler[256] = {0};
         memcpy(handler, type + 1, suffix - type - 2);
+        
+        /**
+         * trim tail space
+         */
+        int len = strlen(handler);
+        while(len > 0 && isspace(handler[len-1]))
+            handler[--len] = 0x00;
 
-        char achHandler[256] = {0};
-
-        if (currentCtx.expandVariable(handler, achHandler, 256) < 0)
+        if (currentCtx.expandVariable(handler, achHandler, max_len) < 0)
         {
             LS_NOTICE(&currentCtx,
                       "add String is too long for scripthandler, value: %s",
                       handler);
-            continue;
+            return -1;
+        }
+        
+        psuffix->setStr(suffix, strlen(suffix));
+        return 0;
+}
+
+
+void HttpMime::releaseHandlerData(scriptHanlderData *pData, int dataCount)
+{
+    for (int i=0; i<dataCount; ++i)
+    {
+        free(pData[i].handler);
+        free(pData[i].suffix);
+        free(pData[i].type);
+    }
+    delete [] pData;
+}
+
+
+/**
+ * return NULL not find, otherwise return the item
+ */
+static scriptHanlderData* lookSuffixInArr(scriptHanlderData *pData,
+                          int count, const char *suffix)
+{
+    for (int i=0; i<count; ++i)
+    {
+        if (strcasecmp(pData[i].suffix, suffix) == 0)
+            return &pData[i];
+    }
+    return NULL;
+}
+
+/**
+ * Merge is by suffix, if the suffix is not defined in list then need to merge 
+ * from parentData
+ */
+void HttpMime::mergeHandlerList(ConfigCtx& currentCtx,
+                                scriptHanlderData *parentData,
+                                int parentDataCount,
+                                const XmlNodeList  *pList,
+                                scriptHanlderData *pdata,
+                                int *count)
+{
+    int n = 0;
+    /**
+     * Always clear the state of parent level data first
+     */
+    for (int i=0; i<parentDataCount; ++i)
+        parentData[i].state = 0;
+
+    if (pList)
+    {
+        XmlNodeList::const_iterator iter;
+        for (iter = pList->begin(); iter != pList->end(); ++iter)
+        {
+            const char *value = (char *)(*iter)->getValue();
+            char achHandler[256] = {0};
+            AutoStr sSuffix;
+            AutoStr sType;
+            int ret = _configScriptHandler(currentCtx, value, &sSuffix, &sType,
+                                           achHandler, 256);
+            if (ret)
+                continue;
+
+            pdata[n].handler = strdup(achHandler);
+            pdata[n].suffix = strdup(sSuffix.c_str());
+            pdata[n].type = strdup(sType.c_str());
+            pdata[n].state = 0;  //vhost own
+            ++n;
+
+
+            scriptHanlderData* parentDataItem = lookSuffixInArr(parentData,
+                                                                parentDataCount,
+                                                                sSuffix.c_str());
+            if (parentDataItem)
+                parentDataItem->state = 1;
+        }
+    }
+
+    /**
+     * Now check if any undefined in vhost but defined in server level
+     */
+    for (int i=0; i<parentDataCount; ++i)
+    {
+        if (parentData[i].state == 0)
+        {
+            pdata[n].handler = strdup(parentData[i].handler);
+            pdata[n].suffix =  strdup(parentData[i].suffix);
+            pdata[n].type = strdup(parentData[i].type);
+            pdata[n].state = 1;  //copy from server
+            ++n;
+        }
+    }
+    *count = n;
+}
+
+/***
+ * Comments:
+ * Since the server level cannot be too many suffix, we use array to store
+ * and loop search instead of hashtable
+ * And we do not release this buffer for we may use it ion future just
+ * as the XML tree
+ */
+static scriptHanlderData  *s_pSvrScriptHanlderData = NULL;
+static int s_nSvrScriptHanlderData = 0;
+
+int HttpMime::configScriptHandler(const XmlNodeList *pList,
+                                  HttpMime *pHttpMime,
+                                  HttpVHost *vhost)
+{
+    ConfigCtx currentCtx("scripthandler", "add");
+    scriptHanlderData  *pData = NULL;
+    int nData = 0;
+    int listSize = (pList ? pList->size() : 0);
+    
+    if (!vhost)
+    {
+        if (s_pSvrScriptHanlderData == NULL && listSize > 0)
+            s_pSvrScriptHanlderData = new scriptHanlderData[listSize];
+        
+        if (s_pSvrScriptHanlderData)
+        {
+            mergeHandlerList(currentCtx, NULL, 0, pList, s_pSvrScriptHanlderData,
+                             &s_nSvrScriptHanlderData);
         }
 
-        if (vhost)
+        pData = s_pSvrScriptHanlderData;
+        nData = s_nSvrScriptHanlderData;
+    }
+    else
+    {
+        pData = new scriptHanlderData[listSize + s_nSvrScriptHanlderData];
+        if (pData)
         {
-            app_node_st *app_node_ptr = MainServerConfig::getInstance().
-                                            getExtAppXmlNode(achHandler);
-            if (app_node_ptr)
+            mergeHandlerList(currentCtx, s_pSvrScriptHanlderData,
+                             s_nSvrScriptHanlderData, pList, pData, &nData);
+        }
+    }
+
+    if (!pData)
+    {
+        LS_ERROR(&currentCtx, "It seems out of memory in configScriptHandler()!!! ");
+        return -1;
+    }
+
+
+    for (int i=0; i<nData; ++i)
+    {
+        const HttpHandler *pHdlr = NULL;
+        char *suffix = pData[i].suffix;
+        char *handler = pData[i].handler;
+        char *type = pData[i].type;
+        
+        /**
+         * Server level need fill in the array
+         */
+        if (!vhost)
+        {
+            pHdlr = HandlerFactory::getHandler(type, handler);
+            LS_DBG_H(&currentCtx, "HttpMime::addMimeHandler(server) getHandler with"
+                " name %s (for suffix %s) ret %p", handler, suffix, pHdlr);
+        }
+
+        else
+        {
+            /**
+             * First check if VHost have this configged, if yes, use it
+             * otherewise, will use server level, but if server level guid is 
+             * different, create a vhost owned extapp
+             */
+            char sHanlderVh[256];
+            vhost->getUniAppName(handler, sHanlderVh, 256);
+            pHdlr = HandlerFactory::getHandler(type, sHanlderVh);
+            LS_DBG_H(&currentCtx, "HttpMime::addMimeHandler(vhost) getHandler with"
+                    " name %s (for suffix %s) ret %p",
+                     sHanlderVh, suffix, pHdlr);
+            
+            if (!pHdlr)
             {
-                LocalWorker *pApp = static_cast<LocalWorker *>(app_node_ptr->worker);
-                if (vhost->getUid() != pApp->getConfig().getUid() ||
-                    vhost->getGid() != pApp->getConfig().getGid())
+                app_node_st *app_node_ptr = MainServerConfig::getInstance().
+                                            getExtAppXmlNode(handler);
+                if (app_node_ptr)
                 {
-                    /**
-                     * Since the uid /gid not match with the setting in
-                     * server level, need to set up an own extApp and connect
-                     * to the suffix
-                     */
-                    int ret = vhost->addPhpXmlNodeSSize((char *)suffix,
-                                   (XmlNode*)app_node_ptr->xml_node);
-                    if (ret == -1)
+                    LocalWorker *pApp = static_cast<LocalWorker *>(app_node_ptr->worker);
+                    if (vhost->getUid() != pApp->getConfig().getUid() ||
+                        vhost->getGid() != pApp->getConfig().getGid())
                     {
-                        LS_NOTICE(&currentCtx,
-                                  "Failed to addPhpXmlNodeSSize() due to too "
-                                  "many items > %d defined as"
-                                  " MAX_VHOST_PHP_NUM.",
-                                  MAX_VHOST_PHP_NUM);
-                        LS_NOTICE(&currentCtx, "and will use SEREVR defined "
-                                    "user/group for this extApp.");
+                        /**
+                        * Since the uid /gid not match with the setting in
+                        * server level, need to set up an own extApp and connect
+                        * to the suffix
+                        */
+                        int ret = vhost->addPhpXmlNodeSSize((char *)suffix,
+                                    (char *)handler,
+                                    (XmlNode*)app_node_ptr->xml_node);
+                        if (ret == -1)
+                        {
+                            LS_NOTICE(&currentCtx,
+                                    "Failed to addPhpXmlNodeSSize() due to too "
+                                    "many items > %d defined as MAX_VHOST_PHP_NUM.",
+                                    MAX_VHOST_PHP_NUM);
+                            LS_NOTICE(&currentCtx, "and will use SEREVR defined "
+                                        "user/group for this extApp.");
+                        }
+                        else
+                        {
+                            LS_DBG(&currentCtx, "addPhpXmlNodeSSize() for %s due"
+                                    " to diff user/group for this extApp.",
+                                   handler);
+                            continue;
+                        }
                     }
-                    else
-                        continue;
+                }
+            }
+
+            if (!pHdlr)
+            {
+                pHdlr = HandlerFactory::getHandler(type, handler);
+                if (pHdlr)
+                {
+                    LS_DBG_H(&currentCtx, "HttpMime::addMimeHandler getHandler"
+                             " with name %s ret %p", handler, pHdlr);
+                }
+                else
+                {
+                    LS_ERROR(&currentCtx, "HttpMime::addMimeHandler getHandler"
+                             " with name %s ret %p", handler, pHdlr);
                 }
             }
         }
 
-        const HttpHandler *pHdlr = HandlerFactory::getHandler(pType, achHandler);
         addMimeHandler(pHdlr, NULL, pHttpMime, suffix);
     }
+
+    if (vhost && pData)
+        releaseHandlerData(pData, nData);
 
     return 0;
 }
@@ -1257,8 +1458,7 @@ void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime,
     if (!pHdlr)
     {
         LS_ERROR(ConfigCtx::getCurConfigCtx(),
-                 "use static file handler for suffix [%s]",
-                 pSuffix);
+                 "use static file handler for suffix [%s]", pSuffix);
         pHdlr = HandlerFactory::getInstance(0, NULL);
     }
     HttpMime *pParent = NULL;
@@ -1268,8 +1468,8 @@ void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime,
     else
         pHttpMime = HttpMime::getMime();
 
-    pHttpMime->addMimeHandler(pSuffix, pMime,
-                              pHdlr, pParent, TmpLogId::getLogId());
+    pHttpMime->addMimeHandler(pSuffix, pMime, pHdlr, pParent,
+                              TmpLogId::getLogId());
 }
 
 

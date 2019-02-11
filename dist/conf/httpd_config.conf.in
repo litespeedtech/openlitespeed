@@ -222,11 +222,6 @@ vhTemplate centralConfigLog{
     listeners                Default
 }
 
-vhTemplate PHP_SuEXEC{
-    templateFile             conf/templates/phpsuexec.conf
-    listeners                Default
-}
-
 vhTemplate EasyRailsWithSuEXEC{
     templateFile             conf/templates/rails.conf
     listeners                Default

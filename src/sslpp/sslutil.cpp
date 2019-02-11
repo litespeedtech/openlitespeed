@@ -33,14 +33,14 @@ const char *SslUtil::s_pDefaultCAFile = NULL;
 const char *SslUtil::s_pDefaultCAPath = NULL;
 
 static int defaultAsyncCert(asyncCertDoneCb cb, void *pParam,
-                            const char *pDomain, int iDomainLen, bool isSsl)
+                            const char *pDomain, int iDomainLen)
 {
     return -1;
 }
 
 
 asyncCertFunc SslUtil::removeAsyncCertLookup = defaultAsyncCert;
-asyncCertFunc SslUtil::addAsyncCertLookup = defaultAsyncCert;
+asyncCertFunc SslUtil::addAsyncCertLookup = NULL;
 
 static const int s_iSystems = 4;
 static const char *s_aSystemFiles[] =
@@ -441,7 +441,7 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
 /*
  * return: -1 if cert NULL, 0 on fail, 1 on success
  */
-int SslUtil::loadCert(SSL_CTX *pCtx, void *pCert, int iCertLen)
+int SslUtil::loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen)
 {
     BIO *in;
     X509 *cert = NULL;
@@ -468,7 +468,7 @@ int SslUtil::loadCert(SSL_CTX *pCtx, void *pCert, int iCertLen)
 /*
  * return: -1 if key NULL, 0 if SSL_CTX_use_PrivateKey fails, > 1 on success (len per EVP_PKEY_bits)
  */
-int SslUtil::loadPrivateKey(SSL_CTX *pCtx, void *pKey, int iKeyLen)
+int SslUtil::loadPrivateKey(SSL_CTX *pCtx, const void *pKey, int iKeyLen)
 {
     BIO *in;
     EVP_PKEY *key = NULL;

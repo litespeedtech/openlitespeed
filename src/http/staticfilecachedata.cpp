@@ -538,7 +538,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
     off_t size = m_fileData.getFileSize();
     if ((size > s_iMaxFileSize) || (size < s_iMinFileSize))
     {
-        LS_DBG_H("Cannot compress file %s, file size %d!",
+        LS_DBG_H("Cannot compress file %s, file size %ld!",
                     m_real.c_str(), size);
         return LS_FAIL;
     }
@@ -557,7 +557,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
 
         long ret = compressFile(useBrotli);
         if (ret == -1)
-            LS_WARN("Failed to compress file %s, file size %d!",
+            LS_WARN("Failed to compress file %s, file size %ld!",
                     m_real.c_str(), size);
         
         *p = 'l';
@@ -582,7 +582,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
 
         long ret = compressFile(useBrotli);
         if (ret == -1)
-            LS_WARN("Failed to compress file %s, file size %d!",
+            LS_WARN("Failed to compress file %s, file size %ld!",
                     m_real.c_str(), size);
 
         *p = 'l';

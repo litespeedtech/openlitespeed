@@ -99,6 +99,7 @@ class StaticFileCacheData;
 struct php_xml_st
 {
     AutoStr suffix;
+    AutoStr app_name;
     XmlNode *xml_node;
 };
 
@@ -329,16 +330,25 @@ public:
         else
             return NULL;
     }
-    int addPhpXmlNodeSSize(char *suffix, XmlNode *pNode)
+    int addPhpXmlNodeSSize(char *suffix, char *appName, XmlNode *pNode)
     {
         if(m_PhpXmlNodeSSize >= MAX_VHOST_PHP_NUM - 1)
             return -1;
         m_pPhpXmlNodeS[m_PhpXmlNodeSSize].suffix.setStr(suffix);
+        m_pPhpXmlNodeS[m_PhpXmlNodeSSize].app_name.setStr(appName);
         m_pPhpXmlNodeS[m_PhpXmlNodeSSize].xml_node = pNode;
         ++m_PhpXmlNodeSSize;
         return 0;
     }
     
+    /**
+     * For the VHost UniqueAppName and UniqueAppUri we do the same way
+     * add ".$uid" to the end of the string
+     */
+    void getUniAppUri(const char *app_uri, char *dst, int dst_len) const;
+    void getUniAppName(const char *app_name, char *dst, int dst_len) const
+    {    getUniAppUri(app_name, dst, dst_len); }
+
     void setUid(uid_t uid)    {   m_uid = uid;    }
     uid_t getUid() const        {   return m_uid;   }
 
@@ -521,7 +531,7 @@ public:
 
     int config(const XmlNode *pVhConfNode, int is_uid_set);
     int getExtAppGUid(const XmlNode *pExtAppNode);
-    void getAppName(const char *suffix, char *appName, int maxLen);
+    
     int configVHScriptHandler2();
     int configVHScriptHandler(const XmlNode *pVhConfNode);
     const HttpHandler *isHandlerAllowed(const HttpHandler *pHdlr, int type,

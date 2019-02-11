@@ -137,8 +137,6 @@ int SUExec::spawnChild(const char *pAppCmd, int fdIn, int fdOut,
         dup2(fdOut, STDOUT_FILENO);
         close(fdOut);
     }
-    else
-        close(STDOUT_FILENO);
 
     if (pLimits)
     {

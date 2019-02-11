@@ -154,7 +154,6 @@ int SubstItem::parseServerVar(const char *pCurLine,
 {
     const char *pName = pFormatStr;
     const char *pClose = findEndOfVarName(pName, pEnd);
-    int len;
     if (*pName == '{')
     {
         if (pClose == pEnd)

@@ -539,7 +539,7 @@ Please specify administrators' email addresses.
 It is recommended to specify a real email address,
 Multiple email addresses can be set by a comma 
 delimited list of email addresses. Whenever something
-abnormal happened, a notificiation will be sent to 
+abnormal happened, a notification will be sent to
 emails listed here.
 
 EOF

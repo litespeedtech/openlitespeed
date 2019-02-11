@@ -2130,9 +2130,9 @@ static void *get_vhost_module_param(const void *vhost,
 //Do not use it currently
 int handoff_fd(const lsi_session_t *session, char **pData, int *pDataLen)
 {
-    if (!session || !pData || !pDataLen)
-        return LS_FAIL;
-    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+//     if (!session || !pData || !pDataLen)
+//         return LS_FAIL;
+//     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     return LS_FAIL;//pSession->handoff(pData, pDataLen);
 }
 

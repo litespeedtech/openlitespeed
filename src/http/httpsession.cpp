@@ -113,13 +113,13 @@ HttpSession::~HttpSession()
 }
 
 const char *HttpSession::getPeerAddrString() const
-{    return m_pClientInfo->getAddrString();  }
+{    return (m_pClientInfo ? m_pClientInfo->getAddrString() : "");  }
 
 int HttpSession::getPeerAddrStrLen() const
-{   return m_pClientInfo->getAddrStrLen();   }
+{   return (m_pClientInfo ? m_pClientInfo->getAddrStrLen() : 0);   }
 
 const struct sockaddr *HttpSession::getPeerAddr() const
-{   return m_pClientInfo->getAddr(); }
+{   return (m_pClientInfo ? m_pClientInfo->getAddr() : NULL); }
 
 
 bool HttpSession::shouldIncludePeerAddr() const
@@ -4181,10 +4181,7 @@ int HttpSession::finalizeHeader(int ver, int code)
     //setup Send Level gzip filters
     //checkAndInstallGzipFilters(1);
 
-    int ret;
-    getResp()->getRespHeaders().addStatusLine(ver, code,
-            m_request.isKeepAlive());
-
+    int ret = 0;
     if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_HEADER))
     {
         ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_SEND_RESP_HEADER,
@@ -4195,8 +4192,12 @@ int HttpSession::finalizeHeader(int ver, int code)
 
     }
     if (!isNoRespBody())
-        return contentEncodingFixup();
-    return 0;
+        ret = contentEncodingFixup();
+    
+    getResp()->getRespHeaders().addStatusLine(ver, code,
+            m_request.isKeepAlive());
+    
+    return ret;
 }
 
 

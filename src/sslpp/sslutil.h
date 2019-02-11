@@ -9,7 +9,7 @@
 
 typedef int (*asyncCertDoneCb)(void *arg, const char *pDomain);
 typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
-                             const char *pDomain, int iDomainLen, bool isSsl);
+                             const char *pDomain, int iDomainLen);
 
 class SslUtil
 {
@@ -48,8 +48,8 @@ public:
                                       char **pBegin);
     static int digestIdContext(SSL_CTX *pCtx, const void *pDigest,
                                size_t iDigestLen);
-    static int loadCert(SSL_CTX *pCtx, void *pCert, int iCertLen);
-    static int loadPrivateKey(SSL_CTX *pCtx, void *pKey, int iKeyLen);
+    static int loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen);
+    static int loadPrivateKey(SSL_CTX *pCtx, const void *pKey, int iKeyLen);
     static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type);
     static int loadPrivateKeyFile(SSL_CTX *pCtx, const char *pFile, int type);
     static bool loadCA(SSL_CTX *pCtx, const char *pCAFile, const char *pCAPath,

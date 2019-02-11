@@ -20,13 +20,12 @@
 
 
 #include <http/expiresctrl.h>
-
+#include <util/autostr.h>
 #include <sys/types.h>
 #include <stddef.h>
 
 #define MAX_MIME_LEN 256
 
-class AutoStr2;
 class HttpHandler;
 class MimeMap;
 class MIList;
@@ -38,6 +37,14 @@ class MimeSettingList;
 class XmlNodeList;
 class HttpVHost;
 class ConfigCtx;
+
+typedef struct _scriptHanlderData {
+    char* suffix;
+    char *handler;
+    char *type;
+    int state;
+} scriptHanlderData;
+
 
 class MimeSetting
 {
@@ -122,8 +129,21 @@ public:
     static int  isValidMimeType(const char *pDescr);
     static int  shouldKeepAlive(const char *pMIME);
     static int getExtAppGUid(const XmlNode* pExtAppNode, uid_t &udi, gid_t &gid);
+
+    static void releaseHandlerData(scriptHanlderData *pData, int dataCount);
+    static void mergeHandlerList(ConfigCtx& currentCtx,
+                                 scriptHanlderData *parentData,
+                                 int parentDataCount,
+                                 const XmlNodeList  *pList,
+                                 scriptHanlderData *pdata,
+                                 int *count);
+    static int _configScriptHandler(ConfigCtx& currentCtx, const char *value,
+                                    AutoStr *psuffix, AutoStr *psType,
+                                    char *achHandler, int max_len);
     static int configScriptHandler(const XmlNodeList *pList,
-                                   HttpMime *pHttpMime, HttpVHost *vhost);
+                                  HttpMime *pHttpMime,
+                                  HttpVHost *vhost);
+
     static void addMimeHandler(const HttpHandler *pHdlr, char *pMime,
                                HttpMime *pHttpMime,
                                const char *pSuffix);

@@ -858,6 +858,11 @@ int H2Connection::processPriority(uint32_t id)
         return H2_ERROR_PROTOCOL_ERROR;
     //Add one to the value to obtain a weight between 1 and 256.
     m_priority.m_weight = *(pSrc + 4) + 1;
+
+    LS_DBG_L(getLogger(),
+               "[%s-%d] stream priority, execlusive: %d, depend sid: %d, weight: %hd ",
+             getLogId(), id, (int)m_priority.m_exclusive, m_priority.m_dependStreamId, m_priority.m_weight);
+
     return 0;
 }
 

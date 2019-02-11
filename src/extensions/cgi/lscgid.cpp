@@ -653,7 +653,7 @@ static void child_main(int fd)
         dup2(fd, STDOUT_FILENO);
     else
         closeit = 0;
-    if (closeit)
+    if (closeit && fd != STDOUT_FILENO)
         close(fd);
     processreq(STDOUT_FILENO);
     exit(0);

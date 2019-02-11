@@ -140,6 +140,26 @@ UserDir *HttpVHost::getFileUserDir(
 }
 
 
+void HttpVHost::getUniAppUri(const char *app_uri, char *dst, int dst_len) const
+{
+    int len = strlen(app_uri);
+
+    if (app_uri != dst)
+    {
+        memcpy(dst, app_uri, (len > dst_len) ? dst_len : len);
+    }
+
+    if (len >= dst_len)
+    {
+        LS_ERROR("getUniAppUri error: dst_len %d smaller than uri len %d.",
+                 dst_len, len);
+        return ;
+    }
+
+    snprintf(dst + len, dst_len - len, ".%d", getUid());
+}
+
+
 void HttpVHost::offsetChroot(const char *pChroot, int len)
 {
     char achTemp[512];
@@ -602,7 +622,6 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
                          size_t iUriLen, AutoStr2 *missURI) const
 {
     assert(iUriLen > 0 && pURI[0] == '/');
-    const char *curContextURI = pContext->getURI();
     int curContextURILen = pContext->getURILen();
 
     if (pContext->isNullContext())
@@ -2125,7 +2144,7 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
     const char *pStartupFile = ConfigCtx::getCurConfigCtx()->getTag(pNode, "startupFile", 0, 0);
     const char *pBinPath = pNode->getChildValue("binPath");
 
-    int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
+    ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
 
     int appType = HandlerType::HT_APPSERVER;
     const char *sType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "appType");
@@ -3136,9 +3155,19 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     /**
      * Check if we have server level php with different guid,
      * if yes, need set the extApp and config scriptHanlder
+     * 
+     * So now if we have vhost "Example" with "add  lsapi:lsphp php",
+     * we will check if we have "Example:lsphp"  extapp first, then will check 
+     * "lsphp" (server level).
+     * Before that if Vhost do not lsphp defined, will not add "Example:lsphp",
+     * but if vhost have diff user/group than server level, will create
+     * "Example:lsphp" automatically with the vhost user/group.
+     * 
      */
     if (getPhpXmlNodeSSize() > 0)
     {
+        LS_DBG_L("[VHost:%s] start to config its own php handler, size %d.",
+                 getName(), getPhpXmlNodeSSize());
         ExtAppRegistry::configVhostOwnPhp(this);
         configVHScriptHandler2();
     }
@@ -3249,14 +3278,6 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 }
 
 
-void HttpVHost::getAppName(const char *suffix, char *appName, int maxLen)
-{
-    assert(maxLen >= 255);
-    strcpy(appName, suffix);
-    strcat(appName, "_");
-    strcat(appName, getName());
-}
-
 /**
  * Only for a special case, we need to handler spcially, otherwise
  * use the existing routing
@@ -3271,6 +3292,7 @@ int HttpVHost::configVHScriptHandler2()
 {
     HttpMime *pHttpMime = getMIME();
     const char *suffix  = NULL;
+    const char *orgAppName = NULL;
     php_xml_st *pPhpXmlNodeS;
     char appName[256];
 
@@ -3279,7 +3301,8 @@ int HttpVHost::configVHScriptHandler2()
     {
         pPhpXmlNodeS = getPhpXmlNodeS(i);
         suffix = pPhpXmlNodeS->suffix.c_str();
-        getAppName(suffix, appName, 256);
+        orgAppName = pPhpXmlNodeS->app_name.c_str();
+        getUniAppName(orgAppName, appName, 256);
         const HttpHandler *pHdlr = HandlerFactory::getHandler("lsapi", appName);
         HttpMime::addMimeHandler(pHdlr, NULL, pHttpMime, suffix);
     }
@@ -3288,17 +3311,18 @@ int HttpVHost::configVHScriptHandler2()
 
 int HttpVHost::configVHScriptHandler(const XmlNode *pVhConfNode)
 {
+    /**
+     * Comments, even if the list is NULL, we still need to config because
+     * VHost may have different user/group than server
+     */
+    const XmlNodeList *pList = NULL;
     const XmlNode *p0 = pVhConfNode->getChild("scriptHandler");
-    if (p0 == NULL)
-        return 0;
-
-    const XmlNodeList *pList = p0->getChildren("add");
-    if (pList && pList->size() > 0)
-    {
-        getRootContext().initMIME();
-        HttpMime::configScriptHandler(pList, getMIME(), this);
-    }
-
+    if (p0)
+        pList = p0->getChildren("add");
+    
+    getRootContext().initMIME();
+    HttpMime::configScriptHandler(pList, getMIME(), this);
+ 
     return 0;
 }
 

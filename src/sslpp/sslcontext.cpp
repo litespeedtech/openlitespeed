@@ -437,7 +437,7 @@ SslContext::~SslContext()
 
 void SslContext::release()
 {
-    if (m_pCtx != NULL)
+    if (m_pCtx != NULL && m_pCtx != SSL_CTX_PENDING)
     {
         SSL_CTX *pCtx = m_pCtx;
         m_pCtx = NULL;
