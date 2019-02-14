@@ -345,7 +345,7 @@ public:
      * For the VHost UniqueAppName and UniqueAppUri we do the same way
      * add ".$uid" to the end of the string
      */
-    void getUniAppUri(const char *app_uri, char *dst, int dst_len) const;
+    void getUniAppUri(const char *app_uri, char *dst, int dst_len, int loop = 0) const;
     void getUniAppName(const char *app_name, char *dst, int dst_len) const
     {    getUniAppUri(app_name, dst, dst_len); }
 

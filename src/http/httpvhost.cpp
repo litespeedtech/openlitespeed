@@ -140,7 +140,7 @@ UserDir *HttpVHost::getFileUserDir(
 }
 
 
-void HttpVHost::getUniAppUri(const char *app_uri, char *dst, int dst_len) const
+void HttpVHost::getUniAppUri(const char *app_uri, char *dst, int dst_len, int loop) const
 {
     int len = strlen(app_uri);
 
@@ -156,7 +156,7 @@ void HttpVHost::getUniAppUri(const char *app_uri, char *dst, int dst_len) const
         return ;
     }
 
-    snprintf(dst + len, dst_len - len, ".%d", getUid());
+    snprintf(dst + len, dst_len - len, ".%d%d", getUid(), loop);
 }
 
 

@@ -630,9 +630,9 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         {
             int loop = 0;
             int uriInUse = 0;
-            while (((uriInUse = hasUri(pUri)) != 0) && ++loop < 10)
+            while (((uriInUse = hasUri(pUri)) != 0) && pVHost && ++loop < 10)
             {
-                pVHost->getUniAppUri(pUri, appUriVh, 256);
+                pVHost->getUniAppUri(pUri, appUriVh, 256, loop);
                 LS_INFO(&currentCtx,
                         "socket address %s is used, will try use %s instead.",
                         pUri, appUriVh);

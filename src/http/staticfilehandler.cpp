@@ -374,7 +374,6 @@ int processH264Stream(HttpSession *pSession, double start)
 
 
 
-#define RANGES_TOO_BIG_RET          100000
 static int processRange(HttpSession *pSession, HttpReq *pReq,
                         const char *pRange);
 
@@ -500,9 +499,7 @@ int StaticFileHandler::process(HttpSession *pSession,
             }
             if (!ret && pInfo->getFileData()->getFileSize() > 0)
             {
-                int ret = processRange(pSession, pReq, pRange);
-                if (ret != RANGES_TOO_BIG_RET)
-                    return ret;
+                return processRange(pSession, pReq, pRange);
             }
         }
         else
@@ -795,10 +792,10 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     }
     else
     {
-        //range too big, return whole content
-        if (range->isRangesTooBig())
-            return RANGES_TOO_BIG_RET; //a big unused return valus
-            
+        pReq->setStatusCode(SC_206);
+        if (pReq->getRange())
+            delete pReq->getRange();
+        pReq->setRange(range);
         ret = pData->readyCacheData(0);
         if (!ret)
         {
