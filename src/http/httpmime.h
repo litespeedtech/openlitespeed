@@ -140,6 +140,7 @@ public:
     static int _configScriptHandler(ConfigCtx& currentCtx, const char *value,
                                     AutoStr *psuffix, AutoStr *psType,
                                     char *achHandler, int max_len);
+    static int getSuffixCount(const XmlNodeList *pList);
     static int configScriptHandler(const XmlNodeList *pList,
                                   HttpMime *pHttpMime,
                                   HttpVHost *vhost);

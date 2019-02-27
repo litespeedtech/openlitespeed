@@ -149,10 +149,14 @@ int HttpSession::onInitConnected()
     }
     else
         m_request.setCrypto(NULL);
-    assert(pInfo->m_pServerAddrInfo);
-    setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
 
-    assert(pInfo->m_pClientInfo);
+    /**
+     * If setConnInfo() failed, the m_pServerAddrInfo can be NULL
+     */
+    if(pInfo->m_pServerAddrInfo)
+        setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
+
+    //assert(pInfo->m_pClientInfo);
     setClientInfo(pInfo->m_pClientInfo);
     m_iRemotePort = pInfo->m_remotePort;
     m_iFlag = 0;
@@ -636,12 +640,14 @@ int HttpSession::readReqBody()
     int count = 0;
     int hasBufferedData = 1;
     int endBody;
+    int readbytes = 0;
+    int isspdy = getStream()->isSpdy();
     while (!(endBody = endOfReqBody()) || hasBufferedData)
     {
         hasBufferedData = 0;
         if (!endBody)
         {
-            if ((ret < (int)size) || (++count == 10))
+            if ((ret < (int)size) || (++count == 10 && !isspdy))
                 return 0;
         }
 
@@ -685,6 +691,7 @@ int HttpSession::readReqBody()
         }
         if (ret > 0)
         {
+            readbytes += ret;
             if (m_pReqParser && m_pReqParser->isParsePost())
             {
                 if (!m_pReqParser->isParseUploadByFilePath())
@@ -707,7 +714,7 @@ int HttpSession::readReqBody()
                      (long long)m_request.getContentFinished(),
                      (long long)m_request.getContentLength());
 
-            if (m_pHandler && !getFlag(HSF_REQ_WAIT_FULL_BODY))
+            if (m_pHandler && !getFlag(HSF_REQ_WAIT_FULL_BODY) && !isspdy)
             {
                 m_pHandler->onRead(this);
                 if (getState() == HSS_REDIRECT)
@@ -719,7 +726,13 @@ int HttpSession::readReqBody()
         else if (ret == -2)
             return getModuleDenyCode(LSI_HKPT_RECV_REQ_BODY);
     }
-
+    
+    if (isspdy && readbytes && m_pHandler)
+    {
+        m_pHandler->onRead(this);
+        return 0;
+    }
+    
     LS_DBG_L(getLogSession(), "Finished request body %lld bytes!",
              (long long)m_request.getContentFinished());
     if (m_pChunkIS)
@@ -1273,6 +1286,7 @@ int HttpSession::processNewReqBody()
         //else
         //    m_request.processReqBodyInReqHeaderBuf();
         ret = readReqBody();
+        //if (!ret && getFlag(HSF_REQ_BODY_DONE))
         if (!ret)
         {
             if ((m_pReqParser && !m_pReqParser->isParseDone())
@@ -1704,6 +1718,11 @@ int HttpSession::startServerParsed()
 int HttpSession::handlerProcess(const HttpHandler *pHandler)
 {
     m_processState = HSPS_HANDLER_PROCESSING;
+    /**
+     * 2/25/19 added the below state change
+     */
+    m_iFlag |= HSF_URI_MAPPED;
+    
     if (m_pHandler)
         cleanUpHandler();
 
@@ -1770,13 +1789,15 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         setFlag(HSF_REQ_WAIT_FULL_BODY);
     if (getFlag(HSF_REQ_WAIT_FULL_BODY | HSF_REQ_BODY_DONE) ==
         HSF_REQ_WAIT_FULL_BODY)
+    {
+        getStream()->wantRead(1);
         return 0;
-
+    }
     
     
     
     
-    int ret = assignHandler(m_request.getHttpHandler());
+    int ret = assignHandler(pHandler);
     if (ret)
         return ret;
 
@@ -2768,9 +2789,12 @@ int HttpSession::setupGzipFilter()
         {
             if (m_pRespBodyBuf && !m_pRespBodyBuf->empty())
                 m_pRespBodyBuf->rewindWriteBuf();
-            if (m_response.getContentLen() > 200)
+            if (m_response.getContentLen() > 200 ||
+                m_response.getContentLen() < 0)
+            {
                 if (setupGzipBuf() == -1)
                     return LS_FAIL;
+            }
         }
         else //turn on compression at SEND_RESP_BODY filter
         {
@@ -3785,10 +3809,15 @@ int HttpSession::execExtCmd(const char *pCmd, int len, int mode)
 int HttpSession::getServerAddrStr(char *pBuf, int len)
 {
     const AutoStr2 *pAddr;
-    pAddr = getStream()->getConnInfo()->m_pServerAddrInfo->getAddrStr();
-    if (pAddr->len() <= len)
-        len = pAddr->len();
-    memcpy(pBuf, pAddr->c_str(), len);
+    len = 0;
+    const ConnInfo *pInfo = getStream()->getConnInfo();
+    if (pInfo->m_pServerAddrInfo)
+    {
+        pAddr = pInfo->m_pServerAddrInfo->getAddrStr();
+        if (pAddr->len() <= len)
+            len = pAddr->len();
+        memcpy(pBuf, pAddr->c_str(), len);
+    }
     return len;
 }
 
@@ -4550,8 +4579,10 @@ int HttpSession::smProcessReq()
         case HSPS_HKPT_RCVD_REQ_BODY_PROCESSING:
             ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_HANDLER_PROCESSING);
             if (m_processState == HSPS_HANDLER_PROCESSING)
+            {
                 if (m_pHandler)
                     m_pHandler->onRead(this);
+            }
             break;
         case HSPS_HKPT_RCVD_RESP_HEADER:
             ret = runEventHkpt(LSI_HKPT_RCVD_RESP_HEADER, HSPS_RCVD_RESP_HEADER_DONE);

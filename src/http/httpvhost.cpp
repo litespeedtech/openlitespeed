@@ -140,25 +140,6 @@ UserDir *HttpVHost::getFileUserDir(
 }
 
 
-void HttpVHost::getUniAppUri(const char *app_uri, char *dst, int dst_len, int loop) const
-{
-    int len = strlen(app_uri);
-
-    if (app_uri != dst)
-    {
-        memcpy(dst, app_uri, (len > dst_len) ? dst_len : len);
-    }
-
-    if (len >= dst_len)
-    {
-        LS_ERROR("getUniAppUri error: dst_len %d smaller than uri len %d.",
-                 dst_len, len);
-        return ;
-    }
-
-    snprintf(dst + len, dst_len - len, ".%d%d", getUid(), loop);
-}
-
 
 void HttpVHost::offsetChroot(const char *pChroot, int len)
 {
@@ -669,7 +650,7 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
 
         HttpContext *pContext0 = addContext(missURI.c_str(), HandlerType::HT_NULL,
                               achRealPath, NULL, 1);
-        LS_INFO(ConfigCtx::getCurConfigCtx(), "Tried to add new context: "
+        LS_DBG_H(ConfigCtx::getCurConfigCtx(), "Tried to add new context: "
                 "URI %s location %s, result %p",
                 missURI.c_str(), achRealPath, pContext0);
         if (pContext0 == NULL)

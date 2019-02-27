@@ -26,6 +26,11 @@
 #include <util/datetime.h>
 #include <log4cxx/logger.h>
 
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -209,7 +214,12 @@ int SslOcspStapling::init(SslContext *pSslCtx)
         //                           m_sOcspResponder.len());
         iResult = 0;
         //update();
-        const ASN1_TIME *not_before = X509_get0_notBefore(pCert);
+        const ASN1_TIME *not_before;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
+        not_before = X509_get0_notBefore(pCert);
+#else
+        not_before = X509_get_notBefore(pCert);
+#endif
         ASN1_TIME_to_generalizedtime((ASN1_TIME *)not_before, &m_notBefore);
     }
     X509_free(pCert);
@@ -507,6 +517,9 @@ int SslOcspStapling::verifyRespFile(int is_new_resp)
     BIO                 *pBio;
     OCSP_RESPONSE       *pResponse;
     OCSP_BASICRESP      *pBasicResp;
+    uint8_t             *pBuf = NULL;
+    const unsigned char *pCopy;
+    size_t              ulSize;
     X509_STORE *pXstore;
     if (is_new_resp)
         pBio = BIO_new_file(m_sRespfileTmp.c_str(), "r");
@@ -515,10 +528,24 @@ int SslOcspStapling::verifyRespFile(int is_new_resp)
     if (pBio == NULL)
         return -1;
 
-    pResponse = d2i_OCSP_RESPONSE_bio(pBio, NULL);
-    BIO_free(pBio);
-    if (pResponse == NULL)
+#ifdef OPENSSL_IS_BORINGSSL
+    if (1 != BIO_read_asn1(pBio, &pBuf, &ulSize, 100 * 1024))
+    {
+        BIO_free(pBio);
         return -1;
+    }
+    BIO_free(pBio);
+
+    pCopy = pBuf;
+    pResponse = d2i_OCSP_RESPONSE(NULL, &pCopy, ulSize);
+    OPENSSL_free(pBuf);
+#else
+    pResponse = d2i_OCSP_RESPONSE_bio(pBio, NULL);
+#endif
+    if (pResponse == NULL)
+    {
+        return -1;
+    }
 
     if (OCSP_response_status(pResponse) == OCSP_RESPONSE_STATUS_SUCCESSFUL)
     {

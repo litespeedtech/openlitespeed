@@ -10,6 +10,14 @@
 #include <sslpp/sslsesscache.h>
 #include <sslpp/sslticket.h>
 
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
+#include <openssl/ssl.h>
+#include <openssl/x509v3.h>
+
 #include <lsdef.h>
 #include <log4cxx/logger.h>
 
@@ -660,6 +668,8 @@ int SslUtil::setCertificateChain(SSL_CTX *pCtx, BIO * bio)
 static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 {
     SslConnection *pConnection = SslConnection::get(pSSL);
+    if (!pConnection)
+        return;
     if ((where & SSL_CB_HANDSHAKE_START)
         && pConnection->getFlag(SslConnection::F_HANDSHAKE_DONE)
 #if OPENSSL_VERSION_NUMBER > 0x10101000L
@@ -839,7 +849,9 @@ void SslUtil::updateProtocol(SSL_CTX *pCtx, int method)
     {
         SSL_CTX_set_max_proto_version(pCtx, TLS1_3_VERSION);
 #ifdef OPENSSL_IS_BORINGSSL
+#if defined(TLS1_3_DRAFT23_VERSION) || defined(TLS1_3_DRAFT28_VERSION)
         SSL_CTX_set_tls13_variant(pCtx, tls13_all);
+#endif
 #endif
     }
 #endif
@@ -883,4 +895,55 @@ void SslUtil::disableSessionTickets(SSL_CTX *pCtx)
 }
 
 
+int SslUtil::getSkid(SSL_CTX *pCtx, char *skid_buf, int buf_len)
+{
+    X509 *px509 = SSL_CTX_get0_certificate(pCtx);
+    int idx = X509_get_ext_by_NID(px509, NID_subject_key_identifier, -1);
+
+    X509_EXTENSION *pExt = X509_get_ext(px509, idx);
+
+    const X509V3_EXT_METHOD *method;
+
+    if (!(method = X509V3_EXT_get(pExt)))
+        return LS_FAIL;
+    ASN1_OCTET_STRING *skid;
+
+//     const unsigned char *p;
+//     p = pExt->value->data;
+//
+//     skid = (ASN1_OCTET_STRING *) ASN1_item_d2i(NULL, &p, pExt->value->length,
+//                                                     ASN1_ITEM_ptr(method->it));
+
+    skid = X509_EXTENSION_get_data(pExt);
+
+    static const char hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
+    if (skid->length * 3 > buf_len)
+        return LS_FAIL;
+    char * bp = skid_buf;
+    for (int idx =0; idx < skid->length; idx++)
+    {
+        *bp++ = hex[skid->data[idx] >> 4];
+        *bp++ = hex[skid->data[idx] & 0xf];
+        *bp++ = ':';
+    }
+    *--bp = '\0';
+    return bp - skid_buf;
+}
+
+
+int SslUtil::lookupCertSerial(X509 *pCert, char *pBuf, int len)
+{
+    BIO *bio;
+    int n;
+
+    if ((bio = BIO_new(BIO_s_mem())) == NULL)
+        return -1;
+    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
+    //n = BIO_pending(bio);
+    n = BIO_read(bio, pBuf, len);
+    pBuf[n] = '\0';
+    BIO_free(bio);
+    return n;
+}
 

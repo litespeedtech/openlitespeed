@@ -15,6 +15,7 @@
 #include <lsr/ls_pool.h>
 #include <socket/ls_sock.h>
 #include <sslpp/ls_fdbuf_bio.h>
+#include <openssl/bio.h>
 
 #ifdef RUN_TEST
 #define DEBUGGING

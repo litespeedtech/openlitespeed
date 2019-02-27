@@ -21,11 +21,11 @@
 #define SSLOCSPSTAPLING_H
 #include <socket/gsockaddr.h>
 #include <util/autostr.h>
-#include <openssl/asn1.h>
 
 class SslContext;
 class HttpFetch;
 
+typedef struct asn1_string_st ASN1_TIME;
 typedef struct ocsp_basic_response_st OCSP_BASICRESP;
 typedef struct ocsp_cert_id_st OCSP_CERTID;
 typedef struct ocsp_response_st OCSP_RESPONSE;

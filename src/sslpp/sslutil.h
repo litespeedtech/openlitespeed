@@ -4,8 +4,8 @@
 #ifndef SSLUTIL_H
 #define SSLUTIL_H
 
-#include <openssl/ssl.h>
-
+typedef struct bio_st  BIO;
+typedef struct x509_st X509;
 
 typedef int (*asyncCertDoneCb)(void *arg, const char *pDomain);
 typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
@@ -70,6 +70,9 @@ public:
         return s_pDefaultCAPath;
     }
     static int setCertificateChain(SSL_CTX *pCtx, BIO * bio);
+
+    static int getSkid(SSL_CTX *pCtx, char *skid_buf, int buf_len);
+    static int lookupCertSerial(X509 *pCert, char *pBuf, int len);
 
     static void initCtx(SSL_CTX *pCtx, int method, char renegProtect);
     static long setOptions(SSL_CTX *pCtx, long options);

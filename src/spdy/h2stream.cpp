@@ -96,9 +96,12 @@ H2Stream::~H2Stream()
     m_bufIn.clear();
 }
 
-
+//#define FOR_DEBUG_H2_BUFFER_DATA
 int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
 {
+#ifdef FOR_DEBUG_H2_BUFFER_DATA
+    static bool readstart = 0;
+#endif
     if (m_bufIn.append(pData, len) == -1)
         return LS_FAIL;
     if (isFlowCtrl())
@@ -111,7 +114,11 @@ int H2Stream::appendReqData(char *pData, int len, uint8_t flags)
         if (getHandler()->detectContentLenMismatch(m_bufIn.size()))
             return LS_FAIL;
     }
-    if (isWantRead())
+    if (isWantRead()
+#ifdef FOR_DEBUG_H2_BUFFER_DATA
+        && (readstart || (readstart = (m_bufIn.size() > 10000000)))
+#endif
+    )
         getHandler()->onReadEx();
     return len;
 }

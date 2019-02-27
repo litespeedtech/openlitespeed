@@ -8,6 +8,12 @@
 
 #include <log4cxx/logger.h>
 #include <lsr/ls_pool.h>
+
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -70,6 +76,13 @@ void SslConnection::setSSL(SSL *ssl)
     m_flag = 0;
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
+
+
+SslConnection *SslConnection::get(const SSL *ssl)
+{
+    return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);
+}
+
 
 void SslConnection::release()
 {

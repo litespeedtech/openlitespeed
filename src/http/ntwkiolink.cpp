@@ -51,7 +51,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/tcp.h>
-#include <openssl/ssl.h>
 
 #if !defined(NO_SENDFILE)
 #include <util/gsendfile.h>

@@ -195,7 +195,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                      strncasecmp(pRules, "</IfModule>", 11) == 0)
                 LS_INFO("Rewrite directive: %s bypassed.", pRules);
             else if (*pRules != '#')
-                LS_ERROR("Invalid rewrite directive: %s", pRules);
+                LS_INFO("Invalid rewrite directive: %s", pRules);
 
             if (pLineEnd)
                 *pLineEnd = '\n';

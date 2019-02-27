@@ -37,7 +37,8 @@
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
 #include <sslpp/hiocrypto.h>
-// #include <sslpp/sslcert.h>
+#include <sslpp/sslcert.h>
+#include <sslpp/sslutil.h>
 #include <util/autostr.h>
 #include <util/datetime.h>
 #include <util/ienv.h>
@@ -541,22 +542,6 @@ int HttpCgiTool::addSpecialEnv(IEnv *pEnv, HttpReq *pReq)
 }
 
 
-static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
-{
-    BIO *bio;
-    int n;
-
-    if ((bio = BIO_new(BIO_s_mem())) == NULL)
-        return LS_FAIL;
-    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
-    //n = BIO_pending(bio);
-    n = BIO_read(bio, pBuf, len);
-    pBuf[n] = '\0';
-    BIO_free(bio);
-    return n;
-}
-
-
 static int addEnv(void *pObj, void *pUData, const char *pKey, int iKeyLen)
 {
     IEnv *pEnv = (IEnv *)pUData;
@@ -772,7 +757,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
                                  X509_get_version(pClientCert) + 1);
                     pEnv->add("SSL_CLIENT_M_VERSION", 20, achBuf, n);
                     ++count;
-                    n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
+                    n = SslUtil::lookupCertSerial(pClientCert, achBuf, 4096);
                     if (n != -1)
                     {
                         pEnv->add("SSL_CLIENT_M_SERIAL", 19, achBuf, n);

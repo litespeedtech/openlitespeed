@@ -1181,7 +1181,7 @@ int HttpMime::_configScriptHandler(ConfigCtx& currentCtx, const char *value,
 
         const char *type = strchr(value, ':');
 
-        if (suffix == NULL || type == NULL || strchr(suffix, '.') || type > suffix)
+        if (!suffix || !type || strchr(suffix, '.') || type > suffix)
         {
             currentCtx.logErrorInvalTag("suffix", suffix);
             return -1;
@@ -1274,18 +1274,28 @@ void HttpMime::mergeHandlerList(ConfigCtx& currentCtx,
             if (ret)
                 continue;
 
-            pdata[n].handler = strdup(achHandler);
-            pdata[n].suffix = strdup(sSuffix.c_str());
-            pdata[n].type = strdup(sType.c_str());
-            pdata[n].state = 0;  //vhost own
-            ++n;
+            /**
+             * sSuffix can be a list
+             */
+            
+            StringList strList;
+            const char *pSuffix = sSuffix.c_str();
+            int size = strList.split(pSuffix, pSuffix + strlen(pSuffix), ",");
+            for (int i=0; i<size; ++i)
+            {
+                pSuffix = strList[i]->c_str();
+                pdata[n].handler = strdup(achHandler);
+                pdata[n].suffix = strdup(pSuffix);
+                pdata[n].type = strdup(sType.c_str());
+                pdata[n].state = 0;  //vhost own
+                ++n;
 
-
-            scriptHanlderData* parentDataItem = lookSuffixInArr(parentData,
+                scriptHanlderData* parentDataItem = lookSuffixInArr(parentData,
                                                                 parentDataCount,
-                                                                sSuffix.c_str());
-            if (parentDataItem)
-                parentDataItem->state = 1;
+                                                                pSuffix);
+                if (parentDataItem)
+                    parentDataItem->state = 1;
+            }
         }
     }
 
@@ -1316,6 +1326,32 @@ void HttpMime::mergeHandlerList(ConfigCtx& currentCtx,
 static scriptHanlderData  *s_pSvrScriptHanlderData = NULL;
 static int s_nSvrScriptHanlderData = 0;
 
+
+/**
+ * The return value should be equal or larger than real count to make
+ * enough space 
+ */
+int HttpMime::getSuffixCount(const XmlNodeList *pList)
+{
+    int count = 0;
+    if (pList)
+    {
+        XmlNodeList::const_iterator iter;
+        for (iter = pList->begin(); iter != pList->end(); ++iter)
+        {
+            const char *value = (char *)(*iter)->getValue();
+            ++count;
+            while( value && *value && (value = strchr(value, ',')) != NULL)
+            {
+                ++value;
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+
 int HttpMime::configScriptHandler(const XmlNodeList *pList,
                                   HttpMime *pHttpMime,
                                   HttpVHost *vhost)
@@ -1323,7 +1359,7 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
     ConfigCtx currentCtx("scripthandler", "add");
     scriptHanlderData  *pData = NULL;
     int nData = 0;
-    int listSize = (pList ? pList->size() : 0);
+    int listSize = getSuffixCount(pList);
     
     if (!vhost)
     {

@@ -8,9 +8,7 @@
 #include <lsdef.h>
 #include <sslpp/hiocrypto.h>
 #include <sslpp/ls_fdbuf_bio.h>
-#include <openssl/ssl.h>
 
-typedef struct bio_st  BIO;
 typedef struct x509_st X509;
 typedef struct ssl_cipher_st SSL_CIPHER;
 typedef struct ssl_st SSL;
@@ -113,8 +111,7 @@ public:
     void enableRbio() {};
 
     static void initConnIdx();
-    static SslConnection *get(const SSL *ssl)
-    {   return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);   }
+    static SslConnection *get(const SSL *ssl);
 
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);

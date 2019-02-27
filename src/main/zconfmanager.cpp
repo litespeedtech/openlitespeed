@@ -246,7 +246,7 @@ int ZConfManager::appendSslContext(const char *pDomainList, int iListLen,
     const int iBundlePrefixLen = 18;
     const char *pBundlePrefix = "\",\n\"ca_bundle\" : \"";
     int iPreBundleSize;
-    if ((NULL == pCtx) || !SSL_CTX_check_private_key(pCtx->get()))
+    if ((NULL == pCtx) || !pCtx->checkPrivateKey())
         return appendToTmpDomainList(pDomainList, iListLen);
     // Beyond this point, we have a context and the priv key and cert are valid
     m_pSslConf->reserve(m_pSslConf->size() + iListLen + 31);

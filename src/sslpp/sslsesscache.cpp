@@ -25,6 +25,11 @@
 #include <util/objpool.h>
 #include <util/stringtool.h>
 
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>

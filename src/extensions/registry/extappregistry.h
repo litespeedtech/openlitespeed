@@ -93,6 +93,7 @@ public:
     static int generateRTReport(int fd);
     static int hasUri(const char *uri);
     
+    static void getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, int loop = 0);
     static int configVhostOwnPhp(HttpVHost *pVHost);
     static ExtWorker *configExtApp(const XmlNode *pNode, const HttpVHost *pVHost);
     static int configLoadBalacner(const XmlNode *pNode,

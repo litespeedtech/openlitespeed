@@ -400,7 +400,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
         pNode = pPhpXmlNodeS->xml_node;
         pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
                                                             achAddress, 128);
-        pVHost->getUniAppUri(pUri, achAddress, 256);
+        ExtAppRegistry::getUniAppUri(pUri, achAddress, 256, pVHost->getUid());
         assert(pUri == achAddress);
 
         /**
@@ -509,8 +509,29 @@ int ExtAppRegistry::hasUri(const char *uri)
 }
 
 
+void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, int loop)
+{
+    int len = strlen(app_uri);
+
+    if (app_uri != dst)
+    {
+        memcpy(dst, app_uri, (len > dst_len) ? dst_len : len);
+    }
+
+    if (len >= dst_len)
+    {
+        LS_ERROR("getUniAppUri error: dst_len %d smaller than uri len %d.",
+                 dst_len, len);
+        return ;
+    }
+
+    snprintf(dst + len, dst_len - len, ".%d%d", uid, loop);
+}
+
+
+
 /**
- * WHen it is from server level, the pVhost is NULL
+ * When it is from server level, the pVhost is NULL
  */
 ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *pVHost)
 {
@@ -542,14 +563,6 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     if (pName == NULL)
         return NULL;
 
-
-    if(pVHost)
-    {
-        pVHost->getUniAppName(pName, appNameVh, 256);
-        pName = appNameVh;
-    }
-    ConfigCtx currentCtx(pName);
-
     pType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "type");
     if (!pType)
         return NULL;
@@ -558,7 +571,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     if ((iType < HandlerType::HT_FASTCGI) ||
         (iType >= HandlerType::HT_END))
     {
-        LS_ERROR(&currentCtx, "unknown external processor <type>: %s", pType);
+        LS_ERROR("Unknown external processor <type>: %s", pType);
         return NULL;
     }
 
@@ -566,8 +579,20 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         return NULL;
 
 
-    iType -= HandlerType::HT_CGI;
+    /**
+     * For proxy type, will not add the uid to the name to avoid 
+     * can not find it later
+     */
+    if(pVHost && iType != HandlerType::HT_PROXY)
+    {
+        pVHost->getUniAppName(pName, appNameVh, 256);
+        pName = appNameVh;
+    }
+    ConfigCtx currentCtx(pName);
 
+    
+    iType -= HandlerType::HT_CGI;
+    
     /**
      * AddApp first and then do the settings
      */
@@ -575,7 +600,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     pWorker = addApp(iType, pName, &exist);
     if (!pWorker)
     {
-        LS_ERROR(&currentCtx, "failed to add external processor!");
+        LS_ERROR(&currentCtx, "failed to add external processor: %s!", pName);
         return NULL;
     }
     if (exist)
@@ -630,9 +655,12 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         {
             int loop = 0;
             int uriInUse = 0;
-            while (((uriInUse = hasUri(pUri)) != 0) && pVHost && ++loop < 10)
+            while (((uriInUse = hasUri(pUri)) != 0) && ++loop < 10)
             {
-                pVHost->getUniAppUri(pUri, appUriVh, 256, loop);
+                ExtAppRegistry::getUniAppUri(pUri, appUriVh, 256,
+                                        (pVHost ? pVHost->getUid() :
+                                        ServerProcessConfig::getInstance().getUid()),
+                                        loop);
                 LS_INFO(&currentCtx,
                         "socket address %s is used, will try use %s instead.",
                         pUri, appUriVh);

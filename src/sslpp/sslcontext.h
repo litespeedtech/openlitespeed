@@ -66,6 +66,8 @@ public:
     SSL_CTX *get() const        {   return m_pCtx;          }
     void set(SSL_CTX * ctx)     {   m_pCtx = ctx;           }
     
+    bool checkPrivateKey();
+
     SSL *newSSL();
     void setProtocol(int method);
 
