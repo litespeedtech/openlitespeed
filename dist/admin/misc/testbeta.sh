@@ -114,7 +114,7 @@ fi
 
 
 cd /tmp
-if [ -e ols.tgz ] ; then
+if [ -f ols.tgz ] ; then
     rm -f ols.tgz
 fi
 
@@ -138,24 +138,41 @@ cd $SERVERROOT
 bin/lswsctrl stop
 
 cd bin/
+if [ -f openlitespeed.old ] ; then
+    rm -f openlitespeed.old
+fi
 mv openlitespeed openlitespeed.old
-cp $SRCDIR/bin/openlitespeed openlitespeed-$VER
+
+cp -f $SRCDIR/bin/openlitespeed openlitespeed-$VER
 ln -sf openlitespeed-$VER openlitespeed
 
 cd ../modules
+if [ -f cache.so.old ] ; then
+    rm -f cache.so.old
+fi
+
 mv cache.so  cache.so.old
-cp $SRCDIR/modules/cache.so cache.so-$VER
+cp -f $SRCDIR/modules/cache.so cache.so-$VER
 ln -sf cache.so-$VER cache.so
 
 if [ -f modpagespeed.so ] ; then
+
+    if [ -f modpagespeed.so.old ] ; then
+        rm -f modpagespeed.so.old
+    fi
     mv modpagespeed.so  modpagespeed.so.old
-    cp $SRCDIR/modules/modpagespeed.so modpagespeed.so-$VER
+    cp -f $SRCDIR/modules/modpagespeed.so modpagespeed.so-$VER
     ln -sf modpagespeed.so-$VER modpagespeed.so
 fi
 
 if [ -f mod_security.so ] ; then
+
+    if [ -f mod_security.so.old ] ; then
+        rm -f mod_security.so.old
+    fi
+
     mv mod_security.so  mod_security.so.old
-    cp $SRCDIR/modules/mod_security.so mod_security.so-$VER
+    cp -f $SRCDIR/modules/mod_security.so mod_security.so-$VER
     ln -sf mod_security.so-$VER mod_security.so
 fi
 
