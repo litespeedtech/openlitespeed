@@ -17,10 +17,11 @@ fi
 if [ "x$1" = "x-h" ] || [ "x$1" = "x--help" ] ; then
     echoc "This tool is for pickup the binaries from the specified version of openlitespeed package"
     echoc "Usage: "
-    echoc "1, $0 [Version] [SERVER_ROOT], will install the specified version binaries"
+    echoc "1, $0 [-d] [Version] [SERVER_ROOT], will install the specified version binaries"
     echoc "         such as .\>$0 1.4.45"
     echoc "         The default version is the latest 1.4.x "
     echoc "         The default server root is /usr/local/lsws "
+    echoc "         If -d is added, will use the DEBUG build instead of release build."
     echoc "2, $0 -r [SERVER_ROOT], will recover to your original installed version"
     echoc "3, $0 -h, display help"
     echoc "4, $0 -v, display version"
@@ -28,6 +29,11 @@ if [ "x$1" = "x-h" ] || [ "x$1" = "x--help" ] ; then
     exit 0
 fi
 
+ISDEBUG=no
+if [ "x$1" = "x-d" ] ; then
+    ISDEBUG=yes
+    shift
+fi
 
 ISRECOVER=no
 if [ "x$1" = "x-r" ] ; then
@@ -113,6 +119,10 @@ if [ -e ols.tgz ] ; then
 fi
 
 URL=https://openlitespeed.org/preuse/openlitespeed-$VER.tgz
+if [ "$ISDEBUG" = "yes" ] ; then
+    URL=https://openlitespeed.org/preuse/openlitespeed-$VER.d.tgz
+fi
+
 wget -nv -O ols.tgz $URL
 if [ $? != 0 ] ; then
     echoc Failed to download $URL, quit.

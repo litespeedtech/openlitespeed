@@ -155,6 +155,8 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     {
         pEntry = iter.second();
 
+        debug_dump(pEntry, "found entry in hash");
+
         if (pEntry->isUnderConstruct())
             return pEntry;
 
@@ -220,9 +222,17 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         //pEntry->setKey( hash, pURI, iURILen, pQS, iQSLen, pIP, ipLen, pCookie, cookieLen );
         pEntry->loadCeHeader();
         //assert( pEntry->verifyHashKey() == 0 );
+
+        debug_dump(pEntry, "load entry from disk");
+
         updateEntryState((DirHashCacheEntry *)pEntry);
         if (stale)
+        {
+            g_api->log(NULL, LSI_LOG_DEBUG,
+                       "[CACHE] [%p] [%s] found stale copy, mark stale", pEntry,
+                       pEntry->getHashKey().to_str(NULL));
             pEntry->setStale(1);
+        }
         pEntry->setMaxStale(maxStale);
     }
 
@@ -468,6 +478,13 @@ void DirHashCacheStore::removePermEntry(CacheEntry *pEntry)
     buildCacheLocation(achBuf, 4096, pEntry->getHashKey(),
                        pEntry->isPrivate());
     unlink(achBuf);
+}
+
+void DirHashCacheStore::getEntryFilePath(CacheEntry *pEntry, char *pPath, int &len)
+{
+    assert(len >= 4096);
+    len = buildCacheLocation(pPath, 4096, pEntry->getHashKey(),
+                             pEntry->isPrivate());
 }
 /*
 void DirHashCacheStore::renameDiskEntry( CacheEntry * pEntry )

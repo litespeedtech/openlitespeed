@@ -58,13 +58,14 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.59"
+#define MODULE_VERSION_INFO         "1.60"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
 #define VALMAXSIZE          4096
 #define MAX_HEADER_LEN      16384
-
+#define Z_BUF_SIZE          16384
+    
 /////////////////////////////////////////////////////////////////////////////
 extern lsi_module_t MNAME;
 
@@ -170,7 +171,8 @@ struct MyMData
     CacheHash       cePrivateHash;
     CacheKey        cacheKey;
     int16_t         hkptIndex;
-    int16_t         hasCacheFrontend;
+    unsigned char   hasCacheFrontend;
+    unsigned char   reqCompressType; //0, no, 1: gzip, 2:br
     XXH64_state_t   contentState;
     z_stream       *zstream;
     off_t           orgFileLength;
@@ -587,6 +589,79 @@ static int isUrlExclude(const lsi_session_t *session, CacheConfig *pConfig,
 }
 
 
+static int uninitZstream(z_stream *zstream, bool compress)
+{
+    if (compress)
+        deflateEnd(zstream);
+    else
+        inflateEnd(zstream);
+    delete zstream;
+    return 0;
+}
+
+
+/**
+ * return 0 for OK, -1 for error
+ */
+static int initZstream(z_stream *zstream, bool compress)
+{
+    zstream->opaque = Z_NULL;
+    zstream->zalloc = Z_NULL;
+    zstream->zfree = Z_NULL;
+    zstream->avail_in = 0;
+    zstream->next_in = Z_NULL;
+    if (compress)
+    {
+        if (deflateInit2(zstream, Z_BEST_COMPRESSION, Z_DEFLATED,
+                16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+        {
+            return -1;
+        }
+    }
+    else
+    {
+        if (inflateInit2(zstream, 32 + MAX_WBITS) != Z_OK)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+
+static int compressbuf(z_stream *zstream, bool compress, unsigned char *buff,
+                    int buffLen, int fd, int eof)
+{
+    unsigned char buf[Z_BUF_SIZE];
+    zstream->next_in = buff;
+    zstream->avail_in = buffLen;
+    int ret = 0;
+    int z_ret;
+    
+    do
+    {
+        zstream->next_out = buf;
+        zstream->avail_out = Z_BUF_SIZE;
+
+        if (compress)
+            z_ret = deflate(zstream, eof ? Z_FINISH : Z_SYNC_FLUSH);
+        else
+            z_ret = inflate(zstream, eof ? Z_FINISH : Z_PARTIAL_FLUSH);
+        
+        if (z_ret == Z_STREAM_ERROR)
+            return LS_FAIL;
+        
+        if (z_ret == Z_BUF_ERROR)
+            z_ret = Z_OK;
+        
+        if (z_ret >= Z_OK)
+            ret += write(fd, buf, Z_BUF_SIZE - zstream->avail_out);
+    } while (z_ret != Z_STREAM_END);
+
+    return ret;
+}
+
 static int isDomainExclude(const lsi_session_t *session, CacheConfig *pConfig)
 {
     if (pConfig->getVHostMapExclude())
@@ -868,6 +943,34 @@ void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
     pKey->m_sCookie.setStr(pCookieBuf);
 }
 
+static void dumpCacheKey(const lsi_session_t *session, const CacheKey *pKey)
+{
+    g_api->log(session, LSI_LOG_DEBUG,
+           "[CACHE] CacheKey data: URI [%.*s], "
+           "QS [%.*s], Vary Cookie [%.*s], "
+           "Private Cookie [%.*s], IP [%s]\n",
+           pKey->m_iUriLen, pKey->m_pUri,
+           pKey->m_iQsLen,  pKey->m_pQs ? pKey->m_pQs : "",
+           pKey->m_iCookieVary, pKey->m_sCookie.c_str() ? pKey->m_sCookie.c_str() : "",
+           pKey->m_iCookiePrivate,
+           pKey->m_sCookie.c_str() ? pKey->m_sCookie.c_str() + pKey->m_iCookieVary : "",
+           pKey->m_pIP);
+}
+
+
+static void dumpCacheHash(const lsi_session_t *session, const char *desc,
+                          const CacheHash *pHash)
+{
+    g_api->log(session, LSI_LOG_DEBUG,
+           "[CACHE] %s, hash: [%02x%02x%02x%02x%02x%02x%02x%02x]\n",
+           desc,
+           pHash->getKey()[0], pHash->getKey()[1],
+           pHash->getKey()[2], pHash->getKey()[3],
+           pHash->getKey()[4], pHash->getKey()[5],
+           pHash->getKey()[6], pHash->getKey()[7]
+          );
+}
+
 
 short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                   const char *uri, int uriLen,
@@ -876,8 +979,11 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                   CacheConfig *pConfig, CacheEntry **pEntry, bool doPublic)
 {
     buildCacheKey(rec->session, uri, uriLen, no_vary, &myData->cacheKey);
+    dumpCacheKey(rec->session, &myData->cacheKey);
     calcCacheHash(rec->session, &myData->cacheKey, cePublicHash,
                   cePrivateHash);
+    dumpCacheHash(rec->session, "Public hash", cePublicHash);
+    dumpCacheHash(rec->session, "Private hash", cePrivateHash);
 
     long lastCacheFlush = (long)g_api->get_module_data(rec->session, &MNAME,
                           LSI_DATA_IP);
@@ -1092,7 +1198,6 @@ static int cancelCache(lsi_param_t *rec)
 static int deflateBufAndWriteToFile(MyMData *myData, unsigned char *pBuf,
                                     int len, int eof, int fd)
 {
-    #define Z_BUF_SIZE 16384
     unsigned char buf[Z_BUF_SIZE];
     int ret = 0;
     if (myData->zstream)
@@ -1362,6 +1467,10 @@ static int createEntry(lsi_param_t *rec)
         return 0;
     }
 
+    dumpCacheKey(rec->session, &myData->cacheKey);
+    dumpCacheHash(rec->session, "Create cache with hash ",
+                  &myData->pEntry->getHashKey());
+
     //Now we can store it
     myData->iCacheState = CE_STATE_WILLCACHE;
 
@@ -1475,28 +1584,14 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
      * If already gzipped, no need to gzip 
      */
     int needGzip = (g_api->get_resp_buffer_compress_method(rec->session) == 0);
-    
+
     /**
-     * For ab test, no need to gzip only when it does not have gzip in encoding
+     * If the response not gzipped, and check if req need gzip,
+     * if not needed, do not gzip it.
      */
     if (needGzip)
     {
-#define AB_USERAGENT        "ApacheBench"
-#define AB_USERAGENT_LEN    (sizeof(AB_USERAGENT) - 1)
-        int uaLen;
-        const char * pUA = g_api->get_req_header_by_id(rec->session,
-                                                       LSI_HDR_USERAGENT,
-                                                       &uaLen);
-        if (pUA && uaLen > AB_USERAGENT_LEN &&
-            strncasecmp(pUA, AB_USERAGENT, AB_USERAGENT_LEN) == 0)
-        {
-            int encodingLen;
-            const char *encoding = g_api->get_req_header_by_id(rec->session,
-                                                         LSI_HDR_ACC_ENCODING,
-                                                         &encodingLen);
-            if (encodingLen < 4 || strcasestr(encoding, "gzip") == NULL)
-                needGzip = false;
-        }
+        needGzip = (myData->reqCompressType == 1);
     }
 
     /**
@@ -1532,13 +1627,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         myData->zstream = new z_stream;
         if (myData->zstream)
         {
-            myData->zstream->opaque = Z_NULL;
-            myData->zstream->zalloc = Z_NULL;
-            myData->zstream->zfree = Z_NULL;
-            myData->zstream->avail_in = 0;
-            myData->zstream->next_in = Z_NULL;
-            if (deflateInit2(myData->zstream, Z_BEST_COMPRESSION, Z_DEFLATED,
-                16 + MAX_WBITS, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+            if (initZstream(myData->zstream, 1))
             {
                 delete myData->zstream;
                 myData->zstream = NULL;
@@ -2028,6 +2117,15 @@ static int checkAssignHandler(lsi_param_t *rec)
     //re-store it
     //bool doPublic = cacheCtrl.isPublicCacheable() || myData->pConfig->isCheckPublic();
     bool doPublic = true;
+    int encodingLen;
+    const char *encoding = g_api->get_req_header_by_id(rec->session,
+                                                       LSI_HDR_ACC_ENCODING,
+                                                       &encodingLen);
+    myData->reqCompressType = (encodingLen >= 4 && strcasestr(encoding, "gzip"));
+    if (myData->reqCompressType == LSI_NO_COMPRESS &&
+        encodingLen >= 2 && strcasestr(encoding, "br"))
+        myData->reqCompressType = LSI_BR_COMPRESS;
+
     myData->iCacheState = lookUpCache(rec, myData,
                                    cacheCtrl.getFlags() & CacheCtrl::no_vary,
                                    myData->pOrgUri, strlen(myData->pOrgUri),
@@ -2425,9 +2523,99 @@ static void decref_and_free_data(MyMData *myData, const lsi_session_t *session)
     g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
 }
 
+
+static void updateCacheEntry(MyMData *myData, int tmpfd, char *tmppath,
+                             int compressType, off_t length)
+{
+    //length change
+    myData->pEntry->setPart2Len(length);
+
+    //Update compressType
+    myData->pEntry->markReady(compressType);
+
+    //Update fd
+    close(myData->pEntry->getFdStore());
+    myData->pEntry->setFdStore(tmpfd);
+
+    //since the filepath is org path + .tmp, so just publish it to use it
+    myData->pConfig->getStore()->publish(myData->pEntry);
+}
+
+static void toggleGzipState(const lsi_session_t *session,
+                            MyMData *myData, int needCompressType)
+{
+    if (needCompressType != LSI_NO_COMPRESS &&
+        needCompressType != LSI_GZIP_COMPRESS)
+        return ;
+
+    if(myData->pEntry->isUpdating())
+        return ;
+
+    z_stream *zstream = new z_stream;
+    if (!zstream)
+    {
+        g_api->log(session, LSI_LOG_ERROR, "Alloc memory for zstream error.");
+        return ;
+    }
+    
+    bool compress = (needCompressType == LSI_GZIP_COMPRESS);
+    if (initZstream(zstream, compress))
+    {
+        delete zstream;
+        return ;
+    }
+
+    int fd = myData->pEntry->getFdStore();
+    int part1offset = myData->pEntry->getPart1Offset();
+    int part2offset = myData->pEntry->getPart2Offset();
+    off_t length = myData->pEntry->getContentTotalLen() -
+                       (part2offset - part1offset);
+    
+    unsigned char *buff  = (unsigned char *)mmap((caddr_t)0,
+                                                 part2offset + length,
+                                                 PROT_READ, MAP_SHARED,
+                                                 fd, 0);
+    if (buff == (unsigned char *)(-1))
+    {
+        uninitZstream(zstream, compress);
+        return ;
+    }
+
+    char tmppath[4100] = {0};
+    int len = 4100;
+    myData->pConfig->getStore()->getEntryFilePath(myData->pEntry, tmppath, len);
+    strcat(tmppath, ".tmp");
+//     if (access(tmppath, 0) != -1)
+//         unlink(tmppath);
+    
+    int tmpfd = ::open(tmppath, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0760);
+    if (tmpfd == -1)
+        return ;
+    ::fcntl(tmpfd, F_SETFD, FD_CLOEXEC);
+    
+    /**
+     * Now set the updating flag
+     */
+    myData->pEntry->setUpdating(1);
+    
+    write(tmpfd, buff, part2offset);
+    buff+= part2offset;
+    
+    off_t ret = compressbuf(zstream, compress, buff, length, tmpfd, 1);
+    g_api->log(session, LSI_LOG_DEBUG,
+               "[%s]toggleGzipState write %d bytes to file %s.\n",
+               ModuleNameStr, ret, tmppath);
+    
+
+    myData->pEntry->setUpdating(0);
+    updateCacheEntry(myData, tmpfd, tmppath, needCompressType, ret);
+    uninitZstream(zstream, compress);
+    //myData->pEntry->setUpdating(0);
+}
+
+
 static int handlerProcess(const lsi_session_t *session)
 {
-    g_api->log(session, LSI_LOG_DEBUG, "[%s]handlerProcess.\n", ModuleNameStr);
     MyMData *myData = (MyMData *)g_api->get_module_data(session, &MNAME,
                       LSI_DATA_HTTP);
     if (!myData)
@@ -2479,6 +2667,7 @@ static int handlerProcess(const lsi_session_t *session)
     int len;
     int fd = myData->pEntry->getFdStore();
     CeHeader &CeHeader = myData->pEntry->getHeader();
+    int compressType = myData->pEntry->getCompressType();
 
     int hitIdx = (myData->iCacheState == CE_STATE_HAS_PRIVATE_CACHE) ? 1 : 0;
 
@@ -2499,6 +2688,9 @@ static int handlerProcess(const lsi_session_t *session)
             if (buff == (char *)(-1))
             {
                 decref_and_free_data(myData, session);
+                g_api->log(session, LSI_LOG_ERROR,
+                           "[%s]handlerProcess return 500 due to cant alloc memory.\n",
+                           ModuleNameStr);
                 return 500;
             }
             pBuffOrg = buff;
@@ -2526,33 +2718,40 @@ static int handlerProcess(const lsi_session_t *session)
                     munmap((caddr_t)pBuffOrg, part2offset);
                 g_api->end_resp(session);
                 decref_and_free_data(myData, session);
+                g_api->log(session, LSI_LOG_DEBUG,
+                           "[%s]handlerProcess return 304.\n", ModuleNameStr);
                 return 0;
             }
 
-            int compressType = myData->pEntry->getCompressType();
-            if (compressType)  //1 gz,  2 br
-            {
-                str.setStr(buff, CeHeader.m_lenETag);
-                pEtag = (char *)str.c_str();
+            
+            str.setStr(buff, CeHeader.m_lenETag);
+            pEtag = (char *)str.c_str();
 
-                char *pUpdate = pEtag + str.len() - 4;
-                if (*pUpdate++ == ';')
+            char *pUpdate = pEtag + str.len() - 4;
+            if (*pUpdate++ == ';')
+            {
+                if (compressType == 0)
                 {
-                    if (compressType == 1)
-                    {
-                        *pUpdate++ = 'g';
-                        *pUpdate++ = 'z';
-                    }
-                    else
-                    {
-                        *pUpdate++ = 'b';
-                        *pUpdate++ = 'r';
-                    }
+                    *pUpdate++ = ';';
+                    *pUpdate++ = ';';
+                }
+                else if (compressType == 1)
+                {
+                    *pUpdate++ = 'g';
+                    *pUpdate++ = 'z';
+                }
+                else if (compressType == 2)
+                {
+                    *pUpdate++ = 'b';
+                    *pUpdate++ = 'r';
                 }
             }
 
             g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0, pEtag,
                                    CeHeader.m_lenETag, LSI_HEADEROP_SET);
+            g_api->log(session, LSI_LOG_DEBUG,
+                       "[%s]handlerProcess add etag %s.\n",
+                       ModuleNameStr, pEtag);
         }
 
         buff += CeHeader.m_lenETag + CeHeader.m_lenStxFilePath;
@@ -2586,24 +2785,40 @@ static int handlerProcess(const lsi_session_t *session)
                            LSI_HEADEROP_SET);
 
     g_api->set_status_code(session, CeHeader.m_statusCode);
+    g_api->log(session, LSI_LOG_DEBUG,
+                       "[%s]handlerProcess set_status_code %d.\n",
+                       ModuleNameStr, CeHeader.m_statusCode);
 
+    //assert(strcasestr(myData->pOrgUri, "fonts/ProximaNova-Regular.woff") == NULL);
+    
     int ret  = 0;
     if (myData->iMethod == HTTP_GET)
     {
         off_t length = myData->pEntry->getContentTotalLen() -
                        (part2offset - part1offset);
 
-
-        int compressType = myData->pEntry->getCompressType();
-        if (compressType == 1)
+        if (compressType == LSI_NO_COMPRESS)
+        {
+            if (myData->reqCompressType == LSI_GZIP_COMPRESS)
+                myData->pEntry->incHits();
+            else if (myData->reqCompressType == compressType)
+                myData->pEntry->clearHits();
+        }
+        else if (compressType == LSI_GZIP_COMPRESS)
         {
             g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_ENCODING,
                                    NULL, 0, "gzip", 4, LSI_HEADEROP_SET);
             g_api->log(session, LSI_LOG_DEBUG,
                        "[%s]set_resp_header [Content-Encoding: gzip].\n",
                        ModuleNameStr);
+
+            if (myData->reqCompressType == LSI_NO_COMPRESS)
+                myData->pEntry->incHits();
+            else if (myData->reqCompressType == compressType)
+                myData->pEntry->clearHits();
+
         }
-        else if (compressType == 2)
+        else if (compressType == LSI_BR_COMPRESS)
         {
             g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_ENCODING,
                                    NULL, 0, "br", 2, LSI_HEADEROP_SET);
@@ -2613,12 +2828,31 @@ static int handlerProcess(const lsi_session_t *session)
         }
         g_api->set_resp_buffer_compress_method(session, compressType);
 
+
         g_api->set_resp_content_length(session, length);
         int fd = myData->pEntry->getFdStore();
+        
+        g_api->log(session, LSI_LOG_DEBUG,
+                   "[%s]handlerProcess fd %d, offset %d, length %ld\n",
+                   ModuleNameStr, fd, part2offset, length);
+
         if (g_api->send_file2(session, fd, part2offset, length) == 0)
             g_api->end_resp(session);
         else
             ret = 500;
+        
+        /**
+         * For testing, disable the code 
+         */
+        if (myData->pEntry->getHits() >= 10)
+        {
+            g_api->log(session, LSI_LOG_DEBUG,
+                       "[%s]handlerProcess check entry hit %d times, "
+                       "will change to compressType from %d to %d.\n",
+                       ModuleNameStr, myData->pEntry->getHits(),
+                       compressType, myData->reqCompressType);
+            toggleGzipState(session, myData, myData->reqCompressType);
+        }
     }
     else //HEAD
         g_api->end_resp(session);

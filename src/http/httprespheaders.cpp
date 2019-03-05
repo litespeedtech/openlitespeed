@@ -136,7 +136,13 @@ void HttpRespHeaders::updateEtag(int compress_type)
     pUpdate = (char *)pETag + etagLen - 4;
     if (*pUpdate++ == ';')
     {
-        if (compress_type == 0)
+        /*if (compress_type == 0)
+        {
+            *pUpdate++ = ';';
+            *pUpdate++ = ';';
+        }
+        else */
+        if (compress_type == 1)
         {
             *pUpdate++ = 'g';
             *pUpdate++ = 'z';

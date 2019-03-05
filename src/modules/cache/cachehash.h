@@ -44,6 +44,9 @@ public:
     static hash_key_t to_ghash_key(const void *__s);
     static int  compare(const void *pVal1, const void *pVal2);
 
+    const char *to_str(char *buf) const;
+    static const char *to_str(const unsigned char *key, char *buf);
+
 private:
     uint64_t  m_key;
 };

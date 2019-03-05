@@ -1,7 +1,7 @@
 CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0
 INCLUDEPATH= -I../../util/ -I./ -I../../../include  -I../ -I../../
-CFLAGS= -fPIC -fvisibility=hidden  -g  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
+
 ifeq ($(BUILDSTATIC), 1)
     ALLLIB := -nodefaultlibs $(shell g++ -print-file-name='libstdc++.a') -lm -lc -lgcc_eh  -lc_nonshared -lgcc
 endif
@@ -9,9 +9,19 @@ endif
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
-        LDFLAGS=  $(ALLLIB)  -fPIC -g -undefined dynamic_lookup  -Wall $(LFSFLAGS) -shared
+        LDFLAGS := $(ALLLIB) -fPIC  -undefined dynamic_lookup  
 else
-        LDFLAGS=  $(ALLLIB)  -fPIC -pg -O2  -g -Wall $(LFSFLAGS) -shared
+        LDFLAGS := $(ALLLIB) -fPIC
+endif
+
+
+#make -f Makefile.f CFG=debug will create a debug version module
+ifeq ($(CFG), debug)
+        CFLAGS := -fPIC -g -fvisibility=hidden  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
+        LDFLAGS := $(LDFLAGS) -g3 -O0 -Wall  $(LFSFLAGS) -shared
+else
+        CFLAGS := -fPIC -g -O2 -fvisibility=hidden  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
+        LDFLAGS := $(LDFLAGS) -g -O2 -Wall  $(LFSFLAGS) -shared
 endif
 
 SOURCES =modinspector.cpp

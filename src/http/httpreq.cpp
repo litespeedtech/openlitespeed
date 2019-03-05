@@ -1017,8 +1017,8 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
     {
         const char *pQS = getQueryString();
         int len = getQueryStringLen();
-        LS_DBG_L(getLogSession(), "New request: \n\tMethod=[%s], URI=[%s],\n"
-                 "\tQueryString=[%.*s]\n\tContent Length=%lld\n",
+        LS_DBG_L(getLogSession(), "New request: Method=[%s], URI=[%s],"
+                 " QueryString=[%.*s], Content Length=%lld\n",
                  HttpMethod::get(getMethod()), getURI(), len, pQS,
                  (long long)getContentLength());
     }

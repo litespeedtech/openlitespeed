@@ -68,8 +68,9 @@ public:
     long getLastAccess() const      {   return m_lastAccess;    }
 
     void incHits()                  {   ++m_iHits;          }
+    void clearHits()                {   m_iHits = 0;        }
     long getHits() const            {   return m_iHits;     }
-//
+
 //     void incTestHits()              {   ++m_iTestHits;    }
 //     long getTestHits() const        {   return m_iTestHits;    }
 
@@ -121,6 +122,8 @@ public:
     void markReady(int compressed_method)
     {
         m_header.m_flag = (m_header.m_flag & ~CeHeader::CEH_IN_CONSTRUCT);
+        m_header.m_flag &= (~CeHeader::CEH_BR & ~CeHeader::CEH_GZIP);
+        
         if (compressed_method == 2)
             m_header.m_flag |= CeHeader::CEH_BR;
         else if (compressed_method == 1)
@@ -184,6 +187,9 @@ public:
 
 private:
     long        m_lastAccess;
+    /**
+     * When this reach 10, then means currrent cache need to change gzip/ungzip
+     */
     int         m_iHits;
     int         m_iMaxStale;
     int         m_needDelay; //delay serving if have cache, in URI_MAP instead of recv req header */

@@ -22,7 +22,14 @@ else
 	ifeq ($(MACHINE_TYPE), 64)
 	    INCLUDE_ARCH = arch/linux/x64
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/x64/
-	    CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS)
+	    ifeq ($(CFG), debug)
+            #PSOLPATH = $(shell pwd)/psol/lib/Debug/linux/x64/
+            CFLAGS= -fPIC -fvisibility=hidden -g3 -O0 -Wall -c -D_REENTRANT $(LFSFLAGS)
+            LDFLAGS= $(ALLLIB) -fPIC -g3 -O0 -Wall $(LFSFLAGS) -shared
+	    else
+            CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS)
+            LDFLAGS= $(ALLLIB) -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
+        endif
 	else
         ifeq ($(ARCH_TYPE), x86_64)
             ARCH_TYPE = i386
@@ -30,9 +37,15 @@ else
         
 	    INCLUDE_ARCH = arch/linux/ia32
 	    PSOLPATH = $(shell pwd)/psol/lib/Release/linux/ia32/
-	    CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(ARCH_TYPE)
+	    ifeq ($(CFG), debug)
+            #PSOLPATH = $(shell pwd)/psol/lib/Debug/linux/ia32/
+            CFLAGS= -fPIC -fvisibility=hidden -g3 -O0 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(ARCH_TYPE)
+            LDFLAGS= $(ALLLIB) -fPIC -g3 -O0 -Wall $(LFSFLAGS) -shared
+	    else
+            CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(LFSFLAGS) -march=$(ARCH_TYPE)
+            LDFLAGS= $(ALLLIB) -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
+        endif
 	endif
-	LDFLAGS= $(ALLLIB) -fPIC -g -O2 -Wall $(LFSFLAGS) -shared
 endif
 
 INCLUDEFILES =-I. -I../.. -I.. -I../../util -I../../../  -I../../../include \

@@ -193,15 +193,16 @@ public:
     void addGzipEncodingHeader()
     {
         add(s_gzipHeaders, 2);
-        updateEtag(0);
+        updateEtag(1);
     }
 
     void addBrotliEncodingHeader()
     {
         add(s_brHeaders, 2);
-        updateEtag(1);
+        updateEtag(2);
     }
 
+    //compress_type 0: no gzip, 1:gzip, 2: br
     void updateEtag(int compress_type);
 
     void appendChunked()
