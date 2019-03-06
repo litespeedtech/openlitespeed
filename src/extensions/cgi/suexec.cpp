@@ -217,9 +217,9 @@ int SUExec::checkLScgid(const char *path)
     return 0;
 }
 
-
+#define _HAS_LVE_
 static char sDefaultPath[] = "PATH=/bin:/usr/bin:/usr/local/bin";
-//static char sLVE[] = "LVE_ENABLE=1";
+static char sLVE[] = "LVE_ENABLE=1";
 
 
 int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,

@@ -53,7 +53,7 @@
 #define MAX_CACHE_CONTROL_LENGTH    128
 #define MAX_RESP_HEADERS_NUMBER     50
 #define MNAME                       cache
-#define ModuleNameStr               "Module-Cache"
+#define ModuleNameStr               "Module:Cache"
 #define CACHEMODULEKEY              "_lsi_module_cache_handler__"
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
@@ -1040,7 +1040,7 @@ int releaseMData(void *data)
         
         if (myData->pCacheVary)
             delete myData->pCacheVary;
-        
+        memset(myData, 0, sizeof(MyMData));
         delete myData;
     }
     return 0;
@@ -2524,93 +2524,167 @@ static void decref_and_free_data(MyMData *myData, const lsi_session_t *session)
 }
 
 
-static void updateCacheEntry(MyMData *myData, int tmpfd, char *tmppath,
-                             int compressType, off_t length)
+static void updateCacheEntry(CacheConfig *pConfig, CacheEntry *pEntry, int tmpfd,
+                             char *tmppath, int compressType, off_t length)
 {
     //length change
-    myData->pEntry->setPart2Len(length);
+    pEntry->setPart2Len(length);
 
     //Update compressType
-    myData->pEntry->markReady(compressType);
+    pEntry->markReady(compressType);
 
     //Update fd
-    close(myData->pEntry->getFdStore());
-    myData->pEntry->setFdStore(tmpfd);
+    close(pEntry->getFdStore());
+    pEntry->setFdStore(tmpfd);
 
     //since the filepath is org path + .tmp, so just publish it to use it
-    myData->pConfig->getStore()->publish(myData->pEntry);
+    pConfig->getStore()->publish(pEntry);
 }
 
-static void toggleGzipState(const lsi_session_t *session,
-                            MyMData *myData, int needCompressType)
+static void closeTmpFile(int fd, const char *path)
+{
+    close(fd);
+    unlink(path);
+}
+
+static void toggleGzipState(MyMData *myData, int needCompressType)
 {
     if (needCompressType != LSI_NO_COMPRESS &&
         needCompressType != LSI_GZIP_COMPRESS)
         return ;
 
-    if(myData->pEntry->isUpdating())
-        return ;
-
-    z_stream *zstream = new z_stream;
-    if (!zstream)
-    {
-        g_api->log(session, LSI_LOG_ERROR, "Alloc memory for zstream error.");
-        return ;
-    }
-    
-    bool compress = (needCompressType == LSI_GZIP_COMPRESS);
-    if (initZstream(zstream, compress))
-    {
-        delete zstream;
-        return ;
-    }
-
-    int fd = myData->pEntry->getFdStore();
-    int part1offset = myData->pEntry->getPart1Offset();
-    int part2offset = myData->pEntry->getPart2Offset();
-    off_t length = myData->pEntry->getContentTotalLen() -
-                       (part2offset - part1offset);
-    
-    unsigned char *buff  = (unsigned char *)mmap((caddr_t)0,
-                                                 part2offset + length,
-                                                 PROT_READ, MAP_SHARED,
-                                                 fd, 0);
-    if (buff == (unsigned char *)(-1))
-    {
-        uninitZstream(zstream, compress);
-        return ;
-    }
-
-    char tmppath[4100] = {0};
-    int len = 4100;
-    myData->pConfig->getStore()->getEntryFilePath(myData->pEntry, tmppath, len);
-    strcat(tmppath, ".tmp");
-//     if (access(tmppath, 0) != -1)
-//         unlink(tmppath);
-    
-    int tmpfd = ::open(tmppath, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0760);
-    if (tmpfd == -1)
-        return ;
-    ::fcntl(tmpfd, F_SETFD, FD_CLOEXEC);
-    
-    /**
-     * Now set the updating flag
+    /***
+     * Because in child process, mydata maybe can not be accessed when it is 
+     * released, so save the config and entry now.
      */
-    myData->pEntry->setUpdating(1);
+    CacheConfig *pConfig = myData->pConfig;
+    CacheEntry *pEntry = myData->pEntry;
     
-    write(tmpfd, buff, part2offset);
-    buff+= part2offset;
-    
-    off_t ret = compressbuf(zstream, compress, buff, length, tmpfd, 1);
-    g_api->log(session, LSI_LOG_DEBUG,
-               "[%s]toggleGzipState write %d bytes to file %s.\n",
-               ModuleNameStr, ret, tmppath);
-    
+    /***
+     * Should not block the current processing
+     */
+    pid_t pid = fork();
+    if (pid < 0)
+    {
+        g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState fork failed.\n",
+               ModuleNameStr);
+        return ;
+    }
 
-    myData->pEntry->setUpdating(0);
-    updateCacheEntry(myData, tmpfd, tmppath, needCompressType, ret);
-    uninitZstream(zstream, compress);
-    //myData->pEntry->setUpdating(0);
+    if (pid > 0)
+    {
+        g_api->log(NULL, LSI_LOG_DEBUG,
+               "[%s]toggleGzipState fork pid %d to processing.\n",
+               ModuleNameStr, pid);
+        return;
+    }
+    else //child process
+    {
+        char tmppath[4100] = {0};
+        int len = 4096;
+        pConfig->getStore()->getEntryFilePath(pEntry, tmppath, len);
+        strcat(tmppath, ".tmp");
+
+        /**
+         * If the the file exists more than 10 minutes, should be something wrong
+         * Even the state is updating, try to remove it 
+         */
+        struct stat sb;
+        if (stat(tmppath, &sb) != -1)
+        {
+            if((long)DateTime_s_curTime - (long)sb.st_ctime < 360)
+                exit (0);
+            else
+            {
+                g_api->log(NULL, LSI_LOG_DEBUG,
+                           "[%s]toggleGzipState processing too long %d seconds.\n",
+                           ModuleNameStr,
+                           (long)DateTime_s_curTime - (long)sb.st_ctime);
+                unlink(tmppath);
+            }
+        }
+
+        int tmpfd = ::open(tmppath, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0760);
+        if (tmpfd == -1)
+        {
+            g_api->log(NULL, LSI_LOG_DEBUG,
+                           "[%s]toggleGzipState can not open file %s.\n",
+                           ModuleNameStr, tmppath);
+            exit (0);
+        }
+        
+        ::fcntl(tmpfd, F_SETFD, FD_CLOEXEC);
+
+        z_stream *zstream = new z_stream;
+        if (!zstream)
+        {
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState alloc"
+                        " memory for zstream error.\n", ModuleNameStr);
+            closeTmpFile(tmpfd, tmppath);
+            exit (0);
+        }
+        
+        bool compress = (needCompressType == LSI_GZIP_COMPRESS);
+        if (initZstream(zstream, compress))
+        {
+            delete zstream;
+            closeTmpFile(tmpfd, tmppath);
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState initZstream"
+                        " error.\n", ModuleNameStr);
+            exit (0);
+        }
+
+        int fd = pEntry->getFdStore();
+        int part1offset = pEntry->getPart1Offset();
+        int part2offset = pEntry->getPart2Offset();
+        off_t length = pEntry->getContentTotalLen() -
+                           (part2offset - part1offset);
+        
+        unsigned char *buff  = (unsigned char *)mmap((caddr_t)0,
+                                                     part2offset + length,
+                                                     PROT_READ, MAP_SHARED,
+                                                     fd, 0);
+        if (buff == (unsigned char *)(-1))
+        {
+            uninitZstream(zstream, compress);
+            closeTmpFile(tmpfd, tmppath);
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState mmap"
+                        " error.\n", ModuleNameStr);
+            exit (0);
+        }
+
+
+        
+
+        /**
+         * Now set the updating flag
+         */
+        write(tmpfd, buff, part2offset);
+        buff+= part2offset;
+        
+        off_t ret = compressbuf(zstream, compress, buff, length, tmpfd, 1);
+        g_api->log(NULL, LSI_LOG_DEBUG,
+                   "[%s]toggleGzipState write %d bytes to file %s.\n",
+                   ModuleNameStr, ret, tmppath);
+
+        if (ret <= 0)
+        {
+            //failed
+            closeTmpFile(tmpfd, tmppath);
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState compressbuf"
+                        " error.\n", ModuleNameStr);
+        }
+        else
+        {
+            updateCacheEntry(pConfig, pEntry, tmpfd, tmppath, needCompressType, ret);
+            g_api->log(NULL, LSI_LOG_DEBUG, "[%s]toggleGzipState updated"
+                        " the cache entry.\n", ModuleNameStr);
+        }
+        uninitZstream(zstream, compress);
+
+        munmap((caddr_t)buff, part2offset + length);
+        exit(0);
+    }
 }
 
 
@@ -2851,7 +2925,7 @@ static int handlerProcess(const lsi_session_t *session)
                        "will change to compressType from %d to %d.\n",
                        ModuleNameStr, myData->pEntry->getHits(),
                        compressType, myData->reqCompressType);
-            toggleGzipState(session, myData, myData->reqCompressType);
+            toggleGzipState(myData, myData->reqCompressType);
         }
     }
     else //HEAD
