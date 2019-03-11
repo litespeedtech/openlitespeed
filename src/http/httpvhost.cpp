@@ -3507,14 +3507,12 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
             ConfigCtx::getCurConfigCtx()->getVhRoot());
 
         const char *pConfFile = pNode->getChildValue("configFile");
-
         if (pConfFile != NULL)
         {
             if (ConfigCtx::getCurConfigCtx()->getValidFile(achVhConf, pConfFile,
                     "vhost config") == 0)
             {
                 pVhConfNode = plainconf::parseFile(achVhConf, "virtualHostConfig");
-
                 if (pVhConfNode == NULL)
                 {
                     LS_ERROR(ConfigCtx::getCurConfigCtx(), "cannot load configure file - %s !",
@@ -3525,9 +3523,15 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
             }
         }
 
+        /**
+         * If do not have the configFile, will use the current XmlNode
+         */
         if (!pVhConfNode)
+        {
             pVhConfNode = pNode;
-
+            LS_INFO(ConfigCtx::getCurConfigCtx(), "Since no configFile "
+                    "defined, use current node.");
+        }
 
         const char *pDomain  = pVhConfNode->getChildValue("vhDomain");
         const char *pAliases = pVhConfNode->getChildValue("vhAliases");

@@ -37,6 +37,7 @@
 #include <main/mainserverconfig.h>
 #include <main/plainconf.h>
 #include <main/serverinfo.h>
+#include <shm/lsshmpool.h>
 #include <socket/coresocket.h>
 #include <util/datetime.h>
 #include <util/daemonize.h>
@@ -542,7 +543,7 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
         left_len -= strlen(achBuf);
     }
     
-    if (left_len >= strlen(command))
+    if (left_len >= (int)strlen(command))
         strcat(achBuf, command);
     else
     {
@@ -1083,6 +1084,49 @@ void LshttpdMain::setChildSlot(int num, int val)
 }
 
 
+#ifdef _PROFILE_
+#include <sys/gmon.h>
+#endif
+void LshttpdMain::onNewChildStart(ChildProc * pProc)
+{
+#ifdef _PROFILE_
+    extern char __executable_start;
+    extern char __etext;
+    monstartup ((u_long) &__executable_start, (u_long) &__etext);
+#endif
+
+    int cpu_count = HttpServerConfig::getInstance().getCpuAffinity();
+    if (cpu_count > 0)
+    {
+        cpu_set_t       cpu_affinity;
+
+        PCUtil::getAffinityMask(s_iCpuCount, pProc->m_iProcNo - 1, cpu_count,
+                                &cpu_affinity);
+        PCUtil::setCpuAffinity(&cpu_affinity);
+    }
+    setpgid(0, 0);
+    m_pServer->setBlackBoard(pProc->m_pBlackBoard);
+    m_pServer->setProcNo(pProc->m_iProcNo);
+    //setAffinity( 0, pProc->m_iProcNo);  //TEST: need uncomment and debug
+    releaseExcept(pProc);
+    m_pServer->reinitMultiplexer();
+    m_pServer->enableAioLogging();
+    if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
+        && (m_pServer->initAioSendFile() != 0))
+    {
+        HttpServerConfig::getInstance().setUseSendfile(1);
+    }
+    close(m_fdAdmin);
+
+#ifdef IS_LSCPD
+    snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
+#else
+    snprintf(argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo);
+#endif
+
+    LsShmPool::setPid(pProc->m_pid);
+}
+
 int LshttpdMain::startChild(ChildProc *pProc)
 {
     if (!pProc->m_pBlackBoard)
@@ -1104,28 +1148,8 @@ int LshttpdMain::startChild(ChildProc *pProc)
     if (pProc->m_pid == 0)
     {
         //child process
-        cpu_set_t       cpu_affinity;
-
-        PCUtil::getAffinityMask(s_iCpuCount, pProc->m_iProcNo - 1, 1,
-                                &cpu_affinity);
-        PCUtil::setCpuAffinity(&cpu_affinity);
-        m_pServer->setBlackBoard(pProc->m_pBlackBoard);
-        m_pServer->setProcNo(pProc->m_iProcNo);
-        //setAffinity( 0, pProc->m_iProcNo);  //TEST: need uncomment and debug
-        releaseExcept(pProc);
-        m_pServer->reinitMultiplexer();
-        m_pServer->enableAioLogging();
-        if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
-            && (m_pServer->initAioSendFile() != 0))
-            return LS_FAIL;
-        close(m_fdAdmin);
-        
-#ifdef IS_LSCPD
-        snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
-#else
-        snprintf(argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo);
-#endif
-
+        pProc->m_pid = getpid();
+        onNewChildStart(pProc);
         return 0;
     }
 
@@ -1487,34 +1511,6 @@ void LshttpdMain::processSignal()
 }
 
 
-int LshttpdMain::getNumCores()
-{
-#ifdef LSWS_NO_SET_AFFINITY
-    return 2;
-#else
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    return sysconf(_SC_NPROCESSORS_ONLN);
-#else
-    int nm[2];
-    size_t len = 4;
-    uint32_t count = 0;
-
-#ifdef HW_AVAILCPU
-    nm[0] = CTL_HW;
-    nm[1] = HW_AVAILCPU;
-    sysctl(nm, 2, &count, &len, NULL, 0);
-#endif
-
-    if (count < 1)
-    {
-        nm[1] = HW_NCPU;
-        sysctl(nm, 2, &count, &len, NULL, 0);
-        if (count < 1)  count = 1;
-    }
-    return count;
-#endif
-#endif
-}
 /*
 void LshttpdMain::setAffinity( pid_t pid, int cpuId )
 {

@@ -46,6 +46,7 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int8_t          m_iDynGzipCompress;
     int8_t          m_iCompressLevel;
     int8_t          m_iBrCompress;
+    int8_t          m_iEnableLve;
 
     int32_t         m_iCheckDeniedSymLink;
 
@@ -59,6 +60,7 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int32_t         m_iScriptForbiddenBits;
     int32_t         m_iDirForbiddenBits;
     int32_t         m_iRestartTimeout;
+    int32_t         m_nCpuAffinity;
 
     int             m_iDnsLookup;
     int             m_iUseProxyHeader;
@@ -81,6 +83,9 @@ public:
 
     void setRestartTimeOut(int32_t timeout) {   m_iRestartTimeout = timeout;}
     int32_t getRestartTimeout() const       {   return m_iRestartTimeout;   }
+
+    void setEnableLve(int32_t v) {   m_iEnableLve = v;}
+    int32_t getEnableLve() const       {   return m_iEnableLve;   }
 
     void setKeepAliveTimeout(int32_t t)     {   m_iKeepAliveTimeout = t;    }
     int32_t getKeepAliveTimeout() const     {   return m_iKeepAliveTimeout; }
@@ -189,6 +194,9 @@ public:
     HttpVHost *getGlobalVHost()             {   return m_pGlobalVHost;      }
 
     int getSpdyKeepaliveTimeout();
+
+    int getCpuAffinity() const              {   return m_nCpuAffinity;      }
+    void setCpuAffinity( int count)         {   m_nCpuAffinity = count;     }
 
 };
 

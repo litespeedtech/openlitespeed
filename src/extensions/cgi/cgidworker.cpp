@@ -50,7 +50,6 @@ CgidWorker::CgidWorker(const char *pName)
     : ExtWorker(HandlerType::HT_CGI)
     , m_pid(-1)
     , m_fdCgid(-1)
-    , m_lve(1)
 {
     setConfigPointer(new CgidConfig(pName));
 }
@@ -297,6 +296,10 @@ int CgidWorker::config(const XmlNode *pNode1)
     return CgidWorker::getCgidWorkerPid();
 }
 
+int  CgidWorker::getLVE() const
+{
+    return HttpServerConfig::getInstance().getEnableLve();
+}
 
 void CgidWorker::closeFdCgid()
 {

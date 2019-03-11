@@ -2907,6 +2907,14 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             l = 3600 * 24;
         HttpServerConfig::getInstance().setRestartTimeOut(l);
 
+        HttpServerConfig::getInstance().setEnableLve(
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0, 
+                                                       3, 0));
+
+        HttpServerConfig::getInstance().setCpuAffinity(
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0, 
+                                                       64, 0));
+
         //this value can only be set once when server start.
         if (MainServerConfigObj.getCrashGuard() == 2)
             MainServerConfigObj.setCrashGuard(1);

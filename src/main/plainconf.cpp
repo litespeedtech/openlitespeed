@@ -407,6 +407,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"apptype", NULL},
     {"startupfile", NULL},
     {"appserverenv", NULL},
+    {"enablelve",  NULL},
+    {"cpuaffinity", NULL},
     
 };
 
@@ -1289,7 +1291,6 @@ void plainconf::loadConfFile(const char *path)
                 continue;
 
             AutoStr2 pathInclude;
-
             if (isInclude(p, pathInclude))
             {
                 char achBuf[512] = {0};
@@ -1354,13 +1355,6 @@ void plainconf::loadConfFile(const char *path)
 XmlNode *plainconf::parseFile(const char *configFilePath,
                               const char *rootTag)
 {
-#ifdef TEST_OUTPUT_PLAIN_CONF
-    char *tmp = (char *)new char[5 * 1024 * 1024];
-
-    if (tmp)
-        delete []tmp;
-
-#endif
     XmlNode *rootNode = new XmlNode;
     const char *attr = NULL;
     rootNode->init(rootTag, &attr);

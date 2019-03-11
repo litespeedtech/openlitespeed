@@ -122,6 +122,7 @@ class LshttpdMain
     void deallocateBlackBoard(char *pBuf);
 
     int             startChild(ChildProc *pProc);
+    void            onNewChildStart(ChildProc * pProc);
     int             childDead(int pid);
     void            stopAllChildren();
     void            waitChildren();
@@ -141,7 +142,6 @@ class LshttpdMain
 
     void            processSignal();
 
-    int             getNumCores();
     void            setAffinity(pid_t pid, int cpuId);
 
     LshttpdMain(const LshttpdMain &rhs);

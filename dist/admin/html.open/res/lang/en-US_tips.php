@@ -170,6 +170,8 @@ $_tipsdb['connTimeout'] = new DAttrHelp("Connection Timeout (secs)", 'Specifies 
 
 $_tipsdb['consoleSessionTimeout'] = new DAttrHelp("Session Timeout (secs)", 'Customize the session timeout length of the WebAdmin Console.  The default is 60 seconds.', ' Set a proper value for production use, usually less than 300 seconds.', 'Integer number', '');
 
+$_tipsdb['cpuAffinity'] = new DAttrHelp("CPU Affinity", 'CPU affinity binds a process to one or more CPUs (cores). It is beneficial for a process to always use the same CPU because then the process can make use of data left in CPU cache. If the process moves to a different CPU, there is no use of CPU cache and unnecessary overhead is required.<br/><br/>The CPU Affinity setting controls how many CPUs (cores) one server process will be associated with. The minimum value is 0, which will disable this feature. The maximum value is the number of cores the server has. Generally, 1 is the best setting because because it creates the strictest use of CPU affinity and thus makes the most use of CPU cache.<br/><br/>Default value: 0', '', 'Integer value from 0 to 64. (0 will disable this feature)', '');
+
 $_tipsdb['crlFile'] = new DAttrHelp("Client Revocation File", ' Specifies the file containing PEM-encoded CA CRL files enumerating revoked  client certificates. This can be used as an alternative or in addition to  &quot;Client Revocation Path&quot;.', '', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
 
 $_tipsdb['crlPath'] = new DAttrHelp("Client Revocation Path", ' Specifies the directory containing PEM-encoded CA CRL files for revoked  client certificates. The files in this directory have to be PEM-encoded.  These files are accessed through hash filenames, hash-value.rN. Please refer to openSSL or Apache mod_ssl documentation regarding creating the hash filename.', '', 'path', '');
@@ -205,6 +207,8 @@ $_tipsdb['enableExpires'] = new DAttrHelp("Enable Expires", 'Specifies whether t
 $_tipsdb['enableGzipCompress'] = new DAttrHelp("Enable Compression", 'Controls GZIP compression for both static and dynamic HTTP responses.', ' Enable it to save network bandwidth. Text-based responses such as  html, css, and javascript files benefit the most and on average can be compressed to half  of their original size.', 'Select from radio box', '');
 
 $_tipsdb['enableIpGeo'] = new DAttrHelp("Enable GeoLocation Lookup", ' Specifies whether to enable/disable IP Geolocation lookup.  Can be set at server, virtual host, or context level. IP Geolocation is disabled by default when using value &quot;Not Set&quot;.', '', 'Select from radio box', '');
+
+$_tipsdb['enableLVE'] = new DAttrHelp("Cloud-Linux", 'Specifies whether to enable CloudLinux&#039;s Lightweight Virtual Environment (LVE)  when it exists. You can use LiteSpeed with LVE to achieve better resource management.  For more information, please check http://www.cloudlinux.com.', '', 'Select from drop down list', '');
 
 $_tipsdb['enableRewrite'] = new DAttrHelp("Enable Rewrite", 'Specifies whether to enable LiteSpeed&#039;s URL rewrite engine. This option can be customized at the virtual host or context level, and is inherited along the directory tree until it is explicitly overridden.', '', 'Select from radio box', '');
 
@@ -246,9 +250,13 @@ $_tipsdb['extAppType'] = new DAttrHelp("Type", 'Specifies the type of external a
 
 $_tipsdb['extAuthorizer'] = new DAttrHelp("Authorizer", 'Specifies an external application that can be used to generate authorized/unauthorized decisions. Currently, only the FastCGI Authorizer is available. For more details about the FastCGI Authorizer role,  please visit <a href="http://www.fastcgi.com" target="_blank" rel="noopener noreferrer">http://www.fastcgi.com</a>.', '', 'Select from drop down list', '');
 
+$_tipsdb['extGroup'] = new DAttrHelp("Run As Group", 'The external application will run as this specified group name. If not set, Virtual Host level settings will be inherited.<br/><br/>Default value: Not Set', '', 'Valid group name.', '');
+
 $_tipsdb['extMaxIdleTime'] = new DAttrHelp("Max Idle Time", 'Specifies the maximum idle time before an external application is stopped by the server, freeing idle resources. When set to &quot;-1&quot;, the external application will not be stopped by the server unless running in ProcessGroup mode where idle external applications will be stopped after 30 seconds. The default value is &quot;-1&quot;.', ' This feature is especially useful in the mass hosting environment where, in order to prevent files owned by one virtual host from being accessed by the external application scripts of another virtual host, many different applications are run at the same time in SetUID mode. Set this value low to prevent these external applications from idling unnecessarily.', 'Select from radio box', '');
 
 $_tipsdb['extUmask'] = new DAttrHelp("umask", 'Sets default umask for this external application&#039;s processes.   See  man 2 umask  for details. The default value taken from the server-level   &quot;umask&quot; setting.', '', 'value valid range [000]-[777].', '');
+
+$_tipsdb['extUser'] = new DAttrHelp("Run As User", 'The external application will run as this specified user name. If not set, Virtual Host level settings will be inherited.<br/><br/>Default value: Not Set', '', 'Valid username.', '');
 
 $_tipsdb['extWorkers'] = new DAttrHelp("Workers", 'List of worker groups previously defined in the external load balancer.', '', 'A comma-separated list in the form ExternalAppType::ExternalAppName', 'fcgi::localPHP, proxy::backend1');
 
@@ -576,9 +584,9 @@ $_tipsdb['staticReqPerSec'] = new DAttrHelp("Static Requests/Second", 'Specifies
 
 $_tipsdb['statuscode'] = new DAttrHelp("Status Code", 'Specifies the response status code of the external redirection.  If the status code is between 300 and 399, &quot;Destination URI&quot; can be specified.', '', 'Select from drop down list', '');
 
-$_tipsdb['suexecGroup'] = new DAttrHelp("suEXEC Group", 'The group to run as at the current context level using either the group name or gid of the group. This setting will not take effect if the <b>Run As User</b> setting has not been set at the Virtual Host or External Application levels.<br/><br/>Default values:<br/><b>Virtual Host level:</b> Virtual Host level <b>Run As User</b> setting value<br/><b>External Application level:</b> External application level <b>Run As User</b> setting value if set, else inherit Virtual Host level setting', '', 'Valid group name or uid', '');
+$_tipsdb['suexecGroup'] = new DAttrHelp("suEXEC Group", 'At the current context level, run as this group. Either <b>suEXEC User</b> at the Virtual Host level, or <b>Run As User</b> at the External Application level, must be set for <b>suEXEC Group</b> to take effect.<br/><br/>This configuration can be overridden at the External Application level using the <b>Run As Group</b> setting.<br/><br/>Default value: <b>suExec User</b> setting value', '', 'Valid group name or uid', '');
 
-$_tipsdb['suexecUser'] = new DAttrHelp("suEXEC User", 'The user to run as at the current context level using either the user name or uid of the user. This setting will override the Virtual Host level <b>ExtApp Set UID Mode</b> setting if set.<br/><br/>Default values:<br/><b>Virtual Host level:</b> Not Set<br/><b>External Application level:</b> Inherit Virtual Host level setting', '', 'Valid user name or uid.', '');
+$_tipsdb['suexecUser'] = new DAttrHelp("suEXEC User", 'At the current context level, run as this user. If set, this value will override the Virtual Host level <b>ExtApp Set UID Mode</b> setting.<br/><br/>This configuration may be overridden at the External Application level using the <b>Run As User</b> setting.<br/><br/>Default value: Not Set', '', 'Valid user name or uid.', '');
 
 $_tipsdb['suffix'] = new DAttrHelp("Suffix", 'Specifies the script file suffixes that will be handled by this  script handler. Suffixes must be unique.', 'The server will automatically add a special MIME type (&quot;application/x-httpd-[suffix]&quot;) for the first  suffix in the list. For example, MIME type &quot;application/x-httpd-php53&quot; will be added  for suffix &quot;php53&quot;. Suffixes after the first need to set up in the &quot;MIME Settings&quot; settings.<br/>Though we list suffixes in this field, the script handlers use MIME types, not suffixes,  to decide which scripts to handle. <br/> Only specify the suffixes you really need.', 'Comma delimited list with period &quot;.&quot; character prohibited.', '');
 

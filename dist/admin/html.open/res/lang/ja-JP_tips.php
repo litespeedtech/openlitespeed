@@ -170,6 +170,8 @@ $_tipsdb['connTimeout'] = new DAttrHelp("コネクションタイムアウト（
 
 $_tipsdb['consoleSessionTimeout'] = new DAttrHelp("セッションタイムアウト（秒）", 'WebAdmin Consoleのセッションタイムアウトの長さをカスタマイズします。 デフォルトは60秒です。', '[セキュリティ]プロダクション使用に適切な値を設定します。通常は300秒未満です。', '整数', '');
 
+$_tipsdb['cpuAffinity'] = new DAttrHelp("CPU Affinity", 'CPU affinity binds a process to one or more CPUs (cores). It is beneficial for a process to always use the same CPU because then the process can make use of data left in CPU cache. If the process moves to a different CPU, there is no use of CPU cache and unnecessary overhead is required.<br/><br/>The CPU Affinity setting controls how many CPUs (cores) one server process will be associated with. The minimum value is 0, which will disable this feature. The maximum value is the number of cores the server has. Generally, 1 is the best setting because because it creates the strictest use of CPU affinity and thus makes the most use of CPU cache.<br/><br/>Default value: 0', '', 'Integer value from 0 to 64. (0 will disable this feature)', '');
+
 $_tipsdb['crlFile'] = new DAttrHelp("クライアント失効ファイル", '取り消されたクライアント証明書を列挙するPEMエンコードCA CRLファイルを含むファイルを指定します。 これは、代わりに、または&quot;クライアントの失効パス&quot;に加えて使用することができます。', '', 'ファイル名への絶対パス又は$SERVER_ROOTからの相対パス', '');
 
 $_tipsdb['crlPath'] = new DAttrHelp("クライアントの失効パス", '取り消されたクライアント証明書のPEMエンコードされたCA CRLファイルを含むディレクトリを指定します。 このディレクトリのファイルはPEMでエンコードする必要があります。 これらのファイルは、ハッシュファイル名、hash-value.rNによってアクセスされます。 ハッシュファイル名の作成については、openSSLまたはApache mod_sslのドキュメントを参照してください。', '', 'パス', '');
@@ -205,6 +207,8 @@ $_tipsdb['enableExpires'] = new DAttrHelp("有効期限を有効にする", '静
 $_tipsdb['enableGzipCompress'] = new DAttrHelp("圧縮を有効にする", '静的HTTP応答と動的HTTP応答の両方のGZIP圧縮を制御します。', '[パフォーマンス]ネットワーク帯域幅を節約するために有効にします。 html、css、およびjavascriptファイルなどのテキストベースの応答が最大の利益をもたらし、平均で元のサイズの半分に圧縮できます。', 'ラジオボックスから選択', '');
 
 $_tipsdb['enableIpGeo'] = new DAttrHelp("IPジオロケーションを有効にする", ' IPジオロケーション検索を有効/無効にするかどうかを指定します。 サーバ、バーチャルホスト、コンテキストレベルで設定できます。 値 「未設定」を使用すると、IPジオロケーションはデフォルトで無効になります。', '', 'ラジオボックスから選択', '');
+
+$_tipsdb['enableLVE'] = new DAttrHelp("Cloud-Linux", 'CloudLinuxの軽量バーチャル環境（LVE）が存在する場合に有効にするかどうかを指定します。 LiteSpeedをLVEと共に使用すると、より良いリソース管理を実現できます。 詳細については、http://www.cloudlinux.comを参照してください。', '', '選択', '');
 
 $_tipsdb['enableRewrite'] = new DAttrHelp("Rewriteを有効にする", 'LiteSpeedのURL書き換えエンジンを有効にするかどうかを指定します。 このオプションは、バーチャルホストまたはコンテキストレベルでカスタマイズでき、明示的に上書きされるまでディレクトリツリーに沿って継承されます。', '', 'ラジオボックスから選択', '');
 
@@ -246,9 +250,13 @@ $_tipsdb['extAppType'] = new DAttrHelp("タイプ", '外部アプリケーショ
 
 $_tipsdb['extAuthorizer'] = new DAttrHelp("承認者", '権限のある/権限のないかの決定を生成するために使用できる外部アプリケーションを指定します。 現在、FastCGI Authorizerのみが使用可能です。 FastCGI Authorizerの役割の詳細については、<a href="http://www.fastcgi.com" target="_blank" rel="noopener noreferrer">http://www.fastcgi.com</a>を参照してください。 。', '', 'ドロップダウンリストから選択', '');
 
+$_tipsdb['extGroup'] = new DAttrHelp("suEXECグループ", '外部アプリケーションが実行されるグループ名を指定します。', '', '有効なグループ名。', '');
+
 $_tipsdb['extMaxIdleTime'] = new DAttrHelp("最大アイドル時間", 'サーバーが外部アプリケーションを停止するまでの最大アイドル時間を指定します。 &quot;-1&quot;に設定すると、外部アプリケーションはサーバーによって停止されません。 デフォルト値は &quot;-1&quot;です。 この機能により、アイドル状態のアプリケーションが使用するリソースを解放することができます。 最大限のセキュリティを確保するために、setuidモードで動作する多くのアプリケーションを定義する必要がある場合には、マスホスティング環境で特に便利です。', '[パフォーマンス]この機能は、大規模なホスティング環境で特に便利です。 あるバーチャルホストが所有するファイルが別のバーチャルホストの外部アプリケーションスクリプトによってアクセスされないようにするため、大量ホスティングではSetUIDモードで同時に多くの異なるアプリケーションを実行する必要があります。 これらの外部アプリケーションが不必要にアイドリングしないように、この最大アイドル時間を低く設定します。', 'ラジオボックスから選択', '');
 
 $_tipsdb['extUmask'] = new DAttrHelp("umask", 'この外部アプリケーションのプロセスのデフォルトumaskを設定します。 詳細は、man 2 umaskを参照してください。 デフォルト値はサーバーレベルの&quot;umask&quot;設定から取得されます。', '', '有効範囲[000]〜[777]の値。', '');
+
+$_tipsdb['extUser'] = new DAttrHelp("suEXECユーザー", '外部アプリケーションが実行されるユーザー名を指定します。 設定されていない場合、外部アプリケーションはWebサーバーのユーザーとして実行されます。', '', '有効なユーザー名。', '');
 
 $_tipsdb['extWorkers'] = new DAttrHelp("ワーカー", '以前に外部ロードバランサで定義されたワーカーグループのリスト。', '', 'ExternalAppType::ExternalAppNameという形式のカンマ区切りリスト', 'fcgi::localPHP, proxy::backend1');
 
@@ -576,9 +584,9 @@ $_tipsdb['staticReqPerSec'] = new DAttrHelp("静的リクエスト/秒", '確立
 
 $_tipsdb['statuscode'] = new DAttrHelp("ステータスコード", '外部リダイレクトの応答ステータスコードを指定します。 ステータスコードが300〜399の場合、&quot;宛先URI&quot;を指定できます。', '', '選択', '');
 
-$_tipsdb['suexecGroup'] = new DAttrHelp("suEXEC Group", 'The group to run as at the current context level using either the group name or gid of the group. This setting will not take effect if the <b>Run As User</b> setting has not been set at the Virtual Host or External Application levels.<br/><br/>Default values:<br/><b>Virtual Host level:</b> Virtual Host level <b>Run As User</b> setting value<br/><b>External Application level:</b> External application level <b>Run As User</b> setting value if set, else inherit Virtual Host level setting', '', 'Valid group name or uid', '');
+$_tipsdb['suexecGroup'] = new DAttrHelp("suEXEC Group", 'At the current context level, run as this group. Either <b>suEXEC User</b> at the Virtual Host level, or <b>Run As User</b> at the External Application level, must be set for <b>suEXEC Group</b> to take effect.<br/><br/>This configuration can be overridden at the External Application level using the <b>Run As Group</b> setting.<br/><br/>Default value: <b>suExec User</b> setting value', '', 'Valid group name or uid', '');
 
-$_tipsdb['suexecUser'] = new DAttrHelp("suEXEC User", 'The user to run as at the current context level using either the user name or uid of the user. This setting will override the Virtual Host level <b>ExtApp Set UID Mode</b> setting if set.<br/><br/>Default values:<br/><b>Virtual Host level:</b> Not Set<br/><b>External Application level:</b> Inherit Virtual Host level setting', '', 'Valid user name or uid.', '');
+$_tipsdb['suexecUser'] = new DAttrHelp("suEXEC User", 'At the current context level, run as this user. If set, this value will override the Virtual Host level <b>ExtApp Set UID Mode</b> setting.<br/><br/>This configuration may be overridden at the External Application level using the <b>Run As User</b> setting.<br/><br/>Default value: Not Set', '', 'Valid user name or uid.', '');
 
 $_tipsdb['suffix'] = new DAttrHelp("サフィックス", 'このスクリプトハンドラによって処理されるスクリプトファイルのサフィックスを指定します。 接尾辞は一意である必要があります。', 'サーバーは、リスト内の最初の接尾辞に特殊なMIMEタイプ（ &quot;application / x-httpd- [suffix]&quot;）を自動的に追加します。 たとえば、接尾辞 &quot;php53&quot;にMIMEタイプ &quot;application / x-httpd-php53&quot;が追加されます。 接尾辞は&quot;MIME設定&quot;設定で最初に設定する必要があります。<br/>このフィールドではサフィックスを列挙していますが、スクリプトハンドラは接尾辞ではなくMIMEタイプを使用して、処理するスクリプトを決定します。<br/>[パフォーマンスとセキュリティ]本当に必要なサフィックスのみを指定してください。', 'カンマ区切りリストでピリオド&quot;.&quot;は禁止されています。', '');
 

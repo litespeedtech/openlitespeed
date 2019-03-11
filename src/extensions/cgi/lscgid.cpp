@@ -51,13 +51,22 @@
 #define uint32_t unsigned long
 
 static uid_t        s_uid;
+#define HAS_CLOUD_LINUX
 #ifdef HAS_CLOUD_LINUX
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#include <lve/lve-ctl.h>
+
 static int s_enable_lve = 0;
 static struct liblve *s_lve = NULL;
 
 static void *s_liblve;
+typedef int (*lve_is_available)(void);
+typedef int (*lve_instance_init)(struct liblve *);
+typedef int (*lve_destroy)(struct liblve *);
+typedef int (*lve_enter)(struct liblve *, uint32_t, int32_t, int32_t,
+                           uint32_t *);
+typedef int (*lve_leave)(struct liblve *, uint32_t *);
+typedef int (*lve_jail)(struct passwd *, char *);
+
 static int (*fp_lve_is_available)(void) = NULL;
 static int (*fp_lve_instance_init)(struct liblve *) = NULL;
 static int (*fp_lve_destroy)(struct liblve *) = NULL;
@@ -70,7 +79,7 @@ static int load_lve_lib()
     s_liblve = dlopen("liblve.so.0", RTLD_LAZY);
     if (s_liblve)
     {
-        fp_lve_is_available = dlsym(s_liblve, "lve_is_available");
+        fp_lve_is_available = (lve_is_available)dlsym(s_liblve, "lve_is_available");
         if (dlerror() == NULL)
         {
             if (!(*fp_lve_is_available)())
@@ -97,17 +106,17 @@ static int init_lve()
     int rc;
     if (!s_liblve)
         return LS_FAIL;
-    fp_lve_instance_init = dlsym(s_liblve, "lve_instance_init");
-    fp_lve_destroy = dlsym(s_liblve, "lve_destroy");
-    fp_lve_enter = dlsym(s_liblve, "lve_enter");
-    fp_lve_leave = dlsym(s_liblve, "lve_leave");
+    fp_lve_instance_init = (lve_instance_init)dlsym(s_liblve, "lve_instance_init");
+    fp_lve_destroy = (lve_destroy)dlsym(s_liblve, "lve_destroy");
+    fp_lve_enter = (lve_enter)dlsym(s_liblve, "lve_enter");
+    fp_lve_leave = (lve_leave)dlsym(s_liblve, "lve_leave");
     if (s_enable_lve >= 2)
-        fp_lve_jail = dlsym(s_liblve, "jail");
+        fp_lve_jail = (lve_jail)dlsym(s_liblve, "jail");
 
     if (s_lve == NULL)
     {
         rc = (*fp_lve_instance_init)(NULL);
-        s_lve = malloc(rc);
+        s_lve = (struct liblve *)malloc(rc);
     }
     rc = (*fp_lve_instance_init)(s_lve);
     if (rc != 0)
