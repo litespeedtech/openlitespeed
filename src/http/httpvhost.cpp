@@ -2671,7 +2671,7 @@ int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const char *ctxName = (*iter)->getValue();
-            LS_INFO("[%s] config conxtext %s.",
+            LS_INFO("[%s] config context %s.",
                     TmpLogId::getLogId(), ctxName);
             configContext(*iter);
             
