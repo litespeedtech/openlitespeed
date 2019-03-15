@@ -39,7 +39,7 @@
 
 #endif
 
-const int RBIO_BUF_SIZE = 2048; // Initial size
+const int RBIO_BUF_SIZE = 4096; // Initial size
 #if OPENSSL_VERSION_NUMBER < 0x10100000
 BIO_METHOD  s_biom_s;
 #endif

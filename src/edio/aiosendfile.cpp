@@ -67,9 +67,8 @@ AioSendFile::~AioSendFile()
 
 int AioSendFile::onNotified(int count)
 {
-    int i;
     Aiosfcb *event;
-    for (i = 0; i < count; ++i)
+    while (!ls_lfqueue_empty(m_pFinishedQueue))
     {
         event = Aiosfcb::getCbPtr(ls_lfqueue_get(m_pFinishedQueue));
         if (!event)

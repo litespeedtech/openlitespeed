@@ -152,7 +152,10 @@ int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
     //in child
     if (pid == 0)
     {
+        char lve_env[16];
         CloseUnusedFd(fd);
+        snprintf(lve_env, sizeof(lve_env) -1, "LVE_ENABLE=%d", getLVE());
+        putenv(lve_env);
         int ret = lscgid_main(fd, argv0, secret, pData);
         exit(ret);
     }

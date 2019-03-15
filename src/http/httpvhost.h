@@ -539,6 +539,11 @@ public:
     const HttpHandler *isHandlerAllowed(const HttpHandler *pHdlr, int type,
                                         const char *pHandler);
     void configVHChrootMode(const XmlNode *pNode);
+    
+    int configListenerMappings(const char *pListeners,
+                               const char *pDomain,
+                               const char *pAliases);
+
     static HttpVHost *configVHost(const XmlNode *pNode, const char *pName,
                                   const char *pDomain, const char *pAliases, const char *pVhRoot,
                                   const XmlNode *pConfigNode);

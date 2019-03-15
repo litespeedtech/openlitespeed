@@ -2698,7 +2698,7 @@ int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const char *ctxName = (*iter)->getValue();
-            LS_INFO("[%s] config conxtext %s.",
+            LS_INFO("[%s] config context %s.",
                     TmpLogId::getLogId(), ctxName);
             configContext(*iter);
             
@@ -3475,6 +3475,37 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
     return NULL;
 }
 
+/**
+ * Example:
+ * listeners  Default, DefaultHttps
+ */
+int HttpVHost::configListenerMappings(const char *pListeners,
+                                      const char *pDomain,
+                                      const char *pAliases)
+{
+    int add = 0;
+    StringList  listenerNames;
+    listenerNames.split(pListeners, strlen(pListeners) + pListeners, ",");
+    StringList::iterator iter;
+    for (iter = listenerNames.begin(); iter != listenerNames.end(); ++iter)
+    {
+        const char *p = (*iter)->c_str();
+        if (HttpServer::getInstance().mapListenerToVHost(p, this,
+            pDomain ? pDomain : "*") == 0)
+            ++add;
+        if (pAliases && 
+            HttpServer::getInstance().mapListenerToVHost(p, this, pAliases) == 0)
+            ++add;
+    }
+
+    ConfigCtx currentCtx("vhost", getName());
+    LS_INFO(&currentCtx, "configListenerMappings vhost [%s], listeners [%s], "
+            " domain [%s], aliase [%s], added %d mappings.", 
+            getName(), pListeners, pDomain, pAliases, add);
+    return add;
+}
+
+
 
 HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
 {
@@ -3537,6 +3568,15 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
         const char *pAliases = pVhConfNode->getChildValue("vhAliases");
         pVHost = HttpVHost::configVHost(pNode, pName, pDomain, pAliases, pVhRoot,
                                         pVhConfNode);
+
+        /**
+         * Comments: listeners must be in the root level of Vhost, 
+         * for compatible with vhosttemplate
+         */
+        const char *pListeners = pNode->getChildValue("listeners");
+        if (pListeners && pVHost)
+            pVHost->configListenerMappings(pListeners, pDomain, pAliases);
+
         break;
     }
 

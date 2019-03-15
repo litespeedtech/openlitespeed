@@ -1330,7 +1330,7 @@ int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
     if (!p)
         p = strchr(value, '\t');
 
-    if (p)
+    if (p && p - value < 256)
         memcpy(pVHost, value, p - value);
     else
         return LS_FAIL;
@@ -1443,9 +1443,6 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 
             if (pListener)
             {
-                if (!pVHostName)
-                    pListener->getVHostMap()->clear();
-
                 if ((configVirtualHostMappings(pListener, pListenerNode, pVHostName) > 0)
                     && (pVHostName))
                     pListener->endConfig();
@@ -4266,6 +4263,13 @@ int HttpServer::mapListenerToVHost(const char *pListener,
     return m_impl->mapListenerToVHost(pListener, pKey, pVHost);
 }
 
+int HttpServer::mapListenerToVHost(const char *pListenerName,
+                                   HttpVHost    *pVHost,
+                                   const char *pDomains)
+{
+    HttpListener *pListener = getListener(pListenerName);
+    return m_impl->mapListenerToVHost(pListener, pVHost, pDomains);
+}
 
 int HttpServer::mapListenerToVHost(HttpListener *pListener,
                                    HttpVHost    *pVHost, const char *pDomains)

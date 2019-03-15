@@ -1595,7 +1595,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     }
 
     /**
-     * If need to gzip but it is a a samll static file, no need
+     * If need to gzip but it is a small static file, no need
      * Or it is not compressible, no need
      */
     if (needGzip)
@@ -1621,6 +1621,23 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         memcmp("static", phandlerType, 6) == 0 &&
         sb.st_size > 0 && sb.st_size < 200)
         needGzip = false;
+
+    /***
+     * if it isn't a static file but has small size, no need to gzip
+     */
+    if (needGzip)
+    {
+        char *pVal = NULL;
+        int valLen;
+        getRespHeader(rec->session, LSI_RSPHDR_CONTENT_LENGTH, &pVal, &valLen);
+        if (pVal && valLen > 0)
+        {
+            int len = 0;
+            len = atoi(pVal);
+            if (len >= 0 && len < 200)
+                needGzip = false;
+        }
+    }
 
     if (needGzip)
     {
@@ -1715,7 +1732,12 @@ int cacheTofile(lsi_param_t *rec)
     if (!myData)
         return 0;
 
-    cacheHeader(rec, myData);
+    if (myData->iCacheSendBody == 0) //uninit
+    {
+        myData->iCacheSendBody = 1; //need cache
+        cacheHeader(rec, myData);
+    }
+
     int fd = myData->pEntry->getFdStore();
 
     long iCahcedSize = 0;
@@ -2001,6 +2023,21 @@ MyMData *createMData(lsi_param_t *rec)
     }
 
     return myData;
+}
+
+
+static int sessionBegin(lsi_param_t *rec)
+{
+    MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
+                      LSI_DATA_HTTP);
+    if (myData)
+    {
+        g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP, releaseMData);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s] sessionBegin released previous module data.\n",
+                   ModuleNameStr);
+    }
+    return 0;
 }
 
 static int checkAssignHandler(lsi_param_t *rec)
@@ -2310,6 +2347,7 @@ int releaseIpCounter(void *data)
 
 static lsi_serverhook_t serverHooks[] =
 {
+    {LSI_HKPT_HTTP_BEGIN,       sessionBegin,       LSI_HOOK_FIRST,  LSI_FLAG_ENABLED},
 #ifdef USE_RECV_REQ_HEADER_HOOK
     {LSI_HKPT_RCVD_REQ_HEADER,  checkAssignHandler, LSI_HOOK_EARLY,     LSI_FLAG_ENABLED},
 #endif

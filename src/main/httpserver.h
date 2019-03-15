@@ -83,6 +83,9 @@ public:
     int mapListenerToVHost(const char *pListenerName,
                            const char *pKey,
                            const char *pVHostName);
+    int mapListenerToVHost(const char *pListenerName,
+                           HttpVHost    *pVHost,
+                           const char *pDomains);
     int mapListenerToVHost(HttpListener *pListener,
                            HttpVHost    *pVHost,
                            const char *pDomains);

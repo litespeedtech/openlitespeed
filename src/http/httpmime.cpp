@@ -1430,8 +1430,17 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
                 if (app_node_ptr)
                 {
                     LocalWorker *pApp = static_cast<LocalWorker *>(app_node_ptr->worker);
-                    if (vhost->getUid() != pApp->getConfig().getUid() ||
-                        vhost->getGid() != pApp->getConfig().getGid())
+                    
+                    /**
+                     * If the APP has own user/group, do not inherit with
+                     * vhost level setting
+                     */
+                    XmlNode *pNode = (XmlNode*)app_node_ptr->xml_node;
+                    const char *pUser = pNode->getChildValue("extUser");
+                    const char *pGroup = pNode->getChildValue("extGroup");
+                    if (!pUser && !pGroup &&
+                        (vhost->getUid() != pApp->getConfig().getUid() ||
+                        vhost->getGid() != pApp->getConfig().getGid()))
                     {
                         /**
                         * Since the uid /gid not match with the setting in

@@ -240,6 +240,12 @@ static int doCompression(lsi_param_t *rec, zbufinfo_t *pBufInfo,
         else
             ret = deflate(pStream, iDoFlush);
 
+        /**
+         * Treat the memory error as OK
+         */
+        if (ret == Z_BUF_ERROR)
+            ret = Z_OK;
+        
         if (ret >= Z_OK)
         {
             consumed = rec->len1 - pStream->avail_in;

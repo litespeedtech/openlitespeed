@@ -4410,18 +4410,11 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
         LS_DBG_M(getLogSession(), "Aio Response body sent: %lld.",
                  (long long)m_response.getBodySent());
         m_sendFileInfo.incCurPos(written);
-        if ((unsigned int)written < event->getSize())
-        {
-            continueWrite();
-            return 0;
-        }
     }
-    //File should be completely sent.
     if (m_sendFileInfo.getRemain() > 0)
     {
-        LS_DBG_M(getLogSession(),
-                 "Handle Aio Event: Reached an invalid conclusion!");
-        return LS_FAIL;
+        continueWrite();
+        return 0;
     }
     return onWriteEx();
 }

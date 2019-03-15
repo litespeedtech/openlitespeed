@@ -35,25 +35,20 @@ EventNotifier::~EventNotifier()
 
 int EventNotifier::handleEvents(short int event)
 {
-    int count = 0;
-    ls_atomic_setint( &m_pending, 0);
     if (event & POLLIN)
     {
+        int count = 0;
 #ifdef LSEFD_AVAIL
         uint64_t ret;
-        if (eventfd_read(getfd(), &ret) < 0)
-            return LS_FAIL;
-
-        if (ret > INT_MAX)
-            count = INT_MAX;
-        else
-            count = (int)ret;
+        eventfd_read(getfd(), &ret);
+        ++count;
 #else
         char achBuf[50];
         int len = 0;
         while ((len = read(getfd(), achBuf, sizeof(achBuf) / sizeof(char))) > 0)
             count += len;
 #endif
+        ls_atomic_setint( &m_pending, 0);
         onNotified(count);
     }
 

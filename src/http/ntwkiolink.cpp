@@ -462,15 +462,19 @@ void NtwkIOLink::continueWrite()
     //if( getFlag( HIO_FLAG_WANT_WRITE ) )
     //    return;
     setFlag(HIO_FLAG_WANT_WRITE, 1);
-    if (allowWrite())
+    ThrottleUnit *pThrottle = getClientInfo()->getThrottleCtrl().getThrottleOut();
+    if (!pThrottle->getAvail())
     {
-        LS_DBG_L(this, "Write resumed!");
-        /*        short revents = getRevents();
-                if ( revents & POLLOUT )
-                    handleEvents( revents );
-                else*/
-        MultiplexerFactory::getMultiplexer()->continueWrite(this);
+        if (pThrottle->isUnlimited())
+            pThrottle->reset();
+        else
+        {
+            LS_DBG_L(this, "NtwkIOLink::continueWrite() - THROTTLING!!!");
+            return;
+        }
     }
+    LS_DBG_L(this, "write resumed!");
+    MultiplexerFactory::getMultiplexer()->continueWrite(this);
 }
 
 
@@ -1001,7 +1005,7 @@ off_t NtwkIOLink::sendfileSetUp(off_t size)
     }
     ThrottleControl *pCtrl = getThrottleCtrl();
 
-    if (pCtrl)
+    if (pCtrl && !pCtrl->getThrottleOut()->isUnlimited())
     {
         int Quota = pCtrl->getOSQuota();
         if (size > (unsigned int)Quota + (Quota >> 3))
