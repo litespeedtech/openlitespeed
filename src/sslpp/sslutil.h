@@ -4,12 +4,7 @@
 #ifndef SSLUTIL_H
 #define SSLUTIL_H
 
-typedef struct bio_st  BIO;
-typedef struct x509_st X509;
-
-typedef int (*asyncCertDoneCb)(void *arg, const char *pDomain);
-typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
-                             const char *pDomain, int iDomainLen);
+#include <sslpp/ssldef.h>
 
 class SslUtil
 {
@@ -48,7 +43,8 @@ public:
                                       char **pBegin);
     static int digestIdContext(SSL_CTX *pCtx, const void *pDigest,
                                size_t iDigestLen);
-    static int loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen);
+    static int loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen,
+                        int loadChain = 0);
     static int loadPrivateKey(SSL_CTX *pCtx, const void *pKey, int iKeyLen);
     static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type);
     static int loadPrivateKeyFile(SSL_CTX *pCtx, const char *pFile, int type);

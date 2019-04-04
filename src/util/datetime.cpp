@@ -24,12 +24,12 @@ time_t DateTime::s_curTime = time(NULL);
 int    DateTime::s_curTimeUs = 0;
 
 
-time_t DateTime::parseHttpTime(const char *s)
+time_t DateTime::parseHttpTime(const char *s, int len)
 {
-    static const unsigned int daytab[2][12] =
+    static const unsigned int daytab[2][13] =
     {
-        {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 },
-        {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 }
+        {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 },
+        {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 }
     };
     unsigned sec, min, hour, day, mon, year;
     char month[3] = { 0, 0, 0 };
@@ -46,11 +46,12 @@ time_t DateTime::parseHttpTime(const char *s)
         char flag;
         char state;
         char type;
+        const char *end = s + len;
         type = 0;
         state = D_START;
         n = 0;
         flag = 1;
-        for (ch = *s; (ch && state != D_END); ch = *s++)
+        for (ch = *s; (ch && state != D_END && s < end); ch = *s++)
         {
             switch (state)
             {
@@ -113,7 +114,7 @@ time_t DateTime::parseHttpTime(const char *s)
                     ;
                 else if (isdigit(ch))
                 {
-                    flag = 0;
+                    flag = 0 ;
                     year = 10 * year + (ch - '0');
                 }
                 else
@@ -214,6 +215,7 @@ time_t DateTime::parseHttpTime(const char *s)
                                              365L * (year - 1970L) + ((year - 1969L) >> 2))));
     }
 }
+
 
 char  *DateTime::getRFCTime(time_t t, char *buf)
 {

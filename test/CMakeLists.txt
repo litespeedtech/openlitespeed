@@ -157,9 +157,9 @@ add_executable(ols_unittest
 SET( unittestlib
     modgzip lsiapi main http lsiapi ssi
     registry cgi fcgi jk extensions lsapi proxy
-    edio socket sslpp lsshm thread log4cxx GeoIP adns
+    socket sslpp lsshm thread log4cxx GeoIP adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
-    udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
+    edio udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
     ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
     spdy libssl.a libcrypto.a
     -Wl,-Map=ols_unittest.map)

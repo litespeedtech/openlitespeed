@@ -142,9 +142,9 @@ add_executable(ls_shmhashstat
 SET( litespeedlib
     modgzip lsiapi main http lsiapi spdy http ssi
     registry cgi fcgi jk extensions lsapi proxy
-    edio socket sslpp lsshm thread log4cxx adns
+    socket sslpp lsshm thread log4cxx adns
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive GeoIP ${MMDB_LIB}
-    libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
+    edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
     ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns
     -nodefaultlibs pthread rt
     ${CMAKE_DL_LIBS} libstdc++.a crypt m gcc_eh c c_nonshared gcc )

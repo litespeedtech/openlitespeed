@@ -21,6 +21,7 @@
 #include <http/httpstatusline.h>
 #include <http/httpver.h>
 #include <http/httpserverconfig.h>
+#include <log4cxx/logger.h>
 #include <util/datetime.h>
 #include <util/iovec.h>
 #include <ctype.h>
@@ -53,6 +54,8 @@ http_header_t       HttpRespHeaders::s_keepaliveHeader;
 http_header_t       HttpRespHeaders::s_chunkedHeader;
 http_header_t       HttpRespHeaders::s_concloseHeader;
 http_header_t       HttpRespHeaders::s_acceptRangeHeader;
+
+static char s_sTurboCharged[66] = "X-Turbo-Charged-By: ";
 
 const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
 {
@@ -899,6 +902,31 @@ int HttpRespHeaders::mergeAll()
 }
 
 
+void HttpRespHeaders::dump(LogSession *pILog, int dump_header) const
+{
+    LS_DBG_H(pILog, "Resp headers, status: %d, total: %d, removed: %d, unique:%d, "
+                    "has hole: %d, buffer size: %d",
+             (int)m_iHttpCode,
+        (int)getTotalCount(), (int)m_iHeaderRemovedCount,
+        (int)m_iHeaderUniqueCount, (int)m_flags,
+        (int)m_buf.size() );
+    resp_kvpair *pKv = getKV(0);
+    resp_kvpair *pKvEnd = getKV(getTotalCount() - 1);
+
+    while (pKv <= pKvEnd)
+    {
+        if (pKv->keyLen > 0)
+        {
+            int len = pKv->keyLen + pKv->valLen + 4;
+            LS_DBG_H(pILog, "    %.*s", len, m_buf.begin() + pKv->keyOff);
+        }
+        ++pKv;
+    }
+}
+
+
+
+
 int HttpRespHeaders::appendToIov(IOVec *iovec, int &addCrlf)
 {
     int total;
@@ -1033,6 +1061,16 @@ void HttpRespHeaders::hideServerSignature(int hide)
 
 }
 
+void HttpRespHeaders::addTruboCharged()
+{
+    if (s_commonHeadersCount > 1)
+    {
+        addWithUnknownHeader(s_sTurboCharged, 18,
+                             HttpServerVersion::getVersion(),
+                             HttpServerVersion::getVersionLen(),
+                             LSI_HEADEROP_SET);
+    }
+}
 
 void HttpRespHeaders::dropConnectionHeaders()
 {

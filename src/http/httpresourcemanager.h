@@ -42,6 +42,9 @@ typedef ObjPool<HttpSession>            HttpSessionPool;
 typedef ObjPool<NtwkIOLink>             NtwkIoLinkPool;
 typedef ObjPool<Aiosfcb>                AiosfcbPool;
 
+#define SESSION_POOL_VG_DEBUG 1
+
+
 class HttpResourceManager : public TSingleton<HttpResourceManager>
 {
     friend class TSingleton<HttpResourceManager>;
@@ -110,17 +113,13 @@ public:
 
 
 
-    void recycle(HttpSession *pSession)
-    {   m_poolHttpSession.recycle(pSession);    }
+    void recycle(HttpSession *pSession);
 
-    HttpSession *getConnection()
-    {    return m_poolHttpSession.get();   }
+    HttpSession *getHttpSession();
 
-    void recycle(HttpSession **pSession, int n)
-    {   m_poolHttpSession.recycle((void **)pSession, n);    }
+    void recycle(HttpSession **pSession, int n);
 
-    int getConnections(HttpSession **pSession, int n)
-    {   return m_poolHttpSession.get(pSession, n);          }
+    int getConnections(HttpSession **pSession, int n);
 
     int initAiosfcbPool();
     void recycle(Aiosfcb *pAiosfcb)

@@ -135,6 +135,7 @@ HttpReq::HttpReq()
     m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     //m_pHTAContext = NULL;
     m_pContext = NULL;
+    m_pMimeType = NULL;
     m_pSSIRuntime = NULL;
     ::memset(m_commonHeaderLen, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderLen);
@@ -669,13 +670,13 @@ int HttpReq::processHeaderLines()
                 return SC_400;
             }
             index = HttpHeader::getIndex(pLineBegin);
-            if (index != HttpHeader::H_HEADER_END)
+            if (index < HttpHeader::H_TE)
             {
                 m_commonHeaderLen[ index ] = pTemp1 - pTemp;
                 m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
                 ret = processHeader(index);
             }
-            else
+            else if (index == HttpHeader::H_HEADER_END)
             {
                 pCurHeader = newUnknownHeader();
                 pCurHeader->keyOff = pLineBegin - m_headerBuf.begin();
@@ -685,6 +686,13 @@ int HttpReq::processHeaderLines()
 
                 ret = processUnknownHeader(pCurHeader, pLineBegin, pTemp);
             }
+            else 
+            {
+                m_otherHeaderLen[ index - HttpHeader::H_TE] = pTemp1 - pTemp;
+                m_otherHeaderOffset[index - HttpHeader::H_TE] = pTemp - m_headerBuf.begin();
+                ret = processHeader(index);
+            }
+            
             if (ret != 0)
                 return ret;
         }
@@ -733,13 +741,19 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
         index = begin->name_index;
         if (index == UPK_HDR_UNKNOWN)
             index = HttpHeader::getIndex(name);
-        if (index >= 0 && index != HttpHeader::H_HEADER_END)
+        if (index >= 0 && index < HttpHeader::H_TE)
         {
             m_commonHeaderLen[ index ] = begin->val_len;
             m_commonHeaderOffset[index] = value - m_headerBuf.begin();
             ret = processHeader(index);
         }
-        else
+        else if (index >= 0 && index < HttpHeader::H_HEADER_END)
+        {
+            m_otherHeaderLen[ index - HttpHeader::H_TE] = begin->val_len;
+            m_otherHeaderOffset[index - HttpHeader::H_TE] = value - m_headerBuf.begin();
+            ret = processHeader(index);
+        }
+        else 
         {
             pCurHeader = newUnknownHeader();
             pCurHeader->keyOff = begin->name_offset;
@@ -749,6 +763,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
 
             ret = processUnknownHeader(pCurHeader, name, value);
         }
+        
         if (ret != 0)
             return ret;
         ++begin;
@@ -762,6 +777,9 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
 
 int HttpReq::processHeader(int index)
 {
+    if (index >= HttpHeader::H_TE || index < 0)
+        return 0;
+
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
     const char *pBEnd = pCur + m_commonHeaderLen[ index ];
     switch (index)
@@ -1170,7 +1188,7 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
         return SC_400;    //invalid url format
     }
     uSetURI(pURI, iURILen);
-    if ((alloc) || (n - 1 - (pArgs - pURI) > 0) || (!m_pSSIRuntime))
+    if ((alloc) || (n - 1 - (pArgs - pURI) > 0))
         setQS(getURI() + (pArgs - pURI), n - 1 - (pArgs - pURI));
 
     else
@@ -2302,7 +2320,7 @@ const ExpiresCtrl *HttpReq::shouldAddExpires()
         p = &m_pVHost->getExpires();
     else
         p = HttpMime::getMime()->getDefault()->getExpires();
-    if (p->isEnabled())
+    if (p->isEnabled() && m_pMimeType)
     {
         if (m_pMimeType->getExpires()->getBase())
             p = m_pMimeType->getExpires();

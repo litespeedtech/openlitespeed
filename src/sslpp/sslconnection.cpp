@@ -8,12 +8,10 @@
 
 #include <log4cxx/logger.h>
 #include <lsr/ls_pool.h>
-
 #include <assert.h>
 #if __cplusplus <= 199711L && !defined(static_assert)
 #define static_assert(a, b) _Static_assert(a, b)
 #endif
-
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -86,6 +84,7 @@ SslConnection *SslConnection::get(const SSL *ssl)
 
 void SslConnection::release()
 {
+    DEBUG_MESSAGE("[SSL: %p] release\n", this);
     assert(m_ssl);
     if (m_iStatus != DISCONNECTED)
         shutdown(0);
@@ -242,6 +241,7 @@ int SslConnection::flush()
 int SslConnection::shutdown(int bidirectional)
 {
     assert(m_ssl);
+    
     m_flag = 0;
     if (m_iStatus == ACCEPTING)
     {
@@ -281,19 +281,20 @@ void SslConnection::toAccept()
 int SslConnection::accept()
 {
     int ret;
-    DEBUG_MESSAGE("[SSL: %p] accept\n", this);
+    DEBUG_MESSAGE("[SSL: %p] accept SSL: %p\n", this, m_ssl);
     assert(m_ssl);
     if (m_iStatus != ACCEPTING && m_iStatus != GOTCERT) {
         DEBUG_MESSAGE("[SSL: %p] In accept but not in ACCEPTING status\n",
                       this);
         return -1;
     }
+    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p\n", this, m_ssl);
     ret = SSL_do_handshake(m_ssl);
-    DEBUG_MESSAGE("[SSL: %p] SSL_accept rc: %d\n", this, ret);
+    DEBUG_MESSAGE("[SSL: %p] SSL_accept SSL_do_handshake rc: %d\n", this, ret);
     if (ret == 1)
     {
         DEBUG_MESSAGE("[SSL: %p] SSL_accept worked - move to connected"
-                        " status\n", this);
+                      " status, version: 0x%x\n", this, SSL_version(m_ssl));
         m_iStatus = CONNECTED;
         m_iWant = READ;
     }
@@ -303,7 +304,6 @@ int SslConnection::accept()
     }
     return ret;
 }
-
 
 
 int SslConnection::checkError(int ret)
@@ -335,6 +335,16 @@ int SslConnection::checkError(int ret)
         m_iStatus = WAITINGCERT;
         ERR_clear_error();
         return 0; // This will trigger a setSSLAgain(), which will disable read/write.
+#ifdef SSL_ASYNC_PK
+    case SSL_ERROR_WANT_PRIVATE_KEY_OPERATION:
+        DEBUG_MESSAGE("[SSL: %p] BORING requested SSL_do_handshake retry\n",
+                      this);
+        ERR_clear_error();
+        m_iWant = 0;
+        errno = EAGAIN;
+        return 0;
+#endif
+
     case SSL_ERROR_SSL:
         if (m_iWant == LAST_WRITE)
         {
@@ -352,6 +362,8 @@ int SslConnection::checkError(int ret)
                 break;
             }
         }
+
+        
     default:
         LS_DBG_H("SslError:%s\n", SslError(err).what());
         errno = EIO;

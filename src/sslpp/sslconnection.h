@@ -6,17 +6,12 @@
 #ifndef SSLCONNECTION_H
 #define SSLCONNECTION_H
 #include <lsdef.h>
+#include <sslpp/ssldef.h>
 #include <sslpp/hiocrypto.h>
 #include <sslpp/ls_fdbuf_bio.h>
 
-typedef struct x509_st X509;
-typedef struct ssl_cipher_st SSL_CIPHER;
-typedef struct ssl_st SSL;
-typedef struct ssl_ctx_st SSL_CTX;
-typedef struct ssl_session_st SSL_SESSION;
-
-
 class SslClientSessCache;
+
 class SslConnection : public HioCrypto
 {
 public:
@@ -49,7 +44,7 @@ public:
     char wantWrite() const  {   return m_iWant & WRITE; }
     char lastRead() const   {   return m_iWant & LAST_READ; }
     char lastWrite() const  {   return m_iWant & LAST_WRITE; }
-
+    
     bool getFlag(int v) const   {   return m_flag & v;     }
     void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
 
@@ -61,9 +56,10 @@ public:
 
     void release();
     int setfd(int fd);
-    int setfd(int rfd, int wfd);
+    //int setfd(int rfd, int wfd);
 
     void toAccept();
+
     int accept();
     int connect();
     int read(char *pBuf, int len);

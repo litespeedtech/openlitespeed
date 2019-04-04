@@ -10,6 +10,8 @@
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslutil.h>
 #include <sslpp/sslcontextconfig.h>
+#include <sslpp/sslasyncpk.h>
+#include <sslpp/sslcertcomp.h>
 
 #include <log4cxx/logger.h>
 
@@ -75,6 +77,13 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
         return NULL;
     }
 
+#ifdef SSL_ASYNC_PK
+    SslAsyncPk::enableApk(pContext->m_pCtx);
+#endif
+
+#ifdef SSLCERTCOMP
+    SslCertComp::enableCertComp(pContext->m_pCtx);
+#endif
     return pContext;
 }
 
@@ -213,6 +222,14 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
     {
         pContext->configStapling(pConfig);
     }
+
+#ifdef SSL_ASYNC_PK
+    SslAsyncPk::enableApk(pContext->m_pCtx);
+#endif
+
+#ifdef SSLCERTCOMP
+    SslCertComp::enableCertComp(pContext->m_pCtx);
+#endif
 
 #ifdef _ENTERPRISE_
     if (pConfig->m_iClientVerify)
@@ -401,6 +418,7 @@ int SslContext::init(int iMethod)
     SSL_METHOD *meth;
     if (initSSL())
         return -1;
+    
     m_iMethod = iMethod;
     m_iEnableSpdy = 0;
     m_iEnableOcsp = 0;
@@ -408,6 +426,7 @@ int SslContext::init(int iMethod)
     m_pCtx = SSL_CTX_new(meth);
     if (m_pCtx)
     {
+        LS_DBG_L("[SslCertComp] Create SSL_CTX: %p\n", m_pCtx);
         SslUtil::initCtx(m_pCtx, iMethod, m_iRenegProtect);
         //initDH( NULL );
         //initECDH();
@@ -442,6 +461,9 @@ SslContext::~SslContext()
 
 void SslContext::release()
 {
+#ifdef SSLCERTCOMP
+    SslCertComp::disableCertCompDecomp(m_pCtx);
+#endif        
     if (m_pCtx != NULL && m_pCtx != SSL_CTX_PENDING)
     {
         SSL_CTX *pCtx = m_pCtx;
@@ -449,7 +471,10 @@ void SslContext::release()
         SSL_CTX_free(pCtx);
     }
     if (m_pStapling)
+    {
         delete m_pStapling;
+        m_pStapling = NULL;
+    }
 }
 
 

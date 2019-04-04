@@ -830,16 +830,13 @@ int HttpMime::loadMime(const char *pPropertyPath)
     int lineNo = 0;
     m_pSuffixMap->release_objects();
 
-    while (! feof(fpMime))
+    while (fgets(pBuf, TEMP_BUF_LEN, fpMime))
     {
         lineNo ++ ;
-        if (fgets(pBuf, TEMP_BUF_LEN, fpMime))
-        {
-            char *p = strchr(pBuf, '#');
-            if (p)
-                *p = 0;
-            processOneLine(pPropertyPath, pBuf, lineNo);
-        }
+        char *p = strchr(pBuf, '#');
+        if (p)
+            *p = 0;
+        processOneLine(pPropertyPath, pBuf, lineNo);
     }
 
     fclose(fpMime);

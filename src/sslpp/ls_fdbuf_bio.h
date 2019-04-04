@@ -6,6 +6,8 @@
 #ifndef __LS_FDBUF_BIO_H__
 #define __LS_FDBUF_BIO_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus 
 extern "C" {
 #endif

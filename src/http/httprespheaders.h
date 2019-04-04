@@ -45,6 +45,7 @@ typedef struct
 struct http_header_t;
 struct iovec;
 class IOVec;
+class LogSession;
 
 #define HRH_F_HAS_HOLE  1
 #define HRH_F_HAS_PUSH  2
@@ -182,6 +183,7 @@ public:
     int getTotalLen()       { return m_iHeadersTotalLen; }
     int appendToIov(IOVec *iovec, int &addCrlf);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
+    void dump(LogSession *pILog, int dump_header) const;
 
     static INDEX getIndex(const char *pHeader);
     static int getHeaderStringLen(INDEX index)  {    return s_iHeaderLen[(int)index];  }
@@ -189,6 +191,7 @@ public:
     static void buildCommonHeaders();
     static void updateDateHeader();
     static void hideServerSignature(int hide);
+    
 
     void addGzipEncodingHeader()
     {
@@ -215,6 +218,7 @@ public:
         add(&s_acceptRangeHeader, 1);
     }
 
+    void addTruboCharged();
     void addCommonHeaders()
     {   add(s_commonHeaders, s_commonHeadersCount);     }
 

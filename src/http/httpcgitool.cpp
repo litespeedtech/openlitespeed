@@ -63,54 +63,11 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
     const AutoStr2 *pCharset = NULL;
     if (pReq->getStatusCode() == SC_304)
         return 0;
-    const MimeSetting *pMIME = NULL;
-    p = (char *)memchr(pValue, ';', valLen);
-    int gzipAccept = pReq->gzipAcceptable();
-    HttpContext *pContext = &(pReq->getVHost()->getRootContext());
-    //const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
-    int enbale = pContext->getExpires().isEnabled();
-    
-    if (gzipAccept || enbale)
-    {
-        char *pEnd;
-        if (p)
-            pEnd = (char *)p;
-        else
-            pEnd = (char *)pValue + valLen;
-        char ch = *pEnd;
-        *pEnd = 0;
-        
-        pMIME = pContext->lookupMimeSetting((char *)pValue);
-        LS_DBG_L(pReq->getLogSession(), "content type: [%s], pMIME: %p\n",
-                    pValue, pMIME);
-        *pEnd = ch;
-
-    }
-    if (gzipAccept)
-    {
-        if (!pMIME || !pMIME->getExpires()->compressible())
-            pReq->andGzip(~GZIP_ENABLED);
-    }
-    
-    if (enbale)
-    {
-        ExpiresCtrl *pExpireDefault = NULL;
-        if (pMIME && pMIME->getExpires()->getBase())
-            pExpireDefault = (ExpiresCtrl *)pMIME->getExpires();
-        if (pExpireDefault == NULL)
-            pExpireDefault = &pContext->getExpires();
-
-        if (pExpireDefault->getBase())
-            pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
-    }
-
-    if (pReq->isKeepAlive())
-        pReq->smartKeepAlive(pValue);
     
     if (HttpMime::needCharset(pValue))
     {
         pCharset = pReq->getDefaultCharset();
-        if (pCharset && p)
+        if (pCharset && (p = (char *)memchr(pValue, ';', valLen)) != NULL)
         {
             while (isspace(*(++p)))
                 ;

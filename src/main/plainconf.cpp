@@ -1252,10 +1252,8 @@ void plainconf::loadConfFile(const char *path)
         char sMultiLineModeSign[MAX_MULLINE_SIGN_LENGTH] = {0};
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
 
-        while (!feof(fp))
+        while (fgets(sLine, MAX_LINE_LENGTH, fp))
         {
-            sLine[0] = 0x00;
-            fgets(sLine, MAX_LINE_LENGTH, fp);
             ++lineNumber;
             p = sLine;
 

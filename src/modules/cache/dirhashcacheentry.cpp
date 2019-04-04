@@ -172,7 +172,7 @@ int DirHashCacheEntry::saveRespHeaders(HttpRespHeaders *pHeader)
         return LS_FAIL;
     pKey = pHeader->getHeader(HttpRespHeaders::H_LAST_MODIFIED, &keyLen);
     if (pKey)
-        getHeader().m_tmLastMod = DateTime::parseHttpTime(pKey);
+        getHeader().m_tmLastMod = DateTime::parseHttpTime(pKey, keyLen);
     /*
      * FIXME: need to locate etag header location
         pHeader->getHeader( HttpRespHeaders::H_ETAG, &pKey, &keyLen);

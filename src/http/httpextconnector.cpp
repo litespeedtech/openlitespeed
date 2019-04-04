@@ -179,6 +179,7 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
 
 int  HttpExtConnector::respHeaderDone()
 {
+    m_pSession->testContentType();
     int ret = m_pSession->respHeaderDone();
     if (m_iRespState & HEC_RESP_AUTHORIZED)
         ret = 1;

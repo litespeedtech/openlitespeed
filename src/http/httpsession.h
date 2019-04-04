@@ -522,6 +522,7 @@ public:
     int shouldLogAccess() const
     {   return !(m_iFlag & HSF_ACCESS_LOG_OFF);    }
 
+    void testContentType();
     int updateContentCompressible();
     int suspendProcess();
 

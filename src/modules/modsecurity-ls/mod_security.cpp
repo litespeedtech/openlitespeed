@@ -468,6 +468,7 @@ static int UriMapHook(lsi_param_t *rec)
     struct iovec iov_val[MAX_REQ_HEADERS_NUMBER];
     count = g_api->get_req_headers(session, iov_key, iov_val,
                                     MAX_REQ_HEADERS_NUMBER);
+
     for (int i = 0; i < count; ++i)
     {
         msc_add_n_request_header(myData->modsec_transaction,
@@ -484,7 +485,7 @@ static int UriMapHook(lsi_param_t *rec)
                     "msc_process_request_headers failed.\n", ModuleNameStr);
         return LSI_ERROR;
     }
-    
+
     Rules *rules = myData->modsec_transaction->m_rules;
     bool chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
     bool chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
@@ -493,6 +494,19 @@ static int UriMapHook(lsi_param_t *rec)
                chkReqBody ? "YES" : "NO",
                chkRespBody ? "YES" : "NO");
     
+    if(chkReqBody && rules->m_requestBodyLimit.m_value > 3000) //at least set limit to 3000
+    {
+        long reqbodySize = g_api->get_req_content_length(session);
+        if (reqbodySize > rules->m_requestBodyLimit.m_value)
+        {
+            chkReqBody = false;
+            g_api->log(session, LSI_LOG_DEBUG,
+                       "[Module:%s] RequestBodyAccess disabled due to size %ld > %ld.",
+                       ModuleNameStr, reqbodySize,
+                       (long)rules->m_requestBodyLimit.m_value);
+        }
+    }
+
     int aEnableHkpt[4] = {LSI_HKPT_RCVD_RESP_HEADER,
                           LSI_HKPT_HANDLER_RESTART, };
     int arrCount = 2;
@@ -546,6 +560,7 @@ static int reqBodyHook(lsi_param_t *rec)
         
         msc_append_request_body(myData->modsec_transaction,
                                 (const unsigned char *)pTmpBuf, (size_t)len);
+
         int ret = process_intervention(myData->modsec_transaction, rec);
         if (ret != STATUS_OK) {
             g_api->log(session, LSI_LOG_DEBUG,
@@ -554,8 +569,8 @@ static int reqBodyHook(lsi_param_t *rec)
         }
         offset += len;
     }
-    while (!g_api->is_body_buf_eof(pBuf, offset)); 
-    
+    while (!g_api->is_body_buf_eof(pBuf, offset));
+
     g_api->log(session, LSI_LOG_DEBUG,
                "[Module:%s] reqBodyHook used %ld bytes of %ld\n", 
                ModuleNameStr, offset, len);
@@ -615,6 +630,28 @@ static int respHeaderHook(lsi_param_t *rec)
         return LSI_ERROR;
     }
 
+    Rules *rules = myData->modsec_transaction->m_rules;
+    bool chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
+    if(chkRespBody && rules->m_responseBodyLimit.m_value > 3000) //at least set limit to 3000
+    {
+        struct iovec iov[1] = {{NULL, 0}};
+        int iovCount = g_api->get_resp_header(session,
+                                              LSI_RSPHDR_CONTENT_LENGTH,
+                                              NULL, 0, iov, 1);
+        if (iovCount == 1 && iov[0].iov_len > 0)
+        {
+            long len = atol((char *)iov[0].iov_base);
+            if (len > rules->m_responseBodyLimit.m_value)
+            {
+                int disableHkpt = LSI_HKPT_RCVD_RESP_BODY;
+                g_api->enable_hook(session, &MNAME, 0, &disableHkpt, 1);
+                g_api->log(session, LSI_LOG_DEBUG,
+                       "[Module:%s] ResponseBodyAccess disabled due to size %ld > %ld.",
+                       ModuleNameStr, len,
+                       (long)rules->m_responseBodyLimit.m_value);
+            }
+        }
+    }
     return LSI_OK;
 }
 

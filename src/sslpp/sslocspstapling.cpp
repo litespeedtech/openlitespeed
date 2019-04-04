@@ -373,7 +373,7 @@ int SslOcspStapling::createRequest()
         {
             if (DateTime::s_curTime - m_pHttpFetch->getTimeStart() < 30)
                 return 0;
-            LS_DBG("%s: HTTP fetch timed out, state: %d\n",
+            LS_DBG("[OCSP] %s: HTTP fetch timed out, state: %d\n",
                       m_sRespfileTmp.c_str(), m_pHttpFetch->getReqState());
         }
         delete m_pHttpFetch;
@@ -462,8 +462,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     {
         if (m_pCertId == NULL)
         {
-            log4cxx::Logger::getRootLogger()->error("%s: cert ID is NULL\n",
-                                       m_sCertfile.c_str());
+            LS_NOTICE("[OCSP] %s: cert ID is NULL\n", m_sCertfile.c_str());
             return 1;
         }
         int find_status = OCSP_resp_find_status(pBasicResp, m_pCertId, &n,
@@ -487,15 +486,14 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         }
         else
         {
-            log4cxx::Logger::getRootLogger()->error(
-                "%s: verify failed, find_status: %d, status: %d, validate: %d\n",
-                m_sCertfile.c_str(), find_status, n, validate);
+            LS_NOTICE("[OCSP] %s: verify failed, find_status: %d, status: %d, validate: %d\n",
+                      m_sCertfile.c_str(), find_status, n, validate);
         }
     }
     else
     {
-        log4cxx::Logger::getRootLogger()->error("%s: OCSP_basic_verify() failed: %s\n",
-                                       m_sCertfile.c_str(), SslError().what());
+        LS_NOTICE("[OCSP] %s: OCSP_basic_verify() failed: %s\n",
+                  m_sCertfile.c_str(), SslError().what());
         m_pCtx->disableOscp();
         m_RespTime = UINT_MAX;
 

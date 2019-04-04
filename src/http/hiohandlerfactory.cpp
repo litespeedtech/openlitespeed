@@ -29,7 +29,7 @@ HioHandler *HioHandlerFactory::getHioHandler(HiosProtocol proto)
     switch (proto)
     {
     case HIOS_PROTO_HTTP:
-        pHioHandler = HttpResourceManager::getInstance().getConnection();
+        pHioHandler = HttpResourceManager::getInstance().getHttpSession();
         return pHioHandler;
     case HIOS_PROTO_HTTP2:
         pHioHandler = H2Connection::get();

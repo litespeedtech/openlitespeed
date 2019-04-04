@@ -48,29 +48,29 @@ int HttpFetchDriver::onTimer()
 void HttpFetchDriver::start()
 {
     setPollfd();
-    Multiplexer *pMpl =  MultiplexerFactory::getMultiplexer();
+    Multiplexer *pMpl = getMultiplexer();
     if (pMpl)
         pMpl->add(this,  POLLIN | POLLOUT | POLLHUP | POLLERR);
 }
 
 void HttpFetchDriver::stop()
 {
-    Multiplexer *pMpl =  MultiplexerFactory::getMultiplexer();
+    Multiplexer *pMpl = getMultiplexer();
     if (pMpl)
         pMpl->remove(this);
 }
 
 void HttpFetchDriver::switchWriteToRead()
 {
-    MultiplexerFactory::getMultiplexer()->switchWriteToRead(this);
+    getMultiplexer()->switchWriteToRead(this);
 }
 
 void HttpFetchDriver::switchReadToWrite()
 {
-    MultiplexerFactory::getMultiplexer()->switchReadToWrite(this);
+    getMultiplexer()->switchReadToWrite(this);
 }
 
 void HttpFetchDriver::continueWrite()
 {
-    MultiplexerFactory::getMultiplexer()->continueWrite(this);
-}
+    getMultiplexer()->continueWrite(this);
+} 

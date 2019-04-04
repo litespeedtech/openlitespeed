@@ -449,27 +449,33 @@ int SslUtil::digestIdContext(SSL_CTX *pCtx, const void *pDigest,
 /*
  * return: -1 if cert NULL, 0 on fail, 1 on success
  */
-int SslUtil::loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen)
+int SslUtil::loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen,
+                      int loadChain)
 {
     BIO *in;
     X509 *cert = NULL;
-    int ret;
+    int ret = -1;
     unsigned int digestlen;
     unsigned char digest[EVP_MAX_MD_SIZE];
 
     in = BIO_new_mem_buf(pCert, iCertLen);
     cert = PEM_read_bio_X509(in, NULL, 0, NULL);
-    BIO_free(in);
-    if (!cert)
-        return -1;
-    if (( ret = SSL_CTX_use_certificate(pCtx, cert)) == 1 )
+    if (cert)
     {
-        if ( X509_digest(cert, EVP_sha1(), digest, &digestlen) == 0)
-            LS_DBG_L("Creating cert digest failed");
-        else if (digestIdContext(pCtx, digest, digestlen) != LS_OK)
-            LS_DBG_L("Digest id context failed");
+        if (( ret = SSL_CTX_use_certificate(pCtx, cert)) == 1 )
+        {
+            if ( X509_digest(cert, EVP_sha1(), digest, &digestlen) == 0)
+                LS_DBG_L("Creating cert digest failed");
+            else if (digestIdContext(pCtx, digest, digestlen) != LS_OK)
+                LS_DBG_L("Digest id context failed");
+        }
+        X509_free(cert);
     }
-    X509_free(cert);
+    if (ret && loadChain)
+    {
+        setCertificateChain(pCtx, in);
+    }
+    BIO_free(in);
     return ret;
 }
 
@@ -946,4 +952,57 @@ int SslUtil::lookupCertSerial(X509 *pCert, char *pBuf, int len)
     BIO_free(bio);
     return n;
 }
+
+#include <pthread.h>
+
+/* This array will store all of the mutexes available to OpenSSL. */
+static pthread_mutex_t *mutex_buf = NULL;
+
+static void locking_function(int mode, int n, const char *file, int line)
+{
+  if(mode & CRYPTO_LOCK)
+    pthread_mutex_lock(&mutex_buf[n]);
+  else
+    pthread_mutex_unlock(&mutex_buf[n]);
+}
+
+
+static unsigned long id_function(void)
+{
+  return ((unsigned long)pthread_self());
+}
+
+
+int thread_setup(void)
+{
+  int i;
+
+  mutex_buf = (pthread_mutex_t *)malloc(CRYPTO_num_locks()
+                                        * sizeof(pthread_mutex_t));
+  if(!mutex_buf)
+    return 0;
+  for(i = 0;  i < CRYPTO_num_locks();  i++)
+    pthread_mutex_init(&mutex_buf[i], NULL);
+  CRYPTO_set_id_callback(id_function);
+  CRYPTO_set_locking_callback(locking_function);
+  return 1;
+}
+
+
+int thread_cleanup(void)
+{
+  int i;
+
+  if(!mutex_buf)
+    return 0;
+  CRYPTO_set_id_callback(NULL);
+  CRYPTO_set_locking_callback(NULL);
+  for(i = 0;  i < CRYPTO_num_locks();  i++)
+    pthread_mutex_destroy(&mutex_buf[i]);
+  free(mutex_buf);
+  mutex_buf = NULL;
+  return 1;
+}
+
+
 

@@ -211,6 +211,8 @@ static lsi_config_key_t paramArray[] =
 
     {"no-vary",                 16, 0},//},16
     {"addEtag",                 17, 0},
+    {"purgeUri",                18, 0},
+    
     {NULL, 0, 0} //Must have NULL in the last item
 };
 
@@ -445,6 +447,7 @@ static int parseLine(CacheConfig *pConfig, int param_id,
     case 13: //storagepath
     case 14:
     case 15:
+    case 18:
         return i; //return the index for next step parsing
 
     case 16:
@@ -546,6 +549,9 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
             parseNoCacheUrl(pConfig, param[i].val, param[i].val_len, level, name);
         else if (ret == 14)
             parseNoCacheDomain(pConfig, param[i].val, param[i].val_len, level, name);
+        else if (ret == 18)
+            pConfig->setPurgeUri(param[i].val, param[i].val_len);
+
     }
 
     parseNoCacheUrlFinal(pConfig);
@@ -1340,6 +1346,19 @@ static int createEntry(lsi_param_t *rec)
     for (int i = 0; i < count; ++i)
         myData->cacheCtrl.parse((char *)iov[i].iov_base, iov[i].iov_len);
 
+    /**
+     * If no LSI_RSPHDR_LITESPEED_CACHE_CONTROL, then we can check
+     * expireInSeconds = 0 case and check the normal cache-contrl max-age
+     * and s-maxage
+     */
+    if (count == 0 && myData->cacheCtrl.getMaxAge() == 0)
+    {
+        count = g_api->get_resp_header(rec->session,
+                    LSI_RSPHDR_CACHE_CTRL, NULL, 0, iov, 3);
+        for (int i = 0; i < count; ++i)
+            myData->cacheCtrl.parse((char *)iov[i].iov_base, iov[i].iov_len);
+    }
+    
     if (myData->cacheCtrl.isCacheOff())
     {
         clearHooks(rec->session);
@@ -1347,6 +1366,8 @@ static int createEntry(lsi_param_t *rec)
                    "[%s]createEntry abort, code 1.\n", ModuleNameStr);
         return 0;
     }
+    
+    
 
     //For a HEAD request, do not save it
     if (myData->iMethod == HTTP_HEAD)
@@ -1518,7 +1539,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     getRespHeader(rec->session, LSI_RSPHDR_LAST_MODIFIED, &sLastMod,
                   &nLastModLen);
     if (sLastMod)
-        CeHeader.m_tmLastMod = DateTime::parseHttpTime(sLastMod);
+        CeHeader.m_tmLastMod = DateTime::parseHttpTime(sLastMod, nLastModLen);
 
 
     //Check if it is a static file caching
@@ -1999,7 +2020,7 @@ MyMData *createMData(lsi_param_t *rec)
                                rec->session, &MNAME);
     int flag = getControlFlag(pConfig);
     myData->cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
-    myData->pConfig = (CacheConfig *)g_api->get_config(rec->session, &MNAME);
+    myData->pConfig = pConfig;
     int uriLen = g_api->get_req_org_uri(rec->session, NULL, 0);
     if (uriLen > 0)
     {
@@ -2088,8 +2109,15 @@ static int checkAssignHandler(lsi_param_t *rec)
     int method = getHttpMethod(rec, httpMethod);
     if (method == HTTP_UNKNOWN || method == HTTP_POST)
     {
+        CacheConfig *pConfig = (CacheConfig *)g_api->get_config(
+                            rec->session, &MNAME);
+        int flag = getControlFlag(pConfig);
+        CacheCtrl cacheCtrl;
+        cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
+        parseEnv(rec->session, cacheCtrl);
+
         //Do not store POST method for handling, only store the timestamp
-        if (method == HTTP_POST)
+        if (method == HTTP_POST && cacheCtrl.isPrivateAutoFlush())
         {
             g_api->set_module_data(rec->session, &MNAME, LSI_DATA_IP,
                                    (void *)(long)DateTime_s_curTime);
@@ -2112,23 +2140,6 @@ static int checkAssignHandler(lsi_param_t *rec)
         return bypassUrimapHook(rec, myData);
     }
 
-    CacheCtrl cacheCtrl;
-    int flag = getControlFlag(pConfig);
-    cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
-    parseEnv(rec->session, cacheCtrl);
-
-    if (rec->ptr1 != NULL && rec->len1 > 0)
-        cacheCtrl.parse((const char *)rec->ptr1, rec->len1);
-
-    if (!pConfig->isSet(CACHE_IGNORE_REQ_CACHE_CTRL_HEADER))
-    {
-        int bufLen;
-        const char *buf = g_api->get_req_header_by_id(rec->session,
-                          LSI_HDR_CACHE_CTRL, &bufLen);
-        if (buf && bufLen > 0)
-            cacheCtrl.parse(buf, bufLen);
-    }
-
     if (method == HTTP_GET || method == HTTP_HEAD)
     {
         if (!pConfig->isCheckPublic() && !pConfig->isPrivateCheck())
@@ -2149,6 +2160,20 @@ static int checkAssignHandler(lsi_param_t *rec)
 
     myData->pConfig = pConfig;
     myData->iMethod = method;
+    CacheCtrl &cacheCtrl = myData->cacheCtrl;
+    parseEnv(rec->session, cacheCtrl);
+
+    if (rec->ptr1 != NULL && rec->len1 > 0)
+        cacheCtrl.parse((const char *)rec->ptr1, rec->len1);
+
+    if (!pConfig->isSet(CACHE_IGNORE_REQ_CACHE_CTRL_HEADER))
+    {
+        int bufLen;
+        const char *buf = g_api->get_req_header_by_id(rec->session,
+                          LSI_HDR_CACHE_CTRL, &bufLen);
+        if (buf && bufLen > 0)
+            cacheCtrl.parse(buf, bufLen);
+    }
 
     //Set to true but not the below just for not to re-check cache state or
     //re-store it
@@ -2195,11 +2220,6 @@ static int checkAssignHandler(lsi_param_t *rec)
         return bypassUrimapHook(rec, NULL);
     }
 
-
-    //need to  re-set the cacheCtrl and pConfig since it may be updated in diff level
-    myData->cacheCtrl = cacheCtrl;
-    myData->pConfig = pConfig;
-    
     if (g_api->get_req_env(rec->session, "LSCACHE_FRONTEND", 16, val, 2) > 0
         && strncasecmp(val, "1", 1) ==  0)
     {
@@ -2395,7 +2415,7 @@ int isModified(const lsi_session_t *session, CeHeader &CeHeader, char *etag,
 
     buf = g_api->get_req_header(session, "If-Modified-Since", 17, &len);
     if (!*buf && len >= RFC_1123_TIME_LEN &&
-        CeHeader.m_tmLastMod <= DateTime::parseHttpTime(buf))
+        CeHeader.m_tmLastMod <= DateTime::parseHttpTime(buf, len))
         return 0;
 
     return 1;
@@ -2742,13 +2762,26 @@ static int handlerProcess(const lsi_session_t *session)
 
     if (myData->iMethod == HTTP_PURGE || myData->iMethod == HTTP_REFRESH)
     {
-        int len;
-        const char *pIP = g_api->get_client_ip(session, &len);
-        if (g_api->get_client_access_level(session) != LSI_ACL_TRUST &&
-            (!pIP || strncmp(pIP, "127.0.0.1", 9) != 0))
+        /**
+         * 1, if the context is protected by realm, need to pass the http Authorization
+         * 2, if the context is not protected by realm, the IP must be defined as trust
+         * 3, if there is an entry, purge the entry
+         * 4, if no entry, if the purgeUri is defined, must match the uri
+         */
+        
+        char httpAuthEnv[3] = {0};
+        int httpAuthEnvLen = g_api->get_req_env(session, "HttpAuth", 8,
+                                                    httpAuthEnv, 2);
+        if (httpAuthEnvLen <= 0 || *httpAuthEnv != '1')
         {
-            decref_and_free_data(myData, session);
-            return 405;
+            int len;
+            const char *pIP = g_api->get_client_ip(session, &len);
+            if (g_api->get_client_access_level(session) != LSI_ACL_TRUST &&
+                (!pIP || strncmp(pIP, "127.0.0.1", 9) != 0))
+            {
+                decref_and_free_data(myData, session);
+                return 405;
+            }
         }
 
         if (myData->pEntry)
@@ -2767,11 +2800,43 @@ static int handlerProcess(const lsi_session_t *session)
             }
         }
         else
-            g_api->append_resp_body(session, "No such entry.", 14);
+        {
+            bool bPurgeTags = true;
+            char *pUri = myData->pConfig->getPurgeUri();
+            if (pUri)
+            {
+                char *pOrgUri = strchr(myData->pOrgUri, ':');
+                pOrgUri = strchr(pOrgUri, '/');
+                if (strcasecmp(pUri, pOrgUri) != 0)
+                    bPurgeTags = false;
+            }
+            
+            if (bPurgeTags)
+            {
+                int valLen = 0;
+                const char *pVal = g_api->get_req_header_by_id(session,
+                                                              LSI_HDR_LITESPEED_PURGE,
+                                                              &valLen);
+                if (pVal && valLen > 0)
+                {
+                    processPurge(session, pVal, valLen);
+                    g_api->set_resp_content_length(session, valLen + 24);
+                    g_api->append_resp_body(session, "Processed PURGE by \"", 20);
+                    g_api->append_resp_body(session, pVal, valLen);
+                    g_api->append_resp_body(session, "\".\r\n", 4);
+                }
+                else
+                    g_api->append_resp_body(session, "PURGE tag not defined.\n",
+                                        23);
+            }
+            else
+                g_api->append_resp_body(session, "PURGE uri not match.\n", 21);
+        }
+
 
         g_api->end_resp(session);
         decref_and_free_data(myData, session);
-        return 200;
+        return 0;
     }
 
 

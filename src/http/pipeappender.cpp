@@ -112,8 +112,8 @@ int PipeAppender::close()
     // stop previous external logger
 
     MultiplexerFactory::getMultiplexer()->remove(this);
+    ::close(m_fd);
     EventReactor::setfd(-1);
-    ::close(getfd());
     setfd(-1);
 
     if (m_pid != -1)

@@ -36,7 +36,7 @@ CacheCtrl::CacheCtrl()
 CacheCtrl::~CacheCtrl()
 {
 }
-#define CACHE_DIRECTIVES 16
+#define CACHE_DIRECTIVES 17
 static const char *s_directives[CACHE_DIRECTIVES] =
 {
     "no-cache",
@@ -46,7 +46,7 @@ static const char *s_directives[CACHE_DIRECTIVES] =
     "min-fresh",
     "no-transform",
     "only-if-cached",
-    "public",
+    "public",//7
     "private",
     "must-revalidate",
     "proxy-revalidate",
@@ -54,11 +54,12 @@ static const char *s_directives[CACHE_DIRECTIVES] =
     "esi",
     "no-vary",
     "set-blank",
-    "shared"
+    "shared",
+    "no-autoflush",//16
 };
 
 static const int s_dirLen[CACHE_DIRECTIVES] =
-{   8, 8, 7, 9, 9, 12, 14, 6, 7, 15, 16, 8, 3, 7, 9, 6    };
+{   8, 8, 7, 9, 9, 12, 14, 6, 7, 15, 16, 8, 3, 7, 9, 6, 12   };
 
 
 int CacheCtrl::parse(const char *pHeader, int len)
@@ -118,6 +119,9 @@ int CacheCtrl::parse(const char *pHeader, int len)
                 case 7:
                     // If php says public, cache publicly.
                     m_flags &= ~cache_private;
+                    break;
+                case 16:
+                    m_flags |= no_autoflush;
                     break;
                 default:
                     break;

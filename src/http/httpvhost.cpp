@@ -1799,6 +1799,7 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     config.getEnv()->add(pAppDefault->getEnv());
     config.addEnv(NULL);
     config.setUGid(getUid(), getGid());
+    config.setRunOnStartUp(runOnStart);
 
     snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
     pWorker->setRestartMarker(achName, 0);

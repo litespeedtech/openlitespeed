@@ -136,7 +136,7 @@ public:
 
     int write(LoopBuf *pBuf);
 
-    Multiplexer *getMultiplexer() const
+    Multiplexer *getCurMplex() const
     {   return m_pMplex;  }
 
     virtual int onHangup();

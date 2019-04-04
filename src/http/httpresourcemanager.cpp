@@ -99,3 +99,54 @@ void HttpResourceManager::onTimer()
 }
 
 
+#define SESSION_POOL_VG_DEBUG 1
+
+void HttpResourceManager::recycle(HttpSession *pSession)
+{
+#ifdef SESSION_POOL_VG_DEBUG
+    delete pSession;
+#else
+    s_pool.recycle(pSession);
+#endif
+}
+
+
+HttpSession *HttpResourceManager::getHttpSession()
+{
+    HttpSession *p;
+#ifdef SESSION_POOL_VG_DEBUG
+    p = new HttpSession();
+#else
+    p = s_pool.get();
+#endif
+    return p;
+}
+
+
+void HttpResourceManager::recycle(HttpSession **pSession, int n)
+{
+#ifdef SESSION_POOL_VG_DEBUG
+    for (int i = 0; i < n; ++i)
+    {
+        delete pSession[i];
+    }
+#else
+    s_pool.recycle((void **)pSession, n);
+#endif
+}
+
+
+int HttpResourceManager::getConnections(HttpSession **pSession, int n)
+{
+#ifdef SESSION_POOL_VG_DEBUG
+    for (int i = 0; i < n; ++i)
+    {
+        pSession[i] = new HttpSession();
+    }
+    return n;
+#else
+    int ret = s_pool.get(pSession, n);
+    return ret;
+#endif
+}
+

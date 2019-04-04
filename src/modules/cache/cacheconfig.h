@@ -81,6 +81,7 @@ public:
     long getMaxObjSize() const      {   return m_lMaxObjSize;   }
     void setAddEtagType(int v)      {   m_iAddEtag = v;     }
     int getAddEtagType() const      { return m_iAddEtag;    }
+    char *getPurgeUri() const        { return m_pPurgeUri;   };
     int  isLitemagReady();
     void setLitemageDefault();
 
@@ -102,6 +103,7 @@ public:
 
     void setOwnStore(int v)    { m_iOwnStore = v; }
     //int getOwnStore()    { return m_iOwnStore; }
+    void setOwnPurgeUri(int v)    { m_iOwnPurgeUri = v; }
 
     Aho *getUrlExclude() const         {   return m_pUrlExclude;     }
     void setUrlExclude(Aho *pExclude)  {   m_pUrlExclude = pExclude; }
@@ -114,6 +116,13 @@ public:
     DirHashCacheStore *getStore() const { return m_pStore; }
     void setStore(DirHashCacheStore *pStore) { m_pStore = pStore; }
 
+    void setPurgeUri(const char *val, int valLen)
+    {
+        m_iOwnPurgeUri = 1;
+        m_pPurgeUri = strndup(val,valLen);
+    };
+    
+    
 
 
 private:
@@ -124,15 +133,16 @@ private:
     int     m_iMaxStale;
     long    m_lMaxObjSize;
     int8_t  m_iLevele;  //SERVER, VHOST or context
-    int8_t  m_iOnlyUseOwnUrlExclude;
-    int8_t  m_iOwnStore;
     int8_t  m_iAddEtag;  //0, no, 1: add size-mtime; 2: xxhash64
-
+    int8_t  m_iOnlyUseOwnUrlExclude;
+    int     m_iOwnStore : 4;
+    int     m_iOwnPurgeUri : 4;
 
     Aho        *m_pUrlExclude; //server and Vhost level can have it
     Aho        *m_pParentUrlExclude;
     VHostMap   *m_pVHostMapExclude;//Only server level has it
     DirHashCacheStore *m_pStore;
+    char       *m_pPurgeUri; //server and Vhost level can have it
 };
 
 #endif

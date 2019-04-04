@@ -998,7 +998,7 @@ void HttpServerImpl::checkOLSUpdate()
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
     sAutoUpdFile.append("/autoupdate/", 12);
     if (stat(sAutoUpdFile.c_str(), &sb) == -1)
-        mkdir(sAutoUpdFile.c_str(), 0777);
+        mkdir(sAutoUpdFile.c_str(), 0755);
     sAutoUpdFile.append("release", 7);
 
     if (stat(sAutoUpdFile.c_str(), &sb) != -1)
@@ -1214,6 +1214,9 @@ int HttpServerImpl::reinitMultiplexer()
     ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
     ServerInfo::getServerInfo()->setAdnsOp(0);
+#if defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
+    SigEventDispatcher::init();
+#endif
     return 0;
 }
 

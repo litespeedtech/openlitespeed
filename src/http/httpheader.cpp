@@ -32,7 +32,7 @@
 int HttpHeader::s_iHeaderLen[H_HEADER_END + 1] =
 {
     6, 14, 15, 15, 13, 10, 12, 14, 6, 7, 4, 6, 7, 10, //user-agent
-    13, 17, 8, 13, 8, 19, 10, 5, 15, 3, 17, 2, 6, 12, 19, 4, //date
+    13, 17, 8, 13, 8, 19, 10, 5, 15, 3, 17, 2, 17, 6, 12, 19, 4, //date
     7, 7, 7, 5, 16, 16, 16, 11, 13, 7, 13, //last-modified
     //13,3,4,8,18,16,11,6,4,16,10,11,6,20,19,25,
     0
@@ -67,6 +67,7 @@ const char *HttpHeader::s_pHeaderNames[H_HEADER_END + 1] =
 
     // request-header
     "TE",
+    "X-LiteSpeed-Purge",
     "Expect",
     "Max-Forwards",
     "Proxy-Authorization",
@@ -120,6 +121,7 @@ const char *HttpHeader::s_pHeaderNamesLowercase[H_HEADER_END + 1] =
 
     // request-header
     "te",
+    "x-litespeed-purge"
     "expect",
     "max-forwards",
     "proxy-authorization",
@@ -260,6 +262,8 @@ size_t HttpHeader::getIndex(const char *pHeader)
     case 'x':
         if (strncasecmp(pHeader, "-forwarded-for", 14) == 0)
             idx = H_X_FORWARDED_FOR;
+        else if (strncasecmp(pHeader, "-litespeed-purge", 16) == 0)
+            idx = H_X_LITESPEED_PURGE;
         break;
     }
 

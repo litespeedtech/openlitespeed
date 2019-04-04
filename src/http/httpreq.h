@@ -201,6 +201,12 @@ private:
     int                 m_reqLineLen;
     int                 m_reqURLOff;
     int                 m_reqURLLen;
+    
+    /***
+     * The below two array to store the headers other than the common
+     */
+    short               m_otherHeaderLen[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
+    int                 m_otherHeaderOffset[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
     ls_str_t            m_location;
     ls_str_t            m_pathInfo;
     ls_str_t            m_newHost;
@@ -412,7 +418,12 @@ public:
     //request header
 
     const char *getHeader(size_t index) const
-    {   return m_headerBuf.begin() + m_commonHeaderOffset[ index];  }
+    {
+        int offset = (index < HttpHeader::H_TE ?
+                         m_commonHeaderOffset[index] :
+                         m_otherHeaderOffset[index - HttpHeader::H_TE]);
+        return m_headerBuf.begin() + offset;
+    }
 
     const char *getHeader(const char *pName, int namelen, int &valLen) const
     {
@@ -428,7 +439,11 @@ public:
     int isHeaderSet(size_t index) const
     {   return m_commonHeaderOffset[index];     }
     int getHeaderLen(size_t index) const
-    {   return m_commonHeaderLen[ index ];      }
+    {
+        return (index < HttpHeader::H_TE ?
+                 m_commonHeaderLen[ index ] :
+                 m_otherHeaderLen[ index - HttpHeader::H_TE]);
+    }
 
     int dropReqHeader(int index);
     

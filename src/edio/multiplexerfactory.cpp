@@ -30,7 +30,6 @@ int MultiplexerFactory::s_iMaxFds = 4096;
 static const char *s_sType[MultiplexerFactory::BEST + 1] =
 {
     "poll",
-    "select",
     "devpoll",
     "kqueue",
     "rtsig",
@@ -47,13 +46,15 @@ LS_SINGLETON(MultiplexerFactory);
 
 int MultiplexerFactory::getType(const char *pType)
 {
-    int i;
-    if (!pType)
-        return POLL;
-    for (i = 0; i < BEST + 1; ++i)
+    int i = BEST;
+    if (pType)
     {
-        if (strcasecmp(pType, s_sType[i]) == 0)
-            break;
+        for (i = 0; i < BEST + 1; ++i)
+        {
+            if (strcasecmp(pType, s_sType[i]) == 0)
+                break;
+        }
+        i = BEST;
     }
     if (i == BEST)
     {

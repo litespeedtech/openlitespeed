@@ -12,6 +12,8 @@
 
 SslError::SslError() throw()
 {
+    m_achMsg[0] = 0;
+    m_iError = 0;
     char *p = m_achMsg;
     char *pEnd = &m_achMsg[MSG_MAX_LEN] - 1;
     const char *data;
@@ -34,6 +36,7 @@ SslError::SslError() throw()
 
 SslError::SslError(int err) throw()
 {
+    m_achMsg[0] = 0;
     m_achMsg[MSG_MAX_LEN] = 0;
     m_iError = err;
     ERR_error_string_n(m_iError, m_achMsg, MSG_MAX_LEN);

@@ -319,7 +319,8 @@ int StaticFileCacheData::testMod(HttpReq *pReq)
         if (pReq->isHeaderSet(HttpHeader::H_IF_MODIFIED_SINCE))
         {
             pNonMatch = pReq->getHeader(HttpHeader::H_IF_MODIFIED_SINCE);
-            long IMS = DateTime::parseHttpTime(pNonMatch);
+            long IMS = DateTime::parseHttpTime(pNonMatch,
+                pReq->getHeaderLen(HttpHeader::H_IF_MODIFIED_SINCE));
             if (IMS >= m_fileData.getLastMod())
                 return SC_304;
         }
@@ -341,7 +342,7 @@ int StaticFileCacheData::testIfRange(const char *pMatch, int len)
     }
     else
     {
-        long IUMS = DateTime::parseHttpTime(pMatch);
+        long IUMS = DateTime::parseHttpTime(pMatch, len);
         if (IUMS < m_fileData.getLastMod())
             return SC_412;
     }
@@ -371,7 +372,8 @@ int StaticFileCacheData::testUnMod(HttpReq *pReq)
     if (pReq->isHeaderSet(HttpHeader::H_IF_UNMOD_SINCE))
     {
         pMatch = pReq->getHeader(HttpHeader::H_IF_UNMOD_SINCE);
-        long IMS = DateTime::parseHttpTime(pMatch);
+        long IMS = DateTime::parseHttpTime(pMatch,
+            pReq->getHeaderLen(HttpHeader::H_IF_UNMOD_SINCE));
         if (IMS < m_fileData.getLastMod())
             return SC_412;
     }

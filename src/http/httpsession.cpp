@@ -564,6 +564,8 @@ int HttpSession::reqBodyDone()
     int ret = 0;
     getStream()->wantRead(0);
     setFlag(HSF_REQ_BODY_DONE, 1);
+    LS_DBG_L(getLogSession(),
+             "HttpSession::reqBodyDone().");
 
     if (m_pReqParser)
     {
@@ -726,15 +728,14 @@ int HttpSession::readReqBody()
         else if (ret == -2)
             return getModuleDenyCode(LSI_HKPT_RECV_REQ_BODY);
     }
-    
-    if (isspdy && readbytes && m_pHandler)
-    {
-        m_pHandler->onRead(this);
-        return 0;
-    }
-    
     LS_DBG_L(getLogSession(), "Finished request body %lld bytes!",
              (long long)m_request.getContentFinished());
+    if (!endOfReqBody() && isspdy && readbytes && m_pHandler)
+    {
+        m_pHandler->onRead(this);
+        //return 0;
+    }
+
     if (m_pChunkIS)
     {
         if (m_pChunkIS->getBufSize() > 0)
@@ -1087,6 +1088,16 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
 
 int HttpSession::processNewReqInit()
 {
+    LS_DBG_L(getLogSession(),
+             "processNewReq(), request header buffer size: %d, "
+             "header used: %d, processed: %d.",
+             m_request.getHeaderBuf().size(),
+             m_request.getHttpHeaderEnd(), m_request.getCurPos());
+
+    if ( m_request.getHttpHeaderLen() > 0 )
+        LS_DBG_H(getLogSession(), "Headers: %.*s",
+                m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
+
     int ret;
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
     int useProxyHeader = httpServConf.getUseProxyHeader();
@@ -1134,8 +1145,8 @@ int HttpSession::processNewReqInit()
             len = m_request.getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
         }
         
-        LS_DBG_L(getLogSession(), "HttpSession::processNewReqInit pProxyHeader %s pName %s len %d.",
-                 pProxyHeader, pName, len);
+        LS_DBG_L(getLogSession(), "HttpSession::processNewReqInit client IP from '%s: %.*s'.",
+                 pName, len, pProxyHeader);
         if (*pProxyHeader)
         {
             ret = updateClientInfoFromProxyHeader(pName, pProxyHeader, len);
@@ -1339,6 +1350,11 @@ int HttpSession::checkAuthentication(const HTAuth *pHTAuth,
 //            else
 //                m_request.saveMatchedResult();
         }
+    }
+    else
+    {
+        LS_DBG_H(getLogSession(), "User '%s' authenticated.", pAuthUser);
+        addEnv("HttpAuth", 8, "1", 1);
     }
     return ret;
 
@@ -1973,7 +1989,8 @@ void HttpSession::sendHttpError(const char *pAdditional)
                     }
 
                     assert(pErrDoc->len() < 2048);
-                    int ret = redirect(pErrDoc->c_str(), pErrDoc->len(), 1);
+                    int ret = redirect(pErrDoc->c_str(), pErrDoc->len(),
+                                      !m_request.isAppContext());
                     if (ret == 0 || statusCode == ret)
                         return;
                     if ((ret != m_request.getStatusCode())
@@ -3394,10 +3411,13 @@ void HttpSession::prepareHeaders()
     HttpRespHeaders &headers = m_response.getRespHeaders();
     headers.addCommonHeaders();
 
+    if (m_request.isCfIpSet())
+        headers.addTruboCharged();
+
     if (m_request.getAuthRequired())
         m_request.addWWWAuthHeader(headers);
 
-    if (m_request.getLocation() != NULL)
+    if (m_request.getLocationLen() > 0 && m_request.getLocation() != NULL)
         addLocationHeader();
     
     m_request.applyHeaderOps(this, &headers);
@@ -3662,6 +3682,9 @@ int HttpSession::sendRespHeaders()
     
     if (finalizeHeader(m_request.getVersion(), m_request.getStatusCode()))
         return 1;
+
+    if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
+        m_response.getRespHeaders().dump(getLogSession(), 1);
 
     getStream()->sendRespHeaders(&m_response.getRespHeaders(), isNoBody);
     m_iFlag |= HSF_RESP_HEADER_SENT;
@@ -4227,6 +4250,60 @@ int HttpSession::finalizeHeader(int ver, int code)
             m_request.isKeepAlive());
     
     return ret;
+}
+
+void HttpSession::testContentType()
+{
+    HttpResp *pResp = getResp();
+    HttpReq *pReq = getReq();
+    int valLen;
+    char *pValue = (char *)pResp->getRespHeaders().getHeader(
+                                HttpRespHeaders::H_CONTENT_TYPE, &valLen);
+    if (!pValue)
+        return;
+    const MimeSetting *pMIME = NULL;
+    int canCompress = pReq->gzipAcceptable() | pReq->brAcceptable();
+    HttpContext *pContext = &(pReq->getVHost()->getRootContext());
+    const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
+    int enbale = pContext->getExpires().isEnabled();
+
+    if (canCompress || enbale)
+    {
+        char *pEnd;
+        const char *p;
+        p = (char *)memchr(pValue, ';', valLen);
+        if (p)
+            pEnd = (char *)p;
+        else
+            pEnd = (char *)pValue + valLen;
+        char ch = *pEnd;
+        *pEnd = 0;
+        pMIME = pContext->lookupMimeSetting((char *)pValue);
+        LS_DBG_L(getLogSession(), "Response content type: [%s], pMIME: %p\n",
+                 pValue, pMIME);
+        *pEnd = ch;
+
+    }
+    if (!pMIME || !pMIME->getExpires()->compressible())
+    {
+        pReq->andGzip(~GZIP_ENABLED);
+        pReq->andBr(~BR_ENABLED);
+    }
+
+    if (enbale)
+    {
+        ExpiresCtrl *pExpireDefault = NULL;
+        if (pMIME && pMIME->getExpires()->getBase())
+            pExpireDefault = (ExpiresCtrl *)pMIME->getExpires();
+        if (pExpireDefault == NULL)
+            pExpireDefault = &pContext->getExpires();
+
+        if (pExpireDefault->getBase())
+            pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
+    }
+
+    if (pReq->isKeepAlive())
+        pReq->smartKeepAlive(pValue);
 }
 
 
