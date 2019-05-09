@@ -336,7 +336,7 @@ static int execute_cgi(lscgid_t *pCGI)
     {
         uint32_t cookie;
         int ret = -1;
-        int count;
+        //int count;
         //for( count = 0; count < 10; ++count )
         {
             ret = (*fp_lve_enter)(s_lve, pCGI->m_data.m_uid, -1, -1, &cookie);

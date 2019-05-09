@@ -77,6 +77,8 @@ extern "C" {
 #define LSAPI_RESP_END              5
 #define LSAPI_STDERR_STREAM         6
 #define LSAPI_REQ_RECEIVED          7
+#define LSAPI_CONN_CLOSE            8
+#define LSAPI_INTERNAL_ERROR        9
 
 
 #define LSAPI_MAX_HEADER_LEN        65535
@@ -87,10 +89,10 @@ extern "C" {
 
     struct lsapi_packet_header
     {
-        char    m_versionB0;      //LSAPI protocol version
-        char    m_versionB1;
-        char    m_type;
-        char    m_flag;
+        uint8_t m_versionB0;      //LSAPI protocol version
+        uint8_t m_versionB1;
+        uint8_t m_type;
+        uint8_t m_flag;
         union
         {
             int32_t m_iLen;    //include this header

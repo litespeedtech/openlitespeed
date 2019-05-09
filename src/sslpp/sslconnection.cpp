@@ -102,8 +102,13 @@ int SslConnection::setfd(int fd)
     DEBUG_MESSAGE("[SSL: %p] setfd: %d\n", this, fd);
     if (m_ssl)
     {
-        BIO * bio = ls_fdbio_create(fd, &m_bio);
-        SSL_set_bio(m_ssl, bio, bio);
+        if  (fd != -1 && m_bio.m_rbioBuf == NULL)
+        {
+            BIO * bio = ls_fdbio_create(fd, &m_bio);
+            SSL_set_bio(m_ssl, bio, bio);
+        }
+        else
+            BIO_set_fd(SSL_get_rbio(m_ssl), fd, 0);
     }
     return 0;
 }
@@ -288,7 +293,9 @@ int SslConnection::accept()
                       this);
         return -1;
     }
-    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p\n", this, m_ssl);
+    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p, ctx: %p\n", this, 
+                  m_ssl, SSL_get_SSL_CTX(m_ssl));
+    setFlag(F_ASYNC_PK, 0);
     ret = SSL_do_handshake(m_ssl);
     DEBUG_MESSAGE("[SSL: %p] SSL_accept SSL_do_handshake rc: %d\n", this, ret);
     if (ret == 1)
@@ -341,6 +348,7 @@ int SslConnection::checkError(int ret)
                       this);
         ERR_clear_error();
         m_iWant = 0;
+        setFlag(F_ASYNC_PK, 1);
         errno = EAGAIN;
         return 0;
 #endif

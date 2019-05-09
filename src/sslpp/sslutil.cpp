@@ -908,6 +908,9 @@ int SslUtil::getSkid(SSL_CTX *pCtx, char *skid_buf, int buf_len)
 
     X509_EXTENSION *pExt = X509_get_ext(px509, idx);
 
+    if (NULL == pExt)
+        return LS_FAIL;
+
     const X509V3_EXT_METHOD *method;
 
     if (!(method = X509V3_EXT_get(pExt)))

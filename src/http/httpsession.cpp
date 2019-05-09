@@ -907,7 +907,7 @@ int HttpSession::readToHeaderBuf()
                               "Http request header is too big, abandon!");
                     //m_request.setHeaderEnd();
                     //m_request.dumpHeader();
-                    return SC_400;
+                    return SC_414;
                 }
             }
         }
@@ -1745,7 +1745,6 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     if (pHandler == NULL)
         return SC_403;
 
-    const HttpVHost *pVHost = m_request.getVHost();
      if (m_request.getContext()
         && m_request.getContext()->isAppContext())
     {
@@ -3516,7 +3515,7 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
     uri.len = uriLen;
     host.ptr = (char *)m_request.getHeader(HttpHeader::H_HOST);
     host.len = m_request.getHeaderLen(HttpHeader::H_HOST);
-    ls_strpair_t extraHeaders[4];
+    ls_strpair_t extraHeaders[8];
     ls_strpair_t *p = extraHeaders;
 //     URICache::iterator iter;
 //     URICache *pCache = m_request.getVHost()->getURICache();
@@ -3547,6 +3546,26 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
         p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_ACC_ENCODING);
         p++;
     }
+
+    p->val.len = m_request.getHeaderLen(HttpHeader::H_USERAGENT);
+    if (p->val.len > 0)
+    {
+        p->val.ptr = (char *)m_request.getHeader(HttpHeader::H_USERAGENT);
+        p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
+                                        HttpHeader::H_USERAGENT);
+        p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_USERAGENT);
+        p++;
+    }
+    char referer[16484];
+    p->val.len = snprintf(referer, sizeof(referer), "https://%.*s%.*s",
+                          (int)host.len, host.ptr, m_request.getOrgReqURLLen(),
+                          m_request.getOrgReqURL());
+    p->val.ptr = referer;
+    p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
+                                        HttpHeader::H_REFERER);
+    p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_REFERER);
+    p++;
+
     memset(p, 0, sizeof(*p));
     p = extraHeaders;
     
@@ -4290,9 +4309,11 @@ void HttpSession::testContentType()
         pReq->andBr(~BR_ENABLED);
     }
 
+    if (pReq->isKeepAlive())
+        pReq->smartKeepAlive(pValue);
+
     if (enbale)
     {
-        ExpiresCtrl *pExpireDefault = NULL;
         if (pMIME && pMIME->getExpires()->getBase())
             pExpireDefault = (ExpiresCtrl *)pMIME->getExpires();
         if (pExpireDefault == NULL)
@@ -4301,9 +4322,6 @@ void HttpSession::testContentType()
         if (pExpireDefault->getBase())
             pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
     }
-
-    if (pReq->isKeepAlive())
-        pReq->smartKeepAlive(pValue);
 }
 
 

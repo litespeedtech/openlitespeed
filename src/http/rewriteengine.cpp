@@ -80,13 +80,13 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
     int fd = open(path, O_RDONLY);
     if (fd == -1)
     {
-        LS_ERROR("Rewrite file [%s] can not open.", path);
+        LS_INFO("Rewrite file [%s] can not open.", path);
         return LS_FAIL;
     }
 
     struct stat sb;
     if (fstat(fd, &sb) == -1) {
-        LS_ERROR("Rewrite file [%s] cannot be open.", path);
+        LS_INFO("Rewrite file [%s] cannot be open.", path);
         return LS_FAIL;
     }
 
@@ -179,7 +179,12 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                 while (isspace(*pRules))
                     ++pRules;
                 
-                int len = pLineEnd - pRules;
+                int len = 0;
+                if (pLineEnd)
+                    len = pLineEnd - pRules;
+                else
+                    len = strlen(pRules);
+
                 if (len >= 2 && strncasecmp(pRules, "on", 2) == 0)
                 {
                     pContext->enableRewrite(1);

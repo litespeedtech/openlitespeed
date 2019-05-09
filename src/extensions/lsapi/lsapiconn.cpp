@@ -96,7 +96,7 @@ int LsapiConn::connect(Multiplexer *pMplx)
     }
     fcntl(fds[0], F_SETFD, FD_CLOEXEC);
     setReqProcessed(0);
-    setToStop(0);
+    setToClose(0);
     //if ( pApp->getCurInstances() >= pApp->getConfig().getInstances() )
     //    return LS_FAIL;
     m_pid = LocalWorker::workerExec(pWorker->getConfig(), fds[1]);
@@ -277,6 +277,7 @@ int  LsapiConn::endOfReqBody()
     }
     suspendWrite();
     m_lReqSentTime = DateTime::s_curTime;
+    m_respState = LSAPI_CONN_REQ_SENT;
     return 0;
 }
 
@@ -316,7 +317,17 @@ int LsapiConn::doRead()
 //        ret = processResp();
 //    else
 //        ret = processRespBuffed();
-    if (getState() == ABORT)
+    if (m_respState == LSAPI_CONN_END_RESP)
+    {
+        m_respState = 0;
+        if (getConnector())
+        {
+            incReqProcessed();
+            setInProcess(0);
+            getConnector()->endResponse(0, 0);
+        }
+    }
+    else if (getState() == ABORT)
     {
         if (getConnector())
         {
@@ -328,12 +339,27 @@ int LsapiConn::doRead()
 }
 
 
+const char *s_packetName[] =
+{
+    "LSAPI_INVALID",
+    "LSAPI_BEGIN_REQUEST",
+    "LSAPI_ABORT_REQUEST",
+    "LSAPI_RESP_HEADER",
+    "LSAPI_RESP_STREAM",
+    "LSAPI_RESP_END",
+    "LSAPI_STDERR_STREAM",
+    "LSAPI_REQ_RECEIVED",
+    "LSAPI_CONN_CLOSE",
+    "LSAPI_INTERNAL_ERROR",
+};
+
+
 inline int verifyPacketHeader(struct lsapi_packet_header *pHeader)
 {
     if ((LSAPI_VERSION_B0 != pHeader->m_versionB0) ||
         (LSAPI_VERSION_B1 != pHeader->m_versionB1) ||
         (LSAPI_RESP_HEADER > pHeader->m_type) ||
-        (LSAPI_REQ_RECEIVED < pHeader->m_type))
+        (LSAPI_INTERNAL_ERROR < pHeader->m_type))
         return LS_FAIL;
     if (LSAPI_ENDIAN != (pHeader->m_flag & LSAPI_ENDIAN_BIT))
     {
@@ -379,6 +405,11 @@ int LsapiConn::processPacketHeader(char *pBuf, int len)
             errno = EIO;
             return LS_FAIL;
         }
+        else
+            LS_DBG_M(this, "Received %s, packetLen: %d",
+                     s_packetName[m_respHeader.m_type],
+                     m_respHeader.m_packetLen.m_iLen);
+
 //         if ( m_iPacketLeft > LSAPI_MAX_HEADER_LEN )
 //         {
 //             LS_WARN( "[%s] LSAPI Packet is too large: %d",
@@ -389,10 +420,8 @@ int LsapiConn::processPacketHeader(char *pBuf, int len)
         switch (m_respHeader.m_type)
         {
         case LSAPI_RESP_END:
-            incReqProcessed();
-            setInProcess(0);
-            if (getConnector())
-                getConnector()->endResponse(0, 0);
+            m_respState = LSAPI_CONN_END_RESP;
+            m_iPacketHeaderLeft = LSAPI_PACKET_HEADER_LEN;
             return 0;
         case LSAPI_RESP_HEADER:
             if (m_respState == LSAPI_CONN_READ_RESP_BODY)
@@ -414,6 +443,9 @@ int LsapiConn::processPacketHeader(char *pBuf, int len)
             //m_reqReceived       = 1;
             setCPState(1);
             break;
+        case LSAPI_CONN_CLOSE:
+            markToClose();
+            return 0;
         }
     }
     return len;
@@ -453,11 +485,8 @@ int LsapiConn::processRespBuffed()
         switch (m_respHeader.m_type)
         {
         case LSAPI_RESP_END:
-            m_respState = LSAPI_CONN_IDLE;
-            incReqProcessed();
-            setInProcess(0);
-            getConnector()->endResponse(0, 0);
-            return 0;
+            m_respState = LSAPI_CONN_END_RESP;
+            break;
         case LSAPI_RESP_HEADER:
             m_iCurRespHeader    = 0;
             m_respState         = LSAPI_CONN_READ_RESP_INFO;
@@ -468,6 +497,9 @@ int LsapiConn::processRespBuffed()
             //m_reqReceived       = 1;
             setCPState(1);
             break;
+        case LSAPI_CONN_CLOSE:
+            markToClose();
+            return 0;
         }
         m_pRespHeaderProcess    = (char *)&m_respInfo;
     }
@@ -571,6 +603,12 @@ int LsapiConn::processResp()
                         break;
 
                     }
+                    else
+                        LS_DBG_M(getLogger(), "[%s] received %s, packetLen: %d",
+                                 getLogId(), s_packetName[m_respHeader.m_type],
+                                 m_respHeader.m_packetLen.m_iLen);
+
+
 //                     if ( m_iPacketLeft > LSAPI_MAX_HEADER_LEN )
 //                     {
 //                         LS_WARN( "[%s] LSAPI Packet is too large: %d",
@@ -580,11 +618,8 @@ int LsapiConn::processResp()
                     switch (m_respHeader.m_type)
                     {
                     case LSAPI_RESP_END:
-                        m_respState = 0;
-                        incReqProcessed();
-                        setInProcess(0);
-                        getConnector()->endResponse(0, 0);
-                        return 0;
+                        m_respState = LSAPI_CONN_END_RESP;
+                        break;
                     case LSAPI_RESP_HEADER:
                         m_iCurRespHeader = 0;
                         m_respState = LSAPI_CONN_READ_RESP_INFO;
@@ -595,6 +630,9 @@ int LsapiConn::processResp()
                         //m_reqReceived       = 1;
                         setCPState(1);
                         break;
+                    case LSAPI_CONN_CLOSE:
+                        markToClose();
+                        return 0;
                     }
                 }
             }
@@ -622,13 +660,17 @@ int LsapiConn::processResp()
                     if ((m_respState == LSAPI_CONN_READ_RESP_BODY) &&
                         (getConnector()))
                         getConnector()->flushResp();
-                    return ret;
+                    if (m_respState != LSAPI_CONN_END_RESP)
+                        return ret;
                 }
                 break;
             case LSAPI_STDERR_STREAM:
                 ret = readStderrStream();
-                if (ret <= 0)
+                if (ret <= 0 && m_respState != LSAPI_CONN_END_RESP)
                     return ret;
+                break;
+            case LSAPI_REQ_RECEIVED:
+                ret = readNotifyStream();
                 break;
             default:
                 //error: protocol error
@@ -872,6 +914,64 @@ int LsapiConn::readRespBody()
 }
 
 
+int LsapiConn::readNotifyStream()
+{
+    int     ret;
+    size_t  bufLen;
+    char    achBuf[2049];
+
+    while (m_iPacketLeft > 0)
+    {
+        char *pBuf = achBuf;
+        bufLen = sizeof(achBuf);
+        int toRead = m_iPacketLeft + sizeof(m_respHeader);
+        if (toRead > (int)bufLen)
+            toRead = bufLen ;
+        ret = read(pBuf, toRead);
+        if (ret > 0)
+        {
+            int len, packetLen;
+            LS_DBG_M(getLogger(),
+                     "[%s] process NOTIFY stream %d bytes, packet left: %d",
+                     getLogId(), ret, m_iPacketLeft);
+            if (ret >= m_iPacketLeft)
+            {
+                packetLen       = m_iPacketLeft;
+                m_iPacketLeft   = 0;
+            }
+            else
+            {
+                packetLen       = ret;
+                m_iPacketLeft  -= ret;
+            }
+            //if ( pHEC )
+            //    pHEC->processErrData( pBuf, packetLen );
+
+            if (m_iPacketLeft <= 0)
+            {
+                m_iPacketHeaderLeft = LSAPI_PACKET_HEADER_LEN;
+                if (ret > packetLen)
+                {
+                    LS_DBG_M(getLogger(), "[%s] process packet header %d bytes",
+                             getLogId(), ret - packetLen);
+                    len = processPacketHeader(pBuf + packetLen, ret - packetLen);
+                    if (len <= 0)
+                        return len;
+                    if ((m_respHeader.m_type != LSAPI_STDERR_STREAM) ||
+                        (m_iPacketLeft <= 0))
+                        return 1;
+                }
+                else
+                    break;
+            }
+        }
+        else
+            return ret;
+    }
+    return 1;
+}
+
+
 int LsapiConn::readStderrStream()
 {
     HttpExtConnector *pHEC = getConnector();
@@ -1012,8 +1112,8 @@ void LsapiConn::cleanUp()
 
 int LsapiConn::onTimer()
 {
-    if (m_respState && !getCPState()
-        && (DateTime::s_curTime - m_lReqSentTime >= 3))
+    if ((m_respState == LSAPI_CONN_REQ_SENT) && !getCPState()
+        && (DateTime::s_curTime - m_lReqSentTime >= 10))
     {
         LS_NOTICE(this, "No request delivery notification has been received "
                   "from LSAPI application, possible dead lock.");

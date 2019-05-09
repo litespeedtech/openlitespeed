@@ -205,7 +205,7 @@ private:
     /***
      * The below two array to store the headers other than the common
      */
-    short               m_otherHeaderLen[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
+    uint16_t            m_otherHeaderLen[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
     int                 m_otherHeaderOffset[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
     ls_str_t            m_location;
     ls_str_t            m_pathInfo;

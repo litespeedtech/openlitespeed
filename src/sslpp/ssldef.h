@@ -30,6 +30,8 @@ typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
 
 typedef int (*ssl_async_pk_resume_cb)(void *link);
 
+void *async_pk_prepare(SSL *ssl, ssl_async_pk_resume_cb on_resume, void *param);
+
 #ifdef __cplusplus
 }
 #endif

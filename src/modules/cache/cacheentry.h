@@ -28,6 +28,8 @@
 
 
 #define DateTime_s_curTime  ( DateTime::s_curTime )
+#define DateTime_s_curTimeMs  ( DateTime::s_curTimeUs / 1000 )
+
 //#define DateTime_s_curTime  ( time(NULL) )
 
 //#define CACHE_RESP_HEADER   1
@@ -184,6 +186,9 @@ public:
     void setNeedDelay(int v) {   m_needDelay = v;    }
     int  getNeedDelay() {   return m_needDelay;    }
 
+    int getVaryIndexSet(int index)   {  return m_iVaryFlag & (1 << index);   }
+    void setVaryIndex(int index)     { m_iVaryFlag |= (1 << index);   }
+
 
 private:
     long        m_lastAccess;
@@ -198,6 +203,7 @@ private:
     off_t       m_startOffset;
     CeHeader    m_header;
     int         m_fdStore;
+    int32_t     m_iVaryFlag;  //each bit indicate a vary req header
     AutoStr     m_sKey;
 
     AutoStr     m_sTag;

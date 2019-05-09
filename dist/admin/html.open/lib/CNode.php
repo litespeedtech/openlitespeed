@@ -237,9 +237,8 @@ class CNode
 
     public function EndBlock(&$cur_comment)
     {
-        $this->_fileline->AddEndComment($cur_comment);
-        $cur_comment = '';
         if ($this->_raw_tag != '') {
+            $this->_raw_content .= $cur_comment;
             if ($this->_raw_content != '') {
                 $child = new CNode($this->_raw_tag, $this->_raw_content, self::T_KV | self::T_RAW);
                 $this->AddChild($child);
@@ -250,7 +249,10 @@ class CNode
                     $child->_type |= self::T_RAW;
                 }
             }
+        } else {
+            $this->_fileline->AddEndComment($cur_comment);
         }
+        $cur_comment = '';
     }
 
     public function AddChild($child)

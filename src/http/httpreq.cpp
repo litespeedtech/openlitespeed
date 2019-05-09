@@ -264,15 +264,15 @@ int HttpReq::appendPendingHeaderData(const char *pBuf, int len)
 }
 
 
-static inline int growBuf(AutoBuf &buf, int len)
-{
-    int g = 1024;
-    if (g < len)
-        g = len;
-    if (buf.grow(g) == -1)
-        return SC_500;
-    return 0;
-}
+// static inline int growBuf(AutoBuf &buf, int len)
+// {
+//     int g = 1024;
+//     if (g < len)
+//         g = len;
+//     if (buf.grow(g) == -1)
+//         return SC_500;
+//     return 0;
+// }
 
 
 int HttpReq::processHeader()
@@ -371,7 +371,6 @@ int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
 
     int result = 0;
     const char *pCur = m_headerBuf.begin() + HEADER_BUF_PAD;
-    const char *pBEnd = m_headerBuf.end();
     const char *p = pCur + header->getMethodLen();
     m_reqLineOff = HEADER_BUF_PAD;
     result = parseMethod(pCur, p);
@@ -401,16 +400,22 @@ int HttpReq::processRequestLine()
     const char *pCur = m_headerBuf.begin() + m_iReqHeaderBufFinished;
     const char *pBEnd = m_headerBuf.end();
     int iBufLen = pBEnd - pCur;
-    assert(iBufLen >= 0);
+    if (iBufLen < 0)
+        return SC_500;
     
+    int isLongLine = 0;
     if (pBEnd > HttpServerConfig::getInstance().getMaxURLLen() +
         m_headerBuf.begin())
+    {
         pBEnd = HttpServerConfig::getInstance().getMaxURLLen() +
                 m_headerBuf.begin();
+        isLongLine = 1;
+    }
 
     const char *pLineEnd;
     while ((pLineEnd = (const char *)memchr(pCur, '\n', pBEnd - pCur)) != NULL)
     {
+        isLongLine = 0;
         while (pCur < pLineEnd)
         {
             if (!isspace(*pCur))
@@ -424,6 +429,8 @@ int HttpReq::processRequestLine()
     }
     if (pLineEnd == NULL)
     {
+        if (isLongLine)
+            return SC_414;
         if (iBufLen < MAX_BUF_SIZE + 20)
             return 1;
         else
@@ -720,7 +727,6 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
     const char *name;
     const char *value;
     key_value_pair *pCurHeader = NULL;
-    bool headerfinished = false;
     int index;
     int ret = 0;
 
@@ -3347,7 +3353,6 @@ int HttpReq::dropReqHeader(int index)
     char *pOld = (char *)getHeader(index);
     int oldLen = getHeaderLen(index);
     char *pValEnd = pOld + oldLen;
-    char *pHeaderName = pOld - HttpHeader::getHeaderStringLen(index) - 1;
     while(pOld[-1] != '\n')
         --pOld;
     --pOld;

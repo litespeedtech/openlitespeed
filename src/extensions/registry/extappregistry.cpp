@@ -491,6 +491,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
             config.setStartByServer(iAutoStart);
 
             config.config(pNode);
+            config.setRunOnStartUp(0);//For Vhost inherit app not to auto start
             config.setUGid(pVHost->getUid(), pVHost->getGid());
         }
     }

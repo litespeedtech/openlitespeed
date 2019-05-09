@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "mainserverconfig.h"
 
 //#define TEST_OUTPUT_PLAIN_CONF
 
@@ -1129,6 +1130,9 @@ void plainconf::getIncludeFile(const char *curDir, const char *orgFile,
 //Example: co -u1.1 httpd_config.conf
 void plainconf::checkInFile(const char *path)
 {
+    if (MainServerConfig::getInstance().getDisableWebAdmin())
+        return ;
+    
     if (access(path, 0) == -1)
         return ;
 

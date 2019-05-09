@@ -1821,9 +1821,10 @@ void NtwkIOLink::resumeEventNotify()
 static const char *s_pProtoString[] = { "", ":SPDY2", ":SPDY3", ":SPDY31", ":HTTP2" };
 const char *NtwkIOLink::buildLogId()
 {
-    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%hu%s",
-                      getClientInfo()->getAddrString(), getRemotePort(),
-                      s_pProtoString[(int)getProtocol() ]);
+    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%u%s",
+                              getClientInfo()->getAddrString(),
+                              getConnInfo()->m_remotePort,
+                              s_pProtoString[(int)getProtocol() ]);
     return m_logId.ptr;
 }
 

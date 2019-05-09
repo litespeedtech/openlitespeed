@@ -27,6 +27,7 @@
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <socket/coresocket.h>
+#include "socket/gsockaddr.h"
 #include <util/pcutil.h>
 #include <util/rlimits.h>
 #include <util/stringtool.h>
@@ -428,10 +429,18 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
 
 
 
-    CoreSocket::connect(
+    int ret = CoreSocket::connect(
         CgidWorker::getCgidWorker()->getConfig().getServerAddr(), 0,
         &fdReq, 1);
 
+    if (ret)
+    {
+        const GSockAddr &server = CgidWorker::getCgidWorker()->
+                                getConfig().getServerAddr();
+        LS_ERROR("[suEXEC] Failed to connect %s, return %d",
+                 server.toString(), ret);
+    }
+    
     if (fdReq != -1)
     {
         m_req.finalize(0, CgidWorker::getCgidWorker()->getConfig().getSecret(),

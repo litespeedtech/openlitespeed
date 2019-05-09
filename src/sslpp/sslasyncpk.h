@@ -23,21 +23,21 @@ class SslApkWorker : public EventNotifier
 {
     ls_lfqueue_t *m_pFinishedQueue;
     WorkCrew     *m_crew;
-    static SslApkWorker *m_obj;
+    static SslApkWorker *s_instance;
 
 public:
-    SslApkWorker()
-        : m_pFinishedQueue(NULL)
-        , m_crew(NULL)
-        { }
+    SslApkWorker();
 
     ~SslApkWorker();
-    
+
+    static int prepare();
+    static int start(Multiplexer *pMplx, int workers);
+
     static void setSslAsyncPkNotifier(SslApkWorker *m_not)
-    {   m_obj = m_not; }
+    {   s_instance = m_not; }
     
     static SslApkWorker *getSslAsyncPkNotifier()
-    {   return m_obj;  }
+    {   return s_instance;  }
     
     int init();
     
@@ -58,15 +58,13 @@ public:
     void release();
 
     static void enableApk(SSL_CTX *ctx);
-    static SslAsyncPk *prepareAsyncPk(SSL *ssl, ssl_async_pk_resume_cb on_read, 
-                                      void *link);
     static void cancel(SSL *ssl);
     static void releaseAsyncPk(SSL *ssl);
 
-    bool isCanceled()                   {   return (bool)(m_link == NULL); }
+    bool isCanceled()                   {   return (bool)(m_resume_param == NULL); }
     
-    void          *m_link;
-    ssl_async_pk_resume_cb m_on_read;
+    void         *m_resume_param;
+    ssl_async_pk_resume_cb on_resume_cb;
     int           m_refCounter;
     char          m_state;
     uint16_t      m_sig_alg;

@@ -93,7 +93,7 @@ struct ConnInfo
         struct ssl_st      *m_pSsl;
     };
     const ServerAddrInfo   *m_pServerAddrInfo;
-    int                     m_remotePort;
+    unsigned int            m_remotePort;
 };
 
 

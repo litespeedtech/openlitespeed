@@ -7,8 +7,7 @@ m4_include(ax_check_libudns.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-#AC_PREREQ([2.69])
-AC_INIT([openlitespeed],[1.4.46],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.4.47],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
@@ -267,6 +266,24 @@ echo "LIBBROTLI=$LIBBROTLI"
 AC_SUBST([LIBBROTLI])
 
 
+LIBGEOIP=" -lGeoIP "
+OPENLSWS_IPTOGEO=yes
+AC_ARG_ENABLE([iptogeo],
+              [AS_HELP_STRING([--enable-iptogeo=@<:@yes/no@:>@],
+                              [Enable iptogeo which need to have Geoip library installed @<:@default=yes@:>@])],
+               [OPENLSWS_IPTOGEO="$enableval"], [])
+
+if test "$OPENLSWS_IPTOGEO" = "no" ; then 
+    echo "iptogeo disabled!!!"
+    LIBGEOIP=
+else
+    AC_DEFINE_UNQUOTED([ENABLE_IPTOGEO], [1], [Defined to compile with iptogeo enabled])
+    LIBGEOIP=" -lGeoIP "
+    echo "iptogeo enabled!!!"
+fi
+echo "LIBGEOIP=$LIBGEOIP"
+AC_SUBST([LIBGEOIP])
+
 
 LIBMMDB=
 OPENLSWS_IPTOGEO2=no
@@ -355,7 +372,17 @@ AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
 AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
 
 
-
+AC_ARG_ENABLE([recaptcha],
+              [AS_HELP_STRING([--enable-recaptcha=@<:@yes/no@:>@],
+                              [Enable recaptcha @<:@default=yes@:>@])],
+               [OPENLSWS_RECAPTCHA="$enableval"], [])
+if test "$OPENLSWS_RECAPTCHA" = "no" ; then 
+    echo "Recaptcha disabled!!!"
+else
+    echo "Recaptcha enabled, will compile it..."
+    LSRECAPTCHA=`$srcdir/src/modules/lsrecaptcha/build_lsrecaptcha.sh`
+    echo $LSRECAPTCHA
+fi
 
 AC_ARG_WITH(ip2loc,
 [  --with-ip2loc[[=DIR]]        enable ip2location (located in directory DIR, if supplied).  [[default=no]]],
@@ -442,7 +469,6 @@ AX_PATH_LIB_PCRE(, AC_MSG_ERROR(Can not find pcre. You must install it before co
 AX_PATH_LIB_UDNS(, AC_MSG_ERROR(Can not find udns library. You must install it before continuing.))
 
 AX_LIB_EXPAT(0.5)
-#AC_CHECK_LIB([GeoIP], [GeoIP_id_by_addr])
 AC_CHECK_LIB(crypt,crypt,LIBS="-lcrypt $LIBS")
       
       

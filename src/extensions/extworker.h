@@ -110,9 +110,11 @@ public:
         m_pConfig->setMaxConns(max);
         m_connPool.setMaxConns(max);
     }
-    void clearCurConnPool();
+    int clearCurConnPool();
     ExtConn *getConn();
     void recycleConn(ExtConn *conn);
+    void removeConn(IConnection *pConn)
+    {   m_connPool.removeConn(pConn);     }
     int  removeReq(ExtRequest *pReq);
     int  processRequest(ExtRequest *pReq, int retry = 0);
     void onTimer();
@@ -148,17 +150,19 @@ public:
 
     ReqStats *getReqStats()    {   return &m_reqStats; }
 
-    virtual void addPid(pid_t pid)    {}
-    virtual void removePid(pid_t pid)  {}
+    virtual void addPid(pid_t pid)      {}
+    virtual void removePid(pid_t pid)   {}
     virtual void moveToStopList()       {}
     virtual void cleanStopPids()        {}
 
     virtual int setURL(const char *pURL);
 
     long getLastRestart() const         {   return m_lLastRestart;      }
-    void setLastRestart(long l)       {   m_lLastRestart = l;         }
+    void setLastRestart(long l)         {   m_lLastRestart = l;         }
 
     int getLingerConns() const          {   return m_iLingerConns;      }
+    void incLingerConn()                {   ++m_iLingerConns;           }
+
     LS_NO_COPY_ASSIGN(ExtWorker);
 };
 

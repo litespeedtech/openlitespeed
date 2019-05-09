@@ -611,11 +611,15 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
             p += 7;
         }
         i = pReq->getHeaderLen(HttpHeader::H_HOST);
+        if (i > pValue + bufLen - p)
+            i = pValue + bufLen - p;
         memmove(p, pReq->getHeader(HttpHeader::H_HOST),
                 i);
         p += i;
 
         i = pReq->getOrgURILen();
+        if (i > pValue + bufLen - p)
+            i = pValue + bufLen - p;
         memmove(p, pReq->getOrgURI(), i);
         p += i;
         return p - pValue;

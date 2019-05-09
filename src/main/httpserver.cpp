@@ -2793,9 +2793,17 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         SigEventDispatcher::setAiokoLoaded();
 #endif
 
-        //if ( m_pServer->initErrorLog( pRoot, 1 ) )
-        if (HttpServer::getInstance().initErrorLog(pRoot, 1))
-            break;
+        if (!MainServerConfigObj.getConfTestMode())
+        {
+            //if ( m_pServer->initErrorLog( pRoot, 1 ) )
+            if (HttpServer::getInstance().initErrorLog(pRoot, 1))
+                break;
+        }
+        else
+        {
+            HttpServer::getInstance().setErrorLogFile(TEST_CONF_LOG);
+            HttpServer::getInstance().setLogLevel("WARN");
+        }
 
         const char *pValue = pRoot->getChildValue("serverName");
         if (pValue != NULL)
@@ -2859,6 +2867,21 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                       procConf.getUid(), procConf.getGid());
                 chown(HttpLog::getAccessLogFileName(),
                       procConf.getUid(), procConf.getGid());
+
+                /**
+                 * Fix /cgid/ DIR permission because user can change
+                 * user/group setting and will cause permission error.
+                 */
+                AutoStr2 sDir = MainServerConfig::getInstance().getServerRoot();
+                sDir.append("cgid/", 5);
+                
+                /**
+                 * Some user may not have such DIR, Mkdir first
+                 */
+                struct stat sb;
+                if (stat(sDir.c_str(), &sb) == -1)
+                    mkdir(sDir.c_str(), 0710);
+                chown(sDir.c_str(), procConf.getUid(), procConf.getGid());
             }
         }
 
@@ -3055,18 +3078,24 @@ static int detectMmdb(const XmlNodeList *pList)
 int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 {
     const XmlNodeList *pList = pNode->getChildren("geoipDB");
-    Ip2Geo *pIp2Geo;
+    Ip2Geo *pIp2Geo = NULL;
     
     if ((!pList) || (pList->size() == 0))
         return 0;
+   
 #ifdef ENABLE_IPTOGEO2
     if (detectMmdb(pList))
         pIp2Geo = new IpToGeo2();
-    else
 #endif
+        
+#ifdef ENABLE_IPTOGEO        
+    if (!pIp2Geo)
         pIp2Geo = new IpToGeo();
+#endif
+
     if (!pIp2Geo)
         return LS_FAIL;
+
     if (pIp2Geo->config(pList) == -1)
     {
         delete pIp2Geo;
@@ -3206,11 +3235,16 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         return ret;
 
 
-    //if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
     {
         ret = loadAdminConfig(pRoot);
         if (ret)
             return ret;
+    }
+    else
+    {
+        //When webAdmin disabled, set to enableCoreDump to 1.
+        MainServerConfig::getInstance().setEnableCoreDump(1);
     }
 
     configTuning(pRoot);
@@ -3218,14 +3252,17 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     //Must load modules before parse and set scriptHandlers
     configModules(pRoot);
 
-    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    if (!MainServerConfig::getInstance().getConfTestMode())
     {
-        if (startAdminListener(pRoot, ADMIN_CONFIG_NODE))
-            return LS_FAIL;
-    }
+        if (!MainServerConfig::getInstance().getDisableWebAdmin())
+        {
+            if (startAdminListener(pRoot, ADMIN_CONFIG_NODE))
+                return LS_FAIL;
+        }
 
-    //All other server listeners
-    startListeners(pRoot);
+        //All other server listeners
+        startListeners(pRoot);
+    }
 
     int maxconns = ConnLimitCtrl::getInstance().getMaxConns();
     unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 3);
@@ -3305,8 +3342,11 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     configVHosts(pRoot);
     configZconfSvrConf(pRoot);
     configListenerVHostMap(pRoot, NULL);
-    configVHTemplates(pRoot);
-
+    if (!MainServerConfig::getInstance().getConfTestMode())
+    {
+        configVHTemplates(pRoot);
+    }
+    
     ZConfManager::getInstance().prepareServerUp();
 
     return ret;

@@ -38,6 +38,7 @@ public:
         F_HANDSHAKE_DONE    = 1,
         F_DISABLE_HTTP2     = 2,
         F_ASYNC_CERT        = 4,
+        F_ASYNC_PK          = 8
     };
 
     char wantRead() const   {   return m_iWant & READ;  }

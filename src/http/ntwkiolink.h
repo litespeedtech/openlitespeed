@@ -234,14 +234,6 @@ public:
     static int getToken()
     {   return s_iTmToken;        }
 
-    void setRemotePort(unsigned short port)
-    {
-        m_iRemotePort = port;
-        clearLogId();
-    };
-
-    unsigned short getRemotePort() const  {   return m_iRemotePort;       };
-
     int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
     const char *buildLogId();

@@ -243,7 +243,7 @@ int CgidWorker::config(const XmlNode *pNode1)
 
     if (!pValue)
     {
-        snprintf(achSocket, 128, "uds:/%s%sadmin/cgid/cgid.sock",
+        snprintf(achSocket, 128, "uds:/%s%scgid/cgid.sock",
                  (iChrootlen) ? psChroot : "",
                  MainServerConfig::getInstance().getServerRoot());
     }

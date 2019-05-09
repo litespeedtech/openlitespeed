@@ -31,6 +31,7 @@ CacheEntry::CacheEntry()
     , m_needDelay(0)
     , m_startOffset(0)
     , m_fdStore(-1)
+    , m_iVaryFlag(0)
     , m_pWaitQue(NULL)
 {
 }
@@ -58,14 +59,14 @@ int CacheKey::getPrivateId(char *pBuf, char *pBufEnd)
     char *p = pBuf;
     if (m_ipLen <= 0)
         return -1;
-    if (m_iCookiePrivate > 0)
-    {
-        if (p + m_iCookiePrivate + 1 > pBufEnd)
-            return -1;
-        *p++ = '~';
-        memmove(p , m_sCookie.c_str() + m_iCookieVary, m_iCookiePrivate);
-        p += m_iCookiePrivate;
-    }
+//     if (m_iCookiePrivate > 0)
+//     {
+//         if (p + m_iCookiePrivate + 1 > pBufEnd)
+//             return -1;
+//         *p++ = '~';
+//         memmove(p , m_sCookie.c_str() + m_iCookieVary, m_iCookiePrivate);
+//         p += m_iCookiePrivate;
+//     }
     if (p + m_ipLen + 1 > pBufEnd)
         return -1;
     *p++ = '@';

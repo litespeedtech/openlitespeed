@@ -193,7 +193,7 @@ public:
      */
     int addJob(ls_lfnodei_t *item);
 
-
+    void dropPriorityBy(int n)  {}
 
     LS_NO_COPY_ASSIGN(WorkCrew);
 };

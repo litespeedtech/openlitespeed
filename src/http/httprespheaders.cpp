@@ -48,8 +48,9 @@
 char HttpRespHeaders::s_sDateHeaders[30] = "Tue, 09 Jul 2013 13:43:01 GMT";
 int             HttpRespHeaders::s_commonHeadersCount = 2;
 http_header_t       HttpRespHeaders::s_commonHeaders[2];
-http_header_t       HttpRespHeaders::s_gzipHeaders[2];
-http_header_t       HttpRespHeaders::s_brHeaders[2];
+http_header_t       HttpRespHeaders::s_gzipHeaders;
+http_header_t       HttpRespHeaders::s_brHeaders;
+http_header_t       HttpRespHeaders::s_varyHeaders;
 http_header_t       HttpRespHeaders::s_keepaliveHeader;
 http_header_t       HttpRespHeaders::s_chunkedHeader;
 http_header_t       HttpRespHeaders::s_concloseHeader;
@@ -996,29 +997,23 @@ void HttpRespHeaders::buildCommonHeaders()
         HttpServerVersion::getVersionLen();
 
 
-    HttpRespHeaders::s_gzipHeaders[0].index    =
+    HttpRespHeaders::s_gzipHeaders.index    =
         HttpRespHeaders::H_CONTENT_ENCODING;
-    HttpRespHeaders::s_gzipHeaders[0].val      = "gzip";
-    HttpRespHeaders::s_gzipHeaders[0].valLen   = 4;
+    HttpRespHeaders::s_gzipHeaders.val      = "gzip";
+    HttpRespHeaders::s_gzipHeaders.valLen   = 4;
 
-    HttpRespHeaders::s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_gzipHeaders[1].val      = "Accept-Encoding";
-    HttpRespHeaders::s_gzipHeaders[1].valLen   = 15;
-
-
-    HttpRespHeaders::s_brHeaders[0].index    =
+    HttpRespHeaders::s_brHeaders.index    =
         HttpRespHeaders::H_CONTENT_ENCODING;
-    HttpRespHeaders::s_brHeaders[0].val      = "br";
-    HttpRespHeaders::s_brHeaders[0].valLen   = 2;
+    HttpRespHeaders::s_brHeaders.val      = "br";
+    HttpRespHeaders::s_brHeaders.valLen   = 2;
 
-    HttpRespHeaders::s_brHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_brHeaders[1].val      = "Accept-Encoding";
-    HttpRespHeaders::s_brHeaders[1].valLen   = 15;
+    HttpRespHeaders::s_varyHeaders.index    = HttpRespHeaders::H_VARY;
+    HttpRespHeaders::s_varyHeaders.val      = "Accept-Encoding";
+    HttpRespHeaders::s_varyHeaders.valLen   = 15;
 
-    HttpRespHeaders::s_keepaliveHeader.index    =
-        HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_keepaliveHeader.val      = "Keep-Alive";
-    HttpRespHeaders::s_keepaliveHeader.valLen   = 10;
+    HttpRespHeaders::s_keepaliveHeader.index   = HttpRespHeaders::H_CONNECTION;
+    HttpRespHeaders::s_keepaliveHeader.val     = "Keep-Alive";
+    HttpRespHeaders::s_keepaliveHeader.valLen  = 10;
 
     HttpRespHeaders::s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;
     HttpRespHeaders::s_concloseHeader.val      = "close";

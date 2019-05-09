@@ -29,6 +29,9 @@
 
 #define ADMIN_USERDB                "_AdminUserDB"
 
+#define TEST_CONF_LOG           DEFAULT_TMP_DIR "/testconf"
+
+
 extern const char *sStatDir;
 
 

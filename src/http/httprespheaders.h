@@ -34,11 +34,11 @@
 
 typedef struct
 {
-    int     keyOff;
-    int     valOff;
-    short   keyLen;
-    short   valLen;
-    int32_t next_index;  //For the multiple line case, this will indicate the next KVPair index, first valid value is 1 since default is 0
+    int         keyOff;
+    int         valOff;
+    short       keyLen;
+    uint16_t    valLen;
+    int32_t     next_index;  //For the multiple line case, this will indicate the next KVPair index, first valid value is 1 since default is 0
 } resp_kvpair;
 
 
@@ -195,13 +195,15 @@ public:
 
     void addGzipEncodingHeader()
     {
-        add(s_gzipHeaders, 2);
+        add(&s_gzipHeaders, 1);
+        add(&s_varyHeaders, 1, LSI_HEADEROP_APPEND);
         updateEtag(1);
     }
 
     void addBrotliEncodingHeader()
     {
-        add(s_brHeaders, 2);
+        add(&s_brHeaders, 1);
+        add(&s_varyHeaders, 1, LSI_HEADEROP_APPEND);
         updateEtag(2);
     }
 
@@ -279,8 +281,9 @@ private:
 
     static char s_sDateHeaders[30];
     static http_header_t   s_commonHeaders[2];
-    static http_header_t   s_gzipHeaders[2];
-    static http_header_t   s_brHeaders[2];
+    static http_header_t   s_gzipHeaders;
+    static http_header_t   s_brHeaders;
+    static http_header_t   s_varyHeaders;
     static http_header_t   s_keepaliveHeader;
     static http_header_t   s_chunkedHeader;
     static http_header_t   s_concloseHeader;

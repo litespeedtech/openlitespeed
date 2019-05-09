@@ -65,13 +65,18 @@ public:
     int setVerifyKey(void *pPrivatePurgeData, const char *pVerifyKey, int len);
     const char *getVerifyKey(void *pPrivatePurgeData, int *len);
 
-    virtual int addUrlVary(const char *pUrl, int len, int id);
+    virtual int addUrlVary(const char *pUrl, int len, int32_t id);
+    
+    virtual int delUrlVary(const char *pUrl, int len);
+    
+    virtual int32_t getUrlVaryId(const char *pUrl, int len);
 
     virtual int getVaryId(const char *pVary, int varyLen);
 
     virtual const AutoStr2 *getVaryStrById(uint id);
 
     virtual const AutoStr2 *getUrlVary(const char *pUrl, int len);
+
 
     CacheInfo *getCacheInfo();
 

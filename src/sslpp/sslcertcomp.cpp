@@ -347,13 +347,6 @@ void SslCertComp::setBrCompressLevel(int level)
 
 void SslCertComp::disableCertCompDecomp(SSL_CTX *ctx)
 {
-    DEBUG_MESSAGE("[SSLCertComp] disableCertComp: %p\n", ctx);
-    if ((s_activate_comp) || (s_activate_decomp))
-    {
-        DEBUG_MESSAGE("[SSLCertComp] turning it off\n");
-        SSL_CTX_add_cert_compression_alg(ctx, TLSEXT_cert_compression_brotli,
-                                         NULL, NULL);
-    }
 }
 
 
@@ -362,6 +355,9 @@ void SslCertComp::enableCertComp(SSL_CTX *ctx)
     DEBUG_MESSAGE("[SSLCertComp] enableCertComp: %p\n", ctx);
     if (s_activate_comp)
     {
+        if (s_iSSL_CTX_index < 0)
+            s_iSSL_CTX_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, freeCtxData);
+        
         if (!(SSL_CTX_add_cert_compression_alg(ctx, TLSEXT_cert_compression_brotli,
                                                certCompressFuncBrotli, NULL)))
             INFO_MESSAGE("[SSLCertComp] Requested cert compression but unable to "
@@ -377,6 +373,9 @@ void SslCertComp::enableCertDecomp(SSL_CTX *ctx)
     DEBUG_MESSAGE("[SSLCertComp] enableCertDecomp: %p\n", ctx);
     if (s_activate_decomp)
     {
+        if (s_iSSL_CTX_index < 0)
+            s_iSSL_CTX_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, freeCtxData);
+        
         if (!(SSL_CTX_add_cert_compression_alg(ctx, TLSEXT_cert_compression_brotli,
                                                NULL, certDecompressFuncBrotli)))
             INFO_MESSAGE("[SSLCertComp] Requested cert decompression but unable to "

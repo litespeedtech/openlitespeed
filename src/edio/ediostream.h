@@ -98,8 +98,6 @@ public:
             }
             if (ret < len)
                 resetRevent(POLLOUT);
-            else
-                setRevent(POLLOUT);
             return ret;
         }
     }
@@ -120,8 +118,6 @@ public:
                     ret = 0;
                 }
             }
-            else
-                setRevent(POLLOUT);
             return ret;
         }
     }

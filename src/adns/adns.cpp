@@ -413,7 +413,6 @@ int Adns::handleEvents( short events )
 
 int Adns::onTimer()
 {
-    dns_ioevent( m_pCtx, DateTime::s_curTime );
     if (++m_iCounter >= 10)
     {
         m_iCounter = 0;

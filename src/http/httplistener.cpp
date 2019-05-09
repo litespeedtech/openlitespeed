@@ -386,8 +386,8 @@ int HttpListener::checkAccess(struct conn_data *pData)
     ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pPeer);
     pData->pInfo = pInfo;
 
-    LS_DBG_H(this, "New connection from %s:%d.", pInfo->getAddrString(),
-             ntohs(((struct sockaddr_in *)pPeer)->sin_port));
+    LS_DBG_H(this, "New connection from %s:%u.", pInfo->getAddrString(),
+             (unsigned)ntohs(((struct sockaddr_in *)pPeer)->sin_port));
 
     return pInfo->checkAccess();
 }
@@ -432,8 +432,6 @@ int HttpListener::batchAddConn(struct conn_data *pBegin,
     }
     NtwkIOLink **pConnEnd = &pConns[ret];
     NtwkIOLink **pConnCur = pConns;
-    VHostMap *pMap;
-    sockaddr_in *pAddrIn;
     int flag = MultiplexerFactory::getMultiplexer()->getFLTag();
     while (pCur < pEnd)
     {
@@ -494,7 +492,6 @@ VHostMap *HttpListener::getSubMap(int fd)
 int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
 {
     int fd = pCur->fd;
-    sockaddr_in *pAddrIn = (sockaddr_in *)pCur->achPeerAddr;
     if (checkAccess(pCur))
     {
         no_timewait(fd);
@@ -520,14 +517,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         return LS_FAIL;
     }
 
-    VHostMap *pMap;
-    if (m_pSubIpMap)
-        pMap = getSubMap(fd);
-    else
-        pMap = getVHostMap();
-    pConn->setVHostMap(pMap);
     pConn->setLogger(getLogger());
-    pConn->setRemotePort(ntohs(pAddrIn->sin_port));
     if (pConn->setLink(this, pCur->fd, &info))
     {
         HttpResourceManager::getInstance().recycle(pConn);

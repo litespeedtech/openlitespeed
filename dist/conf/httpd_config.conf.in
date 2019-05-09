@@ -41,8 +41,8 @@ expires {
 }
 
 tuning{
-    maxConnections               10000
-    maxSSLConnections            5000
+    maxConnections               2000
+    maxSSLConnections            1000
     connTimeout                  300 
     maxKeepAliveReq              10000
     smartKeepAlive               0 
@@ -59,10 +59,10 @@ tuning{
     useSendfile                  1 
     fileETag                     28 
     SSLCryptoDevice              null 
-    maxReqURLLen                 8192 
-    maxReqHeaderSize             16380 
+    maxReqURLLen                 32768 
+    maxReqHeaderSize             65536 
     maxReqBodySize               2047M 
-    maxDynRespHeaderSize         8192 
+    maxDynRespHeaderSize         32768 
     maxDynRespSize               2047M 
     enableGzipCompress           1
     enableBrCompress             1
@@ -145,7 +145,7 @@ scriptHandler{
 railsDefaults{
     binPath                  %RUBY_BIN%
     railsEnv                 1 
-    maxConns                 5 
+    maxConns                 1 
     env                      LSAPI_MAX_IDLE=60 
     initTimeout              60 
     retryTimeout             0 

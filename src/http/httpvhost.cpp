@@ -1988,6 +1988,10 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
         config.addEnv(achName);
     }
 
+    snprintf(achName, MAX_PATH_LEN, "LSNODE_SOCKET=%s",
+             config.getServerAddr().getUnix());
+    config.addEnv(achName);
+
     if (pRunModeEnv)
     {
         snprintf(achName, MAX_PATH_LEN, "NODE_ENV=%s", pRunModeEnv);
@@ -2665,6 +2669,7 @@ int HttpVHost::configRedirectContext(const XmlNode *pContextNode,
     {
         pContext->redirectCode(code);
         pContext->setConfigBit(BIT_ALLOW_OVERRIDE, 1);
+        pContext->enableRewrite(0); //Force redirect context to disable rewrite
     }
     return 0;
 }

@@ -3,7 +3,7 @@ modulesdir=$(prefix)/modules
 modules_LTLIBRARIES=cache.la
 cache_la_LDFLAGS= -module -avoid-version -shared
 
-AM_CPPFLAGS =  -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
+AM_CPPFLAGS =  -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 cache_la_METASOURCES= AUTO
 

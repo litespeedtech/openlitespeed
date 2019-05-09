@@ -48,7 +48,13 @@
 
 #endif
 
-SslApkWorker *SslApkWorker::m_obj = NULL;
+SslApkWorker *SslApkWorker::s_instance = NULL;
+
+
+SslApkWorker::SslApkWorker()
+    : m_pFinishedQueue(NULL)
+    , m_crew(NULL)
+{ }
 
 
 SslApkWorker::~SslApkWorker()
@@ -60,6 +66,21 @@ SslApkWorker::~SslApkWorker()
 }
 
 
+int SslApkWorker::prepare()
+{
+    if (s_instance)
+        return 0;
+    s_instance = new SslApkWorker();
+    if (s_instance->init() == -1)
+    {
+        delete s_instance;
+        s_instance = NULL;
+        return -1;
+    }
+    return 0;
+}
+
+
 int SslApkWorker::init()
 {
     if (!m_pFinishedQueue)
@@ -67,19 +88,22 @@ int SslApkWorker::init()
         m_pFinishedQueue = ls_lfqueue_new();
         if (!m_pFinishedQueue)
         {
-            LS_NOTICE("[SSL] SSLAsyncPkNotifier::init Unable to create Finished queue\n");
+            LS_NOTICE("[SSL] [ApkWorrker] init Unable to create Finished queue\n");
             return -1;
         }
     }
     if (!m_crew)
     {
-        LS_DBG_L("[SSL] SSLAsyncPkNotifier::init create WorkCrew!\n");
+        LS_DBG_L("[SSL] [ApkWorrker] init create WorkCrew!\n");
         m_crew = new WorkCrew(this);
         if (!m_crew)
         {
-            LS_NOTICE("[SSL] SSLAsyncPkNotifier::init create WorkCrew memory error!\n");
+            LS_NOTICE("[SSL] [ApkWorrker] init create WorkCrew memory error!\n");
             return -1;
         }
+
+        m_crew->dropPriorityBy(1);
+
         //m_crew->blockSig(SIGCHLD);
         //m_crew->startProcessing();
     }
@@ -91,7 +115,7 @@ int SslApkWorker::addJob(ls_lfnodei_t  *data)
 {
     int rc;
     
-    LS_DBG_L("[SSL] SSLAsyncPkNotifier::addJob: %p!\n", data);
+    LS_DBG_L("[SSL] [ApkWorker] addJob: %p!\n", data);
     rc = m_crew->addJob(data);
     return rc;
 }
@@ -104,23 +128,37 @@ int SslApkWorker::startProcessor(int workers)
 }
 
 
+int SslApkWorker::start(Multiplexer *pMplx, int workers)
+{
+    if (prepare() != 0)
+        return -1;
+    if (s_instance->initNotifier(pMplx) == -1)
+        return -1;
+    return s_instance->startProcessor(workers);
+}
+
+
 int SslApkWorker::onNotified(int count)
 {
     SslAsyncPk *event;
-    LS_DBG_L("[SSL] SSLAsyncPkNotifier::onNotified: %d!\n", count);
+    LS_DBG_L("[SSL] [ApkWorker] onNotified: %d!\n", count);
     while (!ls_lfqueue_empty(m_pFinishedQueue))
     {
         event = (SslAsyncPk *)ls_lfqueue_get(m_pFinishedQueue);
-        if (!event)
-        {
-            LS_NOTICE("SslAsyncPkNotifier::onNotified(), Bad Event Object Returned!");
-            return LS_FAIL;
-        }
-        if (!event->isCanceled())
-        {
-            event->m_on_read(event->m_link);
-        }
+        void *link = event->m_resume_param;
         event->release();
+        if (link)
+        {
+            LS_DBG_L("[SSL] [ApkWorker] onNotified event: %p, resume!\n",
+                     event);
+            event->on_resume_cb(link);
+        }
+        else
+        {
+            LS_DBG_L("[SSL] [ApkWorker] onNotified event: %p, canceled!\n",
+                     event);
+
+        }
     }
     return LS_OK;
     
@@ -140,22 +178,24 @@ static int  s_iSslAsyncPk_index = -1;
 static void freeAsyncPkData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx,
                         long argl, void *argp)
 {
-    DEBUG_MESSAGE("[SSL] freeing callback\n");
-    if (idx == s_iSslAsyncPk_index)
+    DEBUG_MESSAGE("[SSL] [AsyncPk] freeing callback\n");
+    assert(idx == s_iSslAsyncPk_index);
+    if (!ptr)
+        return;
+    if (((SslAsyncPk *)ptr)->m_resume_param)
     {
-        DEBUG_MESSAGE("[SSLCertComp] correct index\n");
-        if (ptr)
-        {
-            DEBUG_MESSAGE("[SSLCertComp] freeing data %p\n", ptr);
-            ((SslAsyncPk *)ptr)->release();
-        }
+        ls_atomic_setptr(&((SslAsyncPk *)ptr)->m_resume_param, NULL);
+        LS_DBG_L("[SSL] [AsyncPk: %p] free exdata, SslAsyncPk canceled!\n",
+                    ptr);
     }
+    DEBUG_MESSAGE("[SSL] [AsyncPk] freeing data %p\n", ptr);
+    ((SslAsyncPk *)ptr)->release();
 }
 
 
 SslAsyncPk::SslAsyncPk()
-    : m_link(NULL)
-    , m_on_read(NULL)
+    : m_resume_param(NULL)
+    , on_resume_cb(NULL)
     , m_refCounter(1)
     , m_state(APK_NOT_INUSE)
     , m_sig_alg(0)
@@ -172,8 +212,7 @@ SslAsyncPk::~SslAsyncPk()
 }
 
 
-SslAsyncPk *SslAsyncPk::prepareAsyncPk(SSL *ssl, ssl_async_pk_resume_cb on_read, 
-                                       void *link)
+void *async_pk_prepare(SSL *ssl, ssl_async_pk_resume_cb on_resume, void *param)
 {
     if (s_iSslAsyncPk_index == -1)
         s_iSslAsyncPk_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, freeAsyncPkData);
@@ -186,8 +225,8 @@ SslAsyncPk *SslAsyncPk::prepareAsyncPk(SSL *ssl, ssl_async_pk_resume_cb on_read,
     }
     SSL_set_ex_data(ssl, s_iSslAsyncPk_index, (void *)data);
     
-    data->m_link = link;
-    data->m_on_read = on_read;
+    data->m_resume_param = param;
+    data->on_resume_cb = on_resume;
     return data;
 }
 
@@ -201,7 +240,8 @@ void SslAsyncPk::cancel(SSL *ssl)
                       ssl);
         return;
     }
-    asyncPk->m_link = NULL;
+    LS_DBG_L("[SSL: %p] [AsyncPk: %p] cancel by application\n", ssl, asyncPk);
+    ls_atomic_setptr(&asyncPk->m_resume_param, NULL);
 }
 
 
@@ -210,11 +250,11 @@ void SslAsyncPk::releaseAsyncPk(SSL *ssl)
     SslAsyncPk *asyncPk = (SslAsyncPk *)SSL_get_ex_data(ssl, s_iSslAsyncPk_index);
     if (!asyncPk)
     {
-        DEBUG_MESSAGE("[SSL: %p] Attempt to release with no class assigned\n",
+        DEBUG_MESSAGE("[SSL: %p] [AsyncPk] Attempt to release with no data assigned\n",
                       ssl);
         return;
     }
-    DEBUG_MESSAGE("[SSL: %p] External releaseAsyncPk: %p\n", ssl, asyncPk);
+    DEBUG_MESSAGE("[SSL: %p] [AsyncPk: %p] release by application\n", ssl, asyncPk);
     asyncPk->release();
     SSL_set_ex_data(ssl, s_iSslAsyncPk_index, NULL);
 }
@@ -228,8 +268,8 @@ static int AsyncSign(EVP_MD_CTX *ctx, SslAsyncPk *data)
                            SSL_get_signature_algorithm_digest(data->m_sig_alg),
                            NULL, data->m_pkey) != 1)
     {
-        ERROR_MESSAGE("[SSL: %p] privateKeyThread, Can't do DigestSignInit\n",
-                        data);
+        ERROR_MESSAGE("[SSL] [AsyncPk: %p] privateKeyThread, Can't do DigestSignInit\n",
+                      data);
         return APK_FAILED;
     }
     if (SSL_is_signature_algorithm_rsa_pss(data->m_sig_alg))
@@ -237,7 +277,7 @@ static int AsyncSign(EVP_MD_CTX *ctx, SslAsyncPk *data)
         if (!EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) ||
             !EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, -1))
         {
-            ERROR_MESSAGE("[SSL: %p] privateKeyThread, Bad additional "
+            ERROR_MESSAGE("[SSL] [AsyncPk: %p] privateKeyThread, Bad additional "
                             "parameters\n", data);
             return APK_FAILED;
         }
@@ -245,7 +285,7 @@ static int AsyncSign(EVP_MD_CTX *ctx, SslAsyncPk *data)
     if (EVP_DigestSign(ctx, (unsigned char *)data->m_sign,
                         &data->m_sign_size, data->m_in, data->m_in_len) != 1)
     {
-        ERROR_MESSAGE("[SSL: %p] privateKeyThread, Error in EVP_DigestSign"
+        ERROR_MESSAGE("[SSL] [AsyncPk: %p] privateKeyThread, Error in EVP_DigestSign"
                         " for real\n", data);
         return APK_FAILED;
     }
@@ -256,13 +296,19 @@ static int AsyncSign(EVP_MD_CTX *ctx, SslAsyncPk *data)
 void* SslAsyncPk::privateKeyThread(ls_lfnodei_t* item)
 {
     SslAsyncPk *data = (SslAsyncPk *)item;
-    if (!data || data->isCanceled() || !data->m_in || !data->m_sign)
+    if (data->isCanceled())
     {
-        ERROR_MESSAGE("[SSL: %p] privateKeyThread, no data!\n",
+        LS_DBG_L("[SSL] [AsyncPk: %p] privateKeyThread, SslAsyncPk canceled!\n",
+                  data);
+        return NULL; // No known connection for private key
+    }
+    if (!data->m_in || !data->m_sign)
+    {
+        ERROR_MESSAGE("[SSL] [AsyncPk: %p] privateKeyThread, no input data!\n",
                       data);
         return NULL; // No known connection for private key
     }
-    DEBUG_MESSAGE("[SSL: %p] privateKeyThread sign item: "
+    DEBUG_MESSAGE("[SSL] [AsyncPk: %p] privateKeyThread sign item: "
                   "%p, PKEY: %p, using alg: %d\n",
                   data, data, data->m_pkey,
                   data->m_sig_alg);
@@ -272,7 +318,7 @@ void* SslAsyncPk::privateKeyThread(ls_lfnodei_t* item)
     data->m_state = AsyncSign(&ctx, data);
     EVP_MD_CTX_cleanup(&ctx);
 
-    DEBUG_MESSAGE("[SSL: %p] privateKeyThread sign done, ok: %d\n",
+    DEBUG_MESSAGE("[SSL] [AsyncPk: %p] privateKeyThread sign done, ok: %d\n",
                   data, data->m_state);
     return NULL;
 }
@@ -364,7 +410,7 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl,
     DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeyComplete\n", ssl);
     if (!data || data->isCanceled())
     {
-        DEBUG_MESSAGE("AsyncPrivateKeySign canceled\n");
+        DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeySign canceled\n", ssl);
         return ret;
     }
     if (data->m_state == APK_REQUEST)
@@ -398,6 +444,7 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl,
         DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeyComplete not using async sync\n",
                       ssl);
     }
+    data->m_resume_param = NULL;
     return ret;
 }
 
@@ -417,15 +464,15 @@ void SslAsyncPk::enableApk(SSL_CTX *ctx)
     
 void SslAsyncPk::release()
 {
-    DEBUG_MESSAGE("[SslAsyncPk: %p] release, ref: %d\n", this, m_refCounter);
+    DEBUG_MESSAGE("[SSL] [AsyncPk: %p] release, ref: %d\n", this, m_refCounter);
     if (ls_atomic_add_fetch(&m_refCounter, -1) > 0)
         return;
-    DEBUG_MESSAGE("[SslAsyncPk] no reference now, release\n");
+    DEBUG_MESSAGE("[SSL] [AsyncPk] no reference now, release\n");
     m_sign_size = 0;
     if (m_sign)
         free(m_sign);
     delete this; 
-    DEBUG_MESSAGE("[SslAsyncPk] release done\n");
+    DEBUG_MESSAGE("[SSL] [AsyncPk] release done\n");
 }
 
 #endif // SSL_ASYNC_PK

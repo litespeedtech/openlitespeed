@@ -43,6 +43,9 @@
 #define CACHE_ADD_ETAG                      (1<<15)
 
 
+class StringList;
+
+
 class DirHashCacheStore;
 
 class CacheConfig
@@ -81,7 +84,14 @@ public:
     long getMaxObjSize() const      {   return m_lMaxObjSize;   }
     void setAddEtagType(int v)      {   m_iAddEtag = v;     }
     int getAddEtagType() const      { return m_iAddEtag;    }
-    char *getPurgeUri() const        { return m_pPurgeUri;   };
+    char *getPurgeUri() const       { return m_pPurgeUri;   };
+    
+    StringList *getVaryList() const {   return m_pVaryList;    }
+    void setVaryList(StringList *pList);
+    
+    int getOwnVaryList()            { return m_iOwnVaryList; }
+    void setOwnVaryList(int v)      { m_iOwnVaryList = v; }
+
     int  isLitemagReady();
     void setLitemageDefault();
 
@@ -121,8 +131,6 @@ public:
         m_iOwnPurgeUri = 1;
         m_pPurgeUri = strndup(val,valLen);
     };
-    
-    
 
 
 private:
@@ -132,17 +140,20 @@ private:
     int     m_privateAge;
     int     m_iMaxStale;
     long    m_lMaxObjSize;
+
     int8_t  m_iLevele;  //SERVER, VHOST or context
     int8_t  m_iAddEtag;  //0, no, 1: add size-mtime; 2: xxhash64
-    int8_t  m_iOnlyUseOwnUrlExclude;
+    int     m_iOnlyUseOwnUrlExclude  : 4;
     int     m_iOwnStore : 4;
     int     m_iOwnPurgeUri : 4;
+    int     m_iOwnVaryList : 4;
 
     Aho        *m_pUrlExclude; //server and Vhost level can have it
     Aho        *m_pParentUrlExclude;
     VHostMap   *m_pVHostMapExclude;//Only server level has it
     DirHashCacheStore *m_pStore;
     char       *m_pPurgeUri; //server and Vhost level can have it
+    StringList *m_pVaryList; 
 };
 
 #endif

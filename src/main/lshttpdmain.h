@@ -69,6 +69,7 @@ class LshttpdMain
     pid_t               m_pid;
     int                 m_noDaemon;
     int                 m_noCrashGuard;
+    int                 m_iConfTestMode;
     AutoStr             m_gdbPath;
 
     int                *m_pProcState;

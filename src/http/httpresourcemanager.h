@@ -19,10 +19,11 @@
 #define HTTPRESOURCEMANAGER_H
 
 #include <lsdef.h>
+#include <http/httpdefs.h>
 #include <util/objpool.h>
 #include <util/tsingleton.h>
 
-#define GLOBAL_BUF_SIZE 16384
+#define GLOBAL_BUF_SIZE MAX_BUF_SIZE
 
 class Aiosfcb;
 class ChunkInputStream;

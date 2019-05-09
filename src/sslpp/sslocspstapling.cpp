@@ -232,14 +232,14 @@ int SslOcspStapling::update()
     struct stat st;
     if (m_RespTime == UINT_MAX)
         return 0;
-    if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge < DateTime::s_curTime)
+    if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge >= DateTime::s_curTime)
     {
         return 0;
     }
 
     if (::stat(m_sRespfile.c_str(), &st) == 0)
     {
-        if (st.st_mtime + m_iocspRespMaxAge + 3600 < DateTime::s_curTime)
+        if (st.st_mtime + m_iocspRespMaxAge < DateTime::s_curTime)
         {
             releaseRespData();
             unlink(m_sRespfile.c_str());
