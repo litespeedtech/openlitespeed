@@ -15,6 +15,7 @@
 #include <lsr/ls_pool.h>
 #include <socket/ls_sock.h>
 #include <sslpp/ls_fdbuf_bio.h>
+#include <openssl/bio.h>
 
 #ifdef RUN_TEST
 #define DEBUGGING
@@ -38,7 +39,7 @@
 
 #endif
 
-const int RBIO_BUF_SIZE = 2048; // Initial size
+const int RBIO_BUF_SIZE = 4096; // Initial size
 #if OPENSSL_VERSION_NUMBER < 0x10100000
 BIO_METHOD  s_biom_s;
 #endif
@@ -77,7 +78,7 @@ void ls_fdbuf_bio_init(ls_fdbio_data *fdbio)
 static int bio_fd_free(BIO *a)
 {
     ls_fdbio_data *fdbio;
-    DEBUG_MESSAGE("[BIO: %d] bio_fd_free: %p\n", getpid(), a);
+    DEBUG_MESSAGE("[BIO] bio_fd_free: %p\n", a);
     if (a == NULL)
         return 0;
     fdbio = LS_FDBUF_FROM_BIO(a);
@@ -99,17 +100,17 @@ static int bio_fd_read(BIO *b, char *out, int outl)
     ls_fdbio_data *fdbio = LS_FDBUF_FROM_BIO(b);
     int fd = BIO_get_fd(b, 0);
     int total = 0;
-    DEBUG_MESSAGE("[BIO: %d] bio_fd_read: %p, %d bytes on %d\n", getpid(), b, 
+    DEBUG_MESSAGE("[BIO] bio_fd_read: %p, %d bytes on %d\n", b,
                   outl, fd);
     if ((out == NULL) || (!outl))
     {
-        INFO_MESSAGE("[BIO: %d] bio_fd_read NO BUFFER!!\n", getpid());
+        INFO_MESSAGE("[BIO] bio_fd_read NO BUFFER!!\n");
         err = ENOMEM;
         return -1;
     }
     if (fdbio->m_rbioClosed)
     {
-        DEBUG_MESSAGE("[BIO: %d] bio_fd_read: CLOSED ON PREVIOUS READ\n", getpid());
+        DEBUG_MESSAGE("[BIO] bio_fd_read: CLOSED ON PREVIOUS READ\n");
         errno = 0;
         return 0;
     }
@@ -121,15 +122,15 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         if (buffered)
         {
             copy = (buffered > rd_remaining) ? rd_remaining : buffered;
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_read: Use buffered %d of %d\n", 
-                          getpid(), copy, rd_remaining);
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Use buffered %d of %d\n",
+                          copy, rd_remaining);
             memcpy(&out[total], &fdbio->m_rbioBuf[fdbio->m_rbioIndex], copy);
             fdbio->m_rbioIndex += copy;
             total += copy;
             if (total >= outl)
             {
-                DEBUG_MESSAGE("[BIO: %d] bio_fd_read: GOT TOTAL %d\n", 
-                              getpid(), total);
+                DEBUG_MESSAGE("[BIO] bio_fd_read: GOT TOTAL %d\n",
+                              total);
                 return total;
             }
             fdbio->m_rbioBuffered = 0;
@@ -138,8 +139,7 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         }
         if ((rd_remaining < fdbio->m_rbioBufSz) && (fdbio->m_rbioBuf))
         {
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_read: Read into buffer\n", 
-                          getpid());
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into buffer\n");
             ret = ls_read(fd, fdbio->m_rbioBuf, fdbio->m_rbioBufSz);
             if (ret < fdbio->m_rbioBufSz)
                 fdbio->m_rbioWaitEvent = 1;
@@ -147,8 +147,7 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         }
         else
         {
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_read: Read into data\n", 
-                          getpid());
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into data\n");
             ret = ls_read(fd, out + total, rd_remaining);
             if (ret < rd_remaining)
                 fdbio->m_rbioWaitEvent = 1;
@@ -156,7 +155,7 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         }
         if (ret == 0)
         {
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_read: CLOSED\n", getpid());
+            DEBUG_MESSAGE("[BIO] bio_fd_read: CLOSED\n");
             fdbio->m_rbioClosed = 1;
             errno = 0;
             return total;
@@ -166,14 +165,13 @@ static int bio_fd_read(BIO *b, char *out, int outl)
             errno = err;
             if (total)
             {
-                DEBUG_MESSAGE("[BIO: %d] bio_fd_read: error but I have data\n", 
-                              getpid());
+                DEBUG_MESSAGE("[BIO] bio_fd_read: error but I have data\n");
                 return total;
             }
             if ((SIMPLE_RETRY(err)) || (BIO_fd_should_retry(ret)))
             {
-                DEBUG_MESSAGE("[BIO: %d] bio_fd_read: set retry read"
-                              " errno: %d\n", getpid(), err);
+                DEBUG_MESSAGE("[BIO] bio_fd_read: set retry read"
+                              " errno: %d\n", err);
                 errno = err;
                 BIO_set_retry_read(b);
             }
@@ -183,14 +181,12 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         {
             fdbio->m_rbioBuffered = buffered;
             fdbio->m_rbioIndex = 0;
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_read: Preserve read: %d\n", 
-                          getpid(), ret);
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Preserve read: %d\n", ret);
         }
         else
         {
             total += ret;
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_read: Read into data: %d\n", 
-                          getpid(), ret);
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into data: %d\n", ret);
         }
     }
     return total;
@@ -203,8 +199,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
     int err = 0;
     int fd = BIO_get_fd(b, 0);
 
-    DEBUG_MESSAGE("[BIO: %d] bio_fd_write: %p, %d bytes on %d\n", getpid(), b, 
-                  inl, fd);
+    DEBUG_MESSAGE("[BIO] bio_fd_write: %p, %d bytes on %d\n", b, inl, fd);
     ret = ls_write(fd, (void *)in, inl);
     if ( ret > 0)
     {
@@ -214,16 +209,16 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
     err = errno;
     if ((ret == -1) && (!(SIMPLE_RETRY(err))) && (!BIO_fd_should_retry(ret)))
     {
-        DEBUG_MESSAGE("[BIO: %d] bio_fd_write: actual write failed, errno: %d\n",
-                      getpid(), err);
+        DEBUG_MESSAGE("[BIO] bio_fd_write: actual write failed, errno: %d\n",
+                      err);
         return ret;
     }            
     BIO_clear_retry_flags(b);
     if (ret < 0) {
         if ((BIO_fd_should_retry(ret)) || (SIMPLE_RETRY(err)))
         {
-            DEBUG_MESSAGE("[BIO: %d] bio_fd_write: %p, early return, errno: %d,"
-                          " ret: %d\n", getpid(), b, err, ret);
+            DEBUG_MESSAGE("[BIO] bio_fd_write: %p, early return, errno: %d,"
+                          " ret: %d\n", b, err, ret);
             BIO_set_retry_write(b);
             errno = EAGAIN;
             //return bio_fd_write(b, in, inl);
@@ -231,8 +226,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
         }
     }
     
-    DEBUG_MESSAGE("[BIO: %d] bio_fd_write: %p, returning: %d\n", getpid(), b, 
-                  ret);
+    DEBUG_MESSAGE("[BIO] bio_fd_write: %p, returning: %d\n", b, ret);
     errno = err;
     return ret;
 }
@@ -242,7 +236,7 @@ static int bio_fd_puts(BIO *bp, const char *str)
 {
     int n, ret;
     
-    DEBUG_MESSAGE("[BIO: %d] bio_fd_puts: %p, %s\n", getpid(), bp, str);
+    DEBUG_MESSAGE("[BIO] bio_fd_puts: %p, %s\n", bp, str);
 
     n = strlen(str);
     ret = bio_fd_write(bp, str, n);
@@ -256,7 +250,7 @@ static int bio_fd_gets(BIO *bp, char *buf, int size)
     char *ptr = buf;
     char *end = buf + size - 1;
     
-    DEBUG_MESSAGE("[BIO: %d] bio_fd_gets: %p\n", getpid(), bp);
+    DEBUG_MESSAGE("[BIO] bio_fd_gets: %p\n", bp);
 
     while (ptr < end && bio_fd_read(bp, ptr, 1) > 0) {
         if (*ptr++ == '\n')
@@ -335,7 +329,7 @@ static int setup_writes(ls_fdbio_data *fdbio)
 {
     if (!fdbio)
         return 0;
-    DEBUG_MESSAGE("[BIO: %d] setup_writes\n", getpid());
+    DEBUG_MESSAGE("[BIO] setup_writes\n");
     return 0;
 }
 
@@ -344,7 +338,7 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
 {
     if (!s_biom)
     {
-        DEBUG_MESSAGE("[BIO: %d] ls_fdbio_create METHOD\n", getpid());
+        DEBUG_MESSAGE("[BIO] ls_fdbio_create METHOD\n");
     
         s_biom_fd_builtin = BIO_s_fd();
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
@@ -352,8 +346,7 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
             BIO_TYPE_FD | BIO_TYPE_SOURCE_SINK | BIO_TYPE_DESCRIPTOR, 
             "Litespeed BIO Method")))
         {
-            DEBUG_MESSAGE("[BIO: %d] ERROR creating BIO_METHOD\n", 
-                          getpid());
+            DEBUG_MESSAGE("[BIO] ERROR creating BIO_METHOD\n");
             return NULL;
         }
 #ifdef OPENSSL_IS_BORINGSSL
@@ -380,7 +373,8 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
     if (!fdbio->m_rbioBufSz)
         fdbio->m_rbioBufSz = RBIO_BUF_SIZE;
     
-    if (!(fdbio->m_rbioBuf = (char *)ls_palloc(fdbio->m_rbioBufSz)))
+    if (!fdbio->m_rbioBuf
+        && !(fdbio->m_rbioBuf = (char *)ls_palloc(fdbio->m_rbioBufSz)))
     {
         DEBUG_MESSAGE("Insufficient memory allocating %d bytes\n",
                       fdbio->m_rbioBufSz);
@@ -393,8 +387,8 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
     BIO *bio = BIO_new(s_biom);
     if (!bio)
     {
-        DEBUG_MESSAGE("[BIO: %d:%p] ls_fdbio_create error creating rbio\n",
-                      getpid(), fdbio);
+        DEBUG_MESSAGE("[BIO: %p] ls_fdbio_create error creating rbio\n",
+                       fdbio);
         // everything freed in the destructor
         return NULL;
     }
@@ -404,8 +398,8 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
 #else
     BIO_set_app_data(bio, fdbio);
 #endif    
-    DEBUG_MESSAGE("[BIO: %d] ls_fdbio_create bio: %p\n",
-                  getpid(), bio);
+    DEBUG_MESSAGE("[BIO] ls_fdbio_create bio: %p\n",
+                   bio);
     
     setup_writes(fdbio);
     return bio;

@@ -38,7 +38,8 @@
 #include <lsr/ls_str.h>
 #include <lsr/ls_strtool.h>
 #include <sslpp/hiocrypto.h>
-// #include <sslpp/sslcert.h>
+#include <sslpp/sslcert.h>
+#include <sslpp/sslutil.h>
 #include <util/autostr.h>
 #include <util/datetime.h>
 #include <util/ienv.h>
@@ -63,54 +64,11 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
     const AutoStr2 *pCharset = NULL;
     if (pReq->getStatusCode() == SC_304)
         return 0;
-    const MimeSetting *pMIME = NULL;
-    p = (char *)memchr(pValue, ';', valLen);
-    int gzipAccept = pReq->gzipAcceptable();
-    HttpContext *pContext = &(pReq->getVHost()->getRootContext());
-    //const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
-    int enbale = pContext->getExpires().isEnabled();
-    
-    if (gzipAccept || enbale)
-    {
-        char *pEnd;
-        if (p)
-            pEnd = (char *)p;
-        else
-            pEnd = (char *)pValue + valLen;
-        char ch = *pEnd;
-        *pEnd = 0;
-        
-        pMIME = pContext->lookupMimeSetting((char *)pValue);
-        LS_DBG_L(pReq->getLogSession(), "content type: [%s], pMIME: %p\n",
-                    pValue, pMIME);
-        *pEnd = ch;
-
-    }
-    if (gzipAccept)
-    {
-        if (!pMIME || !pMIME->getExpires()->compressible())
-            pReq->andGzip(~GZIP_ENABLED);
-    }
-    
-    if (enbale)
-    {
-        ExpiresCtrl *pExpireDefault = NULL;
-        if (pMIME && pMIME->getExpires()->getBase())
-            pExpireDefault = (ExpiresCtrl *)pMIME->getExpires();
-        if (pExpireDefault == NULL)
-            pExpireDefault = &pContext->getExpires();
-
-        if (pExpireDefault->getBase())
-            pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
-    }
-
-    if (pReq->isKeepAlive())
-        pReq->smartKeepAlive(pValue);
     
     if (HttpMime::needCharset(pValue))
     {
         pCharset = pReq->getDefaultCharset();
-        if (pCharset && p)
+        if (pCharset && (p = (char *)memchr(pValue, ';', valLen)) != NULL)
         {
             while (isspace(*(++p)))
                 ;
@@ -336,6 +294,13 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         return 0;
     default:
         //"script-control: no-abort" is not supported
+
+        if (11 == nameLen && 0 == strncasecmp(pName, "Lsrecaptcha", 11)
+            && 1 == valLen && '1' == *pValue)
+        {
+            pExtConn->getHttpSession()->checkSuccessfulRecaptcha();
+            return 0;
+        }
         break;
     }
     if (index != HttpRespHeaders::H_HEADER_END)
@@ -514,22 +479,6 @@ int HttpCgiTool::addSpecialEnv(IEnv *pEnv, HttpReq *pReq)
     const char *pTemp = pReq->getURI();
     pEnv->add("SCRIPT_NAME", 11, pTemp, pReq->getScriptNameLen());
     return 0;
-}
-
-
-static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
-{
-    BIO *bio;
-    int n;
-
-    if ((bio = BIO_new(BIO_s_mem())) == NULL)
-        return LS_FAIL;
-    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
-    //n = BIO_pending(bio);
-    n = BIO_read(bio, pBuf, len);
-    pBuf[n] = '\0';
-    BIO_free(bio);
-    return n;
 }
 
 
@@ -748,7 +697,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
                                  X509_get_version(pClientCert) + 1);
                     pEnv->add("SSL_CLIENT_M_VERSION", 20, achBuf, n);
                     ++count;
-                    n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
+                    n = SslUtil::lookupCertSerial(pClientCert, achBuf, 4096);
                     if (n != -1)
                     {
                         pEnv->add("SSL_CLIENT_M_SERIAL", 19, achBuf, n);

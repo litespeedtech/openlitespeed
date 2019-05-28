@@ -83,7 +83,7 @@
 
 
 
-#define MODPAGESPEEDVERSION  "2.1-1.11.33.4"
+#define MODPAGESPEEDVERSION  "2.2-1.11.33.4"
 
 #define DBG(session, args...) g_api->log(session, LSI_LOG_DEBUG, args)
 
@@ -1996,22 +1996,22 @@ static int StartFetchPageSpeedResource(PsMData *pMyData, lsi_session_t *session)
 }
 
 
-static int StartPageSpeedProxyFetch(PsMData *pMyData, lsi_session_t *session)
-{
-    bool is_proxy = false;
-    GoogleString mapped_url;
-    GoogleString host_header;
-    const GoogleUrl &url = *(pMyData->request->url);
-
-    RewriteOptions *options = pMyData->request->options;
-    if (options->domain_lawyer()->MapOriginUrl(
-            url, &mapped_url, &host_header, &is_proxy) && is_proxy) {
-        StartFetchProxy(pMyData, session, kPageSpeedProxy, 
-                        mapped_url, false);
-        return 1;
-    }
-    return 0;
-}
+// static int StartPageSpeedProxyFetch(PsMData *pMyData, lsi_session_t *session)
+// {
+//     bool is_proxy = false;
+//     GoogleString mapped_url;
+//     GoogleString host_header;
+//     const GoogleUrl &url = *(pMyData->request->url);
+// 
+//     RewriteOptions *options = pMyData->request->options;
+//     if (options->domain_lawyer()->MapOriginUrl(
+//             url, &mapped_url, &host_header, &is_proxy) && is_proxy) {
+//         StartFetchProxy(pMyData, session, kPageSpeedProxy, 
+//                         mapped_url, false);
+//         return 1;
+//     }
+//     return 0;
+// }
 
 
 
@@ -2761,6 +2761,11 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
         return LSI_OK;
     }
 
+    /**
+     * Tell server modpagespeed is using
+     */
+    g_api->set_req_env(session, "modpagespeed", 12, "on", 2);
+    
     pMyData->state = PS_STATE_INIT;
     pMyData->sBuff = "";
     pMyData->request = req;
@@ -2827,10 +2832,6 @@ static int UriMapHook(lsi_param_t *rec)
         response_category = RouteRequest(pMyData, session, true);
 
     int ret = 0;
-    g_api->set_req_wait_full_body(session);
-
-    //Disable cache module
-    //g_api->set_req_env(rec->session, "cache-control", 13, "no-cache", 8);
 
     switch (response_category)
     {

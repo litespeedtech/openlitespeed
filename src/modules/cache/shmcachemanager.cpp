@@ -773,7 +773,7 @@ int ShmCacheManager::isPurgedByTag(
                     if (privatePurge.isFlushed(pEntry->getHeader().m_tmCreated,
                                        pEntry->getHeader().m_msCreated))
                         return 1;
-                    int tagId = findTagId(pTag, pEntry->getHeader().m_tagLen);
+                    int tagId = findTagId(p, pTagEnd - p);
                     if (tagId != -1)
                     {
                         ret= privatePurge.shouldPurge(tagId,
@@ -952,7 +952,19 @@ int ShmCacheManager::init(const char *pStoreDir)
 }
 
 
-int ShmCacheManager::addUrlVary(const char *pUrl, int len, int id)
+/**
+ * Comment: when delete, the item can be not existing
+ */
+int ShmCacheManager::delUrlVary(const char *pUrl, int len)
+{
+    m_pUrlVary->lock();
+    m_pUrlVary->remove(pUrl, len);
+    m_pUrlVary->unlock();
+    return 0;
+}
+
+
+int ShmCacheManager::addUrlVary(const char *pUrl, int len, int32_t id)
 {
     int ret = 0;
     int valLen;
@@ -1038,6 +1050,21 @@ const AutoStr2 *ShmCacheManager::getVaryStrById(uint id)
     return pId;
 }
 
+int32_t ShmCacheManager::getUrlVaryId(const char *pUrl, int len)
+{
+    int valLen;
+    LsShmOffset_t offVal;
+    m_pUrlVary->lock();
+    offVal = m_pUrlVary->find(pUrl, len, &valLen);
+    m_pUrlVary->unlock();
+
+    if (offVal != 0)
+    {
+        int32_t id = *(int32_t *)m_pUrlVary->offset2ptr(offVal);
+        return id;
+    }
+    return -1;
+}
 
 const AutoStr2 *ShmCacheManager::getUrlVary(const char *pUrl, int len)
 {

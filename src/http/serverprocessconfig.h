@@ -35,12 +35,20 @@ class ServerProcessConfig : public TSingleton< ServerProcessConfig >
     int                    m_iPriority;
     int                    m_iUMask;
     AutoStr2              *m_pChroot;
+    int                    m_cgroupAllow;
+    int                    m_cgroupDefault;
 
     ServerProcessConfig(const ServerProcessConfig &rhs);
     void operator=(const ServerProcessConfig &rhs);
     ServerProcessConfig();
 public:
-
+    enum CGroupConfigValues 
+    {
+        CGROUP_CONFIG_DEFAULT_OFF = 0,
+        CGROUP_CONFIG_DEFAULT_ON,
+        CGROUP_CONFIG_DISALLOW
+    };
+        
     ~ServerProcessConfig();
 
     void setUid(uid_t uid)                {   m_uid = uid;                }
@@ -66,6 +74,12 @@ public:
 
     void setChroot(AutoStr2 *pChroot)     {   m_pChroot = pChroot;        }
     AutoStr2 *getChroot() const             {   return m_pChroot;           }
+    
+    void setCGroupAllow(int enabled)      {   m_cgroupAllow = enabled;    }
+    int getCGroupAllow() const              {   return m_cgroupAllow;       }
+    
+    void setCGroupDefault(int enabled)    {   m_cgroupDefault = enabled;  }
+    int getCGroupDefault() const            {   return m_cgroupDefault;     }
 };
 
 #endif //SERVERPROCESSCONFIG_H

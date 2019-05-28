@@ -51,7 +51,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/tcp.h>
-#include <openssl/ssl.h>
 
 #if !defined(NO_SENDFILE)
 #include <util/gsendfile.h>
@@ -463,18 +462,22 @@ void NtwkIOLink::continueWrite()
     //if( getFlag( HIO_FLAG_WANT_WRITE ) )
     //    return;
     setFlag(HIO_FLAG_WANT_WRITE, 1);
-    if (allowWrite())
+    ThrottleUnit *pThrottle = getClientInfo()->getThrottleCtrl().getThrottleOut();
+    if (!pThrottle->getAvail())
     {
-        LS_DBG_L(this, "Write resumed!");
-        /*        short revents = getRevents();
-                if ( revents & POLLOUT )
-                    handleEvents( revents );
-                else*/
-        MultiplexerFactory::getMultiplexer()->continueWrite(this);
+        if (pThrottle->isUnlimited())
+            pThrottle->reset();
+        else
+        {
+            LS_DBG_L(this, "NtwkIOLink::continueWrite() - THROTTLING!!!");
+            return;
+        }
     }
     else
         LS_DBG_L(this, "Throttled!");
 
+    LS_DBG_L(this, "write resumed!");
+    MultiplexerFactory::getMultiplexer()->continueWrite(this);
 }
 
 
@@ -1006,7 +1009,7 @@ off_t NtwkIOLink::sendfileSetUp(off_t size)
     }
     ThrottleControl *pCtrl = getThrottleCtrl();
 
-    if (pCtrl)
+    if (pCtrl && !pCtrl->getThrottleOut()->isUnlimited())
     {
         int Quota = pCtrl->getOSQuota();
         if (size > (unsigned int)Quota + (Quota >> 3))
@@ -1819,9 +1822,10 @@ void NtwkIOLink::resumeEventNotify()
 static const char *s_pProtoString[] = { "", ":SPDY2", ":SPDY3", ":SPDY31", ":HTTP2" };
 const char *NtwkIOLink::buildLogId()
 {
-    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%hu%s",
-                      getClientInfo()->getAddrString(), getRemotePort(),
-                      s_pProtoString[(int)getProtocol() ]);
+    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%u%s",
+                              getClientInfo()->getAddrString(),
+                              getConnInfo()->m_remotePort,
+                              s_pProtoString[(int)getProtocol() ]);
     return m_logId.ptr;
 }
 

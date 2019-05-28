@@ -5,37 +5,13 @@ OSNAME=
 OSVER=
 OSTYPE=`getconf LONG_BIT`
 MARIADBCPUARCH=
-
+DLCMD=
 
 inst_admin_php()
 {
     # detect download method
     OS=`uname -s`
-
-    DLCMD=
-    DL=`which wget`
-    if [ $? -eq 0 ] ; then
-        DLCMD="wget -nv -O "
-    else
-        DL=`which curl`
-        if [ $? -eq 0 ] ; then
-            DLCMD="curl -L -o "
-        else
-            if [ "x$OS" = "xFreeBSD" ] ; then
-                DL=`which fetch`
-                if [ $? -eq 0 ] ; then
-                    DLCMD="fetch -o "
-                fi
-            fi
-        fi
-    fi
-
-    if [ "x$DLCMD" = "x" ] ; then
-        echo "ERROR: cannot find proper download method curl/wget/fetch."
-    fi
-
-    echo "DLCMD is $DLCMD"
-    echo
+    detectdlcmd
 
     HASADMINPHP=n
     if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
@@ -251,9 +227,9 @@ inst_lsphp7()
 #script start here
 cd `dirname "$0"`
 source ./functions.sh 2>/dev/null
-if [ $? != 0 ]; then
+if [ $? != 0 ] ; then
     . ./functions.sh
-    if [ $? != 0 ]; then
+    if [ $? != 0 ] ; then
         echo [ERROR] Can not include 'functions.sh'.
         exit 1
     fi

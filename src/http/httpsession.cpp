@@ -40,8 +40,10 @@
 #include <http/httpvhost.h>
 #include <http/l4handler.h>
 #include <http/mtsessdata.h>
+#include <http/recaptcha.h>
 #include <http/reqhandler.h>
 #include <http/rewriteengine.h>
+#include <http/serverprocessconfig.h>
 #include <http/smartsettings.h>
 #include <http/staticfilecache.h>
 #include <http/staticfilecachedata.h>
@@ -155,6 +157,8 @@ HttpSession::HttpSession()
     , m_pMtSessData(NULL)
     , m_processState(HSPS_READ_REQ_HEADER)
     , m_curHookLevel(0)
+    , m_pVHostAcl(NULL)
+    , m_iVHostAccess(0)
     , m_lockMtHolder(0)
     , m_pAiosfcb(NULL)
     , m_sn(1)
@@ -187,13 +191,27 @@ HttpSession::~HttpSession()
 }
 
 const char *HttpSession::getPeerAddrString() const
-{    return m_pClientInfo->getAddrString();  }
+{    return (m_pClientInfo ? m_pClientInfo->getAddrString() : "");  }
 
 int HttpSession::getPeerAddrStrLen() const
-{   return m_pClientInfo->getAddrStrLen();   }
+{   return (m_pClientInfo ? m_pClientInfo->getAddrStrLen() : 0);   }
 
 const struct sockaddr *HttpSession::getPeerAddr() const
-{   return m_pClientInfo->getAddr(); }
+{   return (m_pClientInfo ? m_pClientInfo->getAddr() : NULL); }
+
+
+bool HttpSession::shouldIncludePeerAddr() const
+{
+    if (HttpServerConfig::getInstance().getUseProxyHeader() != 3)
+        return true;
+
+    int iProxyAddrLen;
+    const char *pProxyAddr = m_request.getEnv("PROXY_REMOTE_ADDR", 17, iProxyAddrLen);
+
+    // If behind proxy, client is trusted. Else check client info. Return NOT.
+    return !((pProxyAddr != NULL)
+                || (AC_TRUST == getClientInfo()->getAccess()));
+}
 
 
 int HttpSession::onInitConnected()
@@ -209,10 +227,14 @@ int HttpSession::onInitConnected()
     }
     else
         m_request.setCrypto(NULL);
-    assert(pInfo->m_pServerAddrInfo);
-    setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
 
-    assert(pInfo->m_pClientInfo);
+    /**
+     * If setConnInfo() failed, the m_pServerAddrInfo can be NULL
+     */
+    if(pInfo->m_pServerAddrInfo)
+        setVHostMap(pInfo->m_pServerAddrInfo->getVHostMap());
+
+    //assert(pInfo->m_pClientInfo);
     setClientInfo(pInfo->m_pClientInfo);
     m_iRemotePort = pInfo->m_remotePort;
     m_iFlag = 0;
@@ -459,12 +481,12 @@ void HttpSession::nextRequest()
     m_sendFileInfo.release();
     //m_sendFileInfo.reset();
     releaseReqParser();
-
-
+    
     //for SSI, should resume
     if (getSsiRuntime())
         return releaseSsiRuntime();
-
+    
+    
     if (!m_request.isKeepAlive() || getStream()->isSpdy() || !endOfReqBody())
     {
         LS_DBG_L(getLogSession(), "Non-KeepAlive, CLOSING!");
@@ -479,7 +501,8 @@ void HttpSession::nextRequest()
                 m_sessionHooks.runCallbackNoParam(LSI_HKPT_HTTP_END, (LsiSession *)this);
         }
 
-
+        LsiapiBridge::releaseModuleData(LSI_DATA_HTTP, getModuleData());
+        
         ls_atomic_fetch_add(&m_sn, 1);
         //ls_atomic_setint(&m_sessSeq, ls_atomic_add_fetch(&s_m_sessSeq, 1)); // ok to overflow / wrap
         LS_DBG_L("[T%d %s] sess seq now %d\n", ls_thr_seq(), __PRETTY_FUNCTION__, ls_atomic_fetch_add(&m_sessSeq, 0));
@@ -660,6 +683,8 @@ int HttpSession::reqBodyDone()
 //    HSPState next;
     getStream()->wantRead(0);
     setFlag(HSF_REQ_BODY_DONE, 1);
+    LS_DBG_L(getLogSession(),
+             "HttpSession::reqBodyDone().");
 
     if (this->getReqParser())
     {
@@ -738,12 +763,14 @@ int HttpSession::readReqBody()
     int hasBufferedData = 1;
     int endBody;
     ReqParser *pParser = getReqParser();
+    int readbytes = 0;
+    int isspdy = getStream()->isSpdy();
     while (!(endBody = endOfReqBody()) || hasBufferedData)
     {
         hasBufferedData = 0;
         if (!endBody)
         {
-            if ((ret < (int)size) || (++count == 10))
+            if ((ret < (int)size) || (++count == 10 && !isspdy))
                 return 0;
         }
 
@@ -787,6 +814,7 @@ int HttpSession::readReqBody()
         }
         if (ret > 0)
         {
+            readbytes += ret;
             if (pParser && pParser->isParsePost())
             {
                 if (!pParser->isParseUploadByFilePath())
@@ -809,13 +837,12 @@ int HttpSession::readReqBody()
                      (long long)m_request.getContentFinished(),
                      (long long)m_request.getContentLength());
 
-
             if (endOfReqBody())
             {
                 getStream()->wantRead(0);
                 break;
             }
-            if (m_pHandler && !getFlag(HSF_REQ_WAIT_FULL_BODY))
+            if (m_pHandler && !getFlag(HSF_REQ_WAIT_FULL_BODY) && !isspdy)
             {
                 m_pHandler->onRead(this);
                 if (getState() == HSS_REDIRECT)
@@ -827,9 +854,14 @@ int HttpSession::readReqBody()
         else if (ret == -2)
             return getModuleDenyCode(LSI_HKPT_RECV_REQ_BODY);
     }
-
     LS_DBG_L(getLogSession(), "Finished request body %lld bytes!",
              (long long)m_request.getContentFinished());
+    if (!endOfReqBody() && isspdy && readbytes && m_pHandler)
+    {
+        m_pHandler->onRead(this);
+        //return 0;
+    }
+
     if (m_pChunkIS)
     {
         if (m_pChunkIS->getBufSize() > 0)
@@ -1008,7 +1040,7 @@ int HttpSession::readToHeaderBuf()
                               "Http request header is too big, abandon!");
                     //m_request.setHeaderEnd();
                     //m_request.dumpHeader();
-                    return SC_400;
+                    return SC_414;
                 }
             }
         }
@@ -1193,6 +1225,16 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
 
 int HttpSession::processNewReqInit()
 {
+    LS_DBG_L(getLogSession(),
+             "processNewReq(), request header buffer size: %d, "
+             "header used: %d, processed: %d.",
+             m_request.getHeaderBuf().size(),
+             m_request.getHttpHeaderEnd(), m_request.getCurPos());
+
+    if ( m_request.getHttpHeaderLen() > 0 )
+        LS_DBG_H(getLogSession(), "Headers: %.*s",
+                m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
+
     int ret;
 
     LS_DBG_L(getLogSession(),
@@ -1206,7 +1248,7 @@ int HttpSession::processNewReqInit()
                 m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
 
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
-
+    int useProxyHeader = httpServConf.getUseProxyHeader();
     LS_DBG_L(getLogSession(),
              "processNewReq(), request header buffer size: %d, "
              "header used: %d, processed: %d.",
@@ -1219,17 +1261,17 @@ int HttpSession::processNewReqInit()
 
     if (getStream()->isSpdy())
     {
-        m_request.keepAlive(0);
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
-    if ((httpServConf.getUseProxyHeader() == 1)
-        || ((httpServConf.getUseProxyHeader() == 2)
+    if ((useProxyHeader == 1)
+        || (((useProxyHeader == 2) || (useProxyHeader == 3))
             && (getClientInfo()->getAccess() == AC_TRUST)))
     {
         const char *pName;
         const char *pProxyHeader;
         int len;
-        if ((httpServConf.getUseProxyHeader() == 2) && m_request.isCfIpSet())
+        if (((useProxyHeader == 2) || (useProxyHeader == 3))
+            && m_request.isCfIpSet())
         {
             pName = "CF-Connecting-IP";
             pProxyHeader = m_request.getCfIpHeader(len);
@@ -1242,14 +1284,26 @@ int HttpSession::processNewReqInit()
             len = m_request.getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
         }
 
-        LS_DBG_L(getLogSession(), "HttpSession::processNewReqInit pProxyHeader %s pName %s len %d.",
-                 pProxyHeader, pName, len);
+        LS_DBG_L(getLogSession(), "HttpSession::processNewReqInit client IP from '%s: %.*s'.",
+                 pName, len, pProxyHeader);
+
         if (*pProxyHeader)
         {
             ret = updateClientInfoFromProxyHeader(pName, pProxyHeader, len);
             if (ret)
                 return ret;
         }
+    }
+
+    if (m_request.isUserAgentType(UA_GOOGLEBOT_POSSIBLE))
+    {
+        uint32_t flags = m_pClientInfo->isFlagSet(CIF_GOOG_FAKE | CIF_GOOG_REAL);
+        if (flags == 0)
+            m_pClientInfo->setFlag(CIF_GOOG_TEST);
+        else if (flags & CIF_GOOG_REAL)
+            m_request.setUserAgentType(UA_GOOGLEBOT_CONFIRMED);
+        else
+            m_request.setUserAgentType(UA_GOOGLEBOT_FAKE);
     }
 
     if (m_request.isHttps())
@@ -1301,12 +1355,27 @@ int HttpSession::processNewReqInit()
         processHttp2Upgrade(pVHost);
     }
 
-    if ((getStream()->isThrottle())
-        && (!(m_iFlag & HSF_SUB_SESSION))
-        && (getClientInfo()->getAccess() != AC_TRUST))
-        getClientInfo()->getThrottleCtrl().adjustLimits(
-            pVHost->getThrottleLimits());
-
+    if (getClientInfo()->getAccess() != AC_TRUST)
+    {
+        if (getStream()->isThrottle()
+            && (!(m_iFlag & HSF_SUB_SESSION)))
+            getClientInfo()->getThrottleCtrl().adjustLimits(
+                pVHost->getThrottleLimits());
+        if (isUseRecaptcha())
+        {
+            if (rewriteToRecaptcha())
+            {
+                LS_DBG_M(getLogSession(), "[RECAPTCHA] VHost level triggered, redirect.");
+                return 0;
+            }
+            else
+            {
+                LS_DBG_M(getLogSession(), "[RECAPTCHA] VHost level block parallel.");
+                blockParallelRecaptcha();
+                return SC_403;
+            }
+        }
+    }
 
     if (m_request.isKeepAlive())
     {
@@ -1423,6 +1492,7 @@ int HttpSession::processNewReqBody()
         //else
         //    m_request.processReqBodyInReqHeaderBuf();
         ret = readReqBody();
+        //if (!ret && getFlag(HSF_REQ_BODY_DONE))
         if (!ret)
         {
             if ((getReqParser() && !getReqParser()->isParseDone())
@@ -1475,6 +1545,11 @@ int HttpSession::checkAuthentication(const HTAuth *pHTAuth,
 //            else
 //                m_request.saveMatchedResult();
         }
+    }
+    else
+    {
+        LS_DBG_H(getLogSession(), "User '%s' authenticated.", pAuthUser);
+        addEnv("HttpAuth", 8, "1", 1);
     }
     return ret;
 
@@ -1574,6 +1649,28 @@ int HttpSession::doRedirect()
 }
 
 
+int HttpSession::getVHostAccess()
+{
+    const HttpVHost *pVHost = m_request.getVHost();
+    const AccessControl *pAcl = (NULL == pVHost ? NULL : pVHost->getAccessCtrl());
+
+    if (NULL == pAcl)
+        m_iVHostAccess = AC_ALLOW;
+    else if (pAcl == m_pVHostAcl)
+    {
+        LS_DBG_M(getLogSession(), "getVHostAccess access unchanged %p.", pAcl);
+    }
+    else
+    {
+        m_iVHostAccess = pAcl->hasAccess(getPeerAddr());
+        m_pVHostAcl = pAcl;
+    }
+
+    LS_DBG_M(getLogSession(), "getVHostAccess, acl returned access %d", m_iVHostAccess);
+    return m_iVHostAccess;
+}
+
+
 int HttpSession::processVHostRewrite()
 {
     const HttpContext *pContext = &(m_request.getVHost()->getRootContext());
@@ -1618,6 +1715,198 @@ int HttpSession::processVHostRewrite()
     }
     setProcessState(HSPS_CONTEXT_MAP);
     return ret;
+}
+
+
+bool HttpSession::shouldAvoidRecaptcha()
+{
+    ClientInfo *pClientInfo = getClientInfo();
+    if (AC_CAPTCHA == pClientInfo->getAccess())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s has been verified.",
+                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+        return true;
+    }
+    else if (AC_TRUST == pClientInfo->getAccess())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s is trusted, skip recaptcha.",
+                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+        return true;
+    }
+
+    if (AC_TRUST == getVHostAccess())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s is in vhost whitelist.",
+                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+        return true;
+    }
+
+    if (m_request.isFavicon())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Favicon request, skip recaptcha.");
+        return true;
+    }
+
+    if (getStream() && getStream()->isFromLocalAddr())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
+                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+        return true;
+    }
+
+    const char *pUserAgent = m_request.getUserAgent();
+    int iUserAgentLen = m_request.getUserAgentLen();
+
+    const Recaptcha *pRecaptcha = m_request.getRecaptcha(),
+            *pServerRecaptcha = HttpServerConfig::getInstance()
+               .getGlobalVHost()->getRecaptcha();
+
+    // check bots
+    if (m_request.isGoodBot()
+        || pServerRecaptcha->isBotWhitelisted(pUserAgent, iUserAgentLen)
+        || (pRecaptcha != pServerRecaptcha
+            && pRecaptcha->isBotWhitelisted(pUserAgent, iUserAgentLen)))
+    {
+        if (m_request.isUnlimitedBot())
+            return true;
+        pClientInfo->incAllowedBotHits();
+        if (!pClientInfo->isReachBotLimit())
+            return true;
+    }
+
+    return false;
+}
+
+
+bool HttpSession::isUseRecaptcha(int isEarlyDetect)
+{
+    const Recaptcha *pRecaptcha = m_request.getRecaptcha();
+    if (NULL == pRecaptcha)
+        return 0;
+
+    if (shouldAvoidRecaptcha())
+        return 0;
+
+    ConnLimitCtrl &ctrl = ConnLimitCtrl::getInstance();
+    int sslConns = ctrl.getMaxSSLConns() - ctrl.availSSLConn();
+    int plainConns = ctrl.getMaxConns() - sslConns - ctrl.availConn();
+    const Recaptcha *pServerRecaptcha = HttpServerConfig::getInstance()
+               .getGlobalVHost()->getRecaptcha();
+
+    /**
+     * If the connection is new, the count is inaccurate; the count is updated
+     * _after_ the first request is served.
+     */
+    if (!m_iReqServed)
+    {
+        if (isHttps())
+            ++sslConns;
+        else
+            ++plainConns;
+    }
+
+    LS_DBG_H(getLogSession(),
+            "[RECAPTCHA] Concurrent Stats reg: %d, ssl: %d",
+            plainConns, sslConns);
+
+    int ret = (plainConns >= pServerRecaptcha->getRegConnLimit()
+                || sslConns >= pServerRecaptcha->getSslConnLimit());
+
+    if (!isEarlyDetect)
+    {
+        HttpVHost *pVHost = (HttpVHost *) m_request.getVHost();
+
+        if (!pVHost->isRecaptchaEnabled())
+            return 0;
+
+        LS_DBG_H(getLogSession(),"[RECAPTCHA] VHost Refs %d(volatile)",
+                pVHost->getRef());
+        ret |= (pVHost->getRef() >= pRecaptcha->getRegConnLimit());
+    }
+
+    return ret;
+}
+
+
+bool HttpSession::hasPendingCaptcha() const
+{
+    return getClientInfo()->isFlagSet(CIF_CAPTCHA_PENDING);
+}
+
+
+bool HttpSession::recaptchaAttemptsAvail() const
+{
+    const Recaptcha *pRecaptcha = m_request.getRecaptcha();
+    if (!pRecaptcha)
+        return false;
+    return (getClientInfo()->getCaptchaTries() < pRecaptcha->getMaxTries());
+}
+
+
+// Return 1 to indicate rewritten, 0 otherwise.
+int HttpSession::rewriteToRecaptcha(bool blockIfTooManyAttempts)
+{
+    LS_DBG_M(getLogSession(), "[RECAPTCHA] Try to rewrite request to recaptcha.");
+    ClientInfo *pClientInfo = getClientInfo();
+
+    if (blockIfTooManyAttempts && !recaptchaAttemptsAvail())
+        return 0;
+
+     
+    if (!m_request.isCaptcha() &&  hasPendingCaptcha())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s has pending captcha.",
+                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+        return 0;
+    }
+    
+    
+    if (m_request.rewriteToRecaptcha())
+    {
+        pClientInfo->setFlag(CIF_CAPTCHA_PENDING);
+        pClientInfo->incCaptchaTries();
+        LS_DBG_M("[RECAPTCHA] new count %d", pClientInfo->getCaptchaTries());
+        m_processState = HSPS_BEGIN_HANDLER_PROCESS;
+    }
+    else if (!getFlag(HSF_REQ_BODY_DONE))
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Need to finish reading body.");
+        setFlag(HSF_URI_MAPPED);
+        setFlag(HSF_REQ_WAIT_FULL_BODY);
+        m_processState = HSPS_PROCESS_NEW_REQ_BODY;
+    }
+
+    return 1;
+}
+
+
+void HttpSession::checkSuccessfulRecaptcha()
+{
+    ClientInfo *pClientInfo = getClientInfo();
+    if (!pClientInfo)
+        return;
+
+    if (!m_request.getContext()->isCheckCaptcha())
+    {
+        LS_WARN(getLogSession(),
+                "[RECAPTCHA] WARNING: Got a suspicious response header during a non recaptcha request.");
+        return;
+    }
+
+    LS_DBG_M(getLogSession(), "[RECAPTCHA] Successful, trust %.*s",
+            pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+    pClientInfo->setAccess(AC_CAPTCHA);
+    pClientInfo->resetCaptchaTries();
+    pClientInfo->clearFlag(CIF_CAPTCHA_PENDING);
+}
+
+
+void HttpSession::blockParallelRecaptcha()
+{
+    LS_DBG_H(getLogSession(), "[RECAPTCHA] Have pending captcha, do not allow multiple.");
+    // m_processState = HSPS_DROP_CONNECTION;
+    // setState(HSS_IO_ERROR);
+    m_request.setStatusCode(SC_403);
 }
 
 
@@ -1714,6 +2003,32 @@ int HttpSession::processContextRewrite()
     return ret;
 }
 
+
+/**
+ * Return 1, will bepass URI_MAP hooks
+ */
+int HttpSession::preUriMap()
+{
+    int valLen = 0;
+    const char *pEnv = m_request.getEnv("modpagespeed", 12, valLen);
+    if (valLen == 2 && strncasecmp(pEnv, "on", 2) == 0)
+        return 0;
+    
+    m_request.checkUrlStaicFileCache();
+    int ret = (m_request.getUrlStaticFileData() ? 1 : 0);
+    if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
+    {
+        LS_DBG_L(getLogSession(), "preUriMap check serving by static url file cache: %d",
+                 ret);
+    }
+    
+    if (ret)
+    {
+        m_request.addEnv("staticcacheserve", 16, "1", 1);
+    }
+
+    return ret;
+}
 
 int HttpSession::processFileMap()
 {
@@ -1925,14 +2240,18 @@ int HttpSession::startServerParsed()
 int HttpSession::handlerProcess(const HttpHandler *pHandler)
 {
     setProcessState(HSPS_HANDLER_PROCESSING);
+    /**
+     * 2/25/19 added the below state change
+     */
+    m_iFlag |= HSF_URI_MAPPED;
+
     if (m_pHandler && cleanUpHandler(HSPS_HANDLER_PROCESSING) == LS_AGAIN)
         return 0;
 
     if (pHandler == NULL)
         return SC_403;
 
-    const HttpVHost *pVHost = m_request.getVHost();
-    if (m_request.getContext()
+     if (m_request.getContext()
         && m_request.getContext()->isAppContext())
     {
         if (m_request.getStatusCode() == SC_404)
@@ -1966,8 +2285,9 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     }
     int dyn = (pHandler->getType() >= HandlerType::HT_DYNAMIC);
     ThrottleControl *pTC = &getClientInfo()->getThrottleCtrl();
-    if ((getClientInfo()->getAccess() == AC_TRUST) ||
-        (pTC->allowProcess(dyn)))
+    if ((getClientInfo()->getAccess() == AC_TRUST)
+        || (getVHostAccess() == AC_TRUST)
+        || (pTC->allowProcess(dyn)))
     {
     }
     else
@@ -1991,15 +2311,35 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         setFlag(HSF_REQ_WAIT_FULL_BODY);
     if (testFlag(HSF_REQ_WAIT_FULL_BODY | HSF_REQ_BODY_DONE) ==
         HSF_REQ_WAIT_FULL_BODY)
+    {
+        getStream()->wantRead(1);
         return 0;
-
+    }
     
     
     
     
-    int ret = assignHandler(m_request.getHttpHandler());
+    int ret = assignHandler(pHandler);
     if (ret)
         return ret;
+
+    const HttpVHost *pVHost = m_request.getVHost();
+    if ((type == HandlerType::HT_CGI) && 
+        (((pVHost) && (pVHost->enableCGroup())) ||
+         ((!pVHost) && (ServerProcessConfig::getInstance().getCGroupAllow()) &&
+          (ServerProcessConfig::getInstance().getCGroupDefault()))))
+    {
+        LS_DBG_L(getLogSession(), "HttpSession::CGroup activate");
+        m_request.addEnv("LS_CGROUP", 9, "Y", 1);
+    }
+    else
+    {
+        LS_DBG_L(getLogSession(), "HttpSession::CGroup don't activate, type: %s "
+                 "vHost: %p, vHost->enableCGroup: %s, config.getCGroupAllow: %s\n",
+                 (m_request.getHttpHandler()->getType() == HandlerType::HT_CGI) ? "CGI" : "NOT CGI",
+                 pVHost, ((pVHost) && (pVHost->enableCGroup())) ? "YES" : "NO",
+                 ServerProcessConfig::getInstance().getCGroupAllow() ? "YES" : "NO");
+    }
 
     setState(HSS_PROCESSING);
     pTC->incReqProcessed( dyn );
@@ -2180,7 +2520,8 @@ int HttpSession::sendHttpError(const char *pAdditional)
 
         if (pErrDoc->len() < 2048)
         {
-            int ret = redirect(pErrDoc->c_str(), pErrDoc->len(), 1);
+            int ret = redirect(pErrDoc->c_str(), pErrDoc->len(),
+                               !m_request.isAppContext());
             if (ret == 0 || statusCode == ret)
                 return 0;
             if ((ret != m_request.getStatusCode())
@@ -2583,6 +2924,9 @@ void HttpSession::releaseResources()
     m_request.reset();
     releaseMtSessData();
 
+    m_pVHostAcl = NULL;
+    m_iVHostAccess = 0;
+
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
     m_iSubReqSeq = 0;
@@ -2632,6 +2976,8 @@ void HttpSession::closeSession()
 
     releaseResources();
 
+    LsiapiBridge::releaseModuleData(LSI_DATA_HTTP, getModuleData());
+    
     //For reuse condition, need to reset the sessionhooks
     m_sessionHooks.reset();
 
@@ -3147,9 +3493,12 @@ int HttpSession::setupGzipFilter()
         {
             if (!getRespBodyBuf()->empty())
                 getRespBodyBuf()->rewindWriteBuf();
-            if (m_response.getContentLen() > 200)
+            if (m_response.getContentLen() > 200 ||
+                m_response.getContentLen() < 0)
+            {
                 if (setupGzipBuf() == -1)
                     return LS_FAIL;
+            }
         }
         else //turn on compression at SEND_RESP_BODY filter
         {
@@ -3776,10 +4125,13 @@ void HttpSession::prepareHeaders()
     HttpRespHeaders &headers = m_response.getRespHeaders();
     headers.addCommonHeaders();
 
+    if (m_request.isCfIpSet())
+        headers.addTruboCharged();
+
     if (m_request.getAuthRequired())
         m_request.addWWWAuthHeader(headers);
 
-    if (m_request.getLocation() != NULL)
+    if (m_request.getLocationLen() > 0 && m_request.getLocation() != NULL)
         addLocationHeader();
     
     m_request.applyHeaderOps(this, &headers);
@@ -3878,7 +4230,7 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
     uri.len = uriLen;
     host.ptr = (char *)m_request.getHeader(HttpHeader::H_HOST);
     host.len = m_request.getHeaderLen(HttpHeader::H_HOST);
-    ls_strpair_t extraHeaders[4];
+    ls_strpair_t extraHeaders[8];
     ls_strpair_t *p = extraHeaders;
 //     URICache::iterator iter;
 //     URICache *pCache = m_request.getVHost()->getURICache();
@@ -3909,6 +4261,26 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
         p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_ACC_ENCODING);
         p++;
     }
+
+    p->val.len = m_request.getHeaderLen(HttpHeader::H_USERAGENT);
+    if (p->val.len > 0)
+    {
+        p->val.ptr = (char *)m_request.getHeader(HttpHeader::H_USERAGENT);
+        p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
+                                        HttpHeader::H_USERAGENT);
+        p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_USERAGENT);
+        p++;
+    }
+    char referer[16484];
+    p->val.len = snprintf(referer, sizeof(referer), "https://%.*s%.*s",
+                          (int)host.len, host.ptr, m_request.getOrgReqURLLen(),
+                          m_request.getOrgReqURL());
+    p->val.ptr = referer;
+    p->key.ptr = (char *)HttpHeader::getHeaderNameLowercase(
+                                        HttpHeader::H_REFERER);
+    p->key.len = HttpHeader::getHeaderStringLen(HttpHeader::H_REFERER);
+    p++;
+
     memset(p, 0, sizeof(*p));
     p = extraHeaders;
 
@@ -4051,15 +4423,19 @@ int HttpSession::sendRespHeaders()
         ls_mutex_unlock(&p->m_respHeaderLock);
 
     if (!isNoBody && m_response.getRespHeaders().hasPush()
-        && getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
+        && getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE)
+        && m_request.getUserAgentType() != UA_SAFARI)
         processServerPush();
-    
+
     if (finalizeHeader(m_request.getVersion(), m_request.getStatusCode()))
     {
         clearFlag(HSF_RESP_HEADER_SENT);
         return 1;
     }
     setFlag(HSF_RESP_HEADER_SENT);
+
+    if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
+        m_response.getRespHeaders().dump(getLogSession(), 1);
 
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
         m_response.getRespHeaders().dump(getLogSession(), 1);
@@ -4215,10 +4591,15 @@ int HttpSession::execExtCmdEx()
 int HttpSession::getServerAddrStr(char *pBuf, int len)
 {
     const AutoStr2 *pAddr;
-    pAddr = getStream()->getConnInfo()->m_pServerAddrInfo->getAddrStr();
-    if (pAddr->len() <= len)
-        len = pAddr->len();
-    memcpy(pBuf, pAddr->c_str(), len);
+    len = 0;
+    const ConnInfo *pInfo = getStream()->getConnInfo();
+    if (pInfo->m_pServerAddrInfo)
+    {
+        pAddr = pInfo->m_pServerAddrInfo->getAddrStr();
+        if (pAddr->len() <= len)
+            len = pAddr->len();
+        memcpy(pBuf, pAddr->c_str(), len);
+    }
     return len;
 }
 
@@ -4347,9 +4728,9 @@ int HttpSession::writeRespBodyBlockInternal(SendFileInfo *pData,
     }
     else
         len = writeRespBodyDirect(pBuf, written);
-    LS_DBG_M(getLogSession(), "%s return %d.\n",
+    LS_DBG_M(getLogSession(), "%s tried %d return %d.\n",
              getGzipBuf() ? "appendDynBodyEx()" : "writeRespBodyDirect()",
-             len);
+             written, len);
 
     if (len > 0)
         pData->incCurPos(len);
@@ -4552,6 +4933,7 @@ int HttpSession::passSendFileToParent(SendFileInfo *pData)
 int HttpSession::sendStaticFile(SendFileInfo *pData)
 {
     LS_DBG_M(getLogSession(), "SendStaticFile()");
+    getStream()->resetBytesCount();
 
     if (m_iFlag & HSF_SUB_SESSION && !getGzipBuf())
         return passSendFileToParent(pData);
@@ -4637,10 +5019,7 @@ int HttpSession::finalizeHeader(int ver, int code)
     //setup Send Level gzip filters
     //checkAndInstallGzipFilters(1);
 
-    int ret;
-    getResp()->getRespHeaders().addStatusLine(ver, code,
-            m_request.isKeepAlive());
-
+    int ret = 0;
     if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_HEADER))
     {
         ret = m_sessionHooks.runCallbackNoParam(LSI_HKPT_SEND_RESP_HEADER,
@@ -4651,8 +5030,65 @@ int HttpSession::finalizeHeader(int ver, int code)
 
     }
     if (!isNoRespBody())
-        return contentEncodingFixup();
-    return 0;
+        ret = contentEncodingFixup();
+    
+    getResp()->getRespHeaders().addStatusLine(ver, code,
+            m_request.isKeepAlive());
+    
+    return ret;
+}
+
+void HttpSession::testContentType()
+{
+    HttpResp *pResp = getResp();
+    HttpReq *pReq = getReq();
+    int valLen;
+    char *pValue = (char *)pResp->getRespHeaders().getHeader(
+                                HttpRespHeaders::H_CONTENT_TYPE, &valLen);
+    if (!pValue)
+        return;
+    const MimeSetting *pMIME = NULL;
+    int canCompress = pReq->gzipAcceptable() | pReq->brAcceptable();
+    HttpContext *pContext = &(pReq->getVHost()->getRootContext());
+    const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
+    int enbale = pContext->getExpires().isEnabled();
+
+    if (canCompress || enbale)
+    {
+        char *pEnd;
+        const char *p;
+        p = (char *)memchr(pValue, ';', valLen);
+        if (p)
+            pEnd = (char *)p;
+        else
+            pEnd = (char *)pValue + valLen;
+        char ch = *pEnd;
+        *pEnd = 0;
+        pMIME = pContext->lookupMimeSetting((char *)pValue);
+        LS_DBG_L(getLogSession(), "Response content type: [%s], pMIME: %p\n",
+                 pValue, pMIME);
+        *pEnd = ch;
+
+    }
+    if (!pMIME || !pMIME->getExpires()->compressible())
+    {
+        pReq->andGzip(~GZIP_ENABLED);
+        pReq->andBr(~BR_ENABLED);
+    }
+
+    if (pReq->isKeepAlive())
+        pReq->smartKeepAlive(pValue);
+
+    if (enbale)
+    {
+        if (pMIME && pMIME->getExpires()->getBase())
+            pExpireDefault = (ExpiresCtrl *)pMIME->getExpires();
+        if (pExpireDefault == NULL)
+            pExpireDefault = &pContext->getExpires();
+
+        if (pExpireDefault->getBase())
+            pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
+    }
 }
 
 
@@ -4702,7 +5138,7 @@ int HttpSession::contentEncodingFixup()
     }
     else if (!pContentEncoding && updateContentCompressible())
     {
-        if (m_response.getContentLen() > 200)
+        if (m_response.getContentLen() > 200)// && getReq()->getStatusCode() < SC_400)
         {
             if (addModgzipFilter((LsiSession *)this, 1,
                                  HttpServerConfig::getInstance().getCompressLevel()) == -1)
@@ -4836,18 +5272,11 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
         LS_DBG_M(getLogSession(), "Aio Response body sent: %lld.",
                  (long long)m_response.getBodySent());
         m_sendFileInfo.incCurPos(written);
-        if ((unsigned int)written < event->getSize())
-        {
-            continueWrite();
-            return 0;
-        }
     }
-    //File should be completely sent.
     if (m_sendFileInfo.getRemain() > 0)
     {
-        LS_DBG_M(getLogSession(),
-                 "Handle Aio Event: Reached an invalid conclusion!");
-        return LS_FAIL;
+        continueWrite();
+        return 0;
     }
     return onWriteEx();
 }
@@ -4959,6 +5388,7 @@ int HttpSession::smProcessReq()
         //fall through
         case HSPS_HKPT_URI_MAP:
             m_iFlag |= HSF_URI_MAPPED;
+            preUriMap();
             ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
             if (ret || m_processState != HSPS_FILE_MAP)
                 break;
@@ -5010,8 +5440,10 @@ int HttpSession::smProcessReq()
         case HSPS_HKPT_RCVD_REQ_BODY_PROCESSING:
             ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_HANDLER_PROCESSING);
             if (m_processState == HSPS_HANDLER_PROCESSING)
+            {
                 if (m_pHandler)
                     m_pHandler->onRead(this);
+            }
             break;
         case HSPS_HKPT_RCVD_RESP_HEADER:
             ret = runEventHkpt(LSI_HKPT_RCVD_RESP_HEADER, HSPS_RCVD_RESP_HEADER_DONE);

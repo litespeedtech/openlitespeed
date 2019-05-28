@@ -34,6 +34,8 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <extensions/registry/extappregistry.h>
+
 
 BEGIN_LOG4CXX_NS
 class Logger;
@@ -53,6 +55,8 @@ END_LOG4CXX_NS
 #define VH_GZIP             256
 #define VH_BR               512
 #define VH_AUTOLOADHTACCESS  1024
+#define VH_CGROUP           2048
+#define VH_RECAPTCHA        4096
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -83,6 +87,7 @@ class LocalWorker;
 class LocalWorkerConfig;
 class LsiApiHooks;
 class ModUserdir;
+class Recaptcha;
 class RewriteMapList;
 class RLimits;
 class SsiTagConfig;
@@ -99,6 +104,7 @@ class StaticFileCacheData;
 struct php_xml_st
 {
     AutoStr suffix;
+    AutoStr app_name;
     XmlNode *xml_node;
 };
 
@@ -176,6 +182,7 @@ private:
     SslContext         *m_pSSLCtx;
     SsiTagConfig       *m_pSSITagConfig;
     LsiModuleData       m_moduleData;
+    Recaptcha          *m_pRecaptcha;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
     php_xml_st          m_pPhpXmlNodeS[MAX_VHOST_PHP_NUM];
@@ -220,7 +227,7 @@ public:
     const char *getAccessLogPath() const;
     LOG4CXX_NS::Logger *getLogger() const  {   return m_pLogger;       }
 
-    AccessControl *getAccessCtrl();
+    AccessControl *getAccessCtrl() const;
     AccessCache *getAccessCache() const    {   return m_pAccessCache;  }
 
     HotlinkCtrl *getHotlinkCtrl() const    {   return m_pHotlinkCtrl;  }
@@ -295,6 +302,9 @@ public:
     void enableBr(int enable)         {   setFeature(VH_BR, enable);      }
     int  enableBr() const               {   return m_iFeatures & VH_BR;     }
 
+    void enableCGroup(int enable)       {   setFeature(VH_CGROUP, enable);    }
+    int  enableCGroup() const             {   return m_iFeatures & VH_CGROUP;   }
+
     ExpiresCtrl &getExpires()           {   return m_rootContext.getExpires();  }
     const ExpiresCtrl &getExpires() const
     {   return m_rootContext.getExpires();           }
@@ -329,16 +339,25 @@ public:
         else
             return NULL;
     }
-    int addPhpXmlNodeSSize(char *suffix, XmlNode *pNode)
+    int addPhpXmlNodeSSize(char *suffix, char *appName, XmlNode *pNode)
     {
         if(m_PhpXmlNodeSSize >= MAX_VHOST_PHP_NUM - 1)
             return -1;
         m_pPhpXmlNodeS[m_PhpXmlNodeSSize].suffix.setStr(suffix);
+        m_pPhpXmlNodeS[m_PhpXmlNodeSSize].app_name.setStr(appName);
         m_pPhpXmlNodeS[m_PhpXmlNodeSSize].xml_node = pNode;
         ++m_PhpXmlNodeSSize;
         return 0;
     }
     
+    /**
+     * For the VHost UniqueAppName and UniqueAppUri we do the same way
+     * add ".$uid" to the end of the string
+     */
+    
+    void getUniAppName(const char *app_name, char *dst, int dst_len) const
+    {    ExtAppRegistry::getUniAppUri(app_name, dst, dst_len, getUid()); }
+
     void setUid(uid_t uid)    {   m_uid = uid;    }
     uid_t getUid() const        {   return m_uid;   }
 
@@ -461,7 +480,8 @@ public:
                                    const char *appPath,
                                    int maxConns, const char *pRailsEnv,
                                    int maxIdle, const Env *pEnv,
-                                   const char *pBinPath);
+                                   const char *pBinPath,
+                                   HttpContext *pOldCtx);
 
     HttpContext *addRailsContext(const char *pURI, const char *pLocation,
                                         ExtWorker *pWorker,
@@ -520,12 +540,17 @@ public:
 
     int config(const XmlNode *pVhConfNode, int is_uid_set);
     int getExtAppGUid(const XmlNode *pExtAppNode);
-    void getAppName(const char *suffix, char *appName, int maxLen);
+    
     int configVHScriptHandler2();
     int configVHScriptHandler(const XmlNode *pVhConfNode);
     const HttpHandler *isHandlerAllowed(const HttpHandler *pHdlr, int type,
                                         const char *pHandler);
     void configVHChrootMode(const XmlNode *pNode);
+    
+    int configListenerMappings(const char *pListeners,
+                               const char *pDomain,
+                               const char *pAliases);
+
     static HttpVHost *configVHost(const XmlNode *pNode, const char *pName,
                                   const char *pDomain, const char *pAliases, const char *pVhRoot,
                                   const XmlNode *pConfigNode);
@@ -555,6 +580,10 @@ public:
      */
     int getIdBitOfUrl(const char *url);
     
+    int isRecaptchaEnabled() const      {   return m_iFeatures & VH_RECAPTCHA;  }
+    const Recaptcha *getRecaptcha() const   {   return m_pRecaptcha;        }
+    void setRecaptcha(Recaptcha *p)         {   m_pRecaptcha = p;           }
+    int configRecaptcha(const XmlNode *pNode);
 };
 
 

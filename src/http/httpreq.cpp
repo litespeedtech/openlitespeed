@@ -31,6 +31,7 @@
 #include <http/httpstatuscode.h>
 #include <http/httpver.h>
 #include <http/httpvhost.h>
+#include <http/recaptcha.h>
 #include <http/requestvars.h>
 #include <http/serverprocessconfig.h>
 #include <http/vhostmap.h>
@@ -136,6 +137,7 @@ HttpReq::HttpReq()
     m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
     //m_pHTAContext = NULL;
     m_pContext = NULL;
+    m_pMimeType = NULL;
     ::memset(m_commonHeaderLen, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderLen);
     m_upgradeProto = UPD_PROTO_NONE;
@@ -209,6 +211,7 @@ void HttpReq::reset(int discard)
     m_pAuthUser = NULL;
     m_pRange = NULL;
     m_lastStatPath.setStr("");
+    m_pUrlStaticFileData = NULL;
 }
 
 
@@ -320,19 +323,6 @@ int HttpReq::appendPendingHeaderData(const char *pBuf, int len)
 }
 
 
-/* NOT USED
-static inline int growBuf(AutoBuf &buf, int len)
-{
-    int g = 1024;
-    if (g < len)
-        g = len;
-    if (buf.grow(g) == -1)
-        return SC_500;
-    return 0;
-}
-*/
-
-
 int HttpReq::processHeader()
 {
     if (m_iHeaderStatus == HEADER_REQUEST_LINE)
@@ -419,6 +409,94 @@ int HttpReq::removeSpace(const char **pCur, const char *pBEnd)
 }
 
 
+static int processUserAgent(const char *pUserAgent, int len)
+{
+    int iType = UA_UNKNOWN;
+    char achUA[256];
+    switch(*pUserAgent)
+    {
+        case 'l': case 'L':
+        case 'a': case 'A':
+        case 'g': case 'G':
+        case 'm': case 'M':
+        case 'c': case 'C':
+        case 'w': case 'W':
+            break;
+        default:
+            return 0;
+    }
+    if (len > 255)
+        len = 255;
+    ls_strnlower(pUserAgent, achUA, &len);
+    achUA[len] = 0;
+    switch(*achUA)
+    {
+    case 'l':
+        if (strncmp(achUA, "litemage_", 9) == 0)
+        {
+            if (strncmp(&achUA[9], "walker", 6) == 0)
+                iType = UA_LITEMAGE_CRAWLER;
+            else if (strncmp(&achUA[9], "runner", 6) == 0)
+                iType = UA_LITEMAGE_RUNNER;
+        }
+        else if (strncmp(achUA, "lscache_", 8) == 0)
+        {
+            if (strncmp(&achUA[8], "walker", 6) == 0)
+                iType = UA_LSCACHE_WALKER;
+            else if (strncmp(&achUA[8], "runner", 6) == 0)
+                iType = UA_LSCACHE_RUNNER;
+        }
+        break;
+    case 'a':
+        if (strncmp(achUA, "apachebench/", 12) == 0)
+            iType = UA_BENCHMARK_TOOL;
+        break;
+    case 'g':
+        if (strncmp(achUA, "googlebot/", 10) == 0
+            || (len > 35 && strncmp(&achUA[25], "googlebot/", 10) == 0))
+        {
+            //NOTE: Fastest way to dectect possible Googlebot UA string listed by
+            //         http://www.useragentstring.com/pages/Googlebot/
+            // Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)
+            // Googlebot/2.1 (+http://www.googlebot.com/bot.html)
+            // Googlebot/2.1 (+http://www.google.com/bot.html)
+            iType = UA_GOOGLEBOT_POSSIBLE;
+        }
+        break;
+    case 'm':
+        if (len > 40 && strstr(&achUA[len-40], "chrome") == NULL
+            && strstr(&achUA[len-16], "safari") != NULL)
+            iType = UA_SAFARI;
+    case 'c':
+        if (strncmp(achUA, "curl/", 5) == 0)
+            iType = UA_CURL;
+        break;
+    case 'w':
+        if (strncmp(achUA, "wget/", 5) == 0)
+            iType = UA_WGET;
+        break;
+    }
+    return iType;
+}
+
+
+void HttpReq::classifyUrl()
+{
+    const char *pUrl = ls_str_cstr(&m_curUrl.key);
+    int iUrlLen = ls_str_len(&m_curUrl.key);
+    if (iUrlLen < 11)
+        return;
+    const AutoStr2 *pRecaptchaUrl = Recaptcha::getDynUrl();
+    const char *pUrlEnd = pUrl + iUrlLen;
+
+    if (iUrlLen >= 12 && memcmp(pUrlEnd - 12, "/favicon.ico", 12) == 0)
+        m_iUrlType = URL_FAVICON;
+    else if (iUrlLen >= pRecaptchaUrl->len()
+            && memcmp(pUrlEnd- pRecaptchaUrl->len(), pRecaptchaUrl->c_str(), pRecaptchaUrl->len()) == 0)
+        m_iUrlType = URL_CAPTCHA;
+}
+
+
 int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
 {
     AutoBuf *buf = header->getBuf();
@@ -429,7 +507,6 @@ int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
 
     int result = 0;
     const char *pCur = m_headerBuf.begin() + HEADER_BUF_PAD;
-    const char *pBEnd = m_headerBuf.end();
     const char *p = pCur + header->getMethodLen();
     m_reqLineOff = HEADER_BUF_PAD;
     result = parseMethod(pCur, p);
@@ -459,16 +536,22 @@ int HttpReq::processRequestLine()
     const char *pCur = m_headerBuf.begin() + m_iReqHeaderBufFinished;
     const char *pBEnd = m_headerBuf.end();
     int iBufLen = pBEnd - pCur;
-    assert(iBufLen >= 0);
-
+    if (iBufLen < 0)
+        return SC_500;
+    
+    int isLongLine = 0;
     if (pBEnd > HttpServerConfig::getInstance().getMaxURLLen() +
         m_headerBuf.begin())
+    {
         pBEnd = HttpServerConfig::getInstance().getMaxURLLen() +
                 m_headerBuf.begin();
+        isLongLine = 1;
+    }
 
     const char *pLineEnd;
     while ((pLineEnd = (const char *)memchr(pCur, '\n', pBEnd - pCur)) != NULL)
     {
+        isLongLine = 0;
         while (pCur < pLineEnd)
         {
             if (!isspace(*pCur))
@@ -482,6 +565,8 @@ int HttpReq::processRequestLine()
     }
     if (pLineEnd == NULL)
     {
+        if (isLongLine)
+            return SC_414;
         if (iBufLen < MAX_BUF_SIZE + 20)
             return 1;
         else
@@ -616,6 +701,7 @@ int HttpReq::parseURL(const char *pCur, const char *pBEnd)
         return result;
     m_reqURLLen = pBEnd - m_headerBuf.begin() - m_reqURLOff;
     //m_reqURLLen = pCur - m_headerBuf.begin() - m_reqURLOff;
+    classifyUrl();
     return 0;
 }
 
@@ -756,13 +842,13 @@ int HttpReq::processHeaderLines()
                 return SC_400;
             }
             index = HttpHeader::getIndex(pLineBegin);
-            if (index != HttpHeader::H_HEADER_END)
+            if (index < HttpHeader::H_TE)
             {
                 m_commonHeaderLen[ index ] = pTemp1 - pTemp;
                 m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
                 ret = processHeader(index);
             }
-            else
+            else if (index == HttpHeader::H_HEADER_END)
             {
                 pCurHeader = newUnknownHeader();
                 pCurHeader->keyOff = pLineBegin - m_headerBuf.begin();
@@ -771,6 +857,13 @@ int HttpReq::processHeaderLines()
                 pCurHeader->valLen = pTemp1 - pTemp;
                 ret = processUnknownHeader(pCurHeader, pLineBegin, pTemp);
             }
+            else 
+            {
+                m_otherHeaderLen[ index - HttpHeader::H_TE] = pTemp1 - pTemp;
+                m_otherHeaderOffset[index - HttpHeader::H_TE] = pTemp - m_headerBuf.begin();
+                ret = processHeader(index);
+            }
+            
             if (ret != 0)
                 return ret;
         }
@@ -803,7 +896,6 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
     const char *name;
     const char *value;
     key_value_pair *pCurHeader = NULL;
-    bool headerfinished = false;
     int index;
     int ret = 0;
 
@@ -824,13 +916,19 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
         index = begin->name_index;
         if (index == UPK_HDR_UNKNOWN)
             index = HttpHeader::getIndex(name);
-        if (index >= 0 && index != HttpHeader::H_HEADER_END)
+        if (index >= 0 && index < HttpHeader::H_TE)
         {
             m_commonHeaderLen[ index ] = begin->val_len;
             m_commonHeaderOffset[index] = value - m_headerBuf.begin();
             ret = processHeader(index);
         }
-        else
+        else if (index >= 0 && index < HttpHeader::H_HEADER_END)
+        {
+            m_otherHeaderLen[ index - HttpHeader::H_TE] = begin->val_len;
+            m_otherHeaderOffset[index - HttpHeader::H_TE] = value - m_headerBuf.begin();
+            ret = processHeader(index);
+        }
+        else 
         {
             pCurHeader = newUnknownHeader();
             pCurHeader->keyOff = begin->name_offset;
@@ -840,6 +938,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
 
             ret = processUnknownHeader(pCurHeader, name, value);
         }
+        
         if (ret != 0)
             return ret;
         ++begin;
@@ -853,6 +952,9 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
 
 int HttpReq::processHeader(int index)
 {
+    if (index >= HttpHeader::H_TE || index < 0)
+        return 0;
+
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
     const char *pBEnd = pCur + m_commonHeaderLen[ index ];
     switch (index)
@@ -874,6 +976,9 @@ int HttpReq::processHeader(int index)
                 return SC_400;
             m_lEntityLength = CHUNKED;
         }
+        break;
+    case HttpHeader::H_USERAGENT:
+        m_iUserAgentType = processUserAgent(pCur, pBEnd - pCur);
         break;
     case HttpHeader::H_ACC_ENCODING:
         if (m_commonHeaderLen[ index ] >= 2)
@@ -1108,8 +1213,8 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
     {
         const char *pQS = getQueryString();
         int len = getQueryStringLen();
-        LS_DBG_L(getLogSession(), "New request: \n\tMethod=[%s], URI=[%s],\n"
-                 "\tQueryString=[%.*s]\n\tContent Length=%lld\n",
+        LS_DBG_L(getLogSession(), "New request: Method=[%s], URI=[%s],"
+                 " QueryString=[%.*s], Content Length=%lld\n",
                  HttpMethod::get(getMethod()), getURI(), len, pQS,
                  (long long)getContentLength());
     }
@@ -1261,9 +1366,7 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
         return SC_400;    //invalid url format
     }
     uSetURI(pURI, iURILen);
-    if ((alloc) || (n - 1 - (pArgs - pURI) > 0)
-        //|| (!m_pSsiRuntime)
-    )
+    if ((alloc) || (n - 1 - (pArgs - pURI) > 0))
         setQS(getURI() + (pArgs - pURI), n - 1 - (pArgs - pURI));
     else
         m_curUrl.val = m_pUrls[m_iRedirects - 1].val;
@@ -2015,8 +2118,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                 {
                     if (++p != pEnd)
                     {
-                        if ((!m_pContext->isAppContext())
-                            && (strcmp(p, "favicon.ico") != 0))
+                        if ((!m_pContext->isAppContext()) &&  (!isFavicon()))
                             LS_DBG_L(getLogSession(), "File not found [%s].", pBuf);
                         return SC_404;
                     }
@@ -2030,8 +2132,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
     while (p >= pBegin);
     if (ret == -1)
     {
-        if ((!m_pContext->isAppContext())
-            && (strcmp(p, "/favicon.ico") != 0))
+        if ((!m_pContext->isAppContext()) && (!isFavicon()))
             LS_DBG_L(getLogSession(), "(stat)File not found [%s].", pBuf);
         return checkSuffixHandler(pURI, uriLen, cacheable);
     }
@@ -2465,7 +2566,7 @@ const ExpiresCtrl *HttpReq::shouldAddExpires()
         p = &m_pVHost->getExpires();
     else
         p = HttpMime::getMime()->getDefault()->getExpires();
-    if (p->isEnabled())
+    if (p->isEnabled() && m_pMimeType)
     {
         if (m_pMimeType->getExpires()->getBase())
             p = m_pMimeType->getExpires();
@@ -2662,7 +2763,7 @@ void  HttpReq::smartKeepAlive(const char *pValue)
 
 
 const char *HttpReq::findEnvAlias(const char *pKey, int keyLen,
-                                  int &aliasKeyLen)
+                                  int &aliasKeyLen) const
 {
     int count = sizeof(envAlias) / sizeof(envAlias_t);
     for (int i = 0; i < count; ++i)
@@ -2710,7 +2811,7 @@ ls_strpair_t *HttpReq::addEnv(const char *pOrgKey, int orgKeyLen,
 
 
 const char *HttpReq::getEnv(const char *pOrgKey, int orgKeyLen,
-                            int &valLen)
+                            int &valLen) const
 {
     int keyLen = 0;
     const char *pKey = findEnvAlias(pOrgKey, orgKeyLen, keyLen);
@@ -2809,6 +2910,37 @@ char HttpReq::isGeoIpOn() const
 uint32_t HttpReq::isIpToLocOn() const
 {
     return (m_pContext) ? m_pContext->isIpToLocOn() : 0;
+}
+
+
+bool HttpReq::isGoodBot() const
+{
+    switch (m_iUserAgentType)
+    {
+    case UA_GOOGLEBOT_CONFIRMED: case UA_BENCHMARK_TOOL:
+    case UA_LITEMAGE_CRAWLER: case UA_LITEMAGE_RUNNER:
+    case UA_LSCACHE_WALKER: case UA_LSCACHE_RUNNER:
+    case UA_CURL: case UA_WGET:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
+
+bool HttpReq::isUnlimitedBot() const
+{
+    switch (m_iUserAgentType)
+    {
+    case UA_GOOGLEBOT_CONFIRMED:
+    case UA_LITEMAGE_CRAWLER: case UA_LITEMAGE_RUNNER:
+    case UA_LSCACHE_WALKER: case UA_LSCACHE_RUNNER:
+        return true;
+    default:
+        break;
+    }
+    return false;
 }
 
 
@@ -3312,8 +3444,12 @@ int HttpReq::copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
 
 int HttpReq::checkUrlStaicFileCache()
 {
-    HttpVHost *host = (HttpVHost *)getVHost();
-    m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
+    if (!m_pUrlStaticFileData)
+    {
+        
+        HttpVHost *host = (HttpVHost *)getVHost();
+        m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
+    }
     return 0;
 }
 
@@ -3458,7 +3594,6 @@ int HttpReq::dropReqHeader(int index)
     char *pOld = (char *)getHeader(index);
     int oldLen = getHeaderLen(index);
     char *pValEnd = pOld + oldLen;
-    char *pHeaderName = pOld - HttpHeader::getHeaderStringLen(index) - 1;
     while(pOld[-1] != '\n')
         --pOld;
     --pOld;
@@ -3617,3 +3752,99 @@ void HttpReq::appendReqHeader( const char *pName, int iNameLen,
 
 
 
+const Recaptcha *HttpReq::getRecaptcha() const
+{
+    if (!m_pVHost)
+        return HttpServerConfig::getInstance().getGlobalVHost()->getRecaptcha();
+    const Recaptcha *pRecaptcha = m_pVHost->getRecaptcha();
+    return (pRecaptcha ? pRecaptcha : HttpServerConfig::getInstance()
+               .getGlobalVHost()->getRecaptcha());
+}
+
+
+void HttpReq::setRecaptchaEnvs()
+{
+    const Recaptcha *pRecaptcha = getRecaptcha();
+    const Recaptcha *pServerRecaptcha = HttpServerConfig::getInstance()
+            .getGlobalVHost()->getRecaptcha();
+
+    const AutoStr2 *pSiteKey = pRecaptcha->getSiteKey();
+    const AutoStr2 *pSecretKey = pRecaptcha->getSecretKey();
+    const char *pTypeParam = pRecaptcha->getTypeParam();
+
+    if (NULL == pSiteKey || NULL == pSecretKey)
+    {
+        pSiteKey = pServerRecaptcha->getSiteKey();
+        pSecretKey = pServerRecaptcha->getSecretKey();
+        pTypeParam = pServerRecaptcha->getTypeParam();
+    }
+
+    assert(pSiteKey != NULL && pSecretKey != NULL);
+
+    if (isCaptcha() && HttpMethod::HTTP_POST == getMethod())
+    {
+        addEnv(Recaptcha::getSecretKeyName()->c_str(),
+                Recaptcha::getSecretKeyName()->len(),
+                pSecretKey->c_str(), pSecretKey->len());
+    }
+
+    addEnv(Recaptcha::getSiteKeyName()->c_str(),
+            Recaptcha::getSiteKeyName()->len(),
+            pSiteKey->c_str(), pSiteKey->len());
+
+    if (pTypeParam != NULL)
+    {
+        addEnv(Recaptcha::getTypeParamName()->c_str(),
+                Recaptcha::getTypeParamName()->len(),
+                pTypeParam, strlen(pTypeParam));
+    }
+}
+
+
+int HttpReq::rewriteToRecaptcha()
+{
+    setRecaptchaEnvs();
+
+    if (!m_pVHost)
+        m_pVHost = HttpServerConfig::getInstance().getGlobalVHost();
+
+    if (isCaptcha() && HttpMethod::HTTP_POST == getMethod())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] Already a captcha request.");
+        m_pContext = Recaptcha::getDynCtx();
+        m_pHttpHandler = m_pContext->getHandler();
+        return 0;
+    }
+
+    const AutoStr2 *pUrl = Recaptcha::getStaticUrl();
+
+    LS_DBG_M(getLogSession(), "[RECAPTCHA] Internal redirect to [%s].",
+            pUrl->c_str());
+
+    internalRedirect(pUrl->c_str(), pUrl->len(), 1);
+    m_pContext = Recaptcha::getStaticCtx();
+    const char *pSuffix = findSuffix(pUrl->c_str(), pUrl->c_str() + pUrl->len());
+    if (pSuffix)
+        m_pMimeType = m_pContext->determineMime(pSuffix, NULL);
+    else
+        m_pMimeType = NULL;
+    m_pHttpHandler = m_pContext->getHandler();
+    processContextPath();
+    setStatusCode(SC_200);
+
+    return 1;
+}
+
+
+const char *HttpReq::getVhostName() const
+{
+    return m_pVHost ? m_pVHost->getName() : NULL;
+}
+
+
+const AccessControl *HttpReq::getVHostAccessCtrl() const
+{
+    if (m_pVHost && m_pVHost->getAccessCache())
+        return m_pVHost->getAccessCache()->getAccessCtrl();
+    return NULL;
+}

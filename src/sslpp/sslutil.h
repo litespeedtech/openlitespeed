@@ -4,12 +4,7 @@
 #ifndef SSLUTIL_H
 #define SSLUTIL_H
 
-#include <openssl/ssl.h>
-
-
-typedef int (*asyncCertDoneCb)(void *arg, const char *pDomain);
-typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
-                             const char *pDomain, int iDomainLen, bool isSsl);
+#include <sslpp/ssldef.h>
 
 class SslUtil
 {
@@ -48,8 +43,9 @@ public:
                                       char **pBegin);
     static int digestIdContext(SSL_CTX *pCtx, const void *pDigest,
                                size_t iDigestLen);
-    static int loadCert(SSL_CTX *pCtx, void *pCert, int iCertLen);
-    static int loadPrivateKey(SSL_CTX *pCtx, void *pKey, int iKeyLen);
+    static int loadCert(SSL_CTX *pCtx, const void *pCert, int iCertLen,
+                        int loadChain = 0);
+    static int loadPrivateKey(SSL_CTX *pCtx, const void *pKey, int iKeyLen);
     static int loadCertFile(SSL_CTX *pCtx, const char *pFile, int type);
     static int loadPrivateKeyFile(SSL_CTX *pCtx, const char *pFile, int type);
     static bool loadCA(SSL_CTX *pCtx, const char *pCAFile, const char *pCAPath,
@@ -70,6 +66,9 @@ public:
         return s_pDefaultCAPath;
     }
     static int setCertificateChain(SSL_CTX *pCtx, BIO * bio);
+
+    static int getSkid(SSL_CTX *pCtx, char *skid_buf, int buf_len);
+    static int lookupCertSerial(X509 *pCert, char *pBuf, int len);
 
     static void initCtx(SSL_CTX *pCtx, int method, char renegProtect);
     static long setOptions(SSL_CTX *pCtx, long options);

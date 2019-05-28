@@ -237,6 +237,9 @@ int UnpackedHeaders::set(ls_str_t *method, ls_str_t* url,
         while(headers->key.ptr)
         {
             int index = -1;
+            if (headers->key.len == 15
+                && strcmp(headers->key.ptr, "accept-encoding") == 0)
+                index = HttpHeader::H_ACC_ENCODING;
             if (appendHeader(index, headers->key.ptr, headers->key.len,
                                  headers->val.ptr, headers->val.len) == LS_FAIL)
                 return LS_FAIL;

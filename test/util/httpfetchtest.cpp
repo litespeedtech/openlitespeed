@@ -38,7 +38,6 @@ TEST(httpfetchTest_Test)
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
     Multiplexer *mult = MultiplexerFactory::getMultiplexer();
-    void *p = NULL;
     HttpFetch *pHttpFetch = new HttpFetch;
     //pHttpFetch->setResProcessor(NULL, p);
     //pHttpFetch->setTimeout(100);

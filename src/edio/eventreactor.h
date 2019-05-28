@@ -20,12 +20,15 @@
 #ifndef EVENTREACTOR_H
 #define EVENTREACTOR_H
 
-
 #include <lsdef.h>
 #include <stddef.h>
 #include <poll.h>
 
 #define ERF_UPDATE  1
+#define ERF_ADD     2
+#define ERF_REMOVE  4
+
+class Multiplexer;
 
 class EventReactor
 {
@@ -39,7 +42,7 @@ public:
     typedef int (*pri_handler)();
     typedef void (*command_fn)(EventReactor *pThis);
 
-    EventReactor()
+    EventReactor() 
         : m_pfd(NULL)
         , m_cntHup(0)
         , m_eventSet(0)
@@ -84,13 +87,15 @@ public:
     void clearRevent()                  {   m_pollfd.revents = 0;    }
     void assignRevent(short event)      {   m_pollfd.revents = event;}
     short getAssignedRevent()           {   return m_pollfd.revents; }
-
+    
     void updateEventSet()               {   m_eventSet = m_pfd->events;     }
     int  isApplyEvents() const          {   return m_eventSet != m_pfd->events;  }
-
+    
     void addFlag(unsigned short flag)   {   m_flags |= flag;        }
     void removeFlag(unsigned short flag){   m_flags &= ~flag;       }
     unsigned short getEvtFlag() const   {   return m_flags;         }
+
+    Multiplexer *getMultiplexer() const;
 
     LS_NO_COPY_ASSIGN(EventReactor);
 };

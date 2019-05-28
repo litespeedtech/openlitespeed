@@ -1,7 +1,6 @@
 CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++11
 INCLUDEPATH= -I../../util/ -I./ -I../../../include  -I../../../../../../thirdparty/include -I../ -I../../ -I./ModSecurity/headers/
-CFLAGS= -fPIC -fvisibility=hidden -g -O2 -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
 
 LIBFLAGS := $(shell pwd)/ModSecurity/src/.libs/libmodsecurity.a -lxml2 -lcurl
 ifeq ($(BUILDSTATIC), 1)
@@ -12,10 +11,22 @@ endif
 
 OS := $(shell uname)
 ifeq ($(OS), Darwin)
-	LDFLAGS := $(ALLLIB)  $(LDFLAGS) -fPIC -g -undefined dynamic_lookup  -Wall  $(LFSFLAGS) -shared
+        LDFLAGS := $(ALLLIB) -fPIC  -undefined dynamic_lookup  
 else
-	LDFLAGS := $(ALLLIB)  $(LDFLAGS) -fPIC -g -Wall   $(LFSFLAGS) -shared
+        LDFLAGS := $(ALLLIB) -fPIC
 endif
+
+
+#make -f Makefile.f CFG=debug will create a debug version module
+ifeq ($(CFG), debug)
+        CFLAGS := -fPIC -g -fvisibility=hidden  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
+        LDFLAGS := $(LDFLAGS) -g3 -O0 -Wall  $(LFSFLAGS) -shared
+else
+        CFLAGS := -fPIC -g -O2 -fvisibility=hidden  -Wall -c -D_REENTRANT $(INCLUDEPATH)  $(LFSFLAGS)
+        LDFLAGS := $(LDFLAGS) -g -O2 -Wall  $(LFSFLAGS) -shared
+endif
+
+
 
 SOURCES = mod_security.cpp
 $(shell ./dllibmodsecurity.sh >&2)

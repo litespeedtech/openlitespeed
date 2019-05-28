@@ -18,3 +18,14 @@
 
 
 #include "eventreactor.h"
+#include "multiplexerfactory.h"
+#include <socket/ls_sock.h>
+
+Multiplexer *EventReactor::getMultiplexer() const
+{
+#ifdef _USE_USER_SOCK
+    if (is_usersock(getfd()))
+        return MultiplexerFactory::getUsockMultiplexer();
+#endif
+    return MultiplexerFactory::getMultiplexer();
+}

@@ -111,14 +111,11 @@ KeyData *FileStore::getNext()
     char pBuf[TEMP_BUF_LEN + 1];
     if (!m_pFile)
         return NULL;
-    while (!feof(m_pFile))
+    while (fgets(pBuf, TEMP_BUF_LEN, m_pFile))
     {
-        if (fgets(pBuf, TEMP_BUF_LEN, m_pFile))
-        {
-            KeyData *pData = parseLine(pBuf, &pBuf[strlen(pBuf)]);
-            if (pData)
-                return pData;
-        }
+        KeyData *pData = parseLine(pBuf, &pBuf[strlen(pBuf)]);
+        if (pData)
+            return pData;
     }
     return NULL;
 }
@@ -133,10 +130,9 @@ KeyData *FileStore::getDataFromStore(const char *pKey, int keyLen)
     if (open())
         return NULL;
     fseeko(m_pFile, 0, SEEK_SET);
-    while (!feof(m_pFile))
+    while (fgets(pBuf, TEMP_BUF_LEN, m_pFile))
     {
-        if ((fgets(pBuf, TEMP_BUF_LEN, m_pFile) == NULL)
-            || (strncmp(pBuf, pKey, keyLen) != 0))
+        if (strncmp(pBuf, pKey, keyLen) != 0)
             continue;
         char ch;
         pPos = pBuf + keyLen;

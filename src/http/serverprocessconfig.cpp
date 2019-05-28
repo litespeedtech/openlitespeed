@@ -31,6 +31,8 @@ ServerProcessConfig::ServerProcessConfig()
     , m_iPriority(3)
     , m_iUMask(022)
     , m_pChroot(NULL)
+    , m_cgroupAllow(0)
+    , m_cgroupDefault(0)
 {}
 
 ServerProcessConfig::~ServerProcessConfig()

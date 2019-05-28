@@ -51,6 +51,7 @@ static StaticObj< PidList > s_pidList;
 static PidSimpleList *s_pSimpleList = NULL;
 
 RLimits *ExtAppRegistry::s_pRLimits = NULL;
+AppUriHashT *ExtAppRegistry::s_pAppUriHashT = NULL;
 
 class ExtAppMap : public HashStringMap< ExtWorker * >
 {
@@ -93,7 +94,10 @@ ExtWorker *ExtAppSubRegistry::addWorker(int type, const char *pName)
         return NULL;
     ExtAppMap::iterator iter = m_pRegistry->find(pName);
     if (iter != m_pRegistry->end())
+    {
+        LS_ERROR("Fail to addWorker(\"%s\") which is already added.", pName);
         return iter.second();
+    }
     else
     {
         ExtWorker *pApp = NULL;
@@ -253,9 +257,19 @@ static ExtWorker *newWorker(int type, const char *pName)
 }
 
 
-ExtWorker *ExtAppRegistry::addApp(int type, const char *pName)
+ExtWorker *ExtAppRegistry::addApp(int type, const char *pName, int *exist)
 {
     assert(type >= 0 && type < EA_NUM_APP);
+
+    if (exist)
+    {
+        //check if we already added it
+        ExtWorker *pWorker = s_registry[type]()->getWorker(pName);
+        *exist = (pWorker != NULL);
+        if (*exist)
+            return pWorker;
+    }
+
     return s_registry[type]()->addWorker(type, pName);
 }
 
@@ -316,6 +330,7 @@ void ExtAppRegistry::init()
     for (int i = 0; i < EA_NUM_APP; ++i)
         s_registry[i].construct();
     s_pidList.construct();
+    s_pAppUriHashT = new AppUriHashT(5, GHash::hfString, GHash::cmpString);
 }
 
 
@@ -328,6 +343,8 @@ void ExtAppRegistry::shutdown()
         s_registry[i]()->clear();
         s_registry[i].destruct();
     }
+    s_pAppUriHashT->release_objects();
+    delete s_pAppUriHashT;
 }
 
 
@@ -377,15 +394,19 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
     for (int i=0; i<count; ++i)
     {
         pPhpXmlNodeS = pVHost->getPhpXmlNodeS(i);
-        pVHost->getAppName(pPhpXmlNodeS->suffix.c_str(), appName, 256);
+        pVHost->getUniAppName(pPhpXmlNodeS->app_name.c_str(), appName, 256);
 
         ConfigCtx currentCtx(appName);
         pNode = pPhpXmlNodeS->xml_node;
         pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
                                                             achAddress, 128);
-        strcat(achAddress, "_");
-        strncat(achAddress, pVHost->getName(), 2556- strlen(pUri));
+        ExtAppRegistry::getUniAppUri(pUri, achAddress, 256, pVHost->getUid());
+        assert(pUri == achAddress);
 
+        /**
+         * Add the VHost name to the end of the pURI to avoid conflict with others
+         * 
+         */
         if (addr.set(pUri, NO_ANY | DO_NSLOOKUP))
         {
             LS_ERROR(&currentCtx, "failed to set socket address %s!", pUri);
@@ -423,13 +444,21 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
 
             pPath = &buf[len];
         }
-        pWorker = addApp(iType, (const char *)appName);
 
+        int exist = 0;
+        pWorker = addApp(iType, (const char *)appName, &exist);
         if (!pWorker)
         {
             LS_ERROR(&currentCtx, "failed to add external processor!");
             return -1;
         }
+        if (exist)
+        {
+            LS_DBG(&currentCtx, "external processor %s exist, no need to addApp again!",
+                   appName);
+            return 0;
+        }
+
         pConfig = pWorker->getConfigPointer();
         assert(pConfig);
 
@@ -462,6 +491,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
             config.setStartByServer(iAutoStart);
 
             config.config(pNode);
+            config.setRunOnStartUp(0);//For Vhost inherit app not to auto start
             config.setUGid(pVHost->getUid(), pVHost->getGid());
         }
     }
@@ -469,13 +499,50 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
     return 0;
 }
 
-ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel)
+
+int ExtAppRegistry::hasUri(const char *uri)
+{
+    AppUriHashT::iterator it = s_pAppUriHashT->find(uri);
+    if (it != s_pAppUriHashT->end())
+        return 1;
+    else
+        return 0;
+}
+
+
+void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, int loop)
+{
+    int len = strlen(app_uri);
+
+    if (app_uri != dst)
+    {
+        memcpy(dst, app_uri, (len > dst_len) ? dst_len : len);
+    }
+
+    if (len >= dst_len)
+    {
+        LS_ERROR("getUniAppUri error: dst_len %d smaller than uri len %d.",
+                 dst_len, len);
+        return ;
+    }
+
+    snprintf(dst + len, dst_len - len, ".%d%d", uid, loop);
+}
+
+
+
+/**
+ * When it is from server level, the pVhost is NULL
+ */
+ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *pVHost)
 {
     int iType;
     int role;
     char achAddress[128];
     GSockAddr addr;
     char achName[256];
+    char appNameVh[256];
+    char appUriVh[256];
     const char *pName;
     const char *pType;
     const char *pUri;
@@ -486,6 +553,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
     ExtWorkerConfig *pConfig = NULL;
     int isHttps = 0;
     int len = 0;
+
     if (ServerProcessConfig::getInstance().getChroot() != NULL)
         len = ServerProcessConfig::getInstance().getChroot()->len();
     if (strncasecmp(pNode->getName(), "extProcessor", 12) != 0)
@@ -496,8 +564,6 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
     if (pName == NULL)
         return NULL;
 
-    ConfigCtx currentCtx(pName);
-
     pType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "type");
     if (!pType)
         return NULL;
@@ -506,7 +572,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
     if ((iType < HandlerType::HT_FASTCGI) ||
         (iType >= HandlerType::HT_END))
     {
-        LS_ERROR(&currentCtx, "unknown external processor <type>: %s", pType);
+        LS_ERROR("Unknown external processor <type>: %s", pType);
         return NULL;
     }
 
@@ -514,7 +580,37 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
         return NULL;
 
 
+    /**
+     * For proxy type, will not add the uid to the name to avoid 
+     * can not find it later
+     */
+    if(pVHost && iType != HandlerType::HT_PROXY)
+    {
+        pVHost->getUniAppName(pName, appNameVh, 256);
+        pName = appNameVh;
+    }
+    ConfigCtx currentCtx(pName);
+
+    
     iType -= HandlerType::HT_CGI;
+    
+    /**
+     * AddApp first and then do the settings
+     */
+    int exist = 0;
+    pWorker = addApp(iType, pName, &exist);
+    if (!pWorker)
+    {
+        LS_ERROR(&currentCtx, "failed to add external processor: %s!", pName);
+        return NULL;
+    }
+    if (exist)
+    {
+        LS_DBG(&currentCtx, "external processor %s exist, no need to addApp again!",
+                pName);
+        return pWorker;
+    }
+
 
     pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
             achAddress, 128);
@@ -556,6 +652,42 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
             iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "autoStart",
                          0, 2, 0);
 
+        if (iAutoStart && strlen(pUri) > 6 && strncasecmp(pUri, "uds://", 6) == 0)
+        {
+            int loop = 0;
+            int uriInUse = 0;
+            while (((uriInUse = hasUri(pUri)) != 0) && ++loop < 10)
+            {
+                ExtAppRegistry::getUniAppUri(pUri, appUriVh, 256,
+                                        (pVHost ? pVHost->getUid() :
+                                        ServerProcessConfig::getInstance().getUid()),
+                                        loop);
+                LS_INFO(&currentCtx,
+                        "socket address %s is used, will try use %s instead.",
+                        pUri, appUriVh);
+                pUri = appUriVh;
+            }
+            
+            if (uriInUse)
+            {
+                LS_ERROR(&currentCtx, "socket address %s is used, give up!", pUri);
+                return NULL;
+            }
+            else
+            {
+                app_uri_info *data = new app_uri_info;
+                data->uri.setStr(pUri, strlen(pUri));
+                AppUriHashT::iterator it = s_pAppUriHashT->insert(data->uri.c_str(),
+                                                                  data);
+                if (!it)
+                {
+                    LS_ERROR(&currentCtx, "Failed to add socket address %s!",
+                             pUri);
+                    return NULL;
+                }
+            }
+        }
+            
         pPath = pNode->getChildValue("path");
 
         if ((iAutoStart) && ((!pPath || !*pPath)))
@@ -591,13 +723,9 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
             pPath = &buf[len];
         }
     }
-    pWorker = addApp(iType, pName);
 
-    if (!pWorker)
-    {
-        LS_ERROR(&currentCtx, "failed to add external processor!");
-        return NULL;
-    }
+
+
     pConfig = pWorker->getConfigPointer();
     assert(pConfig);
 
@@ -640,7 +768,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, bool  bServerLevel
      * If is server level, need to save the XmlNode
      * 
      */
-    if (bServerLevel)
+    if (!pVHost)
     {
         app_node_st key_ptr;
         key_ptr.key.setStr(pName);
@@ -776,7 +904,7 @@ int ExtAppRegistry::configExtApps(const XmlNode *pRoot,
     for (int i = 0 ; i < c ; ++ i)
     {
         pExtAppNode = list[i];
-        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost == NULL);
+        ExtWorker *pWorker = configExtApp(pExtAppNode, pVHost);
         if (pWorker != NULL)
         {
             if (pVHost)

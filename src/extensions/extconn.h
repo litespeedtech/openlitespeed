@@ -32,7 +32,7 @@ class ExtConn : public EdStream, public IConnection
     , virtual public LOG4CXX_NS::ILog
 {
     char            m_iState;
-    char            m_iToStop;
+    char            m_iToClose;
     char            m_iInProcess;
     char            m_iCPState;
     time_t          m_tmLastAccess;
@@ -71,19 +71,19 @@ public:
 
     ExtConn();
     virtual ~ExtConn();
-    void  setState(char state)    {   m_iState = state;       }
+    void  setState(char state)      {   m_iState = state;       }
     char  getState() const          {   return m_iState;        }
 
-    void  setToStop(char n)       {   m_iToStop = n;          }
-    char  getToStop() const         {   return m_iToStop;       }
+    void  setToClose(char n)        {   m_iToClose = n;         }
+    char  isToClose() const         {   return m_iToClose;      }
 
-    void  setInProcess(char s)    {   m_iInProcess = s;       }
+    void  setInProcess(char s)      {   m_iInProcess = s;       }
     char  getInProcess() const      {   return m_iInProcess;    }
 
-    void  setCPState(char s)      {   m_iCPState = s;         }
+    void  setCPState(char s)        {   m_iCPState = s;         }
     char  getCPState() const        {   return m_iCPState;      }
 
-    void  access(time_t tm)       {   m_tmLastAccess = tm;    }
+    void  access(time_t tm)         {   m_tmLastAccess = tm;    }
     time_t getLastAccess() const    {   return m_tmLastAccess;  }
 
     void  setWorker(ExtWorker *pWorker)
@@ -102,6 +102,8 @@ public:
     int  onEventDone(short event);
     int  onInitConnected();
     void onSecTimer();
+
+    int  markToClose();
 
     int  reconnect();
 

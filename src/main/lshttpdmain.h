@@ -69,6 +69,7 @@ class LshttpdMain
     pid_t               m_pid;
     int                 m_noDaemon;
     int                 m_noCrashGuard;
+    int                 m_iConfTestMode;
     AutoStr             m_gdbPath;
 
     int                *m_pProcState;
@@ -122,6 +123,7 @@ class LshttpdMain
     void deallocateBlackBoard(char *pBuf);
 
     int             startChild(ChildProc *pProc);
+    void            onNewChildStart(ChildProc * pProc);
     int             childDead(int pid);
     void            stopAllChildren(int nowait);
     void            waitChildren();
@@ -141,7 +143,6 @@ class LshttpdMain
 
     void            processSignal();
 
-    int             getNumCores();
     void            setAffinity(pid_t pid, int cpuId);
     void            cleanEnvVars();
 

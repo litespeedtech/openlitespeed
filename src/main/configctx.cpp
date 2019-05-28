@@ -42,6 +42,13 @@
 #include <sslpp/sslticket.h>
 #include <sslpp/sslutil.h>
 
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
+#include <openssl/ssl.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <unistd.h>

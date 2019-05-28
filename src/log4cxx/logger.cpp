@@ -268,6 +268,42 @@ void Logger::s_vlograw(log4cxx::Logger *l, const char *format, va_list va)
 }
 
 
+void Logger::s_logbuf(log4cxx::Logger *l, const char *buf, size_t size)
+{
+    char tmp[8192];
+    char *p = tmp, *buf_end = &tmp[sizeof(tmp)];
+    const char *end = buf + size;
+    if (!l)
+        l = log4cxx::Logger::getDefault();
+    while(buf < end)
+    {
+        if (*buf < 0x20)
+        {
+            switch (*buf)
+            {
+            case '\t':
+            case '\n':
+            case '\r':
+                *p++ = *buf;
+                break;
+            default:
+                *p++ = '.';
+                break;
+            }
+        }
+        else
+            *p++ = *buf;
+        ++buf;
+        if (p >= buf_end)
+        {
+            l->lograw(tmp, p - tmp);
+            p = tmp;
+        }
+    }
+    if (p > tmp)
+        l->lograw(tmp, p - tmp);
+}
+
 
 void Logger::s_lograw(const char *format, ...)
 {
@@ -276,6 +312,28 @@ void Logger::s_lograw(const char *format, ...)
     s_vlograw(NULL, format, va);
     va_end(va);
 }
+
+
+void Logger::s_lograw(log4cxx::Logger *l, const char *format, ...)
+{
+    va_list  va;
+    va_start(va, format);
+    s_vlograw(l, format, va);
+    va_end(va);
+}
+
+
+void Logger::s_lograw(LogSession *pLogSession, const char *format, ...)
+{
+    log4cxx::Logger *l = (pLogSession && pLogSession->getLogger())
+                         ? pLogSession->getLogger()
+                         : log4cxx::Logger::getDefault();
+    va_list  va;
+    va_start(va, format);
+    s_vlograw(l, format, va);
+    va_end(va);
+}
+
 
 END_LOG4CXX_NS
 

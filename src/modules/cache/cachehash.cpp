@@ -43,3 +43,20 @@ hash_key_t CacheHash::to_ghash_key(const void *__s)
 int CacheHash::compare(const void *pVal1, const void *pVal2)
 {   return  *((uint64_t *)pVal1) - *((uint64_t *)pVal2);    }
 
+
+const char *CacheHash::to_str(char *buf) const
+{
+    return to_str(getKey(), buf);
+}
+
+
+const char *CacheHash::to_str(const unsigned char *key, char *buf)
+{
+    static char s_buf[17];
+    if (buf == NULL)
+        buf = s_buf;
+    snprintf(buf, 17, "%02x%02x%02x%02x%02x%02x%02x%02x",
+             key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7]);
+    return buf;
+}
+

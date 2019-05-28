@@ -103,7 +103,6 @@ public:
     static int getHostByNameSync(const char *pName, in_addr_t *addr);
     static int getHostByNameV6Sync(const char *pName, in6_addr *addr);
 
-    LsShmHash  *getShmHash()    {   return m_pShmHash;  }
     void       checkCacheTTL();
     
     void       processPendingEvt()  
@@ -124,6 +123,7 @@ private:
     static void printLookupError(struct dns_ctx *ctx, AdnsReq *pAdnsReq);
 
     void checkDnsEvents();
+    LsShmHash  *getShmHash()    {   return m_pShmHash;  }
 
 
     struct dns_ctx *    m_pCtx;

@@ -222,15 +222,27 @@ int LocalWorker::startOnDemond(int force)
 int LocalWorker::stop()
 {
     pid_t pid;
+    int ret;
     PidList::iterator iter;
+    if (getConnPool().getTotalConns() > 0)
+        LS_NOTICE("[%s] stop worker processes", getName());
+    ret = clearCurConnPool();
     removeUnixSocket();
-    LS_NOTICE("[%s] stop worker processes", getName());
-    for (iter = getPidList()->begin(); iter != getPidList()->end();)
+    if (ret <= 0)
     {
-        pid = (pid_t)(long)iter->first();
-        iter = getPidList()->next(iter);
-        killProcess(pid);
-        LS_DBG_L("[%s] kill pid: %d", getName(), pid);
+        for (iter = getPidList()->begin(); iter != getPidList()->end();)
+        {
+            pid = (pid_t)(long)iter->first();
+            iter = getPidList()->next(iter);
+            killProcess(pid);
+            LS_DBG_L("[%s] kill pid: %d", getName(), pid);
+        }
+    }
+    else
+    {
+        if (LS_LOG_ENABLED(log4cxx::Level::DBG_LOW))
+            LS_INFO("[%s] %d request being processed, kill external app later.",
+                    getName(), ret);
     }
     moveToStopList();
     setState(ST_NOTSTARTED);

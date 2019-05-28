@@ -98,8 +98,6 @@ public:
             }
             if (ret < len)
                 resetRevent(POLLOUT);
-            else
-                setRevent(POLLOUT);
             return ret;
         }
     }
@@ -120,8 +118,6 @@ public:
                     ret = 0;
                 }
             }
-            else
-                setRevent(POLLOUT);
             return ret;
         }
     }
@@ -136,7 +132,7 @@ public:
 
     int write(LoopBuf *pBuf);
 
-    Multiplexer *getMultiplexer() const
+    Multiplexer *getCurMplex() const
     {   return m_pMplex;  }
 
     virtual int onHangup();

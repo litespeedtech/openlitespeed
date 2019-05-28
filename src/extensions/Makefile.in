@@ -110,15 +110,15 @@ am_libextensions_a_OBJECTS = loadbalancer.$(OBJEXT) \
 	extworker.$(OBJEXT) extconn.$(OBJEXT) \
 	extworkerconfig.$(OBJEXT) l4conn.$(OBJEXT) lscgid.$(OBJEXT) \
 	suexec.$(OBJEXT) cgidreq.$(OBJEXT) cgidconfig.$(OBJEXT) \
-	cgidworker.$(OBJEXT) cgidconn.$(OBJEXT) fcgienv.$(OBJEXT) \
-	fcgiappconfig.$(OBJEXT) fcgiapp.$(OBJEXT) \
-	fcginamevaluepair.$(OBJEXT) fcgiconnection.$(OBJEXT) \
-	fcgirecord.$(OBJEXT) jkajp13.$(OBJEXT) jworker.$(OBJEXT) \
-	jworkerconfig.$(OBJEXT) jconn.$(OBJEXT) proxyconfig.$(OBJEXT) \
-	proxyworker.$(OBJEXT) proxyconn.$(OBJEXT) \
-	extappregistry.$(OBJEXT) appconfig.$(OBJEXT) \
-	lsapiworker.$(OBJEXT) lsapireq.$(OBJEXT) lsapiconn.$(OBJEXT) \
-	lsapiconfig.$(OBJEXT)
+	cgidworker.$(OBJEXT) cgidconn.$(OBJEXT) cgroupconn.$(OBJEXT) \
+	cgroupuse.$(OBJEXT) fcgienv.$(OBJEXT) fcgiappconfig.$(OBJEXT) \
+	fcgiapp.$(OBJEXT) fcginamevaluepair.$(OBJEXT) \
+	fcgiconnection.$(OBJEXT) fcgirecord.$(OBJEXT) \
+	jkajp13.$(OBJEXT) jworker.$(OBJEXT) jworkerconfig.$(OBJEXT) \
+	jconn.$(OBJEXT) proxyconfig.$(OBJEXT) proxyworker.$(OBJEXT) \
+	proxyconn.$(OBJEXT) extappregistry.$(OBJEXT) \
+	appconfig.$(OBJEXT) lsapiworker.$(OBJEXT) lsapireq.$(OBJEXT) \
+	lsapiconn.$(OBJEXT) lsapiconfig.$(OBJEXT)
 libextensions_a_OBJECTS = $(am_libextensions_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -231,6 +231,7 @@ IS_LSCPD = @IS_LSCPD@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBBROTLI = @LIBBROTLI@
+LIBGEOIP = @LIBGEOIP@
 LIBMMDB = @LIBMMDB@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -346,7 +347,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_s
 libextensions_a_METASOURCES = AUTO
 libextensions_a_SOURCES = loadbalancer.cpp localworkerconfig.cpp localworker.cpp pidlist.cpp iprocessortimer.cpp httpextprocessor.cpp \
   extrequest.cpp extworker.cpp extconn.cpp extworkerconfig.cpp l4conn.cpp \
-  cgi/lscgid.cpp cgi/suexec.cpp cgi/cgidreq.cpp cgi/cgidconfig.cpp cgi/cgidworker.cpp cgi/cgidconn.cpp \
+  cgi/lscgid.cpp cgi/suexec.cpp cgi/cgidreq.cpp cgi/cgidconfig.cpp cgi/cgidworker.cpp cgi/cgidconn.cpp cgi/cgroupconn.cpp cgi/cgroupuse.cpp \
   fcgi/fcgienv.cpp fcgi/fcgiappconfig.cpp fcgi/fcgiapp.cpp fcgi/fcginamevaluepair.cpp fcgi/fcgiconnection.cpp fcgi/fcgirecord.cpp \
   jk/jkajp13.cpp jk/jworker.cpp jk/jworkerconfig.cpp jk/jconn.cpp \
   proxy/proxyconfig.cpp proxy/proxyworker.cpp proxy/proxyconn.cpp \
@@ -407,6 +408,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgidconn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgidreq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgidworker.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgroupconn.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgroupuse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/extappregistry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/extconn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/extrequest.Po@am__quote@
@@ -543,6 +546,34 @@ cgidconn.obj: cgi/cgidconn.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cgi/cgidconn.cpp' object='cgidconn.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o cgidconn.obj `if test -f 'cgi/cgidconn.cpp'; then $(CYGPATH_W) 'cgi/cgidconn.cpp'; else $(CYGPATH_W) '$(srcdir)/cgi/cgidconn.cpp'; fi`
+
+cgroupconn.o: cgi/cgroupconn.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT cgroupconn.o -MD -MP -MF $(DEPDIR)/cgroupconn.Tpo -c -o cgroupconn.o `test -f 'cgi/cgroupconn.cpp' || echo '$(srcdir)/'`cgi/cgroupconn.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/cgroupconn.Tpo $(DEPDIR)/cgroupconn.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cgi/cgroupconn.cpp' object='cgroupconn.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o cgroupconn.o `test -f 'cgi/cgroupconn.cpp' || echo '$(srcdir)/'`cgi/cgroupconn.cpp
+
+cgroupconn.obj: cgi/cgroupconn.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT cgroupconn.obj -MD -MP -MF $(DEPDIR)/cgroupconn.Tpo -c -o cgroupconn.obj `if test -f 'cgi/cgroupconn.cpp'; then $(CYGPATH_W) 'cgi/cgroupconn.cpp'; else $(CYGPATH_W) '$(srcdir)/cgi/cgroupconn.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/cgroupconn.Tpo $(DEPDIR)/cgroupconn.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cgi/cgroupconn.cpp' object='cgroupconn.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o cgroupconn.obj `if test -f 'cgi/cgroupconn.cpp'; then $(CYGPATH_W) 'cgi/cgroupconn.cpp'; else $(CYGPATH_W) '$(srcdir)/cgi/cgroupconn.cpp'; fi`
+
+cgroupuse.o: cgi/cgroupuse.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT cgroupuse.o -MD -MP -MF $(DEPDIR)/cgroupuse.Tpo -c -o cgroupuse.o `test -f 'cgi/cgroupuse.cpp' || echo '$(srcdir)/'`cgi/cgroupuse.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/cgroupuse.Tpo $(DEPDIR)/cgroupuse.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cgi/cgroupuse.cpp' object='cgroupuse.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o cgroupuse.o `test -f 'cgi/cgroupuse.cpp' || echo '$(srcdir)/'`cgi/cgroupuse.cpp
+
+cgroupuse.obj: cgi/cgroupuse.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT cgroupuse.obj -MD -MP -MF $(DEPDIR)/cgroupuse.Tpo -c -o cgroupuse.obj `if test -f 'cgi/cgroupuse.cpp'; then $(CYGPATH_W) 'cgi/cgroupuse.cpp'; else $(CYGPATH_W) '$(srcdir)/cgi/cgroupuse.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/cgroupuse.Tpo $(DEPDIR)/cgroupuse.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='cgi/cgroupuse.cpp' object='cgroupuse.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o cgroupuse.obj `if test -f 'cgi/cgroupuse.cpp'; then $(CYGPATH_W) 'cgi/cgroupuse.cpp'; else $(CYGPATH_W) '$(srcdir)/cgi/cgroupuse.cpp'; fi`
 
 fcgienv.o: fcgi/fcgienv.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT fcgienv.o -MD -MP -MF $(DEPDIR)/fcgienv.Tpo -c -o fcgienv.o `test -f 'fcgi/fcgienv.cpp' || echo '$(srcdir)/'`fcgi/fcgienv.cpp

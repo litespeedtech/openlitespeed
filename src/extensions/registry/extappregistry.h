@@ -22,6 +22,7 @@
 #include <lsdef.h>
 #include <sys/types.h>
 #include <util/gpointerlist.h>
+#include <util/autostr.h>
 
 class ExtWorker;
 class ExtAppMap;
@@ -29,6 +30,16 @@ class XmlNode;
 class ConfigCtx;
 class RLimits;
 class HttpVHost;
+template< class T >
+class THash;
+
+typedef struct _app_uri_info
+{
+    AutoStr uri;
+} app_uri_info;
+
+typedef  THash<app_uri_info *> AppUriHashT;
+
 
 class ExtAppSubRegistry
 {
@@ -65,9 +76,10 @@ class ExtAppRegistry
 {
 private:
     static RLimits        *s_pRLimits;
+    static AppUriHashT    *s_pAppUriHashT;
 public:
     static ExtWorker *newWorker(int type, const char *pName);
-    static ExtWorker *addApp(int type, const char *pName);
+    static ExtWorker *addApp(int type, const char *pName, int *exist = NULL);
     static ExtWorker *getApp(int type, const char *pName);
     static int stopApp(ExtWorker *pApp);
     static int stopAll();
@@ -79,14 +91,17 @@ public:
     static void init();
     static void shutdown();
     static int generateRTReport(int fd);
+    static int hasUri(const char *uri);
     
+    static void getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, int loop = 0);
     static int configVhostOwnPhp(HttpVHost *pVHost);
-    static ExtWorker *configExtApp(const XmlNode *pNode, bool bServerLevel);
+    static ExtWorker *configExtApp(const XmlNode *pNode, const HttpVHost *pVHost);
     static int configLoadBalacner(const XmlNode *pNode,
                                   const HttpVHost *pVHost);
     static int configExtApps(const XmlNode *pRoot, const HttpVHost *pVHost);
     static RLimits *getRLimits()    {   return s_pRLimits;  }
     static void setRLimits(RLimits *pRLimits)   {   s_pRLimits = pRLimits;  }
+    
     LS_NO_COPY_ASSIGN(ExtAppRegistry);
 };
 

@@ -23,6 +23,8 @@ class SslContextConfig;
 
 typedef SslContext *(*SslSniLookupCb)(void *arg, const char *pName);
 
+#define SSL_CTX_PENDING ((SSL_CTX *)-1L)
+
 struct bio_st;
 
 class SslContext
@@ -62,6 +64,10 @@ public:
     void setLastAccess(long t)  {   m_tmLastAccess = t;     }
 
     SSL_CTX *get() const        {   return m_pCtx;          }
+    void set(SSL_CTX * ctx)     {   m_pCtx = ctx;           }
+    
+    bool checkPrivateKey();
+
     SSL *newSSL();
     void setProtocol(int method);
 

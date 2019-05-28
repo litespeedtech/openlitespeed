@@ -66,27 +66,27 @@ void ThrottleLimits::config(const XmlNode *pNode1,
             }
             else
             {
-                outlimit = INT_MAX;
-                inlimit = INT_MAX;
+                outlimit = THROTTLE_MAX;
+                inlimit = THROTTLE_MAX;
             }
         }
     }
     if (outlimit <= 0)
-        outlimit = INT_MAX;
+        outlimit = THROTTLE_MAX;
     if (inlimit <= 0)
-        inlimit = INT_MAX;
+        inlimit = THROTTLE_MAX;
     m_iOutput = outlimit;
     m_iInput = inlimit;
     int limit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
                 "dynReqPerSec", 0, INT_MAX,
                 pDefault->getDynReqLimit());
     if (limit == 0)
-        limit = INT_MAX;
+        limit = THROTTLE_MAX;
     m_iDynReq = limit;
     limit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
             "staticReqPerSec", 0, INT_MAX,
             pDefault->getStaticReqLimit());
     if (limit == 0)
-        limit = INT_MAX;
+        limit = THROTTLE_MAX;
     m_iStaticReq = limit;
 }

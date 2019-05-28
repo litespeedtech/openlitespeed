@@ -95,26 +95,6 @@ ByteRange *HttpRange::getSlot(ls_xpool_t *pool)
     return m_array.getNew();
 }
 
-/**
- * If ranges bigger than the whole content length, return 1.
- * Otherwise return 0.
- */
-int HttpRange::isRangesTooBig()
-{
-    if (m_lEntityLen == -1)
-        return 0;
-    
-    int size = m_array.getSize();
-    off_t total = 0;
-    for (int i = 0; i < size; ++i)
-        total += m_array.getObj(i)->getLen();
-
-    if (total >= m_lEntityLen)
-        return 1;
-    else
-        return 0;
-}
-
 int HttpRange::checkAndInsert(ByteRange &range, ls_xpool_t *pool)
 {
     if ((range.getBegin() == -1) && (range.getEnd() == -1))
@@ -189,6 +169,7 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
     int state = 0;
     ByteRange range(-1, -1);
     off_t lValue = 0;
+    off_t total = 0;
     while (state != 6)
     {
         switch (ch)
@@ -278,6 +259,9 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
                     state = 6;
                     break;
                 }
+                total += range.getLen();
+                if (total > m_lEntityLen)
+                    return SC_200;
                 range.setBegin(-1);
                 range.setEnd(-1);
                 state = 0;

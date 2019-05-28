@@ -20,8 +20,9 @@
 
 #include <lsdef.h>
 #include <log4cxx/tmplogid.h>
-#include <openssl/ssl.h>
 #include <stdarg.h>
+
+typedef struct ssl_ctx_st SSL_CTX;
 
 //class HttpContext;
 //class HttpVHost;

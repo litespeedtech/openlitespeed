@@ -18,6 +18,9 @@
 #ifndef IPTOGEO_H
 #define IPTOGEO_H
 
+#include <config.h>
+#ifdef ENABLE_IPTOGEO
+
 
 #include <inttypes.h>
 
@@ -82,4 +85,5 @@ private:
     LS_NO_COPY_ASSIGN(IpToGeo);
 };
 
+#endif  //ENABLE_IPTOGEO
 #endif

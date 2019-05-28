@@ -104,6 +104,8 @@ public:
 //         return m_iMaxObjSize;
 //     }
 
+    void debug_dump(CacheEntry *pEntry, const char *msg);
+
 protected:
     virtual int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
                                 const char *pFromSuffix, const char *pToSuffix, int validate) = 0;

@@ -369,9 +369,7 @@ public:
 
     void eraseIterator(iteroffset iterOff)
     {
-        autoLockChkRehash();
         eraseIteratorHelper(iterOff);
-        autoUnlock();
     }
 
     iteroffset  insertCopy(LsShmHKey key, ls_strpair_t *pParms)

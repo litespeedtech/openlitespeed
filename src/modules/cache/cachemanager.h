@@ -177,7 +177,11 @@ public:
         CacheKey *pKey, const char *pValue, int iValLen,
         time_t curTime, int curTimeMS) = 0;
 
-    virtual int addUrlVary(const char *pUrl, int len, int id) = 0;
+    virtual int addUrlVary(const char *pUrl, int len, int32_t id) = 0;
+
+    virtual int delUrlVary(const char *pUrl, int len) = 0;
+
+    virtual int32_t getUrlVaryId(const char *pUrl, int len) = 0;
 
     virtual int getVaryId(const char *pVary, int varyLen) = 0;
 

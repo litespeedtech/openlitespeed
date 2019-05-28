@@ -72,6 +72,7 @@ public:
 
     virtual void removePermEntry(CacheEntry *pEntry);
 
+    void getEntryFilePath(CacheEntry *pEntry, char *pPath, int &len);
 
 //    int &ls_fio_stat(char achBuf[4096], struct stat *st);
 

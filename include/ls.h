@@ -1140,7 +1140,17 @@ enum LSI_REQ_HEADER_ID
     /**
      * "Transfer-Encoding" request header.
      */
-    LSI_HDR_TRANSFER_ENCODING
+    LSI_HDR_TRANSFER_ENCODING,
+    
+    /***
+     * Add a padding to make the indexes match server internal indexes.
+     */
+    LSI_HDR_TE_PADDING,
+    
+    /**
+     * "X-LiteSpeed-Purge" request header.
+     */
+    LSI_HDR_LITESPEED_PURGE,
 
 };
 
@@ -1317,7 +1327,11 @@ enum LSI_ACL_LEVEL
     /**
      * ACL block access.
      */
-    LSI_ACL_BLOCK
+    LSI_ACL_BLOCK,
+    /**
+     * ACL captcha verified.
+     */
+    LSI_ACL_CAPTCHA
 };
 
 /**

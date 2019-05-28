@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "mainserverconfig.h"
 
 //#define TEST_OUTPUT_PLAIN_CONF
 
@@ -63,6 +64,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"allowbrowse",                              NULL},
     {"allowdirectaccess",                        NULL},
     {"allowedhosts",                             NULL},
+    {"allowedrobothits",                         NULL},
     {"allowsetuid",                              NULL},
     {"allowsymbollink",                          NULL},
     {"authname",                                 NULL},
@@ -80,6 +82,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"banperiod",                                NULL},
     {"base",                                     NULL},
     {"binding",                                  NULL},
+    {"botwhitelist",                             NULL},
     {"brstaticcompresslevel",                    NULL},
     {"byteslog",                                 NULL},
     {"cacertfile",                               NULL},
@@ -90,6 +93,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"certfile3",                                NULL},
     {"cgidsock",                                 NULL},
     {"cgirlimit",                                NULL},
+    {"cgroup",                                   NULL},
     {"checksymbollink",                          NULL},
     {"chrootmode",                               NULL},
     {"chrootpath",                               NULL},
@@ -205,6 +209,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"logreferer",                               NULL},
     {"loguseragent",                             NULL},
     {"ls_enabled",                               NULL},
+    {"lsrecaptcha",                              NULL},
     {"map",                                      NULL},
     {"maxcachedfilesize",                        NULL},
     {"maxcachesize",                             NULL},
@@ -221,6 +226,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"maxreqheadersize",                         NULL},
     {"maxrequrllen",                             NULL},
     {"maxsslconnections",                        NULL},
+    {"maxtries",                                 NULL},
     {"member",                                   NULL},
     {"memhardlimit",                             NULL},
     {"memsoftlimit",                             NULL},
@@ -253,6 +259,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"realm",                                    NULL},
     {"realmlist",                                NULL},//!!
     {"redirecturi",                              NULL},
+    {"regconnlimit",                             NULL},
     {"required",                                 NULL},
     {"requiredpermissionmask",                   NULL},
     {"respbuffer",                               NULL},
@@ -265,10 +272,13 @@ plainconfKeywords plainconf::sKeywords[] =
     {"runonstartup",                             NULL},
     {"scripthandler",                            NULL},
     {"scripthandlerlist",                        NULL},
+    {"secretkey",                                NULL},
     {"secure",                                   NULL},
     {"securedconn",                              NULL},
     {"security",                                 NULL},
     {"servername",                               NULL},
+    {"sitekey",                                  NULL},
+    {"sslconnlimit",                             NULL},
     {"ssldefaultcafile",                         NULL},
     {"ssldefaultcapath",                         NULL},
     {"sslenablemulticerts",                      NULL},
@@ -406,7 +416,9 @@ plainconfKeywords plainconf::sKeywords[] =
     {"binpath", NULL},
     {"apptype", NULL},
     {"startupfile", NULL},
-    
+    {"appserverenv", NULL},
+    {"enablelve",  NULL},
+    {"cpuaffinity", NULL},
     
 };
 
@@ -1127,6 +1139,9 @@ void plainconf::getIncludeFile(const char *curDir, const char *orgFile,
 //Example: co -u1.1 httpd_config.conf
 void plainconf::checkInFile(const char *path)
 {
+    if (MainServerConfig::getInstance().getDisableWebAdmin())
+        return ;
+    
     if (access(path, 0) == -1)
         return ;
 
@@ -1250,10 +1265,8 @@ void plainconf::loadConfFile(const char *path)
         char sMultiLineModeSign[MAX_MULLINE_SIGN_LENGTH] = {0};
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
 
-        while (!feof(fp))
+        while (fgets(sLine, MAX_LINE_LENGTH, fp))
         {
-            sLine[0] = 0x00;
-            fgets(sLine, MAX_LINE_LENGTH, fp);
             ++lineNumber;
             p = sLine;
 
@@ -1289,7 +1302,6 @@ void plainconf::loadConfFile(const char *path)
                 continue;
 
             AutoStr2 pathInclude;
-
             if (isInclude(p, pathInclude))
             {
                 char achBuf[512] = {0};
@@ -1354,13 +1366,6 @@ void plainconf::loadConfFile(const char *path)
 XmlNode *plainconf::parseFile(const char *configFilePath,
                               const char *rootTag)
 {
-#ifdef TEST_OUTPUT_PLAIN_CONF
-    char *tmp = (char *)new char[5 * 1024 * 1024];
-
-    if (tmp)
-        delete []tmp;
-
-#endif
     XmlNode *rootNode = new XmlNode;
     const char *attr = NULL;
     rootNode->init(rootTag, &attr);

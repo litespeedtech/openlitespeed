@@ -189,7 +189,7 @@ function printOneEntry( $base, $name, $fileStat, $setting )
     if ( isset($_SERVER['LS_FI_OFF'])&& $_SERVER['LS_FI_OFF'] )
     {
         $buf = '<li>' . '<a href="' . $encoded .
-                 $fileStat->isdir.'">' . sprintf( $setting->nameFormat, $name."</a></li>\n");
+                 $fileStat->isdir.'">' . sprintf( $setting->nameFormat, htmlspecialchars($name)."</a></li>\n");
     }
     else
     {
@@ -199,7 +199,7 @@ function printOneEntry( $base, $name, $fileStat, $setting )
         {
             $name = substr( $name, 0, $setting->nameWidth - 3 ). '...';
         }
-        $buf .= sprintf( $setting->nameFormat, $name."</A>");
+        $buf .= sprintf( $setting->nameFormat, htmlspecialchars($name)."</a>");
         if ( $fileStat->mtime != -1 )
             $buf .= date($setting->Time_Format, $fileStat->mtime);
         else

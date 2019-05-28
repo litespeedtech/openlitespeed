@@ -29,6 +29,7 @@
 #include <http/httpmime.h>
 #include <http/httpserverconfig.h>
 #include <http/httpstatuscode.h>
+#include <http/recaptcha.h>
 #include <http/rewriteengine.h>
 #include <http/rewriterule.h>
 #include <http/rewritemap.h>
@@ -140,6 +141,7 @@ UserDir *HttpVHost::getFileUserDir(
 }
 
 
+
 void HttpVHost::offsetChroot(const char *pChroot, int len)
 {
     char achTemp[512];
@@ -248,6 +250,7 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_pRewriteMaps(NULL)
     , m_pSSLCtx(NULL)
     , m_pSSITagConfig(NULL)
+    , m_pRecaptcha(NULL)
     , m_PhpXmlNodeSSize(0)
 {
     char achBuf[10] = "/";
@@ -298,10 +301,9 @@ int HttpVHost::setDocRoot(const char *psRoot)
 }
 
 
-AccessControl *HttpVHost::getAccessCtrl()
-{
-    return m_pAccessCache->getAccessCtrl();
-}
+AccessControl *HttpVHost::getAccessCtrl() const
+{   return (m_pAccessCache ? m_pAccessCache->getAccessCtrl() : NULL);   }
+
 
 
 void HttpVHost::enableAccessCtrl()
@@ -602,7 +604,6 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
                          size_t iUriLen, AutoStr2 *missURI) const
 {
     assert(iUriLen > 0 && pURI[0] == '/');
-    const char *curContextURI = pContext->getURI();
     int curContextURILen = pContext->getURILen();
 
     if (pContext->isNullContext())
@@ -636,12 +637,21 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
     while (pContext && !dirMatch(pContext, pURI, iUriLen, &missURI))
     {
         char achRealPath[MAX_PATH_LEN];
-        strncpy(achRealPath, pContext->getLocation(), pContext->getLocationLen());
-        strcpy(achRealPath + pContext->getLocationLen(), missURI.c_str());
+        int locLen = pContext->getLocationLen();
+        strncpy(achRealPath, pContext->getLocation(), locLen);
+        
+        /**
+         * Comments: missURI is alway start with '/', so when strcpy, just do +1
+         * 
+         * if ( *(achRealPath + locLen - 1) == '/')
+         *            --locLen;
+         * strcpy(achRealPath + locLen, missURI.c_str());
+         */
+        strcpy(achRealPath + locLen, missURI.c_str() + 1);
 
         HttpContext *pContext0 = addContext(missURI.c_str(), HandlerType::HT_NULL,
                               achRealPath, NULL, 1);
-        LS_INFO(ConfigCtx::getCurConfigCtx(), "Tried to add new context: "
+        LS_DBG_H(ConfigCtx::getCurConfigCtx(), "Tried to add new context: "
                 "URI %s location %s, result %p",
                 missURI.c_str(), achRealPath, pContext0);
         if (pContext0 == NULL)
@@ -1518,7 +1528,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
 
     LocalWorkerConfig &config = pWorker->getConfig();
-    config.setDetached(1);
+    //config.setDetached(1);
     setDefaultConfig(config, pRailsRunner, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();
@@ -1570,7 +1580,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
     config.getEnv()->add(pAppDefault->getEnv());
     config.addEnv(NULL);
-
+    config.setUGid(getUid(), getGid());
     config.setRunOnStartUp(runOnStart);
 
     snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
@@ -1600,10 +1610,19 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
     }
     char achBuf[MAX_PATH_LEN];
     snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
-    HttpContext *pContext = addContext(achURI, HandlerType::HT_NULL,
-                                          achBuf, NULL, 1);
+    HttpContext *pContext = NULL;
+
+    if (pOldCtx)
+    {
+        pContext = pOldCtx;
+        pContext->setRoot(achBuf);
+    }
+    else
+        pContext = addContext(achURI, HandlerType::HT_NULL,
+                                 achBuf, NULL, 1);
     if (!pContext)
         return NULL;
+    
     strcpy(&achURI[uriLen], "dispatch.rb");
     HttpContext *pDispatch = addContext(achURI,
                                         HandlerType::HT_NULL,
@@ -1635,12 +1654,6 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
     pContext->setAutoIndexOff(1);
     pContext->setCustomErrUrls("404", achURI);
     pContext->setRailsContext();
-    if (pOldCtx)
-    {
-        pOldCtx->setAutoIndexOff(1);
-        pOldCtx->setCustomErrUrls("404", achURI);
-        pOldCtx->setRailsContext();
-    }
     return pContext;
 
 }
@@ -1650,7 +1663,8 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
                                            const char *appPath,
                                            int maxConns, const char *pRailsEnv,
                                            int maxIdle, const Env *pEnv,
-                                           const char *pBinPath)
+                                           const char *pBinPath,
+                                           HttpContext *pOldCtx)
 {
     char achFileName[MAX_PATH_LEN];
 
@@ -1673,7 +1687,7 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
                                        pBinPath) ;
     if (!pWorker)
         return NULL;
-    return addRailsContext(contextUri, achFileName, pWorker, NULL);
+    return addRailsContext(contextUri, achFileName, pWorker, pOldCtx);
 }
 
 
@@ -1733,7 +1747,7 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     }
 
     LocalWorkerConfig &config = pWorker->getConfig();
-    config.setDetached(1);
+    //config.setDetached(1);
     setDefaultConfig(config, pBinPath, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();
@@ -1780,6 +1794,8 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
 
     config.getEnv()->add(pAppDefault->getEnv());
     config.addEnv(NULL);
+    config.setUGid(getUid(), getGid());
+    config.setRunOnStartUp(runOnStart);
 
     snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
     pWorker->setRestartMarker(achName, 0);
@@ -1814,7 +1830,10 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
     HttpContext *pContext;
     if (pOldCtx)
+    {
         pContext = pOldCtx;
+        pContext->setRoot(achBuf);
+    }
     else
         pContext = addContext(achURI, HandlerType::HT_NULL,
                                  achBuf, NULL, 1);
@@ -1965,6 +1984,10 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
         config.addEnv(achName);
     }
 
+    snprintf(achName, MAX_PATH_LEN, "LSNODE_SOCKET=%s",
+             config.getServerAddr().getUnix());
+    config.addEnv(achName);
+
     if (pRunModeEnv)
     {
         snprintf(achName, MAX_PATH_LEN, "NODE_ENV=%s", pRunModeEnv);
@@ -1985,7 +2008,7 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
 
     config.getEnv()->add(pAppDefault->getEnv());
     config.addEnv(NULL);
-
+    config.setUGid(getUid(), getGid());
     config.setRunOnStartUp(runOnStart);
 
     snprintf(achName, MAX_PATH_LEN, "%stmp/restart.txt", achFileName);
@@ -2038,7 +2061,10 @@ HttpContext *HttpVHost::addNodejsContext(const char *pURI,
     snprintf(achBuf, MAX_PATH_LEN, "%spublic/", pLocation);
     HttpContext *pContext;
     if (pOldCtx)
+    {
         pContext = pOldCtx;
+        pContext->setRoot(achBuf);
+    }
     else
         pContext = addContext(0, achURI, HandlerType::HT_NULL,
                                  achBuf, NULL, 1);
@@ -2065,6 +2091,8 @@ HttpContext *HttpVHost::addNodejsContext(const char *pURI,
 
     pContext->setCustomErrUrls("404", achURI);
 
+    pContext->clearDirIndexes();
+    pContext->addDirIndexes("-");
     pContext->setNodejsContext();
     pContext->setAutoIndex(0);
     pContext->setAutoIndexOff(1);
@@ -2098,7 +2126,7 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
     const char *pStartupFile = ConfigCtx::getCurConfigCtx()->getTag(pNode, "startupFile", 0, 0);
     const char *pBinPath = pNode->getChildValue("binPath");
 
-    int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
+    ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
 
     int appType = HandlerType::HT_APPSERVER;
     const char *sType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "appType");
@@ -2199,7 +2227,7 @@ HttpContext *HttpVHost::configAppContext( int appType, const char *contextUri,
     {
     case HandlerType::HT_RAILS:
         return configRailsContext(contextUri, pAppRoot, maxConns, pAppMode,
-                                  maxIdle, pProcessEnv, pBinPath);
+                                  maxIdle, pProcessEnv, pBinPath, pOldCtx);
         break;
 
     case HandlerType::HT_PYTHON:
@@ -2637,6 +2665,7 @@ int HttpVHost::configRedirectContext(const XmlNode *pContextNode,
     {
         pContext->redirectCode(code);
         pContext->setConfigBit(BIT_ALLOW_OVERRIDE, 1);
+        pContext->enableRewrite(0); //Force redirect context to disable rewrite
     }
     return 0;
 }
@@ -3089,12 +3118,26 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     if (configBasics(pVhConfNode, iChrootlen) != 0)
         return 1;
 
+    enableCGroup((ServerProcessConfig::getInstance().getCGroupAllow()) ?
+                 ConfigCtx::getCurConfigCtx()->getLongValue(
+                     pVhConfNode, "cgroup", 0, 1, 
+                     ServerProcessConfig::getInstance().getCGroupDefault()) : 0);
+    
     if (!is_uid_set)
         updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());
 
     const XmlNode *p0;
     HttpContext *pRootContext = &getRootContext();
     initErrorLog(pVhConfNode, 0);
+    int recaptchaEnable = HttpServerConfig::getInstance().getGlobalVHost()->isRecaptchaEnabled();
+    if (recaptchaEnable)
+    {
+        const XmlNode *pRecaptchaNode = pVhConfNode->getChild("lsrecaptcha");
+        if (pRecaptchaNode)
+            configRecaptcha(pRecaptchaNode);
+        else
+            setFeature(VH_RECAPTCHA, recaptchaEnable);
+    }
     configSecurity(pVhConfNode);
     {
         ConfigCtx currentCtx("epsr");
@@ -3109,9 +3152,19 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     /**
      * Check if we have server level php with different guid,
      * if yes, need set the extApp and config scriptHanlder
+     * 
+     * So now if we have vhost "Example" with "add  lsapi:lsphp php",
+     * we will check if we have "Example:lsphp"  extapp first, then will check 
+     * "lsphp" (server level).
+     * Before that if Vhost do not lsphp defined, will not add "Example:lsphp",
+     * but if vhost have diff user/group than server level, will create
+     * "Example:lsphp" automatically with the vhost user/group.
+     * 
      */
     if (getPhpXmlNodeSSize() > 0)
     {
+        LS_DBG_L("[VHost:%s] start to config its own php handler, size %d.",
+                 getName(), getPhpXmlNodeSSize());
         ExtAppRegistry::configVhostOwnPhp(this);
         configVHScriptHandler2();
     }
@@ -3222,14 +3275,6 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 }
 
 
-void HttpVHost::getAppName(const char *suffix, char *appName, int maxLen)
-{
-    assert(maxLen >= 255);
-    strcpy(appName, suffix);
-    strcat(appName, "_");
-    strcat(appName, getName());
-}
-
 /**
  * Only for a special case, we need to handler spcially, otherwise
  * use the existing routing
@@ -3244,6 +3289,7 @@ int HttpVHost::configVHScriptHandler2()
 {
     HttpMime *pHttpMime = getMIME();
     const char *suffix  = NULL;
+    const char *orgAppName = NULL;
     php_xml_st *pPhpXmlNodeS;
     char appName[256];
 
@@ -3252,7 +3298,8 @@ int HttpVHost::configVHScriptHandler2()
     {
         pPhpXmlNodeS = getPhpXmlNodeS(i);
         suffix = pPhpXmlNodeS->suffix.c_str();
-        getAppName(suffix, appName, 256);
+        orgAppName = pPhpXmlNodeS->app_name.c_str();
+        getUniAppName(orgAppName, appName, 256);
         const HttpHandler *pHdlr = HandlerFactory::getHandler("lsapi", appName);
         HttpMime::addMimeHandler(pHdlr, NULL, pHttpMime, suffix);
     }
@@ -3261,17 +3308,18 @@ int HttpVHost::configVHScriptHandler2()
 
 int HttpVHost::configVHScriptHandler(const XmlNode *pVhConfNode)
 {
+    /**
+     * Comments, even if the list is NULL, we still need to config because
+     * VHost may have different user/group than server
+     */
+    const XmlNodeList *pList = NULL;
     const XmlNode *p0 = pVhConfNode->getChild("scriptHandler");
-    if (p0 == NULL)
-        return 0;
-
-    const XmlNodeList *pList = p0->getChildren("add");
-    if (pList && pList->size() > 0)
-    {
-        getRootContext().initMIME();
-        HttpMime::configScriptHandler(pList, getMIME(), this);
-    }
-
+    if (p0)
+        pList = p0->getChildren("add");
+    
+    getRootContext().initMIME();
+    HttpMime::configScriptHandler(pList, getMIME(), this);
+ 
     return 0;
 }
 
@@ -3295,6 +3343,74 @@ const HttpHandler *HttpVHost::isHandlerAllowed(const HttpHandler *pHdlr,
         }
     }
     return pHdlr;
+}
+
+
+int HttpVHost::configRecaptcha(const XmlNode *pNode)
+{
+    ConfigCtx currentCtx("vhost", getName());
+    LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Config recaptcha.");
+    HttpVHost *pGlobalVHost = HttpServerConfig::getInstance().getGlobalVHost();
+    int enabled = pGlobalVHost->isRecaptchaEnabled();
+    enabled = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enabled", 0, 1, enabled);
+    if (!enabled)
+        return 0;
+
+    const char *pSiteKey = pNode->getChildValue("siteKey");
+    const char *pSecretKey = pNode->getChildValue("secretKey");
+
+    if (pGlobalVHost == this && (NULL == pSiteKey || NULL == pSecretKey))
+    {
+        pSiteKey = Recaptcha::getDefaultSiteKey();
+        pSecretKey = Recaptcha::getDefaultSecretKey();
+    }
+
+    {
+        const Recaptcha *pGlobalRecaptcha = pGlobalVHost->getRecaptcha();
+        const AutoStr2 *pGlobalSiteKey = (pGlobalRecaptcha ? pGlobalRecaptcha->getSiteKey() : NULL);
+        const AutoStr2 *pGlobalSecretKey = (pGlobalRecaptcha ? pGlobalRecaptcha->getSecretKey() : NULL);
+
+        if ((NULL == pSiteKey && NULL == pGlobalSiteKey)
+            || (NULL == pSecretKey && NULL == pGlobalSecretKey))
+        {
+            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Missing site or secret key.");
+            return -1;
+        }
+    }
+
+    uint16_t type = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "type",
+                        Recaptcha::TYPE_UNKNOWN, Recaptcha::TYPE_END, Recaptcha::TYPE_UNKNOWN);
+    uint16_t maxTries = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                                "maxTries", 0, SHRT_MAX, 3);
+    int regLimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                            "regConnLimit", 0, INT_MAX, 15000);
+    int sslLimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                            "sslConnLimit", 0, INT_MAX, 10000);
+
+    Recaptcha *pRecaptcha = new Recaptcha();
+
+    pRecaptcha->setType(type);
+    pRecaptcha->setMaxTries(maxTries);
+    pRecaptcha->setRegConnLimit(regLimit);
+    pRecaptcha->setSslConnLimit(sslLimit);
+    if (pSiteKey)
+        pRecaptcha->setSiteKey(pSiteKey);
+    if (pSecretKey)
+        pRecaptcha->setSecretKey(pSecretKey);
+
+    const char *pValue = pNode->getChildValue("botWhiteList");
+    if (pValue)
+    {
+        StringList list;
+        list.split(pValue, strlen(pValue) + pValue, "\r\n");
+        pRecaptcha->setBotWhitelist(&list);
+    }
+
+    setRecaptcha(pRecaptcha);
+    setFeature(VH_RECAPTCHA, enabled);
+
+    LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Recaptcha configured and enabled.");
+    return 0;
 }
 
 
@@ -3391,6 +3507,9 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
 
         pVHnew->setUidMode(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                            "setUIDMode", 0, 2, 0));
+        
+        
+        
 
         pVHnew->setMaxKAReqs(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                              "maxKeepAliveReq", 0, 32767,
@@ -3440,6 +3559,37 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
     return NULL;
 }
 
+/**
+ * Example:
+ * listeners  Default, DefaultHttps
+ */
+int HttpVHost::configListenerMappings(const char *pListeners,
+                                      const char *pDomain,
+                                      const char *pAliases)
+{
+    int add = 0;
+    StringList  listenerNames;
+    listenerNames.split(pListeners, strlen(pListeners) + pListeners, ",");
+    StringList::iterator iter;
+    for (iter = listenerNames.begin(); iter != listenerNames.end(); ++iter)
+    {
+        const char *p = (*iter)->c_str();
+        if (HttpServer::getInstance().mapListenerToVHost(p, this,
+            pDomain ? pDomain : "*") == 0)
+            ++add;
+        if (pAliases && 
+            HttpServer::getInstance().mapListenerToVHost(p, this, pAliases) == 0)
+            ++add;
+    }
+
+    ConfigCtx currentCtx("vhost", getName());
+    LS_INFO(&currentCtx, "configListenerMappings vhost [%s], listeners [%s], "
+            " domain [%s], aliase [%s], added %d mappings.", 
+            getName(), pListeners, pDomain, pAliases, add);
+    return add;
+}
+
+
 
 HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
 {
@@ -3472,14 +3622,12 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
             ConfigCtx::getCurConfigCtx()->getVhRoot());
 
         const char *pConfFile = pNode->getChildValue("configFile");
-
         if (pConfFile != NULL)
         {
             if (ConfigCtx::getCurConfigCtx()->getValidFile(achVhConf, pConfFile,
                     "vhost config") == 0)
             {
                 pVhConfNode = plainconf::parseFile(achVhConf, "virtualHostConfig");
-
                 if (pVhConfNode == NULL)
                 {
                     LS_ERROR(ConfigCtx::getCurConfigCtx(), "cannot load configure file - %s !",
@@ -3490,14 +3638,29 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
             }
         }
 
+        /**
+         * If do not have the configFile, will use the current XmlNode
+         */
         if (!pVhConfNode)
+        {
             pVhConfNode = pNode;
-
+            LS_INFO(ConfigCtx::getCurConfigCtx(), "Since no configFile "
+                    "defined, use current node.");
+        }
 
         const char *pDomain  = pVhConfNode->getChildValue("vhDomain");
         const char *pAliases = pVhConfNode->getChildValue("vhAliases");
         pVHost = HttpVHost::configVHost(pNode, pName, pDomain, pAliases, pVhRoot,
                                         pVhConfNode);
+
+        /**
+         * Comments: listeners must be in the root level of Vhost, 
+         * for compatible with vhosttemplate
+         */
+        const char *pListeners = pNode->getChildValue("listeners");
+        if (pListeners && pVHost)
+            pVHost->configListenerMappings(pListeners, pDomain, pAliases);
+
         break;
     }
 
@@ -3588,7 +3751,7 @@ void HttpVHost::addUrlStaticFileMatch(StaticFileCacheData *pData,
         it = m_pUrlStxFileHash->insert(data->url.c_str(), data);
         if (!it)
         {
-            LS_ERROR("[HttpVHost::addUrlStaticFileMatch] try to insert again still failed.");
+            LS_ERROR("[static file cache] try to insert again still failed.");
         }
     }
     pData->incRef();

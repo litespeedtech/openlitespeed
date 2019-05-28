@@ -88,6 +88,7 @@ int EdStream::close()
         if (m_pMplex)
             m_pMplex->remove(this);
         //::shutdown( getfd(), SHUT_RDWR );
+        clearRevent();
         ::close(getfd());
         setfd(-1);
     }
@@ -128,12 +129,6 @@ int EdStream::handleEvents(short event)
             abort();
         if (!getAssignedRevent())
             goto EVENT_DONE;
-    }
-    if ((ret != -1) && (event & POLLHUP))
-    {
-        ret = onHangup();
-        if (!getAssignedRevent())
-            return LS_OK;
     }
     if ((ret != -1) && (event & POLLOUT))
     {

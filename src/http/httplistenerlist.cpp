@@ -401,8 +401,8 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
         if (pListener == NULL)
         {
             snprintf(sAddr, sizeof(sAddr), 
-                        (pAddr->sa_family == AF_INET6) ? "[%s]:%d" : "%s:%d", 
-                        pInfo->getAddrStr()->c_str(), GSockAddr::getPort(pAddr));
+                        (pAddr->sa_family == AF_INET6) ? "[%s]:%u" : "%s:%u",
+                        pInfo->getAddrStr()->c_str(), (unsigned)GSockAddr::getPort(pAddr));
 
             pListener = m_pListenerList->get(sAddr, sAddr);
         }
@@ -412,12 +412,12 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
             if (pAddr->sa_family == AF_INET6)
             {
                 snprintf(sAddr, sizeof(sAddr), 
-                        "[::]:%d", GSockAddr::getPort(pAddr));
+                        "[::]:%u", (unsigned)GSockAddr::getPort(pAddr));
             }
             else
             {
-                snprintf(sAddr, sizeof(sAddr), "*:%d", 
-                        GSockAddr::getPort(pAddr));
+                snprintf(sAddr, sizeof(sAddr), "*:%u",
+                         (unsigned)GSockAddr::getPort(pAddr));
             }
             pListener = m_pListenerList->get(sAddr, sAddr);
             assert(pListener != NULL);

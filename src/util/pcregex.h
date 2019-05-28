@@ -22,6 +22,7 @@
 #include <lsdef.h>
 #include <lsr/ls_pcreg.h>
 #include <pcre.h>
+#include <pcreposix.h>
 
 //#define _USE_PCRE_JIT_
 

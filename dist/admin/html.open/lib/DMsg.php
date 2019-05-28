@@ -26,7 +26,8 @@ class DMsg
             $lang = $_SESSION[DMsg::_COOKIE_LANG_];
         } else {
             $lang1 = UIBase::GrabGoodInput('cookie', self::_COOKIE_LANG_);
-            if ($lang1 != null && $lang != $lang1 && array_key_exists($lang1, self::$_supported)) {
+            if ($lang1 != null && $lang != $lang1 && array_key_exists($lang1,
+                                                                      self::$_supported)) {
                 $lang = $lang1;
             }
             DMsg::SetLang($lang);
@@ -48,8 +49,9 @@ class DMsg
 
     private static function init_tips()
     {
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             self::init();
+        }
 
         if (self::$_curlang != self::DEFAULT_LANG) {
             $filecode = self::$_supported[self::DEFAULT_LANG][1];
@@ -62,8 +64,9 @@ class DMsg
 
     public static function GetSupportedLang(&$cur_lang)
     {
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             self::init();
+        }
 
         $cur_lang = self::$_curlang;
         return self::$_supported;
@@ -82,14 +85,17 @@ class DMsg
             $secure = !empty($_SERVER['HTTPS']);
             $httponly = true;
 
-            setcookie(DMsg::_COOKIE_LANG_, $lang, strtotime('+10 days'), '/', $domain, $secure, $httponly);
+            setcookie(DMsg::_COOKIE_LANG_, $lang, strtotime('+10 days'), '/',
+                                                            $domain, $secure,
+                                                            $httponly);
         }
     }
 
     public static function GetAttrTip($label)
     {
-        if ($label == '')
+        if ($label == '') {
             return null;
+        }
 
         global $_tipsdb;
 
@@ -97,9 +103,9 @@ class DMsg
             self::init_tips();
         }
 
-        if (isset($_tipsdb[$label]))
+        if (isset($_tipsdb[$label])) {
             return $_tipsdb[$label];
-        else {
+        } else {
             //error_log("DMsg:undefined attr tip $label"); allow null
             return null;
         }
@@ -119,32 +125,34 @@ class DMsg
             if (isset($_tipsdb[$label]))
                 $tips = array_merge($tips, $_tipsdb[$label]);
         }
-        if (empty($tips))
+        if (empty($tips)) {
             return null;
-        else
+        } else {
             return $tips;
+        }
     }
 
     public static function UIStr($tag, $repl = '')
     {
-        if ($tag == '')
+        if ($tag == '') {
             return null;
+        }
 
         global $_gmsg;
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             DMsg::init();
-
-        if (isset($_gmsg[$tag]))
-            if ($repl == '')
-                return $_gmsg[$tag];
-            else {
-                $search = array_keys($repl);
-                $replace = array_values($repl);
-                return str_replace($search, $replace, $_gmsg[$tag]);
-            } else {
-            //error_log("DMsg:undefined UIStr tag $tag");
-            return 'Unknown';
         }
+
+        if (isset($_gmsg[$tag])) {
+            if ($repl == '') {
+                return $_gmsg[$tag];
+            }
+            $search = array_keys($repl);
+            $replace = array_values($repl);
+            return str_replace($search, $replace, $_gmsg[$tag]);
+        }
+        //error_log("DMsg:undefined UIStr tag $tag");
+        return 'Unknown';
     }
 
     public static function EchoUIStr($tag, $repl = '')
@@ -167,37 +175,38 @@ class DMsg
 
     public static function ALbl($tag)
     {
-        if ($tag == '')
+        if ($tag == '') {
             return null;
+        }
 
         global $_gmsg;
         if (self::$_curlang == '') {
             DMsg::init();
         }
 
-        if (isset($_gmsg[$tag]))
+        if (isset($_gmsg[$tag])) {
             return $_gmsg[$tag];
-        else {
-            //error_log("DMsg:undefined ALbl tag $tag");
-            return 'Unknown';
         }
+        //error_log("DMsg:undefined ALbl tag $tag");
+        return 'Unknown';
     }
 
     public static function Err($tag)
     {
-        if ($tag == '')
+        if ($tag == '') {
             return null;
+        }
 
         global $_gmsg;
-        if (self::$_curlang == '')
+        if (self::$_curlang == '') {
             DMsg::init();
-
-        if (isset($_gmsg[$tag]))
-            return $_gmsg[$tag] . ' '; // add extra space
-        else {
-            //error_log("DMsg:undefined Err tag $tag");
-            return 'Unknown';
         }
+
+        if (isset($_gmsg[$tag])) {
+            return $_gmsg[$tag] . ' '; // add extra space
+        }
+        //error_log("DMsg:undefined Err tag $tag");
+        return 'Unknown';
     }
 
     private static function echo_sort_keys($lang_array, $priority)
@@ -266,7 +275,8 @@ global $_gmsg;';
 
         echo $header . "\n\n";
 
-        $priority = ['menu_', 'tab_', 'btn_', 'note_', 'err_', 'l_', 'o_', 'parse_', 'service_', 'buildphp_', 'mail_'];
+        $priority = ['menu_', 'tab_', 'btn_', 'note_', 'err_', 'l_', 'o_', 'parse_',
+            'service_', 'buildphp_', 'mail_'];
 
         if (!$added) {
             // output sorted english

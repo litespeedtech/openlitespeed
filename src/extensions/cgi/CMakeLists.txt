@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+#include_directories("/usr/lib64/glib-2.0/include")
+#include_directories("/usr/include/glib-2.0")
 
 ########### next target ###############
 
@@ -10,6 +12,8 @@ SET(cgi_STAT_SRCS
    cgidworker.cpp
    cgidconn.cpp
    lscgid.cpp
+   cgroupconn.cpp
+   cgroupuse.cpp
 )
 
 add_library(cgi STATIC ${cgi_STAT_SRCS})

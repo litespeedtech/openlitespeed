@@ -91,7 +91,8 @@ int HttpResp::addExpiresHeader(time_t lastMod, const ExpiresCtrl *pExpires)
     char achTmp[128];
     time_t expire;
     int    age;
-    if (m_respHeaders.isHeaderSet(HttpRespHeaders::H_CACHE_CTRL))
+    if (m_respHeaders.isHeaderSet(HttpRespHeaders::H_CACHE_CTRL)
+        || m_respHeaders.isHeaderSet(HttpRespHeaders::H_EXPIRES))
         return 0;
     switch (pExpires->getBase())
     {

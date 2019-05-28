@@ -145,6 +145,7 @@ class HttpHeaderOps;
 #define BIT2_WEBSOCKADDR        (1<<14)
 
 #define BIT2_IPTOLOC            (1<<22)
+#define BIT2_CHECK_CAPTCHA      (1<<23)
 
 
 //last bit, if set, is a NULL context
@@ -588,6 +589,8 @@ public:
 
     int forceAddMime(char *pBegin);
 
+    void setCheckCaptcha(int c)     {   setConfigBit2(BIT2_CHECK_CAPTCHA, c);  }
+    uint32_t isCheckCaptcha() const {   return m_iConfigBits2 & BIT2_CHECK_CAPTCHA; }
 };
 
 extern void recycleContext(HttpContext *pContext);

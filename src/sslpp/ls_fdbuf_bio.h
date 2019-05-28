@@ -6,13 +6,11 @@
 #ifndef __LS_FDBUF_BIO_H__
 #define __LS_FDBUF_BIO_H__
 
+#include <stdint.h>
+
 #ifdef __cplusplus 
 extern "C" {
 #endif
-
-#include <openssl/ssl.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
 
 /**
  * @file ls_fdbuf_bio.h
@@ -47,7 +45,7 @@ void ls_fdbuf_bio_init(ls_fdbio_data *fdbio);
  * Allocated by caller.
  * @return NULL to indicate an error.
  */
-BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio);
+struct bio_st *ls_fdbio_create(int fd, ls_fdbio_data *fdbio);
 
 
 #ifdef __cplusplus 

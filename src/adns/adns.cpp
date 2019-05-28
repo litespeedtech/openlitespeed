@@ -55,7 +55,9 @@ void Adns::trimCache()
     if (DateTime::s_curTime - m_tmLastTrim > 60)
     {
         m_tmLastTrim = DateTime::s_curTime;
+        m_pShmHash->lock();
         m_pShmHash->trim(DateTime::s_curTime - DNS_CACHE_TTL, NULL, 0);
+        m_pShmHash->unlock();
     }
 }
 
@@ -64,9 +66,11 @@ const char *Adns::getCacheValue( const char * pName, int nameLen, int &valLen )
 {
     if (!m_pShmHash)
         return NULL;
+    const char *ret = NULL;
     LsShmHash::iteroffset iterOff;
     ls_strpair_t parms;
     ls_str_set(&parms.key, (char *)pName, nameLen);
+    m_pShmHash->lock();
     iterOff = m_pShmHash->findIterator(&parms);
     if (iterOff.m_iOffset != 0)
     {
@@ -74,18 +78,18 @@ const char *Adns::getCacheValue( const char * pName, int nameLen, int &valLen )
         valLen = iter->getValLen();
         if (valLen == 0)
         {
+            ret = "";
             if (iter->getLruLasttime() < DateTime::s_curTime
                                             - DNS_CACHE_NOTFOUND_TTL)
             {
                 m_pShmHash->eraseIterator(iterOff);
-                return NULL;
+                ret = NULL;
             }
-            return "";
         }
-        return (char *)iter->getVal();
+        ret = (char *)iter->getVal();
     }
-    else
-        return NULL;
+    m_pShmHash->unlock();
+    return ret;
 }
 
 
@@ -125,6 +129,7 @@ int Adns::initShm(int uid, int gid)
         "adns_cache", "dns_cache", 1000, LSSHM_FLAG_LRU)) != NULL)
     {
         m_pShmHash->getPool()->getShm()->chperm(uid, gid, 0600);
+        m_pShmHash->disableAutoLock();
     }
     return 0;
 }
@@ -238,7 +243,11 @@ void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
 
     LsShmHash *pCache = Adns::getInstance().getShmHash();
     if (pCache)
+    {
+        pCache->lock();
         pCache->insert(pAdnsReq->name, strlen(pAdnsReq->name), sIp, ipLen);
+        pCache->unlock();
+    }
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, ipLen, sIp);
 
@@ -281,7 +290,11 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
 
     LsShmHash *pCache = Adns::getInstance().getShmHash();
     if (pCache)
+    {
+        pCache->lock();
         pCache->insert(pAdnsReq->name, nameLen, p, n);
+        pCache->unlock();
+    }
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, n, p);
     //else
@@ -413,7 +426,6 @@ int Adns::handleEvents( short events )
 
 int Adns::onTimer()
 {
-    dns_ioevent( m_pCtx, DateTime::s_curTime );
     if (++m_iCounter >= 10)
     {
         m_iCounter = 0;

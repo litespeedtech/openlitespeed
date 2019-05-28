@@ -6,19 +6,12 @@
 #ifndef SSLCONNECTION_H
 #define SSLCONNECTION_H
 #include <lsdef.h>
+#include <sslpp/ssldef.h>
 #include <sslpp/hiocrypto.h>
 #include <sslpp/ls_fdbuf_bio.h>
-#include <openssl/ssl.h>
-
-typedef struct bio_st  BIO;
-typedef struct x509_st X509;
-typedef struct ssl_cipher_st SSL_CIPHER;
-typedef struct ssl_st SSL;
-typedef struct ssl_ctx_st SSL_CTX;
-typedef struct ssl_session_st SSL_SESSION;
-
 
 class SslClientSessCache;
+
 class SslConnection : public HioCrypto
 {
 public:
@@ -27,31 +20,34 @@ public:
         DISCONNECTED,
         CONNECTING,
         ACCEPTING,
-        WAITINGCERT,
-        GOTCERT,
         CONNECTED,
         SHUTDOWN
     };
     enum
     {
-        READ = 1,
-        WRITE = 2,
+        WANT_READ = 1,
+        WANT_WRITE = 2,
         LAST_READ = 4,
-        LAST_WRITE = 8
+        LAST_WRITE = 8,
+        WANT_CERT = 16
     };
 
     enum
     {
         F_HANDSHAKE_DONE    = 1,
         F_DISABLE_HTTP2     = 2,
+        F_ASYNC_CERT        = 4,
+        F_ASYNC_PK          = 8,
+        F_ASYNC_CERT_FAIL   = 16,
     };
 
-    char wantRead() const   {   return m_iWant & READ;  }
-    char wantWrite() const  {   return m_iWant & WRITE; }
-    char lastRead() const   {   return m_iWant & LAST_READ; }
-    char lastWrite() const  {   return m_iWant & LAST_WRITE; }
+    char wantRead() const   {   return m_iWant & WANT_READ;     }
+    char wantWrite() const  {   return m_iWant & WANT_WRITE;    }
+    char lastRead() const   {   return m_iWant & LAST_READ;     }
+    char lastWrite() const  {   return m_iWant & LAST_WRITE;    }
+    char wantCert() const   {   return m_iWant & WANT_CERT;     }
 
-    bool getFlag(int v) const   {   return m_flag & v;     }
+    int  getFlag(int v) const   {   return m_flag & v;     }
     void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
 
     SslConnection();
@@ -62,9 +58,10 @@ public:
 
     void release();
     int setfd(int fd);
-    int setfd(int rfd, int wfd);
+    //int setfd(int rfd, int wfd);
 
     void toAccept();
+
     int accept();
     int connect();
     int read(char *pBuf, int len);
@@ -76,6 +73,9 @@ public:
     int checkError(int ret);
     bool isConnected()      {   return m_iStatus == CONNECTED;  }
     int tryagain();
+
+    int asyncFetchCert(asyncCertDoneCb cb, void *pParam);
+    void cancelAsyncFetchCert(asyncCertDoneCb cb, void *pParam);
 
     char getStatus() const   {   return m_iStatus;   }
 
@@ -112,8 +112,7 @@ public:
     void enableRbio() {};
 
     static void initConnIdx();
-    static SslConnection *get(const SSL *ssl)
-    {   return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);   }
+    static SslConnection *get(const SSL *ssl);
 
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
@@ -123,6 +122,11 @@ public:
     char *getRawBuffer(int *len);
     bool hasPendingIn() const
     {   return m_bio.m_rbioBuffered > m_bio.m_rbioIndex;   }
+
+
+    bool isWaitingAsyncCert() const
+    {   return (getFlag(F_ASYNC_CERT | F_ASYNC_CERT_FAIL) == F_ASYNC_CERT); }
+    bool wantAsyncCtx(SSL_CTX *&pInput);
 
 private:
     SSL    *m_ssl;
