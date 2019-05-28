@@ -63,6 +63,7 @@ class ProxyConn : public ExtConn
 
     int         readvSsl(const struct iovec *vector, const struct iovec *pEnd);
     void        setSSLAgain();
+    int         addForwardedFor(const char *pBegin);
 
 protected:
     virtual int doRead();

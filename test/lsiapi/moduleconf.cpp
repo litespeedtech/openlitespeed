@@ -90,7 +90,7 @@ TEST(TEST_MODULECONF)
     for (i=0; i<sizeof(tests)/sizeof(escapeMatchInfo_t); ++i)
     {
         ret = ModuleConfig::escapeParamVal(tests[i].src, strlen(tests[i].src), str);
-        printf("i %lu %lu.\n", i, strlen(tests[i].dst));
+        printf("i %d %d.\n", (int)i, (int)strlen(tests[i].dst));
         CHECK(ret == strlen(tests[i].dst));
         CHECK(memcmp(str, tests[i].dst, ret) ==0);
         

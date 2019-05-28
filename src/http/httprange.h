@@ -55,7 +55,6 @@ public:
     int  getContentOffset(int n, off_t &begin, off_t &end) const;
     void setContentLen(off_t entityLen)    { m_lEntityLen = entityLen; }
     void beginMultipart();
-    int isRangesTooBig();
 
     const char *getBoundary() const
     {   return m_boundary;  }

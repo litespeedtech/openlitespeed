@@ -4,6 +4,17 @@
 #
 
 
+DLCMD=
+source ../../../dist/functions.sh 2>/dev/null
+if [ $? != 0 ] ; then
+    . ../../../dist/functions.sh
+    if [ $? != 0 ] ; then
+        echo [ERROR] Can not include 'functions.sh'.
+        exit 1
+    fi
+fi
+
+
 pushd .
 cd `dirname "$0"`
 
@@ -43,14 +54,11 @@ cd ../../../../thirdparty
 
 if [ ! -f psol-$PSOLVERSION/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; then
 
-
     TARGET=$PSOLVERSION.tar.gz
 
-
-    DL=`which curl`
-    DLCMD="$DL -O -k "
     if [ ! -f $TARGET ] ; then
-        $DLCMD https://dl.google.com/dl/page-speed/psol/$TARGET
+        detectdlcmd
+        $DLCMD $TARGET https://dl.google.com/dl/page-speed/psol/$TARGET
     fi
     tar -xzvf $TARGET # expands to psol/
     mv psol psol-$PSOLVERSION

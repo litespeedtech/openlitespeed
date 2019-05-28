@@ -11,8 +11,12 @@
 /**
   *@author George Wang
   */
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
 
-typedef struct x509_st X509;
+#include <openssl/x509.h>
 
 class SslCert
 {

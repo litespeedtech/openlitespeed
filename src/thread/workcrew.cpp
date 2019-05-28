@@ -36,6 +36,25 @@
 #include <new>
 
 
+WorkCrew::WorkCrew(EventNotifier *en)
+    : m_pProcess(NULL)
+    , m_pFinishedQueue(NULL)
+    , m_pNotifier(en)
+    , m_crew()
+    , m_emptySlots()
+    , m_stateFutex(TO_START)
+    , m_nice(0)
+    , m_minIdle(1)
+    , m_maxIdle(10)
+    , m_maxWorkers(1)
+    , m_idleWorkers(0)
+    , m_iRunningWorkers(0)
+    , m_cleanUp()
+{
+    init();
+}
+
+
 WorkCrew::WorkCrew(int maxWorkers, WorkCrewProcessFn  processor,
                    ls_lfqueue_t * finishedQueue, EventNotifier *en)
     : m_pProcess(processor)
@@ -44,6 +63,7 @@ WorkCrew::WorkCrew(int maxWorkers, WorkCrewProcessFn  processor,
     , m_crew()
     , m_emptySlots()
     , m_stateFutex(TO_START)
+    , m_nice(0)
     , m_minIdle(1)
     , m_maxIdle(10)
     , m_maxWorkers(maxWorkers)
@@ -52,11 +72,9 @@ WorkCrew::WorkCrew(int maxWorkers, WorkCrewProcessFn  processor,
     , m_cleanUp()
 {
     DPRINTF("WRKRW CNSTRCT %s\n", pStatus());
-    ls_mutex_setup(&m_addWorker);
-    ls_mutex_setup(&m_crewLock);
-    sigemptyset(&m_sigBlock);
     init();
 }
+
 
 WorkCrew::WorkCrew(int32_t maxWorkers, WorkCrewProcessFn  processor,
                    ls_lfqueue_t * finishedQueue, EventNotifier *en,
@@ -67,6 +85,7 @@ WorkCrew::WorkCrew(int32_t maxWorkers, WorkCrewProcessFn  processor,
     , m_crew()
     , m_emptySlots()
     , m_stateFutex(TO_START)
+    , m_nice(0)
     , m_minIdle(minIdleWorkers)
     , m_maxIdle(maxIdleWorkers)
     , m_maxWorkers(maxWorkers)
@@ -74,20 +93,22 @@ WorkCrew::WorkCrew(int32_t maxWorkers, WorkCrewProcessFn  processor,
     , m_iRunningWorkers(0)
     , m_cleanUp()
 {
-    ls_mutex_setup(&m_crewLock);
     DPRINTF("WRKRW CNSTRCT %s\n", pStatus());
-    ls_mutex_setup(&m_addWorker);
-    sigemptyset(&m_sigBlock);
     init();
 }
+
 
 void WorkCrew::init()
 {
     DPRINTF("WRKRW INIT %s\n", pStatus());
+
+    ls_mutex_setup(&m_crewLock);
+    ls_mutex_setup(&m_addWorker);
+    sigemptyset(&m_sigBlock);
+    sigaddset(&m_sigBlock, SIGCHLD);
+
     if (m_maxIdle < m_minIdle)
         m_maxIdle = m_minIdle;
-    if (m_maxWorkers < m_maxIdle)
-        m_maxWorkers = m_maxIdle;
 
 #ifdef LS_WORKCREW_LF
     m_pJobQueue = ls_lfqueue_new();
@@ -95,6 +116,7 @@ void WorkCrew::init()
     m_pJobQueue = new PThreadWorkQueue();
 #endif
 }
+
 
 void WorkCrew::blockSig(int signum)
 {
@@ -210,10 +232,23 @@ ls_lfnodei_t *WorkCrew::getJob(bool poll)
 }
 
 
+int WorkCrew::startJobProcessor(int numWorkers,
+        ls_lfqueue_t *pFinishedQueue,
+        WorkCrewProcessFn processor)
+{
+    assert(processor && pFinishedQueue);
+    m_pProcess = processor;
+    m_pFinishedQueue = pFinishedQueue;
+    m_maxWorkers = numWorkers;
+    LS_DBG_H("WorkCrew::startJobProcessor(), Starting Processor.");
+    return startProcessing();
+}
+
+
 int WorkCrew::startProcessing()
 {
     assert(m_pProcess);
-    if (ls_atomic_casint(&m_stateFutex, TO_START, RUNNING))
+    if (!ls_atomic_casint(&m_stateFutex, TO_START, RUNNING))
     {
         LS_DBG_H("WorkCrew::startProcessing() WRONG STATE %d.", m_stateFutex);
         return LS_FAIL;
@@ -248,7 +283,7 @@ void WorkCrew::stopProcessing()
     stopAllWorkers();
 
     // now wait for all to die
-    while ( !noMoreWorkers() ) {
+    while ( !isAllWorkerDead() ) {
         DPRINTF("STPPROC WAITDIE %s\n", pStatus());
         int ret = 0;
         //LS_TH_BENIGN(&m_stateFutex, "ok read");
@@ -258,11 +293,11 @@ void WorkCrew::stopProcessing()
         //LS_TH_FLUSH();
 
         if (m_stateFutex == STOPPED) {
-            assert(noMoreWorkers());
+            assert(isAllWorkerDead());
             break;
         }
 
-        if (!noMoreWorkers()) {
+        if (!isAllWorkerDead()) {
             stopAllWorkers();
         }
         else {
@@ -282,7 +317,6 @@ void WorkCrew::stopProcessing()
 #endif
     ls_atomic_setptr(&m_pFinishedQueue, NULL);
 }
-
 
 
 int WorkCrew::putFinishedItem(ls_lfnodei_t *item)
@@ -358,7 +392,7 @@ void WorkCrew::workerDied(CrewWorker *pWorker)
         // we are still in running state
         // already pushed our slot, so if we were last
         // worker running, size() is now 0 and noMoreWorkers is true
-        if ( noMoreWorkers() )
+        if ( isAllWorkerDead() )
         {
             //LS_TH_BENIGN(&m_stateFutex, "ok set");
             ls_atomic_setint(&m_stateFutex, STOPPED);
@@ -419,10 +453,18 @@ void WorkCrew::stopAllWorkers()
 
 void *WorkCrew::workerRoutine(CrewWorker * pWorker)
 {
+    int32_t tidles;
     // sanity check from prior code - optional?
     if (!m_pProcess) {
         DPRINTF("GAPJ WRKBAD slot %d can't run %s\n", pWorker->getSlot(), pStatus());
         return NULL;
+    }
+
+    if (m_nice)
+    {
+        tidles = nice(m_nice);
+        DPRINTF("WRKRTN slot %d drop prioirity by %d to %d\n",
+                pWorker->getSlot(), m_nice, tidles);
     }
 
     while (pWorker->isWorking())
@@ -455,7 +497,7 @@ void *WorkCrew::workerRoutine(CrewWorker * pWorker)
         //LS_TH_BENIGN(&m_idleWorkers, "ok read");
         //LS_TH_BENIGN(&m_maxWorkers, "ok read");
         //LS_TH_BENIGN(&m_maxIdle, "ok read");
-        int32_t tidles = idles();
+        tidles = idles();
         int32_t tmaxWorkers = maxWorkers();
         int32_t tmaxIdle = maxIdle();
         //LS_TH_FLUSH();
@@ -468,6 +510,7 @@ void *WorkCrew::workerRoutine(CrewWorker * pWorker)
     DPRINTF("WRKRTN stopping slot %d %s\n", pWorker->getSlot(), pStatus());
     return NULL;
 }
+
 
 void WorkCrew::pushCleanup(void (*routine)(void *), void * arg)
 {

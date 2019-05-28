@@ -39,6 +39,7 @@ int ClientInfo::s_iSoftLimitPC = INT_MAX;
 int ClientInfo::s_iHardLimitPC = 100;
 int ClientInfo::s_iOverLimitGracePeriod = 10;
 int ClientInfo::s_iBanPeriod = 60;
+uint16_t ClientInfo::s_iMaxAllowedBotHits = 3;
 
 #if 0
 TShmClientPool *ClientInfo::s_base = NULL;
@@ -78,6 +79,8 @@ ClientInfo::ClientInfo()
 #ifdef USE_IP2LOCATION
     , m_pLocInfo(NULL)
 #endif
+    , m_iCaptchaTries( 0 )
+    , m_iAllowedBotHits( 0 )
 {
 #if 0
     m_pShmClient = NULL;
@@ -141,7 +144,7 @@ void ClientInfo::setAddr(const struct sockaddr *pAddr)
     else
     {
         len = 24;
-        strLen = 41;
+        strLen = 43;
     }
 
 #if 0
@@ -172,9 +175,22 @@ void ClientInfo::setAddr(const struct sockaddr *pAddr)
     m_sAddr.prealloc(strLen);
     if (m_sAddr.buf())
     {
-        inet_ntop(pAddr->sa_family, ((char *)pAddr) + ((len >> 1) - 4),
-                  m_sAddr.buf(), strLen);
-        m_sAddr.setLen(strlen(m_sAddr.c_str()));
+        char *p = m_sAddr.buf();
+        if (AF_INET6 == pAddr->sa_family)
+        {
+            *p++ = '[';
+            strLen -= 2;
+        }
+        inet_ntop(pAddr->sa_family, ((char * )pAddr) + ((len >> 1) - 4),
+                  p, strLen);
+        int l = strlen(p);
+        if (AF_INET6 == pAddr->sa_family)
+        {
+            *(p + l) = ']';
+            *(p + l + 1) = '\0';
+            l += 2;
+        }
+        m_sAddr.setLen(l);
     }
     memset(&m_iConns, 0, (char *)(&m_lastConnect + 1) - (char *)&m_iConns);
     m_iAccess = 1;
@@ -254,11 +270,11 @@ static inline int isGoog(const char *pHost, int iHostLen)
 int ClientInfo::checkHost()
 {
     struct sockaddr *pAddr = (struct sockaddr *)m_achSockAddr;
-    clearFlag(CLIENTINFO_GOOG_TEST);
+    clearFlag(CIF_GOOG_TEST);
     if ((m_sHostName.len() == 0)
         || (isGoog(m_sHostName.c_str(), m_sHostName.len()) == 0))
     {
-        setFlag(CLIENTINFO_GOOG_FAKE);
+        setFlag(CIF_GOOG_FAKE);
         LS_NOTICE("Client attempted to fake being google. Ip: %s, Host: %s",
                   m_sAddr.c_str(), m_sHostName.c_str());
         return 0;
@@ -284,11 +300,11 @@ void ClientInfo::verifyIp(void *ip, const long length)
     }
     if ((size == length) && (memcmp(pOrigAddr, ip, size) == 0))
     {
-        m_iFlags |= CLIENTINFO_GOOG_REAL;
+        m_iFlags |= CIF_GOOG_REAL;
         return;
     }
 
-    m_iFlags |= CLIENTINFO_GOOG_FAKE;
+    m_iFlags |= CIF_GOOG_FAKE;
     if (LS_LOG_ENABLED(log4cxx::Level::NOTICE))
     {
         char ipAddr[INET6_ADDRSTRLEN];

@@ -29,7 +29,6 @@ class CgidWorker : public ExtWorker
 {
     int     m_pid;
     int     m_fdCgid;
-    int     m_lve;
 
     static CgidWorker *s_pCgid;
     static int s_iCgidWorkerPid;
@@ -49,8 +48,8 @@ public:
 
     int start(const char *pServerRoot, const char *pChroot,
               uid_t uid, gid_t gid, int priority);
-    void setLVE(int lve)  {   m_lve = lve;    }
-    int  getLVE() const     {   return m_lve;   }
+    //void setLVE(int lve)  {   m_lve = lve;    }
+    int  getLVE() const;
     void closeFdCgid();
 
     static int checkRestartCgid(const char *pServerRoot, const char *pChroot,

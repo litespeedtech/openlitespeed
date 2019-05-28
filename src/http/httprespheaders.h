@@ -27,11 +27,11 @@
 
 typedef struct
 {
-    int     keyOff;
-    int     valOff;
-    short   keyLen;
-    short   valLen;
-    int32_t next_index;  //For the multiple line case, this will indicate the next KVPair index, first valid value is 1 since default is 0
+    int         keyOff;
+    int         valOff;
+    short       keyLen;
+    uint16_t    valLen;
+    int32_t     next_index;  //For the multiple line case, this will indicate the next KVPair index, first valid value is 1 since default is 0
 } resp_kvpair;
 
 
@@ -182,7 +182,7 @@ public:
     int getTotalLen()       { return m_iHeadersTotalLen; }
     int appendToIov(IOVec *iovec, int &addCrlf);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
-    void dump(LogSession *pILog, int dump_header);
+    void dump(LogSession *pILog, int dump_header) const;
 
     static INDEX getIndex(const char *pHeader);
     static int getHeaderStringLen(INDEX index)  {    return s_iHeaderLen[(int)index];  }
@@ -190,19 +190,23 @@ public:
     static void buildCommonHeaders();
     static void updateDateHeader();
     static void hideServerSignature(int hide);
+    
 
     void addGzipEncodingHeader()
     {
-        add(s_gzipHeaders, 2);
-        updateEtag(0);
+        add(&s_gzipHeaders, 1);
+        add(&s_varyHeaders, 1, LSI_HEADEROP_APPEND);
+        updateEtag(1);
     }
 
     void addBrotliEncodingHeader()
     {
-        add(s_brHeaders, 2);
-        updateEtag(1);
+        add(&s_brHeaders, 1);
+        add(&s_varyHeaders, 1, LSI_HEADEROP_APPEND);
+        updateEtag(2);
     }
 
+    //compress_type 0: no gzip, 1:gzip, 2: br
     void updateEtag(int compress_type);
 
     void appendChunked()
@@ -215,6 +219,7 @@ public:
         add(&s_acceptRangeHeader, 1);
     }
 
+    void addTruboCharged();
     void addCommonHeaders()
     {   add(s_commonHeaders, s_commonHeadersCount);     }
 
@@ -277,8 +282,9 @@ private:
 
     static char s_sDateHeaders[30];
     static http_header_t   s_commonHeaders[2];
-    static http_header_t   s_gzipHeaders[2];
-    static http_header_t   s_brHeaders[2];
+    static http_header_t   s_gzipHeaders;
+    static http_header_t   s_brHeaders;
+    static http_header_t   s_varyHeaders;
     static http_header_t   s_keepaliveHeader;
     static http_header_t   s_chunkedHeader;
     static http_header_t   s_concloseHeader;

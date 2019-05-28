@@ -1,6 +1,6 @@
 #ifndef HIOCRYPTO_H
 #define HIOCRYPTO_H
-
+#include <unistd.h>
 typedef struct x509_st X509;
 class HioCrypto
 {

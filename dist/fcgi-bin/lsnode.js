@@ -24,7 +24,7 @@ function startApplication() {
         try {
             process.chdir(process.env.LSNODE_ROOT);
         } catch (err) {
-            console.error("Error setting directory to: " + 
+            console.error("Error setting directory to: " +
                           process.env.LSNODE_ROOT + ": " + err);
         }
     }
@@ -41,11 +41,18 @@ function startApplication() {
     } catch(e) {
         fs.openSync('/dev/null', "w+");
     }
-    
+
     http.Server.prototype.realListen = http.Server.prototype.listen;
     http.Server.prototype.listen = customListen;
+    http.Server.prototype.address = lsnode_address;
     require(startupFile);
 }
+
+
+function lsnode_address() {
+    return process.env.LSNODE_SOCKET;
+}
+
 
 function customListen(port) {
     function onListenError(error) {
@@ -91,7 +98,4 @@ function customListen(port) {
     });
     return server;
 }
-
-
-
 

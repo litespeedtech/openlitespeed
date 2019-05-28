@@ -313,7 +313,7 @@ int ReqParser::initMutlipart(const char *pContentType, int len)
     }
     m_last_char = 0;
     m_multipartBuf.clear();
-    const char *p = strstr(pContentType, "boundary=");
+    const char *p = (const char *)memmem(pContentType, len, "boundary=", 9);
     if (p && *(p + 9))
     {
         len = len - ((p + 9) - pContentType);

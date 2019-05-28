@@ -15,6 +15,8 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+#include <ls.h>
+
 #include "cachestore.h"
 #include "cachehash.h"
 #include "cacheentry.h"
@@ -179,6 +181,15 @@ void CacheStore::houseKeeping()
         else
             ++it;
     }
+}
+
+
+void CacheStore::debug_dump(CacheEntry *pEntry, const char *msg)
+{
+    g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] %s: %p [%s], ref: %d, flag: %hx, expire: %ld, stale: %d, cur_time: %ld",
+           msg, pEntry, pEntry->getHashKey().to_str(NULL), pEntry->getRef(),
+           pEntry->getHeader().m_flag, pEntry->getExpireTime(),
+           pEntry->getMaxStale(), DateTime::s_curTime);
 }
 
 

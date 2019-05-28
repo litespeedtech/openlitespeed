@@ -7,6 +7,7 @@ SET(sslpp_STAT_SRCS
    sslcontextconfig.cpp
    sslengine.cpp
    sslcert.cpp
+   sslcertcomp.cpp
    sslerror.cpp
    sslconnection.cpp
    sslcontext.cpp
@@ -14,6 +15,7 @@ SET(sslpp_STAT_SRCS
    sslsesscache.cpp
    sslticket.cpp
    sslutil.cpp
+   sslasyncpk.cpp
    ocsp/ocsp.c
    ls_fdbuf_bio.c
 )

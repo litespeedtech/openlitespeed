@@ -184,7 +184,7 @@ class DTblDefBase
         $this->_options['logLevel'] = array('ERROR'  => 'ERROR', 'WARN'   => 'WARNING',
             'NOTICE' => 'NOTICE', 'INFO'   => 'INFO', 'DEBUG'  => 'DEBUG');
 
-        $this->_options['recaptcha'] = [
+        $this->_options['lsrecaptcha'] = [
             '0' => DMsg::ALbl('o_notset'),
             '1' => DMsg::ALbl('o_checkbox'),
             '2' => DMsg::ALbl('o_invisible')];
@@ -287,13 +287,12 @@ class DTblDefBase
             'vh_maxKeepAliveReq' => self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
             'vh_smartKeepAlive'  => self::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), true, 'vhSmartKeepAlive'),
             'vh_enableGzip'      => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
-            'vh_spdyAdHeader'    => self::NewParseTextAttr('spdyAdHeader', DMsg::ALbl('l_spdyadheader'), "/^\d+:npn-spdy\/[23]$/", DMsg::ALbl('parse_spdyadheader')),
             'vh_allowSymbolLink' => self::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
             'vh_enableScript'    => self::NewBoolAttr('enableScript', DMsg::ALbl('l_enablescript'), false),
             'vh_restrained'      => self::NewBoolAttr('restrained', DMsg::ALbl('l_restrained'), false),
             'vh_setUIDMode'      => self::NewSelAttr('setUIDMode', DMsg::ALbl('l_setuidmode'), array('' => '', 0 => 'Server UID', 1 => 'CGI File UID', 2 => 'DocRoot UID'), true, 'setUidMode'),
-            'vh_suexec_user'         => self::NewTextAttr('user', DMsg::ALbl('l_suexecuser'), 'cust'),
-            'vh_suexec_group'        => self::NewTextAttr('group', DMsg::ALbl('l_suexecgrp'), 'cust'),
+            'vh_suexec_user'         => self::NewTextAttr('user', DMsg::ALbl('l_suexecuser1'), 'cust', true, 'suexecUser'),
+            'vh_suexec_group'        => self::NewTextAttr('group', DMsg::ALbl('l_suexecgrp1'), 'cust', true, 'suexecGroup'),
             'staticReqPerSec'    => self::NewIntAttr('staticReqPerSec', DMsg::ALbl('l_staticreqpersec'), true, 0),
             'dynReqPerSec'       => self::NewIntAttr('dynReqPerSec', DMsg::ALbl('l_dynreqpersec'), true, 0),
             'outBandwidth'       => self::NewIntAttr('outBandwidth', DMsg::ALbl('l_outbandwidth'), true, 0),
@@ -487,27 +486,6 @@ class DTblDefBase
         );
 
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $attrs, 'perClientConnLimit');
-    }
-
-    protected function add_S_SEC_CGI($id)
-    {
-        $attrs = array(
-            self::NewTextAttr('cgidSock', DMsg::ALbl('l_cgidsock'), 'addr'),
-            self::NewIntAttr('maxCGIInstances', DMsg::ALbl('l_maxCGIInstances'), true, 1, 2000),
-            self::NewIntAttr('minUID', DMsg::ALbl('l_minuid'), true, 10),
-            self::NewIntAttr('minGID', DMsg::ALbl('l_mingid'), true, 5),
-            self::NewIntAttr('forceGID', DMsg::ALbl('l_forcegid'), true, 0),
-            $this->_attrs['cgiUmask'],
-            $this->_attrs['priority']->dup(null, DMsg::ALbl('l_cgipriority'), 'CGIPriority'),
-            self::NewIntAttr('CPUSoftLimit', DMsg::ALbl('l_cpusoftlimit'), true, 0),
-            self::NewIntAttr('CPUHardLimit', DMsg::ALbl('l_cpuhardlimit'), true, 0),
-            $this->_attrs['memSoftLimit'],
-            $this->_attrs['memHardLimit'],
-            $this->_attrs['procSoftLimit'],
-            $this->_attrs['procHardLimit']
-        );
-
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
     }
 
 	private function add_S_SEC_RECAP($id)
@@ -1062,20 +1040,6 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_membervhosts'), $attrs, 'vhName');
     }
 
-    protected function add_V_GENERAL($id)
-    {
-        $attrs = array(
-            self::NewTextAttr('docRoot', DMsg::ALbl('l_docroot'), 'cust', false), //no validation, maybe suexec owner
-            $this->_attrs['tp_vhDomain'], // this setting is a new way, will merge with listener map settings for backward compatible
-            $this->_attrs['tp_vhAliases'],
-            $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
-            $this->_attrs['vh_enableGzip'],
-            $this->_attrs['enableIpGeo'],
-            $this->_attrs['vh_spdyAdHeader']
-        );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_g'), $attrs);
-    }
-
     protected function add_V_LOG($id)
     {
         $attrs = array(
@@ -1352,18 +1316,6 @@ class DTblDefBase
             $this->_attrs['vh_smartKeepAlive']
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, 'Base', $attrs); // todo: title change
-    }
-
-    protected function add_T_GENERAL2($id)
-    {
-        $attrs = array(
-            $this->_attrs['tp_vrFile']->dup('docRoot', DMsg::ALbl('l_docroot'), 'templateVHDocRoot'),
-            $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
-            $this->_attrs['vh_enableGzip'],
-            $this->_attrs['enableIpGeo'],
-            $this->_attrs['vh_spdyAdHeader']
-        );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_base2'), $attrs);
     }
 
     protected function add_T_SEC_FILE($id)

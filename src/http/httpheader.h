@@ -74,6 +74,7 @@ public:
 
         //request-header
         H_TE,
+        H_X_LITESPEED_PURGE,
         H_EXPECT,
         H_MAX_FORWARDS,
         H_PROXY_AUTH,
@@ -115,6 +116,7 @@ public:
 
         H_HTTP_VERSION,
         */
+
         H_HEADER_END
     };
     static size_t getIndex(const char *pHeader);

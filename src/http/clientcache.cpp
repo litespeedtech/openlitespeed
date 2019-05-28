@@ -261,6 +261,11 @@ static int resetQuotas(const void *pKey, void *pData)
     ClientInfo *pInfo = ((ClientInfo *)pData);
     if (!pInfo)
         return 0;
+    if (!(DateTime::s_curTime % 10))
+    {
+        pInfo->clearFlag(CIF_CAPTCHA_PENDING);
+        pInfo->resetAllowedBotHits();
+    }
     pInfo->setSslNewConn(0);
     pInfo->getThrottleCtrl().resetQuotas();
     time_t tm = pInfo->getOverLimitTime();
@@ -444,7 +449,11 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
             else
                 Adns::getInstance().getHostByAddr(pPeer, pInfo, addrlookupCb);
         }
-    }
+        LS_DBG_H("New client info. Check if AC_CAPTCHA: %d, Check if "
+                 "CIF_PENDING_CAPTCHA: %d",
+                 pInfo->getAccess() == AC_CAPTCHA,
+                 pInfo->isFlagSet(CIF_CAPTCHA_PENDING));
+     }
     else
     {
         pInfo = iter.second();

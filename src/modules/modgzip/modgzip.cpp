@@ -240,6 +240,12 @@ static int doCompression(lsi_param_t *rec, zbufinfo_t *pBufInfo,
         else
             ret = deflate(pStream, iDoFlush);
 
+        /**
+         * Treat the memory error as OK
+         */
+        if (ret == Z_BUF_ERROR)
+            ret = Z_OK;
+        
         if (ret >= Z_OK)
         {
             consumed = rec->len1 - pStream->avail_in;
@@ -503,13 +509,11 @@ static int enablehook(lsi_session_t *session, lsi_module_t *pModule,
     }
     if (myData->recv != NULL)
     {
-        myData->recv->compresslevel = 0;
         ls_objpool_recycle(&zpooldeflate, myData->recv);
         myData->recv = NULL;
     }
     if (myData->send != NULL)
     {
-        myData->send->compresslevel = 0;
         ls_objpool_recycle(&zpooldeflate, myData->send);
         myData->send = NULL;
     }

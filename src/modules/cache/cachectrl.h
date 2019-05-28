@@ -45,14 +45,16 @@ public:
         no_vary = (1 << 13),
         set_blank = (1 << 14),
         shared = (1 << 15),
-        esi_on = (1 << 16),
-        has_cookie = (1 << 17)
+        no_autoflush = (1 << 16),
+        esi_on = (1 << 17),
+        has_cookie = (1 << 18)
     };
 
     int isCacheOff() const  {   return m_flags & (no_cache | no_store);    }
     int isCacheOn() const   {   return m_flags & (cache_private | cache_public);   }
-    int isPublicCacheable() const {   return (m_flags & cache_public);   }
-    int isPrivateCacheable() const  {   return m_flags & cache_private;   }
+    int isPublicCacheable() const   {   return (m_flags & cache_public);    }
+    int isPrivateCacheable() const  {   return m_flags & cache_private;     }
+    int isPrivateAutoFlush() const  {   return !(m_flags & no_autoflush);   }
     void setHasCookie()     {   m_flags |= has_cookie;  }
     int getFlags() const    {   return m_flags;     }
     int getMaxAge() const   {   return m_iMaxAge;   }

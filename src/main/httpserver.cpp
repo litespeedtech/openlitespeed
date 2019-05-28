@@ -66,6 +66,7 @@
 #include <http/iptoloc.h>
 #include <http/ntwkiolink.h>
 #include <http/platforms.h>
+#include <http/recaptcha.h>
 #include <http/serverprocessconfig.h>
 #include <http/staticfilecache.h>
 #include <http/staticfilecachedata.h>
@@ -409,6 +410,10 @@ private:
 
     void configZconfSvrConf(const XmlNode *pRoot);
 
+    int configLsrecaptchaWorker(const XmlNode *pNode);
+    int configLsrecaptchaContexts();
+    int initLsrecaptcha(const XmlNode * pNode);
+
 public:
     void hideServerSignature(int sv);
     int processAutoUpdResp(HttpFetch *pHttpFetch);
@@ -633,7 +638,7 @@ int HttpServerImpl::generateRTReport()
     pAppender->setAppendMode(0);
     if (pAppender->open())
     {
-        LS_ERROR("Failed to open the real time report!");
+        LS_ERROR("Failed to open the real time report: %s!", m_sRTReportFile.c_str());
         return LS_FAIL;
     }
     int ret;
@@ -998,7 +1003,7 @@ void HttpServerImpl::checkOLSUpdate()
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
     sAutoUpdFile.append("/autoupdate/", 12);
     if (stat(sAutoUpdFile.c_str(), &sb) == -1)
-        mkdir(sAutoUpdFile.c_str(), 0777);
+        mkdir(sAutoUpdFile.c_str(), 0755);
     sAutoUpdFile.append("release", 7);
 
     if (stat(sAutoUpdFile.c_str(), &sb) != -1)
@@ -1214,6 +1219,9 @@ int HttpServerImpl::reinitMultiplexer()
     ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
     ServerInfo::getServerInfo()->setAdnsOp(0);
+#if defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
+    SigEventDispatcher::init();
+#endif
     return 0;
 }
 
@@ -1330,7 +1338,7 @@ int HttpServerImpl::addVirtualHostMapping(HttpListener *pListener,
     if (!p)
         p = strchr(value, '\t');
 
-    if (p)
+    if (p && p - value < 256)
         memcpy(pVHost, value, p - value);
     else
         return LS_FAIL;
@@ -1443,9 +1451,6 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 
             if (pListener)
             {
-                if (!pVHostName)
-                    pListener->getVHostMap()->clear();
-
                 if ((configVirtualHostMappings(pListener, pListenerNode, pVHostName) > 0)
                     && (pVHostName))
                     pListener->endConfig();
@@ -2259,14 +2264,10 @@ int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
             const XmlNode *pDir = *iter;
-            const char *val = pDir->getValue();
-            char achDir[MAX_PATH_LEN];
 
-            if (val && ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achDir, val) == 0)
-            {
-                if (pDeniedDir->addDir(achDir) == 0)
+            if (pDir->getValue())
+                if (pDeniedDir->addDir(pDir->getValue()) == 0)
                     add ++;
-            }
         }
     }
 
@@ -2470,12 +2471,9 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                     " in the response header.");
         }
 
-
-        // TODO: This is temporary code. Will implement in new year.
-        int useProxyHeader = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 3, 0);
         HttpServerConfig::getInstance().setUseProxyHeader(
-            (useProxyHeader == 3 ? 2 : useProxyHeader));
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+                    "useIpInProxyHeader", 0, 3, 0));
 
         denyAccessFiles(NULL, ".ht*", 0);
 
@@ -2498,6 +2496,11 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         }
 
         configSecurity(pRoot);
+
+        pNode = pRoot->getChild("lsrecaptcha");
+        if (pNode) {
+            initLsrecaptcha(pNode);
+        }
 
         m_serverContext.setModuleConfig(ModuleManager::getInstance().getGlobalModuleConfig(), 0);
         m_serverContext.initExternalSessionHooks();
@@ -2800,9 +2803,17 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         SigEventDispatcher::setAiokoLoaded();
 #endif
 
-        //if ( m_pServer->initErrorLog( pRoot, 1 ) )
-        if (HttpServer::getInstance().initErrorLog(pRoot, 1))
-            break;
+        if (!MainServerConfigObj.getConfTestMode())
+        {
+            //if ( m_pServer->initErrorLog( pRoot, 1 ) )
+            if (HttpServer::getInstance().initErrorLog(pRoot, 1))
+                break;
+        }
+        else
+        {
+            HttpServer::getInstance().setErrorLogFile(TEST_CONF_LOG);
+            HttpServer::getInstance().setLogLevel("WARN");
+        }
 
         const char *pValue = pRoot->getChildValue("serverName");
         if (pValue != NULL)
@@ -2866,6 +2877,21 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                       procConf.getUid(), procConf.getGid());
                 chown(HttpLog::getAccessLogFileName(),
                       procConf.getUid(), procConf.getGid());
+
+                /**
+                 * Fix /cgid/ DIR permission because user can change
+                 * user/group setting and will cause permission error.
+                 */
+                AutoStr2 sDir = MainServerConfig::getInstance().getServerRoot();
+                sDir.append("cgid/", 5);
+                
+                /**
+                 * Some user may not have such DIR, Mkdir first
+                 */
+                struct stat sb;
+                if (stat(sDir.c_str(), &sb) == -1)
+                    mkdir(sDir.c_str(), 0710);
+                chown(sDir.c_str(), procConf.getUid(), procConf.getGid());
             }
         }
 
@@ -2913,6 +2939,14 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         if (l == -1)
             l = 3600 * 24;
         HttpServerConfig::getInstance().setRestartTimeOut(l);
+
+        HttpServerConfig::getInstance().setEnableLve(
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0, 
+                                                       3, 0));
+
+        HttpServerConfig::getInstance().setCpuAffinity(
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0, 
+                                                       64, 0));
 
         //this value can only be set once when server start.
         if (MainServerConfigObj.getCrashGuard() == 2)
@@ -3054,18 +3088,24 @@ static int detectMmdb(const XmlNodeList *pList)
 int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 {
     const XmlNodeList *pList = pNode->getChildren("geoipDB");
-    Ip2Geo *pIp2Geo;
+    Ip2Geo *pIp2Geo = NULL;
     
     if ((!pList) || (pList->size() == 0))
         return 0;
+   
 #ifdef ENABLE_IPTOGEO2
     if (detectMmdb(pList))
         pIp2Geo = new IpToGeo2();
-    else
 #endif
+        
+#ifdef ENABLE_IPTOGEO        
+    if (!pIp2Geo)
         pIp2Geo = new IpToGeo();
+#endif
+
     if (!pIp2Geo)
         return LS_FAIL;
+
     if (pIp2Geo->config(pList) == -1)
     {
         delete pIp2Geo;
@@ -3102,6 +3142,175 @@ int HttpServerImpl::configIpToLoc(const XmlNode *pNode)
 #endif
 
     return 0;
+}
+
+
+#define DEFAULT_LSRECAPTCHA_SOCK    "uds:/" DEFAULT_TMP_DIR "/lsrecaptcha.sock"
+int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
+{
+    const char *pName = "lsrecaptcha";
+    int iAutoStart = 1;
+    int backlog = 10;
+    int instances = 1;
+    int iMaxConns = 35;
+    int iRetryTimeout = 15;
+    int iInitTimeout = 60;
+    int iBuffer = 0;
+    int iKeepAlive = 1;
+    int iKeepAliveTimeout = 60;
+
+    const char *pAddr = DEFAULT_LSRECAPTCHA_SOCK;
+
+    // FIXME: is this necessary?
+    GSockAddr addr;
+    if ( addr.set( pAddr, NO_ANY ) )
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "failed to set socket address %s!", pAddr);
+        return -1;
+    }
+
+    const char *pPath = "$SERVER_ROOT/lsrecaptcha/_recaptcha";
+    char achPath[MAX_PATH_LEN];
+    if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achPath, pPath) != 0) {
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Module path is invalid.");
+        return -1;
+    }
+    pPath = achPath;
+
+    int selfManaged = 1;
+
+    ExtWorker * pWorker = ExtAppRegistry::addApp(EA_LSAPI, pName);
+    if ( !pWorker )
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "failed to add external processor!");
+        return -1;
+    }
+
+    ExtWorkerConfig * pConfig = pWorker->getConfigPointer();
+    assert( pConfig );
+    if ( pAddr )
+        if ( pWorker->setURL( pAddr ) )
+        {
+            LS_ERROR(ConfigCtx::getCurConfigCtx(), "failed to set socket address to %s!",
+                    pAddr);
+            return -1;
+        }
+
+    pWorker->setRole( HandlerType::ROLE_RESPONDER );
+    pConfig->setPersistConn( iKeepAlive );
+    pConfig->setKeepAliveTimeout( iKeepAliveTimeout );
+    pWorker->setMaxConns( iMaxConns );
+    pConfig->setTimeout( iInitTimeout );
+    pConfig->setRetryTimeout( iRetryTimeout );
+    pConfig->setBuffering( iBuffer );
+
+    pConfig->clearEnv();
+
+    LocalWorker * pApp = dynamic_cast<LocalWorker *>( pWorker );
+    if ( NULL == pApp )
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Worker is not a localworker!. Fail configuration");
+        return -1;
+    }
+    LocalWorkerConfig& config = pApp->getConfig();
+    config.setBackLog( backlog );
+    config.setAppPath( pPath );
+    config.setInstances( instances );
+    config.setPriority(ServerProcessConfig::getInstance().getPriority());
+    config.setSelfManaged( selfManaged );
+    if ( instances == 1 && selfManaged )
+    {
+        config.setRunOnStartUp( 0 );
+        config.setStartByServer( iAutoStart );
+    }
+    config.setMaxIdleTime( INT_MAX );
+    if (( instances != 1 )&&
+        ( config.getMaxConns() > instances ))
+    {
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Possible mis-configuration: 'Instances'=%d, "
+                "'Max connections'=%d, unless one Fast CGI process is "
+                "capable of handling multiple connections, "
+                "you should set 'Instances' greater or equal to "
+                "'Max connections'.", instances, config.getMaxConns());
+        pApp->setMaxConns( instances );
+    }
+
+    RLimits limits;
+    memset( &limits, 0, sizeof( limits ) );
+    config.setRLimits( &limits );
+
+    Env * pEnv = config.getEnv();
+    if ( pEnv->find( "PATH" ) == NULL )
+    {
+        pEnv->add( "PATH=/bin:/usr/bin" );
+    }
+    pEnv->add( 0, 0, 0, 0 );
+    return 0;
+}
+
+
+int HttpServerImpl::configLsrecaptchaContexts()
+{
+    char achPath[MAX_PATH_LEN], achContext[MAX_PATH_LEN];
+
+    HttpVHost *pGlobalVHost = HttpServerConfig::getInstance().getGlobalVHost();
+    const char *pStaticUrl = Recaptcha::getStaticUrl()->c_str();
+    const char *pStaticUrlEnd = (const char *)memrchr(pStaticUrl, '/',
+            Recaptcha::getStaticUrl()->len());
+    assert(pStaticUrlEnd != NULL);
+    memcpy(achContext, pStaticUrl, pStaticUrlEnd - pStaticUrl);
+    achContext[pStaticUrlEnd - pStaticUrl] = '\0';
+
+    if (ConfigCtx::getCurConfigCtx()->getAbsolutePath(achPath, "$SERVER_ROOT/lsrecaptcha/") != 0) {
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Recaptcha path is invalid.");
+        return -1;
+    }
+    HttpContext *pStaticContext = pGlobalVHost->addContext(achContext,
+            HandlerType::HT_SSI, achPath, NULL, 1);
+    if (NULL == pStaticContext)
+    {
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Failed to add static lsrecaptcha context.");
+        return -1;
+    }
+
+    if (ConfigCtx::getCurConfigCtx()->getAbsolutePath(achPath, "$SERVER_ROOT/lsrecaptcha/_recaptcha_custom.shtml") == 0
+        && access(achPath, F_OK) == 0 )
+    {
+        LS_INFO(ConfigCtx::getCurConfigCtx(),
+                "Detect and use custom recaptcha page, %s.", achPath);
+        Recaptcha::setStaticUrl("/.lsrecap/_recaptcha_custom.shtml");
+    }
+
+    HttpContext *pVerifierCtx = pGlobalVHost->addContext(Recaptcha::getDynUrl()->c_str(),
+            HandlerType::HT_LSAPI, NULL, "lsrecaptcha", 1);
+    if (NULL == pVerifierCtx)
+    {
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Failed to add static lsrecaptcha context.");
+        return -1;
+    }
+    pVerifierCtx->setCheckCaptcha(1);
+    Recaptcha::setStaticCtx(pStaticContext);
+    Recaptcha::setDynCtx(pVerifierCtx);
+    return 0;
+}
+
+
+int HttpServerImpl::initLsrecaptcha(const XmlNode *pNode)
+{
+    ConfigCtx currentCtx("server", "recaptcha");
+
+    uint16_t allowedBotHits = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                                    "allowedRobotHits", 0, SHRT_MAX, 3);
+    ClientInfo::setMaxAllowedBotHits(allowedBotHits);
+
+    if (HttpServerConfig::getInstance().getGlobalVHost()->configRecaptcha(pNode))
+        return -1;
+
+    int ret = configLsrecaptchaWorker( pNode );
+    if (ret)
+        return ret;
+
+    return configLsrecaptchaContexts();
 }
 
 
@@ -3205,11 +3414,16 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         return ret;
 
 
-    //if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    if (!MainServerConfig::getInstance().getDisableWebAdmin())
     {
         ret = loadAdminConfig(pRoot);
         if (ret)
             return ret;
+    }
+    else
+    {
+        //When webAdmin disabled, set to enableCoreDump to 1.
+        MainServerConfig::getInstance().setEnableCoreDump(1);
     }
 
     configTuning(pRoot);
@@ -3217,14 +3431,17 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     //Must load modules before parse and set scriptHandlers
     configModules(pRoot);
 
-    if (!MainServerConfig::getInstance().getDisableWebAdmin())
+    if (!MainServerConfig::getInstance().getConfTestMode())
     {
-        if (startAdminListener(pRoot, ADMIN_CONFIG_NODE))
-            return LS_FAIL;
-    }
+        if (!MainServerConfig::getInstance().getDisableWebAdmin())
+        {
+            if (startAdminListener(pRoot, ADMIN_CONFIG_NODE))
+                return LS_FAIL;
+        }
 
-    //All other server listeners
-    startListeners(pRoot);
+        //All other server listeners
+        startListeners(pRoot);
+    }
 
     int maxconns = ConnLimitCtrl::getInstance().getMaxConns();
     unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 3);
@@ -3304,8 +3521,11 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     configVHosts(pRoot);
     configZconfSvrConf(pRoot);
     configListenerVHostMap(pRoot, NULL);
-    configVHTemplates(pRoot);
-
+    if (!MainServerConfig::getInstance().getConfTestMode())
+    {
+        configVHTemplates(pRoot);
+    }
+    
     ZConfManager::getInstance().prepareServerUp();
 
     return ret;
@@ -4265,6 +4485,13 @@ int HttpServer::mapListenerToVHost(const char *pListener,
     return m_impl->mapListenerToVHost(pListener, pKey, pVHost);
 }
 
+int HttpServer::mapListenerToVHost(const char *pListenerName,
+                                   HttpVHost    *pVHost,
+                                   const char *pDomains)
+{
+    HttpListener *pListener = getListener(pListenerName);
+    return m_impl->mapListenerToVHost(pListener, pVHost, pDomains);
+}
 
 int HttpServer::mapListenerToVHost(HttpListener *pListener,
                                    HttpVHost    *pVHost, const char *pDomains)

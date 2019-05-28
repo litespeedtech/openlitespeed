@@ -105,7 +105,7 @@ int L4conn::onInitConnected()
 //     {
 //         char        achSockAddr[128];
 //         char        achAddr[128]    = "";
-//         int         port            = 0;
+//         unsigned    port            = 0;
 //         socklen_t   len             = 128;
 //
 //         if ( getsockname( getfd(), (struct sockaddr *)achSockAddr, &len ) == 0 )
@@ -114,7 +114,7 @@ int L4conn::onInitConnected()
 //             port = GSockAddr::getPort( (struct sockaddr *)achSockAddr );
 //         }
 
-//         LS_DBG_L(getLogSession(), "Connected to [%s] on local addres [%s:%d]!",
+//         LS_DBG_L(getLogSession(), "Connected to [%s] on local addres [%s:%u]!",
 //                  m_pWorker->getURL(), achAddr, port);
 //    }
     return 0;

@@ -19,10 +19,11 @@
 #define HTTPRESOURCEMANAGER_H
 
 #include <lsdef.h>
+#include <http/httpdefs.h>
 #include <util/objpool.h>
 #include <util/tsingleton.h>
 
-#define GLOBAL_BUF_SIZE 16384
+#define GLOBAL_BUF_SIZE MAX_BUF_SIZE
 
 class Aiosfcb;
 class ChunkInputStream;
@@ -41,6 +42,9 @@ typedef ObjPool<GzipBuf>                GunzipBufPool;
 typedef ObjPool<HttpSession>            HttpSessionPool;
 typedef ObjPool<NtwkIOLink>             NtwkIoLinkPool;
 typedef ObjPool<Aiosfcb>                AiosfcbPool;
+
+#define SESSION_POOL_VG_DEBUG 1
+
 
 class HttpResourceManager : public TSingleton<HttpResourceManager>
 {
@@ -110,21 +114,15 @@ public:
 
 
 
-    void recycle(HttpSession *pSession)
-    ;
-//    {   m_poolHttpSession.recycle(pSession);    }
-        
-    HttpSession *getConnection()
-    ;
- //   {    return m_poolHttpSession.get();   }
- 
-    void recycle(HttpSession **pSession, int n)
-    ;
-//    {   m_poolHttpSession.recycle((void **)pSession, n);    }
 
-    int getConnections(HttpSession **pSession, int n)
-    ;
-//    {   return m_poolHttpSession.get(pSession, n);          }
+    HttpSession *getConnection();
+    void recycle(HttpSession *pSession);
+
+    HttpSession *getHttpSession();
+
+    void recycle(HttpSession **pSession, int n);
+
+    int getConnections(HttpSession **pSession, int n);
 
     int initAiosfcbPool();
     void recycle(Aiosfcb *pAiosfcb)

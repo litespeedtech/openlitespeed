@@ -216,7 +216,9 @@ class HttpSession
 
     ClientInfo           *m_pClientInfo;
 
-    
+    const AccessControl * m_pVHostAcl;
+    int                   m_iVHostAccess;
+
     uint16_t              m_iRemotePort;
     uint16_t              m_iSubReqSeq;
 
@@ -456,10 +458,12 @@ private:
     int processNewReqInit();
     int processNewReqBody();
     int smProcessReq();
+    void setRecaptchaEnvs();
     int processContextMap();
     int processContextRewrite();
     int processContextAuth();
     int processAuthorizer();
+    int preUriMap();
     int processFileMap();
     int processNewUri();
 
@@ -479,6 +483,7 @@ public:
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
     const struct sockaddr *getPeerAddr() const;
+    bool shouldIncludePeerAddr() const;
 
     void suspendRead()          {    getStream()->suspendRead();        };
     void continueRead()         {    getStream()->continueRead();       };
@@ -496,6 +501,7 @@ public:
 
     void setClientInfo(ClientInfo *p)       {   m_pClientInfo = p;                  };
     ClientInfo *getClientInfo() const       {   return m_pClientInfo;               };
+    int getVHostAccess();
 
     HttpSessionState getState() const       {   return (HttpSessionState)ls_atomic_fetch_or(const_cast<short *>(&m_iState), 0);  };
     void setState(HttpSessionState state)   {   ls_atomic_setshort(&m_iState, (short)state);            };
@@ -724,6 +730,7 @@ public:
 
     const char *getOrgReqUrl(int *n);
 
+    void testContentType();
     int updateContentCompressible();
     int suspendProcess();
 
@@ -802,6 +809,15 @@ public:
         m_lockMtHolder = 0;
         ls_spinlock_unlock(&m_lockMtRace);
     }
+    bool isRecaptchaEnabled() const
+    {   return (m_request.getRecaptcha() != NULL);      }
+    bool shouldAvoidRecaptcha();
+    bool isUseRecaptcha(int isEarlyDetect = 0);
+    bool hasPendingCaptcha() const;
+    bool recaptchaAttemptsAvail() const;
+    int rewriteToRecaptcha(bool blockIfTooManyAttempts = false);
+    void checkSuccessfulRecaptcha();
+    void blockParallelRecaptcha();
 };
 
 #endif

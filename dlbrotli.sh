@@ -3,8 +3,21 @@
 cd `dirname "$0"`
 echo "Checking libbrotli ..."
 
+DLCMD=
+source dist/functions.sh 2>/dev/null
+if [ $? != 0 ] ; then
+    . dist/functions.sh
+    if [ $? != 0 ] ; then
+        echo [ERROR] Can not include 'functions.sh'.
+        exit 1
+    fi
+fi
+
+
 
 if [ ! -f brotli-master/out/libbrotlidec-static.a ] ; then
+
+    detectdlcmd
     echo -e "\033[38;5;148mDownloading libbrotli latest version and building, it will take several minutes ...\033[39m"
 
     which cmake 
@@ -13,7 +26,7 @@ if [ ! -f brotli-master/out/libbrotlidec-static.a ] ; then
         exit 1
     fi
 
-    wget  --no-check-certificate  -O br.zip   https://codeload.github.com/google/brotli/zip/master
+    $DLCMD br.zip https://codeload.github.com/google/brotli/zip/master
     unzip br.zip
     cd brotli-master
     

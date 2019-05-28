@@ -26,10 +26,11 @@
 #include <util/autostr.h>
 #include <http/ip2geo.h>
 
-#define CLIENTINFO_NEED_RESET   (1<<0)
-#define CLIENTINFO_GOOG_TEST    (1<<1)
-#define CLIENTINFO_GOOG_REAL    (1<<2)
-#define CLIENTINFO_GOOG_FAKE    (1<<3)
+#define CIF_NEED_RESET      (1<<0)
+#define CIF_GOOG_TEST       (1<<1)
+#define CIF_GOOG_REAL       (1<<2)
+#define CIF_GOOG_FAKE       (1<<3)
+#define CIF_CAPTCHA_PENDING (1<<4)
 
 #if 0
 #include <shm/lsshmcache.h>
@@ -72,15 +73,18 @@ class ClientInfo
 
     time_t      m_tmOverLimit;
     short       m_sslNewConn;
+    uint16_t    m_iCaptchaTries;
+    uint16_t    m_iAllowedBotHits;
     int         m_iHits;
     time_t      m_lastConnect;
     int         m_iAccess;
 
     ThrottleControl     m_ctlThrottle;
-    static int  s_iSoftLimitPC;
-    static int  s_iHardLimitPC;
-    static int  s_iOverLimitGracePeriod;
-    static int  s_iBanPeriod;
+    static int          s_iSoftLimitPC;
+    static int          s_iHardLimitPC;
+    static int          s_iOverLimitGracePeriod;
+    static int          s_iBanPeriod;
+    static uint16_t     s_iMaxAllowedBotHits;
     //time_t
     //int       m_iBadReqs;
     //int       m_iGoodReqs;
@@ -119,48 +123,58 @@ public:
     int isFlagSet( int flag ) const     {   return m_iFlags & flag;     }
 
     int isNeedTestHost() const
-    {   return m_iFlags & CLIENTINFO_GOOG_TEST;         }
+    {   return m_iFlags & CIF_GOOG_TEST;    }
     int checkHost();
     void verifyIp(void *ip, const long length);
 
-    const char *getAddrString() const  {   return m_sAddr.c_str();     }
-    int         getAddrStrLen() const  {   return m_sAddr.len();       }
+    const char *getAddrString() const   {   return m_sAddr.c_str();     }
+    int         getAddrStrLen() const   {   return m_sAddr.len();       }
 
     void setHostName(const char *p)
     {
         if (p) m_sHostName.setStr(p);
         else     m_sHostName.setStr("", 0);
     }
-    const char *getHostName() const    {   return m_sHostName.c_str(); }
-    int getHostNameLen() const         {   return m_sHostName.len();   }
+    const char *getHostName() const     {   return m_sHostName.c_str(); }
+    int getHostNameLen() const          {   return m_sHostName.len();   }
 
-    size_t incConn()                   {   return ++m_iConns;      }
-    size_t decConn()                   {   return --m_iConns;      }
-    size_t getConns() const            {   return m_iConns;        }
+    size_t incConn()                    {   return ++m_iConns;          }
+    size_t decConn()                    {   return --m_iConns;          }
+    size_t getConns() const             {   return m_iConns;            }
 
-    void hit(time_t t)                 {   ++m_iHits; m_lastConnect = t;    }
-    void resetHits()                   {   m_iHits = 0;            }
-    int  getHits() const               {   return m_iHits;         }
+    void incCaptchaTries()              {   ++m_iCaptchaTries;          }
+    uint16_t getCaptchaTries() const    {   return m_iCaptchaTries;     }
+    void resetCaptchaTries()            {   m_iCaptchaTries = 0;        }
 
-    void setLastConnTime(time_t t)     {   m_lastConnect = t ;     }
-    time_t getLastConnTime() const     {   return m_lastConnect;   }
+    void incAllowedBotHits()            {   ++m_iAllowedBotHits;        }
+    uint16_t getAllowedBotHits() const  {   return m_iAllowedBotHits;   }
+    void resetAllowedBotHits()          {   m_iAllowedBotHits = 0;      }
+    bool isReachBotLimit() const
+    {   return (getAllowedBotHits() >= getMaxAllowedBotHits());         }
 
-    void setOverLimitTime(time_t t)    {   m_tmOverLimit = t ;     }
-    time_t getOverLimitTime() const    {   return m_tmOverLimit;   }
+    void hit(time_t t)                  {   ++m_iHits; m_lastConnect = t;    }
+    void resetHits()                    {   m_iHits = 0;                }
+    int  getHits() const                {   return m_iHits;             }
 
-    void setAccess(int access)         {   m_iAccess = access;     }
-    int getAccess() const              {   return m_iAccess;       }
+    void setLastConnTime(time_t t)      {   m_lastConnect = t ;         }
+    time_t getLastConnTime() const      {   return m_lastConnect;       }
+
+    void setOverLimitTime(time_t t)     {   m_tmOverLimit = t ;         }
+    time_t getOverLimitTime() const     {   return m_tmOverLimit;       }
+
+    void setAccess(int access)          {   m_iAccess = access;         }
+    int getAccess() const               {   return m_iAccess;           }
 
     int checkAccess();
 
-    ThrottleControl &getThrottleCtrl() {   return m_ctlThrottle;   }
+    ThrottleControl &getThrottleCtrl()  {   return m_ctlThrottle;       }
 
     bool allowRead() const      {   return m_ctlThrottle.allowRead();   }
     bool allowWrite() const     {   return m_ctlThrottle.allowWrite();  }
 
-    short incSslNewConn()   {   return ++m_sslNewConn;  }
-    short getSslNewConn()   {   return m_sslNewConn;    }
-    void  setSslNewConn(int n)   {   m_sslNewConn = n;    }
+    short incSslNewConn()               {   return ++m_sslNewConn;      }
+    short getSslNewConn()               {   return m_sslNewConn;        }
+    void  setSslNewConn(int n)          {   m_sslNewConn = n;           }
     void  setGeoInfo(GeoInfo *geoInfo)  {   m_pGeoInfo = geoInfo;       }
     GeoInfo *getGeoInfo() const         {   return m_pGeoInfo;          }
 
@@ -190,6 +204,12 @@ public:
     {   s_iBanPeriod = val;   }
     static int getBanPeriod()
     {   return s_iBanPeriod;  }
+
+    static void setMaxAllowedBotHits(uint16_t h)
+    {   s_iMaxAllowedBotHits = h;       }
+    static uint16_t getMaxAllowedBotHits()
+    {   return s_iMaxAllowedBotHits;    }
+
 #if 0
     TShmClient *getShmClientInfo()
     {

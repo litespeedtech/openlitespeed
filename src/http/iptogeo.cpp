@@ -18,6 +18,8 @@
 
 #include "iptogeo.h"
 
+#ifdef ENABLE_IPTOGEO
+
 #include <http/httplog.h>
 #include <log4cxx/logger.h>
 #include <main/configctx.h>
@@ -633,3 +635,5 @@ int IpToGeo::config(const XmlNodeList *pList)
     }
     return 0;
 }
+
+#endif // ENABLE_IPTOGEO

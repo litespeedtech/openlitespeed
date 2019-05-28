@@ -1565,7 +1565,8 @@ int LsShmHash::touchLru(iteroffset iterOff)
 {
     if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return 0;
-
+    if (iterOff.m_iOffset == 0)
+        return 0;
     autoLockChkRehash();
     lruMarkNewest(offset2iterator(iterOff), iterOff);
     autoUnlock();

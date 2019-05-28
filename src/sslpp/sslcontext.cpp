@@ -10,8 +10,15 @@
 #include <sslpp/sslocspstapling.h>
 #include <sslpp/sslutil.h>
 #include <sslpp/sslcontextconfig.h>
+#include <sslpp/sslasyncpk.h>
+#include <sslpp/sslcertcomp.h>
 
 #include <log4cxx/logger.h>
+
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
 
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -70,6 +77,13 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
         return NULL;
     }
 
+#ifdef SSL_ASYNC_PK
+    SslAsyncPk::enableApk(pContext->m_pCtx);
+#endif
+
+#ifdef SSLCERTCOMP
+    SslCertComp::enableCertComp(pContext->m_pCtx);
+#endif
     return pContext;
 }
 
@@ -208,6 +222,14 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
     {
         pContext->configStapling(pConfig);
     }
+
+#ifdef SSL_ASYNC_PK
+    SslAsyncPk::enableApk(pContext->m_pCtx);
+#endif
+
+#ifdef SSLCERTCOMP
+    SslCertComp::enableCertComp(pContext->m_pCtx);
+#endif
 
 #ifdef _ENTERPRISE_
     if (pConfig->m_iClientVerify)
@@ -396,6 +418,7 @@ int SslContext::init(int iMethod)
     SSL_METHOD *meth;
     if (initSSL())
         return -1;
+    
     m_iMethod = iMethod;
     m_iEnableSpdy = 0;
     m_iEnableOcsp = 0;
@@ -403,6 +426,7 @@ int SslContext::init(int iMethod)
     m_pCtx = SSL_CTX_new(meth);
     if (m_pCtx)
     {
+        LS_DBG_L("[SslCertComp] Create SSL_CTX: %p\n", m_pCtx);
         SslUtil::initCtx(m_pCtx, iMethod, m_iRenegProtect);
         //initDH( NULL );
         //initECDH();
@@ -437,14 +461,20 @@ SslContext::~SslContext()
 
 void SslContext::release()
 {
-    if (m_pCtx != NULL)
+#ifdef SSLCERTCOMP
+    SslCertComp::disableCertCompDecomp(m_pCtx);
+#endif        
+    if (m_pCtx != NULL && m_pCtx != SSL_CTX_PENDING)
     {
         SSL_CTX *pCtx = m_pCtx;
         m_pCtx = NULL;
         SSL_CTX_free(pCtx);
     }
     if (m_pStapling)
+    {
         delete m_pStapling;
+        m_pStapling = NULL;
+    }
 }
 
 
@@ -589,15 +619,12 @@ int SslContext::setPrivateKeyFile(const char *pFile, int type)
     return 1;
 }
 
-/*Ron
-int SslContext::checkPrivateKey()
+bool SslContext::checkPrivateKey()
 {
     if (m_pCtx)
         return SSL_CTX_check_private_key(m_pCtx) == 1;
-    else
-        return false;
+    return false;
 }
-*/
 
 int SslContext::setCipherList(const char *pList)
 {
@@ -949,10 +976,16 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
 #endif
 
 
+/* This will neeed to be updated as the ID versions change.  Eventually
+ * it will become simply "h3"
+ */
+#define H3_ALPN "\x05h3-20"
+#define H3_ALSZ (sizeof(H3_ALPN) - 1)
+
 /**
  * We support h2-16, but if set to this value, firefox will not choose h2-16, so we have to use h2-14.
  */
-static const char *NEXT_PROTO_STRING[8] =
+static const char *NEXT_PROTO_STRING[16] =
 {
     "\x08http/1.1",
     "\x06spdy/2\x08http/1.1",
@@ -962,11 +995,20 @@ static const char *NEXT_PROTO_STRING[8] =
     "\x02h2\x06spdy/2\x08http/1.1",
     "\x02h2\x08spdy/3.1\x06spdy/3\x08http/1.1",
     "\x02h2\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
+    H3_ALPN "\x08http/1.1",
+    H3_ALPN "\x06spdy/2\x08http/1.1",
+    H3_ALPN "\x08spdy/3.1\x06spdy/3\x08http/1.1",
+    H3_ALPN "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
+    H3_ALPN "\x02h2\x08http/1.1",
+    H3_ALPN "\x02h2\x06spdy/2\x08http/1.1",
+    H3_ALPN "\x02h2\x08spdy/3.1\x06spdy/3\x08http/1.1",
+    H3_ALPN "\x02h2\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
 };
 
-static unsigned int NEXT_PROTO_STRING_LEN[8] =
+static unsigned int NEXT_PROTO_STRING_LEN[16] =
 {
     9, 16, 25, 32, 12, 19, 28, 35,
+    9+H3_ALSZ, 16+H3_ALSZ, 25+H3_ALSZ, 32+H3_ALSZ, 12+H3_ALSZ, 19+H3_ALSZ, 28+H3_ALSZ, 35+H3_ALSZ,
 };
 
 //static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
@@ -990,11 +1032,14 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
 {
     SslContext *pCtx = (SslContext *)arg;
     SslConnection *pConn = SslConnection::get(pSSL);
-    if (pConn->getFlag(SslConnection::F_DISABLE_HTTP2))
+    if (pConn && pConn->getFlag(SslConnection::F_DISABLE_HTTP2))
         return SSL_TLSEXT_ERR_NOACK;
+    unsigned char alpn_idx = pCtx->getEnableSpdy();
+    if (pConn)
+        alpn_idx &= ~8; // No HTTP/3 on TCP connection
     if (SSL_select_next_proto((unsigned char **) out, outlen,
-                              (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy() ],
-                              NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ],
+                              (const unsigned char *)NEXT_PROTO_STRING[ alpn_idx ],
+                              NEXT_PROTO_STRING_LEN[ alpn_idx ],
                               in, inlen)
         != OPENSSL_NPN_NEGOTIATED)
         return SSL_TLSEXT_ERR_NOACK;
@@ -1013,7 +1058,7 @@ void SslContext::setAlpnCb(SSL_CTX *ctx, void *arg)
 
 int SslContext::enableSpdy(int level)
 {
-    m_iEnableSpdy = (level & 7);
+    m_iEnableSpdy = (level & 15);
     if (m_iEnableSpdy == 0)
         return 0;
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation

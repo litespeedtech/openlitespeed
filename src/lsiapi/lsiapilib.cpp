@@ -53,6 +53,8 @@
 #include <main/httpserver.h>
 #include <main/mainserverconfig.h>
 #include <sslpp/sslconnection.h>
+#include <sslpp/sslutil.h>
+#include <sslpp/sslcert.h>
 #include <thread/mtnotifier.h>
 #include <thread/workcrew.h>
 #include <util/datetime.h>
@@ -2146,9 +2148,9 @@ static void *get_vhost_module_conf(const void *vhost,
 //Do not use it currently
 int handoff_fd(const lsi_session_t *session, char **pData, int *pDataLen)
 {
-    if (!session || !pData || !pDataLen)
-        return LS_FAIL;
-    HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+//     if (!session || !pData || !pDataLen)
+//         return LS_FAIL;
+//     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     return LS_FAIL;//pSession->handoff(pData, pDataLen);
 }
 
@@ -2365,22 +2367,6 @@ static void foreach_special_env(const HttpSession *session, const char *filter,
 }
 
 
-static int lookup_ssl_cert_serial(X509 *pCert, char *pBuf, int len)
-{
-    BIO *bio;
-    int n;
-
-    if ((bio = BIO_new(BIO_s_mem())) == NULL)
-        return LS_FAIL;
-    i2a_ASN1_INTEGER(bio, X509_get_serialNumber(pCert));
-    //n = BIO_pending(bio);
-    n = BIO_read(bio, pBuf, len);
-    pBuf[n] = '\0';
-    BIO_free(bio);
-    return n;
-}
-
-
 static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
                             void *arg)
 {
@@ -2430,7 +2416,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
                 n = snprintf(achBuf, sizeof(achBuf), "%lu",
                                 X509_get_version(pClientCert) + 1);
                 cb(-1, "SSL_CLIENT_M_VERSION", 20, achBuf, n, arg);
-                n = lookup_ssl_cert_serial(pClientCert, achBuf, 4096);
+                n = SslUtil::lookupCertSerial(pClientCert, achBuf, 4096);
                 if (n != -1)
                 {
                     cb(-1, "SSL_CLIENT_M_SERIAL", 19, achBuf, n, arg);

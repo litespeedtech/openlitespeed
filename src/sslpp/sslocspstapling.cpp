@@ -26,6 +26,11 @@
 #include <util/datetime.h>
 #include <log4cxx/logger.h>
 
+#include <assert.h>
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -136,7 +141,7 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
     if (istatusCode == 200 && pRespContentType != NULL
         && strcasecmp(pRespContentType, "application/ocsp-response") == 0)
     {
-        if (verifyRespFile() != 0)
+        if (verifyRespFile(1) != 0)
         {
             m_pCtx->disableOscp();
             m_RespTime = UINT_MAX;
@@ -165,6 +170,7 @@ SslOcspStapling::SslOcspStapling()
     , m_iDataLen(0)
     , m_pRespData(NULL)
     , m_iocspRespMaxAge(3600 * 24)
+    , m_notBefore(NULL)
     , m_pCtx(NULL)
     , m_RespTime(0)
     , m_pCertId(NULL)
@@ -180,6 +186,8 @@ SslOcspStapling::~SslOcspStapling()
         free(m_pReqData);
     if (m_pCertId != NULL)
         OCSP_CERTID_free(m_pCertId);
+    if (m_notBefore)
+        ASN1_STRING_free(m_notBefore);
 }
 
 int SslOcspStapling::init(SslContext *pSslCtx)
@@ -206,6 +214,13 @@ int SslOcspStapling::init(SslContext *pSslCtx)
         //                           m_sOcspResponder.len());
         iResult = 0;
         //update();
+        const ASN1_TIME *not_before;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
+        not_before = X509_get0_notBefore(pCert);
+#else
+        not_before = X509_get_notBefore(pCert);
+#endif
+        ASN1_TIME_to_generalizedtime((ASN1_TIME *)not_before, &m_notBefore);
     }
     X509_free(pCert);
     return iResult;
@@ -217,14 +232,14 @@ int SslOcspStapling::update()
     struct stat st;
     if (m_RespTime == UINT_MAX)
         return 0;
-    if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge < DateTime::s_curTime)
+    if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge >= DateTime::s_curTime)
     {
         return 0;
     }
 
     if (::stat(m_sRespfile.c_str(), &st) == 0)
     {
-        if (st.st_mtime + m_iocspRespMaxAge + 3600 < DateTime::s_curTime)
+        if (st.st_mtime + m_iocspRespMaxAge < DateTime::s_curTime)
         {
             releaseRespData();
             unlink(m_sRespfile.c_str());
@@ -358,7 +373,7 @@ int SslOcspStapling::createRequest()
         {
             if (DateTime::s_curTime - m_pHttpFetch->getTimeStart() < 30)
                 return 0;
-            LS_DBG("%s: HTTP fetch timed out, state: %d\n",
+            LS_DBG("[OCSP] %s: HTTP fetch timed out, state: %d\n",
                       m_sRespfileTmp.c_str(), m_pHttpFetch->getReqState());
         }
         delete m_pHttpFetch;
@@ -432,7 +447,6 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     int                 n, iResult = -1;
     STACK_OF(X509)      *pXchain;
     ASN1_GENERALIZEDTIME  *pThisupdate, *pNextupdate;
-    struct stat         st;
 
 #ifndef OPENSSL_IS_BORINGSSL
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -448,8 +462,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     {
         if (m_pCertId == NULL)
         {
-            log4cxx::Logger::getRootLogger()->error("%s: cert ID is NULL\n",
-                                       m_sCertfile.c_str());
+            LS_NOTICE("[OCSP] %s: cert ID is NULL\n", m_sCertfile.c_str());
             return 1;
         }
         int find_status = OCSP_resp_find_status(pBasicResp, m_pCertId, &n,
@@ -457,29 +470,30 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         //NOTE: get around an issue with response have wrong nextupdate time.
         //      do not check it for now.
         pNextupdate = NULL;
-        int validate = OCSP_check_validity(pThisupdate, pNextupdate, 300, -1);
+        int validate = -100;
 
-        if (find_status == 1 && n == V_OCSP_CERTSTATUS_GOOD
-            && validate == 1)
+        if (find_status == 1 && n == V_OCSP_CERTSTATUS_GOOD)
+        {
+            int day, sec;
+            if (m_notBefore && ASN1_TIME_diff(&day, &sec, m_notBefore, pThisupdate)
+                && (day > 0 || sec > 0))
+                validate = OCSP_check_validity(pThisupdate, pNextupdate, 300, -1);
+        }
+
+        if (validate == 1)
         {
             iResult = 0;
-            updateRespData(pResponse);
-            unlink(m_sRespfile.c_str());
-            rename(m_sRespfileTmp.c_str(), m_sRespfile.c_str());
-            if (::stat(m_sRespfile.c_str(), &st) == 0)
-                m_RespTime = st.st_mtime;
         }
         else
         {
-            log4cxx::Logger::getRootLogger()->error(
-                "%s: verify failed, find_status: %d, status: %d, validate: %d\n",
-                m_sCertfile.c_str(), find_status, n, validate);
+            LS_NOTICE("[OCSP] %s: verify failed, find_status: %d, status: %d, validate: %d\n",
+                      m_sCertfile.c_str(), find_status, n, validate);
         }
     }
     else
     {
-        log4cxx::Logger::getRootLogger()->error("%s: OCSP_basic_verify() failed: %s\n",
-                                       m_sCertfile.c_str(), SslError().what());
+        LS_NOTICE("[OCSP] %s: OCSP_basic_verify() failed: %s\n",
+                  m_sCertfile.c_str(), SslError().what());
         m_pCtx->disableOscp();
         m_RespTime = UINT_MAX;
 
@@ -495,43 +509,64 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     return iResult;
 }
 
-int SslOcspStapling::verifyRespFile(int iNeedVerify)
+int SslOcspStapling::verifyRespFile(int is_new_resp)
 {
     int                 iResult = -1;
     BIO                 *pBio;
     OCSP_RESPONSE       *pResponse;
     OCSP_BASICRESP      *pBasicResp;
+    uint8_t             *pBuf = NULL;
+    const unsigned char *pCopy;
+    size_t              ulSize;
     X509_STORE *pXstore;
-    if (iNeedVerify)
+    if (is_new_resp)
         pBio = BIO_new_file(m_sRespfileTmp.c_str(), "r");
     else
         pBio = BIO_new_file(m_sRespfile.c_str(), "r");
     if (pBio == NULL)
         return -1;
 
-    pResponse = d2i_OCSP_RESPONSE_bio(pBio, NULL);
-    BIO_free(pBio);
-    if (pResponse == NULL)
+#ifdef OPENSSL_IS_BORINGSSL
+    if (1 != BIO_read_asn1(pBio, &pBuf, &ulSize, 100 * 1024))
+    {
+        BIO_free(pBio);
         return -1;
+    }
+    BIO_free(pBio);
+
+    pCopy = pBuf;
+    pResponse = d2i_OCSP_RESPONSE(NULL, &pCopy, ulSize);
+    OPENSSL_free(pBuf);
+#else
+    pResponse = d2i_OCSP_RESPONSE_bio(pBio, NULL);
+#endif
+    if (pResponse == NULL)
+    {
+        return -1;
+    }
 
     if (OCSP_response_status(pResponse) == OCSP_RESPONSE_STATUS_SUCCESSFUL)
     {
-        if (iNeedVerify)
+        pBasicResp = OCSP_response_get1_basic(pResponse);
+        if (pBasicResp != NULL)
         {
-            pBasicResp = OCSP_response_get1_basic(pResponse);
-            if (pBasicResp != NULL)
+            pXstore = SSL_CTX_get_cert_store(m_pCtx->get());
+            if (pXstore)
             {
-                pXstore = SSL_CTX_get_cert_store(m_pCtx->get());
-                if (pXstore)
-                    iResult = certVerify(pResponse, pBasicResp, pXstore);
-                OCSP_BASICRESP_free(pBasicResp);
+                iResult = certVerify(pResponse, pBasicResp, pXstore);
+                if (iResult == 0 && is_new_resp)
+                {
+                    unlink(m_sRespfile.c_str());
+                    rename(m_sRespfileTmp.c_str(), m_sRespfile.c_str());
+                    struct stat st;
+                    if (::stat(m_sRespfile.c_str(), &st) == 0)
+                        m_RespTime = st.st_mtime;
+                }
             }
+            OCSP_BASICRESP_free(pBasicResp);
         }
-        else
-        {
+        if (iResult == 0)
             updateRespData(pResponse);
-            iResult = 0;
-        }
     }
     OCSP_RESPONSE_free(pResponse);
     return iResult;
@@ -578,25 +613,25 @@ int SslOcspStapling::getCertId(X509 *pCert)
     pXstore = SSL_CTX_get_cert_store(m_pCtx->get());
     if (pXstore == NULL)
     {
-        setLastErrMsg("SSL_CTX_get_cert_store failed!\n");
+        setLastErrMsg("SSL_CTX_get_cert_store failed!");
         return -1;
     }
     pXstore_ctx = X509_STORE_CTX_new();
     if (pXstore_ctx == NULL)
     {
-        setLastErrMsg("X509_STORE_CTX_new failed!\n");
+        setLastErrMsg("X509_STORE_CTX_new failed!");
         return -1;
     }
     if (X509_STORE_CTX_init(pXstore_ctx, pXstore, NULL, NULL) == 0)
     {
-        setLastErrMsg("X509_STORE_CTX_init failed!\n");
+        setLastErrMsg("X509_STORE_CTX_init failed!");
         return -1;
     }
     n = X509_STORE_CTX_get1_issuer(&pXissuer, pXstore_ctx, pCert);
     X509_STORE_CTX_free(pXstore_ctx);
     if ((n == -1) || (n == 0))
     {
-        setLastErrMsg("X509_STORE_CTX_get1_issuer failed!\n");
+        setLastErrMsg("X509_STORE_CTX_get1_issuer failed!");
         return -1;
     }
     m_pCertId = OCSP_cert_to_id(NULL, pCert, pXissuer);

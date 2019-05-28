@@ -365,6 +365,20 @@ public:
 #endif
         ;
 
+    static void s_lograw(log4cxx::Logger *l, const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 2, 3)))
+#endif
+        ;
+
+    static void s_lograw(LogSession *pLogSession, const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 2, 3)))
+#endif
+        ;
+
+    static void s_logbuf(log4cxx::Logger *l, const char *buf, size_t size);
+
     static void s_vlograw(log4cxx::Logger *l, const char *format, va_list va);
         
     static void s_vlog(int level, LogSession *pLogSession,

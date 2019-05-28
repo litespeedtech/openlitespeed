@@ -25,6 +25,7 @@
 class SslContext;
 class HttpFetch;
 
+typedef struct asn1_string_st ASN1_TIME;
 typedef struct ocsp_basic_response_st OCSP_BASICRESP;
 typedef struct ocsp_cert_id_st OCSP_CERTID;
 typedef struct ocsp_response_st OCSP_RESPONSE;
@@ -45,7 +46,7 @@ public:
     int getResponder(X509 *pCert);
     int callback(SSL *ssl);
     int processResponse(HttpFetch *pHttpFetch);
-    int verifyRespFile(int iNeedVerify = 1);
+    int verifyRespFile(int is_new_resp);
     int certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasicResp,
                    X509_STORE *pXstore);
     void releaseRespData();
@@ -75,6 +76,7 @@ private:
     AutoStr2        m_sRespfile;
     AutoStr2        m_sRespfileTmp;
     int             m_iocspRespMaxAge;
+    ASN1_TIME      *m_notBefore;
     SslContext     *m_pCtx;
     uint32_t        m_RespTime;
     OCSP_CERTID    *m_pCertId;

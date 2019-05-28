@@ -26,10 +26,12 @@
 #include <extensions/httpextprocessor.h>
 
 #define LSAPI_CONN_IDLE             0
-#define LSAPI_CONN_READ_RESP_INFO   1
-#define LSAPI_CONN_READ_HEADER_LEN  2
-#define LSAPI_CONN_READ_HEADER      3
-#define LSAPI_CONN_READ_RESP_BODY   4
+#define LSAPI_CONN_REQ_SENT         1
+#define LSAPI_CONN_READ_RESP_INFO   2
+#define LSAPI_CONN_READ_HEADER_LEN  3
+#define LSAPI_CONN_READ_HEADER      4
+#define LSAPI_CONN_READ_RESP_BODY   5
+#define LSAPI_CONN_END_RESP         6
 
 class LsapiConn: public ExtConn
     , public HttpExtProcessor
@@ -64,6 +66,8 @@ class LsapiConn: public ExtConn
     int     sendAbortReq();
     int     processRespHeader();
     int     readStderrStream();
+    int     readNotifyStream();
+
 protected:
     virtual int doRead();
     virtual int doWrite();

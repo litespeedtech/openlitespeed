@@ -28,6 +28,8 @@
 
 
 #define DateTime_s_curTime  ( DateTime::s_curTime )
+#define DateTime_s_curTimeMs  ( DateTime::s_curTimeUs / 1000 )
+
 //#define DateTime_s_curTime  ( time(NULL) )
 
 //#define CACHE_RESP_HEADER   1
@@ -68,8 +70,9 @@ public:
     long getLastAccess() const      {   return m_lastAccess;    }
 
     void incHits()                  {   ++m_iHits;          }
+    void clearHits()                {   m_iHits = 0;        }
     long getHits() const            {   return m_iHits;     }
-//
+
 //     void incTestHits()              {   ++m_iTestHits;    }
 //     long getTestHits() const        {   return m_iTestHits;    }
 
@@ -121,6 +124,8 @@ public:
     void markReady(int compressed_method)
     {
         m_header.m_flag = (m_header.m_flag & ~CeHeader::CEH_IN_CONSTRUCT);
+        m_header.m_flag &= (~CeHeader::CEH_BR & ~CeHeader::CEH_GZIP);
+        
         if (compressed_method == 2)
             m_header.m_flag |= CeHeader::CEH_BR;
         else if (compressed_method == 1)
@@ -181,9 +186,15 @@ public:
     void setNeedDelay(int v) {   m_needDelay = v;    }
     int  getNeedDelay() {   return m_needDelay;    }
 
+    int getVaryIndexSet(int index)   {  return m_iVaryFlag & (1 << index);   }
+    void setVaryIndex(int index)     { m_iVaryFlag |= (1 << index);   }
+
 
 private:
     long        m_lastAccess;
+    /**
+     * When this reach 10, then means currrent cache need to change gzip/ungzip
+     */
     int         m_iHits;
     int         m_iMaxStale;
     int         m_needDelay; //delay serving if have cache, in URI_MAP instead of recv req header */
@@ -192,6 +203,7 @@ private:
     off_t       m_startOffset;
     CeHeader    m_header;
     int         m_fdStore;
+    int32_t     m_iVaryFlag;  //each bit indicate a vary req header
     AutoStr     m_sKey;
 
     AutoStr     m_sTag;

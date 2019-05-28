@@ -30,13 +30,17 @@ CacheConfig::CacheConfig()
     , m_lMaxObjSize(10000000)
       //, m_iBypassPercentage(5)
     , m_iLevele(0)
+    , m_iAddEtag(0)
     , m_iOnlyUseOwnUrlExclude(0)
     , m_iOwnStore(0)
-    , m_iAddEtag(0)
+    , m_iOwnPurgeUri(0)
+    , m_iOwnVaryList(0)
     , m_pUrlExclude(NULL)
     , m_pParentUrlExclude(NULL)
     , m_pVHostMapExclude(NULL)
     , m_pStore(NULL)
+    , m_pPurgeUri(NULL)
+    , m_pVaryList(NULL)
 {
 }
 
@@ -49,11 +53,20 @@ CacheConfig::~CacheConfig()
         delete m_pVHostMapExclude;
     if (m_iOwnStore && m_pStore)
         delete m_pStore;
+    if (m_iOwnPurgeUri && m_pPurgeUri)
+        free(m_pPurgeUri);
+    if (m_iOwnVaryList && m_pVaryList)
+        delete m_pVaryList;
 
     m_pUrlExclude = NULL;
+    m_pVaryList = NULL;
+    m_pPurgeUri = NULL;
     m_pParentUrlExclude = NULL;
     m_pVHostMapExclude = NULL;
     m_pStore = NULL;
+    m_iOwnStore = 0;
+    m_iOwnPurgeUri = 0;
+    m_iOwnVaryList = 0;
 }
 
 
@@ -78,6 +91,10 @@ void CacheConfig::inherit(const CacheConfig *pParent)
         m_pStore = pParent->getStore();
         m_iOwnStore = 0;
         m_iAddEtag = pParent->getAddEtagType();
+        m_pPurgeUri = pParent->getPurgeUri();
+        m_iOwnPurgeUri = 0;
+        m_pVaryList = pParent->getVaryList();
+        m_iOwnVaryList = 0;
     }
 }
 
@@ -126,4 +143,11 @@ void CacheConfig::setLitemageDefault()
     setMaxObjSize(1024 * 1024);
 }
 
+void CacheConfig::setVaryList(StringList *pList)
+{
+    if (m_iOwnVaryList && m_pVaryList)
+        delete m_pVaryList;
+    m_pVaryList = pList;
+    m_iOwnVaryList = 1;
+}
 

@@ -112,7 +112,12 @@ int main(int argc, char *argv[])
 }
 
 
+//#define WANT_LSAN
 #ifndef WANT_LSAN
-extern "C" const char* __asan_default_options() { return "detect_leaks=0"; }
+extern "C" const char* __asan_default_options()
+{ return "disable_coredump=0:unmap_shadow_on_exit=1:detect_leaks=0:abort_on_error=1"; }
+#else
+extern "C" const char* __asan_default_options()
+{ return "disable_coredump=0:unmap_shadow_on_exit=1:abort_on_error=1"; }
 #endif
 

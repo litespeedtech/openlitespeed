@@ -48,12 +48,15 @@
 char HttpRespHeaders::s_sDateHeaders[30] = "Tue, 09 Jul 2013 13:43:01 GMT";
 int             HttpRespHeaders::s_commonHeadersCount = 2;
 http_header_t       HttpRespHeaders::s_commonHeaders[2];
-http_header_t       HttpRespHeaders::s_gzipHeaders[2];
-http_header_t       HttpRespHeaders::s_brHeaders[2];
+http_header_t       HttpRespHeaders::s_gzipHeaders;
+http_header_t       HttpRespHeaders::s_brHeaders;
+http_header_t       HttpRespHeaders::s_varyHeaders;
 http_header_t       HttpRespHeaders::s_keepaliveHeader;
 http_header_t       HttpRespHeaders::s_chunkedHeader;
 http_header_t       HttpRespHeaders::s_concloseHeader;
 http_header_t       HttpRespHeaders::s_acceptRangeHeader;
+
+static char s_sTurboCharged[66] = "X-Turbo-Charged-By: ";
 
 const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
 {
@@ -161,7 +164,13 @@ void HttpRespHeaders::updateEtag(int compress_type)
     pUpdate = (char *)pETag + etagLen - 4;
     if (*pUpdate++ == ';')
     {
-        if (compress_type == 0)
+        /*if (compress_type == 0)
+        {
+            *pUpdate++ = ';';
+            *pUpdate++ = ';';
+        }
+        else */
+        if (compress_type == 1)
         {
             *pUpdate++ = 'g';
             *pUpdate++ = 'z';
@@ -918,16 +927,16 @@ int HttpRespHeaders::mergeAll()
 }
 
 
-void HttpRespHeaders::dump(LogSession *pILog, int dump_header)
+void HttpRespHeaders::dump(LogSession *pILog, int dump_header) const
 {
-    LS_DBG_H(pILog, "Resp headers, total: %d, removed: %d, unique:%d, " 
+    LS_DBG_H(pILog, "Resp headers, status: %d, total: %d, removed: %d, unique:%d, "
                     "has hole: %d, buffer size: %d",
+             (int)m_iHttpCode,
         (int)getTotalCount(), (int)m_iHeaderRemovedCount,
         (int)m_iHeaderUniqueCount, (int)m_flags,
         (int)m_buf.size() );
     resp_kvpair *pKv = getKV(0);
     resp_kvpair *pKvEnd = pKv + getTotalCount();
-
     while (pKv < pKvEnd)
     {
         if (pKv->keyLen > 0)
@@ -1009,29 +1018,23 @@ void HttpRespHeaders::buildCommonHeaders()
         HttpServerVersion::getVersionLen();
 
 
-    HttpRespHeaders::s_gzipHeaders[0].index    =
+    HttpRespHeaders::s_gzipHeaders.index    =
         HttpRespHeaders::H_CONTENT_ENCODING;
-    HttpRespHeaders::s_gzipHeaders[0].val      = "gzip";
-    HttpRespHeaders::s_gzipHeaders[0].valLen   = 4;
+    HttpRespHeaders::s_gzipHeaders.val      = "gzip";
+    HttpRespHeaders::s_gzipHeaders.valLen   = 4;
 
-    HttpRespHeaders::s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_gzipHeaders[1].val      = "Accept-Encoding";
-    HttpRespHeaders::s_gzipHeaders[1].valLen   = 15;
-
-
-    HttpRespHeaders::s_brHeaders[0].index    =
+    HttpRespHeaders::s_brHeaders.index    =
         HttpRespHeaders::H_CONTENT_ENCODING;
-    HttpRespHeaders::s_brHeaders[0].val      = "br";
-    HttpRespHeaders::s_brHeaders[0].valLen   = 2;
+    HttpRespHeaders::s_brHeaders.val      = "br";
+    HttpRespHeaders::s_brHeaders.valLen   = 2;
 
-    HttpRespHeaders::s_brHeaders[1].index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_brHeaders[1].val      = "Accept-Encoding";
-    HttpRespHeaders::s_brHeaders[1].valLen   = 15;
+    HttpRespHeaders::s_varyHeaders.index    = HttpRespHeaders::H_VARY;
+    HttpRespHeaders::s_varyHeaders.val      = "Accept-Encoding";
+    HttpRespHeaders::s_varyHeaders.valLen   = 15;
 
-    HttpRespHeaders::s_keepaliveHeader.index    =
-        HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_keepaliveHeader.val      = "Keep-Alive";
-    HttpRespHeaders::s_keepaliveHeader.valLen   = 10;
+    HttpRespHeaders::s_keepaliveHeader.index   = HttpRespHeaders::H_CONNECTION;
+    HttpRespHeaders::s_keepaliveHeader.val     = "Keep-Alive";
+    HttpRespHeaders::s_keepaliveHeader.valLen  = 10;
 
     HttpRespHeaders::s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;
     HttpRespHeaders::s_concloseHeader.val      = "close";
@@ -1074,6 +1077,16 @@ void HttpRespHeaders::hideServerSignature(int hide)
 
 }
 
+void HttpRespHeaders::addTruboCharged()
+{
+    if (s_commonHeadersCount > 1)
+    {
+        addWithUnknownHeader(s_sTurboCharged, 18,
+                             HttpServerVersion::getVersion(),
+                             HttpServerVersion::getVersionLen(),
+                             LSI_HEADEROP_SET);
+    }
+}
 
 void HttpRespHeaders::dropConnectionHeaders()
 {

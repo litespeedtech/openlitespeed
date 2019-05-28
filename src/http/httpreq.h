@@ -75,6 +75,24 @@ enum
 #define EXEC_CMD_PARSE_RES      (1<<29)
 #define GLOBAL_VH_CTX           (1<<29)
 
+#define UA_UNKNOWN              0
+#define UA_SAFARI               1
+#define UA_LITEMAGE_CRAWLER     2
+#define UA_BENCHMARK_TOOL       3
+#define UA_GOOGLEBOT_POSSIBLE   4
+#define UA_GOOGLEBOT_CONFIRMED  5
+#define UA_GOOGLEBOT_FAKE       6
+#define UA_LITEMAGE_RUNNER      7
+#define UA_LSCACHE_WALKER       8
+#define UA_LSCACHE_RUNNER       9
+#define UA_CURL                 10
+#define UA_WGET                 11
+
+#define URL_GENERIC             0
+
+#define URL_FAVICON             2
+#define URL_CAPTCHA             3
+
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2
 #define GZIP_REQUIRED           (GZIP_ENABLED | REQ_GZIP_ACCEPT)
@@ -115,6 +133,7 @@ class VHostMap;
 class VMemBuf;
 class UnpackedHeaders;
 class HioCrypto;
+class Recaptcha;
 
 typedef struct ls_hash_s ls_hash_t;
 struct ls_subreq_s;
@@ -209,6 +228,12 @@ private:
     int                 m_reqLineLen;
     int                 m_reqURLOff;
     int                 m_reqURLLen;
+    
+    /***
+     * The below two array to store the headers other than the common
+     */
+    uint16_t            m_otherHeaderLen[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
+    int                 m_otherHeaderOffset[HttpHeader::H_HEADER_END - HttpHeader::H_TE];
     ls_str_t            m_location;
     ls_str_t            m_pathInfo;
     ls_str_t            m_newHost;
@@ -218,8 +243,10 @@ private:
     unsigned char       m_iHS3;
     unsigned char       m_iLeadingWWW;
     int                 m_iHS2;
+    char                m_method;
+    char                m_iUserAgentType;
+    short               m_iUrlType;
     short               m_iCfIpHeader;
-    short               m_method;
     int                 m_iEnvCount;
 
     unsigned short      m_ver;
@@ -396,6 +423,8 @@ public:
 
     const HttpVHost *getVHost() const       {   return m_pVHost;            }
     HttpVHost *getVHost()                   {   return m_pVHost;            }
+    const char *getVhostName() const;
+    const AccessControl *getVHostAccessCtrl() const;
 
     void setVHost(HttpVHost *pVHost)        {   m_pVHost = pVHost;          }
 
@@ -428,7 +457,12 @@ public:
     //request header
 
     const char *getHeader(size_t index) const
-    {   return m_headerBuf.begin() + m_commonHeaderOffset[ index];  }
+    {
+        int offset = (index < HttpHeader::H_TE ?
+                         m_commonHeaderOffset[index] :
+                         m_otherHeaderOffset[index - HttpHeader::H_TE]);
+        return m_headerBuf.begin() + offset;
+    }
 
     const char *getHeader(const char *pName, int namelen, int &valLen) const
     {
@@ -444,7 +478,11 @@ public:
     int isHeaderSet(size_t index) const
     {   return m_commonHeaderOffset[index];     }
     int getHeaderLen(size_t index) const
-    {   return m_commonHeaderLen[ index ];      }
+    {
+        return (index < HttpHeader::H_TE ?
+                 m_commonHeaderLen[ index ] :
+                 m_otherHeaderLen[ index - HttpHeader::H_TE]);
+    }
 
     int dropReqHeader(int index);
     
@@ -634,10 +672,10 @@ public:
 
     int checkSymLink(const char *pPath, int pathLen, const char *pBegin);
 
-    const char *findEnvAlias(const char *pKey, int keyLen, int &aliasKeyLen);
+    const char *findEnvAlias(const char *pKey, int keyLen, int &aliasKeyLen) const;
     ls_strpair_t *addEnv(const char *pKey, int keyLen, const char *pValue,
                          int valLen);
-    const char *getEnv(const char *pKey, int keyLen, int &valLen);
+    const char *getEnv(const char *pKey, int keyLen, int &valLen) const;
     const RadixNode *getEnvNode() const;
     int  getEnvCount();
     void unsetEnv(const char *pKey, int keyLen);
@@ -659,6 +697,8 @@ public:
     {   return m_iReqFlag & IS_FORWARDED_HTTPS;   }
     void setHttps()     {    m_iReqFlag |= IS_HTTPS;   }
 
+    bool isFavicon() const      {   return (m_iUrlType == URL_FAVICON); }
+    bool isCaptcha() const      {   return (m_iUrlType == URL_CAPTCHA); }
 
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)
@@ -679,6 +719,17 @@ public:
     void orContextState(int s)            {   m_iContextState |= s;       }
     void clearContextState(int s)         {   m_iContextState &= ~s;      }
     int getContextState(int s) const    {   return m_iContextState & s; }
+
+    const char *getUserAgent() const
+    {   return getHeader(HttpHeader::H_USERAGENT);      }
+    int getUserAgentLen() const
+    {   return getHeaderLen(HttpHeader::H_USERAGENT);   }
+    void setUserAgentType(char s)       {   m_iUserAgentType = s;           }
+    char getUserAgentType() const       {   return m_iUserAgentType;        }
+    int  isUserAgentType(char s) const  {   return (m_iUserAgentType == s); }
+    bool isGoodBot() const;
+    bool isUnlimitedBot() const;
+
     int detectLoopRedirect(const char *pURI, int uriLen,
                            const char *pArg, int qsLen, int isSSL);
     int detectLoopRedirect(int cmpCurUrl, const char *pUri, int uriLen,
@@ -845,6 +896,12 @@ public:
 
     void appendReqHeader( const char *pName, int iNameLen,
                           const char *pValue, int iValLen);
+
+    void classifyUrl();
+
+    const Recaptcha *getRecaptcha() const;
+    void setRecaptchaEnvs();
+    int rewriteToRecaptcha();
 
     int checkUrlStaicFileCache();
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}

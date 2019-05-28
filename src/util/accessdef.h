@@ -23,6 +23,7 @@
 #define AC_ALLOW    LSI_ACL_ALLOW
 #define AC_TRUST    LSI_ACL_TRUST
 #define AC_BLOCK    LSI_ACL_BLOCK
+#define AC_CAPTCHA  LSI_ACL_CAPTCHA
 
 #endif
 

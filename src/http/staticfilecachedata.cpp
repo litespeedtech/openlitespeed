@@ -319,7 +319,8 @@ int StaticFileCacheData::testMod(HttpReq *pReq)
         if (pReq->isHeaderSet(HttpHeader::H_IF_MODIFIED_SINCE))
         {
             pNonMatch = pReq->getHeader(HttpHeader::H_IF_MODIFIED_SINCE);
-            long IMS = DateTime::parseHttpTime(pNonMatch);
+            long IMS = DateTime::parseHttpTime(pNonMatch,
+                pReq->getHeaderLen(HttpHeader::H_IF_MODIFIED_SINCE));
             if (IMS >= m_fileData.getLastMod())
                 return SC_304;
         }
@@ -341,7 +342,7 @@ int StaticFileCacheData::testIfRange(const char *pMatch, int len)
     }
     else
     {
-        long IUMS = DateTime::parseHttpTime(pMatch);
+        long IUMS = DateTime::parseHttpTime(pMatch, len);
         if (IUMS < m_fileData.getLastMod())
             return SC_412;
     }
@@ -371,7 +372,8 @@ int StaticFileCacheData::testUnMod(HttpReq *pReq)
     if (pReq->isHeaderSet(HttpHeader::H_IF_UNMOD_SINCE))
     {
         pMatch = pReq->getHeader(HttpHeader::H_IF_UNMOD_SINCE);
-        long IMS = DateTime::parseHttpTime(pMatch);
+        long IMS = DateTime::parseHttpTime(pMatch,
+            pReq->getHeaderLen(HttpHeader::H_IF_UNMOD_SINCE));
         if (IMS < m_fileData.getLastMod())
             return SC_412;
     }
@@ -538,8 +540,8 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
     off_t size = m_fileData.getFileSize();
     if ((size > s_iMaxFileSize) || (size < s_iMinFileSize))
     {
-        LS_DBG_H("Cannot compress file %s, file size %d!",
-                    m_real.c_str(), size);
+        LS_DBG_H("Cannot compress file %s, file size %ld!",
+                    m_real.c_str(), (long)size);
         return LS_FAIL;
     }
     
@@ -557,9 +559,9 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
 
         long ret = compressFile(useBrotli);
         if (ret == -1)
-            LS_WARN("Failed to compress file %s, file size %d!",
-                    m_real.c_str(), size);
-        
+            LS_WARN("Failed to compress file %s, file size %ld!",
+                    m_real.c_str(), (long)size);
+
         *p = 'l';
         unlink(pPath->buf());
         *p = 0;
@@ -582,8 +584,8 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
 
         long ret = compressFile(useBrotli);
         if (ret == -1)
-            LS_WARN("Failed to compress file %s, file size %d!",
-                    m_real.c_str(), size);
+            LS_WARN("Failed to compress file %s, file size %ld!",
+                    m_real.c_str(), (long)size);
 
         *p = 'l';
         unlink(pPath->buf());
@@ -830,7 +832,7 @@ int StaticFileCacheData::readyCompressed(char compressMode)
 
     if (tm == m_tmLastCheck)
         return setReadiedCompressData(compressMode);
-
+    
     int statBr = -1, retGz = -1, statGz = -1;
     struct stat stGzip;
     struct stat stBr;
@@ -866,7 +868,7 @@ int StaticFileCacheData::readyCompressed(char compressMode)
         {
             // use br
         }
-        if (!(compressMode & SFCD_MODE_GZIP) || retGz)
+        else if (!(compressMode & SFCD_MODE_GZIP) || retGz)
         {
             // update br
             if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr, 1)))

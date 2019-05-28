@@ -48,6 +48,7 @@ private:
     int             m_iDisableLogRotate;
     StringList      m_sSuspendedVhosts;
     int             m_iDisableWebAdmin;
+    int             m_iConfTestMode;
     
     app_node_st  m_stExtAppXmlNodeS[MAX_EXT_APP_NUMBER];
     int             m_iEextAppXmlNodeSSize;
@@ -62,6 +63,7 @@ private:
         , m_iEnableCoreDump(0)
         , m_iDisableLogRotate(0)
         , m_iDisableWebAdmin(0)
+        , m_iConfTestMode(0)
         , m_iEextAppXmlNodeSSize(0)
     {}
 public:
@@ -77,6 +79,7 @@ public:
     void setAutoIndexURI(const char *pAutoIndexURI) {   m_sAutoIndexURI = pAutoIndexURI;}
     void setEnableCoreDump(int iEnableCoreDump)     {  m_iEnableCoreDump = iEnableCoreDump; }
     void setDisableLogRotateAtStartup(int n)        {  m_iDisableLogRotate = n; }
+    void setConfTestMode(int n)                  {   m_iConfTestMode = n;      }
 
     const char *getServerName()    const   {   return m_sServerName.c_str();   }
     const char *getAdminEmails()   const   {   return m_sAdminEmails.c_str();  }
@@ -94,7 +97,8 @@ public:
 
     void setDisableWebAdmin(int v)         {   m_iDisableWebAdmin = v;          }
     int getDisableWebAdmin() const         {   return m_iDisableWebAdmin;            }
-    
+    int getConfTestMode() const          { return m_iConfTestMode;               }
+
     int insertExtAppXmlNode(app_node_st *key_pointer)
     {
         if (m_iEextAppXmlNodeSSize < MAX_EXT_APP_NUMBER - 1)

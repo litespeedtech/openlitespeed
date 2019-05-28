@@ -342,8 +342,6 @@ typedef struct ocsp_basic_response_st {
 # define PEM_STRING_OCSP_REQUEST "OCSP REQUEST"
 # define PEM_STRING_OCSP_RESPONSE "OCSP RESPONSE"
 
-# define d2i_OCSP_RESPONSE_bio(bp,p) ASN1_d2i_bio_of(OCSP_RESPONSE,OCSP_RESPONSE_new,d2i_OCSP_RESPONSE,bp,p)
-
 # define OCSP_BASICRESP_verify(a,r,d) ASN1_item_verify(ASN1_ITEM_rptr(OCSP_RESPDATA),\
         a->signatureAlgorithm,a->signature,a->tbsResponseData,r)
 

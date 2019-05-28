@@ -38,6 +38,7 @@
 #include <main/mainserverconfig.h>
 #include <main/plainconf.h>
 #include <main/serverinfo.h>
+#include <shm/lsshmpool.h>
 #include <socket/coresocket.h>
 #include <util/datetime.h>
 #include <util/daemonize.h>
@@ -71,6 +72,11 @@
 #include <unistd.h>
 #include <config.h>
 
+/***
+ * Do not change the below format, it will be set correctly while packing the code
+ */
+#define BUILDTIME  " (built: Tue May 28 17:43:00 UTC 2019)"
+
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
 static char s_iRunning = 0;
@@ -82,6 +88,7 @@ LshttpdMain::LshttpdMain()
     , m_pBuilder(NULL)
     , m_noDaemon(0)
     , m_noCrashGuard(0)
+    , m_iConfTestMode(0)
     , m_pProcState(NULL)
     , m_curChildren(0)
     , m_fdAdmin(-1)
@@ -543,7 +550,7 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
         left_len -= strlen(achBuf);
     }
     
-    if (left_len >= strlen(command))
+    if (left_len >= (int)strlen(command))
         strcat(achBuf, command);
     else
     {
@@ -631,6 +638,10 @@ int LshttpdMain::config()
         m_pBuilder->releaseConfigXmlTree();
     if (ret != 0)
         return 1;
+    
+    if (m_iConfTestMode)
+        return 0;
+    
     if (m_pServer->isServerOk())
         return 2;
 //    if ( ServerProcessConfig::getInstance.getChroot != NULL )
@@ -715,13 +726,13 @@ int LshttpdMain::testRunningServer()
 
 void LshttpdMain::printVersion()
 {
-    printf("%s\n\tmodule versions:\n%s\n",
-           HttpServerVersion::getVersion(), LS_MODULE_VERSION_INFO);
+    printf("%s%s\n\tmodule versions:\n%s\n",
+           HttpServerVersion::getVersion(), BUILDTIME, LS_MODULE_VERSION_INFO);
 }
 
 void LshttpdMain::parseOpt(int argc, char *argv[])
 {
-    const char *opts = "cdnv";
+    const char *opts = "cdntv";
     int c;
     char achCwd[512];
     getServerRootFromExecutablePath(argv[0], achCwd, 512);
@@ -739,6 +750,11 @@ void LshttpdMain::parseOpt(int argc, char *argv[])
             break;
         case 'n':
             m_noDaemon = 1;
+            break;
+        case 't':
+            m_noDaemon = 1;
+            m_noCrashGuard = 1;
+            m_iConfTestMode = 1;
             break;
         case 'v':
             printVersion();
@@ -806,6 +822,7 @@ int LshttpdMain::init(int argc, char *argv[])
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
     if (argc > 1)
         parseOpt(argc, argv);
+
     if (getServerRoot(argc, argv) != 0)
     {
         //LS_ERROR("Failed to determine the root directory of server!" ));
@@ -814,15 +831,22 @@ int LshttpdMain::init(int argc, char *argv[])
         return 1;
     }
 
-    mkdir(DEFAULT_TMP_DIR,  0755);
 
-    if (testRunningServer() != 0)
-        return 2;
+    if (!m_iConfTestMode)
+    {
+        mkdir(DEFAULT_TMP_DIR,  0755);
 
+        if (testRunningServer() != 0)
+            return 2;
+    }
+    else
+        MainServerConfig::getInstance().setConfTestMode(1);
+    
 #ifndef IS_LSCPD
 
     //load the config
     m_pBuilder->loadConfigFile();
+
 //    m_pBuilder->loadPlainConfigFile();
     if (m_pServer->configServerBasics(0, m_pBuilder->getRoot()))
         return 1;
@@ -855,8 +879,10 @@ int LshttpdMain::init(int argc, char *argv[])
     plainconf::flushErrorLog();
 #endif
 
-    LS_NOTICE("Loading %s ...", HttpServerVersion::getVersion());
+  
+    LS_NOTICE("Loading %s%s ...", HttpServerVersion::getVersion(), BUILDTIME);
     LS_NOTICE("Using [%s]", SSLeay_version(SSLEAY_VERSION));
+
 
     if (!m_noDaemon)
     {
@@ -868,28 +894,35 @@ int LshttpdMain::init(int argc, char *argv[])
 #endif
     }
 
-    enableCoreDump();
+    if (!m_iConfTestMode)
+    {
+        enableCoreDump();
 
+        if (testRunningServer() != 0)
+            return 2;
+        m_pid = getpid();
+        if (m_pidFile.writePid(m_pid))
+            return 2;
 
-    if (testRunningServer() != 0)
-        return 2;
-    m_pid = getpid();
-    if (m_pidFile.writePid(m_pid))
-        return 2;
-
-
-    if (!MainServerConfig::getInstance().getDisableWebAdmin())
-        startAdminSocket();
+        if (!MainServerConfig::getInstance().getDisableWebAdmin())
+            startAdminSocket();
+    }
 
 #ifndef IS_LSCPD
     ret = config();
-    if (ret)
+    if (ret && !m_iConfTestMode)
     {
         LS_ERROR("Fatal error in configuration, exit!");
         fprintf(stderr, "[ERROR] Fatal error in configuration, shutdown!\n");
         return ret;
     }
+
 #endif
+
+    if (m_iConfTestMode)
+    {
+        return 0;
+    }
 
     removeOldRtreport();
     {
@@ -985,12 +1018,47 @@ int LshttpdMain::main(int argc, char *argv[])
         if (ret != 0)
             return ret;
 
-        m_pServer->start();
+        if (!m_iConfTestMode)
+        {
+            m_pServer->start();
 
-        //If HttpServerConfig::s_iProcNo is 0, is main process
-        if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_WORKER_ATEXIT))
-            GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_ATEXIT, NULL);
+            //If HttpServerConfig::s_iProcNo is 0, is main process
+            if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_WORKER_ATEXIT))
+                GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_ATEXIT, NULL);
+        }
         m_pServer->releaseAll();
+        
+        if (m_iConfTestMode)
+        {
+            int ret = 0;
+            int fd = ::open(TEST_CONF_LOG, O_RDONLY);
+            if (fd != -1)
+            {
+                struct stat st;
+                if (fstat(fd, &st) == 0 && st.st_size > 0)
+                {
+                    ret = 1;
+                    unsigned char *buff  = (unsigned char *)mmap((caddr_t)0,
+                                                                 st.st_size,
+                                                                 PROT_READ,
+                                                                 MAP_SHARED,
+                                                                 fd,
+                                                                 0);
+                    if (buff != (unsigned char *)(-1))
+                    {
+                        printf("%.*s", (int)st.st_size, buff);
+                        
+                        if (strstr((const char *)buff, "[ERROR]") != NULL)
+                            ret = 2;
+                    }
+                    munmap((caddr_t)buff, st.st_size);
+                }
+                
+                close(fd);
+                unlink(TEST_CONF_LOG);
+            }
+            return ret;
+        }
     }
     return 0;
 }
@@ -1087,6 +1155,49 @@ void LshttpdMain::setChildSlot(int num, int val)
 }
 
 
+#ifdef _PROFILE_
+#include <sys/gmon.h>
+#endif
+void LshttpdMain::onNewChildStart(ChildProc * pProc)
+{
+#ifdef _PROFILE_
+    extern char __executable_start;
+    extern char __etext;
+    monstartup ((u_long) &__executable_start, (u_long) &__etext);
+#endif
+
+    int cpu_count = HttpServerConfig::getInstance().getCpuAffinity();
+    if (cpu_count > 0)
+    {
+        cpu_set_t       cpu_affinity;
+
+        PCUtil::getAffinityMask(s_iCpuCount, pProc->m_iProcNo - 1, cpu_count,
+                                &cpu_affinity);
+        PCUtil::setCpuAffinity(&cpu_affinity);
+    }
+    setpgid(0, 0);
+    m_pServer->setBlackBoard(pProc->m_pBlackBoard);
+    m_pServer->setProcNo(pProc->m_iProcNo);
+    //setAffinity( 0, pProc->m_iProcNo);  //TEST: need uncomment and debug
+    releaseExcept(pProc);
+    m_pServer->reinitMultiplexer();
+    m_pServer->enableAioLogging();
+    if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
+        && (m_pServer->initAioSendFile() != 0))
+    {
+        HttpServerConfig::getInstance().setUseSendfile(1);
+    }
+    close(m_fdAdmin);
+
+#ifdef IS_LSCPD
+    snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
+#else
+    snprintf(argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo);
+#endif
+
+    LsShmPool::setPid(pProc->m_pid);
+}
+
 int LshttpdMain::startChild(ChildProc *pProc)
 {
     if (!pProc->m_pBlackBoard)
@@ -1108,32 +1219,8 @@ int LshttpdMain::startChild(ChildProc *pProc)
     if (pProc->m_pid == 0)
     {
         //child process
-        cpu_set_t       cpu_affinity;
-
-        cleanEnvVars();
-
-        PCUtil::getAffinityMask(s_iCpuCount, pProc->m_iProcNo - 1, 1,
-                                &cpu_affinity);
-        PCUtil::setCpuAffinity(&cpu_affinity);
-        m_pServer->setBlackBoard(pProc->m_pBlackBoard);
-        m_pServer->setProcNo(pProc->m_iProcNo);
-        //setAffinity( 0, pProc->m_iProcNo);  //TEST: need uncomment and debug
-        releaseExcept(pProc);
-        m_pServer->reinitMultiplexer();
-        m_pServer->enableAioLogging();
-        WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
-        pGWC->startProcessing();
-        if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
-            && (m_pServer->initAioSendFile() != 0))
-            return LS_FAIL;
-        close(m_fdAdmin);
-
-#ifdef IS_LSCPD
-        snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
-#else
-        snprintf(argv0, 80, "openlitespeed (lshttpd - #%02d)", pProc->m_iProcNo);
-#endif
-
+        pProc->m_pid = getpid();
+        onNewChildStart(pProc);
         return 0;
     }
 
@@ -1498,34 +1585,6 @@ void LshttpdMain::processSignal()
 }
 
 
-int LshttpdMain::getNumCores()
-{
-#ifdef LSWS_NO_SET_AFFINITY
-    return 2;
-#else
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    return sysconf(_SC_NPROCESSORS_ONLN);
-#else
-    int nm[2];
-    size_t len = 4;
-    uint32_t count = 0;
-
-#ifdef HW_AVAILCPU
-    nm[0] = CTL_HW;
-    nm[1] = HW_AVAILCPU;
-    sysctl(nm, 2, &count, &len, NULL, 0);
-#endif
-
-    if (count < 1)
-    {
-        nm[1] = HW_NCPU;
-        sysctl(nm, 2, &count, &len, NULL, 0);
-        if (count < 1)  count = 1;
-    }
-    return count;
-#endif
-#endif
-}
 /*
 void LshttpdMain::setAffinity( pid_t pid, int cpuId )
 {

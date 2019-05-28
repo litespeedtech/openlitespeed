@@ -36,8 +36,6 @@ AppConfig AppConfig::s_nodeAppConfig;
 
 int AppConfig::loadAppDefault(const XmlNode *pNode)
 {
-    s_iAppEnv = 1;
-
     s_pAppDefault = new LocalWorkerConfig();
 
     s_pAppDefault->setPersistConn(1);
@@ -54,7 +52,7 @@ int AppConfig::loadAppDefault(const XmlNode *pNode)
     s_pAppDefault->getRLimits()->setCPULimit(RLIM_INFINITY, RLIM_INFINITY);
     s_binPath = "";
 
-    s_iAppEnv = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "env",
+    s_iAppEnv = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "appserverEnv",
                   0, 2, 1);
     const char *path = NULL;
     if (pNode)

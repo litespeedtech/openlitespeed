@@ -98,15 +98,15 @@ int ExtWorker::start()
 }
 
 
-static int setToStop(void *p)
+static int setConnToClose(void *p)
 {
     ExtConn *pConn = (ExtConn *)(IConnection *)p;
-    pConn->setToStop(1);
+    pConn->setToClose(1);
     return 0;
 }
 
 
-void ExtWorker::clearCurConnPool()
+int ExtWorker::clearCurConnPool()
 {
     ExtConn *pConn;
     while ((pConn = (ExtConn *)m_connPool.getFreeConn()) != NULL)
@@ -115,7 +115,8 @@ void ExtWorker::clearCurConnPool()
         m_connPool.removeConn(pConn);
     }
     m_iLingerConns += m_connPool.getTotalConns();
-    m_connPool.for_each(setToStop);
+    m_connPool.for_each(setConnToClose);
+    return m_iLingerConns;
 }
 
 
@@ -157,7 +158,7 @@ ExtConn *ExtWorker::getConn()
 
 void ExtWorker::recycleConn(ExtConn *pConn)
 {
-    if (pConn->getToStop())
+    if (pConn->isToClose())
     {
         m_iLingerConns--;
         pConn->close();
@@ -327,7 +328,7 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
 //        LS_INFO( "[%s] Connection error: %s, req: [%s]",
 //            m_pConfig->getURL(), strerror( errCode ), pReq->getLogId() ));
     }
-    if (pConn->getToStop())
+    if (pConn->isToClose())
         m_iLingerConns--;
     m_connPool.removeConn(pConn);
     if (errCode == EAGAIN)

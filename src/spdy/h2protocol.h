@@ -191,9 +191,9 @@ public:
 
 struct Priority_st
 {
-    uint8_t     m_exclusive;
     uint32_t    m_dependStreamId;
     uint16_t    m_weight;  //1~256
+    uint8_t     m_exclusive;
 };
 
 

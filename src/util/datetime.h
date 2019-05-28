@@ -31,7 +31,7 @@ public:
     DateTime();
     ~DateTime();
 
-    static time_t parseHttpTime(const char *s);
+    static time_t parseHttpTime(const char *s, int len);
     static char  *getRFCTime(time_t t, char *buf);
     static char  *getLogTime(time_t lTime, char *pBuf, int bGMT = 0);
 

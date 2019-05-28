@@ -31,7 +31,7 @@
 
 ExtConn::ExtConn()
     : m_iState(0)
-    , m_iToStop(0)
+    , m_iToClose(0)
     , m_iInProcess(0)
     , m_iCPState(0)
     , m_tmLastAccess(0)
@@ -148,7 +148,7 @@ int ExtConn::connectEx(Multiplexer *pMplx)
                               &fd, 1);
     m_iReqProcessed = 0;
     m_iCPState = 0;
-    m_iToStop = 0;
+    m_iToClose = 0;
     if ((fd == -1) && (errno == ECONNREFUSED))
         ret = CoreSocket::connect(m_pWorker->getServerAddr(), pMplx->getFLTag(),
                                   &fd, 1);
@@ -186,7 +186,7 @@ int ExtConn::onInitConnected()
     {
         char        achSockAddr[128];
         char        achAddr[128]    = "";
-        int         port            = 0;
+        unsigned    port            = 0;
         socklen_t   len             = 128;
 
         if (getsockname(getfd(), (struct sockaddr *)achSockAddr, &len) == 0)
@@ -195,7 +195,7 @@ int ExtConn::onInitConnected()
             port = GSockAddr::getPort((struct sockaddr *)achSockAddr);
         }
 
-        LS_DBG_L(this, "Connected to [%s] on local address [%s:%d]!",
+        LS_DBG_L(this, "Connected to [%s] on local address [%s:%u]!",
                  m_pWorker->getURL(), achAddr, port);
     }
     return 0;
@@ -285,6 +285,27 @@ int ExtConn::onError()
     else
         onRead();
     return LS_FAIL;
+}
+
+
+int ExtConn::markToClose()
+{
+    if (getReq())
+    {
+        if (!isToClose())
+        {
+            setToClose(1);
+            m_pWorker->incLingerConn();
+            return 0;
+        }
+    }
+    else
+    {
+        close();
+        m_pWorker->removeConn(this);
+        return 1;
+    }
+    return 0;
 }
 
 

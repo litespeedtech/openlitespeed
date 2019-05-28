@@ -38,7 +38,6 @@ public:
     enum
     {
         POLL,
-        SELECT,
         DEV_POLL,
         KQUEUE,
         RT_SIG,

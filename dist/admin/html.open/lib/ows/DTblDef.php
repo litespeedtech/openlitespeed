@@ -81,6 +81,9 @@ class DTblDef extends DTblDefBase
 				self::NewCustFlagAttr('user', null, (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				self::NewCustFlagAttr('group', null, (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				$this->_attrs['priority']->dup(null, null, 'serverPriority'),
+				DTblDefBase::NewIntAttr('cpuAffinity', DMsg::ALbl('l_cpuaffinity'), true, 1),
+				DTblDefBase::NewSelAttr( 'enableLVE', DMsg::ALbl('l_enablelve'),
+						array( 0=>DMsg::ALbl('o_disabled'), 1=>"LVE", 2=>"CageFS", 3=>DMsg::ALbl('o_cagefswithoutsuexec') ) ),
 				self::NewIntAttr('inMemBufSize', DMsg::ALbl('l_inmembufsize'), false, 0),
 				self::NewTextAttr('swappingDir', DMsg::ALbl('l_swappingdir'), 'cust', false),
 				self::NewBoolAttr('autoFix503', DMsg::ALbl('l_autofix503')),
@@ -116,6 +119,28 @@ class DTblDef extends DTblDefBase
             self::NewBoolAttr('autoLoadHtaccess', DMsg::ALbl('l_autoLoadRewriteHtaccess')),
 		);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
+    }
+
+    protected function add_S_SEC_CGI($id)
+    {
+        $attrs = array(
+            self::NewTextAttr('cgidSock', DMsg::ALbl('l_cgidsock'), 'addr'),
+            self::NewIntAttr('maxCGIInstances', DMsg::ALbl('l_maxCGIInstances'), true, 1, 2000),
+            self::NewIntAttr('minUID', DMsg::ALbl('l_minuid'), true, 10),
+            self::NewIntAttr('minGID', DMsg::ALbl('l_mingid'), true, 5),
+            self::NewIntAttr('forceGID', DMsg::ALbl('l_forcegid'), true, 0),
+            $this->_attrs['cgiUmask'],
+            $this->_attrs['priority']->dup(null, DMsg::ALbl('l_cgipriority'), 'CGIPriority'),
+            self::NewIntAttr('CPUSoftLimit', DMsg::ALbl('l_cpusoftlimit'), true, 0),
+            self::NewIntAttr('CPUHardLimit', DMsg::ALbl('l_cpuhardlimit'), true, 0),
+            $this->_attrs['memSoftLimit'],
+            $this->_attrs['memHardLimit'],
+            $this->_attrs['procSoftLimit'],
+            $this->_attrs['procHardLimit'],
+            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), array('0' => DMsg::ALbl('o_off'), '1' => DMsg::ALbl('o_on'), '2' => DMsg::ALbl('o_disabled'))),
+        );
+
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
     }
 
     protected function add_VT_REWRITE_CTRL($id)
@@ -217,14 +242,7 @@ class DTblDef extends DTblDefBase
 
 	protected function add_S_TUNING_OS($id) //keep
 	{
-		$edoptions = array( 'best'    => 'best (All platforms)',
-				    'poll'    => 'poll (All platforms)',
-				    'epoll'   => 'epoll (Linux)',
-				    'kqueue'  => 'kqueue (FreeBSD/Mac OS X)',
-				    'devpoll' => 'devpoll (Solaris)');
-
 		$attrs = array(
-			self::NewSelAttr('eventDispatcher', DMsg::ALbl('l_ioeventdispatcher'), $edoptions),
             self::NewTextAttr('shmDefaultDir', DMsg::ALbl('l_shmDefaultDir'), 'cust'),
 			);
 
@@ -248,22 +266,9 @@ class DTblDef extends DTblDefBase
 
 	protected function add_S_TUNING_SSL($id)
 	{
-		$ssloptions = array( 'null' => DMsg::ALbl('l_ssloptnull'),
-			 'auto' => DMsg::ALbl('l_ssloptauto'),
-			 'dynamic'=> DMsg::ALbl('l_ssloptdynamic'),
-			 'cswift' => DMsg::ALbl('l_ssloptcswift'),
-			 'chil' => DMsg::ALbl('l_ssloptchil'),
-			 'atalla' => DMsg::ALbl('l_ssloptatalla'),
-			 'nuron' => DMsg::ALbl('l_ssloptnuron'),
-			 'ubsec' => DMsg::ALbl('l_ssloptubsec'),
-			 'aep' => DMsg::ALbl('l_ssloptaep'),
-			 'sureware' => DMsg::ALbl('l_ssloptsureware'),
-			 '4758cca' => DMsg::ALbl('l_sslopt4758cca') );
-
 		$attrs = array(
-			self::NewBoolAttr('SSLStrongDhKey', DMsg::ALbl('l_SSLStrongDhKey')),
+			self::NewBoolAttr('sslStrongDhKey', DMsg::ALbl('l_sslStrongDhKey')),
 			self::NewBoolAttr('sslEnableMultiCerts', DMsg::ALbl('l_sslEnableMultiCerts')),
-			self::NewSelAttr('SSLCryptoDevice', DMsg::ALbl('l_sslcryptodevice'), $ssloptions),
             $this->_attrs['sslSessionCache'],
             self::NewIntAttr('sslSessionCacheSize', DMsg::ALbl('l_sslSessionCacheSize'), true, 512),
             self::NewIntAttr('sslSessionCacheTimeout', DMsg::ALbl('l_sslSessionCacheTimeout'), true, 10, 1000000),
@@ -419,6 +424,32 @@ class DTblDef extends DTblDefBase
 			);
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::UIStr('tab_sec'), $attrs, 'name');
 	}
+
+    protected function add_V_GENERAL($id)
+    {
+        $attrs = array(
+            self::NewTextAttr('docRoot', DMsg::ALbl('l_docroot'), 'cust', false), //no validation, maybe suexec owner
+            $this->_attrs['tp_vhDomain'], // this setting is a new way, will merge with listener map settings for backward compatible
+            $this->_attrs['tp_vhAliases'],
+            $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
+            $this->_attrs['vh_enableGzip'],
+            $this->_attrs['enableIpGeo'],
+            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), array('0' => DMsg::ALbl('o_off'), '1' => DMsg::ALbl('o_on'))),
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_g'), $attrs);
+    }
+
+    protected function add_T_GENERAL2($id)
+    {
+        $attrs = array(
+            $this->_attrs['tp_vrFile']->dup('docRoot', DMsg::ALbl('l_docroot'), 'templateVHDocRoot'),
+            $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
+            $this->_attrs['vh_enableGzip'],
+            $this->_attrs['enableIpGeo'],
+            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), array('0' => DMsg::ALbl('o_off'), '1' => DMsg::ALbl('o_on'))),
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_base2'), $attrs);
+    }
 
 	protected function add_V_REALM_TOP($id)
 	{
@@ -676,7 +707,7 @@ class DTblDef extends DTblDefBase
             $this->_attrs['vh_suexec_user'],
             $this->_attrs['vh_suexec_group'],
 			);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_extappresctl'), $attrs);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_extappsec'), $attrs);
 	}
 
 	protected function add_L_GENERAL($id)

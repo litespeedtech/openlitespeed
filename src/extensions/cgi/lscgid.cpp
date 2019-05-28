@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <signal.h>
+#include <config.h>
 
 #ifndef _XPG4_2
 # define _XPG4_2
@@ -45,18 +46,31 @@
 #include <pwd.h>
 #include <time.h>
 #include <unistd.h>
-
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+#include "cgroupconn.h"
+#include "cgroupuse.h"
+#endif
 
 #define uint32_t unsigned long
 
 static uid_t        s_uid;
+
+#define HAS_CLOUD_LINUX
 #ifdef HAS_CLOUD_LINUX
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#include <lve/lve-ctl.h>
+
 static int s_enable_lve = 0;
 static struct liblve *s_lve = NULL;
 
 static void *s_liblve;
+typedef int (*lve_is_available)(void);
+typedef int (*lve_instance_init)(struct liblve *);
+typedef int (*lve_destroy)(struct liblve *);
+typedef int (*lve_enter)(struct liblve *, uint32_t, int32_t, int32_t,
+                           uint32_t *);
+typedef int (*lve_leave)(struct liblve *, uint32_t *);
+typedef int (*lve_jail)(struct passwd *, char *);
+
 static int (*fp_lve_is_available)(void) = NULL;
 static int (*fp_lve_instance_init)(struct liblve *) = NULL;
 static int (*fp_lve_destroy)(struct liblve *) = NULL;
@@ -69,7 +83,7 @@ static int load_lve_lib()
     s_liblve = dlopen("liblve.so.0", RTLD_LAZY);
     if (s_liblve)
     {
-        fp_lve_is_available = dlsym(s_liblve, "lve_is_available");
+        fp_lve_is_available = (lve_is_available)dlsym(s_liblve, "lve_is_available");
         if (dlerror() == NULL)
         {
             if (!(*fp_lve_is_available)())
@@ -96,17 +110,17 @@ static int init_lve()
     int rc;
     if (!s_liblve)
         return LS_FAIL;
-    fp_lve_instance_init = dlsym(s_liblve, "lve_instance_init");
-    fp_lve_destroy = dlsym(s_liblve, "lve_destroy");
-    fp_lve_enter = dlsym(s_liblve, "lve_enter");
-    fp_lve_leave = dlsym(s_liblve, "lve_leave");
+    fp_lve_instance_init = (lve_instance_init)dlsym(s_liblve, "lve_instance_init");
+    fp_lve_destroy = (lve_destroy)dlsym(s_liblve, "lve_destroy");
+    fp_lve_enter = (lve_enter)dlsym(s_liblve, "lve_enter");
+    fp_lve_leave = (lve_leave)dlsym(s_liblve, "lve_leave");
     if (s_enable_lve >= 2)
-        fp_lve_jail = dlsym(s_liblve, "jail");
+        fp_lve_jail = (lve_jail)dlsym(s_liblve, "jail");
 
     if (s_lve == NULL)
     {
         rc = (*fp_lve_instance_init)(NULL);
-        s_lve = malloc(rc);
+        s_lve = (struct liblve *)malloc(rc);
     }
     rc = (*fp_lve_instance_init)(s_lve);
     if (rc != 0)
@@ -136,8 +150,8 @@ static int          s_fdControl = -1;
 static void log_cgi_error(const char *func, const char *arg,
                                                     const char *explanation)
 {
-    char err[128];
-    int n = ls_snprintf(err, 127, "%s:%s%.*s %s\n", func, (arg) ? arg : "",
+    char err[512];
+    int n = ls_snprintf(err, sizeof(err) - 1, "%s:%s%.*s %s\n", func, (arg) ? arg : "",
                     !!arg, ":", explanation ? explanation : strerror(errno));
     write(STDERR_FILENO, err, n);
 }
@@ -304,17 +318,86 @@ static int applyLimits(lscgid_req *pCGI)
 #endif
 
 #if defined(RLIMIT_CPU)
-    if (pCGI->m_cpu.rlim_cur)
-        setrlimit(RLIMIT_CPU, &pCGI->m_cpu);
+    //if (pCGI->m_cpu.rlim_cur)
+    //    setrlimit(RLIMIT_CPU, &pCGI->m_cpu);
 #endif
 
     return 0;
 }
 
 
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+static int cgroup_env(lscgid_t *pCGI)
+{
+    if (getuid())
+        return -1;
+    
+    char **env_arr = pCGI->m_env;
+    char  *prefix = (char *)"LS_CGROUP=";
+    int    prefix_len = 10;
+    while (*env_arr)
+    {
+        char *env = *env_arr;
+        if (!(strncmp(env, prefix, prefix_len)))
+        {
+            char *val = env + prefix_len;
+            if ((*val == 'y') || (*val == 'Y'))
+            {
+                return 0;
+            }
+            return -1; // not a valid value then
+        }
+        ++env_arr;
+    }
+    return -1;
+}
+
+static int cgroup_activate(lscgid_t *pCGI)
+{
+    int rc = -1;
+    CGroupUse *use;
+    CGroupConn *conn;
+    
+    int uid = geteuid();
+    seteuid(0);
+    conn = new CGroupConn();
+    if (!conn)
+        log_cgi_error("execute cgi create cgroup conn", NULL, NULL);
+    else if (conn->create() == -1)
+        log_cgi_error("execute cgi create cgroup conn", NULL, conn->getErrorText());
+    else
+    {
+        seteuid(0);
+        use = new CGroupUse(conn);
+        if (!use)
+            log_cgi_error("execute_cgi create cgroup use", NULL, conn->getErrorText());
+        else if (use->apply(pCGI->m_data.m_uid) == -1)
+            log_cgi_error("execute_cgi apply uid", NULL, conn->getErrorText());
+        else
+            rc = 0;
+    }
+    seteuid(uid);
+    return rc;
+}
+
+
+static int cgroup_process(lscgid_t *pCGI)
+{
+    if (!cgroup_env(pCGI))
+        return cgroup_activate(pCGI);
+    return 0;
+}            
+#endif
+   
+    
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    cgroup_process(pCGI);
+#endif
+   
+    
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");
     applyLimits(&pCGI->m_data);
@@ -326,7 +409,7 @@ static int execute_cgi(lscgid_t *pCGI)
     {
         uint32_t cookie;
         int ret = -1;
-        int count;
+        //int count;
         //for( count = 0; count < 10; ++count )
         {
             ret = (*fp_lve_enter)(s_lve, pCGI->m_data.m_uid, -1, -1, &cookie);
@@ -374,7 +457,10 @@ static int execute_cgi(lscgid_t *pCGI)
     }
     ch = *(pCGI->m_argv[0]);
     * pCGI->m_argv[0] = 0;
-    if (chdir(pCGI->m_pCGIDir) == -1)
+    const char *dir = pCGI->m_cwdPath;
+    if (!dir)
+        dir = pCGI->m_pCGIDir;
+    if (chdir(dir) == -1)
     {
         int error = errno;
         log_cgi_error("lscgid: chdir()", pCGI->m_pCGIDir, NULL);
@@ -479,6 +565,15 @@ static int process_req_data(lscgid_t *cgi_req)
         p += sizeof(short);
 #endif
         cgi_req->m_env[i] = p;
+        if (*p == 'L')
+        {
+            if (strncasecmp(p, "LS_CWD=", 7) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_cwdPath = p + 7;
+            }
+        }
         p += len;
         if (p > pEnd)
             return 500;
@@ -511,7 +606,7 @@ static int process_req_header(lscgid_t *cgi_req)
     memmove(cgi_req->m_data.m_md5, s_pSecret, 16);
     StringTool::getMd5((const char *)&cgi_req->m_data,
                        sizeof(lscgid_req), cgi_req->m_data.m_md5);
-    if (memcmp(cgi_req->m_data.m_md5, achMD5, 16) != 0)
+   if (memcmp(cgi_req->m_data.m_md5, achMD5, 16) != 0)
     {
         log_cgi_error("lscgid", NULL, "request validation failed!");
         return 500;
@@ -612,6 +707,7 @@ static int processreq(int fd)
     lscgid_t cgi_req;
     int ret;
 
+    memset(&cgi_req, 0, sizeof(cgi_req));
     ret = recv_req(fd, &cgi_req, 10);
     if (ret)
         cgiError(fd, ret);
@@ -639,7 +735,7 @@ static void child_main(int fd)
         dup2(fd, STDOUT_FILENO);
     else
         closeit = 0;
-    if (closeit)
+    if (closeit && fd != STDOUT_FILENO)
         close(fd);
     processreq(STDOUT_FILENO);
     exit(0);
@@ -822,7 +918,12 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
     //setproctitle( "%s", "httpd" );
 #else
     memset(argv0, 0, strlen(argv0));
+    
+#ifdef IS_LSCPD    
+    strcpy(argv0, "lscpd (lscgid)");
+#else
     strcpy(argv0, "openlitespeed (lscgid)");
+#endif    
 #endif
 
     ret = run(fd);

@@ -109,6 +109,8 @@ public:
              ls_lfqueue_t * finishedQueue, EventNotifier *en,
              int32_t minIdleWorkers, int32_t maxIdleWorkers);
 
+    explicit WorkCrew(EventNotifier *en);
+
     /** @~WorkCrew
      * @brief The Work Crew Destructor.
      * @details This function will end any thread still running and delete the
@@ -123,6 +125,9 @@ public:
         STOPPING,
         STOPPED
      };
+
+     int startJobProcessor(int numWorkers, ls_lfqueue_t *pFinishedQueue,
+                           WorkCrewProcessFn processor);
 
     /** @startProcessing
      * @brief Starts the Workers to begin processing the jobs.
@@ -181,6 +186,8 @@ public:
 
     void pushCleanup(void (*routine)(void *), void * arg);
 
+    void dropPriorityBy(int n)  {   m_nice = n;     }
+
 private:
     class CleanUp
     {
@@ -205,6 +212,7 @@ private:
     ls_mutex_t                  m_crewLock;
     SlotList                    m_emptySlots;
     int                         m_stateFutex;
+    int                         m_nice;
     int32_t                     m_minIdle;
     int32_t                     m_maxIdle;
     int32_t                     m_maxWorkers;
@@ -267,7 +275,8 @@ private:
     int addWorker();
     void stopAllWorkers();
 
-    bool noMoreWorkers() const { return  0 == size(); }
+    bool isAllWorkerDead() const { return  0 == size(); }
+
 
     LS_NO_COPY_ASSIGN(WorkCrew);
 };

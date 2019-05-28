@@ -12,6 +12,11 @@
 
 #include <fcntl.h>
 #include <string.h>
+
+#if __cplusplus <= 199711L && !defined(static_assert)
+#define static_assert(a, b) _Static_assert(a, b)
+#endif
+
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 

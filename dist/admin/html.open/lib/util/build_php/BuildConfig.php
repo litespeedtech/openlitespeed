@@ -25,18 +25,17 @@ class BuildConfig
 
             case self::PHP_VERSION: return
                         array(
-                            '7.3.0',
-                            '7.2.13',
-                            '7.1.25',
+                            '7.3.5',
+                            '7.2.18',
+                            '7.1.29',
                             '7.0.33',
-                            '5.6.39',
+                            '5.6.40',
                             '5.5.38',
                             '5.4.45',
                             '5.3.29',
-                            '5.2.17',
-                            '4.4.9');
+                            '5.2.17');
 
-            case self::LSAPI_VERSION: return '7.1';
+            case self::LSAPI_VERSION: return '7.3';
 
             case self::SUHOSIN_VERSION: return '0.9.38';
 
@@ -48,7 +47,7 @@ class BuildConfig
 
             case self::MEMCACHED_VERSION: return '2.2.0';
 
-            case self::MEMCACHED7_VERSION: return '3.0.4'; // for php7 only
+            case self::MEMCACHED7_VERSION: return '3.1.3'; // for php7 only
 
             case self::OPCACHE_VERSION: return '7.0.5';
 

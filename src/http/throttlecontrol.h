@@ -49,6 +49,7 @@ public:
             m_iAvailable -= n;          }
     void    adjustLimit(int n)
     {   m_iAvailable += (n - m_iLimit);   m_iLimit = (n > 0) ? n : THROTTLE_MAX;       }
+    bool    isUnlimited() const {   return m_iLimit == THROTTLE_MAX;    }
 
 };
 
@@ -113,6 +114,11 @@ public:
 
     ThrottleUnit *getThrottleUnit(int dyn)
     {   return &m_req[dyn];   }
+
+    ThrottleUnit *getThrottleIn()
+    {   return &m_input;   }
+    ThrottleUnit *getThrottleOut()
+    {   return &m_output;  }
 
     void incReqProcessed(int dyn)
     {

@@ -95,6 +95,16 @@ echo "ln -sf lsphp-${PHP_VERSION} lsphp${PHP_MAIN_VERSION}"
 ln -sf lsphp-${PHP_VERSION} "lsphp${PHP_MAIN_VERSION}" 
 check_errs $? "fail to creat symbolic link"
 
+if [ -e "${INSTALL_DIR}/lib" ] && [ ! -e "${INSTALL_DIR}/lib/php.ini" ] ; then
+    cp ${PHP_BUILD_DIR}/php-${PHP_VERSION}/php.ini-production ${INSTALL_DIR}/lib/php.ini
+    check_errs $? "fail to copy php.ini to ${INSTALL_DIR}/lib/php.ini"
+fi
+
+if [ -e "${INSTALL_DIR}/lib64" ] && [ ! -e "${INSTALL_DIR}/lib64/php.ini" ] ; then
+    cp ${PHP_BUILD_DIR}/php-${PHP_VERSION}/php.ini-production ${INSTALL_DIR}/lib64/php.ini
+    check_errs $? "fail to copy php.ini to ${INSTALL_DIR}/lib64/php.ini"
+fi
+
 INST_USER=`id`
 INST_USER=`expr "${INST_USER}" : 'uid=.*(\(.*\)) gid=.*'`
 

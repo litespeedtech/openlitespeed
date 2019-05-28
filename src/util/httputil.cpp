@@ -561,6 +561,7 @@ int HttpUtil::unescapeInPlace(char *pDest, int &iUriLen,
     const char *pSrc = pOrgSrc;
     const char *pEnd = pOrgSrc + iUriLen;
     char *p = pDest;
+    int check = 0;
 
     while (pSrc < pEnd)
     {
@@ -572,10 +573,10 @@ int HttpUtil::unescapeInPlace(char *pDest, int &iUriLen,
                 char x1, x2;
                 x1 = *pSrc++;
                 if (!isxdigit(x1))
-                    return LS_FAIL;
+                    return -1;
                 x2 = *pSrc++;
                 if (!isxdigit(x2))
-                    return LS_FAIL;
+                    return -1;
                 c = (hexdigit(x1) << 4) + hexdigit(x2);
                 break;
             }
@@ -596,11 +597,12 @@ int HttpUtil::unescapeInPlace(char *pDest, int &iUriLen,
             }
             return p - pDest;
         }
+
         switch (c)
         {
         case '.':
             if (*(p - 1) == '/')
-                return LS_FAIL;
+                check = 1;
             *p++ = c;
             break;
         case '/':
@@ -610,6 +612,24 @@ int HttpUtil::unescapeInPlace(char *pDest, int &iUriLen,
         //fall through
         default:
             *p++ = c;
+            if (check > 0)
+            {
+                if (check == 2)
+                {
+                    if ((c == 't') && (*(p - 2) == 'h'))
+                        return -1;
+                }
+                else if (check == 3)
+                {
+                    if ((c == 't') && (*(p - 2) == 'i') && (*(p - 3) == 'g'))
+                        return -1;
+                    else if ((c == 'n') && (*(p - 2) == 'v') && (*(p - 3) == 's'))
+                        return -1;
+                }
+                if (++check > 3)
+                    check = 0;
+            }
+
         }
     }
     pOrgSrc = p;
