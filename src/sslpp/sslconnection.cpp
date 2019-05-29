@@ -410,6 +410,7 @@ int SslConnection::asyncFetchCert(asyncCertDoneCb cb, void *pParam)
     {
         LS_DBG_L("asyncFetchCert() failed, disable async cert.");
         setFlag(F_ASYNC_CERT_FAIL, 1);
+        m_iWant &= ~WANT_CERT;
     }
 
     return ret;
@@ -425,6 +426,7 @@ void SslConnection::cancelAsyncFetchCert(asyncCertDoneCb cb, void *pParam)
     LS_DBG_L("Try to remove callback for async lookup for %s\n", pDomain);
 
     setFlag(F_ASYNC_CERT_FAIL, 1); // Mark failure first.
+    m_iWant &= ~WANT_CERT;
     SslUtil::removeAsyncCertLookup(cb, pParam, pDomain, 0);
     setFlag(F_ASYNC_CERT, 0); // Remove may trigger async fetch done callback. Clear flag after.
 }
