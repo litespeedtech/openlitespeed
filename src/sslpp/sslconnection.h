@@ -46,6 +46,7 @@ public:
     char lastRead() const   {   return m_iWant & LAST_READ;     }
     char lastWrite() const  {   return m_iWant & LAST_WRITE;    }
     char wantCert() const   {   return m_iWant & WANT_CERT;     }
+    void clearWantCert()    {   m_iWant &= ~WANT_CERT;          }
 
     int  getFlag(int v) const   {   return m_flag & v;     }
     void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }

@@ -355,12 +355,12 @@ int CgidWorker::config(const XmlNode *pNode1)
    
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     procConfig.setCGroupAllow(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
-        "cgroup", 0, 2, 0) != ServerProcessConfig::CGROUP_CONFIG_DISALLOW);
+        "cgroups", 0, 2, 0) != ServerProcessConfig::CGROUP_CONFIG_DISALLOW);
     if ((procConfig.getCGroupAllow()) && (cgroup_validate() == -1))
         procConfig.setCGroupAllow(0);
     
     procConfig.setCGroupDefault(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
-        "cgroup", 0, 2, 0) == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON);
+        "cgroups", 0, 2, 0) == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON);
 #endif
     
     CgidWorker::setCgidWorkerPid(

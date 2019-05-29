@@ -3120,7 +3120,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 
     enableCGroup((ServerProcessConfig::getInstance().getCGroupAllow()) ?
                  ConfigCtx::getCurConfigCtx()->getLongValue(
-                     pVhConfNode, "cgroup", 0, 1, 
+                     pVhConfNode, "cgroups", 0, 1,
                      ServerProcessConfig::getInstance().getCGroupDefault()) : 0);
     
     if (!is_uid_set)

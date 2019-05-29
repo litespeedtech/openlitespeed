@@ -93,7 +93,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"certfile3",                                NULL},
     {"cgidsock",                                 NULL},
     {"cgirlimit",                                NULL},
-    {"cgroup",                                   NULL},
+    {"cgroups",                                  NULL},
     {"checksymbollink",                          NULL},
     {"chrootmode",                               NULL},
     {"chrootpath",                               NULL},
