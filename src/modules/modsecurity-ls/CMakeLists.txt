@@ -14,5 +14,5 @@ add_library(mod_security SHARED
     mod_security.cpp
 )
 
-target_link_libraries(mod_security ${PROJECT_SOURCE_DIR}/../thirdparty/ModSecurity/src/.libs/libmodsecurity.a  )
+target_link_libraries(mod_security libmodsecurity.a )
 set_target_properties(mod_security PROPERTIES PREFIX "")

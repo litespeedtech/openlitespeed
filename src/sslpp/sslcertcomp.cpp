@@ -59,26 +59,24 @@ static int  s_iSSL_CTX_index = -1;
 static void freeCtxData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, 
                         long argl, void *argp)
 {
-    DEBUG_MESSAGE("[SSLCertComp] freeing callback\n");
-    if (idx == s_iSSL_CTX_index)
+    assert(idx == s_iSSL_CTX_index);
+    if (ptr)
     {
-        DEBUG_MESSAGE("[SSLCertComp] correct index\n");
-        if (ptr)
-        {
-            DEBUG_MESSAGE("[SSLCertComp] freeing data\n");
-            ls_pfree(ptr);
-        }
+        DEBUG_MESSAGE("[SSLCertComp] freeing data\n");
+        ls_pfree(ptr);
     }
 }
 
 
 static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx, 
                                              SslCertComp::comp_cache_t *cache, 
+                                             int in_size,
                                              char *readBuffer, size_t len)
 {
     if (!cache)
     {
-        cache = (SslCertComp::comp_cache_t *)ls_palloc(len + sizeof(int));
+        cache = (SslCertComp::comp_cache_t *)ls_palloc(len + sizeof(int) * 2);
+        cache->m_input_len = in_size;
         cache->m_len = len;
         memcpy(cache->m_comp, readBuffer, len);    
     }
@@ -86,7 +84,7 @@ static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx,
     {
         SslCertComp::comp_cache_t *recache;
         recache = (SslCertComp::comp_cache_t *)ls_prealloc(cache, cache->m_len + 
-                                                           sizeof(int) + len);
+                                                           sizeof(int) * 2 + len);
         if (recache)
         {
             memcpy(&recache->m_comp[recache->m_len], readBuffer, len);
@@ -121,13 +119,23 @@ static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data,
     cache = (SslCertComp::comp_cache_t *)SSL_CTX_get_ex_data(ctx, s_iSSL_CTX_index);
     if (cache)
     {
-        DEBUG_MESSAGE("[SSLCertComp] Using cached %d bytes\n", cache->m_len);
-        if (CBB_add_bytes(out, (const uint8_t *)cache->m_comp, cache->m_len) == 0)
+        if (cache->m_input_len == (int)in_size)
         {
-            ERROR_MESSAGE("[SSLCertComp] Error adding cached data to compressed buffer\n");
-            return false;
+            DEBUG_MESSAGE("[SSLCertComp] Using cached %d bytes\n", cache->m_len);
+            if (CBB_add_bytes(out, (const uint8_t *)cache->m_comp, cache->m_len) == 0)
+            {
+                ERROR_MESSAGE("[SSLCertComp] Error adding cached data to compressed buffer\n");
+                return false;
+            }
+            return true;
         }
-        return true;
+        else
+        {
+            SSL_CTX_set_ex_data(ctx, s_iSSL_CTX_index, NULL);\
+            DEBUG_MESSAGE("[SSLCertComp] input size changed, release old cache\n");
+            ls_pfree(cache);
+            cache = NULL;
+        }
     }
     
     VMemBuf   vmembuf;
@@ -184,7 +192,7 @@ static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data,
             ERROR_MESSAGE("[SSLCertComp] Error adding data to compressed buffer\n");
             return false;
         }
-        if (!(cache = cache_data(ctx, cache, readBuffer, len)))
+        if (!(cache = cache_data(ctx, cache, in_size, readBuffer, len)))
             return false;
         vmembuf.readUsed(len);
     }

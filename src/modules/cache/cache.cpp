@@ -1225,6 +1225,21 @@ static void dumpCacheHash(const lsi_session_t *session, const char *desc,
           );
 }
 
+off_t getEntryContentLength(MyMData *myData)
+{
+    int part1offset = myData->pEntry->getPart1Offset();
+    int part2offset = myData->pEntry->getPart2Offset();
+    if (part2offset - part1offset > 0)
+    {
+        off_t length = myData->pEntry->getContentTotalLen() -
+                       (part2offset - part1offset);
+        return length;
+    }
+    else
+        return -1;
+}
+   
+
 
 short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                   const char *uri, int uriLen,
@@ -1486,9 +1501,10 @@ static int endCache(lsi_param_t *rec)
     {
         if (myData->hkptIndex)
         {
-            //check if static file not optmized
-            if (myData->pEntry->getHeader().m_lenStxFilePath > 0 &&
-                myData->orgFileLength == myData->pEntry->getHeader().m_lSize)
+            //check if static file not optmized, or 0 byte content
+            if (myData->orgFileLength == 0 ||
+                (myData->pEntry->getHeader().m_lenStxFilePath > 0 &&
+                 myData->orgFileLength == myData->pEntry->getHeader().m_lSize))
             {
                 //Check if file optimized, if not, do not store it
                 cancelCache(rec);
@@ -1519,7 +1535,9 @@ static int endCache(lsi_param_t *rec)
                 myData->pConfig->getStore()->publish(myData->pEntry);
                 myData->iCacheState = CE_STATE_CACHED;  //Succeed
                 g_api->log(NULL, LSI_LOG_DEBUG,
-                           "[%s]published %s.\n", ModuleNameStr, myData->pOrgUri);
+                           "[%s]published %s, content length %ld.\n",
+                           ModuleNameStr, myData->pOrgUri,
+                           myData->orgFileLength);
             }
         }
         return cancelCache(rec);
@@ -2930,6 +2948,13 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
         needCompressType != LSI_GZIP_COMPRESS)
         return ;
 
+    /**
+     * Too small content needn't to be compressed
+     */
+    if (needCompressType == LSI_GZIP_COMPRESS &&
+        getEntryContentLength(myData) < 200)
+        return ;
+    
     /***
      * Because in child process, mydata maybe can not be accessed when it is 
      * released, so save the config and entry now.

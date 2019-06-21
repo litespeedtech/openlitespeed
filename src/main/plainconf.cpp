@@ -1133,7 +1133,8 @@ void plainconf::checkInFile(const char *path)
     if (MainServerConfig::getInstance().getDisableWebAdmin())
         return ;
     
-    if (access(path, 0) == -1)
+    struct stat sb0;
+    if (stat(path, &sb0) == -1)
         return ;
 
     //Backup file abd checkin and out
@@ -1141,36 +1142,40 @@ void plainconf::checkInFile(const char *path)
     strcpy(new_path, path);
     strcat(new_path, "0");
 
+    int ret;
+    struct stat sb;
     AutoStr2 buf;
-    buf.setStr("cp \"");
-    buf.append(path, strlen(path));
-    buf.append("\" \"", 3);
-    buf.append(new_path, strlen(new_path));
-    buf.append("\"", 1);
-    int ret = system(buf.c_str());
-
-    if (ret != 0)
+    if (stat(new_path, &sb) == -1 ||
+        (sb.st_mtime < sb0.st_mtime && sb0.st_size != sb.st_size))
     {
-        logToMem(LOG_LEVEL_INFO, "Failed to backup the conf file %s, ret %d.",
-                 path, ret);
-        return ;
+        buf.setStr("cp -f \"");
+        buf.append(path, strlen(path));
+        buf.append("\" \"", 3);
+        buf.append(new_path, strlen(new_path));
+        buf.append("\"", 1);
+        ret = system(buf.c_str());
+        if (ret != 0)
+        {
+            logToMem(LOG_LEVEL_INFO, "Failed to backup the conf file %s, ret %d.",
+                    path, ret);
+            return ;
+        }
+        
+        buf.setStr("ci -l -q -t-\"");
+        buf.append(new_path, strlen(new_path));
+        buf.append("\" -mUpdate \"", 12);
+        buf.append(new_path, strlen(new_path));
+        buf.append("\" >/dev/null 2>&1", 17);
+        ret = system(buf.c_str());
+
+        if (ret == 0)
+            logToMem(LOG_LEVEL_INFO, "RCS checkin config file %s OK.", new_path);
+        else
+            logToMem(LOG_LEVEL_INFO,
+                    "Failed to RCS checkin conf file %s, ret %d, error(%s). "
+                    "Org command is %s.", new_path, ret, strerror(errno), buf.c_str());
     }
-
-    buf.setStr("ci -l -q -t-\"");
-    buf.append(new_path, strlen(new_path));
-    buf.append("\" -mUpdate \"", 12);
-    buf.append(new_path, strlen(new_path));
-    buf.append("\" >/dev/null 2>&1", 17);
-    ret = system(buf.c_str());
-
-    if (ret == 0)
-        logToMem(LOG_LEVEL_INFO, "RCS checkin config file %s OK.", new_path);
-    else
-        logToMem(LOG_LEVEL_INFO,
-                 "Failed to RCS checkin conf file %s, ret %d, error(%s). "
-                 "Org command is %s.", new_path, ret, strerror(errno), buf.c_str());
-
-    unlink(new_path);
+    
 }
 
 

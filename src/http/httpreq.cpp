@@ -2439,7 +2439,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
                            const AutoStr2 **pChroot)
 {
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
-    if (m_fileStat.st_mode & (S_ISUID | S_ISGID))
+    bool sbitSet = m_fileStat.st_mode & (S_ISUID | S_ISGID);
+    if (sbitSet)
     {
         if (!m_pContext || !m_pContext->allowSetUID())
         {
@@ -2451,7 +2452,7 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
     if (m_pVHost && !m_pContext)
         m_pContext = &m_pVHost->getRootContext();
     char chMode = UID_FILE;
-    if (m_pContext)
+    if (m_pContext && !sbitSet)
         chMode = m_pContext->getSetUidMode();
     switch (chMode)
     {

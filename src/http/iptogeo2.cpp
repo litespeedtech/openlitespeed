@@ -150,11 +150,8 @@ void GeoIpData2::release()
 {
     m_did_parse_env = 0;
     m_tried_parse_env = 0;
-    
-    if (!m_IpToGeo2)
-        return;
-    
-    if (m_db_found)
+
+    if (m_db_found && m_IpToGeo2)
     {
         for (int i = 0; i < m_IpToGeo2->m_ndbs; ++i)
         {

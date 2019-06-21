@@ -88,17 +88,17 @@ int SslApkWorker::init()
         m_pFinishedQueue = ls_lfqueue_new();
         if (!m_pFinishedQueue)
         {
-            LS_NOTICE("[SSL] [ApkWorrker] init Unable to create Finished queue\n");
+            LS_NOTICE("[SSL] [ApkWorker] init Unable to create Finished queue\n");
             return -1;
         }
     }
     if (!m_crew)
     {
-        LS_DBG_L("[SSL] [ApkWorrker] init create WorkCrew!\n");
+        LS_DBG_L("[SSL] [ApkWorker] init create WorkCrew!\n");
         m_crew = new WorkCrew(this);
         if (!m_crew)
         {
-            LS_NOTICE("[SSL] [ApkWorrker] init create WorkCrew memory error!\n");
+            LS_NOTICE("[SSL] [ApkWorker] init create WorkCrew memory error!\n");
             return -1;
         }
 
@@ -149,8 +149,8 @@ int SslApkWorker::onNotified(int count)
         event->release();
         if (link)
         {
-            LS_DBG_L("[SSL] [ApkWorker] onNotified event: %p, resume!\n",
-                     event);
+            LS_DBG_L("[SSL] [ApkWorker] onNotified event: %p (%p), resume!\n",
+                     event, link);
             event->on_resume_cb(link);
         }
         else
@@ -215,8 +215,12 @@ SslAsyncPk::~SslAsyncPk()
 void *async_pk_prepare(SSL *ssl, ssl_async_pk_resume_cb on_resume, void *param)
 {
     if (s_iSslAsyncPk_index == -1)
-        s_iSslAsyncPk_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, freeAsyncPkData);
+        s_iSslAsyncPk_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, 
+                                                   freeAsyncPkData);
     SslAsyncPk *data = new SslAsyncPk();
+    DEBUG_MESSAGE("[SSL: %p] async_pk_prepare entry, SslAsyncPk: %p\n", ssl, 
+                  data);
+    
     if (!data)
     {
         ERROR_MESSAGE("[SSL: %p] Error creating SslAsyncPk structure\n", ssl);
@@ -327,10 +331,14 @@ void* SslAsyncPk::privateKeyThread(ls_lfnodei_t* item)
 static ssl_private_key_result_t AsyncPrivateKeySign(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out,
     uint16_t signature_algorithm, const uint8_t *in, size_t in_len);
+static ssl_private_key_result_t AsyncPrivateKeyDecrypt(
+    SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out, const uint8_t *in,
+    size_t in_len);
 static ssl_private_key_result_t AsyncPrivateKeyComplete(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out);
+
 static const SSL_PRIVATE_KEY_METHOD s_async_private_key_method = 
-    { AsyncPrivateKeySign, NULL, AsyncPrivateKeyComplete };
+    { AsyncPrivateKeySign, AsyncPrivateKeyDecrypt, AsyncPrivateKeyComplete };
 
 
 static ssl_private_key_result_t AsyncPrivateKeySign(
@@ -406,6 +414,7 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl,
 {
     SslAsyncPk *data = (SslAsyncPk *)SSL_get_ex_data(ssl, s_iSslAsyncPk_index);
 
+    SSL_set_private_key_method(ssl, NULL);
     ssl_private_key_result_t ret = ssl_private_key_failure;
     DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeyComplete\n", ssl);
     if (!data || data->isCanceled())
@@ -446,6 +455,27 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl,
     }
     data->m_resume_param = NULL;
     return ret;
+}
+
+
+static ssl_private_key_result_t AsyncPrivateKeyDecrypt(
+    SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out, const uint8_t *in,
+    size_t in_len)
+{
+    RSA *rsa = EVP_PKEY_get0_RSA(SSL_get_privatekey(ssl));
+    if (rsa == NULL)
+    {
+        ERROR_MESSAGE("AsyncPrivateKeyDecrypt called with incorrect key type.\n");
+        return ssl_private_key_failure;
+    }
+    if (!RSA_decrypt(rsa, out_len, out, RSA_size(rsa), in, in_len,
+        RSA_NO_PADDING))
+    {
+        ERROR_MESSAGE("RSA_decrypt error\n");
+        return ssl_private_key_failure;
+    }
+    DEBUG_MESSAGE("AsyncPrivateKeyDecrypt ok\n");
+    return ssl_private_key_success;
 }
 
 

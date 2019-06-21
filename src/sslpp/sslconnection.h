@@ -20,17 +20,16 @@ public:
         DISCONNECTED,
         CONNECTING,
         ACCEPTING,
-        WAITINGCERT,
-        GOTCERT,
         CONNECTED,
         SHUTDOWN
     };
     enum
     {
-        READ = 1,
-        WRITE = 2,
+        WANT_READ = 1,
+        WANT_WRITE = 2,
         LAST_READ = 4,
-        LAST_WRITE = 8
+        LAST_WRITE = 8,
+        WANT_CERT = 16
     };
 
     enum
@@ -38,16 +37,20 @@ public:
         F_HANDSHAKE_DONE    = 1,
         F_DISABLE_HTTP2     = 2,
         F_ASYNC_CERT        = 4,
-        F_ASYNC_PK          = 8
+        F_ASYNC_PK          = 8,
+        F_ASYNC_CERT_FAIL   = 16,
     };
 
-    char wantRead() const   {   return m_iWant & READ;  }
-    char wantWrite() const  {   return m_iWant & WRITE; }
-    char lastRead() const   {   return m_iWant & LAST_READ; }
-    char lastWrite() const  {   return m_iWant & LAST_WRITE; }
-    
-    bool getFlag(int v) const   {   return m_flag & v;     }
+    char wantRead() const   {   return m_iWant & WANT_READ;     }
+    char wantWrite() const  {   return m_iWant & WANT_WRITE;    }
+    char lastRead() const   {   return m_iWant & LAST_READ;     }
+    char lastWrite() const  {   return m_iWant & LAST_WRITE;    }
+    char wantCert() const   {   return m_iWant & WANT_CERT;     }
+    void clearWantCert()    {   m_iWant &= ~WANT_CERT;          }
+
+    int  getFlag(int v) const   {   return m_flag & v;     }
     void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
+    bool isWaitAsync() const    {   return m_flag & (F_ASYNC_CERT | F_ASYNC_PK);   }
 
     SslConnection();
     ~SslConnection();
@@ -72,6 +75,9 @@ public:
     int checkError(int ret);
     bool isConnected()      {   return m_iStatus == CONNECTED;  }
     int tryagain();
+
+    int asyncFetchCert(asyncCertDoneCb cb, void *pParam);
+    void cancelAsyncFetchCert(asyncCertDoneCb cb, void *pParam);
 
     char getStatus() const   {   return m_iStatus;   }
 
@@ -118,6 +124,11 @@ public:
     char *getRawBuffer(int *len);
     bool hasPendingIn() const
     {   return m_bio.m_rbioBuffered > m_bio.m_rbioIndex;   }
+
+
+    bool isWaitingAsyncCert() const
+    {   return (getFlag(F_ASYNC_CERT | F_ASYNC_CERT_FAIL) == F_ASYNC_CERT); }
+    bool wantAsyncCtx(SSL_CTX *&pInput);
 
 private:
     SSL    *m_ssl;

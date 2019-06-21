@@ -25,6 +25,7 @@ class SslCertComp
 public:
     typedef struct 
     {
+        int     m_input_len;
         int     m_len;
         uint8_t m_comp[1];
     } comp_cache_t;

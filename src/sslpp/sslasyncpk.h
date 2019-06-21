@@ -73,8 +73,8 @@ public:
     char         *m_sign;
     size_t        m_sign_size;
     EVP_PKEY     *m_pkey;
-    
-    
+
+
     static void *privateKeyThread(ls_lfnodei_t *item);
     
     LS_NO_COPY_ASSIGN(SslAsyncPk);

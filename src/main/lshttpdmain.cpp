@@ -47,6 +47,9 @@
 #include <util/stringlist.h>
 #include <util/signalutil.h>
 #include <util/vmembuf.h>
+#include <util/httpfetch.h>
+#include <socket/gsockaddr.h>
+
 #include <sys/sysctl.h>
 
 #include <extensions/cgi/cgidworker.h>
@@ -74,7 +77,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu May  9 15:05:35 UTC 2019)"
+#define BUILDTIME  " (built: Fri Jun 21 18:20:27 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -160,9 +163,29 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     LS_NOTICE("[AutoRestarter] child process with pid=%d received signal=%d, %s!",
               (int)pid, signal, pCoreFile[ coredump != 0 ]);
     //cleanUp();
+    
 
+#ifdef LS_ENABLE_DEBUG
+    LS_NOTICE("[*****] Debug version running, will create core file.");
     //We are in middle of graceful shutdown, do not restart another copy
     SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);
+#else
+    
+    //Since it is not DEBUG version, I will download the DEBUG version to run.
+    const char *pVer = PACKAGE_VERSION;
+    AutoStr2 sCmd;
+    sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
+    sCmd.append("/admin/misc/testbeta.sh -d ", 27);
+    sCmd.append(pVer, strlen(pVer));
+    
+    LS_NOTICE("[*****] non-debug version running, run cmd \"%s\".",
+              sCmd.c_str());
+    
+    if (fork() == 0)  // run it in child process
+        ::system(sCmd.c_str());
+    
+#endif    
+    
     if (coredump)
     {
 
@@ -725,8 +748,15 @@ int LshttpdMain::testRunningServer()
 
 void LshttpdMain::printVersion()
 {
-    printf("%s%s\n\tmodule versions:\n%s\n",
-           HttpServerVersion::getVersion(), BUILDTIME, LS_MODULE_VERSION_INFO);
+    printf("%s%s%s\n\tmodule versions:\n%s\n",
+           HttpServerVersion::getVersion(), BUILDTIME, 
+           
+#ifdef LS_ENABLE_DEBUG
+           " (DEBUG)",
+#else
+           " ",
+#endif
+           LS_MODULE_VERSION_INFO);
 }
 
 void LshttpdMain::parseOpt(int argc, char *argv[])

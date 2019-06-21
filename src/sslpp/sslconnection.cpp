@@ -19,6 +19,7 @@
 #include <sslpp/sslerror.h>
 #include <sslpp/sslsesscache.h>
 #include <sslpp/sslcert.h>
+#include <sslpp/sslutil.h>
 #include <util/stringtool.h>
 
 #include <errno.h>
@@ -278,7 +279,7 @@ void SslConnection::toAccept()
 {
     DEBUG_MESSAGE("[SSL: %p] toAccept\n", this);
     m_iStatus = ACCEPTING;
-    m_iWant = READ;
+    m_iWant = WANT_READ;
     SSL_set_accept_state(m_ssl);
 }
 
@@ -288,7 +289,7 @@ int SslConnection::accept()
     int ret;
     DEBUG_MESSAGE("[SSL: %p] accept SSL: %p\n", this, m_ssl);
     assert(m_ssl);
-    if (m_iStatus != ACCEPTING && m_iStatus != GOTCERT) {
+    if (m_iStatus != ACCEPTING) {
         DEBUG_MESSAGE("[SSL: %p] In accept but not in ACCEPTING status\n",
                       this);
         return -1;
@@ -303,7 +304,7 @@ int SslConnection::accept()
         DEBUG_MESSAGE("[SSL: %p] SSL_accept worked - move to connected"
                       " status, version: 0x%x\n", this, SSL_version(m_ssl));
         m_iStatus = CONNECTED;
-        m_iWant = READ;
+        m_iWant = WANT_READ;
     }
     else
     {
@@ -332,15 +333,14 @@ int SslConnection::checkError(int ret)
     case SSL_ERROR_WANT_READ:
     case SSL_ERROR_WANT_WRITE:
         if (err == SSL_ERROR_WANT_READ)
-            m_iWant |= READ;
+            m_iWant |= WANT_READ;
         else
-            m_iWant |= WRITE;
+            m_iWant |= WANT_WRITE;
         ERR_clear_error();
         return 0;
     case SSL_ERROR_WANT_X509_LOOKUP:
-        LS_DBG_H("[SSLSNI] need to pause SSL accept to fetch cert.");
-        m_iStatus = WAITINGCERT;
         ERR_clear_error();
+        m_iWant = WANT_CERT;
         return 0; // This will trigger a setSSLAgain(), which will disable read/write.
 #ifdef SSL_ASYNC_PK
     case SSL_ERROR_WANT_PRIVATE_KEY_OPERATION:
@@ -356,7 +356,7 @@ int SslConnection::checkError(int ret)
     case SSL_ERROR_SSL:
         if (m_iWant == LAST_WRITE)
         {
-            m_iWant |= WRITE;
+            m_iWant |= WANT_WRITE;
             ERR_clear_error();
             return 0;
         }
@@ -377,6 +377,58 @@ int SslConnection::checkError(int ret)
         errno = EIO;
     }
     return -1;
+}
+
+
+int SslConnection::asyncFetchCert(asyncCertDoneCb cb, void *pParam)
+{
+    if (!SslUtil::addAsyncCertLookup)
+        return LS_FAIL;
+
+    if (getFlag(F_ASYNC_CERT))
+    {
+        LS_DBG_L("Already waiting for cert, do not append another callback.\n");
+        return 1;
+    }
+
+    if (getFlag(F_ASYNC_CERT_FAIL))
+    {
+        LS_DBG_L("Already failed for async cert.\n");
+        return LS_FAIL;
+    }
+
+    const char *pDomain = getTlsExtHostName();
+
+    LS_DBG_L("Add callback to async lookup for %s\n", pDomain);
+    int ret = SslUtil::addAsyncCertLookup(cb, pParam, pDomain, 0);
+    if (ret == 1)
+    {
+        LS_DBG_L("asyncFetchCert() submit, waiting async cert.");
+        setFlag(F_ASYNC_CERT, 1);
+    }
+    else
+    {
+        LS_DBG_L("asyncFetchCert() failed, disable async cert.");
+        setFlag(F_ASYNC_CERT_FAIL, 1);
+        m_iWant &= ~WANT_CERT;
+    }
+
+    return ret;
+}
+
+
+void SslConnection::cancelAsyncFetchCert(asyncCertDoneCb cb, void *pParam)
+{
+    if (!getFlag(F_ASYNC_CERT))
+        return;
+
+    const char *pDomain = getTlsExtHostName();
+    LS_DBG_L("Try to remove callback for async lookup for %s\n", pDomain);
+
+    setFlag(F_ASYNC_CERT_FAIL, 1); // Mark failure first.
+    m_iWant &= ~WANT_CERT;
+    SslUtil::removeAsyncCertLookup(cb, pParam, pDomain, 0);
+    setFlag(F_ASYNC_CERT, 0); // Remove may trigger async fetch done callback. Clear flag after.
 }
 
 
@@ -415,8 +467,10 @@ int SslConnection::tryagain()
 
 int SslConnection::updateOnGotCert()
 {
-    assert(m_iStatus == WAITINGCERT);
-    m_iStatus = GOTCERT;
+    assert(isWaitingAsyncCert());
+
+    setFlag(F_ASYNC_CERT, 0);
+
     return 0;
 }
 
@@ -628,3 +682,32 @@ void SslConnection::tryReuseCachedSession(const char *pHost, int iHostLen)
 }
 
 
+bool SslConnection::wantAsyncCtx(SSL_CTX *&pCtx)
+{
+    int ret = false;
+
+    if (pCtx != (SSL_CTX *)-1L)
+    {
+        if (wantCert()) // wanted cert and got it.
+        {
+            LS_DBG_H("[SSLSNI] Use cert from async fetch result.");
+            m_iWant &= ~WANT_CERT;
+        }
+        // Else it is a previously retrieved certificate.
+    }
+    else if (wantCert()) // wanted cert and it failed.
+    {
+        LS_DBG_H("[SSLSNI] Fetch async cert completed already, do not fetch again.");
+        pCtx = NULL;
+        setFlag(F_ASYNC_CERT_FAIL, 1);
+        m_iWant &= ~WANT_CERT;
+    }
+    else
+    {
+        LS_DBG_H("[SSLSNI] need to pause SSL accept to fetch cert.");
+        ret = true;
+        assert(0 == wantCert()); // We should not already want cert.
+    }
+
+    return ret;
+}

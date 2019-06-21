@@ -195,6 +195,8 @@ public:
                                      int iMode, int iFlags,
                                      LsShmOffset_t lockOffset);
 
+    LsShmHash *dup(const char *name) const;
+
     //int init(size_t init_size);
     int init(LsShmOffset_t offset);
 
@@ -215,6 +217,9 @@ public:
 
     ls_attr_inline LsShmPool *getPool() const
     {   return m_pPool;     }
+
+    ls_attr_inline uint8_t getFlags() const
+    {   return m_iFlags;    }
 
     ls_attr_inline LsShmOffset_t ptr2offset(const void *ptr) const
     {   return m_pPool->ptr2offset(ptr); }
@@ -361,6 +366,23 @@ public:
                0 : ptr2offset(offset2iteratorData(iterOff));
     }
 
+    uint64_t getTid(const void *pKey, int keyLen)
+    {
+        iteroffset iterOff;
+        ls_strpair_t parms;
+        uint64_t tid = 0;
+        ls_str_set(&parms.key, (char *)pKey, keyLen);
+
+        autoLockChkRehash();
+        iterOff = (*m_find)(this, &parms);
+        if (iterOff.m_iOffset != 0)
+        {
+            tid = doGetTid(iterOff);
+        }
+        autoUnlock();
+        return tid;
+    }
+
     int touchLru(iteroffset iterOff);
 
     int lruSetNewestTime(iteroffset offset, time_t lasttime);
@@ -369,9 +391,7 @@ public:
 
     void eraseIterator(iteroffset iterOff)
     {
-        autoLockChkRehash();
         eraseIteratorHelper(iterOff);
-        autoUnlock();
     }
 
     iteroffset  insertCopy(LsShmHKey key, ls_strpair_t *pParms)
@@ -480,6 +500,10 @@ public:
 
     iteroffset doUpdate(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
 
+    uint64_t doGetTid(iteroffset iterOff);
+
+    uint64_t doUpdateTid(iteroffset iterOff);
+
     iteroffset nextLruIterOff(iteroffset iterOff)
     {
         if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
@@ -520,6 +544,18 @@ public:
         return offset2iterator((iter == NULL) ?
             getLruNewest() : iter->getLruLinkPrev());
     }
+
+    iteroffset tid2IterOff(uint64_t tid, void *&pSearchState) const;
+
+    // Returns the next tid with a value. outOffset and outDelTid will be zeroed.
+    // If the tid is a 'delete', outDelTid will be set to the tid deleted.
+    // else outOffset will be set to the offset assicated with the returned tid.
+    uint64_t nextTidVal(uint64_t tidIn, void *&pSearchState,
+            iteroffset &outOffset, uint64_t &outDelTid) const;
+    void assignTid(iteroffset iterOff, uint64_t tid);
+
+    uint64_t getMinTid() const;
+    uint64_t getLastTid() const;
 
     LsShmHasher_fn getHashFn() const   {   return m_hf;    }
     LsShmValComp_fn getValComp() const {   return m_vc;    }
@@ -570,7 +606,7 @@ public:
     void disableAutoLock()
     {   m_iAutoLock = 0; };
 
-    int isAutoLock()
+    int isAutoLock() const
     {   return m_iAutoLock;   }
 
     int lock()
@@ -598,6 +634,11 @@ public:
     int downRef()    { return --m_iRef; }
     LsShmHash::iteroffset iterGrowValue(iteroffset iterOff,
                                         int size_to_grow, int front);
+
+    // Transfer an iterator from one hash to another.
+    // Both hashes must be locked. Pool and flag consistencies will be checked.
+    static int move(iteroffset iterOff, LsShmHash *pSrcHash,
+            LsShmHash *pDestHash);
 
 protected:
     typedef iteroffset(*hash_find)(LsShmHash *pThis, ls_strpair_t *pParms);
@@ -725,7 +766,6 @@ protected:
     hash_set            m_set;
     hash_find           m_find;
     hash_get            m_get;
-
     uint8_t             m_iterExtraSpace;
     uint8_t             m_dataExtraSpace;
     int8_t              m_iAutoLock;
@@ -746,6 +786,10 @@ private:
     LsShmHash &operator=(const LsShmHash &other);
 
     void releaseHTableShm();
+
+    void initIter(iteroffset iterOff, iterator iter);
+    // This will only remove the offset from the hash.  It will not delete from SHM.
+    void remove(iteroffset iterOff, iterator iter);
 
     LsShmTidMgr        *m_pTidMgr;
 

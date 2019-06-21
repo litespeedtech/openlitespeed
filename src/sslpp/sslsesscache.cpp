@@ -57,7 +57,7 @@ static inline void printId(const char *tag, const uint8_t *pId, int iIdLen)
         int len;
 
         len = StringTool::hexEncode((const char *)pId, iIdLen, buf);
-        LS_DBG_L("[SSL SESS] [PID:%6d] %s: ID [%s] size %d", getpid(), tag,
+        LS_DBG_L("[SSL SESS] %s: ID [%s] size %d", tag,
                  buf, len);
     }
 }
@@ -75,6 +75,7 @@ SslSessCache::SslSessCache()
     : m_expireSec(0)
     , m_maxEntries(0)
     , m_pSessStore(NULL)
+    , m_pRemoteStore(NULL)
     , m_pObserver(NULL)
 {
 }
@@ -96,7 +97,7 @@ int SslSessCache::initShm(int uid, int gid)
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return LS_FAIL;
     if ((m_pSessStore = pPool->getNamedHash(shmSslCache, 10000,
-                        LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU)) != NULL)
+                        LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU | LSSHM_FLAG_TID)) != NULL)
     {
         m_pSessStore->disableAutoLock(); // we will be responsible for the lock
         s_numNew = 0;
@@ -173,12 +174,13 @@ static SSL_SESSION *getSessionCb(SSL *pSSL,
     *ref = 0;
     const unsigned char *cp;
     SSL_SESSION *pSess = NULL;
-    SslSessData_t * pObj = cache.getLockedSessionData(id, len);
+    LsShmHash *pHash;
+    SslSessData_t * pObj = cache.getLockedSessionData(id, len, pHash);
     if (pObj)
     {
         cp = (const unsigned char *) pObj->x_sessionData;
         pSess = d2i_SSL_SESSION(NULL, &cp, pObj->x_iValueLen);
-        cache.unlock();
+        cache.unlock(pHash);
         if (pSess)
             printId("Create Session from cache succeed", id, len);
         else
@@ -216,11 +218,13 @@ static void removeCb(SSL_CTX *pCtx, SSL_SESSION *pSess)
     printId("Remove Session", (unsigned char *)id, (int)len);
 #endif
     LsShmHash * pStore = cache.getSessStore();
-    pStore->lock();
-    pStore->remove((unsigned char *)id, (int)len);
-    pStore->unlock();
-    if (cache.getObserver() != NULL)
-        cache.getObserver()->onDelEntry(id, len);
+    if (pStore && cache.deleteSessionEx(pStore, (const char *)id, (int)len))
+    {
+        if (cache.getObserver() != NULL)
+            cache.getObserver()->onDelEntry(id, len);
+    }
+    else if ((pStore = cache.getRemoteStore()) != NULL)
+        cache.deleteSessionEx(pStore, (const char *)id, (int)len);
 
     cache.sessionFlush(); // flush out the SHM expired sessions
 }
@@ -242,24 +246,27 @@ int SslSessCache::watchCtx(SSL_CTX *pCtx)
 
 
 /**
- * addSession() will try to insert a session into the hash.
+ * addSessionEx() will try to insert a session into the hash.
  */
-int SslSessCache::addSession(time_t lruTm, const uint8_t *pId, int idLen,
-                             unsigned char *pData, int iDataLen)
+LsShmOffset_t SslSessCache::addSessionEx(LsShmHash *pHash, time_t lruTm,
+        const uint8_t *pId, int idLen, unsigned char *pData, int iDataLen)
 {
     LsShmHIterOff iIterOff;
     ls_strpair_t parms;
 
+    if (NULL == pHash)
+        pHash = getSessStore();
+
     s_numNew++;
     // flush out expired data
     if (!(s_numNew % 0x400))
-        sessionFlush();
+        sessionFlush(); // Will only flush the normal table.
 
-    m_pSessStore->lock();
-    iIterOff = m_pSessStore->insertIterator( m_pSessStore->setParms(&parms, pId, idLen, pData, iDataLen));
+    pHash->lock();
+    iIterOff = pHash->insertIterator( pHash->setParms(&parms, pId, idLen, pData, iDataLen));
     if (iIterOff.m_iOffset != 0)
     {
-        m_pSessStore->linkMvTopTime(iIterOff, lruTm);
+        pHash->linkMvTopTime(iIterOff, lruTm);
 #ifdef DEBUG_SHOW_MORE
         printId("New Session", pId, idLen);
 #endif
@@ -268,26 +275,35 @@ int SslSessCache::addSession(time_t lruTm, const uint8_t *pId, int idLen,
     {
         printId("Failed to add to SHM hashtable", pId, idLen);
     }
-    m_pSessStore->unlock();
+    pHash->unlock();
 
-    return (iIterOff.m_iOffset != 0); //session will be cached
+    return iIterOff.m_iOffset; //session will be cached
 }
 
 
 int SslSessCache::deleteSession(const char * pId, int len)
 {
-    if (!m_pSessStore)
-        return 0;
-    m_pSessStore->lock();
-    int ret = m_pSessStore->remove(pId, len);
-    m_pSessStore->unlock();
+    int ret = 0;
+    if (m_pSessStore)
+        ret = deleteSessionEx(m_pSessStore, pId, len);
+    if (0 == ret && m_pRemoteStore)
+        ret = deleteSessionEx(m_pRemoteStore, pId, len);
     return ret;
 }
 
 
-void SslSessCache::unlock()
+int SslSessCache::deleteSessionEx(LsShmHash *pHash, const char * pId, int len)
 {
-    m_pSessStore->unlock();
+    pHash->lock();
+    int ret = pHash->remove(pId, len);
+    pHash->unlock();
+    return ret;
+}
+
+
+void SslSessCache::unlock(LsShmHash *pHash)
+{
+    pHash->unlock();
 }
 
 
@@ -298,23 +314,37 @@ void SslSessCache::unlock()
  * NOTICE: if this function succeeds, the hash table \b must be unlocked
  * afterwards.
  */
-SslSessData_t *SslSessCache::getLockedSessionData(const unsigned char *id, int len)
+SslSessData_t *SslSessCache::getLockedSessionData(const unsigned char *id,
+        int len, LsShmHash *&pHash)
+{
+    pHash = NULL;
+    SslSessData_t *pObj = getLockedSessionDataEx(m_pSessStore, id, len);
+    if (pObj)
+        pHash = m_pSessStore;
+    else if (m_pRemoteStore && (pObj = getLockedSessionDataEx(m_pRemoteStore, id, len)))
+        pHash = m_pRemoteStore;
+    return pObj;
+}
+
+
+SslSessData_t *SslSessCache::getLockedSessionDataEx(LsShmHash *pHash,
+        const unsigned char *id, int len)
 {
     int valLen;
     LsShmOffset_t iObjOff;
     SslSessData_t *pObj;
 
-    m_pSessStore->lock();
-    iObjOff = m_pSessStore->find(id, len, &valLen);
+    pHash->lock();
+    iObjOff = pHash->find(id, len, &valLen);
     if (iObjOff != 0)
     {
-        pObj = (SslSessData_t *)m_pSessStore->offset2ptr(iObjOff);
+        pObj = (SslSessData_t *)pHash->offset2ptr(iObjOff);
         if (!isExpired(pObj))
-            return pObj;      //m_pSessStore need to be locked
+            return pObj;      //pHash need to be locked
         else
             printId("Cached Session expired", id, len);
     }
-    m_pSessStore->unlock();
+    pHash->unlock();
     return NULL;
 }
 
