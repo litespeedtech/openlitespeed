@@ -57,6 +57,8 @@
 
 #define LS_LOGRAW(...) log4cxx::Logger::s_lograw( __VA_ARGS__);
 
+#define LS_LOG_F(...) log4cxx::Logger::s_log_forced( __VA_ARGS__);
+
 #define LS_DBG_IO( ... ) \
     do { \
         if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_IODATA ) ) \
@@ -374,6 +376,12 @@ public:
     static void s_lograw(LogSession *pLogSession, const char *format, ...)
 #if __GNUC__
         __attribute__((format(printf, 2, 3)))
+#endif
+        ;
+
+    static void s_log_forced(int level, LogSession *pLogSession, const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
 #endif
         ;
 

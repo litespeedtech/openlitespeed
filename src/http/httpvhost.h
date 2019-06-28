@@ -100,6 +100,8 @@ template< class T >
 class THash;
 class StaticFileCacheData;
 
+#define MAX_ACCESS_LOG    4
+
 
 struct php_xml_st
 {
@@ -145,7 +147,7 @@ class HttpVHost : public RefCounter, public HttpLogSource
 {
 private:
     ReqStats            m_reqStats;
-    AccessLog          *m_pAccessLog;
+    AccessLog          *m_pAccessLog[MAX_ACCESS_LOG];
     LOG4CXX_NS::Logger *m_pLogger;
     LOG4CXX_NS::Appender *m_pBytesLog;
 
@@ -183,6 +185,7 @@ private:
     SsiTagConfig       *m_pSSITagConfig;
     LsiModuleData       m_moduleData;
     Recaptcha          *m_pRecaptcha;
+    AccessLog          *m_lastAccessLog;
 
     UrlStxFileHash     *m_pUrlStxFileHash;
     php_xml_st          m_pPhpXmlNodeS[MAX_VHOST_PHP_NUM];
@@ -263,7 +266,8 @@ public:
     virtual int  setErrorLogFile(const char *pFileName);
     virtual void setErrorLogRollingSize(off_t size, int keep_days);
 
-    virtual AccessLog *getAccessLog() const  {   return m_pAccessLog;    }
+    virtual AccessLog *getAccessLog() const
+    {   return m_lastAccessLog ? m_lastAccessLog : m_pAccessLog[0];    }
 
     void offsetChroot(const char *pChroot, int len);
 

@@ -84,6 +84,7 @@ public:
     void eraseIterCb(LsShmHElem *pElem);
     void updateIterCb(LsShmHElem *pElem, LsShmHIterOff off);
     void clearCb();
+    uint64_t getTidCb(LsShmHElem *pElem);
 
     int  setTidTblDel(uint64_t tid, uint64_t *pTid)
     {   return setTidTblEnt(tid, pTid);  }
@@ -114,6 +115,8 @@ public:
     uint64_t getLastTid() const
     {   return getTidInfo()->x_tid;   }
 
+    uint64_t getLastTidPreClear() const
+    {   return getTidInfo()->x_lastTidPreClear; }
 private:
     LsShmTidMgr(const LsShmTidMgr &other);
     LsShmTidMgr &operator=(const LsShmTidMgr &other);

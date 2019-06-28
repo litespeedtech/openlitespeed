@@ -59,15 +59,11 @@ static int  s_iSSL_CTX_index = -1;
 static void freeCtxData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, 
                         long argl, void *argp)
 {
-    DEBUG_MESSAGE("[SSLCertComp] freeing callback\n");
-    if (idx == s_iSSL_CTX_index)
+    assert(idx == s_iSSL_CTX_index);
+    if (ptr)
     {
-        DEBUG_MESSAGE("[SSLCertComp] correct index\n");
-        if (ptr)
-        {
-            DEBUG_MESSAGE("[SSLCertComp] freeing data\n");
-            ls_pfree(ptr);
-        }
+        DEBUG_MESSAGE("[SSLCertComp] freeing data\n");
+        ls_pfree(ptr);
     }
 }
 

@@ -77,7 +77,6 @@ class CValidation
 
     protected function validatePostTbl($tbl, $extracted)
     {
-        $isValid = 1;
         $tid = $tbl->Get(DTbl::FLD_ID);
 
         if (($index = $tbl->Get(DTbl::FLD_INDEX)) != null) {
@@ -96,7 +95,7 @@ class CValidation
 
                         if (in_array($holderval, $existingkeys)) {
                             $keynode->SetErr('This value has been used! Please choose a unique one.');
-                            $isValid = -1;
+                            return -1;
                         }
                     }
                 }
@@ -111,23 +110,23 @@ class CValidation
 
         $view = $this->_disp->Get(DInfo::FLD_View);
         if ($tid == 'L_GENERAL' || $tid == 'ADM_L_GENERAL') {
-            $this->chkPostTbl_L_GENERAL($extracted);
+            return $this->chkPostTbl_L_GENERAL($extracted);
         } elseif ($view == 'sl' || $view == 'al') { // will ignore vhlevel
             if ($tid == 'LVT_SSL_CERT')
-                $isValid = $this->chkPostTbl_L_SSL_CERT($extracted);
+                return $this->chkPostTbl_L_SSL_CERT($extracted);
         }
         elseif ($view == 'admin') {
             if ($tid == 'ADM_USR')
-                $isValid = $this->chkPostTbl_ADM_USR($extracted);
+                return $this->chkPostTbl_ADM_USR($extracted);
             elseif ($tid == 'ADM_USR_NEW')
-                $isValid = $this->chkPostTbl_ADM_USR_NEW($extracted);
+                return $this->chkPostTbl_ADM_USR_NEW($extracted);
         }
         elseif ($tid == 'V_UDB') {
-            $isValid = $this->chkPostTbl_ADM_USR_NEW($extracted);
+            return $this->chkPostTbl_ADM_USR_NEW($extracted);
         }
 
 
-        return $isValid;
+        return 1;
     }
 
     protected function encryptPass($val)
@@ -212,12 +211,32 @@ class CValidation
 
     protected function chkPostTbl_L_GENERAL($d)
     {
+        $isValid = 1;
         $ip = $d->GetChildVal('ip');
-        if ($ip == 'ANY') {
-            $ip = '*';
-        }
         $port = $d->GetChildVal('port');
-        $d->AddChild(new CNode('address', "$ip:$port"));
+
+        $confdata = $this->_disp->Get(DInfo::FLD_ConfData);
+        $lastref = $this->_disp->GetLast(DInfo::FLD_REF);
+        $nodes = $confdata->GetRootNode()->GetChildren('listener');
+
+        foreach ($nodes as $ref => $node) {
+            if ($ref == $lastref)
+                continue;
+            $nodeport = $node->GetChildVal('port');
+            if ($port != $nodeport)
+                continue;
+
+            $nodeip = $node->GetChildVal('ip');
+            if ($ip == $nodeip || $ip == 'ANY' || $nodeip == 'ANY') {
+                $d->SetChildErr('port', 'This port is already in use.');
+                $isValid = -1;
+                break;
+            }
+        }
+
+        $ip0 = ($ip == 'ANY') ? '*' : $ip;
+        $d->AddChild(new CNode('address', "$ip0:$port"));
+        return $isValid;
     }
 
     protected function isCurrentListenerSecure()

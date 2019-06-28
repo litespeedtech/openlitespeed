@@ -10,9 +10,16 @@ echoc()
 }
 
 if [ "x$1" = "x-v" ] || [ "x$1" = "x--version" ] ; then
-    echoc "Version 1.1-2/26/2019"
+    echoc "Version 1.2-6/20/2019"
     exit 0
 fi
+
+OS=`uname`
+if [ "x$OS" != "xLinux" ] ; then
+    echoc "Error: this tool only works on Linux. Quit."
+    exit 1
+fi
+
 
 if [ "x$1" = "x-h" ] || [ "x$1" = "x--help" ] ; then
     echoc "This tool is for pickup the binaries from the specified version of openlitespeed package"

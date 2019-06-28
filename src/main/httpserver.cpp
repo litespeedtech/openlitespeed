@@ -103,6 +103,7 @@
 #include <util/pcutil.h>
 #include <util/vmembuf.h>
 #include <util/xmlnode.h>
+#include <util/stringtool.h>
 #include <util/sysinfo/nicdetect.h>
 #include <util/sysinfo/systeminfo.h>
 #include <util/ni_fio.h>
@@ -116,6 +117,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 
 #include <new>
 #include <util/httpfetch.h>
@@ -987,6 +989,63 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
     return 0;
 }
 
+static const char *detectCp()
+{
+    struct stat st;
+    const char *type;
+    if (stat("/usr/local/cpanel", &st) == 0)
+        type = "cpanel";
+    else if (stat("/usr/local/CyberCP", &st) == 0)
+        type = "cyberpanel";
+    else if (stat("/usr/local/directadmin", &st) == 0)
+        type = "da";
+    else if (stat("/etc/httpd/conf/plesk.conf.d/", &st) == 0
+             || stat("/etc/apache2/plesk.conf.d/", &st) == 0)
+        type = "plesk";
+    else if (stat("/usr/local/interworx", &st) == 0)
+        type = "interworx";
+    else if (!MainServerConfig::getInstance().getDisableWebAdmin())
+        type = "webadmin";
+    else
+        type = "unknown";
+    return type;
+}
+
+static char *OsDetect()
+{
+    char s[64] = { 0 };
+    struct utsname name;
+    memset(&name, 0, sizeof(name));
+    uname(&name);
+    snprintf(s, 63, "%s_%s_%s", name.sysname, name.release, name.machine);
+    return s;
+}
+
+static char *detectPlat()
+{
+    char str[65] = { 0 };
+    char *p = str;
+    AutoStr2 sPlat;
+    sPlat.setStr(MainServerConfig::getInstance().getServerRoot());
+    sPlat.append("/PLAT", 5);
+    FILE *fp = fopen(sPlat.c_str(), "r");
+    if (fp)
+    {
+        if (!fgets(str, 64, fp))
+            str[0] = 0x00;
+        else
+        {
+            p = StringTool::strTrim(p);
+            char *p1 = p;
+            while(*p1 && !isspace(*p1))
+                ++p1;
+            *p1 = 0x00;
+        }
+        
+        fclose(fp);
+    }
+    return p;
+}
 
 //autoupdate checking, this only do once per day, won't use much resource
 void HttpServerImpl::checkOLSUpdate()
@@ -1023,15 +1082,24 @@ void HttpServerImpl::checkOLSUpdate()
     m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
     m_pAutoUpdFetch->setCallBack(autoUpdCheckCb, this);
     GSockAddr m_addrResponder;
-    char sUrl[128];
-    strcpy(sUrl, "http://open.litespeedtech.com/");
+    char sUrl[256];
+    strcpy(sUrl, "http://openlitespeed.org/");
     m_addrResponder.setHttpUrl(sUrl, strlen(sUrl));
     strcat(sUrl, "packages/release?ver=");
     strcat(sUrl, PACKAGE_VERSION);
+    strcat(sUrl, "&os=");
+    strcat(sUrl, OsDetect());
+    strcat(sUrl, "&env=");
+    strcat(sUrl, detectCp());
+#ifdef PREBUILT_VERSION    
+    strcat(sUrl, "_pre_");
+#else    
+    strcat(sUrl, "_src_");
+#endif
+    strcat(sUrl, detectPlat());
     m_pAutoUpdFetch->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               m_addrResponder);
 
-    return ;
 }
 
 

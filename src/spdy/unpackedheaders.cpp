@@ -142,6 +142,23 @@ void UnpackedHeaders::endHeader()
     m_buf.append_unsafe('\n');
 }
 
+int UnpackedHeaders::setMethod(const char *ptr, int len)
+{
+    if (m_buf.size() != 4)
+        return LS_FAIL;
+    m_buf.append(ptr, len);
+    m_methodLen = len;
+    m_buf.append(" ", 1);
+    if (m_url.ptr)
+    {
+        appendUrl(m_url.ptr, m_url.len);
+        if (m_alloc_str)
+            ls_pfree(m_url.ptr);
+        m_url.ptr = NULL;
+    }
+    return 0;
+}
+
 
 int UnpackedHeaders::appendUrl(const char *ptr, int len)
 {

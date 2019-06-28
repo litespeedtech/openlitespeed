@@ -38,7 +38,7 @@ case "$1" in
 		fi
 		;;
 	stop)
-		"$LSWS_CTRL" stop 2>/dev/null 1>&2
+		"$LSWS_CTRL" delay-stop 2>/dev/null 1>&2
 		ret=$?
 		if [ "x`uname -s`" = "xFreeBSD" ]; then
 			if [ $ret -eq 0 ]; then
