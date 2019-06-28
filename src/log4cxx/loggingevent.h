@@ -28,6 +28,7 @@
 BEGIN_LOG4CXX_NS
 
 #define LOGEVENT_NO_LINEFEED 1
+#define LOGEVENT_FORCED      2
 class Layout;
 class LoggingEvent
 {

@@ -403,13 +403,13 @@ int ConfigCtx::getValidPath(char *dest, const char *path, const char *desc)
 {
     if (getAbsolutePath(dest, path) != 0)
     {
-        LS_ERROR(INVAL_PATH, desc,  path);
+        LS_WARN(INVAL_PATH, desc,  path);
         return LS_FAIL;
     }
 
     if (access(dest, F_OK) != 0)
     {
-        LS_ERROR(INACCESSIBLE_PATH, desc,  dest);
+        LS_WARN(INACCESSIBLE_PATH, desc,  dest);
         return LS_FAIL;
     }
 

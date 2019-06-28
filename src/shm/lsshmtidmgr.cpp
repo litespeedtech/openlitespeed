@@ -198,6 +198,13 @@ void LsShmTidMgr::clearCb()
 }
 
 
+uint64_t LsShmTidMgr::getTidCb(LsShmHElem* pElem)
+{
+    LsShmTidLink *pLink = (LsShmTidLink *)pElem->getExtraPtr(m_iIterOffset);
+    return (pLink ? pLink->x_tid : 0);
+}
+
+
 LsShmOffset_t LsShmTidMgr::allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t oldCnt,
                                        int &remapped)
 {

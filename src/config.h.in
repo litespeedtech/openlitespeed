@@ -215,6 +215,9 @@
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
 
+/* Define if set to debug mode */
+#undef LS_ENABLE_DEBUG
+
 /* Define if need spdy/http2 feature */
 #undef LS_ENABLE_SPDY
 

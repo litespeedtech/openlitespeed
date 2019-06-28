@@ -1236,29 +1236,8 @@ int HttpSession::processNewReqInit()
                 m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
 
     int ret;
-
-    LS_DBG_L(getLogSession(),
-             "processNewReq(), request header buffer size: %d, "
-             "header used: %d, processed: %d.",
-             m_request.getHeaderBuf().size(),
-             m_request.getHttpHeaderEnd(), m_request.getCurPos());
-
-    if ( m_request.getHttpHeaderLen() > 0 )
-        LS_DBG_H(getLogSession(), "Headers: %.*s",
-                m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
-
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
     int useProxyHeader = httpServConf.getUseProxyHeader();
-    LS_DBG_L(getLogSession(),
-             "processNewReq(), request header buffer size: %d, "
-             "header used: %d, processed: %d.",
-             m_request.getHeaderBuf().size(),
-             m_request.getHttpHeaderEnd(), m_request.getCurPos());
-
-    if ( m_request.getHttpHeaderLen() > 0 )
-        LS_DBG_H(getLogSession(), "Headers: %.*s",
-                m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
-
     if (getStream()->isSpdy())
     {
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
@@ -1329,6 +1308,7 @@ int HttpSession::processNewReqInit()
     }
 
     getStream()->setLogger(pVHost->getLogger());
+    setLogger(pVHost->getLogger());
     if (getStream()->isLogIdBuilt())
     {
         lockAddOrReplaceFrom('#', pVHost->getName());
@@ -2239,15 +2219,16 @@ int HttpSession::startServerParsed()
 
 int HttpSession::handlerProcess(const HttpHandler *pHandler)
 {
+    if ((m_iFlag & HSF_URI_MAPPED) == 0)
+    {
+        setProcessState(HSPS_HANDLER_PRE_PROCESSING);
+        return 0;
+    }
+    
     setProcessState(HSPS_HANDLER_PROCESSING);
-    /**
-     * 2/25/19 added the below state change
-     */
-    m_iFlag |= HSF_URI_MAPPED;
-
     if (m_pHandler && cleanUpHandler(HSPS_HANDLER_PROCESSING) == LS_AGAIN)
         return 0;
-
+    
     if (pHandler == NULL)
         return SC_403;
 
@@ -4591,7 +4572,6 @@ int HttpSession::execExtCmdEx()
 int HttpSession::getServerAddrStr(char *pBuf, int len)
 {
     const AutoStr2 *pAddr;
-    len = 0;
     const ConnInfo *pInfo = getStream()->getConnInfo();
     if (pInfo->m_pServerAddrInfo)
     {
@@ -4600,6 +4580,8 @@ int HttpSession::getServerAddrStr(char *pBuf, int len)
             len = pAddr->len();
         memcpy(pBuf, pAddr->c_str(), len);
     }
+    else
+        len = 0;
     return len;
 }
 
@@ -5387,7 +5369,7 @@ int HttpSession::smProcessReq()
                 break;
         //fall through
         case HSPS_HKPT_URI_MAP:
-            m_iFlag |= HSF_URI_MAPPED;
+            setFlag(HSF_URI_MAPPED);
             preUriMap();
             ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
             if (ret || m_processState != HSPS_FILE_MAP)
@@ -5437,6 +5419,13 @@ int HttpSession::smProcessReq()
         case HSPS_BEGIN_HANDLER_PROCESS:
             ret = handlerProcess(m_request.getHttpHandler());
             break;
+            
+        case HSPS_HANDLER_PRE_PROCESSING:
+            m_iFlag |= HSF_URI_MAPPED;
+            preUriMap();
+            runEventHkpt(LSI_HKPT_URI_MAP, HSPS_BEGIN_HANDLER_PROCESS);
+            break;
+            
         case HSPS_HKPT_RCVD_REQ_BODY_PROCESSING:
             ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_HANDLER_PROCESSING);
             if (m_processState == HSPS_HANDLER_PROCESSING)

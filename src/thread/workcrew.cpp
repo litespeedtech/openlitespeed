@@ -281,7 +281,10 @@ void WorkCrew::stopProcessing()
     }
 
     stopAllWorkers();
-
+#ifndef LS_WORKCREW_LF
+    m_pJobQueue->shutdown();
+#endif
+    
     // now wait for all to die
     while ( !isAllWorkerDead() ) {
         DPRINTF("STPPROC WAITDIE %s\n", pStatus());
@@ -312,9 +315,7 @@ void WorkCrew::stopProcessing()
 
 
     LS_DBG_H("WorkCrew::stopProcessing(), Stopping Processor.");
-#ifndef LS_WORKCREW_LF
-    m_pJobQueue->shutdown();
-#endif
+
     ls_atomic_setptr(&m_pFinishedQueue, NULL);
 }
 

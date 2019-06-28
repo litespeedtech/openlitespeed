@@ -30,17 +30,7 @@ public:
 
     static int convertHpackIdx(int hpack_index);
 
-    int setMethod(const char *ptr, int len)
-    {
-        if (m_buf.size() != 4)
-            return LS_FAIL;
-        m_buf.append(ptr, len);
-        m_methodLen = len;
-        m_buf.append(" ", 1);
-        if (m_url.ptr)
-            appendUrl(m_url.ptr, m_url.len);
-        return 0;
-    }
+    int setMethod(const char *ptr, int len);
 
     int setUrl(const char *ptr, int len)
     {

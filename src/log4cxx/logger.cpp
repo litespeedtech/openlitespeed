@@ -104,7 +104,7 @@ static int logSanitize(char *pBuf, int len)
 
 void Logger::vlog(int level, const char *pId, const char *format,
                   va_list args,
-                  int no_linefeed)
+                  int flag)
 {
     int errno_save = errno;
     char achBuf[8192];
@@ -125,8 +125,8 @@ void Logger::vlog(int level, const char *pId, const char *format,
 
     LoggingEvent event(level, getName(), achBuf, messageLen);
 
-    if (no_linefeed)
-        event.m_flag |= LOGEVENT_NO_LINEFEED;
+    if (flag)
+        event.m_flag |= flag;
 
     gettimeofday(&event.m_timestamp, NULL);
     Logger *pLogger = this;
@@ -134,7 +134,8 @@ void Logger::vlog(int level, const char *pId, const char *format,
     {
         if (!event.m_pLayout)
             event.m_pLayout = pLogger->m_pLayout;
-        if (pLogger->m_pAppender && pLogger->isEnabled(level))
+        if (pLogger->m_pAppender
+            && ((flag & LOGEVENT_FORCED) || pLogger->isEnabled(level)))
         {
             //if (pLogger->m_pAppender->append(&event) == -1)
             //    break;
@@ -177,13 +178,13 @@ void Logger::lograw(const struct iovec *pIov, int len)
 }
 
 void Logger::s_vlog(int level, LogSession *pLogSession,
-                    const char *format, va_list args, int no_linefeed)
+                    const char *format, va_list args, int flag)
 {
     log4cxx::Logger *l = (pLogSession && pLogSession->getLogger())
                          ? pLogSession->getLogger()
                          : log4cxx::Logger::getDefault();
     l->vlog(level, pLogSession ? pLogSession->getLogId() : NULL,
-            format, args, no_linefeed);
+            format, args, flag);
 }
 
 
@@ -333,6 +334,21 @@ void Logger::s_lograw(LogSession *pLogSession, const char *format, ...)
     s_vlograw(l, format, va);
     va_end(va);
 }
+
+
+void Logger::s_log_forced(int level, LogSession *pLogSession,
+                          const char *format, ...)
+{
+    log4cxx::Logger *l = (pLogSession && pLogSession->getLogger())
+                         ? pLogSession->getLogger()
+                         : log4cxx::Logger::getDefault();
+    va_list  va;
+    va_start(va, format);
+    l->vlog(level, pLogSession ? pLogSession->getLogId() : NULL,
+            format, va, LOGEVENT_FORCED);
+    va_end(va);
+}
+
 
 
 END_LOG4CXX_NS

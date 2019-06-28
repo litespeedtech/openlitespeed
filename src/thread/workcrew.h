@@ -24,11 +24,11 @@
 #include <util/gpointerlist.h>
 #include <lsr/ls_lock.h>
 
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#define LS_WORKCREW_LF
-#else
+// #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+// #define LS_WORKCREW_LF
+// #else
 class PThreadWorkQueue;
-#endif
+// #endif
 
 //#define LS_WORKCREW_DEBUG
 #ifdef LS_WORKCREW_DEBUG

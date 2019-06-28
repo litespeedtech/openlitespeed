@@ -19,6 +19,7 @@
 #define SSLSESSCACHE_H
 
 #include <lsdef.h>
+#include <shm/lsshmtypes.h>
 #include <util/hashstringmap.h>
 #include <util/tsingleton.h>
 #include <stdint.h>
@@ -56,17 +57,30 @@ public:
     int     sessionFlush();
     int     stat();
     int     addSession(time_t lruTm, const uint8_t *pId, int idLen,
-                       unsigned char *pData, int iDataLen);
+                       unsigned char *pData, int iDataLen)
+    {
+        return (addSessionEx(getSessStore(), lruTm, pId, idLen,
+                             pData, iDataLen) != 0);
+    }
+
+    LsShmOffset_t addSessionEx(LsShmHash *pHash, time_t lruTm, const uint8_t *pId,
+                        int idLen, unsigned char *pData, int iDataLen);
     SSL_SESSION *getSession(unsigned char *id, int len);
-    SslSessData_t *getLockedSessionData(const unsigned char *id, int len);
+    SslSessData_t *getLockedSessionData(const unsigned char *id, int len, LsShmHash *&pHash);
     int deleteSession(const char *pId, int len);
+    int deleteSessionEx(LsShmHash *pHash, const char *pId, int len);
 
     void setObserver(LsShmHashObserver *pObserver)
     {   m_pObserver = pObserver;        }
     LsShmHashObserver *getObserver() const
     {   return m_pObserver;         }
 
-    void    unlock();
+    void setRemoteStore(LsShmHash *pHash)
+    {   m_pRemoteStore = pHash;         }
+    LsShmHash *getRemoteStore() const
+    {   return m_pRemoteStore;          }
+
+    void    unlock(LsShmHash *pHash);
     LsShmHash *getSessStore() const
     {   return m_pSessStore;    }
 
@@ -76,11 +90,14 @@ private:
     SslSessCache();
     ~SslSessCache();
     int    initShm(int uid, int gid);
+    SslSessData_t *getLockedSessionDataEx(LsShmHash *pHash,
+            const unsigned char *id, int len);
 
 private:
     int32_t                 m_expireSec;
     int                     m_maxEntries;
     LsShmHash              *m_pSessStore;
+    LsShmHash              *m_pRemoteStore;
     LsShmHashObserver      *m_pObserver;
 
     LS_NO_COPY_ASSIGN(SslSessCache);

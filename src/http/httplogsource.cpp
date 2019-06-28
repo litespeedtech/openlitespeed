@@ -35,13 +35,35 @@
 AutoStr  HttpLogSource::s_sDefaultAccessLogFormat;
 short HttpLogSource::s_iAioServerAccessLog = -1;
 short HttpLogSource::s_iAioServerErrorLog = -1;
-int HttpLogSource::initAccessLog(const XmlNode *pRoot,
+int HttpLogSource::initAccessLogs(const XmlNode *pRoot,
                                  int setDebugLevel)
 {
+    int ret = 0;
     ConfigCtx currentCtx("accesslog");
-    //const XmlNode *p0 = pRoot->getChild( "logging", 1 );
-    const XmlNode *pNode1 = pRoot->getChild("accessLog");
+    const XmlNodeList *pList = pRoot->getChildren("accessLog");
+    if (pList)
+    {
+        XmlNodeList::const_iterator iter;
+        for (iter = pList->begin(); iter != pList->end(); ++iter)
+        {
+            ret = initAccessLog(*iter, setDebugLevel, 1);
+            if(ret)
+                return ret;
+        }
+    }
+    
+    return ret;
+}
+    
 
+int HttpLogSource::initAccessLog(const XmlNode *pNode,
+                                 int setDebugLevel, int inList)
+{
+    ConfigCtx currentCtx("accesslog");
+    const XmlNode *pNode1 = pNode;
+    if (!inList)
+        pNode1 = (pNode ? pNode->getChild("accessLog") : NULL);
+    
     if (pNode1 == NULL)
     {
         if (setDebugLevel)
@@ -57,7 +79,7 @@ int HttpLogSource::initAccessLog(const XmlNode *pRoot,
                         "useServer", 0, 2, 2);
         enableAccessLog(useServer != 2);
 
-        if (setDebugLevel)
+        if (setDebugLevel && s_sDefaultAccessLogFormat.c_str() == NULL)
         {
             const char *pFmt = pNode1->getChildValue("logFormat");
 
