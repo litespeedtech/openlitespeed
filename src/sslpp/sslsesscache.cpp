@@ -104,6 +104,11 @@ int SslSessCache::initShm(int uid, int gid)
         sessionFlush();
         return LS_OK;
     }
+    else
+    {
+        pShm->deleteFile();
+        pShm->close();
+    }
     return LS_FAIL;
 }
 
@@ -117,7 +122,10 @@ int SslSessCache::init(int32_t iTimeout, int iMaxEntries, int uid, int gid)
     }
     m_expireSec = iTimeout;
     m_maxEntries = iMaxEntries;
-    return initShm(uid, gid);
+    int ret = initShm(uid, gid);
+    if (ret == LS_FAIL)  //try again after remove old SHM file.
+        ret = initShm(uid, gid);
+    return ret;
 }
 
 
