@@ -72,18 +72,26 @@ class RawFiles
 
 class PlainConfParser
 {
+    private $_hasInclude;
+
     public function __construct()
     {
     }
 
     public function Parse($filename)
     {
+        $this->_hasInclude = false;
         $root = new CNode(CNode::K_ROOT, $filename, CNode::T_ROOT);
         $rawfiles = new RawFiles();
 
         $this->parse_raw($rawfiles, $root);
 
         return $root;
+    }
+
+    public function HasInclude()
+    {
+        return $this->_hasInclude;
     }
 
     private function parse_raw($rawfiles, $root)
@@ -230,6 +238,7 @@ class PlainConfParser
                 } elseif ($newnode->HasFlag(CNode::BM_INC)) {
                     $this->parse_raw($rawfiles, $newnode);
                     $cur_node->AddIncludeChildren($newnode);
+                    $this->_hasInclude = true;
                 }
             }
 

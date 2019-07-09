@@ -102,6 +102,7 @@
 #include <util/pcutil.h>
 #include <util/vmembuf.h>
 #include <util/xmlnode.h>
+#include <util/stringtool.h>
 #include <util/sysinfo/nicdetect.h>
 #include <util/sysinfo/systeminfo.h>
 #include <util/ni_fio.h>
@@ -115,6 +116,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 
 #include <new>
 #include <util/httpfetch.h>
@@ -982,6 +984,63 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
     return 0;
 }
 
+static const char *detectCp()
+{
+    struct stat st;
+    const char *type;
+    if (stat("/usr/local/cpanel", &st) == 0)
+        type = "cpanel";
+    else if (stat("/usr/local/CyberCP", &st) == 0)
+        type = "cyberpanel";
+    else if (stat("/usr/local/directadmin", &st) == 0)
+        type = "da";
+    else if (stat("/etc/httpd/conf/plesk.conf.d/", &st) == 0
+             || stat("/etc/apache2/plesk.conf.d/", &st) == 0)
+        type = "plesk";
+    else if (stat("/usr/local/interworx", &st) == 0)
+        type = "interworx";
+    else if (!MainServerConfig::getInstance().getDisableWebAdmin())
+        type = "webadmin";
+    else
+        type = "unknown";
+    return type;
+}
+
+static char *OsDetect(char *s, int max_len)
+{
+    struct utsname name;
+    memset(&name, 0, sizeof(name));
+    if (uname(&name) == -1)
+        strcpy(s, "unknown");
+    else
+        snprintf(s, max_len - 1, "%s_%s_%s", name.sysname, name.release, name.machine);
+    return s;
+}
+
+static char *detectPlat(char *str, int max_len)
+{
+    char *p = str;
+    AutoStr2 sPlat;
+    sPlat.setStr(MainServerConfig::getInstance().getServerRoot());
+    sPlat.append("/PLAT", 5);
+    FILE *fp = fopen(sPlat.c_str(), "r");
+    if (fp)
+    {
+        if (!fgets(str, max_len - 1, fp))
+            str[0] = 0x00;
+        else
+        {
+            p = StringTool::strTrim(p);
+            char *p1 = p;
+            while(*p1 && !isspace(*p1))
+                ++p1;
+            *p1 = 0x00;
+        }
+        
+        fclose(fp);
+    }
+    return p;
+}
 
 //autoupdate checking, this only do once per day, won't use much resource
 void HttpServerImpl::checkOLSUpdate()
@@ -996,10 +1055,7 @@ void HttpServerImpl::checkOLSUpdate()
     struct stat sb;
     AutoStr2 sAutoUpdFile;
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
-    sAutoUpdFile.append("/autoupdate/", 12);
-    if (stat(sAutoUpdFile.c_str(), &sb) == -1)
-        mkdir(sAutoUpdFile.c_str(), 0755);
-    sAutoUpdFile.append("release", 7);
+    sAutoUpdFile.append("autoupdate/release", 18);
 
     if (stat(sAutoUpdFile.c_str(), &sb) != -1)
     {
@@ -1018,15 +1074,26 @@ void HttpServerImpl::checkOLSUpdate()
     m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
     m_pAutoUpdFetch->setCallBack(autoUpdCheckCb, this);
     GSockAddr m_addrResponder;
-    char sUrl[128];
-    strcpy(sUrl, "http://open.litespeedtech.com/");
+    char sUrl[256];
+    char osstr[64] = {0};
+    char plat[64] = {0};
+    strcpy(sUrl, "http://openlitespeed.org/");
     m_addrResponder.setHttpUrl(sUrl, strlen(sUrl));
     strcat(sUrl, "packages/release?ver=");
     strcat(sUrl, PACKAGE_VERSION);
+    strcat(sUrl, "&os=");
+    strcat(sUrl, OsDetect(osstr, 64));
+    strcat(sUrl, "&env=");
+    strcat(sUrl, detectCp());
+#ifdef PREBUILT_VERSION    
+    strcat(sUrl, "_pre_");
+#else    
+    strcat(sUrl, "_src_");
+#endif
+    strcat(sUrl, detectPlat(plat, 64));
     m_pAutoUpdFetch->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               m_addrResponder);
 
-    return ;
 }
 
 
@@ -2882,6 +2949,12 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                 if (stat(sDir.c_str(), &sb) == -1)
                     mkdir(sDir.c_str(), 0710);
                 chown(sDir.c_str(), procConf.getUid(), procConf.getGid());
+                
+                AutoStr2 sAutoUpd = MainServerConfig::getInstance().getServerRoot();
+                sAutoUpd.append("autoupdate/", 11);
+                if (stat(sAutoUpd.c_str(), &sb) == -1)
+                    mkdir(sAutoUpd.c_str(), 0755);
+                chown(sAutoUpd.c_str(), procConf.getUid(), procConf.getGid());
             }
         }
 

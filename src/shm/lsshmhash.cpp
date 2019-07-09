@@ -1104,12 +1104,12 @@ LsShmHash::iteroffset LsShmHash::insertCopy2(LsShmHKey key,
     setIterKey(pNew, ls_str_buf(&pParms->key));
     setIterData(pNew, ls_str_buf(&pParms->val));
 
-    initIter(offset, pNew);
+    insertAlloced(offset, pNew);
     return offset;
 }
 
 
-void LsShmHash::initIter(iteroffset iterOff, iterator iter)
+void LsShmHash::insertAlloced(iteroffset iterOff, iterator iter)
 {
     uint32_t hashIndx = getIndex(iter->x_hkey, capacity());
     LsShmHIterOff *pIdx = getHidx(hashIndx);
@@ -1139,6 +1139,91 @@ void LsShmHash::initIter(iteroffset iterOff, iterator iter)
             assert(info.n_current == table.x_iSize);
         }
     }
+}
+
+
+// oldIter and oldIterOff will be released and therefore are invalid when this function concludes.
+// oldIterOff's tid iter is erased, but new iter tid is NOT SET, following initIter logic.
+void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
+                        iteroffset newIterOff, iterator newIter)
+{
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+
+    if (0 == oldIterOff.m_iOffset || NULL == oldIter
+            || 0 == newIterOff.m_iOffset || NULL == newIter)
+        return;
+
+    LsShmSize_t size = oldIter->x_iLen;
+    uint32_t hashIndx = getIndex(oldIter->x_hkey, capacity());
+    LsShmHIterOff *pIdx = getHidx(hashIndx);
+    LsShmOffset_t offset = pIdx->m_iOffset;
+    LsShmHElem *pElem;
+    LsShmOffset_t next = oldIter->x_iNext.m_iOffset;     // in case of remap in tid list
+
+
+    //NOTE:race condition, two process release the object at the same time.
+    //     ShmHash was not properly locked.
+    if (offset == 0)
+    {
+        getPool()->getShm()->backupBrokenFile();
+        assert(offset != 0);
+    }
+#ifdef DEBUG_RUN
+    if (offset == 0)
+    {
+        SHM_NOTICE(
+            "LsShmHash::replace %6d %X size %d cap %d",
+            getpid(), m_pPool->getShmMap(),
+            size(),
+            capacity()
+        );
+        sleep(10);
+    }
+#endif
+
+    if (m_pTidMgr != NULL)
+    {
+        m_pTidMgr->eraseIterCb(oldIter);
+        pIdx = getHidx(hashIndx);
+    }
+
+    if (offset == oldIterOff.m_iOffset)
+    {
+        pIdx->m_iOffset = newIterOff.m_iOffset;
+        newIter->x_iNext.m_iOffset = next;
+        oldIter->x_iNext.m_iOffset = 0;
+    }
+    else
+    {
+        while (offset != 0)
+        {
+            pElem = (LsShmHElem *)m_pPool->offset2ptr(offset);
+            if (pElem->x_iNext.m_iOffset == oldIterOff.m_iOffset)
+            {
+                pElem->x_iNext.m_iOffset = newIterOff.m_iOffset;
+                newIter->x_iNext.m_iOffset = next;
+                oldIter->x_iNext.m_iOffset = 0;
+                break;
+            }
+            // next offset...
+            offset = pElem->x_iNext.m_iOffset;
+        }
+    }
+
+    if (m_iFlags & LSSHM_FLAG_LRU)
+    {
+        removeFromLru(oldIter);
+        addToLru(newIter, newIterOff);
+        if (getLru()->n_current != getHTable()->x_iSize)
+        {
+            LsHashLruInfo info = *getLru();
+            LsShmHTable table = *getHTable();
+            getPool()->getShm()->backupBrokenFile();
+            assert(info.n_current == table.x_iSize);
+        }
+    }
+
+    release2(oldIterOff.m_iOffset, size);
 }
 
 
@@ -2103,9 +2188,10 @@ int LsShmHash::move(iteroffset iterOff, LsShmHash *pSrcHash,
             iter->getVal(), iter->getValLen()));
 
     if (destOff.m_iOffset != 0)
-        pDestHash->eraseIteratorHelper(destOff);
-
-    pDestHash->initIter(iterOff, iter);
+        pDestHash->replace(destOff, pDestHash->offset2iterator(destOff),
+                           iterOff, iter);
+    else
+        pDestHash->insertAlloced(iterOff, iter);
     if (pDestHash->getTidMgr() != NULL && pDestHash->isTidMaster())
         pDestHash->getTidMgr()->insertIterCb(iterOff);
     if (pSrcHash->getFlags() & LSSHM_FLAG_LRU)

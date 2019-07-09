@@ -210,7 +210,7 @@ class DTbl
                 break;
             }
         }
-        if ($all_blocked) {
+        if ($all_blocked || defined('_CONF_READONLY_')) {
             $actString = null;
         }
 
@@ -503,10 +503,15 @@ class DTbl
                 $index = $action_attr->_minVal[0];
                 $type = $data->GetChildVal($index);
                 $ti = isset($action_attr->_minVal[$type]) ? $action_attr->_minVal[$type] : $action_attr->_minVal[1];
-            } else
+            } else {
                 $ti = $action_attr->_minVal;
+            }
+            $actString = $action_attr->_maxVal;
+            if (defined('_CONF_READONLY_')) {
+                $actString = 'v';
+            }
 
-            $actdata = $disp->GetActionData($action_attr->_maxVal, $ti, $key0);
+            $actdata = $disp->GetActionData($actString, $ti, $key0);
             $actionLink = UI::GetActionButtons($actdata, 'icon');
             $indexActionLink = isset($actdata['v']) ? $actdata['v']['href'] : null;
         }

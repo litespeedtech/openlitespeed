@@ -77,7 +77,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Fri Jun 21 18:20:27 UTC 2019)"
+#define BUILDTIME  " (built: Tue Jul  9 16:51:28 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -165,7 +165,8 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     //cleanUp();
     
 
-#ifdef LS_ENABLE_DEBUG
+#if 1
+//#ifdef LS_ENABLE_DEBUG
     LS_NOTICE("[*****] Debug version running, will create core file.");
     //We are in middle of graceful shutdown, do not restart another copy
     SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);

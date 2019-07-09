@@ -145,13 +145,13 @@ void HttpVHost::offsetChroot(const char *pChroot, int len)
 {
     char achTemp[512];
     const char *pOldName;
-    if (m_pAccessLog)
+    if (m_pAccessLog[0])
     {
-        pOldName = m_pAccessLog->getAppender()->getName();
+        pOldName = m_pAccessLog[0]->getAppender()->getName();
         if (strncmp(pChroot, pOldName, len) == 0)
         {
             strcpy(achTemp, pOldName + len);
-            m_pAccessLog->getAppender()->setName(achTemp);
+            m_pAccessLog[0]->getAppender()->setName(achTemp);
         }
     }
     if (m_pLogger)
@@ -194,31 +194,41 @@ int HttpVHost::setErrorLogFile(const char *pFileName)
 int HttpVHost::setAccessLogFile(const char *pFileName, int pipe)
 {
     int ret = 0;
+    int i;
+    m_lastAccessLog = NULL;
 
-    if ((pFileName) && (*pFileName))
+    if (! pFileName || !*pFileName)
+        return -1;
+    
+    for (i = 0; i < MAX_ACCESS_LOG; ++i)
     {
-        if (!m_pAccessLog)
+        if (!m_pAccessLog[i])
         {
-            m_pAccessLog = new AccessLog();
-            if (!m_pAccessLog)
-                return LS_FAIL;
+            m_pAccessLog[i] = new AccessLog();
+            if (!m_pAccessLog[i])
+                return -1;
+            m_lastAccessLog = m_pAccessLog[i];
+                break;
         }
-        ret = m_pAccessLog->init(pFileName, pipe);
     }
+    if (!m_lastAccessLog)
+        return -1;
+        
+    ret = m_lastAccessLog->init(pFileName, pipe);
     if (ret)
     {
-        if (m_pAccessLog)
-            delete m_pAccessLog;
-        m_pAccessLog = NULL;
+        delete m_lastAccessLog;
+        m_lastAccessLog = NULL;
+        m_pAccessLog[i] = NULL;
     }
-    return ret;
+    return (m_lastAccessLog ? 0 : -1);
 }
 
 
 const char *HttpVHost::getAccessLogPath() const
 {
-    if (m_pAccessLog)
-        return m_pAccessLog->getLogPath();
+    if (m_pAccessLog[0])
+        return m_pAccessLog[0]->getLogPath();
     return NULL;
 }
 
@@ -227,8 +237,7 @@ const char *HttpVHost::getAccessLogPath() const
  * HttpVHost funcitons.
  *****************************************************************/
 HttpVHost::HttpVHost(const char *pHostName)
-    : m_pAccessLog(NULL)
-    , m_pLogger(NULL)
+    : m_pLogger(NULL)
     , m_pBytesLog(NULL)
     , m_iMaxKeepAliveRequests(100)
     , m_iSmartKeepAlive(0)
@@ -260,6 +269,7 @@ HttpVHost::HttpVHost(const char *pHostName)
                                            GHash::cmpString);
 
     m_pUrlIdHash = new UrlIdHash(64, GHash::hfString, GHash::cmpCiString);
+    memset(m_pAccessLog, 0, sizeof(AccessLog *) * MAX_ACCESS_LOG);
 }
 
 
@@ -267,10 +277,17 @@ HttpVHost::~HttpVHost()
 {
     if (m_pLogger)
         m_pLogger->getAppender()->close();
-    if (m_pAccessLog)
+    
+    for (int i=0; i<MAX_ACCESS_LOG; ++i)
     {
-        m_pAccessLog->flush();
-        delete m_pAccessLog;
+        if (m_pAccessLog[i])
+        {
+            m_pAccessLog[i]->flush();
+            delete m_pAccessLog[i];
+            m_pAccessLog[i] = NULL;
+        }
+        else
+            break;
     }
     if (m_pAccessCache)
         delete m_pAccessCache;
@@ -372,8 +389,14 @@ void HttpVHost::setErrorLogRollingSize(off_t size, int keep_days)
 
 void  HttpVHost::logAccess(HttpSession *pSession) const
 {
-    if (m_pAccessLog)
-        m_pAccessLog->log(pSession);
+    if (m_pAccessLog[0])
+    {
+        for (int i = 0; i < MAX_ACCESS_LOG; ++i)
+        {
+            if (m_pAccessLog[i])
+                m_pAccessLog[i]->log(pSession);
+        }
+    }
     else
         HttpLog::logAccess(m_sName.c_str(), m_sName.len(), pSession);
 }
@@ -419,35 +442,52 @@ void HttpVHost::onTimer()
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
     if (HttpServerConfig::getInstance().getProcNo())
     {
-        if (m_pAccessLog)
+        if (m_pAccessLog[0])
         {
-            if (m_pAccessLog->reopenExist() == -1)
+//             if (m_pAccessLog->reopenExist() == -1)
+//             {
+//                 LS_ERROR("[%s] Failed to open access log file %s.",
+//                          m_sName.c_str(), m_pAccessLog->getLogPath());
+//             }
+            
+            for (int i = 0; i < MAX_ACCESS_LOG; ++i)
             {
-                LS_ERROR("[%s] Failed to open access log file %s.",
-                         m_sName.c_str(), m_pAccessLog->getLogPath());
+                if (m_pAccessLog[i])
+                {
+                    m_pAccessLog[i]->flush();
+                    m_pAccessLog[i]->closeNonPiped();
+                }
+                else
+                    break;
             }
-            m_pAccessLog->flush();
         }
         if (m_pLogger)
             m_pLogger->getAppender()->reopenExist();
     }
     else
     {
-        if (m_pAccessLog && !m_pAccessLog->isPipedLog())
+        if (m_pAccessLog[0])
         {
-            if (LogRotate::testRolling(m_pAccessLog->getAppender(),
-                                       procConfig.getUid(),
-                                       procConfig.getGid()))
+            for (int i = 0; i < MAX_ACCESS_LOG; ++i)
             {
-                if (m_pAwstats)
-                    m_pAwstats->update(this);
-                else
-                    LogRotate::testAndRoll(m_pAccessLog->getAppender(),
-                                           procConfig.getUid(),
-                                           procConfig.getGid());
+                if (m_pAccessLog[i] && !m_pAccessLog[i]->isPipedLog())
+                {
+                    if (LogRotate::testRolling(
+                        m_pAccessLog[i]->getAppender(),
+                        procConfig.getUid(),
+                        procConfig.getGid()))
+                    {
+                        if (!i && m_pAwstats)
+                            m_pAwstats->update(this);
+                        else
+                            LogRotate::testAndRoll(m_pAccessLog[i]->getAppender(),
+                                                procConfig.getUid(),
+                                                procConfig.getGid());
+                    }
+                    else if (!i && m_pAwstats)
+                        m_pAwstats->updateIfNeed(time(NULL), this);
+                }
             }
-            else if (m_pAwstats)
-                m_pAwstats->updateIfNeed(time(NULL), this);
         }
         if (m_pBytesLog)
             LogRotate::testAndRoll(m_pBytesLog, procConfig.getUid(),
@@ -3136,7 +3176,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 
     getRootContext().setParent(
         &HttpServer::getInstance().getServerContext());
-    initAccessLog(pVhConfNode, 0);
+    initAccessLogs(pVhConfNode, 0);
     configVHScriptHandler(pVhConfNode);
 
     /**
@@ -3644,17 +3684,30 @@ void HttpVHost::enableAioLogging()
     if (m_iAioErrorLog < 0)
         m_iAioErrorLog = HttpLogSource::getAioServerErrorLog();
 
-    if (m_iAioAccessLog == 1)
+    if (m_iAioAccessLog == 1 && m_pAccessLog[0])
     {
-        getAccessLog()->getAppender()->setAsync();
-        LS_DBG_L("[VHost:%s] Enable AIO for Access Logging!",
-                 getName());
+        for (int i = 0; i < MAX_ACCESS_LOG; ++i)
+        {
+            if (m_pAccessLog[i] && !m_pAccessLog[i]->isPipedLog())
+            {
+                m_pAccessLog[i]->getAppender()->setAsync();
+                LS_DBG("[VHost:%s] Enable AIO for Access Logging!",
+                       getName());
+            }
+        }
     }
     if (m_iAioErrorLog == 1)
     {
         getLogger()->getAppender()->setAsync();
         LS_DBG_L("[VHost:%s] Enable AIO for Error Logging!",
                  getName());
+    }
+    
+    if (m_pBytesLog)
+    {
+        m_pBytesLog->setAsync();
+        LS_DBG("[VHost:%s] Enable AIO for Bandwidth Logging!",
+               getName());
     }
 }
 

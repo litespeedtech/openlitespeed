@@ -500,6 +500,19 @@ public:
 
     iteroffset doUpdate(iteroffset iterOff, LsShmHKey key, ls_strpair_t *pParms);
 
+
+    // The following two methods manipulate the hash only. Iterators are not allocated/freed.
+    // Assume the lock is locked.
+    // insertAlloced will update LRU, but not TID.
+    void insertAlloced(iteroffset iterOff, iterator iter);
+
+    // remove will update LRU and remove from TID.
+    void remove(iteroffset iterOff, iterator iter);
+
+    // Replace will update LRU, but not TID.
+    void replace(iteroffset oldIterOff, iterator oldIter,
+                    iteroffset newIterOff, iterator newIter);
+
     uint64_t doGetTid(iteroffset iterOff);
 
     uint64_t doUpdateTid(iteroffset iterOff);
@@ -786,10 +799,6 @@ private:
     LsShmHash &operator=(const LsShmHash &other);
 
     void releaseHTableShm();
-
-    void initIter(iteroffset iterOff, iterator iter);
-    // This will only remove the offset from the hash.  It will not delete from SHM.
-    void remove(iteroffset iterOff, iterator iter);
 
     LsShmTidMgr        *m_pTidMgr;
 

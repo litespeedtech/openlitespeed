@@ -971,6 +971,7 @@ installation()
     chmod  g+x $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid $LSWS_HOME/cgid
     chown  $CONF_OWN $LSWS_HOME/admin/tmp/sess_* 1>/dev/null 2>&1
     chown  $DIR_OWN $LSWS_HOME/cachedata
+    chown  $DIR_OWN $LSWS_HOME/autoupdate
     util_mkdir "$SDIR_OWN" $DIR_MOD Example 
 
     find "$LSWS_HOME/admin/tmp" -type s -atime +1 -delete 2>/dev/null

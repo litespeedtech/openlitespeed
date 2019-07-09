@@ -54,8 +54,10 @@ public:
     virtual void enableAioLogging() = 0;
     int initAccessLog(const XmlNode *pNode,
                       off_t *pRollingSize);
-    int initAccessLog(const XmlNode *pRoot,
+    int initAccessLogs(const XmlNode *pRoot,
                       int setDebugLevel);
+    int initAccessLog(const XmlNode *pRoot,
+                      int setDebugLevel, int inList = 0);
     int initErrorLog2(const XmlNode *pNode,
                       int setDebugLevel);
     int initErrorLog(const XmlNode *pRoot,

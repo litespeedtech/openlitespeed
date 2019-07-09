@@ -107,15 +107,37 @@ stop()
     killwatch
     kill -USR2 $PID
     kill $PID
-    ret=$?
-    if  [ $ret -eq 0 ]; then
-#    if [ -f $PIDFILE ]; then
-#        sleep 1
-#    fi
+    
+    test_running
+    if [ $RUNNING -eq 0 ]; then
         echo "[OK] $DESC: stopped."
     else
-        echo "[ERROR] can not kill $DESC"
+        for i in {1..15}
+        do
+            sleep 1
+            test_running
+            echo "[$i/15]: test if running"
+            
+            if [ $RUNNING -eq 1 ]; then
+                if [ "$i" = "14" ] || [ "$i" = "15" ] ; then
+                    kill -9 $PID
+                    echo "Sent kill again to stop."
+                else
+                    echo "[$i/15]: running, wait for 1 more second."
+                fi
+            else
+                break
+            fi
+        done
+        
+        test_running
+        if [ $RUNNING -eq 1 ]; then
+            echo "[ERROR] can not kill $DESC"
+        else
+            echo "[OK] $DESC: stopped."
+        fi
     fi
+
 }
 
 
