@@ -350,10 +350,15 @@ fi
 if [ -f "$LSWS_HOME/conf/httpd_config.conf" ] ; then
     INSTALL_TYPE="upgrade"
     #Now check if the user and group match with the conf file
-    OLD_USER_CONF=`grep "user" "$LSWS_HOME/conf/httpd_config.conf"`
-    OLD_GROUP_CONF=`grep "group" "$LSWS_HOME/conf/httpd_config.conf"`
+    OLD_USER_CONF=`grep -m 1 "user" "$LSWS_HOME/conf/httpd_config.conf"`
+    OLD_GROUP_CONF=`grep -m 1 "group" "$LSWS_HOME/conf/httpd_config.conf"`
     OLD_USER=`expr "$OLD_USER_CONF" : '\s*user\s*\(\S*\)'`
     OLD_GROUP=`expr "$OLD_GROUP_CONF" : '\s*group\s*\(\S*\)'`
+    
+    if [ "x$OLD_USER" = "x" ] ; then
+        OLD_USER=$WS_USER
+        OLD_GROUP=$WS_GROUP
+    fi
     
     if [ "$WS_USER" = "$DEFAULT_USER" ] && [ "$WS_GROUP" = "$DEFAULT_GROUP" ] ; then
         WS_USER=$OLD_USER
