@@ -91,6 +91,7 @@ $_gmsg['note_multicpufeature'] = 'This feature is available for Multiple-CPU lic
 $_gmsg['note_newver'] = 'New Release';
 $_gmsg['note_number'] = 'Number';
 $_gmsg['note_numvalidrange'] = 'Number valid range';
+$_gmsg['note_readonly_mode'] = 'Include file detected in configuration file. Entering Read-only mode.';
 $_gmsg['note_select_option'] = 'Please select';
 $_gmsg['note_serv_level'] = 'Server Level';
 $_gmsg['note_signout'] = 'Sign Out';

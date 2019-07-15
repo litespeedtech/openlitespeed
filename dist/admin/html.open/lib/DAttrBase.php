@@ -269,8 +269,9 @@ class DAttrBase
 
         if ($this->_multiInd == 2 && $value != null) {
             $v = preg_split("/\n+/", $value, -1, PREG_SPLIT_NO_EMPTY);
-            foreach ($v as $vi)
+            foreach ($v as $vi) {
                 $node->AddChild(new CNode($key, trim($vi)));
+            }
         }
         elseif ($this->_type == 'checkboxOr') {
             $node->AddChild(new CNode($key, $value));

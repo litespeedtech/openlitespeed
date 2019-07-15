@@ -15,13 +15,27 @@ pageSetUp();
 
 var pagefunction = function() {
 	// clears memory even if nothing is in the function
+   	var rospan = $("#readonlynotice");
+    <?php
+    if (defined('_CONF_READONLY_')) {
+        $alert_str = '<i class=\"fa fa-bell\"></i> ' . DMsg::UIStr('note_readonly_mode');
+    ?>
+        rospan.html("<?php echo $alert_str;?>");
+      	if (rospan.hasClass("hide"))
+            rospan.removeClass("hide");
 
-<?php
-if (Service::HasChanged()) { ?>
+    <?php } else { ?>
+        rospan.html("");
+      	if (!rospan.hasClass("hide"))
+            rospan.addClass("hide");
+
+    <?php }
+
+   if (Service::HasChanged()) { ?>
 	var span = $("#ribbon span");
 	if (span.hasClass("hide"))
 		span.removeClass("hide");
- <?php } ?>
+<?php } ?>
 };
 
 // end pagefunction

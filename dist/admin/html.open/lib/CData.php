@@ -369,7 +369,9 @@ class CData
         $confbuf = '';
         $this->before_write_conf($convertedroot);
         $convertedroot->PrintBuf($confbuf);
-        $this->write_file($filepath, $confbuf);
+        if (!defined('_CONF_READONLY_')) {
+            $this->write_file($filepath, $confbuf);
+        }
         return $convertedroot;
     }
 
@@ -657,6 +659,12 @@ class CData
             $this->_conferr = $this->_root->GetErr();
             error_log("fatel err " . $this->_root->GetErr());
             return false;
+        }
+        if ($parser->HasInclude()) {
+            // readonly
+            if (!defined('_CONF_READONLY_')) {
+                define('_CONF_READONLY_', true);
+            }
         }
 
         $this->after_read();

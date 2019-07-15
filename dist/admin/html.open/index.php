@@ -22,6 +22,7 @@ include("view/inc/nav.php");
 		</ol>
 		<!-- end breadcrumb -->
 		<span class="hide pull-right well well-sm text-warning"><i class="fa fa-bell"></i> <?php DMsg::EchoUIStr('note_configmodified')?></span>
+        <span id="readonlynotice" class="hide pull-right well well-sm text-warning"></span>
 	</div>
 	<!-- END RIBBON -->
 

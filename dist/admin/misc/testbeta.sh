@@ -1,5 +1,8 @@
 #! /bin/sh
 
+VERSION=v2.0-7/5/2019
+LOCKFILE=/tmp/olsupdatingflag
+
 echoc()
 {
 	if [ $# -eq 0 ] ; then
@@ -10,9 +13,10 @@ echoc()
 }
 
 if [ "x$1" = "x-v" ] || [ "x$1" = "x--version" ] ; then
-    echoc "Version 1.2-6/20/2019"
+    echoc "Version $VERSION"
     exit 0
 fi
+
 
 OS=`uname`
 if [ "x$OS" != "xLinux" ] ; then
@@ -36,6 +40,13 @@ if [ "x$1" = "x-h" ] || [ "x$1" = "x--help" ] ; then
     exit 0
 fi
 
+
+if [ -f $LOCKFILE ] ; then
+    echoc "Openlitespeed is updating, quit."
+    exit 0
+fi
+touch $LOCKFILE
+
 ISDEBUG=no
 if [ "x$1" = "x-d" ] ; then
     ISDEBUG=yes
@@ -50,6 +61,7 @@ else
     which wget
     if [ $? != 0 ] ; then
         echoc It seems you do not have wget installed, please install it first and try again.
+        rm -rf $LOCKFILE
         exit 1
     fi
 
@@ -57,7 +69,8 @@ else
         wget -nv -O release https://openlitespeed.org/preuse/release
         if [ $? != 0 ] ; then
             echoc Can not download the latest version file
-            exit 1;
+            rm -rf $LOCKFILE
+            exit 1
         else
             VERSION=`cat release`
         fi
@@ -79,14 +92,17 @@ else
 fi
 
 if [ ! -f $SERVERROOT/bin/openlitespeed ] ; then
+    rm -rf $LOCKFILE
     echoc It seems you do not have openlitespeed installed in $SERVERROOT.
     echoc So can not install/recover by this tool.
     exit 1
 fi
 
+
 if [ "x$ISRECOVER" = "xyes" ] ; then
     
     if [ ! -f $SERVERROOT/bin/openlitespeed.old ] ; then 
+        rm -rf $LOCKFILE
         echoc Can not find $SERVERROOT/bin/openlitespeed.old, can not recover
         echoc Quit.
         exit 1
@@ -99,6 +115,10 @@ if [ "x$ISRECOVER" = "xyes" ] ; then
     rm openlitespeed
     mv openlitespeed.old openlitespeed
 
+    rm lswsctrl
+    mv lswsctrl.old lswsctrl
+
+    
     cd ../modules
     rm cache.so
     mv cache.so.old cache.so
@@ -115,6 +135,7 @@ if [ "x$ISRECOVER" = "xyes" ] ; then
 
     $SERVERROOT/bin/lswsctrl start
     echo All binaries are recoved and service is on.
+    rm -rf $LOCKFILE
     exit 0
 fi
 
@@ -133,6 +154,7 @@ fi
 wget -nv -O ols.tgz $URL
 if [ $? != 0 ] ; then
     echoc Failed to download $URL, quit.
+    rm -rf $LOCKFILE
     exit 1
 fi
 
@@ -152,6 +174,15 @@ mv openlitespeed openlitespeed.old
 
 cp -f $SRCDIR/bin/openlitespeed openlitespeed-$VER
 ln -sf openlitespeed-$VER openlitespeed
+
+
+if [ -f lswsctrl.old ] ; then
+    rm -f lswsctrl.old
+fi
+mv lswsctrl lswsctrl.old
+
+cp -f $SRCDIR/bin/lswsctrl lswsctrl-$VER
+ln -sf lswsctrl-$VER lswsctrl
 
 cd ../modules
 if [ -f cache.so.old ] ; then
@@ -185,6 +216,7 @@ fi
 
 $SERVERROOT/bin/lswsctrl start
 echoc All binaries are updated and service is on.
+rm -rf $LOCKFILE
 echo 
 echo
 
