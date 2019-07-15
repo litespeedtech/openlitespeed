@@ -1011,19 +1011,19 @@ static const char *detectCp()
     return type;
 }
 
-static char *OsDetect()
+static char *OsDetect(char *s, int max_len)
 {
-    char s[64] = { 0 };
     struct utsname name;
     memset(&name, 0, sizeof(name));
-    uname(&name);
-    snprintf(s, 63, "%s_%s_%s", name.sysname, name.release, name.machine);
+    if (uname(&name) == -1)
+        strcpy(s, "unknown");
+    else
+        snprintf(s, max_len - 1, "%s_%s_%s", name.sysname, name.release, name.machine);
     return s;
 }
 
-static char *detectPlat()
+static char *detectPlat(char *str, int max_len)
 {
-    char str[65] = { 0 };
     char *p = str;
     AutoStr2 sPlat;
     sPlat.setStr(MainServerConfig::getInstance().getServerRoot());
@@ -1031,7 +1031,7 @@ static char *detectPlat()
     FILE *fp = fopen(sPlat.c_str(), "r");
     if (fp)
     {
-        if (!fgets(str, 64, fp))
+        if (!fgets(str, max_len - 1, fp))
             str[0] = 0x00;
         else
         {
@@ -1060,10 +1060,7 @@ void HttpServerImpl::checkOLSUpdate()
     struct stat sb;
     AutoStr2 sAutoUpdFile;
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
-    sAutoUpdFile.append("/autoupdate/", 12);
-    if (stat(sAutoUpdFile.c_str(), &sb) == -1)
-        mkdir(sAutoUpdFile.c_str(), 0755);
-    sAutoUpdFile.append("release", 7);
+    sAutoUpdFile.append("autoupdate/release", 18);
 
     if (stat(sAutoUpdFile.c_str(), &sb) != -1)
     {
@@ -1083,12 +1080,14 @@ void HttpServerImpl::checkOLSUpdate()
     m_pAutoUpdFetch->setCallBack(autoUpdCheckCb, this);
     GSockAddr m_addrResponder;
     char sUrl[256];
+    char osstr[64] = {0};
+    char plat[64] = {0};
     strcpy(sUrl, "http://openlitespeed.org/");
     m_addrResponder.setHttpUrl(sUrl, strlen(sUrl));
     strcat(sUrl, "packages/release?ver=");
     strcat(sUrl, PACKAGE_VERSION);
     strcat(sUrl, "&os=");
-    strcat(sUrl, OsDetect());
+    strcat(sUrl, OsDetect(osstr, 64));
     strcat(sUrl, "&env=");
     strcat(sUrl, detectCp());
 #ifdef PREBUILT_VERSION    
@@ -1096,7 +1095,7 @@ void HttpServerImpl::checkOLSUpdate()
 #else    
     strcat(sUrl, "_src_");
 #endif
-    strcat(sUrl, detectPlat());
+    strcat(sUrl, detectPlat(plat, 64));
     m_pAutoUpdFetch->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               m_addrResponder);
 
@@ -2960,6 +2959,12 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                 if (stat(sDir.c_str(), &sb) == -1)
                     mkdir(sDir.c_str(), 0710);
                 chown(sDir.c_str(), procConf.getUid(), procConf.getGid());
+                
+                AutoStr2 sAutoUpd = MainServerConfig::getInstance().getServerRoot();
+                sAutoUpd.append("autoupdate/", 11);
+                if (stat(sAutoUpd.c_str(), &sb) == -1)
+                    mkdir(sAutoUpd.c_str(), 0755);
+                chown(sAutoUpd.c_str(), procConf.getUid(), procConf.getGid());
             }
         }
 

@@ -487,13 +487,9 @@ class CNode
         } else {
             foreach ($extractData->_els as $key => $exchild) {
                 if (isset($child->_els[$key])) {
-                    $nd = $child->_els[$key];
-                    if (is_array($nd) || (is_a($exchild, 'CNode') && $exchild->HasFlag(CNode::BM_BLK)))
-                        $child->_els[$key] = $exchild; // this will lost inline notes
-                    else {
-                        $nd->SetVal($exchild->_v);
-                    }
-                } else if (is_array($exchild)) {
+                    unset($child->_els[$key]);
+                }
+                if (is_array($exchild)) {
                     foreach ($exchild as $exchildSingle) {
                         $child->AddChild($exchildSingle);
                     }
@@ -529,13 +525,15 @@ class CNode
             foreach ($this->_els as $k => $el) {
                 $buf .= "$indent   [$k] => ";
                 if (is_array($el)) {
-                    foreach ($el as $k0 => $child)
-                        $buf .= " [$k0] => ";
+                    $buf .= "\n";
                     $level ++;
-                    if (!is_a($child, 'CNode')) {
-                        $buf .= "not cnode ";
+                    foreach ($el as $k0 => $child) {
+                        $buf .= "$indent      [$k0] => ";
+                        if (!is_a($child, 'CNode')) {
+                            $buf .= "not cnode ";
+                        }
+                        $child->debug_out($buf, $level);
                     }
-                    $child->debug_out($buf, $level);
                 } else
                     $el->debug_out($buf, $level);
             }
@@ -570,7 +568,7 @@ class CNode
             return; // do not print including nodes
 
         if ($this->_type & self::BM_RAW) {
-            $buf .= $this->_v . "\n";
+            $buf .= rtrim($this->_v) . "\n";
             return;
         }
         $indent = str_pad('', $level * 2);

@@ -5,7 +5,7 @@ After OpenLiteSpeed has been installed, there should be a file named mod_securit
 2. Run following command in /openlitespeed_download/src/modules/modsecurity_ls to make mod_security.so:
  make -f Makefile.f
 
-Note: If compiling does not work, try "gmake" instead of "make".
+Note: If compiling does not work, try "gmake" instead of "make". FreeBSD need to use gmake.
 
 3. Copy the file to the modules directory in your OpenLiteSpeed installation. (Normally, it should be $LSWS_ROOT/modules/.)
 

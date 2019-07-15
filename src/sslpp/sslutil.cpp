@@ -25,7 +25,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
+#include <sys/socket.h>
 
 const int SSLUTIL_MAX_CERT_LENGTH = 40960;
 
@@ -683,7 +683,7 @@ static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 #endif
     )
     {
-        close(SSL_get_fd(pSSL));
+        shutdown(SSL_get_fd(pSSL), SHUT_RDWR);
 #ifndef OPENSSL_IS_BORINGSSL
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         SSLerr(SSL_F_SSL_DO_HANDSHAKE, SSL_R_SSL_HANDSHAKE_FAILURE);

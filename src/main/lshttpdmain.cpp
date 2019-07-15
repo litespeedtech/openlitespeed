@@ -74,11 +74,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <config.h>
+#include <sys/stat.h>
+
 
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Mon Jul  1 14:31:46 UTC 2019)"
+#define BUILDTIME  " (built: Mon Jul 15 20:13:15 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -173,19 +175,35 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);
 #else
     
-    //Since it is not DEBUG version, I will download the DEBUG version to run.
-    const char *pVer = PACKAGE_VERSION;
-    AutoStr2 sCmd;
-    sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
-    sCmd.append("/admin/misc/testbeta.sh -d ", 27);
-    sCmd.append(pVer, strlen(pVer));
-    
-    LS_NOTICE("[*****] non-debug version running, run cmd \"%s\".",
-              sCmd.c_str());
-    
-    if (fork() == 0)  // run it in child process
-        ::system(sCmd.c_str());
-    
+    const char *sUpdateFlag = "/tmp/olsupdatingflag";
+    struct stat st;
+    int exist = 0;
+    //Flag exist and less than 1 day
+    if ((exist = stat(sUpdateFlag, &st)) != -1 && (long)st.st_ctime + 86400 > DateTime::s_curTime)
+    {
+        LS_NOTICE("[*****] non-Debug version running and ols updating, will create core file.");
+        //We are in middle of graceful shutdown, do not restart another copy
+        SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);
+    }
+    else
+    {
+        if (exist == 0)
+            unlink(sUpdateFlag);
+        
+        coredump = 0;
+        //Since it is not DEBUG version, I will download the DEBUG version to run.
+        const char *pVer = PACKAGE_VERSION;
+        AutoStr2 sCmd;
+        sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
+        sCmd.append("/admin/misc/testbeta.sh -d ", 27);
+        sCmd.append(pVer, strlen(pVer));
+        
+        LS_NOTICE("[*****] non-debug version running, run cmd \"%s\".",
+                sCmd.c_str());
+        
+        if (fork() == 0)  // run it in child process
+            ::system(sCmd.c_str());
+    }
 #endif    
     
     if (coredump)
