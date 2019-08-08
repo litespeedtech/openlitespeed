@@ -59,6 +59,7 @@ type lsapi struct {
 }
 
 func Init(appDir, appName string) {
+	setDebugHandler(&dDisabled)
 	initLsapi()
 	initSys(appDir, appName)
 }
@@ -277,6 +278,13 @@ func lsapiListenAndServe(addr string, handler http.Handler) error {
 
 	for IsRunning() {
 		l.SetDeadline(time.Now().Add(time.Second))
+
+		if envPpid != 0 && envPpid != syscall.Getppid() {
+			log.Println("parent pid changed, stop.")
+			close(chStop)
+			break
+		}
+
 		c, err := l.Accept()
 		if err != nil {
 			if isNetErrorBad(err) {
@@ -286,10 +294,12 @@ func lsapiListenAndServe(addr string, handler http.Handler) error {
 			}
 		}
 		w := newWorker(c, handler)
+		Debugf("created worker %p, add one to wait group.\n", w)
 		wg.Add(1)
 		go w.serve()
 		cond_threads.L.Lock()
 		cnt_threads++
+		Debugf("Now have %d workers.\n", cnt_threads)
 		for cnt_threads >= envChildren {
 			cond_threads.Wait()
 		}
@@ -304,6 +314,7 @@ func lsapiListenAndServe(addr string, handler http.Handler) error {
 func workerDone() {
 	cond_threads.L.Lock()
 	cnt_threads--
+	Debugf("workerDone, now have %d workers.\n", cnt_threads)
 	cond_threads.L.Unlock()
 	cond_threads.Signal()
 

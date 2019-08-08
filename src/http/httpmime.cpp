@@ -1404,7 +1404,7 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
         {
             pHdlr = HandlerFactory::getHandler(type, handler);
             LS_DBG_H(&currentCtx, "HttpMime::addMimeHandler(server) getHandler with"
-                " name %s (for suffix %s) ret %p", handler, suffix, pHdlr);
+                " name %s (for suffix %s) ret %p.", handler, suffix, pHdlr);
         }
 
         else

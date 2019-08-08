@@ -3346,7 +3346,7 @@ int HttpServerImpl::configLsrecaptchaContexts()
         return -1;
     }
 
-    if (ConfigCtx::getCurConfigCtx()->getAbsolutePath(achPath, "$SERVER_ROOT/lsrecaptcha/_recaptcha_custom.shtml") == 0
+    if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achPath, "$SERVER_ROOT/lsrecaptcha/_recaptcha_custom.shtml") == 0
         && access(achPath, F_OK) == 0 )
     {
         LS_INFO(ConfigCtx::getCurConfigCtx(),

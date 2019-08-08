@@ -73,6 +73,12 @@ class RawFiles
 class PlainConfParser
 {
     private $_hasInclude;
+    private $_bypassIncludes = [];
+
+    public function SetBypassInclude($bypassPatterns)
+    {
+        $this->_bypassIncludes = $bypassPatterns;
+    }
 
     public function __construct()
     {
@@ -99,7 +105,16 @@ class PlainConfParser
         $fid = $rawfiles->AddRawFile($root);
 
         $filename = $root->Get(CNode::FLD_VAL);
+        if (!empty($this->_bypassIncludes)) {
+            foreach ($this->_bypassIncludes as $pattern) {
+                if (preg_match($pattern, $filename)) {
+                    //error_log("bypass $filename");
+                    return;
+                }
+            }
+        }
         $fullpath = $rawfiles->GetFullFileName($fid);
+
         $rawlines = file($fullpath);
 
         if ($rawlines == null) {

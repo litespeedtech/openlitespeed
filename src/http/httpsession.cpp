@@ -3360,7 +3360,7 @@ int HttpSession::sendDynBody()
         int len = toWrite;
         if (m_response.getContentLen() > 0)
         {
-            int allowed = m_response.getContentLen() - m_lDynBodySent;
+            off_t allowed = m_response.getContentLen() - m_lDynBodySent;
             if (len > allowed)
                 len = allowed;
             if (len <= 0)
@@ -3737,11 +3737,23 @@ void HttpSession::resetRespBodyBuf()
 }
 
 
+/**
+ * The below errors are different, the page is a whole page, 
+ * the 2nd error is just appended to the content which is already sent
+ */
+static char achError413Page[] =
+    "<HTML><HEAD><TITLE>Request Entity Too Large</TITLE></HEAD>"
+    "<BODY BGCOLOR=#FFFFFF><HR><H1>413 Request Entity Too Large</H1>"
+    "The dynamic response body size is over the limit. The limit is "
+    "set in the key 'maxDynRespSize' located in the tuning section of"
+    " the server configuration, and labeled 'max dynamic response body"
+    " size'.<HR></BODY></HTML>";
+
 static char achOverBodyLimitError[] =
-    "<p>The dynamic response body size is over the "
-    "limit, the response will be truncated by the web server. "
-    "The limit is set in the tuning section of the server configuration, "
-    "labeled 'Max Dynamic Response Body Size'.";
+    "<p>The dynamic response body size is over the limit, the response "
+    "will be truncated by the web server. The limit is set in the key "
+    "'maxDynRespSize' located in the tuning section of the server "
+    "configuration, and labeled 'max dynamic response body size'.";
 
 
 size_t HttpSession::getRespBodyBuffered()
@@ -3777,6 +3789,29 @@ int HttpSession::checkRespSize(int nobuffer)
     return ret;
 }
 
+int HttpSession::checkRespSize()
+{
+    if (getRespBodyBuf() && m_response.getBodySent() >
+            HttpServerConfig::getInstance().getMaxDynRespLen())
+    {
+        LS_WARN(getLogSession(), "The dynamic response body size is"
+                    " over the limit, abort!");
+        appendDynBody(achOverBodyLimitError, sizeof(achOverBodyLimitError) - 1);
+        if (m_pHandler)
+            m_pHandler->abortReq();
+        return 1;
+    }
+    else
+        return 0;
+}
+
+
+int HttpSession::createOverBodyLimitErrorPage()
+{
+    int len = sizeof(achError413Page) - 1;
+    appendDynBody(achError413Page, len);
+    return len;
+}
 
 //return 0 , caller should continue
 //return !=0, the request has been redirected, should break the normal flow

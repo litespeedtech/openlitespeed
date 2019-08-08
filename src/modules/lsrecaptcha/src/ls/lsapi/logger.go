@@ -20,9 +20,14 @@ package lsapi
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+	"time"
 )
 
 type logger struct {
@@ -30,18 +35,37 @@ type logger struct {
 	bytesbuf *bytes.Buffer
 }
 
+type fileLogger struct {
+	lock     sync.Mutex
+	filename string
+	handle   *os.File
+}
+
+type debugHandler interface {
+	printf(format string, v ...interface{})
+	print(s string)
+}
+type debugEnabled struct{}
+type debugDisabled struct{}
+
 const (
 	defaultLogFile string = "error_log"
+	logRotateSize  int64  = 1000000
 )
 
-var log_handle *os.File
+var log_handle *fileLogger
+
+var dEnabled debugEnabled
+var dDisabled debugDisabled
+
+var dHandler debugHandler
 
 func LogToFile(logfile string) error {
 	if logfile == "" {
 		logfile = defaultLogFile
 	}
 	var err error
-	log_handle, err = os.OpenFile(logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	log_handle, err = createFileLogger(logfile)
 	if err != nil {
 		return err
 	}
@@ -52,7 +76,7 @@ func LogToFile(logfile string) error {
 
 func closeLogFile() {
 	if log_handle != nil {
-		log_handle.Close()
+		log_handle.close()
 		log_handle = nil
 	}
 }
@@ -103,4 +127,127 @@ func (self logger) Write(p []byte) (n int, err error) {
 	}
 
 	return pLen, nil
+}
+
+func createFileLogger(filename string) (*fileLogger, error) {
+	w := &fileLogger{filename: filename}
+	err := w.rotate()
+	if err != nil {
+		log.Printf("Log file not accessible %s\n", w.filename)
+		w.filename = "/tmp/go_" + filepath.Base(w.filename) + "." + strconv.Itoa(os.Getpid())
+		log.Printf("Try to write to %s\n", w.filename)
+		err = w.rotate()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return w, nil
+}
+
+func (w *fileLogger) close() error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	err := w.handle.Close()
+	w.handle = nil
+	return err
+}
+
+// Write satisfies the io.Writer interface.
+func (w *fileLogger) Write(output []byte) (int, error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	fi, err := w.handle.Stat()
+	if err != nil {
+		return 0, err
+	} else if fi.Size() > logRotateSize {
+		err = w.rotate()
+		if err != nil {
+			w.handle = nil
+			log.SetOutput(os.Stderr)
+			log.Println("Failed to rotate log, revert to default.")
+			return 0, err
+		}
+	}
+	return w.handle.Write(output)
+}
+
+// Perform the actual act of rotating and reopening file.
+func (w *fileLogger) rotate() (err error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
+	// Close existing file if open
+	if w.handle != nil {
+		err = w.handle.Close()
+		w.handle = nil
+		if err != nil {
+			return err
+		}
+	}
+	// Rename dest file if it already exists
+	_, err = os.Stat(w.filename)
+	if err == nil {
+		newName := w.filename + time.Now().Format(".2006_01_02")
+		matches, err := filepath.Glob(newName + "*")
+		if err != nil {
+			return err
+		}
+		if len(matches) != 0 {
+			newName += fmt.Sprintf(".%02d", len(matches))
+		}
+		//2019_07_11.03
+		err = os.Rename(w.filename, newName)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create a file.
+	w.handle, err = os.Create(w.filename)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func Debugf(format string, v ...interface{}) {
+	dHandler.printf(format, v)
+}
+
+func Debug(s string) {
+	dHandler.print(s)
+}
+
+func toggleDebug() {
+	if getDebugHandler() == &dDisabled {
+		log.Println("Enable Debug Logging!")
+		setDebugHandler(&dEnabled)
+	} else {
+		log.Println("Disable Debug Logging!")
+		setDebugHandler(&dDisabled)
+	}
+}
+
+func setDebugHandler(d debugHandler) {
+	dHandler = d
+}
+
+func getDebugHandler() debugHandler {
+	return dHandler
+}
+
+func (debugEnabled) printf(format string, v ...interface{}) {
+	log.Printf("[DEBUG] "+format, v)
+}
+
+func (debugEnabled) print(s string) {
+	log.Println("[DEBUG] " + s)
+}
+
+func (debugDisabled) printf(format string, v ...interface{}) {
+	// Debug disabled, do not log.
+}
+
+func (debugDisabled) print(s string) {
+	// Debug disabled, do not log.
 }

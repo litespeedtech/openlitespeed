@@ -34,6 +34,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"syscall"
 )
 
 type packetType uint8
@@ -104,6 +105,7 @@ var envChildren int
 var envExtraChildren int
 var envMaxIdleChildren int
 var envMaxProcessTime int
+var envPpid int
 
 var envRecoverNetwork string
 var envRecoverAddr string
@@ -131,12 +133,18 @@ func envStrToInt(n string, d int) int {
 
 func initLsapiEnv() {
 
+	envPpid = syscall.Getppid()
+
 	if envLsapiOn = envStrToInt("LSAPI_ON", 1); envLsapiOn == 0 {
 		// Not lsapi, no need to continue.
 		return
 	}
 
 	setEndian()
+
+	if noCheckPpid := envStrToInt("LSAPI_PPID_NO_CHECK", 0); noCheckPpid == 1 {
+		envPpid = 0
+	}
 
 	envMaxReqs = envStrToInt("LSAPI_MAX_REQS", 10000)
 	envAcceptNotify = envStrToInt("LSAPI_ACCEPT_NOTIFY", 0)
