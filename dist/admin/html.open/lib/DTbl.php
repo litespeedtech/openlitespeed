@@ -210,8 +210,8 @@ class DTbl
                 break;
             }
         }
-        if ($all_blocked || defined('_CONF_READONLY_')) {
-            $actString = null;
+        if ($actString && ($all_blocked || defined('_CONF_READONLY_'))) {
+            $actString = (strpos($actString, 'B') !== false) ? 'B' : null;
         }
 
         if ($actString != null) {
@@ -507,8 +507,8 @@ class DTbl
                 $ti = $action_attr->_minVal;
             }
             $actString = $action_attr->_maxVal;
-            if (defined('_CONF_READONLY_')) {
-                $actString = 'v';
+            if ($actString && defined('_CONF_READONLY_')) {
+                $actString = (strpos($actString, 'X') !== false) ? 'X' : 'v';
             }
 
             $actdata = $disp->GetActionData($actString, $ti, $key0);

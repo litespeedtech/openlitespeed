@@ -14,7 +14,7 @@ class ControllerBase
 
 	protected function __construct()
 	{
-		$this->_disp = new DInfo();
+		$this->_disp = DInfo::singleton();
 	}
 
 	public static function singleton()

@@ -180,9 +180,12 @@ class DAttrBase
             }
         }
         elseif ($this->_type == 'ctxseq') {
-            $o = $value . ' <a href="javascript:lst_ctxseq(' . $value
+            $o = $value;
+            if (!defined('_CONF_READONLY_')) {
+                $o .= ' <a href="javascript:lst_ctxseq(' . $value
                     . ')" class="btn bg-color-blueLight btn-xs txt-color-white"><i class="fa fa-plus"></i></a> <a href="javascript:lst_ctxseq(-' . $value
                     . ')" class="btn bg-color-blueLight btn-xs txt-color-white"><i class="fa fa-minus"></i></a>';
+            }
         }
         else if ($this->_key == "note") {
             $o .= '<textarea readonly style="width:100%;height:auto">' . htmlspecialchars($value, ENT_QUOTES) . '</textarea>';

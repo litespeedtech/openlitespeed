@@ -603,7 +603,9 @@ public:
     int shouldSuspendReadingResp();
     void resetRespBodyBuf();
     int checkRespSize(int nobuffer);
+    int checkRespSize();
 
+    int createOverBodyLimitErrorPage();
     int respHeaderDone();
 
     void setRespBodyDone()

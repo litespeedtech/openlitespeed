@@ -342,6 +342,19 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_serverlog'), $attrs, 'fileName');
     }
 
+    protected function add_S_ACLOG_TOP($id)
+    {
+        $align = array('center', 'center', 'center');
+
+        $attrs = array(
+            $this->_attrs['fileName2']->dup(null, null, 'accessLog_fileName'),
+            $this->_attrs['logFormat'],
+            $this->_attrs['rollingSize'],
+            self::NewActionAttr('S_ACLOG', 'Ed')
+        );
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG', $align);
+    }
+
     protected function add_S_ACLOG($id)
     {
         $attrs = array(
@@ -419,7 +432,7 @@ class DTblDefBase
             self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 16384),
             self::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 16380),
             self::NewIntAttr('maxReqBodySize', DMsg::ALbl('l_maxreqbodysize'), false, '1M', null),
-            self::NewIntAttr('maxDynRespHeaderSize', DMsg::ALbl('l_maxdynrespheadersize'), false, 200, 8192),
+            self::NewIntAttr('maxDynRespHeaderSize', DMsg::ALbl('l_maxdynrespheadersize'), false, 200, '64K'),
             self::NewIntAttr('maxDynRespSize', DMsg::ALbl('l_maxdynrespsize'), false, '1M', null)
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_reqresp'), $attrs);
@@ -452,6 +465,23 @@ class DTblDefBase
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_brcompress'), $attrs, 'brotliTuning');
     }
+
+    private function add_S_TUNING_QUIC($id)
+	{
+		$attrs = array(
+            self::NewBoolAttr('quicEnable', DMsg::ALbl('l_enablequic')),
+            self::NewTextAttr('quicShmDir', DMsg::ALbl('l_quicshmdir'), 'cust'),
+            self::NewTextAttr('quicVersions', DMsg::ALbl('l_quicversions'), 'cust'),
+            self::NewIntAttr('quicCfcw', DMsg::ALbl('l_quiccfcw'), true, '64K', '512M'),
+            self::NewIntAttr('quicMaxCfcw', DMsg::ALbl('l_quicmaxcfcw'), true, '64K', '512M'),
+            self::NewIntAttr('quicSfcw', DMsg::ALbl('l_quicsfcw'), true, '64K', '128M'),
+            self::NewIntAttr('quicMaxSfcw', DMsg::ALbl('l_quicmaxsfcw'), true, '64K', '128M'),
+            self::NewIntAttr('quicMaxStreams', DMsg::ALbl('l_quicmaxstreams'), true, 10, 1000),
+            self::NewIntAttr('quicHandshakeTimeout', DMsg::ALbl('l_quichandshaketimeout'), true, 1, 15),
+            self::NewIntAttr('quicIdleTimeout', DMsg::ALbl('l_quicidletimeout'), true, 10, 30),
+			);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_quic'), $attrs);
+	}
 
     protected function add_S_SEC_FILE($id)
     {
@@ -524,7 +554,6 @@ class DTblDefBase
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
 	}
-
 
     protected function add_S_SEC_DENY($id)
     {
@@ -964,7 +993,8 @@ class DTblDefBase
             $this->_attrs['ssl_renegProtection'],
             $this->_attrs['sslSessionCache'],
             $this->_attrs['sslSessionTickets'],
-            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '0' => DMsg::ALbl('o_none')))
+            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '0' => DMsg::ALbl('o_none'))),
+            self::NewBoolAttr('enableQuic', DMsg::ALbl('l_allowquic'), true, 'allowQuic'),
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_securityandfeatures'), $attrs);
     }
@@ -975,6 +1005,8 @@ class DTblDefBase
             $this->_attrs['ssl_renegProtection'],
             $this->_attrs['sslSessionCache'],
             $this->_attrs['sslSessionTickets'],
+            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '0' => DMsg::ALbl('o_none'))),
+            self::NewBoolAttr('enableQuic', DMsg::ALbl('l_enablequic'), true, 'vhEnableQuic'),
                 );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_sec'), $attrs);
     }
@@ -1049,6 +1081,20 @@ class DTblDefBase
             $this->_attrs['rollingSize']
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhlog'), $attrs, 'fileName');
+    }
+
+    protected function add_V_ACLOG_TOP($id)
+    {
+        $align = array('center', 'center', 'center');
+
+        $attrs = array(
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), array(0 => DMsg::ALbl('o_ownlogfile'), 1 => DMsg::ALbl('o_serverslogfile'), 2 => DMsg::ALbl('o_disabled')), false, 'aclogUseServer'),
+            $this->_attrs['fileName3']->dup(null, null, 'accessLog_fileName'),
+            $this->_attrs['logFormat'],
+            $this->_attrs['rollingSize'],
+            self::NewActionAttr('V_ACLOG', 'Ed')
+        );
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'V_ACLOG', $align);
     }
 
     protected function add_V_ACLOG($id)
@@ -1342,6 +1388,12 @@ class DTblDefBase
     protected function add_T_LOG($id)
     {
         $this->_tblDef[$id] = $this->DupTblDef('V_LOG', $id);
+        $this->_tblDef[$id]->ResetAttrEntry(1, $this->_attrs['tp_vrFile']);
+    }
+
+    protected function add_T_ACLOG_TOP($id)
+    {
+        $this->_tblDef[$id] = $this->DupTblDef('V_ACLOG_TOP', $id);
         $this->_tblDef[$id]->ResetAttrEntry(1, $this->_attrs['tp_vrFile']);
     }
 

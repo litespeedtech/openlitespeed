@@ -536,11 +536,16 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
                                   );
     if (m_pExtraReqHdrs != NULL)
     {
+        int trim = 0;
+        if (extraLen >= 2
+                && *(m_pExtraReqHdrs + extraLen - 2) == '\r'
+                && *(m_pExtraReqHdrs + extraLen - 1) == '\n')
+            trim = 2;
+
         m_reqHeaderLen += safe_snprintf(m_pReqBuf + m_reqHeaderLen,
                                     len - m_reqHeaderLen,
                                     "%.*s\r\n",
-                                    extraLen, m_pExtraReqHdrs
-                                    );
+                                    extraLen - trim, m_pExtraReqHdrs);
     }
     if (m_reqBodyLen > 0)
     {

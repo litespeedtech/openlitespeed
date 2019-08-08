@@ -78,7 +78,7 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
     }
 
 #ifdef SSL_ASYNC_PK
-    SslAsyncPk::enableApk(pContext->m_pCtx);
+    ssl_ctx_enable_apk(pContext->m_pCtx);
 #endif
 
 #ifdef SSLCERTCOMP
@@ -224,7 +224,7 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
     }
 
 #ifdef SSL_ASYNC_PK
-    SslAsyncPk::enableApk(pContext->m_pCtx);
+    ssl_ctx_enable_apk(pContext->m_pCtx);
 #endif
 
 #ifdef SSLCERTCOMP
@@ -979,7 +979,7 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
 /* This will neeed to be updated as the ID versions change.  Eventually
  * it will become simply "h3"
  */
-#define H3_ALPN "\x05h3-20"
+#define H3_ALPN "\x05h3-22"
 #define H3_ALSZ (sizeof(H3_ALPN) - 1)
 
 /**

@@ -8,7 +8,7 @@ class FileLine
     public $_fline0;
     public $_fline1;
 
-    function __construct($file_id, $from_line, $to_line, $comment)
+    public function __construct($file_id, $from_line, $to_line, $comment)
     {
         $this->_fid = $file_id;
         $this->_fline0 = $from_line;
@@ -16,11 +16,15 @@ class FileLine
         $this->_note0 = $comment;
     }
 
-    function AddEndComment($note1)
+    public function AddEndComment($note1)
     {
         $this->_note1 .= "$note1\n";
     }
 
+    public function debug_str()
+    {
+        return sprintf("fid=%s from line %s to %s", $this->_fid, $this->_fline0, $this->_fline1);
+    }
 }
 
 class CNode
@@ -515,10 +519,17 @@ class CNode
         }
     }
 
+    public function debug_str()
+    {
+        $buf = '';
+        $this->debug_out($buf);
+        return $buf;
+    }
+
     public function debug_out(&$buf, $level = 0)
     {
         $indent = str_pad('', $level * 2);
-        $buf .= "key={$this->_k} val= {$this->_v} type={$this->_type}";
+        $buf .= "key={$this->_k} val= {$this->_v} type={$this->_type} ";
         if ($this->_els != null) {
             $buf .= " {\n";
             $level ++;

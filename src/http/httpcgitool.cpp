@@ -30,7 +30,7 @@
 #include <http/ip2geo.h>
 #include <http/iptoloc.h>
 #include <http/clientinfo.h>
-
+#include <http/httpserverconfig.h>
 #include <http/requestvars.h>
 #include <lsiapi/lsiapi_const.h>
 #include <log4cxx/logger.h>
@@ -282,7 +282,16 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             off_t lContentLen = strtoll(pValue, NULL, 10);
             if ((lContentLen >= 0) && (lContentLen != LLONG_MAX))
             {
-                pResp->setContentLen(lContentLen);
+                if (lContentLen > HttpServerConfig::getInstance().getMaxDynRespLen())
+                {
+                    pReq->setStatusCode(SC_413);
+                    int len = pExtConn->getHttpSession()->createOverBodyLimitErrorPage();
+                    pResp->setContentLen(len);
+                    pExtConn->getHttpSession()->endResponse(0);
+                    return LS_FAIL;
+                }
+                else
+                    pResp->setContentLen(lContentLen);
                 status |= HEC_RESP_CONT_LEN;
                 pReq->orContextState(RESP_CONT_LEN_SET);
             }

@@ -45,13 +45,13 @@ class DPageDef
 				['S_PROCESS',
 			'S_GENERAL',
 			new DTblMap(['logging:log', 'errorlog$fileName' ], 'S_LOG'),
-			new DTblMap(['logging:accessLog', 'accesslog$fileName' ], 'S_ACLOG'),
+			new DTblMap(['logging:accessLog', '*accesslog$fileName' ], 'S_ACLOG'),
 			'S_INDEX',
 			new DTblMap('expires', 'A_EXPIRES'),
             'S_AUTOLOADHTA', 'S_FILEUPLOAD',
 			new DTblMap(['ipToGeo:geoipDB', '*geoipdb$geoipDBFile' ], 'S_GEOIP'),
             new DTblMap('ip2locDB', 'S_IP2LOCATION'),
-			new DTblMap('tuning', ['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL' ]),
+			new DTblMap('tuning', ['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL', /*'S_TUNING_QUIC'*/ ]),
 			new DTblMap(['security:fileAccessControl', 'fileAccessControl' ], 'S_SEC_FILE'),
 			new DTblMap(['security:perClientConnLimit', 'perClientConnLimit' ], 'S_SEC_CONN'),
 			new DTblMap(['security:CGIRLimit', 'CGIRLimit' ], 'S_SEC_CGI'),
@@ -81,7 +81,7 @@ class DPageDef
 				[
                     'V_GENERAL',
                     new DTblMap(['logging:log','errorlog$fileName'], 'V_LOG'),
-                    new DTblMap(['logging:accessLog','accesslog$fileName'], 'V_ACLOG'),
+                    new DTblMap(['logging:accessLog','*accesslog$fileName'], 'V_ACLOG'),
                     new DTblMap('index', 'VT_INDXF'),
                     new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
                     new DTblMap(['scriptHandlerList','scripthandler'],
@@ -121,7 +121,7 @@ class DPageDef
                             [
                                 'T_GENERAL2',
                                 new DTblMap(['logging:log','errorlog$fileName'], 'T_LOG'),
-                                new DTblMap(['logging:accessLog','accesslog$fileName'], 'T_ACLOG'),
+                                new DTblMap(['logging:accessLog','*accesslog$fileName'], 'T_ACLOG'),
                                 new DTblMap('index', 'VT_INDXF'),
                                 new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
                                 new DTblMap(['scriptHandlerList','scripthandler'],
@@ -194,12 +194,12 @@ class DPageDef
         $id = 'log';
 		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('',
 				[new DTblMap('errorlog$fileName', 'S_LOG'),
-						new DTblMap('accesslog$fileName', 'S_ACLOG')]));
+						new DTblMap('accesslog$fileName', 'S_ACLOG_TOP', 'S_ACLOG')]));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'tuning';
 		$page = new DPage($id, DMsg::UIStr('tab_tuning'), new DTblMap('tuning',
-				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL']));
+				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL', /*'S_TUNING_QUIC'*/]));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'sec';
@@ -298,12 +298,12 @@ class DPageDef
 		$id = 'log';
 		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('',
 				[new DTblMap('errorlog$fileName', 'V_LOG'),
-						new DTblMap('accesslog$fileName', 'V_ACLOG')]));
+						new DTblMap('accesslog$fileName', 'V_ACLOG_TOP', 'V_ACLOG')]));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('virtualHostConfig',
 				[new DTblMap('errorlog$fileName', 'T_LOG'),
-						new DTblMap('accesslog$fileName', 'T_ACLOG')]));
+						new DTblMap('accesslog$fileName', 'T_ACLOG_TOP', 'T_ACLOG')]));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'sec';

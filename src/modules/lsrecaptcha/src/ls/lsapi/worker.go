@@ -70,7 +70,7 @@ func (self *worker) Read(p []byte) (int, error) {
 
 	bytesRead, err := self.conn.Read(p[off:])
 	self.bodyLeft -= int64(bytesRead)
-	return bytesRead, err
+	return off + bytesRead, err
 }
 
 func (self *worker) getRequest() (*http.Request, error) {
@@ -96,22 +96,28 @@ func (self *worker) cleanUp() {
 
 func (self *worker) serve() {
 	defer self.cleanUp()
+
+	Debugf("In worker serve, worker: %p.\n", self)
 	if envAcceptNotify != 0 {
 		if err := sendPacketHeader(self.conn, lsapiReqReceived); err != nil {
 			return
 		}
 	}
 	for IsRunning() {
+		Debugf("is running, wait for request, worker: %p.\n", self)
 		// If that is -1, we exit the loop.
 		http_req, err := self.getRequest()
 		if err != nil {
+			Debugf("get request returned worker: %p, err %+v\n", self, err)
 			return
 		}
+		Debugf("serve request, worker: %p\n", self)
 		if err := self.serveRequest(http_req); err != nil {
 			return
 		}
 
 	}
+	Debugf("Exit serve, worker: %p\n", self)
 }
 
 func (self *worker) serveRequest(http_req *http.Request) error {

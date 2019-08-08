@@ -2096,7 +2096,6 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
 {
     int ret;
     char *p;
-    ret = SC_404;
     //find the first valid file or directory
     p = pEnd;
     do
@@ -2105,7 +2104,12 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
             --p;
         *p = 0;
         ret = fileStat(pBuf, &m_fileStat);
-
+        if (ret == -1 && m_lastStatRes == EACCES)
+        {
+            LS_DBG_L(getLogSession(), "File not accessible [%s].", pBuf);
+            return SC_403;
+        }
+        
         if (p != pEnd)
             *p = '/';
         if (ret != -1)

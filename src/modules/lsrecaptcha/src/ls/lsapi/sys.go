@@ -42,6 +42,7 @@ var sysDir string = "/tmp"
 var sock string
 
 var is_running int
+var chStop chan os.Signal
 
 // func GetPidFile() string { return pidfile }
 func GetSock() string { return sock }
@@ -132,7 +133,7 @@ func initSys(newSysDir, newSysFileName string) {
 // termination signal sent to the process.
 func registerSignalHandler() {
 	log.Println("Register signal handler.")
-	var chStop = make(chan os.Signal)
+	chStop = make(chan os.Signal)
 	signal.Notify(chStop, syscall.SIGKILL)
 	signal.Notify(chStop, syscall.SIGTERM)
 	signal.Notify(chStop, syscall.SIGINT)
@@ -143,25 +144,31 @@ func registerSignalHandler() {
 }
 
 // handleSignal handles the termination signals sent to the process.
-// SIGTERM, SIGINT, SIGUSR1 will stop the process.
-// SIGUSR2 will attempt to restart it.
+// SIGTERM, SIGINT will stop the process.
+// SIGUSR1 will attempt to restart it.
 func handleSignal(chStop chan os.Signal) {
 	// setPidFile()
 	// defer os.Remove(GetPidFile())
 
-	sig := <-chStop
-	log.Printf("Caught signal %+v.\n", sig)
+	for {
+		sig := <-chStop
+		log.Printf("Caught signal %+v.\n", sig)
 
-	// Run any clean up code here.
+		// Run any clean up code here.
 
-	if sig == syscall.SIGUSR2 {
-		log.Println("Try to gracefully restart lsapi.")
-		// os.Remove(GetPidFile())
-		GracefulRestart()
-	} else {
-		log.Println("Stopping the process.")
-		// defer os.Remove(GetPidFile())
-		Stop()
+		if sig == syscall.SIGUSR1 {
+			log.Println("Try to gracefully restart lsapi.")
+			// os.Remove(GetPidFile())
+			GracefulRestart()
+			break
+		} else if sig == syscall.SIGUSR2 {
+			toggleDebug()
+		} else {
+			log.Println("Stopping the process.")
+			// defer os.Remove(GetPidFile())
+			Stop()
+			break
+		}
 	}
 	// Give main routine a chance to stop.
 	time.Sleep(2 * time.Second)

@@ -226,13 +226,10 @@ inst_lsphp7()
 
 #script start here
 cd `dirname "$0"`
-source ./functions.sh 2>/dev/null
+. ./functions.sh
 if [ $? != 0 ] ; then
-    . ./functions.sh
-    if [ $? != 0 ] ; then
-        echo [ERROR] Can not include 'functions.sh'.
-        exit 1
-    fi
+    echo [ERROR] Can not include 'functions.sh'.
+    exit 1
 fi
 
 #If install.sh in admin/misc, need to change directory

@@ -22,14 +22,14 @@
 const char HttpServerVersion::s_pVersion[] = "LiteSpeed/" PACKAGE_VERSION
         " Open\n\tmodule versions:\n" LS_MODULE_VERSION_INFO;
 
-int        HttpServerVersion::s_iVersionLen =
-    9; //sizeof( s_pVersion ) - 1;
+int  HttpServerVersion::s_iVersionLen = 9;
 
 void HttpServerVersion::hideDetail(int hide)
 {
     if (hide)
         s_iVersionLen = 9;
     else
-        s_iVersionLen = sizeof(s_pVersion) - 1;
+        s_iVersionLen = strchr(HttpServerVersion::s_pVersion, '\n') - 
+                            HttpServerVersion::s_pVersion;
 }
 

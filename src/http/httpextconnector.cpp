@@ -235,7 +235,7 @@ int HttpExtConnector::flushResp()
     //return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
     int finished = m_iState & (HEC_ABORT_REQUEST | HEC_ERROR | HEC_COMPLETE);
     int save_errno = errno;
-    int ret;
+    m_pSession->checkRespSize();
     if (m_pSession->shouldSuspendReadingResp())
     {
         LS_DBG_M(getLogger(),
@@ -243,7 +243,7 @@ int HttpExtConnector::flushResp()
                     getLogId());
         m_pProcessor->suspendRead();
     }
-    ret = m_pSession->flush();
+    int ret = m_pSession->flush();
     if ((ret == 0) && (!finished) && m_pProcessor)
     {
         m_pSession->rewindRespBodyBuf();

@@ -47,6 +47,22 @@ class DInfo
     private $_isPrintingLinkedTbl;
     private $_allActions;
 
+    private static $_instance;
+
+	public static function singleton()
+	{
+		if (!isset(self::$_instance)) {
+			self::$_instance = new self();
+		}
+
+		return self::$_instance;
+	}
+
+    private function __construct()
+    {
+
+    }
+
     public function ShowDebugInfo()
     {
         return "DINFO: conftype={$this->_confType} view={$this->_view} viewname={$this->_viewName} mid={$this->_mid} pid={$this->_pid} tid={$this->_tid} ref={$this->_ref} act={$this->_act}\n";
