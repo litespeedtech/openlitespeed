@@ -1854,7 +1854,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
 {
     int ret;
     char *p;
-    ret = SC_404;
+    int errStatus = SC_404;
     //find the first valid file or directory
     p = pEnd;
     do
@@ -1863,7 +1863,9 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
             --p;
         *p = 0;
         ret = ls_fio_stat(pBuf, &m_fileStat);
-
+        if (ret == -1 && errno == EACCES)
+            errStatus = SC_403;
+        
         if (p != pEnd)
             *p = '/';
         if (ret != -1)
@@ -1879,7 +1881,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                         if ((!m_pContext->isAppContext())
                             && (strcmp(p, "favicon.ico") != 0))
                             LS_DBG_L(getLogSession(), "File not found [%s].", pBuf);
-                        return SC_404;
+                        return errStatus;
                     }
                 }
             }

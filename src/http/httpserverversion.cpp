@@ -22,8 +22,7 @@
 const char HttpServerVersion::s_pVersion[] = "LiteSpeed/" PACKAGE_VERSION
         " Open";
 
-int        HttpServerVersion::s_iVersionLen =
-    9; //sizeof( s_pVersion ) - 1;
+int  HttpServerVersion::s_iVersionLen = 9;
 
 void HttpServerVersion::hideDetail(int hide)
 {

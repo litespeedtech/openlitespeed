@@ -36,6 +36,8 @@ static const char s_h2sUpgradeResponse[] =
 static const char *s_clientPreface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 #define H2_CLIENT_PREFACE_LEN   24
 
+#define MAX_CONTROL_FRAMES_RATE 1000
+#define MAX_OUT_BUF_SIZE        65536
 
 static hash_key_t int_hash(const void *p)
 {
@@ -77,6 +79,7 @@ H2Connection::H2Connection()
     , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
     , m_tmLastFrameIn(0)
     , m_mapStream(50, int_hash, int_comp)
+    , m_iControlFrames(0)
     , m_iFlag(0)
     , m_iCurDataOutWindow(H2_FCW_INIT_SIZE)
     , m_iCurInBytesToUpdate(0)
@@ -109,7 +112,6 @@ HioHandler *H2Connection::get()
 
 int H2Connection::onInitConnected()
 {
-    m_iState = HIOS_CONNECTED;
     setOS(getStream());
     getStream()->continueRead();
     return 0;
@@ -252,6 +254,7 @@ int H2Connection::processInput()
 int H2Connection::onReadEx2()
 {
     int n = 0, avaiLen = 0;
+    int round = 0;
     while (true)
     {
         if (m_bufInput.available() < 500)
@@ -268,6 +271,18 @@ int H2Connection::onReadEx2()
 
         if (processInput() == LS_FAIL)
             return LS_FAIL;
+        if (n < avaiLen || ++round >= 8)
+        {
+            if (round >= 8)
+            {
+                if (getBuf()->size() >= MAX_OUT_BUF_SIZE)
+                {
+                    m_iFlag |= H2_CONN_FLAG_PAUSE_READ;
+                    getStream()->suspendRead();
+                }
+            }
+            return 0;
+        }
     }
     // must start to close connection
     // must turn off READING event in the meantime
@@ -317,7 +332,7 @@ int H2Connection::processFrame(H2FrameHeader *pHeader)
     case H2_FRAME_PING:
         return processPingFrame(pHeader);
     default:
-        sendPingFrame(1, (uint8_t *)"\0\0\0\0\0\0\0\0");
+        sendPingFrame(H2_FLAG_ACK, (uint8_t *)"\0\0\0\0\0\0\0\0");
         break;
     }
     return 0;
@@ -490,6 +505,11 @@ int H2Connection::processSettingFrame(H2FrameHeader *pHeader)
     m_iCurrentFrameRemain = 0;
     m_iFlag |= H2_CONN_FLAG_SETTING_RCVD;
 
+    if (++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
+    {
+        LS_INFO(getLogSession(), "SETTINGS frame abuse detected, close connection.");
+        return LS_FAIL;
+    }
     sendSettingsFrame();
     sendFrame0Bytes(H2_FRAME_SETTINGS, H2_FLAG_ACK, 0);
 
@@ -514,7 +534,7 @@ int H2Connection::resetStream(uint32_t id, H2Stream *pStream,
         id = pStream->getStreamID();
     else
         pStream = findStream(id);
-    if (id > 0)
+    if (pStream || (id > 0 && getBuf()->size() < 16384))
         sendRstFrame(id, code);
     if (pStream)
     {
@@ -544,6 +564,14 @@ int H2Connection::processWindowUpdateFrame(H2FrameHeader *pHeader)
         return 0;
     }
 
+    if (delta < 10)
+    {
+        if (++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
+        {
+            LS_INFO(getLogSession(), "WINDOW_UPDATE frame abuse detected, close connection.");
+            return LS_FAIL;
+        }
+    }
 
     if (id == 0)
     {
@@ -682,6 +710,15 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
         //Do not pop_back right now since buf may have more data then this frame
         m_iCurrentFrameRemain -= (1 + padLen);
     }
+    if (m_iCurrentFrameRemain == 0
+        && !(pHeader->getFlags() & H2_FLAG_END_STREAM))
+    {
+        if (++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
+        {
+            LS_INFO(getLogSession(), "Zero length DATA frame abuse detected, close connection.");
+            return LS_FAIL;
+        }
+    }
 
     while (m_iCurrentFrameRemain > 0)
     {
@@ -745,7 +782,15 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag)
     int iDatalen = (m_bufInput.size() < m_iCurrentFrameRemain) ?
                    (m_bufInput.size()) : (m_iCurrentFrameRemain);
     if (iDatalen <= 0)
+    {
+        if ((iHeaderFlag & H2_FLAG_END_HEADERS) == 0
+            && ++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
+        {
+            LS_INFO(getLogSession(), "Zero-length HEADER/CONTINUATION frame abuse detected, close connection.");
+            return LS_FAIL;
+        }
         return 0;
+    }
 
     //Check if we need to move the buffer to stream bufinflat
     bool needToMove = false;
@@ -766,6 +811,11 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag)
         {
             m_bufInflate.append(m_bufInput.begin(), iDatalen);
             m_bufInput.pop_front(iDatalen);
+        }
+        if (m_bufInflate.size() > MAX_HTTP2_HEADERS_SIZE)
+        {
+            LS_INFO(getLogSession(), "HEADER abuse detected, close connection.");
+            return LS_FAIL;
         }
         m_iCurrentFrameRemain -= iDatalen;
     }
@@ -862,6 +912,21 @@ int H2Connection::processPriority(uint32_t id)
     LS_DBG_L(getLogger(),
                "[%s-%d] stream priority, execlusive: %d, depend sid: %d, weight: %hd ",
              getLogId(), id, (int)m_priority.m_exclusive, m_priority.m_dependStreamId, m_priority.m_weight);
+    H2Stream *pH2Stream = findStream(id);
+    if (pH2Stream)
+    {
+        if (pH2Stream->getFlag() & HIO_FLAG_PRI_SET)
+        {
+            if (++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
+            {
+                LS_INFO(getLogSession(), "PRIORITY frame abuse detected, close connection.");
+                return LS_FAIL;
+            }
+        }
+        else
+            pH2Stream->setFlag(HIO_FLAG_PRI_SET, 1);
+        //pH2Stream->apply_priority(&m_priority);
+    }
 
     return 0;
 }
@@ -1300,6 +1365,11 @@ int H2Connection::processPingFrame(H2FrameHeader *pHeader)
             LS_DBG_L(getLogSession(), "Unexpected PING frame, %.8s", payload);
             return 0;
         }
+        if (++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
+        {
+            LS_INFO(getLogSession(), "PING frame abuse detected, close connection.");
+            return LS_FAIL;
+        }
         return sendPingFrame(H2_FLAG_ACK, payload);
     }
 
@@ -1480,7 +1550,7 @@ int H2Connection::timerRoutine()
         LS_DBG_L(getLogSession(), "write() timeout.");
         doGoAway(H2_ERROR_PROTOCOL_ERROR);
     }
-
+    m_iControlFrames = 0;
     return 0;
 }
 
@@ -1721,8 +1791,8 @@ int H2Connection::onWriteEx2()
     int wantWrite = 0;
 
     LS_DBG_H(getLogSession(),
-             "onWriteEx2() state: %d, output buffer size = %d, Data Out Window: %d",
-             m_iState, getBuf()->size(), m_iCurDataOutWindow);
+             "onWriteEx2() output buffer size = %d, Data Out Window: %d",
+             getBuf()->size(), m_iCurDataOutWindow);
     if (getBuf()->size() > 4096)
     {
         flush();
@@ -1790,7 +1860,14 @@ int H2Connection::onWriteEx()
     m_iFlag &= ~H2_CONN_FLAG_IN_EVENT;
 
     if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
+    {
         getStream()->suspendWrite();
+        if (m_iFlag & H2_CONN_FLAG_PAUSE_READ)
+        {
+            m_iFlag &= ~H2_CONN_FLAG_PAUSE_READ;
+            getStream()->continueRead();
+        }
+    }
     return 0;
 }
 

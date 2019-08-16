@@ -65,9 +65,10 @@ tuning{
     maxDynRespHeaderSize         32768 
     maxDynRespSize               2047M 
     enableGzipCompress           1
-    enableBrCompress             1
+    enableBrCompress             4
     enableDynGzipCompress        1 
     gzipCompressLevel            6 
+    brStaticCompressLevel        6
     compressibleTypes            text/*, application/x-javascript, application/xml, application/javascript, image/svg+xml,application/rss+xml
     gzipAutoUpdateStatic         1 
     gzipMinFileSize              300 

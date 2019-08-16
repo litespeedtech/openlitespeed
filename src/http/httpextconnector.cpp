@@ -234,9 +234,19 @@ int HttpExtConnector::flushResp()
         return 0;
     //return m_pSession->flushDynBody(m_iRespState & HEC_RESP_NOBUFFER);
     int finished = m_iState & (HEC_ABORT_REQUEST | HEC_ERROR | HEC_COMPLETE);
+    int save_errno = errno;
+    m_pSession->checkRespSize();
+    if (m_pSession->shouldSuspendReadingResp())
+    {
+        LS_DBG_M(getLogger(),
+                    "[%s] too much pending data, suspend reading response from extapp",
+                    getLogId());
+        m_pProcessor->suspendRead();
+    }
     int ret = m_pSession->flush();
     if ((ret == 0) && (!finished) && m_pProcessor)
         m_pProcessor->continueRead();
+    errno = save_errno;
     return ret;
 }
 

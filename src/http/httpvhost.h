@@ -245,7 +245,7 @@ public:
     {   return m_contexts.add(pContext);          }
 
     bool dirMatch(HttpContext * &pContext, const char *pURI, size_t iUriLen,
-                  AutoStr2 *missingDir) const;
+                  AutoStr2 *missingDir, AutoStr2 *missLoc) const;
     HttpContext *bestMatch(const char *pURI, size_t iUriLen);
 
     const HttpContext *matchLocation(const char *pURI, size_t iUriLen,

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Working OS Versions
 # CentOS 7
@@ -14,10 +14,12 @@ cd `dirname "$0"`
 
 MOD_SEC_HOME='ModSecurity/headers'
 
-case "$OSTYPE" in
-  darwin*)  OS='mac'
+
+
+case `uname` in
+  Darwin*)  OS='mac'
             ;;
-  linux*)   OS='linux'
+  Linux*)   OS='linux'
             ;;
   *BSD*)    OS='bsd'
             ;;
@@ -98,9 +100,8 @@ if [ ! -f $MOD_SEC_HOME/modsecurity/modsecurity.h ] ; then
     fi
   elif [ $OS = 'bsd' ] ; then
     if [ $APP_MGR_CMD = 'pkg' ] ; then
-      EXEC="sudo $APP_MGR_CMD install -y"
-      PKGS="bison git yajl flex curl gcc doxygen GeoIP autoconf \
-      libtool automake gmake"
+      EXEC="$APP_MGR_CMD install -y"
+      PKGS="bison git yajl flex curl gcc doxygen autoconf libtool automake gmake"
     else
       echo 'pkg is not installed. Please either install it and re-run this'
       echo 'or use portsnap to manually install the needed packages and build'

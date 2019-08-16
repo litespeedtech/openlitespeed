@@ -2,10 +2,10 @@ CC=g++
 LFSFLAGS= $(shell getconf LFS_CFLAGS) -D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++11
 INCLUDEPATH= -I../../util/ -I./ -I../../../include  -I../../../../../../thirdparty/include -I../ -I../../ -I./ModSecurity/headers/
 
-LIBFLAGS := $(shell pwd)/ModSecurity/src/.libs/libmodsecurity.a -lxml2 -lcurl
+LIBFLAGS := $(shell pwd)/ModSecurity/src/.libs/libmodsecurity.a -lxml2 -lcurl -lyajl 
 ifeq ($(BUILDSTATIC), 1)
 	ALLLIB := -nodefaultlibs $(shell g++ -print-file-name='libstdc++.a') -lm -lc -lssl -lcrypto -lpthread -lGeoIP -lz -lpcre -lyajl -lgcc_eh  -lc_nonshared -lgcc
-	LIBFLAGS := -L$(shell pwd)/../../../../../../thirdparty/lib -lmodsecurity  -lxml2  -lcurl
+	LIBFLAGS := -L$(shell pwd)/../../../../../../thirdparty/lib -lmodsecurity  -lxml2  -lcurl -lyajl 
 endif
 
 

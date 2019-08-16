@@ -30,7 +30,7 @@
 #include <http/ip2geo.h>
 #include <http/iptoloc.h>
 #include <http/clientinfo.h>
-
+#include <http/httpserverconfig.h>
 #include <http/requestvars.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_hash.h>
@@ -281,7 +281,16 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             off_t lContentLen = strtoll(pValue, NULL, 10);
             if ((lContentLen >= 0) && (lContentLen != LLONG_MAX))
             {
-                pResp->setContentLen(lContentLen);
+                if (lContentLen > HttpServerConfig::getInstance().getMaxDynRespLen())
+                {
+                    pReq->setStatusCode(SC_413);
+                    int len = pExtConn->getHttpSession()->createOverBodyLimitErrorPage();
+                    pResp->setContentLen(len);
+                    pExtConn->getHttpSession()->endResponse(0);
+                    return LS_FAIL;
+                }
+                else
+                    pResp->setContentLen(lContentLen);
                 status |= HEC_RESP_CONT_LEN;
                 pReq->orContextState(RESP_CONT_LEN_SET);
             }
@@ -533,6 +542,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     if (!isPython)
         pEnv->add("DOCUMENT_ROOT", 13,
                   pStr->c_str(), pStr->len() - 1);
+        
+        
     pEnv->add("REMOTE_ADDR", 11, pSession->getPeerAddrString(),
               pSession->getPeerAddrStrLen());
 

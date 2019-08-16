@@ -968,8 +968,7 @@ int HttpContext::setForceType(char *pValue, const char *pLogId)
         return LS_FAIL;
     if (strcasecmp(pValue, "none") != 0)
     {
-        if (m_pInternal->m_pMIME)
-            pSetting = m_pInternal->m_pMIME->getMimeSetting(pValue);
+        pSetting = lookupMimeSetting(pValue);
         if (!pSetting)
             pSetting = HttpMime::getMime()->getMimeSetting(pValue);
         if (!pSetting)
@@ -1251,6 +1250,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
                                    char *pRule, const char *htaccessPath)
 {
     RewriteRuleList *pRuleList;
+    char achHandler[1024] = {0};
 
     AutoStr2 rule = "";
     if (pRule)
@@ -1259,9 +1259,20 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
     //Usual case, htaccessPath is the path of the .htaccess file
     //But for a function, only a simple test if have at least one char
     //Adn if the rule contains "RewriteFile", do not include htaccessPath
-    if (htaccessPath &&
-        strlen(htaccessPath) > 1 &&
-        access(htaccessPath, F_OK) == 0)
+    if (htaccessPath && strlen(htaccessPath) > 1)
+    {
+        if (ConfigCtx::getCurConfigCtx()->expandVariable(htaccessPath, achHandler,
+                    1024, 1) < 0)
+        {
+            
+            LS_ERROR(ConfigCtx::getCurConfigCtx(), 
+                     "Failed to parse .htaccessPath \"%s\".", htaccessPath);
+            return LS_FAIL;
+        }
+        htaccessPath = achHandler;
+    }
+
+    if (access(htaccessPath, F_OK) == 0)
     {
         if (!pRule || strcasestr(pRule, "RewriteFile") == NULL)
         {

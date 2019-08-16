@@ -640,7 +640,8 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
 
 
 bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
-                         size_t iUriLen, AutoStr2 *missURI) const
+                         size_t iUriLen, AutoStr2 *missURI,
+                         AutoStr2 *missLoc) const
 {
     assert(iUriLen > 0 && pURI[0] == '/');
     int curContextURILen = pContext->getURILen();
@@ -659,6 +660,7 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
         {
             ret = false;
             missURI->setStr(pURI, p - pURI + 1);
+            missLoc->setStr(pURI + curContextURILen, p - (pURI + curContextURILen) + 1);
             break;
         }
         ++p;
@@ -672,21 +674,15 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
 {
     HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
     
-    AutoStr2 missURI;
-    while (pContext && !dirMatch(pContext, pURI, iUriLen, &missURI))
+    AutoStr2 missURI; //A while URI start with /
+    AutoStr2 missLoc;  //A loc should be added to pContext location for the full path
+    while (pContext && !dirMatch(pContext, pURI, iUriLen, &missURI, &missLoc))
     {
         char achRealPath[MAX_PATH_LEN];
         int locLen = pContext->getLocationLen();
         strncpy(achRealPath, pContext->getLocation(), locLen);
-        
-        /**
-         * Comments: missURI is alway start with '/', so when strcpy, just do +1
-         * 
-         * if ( *(achRealPath + locLen - 1) == '/')
-         *            --locLen;
-         * strcpy(achRealPath + locLen, missURI.c_str());
-         */
-        strcpy(achRealPath + locLen, missURI.c_str() + 1);
+
+        strcpy(achRealPath + locLen, missLoc.c_str());
 
         HttpContext *pContext0 = addContext(missURI.c_str(), HandlerType::HT_NULL,
                               achRealPath, NULL, 1);
@@ -1595,6 +1591,8 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     {
         snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
         config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
+        config.addEnv(achName);
     }
     else
         config.setSelfManaged(0);
@@ -1817,6 +1815,8 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     if (maxConns > 1)
     {
         snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+        config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
         config.addEnv(achName);
     }
     else
