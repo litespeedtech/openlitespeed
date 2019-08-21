@@ -77,6 +77,7 @@ class LshttpdMain
     LinkObjPool<ChildProc>  m_pool;
     int                 m_curChildren;
     int                 m_fdAdmin;
+    int                 m_fdCmd;
 
     int     getFullPath(const char *pRelativePath, char *pBuf, int bufLen);
     int     execute(const char *pExecCmd, const char *pParam);
@@ -122,6 +123,10 @@ class LshttpdMain
 
     void deallocateBlackBoard(char *pBuf);
 
+    
+    int startCmdChannel();
+    int processChildCmd();
+    
     int             startChild(ChildProc *pProc);
     void            onNewChildStart(ChildProc * pProc);
     int             childDead(int pid);

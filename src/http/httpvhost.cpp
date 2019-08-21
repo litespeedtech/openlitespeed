@@ -1564,7 +1564,6 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
 
     LocalWorkerConfig &config = pWorker->getConfig();
-    //config.setDetached(1);
     setDefaultConfig(config, pRailsRunner, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();
@@ -1591,6 +1590,8 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     if (maxConns > 1)
     {
         snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+        config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
         config.addEnv(achName);
     }
     else
@@ -1783,7 +1784,6 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     }
 
     LocalWorkerConfig &config = pWorker->getConfig();
-    //config.setDetached(1);
     setDefaultConfig(config, pBinPath, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();
@@ -1809,6 +1809,8 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     if (maxConns > 1)
     {
         snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+        config.addEnv(achName);
+        snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
         config.addEnv(achName);
     }
     else
@@ -2002,7 +2004,6 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
 
 
     LocalWorkerConfig &config = pWorker->getConfig();
-    config.setDetached(1);
     setDefaultConfig(config, pNodejsStarter, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();

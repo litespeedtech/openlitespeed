@@ -525,6 +525,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     if (!isPython)
         pEnv->add("DOCUMENT_ROOT", 13,
                   pStr->c_str(), pStr->len() - 1);
+        
+        
     pEnv->add("REMOTE_ADDR", 11, pSession->getPeerAddrString(),
               pSession->getPeerAddrStrLen());
 

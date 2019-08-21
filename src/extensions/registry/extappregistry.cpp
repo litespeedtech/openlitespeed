@@ -43,6 +43,7 @@
 #include <extensions/proxy/proxyconfig.h>
 #include <extensions/proxy/proxyworker.h>
 #include <unistd.h>
+#include "../pidlist.h"
 
 
 static ExtWorker *newWorker(int type, const char *pName);
@@ -52,6 +53,7 @@ static PidSimpleList *s_pSimpleList = NULL;
 
 RLimits *ExtAppRegistry::s_pRLimits = NULL;
 AppUriHashT *ExtAppRegistry::s_pAppUriHashT = NULL;
+char s_lsphpRestartFlagFile[MAX_PATH_LEN] = {0};
 
 class ExtAppMap : public HashStringMap< ExtWorker * >
 {
@@ -193,6 +195,15 @@ void ExtAppSubRegistry::onTimer()
          iter != m_pRegistry->end();
          iter = m_pRegistry->next(iter))
         iter.second()->onTimer();
+    
+    //Every 10 seconds to check the restart file changed or not
+    struct stat st;
+    if(stat(s_lsphpRestartFlagFile, &st) == 0)
+    {
+        LocalWorker::s_tmRestartPhp = st.st_mtime;
+    }
+    
+    
 }
 
 
@@ -414,7 +425,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
         }
 
         iAutoStart = ConfigCtx::getCurConfigCtx()->
-                                getLongValue(pNode, "autoStart", 0, 2, 0);
+                                getLongValue(pNode, "autoStart", 0, 2, 1);
     
         pPath = pNode->getChildValue("path");
         
@@ -489,9 +500,8 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
             LocalWorkerConfig &config = pApp->getConfig();
             config.setAppPath(pPath);
             config.setStartByServer(iAutoStart);
-
+            config.setPhpHandler(1);
             config.config(pNode);
-            config.setRunOnStartUp(0);//For Vhost inherit app not to auto start
             config.setUGid(pVHost->getUid(), pVHost->getGid());
         }
     }
@@ -548,6 +558,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     const char *pUri;
     char buf[MAX_PATH_LEN];
     int iAutoStart = 0;
+    int iRunOnStartup = 0;
     const char *pPath = NULL;
     ExtWorker *pWorker = NULL;
     ExtWorkerConfig *pConfig = NULL;
@@ -590,7 +601,6 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         pName = appNameVh;
     }
     ConfigCtx currentCtx(pName);
-
     
     iType -= HandlerType::HT_CGI;
     
@@ -650,7 +660,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
             iAutoStart = 1;
         else
             iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "autoStart",
-                         0, 2, 0);
+                         0, 2, 1);
 
         if (iAutoStart && strlen(pUri) > 6 && strncasecmp(pUri, "uds://", 6) == 0)
         {
@@ -755,12 +765,29 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
 
     if (pApp)
     {
+        char achName[MAX_PATH_LEN] = {0};
         LocalWorkerConfig &config = pApp->getConfig();
         config.setAppPath(pPath);
         config.setStartByServer(iAutoStart);
-
+        config.setPhpHandler(iType == EA_LSAPI);
         config.config(pNode);
-        config.configExtAppUserGroup(pNode, iType);
+        config.configExtAppUserGroup(pNode, iType, achName);
+        
+        if (config.isDetached())
+        {
+            if (!pVHost)
+            {
+                snprintf(s_lsphpRestartFlagFile, MAX_PATH_LEN,
+                         "%sadmin/tmp/.lsphp_restart.txt",
+                         MainServerConfig::getInstance().getServerRoot());
+                pApp->setRestartMarker(s_lsphpRestartFlagFile, 0);
+            }
+            else
+            {   
+                strcat(achName, "/.lsphp_restart.txt");
+                pApp->setRestartMarker(achName, 0);
+            }
+        }
     }
 
         
@@ -777,7 +804,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         int ret = MainServerConfig::getInstance().insertExtAppXmlNode(&key_ptr);
         if (ret == -1)
         {
-            LS_ERROR(&currentCtx, "Failed to isert extApp '%s' with Node %p due"
+            LS_ERROR(&currentCtx, "Failed to insert extApp '%s' with Node %p due"
                       " to  too many items(> %d defined as MAX_EXT_APP_NUMBER).",
                       pName, pNode, MAX_EXT_APP_NUMBER);
         }
@@ -966,10 +993,43 @@ void PidRegistry::setSimpleList(PidSimpleList *pList)
 }
 
 
-void PidRegistry::markToStop(pid_t pid, int kill_type)
+void PidRegistry::sendKillCmdToWatchdog(pid_t pid, int kill_type, long lastmod)
 {
-    if (s_pSimpleList)
-        s_pSimpleList->markToStop(pid, kill_type);
+    if (MainServerConfig::getInstance().getGlobalfdCmd() == -1)
+        return;
+    char buf[256];
+    int len = snprintf(buf, 256, "extappkill:%d:%d:%ld", pid, kill_type, lastmod);
+    LS_NOTICE("sendKillCmdToWatchdog: '%.*s'.", len, buf);
+    write(MainServerConfig::getInstance().getGlobalfdCmd(), buf, len);
+}
+
+
+int PidRegistry::markToStop(pid_t pid, int kill_type)
+{
+    if (kill_type == KILL_TYPE_NEVER)
+    {
+        if (s_pSimpleList)
+            return s_pSimpleList->markToStop(pid, kill_type);
+    }
+    else
+    {
+        sendKillCmdToWatchdog(pid, kill_type, 0);
+    }
+    return 1;
+}
+
+
+void PidRegistry::addMarkToStop(pid_t pid, int kill_type, long lastmod)
+{
+    if (kill_type == KILL_TYPE_NEVER)
+    {
+        if (s_pSimpleList)
+            s_pSimpleList->add(pid, kill_type, NULL);
+    }
+    else
+    {
+        sendKillCmdToWatchdog(pid, kill_type, lastmod);
+    }
 }
 
 

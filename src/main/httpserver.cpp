@@ -2189,7 +2189,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                             1, 9, 4));
     config.setBrCompress(
 #ifdef USE_BROTLI
-        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 1, 1)
+        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 6, 4)
 #else
         0
 #endif
@@ -2207,7 +2207,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                                 1024 * 1024)
     );
     StaticFileCacheData::setStaticBrOptions(
-        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 9, 6)
+        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 11, 6)
     );
 
 

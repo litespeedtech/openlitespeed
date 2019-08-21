@@ -419,7 +419,6 @@ plainconfKeywords plainconf::sKeywords[] =
     {"appserverenv", NULL},
     {"enablelve",  NULL},
     {"cpuaffinity", NULL},
-    
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

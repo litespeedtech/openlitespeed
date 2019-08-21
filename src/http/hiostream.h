@@ -73,6 +73,8 @@ enum HiosProtocol
 #define HIO_FLAG_FROM_LOCAL         (1<<12)
 #define HIO_FLAG_PUSH_CAPABLE       (1<<13)
 #define HIO_FLAG_INIT_PUSH          (1<<14)
+#define HIO_FLAG_PRI_SET            (1<<15)
+
 
 #define HIO_PRIORITY_HIGHEST        (0)
 #define HIO_PRIORITY_LOWEST         (7)

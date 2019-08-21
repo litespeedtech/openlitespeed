@@ -95,7 +95,10 @@ int ls_atomic_spin_pidwait(ls_atom_spinlock_t *p)
         {
             if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
                 && ls_atomic_casint(p, waitpid, ls_spin_pid))
+            {
+                LS_TH_LOCKED(p, 1); // call it a write lock
                 return -waitpid;
+            }
             cnt = MAX_SPINCNT_CHECK;
             usleep(200);
         }

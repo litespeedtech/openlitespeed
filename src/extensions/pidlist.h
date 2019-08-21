@@ -44,7 +44,13 @@ public:
     ExtWorker *m_pWorker;
 };
 
-#define KILL_TYPE_TERM  -1
+#define KILL_TYPE_NEVER -5
+#define KILL_TYPE_USR1  -4
+#define KILL_TYPE_TERM  -3
+#define KILL_TYPE_KILL  -2
+#define KILL_TYPE_DONE  -1
+#define KILL_TYPE_NONE  0
+
 
 class PidSimpleList
 {
