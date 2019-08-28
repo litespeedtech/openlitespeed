@@ -14,16 +14,16 @@ Technologies.
 Documentation
 --------
 
-Users can find all OpenLiteSpeed documentation on the [OpenLiteSpeed site](http://open.litespeedtech.com), 
+Users can find all OpenLiteSpeed documentation on the [OpenLiteSpeed site](https://openlitespeed.org), 
 but here are some quick links to important parts of the site:
 
-[Installation](http://open.litespeedtech.com/mediawiki/index.php/Help:Installation)
+[Installation](https://openlitespeed.org/mediawiki/index.php/Help:Installation)
 
-[Configuration](http://open.litespeedtech.com/mediawiki/index.php/Help:Configuration)
+[Configuration](https://openlitespeed.org/mediawiki/index.php/Help:Configuration)
 
-[Road map](http://open.litespeedtech.com/mediawiki/index.php/Road_Map)
+[Road map](https://openlitespeed.org/mediawiki/index.php/Road_Map)
 
-[Release log](http://open.litespeedtech.com/mediawiki/index.php/Release_Log/1.x)
+[Release log](https://openlitespeed.org/mediawiki/index.php/Release_Log/1.x)
 
 Get in Touch
 --------
