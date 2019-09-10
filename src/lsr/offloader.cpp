@@ -17,7 +17,7 @@ void *process_offload(ls_offload *task)
         LS_DBG_L("[OFFLOAD] worker process Task: %p.\n",  task);
         task->state = LS_OFFLOAD_PROCESSING;
         task->api->perform(task);
-        task->state = LS_OFFLOAD_DONE;
+        task->state = LS_OFFLOAD_IN_FINISH_QUEUE;
     }
     else
     {
@@ -153,11 +153,15 @@ int Offloader::onNotified(int count)
         if (!task->is_canceled)
         {
             LS_DBG_L("[%s] on_task_done %p.\n", get_log_id(), task);
+            assert(task->state == LS_OFFLOAD_IN_FINISH_QUEUE);
+            task->state = LS_OFFLOAD_FINISH_CB;
             task->api->on_task_done(task->param_task_done);
+            task->state = LS_OFFLOAD_FINISH_CB_DONE;
         }
         else
         {
             LS_DBG_L("[%s] task %p has been canceled.\n", get_log_id(), task);
+            task->state = LS_OFFLOAD_FINISH_CB_BYPASS;
         }
         LS_DBG_L("[%s] release task %p.\n", get_log_id(), task);
         task->api->release(task);

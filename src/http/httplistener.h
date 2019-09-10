@@ -139,6 +139,8 @@ public:
     
     ssl_st *newSsl(SslContext *pSslContext);
     int setConnInfo(ConnInfo *pInfo, struct conn_data *pCur);
+
+    int enableQuic();
 };
 
 #endif

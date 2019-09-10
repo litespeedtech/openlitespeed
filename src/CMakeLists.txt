@@ -2,15 +2,19 @@ cmake_minimum_required(VERSION 2.8)
 
 link_directories("/usr/lib64")
 
+include_directories(lshpack)
+
 add_subdirectory(adns)
 add_subdirectory(edio)
 add_subdirectory(extensions)
 add_subdirectory(http)
+add_subdirectory(liblsquic)
 add_subdirectory(log4cxx)
 add_subdirectory(lsiapi)
 add_subdirectory(lsr)
 add_subdirectory(main)
 add_subdirectory(modules)
+add_subdirectory(quic)
 add_subdirectory(shm)
 add_subdirectory(socket)
 add_subdirectory(spdy)
@@ -142,11 +146,12 @@ add_executable(ls_shmhashstat
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    modgzip lsiapi main http lsiapi spdy http ssi
+    modgzip lsiapi main http spdy  ssi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns
-    -Wl,--whole-archive util lsr -Wl,--no-whole-archive GeoIP ${MMDB_LIB}
+    quic lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive GeoIP ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
+    libz.a libpcre.a libexpat.a libxml2.a
     ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns
     -nodefaultlibs pthread rt
     ${CMAKE_DL_LIBS} libstdc++.a crypt m gcc_eh c c_nonshared gcc 

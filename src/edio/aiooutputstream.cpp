@@ -17,6 +17,7 @@
 *****************************************************************************/
 
 #include <edio/aiooutputstream.h>
+#include <edio/sigeventdispatcher.h>
 #include <lsr/ls_fileio.h>
 #include <util/autobuf.h>
 #include <util/resourcepool.h>
@@ -37,6 +38,20 @@
 #ifdef LS_AIO_USE_KQ
 #include <edio/multiplexer.h>
 #include <edio/kqueuer.h>
+#include <sys/param.h>
+#include <sys/linker.h>
+
+static short s_iAiokoLoaded = -1;
+
+void AioOutputStream::setAiokoLoaded()
+{
+    s_iAiokoLoaded = (kldfind("aio.ko") != -1);
+}
+
+short AioOutputStream::aiokoIsLoaded()
+{
+    return s_iAiokoLoaded;
+}
 #endif
 
 void AioReq::setcb(int fildes, void *buf, size_t nbytes, int offset,
@@ -49,9 +64,13 @@ void AioReq::setcb(int fildes, void *buf, size_t nbytes, int offset,
     m_aiocb.aio_sigevent.sigev_value.sival_ptr = pHandler;
 #if defined(LS_AIO_USE_KQ)
     m_aiocb.aio_sigevent.sigev_notify_kqueue = KQueuer::getFdKQ();
+#elif defined(LS_AIO_USE_SIGNAL)
+    assert( s_rtsigNo != -1);
+    m_aiocb.aio_sigevent.sigev_signo = s_rtsigNo;
 #endif
 }
 
+int AioReq::s_rtsigNo = -1;
 
 AioReq::AioReq()
 {
@@ -59,10 +78,10 @@ AioReq::AioReq()
     m_aiocb.aio_reqprio = 0;
 #if defined(LS_AIO_USE_KQ)
     m_aiocb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
-    m_aiocb.aio_sigevent.sigev_notify_kevent_flags = EV_ONESHOT;
+    //m_aiocb.aio_sigevent.sigev_notify_kevent_flags = EV_ONESHOT;
 #elif defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
     m_aiocb.aio_sigevent.sigev_notify = SIGEV_SIGNAL;
-    m_aiocb.aio_sigevent.sigev_signo = HS_AIO;
+    //m_aiocb.aio_sigevent.sigev_signo = HS_AIO;
 #endif
 }
 
@@ -141,7 +160,7 @@ int AioOutputStream::append(const char *pBuf, int len)
 
 
 #define LS_AIO_MAXBUF 4096
-int AioOutputStream::onAioEvent()
+int AioOutputStream::onEvent()
 {
     ResourcePool::getInstance().recycle(m_pSend);
     m_pSend = NULL;
@@ -169,7 +188,7 @@ int AioOutputStream::flush()
     m_pSend = m_pRecv;
     m_pRecv = NULL;
     if (write(getfd(), m_pSend->begin(), m_pSend->size(),
-              0, (AioEventHandler *)this))
+              0, (EventHandler *)this))
         return LS_FAIL;
     m_flushRequested = 0;
 #endif // defined(LS_AIO_USE_AIO)

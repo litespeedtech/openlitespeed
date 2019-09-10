@@ -95,5 +95,3 @@ SET(http_STAT_SRCS
 
 add_library(http STATIC ${http_STAT_SRCS})
 
-target_link_libraries(http -lpcre -lz -lcrypt -lssl -lcrypto -lexpat)
-

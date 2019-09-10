@@ -28,7 +28,6 @@ SET(edio_STAT_SRCS
    pollfdreactor.cpp
    lookupfd.cpp
    devpoller.cpp
-   aioeventhandler.cpp
    sigeventdispatcher.cpp
    aiooutputstream.cpp
    aiosendfile.cpp

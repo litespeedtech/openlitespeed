@@ -24,7 +24,8 @@ static const char *s_sProtoName[] =
     "SPDY/2",
     "SPDY/3",
     "SPDY/3.1",
-    "HTTP/2"
+    "HTTP/2",
+    "QUIC",
 };
 
 const char *HioStream::getProtocolName(HiosProtocol proto)

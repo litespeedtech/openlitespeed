@@ -19,10 +19,13 @@
 #define AIOOUTPUTSTREAM_H
 
 #include <lsdef.h>
-#include <edio/aioeventhandler.h>
+#include <edio/eventhandler.h>
 
 #include <aio.h>
 #include <sys/types.h>
+
+#include <signal.h>
+
 
 #ifdef LS_AIO_USE_KQ
 #include <sys/event.h>
@@ -32,6 +35,7 @@ class AutoBuf;
 
 class AioReq
 {
+    static int      s_rtsigNo;
     struct aiocb    m_aiocb;
 
 private:
@@ -58,21 +62,24 @@ public:
     {   return aio_return(&m_aiocb);  }
 
     int read(int fildes, void *buf, int nbytes, int offset,
-             AioEventHandler *pHandler)
+             EventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_read(&m_aiocb);
     }
     int write(int fildes, void *buf, int nbytes, int offset,
-              AioEventHandler *pHandler)
+              EventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_write(&m_aiocb);
     }
+
+    static void setSigNo(int signo)     {   s_rtsigNo = signo;  }
+
     LS_NO_COPY_ASSIGN(AioReq);
 };
 
-class AioOutputStream : public AioEventHandler, private AioReq
+class AioOutputStream : public EventHandler, private AioReq
 {
     int             m_fd;
     char            m_async;
@@ -116,7 +123,7 @@ public:
     }
 
     int append(const char *pBuf, int len);
-    virtual int onAioEvent();
+    virtual int onEvent();
     int flush();
     LS_NO_COPY_ASSIGN(AioOutputStream);
 };

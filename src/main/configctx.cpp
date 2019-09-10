@@ -843,7 +843,7 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
         }
     }
 
-    config.m_iEnableSpdy = getLongValue(pNode, "enableSpdy", 0, 7, 7);
+    config.m_iEnableSpdy = getLongValue(pNode, "enableSpdy", 0, 15, 15);
     config.m_iEnableCache = getLongValue(pNode, "sslSessionCache", 0, 1, 0);
     config.m_iInsecReneg = !getLongValue(pNode, "regenProtection", 0, 1, 1);
     config.m_iEnableTicket = getLongValue(pNode, "sslSessionTickets",

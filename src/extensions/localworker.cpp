@@ -39,16 +39,26 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <fcntl.h>
+#include <util/ni_fio.h>
+#include <socket/coresocket.h>
+#include <http/httpstatuscode.h>
+
 #define GRACE_TIMEOUT 20
 #define KILL_TIMEOUT 25
+
+time_t LocalWorker::s_tmRestartPhp = 0;
 
 LocalWorker::LocalWorker(int type)
     : ExtWorker(type)
     , m_fdApp(-1)
     , m_sigGraceStop(SIGTERM)
+    , m_tmResourceLimited(0)
+    , m_forceStop(0)
     , m_pidList(NULL)
     , m_pidListStop(NULL)
     , m_pRestartMarker(NULL)
+    , m_pDetached(NULL)
 {
     m_pidList = new PidList();
     m_pidListStop = new PidList();
@@ -218,9 +228,25 @@ int LocalWorker::startOnDemond(int force)
     return startEx();
 }
 
+int LocalWorker::stopDetachedWorker()
+{
+    if (!getConfig().isDetached())
+        return -1;
+    if (!m_pDetached)
+        return 0;
+    if (isDetachedAlreadyRunning())
+        killOldDetachedInstance(&m_pDetached->pid_info);
+    else
+        removeOldDetachedSocket();
+    setState(ST_NOTSTARTED);
+    return 0;
+}
+
 
 int LocalWorker::stop()
 {
+    if (getConfig().isDetached() && m_pDetached)
+        return -1;
     pid_t pid;
     int ret;
     PidList::iterator iter;
@@ -276,6 +302,13 @@ int LocalWorker::addNewProcess()
     return 1;
 }
 
+//every 10 seconds timer
+void LocalWorker::onTimer()
+{
+    if (m_pRestartMarker && m_pDetached && isDetachedAlreadyRunning() &&
+        m_pRestartMarker->checkRestart(DateTime::s_curTime))
+        restart();
+}
 
 int LocalWorker::tryRestart()
 {
@@ -487,6 +520,8 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
 int LocalWorker::startWorker()
 {
     int fd = getfd();
+//      if (m_tmResourceLimited == DateTime::s_curTime)
+//         return -SC_508;
     LocalWorkerConfig &config = getConfig();
     struct stat st;
 //    if (( stat( config.getCommand(), &st ) == -1 )||
@@ -548,6 +583,26 @@ int LocalWorker::startWorker()
     return (i == 0) ? LS_FAIL : LS_OK;
 }
 
+// int LocalWorker::startOneWorker()
+// {
+//     int pid;
+//     int fd;
+// //     if (m_tmResourceLimited == DateTime::s_curTime)
+// //         return -SC_508;
+//     fd = getfd();
+//     LocalWorkerConfig &config = getConfig();
+//     
+//     if (fd == -1)
+//     {
+//         //config.altServerAddr();
+//         fd = ExtWorker::startServerSock(&config, config.getBackLog());
+//     }
+//     pid = workerExec(config, fd);
+//     if (pid != 0)
+//         return processPid(pid);
+//     return 0;
+// }
+
 
 void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
 {
@@ -566,9 +621,9 @@ void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
         ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "CPUHardLimit", 0,
                 INT_MAX, 0));
     long memSoft = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "memSoftLimit", 0, INT_MAX, 0);
+                   "memSoftLimit", 0, LONG_MAX, 0);
     long memHard = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "memHardLimit", 0, INT_MAX, 0);
+                   "memHardLimit", 0, LONG_MAX, 0);
 
     if ((memSoft & (memSoft < 1024 * 1024)) ||
         (memHard & (memHard < 1024 * 1024)))
@@ -596,6 +651,376 @@ void LocalWorker::setRestartMarker(const char* path, int reset_me_path_pos)
         m_pRestartMarker->checkRestart(time(NULL));
     }
 }
+
+
+
+
+bool LocalWorker::serverLevelRestartPhp()
+{
+    return (getConfig().isPhpHandler() && m_pDetached
+            && m_pDetached->pid_info.last_modify < s_tmRestartPhp);
+}
+
+
+void LocalWorker::checkAndStopWorker()
+{
+    int s = 0;
+    if (getState() == ST_GOOD && m_pRestartMarker)
+    {
+        if (m_pRestartMarker->checkRestart(DateTime::s_curTime)
+            || serverLevelRestartPhp())
+        {
+            LS_INFO("[%s] detect restart request, stopping ...", getName());
+            s = 1;
+        }
+    }
+    if (!s)
+    {
+        if (m_forceStop)
+        {
+            m_forceStop = 0;
+            LS_INFO("[%s] force stop requested, stopping ...", getName());
+        }
+        else 
+            return;
+    }
+    if (getConfig().isDetached())
+    {
+        if (m_pDetached && m_pDetached->pid_info.pid > 0
+            && DateTime::s_curTime - m_pDetached->last_stop_time > 60)
+        {
+            m_pDetached->last_stop_time = DateTime::s_curTime;
+            killOldDetachedInstance(&m_pDetached->pid_info);
+        }
+    }
+    else
+    {
+        stop();
+    }
+}
+
+
+
+static int lockFile(int fd, short lockType)
+{
+    int ret;
+    struct flock lock;
+    lock.l_type = lockType;
+    lock.l_start = 0;
+    lock.l_whence = SEEK_SET;
+    lock.l_len = 0;
+    while (1)
+    {
+        ret = fcntl(fd, F_SETLK, &lock);
+        if ((ret == -1) && (errno == EINTR))
+            continue;
+        if (ret == 0)
+            return ret;
+        int err = errno;
+        lock.l_pid = 0;
+        if (fcntl(fd, F_GETLK, &lock) == 0 && lock.l_pid > 0)
+            ret = lock.l_pid;
+        errno = err;
+        return ret;
+    }
+}
+
+
+int LocalWorker::openLockPidFile(const char *pSocketPath)
+{
+    char bufPidFile[4096];
+    snprintf(bufPidFile, sizeof(bufPidFile), "%s.pid",
+             pSocketPath);
+    int fd = nio_open(bufPidFile, O_WRONLY | O_CREAT | O_NOFOLLOW | O_TRUNC, 0644);
+    if (fd == -1)
+    {
+        int err = errno;
+        LS_NOTICE("[%s]: Failed to open pid file [%s]: %s",
+                 getName(), bufPidFile, strerror(errno));
+        errno = err;
+        return -1;
+    }
+    int ret;
+    if ((ret = lockFile(fd, F_WRLCK)) != 0)
+    {
+        int err = errno;
+        LS_NOTICE("[%s]: Failed to lock pid file [%s]: %s, locked by PID: %d",
+                  getName(), bufPidFile, strerror(errno), ret);
+        close(fd);
+        errno = err;
+        return -1;
+    }
+    LS_INFO("[%s]: locked pid file [%s].", getName(), bufPidFile);
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+    return fd;
+}
+
+
+static int unlockClosePidFile(int fd)
+{
+    lockFile(fd, F_UNLCK);
+    close(fd);
+    return 0;
+}
+
+
+int LocalWorker::processPid(int pid, const char * path)
+{
+    if (pid > 0)
+    {
+        const char *pLogId = getName();
+        if (getConfig().getRunOnStartUp() != EXTAPP_RUNONSTART_DAEMON
+            && !getConfig().isDetached())
+        {
+            //if ( getConfig().getStartByServer() == EXTAPP_AUTOSTART_CGID )
+            //    addPid( pid );
+            //else
+            PidRegistry::add(pid, this, 0);
+        }
+        
+        LS_INFO("[%s] add child process pid: %d", pLogId, pid);
+        if (getConfig().isDetached())
+        {
+            m_pDetached->pid_info.pid = pid;
+            saveDetachedPid(m_pDetached->fd_pid_file,
+                           &m_pDetached->pid_info, path);
+        }
+
+    }
+    else
+    {
+        
+        if (pid <= -600)
+            pid = -SC_500;
+        if (pid < -100)
+            pid = -HttpStatusCode::getInstance().codeToIndex(-pid);
+        LS_ERROR("[%s]: Failed to start one instance. pid: %d %s",
+                 getName(), pid, (pid == -SC_508) ? "Resource limit reached!" : "");
+        if (pid == -SC_508)
+            m_tmResourceLimited = DateTime::s_curTime;
+        if (getConfig().isDetached())
+            setState(ST_NOTSTARTED);
+    }
+    if (getConfig().isDetached())
+    {
+        
+        if (m_pDetached->fd_pid_file != -1)
+        {
+            unlockClosePidFile(m_pDetached->fd_pid_file);
+            LS_INFO("[%s]: unlocked pid file [%s.pid].",
+                    getName(), getConfig().getServerAddr().getUnix());
+            m_pDetached->fd_pid_file = -1;
+        }
+    }
+    return pid;
+}
+
+
+
+
+
+bool LocalWorker::loadDetachedPid(int fd, DetachedPidInfo_t *detached_pid)
+{
+    return pread(fd, detached_pid, sizeof(DetachedPidInfo_t), 0)
+            == sizeof(DetachedPidInfo_t);
+}
+
+
+void LocalWorker::saveDetachedPid(int fd, DetachedPidInfo_t *detached_pid,
+                                 const char *path)
+{
+    struct stat st;
+    stat(path, &st);
+    m_pDetached->pid_info.inode = st.st_ino;
+    m_pDetached->pid_info.last_modify = st.st_mtime;
+
+    pwrite(fd, detached_pid, sizeof(DetachedPidInfo_t), 0);
+}
+
+
+void LocalWorker::removeOldDetachedSocket()
+{
+    LS_INFO("[%s] remove unix socket for detached process: %s",
+            getName(), getConfig().getServerAddr().getUnix());
+    unlink( getConfig().getServerAddr().getUnix() );
+}
+
+
+void LocalWorker::killOldDetachedInstance(DetachedPidInfo_t *detached_pid)
+{
+    LS_INFO("[%s] kill current detached process: %d",
+            getName(), m_pDetached->pid_info.pid);
+    removeOldDetachedSocket();
+    int pid = detached_pid->pid;
+    if (pid <= 1)
+        return;
+    PidRegistry::addMarkToStop(pid, KILL_TYPE_TERM,
+                                m_pDetached->pid_info.last_modify);
+}
+
+
+
+int LocalWorker::isDetachedAlreadyRunning()
+{
+    char bufPidFile[4096];
+    int ret;
+    if (m_pDetached)
+    {
+        if (m_pDetached->last_check_time == DateTime::s_curTime
+            && m_pDetached->pid_info.pid > 0)
+        {
+            LS_DBG_L("[%s] is running as pid: %d.",
+                     getName(), m_pDetached->pid_info.pid);
+            return 1;
+        }
+        else if (m_pDetached->fd_pid_file != -1) //starting
+        {
+            LS_DBG_L("[%s] is starting up by current process.", getName());
+            return 2;
+        }
+    }
+
+    const GSockAddr &service_addr = getConfig().getServerAddr();
+    if (service_addr.family() != PF_UNIX)
+        return -1;
+
+    struct stat st;
+    if (nio_stat(service_addr.getUnix(), &st) == -1)
+        return -1;
+
+    snprintf(bufPidFile, sizeof(bufPidFile), "%s.pid",
+             service_addr.getUnix());
+    int fd = open(bufPidFile, O_RDONLY );
+    if (fd == -1)
+        return -1;
+
+    if (!m_pDetached)
+        m_pDetached = new DetachedProcess_t();
+    ret = loadDetachedPid(fd, &m_pDetached->pid_info);
+    close(fd);
+    if (ret != 1)
+    {
+        m_pDetached->pid_info.pid = -1;
+        return -1;
+    }
+    if (m_pDetached->pid_info.pid > 0
+        && m_pDetached->pid_info.inode == st.st_ino
+        && m_pDetached->pid_info.last_modify == st.st_mtime)
+    {
+        ret = kill(m_pDetached->pid_info.pid, 0);
+        if (ret == 0 || errno != ESRCH)
+            return 1;
+    }
+    m_pDetached->pid_info.pid = -1;
+    return 0;
+}
+
+
+// return 0    start in progress
+// return > 0  started/already running
+// return < 0  something wrong, cannot start
+//             can be `-HTTP_Status_Code`
+
+int LocalWorker::startDetachedWorker(int force)
+{
+    int pid;
+    int fd;
+    int ret;
+    int tries = 0;
+    if (m_tmResourceLimited == DateTime::s_curTime)
+        return -SC_508;
+
+TRY_AGAIN:
+    ret = isDetachedAlreadyRunning();
+    if (ret == 1)
+    {
+        if (!force && m_pRestartMarker)
+        {
+            if (m_pRestartMarker->getLastReset()
+                > m_pDetached->pid_info.last_modify)
+                force = 1;
+        }
+        if (force || serverLevelRestartPhp())
+        {
+            killOldDetachedInstance(&m_pDetached->pid_info);
+        }
+        else
+            return 1;
+    }
+    else if (ret == 2)
+        return 0;
+
+    LocalWorkerConfig &config = getConfig();
+    const GSockAddr &service_addr = config.getServerAddr();
+    int fd_pid_file = openLockPidFile(service_addr.getUnix());
+    if (fd_pid_file == -1)
+    {
+        if (errno == EAGAIN)
+        {
+            if (++tries < 5)
+            {
+                if (tries < 4)
+                {
+                    LS_NOTICE("[%s]: Could be detached process being started, wait and retry: %d",
+                        getName(), tries);
+                    usleep(10000);
+                }
+                else
+                {
+                    char bufPidFile[4096];
+                    snprintf(bufPidFile, sizeof(bufPidFile), "%s.pid",
+                             service_addr.getUnix());
+
+                    LS_NOTICE("[%s]: Could be dead lock, remove pid file [%s] and retry",
+                              getName(), bufPidFile);
+                    unlink(bufPidFile);
+                }
+                goto TRY_AGAIN;
+            }
+        }
+        LS_ERROR("[%s]: Failed to lock pid file for [%s]: %s",
+                 getName(), service_addr.getUnix(), strerror(errno));
+        return -1;
+    }
+
+    removeOldDetachedSocket();
+    ret = CoreSocket::listen(service_addr, config.getBackLog(), &fd, -1, -1);
+    if (fd == -1)
+    {
+        LS_ERROR("[%s]: Failed to listen socket [%s]: %s",
+                 getName(), service_addr.getUnix(), strerror(errno));
+        unlockClosePidFile(fd_pid_file);
+        return -1;
+    }
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+
+    if (!m_pDetached)
+        m_pDetached = new DetachedProcess();
+    m_pDetached->fd_pid_file = fd_pid_file;
+    m_pDetached->last_check_time = DateTime::s_curTime;
+    m_pDetached->pid_info.pid = -1;
+    saveDetachedPid(fd_pid_file, &m_pDetached->pid_info,
+                   service_addr.getUnix());
+
+    
+    pid = workerExec(config, fd);
+    if (pid != 0)
+    {
+        ret = processPid(pid, service_addr.getUnix());
+        return ret;
+    }
+    else
+    {
+        LS_DBG_L("[%s] async exec in background.", getName());
+        m_pDetached->pid_info.pid = 0;
+    }
+    return 0;
+}
+
+
+
+
+
 
 
 bool RestartMarker::isSamePath(const char* path)

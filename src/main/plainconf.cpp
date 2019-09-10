@@ -419,7 +419,19 @@ plainconfKeywords plainconf::sKeywords[] =
     {"appserverenv", NULL},
     {"enablelve",  NULL},
     {"cpuaffinity", NULL},
-    
+ 
+    {"enablequic", NULL},
+    {"quicenable", NULL},
+    {"quicshmdir", NULL},
+    {"quicversions", NULL},
+    {"quiccfcw", NULL},
+    {"quicmaxcfcw", NULL},
+    {"quicsfcw", NULL},
+    {"quicmaxsfcw", NULL},
+    {"quicmaxstreams", NULL},
+    {"quichandshaketimeout", NULL},
+    {"quicidletimeout", NULL},
+    {"quiccongestionctrl ", NULL},
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

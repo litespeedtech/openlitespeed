@@ -59,7 +59,7 @@ HttpStatusCode::HttpStatusCode()
     m_aSC[code++] = new StatusCode(SC_304, " 304 Not Modified\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_305, " 305 Use Proxy\r\n",
                                    "The resource is only accessible through the proxy!");
-    m_aSC[code++] = new StatusCode(SC_306, "", NULL);
+    m_aSC[code++] = new StatusCode(SC_306, " 306 Switch Proxy\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_307, " 307 Temporary Redirect\r\n",
                                    "The document has been temporarily moved to <A HREF=\"%s\">here</A>.");
     m_aSC[code++] = new StatusCode(SC_308, " 308 Permanent Redirect\r\n",
@@ -127,10 +127,10 @@ HttpStatusCode::HttpStatusCode()
     m_aSC[code++] = new StatusCode(SC_506, " 506 Loop Detected\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_507, " 507 Insufficient Storage\r\n",
                                    NULL);
-    m_aSC[code++] = new StatusCode(SC_508, " ", NULL);
-    m_aSC[code++] = new StatusCode(SC_509, " 509 Bandwidth Limit Exceeded",
+    m_aSC[code++] = new StatusCode(SC_508, " 508 Insufficient Resource\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_509, " 509 Bandwidth Limit Exceeded\r\n",
                                    NULL);
-    m_aSC[code++] = new StatusCode(SC_510, " 510 Not Extended", NULL);
+    m_aSC[code++] = new StatusCode(SC_510, " 510 Not Extended\r\n", NULL);
 };
 
 HttpStatusCode::~HttpStatusCode()
@@ -155,7 +155,9 @@ StatusCode::StatusCode(int code, const char *pStatus,
             char *pEnd = p + 4096;
             p += ls_snprintf(p, pEnd - p,
                              "<!DOCTYPE html>\n"
-                             "<html style=\"height:100%%\">\n<head><title>%s</title></head>\n"
+                             "<html style=\"height:100%%\">\n<head>\n"
+                             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">\n"
+                             "<title>%s</title></head>\n"
                              "<body style=\"color: #444; margin:0;font: normal 14px/20px Arial, Helvetica, sans-serif; height:100%%; background-color: #fff;"
                              "\">\n"
                              "<div style=\"height:auto; min-height:100%%; \">"

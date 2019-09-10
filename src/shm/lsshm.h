@@ -104,6 +104,7 @@ public:
 
     void deleteFile();
     void backupBrokenFile();
+    void tryRecoverCorruption();
 
 
 private:

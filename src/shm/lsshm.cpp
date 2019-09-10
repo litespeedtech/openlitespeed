@@ -215,6 +215,14 @@ void LsShm::tryRecoverBadOffset(LsShmOffset_t offset)
 }
 
 
+void LsShm::tryRecoverCorruption()
+{
+    deleteFile();
+    if (s_fatalErrorCb)
+        (*s_fatalErrorCb)();
+}
+
+
 int LsShm::isOffsetValid(LsShmOffset_t offset)
 {
     return (offset <= x_pShmMap->x_stat.m_iFileSize);
@@ -756,7 +764,7 @@ LsShmStatus_t LsShm::remap()
             if (s_fatalErrorCb)
                 (*s_fatalErrorCb)();
             
-            assert( "bad file size." == (const char *)&mapCopy);
+            assert( (const char *)"bad file size." == (const char *)&mapCopy);
         }
     }
     LsShmXSize_t size = x_pShmMap->x_stat.m_iFileSize;

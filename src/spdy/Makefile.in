@@ -108,7 +108,7 @@ am_libspdy_a_OBJECTS = spdyprotocol.$(OBJEXT) spdyconnection.$(OBJEXT) \
 	spdystream.$(OBJEXT) spdyzlibfilter.$(OBJEXT) \
 	spdystreampool.$(OBJEXT) h2connection.$(OBJEXT) \
 	h2protocol.$(OBJEXT) h2stream.$(OBJEXT) lshpack.$(OBJEXT) \
-	unpackedheaders.$(OBJEXT)
+	unpackedheaders.$(OBJEXT) lshpack.$(OBJEXT)
 libspdy_a_OBJECTS = $(am_libspdy_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -354,7 +354,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_s
 libspdy_a_METASOURCES = AUTO
 libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp \
 		spdyzlibfilter.cpp spdystreampool.cpp h2connection.cpp \
-		h2protocol.cpp h2stream.cpp lshpack.c unpackedheaders.cpp 
+		h2protocol.cpp h2stream.cpp lshpack.c unpackedheaders.cpp \
+		lshpack.c
 
 noinst_HEADERS = 
 all: all-am

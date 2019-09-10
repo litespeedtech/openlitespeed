@@ -18,6 +18,7 @@
 #include "extworker.h"
 #include "extconn.h"
 #include "extrequest.h"
+#include "localworker.h"
 
 #include <http/httpstatuscode.h>
 #include <http/httpvhost.h>
@@ -368,6 +369,10 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
                 m_lLastRestart = time(NULL);
                 LS_INFO("[%s] Connection refused, restart!",
                         m_pConfig->getURL());
+                
+                LocalWorker *pLocalWorker = dynamic_cast<LocalWorker *>(this);
+                if (pLocalWorker)
+                    pLocalWorker->stopDetachedWorker();
                 restart();
             }
             else
@@ -397,6 +402,9 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
                                   " application!", m_pConfig->getURL(),
                                   m_pConfig->getMaxConns());
                         m_lLastRestart = time(NULL);
+                        LocalWorker *pLocalWorker = dynamic_cast<LocalWorker *>(this);
+                        if (pLocalWorker)
+                            pLocalWorker->stopDetachedWorker();
                         restart();
                     }
                 }

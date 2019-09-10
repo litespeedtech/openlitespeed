@@ -137,21 +137,13 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	crewworker.$(OBJEXT)
 openlitespeed_OBJECTS = $(am_openlitespeed_OBJECTS)
 am__DEPENDENCIES_1 =
-@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@am__DEPENDENCIES_2 =  \
-@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@	../ssl/libssl.a \
-@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@	../ssl/libcrypto.a
-@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@am__DEPENDENCIES_2 =  \
-@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@	../ssl/libssl.a \
-@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@	../ssl/libcrypto.a \
-@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@	../ssl/libdecrepit.a
-@USE_DYN_OSSL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
-	./spdy/libspdy.a ./extensions/libextensions.a \
-	./log4cxx/liblog4cxx.a ./socket/libsocket.a ./sslpp/libsslpp.a \
-	./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
-	./modules/libmodules.a ./shm/liblsshm.a ./adns/libadns.a \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1) \
+	./extensions/libextensions.a ./log4cxx/liblog4cxx.a \
+	./socket/libsocket.a ./sslpp/libsslpp.a ./ssi/libssi.a \
+	./edio/libedio.a ./lsiapi/liblsiapi.a ./modules/libmodules.a \
+	./shm/liblsshm.a ./adns/libadns.a ./quic/libquic.a \
+	./liblsquic/liblsquic.a ./spdy/libspdy.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(AM_OPENSSL_LIBS) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
@@ -440,9 +432,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-@USE_BSSL_FALSE@@USE_DYN_OSSL_FALSE@AM_OPENSSL_LIBS = ../ssl/libssl.a ../ssl/libcrypto.a
-@USE_BSSL_TRUE@@USE_DYN_OSSL_FALSE@AM_OPENSSL_LIBS = ../ssl/libssl.a ../ssl/libcrypto.a ../ssl/libdecrepit.a
-@USE_DYN_OSSL_TRUE@AM_OPENSSL_LIBS = $(OPENSSL_LIBS)
+AM_OPENSSL_LIBS = ../ssl/libssl.a ../ssl/libcrypto.a ../ssl/libdecrepit.a
 openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    util/httpfetchdriver.cpp \
    util/httpfetch.cpp \
@@ -543,17 +533,19 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    thread/worker.cpp \
    thread/crewworker.cpp
 
-openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
+openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
+        ./quic/libquic.a ./liblsquic/liblsquic.a ./spdy/libspdy.a \
         $(LIBBROTLI) $(LIBMMDB) $(EXTRA_LIBS) \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) ${IP2LOCATION_LIBS} \
         -ludns $(LIBGEOIP) -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = $(OPENSSL_LDFLAGS) -L/usr/lib -L/usr/local/lib -L/usr/lib64  
-AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
-SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns
+AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CXXFLAGS = -std=c++0x
+SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns quic liblsquic
 
 # the library search path.
 openlitespeed_LDFLAGS = $(all_libraries)

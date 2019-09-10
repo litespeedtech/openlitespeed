@@ -12,7 +12,9 @@ set(openlitespeed_VERSION
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories( include ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
+SET(LSQUIC_SERVER_MODE 1)
+
+include_directories( BEFORE  include ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
 link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
 
 SET (CMAKE_C_COMPILER         "/usr/bin/clang")
@@ -47,14 +49,13 @@ ENDIF(ASAN)
 
 set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter")
 
-
 #set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
 add_definitions(-DPOOL_TESTING)
 #add_definitions(-DLS_WORKCREW_DEBUG)
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
 
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)

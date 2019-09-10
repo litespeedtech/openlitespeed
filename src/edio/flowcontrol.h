@@ -26,6 +26,8 @@ public:
     virtual ~InputFlowControl() {};
     virtual void suspendRead() = 0;
     virtual void continueRead() = 0;
+    virtual void suspendNotify() = 0;
+    virtual void resumeNotify() = 0;
 };
 
 class OutputFlowControl

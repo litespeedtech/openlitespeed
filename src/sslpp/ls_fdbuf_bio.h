@@ -25,6 +25,12 @@ typedef struct ls_fdbio_data {
     uint16_t     m_rbioBufSz;
     uint8_t      m_rbioClosed;
     uint8_t      m_rbioWaitEvent;
+
+    uint8_t     *m_wbuf;
+    int32_t      m_wbuf_size;
+    int32_t      m_wbuf_used;
+    int32_t      m_wbuf_sent;
+    int32_t      m_flag;
 } ls_fdbio_data;
 
 
@@ -47,6 +53,9 @@ void ls_fdbuf_bio_init(ls_fdbio_data *fdbio);
  */
 struct bio_st *ls_fdbio_create(int fd, ls_fdbio_data *fdbio);
 
+int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd);
+
+void ls_fdbio_set_wbuff(ls_fdbio_data *fdbio, int dobuff);
 
 #ifdef __cplusplus 
 }

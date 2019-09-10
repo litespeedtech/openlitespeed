@@ -851,12 +851,15 @@ static int verifyProtocol(SSL *pSSL, long newCtxOptions)
     case SSL3_VERSION:
         if (newCtxOptions & SSL_OP_NO_SSLv3)
             return SslUtil::CERTCB_RET_ERR;
+        break;
     case TLS1_VERSION:
         if (newCtxOptions & SSL_OP_NO_TLSv1)
             return SslUtil::CERTCB_RET_ERR;
+        break;
     case TLS1_1_VERSION:
         if (newCtxOptions & SSL_OP_NO_TLSv1_1)
             return SslUtil::CERTCB_RET_ERR;
+        break;
     }
     return SslUtil::CERTCB_RET_OK;
 }

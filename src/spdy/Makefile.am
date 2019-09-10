@@ -4,6 +4,7 @@ libspdy_a_METASOURCES = AUTO
 
 libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp \
 		spdyzlibfilter.cpp spdystreampool.cpp h2connection.cpp \
-		h2protocol.cpp h2stream.cpp lshpack.c unpackedheaders.cpp 
+		h2protocol.cpp h2stream.cpp lshpack.c unpackedheaders.cpp \
+		lshpack.c
 
 noinst_HEADERS = 

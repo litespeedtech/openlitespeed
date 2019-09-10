@@ -1,14 +1,6 @@
 bin_PROGRAMS = openlitespeed
 
-if USE_DYN_OSSL
-AM_OPENSSL_LIBS=$(OPENSSL_LIBS)
-else
-if USE_BSSL
 AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a ../ssl/libdecrepit.a
-else
-AM_OPENSSL_LIBS= ../ssl/libssl.a ../ssl/libcrypto.a
-endif
-endif
 
 
 openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
@@ -113,18 +105,20 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    
 
 
-openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a ./spdy/libspdy.a \
+openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
+        ./quic/libquic.a ./liblsquic/liblsquic.a ./spdy/libspdy.a \
         $(LIBBROTLI) $(LIBMMDB) $(EXTRA_LIBS) \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) ${IP2LOCATION_LIBS} \
         -ludns $(LIBGEOIP) -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = $(OPENSSL_LDFLAGS) -L/usr/lib -L/usr/local/lib -L/usr/lib64  
-AM_CPPFLAGS = -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CXXFLAGS = -std=c++0x
 
-SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns
+SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns quic liblsquic
 
 
 # the library search path.

@@ -6,6 +6,7 @@ AM_CPPFLAGS =  -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_
 libmain_a_METASOURCES = AUTO
 
 libmain_a_SOURCES = mainserverconfig.cpp lshttpdmain.cpp serverinfo.cpp httpconfigloader.cpp \
-	httpserver.cpp plainconf.cpp configctx.cpp zconfclient.cpp zconfmanager.cpp
+	httpserver.cpp plainconf.cpp configctx.cpp zconfclient.cpp zconfmanager.cpp \
+	../sslpp/sslcontextconfig.cpp
 
 ####### kdevelop will overwrite this part!!! (end)############

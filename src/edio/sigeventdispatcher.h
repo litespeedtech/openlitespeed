@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2017  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,33 +18,52 @@
 #ifndef SIGEVENTDISPATCHER_H
 #define SIGEVENTDISPATCHER_H
 
-#include <edio/aioeventhandler.h>
 #include <edio/eventreactor.h>
+#include <util/tsingleton.h>
 
 #include <signal.h>
 
-class SigEventDispatcher : public EventReactor
-{
-#if defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
-private:
+#if !(defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__))
+#define HS_AIO (SIGRTMIN + 4)
+#define LS_HAS_RTSIG 
+#endif
 
-    explicit SigEventDispatcher(sigset_t *ss);
+typedef void (*sigevthdlr_t)(int, void *);
+
+#define SIG_EVT_HANDLER  ((sigevthdlr_t)-1)
+
+struct SigEvtHdlrInfo;
+
+class SigEventDispatcher : public EventReactor
+                         , public TSingleton<SigEventDispatcher>
+{
+    friend class TSingleton<SigEventDispatcher>;
+#if defined(LS_HAS_RTSIG)
+private:
+    short           m_rtsigmin;
+    short           m_rtsigcnt;
+    short           m_rtsignext;
+    short           m_flag;
+    long            m_mergeable;
+    sigset_t        m_sigset;
+    SigEvtHdlrInfo *m_rtsig_hdlrs;
+ 
+    SigEventDispatcher();
+
     SigEventDispatcher(const SigEventDispatcher &other);
     ~SigEventDispatcher() {}
     SigEventDispatcher &operator=(const SigEventDispatcher *rhs);
+    int nextRtsig();
 
 public:
-    static int processSigEvent();
+    int processSigEvent();
 
-    static int init();
-
+    int registerRtsig(sigevthdlr_t hdlr, void *param, bool merge = false);
+    int beginWatch();
+#endif //defined(LS_HAS_RTSIG)
+    
     virtual int handleEvents(short event);
 
-#elif defined(LS_AIO_USE_KQ)
-public:
-    static void setAiokoLoaded();
-    static short aiokoIsLoaded();
-#endif // defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
 };
 
 

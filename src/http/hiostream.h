@@ -19,6 +19,8 @@
 #define HIOSTREAM_H
 
 #include <inttypes.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <sys/types.h>
 #include <edio/inputstream.h>
 #include <edio/outputstream.h>
@@ -55,6 +57,7 @@ enum HiosProtocol
     HIOS_PROTO_SPDY3 = 2,
     HIOS_PROTO_SPDY31 = 3,
     HIOS_PROTO_HTTP2 = 4,
+    HIOS_PROTO_QUIC = 5,
     HIOS_PROTO_MAX
 };
 
@@ -73,6 +76,8 @@ enum HiosProtocol
 #define HIO_FLAG_FROM_LOCAL         (1<<12)
 #define HIO_FLAG_PUSH_CAPABLE       (1<<13)
 #define HIO_FLAG_INIT_PUSH          (1<<14)
+#define HIO_FLAG_PRI_SET            (1<<15)
+
 
 #define HIO_PRIORITY_HIGHEST        (0)
 #define HIO_PRIORITY_LOWEST         (7)
@@ -93,6 +98,7 @@ struct ConnInfo
         struct ssl_st      *m_pSsl;
     };
     const ServerAddrInfo   *m_pServerAddrInfo;
+    char                    m_serverAddr[sizeof(struct sockaddr_in6)];
     unsigned int            m_remotePort;
 };
 

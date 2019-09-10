@@ -144,6 +144,10 @@ public:
     int close();
     int flush()    {   return LS_OK;    }
     int getSockError(int32_t *error);
+
+    void suspendNotify();
+    void resumeNotify();
+
 };
 
 

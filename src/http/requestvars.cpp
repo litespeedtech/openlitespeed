@@ -33,6 +33,8 @@
 #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
 #include <sslpp/sslcert.h>
+#include <sslpp/sslconnection.h>
+
 #include <util/autostr.h>
 #include <util/datetime.h>
 #include <util/httputil.h>

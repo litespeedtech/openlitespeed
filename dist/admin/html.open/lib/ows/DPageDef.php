@@ -51,7 +51,7 @@ class DPageDef
             'S_AUTOLOADHTA', 'S_FILEUPLOAD',
 			new DTblMap(['ipToGeo:geoipDB', '*geoipdb$geoipDBFile' ], 'S_GEOIP'),
             new DTblMap('ip2locDB', 'S_IP2LOCATION'),
-			new DTblMap('tuning', ['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL', /*'S_TUNING_QUIC'*/ ]),
+			new DTblMap('tuning', ['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSL', 'S_TUNING_QUIC' ]),
 			new DTblMap(['security:fileAccessControl', 'fileAccessControl' ], 'S_SEC_FILE'),
 			new DTblMap(['security:perClientConnLimit', 'perClientConnLimit' ], 'S_SEC_CONN'),
 			new DTblMap(['security:CGIRLimit', 'CGIRLimit' ], 'S_SEC_CGI'),
@@ -199,7 +199,7 @@ class DPageDef
 
 		$id = 'tuning';
 		$page = new DPage($id, DMsg::UIStr('tab_tuning'), new DTblMap('tuning',
-				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_BROTLI', 'S_TUNING_SSL', /*'S_TUNING_QUIC'*/]));
+				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSL', 'S_TUNING_QUIC']));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'sec';

@@ -7,7 +7,7 @@ m4_include(ax_check_libudns.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([openlitespeed],[1.5.4],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.6.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
@@ -329,48 +329,19 @@ AC_SUBST([LIBMMDB])
 
 ## ##Set option --with-bssl
 AC_ARG_WITH(bssl,
-            [  --with-bssl[[=DIR]]       Set to use BoringSSL instead of OpenSSL [[default=no]]],
-            [
-                if test $withval = no
-                then
-                    OPENLSWS_BSSL=no
-                elif test $withval = yes
-                then
-                    OPENLSWS_BSSL=yes
-                else
-                    OPENLSWS_BSSL="$withval"
-                fi
-            ],[OPENLSWS_BSSL=no])
+            [  --with-bssl[[=DIR]]       Set to use BoringSSL instead of build while configure [[default=boringssl]]],
+            [ OPENLSWS_BSSL="$withval" ],[OPENLSWS_BSSL=boringssl])
 AC_SUBST([OPENLSWS_BSSL])
 
-if test "$OPENLSWS_BSSL" = no ; then
-    if test "$OSNAME" = Darwin ; then
-        usedynossl=yes
-        CPPFLAGS=" $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
-    else
-        usedynossl=no
-        CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
-        echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
-        OSSL=`. $srcdir/dlossl.sh`
-        echo "Finsihed building openssl."
-    fi
-    echo "Openssl: use_dyn_ossl = $usedynossl"
-    AC_DEFINE([USE_OPENSSL], [1], [will use openssl as ssl])
-else
-    #### Not provide location, use default location, will not copy files
-    usedynossl=no
-    AC_DEFINE_UNQUOTED([USE_BORINGSSL], [1], [Defined to use BoringSSL instead of OpenSSL])
-    CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg -DUSE_BORINGSSL=1 "
-    if test "$OPENLSWS_BSSL" = yes ; then
-        echo "Will use exist BoringSSL files in $srcdir/ssl/."
-    else
-        OSSL=`. $srcdir/dlossl.sh use_bssl "$OPENLSWS_BSSL"`
-        echo "BoringSSL files copied to $srcdir/ssl/ from $OPENLSWS_BSSL."
-    fi
-    OPENLSWS_BSSL=yes
-fi
-AM_CONDITIONAL([USE_DYN_OSSL], [test x$usedynossl = xyes])
-AM_CONDITIONAL([USE_BSSL], [test x$OPENLSWS_BSSL = xyes])
+
+
+CPPFLAGS=" -I$srcdir/ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg -DUSE_BORINGSSL=1 "
+BSSL=`. $srcdir/dlbssl.sh "$OPENLSWS_BSSL"`
+echo "BoringSSL files copied to $srcdir/ssl/ from $OPENLSWS_BSSL."
+
+AC_DEFINE_UNQUOTED([USE_BORINGSSL], [1], [Defined to use BoringSSL instead of OpenSSL])
+AC_DEFINE_UNQUOTED([USE_DYN_OSSL], [0], [Defined to use openssl])
+AC_DEFINE_UNQUOTED([USE_BSSL], [1], [Defined to use boringSSL])
 
 
 AC_ARG_ENABLE([recaptcha],
@@ -516,6 +487,10 @@ if test "$OSNAME" = Darwin ; then
     RT_LIB_OPTION=
 fi
 
+if test "$OSTYPE" = aarch64 ; then
+    EXTRA_LIBS="$EXTRA_LIBS -latomic"
+fi
+
 LDFLAGS="$LDFLAGS $PCRE_LDFLAGS $UDNS_LDFLAGS -D_GLIBCXX_USE_CXX11_ABI=0"
 echo "Final LDFLAGS='$LDFLAGS'"
 AC_SUBST([DL_LIB_OPTION])
@@ -539,6 +514,8 @@ AC_CONFIG_FILES(Makefile
                 src/modules/Makefile
                 src/shm/Makefile
                 src/adns/Makefile
+                src/quic/Makefile
+                src/liblsquic/Makefile
                 src/modules/cache/Makefile
                 src/modules/modinspector/Makefile
                 src/modules/modreqparser/Makefile

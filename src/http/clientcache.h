@@ -56,6 +56,7 @@ private:
     void    recycle(ClientInfo *pInfo);
 
     ClientCache(int initSize);
+    ClientCache(void);
 public:
 
     ~ClientCache();

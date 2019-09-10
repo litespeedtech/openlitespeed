@@ -111,10 +111,9 @@ am_libedio_a_OBJECTS = reactorindex.$(OBJEXT) fdindex.$(OBJEXT) \
 	multiplexerfactory.$(OBJEXT) eventreactor.$(OBJEXT) \
 	poller.$(OBJEXT) multiplexer.$(OBJEXT) pollfdreactor.$(OBJEXT) \
 	lookupfd.$(OBJEXT) devpoller.$(OBJEXT) \
-	aioeventhandler.$(OBJEXT) sigeventdispatcher.$(OBJEXT) \
-	aiooutputstream.$(OBJEXT) aiosendfile.$(OBJEXT) \
-	eventnotifier.$(OBJEXT) eventprocessor.$(OBJEXT) \
-	evtcbque.$(OBJEXT)
+	sigeventdispatcher.$(OBJEXT) aiooutputstream.$(OBJEXT) \
+	aiosendfile.$(OBJEXT) eventnotifier.$(OBJEXT) \
+	eventprocessor.$(OBJEXT) evtcbque.$(OBJEXT)
 libedio_a_OBJECTS = $(am_libedio_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -341,7 +340,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_s
 libedio_a_METASOURCES = AUTO
 libedio_a_SOURCES = reactorindex.cpp fdindex.cpp kqueuer.cpp epoll.cpp rtsigio.cpp ediostream.cpp outputbuf.cpp cacheos.cpp \
    inputstream.cpp bufferedos.cpp outputstream.cpp flowcontrol.cpp iochain.cpp multiplexerfactory.cpp eventreactor.cpp poller.cpp \
-   multiplexer.cpp pollfdreactor.cpp lookupfd.cpp devpoller.cpp aioeventhandler.cpp sigeventdispatcher.cpp aiooutputstream.cpp \
+   multiplexer.cpp pollfdreactor.cpp lookupfd.cpp devpoller.cpp sigeventdispatcher.cpp aiooutputstream.cpp \
    aiosendfile.cpp eventnotifier.cpp eventprocessor.cpp evtcbque.cpp
 
 all: all-am
@@ -393,7 +392,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aioeventhandler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aiooutputstream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/aiosendfile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bufferedos.Po@am__quote@

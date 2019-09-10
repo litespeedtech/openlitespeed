@@ -95,7 +95,10 @@ int ls_atomic_spin_pidwait(ls_atom_spinlock_t *p)
         {
             if ((kill(waitpid, 0) < 0) && (errno == ESRCH)
                 && ls_atomic_casint(p, waitpid, ls_spin_pid))
+            {
+                LS_TH_LOCKED(p, 1); // call it a write lock
                 return -waitpid;
+            }
             cnt = MAX_SPINCNT_CHECK;
             usleep(200);
         }
@@ -150,7 +153,7 @@ int ls_pspinlock_setup(ls_pspinlock_t   *p)
 {
     int code;
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    *p = OS_SPINLOCK_INIT;
+    *p = OS_UNFAIR_LOCK_INIT;
     code = 0;
 #else
     code = pthread_spin_init((pthread_spinlock_t *)p,

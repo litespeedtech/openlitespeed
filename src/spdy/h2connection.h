@@ -44,6 +44,7 @@
 #define H2_CONN_FLAG_NO_PUSH        (1<<8)
 #define H2_CONN_FLAG_WANT_FLUSH     (1<<9)
 #define H2_CONN_FLAG_IN_EVENT       (1<<10)
+#define H2_CONN_FLAG_PAUSE_READ     (1<<11)
 
 #define H2_STREAM_PRIORITYS         (8)
 
@@ -253,7 +254,7 @@ private:
 
     TDLinkQueue<H2Stream>  m_priQue[H2_STREAM_PRIORITYS];
     StreamMap       m_mapStream;
-    short           m_iState;
+    short           m_iControlFrames;
     short           m_iFlag;
     Priority_st     m_priority;
     char            m_bVersion;

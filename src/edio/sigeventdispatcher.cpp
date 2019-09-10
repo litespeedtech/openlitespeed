@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2017  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -16,25 +16,11 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
+#include <edio/eventhandler.h>
 #include <edio/sigeventdispatcher.h>
 
-#if defined(LS_AIO_USE_KQ)
-#include <sys/param.h>
-#include <sys/linker.h>
 
-static short s_iAiokoLoaded = -1;
-
-void SigEventDispatcher::setAiokoLoaded()
-{
-    s_iAiokoLoaded = (kldfind("aio.ko") != -1);
-}
-
-short SigEventDispatcher::aiokoIsLoaded()
-{
-    return s_iAiokoLoaded;
-}
-
-#elif defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
+#if defined(LS_HAS_RTSIG)
 
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
@@ -43,76 +29,179 @@ short SigEventDispatcher::aiokoIsLoaded()
 #include <fcntl.h>
 #include <unistd.h>
 
-#if defined(LS_AIO_USE_SIGFD)
-#include <sys/signalfd.h>
-#endif // defined(LS_AIO_USE_SIGFD)
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+#include <sys/syscall.h>
+
+#if !defined( __NR_signalfd )
+#if defined(__x86_64__)
+#define __NR_signalfd 282
+#elif defined(__i386__)
+#define __NR_signalfd 321
+#else
+#error Cannot detect your architecture!
+#endif //defined(__i386__)
+#endif //!defined(__NR_signalfd )
+
+#define SIZEOF_SIG (_NSIG / 8)
+#define SIZEOF_SIGSET (SIZEOF_SIG > sizeof(sigset_t) ? sizeof(sigset_t): SIZEOF_SIG)
+
+
+struct signalfd_siginfo
+{
+    u_int32_t ssi_signo;
+    int32_t ssi_errno;
+    int32_t ssi_code;
+    u_int32_t ssi_pid;
+    u_int32_t ssi_uid;
+    int32_t ssi_fd;
+    u_int32_t ssi_tid;
+    u_int32_t ssi_band;
+    u_int32_t ssi_overrun;
+    u_int32_t ssi_trapno;
+    int32_t ssi_status;
+    int32_t ssi_int;
+    u_int64_t ssi_ptr;
+    u_int64_t ssi_utime;
+    u_int64_t ssi_stime;
+    u_int64_t ssi_addr;
+    u_int8_t __pad[48];
+};
+
+static inline int signalfd(int ufc, sigset_t const *mask, int flag)
+{
+    return syscall(__NR_signalfd, ufc, mask, SIZEOF_SIGSET);
+}
+
+#endif //defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+
+struct SigEvtHdlrInfo
+{
+    sigevthdlr_t  handler;
+    void         *param;
+};
+
+
+#define SED_FLAG_SIGNALFD   1 
+#define SED_FLAG_INITED     2
+#define SED_FLAG_INUSE      4
 
 int SigEventDispatcher::processSigEvent()
 {
-#ifdef LS_AIO_USE_SIGNAL
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if ((m_flag & SED_FLAG_SIGNALFD) || !(m_flag & SED_FLAG_INUSE))
+        return LS_OK;
+#endif //defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+#ifdef LS_HAS_RTSIG
     struct timespec timeout;
     siginfo_t si;
-    sigset_t ss;
 
     timeout.tv_sec = 0;
     timeout.tv_nsec = 0;
 
-    sigemptyset(&ss);
-    sigaddset(&ss, HS_AIO);
 
-    while (sigtimedwait(&ss, &si, &timeout) > 0)
+    while (sigtimedwait(&m_sigset, &si, &timeout) > 0)
     {
-        if (!sigismember(&ss, HS_AIO))
-            continue;
-        ((AioEventHandler *)si.si_value.sival_ptr)->onAioEvent();
+        int idx = si.si_signo - m_rtsigmin;
+        if (idx >=0 && idx < m_rtsigcnt)
+        {
+            if (m_rtsig_hdlrs[idx].handler == SIG_EVT_HANDLER)
+                ((EventHandler *)si.si_value.sival_ptr)->onEvent();
+            else if (m_rtsig_hdlrs[idx].handler != NULL)
+                (*m_rtsig_hdlrs[idx].handler)(si.si_signo, m_rtsig_hdlrs[idx].param);
+        }            
     }
 #endif
     return LS_OK;
 }
 
-int SigEventDispatcher::init()
+
+LS_SINGLETON(SigEventDispatcher);
+
+
+SigEventDispatcher::SigEventDispatcher()
 {
-    SigEventDispatcher *pReactor;
-    sigset_t ss;
-    sigemptyset(&ss);
-    sigaddset(&ss, HS_AIO);
-    sigprocmask(SIG_BLOCK, &ss, NULL);
-#if defined(LS_AIO_USE_SIGFD)
-    pReactor = new SigEventDispatcher(&ss);
-    if (pReactor->getfd() == -1)
-    {
-        delete pReactor;
-        return LS_FAIL;
-    }
-    MultiplexerFactory::getMultiplexer()->add(pReactor, POLLIN);
-#endif // defined(LS_AIO_USE_SIGFD)
-    return LS_OK;
+    m_rtsigmin = SIGRTMIN;
+    m_rtsigcnt = SIGRTMAX - SIGRTMIN;
+    m_rtsignext = m_rtsigmin + 4;
+    sigemptyset(&m_sigset);
+    m_flag = 0;
+    if (m_rtsigcnt > (int) sizeof(m_mergeable) * 8)
+        m_rtsigcnt = (int) sizeof(m_mergeable) * 8;
+    m_rtsig_hdlrs = (SigEvtHdlrInfo *)malloc(m_rtsigcnt 
+                        * sizeof(SigEvtHdlrInfo));
+    memset(m_rtsig_hdlrs, 0, sizeof(SigEvtHdlrInfo) * m_rtsigcnt);
 }
 
 
-SigEventDispatcher::SigEventDispatcher(sigset_t *ss)
+int SigEventDispatcher::beginWatch()
 {
-#if defined(LS_AIO_USE_SIGFD)
-    int fd = signalfd(-1, ss, 0);
+    if (!(m_flag & SED_FLAG_INUSE))
+        return 0;
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    int fd = signalfd(-1, &m_sigset, 0);
     if (fd != -1)
     {
         fcntl(fd, F_SETFD, FD_CLOEXEC);
         fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
         setfd(fd);
+        MultiplexerFactory::getMultiplexer()->add(this, POLLIN);
+        m_flag |= SED_FLAG_SIGNALFD;
     }
-#endif // defined(LS_AIO_USE_SIGFD)
+#endif
+    m_flag |= SED_FLAG_INITED;
+    return 0;
 }
+
+
+int SigEventDispatcher::nextRtsig()
+{
+    int signo; 
+    while( m_rtsignext < m_rtsigmin + m_rtsigcnt)
+    {
+        signo = m_rtsignext++;
+        if (!sigismember(&m_sigset, signo))
+            return signo;
+    }
+    return -1;
+}
+
+
+int SigEventDispatcher::registerRtsig(sigevthdlr_t hdlr, void *param, bool merge)
+{
+    int signo = nextRtsig(); 
+    if (signo == -1)
+        return signo;
+
+    if (sigaddset(&m_sigset, signo) != 0
+        || sigprocmask(SIG_BLOCK, &m_sigset, NULL) != 0)
+        return -1;
+    int idx = signo - m_rtsigmin;
+    if (idx >= 0 && idx < m_rtsigcnt)
+    {
+        m_rtsig_hdlrs[idx].handler = hdlr;
+        m_rtsig_hdlrs[idx].param   = param;
+        if (merge)
+            m_mergeable |= 1L << idx;
+    }
+    m_flag |= SED_FLAG_INUSE;
+    return signo;
+}
+
 
 int SigEventDispatcher::handleEvents(short event)
 {
-#if defined(LS_AIO_USE_SIGFD)
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     int i, readCount = 0;
-    signalfd_siginfo si[5];
+    signalfd_siginfo si[20];
+    long handled_set;
     if (!(event & POLLIN))
         return LS_OK;
     do
     {
-        if ((readCount = read(getfd(), &si, sizeof(signalfd_siginfo) * 5)) < 0)
+        if ((readCount = read(getfd(), &si, sizeof(si))) < 0)
         {
             if (errno == EAGAIN)
                 break;
@@ -121,12 +210,23 @@ int SigEventDispatcher::handleEvents(short event)
         else if (readCount == 0)
             return LS_OK;
         readCount /= sizeof(signalfd_siginfo);
-        for (i = 0; i < readCount; ++i)
-            ((AioEventHandler *)si[i].ssi_ptr)->onAioEvent();
+        for (i = 0, handled_set = 0; i < readCount; ++i)
+        {
+            int idx = si[i].ssi_signo - m_rtsigmin;
+            if (idx >=0 && idx < m_rtsigcnt && !(handled_set & (1L << idx)))
+            {
+                handled_set |= (1L << idx) & m_mergeable;
+                if (m_rtsig_hdlrs[idx].handler == SIG_EVT_HANDLER)
+                    ((EventHandler *)si[i].ssi_ptr)->onEvent();
+                else if (m_rtsig_hdlrs[idx].handler != NULL)
+                    (*m_rtsig_hdlrs[idx].handler)(si[i].ssi_signo, 
+                                          m_rtsig_hdlrs[idx].param);
+            }            
+        }
     }
-    while (readCount == 5);
-#endif // defined(LS_AIO_USE_SIGFD)
+    while (readCount == (int) (sizeof(si) / sizeof(si[0])));
+#endif
     return LS_OK;
 }
 
-#endif // defined(LS_AIO_USE_KQ)
+#endif //defined(LS_HAS_RTSIG)

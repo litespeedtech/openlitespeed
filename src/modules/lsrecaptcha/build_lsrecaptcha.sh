@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if which go ; then
     echo "Go is installed, continue with installation."

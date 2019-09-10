@@ -148,13 +148,12 @@ static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl,
         DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeySign canceled\n", ssl);
         return ret;
     }
-    if (data->m_header.state == LS_OFFLOAD_ENQUEUE
-        || data->m_header.state == LS_OFFLOAD_PROCESSING)
+    if (data->m_header.state < LS_OFFLOAD_FINISH_CB)
     {
-        DEBUG_MESSAGE("[SSL: %p] has not been signed yet, wait\n", ssl);
+        DEBUG_MESSAGE("[SSL: %p] Signing not finished yet, wait\n", ssl);
         return ssl_private_key_retry;
     }
-    if (data->m_header.state == LS_OFFLOAD_DONE)
+    if (data->m_header.state == LS_OFFLOAD_FINISH_CB)
     {
         if (max_out < data->m_sign_size)
         {
