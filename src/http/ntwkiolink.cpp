@@ -427,8 +427,7 @@ int NtwkIOLink::close()
 void NtwkIOLink::suspendRead()
 {
     LS_DBG_L(this, "NtwkIOLink::suspendRead()...");
-    if (!((isSSL()) && (m_ssl.wantRead())))
-        MultiplexerFactory::getMultiplexer()->suspendRead(this);
+    MultiplexerFactory::getMultiplexer()->suspendRead(this);
 }
 
 

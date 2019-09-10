@@ -18,7 +18,7 @@ class Product
         $releasefile = SERVER_ROOT . 'autoupdate/release';
         if (file_exists($releasefile)) {
             $this->new_version = trim(file_get_contents($releasefile));
-            if ($this->version == $this->new_version)
+            if (version_compare($this->version, $this->new_version, '>='))
                 $this->new_version = null;
         }
     }

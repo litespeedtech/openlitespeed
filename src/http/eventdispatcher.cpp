@@ -29,6 +29,7 @@
 #include <http/connlimitctrl.h>
 #include <log4cxx/logger.h>
 #include <main/httpserver.h>
+#include <quic/quicengine.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/time.h>
@@ -117,6 +118,9 @@ static void processTimer()
     DateTime::s_curTimeUs = tv.tv_usec;
     NtwkIOLink::setPrevToken(NtwkIOLink::getToken());
     NtwkIOLink::setToken(tv.tv_usec / (1000000 / TIMER_PRECISION));
+    QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
+    if (pQuicEngine)
+        pQuicEngine->onTimer();
     if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
         HttpServer::getInstance().onTimer();
     MultiplexerFactory::getMultiplexer()->timerExecute();
@@ -206,6 +210,9 @@ static inline void processTimerNew()
     NtwkIOLink::setToken(tv.tv_usec / (1000000 / TIMER_PRECISION));
     if (NtwkIOLink::getToken() != NtwkIOLink::getPrevToken())
     {
+        QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
+        if (pQuicEngine)
+            pQuicEngine->onTimer();
         if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
         {
             if (getppid() != s_ppid)
@@ -221,14 +228,63 @@ static inline void processTimerNew()
 }
 
 
+static int s_quic_tight_loop_count = 0;
+static int s_quic_previous_debug_level = 0;
+static int s_quic_default_level = 0;
+static inline void detectQuicBusyLoop(int to)
+{
+    if (to == 0)
+    {
+        if (++s_quic_tight_loop_count >= 100)
+        {
+            if (s_quic_tight_loop_count % 100 == 0)
+            {
+                LS_WARN("Detected QUIC busy loop at %d", s_quic_tight_loop_count);
+                if (s_quic_tight_loop_count == 500)
+                {
+                    s_quic_default_level = *log4cxx::Level::getDefaultLevelPtr();
+                    s_quic_previous_debug_level = HttpLog::getDebugLevel();
+                    HttpLog::setDebugLevel(10);
+                }
+            }
+        }
+    }
+    else
+    {
+        if (s_quic_tight_loop_count >= 100)
+        {
+            LS_WARN("End QUIC busy loop at %d", s_quic_tight_loop_count);
+            HttpLog::setDebugLevel(s_quic_previous_debug_level);
+            log4cxx::Level::setDefaultLevel(s_quic_default_level);
+            s_quic_previous_debug_level = 0;
+            s_quic_default_level = 0;
+        }
+        s_quic_tight_loop_count = 0;
+    }
+}
+
+
 #define MLTPLX_TIMEOUT 100
 int EventDispatcher::run()
 {
     int ret;
     int sigEvent;
+    QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
+    int nextQuicEventMilliSec, to;
     s_ppid = getppid();
     while (true)
     {
+        to = MLTPLX_TIMEOUT;
+        if (pQuicEngine)
+        {
+            nextQuicEventMilliSec = pQuicEngine->nextEventTime();
+            if (nextQuicEventMilliSec >= 0
+                && nextQuicEventMilliSec < MLTPLX_TIMEOUT)
+            {
+                to = nextQuicEventMilliSec;
+            }
+            detectQuicBusyLoop(to);
+        }
         ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
                   MLTPLX_TIMEOUT);
         if ((ret == -1) && errno)
@@ -241,11 +297,14 @@ int EventDispatcher::run()
         }
         Adns::getInstance().processPendingEvt();
         processTimerNew();
-#ifdef LS_AIO_USE_SIGNAL
-        SigEventDispatcher::processSigEvent();
+#ifdef LS_HAS_RTSIG
+        SigEventDispatcher::getInstance().processSigEvent();
 #endif
 
         EvtcbQue::getInstance().run();
+
+        if (pQuicEngine)
+            pQuicEngine->processEvents();
 
         if ((sigEvent = HttpSignals::gotEvent()))
         {
@@ -268,12 +327,25 @@ int EventDispatcher::linger(int timeout)
 {
     int ret;
     long endTime = time(NULL) + timeout;
+    int nextQuicEventMilliSec, to;
+    QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
     MultiplexerFactory::getMultiplexer()->setPriHandler(NULL);
     startTimer();
     while ((time(NULL) < endTime)
            && (ConnLimitCtrl::getInstance().getMaxConns()
-               > ConnLimitCtrl::getInstance().availConn()))
+               > ConnLimitCtrl::getInstance().availConn()
+                   || QuicEngine::activeConnsCount() > 0))
     {
+        to = MLTPLX_TIMEOUT;
+        if (pQuicEngine)
+        {
+            nextQuicEventMilliSec = pQuicEngine->nextEventTime();
+            if (nextQuicEventMilliSec >= 0
+                && nextQuicEventMilliSec < MLTPLX_TIMEOUT)
+            {
+                to = nextQuicEventMilliSec;
+            }
+        }
         ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
                   MLTPLX_TIMEOUT);
         if (ret == -1)
@@ -285,10 +357,13 @@ int EventDispatcher::linger(int timeout)
             }
         }
         Adns::getInstance().processPendingEvt();
-#ifdef LS_AIO_USE_SIGNAL
-        SigEventDispatcher::processSigEvent();
+#ifdef LS_HAS_RTSIG
+        SigEventDispatcher::getInstance().processSigEvent();
 #endif
         EvtcbQue::getInstance().run();
+
+        if (pQuicEngine)
+            pQuicEngine->processEvents();
 
         if (HttpSignals::gotSigAlarm())
         {

@@ -1131,6 +1131,7 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
     addEnv("PROXY_REMOTE_ADDR", 17,
            getPeerAddrString(), getPeerAddrStrLen());
 
+    m_iFlag |= HSF_BEHIND_PROXY;
     if (pInfo == m_pClientInfo)
         return 0;
     //NOTE: turn of connection account for now, it does not work well for
@@ -4338,14 +4339,11 @@ int HttpSession::processOneLink(const char *p, const char *pEnd,
 void HttpSession::processLinkHeader(const char* pValue, int valLen,
                                     AutoStr2 &cookie)
 {
-    if (!getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE))
-        return;
-
     const char *p = pValue;
     const char *pLineEnd = p + valLen;
     const char *pEnd;
 
-    while(p < pLineEnd)
+    while (getStream()->getFlag(HIO_FLAG_PUSH_CAPABLE) && p < pLineEnd)
     {
         pEnd = (const char *)memchr(p, ',', pLineEnd - p);
         if (!pEnd)
@@ -4789,7 +4787,7 @@ int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
     if (!pBuf)
         pBuf = ls_palloc(STATIC_FILE_BLOCK_SIZE);
     remain = m_aioReq.read(pData->getECache()->getfd(), pBuf,
-                           len, pData->getCurPos(), (AioEventHandler *)this);
+                           len, pData->getCurPos(), (EventHandler *)this);
     if (remain != 0)
         return LS_FAIL;
     setFlag(HSF_AIO_READING);
@@ -5051,7 +5049,16 @@ int HttpSession::finalizeHeader(int ver, int code)
     
     getResp()->getRespHeaders().addStatusLine(ver, code,
             m_request.isKeepAlive());
-    
+
+    if ((m_iFlag & HSF_BEHIND_PROXY) == 0
+            && m_request.getVHost() && m_request.getVHost()->enableQuic())
+    {
+        const AutoStr2 *altsvc = m_request.getVHostMap()->getAltSvc();
+        if (altsvc && altsvc->len() > 0)
+            getResp()->getRespHeaders().add("Alt-Svc", 7,
+                                            altsvc->c_str(), altsvc->len());
+    }
+
     return ret;
 }
 

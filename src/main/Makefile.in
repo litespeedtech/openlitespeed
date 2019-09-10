@@ -107,7 +107,7 @@ am_libmain_a_OBJECTS = mainserverconfig.$(OBJEXT) \
 	lshttpdmain.$(OBJEXT) serverinfo.$(OBJEXT) \
 	httpconfigloader.$(OBJEXT) httpserver.$(OBJEXT) \
 	plainconf.$(OBJEXT) configctx.$(OBJEXT) zconfclient.$(OBJEXT) \
-	zconfmanager.$(OBJEXT)
+	zconfmanager.$(OBJEXT) sslcontextconfig.$(OBJEXT)
 libmain_a_OBJECTS = $(am_libmain_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -125,12 +125,12 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) \
 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
@@ -335,7 +335,8 @@ noinst_LIBRARIES = libmain.a
 AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 libmain_a_METASOURCES = AUTO
 libmain_a_SOURCES = mainserverconfig.cpp lshttpdmain.cpp serverinfo.cpp httpconfigloader.cpp \
-	httpserver.cpp plainconf.cpp configctx.cpp zconfclient.cpp zconfmanager.cpp
+	httpserver.cpp plainconf.cpp configctx.cpp zconfclient.cpp zconfmanager.cpp \
+	../sslpp/sslcontextconfig.cpp
 
 all: all-am
 
@@ -393,6 +394,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mainserverconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plainconf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serverinfo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sslcontextconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zconfclient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zconfmanager.Po@am__quote@
 
@@ -416,6 +418,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
+
+sslcontextconfig.o: ../sslpp/sslcontextconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT sslcontextconfig.o -MD -MP -MF $(DEPDIR)/sslcontextconfig.Tpo -c -o sslcontextconfig.o `test -f '../sslpp/sslcontextconfig.cpp' || echo '$(srcdir)/'`../sslpp/sslcontextconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sslcontextconfig.Tpo $(DEPDIR)/sslcontextconfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../sslpp/sslcontextconfig.cpp' object='sslcontextconfig.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o sslcontextconfig.o `test -f '../sslpp/sslcontextconfig.cpp' || echo '$(srcdir)/'`../sslpp/sslcontextconfig.cpp
+
+sslcontextconfig.obj: ../sslpp/sslcontextconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT sslcontextconfig.obj -MD -MP -MF $(DEPDIR)/sslcontextconfig.Tpo -c -o sslcontextconfig.obj `if test -f '../sslpp/sslcontextconfig.cpp'; then $(CYGPATH_W) '../sslpp/sslcontextconfig.cpp'; else $(CYGPATH_W) '$(srcdir)/../sslpp/sslcontextconfig.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/sslcontextconfig.Tpo $(DEPDIR)/sslcontextconfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../sslpp/sslcontextconfig.cpp' object='sslcontextconfig.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o sslcontextconfig.obj `if test -f '../sslpp/sslcontextconfig.cpp'; then $(CYGPATH_W) '../sslpp/sslcontextconfig.cpp'; else $(CYGPATH_W) '$(srcdir)/../sslpp/sslcontextconfig.cpp'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

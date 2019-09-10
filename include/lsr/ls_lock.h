@@ -78,11 +78,11 @@ typedef pthread_mutex_t     ls_mutex_t;
 #endif
 
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-#include <libkern/OSAtomic.h>
-typedef OSSpinLock ls_pspinlock_t;
-#define ls_pspinlock_lock          OSSpinLockLock
-#define ls_pspinlock_trylock       OSSpinLockTry
-#define ls_pspinlock_unlock        OSSpinLockUnlock
+#include <os/lock.h>
+typedef os_unfair_lock ls_pspinlock_t;
+#define ls_pspinlock_lock          os_unfair_lock_lock
+#define ls_pspinlock_trylock       os_unfair_lock_trylock
+#define ls_pspinlock_unlock        os_unfair_lock_unlock
 #else
 typedef pthread_spinlock_t ls_pspinlock_t;
 #define ls_pspinlock_lock          pthread_spin_lock
@@ -189,6 +189,31 @@ ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 {
     int err = _umtx_op(futex, UMTX_OP_WAIT_UINT, val, 0, (void *)timeout);
     return err;
+}
+
+#endif
+
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+
+#define ls_futex_wait_priv         ls_futex_wait
+#define ls_futex_wake_priv         ls_futex_wake
+#define ls_futex_wakeall_priv      ls_futex_wakeall
+ls_inline int ls_futex_wake(int *futex)
+{
+//Not implemented for MAC OS
+    return 0;
+}
+
+ls_inline int ls_futex_wakeall(int *futex)
+{
+//Not implemented for MAC OS
+    return 0;
+}
+
+ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
+{
+    usleep(1000);
+    return 0;
 }
 
 #endif

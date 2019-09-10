@@ -46,7 +46,7 @@ int AppConfig::loadAppDefault(const XmlNode *pNode)
     s_pAppDefault->setBuffering(0);
     s_pAppDefault->setPriority(
         ServerProcessConfig::getInstance().getPriority() + 1);
-    s_pAppDefault->setBackLog(10);
+    s_pAppDefault->setBackLog(100);
     s_pAppDefault->setMaxIdleTime(300);
     s_pAppDefault->setRLimits(ExtAppRegistry::getRLimits());
     s_pAppDefault->getRLimits()->setCPULimit(RLIM_INFINITY, RLIM_INFINITY);

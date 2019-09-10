@@ -707,6 +707,7 @@ int LsShmHash::rehash()
     iteroffset iterNextOff;
     int szTable;
     int szBitMap;
+    uint count = 0;
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmHash::rehash %6d %X size %d cap %d NEW %d",
                getpid(), m_pPool->getShmMap(),
@@ -771,6 +772,12 @@ int LsShmHash::rehash()
         iter->x_iNext.m_iOffset = npIdx->m_iOffset;
         npIdx->m_iOffset = iterOff.m_iOffset;
         iterOff = iterNextOff;
+        if (++count > oldSize + oldSize / 2)
+        {
+            fprintf(stderr, "LsShmHash::rehash() is in a infinity loop, likely due to SHM corruption. remove corrupted file.");
+            getPool()->getShm()->tryRecoverCorruption();
+            abort();
+        }
     }
     pTable->x_iWorkIterOff = 0;
 
@@ -1631,7 +1638,6 @@ int LsShmHash::trimsize(int need, LsShmHash::TrimCb func, void *arg)
     
     while ((offElem.m_iOffset != 0) && (need > 0))
     {
-        int ret = 1;
         if ((m_pTidMgr != NULL) && (m_pTidMgr->checkTidTbl() != 0))
             pLru = getLru();
         pElem = offset2iterator(offElem);
@@ -1639,7 +1645,7 @@ int LsShmHash::trimsize(int need, LsShmHash::TrimCb func, void *arg)
         next = pElem->getLruLinkNext();
 
         if (func != NULL)
-            ret = (*func)(pElem, arg);
+            (*func)(pElem, arg);
 //         int ret = clrdata(pElem->getVal());
         eraseIteratorHelper(offElem);
         ++del;

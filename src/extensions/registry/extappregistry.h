@@ -115,8 +115,11 @@ public:
 
     static void add(pid_t pid, ExtWorker *pApp, long tm);
     static ExtWorker *remove(pid_t pid);
-    static void markToStop(pid_t pid, int kill_type);
-
+    static int markToStop(pid_t pid, int kill_type);
+    static void sendKillCmdToWatchdog(pid_t pid, int kill_type, long lastmod);
+    static void addMarkToStop(pid_t pid, int kill_type, long lastmod);
+    
+    
     LS_NO_COPY_ASSIGN(PidRegistry);
 };
 

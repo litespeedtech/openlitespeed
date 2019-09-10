@@ -17,7 +17,7 @@
 *****************************************************************************/
 #include "httpresourcemanager.h"
 
-#include <edio/aioeventhandler.h>
+#include <edio/eventhandler.h>
 #include <edio/aiosendfile.h>
 #include <http/chunkinputstream.h>
 #include <http/chunkoutputstream.h>

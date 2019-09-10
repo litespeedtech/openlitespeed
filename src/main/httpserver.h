@@ -53,6 +53,7 @@ class HttpConfigLoader;
 class VHostMap;
 class XmlNode;
 class ConfigCtx;
+class QuicEngine;
 
 class HttpServer : public TSingleton<HttpServer>, public HttpLogSource
 {
@@ -144,6 +145,8 @@ public:
 //    void reconfigVHost( char *pVHostName, XmlNode* pRoot );
     void setServerRoot(const char *pRoot);
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig = 0);
+    void addQuicEngine(QuicEngine *pEngine);
+    QuicEngine *getQuicEngine() const;
 
 
 };

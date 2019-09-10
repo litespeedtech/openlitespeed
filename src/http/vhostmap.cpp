@@ -73,8 +73,10 @@ VHostMap::VHostMap()
     , m_pDedicated(NULL)
     , m_pWildMatches(NULL)
     , m_pSslContext(NULL)
+    , m_pQuicListener(NULL)
     , m_iNamedVH(0)
     , m_iStripWWW(1)
+    , m_sAltSvc("")
 {}
 
 

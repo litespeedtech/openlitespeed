@@ -1,0 +1,25 @@
+# should be added as /usr/lib/systemd/system/lshttpd.service
+[Unit]
+Description=OpenLiteSpeed HTTP Server
+After=network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/lshttpd.pid
+ExecStart=%LSWS_CTRL% start 
+ExecReload=%LSWS_CTRL% restart 
+ExecStop=%LSWS_CTRL% delay-stop
+
+KillMode=none
+PrivateTmp=false
+
+# do not want to be limited in anyway
+CPUAccounting=false
+TasksAccounting=false
+MemoryAccounting=false
+
+[Install]
+WantedBy=multi-user.target
+Alias=lsws.service
+Alias=openlitespeed.service

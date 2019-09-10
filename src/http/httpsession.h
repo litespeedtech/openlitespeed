@@ -20,7 +20,7 @@
 
 #include <ls.h>
 #include <lsr/ls_atomic.h>
-#include <edio/aioeventhandler.h>
+#include <edio/eventhandler.h>
 #include <edio/aiooutputstream.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
@@ -29,7 +29,6 @@
 //#include <http/ntwkiolink.h>
 #include <edio/eventreactor.h>
 #include <http/hiostream.h>
-#include <sslpp/sslconnection.h>
 #include <lsiapi/lsiapihooks.h>
 
 #include <http/sendfileinfo.h>
@@ -56,7 +55,7 @@ class MtParamUriQs;
 class MtParamSendfile;
 class MtParamParseReqArgs;
 class MtLocalBufQ;
-
+class HioCrypto;
 
 enum  HttpSessionState
 {
@@ -168,6 +167,7 @@ enum HSPState
 #define HSF_STX_FILE_CACHE_READY    (1<<29)
 
 #define HSF_URI_MAPPED              (1<<30)
+#define HSF_BEHIND_PROXY            (1<<31)
 
 
 typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,
@@ -181,7 +181,6 @@ class HttpSession
     : public LsiSession
     , public InputStream
     , public HioHandler
-    , public AioEventHandler
     , public ls_lfnodei_t
     , public LogSession
 {

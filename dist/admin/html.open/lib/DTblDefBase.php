@@ -259,11 +259,11 @@ class DTblDefBase
             'ext_retryTimeout' => self::NewIntAttr('retryTimeout', DMsg::ALbl('l_retrytimeout'), false, 0),
             'ext_respBuffer'   => self::NewSelAttr('respBuffer', DMsg::ALbl('l_respbuffer'), array('0' => DMsg::ALbl('o_no'), '1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_nofornph')), false),
             'ext_persistConn'  => self::NewBoolAttr('persistConn', DMsg::ALbl('l_persistconn')),
-            'ext_autoStart'    => self::NewSelAttr('autoStart', DMsg::ALbl('l_autostart'), array('1' => DMsg::ALbl('o_yes'), '0' => DMsg::ALbl('o_no'), '2' => DMsg::ALbl('o_thrucgidaemon')), false),
+            'ext_autoStart'    => self::NewSelAttr('autoStart', DMsg::ALbl('l_autostart'), array('2' => DMsg::ALbl('o_thrucgidaemon'), '0' => DMsg::ALbl('o_no')), false),
             'ext_path'         => self::NewPathAttr('path', DMsg::ALbl('l_command'), 'file1', 3, 'x', true, 'extAppPath'),
             'ext_backlog'      => self::NewIntAttr('backlog', DMsg::ALbl('l_backlog'), true, 1, 100),
             'ext_instances'    => self::NewIntAttr('instances', DMsg::ALbl('l_instances'), true, 0, 1000),
-            'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_yesdaemonmode'), '0' => DMsg::ALbl('o_no'), )),
+            'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '3' => DMsg::ALbl('o_yesdetachmode'), '2' => DMsg::ALbl('o_yesdaemonmode'), '0' => DMsg::ALbl('o_no'), )),
             'ext_user'         => self::NewTextAttr('extUser', DMsg::ALbl('l_suexecuser'), 'cust'),
             'ext_group'        => self::NewTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), 'cust'),
             'cgiUmask'      => self::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_umask')),
@@ -443,35 +443,33 @@ class DTblDefBase
         $parseFormat = "/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)$/";
 
         $attrs = array(
+            // general
             self::NewBoolAttr('enableGzipCompress', DMsg::ALbl('l_enablecompress'), false),
+            self::NewParseTextAreaAttr('compressibleTypes', DMsg::ALbl('l_compressibletypes'), $parseFormat, DMsg::ALbl('parse_compressibletypes'), true, 5, null, 0, 0, 1),
+            // dyn
             self::NewBoolAttr('enableDynGzipCompress', DMsg::ALbl('l_enabledyngzipcompress'), false),
             self::NewIntAttr('gzipCompressLevel', DMsg::ALbl('l_gzipcompresslevel'), true, 1, 9),
-            self::NewParseTextAreaAttr('compressibleTypes', DMsg::ALbl('l_compressibletypes'), $parseFormat, DMsg::ALbl('parse_compressibletypes'), true, 5, null, 0, 0, 1),
+           // self::NewIntAttr('enableBrCompress', DMsg::ALbl('l_brcompresslevel'), true, 0, 6),
+            // static
             self::NewBoolAttr('gzipAutoUpdateStatic', DMsg::ALbl('l_gzipautoupdatestatic')),
+            self::NewIntAttr('gzipStaticCompressLevel', DMsg::ALbl('l_gzipstaticcompresslevel'), true, 1, 9),
+            self::NewIntAttr('brStaticCompressLevel', DMsg::ALbl('l_brstaticcompresslevel'), true, 1, 11),
             self::NewTextAttr('gzipCacheDir', DMsg::ALbl('l_gzipcachedir'), 'cust'),
-            self::NewIntAttr('gzipStaticCompressLevel', DMsg::ALbl('l_staticcompresslevel'), true, 1, 9),
             self::NewIntAttr('gzipMaxFileSize', DMsg::ALbl('l_gzipmaxfilesize'), true, '1K'),
             self::NewIntAttr('gzipMinFileSize', DMsg::ALbl('l_gzipminfilesize'), true, 200)
         );
 
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_gzip'), $attrs);
-    }
-
-    protected function add_S_TUNING_BROTLI($id)
-    {
-        $attrs = array(
-            self::NewBoolAttr('enableBrCompress', DMsg::ALbl('l_enablebrcompress')),
-            self::NewIntAttr('brStaticCompressLevel', DMsg::ALbl('l_staticcompresslevel'), true, 1, 11),
-        );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_brcompress'), $attrs, 'brotliTuning');
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_gzipbr'), $attrs);
     }
 
     private function add_S_TUNING_QUIC($id)
 	{
+        $congest_options = ['' => 'Default', '1' => 'Cubic', '2' => 'BBR'];
 		$attrs = array(
             self::NewBoolAttr('quicEnable', DMsg::ALbl('l_enablequic')),
             self::NewTextAttr('quicShmDir', DMsg::ALbl('l_quicshmdir'), 'cust'),
             self::NewTextAttr('quicVersions', DMsg::ALbl('l_quicversions'), 'cust'),
+            self::NewSelAttr('quicCongestionCtrl', DMsg::ALbl('l_congestionctrl'), $congest_options),
             self::NewIntAttr('quicCfcw', DMsg::ALbl('l_quiccfcw'), true, '64K', '512M'),
             self::NewIntAttr('quicMaxCfcw', DMsg::ALbl('l_quicmaxcfcw'), true, '64K', '512M'),
             self::NewIntAttr('quicSfcw', DMsg::ALbl('l_quicsfcw'), true, '64K', '128M'),

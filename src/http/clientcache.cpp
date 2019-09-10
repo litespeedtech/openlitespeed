@@ -61,6 +61,12 @@ ClientCache::ClientCache(int initSize)
 {}
 
 
+ClientCache::ClientCache(void)
+    : m_v4(1000, NULL, NULL)
+    , m_v6(1000, GHash::hfIpv6, GHash::cmpIpv6)
+{}
+
+
 ClientCache::~ClientCache()
 {
 }

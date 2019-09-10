@@ -117,7 +117,7 @@ public:
     {   m_connPool.removeConn(pConn);     }
     int  removeReq(ExtRequest *pReq);
     int  processRequest(ExtRequest *pReq, int retry = 0);
-    void onTimer();
+    virtual void onTimer();
 
     void setState(int state)  {   m_iState = state;   }
     int getState() const        {   return m_iState;    }

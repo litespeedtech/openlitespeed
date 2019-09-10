@@ -525,6 +525,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     if (!isPython)
         pEnv->add("DOCUMENT_ROOT", 13,
                   pStr->c_str(), pStr->len() - 1);
+        
+        
     pEnv->add("REMOTE_ADDR", 11, pSession->getPeerAddrString(),
               pSession->getPeerAddrStrLen());
 
@@ -718,7 +720,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
                     X509_NAME_oneline(X509_get_issuer_name(pClientCert), achBuf, 4096);
                     pEnv->add("SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf));
                     ++count;
-                    if (SslConnection::isClientVerifyOptional(i))
+                    if (i == SSL_VERIFY_PEER)
                     {
                         strcpy(achBuf, "GENEROUS");
                         n = 8;

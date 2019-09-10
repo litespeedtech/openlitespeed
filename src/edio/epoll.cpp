@@ -189,7 +189,7 @@ int epoll::remove(EventReactor *pHandler)
     if (fd <= (int)m_reactorIndex.getUsed())
     {
         pHandler->clearRevent();
-        pHandler->setMask2(0);
+        //pHandler->setMask2(0);
         pHandler->updateEventSet();
         m_reactorIndex.set(fd, NULL);
     }

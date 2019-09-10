@@ -2394,7 +2394,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
     cb(-1, "SSL_CIPHER_USEKEYSIZE", 21, buf, n, arg);
 
     pBuf = buf;
-    n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
+    n = pCrypto->getEnv(HioCrypto::CIPHER_ALGKEYSIZE, pBuf, 128);
     cb(-1, "SSL_CIPHER_ALGKEYSIZE", 21, buf, n, arg);
     
     int i = pCrypto->getVerifyMode();

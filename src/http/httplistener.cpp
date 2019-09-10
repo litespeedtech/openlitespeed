@@ -29,6 +29,8 @@
 #include <http/smartsettings.h>
 #include <http/vhostmap.h>
 #include <log4cxx/logger.h>
+#include <main/httpserver.h>
+#include <quic/udplistener.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
 #include <util/accessdef.h>
@@ -107,7 +109,36 @@ void HttpListener::endConfig()
         setLogger(m_pMapVHost->getDedicated()->getLogger());
     if (m_pMapVHost->getSslContext()
         || (m_pSubIpMap && m_pSubIpMap->hasSSL()))
+    {
         m_isSSL = 1;
+        if (m_pMapVHost->isQuicEnabled())
+        {
+            enableQuic();
+        }
+    }
+}
+
+
+int HttpListener::enableQuic()
+{
+    QuicEngine *pEngine = HttpServer::getInstance().getQuicEngine();
+    if (!pEngine)
+        return -1;
+
+    UdpListener *pUdp = new UdpListener(pEngine, this, m_pMapVHost);
+    pUdp->setAddr(m_pMapVHost->getAddrStr()->c_str());
+    if (pUdp->start() != LS_FAIL)
+    {
+        m_pMapVHost->setQuicListener(pUdp);
+        LS_DBG_H(this, "enableQuic addr:%s", m_pMapVHost->getAddrStr()->c_str());
+        return 0;
+    }
+    else
+    {
+        LS_NOTICE(this, "Failed to enable QUIC at address: %s",
+                  m_pMapVHost->getAddrStr()->c_str());
+        return -1;
+    }
 }
 
 
@@ -254,7 +285,7 @@ static void no_timewait(int fd)
 struct conn_data
 {
     int             fd;
-    char            achPeerAddr[24];
+    char            achPeerAddr[sizeof(struct sockaddr_in6)];
     ClientInfo     *pInfo;
 };
 
@@ -281,7 +312,7 @@ int HttpListener::handleEvents(short event)
 
     while (iCount < allowed)
     {
-        socklen_t len = 24;
+        socklen_t len = sizeof(pCur->achPeerAddr);
 #ifdef SOCK_CLOEXEC
         static int isUseAccept4 = 1;
         if (isUseAccept4)
@@ -594,8 +625,11 @@ int HttpListener::writeStatusReport(int fd)
 
 int HttpListener::mapDomainList(HttpVHost *pVHost, const char *pDomains)
 {
-    return m_pMapVHost->mapDomainList(pVHost, pDomains);
+    if (pVHost && pVHost->enableQuicListener() &&
+        m_pMapVHost && m_pMapVHost->getQuicListener())
+        pVHost->enableQuic(1);
 
+    return m_pMapVHost->mapDomainList(pVHost, pDomains);
 }
 
 

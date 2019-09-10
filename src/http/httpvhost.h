@@ -49,7 +49,7 @@ END_LOG4CXX_NS
 #define VH_ENABLE           4
 #define VH_SERVER_ENABLE    8
 #define VH_ENABLE_SCRIPT    16
-//#define VH_CONTEXT_AC       32
+#define VH_QUIC             32
 #define VH_RESTRAINED       64
 #define VH_ACC_LOG          128
 #define VH_GZIP             256
@@ -57,6 +57,7 @@ END_LOG4CXX_NS
 #define VH_AUTOLOADHTACCESS  1024
 #define VH_CGROUP           2048
 #define VH_RECAPTCHA        4096
+#define VH_QUIC_LISTENER    8192
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -308,6 +309,10 @@ public:
 
     void enableCGroup(int enable)       {   setFeature(VH_CGROUP, enable);    }
     int  enableCGroup() const             {   return m_iFeatures & VH_CGROUP;   }
+
+    void enableQuic(int enable)       {   setFeature(VH_QUIC, enable);    }
+    int  enableQuic() const             {   return m_iFeatures & VH_QUIC;   }
+    int  enableQuicListener() const     {   return m_iFeatures & VH_QUIC_LISTENER;   }
 
     ExpiresCtrl &getExpires()           {   return m_rootContext.getExpires();  }
     const ExpiresCtrl &getExpires() const

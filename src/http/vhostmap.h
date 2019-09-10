@@ -19,6 +19,7 @@
 #define VHOSTMAP_H
 
 
+#include <quic/udplistener.h>
 #include <util/autostr.h>
 #include <util/gpointerlist.h>
 #include <util/hashstringmap.h>
@@ -39,11 +40,13 @@ class VHostMap : private HashStringMap< HttpVHost * >, public RefCounter
     HttpVHost        *m_pDedicated;
     WildMatchList    *m_pWildMatches;
     SslContext       *m_pSslContext;
+    UdpListener      *m_pQuicListener;
     AutoStr2          m_sAddr;
     int               m_port;
     AutoStr2          m_sPort;
     int               m_iNamedVH;
     short             m_iStripWWW;
+    AutoStr2          m_sAltSvc;
 
     VHostMap(const VHostMap &rhs);
     void operator=(const VHostMap &rhs);
@@ -105,6 +108,12 @@ public:
     void setStripWWW(short s)         {   m_iStripWWW = s;      }
 
     int zconfAppendDomainMap(AutoBuf *pBuf, char isSsl);
+
+    char isQuicEnabled() const              {   return 1;   /* TODO */  }
+    void setQuicListener(UdpListener *p)    {   m_pQuicListener = p;    }
+    UdpListener *getQuicListener() const    {   return m_pQuicListener; }
+    const AutoStr2 *getAltSvc() const   {   return &m_sAltSvc;       }
+    void setAltSvc(const char *s)   { m_sAltSvc = AutoStr2(s); }
 };
 
 

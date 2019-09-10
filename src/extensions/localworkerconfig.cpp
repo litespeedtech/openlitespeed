@@ -39,7 +39,7 @@
 LocalWorkerConfig::LocalWorkerConfig(const char *pName)
     : ExtWorkerConfig(pName)
     , m_pCommand(NULL)
-    , m_iBackLog(10)
+    , m_iBackLog(100)
     , m_iInstances(1)
     , m_iPriority(0)
     , m_iRunOnStartUp(0)
@@ -50,7 +50,7 @@ LocalWorkerConfig::LocalWorkerConfig(const char *pName)
 
 LocalWorkerConfig::LocalWorkerConfig()
     : m_pCommand(NULL)
-    , m_iBackLog(10)
+    , m_iBackLog(100)
     , m_iInstances(1)
     , m_iPriority(0)
     , m_iRunOnStartUp(0)
@@ -113,7 +113,21 @@ void LocalWorkerConfig::setRLimits(const RLimits *pRLimits)
 }
 
 
-int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
+#define DETACH_MODE_MIN_MAX_IDLE 30
+#define DETACH_MODE_DEFAULT_MAX_IDLE 60
+static void setDetachedAppEnv(Env *pEnv, int max_idle)
+{
+    char achBuf[200];
+    snprintf(achBuf, 200, "LSAPI_PPID_NO_CHECK=1");
+    pEnv->add(achBuf);
+    snprintf(achBuf, 200, "LSAPI_PGRP_MAX_IDLE=%d", max_idle);
+    pEnv->add(achBuf);
+    snprintf(achBuf, 200,  "LSAPI_KEEP_LISTEN=2");
+    pEnv->add(achBuf);
+}
+
+
+int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv(int maxIdleTime)
 {
     static const char *instanceEnv[] =
     {
@@ -152,6 +166,14 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv()
         selfManaged = 1;
     }
 
+    
+    if (isDetached())
+    {
+        setDetachedAppEnv(pEnv,
+                          (maxIdleTime > DETACH_MODE_MIN_MAX_IDLE)
+                          ? maxIdleTime : DETACH_MODE_MIN_MAX_IDLE);
+    }
+    
     pEnv->add(0, 0, 0, 0);
     return selfManaged;
 }
@@ -163,7 +185,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
     int selfManaged;
     int instances;
     int backlog = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "backlog",
-                  1, 100, 10);
+                  1, 100, 100);
     int priority = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                    "priority", -20, 20, procConfig.getPriority() + 1);
 
@@ -189,8 +211,8 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
     setUmask(umakeVal);
 
     setRunOnStartUp(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                    "runOnStartUp", 0, 2, 0));
-
+                    "runOnStartUp", 0, 3, 3));
+        
     RLimits limits;
     if (ExtAppRegistry::getRLimits() != NULL)
         limits = *(ExtAppRegistry::getRLimits());
@@ -216,7 +238,11 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
                 instances);
     }
     setInstances(instances);
-    selfManaged = checkExtAppSelfManagedAndFixEnv();
+    
+    
+    long maxIdle = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                   "extMaxIdleTime", -1, INT_MAX, DETACH_MODE_DEFAULT_MAX_IDLE);
+    selfManaged = checkExtAppSelfManagedAndFixEnv(maxIdle);
     setSelfManaged(selfManaged);
     if ((instances != 1) &&
         (getMaxConns() > instances))
@@ -252,7 +278,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
 
 
 void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
-        int iType)
+        int iType, char *sHomeDir)
 {
 
     const char *pUser = pNode->getChildValue("extUser");
@@ -276,8 +302,17 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
         }
         else
             uid = pw->pw_uid;
+        
+        strcpy(sHomeDir, pw->pw_dir);
     }
     else
+    {
         gid = ServerProcessConfig::getInstance().getGid();
+        pw = getpwuid(uid);
+        if (pw)
+            strcpy(sHomeDir, pw->pw_dir);
+        else
+            strcpy(sHomeDir, "/home/nobody"); //If failed, use default as 
+    }
     setUGid(uid, gid);
 }

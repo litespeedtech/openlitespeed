@@ -99,7 +99,7 @@ SET(unittest_STAT_SRCS
    unittest_main.cpp
 )
 
-link_directories(${PROJECT_SOURCE_DIR}/ssl/ /usr/local/lib)
+link_directories(${PROJECT_SOURCE_DIR}/../thirdparty/lib/ /usr/local/lib /usr/lib64)
 
 add_executable(ols_unittest
     ../src/httpdtest.cpp
@@ -163,10 +163,12 @@ SET( unittestlib
     modgzip lsiapi main http lsiapi ssi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx GeoIP adns
+    quic lsquic
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     edio udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
+    libz.a libpcre.a libexpat.a libxml2.a
     ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
-    spdy libssl.a libcrypto.a
+    spdy crypt libssl.a libcrypto.a
     -Wl,-Map=ols_unittest.map)
 
 target_link_libraries(ols_unittest ${unittestlib} )

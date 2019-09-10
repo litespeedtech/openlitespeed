@@ -26,9 +26,8 @@
 ContextList::ContextList()
     : TPointerList< HttpContext >(4)
 {
-    m_size = capacity();
-    m_sTags.prealloc(m_size);
-    memset(m_sTags.buf(), 0, m_size);
+    m_sTags.prealloc(capacity());
+    memset(m_sTags.buf(), 0, capacity());
 }
 
 
@@ -55,12 +54,12 @@ void ContextList::release()
 int ContextList::add(HttpContext *pContext, int release)
 {
     int n = size();
-    if (m_size <= n)
+    int cap = capacity();
+    if (cap <= n)
     {
-        if (m_sTags.prealloc(m_size * 2))
+        if (m_sTags.prealloc(cap * 2))
         {
-            memset(m_sTags.buf() + m_size, 0, m_size);
-            m_size = m_size * 2;
+            memset(m_sTags.buf() + cap, 0, cap);
         }
         else
             return LS_FAIL;
@@ -94,8 +93,10 @@ void ContextList::releaseUnused(long curTime, long timeout)
     {
         if (curTime - (*iter)->getLastMod() > timeout)
         {
-            delete(*iter);
+            if (m_sTags.buf()[iter - begin()])
+                delete(*iter);
             erase(iter);
+            m_sTags.buf()[iter - begin()] = m_sTags.buf()[size()];
         }
         else
             ++iter;

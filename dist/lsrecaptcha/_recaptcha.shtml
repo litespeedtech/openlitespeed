@@ -1,56 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
-        <title>Bot Verification</title>
-        <script>
-                function onSubmit() {
-                        document.getElementById('lsrecaptcha-form').submit();
-                }
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <title>Bot Verification</title>
+    <script>
+        function onSubmit() {
+            document.getElementById('lsrecaptcha-form').submit();
+        }
 
-                var onloadCallback = async function() {
-                        var cont = grecaptcha.render('recaptchadiv', {
-                                'sitekey': '<!--#echo var="ENV:LSRECAPTCHA_SITE_KEY"-->',
-                                'callback': onSubmit,
-                                <!--#echo var="ENV:LSRECAPTCHA_TYPE_PARAM"-->
-                        });
-                        await grecaptcha.execute(cont);
-                };
-        </script>
-        <style>
-                body {
-                height: 100%;
-                }
-                .panel {
-                padding: 30px;
-                max-width: 425px;
-                margin: 10% auto;
-                box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.2);
-                }
-                .title {
-                font-size: 1.5em;
-                font-weight: 100;
-                margin-top: 10px;
-                text-align: center;
-                }
-                .recaptcha-center {
-                margin-top: 35px;
-                margin-bottom: 20px;
-                margin-left: 13%;
-                margin-right: 13%;
-                display: block;
-                }
-        </style>
+        var onloadCallback = async function() {
+            var cont = grecaptcha.render('recaptchadiv', {
+                'sitekey': '<!--#echo var="ENV:LSRECAPTCHA_SITE_KEY"-->',
+                'callback': onSubmit,
+                <!--#echo var="ENV:LSRECAPTCHA_TYPE_PARAM"-->
+            });
+            await grecaptcha.execute(cont);
+        };
+    </script>
+    <style>
+        body {
+        height: 100%;
+        }
+        .panel {
+        padding: 30px;
+        max-width: 425px;
+        margin: 10% auto;
+        box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.2);
+        }
+        .title {
+        font-size: 1.5em;
+        font-weight: 100;
+        margin-top: 10px;
+        text-align: center;
+        }
+        .recaptcha-center {
+        margin-top: 35px;
+        margin-bottom: 20px;
+        margin-left: 13%;
+        margin-right: 13%;
+        display: block;
+        }
+    </style>
 </head>
 <body>
-        <div class="panel">
-                <h3 class="title">Verifying that you are not a robot...</h3>
-                <form id="lsrecaptcha-form" method="POST" action="/.lsrecap/recaptcha">
-                        <div id="recaptchadiv" class="recaptcha-center"></div>
-                </form>
-        </div>
-        <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
-                async defer>
-        </script>
+    <div class="panel">
+        <h3 class="title">Verifying that you are not a robot...</h3>
+        <form id="lsrecaptcha-form" method="POST" action="/.lsrecap/recaptcha">
+            <div id="recaptchadiv" class="recaptcha-center"></div>
+        </form>
+    </div>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit"
+            async defer>
+    </script>
 </body>
 </html>

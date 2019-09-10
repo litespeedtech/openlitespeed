@@ -86,6 +86,9 @@
 #include <main/zconfclient.h>
 #include <main/zconfmanager.h>
 
+#include <quic/quicengine.h>
+#include <quic/udplistener.h>
+
 #include <shm/lsshm.h>
 #include <sslpp/sslcontext.h>
 #include <sslpp/sslcontextconfig.h>
@@ -107,6 +110,7 @@
 #include <util/sysinfo/nicdetect.h>
 #include <util/sysinfo/systeminfo.h>
 #include <util/ni_fio.h>
+#include <util/stringtool.h>
 
 #include <ctype.h>
 #include <dirent.h>
@@ -221,6 +225,7 @@ private:
     pid_t               m_pid;
     gid_t               m_pri_gid;
     HttpFetch          *m_pAutoUpdFetch;
+    QuicEngine         *m_pQuicEngine;
 
     HttpServerImpl(const HttpServerImpl &rhs);
     void operator=(const HttpServerImpl &rhs);
@@ -230,6 +235,7 @@ private:
         : m_sSwapDirectory(DEFAULT_SWAP_DIR)
         , m_pri_gid(0)
         , m_pAutoUpdFetch(NULL)
+        , m_pQuicEngine(NULL)
     {
         ClientCache::initObjPool();
         ExtAppRegistry::init();
@@ -416,9 +422,18 @@ private:
     int configLsrecaptchaContexts();
     int initLsrecaptcha(const XmlNode * pNode);
 
+    int initQuic(const XmlNode *pNode);
+    void initQuicEngine(const char *pShmDir,
+                                const struct lsquic_engine_settings *settings);
+
 public:
     void hideServerSignature(int sv);
     int processAutoUpdResp(HttpFetch *pHttpFetch);
+    void addQuicEngine(QuicEngine *pEngine)
+    {   m_pQuicEngine = pEngine;    }
+
+    QuicEngine *getQuicEngine() const
+    {   return m_pQuicEngine;   }
 
 };
 
@@ -868,6 +883,7 @@ void HttpServerImpl::endConfig(int error)
     m_oldListeners.saveInUseListnersTo(m_toBeReleasedListeners);
     m_orgVHosts.appendTo(m_toBeReleasedVHosts);
     m_listeners.endConfig();
+    ServerAddrRegistry::getInstance().init(&m_listeners);
 }
 
 
@@ -1282,13 +1298,18 @@ int HttpServerImpl::reinitMultiplexer()
         else if (MultiplexerFactory::s_iMultiplexerType)
             MultiplexerFactory::getMultiplexer()->add(m_listeners[i],
                     POLLIN | POLLHUP | POLLERR);
+        {
+            UdpListener *pUdp = m_listeners[i]->getVHostMap()->getQuicListener();
+            if (pUdp && pUdp->getfd() != -1)
+            {
+                MultiplexerFactory::getMultiplexer()->add(pUdp,
+                    POLLIN | POLLHUP | POLLERR);
+            }
+        }
     }
     ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
     ServerInfo::getServerInfo()->setAdnsOp(0);
-#if defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
-    SigEventDispatcher::init();
-#endif
     return 0;
 }
 
@@ -1614,6 +1635,30 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
                        );
 
             }
+
+            int iEnableQuic = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableQuic", 0, 1, 1);
+            if (iEnableQuic)
+            {
+                QuicEngine *pQuic = HttpServer::getInstance().getQuicEngine();
+                VHostMap *pMap = pListener->getVHostMap();
+                if (pQuic && pMap->getQuicListener() == NULL)
+                {
+                    UdpListener *pUdp;
+                    pUdp = pQuic->startUdpListener(NULL /* XXX */, pMap);
+                    if (pUdp)
+                    {
+                        int s;
+                        char alt_svc[512];
+                        pMap->setQuicListener(pUdp);
+                        s = pQuic->getAltSvcVerStr(pUdp->getPort(), alt_svc, sizeof(alt_svc));
+                        if (0 == s)
+                            pMap->setAltSvc(alt_svc);
+                        else
+                            LS_ERROR("cannot generate Alt-Svc string");
+                    }
+                }
+            }
+
         }
 
         iNumChildren = HttpServerConfig::getInstance().getChildren();
@@ -1840,7 +1885,7 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
     pFcgiApp->setURL(pURI);
     strcat(pchPHPBin, " -c ../conf/php.ini");
     pFcgiApp->getConfig().setAppPath(&pchPHPBin[iChrootLen]);
-    pFcgiApp->getConfig().setBackLog(10);
+    pFcgiApp->getConfig().setBackLog(100);
     pFcgiApp->getConfig().setSelfManaged(0);
     pFcgiApp->getConfig().setStartByServer(1);
     pFcgiApp->setMaxConns(4);
@@ -2189,7 +2234,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                             1, 9, 4));
     config.setBrCompress(
 #ifdef USE_BROTLI
-        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 1, 1)
+        currentCtx.getLongValue(pNode, "enableBrCompress", 0, 6, 4)
 #else
         0
 #endif
@@ -2207,7 +2252,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                                 1024 * 1024)
     );
     StaticFileCacheData::setStaticBrOptions(
-        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 9, 6)
+        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 11, 6)
     );
 
 
@@ -2313,6 +2358,8 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     }
     SslUtil::initDefaultCA(pCAFile, pCAPath);
 
+    initQuic(pNode);
+    
     return 0;
 }
 
@@ -2988,10 +3035,15 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         HttpServerConfig::getInstance().setChildren(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "httpdWorkers: %d, "
+                "Num of Processors: %d", 
+                HttpServerConfig::getInstance().getChildren(),
+                iNumProc);
 #else
         HttpServerConfig::getInstance().setChildren(1);
 #endif
 
+            
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
 
         if (pGDBPath)
@@ -3328,8 +3380,7 @@ int HttpServerImpl::configLsrecaptchaContexts()
 
     HttpVHost *pGlobalVHost = HttpServerConfig::getInstance().getGlobalVHost();
     const char *pStaticUrl = Recaptcha::getStaticUrl()->c_str();
-    const char *pStaticUrlEnd = (const char *)memrchr(pStaticUrl, '/',
-            Recaptcha::getStaticUrl()->len());
+    const char *pStaticUrlEnd = (const char *)strrchr(pStaticUrl, '/');
     assert(pStaticUrlEnd != NULL);
     memcpy(achContext, pStaticUrl, pStaticUrlEnd - pStaticUrl);
     achContext[pStaticUrlEnd - pStaticUrl] = '\0';
@@ -3455,6 +3506,114 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
 }
 
 
+#define QUIC_ENABLED_BY_DEFAULT 1
+
+
+void HttpServerImpl::initQuicEngine(const char *pShmDir,
+                                const struct lsquic_engine_settings *settings)
+{
+    if (getQuicEngine() == NULL)
+    {
+        QuicEngine *pEngine = new QuicEngine();
+        if (pEngine->init(MultiplexerFactory::getMultiplexer(), pShmDir,
+                                                        settings) != LS_FAIL)
+            addQuicEngine(pEngine);
+        else
+            delete pEngine;
+    }
+}
+
+
+int HttpServerImpl::initQuic(const XmlNode *pNode)
+{
+    int enableQuic;
+    const char *pShmDir;
+    const char *pVersions;
+    struct lsquic_engine_settings settings;
+    char err_buf[100];
+
+    ConfigCtx currentCtx("server", "quic");
+
+#define GET_VAL(node, name, min, max, def) \
+    ConfigCtx::getCurConfigCtx()->getLongValue(node, name, min, max, def)
+
+    enableQuic = GET_VAL(pNode, "quicEnable", 0, 1, QUIC_ENABLED_BY_DEFAULT);
+    if (!enableQuic)
+        return 0;
+
+    assert(pNode);
+    pShmDir = pNode->getChildValue("quicShmDir");
+    if (!pShmDir)
+        pShmDir = "/dev/shm";
+    
+    lsquic_engine_init_settings(&settings, LSENG_SERVER);
+
+    pVersions = pNode->getChildValue("quicVersions");
+    if (pVersions)
+    {
+        int ver = 0;
+        enum lsquic_version quic_version;
+        StrParse strparse(pVersions, pVersions + strlen(pVersions), ", ");
+        const char *p;
+        while (!strparse.isEnd())
+        {
+            p = strparse.trim_parse();
+            if (!p)
+                break;
+            if (p != strparse.getStrEnd())
+            {
+                quic_version = lsquic_str2ver(p, strparse.getStrEnd() - p);
+                if ((enum lsquic_version) -1 != quic_version &&
+                                                quic_version < N_LSQVER)
+                    ver |= 1 << quic_version;
+            }
+        }
+        if (ver != 0)
+            settings.es_versions = ver;
+    }
+
+    settings.es_cfcw     = GET_VAL(pNode, "quicCfcw", 64 * 1024,
+                                512 * 1024 * 1024,  3 * 1024 * 512);
+    settings.es_max_cfcw = GET_VAL(pNode, "quicMaxCfcw", 64 *1024,
+                                512 * 1024 * 1024, 0);
+    settings.es_sfcw     = GET_VAL(pNode, "quicSfcw",
+                                64 * 1024, 128 * 1024 * 1024,  1 * 1024 * 1024);
+    settings.es_max_sfcw = GET_VAL(pNode, "quicMaxSfcw", 64 * 1024,
+                                128 * 1024 * 1024, 0);
+    settings.es_max_streams_in
+                         = GET_VAL(pNode, "quicMaxStreams",
+                                10, 1000, 100);
+    settings.es_idle_conn_to
+                         = GET_VAL(pNode, "quicIdleTimeout", 10, 30, 30)
+                                                  * 1000000 /* Microseconds */;
+    settings.es_handshake_to
+                     = GET_VAL(pNode, "quicHandshakeTimeout", 1, 15, 10)
+                                              * 1000000 /* Microseconds */;
+
+    settings.es_support_push = GET_VAL(pNode, "quicPush", 0, 1, 1);
+
+    
+    settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 2, 0);
+    
+    
+    settings.es_proc_time_thresh = 100000;
+    settings.es_pace_packets = 1;
+
+    if (0 == lsquic_engine_check_settings(&settings, LSENG_SERVER,
+                                          err_buf, sizeof(err_buf)))
+        initQuicEngine(pShmDir, &settings);
+    else
+    {
+        LS_NOTICE("[QUIC] %s, using defaults", err_buf);
+        initQuicEngine(pShmDir, NULL);
+    }
+
+    return 0;
+
+#undef GET_VAL
+}
+
+
 int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 {
     int ret;
@@ -3466,9 +3625,6 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         m_oldListeners.recvListeners();
         StdErrLogger::getInstance().initLogger(
             MultiplexerFactory::getMultiplexer());
-#if defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
-        SigEventDispatcher::init();
-#endif
         if (configChroot(pRoot))
             return LS_FAIL;
 
@@ -3503,6 +3659,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 
     //Must load modules before parse and set scriptHandlers
     configModules(pRoot);
+
 
     if (!MainServerConfig::getInstance().getConfTestMode())
     {
@@ -4867,3 +5024,10 @@ int HttpServer::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
 }
 
 
+void HttpServer::addQuicEngine(QuicEngine *pEngine)
+{
+    return m_impl->addQuicEngine(pEngine);
+}
+
+QuicEngine *HttpServer::getQuicEngine() const
+{   return m_impl->getQuicEngine();     }

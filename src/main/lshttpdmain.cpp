@@ -38,6 +38,7 @@
 #include <main/mainserverconfig.h>
 #include <main/plainconf.h>
 #include <main/serverinfo.h>
+#include <quic/quicengine.h>
 #include <shm/lsshmpool.h>
 #include <socket/coresocket.h>
 #include <util/datetime.h>
@@ -80,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu Aug  8 01:45:37 UTC 2019)"
+#define BUILDTIME  " (built: Tue Sep 10 14:57:58 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -98,6 +99,7 @@ LshttpdMain::LshttpdMain()
     , m_pProcState(NULL)
     , m_curChildren(0)
     , m_fdAdmin(-1)
+    , m_fdCmd(-1)
 {
     m_pServer = &HttpServer::getInstance();
 
@@ -957,6 +959,8 @@ int LshttpdMain::init(int argc, char *argv[])
             startAdminSocket();
     }
 
+    QuicEngine::setpid(getpid());
+    
 #ifndef IS_LSCPD
     ret = config();
     if (ret && !m_iConfTestMode)
@@ -1002,6 +1006,7 @@ int LshttpdMain::init(int argc, char *argv[])
     if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_MAIN_INITED))
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_INITED, NULL);
 
+    startCmdChannel();
     if (!m_noCrashGuard && (MainServerConfig::getInstance().getCrashGuard()))
     {
         if (guardCrash())
@@ -1038,6 +1043,7 @@ int LshttpdMain::init(int argc, char *argv[])
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_INIT,
                 NULL);
 
+    
 
     return 0;
 }
@@ -1245,6 +1251,7 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
 #endif
 
     LsShmPool::setPid(pProc->m_pid);
+    QuicEngine::setpid(pProc->m_pid);
 }
 
 int LshttpdMain::startChild(ChildProc *pProc)
@@ -1522,7 +1529,7 @@ int LshttpdMain::guardCrash()
     int  iForkCount     = 0;
     int  ret            = 0;
     int  iNumChildren = HttpServerConfig::getInstance().getChildren();
-    struct pollfd   pfds[2];
+    struct pollfd   pfds[3] = {{-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}};
     HttpSignals::init(sigchild);
     if (iNumChildren >= 32)
     {
@@ -1537,10 +1544,21 @@ int LshttpdMain::guardCrash()
     else
         m_fdAdmin = -1;
 
-    pfds[0].fd = m_fdAdmin;
-    pfds[0].events = POLLIN;
-    pfds[1].fd = -1;
-    pfds[1].events = 0;
+    int pollCount = 0;
+    if (m_fdCmd != -1)
+    {
+        pfds[pollCount].fd = m_fdCmd;
+        pfds[pollCount].events = POLLIN;
+        ++pollCount;
+    }
+    
+    if (m_fdAdmin != -1)
+    {
+        pfds[pollCount].fd = m_fdAdmin;
+        pfds[pollCount].events = POLLIN;
+        ++pollCount;
+    }
+    
     s_iRunning = 1;
     startTimer();
     while (s_iRunning > 0)
@@ -1577,12 +1595,14 @@ int LshttpdMain::guardCrash()
                 }
             }
         }
-        if (m_fdAdmin != -1)
+        if (pollCount > 0)
         {
-            ret = ::poll(pfds, 1, 1000);
+            ret = ::poll(pfds, pollCount, 1000);
             if (ret > 0)
             {
-                if (pfds[0].revents)
+                if (pfds[0].revents && m_fdCmd != -1)
+                    processChildCmd();
+                else if (m_fdAdmin != -1)
                     acceptAdminSockConn();
                 continue;
             }
@@ -1702,3 +1722,167 @@ void LshttpdMain::cleanEnvVars()
         }
     }
 }
+
+
+int LshttpdMain::startCmdChannel()
+{
+    int fds[2];
+    if (socketpair(AF_UNIX, SOCK_DGRAM, 0, fds) == -1)
+    {
+        m_fdCmd = -1;
+    }
+    else
+    {
+        fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+        fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+        fcntl(fds[0], F_SETFL, fcntl(fds[0], F_GETFL, 0) | O_NONBLOCK);
+        m_fdCmd = fds[0];
+        MainServerConfig::getInstance().setGlobalfdCmd(fds[1]);
+    }
+    return 0;
+}
+
+
+enum
+{
+    FIX_CACHE_CREATE_ROOT,
+    FIX_CACHE_UPDATE_PERM,
+    FIX_CACHE_REMOVE_OLD,
+    EXTAPP_KILL,
+};
+
+//Currently we only support EXTAPP_KILL type
+static int parseChildCmd(const char *pAction)
+{
+    if (strcasecmp(pAction, "createcacheroot") == 0)
+        return FIX_CACHE_CREATE_ROOT;
+    else if (strcasecmp(pAction, "fixcacheperm") == 0)
+        return FIX_CACHE_UPDATE_PERM;
+    else if (strcasecmp(pAction, "removecacheroot") == 0)
+        return FIX_CACHE_REMOVE_OLD;
+    else if (strcasecmp(pAction, "extappkill") == 0)
+        return EXTAPP_KILL;
+    else
+        return -1;
+}
+
+
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) \
+    || defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
+static long getProcessStartTime(int pid)
+{
+    int             mib[4];
+    size_t          len;
+    struct kinfo_proc   kp;
+
+    len = 4;
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;
+    mib[2] = KERN_PROC_PID;
+    mib[3] = pid;
+    len = sizeof(kp);
+    if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0) {
+        return -1;
+    }
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
+    return kp.ki_start.tv_sec;
+#else
+    return kp.kp_proc.p_un.__p_starttime.tv_sec;
+#endif
+}
+#endif
+
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+static long getProcessStartTime(int pid)
+{
+    char proc_pid_path[80];
+    struct stat st;
+    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/exe", pid);
+    int ret = lstat(proc_pid_path, &st);
+    if (ret == -1)
+    {
+        return -1;
+    }
+    return st.st_mtime;
+}
+#endif
+
+
+static int killExtApp(char *pCmd, int cmdLen)
+{
+    char *colon = (char *)memchr(pCmd, ':', cmdLen);
+    if (!colon)
+        return -1;
+    *colon++ = 0;
+    int pid = atoi(pCmd);
+    int kill_type = atoi(colon);
+
+    colon = (char *)memchr(colon, ':', pCmd + cmdLen - colon);
+    long timestamp = 0;
+    if (colon)
+    {
+        ++colon;
+        timestamp = atol(colon);
+    }
+
+    long start_time = getProcessStartTime(pid);
+    if (start_time == -1)
+    {
+        LS_INFO("Failed to get process [%d] start time, not running, skip killing.", pid);
+        return -1;
+    }
+
+    if (timestamp && start_time - timestamp > 60)
+    {
+        LS_INFO("process [%d] pid start mtime(%ld) - 60 > pid file mtime (%ld), skip killing.",
+                pid, start_time, timestamp);
+        return -1;
+    }
+
+    static int s_sigKillType[3] = { SIGUSR1, SIGTERM, SIGKILL };
+    if (pid > 1 && kill_type >= KILL_TYPE_USR1 && kill_type <= KILL_TYPE_KILL)
+    {
+        if (::kill(pid, s_sigKillType[ kill_type + 4 ]) == 0)
+        {
+            LS_INFO("[CLEANUP] Send signal: %d to process: %d",
+                    s_sigKillType[ kill_type + 4 ], pid);
+        }
+    }
+    return 0;
+}
+
+
+int LshttpdMain::processChildCmd()
+{
+    char achBuf[4096];
+    int n = read(m_fdCmd, &achBuf, 4095);
+    if (n > 0)
+    {
+        achBuf[n] = 0;
+        LS_NOTICE("[%d] Cmd from child: [%.*s]", m_pid, n, achBuf);
+
+        char *colon = (char *)memchr(achBuf, ':', n);
+        if (!colon)
+            return 0;
+        *colon++ = 0;
+        int action = parseChildCmd(achBuf);
+        if (action == EXTAPP_KILL)
+        {
+            return killExtApp(colon, &achBuf[n] - colon);
+        }
+//         else if (action >= 0)
+//         {
+//             return fixCacheDir(action, colon, &achBuf[n] - colon);
+//         }
+        else
+        {
+            return -1;
+        }
+    }
+    return 0;
+}
+

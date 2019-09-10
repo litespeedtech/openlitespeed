@@ -24,10 +24,8 @@ UnpackedHeaders::~UnpackedHeaders()
 }
 
 
-int UnpackedHeaders::convertHpackIdx(int hpack_index)
+static int lookup[] =
 {
-    static int lookup[] =
-    {
     HttpHeader::H_HOST,             //":authority",
     UPK_HDR_METHOD,                 //":method",
     UPK_HDR_METHOD,                 //":method",
@@ -89,9 +87,122 @@ int UnpackedHeaders::convertHpackIdx(int hpack_index)
     -21,                            //"vary",
     HttpHeader::H_VIA,              //"via",
     -22,                            //"www-authenticate",
-    };
+    HttpHeader::H_HOST,             //":authority"
+    UPK_HDR_PATH,                   //":path"
+    -23,                            //"age"
+    -24,                            //"content-disposition"
+    HttpHeader::H_CONTENT_LENGTH,   //"content-length"
+    HttpHeader::H_COOKIE,           //"cookie"
+    HttpHeader::H_DATE,             //"date"
+    -25,                            //"etag"
+    HttpHeader::H_IF_MODIFIED_SINCE,//"if-modified-since"
+    HttpHeader::H_IF_NO_MATCH,      //"if-none-match"
+    HttpHeader::H_LAST_MODIFIED,    //"last-modified"
+    -26,                            //"link"
+    -27,                            //"location"
+    HttpHeader::H_REFERER,          //"referer"
+    -28,                            //"set-cookie"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_METHOD,                 //":method"
+    UPK_HDR_SCHEME,                 //":scheme"
+    UPK_HDR_SCHEME,                 //":scheme"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    HttpHeader::H_ACCEPT,           //"accept"
+    HttpHeader::H_ACCEPT,           //"accept"
+    HttpHeader::H_ACC_ENCODING,     //"accept-encoding"
+    -29,                            //"accept-ranges"
+    -30,                            //"access-control-allow-headers"
+    -31,                            //"access-control-allow-headers"
+    -32,                            //"access-control-allow-origin"
+    HttpHeader::H_CACHE_CTRL,       //"cache-control"
+    HttpHeader::H_CACHE_CTRL,       //"cache-control"
+    HttpHeader::H_CACHE_CTRL,       //"cache-control"
+    HttpHeader::H_CACHE_CTRL,       //"cache-control"
+    HttpHeader::H_CACHE_CTRL,       //"cache-control"
+    HttpHeader::H_CACHE_CTRL,       //"cache-control"
+    HttpHeader::H_CONTENT_ENCODING, //"content-encoding"
+    HttpHeader::H_CONTENT_ENCODING, //"content-encoding"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_CONTENT_TYPE,     //"content-type"
+    HttpHeader::H_RANGE,            //"range"
+    -33,                            //"strict-transport-security"
+    -34,                            //"strict-transport-security"
+    -35,                            //"strict-transport-security"
+    -36,                            //"vary"
+    -37,                            //"vary"
+    -38,                            //"x-content-type-options"
+    -39,                            //"x-xss-protection"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    UPK_HDR_STATUS,                 //":status"
+    HttpHeader::H_ACC_LANG,         //"accept-language"
+    -40,                            //"access-control-allow-credentials"
+    -41,                            //"access-control-allow-credentials"
+    -42,                            //"access-control-allow-headers"
+    -43,                            //"access-control-allow-methods"
+    -44,                            //"access-control-allow-methods"
+    -45,                            //"access-control-allow-methods"
+    -46,                            //"access-control-expose-headers"
+    -47,                            //"access-control-request-headers"
+    -48,                            //"access-control-request-method"
+    -49,                            //"access-control-request-method"
+    -50,                            //"alt-svc"
+    HttpHeader::H_AUTHORIZATION,    //"authorization"
+    -51,                            //"content-security-policy"
+    -52,                            //"early-data"
+    -53,                            //"expect-ct"
+    -54,                            //"forwarded"
+    HttpHeader::H_IF_RANGE,         //"if-range"
+    -55,                            //"origin"
+    -56,                            //"purpose"
+    -57,                            //"server"
+    -58,                            //"timing-allow-origin"
+    -59,                            //"upgrade-insecure-requests"
+    HttpHeader::H_USERAGENT,        //"user-agent"
+    -60,                            //"x-forwarded-for"
+    -61,                            //"x-frame-options"
+    -62,                            //"x-frame-options"
+};
 
+// Handles both HPACK and QPACK indexes.  HPACK indexes are in the range
+// 0 - 60, while QPACK indexes are in the range 61 - 159.
+//
+int UnpackedHeaders::convertHorQpackIdx(int hpack_index)
+{
     if (hpack_index > 0 && hpack_index <= (int)(sizeof(lookup)/sizeof(int)))
+        return lookup[hpack_index - 1];
+    return UPK_HDR_UNKNOWN;
+};
+
+
+#define HPACK_MAX_INDEX 61
+int UnpackedHeaders::convertHpackIdx(int hpack_index)
+{
+    if (hpack_index > 0 && hpack_index <= HPACK_MAX_INDEX)
         return lookup[hpack_index - 1];
     return UPK_HDR_UNKNOWN;
 };

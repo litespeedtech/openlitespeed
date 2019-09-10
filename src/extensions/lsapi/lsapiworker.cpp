@@ -19,6 +19,9 @@
 #include "lsapiconfig.h"
 #include "lsapiconn.h"
 #include <http/handlertype.h>
+#include <main/configctx.h>
+#include <main/mainserverconfig.h>
+#include <stdio.h>
 
 
 LsapiWorker::LsapiWorker(const char *pName)
@@ -43,6 +46,13 @@ int LsapiWorker::startEx()
     int ret = 1;
     LsapiConfig &config = getConfig();
     if (config.getSelfManaged() && (config.getURL()) && (config.getCommand()))
-        ret = startWorker();
+    {
+        if (config.isDetached())
+        {
+            ret = startDetachedWorker(0);
+        }
+        else            
+            ret = startWorker();
+    }
     return ret;
 }

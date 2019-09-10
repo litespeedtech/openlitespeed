@@ -149,6 +149,16 @@ EVENT_DONE:
 }
 
 
+void EdStream::suspendNotify()
+{
+    m_pMplex->remove(this);
+}
+
+void EdStream::resumeNotify()
+{
+    m_pMplex->add(this, getEvents());
+}
+
 int EdStream::read(char *pBuf, int size)
 {
     int ret = ::read(getfd(), pBuf, size);

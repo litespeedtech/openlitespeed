@@ -954,8 +954,9 @@ installation()
 	else
 		SDIR_OWN=$DIR_OWN
 	fi
-	sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc"
-	sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.gentoo.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc.gentoo"
+    sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc"
+    sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.gentoo.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc.gentoo"
+    sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lshttpd.service.in" > "$LSINSTALL_DIR/admin/misc/lshttpd.service"
     if [ -d "$LSWS_HOME/admin/html.$VERSION" ]; then
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
