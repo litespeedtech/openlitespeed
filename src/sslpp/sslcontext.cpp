@@ -982,7 +982,9 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
 /* This will neeed to be updated as the ID versions change.  Eventually
  * it will become simply "h3"
  */
+#ifndef H3_ALPN
 #define H3_ALPN "\x05h3-22"
+#endif
 #define H3_ALSZ (sizeof(H3_ALPN) - 1)
 
 /**

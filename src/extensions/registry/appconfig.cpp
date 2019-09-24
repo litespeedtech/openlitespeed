@@ -48,7 +48,8 @@ int AppConfig::loadAppDefault(const XmlNode *pNode)
         ServerProcessConfig::getInstance().getPriority() + 1);
     s_pAppDefault->setBackLog(100);
     s_pAppDefault->setMaxIdleTime(300);
-    s_pAppDefault->setRLimits(ExtAppRegistry::getRLimits());
+    s_pAppDefault->getRLimits()->setDataLimit(RLIM_INFINITY, RLIM_INFINITY);
+    s_pAppDefault->getRLimits()->setProcLimit(1400, 1500);
     s_pAppDefault->getRLimits()->setCPULimit(RLIM_INFINITY, RLIM_INFINITY);
     s_binPath = "";
 

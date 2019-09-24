@@ -358,13 +358,13 @@ private:
                                   const char *pVHostName);
     int configListenerVHostMap(const XmlNode *pRoot,
                                const char *pVHostName);
-    
+
     void configCRL(const XmlNode *pNode, SslContext *pSsl);
     SslContext *newSSLContext(const XmlNode *pNode,
                               const char *pName, SslContext *pOldContext);
     int initOcspCachePath();
     int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
-    
+
     HttpListener *configListener(const XmlNode *pNode, int isAdmin);
     int configListeners(const XmlNode *pRoot, int isAdmin);
 
@@ -813,7 +813,7 @@ int HttpServerImpl::mapListenerToVHost(HttpListener *pListener,
 {
     if (!pListener)
         return LS_FAIL;
-    return pListener->getVHostMap()->mapDomainList(pVHost, pDomains);
+    return pListener->mapDomainList(pVHost, pDomains);
 }
 
 
@@ -1009,9 +1009,9 @@ static const char *detectCp()
 {
     struct stat st;
     const char *type;
-    if (stat("/usr/local/cpanel", &st) == 0)
+    /*if (stat("/usr/local/cpanel", &st) == 0)
         type = "cpanel";
-    else if (stat("/usr/local/CyberCP", &st) == 0)
+    else */if (stat("/usr/local/CyberCP", &st) == 0)
         type = "cyberpanel";
     else if (stat("/usr/local/directadmin", &st) == 0)
         type = "da";
@@ -1057,7 +1057,7 @@ static char *detectPlat(char *str, int max_len)
                 ++p1;
             *p1 = 0x00;
         }
-        
+
         fclose(fp);
     }
     return p;
@@ -1106,9 +1106,9 @@ void HttpServerImpl::checkOLSUpdate()
     strcat(sUrl, OsDetect(osstr, 64));
     strcat(sUrl, "&env=");
     strcat(sUrl, detectCp());
-#ifdef PREBUILT_VERSION    
+#ifdef PREBUILT_VERSION
     strcat(sUrl, "_pre_");
-#else    
+#else
     strcat(sUrl, "_src_");
 #endif
     strcat(sUrl, detectPlat(plat, 64));
@@ -2266,7 +2266,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
         if (currentCtx.getAbsolutePath(achBuf, pValue) == -1)
         {
-            LS_ERROR(&currentCtx, "path of gzip cache is invalid, use default.");
+            LS_WARN(&currentCtx, "path of gzip cache is invalid, use default.");
             pValue = getSwapDir();
         }
         else
@@ -2998,7 +2998,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                  */
                 AutoStr2 sDir = MainServerConfig::getInstance().getServerRoot();
                 sDir.append("cgid/", 5);
-                
+
                 /**
                  * Some user may not have such DIR, Mkdir first
                  */
@@ -3006,7 +3006,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                 if (stat(sDir.c_str(), &sb) == -1)
                     mkdir(sDir.c_str(), 0710);
                 chown(sDir.c_str(), procConf.getUid(), procConf.getGid());
-                
+
                 AutoStr2 sAutoUpd = MainServerConfig::getInstance().getServerRoot();
                 sAutoUpd.append("autoupdate/", 11);
                 if (stat(sAutoUpd.c_str(), &sb) == -1)
@@ -3066,11 +3066,11 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         HttpServerConfig::getInstance().setRestartTimeOut(l);
 
         HttpServerConfig::getInstance().setEnableLve(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0, 
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0,
                                                        3, 0));
 
         HttpServerConfig::getInstance().setCpuAffinity(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0, 
+            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0,
                                                        64, 0));
 
         //this value can only be set once when server start.
@@ -3214,16 +3214,16 @@ int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
 {
     const XmlNodeList *pList = pNode->getChildren("geoipDB");
     Ip2Geo *pIp2Geo = NULL;
-    
+
     if ((!pList) || (pList->size() == 0))
         return 0;
-   
+
 #ifdef ENABLE_IPTOGEO2
     if (detectMmdb(pList))
         pIp2Geo = new IpToGeo2();
 #endif
-        
-#ifdef ENABLE_IPTOGEO        
+
+#ifdef ENABLE_IPTOGEO
     if (!pIp2Geo)
         pIp2Geo = new IpToGeo();
 #endif
@@ -3706,22 +3706,22 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
         ConfigCtx currentCtx("server", "epsr");
         ExtAppRegistry::configExtApps(pRoot, NULL);
     }
-    
+
     {
         ConfigCtx currentCtx("server", "rails");
         AppConfig::s_rubyAppConfig.loadAppDefault(pRoot->getChild("railsDefaults"));
     }
-    
+
     {
         ConfigCtx currentCtx("server", "python");
         AppConfig::s_wsgiAppConfig.loadAppDefault(pRoot->getChild("wsgiDefaults"));
     }
-    
+
     {
         ConfigCtx currentCtx("server", "nodejs");
         AppConfig::s_nodeAppConfig.loadAppDefault(pRoot->getChild("nodeDefaults"));
     }
-    
+
     const XmlNode *p0 = pRoot->getChild("scriptHandler");
     if (p0 != NULL)
     {
@@ -3755,7 +3755,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     {
         configVHTemplates(pRoot);
     }
-    
+
     ZConfManager::getInstance().prepareServerUp();
 
     return ret;
@@ -4179,7 +4179,7 @@ int HttpServerImpl::initLscpd()
     config.m_sKeyFile[0] = achBuf1;
     config.m_sCertFile[0] = achBuf;
     config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
-    config.m_iProtocol = 31;
+    config.m_iProtocol = 28;
     config.m_iEnableECDHE = 1;
     config.m_iEnableDHE = 1;
     config.m_iEnableTicket = -1;
@@ -4192,7 +4192,7 @@ int HttpServerImpl::initLscpd()
         LS_ERROR("Failed to create VHost <%s>.", LSCPD_VHOST_NAME);
         return LS_FAIL;
     }
-    
+
     pVHost->getRootContext().setParent(
         &HttpServer::getInstance().getServerContext());
     pVHost->getRootContext().inherit(&HttpServer::getInstance().getServerContext());
@@ -4338,7 +4338,7 @@ int HttpServerImpl::initSampleServer()
     config.m_sKeyFile[0] = achBuf1;
     config.m_sCertFile[0] = achBuf;
     config.m_sCiphers = "ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+SSLv2:+EXP";
-    config.m_iProtocol = 14;
+    config.m_iProtocol = 13;
     config.m_iEnableECDHE = 1;
     config.m_iEnableDHE = 1;
     config.m_iEnableTicket = -1;

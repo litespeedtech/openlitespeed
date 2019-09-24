@@ -1518,7 +1518,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
     if (access(achFileName, F_OK) != 0)
     {
-        LS_ERROR("[%s] path to Rack application is invalid!",
+        LS_WARN("[%s] path to Rack application is invalid!",
                  TmpLogId::getLogId());
         return NULL;
     }
@@ -1712,7 +1712,7 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
     int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achFileName, appPath);
     if (ret == -1)
     {
-        LS_ERROR("[%s] path to Rails application is invalid!",
+        LS_WARN("[%s] path to Rails application is invalid!",
                  TmpLogId::getLogId());
         return NULL;
     }
@@ -1752,7 +1752,7 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
 
     if (access(achFileName, F_OK) != 0)
     {
-        LS_ERROR("[%s] Path for Python application is invalid: %s",
+        LS_WARN("[%s] Path for Python application is invalid: %s",
                  TmpLogId::getLogId(),  achFileName);
         return NULL;
     }
@@ -2387,7 +2387,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     if (ret == -1)
     {
-        LS_ERROR(ConfigCtx::getCurConfigCtx(), "path to Web-App is invalid!");
+        LS_WARN(ConfigCtx::getCurConfigCtx(), "path to Web-App is invalid!");
         return NULL;
     }
 
@@ -2438,7 +2438,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     if (!pRoot)
     {
-        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+        LS_WARN(ConfigCtx::getCurConfigCtx(),
                  "invalid Web-App configuration file: %s."
                  , achFileName);
         return NULL;

@@ -139,7 +139,18 @@ prepareLinux()
             exit 1
         fi
         
-        yum -y install git cmake  libtool autoreconf autoheader automake wget go clang patch expat-devel
+        yum -y install git
+        yum -y install cmake
+        yum -y install libtool 
+        yum -y install autoreconf 
+        yum -y install autoheader 
+        yum -y install automake 
+        yum -y install wget 
+        yum -y install go 
+        yum -y install clang 
+        yum -y install patch 
+        yum -y install expat-devel
+        
         
     #now for debian and Ubuntu    
     elif [ -f /etc/debian_version ] ; then     
@@ -436,8 +447,11 @@ make
 cp src/openlitespeed  dist/bin/
 
 cpModuleSoFiles
-freebsdFix
 
+#Version >= 1.6.0 which has QUIC need to fix for freebsd
+if [ -e src/liblsquic ] ; then 
+    freebsdFix
+fi
 
 cat >> ./ols.conf <<END 
 #If you want to change the default values, please update this file.

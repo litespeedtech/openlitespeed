@@ -2,6 +2,7 @@
 #ifndef LSQUIC_ENC_SESS_H
 #define LSQUIC_ENC_SESS_H 1
 
+struct lsquic_alarmset;
 struct lsquic_engine_public;
 struct lsquic_packet_out;
 struct lsquic_packet_in;
@@ -262,7 +263,8 @@ struct enc_session_funcs_iquic
                            struct lsquic_conn *, const struct lsquic_cid *,
                            const struct ver_neg *, void *(crypto_streams)[4],
                            const struct crypto_stream_if *,
-                           const unsigned char *, size_t);
+                           const unsigned char *, size_t,
+                           struct lsquic_alarmset *);
 
     void
     (*esfi_destroy) (enc_session_t *);
@@ -318,7 +320,7 @@ struct enc_session_funcs_gquic lsquic_enc_session_gquic_gquic_1;
 extern const struct enc_session_funcs_iquic lsquic_enc_session_iquic_ietf_v1;
 
 #define select_esf_common_by_ver(ver) ( \
-    ver == LSQVER_ID22 ? &lsquic_enc_session_common_ietf_v1 : \
+    ver == LSQVER_ID23 ? &lsquic_enc_session_common_ietf_v1 : \
     ver == LSQVER_VERNEG ? &lsquic_enc_session_common_ietf_v1 : \
     &lsquic_enc_session_common_gquic_1 )
 

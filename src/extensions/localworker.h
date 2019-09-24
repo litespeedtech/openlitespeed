@@ -115,6 +115,7 @@ public:
     void checkAndStopWorker();
 
     int openLockPidFile(const char *pSocketPath);
+    bool detectBinaryChange();
     int processPid(int pid, const char * path);
 
     

@@ -514,6 +514,8 @@ void HttpSession::nextRequest()
         ls_atomic_setint(&m_iMtFlag, 0);
         logAccess(0);
         ++m_iReqServed;
+        getStream()->resetBytesCount();
+
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
         m_sendFileInfo.release();
@@ -2986,6 +2988,10 @@ void HttpSession::recycle()
     }
     m_sExtCmdResBuf.clear();
 
+//9/20/19 add releaseResources() in recycle
+    m_response.reset(1);
+    m_request.reset();
+    
     resetBackRefPtr();
 
     if (getFlag(HSF_AIO_READING) || getMtFlag(HSF_MT_HANDLER))
@@ -4948,7 +4954,6 @@ int HttpSession::passSendFileToParent(SendFileInfo *pData)
 int HttpSession::sendStaticFile(SendFileInfo *pData)
 {
     LS_DBG_M(getLogSession(), "SendStaticFile()");
-    getStream()->resetBytesCount();
 
     if (m_iFlag & HSF_SUB_SESSION && !getGzipBuf())
         return passSendFileToParent(pData);

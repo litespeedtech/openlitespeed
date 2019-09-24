@@ -96,7 +96,7 @@ long long getLongValue(const char *pValue, int base)
 
 void ConfigCtx::logErrorPath(const char *pstr1,  const char *pstr2)
 {
-    LS_ERROR(this, "Path for %s is invalid: %s", pstr1, pstr2);
+    LS_WARN(this, "Path for %s is invalid: %s", pstr1, pstr2);
 }
 
 
@@ -443,7 +443,7 @@ int ConfigCtx::getLogFilePath(char *pBuf, const XmlNode *pNode)
 
     if (getAbsoluteFile(pBuf, pValue) != 0)
     {
-        LS_ERROR(this, "ath for %s is invalid: %s", "log file",  pValue);
+        LS_WARN(this, "Path for %s is invalid: %s", "log file",  pValue);
         return 1;
     }
 

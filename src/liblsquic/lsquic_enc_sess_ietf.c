@@ -44,6 +44,7 @@
 #include "lsquic_frab_list.h"
 #include "lsquic_tokgen.h"
 #include "lsquic_ietf.h"
+#include "lsquic_alarmset.h"
 
 #if __GNUC__
 #   define UNLIKELY(cond) __builtin_expect(cond, 0)
@@ -78,8 +79,8 @@ static const struct alpn_map {
     enum lsquic_version  version;
     const unsigned char *alpn;
 } s_alpns[] = {
-    {   LSQVER_ID22, (unsigned char *) "\x05h3-22",     },
-    {   LSQVER_VERNEG, (unsigned char *) "\x05h3-22",     },
+    {   LSQVER_ID23, (unsigned char *) "\x05h3-23",     },
+    {   LSQVER_VERNEG, (unsigned char *) "\x05h3-23",     },
 };
 
 struct enc_sess_iquic;
@@ -105,6 +106,10 @@ iquic_esf_get_server_cert_chain (enc_session_t *);
 
 static void
 maybe_drop_SSL (struct enc_sess_iquic *);
+
+static void
+no_sess_ticket (enum alarm_id alarm_id, void *ctx,
+                                  lsquic_time_t expiry, lsquic_time_t now);
 
 
 typedef void (*gen_hp_mask_f)(struct enc_sess_iquic *,
@@ -236,6 +241,7 @@ struct enc_sess_iquic
         ESI_ALPN_CHECKED = 1 << 8,
         ESI_CACHED_INFO  = 1 << 9,
         ESI_1RTT_ACKED   = 1 << 10,
+        ESI_WANT_TICKET  = 1 << 11,
     }                    esi_flags;
     enum evp_aead_direction_t
                          esi_dir[2];        /* client, server */
@@ -264,6 +270,8 @@ struct enc_sess_iquic
     struct frab_list     esi_frals[N_ENC_LEVS];
     struct transport_params
                          esi_peer_tp;
+    struct lsquic_alarmset
+                        *esi_alset;
 };
 
 
@@ -520,7 +528,7 @@ gen_trans_params (struct enc_sess_iquic *enc_sess, unsigned char *buf,
         - 1 /* One slot is used by peer's SCID */
         - !!(params.tp_flags & (TRAPA_PREFADDR_IPv4|TRAPA_PREFADDR_IPv6));
     if (!settings->es_allow_migration)
-        params.tp_disable_migration = 1;
+        params.tp_disable_active_migration = 1;
 
     len = lsquic_tp_encode(&params, buf, bufsz);
     if (len >= 0)
@@ -651,7 +659,8 @@ iquic_esfi_create_client (const char *hostname,
             struct lsquic_engine_public *enpub, struct lsquic_conn *lconn,
             const lsquic_cid_t *dcid, const struct ver_neg *ver_neg,
             void *crypto_streams[4], const struct crypto_stream_if *cryst_if,
-            const unsigned char *zero_rtt, size_t zero_rtt_sz)
+            const unsigned char *zero_rtt, size_t zero_rtt_sz,
+            struct lsquic_alarmset *alset)
 {
     struct enc_sess_iquic *enc_sess;
 
@@ -719,6 +728,12 @@ iquic_esfi_create_client (const char *hostname,
         enc_sess->esi_zero_rtt_buf = NULL;
         enc_sess->esi_zero_rtt_sz = 0;
     }
+
+    if (enc_sess->esi_enpub->enp_stream_if->on_zero_rtt_info)
+        enc_sess->esi_flags |= ESI_WANT_TICKET;
+    enc_sess->esi_alset = alset;
+    lsquic_alarmset_init_alarm(enc_sess->esi_alset, AL_SESS_TICKET,
+                                            no_sess_ticket, enc_sess);
 
     return enc_sess;
 }
@@ -1126,6 +1141,7 @@ iquic_new_session_cb (SSL *ssl, SSL_SESSION *session)
     size_t ticket_sz;
     lsquic_ver_tag_t tag;
     const uint8_t *trapa_buf;
+    SSL_CTX *ssl_ctx;
     size_t trapa_sz, buf_sz;
 
     enc_sess = SSL_get_ex_data(ssl, s_idx);
@@ -1133,8 +1149,18 @@ iquic_new_session_cb (SSL *ssl, SSL_SESSION *session)
 
     max_early_data_size = SSL_SESSION_get_max_early_data_size(session);
     if (0xFFFFFFFFu != max_early_data_size)
-        LSQ_WARN("max_early_data_size=0x%X, protocol violation",
+    {
+        /* See [draft-ietf-quic-tls-23], Section 4.5 */
+        LSQ_INFO("max_early_data_size=0x%X, protocol violation",
                                                         max_early_data_size);
+        enc_sess->esi_conn->cn_if->ci_abort_error(enc_sess->esi_conn, 0,
+            TEC_PROTOCOL_VIOLATION, "max_early_data_size is set to %u "
+                "instead of 0xFFFFFFFF as mandated by standard",
+                max_early_data_size);
+        ssl_ctx = SSL_get_SSL_CTX(ssl);
+        SSL_CTX_sess_set_new_cb(ssl_ctx, NULL);
+        return 0;
+    }
 
     SSL_get_peer_quic_transport_params(enc_sess->esi_ssl, &trapa_buf,
                                                                 &trapa_sz);
@@ -1192,6 +1218,8 @@ iquic_new_session_cb (SSL *ssl, SSL_SESSION *session)
     enc_sess->esi_enpub->enp_stream_if->on_zero_rtt_info(enc_sess->esi_conn,
                                                                 buf, buf_sz);
     free(buf);
+    enc_sess->esi_flags &= ~ESI_WANT_TICKET;
+    lsquic_alarmset_unset(enc_sess->esi_alset, AL_SESS_TICKET);
     return 0;
 }
 
@@ -1625,7 +1653,7 @@ iquic_esf_encrypt_packet (enc_session_t *enc_session_p,
     size_t out_sz, dst_sz;
     int header_sz;
     int ipv6;
-    unsigned packno_off, packno_len, sample_off, cliser;
+    unsigned packno_off, packno_len, cliser;
     enum packnum_space pns;
     char errbuf[ERR_ERROR_STRING_BUF_LEN];
 
@@ -1739,8 +1767,10 @@ iquic_esf_encrypt_packet (enc_session_t *enc_session_p,
     assert(out_sz == dst_sz - header_sz);
 
     lconn->cn_pf->pf_packno_info(lconn, packet_out, &packno_off, &packno_len);
-    sample_off = packno_off + 4;
+#ifndef NDEBUG
+    const unsigned sample_off = packno_off + 4;
     assert(sample_off + IQUIC_TAG_LEN <= dst_sz);
+#endif
     apply_hp(enc_sess, hp, cliser, dst, packno_off, packno_len);
 
     packet_out->po_enc_data    = dst;
@@ -1876,6 +1906,7 @@ iquic_esf_decrypt_packet (enc_session_t *enc_session_p,
     }
     else
     {
+        key_phase = 0;
         assert(enc_sess->esi_hsk_pairs);
         pair = &enc_sess->esi_hsk_pairs[ enc_level ];
         crypto_ctx = &pair->ykp_ctx[ cliser ];
@@ -1976,6 +2007,9 @@ iquic_esf_decrypt_packet (enc_session_t *enc_session_p,
     pns = lsquic_enclev2pns[enc_level];
     if (packet_in->pi_packno > enc_sess->esi_max_packno[pns])
         enc_sess->esi_max_packno[pns] = packet_in->pi_packno;
+    /* XXX Compiler complains that `pair' may be uninitialized here, but this
+     * variable is set in `if (crypto_ctx == &crypto_ctx_buf)' above.
+     */
     if (is_valid_packno(pair->ykp_thresh)
                                 && packet_in->pi_packno > pair->ykp_thresh)
         pair->ykp_thresh = packet_in->pi_packno;
@@ -2197,6 +2231,20 @@ cache_info (struct enc_sess_iquic *enc_sess)
 
 
 static void
+drop_SSL (struct enc_sess_iquic *enc_sess)
+{
+    LSQ_DEBUG("drop SSL object");
+    if (enc_sess->esi_conn->cn_if->ci_drop_crypto_streams)
+        enc_sess->esi_conn->cn_if->ci_drop_crypto_streams(
+                                                    enc_sess->esi_conn);
+    cache_info(enc_sess);
+    SSL_free(enc_sess->esi_ssl);
+    enc_sess->esi_ssl = NULL;
+    free_handshake_keys(enc_sess);
+}
+
+
+static void
 maybe_drop_SSL (struct enc_sess_iquic *enc_sess)
 {
     /* We rely on the following BoringSSL property: it writes new session
@@ -2210,12 +2258,29 @@ maybe_drop_SSL (struct enc_sess_iquic *enc_sess)
         && enc_sess->esi_ssl
         && lsquic_frab_list_empty(&enc_sess->esi_frals[ENC_LEV_FORW]))
     {
-        LSQ_DEBUG("drop SSL object");
-        cache_info(enc_sess);
-        SSL_free(enc_sess->esi_ssl);
-        enc_sess->esi_ssl = NULL;
-        free_handshake_keys(enc_sess);
+        if ((enc_sess->esi_flags & (ESI_SERVER|ESI_WANT_TICKET))
+                                                            != ESI_WANT_TICKET)
+            drop_SSL(enc_sess);
+        else if (enc_sess->esi_alset
+                && !lsquic_alarmset_is_set(enc_sess->esi_alset, AL_SESS_TICKET))
+        {
+            LSQ_DEBUG("no session ticket: delay dropping SSL object");
+            lsquic_alarmset_set(enc_sess->esi_alset, AL_SESS_TICKET,
+                /* Wait up to two seconds for session tickets */
+                                                lsquic_time_now() + 2000000);
+        }
     }
+}
+
+
+static void
+no_sess_ticket (enum alarm_id alarm_id, void *ctx,
+                                  lsquic_time_t expiry, lsquic_time_t now)
+{
+    struct enc_sess_iquic *enc_sess = ctx;
+
+    LSQ_DEBUG("no session tickets forthcoming -- drop SSL");
+    drop_SSL(enc_sess);
 }
 
 
@@ -2577,23 +2642,43 @@ readf_cb (void *ctx, const unsigned char *buf, size_t len, int fin)
 }
 
 
+static size_t
+discard_cb (void *ctx, const unsigned char *buf, size_t len, int fin)
+{
+    return len;
+}
+
+
 static void
 chsk_ietf_on_read (struct lsquic_stream *stream, lsquic_stream_ctx_t *ctx)
 {
     struct enc_sess_iquic *const enc_sess = (void *) ctx;
     enum enc_level enc_level = enc_sess->esi_cryst_if->csi_enc_level(stream);
     struct readf_ctx readf_ctx = { enc_sess, enc_level, 0, };
+    ssize_t nread;
 
 
-    ssize_t nread = enc_sess->esi_cryst_if->csi_readf(stream,
-                                                    readf_cb, &readf_ctx);
-
-    if (!(nread < 0 || readf_ctx.err))
-        iquic_esfi_shake_stream((enc_session_t *)enc_sess, stream, "on_read");
+    if (enc_sess->esi_ssl)
+    {
+        nread = enc_sess->esi_cryst_if->csi_readf(stream, readf_cb, &readf_ctx);
+        if (!(nread < 0 || readf_ctx.err))
+            iquic_esfi_shake_stream((enc_session_t *)enc_sess, stream,
+                                                                    "on_read");
+        else
+            enc_sess->esi_conn->cn_if->ci_internal_error(enc_sess->esi_conn,
+                "shaking stream failed: nread: %zd, err: %d, SSL err: %"PRIu32,
+                nread, readf_ctx.err, ERR_get_error());
+    }
     else
-        enc_sess->esi_conn->cn_if->ci_internal_error(enc_sess->esi_conn,
-            "shaking stream failed: nread: %zd, err: %d, SSL err: %"PRIu32,
-            nread, readf_ctx.err, ERR_get_error());
+    {
+        /* This branch is reached when we don't want TLS ticket and drop
+         * the SSL object before we process TLS tickets that have been
+         * already received and waiting in the incoming stream buffer.
+         */
+        nread = enc_sess->esi_cryst_if->csi_readf(stream, discard_cb, NULL);
+        lsquic_stream_wantread(stream, 0);
+        LSQ_DEBUG("no SSL object: discard %zd bytes of SSL data", nread);
+    }
 }
 
 
