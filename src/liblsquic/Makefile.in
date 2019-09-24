@@ -136,10 +136,9 @@ am_liblsquic_a_OBJECTS = lsquic_alarmset.$(OBJEXT) \
 	lsquic_http1x_if.$(OBJEXT) lsquic_parse_ietf_v1.$(OBJEXT) \
 	lsquic_varint.$(OBJEXT) lsquic_enc_sess_common.$(OBJEXT) \
 	lsquic_mini_conn_ietf.$(OBJEXT) lsquic_purga.$(OBJEXT) \
-	lsquic_hq.$(OBJEXT) lsquic_hcsi_reader.$(OBJEXT) \
-	lsquic_hcso_writer.$(OBJEXT) lsquic_frab_list.$(OBJEXT) \
-	lsqpack.$(OBJEXT) lsquic_qenc_hdl.$(OBJEXT) \
-	lsquic_qdec_hdl.$(OBJEXT) lsquic_h3_prio.$(OBJEXT) \
+	lsquic_hcsi_reader.$(OBJEXT) lsquic_hcso_writer.$(OBJEXT) \
+	lsquic_frab_list.$(OBJEXT) lsqpack.$(OBJEXT) \
+	lsquic_qenc_hdl.$(OBJEXT) lsquic_qdec_hdl.$(OBJEXT) \
 	lsquic_tokgen.$(OBJEXT) lsquic_parse_Q046.$(OBJEXT) \
 	lsquic_minmax.$(OBJEXT) lsquic_bw_sampler.$(OBJEXT) \
 	lsquic_bbr.$(OBJEXT) lsquic_enc_sess_ietf.$(OBJEXT) \
@@ -390,14 +389,12 @@ liblsquic_a_SOURCES = lsquic_alarmset.c lsquic_conn.c lsquic_full_conn.c lsquic_
 	lsquic_enc_sess_common.c \
 	lsquic_mini_conn_ietf.c \
 	lsquic_purga.c \
-	lsquic_hq.c \
 	lsquic_hcsi_reader.c \
 	lsquic_hcso_writer.c \
 	lsquic_frab_list.c \
 	ls-qpack/lsqpack.c \
 	lsquic_qenc_hdl.c \
 	lsquic_qdec_hdl.c \
-	lsquic_h3_prio.c \
 	lsquic_tokgen.c \
 	lsquic_parse_Q046.c \
 	lsquic_minmax.c \
@@ -483,14 +480,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_full_conn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_full_conn_ietf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_global.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_h3_prio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_handshake.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_hash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_hcsi_reader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_hcso_writer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_headers_stream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_hkdf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_hq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_hspack_valid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_http1x_if.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsquic_logger.Po@am__quote@

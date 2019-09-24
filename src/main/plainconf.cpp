@@ -431,7 +431,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"quicmaxstreams", NULL},
     {"quichandshaketimeout", NULL},
     {"quicidletimeout", NULL},
-    {"quiccongestionctrl ", NULL},
+    {"quicpush", NULL},
+    {"quiccongestionctrl", NULL},
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

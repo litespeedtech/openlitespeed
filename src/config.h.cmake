@@ -5,6 +5,6 @@
 #define DEFAULT_TMP_DIR "/tmp/lshttpd"
 #define PID_FILE        "/tmp/lshttpd/openlitespeed.pid"
 
-#define PACKAGE_VERSION "1.6.0"
+#define PACKAGE_VERSION "1.6.1"
 #define LS_MODULE_VERSION_INFO "\tmodgzip 1.1\n\tcache 1.61\n\tmodinspector 1.1\n\tuploadprogress LSIAPI_VERSION_STRING\n\tmod_security 1.1\n"
 #endif

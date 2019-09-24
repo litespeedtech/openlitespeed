@@ -27,14 +27,12 @@ liblsquic_a_SOURCES =  lsquic_alarmset.c lsquic_conn.c lsquic_full_conn.c lsquic
 	lsquic_enc_sess_common.c \
 	lsquic_mini_conn_ietf.c \
 	lsquic_purga.c \
-	lsquic_hq.c \
 	lsquic_hcsi_reader.c \
 	lsquic_hcso_writer.c \
 	lsquic_frab_list.c \
 	ls-qpack/lsqpack.c \
 	lsquic_qenc_hdl.c \
 	lsquic_qdec_hdl.c \
-	lsquic_h3_prio.c \
 	lsquic_tokgen.c \
 	lsquic_parse_Q046.c \
 	lsquic_minmax.c \

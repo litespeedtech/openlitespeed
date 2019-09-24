@@ -5689,34 +5689,35 @@ lshpack_enc_huff_encode (const unsigned char *src,
 {
     unsigned char *p_dst = dst;
     unsigned char *dst_end = p_dst + dst_len;
-    uint64_t bits = 0;
+    uintptr_t bits;  /* OK not to initialize this variable */
     unsigned bits_used = 0, adj;
     struct encode_el cur_enc_code;
 
     while (src != src_end)
     {
         cur_enc_code = encode_table[*src++];
-        if (bits_used + cur_enc_code.bits < 64)
+        if (bits_used + cur_enc_code.bits < sizeof(bits) * 8)
         {
             bits <<= cur_enc_code.bits;
             bits |= cur_enc_code.code;
             bits_used += cur_enc_code.bits;
             continue;
         }
-        else if (p_dst + 8 <= dst_end)
+        else if (p_dst + sizeof(bits) <= dst_end)
         {
-            bits <<= 64 - bits_used;
-            bits |= cur_enc_code.code >> (cur_enc_code.bits - (64 - bits_used));
+            bits <<= sizeof(bits) * 8 - bits_used;
+            bits_used = cur_enc_code.bits - (sizeof(bits) * 8 - bits_used);
+            bits |= cur_enc_code.code >> bits_used;
+#if UINTPTR_MAX == 18446744073709551615ull
             *p_dst++ = bits >> 56;
             *p_dst++ = bits >> 48;
             *p_dst++ = bits >> 40;
             *p_dst++ = bits >> 32;
+#endif
             *p_dst++ = bits >> 24;
             *p_dst++ = bits >> 16;
             *p_dst++ = bits >> 8;
             *p_dst++ = bits;
-            bits_used += cur_enc_code.bits;
-            bits_used &= 64 - 1;
             bits = cur_enc_code.code;   /* OK not to clear high bits */
         }
         else
@@ -5726,14 +5727,16 @@ lshpack_enc_huff_encode (const unsigned char *src,
     adj = bits_used + (-bits_used & 7);     /* Round up to 8 */
     if (bits_used && p_dst + (adj >> 3) <= dst_end)
     {
-        bits <<= adj - bits_used;       /* Align to byte boundary */
-        bits |= ((1 << (adj - bits_used)) - 1);  /* EOF */
+        bits <<= -bits_used & 7;            /* Align to byte boundary */
+        bits |= ((1 << (-bits_used & 7)) - 1);  /* EOF */
         switch (adj >> 3)
         {                               /* Write out */
+#if UINTPTR_MAX == 18446744073709551615ull
         case 8: *p_dst++ = bits >> 56;
         case 7: *p_dst++ = bits >> 48;
         case 6: *p_dst++ = bits >> 40;
         case 5: *p_dst++ = bits >> 32;
+#endif
         case 4: *p_dst++ = bits >> 24;
         case 3: *p_dst++ = bits >> 16;
         case 2: *p_dst++ = bits >> 8;
@@ -72139,9 +72142,8 @@ static const struct hdec { uint8_t lens; uint8_t out[3]; } hdecs[] =
 
 
 /* The decoder is optimized for the common case.  Most of the time, we decode
- * data whose encoding is 16 bits or shorter.  This allows us to use a 64 KB
- * table indexed by two bytes of input which outputs, 1, 2, or 3 bytes at a
- * time.
+ * data whose encoding is 16 bits or shorter.  This lets us use a 64 KB table
+ * indexed by two bytes of input and outputs 1, 2, or 3 bytes at a time.
  *
  * In the case a longer code is encoutered, we fall back to the original
  * Huffman decoder that supports all code lengths.
@@ -72153,63 +72155,66 @@ lshpack_dec_huff_decode (const unsigned char *src, int src_len,
     unsigned char *const orig_dst = dst;
     const unsigned char *const src_end = src + src_len;
     unsigned char *const dst_end = dst + dst_len;
-    uint64_t buf;
+    uintptr_t buf;                  /* OK not to initialize */
     unsigned avail_bits, len;
     struct hdec hdec;
     uint16_t idx;
     int r;
 
-    buf = 0;
     avail_bits = 0;
-    if (src + 8 <= src_end)
+    while (1)
     {
-        goto first_fill;
-  fill_fast:
-        switch ((64 - avail_bits) >> 3)
+        if (src + sizeof(buf) <= src_end)
         {
-        case 8:
-            buf <<= 8;
-  first_fill:
-            buf |= (uint64_t) *src++;
-        case 7:
-            buf <<= 8;
-            buf |= (uint64_t) *src++;
-        default:
-            buf <<= 48;
-            buf |= (uint64_t) *src++ << 40;
-            buf |= (uint64_t) *src++ << 32;
-            buf |= (uint64_t) *src++ << 24;
-            buf |= (uint64_t) *src++ << 16;
-            buf |= (uint64_t) *src++ <<  8;
-            buf |= (uint64_t) *src++ <<  0;
-        }
-        avail_bits += (64 - avail_bits) >> 3 << 3;
-    }
-    else if (src < src_end)
-    {
-        do
-        {
-  fill_slow:
-            buf <<= 8;
-            buf |= (uint64_t) *src++;
-            avail_bits += 8;
-        }
-        while (src < src_end && avail_bits < 57);
-    }
-    else
-        return 0;
-
-    if (dst_end - dst >= (ptrdiff_t) (8 * sizeof(buf) / SHORTEST_CODE)
-                                                        && avail_bits >= 16)
-    {
-        /* Fast loop: don't check destination bounds; use the fact that all
-         * table entries below 0xFFFE are valid.
-         */
-        do
-        {
-            idx = buf >> (avail_bits - 16);
-            if (idx < 0xFFFE)
+            len = (sizeof(buf) * 8 - avail_bits) >> 3;
+            avail_bits += len << 3;
+            switch (len)
             {
+#if UINTPTR_MAX == 18446744073709551615ull
+            case 8:
+                buf <<= 8;
+                buf |= (uintptr_t) *src++;
+            case 7:
+                buf <<= 8;
+                buf |= (uintptr_t) *src++;
+            default:
+                buf <<= 48;
+                buf |= (uintptr_t) *src++ << 40;
+                buf |= (uintptr_t) *src++ << 32;
+                buf |= (uintptr_t) *src++ << 24;
+                buf |= (uintptr_t) *src++ << 16;
+#else
+            case 4:
+                buf <<= 8;
+                buf |= (uintptr_t) *src++;
+            case 3:
+                buf <<= 8;
+                buf |= (uintptr_t) *src++;
+            default:
+                buf <<= 16;
+#endif
+                buf |= (uintptr_t) *src++ <<  8;
+                buf |= (uintptr_t) *src++ <<  0;
+            }
+        }
+        else if (src < src_end)
+            do
+            {
+                buf <<= 8;
+                buf |= (uintptr_t) *src++;
+                avail_bits += 8;
+            }
+            while (src < src_end && avail_bits <= sizeof(buf) * 8 - 8);
+        else
+            break;  /* Normal case terminating condition: out of input */
+
+        if (dst_end - dst >= (ptrdiff_t) (8 * sizeof(buf) / SHORTEST_CODE)
+                                                            && avail_bits >= 16)
+        {
+            /* Fast path: don't check destination bounds */
+            do
+            {
+                idx = buf >> (avail_bits - 16);
                 hdec = hdecs[idx];
                 dst[0] = hdec.out[0];
                 dst[1] = hdec.out[1];
@@ -72217,46 +72222,42 @@ lshpack_dec_huff_decode (const unsigned char *src, int src_len,
                 dst += hdec.lens & 3;
                 avail_bits -= hdec.lens >> 2;
             }
-            else
-                goto slow_pass;
+            while (avail_bits >= 16 && hdec.lens);
+            if (avail_bits < 16)
+                continue;
+            goto slow_path;
         }
-        while (avail_bits >= 16);
-    }
-    else
-        while (avail_bits >= 16)
-        {
-            idx = buf >> (avail_bits - 16);
-            hdec = hdecs[idx];
-            len = hdec.lens & 3;
-            if (len && dst + len <= dst_end)
+        else
+            while (avail_bits >= 16)
             {
-                switch (len)
+                idx = buf >> (avail_bits - 16);
+                hdec = hdecs[idx];
+                len = hdec.lens & 3;
+                if (len && dst + len <= dst_end)
                 {
-                case 3:
-                    *dst++ = hdec.out[0];
-                    *dst++ = hdec.out[1];
-                    *dst++ = hdec.out[2];
-                    break;
-                case 2:
-                    *dst++ = hdec.out[0];
-                    *dst++ = hdec.out[1];
-                    break;
-                default:
-                    *dst++ = hdec.out[0];
-                    break;
+                    switch (len)
+                    {
+                    case 3:
+                        *dst++ = hdec.out[0];
+                        *dst++ = hdec.out[1];
+                        *dst++ = hdec.out[2];
+                        break;
+                    case 2:
+                        *dst++ = hdec.out[0];
+                        *dst++ = hdec.out[1];
+                        break;
+                    default:
+                        *dst++ = hdec.out[0];
+                        break;
+                    }
+                    avail_bits -= hdec.lens >> 2;
                 }
-                avail_bits -= hdec.lens >> 2;
+                else if (dst + len > dst_end)
+                    return -2;
+                else
+                    goto slow_path;
             }
-            else if (dst + len > dst_end)
-                return -2;
-            else
-                goto slow_pass;
-        }
-
-    if (src + 8 <= src_end)
-        goto fill_fast;
-    if (src < src_end)
-        goto fill_slow;
+    }
 
     if (avail_bits >= SHORTEST_CODE)
     {
@@ -72269,6 +72270,8 @@ lshpack_dec_huff_decode (const unsigned char *src, int src_len,
          */
         hdec = hdecs[idx];
         len = hdec.lens & 3;
+        if ((hdec.lens >> 2) > avail_bits)
+            return -1;
         if (len && dst + len <= dst_end)
         {
             switch (len)
@@ -72304,7 +72307,7 @@ lshpack_dec_huff_decode (const unsigned char *src, int src_len,
   end:
     return dst - orig_dst;
 
-  slow_pass:
+  slow_path:
     /* Find previous byte boundary and finish decoding thence. */
     while ((avail_bits & 7) && dst > orig_dst)
         avail_bits += encode_table[ *--dst ].bits;
