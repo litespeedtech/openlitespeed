@@ -34,7 +34,6 @@ public:
 };
 class ContextList : public TPointerList< HttpContext >
 {
-    int         m_size;
     AutoStr     m_sTags;
     ContextList(const ContextList &rhs);
     void operator=(const ContextList &rhs);

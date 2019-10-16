@@ -104,6 +104,8 @@ $_tipsdb['adminUser'] = new DAttrHelp("网络管理员用户", '更改WebAdmin�
 
 $_tipsdb['allowBrowse'] = new DAttrHelp("Accessible", 'Specifies whether this context can be accessed. Set to No to deny access. You can use this feature to protect the specified directory from being visited. You may use it when you are updating contents for this context or you have special data in this directory.', '', 'Select from radio box', '');
 
+$_tipsdb['allowQuic'] = new DAttrHelp("Allow QUIC", 'Allows the use of the QUIC network protocol for virtual hosts mapped to this listener. For this setting to take effect, &quot;Enable QUIC&quot; must also be set to Yes at the server level. Default value is Yes.', 'When this setting is set to Yes, QUIC can still be disabled at the virtual host level through the &quot;Enable QUIC&quot; setting.', '', '');
+
 $_tipsdb['allowSetUID'] = new DAttrHelp("Allow Set UID", 'Specifies whether the set UID bit is allowed for CGI scripts. If the set UID bit is allowed and the set UID bit is enabled for a CGI script, no matter which user the CGI script was started on behalf of, the user ID of the CGI process will switch to the user ID of the owner of the CGI script.<br/>The default is &quot;Off&quot;.', ' Do not allow Set UID CGI scripts whenever possible, as it is inherently a security risk.', 'Select from radio box', '');
 
 $_tipsdb['allowSymbolLink'] = new DAttrHelp("跟随符号链接", '指定在这个虚拟主机内是否要跟随符号链接。 If Owner Match选项启用后，只有在链接和目标属主一致时才跟踪符号链接。 此设置将覆盖默认的服务器级设置。', '[性能和安全性建议] 为了更好的安全性，请禁用此功能。为了获得更好的性能，启用它。', '选项', '');
@@ -478,6 +480,28 @@ $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enabl
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web Server", 'Specifies the name of the external web server. This external web server must be defined in the &quot;External Apps&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
+$_tipsdb['quicCfcw'] = new DAttrHelp("Connection Flow Control Window", 'The initial size of the buffer allocated for a QUIC connection. Default value is 1.5M.', 'A larger window size will use more memory.', 'Number between 64K and 512M', '');
+
+$_tipsdb['quicCongestionCtrl'] = new DAttrHelp("Congestion Control", 'The congestion control algorithm used. This can be set manually or left up to the QUIC library in use by selecting the &quot;Default&quot; option.<br/><br/>Default value: Default', '', 'Select from drop down list', '');
+
+$_tipsdb['quicEnable'] = new DAttrHelp("Enable QUIC", 'Enables the QUIC network protocol server wide. Default value is Yes.', 'When this setting is set to Yes, QUIC can still be disabled at the listener level through the &quot;Allow QUIC&quot; setting, or at the virtual host level through the &quot;Enable QUIC&quot; setting.', 'Select from radio box', '');
+
+$_tipsdb['quicHandshakeTimeout'] = new DAttrHelp("Handshake Timeout", 'The time in seconds a new QUIC connection is given to complete its handshake, after which the connection is aborted. Default value is 10.', '', 'Integer number between 1 and 15', '');
+
+$_tipsdb['quicIdleTimeout'] = new DAttrHelp("Idle Timeout", 'The time in seconds after which an idle QUIC connection will be closed. Default value is 30.', '', 'Integer number between 10 and 30', '');
+
+$_tipsdb['quicMaxCfcw'] = new DAttrHelp("Max Connection Flow Control Window", 'Specifies the maximum size that a connection flow control window buffer is allowed to reach due to window auto-tuning.<br/><br/>Default value is 0, which means that the value of &quot;Connection Flow Control Window&quot; is used and no auto-tuning is performed.', 'A larger window size will use more memory.', '0 or a number between 64K and 512M', '');
+
+$_tipsdb['quicMaxSfcw'] = new DAttrHelp("Max Stream Flow Control Window", 'Specifies the maximum size that a stream flow control window is allowed to reach due to window auto-tuning.<br/><br/>Default value is 0, which means that the value of &quot;Stream Flow Control Window&quot; is used and no auto-tuning is performed.', 'A larger window size will use more memory.', '0 or a number between 64K and 128M', '');
+
+$_tipsdb['quicMaxStreams'] = new DAttrHelp("Max Concurrent Streams Per Connection", 'The maximum number of concurrent streams allowed per QUIC connection. Default value is 100.', '', 'Integer number between 10 and 1000', '');
+
+$_tipsdb['quicSfcw'] = new DAttrHelp("Stream Flow Control Window", 'The initial amount of data a QUIC connection is willing to receive per stream. Default value is 1M.', 'A larger window size will use more memory.', 'Number between 64K and 128M', '');
+
+$_tipsdb['quicShmDir'] = new DAttrHelp("QUIC SHM Directory", 'Specifies the directory used to save QUIC data to shared memory.<br/><br/>By default, the server&#039;s default SHM directory, /dev/shm, will be used.', 'A RAM based partition, such as /dev/shm, is recommended.', 'Path', '');
+
+$_tipsdb['quicVersions'] = new DAttrHelp("QUIC Versions", 'A list of enabled QUIC versions. This setting should only be used to limit QUIC support to the versions listed and is best left blank.', 'It is recommended to leave this setting blank to have the the best configuration applied automatically.', 'Comma-separated list', 'Q035, Q039');
+
 $_tipsdb['railsDefaults'] = new DAttrHelp("Rack/Rails Default Settings", 'Default configurations for Rack/Rails applications. These settings can be overriden at the context level.', '', '', '');
 
 $_tipsdb['rcvBufSize'] = new DAttrHelp("接收缓冲区大小", '每个TCP套接字的接收缓冲区的大小。设定值为0使用 操作系统默认的缓冲区大小。65535是允许的最大缓冲区大小。', '[性能建议] 处理大载荷入站请求，如文件上传时，大的接收缓冲区会提高性能。', '无符号整数', '');
@@ -669,6 +693,8 @@ $_tipsdb['venable'] = new DAttrHelp("Enable", 'The Enable action starts up a sto
 $_tipsdb['verifyDepth'] = new DAttrHelp("Verify Depth", ' Specifies how deeply a certificate should be verified before determining that the client does not have a valid certificate. The default is &quot;1&quot;.', '', 'Select from drop down list', '');
 
 $_tipsdb['vhEnableGzip'] = new DAttrHelp("启用GZIP", '指定是否启用此虚拟主机的gzip压缩功能。 这项设置只有在服务器级别的GZIP压缩功能启用时才有效。 在服务器级别开启压缩的情况下，可以通过此选项关闭本虚拟主机的压缩。 压缩设置是在服务器级别配置的（在Tuning-GZIP选项中）。', '', '布尔值', '');
+
+$_tipsdb['vhEnableQuic'] = new DAttrHelp("Enable QUIC", 'Enables the QUIC network protocol for this virtual host. For this setting to take effect, both &quot;Enable QUIC&quot; and &quot;Allow QUIC&quot; must also be set to Yes at the server and listener levels respectively. Default value is Yes.', 'When this setting is set to No, the QUIC advertisement will no longer be sent. If a browser still contains cached QUIC information and QUIC is still enabled at the server and listener levels, a QUIC connection will continue to be used until this information is no longer cached or a QUIC protocol error is encountered.', 'Select from radio box', '');
 
 $_tipsdb['vhMaxKeepAliveReq'] = new DAttrHelp("最大Keep-Alive请求数", '指定通过keep-alive(永久)连接服务的最大请求数量。当该限制值达到时连接将被断开。你可以为不同虚拟主机设置不同的数值。这个数值不能超过服务器级别的&quot;最大持续连接请求数&quot;限制值。', '[性能建议] 设置为一个合理的高数值。设置为1或比1更小的值将禁用keep-alive连接。', '无符号整数', '');
 

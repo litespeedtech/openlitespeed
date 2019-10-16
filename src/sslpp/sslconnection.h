@@ -75,6 +75,7 @@ public:
     int checkError(int ret);
     bool isConnected()      {   return m_iStatus == CONNECTED;  }
     int tryagain();
+    void setWriteBuffering(int buffering);
 
     int asyncFetchCert(asyncCertDoneCb cb, void *pParam);
     void cancelAsyncFetchCert(asyncCertDoneCb cb, void *pParam);

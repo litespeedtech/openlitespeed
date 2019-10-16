@@ -514,6 +514,8 @@ void HttpSession::nextRequest()
         ls_atomic_setint(&m_iMtFlag, 0);
         logAccess(0);
         ++m_iReqServed;
+        getStream()->resetBytesCount();
+
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
         m_sendFileInfo.release();
@@ -1304,6 +1306,8 @@ int HttpSession::processNewReqInit()
             LS_DBG_L(getLogSession(), "Cannot find a matching VHost.");
             *pHostEnd = ch;
         }
+        
+        m_sessionHooks.inherit(NULL, 1);
         return SC_404;
     }
 
@@ -4950,7 +4954,6 @@ int HttpSession::passSendFileToParent(SendFileInfo *pData)
 int HttpSession::sendStaticFile(SendFileInfo *pData)
 {
     LS_DBG_M(getLogSession(), "SendStaticFile()");
-    getStream()->resetBytesCount();
 
     if (m_iFlag & HSF_SUB_SESSION && !getGzipBuf())
         return passSendFileToParent(pData);

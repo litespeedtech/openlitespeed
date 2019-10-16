@@ -7,7 +7,7 @@ m4_include(ax_check_libudns.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([openlitespeed],[1.5.6],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.5.7],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
@@ -105,7 +105,7 @@ AC_SUBST([OPENLSWS_EXAMPLEPORT])
 
 AC_ARG_WITH([lsphp7],
             AS_HELP_STRING([--with-lsphp7],[Set lsphp7 as default php script handler[default: yes]]),
-            [USE_LSPHP7="$withval"], [USE_LSPHP7=no])
+            [USE_LSPHP7="$withval"], [USE_LSPHP7=yes])
 
 AC_ARG_WITH([tempdir],
             AS_HELP_STRING([--with-tempdir],[Set a customized temprary directory[default: /tmp/lshttpd]]),
@@ -344,16 +344,11 @@ AC_ARG_WITH(bssl,
 AC_SUBST([OPENLSWS_BSSL])
 
 if test "$OPENLSWS_BSSL" = no ; then
-    if test "$OSNAME" = Darwin ; then
-        usedynossl=yes
-        CPPFLAGS=" $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
-    else
-        usedynossl=no
-        CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
-        echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
-        OSSL=`. $srcdir/dlossl.sh`
-        echo "Finsihed building openssl."
-    fi
+    usedynossl=no
+    CPPFLAGS=" -I../../ssl/include $CPPFLAGS -I../../src -I../../include -I/usr/local/include -I/usr/local -I/usr -I/usr/pkg "
+    echo "Will build latest stable openssl libraries for you, this may take several minutes ..."
+    OSSL=`. $srcdir/dlossl.sh`
+    echo "Finsihed building openssl."
     echo "Openssl: use_dyn_ossl = $usedynossl"
     AC_DEFINE([USE_OPENSSL], [1], [will use openssl as ssl])
 else
@@ -514,6 +509,10 @@ fi
 if test "$OSNAME" = Darwin ; then
     LDFLAGS="$LDFLAGS -Wl,-export_dynamic -pagezero_size 10000 -image_base 100000000"
     RT_LIB_OPTION=
+fi
+
+if test "$OSTYPE" = aarch64 ; then
+    EXTRA_LIBS="$EXTRA_LIBS -latomic"
 fi
 
 LDFLAGS="$LDFLAGS $PCRE_LDFLAGS $UDNS_LDFLAGS -D_GLIBCXX_USE_CXX11_ABI=0"

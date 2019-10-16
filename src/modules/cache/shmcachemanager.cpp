@@ -25,7 +25,6 @@
 
 #include <ctype.h>
 
-
 typedef struct shm_purgedata_s
 {
     purgeinfo_t         x_purgeinfo;
@@ -560,6 +559,36 @@ LsShmOffset_t ShmCacheManager::addUpdate(
     return offVal;
 }
 
+LsShmOffset_t ShmCacheManager::addUpdate(LsShmHash *pHash, const char *pKey,
+        int keyLen, purgeinfo_t *pData)
+{
+    purgeinfo_t *xData;
+    ls_strpair_t parms;
+
+    LsShmHashLocker locker(pHash);
+
+//     LsShmHIterOff offIter = pHash->insertIterator(
+//         pHash->setParms(&parms, pKey, keyLen, NULL, sizeof(purgeinfo_t)));
+//
+    // Use setIterator instead of getIterator to increment tid.
+    LsShmHIterOff offIter = pHash->setIterator(
+        pHash->setParms(&parms, pKey, keyLen, pData, sizeof(*pData)));
+    
+    if (offIter.m_iOffset != 0)
+    {
+        xData = (purgeinfo_t *)pHash->offset2iteratorData(offIter);
+        xData->tmSecs = pData->tmSecs;
+        xData->tmMsec = pData->tmMsec;
+        xData->flags = pData->flags;
+        xData->idTag = 0;
+//         LOG4CXX_NS::Logger::getRootLogger()->debug(
+//                 "mark tag: %.*s, purge timestamp: %d.%d, flag, %d",
+//                 keyLen, pKey, sec, (int)msec, flag );
+        pHash->linkMvTopTime(offIter, pData->tmSecs);
+    }
+
+    return offIter.m_iOffset;
+}
 
 
 
@@ -648,6 +677,8 @@ int ShmCacheManager::processPurgeCmdEx(
                     CacheInfo *pInfo = (CacheInfo *)m_pStr2IdHash->
                                        offset2ptr(m_CacheInfoOff);
                     pInfo->setPurgeTime(curTime, curTimeMS);
+                    pInfo->clearStats();
+                    pInfo->updateFlag(CIF_STALE_PURGE, stale);
                 }
                 pValue = pNext;
                 continue;
@@ -660,6 +691,7 @@ int ShmCacheManager::processPurgeCmdEx(
         }
         else if (pValueEnd[-1] == '*')
             flag |= PDF_POSTFIX;
+        
         if (pPrivate)
         {
             int idTag = getTagId(pValue, pValueEnd - pValue);
@@ -671,8 +703,17 @@ int ShmCacheManager::processPurgeCmdEx(
                 pPrivate->addUpdate(&purgeinfo);
             }
         }
-        else
-            addUpdate(pValue, pValueEnd - pValue, flag, curTime, curTimeMS);
+        else if (m_pPublicPurge)
+        {
+            addUpdate(pValue, pValueEnd - pValue, flag, (int32_t)curTime,
+                      (int16_t)curTimeMS);
+            
+            CacheInfo *pInfo = (CacheInfo *)m_pStr2IdHash->
+                                offset2ptr(m_CacheInfoOff);
+            pInfo->setPurgeTime(curTime, curTimeMS);
+            pInfo->clearStats();
+            pInfo->updateFlag(CIF_STALE_PURGE, stale);
+        }
         pValue = pNext;
     }
     return 0;
@@ -807,7 +848,8 @@ int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey,
                        offset2ptr(m_CacheInfoOff);
     if (pInfo->shouldPurge(pEntry->getHeader().m_tmCreated,
                            pEntry->getHeader().m_msCreated))
-        ret = 1;
+        ret = (pInfo->getFlags() & CIF_STALE_PURGE) ? PDF_STALE : 1;
+ 
     else
     {
         const char *pTag = pEntry->getTag().c_str();
@@ -817,10 +859,9 @@ int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey,
         }
         if (!ret)
         {
-            if (shouldPurge(pEntry->getKey().c_str(), pEntry->getKeyLen(),
+            ret = shouldPurge(pEntry->getKey().c_str(), pEntry->getKeyLen(),
                             pEntry->getHeader().m_tmCreated,
-                            pEntry->getHeader().m_msCreated))
-                ret = 1;
+                            pEntry->getHeader().m_msCreated);
 
         }
     }

@@ -233,14 +233,16 @@ int SslConnection::writev(const struct iovec *vect, int count,
 
 int SslConnection::wpending()
 {
-    return 0;
+    return m_bio.m_wbuf_used - m_bio.m_wbuf_sent;
 }
 
 
 int SslConnection::flush()
 {
     DEBUG_MESSAGE("[SSL: %p] flush\n", this);
-    return 1; // Nothing to flush
+    if (m_bio.m_wbuf_used)
+        return ls_fdbio_flush(&m_bio, SSL_get_fd(m_ssl));
+    return 1;
 }
 
 
@@ -258,6 +260,7 @@ int SslConnection::shutdown(int bidirectional)
     if (m_iStatus != DISCONNECTED)
     {
         m_iWant = 0;
+        setWriteBuffering(0);
         SSL_set_shutdown(m_ssl, SSL_RECEIVED_SHUTDOWN);
         //SSL_set_quiet_shutdown( m_ssl, !bidirectional );
         int ret = SSL_shutdown(m_ssl);
@@ -371,7 +374,7 @@ int SslConnection::checkError(int ret)
             }
         }
 
-        
+        //fall through
     default:
         LS_DBG_H("SslError:%s\n", SslError(err).what());
         errno = EIO;
@@ -710,4 +713,10 @@ bool SslConnection::wantAsyncCtx(SSL_CTX *&pCtx)
     }
 
     return ret;
+}
+
+
+void SslConnection::setWriteBuffering(int buffering)
+{
+    ls_fdbio_set_wbuff(&m_bio, buffering);
 }

@@ -67,15 +67,68 @@ else
 fi 
 
 
-
-for path in /etc/init.d /etc/rc.d/init.d 
+for path in /etc/init.d /etc/rc.d/init.d
 do
-	if [ "x$INIT_DIR" = "x" ]; then
-		if [ -d "$path" ]; then
-			INIT_DIR=$path
-		fi
-	fi
+    if [ "x$INIT_DIR" = "x" ]; then
+        if [ -d "$path" ]; then
+            INIT_DIR=$path
+        fi
+    fi
 done
+
+
+AP_PROC=httpd
+if [ -e /etc/debian_version ]; then
+    AP_PROC=apache2
+fi
+
+# use systemd if possible, need to use same method as apache
+SYSTEMDDIR=""
+
+SYSTEMBIN=`which systemctl 2>/dev/null`
+if [ $? -eq 0 ] ; then
+    for path in /etc/systemd/system /usr/lib/systemd/system /lib/systemd/system
+    do
+        if [ "${SYSTEMDDIR}" = "" ] ; then
+            if [ -d "$path" ] && [ -e ${path}/${AP_PROC}.service ] ; then
+                SYSTEMDDIR=$path
+            fi
+        fi
+    done
+
+    #DirectAdmin may not have /etc/systemd/system/httpd.service, but need to use systemd
+    if [ "${SYSTEMDDIR}" = "" ] && [ -d /usr/local/directadmin ] && [ -d /etc/systemd/system ]; then
+        SYSTEMDDIR=/etc/systemd/system
+    fi
+
+    # For centos7, use /usr/lib/systemd/system, where apache systemd file is.
+    if [ "${SYSTEMDDIR}" = "" ] && [ -f /etc/redhat-release ] && [ -d /usr/lib/systemd/system ]; then
+        SYSTEMDDIR=/usr/lib/systemd/system
+    fi
+fi
+
+if [ "${SYSTEMDDIR}" != "" ] ; then
+    if [ "${INIT_DIR}" != "" ] && [ -e ${INIT_DIR}/lsws ] ; then
+        echo "Removing ${INIT_DIR}/lsws"
+        rm -f ${INIT_DIR}/lsws
+    fi
+
+    cp -f ${CURDIR}/lshttpd.service ${SYSTEMDDIR}/lshttpd.service
+    chmod 644 ${SYSTEMDDIR}/lshttpd.service
+
+    systemctl daemon-reload
+    systemctl enable lshttpd.service
+    if [ $? -eq 0  ]; then
+            echo "[OK] lshttpd.service has been successfully installed!"
+            exit 0
+    else
+        echo "[ERROR] failed to enable lshttpd.service in systemd!"
+        exit 1
+    fi
+fi
+
+
+
 if [ "x$INIT_DIR" = "x" ]; then
 	echo "[ERROR] failed to find the init.d directory!"
 	exit 1

@@ -80,7 +80,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Wed Aug 21 20:08:10 UTC 2019)"
+#define BUILDTIME  " (built: Wed Oct 16 19:35:24 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -176,11 +176,13 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);
 #else
     
-    const char *sUpdateFlag = "/tmp/olsupdatingflag";
-    struct stat st;
-    int exist = 0;
+    AutoStr2 sCmd;
+    sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
+    sCmd.append("/admin/misc/testbeta.sh", 23);
+    static time_t upLastCheckingTm = 0;
     //Flag exist and less than 1 day
-    if ((exist = stat(sUpdateFlag, &st)) != -1 && (long)st.st_ctime + 86400 > DateTime::s_curTime)
+    if (upLastCheckingTm + 86400 > DateTime::s_curTime ||
+        access(sCmd.c_str(), F_OK) == -1)
     {
         LS_NOTICE("[*****] non-Debug version running and ols updating, will create core file.");
         //We are in middle of graceful shutdown, do not restart another copy
@@ -188,15 +190,12 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     }
     else
     {
-        if (exist == 0)
-            unlink(sUpdateFlag);
+        upLastCheckingTm = DateTime::s_curTime;
         
         coredump = 0;
         //Since it is not DEBUG version, I will download the DEBUG version to run.
         const char *pVer = PACKAGE_VERSION;
-        AutoStr2 sCmd;
-        sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
-        sCmd.append("/admin/misc/testbeta.sh -d ", 27);
+        sCmd.append(" -d ", 4);
         sCmd.append(pVer, strlen(pVer));
         
         LS_NOTICE("[*****] non-debug version running, run cmd \"%s\".",
@@ -1782,8 +1781,11 @@ static long getProcessStartTime(int pid)
     if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0) {
         return -1;
     }
-
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
     return kp.ki_start.tv_sec;
+#else
+    return kp.kp_proc.p_un.__p_starttime.tv_sec;
+#endif
 }
 #endif
 

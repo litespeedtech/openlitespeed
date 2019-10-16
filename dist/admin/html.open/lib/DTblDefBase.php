@@ -464,10 +464,12 @@ class DTblDefBase
 
     private function add_S_TUNING_QUIC($id)
 	{
+        $congest_options = ['' => 'Default', '1' => 'Cubic', '2' => 'BBR'];
 		$attrs = array(
             self::NewBoolAttr('quicEnable', DMsg::ALbl('l_enablequic')),
             self::NewTextAttr('quicShmDir', DMsg::ALbl('l_quicshmdir'), 'cust'),
             self::NewTextAttr('quicVersions', DMsg::ALbl('l_quicversions'), 'cust'),
+            self::NewSelAttr('quicCongestionCtrl', DMsg::ALbl('l_congestionctrl'), $congest_options),
             self::NewIntAttr('quicCfcw', DMsg::ALbl('l_quiccfcw'), true, '64K', '512M'),
             self::NewIntAttr('quicMaxCfcw', DMsg::ALbl('l_quicmaxcfcw'), true, '64K', '512M'),
             self::NewIntAttr('quicSfcw', DMsg::ALbl('l_quicsfcw'), true, '64K', '128M'),

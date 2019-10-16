@@ -35,6 +35,10 @@ $_gmsg['menu_versionmgr'] = 'Version Manager';
 $_gmsg['menu_vh'] = 'Virtual Hosts';
 $_gmsg['menu_vh_'] = 'Virtual Host';
 $_gmsg['menu_webadmin'] = 'WebAdmin Settings';
+$_gmsg['menu_devgroup'] = 'Developer Mailing List';
+$_gmsg['menu_forum'] = 'Forum';
+$_gmsg['menu_slack'] = 'Slack';
+$_gmsg['menu_cloudimage'] = 'Cloud Images';
 
 
 $_gmsg['tab_addons'] = 'Add-ons';
@@ -196,6 +200,7 @@ $_gmsg['l_compressarchive'] = 'Compress Archive';
 $_gmsg['l_compressibletypes'] = 'Compressible Types';
 $_gmsg['l_concurrentReqLimit'] = 'Concurrent Request Limit';
 $_gmsg['l_configfile'] = 'Config File';
+$_gmsg['l_congestionctrl'] = 'Congestion Control';
 $_gmsg['l_connection'] = 'Connection';
 $_gmsg['l_conntimeout'] = 'Connection Timeout (secs)';
 $_gmsg['l_contextlist'] = 'Context List';

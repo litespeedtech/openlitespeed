@@ -47,6 +47,11 @@ class UrlVary;
 #define CM_ID_FORMKEY       0
 #define CM_ID_MESSAGES      9
 
+#define CIF_VARY_HASH       4
+#define CIF_PUB_TRACK_HASH  8
+#define CIF_PRIV_TRACK_HASH 16
+#define CIF_STALE_PURGE     32
+
 typedef struct purgeinfo_s
 {
     int32_t     tmSecs;
@@ -76,6 +81,11 @@ public:
     ~CacheInfo()
     {}
 
+    void clearStats()
+    {
+        memset(m_stats, 0, (char *)&m_tmLastHouseKeeping - (char*)m_stats);
+    }
+    
     int32_t getNextPrivateTagId()
     {   return ls_atomic_fetch_add(&m_iCurPrivateTagId, 1) + 1;    }
 
@@ -129,6 +139,24 @@ public:
     int32_t getNewPurgeCount() const
     {   return m_iSessionPurged - m_iLastCleanSessPurge;    }
 
+    uint32_t getFlags() const       {   return m_iFlags;        }
+    uint32_t setFlags(uint32_t f)   {   m_iFlags = f;        }
+    
+    void updateFlag(uint32_t f, uint32_t val)
+    {
+        uint32_t old;
+        uint32_t new_val;
+        do
+        {
+            old = m_iFlags;
+            if (val)
+                new_val = old | f;
+            else
+                new_val = old & ~f;
+        }
+        while(!ls_atomic_cas32(&m_iFlags, old, new_val));
+    }
+    
 private:
     int32_t     m_tmPurgeSecs;
     int32_t     m_tmPurgeMsecs;
@@ -141,7 +169,8 @@ private:
     uint32_t        m_tmLastHouseKeeping;
     uint32_t        m_tmLastCleanDiskCache;
     uint32_t        m_iLastCleanSessPurge;
-    char            m_reserved[256] __attribute__ ((unused)); /* Padding, do not remove */
+    uint32_t        m_iFlags;
+    char            m_reserved[252] __attribute__ ((unused)); /* Padding, do not remove */
 };
 
 

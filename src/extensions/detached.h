@@ -10,12 +10,16 @@ struct DetachedPidInfo
     long  last_modify;
     pid_t pid;
     unsigned start_time_diff;
+    uint32_t bin_last_mod;
+    uint32_t reserved;
 
     DetachedPidInfo()
         : inode(0)
         , last_modify(0)
         , pid(-1)
         , start_time_diff(0)
+        , bin_last_mod(0)
+        , reserved(0)
         {}
 };
 typedef struct DetachedPidInfo DetachedPidInfo_t;

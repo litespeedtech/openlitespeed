@@ -9,9 +9,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <poll.h>
 #include <time.h>
 #include <fcntl.h>
+
+#include <lsdef.h>
 #include <lsr/ls_pool.h>
 #include <socket/ls_sock.h>
 #include <sslpp/ls_fdbuf_bio.h>
@@ -58,7 +61,11 @@ static int BIO_fd_should_retry(int i);
 static int BIO_fd_non_fatal_error(int err);
 #endif
 
-#define SIMPLE_RETRY(err) ((err == EAGAIN) || (err = EWOULDBLOCK))
+#if EWOULDBLOCK != EAGAIN
+#define SIMPLE_RETRY(err) ((err == EAGAIN) || (err == EWOULDBLOCK))
+#else
+#define SIMPLE_RETRY(err) (err == EAGAIN)
+#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
 void *BIO_get_data(BIO *a);
@@ -162,7 +169,7 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         }
         if (ret < 0) 
         {
-            errno = err;
+            err = errno;
             if (total)
             {
                 DEBUG_MESSAGE("[BIO] bio_fd_read: error but I have data\n");
@@ -193,14 +200,190 @@ static int bio_fd_read(BIO *b, char *out, int outl)
 }
 
 
+#define LS_FDBIO_FULL           1
+#define LS_FDBIO_BUFFERING      2
+int ls_fdbio_alloc_wbuff(ls_fdbio_data *fdbio, int size)
+{
+    DEBUG_MESSAGE("[FDBIO] alloc write buf %d\n", size);
+    assert(fdbio->m_wbuf_used == 0);
+    if (fdbio->m_wbuf && fdbio->m_wbuf_size >= size)
+        return LS_OK;
+    void *buf = ls_palloc_slab(size);
+    if (buf)
+    {
+        if (fdbio->m_wbuf)
+            ls_pfree_slab(fdbio->m_wbuf, fdbio->m_wbuf_size);
+        fdbio->m_wbuf = (uint8_t *)buf;
+        fdbio->m_wbuf_size = size;
+        fdbio->m_wbuf_sent = 0;
+        return LS_OK;
+    }
+    return LS_FAIL;
+}
+
+
+int ls_fdbio_is_idle(ls_fdbio_data *fdbio)
+{
+    return fdbio->m_wbuf && fdbio->m_wbuf_used == 0;
+}
+
+
+void ls_fdbio_relelase_wbuff(ls_fdbio_data *fdbio)
+{
+    assert(fdbio->m_wbuf_used == 0);
+    DEBUG_MESSAGE("[FDBIO] free buf %d\n", (int)fdbio->m_wbuf_size);
+    if (fdbio->m_wbuf == NULL)
+        return;
+    ls_pfree_slab(fdbio->m_wbuf, fdbio->m_wbuf_size);
+    fdbio->m_wbuf = NULL;
+}
+
+
+static int ls_fdbio_combine_write(ls_fdbio_data *fdbio, int fd, const void *buf, int num)
+{
+    DEBUG_MESSAGE("[FDBIO] ls_fdbio_combine_write, to write: %d, used: %d, sent: %d\n",
+           num, (int)fdbio->m_wbuf_used, (int)fdbio->m_wbuf_sent);
+    struct iovec iov[2];
+    iov[0].iov_base = fdbio->m_wbuf + fdbio->m_wbuf_sent;
+    iov[0].iov_len = fdbio->m_wbuf_used - fdbio->m_wbuf_sent;
+    iov[1].iov_base = (void *)buf;
+    iov[1].iov_len = num;
+    int ret = ls_writev(fd, iov, 2);
+    DEBUG_MESSAGE("[FDBIO] ls_writev(%d + %d) ret: %d\n",
+                  iov[0].iov_len, iov[1].iov_len, ret);
+    if (ret > 0)
+    {
+        if (ret >= (int)iov[0].iov_len)
+        {
+            ret -= iov[0].iov_len;
+            fdbio->m_wbuf_used = 0;
+            fdbio->m_wbuf_sent = 0;
+            if (ret == 0)
+            {
+                ret = -1;
+                errno = EWOULDBLOCK;
+            }
+        }
+        else
+        {
+            fdbio->m_wbuf_sent += ret;
+            ret = -1;
+            errno = EWOULDBLOCK;
+        }
+    }
+    DEBUG_MESSAGE("[FDBIO] combine_write ret: %d, buffer used: %d, sent: %d\n",
+                  ret, fdbio->m_wbuf_used, fdbio->m_wbuf_sent);
+    return ret;
+}
+
+
+static int ls_fdbio_buff_write(ls_fdbio_data *fdbio, int fd, const void *buf, int num)
+{
+    DEBUG_MESSAGE("[FDBIO] ls_fdbio_buff_write, to write: %d, used: %d, sent: %d\n",
+           num, (int)fdbio->m_wbuf_used, (int)fdbio->m_wbuf_sent);
+    if (fdbio->m_flag & LS_FDBIO_FULL)
+        return 0;
+    if (!fdbio->m_wbuf)
+    {
+        if (num < 4096)
+            if (ls_fdbio_alloc_wbuff(fdbio, 4096) == LS_FAIL)
+                return LS_FAIL;
+    }
+
+    int avail = fdbio->m_wbuf_size - fdbio->m_wbuf_used;
+    if (avail < num)
+    {
+        int ret;
+        if (fdbio->m_wbuf_used > 0)
+            ret = ls_fdbio_combine_write(fdbio, fd, buf, num);
+        else
+            ret = ls_write(fd, buf, num);
+        if (ret >= num && fdbio->m_wbuf_size < 16413 * 4)
+        {
+            int new_size = fdbio->m_wbuf_size + 16413;
+            if (new_size < 16413 * 2)
+                new_size = 16413 * 2;
+            ls_fdbio_alloc_wbuff(fdbio, new_size);
+        }
+        return ret;
+    }
+    memmove(fdbio->m_wbuf + fdbio->m_wbuf_used, buf, num);
+    fdbio->m_wbuf_used += num;
+    DEBUG_MESSAGE("[FDBIO] lstls_buff_write, to write: %d, finished: %ld, used: %d, sent: %d\n",
+           num, num, (int)fdbio->m_wbuf_used, (int)fdbio->m_wbuf_sent);
+    return num;
+}
+
+
+int ls_fdbio_is_full(ls_fdbio_data *fdbio)
+{   return fdbio->m_flag & LS_FDBIO_FULL;      }
+
+
+void ls_fdbio_clear_buff_full(ls_fdbio_data *fdbio)
+{    fdbio->m_flag &= ~LS_FDBIO_FULL;    }
+
+
+void ls_fdbio_set_wbuff(ls_fdbio_data *fdbio, int dobuff)
+{
+    if (dobuff)
+        fdbio->m_flag |= LS_FDBIO_BUFFERING;
+    else
+        fdbio->m_flag &= ~LS_FDBIO_BUFFERING;
+}
+
+
+int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd)
+{
+    if (fdbio->m_flag & LS_FDBIO_FULL)
+        return 0;
+    int pending = fdbio->m_wbuf_used - fdbio->m_wbuf_sent;
+    if (pending <= 0)
+        return 1;
+    int ret = ls_write(fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending);
+    DEBUG_MESSAGE("[FDBIO] flush_ex write(%d, %p, %d) return %d\n",
+           fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending, ret);
+    if (ret >= pending)
+    {
+        fdbio->m_wbuf_used = 0;
+        fdbio->m_wbuf_sent = 0;
+        DEBUG_MESSAGE("[FDBIO] FLUSHED\n");
+        return 1;
+    }
+    else
+    {
+        DEBUG_MESSAGE("[FDBIO] partial write, mark buffer FULL.\n");
+        fdbio->m_flag |= LS_FDBIO_FULL;
+        if (ret > 0)
+        {
+            fdbio->m_wbuf_sent += ret;
+        }
+        else if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+
 static int bio_fd_write(BIO *b, const char *in, int inl)
 {
     int ret;
     int err = 0;
     int fd = BIO_get_fd(b, 0);
+    ls_fdbio_data *fdbio = LS_FDBUF_FROM_BIO(b);
 
-    DEBUG_MESSAGE("[BIO] bio_fd_write: %p, %d bytes on %d\n", b, inl, fd);
-    ret = ls_write(fd, (void *)in, inl);
+    DEBUG_MESSAGE("[FDBIO] bio_fd_write: %p, %d bytes on %d\n", b, inl, fd);
+    if (fdbio->m_flag & LS_FDBIO_BUFFERING)
+    {
+        ret = ls_fdbio_buff_write(fdbio, fd, in, inl);
+    }
+    else if (fdbio->m_wbuf_used > 0)
+    {
+        ret = ls_fdbio_combine_write(fdbio, fd, in, inl);
+    }
+    else
+        ret = ls_write(fd, (void *)in, inl);
     if ( ret > 0)
     {
         BIO_clear_retry_flags(b);
@@ -209,7 +392,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
     err = errno;
     if ((ret == -1) && (!(SIMPLE_RETRY(err))) && (!BIO_fd_should_retry(ret)))
     {
-        DEBUG_MESSAGE("[BIO] bio_fd_write: actual write failed, errno: %d\n",
+        DEBUG_MESSAGE("[FDBIO] bio_fd_write: actual write failed, errno: %d\n",
                       err);
         return ret;
     }            
@@ -217,7 +400,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
     if (ret < 0) {
         if ((BIO_fd_should_retry(ret)) || (SIMPLE_RETRY(err)))
         {
-            DEBUG_MESSAGE("[BIO] bio_fd_write: %p, early return, errno: %d,"
+            DEBUG_MESSAGE("[FDBIO] bio_fd_write: %p, early return, errno: %d,"
                           " ret: %d\n", b, err, ret);
             BIO_set_retry_write(b);
             errno = EAGAIN;
@@ -226,7 +409,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
         }
     }
     
-    DEBUG_MESSAGE("[BIO] bio_fd_write: %p, returning: %d\n", b, ret);
+    DEBUG_MESSAGE("[FDBIO] bio_fd_write: %p, returning: %d\n", b, ret);
     errno = err;
     return ret;
 }
@@ -236,7 +419,7 @@ static int bio_fd_puts(BIO *bp, const char *str)
 {
     int n, ret;
     
-    DEBUG_MESSAGE("[BIO] bio_fd_puts: %p, %s\n", bp, str);
+    DEBUG_MESSAGE("[FDBIO] bio_fd_puts: %p, %s\n", bp, str);
 
     n = strlen(str);
     ret = bio_fd_write(bp, str, n);

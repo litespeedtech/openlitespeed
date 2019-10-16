@@ -308,6 +308,7 @@ void LocalWorker::onTimer()
     if (m_pRestartMarker && m_pDetached && isDetachedAlreadyRunning() &&
         m_pRestartMarker->checkRestart(DateTime::s_curTime))
         restart();
+    checkAndStopWorker();
 }
 
 int LocalWorker::tryRestart()
@@ -621,9 +622,9 @@ void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
         ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "CPUHardLimit", 0,
                 INT_MAX, 0));
     long memSoft = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "memSoftLimit", 0, INT_MAX, 0);
+                   "memSoftLimit", 0, LONG_MAX, 0);
     long memHard = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "memHardLimit", 0, INT_MAX, 0);
+                   "memHardLimit", 0, LONG_MAX, 0);
 
     if ((memSoft & (memSoft < 1024 * 1024)) ||
         (memHard & (memHard < 1024 * 1024)))
@@ -674,6 +675,18 @@ void LocalWorker::checkAndStopWorker()
             s = 1;
         }
     }
+    
+    if (getState() == ST_GOOD && m_pDetached && m_pDetached->pid_info.pid > 0)
+    {
+        if (detectBinaryChange())
+        {
+            LS_INFO("[%s] detected binary change [%s], stopping ...",
+                    getName(),
+                    ((LocalWorkerConfig *)getConfigPointer())->getCommand());
+            s = 2;
+        }
+    }
+        
     if (!s)
     {
         if (m_forceStop)
@@ -686,8 +699,9 @@ void LocalWorker::checkAndStopWorker()
     }
     if (getConfig().isDetached())
     {
-        if (m_pDetached && m_pDetached->pid_info.pid > 0
-            && DateTime::s_curTime - m_pDetached->last_stop_time > 60)
+        if (s ==2 ||
+            (m_pDetached && m_pDetached->pid_info.pid > 0
+            && DateTime::s_curTime - m_pDetached->last_stop_time > 60))
         {
             m_pDetached->last_stop_time = DateTime::s_curTime;
             killOldDetachedInstance(&m_pDetached->pid_info);
@@ -816,13 +830,12 @@ int LocalWorker::processPid(int pid, const char * path)
 }
 
 
-
-
-
+#define DETACHED_PIDINFO_MIN_SIZE 24
 bool LocalWorker::loadDetachedPid(int fd, DetachedPidInfo_t *detached_pid)
 {
+     memset(detached_pid, 0, sizeof(*detached_pid));
     return pread(fd, detached_pid, sizeof(DetachedPidInfo_t), 0)
-            == sizeof(DetachedPidInfo_t);
+            >= DETACHED_PIDINFO_MIN_SIZE;
 }
 
 
@@ -834,7 +847,25 @@ void LocalWorker::saveDetachedPid(int fd, DetachedPidInfo_t *detached_pid,
     m_pDetached->pid_info.inode = st.st_ino;
     m_pDetached->pid_info.last_modify = st.st_mtime;
 
+    const char *bin_path = ((LocalWorkerConfig *)getConfigPointer())->getCommand();
+    if (bin_path && nio_stat(bin_path, &st) == 0)
+    {
+        m_pDetached->pid_info.bin_last_mod = st.st_mtime;
+    }
+
     pwrite(fd, detached_pid, sizeof(DetachedPidInfo_t), 0);
+}
+
+bool LocalWorker::detectBinaryChange()
+{
+    struct stat st;
+    const char *bin_path = ((LocalWorkerConfig *)getConfigPointer())->getCommand();
+    if (bin_path && nio_stat(bin_path, &st) == 0)
+    {
+        if (m_pDetached->pid_info.bin_last_mod != st.st_mtime)
+            return true;
+    }
+    return false;
 }
 
 

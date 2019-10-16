@@ -124,19 +124,18 @@ void HttpLog::setDebugLevel(int level)
             log4cxx::Level::setDefaultLevel(Level::INFO);
     }
     else
+    {
+        logger()->setLevel(Level::DEBUG);
         log4cxx::Level::setDefaultLevel(Level::DEBUG + 10 * level);
+    }
 }
-
 
 void HttpLog::toggleDebugLog()
 {
     if (s_debugLevel)
-        s_debugLevel = 0;
+        setDebugLevel(0);
     else
-    {
-        logger()->setLevel(Level::DEBUG);
         setDebugLevel(10);
-    }
 }
 
 

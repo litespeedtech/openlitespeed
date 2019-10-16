@@ -80,10 +80,22 @@ $page_nav = array(
 								'title' => DMsg::UIStr('menu_guides'),
 								'url' => 'https://openlitespeed.org/kb/?utm_source=Open&utm_medium=WebAdmin',
 								'url_target' => '_blank'),
-						'community' => array(
-								'title' => DMsg::UIStr('menu_community'),
+						'devgroup' => array(
+								'title' => DMsg::UIStr('menu_devgroup'),
 								'url' => 'https://groups.google.com/forum/#!forum/openlitespeed-development',
-								'url_target' => '_blank')
+								'url_target' => '_blank'),
+						'forum' => array(
+								'title' => DMsg::UIStr('menu_forum'),
+								'url' => 'https://forum.openlitespeed.org/?utm_source=Open&utm_medium=WebAdmin',
+								'url_target' => '_blank'),
+						'slack' => array(
+								'title' => DMsg::UIStr('menu_slack'),
+								'url' => 'https://join.slack.com/t/golitespeed/shared_invite/enQtMzE5ODgxMTUyNTgzLWVhZDNhZDNmYWRhZmIwNzUxN2Y2ZDRjZGUwZjFiMDk1ZTNjZDJmMDg5NTcyZjFiZDM4MDY1NjkwYjkzM2E5YmE',
+								'url_target' => '_blank'),
+						'cloudimage' => array(
+								'title' => DMsg::UIStr('menu_cloudimage'),
+								'url' => 'https://docs.litespeedtech.com/cloud/?utm_source=Open&utm_medium=WebAdmin',
+								'url_target' => '_blank'),
 				)
 		)
 

@@ -873,7 +873,7 @@ int  SslUtil::enableShmSessionCache(SSL_CTX *pCtx)
 {
     if (!SslSessCache::getInstance().isReady())
     {
-        LS_WARN("FAILED TO ENABLE SHM SSL CACHE. SERVER DID NOT INITIALIZE");
+        LS_NOTICE("Server level SSL SHM cache is not enabled, failed to enable shared session cache.");
         return LS_OK;
     }
 
@@ -881,7 +881,7 @@ int  SslUtil::enableShmSessionCache(SSL_CTX *pCtx)
                                             | SSL_SESS_CACHE_NO_INTERNAL);
     /* enable external cache configuration check */
     SslSessCache::watchCtx(pCtx);
-    LS_DBG_L("EXTERNAL SHM SSL CACHE ENABLED");
+    LS_DBG_L("Shared SHM SSL session cache enabled.");
     return LS_OK;
 }
 

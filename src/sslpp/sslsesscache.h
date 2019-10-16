@@ -103,6 +103,7 @@ private:
     LS_NO_COPY_ASSIGN(SslSessCache);
 };
 
+LS_SINGLETON_DECL(SslSessCache);
 
 class SslClientSessCache
 {
