@@ -224,7 +224,7 @@ void HttpListenerList::passListeners()
         if ((*iter)->getfd() != -1)
         {
             --count;
-            LS_INFO("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
+            LS_NOTICE("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
                     (*iter)->getfd(), startfd + count);
             dup2((*iter)->getfd(), startfd + count);
         }
@@ -420,7 +420,6 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
                          (unsigned)GSockAddr::getPort(pAddr));
             }
             pListener = m_pListenerList->get(sAddr, sAddr);
-            assert(pListener != NULL);
         }
         
         if (pListener)

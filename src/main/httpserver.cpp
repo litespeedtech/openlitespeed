@@ -61,7 +61,6 @@
 #include <http/httpstatuscode.h>
 #include <http/httpvhost.h>
 #include <http/httpvhostlist.h>
-#include <http/iptogeo.h>
 #include <http/iptogeo2.h>
 #include <http/iptoloc.h>
 #include <http/ntwkiolink.h>
@@ -709,7 +708,7 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
     pListener = m_listeners.get(pName, pAddr);
     if (pListener)
     {
-        LS_DBG_L("Reuse existing Listener [%s] [%s].", pName, pAddr);
+        LS_NOTICE("Reuse existing Listener [%s] [%s].", pName, pAddr);
         return pListener;
     }
     pListener = m_oldListeners.get(pName, pAddr);
@@ -717,7 +716,7 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
     {
         pListener = newTcpListener(pName, pAddr);
         if (pListener)
-            LS_DBG_L("Created new Listener [%s].", pName);
+            LS_NOTICE("Created new Listener [%s].", pName);
         else
         {
             LS_ERROR("HttpServer::addListener(%s) failed to create new listener"
@@ -729,7 +728,7 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
     {
         pListener->beginConfig();
         m_oldListeners.remove(pListener);
-        LS_DBG_L("Reuse current listener [%s].", pName);
+        LS_NOTICE("Reuse current listener [%s].", pName);
     }
     m_listeners.add(pListener);
     return pListener;
@@ -1635,7 +1634,8 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
                        );
 
             }
-
+            
+            //Allow quic 
             int iEnableQuic = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableQuic", 0, 1, 1);
             if (iEnableQuic)
             {
@@ -3223,11 +3223,6 @@ int HttpServerImpl::configIpToGeo(const XmlNode *pNode)
         pIp2Geo = new IpToGeo2();
 #endif
 
-#ifdef ENABLE_IPTOGEO
-    if (!pIp2Geo)
-        pIp2Geo = new IpToGeo();
-#endif
-
     if (!pIp2Geo)
         return LS_FAIL;
 
@@ -3537,6 +3532,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 #define GET_VAL(node, name, min, max, def) \
     ConfigCtx::getCurConfigCtx()->getLongValue(node, name, min, max, def)
 
+    //Server tunning level enable quic 
     enableQuic = GET_VAL(pNode, "quicEnable", 0, 1, QUIC_ENABLED_BY_DEFAULT);
     if (!enableQuic)
         return 0;

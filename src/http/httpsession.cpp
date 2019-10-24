@@ -751,6 +751,14 @@ int HttpSession::reqBodyDone()
 }
 
 
+int HttpSession::call_onRead(lsi_session_t *p, long , void *)
+{
+    HttpSession *pSession = (HttpSession *)p;
+    pSession->onReadEx();
+    return 0;
+}
+
+
 int HttpSession::readReqBody()
 {
     char *pBuf;
@@ -773,7 +781,11 @@ int HttpSession::readReqBody()
         if (!endBody)
         {
             if ((ret < (int)size) || (++count == 10 && !isspdy))
+            {
+                if (count == 10)
+                    EvtcbQue::getInstance().schedule(call_onRead, this, 0, NULL, false);
                 return 0;
+            }
         }
 
         if (pParser && pParser->isParsePost() && pParser->isParseUploadByFilePath())
@@ -1307,6 +1319,8 @@ int HttpSession::processNewReqInit()
             LS_DBG_L(getLogSession(), "Cannot find a matching VHost.");
             *pHostEnd = ch;
         }
+        
+        m_sessionHooks.inherit(NULL, 1);
         return SC_404;
     }
 

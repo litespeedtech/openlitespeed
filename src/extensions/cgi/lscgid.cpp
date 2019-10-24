@@ -882,6 +882,7 @@ sighandler_t my_signal(int sig, sighandler_t f)
 int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 {
     int ret;
+    char *sEnv = NULL;
 
     s_parent = getppid();
     my_signal(SIGCHLD, sigchild);
@@ -897,11 +898,12 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 #ifdef HAS_CLOUD_LINUX
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    if ((pSock = getenv("LVE_ENABLE")) != NULL)
+    
+    if ((sEnv = getenv("LVE_ENABLE")) != NULL)
     {
-        s_enable_lve = atol(pSock);
+        s_enable_lve = atol(sEnv);
         unsetenv("LVE_ENABLE");
-        pSock = NULL;
+        sEnv = NULL;
     }
     if (s_enable_lve && !s_uid)
     {

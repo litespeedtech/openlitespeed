@@ -220,7 +220,7 @@ $_tipsdb['enableRewrite'] = new DAttrHelp("Enable Rewrite", 'Specifies whether t
 
 $_tipsdb['enableScript'] = new DAttrHelp("启用脚本", '指定在这个虚拟主机中是否允许运行脚本（非静态页面）。 如果禁用，CGI, FastCGI, LSAPI, Servlet引擎 和其他脚本语言都将在这个虚拟机中不被允许使用。 因此如果你希望使用一个脚本处理程序，你需要启用本项。', '', '布尔值', '');
 
-$_tipsdb['enableSpdy'] = new DAttrHelp("Enable SPDY/HTTP2", 'HTTP/2 and SPDY are new versions of the HTTP network protocol with the goal of reducing page load times. More information can be found at <a href=&quot;http://en.wikipedia.org/wiki/HTTP/2&quot;>http://en.wikipedia.org/wiki/HTTP/2</a>.', 'This setting can be set at the listener and virtual host levels.', 'Check the protocol(s) you wish to enable. Leaving all boxes unchecked will enable SPDY and HTTP/2 support (the default). If you wish to disable SPDY and HTTP/2, check &quot;None&quot; only and leave all other boxes unchecked.', '');
+$_tipsdb['enableSpdy'] = new DAttrHelp("Enable SPDY/HTTP2/HTTP3", 'Selectively enable HTTP/3, HTTP/2, and SPDY HTTP network protocols.<br/><br/>If you wish to disable SPDY, HTTP/2, and HTTP3, check &quot;None&quot; and leave all other boxes unchecked.<br/><br/>Default value: All enabled', 'This setting can be set at the listener and virtual host levels.', 'Select from checkbox', '');
 
 $_tipsdb['enableStapling'] = new DAttrHelp("Enable OCSP Stapling", 'Determines whether to enable OCSP stapling, a more efficient way of verifying public key certificates.', '', 'Select from radio box', '');
 

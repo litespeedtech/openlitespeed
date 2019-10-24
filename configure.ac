@@ -7,7 +7,7 @@ m4_include(ax_check_libudns.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([openlitespeed],[1.6.1],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.6.2],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
@@ -105,7 +105,7 @@ AC_SUBST([OPENLSWS_EXAMPLEPORT])
 
 AC_ARG_WITH([lsphp7],
             AS_HELP_STRING([--with-lsphp7],[Set lsphp7 as default php script handler[default: yes]]),
-            [USE_LSPHP7="$withval"], [USE_LSPHP7=no])
+            [USE_LSPHP7="$withval"], [USE_LSPHP7=yes])
 
 AC_ARG_WITH([tempdir],
             AS_HELP_STRING([--with-tempdir],[Set a customized temprary directory[default: /tmp/lshttpd]]),
@@ -265,25 +265,6 @@ else
 fi
 echo "LIBBROTLI=$LIBBROTLI"
 AC_SUBST([LIBBROTLI])
-
-
-LIBGEOIP=" -lGeoIP "
-OPENLSWS_IPTOGEO=yes
-AC_ARG_ENABLE([iptogeo],
-              [AS_HELP_STRING([--enable-iptogeo=@<:@yes/no@:>@],
-                              [Enable iptogeo which need to have Geoip library installed @<:@default=yes@:>@])],
-               [OPENLSWS_IPTOGEO="$enableval"], [])
-
-if test "$OPENLSWS_IPTOGEO" = "no" ; then 
-    echo "iptogeo disabled!!!"
-    LIBGEOIP=
-else
-    AC_DEFINE_UNQUOTED([ENABLE_IPTOGEO], [1], [Defined to compile with iptogeo enabled])
-    LIBGEOIP=" -lGeoIP "
-    echo "iptogeo enabled!!!"
-fi
-echo "LIBGEOIP=$LIBGEOIP"
-AC_SUBST([LIBGEOIP])
 
 
 LIBMMDB=

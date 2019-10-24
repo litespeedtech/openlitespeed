@@ -20,6 +20,8 @@
 ###    Author: dxu@litespeedtech.com (David Shue)
 
 VERSION=1.0.0
+LIBQUICVER=34e9ac5f5d393ba9bc760aa06edcd14a2586316e
+
 moduledir="modreqparser cache modinspector uploadprogress "
 OS=`uname`
 ISLINUX=no
@@ -354,6 +356,32 @@ updateModuleCMakelistfile()
     fi
 }
 
+preparelibquic()
+{
+    if [ -e lsquic ] ; then
+        ls src/ | grep liblsquic
+        if [ $? -eq 0 ] ; then
+            echo Need to git download the submodule ...
+            rm -rf lsquic
+            git clone https://github.com/litespeedtech/lsquic.git
+            cd lsquic
+            git checkout ${LIBQUICVER}
+            git submodule update --init --recursive
+            cd ..
+            
+            #cp files for autotool
+            rm -rf src/liblsquic
+            mv lsquic/src/liblsquic src/
+            
+            rm include/lsquic.h
+            mv lsquic/include/lsquic.h  include/
+            rm include/lsquic_types.h
+            mv lsquic/include/lsquic_types.h include/
+            
+        fi
+    fi
+}
+
 cpModuleSoFiles()
 {
     if [ ! -d dist/modules/ ] ; then
@@ -410,6 +438,9 @@ fi
 
 updateSrcCMakelistfile
 updateModuleCMakelistfile
+preparelibquic
+
+
 
 cd ..
 git clone https://github.com/litespeedtech/third-party.git

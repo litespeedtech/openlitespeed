@@ -485,6 +485,9 @@ END
 fi
 
 
+echo -e "\033[38;5;148mUpdating webcache manager, please waiting ...\033[39m"
+$LSWS_HOME/admin/misc/lscmctl   --update-lib
+
 
 echo
 echo -e "\033[38;5;148mInstallation finished, Enjoy!\033[39m"
