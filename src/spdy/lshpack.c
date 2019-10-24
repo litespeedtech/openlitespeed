@@ -72164,6 +72164,8 @@ lshpack_dec_huff_decode (const unsigned char *src, int src_len,
     avail_bits = 0;
     while (1)
     {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"        
         if (src + sizeof(buf) <= src_end)
         {
             len = (sizeof(buf) * 8 - avail_bits) >> 3;
@@ -72207,6 +72209,7 @@ lshpack_dec_huff_decode (const unsigned char *src, int src_len,
             while (src < src_end && avail_bits <= sizeof(buf) * 8 - 8);
         else
             break;  /* Normal case terminating condition: out of input */
+#pragma GCC diagnostic pop
 
         if (dst_end - dst >= (ptrdiff_t) (8 * sizeof(buf) / SHORTEST_CODE)
                                                             && avail_bits >= 16)

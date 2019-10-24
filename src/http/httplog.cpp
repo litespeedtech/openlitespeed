@@ -26,6 +26,7 @@
 #include <log4cxx/layout.h>
 #include <log4cxx/logger.h>
 #include <log4cxx/logrotate.h>
+#include <quic/quicengine.h>
 
 #include <new>
 
@@ -122,21 +123,22 @@ void HttpLog::setDebugLevel(int level)
     {
         if (log4cxx::Level::isEnabled(Level::DEBUG))
             log4cxx::Level::setDefaultLevel(Level::INFO);
+        QuicEngine::setDebugLog(0);
     }
     else
+    {
+        logger()->setLevel(Level::DEBUG);
         log4cxx::Level::setDefaultLevel(Level::DEBUG + 10 * level);
+        QuicEngine::setDebugLog(1);
+    }
 }
-
 
 void HttpLog::toggleDebugLog()
 {
     if (s_debugLevel)
-        s_debugLevel = 0;
+        setDebugLevel(0);
     else
-    {
-        logger()->setLevel(Level::DEBUG);
         setDebugLevel(10);
-    }
 }
 
 

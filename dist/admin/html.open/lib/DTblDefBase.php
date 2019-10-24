@@ -991,7 +991,7 @@ class DTblDefBase
             $this->_attrs['ssl_renegProtection'],
             $this->_attrs['sslSessionCache'],
             $this->_attrs['sslSessionTickets'],
-            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '0' => DMsg::ALbl('o_none'))),
+            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '8'=>'HTTP/3', '0' => DMsg::ALbl('o_none'))),
             self::NewBoolAttr('enableQuic', DMsg::ALbl('l_allowquic'), true, 'allowQuic'),
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_securityandfeatures'), $attrs);
@@ -1003,7 +1003,8 @@ class DTblDefBase
             $this->_attrs['ssl_renegProtection'],
             $this->_attrs['sslSessionCache'],
             $this->_attrs['sslSessionTickets'],
-            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '0' => DMsg::ALbl('o_none'))),
+
+            self::NewCheckBoxAttr('enableSpdy', DMsg::ALbl('l_enablespdy'), array('1' => 'SPDY/2', '2' => 'SPDY/3', '4' => 'HTTP/2', '8'=>'HTTP/3', '0' => DMsg::ALbl('o_none'))),
             self::NewBoolAttr('enableQuic', DMsg::ALbl('l_enablequic'), true, 'vhEnableQuic'),
                 );
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_sec'), $attrs);

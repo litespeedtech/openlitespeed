@@ -1012,6 +1012,7 @@ int LsapiConn::readStderrStream()
                 && (memcmp(achBuf, "\0PID", 4) == 0))
             {
                 //ignore this packet for now.
+                setCPState(1);
             }
             else if (pHEC)
                 pHEC->processErrData(pBuf, packetLen);

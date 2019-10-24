@@ -266,7 +266,7 @@ void EvtcbQue::run()
             evtcbtail_t * session = pObj->m_pSession;
             if (!session)
             {
-                LS_ERROR( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed! SKIPPING\n",
+                LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed! SKIPPING\n",
                          ls_thr_seq(), __PRETTY_FUNCTION__, pObj);
                 m_sessCallbackObjList[slot].remove(pObj);
                 if (pObj == pLast)
@@ -293,7 +293,7 @@ void EvtcbQue::run()
 
             if (tailnode->m_pSession != session)
             {
-                LS_ERROR( "[T%d %s] called with pObj %p pObj->m_pSession %p tailnode %p tailnode_session %p MISMATCH not allowed! SKIPPING\n",
+                LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession %p tailnode %p tailnode_session %p MISMATCH not allowed! SKIPPING\n",
                          ls_thr_seq(), __PRETTY_FUNCTION__, pObj, pObj->m_pSession, tailnode, tailnode->m_pSession);
                 m_sessCallbackObjList[slot].remove(pObj);
                 if (pObj == pLast)
@@ -396,7 +396,7 @@ void EvtcbQue::schedule(evtcbnode_s *pObj, bool nowait)
 
     if (!session)
     {
-        LS_ERROR( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed!\n",
+        LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed!\n",
                  ls_thr_seq(), __PRETTY_FUNCTION__, pObj);
         return;
     }
@@ -422,7 +422,7 @@ void EvtcbQue::schedule(evtcbnode_s *pObj, bool nowait)
     {
         if (tailnode->m_pSession != session)
         {
-            LS_ERROR( "[T%d %s] called with pObj %p pObj->m_pSession %p tailnode %p tailnode_session %p MISMATCH not allowed!\n",
+            LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession %p tailnode %p tailnode_session %p MISMATCH not allowed!\n",
                      ls_thr_seq(), __PRETTY_FUNCTION__, pObj, pObj->m_pSession, tailnode, tailnode->m_pSession);
             return;
         }

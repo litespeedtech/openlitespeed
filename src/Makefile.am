@@ -112,7 +112,7 @@ openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a \
         ./quic/libquic.a ./liblsquic/liblsquic.a ./spdy/libspdy.a \
         $(LIBBROTLI) $(LIBMMDB) $(EXTRA_LIBS) \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) ${IP2LOCATION_LIBS} \
-        -ludns $(LIBGEOIP) -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
+        -ludns -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = $(OPENSSL_LDFLAGS) -L/usr/lib -L/usr/local/lib -L/usr/lib64  
 AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
