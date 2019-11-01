@@ -1,1 +1,1 @@
-../../lsquic/include/lsquic.h
+../lsquic/include/lsquic.h
