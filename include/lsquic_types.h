@@ -1,1 +1,1 @@
-../../lsquic/include/lsquic_types.h
+../lsquic/include/lsquic_types.h
