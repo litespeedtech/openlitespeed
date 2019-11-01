@@ -1,0 +1,3 @@
+[submodule "lsquic"]
+	path = lsquic
+	url = https://github.com/litespeedtech/lsquic.git
