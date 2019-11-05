@@ -248,9 +248,9 @@ LocInfo *ClientInfo::allocateLocInfo()
 
 static inline int isGoog(const char *pHost, int iHostLen)
 {
-    if (!strncmp("googlebot.com", pHost + iHostLen - 13, 13))
+    if (iHostLen > 13 && !strncmp("googlebot.com", pHost + iHostLen - 13, 13))
         return 1;
-    return (strncmp("google.com", pHost + iHostLen - 10, 10) == 0);
+    return (iHostLen > 10 && strncmp("google.com", pHost + iHostLen - 10, 10) == 0);
 }
 
 

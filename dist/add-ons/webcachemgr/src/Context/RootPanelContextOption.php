@@ -24,7 +24,7 @@ class RootPanelContextOption extends ContextOption
         $invokerName = $panelName;
         $invokerType = parent::FROM_CONTROL_PANEL;
         $isRoot = parent::IS_ROOT;
-        $logFileLvl = Logger::L_DEBUG;//INFO;
+        $logFileLvl = Logger::L_INFO;
         $logEchoLvl = Logger::L_NONE;
         $bufferedWrite = true;
         $bufferedEcho = true;

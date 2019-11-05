@@ -274,6 +274,7 @@ class HttpSession
 
     static int readReqBodyTermination(LsiSession *pSession, char *pBuf,
                                       int size);
+    static int call_onRead(lsi_session_t *p, long , void *);
 
     char getSsiStackDepth() const;
 

@@ -13,7 +13,7 @@ libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.
    staticfilecachedata.cpp  staticfilecache.cpp cacheelement.cpp httpcache.cpp chunkoutputstream.cpp chunkinputstream.cpp  httplog.cpp \
    httpmime.cpp sendfileinfo.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp reqhandler.cpp \
    httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp  httpstatusline.cpp httpheader.cpp \
-   smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp iptogeo.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
+   smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
    httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp subrequest.cpp hiochainstream.cpp \
    iptoloc.cpp iptogeo2.cpp recaptcha.cpp
 

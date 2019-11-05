@@ -49,7 +49,9 @@ typedef struct msc_conf_t_{
 
 typedef struct ModData_t
 {
-    Transaction             *modsec_transaction;
+    Transaction            *modsec_transaction;
+    int8_t                  chkReqBody;
+    int8_t                  chkRespBody;    
 } ModData;
 
 
@@ -487,19 +489,19 @@ static int UriMapHook(lsi_param_t *rec)
     }
 
     Rules *rules = myData->modsec_transaction->m_rules;
-    bool chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
-    bool chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
+    myData->chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
+    myData->chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     g_api->log(session, LSI_LOG_DEBUG, "[Module:%s] RequestBodyAccess: %s "
                "ResponseBodyAccess: %s\n", ModuleNameStr,
-               chkReqBody ? "YES" : "NO",
-               chkRespBody ? "YES" : "NO");
+               myData->chkReqBody ? "YES" : "NO",
+               myData->chkRespBody ? "YES" : "NO");
     
-    if(chkReqBody && rules->m_requestBodyLimit.m_value > 3000) //at least set limit to 3000
+    if(myData->chkReqBody && rules->m_requestBodyLimit.m_value > 3000) //at least set limit to 3000
     {
         long reqbodySize = g_api->get_req_content_length(session);
         if (reqbodySize > rules->m_requestBodyLimit.m_value)
         {
-            chkReqBody = false;
+            myData->chkReqBody = false;
             g_api->log(session, LSI_LOG_DEBUG,
                        "[Module:%s] RequestBodyAccess disabled due to size %ld > %ld.",
                        ModuleNameStr, reqbodySize,
@@ -508,17 +510,14 @@ static int UriMapHook(lsi_param_t *rec)
     }
 
     int aEnableHkpt[4] = {LSI_HKPT_RCVD_RESP_HEADER,
-                          LSI_HKPT_HANDLER_RESTART, };
-    int arrCount = 2;
-    if (chkReqBody)
+                          LSI_HKPT_HANDLER_RESTART,
+                          LSI_HKPT_RCVD_REQ_BODY,
+                          LSI_HKPT_RCVD_RESP_BODY};
+    if (myData->chkReqBody)
     {
         g_api->set_req_wait_full_body(session);
-        aEnableHkpt[arrCount ++] = LSI_HKPT_RCVD_REQ_BODY;
     }
-    if (chkRespBody)
-        aEnableHkpt[arrCount ++] = LSI_HKPT_RCVD_RESP_BODY;
-
-    g_api->enable_hook(session, &MNAME, 1, aEnableHkpt, arrCount);
+    g_api->enable_hook(session, &MNAME, 1, aEnableHkpt, 4);
     return LSI_OK;
 }
 
@@ -545,35 +544,42 @@ static int reqBodyHook(lsi_param_t *rec)
     g_api->log(session, LSI_LOG_DEBUG,
                "[Module:%s] reqBodyHook entry, len: %ld.\n", ModuleNameStr, len);
     
-    if (len == 0)
-        return LSI_OK;
-
-    do
+    if (len > 0 && myData->chkReqBody)
     {
-        len = 0;
-        if ((pTmpBuf = g_api->acquire_body_buf_block(pBuf, offset, (int *)&len))
-            == NULL)
-            break;
+        do
+        {
+            len = 0;
+            if ((pTmpBuf = g_api->acquire_body_buf_block(pBuf, offset, (int *)&len))
+                == NULL)
+                break;
 
-        //g_api->log(session, LSI_LOG_DEBUG,
-        //           "[Module:%s] reqBodyHook data: %ld bytes.\n", ModuleNameStr, len);
-        
-        msc_append_request_body(myData->modsec_transaction,
-                                (const unsigned char *)pTmpBuf, (size_t)len);
+            //g_api->log(session, LSI_LOG_DEBUG,
+            //           "[Module:%s] reqBodyHook data: %ld bytes.\n", ModuleNameStr, len);
+            
+            msc_append_request_body(myData->modsec_transaction,
+                                    (const unsigned char *)pTmpBuf, (size_t)len);
 
-        int ret = process_intervention(myData->modsec_transaction, rec);
-        if (ret != STATUS_OK) {
-            g_api->log(session, LSI_LOG_DEBUG,
-                    "[Module:%s] reqBodyHook failed.\n", ModuleNameStr);
-            return LSI_ERROR;
+            int ret = process_intervention(myData->modsec_transaction, rec);
+            if (ret != STATUS_OK) {
+                g_api->log(session, LSI_LOG_DEBUG,
+                        "[Module:%s] reqBodyHook failed.\n", ModuleNameStr);
+                return LSI_ERROR;
+            }
+            offset += len;
         }
-        offset += len;
-    }
-    while (!g_api->is_body_buf_eof(pBuf, offset));
-
-    g_api->log(session, LSI_LOG_DEBUG,
+        while (!g_api->is_body_buf_eof(pBuf, offset));
+    
+        g_api->log(session, LSI_LOG_DEBUG,
                "[Module:%s] reqBodyHook used %ld bytes of %ld\n", 
                ModuleNameStr, offset, len);
+        
+    }
+    else
+    {
+        g_api->log(session, LSI_LOG_DEBUG,
+               "[Module:%s] reqBodyHook bypass reqBody len %d.\n",
+               ModuleNameStr, len);
+    }
     
     g_api->log(session, LSI_LOG_DEBUG,
                "[Module:%s] reqBodyHook final body check.\n", ModuleNameStr);
@@ -676,7 +682,7 @@ static int respHeaderHook(lsi_param_t *rec)
     int len = 0;
     void *pRespBodyBuf = g_api->get_resp_body_buf(rec->session);
     int ret;
-    while (!g_api->is_body_buf_eof(pRespBodyBuf, offset))
+    while (myData->chkRespBody && !g_api->is_body_buf_eof(pRespBodyBuf, offset))
     {
         len = 0;
         pBuf = g_api->acquire_body_buf_block(pRespBodyBuf, offset, &len);

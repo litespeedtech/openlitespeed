@@ -751,6 +751,14 @@ int HttpSession::reqBodyDone()
 }
 
 
+int HttpSession::call_onRead(lsi_session_t *p, long , void *)
+{
+    HttpSession *pSession = (HttpSession *)p;
+    pSession->onReadEx();
+    return 0;
+}
+
+
 int HttpSession::readReqBody()
 {
     char *pBuf;
@@ -773,7 +781,11 @@ int HttpSession::readReqBody()
         if (!endBody)
         {
             if ((ret < (int)size) || (++count == 10 && !isspdy))
+            {
+                if (count == 10)
+                    EvtcbQue::getInstance().schedule(call_onRead, this, 0, NULL, false);
                 return 0;
+            }
         }
 
         if (pParser && pParser->isParsePost() && pParser->isParseUploadByFilePath())
@@ -1731,12 +1743,12 @@ bool HttpSession::shouldAvoidRecaptcha()
         return true;
     }
 
-    if (getStream() && getStream()->isFromLocalAddr())
-    {
-        LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
-                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
-        return true;
-    }
+//     if (getStream() && getStream()->isFromLocalAddr())
+//     {
+//         LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
+//                 pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+//         return true;
+//     }
 
     const char *pUserAgent = m_request.getUserAgent();
     int iUserAgentLen = m_request.getUserAgentLen();

@@ -64,13 +64,13 @@ class Context
     protected function __construct( ContextOption $contextOption )
     {
         $this->options = $contextOption;
-        $this->dataDir = realpath(__DIR__ . '/../../../..') . '/admin/lscdata';
 
         $this->init();
     }
 
     protected function init()
     {
+        $this->dataDir = realpath(__DIR__ . '/../../../..') . '/admin/lscdata';
         $this->dataFile = $this->dataDir . '/lscm.data';
         $this->customDataFile = $this->dataDir . '/lscm.data.cust';
         $this->isRoot = $this->options->isRoot();

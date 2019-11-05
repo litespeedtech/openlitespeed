@@ -19,20 +19,55 @@ abstract class ControlPanel
 
     /**
      * @deprecated
+     *
+     * @var string
      */
     const PANEL_CPANEL = 'whm';
 
     /**
      * @deprecated
+     *
+     * @var string
      */
     const PANEL_PLESK = 'plesk';
 
+    /**
+     * @var string
+     */
     const PANEL_API_VERSION = '1.9';
+
+    /**
+     * @since 1.9
+     * @var int
+     */
     const PANEL_API_VERSION_SUPPORTED = 0;
+
+    /**
+     * @since 1.9
+     * @var int
+     */
     const PANEL_API_VERSION_TOO_LOW = 1;
+
+    /**
+     * @since 1.9
+     * @var int
+     */
     const PANEL_API_VERSION_TOO_HIGH = 2;
+
+    /**
+     * @since 1.9
+     * @var int
+     */
     const PANEL_API_VERSION_UNKNOWN = 3;
+
+    /**
+     * @var int
+     */
     const PHP_TIMEOUT = 10;
+
+    /**
+     * @var string
+     */
     const NOT_SET = '__LSC_NOTSET__';
 
     /**

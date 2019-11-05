@@ -282,7 +282,6 @@ class WPInstallStorage
     }
 
     /**
-     * Note: look into possibly removing this later.
      *
      * @param WPInstall  $wpInstall
      */

@@ -433,9 +433,4 @@ class Util
         return false;
     }
 
-    public static function writeToTestLog($msg)
-    {
-        file_put_contents('/tmp/test.log', "{$msg}\n", FILE_APPEND);
-    }
-
 }

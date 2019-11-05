@@ -1275,12 +1275,24 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
         {
             if ((*pEntry)->isStale() && !(*pEntry)->isUpdating())
             {
-                myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                                 myData->cePublicHash, &myData->cacheKey, 0);
-                return CE_STATE_UPDATE_STALE;
+                CacheEntry *pNewEntry = myData->pConfig->getStore()->
+                                        createCacheEntry(myData->cePublicHash,
+                                        &myData->cacheKey, 0);
+                if (pNewEntry)
+                {
+                    myData->pEntry = pNewEntry;
+                    return CE_STATE_UPDATE_STALE;
+                }
+                else
+                {
+                 
+                    g_api->log(rec->session, LSI_LOG_ERROR,
+                               "[%s] createEntry failed for update stale.\n",
+                               ModuleNameStr);
+                }
             }
-            else
-                return CE_STATE_HAS_PUBLIC_CACHE;
+
+            return CE_STATE_HAS_PUBLIC_CACHE;
         }
     }
 

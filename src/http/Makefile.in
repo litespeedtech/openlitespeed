@@ -134,11 +134,10 @@ am_libhttp_a_OBJECTS = httpstatuscode.$(OBJEXT) moduserdir.$(OBJEXT) \
 	httpstatusline.$(OBJEXT) httpheader.$(OBJEXT) \
 	smartsettings.$(OBJEXT) httplistener.$(OBJEXT) \
 	httpresp.$(OBJEXT) httpreq.$(OBJEXT) httpsession.$(OBJEXT) \
-	iptogeo.$(OBJEXT) moov.$(OBJEXT) hiostream.$(OBJEXT) \
-	hiohandlerfactory.$(OBJEXT) httprespheaders.$(OBJEXT) \
-	l4handler.$(OBJEXT) httpaiosendfile.$(OBJEXT) \
-	serverprocessconfig.$(OBJEXT) httpstats.$(OBJEXT) \
-	reqparser.$(OBJEXT) subrequest.$(OBJEXT) \
+	moov.$(OBJEXT) hiostream.$(OBJEXT) hiohandlerfactory.$(OBJEXT) \
+	httprespheaders.$(OBJEXT) l4handler.$(OBJEXT) \
+	httpaiosendfile.$(OBJEXT) serverprocessconfig.$(OBJEXT) \
+	httpstats.$(OBJEXT) reqparser.$(OBJEXT) subrequest.$(OBJEXT) \
 	hiochainstream.$(OBJEXT) iptoloc.$(OBJEXT) iptogeo2.$(OBJEXT) \
 	recaptcha.$(OBJEXT)
 libhttp_a_OBJECTS = $(am_libhttp_a_OBJECTS)
@@ -254,7 +253,6 @@ IS_LSCPD = @IS_LSCPD@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBBROTLI = @LIBBROTLI@
-LIBGEOIP = @LIBGEOIP@
 LIBMMDB = @LIBMMDB@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -376,7 +374,7 @@ libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.
    staticfilecachedata.cpp  staticfilecache.cpp cacheelement.cpp httpcache.cpp chunkoutputstream.cpp chunkinputstream.cpp  httplog.cpp \
    httpmime.cpp sendfileinfo.cpp httpcontext.cpp httpserverversion.cpp vhostmap.cpp eventdispatcher.cpp staticfilehandler.cpp reqhandler.cpp \
    httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp  httpstatusline.cpp httpheader.cpp \
-   smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp iptogeo.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
+   smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
    httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp subrequest.cpp hiochainstream.cpp \
    iptoloc.cpp iptogeo2.cpp recaptcha.cpp
 
@@ -484,7 +482,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpvhost.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/httpvhostlist.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iptogeo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iptogeo2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iptoloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/l4handler.Po@am__quote@

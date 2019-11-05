@@ -3,9 +3,6 @@
 /* Defined the temprary directory */
 #undef DEFAULT_TMP_DIR
 
-/* Defined to compile with iptogeo enabled */
-#undef ENABLE_IPTOGEO
-
 /* Defined to compile with iptogeo2 enabled */
 #undef ENABLE_IPTOGEO2
 

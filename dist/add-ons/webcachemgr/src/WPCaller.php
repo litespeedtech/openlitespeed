@@ -1095,7 +1095,7 @@ class WPCaller
          */
         global $wpdb;
 
-        error_reporting(E_ALL & ~E_WARNING);
+        error_reporting(E_ALL);
 
         /**
          * Attempt to override any WordPress memory limits.

@@ -8,10 +8,13 @@
 # *********************************************/
 
 VERSION='1.9'
-CURR_DIR=`pwd`
-FILE_DIR=`dirname $0`
-LSWS_DIR="${FILE_DIR}/../.."
-SCRIPT=${LSWS_DIR}/add-ons/webcachemgr/bootstrap_cli.php
+OS=$(uname -s)
+SCRIPT_DIR=$(cd $(dirname ${0}) && pwd)
+
+cd $SCRIPT_DIR
+
+LSWS_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
+PHP_SCRIPT="${LSWS_DIR}/add-ons/webcachemgr/bootstrap_cli.php"
 
 YELLOW='\e[33m'
 CYAN='\e[36m'
@@ -22,24 +25,24 @@ END_COLOR='\e[0m'
 printHeader()
 {
     # $1 title , $2 descr
-	printf "\n${YELLOW}$1${END_COLOR}\n$2\n"
+	printf "\n${YELLOW}${1}${END_COLOR}\n${2}\n"
 }
 
 printLabelDesc()
 {
-	printf "\n${YELLOW}$1${END_COLOR} $2\n\n" 
+	printf "\n${YELLOW}${1}${END_COLOR} ${2}\n\n"
 }
 
 printCmdOption()
 {
-    printf "${CYAN}$1${END_COLOR} ${GREEN}$2${END_COLOR}\n" 
-    printf "    $3\n\n" | fold -sw 80 
+    printf "${CYAN}${1}${END_COLOR} ${GREEN}${2}${END_COLOR}\n"
+    printf "    ${3}\n\n" | fold -sw 80
 }
 
 printExample()
 {
-	printf "  ${L_GRAY}$1:${END_COLOR}\n"  
-	printf "  ./lscmctl $2\n\n"
+	printf "  ${L_GRAY}${1}:${END_COLOR}\n"
+	printf "  ./lscmctl ${2}\n\n"
 }
 
 printHelp() 
@@ -84,14 +87,9 @@ printHelp()
 
 runUpdate()
 {
-    pushd `dirname "$0"` > /dev/null
-
-    pushd ../../add-ons > /dev/null
-    ADDONS_DIR=$(pwd)
-    popd > /dev/null
-
-    URL="https://shared.litespeed.sh/latest"
+    ADDONS_DIR=$(cd "${LSWS_DIR}/add-ons" && pwd)
     LOCAL_TAR_FILE="${ADDONS_DIR}/shared_latest.tar.gz"
+    URL="https://shared.litespeed.sh/latest"
 
     echo "Downloading latest shared code tar file..."
     wget -q --tries=1 --no-check-certificate "$URL" -O "$LOCAL_TAR_FILE"
@@ -109,17 +107,21 @@ runUpdate()
 
     MD5_VALUE=$(wget -q https://shared.litespeed.sh/latest/md5 -O -)
 
-    if [ "$MD5_VALUE" == "" ] ; then
+    if [ "$MD5_VALUE" = "" ] ; then
         /bin/rm -f "$LOCAL_TAR_FILE"
         errorExit "Failed to wget latest shared code md5 value."
     fi
 
-    LOCAL_MD5_VAL=$(md5sum $LOCAL_TAR_FILE | awk '{ print $1 }')
+    if [ "x${OS}" = "xFreeBSD" ] ; then
+        LOCAL_MD5_VAL=$(md5 $LOCAL_TAR_FILE | awk '{ print $4 }')
+    else
+        LOCAL_MD5_VAL=$(md5sum $LOCAL_TAR_FILE | awk '{ print $1 }')
+    fi
 
     echo "Checking tar file md5..."
 
     if [ "$MD5_VALUE" != "$LOCAL_MD5_VAL" ] ; then
-        /bin/rm -f "${LOCAL_TAR_FILE}"
+        /bin/rm -f "$LOCAL_TAR_FILE"
         errorExit "Md5 mismatch for shared code! Aborting."
     fi
 
@@ -136,24 +138,22 @@ runUpdate()
     RET=$?
 
     if [ "$RET" != "0" ] ; then
-        /bin/rm -f "${LOCAL_TAR_FILE}"
+        /bin/rm -f "$LOCAL_TAR_FILE"
         errorExit "Failed to extract tar.gz file with tar exit status ${RET}."
     fi
 
     echo "Removing local shared code tar file..."
-    /bin/rm -f "${LOCAL_TAR_FILE}"
+    /bin/rm -f "$LOCAL_TAR_FILE"
 
     echo "Updating lscmctl script..."
     /bin/mv -f "${ADDONS_DIR}/lscmctl" "${ADDONS_DIR}/../admin/misc/lscmctl"
-
-    popd > /dev/null
 
     echo "Done!"
 }
 
 errorExit()
 {
-    printf "${YELLOW}ERROR: ${END_COLOR} $1\n\n"
+    printf "${YELLOW}ERROR: ${END_COLOR} ${1}\n\n"
     exit 1
 }
 
@@ -185,27 +185,39 @@ setPanelClassName()
 
 selectPHP() 
 {
-    if [ "$1" == "-php" ]
+    if [ "$1" = "-php" ]
     then
         if [ -x "$2" ] ; then
-            PHP="$2 -d disable_functions="
+            PHP_BIN="${2} -d disable_functions="
             return 2
         else
-            errorExit "$2 not detected as a valid php binary."
+            errorExit "${2} not detected as a valid php binary."
         fi
     else
         #Use default admin php binary
-        PHP="${LSWS_DIR}/admin/fcgi-bin/admin_php5 -c ${LSWS_DIR}/add-ons/webcachemgr/shared/webcachemgr.ini"
+        local DEFAULT_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php5"
+        local OLS_DA_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php"
+
+        if [ ! -x "$DEFAULT_PHP_BIN" ] ; then
+
+            if [ -x "$OLS_DA_PHP_BIN" ] ; then
+                DEFAULT_PHP_BIN="$OLS_DA_PHP_BIN"
+            else
+                errorExit "Could not find default admin PHP binary."
+            fi
+        fi
+
+        PHP_BIN="${DEFAULT_PHP_BIN} -c ${LSWS_DIR}/add-ons/webcachemgr/shared/webcachemgr.ini"
     fi
 }
 
-if [ "$1" == "--help" ]
+if [ "$1" = "--help" ]
 then
     printHelp
     exit 0
 fi
 
-if [ "$1" == "--update-lib" ]
+if [ "$1" = "--update-lib" ]
 then
     runUpdate
     exit 0;
@@ -213,19 +225,18 @@ fi
 
 setPanelClassName
 
-if [ "$PANEL_CLASS_NAME" == false ] ; then
+if [ "$PANEL_CLASS_NAME" = false ] ; then
     errorExit 'Supported Control Panel not detected. Aborting!'
 fi    
 
 selectPHP $1 $2
 
-if [ $? == 2 ] ; then
+if [ $? = 2 ] ; then
     shift 2
 fi
 
-if [ $# == 0 ] ; then
+if [ $# = 0 ] ; then
     errorExit "Missing input command. Try --help for a full list of available commands with examples."
 fi
 
-$PHP $SCRIPT $PANEL_CLASS_NAME "$@"
-
+$PHP_BIN $PHP_SCRIPT $PANEL_CLASS_NAME "$@"
