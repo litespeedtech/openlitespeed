@@ -64,7 +64,7 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
     const AutoStr2 *pCharset = NULL;
     if (pReq->getStatusCode() == SC_304)
         return 0;
-    
+
     if (HttpMime::needCharset(pValue))
     {
         pCharset = pReq->getDefaultCharset();
@@ -525,8 +525,8 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     if (!isPython)
         pEnv->add("DOCUMENT_ROOT", 13,
                   pStr->c_str(), pStr->len() - 1);
-        
-        
+
+
     pEnv->add("REMOTE_ADDR", 11, pSession->getPeerAddrString(),
               pSession->getPeerAddrStrLen());
 
@@ -546,12 +546,12 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
         pEnv->add("SERVER_ADMIN", 12, pStr->c_str(), pStr->len());
         ++count;
     }
-    
-    
+
+
     char *pBuf = buf;
     n = RequestVars::getReqVar(pSession, REF_SERVER_PORT, pBuf, 128);
     pEnv->add("SERVER_PORT", 11, pBuf, n);
-    
+
     pEnv->add("REQUEST_URI", 11, pReq->getOrgReqURL(),
               pReq->getOrgReqURLLen());
     count += 2;
@@ -580,7 +580,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             }
         }
     }
-    
+
     if (!isPython)
     {
         if (pReq->getStatusCode() && (pReq->getStatusCode() != SC_200))
@@ -609,7 +609,7 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             }
         }
     }
-    
+
     //add geo IP env here
     if (pReq->isGeoIpOn())
     {
@@ -642,9 +642,9 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
 
     if (pSession->getStream()->isSpdy())
     {
-        const char *pProto = HioStream::getProtocolName((HiosProtocol)
+        const ls_str_t *pProto = HioStream::getProtocolName((HiosProtocol)
                              pSession->getStream()->getProtocol());
-        pEnv->add("X_SPDY", 6, pProto, strlen(pProto));
+        pEnv->add("X_SPDY", 6, pProto->ptr, pProto->len);
         ++count;
     }
 
@@ -664,15 +664,15 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             ++count;
         }
 
-        
+
         pBuf = buf;
         n = pCrypto->getEnv(HioCrypto::CIPHER, pBuf, 128);
         pEnv->add("SSL_CIPHER", 10, pBuf, n);
-        
+
         pBuf = buf;
         n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
         pEnv->add("SSL_CIPHER_USEKEYSIZE", 21, pBuf, n);
-        
+
         pBuf = buf;
         n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
         pEnv->add("SSL_CIPHER_ALGKEYSIZE", 21, pBuf, n);
@@ -771,7 +771,7 @@ int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
             if ((i == HttpHeader::H_AUTHORIZATION)
                 && (pReq->getAuthUser()))
                 continue;
-            pEnv->add(lsiApiConst.get_cgi_header(i), 
+            pEnv->add(lsiApiConst.get_cgi_header(i),
                       lsiApiConst.get_cgi_header_len(i),
                       pTemp, pReq->getHeaderLen(i));
         }
@@ -819,10 +819,10 @@ int HttpCgiTool::processExpires(HttpReq *pReq, HttpResp *pResp, const char *pVal
         ExpiresCtrl *pExpireDefault = NULL;//&pContext->getExpires();
         if (pMIMESetting)
             pExpireDefault = (ExpiresCtrl *)pMIMESetting->getExpires();
-        
+
         if (pExpireDefault == NULL)
             pExpireDefault = &pContext->getExpires();
-            
+
         if (pExpireDefault->getBase())
             pResp->addExpiresHeader(DateTime::s_curTime, pExpireDefault);
     }

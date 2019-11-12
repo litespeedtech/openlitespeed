@@ -75,7 +75,7 @@ protected:
     virtual int onTimer();
 
     int read(char *pBuf , int size);
-    int readv(struct iovec *vector, size_t count);
+    int readv(struct iovec *vector, int count);
 
 public:
     virtual int removeRequest(ExtRequest *pReq);

@@ -2260,7 +2260,7 @@ char *get_uacode(const char *ua)
     ls_hash_iter it = ls_hash_find(s_uacode_hasht, ua);
     if (it == NULL)
         return NULL;
-    
+
     uacode_item *item = (uacode_item *)ls_hash_getdata(it);
     assert (item);
     return item->code;
@@ -2299,11 +2299,11 @@ static void foreach_req_header(const HttpSession *session, const char *filter,
         pTemp = pReq->getHeader(i);
         if (*pTemp)
         {
-            if (!filter || fm.match(RequestVars::getHeaderString(i), 
+            if (!filter || fm.match(RequestVars::getHeaderString(i),
                          HttpHeader::getHeaderStringLen(i)))
             {
-                cb(i, RequestVars::getHeaderString(i), 
-                   HttpHeader::getHeaderStringLen(i), 
+                cb(i, RequestVars::getHeaderString(i),
+                   HttpHeader::getHeaderStringLen(i),
                    pTemp, pReq->getHeaderLen(i), arg);
             }
         }
@@ -2363,7 +2363,7 @@ static void foreach_special_env(const HttpSession *session, const char *filter,
         {
             cb(-1, pKey, keyLen, pVal, valLen, arg);
         }
-    }    
+    }
 }
 
 
@@ -2376,7 +2376,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
     HioCrypto *pCrypto = pHttpSession->getCrypto();
     if (!pCrypto)
         return;
-    
+
     pBuf = buf;
     n = pCrypto->getEnv(HioCrypto::CRYPTO_VERSION, pBuf, 128);
     cb(-1, "SSL_VERSION", 11, pBuf, n, arg);
@@ -2396,7 +2396,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
     pBuf = buf;
     n = pCrypto->getEnv(HioCrypto::CIPHER_ALGKEYSIZE, pBuf, 128);
     cb(-1, "SSL_CIPHER_ALGKEYSIZE", 21, buf, n, arg);
-    
+
     int i = pCrypto->getVerifyMode();
     if (i != 0)
     {
@@ -2449,7 +2449,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
 }
 
 
-static void foreach_req_var_full(HttpSession *pSession, 
+static void foreach_req_var_full(HttpSession *pSession,
                                  lsi_foreach_cb cb, void *arg)
 {
     HttpReq *pReq = pSession->getReq();
@@ -2516,7 +2516,7 @@ static void foreach_req_var_full(HttpSession *pSession,
             cb(-1, "REDIRECT_QUERY_STRING", 21, pTemp, n, arg);
         }
     }
-    
+
     //add geo IP env here
     if (pReq->isGeoIpOn())
     {
@@ -2545,9 +2545,9 @@ static void foreach_req_var_full(HttpSession *pSession,
 #endif
     if (pSession->getStream()->isSpdy())
     {
-        const char *pProto = HioStream::getProtocolName((HiosProtocol)
+        const ls_str_t *pProto = HioStream::getProtocolName((HiosProtocol)
                              pSession->getStream()->getProtocol());
-        cb(-1, "X_SPDY", 6, pProto, strlen(pProto), arg);
+        cb(-1, "X_SPDY", 6, pProto->ptr, pProto->len, arg);
     }
 
     if (pSession->isHttps())
@@ -2557,7 +2557,7 @@ static void foreach_req_var_full(HttpSession *pSession,
     n = snprintf(sVer, 40, "Openlitespeed %s", PACKAGE_VERSION);
     cb(-1, "LSWS_EDITION", 12, sVer, n, arg);
     cb(-1, "X-LSCACHE", 9, "1", 1, arg);
-    
+
     const AutoStr2 *psTemp = pReq->getRealPath();
     if (psTemp)
     {
@@ -2600,7 +2600,7 @@ static void foreach_req_var(const HttpSession *session, const char *filter,
         foreach_req_var_full(const_cast<HttpSession *>(session), cb, arg);
         return;
     }
-    
+
     for (i = LSI_VAR_REMOTE_ADDR; i < LSI_VAR_COUNT; ++i)
     {
         p = val;
@@ -2693,13 +2693,13 @@ static int req_env_cb(void *pObj, void *pUData, const char *pKey, int iKeyLen)
     return 0;
 }
 
-static void foreach_req_env(const HttpSession *session, const char *filter, 
+static void foreach_req_env(const HttpSession *session, const char *filter,
                             lsi_foreach_cb cb, void *arg)
 {
     LSI_DBGH(session, "enter %s: filter %s, cb %p, arg %p\n",
                               __func__, filter, cb, arg);
     RadixNode *pNode;
-    
+
     if ((pNode = (RadixNode *)session->getReq()->getEnvNode()) != NULL)
     {
         struct cb_arg_s new_arg = { cb, arg, filter };
@@ -2716,14 +2716,14 @@ static void foreach_req_cgi_header(const HttpSession *session, const char *filte
     int headers = lsiApiConst.get_cgi_header_count();
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     FilterMatch fm(filter);
-    
+
     if (session == NULL)
         return;
-    
+
     HttpReq *pReq = pSession->getReq();
-    if (!pReq) 
+    if (!pReq)
         return;
-    
+
     for (int i = 0; i < headers; ++i)
     {
         const char *val = pReq->getHeader(i);
@@ -2732,7 +2732,7 @@ static void foreach_req_cgi_header(const HttpSession *session, const char *filte
             const char *key = lsiApiConst.get_cgi_header(i);
             const int  key_len = lsiApiConst.get_cgi_header_len(i);
             int val_len = pReq->getHeaderLen(i);
-            //Note: WARNING: web server does not send authorization info to cgi 
+            //Note: WARNING: web server does not send authorization info to cgi
             //for security reasons
             //pass AUTHORIZATION header only when server does not check it.
             if ((i == HttpHeader::H_AUTHORIZATION)
@@ -2789,7 +2789,7 @@ static void foreach_resp_header(const HttpSession *session, const char *filter,
     }
 }
 
-static void lsi_foreach(const lsi_session_t *session, LSI_DATA_TYPE type, 
+static void lsi_foreach(const lsi_session_t *session, LSI_DATA_TYPE type,
                         const char *filter, lsi_foreach_cb cb, void *arg)
 {
     LSI_DBGH(session, "enter %s: type %d, filter %s, cb %p, arg %p\n",
@@ -2821,7 +2821,7 @@ static void lsi_foreach(const lsi_session_t *session, LSI_DATA_TYPE type,
         foreach_resp_header(pSession, filter, cb, arg);
         break;
     }
-}    
+}
 
 void register_thread_cleanup(const lsi_module_t *pModule, void (*routine)(void *), void * arg)
 {
@@ -3457,7 +3457,7 @@ static int lsi_flush_ts(const lsi_session_t *session)
     if (pSession == NULL)
         return LS_FAIL;
     LSI_DBGH(pSession, "lsi_flush_ts() called\n");
-    
+
 //    lsi_flush_local_buf_ts(pSession);
 
     return notifyCollapsibleMtFlag(pSession, HSF_MT_FLUSH);
@@ -3565,7 +3565,7 @@ static void module_log_ts(const lsi_module_t *pMod, const lsi_session_t *session
     if (log4cxx::Level::isEnabled(level) && level <= MODULE_LOG_LEVEL(pMod))
     {
         char new_fmt[8192];
-        snprintf(new_fmt, 8191, "[%s] [T%d] %s", MODULE_NAME(pMod), 
+        snprintf(new_fmt, 8191, "[%s] [T%d] %s", MODULE_NAME(pMod),
                  ls_thr_seq(), fmt);
         HttpSession *pSess = (HttpSession *)((LsiSession *)session);
         LogSession *pLogSess = pSess ? pSess->getLogSession() : NULL;
@@ -3769,7 +3769,7 @@ void lsiapi_init_server_api()
     pApi->get_ua_code = get_uacode;
 
     pApi->foreach = lsi_foreach;
-    
+
     pApi->module_log = module_log;
     pApi->c_log      = c_log;
     pApi->_log_level_ptr = log4cxx::Level::getDefaultLevelPtr();

@@ -66,31 +66,31 @@ public:
     virtual void suspendRead();
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
 
-    virtual int sendfile(int fdSrc, off_t off, off_t size);
-    virtual int readv(iovec *vector, size_t count);
+    virtual int sendfile(int fdSrc, off_t off, size_t size, int flag);
+    virtual int readv(iovec *vector, int count);
     virtual int read(char *pBuf, int size);
     virtual int close();
     virtual int flush();
     virtual int writev(const iovec *vector, int count);
     virtual int write(const char *pBuf, int size);
     virtual const char *buildLogId();
-    virtual int push(ls_str_t *pUrl, ls_str_t *pHost, 
+    virtual int push(ls_str_t *pUrl, ls_str_t *pHost,
                      ls_strpair_t *pExtraHeaders);
 
     virtual int getEnv(HioCrypto::ENV id, char *&val, int maxValLen);
 
     virtual int sendfile(int fdSrc, off_t off, size_t size) { return 0; }
+    virtual UnpackedHeaders *getReqHeaders()
+    {   return m_pHeaders;  }
 
-    virtual uint16_t getEvents() const;
-    virtual int isFromLocalAddr() const;
-    virtual NtwkIOLink *getNtwkIoLink();
-    
     void onRead();
     void onWrite();
     void onClose();
-    
+
 private:
     int checkReadRet(int ret);
+
+    UnpackedHeaders * m_pHeaders;
 };
 
 #endif // QUICSTREAM_H

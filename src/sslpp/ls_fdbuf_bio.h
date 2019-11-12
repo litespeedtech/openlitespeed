@@ -6,7 +6,7 @@
 #ifndef __LS_FDBUF_BIO_H__
 #define __LS_FDBUF_BIO_H__
 
-#include <stdint.h>
+#include <lsdef.h>
 
 #ifdef __cplusplus 
 extern "C" {
@@ -19,12 +19,12 @@ extern "C" {
  */
 
 typedef struct ls_fdbio_data {
-    char        *m_rbioBuf;
-    uint16_t     m_rbioBuffered;
-    uint16_t     m_rbioIndex;
-    uint16_t     m_rbioBufSz;
-    uint8_t      m_rbioClosed;
-    uint8_t      m_rbioWaitEvent;
+    uint8_t     *m_rbuf;
+    uint16_t     m_rbuf_used;
+    uint16_t     m_rbuf_read;
+    uint16_t     m_rbuf_size;
+    uint8_t      m_is_closed;
+    uint8_t      m_need_read_event;
 
     uint8_t     *m_wbuf;
     int32_t      m_wbuf_size;
@@ -32,6 +32,9 @@ typedef struct ls_fdbio_data {
     int32_t      m_wbuf_sent;
     int32_t      m_flag;
 } ls_fdbio_data;
+
+#define LS_FDBIO_WBLOCK         1
+#define LS_FDBIO_BUFFERING      2
 
 
 /**
@@ -55,7 +58,40 @@ struct bio_st *ls_fdbio_create(int fd, ls_fdbio_data *fdbio);
 
 int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd);
 
-void ls_fdbio_set_wbuff(ls_fdbio_data *fdbio, int dobuff);
+ls_inline void ls_fdbio_set_wbuff(ls_fdbio_data *fdbio, int dobuff)
+{
+    if (dobuff)
+        fdbio->m_flag |= LS_FDBIO_BUFFERING;
+    else
+        fdbio->m_flag &= ~LS_FDBIO_BUFFERING;
+}
+
+void ls_fdbio_release_wbuff(ls_fdbio_data *fdbio);
+void ls_fdbio_release_rbuff(ls_fdbio_data *fdbio);
+
+ls_inline int ls_fdbio_is_wbuf_idle(ls_fdbio_data *fdbio)
+{
+    return fdbio->m_wbuf && fdbio->m_wbuf_used == 0;
+}
+
+ls_inline int ls_fdbio_is_rbuf_idle(ls_fdbio_data *fdbio)
+{
+    return fdbio->m_rbuf && fdbio->m_rbuf_used == fdbio->m_rbuf_read;
+}
+
+ls_inline void ls_fdbio_release_idle_buffer(ls_fdbio_data *fdbio)
+{
+    if (ls_fdbio_is_wbuf_idle(fdbio))
+        ls_fdbio_release_wbuff(fdbio);
+    if (ls_fdbio_is_rbuf_idle(fdbio))
+        ls_fdbio_release_rbuff(fdbio);
+}
+
+ls_inline int ls_fdbio_is_wblock(ls_fdbio_data *fdbio)
+{   return fdbio->m_flag & LS_FDBIO_WBLOCK;      }
+
+ls_inline void ls_fdbio_clear_wblock(ls_fdbio_data *fdbio)
+{    fdbio->m_flag &= ~LS_FDBIO_WBLOCK;    }
 
 #ifdef __cplusplus 
 }

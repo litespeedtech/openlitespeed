@@ -266,7 +266,7 @@ void EvtcbQue::run()
             evtcbtail_t * session = pObj->m_pSession;
             if (!session)
             {
-                LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed! SKIPPING\n",
+                LS_DBG_M( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed! SKIPPING\n",
                          ls_thr_seq(), __PRETTY_FUNCTION__, pObj);
                 m_sessCallbackObjList[slot].remove(pObj);
                 if (pObj == pLast)

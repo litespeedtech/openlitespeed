@@ -22,6 +22,7 @@
 #include <http/httpver.h>
 #include <http/httpserverconfig.h>
 #include <log4cxx/logger.h>
+#include <spdy/lshpack.h>
 #include <util/datetime.h>
 #include <util/iovec.h>
 #include <ctype.h>
@@ -39,8 +40,8 @@
  * The last one (does not have a child) is 0x80000000
  * ****************************************************************************/
 
-#define HIGHEST_BIT_NUMBER                  0x80000000
-#define BYPASS_HIGHEST_BIT_MASK             0x7FFFFFFF
+#define HIGHEST_BIT_NUMBER                  0x8000
+#define BYPASS_HIGHEST_BIT_MASK             0x7FFF
 #define MAX_RESP_HEADER_LEN                 8192
 
 
@@ -158,7 +159,7 @@ void HttpRespHeaders::updateEtag(int compress_type)
 {
     int etagLen;
     const char *pETag = getHeader(H_ETAG, &etagLen);
-    char * pUpdate; 
+    char * pUpdate;
     if (!pETag)
         return;
     pUpdate = (char *)pETag + etagLen - 4;
@@ -191,7 +192,7 @@ inline void HttpRespHeaders::incKVPairs(int num)
 }
 
 
-inline resp_kvpair *HttpRespHeaders::getKV(int index) const
+inline resp_kvpair *HttpRespHeaders::getKvPair(int index) const
 {
     return m_aKVPairs.getObj(index);
 }
@@ -217,7 +218,7 @@ void HttpRespHeaders::replaceHeader(resp_kvpair *pKv, const char *pVal,
 
 #define HRH_SVR_RESERVE 127
 
-int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
+int HttpRespHeaders::appendHeader(resp_kvpair *pKv, int hdr_idx, const char *pName,
                                   unsigned int nameLen, const char *pVal,
                                   unsigned int valLen, int method)
 {
@@ -244,14 +245,14 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
         {
             int i = pKv - (resp_kvpair *)m_aKVPairs.begin();
             incKVPairs(10);
-            pKv = getKV(i);
+            pKv = getKvPair(i);
         }
         if (pKv->next_index == 0)
             pKv->next_index = new_id + 1;
         else
         {
             while ((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) > 0)
-                pKv = getKV((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
+                pKv = getKvPair((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
 
             pKv->next_index = ((new_id + 1) | HIGHEST_BIT_NUMBER);
         }
@@ -263,6 +264,7 @@ int HttpRespHeaders::appendHeader(resp_kvpair *pKv, const char *pName,
 
     pUpdKv->keyOff = m_buf.size();
     pUpdKv->keyLen = nameLen;
+    pUpdKv->hdr_idx = hdr_idx;
 
     m_buf.append_unsafe(pName, nameLen);
     m_buf.append_unsafe(": ", 2);
@@ -353,7 +355,7 @@ int HttpRespHeaders::add(INDEX index, const char *pName, int nameLen,
         ++m_iHeaderUniqueCount;
     }
     else
-        pKv = getKV(kvOrderNum);
+        pKv = getKvPair(kvOrderNum);
 
     // enough space for replace, use the same keyoff, and update valoff,
     // add padding, make it the same length as before
@@ -364,7 +366,7 @@ int HttpRespHeaders::add(INDEX index, const char *pName, int nameLen,
         return 0;
     }
 
-    if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD) 
+    if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD)
         && (pKv->valLen > 0))
     {
         if ( (index != H_SET_COOKIE || method != LSI_HEADEROP_ADD)
@@ -381,7 +383,7 @@ int HttpRespHeaders::add(INDEX index, const char *pName, int nameLen,
         m_flags |= HRH_F_HAS_HOLE;
     }
 
-    return appendHeader(pKv, pName, nameLen, pVal, valLen, method);
+    return appendHeader(pKv, index, pName, nameLen, pVal, valLen, method);
 }
 
 
@@ -422,7 +424,7 @@ int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
         return LS_FAIL;
 
     assert(m_hLastHeaderKVPairIndex < getTotalCount());
-    resp_kvpair *pKv = getKV(m_hLastHeaderKVPairIndex);
+    resp_kvpair *pKv = getKvPair(m_hLastHeaderKVPairIndex);
 
     //check if it is the end
     if (m_buf.size() != pKv->valOff + pKv->valLen + 2)
@@ -469,7 +471,7 @@ void HttpRespHeaders::_del(int kvOrderNum)
     if (kvOrderNum <= -1)
         return;
 
-    resp_kvpair *pKv = getKV(kvOrderNum);
+    resp_kvpair *pKv = getKvPair(kvOrderNum);
     if ((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) > 0)
         _del((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
 
@@ -522,7 +524,7 @@ char *HttpRespHeaders::getContentTypeHeader(int &len)
         return NULL;
     }
 
-    resp_kvpair *pKv = getKV(index);
+    resp_kvpair *pKv = getKvPair(index);
     len = pKv->valLen;
     return getVal(pKv);
 }
@@ -587,7 +589,7 @@ int HttpRespHeaders::getHeaderKvOrder(const char *pName,
 
     for (int i = 0; i < total; ++i)
     {
-        pKv = getKV(i);
+        pKv = getKvPair(i);
         if (pKv->keyLen == (int)nameLen &&
             strncasecmp(pName, getName(pKv), nameLen) == 0)
         {
@@ -600,22 +602,27 @@ int HttpRespHeaders::getHeaderKvOrder(const char *pName,
 }
 
 
-int HttpRespHeaders::_getHeader(int kvOrderNum, char **pName, int *nameLen,
+int HttpRespHeaders::getHeader(int kvOrderNum, int *idx, struct iovec *name,
                                 struct iovec *iov, int maxIovCount)
 {
     int count = 0;
     resp_kvpair *pKv;
-    if (nameLen)
-        *nameLen = 0;
+    if (name)
+    {
+        name->iov_base = NULL;
+        name->iov_len = 0;
+    }
     while (kvOrderNum >= 0 && count < maxIovCount)
     {
-        pKv = getKV(kvOrderNum);
-        if (pKv->keyLen > 0 && pKv->valLen > 0)
+        pKv = getKvPair(kvOrderNum);
+        if (pKv->keyLen > 0)
         {
-            if (pName && nameLen && 0 == *nameLen)
+            if (name && 0 == name->iov_len)
             {
-                *pName = getName(pKv);
-                *nameLen = pKv->keyLen;
+                name->iov_base = getName(pKv);
+                name->iov_len = pKv->keyLen;
+                if (idx != NULL)
+                    *idx = pKv->hdr_idx;
             }
             iov[count].iov_base = getVal(pKv);
             iov[count++].iov_len = pKv->valLen;
@@ -633,7 +640,7 @@ int  HttpRespHeaders::getHeader(INDEX index, struct iovec *iov,
     if (m_KVPairindex[index] != 0xFF)
         kvOrderNum = m_KVPairindex[index];
 
-    return _getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
+    return getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
 }
 
 
@@ -645,7 +652,7 @@ int HttpRespHeaders::getHeader(const char *pName, int nameLen,
         return getHeader(idx, iov, maxIovCount);
 
     int kvOrderNum = getHeaderKvOrder(pName, nameLen);
-    return _getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
+    return getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
 }
 
 
@@ -655,7 +662,7 @@ const char *HttpRespHeaders::getHeader(INDEX index,
     resp_kvpair *pKv;
     if (m_KVPairindex[index] == 0xFF)
         return NULL;
-    pKv = getKV(m_KVPairindex[index]);
+    pKv = getKvPair(m_KVPairindex[index]);
     *valLen = pKv->valLen;
     return getVal(pKv);
 }
@@ -678,7 +685,7 @@ int HttpRespHeaders::getFirstHeader(const char *pName, int nameLen,
 
 HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
 {
-    register INDEX idx = H_HEADER_END;
+    INDEX idx = H_HEADER_END;
 
     switch (*pHeader++ | 0x20)
     {
@@ -689,7 +696,7 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
     case 'c':
         switch(*(pHeader+7) | 0x20)
         {
-        case 'o':    
+        case 'o':
             if (strncasecmp(pHeader, "onnection", 9) == 0)
                 idx = H_CONNECTION;
             break;
@@ -835,8 +842,8 @@ int HttpRespHeaders::nextHeaderPos(int pos)
     int total = getTotalCount();
     for (int i = pos + 1; i < total; ++i)
     {
-        if (getKV(i)->keyLen > 0
-            && ((getKV(i)->next_index & HIGHEST_BIT_NUMBER) == 0))
+        if (getKvPair(i)->keyLen > 0
+            && ((getKvPair(i)->next_index & HIGHEST_BIT_NUMBER) == 0))
         {
             ret = i;
             break;
@@ -861,7 +868,7 @@ int HttpRespHeaders::getAllHeaders(struct iovec *iov_key,
 
     for (int i = 0; i < total && count < maxIovCount; ++i)
     {
-        resp_kvpair *pKv = getKV(i);
+        resp_kvpair *pKv = getKvPair(i);
         if (pKv->keyLen > 0)
         {
             iov_key[count].iov_base = m_buf.begin() + pKv->keyOff;
@@ -889,7 +896,7 @@ int HttpRespHeaders::appendToIovExclude(IOVec *iovec, const char *pName,
     int total = 0;
     resp_kvpair *pKv;
 
-    for (int i = 0; (pKv = getKV(i)) != NULL; ++i)
+    for (int i = 0; (pKv = getKvPair(i)) != NULL; ++i)
     {
         if ((pKv->keyLen > 0)
             && ((pKv->keyLen != nameLen)
@@ -910,7 +917,7 @@ int HttpRespHeaders::mergeAll()
     resp_kvpair *pKv;
     AutoBuf tmp(m_buf.size());
 
-    for (int i = 0; (pKv = getKV(i)) != NULL; ++i)
+    for (int i = 0; (pKv = getKvPair(i)) != NULL; ++i)
     {
         if (pKv->keyLen > 0)
         {
@@ -935,7 +942,7 @@ void HttpRespHeaders::dump(LogSession *pILog, int dump_header) const
         (int)getTotalCount(), (int)m_iHeaderRemovedCount,
         (int)m_iHeaderUniqueCount, (int)m_flags,
         (int)m_buf.size() );
-    resp_kvpair *pKv = getKV(0);
+    resp_kvpair *pKv = getKvPair(0);
     resp_kvpair *pKvEnd = pKv + getTotalCount();
     while (pKv < pKvEnd)
     {
@@ -1098,4 +1105,47 @@ void HttpRespHeaders::dropConnectionHeaders()
 }
 
 
+int HttpRespHeaders::toHpackIdx(int index)
+{
+    static int lookup[] =
+    {
+        LSHPACK_HDR_ACCEPT_RANGES,
+        -1,                             //H_CONNECTION,
+        LSHPACK_HDR_CONTENT_TYPE,
+        LSHPACK_HDR_CONTENT_LENGTH ,
+        LSHPACK_HDR_CONTENT_ENCODING,
+        LSHPACK_HDR_CONTENT_RANGE,
+        LSHPACK_HDR_CONTENT_DISPOSITION,
+        LSHPACK_HDR_CACHE_CONTROL,
+        LSHPACK_HDR_DATE,
+        LSHPACK_HDR_ETAG,
+        LSHPACK_HDR_EXPIRES,
+        -2,                             //KEEP_ALIVE,
+        LSHPACK_HDR_LAST_MODIFIED,
+        LSHPACK_HDR_LOCATION,
+        -3,                             //LITESPEED_LOCATION,
+        -4,                             //LITESPEED_CACHE_CONTROL,
+        -5,                             //LSI_RSPHDR_PRAGMA,
+        -6,                             //PROXY_CONNECTION,
+        LSHPACK_HDR_SERVER,
+        LSHPACK_HDR_SET_COOKIE,
+        -7,                             //CGI_STATUS,
+        LSHPACK_HDR_TRANSFER_ENCODING,
+        LSHPACK_HDR_VARY,
+        LSHPACK_HDR_WWW_AUTHENTICATE,
+        -8,                             //X_LITESPEED_CACHE,
+        -9,                             //X_LITESPEED_PURGE,
+        -10,                            //X_LITESPEED_TAG,
+        -11,                            //X_LITESPEED_VARY,
+        LSHPACK_HDR_SET_COOKIE,         //LSC_COOKIE ,
+        -13,                            //X_POWERED_BY,
+        LSHPACK_HDR_LINK,
+        -14,                            //HTTP_VERSION,
+        -15                             //H_HEADER_END
+    };
+
+    if (index >= 0 && index < (int)(sizeof(lookup)/sizeof(int)))
+        return lookup[index];
+    return -15;
+};
 

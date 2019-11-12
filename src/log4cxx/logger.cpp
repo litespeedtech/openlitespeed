@@ -25,6 +25,8 @@
 #include "tmplogid.h"
 #include "logsession.h"
 
+#include <lsr/ls_log.h>
+
 #include <stdio.h>
 
 BEGIN_LOG4CXX_NS
@@ -33,6 +35,25 @@ static int s_inited = 0;
 ::GFactory *s_pFactory = NULL;
 Logger *Logger::s_pDefault = NULL;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void c_log(int level, const char *format, ...)
+{
+    if ( log4cxx::Level::isEnabled( level ) )
+    {
+        log4cxx::Logger *l = log4cxx::Logger::getDefault();
+        va_list  va;
+        va_start(va, format);
+        l->vlog(level, format, va);
+        va_end(va);
+    }
+}
+
+#ifdef __cplusplus
+}
+#endif
 
 Logger::Logger(const char *pName)
     : Duplicable(pName)

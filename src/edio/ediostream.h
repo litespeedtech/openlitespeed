@@ -77,7 +77,7 @@ public:
     virtual void suspendRead();
 
     int read(char *pBuf, int size);
-    int readv(struct iovec *vector, size_t count);
+    int readv(struct iovec *vector, int count);
     virtual int onRead() = 0;
 
     virtual void continueWrite();

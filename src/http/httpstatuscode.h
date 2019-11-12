@@ -240,4 +240,5 @@ public:
     LS_NO_COPY_ASSIGN(HttpStatusCode);
 };
 
+LS_SINGLETON_DECL(HttpStatusCode);
 #endif

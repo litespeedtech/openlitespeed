@@ -51,7 +51,7 @@ public:
     void open();
     void setStream(InputStream *pIS)   {   m_pIS = pIS;   }
     virtual int read(char *pBuf, int size);
-    int readv(struct iovec *vector, size_t count);
+    int readv(struct iovec *vector, int count);
     void close() {};
     bool eos()  const  {  return m_iChunkLen == CHUNK_EOF ;       }
     bool fail() const  {  return m_iChunkLen == INVALID_CHUNK;    }

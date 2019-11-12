@@ -175,7 +175,7 @@ int EdStream::read(char *pBuf, int size)
 }
 
 
-int EdStream::readv(struct iovec *vector, size_t count)
+int EdStream::readv(struct iovec *vector, int count)
 {
     int ret = ::readv(getfd(), vector, count);
     if (!ret)

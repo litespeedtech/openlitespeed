@@ -70,7 +70,7 @@ public:
 
     int  appendReqLine(const char *method, int method_len,
                        const char *url, int url_len);
-    int appendHeader(int index, const char *name, int name_len,
+    int appendHeader(int hpack_index, const char *name, int name_len,
                      const char *val, int val_len);
     int appendCookieHeader(ls_str_t *cookies, int count, int total_len);
 
@@ -89,6 +89,9 @@ public:
     {   return m_entries.begin();   }
     const req_header_entry *getEntryEnd() const
     {   return m_entries.end();     }
+
+    void reset();
+    int copy(const UnpackedHeaders &rhs);
 
 private:
     AutoBuf                     m_buf;

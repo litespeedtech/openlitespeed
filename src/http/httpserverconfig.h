@@ -94,10 +94,10 @@ public:
     {   m_iMaxKeepAliveRequests = max - 1;   }
     int16_t getMaxKeepAliveRequests() const
     {   return m_iMaxKeepAliveRequests; }
-    
+
     void setAutoLoadHtaccess(int8_t val)      {   m_iAutoLoadHtaccess = val;    }
     int8_t getAutoLoadHtaccess() const        {   return m_iAutoLoadHtaccess;   }
-    
+
     void setSmartKeepAlive(int8_t val)      {   m_iSmartKeepAlive = val;    }
     int8_t getSmartKeepAlive() const        {   return m_iSmartKeepAlive;   }
 
@@ -199,5 +199,7 @@ public:
     void setCpuAffinity( int count)         {   m_nCpuAffinity = count;     }
 
 };
+
+LS_SINGLETON_DECL(HttpServerConfig);
 
 #endif

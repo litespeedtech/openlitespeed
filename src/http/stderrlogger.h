@@ -49,4 +49,5 @@ public:
     LS_NO_COPY_ASSIGN(StdErrLogger);
 };
 
+LS_SINGLETON_DECL(StdErrLogger);
 #endif

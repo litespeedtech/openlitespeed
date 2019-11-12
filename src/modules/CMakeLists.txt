@@ -8,5 +8,5 @@ add_subdirectory(js)
 add_subdirectory(modinspector)
 add_subdirectory(uploadprogress)
 #add_subdirectory(mod_lsphp)
-#add_subdirectory(modsecurity-ls)
+add_subdirectory(modsecurity-ls)
 

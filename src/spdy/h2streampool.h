@@ -18,14 +18,13 @@
 #ifndef H2STREAMPOOL_H
 #define H2STREAMPOOL_H
 
+#include <lsdef.h>
 #include <util/dlinkqueue.h>
 #include <util/objpool.h>
 
 class H2Stream;
-typedef ObjPool<H2Stream>       Pool;
-class H2StreamPool : public ObjPool<H2Stream>
+class H2StreamPool
 {
-    static Pool s_pool;
     H2StreamPool();
     ~H2StreamPool();
 public:

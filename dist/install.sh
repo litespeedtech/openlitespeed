@@ -72,7 +72,7 @@ install_lsphp7_centos()
 {
     action=install
     ND=nd
-    LSPHPVER=71
+    LSPHPVER=73
     yum -y $action epel-release
     rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
     yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
@@ -92,7 +92,7 @@ install_lsphp7_centos()
 
 install_lsphp7_debian()
 {
-    LSPHPVER=71
+    LSPHPVER=73
 
     grep -Fq  "http://rpms.litespeedtech.com/debian/" /etc/apt/sources.list.d/lst_debian_repo.list
     if [ $? != 0 ] ; then

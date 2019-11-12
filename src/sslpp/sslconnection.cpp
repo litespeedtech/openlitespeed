@@ -103,7 +103,7 @@ int SslConnection::setfd(int fd)
     DEBUG_MESSAGE("[SSL: %p] setfd: %d\n", this, fd);
     if (m_ssl)
     {
-        if  (fd != -1 && m_bio.m_rbioBuf == NULL)
+        if  (fd != -1 && m_bio.m_rbuf == NULL)
         {
             BIO * bio = ls_fdbio_create(fd, &m_bio);
             SSL_set_bio(m_ssl, bio, bio);
@@ -122,9 +122,9 @@ int SslConnection::read(char *pBuf, int len)
     char *p = pBuf;
     char *pEnd = pBuf + len;
     int ret;
-    m_bio.m_rbioWaitEvent = 0;
-    while(p < pEnd && (m_bio.m_rbioIndex < m_bio.m_rbioBuffered
-                       || !m_bio.m_rbioWaitEvent))
+    m_bio.m_need_read_event = 0;
+    while(p < pEnd && (m_bio.m_rbuf_read < m_bio.m_rbuf_used
+                       || !m_bio.m_need_read_event))
     {
         DEBUG_MESSAGE("[SSL: %p] SSL_read\n", this);
         ret = SSL_read(m_ssl, p, pEnd - p);
@@ -237,6 +237,10 @@ int SslConnection::wpending()
 }
 
 
+//return
+//   0: not flushed
+//   1: flushed
+//  -1: error
 int SslConnection::flush()
 {
     DEBUG_MESSAGE("[SSL: %p] flush\n", this);
@@ -657,9 +661,9 @@ int SslConnection::getEnv(HioCrypto::ENV id, char *&pValue, int bufLen)
 char* SslConnection::getRawBuffer(int *len)
 {
     DEBUG_MESSAGE("[SSL: %p] getRawBuffer: len: %d\n", this,
-                  m_bio.m_rbioBuffered);
-    *len = m_bio.m_rbioBuffered;
-    return m_bio.m_rbioBuf;
+                  m_bio.m_rbuf_used);
+    *len = m_bio.m_rbuf_used;
+    return (char *)m_bio.m_rbuf;
 }
 
 
@@ -720,3 +724,11 @@ void SslConnection::setWriteBuffering(int buffering)
 {
     ls_fdbio_set_wbuff(&m_bio, buffering);
 }
+
+
+void SslConnection::releaseIdleBuffer()
+{
+    ls_fdbio_release_idle_buffer(&m_bio);
+}
+
+

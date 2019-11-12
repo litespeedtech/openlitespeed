@@ -262,7 +262,7 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
         verSpdy = HIOS_PROTO_HTTP2;
 #endif
 
-    pHandler = HioHandlerFactory::getHioHandler(verSpdy);
+    pHandler = HioHandlerFactory::getHandler(verSpdy);
     if (!pHandler)
         return LS_FAIL;
 
@@ -278,14 +278,14 @@ int NtwkIOLink::switchToHttp2Handler(HioHandler *pSession)
 {
     assert(pSession == getHandler());
     HioHandler *pHandler =
-        HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP2);
+        HioHandlerFactory::getHandler(HIOS_PROTO_HTTP2);
     if (!pHandler)
         return LS_FAIL;
 
     clearLogId();
     setProtocol(HIOS_PROTO_HTTP2);
     pHandler->attachStream(this);
-    pHandler->h2cUpgrade(pSession);
+    pHandler->h2cUpgrade(pSession, NULL, 0);
     return 0;
 }
 
@@ -343,12 +343,12 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
 
     getClientInfo()->incConn();
     LS_DBG_L(this, "concurrent conn: %zd", pInfo->m_pClientInfo->getConns());
-    
+
     //FIXME below code is from lslbd, should we use this flag?
 //     if (pInfo->m_pClientInfo->isFromLocalAddr(
 //         (const sockaddr *)pInfo->m_pServerAddrInfo->getAddr()))
 //         setFlag(HIO_FLAG_FROM_LOCAL, 1);
-    
+
     return 0;
 }
 
@@ -402,7 +402,11 @@ int NtwkIOLink::handleEvents(short evt)
         return 0;
     }
     if (event & POLLOUT)
+    {
+        LS_DBG_L(this, "***clear HIO_FLAG_PAUSE_WRITE flag**");
+        setFlag(HIO_FLAG_PAUSE_WRITE, 0);
         (*m_pFpList->m_onWrite_fp)(this);
+    }
     m_iInProcess = 0;
 
     switch(getState())
@@ -687,7 +691,7 @@ int NtwkIOLink::flush()
         return LS_DONE;
 
     //For SSL part
-    ret = getSSL()->flush();
+    ret = flushSslWpending();
     switch(ret)
     {
     case 0:
@@ -702,7 +706,7 @@ int NtwkIOLink::flush()
             dumpState("flush", "CW");
             MultiplexerFactory::getMultiplexer()->continueRead(this);
         }
-        
+
         return 1;
     case 1:
         return 0;
@@ -710,25 +714,59 @@ int NtwkIOLink::flush()
         tobeClosed();
         break;
     }
-    
-    
+
+
     return ret;
 }
 
 
-void NtwkIOLink::flushSslWpending()
+//return
+//   0: not flushed
+//   1: flushed
+int NtwkIOLink::flushSslWpending()
 {
+    LS_DBG_L(this, "NtwkIOLink::flushSslWpending()...");
+
+    if (isPauseWrite())
+        return 0;
+    if ((m_iHeaderToSend > 0))
+    {
+        LS_DBG_L(this, "Flush buffered header data ...");
+        write("", 0);
+    }
+    if (getFlag(HIO_FLAG_DELAY_FLUSH))
+        setFlag(HIO_FLAG_DELAY_FLUSH, 0);
+    int ret = 1;
     int pending = m_ssl.wpending();
     LS_DBG_L(this, "SSL wpending: %d", pending);
     if (pending > 0)
-        flush();
+        ret = m_ssl.flush();
+    if (!ret)
+    {
+        LS_DBG_L(this, "[SSL] more to flush, continue write.");
+        MultiplexerFactory::getMultiplexer()->continueWrite(this);
+        setFlag(HIO_FLAG_PAUSE_WRITE, 1);
+    }
+    else if (ret == -1)
+        tobeClosed();
+    else
+        if (!isWantWrite())
+            MultiplexerFactory::getMultiplexer()->suspendWrite(this);
+    return ret;
+}
+
+
+inline void NtwkIOLink::setAllowWrite()
+{
+    m_ssl.setAllowWrite();
 }
 
 
 int NtwkIOLink::onWriteSSL(NtwkIOLink *pThis)
 {
     pThis->dumpState("onWriteSSL", "none");
-    pThis->flushSslWpending();
+    pThis->setAllowWrite();
+
     if (pThis->m_ssl.wantWrite())
     {
         if (!pThis->m_ssl.isConnected() || (pThis->m_ssl.lastRead()))
@@ -737,26 +775,33 @@ int NtwkIOLink::onWriteSSL(NtwkIOLink *pThis)
             return 0;
         }
     }
-    return pThis->doWrite();
+    int ret = 0;
+    if (pThis->m_ssl.isConnected())
+    {
+        ret = pThis->doWrite();
+        pThis->flushSslWpending();
+    }
+    return ret;
 }
 
 
 int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
 {
     pThis->dumpState("onReadSSL", "none");
-    if (pThis->m_ssl.wantRead())
+    if (!pThis->m_ssl.isConnected())
     {
-        int last = pThis->m_ssl.lastWrite();
-        if (!pThis->m_ssl.isConnected() || (last))
-        {
-            pThis->SSLAgain();
-            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
-                && pThis->m_ssl.hasPendingIn())
-                return pThis->doRead();
+        pThis->SSLAgain();
+        if (!pThis->m_ssl.isConnected() || !pThis->isWantRead()
+            || !pThis->m_ssl.hasPendingIn())
             return 0;
-        }
     }
-    return pThis->doRead();
+    int ret = 0;
+    if (pThis->m_ssl.isConnected())
+    {
+        ret = pThis->doRead();
+        pThis->flushSslWpending();
+    }
+    return ret;
 }
 
 
@@ -785,6 +830,18 @@ int NtwkIOLink::closeSSL(NtwkIOLink *pThis)
 
 int NtwkIOLink::shutdown()
 {
+    if (flushSslWpending() != 1)
+    {
+        if (!isPeerShutdown())
+        {
+            releaseHandler();
+            if (getState() == HIOS_CONNECTED)
+                setState(HIOS_CLOSING);
+            MultiplexerFactory::getMultiplexer()->continueWrite(this);
+            return 0;
+        }
+    }
+
     if (getState() == HIOS_SHUTDOWN)
         return 0;
     setState(HIOS_SHUTDOWN);
@@ -892,6 +949,12 @@ static int matchToken(int token)
     else
         return ((token > NtwkIOLink::getPrevToken())
                 || (token <= NtwkIOLink::getToken()));
+}
+
+
+void NtwkIOLink::releaseIdleSslBuffer()
+{
+    m_ssl.releaseIdleBuffer();
 }
 
 
@@ -1054,7 +1117,7 @@ int NtwkIOLink::sendfileFinish(int written)
 }
 
 
-int NtwkIOLink::sendfile(int fdSrc, off_t off, off_t size)
+int NtwkIOLink::sendfile(int fdSrc, off_t off, size_t size, int flag)
 {
     int written;
 
@@ -1391,7 +1454,9 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 
 void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 {
-    pThis->flushSslWpending();
+    if (pThis->flushSslWpending() == 1)
+        pThis->releaseIdleSslBuffer();
+
     if (pThis->allowWrite() && (pThis->m_ssl.wantWrite()))
         onWriteSSL_T(pThis);
     if (pThis->allowRead() && (pThis->m_ssl.wantRead()))
@@ -1421,24 +1486,26 @@ void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 int NtwkIOLink::onReadSSL_T(NtwkIOLink *pThis)
 {
     //pThis->dumpState( "onReadSSL_t", "none" );
-    if (pThis->m_ssl.wantRead())
+    if (!pThis->m_ssl.isConnected())
     {
-        int last = pThis->m_ssl.lastWrite();
-        if (!pThis->m_ssl.isConnected() || (last))
-        {
-            pThis->SSLAgain();
-            if (pThis->m_ssl.isConnected() && pThis->isWantRead()
-                && pThis->m_ssl.hasPendingIn())
-                return pThis->doRead();
+        pThis->SSLAgain();
+        if (!pThis->m_ssl.isConnected() || !pThis->isWantRead()
+            || !pThis->m_ssl.hasPendingIn())
             return 0;
-        }
     }
-    return pThis->doReadT();
+    int ret = 0;
+    if (pThis->m_ssl.isConnected())
+    {
+        ret = pThis->doRead();
+        pThis->flushSslWpending();
+    }
+    return ret;
 }
 
 
 int NtwkIOLink::onWriteSSL_T(NtwkIOLink *pThis)
 {
+    pThis->setAllowWrite();
     //pThis->dumpState( "onWriteSSL_T", "none" );
     if (pThis->m_ssl.wantWrite())
     {
@@ -1451,8 +1518,12 @@ int NtwkIOLink::onWriteSSL_T(NtwkIOLink *pThis)
         }
 
     }
-    if (pThis->allowWrite())
-        return pThis->doWrite();
+    if (pThis->m_ssl.isConnected() && pThis->allowWrite())
+    {
+        int ret = pThis->doWrite();
+        pThis->flushSslWpending();
+        return ret;
+    }
     else
         MultiplexerFactory::getMultiplexer()->suspendWrite(pThis);
     return 0;
@@ -1579,6 +1650,12 @@ void NtwkIOLink::handle_acceptSSL_EIO_Err()
 }
 
 
+void NtwkIOLink::enableTlsAccel()
+{
+    m_ssl.setWriteBuffering(1);
+}
+
+
 int NtwkIOLink::acceptSSL()
 {
     int ret = m_ssl.accept();
@@ -1595,6 +1672,10 @@ int NtwkIOLink::acceptSSL()
                     getClientInfo()->getSslNewConn());
             getClientInfo()->setOverLimitTime(DateTime::s_curTime);
             getClientInfo()->setAccess(AC_BLOCK);
+        }
+        else
+        {
+            enableTlsAccel();
         }
 
     }
@@ -1615,10 +1696,13 @@ int NtwkIOLink::sslSetupHandler()
     }
     else
     {
-        LS_DBG_L(this, "Next Protocol Negotiation result: %s",
-                 getProtocolName((HiosProtocol)spdyVer));
+        LS_DBG_L(this, "ALPN result: %s",
+                 getProtocolName((HiosProtocol)spdyVer)->ptr);
     }
-    return setupHandler((HiosProtocol)spdyVer);
+    int ret = setupHandler((HiosProtocol)spdyVer);
+    if (isWantRead() && m_ssl.hasPendingIn())
+        handleEvents(POLLIN);
+    return ret;
 }
 
 

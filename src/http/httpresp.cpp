@@ -30,11 +30,6 @@
 
 #include <string.h>
 
-static const char *s_protocol[] =
-{
-    "http://",
-    "https://"
-};
 
 HttpResp::HttpResp(ls_xpool_t *pool)
     : m_respHeaders(pool)

@@ -122,4 +122,5 @@ public:
     LS_NO_COPY_ASSIGN(RewriteEngine);
 };
 
+LS_SINGLETON_DECL(RewriteEngine);
 #endif

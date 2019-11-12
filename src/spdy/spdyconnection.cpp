@@ -26,6 +26,8 @@
 #include <log4cxx/logger.h>
 #include <util/iovec.h>
 #include <util/datetime.h>
+#include <util/ssnprintf.h>
+#include <ctype.h>
 
 static hash_key_t int_hash(const void *p)
 {
@@ -320,8 +322,8 @@ int SpdyConnection::processSettingFrame(SpdyFrameHeader *pHeader)
         iEntryID = settingPairs.getID();
         iEntryValue = settingPairs.getValue();
         LS_DBG_L(getLogSession(), "%s(%d) value: %d, Flags=%d",
-                 (iEntryID < 8) ? cpEntryNames[iEntryID] : "INVALID",
-                 iEntryID, iEntryValue, ucEntryFlags);
+                 (iEntryID < 8) ? cpEntryNames[iEntryID] : "INVALID", iEntryID, iEntryValue,
+                 ucEntryFlags);
         switch (iEntryID)
         {
         case SPDY_SETTINGS_INITIAL_WINDOW_SIZE:
@@ -709,7 +711,7 @@ SpdyStream *SpdyConnection::getNewStream(uint32_t uiStreamID,
 {
     SpdyStream *pStream;
     HioHandler *pSession =
-        HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
+        HioHandlerFactory::getHandler(HIOS_PROTO_HTTP);
     if (!pSession)
         return NULL;
 
@@ -881,7 +883,7 @@ int SpdyConnection::processPingFrame(SpdyFrameHeader *pHeader)
     gettimeofday(&CurTime, NULL);
     msec = (CurTime.tv_sec - m_timevalPing.tv_sec) * 1000;
     msec += (CurTime.tv_usec - m_timevalPing.tv_usec) / 1000;
-    LS_DBG_H(getLogSession(), "Received PING, ID=%ud, Round trip "
+    LS_DBG_H(getLogSession(), "Received PING, ID=%d, Round trip "
              "times=%ld milli-seconds", m_uiLastPingID, msec);
     return 0;
 }
@@ -1038,8 +1040,8 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
     iovec *pIov;
     iovec *pIovEnd;
     int count;
-    char *key;
-    int keyLen;
+    int idx;
+    struct iovec name;
     int valLen;
 
     pRespHeaders->dropConnectionHeaders();
@@ -1066,8 +1068,7 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
         memmove(pCur, s_achSpdy3StatusLine, sizeof(s_achSpdy3StatusLine) - 1);
         pCur += sizeof(s_achSpdy3StatusLine) - 1;
     }
-    const char *p =
-        HttpStatusCode::getInstance().getCodeString(
+    const char *p = HttpStatusCode::getInstance().getCodeString(
             pRespHeaders->getHttpCode()) + 1;
     *pCur++ = *p++;
     *pCur++ = *p++;
@@ -1077,12 +1078,12 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
          pos != pRespHeaders->HeaderEndPos();
          pos = pRespHeaders->nextHeaderPos(pos))
     {
-        count = pRespHeaders->getHeader(pos, &key, &keyLen, iov,
+        count = pRespHeaders->getHeader(pos, &idx, &name, iov,
                                         MAX_LINE_COUNT_OF_MULTILINE_HEADER);
 
         if (count <= 0)
             continue;
-        if (keyLen + 8 > pBufEnd - pCur)
+        if ((long)name.iov_len + 8 > pBufEnd - pCur)
         {
             if (m_deflator.compress(achHdrBuf, pCur - achHdrBuf, getBuf(), 0) == -1)
                 return LS_FAIL;
@@ -1090,13 +1091,15 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
         }
 
         if (m_bVersion == 2)
-            pCur = beWriteUint16(pCur, keyLen);
+            pCur = beWriteUint16(pCur, name.iov_len);
         else
-            pCur = beWriteUint32(pCur, keyLen);
-        char *pKeyEnd = key + keyLen;
+            pCur = beWriteUint32(pCur, name.iov_len);
+
+        char *p = (char *)name.iov_base;
+        char *pKeyEnd = p + name.iov_len;
         //to lowercase
-        while (key < pKeyEnd)
-            *pCur++ = tolower(*key++);
+        while (p < pKeyEnd)
+            *pCur++ = tolower(*p++);
 
         pIov = iov;
         pIovEnd = &iov[count];
@@ -1145,7 +1148,7 @@ int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     uint32_t temp32;
     int headerOffset = getBuf()->size();
 
-    LS_DBG_H(getStream()->getLogger(), "[%s-%d] sendRespHeaders()", 
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] sendRespHeaders()",
              getStream()->getLogId(), uiStreamID);
 
     getBuf()->guarantee(28);
@@ -1184,19 +1187,20 @@ int SpdyConnection::onWriteEx()
     flush();
     if (!isEmpty())
         return 0;
-    if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
+    if (getStream()->isPauseWrite())
         return 0;
 
     TDLinkQueue<SpdyStream> *pQue = &m_priQue[0];
     TDLinkQueue<SpdyStream> *pEnd = &m_priQue[SPDY_STREAM_PRIORITYS];
 
-    for (; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
+
+    for( ; pQue < pEnd && m_iCurDataOutWindow > 0; ++pQue)
     {
         if (pQue->empty())
             continue;
         int count = pQue->size();
-        while (count-- > 0 && m_iCurDataOutWindow > 0
-               && (pSpdyStream = pQue->pop_front()) != NULL)
+        while(count-- > 0 && m_iCurDataOutWindow > 0
+              && (pSpdyStream = pQue->pop_front()) != NULL)
         {
             if (pSpdyStream->isWantWrite())
             {
@@ -1211,7 +1215,7 @@ int SpdyConnection::onWriteEx()
             if (pSpdyStream->getState() != HIOS_CONNECTED)
                 recycleStream(pSpdyStream->getStreamID());
         }
-        if (getStream()->canWrite() & HIO_FLAG_BUFF_FULL)
+        if (getStream()->isPauseWrite())
             return 0;
     }
 
@@ -1250,11 +1254,4 @@ void SpdyConnection::resetStream(StreamMap::iterator it,
     sendRstFrame(it.second()->getStreamID(), code);
     recycleStream(it);
 }
-
-
-NtwkIOLink *SpdyConnection::getNtwkIoLink()
-{
-    return getStream()->getNtwkIoLink();
-}
-
 

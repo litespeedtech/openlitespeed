@@ -108,14 +108,10 @@ public:
     }
     int sendFinFrame(uint32_t uiStreamID)
     {
-        char achHeader[8];
-        uint32_t *pHeader = (uint32_t *)achHeader;
-        *pHeader = htonl(uiStreamID);
-        achHeader[4] = 1;
-        achHeader[5] = 0;
-        achHeader[6] = 0;
-        achHeader[7] = 0;
-        return cacheWrite(achHeader, sizeof(achHeader));
+        uint32_t achHeader[2];
+        achHeader[0] = htonl(uiStreamID);
+        achHeader[1] = htonl(0x01000000);
+        return cacheWrite((char *)achHeader, sizeof(achHeader));
     }
 
     void dataFrameSent(int bytes)
@@ -139,12 +135,6 @@ public:
 
     void recycleStream(uint32_t uiStreamID);
     static void replaceZero(char *pValue, int ilength);
-    uint16_t getEvents()
-    {   return getStream()->getEvents();    }
-    int isFromLocalAddr() const
-    {   return getStream()->isFromLocalAddr();  }
-
-    NtwkIOLink *getNtwkIoLink();
 
 private:
     typedef THash< SpdyStream * > StreamMap;

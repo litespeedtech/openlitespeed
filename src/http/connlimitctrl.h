@@ -137,5 +137,6 @@ public:
     LS_NO_COPY_ASSIGN(ConnLimitCtrl);
 };
 
+LS_SINGLETON_DECL(ConnLimitCtrl);
 #endif
 

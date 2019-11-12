@@ -1634,8 +1634,8 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
                        );
 
             }
-            
-            //Allow quic 
+
+            //Allow quic
             int iEnableQuic = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableQuic", 0, 1, 1);
             if (iEnableQuic)
             {
@@ -2359,7 +2359,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     SslUtil::initDefaultCA(pCAFile, pCAPath);
 
     initQuic(pNode);
-    
+
     return 0;
 }
 
@@ -3036,14 +3036,14 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
         LS_INFO(ConfigCtx::getCurConfigCtx(), "httpdWorkers: %d, "
-                "Num of Processors: %d", 
+                "Num of Processors: %d",
                 HttpServerConfig::getInstance().getChildren(),
                 iNumProc);
 #else
         HttpServerConfig::getInstance().setChildren(1);
 #endif
 
-            
+
         const char *pGDBPath = pRoot->getChildValue("gdbPath");
 
         if (pGDBPath)
@@ -3532,7 +3532,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 #define GET_VAL(node, name, min, max, def) \
     ConfigCtx::getCurConfigCtx()->getLongValue(node, name, min, max, def)
 
-    //Server tunning level enable quic 
+    //Server tunning level enable quic
     enableQuic = GET_VAL(pNode, "quicEnable", 0, 1, QUIC_ENABLED_BY_DEFAULT);
     if (!enableQuic)
         return 0;
@@ -3541,7 +3541,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     pShmDir = pNode->getChildValue("quicShmDir");
     if (!pShmDir)
         pShmDir = "/dev/shm";
-    
+
     lsquic_engine_init_settings(&settings, LSENG_SERVER);
 
     pVersions = pNode->getChildValue("quicVersions");
@@ -3588,10 +3588,8 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 
     settings.es_support_push = GET_VAL(pNode, "quicPush", 0, 1, 1);
 
-    
     settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 2, 0);
-    
-    
+
     settings.es_proc_time_thresh = 100000;
     settings.es_pace_packets = 1;
 
@@ -3670,7 +3668,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     }
 
     int maxconns = ConnLimitCtrl::getInstance().getMaxConns();
-    unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 3);
+    unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 5);
     LS_NOTICE(ConfigCtx::getCurConfigCtx(),
               "The maximum number of file descriptor limit is set to %llu.",
               maxfds);

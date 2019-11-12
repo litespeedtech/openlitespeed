@@ -38,7 +38,7 @@ public:
 
     ////////////////////////////
     int writev(IOVec &vector, int total) {return 0;};
-    virtual int sendfile(int fdSrc, off_t off, off_t size)
+    virtual int sendfile(int fdSrc, off_t off, size_t size, int flag)
     {   return 0;   }
     int close()  { return -1;};
     int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);

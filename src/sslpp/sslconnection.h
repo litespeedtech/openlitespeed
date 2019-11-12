@@ -47,6 +47,7 @@ public:
     char lastWrite() const  {   return m_iWant & LAST_WRITE;    }
     char wantCert() const   {   return m_iWant & WANT_CERT;     }
     void clearWantCert()    {   m_iWant &= ~WANT_CERT;          }
+    void setAllowWrite()    {   ls_fdbio_clear_wblock(&m_bio);  }
 
     int  getFlag(int v) const   {   return m_flag & v;     }
     void setFlag(int f, int v)  {   m_flag = (m_flag & ~f) | (v ? f : 0);  }
@@ -124,8 +125,9 @@ public:
     // raw data which can be used in a redirect (see ntwkiolink.cpp).
     char *getRawBuffer(int *len);
     bool hasPendingIn() const
-    {   return m_bio.m_rbioBuffered > m_bio.m_rbioIndex;   }
+    {   return m_bio.m_rbuf_used > m_bio.m_rbuf_read;   }
 
+    void releaseIdleBuffer();
 
     bool isWaitingAsyncCert() const
     {   return (getFlag(F_ASYNC_CERT | F_ASYNC_CERT_FAIL) == F_ASYNC_CERT); }

@@ -8,7 +8,7 @@ UnpackedHeaders::UnpackedHeaders()
 {
     LS_ZERO_FILL(m_url, m_methodLen);
     m_buf.append("\0\0\0\0", 4);
-    m_entries.setCapacity(16);
+    m_entries.alloc(16);
 }
 
 
@@ -21,6 +21,21 @@ UnpackedHeaders::~UnpackedHeaders()
         if (m_host.ptr)
             ls_pfree(m_host.ptr);
     }
+}
+
+
+void UnpackedHeaders::reset()
+{
+    if (m_alloc_str)
+    {
+        if (m_url.ptr)
+            ls_pfree(m_url.ptr);
+        if (m_host.ptr)
+            ls_pfree(m_host.ptr);
+    }
+    LS_ZERO_FILL(m_url, m_methodLen);
+    m_buf.resize(4);
+    m_entries.clear();
 }
 
 
@@ -364,10 +379,13 @@ int UnpackedHeaders::set(ls_str_t *method, ls_str_t* url,
     {
         while(headers->key.ptr)
         {
-            int index = -1;
+            int index = UPK_HDR_UNKNOWN;
             if (headers->key.len == 15
                 && strcmp(headers->key.ptr, "accept-encoding") == 0)
                 index = HttpHeader::H_ACC_ENCODING;
+            else if(headers->key.len == 10
+                && strcmp(headers->key.ptr, "user-agent") == 0)
+                index = HttpHeader::H_USERAGENT;
             if (appendHeader(index, headers->key.ptr, headers->key.len,
                                  headers->val.ptr, headers->val.len) == LS_FAIL)
                 return LS_FAIL;
@@ -377,3 +395,20 @@ int UnpackedHeaders::set(ls_str_t *method, ls_str_t* url,
     endHeader();
     return LS_OK;
 }
+
+
+int UnpackedHeaders::copy(const UnpackedHeaders &rhs)
+{
+    m_buf.clear();
+    if (m_buf.append(rhs.m_buf.begin(), rhs.m_buf.size()) == LS_FAIL)
+        return LS_FAIL;
+    m_entries.copy(rhs.m_entries);
+    m_url.ptr = NULL;
+    m_url.len = rhs.m_url.len;
+    m_host.ptr = NULL;
+    m_host.len = rhs.m_host.len;
+    m_alloc_str = 0;
+    m_methodLen = rhs.m_methodLen;
+    return LS_OK;
+}
+

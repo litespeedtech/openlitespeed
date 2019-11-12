@@ -112,6 +112,7 @@ private:
 
 };
 
+LS_SINGLETON_DECL(ModuleManager);
 
 /***
  * Inheriting of the lsi_module_config_t
@@ -185,22 +186,22 @@ public:
     static int  parseConfigList(const XmlNodeList *moduleConfigNodeList,
                                 ModuleConfig *pModuleConfig, int level, const char *name);
 
-    
-    
-    
+
+
+
     static int getKeyIndex(lsi_config_key_t *keys, const char *key, int key_len);
     static void releaseModuleParamInfo(module_param_info_t *param_arr,
                                        int param_count);
-    
+
     static const char *ls_getconfkey(const char **pParseBegin,
                                  const char *pParseEnd, const char **pKeyEnd);
     //return the val_out length
     static int escapeParamVal(const char *val_in, int len, char *val);
-    
+
     static int ls_get_escconfval(const char **pParseBegin,
                                     const char *pParseEnd,
                                     char *val);
-    
+
     static int preParseModuleParam(const char *param, int paramLen,
                                    int level, lsi_config_key_t *keys,
                                    module_param_info_t *param_arr,

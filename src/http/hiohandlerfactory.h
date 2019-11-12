@@ -27,7 +27,7 @@ class HioHandlerFactory
     HioHandlerFactory(const HioHandlerFactory &rhs);
     void operator=(const HioHandlerFactory &rhs);
 public:
-    static HioHandler *getHioHandler(HiosProtocol ver);
+    static HioHandler *getHandler(HiosProtocol ver);
 };
 #endif // HIOHANDLERFACTORY_H
 

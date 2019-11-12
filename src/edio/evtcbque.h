@@ -80,4 +80,7 @@ public:
 
     LS_NO_COPY_ASSIGN(EvtcbQue);
 };
+
+LS_SINGLETON_DECL(EvtcbQue);
+
 #endif  //CALLBACKQUEUE_H

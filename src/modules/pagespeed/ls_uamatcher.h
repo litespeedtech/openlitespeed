@@ -65,16 +65,16 @@ class LsUAMatcher : public TSingleton<LsUAMatcher>
 public:
     LsUAMatcher();
     ~LsUAMatcher();
-    
+
     uint32_t getUaCode(const char *ua_str);
-    
+
     UA_DEVICE_TYPE getDeviceType(uint32_t code);
     UA_DEVICE_TYPE getDeviceType(const char *ua_str)
     {
         return getDeviceType(getUaCode(ua_str));
     }
-    
-    
+
+
     bool testbit(uint32_t code, int flagBit)
     {
         return (code & flagBit ? true : false);
@@ -87,5 +87,6 @@ private:
     LS_NO_COPY_ASSIGN(LsUAMatcher);
 };
 
+LS_SINGLETON_DECL(LsUAMatcher);
 
 #endif  // LS_UA_MATCHER_H_

@@ -35,7 +35,7 @@ void CacheHash::update(XXH64_state_t *pState, const char *pBuf, int len)
 
 hash_key_t CacheHash::to_ghash_key(const void *__s)
 {
-    register hash_key_t __h = *((uint64_t *)__s);
+    hash_key_t __h = *((uint64_t *)__s);
 
     return __h;
 }

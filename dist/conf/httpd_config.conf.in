@@ -41,8 +41,8 @@ expires {
 }
 
 tuning{
-    maxConnections               2000
-    maxSSLConnections            1000
+    maxConnections               10000
+    maxSSLConnections            10000
     connTimeout                  300 
     maxKeepAliveReq              10000
     smartKeepAlive               0 
@@ -125,8 +125,9 @@ accessControl{
 extProcessor lsphp{
     type                            lsapi 
     address                         uds:/%DEFAULT_TMP_DIR%/lsphp.sock 
-    maxConns                        35 
-    env                             PHP_LSAPI_CHILDREN=35 
+    maxConns                        10 
+    env                             PHP_LSAPI_CHILDREN=10
+    env                             LSAPI_AVOID_FORK=200M
     initTimeout                     60 
     retryTimeout                    0 
     persistConn                     1 
@@ -139,8 +140,8 @@ extProcessor lsphp{
     priority                        0 
     memSoftLimit                    2047M 
     memHardLimit                    2047M 
-    procSoftLimit                   400 
-    procHardLimit                   500 
+    procSoftLimit                   1400 
+    procHardLimit                   1500 
 }
 
 scriptHandler{

@@ -61,7 +61,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.61"
+#define MODULE_VERSION_INFO         "1.62"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -712,8 +712,8 @@ static int32_t getVaryFlag(const lsi_session_t *session, CacheConfig *pConfig)
                                         (*iter)->len());
             if (index <= -1)
             {
-                g_api->log(session, LSI_LOG_ERROR, "[%s] vary request header"
-                            " \"%.*s\" not defined!!!!!!!!\n",
+                g_api->log(session, LSI_LOG_WARN, "[%s] vary request header"
+                            " \"%.*s\" not defined!\n",
                            ModuleNameStr, (*iter)->len(), (*iter)->c_str());
                 return LS_FAIL;
             }
@@ -1275,12 +1275,24 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
         {
             if ((*pEntry)->isStale() && !(*pEntry)->isUpdating())
             {
-                myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                                 myData->cePublicHash, &myData->cacheKey, 0);
-                return CE_STATE_UPDATE_STALE;
+                CacheEntry *pNewEntry = myData->pConfig->getStore()->
+                                        createCacheEntry(myData->cePublicHash,
+                                        &myData->cacheKey, 0);
+                if (pNewEntry)
+                {
+                    myData->pEntry = pNewEntry;
+                    return CE_STATE_UPDATE_STALE;
+                }
+                else
+                {
+                 
+                    g_api->log(rec->session, LSI_LOG_ERROR,
+                               "[%s] createEntry failed for update stale.\n",
+                               ModuleNameStr);
+                }
             }
-            else
-                return CE_STATE_HAS_PUBLIC_CACHE;
+
+            return CE_STATE_HAS_PUBLIC_CACHE;
         }
     }
 
@@ -1291,7 +1303,7 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
 }
 
 
-int releaseMData(void *data)
+static int releaseMData(void *data)
 {
     MyMData *myData = (MyMData *)data;
     if (myData)
@@ -2559,6 +2571,10 @@ static int checkAssignHandler(lsi_param_t *rec)
             }
             else
             {
+                //Since it is served from cache, so bypass modsec checking
+                //Becaue when cache entry created, it was checked.
+                g_api->set_req_env(rec->session,  "modsecurity", 11, "off", 3);
+                
                 //myData->pEntry->incHits();
                 myData->iHaveAddedHook = 3; //state of using handler
                 g_api->log(rec->session, LSI_LOG_DEBUG,

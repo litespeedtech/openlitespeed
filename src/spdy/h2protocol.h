@@ -197,6 +197,20 @@ struct Priority_st
 };
 
 
+class H2StreamHasher
+{
+public:
+    uint32_t hash_to_slot(uint32_t k, uint32_t buckets) const
+    {   return (k / 2) % buckets;     }
+    uint32_t key_to_hash(uint32_t k) const
+    {   return k;               }
+    bool comp_hash(uint32_t h1, uint32_t h2) const
+    {   return h1 == h2;    }
+    bool comp_key(uint32_t k1, uint32_t k2) const
+    {   return k1 == k2;    }
+};
+
+
 #define H2_MAX_DATAFRAM_SIZE        16777215
 #define H2_DEFAULT_DATAFRAME_SIZE   16384
 #define H2_FCW_INIT_SIZE            65535

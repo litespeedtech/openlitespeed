@@ -25,7 +25,7 @@
 
 #if !(defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__))
 #define HS_AIO (SIGRTMIN + 4)
-#define LS_HAS_RTSIG 
+#define LS_HAS_RTSIG
 #endif
 
 typedef void (*sigevthdlr_t)(int, void *);
@@ -47,7 +47,7 @@ private:
     long            m_mergeable;
     sigset_t        m_sigset;
     SigEvtHdlrInfo *m_rtsig_hdlrs;
- 
+
     SigEventDispatcher();
 
     SigEventDispatcher(const SigEventDispatcher &other);
@@ -61,10 +61,11 @@ public:
     int registerRtsig(sigevthdlr_t hdlr, void *param, bool merge = false);
     int beginWatch();
 #endif //defined(LS_HAS_RTSIG)
-    
+
     virtual int handleEvents(short event);
 
 };
 
+LS_SINGLETON_DECL(SigEventDispatcher);
 
 #endif //SIGEVENTDISPATCHER_H

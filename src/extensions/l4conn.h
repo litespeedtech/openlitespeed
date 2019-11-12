@@ -43,7 +43,7 @@ public:
     int onWrite();
     int onRead();
     int close();
-    int readv(iovec *vector, size_t count)  {    return 0;  }
+    int readv(iovec *vector, int count)  {    return 0;  }
 
     int onInitConnected();
 

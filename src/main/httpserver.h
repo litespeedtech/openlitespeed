@@ -147,9 +147,9 @@ public:
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig = 0);
     void addQuicEngine(QuicEngine *pEngine);
     QuicEngine *getQuicEngine() const;
-
-
 };
+
+LS_SINGLETON_DECL(HttpServer);
 
 extern int removeMatchFile(const char *pDir, const char *prefix);
 

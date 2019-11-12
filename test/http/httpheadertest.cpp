@@ -282,27 +282,21 @@ SUITE(HttpHeaderTest)
     {
         struct iovec iov[10];
         int total = 0;
-        char *key;
-        int keyLen;
+        struct iovec name;
+        int idx;
 
         printf("\r\n*******************************************************************\r\n\r\n");
         for (int pos = pRespHeaders->HeaderBeginPos();
              pos != pRespHeaders->HeaderEndPos();
              pos = pRespHeaders->nextHeaderPos(pos))
         {
-            int count = pRespHeaders->getHeader(pos, &key, &keyLen, iov, 10);
+            int count = pRespHeaders->getHeader(pos, &idx, &name, iov, 10);
             if (count >= 1)
             {
-                for (int i = 0; i < keyLen; ++i)
-                    printf("%c", *(key + i));
-
-                printf(": ");
+                printf("%.*s: ", (int)name.iov_len, (char *)name.iov_base);
                 for (int j = 0; j < count; ++j)
                 {
-                    for (size_t ii = 0; ii < iov[j].iov_len; ++ii)
-                        printf("%c", *((char *)iov[j].iov_base + ii));
-
-                    printf("\r\n");
+                    printf("%.*s\r\n", (int)iov[j].iov_len, (char *)iov[j].iov_base);
                 }
                 total ++;
             }
@@ -754,7 +748,7 @@ SUITE(HttpHeaderTest)
         IOVec::iterator it;
         char *ph;
         char *p;
-        
+
 
         static const char * s_pHeaders[HttpRespHeaders::H_HEADER_END] =
         {

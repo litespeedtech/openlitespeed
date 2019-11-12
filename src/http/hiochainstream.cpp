@@ -174,12 +174,12 @@ int HioChainStream::write(const char *pBuf, int size)
 
 }
 
-int HioChainStream::sendfile(int fdSrc, off_t off, off_t size)
+int HioChainStream::sendfile(int fdSrc, off_t off, size_t size, int flag)
 {
     //if (getState()!=HIOS_CONNECTED)
     //    return -1;
     if (m_pParentSession)
-        return m_pParentSession->writeRespBodySendFile(fdSrc, off, size);
+        return m_pParentSession->writeRespBodySendFile(fdSrc, off, size, flag);
     if (!getFlag(HIO_FLAG_BLACK_HOLE))
         return 0;
     else

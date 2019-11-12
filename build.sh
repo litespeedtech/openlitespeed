@@ -20,7 +20,6 @@
 ###    Author: dxu@litespeedtech.com (David Shue)
 
 VERSION=1.0.0
-LIBQUICVER=34e9ac5f5d393ba9bc760aa06edcd14a2586316e
 
 moduledir="modreqparser cache modinspector uploadprogress "
 OS=`uname`
@@ -365,6 +364,9 @@ preparelibquic()
             rm -rf lsquic
             git clone https://github.com/litespeedtech/lsquic.git
             cd lsquic
+            
+            LIBQUICVER=`cat ../LSQUICCOMMIT`
+            echoY "LIBQUICVER is ${LIBQUICVER}"
             git checkout ${LIBQUICVER}
             git submodule update --init --recursive
             cd ..
