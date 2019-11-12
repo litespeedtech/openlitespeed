@@ -15,31 +15,42 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+
 #include "hiostream.h"
+#include <assert.h>
+#include <lsr/ls_str.h>
 #include <spdy/unpackedheaders.h>
 
-static const char *s_sProtoName[] =
+static const ls_str_t s_sProtoName[] =
 {
-    "HTTP/1.x",
-    "SPDY/2",
-    "SPDY/3",
-    "SPDY/3.1",
-    "HTTP/2",
-    "QUIC",
+    LS_STR_CONST("HTTP"),
+    LS_STR_CONST("SPDY2"),
+    LS_STR_CONST("SPDY3"),
+    LS_STR_CONST("SPDY3.1"),
+    LS_STR_CONST("HTTP2"),
+    LS_STR_CONST("QUIC"),
+    LS_STR_CONST("UNKNOWN"),
 };
 
-const char *HioStream::getProtocolName(HiosProtocol proto)
+
+const ls_str_t *HioStream::getProtocolName(HiosProtocol proto)
 {
-    if (proto >= HIOS_PROTO_MAX)
-        return "UNKNOWN";
-    return s_sProtoName[proto];
+    if (proto > HIOS_PROTO_MAX)
+        proto = HIOS_PROTO_MAX;
+    return &s_sProtoName[proto];
 }
 
 
 HioStream::~HioStream()
 {
-    if (m_pReqHeaders)
-        delete m_pReqHeaders;
+}
+
+
+void HioStream::switchHandler(HioHandler *pCurrent, HioHandler *pNew)
+{
+    assert(m_pHandler == pCurrent);
+    pCurrent->detachStream();
+    pNew->attachStream(this);
 }
 
 
@@ -60,15 +71,7 @@ HioHandler::~HioHandler()
 
 }
 
-
-int HioHandler::h2cUpgrade(HioHandler *pOld)
+int HioHandler::h2cUpgrade(HioHandler *pOld, const char * pBuf, int size)
 {
     return LS_FAIL;
-}
-
-void HioStream::switchHandler(HioHandler *pCurrent, HioHandler *pNew)
-{
-    assert(m_pHandler == pCurrent);
-    pCurrent->detachStream();
-    pNew->attachStream(this);
 }

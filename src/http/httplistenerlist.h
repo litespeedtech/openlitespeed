@@ -69,18 +69,18 @@ public:
         :m_pVHostMap(NULL)
         {}
     ~ServerAddrInfo()       {}
-    
+
     int init(const struct sockaddr *pAddr);
-    const struct sockaddr *getAddr() const  
+    const struct sockaddr *getAddr() const
     {   return (const struct sockaddr *)m_serverAddr;   }
     const AutoStr2 *getAddrStr() const      {   return &m_serverAddrStr;    }
-    const VHostMap *getVHostMap() const     {   return m_pVHostMap;         } 
-    
+    const VHostMap *getVHostMap() const     {   return m_pVHostMap;         }
+
     void setVHostMap(const VHostMap *pMap)  {   m_pVHostMap = pMap;     }
 
     static hash_key_t hasher(const void *pAddr);
     static int value_cmp(const void *v1, const void *v2);
-    
+
 private:
     char                m_serverAddr[28];
     AutoStr2            m_serverAddrStr;
@@ -95,10 +95,10 @@ class ServerAddrRegistry : public TSingleton<ServerAddrRegistry>
 public:
 
     void init(HttpListenerList *pList);
-    
+
     const ServerAddrInfo *get(const struct sockaddr *pAddr,
                               const void *pProcessor);
-    
+
 private:
     ServerAddrRegistry();
     ~ServerAddrRegistry()   {   m_registry.release_objects();  }
@@ -107,5 +107,7 @@ private:
     HttpListenerList       *m_pListenerList;
 
 };
+
+LS_SINGLETON_DECL(ServerAddrRegistry);
 
 #endif

@@ -20,9 +20,12 @@
 
 #include <lsdef.h>
 #include <http/hiostream.h>
+#include <spdy/unpackedheaders.h>
+#include <spdy/h2protocol.h>
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
 #include <util/datetime.h>
+#include <lstl/thash.h>
 
 #include <inttypes.h>
 
@@ -30,36 +33,41 @@ struct Priority_st;
 class H2Connection;
 class NtwkIOLink;
 
-class H2Stream: public DLinkedObj, public HioStream
+class H2Stream : public DLinkedObj, public HioStream
+               , public HentryInt<H2Stream, uint32_t, H2StreamHasher>
 {
 
 public:
     H2Stream();
     ~H2Stream();
 
-    int init(uint32_t StreamID, H2Connection *pH2Conn,
-             HioHandler *pHandler, Priority_st *pPriority = NULL);
-    int onInitConnected(bool bUpgraded = false);
+    void reset();
+
+    int init(H2Connection *pH2Conn,
+             Priority_st *pPriority = NULL);
+    int onInitConnected(HioHandler *pHandler, bool bUpgraded = false);
 
     int appendReqData(char *pData, int len, uint8_t H2_Flags);
 
     int read(char *buf, int len);
 
-    uint32_t getStreamID()
-    {   return m_uiStreamId;    }
+    uint32_t getStreamID() const
+    {   return get_hash();    }
 
     int write(const char *buf, int len);
     int writev(const struct iovec *vec, int count);
     int writev(IOVec &vector, int total);
+    int write(const char *buf, int len, int flag);
 
-    int sendfile(int fdSrc, off_t off, off_t size)
-    {
-        return 0;
-    };
+    int sendfile(int fdSrc, off_t off, size_t size, int flag);
+
     void switchWriteToRead() {};
 
     int flush();
     int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+
+    UnpackedHeaders * getReqHeaders()
+    {   return &m_headers;   }
 
     int push(ls_str_t *pUrl, ls_str_t *pHost, 
              ls_strpair_t *pExtraHeaders);
@@ -81,12 +89,9 @@ public:
         return (isWantRead() && DateTime::s_curTime - getActiveTime() >= 5);
     }
 
-    uint16_t getEvents() const;
-    int isFromLocalAddr() const;
-    virtual NtwkIOLink *getNtwkIoLink();
-
     int shutdown();
 
+    void closeEx();
     int close();
 
     int onWrite();
@@ -109,6 +114,7 @@ public:
 
     int getDataFrameSize(int wanted);
 
+    void apply_priority(Priority_st *priority);
 
     void appendInputData(char ch)
     {
@@ -118,16 +124,17 @@ public:
 private:
     bool operator==(const H2Stream &other) const;
 
-    int sendData(IOVec *pIov, int total);
     int dataSent(int ret);
+    void shutdownEx();
+    void markShutdown();
 
 protected:
     virtual const char *buildLogId();
 
 private:
-    H2Connection   *m_pH2Conn;
     LoopBuf         m_bufIn;
-    uint32_t        m_uiStreamId;
+    UnpackedHeaders m_headers;
+    H2Connection   *m_pH2Conn;
     int32_t         m_iWindowOut;
     int32_t         m_iWindowIn;
 

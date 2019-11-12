@@ -17,31 +17,37 @@
 *****************************************************************************/
 #include "h2streampool.h"
 #include "h2stream.h"
+#include "unpackedheaders.h"
 
-Pool H2StreamPool::s_pool;
+typedef ObjPool<H2Stream>       Pool;
+static Pool s_stream_pool;
+
 void H2StreamPool::recycle(H2Stream *pStream)
 {
-    s_pool.recycle(pStream);
+    pStream->reset();
+    s_stream_pool.recycle(pStream);
 }
 
 
 H2Stream *H2StreamPool::getH2Stream()
 {
-    H2Stream *p = s_pool.get();
+    H2Stream *p;
+    p = s_stream_pool.get();
     return p;
 }
 
 
 void H2StreamPool::recycle(H2Stream **pStream, int n)
 {
-    s_pool.recycle((void **)pStream, n);
+    for(int i = 0; i < n; ++i)
+        pStream[i]->reset();
+    s_stream_pool.recycle((void **)pStream, n);
 }
 
 
 int H2StreamPool::getH2Streams(H2Stream **pStream, int n)
 {
-    int ret = s_pool.get(pStream, n);
+    int ret = s_stream_pool.get(pStream, n);
     return ret;
 }
-
 

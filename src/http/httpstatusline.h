@@ -55,4 +55,5 @@ public:
     LS_NO_COPY_ASSIGN(HttpStatusLine);
 };
 
+LS_SINGLETON_DECL(HttpStatusLine);
 #endif

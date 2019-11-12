@@ -61,6 +61,9 @@ public:
     int setCapacity(int numObj)
     {   return ls_objarray_setcapacity(this, numObj); }
 
+    int alloc(int numObj)
+    {   return setCapacity(numObj); }
+
     int guarantee(int numObj)
     {   return ls_objarray_guarantee(this, numObj);   }
 };
@@ -123,13 +126,13 @@ public:
     const T *begin() const     {   return  getArray();    }
     const T *end() const       {   return (const T *)getArray() + getSize();   }
 
-    void copy(TObjArray &other)
+    void copy(const TObjArray &other)
     {
         setCapacity(other.getCapacity());
         setSize(other.getSize());
         memmove(getArray(), other.getArray(), getSize() * sizeof(T));
     }
-    
+
     int guarantee(int numObj)
     {   return ObjArray::guarantee(numObj);   }
 

@@ -21,7 +21,7 @@
   * You can define _NOT_USE_SHM_ to disable share memory using,
   * it will break in multi processes mode.
   * FOR TESTING only *
-  */ 
+  */
 //#define _NOT_USE_SHM_
 
 
@@ -48,7 +48,7 @@ struct ShmCidPidInfo
 {
     pid_t                   pid;
     LsShmHash::iteroffset   shmCidIterOffset;
-    LsShmHash::iterator     shmCidIter; 
+    LsShmHash::iterator     shmCidIter;
 };
 
 #ifdef RUN_TEST
@@ -126,7 +126,7 @@ private:
 
     int openShmMapPool(const char *fileName, const char *pShmDir);
     int openShmPacketPool(const char *fileName, const char *pShmDir);
-    
+
 public:
     QuicShm() : m_pServerConf(NULL)
             , m_pCidMap(NULL)
@@ -142,12 +142,12 @@ public:
             {};
 
     ~QuicShm();
-    
+
 
     int init(const char *pShmDir);
-    
+
     static void setPid(int pid);
-    
+
     void *getHashCtx()  { return (void *)m_pServerConf;    }
     struct lsquic_shared_hash_if *getInternalShi() {  return m_pInternalShi; }
     void *getInternalShiCtx()  { return m_pInternalShiCtx;    }
@@ -217,12 +217,12 @@ public:
     static void deleteExpiredItems (LsShmHash *pHash);
     static int insertItem(void *hash_ctx, void *key, unsigned key_sz, void *data,
                unsigned data_sz, time_t expiry);
-    
+
     static int lookupItem(void *hash_ctx, const void *key, unsigned key_sz, void **data,
                unsigned *data_sz);
 
     static int deleteItem(void *hash_ctx, const void *key, unsigned key_sz);
-    
+
 private:
     void releasePacketBufferOff(LsShmOffset_t);
     struct quicshm_packet_buf *packetOffset2ptr(LsShmOffset_t offset);
@@ -253,6 +253,7 @@ private:
 #endif
 };
 
+LS_SINGLETON_DECL(QuicShm);
 
 #endif // QUICSHM_H
 #endif //_NOT_USE_SHM_

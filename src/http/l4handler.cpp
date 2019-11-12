@@ -96,6 +96,8 @@ int L4Handler::onWriteEx()
         }
     }
 
+    getStream()->flush();
+
     if (getBuf()->available() != 0)
     {
         if (full)

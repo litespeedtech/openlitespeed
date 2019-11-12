@@ -20,4 +20,4 @@
 void printbuff(unsigned char *buff, int length);
 int printheader(unsigned char *buff, int length);
 void printbuffstr(char *buff, int length);
-#endif //SPDYDEBUG_H
+#endif // SPDYDEBUG_H

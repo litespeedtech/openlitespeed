@@ -59,7 +59,7 @@ public:
         m_data[0].erase(0, len);
         return len;
     }
-    int readv(struct iovec *vector, size_t count)
+    int readv(struct iovec *vector, int count)
     {
         const struct iovec *pEnd = vector + count;
         int total = 0;

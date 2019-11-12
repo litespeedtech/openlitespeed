@@ -135,6 +135,7 @@ private:
     LS_NO_COPY_ASSIGN(Adns);
 };
 
+LS_SINGLETON_DECL(Adns);
 
 #endif
 

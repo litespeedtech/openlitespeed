@@ -18,9 +18,7 @@
 #ifndef HIOSTREAM_H
 #define HIOSTREAM_H
 
-#include <inttypes.h>
-#include <netdb.h>
-#include <netinet/in.h>
+
 #include <sys/types.h>
 #include <edio/inputstream.h>
 #include <edio/outputstream.h>
@@ -33,13 +31,12 @@ class IOVec;
 class Aiosfcb;
 class HioHandler;
 class HttpRespHeaders;
-class UnpackedHeaders;
 class HioChainStream;
 class NtwkIOLink;
 class ClientInfo;
 class HioCrypto;
 class ServerAddrInfo;
-
+class UnpackedHeaders;
 
 enum HioState
 {
@@ -68,16 +65,23 @@ enum HiosProtocol
 #define HIO_FLAG_ABORT              (1<<4)
 #define HIO_FLAG_PEER_RESET         (1<<5)
 #define HIO_FLAG_HANDLER_RELEASE    (1<<6)
-#define HIO_FLAG_BUFF_FULL          (1<<7)
+#define HIO_FLAG_PAUSE_WRITE        (1<<7)
 #define HIO_FLAG_FLOWCTRL           (1<<8)
 #define HIO_FLAG_BLACK_HOLE         (1<<9)
 #define HIO_FLAG_PASS_THROUGH       (1<<10)
 #define HIO_FLAG_PASS_SETCOOKIE     (1<<11)
 #define HIO_FLAG_FROM_LOCAL         (1<<12)
 #define HIO_FLAG_PUSH_CAPABLE       (1<<13)
-#define HIO_FLAG_INIT_PUSH          (1<<14)
-#define HIO_FLAG_PRI_SET            (1<<15)
+#define HIO_FLAG_INIT_SESS          (1<<14)
+#define HIO_FLAG_IS_PUSH            (1<<15)
+#define HIO_FLAG_WRITE_BUFFER       (1<<16)
+#define HIO_FLAG_SENDFILE           (1<<17)
+#define HIO_FLAG_DELAY_FLUSH        (1<<18)
+#define HIO_FLAG_PRI_SET            (1<<19)
+#define HIO_FLAG_ALTSVC_SENT        (1<<20)
 
+
+#define HIO_EOR                     1
 
 #define HIO_PRIORITY_HIGHEST        (0)
 #define HIO_PRIORITY_LOWEST         (7)
@@ -89,6 +93,7 @@ enum HiosProtocol
 #define HIO_PRIORITY_PUSH           (HIO_PRIORITY_DOWNLOAD + 1)
 #define HIO_PRIORITY_LARGEFILE      (HIO_PRIORITY_LOWEST)
 
+
 struct ConnInfo
 {
     ClientInfo             *m_pClientInfo;
@@ -98,7 +103,6 @@ struct ConnInfo
         struct ssl_st      *m_pSsl;
     };
     const ServerAddrInfo   *m_pServerAddrInfo;
-    char                    m_serverAddr[sizeof(struct sockaddr_in6)];
     unsigned int            m_remotePort;
 };
 
@@ -114,13 +118,16 @@ public:
     }
     virtual ~HioStream();
 
-    virtual int sendfile(int fdSrc, off_t off, off_t size) = 0;
+    virtual int sendfile(int fdSrc, off_t off, size_t size, int flag) = 0;
     virtual int aiosendfile(Aiosfcb *cb)
     {   return 0;   }
     virtual int aiosendfiledone(Aiosfcb *cb)
     {   return 0;   }
-    virtual int readv(struct iovec *vector, size_t count)
+    virtual int readv(struct iovec *vector, int count)
     {       return -1;      }
+    virtual int write(const char *buf, int len) = 0;
+    virtual int write(const char *buf, int len, int flag)
+    {       return write(buf, len);     }
 
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody) = 0;
 
@@ -130,25 +137,13 @@ public:
     virtual void suspendWrite() = 0;
     virtual void continueWrite() = 0;
     virtual void switchWriteToRead() = 0;
-    virtual int onTimer() = 0;
-    virtual uint16_t getEvents() const = 0;
+    virtual int  onTimer()             {    return 0;   }
     virtual void suspendEventNotify()  {};
     virtual void resumeEventNotify()   {};
     //virtual SslConnection * getSSL() = 0;
-    virtual int isFromLocalAddr() const = 0;
-    virtual NtwkIOLink *getNtwkIoLink() = 0;
 
-    
-    virtual void cork(int doCork) {}
-    virtual int detectClose()       {   return 0;   }
-
-    virtual int push(ls_str_t *pUrl, ls_str_t *pHost,
-                     ls_strpair_t *pHeaders)
-    {   return -1;      }
-
-
-    int isThrottle()    {   return 0;   }
     //virtual uint32_t GetStreamID() = 0;
+    virtual int detectClose()       {   return 0;   }
 
     void reset(int32_t timeStamp)
     {
@@ -158,11 +153,11 @@ public:
 
     void setClientInfo(ClientInfo *p)   {   m_connInfo.m_pClientInfo = p;      }
     ClientInfo *getClientInfo() const   {   return m_connInfo.m_pClientInfo;   }
-    
-    void setConnInfo(const ConnInfo *p)       
+
+    void setConnInfo(const ConnInfo *p)
     {   memmove(&m_connInfo, p, sizeof(m_connInfo));        }
     const ConnInfo *getConnInfo() const {   return &m_connInfo;     }
-    
+
     int getPriority() const     {   return m_iPriority;     }
     void setPriority(int pri)
     {
@@ -175,12 +170,16 @@ public:
     void raisePriority(int by = 1)
     {   setPriority(m_iPriority - by);  }
     void lowerPriority(int by = 1)
-    {   setProtocol(m_iPriority + by);  }
+    {   setPriority(m_iPriority + by);  }
 
+    int isSendfileAvail() const
+    {   return m_iFlag & HIO_FLAG_SENDFILE;     }
+
+    int isFromLocalAddr() const
+    {   return m_iFlag & HIO_FLAG_FROM_LOCAL;   }
 
     HioHandler *getHandler() const  {   return m_pHandler;  }
     void setHandler(HioHandler *p)  {   m_pHandler = p;     }
-
     void switchHandler(HioHandler *pCurrent, HioHandler *pNew);
 
     void wantRead(int want)
@@ -217,23 +216,24 @@ public:
     short isWantWrite() const   {   return m_iFlag & HIO_FLAG_WANT_WRITE;   }
     short isReadyToRelease() const {    return m_iFlag & HIO_FLAG_HANDLER_RELEASE;  }
 
-    void setFlag(int flagbit, int val)
+    void setFlag(uint32_t flagbit, int val)
     {   m_iFlag = (val) ? (m_iFlag | flagbit) : (m_iFlag & ~flagbit);       }
-    short getFlag(int flagbit) const    {   return flagbit & m_iFlag;       }
-    short getFlag() const               {   return m_iFlag;                 }
+    uint32_t getFlag(uint32_t flagbit) const {   return flagbit & m_iFlag;  }
+    uint32_t getFlag() const                 {   return m_iFlag;            }
 
-    short isAborted() const     {   return m_iFlag & HIO_FLAG_ABORT;        }
-    void  setAbortedFlag()      {   m_iFlag |= HIO_FLAG_ABORT;              }
+    bool isAborted() const      {   return m_iFlag & HIO_FLAG_ABORT;        }
+    void setAbortedFlag()       {   m_iFlag |= HIO_FLAG_ABORT;              }
 
-    int   isClosing() const     {   return m_iState != HIOS_CONNECTED;      }
+    bool isClosing() const      {   return m_iState != HIOS_CONNECTED;      }
 
     void handlerReadyToRelease() {   m_iFlag |= HIO_FLAG_HANDLER_RELEASE;    }
-    short canWrite()  const     {   return m_iFlag & HIO_FLAG_BUFF_FULL;    }
+    bool isPauseWrite()  const   {   return m_iFlag & HIO_FLAG_PAUSE_WRITE;  }
 
-    char  getProtocol() const   {   return ls_atomic_fetch_add(const_cast<char *>(&m_iProtocol), 0);;     }
-    void  setProtocol(int p)    {   ls_atomic_setchar(&m_iProtocol, p);        }
+    char  getProtocol() const   {   return m_iProtocol;     }
+    void  setProtocol(int p)    {   m_iProtocol = p;        }
 
-    int   isSpdy() const        {   return ls_atomic_fetch_add((volatile char*)&m_iProtocol, 0);     }
+    int   isSpdy() const        {   return m_iProtocol;     }
+    bool  isHttp2() const       {   return m_iProtocol == HIOS_PROTO_HTTP2; }
 
     char  getState() const      {   return m_iState;        }
     void  setState(HioState st) {   m_iState = st;          }
@@ -243,13 +243,17 @@ public:
 
     off_t getBytesRecv() const  {   return m_lBytesRecv;    }
     off_t getBytesSent() const  {   return m_lBytesSent;    }
-
+    off_t getBytesTotal() const {   return m_lBytesRecv + m_lBytesSent; }
 
     void resetBytesCount()
     {
         m_lBytesRecv = 0;
         m_lBytesSent = 0;
     }
+
+    virtual int push(ls_str_t *pUrl, ls_str_t *pHost,
+                     ls_strpair_t *pHeaders)
+    {   return -1;      }
 
     void setActiveTime(uint32_t lTime)
     {   m_tmLastActive = lTime;              }
@@ -268,29 +272,34 @@ public:
     {
         if (m_iState < HIOS_SHUTDOWN)
             m_iState = HIOS_CLOSING;
-        wantRead(0);
     }
 
     short isPeerShutdown() const {  return m_iFlag & HIO_FLAG_PEER_SHUTDOWN;    }
 
-    static const char *getProtocolName(HiosProtocol proto);
+    const ls_str_t *getProtocolName() const
+    {   return getProtocolName((HiosProtocol)m_iProtocol);   }
 
-    UnpackedHeaders *getReqHeaders() const
-    {   return m_pReqHeaders;    }
-    void setReqHeaders(UnpackedHeaders *headers)
-    {   m_pReqHeaders = headers;    }
+    static const ls_str_t *getProtocolName(HiosProtocol proto);
+
+    virtual UnpackedHeaders *getReqHeaders()
+    {   return NULL;    }
+
+    bool isWriteBuffer() const   {   return m_iFlag & HIO_FLAG_WRITE_BUFFER; }
+    virtual ssize_t bufferedWrite(const char *data, size_t size)
+    {   return 0;   }
+protected:
+    void releaseHandler();
 
 private:
 
     HioHandler         *m_pHandler;
     ConnInfo            m_connInfo;
-    UnpackedHeaders    *m_pReqHeaders;
     off_t               m_lBytesRecv;
     off_t               m_lBytesSent;
     char                m_iState;
     char                m_iProtocol;
-    short               m_iFlag;
-    int32_t             m_iPriority;
+    short               m_iPriority;
+    uint32_t            m_iFlag;
     uint32_t            m_tmLastActive;
 
 
@@ -313,7 +322,6 @@ public:
     virtual ~HioHandler();
 
     HioStream *getStream() const           {   return m_pStream;   }
-
     void attachStream(HioStream *p)
     {
         m_pStream  = p;
@@ -340,7 +348,7 @@ public:
 
     virtual void recycle() = 0;
 
-    virtual int h2cUpgrade(HioHandler *pOld);
+    virtual int h2cUpgrade(HioHandler *pOld, const char * pBuf, int size);
     virtual int detectContentLenMismatch(int buffered)  {   return 0;  }
 
 private:
@@ -348,6 +356,16 @@ private:
     HioHandler &operator=(const HioHandler &other);
     bool operator==(const HioHandler &other) const;
 };
+
+
+inline void HioStream::releaseHandler()
+{
+    if (m_pHandler)
+    {
+        m_pHandler->recycle();
+        m_pHandler = NULL;
+    }
+}
 
 
 #endif // HIOSTREAM_H

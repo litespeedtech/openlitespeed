@@ -326,12 +326,30 @@ static int applyLimits(lscgid_req *pCGI)
 }
 
 
+static int changeStderrLog(const char *path)
+{
+    int newfd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (newfd == -1)
+    {
+        fprintf(stderr, "lscgid (%d): failed to change stderr log to: %s\n",
+                getpid(), path);
+        return -1;
+    }
+    if (newfd != 2)
+    {
+        dup2(newfd, 2);
+        close(newfd);
+    }
+    return 0;
+}
+
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 static int cgroup_env(lscgid_t *pCGI)
 {
     if (getuid())
         return -1;
-    
+
     char **env_arr = pCGI->m_env;
     char  *prefix = (char *)"LS_CGROUP=";
     int    prefix_len = 10;
@@ -357,7 +375,7 @@ static int cgroup_activate(lscgid_t *pCGI)
     int rc = -1;
     CGroupUse *use;
     CGroupConn *conn;
-    
+
     int uid = geteuid();
     seteuid(0);
     conn = new CGroupConn();
@@ -386,21 +404,25 @@ static int cgroup_process(lscgid_t *pCGI)
     if (!cgroup_env(pCGI))
         return cgroup_activate(pCGI);
     return 0;
-}            
+}
 #endif
-   
-    
+
+
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     cgroup_process(pCGI);
 #endif
-   
-    
+
+
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");
     applyLimits(&pCGI->m_data);
+
+    if (pCGI->m_stderrPath)
+        changeStderrLog(pCGI->m_stderrPath);
+
 
 #ifdef HAS_CLOUD_LINUX
 
@@ -567,6 +589,12 @@ static int process_req_data(lscgid_t *cgi_req)
         cgi_req->m_env[i] = p;
         if (*p == 'L')
         {
+            if (strncasecmp(p, "LS_STDERR_LOG=", 14) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_stderrPath = p + 14;
+            }
             if (strncasecmp(p, "LS_CWD=", 7) == 0)
             {
                 --i;
@@ -898,7 +926,7 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 #ifdef HAS_CLOUD_LINUX
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    
+
     if ((sEnv = getenv("LVE_ENABLE")) != NULL)
     {
         s_enable_lve = atol(sEnv);
@@ -920,12 +948,12 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
     //setproctitle( "%s", "httpd" );
 #else
     memset(argv0, 0, strlen(argv0));
-    
-#ifdef IS_LSCPD    
+
+#ifdef IS_LSCPD
     strcpy(argv0, "lscpd (lscgid)");
 #else
     strcpy(argv0, "openlitespeed (lscgid)");
-#endif    
+#endif
 #endif
 
     ret = run(fd);

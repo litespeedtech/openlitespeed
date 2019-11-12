@@ -219,7 +219,7 @@ int HttpSession::onInitConnected()
     const ConnInfo *pInfo = getStream()->getConnInfo();
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
-    
+
     if (pInfo->m_pCrypto)
     {
         m_request.setCrypto(pInfo->m_pCrypto);
@@ -481,12 +481,12 @@ void HttpSession::nextRequest()
     m_sendFileInfo.release();
     //m_sendFileInfo.reset();
     releaseReqParser();
-    
+
     //for SSI, should resume
     if (getSsiRuntime())
         return releaseSsiRuntime();
-    
-    
+
+
     if (!m_request.isKeepAlive() || getStream()->isSpdy() || !endOfReqBody())
     {
         LS_DBG_L(getLogSession(), "Non-KeepAlive, CLOSING!");
@@ -502,7 +502,7 @@ void HttpSession::nextRequest()
         }
 
         LsiapiBridge::releaseModuleData(LSI_DATA_HTTP, getModuleData());
-        
+
         ls_atomic_fetch_add(&m_sn, 1);
         //ls_atomic_setint(&m_sessSeq, ls_atomic_add_fetch(&s_m_sessSeq, 1)); // ok to overflow / wrap
         LS_DBG_L("[T%d %s] sess seq now %d\n", ls_thr_seq(), __PRETTY_FUNCTION__, ls_atomic_fetch_add(&m_sessSeq, 0));
@@ -584,7 +584,7 @@ int HttpSession::httpError(int code, const char *pAdditional)
     ls_atomic_fetch_add(&m_sn, 1);
     //ls_atomic_setint(&m_sessSeq, ls_atomic_add_fetch(&s_m_sessSeq, 1)); // ok to overflow / wrap
     LS_DBG_M("[T%d %s] sess seq now %d\n", ls_thr_seq(), __PRETTY_FUNCTION__, ls_atomic_fetch_add(&m_sessSeq, 0));
-    
+
     return 0;
 }
 
@@ -611,7 +611,7 @@ int HttpSession::read(char *pBuf, int size)
 }
 
 
-int HttpSession::readv(struct iovec *vector, size_t count)
+int HttpSession::readv(struct iovec *vector, int count)
 {
     const struct iovec *pEnd = vector + count;
     int total = 0;
@@ -1161,7 +1161,7 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
 
 int HttpSession::processWebSocketUpgrade(HttpVHost *pVHost)
 {
-    HttpContext *pContext = pVHost->bestMatch(m_request.getURI(), 
+    HttpContext *pContext = pVHost->bestMatch(m_request.getURI(),
                                                     m_request.getURILen());
     LS_DBG_L(getLogSession(),
              "Request web socket upgrade, VH name: [%s] URI: [%s]",
@@ -1194,7 +1194,7 @@ int HttpSession::processWebSocketUpgrade(HttpVHost *pVHost)
 int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
 {
     HioHandler *pHandler;
-    pHandler = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP2);
+    pHandler = HioHandlerFactory::getHandler(HIOS_PROTO_HTTP2);
     if (!pHandler)
         return LS_FAIL;
     HioStream *pStream = getStream();
@@ -1202,8 +1202,8 @@ int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
     pStream->switchHandler(this, pHandler);
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     pHandler->attachStream(pStream);
-    pHandler->h2cUpgrade(this);
-    
+    pHandler->h2cUpgrade(this, NULL, 0);
+
     return 0;
 }
 
@@ -1319,7 +1319,7 @@ int HttpSession::processNewReqInit()
             LS_DBG_L(getLogSession(), "Cannot find a matching VHost.");
             *pHostEnd = ch;
         }
-        
+
         m_sessionHooks.inherit(NULL, 1);
         return SC_404;
     }
@@ -1354,8 +1354,8 @@ int HttpSession::processNewReqInit()
 
     if (getClientInfo()->getAccess() != AC_TRUST)
     {
-        if (getStream()->isThrottle()
-            && (!(m_iFlag & HSF_SUB_SESSION)))
+        if (ThrottleControl::getDefault()->getOutputLimit() != INT_MAX
+            && !(m_iFlag & HSF_SUB_SESSION))
             getClientInfo()->getThrottleCtrl().adjustLimits(
                 pVHost->getThrottleLimits());
         if (isUseRecaptcha())
@@ -1849,15 +1849,15 @@ int HttpSession::rewriteToRecaptcha(bool blockIfTooManyAttempts)
     if (blockIfTooManyAttempts && !recaptchaAttemptsAvail())
         return 0;
 
-     
+
     if (!m_request.isCaptcha() &&  hasPendingCaptcha())
     {
         LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s has pending captcha.",
                 pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
         return 0;
     }
-    
-    
+
+
     if (m_request.rewriteToRecaptcha())
     {
         pClientInfo->setFlag(CIF_CAPTCHA_PENDING);
@@ -1948,7 +1948,7 @@ int HttpSession::processContextRewrite()
         setProcessState(HSPS_HKPT_URI_MAP);
         return 0;
     }
-    
+
     while ((!pContext->hasRewriteConfig())
             && (pContext->getParent())
             && (pContext->getParent() != pVHostRoot))
@@ -2010,18 +2010,21 @@ int HttpSession::preUriMap()
     const char *pEnv = m_request.getEnv("modpagespeed", 12, valLen);
     if (valLen == 2 && strncasecmp(pEnv, "on", 2) == 0)
         return 0;
-    
+
     m_request.checkUrlStaicFileCache();
-    int ret = (m_request.getUrlStaticFileData() ? 1 : 0);
+    static_file_data_t *pDataSt = m_request.getUrlStaticFileData();
+    int ret = (pDataSt ? 1 : 0);
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
     {
         LS_DBG_L(getLogSession(), "preUriMap check serving by static url file cache: %d",
                  ret);
     }
-    
+
     if (ret)
     {
         m_request.addEnv("staticcacheserve", 16, "1", 1);
+        if (pDataSt->pData->getBypassModsec())
+            m_request.addEnv("modsecurity", 11, "off", 3);
     }
 
     return ret;
@@ -2241,11 +2244,11 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         setProcessState(HSPS_HANDLER_PRE_PROCESSING);
         return 0;
     }
-    
+
     setProcessState(HSPS_HANDLER_PROCESSING);
     if (m_pHandler && cleanUpHandler(HSPS_HANDLER_PROCESSING) == LS_AGAIN)
         return 0;
-    
+
     if (pHandler == NULL)
         return SC_403;
 
@@ -2313,16 +2316,16 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         getStream()->wantRead(1);
         return 0;
     }
-    
-    
-    
-    
+
+
+
+
     int ret = assignHandler(pHandler);
     if (ret)
         return ret;
 
     const HttpVHost *pVHost = m_request.getVHost();
-    if ((type == HandlerType::HT_CGI) && 
+    if ((type == HandlerType::HT_CGI) &&
         (((pVHost) && (pVHost->enableCGroup())) ||
          ((!pVHost) && (ServerProcessConfig::getInstance().getCGroupAllow()) &&
           (ServerProcessConfig::getInstance().getCGroupDefault()))))
@@ -2367,7 +2370,7 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
                  handlerType);
         return SC_500;
     }
-    
+
 //    if ( pNewHandler->notAllowed( m_request.getMethod() ) )
 //    {
 //        LS_DBG_L( getLogSession(), "Method %s is not allowed.",
@@ -2565,7 +2568,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
         if (nLocation > 0)
             location = strndup(p, nLocation);
     }
-    
+
 //     if (getSsiRuntime())
 //     {
 //         if (( errCode >= SC_300 )&&( errCode < SC_400 ))
@@ -2585,7 +2588,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
 
     resetResp();
     m_sendFileInfo.release();
-    
+
     if (nLocation > 0)
     {
         m_response.getRespHeaders().add(HttpRespHeaders::H_LOCATION, location,
@@ -2594,7 +2597,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
     }
 
     //m_response.prepareHeaders( &m_request );
-    //register int errCode = m_request.getStatusCode();
+    //int errCode = m_request.getStatusCode();
     unsigned int ver = m_request.getVersion();
     if (ver > HTTP_1_0)
     {
@@ -2631,7 +2634,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
                 m_response.getRespHeaders().add(HttpRespHeaders::H_PRAGMA, "no-cache", 8);
             }
         }
-        
+
         m_response.setContentLen(len);
         sendRespHeaders();
         int ret = writeRespBody(pBody, len);
@@ -2928,7 +2931,7 @@ void HttpSession::releaseResources()
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
     m_iSubReqSeq = 0;
-    
+
     if (getRespBodyBuf())
         releaseRespBody();
 
@@ -2975,7 +2978,7 @@ void HttpSession::closeSession()
     releaseResources();
 
     LsiapiBridge::releaseModuleData(LSI_DATA_HTTP, getModuleData());
-    
+
     //For reuse condition, need to reset the sessionhooks
     m_sessionHooks.reset();
 
@@ -3005,7 +3008,7 @@ void HttpSession::recycle()
 //9/20/19 add releaseResources() in recycle
     m_response.reset(1);
     m_request.reset();
-    
+
     resetBackRefPtr();
 
     if (getFlag(HSF_AIO_READING) || getMtFlag(HSF_MT_HANDLER))
@@ -3083,7 +3086,7 @@ void HttpSession::releaseChunkOS()
 
 #if !defined( NO_SENDFILE )
 
-int HttpSession::chunkSendfile(int fdSrc, off_t off, off_t size)
+int HttpSession::chunkSendfile(int fdSrc, off_t off, size_t size)
 {
     int written;
 
@@ -3099,7 +3102,7 @@ int HttpSession::chunkSendfile(int fdSrc, off_t off, off_t size)
             return written;
         else if (written > 0)
             break;
-        written = getStream()->sendfile(fdSrc, off, left);
+        written = getStream()->sendfile(fdSrc, off, left, 0);
 
         if (written > 0)
         {
@@ -3118,7 +3121,7 @@ int HttpSession::chunkSendfile(int fdSrc, off_t off, off_t size)
 
 
 off_t HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
-        off_t size)
+        size_t size, int flag)
 {
     off_t written;
     if (m_pChunkOS)
@@ -3133,7 +3136,7 @@ off_t HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
         return getStream()->aiosendfile(m_pAiosfcb);
     }
     else
-        written = getStream()->sendfile(fdFile, offset, size);
+        written = getStream()->sendfile(fdFile, offset, size, flag);
 
     if (written > 0)
     {
@@ -3759,7 +3762,7 @@ void HttpSession::resetRespBodyBuf()
 
 
 /**
- * The below errors are different, the page is a whole page, 
+ * The below errors are different, the page is a whole page,
  * the 2nd error is just appended to the content which is already sent
  */
 static char achError413Page[] =
@@ -3938,9 +3941,9 @@ int HttpSession::endResponse(int success)
 
     setState(HSS_WRITING);
     setFlag(HSF_RESP_FLUSHED, 0);
-    if (getStream()->isSpdy())
-        getStream()->continueWrite();
-    else
+//     if (getStream()->isSpdy())
+//         getStream()->continueWrite();
+//     else
         ret = flush();
 
     return ret;
@@ -4170,20 +4173,20 @@ void HttpSession::prepareHeaders()
 
     if (m_request.getLocationLen() > 0 && m_request.getLocation() != NULL)
         addLocationHeader();
-    
+
     m_request.applyHeaderOps(this, &headers);
 }
 
 /**
  * Every 8 bit cover 1 byte(2 bytes HEX)
- * 
+ *
  * xxxxxxxx xxxxxxxx  xxxxxxxx  xxxxxxxx  xxxxxxxx ...
  * 0      7 8      15        23        31  ...
- * 
+ *
  * Example
  * 1       2          3         4
  * 1000000 01000000   11000000  00100000
- * 
+ *
  */
 void HttpSession::addBittoCookie(AutoStr2 &cookie, int bit)
 {
@@ -4213,7 +4216,7 @@ int HttpSession::isCookieHaveBit(const char *cookie, int bit)
     int size = strlen(cookie);
     if (bit / 8 >= size/2)
         return 0;
-    
+
     char s[3] = {0};
     int i= bit / 8;
     s[0] = cookie[i * 2];
@@ -4248,7 +4251,7 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
 
     HttpVHost *pVHost = (HttpVHost *) m_request.getVHost();
     int id = pVHost->getIdBitOfUrl(pUri);
-    
+
     if (id == -1)
         id = pVHost->addUrlToUrlIdHash(pUri);
     else
@@ -4382,7 +4385,7 @@ void HttpSession::processServerPush()
     struct iovec *p = iovs, *pEnd;
     pEnd = p + m_response.getRespHeaders().getHeader(
         HttpRespHeaders::H_LINK, iovs, 100);
-    
+
     cookieval_t *cookie0 = m_request.getCookie(SERVERPUSHTAG,
                                                SERVERPUSHTAGLENGTH);
     AutoStr2    cookie1;
@@ -4397,7 +4400,7 @@ void HttpSession::processServerPush()
         processLinkHeader((const char *)p->iov_base, p->iov_len, cookie1);
         ++p;
     }
-    
+
     if (cookie1.len() > 0)
     {
         if (cookie0 && cookie0->valLen > 0 && cookie1.len() == cookie0->valLen
@@ -4410,7 +4413,7 @@ void HttpSession::processServerPush()
         }
         else
         {
-    
+
             AutoStr2    cookie2(SERVERPUSHTAG, SERVERPUSHTAGLENGTH);
             cookie2.append("=", 1);
             cookie2.append(cookie1.c_str(), cookie1.len());
@@ -4866,7 +4869,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     const char *pBuf;
     off_t written;
     off_t remain;
-    off_t len;
+    ssize_t len;
     int count = 0;
 
 #if !defined( NO_SENDFILE )
@@ -4876,8 +4879,13 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
         && (!getGzipBuf() ||
             (pData->getECache() == pData->getFileData()->getGzip())))
     {
-        len = writeRespBodySendFile(fd, pData->getCurPos(), pData->getRemain());
-        LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %lld.", (long long)len);
+        remain = pData->getRemain();
+        if (remain > SSIZE_MAX)
+            remain = SSIZE_MAX;
+
+        len = writeRespBodySendFile(fd, pData->getCurPos(), remain,
+                                    pData->getRemain() <= remain);
+        LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %zd.", len);
         if (len > 0)
         {
             if (iModeSF == 2 && m_pChunkOS == NULL)
@@ -5065,7 +5073,7 @@ int HttpSession::finalizeHeader(int ver, int code)
     }
     if (!isNoRespBody())
         ret = contentEncodingFixup();
-    
+
     getResp()->getRespHeaders().addStatusLine(ver, code,
             m_request.isKeepAlive());
 
@@ -5217,12 +5225,12 @@ int HttpSession::contentEncodingFixup()
 //         *pDataLen = headerBuf.size() - HEADER_BUF_PAD;
 //         *pData = (char *)malloc(*pDataLen);
 //         memmove(*pData, headerBuf.begin() + HEADER_BUF_PAD, *pDataLen);
-// 
+//
 //         getStream()->setAbortedFlag();
 //         closeSession();
 //     }
 //     return fd;
-// 
+//
 // }
 
 
@@ -5435,7 +5443,7 @@ int HttpSession::smProcessReq()
             ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_FILE_MAP);
             if (ret || m_processState != HSPS_FILE_MAP)
                 break;
-            
+
             /**
              * In this state, if req body done or no req body, go through the hook
              */
@@ -5480,13 +5488,13 @@ int HttpSession::smProcessReq()
         case HSPS_BEGIN_HANDLER_PROCESS:
             ret = handlerProcess(m_request.getHttpHandler());
             break;
-            
+
         case HSPS_HANDLER_PRE_PROCESSING:
             m_iFlag |= HSF_URI_MAPPED;
             preUriMap();
             runEventHkpt(LSI_HKPT_URI_MAP, HSPS_BEGIN_HANDLER_PROCESS);
             break;
-            
+
         case HSPS_HKPT_RCVD_REQ_BODY_PROCESSING:
             ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_HANDLER_PROCESSING);
             if (m_processState == HSPS_HANDLER_PROCESSING)

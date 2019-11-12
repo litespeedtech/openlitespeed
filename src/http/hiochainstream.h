@@ -34,7 +34,7 @@ public:
     virtual void continueRead();
     virtual void suspendRead();
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
-    virtual int sendfile(int fdSrc, off_t off, off_t size);
+    virtual int sendfile(int fdSrc, off_t off, size_t size, int flag);
     virtual int read(char *pBuf, int size);
     virtual int close();
     virtual int flush();

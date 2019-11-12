@@ -350,10 +350,10 @@ int HttpReq::processHeader()
 const HttpVHost *HttpReq::matchVHost(const VHostMap *pVHostMap)
 {
     const HttpVHost *pVHost = NULL;
-    register char *pHost = m_headerBuf.begin() + m_iHostOff;
-    register char *pHostEnd = pHost + m_iHostLen;
-    register char ch = *pHostEnd;
-    register int  www = 4;
+    char *pHost = m_headerBuf.begin() + m_iHostOff;
+    char *pHostEnd = pHost + m_iHostLen;
+    char ch = *pHostEnd;
+    int  www = 4;
     if (m_iLeadingWWW && pVHostMap->isStripWWW())
     {
         pHost += www;
@@ -538,7 +538,7 @@ int HttpReq::processRequestLine()
     int iBufLen = pBEnd - pCur;
     if (iBufLen < 0)
         return SC_500;
-    
+
     int isLongLine = 0;
     if (pBEnd > HttpServerConfig::getInstance().getMaxURLLen() +
         m_headerBuf.begin())
@@ -857,13 +857,13 @@ int HttpReq::processHeaderLines()
                 pCurHeader->valLen = pTemp1 - pTemp;
                 ret = processUnknownHeader(pCurHeader, pLineBegin, pTemp);
             }
-            else 
+            else
             {
                 m_otherHeaderLen[ index - HttpHeader::H_TE] = pTemp1 - pTemp;
                 m_otherHeaderOffset[index - HttpHeader::H_TE] = pTemp - m_headerBuf.begin();
                 ret = processHeader(index);
             }
-            
+
             if (ret != 0)
                 return ret;
         }
@@ -928,7 +928,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
             m_otherHeaderOffset[index - HttpHeader::H_TE] = value - m_headerBuf.begin();
             ret = processHeader(index);
         }
-        else 
+        else
         {
             pCurHeader = newUnknownHeader();
             pCurHeader->keyOff = begin->name_offset;
@@ -938,7 +938,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
 
             ret = processUnknownHeader(pCurHeader, name, value);
         }
-        
+
         if (ret != 0)
             return ret;
         ++begin;
@@ -2109,7 +2109,7 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
             LS_DBG_L(getLogSession(), "File not accessible [%s].", pBuf);
             return SC_403;
         }
-        
+
         if (p != pEnd)
             *p = '/';
         if (ret != -1)
@@ -3451,7 +3451,7 @@ int HttpReq::checkUrlStaicFileCache()
 {
     if (!m_pUrlStaticFileData)
     {
-        
+
         HttpVHost *host = (HttpVHost *)getVHost();
         m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
     }
@@ -3459,7 +3459,7 @@ int HttpReq::checkUrlStaicFileCache()
 }
 
 
-int HttpReq::toLocalAbsUrl(const char *pOrgUrl, int urlLen, 
+int HttpReq::toLocalAbsUrl(const char *pOrgUrl, int urlLen,
                            char *pAbsUrl, int absLen)
 {
     const char *p1 = pOrgUrl, *p2;
@@ -3640,7 +3640,7 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
         //fall through
     case LSI_HEADER_ADD:    //add a new line
     case LSI_HEADER_APPEND: //Add with a comma to seperate
-        appendReqHeader(pOp->getName(), pOp->getNameLen(), 
+        appendReqHeader(pOp->getName(), pOp->getNameLen(),
                         pOp->getValue(), pOp->getValueLen());
         break;
     case LSI_HEADER_MERGE:  //append unless exist
@@ -3661,7 +3661,7 @@ int HttpReq::applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
     }
     else if (!pRespHeader)
         return 0;
-    
+
    if (pOp->getOperator() == LSI_HEADER_UNSET)
     {
         if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
@@ -3747,7 +3747,7 @@ void HttpReq::appendReqHeader( const char *pName, int iNameLen,
     popHeaderEndCrlf();
     if (m_headerBuf.available() < iValLen + iNameLen + 4)
         m_headerBuf.grow(iValLen + iNameLen + 4 - m_headerBuf.available());
-    
+
     m_headerBuf.append(pName, iNameLen);
     m_headerBuf.append(": ", 2);
     m_headerBuf.append(pValue, iValLen);

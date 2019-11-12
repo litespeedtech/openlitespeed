@@ -32,7 +32,7 @@ int QuicStream::init(lsquic_stream_t *s)
     setActiveTime(DateTime::s_curTime);
     clearLogId();
     setProtocol(HIOS_PROTO_QUIC);
-    
+
     int flag = HIO_FLAG_FLOWCTRL;
     /* Turn on the push capable flag: check it when push() is called and
      * unset it if necessary.
@@ -56,21 +56,21 @@ int QuicStream::init(lsquic_stream_t *s)
     LS_DBG_L(this, "QuicStream::init(), id: %" PRIu64 ", priority: %d, flag: %d. ",
              lsquic_stream_id(s), pri, (int)getFlag());
     return 0;
-    
+
 }
 
 
 int QuicStream::processUpkdHdrs(QuicUpkdHdrs *hdrs)
 {
-    HioHandler *pHandler = HioHandlerFactory::getHioHandler(HIOS_PROTO_HTTP);
+    HioHandler *pHandler = HioHandlerFactory::getHandler(HIOS_PROTO_HTTP);
     if (!pHandler)
         return LS_FAIL;
 
     pHandler->attachStream(this);
 
-    setReqHeaders(&hdrs->headers);
+    m_pHeaders = &hdrs->headers;
     pHandler->onInitConnected();
-    setReqHeaders(NULL);
+    m_pHeaders = NULL;
     delete hdrs;
 
     if (isWantRead())
@@ -159,7 +159,7 @@ int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
     struct iovec  headerList[1024];
     headers.count = 0;
     headers.headers = (lsquic_http_header *)headerList;
-    pCur = headerList; 
+    pCur = headerList;
     pEnd = &headerList[1024];
 
     if (!m_pStream)
@@ -175,31 +175,27 @@ int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
     ++pCur;
 
     pRespHeaders->dropConnectionHeaders();
-    
+
     for (int pos = pRespHeaders->HeaderBeginPos();
          pos != pRespHeaders->HeaderEndPos();
          pos = pRespHeaders->nextHeaderPos(pos))
     {
-        char *name;
-        int nameLen;
-        int count = pRespHeaders->getHeader(pos, &name, &nameLen, pCur+1,
+        int idx;
+        int count = pRespHeaders->getHeader(pos, &idx, pCur, pCur+1,
                                         (pEnd - pCur - 1) / 2);
 
         if (count <= 0)
             continue;
 
-        char *p = name;
-        char *pKeyEnd = name + nameLen;
+        char *p = (char *)pCur->iov_base;
+        char *pKeyEnd = p + pCur->iov_len;
         //to lowercase
         while (p < pKeyEnd)
         {
             *p = tolower(*p);
             ++p;
         }
-        
-        pCur->iov_base = name;
-        pCur->iov_len  = nameLen;
-        
+
         for(int i = count - 1; i > 0; --i)
         {
             pCur[(i << 1) | 1] = pCur[i + 1];
@@ -207,13 +203,13 @@ int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
         }
         pCur += (count << 1);
 
-    }    
+    }
     headers.count = (pCur - headerList) >> 1;
     return lsquic_stream_send_headers(m_pStream, &headers, isNoBody);
 }
 
 
-int QuicStream::sendfile(int fdSrc, off_t off, off_t size)
+int QuicStream::sendfile(int fdSrc, off_t off, size_t size, int flag)
 {
     return 0;
 }
@@ -251,11 +247,11 @@ int QuicStream::checkReadRet(int ret)
 
     }
     return ret;
-    
+
 }
 
 
-int QuicStream::readv(iovec *vector, size_t count)
+int QuicStream::readv(iovec *vector, int count)
 {
     if (!m_pStream)
         return -1;
@@ -272,11 +268,11 @@ int QuicStream::read(char *pBuf, int size)
     ssize_t ret = lsquic_stream_read(m_pStream, pBuf, size);
     LS_DBG_L(this, "QuicStream::read(), to read: %d, ret: %zd", size, ret);
     return checkReadRet(ret);
-    
+
 }
 
 
-int QuicStream::push(ls_str_t *pUrl, ls_str_t *pHost, 
+int QuicStream::push(ls_str_t *pUrl, ls_str_t *pHost,
                    ls_strpair_t *pExtraHeaders)
 {
     lsquic_conn_t *pConn = lsquic_stream_conn(m_pStream);
@@ -295,7 +291,7 @@ int QuicStream::push(ls_str_t *pUrl, ls_str_t *pHost,
     headers.headers = (lsquic_http_header_t *)pExtraHeaders;
 
     pushed = lsquic_conn_push_stream(pConn, NULL, m_pStream,
-                                   (const struct iovec*) pUrl, 
+                                   (const struct iovec*) pUrl,
                                    (const struct iovec*) pHost,
                                    &headers);
     if (pushed == 0)
@@ -534,20 +530,3 @@ int QuicStream::getEnv(HioCrypto::ENV id, char *&val, int maxValLen)
     }
 }
 
-
-uint16_t QuicStream::getEvents() const
-{
-    return 0;   /* XXX unclear whether this is called */
-}
-
-
-int QuicStream::isFromLocalAddr() const
-{
-    return 0;   /* XXX unclear whether this is called */
-}
-
-
-NtwkIOLink *QuicStream::getNtwkIoLink()
-{
-    return NULL;   /* XXX unclear whether this is called */
-}

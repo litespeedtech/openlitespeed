@@ -306,7 +306,7 @@ int ChunkInputStream::read(char *pBuf, int size)
     return len;
 }
 
-int ChunkInputStream::readv(struct iovec *vector, size_t count)
+int ChunkInputStream::readv(struct iovec *vector, int count)
 {
     assert("ChunkInputStream::readv() is not impelemented" == NULL);
     return LS_FAIL;

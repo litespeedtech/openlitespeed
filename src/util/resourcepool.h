@@ -46,7 +46,7 @@ public:
     void onTimer();
 };
 
-
+LS_SINGLETON_DECL(ResourcePool);
 
 #endif //RESOURCEPOOL_H
 

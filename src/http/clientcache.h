@@ -86,9 +86,10 @@ public:
     {   return s_pClients;          }
     static void setIp2Geo(Ip2Geo *ip2geo)
     {   s_ip2geo = ip2geo;          }
-    static Ip2Geo *getIp2Geo() 
+    static Ip2Geo *getIp2Geo()
     {   return s_ip2geo;            }
     LS_NO_COPY_ASSIGN(ClientCache);
 };
 
+LS_SINGLETON_DECL(ClientCache);
 #endif

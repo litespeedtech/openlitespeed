@@ -298,12 +298,12 @@ class HttpSession
 public:
     void reset() {
         resetEvtcb();
-        memset(&m_pChunkIS, 0, 
+        memset(&m_pChunkIS, 0,
                (char *)(&m_iReqServed + 1) - (char *)&m_pChunkIS);
     }
 
     void cleanUpSubSessions();
-    
+
     int removeSessionCbs(long lParam, void * pParam);
 
     uint32_t getSn()    { return ls_atomic_fetch_add(&m_sn, 0);}
@@ -369,10 +369,10 @@ public:
 
     void addBittoCookie(AutoStr2 &cookie, int bit);
     int isCookieHaveBit(const char *cookies, int bit);
-    
+
     int pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie);
     void processLinkHeader(const char* pValue, int valLen, AutoStr2 &cookie);
-    
+
     static int hookResumeCallback(lsi_session_t *session, long lParam, void *);
     static int removeSessionCbsEvent(lsi_session_t *session, long lParam,
                                 void *pParam);
@@ -427,7 +427,7 @@ private:
                                    int written);
     int writeRespBodyBlockFilterInternal(SendFileInfo *pData, const char *pBuf,
                                          int written, lsi_param_t *param = NULL);
-    int chunkSendfile(int fdSrc, off_t off, off_t size);
+    int chunkSendfile(int fdSrc, off_t off, size_t size);
     int processWebSocketUpgrade(HttpVHost *pVHost);
     int processHttp2Upgrade(const HttpVHost *pVHost);
 
@@ -479,7 +479,7 @@ public:
 
     int16_t isHttps() const           {   return m_request.isHttps(); }
     HioCrypto *getCrypto() const    {   return m_request.getCrypto();  }
-    
+
 
     const char *getPeerAddrString() const;
     int getPeerAddrStrLen() const;
@@ -574,7 +574,7 @@ public:
 
     int httpError(int code, const char *pAdditional = NULL);
     int read(char *pBuf, int size);
-    int readv(struct iovec *vector, size_t count);
+    int readv(struct iovec *vector, int count);
     ReqHandler *getCurHandler() const  {   return m_pHandler;  }
 
 
@@ -583,7 +583,7 @@ public:
 
     void addEnv(const char *pKey, int keyLen, const char *pValue, long valLen);
 
-    off_t writeRespBodySendFile(int fdFile, off_t offset, off_t size);
+    off_t writeRespBodySendFile(int fdFile, off_t offset, size_t size, int flag);
     void rewindRespBodyBuf();
     int setupRespBodyBuf();
     void releaseRespBody();
@@ -782,7 +782,7 @@ public:
 
     int  beginMtHandler(const lsi_reqhdlr_t *pHandler);
     void releaseMtSessData();
-    
+
     int cancelMtHandler();
     int isMtHandlerCancelled() const        {   return testMtFlag(HSF_MT_CANCEL);           }
 

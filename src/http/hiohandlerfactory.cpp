@@ -23,7 +23,7 @@
 #include <spdy/h2connection.h>
 #include <spdy/spdyconnection.h>
 
-HioHandler *HioHandlerFactory::getHioHandler(HiosProtocol proto)
+HioHandler *HioHandlerFactory::getHandler(HiosProtocol proto)
 {
     HioHandler *pHioHandler;
     switch (proto)

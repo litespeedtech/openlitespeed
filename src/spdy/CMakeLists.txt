@@ -13,6 +13,7 @@ spdydebug.cpp
 h2connection.cpp
 h2protocol.cpp
 h2stream.cpp
+h2streampool.cpp
 unpackedheaders.cpp
 lshpack.c
 )

@@ -22,6 +22,7 @@
 #include <lsr/ls_strtool.h>
 #include <util/datetime.h>
 #include <util/iovec.h>
+#include <util/ssnprintf.h>
 
 SpdyStream::SpdyStream()
     : m_uiStreamID(0)
@@ -32,8 +33,8 @@ SpdyStream::SpdyStream()
 
 const char *SpdyStream::buildLogId()
 {
-    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s-%d",
-                      m_pSpdyConn->getStream()->getLogId(), m_uiStreamID);
+    m_logId.len = safe_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s-%d",
+                        m_pSpdyConn->getStream()->getLogId(), m_uiStreamID);
     return m_logId.ptr;
 }
 
@@ -43,6 +44,9 @@ int SpdyStream::init(uint32_t StreamID,
                      HioHandler *pHandler)
 {
     HioStream::reset(DateTime::s_curTime);
+    if (pSpdyConn->getStream()->getFlag(HIO_FLAG_ALTSVC_SENT))
+        setFlag(HIO_FLAG_ALTSVC_SENT, 1);
+
     pHandler->attachStream(this);
     clearLogId();
 
@@ -63,8 +67,9 @@ int SpdyStream::init(uint32_t StreamID,
 int SpdyStream::onInitConnected()
 {
     getHandler()->onInitConnected();
-    if (isWantRead())
-        getHandler()->onReadEx();
+    //Do not need to call oReadEx(), it has been called from continueRead()
+    //if (isWantRead())
+    //    getHandler()->onReadEx();
     if (isWantWrite())
         if (next() == NULL)
             m_pSpdyConn->add2PriorityQue(this);
@@ -140,24 +145,10 @@ void SpdyStream:: continueWrite()
 
 int SpdyStream::onTimer()
 {
-    if (getHandler())
+    if (getState() == HIOS_CONNECTED)
         return getHandler()->onTimerEx();
     return 0;
 }
-
-
-uint16_t SpdyStream::getEvents() const
-{
-    return m_pSpdyConn->getEvents();
-}
-
-
-int SpdyStream::isFromLocalAddr() const
-{   return m_pSpdyConn->isFromLocalAddr();  }
-
-
-NtwkIOLink *SpdyStream::getNtwkIoLink()
-{   return m_pSpdyConn->getNtwkIoLink();    }
 
 
 int SpdyStream::shutdown()
@@ -169,6 +160,7 @@ int SpdyStream::shutdown()
 
     LS_DBG_L(this, "SpdyStream::shutdown()");
     m_pSpdyConn->sendFinFrame(m_uiStreamID);
+    setActiveTime(DateTime::s_curTime);
     m_pSpdyConn->flush();
     return 0;
 }
@@ -205,7 +197,7 @@ int SpdyStream::getDataFrameSize(int wanted)
     if ((m_pSpdyConn->isOutBufFull()) ||
         (0 >= m_iWindowOut))
     {
-        setFlag(HIO_FLAG_BUFF_FULL | HIO_FLAG_WANT_WRITE, 1);
+        setFlag(HIO_FLAG_PAUSE_WRITE | HIO_FLAG_WANT_WRITE, 1);
         if (next() == NULL)
             m_pSpdyConn->add2PriorityQue(this);
         m_pSpdyConn->continueWrite();
@@ -226,11 +218,17 @@ int SpdyStream::writev(IOVec &vector, int total)
     int ret;
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
-    if (getFlag(HIO_FLAG_BUFF_FULL))
+    if (isPauseWrite())
+    {
+        LS_DBG_L(this, "SpdyStream::writev() buff full");
         return 0;
+    }
     size = getDataFrameSize(total);
     if (size <= 0)
+    {
+        LS_DBG_L(this, "getDataFrameSize() return %d", size);
         return 0;
+    }
     if (size < total)
     {
         //adjust vector
@@ -284,7 +282,7 @@ int SpdyStream::onWrite()
         return 0;
     if (m_iWindowOut <= 0)
         return 0;
-    setFlag(HIO_FLAG_BUFF_FULL, 0);
+    setFlag(HIO_FLAG_PAUSE_WRITE, 0);
 
     if (isWantWrite())
         getHandler()->onWriteEx();
@@ -322,7 +320,7 @@ int SpdyStream::sendData(IOVec *pIov, int total)
     {
         m_iWindowOut -= total;
         if (m_iWindowOut <= 0)
-            setFlag(HIO_FLAG_BUFF_FULL, 1);
+            setFlag(HIO_FLAG_PAUSE_WRITE, 1);
     }
     return total;
 }
@@ -342,6 +340,9 @@ int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
         if (next() == NULL)
             m_pSpdyConn->add2PriorityQue(this);
     }
+    if (getFlag(HIO_FLAG_ALTSVC_SENT))
+        m_pSpdyConn->getStream()->setFlag(HIO_FLAG_ALTSVC_SENT, 1);
+
     return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID, isNoBody);
 }
 
@@ -350,7 +351,7 @@ int SpdyStream::adjWindowOut(int32_t n)
     if (isFlowCtrl())
     {
         m_iWindowOut += n;
-        LS_DBG_L(this, "Stream WINDOW_UPDATE: %d, window size: %d ",
+        LS_DBG_L(this, "stream WINDOW_UPDATE: %d, window size: %d ",
                  n, m_iWindowOut);
         if (m_iWindowOut < 0)
         {

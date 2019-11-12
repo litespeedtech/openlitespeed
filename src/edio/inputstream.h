@@ -27,7 +27,7 @@ public:
     InputStream() {};
     virtual ~InputStream() {};
     virtual int read(char *pBuf, int size) = 0;
-    virtual int readv(struct iovec *vector, size_t count) = 0;
+    virtual int readv(struct iovec *vector, int count) = 0;
 };
 class CacheableIS : public InputStream
 {

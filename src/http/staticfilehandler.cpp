@@ -529,6 +529,10 @@ int StaticFileHandler::process(HttpSession *pSession,
     
     if (!ret)
     {
+        //Check the bypass modsec flag set or not
+        if (pCache->getBypassModsec())
+            pReq->addEnv("modsecurity", 11, "off", 3);
+        
         if (pReq->isKeepAlive())
             pReq->smartKeepAlive(pCache->getMimeType()->getMIME()->c_str());
         if (!isSSI)
@@ -591,13 +595,17 @@ int StaticFileHandler::process(HttpSession *pSession,
         //ret = pSession->flush();
         ret = pSession->endResponse(1);
     }
-    if (ret == 0 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY)
-        && code == SC_200 )
+    
+    if (ret == 0 && code == SC_200 )
     {
-        HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
-        host->addUrlStaticFileMatch(pInfo->getFileData(),
-                                    pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
-        LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
+        pCache->setBypassModsec(1);
+        if (!pSession->getFlag(HSF_STX_FILE_CACHE_READY))
+        {
+            HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
+            host->addUrlStaticFileMatch(pInfo->getFileData(),
+                                        pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
+            LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
+        }
     }
     return ret;
 

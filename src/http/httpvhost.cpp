@@ -2215,7 +2215,7 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
     
     const LocalWorkerConfig* pAppDefault = pAppConfig->getpAppDefault();
     int maxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "maxConns", 1, 2000, pAppDefault->getMaxConns());
+                   "maxConns", 1, 10000, pAppDefault->getMaxConns());
     const char *pModeEnv[3] = { "development", "production", "staging" };
     int production = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                      "appserverEnv", 0, 2, pAppConfig->getAppEnv());

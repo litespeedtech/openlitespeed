@@ -31,7 +31,8 @@ typedef struct
     int         valOff;
     short       keyLen;
     uint16_t    valLen;
-    int32_t     next_index;  //For the multiple line case, this will indicate the next KVPair index, first valid value is 1 since default is 0
+    int16_t     next_index;  //For the multiple line case, this will indicate the next KVPair index, first valid value is 1 since default is 0
+    int16_t     hdr_idx;
 } resp_kvpair;
 
 
@@ -112,7 +113,7 @@ public:
     void reset();
     void reset2();
 
-    
+
     int addWithUnknownHeader(const char *pName, int nameLen, const char *pVal,
                              unsigned int valLen, int method);
     int add(INDEX headerIndex, const char *pVal, unsigned int valLen,
@@ -167,10 +168,9 @@ public:
     int  HeaderEndPos()    {    return -1; }
     int  nextHeaderPos(int pos);
 
-    int  getHeader(int pos, char **pName, int *nameLen, struct iovec *iov,
-                   int maxIovCount)
-    {   return _getHeader(pos, pName, nameLen, iov, maxIovCount); }
-    
+    int  getHeader(int pos, int *idx, struct iovec *name, struct iovec *iov,
+                   int maxIovCount);
+
     void prepareFinalize()
     {   m_isFinalize = 1;    }
 
@@ -190,7 +190,7 @@ public:
     static void buildCommonHeaders();
     static void updateDateHeader();
     static void hideServerSignature(int hide);
-    
+
 
     void addGzipEncodingHeader()
     {
@@ -230,6 +230,7 @@ public:
 
     unsigned char hasPush() const   {   return m_flags & HRH_F_HAS_PUSH;    }
 
+    static int toHpackIdx(int index);
 
 public:
     static const char *m_sPresetHeaders[H_HEADER_END];
@@ -257,7 +258,7 @@ private:
 
     int             getFreeSpaceCount() const {    return m_aKVPairs.getCapacity() - m_aKVPairs.getSize();   };
     void            incKVPairs(int num);
-    resp_kvpair    *getKV(int index) const;
+    resp_kvpair    *getKvPair(int index) const;
     resp_kvpair    *getNewKV();
     char           *getHeaderStr(int offset)        { return m_buf.begin() + offset;  }
     const char     *getHeaderStr(int offset) const  { return m_buf.begin() + offset;  }
@@ -270,7 +271,7 @@ private:
     void            _del(int kvOrderNum);
     void            replaceHeader(resp_kvpair *pKv, const char *pVal,
                                   unsigned int valLen);
-    int             appendHeader(resp_kvpair *pKv, const char *pName,
+    int             appendHeader(resp_kvpair *pKv, int hdr_idx, const char *pName,
                                  unsigned int nameLen, const char *pVal, unsigned int valLen, int);
     int             getHeaderKvOrder(const char *pName, unsigned int nameLen);
     void            verifyHeaderLength(INDEX headerIndex,
