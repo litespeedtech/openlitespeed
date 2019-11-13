@@ -6,6 +6,7 @@ OSVER=
 OSTYPE=`getconf LONG_BIT`
 MARIADBCPUARCH=
 DLCMD=
+LSPHPVER=73
 
 inst_admin_php()
 {
@@ -72,17 +73,17 @@ install_lsphp7_centos()
 {
     action=install
     ND=nd
-    LSPHPVER=73
+    
     yum -y $action epel-release
     rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
-    yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
+    yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap lsphp$LSPHPVER-json
     
     if [ ! -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
         action=reinstall
         
         yum -y remove lsphp$LSPHPVER-mysql$ND
         yum -y install lsphp$LSPHPVER-mysql$ND
-        yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap
+        yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap lsphp$LSPHPVER-json
     fi
     
     if [ -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
@@ -92,8 +93,6 @@ install_lsphp7_centos()
 
 install_lsphp7_debian()
 {
-    LSPHPVER=73
-
     grep -Fq  "http://rpms.litespeedtech.com/debian/" /etc/apt/sources.list.d/lst_debian_repo.list
     if [ $? != 0 ] ; then
         echo "deb http://rpms.litespeedtech.com/debian/ $OSVER main"  > /etc/apt/sources.list.d/lst_debian_repo.list
@@ -103,10 +102,10 @@ install_lsphp7_debian()
     wget -O /etc/apt/trusted.gpg.d/lst_repo.gpg http://rpms.litespeedtech.com/debian/lst_repo.gpg
     apt-get -y update
     
-    apt-get -y install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common 
+    apt-get -y install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common lsphp$LSPHPVER-curl lsphp$LSPHPVER-json
     
     if [ ! -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
-        apt-get -y --reinstall install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common 
+        apt-get -y --reinstall install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common lsphp$LSPHPVER-curl lsphp$LSPHPVER-json
     fi
     
     if [ -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
