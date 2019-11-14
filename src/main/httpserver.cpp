@@ -1069,8 +1069,6 @@ void HttpServerImpl::checkOLSUpdate()
     struct tm tstm;
     struct tm *tl = &tstm;
     localtime_r(&t,tl);
-    if (tl->tm_hour != 2)  //Only check it between 2:00AM - 3:00AM
-        return ;
 
     struct stat sb;
     AutoStr2 sAutoUpdFile;
