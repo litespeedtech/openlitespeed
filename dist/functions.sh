@@ -917,9 +917,9 @@ installation_lscpd()
         SDIR_OWN=$DIR_OWN
     fi
     
-    util_mkdir "$SDIR_OWN" $DIR_MOD  bin conf fcgi-bin php lib logs modules  share share/autoindex share/autoindex/icons  tmp autoupdate 
+    util_mkdir "$SDIR_OWN" $DIR_MOD  bin conf fcgi-bin php lib logs modules  share share/autoindex share/autoindex/icons    
     util_mkdir "$CONF_OWN" $SDIR_MOD   phpbuild 
-    util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache cyberpanel
+    util_mkdir "$DIR_OWN" $SDIR_MOD tmp tmp/ocspcache autoupdate cyberpanel
     
     find "$DEFAULT_TMP_DIR" -type s -atime +1 -delete 2>/dev/null
     if [ $? -ne 0 ]; then
@@ -961,15 +961,16 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib logs modules backup cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc tmp autoupdate 
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib logs modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc  
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD cgid admin/cgid admin/cgid/secret
-    util_mkdir "$DIR_OWN" $SDIR_MOD tmp/ocspcache
+    util_mkdir "$DIR_OWN" $SDIR_MOD  tmp/ocspcache
     chgrp  $WS_GROUP $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid $LSWS_HOME/cgid
     chmod  g+x $LSWS_HOME/admin/tmp $LSWS_HOME/admin/cgid $LSWS_HOME/cgid
     chown  $CONF_OWN $LSWS_HOME/admin/tmp/sess_* 1>/dev/null 2>&1
     chown  $DIR_OWN $LSWS_HOME/cachedata
     chown  $DIR_OWN $LSWS_HOME/autoupdate
+    chown  $DIR_OWN $LSWS_HOME/tmp
     util_mkdir "$SDIR_OWN" $DIR_MOD Example 
 
     find "$LSWS_HOME/admin/tmp" -type s -atime +1 -delete 2>/dev/null
