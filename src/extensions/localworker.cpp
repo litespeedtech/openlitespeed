@@ -428,7 +428,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
 
     if (pVHost)
     {
-        LS_DBG_H("[LocalWorker::workerExec] VHost:%s suExec check "
+        LS_NOTICE("[LocalWorker::workerExec] VHost:%s suExec check "
                 "uid %d gid %d setuidmode %d.",
                 pVHost->getName(), pVHost->getUid(), pVHost->getGid(),
                 pVHost->getRootContext().getSetUidMode());
@@ -500,7 +500,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                                  pChrootPath, chrootLen,
                                  pDir, strlen(pDir), config.getRLimits());
     
-    LS_INFO("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
+    LS_NOTICE("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
             " final uid %d gid %d.",
             config.getName(), config.getUid(),
             config.getGid(), config.getCommand(),
