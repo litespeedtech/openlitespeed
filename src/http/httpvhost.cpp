@@ -2543,7 +2543,7 @@ static int getRedirectCode(const XmlNode *pContextNode, int &code,
         }
     }
 
-    if ((code == -1) && (code >= SC_300) && (code < SC_400))
+    if ((code == -1) || ((code >= SC_300) && (code < SC_400)))
     {
         if ((pLocation == NULL) || (*pLocation == 0))
         {
@@ -2602,7 +2602,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
-    else if (*pLocation != '$' && *pLocation != '/' )
+    else if (*pLocation != '$' && *pLocation != '/' && 
+                type != HandlerType::HT_REDIRECT )
     {
         defLocation.setStr("$DOC_ROOT/");
         defLocation.append(pLocation, strlen(pLocation));

@@ -1700,7 +1700,7 @@ int NtwkIOLink::sslSetupHandler()
                  getProtocolName((HiosProtocol)spdyVer)->ptr);
     }
     int ret = setupHandler((HiosProtocol)spdyVer);
-    if (isWantRead() && m_ssl.hasPendingIn())
+    if (!m_iInProcess && isWantRead() && m_ssl.hasPendingIn())
         handleEvents(POLLIN);
     return ret;
 }

@@ -108,7 +108,8 @@ am_libspdy_a_OBJECTS = spdyprotocol.$(OBJEXT) spdyconnection.$(OBJEXT) \
 	spdystream.$(OBJEXT) spdyzlibfilter.$(OBJEXT) \
 	spdystreampool.$(OBJEXT) h2connection.$(OBJEXT) \
 	h2protocol.$(OBJEXT) h2stream.$(OBJEXT) lshpack.$(OBJEXT) \
-	unpackedheaders.$(OBJEXT) lshpack.$(OBJEXT)
+	unpackedheaders.$(OBJEXT) h2streampool.$(OBJEXT) \
+	lshpack.$(OBJEXT)
 libspdy_a_OBJECTS = $(am_libspdy_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -354,7 +355,7 @@ libspdy_a_METASOURCES = AUTO
 libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp \
 		spdyzlibfilter.cpp spdystreampool.cpp h2connection.cpp \
 		h2protocol.cpp h2stream.cpp lshpack.c unpackedheaders.cpp \
-		lshpack.c
+		h2streampool.cpp lshpack.c
 
 noinst_HEADERS = 
 all: all-am
@@ -409,6 +410,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2connection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2protocol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2stream.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2streampool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lshpack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyconnection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyprotocol.Po@am__quote@
