@@ -62,6 +62,8 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
                                    const RewriteMapList *pMaps,
                                    HttpContext *pContext)
 {
+    char pathBuf[4096] = {0};
+
     /*
      * If path not start with $ and /, will add $DOC_ROOT to it
      * start with $ will be exapnded
@@ -69,7 +71,6 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
     if (*path != '/' )
     {
         AutoStr2 sPath = "";
-        char pathBuf[4096] = {0};
         if (*path != '$' )
             sPath = "$DOC_ROOT/";
         sPath.append(path, strlen(path));
