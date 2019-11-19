@@ -269,6 +269,7 @@ void EvtcbQue::run()
                 LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession NULL not allowed! SKIPPING\n",
                          ls_thr_seq(), __PRETTY_FUNCTION__, pObj);
                 m_sessCallbackObjList[slot].remove(pObj);
+                recycle(pObj);
                 if (pObj == pLast)
                     break;
                 pObj = pObjNext;
@@ -285,6 +286,7 @@ void EvtcbQue::run()
                          ls_thr_seq(), __PRETTY_FUNCTION__, slot, session, tailnode,
                          ((HttpSession*)session)->getSessSeq(),((HttpSession*)session)->getSn());
                 m_sessCallbackObjList[slot].remove(pObj);
+                recycle(pObj);
                 if (pObj == pLast)
                     break;
                 pObj = pObjNext;
@@ -296,6 +298,7 @@ void EvtcbQue::run()
                 LS_WARN( "[T%d %s] called with pObj %p pObj->m_pSession %p tailnode %p tailnode_session %p MISMATCH not allowed! SKIPPING\n",
                          ls_thr_seq(), __PRETTY_FUNCTION__, pObj, pObj->m_pSession, tailnode, tailnode->m_pSession);
                 m_sessCallbackObjList[slot].remove(pObj);
+                recycle(pObj);
                 if (pObj == pLast)
                     break;
                 pObj = pObjNext;
@@ -309,6 +312,7 @@ void EvtcbQue::run()
                      ls_thr_seq(), __PRETTY_FUNCTION__, slot, session, expectSlot, tailnode,
                      ((HttpSession*)session)->getSessSeq(),((HttpSession*)session)->getSn());
                 m_sessCallbackObjList[slot].remove(pObj);
+                recycle(pObj);
                 if (pObj == pLast)
                     break;
                 pObj = pObjNext;
