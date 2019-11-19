@@ -1053,8 +1053,6 @@ void HttpServerImpl::checkOLSUpdate()
     struct tm tstm;
     struct tm *tl = &tstm;
     localtime_r(&t,tl);
-    if (tl->tm_hour != 2)  //Only check it between 2:00AM - 3:00AM
-        return ;
 
     struct stat sb;
     AutoStr2 sAutoUpdFile;
@@ -2987,6 +2985,10 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         HttpServerConfig::getInstance().setChildren(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                     "httpdWorkers", 1, 16, iNumProc));
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "httpdWorkers: %d, "
+                "Num of Processors: %d",
+                HttpServerConfig::getInstance().getChildren(),
+                iNumProc);
 #else
         HttpServerConfig::getInstance().setChildren(1);
 #endif
@@ -3510,7 +3512,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     }
 
     int maxconns = ConnLimitCtrl::getInstance().getMaxConns();
-    unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 3);
+    unsigned long long maxfds = SystemInfo::maxOpenFile(maxconns * 5);
     LS_NOTICE(ConfigCtx::getCurConfigCtx(),
               "The maximum number of file descriptor limit is set to %llu.",
               maxfds);

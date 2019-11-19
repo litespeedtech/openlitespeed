@@ -2011,7 +2011,8 @@ int HttpSession::preUriMap()
         return 0;
     
     m_request.checkUrlStaicFileCache();
-    int ret = (m_request.getUrlStaticFileData() ? 1 : 0);
+    static_file_data_t *pDataSt = m_request.getUrlStaticFileData();
+    int ret = (pDataSt ? 1 : 0);
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
     {
         LS_DBG_L(getLogSession(), "preUriMap check serving by static url file cache: %d",
@@ -2021,6 +2022,8 @@ int HttpSession::preUriMap()
     if (ret)
     {
         m_request.addEnv("staticcacheserve", 16, "1", 1);
+        if (pDataSt->pData->getBypassModsec())
+            m_request.addEnv("modsecurity", 11, "off", 3);
     }
 
     return ret;

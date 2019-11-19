@@ -8,6 +8,9 @@ header("Expires: -1");
 header("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
 header("Pragma: no-cache");
 header("X-Frame-Options: SAMEORIGIN");
+header("X-XSS-Protection: 1;mode=block");
+header("Referrer-Policy: same-origin");
+header("X-Content-Type-Options: nosniff");
 
 define ('SERVER_ROOT', $_SERVER['LS_SERVER_ROOT']);
 

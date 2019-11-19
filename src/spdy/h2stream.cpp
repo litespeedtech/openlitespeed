@@ -236,6 +236,7 @@ int H2Stream::close()
 int H2Stream::flush()
 {
     LS_DBG_L(this, "H2Stream::flush()");
+    m_pH2Conn->wantFlush();
     return LS_DONE;
 }
 
@@ -401,7 +402,7 @@ int H2Stream::adjWindowOut(int32_t n)
 }
 
 
-int H2Stream::push(ls_str_t *pUrl, ls_str_t *pHost, 
+int H2Stream::push(ls_str_t *pUrl, ls_str_t *pHost,
                    ls_strpair_t *pExtraHeaders)
 {
     return m_pH2Conn->pushPromise(m_uiStreamId, pUrl, pHost, 

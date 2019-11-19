@@ -116,14 +116,14 @@ stop()
         do
             sleep 1
             test_running
-            echo "[$i/15]: test if running"
+            #echo "[$i/15]: test if running"
             
             if [ $RUNNING -eq 1 ]; then
                 if [ "$i" = "14" ] || [ "$i" = "15" ] ; then
                     kill -9 $PID
-                    echo "Sent kill again to stop."
-                else
-                    echo "[$i/15]: running, wait for 1 more second."
+                   # echo "Sent kill again to stop."
+                #else
+                   # echo "[$i/15]: running, wait for 1 more second."
                 fi
             else
                 break

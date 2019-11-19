@@ -185,7 +185,7 @@ void ExtWorkerConfig::config(const XmlNode *pNode)
 {
     const char *pValue;
     int iMaxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                    "maxConns", 1, 2000, 5);
+                    "maxConns", 1, 10000, 5);
     int iRetryTimeout = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                         "retryTimeout", 0, LONG_MAX, 10);
     int iInitTimeout = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,

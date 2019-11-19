@@ -426,6 +426,14 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     if ((int)gid == -1)
         gid = procConfig.getGid();
 
+    if (pVHost)
+    {
+        LS_NOTICE("[LocalWorker::workerExec] VHost:%s suExec check "
+                "uid %d gid %d setuidmode %d.",
+                pVHost->getName(), pVHost->getUid(), pVHost->getGid(),
+                pVHost->getRootContext().getSetUidMode());
+    }
+    
     if (pVHost && pVHost->getRootContext().getSetUidMode() == UID_DOCROOT)
     {
         uid = pVHost->getUid();
@@ -491,6 +499,13 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                                  config.getUmask(),
                                  pChrootPath, chrootLen,
                                  pDir, strlen(pDir), config.getRLimits());
+    
+    LS_NOTICE("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
+            " final uid %d gid %d.",
+            config.getName(), config.getUid(),
+            config.getGid(), config.getCommand(),
+            uid, gid);
+     
     int rfd = -1;
     int pid;
     //if ( config.getStartByServer() == 2 )

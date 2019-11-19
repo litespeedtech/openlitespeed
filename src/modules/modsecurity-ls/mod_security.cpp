@@ -23,10 +23,11 @@
 #include <modsecurity/modsecurity.h>
 #include <modsecurity/transaction.h>
 #include <modsecurity/rules.h>
+class session;
 
 #define MNAME                       mod_security
 #define ModuleNameStr               "Mod_Security"
-#define VERSIONNUMBER               "1.1"
+#define VERSIONNUMBER               "1.2"
 
 #define MODULE_VERSION_INFO         ModuleNameStr " " VERSIONNUMBER
 
@@ -51,7 +52,7 @@ typedef struct ModData_t
 {
     Transaction            *modsec_transaction;
     int8_t                  chkReqBody;
-    int8_t                  chkRespBody;    
+    int8_t                  chkRespBody;
 } ModData;
 
 
@@ -76,7 +77,7 @@ void ls_modSecLogCb(void *_session, const void *data)
 }
 
 
-int releaseMData(void *data)
+static int releaseMData(void *data)
 {
     ModData *myData = (ModData *)data;
     if (myData)
@@ -357,6 +358,16 @@ static int createModData(lsi_param_t *rec, msc_conf_t *conf)
     }
 }
 
+static int isBypassCheck(lsi_session_t *session)
+{
+    char var[4] = {0};
+    int len = g_api->get_req_env(session,
+                                 "modsecurity", 11, var, 3);
+    if (len == 3 && strncasecmp(var, "off", 3) == 0)
+        return 1;
+    else
+        return 0;
+}
 
 static int UriMapHook(lsi_param_t *rec)
 {
@@ -373,6 +384,13 @@ static int UriMapHook(lsi_param_t *rec)
     {
         g_api->log(session, LSI_LOG_DEBUG,  "[Module:%s] Disabled.\n",
                    ModuleNameStr);
+        return LSI_OK;
+    }
+    
+    if (isBypassCheck(session))
+    {
+        g_api->log(session, LSI_LOG_DEBUG,  "[Module:%s] bypassed for serving "
+                   "from cache.\n", ModuleNameStr);
         return LSI_OK;
     }
 
@@ -488,6 +506,14 @@ static int UriMapHook(lsi_param_t *rec)
         return LSI_ERROR;
     }
 
+#if 0
+    if (qs_len == 5 && strcmp(qs, "12345") == 0)
+    {
+        g_api->set_status_code(rec->session, 500);
+        return LSI_ERROR;
+    }
+#endif    
+    
     Rules *rules = myData->modsec_transaction->m_rules;
     myData->chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
     myData->chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
@@ -607,6 +633,14 @@ static int respHeaderHook(lsi_param_t *rec)
         return LSI_OK;
     }
 
+    if (isBypassCheck(session))
+    {
+        myData->chkRespBody = false;
+        g_api->log(session, LSI_LOG_DEBUG,  "[Module:%s] bypassed for serving "
+                   "from static file cache.\n", ModuleNameStr);
+        return LSI_OK;
+    }
+    
     int count = g_api->get_resp_headers_count(rec->session);
     if (count >= MAX_RESP_HEADERS_NUMBER)
         g_api->log(rec->session, LSI_LOG_WARN,

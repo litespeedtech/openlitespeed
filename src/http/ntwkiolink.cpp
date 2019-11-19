@@ -402,7 +402,10 @@ int NtwkIOLink::handleEvents(short evt)
         return 0;
     }
     if (event & POLLOUT)
+    {
+        //setFlag(HIO_FLAG_PAUSE_WRITE, 0);
         (*m_pFpList->m_onWrite_fp)(this);
+    }
     m_iInProcess = 0;
 
     switch(getState())
@@ -1615,10 +1618,13 @@ int NtwkIOLink::sslSetupHandler()
     }
     else
     {
-        LS_DBG_L(this, "Next Protocol Negotiation result: %s",
+        LS_DBG_L(this, "ALPN result: %s",
                  getProtocolName((HiosProtocol)spdyVer));
     }
-    return setupHandler((HiosProtocol)spdyVer);
+    int ret = setupHandler((HiosProtocol)spdyVer);
+    if (isWantRead() && m_ssl.hasPendingIn())
+        handleEvents(POLLIN);
+    return ret;
 }
 
 
