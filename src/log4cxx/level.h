@@ -20,6 +20,7 @@
 
 
 #include <lsdef.h>
+#include <lsr/ls_log.h>
 #include <log4cxx/nsdefs.h>
 
 BEGIN_LOG4CXX_NS
@@ -33,23 +34,23 @@ class Level
 public:
     enum
     {
-        FATAL = 0,
-        ALERT = 1000,
-        CRIT  = 2000,
-        ERROR = 3000,
-        WARN  = 4000,
-        NOTICE = 5000,
-        INFO  = 6000,
-        DEBUG = 7000,
-        DBG_LESS = 7020,
-        DBG_LOW  = 7020,
-        DBG_MEDIUM = 7050,
-        DBG_MORE = 7080,
-        DBG_HIGH = 7080,
-        DBG_IODATA = 7090,
-        TRACE = 8000,
-        NOTSET = 9000,
-        UNKNOWN = 10000
+        FATAL       = LS_LOG_FATAL,
+        ALERT       = LS_LOG_ALERT,
+        CRIT        = LS_LOG_CRIT,
+        ERROR       = LS_LOG_ERROR,
+        WARN        = LS_LOG_WARN,
+        NOTICE      = LS_LOG_NOTICE,
+        INFO        = LS_LOG_INFO,
+        DEBUG       = LS_LOG_DEBUG,
+        DBG_LESS    = LS_LOG_DBG_LOW,
+        DBG_LOW     = LS_LOG_DBG_LOW,
+        DBG_MEDIUM  = LS_LOG_DBG_MED,
+        DBG_MORE    = LS_LOG_DBG_HIGH,
+        DBG_HIGH    = LS_LOG_DBG_HIGH,
+        DBG_IODATA  = LS_LOG_TRACE,
+        TRACE       = LS_LOG_TRACE,
+        NOTSET      = LS_LOG_NOTSET,
+        UNKNOWN     = LS_LOG_UNKNOWN
     };
 
     static const char *toString(int level)

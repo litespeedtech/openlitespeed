@@ -814,10 +814,10 @@ int HttpReq::processHeader(int index)
             char ch = *pBEnd;
             *((char *)pBEnd) = 0;
             if ((m_commonHeaderLen[ index ] >= 4)
-                && (strstr(pCur, "gzip") != NULL))
+                && (strcasestr(pCur, "gzip") != NULL))
                 m_iAcceptGzip = REQ_GZIP_ACCEPT |
                                 HttpServerConfig::getInstance().getGzipCompress();
-            if (strstr(pCur, "br") != NULL)
+            if (strcasestr(pCur, "br") != NULL)
                 m_iAcceptBr = REQ_BR_ACCEPT |
                                 HttpServerConfig::getInstance().getBrCompress();
             *((char *)pBEnd) = ch;

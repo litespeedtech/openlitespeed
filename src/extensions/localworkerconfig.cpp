@@ -39,7 +39,7 @@
 LocalWorkerConfig::LocalWorkerConfig(const char *pName)
     : ExtWorkerConfig(pName)
     , m_pCommand(NULL)
-    , m_iBackLog(10)
+    , m_iBackLog(100)
     , m_iInstances(1)
     , m_iPriority(0)
     , m_iRunOnStartUp(0)
@@ -50,7 +50,7 @@ LocalWorkerConfig::LocalWorkerConfig(const char *pName)
 
 LocalWorkerConfig::LocalWorkerConfig()
     : m_pCommand(NULL)
-    , m_iBackLog(10)
+    , m_iBackLog(100)
     , m_iInstances(1)
     , m_iPriority(0)
     , m_iRunOnStartUp(0)
@@ -163,7 +163,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
     int selfManaged;
     int instances;
     int backlog = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "backlog",
-                  1, 100, 10);
+                  1, 100, 100);
     int priority = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                    "priority", -20, 20, procConfig.getPriority() + 1);
 

@@ -1,9 +1,5 @@
 
 cmake_minimum_required(VERSION 2.8)
-cmake_policy(SET CMP0002 OLD)
-
-
-########### next target ###############
 
 SET(shm_STAT_SRCS addrmap.cpp
     lsshm.cpp

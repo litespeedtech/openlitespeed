@@ -9,17 +9,21 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <poll.h>
 #include <time.h>
 #include <fcntl.h>
+#include <stdlib.h>
+
+#include <lsdef.h>
 #include <lsr/ls_pool.h>
 #include <socket/ls_sock.h>
 #include <sslpp/ls_fdbuf_bio.h>
 #include <openssl/bio.h>
 
-#ifdef RUN_TEST
+//#ifdef RUN_TEST
 #define DEBUGGING
-#endif
+//#endif
 
 #ifdef DEBUGGING
 
@@ -27,9 +31,9 @@
 #define DEBUG_MESSAGE(...)     printf(__VA_ARGS__);
 #define INFO_MESSAGE(...)      printf(__VA_ARGS__);
 #else
-#include <ls.h>
-#define DEBUG_MESSAGE(...)     LSI_DBG(NULL, __VA_ARGS__);
-#define INFO_MESSAGE(... )     LSI_INF(NULL, __VA_ARGS__);
+#include <lsr/ls_log.h>
+#define DEBUG_MESSAGE(...)     LSR_DBG_H(__VA_ARGS__);
+#define INFO_MESSAGE(... )     LSR_INFO(__VA_ARGS__);
 #endif
 
 #else
@@ -58,7 +62,11 @@ static int BIO_fd_should_retry(int i);
 static int BIO_fd_non_fatal_error(int err);
 #endif
 
-#define SIMPLE_RETRY(err) ((err == EAGAIN) || (err = EWOULDBLOCK))
+#if EWOULDBLOCK != EAGAIN
+#define SIMPLE_RETRY(err) ((err == EAGAIN) || (err == EWOULDBLOCK))
+#else
+#define SIMPLE_RETRY(err) (err == EAGAIN)
+#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
 void *BIO_get_data(BIO *a);
@@ -70,28 +78,45 @@ void *BIO_get_data(BIO *a);
 void ls_fdbuf_bio_init(ls_fdbio_data *fdbio)
 {
     memset(fdbio, 0, sizeof(*fdbio));
+    fdbio->m_rbuf_size = RBIO_BUF_SIZE;
 }
 
 
-
-
-static int bio_fd_free(BIO *a)
+int ls_fdbio_alloc_rbuff(ls_fdbio_data *fdbio, int size)
 {
-    ls_fdbio_data *fdbio;
-    DEBUG_MESSAGE("[BIO] bio_fd_free: %p\n", a);
-    if (a == NULL)
-        return 0;
-    fdbio = LS_FDBUF_FROM_BIO(a);
-    if (!fdbio)
-        return 1;
-    if (fdbio->m_rbioBuf)
+    DEBUG_MESSAGE("[FDBIO] alloc read buf %d\n", size);
+    assert(fdbio->m_rbuf_used == fdbio->m_rbuf_read);
+    if (fdbio->m_rbuf && fdbio->m_rbuf_size >= size)
+        return LS_OK;
+    void *buf = ls_palloc(size);
+    if (buf)
     {
-        ls_pfree(fdbio->m_rbioBuf);
-        fdbio->m_rbioBuf = NULL;
+        if (fdbio->m_rbuf)
+            ls_pfree(fdbio->m_rbuf);
+        fdbio->m_rbuf = (uint8_t *)buf;
+        fdbio->m_rbuf_size = size;
+        fdbio->m_rbuf_used = fdbio->m_rbuf_read = 0;
+        return LS_OK;
     }
-    ls_fdbuf_bio_init(fdbio);
-    return 1;
+    else
+    {
+        DEBUG_MESSAGE("Insufficient memory allocating rbuff %d bytes\n", size);
+        errno = ENOMEM;
+        return LS_FAIL;
+    }
 }
+
+
+void ls_fdbio_release_rbuff(ls_fdbio_data *fdbio)
+{
+    if (fdbio->m_rbuf == NULL)
+        return;
+    assert(fdbio->m_rbuf_used == fdbio->m_rbuf_read);
+    DEBUG_MESSAGE("[FDBIO] free rbuf %d\n", (int)fdbio->m_rbuf_size);
+    ls_pfree(fdbio->m_rbuf);
+    fdbio->m_rbuf = NULL;
+}
+
 
 static int bio_fd_read(BIO *b, char *out, int outl)
 {
@@ -105,10 +130,10 @@ static int bio_fd_read(BIO *b, char *out, int outl)
     if ((out == NULL) || (!outl))
     {
         INFO_MESSAGE("[BIO] bio_fd_read NO BUFFER!!\n");
-        err = ENOMEM;
+        err = EINVAL;
         return -1;
     }
-    if (fdbio->m_rbioClosed)
+    if (fdbio->m_is_closed)
     {
         DEBUG_MESSAGE("[BIO] bio_fd_read: CLOSED ON PREVIOUS READ\n");
         errno = 0;
@@ -116,7 +141,7 @@ static int bio_fd_read(BIO *b, char *out, int outl)
     }
     while (total < outl)
     {
-        int buffered = fdbio->m_rbioBuffered - fdbio->m_rbioIndex;
+        int buffered = fdbio->m_rbuf_used - fdbio->m_rbuf_read;
         int rd_remaining = outl - total;
         int copy = 0;
         if (buffered)
@@ -124,8 +149,8 @@ static int bio_fd_read(BIO *b, char *out, int outl)
             copy = (buffered > rd_remaining) ? rd_remaining : buffered;
             DEBUG_MESSAGE("[BIO] bio_fd_read: Use buffered %d of %d\n",
                           copy, rd_remaining);
-            memcpy(&out[total], &fdbio->m_rbioBuf[fdbio->m_rbioIndex], copy);
-            fdbio->m_rbioIndex += copy;
+            memcpy(&out[total], &fdbio->m_rbuf[fdbio->m_rbuf_read], copy);
+            fdbio->m_rbuf_read += copy;
             total += copy;
             if (total >= outl)
             {
@@ -133,16 +158,17 @@ static int bio_fd_read(BIO *b, char *out, int outl)
                               total);
                 return total;
             }
-            fdbio->m_rbioBuffered = 0;
-            fdbio->m_rbioIndex = 0;
+            fdbio->m_rbuf_used = 0;
+            fdbio->m_rbuf_read = 0;
             rd_remaining = outl - total;
         }
-        if ((rd_remaining < fdbio->m_rbioBufSz) && (fdbio->m_rbioBuf))
+        if ((rd_remaining < fdbio->m_rbuf_size)
+            && (fdbio->m_rbuf || ls_fdbio_alloc_rbuff(fdbio, fdbio->m_rbuf_size) == LS_OK))
         {
             DEBUG_MESSAGE("[BIO] bio_fd_read: Read into buffer\n");
-            ret = ls_read(fd, fdbio->m_rbioBuf, fdbio->m_rbioBufSz);
-            if (ret < fdbio->m_rbioBufSz)
-                fdbio->m_rbioWaitEvent = 1;
+            ret = ls_read(fd, fdbio->m_rbuf, fdbio->m_rbuf_size);
+            if (ret < fdbio->m_rbuf_size)
+                fdbio->m_need_read_event = 1;
             buffered = ret;
         }
         else
@@ -150,19 +176,19 @@ static int bio_fd_read(BIO *b, char *out, int outl)
             DEBUG_MESSAGE("[BIO] bio_fd_read: Read into data\n");
             ret = ls_read(fd, out + total, rd_remaining);
             if (ret < rd_remaining)
-                fdbio->m_rbioWaitEvent = 1;
+                fdbio->m_need_read_event = 1;
             buffered = 0;
         }
         if (ret == 0)
         {
             DEBUG_MESSAGE("[BIO] bio_fd_read: CLOSED\n");
-            fdbio->m_rbioClosed = 1;
+            fdbio->m_is_closed = 1;
             errno = 0;
             return total;
         }
         if (ret < 0) 
         {
-            errno = err;
+            err = errno;
             if (total)
             {
                 DEBUG_MESSAGE("[BIO] bio_fd_read: error but I have data\n");
@@ -179,8 +205,8 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         }
         if (buffered)
         {
-            fdbio->m_rbioBuffered = buffered;
-            fdbio->m_rbioIndex = 0;
+            fdbio->m_rbuf_used = buffered;
+            fdbio->m_rbuf_read = 0;
             DEBUG_MESSAGE("[BIO] bio_fd_read: Preserve read: %d\n", ret);
         }
         else
@@ -193,14 +219,173 @@ static int bio_fd_read(BIO *b, char *out, int outl)
 }
 
 
+int ls_fdbio_alloc_wbuff(ls_fdbio_data *fdbio, int size)
+{
+    DEBUG_MESSAGE("[FDBIO] alloc write buf %d\n", size);
+    assert(fdbio->m_wbuf_used == 0);
+    if (fdbio->m_wbuf && fdbio->m_wbuf_size >= size)
+        return LS_OK;
+    void *buf = ls_palloc(size);
+    if (buf)
+    {
+        if (fdbio->m_wbuf)
+            ls_pfree(fdbio->m_wbuf);
+        fdbio->m_wbuf = (uint8_t *)buf;
+        fdbio->m_wbuf_size = size;
+        fdbio->m_wbuf_sent = 0;
+        return LS_OK;
+    }
+    return LS_FAIL;
+}
+
+
+void ls_fdbio_release_wbuff(ls_fdbio_data *fdbio)
+{
+    assert(fdbio->m_wbuf_used == 0);
+    if (fdbio->m_wbuf == NULL)
+        return;
+    DEBUG_MESSAGE("[FDBIO] free wbuf %d\n", (int)fdbio->m_wbuf_size);
+    ls_pfree(fdbio->m_wbuf);
+    fdbio->m_wbuf_size = 0;
+    fdbio->m_wbuf = NULL;
+}
+
+
+static int ls_fdbio_combine_write(ls_fdbio_data *fdbio, int fd, const void *buf, int num)
+{
+    DEBUG_MESSAGE("[FDBIO] ls_fdbio_combine_write, to write: %d, used: %d, sent: %d\n",
+           num, (int)fdbio->m_wbuf_used, (int)fdbio->m_wbuf_sent);
+    struct iovec iov[2];
+    iov[0].iov_base = fdbio->m_wbuf + fdbio->m_wbuf_sent;
+    iov[0].iov_len = fdbio->m_wbuf_used - fdbio->m_wbuf_sent;
+    iov[1].iov_base = (void *)buf;
+    iov[1].iov_len = num;
+    int ret = ls_writev(fd, iov, 2);
+    DEBUG_MESSAGE("[FDBIO] ls_writev(%d + %d) ret: %d\n",
+                  (int)iov[0].iov_len, (int)iov[1].iov_len, ret);
+    if (ret > 0)
+    {
+        if (ret >= (int)iov[0].iov_len)
+        {
+            ret -= iov[0].iov_len;
+            fdbio->m_wbuf_used = 0;
+            fdbio->m_wbuf_sent = 0;
+            if (ret == 0)
+            {
+                ret = -1;
+                errno = EWOULDBLOCK;
+            }
+        }
+        else
+        {
+            fdbio->m_wbuf_sent += ret;
+            ret = -1;
+            errno = EWOULDBLOCK;
+        }
+    }
+    DEBUG_MESSAGE("[FDBIO] combine_write ret: %d, buffer used: %d, sent: %d\n",
+                  ret, fdbio->m_wbuf_used, fdbio->m_wbuf_sent);
+    return ret;
+}
+
+
+#define TLS_RECORD_MAX_SIZE 16413
+static int ls_fdbio_buff_write(ls_fdbio_data *fdbio, int fd, const void *buf, int num)
+{
+    DEBUG_MESSAGE("[FDBIO] ls_fdbio_buff_write, to write: %d, used: %d, sent: %d\n",
+           num, (int)fdbio->m_wbuf_used, (int)fdbio->m_wbuf_sent);
+    if (!fdbio->m_wbuf)
+    {
+        if (num < 4096)
+            if (ls_fdbio_alloc_wbuff(fdbio, 4096) == LS_FAIL)
+                return LS_FAIL;
+    }
+
+    int avail = fdbio->m_wbuf_size - fdbio->m_wbuf_used;
+    if (avail < num)
+    {
+        int ret;
+        if (fdbio->m_wbuf_used > 0)
+            ret = ls_fdbio_combine_write(fdbio, fd, buf, num);
+        else
+            ret = ls_write(fd, buf, num);
+        if (ret >= num && fdbio->m_wbuf_size < TLS_RECORD_MAX_SIZE * 4)
+        {
+            int new_size = fdbio->m_wbuf_size + TLS_RECORD_MAX_SIZE;
+            if (new_size < TLS_RECORD_MAX_SIZE * 2)
+                new_size = TLS_RECORD_MAX_SIZE * 2;
+            ls_fdbio_alloc_wbuff(fdbio, new_size);
+        }
+        return ret;
+    }
+    memmove(fdbio->m_wbuf + fdbio->m_wbuf_used, buf, num);
+    fdbio->m_wbuf_used += num;
+    DEBUG_MESSAGE("[FDBIO] lstls_buff_write, to write: %d, finished: %d, used: %d, sent: %d\n",
+           num, num, (int)fdbio->m_wbuf_used, (int)fdbio->m_wbuf_sent);
+    return num;
+}
+
+
+int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd)
+{
+    if (fdbio->m_flag & LS_FDBIO_WBLOCK)
+        return 0;
+    int pending = fdbio->m_wbuf_used - fdbio->m_wbuf_sent;
+    if (pending <= 0)
+        return 1;
+    int ret = ls_write(fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending);
+    DEBUG_MESSAGE("[FDBIO] flush_ex write(%d, %p, %d) return %d\n",
+           fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending, ret);
+    if (ret >= pending)
+    {
+        fdbio->m_wbuf_used = 0;
+        fdbio->m_wbuf_sent = 0;
+        DEBUG_MESSAGE("[FDBIO] FLUSHED\n");
+        return 1;
+    }
+    else
+    {
+        DEBUG_MESSAGE("[FDBIO] partial write, mark WBLOCK.\n");
+        fdbio->m_flag |= LS_FDBIO_WBLOCK;
+        if (ret > 0)
+        {
+            fdbio->m_wbuf_sent += ret;
+        }
+        else if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+
 static int bio_fd_write(BIO *b, const char *in, int inl)
 {
     int ret;
     int err = 0;
     int fd = BIO_get_fd(b, 0);
+    ls_fdbio_data *fdbio = LS_FDBUF_FROM_BIO(b);
 
-    DEBUG_MESSAGE("[BIO] bio_fd_write: %p, %d bytes on %d\n", b, inl, fd);
-    ret = ls_write(fd, (void *)in, inl);
+    DEBUG_MESSAGE("[FDBIO] bio_fd_write: %p, %d bytes on %d\n", b, inl, fd);
+    if (fdbio->m_flag & LS_FDBIO_WBLOCK)
+    {
+        DEBUG_MESSAGE("[FDBIO] bio_fd_write, FDBIO_WBLOCK flag is set, set errno to EAGAIN\n");
+        BIO_set_retry_write(b);
+        errno = EAGAIN;
+        return -1;
+    }
+
+    if (fdbio->m_flag & LS_FDBIO_BUFFERING)
+    {
+        ret = ls_fdbio_buff_write(fdbio, fd, in, inl);
+    }
+    else if (fdbio->m_wbuf_used > 0)
+    {
+        ret = ls_fdbio_combine_write(fdbio, fd, in, inl);
+    }
+    else
+        ret = ls_write(fd, (void *)in, inl);
     if ( ret > 0)
     {
         BIO_clear_retry_flags(b);
@@ -209,7 +394,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
     err = errno;
     if ((ret == -1) && (!(SIMPLE_RETRY(err))) && (!BIO_fd_should_retry(ret)))
     {
-        DEBUG_MESSAGE("[BIO] bio_fd_write: actual write failed, errno: %d\n",
+        DEBUG_MESSAGE("[FDBIO] bio_fd_write: actual write failed, errno: %d\n",
                       err);
         return ret;
     }            
@@ -217,7 +402,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
     if (ret < 0) {
         if ((BIO_fd_should_retry(ret)) || (SIMPLE_RETRY(err)))
         {
-            DEBUG_MESSAGE("[BIO] bio_fd_write: %p, early return, errno: %d,"
+            DEBUG_MESSAGE("[FDBIO] bio_fd_write: %p, early return, errno: %d,"
                           " ret: %d\n", b, err, ret);
             BIO_set_retry_write(b);
             errno = EAGAIN;
@@ -226,7 +411,7 @@ static int bio_fd_write(BIO *b, const char *in, int inl)
         }
     }
     
-    DEBUG_MESSAGE("[BIO] bio_fd_write: %p, returning: %d\n", b, ret);
+    DEBUG_MESSAGE("[FDBIO] bio_fd_write: %p, returning: %d\n", b, ret);
     errno = err;
     return ret;
 }
@@ -236,7 +421,7 @@ static int bio_fd_puts(BIO *bp, const char *str)
 {
     int n, ret;
     
-    DEBUG_MESSAGE("[BIO] bio_fd_puts: %p, %s\n", bp, str);
+    DEBUG_MESSAGE("[FDBIO] bio_fd_puts: %p, %s\n", bp, str);
 
     n = strlen(str);
     ret = bio_fd_write(bp, str, n);
@@ -370,19 +555,8 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
         s_biom->destroy = bio_fd_free;
 #endif        
     }
-    if (!fdbio->m_rbioBufSz)
-        fdbio->m_rbioBufSz = RBIO_BUF_SIZE;
-    
-    if (!fdbio->m_rbioBuf
-        && !(fdbio->m_rbioBuf = (char *)ls_palloc(fdbio->m_rbioBufSz)))
-    {
-        DEBUG_MESSAGE("Insufficient memory allocating %d bytes\n",
-                      fdbio->m_rbioBufSz);
-        errno = ENOMEM;
-        return NULL;
-    }
-    fdbio->m_rbioBuffered = 0;
-    fdbio->m_rbioIndex = 0;
+    fdbio->m_rbuf_used = 0;
+    fdbio->m_rbuf_read = 0;
 
     BIO *bio = BIO_new(s_biom);
     if (!bio)
@@ -406,4 +580,20 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
 }
 
 
+static int bio_fd_free(BIO *a)
+{
+    ls_fdbio_data *fdbio;
+    DEBUG_MESSAGE("[BIO] bio_fd_free: %p\n", a);
+    if (a == NULL)
+        return 0;
+    fdbio = LS_FDBUF_FROM_BIO(a);
+    if (!fdbio)
+        return 1;
+    fdbio->m_rbuf_used = fdbio->m_rbuf_read = 0;
+    ls_fdbio_release_rbuff(fdbio);
+    fdbio->m_wbuf_used = 0;
+    ls_fdbio_release_wbuff(fdbio);
+    ls_fdbuf_bio_init(fdbio);
+    return 1;
+}
 

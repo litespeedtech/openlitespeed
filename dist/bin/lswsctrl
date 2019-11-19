@@ -63,7 +63,7 @@ killwatch()
 {
         WATCH_PROCS=`$PS_CMD | grep wswatch.sh | grep -v grep | wc -l`
         if [ $WATCH_PROCS -gt 0 ]; then
-                killall wswatch.sh
+                pkill wswatch.sh
         fi
 }
 
@@ -116,14 +116,14 @@ stop()
         do
             sleep 1
             test_running
-            echo "[$i/15]: test if running"
+            #echo "[$i/15]: test if running"
             
             if [ $RUNNING -eq 1 ]; then
                 if [ "$i" = "14" ] || [ "$i" = "15" ] ; then
                     kill -9 $PID
-                    echo "Sent kill again to stop."
-                else
-                    echo "[$i/15]: running, wait for 1 more second."
+                   # echo "Sent kill again to stop."
+                #else
+                   # echo "[$i/15]: running, wait for 1 more second."
                 fi
             else
                 break
@@ -183,7 +183,7 @@ restart()
                 GPID=`cat $GRACEFUL_PIDFILE`
                 if [ "x$GPID" != 'x' ]; then
                     if [ $GPID -ne 0 ] && [ $GPID -ne 1 ]; then
-                        killall -9 $EXECUTABLE
+                        pkill -9 $EXECUTABLE
                     fi
                 fi
             fi
@@ -202,7 +202,7 @@ restart()
 
         echo "LSWS does not restart properly, check port 7080" >> $RESTART_LOG
         #log7080
-        killall -9 $EXECUTABLE
+        pkill -9 $EXECUTABLE
         sleep 1
         echo "check port 7080 after kill all $EXECUTABLE processes " >> $RESTART_LOG
         #log7080

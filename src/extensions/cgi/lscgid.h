@@ -36,6 +36,7 @@ typedef struct
     char       *m_pCGIDir;
     char      **m_argv;
     char      **m_env;
+    char       *m_stderrPath;
     char       *m_cwdPath;
     int         m_fdReceived;
 

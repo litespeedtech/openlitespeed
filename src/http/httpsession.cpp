@@ -394,6 +394,8 @@ void HttpSession::nextRequest()
         m_iFlag = 0;
         logAccess(0);
         ++m_iReqServed;
+        getStream()->resetBytesCount();
+
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
         m_sendFileInfo.release();
@@ -630,6 +632,14 @@ int HttpSession::reqBodyDone()
 }
 
 
+int HttpSession::call_onRead(lsi_session_t *p, long , void *)
+{
+    HttpSession *pSession = (HttpSession *)p;
+    pSession->onReadEx();
+    return 0;
+}
+
+
 int HttpSession::readReqBody()
 {
     char *pBuf;
@@ -651,7 +661,11 @@ int HttpSession::readReqBody()
         if (!endBody)
         {
             if ((ret < (int)size) || (++count == 10 && !isspdy))
+            {
+                if (count == 10)
+                    EvtcbQue::getInstance().schedule(call_onRead, this, 0, NULL, false);
                 return 0;
+            }
         }
 
         if (m_pReqParser && m_pReqParser->isParsePost() && m_pReqParser->isParseUploadByFilePath())
@@ -1114,6 +1128,7 @@ int HttpSession::processNewReqInit()
             LS_DBG_L(getLogSession(), "Cannot find a matching VHost.");
             *pHostEnd = ch;
         }
+        m_sessionHooks.inherit(NULL, 1);
         return SC_404;
     }
 
@@ -1556,7 +1571,8 @@ int HttpSession::preUriMap()
         return 0;
     
     m_request.checkUrlStaicFileCache();
-    int ret = (m_request.getUrlStaticFileData() ? 1 : 0);
+    static_file_data_t *pDataSt = m_request.getUrlStaticFileData();
+    int ret = (pDataSt ? 1 : 0);
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
     {
         LS_DBG_L(getLogSession(), "preUriMap check serving by static url file cache: %d",
@@ -1566,6 +1582,8 @@ int HttpSession::preUriMap()
     if (ret)
     {
         m_request.addEnv("staticcacheserve", 16, "1", 1);
+        if (pDataSt->pData->getBypassModsec())
+            m_request.addEnv("modsecurity", 11, "off", 3);
     }
 
     return ret;
@@ -4208,7 +4226,6 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 int HttpSession::sendStaticFile(SendFileInfo *pData)
 {
     LS_DBG_M(getLogSession(), "SendStaticFile()");
-    getStream()->resetBytesCount();
 
     if (m_sessionHooks.isDisabled(LSI_HKPT_SEND_RESP_BODY) ||
         !(m_sessionHooks.getFlag(LSI_HKPT_SEND_RESP_BODY)&

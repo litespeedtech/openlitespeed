@@ -198,7 +198,7 @@ int HttpUtil::escapeQs(const char *pSrc, char *pDest, int iDestLen)
         case '=':
         case '%':
         case '\'':
-            if (iDestLen < 3)
+            if (iDestLen > 3)
             {
                 *p++ = '%';
                 *p++ = StringTool::s_aHex[(ch >> 4) & 15];

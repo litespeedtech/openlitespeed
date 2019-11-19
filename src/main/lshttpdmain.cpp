@@ -77,7 +77,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Fri Aug 16 00:12:11 UTC 2019)"
+#define BUILDTIME  " (built: Tue Nov 19 16:59:54 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 

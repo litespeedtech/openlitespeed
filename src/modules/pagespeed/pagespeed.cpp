@@ -153,7 +153,7 @@ struct LsPsVhCtx
     LsServerContext            *serverContext;
     RewriteOptions             *options;
     ProxyFetchFactory          *proxyFetchFactory;
-    MessageHandler             *handler;
+    MessageHandler             *handler;  //Will be a pointer to other, do not delete
 public:
     LsPsVhCtx()
     {
@@ -166,8 +166,6 @@ public:
             delete serverContext;
         if (proxyFetchFactory)
             delete proxyFetchFactory;
-        if (handler)
-            delete handler;
     }
 };
 

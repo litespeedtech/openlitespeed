@@ -427,8 +427,7 @@ int NtwkIOLink::close()
 void NtwkIOLink::suspendRead()
 {
     LS_DBG_L(this, "NtwkIOLink::suspendRead()...");
-    if (!((isSSL()) && (m_ssl.wantRead())))
-        MultiplexerFactory::getMultiplexer()->suspendRead(this);
+    MultiplexerFactory::getMultiplexer()->suspendRead(this);
 }
 
 
@@ -1615,10 +1614,13 @@ int NtwkIOLink::sslSetupHandler()
     }
     else
     {
-        LS_DBG_L(this, "Next Protocol Negotiation result: %s",
+        LS_DBG_L(this, "ALPN result: %s",
                  getProtocolName((HiosProtocol)spdyVer));
     }
-    return setupHandler((HiosProtocol)spdyVer);
+    int ret = setupHandler((HiosProtocol)spdyVer);
+    if (isWantRead() && m_ssl.hasPendingIn())
+        handleEvents(POLLIN);
+    return ret;
 }
 
 

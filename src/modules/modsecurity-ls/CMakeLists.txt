@@ -14,5 +14,7 @@ add_library(mod_security SHARED
     mod_security.cpp
 )
 
-target_link_libraries(mod_security libmodsecurity.a )
+
+target_link_libraries(mod_security libmodsecurity.a -llmdb -lxml2 -lcurl -lcrypto -lssl -lyajl )
+
 set_target_properties(mod_security PROPERTIES PREFIX "")

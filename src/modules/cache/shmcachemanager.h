@@ -56,6 +56,8 @@ public:
     int processPrivatePurgeCmd(CacheKey *pKey, const char *pValue, int iValLen,
                                time_t curTime, int curTimeMS);
 
+    
+    
     void *getPrivateCacheInfo(const char *pPrivateId, int len, int force);
 
     int setPrivateTagFlag(void *pPrivatePurgeData, purgeinfo_t *pInfo);
@@ -101,8 +103,13 @@ private:
 
 
     LsShmOffset_t getSession(const char *pId, int len);
+    
     LsShmOffset_t addUpdate(const char *pKey, int keyLen, int flag,
                             int32_t sec, int16_t msec);
+    LsShmOffset_t addUpdate(LsShmHash *pHash, const char *pKey, int keyLen,
+                            purgeinfo_t *pData);
+    
+    
     int shouldPurge(const char *pKey, int keyLen, int32_t sec, int16_t msec);
 
     int findSession(CacheKey *pKey, ShmPrivatePurgeData *pData);
@@ -117,6 +124,8 @@ private:
     void logShmError();
     int  initCacheInfo(LsShmPool *pPool);
     int  initTables(LsShmPool *pPool);
+    
+    
     void cleanupExpiredSessions();
     int  cleanDiskCache();
 

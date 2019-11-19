@@ -322,12 +322,33 @@ static int applyLimits(lscgid_req *pCGI)
 }
 
 
+static int changeStderrLog(const char *path)
+{
+    int newfd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (newfd == -1)
+    {
+        fprintf(stderr, "lscgid (%d): failed to change stderr log to: %s\n",
+                getpid(), path);
+        return -1;
+    }
+    if (newfd != 2)
+    {
+        dup2(newfd, 2);
+        close(newfd);
+    }
+    return 0;
+}
+
+
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");
     applyLimits(&pCGI->m_data);
+    
+    if (pCGI->m_stderrPath)
+        changeStderrLog(pCGI->m_stderrPath);
 
 #ifdef HAS_CLOUD_LINUX
 
@@ -494,6 +515,12 @@ static int process_req_data(lscgid_t *cgi_req)
         cgi_req->m_env[i] = p;
         if (*p == 'L')
         {
+            if (strncasecmp(p, "LS_STDERR_LOG=", 14) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_stderrPath = p + 14;
+            }            
             if (strncasecmp(p, "LS_CWD=", 7) == 0)
             {
                 --i;
@@ -795,6 +822,7 @@ sighandler_t my_signal(int sig, sighandler_t f)
 int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 {
     int ret;
+    char *sEnv = NULL;
 
     s_parent = getppid();
     my_signal(SIGCHLD, sigchild);
@@ -810,11 +838,12 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 #ifdef HAS_CLOUD_LINUX
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    if ((pSock = getenv("LVE_ENABLE")) != NULL)
+    
+    if ((sEnv = getenv("LVE_ENABLE")) != NULL)
     {
-        s_enable_lve = atol(pSock);
+        s_enable_lve = atol(sEnv);
         unsetenv("LVE_ENABLE");
-        pSock = NULL;
+        sEnv = NULL;
     }
     if (s_enable_lve && !s_uid)
     {

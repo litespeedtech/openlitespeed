@@ -61,6 +61,7 @@ private:
 
 };
 
+#define LS_SINGLETON_DECL(T) template<> T *TSingleton<T>::s_pInstance
 
 #define LS_SINGLETON(T) template<> T *TSingleton<T>::s_pInstance = NULL
 

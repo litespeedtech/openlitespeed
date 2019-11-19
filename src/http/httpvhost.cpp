@@ -2222,7 +2222,7 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
     
     const LocalWorkerConfig* pAppDefault = pAppConfig->getpAppDefault();
     int maxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "maxConns", 1, 2000, pAppDefault->getMaxConns());
+                   "maxConns", 1, 10000, pAppDefault->getMaxConns());
     const char *pModeEnv[3] = { "development", "production", "staging" };
     int production = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                      "appserverEnv", 0, 2, pAppConfig->getAppEnv());
@@ -2550,7 +2550,7 @@ static int getRedirectCode(const XmlNode *pContextNode, int &code,
         }
     }
 
-    if ((code == -1) && (code >= SC_300) && (code < SC_400))
+    if ((code == -1) || ((code >= SC_300) && (code < SC_400)))
     {
         if ((pLocation == NULL) || (*pLocation == 0))
         {
@@ -2609,7 +2609,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
-    else if (*pLocation != '$' && *pLocation != '/' )
+    else if (*pLocation != '$' && *pLocation != '/' && 
+                type != HandlerType::HT_REDIRECT )
     {
         defLocation.setStr("$DOC_ROOT/");
         defLocation.append(pLocation, strlen(pLocation));

@@ -28,7 +28,19 @@ if [ -f "/etc/gentoo-release" ]; then
 	exit 0
 fi
 
+for SYSTEMDDIR in /etc/systemd/system /usr/lib/systemd/system /lib/systemd/system
+do
+    if [ -d ${SYSTEMDDIR} ] && [ -e ${SYSTEMDDIR}/lshttpd.service ] ; then
+        systemctl disable lshttpd.service
+        if [ -e ${SYSTEMDDIR}/lsws.service ] ; then
+            rm -f ${SYSTEMDDIR}/lsws.service
+        fi
+        rm -f ${SYSTEMDDIR}/lshttpd.service
 
+        systemctl daemon-reload
+        echo "[OK] The startup script has been successfully uninstalled from systemd!"
+    fi
+done
 
 for path in /etc/init.d /etc/rc.d/init.d 
 do

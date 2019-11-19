@@ -42,11 +42,12 @@ class FileCacheDataEx : public RefCounter
     friend class StaticFileCacheData;
 
     AutoStr2        m_sCLHeader;
+    
+    int             m_fd;
     off_t           m_lSize;
     ino_t           m_inode;
     time_t          m_lastMod;
-    int             m_fd;
-    int             m_iStatus;
+    int8_t          m_iStatus;
     char           *m_pCache;
 
     FileCacheDataEx(const FileCacheDataEx &rhs);
@@ -78,6 +79,7 @@ public:
     void setStatus(int status)    {   m_iStatus = status; }
     int  getStatus()  const         {   return m_iStatus;   }
 
+   
     int  isCached() const           {   return m_iStatus;  }
     int  isMapped() const
     {   return (m_iStatus == MMAPED);     }
@@ -127,6 +129,7 @@ class StaticFileCacheData : public CacheElement
     char           *m_pETag;
     int             m_iETagLen;
     short           m_iFileETag;
+    short           m_bypassModsec;
     int             m_iValidateHeaderLen;
     SSIScript      *m_pSSIScript;
 
@@ -188,6 +191,9 @@ public:
     unsigned char *getMiniMoov() const  {   return m_pMiniMoov;         }
     int getMiniMoovSize() const         {   return m_iMiniMoovSize;     }
 
+    int getBypassModsec() const         { return m_bypassModsec;    }
+    void setBypassModsec(int v)         { m_bypassModsec = v; }
+    
     int testMod(HttpReq *pReq);
     int testUnMod(HttpReq *pReq);
     int testIfRange(const char *pIR, int len);

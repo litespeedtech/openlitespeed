@@ -1,0 +1,242 @@
+#!/bin/sh
+
+# /********************************************
+# LiteSpeed Cache Management Script
+#
+# @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+# @copyright (c) 2017-2019
+# *********************************************/
+
+VERSION='1.9'
+OS=$(uname -s)
+SCRIPT_DIR=$(cd $(dirname ${0}) && pwd)
+
+cd $SCRIPT_DIR
+
+LSWS_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
+PHP_SCRIPT="${LSWS_DIR}/add-ons/webcachemgr/bootstrap_cli.php"
+
+YELLOW='\e[33m'
+CYAN='\e[36m'
+GREEN='\e[32m'
+L_GRAY='\e[37m'
+END_COLOR='\e[0m'
+
+printHeader()
+{
+    # $1 title , $2 descr
+	printf "\n${YELLOW}${1}${END_COLOR}\n${2}\n"
+}
+
+printLabelDesc()
+{
+	printf "\n${YELLOW}${1}${END_COLOR} ${2}\n\n"
+}
+
+printCmdOption()
+{
+    printf "${CYAN}${1}${END_COLOR} ${GREEN}${2}${END_COLOR}\n"
+    printf "    ${3}\n\n" | fold -sw 80
+}
+
+printExample()
+{
+	printf "  ${L_GRAY}${1}:${END_COLOR}\n"
+	printf "  ./lscmctl ${2}\n\n"
+}
+
+printHelp() 
+{
+	printHeader "LiteSpeed Cache Manager CLI Tool v${VERSION}"
+	printLabelDesc 'Usage:' './lscmctl [-php path/to/php] command [flag/parameter]' 
+	printLabelDesc 'Possible Commands:'
+    printCmdOption 'setcacheroot' '[-svr <cache root>] [-vh <cache root>]' 'List/Set server and/or virtual host cache roots. This command will list the current server and virtual host cache roots when no additional input is given. Use -svr and -vh to set those cache roots. The '"'"'$'"'"' character is not allowed when setting virtual host cache root. Virtual host cache root values starting with a '"'"'/'"'"' will automatically have '"'"'/$vh_user'"'"' appended to the end (this format was chosen to maintain compatibility with CageFS).'
+    printCmdOption 'setversion' '[{--list | --latest | <version>}]' 'List/Set active LSCWP version. This command will list the currently active version when no additional input is given. Use --list to show available versions or --latest to switch to the latest available version. A valid version number can also be provided to switch to that version specifically. This must be set before performing other lscmctl operations.'
+	printCmdOption 'scan' '[-n] [-e]' 'Scan for all WordPress installations. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. Add the -n flag to only discover new installations. By adding the -e flag, LSC-WP will be enabled on all installations after scanning is complete.'
+	printCmdOption 'enable' '{-m | <wp path>}' 'Enables LSWCP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+	printCmdOption 'disable' '{-m | <wp path>}' 'Disables LSWCP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+    printCmdOption 'upgrade' '{-m | <wp path>}' 'Upgrade LSWCP for all discovered WordPress installations to the current active version with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+    printCmdOption 'flag' '<wp path>' 'Flag a single WordPress installation. Flagged installations will be skipped during mass operations.'
+    printCmdOption 'unflag' '{-m | <wp path>}' 'Unflag all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory. Flagged installations will be skipped during mass operations.'
+    printCmdOption 'status' '<wp path>' 'Get the most up to date LSC-WP status for the provided WordPress installation.'
+    printCmdOption 'dashnotify' '{-m | -wppath <wp path>} [-plugin <plugin slug>] {-msgfile <message file path> | -msg <message>}' 'Notify all discovered WordPress installations with the provided message (plain text or HTML) using the Dash Notifier WordPress plugin with the -m parameter or a single installation by providing the path to the WordPress installation directory. A plugin slug can be included to have an install/activate button for that plugin added to the message as well. Installations containing a '"'"'.dash_notifier_bypass'"'"' file will not be notified.'
+	printCmdOption 'dashnotifyremove' '{-m | <wp path>}' 'Remove Dash Notifier plugin (and notification messages) from all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+    printCmdOption 'cpanelplugin' '{--install | --uninstall | -autoinstall [{0 | 1}]}' '[cPanel/WHM Environment Only] Install or uninstall the LiteSpeed user-end plugin for cPanel for all cPanel accounts using the '"'"'--install'"'"' and '"'"'--uninstall'"'"' input flags. The plugin will appear as "LiteSpeed Web Cache Manager" under '"'"'Advanced'"'"' in the user'"'"'s cPanel dashboard. The '"'"'-autoinstall'"'"' input param can be used to check the current auto install status. When turned on, the cPanel plugin will be automatically installed when installing/updating the WHM plugin. Use '"'"'-autoinstall {0 | 1}'"'"' to manually turn this off and on respectively.'
+    printCmdOption 'addinstalls' '{-wpinstall <wp path> <docroot> <server name> <site url>} | -wpinstallsfile <installs file path>}' 'Add a WordPress installation to existing scan data. This "custom" data will be stored in it'"'"'s own lscm.data.cust data file under the "lsws/admin/lscdata" directory. A single installation can be added using the -wpinstall parameter with space separated list of installation info in the required order (<wp path> <docroot> <server name> <site url>). Multiple installations can be added at once using the -wpinstallsfile parameter to provide the path to an installs file containing a newline separated list of installation info in the expected format.'
+    printCmdOption '--update-lib' '' 'Update the lscmctl script and the required shared library to their latest versions.'
+    printHeader "Example Usage:"
+    printExample 'List server and virtual host cache roots' 'setcacheroot'
+    printExample 'Set virtual host cache root' 'setcacheroot -vh /path/to/ssd/lscache'
+    printExample 'Display currently active LSCWP version' 'setversion'
+    printExample 'Display selectable LSCWP versions' 'setversion --list'
+    printExample 'Set active LSCWP version to latest available' 'setversion --latest'
+    printExample 'Set active LSCWP version to v1.5' 'setversion 1.5'
+	printExample 'Discover all installations' 'scan'
+    printExample 'Discover new installations only, passing in path to PHP binary' '-php /path/to/php/ scan -n'
+	printExample 'Enable LSC-WP on all discovered installations' 'enable -m'
+	printExample 'Disable LSC-WP for a single installation' 'disable /home/user/public_html/wp'
+    printExample 'Get LSC-WP status for a single installation' 'status /home/user/public_html/wp'
+    printExample 'Send a simple dashboard message to a single discovered WordPress installation' 'dashnotify -wppath /path/to/wp/install -msg "Hello World!"'
+    printExample 'Broadcast a dashboard message recommending the LiteSpeed Cache for WordPress plugin to all discovered WordPress installations' 'dashnotify -m -plugin litespeed-cache -msgfile /path/to/msg/file'
+    printExample 'Remove dashboard notifications (and Dash Notifier plugin) from all discovered WordPress installations' 'dashnotifyremove -m'
+    printExample '[cPanel/WHM Environment Only] Install the LiteSpeed user-end plugin for cPanel for all cPanel accounts' 'cpanelplugin --install'
+    printExample '[cPanel/WHM Environment Only] Turn off auto install for the LiteSpeed user-end plugin for cPanel' 'cpanelplugin -autoinstall 0'
+    printExample 'Add a single WordPress Installations to custom data file.' 'addinstalls -wpinstall /home/user/public_html/wp /home/user/public_html user.com user.com/wp'
+    printExample 'Add multiple WordPress Installations to custom data file using an installs file.' 'addinstalls -wpinstallsfile /path/to/installs/file'
+}
+
+runUpdate()
+{
+    ADDONS_DIR=$(cd "${LSWS_DIR}/add-ons" && pwd)
+    LOCAL_TAR_FILE="${ADDONS_DIR}/shared_latest.tar.gz"
+    URL="https://shared.litespeed.sh/latest"
+
+    echo "Downloading latest shared code tar file..."
+    wget -q --tries=1 --no-check-certificate "$URL" -O "$LOCAL_TAR_FILE"
+
+    RET=$?
+
+    if [ "$RET" != "0" ] ; then
+
+        if [ -f "$LOCAL_TAR_FILE" ] ; then
+            /bin/rm -f "$LOCAL_TAR_FILE"
+        fi
+
+        errorExit "Failed to download latest shared code with wget exit status ${RET}."
+    fi
+
+    MD5_VALUE=$(wget -q https://shared.litespeed.sh/latest/md5 -O -)
+
+    if [ "$MD5_VALUE" = "" ] ; then
+        /bin/rm -f "$LOCAL_TAR_FILE"
+        errorExit "Failed to wget latest shared code md5 value."
+    fi
+
+    if [ "x${OS}" = "xFreeBSD" ] ; then
+        LOCAL_MD5_VAL=$(md5 $LOCAL_TAR_FILE | awk '{ print $4 }')
+    else
+        LOCAL_MD5_VAL=$(md5sum $LOCAL_TAR_FILE | awk '{ print $1 }')
+    fi
+
+    echo "Checking tar file md5..."
+
+    if [ "$MD5_VALUE" != "$LOCAL_MD5_VAL" ] ; then
+        /bin/rm -f "$LOCAL_TAR_FILE"
+        errorExit "Md5 mismatch for shared code! Aborting."
+    fi
+
+    SHARED_CODE_DIR="${ADDONS_DIR}/webcachemgr"
+
+    if [ -d "$SHARED_CODE_DIR" ] ; then
+        echo "Removing existing shared code directory..."
+        /bin/rm -rf "$SHARED_CODE_DIR"
+    fi
+
+    echo "Extracting downloaded shared code..."
+    tar -xzf "$LOCAL_TAR_FILE" -C "$ADDONS_DIR"
+
+    RET=$?
+
+    if [ "$RET" != "0" ] ; then
+        /bin/rm -f "$LOCAL_TAR_FILE"
+        errorExit "Failed to extract tar.gz file with tar exit status ${RET}."
+    fi
+
+    echo "Removing local shared code tar file..."
+    /bin/rm -f "$LOCAL_TAR_FILE"
+
+    echo "Updating lscmctl script..."
+    /bin/mv -f "${ADDONS_DIR}/lscmctl" "${ADDONS_DIR}/../admin/misc/lscmctl"
+
+    echo "Done!"
+}
+
+errorExit()
+{
+    printf "${YELLOW}ERROR: ${END_COLOR} ${1}\n\n"
+    exit 1
+}
+
+setPanelClassName()
+{
+    PANEL_CLASS_NAME=false
+
+    x=$(/usr/local/cpanel/cpanel -V 2>/dev/null)
+
+    if [ "$x" ]; then
+        PANEL_CLASS_NAME='\Lsc\Wp\Panel\CPanel'
+        return
+    fi
+
+    x=$(plesk version 2>/dev/null)
+
+    if [ "$x" ]; then
+        PANEL_CLASS_NAME='\Lsc\Wp\Panel\Plesk'
+        return
+    fi
+
+    x=$(/usr/local/directadmin/directadmin v 2>/dev/null)
+
+    if [ "$x" ]; then
+        PANEL_CLASS_NAME='\Lsc\Wp\Panel\DirectAdmin'
+        return
+    fi
+}
+
+selectPHP() 
+{
+    if [ "$1" = "-php" ]
+    then
+        if [ -x "$2" ] ; then
+            PHP_BIN="${2} -d disable_functions="
+            return 2
+        else
+            errorExit "${2} not detected as a valid php binary."
+        fi
+    else
+        #Use default admin php binary
+        local DEFAULT_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php5"
+        local OLS_DA_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php"
+
+        if [ ! -x "$DEFAULT_PHP_BIN" ] ; then
+
+            if [ -x "$OLS_DA_PHP_BIN" ] ; then
+                DEFAULT_PHP_BIN="$OLS_DA_PHP_BIN"
+            else
+                errorExit "Could not find default admin PHP binary."
+            fi
+        fi
+
+        PHP_BIN="${DEFAULT_PHP_BIN} -c ${LSWS_DIR}/add-ons/webcachemgr/shared/webcachemgr.ini"
+    fi
+}
+
+if [ "$1" = "--help" ]
+then
+    printHelp
+    exit 0
+fi
+
+if [ "$1" = "--update-lib" ]
+then
+    runUpdate
+    exit 0;
+fi
+
+setPanelClassName
+
+if [ "$PANEL_CLASS_NAME" = false ] ; then
+    errorExit 'Supported Control Panel not detected. Aborting!'
+fi    
+
+selectPHP $1 $2
+
+if [ $? = 2 ] ; then
+    shift 2
+fi
+
+if [ $# = 0 ] ; then
+    errorExit "Missing input command. Try --help for a full list of available commands with examples."
+fi
+
+$PHP_BIN $PHP_SCRIPT $PANEL_CLASS_NAME "$@"
