@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.1-11/22/2019
+LSUPVERSION=v2.1-12/12/2019
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -79,9 +79,9 @@ $DLCMD ${LSWSHOME}/admin/misc/lsup.shnew https://raw.githubusercontent.com/lites
 if [ $? = 0 ] ; then
     diff ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
     if [ $? != 0 ] ; then
-        mv -f ${LSWSHOME}/admin/misc/lsup.sh ${LSWSHOME}/admin/misc/lsup.shold
-        mv -f ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh
-        chmod 777 ${LSWSHOME}/admin/misc/lsup.sh
+        mv -f ${LSWSHOME}/admin/misc/lsup.sh ${LSWSHOME}/admin/misc/lsup.shold >/dev/null 2>&1
+        mv -f ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
+        chmod 777 ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
         echoG "lsup.sh updated, please run again."
         exit 10
     else
@@ -435,11 +435,13 @@ fi
 #Change to old server root when it is updating.
 if [ -f ${LSWSHOME}/bin/openlitespeed ] ; then
     echo "SERVERROOT=${LSWSHOME}" > ols.conf
-    echo  >> ols.conf
+    echo "###" >> ols.conf
 fi
 
 ./install.sh
 
+#Sign it
+echo lsup > "${LSWSHOME}/PLAT"
 rm -rf ${LOCKFILE}
 
 ${LSWSCTRL} start
