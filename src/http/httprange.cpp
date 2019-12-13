@@ -78,6 +78,9 @@ HttpRange::HttpRange(off_t entityLen)
     : m_lEntityLen(entityLen)
 {
     ::memset(m_boundary, 0, sizeof(m_boundary));
+    m_iCurRange = 0;
+    m_pPartHeaderEnd = 0x00;
+    m_pCurHeaderPos = 0x00;
 }
 
 
