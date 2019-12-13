@@ -8,6 +8,11 @@ cd $CURDIR
 CURDIR=`pwd`
 LSWSHOME=`dirname $CURDIR`
 LSWSHOME=`dirname ${LSWSHOME}`
+
+#When it is new installation, use default DIR
+if [ ! -f ${LSWSHOME}/bin/openlitespeed ] ; then
+    LSWSHOME=/usr/local/lsws
+fi
 LSWSCTRL=${LSWSHOME}/bin/lswsctrl
 
 CURLONGVERSION=
