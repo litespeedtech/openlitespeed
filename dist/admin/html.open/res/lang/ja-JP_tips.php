@@ -554,6 +554,8 @@ $_tipsdb['restrictedScriptPermissionMask'] = new DAttrHelp("スクリプトの�
 
 $_tipsdb['retryTimeout'] = new DAttrHelp("リトライタイムアウト（秒）", '以前の通信に問題があった外部アプリケーションを再試行する前に、サーバーが待機する時間を指定します。', '', '整数', '');
 
+$_tipsdb['reusePort'] = new DAttrHelp("Enable REUSEPORT", 'Use SO_REUSEPORT socket option to distribute incoming traffic to multiple workers. This setting is only effective for multi-worker licenses. When enabled, all workers are automatically bound to this listener and &quot;Binding&quot; configuration is ignored.<br/><br/>Default value: On', '', 'ラジオボックスから選択', '');
+
 $_tipsdb['rewriteBase'] = new DAttrHelp("書き換えベース", '書き換えルールのベースURLを指定します。', '', 'URL', '');
 
 $_tipsdb['rewriteInherit'] = new DAttrHelp("継承を書き直す", '親コンテキストから書き換えルールを継承するかどうかを指定します。 書き換えが有効で継承されていない場合は、このコンテキストで定義されている書き換えのベースルールと書き換えルールが使用されます。', '', 'ラジオボックスから選択', '');
@@ -593,8 +595,6 @@ $_tipsdb['shType'] = new DAttrHelp("ハンドラタイプ", 'これらのスク�
 $_tipsdb['shmDefaultDir'] = new DAttrHelp("デフォルトのSHMディレクトリ", '共有メモリのデフォルトディレクトリを指定されたパスに変更します。 ディレクトリが存在しない場合は作成されます。 特に指定のない限り、すべてのSHMデータはこのディレクトリに保存されます。', '', 'パス', '');
 
 $_tipsdb['showVersionNumber'] = new DAttrHelp("サーバー署名", 'サーバーの署名とバージョン番号を次の場所に表示するかどうかを指定します。 レスポンスヘッダの「Server」値。 3つのオプションがあります： バージョンを隠すに設定すると、LiteSpeedのみが表示されます。 バージョンを表示するに設定すると、LiteSpeedとバージョン番号が表示されます。  フルヘッダーを隠すに設定すると、サーバーヘッダー全体がレスポンスヘッダーに表示されなくなります。', '[セキュリティ]サーバのバージョン番号を公開したくない場合は、バージョンを隠すに設定します。', '選択', '');
-
-$_tipsdb['smartKeepAlive'] = new DAttrHelp("スマートキープアライブ", 'バーチャルホスト&quot;Smartキープアライブ&quot; DESCR：スマートキープアライブをオンにするかどうかを指定します。 このオプションは、&quot;最大キープアライブ要求&quot;が1より大きい場合にのみ有効です。 有効にすると、バーチャルホストレベルで有効/無効にすることもできます。 スマートキープアライブは、JavaScript、CSSスタイルシート、およびイメージファイルの要求に対してのみキープアライブ接続を確立します。 htmlページの場合、接続は維持されません。 これにより、より多くのユーザーに効率的にサービスを提供できます。 通常、Webページには、最初のリクエスト後にブラウザによってキャッシュされる複数のイメージとスクリプトが含まれています。<br/>これらの非HTML静的ファイルを単一のキープアライブ接続で送信し、text/htmlファイルを別の非キープアライブ接続経由で送信する方が効率的です。 この方法は、アイドル状態の接続を減らし、より多くの同時要求およびユーザーを処理するための容量を増加させます。', '[パフォーマンス]高負荷のWebサイトでこれを有効にします。', 'ラジオボックスから選択', '');
 
 $_tipsdb['sname'] = new DAttrHelp("名前 - サーバー", 'このサーバーを識別する一意の名前。 これは一般的な設定で指定された&quot;サーバー名&quot;です。', '', '', '');
 
@@ -705,8 +705,6 @@ $_tipsdb['vhModules'] = new DAttrHelp("バーチャルホストモジュール",
 $_tipsdb['vhName'] = new DAttrHelp("バーチャルホスト名", 'バーチャルホストの一意の名前。 バーチャルホストのドメイン名をバーチャルホスト名として使用することをお勧めします。 バーチャルホスト名は、変数$VH_NAMEを使用して参照できます。', '', '', '');
 
 $_tipsdb['vhRoot'] = new DAttrHelp("バーチャルホスト Root", 'バーチャルホストのルートディレクトリを指定します。 注：これはドキュメントのルートではありません<b> NOT </b>です。 このディレクトリの下に、バーチャルホストに関連するすべてのファイル（ログファイル、htmlファイル、CGIスクリプトなど）を置くことをお勧めします。 バーチャルホストルートは、変数$VH_ROOTを使用して参照できます。', '[パフォーマンス]さまざまなハードドライブに異なるバーチャルホストを配置します。', '絶対パス又は$SERVER_ROOTからの相対パス。', '');
-
-$_tipsdb['vhSmartKeepAlive'] = new DAttrHelp("Smartキープアライブ", 'このバーチャルホストに対してSmart Keep-Aliveを有効にするかどうかを指定します。 このオプションは、&quot;スマートキープアライブ&quot;がサーバーレベルで有効で、&quot;最大キープアライブ要求&quot;が1より大きい場合にのみ有効です。', '[パフォーマンス]多忙なWebサイトでこれを有効にします。', 'ラジオボックスから選択', '');
 
 $_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("ファイル名", 'アクセスログファイル名。', '[パフォーマンス]アクセスログファイルを別のディスクに配置します。', 'ファイル名への絶対パス又は$SERVER_ROOT、$VH_ROOTからの相対パス。', '');
 
@@ -870,6 +868,8 @@ $_tipsdb['EDTP:recaptchaType'] = array('');
 $_tipsdb['EDTP:recaptchaVhReqLimit'] = array('');
 
 $_tipsdb['EDTP:restrained'] = array('共有ホスティング環境での拘束をオンにします。');
+
+$_tipsdb['EDTP:reusePort'] = array('');
 
 $_tipsdb['EDTP:rewriteMapLocation'] = array('場所のURIを入力します。 URIは「/」で始まる必要があります。');
 

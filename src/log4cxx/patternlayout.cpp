@@ -110,7 +110,7 @@ int PatternLayout::format(LoggingEvent *pEvent, char *pBuf, int len)
                 *pBuf++ = '\n';
                 break;
             case 'c':
-                pBuf += snprintf(pBuf, pEnd - pBuf, fmt,
+                pBuf += lsnprintf(pBuf, pEnd - pBuf, fmt,
                                  pEvent->m_pLoggerName);
                 break;
             case 'd':
@@ -140,7 +140,7 @@ int PatternLayout::format(LoggingEvent *pEvent, char *pBuf, int len)
                 localtime_r(&t, &tm);
                 if (*fmtDate == 0)
                 {
-                    pBuf += snprintf(pBuf, pEnd - pBuf,
+                    pBuf += lsnprintf(pBuf, pEnd - pBuf,
                                      "%04d-%02d-%02d %02d:%02d:%02d.%06d",
                                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
                                      tm.tm_hour, tm.tm_min, tm.tm_sec,
@@ -154,13 +154,13 @@ int PatternLayout::format(LoggingEvent *pEvent, char *pBuf, int len)
 
                 break;
             case 'p':
-                pBuf += snprintf(pBuf, pEnd - pBuf, fmt,
+                pBuf += lsnprintf(pBuf, pEnd - pBuf, fmt,
                                  Level::toString(pEvent->m_level));
                 break;
             case 'R':
                 tv_diff.tv_sec = pEvent->m_timestamp.tv_sec -
                                  s_startTime.tv_sec;
-                pBuf += snprintf(pBuf, pEnd - pBuf, fmt,
+                pBuf += lsnprintf(pBuf, pEnd - pBuf, fmt,
                                  tv_diff.tv_sec);
                 break;
             case 'r':
@@ -173,7 +173,7 @@ int PatternLayout::format(LoggingEvent *pEvent, char *pBuf, int len)
                     tv_diff.tv_usec += 1000000;
                     --tv_diff.tv_sec;
                 }
-                pBuf += snprintf(pBuf, pEnd - pBuf, "%d%03d",
+                pBuf += lsnprintf(pBuf, pEnd - pBuf, "%d%03d",
                                  (int)tv_diff.tv_sec, (int)(tv_diff.tv_usec / 1000));
                 break;
             case 'u':   /* not supported */

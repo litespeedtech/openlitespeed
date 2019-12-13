@@ -82,5 +82,6 @@ private:
     LS_NO_COPY_ASSIGN(ZConfManager);
 };
 
+LS_SINGLETON_DECL(ZConfManager);
 
 #endif // ZCONFMANAGER_H

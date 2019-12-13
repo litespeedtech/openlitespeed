@@ -108,7 +108,7 @@ $_tipsdb['allowQuic'] = new DAttrHelp("Allow QUIC", 'Allows the use of the QUIC 
 
 $_tipsdb['allowSetUID'] = new DAttrHelp("Allow Set UID", 'Specifies whether the set UID bit is allowed for CGI scripts. If the set UID bit is allowed and the set UID bit is enabled for a CGI script, no matter which user the CGI script was started on behalf of, the user ID of the CGI process will switch to the user ID of the owner of the CGI script.<br/>The default is &quot;Off&quot;.', ' Do not allow Set UID CGI scripts whenever possible, as it is inherently a security risk.', 'Select from radio box', '');
 
-$_tipsdb['allowSymbolLink'] = new DAttrHelp("Follow Symbolic Link", 'Specifies whether to follow symbolic links in this virtual host.  IF OWNER MATCH option will follow a symbolic link only if it has the same ownership.  This setting overrides the default server-level setting.', ' For better security, disable this feature. For better performance, enable it.', 'Select from drop down list', '');
+$_tipsdb['allowSymbolLink'] = new DAttrHelp("Follow Symbolic Link", 'Specifies whether to follow symbolic links in this virtual host. IF OWNER MATCH option will follow a symbolic link only if it has the same ownership. This setting overrides the default server-level setting.', ' For better security, disable this feature. For better performance, enable it.', 'Select from drop down list', '');
 
 $_tipsdb['appServerContext'] = new DAttrHelp("App Server Context", 'An App Server Context provides an easy way to configure a Ruby Rack/Rails, WSGI, or Node.js application. To add a an application through an App Server Context, only mounting the URL and the application&#039;s root directory is required. There is no need to go through all the trouble to define an external application, add a 404 handler, and rewrite rules, etc.', '', '', '');
 
@@ -218,7 +218,7 @@ $_tipsdb['enableRecaptcha'] = new DAttrHelp("Enable reCAPTCHA", 'Enable the reCa
 
 $_tipsdb['enableRewrite'] = new DAttrHelp("Enable Rewrite", 'Specifies whether to enable LiteSpeed&#039;s URL rewrite engine. This option can be customized at the virtual host or context level, and is inherited along the directory tree until it is explicitly overridden.', '', 'Select from radio box', '');
 
-$_tipsdb['enableScript'] = new DAttrHelp("Enable Script", 'Specifies whether scripting (non-static pages) is allowed in this virtual host.  If disabled, CGI, FastCGI, LSAPI, Servlet engines and other scripting languages will not be allowed in this virtual host.  Therefore, if you want to use a script handler, you need to enable it here as well.', '', 'Select from radio box', '');
+$_tipsdb['enableScript'] = new DAttrHelp("Enable Script", 'Specifies whether scripting (non-static pages) is allowed in this virtual host. If disabled, CGI, FastCGI, LSAPI, Servlet engines and other scripting languages will not be allowed in this virtual host. Therefore, if you want to use a script handler, you need to enable it here as well.', '', 'Select from radio box', '');
 
 $_tipsdb['enableSpdy'] = new DAttrHelp("Enable SPDY/HTTP2/HTTP3", 'Selectively enable HTTP/3, HTTP/2, and SPDY HTTP network protocols.<br/><br/>If you wish to disable SPDY, HTTP/2, and HTTP3, check &quot;None&quot; and leave all other boxes unchecked.<br/><br/>Default value: All enabled', 'This setting can be set at the listener and virtual host levels.', 'Select from checkbox', '');
 
@@ -544,7 +544,7 @@ $_tipsdb['respBuffer'] = new DAttrHelp("Response Buffering", 'Specifies whether 
 
 $_tipsdb['restart'] = new DAttrHelp("Apply Changes/Graceful Restart", 'By clicking Graceful Restart, a new server process will be started.  For Graceful Restart, the old server process will only exit after all requests  to it have been finished (or the &quot;Graceful Restart Timeout (secs)&quot; limit has been reached).   Configuration changes are applied at the next restart.  Graceful Restart will apply these changes without any server downtime.', 'Graceful restart takes less than 2 seconds to generate a new server process.', '', '');
 
-$_tipsdb['restrained'] = new DAttrHelp("Restrained", 'Specifies whether files beyond this virtual host root($VH_ROOT) can be accessed  though this web site. If set to Yes, only files under $VH_ROOT can be accessed   and access to symbolic links or context pointing to files or directories beyond $VH_ROOT  will be denied. This, however, does not limit the accessibility of CGI scripts. This is useful  in the shared hosting environment. &quot;Follow Symbolic Link&quot; can be set to Yes to allow  users to use symbolic links under $VH_ROOT, but not anything beyond $VH_ROOT.', ' Turn it on in the shared hosting environment.', 'Select from radio box', '');
+$_tipsdb['restrained'] = new DAttrHelp("Restrained", 'Specifies whether files beyond this virtual host root($VH_ROOT) can be accessed though this web site. If set to Yes, only files under $VH_ROOT can be accessed and access to symbolic links or context pointing to files or directories beyond $VH_ROOT will be denied. This, however, does not limit the accessibility of CGI scripts. This is useful in the shared hosting environment. &quot;Follow Symbolic Link&quot; can be set to Yes to allow users to use symbolic links under $VH_ROOT, but not anything beyond $VH_ROOT.', ' Turn it on in the shared hosting environment.', 'Select from radio box', '');
 
 $_tipsdb['restrictedDirPermissionMask'] = new DAttrHelp("Script Directory Restricted Permission Mask", 'Specifies the restricted permission mask of parent directories of script files that the server will not serve. For example, to prohibit serving PHP scripts in a directory that is group and world writable, set the mask to 022. Default value is 000. This option can be used to prevent serving scripts under a directory of  uploaded files.<br/><br/>See man 2 stat for all values.', '', 'octal numbers', '');
 
@@ -553,6 +553,8 @@ $_tipsdb['restrictedPermissionMask'] = new DAttrHelp("Restricted Permission Mask
 $_tipsdb['restrictedScriptPermissionMask'] = new DAttrHelp("Script Restricted Permission Mask", 'Specifies the restricted permission mask for script files that the server will not serve. For example, to prohibit serving PHP scripts that are group and world writable, set the mask to 022. Default value is 000.<br/><br/>See man 2 stat for all values.', '', 'octal numbers', '');
 
 $_tipsdb['retryTimeout'] = new DAttrHelp("Retry Timeout (secs)", 'Specifies the period of time that the server waits before retrying an external application that had a prior communication problem.', '', 'Integer number', '');
+
+$_tipsdb['reusePort'] = new DAttrHelp("Enable REUSEPORT", 'Use SO_REUSEPORT socket option to distribute incoming traffic to multiple workers. This setting is only effective for multi-worker licenses. When enabled, all workers are automatically bound to this listener and &quot;Binding&quot; configuration is ignored.<br/><br/>Default value: On', '', 'Select from radio box', '');
 
 $_tipsdb['rewriteBase'] = new DAttrHelp("Rewrite Base", 'Specifies the base URL for rewrite rules.', '', 'URL', '');
 
@@ -584,7 +586,7 @@ $_tipsdb['servletContext'] = new DAttrHelp("Servlet Context", 'Servlets can be i
 
 $_tipsdb['servletEngine'] = new DAttrHelp("Servlet Engine", 'Specifies the name of the servlet engine that serves this web application. Servlet engines must be defined in the &quot;External Apps&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
-$_tipsdb['setUidMode'] = new DAttrHelp("External App Set UID Mode", 'Specifies how user ID is set for an external application process. Three choices are available:  <ul><li>Server UID: Set the user/group ID of external application processes  to the same as the server&#039;s user/group ID.</li>     <li>CGI File UID: Set the user/group ID of external CGI processes based  	on the user/group ID of the executable. This option only applies to CGI, not FastCGI or LSPHP.</li>     <li>Doc Root UID: Set the user/group ID of external application processes based  	on the user/group ID of the document root of the current virtual host.</li> </ul><br/><br/>Default value: Server UID', ' In the shared hosting environment, it is recommended to use the CGI File UID or Doc Root UID modes to prevent files owned by one virtual host from being accessed by the external application scripts of another virtual host.', 'Select from drop down list', '');
+$_tipsdb['setUidMode'] = new DAttrHelp("External App Set UID Mode", 'Specifies how user ID is set for an external application process. Three choices are available: <ul><li>Server UID: Set the user/group ID of external application processes  to the same as the server&#039;s user/group ID.</li>     <li>CGI File UID: Set the user/group ID of external CGI processes based 	on the user/group ID of the executable. This option only applies to CGI, not FastCGI or LSPHP.</li>     <li>Doc Root UID: Set the user/group ID of external application processes based 	on the user/group ID of the document root of the current virtual host.</li> </ul><br/><br/>Default value: Server UID', ' In the shared hosting environment, it is recommended to use the CGI File UID or Doc Root UID modes to prevent files owned by one virtual host from being accessed by the external application scripts of another virtual host.', 'Select from drop down list', '');
 
 $_tipsdb['shHandlerName'] = new DAttrHelp("Handler Name", 'Specifies the name of the external application that processes the script files  when the handler type is FastCGI, Web Server, LSAPI, Load Balancer, or Servlet Engine.', '', 'Select from drop down list', '');
 
@@ -593,8 +595,6 @@ $_tipsdb['shType'] = new DAttrHelp("Handler Type", 'Specifies the type of extern
 $_tipsdb['shmDefaultDir'] = new DAttrHelp("Default SHM Directory", 'Changes shared memory&#039;s default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.', '', 'Path', '');
 
 $_tipsdb['showVersionNumber'] = new DAttrHelp("Server Signature", 'Specifies whether to show the server signature and version number in the response header&#039;s &quot;Server&quot; value. There are three options: when set to Hide Version, only LiteSpeed is shown. When set to Show Version, LiteSpeed and the version number are shown.  When set to Hide Full Header, the entire Server header will not be shown in the response header.', ' Set to Hide Version if you do not wish to expose the server version number.', 'Select from drop down list', '');
-
-$_tipsdb['smartKeepAlive'] = new DAttrHelp("Smart Keep-Alive", 'Specifies whether to turn on Smart Keep-Alive. This option is effective only if &quot;Max Keep-Alive Requests&quot; is greater than 1. If enabled, you can also enable/disable it at the virtual host level. Smart keep-alive will only establish keep-alive connections for requests of JavaScript, CSS Style Sheet, and image files. For html pages, the connection will not be kept alive. This will help serve more users more efficiently. Normally a web page contains multiple images and scripts that will be cached by the browser after the initial request. It is more efficient to send those non-html static files through a single keep-alive connection and have the text/html file sent through another non-keep-alive connection. This method will reduce idle connections and in turn increase the capacity to handle more concurrent requests and users.', ' Enable this for high-load web sites.', 'Select from radio box', '');
 
 $_tipsdb['sname'] = new DAttrHelp("Name - Server", 'The unique name that identifies this server. This is the  &quot;Server Name&quot; specified in the general configuration.', '', '', '');
 
@@ -696,17 +696,15 @@ $_tipsdb['vhEnableGzip'] = new DAttrHelp("Enable Compression", 'Specifies whethe
 
 $_tipsdb['vhEnableQuic'] = new DAttrHelp("Enable QUIC", 'Enables the QUIC network protocol for this virtual host. For this setting to take effect, both &quot;Enable QUIC&quot; and &quot;Allow QUIC&quot; must also be set to Yes at the server and listener levels respectively. Default value is Yes.', 'When this setting is set to No, the QUIC advertisement will no longer be sent. If a browser still contains cached QUIC information and QUIC is still enabled at the server and listener levels, a QUIC connection will continue to be used until this information is no longer cached or a QUIC protocol error is encountered.', 'Select from radio box', '');
 
-$_tipsdb['vhMaxKeepAliveReq'] = new DAttrHelp("Max Keep-Alive Requests", 'Specifies the maximum requests that can be served through a keep-alive (persistent)  connection. Connections will be closed once this limit is reached. You can specify a different limit for each virtual hosts. This number cannot exceed the server-level &quot;Max Keep-Alive Requests&quot; limit.', ' Set to a reasonably high value. A value of &quot;1&quot; or less will  disable keep-alive connections.', 'Integer number', '');
+$_tipsdb['vhMaxKeepAliveReq'] = new DAttrHelp("Max Keep-Alive Requests", 'Specifies the maximum requests that can be served through a keep-alive (persistent) connection. Connections will be closed once this limit is reached. You can specify a different limit for each virtual hosts. This number cannot exceed the server-level &quot;Max Keep-Alive Requests&quot; limit.', ' Set to a reasonably high value. A value of &quot;1&quot; or less will disable keep-alive connections.', 'Integer number', '');
 
 $_tipsdb['vhModuleUrlFilters'] = new DAttrHelp("Virtual Host Module Context", 'It&#039;s a centralized place to customize module settings for virtual host contexts. Settings for a context URI will override the virtual host or the server level settings.', '', '', '');
 
 $_tipsdb['vhModules'] = new DAttrHelp("Virtual Host Modules", 'Virtual Host module configuration data is, by default inherited from the Server module configuration.   The Virtual Host Modules are limited to the HTTP level hooks.', '', '', '');
 
-$_tipsdb['vhName'] = new DAttrHelp("Virtual Host Name", 'A unique name for a virtual host. It is recommended to use the virtual host&#039;s domain name as the Virtual Host Name.  Virtual Host Name can be referred to using the variable $VH_NAME.', '', '', '');
+$_tipsdb['vhName'] = new DAttrHelp("Virtual Host Name", 'A unique name for a virtual host. It is recommended to use the virtual host&#039;s domain name as the Virtual Host Name. Virtual Host Name can be referred to using the variable $VH_NAME.', '', '', '');
 
 $_tipsdb['vhRoot'] = new DAttrHelp("Virtual Host Root", 'Specifies the root directory of the virtual host. Note: This is <b>NOT</b> the document root. It is recommended to place all files related to the virtual host (like log files, html files, CGI scripts, etc.) under this directory. Virtual Host Root can be referred to using the variable $VH_ROOT.', ' Place different virtual hosts on different hard drives.', 'An absolute path or a relative path to $SERVER_ROOT.', '');
-
-$_tipsdb['vhSmartKeepAlive'] = new DAttrHelp("Smart Keep-Alive", 'Specifies whether to turn on Smart Keep-Alive for this virtual host. This option is only effective if  &quot;Smart Keep-Alive&quot; is enabled at the server level and &quot;Max Keep-Alive Requests&quot; is greater than 1.', ' Enable this for busy web sites.', 'Select from radio box', '');
 
 $_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("File Name", 'The access log filename.', ' Put access log file on a separate disk.', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.', '');
 
@@ -870,6 +868,8 @@ $_tipsdb['EDTP:recaptchaType'] = array('');
 $_tipsdb['EDTP:recaptchaVhReqLimit'] = array('');
 
 $_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.');
+
+$_tipsdb['EDTP:reusePort'] = array('');
 
 $_tipsdb['EDTP:rewriteMapLocation'] = array('Enter URI for location. URI must start with &quot;/&quot;.');
 

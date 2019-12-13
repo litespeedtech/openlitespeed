@@ -390,8 +390,8 @@ class WPInstallStorage
          */
         $updatableVersions = array();
 
-        if ( !in_array($dataFileVer, $updatableVersions)
-                || !Util::createBackup($dataFile) ) {
+        if ( ! in_array($dataFileVer, $updatableVersions)
+                || ! Util::createBackup($dataFile) ) {
 
             $msg = "{$dataFile} - Data file could not be updated to version "
                     . self::DATA_VERSION;

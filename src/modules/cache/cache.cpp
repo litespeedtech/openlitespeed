@@ -1339,8 +1339,9 @@ int checkBypassHeader(const char *header, int len)
         "transfer-encoding",
         "content-encoding",
         "set-cookie",
+        "x-litespeed-cache", //bypass itself, otherwise always value is 'miss'
     };
-    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, };
+    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, 17, };
 
     int count = sizeof(headersBypass) / sizeof(const char *);
     for (int i = 0; i < count ; ++i)
@@ -3199,8 +3200,7 @@ static int handlerProcess(const lsi_session_t *session)
         return 0;
     }
 
-    if (myData->pEntry)
-        myData->pEntry->incRef();
+    myData->pEntry->incRef();
 
     char tmBuf[RFC_1123_TIME_LEN + 1];
     int len;
@@ -3405,7 +3405,7 @@ static int handlerProcess(const lsi_session_t *session)
 lsi_reqhdlr_t cache_handler = { handlerProcess, NULL, NULL, NULL,
                                 NULL, NULL, NULL,  };
 lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
-LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
+lsi_module_t cache = { LSI_MODULE_SIGNATURE, init, &cache_handler,
                        &cacheDealConfig, MODULE_VERSION_INFO, serverHooks, {0}
                      };
 

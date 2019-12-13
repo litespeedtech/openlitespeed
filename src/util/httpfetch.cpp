@@ -65,10 +65,12 @@ HttpFetch::HttpFetch()
     , m_connTimeout(10)
     , m_respBodyLen(-1)
     , m_pRespContentType(NULL)
+    , m_respBodyRead(0)
     , m_psProxyServerAddr(NULL)
     , m_pServerAddr(NULL)
     , m_pAdnsReq(NULL)
     , m_callback(NULL)
+    , m_callbackArg(NULL)
     , m_iSsl(0)
     , m_iVerifyCert(0)
     , m_pHttpFetchDriver(NULL)
@@ -528,7 +530,7 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
         m_reqBufLen = len;
         m_pReqBuf = pReqBuf;
     }
-    m_reqHeaderLen = safe_snprintf(m_pReqBuf, len,
+    m_reqHeaderLen = lsnprintf(m_pReqBuf, len,
                                    "%s %s HTTP/1.0\r\n"
                                    "Host: %s\r\n"
                                    "Connection: Close\r\n",
@@ -542,23 +544,23 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
                 && *(m_pExtraReqHdrs + extraLen - 1) == '\n')
             trim = 2;
 
-        m_reqHeaderLen += safe_snprintf(m_pReqBuf + m_reqHeaderLen,
+        m_reqHeaderLen += lsnprintf(m_pReqBuf + m_reqHeaderLen,
                                     len - m_reqHeaderLen,
                                     "%.*s\r\n",
                                     extraLen - trim, m_pExtraReqHdrs);
     }
     if (m_reqBodyLen > 0)
     {
-        m_reqHeaderLen += safe_snprintf(m_pReqBuf + m_reqHeaderLen,
+        m_reqHeaderLen += lsnprintf(m_pReqBuf + m_reqHeaderLen,
                                         len - m_reqHeaderLen,
                                         "Content-Type: %s\r\n"
-                                        "Content-Length: %d\r\n",
+                                        "Content-Length: %lld\r\n",
                                         pContentType,
-                                        m_reqBodyLen);
+                                        (long long)m_reqBodyLen);
     }
     strcpy(m_pReqBuf + m_reqHeaderLen, "\r\n");
     if (strchr(m_achHost, ':') == NULL)
-        strcat(m_achHost, (m_iSsl ? ":443" : ":80"));
+        lstrncat(m_achHost, (m_iSsl ? ":443" : ":80"), sizeof(m_achHost));
     m_reqHeaderLen += 2;
     m_reqSent = 0;
     if (m_iEnableDebug)

@@ -50,7 +50,7 @@ private:
     int             m_iDisableWebAdmin;
     int             m_iConfTestMode;
     int             s_fdCmd;
-    
+
     app_node_st  m_stExtAppXmlNodeS[MAX_EXT_APP_NUMBER];
     int             m_iEextAppXmlNodeSSize;
 
@@ -83,7 +83,7 @@ public:
     void setDisableLogRotateAtStartup(int n)        {  m_iDisableLogRotate = n; }
     void setConfTestMode(int n)                  {   m_iConfTestMode = n;      }
     void setGlobalfdCmd(int n)                  { s_fdCmd = n; }
-    
+
     const char *getServerName()    const   {   return m_sServerName.c_str();   }
     const char *getAdminEmails()   const   {   return m_sAdminEmails.c_str();  }
     const char *getGDBPath()       const   {   return m_gdbPath.c_str();       }
@@ -123,9 +123,11 @@ public:
         }
         return NULL;
     }
-    
+
     int getExtAppXmlNodeCount() { return m_iEextAppXmlNodeSSize; }
 
 };
+
+LS_SINGLETON_DECL(MainServerConfig);
 
 #endif // MAINSERVERCONFIG_H

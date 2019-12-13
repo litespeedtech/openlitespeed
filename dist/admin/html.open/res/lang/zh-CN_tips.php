@@ -554,6 +554,8 @@ $_tipsdb['restrictedScriptPermissionMask'] = new DAttrHelp("脚本限制权限�
 
 $_tipsdb['retryTimeout'] = new DAttrHelp("Retry Timeout (secs)", 'Specifies the period of time that the server waits before retrying an external application that had a prior communication problem.', '', '无符号整数', '');
 
+$_tipsdb['reusePort'] = new DAttrHelp("Enable REUSEPORT", 'Use SO_REUSEPORT socket option to distribute incoming traffic to multiple workers. This setting is only effective for multi-worker licenses. When enabled, all workers are automatically bound to this listener and &quot;Binding&quot; configuration is ignored.<br/><br/>Default value: On', '', 'Select from radio box', '');
+
 $_tipsdb['rewriteBase'] = new DAttrHelp("重写基准", '指定重写规则的基准URL。', '', 'URL', '');
 
 $_tipsdb['rewriteInherit'] = new DAttrHelp("重写继承", '指定是否从父级context继承重写规则。 如果启用重写但不继承，将启用本context的重写基准及重写规则。', '', '布尔值', '');
@@ -593,8 +595,6 @@ $_tipsdb['shType'] = new DAttrHelp("类型", '指定处理这些脚本文件的�
 $_tipsdb['shmDefaultDir'] = new DAttrHelp("Default SHM Directory", 'Changes shared memory&#039;s default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.', '', 'Path', '');
 
 $_tipsdb['showVersionNumber'] = new DAttrHelp("服务器签名", '指定是否在响应头的Server参数中显示服务器签名和版本号。 有三个选项: 当设置为Hide Version时、只显示LiteSpeed。当设置为 Show Version，显示LiteSpeed和版本号。  设置为Hide Full Header时，整个Server头都不会显示在响应报头中。', '[安全建议] 如果你不想暴露服务器的版本号，设置为Hide Version。', '布尔值', '');
-
-$_tipsdb['smartKeepAlive'] = new DAttrHelp("智能持续连接", '指定是否启用智能持续连接。此选项只在&quot;最大持续连接请求数&quot;的值大于1 时有效。启用之后，您还可以在虚拟主机级别启用或禁用它。智能持久连接将只为 JavaScript、CSS样式表和图像文件请求建立持续连接。对于HTML页面，连接 不会被保持活跃。这有助于更高效地服务更多用户。通常包含多个图像和脚本的 网页将在初次请求之后被浏览器缓存。 通过一个持续连接来发送那些非HTML静态文件，同时通过另一非持续连接发送 text/html文件的做法更为高效。这种方法将减少闲置连接，进而提高处理并发请 求和更多用户的能力。', '[性能建议] 为高负载网站启用该功能。', '布尔值', '');
 
 $_tipsdb['sname'] = new DAttrHelp("Name - Server", 'The unique name that identifies this server. This is the  &quot;服务器名称&quot; specified in the general configuration.', '', '', '');
 
@@ -705,8 +705,6 @@ $_tipsdb['vhModules'] = new DAttrHelp("Virtual Host Modules", 'Virtual Host modu
 $_tipsdb['vhName'] = new DAttrHelp("虚拟主机名", '为虚拟主机的唯一名称。建议使用虚拟主机的域名作为虚拟主机名。 虚拟主机名参数可以使用$VH_NAME变量来引用。', '', '文本', '');
 
 $_tipsdb['vhRoot'] = new DAttrHelp("虚拟主机根", '指定虚拟主机的根目录。 注：这<b>不是</b>目录根。 建议将所有与该虚拟主机相关的文件 (像日志文件，html文件，CGI脚本等)都放置在这个目录下。 虚拟主机根参数可以使用$VH_ROOT变量来引用。', '[性能建议] 在不同的硬盘放置不同的虚拟主机。', '路径2', '');
-
-$_tipsdb['vhSmartKeepAlive'] = new DAttrHelp("智能Keep-Alive", '指定是否为虚拟主机启用智能Keep-Alive。这个选项仅在当&quot;智能持续连接&quot;启用并且&quot;最大Keep-Alive请求数&quot;大于1的时候生效。', '[性能建议] 为访问繁忙的网站启用此项。', '布尔值', '');
 
 $_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("File Name", 'The access log filename.', ' Put access log file on a separate disk.', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.', '');
 
@@ -870,6 +868,8 @@ $_tipsdb['EDTP:recaptchaType'] = array('');
 $_tipsdb['EDTP:recaptchaVhReqLimit'] = array('');
 
 $_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.');
+
+$_tipsdb['EDTP:reusePort'] = array('');
 
 $_tipsdb['EDTP:rewriteMapLocation'] = array('Enter URI for location. URI must start with &quot;/&quot;.');
 

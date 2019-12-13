@@ -96,14 +96,15 @@ class Context
         $localPluginDir = self::LOCAL_PLUGIN_DIR;
 
         $pattern = "=^((?!deleted).)*{$localPluginDir}((?!deleted).)*$=m";
-        $procMountSet = ! empty(preg_grep($pattern, file($mountFile)));
+        $result = preg_grep($pattern, file($mountFile));
+        $procMountSet = ! empty($result);
 
         if ( ! $procMountSet ) {
             Logger::debug("Data dir not set in {$mountFile}.");
 
             $pattern="=^.*{$localPluginDir}.*$=m";
-            $setInMpFile =
-                    ! empty(preg_grep($pattern, file($mpFile)));
+            $result = preg_grep($pattern, file($mpFile));
+            $setInMpFile = ! empty($result);
 
             if ( ! $setInMpFile ) {
                 file_put_contents($mpFile, "\n{$localPluginDir}",
@@ -161,10 +162,15 @@ class Context
 
     /**
      *
+     * @since 1.9.1  Added optional parameter $loggerObj.
+     *
      * @param ContextOption  $contextOption
+     * @param object         $loggerObj      Object implementing all public
+     *                                       Logger class functions.
      * @throws LSCMException
      */
-    public static function initialize( ContextOption $contextOption )
+    public static function initialize( ContextOption $contextOption,
+            $loggerObj = null )
     {
         if ( self::$instance != null ) {
             /**
@@ -176,8 +182,13 @@ class Context
 
         self::$instance = new self($contextOption);
 
-        $loggerClass = $contextOption->getLoggerClass();
-        $loggerClass::Initialize($contextOption);
+        if ( $loggerObj != null ) {
+            Logger::setInstance($loggerObj);
+        }
+        else {
+            $loggerClass = $contextOption->getLoggerClass();
+            $loggerClass::Initialize($contextOption);
+        }
 
         if ( self::$instance->isRoot == ContextOption::IS_ROOT ) {
             self::$instance->createDataDir();

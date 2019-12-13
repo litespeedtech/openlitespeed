@@ -22,6 +22,8 @@
 
 #include <stddef.h>
 #include <inttypes.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 
@@ -45,5 +47,54 @@
 #define ls_always_inline    static inline __attribute__((always_inline))
 #define ls_attr_inline      __attribute__((always_inline))
 
+ls_inline char *lstrncpy(char *dest, const char *src, size_t n)
+{
+    char *end = (char *)memccpy(dest, src, '\0', n);
+    if (end)
+        return end - 1;
+    if (n)
+    {
+        end = dest + n - 1;
+        *end = '\0';
+        return end;
+    }
+    return dest;
+}
+
+ls_inline char *lstrncat(char *dest, const char *src, size_t n)
+{
+    char *end = (char *)memchr(dest, '\0', n);
+    if (end)
+        return lstrncpy(end, src, dest + n - end);
+    return dest + n;
+}
+
+ls_inline char *lstrncat2(char *dest, size_t n, const char *src1, const char *src2)
+{
+    char *end = lstrncpy(dest, src1, n);
+    return lstrncpy(end, src2, dest + n - end);
+}
+
+ls_inline int lsnprintf(char *dest, size_t size, const char *format, ...)
+#if __GNUC__
+        __attribute__((format(printf, 3, 4)))
+#endif
+        ;
+ls_inline int lsnprintf(char *dest, size_t size, const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    int ret = vsnprintf(dest, size, format, ap);
+    va_end(ap);
+
+    if (ret < 0 || (unsigned)ret < size)
+        return ret;
+    if (size)
+    {
+        *(dest + size - 1) = '\0';
+        return size - 1;
+    }
+    return size;
+}
 
 #endif //_LSDEF_H_

@@ -541,7 +541,7 @@ class CValidation
             }
         }
 
-        if ($res == -1 && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
+        if ($res == -1 && isset($_POST['file_create']) && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
             if (PathTool::createFile($path, $err, $attr->GetKey())) {
                 $err = "$path has been created successfully.";
             }

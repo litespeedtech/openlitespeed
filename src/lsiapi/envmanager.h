@@ -67,4 +67,6 @@ private:
     LS_NO_COPY_ASSIGN(EnvManager);
 };
 
+LS_SINGLETON_DECL(EnvManager);
+
 #endif // ENVMANAGER_H

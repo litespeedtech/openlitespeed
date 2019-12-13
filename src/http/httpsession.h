@@ -166,8 +166,8 @@ enum HSPState
 #define HSF_WAIT_SUBSESSION         (1<<27)
 #define HSF_CUR_SUB_SESSION_DONE    (1<<28)
 #define HSF_STX_FILE_CACHE_READY    (1<<29)
-
 #define HSF_URI_MAPPED              (1<<30)
+#define HSF_SAVE_STX_FILE_CACHE     (1<<31)
 
 
 typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,

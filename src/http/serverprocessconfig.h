@@ -42,13 +42,13 @@ class ServerProcessConfig : public TSingleton< ServerProcessConfig >
     void operator=(const ServerProcessConfig &rhs);
     ServerProcessConfig();
 public:
-    enum CGroupConfigValues 
+    enum CGroupConfigValues
     {
         CGROUP_CONFIG_DEFAULT_OFF = 0,
         CGROUP_CONFIG_DEFAULT_ON,
         CGROUP_CONFIG_DISALLOW
     };
-        
+
     ~ServerProcessConfig();
 
     void setUid(uid_t uid)                {   m_uid = uid;                }
@@ -74,13 +74,14 @@ public:
 
     void setChroot(AutoStr2 *pChroot)     {   m_pChroot = pChroot;        }
     AutoStr2 *getChroot() const             {   return m_pChroot;           }
-    
+
     void setCGroupAllow(int enabled)      {   m_cgroupAllow = enabled;    }
     int getCGroupAllow() const              {   return m_cgroupAllow;       }
-    
+
     void setCGroupDefault(int enabled)    {   m_cgroupDefault = enabled;  }
     int getCGroupDefault() const            {   return m_cgroupDefault;     }
 };
 
+LS_SINGLETON_DECL(ServerProcessConfig);
 #endif //SERVERPROCESSCONFIG_H
 

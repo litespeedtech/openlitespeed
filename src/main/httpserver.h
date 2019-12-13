@@ -148,6 +148,8 @@ public:
 
 };
 
+LS_SINGLETON_DECL(HttpServer);
+
 extern int removeMatchFile(const char *pDir, const char *prefix);
 
 #endif

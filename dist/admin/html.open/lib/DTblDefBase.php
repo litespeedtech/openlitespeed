@@ -285,7 +285,6 @@ class DTblDefBase
             'tp_vrFile' => self::NewParseTextAttr('fileName', DMsg::ALbl('l_filename'), '/(\$VH_NAME)|(\$VH_ROOT)/', DMsg::ALbl('parse_tpfile'), false, 'templateFileRef'),
             'tp_name'            => self::NewParseTextAttr('name', DMsg::ALbl('l_name'), $this->_options['tp_vname'][0], $this->_options['tp_vname'][1], false, 'tpextAppName'),
             'vh_maxKeepAliveReq' => self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
-            'vh_smartKeepAlive'  => self::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), true, 'vhSmartKeepAlive'),
             'vh_enableGzip'      => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
             'vh_allowSymbolLink' => self::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
             'vh_enableScript'    => self::NewBoolAttr('enableScript', DMsg::ALbl('l_enablescript'), false),
@@ -417,7 +416,6 @@ class DTblDefBase
             self::NewIntAttr('maxSSLConnections', DMsg::ALbl('l_maxsslconns'), false, 0),
             self::NewIntAttr('connTimeout', DMsg::ALbl('l_conntimeout'), false, 10, 1000000),
             self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), false, 0, 32767),
-            self::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), false),
             self::NewIntAttr('keepAliveTimeout', DMsg::ALbl('l_keepalivetimeout'), false, 0, 60),
             self::NewIntAttr('sndBufSize', DMsg::ALbl('l_sndbufsize'), true, 0, '512K'),
             self::NewIntAttr('rcvBufSize', DMsg::ALbl('l_rcvbufsize'), true, 0, '512K'),
@@ -878,7 +876,6 @@ class DTblDefBase
     {
         $attrs = array(
             $this->_attrs['vh_maxKeepAliveReq'],
-            $this->_attrs['vh_smartKeepAlive']
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_connection'), $attrs, 'name');
     }
@@ -1358,7 +1355,6 @@ class DTblDefBase
             $this->_attrs['tp_vhRoot'],
             self::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'), '/\$VH_NAME.*\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
             $this->_attrs['vh_maxKeepAliveReq'],
-            $this->_attrs['vh_smartKeepAlive']
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, 'Base', $attrs); // todo: title change
     }

@@ -47,8 +47,10 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int8_t          m_iCompressLevel;
     int8_t          m_iBrCompress;
     int8_t          m_iEnableLve;
+    int8_t          m_iUsePagespeed;
 
-    int32_t         m_iCheckDeniedSymLink;
+    int16_t         m_iCheckDeniedSymLink;
+    int16_t         m_iEnableMultiCerts;
 
     int32_t         m_iMaxFcgiInstances;
 
@@ -94,10 +96,10 @@ public:
     {   m_iMaxKeepAliveRequests = max - 1;   }
     int16_t getMaxKeepAliveRequests() const
     {   return m_iMaxKeepAliveRequests; }
-    
+
     void setAutoLoadHtaccess(int8_t val)      {   m_iAutoLoadHtaccess = val;    }
     int8_t getAutoLoadHtaccess() const        {   return m_iAutoLoadHtaccess;   }
-    
+
     void setSmartKeepAlive(int8_t val)      {   m_iSmartKeepAlive = val;    }
     int8_t getSmartKeepAlive() const        {   return m_iSmartKeepAlive;   }
 
@@ -129,6 +131,9 @@ public:
 
     void setDebugLevel(int32_t level);
 
+    void setUsePagespeed(int n)                  {   m_iUsePagespeed = n;      }
+    int getUsePagespeed() const          { return m_iUsePagespeed;               }
+    
 
     void setMaxURLLen(int len);
     void setMaxHeaderBufLen(int len);
@@ -198,6 +203,10 @@ public:
     int getCpuAffinity() const              {   return m_nCpuAffinity;      }
     void setCpuAffinity( int count)         {   m_nCpuAffinity = count;     }
 
+    void setEnableMultiCerts(int v)  { m_iEnableMultiCerts = v; }
+    int  getEnableMultiCerts() const { return m_iEnableMultiCerts; }
 };
+
+LS_SINGLETON_DECL(HttpServerConfig);
 
 #endif

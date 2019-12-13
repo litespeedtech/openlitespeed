@@ -445,7 +445,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
             (gid < procConfig.getGidMin()))
         {
             if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS))
-                LS_INFO("[VHost:%s] Fast CGI [%s]: suExec access denied,"
+                LS_NOTICE("[VHost:%s] Fast CGI [%s]: suExec access denied,"
                         " UID or GID of VHost document root is smaller "
                         "than minimum UID, GID configured. ", pVHost->getName(),
                         config.getName());
@@ -525,7 +525,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         pid = SUExec::spawnChild(config.getCommand(), fd, -1,
                                  config.getEnv()->get(),
                                  config.getPriority(), config.getRLimits(),
-                                 config.getUmask());
+                                 config.getUmask(), uid, gid);
     if (rfd != -1)
         close(rfd);
 
@@ -586,7 +586,7 @@ int LocalWorker::startWorker()
         pid = workerExec(config, fd);
         if (pid > 0)
         {
-            LS_DBG_L("[%s] add child process pid: %d", getName(), pid);
+            LS_NOTICE("[%s] add child process pid: %d.", getName(), pid);
             PidRegistry::add(pid, this, 0);
         }
         else
@@ -807,7 +807,7 @@ int LocalWorker::processPid(int pid, const char * path)
             PidRegistry::add(pid, this, 0);
         }
         
-        LS_INFO("[%s] add child process pid: %d", pLogId, pid);
+        LS_NOTICE("[%s] add child process pid: %d", pLogId, pid);
         if (getConfig().isDetached())
         {
             m_pDetached->pid_info.pid = pid;

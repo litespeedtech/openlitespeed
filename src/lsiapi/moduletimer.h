@@ -52,6 +52,6 @@ public:
     int checkExpired();
 };
 
-
+LS_SINGLETON_DECL(ModTimerList);
 
 #endif // MODULETIMER_H

@@ -154,7 +154,6 @@ private:
     ThrottleLimits      m_throttle;
 
     int16_t             m_iMaxKeepAliveRequests;
-    int16_t             m_iSmartKeepAlive;
 
     int                 m_iFeatures;
 
@@ -195,8 +194,8 @@ private:
 
     HttpVHost(const HttpVHost &rhs);
     void operator=(const HttpVHost &rhs);
-    
-    
+
+
 
 
 public:
@@ -353,12 +352,12 @@ public:
         ++m_PhpXmlNodeSSize;
         return 0;
     }
-    
+
     /**
      * For the VHost UniqueAppName and UniqueAppUri we do the same way
      * add ".$uid" to the end of the string
      */
-    
+
     void getUniAppName(const char *app_name, char *dst, int dst_len) const
     {    ExtAppRegistry::getUniAppUri(app_name, dst, dst_len, getUid()); }
 
@@ -380,9 +379,6 @@ public:
 
     void setMaxKAReqs(int a)  {   m_iMaxKeepAliveRequests = a;        }
     short getMaxKAReqs() const  {   return m_iMaxKeepAliveRequests;     }
-
-    void setSmartKA(int a)    {   m_iSmartKeepAlive = a;              }
-    short getSmartKA() const    {   return m_iSmartKeepAlive;           }
 
     ThrottleLimits *getThrottleLimits()    {   return &m_throttle;     }
     const ThrottleLimits *getThrottleLimits() const
@@ -472,10 +468,10 @@ public:
                           const char *pBinPath, int maxConns,
                           int maxIdle, LocalWorkerConfig *pDefault);
     int testAppType(const char *pAppRoot);
-    
+
     int configRailsRunner(char *pRunnerCmd, int cmdLen,
                                  const char *pRubyBin);
-    
+
     LocalWorker *addRailsApp(const char *pAppName, const char *appPath,
                             int maxConns, const char *pRailsEnv,
                             int maxIdle, const Env *pEnv,
@@ -490,7 +486,7 @@ public:
     HttpContext *addRailsContext(const char *pURI, const char *pLocation,
                                         ExtWorker *pWorker,
                                         HttpContext *pOldCtx);
-    
+
     LocalWorker *addPythonApp(const char *pAppName,
                               const char *appPath, const char *pStartupFile,
                               int maxConns, const char *pPythonEnv, int maxIdle,
@@ -502,7 +498,7 @@ public:
                                   const char *pStartupFile, ExtWorker *pWorker,
                                   HttpContext *pOldCtx);
 
-    
+
     int configNodeJsStarter(char *pRunnerCmd, int cmdLen, const char *pBinPath);
     LocalWorker *addNodejsApp(const char *pAppName,
                               const char *appPath, const char *pStartupFile,
@@ -514,8 +510,8 @@ public:
                                   const char *pStartupFile, ExtWorker *pWorker,
                                   HttpContext *pOldCtx);
 
-    
-    HttpContext *configAppContext(const XmlNode *pNode, 
+
+    HttpContext *configAppContext(const XmlNode *pNode,
                                   const char *contextUri, const char *appPath);
     HttpContext *configAppContext(int appType,
                                   const char *contextUri, const char *pAppRoot,
@@ -523,8 +519,8 @@ public:
                                   const char * pAppMode, int maxIdle,
                                   const Env *pProcessEnv, int runOnStartup,
                                   const char *pBinPath, HttpContext *pOldCtx);
-    
-    
+
+
     HttpContext *importWebApp(const char *contextUri, const char *appPath,
                               const char *pWorkerName, int allowBrowse);
     int configContext(const XmlNode *pContextNode);
@@ -544,13 +540,13 @@ public:
 
     int config(const XmlNode *pVhConfNode, int is_uid_set);
     int getExtAppGUid(const XmlNode *pExtAppNode);
-    
+
     int configVHScriptHandler2();
     int configVHScriptHandler(const XmlNode *pVhConfNode);
     const HttpHandler *isHandlerAllowed(const HttpHandler *pHdlr, int type,
                                         const char *pHandler);
     void configVHChrootMode(const XmlNode *pNode);
-    
+
     int configListenerMappings(const char *pListeners,
                                const char *pDomain,
                                const char *pAliases);
@@ -576,14 +572,14 @@ public:
     void removeurlStaticFile(static_file_data_t *data);
     static_file_data_t *getUrlStaticFileData(const char *url);
     void urlStaticFileHashClean();
-    
+
     int addUrlToUrlIdHash(const char *url);
-    
+
     /**
      * return the bit of the url added to the hash
      */
     int getIdBitOfUrl(const char *url);
-    
+
     int isRecaptchaEnabled() const      {   return m_iFeatures & VH_RECAPTCHA;  }
     const Recaptcha *getRecaptcha() const   {   return m_pRecaptcha;        }
     void setRecaptcha(Recaptcha *p)         {   m_pRecaptcha = p;           }

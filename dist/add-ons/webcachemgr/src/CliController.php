@@ -490,7 +490,7 @@ class CliController
      */
     private function initNewCpanelPluginConf( CPanel $controlPanel )
     {
-        $lswsHome = realpath(__DIR__ . '/../../../');
+        $lswsHome = realpath(__DIR__ . '/../../..');
 
         $controlPanel->UpdateCpanelPluginConf(
                 CPanel::USER_PLUGIN_SETTING_LSWS_DIR, $lswsHome);

@@ -46,4 +46,5 @@ public:
     LS_NO_COPY_ASSIGN(StaticFileCache);
 };
 
+LS_SINGLETON_DECL(StaticFileCache);
 #endif

@@ -320,6 +320,37 @@ class WPCaller
     }
 
     /**
+     * Check if any known cache plugins that do not use an advanced-cache.php
+     * file are active for this WordPress installation. If any of these
+     * plugins are found, that plugin's slug is returned.
+     *
+     * @since 1.9.1
+     *
+     * @return string  Empty string or detected active cache plugin slug.
+     */
+    private function checkForKnownNonAdvCachePlugins()
+    {
+        $knownPlugins = array(
+            'wp-fastest-cache' => 'wp-fastest-cache/wpFastestCache.php'
+        );
+
+
+        foreach ( $knownPlugins as $slug => $plugin ) {
+            /**
+             * Check if plugin files exist first, as status in db could be
+             * stale if plugin files were removed manually.
+             */
+            if ( file_exists(WP_PLUGIN_DIR . "/{$plugin}")
+                    && is_plugin_active($plugin) ) {
+
+                return $slug;
+            }
+        }
+
+        return '';
+    }
+
+    /**
      *
      * WP Constants: WP_PLUGIN_DIR
      * WP Functions: get_option()
@@ -338,6 +369,23 @@ class WPCaller
 
                 Logger::uiSuccess('LSCWP Detected As Manually Disabled - Flag Set');
                 Logger::notice('Ignore - Previously disabled, flag it from mass operation');
+
+                return false;
+            }
+
+            $thirdPartyCachePluginSlug =
+                    $this->checkForKnownNonAdvCachePlugins();
+
+            if ( $thirdPartyCachePluginSlug != '' ) {
+                $this->currInstall->addUserFlagFile();
+
+                $msg = 'Cannot Enable LSCWP - Detected another active cache  plugin'
+                        . " \"{$thirdPartyCachePluginSlug}\". Flag set.";
+                Logger::uiError($msg);
+
+                $msg = 'Ignore - Detected another active cache plugin '
+                        . "\"{$thirdPartyCachePluginSlug}\". Flagged.";
+                Logger::notice($msg);
 
                 return false;
             }
@@ -1091,9 +1139,10 @@ class WPCaller
     private function initWp()
     {
         /**
-         * Declared for use in included files.
+         * Declared global variables for use in included files.
          */
         global $wpdb;
+        global $shortcode_tags;
 
         error_reporting(E_ALL);
 

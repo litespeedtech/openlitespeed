@@ -1017,12 +1017,11 @@ off_t NtwkIOLink::sendfileSetUp(off_t size)
         if (size > (unsigned int)Quota + (Quota >> 3))
             size = Quota;
     }
-    else
-        size = size & ((1 << 30) - 1);
+
     if (size <= 0)
         return 0;
-    if (size > INT_MAX)
-        size = INT_MAX;
+    if (size > LONG_MAX)
+        size = LONG_MAX;
 
     return size;
 }

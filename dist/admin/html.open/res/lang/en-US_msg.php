@@ -436,6 +436,7 @@ $_gmsg['l_restrictedpermissionmask'] = 'Restricted Permission Mask';
 $_gmsg['l_restrictedscriptpermissionmask'] = 'Script Restricted Permission Mask';
 $_gmsg['l_retrytimeout'] = 'Retry Timeout (secs)';
 $_gmsg['l_retypepass'] = 'Retype Password';
+$_gmsg['l_reuseport'] = 'Enable REUSEPORT';
 $_gmsg['l_rewritebase'] = 'Rewrite Base';
 $_gmsg['l_rewritecontrol'] = 'Rewrite Control';
 $_gmsg['l_rewritedocrootrules'] = 'Document Root Rewrite Rules';

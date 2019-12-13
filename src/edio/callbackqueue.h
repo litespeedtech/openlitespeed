@@ -93,4 +93,6 @@ public:
 
     LS_NO_COPY_ASSIGN(CallbackQueue);
 };
+
+LS_SINGLETON_DECL(CallbackQueue);
 #endif  //CALLBACKQUEUE_H

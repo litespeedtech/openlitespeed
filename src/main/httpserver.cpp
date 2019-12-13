@@ -381,6 +381,7 @@ private:
     int configAccessDeniedDir(const XmlNode *pNode);
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
+    void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod);
     int configServerBasic2(const XmlNode *pRoot, const char *pSwapDir);
     int configMultiplexer(const XmlNode *pNode);
     void configVHTemplateToListenerMap(const XmlNodeList *pList,
@@ -2123,8 +2124,6 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                           10000, 30));
     config.setMaxKeepAliveRequests(
         currentCtx.getLongValue(pNode, "maxKeepAliveReq", 0, 32767, 100));
-    config.setSmartKeepAlive(currentCtx.getLongValue(pNode, "smartKeepAlive",
-                             0, 1, 0));
 
     //HTTP request/response
     config.setMaxURLLen(currentCtx.getLongValue(pNode, "maxReqURLLen", 100,
@@ -2259,7 +2258,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     }
 
     int v = currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0);
-    ConfigCtx::getCurConfigCtx()->setEnableMultiCerts(v);
+    config.setEnableMultiCerts(v);
 
     int iSslCacheSize;
     int32_t iSslCacheTimeout;
@@ -2491,6 +2490,44 @@ static const char *getAutoIndexURI(const XmlNode *pNode)
     }
 
     return pURI;
+}
+
+
+void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod)
+{   
+    char  achBuf[4096];
+    ls_snprintf(achBuf, 4096, "%s/%s/",
+                MainServerConfig::getInstance().getServerRoot(), pSuffix);
+    
+    bool rootuser = (getuid() == 0);
+    struct stat sb;
+    int iStat = stat(achBuf, &sb);
+    if (iStat == -1)
+    {
+        if (GPath::createMissingPath(achBuf, (rootuser ? mod : 0777)) == 0)
+        {
+            iStat = stat(achBuf, &sb);
+            LS_NOTICE("[testAndFixDirs] \"%s\" not exist, created stat %d.",
+                       achBuf, iStat);
+        }
+    }
+    
+    if (iStat != -1 && rootuser)
+    {
+        if (sb.st_uid != uid || sb.st_gid != gid)
+        {
+            LS_NOTICE("[testAndFixDirs] \"%s\" exist and change own to %d:%d.",
+                    achBuf, uid, gid);
+            chown(achBuf, uid, gid);
+        }
+        
+        if ((sb.st_mode & 0777) != mod )
+        {
+            LS_NOTICE("[testAndFixDirs] \"%s\" exist and changed mod to %04o.",
+                    achBuf, mod);
+            chmod(achBuf, mod);
+        }
+    }
 }
 
 
@@ -3031,6 +3068,12 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         m_sRTReportFile = sStatDir;
         m_sRTReportFile.append("/.rtreport", 10);
 
+        
+        testAndFixDirs("cachedata", procConf.getUid(), procConf.getGid(), 0755);
+        testAndFixDirs("autoupdate", procConf.getUid(), procConf.getGid(), 0755);
+        testAndFixDirs("tmp", procConf.getUid(), procConf.getGid(), 0755);
+        testAndFixDirs("tmp/ocspcache", procConf.getUid(), procConf.getGid(), 0700);
+        
         return 0;
     }
 
@@ -4205,7 +4248,6 @@ int HttpServerImpl::initSampleServer()
 
     pVHost->getRootContext().addDirIndexes(
         "index.htm, index.php, index.html, default.html");
-    pVHost->setSmartKA(0);
     pVHost->setMaxKAReqs(100);
 
     pLimit = pVHost->getThrottleLimits();

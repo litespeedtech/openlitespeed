@@ -80,7 +80,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Tue Nov 19 19:23:19 UTC 2019)"
+#define BUILDTIME  " (built: Thu Dec 12 20:31:54 UTC 2019)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -1796,13 +1796,13 @@ static long getProcessStartTime(int pid)
 {
     char proc_pid_path[80];
     struct stat st;
-    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/exe", pid);
-    int ret = lstat(proc_pid_path, &st);
+    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/stat", pid);
+    int ret = stat(proc_pid_path, &st);
     if (ret == -1)
     {
         return -1;
     }
-    return st.st_mtime;
+    return st.st_ctime;
 }
 #endif
 

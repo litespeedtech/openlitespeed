@@ -7,6 +7,7 @@
 #include "sslerror.h"
 #include <openssl/err.h>
 #include <string.h>
+#include <lsdef.h>
 
 #define MSG_MAX_LEN sizeof( m_achMsg ) - 1
 
@@ -27,7 +28,7 @@ SslError::SslError() throw()
         if (*data && (flag & ERR_TXT_STRING))
         {
             *p++ = ':';
-            strncpy(p, data, pEnd - p);
+            lstrncpy(p, data, pEnd - p);
         }
         p += strlen(p);
         ERR_get_error();
@@ -51,7 +52,10 @@ SslError::SslError(const char *pErr) throw()
         memccpy(m_achMsg, pErr, 0, MSG_MAX_LEN);
     }
     else
+    {
         m_achMsg[0] = 0;
+        m_iError = 0;
+    }
 }
 
 SslError::~SslError() throw()

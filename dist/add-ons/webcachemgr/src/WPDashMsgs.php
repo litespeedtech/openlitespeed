@@ -43,7 +43,7 @@ class WPDashMsgs
      */
     public function __construct( )
     {
-        $this->dataFile = LSWS_HOME . '/admin/lscdata/wpDashMsgs.data';
+        $this->dataFile = realpath(__DIR__ . '/../../..') . '/admin/lscdata/wpDashMsgs.data';
 
         $this->init();
     }

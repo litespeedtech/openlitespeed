@@ -139,4 +139,5 @@ public:
     LS_NO_COPY_ASSIGN(HttpResourceManager);
 };
 
+LS_SINGLETON_DECL(HttpResourceManager);
 #endif

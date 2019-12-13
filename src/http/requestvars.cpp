@@ -344,7 +344,6 @@ RequestVars::~RequestVars()
 {
 }
 
-
 static const char *ServerVarNames[REF_EXT_COUNT] =
 {
     "REMOTE_ADDR",
@@ -391,6 +390,16 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "ORG_QUERY_STRING",
     "HTTPS",
 
+    "SSL_PROTOCOL",
+    "SSL_SESSION_ID",
+    "SSL_CIPHER",
+    "SSL_CIPHER_USEKEYSIZE",
+    "SSL_CIPHER_ALGKEYSIZE",
+    "SSL_CLIENT_CERT",
+
+    "VH_NAME",
+    "VH_USER",
+
     "DUMMY",
     "PID",
     "STATUS_CODE",
@@ -400,9 +409,8 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "CONN_STATE",
     "BYTES_IN",
     "BYTES_OUT",
+    "BYTES_TOTAL",
     "RESP_BYTES",
-    "VH_NAME",
-    "COOKIE_VAL",
 
     "DATE_GMT",
     "DATE_LOCAL",
@@ -411,18 +419,20 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "LAST_MODIFIED",
     "QUERY_STRING_UNESCAPED",
     "REQ_TIME_MS",
-
+    "UNIQUE_ID",
+    "COOKIE_VAL",
 };
-
 
 static int ServerVarNameLen[REF_EXT_COUNT] =
 {
     11, 11, 11, 11, 12, 14, 12, 9, 9, 15, 16, 11, 13, 12,
     11, 11, 11, 15, 15, 11, 11, 9, 4, 9, 8, 8, 9, 8, 8, 9, 11, 11,
     16, 10, 10, 15, 16, 11, 15, 10, 11, 16, 5,
-    5, 3, 11, 8, 12, 8, 10, 8, 9, 10,
-    7, 10, 8, 10, 13, 12, 13, 22, 11
+    12, 14, 10, 21, 21, 15, 7, 7,
+    5, 3, 11, 8, 12, 8, 10, 8, 9, 11, 10,
+    8, 10, 13, 12, 13, 22, 11, 9, 10,
 };
+
 
 
 const char *RequestVars::getVarNameStr(int var_id, int &len)
@@ -539,7 +549,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         //TODO: hard code for now
         strncpy(pValue, "Basic", 6);
         return 5;
-    case REF_REQUST_FN:
+    case REF_REQUEST_FN:
     case REF_SCRIPTFILENAME:
     case REF_SCRIPT_BASENAME:
     case REF_REQ_BASENAME:
@@ -772,9 +782,29 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         i = StringTool::offsetToStr(pValue, bufLen, pSession->getBytesSent());
         return i;
 
+    case REF_BYTES_TOTAL:
+        i = StringTool::offsetToStr(pValue, bufLen,
+                                    pSession->getBytesRecv() + 
+                                    pSession->getBytesSent());
+        return i;
+        
     case REF_HTTPS:
         i = snprintf(pValue, bufLen, "%s", pSession->isHttps() ? "on" : "off");
         return i;
+
+    case REF_SSL_VERSION:
+    case REF_SSL_SESSION_ID:
+    case REF_SSL_CIPHER:
+    case REF_SSL_CIPHER_USEKEYSIZE:
+    case REF_SSL_CIPHER_ALGKEYSIZE:
+    case REF_SSL_CLIENT_CERT:
+    {
+        HioCrypto *pCrypto = pSession->getCrypto();
+        if (!pCrypto)
+            return 0;
+        return pCrypto->getEnv((HioCrypto::ENV)(HioCrypto::CRYPTO_VERSION +
+                                (type - REF_SSL_VERSION)), pValue, bufLen);
+    }
 
     case REF_DATE_GMT:
     case REF_DATE_LOCAL:

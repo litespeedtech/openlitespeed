@@ -282,7 +282,7 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
             p = achBuf;
             for(int i = 0; i < rr->dnsptr_nrr; ++i)
             {
-                n += snprintf(achBuf + n, 4096 - n, "%s,", rr->dnsptr_ptr[i]);
+                n += lsnprintf(achBuf + n, 4096 - n, "%s,", rr->dnsptr_ptr[i]);
             }
             achBuf[n -1] = 0;
         }
