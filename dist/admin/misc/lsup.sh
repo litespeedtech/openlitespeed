@@ -432,7 +432,7 @@ if [ "x${ISLINUX}" = "xno" ] ; then
     if [ -f ./build.sh ] ; then
         ./build.sh
     else
-        echoR "This version does not have ./build.sh, please run ./configure; make; make install to install it."
+        echoR "This version does not have ./build.sh, please run './configure; make; make install' to install it."
         echoG Usually ./configure need some parameters, this auto tool cannot continue. Exit. 
         rm -rf ${LOCKFILE}
         exit 8
