@@ -192,6 +192,7 @@ clean()
         rm -rf /tmp/shm/ols/*
     fi
     rm -rf ${LSWSHOME}/cgid/cgid.sock*
+    rm -rf ${LSWSHOME}/autoupdate/*
     
     ${LSWSCTRL} start
     echoG Cleaned and service started.
@@ -446,6 +447,7 @@ if [ -f ${LSWSHOME}/bin/openlitespeed ] ; then
 fi
 
 ./install.sh
+rm -rf ${LSWSHOME}/autoupdate/*
 
 #Sign it
 echo lsup > "${LSWSHOME}/PLAT"
