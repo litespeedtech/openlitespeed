@@ -95,8 +95,8 @@ if [ $? = 0 ] ; then
     fi
 fi
 
-if [ -f $LSWSHOME/autoupdate/release ] ; then 
-    NEWVERSION=`cat $LSWSHOME/autoupdate/release`
+if [ -f ${LSWSHOME}/autoupdate/release ] ; then 
+    NEWVERSION=`cat ${LSWSHOME}/autoupdate/release`
 else
     if [ "x${NEWVERSION}" = "x" ] ; then
         $DLCMD /tmp/tmprelease https://openlitespeed.org/packages/release >/dev/null 2>&1
@@ -268,7 +268,7 @@ Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
      Choose Debug version to upgrade or downgrade, will do clean like -c at the same time.
   
   -v VERSION
-     If VERSION is given, this command will try to install specified VERSION. Otherwise, it will get the latest version from $LSWSHOME/autoupdate/release.
+     If VERSION is given, this command will try to install specified VERSION. Otherwise, it will get the latest version from ${LSWSHOME}/autoupdate/release.
 
   -r 
      Recover to the original installed version which is in file VERSION.
@@ -341,9 +341,9 @@ fi
 touch ${LOCKFILE}
 
 
-TEMPPATH=$LSWSHOME/autoupdate
-if [ ! -e $TEMPPATH ] ; then
-    TEMPPATH=/opt
+TEMPPATH=${LSWSHOME}/autoupdate
+if [ ! -e ${TEMPPATH} ] ; then
+    TEMPPATH=/usr/src
 fi
 cd ${TEMPPATH}
 if [ -f ols.tgz ] ; then
@@ -447,6 +447,7 @@ if [ -f ${LSWSHOME}/bin/openlitespeed ] ; then
 fi
 
 ./install.sh
+rm -rf $SRCDIR
 rm -rf ${LSWSHOME}/autoupdate/*
 
 #Sign it
