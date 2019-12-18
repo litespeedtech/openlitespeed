@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.1-12/12/2019
+LSUPVERSION=v2.2-12/18/2019
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -54,6 +54,7 @@ echoG()
 	fi
 }
 
+echoG "lsup.sh Version: ${LSUPVERSION}."
 
 #Test which downloader
 which wget >/dev/null 2>&1
@@ -87,7 +88,7 @@ if [ $? = 0 ] ; then
         mv -f ${LSWSHOME}/admin/misc/lsup.sh ${LSWSHOME}/admin/misc/lsup.shold >/dev/null 2>&1
         mv -f ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
         chmod 777 ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
-        echoG "lsup.sh updated, please run again."
+        echoG "lsup.sh (Version ${LSUPVERSION}) updated, please run again."
         exit 10
     else
         rm ${LSWSHOME}/admin/misc/lsup.shnew
@@ -259,8 +260,6 @@ testrunning()
 
 display_usage()
 {
-
-    echoG lsup version ${LSUPVERSION}.  
     cat <<EOF
 Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
   
