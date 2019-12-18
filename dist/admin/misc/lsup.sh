@@ -339,13 +339,16 @@ if [ -f ${LOCKFILE} ] ; then
 fi
 
 touch ${LOCKFILE}
-cd /tmp
+
+
+TEMPPATH=$LSWSHOME/autoupdate
+if [ ! -e $TEMPPATH ] ; then
+    TEMPPATH=/opt
+fi
+cd ${TEMPPATH}
 if [ -f ols.tgz ] ; then
     rm -f ols.tgz
 fi
-
-
-
 
 if [ "x${ISLINUX}" = "xyes" ] ; then
     URL=https://openlitespeed.org/packages/openlitespeed-${VERSION}.tgz
@@ -400,9 +403,9 @@ fi
 
 tar xf ols.tgz
 if [ "x${ISLINUX}" = "xyes" ] ; then
-    SRCDIR=/tmp/openlitespeed
+    SRCDIR=${TEMPPATH}/openlitespeed
 else
-    SRCDIR=/tmp/openlitespeed-${VERSION}
+    SRCDIR=${TEMPPATH}/openlitespeed-${VERSION}
 fi
 
 if [ -f ${LSWSHOME}/VERSION ] ; then 
