@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.3-12/26/2019
+LSUPVERSION=v2.3-12/27/2019
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -200,6 +200,17 @@ clean()
     exit 0
 }
 
+changeAdminPasswd()
+{
+    SHFILE=${LSWSHOME}/admin/misc/admpass.sh
+    if [ -f ${SHFILE} ] ; then
+        ${SHFILE}
+    else
+        echoR ${SHFILE} not exist.
+    fi
+    exit 0
+}
+
 testrunning()
 {
     status
@@ -285,6 +296,9 @@ Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
      
   -c
      Do some clean and restart openlitespeed service.
+     
+  -a
+     Change the webAdmin password.
 
   -h | --help     
      Display this help and exit.
@@ -323,6 +337,8 @@ do
         clean
     elif [ "x$1" = "x-t" ] ; then
         testrunning
+    elif [ "x$1" = "x-a" ] ; then
+        changeAdminPasswd        
     else 
         display_usage
     fi
