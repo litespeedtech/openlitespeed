@@ -8,7 +8,7 @@ OpenLiteSpeed is a high-performance, lightweight, open source HTTP server develo
 LiteSpeed Technologies. Users are free to download, use, distribute, and modify OpenLiteSpeed and its 
 source code in accordance with the precepts of the GPLv3 license.
 
-This is the official repository for OpenLiteSpeed's source code. It is maintained byLiteSpeed 
+This is the official repository for OpenLiteSpeed's source code. It is maintained by LiteSpeed 
 Technologies.
 
 Documentation
@@ -23,7 +23,7 @@ but here are some quick links to important parts of the site:
 
 [Road map](https://openlitespeed.org/mediawiki/index.php/Road_Map)
 
-[Release log](https://openlitespeed.org/mediawiki/index.php/Release_Log/1.x)
+[Release log](https://openlitespeed.org/release-log/)
 
 Get in Touch
 --------
