@@ -2607,7 +2607,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         }
   
         //If pLocation does not have tail /, add it now
-        if ( *(pLocation + strlen(pLocation) - 1) != '/' )
+        if (!match && *(pLocation + strlen(pLocation) - 1) != '/' )
         {
             if (!needUpdate)
                 defLocation.setStr(pLocation);
