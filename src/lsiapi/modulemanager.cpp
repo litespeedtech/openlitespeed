@@ -26,6 +26,7 @@
 #include <lsiapi/lsiapilib.h>
 #include <lsiapi/moduletimer.h>
 #include <main/mainserverconfig.h>
+#include <http/httpserverconfig.h>
 #include <util/xmlnode.h>
 #include <ls.h>
 #include <lsr/ls_confparser.h>
@@ -139,6 +140,13 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
              pType, MODULE_NAME(pModule),
              (int16_t)(pModule->signature >> 16),
              (int16_t)pModule->signature);
+    
+    if (strcmp(name, "modpagespeed") == 0)
+    {
+        //Loaded modpagespeed, 
+        HttpServerConfig::getInstance().setUsePagespeed(1);
+    }
+    
     return iter;
 }
 
@@ -180,7 +188,15 @@ lsi_module_t *ModuleManager::loadModule(const char *name)
 
     iterator iter = find(name);
     if (iter != end())
-        return iter.second()->getModule();
+    {
+        //loaded, can be internal or just loaded external
+        if (strcmp(name, "cache") != 0)
+        {
+            error = "Module loaded, cannot load multiple times.";
+            LS_ERROR("Failed to load module [%s], error: %s", name, error);
+        }
+        return NULL;
+    }
 
     //prelinked checked, now, check file
     char sFilePath[512];

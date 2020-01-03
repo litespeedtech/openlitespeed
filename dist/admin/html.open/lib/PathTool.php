@@ -52,20 +52,27 @@ class PathTool
         return $path;
     }
 
-    public static function createFile($path, &$err)
+    public static function createFile($path, &$err, $attrName='')
     {
         if (file_exists($path)) {
             $err = is_file($path) ? "Already exists $path" : "name conflicting with an existing directory $path";
             return false;
         }
+        $dirmode = 0700; // default
+        $filemode = 0600;
+        $specials = ['userDB:location', 'groupDB:location'];
+        if (in_array($attrName, $specials) && strpos($path, '/lsws/conf/') !== false) {
+            $dirmode = 0755; // conf dir will be group protected
+            $filemode = 0644;
+        }
         $dir = substr($path, 0, (strrpos($path, '/')));
-        if (!PathTool::createDir($dir, 0700, $err)) {
+        if (!PathTool::createDir($dir, $dirmode, $err)) {
             $err = 'failed to create file ' . $path;
             return false;
         }
 
         if (touch($path)) {
-            chmod($path, 0600);
+            chmod($path, $filemode);
             return true;
         }
 

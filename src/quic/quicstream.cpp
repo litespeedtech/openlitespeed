@@ -31,7 +31,10 @@ int QuicStream::init(lsquic_stream_t *s)
     m_pStream = s;
     setActiveTime(DateTime::s_curTime);
     clearLogId();
-    setProtocol(HIOS_PROTO_QUIC);
+    if (lsquic_conn_quic_version(lsquic_stream_conn(s)) >= LSQVER_ID23)
+        setProtocol(HIOS_PROTO_HTTP3);
+    else
+        setProtocol(HIOS_PROTO_QUIC);
 
     int flag = HIO_FLAG_FLOWCTRL;
     /* Turn on the push capable flag: check it when push() is called and

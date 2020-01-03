@@ -200,7 +200,7 @@ int HttpVHost::setAccessLogFile(const char *pFileName, int pipe)
 
     if (! pFileName || !*pFileName)
         return -1;
-    
+
     for (i = 0; i < MAX_ACCESS_LOG; ++i)
     {
         if (!m_pAccessLog[i])
@@ -214,7 +214,7 @@ int HttpVHost::setAccessLogFile(const char *pFileName, int pipe)
     }
     if (!m_lastAccessLog)
         return -1;
-        
+
     ret = m_lastAccessLog->init(pFileName, pipe);
     if (ret)
     {
@@ -241,7 +241,6 @@ HttpVHost::HttpVHost(const char *pHostName)
     : m_pLogger(NULL)
     , m_pBytesLog(NULL)
     , m_iMaxKeepAliveRequests(100)
-    , m_iSmartKeepAlive(0)
     , m_iFeatures(VH_ENABLE | VH_SERVER_ENABLE |
                   VH_ENABLE_SCRIPT | LS_ALWAYS_FOLLOW |
                   VH_GZIP)
@@ -279,7 +278,7 @@ HttpVHost::~HttpVHost()
 {
     if (m_pLogger)
         m_pLogger->getAppender()->close();
-    
+
     for (int i=0; i<MAX_ACCESS_LOG; ++i)
     {
         if (m_pAccessLog[i])
@@ -450,7 +449,7 @@ void HttpVHost::onTimer()
 //                 LS_ERROR("[%s] Failed to open access log file %s.",
 //                          m_sName.c_str(), m_pAccessLog->getLogPath());
 //             }
-            
+
             for (int i = 0; i < MAX_ACCESS_LOG; ++i)
             {
                 if (m_pAccessLog[i])
@@ -652,7 +651,7 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
         pContext = (HttpContext *)pContext->getParent();
         return true;
     }
-    
+
     bool ret = true;
     const char *p = pURI + curContextURILen;
     while(p < pURI + iUriLen)
@@ -674,7 +673,7 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
 HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
 {
     HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
-    
+
     AutoStr2 missURI; //A while URI start with /
     AutoStr2 missLoc;  //A loc should be added to pContext location for the full path
     while (pContext && !dirMatch(pContext, pURI, iUriLen, &missURI, &missLoc))
@@ -692,7 +691,7 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
                 missURI.c_str(), achRealPath, pContext0);
         if (pContext0 == NULL)
             break;
-        
+
         if (access(achRealPath, F_OK) != 0)
         {
             pContext0->setConfigBit2(BIT2_NULL_CONTEXT, 1);
@@ -845,11 +844,16 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
             "document root") != 0)
         return LS_FAIL;
 
-    if (ConfigCtx::getCurConfigCtx()->checkPath(pPath, "document root",
+    /**
+     * Test symlink once but store link file since it may change.
+     */
+    char achBuf2[MAX_PATH_LEN];
+    char *pPath2 = achBuf2;
+    strcpy(pPath2, pPath);
+    if (ConfigCtx::getCurConfigCtx()->checkPath(pPath2, "document root",
             followSymLink()) == -1)
         return LS_FAIL;
 
-    //pPath += m_sChroot.len();
     pPath += iChrootLen;
     ConfigCtx::getCurConfigCtx()->clearDocRoot();
     if (setDocRoot(pPath) != 0)
@@ -1318,13 +1322,6 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
             if (!match)
             {
                 int PathLen = strlen(achRealPath);
-
-                if (ConfigCtx::getCurConfigCtx()->checkPath(achRealPath,
-                        "context location", followSymLink()))
-                    return NULL;
-
-                PathLen = strlen(achRealPath);
-
                 if (access(achRealPath, F_OK) != 0)
                 {
                     LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is not accessible: %s",
@@ -1468,7 +1465,7 @@ int HttpVHost::configRailsRunner(char *pRunnerCmd, int cmdLen,
                   TmpLogId::getLogId(), pRubyBin);
         pRubyBin = NULL;
     }
-    
+
     if (!pRubyBin)
     {
         for (int i = 0; i < 2; ++i)
@@ -1480,14 +1477,14 @@ int HttpVHost::configRailsRunner(char *pRunnerCmd, int cmdLen,
             }
         }
     }
-    
+
     if (!pRubyBin)
     {
         LS_NOTICE("[%s] Cannot find ruby interpreter, Rails easy configuration is turned off",
                   TmpLogId::getLogId());
         return LS_FAIL;
     }
-    
+
     snprintf(pRunnerCmd, cmdLen, "%s %sfcgi-bin/RackRunner.rb", pRubyBin,
              MainServerConfig::getInstance().getServerRoot());
     return 0;
@@ -1525,7 +1522,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
     if (!pBinPath || *pBinPath == 0x00)
         pBinPath = AppConfig::s_rubyAppConfig.s_binPath.c_str();
-    
+
     if (pBinPath
         && configRailsRunner(achRunnerCmd, sizeof(achRunnerCmd), pBinPath) != -1)
     {
@@ -1544,7 +1541,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     char achAppName[1024];
     char achName[MAX_PATH_LEN];
     snprintf(achAppName, 1024, "Rack:%s:%s", getName(), pAppName);
-    
+
     pWorker = (LocalWorker *)ExtAppRegistry::getApp(EA_LSAPI, achAppName);
     if (pWorker)
         return pWorker;
@@ -1569,7 +1566,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     config.clearEnv();
     if (pEnv)
         config.getEnv()->add(pEnv);
-    
+
     {
         achFileName[pathLen] = 0;
         snprintf(achName, MAX_PATH_LEN, "RAILS_ROOT=%s",
@@ -1659,7 +1656,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
                                  achBuf, NULL, 1);
     if (!pContext)
         return NULL;
-    
+
     strcpy(&achURI[uriLen], "dispatch.rb");
     HttpContext *pDispatch = addContext(achURI,
                                         HandlerType::HT_NULL,
@@ -1708,7 +1705,7 @@ HttpContext *HttpVHost::configRailsContext(const char *contextUri,
     LocalWorkerConfig* pAppDefault = (LocalWorkerConfig*)AppConfig::s_rubyAppConfig.getpAppDefault();
     if (!pAppDefault)
         return NULL;
-    
+
     int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achFileName, appPath);
     if (ret == -1)
     {
@@ -1881,17 +1878,15 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
 
     //FIXME any reason for the below code
     pContext->setWebSockAddr(pWorker->getConfigPointer()->getServerAddr());
-    
 
     char appURL[MAX_URI_LEN];
     if (!pStartupFile || *pStartupFile == '\0')
         pStartupFile = "index.wsgi";
     memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
     snprintf(appURL, sizeof(appURL), "%s%s", pLocation, pStartupFile);
-    
-    
+
     HttpContext *pDispatch;
-    
+
     pDispatch = addContext(0, achURI, HandlerType::HT_NULL, //NULL TYPE is static
                            appURL, NULL, 1);
     pDispatch->setHandler(pWorker);
@@ -1905,7 +1900,6 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     pContext->setPythonContext();
     return pContext;
 }
-
 
 
 int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
@@ -1967,7 +1961,7 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
 
     if (!pBinPath || *pBinPath == 0x00)
         pBinPath = AppConfig::s_nodeAppConfig.s_binPath.c_str();
-    
+
     if (pBinPath
         && configNodeJsStarter(achRunnerCmd, sizeof(achRunnerCmd), pBinPath) != -1)
     {
@@ -2105,7 +2099,7 @@ HttpContext *HttpVHost::addNodejsContext(const char *pURI,
     else
         pContext = addContext(0, achURI, HandlerType::HT_NULL,
                                  achBuf, NULL, 1);
-        
+
 
     if (!pContext)
         return NULL;
@@ -2212,7 +2206,7 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
         break;
 
     }
-    
+
     const LocalWorkerConfig* pAppDefault = pAppConfig->getpAppDefault();
     int maxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                    "maxConns", 1, 10000, pAppDefault->getMaxConns());
@@ -2569,7 +2563,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         return LS_FAIL;
 
     match = (strncasecmp(pUri, "exp:", 4) == 0);
-    
+
     ConfigCtx currentCtx("context", pUri);
     //int len = strlen( pUri );
 
@@ -2590,7 +2584,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
     pLocation = pContextNode->getChildValue("location");
     AutoStr2 defLocation;
-    if (!pLocation)
+    bool needUpdate = false;
+    if (!pLocation || strlen(pLocation) == 0)
     {
         if (match)
             defLocation.setStr("$DOC_ROOT$0");
@@ -2602,12 +2597,26 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
-    else if (*pLocation != '$' && *pLocation != '/' && 
-                type != HandlerType::HT_REDIRECT )
+    else if (type != HandlerType::HT_REDIRECT)
     {
-        defLocation.setStr("$DOC_ROOT/");
-        defLocation.append(pLocation, strlen(pLocation));
-        pLocation = defLocation.c_str();
+        if (*pLocation != '$' && *pLocation != '/')
+        {
+            defLocation.setStr("$DOC_ROOT/");
+            defLocation.append(pLocation, strlen(pLocation));
+            needUpdate = true;
+        }
+  
+        //If pLocation does not have tail /, add it now
+        if ( *(pLocation + strlen(pLocation) - 1) != '/' )
+        {
+            if (!needUpdate)
+                defLocation.setStr(pLocation);
+            defLocation.append("/", 1);
+            needUpdate = true;
+        }
+        
+        if (needUpdate)
+            pLocation = defLocation.c_str();
     }
 
     pHandler = pContextNode->getChildValue("handler");
@@ -2628,11 +2637,8 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         pHandler = achHandler;
     }
 
- 
     allowBrowse = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                   "allowBrowse", 0, 1, 1);
-
-    
 
     if ((*pUri != '/') && (!match))
     {
@@ -2741,13 +2747,13 @@ int HttpVHost::configVHContextList(const XmlNode *pVhConfNode,
             LS_INFO("[%s] config context %s.",
                     TmpLogId::getLogId(), ctxName);
             configContext(*iter);
-            
+
             //If we did for "/", no need to do again
             if (strcmp(ctxName, "/") == 0)
                 slashCtxCfgRewrite = true;
         }
     }
-    
+
     if (!slashCtxCfgRewrite && enableAutoLoadHt())
     {
         HttpContext *pSlashContext = getContext("/", 1);
@@ -3160,7 +3166,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
                  ConfigCtx::getCurConfigCtx()->getLongValue(
                      pVhConfNode, "cgroups", 0, 1,
                      ServerProcessConfig::getInstance().getCGroupDefault()) : 0);
-    
+
     if (!is_uid_set)
         updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());
 
@@ -3190,14 +3196,14 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     /**
      * Check if we have server level php with different guid,
      * if yes, need set the extApp and config scriptHanlder
-     * 
+     *
      * So now if we have vhost "Example" with "add  lsapi:lsphp php",
-     * we will check if we have "Example:lsphp"  extapp first, then will check 
+     * we will check if we have "Example:lsphp"  extapp first, then will check
      * "lsphp" (server level).
      * Before that if Vhost do not lsphp defined, will not add "Example:lsphp",
      * but if vhost have diff user/group than server level, will create
      * "Example:lsphp" automatically with the vhost user/group.
-     * 
+     *
      */
     if (getPhpXmlNodeSSize() > 0)
     {
@@ -3259,13 +3265,13 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
         ConfigCtx currentCtx("errorpages");
         pRootContext->configErrorPages(p0);
     }
-    
+
     p0 = pVhConfNode->getChild("phpIniOverride");
     if (p0)
     {
         pRootContext->configPhpConfig(p0);
     }
-    
+
 
     pRootContext->inherit(NULL);
 
@@ -3357,10 +3363,10 @@ int HttpVHost::configVHScriptHandler(const XmlNode *pVhConfNode)
     const XmlNode *p0 = pVhConfNode->getChild("scriptHandler");
     if (p0)
         pList = p0->getChildren("add");
-    
+
     getRootContext().initMIME();
     HttpMime::configScriptHandler(pList, getMIME(), this);
- 
+
     return 0;
 }
 
@@ -3548,17 +3554,13 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
 
         pVHnew->setUidMode(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                            "setUIDMode", 0, 2, 0));
-        
-        
-        
+
+
+
 
         pVHnew->setMaxKAReqs(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                              "maxKeepAliveReq", 0, 32767,
                              HttpServerConfig::getInstance().getMaxKeepAliveRequests()));
-
-        pVHnew->setSmartKA(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                           "smartKeepAlive", 0, 1,
-                           HttpServerConfig::getInstance().getSmartKeepAlive()));
 
         pVHnew->getThrottleLimits()->config(pNode,
                                             ThrottleControl::getDefault(), &currentCtx);
@@ -3618,14 +3620,14 @@ int HttpVHost::configListenerMappings(const char *pListeners,
         if (HttpServer::getInstance().mapListenerToVHost(p, this,
             pDomain ? pDomain : "*") == 0)
             ++add;
-        if (pAliases && 
+        if (pAliases &&
             HttpServer::getInstance().mapListenerToVHost(p, this, pAliases) == 0)
             ++add;
     }
 
     ConfigCtx currentCtx("vhost", getName());
     LS_INFO(&currentCtx, "configListenerMappings vhost [%s], listeners [%s], "
-            " domain [%s], aliase [%s], added %d mappings.", 
+            " domain [%s], aliase [%s], added %d mappings.",
             getName(), pListeners, pDomain, pAliases, add);
     return add;
 }
@@ -3695,7 +3697,7 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
                                         pVhConfNode);
 
         /**
-         * Comments: listeners must be in the root level of Vhost, 
+         * Comments: listeners must be in the root level of Vhost,
          * for compatible with vhosttemplate
          */
         const char *pListeners = pNode->getChildValue("listeners");
@@ -3781,7 +3783,7 @@ void HttpVHost::enableAioLogging()
         LS_DBG_L("[VHost:%s] Enable AIO for Error Logging!",
                  getName());
     }
-    
+
     if (m_pBytesLog)
     {
         m_pBytesLog->setAsync();

@@ -486,7 +486,6 @@ void HttpSession::nextRequest()
     if (getSsiRuntime())
         return releaseSsiRuntime();
 
-
     if (!m_request.isKeepAlive() || getStream()->isSpdy() || !endOfReqBody())
     {
         LS_DBG_L(getLogSession(), "Non-KeepAlive, CLOSING!");
@@ -1100,61 +1099,108 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
 {
     char achIP[256];
     char achAddr[128];
+    char *sAddr;
+    char *colon;
     struct sockaddr *pAddr;
     void *pIP;
-    int len = headerLen;
-    char *p = (char *)memchr(pProxyHeader, ',', headerLen);
-    if (p)
-        len = p - pProxyHeader;
-    if ((len <= 0) || (len > 255))
+    const char *p;
+    const char *pIpBegin = pProxyHeader;
+    const char *pEnd = pProxyHeader + headerLen;
+    int len;
+    p = pProxyHeader;
+    while (pIpBegin < pEnd)
     {
-        //error, not a valid IP address
+        while ((pIpBegin < pEnd) && isspace(*pIpBegin))
+            ++pIpBegin;
+
+        p = (char *)memchr(pIpBegin, ',', pEnd - pIpBegin);
+        if (!p)
+            p = pEnd;
+        len = p - pIpBegin;
+        if ((len <= 0) || (len > 255))
+        {
+            //error, not a valid IP address
+            pIpBegin = p + 1;
+            continue;
+        }
+
+        memmove(achIP, pIpBegin, len);
+        sAddr = achIP;
+        achIP[len] = 0;
+        pAddr = (struct sockaddr *)achAddr;
+        memset(pAddr, 0, sizeof(sockaddr_in6));
+        if (achIP[0] == '[')
+        {
+            char *close = (char *)memchr(achIP, ']', len);
+            if (close)
+            {
+                *close = '\0';
+            }
+            sAddr++;
+            --len;
+        }
+        if (strncasecmp(sAddr, "::ffff:", 7) == 0)
+        {
+            sAddr += 7;
+            len -= 7;
+        }
+
+        colon = (char *)memchr(sAddr, ':', len);
+        if ((colon && memchr(sAddr, '.', len) == NULL) )
+        {
+            pAddr->sa_family = AF_INET6;
+            pIP = &((struct sockaddr_in6 *)pAddr)->sin6_addr;
+        }
+        else
+        {
+            if (colon)
+                *colon = '\0';
+            pAddr->sa_family = AF_INET;
+            pIP = &((struct sockaddr_in *)pAddr)->sin_addr;
+        }
+        if (inet_pton(pAddr->sa_family, sAddr, pIP) == 1)
+            break;
+        pIpBegin = p + 1;
+    }
+    if (pIpBegin >= pEnd)
+    {
+        LS_INFO(getLogSession(),
+                "Failed to parse %s header [%.*s], use original IP",
+                pHeaderName, headerLen, pProxyHeader);
         return 0;
     }
 
-    memmove(achIP, pProxyHeader, len);
-    achIP[len] = 0;
-    pAddr = (struct sockaddr *)achAddr;
-    memset(pAddr, 0, sizeof(sockaddr_in6));
-
-    if (memchr(achIP, ':', len))
-    {
-        pAddr->sa_family = AF_INET6;
-        pIP = &((struct sockaddr_in6 *)pAddr)->sin6_addr;
-    }
-    else
-    {
-        pAddr->sa_family = AF_INET;
-        pIP = &((struct sockaddr_in *)pAddr)->sin_addr;
-    }
-    if (inet_pton(pAddr->sa_family, achIP, pIP) != 1)
-        return 0;
-
-    ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pAddr);
+    ClientInfo *pInfo = ClientCache::getInstance().getClientInfo(pAddr);
     LS_DBG_L(getLogSession(),
              "update REMOTE_ADDR based on %s header to %s",
              pHeaderName, achIP);
+//            ::write( 2, m_request.getHeaderBuf().begin(),
+//                      m_request.pendingHeaderDataLen() );
+    m_request.addEnv("PROXY_REMOTE_ADDR", 17,
+                     getPeerAddrString(), getPeerAddrStrLen());
+
+    if (pInfo == m_pClientInfo)
+        return 0;
+    //NOTE: do not decrease the count for the real IP.
+    //      increase count for the x-forwarded-for IP.
+    //      we decrease it in nextrequest() when change it back to real IP.
+    //m_pClientInfo->decConn();
+    //pInfo->incConn(1);
+
+    m_pClientInfo = pInfo;
+    LS_DBG_L("[%s] increase connection count to %d.",
+             m_pClientInfo->getAddrString(), m_pClientInfo->getConns());
+    setFlag(HSF_BEHIND_PROXY);
     if (pInfo)
     {
         if (pInfo->checkAccess())
         {
-            //Access is denied
+            LS_INFO(getLogSession(),
+                "Client IP from header: %s, cur conns: %zu, access denied",
+                pInfo->getAddrString(), pInfo->getConns());
             return SC_403;
         }
     }
-    addEnv("PROXY_REMOTE_ADDR", 17,
-           getPeerAddrString(), getPeerAddrStrLen());
-
-    m_iFlag |= HSF_BEHIND_PROXY;
-    if (pInfo == m_pClientInfo)
-        return 0;
-    //NOTE: turn of connection account for now, it does not work well for
-    //  changing client info based on x-forwarded-for header
-    //  causes double dec at ntwkiolink level, no dec at session level
-    //m_pClientInfo->decConn();
-    //pInfo->incConn();
-
-    m_pClientInfo = pInfo;
     return 0;
 }
 
@@ -1744,12 +1790,12 @@ bool HttpSession::shouldAvoidRecaptcha()
         return true;
     }
 
-    if (getStream() && getStream()->isFromLocalAddr())
-    {
-        LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
-                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
-        return true;
-    }
+//     if (getStream() && getStream()->isFromLocalAddr())
+//     {
+//         LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
+//                 pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+//         return true;
+//     }
 
     const char *pUserAgent = m_request.getUserAgent();
     int iUserAgentLen = m_request.getUserAgentLen();
@@ -1849,14 +1895,12 @@ int HttpSession::rewriteToRecaptcha(bool blockIfTooManyAttempts)
     if (blockIfTooManyAttempts && !recaptchaAttemptsAvail())
         return 0;
 
-
     if (!m_request.isCaptcha() &&  hasPendingCaptcha())
     {
         LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s has pending captcha.",
                 pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
         return 0;
     }
-
 
     if (m_request.rewriteToRecaptcha())
     {
@@ -2006,9 +2050,11 @@ int HttpSession::processContextRewrite()
  */
 int HttpSession::preUriMap()
 {
-    int valLen = 0;
-    const char *pEnv = m_request.getEnv("modpagespeed", 12, valLen);
-    if (valLen == 2 && strncasecmp(pEnv, "on", 2) == 0)
+//     int valLen = 0;
+//     const char *pEnv = m_request.getEnv("modpagespeed", 12, valLen);
+//     if (valLen == 2 && strncasecmp(pEnv, "on", 2) == 0)
+//         return 0;
+    if (HttpServerConfig::getInstance().getUsePagespeed())
         return 0;
 
     m_request.checkUrlStaicFileCache();
@@ -2316,9 +2362,6 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         getStream()->wantRead(1);
         return 0;
     }
-
-
-
 
     int ret = assignHandler(pHandler);
     if (ret)
@@ -2775,6 +2818,20 @@ int HttpSession::doWrite()
 
         setFlag(HSF_RESP_FLUSHED, 0);
         flush();
+        
+        if(getFlag(HSF_SAVE_STX_FILE_CACHE))
+        {
+            HttpVHost *host = getReq()->getVHost();
+            //Need to verify can be cached
+            if (host && m_sendFileInfo.getFileData())
+            {
+                host->addUrlStaticFileMatch(m_sendFileInfo.getFileData(),
+                                            getReq()->getOrgReqURL(),
+                                            getReq()->getOrgReqURLLen());
+                LS_DBG_L( getLogSession(), "[static file cache] create cache." );
+            }
+            setFlag(HSF_SAVE_STX_FILE_CACHE, 0);
+        }
     }
     else if (ret == -1)
         getStream()->tobeClosed();
@@ -4879,13 +4936,17 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
         && (!getGzipBuf() ||
             (pData->getECache() == pData->getFileData()->getGzip())))
     {
+        /**
+         * Update to make sure sendfile size is limit to 2GB per calling
+         */
         remain = pData->getRemain();
         if (remain > SSIZE_MAX)
             remain = SSIZE_MAX;
 
         len = writeRespBodySendFile(fd, pData->getCurPos(), remain,
                                     pData->getRemain() <= remain);
-        LS_DBG_M(getLogSession(), "writeRespBodySendFile() returned %zd.", len);
+        LS_DBG_M(getLogSession(), "writeRespBodySendFile() write %ld returned %zd.",
+                 remain, len);
         if (len > 0)
         {
             if (iModeSF == 2 && m_pChunkOS == NULL)
@@ -5126,9 +5187,6 @@ void HttpSession::testContentType()
         pReq->andGzip(~GZIP_ENABLED);
         pReq->andBr(~BR_ENABLED);
     }
-
-    if (pReq->isKeepAlive())
-        pReq->smartKeepAlive(pValue);
 
     if (enbale)
     {

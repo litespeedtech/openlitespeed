@@ -424,7 +424,7 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
                     fileStrType = 1;
 
                     ret = appendArgKey(pName, nameLen);
-                    if (ret == 0 && m_pFileUploadConfig)
+                    if (ret == 0)
                     {
                         m_decodeBuf.append(fileStr, fileStrLen);
                         fileStrLen = normalisePath(m_pArgs[m_args - 1].valueOffset, fileStrLen);
@@ -773,8 +773,8 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
                 {
                     m_trial_crlf = 0;
                 }
-                
-                if (pCur[-1] == '\n') 
+
+                if (pCur[-1] == '\n')
                 {
                     if (pCur - pBegin >= 2 && pCur[-2] == '\r')
                         m_trial_crlf = 1;
@@ -784,7 +784,7 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
                 }
                 else if (pCur[-1] == '\r')
                     m_trial_crlf = 1;
-                                    
+
                 writeToFile(pBegin, pCur - pBegin);
             }
 
@@ -993,7 +993,7 @@ int ReqParser::beginParsePost()
                          m_pReq->getHeaderLen(HttpHeader::H_CONTENT_TYPE)) == -1)
         return LS_FAIL;
     m_iParseState = PARSE_START;
-    
+
     if (m_pReq->getContentFinished() > 0)
         parseReceivedBody();
     return LS_OK;

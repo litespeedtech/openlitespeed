@@ -173,9 +173,10 @@ struct MyMData
     CacheHash       cePublicHash;
     CacheHash       cePrivateHash;
     CacheKey        cacheKey;
-    int16_t         hkptIndex;
-    unsigned char   hasCacheFrontend;
-    unsigned char   reqCompressType; //0, no, 1: gzip, 2:br
+    uint8_t         hkptIndex;
+    uint8_t         hasCacheFrontend;
+    uint8_t         reqCompressType; //0, no, 1: gzip, 2:br
+    uint8_t         saveFailed;
     XXH64_state_t   contentState;
     z_stream       *zstream;
     off_t           orgFileLength;
@@ -511,6 +512,7 @@ static void verifyStoreReady(CacheConfig *pConfig)
         pConfig->getStore()->setStorageRoot((const char *)defaultCachePath);
         pConfig->getStore()->initManager();
         pConfig->setOwnStore(1);
+        g_api->set_timer(10*1000, 1, house_keeping_cb, pConfig->getStore());
     }
     else
         g_api->log(NULL, LSI_LOG_ERROR,
@@ -1339,8 +1341,9 @@ int checkBypassHeader(const char *header, int len)
         "transfer-encoding",
         "content-encoding",
         "set-cookie",
+        "x-litespeed-cache", //bypass itself, otherwise always value is 'miss'
     };
-    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, };
+    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, 17, };
 
     int count = sizeof(headersBypass) / sizeof(const char *);
     for (int i = 0; i < count ; ++i)
@@ -1481,7 +1484,7 @@ static int deflateBufAndWriteToFile(MyMData *myData, unsigned char *pBuf,
                                     int len, int eof, int fd)
 {
     unsigned char buf[Z_BUF_SIZE];
-    int ret = 0;
+    int ret = 0, rc;
     if (myData->zstream)
     {
         myData->zstream->avail_in = len;
@@ -1494,12 +1497,26 @@ static int deflateBufAndWriteToFile(MyMData *myData, unsigned char *pBuf,
             int z_ret = deflate(myData->zstream, eof ? Z_FINISH : Z_SYNC_FLUSH);
             if ((z_ret == Z_OK) || (z_ret == Z_STREAM_END))
             {
-                ret += write(fd, buf, Z_BUF_SIZE - myData->zstream->avail_out);
+                rc = write(fd, buf, Z_BUF_SIZE - myData->zstream->avail_out);
+                if (rc > 0)
+                    ret += rc;
+                else if (rc < 0)
+                {
+                    ret = -1;
+                    break;
+                }
+                    
             }
         } while (myData->zstream->avail_out == 0);
     }
     else
-        ret += write(fd, pBuf, len);
+    {
+        rc = write(fd, pBuf, len);
+        if (rc > 0)
+            ret += rc;
+        else if (rc < 0)
+            ret = -1;
+    }
 
     return ret;
 }
@@ -1515,13 +1532,14 @@ static int endCache(lsi_param_t *rec)
         {
             //check if static file not optmized, or 0 byte content
             if (myData->orgFileLength == 0 ||
+                myData->saveFailed ||
                 (myData->pEntry->getHeader().m_lenStxFilePath > 0 &&
                  myData->orgFileLength == myData->pEntry->getHeader().m_lSize))
             {
                 //Check if file optimized, if not, do not store it
                 cancelCache(rec);
                 g_api->log(rec->session, LSI_LOG_DEBUG,
-                           "[%s]cache ended without optimization.\n",
+                           "[%s]cache cancelled due to error occurred or no optimization.\n",
                            ModuleNameStr);
             }
             else if (myData->pEntry && myData->iCacheState == CE_STATE_WILLCACHE)
@@ -2094,7 +2112,7 @@ int cacheTofile(lsi_param_t *rec)
     }
 
     int ret;
-    while (fd != -1 && !g_api->is_body_buf_eof(pRespBodyBuf, offset))
+    while (fd != -1 && !myData->saveFailed && !g_api->is_body_buf_eof(pRespBodyBuf, offset))
     {
         len = 0;
         pBuf = g_api->acquire_body_buf_block(pRespBodyBuf, offset, &len);
@@ -2102,6 +2120,11 @@ int cacheTofile(lsi_param_t *rec)
             break;
         
         ret = deflateBufAndWriteToFile(myData, (unsigned char *)pBuf, len, 0, fd);
+        if (ret == -1)
+        {
+            myData->saveFailed = 1;
+            break;
+        }
         if (myData->pConfig->getAddEtagType() == 2)
             XXH64_update(&myData->contentState, pBuf, len);
         g_api->release_body_buf_block(pRespBodyBuf, offset);
@@ -2110,14 +2133,21 @@ int cacheTofile(lsi_param_t *rec)
         myData->orgFileLength += len;
     }
 
-    ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
-    iCahcedSize += ret;
-
-    myData->pEntry->setPart2Len(iCahcedSize);
-    endCache(rec);
-    g_api->log(rec->session, LSI_LOG_DEBUG,
+    if (!myData->saveFailed)
+    {
+        ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
+        iCahcedSize += ret;
+        myData->pEntry->setPart2Len(iCahcedSize);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
                "[%s:cacheTofile] stored, size %ld\n",
                ModuleNameStr, offset);
+    }
+    else
+        g_api->log(rec->session, LSI_LOG_ERROR,
+               "[%s:cacheTofile] Failed due to write file error!\n",
+               ModuleNameStr);
+    endCache(rec);
+    
     return 0;
 }
 
@@ -2136,7 +2166,7 @@ int cacheTofileFilter(lsi_param_t *rec)
     //cache module to start to cahce, So have to check it here
     MyMData *myData = (MyMData *)g_api->get_module_data(rec->session, &MNAME,
                       LSI_DATA_HTTP);
-    if (!myData)
+    if (!myData || myData->saveFailed)
         return rec->len1;
 
     if (myData->iCacheSendBody == 0) //uninit
@@ -2155,21 +2185,32 @@ int cacheTofileFilter(lsi_param_t *rec)
         {
             cancelCache(rec);
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s:cacheTofile] cache cancelled, current size to cache %d > maxObjSize %ld\n",
+                       "[%s:cacheTofileFilter] cache cancelled, current size to cache %d > maxObjSize %ld\n",
                        ModuleNameStr, part2Len + ret, maxObjSz);
             return ret;
         }
 
         
         int len = deflateBufAndWriteToFile(myData, (unsigned char *)rec->ptr1, ret, 0, fd);
-        if (myData->pConfig->getAddEtagType() == 2)
-            XXH64_update(&myData->contentState, rec->ptr1, ret);
+        if (len == -1)
+        {
+            myData->saveFailed = 1;
+            g_api->log(rec->session, LSI_LOG_ERROR,
+               "[%s:cacheTofileFilter] Failed due a write error!\n",
+               ModuleNameStr);
+            return rec->len1;
+        }
+        else
+        {
+            if (myData->pConfig->getAddEtagType() == 2)
+                XXH64_update(&myData->contentState, rec->ptr1, ret);
 
-        myData->pEntry->setPart2Len(part2Len + len);
-        myData->orgFileLength += ret;
-        g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s:cacheTofileFilter] stored, size %d, now part2len %d\n",
-                   ModuleNameStr, len, part2Len + len);
+            myData->pEntry->setPart2Len(part2Len + len);
+            myData->orgFileLength += ret;
+            g_api->log(rec->session, LSI_LOG_DEBUG,
+                    "[%s:cacheTofileFilter] stored, size %d, now part2len %d\n",
+                    ModuleNameStr, len, part2Len + len);
+        }
     }
     return ret; //rec->len1;
 }
@@ -2452,8 +2493,8 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (rangeRequest && rangeRequestLen > 0)
     {
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]checkAssignHandler returned, not support rangeRequest [%s].\n",
-                   ModuleNameStr, rangeRequest);
+                   "[%s]checkAssignHandler returned, not support rangeRequest [%.*s].\n",
+                   ModuleNameStr, rangeRequestLen, rangeRequest);
         return bypassUrimapHook(rec, myData);
     }
 
@@ -3199,8 +3240,7 @@ static int handlerProcess(const lsi_session_t *session)
         return 0;
     }
 
-    if (myData->pEntry)
-        myData->pEntry->incRef();
+    myData->pEntry->incRef();
 
     char tmBuf[RFC_1123_TIME_LEN + 1];
     int len;
@@ -3405,7 +3445,7 @@ static int handlerProcess(const lsi_session_t *session)
 lsi_reqhdlr_t cache_handler = { handlerProcess, NULL, NULL, NULL,
                                 NULL, NULL, NULL,  };
 lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
-LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, &cache_handler,
+lsi_module_t cache = { LSI_MODULE_SIGNATURE, init, &cache_handler,
                        &cacheDealConfig, MODULE_VERSION_INFO, serverHooks, {0}
                      };
 

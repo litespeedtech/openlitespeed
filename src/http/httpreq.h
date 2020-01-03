@@ -228,7 +228,7 @@ private:
     int                 m_reqLineLen;
     int                 m_reqURLOff;
     int                 m_reqURLLen;
-    
+
     /***
      * The below two array to store the headers other than the common
      */
@@ -252,11 +252,10 @@ private:
     unsigned short      m_ver;
     short               m_iRedirects;
 
-    
     char                m_iReqFlag;
     char                 m_iAcceptGzip;
     char                 m_iAcceptBr;
-    
+
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
     int                 m_iContextState;
@@ -317,9 +316,6 @@ private:
     int filesMatch(const char *pEnd);
 
     int checkSuffixHandler(const char *pURI, int len, int &cacheable);
-
-    
-
 
     //parse headers
     int processRequestLine();
@@ -391,11 +387,8 @@ public:
         IS_HTTPS_MASK       = 6,
         IS_NO_CACHE         = 8,
     };
-    
-    
-    
-    
-    explicit HttpReq();
+
+   explicit HttpReq();
     ~HttpReq();
 
     int processHeader();
@@ -485,7 +478,7 @@ public:
     }
 
     int dropReqHeader(int index);
-    
+
     const char *getHostStr()
     {   return m_headerBuf.getp(m_iHostOff);    }
     const char *getOrgReqLine() const
@@ -661,7 +654,6 @@ public:
     const MimeSetting *getMimeType() const  {   return m_pMimeType;         }
     void  setMimeType(const MimeSetting *mime) {   m_pMimeType = mime;         }
 
-    void  smartKeepAlive(const char *pValue);
     //int setRewriteURI( const char * pURL, int len );
     int setRewriteURI(const char *pURL, int len, int no_escape = 1);
     int setRewriteQueryString(const char *pQS, int len);
@@ -853,9 +845,9 @@ public:
 //     int  redirect( const char * pURL, int len, int alloc = 0 );
 //     int internalRedirect( const char * pURL, int len, int alloc );
 
-    int toLocalAbsUrl(const char *pOrgUrl, int urlLen, 
+    int toLocalAbsUrl(const char *pOrgUrl, int urlLen,
                       char *pAbsUrl, int absLen);
-    
+
     int getETagFlags() const;
     int checkScriptPermission();
 

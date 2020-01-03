@@ -32,7 +32,7 @@ public:
     virtual int onNotified(int count){return 0;};
 };
 
-#define NUM_SESS_QUES 64
+#define NUM_SESS_QUES 4
 
 class EvtcbQue : public TSingleton<EvtcbQue>
 {

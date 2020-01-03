@@ -76,6 +76,8 @@ static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx,
     if (!cache)
     {
         cache = (SslCertComp::comp_cache_t *)ls_palloc(len + sizeof(int) * 2);
+        if (!cache)
+            return NULL;
         cache->m_input_len = in_size;
         cache->m_len = len;
         memcpy(cache->m_comp, readBuffer, len);    
@@ -96,8 +98,6 @@ static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx,
             return NULL;
         }    
     }
-    if (!cache)
-        return NULL;
     SSL_CTX_set_ex_data(ctx, s_iSSL_CTX_index, (void *)cache);
     return cache;
 }

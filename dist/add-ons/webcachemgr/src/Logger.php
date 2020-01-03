@@ -15,25 +15,74 @@ use \Lsc\Wp\LogEntry;
 use \Lsc\Wp\LSCMException;
 
 /**
- * Logger is a singleton
+ * Logger is a pseudo singleton.
+ *
+ * Public Logger functions starting with 'p_' are intended for internal use to
+ * account for $instance sometimes being of a different non-extending logger
+ * class.
  */
 class Logger
 {
 
+    /**
+     * @var int
+     */
     const L_NONE = 0;
+
+    /**
+     * @var int
+     */
     const L_ERROR = 1;
+
+    /**
+     * @var int
+     */
     const L_WARN = 2;
+
+    /**
+     * @var int
+     */
     const L_NOTICE = 3;
+
+    /**
+     * @var int
+     */
     const L_INFO = 4;
+
+    /**
+     * @var int
+     */
     const L_VERBOSE = 5;
+
+    /**
+     * @var int
+     */
     const L_DEBUG = 9;
+
+    /**
+     * @var int
+     */
     const UI_INFO = 0;
+
+    /**
+     * @var int
+     */
     const UI_SUCC = 1;
+
+    /**
+     * @var int
+     */
     const UI_ERR = 2;
+
+    /**
+     * @var int
+     */
     const UI_WARN = 3;
 
     /**
-     * @var null|Logger
+     * @var null|Logger|object  Object that implements all Logger class
+     *                          public functions (minus setInstance()). Caution,
+     *                          this requirement is not enforced in the code.
      */
     protected static $instance;
 
@@ -63,12 +112,13 @@ class Logger
 
     /**
      * @var boolean  When set to true, log messages will not be written to the
-     *               log file until this Logger object is destroyed.
+     *               log file until this logger object is destroyed.
      */
     protected $bufferedWrite;
 
     /**
-     * @var LogEntry[]  Stores created LogEntry objects.
+     * @var LogEntry[]|object[]  Stores created objects that implement all
+     *                           LogEntry class public functions.
      */
     protected $msgQueue = array();
 
@@ -139,6 +189,27 @@ class Logger
     }
 
     /**
+     * Set self::$instance to a pre-created logger object.
+     *
+     * This function is intended as an alternative to Initialize() and will
+     * throw an exception if self::$instance is already set.
+     *
+     * @since 1.9.1
+     *
+     * @param object  $loggerObj
+     * @throws LSCMException
+     */
+    public static function setInstance( $loggerObj )
+    {
+        if ( self::$instance != null ) {
+            throw new LSCMException('Logger instance already set.',
+                    LSCMException::E_PROGRAM);
+        }
+
+        self::$instance = $loggerObj;
+    }
+
+    /**
      *
      * @since 1.9
      *
@@ -146,7 +217,7 @@ class Logger
      */
     public static function changeLogFileUsed( $logFile )
     {
-        self::me()->logFile = $logFile;
+        self::me()->p_setLogFile($logFile);
     }
 
     /**
@@ -157,7 +228,189 @@ class Logger
      */
     public static function setAdditionalTagInfo( $addInfo )
     {
-        self::me()->addTagInfo = $addInfo;
+        self::me()->p_setAddTagInfo($addInfo);
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param string  $msg
+     * @param int     $type
+     */
+    public function p_addUiMsg( $msg, $type )
+    {
+        switch ($type) {
+            case self::UI_INFO:
+            case self::UI_SUCC:
+            case self::UI_ERR:
+            case self::UI_WARN:
+                $this->uiMsgs[$type][] = $msg;
+                break;
+            //no default
+        }
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param LogEntry[]|object[]  $entries  Array of objects that implement
+     *                                       all LogEntry class public
+     *                                       functions.
+     */
+    public function p_echoEntries( $entries )
+    {
+        $this->echoEntries($entries);
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @return string
+     */
+    public function p_getAddTagInfo()
+    {
+        return $this->addTagInfo;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @return boolean
+     */
+    public function p_getBufferedEcho()
+    {
+        return $this->bufferedEcho;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @return boolean
+     */
+    public function p_getBufferedWrite()
+    {
+        return $this->bufferedWrite;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @return string
+     */
+    public function p_getLogFile()
+    {
+        return $this->logFile;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @return LogEntry[]|object[]
+     */
+    public function p_getMsgQueue()
+    {
+        return $this->msgQueue;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param int  $type
+     * @return string[]
+     */
+    public function p_getUiMsgs( $type )
+    {
+        $ret = array();
+
+        switch ($type) {
+            case self::UI_INFO:
+            case self::UI_SUCC:
+            case self::UI_ERR:
+            case self::UI_WARN:
+                $ret = $this->uiMsgs[$type];
+                break;
+            //no default
+        }
+
+        return $ret;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param string  $msg
+     * @param int     $lvl
+     */
+    public function p_log( $msg, $lvl )
+    {
+        $this->log($msg, $lvl);
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param string  $addInfo
+     */
+    public function p_setAddTagInfo( $addInfo )
+    {
+        $this->addTagInfo = $addInfo;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param string  $logFile
+     */
+    public function p_setLogFile( $logFile )
+    {
+        $this->logFile = $logFile;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param int  $logFileLvl
+     */
+    public function p_setLogFileLvl( $logFileLvl )
+    {
+        $this->logFileLvl = $logFileLvl;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     * @param LogEntry[]|object[]  $msgQueue
+     */
+    public function p_setMsgQueue( $msgQueue )
+    {
+        $this->msgQueue = $msgQueue;
+    }
+
+    /**
+     *
+     * @since 1.9.1
+     *
+     *
+     * @param LogEntry[]|object[]  $entries  Array of objects that implement
+     *                                       all LogEntry class public
+     *                                       functions.
+     */
+    public function p_writeToFile( $entries )
+    {
+        $this->writeToFile($entries);
     }
 
     /**
@@ -168,7 +421,7 @@ class Logger
      */
     public static function getAdditionalTagInfo()
     {
-        return self::me()->addTagInfo;
+        return self::me()->p_getAddTagInfo();
     }
 
     /**
@@ -179,18 +432,19 @@ class Logger
      */
     public static function getLogFilePath()
     {
-        return self::me()->logFile;
+        return self::me()->p_getLogFile();
     }
 
     /**
      *
      * @since 1.9
      *
-     * @return LogEntry[]
+     * @return LogEntry[]|object[]  Array of objects that implement all
+     *                              LogEntry class public functions.
      */
     public static function getLogMsgQueue()
     {
-        return self::me()->msgQueue;
+        return self::me()->p_getMsgQueue();
     }
 
     /**
@@ -200,19 +454,7 @@ class Logger
      */
     public static function getUiMsgs( $type )
     {
-        $ret = array();
-
-        switch ($type) {
-            case self::UI_INFO:
-            case self::UI_SUCC:
-            case self::UI_ERR:
-            case self::UI_WARN:
-                $ret = self::me()->uiMsgs[$type];
-                break;
-            //no default
-        }
-
-        return $ret;
+        return self::me()->p_getUiMsgs($type);
     }
 
     /**
@@ -225,18 +467,18 @@ class Logger
 
         $m = self::me();
 
-        if ( $m->bufferedWrite ) {
-            $m->writeToFile($m->msgQueue);
+        if ( $m->p_getBufferedWrite() ) {
+            $m->p_writeToFile($m->p_getMsgQueue());
             $clear = true;
         }
 
-        if ( $m->bufferedEcho ) {
-            $m->echoEntries($m->msgQueue);
+        if ( $m->p_getBufferedEcho() ) {
+            $m->p_echoEntries($m->p_getMsgQueue());
             $clear = true;
         }
 
         if ( $clear ) {
-            $m->msgQueue = array();
+            $m->p_setMsgQueue(array());
         }
     }
 
@@ -249,15 +491,7 @@ class Logger
      */
     public static function addUiMsg( $msg, $type )
     {
-        switch ( $type ) {
-            case self::UI_INFO:
-            case self::UI_SUCC:
-            case self::UI_ERR:
-            case self::UI_WARN:
-                self::me()->uiMsgs[$type][] = $msg;
-                break;
-            //no default
-        }
+        self::me()->p_addUiMsg($msg, $type);
     }
 
     /**
@@ -307,7 +541,7 @@ class Logger
      */
     public static function logMsg( $msg, $lvl )
     {
-        self::me()->log($msg, $lvl);
+        self::me()->p_log($msg, $lvl);
     }
 
     /**
@@ -372,7 +606,8 @@ class Logger
 
     /**
      *
-     * @return Logger
+     * @return Logger|object  Object that implements all Logger class public
+     *                        functions.
      * @throws LSCMException
      */
     protected static function me()
@@ -386,12 +621,12 @@ class Logger
 
     /**
      *
-     * @param string  $mesg
+     * @param string  $msg
      * @param int     $lvl
      */
-    protected function log( $mesg, $lvl )
+    protected function log( $msg, $lvl )
     {
-        $entry = new LogEntry($mesg, $lvl);
+        $entry = new LogEntry($msg, $lvl);
 
         $this->msgQueue[] = $entry;
 
@@ -406,7 +641,9 @@ class Logger
 
     /**
      *
-     * @param LogEntry[]  $entries
+     * @param LogEntry[]|object[]  $entries  Array of objects that implement
+     *                                       all LogEntry class public
+     *                                       functions.
      */
     protected function writeToFile( $entries )
     {
@@ -430,7 +667,9 @@ class Logger
 
     /**
      *
-     * @param LogEntry[]  $entries
+     * @param LogEntry[]|object[]  $entries  Array of objects that implement
+     *                                       all LogEntry class public
+     *                                       functions.
      */
     protected function echoEntries( $entries )
     {
@@ -450,18 +689,25 @@ class Logger
     public static function getLvlDescr( $lvl )
     {
         switch ($lvl) {
+
             case self::L_ERROR:
                 return 'ERROR';
+
             case self::L_WARN:
                 return 'WARN';
+
             case self::L_NOTICE:
                 return 'NOTICE';
+
             case self::L_INFO:
                 return 'INFO';
+
             case self::L_VERBOSE:
                 return 'DETAIL';
+
             case self::L_DEBUG:
                 return 'DEBUG';
+
             default:
                 /**
                  * Do silently.
@@ -474,6 +720,8 @@ class Logger
      * Not used yet. Added for later cases where shared log level should be
      * changed to match panel log level.
      *
+     * @deprecated 1.9.1  Deprecated on 11/22/19. Function is likely not
+     *                    needed after recent logger changes.
      * @param int  $lvl
      * @return boolean
      */
@@ -487,7 +735,7 @@ class Logger
                 $lvl = self::L_DEBUG;
             }
 
-            self::me()->logFileLvl = $lvl;
+            self::me()->p_setLogFileLvl($lvl);
 
             return true;
         }

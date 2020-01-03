@@ -406,6 +406,16 @@ class CData
             }
         }
 
+        if ($this->_type == DInfo::CT_SERV && ($mods = $root->GetChildren('module')) != null) {
+            if (!is_array($mods))
+                $mods = [$mods];
+            foreach ($mods as $mod) {
+                if ($mod->GetChildVal('internal') != 1) {
+                    $mod->RemoveChild('internal'); // if not internal, omit this line
+                }
+            }
+        }
+        
         $loc = ($this->_type == DInfo::CT_TP) ? 'virtualHostConfig:scripthandler' : 'scripthandler';
         if (($sh = $root->GetChildren($loc)) != null) {
             if (($shc = $sh->GetChildren('addsuffix')) != null) {
@@ -550,6 +560,23 @@ class CData
             $runningAs = 'user(' . $this->_root->GetChildVal('user') .
                     ') : group(' . $this->_root->GetChildVal('group') . ')';
             $this->_root->AddChild(new CNode('runningAs', $runningAs));
+
+            $mods = $this->_root->GetChildren('module');
+            if ($mods != null) {
+                if (!is_array($mods)) {
+                    $mods = [$mods];
+                }
+                foreach ($mods as $mod) {
+                    if ($mod->GetChildVal('internal') === null) {
+                        if ($mod->Get(CNode::FLD_VAL) == 'cache') {
+                            $mod->AddChild(new CNode('internal', '1'));
+                        } else {
+                            $mod->AddChild(new CNode('internal', '0'));
+                        }
+                    }
+                }
+            }
+            
         }
 
         if ($this->_type == DInfo::CT_SERV || $this->_type == DInfo::CT_ADMIN) {
@@ -762,7 +789,7 @@ class CData
                     $line .= "\n";
                 }
                 else if ($this->_id == 'V_GDB') {
-                    $line = $key . ':' . $item->GetChildVal('users') . "\n";
+                    $line = $item->GetChildVal('name') . ':' . $item->GetChildVal('users') . "\n";
                 }
                 fputs($fd, $line);
             }

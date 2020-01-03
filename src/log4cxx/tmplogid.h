@@ -46,16 +46,12 @@ public:
 
     static void setLogId(const char *pId)
     {
-        strncpy(s_aLogId, pId, sizeof(s_aLogId) - 1);
-        s_aLogId[ sizeof(s_aLogId) - 1 ] = 0;
-        s_iIdLen = strlen(s_aLogId);
+        s_iIdLen = lstrncpy(s_aLogId, pId, sizeof(s_aLogId)) - s_aLogId;
     }
 
     static void appendLogId(const char *pId)
     {
-        strncpy(s_aLogId + s_iIdLen, pId, sizeof(s_aLogId) - 1 - s_iIdLen);
-        s_aLogId[ sizeof(s_aLogId) - 1 ] = 0;
-        s_iIdLen += strlen(s_aLogId + s_iIdLen);
+        s_iIdLen = lstrncpy(s_aLogId + s_iIdLen, pId, sizeof(s_aLogId) - s_iIdLen) - s_aLogId;
     }
 
 

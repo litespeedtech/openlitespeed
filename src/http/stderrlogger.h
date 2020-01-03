@@ -45,6 +45,9 @@ public:
     int initLogger(Multiplexer *pMultiplexer);
     LOG4CXX_NS::Appender *getAppender() const {    return m_pAppender; }
     int isEnabled() const   {   return m_iEnabled;  }
+    int movePipeFdToStdErr();
+    void dupPipeFdToStdErr();
+    void dupAppenderFdToStdErr();
 
     LS_NO_COPY_ASSIGN(StdErrLogger);
 };

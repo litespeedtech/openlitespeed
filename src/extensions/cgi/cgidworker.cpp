@@ -27,6 +27,7 @@
 #include <http/httpmime.h>
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
+#include <http/stderrlogger.h>
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <util/xmlnode.h>
@@ -159,6 +160,7 @@ int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
     if (pid == 0)
     {
         char lve_env[16];
+        StdErrLogger::getInstance().movePipeFdToStdErr();
         CloseUnusedFd(fd);
         snprintf(lve_env, sizeof(lve_env) -1, "LVE_ENABLE=%d", getLVE());
         putenv(lve_env);
@@ -222,7 +224,7 @@ int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
 static int cgroup_validate(void)
 {
     struct passwd *pwd;
-    
+
     if (getuid())
     {
         LS_INFO("You allow cgroups, but are not running as root; disabled.\n");
@@ -250,7 +252,7 @@ static int cgroup_validate(void)
             exit(1);
         }
         if (pid > 0)
-        { 
+        {
             int result;
             waitpid(pid, &result, 0);
             if (WIFEXITED(result) && (WEXITSTATUS(result) == 0))
@@ -352,17 +354,17 @@ int CgidWorker::config(const XmlNode *pNode1)
    HttpMime::getMime()->addMimeHandler("", achMIME_SSI,
                     HandlerFactory::getInstance(HandlerType::HT_SSI, NULL),
                     NULL, TmpLogId::getLogId());
-   
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     procConfig.setCGroupAllow(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
         "cgroups", 0, 2, 0) != ServerProcessConfig::CGROUP_CONFIG_DISALLOW);
     if ((procConfig.getCGroupAllow()) && (cgroup_validate() == -1))
         procConfig.setCGroupAllow(0);
-    
+
     procConfig.setCGroupDefault(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
         "cgroups", 0, 2, 0) == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON);
 #endif
-    
+
     CgidWorker::setCgidWorkerPid(
         start(MainServerConfig::getInstance().getServerRoot(), psChroot,
               procConfig.getUid(), procConfig.getGid(),

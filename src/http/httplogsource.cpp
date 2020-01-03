@@ -30,7 +30,7 @@
 //#include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
-
+#include <unistd.h>
 
 AutoStr  HttpLogSource::s_sDefaultAccessLogFormat;
 short HttpLogSource::s_iAioServerAccessLog = -1;
@@ -51,10 +51,10 @@ int HttpLogSource::initAccessLogs(const XmlNode *pRoot,
                 return ret;
         }
     }
-    
+
     return ret;
 }
-    
+
 
 int HttpLogSource::initAccessLog(const XmlNode *pNode,
                                  int setDebugLevel, int inList)
@@ -63,7 +63,7 @@ int HttpLogSource::initAccessLog(const XmlNode *pNode,
     const XmlNode *pNode1 = pNode;
     if (!inList)
         pNode1 = (pNode ? pNode->getChild("accessLog") : NULL);
-    
+
     if (pNode1 == NULL)
     {
         if (setDebugLevel)
@@ -207,22 +207,22 @@ int HttpLogSource::initAllLog(const char *pRoot)
     strcpy(p, pRoot);
     char *pEnd = p + strlen(p);
     strcpy(achBuf1, achBuf);
-    
+
     strcpy(pEnd, "/logs/error.log");
     setErrorLogFile(achBuf);
     setLogLevel("DEBUG");
     off_t rollSize = 1024 * 10240;
     setErrorLogRollingSize(rollSize, 30);
     HttpLog::setDebugLevel(0);
-    
+
     strcpy(pEnd, "/logs/stderr.log");
     StdErrLogger::getInstance().setLogFileName(achBuf);
     StdErrLogger::getInstance().getAppender()->setRollingSize(rollSize);
-    
+
     strcpy(pEnd, "/logs/access.log");
     HttpLog::setAccessLogFile(achBuf, 0);
     enableAccessLog(1);
-    
+
     AccessLog *pLog = getAccessLog();
     pLog->getAppender()->setKeepDays(30);
     pLog->setLogHeaders(3);
@@ -231,7 +231,7 @@ int HttpLogSource::initAllLog(const char *pRoot)
     pLog->accessLogAgent(0);
     pLog->getAppender()->setRollingSize(rollSize);
     pLog->getAppender()->setCompress(0);
-    
+
     return 0;
 }
 
@@ -245,7 +245,8 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
     if (ret)
         return ret;
 
-    setErrorLogFile(buf);
+    if(setErrorLogFile(buf))
+        return LS_FAIL;
 
     const char *pValue = ConfigCtx::getCurConfigCtx()->getTag(pNode,
                          "logLevel");
@@ -269,6 +270,13 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
 
         if (pValue != NULL)
             HttpLog::setDebugLevel(atoi(pValue));
+
+        if (HttpLog::getErrorLogger()->getAppender())
+        {
+            int fd = HttpLog::getErrorLogger()->getAppender()->getfd();
+            if (fd != -1 && fd != STDERR_FILENO)
+                dup2(fd, STDERR_FILENO);
+        }
 
         if (ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableStderrLog", 0,
                 1, 1))

@@ -431,10 +431,12 @@ class DInfo
         if (substr($loc, 0, 13) == 'extprocessor:') {
             $type = substr($loc, 13);
             if ($type == '$$type') {
-                if ($node != null)
+                if ($node != null) {
                     $type = $node->GetChildVal('type');
-                else
+                }
+                if ($type == null) { // default
                     $type = 'fcgi';
+                }
             }
             if ($type == 'cgi') {
                 $o['cgi'] = 'CGI Daemon';

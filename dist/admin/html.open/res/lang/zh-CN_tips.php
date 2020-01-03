@@ -14,7 +14,7 @@ $_tipsdb['CPUSoftLimit'] = new DAttrHelp("CPU软限制", '以秒为单位，指�
 
 $_tipsdb['DHParam'] = new DAttrHelp("DH Parameter", 'Specifies the location of the Diffie-Hellman parameter file necessary for DH key exchange.', '', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
 
-$_tipsdb['GroupDBLocation'] = new DAttrHelp("Group DB Location", '指定组数据库的位置。<br/>组信息可以在用户数据库或在这个独立的组数据库中设置。 用于用户验证时，将首先检查用户数据库。 如果用户数据库同样包含组信息，组数据库将不被检查。<br/>对于类型为Password File的数据库， 组数据库地址应当是到达包含有组定义的平面文件的路径。 你可以在WebAmin控制台中点击文件名来修改这个设置。<br/>每一行组文件应当包含一个组名， 组名后面跟一个冒号，并在冒号后面使用空格来分割组中的用户名。 例如: <blockquote><code>testgroup: user1 user2 user3</code></blockquote><br/><br/>对于类型为LDAP的数据库， 组数据库地址应当是查询组信息的LDAP URL地址。 对于每一个有效的组， 基于同一URL地址和同一在&quot;Require（授权的用户/组）&quot;中指明的组名进行的LDAP查询请求，应当有且仅有一个记录返回。 &quot;$k&quot;中指定的组名称必须在URL的过滤部分指定并用组名称代替。在组中指定成员的属性名称需在&quot;组成员属性名&quot;中指定。<br/><br/> 例如: 如果objectClass posixGroup被用来存储组信息。可以使用以下的地址：<br/><blockquote><code>ldap: //localhost/ou=GroupDB,dc=example,dc=com???(&(objectClass=*)(cn=$k))</code></blockquote>', '[安全建议] 建议把组文件保存到站点目录外。 如果必须将组文件放置在站点目录内，只需要用&quot;.ht&quot;开头命名，如.htgroup，来防止文件被当做静态文件而输出。LiteSpeed网页服务器不会输出前缀是&quot;.ht&quot;的文件。', '文件3', '');
+$_tipsdb['GroupDBLocation'] = new DAttrHelp("Group DB Location", '指定组数据库的位置。<br/>组信息可以在用户数据库或在这个独立的组数据库中设置。 用于用户验证时，将首先检查用户数据库。 如果用户数据库同样包含组信息，组数据库将不被检查。<br/>对于类型为Password File的数据库， 组数据库地址应当是到达包含有组定义的平面文件的路径。 你可以在WebAmin控制台中点击文件名来修改这个设置。<br/>每一行组文件应当包含一个组名， 组名后面跟一个冒号，并在冒号后面使用空格来分割组中的用户名。 例如: <blockquote><code>testgroup: user1 user2 user3</code></blockquote><br/><br/>对于类型为LDAP的数据库， 组数据库地址应当是查询组信息的LDAP URL地址。 对于每一个有效的组， 基于同一URL地址和同一在&quot;Require（授权的用户/组）&quot;中指明的组名进行的LDAP查询请求，应当有且仅有一个记录返回。 &quot;$k&quot;中指定的组名称必须在URL的过滤部分指定并用组名称代替。在组中指定成员的属性名称需在&quot;组成员属性名&quot;中指定。<br/><br/> 例如: 如果objectClass posixGroup被用来存储组信息。可以使用以下的地址：<br/><blockquote><code>ldap: //localhost/ou=GroupDB,dc=example,dc=com???(&(objectClass=*)(cn=$k))</code></blockquote>', '', '文件3', '');
 
 $_tipsdb['HANDLER_RESTART'] = new DAttrHelp("Hook::HANDLER_RESTART Priority", 'Sets the priority for this module callback within the HTTP Handler Restart Hook.<br/>   The HTTP Handler Restart Hook is triggered when the web server needs to discard the current response and start processing from beginning, for example, when an internal redirect has been requested.<br/><br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
 
@@ -55,6 +55,14 @@ $_tipsdb['RECV_RESP_HEADER'] = new DAttrHelp("Hook::RECV_RESP_HEADER Priority", 
 $_tipsdb['SEND_RESP_BODY'] = new DAttrHelp("Hook::SEND_RESP_BODY Priority", 'Sets the priority for this module callback within the HTTP Send Response Body Hook. <br/><br/>The HTTP Send Response Body Hook is triggered when the web server is going to send the response body.  <br/><br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
 
 $_tipsdb['SEND_RESP_HEADER'] = new DAttrHelp("Hook::SEND_RESP_HEADER Priority", 'Sets the priority for this module callback within the HTTP Send Response Header Hook. <br/><br/>The HTTP Send Response Header Hook is triggered when the web server is ready to send the response header.  <br/><br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
+
+$_tipsdb['UDBgroup'] = new DAttrHelp("Groups", 'A comma seperated list of groups that this user belongs to. The user will only be able to access resources belonging to these groups.<br/><br/>If group information is added here, this information will be used for resource authorization and any group database settings involving this user will be ignored.', '', '', '');
+
+$_tipsdb['UDBpass'] = new DAttrHelp("New Password", 'Password can be any length and contain any characters.', '', '', '');
+
+$_tipsdb['UDBpass1'] = new DAttrHelp("Retype Password", 'Password can be any length and contain any characters.', '', '', '');
+
+$_tipsdb['UDBusername'] = new DAttrHelp("User Name", 'A user name containing only letters and numbers. (no special characters)', '', '', '');
 
 $_tipsdb['URI_MAP'] = new DAttrHelp("Hook::URI_MAP Priority", 'Sets the priority for this module callback within the HTTP URI Map Hook.<br/>  The HTTP URI Map Hook is triggered when the web server maps a URI request to a context.  <br/><br/>It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.', '', 'Integer value from -6000 to 6000. Lower value means higher priority.', '');
 
@@ -286,6 +294,10 @@ $_tipsdb['forceStrictOwnership'] = new DAttrHelp("强制严格属主检查", '�
 
 $_tipsdb['forceType'] = new DAttrHelp("Force MIME Type", 'When specified, all files under this context will be served as 	   static files with the MIME type specified regardless of file suffix. 	   When set to NONE, inherited force type setting will be 	   disabled.', '', 'MIME type or NONE.', '');
 
+$_tipsdb['gdb_groupname'] = new DAttrHelp("Group Name", 'A group name containing only letters and numbers (no special characters).', '', 'string', '');
+
+$_tipsdb['gdb_users'] = new DAttrHelp("Users", 'Space separated list of users belonging to this group.', '', '', '');
+
 $_tipsdb['generalContext'] = new DAttrHelp("Static Context", 'Context settings are used to specify special settings for files in a certain location. These settings can be used to bring in files outside of the document root (like Apache&#039;s Alias or AliasMatch directives), to protect a particular directory using authorization realms, or to block or restrict access to a particular directory within the document root.', '', '', '');
 
 $_tipsdb['geoipDBFile'] = new DAttrHelp("数据库文件路径", ' 指定MaxMind GeoIP数据库路径。', '', '文件路径', '/usr/local/share/GeoIP/GeoLite2-Country.mmdb');
@@ -446,7 +458,7 @@ $_tipsdb['moduleEnabled_vh'] = new DAttrHelp("Enable Module", 'Enables module ho
 
 $_tipsdb['moduleNameSel'] = new DAttrHelp("Module", 'Name of the module. The module must be registered under the Server Module Configuration tab. Once it is registered, the module name will be available in the drop down box for the Listener and Virtual Host configurations.', '', 'Select from drop down list', '');
 
-$_tipsdb['modulename'] = new DAttrHelp("Module", 'Name of the module. The module name will be the same as the module filename.  The module file must be located under $SERVER_ROOT/modules/modulename.so in order to be loaded by the server application. The server will load the registered modules at start up. This requires that the server is restarted after new modules are registered.', '', 'the library name of .so.', '');
+$_tipsdb['modulename'] = new DAttrHelp("Module", 'The name of an external or internal module to be loaded at server startup.<br/><br/><b>External</b><br/>The value used for external modules must match the name of the module&#039;s &quot;.so&quot; file under $SERVER_ROOT/modules/modulename.so in order to be loaded by the server application. This requires that the server is restarted after a new module is registered.<br/><br/><b>Internal</b><br/>The value used for internal modules must match the module name used when the module was built. For example, this must be set to &quot;cache&quot; for the internal cache module included with the server.', '', 'string', '');
 
 $_tipsdb['nodeBin'] = new DAttrHelp("Node Path", 'Path to Node.js executable.', '', '绝对路径', '');
 
@@ -554,6 +566,8 @@ $_tipsdb['restrictedScriptPermissionMask'] = new DAttrHelp("脚本限制权限�
 
 $_tipsdb['retryTimeout'] = new DAttrHelp("Retry Timeout (secs)", 'Specifies the period of time that the server waits before retrying an external application that had a prior communication problem.', '', '无符号整数', '');
 
+$_tipsdb['reusePort'] = new DAttrHelp("Enable REUSEPORT", 'Use SO_REUSEPORT socket option to distribute incoming traffic to multiple workers. This setting is only effective for multi-worker licenses. When enabled, all workers are automatically bound to this listener and &quot;Binding&quot; configuration is ignored.<br/><br/>Default value: On', '', 'Select from radio box', '');
+
 $_tipsdb['rewriteBase'] = new DAttrHelp("重写基准", '指定重写规则的基准URL。', '', 'URL', '');
 
 $_tipsdb['rewriteInherit'] = new DAttrHelp("重写继承", '指定是否从父级context继承重写规则。 如果启用重写但不继承，将启用本context的重写基准及重写规则。', '', '布尔值', '');
@@ -593,8 +607,6 @@ $_tipsdb['shType'] = new DAttrHelp("类型", '指定处理这些脚本文件的�
 $_tipsdb['shmDefaultDir'] = new DAttrHelp("Default SHM Directory", 'Changes shared memory&#039;s default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.', '', 'Path', '');
 
 $_tipsdb['showVersionNumber'] = new DAttrHelp("服务器签名", '指定是否在响应头的Server参数中显示服务器签名和版本号。 有三个选项: 当设置为Hide Version时、只显示LiteSpeed。当设置为 Show Version，显示LiteSpeed和版本号。  设置为Hide Full Header时，整个Server头都不会显示在响应报头中。', '[安全建议] 如果你不想暴露服务器的版本号，设置为Hide Version。', '布尔值', '');
-
-$_tipsdb['smartKeepAlive'] = new DAttrHelp("智能持续连接", '指定是否启用智能持续连接。此选项只在&quot;最大持续连接请求数&quot;的值大于1 时有效。启用之后，您还可以在虚拟主机级别启用或禁用它。智能持久连接将只为 JavaScript、CSS样式表和图像文件请求建立持续连接。对于HTML页面，连接 不会被保持活跃。这有助于更高效地服务更多用户。通常包含多个图像和脚本的 网页将在初次请求之后被浏览器缓存。 通过一个持续连接来发送那些非HTML静态文件，同时通过另一非持续连接发送 text/html文件的做法更为高效。这种方法将减少闲置连接，进而提高处理并发请 求和更多用户的能力。', '[性能建议] 为高负载网站启用该功能。', '布尔值', '');
 
 $_tipsdb['sname'] = new DAttrHelp("Name - Server", 'The unique name that identifies this server. This is the  &quot;服务器名称&quot; specified in the general configuration.', '', '', '');
 
@@ -680,7 +692,7 @@ $_tipsdb['useSendfile'] = new DAttrHelp("使用sendfile()", '指定是否使用s
 
 $_tipsdb['userDBCacheTimeout'] = new DAttrHelp("用户数据库缓存超时", '指定多久检查一次后端用户数据库变更。 在缓存中每个条目都有一个时间戳。 当缓存日期超过指定的超时时间时，将检查后端数据库是否有变化。 如果没有，时间戳将被重置为当前时间，否则会将新的数据载入。 服务器重载和平滑重启会立即清除缓存。', '[性能建议] 如果后端数据库不经常发生变更，设置较长的缓存时间来获得更好的性能。', '单元', '');
 
-$_tipsdb['userDBLocation'] = new DAttrHelp("用户数据库地址", '指定用户数据库的地址。 对于类型为Password File的数据库，应设置为包含用户名/密码的展平文件的路径。 您可以在WebAdmin控制台中点击文件名来进行修改。<br/><br/>用户文件的每一行包含一个用户名，后面加上冒号，在跟上加密的密码，后面可选择添加冒号和用户所属组名。 多个组名通过逗号分隔。如果组信息在用户数据库中指定，那么组数据库将不被检查。<br/><br/>例如: <blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote><br/><br/>对于类型为LDAP的数据库，应该设置用于查询用户信息的LDAP URL。对于每个有效的用户，存储在LDAP服务器中的认证数据 应至少包含用户ID和用户密码。当根据HTTP认证报头中的信息通过指定URL进行LDAP查询请求时，应当有且仅有一个记录被返回。&quot;$k&quot;必须在URL中的过滤部分指定并且将用用户名来替代。用户密码属性名必须在查询中返回。用户密码属性名由&quot;密码属性名&quot;指定。组信息可以使用&quot;Member-of 属性&quot;来指定（可选）。<br/><br/>例如: 用户至少要在LDAP中通过以下对象类定义：uidObject, simpleSecurityObject和organizationalRole。可以使用如下URL：<br/><blockquote><code>ldap://localhost/ou=UserDB,dc=example,dc=com???(&(objectClass=*)(uid=$k))</code></blockquote>', '[安全建议] 建议在文档树以外保存用户密码文件。 如果用户密码文件被放置在文档树以内，只需要使用&quot;.ht&quot;作为文件名开头， 如.htuser，来防止被当做静态文件输出。LiteSpeed Web服务器不输出前缀为“.ht”的文件。', '到用户数据库文件的路径或LDAP URL（RFC 2255）。', '');
+$_tipsdb['userDBLocation'] = new DAttrHelp("用户数据库地址", '指定用户数据库的地址。 对于类型为Password File的数据库，应设置为包含用户名/密码的展平文件的路径。 您可以在WebAdmin控制台中点击文件名来进行修改。<br/><br/>用户文件的每一行包含一个用户名，后面加上冒号，在跟上加密的密码，后面可选择添加冒号和用户所属组名。 多个组名通过逗号分隔。如果组信息在用户数据库中指定，那么组数据库将不被检查。<br/><br/>例如: <blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote><br/><br/>对于类型为LDAP的数据库，应该设置用于查询用户信息的LDAP URL。对于每个有效的用户，存储在LDAP服务器中的认证数据 应至少包含用户ID和用户密码。当根据HTTP认证报头中的信息通过指定URL进行LDAP查询请求时，应当有且仅有一个记录被返回。&quot;$k&quot;必须在URL中的过滤部分指定并且将用用户名来替代。用户密码属性名必须在查询中返回。用户密码属性名由&quot;密码属性名&quot;指定。组信息可以使用&quot;Member-of 属性&quot;来指定（可选）。<br/><br/>例如: 用户至少要在LDAP中通过以下对象类定义：uidObject, simpleSecurityObject和organizationalRole。可以使用如下URL：<br/><blockquote><code>ldap://localhost/ou=UserDB,dc=example,dc=com???(&(objectClass=*)(uid=$k))</code></blockquote>', '', '到用户数据库文件的路径或LDAP URL（RFC 2255）。', '');
 
 $_tipsdb['userDBMaxCacheSize'] = new DAttrHelp("用户数据库最大缓存大小", '指定用户数据库的最大缓存大小。 最近访问的用户认证信息会被缓存在内存中以提供最佳性能。', '[性能建议] 由于更大的缓存会消耗更多的内存，更高的值可能会也可能不会提供更好的性能。 请根据您的用户数据库大小和网站使用情况来设定一个合适的大小。', '无符号整数', '');
 
@@ -705,8 +717,6 @@ $_tipsdb['vhModules'] = new DAttrHelp("Virtual Host Modules", 'Virtual Host modu
 $_tipsdb['vhName'] = new DAttrHelp("虚拟主机名", '为虚拟主机的唯一名称。建议使用虚拟主机的域名作为虚拟主机名。 虚拟主机名参数可以使用$VH_NAME变量来引用。', '', '文本', '');
 
 $_tipsdb['vhRoot'] = new DAttrHelp("虚拟主机根", '指定虚拟主机的根目录。 注：这<b>不是</b>目录根。 建议将所有与该虚拟主机相关的文件 (像日志文件，html文件，CGI脚本等)都放置在这个目录下。 虚拟主机根参数可以使用$VH_ROOT变量来引用。', '[性能建议] 在不同的硬盘放置不同的虚拟主机。', '路径2', '');
-
-$_tipsdb['vhSmartKeepAlive'] = new DAttrHelp("智能Keep-Alive", '指定是否为虚拟主机启用智能Keep-Alive。这个选项仅在当&quot;智能持续连接&quot;启用并且&quot;最大Keep-Alive请求数&quot;大于1的时候生效。', '[性能建议] 为访问繁忙的网站启用此项。', '布尔值', '');
 
 $_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("File Name", 'The access log filename.', ' Put access log file on a separate disk.', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.', '');
 
@@ -737,7 +747,9 @@ $_tipsdb['wsgiDefaults'] = new DAttrHelp("Python WSGI Default Settings", 'Defaul
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/>Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location $DOC_ROOT/URI.', '', 'A plain URI (starting with &quot;/&quot;). If the URI ends with a &quot;/&quot;,  then this WebSocket backend will include all sub-URIs under this URI.', 'Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page&#039;s static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).');
 
 
-$_tipsdb['EDTP:UDBgroup'] = array('If you enter group information here, the group DB will not be checked.','You can enter multiple groups, use comma to separate. Space will be treated as part of a group name.');
+$_tipsdb['EDTP:GroupDBLocation'] = array('It is recommended that the database be stored under the $SERVER_ROOT/conf/vhosts/$VH_NAME/ directory.');
+
+$_tipsdb['EDTP:UDBgroup'] = array('If group information is added here, this information will be used for resource authorization and any group database settings involving this user will be ignored.','You can enter multiple groups, using a comma to separate them. Space characters will be treated as part of a group name.');
 
 $_tipsdb['EDTP:accessControl_allow'] = array('You can set up access control at server, virtual host and context levels. If there is access control at server level, the virtual host rules will be applied after the server rules are satisfied.','Input format can be an IP like 192.168.0.2, a sub-network like 192.168.*, or a subnet/netmask like 192.168.128.5/255.255.128.0.','If you have trusted IP or sub-network, then you must specify them in allowed list by adding a trailing &quot;T&quot; such as 192.168.1.*T. Trusted IP or sub-network is not limited by connection/throttling limit.');
 
@@ -807,6 +819,8 @@ $_tipsdb['EDTP:fcgiapp'] = array('Fast CGI context is a mount point of Fast CGI 
 
 $_tipsdb['EDTP:followSymbolLink'] = array('If Follow-Symbolic-Link is enabled, you can still disable it at virtual host level.');
 
+$_tipsdb['EDTP:gdb_groupname'] = array('Group Name should comprise of letter and numbers only.');
+
 $_tipsdb['EDTP:gzipCompressLevel'] = array('GZIP Compression level ranges from 1 (Minimum) to 9 (Maximum).');
 
 $_tipsdb['EDTP:hardLimit'] = array('Set concurrent connection Limits coming from one client (per IP address). This helps against DoS attack.');
@@ -871,6 +885,8 @@ $_tipsdb['EDTP:recaptchaVhReqLimit'] = array('');
 
 $_tipsdb['EDTP:restrained'] = array('Turn on Restrained in a shared hosting enviroment.');
 
+$_tipsdb['EDTP:reusePort'] = array('');
+
 $_tipsdb['EDTP:rewriteMapLocation'] = array('Enter URI for location. URI must start with &quot;/&quot;.');
 
 $_tipsdb['EDTP:rewriteRules'] = array('Only virtual host level rewrite rules should be used here, such as those found in an Apache virtual host  config file. Do NOT add any document root level rewrite rules here. If you have any document root level rewrite rules from  .htaccess, you should instead create a static context with uri &quot;/&quot; and add the rewrite rules there.');
@@ -897,7 +913,7 @@ $_tipsdb['EDTP:sslSessionTicketKeyFile'] = array('Session tickets will be rotate
 
 $_tipsdb['EDTP:swappingDir'] = array('Swapping directory is recommended to be placed on a local disk such as /tmp. Network drive should be avoided at all cost. Swap will be when configured memory i/o buffer is exhausted.');
 
-$_tipsdb['EDTP:users'] = array('Group DB will be checked only if the user in the user DB does not contain group information..','Use comma to separate multiple users.');
+$_tipsdb['EDTP:userDBLocation'] = array('It is recommended that the database be stored under the $SERVER_ROOT/conf/vhosts/$VH_NAME/ directory.');
 
 $_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.');
 

@@ -988,10 +988,10 @@ int HttpReq::processHeader(int index)
             if ((m_commonHeaderLen[ index ] >= 4)
                 && (strcasestr(pCur, "gzip") != NULL))
                 m_iAcceptGzip = REQ_GZIP_ACCEPT |
-                                HttpServerConfig::getInstance().getGzipCompress();
+                 (HttpServerConfig::getInstance().getGzipCompress() ? GZIP_ENABLED : 0);
             if (strcasestr(pCur, "br") != NULL)
                 m_iAcceptBr = REQ_BR_ACCEPT |
-                                HttpServerConfig::getInstance().getBrCompress();
+                (HttpServerConfig::getInstance().getBrCompress() ? BR_ENABLED : 0);
             *((char *)pBEnd) = ch;
         }
         break;
@@ -2756,14 +2756,6 @@ const AutoStr2 *HttpReq::getDefaultCharset() const
     if (m_pContext)
         return m_pContext->getDefaultCharset();
     return NULL;
-}
-
-
-void  HttpReq::smartKeepAlive(const char *pValue)
-{
-    if (m_pVHost->getSmartKA())
-        if (!HttpMime::shouldKeepAlive(pValue))
-            keepAlive(0);
 }
 
 

@@ -780,7 +780,10 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
         return NULL;
     else if ((pKey = getTag(pNode, "keyFile")) == NULL)
         return NULL;
-    if (m_iEnableMultiCerts != 0)
+    
+    config.m_iEnableMultiCerts = 
+                    HttpServerConfig::getInstance().getEnableMultiCerts();
+    if (config.m_iEnableMultiCerts)
     {
         if (getAbsoluteFile(achCert, pCertFile) != 0)
             return NULL;
@@ -796,8 +799,6 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
     }
     config.m_sCertFile[0] = achCert;
     config.m_sKeyFile[0] = achKey;
-    config.m_iEnableMultiCerts = m_iEnableMultiCerts;
-
     config.m_sName = pName;
 
     const char *pCipher = pNode->getChildValue( "ciphers" );
@@ -880,10 +881,7 @@ int ConfigCtx::initOcspCachePath()
     {
         char achBuf[MAX_PATH_LEN];
         if (getAbsolutePath(achBuf, "$SERVER_ROOT/tmp/ocspcache/") != -1)
-        {
-            GPath::createMissingPath(achBuf, 0700);
             SslOcspStapling::setCachePath(achBuf);
-        }
         else
             return -1;
     }

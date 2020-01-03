@@ -21,6 +21,8 @@
 
 extern lsi_module_t modcompress;
 extern lsi_module_t moddecompress;
+extern lsi_module_t cache;
+
 extern int addModgzipFilter(lsi_session_t *session, int isSend,
                             uint8_t compressLevel);
 struct Prelinked_Module
@@ -33,6 +35,8 @@ Prelinked_Module g_prelinked[] =
 {
     { "modcompress",    &modcompress   },
     { "moddecompress",  &moddecompress },
+    { "cache",          &cache         }
+
 };
 
 int getPrelinkedModuleCount()

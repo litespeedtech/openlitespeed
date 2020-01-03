@@ -274,6 +274,7 @@ void Logger::s_log(int level, const char *format, ...)
 
 void Logger::s_vlograw(log4cxx::Logger *l, const char *format, va_list va)
 {
+    int errno_save = errno;
     char achBuf[8192];
     int messageLen ;
     messageLen = vsnprintf(achBuf,
@@ -287,6 +288,7 @@ void Logger::s_vlograw(log4cxx::Logger *l, const char *format, va_list va)
     if (!l)
         l = log4cxx::Logger::getDefault();
     l->lograw(achBuf, messageLen);
+    errno = errno_save;
 }
 
 

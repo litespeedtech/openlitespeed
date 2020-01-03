@@ -144,28 +144,31 @@ int NtwkIOLink::writev(const struct iovec *vector, int len)
 
     if (m_iHeaderToSend > 0)
     {
-        m_iov.append(vector, len);
-
-        written = writev_internal(m_iov.get(), m_iov.len(), 0);
+        int appended = 0;
+        if (m_iov.avail() >= len && len > 0)
+        {
+            memmove(m_iov.end(), vector, sizeof(struct iovec) * len);
+            appended = 1;
+        }
+        written = writev_internal(m_iov.get(), m_iov.len() + len, 0);
         if (written >= m_iHeaderToSend)
         {
             m_iov.clear();
             written -= m_iHeaderToSend;
             m_iHeaderToSend = 0;
+            if (appended || !len)
+                return written;
+        }
+        else if (written > 0)
+        {
+            m_iHeaderToSend -= written;
+            m_iov.finish(written);
+            return 0;
         }
         else
-        {
-            m_iov.pop_back(len);
-            if (written > 0)
-            {
-                m_iHeaderToSend -= written;
-                m_iov.finish(written);
-                return 0;
-            }
-        }
+            return written;
     }
-    else
-        written = writev_internal(vector, len, 0);
+    written = writev_internal(vector, len, 0);
 
     return written;
 }
@@ -830,7 +833,7 @@ int NtwkIOLink::closeSSL(NtwkIOLink *pThis)
 
 int NtwkIOLink::shutdown()
 {
-    if (flushSslWpending() != 1)
+    if (flushSslWpending() == 0)
     {
         if (!isPeerShutdown())
         {
@@ -982,7 +985,13 @@ int NtwkIOLink::onTimer()
             return 0;
         (*m_pFpList->m_onTimer_fp)(this);
         if (getState() == HIOS_CLOSING)
-            onPeerClose();
+        {
+            if (flushSslWpending() != 0)
+            {
+                onPeerClose();
+                return 1;
+            }
+        }
     }
     return 0;
 }
@@ -1077,12 +1086,11 @@ off_t NtwkIOLink::sendfileSetUp(off_t size)
         if (size > (unsigned int)Quota + (Quota >> 3))
             size = Quota;
     }
-    else
-        size = size & ((1 << 30) - 1);
+
     if (size <= 0)
         return 0;
-    if (size > INT_MAX)
-        size = INT_MAX;
+    if (size > LONG_MAX)
+        size = LONG_MAX;
 
     return size;
 }

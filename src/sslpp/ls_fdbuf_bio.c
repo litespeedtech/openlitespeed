@@ -314,10 +314,13 @@ static int ls_fdbio_buff_write(ls_fdbio_data *fdbio, int fd, const void *buf, in
             int new_size = fdbio->m_wbuf_size + TLS_RECORD_MAX_SIZE;
             if (new_size < TLS_RECORD_MAX_SIZE * 2)
                 new_size = TLS_RECORD_MAX_SIZE * 2;
-            ls_fdbio_alloc_wbuff(fdbio, new_size);
+            if (ls_fdbio_alloc_wbuff(fdbio, new_size) == LS_FAIL)
+                return LS_FAIL;
         }
         return ret;
     }
+    if (!fdbio->m_wbuf)
+        return LS_FAIL;
     memmove(fdbio->m_wbuf + fdbio->m_wbuf_used, buf, num);
     fdbio->m_wbuf_used += num;
     DEBUG_MESSAGE("[FDBIO] lstls_buff_write, to write: %d, finished: %d, used: %d, sent: %d\n",
@@ -334,8 +337,9 @@ int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd)
     if (pending <= 0)
         return 1;
     int ret = ls_write(fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending);
-    DEBUG_MESSAGE("[FDBIO] flush_ex write(%d, %p, %d) return %d\n",
-           fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending, ret);
+    int err = errno;
+    DEBUG_MESSAGE("[FDBIO] flush_ex write(%d, %p, %d) return %d, errno: %d\n",
+           fd, fdbio->m_wbuf + fdbio->m_wbuf_sent, pending, ret, err);
     if (ret >= pending)
     {
         fdbio->m_wbuf_used = 0;
@@ -345,16 +349,17 @@ int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd)
     }
     else
     {
-        DEBUG_MESSAGE("[FDBIO] partial write, mark WBLOCK.\n");
-        fdbio->m_flag |= LS_FDBIO_WBLOCK;
         if (ret > 0)
         {
             fdbio->m_wbuf_sent += ret;
         }
-        else if (ret == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+        else if (ret == -1 && err != EAGAIN && err != EWOULDBLOCK)
         {
+            errno = err;
             return -1;
         }
+        DEBUG_MESSAGE("[FDBIO] partial write, mark WBLOCK.\n");
+        fdbio->m_flag |= LS_FDBIO_WBLOCK;
     }
     return 0;
 }

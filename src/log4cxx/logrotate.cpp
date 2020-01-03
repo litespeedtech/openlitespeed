@@ -87,7 +87,7 @@ int archiveFile(const char *pFileName, const char *pSuffix,
     char achBuf[1024];
     char achName[1024];
     ::localtime_r(&lNow, &tmTmp);
-    n = snprintf(achBuf, max, "%s.%04d_%02d_%02d",
+    n = lsnprintf(achBuf, max, "%s.%04d_%02d_%02d",
                  pFileName, tmTmp.tm_year + 1900,
                  tmTmp.tm_mon + 1, tmTmp.tm_mday);
     max -= n;
@@ -105,11 +105,11 @@ int archiveFile(const char *pFileName, const char *pSuffix,
                 break;
             }
         }
-        l = snprintf(pMoreSuffix, max, ".%02d", suffix++);
+        l = lsnprintf(pMoreSuffix, max, ".%02d", suffix++);
     }
     if (pSuffix && *pSuffix)
     {
-        snprintf(achName, 1024, "%s%s", pFileName, pSuffix);
+        lstrncat2(achName, 1024, pFileName, pSuffix);
         pFileName = achName;
     }
     ret = ::rename(pFileName, achBuf);
@@ -121,7 +121,7 @@ int archiveFile(const char *pFileName, const char *pSuffix,
         if (pid)
             return (pid == -1) ? pid : 0;
         setpriority(PRIO_PROCESS, 0, getpriority(PRIO_PROCESS, 0) + 4);
-        snprintf(achName, 1024, "%s.gz", achBuf);
+        lsnprintf(achName, 1024, "%s.gz", achBuf);
         GzipBuf gzBuf;
         if (gzBuf.compressFile(achBuf, achName) == 0)
             unlink(achBuf);

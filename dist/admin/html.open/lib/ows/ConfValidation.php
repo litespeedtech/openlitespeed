@@ -36,19 +36,25 @@ class ConfValidation extends CValidation
 		return $isValid;
 	}
 
-	protected function chkPostTbl_SERV_MODULE($extracted)
-	{
-		$isValid = 1;
+    protected function chkPostTbl_SERV_MODULE($extracted)
+    {
+        $isValid = 1;
 
-		if ($extracted->GetChildVal('internal') == 0) {
-			$name = $extracted->GetChildVal('name');
-			$module = SERVER_ROOT . "modules/{$name}.so" ;
-			if (!file_exists($module)) {
-				$extracted->SetChildErr('name', "cannot find external module: $module");
-				$isValid = -1;
-			}
-		}
+        $name = $extracted->GetChildVal('name');
+        if ($extracted->GetChildVal('internal') == 0) {
+            if ($name != 'cache') {
+                $module = SERVER_ROOT . "modules/{$name}.so";
+                if (!file_exists($module)) {
+                    $extracted->SetChildErr('name', "cannot find external module: $module");
+                    $isValid = -1;
+                }
+            } else {
+                $extracted->SetChildErr('internal', 'This is a built-in internal module');
+                $isValid = -1;
+            }
+        }
 
-		return $isValid;
-	}
+        return $isValid;
+    }
+    
 }

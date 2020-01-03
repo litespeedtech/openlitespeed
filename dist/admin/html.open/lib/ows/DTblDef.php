@@ -284,7 +284,7 @@ class DTblDef extends DTblDefBase
 		$align = array('center', 'center', 'center', 'center');
 
 		$attrs = array(self::NewViewAttr('name', DMsg::ALbl('l_module')),
-				//self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
+				self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
 				$this->_attrs['mod_params'],
 				$this->_attrs['mod_enabled'],
 				self::NewActionAttr('S_MOD', 'vEd')
@@ -306,7 +306,7 @@ class DTblDef extends DTblDefBase
 	{
 		$attrs = array(self::NewTextAttr('name', DMsg::ALbl('l_module'), 'modulename', false, 'modulename'),
 						$this->_attrs['note'],
-						//self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
+						self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
 						$this->_attrs['mod_params'],
 						$this->_attrs['mod_enabled']);
 
@@ -400,7 +400,6 @@ class DTblDef extends DTblDefBase
 			$this->_attrs['vh_enableScript'],
 			$this->_attrs['vh_restrained'],
 			$this->_attrs['vh_maxKeepAliveReq'],
-			$this->_attrs['vh_smartKeepAlive'],
 			$this->_attrs['vh_setUIDMode'],
             $this->_attrs['vh_suexec_user'],
             $this->_attrs['vh_suexec_group'],
@@ -718,14 +717,16 @@ class DTblDef extends DTblDefBase
 		$port->SetFlag(DAttr::BM_NOFILE);
 
 		$processes = isset($_SERVER['LSWS_CHILDREN']) ? $_SERVER['LSWS_CHILDREN'] : 1;
-		for( $i = 1; $i <= $processes; ++$i )
+		for( $i = 1; $i <= $processes; ++$i ) {
 			$bindoptions[1<<($i-1)] = "Process $i";
+        }
 
 		$attrs = array(
 				self::NewTextAttr('name', DMsg::ALbl('l_listenername'), 'name', false, 'listenerName'),
 				self::NewCustFlagAttr('address', DMsg::ALbl('l_address'), (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				$ip, $port,
 				self::NewCheckBoxAttr('binding', DMsg::ALbl('l_binding'), $bindoptions, true, 'listenerBinding'),
+                //self::NewBoolAttr('reusePort', DMsg::ALbl('l_reuseport')),
 				self::NewBoolAttr('secure', DMsg::ALbl('l_secure'), false, 'listenerSecure'),
 				$this->_attrs['note'],
 		);

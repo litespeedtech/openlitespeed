@@ -41,11 +41,11 @@ class DPageDef
 
 	private function add_FileMap_serv()
 	{
-		$map = new DTblMap(['httpServerConfig', '' ], // loadBalancerConfig
+		$map = new DTblMap(['httpServerConfig', '' ], 
 				['S_PROCESS',
 			'S_GENERAL',
 			new DTblMap(['logging:log', 'errorlog$fileName' ], 'S_LOG'),
-			new DTblMap(['logging:accessLog', '*accesslog$fileName' ], 'S_ACLOG'),
+			new DTblMap(['logging:*accessLog', '*accesslog$fileName' ], 'S_ACLOG'),
 			'S_INDEX',
 			new DTblMap('expires', 'A_EXPIRES'),
             'S_AUTOLOADHTA', 'S_FILEUPLOAD',
@@ -81,7 +81,7 @@ class DPageDef
 				[
                     'V_GENERAL',
                     new DTblMap(['logging:log','errorlog$fileName'], 'V_LOG'),
-                    new DTblMap(['logging:accessLog','*accesslog$fileName'], 'V_ACLOG'),
+                    new DTblMap(['logging:*accessLog','*accesslog$fileName'], 'V_ACLOG'),
                     new DTblMap('index', 'VT_INDXF'),
                     new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
                     new DTblMap(['scriptHandlerList','scripthandler'],
@@ -121,7 +121,7 @@ class DPageDef
                             [
                                 'T_GENERAL2',
                                 new DTblMap(['logging:log','errorlog$fileName'], 'T_LOG'),
-                                new DTblMap(['logging:accessLog','*accesslog$fileName'], 'T_ACLOG'),
+                                new DTblMap(['logging:*accessLog','*accesslog$fileName'], 'T_ACLOG'),
                                 new DTblMap('index', 'VT_INDXF'),
                                 new DTblMap(['customErrorPages:errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
                                 new DTblMap(['scriptHandlerList','scripthandler'],
@@ -192,12 +192,16 @@ class DPageDef
         $this->_pageDef['serv'][$id] = $page;
 
         $id = 'log';
-		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('',
-				[new DTblMap('errorlog$fileName', 'S_LOG'),
-						new DTblMap('accesslog$fileName', 'S_ACLOG_TOP', 'S_ACLOG')]));
-		$this->_pageDef['serv'][$id] = $page;
+        $page = new DPage($id, DMsg::UIStr('tab_log'),
+                new DTblMap('',
+                        [
+                    new DTblMap('errorlog$fileName', 'S_LOG'),
+                    new DTblMap('*accesslog$fileName', 'S_ACLOG_TOP', 'S_ACLOG'),
+                        ]
+        ));
+        $this->_pageDef['serv'][$id] = $page;
 
-		$id = 'tuning';
+        $id = 'tuning';
 		$page = new DPage($id, DMsg::UIStr('tab_tuning'), new DTblMap('tuning',
 				['S_TUNING_OS', 'S_TUNING_CONN', 'S_TUNING_REQ', 'S_TUNING_STATIC', 'S_TUNING_GZIP', 'S_TUNING_SSL', 'S_TUNING_QUIC']));
 		$this->_pageDef['serv'][$id] = $page;
@@ -296,17 +300,21 @@ class DPageDef
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'log';
-		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('',
-				[new DTblMap('errorlog$fileName', 'V_LOG'),
-						new DTblMap('accesslog$fileName', 'V_ACLOG_TOP', 'V_ACLOG')]));
-		$this->_pageDef['vh_'][$id] = $page;
+        $page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap(
+                        '',
+                        [
+                    new DTblMap('errorlog$fileName', 'V_LOG'),
+                    new DTblMap('*accesslog$fileName', 'V_ACLOG_TOP', 'V_ACLOG'),
+                        ]
+        ));
+        $this->_pageDef['vh_'][$id] = $page;
 
-		$page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('virtualHostConfig',
-				[new DTblMap('errorlog$fileName', 'T_LOG'),
-						new DTblMap('accesslog$fileName', 'T_ACLOG_TOP', 'T_ACLOG')]));
-		$this->_pageDef['tp_'][$id] = $page;
+        $page = new DPage($id, DMsg::UIStr('tab_log'), new DTblMap('virtualHostConfig',
+                        [new DTblMap('errorlog$fileName', 'T_LOG'),
+                    new DTblMap('*accesslog$fileName', 'T_ACLOG_TOP', 'T_ACLOG')]));
+        $this->_pageDef['tp_'][$id] = $page;
 
-		$id = 'sec';
+        $id = 'sec';
 		$page = new DPage($id, DMsg::UIStr('tab_sec'), new DTblMap('',
 				[ new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
                   new DTblMap('accessControl', 'A_SEC_AC'),

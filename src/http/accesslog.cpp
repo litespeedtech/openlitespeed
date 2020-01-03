@@ -209,6 +209,15 @@ int CustomFormat::parseFormat(const char *psFormat)
                 }
                 break;
             case 'p':
+                if (pBegin)
+                {
+                    if (strncasecmp(pBegin, "remote", 6) == 0)
+                    {
+                        itemId = REF_REMOTE_PORT;
+                    }
+                    pBegin = NULL;
+                    break;
+                }
                 itemId = REF_SERVER_PORT;
                 break;
             case 'P':
@@ -256,6 +265,9 @@ int CustomFormat::parseFormat(const char *psFormat)
             case 'O':
                 itemId = REF_BYTES_OUT;
                 break;
+            case 'S':
+                itemId = REF_BYTES_TOTAL;
+                break;
             default:
                 break;
             }
@@ -266,7 +278,13 @@ int CustomFormat::parseFormat(const char *psFormat)
                 {
                     pItem->m_itemId = itemId;
                     if (pBegin)
-                        pItem->m_sExtra.setStr(pBegin, pItemEnd - pBegin);
+                    {
+                        int ret = RequestVars::parseBuiltIn(pBegin, pItemEnd - pBegin, 0);
+                        if (ret != -1)
+                            pItem->m_itemId = ret;
+                        else
+                            pItem->m_sExtra.setStr(pBegin, pItemEnd - pBegin);
+                    }
                     push_back(pItem);
                 }
                 else
