@@ -223,7 +223,7 @@ private:
     long                m_lStartTime;
     pid_t               m_pid;
     gid_t               m_pri_gid;
-    HttpFetch          *m_pAutoUpdFetch;
+    HttpFetch          *m_pAutoUpdFetch[2];
     QuicEngine         *m_pQuicEngine;
 
     HttpServerImpl(const HttpServerImpl &rhs);
@@ -233,7 +233,6 @@ private:
     HttpServerImpl(HttpServer *pServer)
         : m_sSwapDirectory(DEFAULT_SWAP_DIR)
         , m_pri_gid(0)
-        , m_pAutoUpdFetch(NULL)
         , m_pQuicEngine(NULL)
     {
         ClientCache::initObjPool();
@@ -243,12 +242,16 @@ private:
         HttpRespHeaders::buildCommonHeaders();
         m_sRTReportFile = DEFAULT_TMP_DIR "/.rtreport";
         SslContext::setSniLookupCb(VHostMapFindSslContext);
+        memset(m_pAutoUpdFetch, 0, sizeof(m_pAutoUpdFetch));
     }
 
     ~HttpServerImpl()
     {
-        if (m_pAutoUpdFetch)
-            delete m_pAutoUpdFetch;
+        for(int i=0; i<2; ++i)
+        {
+            if (m_pAutoUpdFetch[i])
+                delete m_pAutoUpdFetch[i];
+        }
     }
 
     int initAdns()
@@ -387,6 +390,7 @@ private:
     int configAccessDeniedDir(const XmlNode *pNode);
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
+    void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod);
     int configServerBasic2(const XmlNode *pRoot, const char *pSwapDir);
     int configMultiplexer(const XmlNode *pNode);
     void configVHTemplateToListenerMap(const XmlNodeList *pList,
@@ -410,7 +414,6 @@ private:
     void setServerRoot(const char *pRoot);
     int initServer(XmlNode *pRoot, int reconfig);
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig);
-    int readVersion(const char *path);
 
     void chmodDirToAll(const char *path, struct stat &sb);
     void verifyStatDir(const char *path);
@@ -427,7 +430,7 @@ private:
 
 public:
     void hideServerSignature(int sv);
-    int processAutoUpdResp(HttpFetch *pHttpFetch);
+
     void addQuicEngine(QuicEngine *pEngine)
     {   m_pQuicEngine = pEngine;    }
 
@@ -522,6 +525,7 @@ int HttpServerImpl::start()
     LS_NOTICE("[Child: %d] Start shutting down gracefully ...", m_pid);
     gracefulShutdown();
     LS_NOTICE("[Child: %d] Shut down successfully! ", m_pid);
+    StdErrLogger::getInstance().dupAppenderFdToStdErr();
     return 0;
 
 }
@@ -951,14 +955,23 @@ void HttpServerImpl::onTimer30Secs()
 }
 
 
-static int autoUpdCheckCb(void *pArg, HttpFetch *pHttpFetch)
+static int readVersionStr(const char *s)
 {
-    HttpServerImpl *pServerImpl = (HttpServerImpl *)pArg;
-    pServerImpl->processAutoUpdResp(pHttpFetch);
-    return 0;
+    int ver = 0;
+    //a.b.c(.d) will return (((a * 100 + b) * 100) + c) * 100 + d
+    //a, b, c and d will take up to 2 digits
+    int a = 0, b = 0, c = 0, d = 0;
+    //The .d may not exist
+    if (sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d) >= 3)
+    {
+        if (a > 0 && a < 10)
+            ver = (((a * 100 + b % 100) * 100) + c % 100) * 100 + d % 100;
+    }
+    return ver;
 }
 
-int HttpServerImpl::readVersion(const char *path)
+
+static int readVersion(const char *path)
 {
     //a.b.c(.d) will return (((a * 100 + b) * 100) + c) * 100 + d
     //a, b, c and d will take up to 2 digits
@@ -969,19 +982,15 @@ int HttpServerImpl::readVersion(const char *path)
     {
         fread(s, 1, 20, fp);
         fclose(fp);
-
-        int a = 0, b = 0, c = 0, d = 0;
-        //The .d may not exist
-        if (sscanf(s, "%d.%d.%d.%d", &a, &b, &c, &d) >= 3)
-            ver = (((a * 100 + b % 100) * 100) + c % 100) * 100 + d % 100;
+        ver = readVersionStr(s);
     }
     return ver;
 }
 
-int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
+static int autoUpdCheck(void *pArg, HttpFetch *pHttpFetch)
 {
-    assert(pHttpFetch == m_pAutoUpdFetch);
-    int istatusCode = m_pAutoUpdFetch->getStatusCode() ;
+    //HttpServerImpl *pServerImpl = (HttpServerImpl *)pArg;
+    int istatusCode = pHttpFetch->getStatusCode() ;
     const char *path = pHttpFetch->getResult()->getTempFileName();
     if (istatusCode != 200)
         unlink(path);
@@ -989,14 +998,34 @@ int HttpServerImpl::processAutoUpdResp(HttpFetch *pHttpFetch)
     {
         chmod(path, 0744);
         int newVer = readVersion(path);
-        if (newVer > 1000000)
+        if (newVer)
         {
-            AutoStr2 sCurVer;
-            sCurVer.setStr(MainServerConfig::getInstance().getServerRoot());
-            sCurVer.append("/VERSION", 8);
-            int curVer = readVersion(sCurVer.c_str());
+            int curVer = readVersionStr(PACKAGE_VERSION);
             if (newVer > curVer)
-                LS_NOTICE("[!!!UPDATE!!!] new version %d.%d.%d.%d is available.\n",
+                LS_NOTICE("[!!!UPDATE!!!] new stable version %d.%d.%d.%d is available.\n",
+                          newVer / 1000000, (newVer / 10000) % 100,
+                          (newVer / 100) % 100, newVer % 100);
+        }
+    }
+    return 0;
+}
+
+static int autoUpdCheckCb(void *pArg, HttpFetch *pHttpFetch)
+{
+    //HttpServerImpl *pServerImpl = (HttpServerImpl *)pArg;
+    int istatusCode = pHttpFetch->getStatusCode() ;
+    const char *path = pHttpFetch->getResult()->getTempFileName();
+    if (istatusCode != 200)
+        unlink(path);
+    else
+    {
+        chmod(path, 0744);
+        int newVer = readVersion(path);
+        if (newVer)
+        {
+            int curVer = readVersionStr(PACKAGE_VERSION);
+            if (newVer > curVer)
+                LS_NOTICE("[!!!UPDATE!!!] current branch new version %d.%d.%d.%d is available.\n",
                           newVer / 1000000, (newVer / 10000) % 100,
                           (newVer / 100) % 100, newVer % 100);
         }
@@ -1011,6 +1040,8 @@ static const char *detectCp()
     /*if (stat("/usr/local/cpanel", &st) == 0)
         type = "cpanel";
     else */if (stat("/usr/local/CyberCP", &st) == 0)
+        type = "cyberpanel";
+    else if (stat("/usr/local/CyberPanel", &st) == 0)
         type = "cyberpanel";
     else if (stat("/usr/local/directadmin", &st) == 0)
         type = "da";
@@ -1083,20 +1114,18 @@ void HttpServerImpl::checkOLSUpdate()
             unlink(sAutoUpdFile.c_str());
     }
 
-    if (m_pAutoUpdFetch)
-    {
-        delete m_pAutoUpdFetch;
-        m_pAutoUpdFetch = NULL;
-    }
-    m_pAutoUpdFetch = new HttpFetch();
-    m_pAutoUpdFetch->setTimeout(15);  //Set Req timeout as 30 seconds
-    m_pAutoUpdFetch->setCallBack(autoUpdCheckCb, this);
-    GSockAddr m_addrResponder;
+    if (m_pAutoUpdFetch[0])
+        delete m_pAutoUpdFetch[0];
+    m_pAutoUpdFetch[0] = new HttpFetch();
+    m_pAutoUpdFetch[0]->setTimeout(15);  //Set Req timeout as 30 seconds
+    m_pAutoUpdFetch[0]->setCallBack(autoUpdCheck, this);
+    GSockAddr addrResponder, addrResponder2;
     char sUrl[256];
     char osstr[64] = {0};
     char plat[64] = {0};
     strcpy(sUrl, "http://openlitespeed.org/");
-    m_addrResponder.setHttpUrl(sUrl, strlen(sUrl));
+    addrResponder.setHttpUrl(sUrl, strlen(sUrl));
+    addrResponder2.setHttpUrl(sUrl, strlen(sUrl));
     strcat(sUrl, "packages/release?ver=");
     strcat(sUrl, PACKAGE_VERSION);
     strcat(sUrl, "&os=");
@@ -1109,11 +1138,28 @@ void HttpServerImpl::checkOLSUpdate()
     strcat(sUrl, "_src_");
 #endif
     strcat(sUrl, detectPlat(plat, 64));
-    m_pAutoUpdFetch->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
-                              m_addrResponder);
+    m_pAutoUpdFetch[0]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
+                              addrResponder);
 
+    /**
+     * Since now on, we will fetch the latest version of current branch at
+     * the same time and will send a notification if have newer version of 
+     * current branch (TBD)
+     */
+    sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
+    sAutoUpdFile.append("autoupdate/releasecb", 20);
+    if (m_pAutoUpdFetch[1])
+        delete m_pAutoUpdFetch[1];
+    m_pAutoUpdFetch[1] = new HttpFetch();
+    
+    m_pAutoUpdFetch[1]->setTimeout(15);  //Set Req timeout as 30 seconds
+    m_pAutoUpdFetch[1]->setCallBack(autoUpdCheckCb, this);
+    int curVer = readVersionStr(PACKAGE_VERSION);
+    snprintf(sUrl, 255, "http://openlitespeed.org/packages/relbr%d.%d",
+             curVer / 1000000, (curVer / 10000) % 100);
+    m_pAutoUpdFetch[1]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
+                              addrResponder2);
 }
-
 
 
 void HttpServerImpl::onTimer60Secs()
@@ -1772,11 +1818,19 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
     pVHostAdmin->configSecurity(pNode);
     pVHostAdmin->initErrorLog(pNode, 0);
     pVHostAdmin->initAccessLog(pNode, 0);
+   
     //test if file $SERVER_ROOT/conf/disablewebconsole exist
     //skip admin listener configuration
     if (!enableWebConsole())
         return 0;
 
+    char achRules[] =
+        "RewriteCond %{REQUEST_URI} !^/(index|login)\\.php\n"
+        "RewriteCond %{REQUEST_URI} !^/view/(serviceMgr|confMgr|ajax_data|dashboard|logviewer|compilePHP|realtimestats)\\.php \n"
+        "RewriteRule \\.php - [F]\n";
+    pVHostAdmin->getRootContext().configRewriteRule(NULL, achRules, NULL);
+    pVHostAdmin->getRootContext().enableRewrite(1);
+   
     mapDomainList(pNode, pVHostAdmin);
     return 0;
 }
@@ -2169,8 +2223,6 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                           10000, 30));
     config.setMaxKeepAliveRequests(
         currentCtx.getLongValue(pNode, "maxKeepAliveReq", 0, 32767, 100));
-    config.setSmartKeepAlive(currentCtx.getLongValue(pNode, "smartKeepAlive",
-                             0, 1, 0));
 
     //HTTP request/response
     config.setMaxURLLen(currentCtx.getLongValue(pNode, "maxReqURLLen", 100,
@@ -2305,7 +2357,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     }
 
     int v = currentCtx.getLongValue(pNode, "sslEnableMultiCerts", 0, 1, 0);
-    ConfigCtx::getCurConfigCtx()->setEnableMultiCerts(v);
+    config.setEnableMultiCerts(v);
 
     int iSslCacheSize;
     int32_t iSslCacheTimeout;
@@ -2539,6 +2591,43 @@ static const char *getAutoIndexURI(const XmlNode *pNode)
     }
 
     return pURI;
+}
+
+void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod)
+{
+    char  achBuf[4096];
+    ls_snprintf(achBuf, 4096, "%s/%s/",
+                MainServerConfig::getInstance().getServerRoot(), pSuffix);
+
+    bool rootuser = (getuid() == 0);
+    struct stat sb;
+    int iStat = stat(achBuf, &sb);
+    if (iStat == -1)
+    {
+        if (GPath::createMissingPath(achBuf, (rootuser ? mod : 0777)) == 0)
+        {
+            iStat = stat(achBuf, &sb);
+            LS_NOTICE("[testAndFixDirs] \"%s\" not exist, created stat %d.",
+                       achBuf, iStat);
+        }
+    }
+
+    if (iStat != -1 && rootuser)
+    {
+        if (sb.st_uid != uid || sb.st_gid != gid)
+        {
+            LS_NOTICE("[testAndFixDirs] \"%s\" exist and change own to %d:%d.",
+                    achBuf, uid, gid);
+            chown(achBuf, uid, gid);
+        }
+
+        if ((sb.st_mode & 0777) != mod )
+        {
+            LS_NOTICE("[testAndFixDirs] \"%s\" exist and changed mod to %04o.",
+                    achBuf, mod);
+            chmod(achBuf, mod);
+        }
+    }
 }
 
 
@@ -2904,6 +2993,7 @@ void HttpServerImpl::verifyStatDir(const char *path)
 
 int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 {
+    struct passwd *pw;
     MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
     ServerProcessConfig &procConf = ServerProcessConfig::getInstance();
 
@@ -2971,7 +3061,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             if (pUser)
                 MainServerConfigObj.setUser(pUser);
             gid_t gid = procConf.getGid();
-            struct passwd *pw = Daemonize::configUserGroup(pUser, pGroup, gid);
+            pw = Daemonize::configUserGroup(pUser, pGroup, gid);
             procConf.setGid(gid);
             if (!pw)
             {
@@ -3080,6 +3170,19 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         m_sRTReportFile = sStatDir;
         m_sRTReportFile.append("/.rtreport", 10);
 
+
+        testAndFixDirs("cachedata", procConf.getUid(), procConf.getGid(), 0755);
+        testAndFixDirs("autoupdate", procConf.getUid(), procConf.getGid(), 0755);
+        testAndFixDirs("tmp", procConf.getUid(), procConf.getGid(), 0755);
+        testAndFixDirs("tmp/ocspcache", procConf.getUid(), procConf.getGid(), 0700);
+        
+        //Fix Conf now
+        pw = getpwnam("lsadm");
+        if (!pw)
+            LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
+        else
+            testAndFixDirs("conf", pw->pw_uid, procConf.getGid(), 0750);
+        
         return 0;
     }
 
@@ -3586,7 +3689,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 
     settings.es_support_push = GET_VAL(pNode, "quicPush", 0, 1, 1);
 
-    settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 2, 0);
+    settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 2, 1);
 
     settings.es_proc_time_thresh = 100000;
     settings.es_pace_packets = 1;
@@ -3749,7 +3852,6 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     }
 
     ZConfManager::getInstance().prepareServerUp();
-
     return ret;
 }
 
@@ -3932,10 +4034,10 @@ int HttpServerImpl::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
     }
 
     //ret = configServerBasics( reconfig );
-    ret = configServerBasics(reconfig, pRoot);
-
-    if (ret)
-        return ret;
+//     ret = configServerBasics(reconfig, pRoot);
+//
+//     if (ret)
+//         return ret;
 
     ClientCache::initClientCache(1000);
 
@@ -4359,7 +4461,6 @@ int HttpServerImpl::initSampleServer()
 
     pVHost->getRootContext().addDirIndexes(
         "index.htm, index.php, index.html, default.html");
-    pVHost->setSmartKA(0);
     pVHost->setMaxKAReqs(100);
 
     pLimit = pVHost->getThrottleLimits();

@@ -81,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Tue Nov 19 19:30:53 UTC 2019)"
+#define BUILDTIME  " (built: Fri Jan  3 13:33:02 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -169,7 +169,7 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     LS_NOTICE("[AutoRestarter] child process with pid=%d received signal=%d, %s!",
               (int)pid, signal, pCoreFile[ coredump != 0 ]);
     //cleanUp();
-    
+
 #if 1
     LS_NOTICE("[***] will create core file.");
 //#ifdef LS_ENABLE_DEBUG
@@ -177,7 +177,7 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     //We are in middle of graceful shutdown, do not restart another copy
     SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);
 #else
-    
+
     AutoStr2 sCmd;
     sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
     sCmd.append("/admin/misc/testbeta.sh", 23);
@@ -193,21 +193,21 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     else
     {
         upLastCheckingTm = DateTime::s_curTime;
-        
+
         coredump = 0;
         //Since it is not DEBUG version, I will download the DEBUG version to run.
         const char *pVer = PACKAGE_VERSION;
         sCmd.append(" -d ", 4);
         sCmd.append(pVer, strlen(pVer));
-        
+
         LS_NOTICE("[*****] non-debug version running, run cmd \"%s\".",
                 sCmd.c_str());
-        
+
         if (fork() == 0)  // run it in child process
             ::system(sCmd.c_str());
     }
-#endif    
-    
+#endif
+
     if (coredump)
     {
 
@@ -593,7 +593,7 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
         strcat(achBuf, "/");
         left_len -= strlen(achBuf);
     }
-    
+
     if (left_len >= (int)strlen(command))
         strcat(achBuf, command);
     else
@@ -682,10 +682,10 @@ int LshttpdMain::config()
         m_pBuilder->releaseConfigXmlTree();
     if (ret != 0)
         return 1;
-    
+
     if (m_iConfTestMode)
         return 0;
-    
+
     if (m_pServer->isServerOk())
         return 2;
 //    if ( ServerProcessConfig::getInstance.getChroot != NULL )
@@ -771,8 +771,8 @@ int LshttpdMain::testRunningServer()
 void LshttpdMain::printVersion()
 {
     printf("%s%s%s\n\tmodule versions:\n%s\n",
-           HttpServerVersion::getVersion(), BUILDTIME, 
-           
+           HttpServerVersion::getVersion(), BUILDTIME,
+
 #ifdef LS_ENABLE_DEBUG
            " (DEBUG)",
 #else
@@ -892,7 +892,7 @@ int LshttpdMain::init(int argc, char *argv[])
     }
     else
         MainServerConfig::getInstance().setConfTestMode(1);
-    
+
 #ifndef IS_LSCPD
 
     //load the config
@@ -930,7 +930,7 @@ int LshttpdMain::init(int argc, char *argv[])
     plainconf::flushErrorLog();
 #endif
 
-  
+
     LS_NOTICE("Loading %s%s ...", HttpServerVersion::getVersion(), BUILDTIME);
     LS_NOTICE("Using [%s]", SSLeay_version(SSLEAY_VERSION));
 
@@ -960,7 +960,7 @@ int LshttpdMain::init(int argc, char *argv[])
     }
 
     QuicEngine::setpid(getpid());
-    
+
 #ifndef IS_LSCPD
     ret = config();
     if (ret && !m_iConfTestMode)
@@ -1043,7 +1043,7 @@ int LshttpdMain::init(int argc, char *argv[])
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_INIT,
                 NULL);
 
-    
+
 
     return 0;
 }
@@ -1082,7 +1082,7 @@ int LshttpdMain::main(int argc, char *argv[])
                 GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_ATEXIT, NULL);
         }
         m_pServer->releaseAll();
-        
+
         if (m_iConfTestMode)
         {
             int ret = 0;
@@ -1102,13 +1102,13 @@ int LshttpdMain::main(int argc, char *argv[])
                     if (buff != (unsigned char *)(-1))
                     {
                         printf("%.*s", (int)st.st_size, buff);
-                        
+
                         if (strstr((const char *)buff, "[ERROR]") != NULL)
                             ret = 2;
                     }
                     munmap((caddr_t)buff, st.st_size);
                 }
-                
+
                 close(fd);
                 unlink(TEST_CONF_LOG);
             }
@@ -1235,6 +1235,8 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     m_pServer->setProcNo(pProc->m_iProcNo);
     //setAffinity( 0, pProc->m_iProcNo);  //TEST: need uncomment and debug
     releaseExcept(pProc);
+    StdErrLogger::getInstance().movePipeFdToStdErr();
+
     m_pServer->reinitMultiplexer();
     m_pServer->enableAioLogging();
     if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
@@ -1544,21 +1546,22 @@ int LshttpdMain::guardCrash()
     else
         m_fdAdmin = -1;
 
-    int pollCount = 0;
     if (m_fdCmd != -1)
     {
-        pfds[pollCount].fd = m_fdCmd;
-        pfds[pollCount].events = POLLIN;
-        ++pollCount;
+        pfds[0].fd = m_fdCmd;
+        pfds[0].events = POLLIN;
     }
-    
+
     if (m_fdAdmin != -1)
     {
-        pfds[pollCount].fd = m_fdAdmin;
-        pfds[pollCount].events = POLLIN;
-        ++pollCount;
+        pfds[1].fd = m_fdAdmin;
+        pfds[1].events = POLLIN;
+
     }
-    
+
+    pfds[2].fd = StdErrLogger::getInstance().getfd();
+    pfds[2].events = POLLIN;
+
     s_iRunning = 1;
     startTimer();
     while (s_iRunning > 0)
@@ -1595,21 +1598,26 @@ int LshttpdMain::guardCrash()
                 }
             }
         }
-        if (pollCount > 0)
+        ret = ::poll(pfds, 3, 1000);
+        if (ret > 0)
         {
-            ret = ::poll(pfds, pollCount, 1000);
-            if (ret > 0)
+            if (pfds[0].revents && m_fdCmd != -1)
+                processChildCmd();
+            else if (pfds[1].revents && m_fdAdmin != -1)
             {
-                if (pfds[0].revents && m_fdCmd != -1)
-                    processChildCmd();
-                else if (m_fdAdmin != -1)
+                if (pfds[1].revents == POLLNVAL)
+                {
+                    closeAdminSocket();
+                    pfds[1].fd = -1;
+                }
+                else
                     acceptAdminSockConn();
-                continue;
             }
-
+            else if (pfds[2].revents)
+                StdErrLogger::getInstance().handleEvents(POLLIN);
+            continue;
         }
-        else
-            ::sleep(1);
+
         if (HttpSignals::gotEvent())
             processSignal();
         if ((s_tmDelayShutdown > 0)&&(DateTime::s_curTime > s_tmDelayShutdown))
@@ -1787,7 +1795,7 @@ static long getProcessStartTime(int pid)
     if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0) {
         return -1;
     }
-#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
     return kp.ki_start.tv_sec;
 #else
     return kp.kp_proc.p_un.__p_starttime.tv_sec;
@@ -1801,13 +1809,13 @@ static long getProcessStartTime(int pid)
 {
     char proc_pid_path[80];
     struct stat st;
-    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/exe", pid);
-    int ret = lstat(proc_pid_path, &st);
+    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/stat", pid);
+    int ret = stat(proc_pid_path, &st);
     if (ret == -1)
     {
         return -1;
     }
-    return st.st_mtime;
+    return st.st_ctime;
 }
 #endif
 

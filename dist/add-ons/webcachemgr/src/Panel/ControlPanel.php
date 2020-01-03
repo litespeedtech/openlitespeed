@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.9';
+    const PANEL_API_VERSION = '1.9.4';
 
     /**
      * @since 1.9
@@ -264,6 +264,10 @@ abstract class ControlPanel
         return $ret;
     }
 
+    /**
+     *
+     * @throws LSCMException
+     */
     public function verifyCacheSetup()
     {
         if ( !$this->isCacheEnabled() ) {
@@ -291,6 +295,10 @@ abstract class ControlPanel
         }
     }
 
+    /**
+     *
+     * @param string  $vhCacheRoot
+     */
     public function setVHCacheRoot( $vhCacheRoot = 'lscache' )
     {
         $this->log('Attempting to set VH cache root...', Logger::L_VERBOSE);
@@ -374,6 +382,10 @@ abstract class ControlPanel
         return $this->docRootMap;
     }
 
+    /**
+     *
+     * @return string
+     */
     public function getDefaultSvrCacheRoot()
     {
         return $this->defaultSvrCacheRoot;
@@ -470,7 +482,7 @@ abstract class ControlPanel
     {
         $svrCacheRoot = '';
 
-        $serverConf = dirname(__FILE__) . '/../../../../conf/httpd_config.xml';
+        $serverConf = __DIR__ . '/../../../../conf/httpd_config.xml';
 
         if ( file_exists($serverConf) ) {
             $file_content = file_get_contents($serverConf);
@@ -704,6 +716,10 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.9.4',
+            '1.9.3',
+            '1.9.2',
+            '1.9.1',
             '1.9',
             '1.8',
             '1.7',
@@ -720,10 +736,10 @@ abstract class ControlPanel
         $maxAPIVer = $supportedAPIVers[0];
         $minAPIVer = end($supportedAPIVers);
 
-        if ( $panelAPIVer > $maxAPIVer ) {
+        if ( version_compare($panelAPIVer, $maxAPIVer, '>') ) {
             return self::PANEL_API_VERSION_TOO_HIGH;
         }
-        elseif ( $panelAPIVer < $minAPIVer ) {
+        elseif ( version_compare($panelAPIVer, $minAPIVer, '<') ) {
             return self::PANEL_API_VERSION_TOO_LOW;
         }
         elseif ( ! in_array($panelAPIVer, $supportedAPIVers) ) {

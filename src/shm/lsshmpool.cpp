@@ -113,7 +113,8 @@ LsShmStatus_t LsShmPool::createStaticData(const char *name)
     LsShmPoolMem *pPool = getPool();
 
     pPool->x_iMagic = LSSHM_POOL_MAGIC;
-    strncpy((char *)pPool->x_aName, name, LSSHM_MAXNAMELEN);
+    //NOTE: x_aName does not require '\0' terminated if name length is LSSHM_MAXNAMELEN .
+    memccpy((char *)pPool->x_aName, name, '\0', LSSHM_MAXNAMELEN);
     pPool->x_iSize = sizeof(LsShmPoolMem);
 
     pPool->x_iLockOffset = 0;

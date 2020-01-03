@@ -7,7 +7,7 @@ m4_include(ax_check_libudns.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([openlitespeed],[1.6.4],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.6.5],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define ])
 
 AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
@@ -497,7 +497,6 @@ AC_CONFIG_FILES(Makefile
                 src/adns/Makefile
                 src/quic/Makefile
                 src/liblsquic/Makefile
-                src/modules/cache/Makefile
                 src/modules/modinspector/Makefile
                 src/modules/modreqparser/Makefile
                 src/modules/uploadprogress/Makefile)

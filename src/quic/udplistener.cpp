@@ -168,7 +168,7 @@ int UdpListener::setAddr(const char *pAddr)
 const char *UdpListener::buildLogId()
 {
     char sId[256] = "UDP:";
-    m_addr.toString(&sId[4], 200); 
+    m_addr.toString(&sId[4], 200);
     appendLogId(sId);
     return m_logId.ptr;
 }
@@ -295,9 +295,9 @@ int UdpListener::start()
 
     ::fcntl(fd, F_SETFD, FD_CLOEXEC);
     ::fcntl(fd, F_SETFL, MultiplexerFactory::getMultiplexer()->getFLTag());
-    
+
     setfd(fd);
-    
+
 #ifndef  _NOT_USE_SHM_
     UdpListener::initCidListenerHt();
 #if defined(LS_HAS_RTSIG)
@@ -305,7 +305,7 @@ int UdpListener::start()
         s_rtsigNo = SigEventDispatcher::getInstance().
                         registerRtsig(onMyEvent, m_pEngine, true);
 #endif
-    
+
 #endif
     initPacketsIn();
 
@@ -613,7 +613,7 @@ ssize_t UdpListener::send(struct iovec *iov, size_t iovlen,
     {
         MultiplexerFactory::getMultiplexer()->continueWrite(this);
     }
-    return ret; 
+    return ret;
 }
 
 
@@ -678,7 +678,14 @@ int UdpListener::sendPackets(const struct lsquic_out_spec *spec,
         if (errno == EPERM)
             ret = count;
         else
+        {
+            int err = errno;
             MultiplexerFactory::getMultiplexer()->continueWrite(this);
+            if (ret > 0)
+                errno = EAGAIN;
+            else
+                errno = err;
+        }
     }
     return ret;
 #else
@@ -782,7 +789,7 @@ int UdpListener::feedOwnedPacketToEngine(UdpListener *pListener,
                                 const struct quicshm_packet_buf *packet_buf)
 {
     int s;
-    
+
     s = lsquic_engine_packet_in(pListener->getEngine()->getEngine(),
             packet_buf->data,
             packet_buf->data_len,
@@ -1038,7 +1045,7 @@ void UdpListener::processPacketsInBatch(struct read_ctx *rctx)
                     s == 1 ? "will" : "will not");
                 pids[ uniq_cid_idxs[n] ].pid = -3;
                 break;
-            case -3: 
+            case -3:
                 LS_DBG_MC(this, "%s: skip packet %u: "
                     "CID %" CID_FMT ", already sent PUBLIC_RESET.", __func__,
                     n, CID_BITS(&uniq_cids[ uniq_cid_idxs[n] ]));
@@ -1066,7 +1073,7 @@ void UdpListener::processPacketsInBatch(struct read_ctx *rctx)
         THash<CidInfo *>::iterator it;
         for (n = 0; n < n_uniq_cids; ++n)
         {
-            if (cid2packet_counts[n] == 0 
+            if (cid2packet_counts[n] == 0
                     /* This means that this is never-before-seen cid: */
                 && unknown_cids[n] && pids[n].pid == QuicEngine::getpid())
             {
@@ -1136,7 +1143,7 @@ void UdpListener::processPacketsInBatch(struct read_ctx *rctx)
         while (alien_idx > 0);
 #if DEBUG_SHM_OFFSETS
         LS_DBG_L(this, "%s: offsets after alien shuffling: (%s)", __func__,
-                 (pbs2offstr(packet_bufs, m_pPacketsIn->n_avail, offstr, 
+                 (pbs2offstr(packet_bufs, m_pPacketsIn->n_avail, offstr,
                              sizeof(offstr)), offstr));
 #endif
     }
@@ -1148,7 +1155,7 @@ void UdpListener::processPacketsInBatch(struct read_ctx *rctx)
     if (n_alien_packets)
     {
 #if DEBUG_SHM_OFFSETS
-        LS_DBG_L(this, "%s: %u alien packets, offsets: (%s)", __func__, 
+        LS_DBG_L(this, "%s: %u alien packets, offsets: (%s)", __func__,
                  n_alien_packets,
             (pbs2offstr(packet_bufs + m_pPacketsIn->n_avail - n_alien_packets,
                            n_alien_packets, offstr, sizeof(offstr)), offstr));
@@ -1159,7 +1166,7 @@ void UdpListener::processPacketsInBatch(struct read_ctx *rctx)
             n_alien_packets, pids_to_signal, &n_pids_to_signal);
         if (n < n_alien_packets)
         {
-            LS_WARN(this, "%s: could only append %u out of %u packets", 
+            LS_WARN(this, "%s: could only append %u out of %u packets",
                     __func__, n, n_alien_packets);
             if (n)
                 memmove(
@@ -1181,14 +1188,14 @@ void UdpListener::processPacketsInBatch(struct read_ctx *rctx)
     /* Notify other processes */
     for (n = 0; n < n_pids_to_signal; ++n)
         if (0 == kill(pids_to_signal[n], s_rtsigNo))
-            LS_DBG_L(this, "%s: my pid %d successfully sent a sig to pid %d", 
+            LS_DBG_L(this, "%s: my pid %d successfully sent a sig to pid %d",
                      __func__, QuicEngine::getpid(), pids_to_signal[n]);
         else if (errno == ESRCH || errno == EPERM)
         {   /* EPERM is handled here because it is possible that a
              * process crashed and its PID was reused by another,
              * unrelated, process.
              */
-            LS_DBG_L(this, "%s: pid %d seems to be dead, clean up after it", 
+            LS_DBG_L(this, "%s: pid %d seems to be dead, clean up after it",
                      __func__, pids_to_signal[n]);
             QuicShm::getInstance().cleanupPidShm(pids_to_signal[n]);
         }
@@ -1252,7 +1259,7 @@ enum rop UdpListener::readOnePacket(struct read_iter *iter)
     m_pPacketsIn->vecs[iter->ri_idx].iov_base = m_pPacketsIn->packet_data + iter->ri_off;
     m_pPacketsIn->vecs[iter->ri_idx].iov_len  = MAX_PACKET_SZ;
     unsigned char *ctl_buf = m_pPacketsIn->ctlmsg_data + iter->ri_idx * CTL_SZ;
-    
+
     struct msghdr msg;
     memset(&msg, 0, sizeof(msg));
     msg.msg_name       = &m_pPacketsIn->peer_addresses[iter->ri_idx],
@@ -1340,7 +1347,7 @@ int UdpListener::onRead()
                 return -1;
             }
         }
-        LS_DBG_M(this, "%s: available packet buffers: %u", __func__, 
+        LS_DBG_M(this, "%s: available packet buffers: %u", __func__,
                  m_pPacketsIn->n_avail);
 #endif
         rctx.rc_riter.ri_idx = 0;
@@ -1373,7 +1380,7 @@ int UdpListener::onRead()
 
     finishReading(&rctx);
 
-    LS_DBG_L(this, "%s: done; in total, read %u packet%.*s in %u batch%.*s", 
+    LS_DBG_L(this, "%s: done; in total, read %u packet%.*s in %u batch%.*s",
              __func__, n_packets, n_packets != 1,         "s",
                      n_batches, (n_batches != 1) << 1, "es");
 
@@ -1387,7 +1394,7 @@ int UdpListener::handleEvents(short int event)
     {
 //         if (m_pEngine->isShutdown())
 //             MultiplexerFactory::getMultiplexer()->suspendRead(this);
-//         else    
+//         else
         onRead();
     }
     if (event & POLLOUT)
@@ -1421,7 +1428,7 @@ int UdpListener::initPacketsIn(void)
 
 #if DEBUG_SHM_OFFSETS
     n_alloc = MIN(10, BATCH_SIZE);  /* Small number to make it easy to track */
-    LS_INFO(this, "%s: DEBUG_SHM_OFFSETS is on, allocate %u packets", 
+    LS_INFO(this, "%s: DEBUG_SHM_OFFSETS is on, allocate %u packets",
             __func__, n_alloc);
 #endif
 
@@ -1499,7 +1506,7 @@ UdpListener::~UdpListener()
 //                     m_pPacketsIn->packet_bufs, m_pPacketsIn->n_avail);
 //         m_pPacketsIn->n_avail = 0;
 //     }
-// 
+//
 //     while (m_availPacketBufs.count() > 0)
 //         releaseSomePacketsToSHM();
 // #endif

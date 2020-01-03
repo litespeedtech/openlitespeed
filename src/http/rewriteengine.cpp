@@ -401,7 +401,7 @@ int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
         if (!pValue)
             i = 0;
         return i;
-    case REF_REQUST_FN:
+    case REF_REQUEST_FN:
     case REF_SCRIPTFILENAME:
         if (m_iScriptLen == -1)
         {
@@ -778,13 +778,13 @@ int RewriteEngine::processQueryString(HttpSession *pSession, int flag)
     pBuf++;
     if (n > 0)
     {
-        if (n > REWRITE_BUF_SIZE - 1)
-            n = REWRITE_BUF_SIZE - 1;
+        if (n > REWRITE_BUF_SIZE - 2)
+            n = REWRITE_BUF_SIZE - 2;
         if (flag & RULE_FLAG_QSAPPEND)
         {
-            if (REWRITE_BUF_SIZE < n + m_qsLen + 2)
+            if (REWRITE_BUF_SIZE < n + m_qsLen + 3)
             {
-                m_qsLen = REWRITE_BUF_SIZE - n - 2;
+                m_qsLen = REWRITE_BUF_SIZE - n - 3;
                 if (m_qsLen < 0)
                     m_qsLen = 0;
             }

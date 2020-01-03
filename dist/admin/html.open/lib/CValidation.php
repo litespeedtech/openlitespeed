@@ -500,10 +500,40 @@ class CValidation
             $node->SetErr($err);
         return $res;
     }
+    
+    protected function isNotAllowedPath($path)
+    {
+        $blocked = '/admin/html/';
+        if (strpos($path, $blocked) !== false) {
+            return true;
+        }
+        return false;
+    }
+
+    protected function isNotAllowedExtension($path)
+    {
+        $ext = substr($path, -4);
+        $notallowed = ['.php', '.cgi', '.pl', '.shtml'];
+        foreach ($notallowed as $test) {
+            if (strcasecmp($ext, $test) == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public function chkAttr_file_val($attr, $val, &$err)
     {
-        //this is public
+        // apply to all
+        if ($this->isNotAllowedPath($val)) {
+            $err = 'Directory not allowed';
+            return -1;
+        }
+        if ( $attr->_type == 'file0' && $this->isNotAllowedExtension($val)) {
+            $err = 'File extension not allowed';
+            return -1;
+        }
+        
         clearstatcache();
         $err = null;
 
@@ -541,7 +571,7 @@ class CValidation
             }
         }
 
-        if ($res == -1 && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
+        if ($res == -1 && isset($_POST['file_create']) && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
             if (PathTool::createFile($path, $err, $attr->GetKey())) {
                 $err = "$path has been created successfully.";
             }
@@ -663,14 +693,15 @@ class CValidation
 
     protected function chkAttr_addr($attr, $node)
     {
-        if (preg_match("/^([[:alnum:]._-]+|\[[[:xdigit:]:]+\]):(\d)+$/", $node->Get(CNode::FLD_VAL))) {
+        $v = $node->Get(CNode::FLD_VAL);
+        if (preg_match("/^([[:alnum:]._-]+|\[[[:xdigit:]:]+\]):(\d)+$/", $v)) {
             return 1;
-        } elseif (preg_match("/^UDS:\/\/.+/i", $node->Get(CNode::FLD_VAL))) {
+        } 
+        if (preg_match("/^UDS:\/\/[a-z0-9\/\.]+$/i", $v)) {
             return 1;
-        } else {
-            $node->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
-            return -1;
-        }
+        } 
+        $node->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
+        return -1;
     }
 
     protected function chkAttr_wsaddr($attr, $node)

@@ -112,8 +112,7 @@ class DTblMap
         $index = $tbl->Get(DTbl::FLD_INDEX);
 
         foreach ($attrs as $attr) {
-
-            if ($attr->_type == 'action' || $attr->IsFlagOn(DAttr::BM_NOFILE))
+            if ($attr == null || $attr->_type == 'action' || $attr->IsFlagOn(DAttr::BM_NOFILE))
                 continue;
 
             $key = $attr->GetKey();

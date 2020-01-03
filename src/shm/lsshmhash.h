@@ -186,7 +186,7 @@ public:
 public:
     LsShmHash(LsShmPool *pool,
               const char *name, LsShmHasher_fn hf, LsShmValComp_fn vc, int flags);
-    virtual ~LsShmHash();
+    ~LsShmHash();
 
     static LsShmHash *open(
         const char *pShmName, const char *pHashName, int init_size, int flags);

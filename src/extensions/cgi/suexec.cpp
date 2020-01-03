@@ -460,7 +460,10 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
         send_fd(fdReq, listenFd);
         pid = 0;
         if (read(fdReq, &pid, 4) != 4)
+        {
+            LS_ERROR("[suEXEC] Failed to read 4 bytes pid from fdReq");
             return LS_FAIL;
+        }
     }
     if (pfd)
         *pfd = fdReq;

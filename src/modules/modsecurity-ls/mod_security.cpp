@@ -140,7 +140,12 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
 
     if (level == LSI_CFG_SERVER)
     {
-        assert(pInitConfig == NULL);
+        if (pInitConfig)
+        {
+            g_api->log(NULL, LSI_LOG_ERROR,
+                       "[Module:%s] ParseConfig found error.\n", //load multi times?
+                       ModuleNameStr);
+        }
         pConfig->modsec = msc_init();
         msc_set_connector_info(pConfig->modsec, MODULE_VERSION_INFO);
         msc_set_log_cb(pConfig->modsec, ls_modSecLogCb);
@@ -603,7 +608,7 @@ static int reqBodyHook(lsi_param_t *rec)
     else
     {
         g_api->log(session, LSI_LOG_DEBUG,
-               "[Module:%s] reqBodyHook bypass reqBody len %d.\n",
+               "[Module:%s] reqBodyHook bypass reqBody len %ld.\n",
                ModuleNameStr, len);
     }
     

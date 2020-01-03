@@ -22,9 +22,12 @@ SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 
 IF (CMAKE_BUILD_TYPE MATCHES "Debug")
     set (ASAN "1")
-set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
+    set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
+    add_definitions(-DRUN_TEST)
+    set(libUnitTest  libUnitTest++.a)
+
 ELSE ()
-set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter ")
+    set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter ")
 ENDIF()
 
 ## thread sanitizer
@@ -85,11 +88,6 @@ find_package(EXPAT REQUIRED)
 
 #execute_process( COMMAND ${PROJECT_SOURCE_DIR}/dlossl.sh )
 
-##########################################################################################
-#If you want to link libUnitTest++, just un-comment out the following commands
-#AND YOU NEED TO INSTALL it to the directory /src/test/unittest-cpp/UnitTest++/
-add_definitions(-DRUN_TEST)
-set(libUnitTest  libUnitTest++.a)
 ##########################################################################################
 #If you want to use BoringSSL, just un-comment out the following commands
 #AND YOU NEED TO HAVE THE files ready in openlitespeed/ssl

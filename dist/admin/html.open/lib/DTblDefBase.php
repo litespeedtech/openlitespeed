@@ -285,7 +285,6 @@ class DTblDefBase
             'tp_vrFile' => self::NewParseTextAttr('fileName', DMsg::ALbl('l_filename'), '/(\$VH_NAME)|(\$VH_ROOT)/', DMsg::ALbl('parse_tpfile'), false, 'templateFileRef'),
             'tp_name'            => self::NewParseTextAttr('name', DMsg::ALbl('l_name'), $this->_options['tp_vname'][0], $this->_options['tp_vname'][1], false, 'tpextAppName'),
             'vh_maxKeepAliveReq' => self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
-            'vh_smartKeepAlive'  => self::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), true, 'vhSmartKeepAlive'),
             'vh_enableGzip'      => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
             'vh_allowSymbolLink' => self::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
             'vh_enableScript'    => self::NewBoolAttr('enableScript', DMsg::ALbl('l_enablescript'), false),
@@ -417,7 +416,6 @@ class DTblDefBase
             self::NewIntAttr('maxSSLConnections', DMsg::ALbl('l_maxsslconns'), false, 0),
             self::NewIntAttr('connTimeout', DMsg::ALbl('l_conntimeout'), false, 10, 1000000),
             self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), false, 0, 32767),
-            self::NewBoolAttr('smartKeepAlive', DMsg::ALbl('l_smartkeepalive'), false),
             self::NewIntAttr('keepAliveTimeout', DMsg::ALbl('l_keepalivetimeout'), false, 0, 60),
             self::NewIntAttr('sndBufSize', DMsg::ALbl('l_sndbufsize'), true, 0, '512K'),
             self::NewIntAttr('rcvBufSize', DMsg::ALbl('l_rcvbufsize'), true, 0, '512K'),
@@ -878,7 +876,6 @@ class DTblDefBase
     {
         $attrs = array(
             $this->_attrs['vh_maxKeepAliveReq'],
-            $this->_attrs['vh_smartKeepAlive']
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_connection'), $attrs, 'name');
     }
@@ -1191,7 +1188,7 @@ class DTblDefBase
     {
         return array(
             'realm_type'             => self::NewSelAttr('type', DMsg::ALbl('l_realmtype'), $this->_options['realmType'], false, 'realmType'),
-            'realm_name'             => self::NewTextAttr('name', DMsg::ALbl('l_realmname'), 'name', false, 'realmName'),
+            'realm_name'             => self::NewTextAttr('name', DMsg::ALbl('l_realmname'), 'vhname', false, 'realmName'),
             'realm_udb_maxCacheSize' => self::NewIntAttr('userDB:maxCacheSize', DMsg::ALbl('l_userdbmaxcachesize'), true, 0, '100K', 'userDBMaxCacheSize'),
             'realm_udb_cacheTimeout' => self::NewIntAttr('userDB:cacheTimeout', DMsg::ALbl('l_userdbcachetimeout'), true, 0, 3600, 'userDBCacheTimeout'),
             'realm_gdb_maxCacheSize' => self::NewIntAttr('groupDB:maxCacheSize', DMsg::ALbl('l_groupdbmaxcachesize'), true, 0, '100K', 'groupDBMaxCacheSize'),
@@ -1200,9 +1197,9 @@ class DTblDefBase
 
     protected function add_V_REALM_FILE($id)
     {
-        $udbLoc = self::NewPathAttr('userDB:location', DMsg::ALbl('l_userdblocation'), 'file', 3, 'rc', false, 'userDBLocation');
+        $udbLoc = self::NewPathAttr('userDB:location', DMsg::ALbl('l_userdblocation'), 'file', 3, 'rwc', false, 'userDBLocation');
         $udbLoc->_href = '&t1=V_UDB_TOP&r1=$R';
-        $gdbLoc = self::NewPathAttr('groupDB:location', DMsg::ALbl('l_groupdblocation'), 'file', 3, 'rc', true, 'GroupDBLocation');
+        $gdbLoc = self::NewPathAttr('groupDB:location', DMsg::ALbl('l_groupdblocation'), 'file', 3, 'rwc', true, 'GroupDBLocation');
         $gdbLoc->_href = '&t1=V_GDB_TOP&r1=$R';
 
         $realm_attr = $this->get_realm_attrs();
@@ -1253,10 +1250,10 @@ class DTblDefBase
     protected function add_V_UDB($id)
     {
         $attrs = array(
-            self::NewTextAttr('name', DMsg::ALbl('l_username'), 'name', false),
+            self::NewTextAttr('name', DMsg::ALbl('l_username'), 'name', false, 'UDBusername'),
             self::NewTextAttr('group', DMsg::ALbl('l_groups'), 'name', true, 'UDBgroup', 1),
-            self::NewPassAttr('pass', DMsg::ALbl('l_newpass')),
-            self::NewPassAttr('pass1', DMsg::ALbl('l_retypepass'))
+            self::NewPassAttr('pass', DMsg::ALbl('l_newpass'), false, 'UDBpass'),
+            self::NewPassAttr('pass1', DMsg::ALbl('l_retypepass'), false, 'UDBpass1')
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_userdbentry'), $attrs, 'name');
         $this->_tblDef[$id]->Set(DTbl::FLD_SHOWPARENTREF, true);
@@ -1277,11 +1274,11 @@ class DTblDefBase
 
     protected function add_V_GDB($id)
     {
-        $users = self::NewTextAreaAttr('users', DMsg::ALbl('l_users'), 'name', true, 15, null, 0, 0, 1);
+        $users = self::NewTextAreaAttr('users', DMsg::ALbl('l_users'), 'name', true, 15, 'gdb_users', 0, 0, 1);
         $users->SetGlue(' ');
 
         $attrs = array(
-            self::NewTextAttr('name', DMsg::ALbl('l_groupname'), 'name', false),
+            self::NewTextAttr('name', DMsg::ALbl('l_groupname'), 'vhname', false, 'gdb_groupname'),
             $users,
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_groupdbentry'), $attrs, 'name');
@@ -1358,7 +1355,6 @@ class DTblDefBase
             $this->_attrs['tp_vhRoot'],
             self::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'), '/\$VH_NAME.*\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
             $this->_attrs['vh_maxKeepAliveReq'],
-            $this->_attrs['vh_smartKeepAlive']
         );
         $this->_tblDef[$id] = DTbl::NewRegular($id, 'Base', $attrs); // todo: title change
     }

@@ -109,7 +109,7 @@ int LsapiConn::connect(Multiplexer *pMplx)
     }
     else
     {
-        LS_DBG_L("[%s] add child process pid: %d", pWorker->getName(), m_pid);
+        LS_NOTICE("[%s] add child process pid: %d", pWorker->getName(), m_pid);
         PidRegistry::add(m_pid, pWorker, 0);
     }
 
@@ -1120,6 +1120,8 @@ int LsapiConn::onTimer()
     if ((m_respState == LSAPI_CONN_REQ_SENT) && !getCPState()
         && (DateTime::s_curTime - m_lReqSentTime >= 10))
     {
+        //To print this message only once per 10 seconds.
+        m_lReqSentTime = DateTime::s_curTime;
         LS_NOTICE(this, "No request delivery notification has been received "
                   "from LSAPI application, possible dead lock.");
         if (((LsapiWorker *)getWorker())->getConfig().getSelfManaged())

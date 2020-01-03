@@ -55,6 +55,7 @@ enum HiosProtocol
     HIOS_PROTO_SPDY31 = 3,
     HIOS_PROTO_HTTP2 = 4,
     HIOS_PROTO_QUIC = 5,
+    HIOS_PROTO_HTTP3 = 6,
     HIOS_PROTO_MAX
 };
 

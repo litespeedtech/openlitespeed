@@ -987,9 +987,12 @@ int SpdyConnection::timerRoutine()
     for (; it != m_mapStream.end();)
     {
         itn = m_mapStream.next(it);
-        it.second()->onTimer();
-        if (it.second()->getState() != HIOS_CONNECTED)
-            recycleStream(it);
+        uint32_t id = it.second()->getStreamID();
+        if (it.second()->onTimer() == 0)
+        {
+            if (it.second()->getState() != HIOS_CONNECTED)
+                recycleStream(id);
+        }
         it = itn;
     }
     if (m_mapStream.size() == 0)

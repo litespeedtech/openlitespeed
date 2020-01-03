@@ -114,7 +114,7 @@ public:
     
     
     
-    void setEnableMultiCerts(int v)  { m_iEnableMultiCerts = v; }
+    
 private:
     ConfigCtx      *m_pParent;
     static AutoStr2        s_vhName;
@@ -124,7 +124,7 @@ private:
     static ConfigCtx      *s_pCurConfigCtx;
     static char            s_aDocRoot[MAX_PATH_LEN];
 
-    int             m_iEnableMultiCerts;
+    
 
     LS_NO_COPY_ASSIGN(ConfigCtx);
 };

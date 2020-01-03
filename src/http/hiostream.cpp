@@ -29,6 +29,7 @@ static const ls_str_t s_sProtoName[] =
     LS_STR_CONST("SPDY3.1"),
     LS_STR_CONST("HTTP2"),
     LS_STR_CONST("QUIC"),
+    LS_STR_CONST("HTTP3"),
     LS_STR_CONST("UNKNOWN"),
 };
 

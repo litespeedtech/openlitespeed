@@ -99,7 +99,7 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
                                 p + 15, RFC_1123_TIME_LEN);
     p += 15 + RFC_1123_TIME_LEN + 2;
 
-    if (pResp->getRespHeaders().getHeader(HttpRespHeaders::H_CONTENT_TYPE, 
+    if (pResp->getRespHeaders().getHeader(HttpRespHeaders::H_CONTENT_TYPE,
                                           &iETagLen) == NULL)
         pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
                                     p + 14, pData->getHeaderLen() -
@@ -407,14 +407,14 @@ int StaticFileHandler::process(HttpSession *pSession,
             return ret;
     }
     StaticFileCacheData *pCache = pInfo->getFileData();
-    
+
     if (!pCache)
     {
         LS_ERROR(pReq->getLogSession(), "pCache is NULL, pInfo is %p, pReq is"
                     " %p, pPath is %p.", pInfo, pReq, pPath);
         return SC_500;
     }
-    
+
     /**
      * pPath not really in use, just in case need to LOG an error.
      */
@@ -525,16 +525,13 @@ int StaticFileHandler::process(HttpSession *pSession,
     LS_DBG_L(pReq->getLogSession(), "readyCacheData(%d, %d) return %d",
              compressed, mode, ret);
     FileCacheDataEx *pECache = pInfo->getECache();
-    
-    
+
     if (!ret)
     {
         //Check the bypass modsec flag set or not
         if (pCache->getBypassModsec())
             pReq->addEnv("modsecurity", 11, "off", 3);
-        
-        if (pReq->isKeepAlive())
-            pReq->smartKeepAlive(pCache->getMimeType()->getMIME()->c_str());
+
         if (!isSSI)
         {
             pSession->resetResp();
@@ -550,7 +547,7 @@ int StaticFileHandler::process(HttpSession *pSession,
                     const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
                     if (pExpireDefault)
                     {
-                        ret = pResp->addExpiresHeader(pCache->getLastMod(), 
+                        ret = pResp->addExpiresHeader(pCache->getLastMod(),
                                                       pExpireDefault);
                         if (ret)
                             return ret;
@@ -595,16 +592,24 @@ int StaticFileHandler::process(HttpSession *pSession,
         //ret = pSession->flush();
         ret = pSession->endResponse(1);
     }
-    
-    if (ret == 0 && code == SC_200 )
+
+    if (code == SC_200 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
     {
         pCache->setBypassModsec(1);
-        if (!pSession->getFlag(HSF_STX_FILE_CACHE_READY))
+        if (ret == 0)
         {
             HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
             host->addUrlStaticFileMatch(pInfo->getFileData(),
                                         pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
             LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
+        }
+        else
+        {
+            /**
+             * Serving not done, add flag to save to static file cache when 
+             * response is done
+             */
+            pSession->setFlag(HSF_SAVE_STX_FILE_CACHE);
         }
     }
     return ret;

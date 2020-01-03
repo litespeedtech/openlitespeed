@@ -47,18 +47,19 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
         // it will have irrelevant file system data in it?
 
         SslContext* pNewContext = new SslContext( SslContext::SSL_ALL );
-        LS_DBG_L("[SSL] Create SSL context (ZConf.");
-
-
+        LS_DBG_L("[SSL] Create SSL context (ZConf)");
+        if (!pNewContext)
+        {
+            LS_DBG_L("[SSL] Insufficient memory\n");
+            return NULL;
+        }
+        
         if (pNewContext->init())
             return NULL;
 
 
         pContext = pNewContext;
     }
-    if ( pContext == NULL )
-        return NULL;
-
     if ((ret = SslUtil::loadPrivateKey(pContext->m_pCtx, (void*) pKey, strlen(pKey))) <= 1) {
         LS_ERROR( "[SSL] Config SSL Context (ZConf) with key failed.");
         // delete pNewContext;
@@ -90,12 +91,18 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
 SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
 {
     int ret;
+    SslContext* pNewContext = NULL;
     if (( !pContext )||
             ( pContext->isKeyFileChanged( pConfig->m_sKeyFile[0].c_str() )||
               pContext->isCertFileChanged( pConfig->m_sCertFile[0].c_str() )))
     {
-        SslContext* pNewContext = new SslContext( SslContext::SSL_ALL );
+        pNewContext = new SslContext( SslContext::SSL_ALL );
         LS_DBG_L("[SSL] Create SSL context.");
+        if (!pNewContext)
+        {
+            LS_DBG_L("[SSL] Insufficient memory\n");
+            return NULL;
+        }
         if ( pConfig->m_iEnableMultiCerts )
         {
             ret = pNewContext->setMultiKeyCertFile(pConfig->m_sKeyFile[0].c_str(),
@@ -146,9 +153,6 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         }
         pContext = pNewContext;
     }
-    if ( pContext == NULL )
-        return NULL;
-
 #ifdef OPENSSL_IS_BORINGSSL
     if (!pConfig->m_sCaChainFile.c_str()
         && pConfig->m_sCAFile.c_str())
@@ -174,6 +178,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         if ( pContext->initECDH() == LS_FAIL )
         {
             LS_ERROR("[SSL] Init ECDH failed.");
+            if (pNewContext)
+                delete pNewContext;
             return NULL;
         }
     }
@@ -182,6 +188,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         if ( pContext->initDH( pConfig->m_sDHParam.c_str() ) == LS_FAIL )
         {
             LS_ERROR("[SSL] Init DH failed.");
+            if (pNewContext)
+                delete pNewContext;
             return NULL;
         }
     }
@@ -192,6 +200,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         if (pContext->enableShmSessionCache() == LS_FAIL)
         {
             LS_ERROR("[SSL] Enable session cache failed.");
+            if (pNewContext)
+                delete pNewContext;
             return NULL;
         }
     }
@@ -201,6 +211,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         if (pContext->enableSessionTickets() == LS_FAIL)
         {
             LS_ERROR("[SSL] Enable session ticket failed.");
+            if (pNewContext)
+                delete pNewContext;
             return NULL;
         }
     }
@@ -213,6 +225,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         {
             LS_ERROR("[SSL] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
                         pConfig->m_iEnableSpdy);
+            if (pNewContext)
+                delete pNewContext;
             return NULL;
         }
     }
@@ -249,6 +263,11 @@ int SslContext::configStapling(SslContextConfig *pConfig)
     if (pSslOcspStapling != NULL)
         return 0;
     pSslOcspStapling = new SslOcspStapling;
+    if (!pSslOcspStapling)
+    {
+        LS_ERROR("[SSL] OCSP Stapling can't be enabled: Insufficient memory\n");
+        return -1;
+    }
     setStapling(pSslOcspStapling) ;
     pSslOcspStapling->setCertFile(pConfig->m_sCertFile[0].c_str());
     if (pConfig->m_sCAFile.c_str())
@@ -450,6 +469,8 @@ SslContext::SslContext(int iMethod)
     , m_tmLastAccess(0)
     , m_pStapling(NULL)
 {
+    memset(&m_stKey, 0, sizeof(m_stKey));
+    memset(&m_stCert, 0, sizeof(m_stCert));
 }
 
 
@@ -606,7 +627,8 @@ int SslContext::setPrivateKeyFile(const char *pFile, int type)
     int ret;
     if (!pFile)
         return false;
-    ::stat(pFile, &m_stKey);
+    if (::stat(pFile, &m_stKey) == -1)
+        return false;
     if (init(m_iMethod))
         return false;
 //     if (loadPrivateKeyFile(pFile, type) == -1)

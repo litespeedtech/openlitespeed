@@ -218,6 +218,7 @@ int FileCacheDataEx::readyData(const char *pPath)
                 release();
         }
     }
+#if 0
     else if (((size_t)m_lSize < s_iMaxMMapCacheSize)
              && ((size_t)m_lSize + s_iCurTotalMMAPCache < s_iMaxTotalMMAPCache))
     {
@@ -234,6 +235,7 @@ int FileCacheDataEx::readyData(const char *pPath)
             return 0;
         }
     }
+#endif
     return 0;
 }
 
@@ -544,7 +546,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
                     m_real.c_str(), (long)size);
         return LS_FAIL;
     }
-    
+
     pPath = useBrotli ? &m_bredPath : &m_gzippedPath;
     char *p = pPath->buf() + pPath->len() + 4;
     int fd = createLockFile(pPath->buf(), p);
@@ -832,7 +834,7 @@ int StaticFileCacheData::readyCompressed(char compressMode)
 
     if (tm == m_tmLastCheck)
         return setReadiedCompressData(compressMode);
-    
+
     int statBr = -1, retGz = -1, statGz = -1;
     struct stat stGzip;
     struct stat stBr;

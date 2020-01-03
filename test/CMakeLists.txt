@@ -160,7 +160,7 @@ add_executable(ols_unittest
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( unittestlib
-    modgzip lsiapi main http lsiapi ssi
+    modgzip cache lsiapi main http lsiapi ssi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx GeoIP adns
     quic lsquic
