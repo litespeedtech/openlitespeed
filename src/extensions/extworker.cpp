@@ -226,7 +226,11 @@ int  ExtWorker::processRequest(ExtRequest *pReq, int retry)
     if (m_iState == ST_NOTSTARTED)
         start();
     if (m_iState == ST_BAD)
+    {
+        LS_DBG_L("[%s] request is in a bad state!",
+                 m_pConfig->getURL());
         return SC_503;
+    }
     ExtConn *pConn = NULL;
     if (retry || m_reqQueue.empty())
     {
@@ -369,7 +373,7 @@ int ExtWorker::connectionError(ExtConn *pConn, int errCode)
                 m_lLastRestart = time(NULL);
                 LS_INFO("[%s] Connection refused, restart!",
                         m_pConfig->getURL());
-                
+
                 LocalWorker *pLocalWorker = dynamic_cast<LocalWorker *>(this);
                 if (pLocalWorker)
                     pLocalWorker->stopDetachedWorker();

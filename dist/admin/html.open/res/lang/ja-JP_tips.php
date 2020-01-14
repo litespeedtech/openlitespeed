@@ -14,7 +14,7 @@ $_tipsdb['CPUSoftLimit'] = new DAttrHelp("CPUソフトリミット(秒)", 'CGI�
 
 $_tipsdb['DHParam'] = new DAttrHelp("DHパラメータ", 'DHキー交換に必要なDiffie-Hellmanパラメータファイルの場所を指定します。', '', 'ファイル名への絶対パス又は$SERVER_ROOTからの相対パス', '');
 
-$_tipsdb['GroupDBLocation'] = new DAttrHelp("グループDBの場所", 'グループデータベースの場所を指定します。<br/>グループ情報は、ユーザデータベースまたはこのスタンドアロングループDBに設定することができます。ユーザ認証の場合、ユーザDBが最初にチェックされます。ユーザDBにグループ情報も含まれている場合、グループDBはチェックされません。 <br/><br/>DBタイプのパスワードファイルの場合、グループDBロケーションは、グループ定義を含むフラットファイルへのパスでなければなりません。ファイル名をクリックするとWebAdminコンソールからこのファイルを編集できます。 <br/>グループファイルの各行には、コロンとそのあとにスペース区切りのユーザー名のグループが続くグループ名が含まれている必要があります。例：<br/><blockquote><code>testgroup: user1 user2 user3</code></blockquote> <br/>DBタイプLDAPの場合、グループDBロケーションは、グループ情報を照会するLDAP URLでなければなりません。 有効なグループごとに、このURLと&quot;必要（許可ユーザー/グループ）&quot;で指定されたグループ名に基づいて、LDAP検索リクエストで1つのレコードしか返されません。 &quot;$k&quot;はURLのフィルタ部分に指定する必要があり、グループ名に置き換えられます。 このグループのメンバーを指定する属性の名前は、&quot;グループメンバ属性&quot;によって指定されます。<br/><br/>例: objectClass posixGroupがグループ情報の格納に使用されている場合 次のURLを使用できます: <br/><blockquote><code>ldap://localhost/ou=GroupDB,dc=example,dc=com???(&(objectClass=*)(cn=$k))</code></blockquote>', '[セキュリティ]文書ツリーの外にグループファイルを保存することをお勧めします。 ドキュメントツリー内に配置する必要がある場合は、.htgroupのような先頭の 「.ht」という名前を付けるだけでファイルが静的ファイルとして提供されないようにします。 LiteSpeed Web Serverでは、接頭辞が 「.ht」のファイルは提供されません。', 'ファイル名への絶対パス又は$SERVER_ROOT、$VH_ROOTからの相対パス。', '');
+$_tipsdb['GroupDBLocation'] = new DAttrHelp("グループDBの場所", 'グループデータベースの場所を指定します。<br/>グループ情報は、ユーザデータベースまたはこのスタンドアロングループDBに設定することができます。ユーザ認証の場合、ユーザDBが最初にチェックされます。ユーザDBにグループ情報も含まれている場合、グループDBはチェックされません。 <br/><br/>DBタイプのパスワードファイルの場合、グループDBロケーションは、グループ定義を含むフラットファイルへのパスでなければなりません。ファイル名をクリックするとWebAdminコンソールからこのファイルを編集できます。 <br/>グループファイルの各行には、コロンとそのあとにスペース区切りのユーザー名のグループが続くグループ名が含まれている必要があります。例：<br/><blockquote><code>testgroup: user1 user2 user3</code></blockquote> <br/>DBタイプLDAPの場合、グループDBロケーションは、グループ情報を照会するLDAP URLでなければなりません。 有効なグループごとに、このURLと&quot;必要（許可ユーザー/グループ）&quot;で指定されたグループ名に基づいて、LDAP検索リクエストで1つのレコードしか返されません。 &quot;$k&quot;はURLのフィルタ部分に指定する必要があり、グループ名に置き換えられます。 このグループのメンバーを指定する属性の名前は、&quot;グループメンバ属性&quot;によって指定されます。<br/><br/>例: objectClass posixGroupがグループ情報の格納に使用されている場合 次のURLを使用できます: <br/><blockquote><code>ldap://localhost/ou=GroupDB,dc=example,dc=com???(&(objectClass=*)(cn=$k))</code></blockquote>', '', 'ファイル名への絶対パス又は$SERVER_ROOT、$VH_ROOTからの相対パス。', '');
 
 $_tipsdb['HANDLER_RESTART'] = new DAttrHelp("フック::HANDLER_RESTART プライオリティ", 'このモジュールコールバックの優先度をHTTPハンドラの再起動フック内で設定します。<br/>   Webサーバが現在の応答を破棄し、内部リダイレクトが要求されたときなど、最初から処理を開始する必要があるときに、HTTPハンドラの再起動フックがトリガされます。<br/><br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
 
@@ -55,6 +55,14 @@ $_tipsdb['RECV_RESP_HEADER'] = new DAttrHelp("Hook::RECV_RESP_HEADER Priority", 
 $_tipsdb['SEND_RESP_BODY'] = new DAttrHelp("フック::SEND_RESP_BODY プライオリティ", 'HTTP送信レスポンスボディフック内のこのモジュールコールバックの優先度を設定します。 <br/><br/>HTTP送信レスポンスボディフックは、Webサーバがレスポンスボディを送信するときにトリガされます。  <br/><br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
 
 $_tipsdb['SEND_RESP_HEADER'] = new DAttrHelp("フック::SEND_RESP_HEADER プライオリティ", 'このモジュールコールバックの優先度を、HTTP送信応答ヘッダーフック内で設定します。 <br/><br/>Webサーバーが応答ヘッダーを送信する準備ができたら、HTTP送信応答ヘッダーフックがトリガーされます。  <br/><br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
+
+$_tipsdb['UDBgroup'] = new DAttrHelp("グループ", 'A comma seperated list of groups that this user belongs to. The user will only be able to access resources belonging to these groups.<br/><br/>If group information is added here, this information will be used for resource authorization and any group database settings involving this user will be ignored.', '', '', '');
+
+$_tipsdb['UDBpass'] = new DAttrHelp("New Password", 'Password can be any length and contain any characters.', '', '', '');
+
+$_tipsdb['UDBpass1'] = new DAttrHelp("Retype Password", 'Password can be any length and contain any characters.', '', '', '');
+
+$_tipsdb['UDBusername'] = new DAttrHelp("User Name", 'A user name containing only letters and numbers. (no special characters)', '', '', '');
 
 $_tipsdb['URI_MAP'] = new DAttrHelp("フック::URI_MAP プライオリティ", 'このモジュールコールバックの優先度をHTTP URIマップフック内で設定します。<br/>  HTTP URI マップフックは、WebサーバーがURI要求をコンテキストにマップするときにトリガーされます。 <br/><br/>モジュールにフックポイントがある場合にのみ有効です。 設定されていない場合、優先度はモジュールで定義されたデフォルト値になります。', '', '整数値は-6000から6000です。値が小さいほど優先度が高くなります。', '');
 
@@ -285,6 +293,10 @@ $_tipsdb['forceGID'] = new DAttrHelp("強制GID", 'suEXECモードで起動し�
 $_tipsdb['forceStrictOwnership'] = new DAttrHelp("厳格な所有権チェックを強制する", '厳密なファイル所有権チェックを実施するかどうかを指定します。 有効になっている場合、Webサーバーは、提供されるファイルの所有者がバーチャルホストの所有者と同じかどうかをチェックします。 異なる場合は、403アクセス拒否エラーが返されます。 これはデフォルトではオフになっています。', '[セキュリティ]共有ホスティングの場合、このチェックを有効にしてセキュリティを強化します。', 'ラジオボックスから選択', '');
 
 $_tipsdb['forceType'] = new DAttrHelp("強制MIMEタイプ", 'このコンテキストの下にあるすべてのファイルは、指定すると、ファイルの接尾辞に関係なくMIMEタイプが指定された静的ファイルとして提供されます。         NONE に設定すると、継承された強制タイプの設定は無効になります。', '', 'MIMEタイプまたはNONE。', '');
+
+$_tipsdb['gdb_groupname'] = new DAttrHelp("Group Name", 'A group name containing only letters and numbers (no special characters).', '', 'string', '');
+
+$_tipsdb['gdb_users'] = new DAttrHelp("Users", 'Space separated list of users belonging to this group.', '', '', '');
 
 $_tipsdb['generalContext'] = new DAttrHelp("静的コンテキスト", 'コンテキスト設定は、特定の場所にあるファイルの特別な設定を指定するために使用されます。 これらの設定は、ApacheのAliasやAliasMatchディレクティブのようなドキュメントルートの外部にファイルを持ち込み、認可領域を使用して特定のディレクトリを保護したり、ドキュメントルート内の特定のディレクトリへのアクセスをブロックまたは制限するために使用できます。', '', '', '');
 
@@ -680,7 +692,7 @@ $_tipsdb['useSendfile'] = new DAttrHelp("sendfile（）を使用する", '静的
 
 $_tipsdb['userDBCacheTimeout'] = new DAttrHelp("ユーザーDBキャッシュタイムアウト（秒）", 'バックエンドユーザーデータベースの変更の確認頻度を指定します。 キャッシュ内のすべてのエントリにタイムスタンプがあります。 キャッシュされたデータが指定されたタイムアウトよりも古い場合、バックエンドデータベースの変更がチェックされます。 変更がなければ、タイムスタンプは現在の時刻にリセットされ、そうでない場合は新しいデータがロードされます。 Sevrerのリロードと穏やかな再起動により、キャッシュは直ちにクリアされます。', '[パフォーマンス]バックエンドデータベースが頻繁に変更されない場合は、パフォーマンスを向上させるために、より長いタイムアウトを設定します。', '整数', '');
 
-$_tipsdb['userDBLocation'] = new DAttrHelp("ユーザーDBの場所", 'ユーザーデータベースの場所を指定します。 DBタイプパスワードファイルの場合、ユーザ/パスワード定義を含むフラットファイルへのパスです。 ファイル名をクリックするとWebAdminコンソールからこのファイルを編集できます。<br/><br/>ユーザーファイルの各行には、ユーザー名の後にコロン、crypt()で暗号化されたパスワードが続き、オプションでコロンとユーザーが所属するグループ名が続きます。 グループ名はカンマで区切られます。 グループ情報がユーザーデータベースに指定されている場合、グループデータベースはチェックされません。<br/>例：<blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote><br/><br/>DBタイプ LDAP の場合、ユーザー情報を照会するのはLDAP URLです。 有効なユーザーごとに、LDAPサーバーに格納されている認証データには、少なくともユーザーIDとユーザーパスワードが含まれている必要があります。 HTTP認証ヘッダーで受け取ったこのURLとユーザー名に基づいて、LDAP検索要求で1つだけのレコードを返す必要があります。 &quot;$ k&quot;はURLのフィルタ部分で指定する必要があり、ユーザー名で置き換えられます。 ユーザーのパスワード属性は、照会結果に戻されなければなりません。 ユーザーのパスワードの属性名は、&quot;パスワード属性&quot;で指定します。 グループ情報は、&quot;Member-of属性&quot;で任意に指定できます。<br/><br/>例: 少なくとも、オブジェクトクラス（uidObject、simpleSecurityObject、およびorganizationalRole）を使用してLDAPでユーザーを定義できます。 次のURLを使用できます: <br/><br/><blockquote><code>ldap://localhost/ou=UserDB,dc=example,dc=com???(&(objectClass=*)(uid=$k))</code></blockquote>', '[セキュリティ]ユーザーのパスワードファイルをドキュメントツリーの外部に保存することをお勧めします。 ユーザーのパスワードファイルをドキュメントツリー内に配置する必要がある場合は、.htuserのような先頭の &quot;.ht&quot;という名前を付けて、静的ファイルとして扱わないようにします。 LiteSpeed Web Serverでは、接頭辞が &quot;.ht&quot;のファイルは提供されません。', 'ユーザーDBファイルまたはLDAP URL（RFC 2255）へのパス。', '');
+$_tipsdb['userDBLocation'] = new DAttrHelp("ユーザーDBの場所", 'ユーザーデータベースの場所を指定します。 DBタイプパスワードファイルの場合、ユーザ/パスワード定義を含むフラットファイルへのパスです。 ファイル名をクリックするとWebAdminコンソールからこのファイルを編集できます。<br/><br/>ユーザーファイルの各行には、ユーザー名の後にコロン、crypt()で暗号化されたパスワードが続き、オプションでコロンとユーザーが所属するグループ名が続きます。 グループ名はカンマで区切られます。 グループ情報がユーザーデータベースに指定されている場合、グループデータベースはチェックされません。<br/>例：<blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote><br/><br/>DBタイプ LDAP の場合、ユーザー情報を照会するのはLDAP URLです。 有効なユーザーごとに、LDAPサーバーに格納されている認証データには、少なくともユーザーIDとユーザーパスワードが含まれている必要があります。 HTTP認証ヘッダーで受け取ったこのURLとユーザー名に基づいて、LDAP検索要求で1つだけのレコードを返す必要があります。 &quot;$ k&quot;はURLのフィルタ部分で指定する必要があり、ユーザー名で置き換えられます。 ユーザーのパスワード属性は、照会結果に戻されなければなりません。 ユーザーのパスワードの属性名は、&quot;パスワード属性&quot;で指定します。 グループ情報は、&quot;Member-of属性&quot;で任意に指定できます。<br/><br/>例: 少なくとも、オブジェクトクラス（uidObject、simpleSecurityObject、およびorganizationalRole）を使用してLDAPでユーザーを定義できます。 次のURLを使用できます: <br/><br/><blockquote><code>ldap://localhost/ou=UserDB,dc=example,dc=com???(&(objectClass=*)(uid=$k))</code></blockquote>', '', 'ユーザーDBファイルまたはLDAP URL（RFC 2255）へのパス。', '');
 
 $_tipsdb['userDBMaxCacheSize'] = new DAttrHelp("ユーザーDB最大キャッシュサイズ", 'ユーザーデータベースの最大キャッシュサイズを指定します。 最近アクセスされたユーザー認証データは、最大のパフォーマンスを提供するためにメモリにキャッシュされます。', '[パフォーマンス]キャッシュが大きくなるとメモリが消費されるため、値が高くなるほどパフォーマンスが向上する場合があります。 ユーザーのデータベースサイズとサイトの使用状況に応じて適切なサイズに設定します。', '整数', '');
 
@@ -734,6 +746,8 @@ $_tipsdb['wsgiDefaults'] = new DAttrHelp("Python WSGI Default Settings", 'Defaul
 
 $_tipsdb['wsuri'] = new DAttrHelp("URI", 'このWebSocketバックエンドを使用するURIを指定します。 このURIへのトラフィックは、WebSocketのアップグレード要求が含まれている場合にのみWebSocketバックエンドに転送されます。<br/><br/>このアップグレード要求のないトラフィックは、このURIが属するコンテキストに自動的に転送されます。 このURIに対してContextが存在しない場合、LSWSはこのトラフィックを、$DOC_ROOT/URIの場所で静的コンテキストにアクセスしているものとして扱います。', '', 'URIは、プレーンURI（ &quot;/&quot;で始まる）またはPerlと互換性のある正規表現URI（ &quot;exp：&quot;で始まる）にすることができます。 プレーンURIが &quot;/&quot;で終わる場合、このWebSocketバックエンドはこのURIの下にすべてのサブURIを含みます。', 'WebSocketプロキシをコンテキストとともに使用すると、同じページでさまざまな種類のトラフィックをさまざまな方法で処理できるため、パフォーマンスが最適化されます。 WebSocketトラフィックをWebSocketバックエンドに送信し、LSWSがページの静的コンテンツまたはLSAPIコンテキストを提供できるように静的コンテキストを設定し、LSWSがPHPコンテンツ（両方ともLSSがWebSocketバックエンドより効率的に機能する）を提供できるようにします。');
 
+
+$_tipsdb['EDTP:GroupDBLocation'] = array('It is recommended that the database be stored under the $SERVER_ROOT/conf/vhosts/$VH_NAME/ directory.');
 
 $_tipsdb['EDTP:UDBgroup'] = array('ここでグループ情報を入力すると、グループDBはチェックされません。','複数のグループを入力したり、カンマで区切ったりすることができます。 スペースはグループ名の一部として扱われます。');
 
@@ -804,6 +818,8 @@ $_tipsdb['EDTP:extraHeaders'] = array('The Header Operations setting is backward
 $_tipsdb['EDTP:fcgiapp'] = array('Fast CGIコンテキストは、Fast CGIアプリケーションのマウントポイントです。 Fast CGIアプリケーションは、サーバーレベルまたはバーチャルホストレベルであらかじめ定義されている必要があります。');
 
 $_tipsdb['EDTP:followSymbolLink'] = array('Follow-Symbolic-Linkが有効になっている場合でも、バーチャルホストレベルでそれを無効にできます。');
+
+$_tipsdb['EDTP:gdb_groupname'] = array('Group Name should comprise of letter and numbers only.');
 
 $_tipsdb['EDTP:gzipCompressLevel'] = array('GZIP圧縮レベルの範囲は1（最小）〜9（最大）です。');
 
@@ -897,7 +913,7 @@ $_tipsdb['EDTP:sslSessionTicketKeyFile'] = array('チケットがサーバーに
 
 $_tipsdb['EDTP:swappingDir'] = array('ディレクトリをスワップすることは、/tmpなどのローカルディスクに配置することをお勧めします。 ネットワークドライブは絶対に避けてください。 スワップは、設定されたメモリのI/Oバッファが使い果たされたときに行われます。');
 
-$_tipsdb['EDTP:users'] = array('グループDBは、ユーザDB内のユーザにグループ情報が含まれていない場合にのみチェックされます。。','カンマを使用して複数のユーザーを区切ります。');
+$_tipsdb['EDTP:userDBLocation'] = array('It is recommended that the database be stored under the $SERVER_ROOT/conf/vhosts/$VH_NAME/ directory.');
 
 $_tipsdb['EDTP:vhRoot'] = array('全てのディレクトリがあらかじめ存在する必要があります。 このWebインターフェイスでは、ディレクトリは作成されません。 新しいバーチャルホストを作成する場合は、空のルートディレクトリを作成して最初から設定することができます。 パッケージに同梱されている &quot;例&quot;バーチャルルートをこのバーチャルホストルートにコピーして変更することができます。','バーチャルホストルート（$VH_ROOT）は、絶対パスでも、$SERVER_ROOTに関連してもかまいません。');
 

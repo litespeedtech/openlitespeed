@@ -24,7 +24,12 @@ class Plesk extends ControlPanel
         parent::__construct();
     }
 
-    //More reliable than php_uname('s')
+    /**
+     * More reliable than php_uname('s')
+     *
+     * @return string
+     * @throws LSCMException
+     */
     public function getPleskOS()
     {
         $supportedOS = array( 'centos', 'cloudlinux', 'redhat', 'ubuntu', 'debian' );

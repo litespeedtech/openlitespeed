@@ -56,16 +56,10 @@ inline void swapIntEndian(int *pInteger)
 
 
 LsapiConn::LsapiConn()
-    : m_pid(-1)
-    , m_iTotalPending(0)
-    , m_iPacketLeft(0)
-    , m_iPacketHeaderLeft(0)
-    , m_lReqBeginTime(0)
-    , m_lReqSentTime(0)
-    , m_lsreq(&m_iovec)
-    , m_respState(LSAPI_CONN_IDLE)
-
+    : m_lsreq(&m_iovec)
+    , m_pid(-1)
 {
+    LS_ZERO_FILL(m_iTotalPending, m_respInfo);
 }
 
 
@@ -560,7 +554,7 @@ int LsapiConn::processRespBuffed()
                 break;
             case LSAPI_STDERR_STREAM:
                 LS_DBG_M(this, "Process STDERR stream %d bytes", len);
-                ret = pHEC->processErrData(m_pRespHeaderProcess, len);
+                pHEC->processErrData(m_pRespHeaderProcess, len);
                 m_pRespHeaderProcess += len;
                 break;
             default:
@@ -674,7 +668,7 @@ int LsapiConn::processResp()
                     return ret;
                 break;
             case LSAPI_REQ_RECEIVED:
-                ret = readNotifyStream();
+                readNotifyStream();
                 break;
             default:
                 //error: protocol error

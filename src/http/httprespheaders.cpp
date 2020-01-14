@@ -148,6 +148,7 @@ void HttpRespHeaders::reset()
     memset(m_KVPairindex, 0xFF, H_HEADER_END);
     m_iHttpCode = SC_200;
     memset(&m_flags, 0, &m_iKeepAlive + 1 - &m_flags);
+    m_iHeaderRemovedCount = 0;
     m_hLastHeaderKVPairIndex = -1;
     m_aKVPairs.init();
     m_aKVPairs.setSize(0);
@@ -158,7 +159,7 @@ void HttpRespHeaders::updateEtag(int compress_type)
 {
     int etagLen;
     const char *pETag = getHeader(H_ETAG, &etagLen);
-    char * pUpdate; 
+    char * pUpdate;
     if (!pETag)
         return;
     pUpdate = (char *)pETag + etagLen - 4;
@@ -364,7 +365,7 @@ int HttpRespHeaders::add(INDEX index, const char *pName, int nameLen,
         return 0;
     }
 
-    if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD) 
+    if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD)
         && (pKv->valLen > 0))
     {
         if ( (index != H_SET_COOKIE || method != LSI_HEADEROP_ADD)
@@ -689,7 +690,7 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
     case 'c':
         switch(*(pHeader+7) | 0x20)
         {
-        case 'o':    
+        case 'o':
             if (strncasecmp(pHeader, "onnection", 9) == 0)
                 idx = H_CONNECTION;
             break;

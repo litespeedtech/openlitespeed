@@ -91,12 +91,12 @@ class UserCommand
      * a crafted message to be displayed instead.
      *
      * @param WPInstall  $wpInstall  WordPress Installation object.
-     * @param string     $err        Complied error message.
+     * @param string     $err        Compiled error message.
      * @param int        $lines      Number of $output lines read into the
-     *                                error msg.
+     *                               error msg.
      * @return string                Message to be displayed instead.
      */
-    private static function handleUnexpectedError($wpInstall, &$err, $lines )
+    private static function handleUnexpectedError( $wpInstall, &$err, $lines )
     {
         $msg = 'Unexpected Error Encountered!';
         $path = $wpInstall->getPath();
@@ -311,20 +311,20 @@ class UserCommand
             self::removeLeftoverLscwpFiles($wpInstall);
         }
 
-        $newStatus = $retStatus = $cmdStatus = 0;
+        $errorStatus = $retStatus = $cmdStatus = 0;
 
         switch ( $return_var ) {
             case UserCommand::RETURN_CODE_TIMEOUT:
-                $newStatus |= WPInstall::ST_ERR_TIMEOUT;
+                $errorStatus |= WPInstall::ST_ERR_TIMEOUT;
                 break;
             case UserCommand::EXIT_ERROR:
             case 255:
-                $newStatus |= WPInstall::ST_ERR_EXECMD;
+                $errorStatus |= WPInstall::ST_ERR_EXECMD;
                 break;
             //no default
         }
 
-        $expectedOutput = false;
+        $isExpectedOutput = false;
         $unexpectedLines = 0;
         $succ = $upgrade = $err = $msg = $logMsg = '';
         $logLvl = -1;
@@ -337,7 +337,7 @@ class UserCommand
              * This line will appear after any [UPGRADE] output.
              */
             if ( strpos($line, 'LS UserCommand Output Start') !== false ) {
-                $expectedOutput = true;
+                $isExpectedOutput = true;
             }
             elseif ( strpos($line, '[RESULT]') !== false ) {
 
@@ -373,12 +373,14 @@ class UserCommand
                 $curr = &$logMsg;
             }
             elseif ( strpos($line, '[UPGRADE]') !== false ) {
-                //Ignore this output
+                /**
+                 * Ignore this output
+                 */
                 $curr = &$upgrade;
             }
             else {
 
-                if ( !$expectedOutput ) {
+                if ( !$isExpectedOutput ) {
                     $line = htmlentities($line);
                     $unexpectedLines++;
                 }
@@ -391,19 +393,21 @@ class UserCommand
             Logger::logMsg(trim($logMsg), $logLvl);
         }
 
-        if ( $newStatus == 0 && !$expectedOutput ) {
-            $newStatus |= WPInstall::ST_ERR_EXECMD;
+        if ( !$isExpectedOutput && !$errorStatus ) {
+            $errorStatus |= WPInstall::ST_ERR_EXECMD;
         }
+
+        if ( $errorStatus ) {
+            $wpInstall->addUserFlagFile(false);
+            $errorStatus |= WPInstall::ST_FLAGGED;
+
+            $cmdStatus |= UserCommand::EXIT_INCR_FAIL;
+        }
+
+        $newStatus = ($errorStatus | $retStatus);
 
         if ( $newStatus != 0 ) {
-            $cmdStatus |= UserCommand::EXIT_INCR_FAIL;
-
-            $wpInstall->addUserFlagFile(false);
-            $newStatus |= WPInstall::ST_FLAGGED;
-        }
-
-        if ( ($newStatus |= $retStatus) != 0 ) {
-            $wpInstall->updateCommandStatus($newStatus);
+            $wpInstall->setStatus($newStatus);
         }
 
         if ( $succ ) {
@@ -420,7 +424,7 @@ class UserCommand
                 $cmdStatus |= UserCommand::EXIT_ERROR;
             }
 
-            if ( $expectedOutput ) {
+            if ( $isExpectedOutput ) {
                 $msg = $err;
                 Logger::error("{$wpInstall->getPath()} - {$err}");
             }

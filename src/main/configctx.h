@@ -100,21 +100,18 @@ public:
     static void setDocRoot(const char *pDocRoot)
     { memcpy(s_aDocRoot, pDocRoot, strlen(pDocRoot) + 1); }
     static const char *getDocRoot()         {   return s_aDocRoot;    }
-    
-    
+
+
     SslContext *newSSLContext(const XmlNode *pNode, const char *pName,
                               SslContext *pOldContext);
     void configCRL(const XmlNode *pNode, SslContext *pSSL);
     int initOcspCachePath();
     int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
-    
+
     static int getPrivateKeyPem(SSL_CTX *pCtx, AutoBuf *pBuf);
     static int getCertPem(SSL_CTX *pCtx, AutoBuf *pBuf);
     static int getCertChainPem(SSL_CTX *pCtx, AutoBuf *pBuf);
-    
-    
-    
-    
+
 private:
     ConfigCtx      *m_pParent;
     static AutoStr2        s_vhName;
@@ -123,8 +120,6 @@ private:
     static char            s_aVhRoot[MAX_PATH_LEN];
     static ConfigCtx      *s_pCurConfigCtx;
     static char            s_aDocRoot[MAX_PATH_LEN];
-
-    
 
     LS_NO_COPY_ASSIGN(ConfigCtx);
 };

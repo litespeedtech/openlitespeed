@@ -63,10 +63,11 @@ HttpContext::HttpContext()
     , m_pMatchList(NULL)
     , m_pFilesMatchStr(NULL)
     , m_pHandler(NULL)
-    , m_pInternal(NULL)
+    , m_pInternal(&s_defaultInternal)
     , m_redirectCode(-1)
     , m_iSetUidMode(ENABLE_SCRIPT)
     , m_iRewriteEtag(0)
+    , m_iDummy(0)
     , m_iConfigBits2(BIT2_URI_CACHEABLE)
     , m_iFeatures(BIT_F_ALLOW_BROWSE | BIT_F_INCLUDES | BIT_F_INCLUDES_NOEXEC)
 //    , m_iFilesMatchCtx( 0 )
@@ -75,7 +76,6 @@ HttpContext::HttpContext()
     , m_pRewriteRules(NULL)
     , m_pParent(NULL)
 {
-    m_pInternal = &s_defaultInternal;
 }
 
 
@@ -136,7 +136,7 @@ int HttpContext::setHeaderOps(const char *pLogId, const char *pHeaders,
                 is_req = 1;
             }
             StringTool::strTrim(pLineBegin, pCurEnd);
-            if (m_pInternal->m_pHeaderOps->parseOp(pLineBegin, pCurEnd, 
+            if (m_pInternal->m_pHeaderOps->parseOp(pLineBegin, pCurEnd,
                                                    is_req) == -1)
             {
                 char *p = (char *)pCurEnd;
@@ -211,8 +211,10 @@ int HttpContext::set(const char *pURI, const char *pLocation,
     if ((pLocation) && (*pLocation))
     {
         int len = strlen(pLocation);
-        m_sLocation.prealloc(len + 15);
-        strcpy(m_sLocation.buf(), pLocation);
+        int sz = len + 15;
+        if (!m_sLocation.prealloc(sz))
+            return ENOMEM;
+        lstrncpy(m_sLocation.buf(), pLocation, sz);
         m_sLocation.setLen(len);
         if (*(pLocation + len - 1) == '/')
             isDir = 1;
@@ -225,8 +227,10 @@ int HttpContext::set(const char *pURI, const char *pLocation,
 //        }
     }
     int len = strlen(pURI);
-    m_sContextURI.prealloc(len + 8);
-    strcpy(m_sContextURI.buf(), pURI);
+    int sz = len + 8;
+    if (!m_sContextURI.prealloc(sz))
+        return ENOMEM;
+    lstrncpy(m_sContextURI.buf(), pURI, sz);
     if ((isDir && !regex) && (*(pURI + len - 1) != '/'))
     {
         *(m_sContextURI.buf() + len++) = '/';
@@ -324,7 +328,9 @@ int HttpContext::setURIMatch(const char *pRegex, const char *pSubst)
     m_pURIMatch = new URIMatch();
     if (!m_pURIMatch)
         return ENOMEM;
-    m_pURIMatch->set(pRegex, pSubst);
+    int ret = m_pURIMatch->set(pRegex, pSubst);
+    if (ret)
+        return ret;
     if (pRegex)
         m_sContextURI.setStr(pRegex);
     if (pSubst)
@@ -454,7 +460,7 @@ void HttpContext::setHTAuth(HTAuth *pHTAuth)
 //     m_iConfigBits |= BIT_EXTRA_HEADER;
 //     if (strcasecmp(pHeaders, "none") == 0)
 //         return 0;
-// 
+//
 //     const char *pEnd = pHeaders + len;
 //     const char *pLineBegin, *pLineEnd;
 //     pLineBegin = pHeaders;
@@ -483,7 +489,7 @@ void HttpContext::setHTAuth(HTAuth *pHTAuth)
 //                 *p = '\n';
 //             }
 //         }
-// 
+//
 //         pLineBegin = pLineEnd;
 //         while (isspace(*pLineBegin))
 //             ++pLineBegin;
@@ -1264,16 +1270,16 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
         if (ConfigCtx::getCurConfigCtx()->expandVariable(htaccessPath, achHandler,
                     1024, 1) < 0)
         {
-            
-            LS_ERROR(ConfigCtx::getCurConfigCtx(), 
+
+            LS_ERROR(ConfigCtx::getCurConfigCtx(),
                      "Failed to parse .htaccessPath \"%s\".", htaccessPath);
             return LS_FAIL;
         }
         htaccessPath = achHandler;
     }
 
-        
-    if(access(htaccessPath, F_OK) == 0)
+
+    if(htaccessPath && access(htaccessPath, F_OK) == 0)
     {
         if (!pRule || strcasestr(pRule, "RewriteFile") == NULL)
         {
@@ -1281,7 +1287,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
             rule.append(htaccessPath, strlen(htaccessPath));
         }
     }
-    
+
     if (rule.len() == 0)
         return 0;
 
@@ -1382,7 +1388,7 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
             return -1;
         setPHPConfig(pConfig);
     }
-    
+
     char m_achError[1024] = {0};
     char m_achValue[1024] = {0};
     int id;
@@ -1401,7 +1407,7 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
                 const XmlNode *pItem = *iter;
                 if ((config = pItem->getValue()) != NULL)
                 {
-                    if (ConfigCtx::getCurConfigCtx()->expandVariable(config, 
+                    if (ConfigCtx::getCurConfigCtx()->expandVariable(config,
                         m_achValue, 1024, 1) < 0)
                     {
                         LS_ERROR(ConfigCtx::getCurConfigCtx(),
@@ -1510,18 +1516,18 @@ int HttpContext::config(const RewriteMapList *pMapList,
     configRewriteRule(pMapList, (char *) rules, htaccessPath.c_str());
 
     pNode = pContextNode->getChild("customErrorPages", 1);
-
     if (pNode)
     {
         ConfigCtx currentCtx("errorpages");
         configErrorPages(pNode);
     }
 
-    pNode = pNode->getChild("phpIniOverride");
+    pNode = pContextNode->getChild("phpIniOverride");
     if (pNode)
     {
         configPhpConfig(pNode);
     }
+
     return 0;
 }
 

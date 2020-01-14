@@ -34,7 +34,7 @@ class LocalWorkerConfig : public ExtWorkerConfig
     RLimits     m_rlimits;
     int         m_umask;
     int         m_iPhpHandler;
-    
+
     void operator=(const LocalWorkerConfig &rhs);
 public:
     explicit LocalWorkerConfig(const char *pName);
@@ -65,10 +65,10 @@ public:
     void endConfig();
 
     int getRunOnStartUp() const     {   return m_iRunOnStartUp;  }
-    void setRunOnStartUp(int r)   
+    void setRunOnStartUp(int r)
     {
         setDetached(r == 3);
-        m_iRunOnStartUp = r;     
+        m_iRunOnStartUp = r;
     }
 
     void setRLimits(const RLimits *pRLimits);
@@ -84,10 +84,11 @@ public:
     int isProcPerConn() const       {   return m_iInstances >= getMaxConns();   }
     int isPhpHandler() { return m_iPhpHandler ; }
     void setPhpHandler(int v)       { m_iPhpHandler = v;    }
-    
+
     int checkExtAppSelfManagedAndFixEnv(int maxIdleTime);
     int config(const XmlNode *pNode);
-    void configExtAppUserGroup(const XmlNode *pNode, int iType, char *sHomeDir);
+    void configExtAppUserGroup(const XmlNode *pNode, int iType, char *sHomeDir,
+                               size_t szHomeDir);
 };
 
 #endif

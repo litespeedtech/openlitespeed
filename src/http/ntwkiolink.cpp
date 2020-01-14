@@ -123,12 +123,19 @@ class NtwkIOLink::fp_list_list  *NtwkIOLink::s_pCur_fp_list_list =
         &NtwkIOLink::s_fp_list_list_normal;
 
 NtwkIOLink::NtwkIOLink()
-    : m_sessionHooks()
+    : m_pVHostMap(NULL)
+    , m_iRemotePort(0)
+    , m_iInProcess(0)
+    , m_iPeerShutdown(0)
+    , m_tmToken(0)
+    , m_iSslLastWrite(0)
+    , m_iHeaderToSend(0)
+    , m_pFpList(NULL)
+    , m_sessionHooks()
+    , m_hasBufferedData(0)
     , m_aioSFQ()
 {
-    m_hasBufferedData = 0;
     m_pModuleConfig = NULL;
-
 }
 
 
@@ -144,28 +151,31 @@ int NtwkIOLink::writev(const struct iovec *vector, int len)
 
     if (m_iHeaderToSend > 0)
     {
-        m_iov.append(vector, len);
-
-        written = writev_internal(m_iov.get(), m_iov.len(), 0);
+        int appended = 0;
+        if (m_iov.avail() >= len && len > 0)
+        {
+            memmove(m_iov.end(), vector, sizeof(struct iovec) * len);
+            appended = 1;
+        }
+        written = writev_internal(m_iov.get(), m_iov.len() + len, 0);
         if (written >= m_iHeaderToSend)
         {
             m_iov.clear();
             written -= m_iHeaderToSend;
             m_iHeaderToSend = 0;
+            if (appended || !len)
+                return written;
+        }
+        else if (written > 0)
+        {
+            m_iHeaderToSend -= written;
+            m_iov.finish(written);
+            return 0;
         }
         else
-        {
-            m_iov.pop_back(len);
-            if (written > 0)
-            {
-                m_iHeaderToSend -= written;
-                m_iov.finish(written);
-                return 0;
-            }
-        }
+            return written;
     }
-    else
-        written = writev_internal(vector, len, 0);
+    written = writev_internal(vector, len, 0);
 
     return written;
 }
@@ -302,6 +312,12 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
                     pInfo->m_pServerAddrInfo,
                     pInfo->m_remotePort);
     }
+    else
+    {
+        LS_DBG_L("NtwkIOLink::setLink pInfo == NULL is not allowed.");
+        return LS_FAIL;
+    }
+
     setConnInfo(pInfo);
     setState(HIOS_CONNECTED);
     setHandler(NULL);
@@ -343,12 +359,12 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
 
     getClientInfo()->incConn();
     LS_DBG_L(this, "concurrent conn: %zd", pInfo->m_pClientInfo->getConns());
-    
+
     //FIXME below code is from lslbd, should we use this flag?
 //     if (pInfo->m_pClientInfo->isFromLocalAddr(
 //         (const sockaddr *)pInfo->m_pServerAddrInfo->getAddr()))
 //         setFlag(HIO_FLAG_FROM_LOCAL, 1);
-    
+
     return 0;
 }
 
@@ -705,7 +721,7 @@ int NtwkIOLink::flush()
             dumpState("flush", "CW");
             MultiplexerFactory::getMultiplexer()->continueRead(this);
         }
-        
+
         return 1;
     case 1:
         return 0;
@@ -713,8 +729,8 @@ int NtwkIOLink::flush()
         tobeClosed();
         break;
     }
-    
-    
+
+
     return ret;
 }
 

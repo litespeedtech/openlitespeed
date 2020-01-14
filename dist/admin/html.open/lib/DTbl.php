@@ -456,7 +456,7 @@ class DTbl
                 $link .= '&r=' . $disp->Get(DInfo::FLD_REF);
 
             $link .= $attr->_href;
-            $attr->_hrefLink = str_replace('$R', $disp->Get(DInfo::FLD_REF), $link);
+            $attr->_hrefLink = str_replace('$R', urlencode($disp->Get(DInfo::FLD_REF)), $link);
         }
 
         $buf .= ($attr->toHtml($node));

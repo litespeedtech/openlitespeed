@@ -31,7 +31,7 @@ class L4Handler : public HioHandler
 
 public:
     L4Handler();
-    ~L4Handler() {};
+    ~L4Handler();
 
     int  init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP,
               int iIpLen);

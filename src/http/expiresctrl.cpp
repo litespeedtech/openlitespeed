@@ -67,6 +67,8 @@ int ExpiresCtrl::parse(const char *pConfig)
 
     StrParse parse(pConfig, pEnd, " \t");
     const char *p = parse.trim_parse();
+    if (!p)
+        return LS_FAIL;
     if (isdigit(*(p + 1)))
     {
         if ((*p == 'A') || (*p == 'a'))

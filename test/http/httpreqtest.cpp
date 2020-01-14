@@ -343,10 +343,10 @@ SUITE(HttpReqTest)
         for (i = 0; i < len; ++i)
         {
             ret = req.append(pInput + i, 1);
-            if ((ret != 1) && (ret != 0))
-                printf("test error: ret=%d, i=%d, bufleft=%s\n", ret, i, pInput + i);
             if (ret == SC_400)
                 break;
+            if ((ret != 1) && (ret != 0))
+                printf("test error: ret=%d, i=%d, bufleft=%s\n", ret, i, pInput + i);
             CHECK((ret == 1) || (ret == 0));
         }
         CHECK(ret == SC_400);

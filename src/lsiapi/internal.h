@@ -96,7 +96,7 @@ typedef struct lsi_module_internal_s
 class LsiSession : public evtcbtail_s
 {
 public:
-    LsiSession() {};
+    LsiSession() { m_pModuleConfig = NULL; };
     virtual ~LsiSession() {};
     ModuleConfig *getModuleConfig()    { return m_pModuleConfig; };
     virtual LogSession *getLogSession() = 0;

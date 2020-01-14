@@ -73,7 +73,7 @@ void ProfileTime::stop()
     struct timespec     end;
     clock_gettime(CLOCK_MONOTONIC, &end);
 #endif
-    m_diffns = (end.tv_sec - m_begin.tv_sec) * 1e9 
+    m_diffns = (end.tv_sec - m_begin.tv_sec) * 1e9
                 + (end.tv_nsec - m_begin.tv_nsec);
 }
 
@@ -82,7 +82,7 @@ void ProfileTime::printTime(const char *desc, int loop_count)
 {
     int64_t time_diff = getTimeUsedNanoSec();
     printf("%s Total: %" PRId64 " ns, Average Per Loop: %" PRId64 " ns\n",
-           desc, time_diff, time_diff / loop_count);
+            desc, time_diff, loop_count ? time_diff / loop_count: 0);
 }
 
 
@@ -90,7 +90,7 @@ void ProfileTime::printTimeMs(const char *desc, int loop_count)
 {
     int64_t time_diff = getTimeUsedNanoSec() / 1e3;
     printf("%s Total: %" PRId64 " ms, Average Per Loop: %" PRId64 " ms\n",
-           desc, time_diff, time_diff / loop_count);
+            desc, time_diff, loop_count ? time_diff / loop_count: 0);
 }
 
 

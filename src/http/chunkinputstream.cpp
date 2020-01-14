@@ -25,13 +25,12 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
-
 ChunkInputStream::ChunkInputStream()
-    : m_pIS(NULL)
-    , m_iChunkLen(INIT_CHUNK_LEN)
-    , m_iRemain(0)
 {
+    LS_ZERO_FILL(m_pIS, m_iBufUsed);
 }
+
+
 ChunkInputStream::~ChunkInputStream()
 {
 }

@@ -35,7 +35,7 @@ class ExtRequest : public DLinkedObj
     int             m_iWorkerTrack;
 
 public:
-    ExtRequest(): m_iAttempts(0) {};
+    ExtRequest(): m_iAttempts(0), m_pLB(NULL), m_iWorkerTrack(0) {};
     virtual ~ExtRequest() {};
 
     void setAttempts(int att) {   m_iAttempts = att;  }

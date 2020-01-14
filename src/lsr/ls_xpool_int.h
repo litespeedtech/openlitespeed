@@ -18,7 +18,7 @@
 #ifndef LS_XPOOL_INT_H
 #define LS_XPOOL_INT_H
 
-typedef __link_t            ls_xblkctrl_t;
+typedef __nlink_t            ls_xblkctrl_t;
 
 struct xpool_alink_s
 {

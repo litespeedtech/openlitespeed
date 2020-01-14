@@ -299,7 +299,11 @@ private:
     void operator=(const SessionHooks &rhs);
 public:
     //with the globalHooks for determine the base and size
-    SessionHooks() : m_iStatus(UNINIT)  {}
+    SessionHooks() : m_iStatus(UNINIT)
+    {
+       memset(m_pEnableArray, 0, sizeof(m_pEnableArray));
+       memset(m_iFlag, 0, sizeof(m_iFlag));
+    }
 
     ~SessionHooks()
     {

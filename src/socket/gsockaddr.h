@@ -88,7 +88,11 @@ public:
     struct sockaddr *get()     {   return m_pSockAddr; }
 
     int family() const
-    {   return m_pSockAddr->sa_family;  }
+    {
+        if (m_pSockAddr)
+            return m_pSockAddr->sa_family;
+        return -1;
+    }
 
     int len() const
     {   return m_len;   }

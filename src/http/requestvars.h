@@ -77,55 +77,55 @@
 #define REF_ORG_REQ_URI     150
 #define REF_ORG_QS          151
 #define REF_HTTPS           152
+#define REF_REQ_SCHEME      153
 
-#define REF_SSL_VERSION     153
-#define REF_SSL_SESSION_ID  154
-#define REF_SSL_CIPHER      155
-#define REF_SSL_CIPHER_USEKEYSIZE   156
-#define REF_SSL_CIPHER_ALGKEYSIZE   157
-#define REF_SSL_CLIENT_CERT 158
+#define REF_SSL_VERSION     154
+#define REF_SSL_SESSION_ID  155
+#define REF_SSL_CIPHER      156
+#define REF_SSL_CIPHER_USEKEYSIZE   157
+#define REF_SSL_CIPHER_ALGKEYSIZE   158
+#define REF_SSL_CLIENT_CERT 159
 
+#define REF_VH_CNAME        160
+#define REF_VH_USER         161
 
-#define REF_VH_CNAME        159
-#define REF_VH_USER         160
+#define REF_DUMMY           162
+#define REF_PID             163
+#define REF_STATUS_CODE     164
+#define REF_STRFTIME        165
+#define REF_REQ_TIME_SEC    166
+#define REF_CUR_URI         167    //no query string part
+#define REF_CONN_STATE      168
+#define REF_BYTES_IN        169
+#define REF_BYTES_OUT       170
+#define REF_BYTES_TOTAL     171
+#define REF_RESP_BYTES      172
 
-#define REF_DUMMY           161
-#define REF_PID             162
-#define REF_STATUS_CODE     163
-#define REF_STRFTIME        164
-#define REF_REQ_TIME_SEC    165
-#define REF_CUR_URI         166    //no query string part
-#define REF_CONN_STATE      167
-#define REF_BYTES_IN        168
-#define REF_BYTES_OUT       169
-#define REF_BYTES_TOTAL     170
-#define REF_RESP_BYTES      171
+#define REF_DATE_GMT        173
+#define REF_DATE_LOCAL      174
+#define REF_DOCUMENT_NAME   175
+#define REF_DOCUMENT_URI    176
+#define REF_LAST_MODIFIED   177
+#define REF_QS_UNESCAPED    178
+#define REF_REQ_TIME_MS     179
+#define REF_UNIQUE_ID       180
+#define REF_COOKIE_VAL      181
 
-#define REF_DATE_GMT        172
-#define REF_DATE_LOCAL      173
-#define REF_DOCUMENT_NAME   174
-#define REF_DOCUMENT_URI    175
-#define REF_LAST_MODIFIED   176
-#define REF_QS_UNESCAPED    177
-#define REF_REQ_TIME_MS     178
-#define REF_UNIQUE_ID       179
-#define REF_COOKIE_VAL      180
-
-#define REF_EXT_END         181
+#define REF_EXT_END         182
 
 #define REF_BEGIN           110
 #define REF_END             REF_DUMMY
 #define REF_COUNT           (REF_END - REF_BEGIN)
 #define REF_EXT_COUNT       (REF_EXT_END - REF_BEGIN)
 
-#define REF_RESP_BODY               181
-#define REF_MATCHED_VAR             182
-#define REF_TRANS_PROTOCOL          183
-#define REF_SEC_PERF_COMBINED       184
-#define REF_RESP_CONTENT_TYPE       185
-#define REF_REQ_BODY                186
-#define REF_VH_ORDER_ID             187
-#define REF_RESP_CONTENT_LENGTH     188
+#define REF_RESP_BODY               182
+#define REF_MATCHED_VAR             183
+#define REF_TRANS_PROTOCOL          184
+#define REF_SEC_PERF_COMBINED       185
+#define REF_RESP_CONTENT_TYPE       186
+#define REF_REQ_BODY                187
+#define REF_VH_ORDER_ID             188
+#define REF_RESP_CONTENT_LENGTH     189
 
 #define REF_RESP_HEADER_BEGIN       200
 

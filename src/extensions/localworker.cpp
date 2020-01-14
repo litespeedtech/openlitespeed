@@ -433,7 +433,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                 pVHost->getName(), pVHost->getUid(), pVHost->getGid(),
                 pVHost->getRootContext().getSetUidMode());
     }
-    
+
     if (pVHost && pVHost->getRootContext().getSetUidMode() == UID_DOCROOT)
     {
         uid = pVHost->getUid();
@@ -499,13 +499,13 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                                  config.getUmask(),
                                  pChrootPath, chrootLen,
                                  pDir, strlen(pDir), config.getRLimits());
-    
+
     LS_NOTICE("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
             " final uid %d gid %d.",
             config.getName(), config.getUid(),
             config.getGid(), config.getCommand(),
             uid, gid);
-     
+
     int rfd = -1;
     int pid;
     //if ( config.getStartByServer() == 2 )
@@ -607,7 +607,7 @@ int LocalWorker::startWorker()
 // //         return -SC_508;
 //     fd = getfd();
 //     LocalWorkerConfig &config = getConfig();
-//     
+//
 //     if (fd == -1)
 //     {
 //         //config.altServerAddr();
@@ -690,7 +690,7 @@ void LocalWorker::checkAndStopWorker()
             s = 1;
         }
     }
-    
+
     if (getState() == ST_GOOD && m_pDetached && m_pDetached->pid_info.pid > 0)
     {
         if (detectBinaryChange())
@@ -701,7 +701,7 @@ void LocalWorker::checkAndStopWorker()
             s = 2;
         }
     }
-        
+
     if (!s)
     {
         if (m_forceStop)
@@ -709,7 +709,7 @@ void LocalWorker::checkAndStopWorker()
             m_forceStop = 0;
             LS_INFO("[%s] force stop requested, stopping ...", getName());
         }
-        else 
+        else
             return;
     }
     if (getConfig().isDetached())
@@ -806,7 +806,7 @@ int LocalWorker::processPid(int pid, const char * path)
             //else
             PidRegistry::add(pid, this, 0);
         }
-        
+
         LS_NOTICE("[%s] add child process pid: %d", pLogId, pid);
         if (getConfig().isDetached())
         {
@@ -818,7 +818,7 @@ int LocalWorker::processPid(int pid, const char * path)
     }
     else
     {
-        
+
         if (pid <= -600)
             pid = -SC_500;
         if (pid < -100)
@@ -832,7 +832,7 @@ int LocalWorker::processPid(int pid, const char * path)
     }
     if (getConfig().isDetached())
     {
-        
+
         if (m_pDetached->fd_pid_file != -1)
         {
             unlockClosePidFile(m_pDetached->fd_pid_file);
@@ -858,16 +858,17 @@ void LocalWorker::saveDetachedPid(int fd, DetachedPidInfo_t *detached_pid,
                                  const char *path)
 {
     struct stat st;
-    stat(path, &st);
-    m_pDetached->pid_info.inode = st.st_ino;
-    m_pDetached->pid_info.last_modify = st.st_mtime;
-
-    const char *bin_path = ((LocalWorkerConfig *)getConfigPointer())->getCommand();
-    if (bin_path && nio_stat(bin_path, &st) == 0)
+    if (stat(path, &st) == 0)
     {
-        m_pDetached->pid_info.bin_last_mod = st.st_mtime;
-    }
+        m_pDetached->pid_info.inode = st.st_ino;
+        m_pDetached->pid_info.last_modify = st.st_mtime;
 
+        const char *bin_path = ((LocalWorkerConfig *)getConfigPointer())->getCommand();
+        if (bin_path && nio_stat(bin_path, &st) == 0)
+        {
+            m_pDetached->pid_info.bin_last_mod = st.st_mtime;
+        }
+    }
     pwrite(fd, detached_pid, sizeof(DetachedPidInfo_t), 0);
 }
 
@@ -1048,7 +1049,7 @@ TRY_AGAIN:
     saveDetachedPid(fd_pid_file, &m_pDetached->pid_info,
                    service_addr.getUnix());
 
-    
+
     pid = workerExec(config, fd);
     if (pid != 0)
     {

@@ -26,7 +26,8 @@ void CrewWorker::thr_cleanup()
             m_slot, this, getHandle());
 #endif
     assert(m_wc);
-    m_wc->workerDied(this);
+    if (m_slot != -1)
+        m_wc->workerDied(this);
     requestStop();
     delete this;
 }

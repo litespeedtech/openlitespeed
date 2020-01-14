@@ -32,6 +32,8 @@
 #include <openssl/md5.h>
 
 CgidConn::CgidConn()
+    : m_pPendingBuf(NULL)
+    , m_iTotalPending(0)
 {
 }
 

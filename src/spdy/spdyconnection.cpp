@@ -65,8 +65,11 @@ SpdyConnection::SpdyConnection()
     , m_uiLastPingID(0)
     , m_uiLastStreamID(0)
     , m_uiGoAwayId(0)
+    , m_iCurrentFrameRemain(0)
     , m_mapStream(50, int_hash, int_comp)
+    , m_state(0)
     , m_flag(0)
+    , m_bVersion(0)
     , m_iCurDataOutWindow(SPDY_FCW_INIT_SIZE)
     , m_iCurInBytesToUpdate(0)
     , m_iDataInWindow(SPDY_FCW_INIT_SIZE)
@@ -75,7 +78,10 @@ SpdyConnection::SpdyConnection()
     , m_iStreamOutInitWindowSize(SPDY_FCW_INIT_SIZE)
     , m_iClientMaxStreams(100)
     , m_tmIdleBegin(0)
+    , m_pcurrentSpdyHeader(NULL)
+
 {
+    memset(&m_timevalPing, 0, sizeof(m_timevalPing));
 }
 
 
@@ -985,9 +991,12 @@ int SpdyConnection::timerRoutine()
     for (; it != m_mapStream.end();)
     {
         itn = m_mapStream.next(it);
-        it.second()->onTimer();
-        if (it.second()->getState() != HIOS_CONNECTED)
-            recycleStream(it);
+        uint32_t id = it.second()->getStreamID();
+        if (it.second()->onTimer() == 0)
+        {
+            if (it.second()->getState() != HIOS_CONNECTED)
+                recycleStream(id);
+        }
         it = itn;
     }
     if (m_mapStream.size() == 0)
@@ -1145,7 +1154,7 @@ int SpdyConnection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     uint32_t temp32;
     int headerOffset = getBuf()->size();
 
-    LS_DBG_H(getStream()->getLogger(), "[%s-%d] sendRespHeaders()", 
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] sendRespHeaders()",
              getStream()->getLogId(), uiStreamID);
 
     getBuf()->guarantee(28);

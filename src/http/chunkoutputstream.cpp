@@ -26,13 +26,8 @@
 static const char *s_CHUNK_END = "0\r\n\r\n";
 
 ChunkOutputStream::ChunkOutputStream()
-    : m_pOS(NULL)
-    , m_iCurSize(0)
-    , m_iBuffering(0)
-    , m_iSendFileLeft(0)
-    , m_iTotalPending(0)
 {
-    m_iov.clear();
+    LS_ZERO_FILL(m_pOS, m_pLastBufBegin);
 }
 
 

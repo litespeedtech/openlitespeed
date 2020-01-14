@@ -1085,10 +1085,10 @@ int RadixNode::setWCHeader(int iFlags, int iMode, ls_xpool_t *pool,
         break;
     case RNSTATE_CNODE:
         pTmp = m_pWC->m_pC;
-        iOrigOff = rnh_roundedsize(pTmp->len);
-        iNewOff = rnh_roundedsize(pHeader->len);
         if (pTmp == NULL)
             return LS_FAIL;
+        iOrigOff = rnh_roundedsize(pTmp->len);
+        iNewOff = rnh_roundedsize(pHeader->len);
         if (pTmp->len < pHeader->len)
         {
             pHeader = (rnheader_t *)rnDoRealloc(iFlags, pool, pHeader,

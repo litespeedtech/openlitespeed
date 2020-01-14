@@ -1229,39 +1229,22 @@ class WPCaller
             putenv('HTTP_HOST=' . self::LSCWP_HTTP_HOST_TEST);
         }
 
-        $includeFiles = array(
-            '/wp-load.php',
-            '/wp-admin/includes/plugin.php',
-            '/wp-includes/l10n.php',
-            '/wp-admin/includes/file.php',
-            '/wp-admin/includes/class-wp-upgrader.php',
-            '/wp-admin/includes/misc.php',
-            '/wp-includes/formatting.php',
-            '/wp-includes/theme.php',
-            '/wp-includes/link-template.php',
-            '/wp-includes/class-wp-theme.php',
-            '/wp-includes/kses.php',
-            '/wp-includes/cron.php',
-            '/wp-includes/pluggable.php',
-            '/wp-includes/http.php',
-            '/wp-includes/class-http.php',
-            '/wp-includes/general-template.php',
-            '/wp-includes/ms-functions.php',
-            '/wp-includes/ms-deprecated.php',
-            '/wp-includes/shortcodes.php',
-            '/wp-includes/user.php',
-            '/wp-includes/capabilities.php',
-            '/wp-includes/default-constants.php',
-            '/wp-includes/meta.php',
-            '/wp-includes/update.php',
-            '/wp-includes/query.php',
-            '/wp-includes/post.php'
-        );
-
         /**
-         * The following version specific includes may fail on RC releases.
+         * Version specific includes may fail on RC releases.
          */
+
+        $includeFiles = array();
+        $includeFiles[] = '/wp-load.php';
+        $includeFiles[] = '/wp-includes/default-constants.php';
+        $includeFiles[] = '/wp-includes/formatting.php';
+        $includeFiles[] = '/wp-includes/meta.php';
+        $includeFiles[] = '/wp-includes/l10n.php';
+        $includeFiles[] = '/wp-includes/class-wp-walker.php';
+        $includeFiles[] = '/wp-includes/capabilities.php';
+
         if ( version_compare($wp_version, '4.4.0', '>=') ) {
+            $includeFiles[] = '/wp-includes/class-wp-roles.php';
+            $includeFiles[] = '/wp-includes/class-wp-role.php';
             $includeFiles[] = '/wp-includes/class-wp-user.php';
             $includeFiles[] = '/wp-includes/rest-api.php';
             $includeFiles[] = '/wp-includes/class-wp-http-encoding.php';
@@ -1270,6 +1253,20 @@ class WPCaller
             $includeFiles[] = '/wp-includes/class-wp-http-curl.php';
             $includeFiles[] = '/wp-includes/class-wp-http-cookie.php';
         }
+
+        $includeFiles[] = '/wp-includes/query.php';
+        $includeFiles[] = '/wp-includes/theme.php';
+        $includeFiles[] = '/wp-includes/class-wp-theme.php';
+        $includeFiles[] = '/wp-includes/user.php';
+        $includeFiles[] = '/wp-includes/general-template.php';
+        $includeFiles[] = '/wp-includes/link-template.php';
+        $includeFiles[] = '/wp-includes/post.php';
+        $includeFiles[] = '/wp-includes/kses.php';
+        $includeFiles[] = '/wp-includes/cron.php';
+        $includeFiles[] = '/wp-includes/update.php';
+        $includeFiles[] = '/wp-includes/shortcodes.php';
+        $includeFiles[] = '/wp-includes/http.php';
+        $includeFiles[] = '/wp-includes/class-http.php';
 
         if ( version_compare($wp_version, '4.6.0', '>=') ) {
             $includeFiles[] = '/wp-includes/class-wp-http-requests-response.php';
@@ -1283,6 +1280,20 @@ class WPCaller
              */
             $includeFiles[] = '/wp-includes/class-wp-query.php';
         }
+
+        if ( version_compare($wp_version, '5.0.0', '>=') ) {
+            $includeFiles[] = '/wp-includes/blocks.php';
+            $includeFiles[] = '/wp-includes/class-wp-block-parser.php';
+        }
+
+        $includeFiles[] = '/wp-includes/ms-functions.php';
+        $includeFiles[] = '/wp-includes/ms-deprecated.php';
+        $includeFiles[] = '/wp-includes/pluggable.php';
+        $includeFiles[] = '/wp-admin/includes/plugin.php';
+        $includeFiles[] = '/wp-admin/includes/file.php';
+        $includeFiles[] = '/wp-admin/includes/class-wp-upgrader.php';
+        $includeFiles[] = '/wp-admin/includes/misc.php';
+        $includeFiles[] = '/wp-admin/includes/template.php';
 
         set_error_handler('\Lsc\Wp\WPCaller::warning_handler');
 

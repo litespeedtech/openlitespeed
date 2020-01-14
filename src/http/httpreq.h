@@ -388,7 +388,7 @@ public:
         IS_NO_CACHE         = 8,
     };
 
-   explicit HttpReq();
+    explicit HttpReq();
     ~HttpReq();
 
     int processHeader();
@@ -451,6 +451,8 @@ public:
 
     const char *getHeader(size_t index) const
     {
+        if (index >= HttpHeader::H_HEADER_END)
+            return NULL;
         int offset = (index < HttpHeader::H_TE ?
                          m_commonHeaderOffset[index] :
                          m_otherHeaderOffset[index - HttpHeader::H_TE]);
@@ -472,7 +474,9 @@ public:
     {   return m_commonHeaderOffset[index];     }
     int getHeaderLen(size_t index) const
     {
-        return (index < HttpHeader::H_TE ?
+        if (index >= HttpHeader::H_HEADER_END)
+            return 0;
+        return ( index < HttpHeader::H_TE ?
                  m_commonHeaderLen[ index ] :
                  m_otherHeaderLen[ index - HttpHeader::H_TE]);
     }

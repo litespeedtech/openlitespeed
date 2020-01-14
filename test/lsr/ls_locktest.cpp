@@ -29,7 +29,6 @@
 int bigValue        = 0;
 int bigCount        = 0;
 int loopCount       = 10000000;
-int numThreads      = 5;
 
 #ifdef notdef
 #define barrier() __sync_synchronize()
@@ -490,6 +489,7 @@ int main(int ac, char *av[])
 {
     int i;
     int index;
+    int numThreads      = 5;
 
     if (ac > 2)
     {

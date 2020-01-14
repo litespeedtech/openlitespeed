@@ -70,7 +70,7 @@ class CompilePHPUI
 	{
 		$cur_step = $this->check->GetNextStep();
 
-		$buf .= '<form name="buildform" id="buildform">
+		$buf = '<form name="buildform" id="buildform">
 		<div class="jarviswidget jarviswidget-color-blueLight">
 		<header role="heading">';
 
@@ -99,7 +99,11 @@ class CompilePHPUI
 	private function form_end()
 	{
 		$cur_step = $this->check->GetNextStep();
-		$version = $this->check->pass_val['php_version'];
+        if (isset($this->check->pass_val['php_version']))
+            $version = $this->check->pass_val['php_version'];
+        else
+            $version = '';
+        
 		return '</fieldset></div></div></div>
 				<input type="hidden" name="curstep" value="' . $cur_step . '">
 				<input type="hidden" name="buildver" value="' . $version . '">
@@ -209,7 +213,6 @@ class CompilePHPUI
 			$options = new BuildOptions($php_version);
 			$options->setDefaultOptions();
 			$default_options = $options;
-            $supported = $this->check->GetModuleSupport($php_version);
 		}
 		elseif ($cur_step == 2) {
 			$options = $pass_val['input_options'];
@@ -222,10 +225,13 @@ class CompilePHPUI
 			$options = new BuildOptions($php_version);
 			$default_options = new BuildOptions($php_version);
 			$default_options->setDefaultOptions();
+            
 		}
 		if ($options == NULL)
 			return "NULL options\n";
 
+        $supported = $this->check->GetModuleSupport($php_version);
+        
 		$saved_options = $options->getSavedOptions();
 		if ($saved_options != NULL && $cur_step == 3) {
 			$options = $saved_options;
@@ -384,7 +390,7 @@ class CompilePHPUI
 				</div>
 				<h5>' . DMsg::ALbl('buildphp_detaillog') . ': </h5>
 				<div >
-				<pre class="lst-logzone" id="logzone">' . $cmd . '</pre>
+				<pre class="lst-logzone" id="logzone"></pre>
 						</div>';
 
 		$buf .= $this->form_end();

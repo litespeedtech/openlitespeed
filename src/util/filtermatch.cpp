@@ -50,7 +50,7 @@ void FilterMatch::init(const char * filter)
         m_igncase = true;
         // fall through
     case 's':
-        m_filter = new char[filter_len];
+        m_filter = new char[filter_len + 1];
         memcpy((void *)m_filter, filter+1, filter_len); // skip the first char, include the NUL
         m_filterLen = filter_len - 1;
         break;

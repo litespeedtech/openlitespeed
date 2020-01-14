@@ -72,8 +72,7 @@ private:
     int loadPrelinkedModules();
 
 public:
-    ~ModuleManager()
-    {}
+    ~ModuleManager();
 
     int initModule();
 

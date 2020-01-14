@@ -20,6 +20,7 @@
 #include <string.h>
 
 CacheHash::CacheHash()
+    : m_key(0)
 {
 }
 

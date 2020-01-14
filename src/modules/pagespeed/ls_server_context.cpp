@@ -30,6 +30,7 @@ namespace net_instaweb
 LsServerContext::LsServerContext(
     LsRewriteDriverFactory *factory, StringPiece hostname, int port)
     : SystemServerContext(factory, hostname, port)
+    , m_pRewriteDriverFactory(NULL)
 {
 }
 

@@ -80,7 +80,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Fri Dec 13 19:51:51 UTC 2019)"
+#define BUILDTIME  " (built: Tue Jan 14 20:16:59 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -92,6 +92,7 @@ static int s_iCpuCount = 1;
 LshttpdMain::LshttpdMain()
     : m_pServer(NULL)
     , m_pBuilder(NULL)
+    , m_pid(0)
     , m_noDaemon(0)
     , m_noCrashGuard(0)
     , m_iConfTestMode(0)
@@ -152,8 +153,6 @@ int LshttpdMain::childExit(pid_t ch_pid, int stat)
 {
     LS_NOTICE("[AutoRestarter] child process with pid=%d exited with status=%d!",
               ch_pid, stat);
-    if (stat != 100)
-        return 0;
     return 0;
 }
 
@@ -168,7 +167,7 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     LS_NOTICE("[AutoRestarter] child process with pid=%d received signal=%d, %s!",
               (int)pid, signal, pCoreFile[ coredump != 0 ]);
     //cleanUp();
-    
+
 #if 1
     LS_NOTICE("[***] will create core file.");
 //#ifdef LS_ENABLE_DEBUG
@@ -176,7 +175,7 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     //We are in middle of graceful shutdown, do not restart another copy
     SendCrashNotification(pid, signal, coredump, pCoreFile[coredump != 0]);
 #else
-    
+
     AutoStr2 sCmd;
     sCmd.setStr(MainServerConfig::getInstance().getServerRoot());
     sCmd.append("/admin/misc/testbeta.sh", 23);
@@ -192,21 +191,21 @@ int LshttpdMain::childSignaled(pid_t pid, int signal, int coredump)
     else
     {
         upLastCheckingTm = DateTime::s_curTime;
-        
+
         coredump = 0;
         //Since it is not DEBUG version, I will download the DEBUG version to run.
         const char *pVer = PACKAGE_VERSION;
         sCmd.append(" -d ", 4);
         sCmd.append(pVer, strlen(pVer));
-        
+
         LS_NOTICE("[*****] non-debug version running, run cmd \"%s\".",
                 sCmd.c_str());
-        
+
         if (fork() == 0)  // run it in child process
             ::system(sCmd.c_str());
     }
-#endif    
-    
+#endif
+
     if (coredump)
     {
 
@@ -403,7 +402,7 @@ int LshttpdMain::getFullPath(const char *pRelativePath, char *pBuf,
 int LshttpdMain::execute(const char *pExecCmd, const char *pParam)
 {
     char achBuf[512];
-    int n = getFullPath(pExecCmd, achBuf, 512);
+    int n = getFullPath(pExecCmd, achBuf, 511);
     ls_snprintf(&achBuf[n], 511 - n, " %s", pParam);
     int ret = system(achBuf);
     return ret;
@@ -437,7 +436,8 @@ int LshttpdMain::startAdminSocket()
     }
     if (i == 100)
         return LS_FAIL;
-    ::fcntl(m_fdAdmin, F_SETFD, FD_CLOEXEC);
+    if (m_fdAdmin != -1)
+        ::fcntl(m_fdAdmin, F_SETFD, FD_CLOEXEC);
     HttpServerConfig::getInstance().setAdminSock(strdup(achBuf));
     LS_NOTICE("[ADMIN] server socket: %s", achBuf);
     return 0;
@@ -452,7 +452,11 @@ int LshttpdMain::closeAdminSocket()
         if (strncmp(pAdminSock, "uds://", 6) == 0)
             unlink(&pAdminSock[5]);
     }
-    close(m_fdAdmin);
+    if (m_fdAdmin != -1)
+    {
+        close(m_fdAdmin);
+        m_fdAdmin = -1;
+    }
     return 0;
 }
 
@@ -462,6 +466,8 @@ int LshttpdMain::acceptAdminSockConn()
     struct sockaddr_in peer;
     socklen_t addrlen;
     addrlen = sizeof(peer);
+    if (m_fdAdmin == -1)
+        return LS_FAIL;
     int fd = accept(m_fdAdmin, (struct sockaddr *)&peer, &addrlen);
     if (fd == -1)
         return LS_FAIL;
@@ -565,7 +571,7 @@ int LshttpdMain::testServerRoot(const char *pRoot)
             return LS_FAIL;
     }
 #else
-    strcpy(achBuf, pRoot);
+    lstrncpy(achBuf, pRoot, sizeof(achBuf));
 #endif
 
     int len = strlen(pRoot);
@@ -589,12 +595,12 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
     if (*command != '/')
     {
         getcwd(achBuf, left_len - 1);
-        strcat(achBuf, "/");
+        lstrncat(achBuf, "/", sizeof(achBuf));
         left_len -= strlen(achBuf);
     }
-    
+
     if (left_len >= (int)strlen(command))
-        strcat(achBuf, command);
+        lstrncat(achBuf, command, sizeof(achBuf));
     else
     {
         printf("Warn: Command too long, bypass it.");
@@ -602,8 +608,10 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
 
     char *p = strrchr(achBuf, '/');
     if (p)
+    {
         *(p + 1) = 0;
-    strcat(p, "../");
+        lstrncat(p, "../", sizeof(achBuf) - (p - achBuf));
+    }
     GPath::clean(achBuf);
     memccpy(pBuf, achBuf, 0, len);
     return 0;
@@ -635,10 +643,10 @@ int LshttpdMain::guessCommonServerRoot()
     {
         if (!pServerRoots[i])
             continue;
-        strcpy(achBuf, pServerRoots[i]);
+        lstrncpy(achBuf, pServerRoots[i], sizeof(achBuf));
         for (size_t j = 0; j < sizeof(pServerDirs) / sizeof(char *); ++j)
         {
-            strcat(achBuf, pServerDirs[j]);
+            lstrncat(achBuf, pServerDirs[j], sizeof(achBuf));
             if (testServerRoot(achBuf) == 0)
                 return 0;
         }
@@ -681,10 +689,10 @@ int LshttpdMain::config()
         m_pBuilder->releaseConfigXmlTree();
     if (ret != 0)
         return 1;
-    
+
     if (m_iConfTestMode)
         return 0;
-    
+
     if (m_pServer->isServerOk())
         return 2;
 //    if ( ServerProcessConfig::getInstance.getChroot != NULL )
@@ -770,8 +778,8 @@ int LshttpdMain::testRunningServer()
 void LshttpdMain::printVersion()
 {
     printf("%s%s%s\n\tmodule versions:\n%s\n",
-           HttpServerVersion::getVersion(), BUILDTIME, 
-           
+           HttpServerVersion::getVersion(), BUILDTIME,
+
 #ifdef LS_ENABLE_DEBUG
            " (DEBUG)",
 #else
@@ -891,7 +899,7 @@ int LshttpdMain::init(int argc, char *argv[])
     }
     else
         MainServerConfig::getInstance().setConfTestMode(1);
-    
+
 #ifndef IS_LSCPD
 
     //load the config
@@ -929,7 +937,7 @@ int LshttpdMain::init(int argc, char *argv[])
     plainconf::flushErrorLog();
 #endif
 
-  
+
     LS_NOTICE("Loading %s%s ...", HttpServerVersion::getVersion(), BUILDTIME);
     LS_NOTICE("Using [%s]", SSLeay_version(SSLEAY_VERSION));
 
@@ -1078,7 +1086,7 @@ int LshttpdMain::main(int argc, char *argv[])
                 GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_ATEXIT, NULL);
         }
         m_pServer->releaseAll();
-        
+
         if (m_iConfTestMode)
         {
             int ret = 0;
@@ -1098,13 +1106,13 @@ int LshttpdMain::main(int argc, char *argv[])
                     if (buff != (unsigned char *)(-1))
                     {
                         printf("%.*s", (int)st.st_size, buff);
-                        
+
                         if (strstr((const char *)buff, "[ERROR]") != NULL)
                             ret = 2;
                     }
                     munmap((caddr_t)buff, st.st_size);
                 }
-                
+
                 close(fd);
                 unlink(TEST_CONF_LOG);
             }
@@ -1238,7 +1246,11 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     {
         HttpServerConfig::getInstance().setUseSendfile(1);
     }
-    close(m_fdAdmin);
+    if (m_fdAdmin != -1)
+    {
+        close(m_fdAdmin);
+        m_fdAdmin = -1;
+    }
 
 #ifdef IS_LSCPD
     snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
@@ -1480,7 +1492,11 @@ void LshttpdMain::applyChanges()
 void LshttpdMain::gracefulRestart()
 {
     LS_DBG_L("Graceful Restart... ");
-    close(m_fdAdmin);
+    if (m_fdAdmin != -1)
+    {
+        close(m_fdAdmin);
+        m_fdAdmin = -1;
+    }
     broadcastSig(SIGTERM, 1);
     s_tmDelayShutdown = 0;
     s_iRunning = 0;
@@ -1546,14 +1562,14 @@ int LshttpdMain::guardCrash()
         pfds[pollCount].events = POLLIN;
         ++pollCount;
     }
-    
+
     if (m_fdAdmin != -1)
     {
         pfds[pollCount].fd = m_fdAdmin;
         pfds[pollCount].events = POLLIN;
         ++pollCount;
     }
-    
+
     s_iRunning = 1;
     startTimer();
     while (s_iRunning > 0)
@@ -1782,7 +1798,7 @@ static long getProcessStartTime(int pid)
     if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0) {
         return -1;
     }
-#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
     return kp.ki_start.tv_sec;
 #else
     return kp.kp_proc.p_un.__p_starttime.tv_sec;

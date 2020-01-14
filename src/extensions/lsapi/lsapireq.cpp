@@ -217,6 +217,8 @@ int LsapiReq::dumpReq(char *pFile)
 {
     //test code
     int fd = open(pFile, O_RDWR | O_CREAT | O_TRUNC, 0600);
+    if (fd == -1)
+        return -1;
     writev(fd, m_pIovec->get(), m_pIovec->len());
     close(fd);
     return 0;

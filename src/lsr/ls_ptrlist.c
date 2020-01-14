@@ -246,6 +246,6 @@ void ls_ptrlist_sort(
     ls_ptrlist_t *pThis, int (*compare)(const void *, const void *))
 {
     qsort(ls_ptrlist_begin(pThis),
-          ls_ptrlist_size(pThis), sizeof(void **), compare);
+          ls_ptrlist_size(pThis), sizeof(void *), compare);
 }
 

@@ -83,6 +83,15 @@ ExtWorkerConfig::~ExtWorkerConfig()
 
 
 ExtWorkerConfig::ExtWorkerConfig(const ExtWorkerConfig &rhs)
+    : m_iTimeout(rhs.m_iTimeout)
+    , m_iRetryTimeout(rhs.m_iRetryTimeout)
+    , m_iKeepAlive(rhs.m_iKeepAlive)
+    , m_iDetached(rhs.m_iDetached)
+    , m_iMaxIdleTime(rhs.m_iMaxIdleTime)
+    , m_iKeepAliveTimeout(rhs.m_iKeepAliveTimeout)
+    , m_iSelfManaged(rhs.m_iSelfManaged)
+    , m_iStartByServer(rhs.m_iStartByServer)
+    , m_pOrgEnv(rhs.m_pOrgEnv)
 {
     m_sURL = rhs.m_sURL;
     m_sName = rhs.m_sName;

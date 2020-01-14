@@ -46,6 +46,7 @@ struct ifi_info *parse_proc_net()
     ls_fio_close(fd);
 
     struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
     char *pEnd = &achBuf[total];
     char *pLineEnd;
     char *p = achBuf;

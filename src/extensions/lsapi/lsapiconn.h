@@ -36,14 +36,14 @@
 class LsapiConn: public ExtConn
     , public HttpExtProcessor
 {
-    int                         m_pid;
     IOVec                       m_iovec;
+    LsapiReq                    m_lsreq;
+    int                         m_pid;
     int                         m_iTotalPending;
     int                         m_iPacketLeft;
     int                         m_iPacketHeaderLeft;
     long                        m_lReqBeginTime;
     long                        m_lReqSentTime;
-    LsapiReq                    m_lsreq;
 
     int                         m_respState;
     //short                       m_reqReceived;

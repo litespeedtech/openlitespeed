@@ -28,6 +28,7 @@
 HotlinkCtrl::HotlinkCtrl()
     : m_iAllowDirectAcc(false)
     , m_iOnlySelf(true)
+    , m_iDummy(0)
     , m_pRegex(NULL)
 {
 }

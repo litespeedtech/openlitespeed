@@ -186,13 +186,13 @@ int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
     }
     else if (*pFile == '/')
         defRootType = -1;
-    
+
     switch(defRootType)
     {
     case 0:
         pRoot = MainServerConfig::getInstance().getServerRoot();
         break;
-        
+
     case 1:
         if (s_aDocRoot[0])
             pRoot = getDocRoot();
@@ -201,8 +201,8 @@ int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
             LS_ERROR(this, "Document root path is not available for %s.", pFile);
             ret = LS_FAIL;
         }
-        break;  
-        
+        break;
+
     case 2:
         if (s_aVhRoot[0])
             pRoot = s_aVhRoot;
@@ -212,12 +212,12 @@ int ConfigCtx::getRootPath(const char *&pRoot, const char *&pFile)
             ret = LS_FAIL;
         }
         break;
-        
+
 
     default:
         break;
     }
-    
+
     if (ret == 0 && (defRootType != -1) && (*pFile == '/'))
         ++pFile;
 
@@ -292,7 +292,7 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
             if (pName && nameLen == -1)
                 nameLen = strlen(pName);
 
-            if (nameLen > 0)
+            if (pName && nameLen > 0)
             {
                 if (nameLen > pBufEnd - pCur)
                     return LS_FAIL;
@@ -685,8 +685,8 @@ XmlNode *ConfigCtx::parseFile(const char *configFilePath,
 
 #ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
-    strcpy(sPlainFile, configFilePath);
-    strcat(sPlainFile, ".txt");
+    lstrncpy(sPlainFile, configFilePath, sizeof(sPlainFile));
+    lstrncat(sPlainFile, ".txt", sizeof(sPlainFile));
 //    plainconf::testOutputConfigFile( pRoot, sPlainFile );
 #endif
 

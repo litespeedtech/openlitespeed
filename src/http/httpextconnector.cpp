@@ -47,6 +47,7 @@ HttpExtConnector::HttpExtConnector()
     , m_iState(HEC_BEGIN_REQUEST)
     , m_iRespState(0)
     , m_iReqBodySent(0)
+    , m_iRespHeaderSize(0)
     , m_iRespBodyLen(0)
     , m_iRespBodySent(0)
 {
@@ -691,7 +692,7 @@ void HttpExtConnector::dump()
     LS_INFO(this, "HttpExtConnector state: %d, request body sent: %lld, "
             "response body size: %lld, response body sent:%lld, "
             "left in buffer: %lld, attempts: %d."
-            , m_iState, (long long)m_iReqBodySent 
+            , m_iState, (long long)m_iReqBodySent
             , (long long)m_pSession->getResp()->getContentLen()
             , (long long)m_pSession->getDynBodySent()
             , (long long)((m_pSession->getRespBodyBuf())

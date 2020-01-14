@@ -177,7 +177,6 @@ private:
     gid_t               m_gid;
     char                m_iRewriteLogLevel;
     char                m_iGlobalMatchContext;
-    int                 m_iDummy2;
     AutoStr2            m_sChroot;
     RewriteMapList     *m_pRewriteMaps;
     SslContext         *m_pSSLCtx;

@@ -25,10 +25,10 @@
 TEST(DeniedDirTest_runTest)
 {
     DeniedDir instance;
-    instance.addDir("/etc/*");
-    instance.addDir("/home/gwang/projects/httpd/dist/conf/*");
+    CHECK(instance.addDir("/etc/*") == 0);
+    CHECK(instance.addDir("/home/gwang/projects/httpd/dist/conf/*") == 0);
     CHECK(instance.addDir("/") == 0);
-    instance.isDenied("/home/gwang/projects/httpd/dist/vhosts/example/html/");
+    CHECK(instance.isDenied("/home/gwang/projects/httpd/dist/vhosts/example/html/") == false);
 
     CHECK(instance.addDir("/usr/*") == 0);
     CHECK(instance.addDir("/home/lsong") == 0);

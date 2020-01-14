@@ -79,3 +79,10 @@ void CacheManager::generateRpt(const char *name, AutoBuf *pBuf)
 
 }
 
+void CacheManager::updateStatsExpireByTracking(shm_objtrack_t *pData)
+{
+    CacheInfo *pInfo = getCacheInfo();
+    ls_atomic_add(&(pInfo->getStats(pData->x_flag & CM_TRACK_PRIVATE)->expired),
+                  1);
+}
+

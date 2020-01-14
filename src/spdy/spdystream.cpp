@@ -25,6 +25,8 @@
 
 SpdyStream::SpdyStream()
     : m_uiStreamID(0)
+    , m_iWindowOut(0)
+    , m_iWindowIn(0)
     , m_pSpdyConn(NULL)
 {
 }

@@ -19,7 +19,8 @@
 #include "dummyiostream.h"
 #include "unittest-cpp/UnitTest++.h"
 DummySpdyConnStream::DummySpdyConnStream()
-    : m_pDatabuff(NULL)
+    : m_running(0)
+    , m_pDatabuff(NULL)
     , m_Datalen(0)
 {
 }

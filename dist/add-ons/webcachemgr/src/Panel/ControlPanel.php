@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.9.1';
+    const PANEL_API_VERSION = '1.9.5';
 
     /**
      * @since 1.9
@@ -120,7 +120,7 @@ abstract class ControlPanel
         $this->phpOptions = '-d disable_functions=ini_set -d opcache.enable=0 '
                 . '-d max_execution_time=' . self::PHP_TIMEOUT . ' -d memory_limit=512M '
                 . '-d register_argc_argv=1 -d zlib.output_compression=0 -d output_handler= '
-                . '-d safe_mode=0';
+                . '-d safe_mode=0 -d open_basedir=';
 
         $this->initConfPaths();
     }
@@ -336,7 +336,16 @@ abstract class ControlPanel
      */
     public function isCacheEnabled()
     {
-        if ( ($f = fopen('/tmp/lshttpd/.status', 'r')) === false ) {
+        $statusFile = '/tmp/lshttpd/.status';
+
+        if ( !file_exists($statusFile) ) {
+            $msg = 'Cannot determine LSCache availability. Please start/switch to LiteSpeed Web '
+                    . 'Server before trying again.';
+
+            throw new LSCMException($msg, LSCMException::E_PERMISSION);
+        }
+
+        if ( ($f = fopen($statusFile, 'r')) === false ) {
             throw new LSCMException('Cannot determine LSCache availability.',
                     LSCMException::E_PERMISSION);
         }
@@ -482,7 +491,7 @@ abstract class ControlPanel
     {
         $svrCacheRoot = '';
 
-        $serverConf = dirname(__FILE__) . '/../../../../conf/httpd_config.xml';
+        $serverConf = __DIR__ . '/../../../../conf/httpd_config.xml';
 
         if ( file_exists($serverConf) ) {
             $file_content = file_get_contents($serverConf);
@@ -716,6 +725,10 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.9.5',
+            '1.9.4',
+            '1.9.3',
+            '1.9.2',
             '1.9.1',
             '1.9',
             '1.8',

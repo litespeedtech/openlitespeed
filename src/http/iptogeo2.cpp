@@ -48,7 +48,7 @@ struct  GeoIpData2::env_found_s
     const char *m_value; // Variable value string
 };
 typedef struct GeoIpData2::env_found_s env_found_t;
-    
+
 // An array that always matches the m_ndbs in IpToGeo2;
 struct GeoIpData2::db_found_s
 {
@@ -75,13 +75,13 @@ typedef struct IpToGeo2::dbs_s dbs_t;
 
 // I only have samples of the ASN, City and Country databases.  We can add
 // more as we get more samples.
-IpToGeo2::env_t s_env_ASN[] = 
+IpToGeo2::env_t s_env_ASN[] =
 {
     { "GEOIP_ORGANIZATION", "/autonomous_system_organization" },
     { "GEOIP_ISP", "/autonomous_system_number" },
 };
 
-IpToGeo2::env_t s_env_City[] = 
+IpToGeo2::env_t s_env_City[] =
 {
     { "GEOIP_COUNTRY_CODE", "/country/iso_code" },
     { "GEOIP_COUNTRY_NAME", "/country/names/en" },
@@ -97,7 +97,7 @@ IpToGeo2::env_t s_env_City[] =
     { "GEOIP_CITY", "/city/names/en" },
 };
 
-IpToGeo2::env_t s_env_Country[] = 
+IpToGeo2::env_t s_env_Country[] =
 {
     { "GEOIP_COUNTRY_CODE", "/country/iso_code" },
     { "GEOIP_COUNTRY_NAME", "/country/names/en" },
@@ -107,23 +107,23 @@ IpToGeo2::env_t s_env_Country[] =
 
 IpToGeo2::dbs_t s_db_default[] =
 {
-    { 0, 
-      "GeoLite2-ASN.mmdb", 
-      "ASN_DB", 
-      NULL, 
-      (int)(sizeof(s_env_ASN) / sizeof(IpToGeo2::env_t)), 
+    { 0,
+      "GeoLite2-ASN.mmdb",
+      "ASN_DB",
+      NULL,
+      (int)(sizeof(s_env_ASN) / sizeof(IpToGeo2::env_t)),
       s_env_ASN },
-    { 0, 
-      "GeoLite2-Country.mmdb", 
-      "COUNTRY_DB", 
-      NULL, 
-      (int)(sizeof(s_env_Country) / sizeof(IpToGeo2::env_t)), 
+    { 0,
+      "GeoLite2-Country.mmdb",
+      "COUNTRY_DB",
+      NULL,
+      (int)(sizeof(s_env_Country) / sizeof(IpToGeo2::env_t)),
       s_env_Country },
-    { 0, 
-      "GeoLite2-City.mmdb", 
-      "CITY_DB", 
-      NULL, 
-      (int)(sizeof(s_env_City) / sizeof(IpToGeo2::env_t)), 
+    { 0,
+      "GeoLite2-City.mmdb",
+      "CITY_DB",
+      NULL,
+      (int)(sizeof(s_env_City) / sizeof(IpToGeo2::env_t)),
       s_env_City }
 };
 
@@ -176,17 +176,17 @@ char *GeoIpData2::strutf8(MMDB_entry_data_s *entry_data, char *key)
 {
     if (entry_data->data_size >= (MAX_KEY_LENGTH - 1))
     {
-        memcpy(key, entry_data->utf8_string, 
+        memcpy(key, entry_data->utf8_string,
                (MAX_KEY_LENGTH - 1));
         key[(MAX_KEY_LENGTH - 1)] = 0;
     }
     else
     {
-        memcpy(key, entry_data->utf8_string, 
+        memcpy(key, entry_data->utf8_string,
                entry_data->data_size);
         key[entry_data->data_size] = 0;
     }
-    return key;    
+    return key;
 }
 
 
@@ -201,7 +201,7 @@ char *GeoIpData2::strint(MMDB_entry_data_s *entry_data, char *key)
             fmt = "%lu";
             if (entry_data->type == MMDB_DATA_TYPE_UINT16)
                 i = entry_data->uint16;
-            else 
+            else
                 i = entry_data->uint32;
             break;
         case MMDB_DATA_TYPE_INT32:
@@ -221,7 +221,7 @@ char *GeoIpData2::strint(MMDB_entry_data_s *entry_data, char *key)
 
 char *GeoIpData2::strdouble(MMDB_entry_data_s *entry_data, char *key)
 {
-    snprintf(key, MAX_KEY_LENGTH - 1, "%7.5f", 
+    snprintf(key, MAX_KEY_LENGTH - 1, "%7.5f",
              entry_data->double_value);
     return(key);
 }
@@ -300,7 +300,7 @@ char *GeoIpData2::extract_simple_data(MMDB_entry_data_s *data)
     if ((data->type == MMDB_DATA_TYPE_INT32) ||
         (data->type == MMDB_DATA_TYPE_UINT16) ||
         (data->type == MMDB_DATA_TYPE_UINT32) ||
-        (data->type == MMDB_DATA_TYPE_UINT64)) 
+        (data->type == MMDB_DATA_TYPE_UINT64))
         return extractInt(data);
     if (data->type == MMDB_DATA_TYPE_BOOLEAN)
         return extractBoolean(data);
@@ -318,7 +318,7 @@ int GeoIpData2::process_map_key(int db, char *key,
     {
         IpToGeo2::env_t const *env = &m_IpToGeo2->m_dbs[db].m_env[i];
         env_found_t *env_found = &db_found->m_env_found[i];
-        
+
         if (!(strcasecmp(key, env->m_key)))
         {
             LS_DBG("[GEO] Found key %s, env: %s\n", key, env->m_var);
@@ -338,9 +338,9 @@ int GeoIpData2::process_map_key(int db, char *key,
                          env->m_var);
                 return -1;
             }
-            else 
+            else
             {
-                LS_DBG("[GEO] Env found: db #%d %s=%s=%s\n", db, key, env->m_var, 
+                LS_DBG("[GEO] Env found: db #%d %s=%s=%s\n", db, key, env->m_var,
                        env_found->m_value);
                 break;
             }
@@ -348,8 +348,8 @@ int GeoIpData2::process_map_key(int db, char *key,
     }
     return 0;
 }
-    
-    
+
+
 int GeoIpData2::process_array_entry(int db, char *key,
                                     MMDB_entry_data_s *entry_data)
 {
@@ -360,7 +360,7 @@ int GeoIpData2::process_array_entry(int db, char *key,
     {
         IpToGeo2::env_t const *env = &m_IpToGeo2->m_dbs[db].m_env[i];
         env_found_t *env_found = &db_found->m_env_found[i];
-        
+
         if (!(strcasecmp(key, env->m_key)))
         {
             env_found->m_value = extract_simple_data(entry_data);
@@ -372,7 +372,7 @@ int GeoIpData2::process_array_entry(int db, char *key,
             }
             else
             {
-                LS_DBG("[GEO] Env found: db #%d %s=%s=%s\n", db, key, env->m_var, 
+                LS_DBG("[GEO] Env found: db #%d %s=%s=%s\n", db, key, env->m_var,
                        env_found->m_value);
                 break;
             }
@@ -380,21 +380,21 @@ int GeoIpData2::process_array_entry(int db, char *key,
     }
     return 0;
 }
-    
-    
+
+
 int GeoIpData2::check_entry_data_list(
     int db,
-    MMDB_entry_data_list_s *entry_data_list, 
-    MMDB_entry_data_list_s **entry_data_list_next, char *key_full) 
+    MMDB_entry_data_list_s *entry_data_list,
+    MMDB_entry_data_list_s **entry_data_list_next, char *key_full)
 {
     LS_DBG("[GEO] check_entry_data_list: key: %s\n", key_full);
-    if (!entry_data_list) 
+    if (!entry_data_list)
     {
         LS_ERROR("[GEO] NULL entry data list while interpreting GEO result\n");
         return -1;
     }
     uint32_t initial_type = entry_data_list->entry_data.type;
-    LS_DBG("[GEO] initial type: %d\n", initial_type);        
+    LS_DBG("[GEO] initial type: %d\n", initial_type);
     int ret;
     // Handle the aggregate types separately.
     if (initial_type == MMDB_DATA_TYPE_MAP)
@@ -403,20 +403,20 @@ int GeoIpData2::check_entry_data_list(
         uint32_t initial_count = count;
         LS_DBG("[GEO] Map count: %d\n", count);
         entry_data_list = entry_data_list->next;
-        while ((entry_data_list) && (count)) 
+        while ((entry_data_list) && (count))
         {
             count--;
             if (MMDB_DATA_TYPE_UTF8_STRING != entry_data_list->entry_data.type) {
-                LS_ERROR("[GEO] Expected a string type in a map (got %d)\n", 
+                LS_ERROR("[GEO] Expected a string type in a map (got %d)\n",
                          entry_data_list->entry_data.type);
                 return -1;
             }
             char key[MAX_KEY_LENGTH];
             char key_child[MAX_KEY_LENGTH];
             strutf8(&entry_data_list->entry_data, key);
-            snprintf(key_child, sizeof(key_child), "%s/%s", 
+            snprintf(key_child, sizeof(key_child), "%s/%s",
                      key_full ? key_full : "", key);
-            LS_DBG("[GEO] Map[%d of %d] key_child: %s\n", initial_count - count, 
+            LS_DBG("[GEO] Map[%d of %d] key_child: %s\n", initial_count - count,
                    initial_count, key_child);
             if (process_map_key(db, key_child, entry_data_list) == -1)
                 return -1;
@@ -434,7 +434,7 @@ int GeoIpData2::check_entry_data_list(
     {
         uint32_t count = entry_data_list->entry_data.data_size;
         /* A customer found a bug where there might be multiple array elements
-         * so we need to be able to deal with an array element (as is 
+         * so we need to be able to deal with an array element (as is
          * documented.  */
         int implied_index = 0;
         if (key_full == NULL)
@@ -443,20 +443,19 @@ int GeoIpData2::check_entry_data_list(
             implied_index = 1;
         }
         int index = 0;
-        entry_data_list = entry_data_list->next; 
+        entry_data_list = entry_data_list->next;
         LS_DBG("[GEO] Array: Count: %d\n", count);
         while (count && entry_data_list)
-        { 
+        {
             char key_child[MAX_KEY_LENGTH];
 
-            snprintf(key_child, sizeof(key_child), "%s/%u", 
-                     key_full ? key_full : "", index);
+            snprintf(key_child, sizeof(key_child), "%s/%u", key_full, index);
             LS_DBG("[GEO] Array[%d]:\n", index);
             if (simple_data_type(&entry_data_list->entry_data))
             {
-                LS_DBG("[GEO] Array: SIMPLE, type: %d\n", 
+                LS_DBG("[GEO] Array: SIMPLE, type: %d\n",
                        entry_data_list->entry_data.type);
-                if (process_array_entry(db, key_child, 
+                if (process_array_entry(db, key_child,
                                         &entry_data_list->entry_data) == -1)
                     return -1;
                 entry_data_list = entry_data_list->next;
@@ -466,7 +465,7 @@ int GeoIpData2::check_entry_data_list(
                 LS_DBG("[GEO] Array: Container, type: %d\n",
                        entry_data_list->entry_data.type);
                 ret = check_entry_data_list(db, entry_data_list,
-                                            &entry_data_list, 
+                                            &entry_data_list,
                                             key_child);
                 if (ret)
                     return ret;
@@ -477,12 +476,12 @@ int GeoIpData2::check_entry_data_list(
         (*entry_data_list_next) = entry_data_list;
         return 0; // advanced through recursion
     }
-        
+
     if (entry_data_list)
         entry_data_list = entry_data_list->next;
-        
+
     (*entry_data_list_next) = entry_data_list;
- 
+
     return 0;
 }
 
@@ -490,7 +489,7 @@ int GeoIpData2::check_entry_data_list(
 int GeoIpData2::parseEnv()
 {
     LS_DBG("[GEO] parseEnv\n");
-    
+
     m_tried_parse_env = 1;
     for (int i = 0; i < m_IpToGeo2->m_ndbs; ++i)
     {
@@ -503,19 +502,19 @@ int GeoIpData2::parseEnv()
             {
                 LS_ERROR("[GEO] Insufficient memory to create DB env\n");
                 return LS_FAIL;
-            }    
+            }
             memset(m_db_found[i].m_env_found,0,size);
         }
         MMDB_entry_data_list_s *list = m_db_found[i].m_list;
         while (list)
-        {   
+        {
 
             if (check_entry_data_list(i, list, &list, NULL))
             {
                 LS_DBG("[GEO] Error in check_entry_data_list\n");
                 break;
             }
-        }   
+        }
         if (m_db_found[i].m_list)
         {
             MMDB_free_entry_data_list(m_db_found[i].m_list);
@@ -530,7 +529,7 @@ int GeoIpData2::parseEnv()
 const char* GeoIpData2::getGeoEnv(const char* pEnvName)
 {
     LS_DBG("[GEO] getGeoEnv: %s\n", pEnvName);
-    if (!m_IpToGeo2) 
+    if (!m_IpToGeo2)
     {
         LS_ERROR("[GEO] Attempt to get GeoEnv without first doing lookup\n");
         return NULL;
@@ -563,7 +562,7 @@ const char* GeoIpData2::getGeoEnv(const char* pEnvName)
                         LS_DBG("[GEO] NULL value so keep looking (db #%d)\n", i);
                         break; // out of envs to next db
                     }
-                    else 
+                    else
                         return m_db_found[i].m_env_found[e].m_value;
                 }
         }
@@ -576,7 +575,7 @@ int GeoIpData2::addGeoEnv(IEnv *pEnv)
 {
     int count = 0;
     LS_DBG("[GEO] addGeoEnv\n");
-    if (!m_IpToGeo2) 
+    if (!m_IpToGeo2)
     {
         LS_ERROR("[GEO] Attempt to add GeoEnv without first doing lookup\n");
         return -1;
@@ -601,7 +600,7 @@ int GeoIpData2::addGeoEnv(IEnv *pEnv)
         {
             if (m_db_found[db].m_env_found[env].m_value)
             {
-                LS_DBG("[GEO] Found env %s=%s\n", 
+                LS_DBG("[GEO] Found env %s=%s\n",
                        m_IpToGeo2->m_dbs[db].m_env[env].m_var,
                        m_db_found[db].m_env_found[env].m_value);
                 pEnv->add(m_IpToGeo2->m_dbs[db].m_env[env].m_var,
@@ -710,17 +709,17 @@ int IpToGeo2::loadGeoIpDbFile(const char *pFile, const char *pDbLogical)
         return LS_FAIL; // Free it all in the destructor
     }
     ret = MMDB_open(pFile, 0, m_dbs[m_ndbs].m_mmdb);
-    if (ret != 0) 
+    if (ret != 0)
     {
-        LS_ERROR("[GEO] Error opening GeoIP2 DB file: %s: %s\n", pFile, 
+        LS_ERROR("[GEO] Error opening GeoIP2 DB file: %s: %s\n", pFile,
                  MMDB_strerror(ret));
         return LS_FAIL;
     }
     m_dbs[m_ndbs].m_open = 1;
-    LS_DBG("[GEO] Geo file: %s now open, size: %ld\n", 
+    LS_DBG("[GEO] Geo file: %s now open, size: %ld\n",
            m_dbs[m_ndbs].m_mmdb->filename, m_dbs[m_ndbs].m_mmdb->file_size);
     m_ndbs++;
-    
+
     return 0;
 }
 
@@ -771,7 +770,7 @@ int IpToGeo2::testGeoIpDbFile(const char *pFile)
             return 0;
     LS_ERROR("[GEO] GeoIP DB file test failed: '%s'.  ret: %d\n", pFile, ret);
 
-    //    LS_ERROR("[GEO] GeoIP DB file test failed: '%s'.  Exited: %d, Status: %d\n", 
+    //    LS_ERROR("[GEO] GeoIP DB file test failed: '%s'.  Exited: %d, Status: %d\n",
     //             pFile, WIFEXITED(status), WEXITSTATUS(status));
     //}
     return -1;
@@ -814,8 +813,8 @@ const char *IpToGeo2::getDefaultLogicalName(const char *fileName)
     for (int i = 0; i < (int)(sizeof(s_db_default) / sizeof(dbs_t)); ++i)
     {
         int defDbLen = strlen(s_db_default[i].m_file);
-        if ((dblen > defDbLen) && 
-            (!(strcmp(s_db_default[i].m_file, 
+        if ((dblen > defDbLen) &&
+            (!(strcmp(s_db_default[i].m_file,
                       &fileName[dblen - defDbLen]))))
         {
             return s_db_default[i].m_logical;
@@ -828,7 +827,7 @@ const char *IpToGeo2::getDefaultLogicalName(const char *fileName)
 /**
  * config: With XmlNodeList
  * "GeoIP DB": Allows you a user to specify a NEW DB name in the OLD form.
- *             User interface nests environment variables within the XML 
+ *             User interface nests environment variables within the XML
  *             definition.  Process the name, then the nested stuff and then
  *             do the defaults so that they will NOT overwrite the user's
  *             specifications.
@@ -875,8 +874,8 @@ int IpToGeo2::config(const XmlNodeList *pList)
                 XmlNodeList children;
                 p->getAllChildren(children);
                 XmlNodeList::const_iterator iterChild;
-                
-                for (iterChild = children.begin(); iterChild != children.end(); 
+
+                for (iterChild = children.begin(); iterChild != children.end();
                      ++iterChild)
                 {
                     XmlNode *parm = *iterChild;
@@ -885,7 +884,7 @@ int IpToGeo2::config(const XmlNodeList *pList)
                     if (!strcasecmp(parm->getName(), "geoipdbname"))
                     {
                         logicalName = parm->getValue();
-                        LS_DBG_M("[GEO] geoipdb found logical name: %s\n", 
+                        LS_DBG_M("[GEO] geoipdb found logical name: %s\n",
                                  logicalName);
                     }
                     else if (!strcasecmp(parm->getName(),"maxminddbenv"))
@@ -895,7 +894,7 @@ int IpToGeo2::config(const XmlNodeList *pList)
                     }
                 }
             }
-            if (!logicalName) 
+            if (!logicalName)
             {
                 // Use a default logical name?
                 if (!(logicalName = getDefaultLogicalName(pFile)))
@@ -910,8 +909,8 @@ int IpToGeo2::config(const XmlNodeList *pList)
                 XmlNodeList children;
                 p->getAllChildren(children);
                 XmlNodeList::const_iterator iterChild;
-                
-                for (iterChild = children.begin(); iterChild != children.end(); 
+
+                for (iterChild = children.begin(); iterChild != children.end();
                      ++iterChild)
                 {
                     XmlNode *parm = *iterChild;
@@ -947,7 +946,7 @@ int IpToGeo2::config(const XmlNodeList *pList)
 int IpToGeo2::configSetFile(const char *pAliasFileName)
 {
     /**
-     * AliasFileName format is everything defined for 'MaxMindDBFile' AFTER 
+     * AliasFileName format is everything defined for 'MaxMindDBFile' AFTER
      * that keyword: <whitespace><db_logical><whitespace><file_name>
      **/
     const char *env_title = "MaxMindDBFile";
@@ -956,7 +955,7 @@ int IpToGeo2::configSetFile(const char *pAliasFileName)
     char alias[MAX_PATH_LEN];
     const char *whitespace = " \t=";
     const char *pAlias;
-    /* skip whitespace.  */    
+    /* skip whitespace.  */
     i = strspn(pAliasFileName,whitespace);
     pAliasFileName += i;
     if (!*pAliasFileName)
@@ -1008,9 +1007,9 @@ int IpToGeo2::configSetFile(const char *pAliasFileName)
 }
 
 
-int IpToGeo2::parseEnvLine(const char *pEnvAliasMap, 
+int IpToGeo2::parseEnvLine(const char *pEnvAliasMap,
                            char *variable, int var_len,
-                           char *database, int database_len, 
+                           char *database, int database_len,
                            char *map, int map_len)
 {
     /**
@@ -1025,8 +1024,8 @@ int IpToGeo2::parseEnvLine(const char *pEnvAliasMap,
     const char *whitespace = " \t=";
     const char *pMap;
     LS_DBG("[GEO] parseEnvLine: %s\n", pEnvAliasMap);
-    
-    /* skip whitespace.  */    
+
+    /* skip whitespace.  */
     i = strspn(pEnvAliasMap,whitespace);
     pEnvAliasMap += i;
     if (!*pEnvAliasMap)
@@ -1066,14 +1065,14 @@ int IpToGeo2::parseEnvLine(const char *pEnvAliasMap,
     // Mapping is two components <database>/<heirarchical-map>
     if (*pMap == '/')
     {
-        LS_ERROR("[GEO] %s missing DB alias in %s", env_title, 
+        LS_ERROR("[GEO] %s missing DB alias in %s", env_title,
                  pEnvAliasMapInitial);
         return -1;
     }
     const char *slash = strchr(pMap,'/');
     if (!slash)
     {
-        LS_ERROR("[GEO] %s missing alias map in %s (%s)", env_title, 
+        LS_ERROR("[GEO] %s missing alias map in %s (%s)", env_title,
                  pEnvAliasMapInitial, pMap);
         return -1;
     }
@@ -1085,13 +1084,13 @@ int IpToGeo2::parseEnvLine(const char *pEnvAliasMap,
     }
     memcpy(database, pMap, slash - pMap);
     database[slash - pMap] = 0;
-    strncpy(map, slash, map_len);
+    lstrncpy(map, slash, map_len);
     return 0;
 }
 
 
-int IpToGeo2::validateEnv(const char *pEnvAliasMap, const char *variable, 
-                          const char *database, const char *map, int *db, 
+int IpToGeo2::validateEnv(const char *pEnvAliasMap, const char *variable,
+                          const char *database, const char *map, int *db,
                           int *found)
 {
     const char *env_title = "MaxMindDBEnv";
@@ -1102,7 +1101,7 @@ int IpToGeo2::validateEnv(const char *pEnvAliasMap, const char *variable,
         {
             if (!m_dbs[i].m_nenv)
             {
-                LS_DBG("[GEO] FIRST env! %s=%s%s DB #%d\n", variable, database, 
+                LS_DBG("[GEO] FIRST env! %s=%s%s DB #%d\n", variable, database,
                        map, i);
                 *db = i;
                 return 0;
@@ -1118,24 +1117,24 @@ int IpToGeo2::validateEnv(const char *pEnvAliasMap, const char *variable,
                     break;
                 }
             }
-            LS_DBG("[GEO] Env FOUND! %s=%s%s DB #%d\n", variable, database, 
+            LS_DBG("[GEO] Env FOUND! %s=%s%s DB #%d\n", variable, database,
                    map, i);
             (*db) = i;
             return 0;
         }
     }
-    LS_ERROR("[GEO] Environment variable database not found: %s\n", 
+    LS_ERROR("[GEO] Environment variable database not found: %s\n",
              pEnvAliasMap);
     return -1;
 }
 
 
-int IpToGeo2::addEnv(const char *pEnvAliasMap, const char *variable, 
+int IpToGeo2::addEnv(const char *pEnvAliasMap, const char *variable,
                      const char *database, const char *map, const int db)
 {
     const char *env_title = "MaxMindDBEnv";
     env_t *arr;
-    
+
     if (db > m_ndbs)
     {
         LS_ERROR("[GEO] addEnv Unexpected db #%d, current num: %d\n", db, m_ndbs);
@@ -1143,9 +1142,9 @@ int IpToGeo2::addEnv(const char *pEnvAliasMap, const char *variable,
     }
     LS_DBG("[GEO] addEnv db #%d (of %d) n_env: %d, add %s=%s\n", db, m_ndbs,
            m_dbs[db].m_nenv, variable, map);
-    arr = (env_t *)ls_prealloc(m_dbs[db].m_env, 
+    arr = (env_t *)ls_prealloc(m_dbs[db].m_env,
                                sizeof(env_t) * (m_dbs[db].m_nenv + 1));
-    if (!arr) 
+    if (!arr)
     {
         LS_ERROR("[GEO] for %s Insufficient memory to allocate space for "
                  "env: %s\n",env_title, pEnvAliasMap);
@@ -1158,7 +1157,7 @@ int IpToGeo2::addEnv(const char *pEnvAliasMap, const char *variable,
     m_dbs[db].m_env[index].m_var = ls_pdupstr(variable);
     m_dbs[db].m_env[index].m_key = ls_pdupstr(map);
 
-    if ((!m_dbs[db].m_env[index].m_var) || 
+    if ((!m_dbs[db].m_env[index].m_var) ||
         (!m_dbs[db].m_env[index].m_key))
     {
         LS_ERROR("[GEO] Insufficient memory to allocate space for env values: %s\n",
@@ -1193,7 +1192,7 @@ int IpToGeo2::configSetEnv(const char *pEnvAliasMap)
 
 int IpToGeo2::defaultEnv()
 {
-    LS_DBG("[GEO] defaultEnv %d DBs, default DBs: %d\n", m_ndbs, 
+    LS_DBG("[GEO] defaultEnv %d DBs, default DBs: %d\n", m_ndbs,
            (int)(sizeof(s_db_default) / sizeof(dbs_t)));
     m_did_add_env_default = 1;
     for (int i = 0; i < m_ndbs; ++i)
@@ -1207,11 +1206,11 @@ int IpToGeo2::defaultEnv()
                 for (int e = 0; e < s_db_default[defDb].m_nenv; ++e)
                 {
                     char env[MAX_PATH_LEN * 3];
-                    snprintf(env, sizeof(env), "%s %s%s", 
+                    snprintf(env, sizeof(env), "%s %s%s",
                              s_db_default[defDb].m_env[e].m_var,
                              m_dbs[i].m_logical,
                              s_db_default[defDb].m_env[e].m_key);
-                    
+
                     LS_DBG("[GEO]    Try to add %s\n", env);
                     if (configSetEnv(env) == -1)
                         return -1;
@@ -1233,14 +1232,14 @@ GeoInfo * IpToGeo2::lookUpSA(struct sockaddr *sa)
 {
     int one_worked = 0;
     if (sa->sa_family == AF_INET)
-        LS_DBG("[GEO] LookUp of %u.%u.%u.%u\n", 
+        LS_DBG("[GEO] LookUp of %u.%u.%u.%u\n",
                (unsigned char)((char *)&((struct sockaddr_in *)sa)->sin_addr)[0],
                (unsigned char)((char *)&((struct sockaddr_in *)sa)->sin_addr)[1],
                (unsigned char)((char *)&((struct sockaddr_in *)sa)->sin_addr)[2],
                (unsigned char)((char *)&((struct sockaddr_in *)sa)->sin_addr)[3]);
     else
         LS_DBG("[GEO] LookUp of IPv6\n");
-        
+
     // Note that addr is already in line byte order
     if (!m_ndbs)
     {
@@ -1254,7 +1253,7 @@ GeoInfo * IpToGeo2::lookUpSA(struct sockaddr *sa)
             LS_ERROR("[GEO] Error setting default ENV\n");
             return NULL;
         }
-        
+
     GeoIpData2::db_found_t *db_found = (GeoIpData2::db_found_t *)ls_palloc(
         sizeof(GeoIpData2::db_found_t) * m_ndbs);
     if (!db_found)
@@ -1276,7 +1275,7 @@ GeoInfo * IpToGeo2::lookUpSA(struct sockaddr *sa)
     {
         MMDB_lookup_result_s res;
         int dberr;
-        
+
         pInfo->m_db_found[i].m_list = NULL;
         res = MMDB_lookup_sockaddr(m_dbs[i].m_mmdb, sa, &dberr);
         if (dberr != 0)
@@ -1286,10 +1285,10 @@ GeoInfo * IpToGeo2::lookUpSA(struct sockaddr *sa)
         else
         {
             // Found
-            dberr = MMDB_get_entry_data_list(&res.entry, 
+            dberr = MMDB_get_entry_data_list(&res.entry,
                                              &pInfo->m_db_found[i].m_list);
             if (dberr != 0)
-                LS_ERROR("[GEO] Get data entry list failed: %s\n", 
+                LS_ERROR("[GEO] Get data entry list failed: %s\n",
                          MMDB_strerror(dberr));
             else
             {

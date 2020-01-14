@@ -116,7 +116,8 @@ static int compare(const void *val1, const void *val2)
 
 void StringList::sort()
 {
-    ::qsort(begin(), size(), sizeof(AutoStr2 **), compare);
+    if (size())
+        ::qsort(begin(), size(), sizeof(AutoStr2 *), compare);
 }
 
 

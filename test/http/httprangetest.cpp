@@ -40,7 +40,8 @@ SUITE(YourSuitqqqqeName)
         range = new(ls_xpool_alloc(pool, sizeof(HttpRange))) HttpRange(el);
 
         const char *psRange = "bytes= 0 -\t0\t ,1234-23456,-10,10-,1999-1999";
-        CHECK(range->parse(psRange, pool) == 0);
+        int res = range->parse(psRange, pool);
+        CHECK(res == 0);
         CHECK(range->count() == 5);
 
         off_t b, e;

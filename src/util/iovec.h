@@ -37,7 +37,7 @@ public:
     IOVec()
         : m_pBegin((struct iovec *)m_aStore + 5)
         , m_pEnd((struct iovec *)m_aStore + 5)
-    {};
+    {   memset(m_aStore, 0, sizeof(m_aStore));   };
     explicit IOVec(int begin)
         : m_pBegin((struct iovec *)m_aStore + begin)
         , m_pEnd((struct iovec *)m_aStore + begin)

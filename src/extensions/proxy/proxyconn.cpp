@@ -44,7 +44,8 @@ ProxyConn::ProxyConn()
     : m_iSsl(0)
     , m_flag(0)
 {
-    strcpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ");
+    lstrncpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ",
+             sizeof(m_extraHeader));
     memset(&m_iTotalPending, 0,
            ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending);
 }
@@ -938,7 +939,7 @@ void ProxyConn::dump()
             "Response header: %d, total: %d bytes received in %ld seconds,"
             "Total processing time: %ld.",
             getState(), getEvents(), m_iReqHeaderSize,
-            (long long)m_iReqBodySize, (long long)m_iReqTotalSent, 
+            (long long)m_iReqBodySize, (long long)m_iReqTotalSent,
             m_iRespHeaderRecv, m_iRespRecv,
             (m_lReqSentTime) ? time(NULL) - m_lReqSentTime : 0,
             time(NULL) - m_lReqBeginTime);

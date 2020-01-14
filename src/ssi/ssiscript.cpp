@@ -418,8 +418,12 @@ void SsiComponent::appendParsed(LinkedObj *p)
 
 
 SsiScript::SsiScript()
-//    : m_pConfig( NULL )
-    : m_pContent(NULL)
+    : m_iParserState(0)
+    , m_lModify(0)
+    , m_lSize(0)
+    , m_pCurComponent(NULL)
+    , m_pCurBlock(NULL)
+    , m_pContent(NULL)
 {
 }
 

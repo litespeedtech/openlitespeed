@@ -154,7 +154,7 @@ void HttpLog::setLogLevel(const char *pLevel)
 void HttpLog::setLogPattern(const char *pPattern)
 {
     if (strlen(pPattern) < sizeof(s_logPattern) - 1)
-        strncpy(s_logPattern, pPattern, 39);
+        lstrncpy(s_logPattern, pPattern, sizeof(s_logPattern));
 }
 
 
@@ -193,6 +193,19 @@ AccessLog *HttpLog::getAccessLog()
 
 int HttpLog::setErrorLogFile(const char *pFileName)
 {
+    const char *excludeList[] = { ".php", ".cgi", ".pl", ".shtml" };
+    int len = strlen(pFileName);
+    for (int i=0; i<sizeof(excludeList)/ sizeof(char *); ++i)
+    {
+        int ll = strlen(excludeList[i]);
+        if (len > ll &&
+            strncasecmp(pFileName + len - ll, excludeList[i], ll) == 0)
+        {
+            HttpLog::perror("Cannot use this suffix as errorlog", pFileName);
+            return LS_FAIL;
+        }
+    }
+    
     Appender *appender
         = Appender::getAppender(pFileName, "appender.ps");
     if (appender)

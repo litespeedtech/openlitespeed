@@ -8,7 +8,7 @@ class BuildOptions
     private $batch_id;
     private $validated = false;
     private $vals = array(
-        'OptionVersion'   => OPTION_VERSION,
+        'OptionVersion'   => 3,
         'PHPVersion'      => '',
         'ExtraPathEnv'    => '',
         'InstallPath'     => '',
@@ -235,7 +235,7 @@ class BuildCheck
 
         $modules['memcachd'] = in_array($v, array('4.4.', '5.2.', '5.3.', '5.4.', '5.5.', '5.6.')); // php7 not supported
 
-        $modules['memcachd7'] = in_array($v, array('7.0.', '7.1.')); // php7 only
+        $modules['memcachd7'] = in_array($v, array('7.0.', '7.1.', '7.2.', '7.3.', '7.4.')); // php7 only
 
         return $modules;
     }
@@ -313,10 +313,22 @@ class BuildCheck
             return false;
         }
 
-        if (strpos($configParams, '--with-litespeed') === false) {
-            $configParams .= " '--with-litespeed'";
+        if (version_compare($php_version, '7.4', '>=')) {
+            // php 7.4+, param is --enable-litespeed
+            if (strpos($configParams, '-litespeed') === false) {
+                $configParams .= " '--enable-litespeed'";
+            } elseif (strpos($configParams, '--with-litespeed') !== false) {
+                $configParams = str_replace('--with-litespeed', '--enable-litespeed', $configParams);
+            } // else assume correct --enable-litespeed
+        } else {
+            // < 7.4, it is --with-litespeed
+            if (strpos($configParams, '-litespeed') === false) {
+                $configParams .= " '--with-litespeed'";
+            } elseif (strpos($configParams, '--enable-litespeed') !== false) {
+                $configParams = str_replace('--enable-litespeed', '--with-litespeed', $configParams);
+            } // else assume correct --with-litespeed
         }
-
+        
         $configParams = "'--prefix=" . $options->GetValue('InstallPath') . "' " . $configParams;
         $options->SetValue('ConfigParam', escapeshellcmd($configParams));
         $options->SetValue('CompilerFlags', escapeshellcmd($compilerFlags));

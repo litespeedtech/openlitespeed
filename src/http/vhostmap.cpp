@@ -73,6 +73,7 @@ VHostMap::VHostMap()
     , m_pDedicated(NULL)
     , m_pWildMatches(NULL)
     , m_pSslContext(NULL)
+    , m_port(0)
     , m_iNamedVH(0)
     , m_iStripWWW(1)
 {}
@@ -350,10 +351,12 @@ void VHostMap::updateMapping(HttpVHostMap &vhosts)
             iter = next(iter);
             erase(iter1);
             if (pCur)
+            {
                 insert(
                     HttpVHostMap::addMatchName(pCur, pName),
                     pCur);
-            HttpVHostMap::incRef(pCur);
+                HttpVHostMap::incRef(pCur);
+            }
         }
         else
             iter = next(iter);

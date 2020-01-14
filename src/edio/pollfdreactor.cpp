@@ -30,6 +30,8 @@ PollfdReactor::PollfdReactor()
     , m_pReactors(NULL)
     , m_pEnd(NULL)
     , m_pStoreEnd(NULL)
+    , m_pCur(NULL)
+    , m_iEvents(0)
     , m_iFirstRecycled(65535)
     , m_priHandler(NULL)
 {

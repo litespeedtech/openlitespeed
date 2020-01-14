@@ -45,7 +45,8 @@ class AuthData : public KeyData
     short       m_encMethod;
 public:
     AuthData()
-        : m_exist(1)
+        : m_lTimestamp(0)
+        , m_exist(1)
         , m_encMethod(ENCRYPT_PLAIN)
     {}
     virtual ~AuthData() {}

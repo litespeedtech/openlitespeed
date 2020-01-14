@@ -78,7 +78,7 @@ int RewriteSubstItem::needUrlDecode() const
 
 
 RewriteSubstItem::RewriteSubstItem(const RewriteSubstItem &rhs)
-    : SubstItem()
+    : SubstItem(rhs)
 {
     if (getType() == REF_MAP)
         setMapRef(new MapRefItem(*rhs.getMapRef()));
@@ -86,6 +86,7 @@ RewriteSubstItem::RewriteSubstItem(const RewriteSubstItem &rhs)
 
 
 RewriteSubstFormat::RewriteSubstFormat()
+    : m_type(0)
 {
 }
 
@@ -99,8 +100,8 @@ RewriteSubstFormat::~RewriteSubstFormat()
 RewriteSubstFormat::RewriteSubstFormat(const RewriteSubstFormat &rhs)
     : TLinkList<RewriteSubstItem>(rhs)
     , LinkedObj()
+    , m_type(rhs.m_type)
 {
-
 }
 
 

@@ -83,6 +83,10 @@ H2Connection::H2Connection()
     , m_tmIdleBegin(0)
 {
     m_timevalPing.tv_sec = 0;
+    m_timevalPing.tv_usec = 0;
+    memset(&m_priority, 0, sizeof(m_priority));
+    memset(&m_hpack_enc, 0, sizeof(m_hpack_enc));
+    memset(&m_hpack_dec, 0, sizeof(m_hpack_dec));
     m_pCurH2Header = (H2FrameHeader *)m_iaH2HeaderMem;
 
 }
@@ -190,7 +194,8 @@ int H2Connection::parseFrame()
             if ((ret = processFrame(m_pCurH2Header)) != LS_OK)
                 return ret;
             if (m_iCurrentFrameRemain > 0)
-                m_bufInput.pop_front(m_iCurrentFrameRemain);
+                if (m_bufInput.pop_front(m_iCurrentFrameRemain) == -1)
+                    return LS_FAIL;
             m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
         }
         else
@@ -697,7 +702,8 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
             resetStream(streamID, pH2Stream, H2_ERROR_PROTOCOL_ERROR);
             return 0;
         }
-        m_bufInput.pop_front(1);
+        if (m_bufInput.pop_front(1) == -1)
+            return LS_FAIL;
         //Do not pop_back right now since buf may have more data then this frame
         m_iCurrentFrameRemain -= (1 + padLen);
     }
@@ -726,11 +732,13 @@ int H2Connection::processDataFrame(H2FrameHeader *pHeader)
             resetStream(streamID, pH2Stream, H2_ERROR_PROTOCOL_ERROR);
             return 0;
         }
-        m_bufInput.pop_front(len);
+        if (m_bufInput.pop_front(len) == -1)
+            return -1;
         m_iCurInBytesToUpdate += len;
     }
 
-    m_bufInput.pop_front(padLen);
+    if (m_bufInput.pop_front(padLen) == -1)
+        return -1;
 
     if (!pH2Stream->isPeerShutdown())
     {
@@ -794,14 +802,17 @@ int H2Connection::processReqHeader(unsigned char iHeaderFlag)
         if (iDatalen > bufPart1Len)
         {
             m_bufInflate.append(m_bufInput.begin(), bufPart1Len);
-            m_bufInput.pop_front(bufPart1Len);
+            if (m_bufInput.pop_front(bufPart1Len) == -1)
+                return -1;
             m_bufInflate.append(m_bufInput.begin(), iDatalen - bufPart1Len);
-            m_bufInput.pop_front(iDatalen - bufPart1Len);
+            if (m_bufInput.pop_front(iDatalen - bufPart1Len) == -1)
+                return -1;
         }
         else
         {
             m_bufInflate.append(m_bufInput.begin(), iDatalen);
-            m_bufInput.pop_front(iDatalen);
+            if (m_bufInput.pop_front(iDatalen) == -1)
+                return -1;
         }
         if (m_bufInflate.size() > MAX_HTTP2_HEADERS_SIZE)
         {
@@ -858,7 +869,7 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
         return 0;
     }
 
-    
+
     if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) )
     {
         LS_DBG_H(getLogSession(), "decodeHeaders():\r\n%.*s",
@@ -877,7 +888,7 @@ int H2Connection::decodeHeaders(unsigned char *pSrc, int length,
         resetStream(0, pStream, H2_ERROR_INTERNAL_ERROR);
         return 0;
     }
-    
+
     if (pStream->getState() != HIOS_CONNECTED)
         recycleStream(pStream->getStreamID());
 
@@ -942,7 +953,7 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
                     id);
         return LS_FAIL;
     }
-    
+
     if (id <= m_uiLastStreamId)
     {
         H2Stream *pStream = findStream(id);
@@ -968,8 +979,10 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
         uint8_t padLen = *pSrc;
         if (m_iCurrentFrameRemain <= 1 + padLen)
             return H2_ERROR_PROTOCOL_ERROR;
-        m_bufInput.pop_front(1);
-        m_bufInput.pop_back(padLen);
+        if (m_bufInput.pop_front(1) == -1)
+            return LS_FAIL;
+        if (m_bufInput.pop_back(padLen) == -1)
+            return LS_FAIL;
         m_iCurrentFrameRemain -= padLen + 1;
     }
 
@@ -1146,7 +1159,7 @@ H2Stream *H2Connection::getNewStream(uint8_t ubH2_Flags)
              getStream()->getLogId(), m_uiLastStreamId, (int)m_mapStream.size(),
              m_uiShutdownStreams, (int)ubH2_Flags);
 
-    if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams 
+    if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams
             >= m_iServerMaxStreams)
         return NULL;
 
@@ -1202,7 +1215,7 @@ void H2Connection::recycleStream(uint32_t uiStreamID)
 void H2Connection::recycleStream(StreamMap::iterator it)
 {
     H2Stream *pH2Stream = it.second();
-    
+
     if ((pH2Stream->getStreamID() & 1) == 0)
         --m_iCurPushStreams;
 
@@ -1279,7 +1292,7 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
     appendCtrlFrameHeader(type, 4, 0, uiStreamId);
 
     appendNbo4Bytes(getBuf(), uiVal1);
-    LS_DBG_H(getStream()->getLogger(), "[%s-%d] send %s frame, value: %d", 
+    LS_DBG_H(getStream()->getLogger(), "[%s-%d] send %s frame, value: %d",
              getStream()->getLogId(), uiStreamId, getH2FrameName(type), uiVal1);
     return 0;
 }
@@ -1596,8 +1609,8 @@ int H2Connection::encodeHeaders(HttpRespHeaders *pRespHeaders,
 
         pIov = iov;
         pIovEnd = &iov[count];
-        
-        
+
+
         for (pIov = iov; pIov < pIovEnd; ++pIov)
         {
             if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ))
@@ -1628,11 +1641,11 @@ int H2Connection::sendRespHeaders(HttpRespHeaders *pRespHeaders,
     int rc = encodeHeaders(pRespHeaders, achHdrBuf, H2_TMP_HDR_BUFF_SIZE);
     if (rc < 0)
         return LS_FAIL;
-    return sendHeaderContFrame(uiStreamID, flag, H2_FRAME_HEADERS, 
+    return sendHeaderContFrame(uiStreamID, flag, H2_FRAME_HEADERS,
                                (const char *)achHdrBuf, rc);
 }
 
-int H2Connection::sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag, 
+int H2Connection::sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
                                       H2FrameType type, const char *pBuf, int size)
 {
     const char *p = pBuf;
@@ -1663,8 +1676,8 @@ int H2Connection::sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
     return 0;
 }
 
-int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId, 
-                                  ls_str_t* pUrl, ls_str_t* pHost, 
+int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
+                                  ls_str_t* pUrl, ls_str_t* pHost,
                                   ls_strpair_t *headers)
 {
     unsigned char achHdrBuf[H2_TMP_HDR_BUFF_SIZE];
@@ -1681,9 +1694,9 @@ int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
                                     pHost->ptr, pHost->len, 0);
     pCur = lshpack_enc_encode(&m_hpack_enc, pCur, pBufEnd, ":scheme", 7,
                                     "https", 5, 0);
-    
+
 //     if (etag)
-//         pCur = m_hpack.encHeader(pCur, pBufEnd, "if-match", 8, etag->ptr, 
+//         pCur = m_hpack.encHeader(pCur, pBufEnd, "if-match", 8, etag->ptr,
 //                              etag->len, 0);
 //     if (lastmod)
 //         pCur = m_hpack.encHeader(pCur, pBufEnd, "if-modified-since", 17,
@@ -1701,15 +1714,15 @@ int H2Connection::sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
             ++headers;
         }
     }
-    
+
     int total = pCur - achHdrBuf;
-    return sendHeaderContFrame(streamId, 0, H2_FRAME_PUSH_PROMISE, 
+    return sendHeaderContFrame(streamId, 0, H2_FRAME_PUSH_PROMISE,
                                (const char *)achHdrBuf, total);
     return 0;
 }
 
 
-H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl, 
+H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
                                     ls_str_t* pHost, ls_strpair_t* headers)
 {
     H2Stream *pStream;
@@ -1736,24 +1749,24 @@ H2Stream* H2Connection::createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
 
     add2PriorityQue(pStream);
     ++m_iCurPushStreams;
-    
+
     return pStream;
 }
 
 
 
-int H2Connection::pushPromise(uint32_t streamId, ls_str_t* pUrl, 
+int H2Connection::pushPromise(uint32_t streamId, ls_str_t* pUrl,
                               ls_str_t* pHost, ls_strpair_t *headers)
 {
     if (m_iCurPushStreams >= m_iMaxPushStreams)
     {
         LS_DBG_L(getLogSession(),
                     "reached max concurrent Server PUSH streams limit, skip push.");
-        return -1; 
+        return -1;
     }
     uint32_t pushStreamId = m_uiPushStreamId;
     m_uiPushStreamId += 2;
-    int ret = sendPushPromise(streamId, pushStreamId, pUrl, pHost, 
+    int ret = sendPushPromise(streamId, pushStreamId, pUrl, pHost,
                               headers);
     if (ret == 0)
         if (createPushStream(pushStreamId, pUrl, pHost, headers) == NULL)

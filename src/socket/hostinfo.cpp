@@ -47,7 +47,7 @@ int HostInfo::init()
     h_addr_list = (char **)m_pBuf + H_MAX_ENTRIES;
     *h_addr_list = NULL;
     assert((char *)h_addr_list - (char *)h_aliases
-           == H_MAX_ENTRIES * sizeof(char *));
+           == (long)(H_MAX_ENTRIES * sizeof(char *)));
     return 0;
 }
 

@@ -28,12 +28,12 @@
 #ifdef ENABLE_IPTOGEO2
 SUITE(IpToGeo2Test)
 {
-    
+
 TEST(IpToGeo2Test_Empty)
 {
     IpToGeo2 ipToGeo2;
     GeoInfo *geoInfo2 = NULL;
-    
+
     fprintf(stderr,"IpToGeo2Test_Empty begins\n");
     CHECK((geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167")) == NULL);
     if (geoInfo2)
@@ -49,7 +49,7 @@ int getdb(const char *db, char *finaldb, int *created)
     char line[350];
     char tar[350];
     char file_so_far[350] = { 0 };
-    
+
     if (created)
         *created = 0;
     snprintf(fulldb, sizeof(fulldb), "%s.mmdb", db);
@@ -126,20 +126,20 @@ TEST(IpToGeo2Test_LoadOnly)
 {
     IpToGeo2 ipToGeo2;
     GeoInfo *geoInfo2 = NULL;
-    
+
     fprintf(stderr,"IpToGeo2Test_LoadOnly begins\n");
     CHECK((geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167")) == NULL);
     if (geoInfo2)
         delete geoInfo2;
 }
 
-    
+
 TEST(IpToGeo2Test_GetOnly)
 {
     IpToGeo2 ipToGeo2;
     char     finaldb[350] = { 0 };
     int      created = 0;
-    
+
     fprintf(stderr,"IpToGeo2Test_GetOnly begins\n");
     CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
@@ -147,7 +147,7 @@ TEST(IpToGeo2Test_GetOnly)
     //    unlink(finaldb);
 }
 
-    
+
 TEST(IpToGeo2Test_GetAndLookup)
 {
     IpToGeo2 ipToGeo2;
@@ -155,12 +155,14 @@ TEST(IpToGeo2Test_GetAndLookup)
     char     finaldb[350] = { 0 };
     int      created = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_GetAndLookup begins\n");
     CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
+    if (!geoInfo2)
+        return;
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_CODE");
     CHECK(res != NULL);
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_NAME");
@@ -168,13 +170,12 @@ TEST(IpToGeo2Test_GetAndLookup)
     // First
     CHECK((res = geoInfo2->getGeoEnv("GEOIP_CONTINENT_CODE")) != NULL);
     // Not found
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
     if (created)
         unlink(finaldb);
 }
 
-    
+
 TEST(IpToGeo2Test_3DBs)
 {
     IpToGeo2 ipToGeo2;
@@ -186,7 +187,7 @@ TEST(IpToGeo2Test_3DBs)
     int      createdCity = 0;
     int      createdASN = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_3DBs begins\n");
     CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
@@ -196,6 +197,8 @@ TEST(IpToGeo2Test_3DBs)
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_CODE");
     CHECK(res != NULL);
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_NAME");
@@ -210,8 +213,7 @@ TEST(IpToGeo2Test_3DBs)
     CHECK(geoInfo2->getGeoEnv("GEOIP_LONGITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("GEOIP_CITY") != NULL);
     CHECK(geoInfo2->getGeoEnv("GEOIP_ISP") != NULL);
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
 
     /*
     if (createdCountry)
@@ -223,7 +225,7 @@ TEST(IpToGeo2Test_3DBs)
     */
 }
 
-    
+
 TEST(IpToGeo2Test_2LookUps)
 {
     IpToGeo2 ipToGeo2;
@@ -235,7 +237,7 @@ TEST(IpToGeo2Test_2LookUps)
     int      createdCity = 0;
     int      createdASN = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_2LookUps begins\n");
     CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
@@ -245,6 +247,8 @@ TEST(IpToGeo2Test_2LookUps)
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_CODE");
     CHECK(res != NULL);
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_NAME");
@@ -259,21 +263,19 @@ TEST(IpToGeo2Test_2LookUps)
     CHECK(geoInfo2->getGeoEnv("GEOIP_LONGITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("GEOIP_CITY") != NULL);
     CHECK(geoInfo2->getGeoEnv("GEOIP_ISP") != NULL);
-    if (geoInfo2)
-    {
-        delete geoInfo2;
-        geoInfo2 = NULL;
-    }
-    
+    delete geoInfo2;
+
     unsigned char IP[4] = { 52,55,120,73 }; // Do it as an int (www.litespeedtech.com)
     geoInfo2 = ipToGeo2.lookUp(*(uint32_t *)&IP[0]);
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_CODE");
     CHECK(res && !strcasecmp(res,"US"));
     res = geoInfo2->getGeoEnv("GEOIP_COUNTRY_NAME");
     CHECK(res && !strcasecmp(res,"United States"));
     // First
-    CHECK(((res = geoInfo2->getGeoEnv("GEOIP_CONTINENT_CODE")) != NULL) && 
+    CHECK(((res = geoInfo2->getGeoEnv("GEOIP_CONTINENT_CODE")) != NULL) &&
           !strcasecmp(res,"NA"));;
     CHECK(geoInfo2->getGeoEnv("GEOIP_BADNAME") == NULL);
     CHECK((res = geoInfo2->getGeoEnv("GEOIP_POSTAL_CODE")) != NULL);
@@ -282,9 +284,8 @@ TEST(IpToGeo2Test_2LookUps)
     CHECK(geoInfo2->getGeoEnv("GEOIP_LONGITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("GEOIP_CITY") != NULL);
     CHECK(geoInfo2->getGeoEnv("GEOIP_ISP") != NULL);
-    if (geoInfo2)
-        delete geoInfo2;
-    
+    delete geoInfo2;
+
     /*
     if (createdCountry)
         unlink(finaldbCountry);
@@ -295,11 +296,11 @@ TEST(IpToGeo2Test_2LookUps)
     */
 }
 
-    
+
 TEST(IpToGeo2Test_SetEnvNoFile)
 {
     IpToGeo2 ipToGeo2;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnvNoFile\n");
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == -1);
 } // IpToGeo2Test_SetEnvNoFile
@@ -310,7 +311,7 @@ TEST(IpToGeo2Test_SetEnvBadDB)
     IpToGeo2 ipToGeo2;
     char     finaldb[350] = { 0 };
     int      created = 0;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnvBadDB begins\n");
     CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
@@ -327,18 +328,19 @@ TEST(IpToGeo2Test_SetEnvLookupOne)
     char     finaldb[350] = { 0 };
     int      created = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnvBadDB begins\n");
     CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("COUNTRY_CODE");
     CHECK(res && !strcasecmp(res,"TR"));
     CHECK(geoInfo2->getGeoEnv("REGION") == NULL);
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
     //if (created)
     //    unlink(finaldb);
 }
@@ -354,14 +356,14 @@ TEST(IpToGeo2Test_SetEnv3DBs)
     int      createdCity = 0;
     int      createdASN = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnv3DBs begins\n");
     CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME COUNTRY_DB/country/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_CONTINENT_CODE COUNTRY_DB/continent/code") == 0);
-    
+
     CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == 0);
@@ -369,14 +371,16 @@ TEST(IpToGeo2Test_SetEnv3DBs)
     CHECK(ipToGeo2.configSetEnv("MM_CITY_NAME CITY_DB/city/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LONGITUDE CITY_DB/location/longitude") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LATITUDE CITY_DB/location/latitude") == 0);
-    
+
     CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASN ASN_DB/autonomous_system_number") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASORG ASN_DB/autonomous_system_organization") == 0);
-    
+
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("MM_COUNTRY_CODE");
     CHECK(res != NULL);
     res = geoInfo2->getGeoEnv("MM_COUNTRY_NAME");
@@ -389,8 +393,7 @@ TEST(IpToGeo2Test_SetEnv3DBs)
     CHECK(geoInfo2->getGeoEnv("MM_LONGITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_CITY_NAME") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_ASN") != NULL);
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
 
     /*
     if (createdCountry)
@@ -402,7 +405,7 @@ TEST(IpToGeo2Test_SetEnv3DBs)
     */
 }
 
-    
+
 TEST(IpToGeo2Test_SetEnv2LookUps)
 {
     IpToGeo2 ipToGeo2;
@@ -414,19 +417,19 @@ TEST(IpToGeo2Test_SetEnv2LookUps)
     int      createdCity = 0;
     int      createdASN = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnv2LookUps begins\n");
     CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASN ASN_DB/autonomous_system_number") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASORG ASN_DB/autonomous_system_organization") == 0);
-    
+
     CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME COUNTRY_DB/country/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_CONTINENT_CODE COUNTRY_DB/continent/code") == 0);
-    
+
     CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == 0);
@@ -434,9 +437,11 @@ TEST(IpToGeo2Test_SetEnv2LookUps)
     CHECK(ipToGeo2.configSetEnv("MM_CITY_NAME CITY_DB/city/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LONGITUDE CITY_DB/location/longitude") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LATITUDE CITY_DB/location/latitude") == 0);
-    
+
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("MM_COUNTRY_CODE");
     CHECK(res != NULL);
     res = geoInfo2->getGeoEnv("MM_COUNTRY_NAME");
@@ -449,32 +454,28 @@ TEST(IpToGeo2Test_SetEnv2LookUps)
     CHECK(geoInfo2->getGeoEnv("MM_LONGITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_CITY_NAME") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_ASN") != NULL);
-    if (geoInfo2)
-    {
-        delete geoInfo2;
-        geoInfo2 = NULL;
-    }
-    
-    
+    delete geoInfo2;
+
     unsigned char IP[4] = { 52,55,120,73 }; // Do it as an int (www.litespeedtech.com)
     geoInfo2 = ipToGeo2.lookUp(*(uint32_t *)&IP[0]);
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("MM_COUNTRY_CODE");
     CHECK(res && !strcasecmp(res,"US"));
     res = geoInfo2->getGeoEnv("MM_COUNTRY_NAME");
     CHECK(res && !strcasecmp(res,"United States"));
     // First
-    CHECK(((res = geoInfo2->getGeoEnv("MM_CONTINENT_CODE")) != NULL) && 
+    CHECK(((res = geoInfo2->getGeoEnv("MM_CONTINENT_CODE")) != NULL) &&
           !strcasecmp(res,"NA"));;
     CHECK(geoInfo2->getGeoEnv("MM_BADNAME") == NULL);
     CHECK((res = geoInfo2->getGeoEnv("MM_POSTAL_CODE")) == NULL);
-    CHECK(geoInfo2->getGeoEnv("MM_METRO_CODE") == NULL); 
+    CHECK(geoInfo2->getGeoEnv("MM_METRO_CODE") == NULL);
     CHECK(geoInfo2->getGeoEnv("MM_LATITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_LONGITUDE") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_CITY_NAME") != NULL);
     CHECK(geoInfo2->getGeoEnv("MM_ASN") != NULL);
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
 
     /*
     if (createdCountry)
@@ -494,18 +495,19 @@ TEST(IpToGeo2Test_SetEnvLookUpV6)
     char     finaldb[350] = { 0 };
     int      created = 0;
     const char *res;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnvLookUpV6 begins\n");
     CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     geoInfo2 = ipToGeo2.lookUpV6("2607:f0d0:3:8::4");
     CHECK(geoInfo2 != NULL);
+    if (geoInfo2 == NULL)
+        return;
     res = geoInfo2->getGeoEnv("COUNTRY_CODE");
     CHECK(res != NULL);
     CHECK(geoInfo2->getGeoEnv("REGION") == NULL);
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
     //if (created)
     //    unlink(finaldb);
 }
@@ -517,15 +519,16 @@ TEST(IpToGeo2Test_SetEnvLookupFailed)
     GeoInfo *geoInfo2 = NULL;
     char     finaldb[350] = { 0 };
     int      created = 0;
-    
+
     fprintf(stderr,"IpToGeo2Test_SetEnvLookupFailed begins\n");
     CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     geoInfo2 = ipToGeo2.lookUp("127.0.0.1");
     CHECK(geoInfo2 == NULL);
-    if (geoInfo2)
-        delete geoInfo2;
+    if (geoInfo2 == NULL)
+        return;
+    delete geoInfo2;
     //if (created)
     //    unlink(finaldb);
 }
@@ -542,14 +545,14 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
     int      createdCity = 0;
     int      createdASN = 0;
     int      ret;
-    
+
     fprintf(stderr,"IpToGeo2Test_3DBsAddGeoEnv begins\n");
     CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME COUNTRY_DB/country/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_CONTINENT_CODE COUNTRY_DB/continent/code") == 0);
-    
+
     CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == 0);
@@ -557,14 +560,16 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
     CHECK(ipToGeo2.configSetEnv("MM_CITY_NAME CITY_DB/city/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LONGITUDE CITY_DB/location/longitude") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LATITUDE CITY_DB/location/latitude") == 0);
-    
+
     CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASN ASN_DB/autonomous_system_number") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASORG ASN_DB/autonomous_system_organization") == 0);
-    
+
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     Env iEnv;
+    if (geoInfo2 == NULL)
+        return;
     ret = geoInfo2->addGeoEnv(&iEnv);
     CHECK(ret >= 0);
     if (ret >= 0)
@@ -579,8 +584,7 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
         CHECK(iEnv.find("MM_ASORG") != NULL);
         CHECK(iEnv.find("MM_BADNAME") == NULL);
     }
-    if (geoInfo2)
-        delete geoInfo2;
+    delete geoInfo2;
     /*
     if (createdCountry)
         unlink(finaldbCountry);
@@ -591,8 +595,8 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
     */
 }
 
-    
-  
+
+
 } // suite
 #endif
 

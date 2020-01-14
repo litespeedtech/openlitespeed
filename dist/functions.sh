@@ -1048,8 +1048,10 @@ installation()
 		util_cp_htaccess "$SDIR_OWN" $DOC_MOD Example/html
 	fi
 
-    chown -R "$CONF_OWN" "$LSWS_HOME/conf/"
-    chmod -R 0755 "$LSWS_HOME/conf/"
+	#change conf own as lsadm:nobody permission 750
+    chown -R lsadm:$WS_GROUP "$LSWS_HOME/conf/"
+    chmod -R 0750 "$LSWS_HOME/conf/"
+    
     chmod 0600 "$LSWS_HOME/conf/httpd_config.conf"
     chmod 0600 "$LSWS_HOME/conf/vhosts/Example/vhconf.conf"
 
@@ -1127,7 +1129,7 @@ gen_selfsigned_cert()
 {
     # source outside config file
     if [ $# -eq 1 ] ; then
-        source ${1}
+        . ${1}
     fi
 
    # set default value

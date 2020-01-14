@@ -53,14 +53,18 @@ public:
     int32_t m_statusCode;       //Response Status Code
     int32_t m_valPart1Len;      //Response Header Length
     int32_t m_valPart2Len;      //Response Body Length
-    int32_t m_tmLastMod;        //Last Modified time parsed from response header if set
+    union
+    {
+        int32_t m_tmLastMod;    //Last Modified time parsed from response header if set
+        int32_t m_pidCreator;   //The process that is creating the cache entry
+    };
     int16_t m_offETag;          //ETag header value location
     int16_t m_lenETag;          //ETag Header size
     int16_t m_lenStxFilePath;   //For a static file caching, we store the orginal file path
     int16_t m_iPrivLen;         //ip and private cookie length, save it for compare cacheHeader need to exclude it
     off_t   m_lSize;
     ino_t   m_inode;
-    time_t  m_lastMod;
+    time_t  m_tmFileLastMod;    //The static file or dynmaic script file last modified time 
 };
 
 #endif

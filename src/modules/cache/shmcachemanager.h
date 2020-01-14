@@ -36,6 +36,8 @@ public:
     ShmCacheManager()
         : m_pPublicPurge(NULL)
         , m_pSessions(NULL)
+        , m_pPubTracker(NULL)
+        , m_pPrivTracker(NULL)
         , m_pStr2IdHash(NULL)
         , m_pUrlVary(NULL)
         , m_pId2VaryStr(NULL)
@@ -49,12 +51,12 @@ public:
 
     int isPurged(CacheEntry *pEntry, CacheKey *pKey, bool isCheckPrivate);
     int processPurgeCmd(const char *pValue, int iValLen, time_t curTime,
-                        int curTimeMS)
+                        int curTimeMS, int stale)
     {
-        return processPurgeCmdEx(NULL, pValue, iValLen, curTime, curTimeMS);
+        return processPurgeCmdEx(NULL, pValue, iValLen, curTime, curTimeMS, stale);
     }
     int processPrivatePurgeCmd(CacheKey *pKey, const char *pValue, int iValLen,
-                               time_t curTime, int curTimeMS);
+                               time_t curTime, int curTimeMS, int stale);
 
     
     
@@ -90,10 +92,19 @@ public:
     virtual int houseKeeping();
 
     virtual int shouldCleanDiskCache();
+    
+    
+    int  addTracking(CacheEntry * pEntry);
+    int  removeTracking(const char *pKey, int keyLen, int isPrivate);
+    int  trimExpiredByTracking(int isPrivate, int maxCnt, int (*removeEntry)(void *, void *), void *param);
+    int  isInTracker(const unsigned char* getKey, int keyLen, int isPrivate);
+
 
 private:
     LsShmHash               *m_pPublicPurge;
     LsShmHash               *m_pSessions;
+    LsShmHash               *m_pPubTracker;
+    LsShmHash               *m_pPrivTracker;
     LsShmHash               *m_pStr2IdHash;
     TShmHash<int32_t>       *m_pUrlVary;
     LsShmHash               *m_pId2VaryStr;
@@ -116,7 +127,7 @@ private:
     int isPurgedByTag(const char *pTag, CacheEntry *pEntry, CacheKey *pKey,
                       bool isCheckPrivate);
     int processPurgeCmdEx(ShmPrivatePurgeData *pPrivate, const char *pValue,
-                          int iValLen, time_t curTime, int curTimeMS);
+                          int iValLen, time_t curTime, int curTimeMS, int stale);
 
     int           getNextVaryId();
     int           getNextPrivateTagId();
@@ -128,6 +139,13 @@ private:
     
     void cleanupExpiredSessions();
     int  cleanDiskCache();
+    
+    int  addTracking2(CacheEntry * pEntry, LsShmHash *pTracker);
+    LsShmHash *getTracker(int isPrivate)
+    {
+        return isPrivate ? m_pPrivTracker : m_pPubTracker;
+    }
+    
 
 };
 

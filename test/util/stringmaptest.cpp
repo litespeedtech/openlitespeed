@@ -224,6 +224,7 @@ SUITE(StringMapTest)
         ret = StringTool::strMatch(testcase8, NULL, pPattern2->begin(),
                                    pPattern2->end(), 0);
         CHECK(ret != 0);
+        delete pPattern2;
 
     }
 }

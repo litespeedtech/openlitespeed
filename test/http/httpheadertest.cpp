@@ -313,17 +313,17 @@ SUITE(HttpHeaderTest)
     }
 
 
-    void DisplayBothHeader(IOVec io, int format, short count,
+    void DisplayBothHeader(IOVec *io, int format, short count,
                            HttpRespHeaders * pRespHeaders)
     {
         IOVec::iterator it;
         unsigned char *p = NULL;
-        it = io.begin();
+        it = io->begin();
         p = (unsigned char *)it->iov_base;
         //return;//comment this out to view header data
 
 
-        for (it = io.begin(); it != io.end(); ++it)
+        for (it = io->begin(); it != io->end(); ++it)
         {
             p = (unsigned char *)it->iov_base;
             for (unsigned int i = 0; i < it->iov_len; ++i)
@@ -414,7 +414,7 @@ SUITE(HttpHeaderTest)
 
     }
 
-    void CheckIoHeader(IOVec io, char *phBuf)
+    void CheckIoHeader(IOVec *io, char *phBuf, const char *function, int line)
     {
         IOVec::iterator it;
         unsigned char *p = NULL;
@@ -423,15 +423,16 @@ SUITE(HttpHeaderTest)
 //printf("->&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 
 
-        for (it = io.begin(); it != io.end(); ++it)
+        for (it = io->begin(); it != io->end(); ++it)
         {
             p = (unsigned char *)it->iov_base;
-            printf("Check: %.*s, %.*s\n", (int)it->iov_len, p,
-                   (int)it->iov_len, ph);
+            //printf("Check: %.*s, %.*s\n", (int)it->iov_len, p,
+            //       (int)it->iov_len, ph);
             CHECK(strncasecmp((const char *)p, ph, it->iov_len) == 0);
             if (strncasecmp((const char *)p, ph, it->iov_len) != 0)
-                printf("p:\n%.*s\nph:\n%.*s\n", (int)it->iov_len, p,
-                       (int)it->iov_len, ph);
+                printf("   Error details: function: %s, line: %d, p:\n%.*s\n"
+                       "ph:\n%.*s\n", function, line,
+                       (int)it->iov_len, p, (int)it->iov_len, ph);
             ph += it->iov_len;
         }
 
@@ -501,10 +502,10 @@ SUITE(HttpHeaderTest)
                   strlen("Thu, 16 May 2013 20:32:23 GMT"));
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
             CHECK(h.getCount() ==
                   5);   //Will add connection: close automatically
 
@@ -517,11 +518,11 @@ SUITE(HttpHeaderTest)
             h.addStatusLine(0, SC_304,
                             1);   //when ver is 0 and keepalive is 1, Will NOT add connection: close automatically
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr, "HTTP/1.1 304 Not Modified\r\n"
-                   "server: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT\r\nx-powered-by: PHP/5.3.24\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
-            CHECK(h.getCount() == 4);
+                   "server: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT\r\nx-powered-by: PHP/5.3.24\r\nconnection: keep-alive\r\n\r\n");
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
+            CHECK(h.getCount() == 5);
 
             h.reset();
             h.add(HttpRespHeaders::H_SERVER,  "My_Server", 9);
@@ -533,87 +534,87 @@ SUITE(HttpHeaderTest)
             h.add(HttpRespHeaders::H_DATE,  "XXXX", 4, LSI_HEADEROP_MERGE);
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.add(HttpRespHeaders::H_DATE,  "NEWDATE", 7, LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.add(HttpRespHeaders::H_DATE,  "NEWDATE2", 8, LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\ndate: NEWDATE2\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.add(HttpRespHeaders::H_DATE,  "NEWDATE3", 8, LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,Thu, 16 ,XXXX\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\ndate: NEWDATE\r\ndate: NEWDATE2\r\ndate: NEWDATE3\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
             h.del(HttpRespHeaders::H_DATE);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getCount() == 4);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
             h.del("X-Powered-By", strlen("X-Powered-By"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getCount() == 3);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\nconnection: close\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.add(HttpRespHeaders::H_SERVER,  "YY_Server", 9);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getCount() == 3);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: YY_Server\r\naccept-ranges: bytes\r\nconnection: close\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
             h.add(HttpRespHeaders::H_SERVER,  "XServer", 7);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getCount() == 3);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.add(HttpRespHeaders::H_DATE,  "Thu, 16 May 2099 20:32:23 GMT",
                   strlen("Thu, 16 May 2013 20:32:23 GMT"));
             h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/9.9.99", strlen("PHP/5.3.24"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getCount() == 5);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
             h.add("Allow", 5, "*.*", 3);
             h.appendLastVal("; .zip; .rar", strlen("; .zip; .rar"));
             h.appendLastVal("; .exe; .flv", strlen("; .zip; .rar"));
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getCount() == 6);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
             h.add(HttpRespHeaders::H_SET_COOKIE,
@@ -633,14 +634,14 @@ SUITE(HttpHeaderTest)
                   strlen("lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/"),
                   LSI_HEADEROP_ADD);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             CHECK(h.getUniqueCnt() == 8);
             CHECK(h.getCount() == 10);
             strcpy(sTestHdr,
                    "HTTP/1.1 200 OK\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
                    "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
             h.getFirstHeader("date", 4, &pVal, valLen);
@@ -676,38 +677,38 @@ SUITE(HttpHeaderTest)
             h.parseAdd("Content-Encoding2 : GZIP\r\n",
                        strlen("Content-Encoding2 : GZIP\r\n"), LSI_HEADEROP_MERGE);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: keep-alive\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
                    "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
                    "MytestHeader: TTTTTTTTTTTT3,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\nContent-Encoding: GZIP\r\nContent-Encoding2: GZIP\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.parseAdd("MytestHeader: XXX\r\n",
                        strlen("MytestHeader: XXX\r\n"), LSI_HEADEROP_MERGE);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: close\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nserver: XServer  \r\naccept-ranges: bytes\r\nconnection: keep-alive\r\ndate: Thu, 16 May 2099 20:32:23 GMT\r\nx-powered-by: PHP/9.9.99\r\nallow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
                    "set-cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nset-cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestbreak: ----\r\nset-cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
                    "mytestheader: TTTTTTTTTTTT3,XXX\r\nmytestheaderii: IIIIIIIIIIIIIIIIIIIII\r\nContent-Encoding: GZIP\r\nContent-Encoding2: GZIP\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
             h.parseAdd("MytestHeader: XXX\r\n",
                        strlen("MytestHeader: XXX\r\n"), LSI_HEADEROP_APPEND);
             h.outputNonSpdyHeaders(&io);
-            DisplayBothHeader(io, kk, h.getCount(), &h);
+            DisplayBothHeader(&io, kk, h.getCount(), &h);
             strcpy(sTestHdr,
-                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: close\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
+                   "HTTP/1.1 404 Not Found\r\nServer: XServer  \r\nAccept-Ranges: bytes\r\nConnection: keep-alive\r\nDate: Thu, 16 May 2099 20:32:23 GMT\r\nX-Powered-By: PHP/9.9.99\r\nAllow: *.*; .zip; .rar; .exe; .flv\r\n");
             strcat(sTestHdr,
                    "Set-Cookie: lsws_uid=a; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\nSet-Cookie: lsws_pass=b; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\ntestBreak: ----\r\nSet-Cookie: lsws_uid=c; expires=Mon, 13 May 2013 14:10:51 GMT; path=/\r\n");
             strcat(sTestHdr,
                    "MytestHeader: TTTTTTTTTTTT3,XXX,XXX\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\nContent-Encoding: GZIP\r\nContent-Encoding2: GZIP\r\n\r\n");
-            CheckIoHeader(io, sTestHdr);
+            CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
         }
 
         h.reset();
@@ -718,28 +719,28 @@ SUITE(HttpHeaderTest)
         h.add(HttpRespHeaders::H_DATE,  "AAAA", 4, LSI_HEADEROP_MERGE);
         h.add(HttpRespHeaders::H_X_POWERED_BY, "PHP/5.3.24", strlen("PHP/5.3.24"));
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
-        CheckIoHeader(io, sTestHdr);
+        CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
         h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADEROP_MERGE);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
-        CheckIoHeader(io, sTestHdr);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
+        CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
         h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADEROP_MERGE);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
-        CheckIoHeader(io, sTestHdr);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
+        CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
         h.add(HttpRespHeaders::H_DATE,  "AAA", 3, LSI_HEADEROP_APPEND);
         strcpy(sTestHdr,
                "HTTP/1.1 200 OK\r\nserver: My_Server\r\naccept-ranges: bytes\r\ndate: Thu, 16 May 2013 20:32:23 GMT,AAAA,AAA,AAA\r\nx-powered-by: PHP/5.3.24\r\nconnection: close\r\n\r\n");
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
-        CheckIoHeader(io, sTestHdr);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
+        CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
         ls_xpool_delete(pool);
 
@@ -754,7 +755,7 @@ SUITE(HttpHeaderTest)
         IOVec::iterator it;
         char *ph;
         char *p;
-        
+
 
         static const char * s_pHeaders[HttpRespHeaders::H_HEADER_END] =
         {
@@ -960,9 +961,9 @@ SUITE(HttpHeaderTest)
         CHECK(h.getTotalLen() == 57);
         temp = h.getAllHeaders( ios, 30 );
         CHECK(temp == 2);//unknown not removed and close
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nUNKNOWN: xUNKNOWN\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
+        CheckIoHeader(&io,sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
 
@@ -988,9 +989,9 @@ SUITE(HttpHeaderTest)
         CHECK(h.getTotalLen() == 38);//should be 57 the same as above?
         temp = h.getAllHeaders( ios, 30 );
         CHECK(temp == 1);//unknown was removed and close should be 2?
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
+        CheckIoHeader(&io,sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
         //check resest and headers built flag
@@ -1016,9 +1017,9 @@ SUITE(HttpHeaderTest)
         CHECK(h.getCount() == 3);
         h.del("X", strlen("X"));
         CHECK(h.getCount() == 3);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "unknown: My_Server\r\nAccept-Ranges: bytes\r\nDate: Thu, 16 May 2013 20:32:23 GMT\r\nX-Powered-By: PHP/5.3.24\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
+        CheckIoHeader(&io,sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
         //check content type
         pVal = h.getContentTypeHeader(temp);//
@@ -1107,7 +1108,7 @@ SUITE(HttpHeaderTest)
         CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
         temp = ios[0].iov_len;
         CHECK(ios[0].iov_len == 9);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
 
         h.reset();
         h.hideServerSignature(0);
@@ -1119,9 +1120,9 @@ SUITE(HttpHeaderTest)
         CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed", 9) == 0);
         CHECK(ios[0].iov_len == 9);
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
+        CheckIoHeader(&io,sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
         h.reset();
         h.hideServerSignature(1);
@@ -1133,9 +1134,9 @@ SUITE(HttpHeaderTest)
         CHECK(memcmp((char *)(ios[0].iov_base), "LiteSpeed/1.2.4 Open", 20) == 0);
         CHECK(ios[0].iov_len == 20);
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nServer: LiteSpeed/1.2.4 Open\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
+        CheckIoHeader(&io,sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
         h.reset();
         h.hideServerSignature(2);
@@ -1143,9 +1144,9 @@ SUITE(HttpHeaderTest)
         h.addCommonHeaders();
         h.del(HttpRespHeaders::H_DATE);
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
         strcpy(sTestHdr, "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n");
-        CheckIoHeader(io,sTestHdr);
+        CheckIoHeader(&io,sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
         //large header test 10k short headers
@@ -1185,7 +1186,7 @@ SUITE(HttpHeaderTest)
         }
         //check output
         h.outputNonSpdyHeaders(&io);
-        DisplayBothHeader(io, kk, h.getCount(), &h);
+        DisplayBothHeader(&io, kk, h.getCount(), &h);
 
 
         ph = s_pOutputHdr;

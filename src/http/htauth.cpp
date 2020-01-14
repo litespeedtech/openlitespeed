@@ -40,8 +40,8 @@
 HTAuth::HTAuth()
     : m_pName(NULL)
     , m_authHeader(NULL)
-    , m_authHeaderLen(0)
     , m_pUserDir(NULL)
+    , m_authHeaderLen(0)
     , m_iAuthType(AUTH_DEFAULT)
 {
 }
@@ -50,8 +50,8 @@ HTAuth::HTAuth()
 HTAuth::HTAuth(const char *pRealm)
     : m_pName(NULL)
     , m_authHeader(NULL)
-    , m_authHeaderLen(0)
     , m_pUserDir(NULL)
+    , m_authHeaderLen(0)
     , m_iAuthType(AUTH_DEFAULT)
 {}
 

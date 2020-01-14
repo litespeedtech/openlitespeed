@@ -60,7 +60,6 @@ class UserDir
     char             *m_pName;
     HashDataCache    *m_pCacheUser;
     HashDataCache    *m_pCacheGroup;
-    int               m_encryptMethod;
 
     UserDir(const UserDir &);
     UserDir &operator=(const UserDir &);

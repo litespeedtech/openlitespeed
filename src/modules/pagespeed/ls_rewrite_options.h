@@ -54,7 +54,7 @@ public:
     // on failure.
     //
     // pool is a memory pool for allocating error strings.
-    const char *ParseAndSetOptions(
+    int ParseAndSetOptions(
         StringPiece *args, int n_args, MessageHandler *handler,
         LsRewriteDriverFactory *driver_factory, OptionScope scope);
 

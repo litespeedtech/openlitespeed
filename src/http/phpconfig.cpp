@@ -33,7 +33,8 @@ int PHPValue::setValue(const char *pKey, const char *pValue,
     if (iType != PHP_CONF_SYSTEM)
         iType = PHP_CONF_PERDIR;
     int keyLen = strlen(pKey);
-    m_sKey.prealloc(keyLen + 3);
+    if (!m_sKey.prealloc(keyLen + 3))
+        return LS_FAIL;
     char *keyBuf = m_sKey.buf();
     *keyBuf++ = PHP_CONFIG_ENV;
     *keyBuf++ = iType;

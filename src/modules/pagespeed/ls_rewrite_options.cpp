@@ -238,17 +238,15 @@ RewriteOptions::OptionSettingResult ParseAndSetOptionHelper(
     return RewriteOptions::kOptionOk;
 }
 
-const char *ps_error_string_for_option(StringPiece directive,
-                                       StringPiece warning)
+void ps_error_string_for_option(StringPiece directive, StringPiece warning)
 {
     GoogleString msg =
         StrCat("\"", directive, "\" ", warning);
     g_api->log(NULL, LSI_LOG_WARN, "[%s] %s\n", ModuleName, msg.c_str());
-    return msg.c_str();
 }
 
 // Very similar to apache/mod_instaweb::ParseDirective.
-const char *LsRewriteOptions::ParseAndSetOptions(
+int LsRewriteOptions::ParseAndSetOptions(
     StringPiece *args, int n_args, MessageHandler *handler,
     LsRewriteDriverFactory *driver_factory,
     RewriteOptions::OptionScope scope)
@@ -258,8 +256,8 @@ const char *LsRewriteOptions::ParseAndSetOptions(
     StringPiece directive = args[0];
     if (GetOptionScope(directive) > scope)
     {
-        return ps_error_string_for_option(
-                   directive, "cannot be set at this scope.");
+        ps_error_string_for_option(directive, "cannot be set at this scope.");
+        return -1;
     }
 
     GoogleString msg;
@@ -312,8 +310,9 @@ const char *LsRewriteOptions::ParseAndSetOptions(
         return 0;
 
     case RewriteOptions::kOptionNameUnknown:
-        return ps_error_string_for_option(
-                   directive, "not recognized or too many arguments");
+        ps_error_string_for_option(directive,
+                                   "not recognized or too many arguments");
+        return -1;
 
     case RewriteOptions::kOptionValueInvalid:
         {
@@ -322,12 +321,13 @@ const char *LsRewriteOptions::ParseAndSetOptions(
             for (int i = 0 ; i < n_args ; i++)
                 StrAppend(&full_directive, i == 0 ? "" : " ", args[i]);
 
-            return ps_error_string_for_option(full_directive, msg);
+            ps_error_string_for_option(full_directive, msg);
+            return -1;
         }
     }
 
     CHECK(false);
-    return NULL;
+    return 0;
 }
 
 LsRewriteOptions *LsRewriteOptions::Clone() const

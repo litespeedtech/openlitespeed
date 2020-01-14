@@ -186,7 +186,7 @@ void doTest(RadixTree *pTree, char **pDynamicInputs, int count)
 #endif
     if (pTree->getNoContext() == 0)
     {
-        while ((pNext = (const char *)memchr(pNext + 1, '/',
+        while (pNext && (pNext = (const char *)memchr(pNext + 1, '/',
                                              strlen(pNext) - 1)) != NULL)
         {
             CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == data);
@@ -197,18 +197,21 @@ void doTest(RadixTree *pTree, char **pDynamicInputs, int count)
     }
     else
     {
-        pNext = (const char *)memchr(pNext + 1, '/', strlen(pNext) - 1);
-        CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == data);
-        while ((pNext = (const char *)memchr(pNext + 1, '/',
-                                             strlen(pNext) - 2)) != NULL)
+        if (pNext)
+            pNext = (const char *)memchr(pNext + 1, '/', strlen(pNext) - 1);
+        if (pNext)
         {
-            CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == NULL);
+            CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == data);
+            while ((pNext = (const char *)memchr(pNext + 1, '/',
+                                                 strlen(pNext) - 2)) != NULL)
+            {
+                CHECK((pOut = pTree->bestMatch(pBegin, pNext - pBegin)) == NULL);
 #ifdef RADIXTREE_DEBUG
-            printf("Should be NULL: %p\n", pOut);
+                printf("Should be NULL: %p\n", pOut);
 #endif
+            }
+            CHECK((pOut = pTree->bestMatch(pBegin, strlen(pBegin))) == &tree2);
         }
-        CHECK((pOut = pTree->bestMatch(pBegin, strlen(pBegin))) == &tree2);
-
     }
 
     CHECK(pTree->for_each(test_for_each) == count);

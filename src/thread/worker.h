@@ -98,7 +98,7 @@ protected:
                 //break;
             }
         }
-        ls_atomic_setint(&m_isWorking, STOPPED);
+        ls_atomic_setint(&m_isWorking, TO_START);
         return ret;
     }
 

@@ -41,9 +41,13 @@ int CgidReq::add(const char *name, size_t nameLen,
     //assert( value );
     //assert( nameLen == strlen( name ) );
     //assert( valLen == strlen( value ) );
+
+    if (!value)
+        valLen = 0;
+
     int bufLen = m_buf.available();
     int len = nameLen + valLen + 4;
-    if (len > 65530)
+    if (len > 65530 )
         return LS_FAIL;
     if (value && strncmp(value, "() {", 4) == 0)
         return LS_FAIL;
@@ -68,7 +72,8 @@ int CgidReq::add(const char *name, size_t nameLen,
         memcpy(pBuf, name, nameLen);
         pBuf += nameLen;
         *pBuf++ = '=';
-        memcpy(pBuf, value, valLen);
+        if (value)
+            memcpy(pBuf, value, valLen);
         pBuf += valLen;
         *pBuf++ = 0;
         m_buf.used(len);

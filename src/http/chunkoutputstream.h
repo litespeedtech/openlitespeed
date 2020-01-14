@@ -32,8 +32,8 @@ class OutputStream;
 
 class ChunkOutputStream
 {
-    OutputStream   *m_pOS;
     IOVec           m_iov;
+    OutputStream   *m_pOS;
     int             m_iCurSize;
     char            m_iBuffering;
     short           m_iSendFileLeft;

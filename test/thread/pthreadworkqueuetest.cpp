@@ -96,8 +96,8 @@ TEST(pthreadworkqueue_test)
 
     CHECK(wq->append(aNodes, PTHREADWORKQUEUE_LOOP_COUNT) == 0);
 
-    worker1.start(wq);
-    worker2.start(wq);
+    CHECK(worker1.start(wq) != LS_FAIL);
+    CHECK(worker2.start(wq) != LS_FAIL);
     sched_yield(); //Yield to provide a more random result.
     for (i = 0; i < PTHREADWORKQUEUE_LOOP_COUNT; ++i)
     {
@@ -175,6 +175,7 @@ TEST(pthreadworkqueue_test)
     wq->shutdown();
     delete wq;
 }
+
 #endif
 
 #endif

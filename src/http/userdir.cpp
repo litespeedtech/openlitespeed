@@ -419,8 +419,6 @@ int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
     if (!pUser || !pUser->isExist())
         return SC_401;
     const char *pStored = pUser->getPasswd();
-//    if (( encryptMethod == m_encryptMethod )||
-//        ( m_encryptMethod == AuthUser::ENCRYPT_UNKNOWN ))
     if (pStored)
     {
         switch (pUser->getEncMethod())

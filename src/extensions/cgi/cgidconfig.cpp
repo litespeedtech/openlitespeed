@@ -21,11 +21,14 @@ CgidConfig::CgidConfig(const char *pName)
     : ExtWorkerConfig(pName)
     , m_priority(10)
 {
+    m_achSecret[0] = 0;
 }
 
 
 CgidConfig::CgidConfig()
+    : m_priority(10)
 {
+    m_achSecret[0] = 0;
 }
 
 

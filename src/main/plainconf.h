@@ -102,7 +102,7 @@ public:
 
     static ConfFileType checkFiletype(const char *path);
     static void getIncludeFile(const char *curDir, const char *orgFile,
-                               char *targetFile);
+                               char *targetFile, ssize_t targetFileLen);
 
     static const char *getConfDeepValue(const XmlNode *pNode,
                                         const char *name);

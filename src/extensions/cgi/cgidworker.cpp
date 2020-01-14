@@ -222,7 +222,7 @@ int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
 static int cgroup_validate(void)
 {
     struct passwd *pwd;
-    
+
     if (getuid())
     {
         LS_INFO("You allow cgroups, but are not running as root; disabled.\n");
@@ -250,7 +250,7 @@ static int cgroup_validate(void)
             exit(1);
         }
         if (pid > 0)
-        { 
+        {
             int result;
             waitpid(pid, &result, 0);
             if (WIFEXITED(result) && (WEXITSTATUS(result) == 0))
@@ -309,7 +309,7 @@ int CgidWorker::config(const XmlNode *pNode1)
     }
     else
     {
-        strcpy(achSocket, "uds:/");
+        lstrncpy(achSocket, "uds:/", sizeof(achSocket));
 
         if (strncasecmp("uds:/", pValue, 5) == 0)
             pValue += 5;
@@ -352,17 +352,17 @@ int CgidWorker::config(const XmlNode *pNode1)
    HttpMime::getMime()->addMimeHandler("", achMIME_SSI,
                     HandlerFactory::getInstance(HandlerType::HT_SSI, NULL),
                     NULL, TmpLogId::getLogId());
-   
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     procConfig.setCGroupAllow(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
         "cgroups", 0, 2, 0) != ServerProcessConfig::CGROUP_CONFIG_DISALLOW);
     if ((procConfig.getCGroupAllow()) && (cgroup_validate() == -1))
         procConfig.setCGroupAllow(0);
-    
+
     procConfig.setCGroupDefault(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
         "cgroups", 0, 2, 0) == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON);
 #endif
-    
+
     CgidWorker::setCgidWorkerPid(
         start(MainServerConfig::getInstance().getServerRoot(), psChroot,
               procConfig.getUid(), procConfig.getGid(),

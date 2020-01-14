@@ -69,9 +69,18 @@ public:
     void setLastAccess(long tm)   {   m_lastAccess = tm;  }
     long getLastAccess() const      {   return m_lastAccess;    }
 
+    void setLastPurgrCheck(long tm);
+    long getLastPurgrCheck() const  {   return m_lastPurgrCheck;}
+    
     void incHits()                  {   ++m_iHits;          }
     void clearHits()                {   m_iHits = 0;        }
     long getHits() const            {   return m_iHits;     }
+
+    
+    void setDirty()                 {   m_isDirty = 1;          }
+    void setBuilding(int v)         {   m_isBuilding = (v != 0);}
+    int  isDirty() const            {   return m_isDirty;       }
+    int  isBuilding() const         {   return m_isBuilding;    }
 
 //     void incTestHits()              {   ++m_iTestHits;    }
 //     long getTestHits() const        {   return m_iTestHits;    }
@@ -176,6 +185,7 @@ public:
 
     AutoStr &getTag()                   {   return m_sTag;      }
     void setTag(const char *pTag, int len);
+
     int  isOlderThan(int32_t tmLast, int32_t iMsecLast)
     {
         return ((m_header.m_tmCreated < tmLast)
@@ -192,11 +202,17 @@ public:
 
 private:
     long        m_lastAccess;
+    long        m_lastPurgrCheck;
+   
+    int         m_iMaxStale;
+    
     /**
      * When this reach 10, then means currrent cache need to change gzip/ungzip
      */
-    int         m_iHits;
-    int         m_iMaxStale;
+    uint32_t    m_iHits:29;
+    uint32_t    m_isDirty:1;
+    uint32_t    m_isBuilding:1;
+    
     int         m_needDelay; //delay serving if have cache, in URI_MAP instead of recv req header */
     CacheHash   m_hashKey;
 

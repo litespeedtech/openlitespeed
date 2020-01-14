@@ -255,8 +255,9 @@ int SpdyZlibFilter::init(int isInflator, int verSpdy)
         else
             ret = deflateInit(&m_stream, -1);
 
-        ret = deflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
-                                   s_dictsLen[ m_iVersion ]);
+        if (ret != Z_STREAM_ERROR)
+            ret = deflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
+                                       s_dictsLen[ m_iVersion ]);
     }
 
     return ret;

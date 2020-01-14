@@ -322,6 +322,9 @@ class WPInstall
 
     /**
      *
+     * @deprecated 1.9.5  Deprecated to avoid confusion with $this->cmdStatus
+     *                    and $this->cmdMsg related functions. Use
+     *                    $this->setStatus() instead.
      * @param int  $newStatus
      */
     public function updateCommandStatus( $newStatus )
@@ -385,7 +388,7 @@ class WPInstall
         $this->setData(self::FLD_DOCROOT, $docRoot);
 
         if ( $docRoot === null ) {
-            $this->updateCommandStatus(self::ST_ERR_DOCROOT);
+            $this->setStatus(self::ST_ERR_DOCROOT);
             $this->addUserFlagFile(false);
 
             $msg = "{$this->path} - Could not find matching document root for WP "

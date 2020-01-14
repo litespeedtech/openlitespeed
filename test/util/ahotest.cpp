@@ -476,10 +476,12 @@ static void checkErr()
     int count = 445;
     int i;
     size_t iOutStart = 0, iOutEnd = 0;
-    ls_aho_state_t **outlast = (ls_aho_state_t **)malloc(sizeof(
-                                   ls_aho_state_t **));
+    ls_aho_state_t *outlast = NULL;
 //     Aho *ac = new Aho( 1 );
     ls_aho_t *ac = ls_aho_new(1);
+    CHECK(ac);
+    if (!ac)
+        return;
     for (i = 0; i < count; ++i)
     {
         if ((ls_aho_addpattern(ac, inputErr[i], strlen(inputErr[i]), NULL) == 0))
@@ -497,7 +499,7 @@ static void checkErr()
         return;
     }
 
-    ls_aho_search(ac, NULL, "_wpnonce", 8, 0, &iOutStart, &iOutEnd, outlast, NULL);
+    ls_aho_search(ac, NULL, "_wpnonce", 8, 0, &iOutStart, &iOutEnd, &outlast, NULL);
     ls_aho_delete(ac);
     return;
 }

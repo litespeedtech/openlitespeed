@@ -25,9 +25,11 @@
 
 CacheEntry::CacheEntry()
     : m_lastAccess(0)
-    , m_iHits(0)
-//     , m_iTestHits(0)
+    , m_lastPurgrCheck(0)
     , m_iMaxStale(0)
+    , m_iHits(0)
+    , m_isDirty(0)
+    , m_isBuilding(0)
     , m_needDelay(0)
     , m_startOffset(0)
     , m_fdStore(-1)
@@ -76,6 +78,12 @@ int CacheKey::getPrivateId(char *pBuf, char *pBufEnd)
     return p - pBuf;
 }
 
+void CacheEntry::setLastPurgrCheck(long tm)
+{
+    m_lastPurgrCheck = tm;
+    g_api->log(NULL, LSI_LOG_DEBUG,
+               "[CACHE] CacheEntry::setLastPurgrCheck called.\n");
+}
 
 int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
 {
@@ -103,7 +111,7 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
     char *pBuf = m_sKey.prealloc(len + 1);
     if (!pBuf)
         return -1;
-    
+
     if (!pKey->m_pUri)
         return -1;
 
@@ -121,7 +129,7 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
         memmove(pBuf + l , pKey->m_sCookie.c_str(), pKey->m_iCookieVary);
         l += pKey->m_iCookieVary;
     }
-    if (pKey->m_ipLen > 0)
+    if (pKey->m_pIP && pKey->m_ipLen > 0)
     {
         if (pKey->m_iCookiePrivate > 0)
         {
@@ -168,7 +176,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
         pKey->m_ipLen = 0 - pKey->m_ipLen;
         isPublic = true;
     }
-    
+
     if (pKey->m_ipLen > 0)
     {
         if (pKey->m_iCookiePrivate > 0)
@@ -182,7 +190,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
             }
             p += pKey->m_iCookiePrivate + 1;
         }
-        
+
         if (!isPublic)
         {
             if ((*p  != '@') ||

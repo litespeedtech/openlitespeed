@@ -70,7 +70,9 @@ SubstItem::~SubstItem()
 
 
 SubstItem::SubstItem(const SubstItem &rhs)
-    : LinkedObj(), m_type(rhs.m_type)
+    : LinkedObj()
+    , m_type(rhs.m_type)
+    , m_subType(0)
 {
     if (rhs.m_value.m_pStr)
     {
@@ -389,6 +391,7 @@ static const char *ServerVarNames[REF_EXT_COUNT] =
     "ORG_REQ_URI",
     "ORG_QUERY_STRING",
     "HTTPS",
+    "REQUEST_SCHEME",
 
     "SSL_PROTOCOL",
     "SSL_SESSION_ID",
@@ -427,12 +430,13 @@ static int ServerVarNameLen[REF_EXT_COUNT] =
 {
     11, 11, 11, 11, 12, 14, 12, 9, 9, 15, 16, 11, 13, 12,
     11, 11, 11, 15, 15, 11, 11, 9, 4, 9, 8, 8, 9, 8, 8, 9, 11, 11,
-    16, 10, 10, 15, 16, 11, 15, 10, 11, 16, 5,
+    16, 10, 10, 15, 16, 11, 15, 10, 11, 16, 5, 14,
     12, 14, 10, 21, 21, 15, 7, 7,
     5, 3, 11, 8, 12, 8, 10, 8, 9, 11, 10,
     8, 10, 13, 12, 13, 22, 11, 9, 10,
 };
 
+static char s_scheme[2][6] = { "http", "https" };
 
 
 const char *RequestVars::getVarNameStr(int var_id, int &len)
@@ -547,7 +551,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         return pReq->getQueryStringLen();
     case REF_AUTH_TYPE:
         //TODO: hard code for now
-        strncpy(pValue, "Basic", 6);
+        lstrncpy(pValue, "Basic", bufLen);
         return 5;
     case REF_REQUEST_FN:
     case REF_SCRIPTFILENAME:
@@ -601,7 +605,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                     do {
                         retry = 0;
                         buffer = (char *)malloc(bufsize);
-                        if (buffer != NULL) {                    
+                        if (buffer != NULL) {
                             errno = 0;
                             if ((getpwuid_r(st.st_uid, &pw, buffer, bufsize, &ppw) == -1) &&
                                 (errno == ERANGE)) {
@@ -621,7 +625,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                 else
                 {
                     struct group gr;
-                    char *buffer;        
+                    char *buffer;
                     struct group *pgr;
                     ssize_t bufsize;
                     int retry = 0;
@@ -633,7 +637,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                         buffer = (char *)malloc(bufsize);
                         if (buffer != NULL) {
                             errno = 0;
-                            if ((getgrgid_r(st.st_gid, &gr, buffer, sizeof(buffer), &pgr) == -1) &&
+                            if ((getgrgid_r(st.st_gid, &gr, buffer, bufsize, &pgr) == -1) &&
                                 (errno == ERANGE)) {
                                 bufsize *= 2;
                                 retry = 1;
@@ -784,14 +788,20 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
 
     case REF_BYTES_TOTAL:
         i = StringTool::offsetToStr(pValue, bufLen,
-                                    pSession->getBytesRecv() + 
+                                    pSession->getBytesRecv() +
                                     pSession->getBytesSent());
         return i;
-        
+
     case REF_HTTPS:
         i = snprintf(pValue, bufLen, "%s", pSession->isHttps() ? "on" : "off");
         return i;
 
+    case REF_REQ_SCHEME:
+    {
+        pValue = s_scheme[ pSession->isHttps() == 1 ];
+        i = 2 + (pSession->isHttps() == 1);
+        return i;
+    }
     case REF_SSL_VERSION:
     case REF_SSL_SESSION_ID:
     case REF_SSL_CIPHER:
@@ -936,7 +946,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
         HioCrypto *pCrypto = pSession->getCrypto();
         if (!pCrypto)
             return 0;
-        
+
         return pCrypto->getEnv((HioCrypto::ENV)(HioCrypto::CRYPTO_VERSION +
                                 (type - LSI_VAR_SSL_VERSION)), pValue, bufLen);
     }
@@ -1064,6 +1074,8 @@ const char *RequestVars::getCookieValue(HttpReq *pReq,
 #ifdef TEST_NEW_FUN
     //TODO: do some test right now, use these code to return the specified cookie
     cookieval_t *cookie = pReq->getCookie(pCookieName, nameLen);
+    if (!cookie)
+        return NULL;
     int cookieLen = cookie->valLen;
     char *pcookieval = pReq->getHeaderBuf().getp(cookie->valOff);
 
@@ -1146,7 +1158,7 @@ static const char *const s_pHeaders[] =
 const char *RequestVars::getHeaderString(int iIndex)
 {
     if ((iIndex >= 0)
-        && (iIndex <= (int)(sizeof(s_pHeaders) / sizeof(char *))))
+        && (iIndex < (int)(sizeof(s_pHeaders) / sizeof(char *))))
         return s_pHeaders[iIndex];
     return NULL;
 }

@@ -24,11 +24,11 @@
 #include <util/gpointerlist.h>
 #include <lsr/ls_lock.h>
 
-// #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-// #define LS_WORKCREW_LF
-// #else
+//#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+//#define LS_WORKCREW_LF
+//#else
 class PThreadWorkQueue;
-// #endif
+//#endif
 
 //#define LS_WORKCREW_DEBUG
 #ifdef LS_WORKCREW_DEBUG
@@ -143,7 +143,7 @@ public:
      *
      * @return Void.
      */
-    void stopProcessing();
+    void stopProcessing(int discard = 0);
 
     /** @size
      * @brief Returns the current number of workers
@@ -199,6 +199,8 @@ private:
         {
         }
     };
+    void markNoCleanup();
+
 #ifdef LS_WORKCREW_LF
     ls_lfqueue_t               *m_pJobQueue;
 #else
@@ -273,10 +275,9 @@ private:
     void init();
 
     int addWorker();
-    void stopAllWorkers();
+    void stopAllWorkers(int discard);
 
     bool isAllWorkerDead() const { return  0 == size(); }
-
 
     LS_NO_COPY_ASSIGN(WorkCrew);
 };

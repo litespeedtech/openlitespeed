@@ -27,6 +27,7 @@
 PidFile::PidFile()
     : m_iFd(-1)
 {
+    memset(&m_st, 0, sizeof(m_st));
 }
 PidFile::~PidFile()
 {

@@ -647,14 +647,14 @@ int AccessControl::addIPv4(const char *ip_mask, int allowed)
     for (; i < c; ++ i)
     {
         if (i == 0)
-            strcat(mask, "255");
+            lstrncat(mask, "255", sizeof(mask));
         else
-            strcat(mask, ".255");
+            lstrncat(mask, ".255", sizeof(mask));
     }
     for (i = 0; i < 4 - c; ++ i)
     {
-        strcat(ip, ".0");
-        strcat(mask, ".0");
+        lstrncat(ip, ".0", sizeof(ip));
+        lstrncat(mask, ".0", sizeof(mask));
     }
     in_addr subNet, netmask;
     if (0 >= inet_pton(AF_INET, ip, &subNet))
@@ -682,7 +682,7 @@ int AccessControl::addSubNetControl(const char *ip_mask, int allowed)
     {
         memccpy(ip, ip_mask, 0, p0 - ip_mask);
         ip[p0 - ip_mask] = 0;
-        strcpy(mask, p0 + 1);
+        lstrncpy(mask, p0 + 1, sizeof(mask));
         return addSubNetControl(ip, mask, allowed);
     }
     if ((strcmp(ip_mask, "*") == 0) || (strcasecmp(ip_mask, "ALL") == 0))

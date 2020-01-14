@@ -51,8 +51,7 @@ public:
                                       int32_t lastCacheFlush) = 0;
 
     virtual CacheEntry *createCacheEntry(const CacheHash &hash,
-                                         CacheKey *pKey,
-                                         int force) = 0;
+                                         CacheKey *pKey) = 0;
 
 //    virtual CacheEntry * getCacheEntry( const char * pKey, int keyLen ) = 0;
 
@@ -87,8 +86,8 @@ public:
     }
 
 
-    void addToDirtyList(CacheEntry *pEntry)
-    {   m_dirtyList.push_back(pEntry);        }
+    int addToHash(CacheEntry *pEntry);
+    void addToDirtyList(CacheEntry *pEntry);
 
     CacheManager *getManager()   {   return m_pManager;    }
 
@@ -104,10 +103,18 @@ public:
 //         return m_iMaxObjSize;
 //     }
 
+    int getCacheDirPath(char *pBuf, int len,
+        const unsigned char *pHashKey, int isPrivate);
     void debug_dump(CacheEntry *pEntry, const char *msg);
+    
+    int cleanByTracking(int public_max, int private_max);
+    
+    static int cleanByTrackingCb(void *, void *);
+    
+    virtual void removeEntryByHash(const unsigned char * pKey, int keyLen) = 0;
 
 protected:
-    virtual int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
+    virtual int renameDiskEntry(CacheEntry *pEntry, char *pFrom, size_t maxFrom,
                                 const char *pFromSuffix, const char *pToSuffix, int validate) = 0;
 
 private:

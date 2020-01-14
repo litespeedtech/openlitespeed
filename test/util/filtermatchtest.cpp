@@ -111,6 +111,7 @@ SUITE(FilterMatchTest)
         CHECK(false == fm->match("exactMatcH"));
         CHECK(true == fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 #undef _UT_TNAME_
@@ -136,6 +137,7 @@ SUITE(FilterMatchTest)
         CHECK(true == fm->match("exactMatcH"));
         CHECK(true == fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 
@@ -162,6 +164,7 @@ SUITE(FilterMatchTest)
         CHECK(false != fm->match("exactMatcH"));
         CHECK(true != fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 #undef _UT_TNAME_
@@ -187,6 +190,7 @@ SUITE(FilterMatchTest)
         CHECK(true != fm->match("exactMatcH"));
         CHECK(true != fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 #undef _UT_TNAME_

@@ -28,22 +28,33 @@ class DirHashCacheEntry;
 class DirHashCacheStore : public CacheStore
 {
 
-    int buildCacheLocation(char *pBuf, int len, const CacheHash &hash,
-                           int isPrivate);
+    int buildCacheLocation(char *pBuf, int len,
+        const unsigned char *pHashKey, int isPrivate);
     int updateEntryState(DirHashCacheEntry *pEntry);
-    int isChanged(CacheEntry *pEntry, const char *pPath, int len);
+    int isChanged(CacheEntry *pEntry, const char *pPath, int len, size_t max_len);
     int isEntryExists(CacheHash &hash, const char *pSuffix,
                       struct stat *pStat);
     int isEntryUpdating(const CacheHash &hash, int isPrivate);
     int isEntryStale(const CacheHash &hash, int isPrivate);
     int isEntryExist(const CacheHash &hash, const char *pSuffix,
                      struct stat *pStat, int isPrivate);
-    
-    int processStale(CacheEntry *pEntry, char *pBuf, int pathLen);
 
+    int processStale(CacheEntry *pEntry, char *pBuf, size_t maxBuf, int pathLen);
+
+    int isCreatorAlive(CacheEntry *pEntry);
+
+    void removeDeadEntry(CacheEntry *pEntry, const CacheHash &hash, 
+                         char *achBuf);
+    int createCacheFile(const CacheHash* pHash, bool is_private);
+    CacheEntry *initCacheEntry(CacheEntry* pEntry, bool is_private);
+    
+    int updateEntryExpire(CacheEntry *pEntry);
+    int updateHashEntry(CacheEntry* pEntry);
+    
 protected:
-    int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
-                        const char *pFromSuffix, const char *pToSuffix, int validate);
+    int renameDiskEntry(CacheEntry *pEntry, char *pFrom, size_t maxFrom,
+                        const char *pFromSuffix, const char *pToSuffix,
+                        int validate);
 
 public:
     DirHashCacheStore();
@@ -56,10 +67,10 @@ public:
     virtual CacheEntry *getCacheEntry(CacheHash &hash, CacheKey *pKey,
                                       int maxStale, int32_t lastCacheFlush);
 
-    virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey,
-                                         int force);
+    virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey);
 
     virtual void cancelEntry(CacheEntry *pEntry, int remove);
+    void cancelEntryInMem(CacheEntry* pEntry);
 
     virtual CacheEntry *getCacheEntry(const char *pKey, int keyLen);
 
@@ -71,6 +82,8 @@ public:
     virtual int publish(CacheEntry *pEntry);
 
     virtual void removePermEntry(CacheEntry *pEntry);
+    
+    virtual void removeEntryByHash(const unsigned char * pKey, int keyLen);
 
     void getEntryFilePath(CacheEntry *pEntry, char *pPath, int &len);
 

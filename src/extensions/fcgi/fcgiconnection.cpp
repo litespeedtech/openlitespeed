@@ -41,12 +41,18 @@ const char FcgiConnection::s_padding[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 FcgiConnection::FcgiConnection()
     : m_bufOS(this)
     , m_recSize(0)
+    , m_iRecStatus(0)
+    , m_iContentLen(0)
+    , m_iRecId(0)
     , m_iId(1)
     , m_iWantWrite(1)
     , m_iTotalPending(0)
     , m_iCurStreamHeader(0)
+    , m_lReqSentTime(0)
+    , m_lReqBeginTime(0)
 {
     memset(m_streamHeaders, 0, sizeof(m_streamHeaders));
+    memset(&m_recCur, 0, sizeof(m_recCur));
 }
 
 
@@ -376,7 +382,7 @@ int FcgiConnection::processFcgiData()
             break;
         if (len == -1)
             return len;
-        int used;
+        int used = 0;
         char *pCur = HttpResourceManager::getGlobalBuf();
         int left = len;
         while (left > 0)

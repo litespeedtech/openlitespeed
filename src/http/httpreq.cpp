@@ -43,6 +43,7 @@
 #include <lsr/ls_hash.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_xpool.h>
+#include <lsdef.h>
 #include <spdy/unpackedheaders.h>
 #include <ssi/ssiruntime.h>
 #include <util/blockbuf.h>
@@ -467,6 +468,7 @@ static int processUserAgent(const char *pUserAgent, int len)
         if (len > 40 && strstr(&achUA[len-40], "chrome") == NULL
             && strstr(&achUA[len-16], "safari") != NULL)
             iType = UA_SAFARI;
+        break;
     case 'c':
         if (strncmp(achUA, "curl/", 5) == 0)
             iType = UA_CURL;
@@ -2086,8 +2088,9 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
     if (m_pUrlStaticFileData
         && m_pUrlStaticFileData->tmaccess == DateTime::s_curTime)
         return 0;
-    else
+    else if (m_pContext)
         return processPath(pURI, uriLen, pBuf, pBegin, pEnd, cacheable);
+    return 0;
 }
 
 
@@ -2689,7 +2692,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
         if (!m_pContext || !m_pContext->allowSetUID())
         {
             LS_INFO(getLogSession(), "Context [%s] set UID/GID mode is "
-                    "not allowed, access denied.", m_pContext->getURI());
+                    "not allowed, access denied.",
+                    m_pContext ? m_pContext->getURI() : "NULL");
             return SC_403;
         }
     }
@@ -3061,7 +3065,7 @@ int HttpReq::fileStat(const char *pPath, struct stat *st)
 
 int HttpReq::getETagFlags() const
 {
-    int tagMod = 0;
+    //int tagMod = 0;
     int etag;
     if (m_pContext)
         etag = m_pContext->getFileEtag();
@@ -3072,11 +3076,11 @@ int HttpReq::getETagFlags() const
         etag = HttpServerConfig::getInstance()
                .getGlobalVHost()->getRootContext().getFileEtag();
     }
-    if (tagMod)
-    {
-        int mask = (tagMod & ETAG_MOD_ALL) >> 3;
-        etag = (etag & ~mask) | (tagMod & mask);
-    }
+    //if (tagMod)
+    //{
+    //    int mask = (tagMod & ETAG_MOD_ALL) >> 3;
+    //    etag = (etag & ~mask) | (tagMod & mask);
+    //}
     return etag;
 }
 
@@ -3606,7 +3610,7 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
 {
     if (pOp->getOperator() == LSI_HEADER_UNSET)
     {
-        if (pOp->getIndex() < HttpHeader::H_HEADER_END)
+        if (pOp->getIndex() < HttpHeader::H_TE)
         {
             dropReqHeader(pOp->getIndex());
         }

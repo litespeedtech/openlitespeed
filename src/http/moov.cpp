@@ -235,8 +235,9 @@ int get_mini_moov(int fd,                    //in - video file descriptor
     munmap(mmap_data, mmap_size);
     if (fail == 1)
     {
-        if (buf)
-            free(buf);
+        // Can't have both fail and buf (we'd break either way)
+        //if (buf)
+        //    free(buf);
         return (-1);
     }
     else
@@ -1588,7 +1589,7 @@ static int calc_new_moov_diff(moov_t *moov_box, float start_time,
 static uint32_t duration_to_sample(uint64_t duration,
                                    unsigned char *stts_entries, uint32_t count)
 {
-    uint32_t i, samp, dura, samp_acc = 0, dura_acc = 0;
+    uint64_t i, samp, dura, samp_acc = 0, dura_acc = 0;
 
     for (i = 0; i < count; i++)
     {
@@ -1599,7 +1600,7 @@ static uint32_t duration_to_sample(uint64_t duration,
         samp_acc += samp;
         dura_acc += samp * dura;
     }
-    return (samp_acc);
+    return ((uint32_t)samp_acc);
 }
 
 
@@ -2025,6 +2026,13 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.length;
             break;
         case FourCC('t', 'k', 'h', 'd'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].tkhd.header = dummy;
             r = tkhd_read(sub_buf, (void *)&moov_box->trak[trak_index].tkhd);
             if (r == 0)
@@ -2032,10 +2040,24 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.ExtendedSize;
             break;
         case FourCC('m', 'd', 'i', 'a'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (2)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.header = dummy;
             sub_buf += dummy.length;
             break;
         case FourCC('m', 'd', 'h', 'd'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (3)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.mdhd.header = dummy;
             r = mdhd_read(sub_buf, (void *)&moov_box->trak[trak_index].mdia.mdhd);
             if (r == 0)
@@ -2043,14 +2065,35 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.ExtendedSize;
             break;
         case FourCC('m', 'i', 'n', 'f'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (4)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.header = dummy;
             sub_buf += dummy.length;
             break;
         case FourCC('s', 't', 'b', 'l'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (5)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.header = dummy;
             sub_buf += dummy.length;
             break;
         case FourCC('s', 't', 's', 'd'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (6)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.stsd.header = dummy;
             r = stsd_read(sub_buf, (void *)
                           &moov_box->trak[trak_index].mdia.minf.stbl.stsd);
@@ -2059,6 +2102,13 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.ExtendedSize;
             break;
         case FourCC('s', 't', 's', 'c'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (7)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.stsc.header = dummy;
             r = stsc_read(sub_buf, (void *)
                           &moov_box->trak[trak_index].mdia.minf.stbl.stsc);
@@ -2067,6 +2117,13 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.ExtendedSize;
             break;
         case FourCC('s', 't', 't', 's'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (8)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.stts.header = dummy;
             r = stts_read(sub_buf, (void *)
                           &moov_box->trak[trak_index].mdia.minf.stbl.stts);
@@ -2075,6 +2132,13 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.ExtendedSize;
             break;
         case FourCC('s', 't', 's', 'z'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (9)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.stsz.header = dummy;
             moov_box->trak[trak_index].mdia.minf.stbl.stsz.ConstantSize = bytes_read(
                         sub_buf + dummy.length + 1 + 3, 4);
@@ -2088,6 +2152,13 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             break;
         case FourCC('s', 't', 'c', 'o'):
         case FourCC('c', 'o', '6', '4'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (10)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.stco_co64.header = dummy;
             r = stco_co64_read(sub_buf,
                                (void *)&moov_box->trak[trak_index].mdia.minf.stbl.stco_co64);
@@ -2096,6 +2167,13 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             sub_buf += dummy.ExtendedSize;
             break;
         case FourCC('s', 't', 's', 's'):
+            if (trak_index == -1)
+            {
+#ifdef UNIT_TEST
+                printf("Error: Unexpected -1 trak_index (11)\n");
+#endif
+                return 0;
+            }
             moov_box->trak[trak_index].mdia.minf.stbl.stss.header = dummy;
             r = stss_read(sub_buf, (void *)
                           &moov_box->trak[trak_index].mdia.minf.stbl.stss);

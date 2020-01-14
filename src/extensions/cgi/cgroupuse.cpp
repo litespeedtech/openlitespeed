@@ -15,19 +15,20 @@
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 CGroupUse::CGroupUse(CGroupConn *conn)
-{ 
+    : m_uid(0)
+{
     CGroupUse::m_conn = conn;
 }
 
-    
+
 CGroupUse::~CGroupUse()
-{  
+{
 }
-    
+
 
 int CGroupUse::apply_slice()
 {
-    // The functions below are supposed to be NULL safe.  That's why I test at 
+    // The functions below are supposed to be NULL safe.  That's why I test at
     // the end for NULL.
     GVariantBuilder *properties = m_conn->m_g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
     GVariantBuilder *pids_array = m_conn->m_g_variant_builder_new(G_VARIANT_TYPE_ARRAY);
@@ -47,7 +48,7 @@ int CGroupUse::apply_slice()
                                               "fail",
                                               properties,
                                               NULL);
-    if ((!properties) || (!pids_array) || (!pvarpid) || (!pvarparr) || 
+    if ((!properties) || (!pids_array) || (!pvarpid) || (!pvarparr) ||
         (!pvarslice) || (!parms))
     {
         // Note: These are supposed to be smart and deallocate when no longer
@@ -85,7 +86,7 @@ int CGroupUse::child_validate(pid_t pid)
 {
     char proc_file[128];
     FILE *fd;
-    
+
     snprintf(proc_file, sizeof(proc_file) - 1, "/proc/%d/cgroup", pid);
     fd = fopen(proc_file, (char *)"r");
     if (!fd)
@@ -95,7 +96,7 @@ int CGroupUse::child_validate(pid_t pid)
     char line_hoped[CUSE_LINE_LEN];
     int  found = 0;
     int  compare_len;
-    compare_len = snprintf(line_hoped, sizeof(line_hoped), 
+    compare_len = snprintf(line_hoped, sizeof(line_hoped),
                            "1:name=systemd:/user.slice/user-%u.slice/", m_uid);
     while ((!found) && (fgets(line, sizeof(line) - 1, fd)))
     {
@@ -135,7 +136,7 @@ int CGroupUse::validate()
     int rc = child_validate(pid);
     kill(pid, 9);
     int session;
-    waitpid(pid, &session, 0); 
+    waitpid(pid, &session, 0);
     return rc;
 }
 

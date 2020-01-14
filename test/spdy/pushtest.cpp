@@ -26,41 +26,41 @@ TEST(VHOST_URL_HASH)
 {
     HttpVHost *vhost = new HttpVHost("testhost");
     const char *url = "http://test.com/";
-    
+
     int id = vhost->getIdBitOfUrl(url);
-    CHECK(id == (uint32_t) -1);
-    
+    CHECK(id == -1);
+
     int id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 0);
     id = vhost->getIdBitOfUrl(url);
     CHECK(id == id1);
-    
-    
-    
-    
+
+
+
+
     url = "http://test1.com/";
     id = vhost->getIdBitOfUrl(url);
-    CHECK(id == (uint32_t) -1);
-    
+    CHECK(id == -1);
+
     id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 1);
     id = vhost->getIdBitOfUrl(url);
     CHECK(id == id1);
-    
-    
+
+
     url = "http://test2.com/";
     id = vhost->getIdBitOfUrl(url);
-    CHECK(id == (uint32_t) -1);
-    
+    CHECK(id == -1);
+
     id1 = vhost->addUrlToUrlIdHash(url);
     CHECK(id1 == 2);
     id = vhost->getIdBitOfUrl(url);
     CHECK(id == id1);
-    
+
     const char *s="abcdefghji";
     const char *s2="jklmnopqrest";
     char ss[3] = {0};
-    
+
     for(int i=0; i<10; ++i)
     {
         for(int j=0; j<10; ++j)
@@ -69,8 +69,8 @@ TEST(VHOST_URL_HASH)
             ss[1] = s2[j];
             url = ss;
             id = vhost->getIdBitOfUrl(url);
-            CHECK(id == (uint32_t) -1);
-            
+            CHECK(id == -1);
+
             id1 = vhost->addUrlToUrlIdHash(url);
             id = vhost->getIdBitOfUrl(url);
             CHECK(id == id1);
@@ -82,7 +82,7 @@ TEST(VHOST_URL_HASH)
 TEST(SESSION_COOKIE)
 {
 
- 
+
 }
 
 

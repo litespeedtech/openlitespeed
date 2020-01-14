@@ -36,7 +36,9 @@ public:
     ~CrewWorker()
     {}
 
-    int32_t getSlot() { return m_slot; }
+    int32_t getSlot() const     {   return m_slot;  }
+    void setSlot(int slot)      {   m_slot = slot;  }
+
     const WorkCrew * getWorkCrew() const { return m_wc; }
     
     int start()

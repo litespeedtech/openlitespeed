@@ -34,10 +34,9 @@ class HTAuth
 {
     char       *m_pName;
     char       *m_authHeader;
-    int         m_authHeaderLen;
     UserDir    *m_pUserDir;
-    short       m_iAuthType;
-    short       m_iAuthTypeUsed;
+    int         m_authHeaderLen;
+    int         m_iAuthType;
 
     HTAuth(const HTAuth &rhs);
     void operator=(const HTAuth &rhs);

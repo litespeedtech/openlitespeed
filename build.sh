@@ -20,10 +20,10 @@
 ###    Author: dxu@litespeedtech.com (David Shue)
 
 VERSION=1.0.0
-moduledir="modreqparser cache modinspector uploadprogress "
+moduledir="modreqparser modinspector uploadprogress "
 OS=`uname`
 ISLINUX=no
-
+VERSIONNUMBER=
 
 if [ "${OS}" = "FreeBSD" ] ; then
     APP_MGRS="pkg"
@@ -52,27 +52,58 @@ if [ "x${APP_MGR_CMD}" = "x" ] ; then
 fi
 
 
+# getVersionNumber0()
+# {
+#     STRING=$1
+#     VERSIONNUMBER=1000000
+#     IFS='.';
+#     parts=( ${STRING} )
+#     unset IFS;
+#     if [ x${parts[2]} = 'x' ] ; then
+#         VERSIONNUMBER=$(( 1000000 * ${parts[0]} + 1000 * ${parts[1]} ))
+#     else
+#     #When x${parts[2]} is not empty, add 1 more to make sure 1.5 and 1.5.0 is not same
+#         VERSIONNUMBER=$(( 1000000 * ${parts[0]} + 1000 * ${parts[1]} + ${parts[2]} + 1 ))
+#     fi
+# }
+
+
+getVersionNumber()
+{
+    STRING=$1
+    VER1=`echo $STRING | awk -F. '{ printf("%d", $1); }'`
+    VER2=`echo $STRING | awk -F. '{ printf("%d", $2); }'`
+    VER3=`echo $STRING | awk -F. '{ printf("%d", $3); }'`
+    VERSIONNUMBER=$(( 1000000 * ${VER1} + 1000 * ${VER2} + ${VER3} + 1 ))
+}
+
 installCmake()
 {
     ${APP_MGR_CMD} -y install git cmake
     if [ $? = 0 ] ; then
-        echo cmake installed.
-    else
-        version=3.14
-        build=5
-        mkdir cmaketemp
-        CURDIR=`pwd`
-        cd ./cmaketemp
-        wget https://cmake.org/files/v${version}/cmake-${version}.${build}.tar.gz
-        tar -xzvf cmake-${version}.${build}.tar.gz
-        cd cmake-${version}.${build}/
+        CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
+        getVersionNumber $CMAKEVER
         
-        ./bootstrap
-        make -j4
-        make install
-        cmake --version
-        cd ${CURDIR}
+        if [ $VERSIONNUMBER -gt 3000000 ] ; then
+            echo cmake installed.
+            return
+        fi
     fi
+    
+    version=3.14
+    build=5
+    mkdir cmaketemp
+    CURDIR=`pwd`
+    cd ./cmaketemp
+    wget https://cmake.org/files/v${version}/cmake-${version}.${build}.tar.gz
+    tar -xzvf cmake-${version}.${build}.tar.gz
+    cd cmake-${version}.${build}/
+    
+    ./bootstrap
+    make -j4
+    make install
+    cmake --version
+    cd ${CURDIR}
 }
 
 installgo()
@@ -88,6 +119,35 @@ installgo()
     fi
 }
 
+
+preparelibquic()
+{
+    if [ -e lsquic ] ; then
+        ls src/ | grep liblsquic
+        if [ $? -eq 0 ] ; then
+            echo Need to git download the submodule ...
+            rm -rf lsquic
+            git clone https://github.com/litespeedtech/lsquic.git
+            cd lsquic
+            
+            LIBQUICVER=`cat ../LSQUICCOMMIT`
+            echoY "LIBQUICVER is ${LIBQUICVER}"
+            git checkout ${LIBQUICVER}
+            git submodule update --init --recursive
+            cd ..
+            
+            #cp files for autotool
+            rm -rf src/liblsquic
+            mv lsquic/src/liblsquic src/
+            
+            rm include/lsquic.h
+            mv lsquic/include/lsquic.h  include/
+            rm include/lsquic_types.h
+            mv lsquic/include/lsquic_types.h include/
+            
+        fi
+    fi
+}
 
 prepareLinux()
 {
@@ -141,6 +201,8 @@ prepareLinux()
         
         yum -y install git
         yum -y install cmake
+        installCmake
+        
         yum -y install libtool 
         yum -y install autoreconf 
         yum -y install autoheader 
@@ -339,6 +401,7 @@ updateModuleCMakelistfile()
 {
     echo "cmake_minimum_required(VERSION 2.8)" > src/modules/CMakeLists.txt
     echo "add_subdirectory(modgzip)" >> src/modules/CMakeLists.txt
+    echo "add_subdirectory(cache)" >> src/modules/CMakeLists.txt
     
     if [ "${OS}" = "Darwin" ] ; then
         echo Mac OS bypass all module right now
@@ -350,8 +413,13 @@ updateModuleCMakelistfile()
     
     if [ "${ISLINUX}" = "yes" ] ; then
         echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
+    
+    fi
+    
+    if [ -f ../thirdparty/lib/libmodsecurity.a ] ; then
         echo "add_subdirectory(modsecurity-ls)" >> src/modules/CMakeLists.txt
     fi
+    
 }
 
 cpModuleSoFiles()
@@ -408,8 +476,7 @@ elif [ "${OS}" = "Darwin" ] ; then
     prepareMac
 fi
 
-updateSrcCMakelistfile
-updateModuleCMakelistfile
+
 
 cd ..
 git clone https://github.com/litespeedtech/third-party.git
@@ -427,7 +494,13 @@ fi
 
 ./build_ols.sh
 
+
 cd ${CURDIR}
+
+updateSrcCMakelistfile
+updateModuleCMakelistfile
+preparelibquic
+
 STDC_LIB=`g++ -print-file-name='libstdc++.a'`
 cp ${STDC_LIB} ../thirdparty/lib64/
 cp ../thirdparty/src/brotli/out/*.a          ../thirdparty/lib64/
@@ -453,7 +526,7 @@ if [ -e src/liblsquic ] ; then
     freebsdFix
 fi
 
-cat >> ./ols.conf <<END 
+cat > ./ols.conf <<END 
 #If you want to change the default values, please update this file.
 #
 
@@ -461,7 +534,6 @@ SERVERROOT=/usr/local/lsws
 OPENLSWS_USER=nobody
 OPENLSWS_GROUP=nobody
 OPENLSWS_ADMIN=admin
-OPENLSWS_PASSWORD=123456
 OPENLSWS_EMAIL=root@localhost
 OPENLSWS_ADMINSSL=yes
 OPENLSWS_ADMINPORT=7080
@@ -470,20 +542,23 @@ DEFAULT_TMP_DIR=/tmp/lshttpd
 PID_FILE=/tmp/lshttpd/lshttpd.pid
 OPENLSWS_EXAMPLEPORT=8088
 
+#You can set password here
+#OPENLSWS_PASSWORD=
+
 END
 
 
 echo Start to pack files.
 mv dist/install.sh  dist/_in.sh
 
-cat >> ./install.sh <<END 
+cat > ./install.sh <<END 
 #!/bin/sh
 
 SERVERROOT=/usr/local/lsws
 OPENLSWS_USER=nobody
 OPENLSWS_GROUP=nobody
 OPENLSWS_ADMIN=admin
-OPENLSWS_PASSWORD=123456
+OPENLSWS_PASSWORD=
 OPENLSWS_EMAIL=root@localhost
 OPENLSWS_ADMINSSL=yes
 OPENLSWS_ADMINPORT=7080
@@ -504,6 +579,40 @@ cd dist
 
 mkdir -p \${SERVERROOT} >/dev/null 2>&1
 
+
+PASSWDFILEEXIST=no
+if [ -f \${SERVERROOT}/admin/conf/htpasswd ] ; then
+    PASSWDFILEEXIST=yes
+else
+    PASSWDFILEEXIST=no
+    #Generate the random PASSWORD if not set in ols.conf
+    if [ "x\$OPENLSWS_PASSWORD" = "x" ] ; then
+        OPENLSWS_PASSWORD=\`openssl rand -base64 6\`
+        if [ "x\$OPENLSWS_PASSWORD" = "x" ] ; then
+            TEMPRANDSTR=\`ls -l ..\`
+            TEMPRANDSTR=\`echo "\${TEMPRANDSTR}" |  md5sum | base64 | head -c 8\`
+            if [ \$? = 0 ] ; then
+                OPENLSWS_PASSWORD=\${TEMPRANDSTR}
+            else
+                OPENLSWS_PASSWORD=123456
+            fi
+        fi
+        echo OPENLSWS_PASSWORD=\${OPENLSWS_PASSWORD} >> ./ols.conf
+    fi
+
+    echo "WebAdmin user/password is admin/\${OPENLSWS_PASSWORD}" > \$SERVERROOT/adminpasswd
+    chmod 600 \$SERVERROOT/adminpasswd
+fi
+
+
+#Change to nogroup for debain/ubuntu
+if [ -f /etc/debian_version ] ; then
+    if [ "\${OPENLSWS_GROUP}" = "nobody" ] ; then
+        OPENLSWS_GROUP=nogroup
+    fi
+fi 
+
+
 ISRUNNING=no
 
 if [ -f \${SERVERROOT}/bin/openlitespeed ] ; then 
@@ -520,10 +629,17 @@ fi
 cp -f modules/*.so \${SERVERROOT}/modules/
 cp -f bin/openlitespeed \${SERVERROOT}/bin/
 
+if [ "\${PASSWDFILEEXIST}" = "no" ] ; then
+    echo -e "\e[31mYour webAdmin password is \${OPENLSWS_PASSWORD}, written to file \$SERVERROOT/adminpasswd.\e[39m"
+else
+    echo -e "\e[31mYour webAdmin password not changed.\e[39m"
+fi
+echo
 
+    
 if [ -f ../needreboot.txt ] ; then
     rm ../needreboot.txt
-    echo -e "\033[38;5;203mYou must reboot the server to ensure the settings change take effect! \033[39m"
+    echo -e "\e[31mYou must reboot the server to ensure the settings change take effect!\e[39m"
     echo
     exit 0
 fi 
@@ -539,5 +655,4 @@ chmod 777 ./install.sh
 echo -e "\033[38;5;71mBuilding finished, please run ./install.sh for installation.\033[39m"
 echo -e "\033[38;5;71mYou may want to update the ols.conf to change the settings before installation.\033[39m"
 echo -e "\033[38;5;71mEnjoy.\033[39m"
-
 

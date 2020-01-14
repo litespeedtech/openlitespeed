@@ -27,6 +27,8 @@
 
 ModUserdir::ModUserdir()
     : m_disabled(0)
+    , m_mode(0)
+    , m_wildcard(-1)
 {
 }
 

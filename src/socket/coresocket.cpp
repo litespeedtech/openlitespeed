@@ -72,6 +72,11 @@ int  CoreSocket::connect(const GSockAddr &server, int iFLTag, int *fd,
 {
     int type = SOCK_STREAM;
     int ret;
+    /**
+     * If serverAddr not initialized, the m_len is not set to right value
+     */
+    if (server.len() < 16)
+        return LS_FAIL;
     *fd = ::socket(server.family(), type, 0);
     if (*fd == -1)
         return LS_FAIL;

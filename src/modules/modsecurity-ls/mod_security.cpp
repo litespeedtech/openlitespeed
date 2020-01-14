@@ -100,7 +100,7 @@ static int setSecRule(msc_conf_t *pConfig, char *value, int type, char *uri)
     g_api->log(NULL, LSI_LOG_DEBUG,  "[Module:%s] setSecRule "
                "value: %s, type: %d %s\n",ModuleNameStr, value, type,
                type == 3 ? uri : "");
-    
+
     switch(type)
     {
     case 1:
@@ -150,14 +150,14 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
         msc_set_connector_info(pConfig->modsec, MODULE_VERSION_INFO);
         msc_set_log_cb(pConfig->modsec, ls_modSecLogCb);
     }
-    else 
+    else
     {
         assert(pInitConfig);
         pConfig->modsec = pInitConfig->modsec;
     }
 
     pConfig->rules_set = msc_create_rules_set();
-    
+
     /**
      * Set default enable value to 0.
      */
@@ -175,7 +175,7 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
                               &error);
         if (ret < 0)
         {
-            g_api->log(NULL, LSI_LOG_ERROR, 
+            g_api->log(NULL, LSI_LOG_ERROR,
                        "[Module:%s]ParseConfig msc_rules_merge failed - "
                        "reason: '%s'.\n",  ModuleNameStr, error);
         }
@@ -197,10 +197,10 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
             ls_objarray_t *pList = ls_confparser_line(&confparser, param[i].val,
                                                       param[i].val +
                                                       param[i].val_len);
-        
+
             int count = ls_objarray_getsize(pList);
             g_api->log(NULL, LSI_LOG_DEBUG,  "[Module:%s] InRemoteRule "
-                       "parameter count: %d (must be 2: license url)\n", 
+                       "parameter count: %d (must be 2: license url)\n",
                        ModuleNameStr, count);
             if (count == 2)
             {
@@ -229,7 +229,7 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
                 pConfig->enable = (strcasecmp(param[i].val, "on") == 0);
                 {
                     g_api->log(NULL, LSI_LOG_DEBUG,  "[Module:%s] Enable flag "
-                               "interpreted as %d\n", ModuleNameStr, 
+                               "interpreted as %d\n", ModuleNameStr,
                                pConfig->enable);
                 }
             }
@@ -272,9 +272,9 @@ static int process_intervention (Transaction *t, lsi_param_t *rec)
     if (intervention.url)
     {
         g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
-                   "Intervention url triggered: %d %s\n", 
+                   "Intervention url triggered: %d %s\n",
                    ModuleNameStr, intervention.status, intervention.url);
-        
+
         if (intervention.status == 301 || intervention.status == 302
             ||intervention.status == 303 || intervention.status == 307)
         {
@@ -293,16 +293,16 @@ static int process_intervention (Transaction *t, lsi_param_t *rec)
     if (intervention.log == NULL) {
         intervention.log = (char *)"(no log message was specified)";
         g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
-                   "No log message specified\n", 
+                   "No log message specified\n",
                    ModuleNameStr);
     }
     g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
-               "Intervention status code triggered: %d\n", 
+               "Intervention status code triggered: %d\n",
                ModuleNameStr, intervention.status);
     if (!intervention.url) {
         // NOT always logged in callback
         g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
-                   "Log Message: %s\n", 
+                   "Log Message: %s\n",
                    ModuleNameStr, intervention.log);
     }
     g_api->set_status_code(rec->session, intervention.status);
@@ -343,24 +343,26 @@ static int createModData(lsi_param_t *rec, msc_conf_t *conf)
                                                  (void *)rec->session);
         if (!trans) {
             g_api->log(rec->session, LSI_LOG_ERROR,
-                       "[Module:%s]Error in msc_new_transaction\n", 
+                       "[Module:%s]Error in msc_new_transaction\n",
                        ModuleNameStr);
             return LSI_ERROR;
         }
 
         myData = new ModData;
+        if (!myData)
+        {
+            g_api->log(rec->session, LSI_LOG_ERROR,
+                       "[Module:%s] Error in msc_new_transaction (insuf. mem.)\n",
+                       ModuleNameStr);
+            return LSI_ERROR;
+        }
         memset(myData, 0, sizeof(ModData));
         myData->modsec_transaction = trans;
     }
 
-    if (myData == NULL)
-        return LSI_ERROR;
-    else
-    {
-        g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
-                               (void *)myData);
-        return LSI_OK;
-    }
+    g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
+                           (void *)myData);
+    return LSI_OK;
 }
 
 static int isBypassCheck(lsi_session_t *session)
@@ -391,7 +393,7 @@ static int UriMapHook(lsi_param_t *rec)
                    ModuleNameStr);
         return LSI_OK;
     }
-    
+
     if (isBypassCheck(session))
     {
         g_api->log(session, LSI_LOG_DEBUG,  "[Module:%s] bypassed for serving "
@@ -406,7 +408,7 @@ static int UriMapHook(lsi_param_t *rec)
         int ret = createModData(rec, conf);
         if (ret == LSI_ERROR)
         {
-            g_api->log(session, LSI_LOG_DEBUG, 
+            g_api->log(session, LSI_LOG_DEBUG,
                        "[Module:%s] Internal error! createModData failed.\n",
                        ModuleNameStr);
             return LSI_OK;
@@ -421,13 +423,13 @@ static int UriMapHook(lsi_param_t *rec)
 
     char host[512] = {0};
     g_api->get_req_var_by_id(session, LSI_VAR_SERVER_NAME, host, 512);
-    
+
     char sport[12] = {0};
     g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PORT, sport, 12);
-    
+
     char cport[12] = {0};
     g_api->get_req_var_by_id(session, LSI_VAR_REMOTE_PORT, cport, 12);
-    
+
     char cip[128] = {0};
     g_api->get_req_var_by_id(session, LSI_VAR_REMOTE_ADDR, cip, 128);
 
@@ -436,7 +438,7 @@ static int UriMapHook(lsi_param_t *rec)
     int ret = process_intervention(myData->modsec_transaction, rec);
     if (ret != STATUS_OK)
     {
-        g_api->log(session, LSI_LOG_DEBUG, 
+        g_api->log(session, LSI_LOG_DEBUG,
                    "[Module:%s] UriMapHook msc_process_connection failed.\n",
                    ModuleNameStr);
         return LSI_ERROR;
@@ -451,8 +453,8 @@ static int UriMapHook(lsi_param_t *rec)
     g_api->get_req_org_uri(session, uri, uriLen + 1);
     if (qs_len > 0)
     {
-        strcat(uri, "?");
-        strncat(uri, qs, qs_len);
+        lstrncat(uri, "?", uriMaxLen);
+        lstrncat(uri, qs, uriMaxLen);
     }
     char httpMethod[10] = {0};
     g_api->get_req_var_by_id(session, LSI_VAR_REQ_METHOD, httpMethod, 10);
@@ -474,11 +476,11 @@ static int UriMapHook(lsi_param_t *rec)
     msc_process_uri(myData->modsec_transaction, uri, httpMethod, http_version);
     ret = process_intervention(myData->modsec_transaction, rec);
     delete []uri;
-    
+
     if (ret != STATUS_OK)
     {
-        g_api->log(session, LSI_LOG_DEBUG, 
-                   "[Module:%s] UriMapHook msc_process_connection failed.\n", 
+        g_api->log(session, LSI_LOG_DEBUG,
+                   "[Module:%s] UriMapHook msc_process_connection failed.\n",
                    ModuleNameStr);
         return LSI_ERROR;
     }
@@ -517,8 +519,8 @@ static int UriMapHook(lsi_param_t *rec)
         g_api->set_status_code(rec->session, 500);
         return LSI_ERROR;
     }
-#endif    
-    
+#endif
+
     Rules *rules = myData->modsec_transaction->m_rules;
     myData->chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
     myData->chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
@@ -526,7 +528,7 @@ static int UriMapHook(lsi_param_t *rec)
                "ResponseBodyAccess: %s\n", ModuleNameStr,
                myData->chkReqBody ? "YES" : "NO",
                myData->chkRespBody ? "YES" : "NO");
-    
+
     if(myData->chkReqBody && rules->m_requestBodyLimit.m_value > 3000) //at least set limit to 3000
     {
         long reqbodySize = g_api->get_req_content_length(session);
@@ -571,10 +573,10 @@ static int reqBodyHook(lsi_param_t *rec)
     pBuf = g_api->get_req_body_buf(session);
     int64_t len = g_api->get_body_buf_size(pBuf);
     const char *pTmpBuf;
-    
+
     g_api->log(session, LSI_LOG_DEBUG,
                "[Module:%s] reqBodyHook entry, len: %ld.\n", ModuleNameStr, len);
-    
+
     if (len > 0 && myData->chkReqBody)
     {
         do
@@ -586,7 +588,7 @@ static int reqBodyHook(lsi_param_t *rec)
 
             //g_api->log(session, LSI_LOG_DEBUG,
             //           "[Module:%s] reqBodyHook data: %ld bytes.\n", ModuleNameStr, len);
-            
+
             msc_append_request_body(myData->modsec_transaction,
                                     (const unsigned char *)pTmpBuf, (size_t)len);
 
@@ -599,11 +601,11 @@ static int reqBodyHook(lsi_param_t *rec)
             offset += len;
         }
         while (!g_api->is_body_buf_eof(pBuf, offset));
-    
+
         g_api->log(session, LSI_LOG_DEBUG,
-               "[Module:%s] reqBodyHook used %ld bytes of %ld\n", 
+               "[Module:%s] reqBodyHook used %ld bytes of %ld\n",
                ModuleNameStr, offset, len);
-        
+
     }
     else
     {
@@ -611,14 +613,14 @@ static int reqBodyHook(lsi_param_t *rec)
                "[Module:%s] reqBodyHook bypass reqBody len %ld.\n",
                ModuleNameStr, len);
     }
-    
+
     g_api->log(session, LSI_LOG_DEBUG,
                "[Module:%s] reqBodyHook final body check.\n", ModuleNameStr);
     msc_process_request_body(myData->modsec_transaction);
     int ret = process_intervention(myData->modsec_transaction, rec);
     if (ret != STATUS_OK) {
        g_api->log(session, LSI_LOG_DEBUG,
-                  "[Module:%s] reqBodyHook failed in final intervention.\n", 
+                  "[Module:%s] reqBodyHook failed in final intervention.\n",
                   ModuleNameStr);
        return LSI_ERROR;
     }
@@ -645,7 +647,7 @@ static int respHeaderHook(lsi_param_t *rec)
                    "from static file cache.\n", ModuleNameStr);
         return LSI_OK;
     }
-    
+
     int count = g_api->get_resp_headers_count(rec->session);
     if (count >= MAX_RESP_HEADERS_NUMBER)
         g_api->log(rec->session, LSI_LOG_WARN,
@@ -666,7 +668,7 @@ static int respHeaderHook(lsi_param_t *rec)
     }
     int code = g_api->get_status_code(rec->session);
     msc_process_response_headers(myData->modsec_transaction, code,  "HTTP 1.1");
-    
+
     int ret = process_intervention(myData->modsec_transaction, rec);
     if (ret != STATUS_OK)
     {
@@ -714,7 +716,7 @@ static int respHeaderHook(lsi_param_t *rec)
         return LSI_OK;
     }
 
-    
+
     //long iCahcedSize = 0;
     off_t offset = 0;
     const char *pBuf;

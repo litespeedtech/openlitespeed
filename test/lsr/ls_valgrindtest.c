@@ -85,6 +85,7 @@ static void gpool_test()
 
     struct malloclink *p;
     p = (struct malloclink *)malloc(sizeof(*p));
+    p->pMalloc = ptr;
     p->pNext = pMalloclink;
     pMalloclink = p;
 

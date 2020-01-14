@@ -53,7 +53,7 @@ void *MtHandlerProcess(ls_lfnodei_t *item)
     pSession->unlockMtRace();
     LS_DBG_M(pSession->getLogSession(),
             "[T%d] unlock MtRace.", ls_thr_seq());
-    
+
     evtcb_pf cb = (evtcb_pf)(&HttpSession::mtNotifyCallback);
     int sn = pSession->getSn();
     pSession->setMtFlag(HSF_MT_NOTIFIED);
@@ -99,7 +99,7 @@ static const lsi_reqhdlr_t *getHandler(const HttpHandler *pHandler)
     if (pHandler)
         pModuleHandler = ((const LsiModule *)pHandler)->getModule()->reqhandler;
 
-    if (!pModuleHandler)
+    if (pHandler && !pModuleHandler)
     {
         LS_ERROR("Internal Server Error, Module %s missing _handler definition,"
                  " cannot be used as a handler",
@@ -343,7 +343,7 @@ int ModuleHandler::mt_process(HttpSession *pSession,
         pCrew = (WorkCrew *)pModuleHandler->ts_hdlr_ctx;
     else
         pCrew = s_pGlobal;
-    
+
     LS_DBG_M(pSession->getLogSession(), "[Tm] unlock MtRace.");
     pSession->unlockMtRace();
     if (pCrew->addJob(pSession) == LS_FAIL)

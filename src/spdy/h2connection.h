@@ -80,7 +80,7 @@ public:
             wanted = 2048;
         return wanted;
     }
-    
+
     int flush();
 
     int onCloseEx();
@@ -114,9 +114,9 @@ public:
     int sendRespHeaders(HttpRespHeaders *pRespHeaders, uint32_t uiStreamID,
                         uint8_t flag);
 
-    int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag, 
+    int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
                            H2FrameType type, const char *pBuf, int size);
-    
+
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
     {   return sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta);   }
 
@@ -160,7 +160,7 @@ public:
 
     void incShutdownStream()    {   ++m_uiShutdownStreams;  }
     void decShutdownStream()    {   --m_uiShutdownStreams;  }
-    int pushPromise(uint32_t streamId, ls_str_t* pUrl, ls_str_t* pHost, 
+    int pushPromise(uint32_t streamId, ls_str_t* pUrl, ls_str_t* pHost,
                     ls_strpair_t *headers);
     void wantFlush();
 
@@ -232,11 +232,11 @@ private:
     int verifyClientPreface();
     int parseFrame();
     int processInput();
-    int sendPushPromise(uint32_t streamId, uint32_t promise_streamId, 
-                        ls_str_t* pUrl, ls_str_t* pHost, 
+    int sendPushPromise(uint32_t streamId, uint32_t promise_streamId,
+                        ls_str_t* pUrl, ls_str_t* pHost,
                         ls_strpair_t *headers);
- 
-    H2Stream* createPushStream(uint32_t pushStreamId, ls_str_t* pUrl, 
+
+    H2Stream* createPushStream(uint32_t pushStreamId, ls_str_t* pUrl,
                                ls_str_t* pHost,  ls_strpair_t* headers);
 
 
@@ -257,7 +257,7 @@ private:
     short           m_iControlFrames;
     short           m_iFlag;
     Priority_st     m_priority;
-    char            m_bVersion;
+    //char            m_bVersion;
 
     int32_t         m_iCurDataOutWindow;
     int32_t         m_iCurInBytesToUpdate;

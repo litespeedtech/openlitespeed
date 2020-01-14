@@ -84,6 +84,10 @@ $page_nav = array(
 								'title' => DMsg::UIStr('menu_devgroup'),
 								'url' => 'https://groups.google.com/forum/#!forum/openlitespeed-development',
 								'url_target' => '_blank'),
+						'releaselog' => array(
+								'title' => DMsg::UIStr('menu_releaselog'),
+								'url' => 'https://openlitespeed.org/release-log/?utm_source=Open&utm_medium=WebAdmin',
+								'url_target' => '_blank'),
 						'forum' => array(
 								'title' => DMsg::UIStr('menu_forum'),
 								'url' => 'https://forum.openlitespeed.org/?utm_source=Open&utm_medium=WebAdmin',

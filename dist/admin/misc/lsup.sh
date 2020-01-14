@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.1-12/12/2019
+LSUPVERSION=v2.3-12/27/2019
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -54,6 +54,7 @@ echoG()
 	fi
 }
 
+echoG "lsup.sh Version: ${LSUPVERSION}."
 
 #Test which downloader
 which wget >/dev/null 2>&1
@@ -87,15 +88,16 @@ if [ $? = 0 ] ; then
         mv -f ${LSWSHOME}/admin/misc/lsup.sh ${LSWSHOME}/admin/misc/lsup.shold >/dev/null 2>&1
         mv -f ${LSWSHOME}/admin/misc/lsup.shnew ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
         chmod 777 ${LSWSHOME}/admin/misc/lsup.sh >/dev/null 2>&1
-        echoG "lsup.sh updated, please run again."
+        echoG "lsup.sh (Version ${LSUPVERSION}) updated, now start new one."
+        exec ${LSWSHOME}/admin/misc/lsup.sh "$@"
         exit 10
     else
         rm ${LSWSHOME}/admin/misc/lsup.shnew
     fi
 fi
 
-if [ -f $LSWSHOME/autoupdate/release ] ; then 
-    NEWVERSION=`cat $LSWSHOME/autoupdate/release`
+if [ -f ${LSWSHOME}/autoupdate/release ] ; then 
+    NEWVERSION=`cat ${LSWSHOME}/autoupdate/release`
 else
     if [ "x${NEWVERSION}" = "x" ] ; then
         $DLCMD /tmp/tmprelease https://openlitespeed.org/packages/release >/dev/null 2>&1
@@ -191,9 +193,21 @@ clean()
         rm -rf /tmp/shm/ols/*
     fi
     rm -rf ${LSWSHOME}/cgid/cgid.sock*
+    rm -rf ${LSWSHOME}/autoupdate/*
     
     ${LSWSCTRL} start
     echoG Cleaned and service started.
+    exit 0
+}
+
+changeAdminPasswd()
+{
+    SHFILE=${LSWSHOME}/admin/misc/admpass.sh
+    if [ -f ${SHFILE} ] ; then
+        ${SHFILE}
+    else
+        echoR ${SHFILE} not exist.
+    fi
     exit 0
 }
 
@@ -259,8 +273,6 @@ testrunning()
 
 display_usage()
 {
-
-    echoG lsup version ${LSUPVERSION}.  
     cat <<EOF
 Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
   
@@ -268,7 +280,7 @@ Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
      Choose Debug version to upgrade or downgrade, will do clean like -c at the same time.
   
   -v VERSION
-     If VERSION is given, this command will try to install specified VERSION. Otherwise, it will get the latest version from $LSWSHOME/autoupdate/release.
+     If VERSION is given, this command will try to install specified VERSION. Otherwise, it will get the latest version from ${LSWSHOME}/autoupdate/release.
 
   -r 
      Recover to the original installed version which is in file VERSION.
@@ -284,6 +296,9 @@ Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
      
   -c
      Do some clean and restart openlitespeed service.
+     
+  -a
+     Change the webAdmin password.
 
   -h | --help     
      Display this help and exit.
@@ -322,6 +337,8 @@ do
         clean
     elif [ "x$1" = "x-t" ] ; then
         testrunning
+    elif [ "x$1" = "x-a" ] ; then
+        changeAdminPasswd        
     else 
         display_usage
     fi
@@ -339,13 +356,16 @@ if [ -f ${LOCKFILE} ] ; then
 fi
 
 touch ${LOCKFILE}
-cd /tmp
+
+
+TEMPPATH=${LSWSHOME}/autoupdate
+if [ ! -e ${TEMPPATH} ] ; then
+    TEMPPATH=/usr/src
+fi
+cd ${TEMPPATH}
 if [ -f ols.tgz ] ; then
     rm -f ols.tgz
 fi
-
-
-
 
 if [ "x${ISLINUX}" = "xyes" ] ; then
     URL=https://openlitespeed.org/packages/openlitespeed-${VERSION}.tgz
@@ -400,9 +420,9 @@ fi
 
 tar xf ols.tgz
 if [ "x${ISLINUX}" = "xyes" ] ; then
-    SRCDIR=/tmp/openlitespeed
+    SRCDIR=${TEMPPATH}/openlitespeed
 else
-    SRCDIR=/tmp/openlitespeed-${VERSION}
+    SRCDIR=${TEMPPATH}/openlitespeed-${VERSION}
 fi
 
 if [ -f ${LSWSHOME}/VERSION ] ; then 
@@ -429,7 +449,7 @@ if [ "x${ISLINUX}" = "xno" ] ; then
     if [ -f ./build.sh ] ; then
         ./build.sh
     else
-        echoR "This version does not have ./build.sh, please run ./configure; make; make install to install it."
+        echoR "This version does not have ./build.sh, please run './configure; make; make install' to install it."
         echoG Usually ./configure need some parameters, this auto tool cannot continue. Exit. 
         rm -rf ${LOCKFILE}
         exit 8
@@ -444,6 +464,8 @@ if [ -f ${LSWSHOME}/bin/openlitespeed ] ; then
 fi
 
 ./install.sh
+rm -rf $SRCDIR
+rm -rf ${LSWSHOME}/autoupdate/*
 
 #Sign it
 echo lsup > "${LSWSHOME}/PLAT"

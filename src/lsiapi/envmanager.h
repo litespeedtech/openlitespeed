@@ -36,7 +36,7 @@ private:
     lsi_callback_pf m_cb;
 
 public:
-    EnvHandler()    {   m_pName = NULL; m_iLen = 0;   };
+    EnvHandler()    {   m_pName = NULL; m_iLen = 0; m_cb = NULL;  };
     ~EnvHandler()   {   if (m_pName) free(m_pName);  };
 
 

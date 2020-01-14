@@ -55,6 +55,8 @@ class EventQueue
 {
 public:
     EventQueue()
+        : m_mutex(0)
+        , m_data()
     {
 
     }

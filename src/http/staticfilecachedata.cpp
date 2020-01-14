@@ -218,6 +218,7 @@ int FileCacheDataEx::readyData(const char *pPath)
                 release();
         }
     }
+#if 0
     else if (((size_t)m_lSize < s_iMaxMMapCacheSize)
              && ((size_t)m_lSize + s_iCurTotalMMAPCache < s_iMaxTotalMMAPCache))
     {
@@ -234,6 +235,7 @@ int FileCacheDataEx::readyData(const char *pPath)
             return 0;
         }
     }
+#endif
     return 0;
 }
 
@@ -544,7 +546,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
                     m_real.c_str(), (long)size);
         return LS_FAIL;
     }
-    
+
     pPath = useBrotli ? &m_bredPath : &m_gzippedPath;
     char *p = pPath->buf() + pPath->len() + 4;
     int fd = createLockFile(pPath->buf(), p);
@@ -607,8 +609,10 @@ int StaticFileCacheData::detectTrancate()
         int ret = openFile(m_real.c_str(), fd);
         if (ret)
             return LS_FAIL;
-        fstat(fd, &st);
+        ret = fstat(fd, &st);
         close(fd);
+        if (ret == -1)
+            return LS_FAIL;
         if (!m_fileData.isDirty(st))
             return 0;
 
@@ -763,7 +767,7 @@ int StaticFileCacheData::buildCompressedPaths()
     char *pReal = m_gzippedPath.prealloc(n + 6);
     if ((!pReal) || (!m_bredPath.prealloc(n + 6)))
         return LS_FAIL;
-    strncpy(pReal, achPath, n);
+    lstrncpy(pReal, achPath, n + 6);
     m_gzippedPath.setLen(n);
     memmove(pReal + n , ".lsz\0\0", 6);
     if (!m_bredPath.setStr(pReal, n + 6))
@@ -832,7 +836,7 @@ int StaticFileCacheData::readyCompressed(char compressMode)
 
     if (tm == m_tmLastCheck)
         return setReadiedCompressData(compressMode);
-    
+
     int statBr = -1, retGz = -1, statGz = -1;
     struct stat stGzip;
     struct stat stBr;

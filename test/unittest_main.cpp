@@ -36,8 +36,7 @@ char *argv0 = NULL;
 //     }
 //     else
 //         achServerRoot[0] = 0;
-//     strncat(achServerRoot, argv0,
-//             sizeof(achServerRoot) -1 - strlen(achServerRoot));
+//     lstrncat(achServerRoot, argv0, sizeof(achServerRoot));
 //     const char *pEnd = strrchr(achServerRoot, '/');
 //     --pEnd;
 //     while (pEnd > achServerRoot && *pEnd != '/')
@@ -46,7 +45,7 @@ char *argv0 = NULL;
 //     while (pEnd > achServerRoot && *pEnd != '/')
 //         --pEnd;
 //     ++pEnd;
-// 
+//
 //     strcpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot");
 //     pServerRoot = strdup(achServerRoot);
 // }

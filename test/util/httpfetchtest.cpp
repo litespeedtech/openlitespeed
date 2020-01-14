@@ -187,7 +187,7 @@ TEST(httpfetchTest_Test)
     delete pHttpFetch;
     pHttpFetch = NULL;
 
-    CHECK(ret == 0);
+    CHECK(ret >= 0);
 
     HttpFetch *pZConf = new HttpFetch();
     const char *pServerUp = "conf=\n"

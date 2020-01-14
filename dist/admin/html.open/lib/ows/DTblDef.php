@@ -284,7 +284,7 @@ class DTblDef extends DTblDefBase
 		$align = array('center', 'center', 'center', 'center');
 
 		$attrs = array(self::NewViewAttr('name', DMsg::ALbl('l_module')),
-				//self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
+				self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
 				$this->_attrs['mod_params'],
 				$this->_attrs['mod_enabled'],
 				self::NewActionAttr('S_MOD', 'vEd')
@@ -306,7 +306,7 @@ class DTblDef extends DTblDefBase
 	{
 		$attrs = array(self::NewTextAttr('name', DMsg::ALbl('l_module'), 'modulename', false, 'modulename'),
 						$this->_attrs['note'],
-						//self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
+						self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
 						$this->_attrs['mod_params'],
 						$this->_attrs['mod_enabled']);
 

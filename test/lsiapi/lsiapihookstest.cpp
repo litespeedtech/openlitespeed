@@ -148,7 +148,7 @@ TEST(LsiApiHooksTest)
         CHECK((*(int *)pHook) == resultData[i]);
         i++;
     }
-
+    delete hooks2;
 
     //copy
     LsiApiHooks hooks4;

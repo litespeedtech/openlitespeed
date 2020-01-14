@@ -31,7 +31,7 @@ TEST(ls_AhoTest_test)
     int ret;
     ls_aho_t *pThis;
     ls_aho_state_t **outlast = (ls_aho_state_t **)ls_palloc(sizeof(
-                                   ls_aho_state_t **));
+                                   ls_aho_state_t *));
 #ifdef LS_AHO_DEBUG
     printf("Start lsr Aho Test");
 #endif
@@ -46,7 +46,7 @@ TEST(ls_AhoTest_test)
             return;
         }
 
-        ret = ls_aho_search(pThis, NULL, ls_aho_TestInput[i], 
+        ret = ls_aho_search(pThis, NULL, ls_aho_TestInput[i],
                             ls_aho_TestInputLen[i], 0,
                             &iOutStart, &iOutEnd, outlast, &ctx);
 
@@ -75,7 +75,7 @@ ls_aho_t *ls_aho_initTree(const char *acceptBuf[], int bufCount,
     }
     for (i = 0; i < bufCount; ++i)
     {
-        if (ls_aho_addpattern(pThis, acceptBuf[i], strlen(acceptBuf[i]), 
+        if (ls_aho_addpattern(pThis, acceptBuf[i], strlen(acceptBuf[i]),
                               (void *)(long)seq) == 0)
         {
             printf("Add patterns failed.");

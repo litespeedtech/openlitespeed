@@ -85,14 +85,18 @@ int ServerInfo::cleanUnixSocketList()
     if (m_pChroot)
     {
         chrootLen = strlen(m_pChroot);
+
+        if ((size_t)chrootLen >= sizeof(achBuf))
+            chrootLen = (int)(sizeof(achBuf) - 1);
         memmove(achBuf, m_pChroot, chrootLen);
+        achBuf[chrootLen] = 0;
         pSock = achBuf;
     }
     while (pNext)
     {
         UnixSocketInfo *pInfo = (UnixSocketInfo *)pNext;
         if (m_pChroot)
-            strcpy(&achBuf[chrootLen], pInfo->m_pFileName);
+            lstrncpy(&achBuf[chrootLen], pInfo->m_pFileName, sizeof(achBuf) - chrootLen);
         else
             pSock = pInfo->m_pFileName;
         if (ls_fio_stat(pSock, &st) != -1)

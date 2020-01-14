@@ -90,7 +90,7 @@ SUITE(ls_strtooltest)
         cnt = strlen(hexstr);
         CHECK(ls_hexencode(mystr, (cnt >> 1), mybuf) == cnt);
         CHECK(strcmp(mybuf, hexstr) == 0);
-        strcpy(mybuf, mystr);       /* encode in place */
+        lstrncpy(mybuf, mystr, sizeof(mybuf));       /* encode in place */
         CHECK(ls_hexencode((const char *)mybuf, (cnt >> 1), mybuf) == cnt);
         CHECK(strcmp(mybuf, hexstr) == 0);
         CHECK(ls_hexdecode(hexstr, cnt, mybuf) == (cnt >> 1));
@@ -152,10 +152,10 @@ SUITE(ls_strtooltest)
               == (int)strlen(offtstr));
         CHECK(strcmp(mybuf, offtstr) == 0);
 
-        strcpy(mybuf, quotestr);
+        lstrncpy(mybuf, quotestr, sizeof(mybuf));
         CHECK(ls_unescapequote(mybuf, mybuf + strlen(mybuf), '\'') == 2);
         CHECK(strcmp(&mybuf[2], quotestr1) == 0);
-        strcpy(mybuf, quotestr);
+        lstrncpy(mybuf, quotestr, sizeof(mybuf));
         CHECK(ls_unescapequote(mybuf, mybuf + strlen(mybuf), '\"') == 2);
         CHECK(strcmp(&mybuf[2], quotestr2) == 0);
     }

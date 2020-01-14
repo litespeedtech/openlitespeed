@@ -26,6 +26,8 @@ int postData(int iHowMuch, int iBuffer, int iDelay, int iCloseAfter)
         free(pchSendBuffer);
         pchSendBuffer = NULL;
     }
+    if (!iBuffer)
+        return 0;
     if (iBuffer) {
         pchSendBuffer = (char *)malloc(iBuffer);
         if (!pchSendBuffer) {

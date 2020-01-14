@@ -194,7 +194,7 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
      */
     struct accept_filter_arg arg;
     memset(&arg, 0, sizeof(arg));
-    strcpy(arg.af_name, "httpready");
+    lstrncpy(arg.af_name, "httpready", sizeof(arg.af_name));
     if (setsockopt(fd, SOL_SOCKET, SO_ACCEPTFILTER, &arg, sizeof(arg)) < 0)
     {
         if (errno != ENOENT)
@@ -507,7 +507,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         --(*iCount);
         return LS_FAIL;
     }
-    
+
     ConnInfo info;
     if (setConnInfo(&info, pCur) == LS_FAIL)
     {
@@ -788,7 +788,7 @@ int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
     {
         return LS_FAIL;
     }
-    
+
     if ((AF_INET6 == pAddr->sa_family) &&
         (IN6_IS_ADDR_V4MAPPED(&((sockaddr_in6 *)pAddr)->sin6_addr)))
     {
@@ -796,7 +796,7 @@ int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
         memmove(&((sockaddr_in *)pAddr)->sin_addr.s_addr, &((char *)pAddr)[20], 4);
     }
 
-    
+
     pInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(pAddr, this);
     const VHostMap * pMap = pInfo->m_pServerAddrInfo->getVHostMap();
     if (!pMap)

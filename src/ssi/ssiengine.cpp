@@ -460,8 +460,11 @@ int SsiEngine::processSubReq(HttpSession *pSession, SubstItem *pItem)
         else
         {
             len = toLocalAbsUrl(pSession, achBuf, p - achBuf, achBuf, sizeof(achBuf));
-            p = &achBuf[len];
-            *p = 0;
+            if (len >= 0)
+            {
+                p = &achBuf[len];
+                *p = 0;
+            }
         }
         if (len == -1)
         {
@@ -710,10 +713,10 @@ static int  shortCurcuit(ExprToken *&pTok)
 
 static int compString(HttpSession *pSession, int type, ExprToken *&pTok)
 {
-    int     len;
     int     ret;
     char achBuf2[40960] = "";
     char achBuf1[40960] = "";
+    int     len = sizeof(achBuf1);
     char   *p1 = achBuf1;
     char   *p2 = achBuf2;
     if (pTok->getType() == ExprToken::EXP_STRING)

@@ -87,10 +87,15 @@ void Recaptcha::setBotWhitelist(const StringList *pList)
         {
             pPattern = (*iter)->c_str();
             iPatternLen = (*iter)->len();
-            buf.guarantee(iPatternLen + 6);
-            int len = snprintf(buf.end(), buf.available(), "(?:%.*s)|",
-                                iPatternLen, pPattern);
-            buf.used(len);
+            if (buf.guarantee(iPatternLen + 6) != LS_FAIL)
+            {
+                int len = snprintf(buf.end(), buf.available(), "(?:%.*s)|",
+                                    iPatternLen, pPattern);
+                buf.used(len);
+            }
+            else
+                LS_NOTICE("reCAPTCHA unable to allocate space for bot whitelist, %.*s. Skip append.",
+                          iPatternLen, pPattern);
         }
         if (!buf.empty())
         {

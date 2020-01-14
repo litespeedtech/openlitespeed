@@ -53,6 +53,13 @@ ModuleManager::ModuleManager()
 }
 
 
+ModuleManager::~ModuleManager()
+{
+    if (m_pGlobalModuleConfig)
+        delete m_pGlobalModuleConfig;
+}
+
+
 int ModuleManager::initModule()
 {
     if (LsiapiBridge::initLsiapi() != 0)
@@ -140,13 +147,13 @@ ModuleManager::iterator ModuleManager::addModule(const char *name,
              pType, MODULE_NAME(pModule),
              (int16_t)(pModule->signature >> 16),
              (int16_t)pModule->signature);
-    
+
     if (strcmp(name, "modpagespeed") == 0)
     {
-        //Loaded modpagespeed, 
+        //Loaded modpagespeed,
         HttpServerConfig::getInstance().setUsePagespeed(1);
     }
-    
+
     return iter;
 }
 
@@ -354,7 +361,7 @@ int ModuleManager::runModuleInit()
     {
         pModule = m_pModuleArray[i];
         checkModuleDef(pModule);
-        
+
         if (pModule->init_pf)
         {
             int ret = pModule->init_pf(pModule);
@@ -366,7 +373,7 @@ int ModuleManager::runModuleInit()
                 continue;
             }
         }
-        
+
         //add global level hooks here
         if (pModule->serverhook)
         {
@@ -612,13 +619,13 @@ int ModuleConfig::saveConfig(const XmlNode *pNode, lsi_module_t *pModule,
 {
     const char *pValue = NULL;
     assert(module_config->module == pModule);
-    
+
 //9/17/2018 diesable context level ls_enabled config, to avoid conflict
 //    with vhost config
 //     pValue = pNode->getChildValue("ls_enabled");
 //     if (!pValue)
 //         pValue = pNode->getChildValue("enabled");
-// 
+//
 //     if (pValue)
 //         module_config->filters_enable = (int16_t)atoi(pValue);
 //     else
@@ -686,7 +693,7 @@ static int checkConfigKeys(lsi_config_key_t *keys)
             p->level = LSI_CFG_SERVER | LSI_CFG_LISTENER | LSI_CFG_VHOST | LSI_CFG_CONTEXT;
         ++p;
     }
-    
+
     return p - keys;
 }
 
@@ -767,7 +774,7 @@ int ModuleConfig::escapeParamVal(const char *val_in, int len, char *val)
 }
 
 /**
- * ls_getconfkey return the key of the line, 
+ * ls_getconfkey return the key of the line,
  * Comments: key can not be multiple line and should be have space inside
  */
 const char *ModuleConfig::ls_getconfkey(const char **pParseBegin,
@@ -859,21 +866,21 @@ int ModuleConfig::ls_get_escconfval(const char **pParseBegin,
  * After parsing, module will get the parsed array, and will be easily to set to
  * its' own data.
  * During parsing, `, ' and " will be treat as quote, inside a quote,
- * such as `, \` will be treat as escape charactor and it will be `, 
- * but won't escape other quote charactor, such as \", so 
+ * such as `, \` will be treat as escape charactor and it will be `,
+ * but won't escape other quote charactor, such as \", so
  *   \` 123 \" \` 456 `
  * will be parsed as
  *   \ 123 \" ` 456
  * And diffrent quoted string can be combined, such as
  *   \` 123 \" \` 456 `   " 789 \" \` 0 "
- * will be parsed as 
- *   \ 123 \" ` 456     789 " \` 0 
+ * will be parsed as
+ *   \ 123 \" ` 456     789 " \` 0
  * A special case is
  *   `123\\`345`
- * will be parsed as 
+ * will be parsed as
  *   123\`345
  * For more details, please check our wiki.
- * 
+ *
  */
 int ModuleConfig::preParseModuleParam(const char *param, int paramLen,
                                       int level, lsi_config_key_t *keys,
@@ -924,7 +931,7 @@ int ModuleConfig::preParseModuleParam(const char *param, int paramLen,
             }
         }
     }
-    
+
     *param_count = param_arr_sz;
     return 0;
 }
@@ -941,19 +948,15 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
     config->module = pModule;
 
     pValue = pNode->getChildValue("ls_enabled");
-    iValueLen = pNode->getChildValueLen("ls_enabled");
     if (!pValue)
-    {
         pValue = pNode->getChildValue("enabled");
-        iValueLen = pNode->getChildValueLen("enabled");
-    }
 
     if (pValue)
         ModuleConfig::setFilterEnable(config, atoi(pValue));
 
     pValue = pNode->getChildValue("param");
     iValueLen = pNode->getChildValueLen("param");
-    
+
     config->data_flag = LSI_CONFDATA_NONE;
     if (pModule->config_parser && pModule->config_parser->parse_config)
     {

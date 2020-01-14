@@ -2811,7 +2811,7 @@ int HttpSession::doWrite()
 
         setFlag(HSF_RESP_FLUSHED, 0);
         flush();
-        
+
         if(getFlag(HSF_SAVE_STX_FILE_CACHE))
         {
             HttpVHost *host = getReq()->getVHost();
@@ -4386,6 +4386,8 @@ int HttpSession::processOneLink(const char *p, const char *pEnd,
     while(pUrlBegin < pEnd && isspace(*pUrlBegin))
         ++pUrlBegin;
     p = (const char *)memchr(pUrlBegin, '>', pEnd - pUrlBegin);
+    if (!p)
+        return 0;
     const char *pUrlEnd = p++;
     while(isspace(pUrlEnd[-1]))
         --pUrlEnd;
@@ -4754,8 +4756,9 @@ int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
     int fd = openStaticFile(pPath, pathLen, &ret);
     if (fd == -1)
         return ret;
-    fstat(fd, &st);
-    ret = setUpdateStaticFileCache(pPath, pathLen, fd, st);
+    ret = fstat(fd, &st);
+    if (ret != -1)
+        ret = setUpdateStaticFileCache(pPath, pathLen, fd, st);
     if (ret)
     {
         close(fd);
@@ -5842,7 +5845,8 @@ void HttpSession::mtParseReqArgs(MtParamParseReqArgs *pParams)
 {
     if ((NULL == pParams) || (getMtFlag(HSF_MT_CANCEL)))
     {
-        pParams->m_ret = LS_FAIL;
+        if (pParams)
+            pParams->m_ret = LS_FAIL;
         return;
     }
 
@@ -5855,7 +5859,8 @@ void HttpSession::mtSendfile(MtParamSendfile *pParams)
 {
     if ((NULL == pParams) || (getMtFlag(HSF_MT_CANCEL)))
     {
-        pParams->m_ret = LS_FAIL;
+        if (pParams)
+            pParams->m_ret = LS_FAIL;
         return;
     }
     pParams->m_ret = LS_OK;
@@ -6178,7 +6183,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
 #define URI_OP_MASK     15
 #define URL_QS_OP_MASK  112
 #define MAX_URI_QS_LEN 8192
-    char tmpBuf[MAX_URI_QS_LEN];
+    char tmpBuf[MAX_URI_QS_LEN + 8];
     char *pStart = tmpBuf;
     char *pQs = NULL;
     int final_qs_len = 0;
@@ -6201,8 +6206,8 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         uri_len = getReq()->getURILen();
         action &= ~LSI_URL_ENCODED;
     }
-    if ((size_t)uri_len > sizeof(tmpBuf) - 1)
-        uri_len = sizeof(tmpBuf) - 1;
+    if ((size_t)uri_len > sizeof(tmpBuf) - 4) // leave room for extra
+        uri_len = sizeof(tmpBuf) - 4;
 
     switch (uri_act)
     {
@@ -6212,7 +6217,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
     case LSI_URL_REDIRECT_303:
     case LSI_URL_REDIRECT_307:
         if (!(action & LSI_URL_ENCODED))
-            len = HttpUtil::escape(uri, uri_len, tmpBuf, sizeof(tmpBuf) - 1);
+            len = HttpUtil::escape(uri, uri_len, tmpBuf, sizeof(tmpBuf) - 3);
         else
         {
             memcpy(tmpBuf, uri, uri_len);
@@ -6221,7 +6226,11 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         break;
     default:
         if (action & LSI_URL_ENCODED)
+        {
             len = HttpUtil::unescape(uri, tmpBuf, uri_len);
+            if (len == -1)
+                len = 0; // To avoid a bad index below
+        }
         else
         {
             memcpy(tmpBuf, uri, uri_len);

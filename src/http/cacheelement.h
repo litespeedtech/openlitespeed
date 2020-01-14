@@ -30,7 +30,7 @@ class CacheElement : public RefCounter
 {
     time_t  m_lastAccess;
 public:
-    CacheElement() {};
+    CacheElement() : m_lastAccess(0) {};
     virtual ~CacheElement() {};
     bool isInUse() const    {   return getRef() > 0;    }
     time_t getLastAccess() const    {   return m_lastAccess;    }

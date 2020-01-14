@@ -76,6 +76,9 @@ int ByteRange::check(off_t entityLen)
 
 HttpRange::HttpRange(off_t entityLen)
     : m_lEntityLen(entityLen)
+    , m_iCurRange(0)
+    , m_pPartHeaderEnd(NULL)
+    , m_pCurHeaderPos(NULL)
 {
     ::memset(m_boundary, 0, sizeof(m_boundary));
     m_iCurRange = 0;

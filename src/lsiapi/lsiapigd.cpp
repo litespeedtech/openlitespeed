@@ -175,8 +175,8 @@ static void renew_gdata_TTL(GDataHash::iterator iter, int TTL, int type,
         {
             fwrite(&pItem->tmexpire, 1, sizeof(time_t), fp);
             fclose(fp);
-            stat(file_path, &st);
-            pItem->tmcreate = st.st_mtime;
+            if (stat(file_path, &st) == 0)
+                pItem->tmcreate = st.st_mtime;
         }
     }
 }
@@ -230,7 +230,7 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
 
     int need_del_file = 0;
     time_t tmCur = DateTime::s_curTime;
-    time_t tmExpire = tmCur;
+    uint32_t tmExpire = (uint32_t)tmCur;
     int fd = -1;
 
     if (containerInfo->tmcreate > st.st_mtime)
@@ -240,10 +240,11 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
         fd = open(file_path, O_RDONLY);
         if (fd != -1)
         {
-            read(fd, &tmExpire, 4);
-            if (tmExpire <= tmCur)
+            if (read(fd, &tmExpire, sizeof(tmExpire)) != sizeof(tmExpire) ||
+                tmExpire <= tmCur)
             {
                 close(fd);
+                fd = -1;
                 need_del_file = 1;
             }
         }
@@ -255,6 +256,8 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
     if (need_del_file || tmExpire < st.st_mtime)
     {
         unlink(file_path);
+        if (fd != -1)
+            close(fd);
         return LS_FAIL;
     }
 
@@ -265,7 +268,8 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
         char *p = (char *)malloc(key_len);
         if (!p)
         {
-            close(fd);
+            if (fd != -1)
+                close(fd);
             return LS_FAIL;
         }
 
@@ -284,7 +288,8 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
     buf = (char *) mmap(NULL, length, PROT_READ, MAP_PRIVATE, fd, 0);
     if (buf == MAP_FAILED)
     {
-        close(fd);
+        if (fd != -1)
+            close(fd);
         return LS_FAIL;
     }
 
@@ -296,7 +301,8 @@ static int recover_file_gdata(lsi_gdata_cont_t *containerInfo,
     pItem->tmaccess = tmCur;
 
     munmap(buf, length);
-    close(fd);
+    if (fd != -1)
+        close(fd);
     return 0;
 }
 
@@ -468,8 +474,8 @@ LSIAPI int set_gdata(lsi_gdata_cont_t *containerInfo, const char *key,
         fclose(fp);
         free(buf); //serialize_cb MUST USE alloc, malloc or realloc to get memory, so here use free to release it
 
-        stat(file_path, &st);
-        iter.second()->tmcreate = st.st_mtime;
+        if (stat(file_path, &st) == 0)
+            iter.second()->tmcreate = st.st_mtime;
     }
 
 

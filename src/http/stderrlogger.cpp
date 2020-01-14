@@ -35,6 +35,7 @@ LS_SINGLETON(StdErrLogger);
 
 StdErrLogger::StdErrLogger()
     : m_iEnabled(0)
+    , m_fdStdErr(-1)
     , m_pAppender(NULL)
 {
 }

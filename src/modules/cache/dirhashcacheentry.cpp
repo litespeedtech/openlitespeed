@@ -29,6 +29,9 @@
 DirHashCacheEntry::DirHashCacheEntry()
     : CacheEntry()
     , m_lastCheck(-1)
+    , m_lastMod(0)
+    , m_lSize(0)
+    , m_inode(0)
 {
 }
 

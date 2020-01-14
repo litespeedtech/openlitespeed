@@ -1131,7 +1131,7 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
     char achSuffix[512];
     if (!pMime)
     {
-        strcpy(achBuf, "application/x-httpd-");
+        lstrncpy(achBuf, "application/x-httpd-", sizeof(achBuf));
 
         pMime = (char *) strchr(pSuffix, ',');
         if (!pMime)
@@ -1142,7 +1142,7 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
             achBuf[20 + pMime - pSuffix ] = 0;
         }
         else
-            strcpy(&achBuf[20], pSuffix);
+            lstrncpy(&achBuf[20], pSuffix, sizeof(achBuf) - 20);
         pMime = achBuf;
     }
     memccpy(achSuffix, pSuffix, 0, 511);
@@ -1193,7 +1193,7 @@ int HttpMime::_configScriptHandler(ConfigCtx& currentCtx, const char *value,
 
         char handler[256] = {0};
         memcpy(handler, type + 1, suffix - type - 2);
-        
+
         /**
          * trim tail space
          */
@@ -1208,7 +1208,7 @@ int HttpMime::_configScriptHandler(ConfigCtx& currentCtx, const char *value,
                       handler);
             return -1;
         }
-        
+
         psuffix->setStr(suffix, strlen(suffix));
         return 0;
 }
@@ -1241,7 +1241,7 @@ static scriptHanlderData* lookSuffixInArr(scriptHanlderData *pData,
 }
 
 /**
- * Merge is by suffix, if the suffix is not defined in list then need to merge 
+ * Merge is by suffix, if the suffix is not defined in list then need to merge
  * from parentData
  */
 void HttpMime::mergeHandlerList(ConfigCtx& currentCtx,
@@ -1275,7 +1275,7 @@ void HttpMime::mergeHandlerList(ConfigCtx& currentCtx,
             /**
              * sSuffix can be a list
              */
-            
+
             StringList strList;
             const char *pSuffix = sSuffix.c_str();
             int size = strList.split(pSuffix, pSuffix + strlen(pSuffix), ",");
@@ -1327,7 +1327,7 @@ static int s_nSvrScriptHanlderData = 0;
 
 /**
  * The return value should be equal or larger than real count to make
- * enough space 
+ * enough space
  */
 int HttpMime::getSuffixCount(const XmlNodeList *pList)
 {
@@ -1358,12 +1358,12 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
     scriptHanlderData  *pData = NULL;
     int nData = 0;
     int listSize = getSuffixCount(pList);
-    
+
     if (!vhost)
     {
         if (s_pSvrScriptHanlderData == NULL && listSize > 0)
             s_pSvrScriptHanlderData = new scriptHanlderData[listSize];
-        
+
         if (s_pSvrScriptHanlderData)
         {
             mergeHandlerList(currentCtx, NULL, 0, pList, s_pSvrScriptHanlderData,
@@ -1396,7 +1396,7 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
         char *suffix = pData[i].suffix;
         char *handler = pData[i].handler;
         char *type = pData[i].type;
-        
+
         /**
          * Server level need fill in the array
          */
@@ -1411,7 +1411,7 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
         {
             /**
              * First check if VHost have this configged, if yes, use it
-             * otherewise, will use server level, but if server level guid is 
+             * otherewise, will use server level, but if server level guid is
              * different, create a vhost owned extapp
              */
             char sHanlderVh[256];
@@ -1420,7 +1420,7 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
             LS_DBG_H(&currentCtx, "HttpMime::addMimeHandler(vhost) getHandler with"
                     " name %s (for suffix %s) ret %p",
                      sHanlderVh, suffix, pHdlr);
-            
+
             if (!pHdlr)
             {
                 app_node_st *app_node_ptr = MainServerConfig::getInstance().
@@ -1428,7 +1428,7 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
                 if (app_node_ptr)
                 {
                     LocalWorker *pApp = static_cast<LocalWorker *>(app_node_ptr->worker);
-                    
+
                     /**
                      * If the APP has own user/group, do not inherit with
                      * vhost level setting

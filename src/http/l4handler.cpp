@@ -29,10 +29,17 @@ L4Handler::L4Handler()
 }
 
 
+L4Handler::~L4Handler()
+{
+    if (m_buf)
+        delete m_buf;
+    if (m_pL4conn)
+        delete m_pL4conn;
+}
+
+
 void L4Handler::recycle()
 {
-    delete m_buf;
-    delete m_pL4conn;
     delete this;
 }
 
