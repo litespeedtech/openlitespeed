@@ -1124,6 +1124,20 @@ EOF
 }
 
 
+gen_selfsigned_cert_new()
+{   
+    COMMNAME=`hostname`
+    SSL_COUNTRY=US
+    SSL_STATE="New Jersey"
+    SSL_LOCALITY=Virtual
+    SSL_ORG=LiteSpeedCommunity
+    SSL_ORGUNIT=Testing
+    key="${SSL_HOSTNAME}.key"
+    cert="${SSL_HOSTNAME}.crt"
+    
+    openssl req -subj "/CN=${COMMNAME}/O=webadmin/C=US/subjectAltName=DNS.1=${MYIP}/" -new -newkey rsa:2048 -sha256 -days 730 -nodes -x509 -keyout ${key} -out ${cert}
+
+}
 
 gen_selfsigned_cert()
 {

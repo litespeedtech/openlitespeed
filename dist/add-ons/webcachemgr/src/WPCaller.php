@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 
@@ -1241,10 +1241,10 @@ class WPCaller
         $includeFiles[] = '/wp-includes/l10n.php';
         $includeFiles[] = '/wp-includes/class-wp-walker.php';
         $includeFiles[] = '/wp-includes/capabilities.php';
-        $includeFiles[] = '/wp-includes/class-wp-roles.php';
-        $includeFiles[] = '/wp-includes/class-wp-role.php';
 
         if ( version_compare($wp_version, '4.4.0', '>=') ) {
+            $includeFiles[] = '/wp-includes/class-wp-roles.php';
+            $includeFiles[] = '/wp-includes/class-wp-role.php';
             $includeFiles[] = '/wp-includes/class-wp-user.php';
             $includeFiles[] = '/wp-includes/rest-api.php';
             $includeFiles[] = '/wp-includes/class-wp-http-encoding.php';

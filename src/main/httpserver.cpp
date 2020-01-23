@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -377,9 +377,10 @@ private:
     int enableWebConsole();
     void setAdminThrottleLimits(HttpVHost *pVHostAdmin);
     HttpVHost *createAdminVhost(LocalWorker *pFcgiApp, int iChrootLen,
-                                char *pchPHPBin);
+                                char *pchPHPBin, size_t phpBinLen);
     LocalWorker *createAdminPhpApp(const char *pChroot, int iChrootLen,
-                                   const char *pURI, char *pchPHPBin);
+                                   const char *pURI, char *pchPHPBin,
+                                   size_t szPhpBin);
     const char *configAdminPhpUri(const XmlNode *pNode);
     int configAdminConsole(const XmlNode *pNode);
     int configSysShmDirs(char *pConfDir);
@@ -544,11 +545,12 @@ int HttpServerImpl::generateStatusReport()
     char achBuf[1024] = "";
     if (ServerProcessConfig::getInstance().getChroot() != NULL)
     {
-        strcpy(achBuf,
-               ServerProcessConfig::getInstance().getChroot()->c_str());
+        lstrncpy(achBuf,
+                ServerProcessConfig::getInstance().getChroot()->c_str(),
+                sizeof(achBuf));
     }
-    strcat(achBuf, sStatDir);
-    strcat(achBuf, "/.status");
+    lstrncat(achBuf, sStatDir, sizeof(achBuf));
+    lstrncat(achBuf, "/.status", sizeof(achBuf));
     LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(achBuf);
     pAppender->setAppendMode(0);
     if (pAppender->open())
@@ -975,14 +977,15 @@ static int readVersion(const char *path)
 {
     //a.b.c(.d) will return (((a * 100 + b) * 100) + c) * 100 + d
     //a, b, c and d will take up to 2 digits
-    char s[20] = {0};
+    char s[21] = {0};
     int ver = 0;
     FILE *fp = fopen(path, "r");
     if (fp)
     {
-        fread(s, 1, 20, fp);
+        ssize_t bytes = fread(s, 1, 20, fp);
         fclose(fp);
-        ver = readVersionStr(s);
+        if (bytes > 0)
+            ver = readVersionStr(s);
     }
     return ver;
 }
@@ -1062,7 +1065,7 @@ static char *OsDetect(char *s, int max_len)
     struct utsname name;
     memset(&name, 0, sizeof(name));
     if (uname(&name) == -1)
-        strcpy(s, "unknown");
+        lstrncpy(s, "unknown", max_len - 1);
     else
         snprintf(s, max_len - 1, "%s_%s_%s", name.sysname, name.release, name.machine);
     return s;
@@ -1123,27 +1126,22 @@ void HttpServerImpl::checkOLSUpdate()
     char sUrl[256];
     char osstr[64] = {0};
     char plat[64] = {0};
-    strcpy(sUrl, "http://openlitespeed.org/");
+    lstrncpy(sUrl, "http://openlitespeed.org/", sizeof(sUrl));
     addrResponder.setHttpUrl(sUrl, strlen(sUrl));
     addrResponder2.setHttpUrl(sUrl, strlen(sUrl));
-    strcat(sUrl, "packages/release?ver=");
-    strcat(sUrl, PACKAGE_VERSION);
-    strcat(sUrl, "&os=");
-    strcat(sUrl, OsDetect(osstr, 64));
-    strcat(sUrl, "&env=");
-    strcat(sUrl, detectCp());
-#ifdef PREBUILT_VERSION
-    strcat(sUrl, "_pre_");
-#else
-    strcat(sUrl, "_src_");
-#endif
-    strcat(sUrl, detectPlat(plat, 64));
+    lstrncat(sUrl, "packages/release?ver=", sizeof(sUrl));
+    lstrncat(sUrl, PACKAGE_VERSION, sizeof(sUrl));
+    lstrncat(sUrl, "&os=", sizeof(sUrl));
+    lstrncat(sUrl, OsDetect(osstr, 64), sizeof(sUrl));
+    lstrncat(sUrl, "&env=", sizeof(sUrl));
+    lstrncat(sUrl, detectCp(), sizeof(sUrl));
+    lstrncat(sUrl, detectPlat(plat, 64), sizeof(sUrl));
     m_pAutoUpdFetch[0]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               addrResponder);
 
     /**
      * Since now on, we will fetch the latest version of current branch at
-     * the same time and will send a notification if have newer version of 
+     * the same time and will send a notification if have newer version of
      * current branch (TBD)
      */
     sAutoUpdFile.setStr(MainServerConfig::getInstance().getServerRoot());
@@ -1151,7 +1149,7 @@ void HttpServerImpl::checkOLSUpdate()
     if (m_pAutoUpdFetch[1])
         delete m_pAutoUpdFetch[1];
     m_pAutoUpdFetch[1] = new HttpFetch();
-    
+
     m_pAutoUpdFetch[1]->setTimeout(15);  //Set Req timeout as 30 seconds
     m_pAutoUpdFetch[1]->setCallBack(autoUpdCheckCb, this);
     int curVer = readVersionStr(PACKAGE_VERSION);
@@ -1200,7 +1198,7 @@ void HttpServerImpl::offsetChroot()
 
     char achTemp[512];
     AutoStr2 *pChroot = ServerProcessConfig::getInstance().getChroot();
-    strcpy(achTemp, StdErrLogger::getInstance().getLogFileName());
+    lstrncpy(achTemp, StdErrLogger::getInstance().getLogFileName(), sizeof(achTemp));
     StdErrLogger::getInstance().setLogFileName(achTemp + pChroot->len());
     HttpLog::offsetChroot(pChroot->c_str(), pChroot->len());
     ServerInfo::getServerInfo()->m_pChroot =
@@ -1360,9 +1358,9 @@ int HttpServerImpl::reinitMultiplexer()
 int HttpServerImpl::setupSwap()
 {
     char achDir[512];
-    strcpy(achDir, getSwapDir());
+    lstrncpy(achDir, getSwapDir(), sizeof(achDir));
     if (*(strlen(achDir) - 1 + achDir) != '/')
-        strcat(achDir, "/");
+        lstrncat(achDir, "/", sizeof(achDir));
     if (!GPath::isValid(achDir))
     {
         char *p = strchr(achDir + 1, '/');
@@ -1378,9 +1376,9 @@ int HttpServerImpl::setupSwap()
     {
         LS_WARN("Specified swapping directory is not writable:%s,"
                 " use default!", achDir);
-        strcpy(achDir, DEFAULT_SWAP_DIR);
+        lstrncpy(achDir, DEFAULT_SWAP_DIR, sizeof(achDir));
         if (*(strlen(achDir) - 1 + achDir) != '/')
-            strcat(achDir, "/");
+            lstrncat(achDir, "/", sizeof(achDir));
         mkdir(achDir, 0700);
     }
     if (!GPath::isWritable(achDir))
@@ -1398,7 +1396,7 @@ int HttpServerImpl::setupSwap()
     if ((strncmp(achDir, DEFAULT_SWAP_DIR,
                  strlen(DEFAULT_SWAP_DIR)) == 0) || (getuid() != 0))
         removeMatchFile(achDir, "");
-    strcat(achDir, "s-XXXXXX");
+    lstrncat(achDir, "s-XXXXXX", sizeof(achDir));
     VMemBuf::setTempFileTemplate(achDir);
     return 0;
 
@@ -1806,19 +1804,19 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
     if (pURI == NULL)
         return LS_FAIL;
     LocalWorker *pFcgiApp = createAdminPhpApp(pChroot, iChrootLen, pURI,
-                            achPHPBin);
+                            achPHPBin, sizeof(achPHPBin));
     HttpVHost *pVHostAdmin = getVHost(DEFAULT_ADMIN_SERVER_NAME);
     if (!pVHostAdmin)
     {
         if ((pVHostAdmin = createAdminVhost(pFcgiApp, iChrootLen,
-                                            achPHPBin)) == NULL)
+                                            achPHPBin, sizeof(achPHPBin))) == NULL)
             return LS_FAIL;
     }
     setAdminThrottleLimits(pVHostAdmin);
     pVHostAdmin->configSecurity(pNode);
     pVHostAdmin->initErrorLog(pNode, 0);
     pVHostAdmin->initAccessLog(pNode, 0);
-   
+
     //test if file $SERVER_ROOT/conf/disablewebconsole exist
     //skip admin listener configuration
     if (!enableWebConsole())
@@ -1830,7 +1828,7 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
         "RewriteRule \\.php - [F]\n";
     pVHostAdmin->getRootContext().configRewriteRule(NULL, achRules, NULL);
     pVHostAdmin->getRootContext().enableRewrite(1);
-   
+
     mapDomainList(pNode, pVHostAdmin);
     return 0;
 }
@@ -1929,13 +1927,13 @@ static int detectIP(char family, char *str, char *pEnd)
 
 LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
         int iChrootLen,
-        const char *pURI, char *pchPHPBin)
+        const char *pURI, char *pchPHPBin, size_t szPhpBin)
 {
     LocalWorker *pFcgiApp = (LocalWorker *) ExtAppRegistry::addApp(
                                 EA_LSAPI, DEFAULT_ADMIN_FCGI_NAME);
     assert(pFcgiApp);
     pFcgiApp->setURL(pURI);
-    strcat(pchPHPBin, " -c ../conf/php.ini");
+    lstrncat(pchPHPBin, " -c ../conf/php.ini", szPhpBin);
     pFcgiApp->getConfig().setAppPath(&pchPHPBin[iChrootLen]);
     pFcgiApp->getConfig().setBackLog(100);
     pFcgiApp->getConfig().setSelfManaged(0);
@@ -1990,12 +1988,12 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
         pFcgiApp->getConfig().addEnv(pEnv);
     }
 
-    strcpy(pEnv, "LSWS_IPV4_ADDRS=");
+    lstrncpy(pEnv, "LSWS_IPV4_ADDRS=", sizeof(pEnv));
 
     if (detectIP(AF_INET, pEnv + strlen(pEnv), &pEnv[8192]) == 0)
         pFcgiApp->getConfig().addEnv(pEnv);
 
-    strcpy(pEnv, "LSWS_IPV6_ADDRS=");
+    lstrncpy(pEnv, "LSWS_IPV6_ADDRS=", sizeof(pEnv));
 
     if (detectIP(AF_INET6, pEnv + strlen(pEnv), &pEnv[8192]) == 0)
         pFcgiApp->getConfig().addEnv(pEnv);
@@ -2008,7 +2006,8 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
 
 HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
         int iChrootLen,
-        char *pchPHPBin)
+        char *pchPHPBin,
+        size_t phpBinLen)
 {
     const char *pAdminSock;
     char achRootPath[MAX_PATH_LEN];
@@ -2030,8 +2029,8 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
 
     pFcgiApp->getConfig().setVHost(pVHostAdmin);
 
-    strcpy(pchPHPBin, ConfigCtx::getCurConfigCtx()->getVhRoot());
-    strcat(pchPHPBin, "html/");
+    snprintf(pchPHPBin, phpBinLen, "%s%s",
+             ConfigCtx::getCurConfigCtx()->getVhRoot(), "html/");
     pVHostAdmin->setDocRoot(pchPHPBin);
     ConfigCtx::getCurConfigCtx()->setDocRoot(pchPHPBin);
     pVHostAdmin->addContext("/", HandlerType::HT_NULL, pchPHPBin, NULL, 1);
@@ -2047,7 +2046,7 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
     setPHPHandler(pDocs, pFcgiApp, achPHPSuffix);
 
     char achMIME[] = "text/html";
-    strcpy(achPHPSuffix, "html");
+    lstrncpy(achPHPSuffix, "html", sizeof(achPHPSuffix));
     pDocs->getMIME()->addMimeHandler(achPHPSuffix, achMIME,
                                      HandlerFactory::getInstance(HandlerType::HT_NULL, NULL), NULL,
                                      TmpLogId::getLogId());
@@ -2307,13 +2306,12 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
 
     pValue = pNode->getChildValue("gzipCacheDir");
+    char achBuf[MAX_PATH_LEN];
 
     if (!pValue)
         pValue = HttpServer::getInstance().getSwapDir();
     else
     {
-        char achBuf[MAX_PATH_LEN];
-
         if (currentCtx.getAbsolutePath(achBuf, pValue) == -1)
         {
             LS_WARN(&currentCtx, "path of gzip cache is invalid, use default.");
@@ -2959,7 +2957,7 @@ void HttpServerImpl::verifyStatDir(const char *path)
             int mod = (rootuser ? 0755 : 0777);
             if (GPath::createMissingPath((char *)str.c_str(), mod) == 0)
             {
-                if (rootuser)
+                if (rootuser && pw)
                     chown(str.c_str(), pw->pw_uid, pw->pw_gid);
                 error =0;
             }
@@ -2967,7 +2965,7 @@ void HttpServerImpl::verifyStatDir(const char *path)
         else
         {
             chmodDirToAll(path, sb);
-            if (sb.st_uid != pw->pw_uid)
+            if (pw && sb.st_uid != pw->pw_uid)
             {
                 if (rootuser)
                 {
@@ -3170,19 +3168,18 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         m_sRTReportFile = sStatDir;
         m_sRTReportFile.append("/.rtreport", 10);
 
-
         testAndFixDirs("cachedata", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("autoupdate", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("tmp", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("tmp/ocspcache", procConf.getUid(), procConf.getGid(), 0700);
-        
+
         //Fix Conf now
         pw = getpwnam("lsadm");
         if (!pw)
             LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
         else
             testAndFixDirs("conf", pw->pw_uid, procConf.getGid(), 0750);
-        
+
         return 0;
     }
 
@@ -3445,16 +3442,16 @@ int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
         config.setStartByServer( iAutoStart );
     }
     config.setMaxIdleTime( INT_MAX );
-    if (( instances != 1 )&&
-        ( config.getMaxConns() > instances ))
-    {
-        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Possible mis-configuration: 'Instances'=%d, "
-                "'Max connections'=%d, unless one Fast CGI process is "
-                "capable of handling multiple connections, "
-                "you should set 'Instances' greater or equal to "
-                "'Max connections'.", instances, config.getMaxConns());
-        pApp->setMaxConns( instances );
-    }
+    //if (( instances != 1 )&&
+    //    ( config.getMaxConns() > instances ))
+    //{
+    //    LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Possible mis-configuration: 'Instances'=%d, "
+    //            "'Max connections'=%d, unless one Fast CGI process is "
+    //            "capable of handling multiple connections, "
+    //            "you should set 'Instances' greater or equal to "
+    //            "'Max connections'.", instances, config.getMaxConns());
+    //    pApp->setMaxConns( instances );
+    //}
 
     RLimits limits;
     memset( &limits, 0, sizeof( limits ) );
@@ -3547,7 +3544,7 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
         {
             char achTemp[512];
             char *pChroot = achTemp;
-            strcpy(pChroot, pValue);
+            lstrncpy(pChroot, pValue, sizeof(achTemp));
             int len = strlen(pChroot);
             len = GPath::checkSymLinks(pChroot, pChroot + len,
                                        pChroot + sizeof(achTemp), pChroot, 1);
@@ -3570,7 +3567,7 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
                 LS_ERROR(ConfigCtx::getCurConfigCtx(),
                          "chroot must be valid absolute path: %s",
                          pChroot);
-                strcpy(pChroot, "/");
+                lstrncpy(pChroot, "/", sizeof(achTemp) - strlen(achTemp));
                 len = 1;
             }
 
@@ -3579,7 +3576,7 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
                 LS_ERROR(ConfigCtx::getCurConfigCtx(),
                          "Server root: %s falls out side of chroot: %s, "
                          "disable chroot!", MainServerConfigObj.getServerRoot(), pChroot);
-                strcpy(pChroot, "/");
+                lstrncpy(pChroot, "/", sizeof(achTemp) - strlen(achTemp));
             }
 
             if (strcmp(pChroot, "/") != 0)
@@ -3589,8 +3586,8 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
                 ServerProcessConfig::getInstance().setChroot(
                     (AutoStr2 *)MainServerConfigObj.getpsChroot());
                 char achTemp[512];
-                strcpy(achTemp, MainServerConfigObj.getServerRoot() +
-                       MainServerConfigObj.getChrootlen());
+                lstrncpy(achTemp, MainServerConfigObj.getServerRoot() +
+                        MainServerConfigObj.getChrootlen(), sizeof(achTemp));
                 setServerRoot(achTemp);
             }
         }
@@ -4066,10 +4063,10 @@ int HttpServerImpl::initLscpd()
     MainServerConfig  &mainServerConfig =  MainServerConfig::getInstance();
     char achBuf[256], achBuf1[256];
     char *p = achBuf;
-    strcpy(p, mainServerConfig.getServerRoot());
+    lstrncpy(p, mainServerConfig.getServerRoot(), sizeof(achBuf));
     assert(p != NULL);
     char *pEnd = p + strlen(p);
-    strcpy(achBuf1, achBuf);
+    lstrncpy(achBuf1, achBuf, sizeof(achBuf1));
 
     beginConfig();
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
@@ -4243,7 +4240,7 @@ int HttpServerImpl::initLscpd()
     LocalWorker *pPhp = (LocalWorker *)ExtAppRegistry::addApp(EA_LSAPI, "php");
     assert(pPhp);
     pPhp->setURL("UDS://tmp/lscpd/lsphp.sock");
-    strcpy(pEnd, "/fcgi-bin/lsphp");
+    lstrncpy(pEnd, "/fcgi-bin/lsphp", sizeof(achBuf) - (pEnd - achBuf));
     pPhp->getConfig().setAppPath(achBuf);
     pPhp->getConfig().setMaxConns(50);
     pPhp->getConfig().setTimeout(60);
@@ -4258,8 +4255,8 @@ int HttpServerImpl::initLscpd()
     pPhp->getConfig().addEnv("PHP_LSAPI_CHILDREN=20");
 
     //listener
-    strcat(achBuf1, "/key.pem");
-    strcpy(pEnd, "/cert.pem");
+    lstrncat(achBuf1, "/key.pem", achBuf1);
+    lstrncpy(pEnd, "/cert.pem", sizeof(achBuf) - (pEnd - achBuf));
     HttpListener *pListener = addListener("DefaultSSL", LSCPD_LISTENER_ADDRESS);
     if (!pListener)
     {
@@ -4292,14 +4289,16 @@ int HttpServerImpl::initLscpd()
     pVHost->getRootContext().inherit(&HttpServer::getInstance().getServerContext());
     pVHost->contextInherit();
 
-    strcpy(pEnd, "/" LSCPD_VHOST_NAME "/");
+    lstrncpy(pEnd, "/" LSCPD_VHOST_NAME "/", sizeof(achBuf) - (pEnd - achBuf));
     pVHost->setVhRoot(achBuf);
-    strcpy(pEnd, "/" LSCPD_VHOST_NAME "/logs/error.log");
+    lstrncpy(pEnd, "/" LSCPD_VHOST_NAME "/logs/error.log",
+            sizeof(achBuf) - (pEnd - achBuf));
     pVHost->setErrorLogFile(achBuf);
     pVHost->setErrorLogRollingSize( 10 * 1024 * 1024, 30 );
     pVHost->setLogLevel( "DEBUG" );
 
-    strcpy(pEnd, "/" LSCPD_VHOST_NAME "/access.log");
+    lstrncpy(pEnd, "/" LSCPD_VHOST_NAME "/access.log",
+            sizeof(achBuf) - (pEnd - achBuf));
     pVHost->setAccessLogFile(achBuf, 1 );
     pVHost->getLogger()->getAppender()->setRollingSize(30 * 1024 * 1024);
     pVHost->getLogger()->getAppender()->setKeepDays(30);
@@ -4377,10 +4376,10 @@ int HttpServerImpl::initSampleServer()
     HttpServerConfig &serverConfig = HttpServerConfig::getInstance();
     char achBuf[256], achBuf1[256];
     char *p = achBuf;
-    strcpy(p, MainServerConfig::getInstance().getServerRoot());
+    lstrncpy(p, MainServerConfig::getInstance().getServerRoot(), sizeof(achBuf));
     assert(p != NULL);
     char *pEnd = p + strlen(p);
-    strcpy(achBuf1, achBuf);
+    lstrncpy(achBuf1, achBuf, sizeof(achBuf1));
 
     m_dispatcher.init("poll");
 
@@ -4413,14 +4412,14 @@ int HttpServerImpl::initSampleServer()
     AccessControl::setAccessCtrl(&m_accessCtrl);
     //strcpy( pEnd, "/logs/error.log" );
     //setErrorLogFile( achBuf );
-    strcpy(pEnd, "/logs/access.log");
+    lstrncpy(pEnd, "/logs/access.log", sizeof(achBuf) - (pEnd - achBuf));
     HttpLog::setAccessLogFile(achBuf, 0);
-    strcpy(pEnd, "/logs/stderr.log");
+    lstrncpy(pEnd, "/logs/stderr.log", sizeof(achBuf) - (pEnd - achBuf));
     StdErrLogger::getInstance().setLogFileName(achBuf);
     HttpLog::setLogPattern("%d [%p] %m");
     HttpLog::setLogLevel("DEBUG");
-    strcat(achBuf1, "/cert/server.crt");
-    strcpy(pEnd, "/cert/server.pem");
+    lstrncat(achBuf1, "/cert/server.crt", sizeof(achBuf1));
+    lstrncpy(pEnd, "/cert/server.pem", sizeof(achBuf) - (pEnd - achBuf));
 
 
 
@@ -4448,7 +4447,7 @@ int HttpServerImpl::initSampleServer()
         &HttpServer::getInstance().getServerContext());
     pVHost2->getRootContext().setParent(
         &HttpServer::getInstance().getServerContext());
-    strcpy(pEnd, "/logs/vhost1.log");
+    lstrncpy(pEnd, "/logs/vhost1.log", sizeof(achBuf) - (pEnd - achBuf));
     pVHost->setErrorLogFile(achBuf);
     pVHost->setErrorLogRollingSize(8192, 10);
     pVHost->setLogLevel("DEBUG");
@@ -4468,7 +4467,7 @@ int HttpServerImpl::initSampleServer()
     pLimit->setStaticReqLimit(20);
 
     //load Http mime types
-    strcpy(pEnd, "/conf/mime.properties");
+    lstrncpy(pEnd, "/conf/mime.properties", sizeof(achBuf) - (pEnd - achBuf));
     if (HttpMime::getMime()->loadMime(achBuf) == 0)
     {
     }
@@ -4478,14 +4477,15 @@ int HttpServerImpl::initSampleServer()
     StaticFileCacheData::setUpdateStaticGzipFile(1, 6, 300, 1024 * 1024);
 
     //protected context
-    strcpy(pEnd, "/wwwroot/protected/");
+    lstrncpy(pEnd, "/wwwroot/protected/", sizeof(achBuf) - (pEnd - achBuf));
     HttpContext *pContext = pVHost->addContext("/protected/",
                             HandlerType::HT_NULL, achBuf, NULL, true);
 
 
 
-    strcpy(pEnd, "/htpasswd");
-    strcpy(&achBuf1[pEnd - achBuf], "/htgroup");
+    lstrncpy(pEnd, "/htpasswd", sizeof(achBuf) - (pEnd - achBuf));
+    lstrncpy(&achBuf1[pEnd - achBuf], "/htgroup",
+            sizeof(achBuf1) - (pEnd - achBuf));
     UserDir *pDir
         = pVHost->getFileUserDir("RistrictedArea", achBuf, achBuf1);
 
@@ -4509,11 +4509,12 @@ int HttpServerImpl::initSampleServer()
         m_serverContext.addFilesMatchContext(pContext);
     }
 
-    strcpy(pEnd, "/wwwroot/");
+    lstrncpy(pEnd, "/wwwroot/", sizeof(achBuf) - (pEnd - achBuf));
     pContext =  pVHost->addContext("/", HandlerType::HT_NULL, achBuf, NULL,
                                    true);
 
-    strcpy(pEnd, "/wwwroot/phpinfo.php$3?username=$1");
+    lstrncpy(pEnd, "/wwwroot/phpinfo.php$3?username=$1",
+            sizeof(achBuf) - (pEnd - achBuf));
     HttpContext *pMatchContext = new HttpContext();
     pVHost->setContext(pMatchContext, "exp: ^/~(([a-z])[a-z0-9]+)(.*)",
                        HandlerType::HT_NULL, achBuf, NULL, true);
@@ -4543,7 +4544,7 @@ int HttpServerImpl::initSampleServer()
 
 
     //CGI context
-    strcpy(pEnd, "/cgi-bin/");
+    lstrncpy(pEnd, "/cgi-bin/", sizeof(achBuf) - (pEnd - achBuf));
     pContext = pVHost->addContext("/cgi-bin/", HandlerType::HT_CGI,
                                   achBuf, "lscgid", true);
 
@@ -4563,7 +4564,7 @@ int HttpServerImpl::initSampleServer()
     pProxy->getConfigPointer()->setMaxConns(10);
 
     //Fast cgi application
-    strcpy(pEnd, "/fcgi-bin/lt-echo-cpp");
+    lstrncpy(pEnd, "/fcgi-bin/lt-echo-cpp", sizeof(achBuf) - (pEnd - achBuf));
     //strcpy( pEnd, "/fcgi-bin/echo" );
     //FcgiApp * pFcgiApp = addFcgiApp( "localhost:5558" );
     FcgiApp *pFcgiApp = (FcgiApp *)ExtAppRegistry::addApp(
@@ -4576,7 +4577,7 @@ int HttpServerImpl::initSampleServer()
     pFcgiApp->getConfig().setMaxConns(3);
 
 
-    strcpy(pEnd, "/fcgi-bin/logger.pl");
+    lstrncpy(pEnd, "/fcgi-bin/logger.pl", sizeof(achBuf) - (pEnd - achBuf));
     pFcgiApp = (FcgiApp *)ExtAppRegistry::addApp(
                    EA_LOGGER, "logger");
     assert(pFcgiApp);
@@ -4590,7 +4591,7 @@ int HttpServerImpl::initSampleServer()
     pVHost->getAccessLog()->setLogHeaders(LOG_REFERER | LOG_USERAGENT);
     pFcgiApp->getConfig().setVHost(pVHost);
 
-    strcpy(pEnd, "/fcgi-bin/php");
+    lstrncpy(pEnd, "/fcgi-bin/php", sizeof(achBuf) - (pEnd - achBuf));
     pFcgiApp = (FcgiApp *)ExtAppRegistry::addApp(
                    EA_FCGI, "php-fcgi");
     assert(pFcgiApp);
@@ -4642,7 +4643,7 @@ int HttpServerImpl::initSampleServer()
 //    CgidWorker::start("/home/gwang/lsws/", NULL, getuid(), getgid(),
 //                        getpriority(PRIO_PROCESS, 0));
 
-    strcpy(pEnd, "/wwwroot/");
+    lstrncpy(pEnd, "/wwwroot/", sizeof(achBuf) - (pEnd - achBuf));
     //printf( "WWW root = %s\n", achBuf );
     pVHost->setDocRoot(achBuf);
     ConfigCtx::getCurConfigCtx()->setDocRoot(achBuf);
@@ -4665,7 +4666,7 @@ int HttpServerImpl::initSampleServer()
     pVHost->contextInherit();
     endConfig(0);
 
-    strcpy(pEnd, "/conf/httpd.conf");
+    lstrncpy(pEnd, "/conf/httpd.conf", sizeof(achBuf) - (pEnd - achBuf));
     return 0;
 }
 
@@ -4689,23 +4690,25 @@ int HttpServer::test_main(const char *pArgv0)
     if (*pArgv0 != '/')
     {
         getcwd(achServerRoot, sizeof(achServerRoot) - 1);
-        strcat(achServerRoot, "/" );
+        lstrncat(achServerRoot,"/", sizeof(achServerRoot));
     }
     else
         achServerRoot[0] = 0;
-    strncat(achServerRoot, pArgv0,
-            sizeof(achServerRoot) -1 - strlen(achServerRoot));
+    lstrncat(achServerRoot, pArgv0, sizeof(achServerRoot));
     const char *pEnd = strrchr(achServerRoot, '/');
-    --pEnd;
-    while (pEnd > achServerRoot && *pEnd != '/')
+    if (pEnd)
+    {
         --pEnd;
-    --pEnd;
-    while (pEnd > achServerRoot && *pEnd != '/')
+        while (pEnd > achServerRoot && *pEnd != '/')
+            --pEnd;
         --pEnd;
-    ++pEnd;
+        while (pEnd > achServerRoot && *pEnd != '/')
+            --pEnd;
+        ++pEnd;
 
-    strcpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot");
-
+        lstrncpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot",
+                 sizeof(achServerRoot) - (pEnd - achServerRoot));
+    }
     MainServerConfig::getInstance().setServerRoot(achServerRoot);
 
 //    if ( fetch.startReq( "http://www.litespeedtech.com/index.html", 0, "lst_index.html" ) == 0 )
@@ -4721,8 +4724,8 @@ int HttpServer::test_main(const char *pArgv0)
     if ( pid == 0 )
     {
         char achCmd[4096];
-        strcpy( achCmd, MainServerConfig::getInstance().getServerRoot() );
-        strcat( achCmd, "/wwwroot/systemTest" );
+        lstrncpy( achCmd, MainServerConfig::getInstance().getServerRoot(), sizeof(achCmd) );
+        lstrncat( achCmd, "/wwwroot/systemTest", sizeof(achCmd) );
         sleep( 5 );
         printf( "run systemTest..." );
         system( achCmd );

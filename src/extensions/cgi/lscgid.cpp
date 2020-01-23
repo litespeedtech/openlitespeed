@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -373,8 +373,8 @@ static int cgroup_env(lscgid_t *pCGI)
 static int cgroup_activate(lscgid_t *pCGI)
 {
     int rc = -1;
-    CGroupUse *use;
-    CGroupConn *conn;
+    CGroupUse *use = NULL;
+    CGroupConn *conn = NULL;
 
     int uid = geteuid();
     seteuid(0);
@@ -395,6 +395,10 @@ static int cgroup_activate(lscgid_t *pCGI)
             rc = 0;
     }
     seteuid(uid);
+    if (use)
+        delete use;
+    if (conn)
+        delete conn;
     return rc;
 }
 
@@ -689,7 +693,7 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
     if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)
     {
         uint32_t pid = (uint32_t)getpid();
-        write(STDOUT_FILENO, &pid, 4);
+        write(STDOUT_FILENO, (const void *)&pid, sizeof(pid));
     }
 
     cur = time(NULL);

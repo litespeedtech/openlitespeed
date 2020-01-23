@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -123,12 +123,19 @@ class NtwkIOLink::fp_list_list  *NtwkIOLink::s_pCur_fp_list_list =
         &NtwkIOLink::s_fp_list_list_normal;
 
 NtwkIOLink::NtwkIOLink()
-    : m_sessionHooks()
+    : m_pVHostMap(NULL)
+    , m_iRemotePort(0)
+    , m_iInProcess(0)
+    , m_iPeerShutdown(0)
+    , m_tmToken(0)
+    , m_iSslLastWrite(0)
+    , m_iHeaderToSend(0)
+    , m_pFpList(NULL)
+    , m_sessionHooks()
+    , m_hasBufferedData(0)
     , m_aioSFQ()
 {
-    m_hasBufferedData = 0;
     m_pModuleConfig = NULL;
-
 }
 
 
@@ -305,6 +312,9 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
                     pInfo->m_pServerAddrInfo,
                     pInfo->m_remotePort);
     }
+    else
+        assert(pInfo); // Coverity claims that this must not be NULL!
+
     setConnInfo(pInfo);
     setState(HIOS_CONNECTED);
     setHandler(NULL);

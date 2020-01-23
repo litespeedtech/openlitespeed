@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -29,7 +29,6 @@
 int bigValue        = 0;
 int bigCount        = 0;
 int loopCount       = 10000000;
-int numThreads      = 5;
 
 #ifdef notdef
 #define barrier() __sync_synchronize()
@@ -490,6 +489,7 @@ int main(int ac, char *av[])
 {
     int i;
     int index;
+    int numThreads      = 5;
 
     if (ac > 2)
     {

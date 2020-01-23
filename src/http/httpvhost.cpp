@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -151,7 +151,7 @@ void HttpVHost::offsetChroot(const char *pChroot, int len)
         pOldName = m_pAccessLog[0]->getAppender()->getName();
         if (strncmp(pChroot, pOldName, len) == 0)
         {
-            strcpy(achTemp, pOldName + len);
+            lstrncpy(achTemp, pOldName + len, sizeof(achTemp));
             m_pAccessLog[0]->getAppender()->setName(achTemp);
         }
     }
@@ -162,7 +162,7 @@ void HttpVHost::offsetChroot(const char *pChroot, int len)
         {
             m_pLogger->getAppender()->close();
             off_t rollSize = m_pLogger->getAppender()->getRollingSize();
-            strcpy(achTemp, pOldName + len);
+            lstrncpy(achTemp, pOldName + len, sizeof(achTemp));
             setErrorLogFile(achTemp);
             m_pLogger->getAppender()->setRollingSize(rollSize);
         }
@@ -255,10 +255,12 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_gid(500)
     , m_iRewriteLogLevel(0)
     , m_iGlobalMatchContext(1)
+    , m_iDummy2(0)
     , m_pRewriteMaps(NULL)
     , m_pSSLCtx(NULL)
     , m_pSSITagConfig(NULL)
     , m_pRecaptcha(NULL)
+    , m_lastAccessLog(NULL)
     , m_PhpXmlNodeSSize(0)
 {
     char achBuf[10] = "/";
@@ -554,7 +556,7 @@ void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
     }
     if (procConfig.getChroot() != NULL)
     {
-        strcpy(p, procConfig.getChroot()->c_str());
+        lstrncpy(p, procConfig.getChroot()->c_str(), sizeof(achBuf));
         p += procConfig.getChroot()->len();
     }
     memccpy(p, pPath, 0, &achBuf[8191] - p);
@@ -609,7 +611,10 @@ HttpContext *HttpVHost::setContext(HttpContext *pContext,
         int ret =  pContext->set(pUri, pLocation, pHdlr, allowBrowse, match);
         if (ret)
         {
-            LOG_ERR_CODE(ret);
+            if (ret != -1)
+                LOG_ERR_CODE(ret);
+            else
+                LS_ERROR("[%s] Error setting context\n", TmpLogId::getLogId());
             delete pContext;
             pContext = NULL;
         }
@@ -680,9 +685,9 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
     {
         char achRealPath[MAX_PATH_LEN];
         int locLen = pContext->getLocationLen();
-        strncpy(achRealPath, pContext->getLocation(), locLen);
+        lstrncpy(achRealPath, pContext->getLocation(), sizeof(achRealPath));
 
-        strcpy(achRealPath + locLen, missLoc.c_str());
+        lstrncpy(achRealPath + locLen, missLoc.c_str(), sizeof(achRealPath) - locLen);
 
         HttpContext *pContext0 = addContext(missURI.c_str(), HandlerType::HT_NULL,
                               achRealPath, NULL, 1);
@@ -707,7 +712,7 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
         if (enableAutoLoadHt())
         {
             //If have .htaccess in this DIR, load it
-            strcat(achRealPath, ".htaccess");
+            lstrncat(achRealPath, ".htaccess", sizeof(achRealPath));
             pContext->configRewriteRule(NULL, NULL, achRealPath);
         }
     }
@@ -849,7 +854,7 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
      */
     char achBuf2[MAX_PATH_LEN];
     char *pPath2 = achBuf2;
-    strcpy(pPath2, pPath);
+    lstrncpy(pPath2, pPath, sizeof(achBuf2));
     if (ConfigCtx::getCurConfigCtx()->checkPath(pPath2, "document root",
             followSymLink()) == -1)
         return LS_FAIL;
@@ -909,8 +914,7 @@ int HttpVHost::configWebsocket(const XmlNode *pWebsocketNode)
 
     if (pContext == NULL)
     {
-        strcpy(achVPath, "$DOC_ROOT");
-        strcat(achVPath, pUri);
+        snprintf(achVPath, sizeof(achVPath), "$DOC_ROOT%s", pUri);
         ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath, achVPath);
         pContext = addContext(pUri, HandlerType::HT_NULL, achRealPath, NULL, 1);
 
@@ -1254,7 +1258,8 @@ HttpContext *HttpVHost::addContext(int match, const char *pUri, int type,
         {
             if (strcmp(pUri, "/") == 0)
             {
-                setContext(pOld, pUri, type, pLocation, pHandler, allowBrowse, match);
+                pOld = setContext(pOld, pUri, type, pLocation, pHandler,
+                                  allowBrowse, match);
                 return pOld;
             }
 
@@ -1302,7 +1307,7 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
 
                 if ((match) && (isdigit(* (pLocation + 1))))
                 {
-                    strcpy(achRealPath, pLocation);
+                    lstrncpy(achRealPath, pLocation, sizeof(achRealPath));
                     break;
                 }
 
@@ -1547,7 +1552,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
         return pWorker;
     pWorker = (LocalWorker *)ExtAppRegistry::addApp(EA_LSAPI, achAppName);
 
-    strcpy(&achFileName[pathLen], "tmp/sockets");
+    lstrncpy(&achFileName[pathLen], "tmp/sockets", sizeof(achFileName) - pathLen);
     //if ( access( achFileName, W_OK ) == -1 )
     {
         buildUdsSocket(achName, 108 + 5, getName(), pAppName);
@@ -1631,7 +1636,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
     char achURI[MAX_URI_LEN];
     int uriLen = strlen(pURI);
 
-    strcpy(achURI, pURI);
+    lstrncpy(achURI, pURI, sizeof(achURI));
     if (achURI[uriLen - 1] != '/')
     {
         achURI[uriLen++] = '/';
@@ -1657,7 +1662,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
     if (!pContext)
         return NULL;
 
-    strcpy(&achURI[uriLen], "dispatch.rb");
+    lstrncpy(&achURI[uriLen], "dispatch.rb", sizeof(achURI) - uriLen);
     HttpContext *pDispatch = addContext(achURI,
                                         HandlerType::HT_NULL,
                                         NULL, NULL, 1);
@@ -1675,7 +1680,7 @@ HttpContext *HttpVHost::addRailsContext(const char *pURI, const char *pLocation,
         if ( pDispatch )
             pDispatch->setHandler( pWorker );
     */
-    strcpy(&achURI[uriLen], "dispatch.lsapi");
+    lstrncpy(&achURI[uriLen], "dispatch.lsapi", sizeof(achURI) - uriLen);
     pDispatch = addContext(achURI, HandlerType::HT_NULL,
                            NULL, NULL, 1);
     if (pDispatch)
@@ -1847,7 +1852,7 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     char achURI[MAX_URI_LEN];
     int uriLen = strlen(pURI);
 
-    strcpy(achURI, pURI);
+    lstrncpy(achURI, pURI, sizeof(achURI));
 
     if (achURI[uriLen - 1] != '/')
     {
@@ -1879,11 +1884,13 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     //FIXME any reason for the below code
     pContext->setWebSockAddr(pWorker->getConfigPointer()->getServerAddr());
 
+
     char appURL[MAX_URI_LEN];
     if (!pStartupFile || *pStartupFile == '\0')
         pStartupFile = "index.wsgi";
     memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
     snprintf(appURL, sizeof(appURL), "%s%s", pLocation, pStartupFile);
+
 
     HttpContext *pDispatch;
 
@@ -1900,6 +1907,7 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     pContext->setPythonContext();
     return pContext;
 }
+
 
 
 int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
@@ -1984,7 +1992,7 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
         return pWorker;
     pWorker = (LocalWorker *)ExtAppRegistry::addApp(EA_PROXY, achAppName);
 
-    strcpy(&achFileName[pathLen], "tmp/sockets");
+    lstrncpy(&achFileName[pathLen], "tmp/sockets", sizeof(achFileName) - pathLen);
     //if ( access( achFileName, W_OK ) == -1 )
     {
         buildUdsSocket(achName, 108 + 5, this->getName(), pAppName);
@@ -2074,7 +2082,7 @@ HttpContext *HttpVHost::addNodejsContext(const char *pURI,
     char achURI[MAX_URI_LEN];
     int uriLen = strlen(pURI);
 
-    strcpy(achURI, pURI);
+    lstrncpy(achURI, pURI, sizeof(achURI));
 
     if (achURI[uriLen - 1] != '/')
     {
@@ -2157,7 +2165,14 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
     const char *pStartupFile = ConfigCtx::getCurConfigCtx()->getTag(pNode, "startupFile", 0, 0);
     const char *pBinPath = pNode->getChildValue("binPath");
 
-    ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
+    int ret = ConfigCtx::getCurConfigCtx()->getAbsolutePath(achAppRoot, appPath);
+    if (ret == -1)
+    {
+        LS_WARN("[%s] app path to application is invalid!",
+                 TmpLogId::getLogId());
+        return NULL;
+    }
+
 
     int appType = HandlerType::HT_APPSERVER;
     const char *sType = ConfigCtx::getCurConfigCtx()->getTag(pNode, "appType");
@@ -2364,7 +2379,7 @@ int HttpVHost::configAwstats(const char *vhDomain, int vhAliasesLen,
     }
 
     Awstats *pAwstats = new Awstats();
-    pAwstats->config(this, val, achBuf, pAwNode,
+    pAwstats->config(this, val, achBuf, sizeof(achBuf), pAwNode,
                      iconURI, vhDomain, vhAliasesLen);
     return 0;
 }
@@ -2399,7 +2414,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
         return NULL;
     }
 
-    strcpy(&achFileName[pathLen], "WEB-INF/web.xml");
+    lstrncpy(&achFileName[pathLen], "WEB-INF/web.xml", sizeof(achFileName) - pathLen);
 
     if (access(achFileName, F_OK) != 0)
     {
@@ -2410,7 +2425,7 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
 
     char achURI[MAX_URI_LEN];
     int uriLen = strlen(contextUri);
-    strcpy(achURI, contextUri);
+    lstrncpy(achURI, contextUri, sizeof(achURI));
 
     if (achFileName[pathLen - 1] != '/')
         ++pathLen;
@@ -2448,8 +2463,8 @@ HttpContext *HttpVHost::importWebApp(const char *contextUri,
         return NULL;
     }
 
-    strcpy(&achURI[uriLen], "WEB-INF/");
-    strcpy(&achFileName[pathLen], "WEB-INF/");
+    lstrncpy(&achURI[uriLen], "WEB-INF/", sizeof(achURI) - uriLen);
+    lstrncpy(&achFileName[pathLen], "WEB-INF/", sizeof(achFileName) - pathLen);
     HttpContext *pInnerContext;
     pInnerContext = configContext(achURI, HandlerType::HT_NULL,
                                   achFileName, NULL, false);
@@ -2488,7 +2503,7 @@ void HttpVHost::configServletMapping(XmlNode *pRoot, char *pachURI,
                 if (*pUrlPattern == '/')
                     ++pUrlPattern;
 
-                strcpy(&pachURI[iUriLen], pUrlPattern);
+                lstrncpy(&pachURI[iUriLen], pUrlPattern, MAX_URI_LEN - iUriLen);
                 int patternLen = strlen(pUrlPattern);
 
                 //remove the trailing '*'
@@ -2584,7 +2599,6 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
     pLocation = pContextNode->getChildValue("location");
     AutoStr2 defLocation;
-    bool needUpdate = false;
     if (!pLocation || strlen(pLocation) == 0)
     {
         if (match)
@@ -2597,26 +2611,12 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
-    else if (type != HandlerType::HT_REDIRECT)
+    else if (type != HandlerType::HT_REDIRECT && 
+        *pLocation != '$' && *pLocation != '/')
     {
-        if (*pLocation != '$' && *pLocation != '/')
-        {
-            defLocation.setStr("$DOC_ROOT/");
-            defLocation.append(pLocation, strlen(pLocation));
-            needUpdate = true;
-        }
-  
-        //If pLocation does not have tail /, add it now
-        if (!match && *(pLocation + strlen(pLocation) - 1) != '/' )
-        {
-            if (!needUpdate)
-                defLocation.setStr(pLocation);
-            defLocation.append("/", 1);
-            needUpdate = true;
-        }
-        
-        if (needUpdate)
-            pLocation = defLocation.c_str();
+        defLocation.setStr("$DOC_ROOT/");
+        defLocation.append(pLocation, strlen(pLocation));
+        pLocation = defLocation.c_str();
     }
 
     pHandler = pContextNode->getChildValue("handler");
@@ -2637,8 +2637,11 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
         pHandler = achHandler;
     }
 
+
     allowBrowse = ConfigCtx::getCurConfigCtx()->getLongValue(pContextNode,
                   "allowBrowse", 0, 1, 1);
+
+
 
     if ((*pUri != '/') && (!match))
     {
@@ -2808,8 +2811,7 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList
                 {
                     char achVPath[MAX_PATH_LEN];
                     char achRealPath[MAX_PATH_LEN];
-                    strcpy(achVPath, "$DOC_ROOT");
-                    strcat(achVPath, pValue);
+                    snprintf(achVPath, sizeof(achVPath), "$DOC_ROOT%s", pValue);
                     ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath, achVPath);
                     pContext = addContext(pValue, HandlerType::HT_NULL, achRealPath, NULL, 1);
                     if (pContext == NULL)
@@ -3209,8 +3211,8 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
     {
         LS_DBG_L("[VHost:%s] start to config its own php handler, size %d.",
                  getName(), getPhpXmlNodeSSize());
-        ExtAppRegistry::configVhostOwnPhp(this);
-        configVHScriptHandler2();
+        if (ExtAppRegistry::configVhostOwnPhp(this) == 0)
+            configVHScriptHandler2();
     }
 
     configAwstats(ConfigCtx::getCurConfigCtx()->getVhDomain()->c_str(),

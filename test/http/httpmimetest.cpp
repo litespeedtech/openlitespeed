@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -28,30 +28,34 @@
 
 extern const char *argv0;
 
-const char *get_server_root(char *achServerRoot)
+const char *get_server_root(char *achServerRoot, ssize_t sz)
 {
     if (*argv0 != '/')
     {
-        getcwd(achServerRoot, sizeof(achServerRoot) - 1);
-        strcat(achServerRoot, "/" );
+        if (getcwd(achServerRoot, sz))
+            lstrncat(achServerRoot, "/", sz);
     }
     else
         achServerRoot[0] = 0;
-    strncat(achServerRoot, argv0,
-            sizeof(achServerRoot) -1 - strlen(achServerRoot));
+    lstrncat(achServerRoot, argv0, sz);
     const char *pEnd = strrchr(achServerRoot, '/');
-    --pEnd;
-    while (pEnd > achServerRoot && *pEnd != '/')
+    if (pEnd)
+    {
         --pEnd;
-    --pEnd;
-    while (pEnd > achServerRoot && *pEnd != '/')
+        while (pEnd > achServerRoot && *pEnd != '/')
+            --pEnd;
         --pEnd;
-    ++pEnd;
+        while (pEnd > achServerRoot && *pEnd != '/')
+            --pEnd;
+        ++pEnd;
 
-    strcpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot");
+        lstrncpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot",
+                 sz - (pEnd - achServerRoot));
+    }
+    else
+        lstrncpy(achServerRoot, "/", sz);
     return achServerRoot;
 }
-
 
 
 
@@ -66,12 +70,12 @@ TEST(HttpMimeTest_runTest)
     char achServerRoot[1024];
     char achBuf[256];
     char *p = achBuf;
-    strcpy(p, get_server_root(achServerRoot));
+    lstrncpy(p, get_server_root(achServerRoot, sizeof(achServerRoot)), sizeof(achBuf));
     CHECK(p != NULL);
     char *pEnd = p + strlen(p);
 
 //   CHECK(m.loadMime("/proj/httpd/httpd/serverroot/conf/m2")!=0);
-    strcpy(pEnd, "/conf/m2");
+    lstrncpy(pEnd, "/conf/m2", sizeof(achBuf) - (pEnd - achBuf));
     ret = m.loadMime(achBuf);
     CHECK(ret == 0);
     if (ret != 0)
@@ -91,7 +95,7 @@ TEST(HttpMimeTest_runTest)
     CHECK(strcmp(pOldType, "image/jpeg") == 0);
     pOldType2 = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
     CHECK(strcmp(pOldType2, "application/gzip0") == 0);
-    strcpy(pEnd, "/conf/m1");
+    lstrncpy(pEnd, "/conf/m1", sizeof(achBuf) - (pEnd - achBuf));
     m.loadMime(achBuf);
     CHECK(strcmp(m.getFileMime("as/dadf/abc.html")->getMIME()->c_str(),
                  "text/html") == 0);
@@ -103,7 +107,7 @@ TEST(HttpMimeTest_runTest)
     CHECK(strcmp(pNewType2, "application/gzip") == 0);
     CHECK(pNewType2 != pOldType2);
     CHECK(strcmp(pOldType2, "application/gzip0") == 0);
-    strcpy(pEnd, "/conf/m2");
+    lstrncpy(pEnd, "/conf/m2", sizeof(achBuf) - (pEnd - achBuf));
     m.loadMime(achBuf);
     pNewType = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
     CHECK(strcmp(pNewType, "application/gzip0") == 0);
@@ -111,7 +115,7 @@ TEST(HttpMimeTest_runTest)
     CHECK(pNewType == pOldType2);
     CHECK(strcmp(pOldType2, "application/gzip0") == 0);
     CHECK(strcmp(pNewType2, "application/gzip") == 0);
-    strcpy(pEnd, "/conf/m2");
+    lstrncpy(pEnd, "/conf/m2", sizeof(achBuf) - (pEnd - achBuf));
     m.loadMime(achBuf);
     pNewType2 = m.getFileMime("asdsa/sda3.gzip")->getMIME()->c_str();
     CHECK(pNewType == pNewType2);

@@ -152,7 +152,7 @@ add_executable(ols_unittest
 
 
 
-
+set ( libUnitTest UnitTest++ )
 # NOTE: When creating a new directory, the order it is placed in this list
 # matters.  Everything listed depends on things listed AFTER it, though
 # it won't depend on everything after it.  Inter-dependency may be fixed

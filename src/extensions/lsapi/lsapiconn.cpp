@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -56,16 +56,10 @@ inline void swapIntEndian(int *pInteger)
 
 
 LsapiConn::LsapiConn()
-    : m_pid(-1)
-    , m_iTotalPending(0)
-    , m_iPacketLeft(0)
-    , m_iPacketHeaderLeft(0)
-    , m_lReqBeginTime(0)
-    , m_lReqSentTime(0)
-    , m_lsreq(&m_iovec)
-    , m_respState(LSAPI_CONN_IDLE)
-
+    : m_lsreq(&m_iovec)
+    , m_pid(-1)
 {
+    LS_ZERO_FILL(m_iTotalPending, m_respInfo);
 }
 
 
@@ -560,7 +554,7 @@ int LsapiConn::processRespBuffed()
                 break;
             case LSAPI_STDERR_STREAM:
                 LS_DBG_M(this, "Process STDERR stream %d bytes", len);
-                ret = pHEC->processErrData(m_pRespHeaderProcess, len);
+                pHEC->processErrData(m_pRespHeaderProcess, len);
                 m_pRespHeaderProcess += len;
                 break;
             default:
@@ -589,7 +583,7 @@ int LsapiConn::processResp()
             ret = read(((char *)&m_respHeader) + sizeof(m_respHeader) -
                        m_iPacketHeaderLeft,
                        m_iPacketHeaderLeft);
-            LS_DBG_M(this, "Process packet header %d bytes", ret);
+            LS_DBG_M(this, "Process packet header %d bytes.", ret);
             if (ret > 0)
             {
                 m_iPacketHeaderLeft -= ret;
@@ -608,7 +602,7 @@ int LsapiConn::processResp()
 
                     }
                     else
-                        LS_DBG_M(getLogger(), "[%s] received %s, packetLen: %d",
+                        LS_DBG_M(getLogger(), "[%s] received %s, packetLen: %d.",
                                  getLogId(), s_packetName[m_respHeader.m_type],
                                  m_respHeader.m_packetLen.m_iLen);
 
@@ -674,7 +668,7 @@ int LsapiConn::processResp()
                     return ret;
                 break;
             case LSAPI_REQ_RECEIVED:
-                ret = readNotifyStream();
+                readNotifyStream();
                 break;
             default:
                 //error: protocol error
@@ -888,7 +882,7 @@ int LsapiConn::readRespBody()
                 m_iPacketHeaderLeft = LSAPI_PACKET_HEADER_LEN;
                 if (ret > packetLen)
                 {
-                    LS_DBG_M(this, "Process packet header %d bytes",
+                    LS_DBG_M(this, "Process Packet header %d bytes",
                              ret - packetLen);
                     int len1 = processPacketHeader(pBuf + packetLen,
                                                    ret - packetLen);
@@ -994,7 +988,7 @@ int LsapiConn::readStderrStream()
         if (ret > 0)
         {
             int len, packetLen;
-            LS_DBG_M(this, "Process STDERR stream %d bytes, packet left: %d",
+            LS_DBG_M(this, "[LSAPI:STDERR]:Process STDERR stream %d bytes, packet left: %d",
                      ret, m_iPacketLeft);
             if (ret >= m_iPacketLeft)
             {
@@ -1029,7 +1023,7 @@ int LsapiConn::readStderrStream()
                 m_iPacketHeaderLeft = LSAPI_PACKET_HEADER_LEN;
                 if (ret > packetLen)
                 {
-                    LS_DBG_M(this, "Process packet header %d bytes",
+                    LS_DBG_M(this, "[LSAPI:STDERR]:Process Packet header %d bytes.",
                              ret - packetLen);
                     len = processPacketHeader(pBuf + packetLen, ret - packetLen);
                     if (len <= 0)

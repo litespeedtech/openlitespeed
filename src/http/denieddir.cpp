@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,6 +18,7 @@
 #include "denieddir.h"
 
 #include <lsdef.h>
+#include <log4cxx/logger.h>
 #include <util/autostr.h>
 
 #include <stdio.h>
@@ -60,7 +61,7 @@ static int compare(const void *val1, const void *val2)
 
 void DeniedDir::sort()
 {
-    ::qsort(begin(), size(), sizeof(DirItem **), compare);
+    ::qsort(begin(), size(), sizeof(DirItem *), compare);
 }
 
 
@@ -124,15 +125,14 @@ int DeniedDir::addDir(const char *pDir)
         //    break;
         //}
         int len = strlen(pDir);
-        //if ( len >= 256 - 1 )
-        //{
-        //    LS_ERROR( "[config] denied path is too long - %s!", pDir ));
-        //    break;
-        //}
-        char buf[256];
+        if (len >= 1023)
+        {
+            LS_ERROR("[config] denied path is too long - %s!", pDir);
+            break;
+        }
+        char buf[1024];
         bool includeSub = false;
-        strcpy(buf, pDir);
-        char *pEnd = buf + len - 1;
+        char *pEnd = lstrncpy(buf, pDir, sizeof(buf)) - 1;
         if (*(pEnd) == '*')
         {
             includeSub = true;

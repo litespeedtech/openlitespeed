@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -255,8 +255,9 @@ int SpdyZlibFilter::init(int isInflator, int verSpdy)
         else
             ret = deflateInit(&m_stream, -1);
 
-        ret = deflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
-                                   s_dictsLen[ m_iVersion ]);
+        if (ret != Z_STREAM_ERROR)
+            ret = deflateSetDictionary(&m_stream, s_dicts[ m_iVersion ],
+                                       s_dictsLen[ m_iVersion ]);
     }
 
     return ret;

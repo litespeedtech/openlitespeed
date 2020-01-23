@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -34,10 +34,9 @@ class HTAuth
 {
     char       *m_pName;
     char       *m_authHeader;
-    int         m_authHeaderLen;
     UserDir    *m_pUserDir;
-    short       m_iAuthType;
-    short       m_iAuthTypeUsed;
+    int         m_authHeaderLen;
+    int         m_iAuthType;
 
     HTAuth(const HTAuth &rhs);
     void operator=(const HTAuth &rhs);

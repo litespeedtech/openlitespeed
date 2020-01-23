@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -36,8 +36,7 @@ char *argv0 = NULL;
 //     }
 //     else
 //         achServerRoot[0] = 0;
-//     strncat(achServerRoot, argv0,
-//             sizeof(achServerRoot) -1 - strlen(achServerRoot));
+//     lstrncat(achServerRoot, argv0, sizeof(achServerRoot));
 //     const char *pEnd = strrchr(achServerRoot, '/');
 //     --pEnd;
 //     while (pEnd > achServerRoot && *pEnd != '/')
@@ -46,7 +45,7 @@ char *argv0 = NULL;
 //     while (pEnd > achServerRoot && *pEnd != '/')
 //         --pEnd;
 //     ++pEnd;
-// 
+//
 //     strcpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot");
 //     pServerRoot = strdup(achServerRoot);
 // }

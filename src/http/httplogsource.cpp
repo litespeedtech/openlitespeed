@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -204,22 +204,22 @@ int HttpLogSource::initAllLog(const char *pRoot)
 {
     char achBuf[256], achBuf1[256];
     char *p = achBuf;
-    strcpy(p, pRoot);
+    lstrncpy(p, pRoot, sizeof(achBuf));
     char *pEnd = p + strlen(p);
-    strcpy(achBuf1, achBuf);
+    lstrncpy(achBuf1, achBuf, sizeof(achBuf1));
 
-    strcpy(pEnd, "/logs/error.log");
+    lstrncpy(pEnd, "/logs/error.log", sizeof(achBuf) - (pEnd - p));
     setErrorLogFile(achBuf);
     setLogLevel("DEBUG");
     off_t rollSize = 1024 * 10240;
     setErrorLogRollingSize(rollSize, 30);
     HttpLog::setDebugLevel(0);
 
-    strcpy(pEnd, "/logs/stderr.log");
+    lstrncpy(pEnd, "/logs/stderr.log", sizeof(achBuf) - (pEnd - p));
     StdErrLogger::getInstance().setLogFileName(achBuf);
     StdErrLogger::getInstance().getAppender()->setRollingSize(rollSize);
 
-    strcpy(pEnd, "/logs/access.log");
+    lstrncpy(pEnd, "/logs/access.log", sizeof(achBuf) - (pEnd - p));
     HttpLog::setAccessLogFile(achBuf, 0);
     enableAccessLog(1);
 
@@ -285,7 +285,7 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
 
             if (p)
             {
-                strcpy(p + 1, "stderr.log");
+                lstrncpy(p + 1, "stderr.log", sizeof(buf) - (p - buf));
                 StdErrLogger::getInstance().setLogFileName(buf);
                 StdErrLogger::getInstance().getAppender()->
                 setRollingSize(rollSize);

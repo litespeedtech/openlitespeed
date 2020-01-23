@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -40,7 +40,8 @@ SUITE(YourSuitqqqqeName)
         range = new(ls_xpool_alloc(pool, sizeof(HttpRange))) HttpRange(el);
 
         const char *psRange = "bytes= 0 -\t0\t ,1234-23456,-10,10-,1999-1999";
-        CHECK(range->parse(psRange, pool) == 0);
+        int res = range->parse(psRange, pool);
+        CHECK(res == 0);
         CHECK(range->count() == 5);
 
         off_t b, e;

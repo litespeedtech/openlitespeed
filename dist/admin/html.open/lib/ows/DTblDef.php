@@ -81,7 +81,7 @@ class DTblDef extends DTblDefBase
 				self::NewCustFlagAttr('user', null, (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				self::NewCustFlagAttr('group', null, (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				$this->_attrs['priority']->dup(null, null, 'serverPriority'),
-				DTblDefBase::NewIntAttr('cpuAffinity', DMsg::ALbl('l_cpuaffinity'), true, 1),
+				DTblDefBase::NewIntAttr('cpuAffinity', DMsg::ALbl('l_cpuaffinity'), true, 0, 64),
 				DTblDefBase::NewSelAttr( 'enableLVE', DMsg::ALbl('l_enablelve'),
 						array( 0=>DMsg::ALbl('o_disabled'), 1=>"LVE", 2=>"CageFS", 3=>DMsg::ALbl('o_cagefswithoutsuexec') ) ),
 				self::NewIntAttr('inMemBufSize', DMsg::ALbl('l_inmembufsize'), false, 0),

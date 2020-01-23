@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -110,7 +110,7 @@ bool GPath::isValid(const char *path)
 bool GPath::isWritable(const char *path)
 {
     char buf[256];
-    strcpy(buf, path);
+    lstrncpy(buf, path, sizeof(buf));
     char *pEnd = strrchr(buf, '/');
     if (pEnd != NULL)
     {
@@ -212,7 +212,7 @@ int GPath::concat(char *dest, size_t size, const char *pRoot,
     int len2 = strlen(pAppend);
     if (len1 + len2 + 2 >= (int)size)
         return LS_FAIL;
-    strcpy(dest, pRoot);
+    lstrncpy(dest, pRoot, size);
     char *pEnd = dest + len1 - 1;
     if (*pEnd != '/')
     {
@@ -250,7 +250,7 @@ int GPath::getAbsolutePath(char *dest, size_t size,
         if (iLen + 1 >= (int)size)
             return LS_FAIL;
 
-        strcpy(dest, path);
+        lstrncpy(dest, path, size);
     }
     char *pEnd = dest + iLen - 1;
     if (*pEnd != '/')
@@ -280,7 +280,7 @@ int GPath::getAbsoluteFile(char *dest, size_t size,
         if (iLen + 1 >= (int)size)
             return LS_FAIL;
 
-        strcpy(dest, file);
+        lstrncpy(dest, file, size);
     }
     return clean(dest);
 }

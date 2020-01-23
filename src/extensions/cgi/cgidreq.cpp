@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -43,7 +43,7 @@ int CgidReq::add(const char *name, size_t nameLen,
     //assert( valLen == strlen( value ) );
     int bufLen = m_buf.available();
     int len = nameLen + valLen + 4;
-    if (len > 65530)
+    if (len > 65530 )
         return LS_FAIL;
     if (value && strncmp(value, "() {", 4) == 0)
         return LS_FAIL;
@@ -68,7 +68,10 @@ int CgidReq::add(const char *name, size_t nameLen,
         memcpy(pBuf, name, nameLen);
         pBuf += nameLen;
         *pBuf++ = '=';
-        memcpy(pBuf, value, valLen);
+        if (value)
+            memcpy(pBuf, value, valLen);
+        else
+            valLen = 0;
         pBuf += valLen;
         *pBuf++ = 0;
         m_buf.used(len);

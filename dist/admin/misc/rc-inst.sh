@@ -77,11 +77,7 @@ do
 done
 
 
-AP_PROC=httpd
-if [ -e /etc/debian_version ]; then
-    AP_PROC=apache2
-fi
-
+AP_PROC=ssh
 # use systemd if possible, need to use same method as apache
 SYSTEMDDIR=""
 

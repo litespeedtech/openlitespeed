@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -609,8 +609,10 @@ int StaticFileCacheData::detectTrancate()
         int ret = openFile(m_real.c_str(), fd);
         if (ret)
             return LS_FAIL;
-        fstat(fd, &st);
+        ret = fstat(fd, &st);
         close(fd);
+        if (ret == -1)
+            return LS_FAIL;
         if (!m_fileData.isDirty(st))
             return 0;
 
@@ -765,7 +767,7 @@ int StaticFileCacheData::buildCompressedPaths()
     char *pReal = m_gzippedPath.prealloc(n + 6);
     if ((!pReal) || (!m_bredPath.prealloc(n + 6)))
         return LS_FAIL;
-    strncpy(pReal, achPath, n);
+    lstrncpy(pReal, achPath, n + 6);
     m_gzippedPath.setLen(n);
     memmove(pReal + n , ".lsz\0\0", 6);
     if (!m_bredPath.setStr(pReal, n + 6))

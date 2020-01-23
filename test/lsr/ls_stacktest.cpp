@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -220,6 +220,9 @@ static void ls_stacktest()
 {
     int i, j;
     ls_stack_t *pStack = ls_stack_new();
+    //CHECK(pStack);
+    if (!pStack)
+        return;
     int iLoops = 100;
     int iIterations = STACK_LOOPCOUNTER / 100;
 
@@ -228,15 +231,21 @@ static void ls_stacktest()
         for (i = 0; i < iIterations; ++i)
         {
             StackNode *pNode = new StackNode(i);
-            ls_stack_push(pStack, pNode->getNodePtr());
+            //CHECK(pNode);
+            if (pNode)
+                ls_stack_push(pStack, pNode->getNodePtr());
         }
 
         for (i = 0; i < iIterations; ++i)
         {
             StackNode *pNode = StackNode::getStackNodePtr(ls_stack_pop(pStack));
-            if (pNode->getVal() != iIterations - i - 1)
-                printf("Iteration Miss!\n");
-            delete pNode;
+            //CHECK(pNode);
+            if (pNode)
+            {
+                if (pNode->getVal() != iIterations - i - 1)
+                    printf("Iteration Miss!\n");
+                delete pNode;
+            }
         }
     }
     ls_stack_delete(pStack);
@@ -292,6 +301,8 @@ static void stackBenchTest(int iNumThreads, const char *pName)
         for (i = 0; i < iNumThreads; ++i)
             aThread[i].join(&pRet);
     }
+    if (aThread)
+        delete [] aThread;
     timer.printTime(pName, loopCount);
 }
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -54,7 +54,7 @@ public:
     // on failure.
     //
     // pool is a memory pool for allocating error strings.
-    const char *ParseAndSetOptions(
+    int ParseAndSetOptions(
         StringPiece *args, int n_args, MessageHandler *handler,
         LsRewriteDriverFactory *driver_factory, OptionScope scope);
 

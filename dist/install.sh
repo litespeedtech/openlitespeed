@@ -7,6 +7,15 @@ OSTYPE=`getconf LONG_BIT`
 MARIADBCPUARCH=
 DLCMD=
 LSPHPVER=73
+MYIP=
+
+testMyIP()
+{   
+    detectdlcmd
+    $DLCMD $LSWS_HOME/myip http://cyberpanel.sh/?ip
+    MYIP=`cat $LSWS_HOME/myip`
+    rm $LSWS_HOME/myip
+}
 
 inst_admin_php()
 {
@@ -287,7 +296,7 @@ IS_LSCPD=$9
 VERSION=open
 SETUP_PHP=1
 PHP_SUFFIX="php"
-SSL_HOSTNAME=""
+SSL_HOSTNAME=webadmin
 
 DEFAULT_USER="nobody"
 DEFAULT_GROUP="nobody"
@@ -395,7 +404,8 @@ echo
 
 if [ "x$ADMIN_SSL" = "xyes" ] ; then
     echo "Admin SSL enabled!"
-    gen_selfsigned_cert ./adminssl.conf
+    testMyIP
+    gen_selfsigned_cert_new 
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.crt $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.crt
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.key $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.key
 else

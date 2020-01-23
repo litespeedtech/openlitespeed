@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -62,10 +62,10 @@ public:
     typedef hash_key_t (*hash_fn)(const void *);
     typedef int (*value_compare)(const void *pVal1, const void *pVal2);
     typedef int (*val_comp)(const void *pVal1, const void *pVal2);
-    
+
     typedef int (*for_each_fn_ex)( iterator iter);
     typedef int (*for_each_fn2_ex)( iterator iter, void *pUData);
-    
+
 
     typedef ls_hash_foreach_fn for_each_fn;
     typedef ls_hash_foreach2_fn for_each2_fn;
@@ -137,7 +137,7 @@ public:
     }
 
     int for_each(iterator beg, iterator end, for_each_fn_ex fun);
-    
+
     int for_each0(iterator beg, iterator end, for_each_fn fun)
     {
         return ls_hash_foreach(this, beg, end, fun);
@@ -162,7 +162,7 @@ public:
     {
         GHash::iterator m_iter;
     public:
-        iterator()
+        iterator() : m_iter(0)
         {}
 
         iterator(GHash::iterator iter) : m_iter(iter)

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -460,8 +460,11 @@ int SsiEngine::processSubReq(HttpSession *pSession, SubstItem *pItem)
         else
         {
             len = toLocalAbsUrl(pSession, achBuf, p - achBuf, achBuf, sizeof(achBuf));
-            p = &achBuf[len];
-            *p = 0;
+            if (len >= 0)
+            {
+                p = &achBuf[len];
+                *p = 0;
+            }
         }
         if (len == -1)
         {
@@ -710,10 +713,10 @@ static int  shortCurcuit(ExprToken *&pTok)
 
 static int compString(HttpSession *pSession, int type, ExprToken *&pTok)
 {
-    int     len;
     int     ret;
     char achBuf2[40960] = "";
     char achBuf1[40960] = "";
+    int     len = sizeof(achBuf1);
     char   *p1 = achBuf1;
     char   *p2 = achBuf2;
     if (pTok->getType() == ExprToken::EXP_STRING)

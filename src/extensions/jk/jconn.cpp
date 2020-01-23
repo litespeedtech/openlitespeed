@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -29,8 +29,15 @@
 JConn::JConn()
     : m_pReqHeaderEnd(NULL)
     , m_pBufEnd(NULL)
+    , m_iPendingHeader(0)
+    , m_iPacketRemain(0)
+    , m_iTotalPending(0)
+    , m_curPacketSize(0)
     , m_packetLeft(0)
+    , m_chunkLeft(0)
+    , m_iNumHeader(0)
     , m_pCurPos(m_respBuf)
+    , m_packetType(0)
     , m_iPacketState(PACKET_HEADER)
     , m_pRespBufEnd((unsigned char *) & (m_respBuf[ sizeof(m_respBuf)]))
 {

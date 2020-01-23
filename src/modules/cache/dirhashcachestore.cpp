@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -73,7 +73,7 @@ int DirHashCacheStore::isEntryExist(const CacheHash &hash, const char *pSuffix,
     struct stat st;
     int n = buildCacheLocation(achBuf, 4096, hash, isPrivate);
     if (pSuffix)
-        strcpy(&achBuf[n], pSuffix);
+        lstrncpy(&achBuf[n], pSuffix, sizeof(achBuf) - n);
     if (!pStat)
         pStat = &st;
     if (nio_stat(achBuf, pStat) == 0)
@@ -98,7 +98,8 @@ int DirHashCacheStore::isEntryStale(const CacheHash &hash, int isPrivate)
     return 0;
 }
 
-int DirHashCacheStore::processStale(CacheEntry *pEntry, char *pBuf, int pathLen)
+int DirHashCacheStore::processStale(CacheEntry *pEntry, char *pBuf,
+                                    size_t maxBuf, int pathLen)
 {
     int dispose = 0;
     if (DateTime::s_curTime - pEntry->getExpireTime() > pEntry->getMaxStale())
@@ -119,7 +120,7 @@ int DirHashCacheStore::processStale(CacheEntry *pEntry, char *pBuf, int pathLen)
             if (!pathLen)
                 pathLen = buildCacheLocation(pBuf, 4096, pEntry->getHashKey(),
                                              pEntry->isPrivate());
-            if (renameDiskEntry(pEntry, pBuf, NULL, ".S",
+            if (renameDiskEntry(pEntry, pBuf, maxBuf, NULL, ".S",
                                 DHCS_SOURCE_MATCH | DHCS_DEST_CHECK) != 0)
             {
                 g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] is stale, [%s] mark stale"
@@ -167,7 +168,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         {
             pathLen = buildCacheLocation(achBuf, 4096, hash,
                                          pEntry->isPrivate());
-            if (isChanged((DirHashCacheEntry *)pEntry, achBuf, pathLen))
+            if (isChanged((DirHashCacheEntry *)pEntry, achBuf, pathLen, sizeof(achBuf)))
             {
                 g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] [%p] path [%s] has been modified "
                            "on disk, mark dirty", pEntry, achBuf);
@@ -189,14 +190,15 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         fd = ::open(achBuf, O_RDONLY);
         if (fd == -1)
         {
-            strcpy(&achBuf[pathLen], ".S");
+            lstrncpy(&achBuf[pathLen], ".S", sizeof(achBuf) - pathLen);
             fd = ::open(achBuf, O_RDONLY);
             achBuf[pathLen] = 0;
             if (fd == -1)
             {
                 if (errno != ENOENT)
                 {
-                    strcpy(&achBuf[pathLen], ": open() failed");
+                    lstrncpy(&achBuf[pathLen], ": open() failed",
+                            sizeof(achBuf) - pathLen);
                     perror(achBuf);
                 }
                 if (pEntry)
@@ -238,7 +240,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
 
     if (pEntry->isStale() || DateTime::s_curTime > pEntry->getExpireTime())
     {
-        dispose = processStale(pEntry, achBuf, pathLen);
+        dispose = processStale(pEntry, achBuf, sizeof(achBuf), pathLen);
     }
     g_api->log(NULL, LSI_LOG_DEBUG,
                "[CACHE] check [%p] against cache manager, tag: '%s' \n",
@@ -250,7 +252,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
                    "[CACHE] [%p] has been flushed, dispose.\n", pEntry);
         dispose = 1;
     }
-    
+
     if (!dispose )
     {
         int flag = getManager()->isPurged(pEntry, pKey, (lastCacheFlush >= 0));
@@ -260,7 +262,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
                        "[CACHE] [%p] has been purged by cache manager, %s",
                        pEntry, (flag & PDF_STALE) ? "stale" : "dispose");
             if (flag &PDF_STALE)
-                dispose = processStale(pEntry, achBuf, pathLen);
+                dispose = processStale(pEntry, achBuf, sizeof(achBuf), pathLen);
             else
                 dispose = 1;
         }
@@ -377,7 +379,7 @@ CacheEntry *DirHashCacheStore::createCacheEntry(
 //    }
 //    else
     {
-        strcpy(&achBuf[n], ".tmp");
+        lstrncpy(&achBuf[n], ".tmp", sizeof(achBuf) - n);
         if (nio_stat(achBuf, &st) == 0)
         {
             //in progress
@@ -434,13 +436,13 @@ void DirHashCacheStore::cancelEntry(CacheEntry *pEntry, int remove)
     {
         int n = buildCacheLocation(achBuf, 4096, pEntry->getHashKey(),
                                    pEntry->isPrivate());
-        strcpy(&achBuf[n], ".tmp");
+        lstrncpy(&achBuf[n], ".tmp", sizeof(achBuf) - n);
         if ((pEntry->getFdStore() != -1) && remove == -1)
         {
             struct stat stFd;
             struct stat stDir;
-            fstat(pEntry->getFdStore(), &stFd);
-            if ((nio_stat(achBuf, &stDir) != 0) ||
+            if ((fstat(pEntry->getFdStore(), &stFd) != 0) ||
+                (nio_stat(achBuf, &stDir) != 0) ||
                 (stFd.st_ino != stDir.st_ino))    //tmp has been modified by someone else
                 remove = 0;
         }
@@ -492,8 +494,8 @@ void DirHashCacheStore::renameDiskEntry( CacheEntry * pEntry )
     char achBuf[4096];
     char achBufNew[4096];
     buildCacheLocation( achBuf, 4096, pEntry->getHashKey() );
-    strcpy( achBufNew, achBuf );
-    strcat( achBufNew, ".d" );
+    lstrncpy( achBufNew, achBuf, sizeof(achBufNew) );
+    lstrncat( achBufNew, ".d", sizeof(achBufNew) );
     rename( achBuf, achBufNew );
     //unlink( achBuf );
 }
@@ -507,7 +509,7 @@ int DirHashCacheStore::dirty( const char * pKey, int keyLen )
 */
 
 int DirHashCacheStore::isChanged(CacheEntry *pEntry, const char *pPath,
-                                 int len)
+                                 int len, size_t max_len)
 {
     DirHashCacheEntry *pE = (DirHashCacheEntry *) pEntry;
     pE->m_lastCheck = DateTime::s_curTime;
@@ -516,13 +518,13 @@ int DirHashCacheStore::isChanged(CacheEntry *pEntry, const char *pPath,
     int ret = nio_stat(pPath, &st);
     if (ret == -1)
     {
-        strcpy((char *)pPath + len, ".S");
+        lstrncpy((char *)pPath + len, ".S", max_len - len);
         ret = nio_stat(pPath, &st);
         *((char *)pPath + len) = 0;
         if (ret == -1)
             return 1;
         pEntry->setStale(1);
-        strcpy((char *)pPath + len, ".tmp");
+        lstrncpy((char *)pPath + len, ".tmp", max_len - len);
         ret = nio_stat(pPath, &st);
         *((char *)pPath + len) = 0;
         pEntry->setUpdating(ret == 0);
@@ -536,7 +538,8 @@ int DirHashCacheStore::isChanged(CacheEntry *pEntry, const char *pPath,
 }
 
 int DirHashCacheStore::renameDiskEntry(CacheEntry *pEntry, char *pFrom,
-                                       const char *pFromSuffix, const char *pToSuffix, int validate)
+                                       size_t maxFrom, const char *pFromSuffix,
+                                       const char *pToSuffix, int validate)
 {
     struct stat stFromFd;
     struct stat stFromDir;
@@ -545,19 +548,23 @@ int DirHashCacheStore::renameDiskEntry(CacheEntry *pEntry, char *pFrom,
     char achTo[4096];
     int fd = pEntry->getFdStore();
     if (!pFrom)
+    {
         pFrom = achFrom;
+        maxFrom = sizeof(achFrom);
+    }
     int n = buildCacheLocation(pFrom, 4090, pEntry->getHashKey(),
                                pEntry->isPrivate());
     if (n == -1)
         return -1;
     memmove(achTo, pFrom, n + 1);
     if (pFromSuffix)
-        strcat(&pFrom[n], pFromSuffix);
+        lstrncpy(&pFrom[n], pFromSuffix, maxFrom - n);
     if (pToSuffix)
-        strcat(&achTo[n], pToSuffix);
+        lstrncpy(&achTo[n], pToSuffix, sizeof(achTo) - n);
     if (validate & DHCS_SOURCE_MATCH)
     {
-        fstat(fd, &stFromFd);
+        if (fstat(fd, &stFromFd) == -1)
+            return -2;
         if (nio_stat(pFrom, &stFromDir) == -1)
             return -2;
         if (stFromFd.st_ino !=
@@ -596,7 +603,7 @@ int DirHashCacheStore::publish(CacheEntry *pEntry)
         (int)sizeof(CeHeader))
         return -1;
 
-    int ret = renameDiskEntry(pEntry, achTmp, ".tmp", NULL,
+    int ret = renameDiskEntry(pEntry, achTmp, sizeof(achTmp), ".tmp", NULL,
                               DHCS_SOURCE_MATCH | DHCS_DEST_CHECK);
     if (ret)
         return ret;

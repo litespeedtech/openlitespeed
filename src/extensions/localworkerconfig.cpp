@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -44,6 +44,7 @@ LocalWorkerConfig::LocalWorkerConfig(const char *pName)
     , m_iPriority(0)
     , m_iRunOnStartUp(0)
     , m_umask(ServerProcessConfig::getInstance().getUMask())
+    , m_iPhpHandler(0)
 {
 }
 
@@ -54,6 +55,8 @@ LocalWorkerConfig::LocalWorkerConfig()
     , m_iInstances(1)
     , m_iPriority(0)
     , m_iRunOnStartUp(0)
+    , m_umask(ServerProcessConfig::getInstance().getUMask())
+    , m_iPhpHandler(0)
 {
 }
 
@@ -70,7 +73,8 @@ LocalWorkerConfig::LocalWorkerConfig(const LocalWorkerConfig &rhs)
     m_iPriority = rhs.m_iPriority;
     m_rlimits = rhs.m_rlimits;
     m_iRunOnStartUp = rhs.m_iRunOnStartUp;
-
+    m_umask = ServerProcessConfig::getInstance().getUMask();
+    m_iPhpHandler = 0;
 }
 
 
@@ -166,14 +170,14 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv(int maxIdleTime)
         selfManaged = 1;
     }
 
-    
+
     if (isDetached())
     {
         setDetachedAppEnv(pEnv,
                           (maxIdleTime > DETACH_MODE_MIN_MAX_IDLE)
                           ? maxIdleTime : DETACH_MODE_MIN_MAX_IDLE);
     }
-    
+
     pEnv->add(0, 0, 0, 0);
     return selfManaged;
 }
@@ -212,7 +216,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
 
     setRunOnStartUp(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                     "runOnStartUp", 0, 3, 3));
-        
+
     RLimits limits;
     if (ExtAppRegistry::getRLimits() != NULL)
         limits = *(ExtAppRegistry::getRLimits());
@@ -238,8 +242,8 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
                 instances);
     }
     setInstances(instances);
-    
-    
+
+
     long maxIdle = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                    "extMaxIdleTime", -1, INT_MAX, DETACH_MODE_DEFAULT_MAX_IDLE);
     selfManaged = checkExtAppSelfManagedAndFixEnv(maxIdle);
@@ -278,7 +282,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
 
 
 void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
-        int iType, char *sHomeDir)
+        int iType, char *sHomeDir, size_t szHomeDir)
 {
 
     const char *pUser = pNode->getChildValue("extUser");
@@ -302,17 +306,17 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
         }
         else
             uid = pw->pw_uid;
-        
-        strcpy(sHomeDir, pw->pw_dir);
+
+        lstrncpy(sHomeDir, pw->pw_dir, szHomeDir);
     }
     else
     {
         gid = ServerProcessConfig::getInstance().getGid();
         pw = getpwuid(uid);
         if (pw)
-            strcpy(sHomeDir, pw->pw_dir);
+            lstrncpy(sHomeDir, pw->pw_dir, szHomeDir);
         else
-            strcpy(sHomeDir, "/home/nobody"); //If failed, use default as 
+            lstrncpy(sHomeDir, "/home/nobody", szHomeDir); //If failed, use default as
     }
     setUGid(uid, gid);
 }

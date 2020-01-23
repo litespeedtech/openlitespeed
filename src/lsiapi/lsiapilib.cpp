@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -1311,7 +1311,7 @@ static int get_req_var_by_id(const lsi_session_t *session, int type, char *val,
     else
         return LS_FAIL;
 
-    if (p != val)
+    if (p != val && ret > 0)
         memcpy(val, p, ret);
 
     if (ret < maxValLen && ret >= 0)
@@ -1945,8 +1945,8 @@ static int  get_access_log_string(const lsi_session_t *session,
     if ((pSession == NULL) || (!log_pattern) || (!buf))
         return LS_FAIL;
 
-    CustomFormat *pLogFmt = AccessLog::parseLogFormat(log_pattern);
-    return AccessLog::getLogString(pSession, pLogFmt, buf, bufLen);
+    int ret = AccessLog::getLogString(pSession, log_pattern, buf, bufLen);
+    return ret;
 }
 
 
@@ -2278,8 +2278,9 @@ void freeUaCodeT()
         {
             uacode_item *item = (uacode_item *)ls_hash_getdata(it);
             free_uacode_item(item);
-            s_uacode_hasht = NULL;
         }
+        ls_hash_delete(s_uacode_hasht);
+        s_uacode_hasht = NULL;
     }
 }
 
@@ -2394,7 +2395,7 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
     cb(-1, "SSL_CIPHER_USEKEYSIZE", 21, buf, n, arg);
 
     pBuf = buf;
-    n = pCrypto->getEnv(HioCrypto::CIPHER_ALGKEYSIZE, pBuf, 128);
+    n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pBuf, 128);
     cb(-1, "SSL_CIPHER_ALGKEYSIZE", 21, buf, n, arg);
 
     int i = pCrypto->getVerifyMode();
@@ -2427,18 +2428,18 @@ static void foreach_ssl_env(HttpSession *pHttpSession, lsi_foreach_cb cb,
                 cb(-1, "SSL_CLIENT_I_DN", 15, achBuf, strlen(achBuf), arg);
                 if (SslConnection::isClientVerifyOptional(i))
                 {
-                    strcpy(achBuf, "GENEROUS");
+                    lstrncpy(achBuf, "GENEROUS", sizeof(achBuf));
                     n = 8;
                 }
                 else
                 {
-                    strcpy(achBuf, "SUCCESS");
+                    lstrncpy(achBuf, "SUCCESS", sizeof(achBuf));
                     n = 7;
                 }
             }
             else
             {
-                strcpy(achBuf, "NONE");
+                lstrncpy(achBuf, "NONE", sizeof(achBuf));
                 n = 4;
             }
         }
@@ -2611,7 +2612,7 @@ static void foreach_req_var(const HttpSession *session, const char *filter,
                                      p, VALMAXSIZE)
             : RequestVars::getReqVar2(const_cast<HttpSession *>(session), i, p, VALMAXSIZE);
 
-        if (ret >= VALMAXSIZE && ret <= 0)
+        if (ret >= VALMAXSIZE || ret <= 0)
             continue;
 
         if (p == val)

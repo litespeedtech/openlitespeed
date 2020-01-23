@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * ******************************************* */
 
 namespace Lsc\Wp\Context;
@@ -33,7 +33,14 @@ class RootPanelContextOption extends ContextOption
         $this->scanDepth = 2;
         $this->batchTimeout = 60;
         $this->batchSize = 10;
-        $this->sharedTplDir = realpath(__DIR__ . '/../View/Tpl');
+
+        $sharedTplDir = realpath(__DIR__ . '/../View/Tpl');
+
+        if ( !is_string($sharedTplDir) ) {
+            $sharedTplDir = '/usr/local/lsws/add-ons/webcachemgr/src/View/Tpl';
+        }
+
+        $this->sharedTplDir = $sharedTplDir;
     }
 
 }

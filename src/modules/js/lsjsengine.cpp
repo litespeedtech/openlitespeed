@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -131,7 +131,7 @@ int    LsJsEngine::runScript(const lsi_session_t *session
                    , s_serverSocket
                    , errno, counter);
 
-        nb = snprintf(buf, 0x1000, "<html><body>\r\n"
+        nb = snprintf(buf, sizeof(buf), "<html><body>\r\n"
                       "<p>FAILED TO CONNECT litespeed.js SOCKET [%s]</p>\r\n"
                       "<p>%s</p>\r\n"
                       "</body></html>\r\n"
@@ -146,14 +146,14 @@ int    LsJsEngine::runScript(const lsi_session_t *session
     char *xbuf = 0;
     int xbuflen = 0;
     int http_fd = 0;
-    
+
     /**
      * FIXME Need to be fixed
      */
-    g_api->log(NULL, LSI_LOG_NOTICE, 
+    g_api->log(NULL, LSI_LOG_NOTICE,
                "LINE 154:  http_fd = g_api->handoff_fd(session, &xbuf, &xbuflen) need to be fixed.");
 //    http_fd = g_api->handoff_fd(session, &xbuf, &xbuflen);
-
+    /* Can't be reached...
     if (http_fd < 0)
     {
         g_api->log(NULL, LSI_LOG_NOTICE
@@ -168,7 +168,7 @@ int    LsJsEngine::runScript(const lsi_session_t *session
         close(node_fd);
         return (0);
     }
-
+    */
     // At this point node_fd and http_fd should be good
     nb = snprintf(buf, 0x100, "Running %s\r\n", scriptpath);
 
@@ -188,8 +188,8 @@ int    LsJsEngine::runScript(const lsi_session_t *session
         write(http_fd, "</body>\r\n", 9);
         write(http_fd, "</html>\r\n", 9);
     }
-    if (xbuf && xbuflen)
-        free(xbuf);
+    //if (xbuf && xbuflen)
+    //    free(xbuf);
     close(node_fd);
     close(http_fd);
     return 0;
@@ -275,7 +275,7 @@ int LsJsEngine::tcpDomainSocket(const char *path)
     }
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path, sizeof(addr.sun_path) - 1);
+    lstrncpy(addr.sun_path, path, sizeof(addr.sun_path));
 
     /* client mode: just connect it */
     if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -72,7 +72,9 @@ SubstItem::~SubstItem()
 
 
 SubstItem::SubstItem(const SubstItem &rhs)
-    : LinkedObj(), m_type(rhs.m_type)
+    : LinkedObj()
+    , m_type(rhs.m_type)
+    , m_subType(0)
 {
     if (rhs.m_value.m_pStr)
     {
@@ -549,7 +551,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         return pReq->getQueryStringLen();
     case REF_AUTH_TYPE:
         //TODO: hard code for now
-        strncpy(pValue, "Basic", 6);
+        lstrncpy(pValue, "Basic", bufLen);
         return 5;
     case REF_REQUEST_FN:
     case REF_SCRIPTFILENAME:
@@ -603,7 +605,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                     do {
                         retry = 0;
                         buffer = (char *)malloc(bufsize);
-                        if (buffer != NULL) {                    
+                        if (buffer != NULL) {
                             errno = 0;
                             if ((getpwuid_r(st.st_uid, &pw, buffer, bufsize, &ppw) == -1) &&
                                 (errno == ERANGE)) {
@@ -623,7 +625,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                 else
                 {
                     struct group gr;
-                    char *buffer;        
+                    char *buffer;
                     struct group *pgr;
                     ssize_t bufsize;
                     int retry = 0;
@@ -635,7 +637,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                         buffer = (char *)malloc(bufsize);
                         if (buffer != NULL) {
                             errno = 0;
-                            if ((getgrgid_r(st.st_gid, &gr, buffer, sizeof(buffer), &pgr) == -1) &&
+                            if ((getgrgid_r(st.st_gid, &gr, buffer, bufsize, &pgr) == -1) &&
                                 (errno == ERANGE)) {
                                 bufsize *= 2;
                                 retry = 1;
@@ -1066,6 +1068,8 @@ const char *RequestVars::getCookieValue(HttpReq *pReq,
 #ifdef TEST_NEW_FUN
     //TODO: do some test right now, use these code to return the specified cookie
     cookieval_t *cookie = pReq->getCookie(pCookieName, nameLen);
+    if (!cookie)
+        return NULL;
     int cookieLen = cookie->valLen;
     char *pcookieval = pReq->getHeaderBuf().getp(cookie->valOff);
 
@@ -1148,7 +1152,7 @@ static const char *const s_pHeaders[] =
 const char *RequestVars::getHeaderString(int iIndex)
 {
     if ((iIndex >= 0)
-        && (iIndex <= (int)(sizeof(s_pHeaders) / sizeof(char *))))
+        && (iIndex < (int)(sizeof(s_pHeaders) / sizeof(char *))))
         return s_pHeaders[iIndex];
     return NULL;
 }

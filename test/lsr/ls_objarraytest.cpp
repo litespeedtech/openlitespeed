@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -138,6 +138,11 @@ TEST(ls_ObjArrayTest_test2)
     int i;
     ls_objarray_t array;
     ls_xpool_t *pool = ls_xpool_new();
+    if (!pool)
+    {
+        CHECK(pool);
+        return;
+    }
     ls_objarray_init(&array, sizeof(testpair_t));
 
     CHECK(ls_objarray_getcapacity(&array) == 0);
@@ -149,12 +154,16 @@ TEST(ls_ObjArrayTest_test2)
     for (i = 0; i < 20; ++i)
     {
         testpair_t *buf = (testpair_t *)ls_objarray_getnew(&array);
-        buf->key = buf->val = i + 1;
+        CHECK(buf);
+        if (buf)
+            buf->key = buf->val = i + 1;
     }
     for (i = 0; i < 20; ++i)
     {
         testpair_t *buf = (testpair_t *)ls_objarray_getobj(&array, i);
-        CHECK(buf->key == i + 1 && buf->val == i + 1);
+        CHECK(buf);
+        if (buf)
+            CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
     ls_objarray_guarantee_xpool(&array, pool, 20);
     ls_objarray_guarantee_xpool(&array, pool, 40);
@@ -168,12 +177,15 @@ TEST(ls_ObjArrayTest_test2)
     for (i = 0; i < 20; ++i)
     {
         testpair_t *buf = (testpair_t *)ls_objarray_getobj(&array, i);
-        CHECK(buf->key == i + 1 && buf->val == i + 1);
+        CHECK(buf);
+        if (buf)
+            CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
 
 
     ls_objarray_release_xpool(&array, pool);
     CHECK(1);
+    ls_xpool_delete(pool);
 }
 
 

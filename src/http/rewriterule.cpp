@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -86,6 +86,7 @@ RewriteSubstItem::RewriteSubstItem(const RewriteSubstItem &rhs)
 
 
 RewriteSubstFormat::RewriteSubstFormat()
+    : m_type(0)
 {
 }
 
@@ -99,6 +100,7 @@ RewriteSubstFormat::~RewriteSubstFormat()
 RewriteSubstFormat::RewriteSubstFormat(const RewriteSubstFormat &rhs)
     : TLinkList<RewriteSubstItem>(rhs)
     , LinkedObj()
+    , m_type(0)
 {
 
 }

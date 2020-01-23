@@ -324,10 +324,11 @@ int ls_map_insert(ls_map_t *pThis, const void *pKey, void *pValue)
 
 ls_map_iter ls_map_find(ls_map_t *pThis, const void *pKey)
 {
-    ls_map_iter ptr = pThis->root;
+    ls_map_iter ptr;
     int iComp;
     if (pThis == NULL)
         return NULL;
+    ptr = pThis->root;
     if (pThis->vc_fn == NULL)
         return NULL;
     while (ptr != NULL && (iComp = pThis->vc_fn(ptr->pkey, pKey)) != 0)

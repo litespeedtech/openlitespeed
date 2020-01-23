@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -440,7 +440,7 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
         LS_ERROR("[suEXEC] Failed to connect %s, return %d",
                  server.toString(), ret);
     }
-    
+
     if (fdReq != -1)
     {
         m_req.finalize(0, CgidWorker::getCgidWorker()->getConfig().getSecret(),
@@ -467,7 +467,7 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
     }
     if (pfd)
         *pfd = fdReq;
-    else
+    else if (fdReq != -1)
         close(fdReq);
     return pid;
 

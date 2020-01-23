@@ -1,3 +1,20 @@
+/*****************************************************************************
+*    Open LiteSpeed is an open source HTTP server.                           *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*                                                                            *
+*    This program is free software: you can redistribute it and/or modify    *
+*    it under the terms of the GNU General Public License as published by    *
+*    the Free Software Foundation, either version 3 of the License, or       *
+*    (at your option) any later version.                                     *
+*                                                                            *
+*    This program is distributed in the hope that it will be useful,         *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+*    GNU General Public License for more details.                            *
+*                                                                            *
+*    You should have received a copy of the GNU General Public License       *
+*    along with this program. If not, see http://www.gnu.org/licenses/.      *
+*****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,7 +73,7 @@ void *sendThread(void *pvPostData) {
     int  isent = 0;
     int  iBlock = 0;
     char chTime[80];
-    
+
     pPostData->m_bStarted = 1;
     pBuffer = (char *)malloc(pPostData->m_iBuffer);
     if (!pBuffer) {
@@ -73,7 +90,7 @@ void *sendThread(void *pvPostData) {
         char chBlock[80];
         int iSend;
         iBlock++;
-        // WARNING Block counters start at 1! 
+        // WARNING Block counters start at 1!
         sprintf(chBlock,"%08d",iBlock);
         iSend = (pPostData->m_iBuffer > (pPostData->m_iHowMuch - i)) ? (pPostData->m_iHowMuch - i) : pPostData->m_iBuffer;
         memcpy(pBuffer,chBlock,(8 < iSend) ? 8 : iSend);
@@ -119,7 +136,7 @@ int chunkedHeader(postData_t_  *pPostData) {
         }
         strTime(chTimePrior);
         iRecvd = recv(pPostData->m_isocket,&chChunkHeader[iChunkHeader],1,0);
-        if ((iChunkHeader == 0) && 
+        if ((iChunkHeader == 0) &&
             (((chChunkHeader[0] >= '0') && (chChunkHeader[0] <= '9')) ||
              ((chChunkHeader[0] >= 'A') && (chChunkHeader[0] <= 'F')) ||
              ((chChunkHeader[0] >= 'a') && (chChunkHeader[0] <= 'f')))) {
@@ -162,7 +179,7 @@ int chunkedHeader(postData_t_  *pPostData) {
     return(iChunkSize);
 }
 
-                 
+
 int processChunked(postData_t_ *pPostData,
                    char        *pBuffer,
                    char        *pBuffer2)
@@ -185,9 +202,9 @@ int processChunked(postData_t_ *pPostData,
         if (iState == STATE_GET_CHUNK_HEADER) {
             int iPriorChunkSize = iChunkSize;
             iChunkSize = chunkedHeader(pPostData);
-            
+
             if (iChunkSize < 0) {
-                printf("Prior error reported  Details on location: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d, PriorChunkSize: %d\n", iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize, iPriorChunkSize);  
+                printf("Prior error reported  Details on location: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d, PriorChunkSize: %d\n", iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize, iPriorChunkSize);
                 return(-1);
             }
             iChunkPos = 0;
@@ -230,7 +247,7 @@ int processChunked(postData_t_ *pPostData,
                 continue;
             }
             // 3 possible values, total choices 6
-            //printf("Choosing: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);  
+            //printf("Choosing: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);
             //printf("iSpaceInBuffer: %d, iRemainingData: %d, iChunkRemaining: %d\n", iSpaceInBuffer, iRemainingData, iChunkRemaining);
             if ((iSpaceInBuffer <= iRemainingData) &&
                 (iRemainingData <= iChunkRemaining)) {
@@ -259,7 +276,7 @@ int processChunked(postData_t_ *pPostData,
             iDidRead = recv(pPostData->m_isocket, &pBuffer[iInBuffer], iRead, 0);
             if (iDidRead == 0) {
                 printf("%s Reading data, unexpected EOF reading data, tried to read: %d\n", strTime(chTime),iRead);
-                printf("Unexpected state: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);  
+                printf("Unexpected state: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);
                 return(-1);
             }
             else if (iDidRead < 0) {
@@ -283,16 +300,16 @@ int processChunked(postData_t_ *pPostData,
             else {
                 // Leave the state alone and continue to come right back here to receive using a different size.
                 continue;
-                //printf("%s Unexpected state: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", strTime(chTime), iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);  
+                //printf("%s Unexpected state: iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", strTime(chTime), iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);
                 //return(-1);
             }
         }
         if (iState == STATE_CHECK_BUFFER) {
             char chBlock[80];
             if ((!iInBuffer) || (iInBuffer > pPostData->m_iBuffer)) {
-                printf("%s Invalid iInBuffer in CheckBuffer. iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", strTime(chTime), iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);  
+                printf("%s Invalid iInBuffer in CheckBuffer. iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d\n", strTime(chTime), iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize);
                 return(-1);
-            }                
+            }
             iBlock++;
             sprintf(chBlock,"%08d",iBlock);
             memcpy(pBuffer2,chBlock,(iInBuffer > 8) ? 8 : iInBuffer);
@@ -301,7 +318,7 @@ int processChunked(postData_t_ *pPostData,
                 char chBlockReceived[9];
                 memcpy(chBlockReceived,pBuffer,8);
                 chBlockReceived[8] = 0;
-                printf("%s Unexpected data. Block #%d iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d, Expected Block: %s, ReceivedBlock: %s\n", strTime(chTime), iBlock, iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize, chBlock, chBlockReceived);  
+                printf("%s Unexpected data. Block #%d iInBuffer: %d, iTotalReceived: %d, iChunkPos: %d, BufferSize: %d, TotalToReceive: %d, ChunkSize: %d, Expected Block: %s, ReceivedBlock: %s\n", strTime(chTime), iBlock, iInBuffer, iTotalReceived, iChunkPos, pPostData->m_iBuffer, pPostData->m_iHowMuch, iChunkSize, chBlock, chBlockReceived);
                 for (iIndex = 0; iIndex < iInBuffer; iIndex++) {
                     if (pBuffer[iIndex] != pBuffer2[iIndex]) {
                         printf("Mismatch at index #%d, '%c' != '%c'\n", iIndex, pBuffer[iIndex], pBuffer2[iIndex]);
@@ -343,7 +360,7 @@ void *recvThread(void *pvPostData) {
     int  iBlock = 0;
     char chBlock[80];
     int  iAllocate;
-    
+
     pPostData->m_bStarted = 1;
     // For now receive a buffer and see if it's the header.
     if (pPostData->m_iCloseAfter) {
@@ -365,6 +382,7 @@ void *recvThread(void *pvPostData) {
         printf("%s RecvThread end of data reading header after %d bytes\n",strTime(chTime), iheader);
         return(NULL);
     }
+    chBuffer[iheader] = 0;
     iAllocate = pPostData->m_iBuffer;
     if (iAllocate < 8) {
         iAllocate = 8;
@@ -405,7 +423,7 @@ void *recvThread(void *pvPostData) {
     else for (i = 0; i < pPostData->m_iHowMuch; i += isent) {
         int size = (pPostData->m_iBuffer > (pPostData->m_iHowMuch - i)) ? (pPostData->m_iHowMuch - i) : pPostData->m_iBuffer;
         int recvd = 0;
-        int irecv;
+        int irecv = 0;
         while (recvd < size) {
             int recvSize = size - recvd;
             //printf("Receive %d bytes starting at %d in buffer\n", recvSize, recvd);
@@ -441,7 +459,7 @@ void *recvThread(void *pvPostData) {
                 printf("%s Mismatch in data in buffer starting block #%d at %d (at %d, got: %c, expected: %c), received block: %s, expected block: %s: %s\n",strTime(chTime), iBlock, i,i,pBuffer[0],pBuffer2[0],chBlockReceive, chBlock, pBuffer);
                 break;
             }
-        } 
+        }
         else {
             // Just a couple of bytes, don't try to validate it.
         }
@@ -570,7 +588,7 @@ int postData(int iHowMuch, int iSendBuffer, int iRecvBuffer, int iuDelay, int iC
         close(isocket);
         pvRecvResult = pvSendResult;
     }
-    else {
+    else if (!iCloseAfter) {
         printf("Waiting for receive to finish\n");
         if (pthread_join(pthread2,&pvRecvResult) == -1) {
             printf("%s Error in waiting on recv thread: %s\n",strTime(chTime), strerror(errno));

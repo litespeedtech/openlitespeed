@@ -1456,8 +1456,7 @@ static int lsiapi_execute_script( lsi_session_t *session,
     char path[LSAPI_MAX_URI_LENGTH];
     struct timeb entry_time;
 
-    strncpy(path,SG(request_info).path_translated,sizeof(path));
-    path[sizeof(path) - 1] = 0; // In case the strncpy didn't /0 terminate it
+    lstrncpy(path,SG(request_info).path_translated,sizeof(path));
     LSM_DBG((&MNAME), session, "lsiapi_execute_script: %s\n",
             SG(request_info).path_translated);
     file_handle->type = ZEND_HANDLE_FILENAME;

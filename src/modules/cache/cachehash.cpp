@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -20,6 +20,7 @@
 #include <string.h>
 
 CacheHash::CacheHash()
+    : m_key(0)
 {
 }
 
@@ -35,7 +36,7 @@ void CacheHash::update(XXH64_state_t *pState, const char *pBuf, int len)
 
 hash_key_t CacheHash::to_ghash_key(const void *__s)
 {
-    hash_key_t __h = *((uint64_t *)__s);
+    register hash_key_t __h = *((uint64_t *)__s);
 
     return __h;
 }

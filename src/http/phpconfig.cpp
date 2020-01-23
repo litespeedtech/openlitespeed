@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -33,7 +33,8 @@ int PHPValue::setValue(const char *pKey, const char *pValue,
     if (iType != PHP_CONF_SYSTEM)
         iType = PHP_CONF_PERDIR;
     int keyLen = strlen(pKey);
-    m_sKey.prealloc(keyLen + 3);
+    if (!m_sKey.prealloc(keyLen + 3))
+        return LS_FAIL;
     char *keyBuf = m_sKey.buf();
     *keyBuf++ = PHP_CONFIG_ENV;
     *keyBuf++ = iType;

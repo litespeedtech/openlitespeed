@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -102,7 +102,7 @@ public:
 
     static ConfFileType checkFiletype(const char *path);
     static void getIncludeFile(const char *curDir, const char *orgFile,
-                               char *targetFile);
+                               char *targetFile, ssize_t targetFileLen);
 
     static const char *getConfDeepValue(const XmlNode *pNode,
                                         const char *name);

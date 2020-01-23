@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -467,6 +467,7 @@ static int processUserAgent(const char *pUserAgent, int len)
         if (len > 40 && strstr(&achUA[len-40], "chrome") == NULL
             && strstr(&achUA[len-16], "safari") != NULL)
             iType = UA_SAFARI;
+        break;
     case 'c':
         if (strncmp(achUA, "curl/", 5) == 0)
             iType = UA_CURL;
@@ -489,8 +490,14 @@ void HttpReq::classifyUrl()
     const AutoStr2 *pRecaptchaUrl = Recaptcha::getDynUrl();
     const char *pUrlEnd = pUrl + iUrlLen;
 
-    if (iUrlLen >= 12 && memcmp(pUrlEnd - 12, "/favicon.ico", 12) == 0)
+    if (memcmp(pUrlEnd - 11, "/robots.txt", 11) == 0)
+        m_iUrlType = URL_ROBOTS_TXT;
+    else if (m_curURL.keyLen >= 12
+            && memcmp(pUrlEnd- 12, "/favicon.ico", 12) == 0)
         m_iUrlType = URL_FAVICON;
+    else if (m_curURL.keyLen >= 28
+             && memcmp(getURI(), "/.well-known/acme-challenge/", 28) == 0)
+        m_iUrlType = URL_ACME_CHALLENGE;
     else if (iUrlLen >= pRecaptchaUrl->len()
             && memcmp(pUrlEnd- pRecaptchaUrl->len(), pRecaptchaUrl->c_str(), pRecaptchaUrl->len()) == 0)
         m_iUrlType = URL_CAPTCHA;
@@ -2086,8 +2093,9 @@ int HttpReq::processURIEx(const char *pURI, int uriLen, int &cacheable)
     if (m_pUrlStaticFileData
         && m_pUrlStaticFileData->tmaccess == DateTime::s_curTime)
         return 0;
-    else
+    else if (m_pContext)
         return processPath(pURI, uriLen, pBuf, pBegin, pEnd, cacheable);
+    return 0;
 }
 
 
@@ -2689,7 +2697,8 @@ int HttpReq::getUGidChroot(uid_t *pUid, gid_t *pGid,
         if (!m_pContext || !m_pContext->allowSetUID())
         {
             LS_INFO(getLogSession(), "Context [%s] set UID/GID mode is "
-                    "not allowed, access denied.", m_pContext->getURI());
+                    "not allowed, access denied.",
+                    m_pContext ? m_pContext->getURI() : "NULL");
             return SC_403;
         }
     }
@@ -3061,7 +3070,7 @@ int HttpReq::fileStat(const char *pPath, struct stat *st)
 
 int HttpReq::getETagFlags() const
 {
-    int tagMod = 0;
+    //int tagMod = 0;
     int etag;
     if (m_pContext)
         etag = m_pContext->getFileEtag();
@@ -3072,11 +3081,11 @@ int HttpReq::getETagFlags() const
         etag = HttpServerConfig::getInstance()
                .getGlobalVHost()->getRootContext().getFileEtag();
     }
-    if (tagMod)
-    {
-        int mask = (tagMod & ETAG_MOD_ALL) >> 3;
-        etag = (etag & ~mask) | (tagMod & mask);
-    }
+    //if (tagMod)
+    //{
+    //    int mask = (tagMod & ETAG_MOD_ALL) >> 3;
+    //    etag = (etag & ~mask) | (tagMod & mask);
+    //}
     return etag;
 }
 
@@ -3606,7 +3615,7 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
 {
     if (pOp->getOperator() == LSI_HEADER_UNSET)
     {
-        if (pOp->getIndex() < HttpHeader::H_HEADER_END)
+        if (pOp->getIndex() < HttpHeader::H_TE)
         {
             dropReqHeader(pOp->getIndex());
         }
@@ -3817,6 +3826,7 @@ int HttpReq::rewriteToRecaptcha()
 
     LS_DBG_M(getLogSession(), "[RECAPTCHA] Internal redirect to [%s].",
             pUrl->c_str());
+    addEnv("cache-control", 13, "no-cache", 8);
 
     internalRedirect(pUrl->c_str(), pUrl->len(), 1);
     m_pContext = Recaptcha::getStaticCtx();

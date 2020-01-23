@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -299,7 +299,11 @@ private:
     void operator=(const SessionHooks &rhs);
 public:
     //with the globalHooks for determine the base and size
-    SessionHooks() : m_iStatus(UNINIT)  {}
+    SessionHooks() : m_iStatus(UNINIT)
+    {
+       memset(m_pEnableArray, 0, sizeof(m_pEnableArray));
+       memset(m_iFlag, 0, sizeof(m_iFlag));
+    }
 
     ~SessionHooks()
     {

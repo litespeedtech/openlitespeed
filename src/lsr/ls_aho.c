@@ -209,7 +209,10 @@ int ls_aho_addfromfile(ls_aho_t *pThis, const char *filename)
         ret = ls_aho_addpattern(pThis, pStart, pEnd - pStart, NULL);
         /* not include the last '\0' */
         if (ret == 0)
+        {
+            fclose(fp);
             return 0;
+        }
     }
     fclose(fp);
     return 1;

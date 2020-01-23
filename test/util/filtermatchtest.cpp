@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -111,6 +111,7 @@ SUITE(FilterMatchTest)
         CHECK(false == fm->match("exactMatcH"));
         CHECK(true == fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 #undef _UT_TNAME_
@@ -136,6 +137,7 @@ SUITE(FilterMatchTest)
         CHECK(true == fm->match("exactMatcH"));
         CHECK(true == fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 
@@ -162,6 +164,7 @@ SUITE(FilterMatchTest)
         CHECK(false != fm->match("exactMatcH"));
         CHECK(true != fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 #undef _UT_TNAME_
@@ -187,6 +190,7 @@ SUITE(FilterMatchTest)
         CHECK(true != fm->match("exactMatcH"));
         CHECK(true != fm->match("exactMatch"));
         std::cerr << std::endl << "END " << EQ(_UT_TNAME_) << std::endl;
+        delete fm;
     }
 
 #undef _UT_TNAME_

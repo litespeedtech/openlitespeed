@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -171,15 +171,21 @@ TEST(spdyzlibfilter_test)
     printbuff((unsigned char *)Result.begin(), n);
     printheader((unsigned char *)Result.begin(), n);
     Result1.clear();
-    n1 = TestDeflator.compress(Result.begin(), n, &Result1, Z_SYNC_FLUSH);
-    CHECK(n1 > 0);
-    printf("UncompressLen=%d, CompressedLen=%d\n", n, n1);
-    Result.clear();
-    pResult1 = Result1.getPointer(0);
-    n = TestInflator1.decompress(pResult1, n1,  Result);
-    CHECK(n > 0);
-    printbuff((unsigned char *)Result.begin(), n);
-    printheader((unsigned char *)Result.begin(), n);
+    if (n > 0)
+    {
+        n1 = TestDeflator.compress(Result.begin(), n, &Result1, Z_SYNC_FLUSH);
+        CHECK(n1 > 0);
+        printf("UncompressLen=%d, CompressedLen=%d\n", n, n1);
+        if (n1 > 0)
+        {
+            Result.clear();
+            pResult1 = Result1.getPointer(0);
+            n = TestInflator1.decompress(pResult1, n1,  Result);
+            CHECK(n > 0);
+            printbuff((unsigned char *)Result.begin(), n);
+            printheader((unsigned char *)Result.begin(), n);
+        }
+    }
 }
 
 

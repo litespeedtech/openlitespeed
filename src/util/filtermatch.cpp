@@ -1,3 +1,20 @@
+/*****************************************************************************
+*    Open LiteSpeed is an open source HTTP server.                           *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*                                                                            *
+*    This program is free software: you can redistribute it and/or modify    *
+*    it under the terms of the GNU General Public License as published by    *
+*    the Free Software Foundation, either version 3 of the License, or       *
+*    (at your option) any later version.                                     *
+*                                                                            *
+*    This program is distributed in the hope that it will be useful,         *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+*    GNU General Public License for more details.                            *
+*                                                                            *
+*    You should have received a copy of the GNU General Public License       *
+*    along with this program. If not, see http://www.gnu.org/licenses/.      *
+*****************************************************************************/
 #include <util/filtermatch.h>
 #include <ctype.h>
 #include <string.h>
@@ -50,7 +67,7 @@ void FilterMatch::init(const char * filter)
         m_igncase = true;
         // fall through
     case 's':
-        m_filter = new char[filter_len];
+        m_filter = new char[filter_len + 1];
         memcpy((void *)m_filter, filter+1, filter_len); // skip the first char, include the NUL
         m_filterLen = filter_len - 1;
         break;

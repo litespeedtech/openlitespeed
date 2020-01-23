@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -36,12 +36,12 @@
 #include <stdio.h>
 #include <string.h>
 
+
 struct LogFormatItem
 {
     int         m_itemId;
     AutoStr2    m_sExtra;
 };
-
 
 class CustomFormat : public TPointerList<LogFormatItem>
 {
@@ -199,7 +199,7 @@ int CustomFormat::parseFormat(const char *psFormat)
                 *pItemEnd = 0;
                 itemId = HttpRespHeaders::getIndex(pBegin);
                 if ((pItemEnd - pBegin != HttpRespHeaders::getHeaderStringLen(
-                                          (HttpRespHeaders::INDEX)itemId)) 
+                                          (HttpRespHeaders::INDEX)itemId))
                     || (itemId >= HttpRespHeaders::H_HEADER_END))
                     itemId = REF_RESP_HEADER;
                 else
@@ -787,4 +787,14 @@ void AccessLog::setRollingSize(off_t size)
 }
 
 
+int  AccessLog::getLogString(HttpSession *pSession, const char *log_pattern,
+                             char *pBuf, int bufLen)
 
+{
+    CustomFormat *pLogFmt = AccessLog::parseLogFormat(log_pattern);
+    if (!pLogFmt)
+        return -1;
+    int ret = customLog(pSession, pLogFmt, pBuf, bufLen, NULL);
+    delete pLogFmt;
+    return ret;
+}

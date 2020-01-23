@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -66,7 +66,8 @@ HttpListener::HttpListener(const char *pName, const char *pAddr)
     , m_iBinding(0xffffffff)
     , m_pAdcPortList(NULL)
 {
-    m_pMapVHost->setAddrStr(pAddr);
+    if (m_pMapVHost)
+        m_pMapVHost->setAddrStr(pAddr);
 }
 
 
@@ -102,16 +103,17 @@ void HttpListener::beginConfig()
 
 void HttpListener::endConfig()
 {
-    m_pMapVHost->endConfig();
+    if (m_pMapVHost)
+        m_pMapVHost->endConfig();
     if (m_pSubIpMap)
         m_pSubIpMap->endConfig();
-    if (m_pMapVHost->getDedicated())
+    if (m_pMapVHost && m_pMapVHost->getDedicated())
         setLogger(m_pMapVHost->getDedicated()->getLogger());
-    if (m_pMapVHost->getSslContext()
+    if ((m_pMapVHost && m_pMapVHost->getSslContext())
         || (m_pSubIpMap && m_pSubIpMap->hasSSL()))
     {
         m_isSSL = 1;
-        if (m_pMapVHost->isQuicEnabled())
+        if (m_pMapVHost && m_pMapVHost->isQuicEnabled())
         {
             enableQuic();
         }
@@ -122,7 +124,7 @@ void HttpListener::endConfig()
 int HttpListener::enableQuic()
 {
     QuicEngine *pEngine = HttpServer::getInstance().getQuicEngine();
-    if (!pEngine)
+    if (!pEngine || !m_pMapVHost)
         return -1;
 
     UdpListener *pUdp = new UdpListener(pEngine, this, m_pMapVHost);
@@ -157,13 +159,17 @@ const char *HttpListener::buildLogId()
 
 const char *HttpListener::getAddrStr() const
 {
-    return m_pMapVHost->getAddrStr()->c_str();
+    if (m_pMapVHost)
+        return m_pMapVHost->getAddrStr()->c_str();
+    return NULL;
 }
 
 
 int  HttpListener::getPort() const
 {
-    return m_pMapVHost->getPort();
+    if (m_pMapVHost)
+        return m_pMapVHost->getPort();
+    return 0;
 }
 
 
@@ -180,7 +186,8 @@ int HttpListener::assign(int fd, struct sockaddr *pAddr)
     else
         addr.toString(achAddr, 128);
     LS_NOTICE("Recovering server socket: [%s]", achAddr);
-    m_pMapVHost->setAddrStr(achAddr);
+    if (m_pMapVHost)
+        m_pMapVHost->setAddrStr(achAddr);
     if ((addr.family() == AF_INET6)
         && (IN6_IS_ADDR_UNSPECIFIED(&addr.getV6()->sin6_addr)))
         snprintf(achAddr, 128, "[ANY]:%hu", (short)addr.getPort());
@@ -217,7 +224,8 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
 
     //int tos = IPTOS_THROUGHPUT;
     //setsockopt( fd, IPPROTO_IP, IP_TOS, &tos, sizeof( tos ));
-    m_pMapVHost->setPort(addr.getPort());
+    if (m_pMapVHost)
+        m_pMapVHost->setPort(addr.getPort());
 
 #ifdef SO_ACCEPTFILTER
     /*
@@ -225,7 +233,7 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
      */
     struct accept_filter_arg arg;
     memset(&arg, 0, sizeof(arg));
-    strcpy(arg.af_name, "httpready");
+    lstrncpy(arg.af_name, "httpready", sizeof(arg.af_name));
     if (setsockopt(fd, SOL_SOCKET, SO_ACCEPTFILTER, &arg, sizeof(arg)) < 0)
     {
         if (errno != ENOENT)
@@ -377,7 +385,8 @@ int HttpListener::handleEvents(short event)
     }
     if (iCount > 0)
     {
-        m_pMapVHost->incRef(iCount);
+        if (m_pMapVHost)
+            m_pMapVHost->incRef(iCount);
         ctrl.incConn(iCount);
     }
     if (iCount >= allowed)
@@ -538,7 +547,7 @@ int HttpListener::addConnection(struct conn_data *pCur, int *iCount)
         --(*iCount);
         return LS_FAIL;
     }
-    
+
     ConnInfo info;
     if (setConnInfo(&info, pCur) == LS_FAIL)
     {
@@ -587,7 +596,7 @@ VHostMap *HttpListener::addIpMap(const char *pIP)
             return NULL;
     }
     VHostMap *pMap = m_pSubIpMap->addIP(pIP);
-    if (pMap)
+    if (pMap && m_pMapVHost)
         pMap->setPort(m_pMapVHost->getPort());
     return pMap;
 }
@@ -596,7 +605,7 @@ VHostMap *HttpListener::addIpMap(const char *pIP)
 int HttpListener::addDefaultVHost(HttpVHost *pVHost)
 {
     int count = 0;
-    if (m_pMapVHost->addMaping(pVHost, "*", 1) == 0)
+    if (m_pMapVHost && m_pMapVHost->addMaping(pVHost, "*", 1) == 0)
         ++count;
     if (m_pSubIpMap)
         count += m_pSubIpMap->addDefaultVHost(pVHost);
@@ -629,7 +638,9 @@ int HttpListener::mapDomainList(HttpVHost *pVHost, const char *pDomains)
         m_pMapVHost && m_pMapVHost->getQuicListener())
         pVHost->enableQuic(1);
 
-    return m_pMapVHost->mapDomainList(pVHost, pDomains);
+    if (m_pMapVHost)
+        return m_pMapVHost->mapDomainList(pVHost, pDomains);
+    return 0;
 }
 
 
@@ -822,7 +833,7 @@ int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
     {
         return LS_FAIL;
     }
-    
+
     if ((AF_INET6 == pAddr->sa_family) &&
         (IN6_IS_ADDR_V4MAPPED(&((sockaddr_in6 *)pAddr)->sin6_addr)))
     {
@@ -830,7 +841,7 @@ int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
         memmove(&((sockaddr_in *)pAddr)->sin_addr.s_addr, &((char *)pAddr)[20], 4);
     }
 
-    
+
     pInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(pAddr, this);
     const VHostMap * pMap = pInfo->m_pServerAddrInfo->getVHostMap();
     if (!pMap)

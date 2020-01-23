@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -81,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Fri Jan  3 21:54:03 UTC 2020)"
+#define BUILDTIME  " (built: Wed Jan 22 22:14:41 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -93,6 +93,7 @@ static int s_iCpuCount = 1;
 LshttpdMain::LshttpdMain()
     : m_pServer(NULL)
     , m_pBuilder(NULL)
+    , m_pid(0)
     , m_noDaemon(0)
     , m_noCrashGuard(0)
     , m_iConfTestMode(0)
@@ -404,7 +405,7 @@ int LshttpdMain::getFullPath(const char *pRelativePath, char *pBuf,
 int LshttpdMain::execute(const char *pExecCmd, const char *pParam)
 {
     char achBuf[512];
-    int n = getFullPath(pExecCmd, achBuf, 512);
+    int n = getFullPath(pExecCmd, achBuf, 511);
     ls_snprintf(&achBuf[n], 511 - n, " %s", pParam);
     int ret = system(achBuf);
     return ret;
@@ -438,7 +439,8 @@ int LshttpdMain::startAdminSocket()
     }
     if (i == 100)
         return LS_FAIL;
-    ::fcntl(m_fdAdmin, F_SETFD, FD_CLOEXEC);
+    if (m_fdAdmin != -1)
+        ::fcntl(m_fdAdmin, F_SETFD, FD_CLOEXEC);
     HttpServerConfig::getInstance().setAdminSock(strdup(achBuf));
     LS_NOTICE("[ADMIN] server socket: %s", achBuf);
     return 0;
@@ -453,7 +455,11 @@ int LshttpdMain::closeAdminSocket()
         if (strncmp(pAdminSock, "uds://", 6) == 0)
             unlink(&pAdminSock[5]);
     }
-    close(m_fdAdmin);
+    if (m_fdAdmin != -1)
+    {
+        close(m_fdAdmin);
+        m_fdAdmin = -1;
+    }
     return 0;
 }
 
@@ -463,6 +469,8 @@ int LshttpdMain::acceptAdminSockConn()
     struct sockaddr_in peer;
     socklen_t addrlen;
     addrlen = sizeof(peer);
+    if (m_fdAdmin == -1)
+        return LS_FAIL;
     int fd = accept(m_fdAdmin, (struct sockaddr *)&peer, &addrlen);
     if (fd == -1)
         return LS_FAIL;
@@ -566,7 +574,7 @@ int LshttpdMain::testServerRoot(const char *pRoot)
             return LS_FAIL;
     }
 #else
-    strcpy(achBuf, pRoot);
+    lstrncpy(achBuf, pRoot, sizeof(achBuf));
 #endif
 
     int len = strlen(pRoot);
@@ -590,12 +598,12 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
     if (*command != '/')
     {
         getcwd(achBuf, left_len - 1);
-        strcat(achBuf, "/");
+        lstrncat(achBuf, "/", sizeof(achBuf));
         left_len -= strlen(achBuf);
     }
 
     if (left_len >= (int)strlen(command))
-        strcat(achBuf, command);
+        lstrncat(achBuf, command, sizeof(achBuf));
     else
     {
         printf("Warn: Command too long, bypass it.");
@@ -603,8 +611,10 @@ int LshttpdMain::getServerRootFromExecutablePath(const char *command,
 
     char *p = strrchr(achBuf, '/');
     if (p)
+    {
         *(p + 1) = 0;
-    strcat(p, "../");
+        lstrncat(p, "../", sizeof(achBuf) - (p - achBuf));
+    }
     GPath::clean(achBuf);
     memccpy(pBuf, achBuf, 0, len);
     return 0;
@@ -636,10 +646,10 @@ int LshttpdMain::guessCommonServerRoot()
     {
         if (!pServerRoots[i])
             continue;
-        strcpy(achBuf, pServerRoots[i]);
+        lstrncpy(achBuf, pServerRoots[i], sizeof(achBuf));
         for (size_t j = 0; j < sizeof(pServerDirs) / sizeof(char *); ++j)
         {
-            strcat(achBuf, pServerDirs[j]);
+            lstrncat(achBuf, pServerDirs[j], sizeof(achBuf));
             if (testServerRoot(achBuf) == 0)
                 return 0;
         }
@@ -1043,8 +1053,6 @@ int LshttpdMain::init(int argc, char *argv[])
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_WORKER_INIT,
                 NULL);
 
-
-
     return 0;
 }
 
@@ -1244,7 +1252,11 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     {
         HttpServerConfig::getInstance().setUseSendfile(1);
     }
-    close(m_fdAdmin);
+    if (m_fdAdmin != -1)
+    {
+        close(m_fdAdmin);
+        m_fdAdmin = -1;
+    }
 
 #ifdef IS_LSCPD
     snprintf(argv0, 80, "lscpd (lscpd - #%02d)", pProc->m_iProcNo);
@@ -1487,7 +1499,11 @@ void LshttpdMain::applyChanges()
 void LshttpdMain::gracefulRestart()
 {
     LS_DBG_L("Graceful Restart... ");
-    close(m_fdAdmin);
+    if (m_fdAdmin != -1)
+    {
+        close(m_fdAdmin);
+        m_fdAdmin = -1;
+    }
     broadcastSig(SIGTERM, 1);
     s_tmDelayShutdown = 0;
     s_iRunning = 0;

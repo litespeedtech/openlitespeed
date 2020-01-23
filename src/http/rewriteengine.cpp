@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -51,7 +51,40 @@ LS_SINGLETON(RewriteEngine);
 
 
 RewriteEngine::RewriteEngine()
+    : m_pSourceURL(NULL)
+    , m_sourceURLLen(0)
+    , m_pQS(NULL)
+    , m_qsLen(0)
+    , m_pOrgSourceURL(NULL)
+    , m_orgSourceURLLen(0)
+    , m_rewritten(0)
+    , m_ruleMatches(0)
+    , m_condMatches(0)
+    , m_pDestURLLen(0)
+    , m_iScriptLen(0)
+    , m_iPathInfoLen(0)
+    , m_iFilePathLen(0)
+    , m_flag(0)
+    , m_action(0)
+    , m_statusCode(0)
+    , m_logLevel(0)
+    , m_pDestURL(NULL)
+    , m_pCondBuf(NULL)
+    , m_pFreeBuf(NULL)
+    , m_pContext(NULL)
+    , m_pBase(NULL)
+    , m_pStrip(NULL)
+    , m_pLastCondStr(NULL)
+    , m_pLastTestStr(NULL)
+    , m_lastTestStrLen(0)
+    , m_noStat(0)
+    , m_stripLen(0)
 {
+    memset(&m_st, 0, sizeof(m_st));
+    memset(m_ruleVec, 0, sizeof(m_ruleVec));
+    memset(m_condVec, 0, sizeof(m_condVec));
+    memset(m_rewriteBuf, 0, sizeof(m_rewriteBuf));
+    memset(m_qsBuf, 0, sizeof(m_qsBuf));
 }
 
 
@@ -89,6 +122,7 @@ int RewriteEngine::loadRewriteFile(char *path, RewriteRuleList *pRuleList,
     struct stat sb;
     if (fstat(fd, &sb) == -1) {
         LS_INFO("Rewrite file [%s] cannot be open.", path);
+        close(fd);
         return LS_FAIL;
     }
 
@@ -149,7 +183,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
             int type = 0;
             if ( strlen(pRules) > 11 && (isspace(*(pRules + 11))) &&
                 ((type = (strncasecmp(pRules, "RewriteFile", 11) == 0 ? 1 : 0))
-                || 
+                ||
                 (type = (strncasecmp(pRules, "RewriteBase", 11) == 0 ? 2 : 0))))
             {
                 pRules += 12;
@@ -180,7 +214,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                 pRules += 14;
                 while (isspace(*pRules))
                     ++pRules;
-                
+
                 int len = 0;
                 if (pLineEnd)
                     len = pLineEnd - pRules;
@@ -247,7 +281,7 @@ int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
 //         m_qsLen -= pRules - m_rewriteBuf[0];
 //     }
 //     return ret;
-// 
+//
 // }
 
 
@@ -935,7 +969,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                                 LS_INFO(pSession->getLogSession(),
                                         "[REWRITE] set cache vary value: '%s'",
                                         pValue);
-                            RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE", 
+                            RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE",
                                                 18, pValue, pValEnd - pValue);
                             //recover the pValue which need "vary="
                             pValue -= 5;
@@ -948,7 +982,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                             needSet = false;
                         }
                     }
-                    else if (strcasecmp(pKey + 6, "Vary") == 0) 
+                    else if (strcasecmp(pKey + 6, "Vary") == 0)
                     {
                         if (m_logLevel > 4)
                             LS_INFO(pSession->getLogSession(),
@@ -957,7 +991,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                                             pValue, pValEnd - pValue);
                     }
                 }
-                
+
                 if (needSet)
                 {
                     RequestVars::setEnv(pSession, pKey, pKeyEnd - pKey, pValue,
@@ -965,7 +999,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                     if (m_logLevel > 4)
                         LS_INFO(pSession->getLogSession(),
                                 "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
-                }                
+                }
             }
         }
         pEnv = (RewriteSubstFormat *)pEnv->next();
@@ -1179,8 +1213,8 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
     m_flag     = 0;
     m_statusCode = 0;
     AutoStr2 cacheCtlStr = "";
-    
-    
+
+
     while (pRule)
     {
         flag = pRule->getFlag();
@@ -1251,7 +1285,7 @@ NEXT_RULE:
             --n;
         }
     }
-    
+
     if (cacheCtlStr.len() > 0)
     {
         if (m_logLevel > 4)

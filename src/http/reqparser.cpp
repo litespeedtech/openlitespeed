@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -45,17 +45,24 @@ ReqParser::ReqParser()
     , m_iCurOff(0)
     , m_state_kv(0)
     , m_last_char(0)
+    , m_trial_crlf(0)
     , m_iParseState(0)
     , m_beginIndex(0)
     , m_args(0)
     , m_maxArgs(0)
     , m_pArgs(NULL)
+    , m_qsBegin(0)
+    , m_qsArgs(0)
+    , m_postBegin(0)
+    , m_postArgs(0)
+    , m_pErrStr(NULL)
     , m_pReq(NULL)
     , m_sLastFileKey("")
     , m_pLastFileBuf(NULL)
     , m_iContentLength(0)
     , m_pFileUploadConfig(NULL)
 {
+    memset(&m_md5Ctx, 0, sizeof(m_md5Ctx));
     allocArgIndex(8);
 }
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -37,7 +37,7 @@ public:
     IOVec()
         : m_pBegin((struct iovec *)m_aStore + 5)
         , m_pEnd((struct iovec *)m_aStore + 5)
-    {};
+    {   memset(m_aStore, 0, sizeof(m_aStore));   };
     explicit IOVec(int begin)
         : m_pBegin((struct iovec *)m_aStore + begin)
         , m_pEnd((struct iovec *)m_aStore + begin)
