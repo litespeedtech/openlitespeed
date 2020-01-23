@@ -2,8 +2,9 @@
 
 /* * ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ *
+ * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright (c) 2018-2020
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -232,10 +233,11 @@ class Plesk extends ControlPanel
                     $tmpDocrootMap[$docroot] =
                             array_merge($tmpDocrootMap[$docroot], $names);
                 }
+
+                $x++;
             }
 
             $names = array();
-            $x++;
         }
 
         $index = 0;
@@ -257,6 +259,35 @@ class Plesk extends ControlPanel
     }
 
     /**
+     * Check for known Plesk PHP binaries and return the newest available
+     * version among them.
+     *
+     * @since 1.9.6
+     *
+     * @return string
+     */
+    protected function getDefaultPhpBinary()
+    {
+        $binaryList = array (
+            '/opt/plesk/php/7.4/bin/php',
+            '/opt/plesk/php/7.3/bin/php',
+            '/opt/plesk/php/7.2/bin/php',
+            '/opt/plesk/php/7.1/bin/php',
+            '/opt/plesk/php/7.0/bin/php',
+            '/opt/plesk/php/5.6/bin/php',
+        );
+
+        foreach ( $binaryList as $binary ) {
+
+            if ( file_exists($binary)) {
+                return $binary;
+            }
+        }
+
+        return '';
+    }
+
+    /**
      *
      * @param WPInstall $wpInstall  Not used
      * @return string
@@ -265,10 +296,25 @@ class Plesk extends ControlPanel
     {
         $phpBin = 'php';
 
-        $psa_php56 = '/opt/plesk/php/5.6/bin/php';
+        $serverName = $wpInstall->getData(WPInstall::FLD_SERVERNAME);
 
-        if ( file_exists($psa_php56) && is_executable($psa_php56) ) {
-            $phpBin = $psa_php56;
+        if ( $serverName != null ) {
+            $escapedServerName = escapeshellarg($serverName);
+
+            $cmd = 'plesk db -Ne "SELECT s.value '
+                    . 'FROM ((domains d INNER JOIN hosting h ON h.dom_id=d.id) '
+                    . 'INNER JOIN ServiceNodeEnvironment s ON h.php_handler_id=s.name) '
+                    . "WHERE d.name={$escapedServerName} AND s.section='phphandlers'\" "
+                    . '| sed -n \'s:.*<clipath>\(.*\)</clipath>.*:\1:p\'';
+
+            $binPath = trim(shell_exec($cmd));
+        }
+
+        if ( !empty($binPath) ) {
+            $phpBin = $binPath;
+        }
+        elseif ( ($defaultBinary = $this->getDefaultPHPBinary()) != '' ) {
+            $phpBin = $defaultBinary;
         }
 
         return "{$phpBin} {$this->phpOptions}";

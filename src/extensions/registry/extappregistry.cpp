@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -223,7 +223,8 @@ int ExtAppSubRegistry::generateRTReport(int fd, int type)
         "Proxy",
         "Servlet",
         "LSAPI",
-        "Logger"
+        "Logger",
+        "LB",
     };
 
     ExtAppMap::iterator iter;
@@ -411,6 +412,12 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
         pNode = pPhpXmlNodeS->xml_node;
         pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
                                                             achAddress, 128);
+        if (!pUri)
+        {
+            LS_ERROR(&currentCtx, "unable to get address for vhost");
+            return -1;
+        }
+
         ExtAppRegistry::getUniAppUri(pUri, achAddress, 256, pVHost->getUid());
         assert(pUri == achAddress);
 
@@ -442,7 +449,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
 
             if (access(pCmd, X_OK) == -1)
             {
-                LS_ERROR(&currentCtx, "invalid path - %s, "
+                LS_ERROR(&currentCtx, "invalid path -- %s, "
                          "it cannot be started by Web server!", buf);
                 return -1;
             }
@@ -473,14 +480,11 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
         pConfig = pWorker->getConfigPointer();
         assert(pConfig);
 
-        if (pUri)
+        if (pWorker->setURL(pUri))
         {
-            if (pWorker->setURL(pUri))
-            {
-                LS_ERROR(&currentCtx, "failed to set socket address to %s!",
-                         appName);
-                return -1;
-            }
+            LS_ERROR(&currentCtx, "failed to set socket address to %s!",
+                     appName);
+            return -1;
         }
 
         pWorker->setRole(HandlerType::ROLE_RESPONDER);
@@ -558,7 +562,6 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     const char *pUri;
     char buf[MAX_PATH_LEN];
     int iAutoStart = 0;
-    int iRunOnStartup = 0;
     const char *pPath = NULL;
     ExtWorker *pWorker = NULL;
     ExtWorkerConfig *pConfig = NULL;
@@ -604,23 +607,15 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     
     iType -= HandlerType::HT_CGI;
     
-    /**
-     * AddApp first and then do the settings
-     */
-    int exist = 0;
-    pWorker = addApp(iType, pName, &exist);
-    if (!pWorker)
-    {
-        LS_ERROR(&currentCtx, "failed to add external processor: %s!", pName);
-        return NULL;
-    }
-    if (exist)
+    
+    pWorker = getApp(iType, pName);
+    if (pWorker)
     {
         LS_DBG(&currentCtx, "external processor %s exist, no need to addApp again!",
                 pName);
         return pWorker;
     }
-
+    
 
     pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
             achAddress, 128);
@@ -643,7 +638,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
             achAddress[l - 1] = 0x00;
 
         if (strchr(pUri, ':') == NULL)
-            strcat(achAddress, (isHttps ? ":443" : ":80"));
+            lstrncat(achAddress, (isHttps ? ":443" : ":80"), sizeof(achAddress));
 
         LS_DBG_L(&currentCtx, "ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
     }
@@ -734,8 +729,13 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         }
     }
 
-
-
+    pWorker = addApp(iType, pName, NULL);
+    if (!pWorker)
+    {
+        LS_ERROR(&currentCtx, "failed to add external processor: %s!", pName);
+        return NULL;
+    }
+    
     pConfig = pWorker->getConfigPointer();
     assert(pConfig);
 
@@ -771,8 +771,8 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         config.setStartByServer(iAutoStart);
         config.setPhpHandler(iType == EA_LSAPI);
         config.config(pNode);
-        config.configExtAppUserGroup(pNode, iType, achName);
-        
+        config.configExtAppUserGroup(pNode, iType, achName, sizeof(achName));
+
         if (config.isDetached())
         {
             if (!pVHost)
@@ -783,8 +783,8 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
                 pApp->setRestartMarker(s_lsphpRestartFlagFile, 0);
             }
             else
-            {   
-                strcat(achName, "/.lsphp_restart.txt");
+            {
+                lstrncat(achName, "/.lsphp_restart.txt", sizeof(achName));
                 pApp->setRestartMarker(achName, 0);
             }
         }

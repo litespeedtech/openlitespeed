@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -70,11 +70,11 @@ void VMemBuf::setTempFileTemplate(const char *pTemp)
 {
     if (pTemp != NULL)
     {
-        strcpy(s_aTmpFileTemplate, pTemp);
+        lstrncpy(s_aTmpFileTemplate, pTemp, sizeof(s_aTmpFileTemplate));
         int len = strlen(pTemp);
         if ((len < 6) ||
             (strcmp(pTemp + len - 6, "XXXXXX") != 0))
-            strcat(s_aTmpFileTemplate, "XXXXXX");
+            lstrncat(s_aTmpFileTemplate, "XXXXXX", sizeof(s_aTmpFileTemplate));
     }
 }
 
@@ -478,7 +478,6 @@ int VMemBuf::appendBlock(BlockBuf *pBlock)
         ls_atomic_spin_unlock(&m_lock);
         return 0;
     }
-    ls_atomic_spin_unlock(&m_lock);
 }
 
 
@@ -576,6 +575,9 @@ int VMemBuf::setFd(const char *pFileName, int fd)
 
 void VMemBuf::rewindReadWriteBuf()
 {
+    if (m_bufList.empty())
+        return ;
+    
 #ifdef _RELEASE_MMAP
     if (m_iType == VMBUF_FILE_MAP)
     {
@@ -592,10 +594,10 @@ void VMemBuf::rewindReadWriteBuf()
 #endif
     ls_atomic_spin_lock(&m_lock);
     m_pCurRBlock = m_bufList.begin();
-    m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
-    m_pCurRPos = (*m_pCurRBlock)->getBuf();
     if (m_pCurRBlock)
     {
+        m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
+        m_pCurRPos = (*m_pCurRBlock)->getBuf();
         if (m_pCurWBlock != m_pCurRBlock)
         {
             m_pCurWBlock = m_pCurRBlock;
@@ -638,6 +640,9 @@ void VMemBuf::rewindWriteBuf()
 
 void VMemBuf::rewindReadBuf()
 {
+    if (m_bufList.empty())
+        return ;
+    
 #ifdef _RELEASE_MMAP
     if (m_iType == VMBUF_FILE_MAP)
     {
@@ -653,12 +658,9 @@ void VMemBuf::rewindReadBuf()
     }
 #endif
     ls_atomic_spin_lock(&m_lock);
-    if (!m_bufList.empty())
-    {
-        m_pCurRBlock = m_bufList.begin();
-        m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
-        m_pCurRPos = (*m_pCurRBlock)->getBuf();
-    }
+    m_pCurRBlock = m_bufList.begin();
+    m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
+    m_pCurRPos = (*m_pCurRBlock)->getBuf();
     ls_atomic_spin_unlock(&m_lock);
 }
 

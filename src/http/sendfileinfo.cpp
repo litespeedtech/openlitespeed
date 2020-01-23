@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -26,6 +26,7 @@
 SendFileInfo::SendFileInfo()
     : m_pFileData(NULL)
     , m_pECache(NULL)
+    , m_pParam(NULL)
     , m_pAioBuf(NULL)
     , m_lCurPos(0)
     , m_lCurEnd(0)
@@ -55,24 +56,24 @@ int SendFileInfo::getfd()
 }
 
 void SendFileInfo::setFileData(StaticFileCacheData *pData)
-{   
+{
     if (m_pFileData == pData)
         return;
     if (m_pFileData)
         m_pFileData->decRef();
-    m_pFileData = pData; 
+    m_pFileData = pData;
     if (m_pFileData)
         m_pFileData->incRef();
 }
 
 
-void SendFileInfo::setECache(FileCacheDataEx *pCache) 
+void SendFileInfo::setECache(FileCacheDataEx *pCache)
 {
     if (m_pECache == pCache)
         return;
     if (m_pECache)
         m_pECache->decRef();
-    m_pECache = pCache;   
+    m_pECache = pCache;
     if (m_pECache)
         m_pECache->incRef();
 }
@@ -98,7 +99,7 @@ void SendFileInfo::release()
 int SendFileInfo::readyCacheData(char compress, char mode)
 {
     int ret;
-    
+
     if ((compress) && (m_pFileData->getMimeType()->getExpires()->compressible()))
     {
         ret = m_pFileData->readyCompressed(mode);
@@ -111,7 +112,7 @@ int SendFileInfo::readyCacheData(char compress, char mode)
             return 0;
         }
     }
-    
+
     const char *pFileName = m_pFileData->getRealPath()->c_str();
     assert(pFileName && *pFileName);
     ret = 0;

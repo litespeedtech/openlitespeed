@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -71,6 +71,7 @@ public:
         : m_pName(NULL)
         , m_pCacheUser(NULL)
         , m_pCacheGroup(NULL)
+        , m_encryptMethod(0)
     {}
     virtual ~UserDir();
 

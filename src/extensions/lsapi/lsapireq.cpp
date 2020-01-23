@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -217,6 +217,8 @@ int LsapiReq::dumpReq(char *pFile)
 {
     //test code
     int fd = open(pFile, O_RDWR | O_CREAT | O_TRUNC, 0600);
+    if (fd == -1)
+        return -1;
     writev(fd, m_pIovec->get(), m_pIovec->len());
     close(fd);
     return 0;

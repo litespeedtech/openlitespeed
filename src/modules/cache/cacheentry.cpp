@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -103,7 +103,7 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
     char *pBuf = m_sKey.prealloc(len + 1);
     if (!pBuf)
         return -1;
-    
+
     if (!pKey->m_pUri)
         return -1;
 
@@ -121,7 +121,7 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
         memmove(pBuf + l , pKey->m_sCookie.c_str(), pKey->m_iCookieVary);
         l += pKey->m_iCookieVary;
     }
-    if (pKey->m_ipLen > 0)
+    if (pKey->m_pIP && pKey->m_ipLen > 0)
     {
         if (pKey->m_iCookiePrivate > 0)
         {
@@ -168,7 +168,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
         pKey->m_ipLen = 0 - pKey->m_ipLen;
         isPublic = true;
     }
-    
+
     if (pKey->m_ipLen > 0)
     {
         if (pKey->m_iCookiePrivate > 0)
@@ -182,7 +182,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
             }
             p += pKey->m_iCookiePrivate + 1;
         }
-        
+
         if (!isPublic)
         {
             if ((*p  != '@') ||

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -258,6 +258,8 @@ void HttpListenerList::recvListeners()
         if (pAddr->sa_family != PF_UNIX)
         {
             int fd = dup(startfd);
+            if (fd == -1)
+                break;
             HttpListener *pListener = new HttpListener();
             pListener->assign(fd, pAddr);
             push_back(pListener);
@@ -400,7 +402,7 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
         pInfo->init(pAddr);
         if (pListener == NULL)
         {
-            snprintf(sAddr, sizeof(sAddr), 
+            snprintf(sAddr, sizeof(sAddr),
                         (pAddr->sa_family == AF_INET6) ? "[%s]:%u" : "%s:%u",
                         pInfo->getAddrStr()->c_str(), (unsigned)GSockAddr::getPort(pAddr));
 
@@ -411,7 +413,7 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
 
             if (pAddr->sa_family == AF_INET6)
             {
-                snprintf(sAddr, sizeof(sAddr), 
+                snprintf(sAddr, sizeof(sAddr),
                         "[::]:%u", (unsigned)GSockAddr::getPort(pAddr));
             }
             else
@@ -421,7 +423,7 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
             }
             pListener = m_pListenerList->get(sAddr, sAddr);
         }
-        
+
         if (pListener)
             pInfo->setVHostMap(pListener->findVhostMap(pAddr));
         m_registry.insert(pInfo->getAddr(), pInfo);
@@ -431,7 +433,7 @@ const ServerAddrInfo *ServerAddrRegistry::get(const struct sockaddr *pAddr,
         pInfo = iter.second();
     }
     return pInfo;
-        
+
 }
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -74,6 +74,7 @@ int FDPass::readFd(int fd, void *ptr, int nbytes, int *recvfd)
 
     msg.msg_name = NULL;
     msg.msg_namelen = 0;
+    msg.msg_flags = 0;
 
     iov[0].iov_base = (char *)ptr;
     iov[0].iov_len = nbytes;
@@ -195,9 +196,15 @@ return (len - sizeof(int));
 int test_fdpass()
 {
 int fd = dup(1);
+if (fd == -1)
+    return fd;
 int intercommfds[2];
 int ret;
-socketpair(AF_UNIX, SOCK_STREAM, 0, intercommfds);
+if (socketpair(AF_UNIX, SOCK_STREAM, 0, intercommfds) == -1)
+{
+    close(fd);
+    return -1;
+}
 ret = fork();
 if (ret == 0)
 {
@@ -214,8 +221,9 @@ close(intercommfds[1]);
 close(fd);
 int n = 0;
 int fd1;
-FDPass::readFd(intercommfds[0], &n, sizeof(int), &fd1);
-printf("recv fd: %d, n: %d\n", fd1, n);
+int rc;
+rc = FDPass::readFd(intercommfds[0], &n, sizeof(int), &fd1);
+printf("recv fd: %d, n: %d, rc: %d\n", fd1, n, rc);
 if (fd1 != -1)
 return 0;
 }

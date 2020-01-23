@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -44,7 +44,8 @@ GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
 {
     if ((!m_pSockAddr) || (m_pSockAddr->sa_family != rhs.sa_family))
         allocate(rhs.sa_family);
-    memmove(m_pSockAddr, &rhs, m_len);
+    if (m_pSockAddr)
+        memmove(m_pSockAddr, &rhs, m_len);
     return *this;
 }
 
@@ -175,7 +176,7 @@ int GSockAddr::setHttpUrl(const char *pHttpUrl, const int len)
 
     if( endPos >= (int)sizeof(url) - 5)
         return -1;
-    
+
     memcpy(url, p, endPos);
     url[endPos] = 0;
 
@@ -345,7 +346,7 @@ int GSockAddr::doLookup(int family, const char *p, int tag)
             m_v4->sin_addr.s_addr = ((sockaddr_in *)(res->ai_addr))->sin_addr.s_addr;
             break;
         case AF_INET6:
-            memcpy(&m_v6->sin6_addr, &((sockaddr_in6 *)(res->ai_addr))->sin6_addr, 
+            memcpy(&m_v6->sin6_addr, &((sockaddr_in6 *)(res->ai_addr))->sin6_addr,
                    sizeof(m_v6->sin6_addr));
             break;
         }
@@ -355,11 +356,11 @@ int GSockAddr::doLookup(int family, const char *p, int tag)
 }
 
 
-int GSockAddr::asyncSet(int family, const char *pURL, int tag 
+int GSockAddr::asyncSet(int family, const char *pURL, int tag
                  , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
                  , void *ctx, AdnsReq **pReq)
 {
-    
+
 #ifdef USE_UDNS
     char achDest[128];
     int  gotAddr = set2(family, pURL, tag, achDest);
@@ -368,7 +369,7 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
         return -1;
     else if (gotAddr == 1)
         return 0;
-    
+
     int ipLen;
     const char *pIp = Adns::getInstance().getHostByNameInCache(achDest,
                         ipLen, family);
@@ -377,13 +378,13 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
         return Adns::setResult(m_pSockAddr, pIp, ipLen);
     }
 
-    if (lookup_pf && 
+    if (lookup_pf &&
         (*pReq = Adns::getInstance().getHostByName(achDest, family,
                                                    lookup_pf, ctx)) != NULL)
         return 1;
     return doLookup(family, achDest, tag);
-    
-   
+
+
 #else
     tag |= DO_NSLOOKUP_DIRECT;
     return set(family, pURL, tag);
@@ -537,7 +538,7 @@ int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
 //         0, 0, 0, 0, 0, 0, 0, sizeof(sockaddr_in6) };
 //     assert(pAddr->sa_family <= AF_INET6);
 //     return XXH64(pAddr, addr_size[pAddr->sa_family], 0);
-//     
+//
 // }
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -122,7 +122,7 @@ const char *HttpHeader::s_pHeaderNamesLowercase[H_HEADER_END + 1] =
 
     // request-header
     "te",
-    "x-litespeed-purge"
+    "x-litespeed-purge",
     "expect",
     "max-forwards",
     "proxy-authorization",
@@ -628,7 +628,10 @@ HeaderOp *HttpHeaderOps::append(int16_t index, const char *pName,
         pVal = pBuf;
     }
     if (m_buf.reserve_append(sizeof(HeaderOp)) == -1)
+    {
+        free((void *)pName);
         return NULL;
+    }
     HeaderOp *pHeader = end() - 1;
     if (is_req)
     {
@@ -665,9 +668,9 @@ int HttpHeaderOps::parseOp(const char *pBegin, const char *pEnd, int is_req)
             ++pNameBegin;
         pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);
     }
-    
-    
-    
+
+
+
     if (pNameEnd && (pNameEnd - pNameBegin == 6)
         && (strncasecmp(pNameBegin, "always", 6) == 0))
     {

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -50,7 +50,7 @@ const SsiComponent *SsiStack::nextComponentOfCurScript()
         {
             //pop block stack one more level
             m_pCurBlock = m_pCurBlock->getParentBlock();
-            if (! m_pCurBlock->isWrapper())
+            if (m_pCurBlock && ! m_pCurBlock->isWrapper())
             {
                 //something is wrong
             }
@@ -59,7 +59,8 @@ const SsiComponent *SsiStack::nextComponentOfCurScript()
         m_pCurComponent = m_pCurBlock;
         if (m_pCurComponent)
             m_pCurComponent = (SsiComponent *)m_pCurComponent->next();
-        m_pCurBlock = m_pCurBlock->getParentBlock();
+        if (m_pCurBlock)
+            m_pCurBlock = m_pCurBlock->getParentBlock();
     }
     return m_pCurComponent;
 

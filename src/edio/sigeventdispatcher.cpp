@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2017  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -83,7 +83,7 @@ struct SigEvtHdlrInfo
 };
 
 
-#define SED_FLAG_SIGNALFD   1 
+#define SED_FLAG_SIGNALFD   1
 #define SED_FLAG_INITED     2
 #define SED_FLAG_INUSE      4
 
@@ -105,13 +105,13 @@ int SigEventDispatcher::processSigEvent()
     while (sigtimedwait(&m_sigset, &si, &timeout) > 0)
     {
         int idx = si.si_signo - m_rtsigmin;
-        if (idx >=0 && idx < m_rtsigcnt)
+        if (idx >=0 && idx < m_rtsigcnt && m_rtsig_hdlrs)
         {
             if (m_rtsig_hdlrs[idx].handler == SIG_EVT_HANDLER)
                 ((EventHandler *)si.si_value.sival_ptr)->onEvent();
             else if (m_rtsig_hdlrs[idx].handler != NULL)
                 (*m_rtsig_hdlrs[idx].handler)(si.si_signo, m_rtsig_hdlrs[idx].param);
-        }            
+        }
     }
 #endif
     return LS_OK;
@@ -128,11 +128,13 @@ SigEventDispatcher::SigEventDispatcher()
     m_rtsignext = m_rtsigmin + 4;
     sigemptyset(&m_sigset);
     m_flag = 0;
+    m_mergeable = 0;
     if (m_rtsigcnt > (int) sizeof(m_mergeable) * 8)
         m_rtsigcnt = (int) sizeof(m_mergeable) * 8;
-    m_rtsig_hdlrs = (SigEvtHdlrInfo *)malloc(m_rtsigcnt 
+    m_rtsig_hdlrs = (SigEvtHdlrInfo *)malloc(m_rtsigcnt
                         * sizeof(SigEvtHdlrInfo));
-    memset(m_rtsig_hdlrs, 0, sizeof(SigEvtHdlrInfo) * m_rtsigcnt);
+    if (m_rtsig_hdlrs)
+        memset(m_rtsig_hdlrs, 0, sizeof(SigEvtHdlrInfo) * m_rtsigcnt);
 }
 
 
@@ -158,7 +160,7 @@ int SigEventDispatcher::beginWatch()
 
 int SigEventDispatcher::nextRtsig()
 {
-    int signo; 
+    int signo;
     while( m_rtsignext < m_rtsigmin + m_rtsigcnt)
     {
         signo = m_rtsignext++;
@@ -171,7 +173,7 @@ int SigEventDispatcher::nextRtsig()
 
 int SigEventDispatcher::registerRtsig(sigevthdlr_t hdlr, void *param, bool merge)
 {
-    int signo = nextRtsig(); 
+    int signo = nextRtsig();
     if (signo == -1)
         return signo;
 
@@ -179,7 +181,7 @@ int SigEventDispatcher::registerRtsig(sigevthdlr_t hdlr, void *param, bool merge
         || sigprocmask(SIG_BLOCK, &m_sigset, NULL) != 0)
         return -1;
     int idx = signo - m_rtsigmin;
-    if (idx >= 0 && idx < m_rtsigcnt)
+    if (idx >= 0 && idx < m_rtsigcnt && m_rtsig_hdlrs)
     {
         m_rtsig_hdlrs[idx].handler = hdlr;
         m_rtsig_hdlrs[idx].param   = param;
@@ -213,15 +215,16 @@ int SigEventDispatcher::handleEvents(short event)
         for (i = 0, handled_set = 0; i < readCount; ++i)
         {
             int idx = si[i].ssi_signo - m_rtsigmin;
-            if (idx >=0 && idx < m_rtsigcnt && !(handled_set & (1L << idx)))
+            if (idx >=0 && idx < m_rtsigcnt && m_rtsig_hdlrs &&
+                !(handled_set & (1L << idx)))
             {
                 handled_set |= (1L << idx) & m_mergeable;
                 if (m_rtsig_hdlrs[idx].handler == SIG_EVT_HANDLER)
                     ((EventHandler *)si[i].ssi_ptr)->onEvent();
                 else if (m_rtsig_hdlrs[idx].handler != NULL)
-                    (*m_rtsig_hdlrs[idx].handler)(si[i].ssi_signo, 
+                    (*m_rtsig_hdlrs[idx].handler)(si[i].ssi_signo,
                                           m_rtsig_hdlrs[idx].param);
-            }            
+            }
         }
     }
     while (readCount == (int) (sizeof(si) / sizeof(si[0])));

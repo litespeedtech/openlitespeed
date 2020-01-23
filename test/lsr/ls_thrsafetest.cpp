@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -95,6 +95,10 @@ static void *testOneAlloc(int id, int size)
         while (--size >= 0)
         {
             if (*p++ != fill) {
+                if (mode)
+                    ls_xpool_free(xpool, ptr);
+                else
+                    ls_pfree(ptr);
                 return NULL;
             }
         }
@@ -177,10 +181,10 @@ static void *runTestHighContention(void *o)
         usleep(200);
 
     if (verbose) printf("test begin %d\n", p->m_id);
-    
+
     for (int loop = 0; loop < loopCount; loop++) {
         long cnt;
-        ptr = ptrs; 
+        ptr = ptrs;
         for (cnt = 0; cnt < allocCount; ++cnt)
         {
             if ((*ptr++ = (*alloc)(32)) == NULL)
@@ -242,7 +246,7 @@ int testthrsafe(void *(*runTest)(void *))
 
     if (verbose) printf("\nRUNNING mode %d numThreads %d allocCount %ld\n",
             mode, numThreads, allocCount);
-    
+
     p = threadMap;
 
     if (mode)
@@ -403,7 +407,10 @@ int main(int ac, char *av[])
 #endif
 
         std::cerr.imbue(std::locale(""));
-        std::cerr
+        if (!allocCount || !loopCount || !numThreads)
+            std::cerr << "Avoiding divide by zero" << std::endl;
+        else
+            std::cerr
             << "[type " << type
             << " mode " << mode
             << " alloc " << ((alloc == ls_palloc) ? "ls_palloc/ls_pfree" : "malloc/free")
@@ -420,7 +427,10 @@ int main(int ac, char *av[])
             << " nsec per alloc " << std::setprecision(3) << std::fixed << 1000.0 * deltaT / (double) allocCount / loopCount / numThreads
             << std::endl;
     }
-    std::cerr << "Avg run usecs " << std::setprecision(0) << std::fixed << tot_usecs/(double)runs
+    if (!runs || !allocCount || !loopCount || !numThreads)
+        std::cerr << "Avoiding divide by zero" << std::endl;
+    else
+        std::cerr << "Avg run usecs " << std::setprecision(0) << std::fixed << tot_usecs/(double)runs
         << " nsec per alloc " << std::setprecision(3) << std::fixed << 1000.0 * tot_usecs/(double)runs / allocCount / loopCount / numThreads<< std::endl;
     std::cout << "Bye.\n";
 }

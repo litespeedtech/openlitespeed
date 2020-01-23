@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -26,6 +26,8 @@
 
 SpdyStream::SpdyStream()
     : m_uiStreamID(0)
+    , m_iWindowOut(0)
+    , m_iWindowIn(0)
     , m_pSpdyConn(NULL)
 {
 }
@@ -33,8 +35,8 @@ SpdyStream::SpdyStream()
 
 const char *SpdyStream::buildLogId()
 {
-    m_logId.len = safe_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s-%d",
-                        m_pSpdyConn->getStream()->getLogId(), m_uiStreamID);
+    m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s-%d",
+                      m_pSpdyConn->getStream()->getLogId(), m_uiStreamID);
     return m_logId.ptr;
 }
 

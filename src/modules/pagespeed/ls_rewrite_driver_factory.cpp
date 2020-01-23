@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -64,10 +64,11 @@ class SharedCircularBuffer;
 
 LsRewriteDriverFactory::LsRewriteDriverFactory(
         const ProcessContext &process_context,
-        SystemThreadSystem *system_thread_system, 
+        SystemThreadSystem *system_thread_system,
         StringPiece hostname, int port)
     : SystemRewriteDriverFactory(process_context, system_thread_system,
                                  NULL, hostname, port)
+    , m_timer(NULL)
     , m_bThreadsStarted(false)
     , m_pLsMessageHandler(new LsMessageHandler(timer(),
                            thread_system()->NewMutex()))
@@ -81,8 +82,11 @@ LsRewriteDriverFactory::LsRewriteDriverFactory(
     default_options()->set_beacon_url("/ls_pagespeed_beacon");
     SystemRewriteOptions *system_options =
         dynamic_cast<SystemRewriteOptions *>(default_options());
-    system_options->set_file_cache_clean_inode_limit(500000);
-    system_options->set_avoid_renaming_introspective_javascript(true);
+    if (system_options)
+    {
+        system_options->set_file_cache_clean_inode_limit(500000);
+        system_options->set_avoid_renaming_introspective_javascript(true);
+    }
     set_message_handler(m_pLsMessageHandler);
     set_html_parse_message_handler(m_pHtmlParseLsiMessageHandler);
 }

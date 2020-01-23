@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -339,8 +339,8 @@ int ZConfManager::updateFile(const char *path, const char *pCurHash, int iCurHas
     }
 
     LS_NOTICE(pMsg, ZCONFMGR_LOG_PREFIX, path);
-
-    ls_fio_close(fd);
+    if (fd >= 0)
+        ls_fio_close(fd);
     return ret;
 }
 
@@ -436,8 +436,9 @@ void ZConfManager::prepareServerUp()
         m_pSslConf->append("\n]\n}");
     }
     ConfigCtx::getCurConfigCtx()->getAbsoluteFile(path, "$SERVER_ROOT/conf/zconfssl.hash");
-    if (0 == hashConf(m_pSslConf, path, NULL))
-        setFlag(ZCMF_SENDZCSSL);
+    if (m_pSslConf)
+        if (0 == hashConf(m_pSslConf, path, NULL))
+            setFlag(ZCMF_SENDZCSSL);
 }
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -29,10 +29,27 @@ L4Handler::L4Handler()
 }
 
 
+L4Handler::~L4Handler()
+{
+    if (m_buf)
+        delete m_buf;
+    if (m_pL4conn)
+        delete m_pL4conn;
+}
+
+
 void L4Handler::recycle()
 {
-    delete m_buf;
-    delete m_pL4conn;
+    if (m_buf)
+    {
+        delete m_buf;
+        m_buf = NULL;
+    }
+    if (m_pL4conn)
+    {
+        delete m_pL4conn;
+        m_pL4conn = NULL;
+    }
     delete this;
 }
 
@@ -117,10 +134,6 @@ int L4Handler::onWriteEx()
 int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
                     const char *pIP, int iIpLen)
 {
-    int ret = m_pL4conn->init(pGSockAddr);
-    if (ret != 0)
-        return ret;
-
     int hasSlashR = 1; //"\r\n"" or "\n"
     LoopBuf *pBuff = m_pL4conn->getBuf();
     pBuff->append(req.getOrgReqLine(), req.getHttpHeaderLen());
@@ -144,6 +157,11 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
     LS_DBG_L(getLogSession(),
              "L4Handler: init web socket, reqheader [%s], len [%d]",
              req.getOrgReqLine(), req.getHttpHeaderLen());
+
+    int ret = m_pL4conn->init(pGSockAddr);
+    if (ret != 0)
+        return ret;
+
     return 0;
 }
 

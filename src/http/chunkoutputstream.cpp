@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -26,13 +26,8 @@
 static const char *s_CHUNK_END = "0\r\n\r\n";
 
 ChunkOutputStream::ChunkOutputStream()
-    : m_pOS(NULL)
-    , m_iCurSize(0)
-    , m_iBuffering(0)
-    , m_iSendFileLeft(0)
-    , m_iTotalPending(0)
 {
-    m_iov.clear();
+    LS_ZERO_FILL(m_pOS, m_pLastBufBegin);
 }
 
 

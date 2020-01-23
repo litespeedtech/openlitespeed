@@ -1,6 +1,20 @@
-/*
- *
- */
+/*****************************************************************************
+*    Open LiteSpeed is an open source HTTP server.                           *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*                                                                            *
+*    This program is free software: you can redistribute it and/or modify    *
+*    it under the terms of the GNU General Public License as published by    *
+*    the Free Software Foundation, either version 3 of the License, or       *
+*    (at your option) any later version.                                     *
+*                                                                            *
+*    This program is distributed in the hope that it will be useful,         *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+*    GNU General Public License for more details.                            *
+*                                                                            *
+*    You should have received a copy of the GNU General Public License       *
+*    along with this program. If not, see http://www.gnu.org/licenses/.      *
+*****************************************************************************/
 
 #include "quicengine.h"
 #include <edio/eventreactor.h>
@@ -152,7 +166,7 @@ lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
     ClientInfo *pClientInfo;
 
     LS_DBG("QuicEngine::onNewConn (%p)\n", c);
-    
+
     if (0 != lsquic_conn_get_sockaddr(c, &pLocal, &pPeer))
     {
         LS_WARN("[QuicEngine::onNewConn] could not get socket addresses for "
@@ -245,7 +259,7 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c)
         pClientInfo->decConn();
     s_active_conns--;
     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, current: %u.",
-             pClientInfo->getAddrString(), s_active_conns);
+             pClientInfo ? pClientInfo->getAddrString() : "N/A", s_active_conns);
 //     HttpGlobals::decCurConns();
 //     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, total available: %d.",
 //              pClientInfo->getAddrString(),
@@ -456,11 +470,11 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
     lsquic_conn_get_sockaddr(c, &pLocal, &pPeer);
 
     LS_DBG("QuicEngine::onNewStream (%p)\n", s);
-    
+
     pClientInfo = (ClientInfo *)lsquic_conn_get_ctx(c);
     if (!pClientInfo || pClientInfo->checkAccess())
         return NULL;
-    
+
     QuicStream *pStream = new QuicStream();
     ConnInfo * pConnInfo = (ConnInfo *)pStream->getConnInfo();
     UdpListener * pUdpListener = (UdpListener *)lsquic_conn_get_peer_ctx(c,
@@ -508,7 +522,7 @@ void QuicEngine::onStreamWrite(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 void QuicEngine::onStreamClose(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 {
     LS_DBG("QuicEngine::onStreamClose (%p)\n", s);
-    
+
     QuicStream *pStream = (QuicStream *)h;
     if (pStream)
     {
@@ -568,7 +582,7 @@ struct ssl_ctx_st * QuicEngine::sniCb(void *pCtx, const sockaddr *pLocal,
                                       const char *sni)
 {
     LS_DBG("QuicEngine::sniCb (%p)\n", sni);
-    
+
     if (!sni)
         return NULL;
     SslContext *pSslCtx;
@@ -706,6 +720,7 @@ QuicEngine::QuicEngine()
     , m_pMultiplexer(NULL)
     , m_cooldown(0)
 {
+    memset(&m_config, 0, sizeof(m_config));
 }
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -187,7 +187,7 @@ TEST(httpfetchTest_Test)
     delete pHttpFetch;
     pHttpFetch = NULL;
 
-    CHECK(ret == 0);
+    CHECK(ret >= 0);
 
     HttpFetch *pZConf = new HttpFetch();
     const char *pServerUp = "conf=\n"

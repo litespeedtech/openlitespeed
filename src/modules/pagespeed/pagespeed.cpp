@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -159,7 +159,7 @@ public:
     {
         LS_ZERO_FILL(serverContext, handler);
     }
-    
+
     ~LsPsVhCtx()
     {
         if (serverContext)
@@ -185,10 +185,10 @@ struct LsPsReqCtx
     bool htmlRewrite;
     bool inPlace;
     bool fetchDone;
-    
+
     PreserveCachingHeaders preserveCachingHeaders;
 
-public: 
+public:
     LsPsReqCtx()
     {
         LS_ZERO_FILL(baseFetch, fetchDone);
@@ -221,7 +221,7 @@ public:
             baseFetch = NULL;
         }
     }
-}; 
+};
 
 
 #define PSF_IS_SUBREQ       1
@@ -240,19 +240,19 @@ struct LsPsReq
     GoogleString        pagespeed_query_params;
     GoogleString        pagespeed_option_cookies;
     RequestHeaders     *reqHeaders;
-    GoogleString       *urlStriped; 
+    GoogleString       *urlStriped;
     GoogleUrl          *url;
     RewriteOptions     *options;
     ResponseHeaders    *respHeaders;
     LSI_REQ_METHOD      method;
 
 public:
-    
+
     LsPsReq()
     {
         LS_ZERO_FILL( reqHeaders, method);
     }
-    
+
     ~LsPsReq()
     {
         if (urlStriped && urlStriped != &urlString)
@@ -288,7 +288,7 @@ public:
     {
         LS_ZERO_FILL( reqCtx, state);
     }
-    
+
     ~PsMData()
     {
         if (reqCtx)
@@ -303,14 +303,14 @@ public:
         }
         if (flags & PSF_OPT_OVERRIDE)
             delete request->options;
-        
+
         if (request)
             delete request;
-        
+
         if (respHeaders)
             delete respHeaders;
     }
-    
+
     void ReleaseBaseFetch()
     {
         // In the normal flow BaseFetch doesn't delete itself in HandleDone() because
@@ -320,7 +320,7 @@ public:
         // for that and then delete itself.
         if (reqCtx == NULL)
             return ;
-        
+
         if (reqCtx->baseFetch != NULL)
         {
             reqCtx->baseFetch->Release();
@@ -331,7 +331,7 @@ public:
         nBuffOffset = 0;
         doneCalled = false;
     }
-    
+
 
 };
 
@@ -370,7 +370,7 @@ int SetLimitCacheControl(lsi_session_t *session, char *buffer, int len)
             if (age > CACHE_MAX_AGE)
             {
                 int width = strlen(CACHE_MAX_AGE_STR);
-                strncpy((char *)p + 1, CACHE_MAX_AGE_STR, width);
+                lstrncpy((char *)p + 1, CACHE_MAX_AGE_STR, width);
                 p += 1 + width;
                 while(isdigit(*p))
                 {
@@ -474,12 +474,12 @@ int net_instaweb::CopyRespHeadersToServer(
     {
         const GoogleString &name_gs = pagespeed_headers.Name(i);
         const GoogleString &value_gs = pagespeed_headers.Value(i);
-        
+
         //If etag not PAGESPEED style, meas not optimized, so not cahce it
         if (StringCaseEqual(name_gs, "etag")
             && !StringCaseStartsWith(value_gs, "W/"))
             g_api->set_req_env(session, "cache-control", 13, "no-cache", 8);
-        
+
         if (preserve_caching_headers == kPreserveAllCachingHeaders)
         {
             if (StringCaseEqual(name_gs, "ETag") ||
@@ -507,7 +507,7 @@ int net_instaweb::CopyRespHeadersToServer(
             name.setStr(kInternalEtagName, strlen(kInternalEtagName));
         else
             name.setStr(name_gs.data(), name_gs.length());
-        
+
         value.setStr(value_gs.data(), value_gs.length());
 
 
@@ -657,7 +657,7 @@ int EndSession(lsi_param_t *rec)
                    "[%s] ps_end_session, session=%p pData=%p.\n",
                    ModuleName, session, pData);
         long evt_obj;
-        if (pData->reqCtx && pData->reqCtx->baseFetch 
+        if (pData->reqCtx && pData->reqCtx->baseFetch
             && (evt_obj = pData->reqCtx->baseFetch->AtomicSetEventObj(0)) != 0)
         {
             g_api->log(session, LSI_LOG_DEBUG,
@@ -665,7 +665,7 @@ int EndSession(lsi_param_t *rec)
                        ModuleName, evt_obj, session);
             g_api->cancel_event(session, evt_obj);
         }
-        
+
         g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, ReleaseMydata);
     }
 
@@ -764,7 +764,7 @@ static int InitGlobalCtx()
         return 0;
 
     g_bMainConfInited = 1;
-    g_api->log(NULL, LSI_LOG_INFO, "[%s] Initializing pagespeed library %s ...\n", 
+    g_api->log(NULL, LSI_LOG_INFO, "[%s] Initializing pagespeed library %s ...\n",
                ModuleName, net_instaweb::kModPagespeedVersion);
     g_pPsGlobalCtx = new LsPsGlobalCtx;
 
@@ -793,7 +793,7 @@ static int InitGlobalCtx()
 
     g_pPsGlobalCtx->driverFactory->LoggingInit();
     g_pPsGlobalCtx->driverFactory->Init();
-    
+
     SystemRewriteDriverFactory::InitApr();
     //atexit(PageSpeedAtExit);
     return 0;
@@ -826,7 +826,7 @@ static void ParseOption(LsRewriteOptions *pOption, const char *sLine,
      */
     const char *pEnd = sLine + len;
     TrimLeadingSpace(&sLine);
-    
+
     while (isspace(*(pEnd - 1)))
         -- pEnd;
     if (*(pEnd - 1) == ';')
@@ -842,7 +842,7 @@ static void ParseOption(LsRewriteOptions *pOption, const char *sLine,
         sLine += 12;
     }
     skip_leading_space(&sLine);
-    
+
     if (pEnd - sLine < 2)
         return ;
 
@@ -950,7 +950,7 @@ static void FreeConfig(void *_config)
 // static void *MergeConfig(void *child, const void *parent)
 // {
 //     const LsRewriteOptions *parent_options = (LsRewriteOptions *)parent;
-//     
+//
 //     LsRewriteOptions *options;
 //     options = parent_options->Clone();
 //     options->Merge(*(LsRewriteOptions *)child);
@@ -988,7 +988,7 @@ static int InitGlobalStats()
     {
         //server_contexts[error_index]->message_handler()->Message(
         //    kError, "mod_pagespeed is enabled. %s", error_message.c_str());
-        g_api->log(NULL, LSI_LOG_ERROR, "mod_pagespeed is disabled. %s\n", 
+        g_api->log(NULL, LSI_LOG_ERROR, "mod_pagespeed is disabled. %s\n",
                    error_message.c_str());
         releaseDriverFactory();
         return LS_FAIL;
@@ -1013,13 +1013,13 @@ static LsPsVhCtx *initVhostContext(const void *vhost)
     if (g_pPsGlobalCtx->driverFactory == NULL)
         return NULL;
     LsRewriteOptions *vhost_option;
-    vhost_option = (LsRewriteOptions *) g_api->get_vhost_module_conf(vhost, 
+    vhost_option = (LsRewriteOptions *) g_api->get_vhost_module_conf(vhost,
                                                                       &MNAME);
 
     //Comment: when Amdin/html parse, this will be NULL, we need not to add it
     if (vhost_option == NULL)
         return NULL;
-    
+
     LsPsVhCtx *vhCtx = new LsPsVhCtx;
     vhCtx->options = vhost_option;
     g_api->set_vhost_module_data(vhost, &MNAME, vhCtx);
@@ -1059,7 +1059,7 @@ static LsPsVhCtx *initVhostContext(const void *vhost)
                 file_cache_path);
     vhCtx->serverContext->CollapseConfigOverlaysAndComputeSignatures();
     g_pPsGlobalCtx->driverFactory->caches()->RegisterConfig(options);
-    
+
     if (options->statistics_enabled()) {
       // Lazily create shared-memory statistics if enabled in any config, even
       // when PageSpeed is totally disabled.  This allows statistics to work if
@@ -1071,9 +1071,9 @@ static LsPsVhCtx *initVhostContext(const void *vhost)
             g_pPsGlobalCtx->global_statistics, g_pPsGlobalCtx->driverFactory);
       }
     }
-    
+
     vhCtx->serverContext->ChildInit(g_pPsGlobalCtx->driverFactory);
-    
+
     vhCtx->proxyFetchFactory = new ProxyFetchFactory(vhCtx->serverContext);
     g_pPsGlobalCtx->driverFactory->SetServerContextMessageHandler(
         vhCtx->serverContext);
@@ -1131,7 +1131,7 @@ static int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
                event_obj, session);
         pMyData->reqCtx->baseFetch->AtomicSetEventObj(event_obj);
 // //        session->setBackRefPtr(&pMyData->ctx->session, 1);
-//         g_api->set_session_back_ref_ptr(session, 
+//         g_api->set_session_back_ref_ptr(session,
 //                                         g_api->get_session_ref_ptr(event_obj));
         return 0;
     }
@@ -1158,12 +1158,12 @@ static bool IsHtmlLikeContent(PsMData *pMyData, lsi_session_t *session)
                    ModuleName);
         return false;
     }
-  
+
     //only "text/html", "application/xhtml+xml", "application/ce-html+xml"
     //  are considered as html like content.
 
     const char *pContentType = (const char *)iov.iov_base;
-    
+
     switch(*pContentType)
     {
     case 't':
@@ -1174,7 +1174,7 @@ static bool IsHtmlLikeContent(PsMData *pMyData, lsi_session_t *session)
         break;
     case 'a':
     case 'A':
-        if (iov.iov_len >= 21 
+        if (iov.iov_len >= 21
             && strncasecmp(pContentType, "application/", 12) == 0)
         {
             if (strncasecmp(pContentType + 12, "xhtml+xml", 9) == 0)
@@ -1235,8 +1235,10 @@ static void DetermineUrl(lsi_session_t *session, GoogleString &str)
     g_api->get_req_org_uri(session, uri, uriLen + 1);
     if (iQSLen > 0)
     {
-        strcat(uri, "?");
-        strncat(uri, pQS, iQSLen);
+        lstrncat(uri, "?", sizeof(uri));
+        int len = strlen(uri);
+        memcpy(&uri[len], pQS, iQSLen);
+        uri[len + iQSLen] = 0;
     }
 
     str = StrCat(isHttps ? "https://" : "http://",
@@ -1290,7 +1292,7 @@ static bool SetExperimentStateAndCookie(lsi_session_t *session,
 {
     CHECK(options->running_experiment());
     bool need_cookie = vhCtx->serverContext->experiment_matcher()->
-                       ClassifyIntoExperiment(*request_headers, 
+                       ClassifyIntoExperiment(*request_headers,
                                               *vhCtx->serverContext->user_agent_matcher(),
                                               options);
 
@@ -1369,7 +1371,7 @@ static bool DetermineOptions(lsi_session_t *session,
     {
         if (options == parent_options)
             *final_options =  options = parent_options->Clone();
-        bool ok = SetExperimentStateAndCookie(session, vhCtx, pReq->reqHeaders, 
+        bool ok = SetExperimentStateAndCookie(session, vhCtx, pReq->reqHeaders,
                                               options, pReq->url->Host());
         if (!ok)
             return false;
@@ -1391,14 +1393,14 @@ static bool DetermineOptions(lsi_session_t *session,
 //     int valLen = 0;
 //     const char *buf = g_api->get_req_header_by_id(session,
 //                       LSI_HDR_X_FORWARDED_PROTO, &valLen);
-// 
+//
 //     if (valLen == 0 || buf == NULL)
 //     {
 //         return false;  // No X-Forwarded-Proto header found.
 //     }
-// 
+//
 //     StringPiece x_forwarded_proto = new StringPiece(buf, valLen);
-// 
+//
 //     if (!STR_CASE_EQ_LITERAL(bufStr, "http") &&
 //         !STR_CASE_EQ_LITERAL(bufStr, "https"))
 //     {
@@ -1406,19 +1408,19 @@ static bool DetermineOptions(lsi_session_t *session,
 //                      << " for URL " << url << " protocol not changed.";
 //         return false;
 //     }
-// 
+//
 //     StringPiece url_sp(*url);
 //     StringPiece::size_type colon_pos = url_sp.find(":");
-// 
+//
 //     if (colon_pos == StringPiece::npos)
 //     {
 //         return false;  // URL appears to have no protocol; give up.
 //     }
-// 
+//
 // //
 //     // Replace URL protocol with that specified in X-Forwarded-Proto.
 //     *url = StrCat(x_forwarded_proto, url_sp.substr(colon_pos));
-// 
+//
 //     return true;
 // }
 
@@ -1514,7 +1516,7 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
     g_api->get_req_org_uri(session, uri, uriLen + 1);
     uri[uriLen] = 0x00;
     StringPiece request_uri_path = uri;//
-    
+
     QueryParams query_params;
 
     query_params.ParseFromUrl(*pMyData->request->url);
@@ -1525,7 +1527,6 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
     HttpStatus::Code status = HttpStatus::kOK;
     ContentType content_type = kContentTypeHtml;
     StringPiece cache_control = HttpAttributes::kNoCache;
-    const char *error_message = NULL;
 
     switch (req_route)
     {
@@ -1564,14 +1565,6 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
                    "[modpagespeed] ps_simple_handler: unknown RequestRouting.\n");
         return LS_FAIL;
     }
-
-    if (error_message != NULL)
-    {
-        pMyData->statusCode = HttpStatus::kNotFound;
-        content_type = kContentTypeHtml;
-        output = error_message;
-    }
-
 
     pMyData->respHeaders = new ResponseHeaders;
     ResponseHeaders &response_headers = *pMyData->respHeaders;
@@ -1615,16 +1608,16 @@ int SimpleHandler(PsMData *pMyData, lsi_session_t *session,
 }
 
 
-static RewriteDriver *CreateRewriteDriver(PsMData *pMyData, 
+static RewriteDriver *CreateRewriteDriver(PsMData *pMyData,
                                           lsi_session_t *session)
 {
     LsPsVhCtx *vhCtx = pMyData->vhCtx;
-    
+
     RewriteDriver *driver;
-    
+
     RewriteOptions *custom_option = pMyData->request->options;
     g_api->log(session, LSI_LOG_DEBUG,
-            "[%s] CreateRewriteDriver, custom_option: %s\n", ModuleName, 
+            "[%s] CreateRewriteDriver, custom_option: %s\n", ModuleName,
             custom_option->OptionsToString().c_str());
 
     if (custom_option != vhCtx->options)
@@ -1638,13 +1631,13 @@ static RewriteDriver *CreateRewriteDriver(PsMData *pMyData,
         driver = vhCtx->serverContext->NewRewriteDriver(
                         pMyData->request->request_context);
     }
-    
+
     driver->SetRequestHeaders(*pMyData->request->reqHeaders);
     return driver;
 }
 
 
-static void RegisterLsHandler(PsMData *pMyData, lsi_session_t *session, 
+static void RegisterLsHandler(PsMData *pMyData, lsi_session_t *session,
                               const char *LogMessage)
 {
     pMyData->flags |= PSF_NO_HOOK;
@@ -1686,7 +1679,7 @@ static int StartRecordForInPlace(PsMData *pMyData, lsi_session_t *session)
 //     r->filter_need_in_memory = 1;
 
     ctx->recorder->ConsiderResponseHeaders(
-        InPlaceResourceRecorder::kFullHeaders, 
+        InPlaceResourceRecorder::kFullHeaders,
         pMyData->request->respHeaders);
     if (ctx->recorder->failed())
     {
@@ -1702,9 +1695,9 @@ static int BaseFetchHandler(PsMData *pMyData, lsi_session_t *session);
 static int InPlaceBaseFetchDoneCb(evtcbtail_s *session_, long param, void *pParam)
 {
     g_api->log((lsi_session_t *)session_, LSI_LOG_DEBUG,
-               "[%s] InPlaceBaseFetchDoneCb(), session=%p.\n", ModuleName, 
+               "[%s] InPlaceBaseFetchDoneCb(), session=%p.\n", ModuleName,
                session_);
-    
+
     if (!session_)
     {
         return -1;
@@ -1785,16 +1778,16 @@ static int StartFetchInPlaceResource(PsMData *pMyData,
                     lsi_session_t *session)
 {
     LsPsReqCtx *ctx = pMyData->reqCtx;
-    CreateBaseFetch(pMyData, session, 
+    CreateBaseFetch(pMyData, session,
                     pMyData->request->request_context,
-                    pMyData->request->reqHeaders, 
+                    pMyData->request->reqHeaders,
                     kIproLookup,
                     InPlaceBaseFetchDoneCb
                    );
-    
+
     // Do not store driver in request_context, it's not safe.
     RewriteDriver *driver = CreateRewriteDriver(pMyData, session);
-    
+
     ctx->driver = driver;
 
     g_api->log(session, LSI_LOG_DEBUG,
@@ -1811,7 +1804,7 @@ static int StartFetchInPlaceResource(PsMData *pMyData,
 
 
 static int StartFetchProxy(PsMData *pMyData,
-                    lsi_session_t *session, 
+                    lsi_session_t *session,
                     BaseFetchType type,
                     GoogleString &url_string,
                     bool set_callback)
@@ -1819,9 +1812,9 @@ static int StartFetchProxy(PsMData *pMyData,
     LsPsReqCtx *ctx = pMyData->reqCtx;
     LsPsVhCtx *vhCtx = pMyData->vhCtx;
 
-    CreateBaseFetch(pMyData, session, 
+    CreateBaseFetch(pMyData, session,
                     pMyData->request->request_context,
-                    pMyData->request->reqHeaders, 
+                    pMyData->request->reqHeaders,
                     type, BaseFetchDoneCb);
     // Do not store driver in request_context, it's not safe.
     RewriteDriver *driver = CreateRewriteDriver(pMyData, session);
@@ -2001,11 +1994,11 @@ static int StartFetchPageSpeedResource(PsMData *pMyData, lsi_session_t *session)
 //     GoogleString mapped_url;
 //     GoogleString host_header;
 //     const GoogleUrl &url = *(pMyData->request->url);
-// 
+//
 //     RewriteOptions *options = pMyData->request->options;
 //     if (options->domain_lawyer()->MapOriginUrl(
 //             url, &mapped_url, &host_header, &is_proxy) && is_proxy) {
-//         StartFetchProxy(pMyData, session, kPageSpeedProxy, 
+//         StartFetchProxy(pMyData, session, kPageSpeedProxy,
 //                         mapped_url, false);
 //         return 1;
 //     }
@@ -2031,7 +2024,7 @@ static bool SendToPagespeed(PsMData *pMyData, lsi_param_t *rec,
             StringPiece((const char *) rec->ptr1, rec->len1),
             pMyData->vhCtx->handler);
     }
-    
+
     if (rec->flag_in & LSI_CBFI_EOF)
     {
         ctx->proxyFetch->Done(true /* success */);
@@ -2042,7 +2035,7 @@ static bool SendToPagespeed(PsMData *pMyData, lsi_param_t *rec,
     return true;
 }
 
- 
+
 
 static void DropUnwantedRespHeaders(lsi_session_t *session)
 {
@@ -2079,7 +2072,7 @@ static int HtmlRewriteFixHeadersFilter(PsMData *pMyData,
     // resources instead of using the last modified header.
     g_api->remove_resp_header(session, LSI_RSPHDR_LAST_MODIFIED, NULL, 0);
 
-    g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER, 
+    g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER,
                            sizeof(PAGESPEED_RESP_HEADER) - 1,
                            MODPAGESPEEDVERSION, sizeof(MODPAGESPEEDVERSION) -1,
                            LSI_HEADEROP_SET);
@@ -2105,7 +2098,7 @@ static int InPlaceCheckRespHeaderFilter(PsMData *pMyData, lsi_session_t *session
 
         // The recorder will do this checking, so pass it the headers.
         ctx->recorder->ConsiderResponseHeaders(
-            InPlaceResourceRecorder::kPreliminaryHeaders, 
+            InPlaceResourceRecorder::kPreliminaryHeaders,
             pMyData->request->respHeaders);
         return 0;
     }
@@ -2148,7 +2141,7 @@ static int InPlaceCheckRespHeaderFilter(PsMData *pMyData, lsi_session_t *session
                    "[modpagespeed] Could not rewrite resource in-place "
                    "because URL is not in cache: %s\n",
                     cache_url.c_str());
-        
+
         StartRecordForInPlace(pMyData, session);
     }
     else
@@ -2220,7 +2213,7 @@ static int sendRespBody(lsi_param_t *rec)
     g_api->log(rec->session, LSI_LOG_DEBUG,
                "[%s] sendRespBody() flag_in %d, buffer in: %d, "
                "html rewrite: %d, doneCalled: %d, baseFetch: %p, recorder: %p\n",
-               ModuleName, rec->flag_in, rec->len1, ctx->htmlRewrite, 
+               ModuleName, rec->flag_in, rec->len1, ctx->htmlRewrite,
                pMyData->doneCalled, ctx->baseFetch, ctx->recorder);
 
     if (pMyData->flags & PSF_NO_HOOK)
@@ -2266,7 +2259,7 @@ static int sendRespBody(lsi_param_t *rec)
             rec->flag_in = LSI_CBFI_EOF;
         else
             rec->flag_in = LSI_CBFI_FLUSH;
-        
+
         int written = g_api->stream_write_next(rec, buf, len);
         if (written > 0)
         {
@@ -2289,7 +2282,7 @@ static int sendRespBody(lsi_param_t *rec)
         if (rec->flag_out)
             *rec->flag_out |= LSI_CBFO_BUFFERED;
     }
-    
+
     if (pMyData->doneCalled && (pMyData->flags & PSF_END_RESP) == 0)
     {
         pMyData->flags |= PSF_END_RESP;
@@ -2297,14 +2290,14 @@ static int sendRespBody(lsi_param_t *rec)
     }
 
 
-    if (*rec->flag_out && rec->flag_in == LSI_CBFI_EOF)
+    if (rec->flag_out && *rec->flag_out && rec->flag_in == LSI_CBFI_EOF)
         g_api->set_handler_write_state(rec->session, 0);
 
 
     g_api->log(rec->session, LSI_LOG_DEBUG,
                "[%s] sendRespBody() flag_in %d, flag out %d, done_called %d, Accumulated %d, write to next %d, buffer data written %d.\n",
-               ModuleName, rec->flag_in, *rec->flag_out, pMyData->doneCalled,
-               rec->len1, ret, writtenTotal);
+               ModuleName, rec->flag_in, rec->flag_out ? *rec->flag_out : 0,
+               pMyData->doneCalled, rec->len1, ret, writtenTotal);
     return ret; //Must use updated buffer.
 
 }
@@ -2376,7 +2369,7 @@ static int HtmlRewriteHeaderFilter(PsMData *pMyData, lsi_session_t *session,
     DropUnwantedRespHeaders(session);
 //     CopyRespHeadersFromServer(session,
 //                              ctx->baseFetch->response_headers());
-    
+
     //This is more efficient, just use the copy we already have.
     ctx->baseFetch->response_headers()->CopyFrom(
         *(pMyData->request->respHeaders));
@@ -2395,34 +2388,34 @@ static int rcvdRespHeaderHook(lsi_param_t *rec)
         //|| (ctx = pMyData->reqCtx) == NULL)
         return LS_FAIL;
 
-    if ((pMyData->flags & (PSF_NO_HOOK|PSF_IS_SUBREQ)) 
+    if ((pMyData->flags & (PSF_NO_HOOK|PSF_IS_SUBREQ))
         || pMyData->state == PS_STATE_RECV_RESP_HEADER)
         return 0;
 
     pMyData->state = PS_STATE_RECV_RESP_HEADER;
-    
+
     LsPsReqCtx *ctx = pMyData->reqCtx;
     struct iovec iov;
-    int count = g_api->get_resp_header(session, LSI_RSPHDR_CONTENT_TYPE, 
+    int count = g_api->get_resp_header(session, LSI_RSPHDR_CONTENT_TYPE,
                                        NULL, 0, &iov, 1);
     if (count <= 0)
         return 0;
-    
+
     StringPiece ctHeader((const char *)iov.iov_base, iov.iov_len);
     const ContentType* content_type = MimeTypeToContentType(ctHeader);
     if (content_type == NULL)
         return 0;
-    
+
     int in_place = false;
     int html_rewrite = false;
-    if (content_type->IsImage() || content_type->IsCss() 
-        || content_type->IsJs()) 
+    if (content_type->IsImage() || content_type->IsCss()
+        || content_type->IsJs())
         in_place = true;
     else if (content_type->IsHtmlLike())
         html_rewrite = true;
     else
         return 0;
-    
+
     UpdateEtag(session);
 
     LsPsReq * pReq = pMyData->request;
@@ -2432,7 +2425,7 @@ static int rcvdRespHeaderHook(lsi_param_t *rec)
     RewriteQuery rewrite_query;
 
     if (!vhCtx->serverContext->GetQueryOptions(
-            pReq->request_context, pReq->options, 
+            pReq->request_context, pReq->options,
             pReq->url, NULL, pReq->respHeaders, &rewrite_query))
     {
         // Failed to parse query params or request headers.  Treat this as if there
@@ -2442,7 +2435,7 @@ static int rcvdRespHeaderHook(lsi_param_t *rec)
     }
 
     RewriteOptions *resp_options = rewrite_query.ReleaseOptions();
-    
+
     bool have_resp_options = resp_options != NULL;
 
     RewriteOptions *options;
@@ -2475,15 +2468,15 @@ static int rcvdRespHeaderHook(lsi_param_t *rec)
 
     if (!pReq->options->enabled())
         return 0;
-    
+
     if (ctx == NULL)
         ctx = createLsPsReqCtx(pMyData);
 
-    //FIXME: may not call this here, mix logic for InPlace response header 
-    // processing, check base fetch result, to do in palce or not should be 
-    // processed in the baseFetch callback. 
-    // record original response header should be in rcvdRespHeader. 
-    
+    //FIXME: may not call this here, mix logic for InPlace response header
+    // processing, check base fetch result, to do in palce or not should be
+    // processed in the baseFetch callback.
+    // record original response header should be in rcvdRespHeader.
+
     InPlaceCheckRespHeaderFilter(pMyData, session, ctx);
 //     if (in_place)
 //         StartRecordForInPlace(pMyData, session);
@@ -2513,7 +2506,7 @@ static REQ_ROUTE RouteRequest(PsMData *pMyData,
 {
     LsPsVhCtx *vhCtx = pMyData->vhCtx;
 
-    if (pMyData->request->url->PathSansLeaf() 
+    if (pMyData->request->url->PathSansLeaf()
                 == dynamic_cast<LsRewriteDriverFactory *>(
                     vhCtx->serverContext->factory())->static_asset_prefix())
         return REQ_ROUTE_STATIC;
@@ -2563,18 +2556,18 @@ static REQ_ROUTE RouteRequest(PsMData *pMyData,
 }
 
 
-static LsPsReq * CreateLsPsReq(lsi_session_t *session, 
+static LsPsReq * CreateLsPsReq(lsi_session_t *session,
                                LsPsVhCtx *vhCtx, RewriteOptions *pConfig)
 {
     LsPsReq *req = new LsPsReq();
-    
+
     DetermineUrl((lsi_session_t *)session, req->urlString);
     //assert(pMyData->urlString == url_string);
-    
+
     g_api->log(session, LSI_LOG_DEBUG,
                "[modpagespeed] CreateLsPsReq() for: %s\n",
                req->urlString.c_str());
-    
+
     req->url = new GoogleUrl(req->urlString);
     if (!req->url->IsWebValid())
     {
@@ -2585,11 +2578,11 @@ static LsPsReq * CreateLsPsReq(lsi_session_t *session,
 
     req->reqHeaders = new RequestHeaders();
     CopyReqHeadersFromServer(session, req->reqHeaders);
-    
+
 //     if (vhCtx->serverContext->global_options()->respect_x_forwarded_proto())
 //     {
 //         bool modified_url = ApplyXForwardedProto(session, &url_string);
-// 
+//
 //         if (modified_url)
 //         {
 //             url.Reset(url_string);
@@ -2598,14 +2591,14 @@ static LsPsReq * CreateLsPsReq(lsi_session_t *session,
 //                                     << " changes the scheme between http and https.";
 //         }
 //     }
-    
+
     RequestContextPtr request_context(
         vhCtx->serverContext->NewRequestContext(session));
 
     RewriteOptions *pReqConfig = NULL;
     //Diffirent from google code, here the option is always inherit from the context, and it should never be NULL
     if (!DetermineOptions(session, req, pConfig,
-                          &pReqConfig, request_context, vhCtx, 
+                          &pReqConfig, request_context, vhCtx,
                           false))
     {
         delete req;
@@ -2625,14 +2618,14 @@ static LsPsReq * CreateLsPsReq(lsi_session_t *session,
     }
     else
         req->urlStriped = &req->urlString;
-    
+
     return req;
 }
 
 /***
  * RcvdReqHeaderHook do test if need to set the UACode to hashTable
  * And setup ModuleData
- * 
+ *
  */
 static int RcvdReqHeaderHook(lsi_param_t *rec)
 {
@@ -2641,7 +2634,7 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
                ModuleName);
 
     LSI_REQ_METHOD method = g_api->get_req_method(session);
-    if (method != LSI_METHOD_GET && method != LSI_METHOD_POST 
+    if (method != LSI_METHOD_GET && method != LSI_METHOD_POST
         && method != LSI_METHOD_PURGE && method != LSI_METHOD_HEAD)
     {
         g_api->log(session, LSI_LOG_DEBUG,
@@ -2657,7 +2650,7 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
     if (vhCtx == NULL || vhCtx->serverContext == NULL)
     {
         //NOTE: add code to create need data structure on demand.
-        // too late, need to do it earlier, otherwise, the directory level 
+        // too late, need to do it earlier, otherwise, the directory level
         // configuration wont be parased
         vhCtx = initVhostContext(g_api->get_req_vhost(session));
     }
@@ -2668,8 +2661,8 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
                 ModuleName);
         return LSI_OK;
     }
-    
-    
+
+
     RewriteOptions *pSessConfig = (RewriteOptions *) g_api->get_config(
                                      session, &MNAME);
     if (!pSessConfig)
@@ -2679,8 +2672,8 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
                    ModuleName);
         return LSI_OK;
     }
-    
-    
+
+
     LsPsReq *req = CreateLsPsReq(session, vhCtx, pSessConfig);
     if (!req)
     {
@@ -2689,26 +2682,26 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
                    ModuleName);
         return LSI_OK;
     }
-    
-    
+
+
     int uaLen;
     const char * pUA = g_api->get_req_header_by_id(session,
                          LSI_HDR_USERAGENT, &uaLen);
     req->method = method;
     req->userAgent = StringPiece(pUA, uaLen);
-    
+
     bool pagespeed_resource = vhCtx->serverContext->IsPagespeedResource(
         *req->url);
-    
+
     if (!req->options->enabled() && !pagespeed_resource)
     {
         // Pagespeed is off, not enabled via query params or request headers.
         // Wait for response header phase to make the final decision.
-        
+
         delete req;
         return LSI_OK;
     }
-    
+
     //FOR SUBREQUEST, NEED TO SET
     if (pUA && uaLen > 0)
     {
@@ -2716,7 +2709,7 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
         char sHex[15] = {'v', 'a', 'r', 'y', '=', };
         char *p = g_api->get_ua_code(ua);
         if (p)
-            strcpy(sHex + 5, p);
+            lstrncpy(sHex + 5, p, sizeof(sHex) - 5);
         else
         {
             snprintf(sHex + 5, 8, "%02X",
@@ -2726,15 +2719,15 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
         g_api->set_req_env(rec->session, "cache-control", 13, sHex, strlen(sHex));
         free(ua);
     }
-    
-    
+
+
     if (IsPagespeedSubrequest(pUA, uaLen))
     {
         delete req;
         return LSI_OK;
     }
-    
-    
+
+
     //If URI_MAP called before, should return
     PsMData *pMyData = (PsMData *) g_api->get_module_data(session,
                        &MNAME, LSI_DATA_HTTP);
@@ -2749,7 +2742,7 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
         g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, ReleaseMydata);
     }
 
-    
+
     pMyData = new PsMData;
     if (pMyData == NULL)
     {
@@ -2764,12 +2757,13 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
      * Tell server modpagespeed is using
      */
     g_api->set_req_env(session, "modpagespeed", 12, "on", 2);
-    
+
     pMyData->state = PS_STATE_INIT;
     pMyData->sBuff = "";
     pMyData->request = req;
     pMyData->vhCtx = vhCtx;
-    
+    pMyData->flags = 0;
+
     if (req->options != pSessConfig)
     {
         pMyData->flags |= PSF_OPT_OVERRIDE;
@@ -2778,7 +2772,7 @@ static int RcvdReqHeaderHook(lsi_param_t *rec)
     g_api->set_module_data(session, &MNAME, LSI_DATA_HTTP, pMyData);
 
 
-    
+
     int aEnableHkpt[] = {LSI_HKPT_URI_MAP,};
     g_api->enable_hook(rec->session, &MNAME, 1, aEnableHkpt, 1);
     return LSI_OK;
@@ -2794,10 +2788,10 @@ static int UriMapHook(lsi_param_t *rec)
 
     PsMData *pMyData = (PsMData *) g_api->get_module_data(session,
                        &MNAME, LSI_DATA_HTTP);
-    
+
     LsPsReq *req = pMyData->request;
     LsPsVhCtx *vhCtx = pMyData->vhCtx;
-    
+
     bool pagespeed_resource = vhCtx->serverContext->IsPagespeedResource(
         *req->url);
 
@@ -2816,11 +2810,11 @@ static int UriMapHook(lsi_param_t *rec)
         g_api->enable_hook(rec->session, &MNAME, 1, aEnableHkpt, 4);
     }
 
-    
-    
+
+
 //     bool pagespeed_resource = vhCtx->serverContext->IsPagespeedResource(
 //         *(pMyData->request->url));
-    
+
     REQ_ROUTE response_category;
     if (pagespeed_resource)
     {
@@ -2877,7 +2871,7 @@ static int UriMapHook(lsi_param_t *rec)
         ret = StartFetchInPlaceResource(pMyData, session);
         pMyData->state = PS_STATE_RECV_REQ;
         return LSI_SUSPEND;
-        
+
     case REQ_ROUTE_RESOURCE:
         ret = StartFetchPageSpeedResource(pMyData, session);
         if (ret == 1) //suspended
@@ -2941,12 +2935,12 @@ static int CopyRespBody(PsMData *pMyData, lsi_session_t *session)
 static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *)
 {
     g_api->log((lsi_session_t *)session_, LSI_LOG_DEBUG,
-               "[%s] BaseFetchDoneCb(), session=%p.\n", ModuleName, 
+               "[%s] BaseFetchDoneCb(), session=%p.\n", ModuleName,
                session_);
-    
+
     if (!session_)
     {
-         //session has been closed. PsMData has been released. 
+         //session has been closed. PsMData has been released.
         return -1;
     }
 
@@ -2975,7 +2969,7 @@ static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *)
     }
 
     //g_api->reset_session_back_ref_ptr(session);
-    
+
     //For suspended case, use the following to resume
     int status_code =
         pMyData->reqCtx->baseFetch->response_headers()->status_code();
@@ -3000,14 +2994,14 @@ static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *)
 //         g_api->log(session, LSI_LOG_DEBUG,
 //                    "[%s] session: %p, BaseFetech RespBody size=%zd.\n",
 //                    ModuleName, session, pMyData->sBuff.size());
-// 
+//
 //         if (CopyRespBody(pMyData, session) == LS_FAIL)
 //         {
 //             g_api->log(session, LSI_LOG_DEBUG,
 //                        "[%s] Failed to copy RespBody.\n", ModuleName);
 //         }
 //     }
-    
+
     g_api->create_session_resume_event(session, &MNAME);
     g_api->set_handler_write_state(session, 1);
 
@@ -3029,7 +3023,7 @@ static int PsHandlerProcess(const lsi_session_t *session)
     pMyData->state = PS_STATE_DONE;
 
     g_api->log(session, LSI_LOG_DEBUG,
-                       "[%s] PsHandlerProcess called with code %d.\n", 
+                       "[%s] PsHandlerProcess called with code %d.\n",
                ModuleName, pMyData->statusCode);
     g_api->set_status_code(session, pMyData->statusCode);
 
@@ -3043,14 +3037,14 @@ static int PsHandlerProcess(const lsi_session_t *session)
             pMyData->reqCtx->baseFetch->CollectHeaders(session);
             if (!pMyData->reqCtx->fetchDone)
                 BaseFetchHandler(pMyData, (lsi_session_t *)session);
-            
+
         }
     }
     g_api->remove_resp_header(session, LSI_RSPHDR_CONTENT_LENGTH, NULL, 0);
 
-    g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER, 
+    g_api->set_resp_header(session, -1, PAGESPEED_RESP_HEADER,
                            sizeof(PAGESPEED_RESP_HEADER) - 1,
-                           MODPAGESPEEDVERSION "-0", 
+                           MODPAGESPEEDVERSION "-0",
                            sizeof(MODPAGESPEEDVERSION "-0") - 1,
                            LSI_HEADEROP_SET);
 
@@ -3061,9 +3055,9 @@ static int PsHandlerProcess(const lsi_session_t *session)
 //     g_api->set_resp_header(session, -1, "UACODE", 6, sHex, strlen(sHex),
 //                            LSI_HEADEROP_SET);
 //     //TEST
-    
-    
-    
+
+
+
     if (!pMyData->sBuff.empty())
     {
         if (CopyRespBody(pMyData, (lsi_session_t *)session) == LS_FAIL)

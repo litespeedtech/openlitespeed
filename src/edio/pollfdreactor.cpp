@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -30,6 +30,8 @@ PollfdReactor::PollfdReactor()
     , m_pReactors(NULL)
     , m_pEnd(NULL)
     , m_pStoreEnd(NULL)
+    , m_pCur(NULL)
+    , m_iEvents(0)
     , m_iFirstRecycled(65535)
     , m_priHandler(NULL)
 {

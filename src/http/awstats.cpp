@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -262,7 +262,7 @@ int Awstats::createConfigFile(char *pModel, const HttpVHost *pVHost)
     char achBuf[8192];
 
     pCur = pEnd = pLastWrite = achBuf;
-    pBufEnd = &achBuf[8192];
+    pBufEnd = &achBuf[8192 - 1];
 
     while (1)
     {
@@ -526,7 +526,7 @@ int Awstats::updateIfNeed(long curTime, const HttpVHost *pVHost)
 }
 
 
-void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
+void Awstats::config(HttpVHost *pVHost, int val, char *achBuf, size_t achBufSz,
                      const XmlNode *pAwNode,
                      char *iconURI, const char *vhDomain, int vhAliasesLen)
 {
@@ -562,13 +562,14 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     if (val == AWS_STATIC)
     {
         handlerType = HandlerType::HT_NULL;
-        strcat(achBuf, "/html/");
+        lstrncat(achBuf, "/html/", achBufSz);
     }
     else
     {
-        ConfigCtx::getCurConfigCtx()->getValidPath(achBuf,
+        if (ConfigCtx::getCurConfigCtx()->getValidPath(achBuf,
                 "$SERVER_ROOT/add-ons/awstats/wwwroot/cgi-bin/",
-                "AWStats CGI-BIN directory");
+                "AWStats CGI-BIN directory"))
+            ; // Ignore result for now
 
         if (pVHost->getRootContext().determineMime("pl",
                 NULL)->getHandler()->getType())
@@ -584,7 +585,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     if (ConfigCtx::getCurConfigCtx()->getLongValue(pAwNode, "securedConn", 0,
             1, 0) == 1)
     {
-        p += ls_snprintf(achBuf, 8192,
+        p += ls_snprintf(achBuf, achBufSz,
                          "rewriteCond %%{HTTPS} !on\n"
                          "rewriteCond %%{HTTP:X-Forwarded-Proto} !https\n"
                          "rewriteRule ^(.*)$ https://%%{SERVER_NAME}%%{REQUEST_URI} [R,L]\n");
@@ -592,13 +593,13 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     }
     if (val == AWS_STATIC)
     {
-        ls_snprintf(p, &achBuf[8192] - p,
+        ls_snprintf(p, &achBuf[achBufSz - 1] - p,
                     "RewriteRule ^$ awstats.%s.html\n",
                     pVHost->getName());
     }
     else
     {
-        ls_snprintf(p, &achBuf[8192] - p,
+        ls_snprintf(p, &achBuf[achBufSz - 1] - p,
                     "RewriteRule ^$ awstats.pl\n"
                     "RewriteCond %%{QUERY_STRING} !configdir=\n"
                     "RewriteRule ^awstats.pl "
@@ -626,7 +627,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     }
     else
     {
-        ConfigCtx::getCurConfigCtx()->expandDomainNames(pValue, achBuf, 4096);
+        ConfigCtx::getCurConfigCtx()->expandDomainNames(pValue, achBuf, achBufSz / 2);
         pValue = achBuf;
     }
 
@@ -639,7 +640,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
     {
         if (vhAliasesLen == 0)
         {
-            ls_snprintf(achBuf, 8192, "127.0.0.1 localhost REGEX[%s]",
+            ls_snprintf(achBuf, achBufSz, "127.0.0.1 localhost REGEX[%s]",
                         getSiteDomain());
             LS_WARN(ConfigCtx::getCurConfigCtx(),
                     "SiteAliases configuration is invalid"
@@ -653,9 +654,9 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf,
 
     if (needConvert)
     {
-        ConfigCtx::getCurConfigCtx()->expandDomainNames(pValue, &achBuf[4096],
-                4096, ' ');
-        ConfigCtx::getCurConfigCtx()->convertToRegex(&achBuf[4096], achBuf, 4096);
+        ConfigCtx::getCurConfigCtx()->expandDomainNames(pValue, &achBuf[achBufSz / 2],
+                achBufSz / 2, ' ');
+        ConfigCtx::getCurConfigCtx()->convertToRegex(&achBuf[achBufSz / 2], achBuf, achBufSz / 2);
         pValue = achBuf;
         LS_INFO(ConfigCtx::getCurConfigCtx(), "SiteAliases is set to '%s'",
                 achBuf);

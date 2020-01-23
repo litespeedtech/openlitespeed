@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -157,7 +157,7 @@ void HttpLog::setLogLevel(const char *pLevel)
 void HttpLog::setLogPattern(const char *pPattern)
 {
     if (strlen(pPattern) < sizeof(s_logPattern) - 1)
-        strncpy(s_logPattern, pPattern, 39);
+        lstrncpy(s_logPattern, pPattern, sizeof(s_logPattern));
 }
 
 
@@ -198,7 +198,7 @@ int HttpLog::setErrorLogFile(const char *pFileName)
 {
     const char *excludeList[] = { ".php", ".cgi", ".pl", ".shtml" };
     int len = strlen(pFileName);
-    for (int i=0; i<sizeof(excludeList)/ sizeof(char *); ++i)
+    for (size_t i=0; i<sizeof(excludeList)/ sizeof(char *); ++i)
     {
         int ll = strlen(excludeList[i]);
         if (len > ll &&
@@ -208,7 +208,7 @@ int HttpLog::setErrorLogFile(const char *pFileName)
             return LS_FAIL;
         }
     }
-    
+
     Appender *appender
         = Appender::getAppender(pFileName, "appender.ps");
     if (appender)

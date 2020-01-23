@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -39,8 +39,8 @@ class Appender;
 class AppenderManager;
 END_LOG4CXX_NS
 
-class CustomFormat;
 class HttpSession;
+class CustomFormat;
 class AccessLog
 {
     LOG4CXX_NS::Appender         *m_pAppender;
@@ -90,11 +90,8 @@ public:
     void closeNonPiped();
     void setRollingSize(off_t size);
     int  setCustomLog(const char *pFmt);
-    static int  getLogString(HttpSession *pSession, CustomFormat *pLogFmt,
-                             char *pBuf, int bufLen)
-    {
-        return customLog(pSession, pLogFmt, pBuf, bufLen, NULL);
-    }
+    static int  getLogString(HttpSession *pSession, const char *log_pattern,
+                             char *pBuf, int bufLen);
 
     static CustomFormat *parseLogFormat(const char *pFmt);
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -67,16 +67,15 @@ public:
 
     int start(void *arg)
     {
-        if (m_thread) {
+        if (m_thread)
             return LS_FAIL;
-        }
         m_arg = arg;
         int ret = pthread_create(&m_thread, &m_attr, start_routine, this);
         return ret;
     }
 
     void * getArg() const   {   return m_arg;   }
-    
+
     int cancel()
     {   return pthread_cancel(m_thread); }
 
@@ -102,9 +101,15 @@ public:
 
     virtual int join(void **pRetVal)
     {
-        int ret = pthread_join(m_thread, pRetVal);
-        m_thread = 0;
-        return ret;
+        if (m_thread && isJoinable() == 1)
+        {
+            int ret = pthread_join(m_thread, pRetVal);
+            m_thread = 0;
+            return ret;
+        }
+        if (pRetVal)
+            *pRetVal = NULL;
+        return -1;
     }
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
@@ -183,7 +188,7 @@ public:
     }
 
 protected:
-    
+
     sigset_t       *m_sigBlock; // if not NULL, block in new thread - set in derived classes
                                 // at least have a good reason if not blocking SIGCHLD, which
                                 // should be handled by main thread
@@ -191,7 +196,7 @@ protected:
     void           *m_arg;
 
 
-    virtual void thr_cleanup()      {   return;         } 
+    virtual void thr_cleanup()      {   return;         }
 
     virtual void *thr_main(void *)  {   return NULL;    };
 
@@ -201,7 +206,7 @@ private:
     static void *ext_routine(void * arg);
     void sigBlock();
 
-    
+
     pthread_t       m_thread;
     pthread_attr_t  m_attr;
 

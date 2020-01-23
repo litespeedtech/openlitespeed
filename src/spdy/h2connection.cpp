@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -69,6 +69,7 @@ H2Connection::H2Connection()
     , m_iCurPushStreams(0)
     , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
     , m_tmLastFrameIn(0)
+    , m_tmLastTimer(0)
     , m_mapStream(64)
     , m_iControlFrames(0)
     , m_iFlag(0)
@@ -83,6 +84,10 @@ H2Connection::H2Connection()
     , m_tmIdleBegin(0)
 {
     m_timevalPing.tv_sec = 0;
+    m_timevalPing.tv_usec = 0;
+    memset(&m_priority, 0, sizeof(m_priority));
+    memset(&m_hpack_enc, 0, sizeof(m_hpack_enc));
+    memset(&m_hpack_dec, 0, sizeof(m_hpack_dec));
     m_pCurH2Header = (H2FrameHeader *)m_iaH2HeaderMem;
 }
 
@@ -960,11 +965,11 @@ int H2Connection::processHeadersFrame(H2FrameHeader *pHeader)
     {
         uint8_t padLen = *pSrc;
         if (m_iCurrentFrameRemain <= 1 + padLen)
-        {
-             return H2_ERROR_PROTOCOL_ERROR;
-        }
-        m_bufInput.pop_front(1);
-        m_bufInput.pop_back(padLen);
+            return H2_ERROR_PROTOCOL_ERROR;
+        if (m_bufInput.pop_front(1) == -1)
+            return LS_FAIL;
+        if (m_bufInput.pop_back(padLen) == -1)
+            return LS_FAIL;
         m_iCurrentFrameRemain -= padLen + 1;
     }
 

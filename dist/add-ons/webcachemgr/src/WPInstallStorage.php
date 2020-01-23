@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 
@@ -256,20 +256,26 @@ class WPInstallStorage
 
     /**
      *
-     * @param string           $path
+     * @param string  $path
      * @return WPInstall|null
      */
     public function getWPInstall( $path )
     {
-        if ( isset($this->wpInstalls[$path]) ) {
-            return $this->wpInstalls[$path];
-        }
-        elseif ( isset($this->custWpInstalls[$path]) ) {
-            return $this->custWpInstalls[$path];
+        if ( ($realPath = realpath($path)) === false ) {
+            $index = $path;
         }
         else {
-            return null;
+            $index = $realPath;
         }
+
+        if ( isset($this->wpInstalls[$index]) ) {
+            return $this->wpInstalls[$index];
+        }
+        elseif ( isset($this->custWpInstalls[$index]) ) {
+            return $this->custWpInstalls[$index];
+        }
+
+        return null;
     }
 
     /**
@@ -451,7 +457,7 @@ class WPInstallStorage
      */
     protected function doWPInstallAction( $action, $path, $extraArgs )
     {
-        if ( ($wpInstall = $this->getWPInstall(realpath($path))) == null ) {
+        if ( ($wpInstall = $this->getWPInstall($path)) == null ) {
             $wpInstall = new WPInstall($path);
             $this->addWPInstall($wpInstall);
         }
@@ -499,14 +505,19 @@ class WPInstallStorage
             case UserCommand::CMD_DASH_DISABLE:
 
                 if ( $wpInstall->hasFatalError() ) {
-                    $msg = 'Install skipped due to Error status. Please Refresh Status before trying '
-                            . 'again.';
-                    $wpInstall->setCmdStatusAndMsg(UserCommand::EXIT_FAIL,
-                            $msg);
+                    $wpInstall->refreshStatus();
 
-                    $this->workingQueue[$path] = $wpInstall;
+                    if ( $wpInstall->hasFatalError() ) {
+                        $wpInstall->addUserFlagFile(false);
 
-                    return;
+                        $msg = 'Install skipped and flagged due to Error status.';
+                        $wpInstall->setCmdStatusAndMsg(UserCommand::EXIT_FAIL,
+                                $msg);
+
+                        $this->workingQueue[$path] = $wpInstall;
+
+                        return;
+                    }
                 }
 
                 break;

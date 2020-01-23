@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -85,7 +85,7 @@ public:
     {
         memset(m_stats, 0, (char *)&m_tmLastHouseKeeping - (char*)m_stats);
     }
-    
+
     int32_t getNextPrivateTagId()
     {   return ls_atomic_fetch_add(&m_iCurPrivateTagId, 1) + 1;    }
 
@@ -140,6 +140,8 @@ public:
     {   return m_iSessionPurged - m_iLastCleanSessPurge;    }
 
     uint32_t getFlags() const       {   return m_iFlags;        }
+    uint32_t setFlags(uint32_t f)   {   return m_iFlags = f;    }
+
     void updateFlag(uint32_t f, uint32_t val)
     {
         uint32_t old;
@@ -154,7 +156,7 @@ public:
         }
         while(!ls_atomic_cas32(&m_iFlags, old, new_val));
     }
-    
+
 private:
     int32_t     m_tmPurgeSecs;
     int32_t     m_tmPurgeMsecs;

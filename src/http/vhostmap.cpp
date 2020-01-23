@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -74,6 +74,7 @@ VHostMap::VHostMap()
     , m_pWildMatches(NULL)
     , m_pSslContext(NULL)
     , m_pQuicListener(NULL)
+    , m_port(0)
     , m_iNamedVH(0)
     , m_iStripWWW(1)
     , m_sAltSvc("")
@@ -352,10 +353,12 @@ void VHostMap::updateMapping(HttpVHostMap &vhosts)
             iter = next(iter);
             erase(iter1);
             if (pCur)
+            {
                 insert(
                     HttpVHostMap::addMatchName(pCur, pName),
                     pCur);
-            HttpVHostMap::incRef(pCur);
+                HttpVHostMap::incRef(pCur);
+            }
         }
         else
             iter = next(iter);

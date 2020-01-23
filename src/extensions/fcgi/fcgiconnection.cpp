@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -41,12 +41,18 @@ const char FcgiConnection::s_padding[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 FcgiConnection::FcgiConnection()
     : m_bufOS(this)
     , m_recSize(0)
+    , m_iRecStatus(0)
+    , m_iContentLen(0)
+    , m_iRecId(0)
     , m_iId(1)
     , m_iWantWrite(1)
     , m_iTotalPending(0)
     , m_iCurStreamHeader(0)
+    , m_lReqSentTime(0)
+    , m_lReqBeginTime(0)
 {
     memset(m_streamHeaders, 0, sizeof(m_streamHeaders));
+    memset(&m_recCur, 0, sizeof(m_recCur));
 }
 
 
@@ -376,7 +382,7 @@ int FcgiConnection::processFcgiData()
             break;
         if (len == -1)
             return len;
-        int used;
+        int used = 0;
         char *pCur = HttpResourceManager::getGlobalBuf();
         int left = len;
         while (left > 0)

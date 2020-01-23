@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -109,7 +109,7 @@ enum SpdyGoAwayStatus
     SPDY_GOAWAY_PROTOCOL_ERROR = 1,
     SPDY_GOAWAY_INTERNAL_ERROR = 2,
     SPDY_GOAWAY_NUM_STATUS_CODES = 3,
-    SPDY_GOAWAY_FLOW_CONTROL_ERROR = 7
+    SPDY_GOAWAY_FLOW_CONTROL_ERROR = 7,
 };
 
 #define SPDY_FRAME_HEADER_SIZE 8

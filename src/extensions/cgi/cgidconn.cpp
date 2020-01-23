@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -32,6 +32,8 @@
 #include <openssl/md5.h>
 
 CgidConn::CgidConn()
+    : m_pPendingBuf(NULL)
+    , m_iTotalPending(0)
 {
 }
 

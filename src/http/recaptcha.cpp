@@ -1,7 +1,20 @@
-/*
- * Copyright 2002 Lite Speed Technologies Inc, All Rights Reserved.
- * LITE SPEED PROPRIETARY/CONFIDENTIAL.
- */
+/*****************************************************************************
+*    Open LiteSpeed is an open source HTTP server.                           *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*                                                                            *
+*    This program is free software: you can redistribute it and/or modify    *
+*    it under the terms of the GNU General Public License as published by    *
+*    the Free Software Foundation, either version 3 of the License, or       *
+*    (at your option) any later version.                                     *
+*                                                                            *
+*    This program is distributed in the hope that it will be useful,         *
+*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+*    GNU General Public License for more details.                            *
+*                                                                            *
+*    You should have received a copy of the GNU General Public License       *
+*    along with this program. If not, see http://www.gnu.org/licenses/.      *
+*****************************************************************************/
 
 #include "recaptcha.h"
 
@@ -87,7 +100,8 @@ void Recaptcha::setBotWhitelist(const StringList *pList)
         {
             pPattern = (*iter)->c_str();
             iPatternLen = (*iter)->len();
-            buf.guarantee(iPatternLen + 6);
+            if (buf.guarantee(iPatternLen + 6) == LS_FAIL)
+                return;
             int len = snprintf(buf.end(), buf.available(), "(?:%.*s)|",
                                 iPatternLen, pPattern);
             buf.used(len);

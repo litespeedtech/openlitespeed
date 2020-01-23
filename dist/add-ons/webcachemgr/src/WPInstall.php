@@ -2,8 +2,9 @@
 
 /* * *********************************************
  * LiteSpeed Web Server Cache Manager
- * @Author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @Copyright: (c) 2018-2019
+ *
+ * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright: (c) 2018-2020
  * *******************************************
  */
 
@@ -94,10 +95,19 @@ class WPInstall
         $this->init($path);
     }
 
+    /**
+     *
+     * @param string  $path
+     */
     protected function init( $path )
     {
+        if ( ($realPath = realpath($path)) === false ) {
+            $this->path = $path;
+        }
+        else {
+            $this->path = $realPath;
+        }
 
-        $this->path = realpath($path);
         $this->data = array(
             self::FLD_STATUS => 0,
             self::FLD_DOCROOT => null,
@@ -322,6 +332,9 @@ class WPInstall
 
     /**
      *
+     * @deprecated 1.9.5  Deprecated to avoid confusion with $this->cmdStatus
+     *                    and $this->cmdMsg related functions. Use
+     *                    $this->setStatus() instead.
      * @param int  $newStatus
      */
     public function updateCommandStatus( $newStatus )
@@ -385,7 +398,7 @@ class WPInstall
         $this->setData(self::FLD_DOCROOT, $docRoot);
 
         if ( $docRoot === null ) {
-            $this->updateCommandStatus(self::ST_ERR_DOCROOT);
+            $this->setStatus(self::ST_ERR_DOCROOT);
             $this->addUserFlagFile(false);
 
             $msg = "{$this->path} - Could not find matching document root for WP "
@@ -510,8 +523,8 @@ class WPInstall
     public function refreshStatus( $forced = false )
     {
         if ( !$this->refreshed || $forced ) {
-            $this->refreshed = true;
             UserCommand::issue(UserCommand::CMD_STATUS, $this);
+            $this->refreshed = true;
         }
 
         return $this->getData(self::FLD_STATUS);

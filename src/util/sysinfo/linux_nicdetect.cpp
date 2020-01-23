@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -46,6 +46,7 @@ struct ifi_info *parse_proc_net()
     ls_fio_close(fd);
 
     struct sockaddr_in6 addr;
+    memset(&addr, 0, sizeof(addr));
     char *pEnd = &achBuf[total];
     char *pLineEnd;
     char *p = achBuf;

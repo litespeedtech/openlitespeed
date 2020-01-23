@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -22,14 +22,14 @@
 #include <unistd.h>
 #include "unittest-cpp/UnitTest++.h"
 
-extern const char *get_server_root(char *achServerRoot);
+extern const char *get_server_root(char *achServerRoot, ssize_t sz);
 
 TEST(XmlNodeTest_test)
 {
     char achError[1024];
     char achBuf[256];
     char *p = achBuf;
-    strcpy(p, get_server_root(achError));
+    lstrncpy(p, get_server_root(achError, sizeof(achBuf)), sizeof(achBuf) );
     CHECK(p != NULL);
     strcat(achBuf, "/conf/myconfig.xml");
 

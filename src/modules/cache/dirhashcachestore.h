@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -31,19 +31,20 @@ class DirHashCacheStore : public CacheStore
     int buildCacheLocation(char *pBuf, int len, const CacheHash &hash,
                            int isPrivate);
     int updateEntryState(DirHashCacheEntry *pEntry);
-    int isChanged(CacheEntry *pEntry, const char *pPath, int len);
+    int isChanged(CacheEntry *pEntry, const char *pPath, int len, size_t max_len);
     int isEntryExists(CacheHash &hash, const char *pSuffix,
                       struct stat *pStat);
     int isEntryUpdating(const CacheHash &hash, int isPrivate);
     int isEntryStale(const CacheHash &hash, int isPrivate);
     int isEntryExist(const CacheHash &hash, const char *pSuffix,
                      struct stat *pStat, int isPrivate);
-    
-    int processStale(CacheEntry *pEntry, char *pBuf, int pathLen);
+
+    int processStale(CacheEntry *pEntry, char *pBuf, size_t maxBuf, int pathLen);
 
 protected:
-    int renameDiskEntry(CacheEntry *pEntry, char *pFrom,
-                        const char *pFromSuffix, const char *pToSuffix, int validate);
+    int renameDiskEntry(CacheEntry *pEntry, char *pFrom, size_t maxFrom,
+                        const char *pFromSuffix, const char *pToSuffix,
+                        int validate);
 
 public:
     DirHashCacheStore();

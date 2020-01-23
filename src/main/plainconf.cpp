@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -681,9 +681,7 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
     XmlNode *pParamNode = new XmlNode;
     const char *attr = NULL;
     pParamNode->init(UNKNOWN_KEYWORDS, &attr);
-    strcpy(newvalue, name);
-    strcat(newvalue, " ");
-    strcat(newvalue, value);
+    snprintf(newvalue, sizeof(newvalue), "%s %s", name, value);
     pParamNode->setValue(newvalue, strlen(newvalue));
     pCurNode->addChild(pParamNode->getName(), pParamNode);
 }
@@ -793,8 +791,8 @@ void plainconf::handleSpecialCase(XmlNode *pNode)
                  */
                 char newname[1024] = {0};
                 char newvalue[4096] = {0};
-                strncpy(newname, value, p - value);
-                strcpy(newvalue, p + 2);
+                lstrncpy(newname, value, sizeof(newname));
+                lstrncpy(newvalue, p + 2, sizeof(newvalue));
 
                 XmlNode *pRootNode = pNode;
 
@@ -1011,7 +1009,7 @@ int plainconf::checkMultiLineMode(const char *sLine,
         if (n > maxSize)
             n = maxSize;
 
-        strncpy(sMultiLineModeSign, p + 3, n);
+        lstrncpy(sMultiLineModeSign, p + 3, maxSize);
         return n;
     }
 
@@ -1067,7 +1065,7 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
     struct dirent *dir_ent;
 
     char str[4096] = {0};
-    strcpy(str, pPath);
+    lstrncpy(str, pPath, sizeof(str));
     strcatchr(str, '/', 4096);
     int offset = strlen(str);
     StringList AllEntries;
@@ -1089,7 +1087,7 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
                 continue;
         }
 
-        strcpy(str + offset, pName);
+        lstrncpy(str + offset, pName, sizeof(str) - offset);
         struct stat st;
         if (stat(str, &st) == 0)
         {
@@ -1113,7 +1111,7 @@ void plainconf::loadDirectory(const char *pPath, const char *pPattern)
 
 
 void plainconf::getIncludeFile(const char *curDir, const char *orgFile,
-                               char *targetFile)
+                               char *targetFile, ssize_t targetFileLen)
 {
     int len = strlen(orgFile);
 
@@ -1122,14 +1120,14 @@ void plainconf::getIncludeFile(const char *curDir, const char *orgFile,
 
     //Absolute path
     if (orgFile[0] == '/')
-        strcpy(targetFile, orgFile);
+        lstrncpy(targetFile, orgFile, targetFileLen);
 
     else if (orgFile[0] == '$')
     {
         if (strncasecmp(orgFile, "$server_root/", 13) == 0)
         {
-            strcpy(targetFile, rootPath.c_str());
-            strcat(targetFile, orgFile + 13);
+            snprintf(targetFile, targetFileLen, "%s%s", rootPath.c_str(),
+                     orgFile + 13);
         }
         else
         {
@@ -1140,9 +1138,7 @@ void plainconf::getIncludeFile(const char *curDir, const char *orgFile,
 
     else
     {
-        strcpy(targetFile, curDir);
-        strcat(targetFile, "/");
-        strcat(targetFile, orgFile);
+        snprintf(targetFile, targetFileLen, "%s/%s", curDir, orgFile);
     }
 }
 
@@ -1154,15 +1150,14 @@ void plainconf::checkInFile(const char *path)
 {
     if (MainServerConfig::getInstance().getDisableWebAdmin())
         return ;
-    
+
     struct stat sb0;
     if (stat(path, &sb0) == -1)
         return ;
 
     //Backup file abd checkin and out
     char new_path[4096];
-    strcpy(new_path, path);
-    strcat(new_path, "0");
+    snprintf(new_path, sizeof(new_path), "%s0", path);
 
     int ret;
     struct stat sb;
@@ -1325,7 +1320,7 @@ void plainconf::loadConfFile(const char *path)
                 char achBuf[512] = {0};
                 char *pathc = strdup(path);
                 const char *curDir = dirname(pathc);
-                getIncludeFile(curDir, pathInclude.c_str(), achBuf);
+                getIncludeFile(curDir, pathInclude.c_str(), achBuf, sizeof(achBuf));
                 free(pathc);
                 loadConfFile(achBuf);
             }
@@ -1403,8 +1398,7 @@ XmlNode *plainconf::parseFile(const char *configFilePath,
 //#define TEST_OUTPUT_PLAIN_CONF 1
 #ifdef TEST_OUTPUT_PLAIN_CONF
     char sPlainFile[512] = {0};
-    strcpy(sPlainFile, configFilePath);
-    strcat(sPlainFile, ".txt");
+    snprintf(sPlainFile, sizeof(sPlainFile), "%s.txt", configFilePath);
     plainconf::testOutputConfigFile(rootNode, sPlainFile);
 #endif
     return rootNode;

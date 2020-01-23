@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -73,7 +73,7 @@ void ProfileTime::stop()
     struct timespec     end;
     clock_gettime(CLOCK_MONOTONIC, &end);
 #endif
-    m_diffns = (end.tv_sec - m_begin.tv_sec) * 1e9 
+    m_diffns = (end.tv_sec - m_begin.tv_sec) * 1e9
                 + (end.tv_nsec - m_begin.tv_nsec);
 }
 
@@ -81,16 +81,18 @@ void ProfileTime::stop()
 void ProfileTime::printTime(const char *desc, int loop_count)
 {
     int64_t time_diff = getTimeUsedNanoSec();
-    printf("%s Total: %" PRId64 " ns, Average Per Loop: %" PRId64 " ns\n",
-           desc, time_diff, time_diff / loop_count);
+    if (loop_count)
+        printf("%s Total: %" PRId64 " ns, Average Per Loop: %" PRId64 " ns\n",
+               desc, time_diff, time_diff / loop_count);
 }
 
 
 void ProfileTime::printTimeMs(const char *desc, int loop_count)
 {
     int64_t time_diff = getTimeUsedNanoSec() / 1e3;
-    printf("%s Total: %" PRId64 " ms, Average Per Loop: %" PRId64 " ms\n",
-           desc, time_diff, time_diff / loop_count);
+    if (loop_count)
+        printf("%s Total: %" PRId64 " ms, Average Per Loop: %" PRId64 " ms\n",
+               desc, time_diff, time_diff / loop_count);
 }
 
 

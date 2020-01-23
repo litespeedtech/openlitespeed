@@ -59,7 +59,7 @@ int assignHandler(lsi_param_t *rec)
         if (p)
         {
             nameLen = p - nameStart;
-            strncpy(name, nameStart, nameLen);
+            memcpy(name, nameStart, nameLen);
             name[nameLen] = 0x00;
             ++p;
 
@@ -76,7 +76,7 @@ int assignHandler(lsi_param_t *rec)
                 p = pEnd;
             }
 
-            strncpy(val, valStart, valLen);
+            memcpy(val, valStart, valLen);
             val[valLen] = 0x00;
 
             g_api->set_req_env(rec->session, name, nameLen, val, valLen);

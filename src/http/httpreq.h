@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -88,10 +88,14 @@ enum
 #define UA_CURL                 10
 #define UA_WGET                 11
 
-#define URL_GENERIC             0
-
-#define URL_FAVICON             2
-#define URL_CAPTCHA             3
+enum
+{
+    URL_GENERIC,
+    URL_FAVICON,
+    URL_ROBOTS_TXT,
+    URL_ACME_CHALLENGE,
+    URL_CAPTCHA,
+};
 
 #define GZIP_ENABLED            1
 #define REQ_GZIP_ACCEPT         2
@@ -451,9 +455,9 @@ public:
 
     const char *getHeader(size_t index) const
     {
-        int offset = (index < HttpHeader::H_TE ?
-                         m_commonHeaderOffset[index] :
-                         m_otherHeaderOffset[index - HttpHeader::H_TE]);
+        if (index >= HttpHeader::H_TE)
+            return NULL;
+        int offset = m_commonHeaderOffset[index];
         return m_headerBuf.begin() + offset;
     }
 
@@ -472,6 +476,8 @@ public:
     {   return m_commonHeaderOffset[index];     }
     int getHeaderLen(size_t index) const
     {
+        if (index >= HttpHeader::H_HEADER_END)
+            return 0;
         return (index < HttpHeader::H_TE ?
                  m_commonHeaderLen[ index ] :
                  m_otherHeaderLen[ index - HttpHeader::H_TE]);
@@ -690,7 +696,10 @@ public:
     void setHttps()     {    m_iReqFlag |= IS_HTTPS;   }
 
     bool isFavicon() const      {   return (m_iUrlType == URL_FAVICON); }
+    bool isRobotsTxt() const    {   return m_iUrlType == URL_ROBOTS_TXT;    }
     bool isCaptcha() const      {   return (m_iUrlType == URL_CAPTCHA); }
+    short getUrlType() const    {   return m_iUrlType;  }
+
 
     char getRewriteLogLevel() const;
     void setHandler(const HttpHandler *pHandler)

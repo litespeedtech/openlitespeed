@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -134,6 +134,8 @@ int PipeAppender::append(const char *pBuf, int len)
         if (!m_buf.empty())
             return m_buf.cache(pBuf, len, 0);
     }
+    if (Appender::getfd() == -1)
+        return LS_FAIL;
     int ret = ::ls_fio_write(Appender::getfd(), pBuf, len);
     if (ret < len)
     {
@@ -156,11 +158,13 @@ int PipeAppender::flush()
               m_buf.size());
     if (!m_buf.empty())
     {
-        if (PipeAppender::getfd() == -1)
+        if (Appender::getfd() == -1)
             if (open() == -1)
                 return -1;
         IOVec iov;
         m_buf.getIOvec(iov);
+        if (Appender::getfd() == -1)
+            return LS_FAIL;
         int ret = ::writev(Appender::getfd(), iov.get(), iov.len());
         LS_NOTICE("[PipeAppender] flush() writev() return %d", ret);
         if (ret > 0)

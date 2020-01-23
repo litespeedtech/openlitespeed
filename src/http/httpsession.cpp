@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -1188,7 +1188,7 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
     //pInfo->incConn(1);
 
     m_pClientInfo = pInfo;
-    LS_DBG_L("[%s] increase connection count to %d.",
+    LS_DBG_L("[%s] increase connection count to %ld.",
              m_pClientInfo->getAddrString(), m_pClientInfo->getConns());
     setFlag(HSF_BEHIND_PROXY);
     if (pInfo)
@@ -1447,6 +1447,10 @@ int HttpSession::processNewReqInit()
     m_request.setStatusCode(SC_200);
     //Run LSI_HKPT_HTTP_BEGIN after the inherit from vhost
     setFlag(HSF_HOOK_SESSION_STARTED);
+
+    if (m_request.getUrlType() == URL_ACME_CHALLENGE)
+        m_request.orContextState(SKIP_REWRITE);
+
     setProcessState(HSPS_HKPT_HTTP_BEGIN);
     return 0;
 }
@@ -1895,12 +1899,14 @@ int HttpSession::rewriteToRecaptcha(bool blockIfTooManyAttempts)
     if (blockIfTooManyAttempts && !recaptchaAttemptsAvail())
         return 0;
 
+
     if (!m_request.isCaptcha() &&  hasPendingCaptcha())
     {
         LS_DBG_M(getLogSession(), "[RECAPTCHA] Client %.*s has pending captcha.",
                 pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
         return 0;
     }
+
 
     if (m_request.rewriteToRecaptcha())
     {
@@ -2363,6 +2369,9 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
         return 0;
     }
 
+
+
+
     int ret = assignHandler(pHandler);
     if (ret)
         return ret;
@@ -2640,7 +2649,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
     }
 
     //m_response.prepareHeaders( &m_request );
-    //int errCode = m_request.getStatusCode();
+    //register int errCode = m_request.getStatusCode();
     unsigned int ver = m_request.getVersion();
     if (ver > HTTP_1_0)
     {
@@ -2818,7 +2827,7 @@ int HttpSession::doWrite()
 
         setFlag(HSF_RESP_FLUSHED, 0);
         flush();
-        
+
         if(getFlag(HSF_SAVE_STX_FILE_CACHE))
         {
             HttpVHost *host = getReq()->getVHost();
@@ -4397,6 +4406,8 @@ int HttpSession::processOneLink(const char *p, const char *pEnd,
     while(pUrlBegin < pEnd && isspace(*pUrlBegin))
         ++pUrlBegin;
     p = (const char *)memchr(pUrlBegin, '>', pEnd - pUrlBegin);
+    if (!p)
+        return 0;
     const char *pUrlEnd = p++;
     while(isspace(pUrlEnd[-1]))
         --pUrlEnd;
@@ -4762,8 +4773,9 @@ int HttpSession::initSendFileInfo(const char *pPath, int pathLen)
     int fd = openStaticFile(pPath, pathLen, &ret);
     if (fd == -1)
         return ret;
-    fstat(fd, &st);
-    ret = setUpdateStaticFileCache(pPath, pathLen, fd, st);
+    ret = fstat(fd, &st);
+    if (ret != -1)
+        ret = setUpdateStaticFileCache(pPath, pathLen, fd, st);
     if (ret)
     {
         close(fd);
@@ -4867,7 +4879,7 @@ int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
     if (!pBuf)
         pBuf = ls_palloc(STATIC_FILE_BLOCK_SIZE);
     remain = m_aioReq.read(pData->getECache()->getfd(), pBuf,
-                           len, pData->getCurPos(), (EventHandler *)this);
+                           len, pData->getCurPos(), (AioEventHandler *)this);
     if (remain != 0)
         return LS_FAIL;
     setFlag(HSF_AIO_READING);
@@ -5861,7 +5873,8 @@ void HttpSession::mtParseReqArgs(MtParamParseReqArgs *pParams)
 {
     if ((NULL == pParams) || (getMtFlag(HSF_MT_CANCEL)))
     {
-        pParams->m_ret = LS_FAIL;
+        if (pParams)
+            pParams->m_ret = LS_FAIL;
         return;
     }
 
@@ -5874,7 +5887,8 @@ void HttpSession::mtSendfile(MtParamSendfile *pParams)
 {
     if ((NULL == pParams) || (getMtFlag(HSF_MT_CANCEL)))
     {
-        pParams->m_ret = LS_FAIL;
+        if (pParams)
+            pParams->m_ret = LS_FAIL;
         return;
     }
     pParams->m_ret = LS_OK;
@@ -6197,7 +6211,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
 #define URI_OP_MASK     15
 #define URL_QS_OP_MASK  112
 #define MAX_URI_QS_LEN 8192
-    char tmpBuf[MAX_URI_QS_LEN];
+    char tmpBuf[MAX_URI_QS_LEN + 8];
     char *pStart = tmpBuf;
     char *pQs = NULL;
     int final_qs_len = 0;
@@ -6220,8 +6234,8 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         uri_len = getReq()->getURILen();
         action &= ~LSI_URL_ENCODED;
     }
-    if ((size_t)uri_len > sizeof(tmpBuf) - 1)
-        uri_len = sizeof(tmpBuf) - 1;
+    if ((size_t)uri_len > sizeof(tmpBuf) - 4) // leave room for extra
+        uri_len = sizeof(tmpBuf) - 4;
 
     switch (uri_act)
     {
@@ -6231,7 +6245,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
     case LSI_URL_REDIRECT_303:
     case LSI_URL_REDIRECT_307:
         if (!(action & LSI_URL_ENCODED))
-            len = HttpUtil::escape(uri, uri_len, tmpBuf, sizeof(tmpBuf) - 1);
+            len = HttpUtil::escape(uri, uri_len, tmpBuf, sizeof(tmpBuf) - 3);
         else
         {
             memcpy(tmpBuf, uri, uri_len);
@@ -6240,7 +6254,11 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         break;
     default:
         if (action & LSI_URL_ENCODED)
+        {
             len = HttpUtil::unescape(uri, tmpBuf, uri_len);
+            if (len == -1)
+                len = 0; // To avoid a bad index below
+        }
         else
         {
             memcpy(tmpBuf, uri, uri_len);

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -169,7 +169,7 @@ StatusCode::StatusCode(int code, const char *pStatus,
                              "</div></div>"
                              ,
                              pStatus, pStatus[1], pStatus[2], pStatus[3], &pStatus[5],
-                             message ? message : "");
+                             message);
             //p += ls_snprintf( p, pEnd - p, "%s", message );
             if ((code >= SC_403) || (code <= SC_404))
                 p += snprintf(p, pEnd - p,

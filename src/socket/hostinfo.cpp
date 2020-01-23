@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -47,7 +47,7 @@ int HostInfo::init()
     h_addr_list = (char **)m_pBuf + H_MAX_ENTRIES;
     *h_addr_list = NULL;
     assert((char *)h_addr_list - (char *)h_aliases
-           == H_MAX_ENTRIES * sizeof(char *));
+           == (long)(H_MAX_ENTRIES * sizeof(char *)));
     return 0;
 }
 

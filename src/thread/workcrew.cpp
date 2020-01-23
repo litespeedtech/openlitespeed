@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -128,7 +128,7 @@ WorkCrew::~WorkCrew()
 {
     DPRINTF("WRKRW DSTRCT %s\n", pStatus());
     if (m_stateFutex < STOPPED) {
-        stopProcessing();
+        stopProcessing(1);
     }
     ls_mutex_lock(&m_crewLock);
 #ifdef LS_WORKCREW_LF
@@ -139,6 +139,15 @@ WorkCrew::~WorkCrew()
 
     m_cleanUp.release_objects();
     ls_mutex_unlock(&m_crewLock);
+
+    int count = ls_atomic_fetch_add(&m_iRunningWorkers, 0);
+    if (count > 0)
+    {
+        while(count-- > 0)
+            sched_yield();
+        usleep(1000);
+    }
+
 }
 
 
@@ -180,8 +189,11 @@ int WorkCrew::addWorker()
     int32_t slot;
 
     slot = getSlot();
-
+    if (slot == -1)
+        return LS_FAIL;
     CrewWorker *worker = new CrewWorker(this, slot);
+    if (!worker)
+        return LS_FAIL;
     // TODO see if this is a real issue - new should take care of it? LS_TH_NEWMEM(worker, sizeof(CrewWorker));
     worker->blockSigs(&m_sigBlock);
     m_crew[slot] = worker;
@@ -198,8 +210,10 @@ int WorkCrew::addWorker()
         else
         {
             if (m_crew[slot])
+            {
                 DPRINTF("ADDWRKR START Worker tid %lu in slot %d, %s\n",
                     worker->getHandle(), slot, pStatus());
+            }
             return 0;
         }
     }
@@ -266,7 +280,7 @@ int WorkCrew::startProcessing()
 }
 
 
-void WorkCrew::stopProcessing()
+void WorkCrew::stopProcessing(int disard)
 {
     struct timespec timeout;
     timeout.tv_sec = 0;
@@ -280,13 +294,13 @@ void WorkCrew::stopProcessing()
         return;
     }
 
-    stopAllWorkers();
+    stopAllWorkers(disard);
 #ifndef LS_WORKCREW_LF
     m_pJobQueue->shutdown();
 #endif
-    
+
     // now wait for all to die
-    while ( !isAllWorkerDead() ) {
+    while ( !disard && !isAllWorkerDead() ) {
         DPRINTF("STPPROC WAITDIE %s\n", pStatus());
         int ret = 0;
         //LS_TH_BENIGN(&m_stateFutex, "ok read");
@@ -301,7 +315,7 @@ void WorkCrew::stopProcessing()
         }
 
         if (!isAllWorkerDead()) {
-            stopAllWorkers();
+            stopAllWorkers(0);
         }
         else {
             // all workers are gone but state didn't change ???
@@ -315,7 +329,6 @@ void WorkCrew::stopProcessing()
 
 
     LS_DBG_H("WorkCrew::stopProcessing(), Stopping Processor.");
-
     ls_atomic_setptr(&m_pFinishedQueue, NULL);
 }
 
@@ -374,6 +387,14 @@ void WorkCrew::workerDied(CrewWorker *pWorker)
     ls_atomic_fetch_add(&m_iRunningWorkers, -1);
     ls_mutex_lock(&m_crewLock);
     int32_t slot = pWorker->getSlot();
+    if (slot == -1)
+        return;
+    if (slot < 0 || slot >= m_crew.size() || !m_crew[slot])
+    {
+        printf("Race condition!  slot: %d, size: %ld, m_crew[%d]: %p\n",
+               slot, m_crew.size(), slot, m_crew[slot]);
+        assert(0);
+    }
     assert(slot >= 0 && slot < m_crew.size() && m_crew[slot]);
     m_emptySlots.push_back(slot);
     m_crew[slot] = NULL;
@@ -435,7 +456,7 @@ int32_t WorkCrew::maxWorkers(int32_t num)
 }
 
 
-void WorkCrew::stopAllWorkers()
+void WorkCrew::stopAllWorkers(int discard)
 {
     DPRINTF("STPALL stopAllWorkers %s\n", pStatus());
     ls_mutex_lock(&m_crewLock);
@@ -443,6 +464,8 @@ void WorkCrew::stopAllWorkers()
     {
         if (m_crew[i])
         {
+            if (discard)
+                m_crew[i]->setSlot(-1);
             m_crew[i]->requestStop();
         }
     }
@@ -488,7 +511,7 @@ void *WorkCrew::workerRoutine(CrewWorker * pWorker)
         if (job)
         {
             DPRINTF("WRKRTN processing job slot %d %s\n", pWorker->getSlot(), pStatus());
-            void *ret = m_pProcess(job);
+            m_pProcess(job);
             if (ls_atomic_fetch_add(&m_pFinishedQueue, 0))
                 putFinishedItem(job);
 

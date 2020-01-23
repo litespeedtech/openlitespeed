@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -61,7 +61,7 @@ public:
     const char *getWorkingDir() const      {   return m_sWorkingDir.c_str();   }
     const char *getSiteDomain() const      {   return m_sSiteDomain.c_str();   }
     int  getInterval() const                {   return m_iUpdateInterval;       }
-    void config(HttpVHost *pVHost, int val, char *achBuf,
+    void config(HttpVHost *pVHost, int val, char *achBuf, size_t achBufSz,
                 const XmlNode *pAwNode,
                 char *iconURI, const char *vhDomain, int vhAliasesLen);
 

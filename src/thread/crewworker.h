@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -36,7 +36,9 @@ public:
     ~CrewWorker()
     {}
 
-    int32_t getSlot() { return m_slot; }
+    int32_t getSlot() const     {   return m_slot;  }
+    void setSlot(int slot)      {   m_slot = slot;  }
+
     const WorkCrew * getWorkCrew() const { return m_wc; }
     
     int start()

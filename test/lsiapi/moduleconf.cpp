@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -38,7 +38,7 @@ escapeMatchInfo_t tests[] =
     {"   123 ", "   123 "},         // 1
     {"   123 \\", "   123 \\"},     // 2
     {"   123 \\\\", "   123 \\\\"}, // 3
-    {"   123 \\\"", "   123 \""},   // 4
+    {"   123 \\\"", "   123 \\"},   // 4
 
     {"'   123 '", "   123 "},
     {"`   123 `", "   123 "},
@@ -77,8 +77,8 @@ escapeMatchInfo_t tests[] =
 
     //  [` 123 \\` 345 `] ====> [ 123 \` 345 ]
     {"` 123 \\\\` 345 `", " 123 \\` 345 "},
-        
-    
+
+
 };
 
 TEST(TEST_MODULECONF)
@@ -86,25 +86,25 @@ TEST(TEST_MODULECONF)
     char str[1024] = {0};
     size_t ret, i;
     FILE *f = fopen("/tmp/samples.txt", "w");
-    
+
     for (i=0; i<sizeof(tests)/sizeof(escapeMatchInfo_t); ++i)
     {
         ret = ModuleConfig::escapeParamVal(tests[i].src, strlen(tests[i].src), str);
         printf("i %d %d.\n", (int)i, (int)strlen(tests[i].dst));
         CHECK(ret == strlen(tests[i].dst));
         CHECK(memcmp(str, tests[i].dst, ret) ==0);
-        
+
         if(f)
-            fprintf(f, "[%s]\n[%s]\n\n", tests[i].src, tests[i].dst);
+            fprintf(f, "[%s]\n[%s]\n[%.*s]\n\n", tests[i].src, tests[i].dst, (int)ret, str);
     }
-    
+
     if(f)
     {
         fclose(f);
         printf("File /tmp/samples.txt created, you may view it for sample in plain text.\n");
     }
     printf("Pass all tests of TEST_MODULECONF.\n");
-    
+
 }
 
 

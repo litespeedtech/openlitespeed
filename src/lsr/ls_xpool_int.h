@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,7 +18,7 @@
 #ifndef LS_XPOOL_INT_H
 #define LS_XPOOL_INT_H
 
-typedef __link_t            ls_xblkctrl_t;
+typedef __nlink_t            ls_xblkctrl_t;
 
 struct xpool_alink_s
 {

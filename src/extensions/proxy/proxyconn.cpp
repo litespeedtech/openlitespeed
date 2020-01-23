@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -44,7 +44,8 @@ ProxyConn::ProxyConn()
     : m_iSsl(0)
     , m_flag(0)
 {
-    strcpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ");
+    lstrncpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ",
+             sizeof(m_extraHeader));
     memset(&m_iTotalPending, 0,
            ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending);
 }
