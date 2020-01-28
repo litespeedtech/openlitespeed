@@ -119,11 +119,13 @@ public:
     int timedJoin(void **pRetVal, struct timespec *timeout)
     {   return pthread_timedjoin_np(m_thread, pRetVal, timeout);    }
 
+#ifdef __gnu_linux__
     int attrSetAffinity(size_t cpusetsize, const cpu_set_t *cpuset)
     {   return m_thread ? LS_FAIL : pthread_attr_setaffinity_np(&m_attr, cpusetsize, cpuset);  }
 
     int attrGetAffinity(size_t cpusetsize, cpu_set_t *pCpuSet)
     {   return pthread_attr_getaffinity_np(&m_attr, cpusetsize, pCpuSet);  }
+#endif
 #endif
 
     int attrSetDetachState(int detachstate)
