@@ -479,6 +479,12 @@ if [ "$ONLYBIN" = "no" ] ; then
     ./install.sh
 else
     cp bin/* ${LSWSHOME}/bin/
+    if [ $? != 0 ] ; then
+        ${LSWSCTRL} stop
+        killall -9 openlitespeed
+        sleep 1
+        cp bin/* ${LSWSHOME}/bin/
+    fi
     cp modules/* ${LSWSHOME}/modules/
     cp admin/misc/* ${LSWSHOME}/admin/misc/
 fi
