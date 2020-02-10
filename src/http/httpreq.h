@@ -455,9 +455,12 @@ public:
 
     const char *getHeader(size_t index) const
     {
-        if (index >= HttpHeader::H_TE)
+        if (index >= HttpHeader::H_HEADER_END)
             return NULL;
-        int offset = m_commonHeaderOffset[index];
+
+        int offset = (index < HttpHeader::H_TE ?
+                         m_commonHeaderOffset[index] :
+                         m_otherHeaderOffset[index - HttpHeader::H_TE]);
         return m_headerBuf.begin() + offset;
     }
 

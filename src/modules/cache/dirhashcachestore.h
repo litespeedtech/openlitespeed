@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -28,8 +28,8 @@ class DirHashCacheEntry;
 class DirHashCacheStore : public CacheStore
 {
 
-    int buildCacheLocation(char *pBuf, int len, const CacheHash &hash,
-                           int isPrivate);
+    int buildCacheLocation(char *pBuf, int len,
+        const unsigned char *pHashKey, int isPrivate);
     int updateEntryState(DirHashCacheEntry *pEntry);
     int isChanged(CacheEntry *pEntry, const char *pPath, int len, size_t max_len);
     int isEntryExists(CacheHash &hash, const char *pSuffix,
@@ -41,6 +41,16 @@ class DirHashCacheStore : public CacheStore
 
     int processStale(CacheEntry *pEntry, char *pBuf, size_t maxBuf, int pathLen);
 
+    int isCreatorAlive(CacheEntry *pEntry);
+
+    void removeDeadEntry(CacheEntry *pEntry, const CacheHash &hash, 
+                         char *achBuf);
+    int createCacheFile(const CacheHash* pHash, bool is_private);
+    CacheEntry *initCacheEntry(CacheEntry* pEntry, bool is_private);
+    
+    int updateEntryExpire(CacheEntry *pEntry);
+    int updateHashEntry(CacheEntry* pEntry);
+    
 protected:
     int renameDiskEntry(CacheEntry *pEntry, char *pFrom, size_t maxFrom,
                         const char *pFromSuffix, const char *pToSuffix,
@@ -57,10 +67,10 @@ public:
     virtual CacheEntry *getCacheEntry(CacheHash &hash, CacheKey *pKey,
                                       int maxStale, int32_t lastCacheFlush);
 
-    virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey,
-                                         int force);
+    virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey);
 
     virtual void cancelEntry(CacheEntry *pEntry, int remove);
+    void cancelEntryInMem(CacheEntry* pEntry);
 
     virtual CacheEntry *getCacheEntry(const char *pKey, int keyLen);
 
@@ -72,6 +82,8 @@ public:
     virtual int publish(CacheEntry *pEntry);
 
     virtual void removePermEntry(CacheEntry *pEntry);
+    
+    virtual void removeEntryByHash(const unsigned char * pKey, int keyLen);
 
     void getEntryFilePath(CacheEntry *pEntry, char *pPath, int &len);
 

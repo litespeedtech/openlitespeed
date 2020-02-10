@@ -76,9 +76,6 @@ int ByteRange::check(off_t entityLen)
 
 HttpRange::HttpRange(off_t entityLen)
     : m_lEntityLen(entityLen)
-    , m_iCurRange(0)
-    , m_pPartHeaderEnd(NULL)
-    , m_pCurHeaderPos(NULL)
 {
     ::memset(m_boundary, 0, sizeof(m_boundary));
     m_iCurRange = 0;
@@ -175,7 +172,7 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
     int state = 0;
     ByteRange range(-1, -1);
     off_t lValue = 0;
-    //off_t total = 0;
+    off_t total = 0;
     while (state != 6)
     {
         switch (ch)
@@ -265,9 +262,9 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
                     state = 6;
                     break;
                 }
-                //total += range.getLen();
-                //if (total > m_lEntityLen)
-                //    return SC_200;
+                total += range.getLen();
+                if (total > m_lEntityLen)
+                    return SC_200;
                 range.setBegin(-1);
                 range.setEnd(-1);
                 state = 0;

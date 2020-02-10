@@ -72,12 +72,25 @@ class Plesk extends ControlPanel
             case 'redhat':
                 $this->apacheConf = '/etc/httpd/conf.d/lscache.conf';
                 break;
+
             case 'ubuntu':
                 $this->apacheConf = '/etc/apache2/conf-enabled/lscache.conf';
                 break;
+
             case 'debian':
-                $this->apacheConf = '/etc/apache2/conf.d/lscache.conf';
+
+                if ( is_dir('/etc/apache2/conf-enabled') ) {
+                    $this->apacheConf = '/etc/apache2/conf-enabled/lscache.conf';
+                }
+                else {
+                    /**
+                     * Old location.
+                     */
+                    $this->apacheConf = '/etc/apache2/conf.d/lscache.conf';
+                }
+
                 break;
+
             //no default case
         }
 

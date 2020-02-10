@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.3-12/27/2019
+LSUPVERSION=v2.4-2/6/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -21,6 +21,7 @@ PREVERSION=
 ORGVERSION=
 NEWVERSION=
 DLCMD=
+ONLYBIN=no
 
 OSNAME=`uname -s`
 ISLINUX=yes
@@ -274,13 +275,16 @@ testrunning()
 display_usage()
 {
     cat <<EOF
-Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
+Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v|-e VERSION]]
   
   -d
      Choose Debug version to upgrade or downgrade, will do clean like -c at the same time.
   
   -v VERSION
      If VERSION is given, this command will try to install specified VERSION. Otherwise, it will get the latest version from ${LSWSHOME}/autoupdate/release.
+
+  -e VERSION
+     If VERSION is given, this command will try to install the binaries of the specified VERSION. Otherwise, it will get the latest version from ${LSWSHOME}/autoupdate/release.
 
   -r 
      Recover to the original installed version which is in file VERSION.
@@ -323,6 +327,14 @@ do
         if [ "x$VERSION" = "x" ] ; then
             display_usage
         fi
+    elif [ "x$1" = "x-e" ] ; then
+        ONLYBIN=yes
+        shift
+        VERSION=$1
+        shift
+        if [ "x$VERSION" = "x" ] ; then
+            display_usage
+        fi    
     elif [ "x$1" = "x-r" ] ; then
         VERSION=${ORGVERSION}
         echoG "You choose to install the original installed version."
@@ -463,7 +475,14 @@ if [ -f ${LSWSHOME}/bin/openlitespeed ] ; then
     echo "###" >> ols.conf
 fi
 
-./install.sh
+if [ "$ONLYBIN" = "no" ] ; then 
+    ./install.sh
+else
+    cp bin/* ${LSWSHOME}/bin/
+    cp modules/* ${LSWSHOME}/modules/
+    cp admin/misc/* ${LSWSHOME}/admin/misc/
+fi
+
 rm -rf $SRCDIR
 rm -rf ${LSWSHOME}/autoupdate/*
 
@@ -472,7 +491,11 @@ echo lsup > "${LSWSHOME}/PLAT"
 rm -rf ${LOCKFILE}
 
 ${LSWSCTRL} start
-echoG All binaries are updated and service is on.
+if [ "$ONLYBIN" = "no" ] ; then 
+    echoG All files are updated and service is on.
+else
+    echoG All binaries are updated and service is on.
+fi
 echo 
 echo
 

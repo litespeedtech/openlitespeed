@@ -701,7 +701,7 @@ class CValidation
             $v = substr($v, 6);
             $supportedvar = ['$SERVER_ROOT', '$VH_NAME', '$VH_ROOT', '$DOC_ROOT'];
             $v = str_replace($supportedvar, 'VAR', $v);
-            if (preg_match("/^[a-z0-9\/\.]+$/i", $v)) {
+            if (preg_match("/^[a-z0-9\-_\/\.]+$/i", $v)) {
                 return 1;
             } 
         }

@@ -865,7 +865,6 @@ class PanelController
                         $failCount++;
                     }
                     elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->hasFatalError()
                             || $wpInstall->isFlagBitSet() ) {
 
                         $bypassedCount++;
@@ -1073,7 +1072,7 @@ class PanelController
                         $failCount++;
                     }
                     elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->hasFatalError() ) {
+                            || $wpInstall->isFlagBitSet() ) {
 
                         $bypassedCount++;
                     }
@@ -1185,7 +1184,7 @@ class PanelController
                         $failCount++;
                     }
                     elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->hasFatalError() ) {
+                            || $wpInstall->isFlagBitSet() ) {
 
                         $bypassedCount++;
                     }

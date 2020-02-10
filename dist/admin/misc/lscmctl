@@ -4,10 +4,10 @@
 # LiteSpeed Cache Management Script
 #
 # @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
-# @copyright (c) 2017-2019
+# @copyright (c) 2017-2020
 # *********************************************/
 
-VERSION='1.9'
+VERSION='1.10.0.1'
 OS=$(uname -s)
 SCRIPT_DIR=$(cd $(dirname ${0}) && pwd)
 
@@ -15,6 +15,8 @@ cd $SCRIPT_DIR
 
 LSWS_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
 PHP_SCRIPT="${LSWS_DIR}/add-ons/webcachemgr/bootstrap_cli.php"
+SHARED_API_VERSION_FILE="${LSWS_DIR}/add-ons/webcachemgr/VERSION"
+SHARED_API_MIN_VER_FILE="${LSWS_DIR}/add-ons/webcachemgr/MIN_VER"
 
 YELLOW='\e[33m'
 CYAN='\e[36m'
@@ -63,7 +65,8 @@ printHelp()
 	printCmdOption 'dashnotifyremove' '{-m | <wp path>}' 'Remove Dash Notifier plugin (and notification messages) from all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
     printCmdOption 'cpanelplugin' '{--install | --uninstall | -autoinstall [{0 | 1}]}' '[cPanel/WHM Environment Only] Install or uninstall the LiteSpeed user-end plugin for cPanel for all cPanel accounts using the '"'"'--install'"'"' and '"'"'--uninstall'"'"' input flags. The plugin will appear as "LiteSpeed Web Cache Manager" under '"'"'Advanced'"'"' in the user'"'"'s cPanel dashboard. The '"'"'-autoinstall'"'"' input param can be used to check the current auto install status. When turned on, the cPanel plugin will be automatically installed when installing/updating the WHM plugin. Use '"'"'-autoinstall {0 | 1}'"'"' to manually turn this off and on respectively.'
     printCmdOption 'addinstalls' '{-wpinstall <wp path> <docroot> <server name> <site url>} | -wpinstallsfile <installs file path>}' 'Add a WordPress installation to existing scan data. This "custom" data will be stored in it'"'"'s own lscm.data.cust data file under the "lsws/admin/lscdata" directory. A single installation can be added using the -wpinstall parameter with space separated list of installation info in the required order (<wp path> <docroot> <server name> <site url>). Multiple installations can be added at once using the -wpinstallsfile parameter to provide the path to an installs file containing a newline separated list of installation info in the expected format.'
-    printCmdOption '--update-lib' '' 'Update the lscmctl script and the required shared library to their latest versions.'
+    printCmdOption '--update-lib' '' 'Update the lscmctl script and the required shared library to their latest versions only if the currently installed versions are no longer supported.'
+    printCmdOption '--force-update-lib' '' 'Force update the lscmctl script and the required shared library to their latest versions. It is not recommended that this command be included in any cron jobs, use command '"'"'--update-lib'"'"' instead.'
     printHeader "Example Usage:"
     printExample 'List server and virtual host cache roots' 'setcacheroot'
     printExample 'Set virtual host cache root' 'setcacheroot -vh /path/to/ssd/lscache'
@@ -85,8 +88,85 @@ printHelp()
     printExample 'Add multiple WordPress Installations to custom data file using an installs file.' 'addinstalls -wpinstallsfile /path/to/installs/file'
 }
 
+updateMinAPIVerFile()
+{
+    local MIN_VER=$(wget -q https://www.litespeed.sh/sub/shared/MIN_VER -O -)
+    local RET=$?
+
+    if [ "$RET" != "0" ] ; then
+        errorExit "Failed to download latest MIN_VER file with wget exit status ${RET}."
+    fi
+
+    echo $MIN_VER > "$SHARED_API_MIN_VER_FILE"
+}
+
+apiNeedsUpdate()
+{
+    local UPDATE_MIN_VER=1
+
+    if [ -f "$SHARED_API_VERSION_FILE" ] ; then
+        `test $(find "$SHARED_API_VERSION_FILE" -mmin -1440)`
+
+        if [ "$?" = "0" ] ; then
+            UPDATE_MIN_VER=0
+        fi
+    fi
+
+    if [ $UPDATE_MIN_VER ] ; then
+        updateMinAPIVerFile
+    fi
+
+    local CURR_VER=$(cat "$SHARED_API_VERSION_FILE")
+    local MIN_VER=$(cat "$SHARED_API_MIN_VER_FILE")
+
+    local CURR_MAJOR=$(echo $CURR_VER | awk -F"." '{print $1}')
+    local MIN_MAJOR=$(echo $MIN_VER | awk -F"." '{print $1}')
+
+    if [ $CURR_MAJOR -lt $MIN_MAJOR ] ; then
+        return 0
+    fi
+
+    local CURR_MINOR=$(echo $CURR_VER | awk -F"." '{print $2}')
+    local MIN_MINOR=$(echo $MIN_VER | awk -F"." '{print $2}')
+
+    if [ $CURR_MINOR -lt $MIN_MINOR ] ; then
+        return 0
+    fi
+
+    local CURR_IMPROVEMENT=$(echo $CURR_VER | awk -F"." '{print match($3, /[^ ]/) ? $3 : 0}')
+    local MIN_IMPROVEMENT=$(echo $MIN_VER | awk -F"." '{print match($3, /[^ ]/) ? $3 : 0}')
+
+    if [ $CURR_IMPROVEMENT -lt $MIN_IMPROVEMENT ] ; then
+        return 0
+    fi
+
+    local CURR_PATCH=$(echo $CURR_VER | awk -F"." '{print match($4, /[^ ]/) ? $4 : 0}')
+    local MIN_PATCH=$(echo $MIN_VER | awk -F"." '{print match($4, /[^ ]/) ? $4 : 0}')
+
+    if [ $CURR_PATCH -lt $MIN_PATCH ] ; then
+        return 0
+    fi
+
+    return 1
+}
+
+enforceMinAPIVer()
+{
+    if apiNeedsUpdate ; then
+        echo "Automatically updating lscmctl script and required shared library"
+        runUpdate
+    fi
+}
+
 runUpdate()
 {
+
+    if [ "$1" = "--update-lib" ] && ! apiNeedsUpdate ; then
+        echo "Shared code library already meets minimum API version requirements."
+        echo "Done!"
+        return
+    fi
+
     ADDONS_DIR=$(cd "${LSWS_DIR}/add-ons" && pwd)
     LOCAL_TAR_FILE="${ADDONS_DIR}/shared_latest.tar.gz"
     URL="https://shared.litespeed.sh/latest"
@@ -217,12 +297,13 @@ then
     exit 0
 fi
 
-if [ "$1" = "--update-lib" ]
+if [ "$1" = "--update-lib" ] || [ "$1" = "--force-update-lib" ]
 then
-    runUpdate
+    runUpdate $1
     exit 0;
 fi
 
+enforceMinAPIVer
 setPanelClassName
 
 if [ "$PANEL_CLASS_NAME" = false ] ; then

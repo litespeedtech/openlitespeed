@@ -1300,7 +1300,7 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
             }
 
             int ret = 0;
-
+            int pathLen = 0;
             switch (*pLocation)
             {
             case '$':
@@ -1315,6 +1315,25 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
             default:
                 ret = ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath,
                         pLocation);
+                
+                /**
+                 * Since it is expanded, now we try to add tail / dor DIR if not have
+                 */
+                pathLen = strlen(achRealPath);
+                if (pathLen > 0 && pathLen < sizeof(achRealPath) - 1 &&
+                    ret == 0 && achRealPath[pathLen - 1] != '/')
+                {
+                    struct stat st;
+                    if (stat(achRealPath, &st) == 0)
+                    {
+                        if (S_ISDIR(st.st_mode))
+                        {
+                            achRealPath[pathLen] = '/';
+                            achRealPath[pathLen + 1] = 0x00;
+                            ++pathLen;
+                        }
+                    }
+                }
                 break;
             }
 
@@ -1326,7 +1345,9 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
 
             if (!match)
             {
-                int PathLen = strlen(achRealPath);
+                if (!pathLen)
+                    pathLen = strlen(achRealPath);
+
                 if (access(achRealPath, F_OK) != 0)
                 {
                     LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is not accessible: %s",
@@ -1334,7 +1355,7 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
                     return NULL;
                 }
 
-                if (PathLen > 512)
+                if (pathLen > 512)
                 {
                     LS_ERROR(ConfigCtx::getCurConfigCtx(), "path is too long: %s",
                              achRealPath);

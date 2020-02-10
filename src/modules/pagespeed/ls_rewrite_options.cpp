@@ -327,7 +327,7 @@ int LsRewriteOptions::ParseAndSetOptions(
     }
 
     CHECK(false);
-    return 0;
+    return -1;
 }
 
 LsRewriteOptions *LsRewriteOptions::Clone() const

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -313,6 +313,12 @@ ShmCacheManager::~ShmCacheManager()
         m_pStr2IdHash->close();
     if (m_pId2VaryStr != NULL)
         m_pId2VaryStr->close();
+    if (m_pPubTracker != NULL)
+        m_pPubTracker->close();
+    if (m_pPrivTracker != NULL)
+        m_pPrivTracker->close();
+//     if (m_pPurgeShmBridge)
+//         delete m_pPurgeShmBridge;
     m_id2StrList.release_objects();
 }
 
@@ -591,11 +597,9 @@ LsShmOffset_t ShmCacheManager::addUpdate(LsShmHash *pHash, const char *pKey,
 }
 
 
-
-
 int ShmCacheManager::processPrivatePurgeCmd(
     CacheKey *pKey, const char *pValue,
-    int iValLen, time_t curTime, int curTimeMS)
+    int iValLen, time_t curTime, int curTimeMS, int stale)
 {
     char achKey[ 8192 ];
     int len;
@@ -606,24 +610,17 @@ int ShmCacheManager::processPrivatePurgeCmd(
     privatePurge.setPool(m_pSessions->getPool());
     privatePurge.setShmOff(getSession(achKey, len));
     return processPurgeCmdEx(&privatePurge, pValue, iValLen, curTime,
-                             curTimeMS);
-
+                             curTimeMS, stale);
 }
 
 
 int ShmCacheManager::processPurgeCmdEx(
     ShmPrivatePurgeData *pPrivate, const char *pValue, int iValLen,
-    time_t curTime, int curTimeMS)
+    time_t curTime, int curTimeMS, int stale)
 {
     int flag;
     const char *pValueEnd, *pNext;
     const char *pEnd = pValue + iValLen;
-    int stale = 0;
-    if (strncasecmp(pValue, "stale,", 6 ) == 0)
-    {
-        stale = 1;
-        pValue += 6;
-    }
     while (pValue < pEnd)
     {
         if (isspace(*pValue))
@@ -708,11 +705,11 @@ int ShmCacheManager::processPurgeCmdEx(
             addUpdate(pValue, pValueEnd - pValue, flag, (int32_t)curTime,
                       (int16_t)curTimeMS);
             
-            CacheInfo *pInfo = (CacheInfo *)m_pStr2IdHash->
-                                offset2ptr(m_CacheInfoOff);
-            pInfo->setPurgeTime(curTime, curTimeMS);
-            pInfo->clearStats();
-            pInfo->updateFlag(CIF_STALE_PURGE, stale);
+//             CacheInfo *pInfo = (CacheInfo *)m_pStr2IdHash->
+//                                 offset2ptr(m_CacheInfoOff);
+//             pInfo->setPurgeTime(curTime, curTimeMS);
+//             pInfo->clearStats();
+//             pInfo->updateFlag(CIF_STALE_PURGE, stale);
         }
         pValue = pNext;
     }
@@ -857,6 +854,19 @@ int ShmCacheManager::isPurged(CacheEntry *pEntry, CacheKey *pKey,
         {
             ret = isPurgedByTag(pTag, pEntry, pKey, isCheckPrivate);
         }
+        /**
+         * Use the URL without QS as a tag to check
+         */
+        if (!ret)
+        {
+            
+            
+            
+            
+        }
+        
+        
+        
         if (!ret)
         {
             ret = shouldPurge(pEntry->getKey().c_str(), pEntry->getKeyLen(),
@@ -905,6 +915,7 @@ int ShmCacheManager::initCacheInfo(LsShmPool *pPool)
         if (*pMagic != CACHE_INFO_MAGIC)
             return LS_FAIL;
     }
+
     m_CacheInfoOff = infoOff + sizeof(int32_t);
     return 0;
 }
@@ -937,7 +948,20 @@ int ShmCacheManager::initTables(LsShmPool *pPool)
                                         LsShmHash::hashXXH32, memcmp, 0);
     if (!m_pId2VaryStr)
         return -1;
+    
+    
+    m_pPubTracker = pPool->getNamedHash("pubtracker", 1000,
+                                        LsShmHash::hashXXH32, memcmp,
+                                        LSSHM_FLAG_LRU);
+    if (!m_pPubTracker)
+        return -1;
 
+    m_pPrivTracker = pPool->getNamedHash("privtracker", 1000,
+                                         LsShmHash::hashXXH32, memcmp,
+                                         LSSHM_FLAG_LRU);
+    if (!m_pPrivTracker)
+        return -1;
+    
     populatePrivateTag();
     return 0;
 }
@@ -1162,6 +1186,101 @@ int ShmCacheManager::shouldCleanDiskCache()
         return 1;
     }
     return 0;
+}
+
+int ShmCacheManager::addTracking(CacheEntry * pEntry)
+{
+    return addTracking2(pEntry,
+                        pEntry->isPrivate() ? m_pPrivTracker : m_pPubTracker);
+}
+
+
+int ShmCacheManager::addTracking2(CacheEntry * pEntry, LsShmHash *pTracker)
+{
+    shm_objtrack_t *pData;
+    int valLen = sizeof(*pData);
+    int flag = LSSHM_FLAG_NONE;
+    
+    pTracker->disableAutoLock();
+    pTracker->lock();
+    LsShmOffset_t offVal = pTracker->get(pEntry->getHashKey().getKey(),
+                                              HASH_KEY_LEN, &valLen, &flag);
+    if (offVal != 0)
+    {
+        CacheInfo *pInfo = getCacheInfo();
+        pData = (shm_objtrack_t *)pTracker->offset2ptr(offVal);
+        if (flag & LSSHM_VAL_CREATED)
+            memset(pData, 0, sizeof(*pData));
+        if (pEntry->isPrivate())
+            pData->x_flag |= CM_TRACK_PRIVATE;
+//         else if (pEntry->isLitemage())
+//         {
+//             pData->x_flag |= CM_TRACK_LITEMAGE;
+//             if (flag & LSSHM_VAL_CREATED)
+//             {
+//                 pInfo->addLitemageCached(1);
+//             }
+//             else
+//             {
+//                 if (pInfo->shouldPurge(pData->x_tmCreated, 0))
+//                     pInfo->addLitemageCached(1);
+//             }
+//         }
+        pData->x_tmCreated = pEntry->getHeader().m_tmCreated;  
+        pData->x_tmExpire = pEntry->getExpireTime() + pEntry->getMaxStale();
+        
+    }
+    pTracker->unlock();
+    pTracker->enableAutoLock();
+    return offVal;    
+}
+
+
+// called when ondisk entry was removed.
+int ShmCacheManager::removeTracking(const char *pKey, int keyLen, int isPrivate)
+{
+    shm_objtrack_t *pData;
+    LsShmHash *pTracker = getTracker(isPrivate);
+    if (!pTracker)
+        return 0;
+    ls_strpair_t parms;
+    ls_str_set(&parms.key, (char *)pKey, keyLen);
+    pTracker->disableAutoLock();
+    pTracker->lock();
+    LsShmHash::iteroffset iterOff = pTracker->findIterator(&parms);
+    if (iterOff.m_iOffset != 0)
+    {
+        pData = (shm_objtrack_t *)pTracker->offset2iteratorData(iterOff);
+        if (!isPrivate)
+            updateStatsExpireByTracking(pData);
+        pTracker->eraseIterator(iterOff);
+    }
+    pTracker->unlock();
+    pTracker->enableAutoLock();
+    return iterOff.m_iOffset != 0;
+}
+
+
+
+int ShmCacheManager::trimExpiredByTracking(int isPrivate, int maxCnt, int (*removeEntry)(void *, void *), void *param)
+{
+    LsShmHash *pTracker = getTracker(isPrivate);
+    if (pTracker)
+        return pTracker->trimByCb(maxCnt, (LsShmHash::TrimCb)removeEntry, param);
+    return 0;
+}
+
+
+int ShmCacheManager::isInTracker(const unsigned char* pKey, int keyLen, 
+                             int isPrivate)
+{
+    LsShmHash *pTracker = getTracker(isPrivate);
+    if (!pTracker)
+        return 0;
+    ls_strpair_t parms;
+    ls_str_set(&parms.key, (char *)pKey, keyLen);
+    LsShmHash::iteroffset iterOff = pTracker->findIterator(&parms);
+    return (int)iterOff.m_iOffset;
 }
 
 

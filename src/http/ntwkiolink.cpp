@@ -387,7 +387,8 @@ void NtwkIOLink::tryRead()
 int NtwkIOLink::handleEvents(short evt)
 {
     int event = evt;
-    LS_DBG_M(this, "NtwkIOLink::handleEvents() events=%d!", event);
+    LS_DBG_M(this, "NtwkIOLink::handleEvents() fd: %d, mask=%hd, events=%hd!",
+             getfd(), getEvents(), evt);
     if (getState() == HIOS_SHUTDOWN)
     {
         if (event & (POLLHUP | POLLERR))
@@ -407,7 +408,16 @@ int NtwkIOLink::handleEvents(short evt)
     }
     m_iInProcess = 1;
     if (event & POLLIN)
+    {
+        //NOTE: force to allow flush output if unexpected POLLIN happens,
+        //      flush could detect socket need to be closed.
+        if ((getEvents() & POLLIN) == 0)
+        {
+            setAllowWrite();
+            setFlag(HIO_FLAG_PAUSE_WRITE, 0);
+        }
         (*m_pFpList->m_onRead_fp)(this);
+    }
     if (event & (POLLHUP | POLLERR))
     {
         m_iInProcess = 0;
@@ -790,10 +800,8 @@ int NtwkIOLink::onWriteSSL(NtwkIOLink *pThis)
     }
     int ret = 0;
     if (pThis->m_ssl.isConnected())
-    {
         ret = pThis->doWrite();
-        pThis->flushSslWpending();
-    }
+    pThis->flushSslWpending();
     return ret;
 }
 
@@ -810,10 +818,8 @@ int NtwkIOLink::onReadSSL(NtwkIOLink *pThis)
     }
     int ret = 0;
     if (pThis->m_ssl.isConnected())
-    {
         ret = pThis->doRead();
-        pThis->flushSslWpending();
-    }
+    pThis->flushSslWpending();
     return ret;
 }
 
@@ -993,7 +999,9 @@ int NtwkIOLink::onTimer()
 
         if (detectClose())
             return 0;
+        m_iInProcess = 1;
         (*m_pFpList->m_onTimer_fp)(this);
+        m_iInProcess = 0;
         if (getState() == HIOS_CLOSING)
         {
             if (flushSslWpending() != 0)
@@ -1513,10 +1521,8 @@ int NtwkIOLink::onReadSSL_T(NtwkIOLink *pThis)
     }
     int ret = 0;
     if (pThis->m_ssl.isConnected())
-    {
         ret = pThis->doRead();
-        pThis->flushSslWpending();
-    }
+    pThis->flushSslWpending();
     return ret;
 }
 
@@ -1543,7 +1549,10 @@ int NtwkIOLink::onWriteSSL_T(NtwkIOLink *pThis)
         return ret;
     }
     else
+    {
+        pThis->flushSslWpending();
         MultiplexerFactory::getMultiplexer()->suspendWrite(pThis);
+    }
     return 0;
 }
 
@@ -1719,7 +1728,7 @@ int NtwkIOLink::sslSetupHandler()
     }
     int ret = setupHandler((HiosProtocol)spdyVer);
     if (!m_iInProcess && isWantRead() && m_ssl.hasPendingIn())
-        handleEvents(POLLIN);
+        (*m_pFpList->m_onRead_fp)(this);
     return ret;
 }
 

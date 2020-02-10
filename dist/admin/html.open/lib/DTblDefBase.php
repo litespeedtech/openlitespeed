@@ -484,15 +484,25 @@ class DTblDefBase
         $parseFormat = $this->_options['parseFormat']['filePermission4'];
         $parseHelp = DMsg::ALbl('parse_secpermissionmask');
 
-        $attrs = array(
+        $flag = (DAttr::BM_HIDE | DAttr::BM_NOEDIT);
+        $a_requiredPermissionMask = self::NewParseTextAttr('requiredPermissionMask', DMsg::ALbl('l_requiredpermissionmask'), $parseFormat, $parseHelp);
+        $a_requiredPermissionMask->SetFlag($flag);
+        $a_restrictedPermissionMask = self::NewParseTextAttr('restrictedPermissionMask', DMsg::ALbl('l_restrictedpermissionmask'), $parseFormat, $parseHelp);
+        $a_restrictedPermissionMask->SetFlag($flag);
+        $a_restrictedScriptPermissionMask = self::NewParseTextAttr('restrictedScriptPermissionMask', DMsg::ALbl('l_restrictedscriptpermissionmask'), $parseFormat, $parseHelp);
+        $a_restrictedScriptPermissionMask->SetFlag($flag);
+        $a_restrictedDirPermissionMask = self::NewParseTextAttr('restrictedDirPermissionMask', DMsg::ALbl('l_restricteddirpermissionmask'), $parseFormat, $parseHelp);
+        $a_restrictedDirPermissionMask->SetFlag($flag);
+        
+        $attrs = [
             self::NewSelAttr('followSymbolLink', DMsg::ALbl('l_followsymbollink'), $this->_options['symbolLink'], false),
             self::NewBoolAttr('checkSymbolLink', DMsg::ALbl('l_checksymbollink'), false),
             self::NewBoolAttr('forceStrictOwnership', DMsg::ALbl('l_forcestrictownership'), false),
-            self::NewParseTextAttr('requiredPermissionMask', DMsg::ALbl('l_requiredpermissionmask'), $parseFormat, $parseHelp),
-            self::NewParseTextAttr('restrictedPermissionMask', DMsg::ALbl('l_restrictedpermissionmask'), $parseFormat, $parseHelp),
-            self::NewParseTextAttr('restrictedScriptPermissionMask', DMsg::ALbl('l_restrictedscriptpermissionmask'), $parseFormat, $parseHelp),
-            self::NewParseTextAttr('restrictedDirPermissionMask', DMsg::ALbl('l_restricteddirpermissionmask'), $parseFormat, $parseHelp)
-        );
+            $a_requiredPermissionMask,
+            $a_restrictedPermissionMask,
+            $a_restrictedScriptPermissionMask,
+            $a_restrictedDirPermissionMask,
+        ];
 
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_fileaccess'), $attrs);
     }

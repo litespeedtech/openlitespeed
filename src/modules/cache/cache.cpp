@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -248,6 +248,7 @@ static void house_keeping_cb(const void *p)
     if (pStore)
     {
         pStore->houseKeeping();
+        pStore->cleanByTracking(100, 100);
         g_api->log(NULL, LSI_LOG_DEBUG, "[%s]house_keeping_cb with store %p.\n",
                    ModuleNameStr, pStore);
     }
@@ -292,9 +293,25 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
         }
 
         if (pValStr[0] != '/')
-            lstrncpy(cachePath, g_api->get_server_root(), sizeof(cachePath));
-        lstrncat(cachePath, pValStr, sizeof(cachePath));
-        lstrncat(cachePath, "/", sizeof(cachePath));
+            lstrncpy(cachePath, g_api->get_server_root(), max_file_len);
+        
+        /**
+         * Since pValStr is not null terminated, so do a length checking here
+         * 
+         */
+        if (valLen + 1 > max_file_len - strlen(cachePath))
+        {
+            g_api->log(NULL, LSI_LOG_ERROR,
+                           "[%s]parseConfig failed to set the storagepath "
+                           "due to [%.*s]too long.\n",
+                           ModuleNameStr, valLen, pValStr);
+
+            delete []pBak;
+            return -1;
+        }
+        
+        strncat(cachePath, pValStr, valLen);
+        strncat(cachePath, "/", 1);
 
         if (createCachePath(cachePath, 0770) == -1)
         {
@@ -309,8 +326,8 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
             pConfig->getStore()->setStorageRoot(cachePath);
             pConfig->getStore()->initManager();
             pConfig->setOwnStore(1);
-            g_api->set_timer(20*1000, 1, house_keeping_cb, pConfig->getStore());
-
+            g_api->set_timer(10*1000, 1, house_keeping_cb, pConfig->getStore());
+            
             g_api->log(NULL, LSI_LOG_DEBUG,
                        "[%s]parseConfig setStoragePath [%s] for level %d[name: %s].\n",
                        ModuleNameStr, cachePath, level, name);
@@ -657,16 +674,75 @@ static void FreeConfig(void *_config)
 
 
 /**
- * tag at least must contains 16 bytes
+ * Comments: tag at least must contains 16 bytes
+ * needQS should be 0 when the purge is from header, the uri already have the QS
+ * and it should be 1 when it is from a PURGE / REFRESH request
  */
-static void urlToTag(const char *url, char *tag)
+static void uriToTag(const lsi_session_t *session,
+                     const char *uri, int uriLen,
+                     int needQS, char *tag)
 {
+    const int maxUrlLength = 16384;
+    char url[maxUrlLength] = { 0 };
+    int urlLen = 0;
+    char httpstr[4] = {0};
+        
+    int len = g_api->get_req_var_by_id(session, LSI_VAR_HTTPS,
+                                        httpstr, 4);
+    if (len == 2 && httpstr[1] == 'n')
+    {
+        memcpy(url + urlLen, "https://", 8);
+        urlLen += 8;
+    }
+    else
+    {
+        memcpy(url + urlLen, "http://", 7);
+        urlLen += 7;
+    }   
+    
+    len = g_api->get_req_var_by_id(session, LSI_VAR_SERVER_NAME,
+                                    url + urlLen, maxUrlLength - urlLen);
+    urlLen += len;
+    
+    memcpy(url + urlLen, ":", 1);
+    ++urlLen;
+    
+    len = g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PORT,
+                                    url + urlLen, maxUrlLength - urlLen);
+    urlLen += len;
+    
+    if (maxUrlLength - urlLen > uriLen)
+    {
+        /**
+            * The copy will copy the URI and the QS
+            */
+        memcpy(url + urlLen, uri, uriLen);
+        urlLen += uriLen;
+    }
+    else
+    {
+        g_api->log(session, LSI_LOG_ERROR, "uriToTag() Url length error.");
+        return ;
+    }
+
+    if (needQS)
+    {
+        const char *pQs = g_api->get_req_query_string(session, &len);
+        if (len > 0)
+        {
+            *(url + urlLen) = '?';
+            ++urlLen;
+            memcpy(url + urlLen, pQs, len);
+            urlLen += len;
+        }
+    }
 
     XXH64_state_t state;
     XXH64_reset(&state, 0);
-    XXH64_update(&state, url, strlen(url));
+    XXH64_update(&state, url, urlLen);
     unsigned long long md = XXH64_digest(&state);
     StringTool::hexEncode((const char *)&md, 8, tag);
+    tag[16] = 0x00;  //Must add null terminate
 }
 
 
@@ -1098,14 +1174,14 @@ int appBufToCacheKey(const lsi_session_t *session, const char *buf,
 
 
 void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
-                   int noVary, CacheKey *pKey)
+                   int noVary, CacheKey *pKey, int useCurQS)
 {
-    int iQSLen;
-    int ipLen;
+    int iQSLen = 0;
+    int ipLen = 0;
     char pCookieBuf[MAX_HEADER_LEN] = {0};
     char *pCookieBufEnd = pCookieBuf + MAX_HEADER_LEN;
     const char *pIp = g_api->get_client_ip(session, &ipLen);
-    const char *pQs = g_api->get_req_query_string(session, &iQSLen);
+    const char *pQs = useCurQS ? g_api->get_req_query_string(session, &iQSLen) : "";
     HttpSession *pSession = (HttpSession *)session;
     HttpReq *pReq = pSession->getReq();
     CacheConfig *pConfig = (CacheConfig *)g_api->get_config(session, &MNAME);
@@ -1251,7 +1327,7 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                   CacheHash *cePublicHash, CacheHash *cePrivateHash,
                   CacheConfig *pConfig, CacheEntry **pEntry, bool doPublic)
 {
-    buildCacheKey(rec->session, uri, uriLen, no_vary, &myData->cacheKey);
+    buildCacheKey(rec->session, uri, uriLen, no_vary, &myData->cacheKey, 1);
     dumpCacheKey(rec->session, &myData->cacheKey);
     calcCacheHash2(rec->session, &myData->cacheKey, cePublicHash,
                   cePrivateHash);
@@ -1263,7 +1339,8 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
 
     *pEntry = pDirHashCacheStore->getCacheEntry(*cePrivateHash,
               &myData->cacheKey, pConfig->getMaxStale(), lastCacheFlush);
-    if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating()))
+    if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating())
+        && !(*pEntry)->isUnderConstruct())
         return CE_STATE_HAS_PRIVATE_CACHE;
 
     if (doPublic)
@@ -1281,7 +1358,7 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
             {
                 CacheEntry *pNewEntry = myData->pConfig->getStore()->
                                         createCacheEntry(myData->cePublicHash,
-                                        &myData->cacheKey, 0);
+                                        &myData->cacheKey);
                 if (pNewEntry)
                 {
                     myData->pEntry = pNewEntry;
@@ -1295,8 +1372,11 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                                ModuleNameStr);
                 }
             }
-
-            return CE_STATE_HAS_PUBLIC_CACHE;
+            
+            if (!(*pEntry)->isUnderConstruct())
+                return CE_STATE_HAS_PUBLIC_CACHE;
+            else
+                return CE_STATE_NOCACHE;
         }
     }
 
@@ -1424,10 +1504,10 @@ static int bypassUrimapHook(lsi_param_t *rec, MyMData *myData)
     return 0;
 }
 
-static void disableRcvdRespHeaderFilter(lsi_param_t *rec)
+static void disableRcvdRespHeaderFilter(const lsi_session_t *session)
 {
     int disableHkpt = LSI_HKPT_RCVD_RESP_HEADER;
-    g_api->enable_hook(rec->session, &MNAME, 0, &disableHkpt, 1);
+    g_api->enable_hook(session, &MNAME, 0, &disableHkpt, 1);
 }
 
 
@@ -1507,7 +1587,7 @@ static int deflateBufAndWriteToFile(MyMData *myData, unsigned char *pBuf,
                     ret = -1;
                     break;
                 }
-
+                    
             }
         } while (myData->zstream->avail_out == 0);
     }
@@ -1547,6 +1627,14 @@ static int endCache(lsi_param_t *rec)
             else if (myData->pEntry && myData->iCacheState == CE_STATE_WILLCACHE)
             {
                 int fd = myData->pEntry->getFdStore();
+                if (fd < 0)
+                {
+                    g_api->log(rec->session, LSI_LOG_ERROR,
+                           "[%s]cache cancelled due to FdStore not initialized.\n",
+                           ModuleNameStr);
+                    return cancelCache(rec);
+                }
+                
                 deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
 
                 if (myData->pConfig->getAddEtagType() == 2)
@@ -1565,6 +1653,7 @@ static int endCache(lsi_param_t *rec)
                 }
 
                 myData->pConfig->getStore()->publish(myData->pEntry);
+                myData->pConfig->getStore()->getManager()->addTracking(myData->pEntry);
                 myData->iCacheState = CE_STATE_CACHED;  //Succeed
                 g_api->log(NULL, LSI_LOG_DEBUG,
                            "[%s]published %s, content length %ld.\n",
@@ -1756,7 +1845,7 @@ static int createEntry(lsi_param_t *rec)
         buildCacheKey(rec->session, myData->cacheKey.m_pUri,
                       myData->cacheKey.m_iUriLen,
                       myData->cacheCtrl.getFlags() & CacheCtrl::no_vary,
-                      &myData->cacheKey);
+                      &myData->cacheKey, 1);
         calcCacheHash2(rec->session, &myData->cacheKey,
                       &myData->cePublicHash, &myData->cePrivateHash);
 
@@ -1801,13 +1890,13 @@ static int createEntry(lsi_param_t *rec)
 
     if (myData->cacheCtrl.isPrivateCacheable())
         myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                             myData->cePrivateHash, &myData->cacheKey, 0);
+                             myData->cePrivateHash, &myData->cacheKey);
     else if (myData->cacheCtrl.isPublicCacheable())
     {
         if (myData->iCacheState != CE_STATE_UPDATE_STALE)
         {
             myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                                 myData->cePublicHash, &myData->cacheKey, 0);
+                                 myData->cePublicHash, &myData->cacheKey);
         }
     }
 
@@ -1841,12 +1930,16 @@ static int createEntry(lsi_param_t *rec)
 int cacheHeader(lsi_param_t *rec, MyMData *myData)
 {
     myData->pEntry->setMaxStale(myData->pConfig->getMaxStale());
-    g_api->log(rec->session, LSI_LOG_DEBUG,
+    int fd = myData->pEntry->getFdStore();
+    g_api->log(rec->session, 
+               (fd != -1 ? LSI_LOG_DEBUG : LSI_LOG_ERROR),
                "[%s]save to %s cachestore by cacheHeader(), uri:%s\n", ModuleNameStr,
                ((myData->cacheCtrl.isPrivateCacheable()) ? "private" : "public"),
                myData->pOrgUri);
 
-    int fd = myData->pEntry->getFdStore();
+    if (fd == -1)
+        return LS_FAIL;
+    
     char *sLastMod = NULL;
     char *sETag = NULL;
     int nLastModLen = 0;
@@ -1928,7 +2021,12 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         memcpy(tag + keyLen, ",", 1);
         offset = keyLen + 1;
     }
-    urlToTag(myData->pOrgUri, tag + offset);
+   
+   
+    int uri_len = 0;
+    const char *uri = g_api->get_req_uri(rec->session, &uri_len);
+    uriToTag(rec->session, uri, uri_len, 1, tag + offset);
+    
     myData->pEntry->setTag(tag, offset + 16);
     delete []tag;
 
@@ -2033,7 +2131,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
 
     CeHeader.m_lSize = sb.st_size;
     CeHeader.m_inode = sb.st_ino;
-    CeHeader.m_lastMod = sb.st_mtime;
+    CeHeader.m_tmFileLastMod = sb.st_mtime;
 
     //Stat to write akll other headers
 
@@ -2053,12 +2151,22 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         if (!checkBypassHeader((const char *)iov_key[i].iov_base,
                                iov_key[i].iov_len))
         {
-            //if it is lsc-cookie, then change to Set-Cookie
-            const char *pKey = (const char *)iov_key[i].iov_base;
-            if (iov_key[i].iov_len == 10 &&
-                strncasecmp(pKey, "lsc-cookie", 10) == 0)
-                pKey = "Set-Cookie";
-
+            pKey = (char *)iov_key[i].iov_base;
+            //If no frontend, no need to save some cache headers
+            if (myData->hasCacheFrontend == 0)
+            {
+                if (iov_key[i].iov_len > 12 &&
+                    strncasecmp("X-LiteSpeed-", pKey, 12) == 0)
+                {
+                    continue;
+                }
+                
+                //if it is lsc-cookie, then change to Set-Cookie
+                if (iov_key[i].iov_len == 10 &&
+                    strncasecmp(pKey, "lsc-cookie", 10) == 0)
+                    pKey = "Set-Cookie";
+            }
+            
 #ifdef CACHE_RESP_HEADER
             headersBufSize += writeHttpHeader(fd, &(myData->m_pEntry->m_sRespHeader),
                                               pKey, iov_key[i].iov_len,
@@ -2135,7 +2243,7 @@ int cacheTofile(lsi_param_t *rec)
         myData->orgFileLength += len;
     }
 
-    if (fd != -1 && !myData->saveFailed)
+    if (!myData->saveFailed && fd != -1)
     {
         ret = deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
         iCahcedSize += ret;
@@ -2149,7 +2257,7 @@ int cacheTofile(lsi_param_t *rec)
                "[%s:cacheTofile] Failed due to write file error!\n",
                ModuleNameStr);
     endCache(rec);
-
+    
     return 0;
 }
 
@@ -2361,7 +2469,7 @@ static void checkFileUpdateWithCache(lsi_param_t *rec, MyMData *myData)
         if ((ret = stat(path, &sb)) != -1 &&
             CeHeader.m_lSize == sb.st_size &&
             CeHeader.m_inode == sb.st_ino &&
-            CeHeader.m_lastMod == sb.st_mtime)
+            CeHeader.m_tmFileLastMod == sb.st_mtime)
             return ;
     }
     myData->pConfig->getStore()->purge(myData->pEntry);
@@ -2538,7 +2646,7 @@ static int checkAssignHandler(lsi_param_t *rec)
             g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                     releaseMData);
         }
-        disableRcvdRespHeaderFilter(rec);
+        disableRcvdRespHeaderFilter(rec->session);
         return bypassUrimapHook(rec, NULL);
     }
 
@@ -2627,7 +2735,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                            "[%s]checkAssignHandler register_req_handler OK.\n",
                            ModuleNameStr);
             }
-            disableRcvdRespHeaderFilter(rec);
+            disableRcvdRespHeaderFilter(rec->session);
             bypassUrimapHook(rec, NULL);
         }
         else
@@ -2790,48 +2898,8 @@ int isModified(const lsi_session_t *session, CeHeader &CeHeader, char *etag,
 }
 
 
-CacheEntry *getCacheByUrl(const lsi_session_t *session, CacheStore *pStore,
-                          const char *pUrl, int iUrlLen, int cachectrl)
-{
-    CacheKey key;
-    CacheHash hashPrivate, hashPublic;
-    CacheEntry *pEntry = NULL;
-    buildCacheKey(session, pUrl, iUrlLen, cachectrl & CacheCtrl::no_vary, &key);
-    calcCacheHash2(session, &key, &hashPublic, &hashPrivate);
-    CacheConfig *pConfig = (CacheConfig *)g_api->get_config(session, &MNAME);
-
-    if (cachectrl & CacheCtrl::cache_private)
-    {
-        long lastCacheFlush = (long)g_api->get_module_data(session, &MNAME,
-                                                           LSI_DATA_IP);
-        pEntry = pStore->getCacheEntry(hashPrivate, &key,
-                                       pConfig->getMaxStale(), lastCacheFlush);
-    }
-
-    if (!pEntry && (cachectrl & CacheCtrl::cache_public))
-    {
-        key.m_ipLen *= -1;
-        pEntry = pStore->getCacheEntry(hashPublic,
-              &key, pConfig->getMaxStale(), -1);
-        key.m_ipLen *= -1;
-    }
-    g_api->log(session, LSI_LOG_DEBUG, "[CACHE]CacheEntry is %p", pEntry);
-    return pEntry;
-}
-
-
-static int purgePublicCacheByUrl(const lsi_session_t *session, CacheStore *pStore, const char *pUrl, int urlLen)
-{
-    CacheEntry *pEntry = getCacheByUrl(session, pStore, pUrl, urlLen, CacheCtrl::cache_public);
-    if (!pEntry)
-        return -1;
-    pStore->purge(pEntry);
-    return 0;
-}
-
-
 static void purgeAllByTag(const lsi_session_t *session, MyMData *myData,
-                          const char *pValue, int valLen)
+                          const char *pValue, int valLen, int stale)
 {
     CacheStore *pStore = myData->pConfig->getStore();
     if (!pStore)
@@ -2847,7 +2915,7 @@ static void purgeAllByTag(const lsi_session_t *session, MyMData *myData,
 
 
     pStore->getManager()->processPrivatePurgeCmd(&key,
-            pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000);
+            pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
     g_api->log(session, LSI_LOG_DEBUG,
                "PURGE private cache for [%s]: %.*s\n",
                key.m_pIP, valLen, pValue);
@@ -2855,7 +2923,7 @@ static void purgeAllByTag(const lsi_session_t *session, MyMData *myData,
 
 
     pStore->getManager()->processPurgeCmd(
-        pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000);
+        pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
     g_api->log(session, LSI_LOG_DEBUG,  "PURGE public cache: %.*s\n",
                valLen, pValue);
 }
@@ -2877,16 +2945,18 @@ static void processPurge2(const lsi_session_t *session,
     if (!pStore)
         return ;
 
+    const char *pValueEnd = pValue + valLen;
+    CacheKey key;
+    bool isPriv = false;
     if (strncmp(pValue, "private,", 8) == 0)
     {
-        CacheKey key;
         int ipLen;
         char pCookieBuf[MAX_HEADER_LEN] = {0};
         char *pCookieBufEnd = pCookieBuf + MAX_HEADER_LEN;
         key.m_pIP = g_api->get_client_ip(session, &ipLen);
         key.m_ipLen = ipLen;
         key.m_iCookieVary = 0;
-
+        
         HttpSession *pSession = (HttpSession *)session;
         HttpReq *pReq = pSession->getReq();
         key.m_iCookiePrivate = getPrivateCacheCookie(pReq,
@@ -2895,59 +2965,54 @@ static void processPurge2(const lsi_session_t *session,
         key.m_sCookie.setStr(pCookieBuf);
 
         pValue += 8;
-        valLen -= 8;
-        while (isspace(*pValue))
-        {
-            ++pValue;
-            --valLen;
-        }
+        isPriv = true;
+    }
+    else
+    {
+        if (strncmp(pValue, "public,", 7) == 0)
+            pValue += 7;
+    }
+    
+    
+    while (isspace(*pValue))
+        ++pValue;
+
+    int stale = 0;
+    if (strncasecmp(pValue, "stale,", 6 ) == 0)
+    {
+        stale = 1;
+        pValue += 6;
+    }
+    
+    while (isspace(*pValue))
+        ++pValue;
+
+    valLen = pValueEnd - pValue;
+    
+    char tag[17] = {0};
+    if (*pValue == '/')
+    {
+        uriToTag(session, pValue, valLen, 0, tag);
+        pValue = tag;
+        valLen = 16;
+    }
+        
+    if (isPriv)
+    {
         pStore->getManager()->processPrivatePurgeCmd(&key,
-                pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000);
+                pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
         g_api->log(session, LSI_LOG_DEBUG,
                    "PURGE private cache for [%s]: %.*s\n",
                    key.m_pIP, valLen, pValue);
     }
     else
     {
-        if (strncmp(pValue, "public,", 7) == 0)
-        {
-            pValue += 7;
-            valLen -= 7;
-        }
-        while (isspace(*pValue))
-        {
-            ++pValue;
-            --valLen;
-        }
-
-        if (*pValue == '/')
-        {
-            if (!pStore->getManager()->getUrlVary(pValue, valLen))
-            {
-                char host[512] = {0};
-                int hostLen = g_api->get_req_var_by_id(session,
-                                                       LSI_VAR_SERVER_NAME,
-                                                       host, 512);
-                char port[12] = {0};
-                int portLen = g_api->get_req_var_by_id(session,
-                                                       LSI_VAR_SERVER_PORT,
-                                                       port, 12);
-
-                AutoStr2 url;
-                url.append(host, hostLen);
-                url.append(":", 1);
-                url.append(port, portLen);
-                url.append(pValue, valLen);
-                purgePublicCacheByUrl(session, pStore, url.c_str(), url.len());
-                return;
-            }
-        }
-
         pStore->getManager()->processPurgeCmd(
-            pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000);
+            pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
         g_api->log(session, LSI_LOG_DEBUG,  "PURGE public cache: %.*s\n",
                    valLen, pValue);
     }
+    
 }
 
 
@@ -3163,6 +3228,9 @@ static int handlerProcess(const lsi_session_t *session)
         return 500;
     }
 
+    //Disable RECV_RESP header here, to avoid cache myself
+    disableRcvdRespHeaderFilter(session);
+    
     if (myData->iMethod == HTTP_PURGE || myData->iMethod == HTTP_REFRESH)
     {
         /**
@@ -3173,6 +3241,9 @@ static int handlerProcess(const lsi_session_t *session)
          * 4, else purge all the entry with a tag which is caculated from the
          * url, no matter the qs, cookie and vary and so on.
          */
+        
+        //Comments: REFRESH is stale purge
+        int stale = myData->iMethod == HTTP_REFRESH ? 1 : 0;
         char httpAuthEnv[3] = {0};
         int httpAuthEnvLen = g_api->get_req_env(session, "HttpAuth", 8,
                                                     httpAuthEnv, 2);
@@ -3183,7 +3254,7 @@ static int handlerProcess(const lsi_session_t *session)
             if (g_api->get_client_access_level(session) != LSI_ACL_TRUST &&
                 (!pIP || strncmp(pIP, "127.0.0.1", 9) != 0))
             {
-                decref_and_free_data(myData, session);
+                g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
                 g_api->log(session, LSI_LOG_DEBUG,
                    "[%s]Processed PURGE http AUTH error.\n", ModuleNameStr);
                 return 405;
@@ -3193,16 +3264,12 @@ static int handlerProcess(const lsi_session_t *session)
 
         bool bPurgeTags = false;
         char *pConfUri = myData->pConfig->getPurgeUri();
-        if (pConfUri)
-        {
-            char *uri = strchr(myData->pOrgUri, ':');
-            if (uri)
-                uri = strchr(uri, '/');
-            if (uri)
-                if (strcasecmp(pConfUri, uri) == 0)
-                    bPurgeTags = true;
-        }
-
+        int uri_len = 0;
+        const char *uri = g_api->get_req_uri(session, &uri_len);
+    
+        if (pConfUri && strcasecmp(pConfUri, uri) == 0)
+            bPurgeTags = true;
+        
         if (bPurgeTags)
         {
             int valLen = 0;
@@ -3227,28 +3294,36 @@ static int handlerProcess(const lsi_session_t *session)
             /**
              * Now, will puge all cache with this URL
              */
+            
             char tag[17] = {0};
-            urlToTag(myData->pOrgUri, tag);
-            purgeAllByTag(session, myData, tag, 16);
+            uriToTag(session, uri, uri_len, 1, tag);
+            purgeAllByTag(session, myData, tag, 16, stale);
 
             g_api->set_resp_content_length(session, strlen(myData->pOrgUri) + 24);
-            g_api->append_resp_body(session, "Processed PURGE by \"", 20);
-            g_api->append_resp_body(session, myData->pOrgUri,
+            g_api->append_resp_body(session, "Processed ", 10);
+            g_api->append_resp_body(session,
+                                    stale ? "REFRESH" : "PURGE",
+                                    stale ? 7 : 5);
+            
+            g_api->append_resp_body(session, " by \"", 5);
+            g_api->append_resp_body(session, myData->pOrgUri, 
                     strlen(myData->pOrgUri));
             g_api->append_resp_body(session, "\".\r\n", 4);
         }
 
         g_api->log(NULL, LSI_LOG_DEBUG,
-                    "[%s]Purged %s with purgetag: %d.\n", ModuleNameStr,
+                    "[%s]Did %s %s with tag: %d.\n", ModuleNameStr, 
+                    stale ? "REFRESH" : "PURGE",
                     myData->pOrgUri, bPurgeTags);
 
         g_api->end_resp(session);
-        decref_and_free_data(myData, session);
+        g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
         return 0;
     }
 
     myData->pEntry->incRef();
-
+    myData->pEntry->setLastAccess(DateTime::s_curTime);
+    
     char tmBuf[RFC_1123_TIME_LEN + 1];
     int len;
     int fd = myData->pEntry->getFdStore();
@@ -3354,7 +3429,23 @@ static int handlerProcess(const lsi_session_t *session)
                                       NULL, 0);
             g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_VARY,
                                       NULL, 0);
-
+            g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_PURGE,
+                                      NULL, 0);
+            g_api->remove_resp_header(session, -1, "X-LiteSpeed-Purge2", 18);
+            
+            struct iovec iov[1] = {{NULL, 0}};
+            int count = g_api->get_resp_header(session, -1, "lsc-cookie",
+                                               10, iov, 1);
+            if (iov[0].iov_len > 0 && count == 1)
+            {
+                g_api->remove_resp_header(session, -1, "lsc-cookie", 10);
+                
+                g_api->set_resp_header(session, LSI_RSPHDR_UNKNOWN,
+                           "Set-Cookie", 10,
+                           (char *)iov[0].iov_base, iov[0].iov_len,
+                           LSI_HEADEROP_SET);
+                
+            }
         }
     }
 
