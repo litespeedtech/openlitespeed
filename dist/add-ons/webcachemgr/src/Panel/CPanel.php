@@ -2,8 +2,9 @@
 
 /* * ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2017-2019
+ *
+ * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright (c) 2017-2020
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -236,29 +237,20 @@ class CPanel extends ControlPanel
      */
     public function getPhpBinary( WPInstall $wpInstall )
     {
+        /**
+         * Default PHP always works in EA3 as CloudLinux PHP Selector changes
+         * this binary.
+         */
         $phpBin = 'php';
 
-        /**
-         * cPanel PHP binary selection Info
-         * Default PHP always works in ea3 as CloudLinux PHP Selector changes
-         * this binary.
-         *
-         * Correct ea4 php binary can be found by ea-php-cli when checking PHP
-         * version in correct directory, regardless of MultiPHP Manager,
-         * .htaccess overrides, CloudLinux PHP Selector, or PHP-FPM status.
-         * Calling 'php $script' directly does not seem to work with our exec().
-         * https://documentation.cpanel.net/display/EA4/EasyApache+4+and+the+ea-php-cli+Package
-         */
+
         if ( $this->isEA4 ) {
-            $su = $wpInstall->getSuCmd();
-            $cmd = "{$su} -c \"cd {$wpInstall->getPath()}/wp-admin "
-                    . '&& php -i | sed -n \"s/.*\'--bindir=\([^\']\+\).*/\1/p\""';
-
-            $wpPhpBin = exec($cmd) . '/php';
-
-            if ( file_exists($wpPhpBin) && is_executable($wpPhpBin) ) {
-                $phpBin = $wpPhpBin;
-            }
+            /**
+             * cPanel php wrapper should accurately detect the correct binary in
+             * EA4 when EA4 only directive '--ea-reference-dir' is provided.
+             */
+            $phpBin =
+                    "/usr/local/bin/php --ea-reference-dir={$wpInstall->getPath()}/wp-admin";
         }
 
         return "{$phpBin} {$this->phpOptions}";

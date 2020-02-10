@@ -3,8 +3,8 @@
 /* * *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2020
+ * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 

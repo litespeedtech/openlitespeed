@@ -370,7 +370,7 @@ int SetLimitCacheControl(lsi_session_t *session, char *buffer, int len)
             if (age > CACHE_MAX_AGE)
             {
                 int width = strlen(CACHE_MAX_AGE_STR);
-                lstrncpy((char *)p + 1, CACHE_MAX_AGE_STR, width);
+                strncpy((char *)p + 1, CACHE_MAX_AGE_STR, width);
                 p += 1 + width;
                 while(isdigit(*p))
                 {
@@ -1235,10 +1235,8 @@ static void DetermineUrl(lsi_session_t *session, GoogleString &str)
     g_api->get_req_org_uri(session, uri, uriLen + 1);
     if (iQSLen > 0)
     {
-        lstrncat(uri, "?", sizeof(uri));
-        int len = strlen(uri);
-        memcpy(&uri[len], pQS, iQSLen);
-        uri[len + iQSLen] = 0;
+        strcat(uri, "?");
+        strncat(uri, pQS, iQSLen);
     }
 
     str = StrCat(isHttps ? "https://" : "http://",

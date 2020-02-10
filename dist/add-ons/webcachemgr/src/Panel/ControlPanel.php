@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.9.6.1';
+    const PANEL_API_VERSION = '1.9.7';
 
     /**
      * @since 1.9
@@ -105,6 +105,12 @@ abstract class ControlPanel
      *                      'names' => (servername => index)
      */
     protected $docRootMap = null;
+
+    /**
+     * @since 1.9.7
+     * @var string
+     */
+    protected static $minAPIFilePath = '';
 
     /**
      * @var null|ControlPanel
@@ -716,6 +722,91 @@ abstract class ControlPanel
 
     /**
      *
+     * @since 1.9.7
+     */
+    protected static function setMinAPIFilePath()
+    {
+        self::$minAPIFilePath = realpath(__DIR__ . '/../..') . '/MIN_VER';
+    }
+
+    /**
+     *
+     * @since 1.9.7
+     *
+     * @return string
+     */
+    protected static function getMinAPIFilePath()
+    {
+        if ( self::$minAPIFilePath == '' ) {
+            self::setMinAPIFilePath();
+        }
+
+        return self::$minAPIFilePath;
+    }
+
+    /**
+     *
+     * @since 1.9.7
+     */
+    protected static function populateMinAPIVerFile()
+    {
+        $minVerFile = self::getMinAPIFilePath();
+
+        $minVerURL = 'https://www.litespeed.sh/sub/shared/MIN_VER';
+        $content = Util::get_url_contents($minVerURL);
+
+        if ( !empty($content) ) {
+            file_put_contents($minVerFile, $content);
+        }
+        else {
+            touch($minVerFile);
+        }
+    }
+
+    /**
+     *
+     * @since 1.9.7
+     *
+     * @return string
+     */
+    protected static function getMinAPIVer()
+    {
+        $minVerFile = self::getMinAPIFilePath();
+
+        clearstatcache();
+
+        if ( !file_exists($minVerFile)
+                || (time() - filemtime($minVerFile)) > 86400 ) {
+
+            self::populateMinAPIVerFile();
+        }
+
+        $minVer = trim(file_get_contents($minVerFile));
+
+        return $minVer;
+    }
+
+    /**
+     *
+     * @since 1.9.7
+     *
+     * @return boolean
+     */
+    public static function meetsMinAPIVerRequirement()
+    {
+        $minAPIVer = self::getMinAPIVer();
+
+        if ( $minAPIVer == ''
+                || version_compare(self::PANEL_API_VERSION, $minAPIVer, '<') ) {
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     *
      * @since 1.9
      *
      * @param type $panelAPIVer  Shared code API version used by the panel
@@ -725,6 +816,7 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.9.7',
             '1.9.6.1',
             '1.9.6',
             '1.9.5',
@@ -745,13 +837,13 @@ abstract class ControlPanel
             '1.0'
         );
 
-        $maxAPIVer = $supportedAPIVers[0];
-        $minAPIVer = end($supportedAPIVers);
+        $maxSupportedAPIVer = $supportedAPIVers[0];
+        $minSupportedAPIVer = end($supportedAPIVers);
 
-        if ( version_compare($panelAPIVer, $maxAPIVer, '>') ) {
+        if ( version_compare($panelAPIVer, $maxSupportedAPIVer, '>') ) {
             return self::PANEL_API_VERSION_TOO_HIGH;
         }
-        elseif ( version_compare($panelAPIVer, $minAPIVer, '<') ) {
+        elseif ( version_compare($panelAPIVer, $minSupportedAPIVer, '<') ) {
             return self::PANEL_API_VERSION_TOO_LOW;
         }
         elseif ( ! in_array($panelAPIVer, $supportedAPIVers) ) {

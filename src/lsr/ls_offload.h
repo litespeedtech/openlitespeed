@@ -63,8 +63,4 @@ int offloader_enqueue(struct Offloader *, struct ls_offload *task);
 #ifdef __cplusplus
 }
 #endif
-
-
 #endif //LS_OFFLOAD_H
-
-

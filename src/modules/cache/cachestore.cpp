@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -54,6 +54,24 @@ void CacheStore::setStorageRoot(const char *pRoot)
 
 }
 
+int CacheStore::addToHash(CacheEntry *pEntry)
+{
+    assert(pEntry->isDirty() == 0);
+    iterator iter = insert((char *)pEntry->getHashKey().getKey(), pEntry);
+    assert(iter != end());
+    return 0;
+}
+
+void CacheStore::addToDirtyList(CacheEntry *pEntry)
+{
+    g_api->log(NULL, LSI_LOG_DEBUG, 
+               "[CACHE] addTodirtyList(): %p [%s], ref: %d, flag: %hx",
+               pEntry, pEntry->getHashKey().to_str(NULL), pEntry->getRef(),
+               pEntry->getHeader().m_flag);
+
+    pEntry->setDirty();
+    m_dirtyList.push_back(pEntry);
+}
 
 int CacheStore::initManager()
 {
@@ -135,7 +153,7 @@ void CacheStore::houseKeeping()
     {
         pEntry = (CacheEntry *)iter.second();
         iterNext = GHash::next(iter);
-        if (pEntry->getRef() == 0)
+        if (pEntry->getRef() == 0 && !pEntry->isUnderConstruct() && !pEntry->isBuilding())
         {
             if (DateTime::s_curTime > pEntry->getExpireTime() + pEntry->getMaxStale())
             {
@@ -183,13 +201,44 @@ void CacheStore::houseKeeping()
     }
 }
 
+int CacheStore::getCacheDirPath(char *pBuf, int len,
+        const unsigned char *pHashKey, int isPrivate)
+{
+    return snprintf(pBuf, len, "%s%s%x/%x/%x/", getRoot().c_str(),
+                    isPrivate ? "priv/" : "",
+                    (pHashKey[0]) >> 4, pHashKey[0] & 0xf, (pHashKey[1]) >> 4);
+}
+
 
 void CacheStore::debug_dump(CacheEntry *pEntry, const char *msg)
 {
-    g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] %s: %p [%s], ref: %d, flag: %hx, expire: %ld, stale: %d, cur_time: %ld",
+    g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] %s: %p [%s], ref: %d, flag: 0x%02x, expire: %ld, stale: %d, cur_time: %ld\n",
            msg, pEntry, pEntry->getHashKey().to_str(NULL), pEntry->getRef(),
            pEntry->getHeader().m_flag, pEntry->getExpireTime(),
            pEntry->getMaxStale(), DateTime::s_curTime);
 }
 
+#include <shm/lsshmhash.h>
+int CacheStore::cleanByTrackingCb(void * pIter, void *pParam)
+{
+    LsShmHash::iterator iter = (LsShmHash::iterator)pIter;
+    shm_objtrack_t *pData = (shm_objtrack_t *)iter->getVal();
+    
+    if (pData->x_tmExpire < DateTime::s_curTime)
+    {
+        CacheStore *pThis = (CacheStore *)pParam;
+        pThis->getManager()->updateStatsExpireByTracking(pData);
+        pThis->removeEntryByHash(iter->getKey(), pData->x_flag & CM_TRACK_PRIVATE);
+        return 1;
+    }
+    return 0;
+}
+
+
+int CacheStore::cleanByTracking(int public_max, int private_max)
+{
+    getManager()->trimExpiredByTracking(0, public_max, CacheStore::cleanByTrackingCb, this);
+    getManager()->trimExpiredByTracking(1, private_max, CacheStore::cleanByTrackingCb, this);
+    return 0;
+}
 

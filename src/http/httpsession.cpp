@@ -4231,7 +4231,8 @@ void HttpSession::prepareHeaders()
     HttpRespHeaders &headers = m_response.getRespHeaders();
     headers.addCommonHeaders();
 
-    if (m_request.isCfIpSet())
+    if (getFlag(HSF_BEHIND_PROXY)
+        && !m_request.getContextState(LSCACHE_FRONTEND))
         headers.addTruboCharged();
 
     if (m_request.getAuthRequired())

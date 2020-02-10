@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -51,6 +51,19 @@ class UrlVary;
 #define CIF_PUB_TRACK_HASH  8
 #define CIF_PRIV_TRACK_HASH 16
 #define CIF_STALE_PURGE     32
+
+#define CM_TRACK_LITEMAGE 1
+#define CM_TRACK_PRIVATE  2
+
+typedef struct shm_objtrack_s
+{
+    uint32_t    x_tmCreated;
+    uint32_t    x_tmExpire;
+    uint8_t     x_flag;
+    uint8_t     x_hits;
+    uint8_t     x_reserve[2];
+}shm_objtrack_t;
+
 
 typedef struct purgeinfo_s
 {
@@ -140,8 +153,8 @@ public:
     {   return m_iSessionPurged - m_iLastCleanSessPurge;    }
 
     uint32_t getFlags() const       {   return m_iFlags;        }
-    uint32_t setFlags(uint32_t f)   {   return m_iFlags = f;    }
-
+    void     setFlags(uint32_t f)   {   m_iFlags = f;        }
+    
     void updateFlag(uint32_t f, uint32_t val)
     {
         uint32_t old;
@@ -201,10 +214,10 @@ public:
     virtual int isPurged(CacheEntry *pEntry, CacheKey *pKey,
                          bool isCheckPrivate) = 0;
     virtual int processPurgeCmd(const char *pValue, int iValLen,
-                                time_t curTime, int curTimeMS) = 0;
+                                time_t curTime, int curTimeMS, int stale) = 0;
     virtual int processPrivatePurgeCmd(
         CacheKey *pKey, const char *pValue, int iValLen,
-        time_t curTime, int curTimeMS) = 0;
+        time_t curTime, int curTimeMS, int stale) = 0;
 
     virtual int addUrlVary(const char *pUrl, int len, int32_t id) = 0;
 
@@ -236,6 +249,18 @@ public:
 
     virtual int houseKeeping() = 0;
     virtual int shouldCleanDiskCache() = 0;
+      
+    
+    void updateStatsExpireByTracking(shm_objtrack_t* pData);
+    
+    
+    virtual int  addTracking(CacheEntry * pEntry) = 0;
+    virtual int  removeTracking(const char *pKey, int keyLen, int isPrivate) = 0;
+    virtual int  trimExpiredByTracking(int isPrivate, int maxCnt, 
+                                       int (*removeEntry)(void *, void *), 
+                                       void *param) = 0;
+    virtual int  isInTracker(const unsigned char* getKey, int keyLen, 
+                             int isPrivate) = 0;
 
 private:
     virtual CacheInfo *getCacheInfo() = 0;

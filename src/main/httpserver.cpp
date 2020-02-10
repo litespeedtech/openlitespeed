@@ -1126,18 +1126,20 @@ void HttpServerImpl::checkOLSUpdate()
     char sUrl[256];
     char osstr[64] = {0};
     char plat[64] = {0};
-    lstrncpy(sUrl, "http://openlitespeed.org/", sizeof(sUrl));
-    addrResponder.setHttpUrl(sUrl, strlen(sUrl));
-    addrResponder2.setHttpUrl(sUrl, strlen(sUrl));
-    lstrncat(sUrl, "packages/release?ver=", sizeof(sUrl));
-    lstrncat(sUrl, PACKAGE_VERSION, sizeof(sUrl));
-    lstrncat(sUrl, "&os=", sizeof(sUrl));
-    lstrncat(sUrl, OsDetect(osstr, 64), sizeof(sUrl));
-    lstrncat(sUrl, "&env=", sizeof(sUrl));
-    lstrncat(sUrl, detectCp(), sizeof(sUrl));
-    lstrncat(sUrl, detectPlat(plat, 64), sizeof(sUrl));
+    const char *httpUrl = "http://openlitespeed.org/";
+    addrResponder.setHttpUrl(httpUrl, strlen(httpUrl));
+    addrResponder2.setHttpUrl(httpUrl, strlen(httpUrl));
+    snprintf(sUrl, sizeof(sUrl), "%s%s%s%s%s%s%s%s%s", httpUrl,
+             "packages/release?ver=", PACKAGE_VERSION, "&os=",
+             OsDetect(osstr, 64), "&env=", detectCp(),
+#ifdef PREBUILT_VERSION
+             "_pre_",
+#else
+             "_src_",
+#endif
+             detectPlat(plat, 64));
     m_pAutoUpdFetch[0]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
-                              addrResponder);
+                               addrResponder);
 
     /**
      * Since now on, we will fetch the latest version of current branch at
@@ -1153,11 +1155,12 @@ void HttpServerImpl::checkOLSUpdate()
     m_pAutoUpdFetch[1]->setTimeout(15);  //Set Req timeout as 30 seconds
     m_pAutoUpdFetch[1]->setCallBack(autoUpdCheckCb, this);
     int curVer = readVersionStr(PACKAGE_VERSION);
-    snprintf(sUrl, 255, "http://openlitespeed.org/packages/relbr%d.%d",
+    snprintf(sUrl, 255, "http://openlitespeed.org/packages/relbr%d.%d?",
              curVer / 1000000, (curVer / 10000) % 100);
     m_pAutoUpdFetch[1]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               addrResponder2);
 }
+
 
 
 void HttpServerImpl::onTimer60Secs()

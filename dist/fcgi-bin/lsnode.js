@@ -28,7 +28,7 @@ function startApplication() {
                           process.env.LSNODE_ROOT + ": " + err);
         }
     }
-    if (startupFile.slice(0,0) != '/') {
+    if (!startupFile.startsWith('/')) {
         startupFile = appRoot + '/' + startupFile;
     }
 

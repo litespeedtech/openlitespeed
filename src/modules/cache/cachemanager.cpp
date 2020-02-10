@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -77,5 +77,12 @@ void CacheManager::generateRpt(const char *name, AutoBuf *pBuf)
                     );
     pBuf->append(achBuf, n);
 
+}
+
+void CacheManager::updateStatsExpireByTracking(shm_objtrack_t *pData)
+{
+    CacheInfo *pInfo = getCacheInfo();
+    ls_atomic_add(&(pInfo->getStats(pData->x_flag & CM_TRACK_PRIVATE)->expired),
+                  1);
 }
 
