@@ -486,7 +486,6 @@ else
         cp bin/* ${LSWSHOME}/bin/
     fi
     cp modules/* ${LSWSHOME}/modules/
-    cp admin/misc/* ${LSWSHOME}/admin/misc/
 fi
 
 rm -rf $SRCDIR
