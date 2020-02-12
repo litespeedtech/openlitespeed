@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.4-2/6/2020
+LSUPVERSION=v2.5-2/12/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -481,8 +481,8 @@ else
     cp bin/* ${LSWSHOME}/bin/
     if [ $? != 0 ] ; then
         ${LSWSCTRL} stop
+        mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
         killall -9 openlitespeed
-        sleep 1
         cp bin/* ${LSWSHOME}/bin/
     fi
     cp modules/* ${LSWSHOME}/modules/
@@ -493,7 +493,7 @@ rm -rf $SRCDIR
 rm -rf ${LSWSHOME}/autoupdate/*
 
 #Sign it
-echo lsup > "${LSWSHOME}/PLAT"
+echo lsup > ${LSWSHOME}/PLAT
 rm -rf ${LOCKFILE}
 
 ${LSWSCTRL} start
