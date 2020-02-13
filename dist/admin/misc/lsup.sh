@@ -481,8 +481,8 @@ else
     cp bin/* ${LSWSHOME}/bin/
     if [ $? != 0 ] ; then
         ${LSWSCTRL} stop
-        mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
         killall -9 openlitespeed
+        mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
         cp bin/* ${LSWSHOME}/bin/
     fi
     cp modules/* ${LSWSHOME}/modules/
