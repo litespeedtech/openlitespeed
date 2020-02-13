@@ -192,7 +192,7 @@ void H2Stream::continueRead()
 {
     LS_DBG_L(this, "H2Stream::continueRead()");
     setFlag(HIO_FLAG_WANT_READ, 1);
-    if (m_bufIn.size() > 0)
+    if (getHandler() && m_bufIn.size() > 0)
         getHandler()->onReadEx();
 }
 
@@ -210,7 +210,7 @@ void H2Stream:: continueWrite()
 
 int H2Stream::onTimer()
 {
-    if (getState() == HIOS_CONNECTED)
+    if (getHandler() && getState() == HIOS_CONNECTED)
         return getHandler()->onTimerEx();
     return 0;
 }
