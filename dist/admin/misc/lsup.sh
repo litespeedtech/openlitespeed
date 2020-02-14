@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.5-2/12/2020
+LSUPVERSION=v2.6-2/14/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -363,12 +363,20 @@ fi
 
 
 if [ -f ${LOCKFILE} ] ; then
-    echoR "Openlitespeed is updating, quit."
-    exit 0
+    FILETIME=`stat -c %Y  ${LOCKFILE}`
+    SYSTEMTIME=`date -u +%s`
+    COMSYSTEMTIME=$(($SYSTEMTIME-600))
+    #echoY ${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME( $COMSYSTEMTIME + 600 seconds)
+    if [ $COMSYSTEMTIME -gt $FILETIME ] ; then
+        echoG "${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME, removed it."
+        rm -rf ${LOCKFILE}
+    else
+        echoR "Openlitespeed is updating, quit."
+        exit 0
+    fi
 fi
 
 touch ${LOCKFILE}
-
 
 TEMPPATH=${LSWSHOME}/autoupdate
 if [ ! -e ${TEMPPATH} ] ; then
