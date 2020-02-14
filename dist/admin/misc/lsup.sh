@@ -489,7 +489,7 @@ else
     cp bin/* ${LSWSHOME}/bin/
     if [ $? != 0 ] ; then
         ${LSWSCTRL} stop
-        killall -9 openlitespeed
+        #killall -9 openlitespeed
         mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
         cp bin/* ${LSWSHOME}/bin/
     fi
@@ -505,9 +505,9 @@ rm -rf ${LOCKFILE}
 
 ${LSWSCTRL} start
 if [ "$ONLYBIN" = "no" ] ; then 
-    echoG All files are updated and service is on.
+    echoG All files are updated and service is started.
 else
-    echoG All binaries are updated and service is on.
+    echoG All binaries are updated and service is started.
 fi
 echo 
 echo
