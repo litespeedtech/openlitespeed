@@ -7,7 +7,7 @@
 # @copyright (c) 2017-2020
 # *********************************************/
 
-VERSION='1.10.0.1'
+VERSION='1.11'
 OS=$(uname -s)
 SCRIPT_DIR=$(cd $(dirname ${0}) && pwd)
 
@@ -239,7 +239,7 @@ errorExit()
 
 setPanelClassName()
 {
-    PANEL_CLASS_NAME=false
+    PANEL_CLASS_NAME=''
 
     x=$(/usr/local/cpanel/cpanel -V 2>/dev/null)
 
@@ -259,6 +259,11 @@ setPanelClassName()
 
     if [ "$x" ]; then
         PANEL_CLASS_NAME='\Lsc\Wp\Panel\DirectAdmin'
+        return
+    fi
+
+    if [ -e "${LSWS_DIR}/admin/lscdata/custom" ]; then
+        PANEL_CLASS_NAME='custom'
         return
     fi
 }
@@ -306,7 +311,7 @@ fi
 enforceMinAPIVer
 setPanelClassName
 
-if [ "$PANEL_CLASS_NAME" = false ] ; then
+if [ "$PANEL_CLASS_NAME" = '' ] ; then
     errorExit 'Supported Control Panel not detected. Aborting!'
 fi    
 
@@ -320,4 +325,4 @@ if [ $# = 0 ] ; then
     errorExit "Missing input command. Try --help for a full list of available commands with examples."
 fi
 
-$PHP_BIN $PHP_SCRIPT $PANEL_CLASS_NAME "$@"
+$PHP_BIN "$PHP_SCRIPT" "$PANEL_CLASS_NAME" "$@"

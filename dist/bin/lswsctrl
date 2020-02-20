@@ -14,10 +14,7 @@ cd "$BASE_DIR"
 BASE_DIR=`pwd`
 
 if [ -f "$BASE_DIR"/lsws_env ] ; then
-    source "$BASE_DIR"/lsws_env 2>/dev/null
-    if [ $? -ne 0 ] ; then
-        . "$BASE_DIR"/lsws_env
-    fi
+    . "$BASE_DIR"/lsws_env
 fi
 
 # if the lsws_env is empty or not exist, still need to set the default values
@@ -40,31 +37,31 @@ fi
 
 test_running()
 {
-RUNNING=0
-if [ -f $PIDFILE ] ; then
-    FPID=`cat $PIDFILE`
-    if [ "x$FPID" != "x" ]; then
-        kill -0 $FPID 2>/dev/null
-        if [ $? -eq 0 ] ; then
-            RUNNING=1
-            PID=$FPID
+    RUNNING=0
+    if [ -f $PIDFILE ] ; then
+        FPID=`cat $PIDFILE`
+        if [ "x$FPID" != "x" ]; then
+            kill -0 $FPID 2>/dev/null
+            if [ $? -eq 0 ] ; then
+                RUNNING=1
+                PID=$FPID
+            fi
         fi
     fi
-fi
-RESTARTING=0
-if [ -f "$BASE_DIR"/"../admin/tmp/.restart" ]; then
-    RESTARTING=1
-fi
+    RESTARTING=0
+    if [ -f "$BASE_DIR"/"../admin/tmp/.restart" ]; then
+        RESTARTING=1
+    fi
 }
 
 ret=0
 
 killwatch()
 {
-        WATCH_PROCS=`$PS_CMD | grep wswatch.sh | grep -v grep | wc -l`
-        if [ $WATCH_PROCS -gt 0 ]; then
-                pkill wswatch.sh
-        fi
+    WATCH_PROCS=`$PS_CMD | grep wswatch.sh | grep -v grep | wc -l`
+    if [ $WATCH_PROCS -gt 0 ]; then
+            pkill wswatch.sh
+    fi
 }
 
 
@@ -150,12 +147,11 @@ delay_stop()
 #        sleep 1
 #    fi
         echo "[OK] $DESC: graceful stop."
+        sleep 3
     else
         echo "[ERROR] can not kill $DESC"
     fi
 }
-
-
 
 do_restart()
 {

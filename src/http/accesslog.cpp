@@ -309,6 +309,20 @@ static int logTime(char *pBuf, int len, time_t lTime, const char *pFmt)
 
 }
 
+
+static int fixHttpVer(HttpSession *pSession, char *pBuf, int n)
+{
+    if (pSession->isHttp2())
+    {
+        n -= 2;
+        *(pBuf + n - 1) = '2';
+    }
+    else if (pSession->getReq()->getVersion() == HTTP_1_0)
+        *(pBuf + n - 1) = '0';
+    return n;
+}
+
+
 int AccessLog::appendEscape(char *pBuf, int destLen, const char *pStr, int len)
 {
     char *pDestEnd = pBuf + destLen;
@@ -459,6 +473,12 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
             n = RequestVars::getReqVar(pSession, pItem->m_itemId, p, pBufEnd - pBuf);
             if (n > 0)
             {
+                if (pItem->m_itemId == REF_REQ_LINE)
+                {
+                    n = fixHttpVer(pSession, p, n);
+                    escape = 1;
+                }
+                
                 if (p != pBuf)
                 {
                     ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, escape, p, n, pLogger);
@@ -677,8 +697,7 @@ void AccessLog::log(HttpSession *pSession)
     m_buf.used(30);
     n = pReq->getOrgReqLineLen();
     char *pOrgReqLine = (char *)pReq->getOrgReqLine();
-    if (pReq->getVersion() == HTTP_1_0)
-        *(pOrgReqLine + n - 1) = '0';
+    n = fixHttpVer(pSession, pOrgReqLine, n);
     if ((n > 4096) || (m_buf.available() < 100 + n))
     {
         flush();

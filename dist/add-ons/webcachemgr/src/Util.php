@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 
@@ -355,13 +355,11 @@ class Util
      */
     public static function is_dir_empty( $dir )
     {
-
-        if ( ($handle = @opendir($dir)) == false )
-        {
+        if ( ($handle = @opendir($dir)) == false ) {
             return true;
         }
 
-        while ( ($entry = readdir($handle)) !== true ) {
+        while ( ($entry = readdir($handle)) !== false ) {
 
             if ( $entry != '.' && $entry != '..' ) {
                 return false;

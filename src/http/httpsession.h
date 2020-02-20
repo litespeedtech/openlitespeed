@@ -168,6 +168,10 @@ enum HSPState
 #define HSF_URI_MAPPED              (1<<30)
 #define HSF_BEHIND_PROXY            (1<<31)
 
+//Start flag2
+#define HSF2_IS_HTTP2               (1<<0)
+
+
 typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,
                             int flag);
 
@@ -226,6 +230,7 @@ class HttpSession
     int32_t               m_iReqTimeUs;
 
     uint32_t              m_iFlag;
+    uint32_t              m_iFlag2;
     short                 m_iState;
     unsigned short        m_iReqServed;
     //int                   m_accessGranted;
@@ -321,11 +326,23 @@ public:
         flag = ls_atomic_fetch_or(&m_iFlag, f);
         return ((flag & f) == 0);
     }
-
+    uint32_t testAndSetFlag2(uint32_t f)
+    {
+        uint32_t flag;
+        flag = ls_atomic_fetch_or(&m_iFlag2, f);
+        return ((flag & f) == 0);
+    }
+    
     uint32_t testFlag(uint32_t f) const
     {
         uint32_t flag;
         flag = ls_atomic_add_fetch((volatile uint32_t*)&m_iFlag, 0);
+        return flag & f;
+    }
+    uint32_t testFlag2(uint32_t f) const
+    {
+        uint32_t flag;
+        flag = ls_atomic_add_fetch((volatile uint32_t*)&m_iFlag2, 0);
         return flag & f;
     }
 
@@ -336,12 +353,22 @@ public:
         else
             ls_atomic_fetch_and(&m_iFlag, ~f);
     }
+    void setFlag2(uint32_t f, int v)
+    {
+        if (v)
+            ls_atomic_fetch_or(&m_iFlag2, f);
+        else
+            ls_atomic_fetch_and(&m_iFlag2, ~f);
+    }
 
 
     void setFlag(uint32_t f)            {   setFlag(f, 1);          }
     void clearFlag(uint32_t f)          {   setFlag(f, 0);          }
-
     uint32_t getFlag(uint32_t f) const  {   return testFlag(f);     }
+
+    void setFlag2(uint32_t f)            {   setFlag2(f, 1);          }
+    void clearFlag2(uint32_t f)          {   setFlag2(f, 0);          }
+    uint32_t getFlag2(uint32_t f) const  {   return testFlag2(f);     }
 
 
     int isRespHeaderSent() const
@@ -606,6 +633,8 @@ public:
     int createOverBodyLimitErrorPage();
     int respHeaderDone();
 
+    bool isHttp2() const            {   return m_iFlag2 & HSF2_IS_HTTP2;    }
+    
     void setRespBodyDone()
     {
         setFlag(HSF_HANDLER_DONE);

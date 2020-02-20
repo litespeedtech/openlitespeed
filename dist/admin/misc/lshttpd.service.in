@@ -6,8 +6,9 @@ Wants=network-online.target
 
 [Service]
 Type=forking
+#PIDFile=/var/run/openlitespeed.pid
 PIDFile=/tmp/lshttpd/lshttpd.pid
-ExecStart=%LSWS_CTRL% start 
+ExecStart=%LSWS_CTRL% start
 ExecReload=%LSWS_CTRL% restart 
 ExecStop=%LSWS_CTRL% delay-stop
 

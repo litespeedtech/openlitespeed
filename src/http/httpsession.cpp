@@ -238,10 +238,10 @@ int HttpSession::onInitConnected()
     setClientInfo(pInfo->m_pClientInfo);
     m_iRemotePort = pInfo->m_remotePort;
     m_iFlag = 0;
+    m_iFlag2 = 0;
     ls_atomic_setint(&m_iMtFlag, 0);
 
     m_curHookLevel = 0;
-    getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
     setLogger(getStream()->getLogger());
     clearLogId();
     //m_request.setILog(this);
@@ -273,8 +273,10 @@ int HttpSession::onInitConnected()
     if (processUnpackedHeaders() == LS_FAIL)
     {
         m_processState = HSPS_READ_REQ_HEADER;
-        getStream()->setFlag(HIO_FLAG_WANT_READ, 1);
+        getStream()->wantRead(1);
     }
+    if (getStream()->isHttp2())
+        setFlag2(HSF2_IS_HTTP2, 1);
     return 0;
 }
 
@@ -510,6 +512,7 @@ void HttpSession::nextRequest()
         m_sessionHooks.reset();
         m_sessionHooks.disableAll();
         m_iFlag = 0;
+        m_iFlag2 = 0;
         ls_atomic_setint(&m_iMtFlag, 0);
         logAccess(0);
         ++m_iReqServed;
@@ -1249,7 +1252,7 @@ int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
     pStream->setProtocol(HIOS_PROTO_HTTP2);
     pHandler->attachStream(pStream);
     pHandler->h2cUpgrade(this, NULL, 0);
-
+    setFlag2(HSF2_IS_HTTP2, 1);
     return 0;
 }
 
@@ -1548,6 +1551,9 @@ int HttpSession::processNewReqBody()
                 setProcessState(HSPS_READ_REQ_BODY);
             else if (m_processState != HSPS_HKPT_RCVD_REQ_BODY)
                 setProcessState(HSPS_PROCESS_NEW_URI);
+            if (!getFlag(HSF_REQ_BODY_DONE)
+                && getStream()->isSpdy() >= HIOS_PROTO_QUIC)
+                getStream()->wantRead(1);
         }
     }
     else

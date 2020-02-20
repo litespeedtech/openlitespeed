@@ -33,14 +33,14 @@ class CliController
     private $commands = array();
 
     /**
-     * @var string  Default value set while parsing commands.
+     * @var string
      */
-    private $svrCacheRoot;
+    private $svrCacheRootParam = '';
 
     /**
      * @var string
      */
-    private $vhCacheRoot = 'lscache';
+    private $vhCacheRootParam = '';
 
     /**
      * @var boolean
@@ -131,7 +131,8 @@ class CliController
                 && $wpInstallStorage->getCount() == 0 ) {
 
             $msg = 'No WordPress installations discovered in the previous scan. If you have any newly '
-                    . "installed WordPress installations, please scan again.\n";
+                    . "installed WordPress installations, please scan again or add them with"
+                    . "command 'addinstalls'.\n";
         }
 
         if ( $msg != '' ) {
@@ -205,16 +206,17 @@ class CliController
 
         if ( ($key = array_search('-svr', $args)) !== false ) {
 
-            if ( empty($args[$key + 1]) ) {
+            if ( empty($args[$key + 1])
+                    || ($this->svrCacheRootParam = trim($args[$key + 1])) == '' ) {
+
                 throw new LSCMException('Invalid Command, missing server cache root value.');
             }
 
-            $this->svrCacheRoot = $args[$key + 1];
             $currSvrCacheRoot = $controlPanel->getServerCacheRoot();
 
-            if ( $this->svrCacheRoot != $currSvrCacheRoot) {
+            if ( $this->svrCacheRootParam != $currSvrCacheRoot) {
 
-                if (!Util::is_dir_empty($this->svrCacheRoot) ) {
+                if ( !Util::is_dir_empty($this->svrCacheRootParam) ) {
                     throw new LSCMException(
                             'Provided server level cache root must be an empty directory.');
                 }
@@ -226,15 +228,16 @@ class CliController
         }
 
         if ( ($key = array_search('-vh', $args)) !== false ) {
+            $setvhCacheRoot = false;
 
-            if ( empty($args[$key + 1]) ) {
+            if ( empty($args[$key + 1])
+                    || ($this->vhCacheRootParam = trim($args[$key + 1])) == '' ) {
+
                 throw new LSCMException(
                         'Invalid Command, missing virtual host cache root value.');
             }
 
-            $vhCacheRoot = $args[$key + 1];
-
-            if ( strpos($vhCacheRoot, '$') !== false ) {
+            if ( strpos($this->vhCacheRootParam, '$') !== false ) {
                 throw new LSCMException(
                     'Invalid Command, virtual host cache root value cannot contain any \'$\' '
                         . 'characters. \'$vh_user\' will be automatically added to the end of virtual '
@@ -243,24 +246,29 @@ class CliController
 
             $currVHCacheRoot = $controlPanel->getVHCacheRoot();
 
-            if ( $vhCacheRoot[0] == '/' ) {
-                $vhCacheRoot = rtrim($vhCacheRoot, '/') . '/$vh_user';
+            if ( $this->vhCacheRootParam[0] == '/' ) {
+                $updatedVhCacheRoot =
+                        rtrim($this->vhCacheRootParam, '/') . '/$vh_user';
 
-                if ( $this->vhCacheRoot != $currVHCacheRoot
-                        && !Util::is_dir_empty($vhCacheRoot) ) {
+                if ( $updatedVhCacheRoot != $currVHCacheRoot
+                        && ! Util::is_dir_empty($this->vhCacheRootParam) ) {
 
                     throw new LSCMException('Provided absolute path for virtual host level '
                             . 'cache root must be an empty directory.');
                 }
+
+                $this->vhCacheRootParam = $updatedVhCacheRoot;
+                $setvhCacheRoot = true;
             }
-
-            $this->vhCacheRoot = $vhCacheRoot;
-
-            if ( $this->vhCacheRoot != $currVHCacheRoot ) {
-                $this->cacheRootCmds[] = 'setVHCacheRoot';
+            elseif ( $this->vhCacheRootParam != $currVHCacheRoot ) {
+                $setvhCacheRoot = true;
             }
 
             unset($args[$key], $args[$key + 1]);
+
+            if ( $setvhCacheRoot ) {
+                $this->cacheRootCmds[] = 'setVHCacheRoot';
+            }
         }
     }
 
@@ -652,12 +660,15 @@ EOF;
 
         $controlPanel = ControlPanel::getClassInstance($panelClassName);
 
-        $this->svrCacheRoot = $controlPanel->getDefaultSvrCacheRoot();
-
         $cmd = array_shift($args);
 
         switch ($cmd) {
             case 'setcacheroot':
+                if ( $panelClassName == 'custom' ) {
+                    $msg = 'Command \'setcacheroot\' cannot be used in the CustomPanel context.';
+                    throw new LSCMException($msg);
+                }
+
                 $this->handleSetCacheRootInput($args);
                 break;
 
@@ -718,12 +729,12 @@ EOF;
 
         switch ( $action ) {
             case 'setSvrCacheRoot':
-                $controlPanel->setServerCacheRoot($this->svrCacheRoot);
+                $controlPanel->setServerCacheRoot($this->svrCacheRootParam);
                 $restartRequired = true;
                 break;
 
             case 'setVHCacheRoot':
-                $controlPanel->setVHCacheRoot($this->vhCacheRoot);
+                $controlPanel->setVHCacheRoot($this->vhCacheRootParam);
                 $restartRequired = true;
                 break;
 

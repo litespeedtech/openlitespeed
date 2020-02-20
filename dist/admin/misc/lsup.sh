@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.4-2/6/2020
+LSUPVERSION=v2.6-2/14/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 CURDIR=`dirname "$0"`
@@ -363,12 +363,20 @@ fi
 
 
 if [ -f ${LOCKFILE} ] ; then
-    echoR "Openlitespeed is updating, quit."
-    exit 0
+    FILETIME=`stat -c %Y  ${LOCKFILE}`
+    SYSTEMTIME=`date -u +%s`
+    COMSYSTEMTIME=$(($SYSTEMTIME-600))
+    #echoY ${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME( $COMSYSTEMTIME + 600 seconds)
+    if [ $COMSYSTEMTIME -gt $FILETIME ] ; then
+        echoG "${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME, removed it."
+        rm -rf ${LOCKFILE}
+    else
+        echoR "Openlitespeed is updating, quit."
+        exit 0
+    fi
 fi
 
 touch ${LOCKFILE}
-
 
 TEMPPATH=${LSWSHOME}/autoupdate
 if [ ! -e ${TEMPPATH} ] ; then
@@ -479,22 +487,27 @@ if [ "$ONLYBIN" = "no" ] ; then
     ./install.sh
 else
     cp bin/* ${LSWSHOME}/bin/
+    if [ $? != 0 ] ; then
+        ${LSWSCTRL} stop
+        #killall -9 openlitespeed
+        mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
+        cp bin/* ${LSWSHOME}/bin/
+    fi
     cp modules/* ${LSWSHOME}/modules/
-    cp admin/misc/* ${LSWSHOME}/admin/misc/
 fi
 
 rm -rf $SRCDIR
 rm -rf ${LSWSHOME}/autoupdate/*
 
 #Sign it
-echo lsup > "${LSWSHOME}/PLAT"
+echo lsup > ${LSWSHOME}/PLAT
 rm -rf ${LOCKFILE}
 
 ${LSWSCTRL} start
 if [ "$ONLYBIN" = "no" ] ; then 
-    echoG All files are updated and service is on.
+    echoG All files are updated and service is started.
 else
-    echoG All binaries are updated and service is on.
+    echoG All binaries are updated and service is started.
 fi
 echo 
 echo

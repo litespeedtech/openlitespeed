@@ -340,6 +340,8 @@ private:
 
     void setBlackBoard(char *pBB);
 
+    int restartMark(int cmd);
+    
     int  cleanUp(int pid, char *pBlackBoard);
     int  initSampleServer();
     int  initLscpd();
@@ -1321,6 +1323,34 @@ int HttpServerImpl::gracefulShutdown()
                HttpServerConfig::getInstance().getRestartTimeout());
 
 }
+
+
+int HttpServerImpl::restartMark(int cmd)
+{
+    char achFile[2048];
+    snprintf(achFile, 2048, "%s/admin/tmp/.restart",
+             MainServerConfig::getInstance().getServerRoot());
+    switch (cmd)
+    {
+    case 0:
+        {
+            int fd  = open(achFile, O_WRONLY | O_CREAT, 0644);
+            close(fd);
+            break;
+        }
+    case 1:
+        {
+            struct stat st;
+            return stat(achFile, &st) == -1;
+        }
+    case 2:
+    default:
+        unlink(achFile);
+        break;
+    }
+    return 0;
+}
+
 
 
 int HttpServerImpl::reinitMultiplexer()
@@ -5042,6 +5072,11 @@ void HttpServer::passListeners()
 void HttpServer::recoverListeners()
 {
     m_impl->m_oldListeners.recvListeners();
+}
+
+int  HttpServer::restartMark(int cmd)
+{
+    return m_impl->restartMark(cmd);
 }
 
 
