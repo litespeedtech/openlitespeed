@@ -1137,7 +1137,7 @@ class WPCaller
     }
 
     /**
-     * Set 'REQUEST_URI' global server and environment variables.
+     * Set global server and environment variables.
      *
      * @since 1.9.8
      *
@@ -1146,8 +1146,6 @@ class WPCaller
      */
     private function setEnvVar( $key, $val )
     {
-        $key = 'REQUEST_URI';
-
         $_SERVER[$key] = $val;
         putenv("{$key}={$val}");
     }

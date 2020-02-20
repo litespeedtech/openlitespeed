@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.9.8';
+    const PANEL_API_VERSION = '1.10';
 
     /**
      * @since 1.9
@@ -147,6 +147,29 @@ abstract class ControlPanel
     public static function initByClassName( $className )
     {
         if ( self::$instance == null ) {
+
+            if ( $className == 'custom' ) {
+                $lsws_home = realpath(__DIR__ . '/../../../../');
+                $customPanelFile = "{$lsws_home}/admin/lscdata/custom/CustomPanel.php";
+
+                if ( ! file_exists($customPanelFile)
+                        || ! include_once $customPanelFile ) {
+
+                    throw new LSCMException(
+                            "Unable to include file {$customPanelFile}");
+                }
+
+                $className = '\Lsc\Wp\Panel\CustomPanel';
+
+                $isSubClass =
+                        is_subclass_of($className, '\Lsc\Wp\Panel\CustomPanelBase');
+
+                if ( ! $isSubClass ) {
+                    $msg = 'Class CustomPanel must extend class '
+                            . '\Lsc\Wp\Panel\CustomPanelBase';
+                    throw new LSCMException($msg);
+                }
+            }
 
             try{
                 self::$instance = new $className();
@@ -816,6 +839,7 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.10',
             '1.9.8',
             '1.9.7',
             '1.9.6.1',

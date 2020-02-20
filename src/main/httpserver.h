@@ -114,6 +114,7 @@ public:
     void passListeners();
     void recoverListeners();
 
+    int  restartMark(int cmd);
     int  initMultiplexer(const char *pType);
     int  reinitMultiplexer();
     int  initAdns();

@@ -77,16 +77,18 @@
 #include <config.h>
 #include <sys/stat.h>
 
+#define GRACEFUL_PID_FILE   DEFAULT_TMP_DIR "graceful.pid"
 
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu Feb 13 15:07:51 UTC 2020)"
+#define BUILDTIME  " (built: Thu Feb 20 20:40:19 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
 static char s_iRunning = 0;
 static long s_tmDelayShutdown = 0;
+static long s_tmGraceful = 0;
 char *argv0 = NULL;
 static int s_iCpuCount = 1;
 
@@ -996,6 +998,9 @@ int LshttpdMain::init(int argc, char *argv[])
             PidFile pidfile;
             ConfigCtx::getCurConfigCtx()->getAbsolute(achBuf, getPidFile(), 0);
             pidfile.writePidFile(achBuf, m_pid);
+//             PidFile varRunPid;
+//             varRunPid.writePidFile("/var/run/openlitespeed.pid", m_pid);
+//             varRunPid.closePidFile();
         }
     }
 
@@ -1486,6 +1491,7 @@ void LshttpdMain::stopAllChildren(int nowait)
             pProc = (ChildProc *)pProc->next();
         }
     }
+    unlink(GRACEFUL_PID_FILE);
 }
 
 
@@ -1499,6 +1505,7 @@ void LshttpdMain::applyChanges()
 void LshttpdMain::gracefulRestart()
 {
     LS_DBG_L("Graceful Restart... ");
+    m_pServer->restartMark(0);
     if (m_fdAdmin != -1)
     {
         close(m_fdAdmin);
@@ -1506,8 +1513,11 @@ void LshttpdMain::gracefulRestart()
     }
     broadcastSig(SIGTERM, 1);
     s_tmDelayShutdown = 0;
+    s_tmGraceful = DateTime::s_curTime;
     s_iRunning = 0;
     m_pidFile.closePidFile();
+    unlink(getPidFile());
+    m_pidFile.writePidFile(GRACEFUL_PID_FILE, m_pid);
     m_pServer->passListeners();
     int pid = fork();
     if (!pid)
@@ -1579,6 +1589,10 @@ int LshttpdMain::guardCrash()
     pfds[2].events = POLLIN;
 
     s_iRunning = 1;
+    
+    LS_NOTICE("Instance is ready for service.");
+    m_pServer->restartMark(2);
+    
     startTimer();
     while (s_iRunning > 0)
     {

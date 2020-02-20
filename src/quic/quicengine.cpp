@@ -772,12 +772,14 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 
     lsquic_logger_init(&logger_if, log4cxx::Logger::getDefault(),
                                                     LLTS_YYYYMMDD_HHMMSSUS);
-    if (LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
-        lsquic_set_log_level("debug");
-    else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
-        lsquic_logger_lopt("event=debug,engine=debug");
-    lsquic_logger_lopt("pacer=info");
-
+//     if (LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
+//         lsquic_set_log_level("debug");
+//     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
+//         lsquic_logger_lopt("event=debug,engine=debug");
+//     lsquic_logger_lopt("pacer=info");
+    bool isQuicLogEnable = (LS_LOG_ENABLED(log4cxx::Level::DBG_HIGH));
+    setDebugLog(isQuicLogEnable);
+    
     m_pMultiplexer = pMplx;
 
 #ifndef _NOT_USE_SHM_

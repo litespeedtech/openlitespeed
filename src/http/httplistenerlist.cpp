@@ -264,6 +264,10 @@ void HttpListenerList::recvListeners()
             pListener->assign(fd, pAddr);
             push_back(pListener);
             sort(s_compare);
+           
+            LS_NOTICE("Recv listener %s, copy fd %d to %d.", 
+                      pListener->getAddrStr(),
+                      startfd, fd);
         }
         close(startfd);
         ++startfd;
