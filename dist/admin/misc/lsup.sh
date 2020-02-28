@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.7-2/21/2020
+LSUPVERSION=v2.71-2/28/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 PIDFILE=/tmp/lshttpd/lshttpd.pid
@@ -548,8 +548,17 @@ fi
 rm -rf $SRCDIR
 rm -rf ${LSWSHOME}/autoupdate/*
 
-#Sign it
-echo lsup > ${LSWSHOME}/PLAT
+#Sign it and keep old sign
+if [ ! -e ${LSWSHOME}/PLAT ] ; then 
+    echo lsup > ${LSWSHOME}/PLAT
+else
+    ORGPLAT=`cat ${LSWSHOME}/PLAT`
+    echo $OEGPLAT | grep lsup >/dev/null 2>&1
+    if [ $? != 0 ] ; then
+        echo "lsup-$OEGPLAT" > ${LSWSHOME}/PLAT
+    fi
+fi
+
 rm -rf ${LOCKFILE}
 
 startService
