@@ -553,9 +553,9 @@ if [ ! -e ${LSWSHOME}/PLAT ] ; then
     echo lsup > ${LSWSHOME}/PLAT
 else
     ORGPLAT=`cat ${LSWSHOME}/PLAT`
-    echo $OEGPLAT | grep lsup >/dev/null 2>&1
+    echo $ORGPLAT | grep lsup >/dev/null 2>&1
     if [ $? != 0 ] ; then
-        echo "lsup-$OEGPLAT" > ${LSWSHOME}/PLAT
+        echo "lsup-$ORGPLAT" > ${LSWSHOME}/PLAT
     fi
 fi
 
