@@ -32,7 +32,6 @@
 #include <main/httpserver.h>
 #include <quic/udplistener.h>
 #include <socket/coresocket.h>
-#include <socket/gsockaddr.h>
 #include <util/accessdef.h>
 #include <util/autobuf.h>
 #include <util/sysinfo/nicdetect.h>
@@ -51,19 +50,22 @@
 #include <unistd.h>
 #include <lsr/ls_strtool.h>
 #include <sslpp/sslcontext.h>
+#include "httpserverconfig.h"
+#include <quic/udplistener.h>
 
 int32_t      HttpListener::m_iSockSendBufSize = -1;
 int32_t      HttpListener::m_iSockRecvBufSize = -1;
-
 
 HttpListener::HttpListener(const char *pName, const char *pAddr)
     : m_sName(pName)
     , m_pMapVHost(new VHostMap())
     , m_pSubIpMap(NULL)
+    , m_pUdpListener(NULL)
+    , m_iBinding(0xffffffffffffffffULL)
     , m_iAdmin(0)
     , m_isSSL(0)
+    , m_flag(0)
     , m_iSendZconf(0)
-    , m_iBinding(0xffffffff)
     , m_pAdcPortList(NULL)
 {
     if (m_pMapVHost)
@@ -75,10 +77,12 @@ HttpListener::HttpListener()
     : m_sName("")
     , m_pMapVHost(new VHostMap())
     , m_pSubIpMap(NULL)
+    , m_pUdpListener(NULL)
+    , m_iBinding(0xffffffffffffffffULL)
     , m_iAdmin(0)
     , m_isSSL(0)
+    , m_flag(0)
     , m_iSendZconf(0)
-    , m_iBinding(0xffffffff)
     , m_pAdcPortList(NULL)
 {
 }
@@ -93,6 +97,10 @@ HttpListener::~HttpListener()
         delete m_pSubIpMap;
     if (m_pAdcPortList)
         delete m_pAdcPortList;
+    if (m_reusePortFds.size() > 0)
+    {
+        releaseReusePortSocket();
+    }
 }
 
 
@@ -115,7 +123,7 @@ void HttpListener::endConfig()
         m_isSSL = 1;
         if (m_pMapVHost && m_pMapVHost->isQuicEnabled())
         {
-            enableQuic();
+            //enableQuic();
         }
     }
 }
@@ -127,7 +135,7 @@ int HttpListener::enableQuic()
     if (!pEngine || !m_pMapVHost)
         return -1;
 
-    UdpListener *pUdp = new UdpListener(pEngine, this, m_pMapVHost);
+    UdpListener *pUdp = new UdpListener(pEngine, this);
     pUdp->setAddr(m_pMapVHost->getAddrStr()->c_str());
     if (pUdp->start() != LS_FAIL)
     {
@@ -172,60 +180,85 @@ int  HttpListener::getPort() const
     return 0;
 }
 
+void HttpListener::finializeSslCtx()
+{
+    if (!m_pMapVHost->getSslContext() || !m_pSubIpMap)
+        return;
+    m_pSubIpMap->setDefaultSslCtx(m_pMapVHost->getSslContext());
+}
+
+
+int HttpListener::beginServe()
+{
+    finializeSslCtx();
+    return MultiplexerFactory::getMultiplexer()->add(this,
+            POLLIN | POLLHUP | POLLERR);
+}
+
 
 int HttpListener::assign(int fd, struct sockaddr *pAddr)
 {
-    GSockAddr addr(pAddr);
+    m_sockAddr.operator=(*pAddr);
     char achAddr[128];
-    if ((addr.family() == AF_INET)
-        && (addr.getV4()->sin_addr.s_addr == INADDR_ANY))
-        snprintf(achAddr, 128, "*:%hu", (short)addr.getPort());
-    else if ((addr.family() == AF_INET6)
-             && (IN6_IS_ADDR_UNSPECIFIED(&addr.getV6()->sin6_addr)))
-        snprintf(achAddr, 128, "[::]:%hu", (short)addr.getPort());
+    if ((m_sockAddr.family() == AF_INET)
+        && (m_sockAddr.getV4()->sin_addr.s_addr == INADDR_ANY))
+        snprintf(achAddr, 128, "*:%hu", (unsigned short)m_sockAddr.getPort());
+    else if ((m_sockAddr.family() == AF_INET6)
+             && (IN6_IS_ADDR_UNSPECIFIED(&m_sockAddr.getV6()->sin6_addr)))
+        snprintf(achAddr, 128, "[::]:%hu", (unsigned short)m_sockAddr.getPort());
     else
-        addr.toString(achAddr, 128);
-    LS_NOTICE("Recovering server socket: [%s]", achAddr);
+        m_sockAddr.toString(achAddr, 128);
+    LS_NOTICE("[%s] Recovering server socket", achAddr);
     if (m_pMapVHost)
         m_pMapVHost->setAddrStr(achAddr);
-    if ((addr.family() == AF_INET6)
-        && (IN6_IS_ADDR_UNSPECIFIED(&addr.getV6()->sin6_addr)))
-        snprintf(achAddr, 128, "[ANY]:%hu", (short)addr.getPort());
+    if ((m_sockAddr.family() == AF_INET6)
+        && (IN6_IS_ADDR_UNSPECIFIED(&m_sockAddr.getV6()->sin6_addr)))
+        snprintf(achAddr, 128, "[ANY]:%hu", (unsigned short)m_sockAddr.getPort());
     setName(achAddr);
-    return setSockAttr(fd, addr);
+    setSockAttr(fd);
+    m_pMapVHost->setPort(m_sockAddr.getPort());
+    setfd(fd);
+    return 0;
 }
-
 
 int HttpListener::start()
 {
-    GSockAddr addr;
-    if (addr.set(getAddrStr(), 0))
+    if (m_sockAddr.set(getAddrStr(), 0))
         return errno;
     int fd;
-    int ret = CoreSocket::listen(addr, SmartSettings::getSockBacklog(), &fd,
-                                 m_iSockSendBufSize, m_iSockRecvBufSize);
+    int ret = -1;
+
+    m_pMapVHost->setPort(m_sockAddr.getPort());
+
+    if (m_flag & LS_SOCK_REUSEPORT)
+    {
+        ret = startReusePortSocket(HttpServerConfig::getInstance().getChildren());
+        if (ret == EPERM)
+            return ret;
+    }
     if (ret != 0)
-        return ret;
-    return setSockAttr(fd, addr);
+    {
+        ret = CoreSocket::listen(m_sockAddr, SmartSettings::getSockBacklog(), &fd,
+                                 LS_SOCK_NODELAY,
+                                 m_iSockSendBufSize, m_iSockRecvBufSize);
+        if (ret != 0)
+            return ret;
+        setSockAttr(fd);
+        setfd(fd);
+    }
+    return 0;
 }
 
-
-int HttpListener::setSockAttr(int fd, GSockAddr &addr)
+int HttpListener::setSockAttr(int fd)
 {
-    setfd(fd);
     ::fcntl(fd, F_SETFD, FD_CLOEXEC);
     ::fcntl(fd, F_SETFL, MultiplexerFactory::getMultiplexer()->getFLTag());
     int nodelay = 1;
-    //::setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
+    ::setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof( int ) );
 #ifdef TCP_DEFER_ACCEPT
     nodelay = 30;
     ::setsockopt(fd, IPPROTO_TCP, TCP_DEFER_ACCEPT, &nodelay, sizeof(int));
 #endif
-
-    //int tos = IPTOS_THROUGHPUT;
-    //setsockopt( fd, IPPROTO_IP, IP_TOS, &tos, sizeof( tos ));
-    if (m_pMapVHost)
-        m_pMapVHost->setPort(addr.getPort());
 
 #ifdef SO_ACCEPTFILTER
     /*
@@ -236,15 +269,237 @@ int HttpListener::setSockAttr(int fd, GSockAddr &addr)
     lstrncpy(arg.af_name, "httpready", sizeof(arg.af_name));
     if (setsockopt(fd, SOL_SOCKET, SO_ACCEPTFILTER, &arg, sizeof(arg)) < 0)
     {
-        if (errno != ENOENT)
-            LS_NOTICE("Failed to set accept-filter 'httpready': %s",
-                      strerror(errno));
+        /*        struct accept_filter_arg arg;
+                memset( &arg, 0, sizeof(arg) );
+                strcpy( arg.af_name, "httpready" );
+                if ( setsockopt(fd, SOL_SOCKET, SO_ACCEPTFILTER, &arg, sizeof(arg)) < 0)
+                {
+                    if (errno != ENOENT)
+                    {
+                        LS_NOTICE( "Failed to set accept-filter 'httpready': %s", strerror(errno) ));
+                    }
+                }*/
     }
 #endif
-
-    return MultiplexerFactory::getMultiplexer()->add(this,
-            POLLIN | POLLHUP | POLLERR);
+    return 0;
 }
+
+void HttpListener::adjustFds(int iNumChildren)
+{
+    int i, ret, fd;
+    if (!isReusePort())
+        return;
+    
+    if (m_reusePortFds.size() > iNumChildren)
+    {
+        for (i=iNumChildren; i<m_reusePortFds.size(); ++i)
+        {
+            LS_INFO("[%s] adjustFds: close fd %d.", getAddrStr(),
+                    m_reusePortFds[i]);
+            close(m_reusePortFds[i]);
+        }
+    }
+    else if (m_reusePortFds.size() < iNumChildren)
+    {
+        m_reusePortFds.guarantee(iNumChildren);
+        for(i = m_reusePortFds.size(); i < iNumChildren; ++i)
+        {
+            ret = CoreSocket::listen(m_sockAddr,
+                                     SmartSettings::getSockBacklog(),
+                                     &fd,
+                                     LS_SOCK_NODELAY | LS_SOCK_REUSEPORT,
+                                     m_iSockSendBufSize, m_iSockRecvBufSize);
+            if (ret != 0 && ret != EACCES)
+            {
+                LS_INFO("[%s] adjustFds: failed to start SO_REUSEPORT socket.",
+                            getAddrStr());
+                //m_flag &= ~LS_SOCK_REUSEPORT;
+                return ;
+            }
+            LS_INFO("[%s] adjustFds: SO_REUSEPORT #%d started, fd: %d",
+                   getAddrStr(), i, fd);
+            m_reusePortFds[i] = fd;
+        }
+    }
+    m_reusePortFds.setSize(iNumChildren);
+}
+
+
+void HttpListener::enableReusePort()
+{
+    m_flag |= LS_SOCK_REUSEPORT;
+}
+
+void HttpListener::addUdpSocket(int fd)
+{
+    LS_DBG("add fd: %d UDP listener %p.", fd, this);
+    if (!m_pUdpListener)
+    {
+        m_pUdpListener = new UdpListener(NULL, this);
+        m_pUdpListener->setAddr(&m_sockAddr);
+        m_pUdpListener->setfd(fd);
+        m_pUdpListener->registEvent();
+        LS_DBG("[%s] create UDP listener %p, add fd: %d.", getAddrStr(),
+               m_pUdpListener, fd);
+    }
+    else if (HttpServerConfig::getInstance().getChildren() > 1)
+    {
+        LS_DBG("[%s] add fd: %d SO_REUSEPORT to UDP listener %p.", getAddrStr(),
+               fd, m_pUdpListener);
+        m_pUdpListener->addReusePortSocket(fd, getAddrStr());
+    }
+    else
+    {
+        LS_DBG("[%s] Close extra SO_REUSEPORT UDP listener, fd: %d.", getAddrStr(),
+               fd);
+        close(fd);
+    }
+}
+
+
+int HttpListener::bindUdpPort()
+{
+    int ret;
+    assert(m_pUdpListener == NULL);
+    UdpListener *pUdp = new UdpListener(NULL, this);
+    pUdp->setAddr(&m_sockAddr);
+    if (m_flag & LS_SOCK_REUSEPORT)
+        ret = pUdp->bindReusePort(HttpServerConfig::getInstance().getChildren(), getAddrStr());
+    else
+        ret = pUdp->bind();
+    if (ret == -1)
+    {
+        LS_NOTICE("[UDP %s] Failed to enable QUIC.", getAddrStr());
+        delete pUdp;
+        return ret;
+    }
+    m_pUdpListener = pUdp;
+    LS_NOTICE("[%s] enabled QUIC UDP", getAddrStr());
+    return 0;
+}
+
+
+int HttpListener::startReusePortSocket(int count)
+{
+    int i, ret, fd;
+    m_reusePortFds.guarantee(count);
+    for(i = 0; i < count; ++i)
+    {
+        ret = CoreSocket::listen(m_sockAddr, SmartSettings::getSockBacklog(), &fd,
+                                 LS_SOCK_NODELAY | LS_SOCK_REUSEPORT,
+                                 m_iSockSendBufSize, m_iSockRecvBufSize);
+        if (ret != 0)
+        {
+            if (ret != EACCES)
+                LS_NOTICE("[%s] failed to start SO_REUSEPORT socket, disalbe",
+                           getAddrStr());
+            m_flag &= ~LS_SOCK_REUSEPORT;
+            return ret;
+        }
+        LS_DBG("[%s] #%d SO_REUSEPORT started, fd: %d",
+               getAddrStr(), i, fd);
+        m_reusePortFds[i] = fd;
+    }
+    m_reusePortFds.setSize(count);
+    return 0;
+}
+
+int HttpListener::closeUnActiveReusePort()
+{
+    m_reusePortFds.close();
+    return 0;
+}
+
+int HttpListener::activeReusePort(int seq)
+{
+    int n;
+    int fd = m_reusePortFds.getActiveFd(seq, &n);
+    if (fd == -1)
+    {
+        LS_NOTICE("[%s] Activates #%d->%d SO_REUSEPORT socket, failed.",
+                getAddrStr(), seq, n);
+        return -1;
+    }
+    LS_NOTICE("[%s] Activates #%d->%d SO_REUSEPORT socket: %d",
+                getAddrStr(), seq, n, fd);
+    setSockAttr(fd);
+    setfd(fd);
+    return 0;
+}
+
+
+
+
+void HttpListener::releaseReusePortSocket()
+{
+    m_reusePortFds.releaseObjects();
+}
+
+
+bool HttpListener::isSameAddr(const struct sockaddr* addr)
+{
+    return (GSockAddr::compare(m_sockAddr.get(), addr) == 0);
+}
+
+
+void HttpListener::addReusePortSocket(int fd)
+{
+    if (HttpServerConfig::getInstance().getChildren() <= 1)
+    {
+        LS_DBG("[%s] Close extra SO_REUSEPORT TCP listener, fd: %d.", getAddrStr(),
+               fd);
+        close(fd);
+        return;
+    }
+    LS_DBG("recvListeners() add fd: %d SO_REUSEPORT to listener %p.", fd,
+            this);
+    if (m_reusePortFds.size() == 0)
+    {
+        *m_reusePortFds.newObj() = getfd();
+    }
+    *m_reusePortFds.newObj() = fd;
+    LS_NOTICE("[%s] SO_REUSEPORT #%d, recovering server socket.",
+                getAddrStr(), m_reusePortFds.size());
+}
+
+
+int HttpListener::getFdCount(int* maxfd)
+{
+    int udp_count = 0;
+    if (m_pUdpListener)
+        udp_count = m_pUdpListener->getFdCount(maxfd);
+    if (getfd() > *maxfd)
+        *maxfd = getfd();
+    if (m_reusePortFds.size() <= 0)
+        return udp_count + (getfd() != -1);
+    return udp_count + m_reusePortFds.getFdCount(maxfd);
+}
+
+
+int HttpListener::passFds2(int target_fd)
+{
+    if (m_reusePortFds.size() > 0)
+        return m_reusePortFds.passFds("TCP", getAddrStr(), target_fd);
+    if (getfd() == -1)
+        return 0;
+    --target_fd;
+    LS_INFO("[%s] Pass listener, copy fd %d to %d.", getAddrStr(),
+        getfd(), target_fd);
+    dup2(getfd(), target_fd);
+    close(getfd());
+    return 1;
+}
+
+
+int HttpListener::passFds(int target_fd)
+{
+    int n = 0;
+    if (m_pUdpListener)
+        n = m_pUdpListener->passFds(target_fd, getAddrStr());
+    n += passFds2(target_fd - n);
+    return n;
+}
+
 
 
 int HttpListener::suspend()
@@ -273,10 +528,11 @@ int HttpListener::stop()
 {
     if (getfd() != -1)
     {
-        LS_INFO("Stop listener %s.", getAddrStr());
+        LS_NOTICE("Stop listener %s, fd %d.", getAddrStr(), getfd());
         MultiplexerFactory::getMultiplexer()->remove(this);
         close(getfd());
         setfd(-1);
+//        releaseReusePortSocket();
         return 0;
     }
     return EBADF;

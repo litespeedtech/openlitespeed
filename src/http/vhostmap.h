@@ -123,11 +123,17 @@ class SubIpMap
 private:
     typedef THash<VHostMap *>      IpMap;
     IpMap       m_map;
+    SslContext       *m_pSslContext;
+    
+    
     SubIpMap(const SubIpMap &rhs);
     void operator=(const SubIpMap &rhs);
 public:
     SubIpMap();
     ~SubIpMap();
+    
+    SslContext *getSslContext() const      {   return m_pSslContext;   }
+    void setDefaultSslCtx(SslContext *p);
 
     VHostMap *getMap(uint32_t ipv4) const;
     VHostMap *getMap(struct sockaddr *pAddr) const;

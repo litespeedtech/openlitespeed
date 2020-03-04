@@ -131,7 +131,7 @@ am_openlitespeed_OBJECTS = prelinkedmods.$(OBJEXT) httpdtest.$(OBJEXT) \
 	ls_stack.$(OBJEXT) ls_str.$(OBJEXT) ls_strlist.$(OBJEXT) \
 	ls_strtool.$(OBJEXT) ls_time.$(OBJEXT) ls_tsstack.$(OBJEXT) \
 	ls_xpool.$(OBJEXT) xxhash.$(OBJEXT) offloader.$(OBJEXT) \
-	mtnotifier.$(OBJEXT) pthreadcond.$(OBJEXT) \
+	reuseport.$(OBJEXT) mtnotifier.$(OBJEXT) pthreadcond.$(OBJEXT) \
 	pthreadmutex.$(OBJEXT) pthreadworkqueue.$(OBJEXT) \
 	thread.$(OBJEXT) workcrew.$(OBJEXT) worker.$(OBJEXT) \
 	crewworker.$(OBJEXT)
@@ -522,6 +522,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
    lsr/offloader.cpp \
+   lsr/reuseport.cpp \
    thread/mtnotifier.cpp \
    thread/pthreadcond.cpp \
    thread/pthreadmutex.cpp \
@@ -743,6 +744,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/radixtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/refcounter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resourcepool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reuseport.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rlimits.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/semaphore.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/signalutil.Po@am__quote@
@@ -2074,6 +2076,20 @@ offloader.obj: lsr/offloader.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='lsr/offloader.cpp' object='offloader.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o offloader.obj `if test -f 'lsr/offloader.cpp'; then $(CYGPATH_W) 'lsr/offloader.cpp'; else $(CYGPATH_W) '$(srcdir)/lsr/offloader.cpp'; fi`
+
+reuseport.o: lsr/reuseport.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT reuseport.o -MD -MP -MF $(DEPDIR)/reuseport.Tpo -c -o reuseport.o `test -f 'lsr/reuseport.cpp' || echo '$(srcdir)/'`lsr/reuseport.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/reuseport.Tpo $(DEPDIR)/reuseport.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='lsr/reuseport.cpp' object='reuseport.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o reuseport.o `test -f 'lsr/reuseport.cpp' || echo '$(srcdir)/'`lsr/reuseport.cpp
+
+reuseport.obj: lsr/reuseport.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT reuseport.obj -MD -MP -MF $(DEPDIR)/reuseport.Tpo -c -o reuseport.obj `if test -f 'lsr/reuseport.cpp'; then $(CYGPATH_W) 'lsr/reuseport.cpp'; else $(CYGPATH_W) '$(srcdir)/lsr/reuseport.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/reuseport.Tpo $(DEPDIR)/reuseport.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='lsr/reuseport.cpp' object='reuseport.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o reuseport.obj `if test -f 'lsr/reuseport.cpp'; then $(CYGPATH_W) 'lsr/reuseport.cpp'; else $(CYGPATH_W) '$(srcdir)/lsr/reuseport.cpp'; fi`
 
 mtnotifier.o: thread/mtnotifier.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT mtnotifier.o -MD -MP -MF $(DEPDIR)/mtnotifier.Tpo -c -o mtnotifier.o `test -f 'thread/mtnotifier.cpp' || echo '$(srcdir)/'`thread/mtnotifier.cpp

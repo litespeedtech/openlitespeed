@@ -45,7 +45,9 @@ int QuicStream::init(lsquic_stream_t *s)
     m_pStream = s;
     setActiveTime(DateTime::s_curTime);
     clearLogId();
-    if (lsquic_conn_quic_version(lsquic_stream_conn(s)) >= LSQVER_ID24)
+    //if (lsquic_conn_quic_version(lsquic_stream_conn(s)) >= LSQVER_ID24)
+    if ((1u <<lsquic_conn_quic_version(lsquic_stream_conn(s)))
+          & LSQUIC_IETF_VERSIONS)
         setProtocol(HIOS_PROTO_HTTP3);
     else
         setProtocol(HIOS_PROTO_QUIC);

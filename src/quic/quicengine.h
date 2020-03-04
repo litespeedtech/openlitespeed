@@ -26,6 +26,7 @@
 class Multiplexer;
 class QuicStream;
 class UdpListener;
+class HttpListener;
 class VHostMap;
 
 
@@ -49,7 +50,8 @@ public:
     lsquic_engine_settings *getConfig()
     {   return &m_config;       }
     
-    int init(Multiplexer * pMplx, const char *pShmDir, const struct lsquic_engine_settings *);
+    int init(Multiplexer * pMplx, const char *pShmDir,
+             const struct lsquic_engine_settings *, const char *quicLogLevel);
     
     void startCooldown();
     int  isCooldown() const                 {   return m_cooldown;      }
@@ -57,7 +59,7 @@ public:
     Multiplexer *getMultiplexer() const     {   return m_pMultiplexer;  } 
     lsquic_engine_t *getEngine() const      {   return m_pEngine;       }
 
-    UdpListener *startUdpListener(void *pTcpPeer, VHostMap *pMap);
+    //UdpListener *startUdpListener(HttpListener *pTcpPeer, VHostMap *pMap);
     int registerUdpListener(UdpListener *pListener);
     UdpListener *getListener(int index) const;
     void onTimer();
@@ -107,6 +109,8 @@ public:
 
     static unsigned activeConnsCount(void)
     {   return s_active_conns;  }
+
+    static void detectBusyLoop(int);
     
 private:
     static void recycleStreams();

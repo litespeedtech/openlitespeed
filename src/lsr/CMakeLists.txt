@@ -39,6 +39,7 @@ SET(lsr_STAT_SRCS
    ls_xpool.c
    xxhash.c
    offloader.cpp
+   reuseport.cpp
 )
 
 add_library(lsr STATIC ${lsr_STAT_SRCS} )

@@ -726,7 +726,7 @@ class DTblDef extends DTblDefBase
 				self::NewCustFlagAttr('address', DMsg::ALbl('l_address'), (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				$ip, $port,
 				self::NewCheckBoxAttr('binding', DMsg::ALbl('l_binding'), $bindoptions, true, 'listenerBinding'),
-                //self::NewBoolAttr('reusePort', DMsg::ALbl('l_reuseport')),
+                self::NewBoolAttr('reusePort', DMsg::ALbl('l_reuseport')),
 				self::NewBoolAttr('secure', DMsg::ALbl('l_secure'), false, 'listenerSecure'),
 				$this->_attrs['note'],
 		);

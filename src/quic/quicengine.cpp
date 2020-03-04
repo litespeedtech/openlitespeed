@@ -29,6 +29,7 @@
 #include <log4cxx/logger.h>
 #include <lsr/ls_str.h>
 #include <http/ntwkiolink.h>
+#include <http/httplog.h>
 
 #include <quic/quicstream.h>
 #include <quic/udplistener.h>
@@ -53,6 +54,51 @@
 TDLinkQueue<QuicStream> QuicEngine::s_streamQueues[N_STREAM_Qs];
 
 unsigned QuicEngine::s_active_conns = 0;
+
+
+static int s_quic_tight_loop_count = 0;
+static int s_quic_previous_debug_level = 0;
+static int s_quic_default_level = 0;
+static int s_quic_restore_log_level = 0;
+static int s_sent_packets = 0;
+
+void QuicEngine::detectBusyLoop(int to)
+{
+    if (to == 0 && !s_sent_packets)
+    {
+        if (++s_quic_tight_loop_count >= 100)
+        {
+            if (s_quic_tight_loop_count % 100 == 0)
+            {
+                LS_WARN("Detected QUIC busy loop at %d", s_quic_tight_loop_count);
+                if (s_quic_tight_loop_count == 500)
+                {
+                    s_quic_default_level = *log4cxx::Level::getDefaultLevelPtr();
+                    s_quic_previous_debug_level = HttpLog::getDebugLevel();
+                    s_quic_restore_log_level = 1;
+                    HttpLog::setDebugLevel(10);
+                }
+            }
+        }
+    }
+    else
+    {
+        if (s_quic_tight_loop_count >= 100)
+        {
+            LS_WARN("End QUIC busy loop at %d", s_quic_tight_loop_count);
+            if (s_quic_restore_log_level)
+            {
+                HttpLog::setDebugLevel(s_quic_previous_debug_level);
+                log4cxx::Level::setDefaultLevel(s_quic_default_level);
+                s_quic_previous_debug_level = 0;
+                s_quic_default_level = 0;
+                s_quic_restore_log_level = 0;
+            }
+        }
+        s_quic_tight_loop_count = 0;
+        s_sent_packets = 0;
+    }
+}
 
 
 UdpListenerList::~UdpListenerList()
@@ -106,25 +152,6 @@ int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
         return 0;
     else
         return -1;
-}
-
-UdpListener *QuicEngine::startUdpListener(void *pTcpPeer, VHostMap *pMap)
-{
-    UdpListener *pUdp = new UdpListener(this, pTcpPeer, pMap);
-    pUdp->setAddr(pMap->getAddrStr()->c_str());
-    int ret = pUdp->start();
-    if (ret != LS_FAIL)
-    {
-        registerUdpListener(pUdp);
-        LS_DBG_H("enableQuic addr: %s", pMap->getAddrStr()->c_str());
-    }
-    else
-    {
-        delete pUdp;
-        pUdp = NULL;
-        LS_DBG_H("Failed to enable QUIC for: %s", pMap->getAddrStr()->c_str());
-    }
-    return pUdp;
 }
 
 
@@ -665,6 +692,7 @@ int QuicEngine::sendPackets(
                 break;
         }
     }
+    s_sent_packets += spec > specs;
     return spec - specs;
 }
 
@@ -735,9 +763,11 @@ QuicEngine::~QuicEngine()
 
 
 int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
-                             const struct lsquic_engine_settings *settings)
+                             const struct lsquic_engine_settings *settings,
+                             const char *quicLogLevel)
 {
-    LS_DBG_L("QuicEngine::init(), pid: %d.", getpid());
+    LS_INFO("QuicEngine::init(), pid: %d, log level [%s].",
+            getpid(), quicLogLevel);
     if (m_pEngine)
         return LS_OK;
 

@@ -25,10 +25,12 @@
 #include <util/autostr.h>
 #include <quic/pbset.h>
 #include <quic/quicshm.h>   /* For _NOT_USE_SHM_ definition */
+#include <lsr/reuseport.h>
 
 class QuicEngine;
 class VHostMap;
 class GHash;
+class HttpListener;
 struct CidInfo;
 struct packets_in;
 struct read_ctx;
@@ -43,16 +45,14 @@ public:
         : EventReactor(-1)
         , m_pEngine(NULL)
         , m_pTcpPeer(NULL)
-        , m_pVHostMap(NULL)
         , m_id(-1)
         , m_pPacketsIn(NULL)
     {}
 
-    explicit UdpListener(QuicEngine *pEngine, void *pTcpPeer, VHostMap *pMap)
+    explicit UdpListener(QuicEngine *pEngine, HttpListener *pTcpPeer)
         : EventReactor(-1)
         , m_pEngine(pEngine)
         , m_pTcpPeer(pTcpPeer)
-        , m_pVHostMap(pMap)
         , m_id(-1)
         , m_pPacketsIn(NULL)
     {}
@@ -60,7 +60,8 @@ public:
     ~UdpListener();
 
     int setAddr(const char *pAddr);
-
+    int setAddr(GSockAddr *);
+    
     int start();
     
     ssize_t sendPacket(struct iovec *, size_t iovlen, const struct sockaddr *,
@@ -86,10 +87,26 @@ public:
     
     void setId(int id)      {   m_id = id;        }
     int  getId() const      {   return m_id;      }
-    void *getTcpPeer() const { return m_pTcpPeer; }
+    HttpListener *getTcpPeer() const { return m_pTcpPeer; }
     unsigned short getPort() const { return m_addr.getPort(); }
 
     struct ssl_ctx_st *getSslContext() const;
+    
+    int setSockOptions(int fd);
+    
+    
+    void initShmCidMapping();
+    int beginServe(QuicEngine *pEngine);
+    int bind2(int flag);
+    int bind();
+    
+    
+    int getFdCount(int* maxfd);
+    int passFds(int target_fd, const char *addr_str);
+    void addReusePortSocket(int fd, const char *addr_str);
+    int registEvent();
+    int activeReusePort(int seq, const char *addr_str);
+    int bindReusePort(int s_children, const char* getAddrStr);
 
 #ifndef _NOT_USE_SHM_
 public: /* These need to be public because we access them from handlePackets */
@@ -106,10 +123,10 @@ private:
 
 private:
     QuicEngine     *m_pEngine;
-    void *          m_pTcpPeer;
-    VHostMap       *m_pVHostMap;
+    HttpListener   *m_pTcpPeer;
     GSockAddr       m_addr;
     int             m_id;
+    ReusePortFds        m_reusePortFds;
 
     static int      s_rtsigNo;
 

@@ -220,14 +220,15 @@ check_os()
     fi
 }
 
-
 inst_lsphp7()
 {
     check_os
     if [ "x$OSNAME" = "xcentos" ] ; then
         install_lsphp7_centos
-    else
+    elif [ "x$OSNAME" = "xubuntu" ] || [ "x$OSNAME" = "xdebian" ] ; then
         install_lsphp7_debian
+    else
+        echo [Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu.
     fi
 }
 
@@ -434,6 +435,11 @@ if [ "x$IS_LSCPD" != "xyes" ] ; then
         
         #Set default lsphp5
         ln -sf "$LSWS_HOME/fcgi-bin/lsphp5" "$LSWS_HOME/fcgi-bin/lsphp" 
+        
+        "$LSWS_HOME/admin/fcgi-bin/admin_php" -v 2>&1 1>/dev/null
+        if [ $? -ne 0 ] && [ -e /etc/redhat-release ]; then
+            yum install -y libnsl
+        fi
         
         if [ "x$USE_LSPHP7" = "xyes" ] ; then
             inst_lsphp7

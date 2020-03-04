@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 7</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -89,7 +99,7 @@
 <h1>Server Tuning</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>OS Optimization</header><p>
 <a href="#shmDefaultDir">Default SHM Directory</a></p></section>
 <section class="toc-row"><header>Connection Tuning</header><p>
-<a href="#maxConnections">Max Connections</a> | <a href="#maxSSLConnections">Max SSL Connections</a> | <a href="#connTimeout">Connection Timeout (secs)</a> | <a href="#maxKeepAliveReq">Max Keep-Alive Requests</a> | <a href="#smartKeepAlive">Smart Keep-Alive</a> | <a href="#keepAliveTimeout">Keep-Alive Timeout (secs)</a> | <a href="#sndBufSize">Send Buffer Size (bytes)</a> | <a href="#rcvBufSize">Receive Buffer Size (bytes)</a></p></section>
+<a href="#maxConnections">Max Connections</a> | <a href="#maxSSLConnections">Max SSL Connections</a> | <a href="#connTimeout">Connection Timeout (secs)</a> | <a href="#maxKeepAliveReq">Max Keep-Alive Requests</a> | <a href="#keepAliveTimeout">Keep-Alive Timeout (secs)</a> | <a href="#sndBufSize">Send Buffer Size (bytes)</a> | <a href="#rcvBufSize">Receive Buffer Size (bytes)</a></p></section>
 <section class="toc-row"><header>Request/Response Tuning</header><p>
 <a href="#maxReqURLLen">Max Request URL Length (bytes)</a> | <a href="#maxReqHeaderSize">Max Request Header Size (bytes)</a> | <a href="#maxReqBodySize">Max Request Body Size (bytes)</a> | <a href="#maxDynRespHeaderSize">Max Dynamic Response Header Size (bytes)</a> | <a href="#maxDynRespSize">Max Dynamic Response Body Size (bytes)</a></p></section>
 <section class="toc-row"><header>Static File Delivery Optimization</header><p>
@@ -106,7 +116,6 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxSSLConnections"><h3>Max SSL Connections<span class="ls-permlink"><a href="#maxSSLConnections"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the maximum number of concurrent SSL connections the server will accept. Since total concurrent SSL and non-SSL connections cannot exceed the limit specified by <span class="tagl"><a href="#maxConnections">Max Connections</a></span>, the actual number of concurrent SSL connections allowed must be lower than this limit.</p> <h4>Syntax</h4><p>Integer number</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="connTimeout"><h3>Connection Timeout (secs)<span class="ls-permlink"><a href="#connTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the maximum connection idle time allowed during processing one request. The connection will be closed if it has been idle, i.e. no I/O activity, for this period of time.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Set this as low as you can to help recover dead connections during a potential DoS attack.</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#keepAliveTimeout">Keep-Alive Timeout (secs)</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxKeepAliveReq"><h3>Max Keep-Alive Requests<span class="ls-permlink"><a href="#maxKeepAliveReq"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the maximum number of requests that can be served through a keep-alive (persistent) session. The connection will be closed once this limit is reached. You can set this limit for each virtual host as well.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> Set this to a reasonably high value. A value of "1" or "0" will disable keep-alive.</p> <h4>See Also</h4><p class="ls-text-small">Virtual Host <span class="tagl"><a href="VirtualHosts_Help.html#vhMaxKeepAliveReq">Max Keep-Alive Requests</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="smartKeepAlive"><h3>Smart Keep-Alive<span class="ls-permlink"><a href="#smartKeepAlive"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to turn on Smart Keep-Alive. This option is effective only if <span class="tagl"><a href="#maxKeepAliveReq">Max Keep-Alive Requests</a></span> is greater than 1. If enabled, you can also enable/disable it at the virtual host level. Smart keep-alive will only establish keep-alive connections for requests of JavaScript, CSS Style Sheet, and image files. For html pages, the connection will not be kept alive. This will help serve more users more efficiently. Normally a web page contains multiple images and scripts that will be cached by the browser after the initial request. It is more efficient to send those non-html static files through a single keep-alive connection and have the text/html file sent through another non-keep-alive connection. This method will reduce idle connections and in turn increase the capacity to handle more concurrent requests and users.</p> <h4>Syntax</h4><p>Select from radio box</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> Enable this for high-load web sites.</p> <h4>See Also</h4><p class="ls-text-small">Virtual Host <span class="tagl"><a href="VirtualHosts_Help.html#vhSmartKeepAlive">Smart Keep-Alive</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="keepAliveTimeout"><h3>Keep-Alive Timeout (secs)<span class="ls-permlink"><a href="#keepAliveTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the maximum idle time between requests from a keep-alive connection. If no new request is received during this period of time, the connection will be closed. This setting only applies to HTTP/1.1 connections. HTTP/2 connections have long keep-alive timeouts by design and are not affected by this setting.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span><span title="Performance" class="ls-icon-performance"></span> We recommend that you set this value just long enough to wait for subsequent requests from  a client when there are more assets referenced by a single page that need to be loaded. Do not set this too long hoping that  the next page will be served over the keep-alive connection. Keeping many idle keep-alive connections is a waste of server resources and could be taken advantage of by (D)DoS attacks. <span class="val">2-5</span> seconds is a  reasonable range for most applications. LiteSpeed is highly efficient in a non-keep-alive environment.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sndBufSize"><h3>Send Buffer Size (bytes)<span class="ls-permlink"><a href="#sndBufSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The sending buffer size of each TCP socket. <span class="val">512K</span> is the maximum allowed buffer size.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> It is recommended to leave this value as "Not Set" or set to 0 to use the operating system's default buffer size.<br/> <span title="Performance" class="ls-icon-performance"></span> If your web site serves large static files, increase the send buffer  size to improve performance.<br/> <span title="Performance" class="ls-icon-performance"></span> Setting this to a lower value will reduce throughput and memory usage per socket allowing the server to have more concurrent sockets when memory is a bottleneck.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="rcvBufSize"><h3>Receive Buffer Size (bytes)<span class="ls-permlink"><a href="#rcvBufSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The receiving buffer size of each TCP socket. <span class="val">512K</span> is the maximum allowed buffer size.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> It is recommended to leave this value as "Not Set" or set to 0 to use the operating system's default buffer size.<br/> <span title="Performance" class="ls-icon-performance"></span> A large receive buffer will increase performance when processing  incoming requests with large payloads, i.e. file uploads.<br/> <span title="Performance" class="ls-icon-performance"></span> Setting this to a lower value will reduce throughput and memory usage per socket allowing the server to have more concurrent sockets when memory is a bottleneck.</p> </article> </div>
@@ -152,7 +161,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="quicHandshakeTimeout"><h3>Handshake Timeout<span class="ls-permlink"><a href="#quicHandshakeTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The time in seconds a new QUIC connection is given to complete its handshake, after which the connection is aborted. Default value is <span class="val">10</span>.</p> <h4>Syntax</h4><p>Integer number between 1 and 15</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="quicIdleTimeout"><h3>Idle Timeout<span class="ls-permlink"><a href="#quicIdleTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The time in seconds after which an idle QUIC connection will be closed. Default value is <span class="val">30</span>.</p> <h4>Syntax</h4><p>Integer number between 10 and 30</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

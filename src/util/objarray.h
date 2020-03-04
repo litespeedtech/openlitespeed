@@ -37,6 +37,8 @@ public:
 
     int     getCapacity() const     {   return sizemax;     }
     int     getSize() const         {   return sizenow;     }
+    int     size() const            {   return sizenow;     }
+    
     int     getObjSize() const      {   return objsize;     }
     void   *getArray()              {   return parray;      }
     const void *getArray() const    {   return parray;      }
@@ -126,6 +128,17 @@ public:
     const T *begin() const     {   return  getArray();    }
     const T *end() const       {   return (const T *)getArray() + getSize();   }
 
+    void deleteObj(T *iter)   {   iter->~T();                 }
+    
+    void releaseObjects()
+    {
+        T *b = begin();
+        T *e = end();
+        for (; b < e; ++b)
+            deleteObj(b);
+        clear();
+    }
+    
     void copy(const TObjArray &other)
     {
         setCapacity(other.getCapacity());
@@ -136,6 +149,9 @@ public:
     int guarantee(int numObj)
     {   return ObjArray::guarantee(numObj);   }
 
+
+    T &operator[](size_t off)               {   return getArray()[off];   }
+    const T &operator[](size_t off) const   {   return getArray()[off];   }
 };
 
 

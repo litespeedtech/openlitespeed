@@ -25,16 +25,19 @@
 #include <log4cxx/logsession.h>
 
 #include <sys/types.h>
+#include <lsr/reuseport.h>
+#include <socket/gsockaddr.h>
+
 
 class HttpVHost;
 class SslContext;
 class VHostMap;
 class ClientInfo;
-class GSockAddr;
 struct ConnInfo;
 class SubIpMap;
 class HttpServerImpl;
 class AutoBuf;
+class UdpListener;
 struct ssl_st;
 
 class HttpListener : public EventReactor, public LogSession
@@ -46,15 +49,20 @@ class HttpListener : public EventReactor, public LogSession
     AutoStr             m_sName;
     VHostMap           *m_pMapVHost;
     SubIpMap           *m_pSubIpMap;
-
+    UdpListener        *m_pUdpListener;
+    unsigned long long  m_iBinding;
     char                m_iAdmin;
     char                m_isSSL;
+    int                 m_flag;
     char                m_iSendZconf;
-    unsigned int        m_iBinding;
-
-    ModuleConfig m_moduleConfig;
-    IolinkSessionHooks  m_iolinkSessionHooks;
     AutoStr            *m_pAdcPortList;
+
+    ModuleConfig        m_moduleConfig;
+    IolinkSessionHooks  m_iolinkSessionHooks;
+    
+    ReusePortFds        m_reusePortFds;
+    
+    GSockAddr           m_sockAddr;
 
     HttpListener(const HttpListener &rhs);
     void operator=(const HttpListener &rhs);
@@ -63,7 +71,7 @@ class HttpListener : public EventReactor, public LogSession
     int batchAddConn(struct conn_data *pBegin,
                      struct conn_data *pEnd, int *iCount);
     int checkAccess(struct conn_data *pData);
-    int setSockAttr(int fd, GSockAddr &addr);
+    int setSockAttr(int fd);
     VHostMap *getSubMap(int fd);
 
 
@@ -93,8 +101,11 @@ public:
     void setAdmin(char admin)         {   m_iAdmin = admin;   }
 
 
-    unsigned int getBinding() const     {   return m_iBinding;  }
-    void setBinding(unsigned int b)   {   m_iBinding = b;     }
+    void finializeSslCtx();
+    int beginServe();
+    
+    unsigned long long getBinding() const     {   return m_iBinding;  }
+    void setBinding(unsigned long long b)   {   m_iBinding = b;     }
 
     int assign(int fd, struct sockaddr *pAddr);
 
@@ -141,6 +152,26 @@ public:
     int setConnInfo(ConnInfo *pInfo, struct conn_data *pCur);
 
     int enableQuic();
+
+    bool isSameAddr(const struct sockaddr* addr);
+    void addReusePortSocket(int fd);
+    int  activeReusePort(int seq);
+    int closeUnActiveReusePort();
+    
+    int getFdCount(int* maxfd);
+    int passFds(int arg1);
+    int passFds2(int target_fd);
+    bool isReusePort() const    {   return m_reusePortFds.size() > 0;    }
+
+    UdpListener *getQuicListener() { return m_pUdpListener;     }
+    
+    void releaseReusePortSocket();
+    void enableReusePort();
+    void adjustFds(int iNumChildren);
+    void addUdpSocket(int fd);
+    int bindUdpPort();
+    int startReusePortSocket(int count);
+
 };
 
 #endif

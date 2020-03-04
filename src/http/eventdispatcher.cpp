@@ -228,42 +228,6 @@ static inline void processTimerNew()
 }
 
 
-static int s_quic_tight_loop_count = 0;
-static int s_quic_previous_debug_level = 0;
-static int s_quic_default_level = 0;
-static inline void detectQuicBusyLoop(int to)
-{
-    if (to == 0)
-    {
-        if (++s_quic_tight_loop_count >= 100)
-        {
-            if (s_quic_tight_loop_count % 100 == 0)
-            {
-                LS_WARN("Detected QUIC busy loop at %d", s_quic_tight_loop_count);
-                if (s_quic_tight_loop_count == 500)
-                {
-                    s_quic_default_level = *log4cxx::Level::getDefaultLevelPtr();
-                    s_quic_previous_debug_level = HttpLog::getDebugLevel();
-                    HttpLog::setDebugLevel(10);
-                }
-            }
-        }
-    }
-    else
-    {
-        if (s_quic_tight_loop_count >= 100)
-        {
-            LS_WARN("End QUIC busy loop at %d", s_quic_tight_loop_count);
-            HttpLog::setDebugLevel(s_quic_previous_debug_level);
-            log4cxx::Level::setDefaultLevel(s_quic_default_level);
-            s_quic_previous_debug_level = 0;
-            s_quic_default_level = 0;
-        }
-        s_quic_tight_loop_count = 0;
-    }
-}
-
-
 #define MLTPLX_TIMEOUT 100
 int EventDispatcher::run()
 {
@@ -283,7 +247,7 @@ int EventDispatcher::run()
             {
                 to = nextQuicEventMilliSec;
             }
-            detectQuicBusyLoop(to);
+            QuicEngine::detectBusyLoop(to);
         }
         ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
                   MLTPLX_TIMEOUT);

@@ -215,6 +215,13 @@ private:
     int appendOutput(const char *data, int size);
     int appendOutput(IOVec *pIov, int size);
     int bufferOutput(const char *data, int size);
+    int guaranteeOutput(const char *data, int size)
+    {
+        int ret = appendOutput(data, size);
+        if (ret > 0)
+            wantFlush();
+        return ret;
+    }
 
     int appendSendfileOutput(int fd, off_t off, int size);
 

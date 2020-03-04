@@ -451,6 +451,12 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                         config.getName());
             return LS_FAIL;
         }
+        
+        
+        LS_INFO("[LocalWorker::workerExec] VHost:%s suExec check "
+                "uid %d gid %d setuidmode %d.",
+                pVHost->getName(), pVHost->getUid(), pVHost->getGid(),
+                pVHost->getRootContext().getSetUidMode());
     }
     //if (( uid == HttpGlobals::s_uid )&&
     //    ( gid == HttpGlobals::s_gid ))
@@ -1035,7 +1041,9 @@ TRY_AGAIN:
     }
 
     removeOldDetachedSocket();
-    ret = CoreSocket::listen(service_addr, config.getBackLog(), &fd, -1, -1);
+    
+    ret = CoreSocket::listen(service_addr, config.getBackLog(), &fd,
+                             LS_SOCK_NODELAY, -1, -1);
     if (fd == -1)
     {
         LS_ERROR("[%s]: Failed to listen socket [%s]: %s",

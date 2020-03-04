@@ -835,3 +835,8 @@ int VHostMap::zconfAppendDomainMap(AutoBuf *pBuf, char isSsl)
 
     return 1;
 }
+
+void SubIpMap::setDefaultSslCtx(SslContext *pContext)
+{
+    m_pSslContext = pContext;
+}

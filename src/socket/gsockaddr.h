@@ -132,6 +132,8 @@ public:
 
     static int compareAddr(const struct sockaddr *pAddr1,
                            const struct sockaddr *pAddr2);
+    static int compare(const struct sockaddr *pAddr1,
+                       const struct sockaddr *pAddr2);
 };
 
 #endif

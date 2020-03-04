@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 7</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -88,9 +98,10 @@
 <article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
 <h1>Installation/Uninstallation</h1>
 
-<h3>Minimum system requirements</h3>
+<h2>Minimum system requirements</h2>
 <ul>
-  <li><strong>Operating System:</strong>
+  <li>
+    <strong>Operating System:</strong>
     <ul>
       <li>Linux(i386): kernel 2.4 and up, glibc-2.2 and up</li>
       <li>CentOS: 5 and up</li>
@@ -100,14 +111,16 @@
       <li>MacOSX: 10.3 and up</li>
     </ul>
   </li>
-  <li><strong>CPU:</strong>
+  <li>
+    <strong>CPU:</strong>
     <ul>
       <li>Intel: 80486 and up</li>
       <li>PowerPC: PowerPC G4</li>
     </ul>
   </li>
   <li><strong>Memory:</strong> 32MB and up</li>
-  <li><strong>Disk:</strong>
+  <li>
+    <strong>Disk:</strong>
     <ul>
       <li>Installation: 200MB</li>
       <li>Runtime: 300MB and up, swapping space depends on usage.</li>
@@ -115,106 +128,142 @@
   </li>
 </ul>
 
-<h3>Installation</h3>
+<h2>Installation</h2>
 <p>
-  Installation must be performed in a command line terminal. For testing purposes, LiteSpeed Web Server can be
-  installed into a home directory by a non-privileged user. For production use, it should be installed into a system directory.
+  Installation must be performed in a command line terminal. For testing
+  purposes, LiteSpeed Web Server can be installed into a home directory by a
+  non-privileged user. For production use, it should be installed into a system
+  directory.
 </p>
 
 <p>
-  In Mac OS X, the root user is disabled by default. It can be enabled using a series of actions detailed on the Apple
-  website. You can also use the sudo command to install LSWS into a system directory without enabling the root user, but
-  system folders will still only be manipulable by the root user. This means that every time you want to control LSWS from
-  the command line terminal (like when you want to start or stop LSWS), you will have to use the sudo command.
+  In Mac OS X, the root user is disabled by default. It can be enabled using a
+  series of actions detailed on the Apple website. You can also use the sudo
+  command to install LSWS into a system directory without enabling the root
+  user, but system folders will still only be manipulable by the root user.
+  This means that every time you want to control LSWS from the command line
+  terminal (like when you want to start or stop LSWS), you will have to use the
+  sudo command.
 </p>
 
-<h4>Installation Steps:</h4>
+<h3>Installation Steps:</h3>
 <p>
-  Visit the <a href="https://openlitespeed.org/kb/" target="_blank" rel="noopener">OpenLiteSpeed Knowledge Base</a>
+  Visit the
+  <a href="https://openlitespeed.org/kb/" target="_blank" rel="noopener">
+    OpenLiteSpeed Knowledge Base
+  </a>
   for a list of installation methods.
 </p>
 
-<h3>Getting Started</h3>
+<h2>Getting Started</h2>
 <ol>
   <li>
-    <p>For detailed information on controlling the server processes, please see the Administration Guide.</p>
     <p>
-      To start the server, simply run [your_install_dir]/bin/lswsctrl start. (To stop it, run [your_install_dir]/bin/lswsctrl stop.)
+      For detailed information on controlling the server processes, please see
+      the Administration Guide.
+    </p>
+    <p>
+      To start the server, simply run [your_install_dir]/bin/lswsctrl start.
+      (To stop it, run [your_install_dir]/bin/lswsctrl stop.)
     </p>
   </li>
   <li>
     <p>A sample site should be running on the server.</p>
     <p>
-      To access your site, point your browser to http://[address]:8088/, [address] being the IP address or domain name of
-      your web server machine. Use &quot;localhost&quot; if the server is on the machine you are using. "8088" is the default
-      port. If you chose another port for LiteSpeed during installation, use the port you designated.
+      To access your site, point your browser to http://[address]:8088/,
+      [address] being the IP address or domain name of your web server machine.
+      Use &quot;localhost&quot; if the server is on the machine you are using.
+      "8088" is the default port. If you chose another port for LiteSpeed
+      during installation, use the port you designated.
     </p>
     <p>
-      A congratulations page linked to other testing pages should load into the browser when pointed to the above address. If
-      not, try testing the WebAdmin interface.
+      A congratulations page linked to other testing pages should load into the
+      browser when pointed to the above address. If not, try testing the
+      WebAdmin Console interface.
     </p>
   </li>
   <li>
     <p>The default port for the WebAdmin console is 7080.</p>
     <p>
-      Plug http://[address]:7080/, into your browser to go to the WebAdmin interface. (If you changed the port for WebAdmin
-      during installation, use that port instead.)
+      Plug http://[address]:7080/, into your browser to go to the WebAdmin
+      interface. (If you changed the port for WebAdmin during installation,
+      use that port instead.)
     </p>
     <p>
-      Remember that for [address] you can use &quot;localhost&quot; if you're currently using the machine the server is on.
+      Remember that for [address] you can use &quot;localhost&quot; if you're
+      currently using the machine the server is on.
     </p>
     <p>
-      The WebAdmin welcome page should load. Click the &quot;Log on&quot; link and use the administrator's username
-      and password specified during installation to log on.
+      The WebAdmin welcome page should load. Click the &quot;Log on&quot; link
+      and use the administrator's username and password specified during
+      installation to log on.
     </p>
     <p>
-      For detailed information regarding configuration, please refer to our Configuration Guide, or click the &quot;Help&quot;
-      link at the top of each page.
+      For detailed information regarding configuration, please refer to our
+      Configuration Guide, or click the &quot;Help&quot; link at the top of
+      each page.
     </p>
   </li>
   <li>
-    <p>If your server uses firewall, please make sure that localhost is trusted.</p>
-    <p>For instance, Linux with IPTables should include a rule ALLOW INPUT from LO.</p>
+    <p>
+      If your server uses firewall, please make sure that localhost is trusted.
+    </p>
+    <p>
+      For instance, Linux with IPTables should include a rule ALLOW INPUT from
+      LO.
+    </p>
   </li>
   <li>
     <p>
-      If your web site and the WebAdmin interface are inaccessible, please take a look at the error log
-      [your_install_dir]/logs/error.log.
+      If your web site and the WebAdmin Console are inaccessible, please take
+      a look at the error log [your_install_dir]/logs/error.log.
     </p>
     <p>
-      If there is a TCP port conflict with other server applications, the web server should be reinstalled with an available port.
-      The following command can be used to find an available port:
+      If there is a TCP port conflict with other server applications, the web
+      server should be reinstalled with an available port. The following
+      command can be used to find an available port:
       <span class="cmd">netstat -an | grep XXXX </span>
-      XXXX is a port number. If the port is available, the command will produce no output.
+      XXXX is a port number. If the port is available, the command will produce
+      no output.
     </p>
     <p>
-      If the swapping directory is not writable, you can either grant writing permission for the swapping directory to the user
-      whom the web server is running as, or change the swapping directory's configurations manually. The swapping directory
-      is configured in the server's XML configuration file: [your_install_dir]/conf/httpd_config.xml. Search the XML file for
-      swappingDir. The default location for the swapping directory is /tmp/lshttpd/swap.
+      If the swapping directory is not writable, you can either grant writing
+      permission for the swapping directory to the user whom the web server is
+      running as, or change the swapping directory's configurations manually.
+      The swapping directory is configured in the server's XML configuration
+      file: [your_install_dir]/conf/httpd_config.xml. Search the XML file for
+      swappingDir. The default location for the swapping directory is
+      /tmp/lshttpd/swap.
     </p>
-    <p>If you still have problems with installation, please check out our wiki or post your problem on our support forum.</p>
+    <p>
+      If you still have problems with installation, please check out our wiki
+      or post your problem on our support forum.
+    </p>
   </li>
 </ol>
 
-<h3>Notes</h3>
+<h2>Notes</h2>
 <ul>
   <li>
-    OpenLiteSpeed supports both native LiteSpeed XML configuration files and plain text configuration files (for those used to
-    editing Apache's httpd.conf). Run [your_install_dir]/conf/switch_config.sh to switch between these formats.
+    OpenLiteSpeed supports both native LiteSpeed XML configuration files and
+    plain text configuration files (for those used to editing Apache's
+    httpd.conf). Run [your_install_dir]/conf/switch_config.sh to switch between
+    these formats.
   </li>
   <li>
-    On FreeBSD, Mac OS X, Ubuntu, and Debian, the shipped PHP (for CentOS) will not run. You will need to build a new
-    PHP for OpenLiteSpeed in order to run PHP applications with OpenLiteSpeed.
+    On FreeBSD, Mac OS X, Ubuntu, and Debian, the shipped PHP (for CentOS) will
+    not run. You will need to build a new PHP for OpenLiteSpeed in order to run
+    PHP applications with OpenLiteSpeed.
   </li>
 </ul>
 
-<h1>Uninstallation Steps</h1>
+<h2>Uninstallation Steps</h2>
 <ol>
-  <li>Stop OpenLiteSpeed if it is running: [your_install_dir]/bin/lswsctrl stop</li>
+  <li>
+    Stop OpenLiteSpeed if it is running: [your_install_dir]/bin/lswsctrl stop
+  </li>
   <li>Remove the install directory: rm -rf [your_install_dir]</li>
-</ol>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</ol></article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

@@ -136,6 +136,9 @@
 #include <http/httpsession.h>
 #endif
 
+
+#define USE_REUSEPORT_BY_DEFAULT    1
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include <sys/prctl.h>
 #endif
@@ -286,16 +289,17 @@ private:
 
     int start();
     int shutdown();
+    void adjustListeners(int iNumChildren);
     int gracefulShutdown();
     int generateStatusReport();
     void setRTReportName(int proc);
     int generateRTReport();
     int generateProcessReport(int fd);
-    HttpListener *newTcpListener(const char *pName, const char *pAddr);
+    HttpListener *newTcpListener(const char *pName, const char *pAddr, int reuseport);
 
-    HttpListener *addListener(const char *pName, const char *pAddr);
+    HttpListener *addListener(const char *pName, const char *pAddr, int reuseport);
     HttpListener *addListener(const char *pName)
-    {   return addListener(pName, pName);     }
+    {   return addListener(pName, pName, 1);     }
 
     int removeListener(const char *pName);
 
@@ -369,6 +373,7 @@ private:
     int initOcspCachePath();
     int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
 
+    int enableQuicListener(HttpListener *pListener);
     HttpListener *configListener(const XmlNode *pNode, int isAdmin);
     int configListeners(const XmlNode *pRoot, int isAdmin);
 
@@ -429,7 +434,8 @@ private:
 
     int initQuic(const XmlNode *pNode);
     void initQuicEngine(const char *pShmDir,
-                                const struct lsquic_engine_settings *settings);
+                        const struct lsquic_engine_settings *settings,
+                        const char *quicLogLevel);
 
 public:
     void hideServerSignature(int sv);
@@ -444,6 +450,8 @@ public:
 
 #include <http/userdir.h>
 #include <http/reqparserparam.h>
+#include <http/httplistener.h>
+#include <http/httplistener.h>
 
 int HttpServerImpl::authAdminReq(char *pAuth)
 {
@@ -539,6 +547,16 @@ int HttpServerImpl::shutdown()
     LS_NOTICE("[Child: %d] Shutting down ...!", m_pid);
     HttpSignals::setSigStop();
     return 0;
+}
+
+void HttpServerImpl::adjustListeners(int iNumChildren)
+{
+    int n = m_listeners.size();
+    for (int i = 0; i < n; ++i)
+    {
+        HttpListener *p = m_listeners[i];
+        p->adjustFds(iNumChildren);
+    }
 }
 
 
@@ -684,20 +702,22 @@ int HttpServerImpl::generateRTReport()
 
 
 HttpListener *HttpServerImpl::newTcpListener(const char *pName,
-        const char  *pAddr)
+        const char  *pAddr, int reuseport)
 {
     HttpListener *pListener = new HttpListener(pName, pAddr);
     if (pListener == NULL)
         return pListener;
     int ret;
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 8; ++i)
     {
+        if (reuseport)
+            pListener->enableReusePort();
         ret = pListener->start();
         if (!ret)
             return pListener;
         if (errno == EACCES)
             break;
-        ls_sleep(100);
+        ls_sleep(500);
     }
     LS_ERROR("HttpListener::start(): Can't listen at address %s: %s!", pName,
              ::strerror(ret));
@@ -708,7 +728,7 @@ HttpListener *HttpServerImpl::newTcpListener(const char *pName,
 
 
 HttpListener *HttpServerImpl::addListener(const char *pName,
-        const char *pAddr)
+        const char *pAddr, int reuseport)
 {
     HttpListener *pListener = NULL;
     if (!pName)
@@ -722,7 +742,7 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
     pListener = m_oldListeners.get(pName, pAddr);
     if (!pListener)
     {
-        pListener = newTcpListener(pName, pAddr);
+        pListener = newTcpListener(pName, pAddr, reuseport);
         if (pListener)
             LS_NOTICE("Created new Listener [%s].", pName);
         else
@@ -1360,26 +1380,50 @@ int HttpServerImpl::reinitMultiplexer()
     {
         if (m_dispatcher.reinit())
             return LS_FAIL;
-        MultiplexerFactory::getMultiplexer()->add(
-            &StdErrLogger::getInstance(), POLLIN | POLLHUP | POLLERR);
+//         MultiplexerFactory::getMultiplexer()->add(
+//             &StdErrLogger::getInstance(), POLLIN | POLLHUP | POLLERR);
     }
     int n = m_listeners.size();
     iProcNo = HttpServerConfig::getInstance().getProcNo();
     for (int i = 0; i < n; ++i)
     {
-        if (!(m_listeners[i]->getBinding() & (1L << (iProcNo - 1))))
-            m_listeners[i]->stop();
-        else if (MultiplexerFactory::s_iMultiplexerType)
-            MultiplexerFactory::getMultiplexer()->add(m_listeners[i],
-                    POLLIN | POLLHUP | POLLERR);
+        HttpListener *p = m_listeners[i];
+        if (p->isReusePort())
         {
-            UdpListener *pUdp = m_listeners[i]->getVHostMap()->getQuicListener();
-            if (pUdp && pUdp->getfd() != -1)
+            if (p->activeReusePort(iProcNo) == -1)
             {
-                MultiplexerFactory::getMultiplexer()->add(pUdp,
-                    POLLIN | POLLHUP | POLLERR);
+                ;//FIXME
+            }
+            else 
+            {
+                if (p->getQuicListener())
+                    p->getQuicListener()->activeReusePort(
+                        iProcNo, p->getAddrStr());
             }
         }
+        else if (!(m_listeners[i]->getBinding() & (1L << (iProcNo - 1))))
+        {
+            p->stop();
+            if (p->getQuicListener())
+            {
+                MultiplexerFactory::getMultiplexer()->remove(p->getQuicListener());
+                close(p->getQuicListener()->getfd());
+                p->getQuicListener()->setfd(-1);
+            }
+            m_listeners.remove(p);
+            --i;
+            --n;
+            continue;
+        }
+        
+        if (p->getQuicListener() && p->getQuicListener()->getfd() != -1
+            && HttpServer::getInstance().getQuicEngine())
+        {
+            p->getQuicListener()->beginServe(HttpServer::getInstance().getQuicEngine());
+        }
+        //p->activeVHosts();
+        p->beginServe();
+      
     }
     ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
@@ -1627,6 +1671,28 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 }
 
 
+int HttpServerImpl::enableQuicListener(HttpListener *pListener)
+{
+    QuicEngine *pQuic = HttpServer::getInstance().getQuicEngine();
+    if (pQuic && pListener->getQuicListener() == NULL)
+    {
+        pListener->bindUdpPort();
+        UdpListener *pUdp = pListener->getQuicListener();
+        VHostMap *pMap = pListener->getVHostMap();
+        if (pUdp)
+        {
+            int s;
+            char alt_svc[512];
+            pMap->setQuicListener(pUdp);
+            s = pQuic->getAltSvcVerStr(pUdp->getPort(), alt_svc, sizeof(alt_svc));
+            if (0 == s)
+                pMap->setAltSvc(alt_svc);
+            else
+                LS_ERROR("cannot generate Alt-Svc string");
+        }
+    }
+    return 0;
+}
 
 
 HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
@@ -1667,15 +1733,18 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
 
         LS_DBG_L("Config listener [%s] [%s]", pName, pAddr);
 
+        
+        int reuseport = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                                        "reusePort", 0, 1, 1);
+        
         HttpListener *pListener = NULL;
-        pListener = addListener(pName, pAddr);
+        pListener = addListener(pName, pAddr, reuseport);
         if (pListener == NULL)
         {
             LS_ERROR(&currentCtx, "failed to start listener on address %s!", pAddr);
             break;
         }
-
-
+        
         if (!isAdmin)
         {
             const XmlNode *p0 = pNode->getChild("modulelist", 1);
@@ -1712,34 +1781,19 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
 
             //Allow quic
             int iEnableQuic = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableQuic", 0, 1, 1);
-            if (iEnableQuic)
+            QuicEngine *pQuic = HttpServer::getInstance().getQuicEngine();
+            if (iEnableQuic && pQuic)
             {
-                QuicEngine *pQuic = HttpServer::getInstance().getQuicEngine();
-                VHostMap *pMap = pListener->getVHostMap();
-                if (pQuic && pMap->getQuicListener() == NULL)
-                {
-                    UdpListener *pUdp;
-                    pUdp = pQuic->startUdpListener(NULL /* XXX */, pMap);
-                    if (pUdp)
-                    {
-                        int s;
-                        char alt_svc[512];
-                        pMap->setQuicListener(pUdp);
-                        s = pQuic->getAltSvcVerStr(pUdp->getPort(), alt_svc, sizeof(alt_svc));
-                        if (0 == s)
-                            pMap->setAltSvc(alt_svc);
-                        else
-                            LS_ERROR("cannot generate Alt-Svc string");
-                    }
-                }
+                if (reuseport)
+                    pListener->enableReusePort();
+                enableQuicListener(pListener);
             }
-
         }
 
         iNumChildren = HttpServerConfig::getInstance().getChildren();
         if (iNumChildren > 1)
         {
-            int binding = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "binding",
+            unsigned long long binding = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "binding",
                           LONG_MIN, LONG_MAX, -1);
 
             if ((binding & ((1 << iNumChildren) - 1)) == 0)
@@ -1849,7 +1903,7 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
     pVHostAdmin->configSecurity(pNode);
     pVHostAdmin->initErrorLog(pNode, 0);
     pVHostAdmin->initAccessLog(pNode, 0);
-
+    pVHostAdmin->setFeature(VH_QUIC_LISTENER, 1);
     //test if file $SERVER_ROOT/conf/disablewebconsole exist
     //skip admin listener configuration
     if (!enableWebConsole())
@@ -3636,13 +3690,14 @@ int HttpServerImpl::configChroot(const XmlNode *pRoot)
 
 
 void HttpServerImpl::initQuicEngine(const char *pShmDir,
-                                const struct lsquic_engine_settings *settings)
+                                const struct lsquic_engine_settings *settings,
+                                const char *quicLogLevel)
 {
     if (getQuicEngine() == NULL)
     {
         QuicEngine *pEngine = new QuicEngine();
         if (pEngine->init(MultiplexerFactory::getMultiplexer(), pShmDir,
-                                                        settings) != LS_FAIL)
+                            settings, quicLogLevel) != LS_FAIL)
             addQuicEngine(pEngine);
         else
             delete pEngine;
@@ -3655,6 +3710,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     int enableQuic;
     const char *pShmDir;
     const char *pVersions;
+    const char *pLogLevel;
     struct lsquic_engine_settings settings;
     char err_buf[100];
 
@@ -3671,7 +3727,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     assert(pNode);
     pShmDir = pNode->getChildValue("quicShmDir");
     if (!pShmDir)
-        pShmDir = "/dev/shm";
+        pShmDir = "/dev/shm/ols";
 
     lsquic_engine_init_settings(&settings, LSENG_SERVER);
 
@@ -3724,13 +3780,17 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     settings.es_proc_time_thresh = 100000;
     settings.es_pace_packets = 1;
 
+    pLogLevel = pNode->getChildValue("quicLogLevel");
+    if (!pLogLevel || strlen(pLogLevel) < 4)
+        pLogLevel = "warn";
+    
     if (0 == lsquic_engine_check_settings(&settings, LSENG_SERVER,
                                           err_buf, sizeof(err_buf)))
-        initQuicEngine(pShmDir, &settings);
+        initQuicEngine(pShmDir, &settings, pLogLevel);
     else
     {
         LS_NOTICE("[QUIC] %s, using defaults", err_buf);
-        initQuicEngine(pShmDir, NULL);
+        initQuicEngine(pShmDir, NULL, pLogLevel);
     }
 
     return 0;
@@ -4790,12 +4850,6 @@ HttpServer::~HttpServer()
 }
 
 
-HttpListener *HttpServer::addListener(const char *pName, const char *pAddr)
-{
-    return m_impl->addListener(pName, pAddr);
-}
-
-
 int HttpServer::removeListener(const char *pName)
 {
     return m_impl->removeListener(pName);
@@ -4961,6 +5015,19 @@ AccessLog *HttpServer::getAccessLog() const
     return HttpLog::getAccessLog();
 }
 
+void HttpServer::startServing()
+{
+    pid_t pid = getpid();
+    LsShmPool::setPid(pid);
+    QuicEngine::setpid(pid);
+
+    reinitMultiplexer();
+    
+//     ExtAppRegistry::markDaemonAppsRemote();
+//     EvtcbQue::getInstance().initNotifier();
+
+}
+
 
 void HttpServer::enableAioLogging()
 {
@@ -5062,6 +5129,10 @@ int HttpServer::updateVHost(const char *pName, HttpVHost *pVHost)
     return m_impl->updateVHost(pName, pVHost);
 }
 
+void HttpServer::adjustListeners(int iNumChildren)
+{
+    return m_impl->adjustListeners(iNumChildren);
+}
 
 void HttpServer::passListeners()
 {

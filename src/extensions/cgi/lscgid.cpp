@@ -716,8 +716,8 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
         if ((FDPass::readFd(fd, &nothing, 1, &cgi_req->m_fdReceived) == -1) ||
             (cgi_req->m_fdReceived == -1))
         {
-            fprintf(stderr, "lscgid: read_fd() failed: %s\n",
-                    strerror(errno));
+            fprintf(stderr, "lscgid: read_fd() fd %d failed: %s\n",
+                    fd, strerror(errno));
             return 500;
         }
         if (cgi_req->m_fdReceived != STDIN_FILENO)

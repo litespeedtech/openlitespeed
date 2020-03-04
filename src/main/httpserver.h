@@ -70,7 +70,6 @@ public:
 
     int start();
     int shutdown();
-    HttpListener *addListener(const char *pName, const char *pAddr);
     int removeListener(const char *pName);
     HttpListener *getListener(const char *pName) const ;
 
@@ -113,6 +112,7 @@ public:
     void setBlackBoard(char *pBuf);
     void passListeners();
     void recoverListeners();
+    void adjustListeners(int iNumChildren);
 
     int  restartMark(int cmd);
     int  initMultiplexer(const char *pType);
@@ -133,6 +133,8 @@ public:
     virtual int setErrorLogFile(const char *pFileName);
     virtual void setErrorLogRollingSize(off_t size, int keep_days);
     virtual AccessLog *getAccessLog() const;
+    
+    void startServing();
     void enableAioLogging();
     const StringList *getIndexFileList() const;
     int  test_main(const char *pArgv0);

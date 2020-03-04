@@ -433,6 +433,10 @@ plainconfKeywords plainconf::sKeywords[] =
     {"quicidletimeout", NULL},
     {"quicpush", NULL},
     {"quiccongestionctrl", NULL},
+    {"quicloglevel", NULL},
+
+    {"reuseport",      NULL},
+
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

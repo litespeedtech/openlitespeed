@@ -721,7 +721,7 @@ static void uriToTag(const lsi_session_t *session,
     }
     else
     {
-        g_api->log(session, LSI_LOG_ERROR, "uriToTag() Url length error.");
+        g_api->log(session, LSI_LOG_ERROR, "uriToTag() uri length error.");
         return ;
     }
 
@@ -2556,7 +2556,7 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (!pConfig)
     {
         g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s]checkAssignHandler error 2.\n", ModuleNameStr);
+                   "[%s]checkAssignHandler config error.\n", ModuleNameStr);
         return bypassUrimapHook(rec, myData);
     }
 
@@ -2564,7 +2564,7 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (uriLen <= 0)
     {
         g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s]checkAssignHandler error 1.\n", ModuleNameStr);
+                   "[%s]checkAssignHandler get uri length error.\n", ModuleNameStr);
         return bypassUrimapHook(rec, myData);
     }
 

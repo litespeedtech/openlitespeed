@@ -412,6 +412,9 @@ int HttpReq::removeSpace(const char **pCur, const char *pBEnd)
 static int processUserAgent(const char *pUserAgent, int len)
 {
     int iType = UA_UNKNOWN;
+    if (len <= 0 || !pUserAgent)
+        return iType;
+    
     char achUA[256];
     switch(*pUserAgent)
     {

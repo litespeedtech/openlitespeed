@@ -701,6 +701,7 @@ public:
     bool isFavicon() const      {   return (m_iUrlType == URL_FAVICON); }
     bool isRobotsTxt() const    {   return m_iUrlType == URL_ROBOTS_TXT;    }
     bool isCaptcha() const      {   return (m_iUrlType == URL_CAPTCHA); }
+    bool isChallenge() const    {   return (m_iUrlType == URL_ACME_CHALLENGE); }
     short getUrlType() const    {   return m_iUrlType;  }
 
 

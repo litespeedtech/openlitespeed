@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 7</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -104,7 +114,7 @@ then available to the Listener and Virtual Host Module Configurations to inherit
 <a href="#expuri">URI</a> | <a href="#modParams">Module Parameters</a></p></section>
 </section>
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="servModules"><h3>Server Modules<span class="ls-permlink"><a href="#servModules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The Server module configuration globally defines the module configuration data.  Once defined, the Listeners and Virtual Hosts have access to the modules and module configurations. <br/><br/> All modules that are to be processed must be registered in the Server configuration. The Server configuration also  defines the default values for module parameter data.  These values can be inherited  or overridden by the Listener and Virtual Host configuration data.<br/><br/> Module priority is only defined at server level and is inherited by the Listener and Virtual Host configurations.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="modulename"><h3>Module<span class="ls-permlink"><a href="#modulename"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Name of the module. The module name will be the same as the module filename.  The module file must be located under $SERVER_ROOT/modules/modulename.so in order to be loaded by the server application. The server will load the registered modules at start up. This requires that the server is restarted after new modules are registered.</p> <h4>Syntax</h4><p>the library name of .so.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="modulename"><h3>Module<span class="ls-permlink"><a href="#modulename"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The name of an external or internal module to be loaded at server startup.<br/><br/> <b>External</b><br/> The value used for external modules must match the name of the module's ".so" file under $SERVER_ROOT/modules/modulename.so in order to be loaded by the server application. This requires that the server is restarted after a new module is registered.<br/><br/> <b>Internal</b><br/> The value used for internal modules must match the module name used when the module was built. For example, this must be set to "cache" for the internal cache module included with the server.</p> <h4>Syntax</h4><p>string</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="internalmodule"><h3>Is Internal<span class="ls-permlink"><a href="#internalmodule"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specify whether the module is an internal module, which is statically linked, instead of being an external .so library.</p> <h4>Syntax</h4><p>Select from radio box</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="modParams"><h3>Module Parameters<span class="ls-permlink"><a href="#modParams"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Set module parameters. The module parameters are defined by the module developer.<br/><br/> Set the value in the Server configuration to globally assign the default value.  The user can override this setting at the Listener, Virtual Host or Context levels. If the 'Not Set' radio button is selected, it will be inherited from the upper level.</p> <h4>Syntax</h4><p>Specified by the module interface.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="moduleEnabled"><h3>Enable Module<span class="ls-permlink"><a href="#moduleEnabled"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Enables module hooks globally. This setting can be overridden at the Listener and Virtual Host levels.<br/><br/> Default value: <span class="val">Yes</span></p> <h4>Syntax</h4><p>Select from radio box</p> </article> </div>
@@ -138,7 +148,7 @@ then available to the Listener and Virtual Host Module Configurations to inherit
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhModuleUrlFilters"><h3>Virtual Host Module Context<span class="ls-permlink"><a href="#vhModuleUrlFilters"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>It's a centralized place to customize module settings for virtual host contexts. Settings for a context URI will override the virtual host or the server level settings.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the URI for this context.</p> <h4>Syntax</h4><p>The URI can be a plain URI (starting with "/") or a Perl compatible regular expression URI (starting with "exp:"). If a plain URI ends with a "/", then this context will include all sub-URIs under this URI. If the context maps to a directory on the file system, a trailing "/" must be added.</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#location">Location</a></span></p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

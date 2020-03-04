@@ -43,17 +43,17 @@ public:
     typedef void (*command_fn)(EventReactor *pThis);
 
     EventReactor() 
-        : m_pfd(NULL)
-        , m_cntHup(0)
+        : m_cntHup(0)
         , m_eventSet(0)
         , m_flags(0)
-    {   m_pollfd.fd = -1;   m_pollfd.events = 0; m_pollfd.revents = 0;  }
+    {   m_pollfd.fd = -1;   m_pollfd.events = 0;
+        m_pollfd.revents = 0; m_pfd = &m_pollfd; }
     explicit EventReactor(int fd)
-        : m_pfd(NULL)
-        , m_cntHup(0)
+        : m_cntHup(0)
         , m_eventSet(0)
         , m_flags(0)
-    {   m_pollfd.fd = fd; m_pollfd.events = 0; m_pollfd.revents = 0;  }
+    {   m_pollfd.fd = fd; m_pollfd.events = 0;
+        m_pollfd.revents = 0; m_pfd = &m_pollfd; }
 
     virtual ~EventReactor() {};
     virtual int handleEvents(short event) = 0;

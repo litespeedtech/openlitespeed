@@ -82,7 +82,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu Feb 20 20:40:19 UTC 2020)"
+#define BUILDTIME  " (built: Wed Mar  4 18:54:06 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -1034,7 +1034,10 @@ int LshttpdMain::init(int argc, char *argv[])
         allocatePidTracker();
         m_pServer->initAdns();
         m_pServer->enableAioLogging();
+        m_pServer->startServing();
         cleanEnvVars();
+        
+        
         WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
         pGWC->startProcessing();
         if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
@@ -1248,9 +1251,10 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     m_pServer->setProcNo(pProc->m_iProcNo);
     //setAffinity( 0, pProc->m_iProcNo);  //TEST: need uncomment and debug
     releaseExcept(pProc);
+    LsShmPool::setPid(pProc->m_pid);
     StdErrLogger::getInstance().movePipeFdToStdErr();
-
-    m_pServer->reinitMultiplexer();
+    m_pServer->startServing();
+    //setIntercommFds(pProc->m_iProcNo);
     m_pServer->enableAioLogging();
     if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
         && (m_pServer->initAioSendFile() != 0))
@@ -1593,7 +1597,10 @@ int LshttpdMain::guardCrash()
     LS_NOTICE("Instance is ready for service.");
     m_pServer->restartMark(2);
     
+    m_pServer->adjustListeners(iNumChildren);
+    
     startTimer();
+    
     while (s_iRunning > 0)
     {
         if (DateTime::s_curTime - lLastForkTime > 60)

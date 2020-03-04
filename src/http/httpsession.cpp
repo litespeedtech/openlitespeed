@@ -1289,16 +1289,6 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
 
 int HttpSession::processNewReqInit()
 {
-    LS_DBG_L(getLogSession(),
-             "processNewReq(), request header buffer size: %d, "
-             "header used: %d, processed: %d.",
-             m_request.getHeaderBuf().size(),
-             m_request.getHttpHeaderEnd(), m_request.getCurPos());
-
-    if ( m_request.getHttpHeaderLen() > 0 )
-        LS_DBG_H(getLogSession(), "Headers: %.*s",
-                m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
-
     int ret;
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
     int useProxyHeader = httpServConf.getUseProxyHeader();

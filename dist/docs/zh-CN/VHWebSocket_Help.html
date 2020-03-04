@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 7</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -97,7 +107,7 @@ communication to the appropriate backend stipulated in the {ITEM=wsaddr} field.<
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="wsuri"><h3>URI<span class="ls-permlink"><a href="#wsuri"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the URI(s) that will use this WebSocket backend. Traffic to  this URI will only be forwarded to the WebSocket backend when it contains  a WebSocket upgrade request. <br/><br/> Traffic without this upgrade request will automatically be forwarded to the  Context that this URI belongs to. If no Context exists for this URI,  LSWS will treat this traffic as though it is accessing a static context with  the location <span class="val">$DOC_ROOT/URI</span>.</p> <h4>Syntax</h4><p>A plain URI (starting with "/"). If the URI ends with a "/",  then this WebSocket backend will include all sub-URIs under this URI.</p> <h4>Example</h4><div class="ls-example">Using the WebSocket proxy in conjunction with a Context  allows you to serve different kinds of traffic in different ways  on the same page, thus optimizing performance. You can send WebSocket  traffic to the WebSocket backend, while setting up a static context so  that LSWS can serve the page's static content, or an LSAPI context so LSWS  will serve PHP content (both of which LSWS does more efficiently  than the WebSocket backend).</div></article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="wsaddr"><h3>Address<span class="ls-permlink"><a href="#wsaddr"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>A unique socket address used by the WebSocket backend.  IPv4 sockets, IPv6 sockets, and Unix Domain Sockets (UDS) are supported.  IPv4 and IPv6 sockets can be used for communication over the network.  UDS can only be used when the WebSocket backend resides on the same machine as the server.</p> <h4>Syntax</h4><p>IPv4 or IPV6 address:port or UDS://path</p> <h4>Example</h4><div class="ls-example">127.0.0.1:5434 <br/> UDS://tmp/lshttpd/php.sock.</div><h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> <span title="Performance" class="ls-icon-performance"></span> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

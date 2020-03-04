@@ -39,6 +39,7 @@
 #include <log4cxx/logger.h>
 #include <lsr/xxhash.h>
 #include <http/vhostmap.h>
+#include <http/httplistener.h>
 #include <sslpp/sslcontext.h>
 
 /* XXX: What happens if LS_HAS_RTSIG is not defined?  Should UDP Listener
@@ -78,6 +79,7 @@
 #define CTL_SZ CMSG_SPACE(MAX(DST_MSG_SZ, sizeof(struct in6_pktinfo)) +  ECN_SZ)
 
 int UdpListener::s_rtsigNo = -1;
+
 
 static hash_key_t hash_cid(const void *__s)
 {
@@ -170,6 +172,12 @@ struct packets_in
     unsigned                 n_alloc;
 };
 
+
+int UdpListener::setAddr(GSockAddr *pSockAddr)
+{
+    m_addr = *pSockAddr;
+    return 0;
+}
 
 int UdpListener::setAddr(const char *pAddr)
 {
@@ -325,8 +333,7 @@ int UdpListener::start()
 #endif
     initPacketsIn();
 
-    ret = MultiplexerFactory::getMultiplexer()->add(this,
-            POLLIN | POLLHUP | POLLERR);
+    ret = registEvent();
     return ret;
 }
 
@@ -1527,15 +1534,223 @@ UdpListener::~UdpListener()
 //         releaseSomePacketsToSHM();
 // #endif
     cleanupPacketsIn();
+//    m_reusePortFds.releaseObjects();
 }
 
 
-struct ssl_ctx_st * UdpListener::getSslContext(void) const {
-    SslContext *pSslContext;
+struct ssl_ctx_st * UdpListener::getSslContext(void) const
+{
+    SslContext *pSslContext = NULL;
+    VHostMap *map = m_pTcpPeer->getVHostMap();
+    if (map)
+    {
+        pSslContext = map->getSslContext();
+        if (pSslContext)
+            return pSslContext->get();
+    }
+    
+    return NULL;
+}
 
-    pSslContext = m_pVHostMap->getSslContext();
-    if (pSslContext)
-        return pSslContext->get();
+void UdpListener::initShmCidMapping()
+{
+    //FIXME
+}
+
+
+int UdpListener::beginServe(QuicEngine *pEngine)
+{
+    m_pEngine = pEngine;
+    m_pEngine->registerUdpListener(this);
+    //return start();
+#ifndef  _NOT_USE_SHM_
+    UdpListener::initCidListenerHt();
+#endif
+    initPacketsIn();
+
+    return registEvent();
+}
+
+int UdpListener::bind2(int flag)
+{
+    int fd;
+    int ret = CoreSocket::bind(m_addr, SOCK_DGRAM, &fd, flag);
+    if (ret != 0)
+        return -1;
+    ret = setSockOptions(fd);
+    if (ret == -1)
+    {
+        int saved_errno = errno;
+        close(fd);
+        errno = saved_errno;
+        return -1;
+    }
+
+    ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+    ::fcntl(fd, F_SETFL, MultiplexerFactory::getMultiplexer()->getFLTag());
+    return fd;
+}
+
+
+int UdpListener::bind()
+{
+    int fd = bind2(0);
+    if (fd == -1)
+        return -1;
+    setfd(fd);
+    return 0;
+}
+
+
+int UdpListener::bindReusePort(int count, const char* addr_str)
+{
+    int i, fd;
+    m_reusePortFds.guarantee(count);
+    for(i = 0; i < count; ++i)
+    {
+        fd = bind2(LS_SOCK_REUSEPORT);
+        if (fd == -1)
+        {
+            if (errno != EACCES)
+                LS_NOTICE("[UDP %s] failed to start SO_REUSEPORT socket",
+                           addr_str);
+            return -1;
+        }
+        LS_NOTICE("[UDP %s] #%d SO_REUSEPORT socket started, fd: %d",
+               addr_str, i, fd);
+        m_reusePortFds[i] = fd;
+    }
+    m_reusePortFds.setSize(count);
+    return 0;
+
+}
+
+
+int UdpListener::setSockOptions(int fd)
+{
+    int ret = 0;
+    int val = 1;
+    if (AF_INET == m_addr.get()->sa_family)
+        ret = setsockopt(fd, IPPROTO_IP,
+#if __linux__ && defined(IP_RECVORIGDSTADDR)
+                         IP_RECVORIGDSTADDR,
+#elif __linux__
+                         IP_PKTINFO,
+#else
+                         IP_RECVDSTADDR,
+#endif
+                         &val, sizeof(val));
     else
-        return NULL;
+        ret = setsockopt(fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &val, sizeof(val));
+    if (ret != 0)
+        return -1;
+
+#if __linux__
+#if !defined(IP_RECVORIGDSTADDR)
+    /* Need to set IP_PKTINFO for sending */
+    if (AF_INET == m_addr.get()->sa_family)
+    {
+        val = 1;
+        ret = setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &val, sizeof(val));
+        if (0 != ret)
+        {
+            return -1;
+        }
+    }
+#endif
+#elif IP_RECVDSTADDR != IP_SENDSRCADDR
+    /* On FreeBSD, IP_RECVDSTADDR is the same as IP_SENDSRCADDR, but I do not
+     * know about other BSD systems.
+     */
+    if (AF_INET == m_addr.get()->sa_family)
+    {
+        val = 1;
+        ret = setsockopt(fd, IPPROTO_IP, IP_SENDSRCADDR, &val, sizeof(val));
+        if (0 != ret)
+        {
+            return -1;
+        }
+    }
+#endif
+
+#if ECN_SUPPORTED
+    val = 1;
+    if (AF_INET == m_addr.get()->sa_family)
+        ret = setsockopt(fd, IPPROTO_IP, IP_RECVTOS, &val, sizeof(val));
+    else
+        ret = setsockopt(fd, IPPROTO_IPV6, IPV6_RECVTCLASS, &val, sizeof(val));
+    if (0 != ret)
+    {
+        return -1;
+    }
+#endif
+
+    val = 1 * 1024 * 1024;
+    ret = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &val, sizeof(val));
+    if (ret != 0)
+    {
+        LS_WARN(this, "cannot set receive buffer to %d bytes: %s", val,
+                  strerror(errno));
+    }
+
+    return ret;
+}
+
+
+int UdpListener::registEvent()
+{
+    return MultiplexerFactory::getMultiplexer()->add(this,
+            POLLIN | POLLHUP | POLLERR);
+}
+
+
+int UdpListener::getFdCount(int* maxfd)
+{
+    if (getfd() > *maxfd)
+        *maxfd = getfd();
+    if (m_reusePortFds.size() <= 0)
+        return getfd() != -1;
+    return m_reusePortFds.getFdCount(maxfd);
+}
+
+
+int UdpListener::passFds(int target_fd, const char *addr_str)
+{
+    if (m_reusePortFds.size() > 0)
+        return m_reusePortFds.passFds("UDP", addr_str, target_fd);
+    if (getfd() == -1)
+        return 0;
+    --target_fd;
+    LS_INFO("[UDP %s] pass listener, copy fd %d to %d.", addr_str,
+        getfd(), target_fd);
+    dup2(getfd(), target_fd);
+    close(getfd());
+    return 1;
+}
+
+
+void UdpListener::addReusePortSocket(int fd, const char *addr_str)
+{
+    if (m_reusePortFds.size() == 0)
+    {
+        *m_reusePortFds.newObj() = getfd();
+    }
+    *m_reusePortFds.newObj() = fd;
+    LS_NOTICE("[UDP %s] Recovering server socket, SO_REUSEPORT #%d",
+                addr_str, m_reusePortFds.size());
+}
+
+
+int UdpListener::activeReusePort(int seq, const char *addr_str)
+{
+    int n;
+    int fd = m_reusePortFds.getActiveFd(seq, &n);
+    if (fd != -1)
+    {
+        LS_NOTICE("[UDP %s] Activates #%d->%d SO_REUSEPORT socket: %d",
+                  addr_str, seq, n, fd);
+        setfd(fd);
+        return 0;
+    }
+    return -1;
 }

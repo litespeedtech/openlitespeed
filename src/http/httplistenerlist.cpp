@@ -22,6 +22,7 @@
 
 #include <socket/gsockaddr.h>
 #include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -211,24 +212,27 @@ void HttpListenerList::passListeners()
     int sort = 0;
     for (iterator iter = begin(); iter != end(); ++iter)
     {
-        if ((*iter)->getfd() >= 1000)
+        int maxfd, fd_count;
+        fd_count = (*iter)->getFdCount(&maxfd);
+        if (maxfd >= 1000)
             sort = 1;
-        if ((*iter)->getfd() != -1)
-            ++count;
+        count += fd_count;
     }
     close(startfd + count);
     if (sort)
         this->sort(compare_fd);
     for (iterator iter = end() - 1; iter >= begin(); --iter)
     {
-        if ((*iter)->getfd() != -1)
-        {
-            --count;
-            LS_NOTICE("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
-                    (*iter)->getfd(), startfd + count);
-            dup2((*iter)->getfd(), startfd + count);
-        }
+        count -= (*iter)->passFds(startfd + count);
     }
+//         if ((*iter)->getfd() != -1)
+//         {
+//             --count;
+//             LS_INFO("Pass listener %s, copy fd %d to %d.", (*iter)->getAddrStr(),
+//                     (*iter)->getfd(), startfd + count);
+//             dup2((*iter)->getfd(), startfd + count);
+//         }
+//     }
 }
 
 
@@ -247,27 +251,61 @@ void HttpListenerList::recvListeners()
         if (getsockname(startfd, pAddr, &len) == -1)
             startfd = 300;  // Must be a server socket
     }
+    HttpListener *pListener = NULL;
     while (1)
     {
         len = 128;
         if (getpeername(startfd, pAddr, &len) != -1)
+        {
+            LS_DBG("recvListeners() fd: %d getpeername() return 0.", startfd);
             break;      // Must not be connected
+        }
         len = 128;
         if (getsockname(startfd, pAddr, &len) == -1)
+        {
+            LS_DBG("recvListeners() fd: %d getsockname() return -1.", startfd);
             break;      // Must be a server socket
-        if (pAddr->sa_family != PF_UNIX)
+        }
+        if ((pAddr)->sa_family != PF_UNIX)
         {
             int fd = dup(startfd);
+            LS_DBG("recvListeners() dup fd: %d to %d.", startfd, fd);
             if (fd == -1)
-                break;
-            HttpListener *pListener = new HttpListener();
-            pListener->assign(fd, pAddr);
-            push_back(pListener);
-            sort(s_compare);
-           
-            LS_NOTICE("Recv listener %s, copy fd %d to %d.", 
+            {
+                close(startfd);
+                ++startfd;
+                continue;
+            }
+            ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+            if (pListener && pListener->isSameAddr(pAddr))
+            {
+                int type;
+                socklen_t length = sizeof( int );
+
+                getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &length);
+
+                if (type == SOCK_STREAM)
+                {
+                    pListener->addReusePortSocket(fd);
+                }
+                else if (type == SOCK_DGRAM)
+                {
+                    pListener->addUdpSocket(fd);
+                }
+            }
+            else
+            {
+                pListener = new HttpListener();
+                LS_DBG("recvListeners() assign fd: %d to listener %p.", fd,
+                       pListener);
+                pListener->assign(fd, pAddr);
+                push_back(pListener);
+                sort(s_compare);
+                
+                LS_NOTICE("Recv listener %s, copy fd %d to %d.", 
                       pListener->getAddrStr(),
                       startfd, fd);
+            }
         }
         close(startfd);
         ++startfd;
@@ -321,6 +359,8 @@ void HttpListenerList::releaseUnused()
         (*iter)->stop();
         if ((*iter)->getVHostMap()->getRef() <= 0)
         {
+            if ((*iter)->getQuicListener())
+                delete (*iter)->getQuicListener();
             delete(*iter);
             erase(iter);
         }
@@ -334,14 +374,18 @@ int HttpListenerList::saveInUseListnersTo(HttpListenerList &rhs)
     int add = 0;
     iterator iter;
     for (iter = begin(); iter != end();)
-    {
+    {   
         (*iter)->stop();
         if ((*iter)->getVHostMap()->getRef() <= 0)
+        {
+            LS_DBG_M("saveInUseListnersTo: delete %p.", *iter);
             delete(*iter);
+        }
         else
         {
             rhs.add(*iter);
             add++;
+            LS_DBG_M("saveInUseListnersTo: add %p, now added %d.", *iter, add);
         }
         erase(iter);
     }

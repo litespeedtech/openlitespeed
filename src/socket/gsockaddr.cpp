@@ -531,6 +531,18 @@ int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
 
 }
 
+static int addr_size[11] = { 0, sizeof(sockaddr_un), sizeof(sockaddr_in),
+    0, 0, 0, 0, 0, 0, 0, sizeof(sockaddr_in6) };
+
+
+int GSockAddr::compare(const struct sockaddr *pAddr1,
+                       const struct sockaddr *pAddr2)
+{
+    if (pAddr1->sa_family != pAddr2->sa_family)
+        return pAddr1->sa_family - pAddr2->sa_family;
+    return memcmp(pAddr1, pAddr2, addr_size[pAddr1->sa_family]);
+}
+
 
 // unsigned long GSockAddr::hash(const struct sockaddr *pAddr)
 // {
