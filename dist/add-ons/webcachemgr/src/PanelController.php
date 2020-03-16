@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -10,18 +10,10 @@
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\AjaxResponse;
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Panel\ControlPanel;
 use \Lsc\Wp\View\AjaxView;
 use \Lsc\Wp\View\Model\Ajax as AjaxViewModel;
-use \Lsc\Wp\WPDashMsgs;
-use \Lsc\Wp\WPInstallStorage;
-use \Lsc\Wp\WPInstall;
-use \Lsc\Wp\UserCommand;
-use \Lsc\Wp\Util;
 
 class PanelController
 {
@@ -578,7 +570,10 @@ class PanelController
             $flagString = 'unflagged';
         }
 
-        $statusInfo = array( 'status' => $statusString, 'flag_status' => $flagString );
+        $statusInfo = array(
+            'status' => $statusString,
+            'flag_status' => $flagString
+        );
 
         return $statusInfo;
     }
@@ -588,6 +583,10 @@ class PanelController
      * @param string  $action
      * @param string  $path
      * @return null
+     * @throws LSCMException  Indirectly thrown by Logger::uiError(),
+     *                        $this->wpInstallStorage->doAction(),
+     *                        Logger::getUiMsgs(), and
+     *                        AjaxResponse::outputAndExit().
      */
     protected function doSingleAction( $action, $path )
     {

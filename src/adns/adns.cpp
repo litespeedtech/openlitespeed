@@ -62,7 +62,8 @@ void Adns::trimCache()
 }
 
 
-const char *Adns::getCacheValue( const char * pName, int nameLen, int &valLen )
+const char *Adns::getCacheValue(const char * pName, int nameLen,
+                                int &valLen, int max_ttl)
 {
     if (!m_pShmHash)
         return NULL;
@@ -75,18 +76,27 @@ const char *Adns::getCacheValue( const char * pName, int nameLen, int &valLen )
     if (iterOff.m_iOffset != 0)
     {
         LsShmHash::iterator iter = m_pShmHash->offset2iterator(iterOff);
-        valLen = iter->getValLen();
-        if (valLen == 0)
+        if (max_ttl && iter->getLruLasttime() < DateTime::s_curTime - max_ttl)
         {
-            ret = "";
-            if (iter->getLruLasttime() < DateTime::s_curTime
-                                            - DNS_CACHE_NOTFOUND_TTL)
-            {
-                m_pShmHash->eraseIterator(iterOff);
-                ret = NULL;
-            }
+            ret = NULL;
+            valLen = 0;
         }
-        ret = (char *)iter->getVal();
+        else
+        {
+            valLen = iter->getValLen();
+            if (valLen == 0)
+            {
+                ret = "";
+                if (iter->getLruLasttime() < DateTime::s_curTime
+                                                - DNS_CACHE_NOTFOUND_TTL)
+                {
+                    m_pShmHash->eraseIterator(iterOff);
+                    ret = NULL;
+                }
+            }
+            else
+                ret = (char *)iter->getVal();
+        }
     }
     m_pShmHash->unlock();
     return ret;
@@ -318,10 +328,12 @@ char *Adns::getCacheName(const char *pName, int type)
 }
 
 
-const char *Adns::getHostByNameInCache( const char * pName, int &length, int type )
+const char *Adns::getHostByNameInCache(const char * pName, int &length,
+                                       int type, int max_ttl)
 {
     char *nameWithVer = getCacheName(pName, type);
-    const char *ret = getCacheValue(nameWithVer, strlen(nameWithVer), length);
+    const char *ret = getCacheValue(nameWithVer, strlen(nameWithVer),
+                                    length, max_ttl);
     free(nameWithVer);
     return ret;
 }
@@ -372,11 +384,12 @@ static void *getInAddr(const struct sockaddr * pAddr, int& length)
 }
 
 
-const char *Adns::getHostByAddrInCache(const struct sockaddr * pAddr, int &length )
+const char *Adns::getHostByAddrInCache(const struct sockaddr * pAddr,
+                                       int &length, int max_ttl )
 {
     int keyLen;
     const char *key = (const char *)getInAddr(pAddr, keyLen);
-    const char *ret = getCacheValue(key, keyLen, length);
+    const char *ret = getCacheValue(key, keyLen, length, max_ttl);
     return ret;
 }
 

@@ -34,7 +34,7 @@ class session;
 #define MAX_RESP_HEADERS_NUMBER     50
 #define MAX_REQ_HEADERS_NUMBER      50
 #define STATUS_OK                   200
-#define CHECKBODYTRUE               (RulesProperties::TrueConfigBoolean)
+#define CHECKBODYTRUE               (RulesSetProperties::TrueConfigBoolean)
 /////////////////////////////////////////////////////////////////////////////
 extern lsi_module_t MNAME;
 
@@ -42,7 +42,7 @@ using namespace modsecurity;
 
 typedef struct msc_conf_t_{
     ModSecurity            *modsec;
-    Rules                  *rules_set;
+    RulesSet               *rules_set;
     int                     enable;
     int                     level;
 } msc_conf_t;
@@ -51,7 +51,6 @@ typedef struct msc_conf_t_{
 typedef struct ModData_t
 {
     Transaction            *modsec_transaction;
-    Rules                  *rules_set;
     int8_t                  chkReqBody;
     int8_t                  chkRespBody;
 } ModData;
@@ -361,7 +360,6 @@ static int createModData(lsi_param_t *rec, msc_conf_t *conf)
 
         memset(myData, 0, sizeof(ModData));
         myData->modsec_transaction = trans;
-        myData->rules_set = conf->rules_set;
     }
 
     g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
@@ -525,7 +523,7 @@ static int UriMapHook(lsi_param_t *rec)
     }
 #endif
 
-    Rules *rules = myData->rules_set;
+    RulesSet *rules = myData->modsec_transaction->m_rules;
     myData->chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
     myData->chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     g_api->log(session, LSI_LOG_DEBUG, "[Module:%s] RequestBodyAccess: %s "
@@ -681,7 +679,7 @@ static int respHeaderHook(lsi_param_t *rec)
         return LSI_ERROR;
     }
 
-    Rules *rules = myData->rules_set;
+    RulesSet *rules = myData->modsec_transaction->m_rules;
     bool chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     if(chkRespBody && rules->m_responseBodyLimit.m_value > 3000) //at least set limit to 3000
     {

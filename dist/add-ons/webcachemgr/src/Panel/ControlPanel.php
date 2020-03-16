@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.10';
+    const PANEL_API_VERSION = '1.11';
 
     /**
      * @since 1.9
@@ -142,6 +142,7 @@ abstract class ControlPanel
      *
      * @deprecated
      * @param string  $className  A fully qualified control panel class name
+     * @return ControlPanel|null
      * @throws LSCMException
      */
     public static function initByClassName( $className )
@@ -228,7 +229,7 @@ abstract class ControlPanel
      *
      * @param string $className  Fully qualified class name.
      * @return ControlPanel
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by self::initByClassName().
      */
     public static function getClassInstance( $className = '' )
     {
@@ -250,7 +251,7 @@ abstract class ControlPanel
      */
     public static function getInstance()
     {
-        return $this->getClassInstance();
+        return self::getClassInstance();
     }
 
     /**
@@ -327,6 +328,8 @@ abstract class ControlPanel
     /**
      *
      * @param string  $vhCacheRoot
+     * @throws LSCMException  Indirectly thrown by $this->log() and
+     *                        $this->writeVHCacheRoot().
      */
     public function setVHCacheRoot( $vhCacheRoot = 'lscache' )
     {
@@ -576,6 +579,9 @@ abstract class ControlPanel
      *
      * @param string  $msg
      * @param int     $level
+     * @throws LSCMException  Indirectly thrown by Logger::error(),
+     *                        Logger::warn(), Logger::notice(), Logger::info(),
+     *                        Logger::verbose(), and Logger::debug().
      */
     protected function log( $msg, $level )
     {
@@ -684,7 +690,8 @@ abstract class ControlPanel
     /**
      *
      * @param string  $vhConf
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by Util::createBackup() and
+     *                        $this->log().
      */
     public function writeVHCacheRoot( $vhConf, $vhCacheRoot = 'lscache' )
     {
@@ -832,13 +839,14 @@ abstract class ControlPanel
      *
      * @since 1.9
      *
-     * @param type $panelAPIVer  Shared code API version used by the panel
-     *                           plugin.
+     * @param string  $panelAPIVer  Shared code API version used by the panel
+     *                              plugin.
      * @return int
      */
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.11',
             '1.10',
             '1.9.8',
             '1.9.7',

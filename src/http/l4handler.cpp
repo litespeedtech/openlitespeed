@@ -154,9 +154,11 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
         pBuff->append("\n\n", 2);
 
     continueRead();
+    
     LS_DBG_L(getLogSession(),
-             "L4Handler: init web socket, reqheader [%s], len [%d]",
-             req.getOrgReqLine(), req.getHttpHeaderLen());
+             "L4Handler: init web socket, reqheader [%.*s], len [%d]",
+             req.getHttpHeaderLen(), req.getOrgReqLine(),
+             req.getHttpHeaderLen());
 
     int ret = m_pL4conn->init(pGSockAddr);
     if (ret != 0)

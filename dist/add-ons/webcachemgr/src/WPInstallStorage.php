@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -11,12 +11,7 @@
 namespace Lsc\Wp;
 
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Panel\ControlPanel;
-use \Lsc\Wp\UserCommand;
-use \Lsc\Wp\Util;
-use \Lsc\Wp\WPInstall;
 
 /**
  * map to data file
@@ -69,6 +64,8 @@ class WPInstallStorage
     /**
      *
      * @param string  $dataFile
+     * @param string  $custDataFile
+     * @throws LSCMException  Indirectly thrown by $this->init().
      */
     public function __construct( $dataFile, $custDataFile = '' )
     {
@@ -80,6 +77,8 @@ class WPInstallStorage
     /**
      *
      * @return int
+     * @throws LSCMException  Indirectly thrown by $this->getDataFileData() and
+     *                        Logger::debug().
      */
     protected function init()
     {
@@ -114,7 +113,7 @@ class WPInstallStorage
      *
      * @param string  $dataFile
      * @return WPInstall[]
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by $this->verifyDataFileVer().
      */
     protected function getDataFileData( $dataFile )
     {
@@ -296,6 +295,10 @@ class WPInstallStorage
         $this->wpInstalls[$wpInstall->getPath()] = $wpInstall;
     }
 
+    /**
+     *
+     * @throws LSCMException  Indirectly thrown by $this->saveDataFile().
+     */
     public function syncToDisk()
     {
         $this->saveDataFile($this->dataFile, $this->wpInstalls);
@@ -309,6 +312,7 @@ class WPInstallStorage
      *
      * @param string       $dataFile
      * @param WPInstall[]  $wpInstalls
+     * @throws LSCMException  Indirectly thrown by $this->log().
      */
     protected function saveDataFile( $dataFile, $wpInstalls )
     {
@@ -352,6 +356,8 @@ class WPInstallStorage
      * @param string  $dataFile
      * @param string  $dataFileVer
      * @return int
+     * @throws LSCMException  Indirectly thrown by Logger::info() and
+     *                        $this->updateDataFile().
      */
     protected function verifyDataFileVer( $dataFile, $dataFileVer )
     {
@@ -386,6 +392,8 @@ class WPInstallStorage
      * @param string  $dataFile
      * @param string  $dataFileVer
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by Logger::info(),
+     *                        Util::createBackup(), and Logger::error().
      */
     public static function updateDataFile( $dataFile, $dataFileVer )
     {
@@ -417,7 +425,8 @@ class WPInstallStorage
      *
      * @param string     $action
      * @return string[]
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by
+     *                        ControlPanel::getClassInstance().
      */
     protected function prepareActionItems( $action )
     {
@@ -453,7 +462,12 @@ class WPInstallStorage
      * @param string    $action
      * @param string    $path
      * @param string[]  $extraArgs
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by $wpInstall->hasValidPath(),
+     *                        $wpInstall->addUserFlagFile(),
+     *                        $wpInstall->refreshStatus(),
+     *                        PluginVersion::getInstance(), and
+     *                        PluginVersion::getInstance()->getAllowedVersions(),
+     *                        UserCommand::issue(), and $this->syncToDisk().
      */
     protected function doWPInstallAction( $action, $path, $extraArgs )
     {
@@ -566,6 +580,14 @@ class WPInstallStorage
      * @param null|string[]  $list
      * @param string[]       $extraArgs
      * @return string[]
+     * @throws LSCMException  Indirectly thrown by $this->prepareActionItems(),
+     *                        $this->log(), Context::getActionTimeout(),
+     *                        $this->scan(), $this->addCustomInstallations(),
+     *                        $this->doWPInstallAction(),
+     *                        PluginVersion::getCurrentVersion(),
+     *                        PluginVersion::getInstance(),
+     *                        PluginVersion::getInstance()->setActiveVersion(),
+     *                        and $this->syncToDisk().
      */
     public function doAction( $action, $list, $extraArgs = array() )
     {
@@ -616,6 +638,16 @@ class WPInstallStorage
 
             default:
 
+                if ( $action == UserCommand::CMD_ENABLE
+                    || $action == UserCommand::CMD_MASS_ENABLE ) {
+
+                    /**
+                     * Ensure that current version is locally downloaded.
+                     */
+                    $currVer = PluginVersion::getCurrentVersion();
+                    PluginVersion::getInstance()->setActiveVersion($currVer);
+                }
+
                 foreach ( $list as $path ) {
                     $this->doWPInstallAction($action, $path, $extraArgs);
 
@@ -645,6 +677,9 @@ class WPInstallStorage
      * @param string   $docroot
      * @param boolean  $forceRefresh
      * @return null
+     * @throws LSCMException  Indirectly thrown by Context::getScanDepth(),
+     *                        $this->log(), and
+     *                        $this->wpInstalls[$wp_path]->refreshStatus().
      */
     protected function scan( $docroot, $forceRefresh = false )
     {
@@ -700,6 +735,8 @@ class WPInstallStorage
      *
      * @param string[]  $wpInstallsInfo
      * @return null
+     * @throws LSCMException  Indirectly thrown by $this->log() and
+     *                        $this->custWpInstalls[$wpPath]->refreshStatus().
      */
     protected function addCustomInstallations( $wpInstallsInfo )
     {
@@ -805,6 +842,9 @@ class WPInstallStorage
      *
      * @param string  $msg
      * @param int     $level
+     * @throws LSCMException  Indirectly thrown by Logger::error(),
+     *                        Logger::warn(), Logger::notice(), Logger::info(),
+     *                        Logger::verbose(), and Logger::debug().
      */
     protected function log( $msg, $level )
     {

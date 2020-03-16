@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -13,12 +13,7 @@ namespace Lsc\Wp;
 use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\Context\ContextOption;
 use \Lsc\Wp\Context\UserCLIContextOption;
-use \Lsc\Wp\DashNotifier;
 use \Lsc\Wp\Panel\ControlPanel;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\UserCommand;
-use \Lsc\Wp\WPInstall;
 
 /**
  * Running as user - suexec
@@ -95,6 +90,7 @@ class UserCommand
      * @param int        $lines      Number of $output lines read into the
      *                               error msg.
      * @return string                Message to be displayed instead.
+     * @throws LSCMException  Indirectly thrown by Logger::error().
      */
     private static function handleUnexpectedError( $wpInstall, &$err, $lines )
     {
@@ -141,6 +137,10 @@ class UserCommand
      *
      * @param WPInstall  $wpInstall
      * @param string     $output
+     * @throws LSCMException  Indirectly thrown by
+     *                        PluginVersion::retrieveTranslation(),
+     *                        self::getIssueCmd(), Logger::debug(), and
+     *                        PluginVersion::removeTranslationZip().
      */
     private static function handleGetTranslationOutput( WPInstall $wpInstall,
             $output )
@@ -187,6 +187,9 @@ class UserCommand
      * @param int        $cmdStatus
      * @param string     $err
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by
+     *                        $wpInstall->populateDataFromUrl() and
+     *                        self::handleGetTranslationOutput().
      */
     private static function handleResultOutput( WPInstall $wpInstall, $line,
             &$retStatus, &$cmdStatus, &$err )
@@ -231,6 +234,8 @@ class UserCommand
      * @since 1.9
      *
      * @param WPInstall  $wpInstall
+     * @throws LSCMException  Indirectly thrown by self::getIssueCmd() and
+     *                        Logger::debug().
      */
     private static function removeLeftoverLscwpFiles( $wpInstall )
     {
@@ -253,6 +258,9 @@ class UserCommand
      * @param WPInstall  $wpInstall
      * @param mixed[]    $extraArgs
      * @return string
+     * @throws LSCMException  Indirectly thrown by
+     *                        $wpInstall->getPhpBinary() and
+     *                        Context::getOption().
      */
     protected static function getIssueCmd( $action, WPInstall $wpInstall,
             $extraArgs = array() )
@@ -291,6 +299,12 @@ class UserCommand
      * @param WPInstall  $wpInstall
      * @param string[]   $extraArgs
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by self::preIssueValidation(),
+     *                        self::getIssueCmd(), Logger::debug(),
+     *                        self::removeLeftoverLscwpFiles(),
+     *                        self::handleResultOutput(), Logger::logMsg(),
+     *                        $wpInstall->addUserFlagFile(), Logger::error(),
+     *                        and self::handleUnexpectedError().
      */
     public static function issue( $action, WPInstall $wpInstall,
             $extraArgs = array() )
@@ -489,7 +503,10 @@ class UserCommand
      * @param WPInstall  $wpInstall
      * @param string[]   $extraArgs  Not used at the moment.
      * @return boolean
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by $wpInstall->hasValidPath()
+     *                        Logger::debug(), $wpInstall->refreshStatus(),
+     *                        $wpInstall->addUserFlagFile(),
+     *                        and DashNotifier::prepLocalDashPluginFiles().
      */
     private static function preIssueValidation( $action, WPInstall $wpInstall,
             $extraArgs )
@@ -510,7 +527,8 @@ class UserCommand
 
                 if ( $wpInstall->hasFlagFile() ) {
                     Logger::debug(
-                            "Bypass mass operation for flagged install {$wpInstall}");
+                            'Bypass mass operation for flagged install '
+                            . $wpInstall);
                     return false;
                 }
 
@@ -524,7 +542,8 @@ class UserCommand
                     if ( $wpInstall->hasFatalError() ) {
                         $wpInstall->addUserFlagFile(false);
 
-                        $msg = "Bypassed mass operation for error install and flagged {$wpInstall}";
+                        $msg = 'Bypassed mass operation for error install and '
+                                . "flagged {$wpInstall}";
                         Logger::debug($msg);
                         return false;
                     }

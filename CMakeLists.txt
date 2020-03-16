@@ -56,7 +56,7 @@ add_definitions(-DPOOL_TESTING)
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 #Add definition for QUIC 
-add_definitions(-DH3_ALPN="\\x05h3-24\\x05h3-25")
+add_definitions(-DH3_ALPN="\\x05h3-25\\x05h3-27")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")

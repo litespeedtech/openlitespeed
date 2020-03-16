@@ -205,10 +205,11 @@ int H2Connection::parseFrame()
             && m_pCurH2Header->getType() != H2_FRAME_CONTINUATION)
             return LS_FAIL;
 
+        if (m_iCurrentFrameRemain > m_bufInput.size())
+            return 0;
+
         if (m_pCurH2Header->getType() != H2_FRAME_DATA)
         {
-            if (m_iCurrentFrameRemain > m_bufInput.size())
-                return 0;
             if ((ret = processFrame(m_pCurH2Header)) != LS_OK)
                 return ret;
             if (m_iCurrentFrameRemain > 0)
@@ -1204,8 +1205,7 @@ int H2Connection::h2cUpgrade(HioHandler *pSession, const char * pBuf, int size)
             flag |= HIO_FLAG_PUSH_CAPABLE;
         pStream->setFlag(flag, 1);
         onInitConnected();
-        setPendingWrite();
-        appendOutput(s_h2sUpgradeResponse, sizeof(s_h2sUpgradeResponse) - 1);
+        guaranteeOutput(s_h2sUpgradeResponse, sizeof(s_h2sUpgradeResponse) - 1);
         sendSettingsFrame();
         return pStream->onInitConnected(pSession, true);
     }
@@ -1329,8 +1329,7 @@ int H2Connection::sendFrame8Bytes(H2FrameType type, uint32_t uiStreamId,
     appendNbo4Bytes(&buf[13], uiVal2);
     LS_DBG_H(getLogger(), "[%s-%d] send %s frame, stream: %d, value: %d"
              , getLogId(), uiStreamId, getH2FrameName(type), uiVal1, uiVal2);
-    appendOutput(buf, 17);
-    setPendingWrite();
+    guaranteeOutput(buf, 17);
     return 0;
 }
 
@@ -1344,8 +1343,7 @@ int H2Connection::sendFrame4Bytes(H2FrameType type, uint32_t uiStreamId,
     appendNbo4Bytes(&buf[9], uiVal1);
     LS_DBG_H(getLogger(), "[%s-%d] send %s frame, value: %d", getLogId(),
              uiStreamId, getH2FrameName(type), uiVal1);
-    appendOutput(buf, 13);
-    setPendingWrite();
+    guaranteeOutput(buf, 13);
     return 0;
 }
 
@@ -1357,8 +1355,7 @@ int H2Connection::sendFrame0Bytes(H2FrameType type, unsigned char flags,
     new (buf) H2FrameHeader(0, type, flags, uiStreamId);
     LS_DBG_H(getLogger(), "[%s-%d] send %s frame, with Flag: %d"
              , getLogId(), uiStreamId, getH2FrameName(type), flags);
-    appendOutput(buf, 9);
-    setPendingWrite();
+    guaranteeOutput(buf, 9);
     return 0;
 }
 
@@ -1401,8 +1398,7 @@ int H2Connection::sendSettingsFrame()
     memcpy(&buf[27], &wu_header, 9);
     appendNbo4Bytes(&buf[36], H2_FCW_INIT_SIZE * 8);
     m_iDataInWindow += H2_FCW_INIT_SIZE * 8;
-    appendOutput(buf, 40);
-    setPendingWrite();
+    guaranteeOutput(buf, 40);
     return 0;
 }
 

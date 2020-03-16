@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -9,8 +9,6 @@
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
-
-use \Lsc\Wp\Panel\ControlPanel;
 
 abstract class CustomPanelBase
 extends ControlPanel

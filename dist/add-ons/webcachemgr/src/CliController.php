@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * ******************************************* */
 
 namespace Lsc\Wp;
@@ -658,7 +658,10 @@ EOF;
     {
         $panelClassName = array_shift($args);
 
-        $controlPanel = ControlPanel::getClassInstance($panelClassName);
+        /**
+         * Initialize ControlPanel instance.
+         */
+        ControlPanel::getClassInstance($panelClassName);
 
         $cmd = array_shift($args);
 
@@ -696,18 +699,23 @@ EOF;
             case 'status':
                 $this->handleSingleOperationInput($cmd, $args);
                 break;
+
             case 'dashnotify':
                 $this->handleDashNotifyInput('notify', $args);
                 break;
+
             case 'dashnotifyremove':
                 $this->handleDashNotifyInput('remove', $args);
                 break;
+
             case 'cpanelplugin':
                 $this->handleCpanelPluginInput($args);
                 break;
+
             case 'addinstalls':
                 $this->handleAddInstallsInput($args);
                 break;
+
             default:
                 throw new LSCMException('Invalid Command, Try --help.');
         }

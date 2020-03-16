@@ -1665,6 +1665,18 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
             }
         }
 
+        //If Admin with port 80 or 443, it will be ignored.
+        const char *pPort = strrchr(pAddr, ':');
+        if (isAdmin && pPort)
+        {
+            int nPort = atoi(++pPort);
+            if (nPort == 80 || nPort == 443)
+            {
+                LS_ERROR(&currentCtx, "Can not set address %s to webAdmin!", pAddr);
+                break;
+            }
+        }
+        
         LS_DBG_L("Config listener [%s] [%s]", pName, pAddr);
 
         HttpListener *pListener = NULL;
