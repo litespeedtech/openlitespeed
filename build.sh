@@ -131,7 +131,7 @@ preparelibquic()
             cd lsquic
             
             LIBQUICVER=`cat ../LSQUICCOMMIT`
-            echoY "LIBQUICVER is ${LIBQUICVER}"
+            echo "LIBQUICVER is ${LIBQUICVER}"
             git checkout ${LIBQUICVER}
             git submodule update --init --recursive
             cd ..
@@ -163,11 +163,11 @@ prepareLinux()
             cat /etc/redhat-release | grep " 7." >/dev/null
             if [ $? = 0 ] ; then
                 OSTYPE=CENTOS7
-#              else
-#                 cat /etc/redhat-release | grep " 8." >/dev/null
-#                 if [ $? = 0 ] ; then
-#                     OSTYPE=CENTOS8
-#                 fi
+             else
+                cat /etc/redhat-release | grep " 8." >/dev/null
+                if [ $? = 0 ] ; then
+                    OSTYPE=CENTOS8
+                fi
             fi
         fi
         
@@ -194,6 +194,10 @@ prepareLinux()
                 make && make install
                 cd ..  
             fi
+            
+        elif [ "${OSTYPE}" = "CENTOS8" ] ; then
+            yum -y groupinstall "Development Tools"
+
         else
             echo This script only works on 6/7/8 for centos family._Static_assert
             exit 1
@@ -411,14 +415,15 @@ updateModuleCMakelistfile()
         done
     fi
     
+    if [ -f ../thirdparty/lib/libmodsecurity.a ] ; then
+        echo "add_subdirectory(modsecurity-ls)" >> src/modules/CMakeLists.txt
+    fi
+    
     if [ "${ISLINUX}" = "yes" ] ; then
         echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
     
     fi
     
-    if [ -f ../thirdparty/lib/libmodsecurity.a ] ; then
-        echo "add_subdirectory(modsecurity-ls)" >> src/modules/CMakeLists.txt
-    fi
     
 }
 
@@ -431,6 +436,18 @@ cpModuleSoFiles()
     for module in ${moduledir}; do
         cp -f src/modules/${module}/*.so dist/modules/
     done
+    
+    if [ -e src/modules/modsecurity-ls/mod_security.so ] ; then
+        cp -f src/modules/modsecurity-ls/mod_security.so dist/modules/
+    fi
+    
+    if [ -e src/modules/pagespeed/modpagespeed.so ] ; then
+        cp -f src/modules/pagespeed/modpagespeed.so dist/modules/
+    fi
+    
+    
+    
+    
 }
 
 fixshmdir()

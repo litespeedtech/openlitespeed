@@ -86,6 +86,7 @@ public:
     char getCompress() const;
     const char *getLogPath() const;
     int  reopenExist();
+    void appendEscape(const char *data, int len);
 
     void closeNonPiped();
     void setRollingSize(off_t size);

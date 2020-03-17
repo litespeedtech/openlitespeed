@@ -268,6 +268,8 @@ size_t HttpHeader::getIndex(const char *pHeader)
     case 'x':
         if (strncasecmp(pHeader, "-forwarded-for", 14) == 0)
             idx = H_X_FORWARDED_FOR;
+        else if (strncasecmp(pHeader, "-litespeed-purge2", 17) == 0)
+            ;//idx = H_X_LITESPEED_PURGE2;//Do nothing now
         else if (strncasecmp(pHeader, "-litespeed-purge", 16) == 0)
             idx = H_X_LITESPEED_PURGE;
         break;

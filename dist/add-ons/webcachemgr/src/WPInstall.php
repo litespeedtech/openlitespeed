@@ -1,9 +1,10 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
- * @Author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @Copyright: (c) 2018-2019
+ *
+ * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 
@@ -11,8 +12,6 @@ namespace Lsc\Wp;
 
 use \Lsc\Wp\Panel\ControlPanel;
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\UserCommand;
-use \Lsc\Wp\Logger;
 
 class WPInstall
 {
@@ -94,10 +93,19 @@ class WPInstall
         $this->init($path);
     }
 
+    /**
+     *
+     * @param string  $path
+     */
     protected function init( $path )
     {
+        if ( ($realPath = realpath($path)) === false ) {
+            $this->path = $path;
+        }
+        else {
+            $this->path = $realPath;
+        }
 
-        $this->path = realpath($path);
         $this->data = array(
             self::FLD_STATUS => 0,
             self::FLD_DOCROOT => null,
@@ -270,6 +278,9 @@ class WPInstall
     /**
      *
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by Logger::uiError(),
+     *                        Logger::notice(), $this->addUserFlagFile(), and
+     *                        Logger::debug().
      */
     public function hasValidPath()
     {
@@ -372,6 +383,9 @@ class WPInstall
      *
      * @param string  $url
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by
+     *                        ControlPanel::getClassInstance(),
+     *                        $this->addUserFlagFile(), and Logger::error().
      */
     public function populateDataFromUrl( $url )
     {
@@ -419,6 +433,8 @@ class WPInstall
      *
      * @param boolean  $runningAsUser
      * @return boolean  True when install has a flag file created/already.
+     * @throws LSCMException  Indirectly thrown by
+     *                        Context::getFlagFileContent().
      */
     public function addUserFlagFile( $runningAsUser = true )
     {
@@ -509,12 +525,13 @@ class WPInstall
      *
      * @param boolean  $forced
      * @return int
+     * @throws LSCMException  Indirectly thrown by UserCommand::issue().
      */
     public function refreshStatus( $forced = false )
     {
         if ( !$this->refreshed || $forced ) {
-            $this->refreshed = true;
             UserCommand::issue(UserCommand::CMD_STATUS, $this);
+            $this->refreshed = true;
         }
 
         return $this->getData(self::FLD_STATUS);
@@ -572,6 +589,8 @@ class WPInstall
     /**
      *
      * @return string
+     * @throws LSCMException  Indirectly thrown by
+     *                        ControlPanel::getClassInstance().
      */
     public function getPhpBinary()
     {

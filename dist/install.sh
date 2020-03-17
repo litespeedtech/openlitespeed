@@ -7,6 +7,15 @@ OSTYPE=`getconf LONG_BIT`
 MARIADBCPUARCH=
 DLCMD=
 LSPHPVER=73
+MYIP=
+
+testMyIP()
+{   
+    detectdlcmd
+    $DLCMD $LSWS_HOME/myip http://cyberpanel.sh/?ip
+    MYIP=`cat $LSWS_HOME/myip`
+    rm $LSWS_HOME/myip
+}
 
 inst_admin_php()
 {
@@ -211,14 +220,15 @@ check_os()
     fi
 }
 
-
 inst_lsphp7()
 {
     check_os
     if [ "x$OSNAME" = "xcentos" ] ; then
         install_lsphp7_centos
-    else
+    elif [ "x$OSNAME" = "xubuntu" ] || [ "x$OSNAME" = "xdebian" ] ; then
         install_lsphp7_debian
+    else
+        echo [Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu.
     fi
 }
 
@@ -287,7 +297,7 @@ IS_LSCPD=$9
 VERSION=open
 SETUP_PHP=1
 PHP_SUFFIX="php"
-SSL_HOSTNAME=""
+SSL_HOSTNAME=webadmin
 
 DEFAULT_USER="nobody"
 DEFAULT_GROUP="nobody"
@@ -395,7 +405,8 @@ echo
 
 if [ "x$ADMIN_SSL" = "xyes" ] ; then
     echo "Admin SSL enabled!"
-    gen_selfsigned_cert ./adminssl.conf
+    testMyIP
+    gen_selfsigned_cert_new 
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.crt $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.crt
     cp $LSINSTALL_DIR/${SSL_HOSTNAME}.key $LSINSTALL_DIR/admin/conf/${SSL_HOSTNAME}.key
 else
@@ -424,6 +435,11 @@ if [ "x$IS_LSCPD" != "xyes" ] ; then
         
         #Set default lsphp5
         ln -sf "$LSWS_HOME/fcgi-bin/lsphp5" "$LSWS_HOME/fcgi-bin/lsphp" 
+        
+        "$LSWS_HOME/admin/fcgi-bin/admin_php" -v 2>&1 1>/dev/null
+        if [ $? -ne 0 ] && [ -e /etc/redhat-release ]; then
+            yum install -y libnsl
+        fi
         
         if [ "x$USE_LSPHP7" = "xyes" ] ; then
             inst_lsphp7

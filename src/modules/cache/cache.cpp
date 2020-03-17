@@ -293,9 +293,25 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
         }
 
         if (pValStr[0] != '/')
-            lstrncpy(cachePath, g_api->get_server_root(), sizeof(cachePath));
-        lstrncat(cachePath, pValStr, sizeof(cachePath));
-        lstrncat(cachePath, "/", sizeof(cachePath));
+            lstrncpy(cachePath, g_api->get_server_root(), max_file_len);
+        
+        /**
+         * Since pValStr is not null terminated, so do a boundry checking here
+         * 
+         */
+        if (valLen + 1 > max_file_len - strlen(cachePath))
+        {
+            g_api->log(NULL, LSI_LOG_ERROR,
+                           "[%s]parseConfig failed to set the storagepath "
+                           "due to [%.*s]too long.\n",
+                           ModuleNameStr, valLen, pValStr);
+
+            delete []pBak;
+            return -1;
+        }
+        
+        strncat(cachePath, pValStr, valLen);
+        strncat(cachePath, "/", 1);
 
         if (createCachePath(cachePath, 0770) == -1)
         {
@@ -1160,8 +1176,8 @@ int appBufToCacheKey(const lsi_session_t *session, const char *buf,
 void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
                    int noVary, CacheKey *pKey, int useCurQS)
 {
-    int iQSLen;
-    int ipLen;
+    int iQSLen = 0;
+    int ipLen = 0;
     char pCookieBuf[MAX_HEADER_LEN] = {0};
     char *pCookieBufEnd = pCookieBuf + MAX_HEADER_LEN;
     const char *pIp = g_api->get_client_ip(session, &ipLen);
@@ -1611,6 +1627,14 @@ static int endCache(lsi_param_t *rec)
             else if (myData->pEntry && myData->iCacheState == CE_STATE_WILLCACHE)
             {
                 int fd = myData->pEntry->getFdStore();
+                if (fd < 0)
+                {
+                    g_api->log(rec->session, LSI_LOG_ERROR,
+                           "[%s]cache cancelled due to FdStore not initialized.\n",
+                           ModuleNameStr);
+                    return cancelCache(rec);
+                }
+                
                 deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
 
                 if (myData->pConfig->getAddEtagType() == 2)
@@ -1906,12 +1930,16 @@ static int createEntry(lsi_param_t *rec)
 int cacheHeader(lsi_param_t *rec, MyMData *myData)
 {
     myData->pEntry->setMaxStale(myData->pConfig->getMaxStale());
-    g_api->log(rec->session, LSI_LOG_DEBUG,
+    int fd = myData->pEntry->getFdStore();
+    g_api->log(rec->session, 
+               (fd != -1 ? LSI_LOG_DEBUG : LSI_LOG_ERROR),
                "[%s]save to %s cachestore by cacheHeader(), uri:%s\n", ModuleNameStr,
                ((myData->cacheCtrl.isPrivateCacheable()) ? "private" : "public"),
                myData->pOrgUri);
 
-    int fd = myData->pEntry->getFdStore();
+    if (fd == -1)
+        return LS_FAIL;
+    
     char *sLastMod = NULL;
     char *sETag = NULL;
     int nLastModLen = 0;
@@ -2123,12 +2151,22 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         if (!checkBypassHeader((const char *)iov_key[i].iov_base,
                                iov_key[i].iov_len))
         {
-            //if it is lsc-cookie, then change to Set-Cookie
-            const char *pKey = (const char *)iov_key[i].iov_base;
-            if (iov_key[i].iov_len == 10 &&
-                strncasecmp(pKey, "lsc-cookie", 10) == 0)
-                pKey = "Set-Cookie";
-
+            pKey = (char *)iov_key[i].iov_base;
+            //If no frontend, no need to save some cache headers
+            if (myData->hasCacheFrontend == 0)
+            {
+                if (iov_key[i].iov_len > 12 &&
+                    strncasecmp("X-LiteSpeed-", pKey, 12) == 0)
+                {
+                    continue;
+                }
+                
+                //if it is lsc-cookie, then change to Set-Cookie
+                if (iov_key[i].iov_len == 10 &&
+                    strncasecmp(pKey, "lsc-cookie", 10) == 0)
+                    pKey = "Set-Cookie";
+            }
+            
 #ifdef CACHE_RESP_HEADER
             headersBufSize += writeHttpHeader(fd, &(myData->m_pEntry->m_sRespHeader),
                                               pKey, iov_key[i].iov_len,
@@ -3391,7 +3429,23 @@ static int handlerProcess(const lsi_session_t *session)
                                       NULL, 0);
             g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_VARY,
                                       NULL, 0);
-
+            g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_PURGE,
+                                      NULL, 0);
+            g_api->remove_resp_header(session, -1, "X-LiteSpeed-Purge2", 18);
+            
+            struct iovec iov[1] = {{NULL, 0}};
+            int count = g_api->get_resp_header(session, -1, "lsc-cookie",
+                                               10, iov, 1);
+            if (iov[0].iov_len > 0 && count == 1)
+            {
+                g_api->remove_resp_header(session, -1, "lsc-cookie", 10);
+                
+                g_api->set_resp_header(session, LSI_RSPHDR_UNKNOWN,
+                           "Set-Cookie", 10,
+                           (char *)iov[0].iov_base, iov[0].iov_len,
+                           LSI_HEADEROP_SET);
+                
+            }
         }
     }
 

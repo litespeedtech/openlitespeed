@@ -194,7 +194,7 @@ int ProxyConn::addForwardedFor(const char *pBegin)
     const char *pForward = pReq->getHeader(HttpHeader::H_X_FORWARDED_FOR);
     int len;
     const char *psAddr = NULL;
-    int psAddrLen;
+    int psAddrLen = 0;
 
     if (*pForward != '\0')
     {
@@ -213,7 +213,7 @@ int ProxyConn::addForwardedFor(const char *pBegin)
     }
     //add "X-Forwarded-For" header
     memmove(&pExtraHeader[headerLen], psAddr, psAddrLen);
-    headerLen += pSession->getPeerAddrStrLen();
+    headerLen += psAddrLen;
     pExtraHeader[headerLen++] = '\r';
     pExtraHeader[headerLen++] = '\n';
     if (*pForward)

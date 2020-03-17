@@ -595,13 +595,24 @@ int StaticFileHandler::process(HttpSession *pSession,
         //ret = pSession->flush();
         ret = pSession->endResponse(1);
     }
-    if (ret == 0 && code == SC_200 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
+    if (code == SC_200 && !pSession->getFlag(HSF_STX_FILE_CACHE_READY))
     {
         pCache->setBypassModsec(1);
-        HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
-        host->addUrlStaticFileMatch(pInfo->getFileData(),
-                                    pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
-        LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
+        if (ret == 0)
+        {
+            HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
+            host->addUrlStaticFileMatch(pInfo->getFileData(),
+                                        pReq->getOrgReqURL(), pReq->getOrgReqURLLen());
+            LS_DBG_L( pSession->getLogSession(), "[static file cache] create cache." );
+        }
+        else
+        {
+            /**
+             * Serving not done, add flag to save to static file cache when 
+             * response is done
+             */
+            pSession->setFlag(HSF_SAVE_STX_FILE_CACHE);
+        }
     }
     return ret;
 

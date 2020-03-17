@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 
@@ -1136,6 +1136,83 @@ class WPCaller
         return $ret;
     }
 
+    /**
+     * Set global server and environment variables.
+     *
+     * @since 1.9.8
+     *
+     * @param string  $key
+     * @param mixed   $val
+     */
+    private function setEnvVar( $key, $val )
+    {
+        $_SERVER[$key] = $val;
+        putenv("{$key}={$val}");
+    }
+
+    /**
+     * Checks if the current WordPress installation is a multisite install and
+     * does some pre-load setup if so.
+     *
+     * Patterns and multisite check logic based on WordPress function
+     * is_multisite().
+     *
+     * @since 1.9.8
+     *
+     * @return boolean
+     * @throws LSCMException
+     */
+    private function isMultisite()
+    {
+        $isMultiSite = false;
+
+        $pattern1 = '/define\(\s*[\'"]MULTISITE[\'"]\s*,[^;]*;/';
+        $pattern2 = '/define\(\s*[\'"]MULTISITE[\'"]\s*,\s*true\s*\)\s*;/';
+        $pattern3 = '/define\(\s*[\'"]SUBDOMAIN_INSTALL[\'"]\s*,[^;]*;/';
+        $pattern4 = '/define\(\s*[\'"]VHOST[\'"]\s*,[^;]*;/';
+        $pattern5 = '/define\(\s*[\'"]SUNRISE[\'"]\s*,[^;]*;/';
+
+        $config_content =
+                file_get_contents($this->currInstall->getWpConfigFile());
+
+        if ( preg_match($pattern1, $config_content, $m1)
+                && preg_match($pattern2, $m1[0]) ) {
+
+            $isMultiSite = true;
+        }
+        elseif ( preg_match($pattern3, $config_content)
+                || preg_match($pattern4, $config_content)
+                || preg_match($pattern5, $config_content) ) {
+
+            $isMultiSite = true;
+        }
+
+        if ( $isMultiSite ) {
+
+            if ( !preg_match('/define\(\s*[\'"]DOMAIN_CURRENT_SITE[\'"]\s*,\s*[\'"](.+)[\'"]\s*\)\s*;/',
+                    $config_content, $m2) ) {
+
+                throw new LSCMException(
+                        'Cannot find DOMAIN_CURRENT_SITE with MULTISITE defined.');
+            }
+
+            $this->currInstall->setServerName($m2[1]);
+
+            if ( !preg_match('/define\(\s*[\'"]PATH_CURRENT_SITE[\'"]\s*,\s*[\'"](.+)[\'"]\s*\)\s*;/',
+                    $config_content, $m3) ) {
+
+                throw new LSCMException(
+                        'Cannot find PATH_CURRENT_SITE with MULTISITE defined.');
+            }
+
+            $this->setEnvVar('REQUEST_URI', $m3[1]);
+
+            define('WP_NETWORK_ADMIN', true);
+        }
+
+        return $isMultiSite;
+    }
+
     private function initWp()
     {
         /**
@@ -1174,35 +1251,9 @@ class WPCaller
          */
         $_SERVER['SCRIPT_FILENAME'] = "{$wpPath}/wp-admin/plugins.php";
 
-        $config_content =
-                file_get_contents($this->currInstall->getWpConfigFile());
-        $uri = '';
-
-        if ( preg_match('/define\(\s*[\'"]MULTISITE[\'"]\s*,\s*true\s*\)\s*;/', $config_content) ) {
-
-            if ( !preg_match('/define\(\s*[\'"]DOMAIN_CURRENT_SITE[\'"]\s*,\s*[\'"](.+)[\'"]\s*\)\s*;/',
-                    $config_content, $m) ) {
-
-                throw new LSCMException(
-                'Cannot find DOMAIN_CURRENT_SITE with MULTISITE defined.');
-            }
-
-            $this->currInstall->setServerName($m[1]);
-
-            if ( !preg_match('/define\(\s*[\'"]PATH_CURRENT_SITE[\'"]\s*,\s*[\'"](.+)[\'"]\s*\)\s*;/',
-                    $config_content, $m2) ) {
-
-                throw new LSCMException(
-                'Cannot find PATH_CURRENT_SITE with MULTISITE defined.');
-            }
-
-            $uri = $m2[1];
-
-            define('WP_NETWORK_ADMIN', true);
+        if ( ! $this->isMultisite() ) {
+            $this->setEnvVar('REQUEST_URI', '');
         }
-
-        $_SERVER['REQUEST_URI'] = $uri;
-        putenv("REQUEST_URI={$uri}");
 
         /**
          * Set for LSCWP v1.1.5.1+ plugin logic.
@@ -1212,22 +1263,19 @@ class WPCaller
             /**
              * For enable/disable.
              */
-            $_SERVER['DOCUMENT_ROOT'] = $docRoot;
-            putenv("DOCUMENT_ROOT={$docRoot}");
+            $this->setEnvVar('DOCUMENT_ROOT', $docRoot);
         }
 
-        if ( $serverName = $this->currInstall->getServerName() ) {
+        $serverName = $this->currInstall->getServerName();
 
-            /**
-             * For security plugins.
-             */
-            $_SERVER['HTTP_HOST'] = $serverName;
-            putenv("HTTP_HOST={$serverName}");
+        if ( empty($serverName) ) {
+            $serverName = self::LSCWP_HTTP_HOST_TEST;
         }
-        else {
-            $_SERVER['HTTP_HOST'] = self::LSCWP_HTTP_HOST_TEST;
-            putenv('HTTP_HOST=' . self::LSCWP_HTTP_HOST_TEST);
-        }
+
+        /**
+         * For security plugins.
+         */
+        $this->setEnvVar('HTTP_HOST', $serverName);
 
         /**
          * Version specific includes may fail on RC releases.

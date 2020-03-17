@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -11,9 +11,6 @@
 namespace Lsc\Wp;
 
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Util;
 
 class PluginVersion
 {
@@ -60,11 +57,18 @@ class PluginVersion
      */
     protected static $instance;
 
+    /**
+     *
+     * @throws LSCMException  Indirectly thrown by $this->init().
+     */
     protected function __construct()
     {
         $this->init();
     }
 
+    /**
+     * @throws LSCMException  Indirectly thrown by Context::isPrivileged().
+     */
     protected function init()
     {
         $this->setVersionFiles();
@@ -77,6 +81,7 @@ class PluginVersion
     /**
      *
      * @return PluginVersion
+     * @throws LSCMException  Indirectly thrown by Context::getOption().
      */
     public static function getInstance()
     {
@@ -91,7 +96,9 @@ class PluginVersion
 
     /**
      *
+     * @param bool  $formatted
      * @return string[]
+     * @throws LSCMException  Indirectly thrown by $this->setKnownVersions().
      */
     public function getKnownVersions( $formatted = false )
     {
@@ -127,6 +134,7 @@ class PluginVersion
     /**
      *
      * @return string[]
+     * @throws LSCMException  Indirectly thrown by $this->setAllowedVersions().
      */
     public function getAllowedVersions()
     {
@@ -140,17 +148,21 @@ class PluginVersion
     /**
      *
      * @return string
+     * @throws LSCMException  Indirectly thrown by $this->getAllowedVersions().
      */
     public function getLatestVersion()
     {
         $allowedVers = $this->getAllowedVersions();
 
-        return $allowedVers[0];
+
+        return (isset($allowedVers[0])) ? $allowedVers[0] : '';
     }
 
     /**
      *
      * @return string
+     * @throws LSCMException  Indirectly thrown by self::getInstance() and
+     *                        $instance->setCurrentVersion().
      */
     public static function getCurrentVersion()
     {
@@ -184,6 +196,8 @@ class PluginVersion
      *
      * @deprecated 1.9
      * @since 1.9
+     *
+     * @throws LSCMException
      */
     protected function checkOldVersionFiles()
     {
@@ -203,25 +217,49 @@ class PluginVersion
     }
 
     /**
-     *
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by
+     *                        $this->checkOldVersionFiles() and Logger::debug().
      */
     public function setCurrentVersion()
     {
         $this->checkOldVersionFiles();
 
-        if ( !file_exists($this->activeFile) ) {
-            throw new LSCMException('Active LSCWP version file not found.');
+        if ( ($activeVersion = $this->getActiveVersion()) == '' ) {
+            Logger::debug('Active LSCWP version not found.');
+        }
+        elseif ( ! $this->hasDownloadedVersion($activeVersion) ) {
+            $activeVersion = '';
+            unlink($this->activeFile);
+            Logger::debug('Valid LSCWP download not found.');
         }
 
-        $activeVersion = trim(file_get_contents($this->activeFile));
-
-        if ( !$this->hasDownloadedVersion($activeVersion) ) {
-            unlink($this->activeFile);
-            throw new LSCMException('Valid LSCWP download not found.');
+        if ( $activeVersion == '' ) {
+            try {
+                $latestVer = self::getLatestVersion();
+                $activeVersion = $latestVer;
+            }
+            catch ( LSCMException $e ) {
+                Logger::debug($e->getMessage());
+            }
         }
 
         $this->currVersion = $activeVersion;
+    }
+
+    /**
+     *
+     * @since 1.11
+     *
+     * @return string
+     */
+    private function getActiveVersion()
+    {
+        if ( file_exists($this->activeFile)
+            && ($content = file_get_contents($this->activeFile)) ) {
+            return trim($content);
+        }
+
+        return '';
     }
 
     /**
@@ -239,6 +277,10 @@ class PluginVersion
         $this->knownVersions = explode("\n", $content);
     }
 
+    /**
+     *
+     * @throws LSCMException  Indirectly thrown by $this->getKnownVersions().
+     */
     protected function setAllowedVersions()
     {
         $knownVers = $this->getKnownVersions();
@@ -251,7 +293,10 @@ class PluginVersion
      *
      * @param string   $version  Valid LSCWP version.
      * @param boolean  $init     True when trying to set initial active
-     *                            version.
+     *                           version.
+     * @throws LSCMException  Indirectly thrown by $this->getAllowedVersions(),
+     *                        Logger::error(), $this->downloadVersion(),
+     *                        and Logger::notice().
      */
     public function setActiveVersion( $version, $init = false )
     {
@@ -275,10 +320,11 @@ class PluginVersion
             }
 
             Logger::error(
-                    "Version {$badVer} not in allowed list, reset active version to {$version}.");
+                    "Version {$badVer} not in allowed list, reset active "
+                    . "version to {$version}.");
         }
 
-        if ( $currVer == '' || $currVer != $version ) {
+        if ( $version != $this->getActiveVersion() ) {
 
             if ( !$this->hasDownloadedVersion($version) ) {
                 $this->downloadVersion($version);
@@ -293,11 +339,13 @@ class PluginVersion
     /**
      *
      * @param boolean  $isforced
+     * @throws LSCMException  Indirectly thrown by Logger::info().
      */
     protected function refreshVersionList( $isforced = false )
     {
         clearstatcache();
-        $versionsUrl = 'https://www.litespeedtech.com/packages/lswpcache/version_list';
+        $versionsUrl =
+            'https://www.litespeedtech.com/packages/lswpcache/version_list';
 
         if ( $isforced || !file_exists($this->versionFile)
                 || (time() - filemtime($this->versionFile)) > 86400 ) {
@@ -474,6 +522,14 @@ class PluginVersion
         $this->wgetPlugin($version, $dir, true);
     }
 
+    /**
+     *
+     * @param string  $locale
+     * @param string  $pluginVer
+     * @return boolean
+     * @throws LSCMException  Indirectly thrown by Logger::info() and
+     *                        Util::unzipFile().
+     */
     public static function retrieveTranslation( $locale, $pluginVer )
     {
         Logger::info("Downloading LSCache for WordPress {$locale} translation...");
@@ -514,6 +570,12 @@ class PluginVersion
         return true;
     }
 
+    /**
+     *
+     * @param string  $locale
+     * @param string  $pluginVer
+     * @throws LSCMException  Indirectly thrown by Logger::info().
+     */
     public static function removeTranslationZip( $locale, $pluginVer )
     {
         Logger::info("Removing LSCache for WordPress {$locale} translation...");

@@ -44,7 +44,7 @@ static const char          *s_pLogId = NULL;
 static LOG4CXX_NS::Logger  *s_pCurLogger  = NULL;
 
 int HttpLog::s_debugLevel = DL_IODATA;
-
+AutoStr2 HttpLog::s_serverRoot = "";
 
 void HttpLog::parse_error(const char *pCurLine, const char *pError)
 {
@@ -178,9 +178,56 @@ int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
 }
 
 
+int HttpLog::checkLogPathValid(const char *pFileName)
+{
+    const char *excludeFileList[] = { ".cgi", ".pl", ".shtml" };
+    const char *excludeDirList[] = { "admin/conf", "admin/html", "conf" };
+    int i;
+    int len = strlen(pFileName);
+    for (i=0; i<sizeof(excludeFileList)/ sizeof(char *); ++i)
+    {
+        int ll = strlen(excludeFileList[i]);
+        if (len > ll &&
+            strncasecmp(pFileName + len - ll, excludeFileList[i], ll) == 0)
+        {
+            HttpLog::perror("Cannot use this suffix as log file", pFileName);
+            return LS_FAIL;
+        }
+    }
+    
+    if (len > s_serverRoot.len() + 4 &&
+        strncmp(pFileName, s_serverRoot.c_str(), s_serverRoot.len()) == 0)
+    {
+        for (i=0; i<sizeof(excludeDirList)/ sizeof(char *); ++i)
+        {
+            int ll = strlen(excludeDirList[i]);
+            if (len - s_serverRoot.len() > ll &&
+                strncasecmp(pFileName + s_serverRoot.len(),
+                            excludeDirList[i], ll) == 0)
+            {
+                HttpLog::perror("Cannot use this directory for log file", pFileName);
+                return LS_FAIL;
+            }
+        }
+    }
+    
+    //For special ".php???"
+    const char *pExt = strrchr(pFileName, '.');
+    if (pExt && strlen(pExt) >= 4 && strncasecmp(pExt, ".php", 4) == 0)
+    {
+        HttpLog::perror("Cannot use this suffix as log file", pFileName);
+        return LS_FAIL;
+    }
+    return 0;
+}
+
+
 int HttpLog::setAccessLogFile(const char *pFileName, int pipe)
 {
-    int ret = accessLog()->init(pFileName, pipe);
+    int ret = checkLogPathValid(pFileName);
+    if (ret)
+        return ret;
+    ret = accessLog()->init(pFileName, pipe);
     return ret;
 }
 
@@ -193,18 +240,9 @@ AccessLog *HttpLog::getAccessLog()
 
 int HttpLog::setErrorLogFile(const char *pFileName)
 {
-    const char *excludeList[] = { ".php", ".cgi", ".pl", ".shtml" };
-    int len = strlen(pFileName);
-    for (int i=0; i<sizeof(excludeList)/ sizeof(char *); ++i)
-    {
-        int ll = strlen(excludeList[i]);
-        if (len > ll &&
-            strncasecmp(pFileName + len - ll, excludeList[i], ll) == 0)
-        {
-            HttpLog::perror("Cannot use this suffix as errorlog", pFileName);
-            return LS_FAIL;
-        }
-    }
+    int ret = checkLogPathValid(pFileName);
+    if (ret)
+        return ret;
     
     Appender *appender
         = Appender::getAppender(pFileName, "appender.ps");

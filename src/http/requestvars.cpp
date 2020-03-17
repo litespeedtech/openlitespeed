@@ -799,7 +799,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
     case REF_REQ_SCHEME:
     {
         pValue = s_scheme[ pSession->isHttps() == 1 ];
-        i = 2 + (pSession->isHttps() == 1);
+        i = 4 + (pSession->isHttps() == 1);
         return i;
     }
     case REF_SSL_VERSION:

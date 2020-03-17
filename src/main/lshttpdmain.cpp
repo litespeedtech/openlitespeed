@@ -80,7 +80,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Tue Jan 14 20:16:59 UTC 2020)"
+#define BUILDTIME  " (built: Tue Mar 17 16:21:29 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -905,6 +905,7 @@ int LshttpdMain::init(int argc, char *argv[])
     //load the config
     m_pBuilder->loadConfigFile();
 
+    HttpLog::setServerRoot(MainServerConfig::getInstance().getServerRoot());
 //    m_pBuilder->loadPlainConfigFile();
     if (m_pServer->configServerBasics(0, m_pBuilder->getRoot()))
         return 1;
@@ -1808,17 +1809,81 @@ static long getProcessStartTime(int pid)
 
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+static long s_boot_time = 0;
+static long s_jiffies_per_sec = 100;
+static long getBootTime()
+{
+    if (s_boot_time)
+        return s_boot_time;
+    s_jiffies_per_sec = sysconf(_SC_CLK_TCK);
+    char stat_buf[40960];
+    int fd = open("/proc/stat",O_RDONLY);
+
+    if (fd < 0)
+        return -1;
+
+    int ret = read(fd, stat_buf, sizeof(stat_buf));
+
+    close(fd);
+
+    if (ret < 0)
+        return -1;
+
+    char *p = (char *)memmem(stat_buf, ret, "btime ", 6);
+    if (!p)
+        return -1;
+    p += 6;
+
+    sscanf(p,"%lu", &s_boot_time);
+    return s_boot_time;
+}
+
+
+static long getProcessStartTimeSinceBoot(int pid)
+{
+    char stat_buf[4096];
+    char proc_pid_path[80];
+    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/stat", pid);
+    int fd = open(proc_pid_path ,O_RDONLY);
+
+    if(fd < 0)
+        return -1;
+
+    int ret = read(fd, stat_buf, sizeof(stat_buf));
+    close(fd);
+
+    if(ret < 0)
+        return -1;
+
+    char *p = (char *)memchr(stat_buf, ')', ret);
+    if (!p)
+        return -1;
+    char *end = p + ret;
+    p += 2;
+    int i;
+    for(i = 0; i < 19; ++i)
+    {
+        p = (char *)memchr(p, ' ', end - p);
+        if (!p)
+            return -1;
+        ++p;
+    }
+    long diff = strtol(p, NULL, 10);
+    return diff;
+}
+
+
 static long getProcessStartTime(int pid)
 {
-    char proc_pid_path[80];
-    struct stat st;
-    snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d/stat", pid);
-    int ret = stat(proc_pid_path, &st);
-    if (ret == -1)
-    {
+    long diff = getProcessStartTimeSinceBoot(pid);
+    if (diff == -1)
         return -1;
-    }
-    return st.st_ctime;
+    long boot_time = getBootTime();
+    if (boot_time == -1)
+        return -1;
+    long real = boot_time + diff / s_jiffies_per_sec;
+    return real;
 }
 #endif
 

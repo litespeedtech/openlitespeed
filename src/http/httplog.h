@@ -25,7 +25,7 @@
 
 #include <stdarg.h>
 #include <sys/types.h>
-
+#include <util/autostr.h>
 
 BEGIN_LOG4CXX_NS
 class Logger;
@@ -50,10 +50,12 @@ enum
 class HttpLog
 {
     static int  s_debugLevel;
+    static AutoStr2 s_serverRoot;
     HttpLog();
     ~HttpLog();
 public:
     static void init();
+    static void setServerRoot(const char *s) { s_serverRoot.setStr(s);  }
     static int logAccess(const char *pVHost, int len, HttpSession *pSession);
     static void error_num(int __errnum, const char *__file,
                           unsigned int __line, const char *__function);
@@ -92,6 +94,7 @@ public:
     static void setLogPattern(const char *pPattern);
     static const char *getLogPattern();
 
+    static int checkLogPathValid(const char *pFileName);
     static int setAccessLogFile(const char *pFileName, int pipe);
     static int setErrorLogFile(const char *pFileName);
     static void offsetChroot(const char *pRoot, int len);

@@ -1,7 +1,9 @@
 #! /bin/sh
 
-LSUPVERSION=v2.3-12/27/2019
+LSUPVERSION=v2.71-2/28/2020
 LOCKFILE=/tmp/olsupdatingflag
+
+PIDFILE=/tmp/lshttpd/lshttpd.pid
 
 CURDIR=`dirname "$0"`
 cd $CURDIR
@@ -15,12 +17,64 @@ if [ ! -f ${LSWSHOME}/bin/openlitespeed ] ; then
 fi
 LSWSCTRL=${LSWSHOME}/bin/lswsctrl
 
+#the lsws_env may change the PID file location
+if [ -f "${LSWSHOME}"/lsws_env ] ; then
+    . "${LSWSHOME}"/lsws_env
+fi
+
+SYSCTRL=no
+which systemctl >/dev/null 2>&1
+if [ $? = 0 ] ; then
+    SYSCTRL=yes
+fi
+
+RUNNING=0
+test_running()
+{
+    RUNNING=0
+    if [ -f $PIDFILE ] ; then
+        FPID=`cat $PIDFILE`
+        if [ "x$FPID" != "x" ]; then
+            kill -0 $FPID 2>/dev/null
+            if [ $? -eq 0 ] ; then
+                RUNNING=1
+                PID=$FPID
+            fi
+        fi
+    fi
+}
+
+
+startService()
+{
+    if [ "$SYSCTRL" = "yes" ] ; then
+        systemctl start lsws
+    fi
+    test_running
+    if [ $RUNNING -eq 0 ] ; then
+        ${LSWSCTRL} start
+    fi
+}
+
+stopService()
+{
+    if [ "$SYSCTRL" = "yes" ] ; then
+        systemctl stop lsws
+    fi
+    test_running
+    if [ $RUNNING -eq 1 ] ; then
+        ${LSWSCTRL} stop
+    fi
+}
+
+
 CURLONGVERSION=
 CURVERSION=
 PREVERSION=
 ORGVERSION=
 NEWVERSION=
 DLCMD=
+ONLYBIN=no
 
 OSNAME=`uname -s`
 ISLINUX=yes
@@ -185,7 +239,7 @@ clean()
 {
     rm -rf ${LOCKFILE}
     status
-    ${LSWSCTRL} stop
+    stopService
     rm -rf /tmp/lshttpd/*
     if [ -e /dev/shm/ols ] ; then
         rm -rf /dev/shm/ols/*
@@ -195,7 +249,7 @@ clean()
     rm -rf ${LSWSHOME}/cgid/cgid.sock*
     rm -rf ${LSWSHOME}/autoupdate/*
     
-    ${LSWSCTRL} start
+    startService
     echoG Cleaned and service started.
     exit 0
 }
@@ -211,7 +265,7 @@ changeAdminPasswd()
     exit 0
 }
 
-testrunning()
+testCurrentStatus()
 {
     status
     if [ -f ${LOCKFILE} ] ; then
@@ -274,13 +328,16 @@ testrunning()
 display_usage()
 {
     cat <<EOF
-Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v VERSION]]
+Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v|-e VERSION]]
   
   -d
      Choose Debug version to upgrade or downgrade, will do clean like -c at the same time.
   
   -v VERSION
      If VERSION is given, this command will try to install specified VERSION. Otherwise, it will get the latest version from ${LSWSHOME}/autoupdate/release.
+
+  -e VERSION
+     If VERSION is given, this command will try to install the binaries of the specified VERSION. Otherwise, it will get the latest version from ${LSWSHOME}/autoupdate/release.
 
   -r 
      Recover to the original installed version which is in file VERSION.
@@ -323,6 +380,14 @@ do
         if [ "x$VERSION" = "x" ] ; then
             display_usage
         fi
+    elif [ "x$1" = "x-e" ] ; then
+        ONLYBIN=yes
+        shift
+        VERSION=$1
+        shift
+        if [ "x$VERSION" = "x" ] ; then
+            display_usage
+        fi    
     elif [ "x$1" = "x-r" ] ; then
         VERSION=${ORGVERSION}
         echoG "You choose to install the original installed version."
@@ -336,7 +401,7 @@ do
     elif [ "x$1" = "x-c" ] ; then
         clean
     elif [ "x$1" = "x-t" ] ; then
-        testrunning
+        testCurrentStatus
     elif [ "x$1" = "x-a" ] ; then
         changeAdminPasswd        
     else 
@@ -351,12 +416,20 @@ fi
 
 
 if [ -f ${LOCKFILE} ] ; then
-    echoR "Openlitespeed is updating, quit."
-    exit 0
+    FILETIME=`stat -c %Y  ${LOCKFILE}`
+    SYSTEMTIME=`date -u +%s`
+    COMSYSTEMTIME=$(($SYSTEMTIME-600))
+    #echoY ${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME( $COMSYSTEMTIME + 600 seconds)
+    if [ $COMSYSTEMTIME -gt $FILETIME ] ; then
+        echoG "${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME, removed it."
+        rm -rf ${LOCKFILE}
+    else
+        echoR "Openlitespeed is updating, quit."
+        exit 0
+    fi
 fi
 
 touch ${LOCKFILE}
-
 
 TEMPPATH=${LSWSHOME}/autoupdate
 if [ ! -e ${TEMPPATH} ] ; then
@@ -433,7 +506,7 @@ if [ -f ${LSWSHOME}/VERSION ] ; then
     cp -f ${LSWSHOME}/VERSION ${LSWSHOME}/VERSION.old
 fi
 
-${LSWSCTRL} stop
+stopService
 rm -rf /tmp/lshttpd/*
 if [ -e /dev/shm/ols ] ; then
     rm -rf /dev/shm/ols/*
@@ -463,16 +536,45 @@ if [ -f ${LSWSHOME}/bin/openlitespeed ] ; then
     echo "###" >> ols.conf
 fi
 
-./install.sh
+if [ "$ONLYBIN" = "no" ] ; then 
+    ./install.sh
+else
+    stopService
+    mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
+    cp bin/* ${LSWSHOME}/bin/
+    cp modules/* ${LSWSHOME}/modules/
+fi
+
 rm -rf $SRCDIR
 rm -rf ${LSWSHOME}/autoupdate/*
 
-#Sign it
-echo lsup > "${LSWSHOME}/PLAT"
+#Sign it and keep old sign
+if [ ! -e ${LSWSHOME}/PLAT ] ; then 
+    echo lsup > ${LSWSHOME}/PLAT
+else
+    ORGPLAT=`cat ${LSWSHOME}/PLAT`
+    echo $ORGPLAT | grep lsup >/dev/null 2>&1
+    if [ $? != 0 ] ; then
+        echo "lsup-$ORGPLAT" > ${LSWSHOME}/PLAT
+    fi
+fi
+
 rm -rf ${LOCKFILE}
 
-${LSWSCTRL} start
-echoG All binaries are updated and service is on.
+startService
+test_running
+if [ $RUNNING -eq 1 ] ; then
+    RUNSTATE="started"
+else
+    RUNSTATE="stopped"
+fi
+
+if [ "$ONLYBIN" = "no" ] ; then 
+    PACKNAME="files"
+else
+    PACKNAME="binaries"
+fi
+echoG "All ${PACKNAME} are updated and service is ${RUNSTATE}."
 echo 
 echo
 

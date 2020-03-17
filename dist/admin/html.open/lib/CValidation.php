@@ -697,9 +697,14 @@ class CValidation
         if (preg_match("/^([[:alnum:]._-]+|\[[[:xdigit:]:]+\]):(\d)+$/", $v)) {
             return 1;
         } 
-        if (preg_match("/^UDS:\/\/[a-z0-9\/\.]+$/i", $v)) {
-            return 1;
-        } 
+        if (stripos($v, 'UDS://') !== false) {
+            $v = substr($v, 6);
+            $supportedvar = ['$SERVER_ROOT', '$VH_NAME', '$VH_ROOT', '$DOC_ROOT'];
+            $v = str_replace($supportedvar, 'VAR', $v);
+            if (preg_match("/^[a-z0-9\-_\/\.]+$/i", $v)) {
+                return 1;
+            } 
+        }
         $node->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path');
         return -1;
     }

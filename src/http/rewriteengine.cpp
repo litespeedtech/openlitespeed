@@ -200,6 +200,11 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                 {
                     ret = loadRewriteFile(pRules, pRuleList, pMapList, pContext);
                     pLast = pRuleList->tail(); //Must update pLast, otherwise cause mess up
+                    /**
+                     * In case the .htaccess is empty. so that the pLast can be NULL
+                     */
+                    if (!pLast)
+                        pLast = pRuleList->head();
                     LS_INFO("RewriteFile [%s] parsed, return %d.", pRules, ret);
                 }
                 else //type == 2

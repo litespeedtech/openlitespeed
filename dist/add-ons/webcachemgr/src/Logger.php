@@ -1,18 +1,16 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
 use \Lsc\Wp\Context\ContextOption;
-use \Lsc\Wp\LogEntry;
-use \Lsc\Wp\LSCMException;
 
 /**
  * Logger is a pseudo singleton.
@@ -180,19 +178,19 @@ class Logger
      */
     public static function Initialize( ContextOption $contextOption )
     {
-        if ( self::$instance != null ) {
+        if ( static::$instance != null ) {
             throw new LSCMException('Logger cannot be initialized twice.',
                     LSCMException::E_PROGRAM);
         }
 
-        self::$instance = new static($contextOption);
+        static::$instance = new static($contextOption);
     }
 
     /**
-     * Set self::$instance to a pre-created logger object.
+     * Set static::$instance to a pre-created logger object.
      *
      * This function is intended as an alternative to Initialize() and will
-     * throw an exception if self::$instance is already set.
+     * throw an exception if static::$instance is already set.
      *
      * @since 1.9.1
      *
@@ -201,12 +199,12 @@ class Logger
      */
     public static function setInstance( $loggerObj )
     {
-        if ( self::$instance != null ) {
+        if ( static::$instance != null ) {
             throw new LSCMException('Logger instance already set.',
                     LSCMException::E_PROGRAM);
         }
 
-        self::$instance = $loggerObj;
+        static::$instance = $loggerObj;
     }
 
     /**
@@ -217,7 +215,7 @@ class Logger
      */
     public static function changeLogFileUsed( $logFile )
     {
-        self::me()->p_setLogFile($logFile);
+        static::me()->p_setLogFile($logFile);
     }
 
     /**
@@ -228,7 +226,7 @@ class Logger
      */
     public static function setAdditionalTagInfo( $addInfo )
     {
-        self::me()->p_setAddTagInfo($addInfo);
+        static::me()->p_setAddTagInfo($addInfo);
     }
 
     /**
@@ -241,10 +239,10 @@ class Logger
     public function p_addUiMsg( $msg, $type )
     {
         switch ($type) {
-            case self::UI_INFO:
-            case self::UI_SUCC:
-            case self::UI_ERR:
-            case self::UI_WARN:
+            case static::UI_INFO:
+            case static::UI_SUCC:
+            case static::UI_ERR:
+            case static::UI_WARN:
                 $this->uiMsgs[$type][] = $msg;
                 break;
             //no default
@@ -331,10 +329,10 @@ class Logger
         $ret = array();
 
         switch ($type) {
-            case self::UI_INFO:
-            case self::UI_SUCC:
-            case self::UI_ERR:
-            case self::UI_WARN:
+            case static::UI_INFO:
+            case static::UI_SUCC:
+            case static::UI_ERR:
+            case static::UI_WARN:
                 $ret = $this->uiMsgs[$type];
                 break;
             //no default
@@ -349,6 +347,7 @@ class Logger
      *
      * @param string  $msg
      * @param int     $lvl
+     * @throws LSCMException  Indirectly thrown in $this->log().
      */
     public function p_log( $msg, $lvl )
     {
@@ -418,10 +417,11 @@ class Logger
      * @since 1.9
      *
      * @return string
+     * @throws LSCMException  Indirectly thrown by static::me().
      */
     public static function getAdditionalTagInfo()
     {
-        return self::me()->p_getAddTagInfo();
+        return static::me()->p_getAddTagInfo();
     }
 
     /**
@@ -432,7 +432,7 @@ class Logger
      */
     public static function getLogFilePath()
     {
-        return self::me()->p_getLogFile();
+        return static::me()->p_getLogFile();
     }
 
     /**
@@ -444,17 +444,18 @@ class Logger
      */
     public static function getLogMsgQueue()
     {
-        return self::me()->p_getMsgQueue();
+        return static::me()->p_getMsgQueue();
     }
 
     /**
      *
      * @param int  $type
      * @return string[]
+     * @throws LSCMException  Indirectly thrown by static::me().
      */
     public static function getUiMsgs( $type )
     {
-        return self::me()->p_getUiMsgs($type);
+        return static::me()->p_getUiMsgs($type);
     }
 
     /**
@@ -465,7 +466,7 @@ class Logger
     {
         $clear = false;
 
-        $m = self::me();
+        $m = static::me();
 
         if ( $m->p_getBufferedWrite() ) {
             $m->p_writeToFile($m->p_getMsgQueue());
@@ -488,120 +489,130 @@ class Logger
      * @deprecated
      * @param string  $msg
      * @param int     $type
+     * @throws LSCMException  Indirectly thrown by static::me().
      */
     public static function addUiMsg( $msg, $type )
     {
-        self::me()->p_addUiMsg($msg, $type);
+        static::me()->p_addUiMsg($msg, $type);
     }
 
     /**
-     * Calls addUiMsg() with message level self::UI_INFO.
+     * Calls addUiMsg() with message level static::UI_INFO.
      *
      * @param string  $msg
      */
     public static function uiInfo( $msg )
     {
-        self::addUiMsg($msg, self::UI_INFO);
+        static::addUiMsg($msg, static::UI_INFO);
     }
 
     /**
-     * Calls addUiMsg() with message level self::UI_SUCC.
+     * Calls addUiMsg() with message level static::UI_SUCC.
      *
      * @param string  $msg
      */
     public static function uiSuccess( $msg )
     {
-        self::addUiMsg($msg, self::UI_SUCC);
+        static::addUiMsg($msg, static::UI_SUCC);
     }
 
     /**
-     * Calls addUiMsg() with message level self::UI_ERR.
+     * Calls addUiMsg() with message level static::UI_ERR.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::addUiMsg().
      */
     public static function uiError( $msg )
     {
-        self::addUiMsg($msg, self::UI_ERR);
+        static::addUiMsg($msg, static::UI_ERR);
     }
 
     /**
-     * Calls addUiMsg() with message level self::UI_WARN.
+     * Calls addUiMsg() with message level static::UI_WARN.
      *
      * @param string  $msg
      */
     public static function uiWarning( $msg )
     {
-        self::addUiMsg($msg, self::UI_WARN);
+        static::addUiMsg($msg, static::UI_WARN);
     }
 
     /**
      *
      * @param string  $msg
      * @param int     $lvl
+     * @throws LSCMException  Indirectly thrown by static::me() and
+     *                        static::me()->p_log().
      */
     public static function logMsg( $msg, $lvl )
     {
-        self::me()->p_log($msg, $lvl);
+        static::me()->p_log($msg, $lvl);
     }
 
     /**
-     * Calls logMsg() with message level self::L_ERROR.
+     * Calls logMsg() with message level static::L_ERROR.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::logMsg().
      */
     public static function error( $msg )
     {
-        self::logMsg($msg, self::L_ERROR);
+        static::logMsg($msg, static::L_ERROR);
     }
 
     /**
-     * Calls logMsg() with message level self::L_WARN.
+     * Calls logMsg() with message level static::L_WARN.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::logMsg().
      */
     public static function warn( $msg )
     {
-        self::logMsg($msg, self::L_WARN);
+        static::logMsg($msg, static::L_WARN);
     }
 
     /**
-     * Calls logMsg() with message level self::L_NOTICE.
+     * Calls logMsg() with message level static::L_NOTICE.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::logMsg().
      */
     public static function notice( $msg )
     {
-        self::logMsg($msg, self::L_NOTICE);
+        static::logMsg($msg, static::L_NOTICE);
     }
 
     /**
-     * Calls logMsg() with message level self::L_INFO.
+     * Calls logMsg() with message level static::L_INFO.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::logMsg().
      */
     public static function info( $msg )
     {
-        self::logMsg($msg, self::L_INFO);
+        static::logMsg($msg, static::L_INFO);
     }
 
     /**
-     * Calls logMsg() with message level self::L_VERBOSE.
+     * Calls logMsg() with message level static::L_VERBOSE.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::logMsg().
      */
     public static function verbose( $msg )
     {
-        self::logMsg($msg, self::L_VERBOSE);
+        static::logMsg($msg, static::L_VERBOSE);
     }
 
     /**
-     * Calls logMsg() with message level self::L_DEBUG.
+     * Calls logMsg() with message level static::L_DEBUG.
      *
      * @param string  $msg
+     * @throws LSCMException  Indirectly thrown by static::logMsg().
      */
     public static function debug( $msg )
     {
-        self::logMsg($msg, self::L_DEBUG);
+        static::logMsg($msg, static::L_DEBUG);
     }
 
     /**
@@ -612,17 +623,20 @@ class Logger
      */
     protected static function me()
     {
-        if ( self::$instance == null ) {
-            throw new LSCMException('Logger Uninitialized.', LSCMException::E_PROGRAM);
+        if ( static::$instance == null ) {
+            throw new LSCMException('Logger Uninitialized.',
+                    LSCMException::E_PROGRAM);
         }
 
-        return self::$instance;
+        return static::$instance;
     }
 
     /**
      *
      * @param string  $msg
      * @param int     $lvl
+     * @throws LSCMException  Indirectly thrown by $this->writeToFile and
+     *                        $this->echoEntries().
      */
     protected function log( $msg, $lvl )
     {
@@ -644,6 +658,7 @@ class Logger
      * @param LogEntry[]|object[]  $entries  Array of objects that implement
      *                                       all LogEntry class public
      *                                       functions.
+     * @throws LSCMException  Indirectly thrown by $e->getOutput().
      */
     protected function writeToFile( $entries )
     {
@@ -670,6 +685,7 @@ class Logger
      * @param LogEntry[]|object[]  $entries  Array of objects that implement
      *                                       all LogEntry class public
      *                                       functions.
+     * @throws LSCMException  Indirectly thrown by $entry->getOutput().
      */
     protected function echoEntries( $entries )
     {
@@ -690,22 +706,22 @@ class Logger
     {
         switch ($lvl) {
 
-            case self::L_ERROR:
+            case static::L_ERROR:
                 return 'ERROR';
 
-            case self::L_WARN:
+            case static::L_WARN:
                 return 'WARN';
 
-            case self::L_NOTICE:
+            case static::L_NOTICE:
                 return 'NOTICE';
 
-            case self::L_INFO:
+            case static::L_INFO:
                 return 'INFO';
 
-            case self::L_VERBOSE:
+            case static::L_VERBOSE:
                 return 'DETAIL';
 
-            case self::L_DEBUG:
+            case static::L_DEBUG:
                 return 'DEBUG';
 
             default:
@@ -729,13 +745,13 @@ class Logger
     {
         $lvl = (int)$lvl;
 
-        if ( self::isValidLogFileLvl($lvl) ) {
+        if ( static::isValidLogFileLvl($lvl) ) {
 
-            if ( $lvl > self::L_DEBUG ) {
-                $lvl = self::L_DEBUG;
+            if ( $lvl > static::L_DEBUG ) {
+                $lvl = static::L_DEBUG;
             }
 
-            self::me()->p_setLogFileLvl($lvl);
+            static::me()->p_setLogFileLvl($lvl);
 
             return true;
         }

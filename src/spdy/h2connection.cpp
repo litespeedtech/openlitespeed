@@ -187,10 +187,11 @@ int H2Connection::parseFrame()
             && m_pCurH2Header->getType() != H2_FRAME_CONTINUATION)
             return LS_FAIL;
 
+        if (m_iCurrentFrameRemain > m_bufInput.size())
+            return 0;
+
         if (m_pCurH2Header->getType() != H2_FRAME_DATA)
         {
-            if (m_iCurrentFrameRemain > m_bufInput.size())
-                return 0;
             if ((ret = processFrame(m_pCurH2Header)) != LS_OK)
                 return ret;
             if (m_iCurrentFrameRemain > 0)

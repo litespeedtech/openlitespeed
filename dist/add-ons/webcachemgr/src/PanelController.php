@@ -1,26 +1,19 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
- * @Author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @Copyright: (c) 2018-2019
+ *
+ * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright: (c) 2018-2020
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\AjaxResponse;
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Panel\ControlPanel;
 use \Lsc\Wp\View\AjaxView;
 use \Lsc\Wp\View\Model\Ajax as AjaxViewModel;
-use \Lsc\Wp\WPDashMsgs;
-use \Lsc\Wp\WPInstallStorage;
-use \Lsc\Wp\WPInstall;
-use \Lsc\Wp\UserCommand;
-use \Lsc\Wp\Util;
 
 class PanelController
 {
@@ -318,7 +311,7 @@ class PanelController
             );
         }
         else {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['homeDirs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -330,11 +323,11 @@ class PanelController
 
                 $finishedList = $this->wpInstallStorage->doAction($action,
                         $batch);
-                $completed = count($finishedList);
+                $completedCount = count($finishedList);
 
-                if ( $completed != $batchSize ) {
+                if ( $completedCount != $batchSize ) {
                     $info['homeDirs'] = array_merge(
-                            array_slice($batch, $completed), $info['homeDirs']);
+                            array_slice($batch, $completedCount), $info['homeDirs']);
                 }
             }
 
@@ -343,7 +336,7 @@ class PanelController
                     Logger::getUiMsgs(Logger::UI_ERR));
 
             $ajaxInfo = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'errMsgs' => $errMsgs
             );
 
@@ -387,7 +380,7 @@ class PanelController
             $info = array( 'installs' => $wpInstallPaths );
         }
         else {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['installs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -400,11 +393,11 @@ class PanelController
                 $finishedList = $this->wpInstallStorage->doAction(
                         UserCommand::CMD_STATUS, $batch);
 
-                $completed = count($finishedList);
+                $completedCount = count($finishedList);
 
-                if ( $completed != $batchSize ) {
+                if ( $completedCount != $batchSize ) {
                     $info['installs'] = array_merge(
-                            array_slice($batch, $completed), $info['installs']);
+                            array_slice($batch, $completedCount), $info['installs']);
                 }
             }
 
@@ -413,7 +406,7 @@ class PanelController
                     Logger::getUiMsgs(Logger::UI_ERR));
 
             $ajaxInfo = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'errMsgs' => $errMsgs
             );
 
@@ -457,7 +450,7 @@ class PanelController
             $info = array( 'installs' => $wpInstallPaths );
         }
         else {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['installs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -470,11 +463,11 @@ class PanelController
                 $finishedList = $this->wpInstallStorage->doAction(
                         WPInstallStorage::CMD_MASS_UNFLAG, $batch);
 
-                $completed = count($finishedList);
+                $completedCount = count($finishedList);
 
-                if ( $completed != $batchSize ) {
+                if ( $completedCount != $batchSize ) {
                     $info['installs'] = array_merge(
-                            array_slice($batch, $completed), $info['installs']);
+                            array_slice($batch, $completedCount), $info['installs']);
                 }
             }
 
@@ -486,7 +479,7 @@ class PanelController
 
 
             $ajaxInfo = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'errMsgs' => $errMsgs,
                 'succMsgs' => $succMsgs
             );
@@ -577,7 +570,10 @@ class PanelController
             $flagString = 'unflagged';
         }
 
-        $statusInfo = array( 'status' => $statusString, 'flag_status' => $flagString );
+        $statusInfo = array(
+            'status' => $statusString,
+            'flag_status' => $flagString
+        );
 
         return $statusInfo;
     }
@@ -587,6 +583,10 @@ class PanelController
      * @param string  $action
      * @param string  $path
      * @return null
+     * @throws LSCMException  Indirectly thrown by Logger::uiError(),
+     *                        $this->wpInstallStorage->doAction(),
+     *                        Logger::getUiMsgs(), and
+     *                        AjaxResponse::outputAndExit().
      */
     protected function doSingleAction( $action, $path )
     {
@@ -812,7 +812,7 @@ class PanelController
             );
         }
         elseif ( $step == 2 ) {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['installs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -828,11 +828,11 @@ class PanelController
                             $this->wpInstallStorage->doAction("mass_{$action}",
                             $batch);
 
-                    $completed = count($finishedList);
+                    $completedCount = count($finishedList);
 
-                    if ( $completed != $batchSize ) {
+                    if ( $completedCount != $batchSize ) {
                         $info['installs'] = array_merge(
-                                array_slice($batch, $completed),
+                                array_slice($batch, $completedCount),
                                 $info['installs']);
                     }
                 }
@@ -864,7 +864,6 @@ class PanelController
                         $failCount++;
                     }
                     elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->hasFatalError()
                             || $wpInstall->isFlagBitSet() ) {
 
                         $bypassedCount++;
@@ -879,7 +878,7 @@ class PanelController
                     Logger::getUiMsgs(Logger::UI_SUCC));
 
             $ajaxReturn = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'bypassedCount' => $bypassedCount,
                 'failCount' => $failCount,
                 'succCount' => $succCount,
@@ -934,7 +933,7 @@ class PanelController
             );
         }
         elseif ( $step == 3 ) {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['installs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -954,11 +953,11 @@ class PanelController
                     $finishedList = $this->wpInstallStorage->doAction(
                             UserCommand::CMD_MASS_UPGRADE, $batch, $extraArgs);
 
-                    $completed = count($finishedList);
+                    $completedCount = count($finishedList);
 
-                    if ( $completed != $batchSize ) {
+                    if ( $completedCount != $batchSize ) {
                         $info['installs'] = array_merge(
-                                array_slice($batch, $completed),
+                                array_slice($batch, $completedCount),
                                 $info['installs']);
                     }
                 }
@@ -975,11 +974,11 @@ class PanelController
                     Logger::getUiMsgs(Logger::UI_ERR));
 
             $ajaxReturn = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'errMsgs' => $errMsgs,
             );
 
-            if ( empty($info['installs']) || $completed == -1 ) {
+            if ( empty($info['installs']) || $completedCount == -1 ) {
                 unset($_SESSION['verInfo']);
             }
 
@@ -1020,7 +1019,7 @@ class PanelController
             );
         }
         else {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['installs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -1037,11 +1036,11 @@ class PanelController
                             UserCommand::CMD_MASS_DASH_NOTIFY, $batch,
                             array($msgInfoJSON));
 
-                    $completed = count($finishedList);
+                    $completedCount = count($finishedList);
 
-                    if ( $completed != $batchSize ) {
+                    if ( $completedCount != $batchSize ) {
                         $info['installs'] = array_merge(
-                                array_slice($batch, $completed), $info['installs']);
+                                array_slice($batch, $completedCount), $info['installs']);
                     }
                 }
                 catch ( LSCMException $e )
@@ -1072,7 +1071,7 @@ class PanelController
                         $failCount++;
                     }
                     elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->hasFatalError() ) {
+                            || $wpInstall->isFlagBitSet() ) {
 
                         $bypassedCount++;
                     }
@@ -1086,7 +1085,7 @@ class PanelController
                     Logger::getUiMsgs(Logger::UI_SUCC));
 
             $ajaxInfo = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'bypassedCount' => $bypassedCount,
                 'failCount' => $failCount,
                 'succCount' => $succCount,
@@ -1134,7 +1133,7 @@ class PanelController
             $info = array( 'installs' => $wpInstallPaths );
         }
         else {
-            $completed = -1;
+            $completedCount = -1;
 
             if ( !isset($info['installs']) ) {
                 Logger::uiError('Expected session data missing! Stopping mass operation.');
@@ -1149,11 +1148,11 @@ class PanelController
                     $finishedList = $this->wpInstallStorage->doAction(
                             UserCommand::CMD_MASS_DASH_DISABLE, $batch);
 
-                    $completed = count($finishedList);
+                    $completedCount = count($finishedList);
 
-                    if ( $completed != $batchSize ) {
+                    if ( $completedCount != $batchSize ) {
                         $info['installs'] = array_merge(
-                                array_slice($batch, $completed), $info['installs']);
+                                array_slice($batch, $completedCount), $info['installs']);
                     }
                 }
                 catch ( LSCMException $e )
@@ -1184,7 +1183,7 @@ class PanelController
                         $failCount++;
                     }
                     elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->hasFatalError() ) {
+                            || $wpInstall->isFlagBitSet() ) {
 
                         $bypassedCount++;
                     }
@@ -1198,7 +1197,7 @@ class PanelController
                     Logger::getUiMsgs(Logger::UI_SUCC));
 
             $ajaxInfo = array(
-                'completed' => $completed,
+                'completed' => $completedCount,
                 'bypassedCount' => $bypassedCount,
                 'failCount' => $failCount,
                 'succCount' => $succCount,

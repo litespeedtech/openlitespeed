@@ -806,7 +806,9 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
                     idx = H_X_LITESPEED_TAG;
                 break;
             case 'p':
-                if (strncasecmp(pHeader, "purge", 5) == 0)
+                if (strncasecmp(pHeader, "purge2", 6) == 0)
+                    idx = H_HEADER_END; //No support for now
+                else if (strncasecmp(pHeader, "purge", 5) == 0)
                     idx = H_X_LITESPEED_PURGE;
                 break;
             case 'v':
