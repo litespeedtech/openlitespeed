@@ -47,7 +47,7 @@ while [ $SUCC -eq "0" ];  do
 		fi
 	else
 		echo ""
-		echo "[ERROR] Sorry, password must be at least 6 charactors!"
+		echo "[ERROR] Sorry, password must be at least 6 characters!"
 		echo ""
 	fi
 done
