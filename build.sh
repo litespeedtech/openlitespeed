@@ -270,7 +270,7 @@ prepareLinux()
         apt-get -y install libexpat-dev
         
         installCmake
-        apt-get -y install git libtool 
+        apt-get -y install git libtool ca-certificates
         apt-get -y install autotools-dev
         apt-get -y install autoreconf
         apt-get -y install autoheader 
@@ -286,7 +286,7 @@ prepareLinux()
         ${APP_MGR_CMD} -y install clang 
         ${APP_MGR_CMD} -y install patch 
         installCmake
-        ${APP_MGR_CMD} -y install git libtool 
+        ${APP_MGR_CMD} -y install git libtool ca-certificates
         ${APP_MGR_CMD} -y install autotools-dev
         ${APP_MGR_CMD} -y install autoreconf
         ${APP_MGR_CMD} -y install autoheader 
