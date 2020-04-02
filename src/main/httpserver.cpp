@@ -341,7 +341,7 @@ private:
     void setBlackBoard(char *pBB);
 
     int restartMark(int cmd);
-    
+
     int  cleanUp(int pid, char *pBlackBoard);
     int  initSampleServer();
     int  initLscpd();
@@ -1676,7 +1676,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
                 break;
             }
         }
-        
+
         LS_DBG_L("Config listener [%s] [%s]", pName, pAddr);
 
         HttpListener *pListener = NULL;
@@ -3182,7 +3182,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 
         MainServerConfigObj.setDisableLogRotateAtStartup(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "disableInitLogRotation",
-                    0, 1, 0));
+                    0, 1, 1));
 
         HttpStats::set503AutoFix(ConfigCtx::getCurConfigCtx()->getLongValue(
                                      pRoot, "AutoFix503", 0, 1, 1));

@@ -411,7 +411,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"php_flag",                                 NULL},
     {"php_admin_value",                          NULL},
     {"php_admin_flag",                           NULL},
-    
+
     {"header",  NULL},
     {"binpath", NULL},
     {"apptype", NULL},
@@ -419,7 +419,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"appserverenv", NULL},
     {"enablelve",  NULL},
     {"cpuaffinity", NULL},
- 
+
     {"enablequic", NULL},
     {"quicenable", NULL},
     {"quicshmdir", NULL},
@@ -437,11 +437,12 @@ plainconfKeywords plainconf::sKeywords[] =
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,
         GHash::cmpCiString);
-bool plainconf::bKeywordsInited = false;
+bool plainconf::bInited = false;
 bool plainconf::bErrorLogSetup = false;
 AutoStr2 plainconf::rootPath = "";
 StringList plainconf::errorLogList;
 GPointerList plainconf::gModuleList;
+StrStrHashMap plainconf::m_confFileHash;
 
 /***
  * We try to make log available even if errorlog is not setup.
@@ -525,10 +526,9 @@ void plainconf::tolowerstr(char *sLine)
     }
 }
 
-
-void plainconf::initKeywords()
+void plainconf::init()
 {
-    if (bKeywordsInited)
+    if (bInited)
         return ;
 
     int count = sizeof(sKeywords) / sizeof(plainconfKeywords);
@@ -541,9 +541,13 @@ void plainconf::initKeywords()
             allKeyword.insert(sKeywords[i].alias, &sKeywords[i]);
     }
 
-    bKeywordsInited = true;
+    bInited = true;
 }
 
+void plainconf::release()
+{
+    m_confFileHash.release_objects();
+}
 
 void plainconf::setRootPath(const char *root)
 {
@@ -552,7 +556,7 @@ void plainconf::setRootPath(const char *root)
 
 const char *plainconf::getRealName(char *name)
 {
-    assert(bKeywordsInited == true);
+    assert(bInited == true);
     tolowerstr(name);
     HashStringMap<plainconfKeywords *>::iterator it = allKeyword.find(name);
 
@@ -1177,7 +1181,7 @@ void plainconf::checkInFile(const char *path)
                     path, ret);
             return ;
         }
-        
+
         buf.setStr("ci -l -q -t-\"");
         buf.append(new_path, strlen(new_path));
         buf.append("\" -mUpdate \"", 12);
@@ -1192,7 +1196,7 @@ void plainconf::checkInFile(const char *path)
                     "Failed to RCS checkin conf file %s, ret %d, error(%s). "
                     "Org command is %s.", new_path, ret, strerror(errno), buf.c_str());
     }
-    
+
 }
 
 
@@ -1257,17 +1261,6 @@ void plainconf::loadConfFile(const char *path)
 
     else //existed file
     {
-        //gModuleList.push_back();
-        //XmlNode *xmlNode = new XmlNode;
-        FILE *fp = fopen(path, "r");
-
-        if (fp == NULL)
-        {
-            logToMem(LOG_LEVEL_ERR, "Cannot open configuration file: %s", path);
-            return;
-        }
-
-
         const int MAX_LINE_LENGTH = 8192;
         char sLine[MAX_LINE_LENGTH];
         char *p;
@@ -1277,11 +1270,64 @@ void plainconf::loadConfFile(const char *path)
         const int MAX_MULLINE_SIGN_LENGTH = 128;
         char sMultiLineModeSign[MAX_MULLINE_SIGN_LENGTH] = {0};
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
+        bool bInHashT = false;
+        char *pBuf = NULL;
+        if (m_confFileHash.size() > 0)
+        {
+            StrStrHashMap::iterator it = m_confFileHash.find(path);
+            if (it != NULL)
+            {
+                pBuf = (char *)it.second()->str2.c_str();
+                bInHashT = true;
+                logToMem(LOG_LEVEL_INFO, "File %s loaded, use memory in hashT, size %d.", path, strlen(pBuf));
+            }
+        }
 
-        while (fgets(sLine, MAX_LINE_LENGTH, fp))
+        if (!pBuf)
+        {
+            FILE *fp = fopen(path, "r");
+            if (fp == NULL)
+            {
+                logToMem(LOG_LEVEL_ERR, "Cannot open configuration file: %s", path);
+                return;
+            }
+
+            fseek(fp, 0L, SEEK_END);
+            int bufLen = ftell(fp);
+            rewind(fp);
+            if (bufLen > 10 * 1024 * 1024)
+            {
+                logToMem(LOG_LEVEL_ERR, "Conf file %s is too large (%dMB)!!", path, bufLen / (1024 * 1024));
+                fclose(fp);
+                return ;
+            }
+            pBuf = new char[bufLen + 1];
+            fread(pBuf, 1, bufLen, fp);
+            pBuf[bufLen] = 0;
+            fclose(fp);
+            m_confFileHash.insert_update(path, pBuf);
+        }
+
+        char *pBufStart = pBuf;
+        char *pBufEnd = pBuf + strlen(pBuf);
+
+        while(pBufStart < pBufEnd)
         {
             ++lineNumber;
+            char *pLineEnd = strchr(pBufStart, '\n');
+            if (!pLineEnd)
+                pLineEnd = pBufEnd;
+
+            if (pLineEnd - pBufStart >= MAX_LINE_LENGTH)
+            {
+                logToMem(LOG_LEVEL_ERR, "Config file %s #%d line is too long!!", path, lineNumber);
+                return ;
+            }
+
+            memcpy(sLine, pBufStart, pLineEnd - pBufStart);
+            sLine[pLineEnd - pBufStart] = 0;
             p = sLine;
+            pBufStart = pLineEnd + 1;
 
             if (nMultiLineModeSignLen)
             {
@@ -1361,15 +1407,17 @@ void plainconf::loadConfFile(const char *path)
             }
         }
 
-        fclose(fp);
+        if (!bInHashT)
+            delete []pBuf;
+
         if (ret != LS_OK)
         {
             logToMem(LOG_LEVEL_ERR, "Multiline configuration too long: %s", path);
             return;
         }
 
-        //Parsed, check in it
-        checkInFile(path);
+        if (!bInHashT)
+            checkInFile(path);
     }
 
 }

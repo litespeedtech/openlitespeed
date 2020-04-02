@@ -27,7 +27,7 @@
 #define MOD_QS_LEN          (sizeof(MOD_QS) -1)
 #define MAX_BUF_LENG        20
 #define EXPIRE_TIME         (30 * 1000)
-#define MODULE_VERSION_INFO  LSIAPI_VERSION_STRING
+#define MODULE_VERSION_INFO  "1.1"
 
 DECL_COMPONENT_LOG(ModuleNameStr);
 

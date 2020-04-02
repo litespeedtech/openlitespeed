@@ -28,7 +28,7 @@ HttpConfigLoader::~HttpConfigLoader()
 
 int HttpConfigLoader::loadConfigFile()
 {
-    plainconf::initKeywords();
+    plainconf::init();
     plainconf::setRootPath(MainServerConfig::getInstance().getServerRoot());
 
     if (!m_pRoot)
@@ -46,4 +46,5 @@ void HttpConfigLoader::releaseConfigXmlTree()
         delete m_pRoot;
         m_pRoot = NULL;
     }
+    plainconf::release();
 }

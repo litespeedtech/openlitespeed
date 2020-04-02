@@ -174,6 +174,7 @@ public:
     int getWeightedPriority(H2Stream* s);
 
     void wantFlush();
+    void wantFlush2();
 
 private:
     typedef Thash<H2Stream, uint32_t, uint32_t, H2StreamHasher> StreamMap;

@@ -30,7 +30,7 @@
 
 #include <util/autostr.h>
 #include <util/stringlist.h>
-
+#include <util/hashstringmap.h>
 #include <stdio.h>
 
 class XmlNode;
@@ -59,7 +59,8 @@ struct plainconfKeywords
 class plainconf
 {
 public:
-    static void initKeywords();
+    static void init();
+    static void release();
     static void setRootPath(const char *root) ;
     static const char *getRealName(char *name);
     static void outputConfigFile(const XmlNode *pNode, FILE *fp, int level);
@@ -114,10 +115,11 @@ public:
 public:
     static plainconfKeywords sKeywords[];
     static GPointerList gModuleList;
-    static bool bKeywordsInited;
+    static bool bInited;
     static AutoStr2 rootPath;
     static StringList errorLogList;
     static bool bErrorLogSetup;
+    static StrStrHashMap m_confFileHash;
 
 };
 

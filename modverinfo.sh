@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 #
 # This script is to gather pre-defined modules version info
 #
@@ -14,26 +14,26 @@ get_file_defined_value()
 
 MODULESPACE=
 if [ "x$OS" = "xLinux" ] ; then
-    MODULESPACE="\n"
+    MODULESPACE="\\n"
 fi
 
 get_file_defined_value src/modules/modgzip/modgzip.cpp "#define     MODULE_VERSION"
-ALL_VER_INFO="$ALL_VER_INFO\tmodgzip $DEFINED_VALUE$MODULESPACE"
+ALL_VER_INFO="$ALL_VER_INFO\\tmodgzip $DEFINED_VALUE$MODULESPACE"
     
 if [ "${OS}" != "Darwin" ] ; then
 
     get_file_defined_value src/modules/cache/cache.cpp "#define MODULE_VERSION_INFO"
-    ALL_VER_INFO="$ALL_VER_INFO\tcache $DEFINED_VALUE$MODULESPACE"
+    ALL_VER_INFO="$ALL_VER_INFO\\tcache $DEFINED_VALUE$MODULESPACE"
 
     get_file_defined_value src/modules/modinspector/modinspector.cpp "#define MODULE_VERSION_INFO"
-    ALL_VER_INFO="$ALL_VER_INFO\tmodinspector $DEFINED_VALUE$MODULESPACE"
+    ALL_VER_INFO="$ALL_VER_INFO\\tmodinspector $DEFINED_VALUE$MODULESPACE"
 
     get_file_defined_value src/modules/uploadprogress/uploadprogress.cpp "#define MODULE_VERSION_INFO"
-    ALL_VER_INFO="$ALL_VER_INFO\tuploadprogress $DEFINED_VALUE$MODULESPACE"
+    ALL_VER_INFO="$ALL_VER_INFO\\tuploadprogress $DEFINED_VALUE$MODULESPACE"
 
 
     get_file_defined_value src/modules/modsecurity-ls/mod_security.cpp "#define VERSIONNUMBER"
-    ALL_VER_INFO="$ALL_VER_INFO\tmod_security $DEFINED_VALUE$MODULESPACE"
+    ALL_VER_INFO="$ALL_VER_INFO\\tmod_security $DEFINED_VALUE$MODULESPACE"
 
 fi
 

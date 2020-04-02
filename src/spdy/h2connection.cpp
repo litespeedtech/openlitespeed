@@ -1263,9 +1263,7 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
 
     LS_DBG_H(getLogger(), "[%s-%d] send DATA frame, FIN: %d, iov: %p, len: %d"
              , getLogId(), uiStreamId, flag, pIov, total);
-    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
-        && getBuf()->empty() && !getStream()->isWantWrite())
-        getStream()->continueWrite();
+    wantFlush2();
 
     appendOutput((char *)&header, 9);
     if (pIov)
@@ -1284,9 +1282,7 @@ int H2Connection::sendDataFrame(uint32_t uiStreamId, int flag,
 
     LS_DBG_H(getLogger(), "[%s-%d] send DATA frame, FIN: %d, data: %p, len: %d"
              , getLogId(), uiStreamId, flag, pBuf, len);
-    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
-        && getBuf()->empty() && !getStream()->isWantWrite())
-        getStream()->continueWrite();
+    wantFlush2();
 
     appendOutput((char *)&header, 9);
     if (pBuf)
@@ -1307,9 +1303,7 @@ int H2Connection::sendfileDataFrame(uint32_t uiStreamId, int flag, int fd,
 
     LS_DBG_H(getLogger(), "[%s-%d] sendfile DATA frame, FIN: %d, fd: %d, off: %lld, len: %d"
              , getLogId(), uiStreamId, flag, fd, (long long)off, len);
-    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT) == 0
-        && getBuf()->empty() && !getStream()->isWantWrite())
-        getStream()->continueWrite();
+    wantFlush2();
 
     appendOutput((char *)&header, 9);
     if (len)
@@ -1480,6 +1474,15 @@ void H2Connection::wantFlush()
 //         flush();
     else
         getStream()->continueWrite();
+}
+
+
+void H2Connection::wantFlush2()
+{
+    if ((m_iFlag & H2_CONN_FLAG_IN_EVENT))
+        m_iFlag |= H2_CONN_FLAG_WANT_FLUSH;
+    else if (getBuf()->empty() && !getStream()->isWantWrite())
+        continueWrite();
 }
 
 
