@@ -10,6 +10,7 @@
 
 namespace Lsc\Wp;
 
+use \Exception;
 use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\Context\ContextOption;
 use \Lsc\Wp\Context\UserCLIContextOption;
@@ -47,6 +48,12 @@ class UserCommand
     const CMD_DASH_DELETE_MSG = 'dash_delete_msg';
 
     /**
+     * @since 1.12
+     * @var string
+     */
+    const CMD_GET_QUICCLOUD_API_KEY = 'getQuicCloudApiKey';
+
+    /**
      * @var bool
      */
     private $asUser = false;
@@ -62,13 +69,14 @@ class UserCommand
     private $action;
 
     /**
-     * @var mixed[]
+     * @var string[]
      */
     private $extraArgs;
 
     /**
      *
      * @param boolean $asUser
+     * @throws LSCMException  Thrown indirectly.
      */
     private function __construct( $asUser = false )
     {
@@ -286,11 +294,83 @@ class UserCommand
         $modifier = implode(' ', $extraArgs);
         $file = __FILE__;
 
-        $cmd = "{$su} -c \"cd {$path}/wp-admin && timeout {$timeout} {$phpBin} {$file} "
-                . "{$action} {$path} {$docRoot} {$serverName} {$env}"
+        return "{$su} -c \"cd {$path}/wp-admin && timeout {$timeout} {$phpBin} "
+                . "{$file} {$action} {$path} {$docRoot} {$serverName} {$env}"
                 . (($modifier !== '') ? " {$modifier}\"" : '"');
+    }
 
-        return $cmd;
+    /**
+     *
+     * @since 1.12
+     *
+     * @param string     $action
+     * @param WPInstall  $wpInstall
+     * @param string[]   $extraArgs
+     * @return null|mixed
+     * @throws LSCMException  Thrown indirectly.
+     */
+    public static function getValueFromWordPress( $action,
+            WPInstall $wpInstall, $extraArgs = array() )
+    {
+        $ret = null;
+
+        if ( !self::preIssueValidation($action, $wpInstall, $extraArgs) ) {
+            return $ret;
+        }
+
+        $cmd = self::getIssueCmd($action, $wpInstall, $extraArgs);
+
+        exec($cmd, $output, $return_var);
+
+        Logger::debug("getValueFromWordPress command "
+            . "{$action}={$return_var} {$wpInstall}\n{$cmd}");
+        Logger::debug('output = ' . var_export($output, true));
+
+        $debug = $upgrade = $err = '';
+        $curr = &$err;
+
+        foreach ( $output as $line ) {
+
+            /**
+             * If this line is not present in output, did not return normally.
+             * This line will appear after any [UPGRADE] output.
+             */
+            if ( strpos($line, 'LS UserCommand Output Start') !== false ) {
+                continue;
+            }
+            elseif ( strpos($line, '[RESULT]') !== false ) {
+
+                if ( preg_match('/API_KEY=(.+)/', $line, $m) ) {
+                    $ret = $m[1];
+                }
+                else {
+                    $err .= "Unexpected result line {$line}\n";
+                }
+            }
+            elseif ( ($pos = strpos($line, '[DEBUG]')) !== false ) {
+                $debug .= substr($line, $pos + 7) . "\n";
+                $curr = &$debug;
+            }
+            elseif ( strpos($line, '[UPGRADE]') !== false ) {
+                //Ignore this output
+                $curr = &$upgrade;
+            }
+            else {
+                $curr .= "{$line}\n";
+            }
+        }
+
+        $path = $wpInstall->getPath();
+
+        if ( $debug ) {
+            Logger::logMsg("{$path} - {$debug}", Logger::L_DEBUG);
+        }
+
+        if ( $err ) {
+            Logger::logMsg("{$path} - {$err}", Logger::L_ERROR);
+        }
+
+        return $ret;
     }
 
     /**
@@ -299,12 +379,7 @@ class UserCommand
      * @param WPInstall  $wpInstall
      * @param string[]   $extraArgs
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by self::preIssueValidation(),
-     *                        self::getIssueCmd(), Logger::debug(),
-     *                        self::removeLeftoverLscwpFiles(),
-     *                        self::handleResultOutput(), Logger::logMsg(),
-     *                        $wpInstall->addUserFlagFile(), Logger::error(),
-     *                        and self::handleUnexpectedError().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function issue( $action, WPInstall $wpInstall,
             $extraArgs = array() )
@@ -503,10 +578,9 @@ class UserCommand
      * @param WPInstall  $wpInstall
      * @param string[]   $extraArgs  Not used at the moment.
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by $wpInstall->hasValidPath()
-     *                        Logger::debug(), $wpInstall->refreshStatus(),
-     *                        $wpInstall->addUserFlagFile(),
-     *                        and DashNotifier::prepLocalDashPluginFiles().
+     * @throws LSCMException  Thrown directly and indirectly.
+     *
+     * @noinspection PhpUnusedParameterInspection
      */
     private static function preIssueValidation( $action, WPInstall $wpInstall,
             $extraArgs )
@@ -523,6 +597,7 @@ class UserCommand
         switch ($action) {
             case self::CMD_MASS_ENABLE:
             case self::CMD_MASS_DISABLE:
+            /** @noinspection PhpMissingBreakStatementInspection */
             case self::CMD_MASS_UPGRADE:
 
                 if ( $wpInstall->hasFlagFile() ) {
@@ -548,6 +623,7 @@ class UserCommand
                         return false;
                     }
                 }
+
             //no default
         }
 
@@ -586,46 +662,64 @@ class UserCommand
                     case self::CMD_STATUS:
                         $ret = $proc->updateStatus(true);
                         break;
+
                     case self::CMD_ENABLE:
                         $ret = $proc->enable($this->extraArgs);
                         $this->currInstall->removeNewLscwpFlagFile();
                         break;
+
                     case self::CMD_DIRECT_ENABLE:
                         $ret = $proc->directEnable();
                         $this->currInstall->removeNewLscwpFlagFile();
                         break;
+
                     case self::CMD_MASS_ENABLE:
                         $ret = $proc->massEnable($this->extraArgs);
                         $this->currInstall->removeNewLscwpFlagFile();
                         break;
+
                     case self::CMD_DISABLE:
                         $ret = $proc->disable($this->extraArgs);
                         break;
+
                     case self::CMD_MASS_DISABLE:
                         $ret = $proc->massDisable($this->extraArgs);
                         break;
+
                     case self::CMD_UPGRADE:
                         $ret = $proc->upgrade($this->extraArgs);
                         break;
+
                     case self::CMD_MASS_UPGRADE:
                         $ret = $proc->massUpgrade($this->extraArgs);
                         break;
+
                     case self::CMD_UPDATE_TRANSLATION:
                         $proc->updateTranslationFiles();
                         $ret = self::EXIT_SUCC;
                         break;
+
                     case self::CMD_DASH_NOTIFY:
                         $ret = $proc->dashNotify($this->extraArgs);
                         break;
+
                     case self::CMD_MASS_DASH_NOTIFY:
                         $ret = $proc->massDashNotify($this->extraArgs);
                         break;
+
                     case self::CMD_DASH_DISABLE:
                         $ret = $proc->dashDisable($this->extraArgs);
                         break;
+
                     case self::CMD_MASS_DASH_DISABLE:
                         $ret = $proc->massDashDisable($this->extraArgs);
                         break;
+
+                    case self::CMD_GET_QUICCLOUD_API_KEY:
+                        $proc->getQuicCloudAPIKey(true);
+                        $ret = self::EXIT_SUCC;
+                        break;
+
                     //no default
                 }
             }
@@ -651,7 +745,7 @@ class UserCommand
                 echo "[LOG][{$lvl}] {$msg}\n";
             }
         }
-        catch ( \Exception $e )
+        catch ( Exception $e )
         {
             $ret = UserCommand::EXIT_ERROR;
 
@@ -689,7 +783,8 @@ class UserCommand
             self::CMD_DASH_NOTIFY,
             self::CMD_MASS_DASH_NOTIFY,
             self::CMD_DASH_DISABLE,
-            self::CMD_MASS_DASH_DISABLE
+            self::CMD_MASS_DASH_DISABLE,
+            self::CMD_GET_QUICCLOUD_API_KEY
         );
 
         return in_array($action, $supported);
@@ -720,6 +815,7 @@ class UserCommand
     /**
      *
      * @return UserCommand
+     * @throws LSCMException  Thrown indirectly.
      */
     private static function getUserCommand()
     {
@@ -747,6 +843,10 @@ class UserCommand
         return $instance;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     public static function run()
     {
         if ( $cmd = self::getUserCommand() ) {
@@ -764,5 +864,7 @@ class UserCommand
 
 /**
  * This should only be invoked from command line.
+ *
+ * @noinspection PhpUnhandledExceptionInspection
  */
 UserCommand::run();

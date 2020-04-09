@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.11';
+    const PANEL_API_VERSION = '1.12';
 
     /**
      * @since 1.9
@@ -124,7 +124,7 @@ abstract class ControlPanel
          * 'ob_gzhandler' etc.
          */
         $this->phpOptions = '-d disable_functions=ini_set -d opcache.enable=0 '
-                . '-d max_execution_time=' . self::PHP_TIMEOUT . ' -d memory_limit=512M '
+                . '-d max_execution_time=' . static::PHP_TIMEOUT . ' -d memory_limit=512M '
                 . '-d register_argc_argv=1 -d zlib.output_compression=0 -d output_handler= '
                 . '-d safe_mode=0 -d open_basedir=';
 
@@ -136,8 +136,8 @@ abstract class ControlPanel
      * Use getClassInstance() with a fully qualified class name as a parameter
      * instead.
      *
-     * Sets self::$instance with a new $className instance if it has not been
-     * set already. An exception will be thrown if self::$instance has already
+     * Sets static::$instance with a new $className instance if it has not been
+     * set already. An exception will be thrown if static::$instance has already
      * been set to a different class name than the one provided.
      *
      * @deprecated
@@ -147,7 +147,7 @@ abstract class ControlPanel
      */
     public static function initByClassName( $className )
     {
-        if ( self::$instance == null ) {
+        if ( static::$instance == null ) {
 
             if ( $className == 'custom' ) {
                 $lsws_home = realpath(__DIR__ . '/../../../../');
@@ -173,7 +173,7 @@ abstract class ControlPanel
             }
 
             try{
-                self::$instance = new $className();
+                static::$instance = new $className();
             }
             catch ( \Exception $e ){
                 throw new LSCMException(
@@ -181,7 +181,7 @@ abstract class ControlPanel
             }
         }
         else {
-            $instanceClassName = '\\' . get_class(self::$instance);
+            $instanceClassName = '\\' . get_class(static::$instance);
 
             if ( $instanceClassName != $className ) {
                 throw new LSCMException(
@@ -190,7 +190,7 @@ abstract class ControlPanel
             }
         }
 
-        return self::$instance;
+        return static::$instance;
     }
 
     /**
@@ -204,22 +204,22 @@ abstract class ControlPanel
      */
     public static function init( $name )
     {
-        if ( self::$instance != null ) {
+        if ( static::$instance != null ) {
             throw new LSCMException('ControlPanel cannot be initialized twice.');
         }
 
         switch ($name) {
-            case self::PANEL_CPANEL:
+            case static::PANEL_CPANEL:
                 $className = 'CPanel';
                 break;
-            case self::PANEL_PLESK:
+            case static::PANEL_PLESK:
                 $className = 'Plesk';
                 break;
             default:
                 throw new LSCMException("Control panel '{$name}' is not supported.");
         }
 
-        return self::initByClassName("\Lsc\Wp\Panel\\{$className}");
+        return static::initByClassName("\Lsc\Wp\Panel\\{$className}");
     }
 
     /**
@@ -229,18 +229,18 @@ abstract class ControlPanel
      *
      * @param string $className  Fully qualified class name.
      * @return ControlPanel
-     * @throws LSCMException  Indirectly thrown by self::initByClassName().
+     * @throws LSCMException  Indirectly thrown by static::initByClassName().
      */
     public static function getClassInstance( $className = '' )
     {
         if ( $className != '' ) {
-            self::initByClassName($className);
+            static::initByClassName($className);
         }
-        elseif ( self::$instance == null ) {
+        elseif ( static::$instance == null ) {
             throw new LSCMException('Could not get instance, ControlPanel not initialized. ');
         }
 
-        return self::$instance;
+        return static::$instance;
     }
 
     /**
@@ -251,7 +251,7 @@ abstract class ControlPanel
      */
     public static function getInstance()
     {
-        return self::getClassInstance();
+        return static::getClassInstance();
     }
 
     /**
@@ -283,11 +283,11 @@ abstract class ControlPanel
     {
         $ret = true;
 
-         if ( self::NOT_SET == $this->getServerCacheRoot() ) {
+         if ( static::NOT_SET == $this->getServerCacheRoot() ) {
             $ret = false;
         }
 
-        if ( self::NOT_SET == $this->getVHCacheRoot() ) {
+        if ( static::NOT_SET == $this->getVHCacheRoot() ) {
             $ret = false;
         }
 
@@ -310,12 +310,12 @@ abstract class ControlPanel
 
         $restartRequired = false;
 
-        if ( self::NOT_SET == $this->getServerCacheRoot() ) {
+        if ( static::NOT_SET == $this->getServerCacheRoot() ) {
             $this->setServerCacheRoot();
             $restartRequired = true;
         }
 
-        if ( self::NOT_SET == $this->getVHCacheRoot() ) {
+        if ( static::NOT_SET == $this->getVHCacheRoot() ) {
             $this->setVHCacheRoot();
             $restartRequired = true;
         }
@@ -561,7 +561,7 @@ abstract class ControlPanel
             $this->log("Server level cache root is {$svrCacheRoot}.", Logger::L_DEBUG);
         }
         else {
-            $this->serverCacheRoot = self::NOT_SET;
+            $this->serverCacheRoot = static::NOT_SET;
             $this->log('Server level cache root is not set.', Logger::L_NOTICE);
         }
 
@@ -570,7 +570,7 @@ abstract class ControlPanel
             $this->log("Virtual Host level cache root is {$vhCacheRoot}.", Logger::L_DEBUG);
         }
         else {
-            $this->vhCacheRoot = self::NOT_SET;
+            $this->vhCacheRoot = static::NOT_SET;
             $this->log('Virtual Host level cache root is not set.', Logger::L_INFO);
         }
     }
@@ -620,7 +620,7 @@ abstract class ControlPanel
     /**
      *
      * @param string  $svrCacheRoot
-     * @throws LSCMException
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     public function setServerCacheRoot( $svrCacheRoot = '' )
     {
@@ -690,8 +690,7 @@ abstract class ControlPanel
     /**
      *
      * @param string  $vhConf
-     * @throws LSCMException  Indirectly thrown by Util::createBackup() and
-     *                        $this->log().
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     public function writeVHCacheRoot( $vhConf, $vhCacheRoot = 'lscache' )
     {
@@ -756,7 +755,7 @@ abstract class ControlPanel
      */
     protected static function setMinAPIFilePath()
     {
-        self::$minAPIFilePath = realpath(__DIR__ . '/../..') . '/MIN_VER';
+        static::$minAPIFilePath = realpath(__DIR__ . '/../..') . '/MIN_VER';
     }
 
     /**
@@ -767,20 +766,21 @@ abstract class ControlPanel
      */
     protected static function getMinAPIFilePath()
     {
-        if ( self::$minAPIFilePath == '' ) {
-            self::setMinAPIFilePath();
+        if ( static::$minAPIFilePath == '' ) {
+            static::setMinAPIFilePath();
         }
 
-        return self::$minAPIFilePath;
+        return static::$minAPIFilePath;
     }
 
     /**
      *
      * @since 1.9.7
+     * @since 1.12  Changed visibility from protected to public.
      */
-    protected static function populateMinAPIVerFile()
+    public static function populateMinAPIVerFile()
     {
-        $minVerFile = self::getMinAPIFilePath();
+        $minVerFile = static::getMinAPIFilePath();
 
         $minVerURL = 'https://www.litespeed.sh/sub/shared/MIN_VER';
         $content = Util::get_url_contents($minVerURL);
@@ -801,14 +801,14 @@ abstract class ControlPanel
      */
     protected static function getMinAPIVer()
     {
-        $minVerFile = self::getMinAPIFilePath();
+        $minVerFile = static::getMinAPIFilePath();
 
         clearstatcache();
 
         if ( !file_exists($minVerFile)
                 || (time() - filemtime($minVerFile)) > 86400 ) {
 
-            self::populateMinAPIVerFile();
+            static::populateMinAPIVerFile();
         }
 
         $minVer = trim(file_get_contents($minVerFile));
@@ -824,10 +824,10 @@ abstract class ControlPanel
      */
     public static function meetsMinAPIVerRequirement()
     {
-        $minAPIVer = self::getMinAPIVer();
+        $minAPIVer = static::getMinAPIVer();
 
         if ( $minAPIVer == ''
-                || version_compare(self::PANEL_API_VERSION, $minAPIVer, '<') ) {
+                || version_compare(static::PANEL_API_VERSION, $minAPIVer, '<') ) {
 
             return false;
         }
@@ -846,6 +846,7 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.12',
             '1.11',
             '1.10',
             '1.9.8',
@@ -874,16 +875,16 @@ abstract class ControlPanel
         $minSupportedAPIVer = end($supportedAPIVers);
 
         if ( version_compare($panelAPIVer, $maxSupportedAPIVer, '>') ) {
-            return self::PANEL_API_VERSION_TOO_HIGH;
+            return static::PANEL_API_VERSION_TOO_HIGH;
         }
         elseif ( version_compare($panelAPIVer, $minSupportedAPIVer, '<') ) {
-            return self::PANEL_API_VERSION_TOO_LOW;
+            return static::PANEL_API_VERSION_TOO_LOW;
         }
         elseif ( ! in_array($panelAPIVer, $supportedAPIVers) ) {
-            return self::PANEL_API_VERSION_UNKNOWN;
+            return static::PANEL_API_VERSION_UNKNOWN;
         }
         else {
-            return self::PANEL_API_VERSION_SUPPORTED;
+            return static::PANEL_API_VERSION_SUPPORTED;
         }
     }
 
@@ -897,9 +898,9 @@ abstract class ControlPanel
      */
     public static function isPanelAPICompatible( $panelAPIVer )
     {
-        $apiCompatStatus = self::checkPanelAPICompatibility($panelAPIVer);
+        $apiCompatStatus = static::checkPanelAPICompatibility($panelAPIVer);
 
-        if ( $apiCompatStatus != self::PANEL_API_VERSION_SUPPORTED ) {
+        if ( $apiCompatStatus != static::PANEL_API_VERSION_SUPPORTED ) {
             return false;
         }
 

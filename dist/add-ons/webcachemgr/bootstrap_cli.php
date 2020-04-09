@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  * @Author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
  * @Copyright: (c) 2018
@@ -15,5 +15,6 @@ require_once __DIR__ . '/autoloader.php';
 
 date_default_timezone_set('UTC');
 
+/** @noinspection PhpUnhandledExceptionInspection */
 Context::initialize(new RootCLIContextOption());
 CliController::run();

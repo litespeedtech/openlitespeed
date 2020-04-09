@@ -442,7 +442,11 @@ bool plainconf::bErrorLogSetup = false;
 AutoStr2 plainconf::rootPath = "";
 StringList plainconf::errorLogList;
 GPointerList plainconf::gModuleList;
+
+#ifdef ENABLE_CONF_HASH
 StrStrHashMap plainconf::m_confFileHash;
+#endif
+
 
 /***
  * We try to make log available even if errorlog is not setup.
@@ -546,7 +550,9 @@ void plainconf::init()
 
 void plainconf::release()
 {
+#ifdef ENABLE_CONF_HASH
     m_confFileHash.release_objects();
+#endif
 }
 
 void plainconf::setRootPath(const char *root)
@@ -1272,6 +1278,8 @@ void plainconf::loadConfFile(const char *path)
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
         bool bInHashT = false;
         char *pBuf = NULL;
+
+#ifdef ENABLE_CONF_HASH
         if (m_confFileHash.size() > 0)
         {
             StrStrHashMap::iterator it = m_confFileHash.find(path);
@@ -1282,7 +1290,7 @@ void plainconf::loadConfFile(const char *path)
                 logToMem(LOG_LEVEL_INFO, "File %s loaded, use memory in hashT, size %d.", path, strlen(pBuf));
             }
         }
-
+#endif
         if (!pBuf)
         {
             FILE *fp = fopen(path, "r");
@@ -1305,7 +1313,9 @@ void plainconf::loadConfFile(const char *path)
             fread(pBuf, 1, bufLen, fp);
             pBuf[bufLen] = 0;
             fclose(fp);
+#ifdef ENABLE_CONF_HASH
             m_confFileHash.insert_update(path, pBuf);
+#endif
         }
 
         char *pBufStart = pBuf;
@@ -1318,14 +1328,14 @@ void plainconf::loadConfFile(const char *path)
             if (!pLineEnd)
                 pLineEnd = pBufEnd;
 
-            if (pLineEnd - pBufStart >= MAX_LINE_LENGTH)
+            if (pLineEnd - pBufStart >= MAX_LINE_LENGTH - 1)
             {
                 logToMem(LOG_LEVEL_ERR, "Config file %s #%d line is too long!!", path, lineNumber);
                 return ;
             }
 
-            memcpy(sLine, pBufStart, pLineEnd - pBufStart);
-            sLine[pLineEnd - pBufStart] = 0;
+            memcpy(sLine, pBufStart, pLineEnd - pBufStart + 1);
+            sLine[pLineEnd - pBufStart + 1] = 0;  //Add a NULL terminate
             p = sLine;
             pBufStart = pLineEnd + 1;
 

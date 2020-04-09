@@ -18,6 +18,9 @@
 #ifndef __PLAINCONF_H__
 #define __PLAINCONF_H__
 
+#define ENABLE_CONF_HASH    1
+
+
 /*Usage of this module
  * parseFile() to parse a whole file includes "include" and return the root node
  * of the config tree
@@ -119,7 +122,9 @@ public:
     static AutoStr2 rootPath;
     static StringList errorLogList;
     static bool bErrorLogSetup;
+#ifdef ENABLE_CONF_HASH
     static StrStrHashMap m_confFileHash;
+#endif
 
 };
 

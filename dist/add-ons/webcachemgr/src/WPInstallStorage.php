@@ -19,17 +19,60 @@ use \Lsc\Wp\Panel\ControlPanel;
 class WPInstallStorage
 {
 
-    const DATA_VERSION = '1.5';
-    const ERR_NOT_EXIST = 1;
-    const ERR_CORRUPTED = 2;
-    const ERR_VERSION_HIGH = 3;
-    const ERR_VERSION_LOW = 4;
-    const CMD_SCAN = 'scan';
-    const CMD_DISCOVER_NEW = 'discoverNew';
+    /**
+     * @var string
+     */
     const CMD_ADD_CUST_WPINSTALLS = 'addCustWPInstalls';
+
+    /**
+     * @var string
+     */
+    const CMD_DISCOVER_NEW = 'discoverNew';
+
+    /**
+     * @var string
+     */
     const CMD_FLAG = 'flag';
-    const CMD_UNFLAG = 'unflag';
+
+    /**
+     * @var string
+     */
     const CMD_MASS_UNFLAG = 'mass_unflag';
+
+    /**
+     * @var string
+     */
+    const CMD_SCAN = 'scan';
+
+    /**
+     * @var string
+     */
+    const CMD_UNFLAG = 'unflag';
+
+    /**
+     * @var string
+     */
+    const DATA_VERSION = '1.5';
+
+    /**
+     * @var int
+     */
+    const ERR_NOT_EXIST = 1;
+
+    /**
+     * @var int
+     */
+    const ERR_CORRUPTED = 2;
+
+    /**
+     * @var int
+     */
+    const ERR_VERSION_HIGH = 3;
+
+    /**
+     * @var int
+     */
+    const ERR_VERSION_LOW = 4;
 
     /**
      * @var string
@@ -65,7 +108,7 @@ class WPInstallStorage
      *
      * @param string  $dataFile
      * @param string  $custDataFile
-     * @throws LSCMException  Indirectly thrown by $this->init().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function __construct( $dataFile, $custDataFile = '' )
     {
@@ -77,8 +120,7 @@ class WPInstallStorage
     /**
      *
      * @return int
-     * @throws LSCMException  Indirectly thrown by $this->getDataFileData() and
-     *                        Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function init()
     {
@@ -113,7 +155,7 @@ class WPInstallStorage
      *
      * @param string  $dataFile
      * @return WPInstall[]
-     * @throws LSCMException  Indirectly thrown by $this->verifyDataFileVer().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function getDataFileData( $dataFile )
     {
@@ -195,6 +237,8 @@ class WPInstallStorage
     /**
      *
      * @return null|WPInstall[]
+     *
+     * @noinspection PhpUnused
      */
     public function getWPInstalls()
     {
@@ -204,6 +248,8 @@ class WPInstallStorage
     /**
      *
      * @return null|WPInstall[]
+     *
+     * @noinspection PhpUnused
      */
     public function getCustWPInstalls()
     {
@@ -297,7 +343,7 @@ class WPInstallStorage
 
     /**
      *
-     * @throws LSCMException  Indirectly thrown by $this->saveDataFile().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function syncToDisk()
     {
@@ -312,7 +358,7 @@ class WPInstallStorage
      *
      * @param string       $dataFile
      * @param WPInstall[]  $wpInstalls
-     * @throws LSCMException  Indirectly thrown by $this->log().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function saveDataFile( $dataFile, $wpInstalls )
     {
@@ -338,26 +384,11 @@ class WPInstallStorage
     }
 
     /**
-     * Deprecated 06/14/19. Use verifyDataFileVer() instead.
-     *
-     * Updates data file to the latest format if possible/needed.
-     *
-     * @deprecated
-     * @param string  $dataFileVer
-     * @return int
-     */
-    protected function checkDataFileVer( $dataFileVer )
-    {
-        return $this->verifyDataFileVer($this->dataFile, $dataFileVer);
-    }
-
-    /**
      *
      * @param string  $dataFile
      * @param string  $dataFileVer
      * @return int
-     * @throws LSCMException  Indirectly thrown by Logger::info() and
-     *                        $this->updateDataFile().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function verifyDataFileVer( $dataFile, $dataFileVer )
     {
@@ -376,24 +407,11 @@ class WPInstallStorage
     }
 
     /**
-     * Deprecated 06/14/19. Use updateDataFile() instead.
-     *
-     * @deprecated
-     * @param string    $dataFileVersion
-     * @return boolean
-     */
-    protected function upgradeDataFile( $dataFileVersion )
-    {
-        return $this->updateDataFile($this->dataFile, $dataFileVersion);
-    }
-
-    /**
      *
      * @param string  $dataFile
      * @param string  $dataFileVer
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by Logger::info(),
-     *                        Util::createBackup(), and Logger::error().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function updateDataFile( $dataFile, $dataFileVer )
     {
@@ -425,8 +443,7 @@ class WPInstallStorage
      *
      * @param string     $action
      * @return string[]
-     * @throws LSCMException  Indirectly thrown by
-     *                        ControlPanel::getClassInstance().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function prepareActionItems( $action )
     {
@@ -462,12 +479,7 @@ class WPInstallStorage
      * @param string    $action
      * @param string    $path
      * @param string[]  $extraArgs
-     * @throws LSCMException  Indirectly thrown by $wpInstall->hasValidPath(),
-     *                        $wpInstall->addUserFlagFile(),
-     *                        $wpInstall->refreshStatus(),
-     *                        PluginVersion::getInstance(), and
-     *                        PluginVersion::getInstance()->getAllowedVersions(),
-     *                        UserCommand::issue(), and $this->syncToDisk().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function doWPInstallAction( $action, $path, $extraArgs )
     {
@@ -580,14 +592,7 @@ class WPInstallStorage
      * @param null|string[]  $list
      * @param string[]       $extraArgs
      * @return string[]
-     * @throws LSCMException  Indirectly thrown by $this->prepareActionItems(),
-     *                        $this->log(), Context::getActionTimeout(),
-     *                        $this->scan(), $this->addCustomInstallations(),
-     *                        $this->doWPInstallAction(),
-     *                        PluginVersion::getCurrentVersion(),
-     *                        PluginVersion::getInstance(),
-     *                        PluginVersion::getInstance()->setActiveVersion(),
-     *                        and $this->syncToDisk().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function doAction( $action, $list, $extraArgs = array() )
     {
@@ -676,10 +681,8 @@ class WPInstallStorage
      *
      * @param string   $docroot
      * @param boolean  $forceRefresh
-     * @return null
-     * @throws LSCMException  Indirectly thrown by Context::getScanDepth(),
-     *                        $this->log(), and
-     *                        $this->wpInstalls[$wp_path]->refreshStatus().
+     * @return void
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function scan( $docroot, $forceRefresh = false )
     {
@@ -734,9 +737,8 @@ class WPInstallStorage
     /**
      *
      * @param string[]  $wpInstallsInfo
-     * @return null
-     * @throws LSCMException  Indirectly thrown by $this->log() and
-     *                        $this->custWpInstalls[$wpPath]->refreshStatus().
+     * @return void
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function addCustomInstallations( $wpInstallsInfo )
     {
@@ -833,18 +835,14 @@ class WPInstallStorage
             }
         }
 
-        $msgs = array( 'succ' => $succ, 'fail' => $fail, 'err' => $err );
-
-        return $msgs;
+        return array( 'succ' => $succ, 'fail' => $fail, 'err' => $err );
     }
 
     /**
      *
      * @param string  $msg
      * @param int     $level
-     * @throws LSCMException  Indirectly thrown by Logger::error(),
-     *                        Logger::warn(), Logger::notice(), Logger::info(),
-     *                        Logger::verbose(), and Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function log( $msg, $level )
     {

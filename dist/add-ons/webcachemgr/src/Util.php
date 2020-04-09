@@ -303,9 +303,7 @@ class Util
      *
      * @param string  $filepath
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by Logger::debug(),
-     *                        Logger::verbose(), self::matchFileSettings(), and
-     *                        Logger::info().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function createBackup( $filepath )
     {

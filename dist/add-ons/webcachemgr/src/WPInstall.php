@@ -383,9 +383,7 @@ class WPInstall
      *
      * @param string  $url
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by
-     *                        ControlPanel::getClassInstance(),
-     *                        $this->addUserFlagFile(), and Logger::error().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function populateDataFromUrl( $url )
     {
