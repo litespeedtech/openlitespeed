@@ -326,6 +326,7 @@ static int fixHttpVer(HttpSession *pSession, char *pBuf, int n)
 int AccessLog::appendEscape(char *pBuf, int destLen, const char *pStr, int len)
 {
     char *pDestEnd = pBuf + destLen;
+    char last = '\0';
     char *p = pBuf;
     const char *pStrEnd = pStr + len;
     while (pStr < pStrEnd)
@@ -346,9 +347,10 @@ int AccessLog::appendEscape(char *pBuf, int destLen, const char *pStr, int len)
             if (pBuf + 2 > pDestEnd)
                 break;
 
-            if ((*pStr == '"') || (*pStr == '\\'))
+            if ((*pStr == '"') || (*pStr == '\\') || (*pStr == '?' && last == '<'))
                 *p++ = '\\';
             *p++ = ch;
+            last = ch;
         }
         ++pStr;
     }
@@ -658,6 +660,17 @@ void AccessLog::log(const char *pVHostName, int len, HttpSession *pSession)
 }
 
 
+void AccessLog::appendEscape(const char *data, int len)
+{
+    if (m_buf.available() < 100 + len)
+    {
+        flush();
+        m_buf.guarantee(100 + len);
+    }
+    appendEscape(m_buf.end(), m_buf.available(), data, len);
+}
+
+
 void AccessLog::log(HttpSession *pSession)
 {
     int  n;
@@ -698,13 +711,7 @@ void AccessLog::log(HttpSession *pSession)
     n = pReq->getOrgReqLineLen();
     char *pOrgReqLine = (char *)pReq->getOrgReqLine();
     n = fixHttpVer(pSession, pOrgReqLine, n);
-    if ((n > 4096) || (m_buf.available() < 100 + n))
-    {
-        flush();
-        m_pAppender->append(pOrgReqLine, n);
-    }
-    else
-        m_buf.append_unsafe(pOrgReqLine, n);
+    appendEscape(pOrgReqLine, n);
     m_buf.append_unsafe('"');
     m_buf.append_unsafe(
         HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode()), 5);
@@ -718,20 +725,20 @@ void AccessLog::log(HttpSession *pSession)
     if (getAccessLogHeader() & LOG_REFERER)
     {
         m_buf.append_unsafe(' ');
-        appendStr(pReq->getHeader(HttpHeader::H_REFERER),
-                  pReq->getHeaderLen(HttpHeader::H_REFERER));
+        appendEscape(pReq->getHeader(HttpHeader::H_REFERER),
+                     pReq->getHeaderLen(HttpHeader::H_REFERER));
     }
     if (getAccessLogHeader() & LOG_USERAGENT)
     {
         m_buf.append_unsafe(' ');
-        appendStr(pReq->getHeader(HttpHeader::H_USERAGENT),
-                  pReq->getHeaderLen(HttpHeader::H_USERAGENT));
+        appendEscape(pReq->getHeader(HttpHeader::H_USERAGENT),
+                     pReq->getHeaderLen(HttpHeader::H_USERAGENT));
     }
     if (getAccessLogHeader() & LOG_VHOST)
     {
         m_buf.append_unsafe(' ');
-        appendStr(pReq->getHeader(HttpHeader::H_HOST),
-                  pReq->getHeaderLen(HttpHeader::H_HOST));
+        appendEscape(pReq->getHeader(HttpHeader::H_HOST),
+                     pReq->getHeaderLen(HttpHeader::H_HOST));
     }
     m_buf.append_unsafe('\n');
     if ((m_buf.available() < MAX_LOG_LINE_LEN)

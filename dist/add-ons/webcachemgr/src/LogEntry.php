@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -9,8 +9,6 @@
  */
 
 namespace Lsc\Wp;
-
-use \Lsc\Wp\Logger;
 
 class LogEntry
 {
@@ -86,6 +84,8 @@ class LogEntry
      *
      * @param int  $logLvl
      * @return string
+     * @throws LSCMException  Indirectly thrown by
+     *                        Logger::getAdditionalTagInfo().
      */
     public function getOutput( $logLvl )
     {
@@ -99,9 +99,7 @@ class LogEntry
         $lvl = '[' . Logger::getLvlDescr($this->lvl) . ']';
         $msg = $this->getMsg();
 
-        $output = "{$timestamp} {$addTagInfo} {$lvl}  {$msg}\n";
-
-        return $output;
+        return "{$timestamp} {$addTagInfo} {$lvl}  {$msg}\n";
     }
 
 }

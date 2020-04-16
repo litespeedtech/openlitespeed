@@ -112,6 +112,33 @@ HttpStatusCode::HttpStatusCode()
                                    NULL);
     m_aSC[code++] = new StatusCode(SC_423, " 423 Locked\r\n", NULL);
     m_aSC[code++] = new StatusCode(SC_424, " 424 Failed Dependency\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_425, " 425 Too Early\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_426, " 426 Upgrade Required\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_427, " 427 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_428, " 428 Precondition Required\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_429, " 429 Too Many Requests\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_430, " 430 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_431, " 431 Request Header Fields Too Large\r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_432, " 432 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_433, " 433 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_434, " 434 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_435, " 435 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_436, " 436 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_437, " 437 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_438, " 438 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_439, " 439 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_440, " 440 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_441, " 441 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_442, " 442 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_443, " 443 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_444, " 444 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_445, " 445 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_446, " 446 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_447, " 447 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_448, " 448 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_449, " 449 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_450, " 450 \r\n", NULL);
+    m_aSC[code++] = new StatusCode(SC_451, " 451 Unavailable For Legal Reasons\r\n", NULL);
 
     m_aSC[code++] = new StatusCode(SC_500, " 500 Internal Server Error\r\n",
                                    "An internal server error has occured.");

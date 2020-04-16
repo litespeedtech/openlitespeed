@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -12,8 +12,6 @@ namespace Lsc\Wp;
 
 use \Lsc\Wp\Panel\ControlPanel;
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\UserCommand;
-use \Lsc\Wp\Logger;
 
 class WPInstall
 {
@@ -280,6 +278,9 @@ class WPInstall
     /**
      *
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by Logger::uiError(),
+     *                        Logger::notice(), $this->addUserFlagFile(), and
+     *                        Logger::debug().
      */
     public function hasValidPath()
     {
@@ -382,6 +383,7 @@ class WPInstall
      *
      * @param string  $url
      * @return boolean
+     * @throws LSCMException  Thrown indirectly.
      */
     public function populateDataFromUrl( $url )
     {
@@ -429,6 +431,8 @@ class WPInstall
      *
      * @param boolean  $runningAsUser
      * @return boolean  True when install has a flag file created/already.
+     * @throws LSCMException  Indirectly thrown by
+     *                        Context::getFlagFileContent().
      */
     public function addUserFlagFile( $runningAsUser = true )
     {
@@ -519,6 +523,7 @@ class WPInstall
      *
      * @param boolean  $forced
      * @return int
+     * @throws LSCMException  Indirectly thrown by UserCommand::issue().
      */
     public function refreshStatus( $forced = false )
     {
@@ -582,6 +587,8 @@ class WPInstall
     /**
      *
      * @return string
+     * @throws LSCMException  Indirectly thrown by
+     *                        ControlPanel::getClassInstance().
      */
     public function getPhpBinary()
     {

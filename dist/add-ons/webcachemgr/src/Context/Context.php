@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -9,7 +9,6 @@
 
 namespace Lsc\Wp\Context;
 
-use \Lsc\Wp\Context\ContextOption;
 use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Logger;
 
@@ -154,6 +153,7 @@ class Context
     /**
      *
      * @return ContextOption
+     * @throws LSCMException  Indirectly thrown by self::me().
      */
     public static function getOption()
     {
@@ -238,6 +238,7 @@ class Context
     /**
      *
      * @return string
+     * @throws LSCMException
      */
     public static function getLSCMDataDir()
     {
@@ -261,7 +262,8 @@ class Context
     /**
      *
      * @return string[]
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by self::me() and
+     *                        Logger::debug().
      */
     public static function getLSCMDataFiles()
     {
@@ -291,6 +293,7 @@ class Context
     /**
      *
      * @return boolean
+     * @throws LSCMException  Indirectly thrown by self::me().
      */
     public static function isPrivileged()
     {
@@ -301,6 +304,7 @@ class Context
     /**
      *
      * @return int
+     * @throws LSCMException  Indirectly thrown by self::me().
      */
     public static function getScanDepth()
     {
@@ -310,6 +314,7 @@ class Context
     /**
      *
      * @return int
+     * @throws LSCMException Indirectly thrown by self::me().
      */
     public static function getActionTimeout()
     {
@@ -328,6 +333,7 @@ class Context
     /**
      *
      * @return string
+     * @throws LSCMException  Indirectly thrown by self::me().
      */
     public static function getFlagFileContent()
     {

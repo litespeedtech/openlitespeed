@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
  * @copyright: (c) 2018

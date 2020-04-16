@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -11,11 +11,6 @@
 namespace Lsc\Wp;
 
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\DashNotifier;
-use \Lsc\Wp\WPInstall;
-use \Lsc\Wp\UserCommand;
-Use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
 
 /**
  * Calls WP internal functions in SHORTINIT mode.
@@ -59,6 +54,8 @@ class WPCaller
     /**
      *
      * @param WPInstall  $curInstall
+     * @param boolean    $loadLscwp
+     * @throws LSCMException  Thrown indirectly.
      */
     private function __construct( WPInstall $curInstall, $loadLscwp )
     {
@@ -70,7 +67,9 @@ class WPCaller
     /**
      *
      * @param WPInstall  $currInstall
+     * @param boolean    $loadLscwp
      * @return WPCaller
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getInstance( WPInstall $currInstall,
             $loadLscwp = true )
@@ -674,19 +673,22 @@ class WPCaller
      */
     private function includeDisableRequiredFiles( $lscwpVer )
     {
-        $dir = WP_PLUGIN_DIR . '/litespeed-cache/admin';
+        $dir = WP_PLUGIN_DIR . '/litespeed-cache';
 
-        if ( version_compare($lscwpVer, '1.1.2.2', '>') ) {
-            require_once "{$dir}/litespeed-cache-admin.class.php";
+        if ( version_compare($lscwpVer, '3.0', '>=') ) {
+            require_once "${dir}/src/admin.cls.php";
+        }
+        elseif ( version_compare($lscwpVer, '1.1.2.2', '>') ) {
+            require_once "{$dir}/admin/litespeed-cache-admin.class.php";
         }
         else {
-            require_once "{$dir}/class-litespeed-cache-admin.php";
+            require_once "{$dir}/admin/class-litespeed-cache-admin.php";
         }
 
         if ( version_compare($lscwpVer, '1.1.0', '<')
                 && version_compare($lscwpVer, '1.0.6', '>') ) {
 
-            require_once "{$dir}/class-litespeed-cache-admin-rules.php";
+            require_once "{$dir}/admin/class-litespeed-cache-admin-rules.php";
         }
     }
 
@@ -698,9 +700,7 @@ class WPCaller
     private function performDisable( $uninstall )
     {
         $this->includeDisableRequiredFiles($this->getPluginVersionFromFile());
-        $status = $this->disable_lscwp($uninstall);
-
-        return $status;
+        return $this->disable_lscwp($uninstall);
     }
 
     /**
@@ -1137,6 +1137,28 @@ class WPCaller
     }
 
     /**
+     *
+     * @since 1.12
+     *
+     * @param bool $setOutputResult
+     * @return string
+     */
+    public function getQuicCloudAPIKey( $setOutputResult = false )
+    {
+        $key = apply_filters('litespeed_conf', 'api_key');
+
+        if ( $key == 'api_key' || $key == null ) {
+            $key = '';
+        }
+
+        if ( $setOutputResult ) {
+            $this->outputResult('API_KEY', $key);
+        }
+
+        return $key;
+    }
+
+    /**
      * Set global server and environment variables.
      *
      * @since 1.9.8
@@ -1213,6 +1235,10 @@ class WPCaller
         return $isMultiSite;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown directly and indirectly.
+     */
     private function initWp()
     {
         /**
@@ -1241,6 +1267,7 @@ class WPCaller
          */
         include_once "{$wpPath}/wp-includes/version.php";
 
+        /** @noinspection PhpUndefinedVariableInspection */
         if ( version_compare($wp_version, '4.0', '<') ) {
             throw new LSCMException("Detected WordPress version as {$wp_version}. "
             . 'Version 4.0 required at minimum.');

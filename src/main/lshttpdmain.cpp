@@ -82,7 +82,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Wed Mar  4 18:54:06 UTC 2020)"
+#define BUILDTIME  " (built: Thu Apr 16 19:54:23 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -910,6 +910,7 @@ int LshttpdMain::init(int argc, char *argv[])
     //load the config
     m_pBuilder->loadConfigFile();
 
+    HttpLog::setServerRoot(MainServerConfig::getInstance().getServerRoot());
 //    m_pBuilder->loadPlainConfigFile();
     if (m_pServer->configServerBasics(0, m_pBuilder->getRoot()))
         return 1;

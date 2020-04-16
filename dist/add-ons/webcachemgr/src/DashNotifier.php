@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server WordPress Dash Notifier
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -11,9 +11,6 @@
 namespace Lsc\Wp;
 
 use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Util;
 
 class DashNotifier
 {
@@ -40,7 +37,9 @@ class DashNotifier
      *
      * @since 1.9
      *
-     * @return null
+     * @return void
+     * @throws LSCMException  Indirectly thrown by self::getLatestVersion(),
+     *                        self::downloadVersion(), and Logger::error().
      */
     public static function prepLocalDashPluginFiles()
     {
@@ -94,6 +93,7 @@ class DashNotifier
      * @since 1.9
      *
      * @return string
+     * @throws LSCMException
      */
     public static function getLatestVersion()
     {
@@ -116,7 +116,7 @@ class DashNotifier
      * @since 1.9
      *
      * @param string  $version
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by self::wgetPlugin().
      */
     protected static function downloadVersion( $version )
     {
@@ -135,7 +135,8 @@ class DashNotifier
      *
      * @param string   $version
      * @param boolean  $saveMD5
-     * @throws LSCMException
+     * @throws LSCMException  Indirectly thrown by Logger::info() and
+     *                        Util::unzipFile().
      */
     protected static function wgetPlugin( $version, $saveMD5 = false )
     {

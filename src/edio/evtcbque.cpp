@@ -602,7 +602,7 @@ void EvtcbQue::resetEvtcbTail(evtcbtail_t * session)
 {
     int slot = static_cast<HttpSession *>(session)->getSessSeq() % NUM_SESS_QUES;
     ls_mutex_lock(&m_sessLks[slot]);
-    LS_DBG_M("[T%d %s] session %p tail %p sn %u set Tail to NULL\n",
+    LS_DBG_H("[T%d %s] session %p tail %p sn %u set Tail to NULL\n",
              ls_thr_seq(), __PRETTY_FUNCTION__, session, session->evtcb_tail, ((HttpSession*)session)->getSn());
     session->evtcb_tail = NULL; // setEvtcbTail(session, NULL);
     ls_mutex_unlock(&m_sessLks[slot]);

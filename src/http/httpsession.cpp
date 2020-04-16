@@ -173,7 +173,7 @@ HttpSession::HttpSession()
     m_response.reset();
     m_request.reset();
     resetEvtcb();
-    LS_DBG_M("[T%d %s] sess seq now %d\n", ls_thr_seq(), __PRETTY_FUNCTION__, ls_atomic_fetch_add(&m_sessSeq, 0));
+    LS_DBG_H("[T%d %s] sess seq now %d\n", ls_thr_seq(), __PRETTY_FUNCTION__, ls_atomic_fetch_add(&m_sessSeq, 0));
 }
 
 
@@ -5409,7 +5409,7 @@ void HttpSession::setBackRefPtr(evtcbtail_t ** v)
 
 void HttpSession::resetEvtcb()
 {
-    LS_DBG_M("%s calling resetEvtcbTail on this %p\n", __func__, this);
+    LS_DBG_H("%s calling resetEvtcbTail on this %p\n", __func__, this);
     EvtcbQue::getInstance().resetEvtcbTail(this);
     evtcbtail_t::back_ref_ptr = NULL;
 }

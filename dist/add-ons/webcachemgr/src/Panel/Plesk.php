@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -11,7 +11,6 @@ namespace Lsc\Wp\Panel;
 
 use \Lsc\Wp\Logger;
 use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Panel\ControlPanel;
 use \Lsc\Wp\Util;
 use \Lsc\Wp\WPInstall;
 
@@ -128,6 +127,11 @@ class Plesk extends ControlPanel
         return $modified_contents;
     }
 
+    /**
+     * @param string $vhConf
+     * @param string $vhCacheRoot
+     * @throws LSCMException  Indirectly thrown by $this->log().
+     */
     public function createVHConfAndSetCacheRoot( $vhConf,
             $vhCacheRoot = 'lscache' )
     {

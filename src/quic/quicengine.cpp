@@ -192,7 +192,7 @@ lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
     const sockaddr *pPeer, *pLocal;
     ClientInfo *pClientInfo;
 
-    LS_DBG("QuicEngine::onNewConn (%p)\n", c);
+    LS_DBG_H("QuicEngine::onNewConn (%p)\n", c);
 
     if (0 != lsquic_conn_get_sockaddr(c, &pLocal, &pPeer))
     {
@@ -239,7 +239,7 @@ const struct lsquic_shared_hash_if s_quic_shi_if =
 void QuicEngine::touchSCIDs(void *ctx, void **peer_ctx,
                                     const lsquic_cid_t *cids, unsigned count)
 {
-    LS_DBG("QuicEngine::touchSCIDs\n");
+    LS_DBG_H("QuicEngine::touchSCIDs\n");
     QuicShm::getInstance().touchCidItems(cids, count);
 }
 
@@ -247,7 +247,7 @@ void QuicEngine::touchSCIDs(void *ctx, void **peer_ctx,
 void QuicEngine::removeOldSCIDs(void *ctx, void **peer_ctx,
                                     const lsquic_cid_t *cids, unsigned count)
 {
-    LS_DBG("QuicEngine::removeOldSCIDs\n");
+    LS_DBG_H("QuicEngine::removeOldSCIDs\n");
     QuicShm::getInstance().markBadCidItems(cids, count, -1);
     const lsquic_cid_t *const end = cids + count;
     for( ; cids < end; ++cids)
@@ -263,7 +263,7 @@ void QuicEngine::addNewSCIDs(void *ctx, void **peer_ctx,
     unsigned n;
     ShmCidPidInfo pids[count];
 
-    LS_DBG("QuicEngine::addNewSCIDs\n");
+    LS_DBG_H("QuicEngine::addNewSCIDs\n");
     memset(pids, 0, sizeof(pids));  /* Set .pid to 0 to signify unknown pids */
     QuicShm::getInstance().lookupCidPids(cids, pids, count);
 
@@ -280,7 +280,7 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c)
 {
     const lsquic_cid_t *cid;
     lsquic_conn_ctx_t *h = lsquic_conn_get_ctx(c);
-    LS_DBG("QuicEngine::onConnClosed (%p)\n", c);
+    LS_DBG_H("QuicEngine::onConnClosed (%p)\n", c);
     ClientInfo *pClientInfo = (ClientInfo *)h;
     if (pClientInfo)
         pClientInfo->decConn();
@@ -496,7 +496,7 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
     lsquic_conn_t *c = lsquic_stream_conn(s);
     lsquic_conn_get_sockaddr(c, &pLocal, &pPeer);
 
-    LS_DBG("QuicEngine::onNewStream (%p)\n", s);
+    LS_DBG_H("QuicEngine::onNewStream (%p)\n", s);
 
     pClientInfo = (ClientInfo *)lsquic_conn_get_ctx(c);
     if (!pClientInfo || pClientInfo->checkAccess())
@@ -548,7 +548,7 @@ void QuicEngine::onStreamWrite(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 
 void QuicEngine::onStreamClose(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 {
-    LS_DBG("QuicEngine::onStreamClose (%p)\n", s);
+    LS_DBG_H("QuicEngine::onStreamClose (%p)\n", s);
 
     QuicStream *pStream = (QuicStream *)h;
     if (pStream)
@@ -608,7 +608,7 @@ struct ssl_ctx_st * QuicEngine::getSslCtxCb(void *peer_ctx)
 struct ssl_ctx_st * QuicEngine::sniCb(void *pCtx, const sockaddr *pLocal,
                                       const char *sni)
 {
-    LS_DBG("QuicEngine::sniCb (%p)\n", sni);
+    LS_DBG_H("QuicEngine::sniCb (%p)\n", sni);
 
     if (!sni)
         return NULL;
@@ -635,7 +635,7 @@ struct ssl_ctx_st * QuicEngine::sniCb(void *pCtx, const sockaddr *pLocal,
 
 int QuicEngine::registerUdpListener(UdpListener *pListener)
 {
-    LS_DBG("QuicEngine::registerUdpListener (%p)\n", pListener);
+    LS_DBG_H("QuicEngine::registerUdpListener (%p)\n", pListener);
     if (!pListener)
         return -1;
     int index = m_udpListeners.size();
@@ -681,7 +681,7 @@ int QuicEngine::sendPackets(
     for (spec = specs, end = specs + count; spec < end; ++spec)
     {
         UdpListener *pListener = (UdpListener *) spec->peer_ctx;
-        LS_DBG("QuicEngine::sendPackets %zu bytes", spec_size(spec));
+        LS_DBG_H("QuicEngine::sendPackets %zu bytes", spec_size(spec));
         sent = pListener->send(spec->iov, spec->iovlen, spec->local_sa,
                                             spec->dest_sa, spec->ecn);
         if (sent < 0)
@@ -809,7 +809,7 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 //     lsquic_logger_lopt("pacer=info");
     bool isQuicLogEnable = (LS_LOG_ENABLED(log4cxx::Level::DBG_HIGH));
     setDebugLog(isQuicLogEnable);
-    
+
     m_pMultiplexer = pMplx;
 
 #ifndef _NOT_USE_SHM_

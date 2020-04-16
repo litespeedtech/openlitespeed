@@ -82,21 +82,24 @@ public:
     void        trimCache();
     
     char *getCacheName(const char *pName, int type);
-    const char *getCacheValue( const char * pName, int nameLen, int &valLen );
+    const char *getCacheValue(const char * pName, int nameLen, int &valLen,
+                               int max_ttl = 0);
 
     //Sync mode, return the ip
-    const char *getHostByNameInCache( const char * pName, int &length, int type );
+    const char *getHostByNameInCache(const char * pName, int &length,
+                                     int type, int max_ttl = 0);
     //Async mode, when done will call the cb
     AdnsReq *getHostByName(const char * pName, int type, lookup_pf cb, void *arg);
 
-    const char *getHostByAddrInCache( const struct sockaddr * pAddr, int &length );
-    AdnsReq *getHostByAddr( const struct sockaddr * pAddr, void *arg, lookup_pf cb );
+    const char *getHostByAddrInCache(const struct sockaddr * pAddr,
+                                     int &length, int max_ttl = 0);
+    AdnsReq *getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_pf cb);
     
     static int setResult(const struct sockaddr *result, const void *ip, int len);
     static void release(AdnsReq *pReq);
     
 
-    int  handleEvents( short events );
+    int  handleEvents(short events);
     int  onTimer();
     void setTimeOut(int tmSec);
 

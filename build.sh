@@ -38,7 +38,7 @@ fi
 
 APP_MGR_CMD=
 for APP_MGR in ${APP_MGRS}; do
-  APP_MGR_CHECK=`which ${APP_MGR}`
+  APP_MGR_CHECK=`which ${APP_MGR} &>/dev/null`
   if [ $? -eq 0 ] ; then
     APP_MGR_CMD="${APP_MGR}"
     break

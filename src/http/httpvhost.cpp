@@ -704,6 +704,10 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
             LS_DBG_L(ConfigCtx::getCurConfigCtx(),
                      "path %s not accessible, added null context %p.",
                      achRealPath, pContext0);
+            
+            
+            
+            
             break;
         }
 
@@ -1909,9 +1913,11 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     char appURL[MAX_URI_LEN];
     if (!pStartupFile || *pStartupFile == '\0')
         pStartupFile = "index.wsgi";
+    
+    //Add a _ between the URI and the startupFile
+    achURI[uriLen++] = '_';
     memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
     snprintf(appURL, sizeof(appURL), "%s%s", pLocation, pStartupFile);
-
 
     HttpContext *pDispatch;
 

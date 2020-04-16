@@ -345,7 +345,7 @@ private:
     void setBlackBoard(char *pBB);
 
     int restartMark(int cmd);
-    
+
     int  cleanUp(int pid, char *pBlackBoard);
     int  initSampleServer();
     int  initLscpd();
@@ -1394,7 +1394,7 @@ int HttpServerImpl::reinitMultiplexer()
             {
                 ;//FIXME
             }
-            else 
+            else
             {
                 if (p->getQuicListener())
                     p->getQuicListener()->activeReusePort(
@@ -1415,7 +1415,7 @@ int HttpServerImpl::reinitMultiplexer()
             --n;
             continue;
         }
-        
+
         if (p->getQuicListener() && p->getQuicListener()->getfd() != -1
             && HttpServer::getInstance().getQuicEngine())
         {
@@ -1423,7 +1423,7 @@ int HttpServerImpl::reinitMultiplexer()
         }
         //p->activeVHosts();
         p->beginServe();
-      
+
     }
     ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
@@ -1731,12 +1731,23 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
             }
         }
 
+        //If Admin with port 80 or 443, it will be ignored.
+        const char *pPort = strrchr(pAddr, ':');
+        if (isAdmin && pPort)
+        {
+            int nPort = atoi(++pPort);
+            if (nPort == 80 || nPort == 443)
+            {
+                LS_ERROR(&currentCtx, "Can not set address %s to webAdmin!", pAddr);
+                break;
+            }
+        }
         LS_DBG_L("Config listener [%s] [%s]", pName, pAddr);
 
-        
+
         int reuseport = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                                         "reusePort", 0, 1, 1);
-        
+
         HttpListener *pListener = NULL;
         pListener = addListener(pName, pAddr, reuseport);
         if (pListener == NULL)
@@ -1744,7 +1755,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
             LS_ERROR(&currentCtx, "failed to start listener on address %s!", pAddr);
             break;
         }
-        
+
         if (!isAdmin)
         {
             const XmlNode *p0 = pNode->getChild("modulelist", 1);
@@ -3224,7 +3235,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 
         MainServerConfigObj.setDisableLogRotateAtStartup(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "disableInitLogRotation",
-                    0, 1, 0));
+                    0, 1, 1));
 
         HttpStats::set503AutoFix(ConfigCtx::getCurConfigCtx()->getLongValue(
                                      pRoot, "AutoFix503", 0, 1, 1));
@@ -3783,7 +3794,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     pLogLevel = pNode->getChildValue("quicLogLevel");
     if (!pLogLevel || strlen(pLogLevel) < 4)
         pLogLevel = "warn";
-    
+
     if (0 == lsquic_engine_check_settings(&settings, LSENG_SERVER,
                                           err_buf, sizeof(err_buf)))
         initQuicEngine(pShmDir, &settings, pLogLevel);
@@ -5022,7 +5033,7 @@ void HttpServer::startServing()
     QuicEngine::setpid(pid);
 
     reinitMultiplexer();
-    
+
 //     ExtAppRegistry::markDaemonAppsRemote();
 //     EvtcbQue::getInstance().initNotifier();
 

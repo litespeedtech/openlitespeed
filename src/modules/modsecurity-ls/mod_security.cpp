@@ -22,12 +22,12 @@
 #include <lsr/ls_confparser.h>
 #include <modsecurity/modsecurity.h>
 #include <modsecurity/transaction.h>
-#include <modsecurity/rules.h>
+#include <modsecurity/rules_set.h>
 class session;
 
 #define MNAME                       mod_security
 #define ModuleNameStr               "Mod_Security"
-#define VERSIONNUMBER               "1.2"
+#define VERSIONNUMBER               "1.3"
 
 #define MODULE_VERSION_INFO         ModuleNameStr " " VERSIONNUMBER
 
@@ -51,6 +51,7 @@ typedef struct msc_conf_t_{
 typedef struct ModData_t
 {
     Transaction            *modsec_transaction;
+    RulesSet               *rules_set;
     int8_t                  chkReqBody;
     int8_t                  chkRespBody;
 } ModData;
@@ -72,7 +73,7 @@ void ls_modSecLogCb(void *_session, const void *data)
         return ;
 
     lsi_session_t *session = (lsi_session_t *)_session;
-    g_api->log(session, LSI_LOG_DEBUG, "[Module:%s] %s\n", ModuleNameStr,
+    g_api->log(session, LSI_LOG_INFO, "[Module:%s] %s\n", ModuleNameStr,
                (const char *)data);
 }
 
@@ -97,7 +98,7 @@ static int setSecRule(msc_conf_t *pConfig, char *value, int type, char *uri)
     int ret = 0;
     const char *error = NULL;
 
-    g_api->log(NULL, LSI_LOG_DEBUG,  "[Module:%s] setSecRule "
+    g_api->log(NULL, LSI_LOG_INFO,  "[Module:%s] setSecRule "
                "value: %s, type: %d %s\n",ModuleNameStr, value, type,
                type == 3 ? uri : "");
 
@@ -131,7 +132,7 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
     msc_conf_t  *pInitConfig = (msc_conf_t *)_initial_config;
     msc_conf_t *pConfig = new msc_conf_t;
 
-    g_api->log(NULL, LSI_LOG_DEBUG,  "[Module:%s] ParseConfig entry, "
+    g_api->log(NULL, LSI_LOG_INFO,  "[Module:%s] ParseConfig entry, "
                 "level %d, Mod_Security v%s.%s.%s\n", ModuleNameStr, level,
                 MODSECURITY_MAJOR, MODSECURITY_MINOR, MODSECURITY_PATCHLEVEL);
     if (!pConfig)
@@ -229,7 +230,7 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
             else {
                 pConfig->enable = (strcasecmp(param[i].val, "on") == 0);
                 {
-                    g_api->log(NULL, LSI_LOG_DEBUG,  "[Module:%s] Enable flag "
+                    g_api->log(NULL, LSI_LOG_INFO,  "[Module:%s] Enable flag "
                                "interpreted as %d\n", ModuleNameStr,
                                pConfig->enable);
                 }
@@ -297,12 +298,12 @@ static int process_intervention (Transaction *t, lsi_param_t *rec)
                    "No log message specified\n",
                    ModuleNameStr);
     }
-    g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
+    g_api->log(rec->session, LSI_LOG_INFO, "[Module:%s]"
                "Intervention status code triggered: %d\n",
                ModuleNameStr, intervention.status);
     if (!intervention.url) {
         // NOT always logged in callback
-        g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
+        g_api->log(rec->session, LSI_LOG_INFO, "[Module:%s]"
                    "Log Message: %s\n",
                    ModuleNameStr, intervention.log);
     }
@@ -360,6 +361,7 @@ static int createModData(lsi_param_t *rec, msc_conf_t *conf)
 
         memset(myData, 0, sizeof(ModData));
         myData->modsec_transaction = trans;
+        myData->rules_set = conf->rules_set;
     }
 
     g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
@@ -523,7 +525,7 @@ static int UriMapHook(lsi_param_t *rec)
     }
 #endif
 
-    RulesSet *rules = myData->modsec_transaction->m_rules;
+    RulesSet *rules = myData->rules_set;
     myData->chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
     myData->chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     g_api->log(session, LSI_LOG_DEBUG, "[Module:%s] RequestBodyAccess: %s "
@@ -679,7 +681,7 @@ static int respHeaderHook(lsi_param_t *rec)
         return LSI_ERROR;
     }
 
-    RulesSet *rules = myData->modsec_transaction->m_rules;
+    RulesSet *rules = myData->rules_set;
     bool chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     if(chkRespBody && rules->m_responseBodyLimit.m_value > 3000) //at least set limit to 3000
     {

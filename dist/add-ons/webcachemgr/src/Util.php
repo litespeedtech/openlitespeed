@@ -1,6 +1,6 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -10,7 +10,6 @@
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\Logger;
 
 class Util
 {
@@ -158,7 +157,10 @@ class Util
      */
     public static function matchPermissions( $file1, $file2 )
     {
-        $perms = (fileperms($file1) & 0777); #convert dec to oct
+        /**
+         * convert dec to oct
+         */
+        $perms = (fileperms($file1) & 0777);
 
         chmod($file2, $perms);
     }
@@ -254,6 +256,12 @@ class Util
         return md5(implode('', $filemd5s));
     }
 
+    /**
+     * @param string  $file
+     * @param string  $backup
+     * @return boolean
+     * @throws LSCMException  Indrectly thrown by Logger::debug().
+     */
     private static function matchFileSettings( $file, $backup )
     {
         clearstatcache();
@@ -291,6 +299,12 @@ class Util
         return $bak;
     }
 
+    /**
+     *
+     * @param string  $filepath
+     * @return boolean
+     * @throws LSCMException  Thrown indirectly.
+     */
     public static function createBackup( $filepath )
     {
         $bak = self::getBackupSuffix($filepath);
@@ -316,6 +330,12 @@ class Util
         return true;
     }
 
+    /**
+     * @param string  $zipFile
+     * @param string  $dest
+     * @return boolean
+     * @throws LSCMException  Indirectly thrown by Logger::debug().
+     */
     public static function unzipFile( $zipFile, $dest )
     {
         if ( class_exists('\ZipArchive') ) {
