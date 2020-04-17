@@ -51,6 +51,7 @@ typedef struct msc_conf_t_{
 typedef struct ModData_t
 {
     Transaction            *modsec_transaction;
+    RulesSet               *rules_set;
     int8_t                  chkReqBody;
     int8_t                  chkRespBody;
 } ModData;
@@ -360,6 +361,7 @@ static int createModData(lsi_param_t *rec, msc_conf_t *conf)
 
         memset(myData, 0, sizeof(ModData));
         myData->modsec_transaction = trans;
+        myData->rules_set = conf->rules_set;
     }
 
     g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
@@ -523,7 +525,7 @@ static int UriMapHook(lsi_param_t *rec)
     }
 #endif
 
-    RulesSet *rules = myData->modsec_transaction->m_rules;
+    RulesSet *rules = myData->rules_set;
     myData->chkReqBody = rules->m_secRequestBodyAccess == CHECKBODYTRUE;
     myData->chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     g_api->log(session, LSI_LOG_DEBUG, "[Module:%s] RequestBodyAccess: %s "
@@ -679,7 +681,7 @@ static int respHeaderHook(lsi_param_t *rec)
         return LSI_ERROR;
     }
 
-    RulesSet *rules = myData->modsec_transaction->m_rules;
+    RulesSet *rules = myData->rules_set;
     bool chkRespBody = rules->m_secResponseBodyAccess == CHECKBODYTRUE;
     if(chkRespBody && rules->m_responseBodyLimit.m_value > 3000) //at least set limit to 3000
     {
