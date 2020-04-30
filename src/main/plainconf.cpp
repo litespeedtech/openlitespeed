@@ -679,6 +679,7 @@ void plainconf::saveUnknownItems(const char *fileName, int lineNumber,
     if (strcasecmp(pCurNode->getName(), "module") != 0
         && strstr(name, "::") == NULL
         && strcasecmp(pCurNode->getName(), "rewrite") != 0
+        && strcasecmp(pCurNode->getName(), "context") != 0
         && strcasecmp(pCurNode->getName(), "urlFilter") != 0)
     {
         logToMem(LOG_LEVEL_ERR, "Not support [%s %s] in file %s:%d", name, value,
@@ -781,6 +782,8 @@ void plainconf::handleSpecialCase(XmlNode *pNode)
         const char *value = (*iter)->getValue();
 
         if (strcasecmp(pNode->getName(), "module") == 0)
+            appendValueToKey(pNode, "param", value);
+        if (strcasecmp(pNode->getName(), "context") == 0)
             appendValueToKey(pNode, "param", value);
         else if (strcasecmp(pNode->getName(), "rewrite") == 0)
             appendValueToKey(pNode, "rules", value);

@@ -1,7 +1,7 @@
 <!--
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -32,10 +32,20 @@ function moveAndShow($src, $dest)
     if (empty($src)) {
         echo "<p>file is empty, not stored.</p>\n";
     } else {
-        rename($src, $dest);
-        echo "<p>Moved: " . $src . " ====> " . $dest . "<br>";
-        echo "MD5  : " . md5_file($dest). "<br>";
-        echo "Size : " . filesize($dest). " bytes</p>\n"; 
+        $fileType = strtolower(pathinfo($dest,PATHINFO_EXTENSION));
+        $check = getimagesize($src);
+        if($check == false) {
+            echo "<p>file is not jpg file, not stored.</p>\n";
+        } else {
+            if($fileType != "jpg") {
+                echo "<p>file type is not jpg, not stored.</p>\n";
+            } else {
+                rename($src, $dest);
+                echo "<p>Moved: " . $src . " ====> " . $dest . "<br>";
+                echo "MD5  : " . md5_file($dest). "<br>";
+                echo "Size : " . filesize($dest). " bytes</p>\n"; 
+            }
+        }
     }
 }
 

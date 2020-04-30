@@ -24,6 +24,13 @@ class ReqStats
 {
     int     m_iReqPerSec;
     int     m_iTotalReqs;
+    int     m_iStxCacheHitsPerSec;
+    int     m_iTotalStxCacheHits;
+
+    int     m_iPubCacheHitsPerSec;
+    int     m_iTotalPubCacheHits;
+    int     m_iPrivCacheHitsPerSec;
+    int     m_iTotalPrivCacheHits;
 
 
     ReqStats(const ReqStats &rhs);
@@ -32,12 +39,39 @@ public:
     ReqStats();
     ~ReqStats();
     void incReqProcessed()  {   ++m_iReqPerSec;         }
+    void incStxCacheHits()  {   ++m_iStxCacheHitsPerSec;         }
+    void incPubCacheHits()  {   ++m_iPubCacheHitsPerSec;         }
+    void incPrivCacheHits()  {   ++m_iPrivCacheHitsPerSec;         }
+
     int  getRPS() const     {   return m_iReqPerSec;    }
     int  getTotal() const   {   return m_iTotalReqs;    }
-    void reset()            {   m_iReqPerSec = 0;       }
-    void resetTotal()       {   m_iTotalReqs = 0;       }
-    void finalizeRpt();
+    int  getHitsPS() const     {   return m_iStxCacheHitsPerSec;    }
+    int  getTotalHits() const  {   return m_iTotalStxCacheHits;     }
 
+    int  getPubHitsPS() const     {   return m_iPubCacheHitsPerSec;    }
+    int  getTotalPubHits() const  {   return m_iTotalPubCacheHits;     }
+    int  getPrivHitsPS() const     {   return m_iPrivCacheHitsPerSec;    }
+    int  getTotalPrivHits() const  {   return m_iTotalPrivCacheHits;     }
+
+
+
+    void reset()
+    {
+        m_iReqPerSec = 0;
+        m_iStxCacheHitsPerSec = 0;
+        m_iPubCacheHitsPerSec = 0;
+        m_iPrivCacheHitsPerSec = 0;
+    }
+
+    void resetTotal()
+    {
+        m_iTotalReqs = 0;
+        m_iTotalStxCacheHits = 0;
+        m_iTotalPubCacheHits = 0;
+        m_iTotalPrivCacheHits = 0;
+    }
+
+    void finalizeRpt();
 };
 
 #endif

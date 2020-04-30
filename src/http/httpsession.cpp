@@ -423,6 +423,32 @@ void HttpSession::logAccess(int cancelled)
         HttpLog::logAccess(NULL, 0, this);
 }
 
+void HttpSession::incStatsCacheHits(int type)
+{
+    HttpVHost *pVhost = m_request.getVHost();
+    if (!pVhost)
+        return ;
+
+    switch (type)
+    {
+    case 0: //static file cache
+        HttpStats::getReqStats()->incStxCacheHits();
+        pVhost->getReqStats()->incStxCacheHits();
+        break;
+    case 1: //public cache
+        HttpStats::getReqStats()->incPubCacheHits();
+        pVhost->getReqStats()->incPubCacheHits();
+        break;
+    case 2: //private cache
+        HttpStats::getReqStats()->incPrivCacheHits();
+        pVhost->getReqStats()->incPrivCacheHits();
+        break;
+    default:
+        break;
+    }
+
+}
+
 
 void HttpSession::incReqProcessed()
 {
@@ -3536,6 +3562,18 @@ inline int HttpSession::useGzip()
 
 extern int addModgzipFilter(lsi_session_t *session, int isSend,
                             uint8_t compressLevel);
+
+int HttpSession::addModgzipFilter(int isSend, uint8_t compressLevel)
+{
+    if (m_sessionHooks.isNotInited())
+        return -1;
+
+    if (::addModgzipFilter((LsiSession *)this, isSend, compressLevel) == -1)
+        return LS_FAIL;
+
+    return 0;
+}
+
 int HttpSession::setupGzipFilter()
 {
     if (testFlag(HSF_RESP_HEADER_SENT))
@@ -3553,7 +3591,7 @@ int HttpSession::setupGzipFilter()
         if (recvhkptNogzip || hkptNogzip || !(gz & REQ_GZIP_ACCEPT))
         {
             //setup decompression filter at RECV_RESP_BODY filter
-            if (addModgzipFilter((LsiSession *)this, 0, 0) == -1)
+            if (addModgzipFilter(0, 0) == -1)
                 return LS_FAIL;
             m_response.getRespHeaders().del(
                 HttpRespHeaders::H_CONTENT_ENCODING);
@@ -3579,8 +3617,7 @@ int HttpSession::setupGzipFilter()
         }
         else //turn on compression at SEND_RESP_BODY filter
         {
-            if (addModgzipFilter((LsiSession *)this, 1,
-                                 HttpServerConfig::getInstance().getCompressLevel()) == -1)
+            if (addModgzipFilter(1, HttpServerConfig::getInstance().getCompressLevel()) == -1)
                 return LS_FAIL;
             m_response.addGzipEncodingHeader();
             //The below do not set the flag because compress won't update the resp VMBuf to decompressed
@@ -5257,7 +5294,7 @@ int HttpSession::contentEncodingFixup()
     {
         if (pContentEncoding)
         {
-            if (addModgzipFilter((LsiSession *)this, 1, 0) == -1)
+            if (addModgzipFilter(1, 0) == -1)
                 return LS_FAIL;
             m_response.getRespHeaders().del(HttpRespHeaders::H_CONTENT_ENCODING);
             clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
@@ -5268,8 +5305,7 @@ int HttpSession::contentEncodingFixup()
     {
         if (m_response.getContentLen() > 200)// && getReq()->getStatusCode() < SC_400)
         {
-            if (addModgzipFilter((LsiSession *)this, 1,
-                                 HttpServerConfig::getInstance().getCompressLevel()) == -1)
+            if (addModgzipFilter(1, HttpServerConfig::getInstance().getCompressLevel()) == -1)
                 return LS_FAIL;
             m_response.addGzipEncodingHeader();
             //The below do not set the flag because compress won't update the resp VMBuf to decompressed

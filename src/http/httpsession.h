@@ -332,7 +332,7 @@ public:
         flag = ls_atomic_fetch_or(&m_iFlag2, f);
         return ((flag & f) == 0);
     }
-    
+
     uint32_t testFlag(uint32_t f) const
     {
         uint32_t flag;
@@ -369,7 +369,6 @@ public:
     void setFlag2(uint32_t f)            {   setFlag2(f, 1);          }
     void clearFlag2(uint32_t f)          {   setFlag2(f, 0);          }
     uint32_t getFlag2(uint32_t f) const  {   return testFlag2(f);     }
-
 
     int isRespHeaderSent() const
     {   return getFlag(HSF_RESP_HEADER_SENT);   }
@@ -409,6 +408,8 @@ public:
     int setUriQueryString(MtParamUriQs * param);
     int setUriQueryString(int action, const char *uri,
                           int uri_len, const char *qs, int qs_len);
+
+    void incStatsCacheHits(int type);
 
 private:
     int runExtAuthorizer(const HttpHandler *pHandler);
@@ -634,7 +635,7 @@ public:
     int respHeaderDone();
 
     bool isHttp2() const            {   return m_iFlag2 & HSF2_IS_HTTP2;    }
-    
+
     void setRespBodyDone()
     {
         setFlag(HSF_HANDLER_DONE);
@@ -656,6 +657,7 @@ public:
     //int flushDynBody( int nobuff );
 
     int useGzip();
+    int addModgzipFilter(int isSend, uint8_t compressLevel);
     int setupGzipFilter();
     int setupGzipBuf();
     void releaseGzipBuf();

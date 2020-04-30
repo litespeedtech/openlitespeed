@@ -20,6 +20,13 @@
 ReqStats::ReqStats()
     : m_iReqPerSec(0)
     , m_iTotalReqs(0)
+    , m_iStxCacheHitsPerSec(0)
+    , m_iTotalStxCacheHits(0)
+    , m_iPubCacheHitsPerSec(0)
+    , m_iTotalPubCacheHits(0)
+    , m_iPrivCacheHitsPerSec(0)
+    , m_iTotalPrivCacheHits(0)
+
 {
 }
 
@@ -30,6 +37,10 @@ ReqStats::~ReqStats()
 void ReqStats::finalizeRpt()
 {
     m_iTotalReqs += m_iReqPerSec;
+    m_iTotalStxCacheHits += m_iStxCacheHitsPerSec;
+    m_iTotalPubCacheHits += m_iPubCacheHitsPerSec;
+    m_iTotalPrivCacheHits += m_iPrivCacheHitsPerSec;
+
 }
 
 

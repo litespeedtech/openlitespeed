@@ -590,7 +590,11 @@ int generateConnReport(int fd)
                         "SSL_BPS_IN: %ld, SSL_BPS_OUT: %ld\n"
                         "MAXCONN: %d, MAXSSL_CONN: %d, PLAINCONN: %d, "
                         "AVAILCONN: %d, IDLECONN: %d, SSLCONN: %d, AVAILSSL: %d\n"
-                        "REQ_RATE []: REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d\n",
+                        "REQ_RATE []: REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d, "
+                        "PUB_CACHE_HITS_PER_SEC: %d, TOTAL_PUB_CACHE_HITS: %d, "
+                        "PRIVATE_CACHE_HITS_PER_SEC: %d, TOTAL_PRIVATE_CACHE_HITS: %d, "
+                        "STATIC_HITS_PER_SEC: %d, TOTAL_STATIC_HITS: %d\n",
+
                         HttpStats::getBytesRead() / 1024,
                         HttpStats::getBytesWritten() / 1024,
                         HttpStats::getSSLBytesRead() / 1024,
@@ -602,7 +606,15 @@ int generateConnReport(int fd)
                         ctrl.getMaxConns() - ctrl.availConn()
                         - HttpStats::getIdleConns(),
                         HttpStats::getReqStats()->getRPS(),
-                        HttpStats::getReqStats()->getTotal());
+                        HttpStats::getReqStats()->getTotal(),
+
+                        HttpStats::getReqStats()->getPubHitsPS(),
+                        HttpStats::getReqStats()->getTotalPubHits(),
+                        HttpStats::getReqStats()->getPrivHitsPS(),
+                        HttpStats::getReqStats()->getTotalPrivHits(),
+                        HttpStats::getReqStats()->getHitsPS(),
+                        HttpStats::getReqStats()->getTotalHits());
+
     write(fd, achBuf, n);
 
     HttpStats::setBytesRead(0);
@@ -3224,6 +3236,21 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
         else
             testAndFixDirs("conf", pw->pw_uid, procConf.getGid(), 0750);
+
+        char syscmd[1024] = {0};
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+        snprintf(syscmd, 1024, "usermod -a -G %s lsadm", MainServerConfigObj.getGroup());
+#endif
+
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
+        snprintf(syscmd, 1024, "pw usermod lsadm -G %s", MainServerConfigObj.getGroup());
+#endif
+
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+        snprintf(syscmd, 1024, "dseditgroup -o edit -a lsadm -t user %s", MainServerConfigObj.getGroup());
+#endif
+        if (*syscmd)
+            ::system(syscmd);
 
         return 0;
     }

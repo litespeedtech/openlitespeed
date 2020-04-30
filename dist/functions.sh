@@ -1129,14 +1129,33 @@ gen_selfsigned_cert_new()
     COMMNAME=`hostname`
     SSL_COUNTRY=US
     SSL_STATE="New Jersey"
-    SSL_LOCALITY=Virtual
-    SSL_ORG=LiteSpeedCommunity
-    SSL_ORGUNIT=Testing
+    csr="${SSL_HOSTNAME}.csr"
     key="${SSL_HOSTNAME}.key"
     cert="${SSL_HOSTNAME}.crt"
     
-    openssl req -subj "/CN=${COMMNAME}/O=webadmin/C=US/subjectAltName=DNS.1=${MYIP}/" -new -newkey rsa:2048 -sha256 -days 730 -nodes -x509 -keyout ${key} -out ${cert}
-
+#     openssl req -subj "/CN=${COMMNAME}/O=webadmin/C=US/extendedKeyUsage=1.3.6.1.5.5.7.3.1/subjectAltName=DNS.1=${MYIP}/" -new -newkey rsa:2048 -sha256 -days 730 -nodes -x509 -keyout ${key} -out ${cert}
+# 
+    
+    cat << EOF > $csr
+[req]
+prompt=no
+distinguished_name=openlitespeed
+[openlitespeed]
+commonName = ${COMMNAME}
+countryName = ${SSL_COUNTRY}
+localityName = Virtual
+organizationName = LiteSpeedCommunity
+organizationalUnitName = Testing
+stateOrProvinceName = NJ
+emailAddress = mail@${COMMNAME}
+name = openlitespeed
+initials = CP
+dnQualifier = openlitespeed
+[server_exts]
+extendedKeyUsage=1.3.6.1.5.5.7.3.1
+EOF
+    openssl req -x509 -config $csr -extensions 'server_exts' -nodes -days 820 -newkey rsa:2048 -keyout ${key} -out ${cert}
+    rm -f $csr
 }
 
 gen_selfsigned_cert()

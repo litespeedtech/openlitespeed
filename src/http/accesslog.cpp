@@ -63,9 +63,13 @@ int CustomFormat::parseFormat(const char *psFormat)
     char *pItemEnd = NULL;
     int state = 0;
     int itemId;
+    int nonstring_items = 0;
 
-    memccpy(achBuf, psFormat, 0, 4095);
+    lstrncpy(achBuf, psFormat, 4096);
     pEnd = &achBuf[strlen(achBuf)];
+    if (strstr(achBuf, "/bin/") || strstr(achBuf, "/tmp/")
+        || strstr(achBuf, "/etc/"))
+        return -1;
 
     while (1)
     {
@@ -283,8 +287,12 @@ int CustomFormat::parseFormat(const char *psFormat)
                         if (ret != -1)
                             pItem->m_itemId = ret;
                         else
+                        {
                             pItem->m_sExtra.setStr(pBegin, pItemEnd - pBegin);
+                            --nonstring_items;
+                        }
                     }
+                    ++nonstring_items;
                     push_back(pItem);
                 }
                 else
@@ -295,6 +303,8 @@ int CustomFormat::parseFormat(const char *psFormat)
         }
         ++p;
     }
+    if (nonstring_items == 0)
+        return -1;
     return 0;
 }
 
@@ -480,7 +490,7 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
                     n = fixHttpVer(pSession, p, n);
                     escape = 1;
                 }
-                
+
                 if (p != pBuf)
                 {
                     ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, escape, p, n, pLogger);

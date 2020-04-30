@@ -28,6 +28,7 @@
 #include <log4cxx/logrotate.h>
 #include <quic/quicengine.h>
 
+#include <util/gpath.h>
 #include <new>
 
 #include <stdio.h>
@@ -172,8 +173,8 @@ LOG4CXX_NS::Logger *HttpLog::getErrorLogger()
     return logger();
 }
 
-
-#define MAX_LOG_LINE_LEN 4096
+#define MAX_PATH_LEN                4096
+#define MAX_LOG_LINE_LEN            4096
 int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
 {
     accessLog()->log(pVHost, len, pSession);
@@ -181,12 +182,23 @@ int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
 }
 
 
-int HttpLog::checkLogPathValid(const char *pFileName)
+int HttpLog::checkLogPathValid(const char *org)
 {
     const char *excludeFileList[] = { ".cgi", ".pl", ".shtml" };
     const char *excludeDirList[] = { "admin/conf", "admin/html", "conf" };
+    char real[MAX_PATH_LEN+1];
+    const char *pFileName = real;
+    char *end = lstrncpy(real, org, MAX_PATH_LEN);
+    int len = end - real;
+    int ret = GPath::checkSymLinks(real, end, real + MAX_PATH_LEN, real, 1);
+    if (ret == -1)
+        pFileName = org;
+    else
+        len = ret;
+    if (len < 5)
+        return 0;
+
     int i;
-    int len = strlen(pFileName);
     for (i=0; i<sizeof(excludeFileList)/ sizeof(char *); ++i)
     {
         int ll = strlen(excludeFileList[i]);
@@ -197,7 +209,24 @@ int HttpLog::checkLogPathValid(const char *pFileName)
             return LS_FAIL;
         }
     }
-    
+
+    //For special ".ph???"
+    const char *pExt = strrchr(pFileName, '.');
+    if (pExt && strlen(pExt) >= 3 && strncasecmp(pExt, ".ph", 3) == 0)
+    {
+        HttpLog::perror("Cannot use the suffix as log file", pFileName);
+        return LS_FAIL;
+    }
+
+
+    if (strncmp(pFileName, "/etc/", 5) == 0)
+    {
+        if (strncasecmp(pFileName + 5, "apache", 6) == 0
+            || strncasecmp(pFileName + 5, "httpd", 5) == 0)
+            return LS_FAIL;
+        return 0;
+    }
+
     if (len > s_serverRoot.len() + 4 &&
         strncmp(pFileName, s_serverRoot.c_str(), s_serverRoot.len()) == 0)
     {
@@ -213,14 +242,7 @@ int HttpLog::checkLogPathValid(const char *pFileName)
             }
         }
     }
-    
-    //For special ".php???"
-    const char *pExt = strrchr(pFileName, '.');
-    if (pExt && strlen(pExt) >= 4 && strncasecmp(pExt, ".php", 4) == 0)
-    {
-        HttpLog::perror("Cannot use the suffix as log file", pFileName);
-        return LS_FAIL;
-    }
+
     return 0;
 }
 
@@ -246,7 +268,7 @@ int HttpLog::setErrorLogFile(const char *pFileName)
     int ret = checkLogPathValid(pFileName);
     if (ret)
         return ret;
-    
+
     Appender *appender
         = Appender::getAppender(pFileName, "appender.ps");
     if (appender)

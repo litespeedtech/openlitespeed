@@ -46,6 +46,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "httpstats.h"
 
 
 RedirectHandler::RedirectHandler()
@@ -448,6 +449,8 @@ int StaticFileHandler::process(HttpSession *pSession,
         }
     }
 
+    pSession->incStatsCacheHits(0);
+
     //if ( code == SC_200 )
     if ((!isSSI) && (code == SC_200))
     {
@@ -609,7 +612,7 @@ int StaticFileHandler::process(HttpSession *pSession,
         else
         {
             /**
-             * Serving not done, add flag to save to static file cache when 
+             * Serving not done, add flag to save to static file cache when
              * response is done
              */
             pSession->setFlag(HSF_SAVE_STX_FILE_CACHE);
