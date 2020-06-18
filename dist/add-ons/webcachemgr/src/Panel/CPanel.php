@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -17,14 +17,10 @@ use \Lsc\Wp\WPInstall;
 class CPanel extends ControlPanel
 {
 
-    const USER_PLUGIN_INSTALL_SCRIPT =
-            '/usr/local/cpanel/whostmgr/docroot/cgi/lsws/res/ls_web_cache_mgr/install.sh';
-    const USER_PLUGIN_UNINSTALL_SCRIPT =
-            '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/uninstall.sh';
-    const USER_PLUGIN_CONF =
-            '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/lswcm.conf';
-    const CPANEL_AUTOINSTALL_DISABLE_FLAG =
-            '/usr/local/cpanel/whostmgr/docroot/cgi/lsws/cpanel_autoinstall_off';
+    const USER_PLUGIN_INSTALL_SCRIPT = '/usr/local/cpanel/whostmgr/docroot/cgi/lsws/res/ls_web_cache_mgr/install.sh';
+    const USER_PLUGIN_UNINSTALL_SCRIPT = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/uninstall.sh';
+    const USER_PLUGIN_CONF = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/lswcm.conf';
+    const CPANEL_AUTOINSTALL_DISABLE_FLAG = '/usr/local/cpanel/whostmgr/docroot/cgi/lsws/cpanel_autoinstall_off';
     const USER_PLUGIN_SETTING_VHOST_CACHE_ROOT = 'vhost_cache_root';
     const USER_PLUGIN_SETTING_LSWS_DIR = 'lsws_dir';
 
@@ -44,12 +40,16 @@ class CPanel extends ControlPanel
     protected function initConfPaths()
     {
         if ( $this->isEA4 ) {
-            $this->apacheConf = '/etc/apache2/conf.d/includes/pre_main_global.conf';
-            $this->apacheVHConf = '/etc/apache2/conf.d/userdata/lscache_vhosts.conf';
+            $this->apacheConf =
+                '/etc/apache2/conf.d/includes/pre_main_global.conf';
+            $this->apacheVHConf =
+                '/etc/apache2/conf.d/userdata/lscache_vhosts.conf';
         }
         else {
-            $this->apacheConf = '/usr/local/apache/conf/includes/pre_main_global.conf';
-            $this->apacheVHConf = '/usr/local/apache/conf/userdata/lscache_vhosts.conf';
+            $this->apacheConf =
+                '/usr/local/apache/conf/includes/pre_main_global.conf';
+            $this->apacheVHConf =
+                '/usr/local/apache/conf/userdata/lscache_vhosts.conf';
         }
     }
 
@@ -83,23 +83,25 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @param string   $file_contents
-     * @return string
+     * @param array   $file_contents
+     * @param string  $vhCacheRoot
+     * @return array
      */
     protected function addVHCacheRootSection( $file_contents,
             $vhCacheRoot = 'lscache' )
     {
-        array_unshift($file_contents,
-                "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n\n");
-        $modified_contents = $file_contents;
+        array_unshift(
+            $file_contents,
+            "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n\n"
+        );
 
-        return $modified_contents;
+        return $file_contents;
     }
 
     /**
      *
      * @param string  $vhConf
-     * @throws LSCMException
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     public function createVHConfAndSetCacheRoot( $vhConf,
             $vhCacheRoot = 'lscache' )
@@ -109,13 +111,16 @@ class CPanel extends ControlPanel
         if ( !file_exists($vhConfDir) ) {
 
             if ( !mkdir($vhConfDir, 0755) ) {
-                throw new LSCMException("Failed to create directory {$vhConfDir}.");
+                throw new LSCMException(
+                    "Failed to create directory {$vhConfDir}."
+                );
             }
 
             $this->log("Created directory {$vhConfDir}", Logger::L_DEBUG);
         }
 
-        $content = "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>";
+        $content =
+            "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>";
 
         if ( false === file_put_contents($vhConf, $content) ) {
             throw new LSCMException("Failed to create file {$vhConf}.");
@@ -139,8 +144,10 @@ class CPanel extends ControlPanel
      */
     protected function prepareDocrootMap()
     {
-        $cmd = 'grep -hro --exclude="cache" --exclude="main" '
-                . '--exclude="*.cache" "documentroot.*\|serveralias.*\|servername.*" /var/cpanel/userdata/*';
+        $cmd =
+            'grep -hro --exclude="cache" --exclude="main" --exclude="*.cache" '
+            . '"documentroot.*\|serveralias.*\|servername.*" '
+            . '/var/cpanel/userdata/*';
         exec($cmd, $lines);
 
         /**
@@ -207,7 +214,9 @@ class CPanel extends ControlPanel
                 $cur = '';
             }
             else {
-                Logger::debug("Unused line when preparing docroot map: {$line}.");
+                Logger::debug(
+                    "Unused line when preparing docroot map: {$line}."
+                );
             }
         }
 
@@ -227,7 +236,8 @@ class CPanel extends ControlPanel
             $index++;
         }
 
-        $this->docRootMap = array( 'docroots' => $roots, 'names' => $servernames );
+        $this->docRootMap =
+            array( 'docroots' => $roots, 'names' => $servernames );
     }
 
     /**
@@ -249,8 +259,8 @@ class CPanel extends ControlPanel
              * cPanel php wrapper should accurately detect the correct binary in
              * EA4 when EA4 only directive '--ea-reference-dir' is provided.
              */
-            $phpBin =
-                    "/usr/local/bin/php --ea-reference-dir={$wpInstall->getPath()}/wp-admin";
+            $phpBin = '/usr/local/bin/php '
+                . "--ea-reference-dir={$wpInstall->getPath()}/wp-admin";
         }
 
         return "{$phpBin} {$this->phpOptions}";
@@ -299,11 +309,16 @@ class CPanel extends ControlPanel
     public function installCpanelPlugin()
     {
         if ( !file_exists(self::USER_PLUGIN_INSTALL_SCRIPT) ) {
-            throw new LSCMException('Unable to find cPanel user-end plugin installation script.'
-                    . ' Please ensure that the LiteSpeed WHM plugin is already installed.');
+            throw new LSCMException(
+                'Unable to find cPanel user-end plugin installation script.'
+                . ' Please ensure that the LiteSpeed WHM plugin is already '
+                . 'installed.'
+            );
         }
 
-        $cpanelPluginDir = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager';
+        $cpanelPluginDir =
+            '/usr/local/cpanel/base/frontend/paper_lantern/'
+            . 'ls_web_cache_manager';
         $cpanelPluginConfFile = "{$cpanelPluginDir}/lswcm.conf";
         $cpanelPluginTplDir = "{$cpanelPluginDir}/landing";
         $cpanelPluginCustTransDir = "{$cpanelPluginDir}/lang/cust";
@@ -373,8 +388,10 @@ class CPanel extends ControlPanel
     public function uninstallCpanelPlugin()
     {
         if ( !file_exists(self::USER_PLUGIN_UNINSTALL_SCRIPT) ) {
-            throw new LSCMException('Unable to find cPanel user-end plugin uninstallation script.'
-                    . ' Plugin may already be uninstalled.');
+            throw new LSCMException(
+                'Unable to find cPanel user-end plugin uninstallation script.'
+                . ' Plugin may already be uninstalled.'
+            );
         }
 
         exec(self::USER_PLUGIN_UNINSTALL_SCRIPT);

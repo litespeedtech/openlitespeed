@@ -117,7 +117,7 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
         chmod(p + 5, 0760);
     }
     else
-        chmod(p + 5, 0700);
+        ;//chmod(p + 5, 0700);
 
     if (pChroot)
     {

@@ -84,6 +84,8 @@ static int icache_env_key = 13;
  * then we should use this valus instead.
  */
 static const char *s_x_vary = "X-LiteSpeed-Vary";
+static const char *bypass_vary[] = {"Origin", };
+
 
 /* IF WANT TO USE THE RECV REQ HEADER HOOK
  * THEN DEFINE USE_RECV_REQ_HEADER_HOOK in cacheentry.h
@@ -771,6 +773,15 @@ static int testFlagWithShm(const lsi_session_t *session,
     return 1;
 }
 
+static bool isVaryHdrBypassed(const char *key, unsigned int len)
+{
+    for (unsigned int i = 0; i < sizeof(bypass_vary) / sizeof(char*); ++i)
+    {
+        if (len == strlen(bypass_vary[i]) && strncasecmp(key, bypass_vary[i], len) == 0)
+            return true;
+    }
+    return false;
+}
 
 
 static int32_t getVaryFlag(const lsi_session_t *session, CacheConfig *pConfig)
@@ -792,6 +803,9 @@ static int32_t getVaryFlag(const lsi_session_t *session, CacheConfig *pConfig)
                                         (*iter)->len());
             if (index <= -1)
             {
+                if (isVaryHdrBypassed((*iter)->c_str(), (*iter)->len()))
+                    continue;
+
                 g_api->log(session, LSI_LOG_WARN, "[%s] vary request header"
                             " \"%.*s\" not defined!\n",
                            ModuleNameStr, (*iter)->len(), (*iter)->c_str());
@@ -1635,6 +1649,8 @@ static int endCache(lsi_param_t *rec)
                     return cancelCache(rec);
                 }
 
+
+                lseek(fd, 0, SEEK_END);
                 deflateBufAndWriteToFile(myData, NULL, 0, 1, fd);
 
                 if (myData->pConfig->getAddEtagType() == 2)

@@ -687,12 +687,16 @@ int DirHashCacheStore::updateEntryExpire(CacheEntry* pEntry)
     
     pEntry->getHeader().m_tmExpire += DateTime::s_curTime -
                                       pEntry->getHeader().m_tmCreated;
+    off_t curOffset = lseek(fd, 0, SEEK_CUR);
+
     if (nio_lseek(fd, pEntry->getStartOffset() + CACHE_ENTRY_MAGIC_LEN,
                   SEEK_SET) == -1)
         return -1;
     if (nio_write(fd, &pEntry->getHeader(), sizeof(CeHeader)) <
         (int)sizeof(CeHeader))
         return -1;
+
+    lseek(fd, curOffset, SEEK_SET);
     return 0;
 }
 

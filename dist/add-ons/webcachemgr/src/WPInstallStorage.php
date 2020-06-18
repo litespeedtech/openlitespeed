@@ -206,15 +206,19 @@ class WPInstallStorage
      */
     public function getCount( $nonFatalOnly = false )
     {
+        $count = 0;
+
         if ( !$nonFatalOnly ) {
-            $count = count($this->wpInstalls);
+
+            if ( $this->wpInstalls != null ) {
+                $count += count($this->wpInstalls);
+            }
 
             if ( $this->custWpInstalls != null ) {
                 $count += count($this->custWpInstalls);
             }
         }
         else {
-            $count = 0;
 
             foreach ( $this->wpInstalls as $install ) {
 

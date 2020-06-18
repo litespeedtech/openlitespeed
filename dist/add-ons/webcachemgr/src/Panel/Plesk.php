@@ -32,8 +32,16 @@ class Plesk extends ControlPanel
      */
     public function getPleskOS()
     {
-        $supportedOS = array( 'centos', 'cloudlinux', 'redhat', 'ubuntu', 'debian' );
         $cmd = '';
+
+        $supportedOS = array(
+            'centos',
+            'virtuozzo',
+            'cloudlinux',
+            'redhat',
+            'ubuntu',
+            'debian'
+        );
 
         if ( is_readable('/etc/os-release') ) {
             $cmd = 'grep ^ID= /etc/os-release | cut -d"=" -f2 | xargs';
@@ -57,16 +65,23 @@ class Plesk extends ControlPanel
         }
 
         throw new LSCMException(
-                'Plesk detected with unsupported OS. (Not CentOS/Cloudlinux/RedHat/Ubuntu/Debian)',
-                LSCMException::E_UNSUPPORTED);
+            'Plesk detected with unsupported OS. '
+                . '(Not CentOS/Virtuozzo/Cloudlinux/RedHat/Ubuntu/Debian)',
+            LSCMException::E_UNSUPPORTED
+        );
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     protected function initConfPaths()
     {
         $OS = $this->getPleskOS();
 
         switch ($OS) {
             case 'centos':
+            case 'virtuozzo':
             case 'cloudlinux':
             case 'redhat':
                 $this->apacheConf = '/etc/httpd/conf.d/lscache.conf';
@@ -79,7 +94,8 @@ class Plesk extends ControlPanel
             case 'debian':
 
                 if ( is_dir('/etc/apache2/conf-enabled') ) {
-                    $this->apacheConf = '/etc/apache2/conf-enabled/lscache.conf';
+                    $this->apacheConf =
+                        '/etc/apache2/conf-enabled/lscache.conf';
                 }
                 else {
                     /**
@@ -93,8 +109,8 @@ class Plesk extends ControlPanel
             //no default case
         }
 
-        $this->apacheVHConf =
-                '/usr/local/psa/admin/conf/templates/custom/domain/domainVirtualHost.php';
+        $this->apacheVHConf = '/usr/local/psa/admin/conf/templates'
+                . '/custom/domain/domainVirtualHost.php';
     }
 
     protected function serverCacheRootSearch()
@@ -117,20 +133,28 @@ class Plesk extends ControlPanel
         return '';
     }
 
+    /**
+     *
+     * @param array   $file_contents
+     * @param string  $vhCacheRoot
+     * @return array
+     */
     protected function addVHCacheRootSection( $file_contents,
             $vhCacheRoot = 'lscache' )
     {
-        $modified_contents = preg_replace('!^\s*</VirtualHost>!im',
-                "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n</VirtualHost>",
-                $file_contents);
-
-        return $modified_contents;
+        return preg_replace(
+            '!^\s*</VirtualHost>!im',
+            "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n"
+                . '</VirtualHost>',
+            $file_contents
+        );
     }
 
     /**
+     *
      * @param string $vhConf
      * @param string $vhCacheRoot
-     * @throws LSCMException  Indirectly thrown by $this->log().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function createVHConfAndSetCacheRoot( $vhConf,
             $vhCacheRoot = 'lscache' )
@@ -171,8 +195,6 @@ class Plesk extends ControlPanel
      *
      * Note: This function is repeated in Plesk plugin files to avoid extra
      * serialize ops etc. This copy is for cli only.
-     *
-     * @return string[][]  Array of docroot keys and their server name(s).
      */
     protected function prepareDocrootMap()
     {

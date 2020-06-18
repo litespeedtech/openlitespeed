@@ -1,9 +1,9 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2019
+ * @copyright: (c) 2019-2020
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -25,8 +25,8 @@ class DirectAdmin extends ControlPanel
     protected function initConfPaths()
     {
         $this->apacheConf = '/etc/httpd/conf/extra/httpd-includes.conf';
-        $this->apacheVHConf =
-                '/usr/local/directadmin/data/templates/custom/cust_httpd.CUSTOM.2.pre';
+        $this->apacheVHConf = '/usr/local/directadmin/data/templates/custom/'
+            . 'cust_httpd.CUSTOM.2.pre';
     }
 
     /**
@@ -88,17 +88,19 @@ class DirectAdmin extends ControlPanel
 
     /**
      *
-     * @param string   $file_contents
-     * @return string
+     * @param array   $file_contents
+     * @param string  $vhCacheRoot
+     * @return array
      */
     protected function addVHCacheRootSection( $file_contents,
             $vhCacheRoot = 'lscache' )
     {
-        array_unshift($file_contents,
-                "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n\n");
-        $modified_contents = $file_contents;
+        array_unshift(
+            $file_contents,
+            "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n\n"
+        );
 
-        return $modified_contents;
+        return $file_contents;
     }
 
     /**
@@ -114,13 +116,16 @@ class DirectAdmin extends ControlPanel
         if ( !file_exists($vhConfDir) ) {
 
             if ( !mkdir($vhConfDir, 0755) ) {
-                throw new LSCMException("Failed to create directory {$vhConfDir}.");
+                throw new LSCMException(
+                    "Failed to create directory {$vhConfDir}."
+                );
             }
 
             $this->log("Created directory {$vhConfDir}", Logger::L_DEBUG);
         }
 
-        $content = "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>";
+        $content =
+            "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>";
 
         if ( false === file_put_contents($vhConf, $content) ) {
             throw new LSCMException("Failed to create file {$vhConf}.");
@@ -207,7 +212,9 @@ class DirectAdmin extends ControlPanel
                 $curServerName = $curServerAliases = $curDocRoot = '';
             }
             else {
-                Logger::debug("Unused line when preparing docroot map: {$line}.");
+                Logger::debug(
+                    "Unused line when preparing docroot map: {$line}."
+                );
             }
         }
 
@@ -227,7 +234,8 @@ class DirectAdmin extends ControlPanel
             $index++;
         }
 
-        $this->docRootMap = array( 'docroots' => $roots, 'names' => $servernames );
+        $this->docRootMap =
+            array( 'docroots' => $roots, 'names' => $servernames );
     }
 
     /**

@@ -394,6 +394,8 @@ private:
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
     void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod);
+    void fixConfDirsPermission();
+
     int configServerBasic2(const XmlNode *pRoot, const char *pSwapDir);
     int configMultiplexer(const XmlNode *pNode);
     void configVHTemplateToListenerMap(const XmlNodeList *pList,
@@ -2685,6 +2687,58 @@ void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, i
     }
 }
 
+void HttpServerImpl::fixConfDirsPermission()
+{
+    bool rootuser = (getuid() == 0);
+    if (!rootuser)
+        return ;
+
+    struct passwd *pw = getpwnam("lsadm");
+    if (!pw)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
+        return ;
+    }
+
+    uid_t uid = pw->pw_uid;
+    gid_t gid = ServerProcessConfig::getInstance().getGid();
+    int mod = 0750;
+    bool needUpdated = false;
+
+    char  achBuf[4096];
+    const char *testDir[] = {"conf", "conf/templates", "conf/vhosts", };
+
+    const char *pRoot = MainServerConfig::getInstance().getServerRoot();
+
+    for (int i = 0; i < sizeof(testDir) / sizeof(const char *); ++i)
+    {
+        ls_snprintf(achBuf, 4096, "%s/%s/", pRoot, testDir[i]);
+
+        struct stat sb;
+        int iStat = stat(achBuf, &sb);
+        if (iStat == -1)
+        {
+            LS_NOTICE("[fixConfAndDirs] \"%s\" does not exist!!!", achBuf);
+            break;
+        }
+
+        if (sb.st_uid != uid || sb.st_gid != gid || (sb.st_mode & 0777) != mod)
+        {
+            LS_NOTICE("[testAndFixDirs] \"%s\" own or permission need to be changed.", achBuf);
+            needUpdated = true;
+            break;
+        }
+    }
+
+    if (needUpdated)
+    {
+        ls_snprintf(achBuf, 4096, "chown -R %s:%s %s/conf/; chmod -R 0750 %s/conf/ ",
+                    "lsadm", MainServerConfig::getInstance().getGroup(), pRoot, pRoot);
+        system(achBuf);
+    }
+
+}
+
 
 int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                                        const char *pSwapDir)
@@ -3229,13 +3283,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         testAndFixDirs("autoupdate", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("tmp", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("tmp/ocspcache", procConf.getUid(), procConf.getGid(), 0700);
-
-        //Fix Conf now
-        pw = getpwnam("lsadm");
-        if (!pw)
-            LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
-        else
-            testAndFixDirs("conf", pw->pw_uid, procConf.getGid(), 0750);
+        fixConfDirsPermission();
 
         char syscmd[1024] = {0};
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
