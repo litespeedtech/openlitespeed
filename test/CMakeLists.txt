@@ -163,7 +163,7 @@ SET( unittestlib
     modgzip cache lsiapi main http lsiapi ssi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx GeoIP adns
-    quic lsquic
+    quic h2 lsquic
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     edio udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
     libz.a libpcre.a libexpat.a libxml2.a

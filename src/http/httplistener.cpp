@@ -289,7 +289,7 @@ void HttpListener::adjustFds(int iNumChildren)
     int i, ret, fd;
     if (!isReusePort())
         return;
-    
+
     if (m_reusePortFds.size() > iNumChildren)
     {
         for (i=iNumChildren; i<m_reusePortFds.size(); ++i)
@@ -398,6 +398,7 @@ int HttpListener::startReusePortSocket(int count)
         }
         LS_DBG("[%s] #%d SO_REUSEPORT started, fd: %d",
                getAddrStr(), i, fd);
+        ::fcntl(fd, F_SETFD, FD_CLOEXEC);
         m_reusePortFds[i] = fd;
     }
     m_reusePortFds.setSize(count);

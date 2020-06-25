@@ -79,22 +79,42 @@ int QuicStream::init(lsquic_stream_t *s)
 }
 
 
-int QuicStream::processUpkdHdrs(QuicUpkdHdrs *hdrs)
+int QuicStream::processHdrSet(void *hdr_set)
+{
+    UnpackedHeaders *hdrs;
+    assert(hdr_set);
+    if (lsquic_stream_is_pushed(m_pStream))
+        hdrs = (UnpackedHeaders *)hdr_set;
+    else
+    {
+        UpkdHdrBuilder *builder = (UpkdHdrBuilder *)hdr_set;
+        hdrs = builder->retrieveHeaders();
+        delete builder;
+    }
+    assert(hdrs);
+    if (processUpkdHdrs(hdrs) == LS_FAIL)
+    {
+        LS_DBG_L(this, "QuicStream::processUpkdHdrs() failed, shutdown.");
+        shutdown();
+        return LS_FAIL;
+    }
+    return LS_OK;
+}
+
+
+int QuicStream::processUpkdHdrs(UnpackedHeaders *hdrs)
 {
     HioHandler *pHandler = HioHandlerFactory::getHandler(HIOS_PROTO_HTTP);
-    if (!pHandler)
-        return LS_FAIL;
-
-    pHandler->attachStream(this);
-
-    m_pHeaders = &hdrs->headers;
-    pHandler->onInitConnected();
-    m_pHeaders = NULL;
+    if (pHandler)
+    {
+        setActiveTime(DateTime::s_curTime);
+        pHandler->attachStream(this);
+        setReqHeaders(hdrs);
+        pHandler->onInitConnected();
+        return LS_OK;
+    }
     delete hdrs;
-
-    if (isWantRead())
-        pHandler->onReadEx();
-    return LS_OK;
+    return LS_FAIL;
 }
 
 
@@ -173,57 +193,14 @@ void QuicStream::suspendRead()
 
 int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
 {
-    struct iovec *pCur, *pEnd;
     lsquic_http_headers_t headers;
-    struct iovec  headerList[1024];
-    headers.count = 0;
-    headers.headers = (lsquic_http_header *)headerList;
-    pCur = headerList;
-    pEnd = &headerList[1024];
 
     if (!m_pStream)
         return -1;
+    pRespHeaders->prepareSendXpack(getProtocol() == HIOS_PROTO_HTTP3);
+    headers.headers = pRespHeaders->begin();
+    headers.count = pRespHeaders->end() - pRespHeaders->begin();
 
-    char *p = (char *)HttpStatusCode::getInstance().getCodeString(
-                  pRespHeaders->getHttpCode());
-    pCur->iov_base  = (char *)":status";
-    pCur->iov_len   = 7;
-    ++pCur;
-    pCur->iov_base = p + 1;
-    pCur->iov_len  = 3;
-    ++pCur;
-
-    pRespHeaders->dropConnectionHeaders();
-
-    for (int pos = pRespHeaders->HeaderBeginPos();
-         pos != pRespHeaders->HeaderEndPos();
-         pos = pRespHeaders->nextHeaderPos(pos))
-    {
-        int idx;
-        int count = pRespHeaders->getHeader(pos, &idx, pCur, pCur+1,
-                                        (pEnd - pCur - 1) / 2);
-
-        if (count <= 0)
-            continue;
-
-        char *p = (char *)pCur->iov_base;
-        char *pKeyEnd = p + pCur->iov_len;
-        //to lowercase
-        while (p < pKeyEnd)
-        {
-            *p = tolower(*p);
-            ++p;
-        }
-
-        for(int i = count - 1; i > 0; --i)
-        {
-            pCur[(i << 1) | 1] = pCur[i + 1];
-            pCur[(i << 1) ]    = *pCur;
-        }
-        pCur += (count << 1);
-
-    }
-    headers.count = (pCur - headerList) >> 1;
     return lsquic_stream_send_headers(m_pStream, &headers, isNoBody);
 }
 
@@ -292,28 +269,18 @@ int QuicStream::read(char *pBuf, int size)
 }
 
 
-int QuicStream::push(ls_str_t *pUrl, ls_str_t *pHost,
-                   ls_strpair_t *pExtraHeaders)
+int QuicStream::push(UnpackedHeaders *hdrs)
 {
     if (!m_pStream)
         return -1;
 
     lsquic_conn_t *pConn = lsquic_stream_conn(m_pStream);
     lsquic_http_headers_t headers;
-    ls_strpair_t *p = pExtraHeaders;
     int pushed;
-
-    while(p && p->key.ptr != NULL)
-    {
-        ++p;
-    }
-    headers.count = p - pExtraHeaders;
-    headers.headers = (lsquic_http_header_t *)pExtraHeaders;
-
-    pushed = lsquic_conn_push_stream(pConn, NULL, m_pStream,
-                                   (const struct iovec*) pUrl,
-                                   (const struct iovec*) pHost,
-                                   &headers);
+    hdrs->prepareSendXpack(getProtocol() == HIOS_PROTO_HTTP3);
+    headers.headers = (lsxpack_header *)hdrs->begin();
+    headers.count = hdrs->end() - hdrs->begin();
+    pushed = lsquic_conn_push_stream(pConn, hdrs, m_pStream, &headers);
     if (pushed == 0)
         return 0;
 
@@ -402,7 +369,7 @@ const char *QuicStream::buildLogId()
 }
 
 
-void QuicStream::onRead()
+int QuicStream::onRead()
 {
     LS_DBG_L(this, "QuicStream::onRead()");
     if (getHandler())
@@ -411,51 +378,55 @@ void QuicStream::onRead()
     }
     else if (getState() == HIOS_CONNECTED)
     {
-        QuicUpkdHdrs *hdrs = (QuicUpkdHdrs *)lsquic_stream_get_hset(m_pStream);
-        if (hdrs)
-        {
-            setActiveTime(DateTime::s_curTime);
-            if (processUpkdHdrs(hdrs) == LS_FAIL)
-            {
-                LS_DBG_L(this, "QuicStream::processUpkdHdrs() failed, shutdown.");
-                shutdown();
-                return;
-            }
-        }
+        void *hset = lsquic_stream_get_hset(m_pStream);
+        if (hset)
+            processHdrSet(hset);
         else
         {
             LS_DBG_L(this, "lsquic_stream_get_hset() failed, shutdown.");
             shutdown();
-            return;
+            return LS_FAIL;
         }
     }
 
     if (getState() == HIOS_CLOSING)
+    {
         onPeerClose();
+        return LS_FAIL;
+    }
+    return LS_OK;
 }
 
 
-void QuicStream::onWrite()
+int QuicStream::onWrite()
 {
     LS_DBG_L(this, "QuicStream::onWrite()");
     if (getState() != HIOS_CONNECTED)
+    {
         close();
+        return LS_FAIL;
+    }
     else
     {
         if (getHandler())
             getHandler()->onWriteEx();
         if (getState() == HIOS_CLOSING)
+        {
             onPeerClose();
+            return LS_FAIL;
+        }
     }
+    return LS_OK;
 }
 
 
-void QuicStream::onClose()
+int QuicStream::onClose()
 {
     LS_DBG_L(this, "QuicStream::onClose()");
     if (getHandler())
         getHandler()->onCloseEx();
     m_pStream = NULL;
+    return LS_OK;
 }
 
 

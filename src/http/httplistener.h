@@ -25,7 +25,7 @@
 #include <log4cxx/logsession.h>
 
 #include <sys/types.h>
-#include <lsr/reuseport.h>
+#include <socket/reuseport.h>
 #include <socket/gsockaddr.h>
 
 
@@ -59,9 +59,9 @@ class HttpListener : public EventReactor, public LogSession
 
     ModuleConfig        m_moduleConfig;
     IolinkSessionHooks  m_iolinkSessionHooks;
-    
+
     ReusePortFds        m_reusePortFds;
-    
+
     GSockAddr           m_sockAddr;
 
     HttpListener(const HttpListener &rhs);
@@ -103,7 +103,7 @@ public:
 
     void finializeSslCtx();
     int beginServe();
-    
+
     unsigned long long getBinding() const     {   return m_iBinding;  }
     void setBinding(unsigned long long b)   {   m_iBinding = b;     }
 
@@ -115,7 +115,7 @@ public:
     {   return m_pMapVHost;     }
 
     const VHostMap *findVhostMap(const struct sockaddr * pAddr) const;
-    
+
     virtual int start();
 
     virtual int handleEvents(short event);
@@ -144,10 +144,10 @@ public:
     void setAdcPortList(const char *pList);
     AutoStr *getAdcPortList() const         { return m_pAdcPortList;    }
     int zconfAppendVHostList(AutoBuf *pBuf);
-    
+
     int addConnection();
     void batchAddConn();
-    
+
     ssl_st *newSsl(SslContext *pSslContext);
     int setConnInfo(ConnInfo *pInfo, struct conn_data *pCur);
 
@@ -157,14 +157,14 @@ public:
     void addReusePortSocket(int fd);
     int  activeReusePort(int seq);
     int closeUnActiveReusePort();
-    
+
     int getFdCount(int* maxfd);
     int passFds(int arg1);
     int passFds2(int target_fd);
     bool isReusePort() const    {   return m_reusePortFds.size() > 0;    }
 
     UdpListener *getQuicListener() { return m_pUdpListener;     }
-    
+
     void releaseReusePortSocket();
     void enableReusePort();
     void adjustFds(int iNumChildren);

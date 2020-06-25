@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -15,39 +15,43 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#ifndef H2STREAM_H
-#define H2STREAM_H
+#ifndef H2STREAMBASE_H
+#define H2STREAMBASE_H
 
 #include <lsdef.h>
-#include <http/hiostream.h>
-#include <spdy/unpackedheaders.h>
-#include <spdy/h2protocol.h>
+#include <h2/h2protocol.h>
+#include <log4cxx/logsession.h>
 #include <util/linkedobj.h>
 #include <util/loopbuf.h>
 #include <util/datetime.h>
 #include <lstl/thash.h>
 
+#include <http/hiostream.h>
 #include <inttypes.h>
 
 struct Priority_st;
-class H2Connection;
-class NtwkIOLink;
+class H2ConnBase;
 
-class H2Stream : public DLinkedObj, public HioStream
-               , public HentryInt<H2Stream, uint32_t, H2StreamHasher>
+class H2StreamBase : public DLinkedObj
+                   , public HentryInt<H2StreamBase, uint32_t, H2StreamHasher>
+                   , virtual public LogSession
+                   , virtual public EdIoStream
+                   , virtual public StreamStat
 {
 
 public:
-    H2Stream();
-    ~H2Stream();
+    H2StreamBase();
+    virtual ~H2StreamBase();
 
     void reset();
+    int init(H2ConnBase *pH2Conn, Priority_st *pPriority);
 
-    int init(H2Connection *pH2Conn,
-             Priority_st *pPriority = NULL);
-    int onInitConnected(HioHandler *pHandler, bool bUpgraded = false);
+    virtual int processRcvdData(char *pData, int len);
+    virtual char *getDirectInBuf(size_t &size);
+    virtual void directInBufUsed(size_t len);
+    virtual char *getDirectOutBuf(size_t &size);
+    virtual void directOutBufUsed(size_t len);
 
-    int appendReqData(char *pData, int len, uint8_t H2_Flags);
 
     int read(char *buf, int len);
 
@@ -64,14 +68,6 @@ public:
     void switchWriteToRead() {};
 
     int flush();
-    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
-
-    UnpackedHeaders * getReqHeaders()
-    {   return &m_headers;   }
-
-    int push(ls_str_t *pUrl, ls_str_t *pHost, 
-             ls_strpair_t *pExtraHeaders);
-
 
     void suspendRead()
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }
@@ -81,65 +77,53 @@ public:
 
     void continueRead();
     void continueWrite();
-
-    int onTimer();
+    void resumeNotify() {   continueRead(); }
 
     int isStuckOnRead()
     {
         return (isWantRead() && DateTime::s_curTime - getActiveTime() >= 5);
     }
+    int onPeerShutdown();
 
     int shutdown();
 
+    void abort();
     void closeEx();
     int close();
-
-    int onWrite();
-
-    int isFlowCtrl() const          {   return getFlag(HIO_FLAG_FLOWCTRL);    }
 
     int32_t getWindowOut() const    {   return m_iWindowOut;    }
 //    void setWindowOut(int32_t v)    {   m_iWindowOut = v;    }
     int adjWindowOut(int32_t n);
 
-    int32_t getWindowIn() const     {   return m_iWindowIn;     }
-    void adjWindowIn(int32_t n)     {   m_iWindowIn += n;       }
-
-    void clearBufIn()               {   m_bufIn.clear();        }
-    LoopBuf *getBufIn()             {   return &m_bufIn;        }
-    int appendInputData(const char *pData, int len)
-    {
-        return m_bufIn.append(pData, len);
-    }
+    void clearBufIn()               {   m_bufRcvd.clear();        }
+    LoopBuf *getBufIn()             {   return &m_bufRcvd;        }
 
     int getDataFrameSize(int wanted);
 
     void apply_priority(Priority_st *priority);
 
-    void appendInputData(char ch)
-    {
-        return m_bufIn.append(ch);
-    }
+    void adjWindowToUpdate(int32_t n)   {   m_iWindowToUpdate += n;     }
+    int32_t getWindowToUpdate() const   {   return m_iWindowToUpdate;   }
+    void windowUpdate();
+
 
 private:
-    bool operator==(const H2Stream &other) const;
+    bool operator==(const H2StreamBase &other) const;
 
+
+protected:
     int dataSent(int ret);
-    void shutdownEx();
+    void shutdownWrite();
     void markShutdown();
 
 protected:
-    virtual const char *buildLogId();
-
-private:
-    LoopBuf         m_bufIn;
-    UnpackedHeaders m_headers;
-    H2Connection   *m_pH2Conn;
+    LoopBuf         m_bufRcvd;
+    H2ConnBase     *m_pH2Conn;
+    int32_t         m_iWindowToUpdate;
     int32_t         m_iWindowOut;
-    int32_t         m_iWindowIn;
 
-    LS_NO_COPY_ASSIGN(H2Stream);
+    LS_NO_COPY_ASSIGN(H2StreamBase);
 };
 
 
-#endif // H2STREAM_H
+#endif // H2STREAMBASE_H

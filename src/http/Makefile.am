@@ -1,8 +1,6 @@
 ####### kdevelop will overwrite this part!!! (begin)##########
 noinst_LIBRARIES = libhttp.a
 
-AM_CPPFLAGS =  -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
-
 libhttp_a_METASOURCES = AUTO
 
 libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.cpp pipeappender.cpp awstats.cpp rewriterulelist.cpp throttlecontrol.cpp \

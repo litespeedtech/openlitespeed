@@ -38,8 +38,20 @@ module Rack
     module Handler
         class LiteSpeed
             def self.run(app, options=nil)
-                while LSAPI.accept != nil
-                    serve app
+                if LSAPI.respond_to?("accept_new_connection")
+                    while LSAPI.accept_new_connection != nil
+                        fork do
+                            LSAPI.postfork_child
+                            while LSAPI.accept != nil
+                                serve app
+                            end
+                        end
+                        LSAPI.postfork_parent
+                    end
+                else
+                    while LSAPI.accept != nil
+                        serve app
+                    end
                 end
             end
             

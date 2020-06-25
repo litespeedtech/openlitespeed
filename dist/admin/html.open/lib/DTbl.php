@@ -377,6 +377,7 @@ class DTbl
             $labels[] = $attr->_helpKey;
         }
         if (($tips = DMsg::GetEditTips($labels)) != null) {
+error_log("edit tips "  . print_r($tips, 1));            
             $buf .= UI::GetTblTips($tips);
         }
 

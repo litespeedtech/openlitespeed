@@ -103,7 +103,7 @@ int SslConnection::setfd(int fd)
     DEBUG_MESSAGE("[SSL: %p] setfd: %d\n", this, fd);
     if (m_ssl)
     {
-        if  (fd != -1 && m_bio.m_rbuf == NULL)
+        if  (fd != -1 && !(m_bio.m_flag & LS_FDBIO_RBUF_ALLOC))
         {
             BIO * bio = ls_fdbio_create(fd, &m_bio);
             SSL_set_bio(m_ssl, bio, bio);
@@ -122,9 +122,9 @@ int SslConnection::read(char *pBuf, int len)
     char *p = pBuf;
     char *pEnd = pBuf + len;
     int ret;
-    m_bio.m_need_read_event = 0;
+    m_bio.m_flag &= ~LS_FDBIO_NEED_READ_EVT;
     while(p < pEnd && (m_bio.m_rbuf_read < m_bio.m_rbuf_used
-                       || !m_bio.m_need_read_event))
+                       || !(m_bio.m_flag & LS_FDBIO_NEED_READ_EVT)))
     {
         DEBUG_MESSAGE("[SSL: %p] SSL_read\n", this);
         ret = SSL_read(m_ssl, p, pEnd - p);
@@ -663,7 +663,7 @@ char* SslConnection::getRawBuffer(int *len)
     DEBUG_MESSAGE("[SSL: %p] getRawBuffer: len: %d\n", this,
                   m_bio.m_rbuf_used);
     *len = m_bio.m_rbuf_used;
-    return (char *)m_bio.m_rbuf;
+    return (m_bio.m_flag & LS_FDBIO_RBUF_ALLOC) ? (char *)m_bio.m_rbuf : NULL;
 }
 
 
@@ -731,4 +731,13 @@ void SslConnection::releaseIdleBuffer()
     ls_fdbio_release_idle_buffer(&m_bio);
 }
 
+
+int SslConnection::bufferInput()
+{
+    return ls_fdbio_buff_input(&m_bio, SSL_get_fd(m_ssl));
+}
+
+
+bool SslConnection::needReadEvent() const
+{   return m_bio.m_flag & LS_FDBIO_NEED_READ_EVT; }
 

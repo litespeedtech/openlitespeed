@@ -56,16 +56,45 @@ public:
 int CustomFormat::parseFormat(const char *psFormat)
 {
     char achBuf[4096];
+    static const char *s_disallow[] =
+    {   "wget", "curl", "bash", "sh", "cat", "more", "less", "strings"    };
 
-    char *pEnd;
+    char ch;
+    const char *src = psFormat;
+    char *p1 = achBuf;
+    while(p1 < &achBuf[sizeof(achBuf) -1] && (ch = *src++) != '\0')
+    {
+        if (ch != '\'' && ch != '"' && ch != '\\')
+            *p1++ = ch;
+        if (ch == '`')
+            return -1;
+    }
+    *p1 = 0;
+    if (strstr(achBuf, "/bin/") || strstr(achBuf, "/tmp/")
+        || strstr(achBuf, "/etc/") || strstr(achBuf, "<<<"))
+        return -1;
+    for(int i = 0; i < (int)(sizeof(s_disallow) / sizeof(char *)); ++i)
+    {
+        const char *key = s_disallow[i];
+        const char *f = achBuf;
+        const char *p;
+        while ((p = strstr(f, key)) != NULL)
+        {
+            if ((p == achBuf || !isalpha(*(p - 1)))
+                && !isalpha(*(p + strlen(key))))
+                return -1;
+            f = p + strlen(key);
+        }
+    }
+    lstrncpy(achBuf, psFormat, 4096);
+
+    char *pEnd = &achBuf[strlen(achBuf)];
     char *p = achBuf;
     char *pBegin = achBuf;
     char *pItemEnd = NULL;
     int state = 0;
     int itemId;
-
-    memccpy(achBuf, psFormat, 0, 4095);
-    pEnd = &achBuf[strlen(achBuf)];
+    int nonstring_items = 0;
 
     while (1)
     {
@@ -175,9 +204,8 @@ int CustomFormat::parseFormat(const char *psFormat)
                 if (!pBegin)
                     break;
                 *pItemEnd = 0;
-                itemId = HttpHeader::getIndex(pBegin);
-                if ((pItemEnd - pBegin != HttpHeader::getHeaderStringLen(itemId)) ||
-                    (itemId >= HttpHeader::H_HEADER_END))
+                itemId = HttpHeader::getIndex(pBegin, pItemEnd - pBegin);
+                if (itemId >= HttpHeader::H_HEADER_END)
                     itemId = REF_HTTP_HEADER;
                 else
                     pBegin = NULL;
@@ -198,7 +226,7 @@ int CustomFormat::parseFormat(const char *psFormat)
                     break;
                 *pItemEnd = 0;
                 itemId = HttpRespHeaders::getIndex(pBegin);
-                if ((pItemEnd - pBegin != HttpRespHeaders::getHeaderStringLen(
+                if ((pItemEnd - pBegin != HttpRespHeaders::getNameLen(
                                           (HttpRespHeaders::INDEX)itemId))
                     || (itemId >= HttpRespHeaders::H_HEADER_END))
                     itemId = REF_RESP_HEADER;
@@ -283,8 +311,12 @@ int CustomFormat::parseFormat(const char *psFormat)
                         if (ret != -1)
                             pItem->m_itemId = ret;
                         else
+                        {
                             pItem->m_sExtra.setStr(pBegin, pItemEnd - pBegin);
+                            --nonstring_items;
+                        }
                     }
+                    ++nonstring_items;
                     push_back(pItem);
                 }
                 else
@@ -295,6 +327,8 @@ int CustomFormat::parseFormat(const char *psFormat)
         }
         ++p;
     }
+    if (nonstring_items == 0)
+        return -1;
     return 0;
 }
 
@@ -453,7 +487,7 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
             case REF_RESP_HEADER:
                 pValue = NULL;
                 n = 0;
-                pSession->getResp()->getRespHeaders().getFirstHeader(
+                pSession->getResp()->getRespHeaders().getHeader(
                     pItem->m_sExtra.c_str(), pItem->m_sExtra.len(), &pValue, n);
                 escape = 1;
                 break;
@@ -480,7 +514,7 @@ int AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt,
                     n = fixHttpVer(pSession, p, n);
                     escape = 1;
                 }
-                
+
                 if (p != pBuf)
                 {
                     ret = appendStrNoQuote(pBuf, pBufEnd - pBuf, escape, p, n, pLogger);
@@ -713,6 +747,7 @@ void AccessLog::log(HttpSession *pSession)
     n = fixHttpVer(pSession, pOrgReqLine, n);
     appendEscape(pOrgReqLine, n);
     m_buf.append_unsafe('"');
+    m_buf.append_unsafe(' ');
     m_buf.append_unsafe(
         HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode()), 5);
     if (contentWritten == 0)

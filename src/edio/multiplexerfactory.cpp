@@ -44,6 +44,24 @@ Multiplexer *MultiplexerFactory::s_pMultiplexer = NULL;
 LS_SINGLETON(MultiplexerFactory);
 
 
+int MultiplexerFactory::initDefault()
+{
+    if (s_pMultiplexer)
+        return LS_OK;
+    Multiplexer *pMplx;
+    pMplx = MultiplexerFactory::getNew(BEST);
+    if (pMplx != NULL)
+    {
+        if (!pMplx->init(1024))
+        {
+            MultiplexerFactory::setMultiplexer(pMplx);
+            return 0;
+        }
+    }
+    return LS_FAIL;
+}
+
+
 int MultiplexerFactory::getType(const char *pType)
 {
     int i = BEST;

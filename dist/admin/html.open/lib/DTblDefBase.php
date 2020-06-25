@@ -397,7 +397,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'geolocationDB');
     }
 
-    private function add_S_IP2LOCATION($id)
+    protected function add_S_IP2LOCATION($id)
     {
         $attrs = array(
             self::NewPathAttr('ip2locDBFile', DMsg::ALbl('l_ip2locDBFile'), 'filep', 2, 'r'),
@@ -438,7 +438,7 @@ class DTblDefBase
 
     protected function add_S_TUNING_GZIP($id)
     {
-        $parseFormat = "/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)$/";
+		$parseFormat = "/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)|default$/";
 
         $attrs = array(
             // general
@@ -460,7 +460,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_gzipbr'), $attrs);
     }
 
-    private function add_S_TUNING_QUIC($id)
+    protected function add_S_TUNING_QUIC($id)
 	{
         $congest_options = ['' => 'Default', '1' => 'Cubic', '2' => 'BBR'];
 		$attrs = array(
@@ -524,7 +524,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $attrs, 'perClientConnLimit');
     }
 
-	private function add_S_SEC_RECAP($id)
+	protected function add_S_SEC_RECAP($id)
 	{
 		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
 		$parseHelp = DMsg::ALbl('parse_recaptchakey');
@@ -545,7 +545,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
 	}
 
-	private function add_VT_SEC_RECAP($id)
+	protected function add_VT_SEC_RECAP($id)
 	{
 		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
 		$parseHelp = DMsg::ALbl('parse_recaptchakey');
@@ -559,6 +559,23 @@ class DTblDefBase
             self::NewIntAttr('regConnLimit', DMsg::ALbl('l_concurrentReqLimit'), true, 0, null, 'recaptchaVhReqLimit'),
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
+	}
+    
+	protected function add_S_SEC_BUBBLEWRAP($id)
+	{
+        $attrs = [
+            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), array('0' => DMsg::ALbl('o_disabled'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on'))),
+            self::NewTextAreaAttr('bubbleWrapCmd', DMsg::ALbl('l_bubblewrapcmd'), 'cust', true, 3, null, 0),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_bubblewrap'), $attrs);
+	}
+
+	protected function add_VT_SEC_BUBBLEWRAP($id)
+	{
+        $attrs = [
+            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), array('' => DMsg::ALbl('o_notset'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on'))),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_bubblewrap'), $attrs);
 	}
 
     protected function add_S_SEC_DENY($id)

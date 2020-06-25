@@ -16,50 +16,60 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "http/httprespheaders.h"
-
+#include <arpa/inet.h>
 #include <http/httpserverversion.h>
-#include <http/httpstatusline.h>
 #include <http/httpver.h>
-#include <http/httpserverconfig.h>
 #include <log4cxx/logger.h>
-#include <spdy/lshpack.h>
+#include <lshpack/lshpack.h>
+#include <socket/gsockaddr.h>
 #include <util/datetime.h>
-#include <util/iovec.h>
+#include <util/stringtool.h>
+#include <h2/unpackedheaders.h>
+#include <http/httpcgitool.h>
+#include <lsqpack.h>
+
 #include <ctype.h>
 
-
-#include <arpa/inet.h>
-
+//FIXME: need to update the comments
 /*******************************************************************************
- *          Some comments about the resp_kvpair
+ *          Something  about lsxpack_header
  * keyOff is the real offset of the key/name,  valOff is the real offset of the value
- * next_index is 0 for single line case
- * FOR MULTIPLE LINE CASE, next_index is relative with the next kvpair position
- * The next_index of the first KVpair of the multiple line is (the next kvpair position + 1)
- * Then in all the children KVPair, the next_index is (the next kvpair position + 1) | 0x80000000
+ * chain_next_idx is 0 for sigle line casel
+ * FOR MULTIPLE LINE CASE, chain_next_idx is relative with the next kvpair position
+ * The chain_next_idx of the first KVpair of the multiple line is (the next kvpair position + 1)
+ * Then in all the chlidren KVPair, the chain_next_idx is (the next kvpair position + 1) | 0x8000
  * The last one (does not have a child) is 0x80000000
  * ****************************************************************************/
 
 #define HIGHEST_BIT_NUMBER                  0x8000
 #define BYPASS_HIGHEST_BIT_MASK             0x7FFF
-#define MAX_RESP_HEADER_LEN                 8192
 
+#ifdef _ENTERPRISE_
+int  HttpRespHeaders::s_showServerHeader = 1;
+#endif
+static char s_sConnKeepAliveHeader[57] =
+    "Connection: Keep-Alive\r\nKeep-Alive: timeout=5, max=100\r\n";
+static char s_sConnCloseHeader[20] = "Connection: close\r\n";
+static char s_sChunkedHeader[29] = "Transfer-Encoding: chunked\r\n";
+static char s_sGzipEncodingHeader[48] =
+    "content-encoding: gzip\r\nvary: Accept-Encoding\r\n";
+static char s_sBrEncodingHeader[46] =
+    "content-encoding: br\r\nvary: Accept-Encoding\r\n";
+static char s_sCommonHeaders[66] =
+    "date: Tue, 09 Jul 2013 13:43:01 GMT\r\nserver";
+static char s_sTurboCharged[66] =
+    "x-turbo-charged-by: ";
 
+static int             s_commonHeadersCount = 2;
+static http_header_t   s_commonHeaders[2];
+static http_header_t   s_gzipHeaders[2];
+static http_header_t   s_brHeaders[2];
+static http_header_t   s_keepaliveHeader[2];
+static http_header_t   s_chunkedHeader;
+static http_header_t   s_concloseHeader;
+static http_header_t   s_turboChargedBy;
 
-char HttpRespHeaders::s_sDateHeaders[30] = "Tue, 09 Jul 2013 13:43:01 GMT";
-int             HttpRespHeaders::s_commonHeadersCount = 2;
-http_header_t       HttpRespHeaders::s_commonHeaders[2];
-http_header_t       HttpRespHeaders::s_gzipHeaders;
-http_header_t       HttpRespHeaders::s_brHeaders;
-http_header_t       HttpRespHeaders::s_varyHeaders;
-http_header_t       HttpRespHeaders::s_keepaliveHeader;
-http_header_t       HttpRespHeaders::s_chunkedHeader;
-http_header_t       HttpRespHeaders::s_concloseHeader;
-http_header_t       HttpRespHeaders::s_acceptRangeHeader;
-
-static char s_sTurboCharged[66] = "X-Turbo-Charged-By: ";
-
-const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
+const char *s_sHeaders[HttpRespHeaders::H_HEADER_END] =
 {
     "Accept-Ranges",
     "Connection",
@@ -86,35 +96,55 @@ const char *HttpRespHeaders::m_sPresetHeaders[H_HEADER_END] =
     "Vary",
     "Www-Authenticate",
     "X-Litespeed-Cache",
-    "X-Litespeed-Purge",
-    "X-Litespeed-Tag",
-    "X-Litespeed-Vary",
+    "X-LiteSpeed-Purge",
+    "X-LiteSpeed-Tag",
+    "X-LiteSpeed-Vary",
     "Lsc-cookie",
     "X-Powered-By",
     "Link",
+    "Version",
+    "alt-svc",
+    "X-LiteSpeed-Alt-Svc",
+    "X-LSADC-Backend",
+    "Upgrade"
 };
+
+
+const char **HttpRespHeaders::getNameList()
+{
+    return s_sHeaders;
+}
 
 
 int HttpRespHeaders::s_iHeaderLen[H_HEADER_END + 1] =
 {
     13, 10, 12, 14, 16, 13, 19, 13, //cache-control
     4, 4, 7, 10, 13, 8, 20, 25, //x-litespeed-cache-control
-    6, 16, 6, 10, 6, 17, 4, 16, //www-authenticate
-    17, 17, 15, 16, 10, 12, //x-powered-by
-    4, 0
+    6, 16, 6, 10, 6, 17, 4, 16, 17, 17, 15, 16, 10, 12, //x-powered-by
+    4, 7, 7, 19, 15, 7, 0
 };
 
 
-HttpRespHeaders::HttpRespHeaders(ls_xpool_t *pool)
-    : m_buf()
-    , m_aKVPairs()
-    , m_iHttpCode(SC_200)
-    , m_hLastHeaderKVPairIndex(0) // NOTICE: set to 0 first so reset works.
+HttpRespHeaders::HttpRespHeaders()
 {
-    m_pool = pool;
-    incKVPairs(16); //init 16 kvpair spaces
+    m_lsxpack.alloc(32);
     reset();
 }
+
+
+HttpRespHeaders::~HttpRespHeaders()
+{
+}
+
+
+inline lsxpack_header *HttpRespHeaders::newHdrEntry()
+{
+    assert(m_working == NULL);
+    lsxpack_header *hdr = m_lsxpack.newObj();
+    memset(hdr, 0, sizeof(*hdr));
+    return hdr;
+}
+
 
 void HttpRespHeaders::reset2()
 {
@@ -135,150 +165,241 @@ void HttpRespHeaders::reset2()
     pIovEnd = &iov[max];
     for (pIov = iov; pIov < pIovEnd; ++pIov)
         add(H_SET_COOKIE, "Set-Cookie", 10, (char *)pIov->iov_base,
-            pIov->iov_len, LSI_HEADEROP_ADD);
-
+            pIov->iov_len, LSI_HEADER_ADD);
 }
 
 
 void HttpRespHeaders::reset()
 {
-    if (m_hLastHeaderKVPairIndex == -1 && m_buf.size() == 0)
-        return ;
-
+    m_flags = 0;
+    m_iHeaderUniqueCount = 0;
     m_buf.clear();
     memset(m_KVPairindex, 0xFF, H_HEADER_END);
-    m_iHttpCode = SC_200;
-    memset(&m_flags, 0, &m_iKeepAlive + 1 - &m_flags);
+    memset(m_lsxpack.begin(), 0, sizeof(lsxpack_header));
+    m_lsxpack.setSize(1);
+    m_working = NULL;
+    m_iHeaderRemovedCount = 1;  //compensate for the reserved header
     m_hLastHeaderKVPairIndex = -1;
-    m_aKVPairs.init();
-    m_aKVPairs.setSize(0);
-    m_aKVPairs.clear();
+    m_iHttpVersion = 0; //HTTP/1.1
+    m_iHttpCode = SC_200;
+    m_iKeepAlive = 0;
+    m_iHeaderBuilt = 0;
+    m_iHeadersTotalLen = 0;
 }
 
-void HttpRespHeaders::updateEtag(int compress_type)
+
+void HttpRespHeaders::addCommonHeaders()
+{   add(s_commonHeaders, s_commonHeadersCount);     }
+
+
+void HttpRespHeaders::addGzipEncodingHeader()
+{
+    add(s_gzipHeaders, 2, LSI_HEADER_MERGE);
+    updateEtag(ETAG_GZIP);
+}
+
+
+void HttpRespHeaders::addBrEncodingHeader()
+{
+    add(s_brHeaders, 2, LSI_HEADER_MERGE);
+    updateEtag(ETAG_BROTLI);
+}
+
+
+void HttpRespHeaders::updateEtag(ETAG_ENCODING type)
 {
     int etagLen;
-    const char *pETag = getHeader(H_ETAG, &etagLen);
+    const char *pETag = getHeaderToUpdate(H_ETAG, &etagLen);
     char * pUpdate;
     if (!pETag)
         return;
-    pUpdate = (char *)pETag + etagLen - 4;
-    if (*pUpdate++ == ';')
+    pUpdate = (char *)pETag + etagLen - 1;
+    if (*pUpdate == '"')
+        --pUpdate;
+    --pUpdate;
+    if (*(pUpdate - 1) == ';')
     {
-        /*if (compress_type == 0)
+        switch (type)
         {
+        case ETAG_NO_ENCODE:
             *pUpdate++ = ';';
             *pUpdate++ = ';';
-        }
-        else */
-        if (compress_type == 1)
-        {
+            break;
+        case ETAG_GZIP:
             *pUpdate++ = 'g';
             *pUpdate++ = 'z';
-        }
-        else
-        {
+            break;
+        case ETAG_BROTLI:
             *pUpdate++ = 'b';
             *pUpdate++ = 'r';
+            break;
         }
     }
 }
 
 
-
-inline void HttpRespHeaders::incKVPairs(int num)
+void HttpRespHeaders::appendChunked()
 {
-    m_aKVPairs.guarantee(m_pool, m_aKVPairs.getSize() + num);
+    add(&s_chunkedHeader, 1);
 }
 
 
-inline resp_kvpair *HttpRespHeaders::getKvPair(int index) const
+void HttpRespHeaders::addTruboCharged()
 {
-    return m_aKVPairs.getObj(index);
+    if (s_commonHeadersCount > 1)
+        add(&s_turboChargedBy, 1);
 }
 
 
-inline resp_kvpair *HttpRespHeaders::getNewKV()
+void HttpRespHeaders::incKvPairs(int num)
 {
-    resp_kvpair *tmp = m_aKVPairs.getNew();
-    memset(tmp, 0, sizeof(resp_kvpair));
-    return tmp;
+    m_lsxpack.guarantee(num);
 }
 
 
 //Replace the value with new value in pKv, in this case must have enough space
-void HttpRespHeaders::replaceHeader(resp_kvpair *pKv, const char *pVal,
+void HttpRespHeaders::replaceHeader(lsxpack_header *pKv, const char *pVal,
                                     unsigned int valLen)
 {
     char *pOldVal = getVal(pKv);
     memcpy(pOldVal, pVal, valLen);
-    memset(pOldVal + valLen, ' ', pKv->valLen - valLen);
+    memset(pOldVal + valLen, ' ', pKv->val_len - valLen);
+    lsxpack_header_mark_val_changed(pKv);
+}
+
+inline void appendLowerCase(char *dest, const char *src, int n)
+{
+    const char *end = src + n;
+    while (src < end)
+        *dest++ = tolower(*src++);
 }
 
 
-#define HRH_SVR_RESERVE 127
-
-int HttpRespHeaders::appendHeader(resp_kvpair *pKv, int hdr_idx, const char *pName,
-                                  unsigned int nameLen, const char *pVal,
-                                  unsigned int valLen, int method)
+void HttpRespHeaders::appendKvPairIdx(lsxpack_header *exist, int kv_idx)
 {
-    if (nameLen + valLen > MAX_RESP_HEADER_LEN
-        || (!m_isFinalize && m_buf.size() + nameLen + valLen + HRH_SVR_RESERVE >=
-            HttpServerConfig::getInstance().getMaxDynRespHeaderLen()))
-        return LS_FAIL;
+    while ((exist->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) > 0)
+        exist = getKvPair((exist->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1);
 
-    if (method == LSI_HEADEROP_SET)
-        memset(pKv, 0, sizeof(resp_kvpair));
+    exist->chain_next_idx = ((kv_idx + 1) | HIGHEST_BIT_NUMBER);
+}
 
-    if (m_buf.available() < (int)(pKv->valLen + nameLen * 2 + valLen + 9))
+
+int HttpRespHeaders::addKvPairIdx(lsxpack_header *new_hdr)
+{
+    if ((new_hdr->flags & LSXPACK_APP_IDX)
+        && new_hdr->app_index != H_UNKNOWN)
     {
-        if (m_buf.grow(pKv->valLen + nameLen * 2 + valLen + 9))
-            return LS_FAIL;
+        int idx = new_hdr->app_index;
+        if (m_KVPairindex[idx] == 0xFF)
+        {
+            m_KVPairindex[idx] = new_hdr - m_lsxpack.begin();
+        }
+        else
+        {
+            appendKvPairIdx(m_lsxpack.get(m_KVPairindex[idx]),
+                            new_hdr - m_lsxpack.begin());
+            return 0;
+        }
+    }
+    else
+    {
+        int ret = getHeaderKvOrder(lsxpack_header_get_name(new_hdr),
+                                   new_hdr->name_len);
+        if (ret != -1)
+        {
+            appendKvPairIdx(m_lsxpack.get(ret), new_hdr - m_lsxpack.begin());
+            return 0;
+        }
+    }
+    return 1;
+}
+
+
+int HttpRespHeaders::tryCommitHeader(INDEX idx, const char *pVal,
+                                     unsigned int valLen)
+{
+    if (!m_working)
+        return LS_FAIL;
+    if (m_working->app_index == idx
+        && pVal == lsxpack_header_get_value(m_working)
+        && valLen == m_working->val_len)
+    {
+        commitWorkingHeader();
+        return LS_OK;
+    }
+    return LS_FAIL;
+}
+
+
+void HttpRespHeaders::commitWorkingHeader()
+{
+    assert(m_working != NULL);
+    m_buf.used(m_working->name_len + m_working->val_len + 4);
+    m_iHeaderUniqueCount += addKvPairIdx(m_working);
+    assert(m_working == m_lsxpack.end());
+    m_lsxpack.setSize(m_lsxpack.size() + 1);
+    m_working = NULL;
+}
+
+
+int HttpRespHeaders::appendHeader(lsxpack_header *pKv, int hdr_idx, const char *pName,
+                                  unsigned int nameLen,
+                                  const char *pVal, unsigned int valLen, int method)
+{
+    if (method == LSI_HEADER_SET)
+        memset(pKv, 0, sizeof(lsxpack_header));
+
+    if (m_buf.available() < (int)(pKv->val_len + nameLen * 2 + valLen + 9))
+    {
+        if (m_buf.grow(pKv->val_len + nameLen * 2 + valLen + 9))
+            return -1;
     }
 
     //Be careful of the two Kv pointer
-    resp_kvpair *pUpdKv = pKv;
-    if (pKv->valLen > 0 && method == LSI_HEADEROP_ADD)
+    lsxpack_header *pUpdKv = pKv;
+    if (pKv->val_len > 0 && method == LSI_HEADER_ADD)
     {
-        int new_id = getTotalCount();
         if (getFreeSpaceCount() <= 0)
         {
-            int i = pKv - (resp_kvpair *)m_aKVPairs.begin();
-            incKVPairs(10);
+            int i = getKvIdx(pKv);
+            incKvPairs(16);
             pKv = getKvPair(i);
         }
-        if (pKv->next_index == 0)
-            pKv->next_index = new_id + 1;
-        else
-        {
-            while ((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) > 0)
-                pKv = getKvPair((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
-
-            pKv->next_index = ((new_id + 1) | HIGHEST_BIT_NUMBER);
-        }
-        pUpdKv = getNewKV();
-        assert(new_id == m_aKVPairs.getSize() - 1);
-        pUpdKv->next_index = HIGHEST_BIT_NUMBER;
-        assert(pUpdKv->valLen == 0);
+        int new_id = m_lsxpack.size();
+        pUpdKv = newHdrEntry();
+        appendKvPairIdx(pKv, new_id);
+        m_hLastHeaderKVPairIndex = new_id;
+        pUpdKv->chain_next_idx = HIGHEST_BIT_NUMBER;
+        assert(pUpdKv->val_len == 0);
     }
 
-    pUpdKv->keyOff = m_buf.size();
-    pUpdKv->keyLen = nameLen;
-    pUpdKv->hdr_idx = hdr_idx;
+    int len = nameLen;
+    //StringTool::strnlower(pName, m_buf.end(), len);
+    //memcpy(m_buf.end(), pName, len);
+    pUpdKv->buf = m_buf.begin();
+    pUpdKv->name_offset = m_buf.size();
+    pUpdKv->name_len = len;
+    pUpdKv->app_index = hdr_idx;
+    pUpdKv->val_offset = pUpdKv->name_offset + nameLen + 2;
+    if (hdr_idx != H_HEADER_END)
+        pUpdKv->flags = (lsxpack_flag)(pUpdKv->flags | LSXPACK_APP_IDX);
+    appendLowerCase(m_buf.end(), pName, len);
+    m_buf.used(len);
+    m_buf.append_unsafe(':');
+    m_buf.append_unsafe(' ');
 
-    m_buf.append_unsafe(pName, nameLen);
-    m_buf.append_unsafe(": ", 2);
-
-    if (pUpdKv->valLen > 0)  //only apply when append and merge
+    if (pUpdKv->val_len > 0)  //only apply when append and merge
     {
-        m_buf.append_unsafe(m_buf.begin() + pUpdKv->valOff, pUpdKv->valLen);
-        m_buf.append_unsafe(",", 1);  //for append and merge case
-        ++ pUpdKv->valLen;
+        m_buf.append_unsafe(m_buf.begin() + pUpdKv->val_offset, pUpdKv->val_len);
+        m_buf.append_unsafe(',');  //for append and merge case
+        ++ pUpdKv->val_len;
     }
     m_buf.append_unsafe(pVal, valLen);
-    m_buf.append_unsafe("\r\n", 2);
-    pUpdKv->valOff = pUpdKv->keyOff + nameLen + 2;
-    pUpdKv->valLen +=  valLen;
+    m_buf.append_unsafe('\r');
+    m_buf.append_unsafe('\n');
+    pUpdKv->val_len +=  valLen;
+    if (pUpdKv == pKv)
+        lsxpack_header_mark_val_changed(pKv);
     return 0;
 }
 
@@ -288,7 +409,7 @@ void HttpRespHeaders::verifyHeaderLength(INDEX headerIndex,
 {
 #ifndef NDEBUG
     assert(headerIndex == getIndex(pName));
-    assert((int)nameLen == getHeaderStringLen(headerIndex));
+    assert((int)nameLen == getNameLen(headerIndex));
 #endif
 }
 
@@ -315,105 +436,124 @@ static int hasValue(const char *existVal, int existValLen, const char *val,
 }
 
 
-//method: 0 replace,1 append, 2 merge, 3 add
-int HttpRespHeaders::add(INDEX index, const char *pName, int nameLen,
-                          const char *pVal, unsigned int valLen, int method)
+int HttpRespHeaders::add(INDEX headerIndex, const char *pVal,
+                         unsigned int valLen,  int method)
 {
-    if ((nameLen <= 0) || (index > H_HEADER_END))
+    if ((int)headerIndex < 0 || headerIndex >= H_HEADER_END)
+        return LS_FAIL;
+    return add(headerIndex, s_sHeaders[headerIndex],
+               getNameLen(headerIndex), pVal, valLen, method);
+}
+
+
+lsxpack_header *HttpRespHeaders::getExistKv(INDEX index,
+                                         const char *name, int name_len)
+{
+    if (index == H_HEADER_END)   // || headerIndex == H_UNKNOWN )
+    {
+        if (name_len <= 0)
+            return NULL;
+        int ret = getHeaderKvOrder(name, name_len);
+        if (ret != -1)
+            getKvPair(ret);
+    }
+    else
+    {
+        if (m_KVPairindex[index] != 0xFF)
+            return getKvPair(m_KVPairindex[index]);
+    }
+    return NULL;
+}
+
+
+//method: 0 replace,1 append, 2 merge, 3 add
+int HttpRespHeaders::add(INDEX headerIndex, const char *pName, unsigned nameLen,
+                         const char *pVal, unsigned int valLen, int method)
+{
+    if ((headerIndex > H_HEADER_END))
         return -1;
 
     int kvOrderNum = -1;
-    resp_kvpair *pKv = NULL;
+    lsxpack_header *pKv = NULL;
 
-    if (index != H_HEADER_END)
+    if (headerIndex != H_HEADER_END)
     {
-        if ((int)nameLen != getHeaderStringLen(index))
-            index = H_HEADER_END;
+        if (pName == NULL)
+        {
+            pName = s_sHeaders[headerIndex];
+            nameLen = getNameLen(headerIndex);
+        }
+        if (headerIndex == H_LINK)
+        {
+            if (memmem(pVal, valLen, "preload", 7) != NULL)
+                m_flags |= HRH_F_HAS_PUSH;
+        }
     }
-    if (index == H_HEADER_END)   // || index == H_UNKNOWN )
+    if (headerIndex == H_HEADER_END)   // || headerIndex == H_UNKNOWN )
     {
+        if (nameLen <= 0)
+            return -1;
         int ret = getHeaderKvOrder(pName, nameLen);
         if (ret != -1)
             kvOrderNum = ret;
         else
-            kvOrderNum = getTotalCount();
+            kvOrderNum = m_lsxpack.size();
     }
     else
     {
-        verifyHeaderLength(index,  pName, nameLen);
-        if (m_KVPairindex[index] == 0xFF)
-            m_KVPairindex[index] = getTotalCount();
-        kvOrderNum = m_KVPairindex[index];
+        //verifyHeaderLength(headerIndex,  pName, nameLen);
+        if (m_KVPairindex[headerIndex] == 0xFF)
+            m_KVPairindex[headerIndex] = m_lsxpack.size();
+        kvOrderNum = m_KVPairindex[headerIndex];
     }
 
-    if (kvOrderNum == getTotalCount())
+    if (getFreeSpaceCount() <= 0)
+        incKvPairs(16);
+    if (kvOrderNum == m_lsxpack.size())
     {
-        // Add a new header
-        if (getFreeSpaceCount() == 0)
-            incKVPairs(10);
-        pKv = getNewKV();
+        pKv = newHdrEntry();
         ++m_iHeaderUniqueCount;
     }
     else
         pKv = getKvPair(kvOrderNum);
 
-    // enough space for replace, use the same keyoff, and update valoff,
-    // add padding, make it the same length as before
-    if (method == LSI_HEADEROP_SET && pKv->keyLen == (int)nameLen
-        && pKv->valLen >= (int)valLen)
+    //enough space for replace, use the same keyoff, and update valoff, add padding, make it is the same leangth as before
+    if (method == LSI_HEADER_SET && pKv->name_len == (int)nameLen
+        && pKv->val_len >= (int)valLen)
     {
+        assert(pKv->name_len == (int)nameLen);
+        assert(strncasecmp(getName(pKv), pName, nameLen) == 0);
         replaceHeader(pKv, pVal, valLen);
         return 0;
     }
 
-    if ((method == LSI_HEADEROP_MERGE || method == LSI_HEADEROP_ADD)
-        && (pKv->valLen > 0))
+    if ((method == LSI_HEADER_MERGE || method == LSI_HEADER_ADD)
+        && (pKv->val_len > 0))
     {
-        if ( (index != H_SET_COOKIE || method != LSI_HEADEROP_ADD)
-            && hasValue(getVal(pKv), pKv->valLen, pVal, valLen))
+        if ((headerIndex != H_SET_COOKIE || method != LSI_HEADER_ADD)
+            && hasValue(getVal(pKv), pKv->val_len, pVal, valLen))
             return 0;//if exist when merge, ignor, otherwise same as append
     }
 
     m_hLastHeaderKVPairIndex = kvOrderNum;
 
-    // Under append situation, if has existing key and valLen > 0, then makes a hole
-    if (pKv->valLen > 0 && method != LSI_HEADEROP_ADD)
+    //Under append situation, if has existing key and valLen > 0, then makes a hole
+    if (pKv->val_len > 0 && method != LSI_HEADER_ADD)
     {
-        assert(pKv->keyLen > 0);
+        assert(pKv->name_len > 0);
         m_flags |= HRH_F_HAS_HOLE;
     }
 
-    return appendHeader(pKv, index, pName, nameLen, pVal, valLen, method);
-}
-
-
-int HttpRespHeaders::add(INDEX headerIndex, const char *pVal,
-                         unsigned int valLen, int method)
-{
-    if ((int)headerIndex < 0 || headerIndex >= H_HEADER_END)
-        return LS_FAIL;
-    if (headerIndex == H_LINK)
-    {
-        if (memmem(pVal, valLen, "preload", 7) != NULL)
-            m_flags |= HRH_F_HAS_PUSH;
-    }
-    return add(headerIndex, m_sPresetHeaders[headerIndex],
-               s_iHeaderLen[headerIndex], pVal, valLen, method);
-}
-
-int HttpRespHeaders::addWithUnknownHeader(const char *pName, int nameLen, const char *pVal,
-                         unsigned int valLen, int method)
-
-{
-    return add(H_HEADER_END, pName, nameLen, pVal, valLen, method);
+    return appendHeader(pKv, headerIndex, pName, nameLen, pVal, valLen, method);
 }
 
 
 int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
                          unsigned int valLen, int method)
 {
-    INDEX headerIndex = getIndex(pName);
+    INDEX headerIndex = getIndex(pName, nameLen);
     return add(headerIndex, pName, nameLen, pVal, valLen, method);
+
 }
 
 
@@ -421,26 +561,26 @@ int HttpRespHeaders::add(const char *pName, int nameLen, const char *pVal,
 int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
 {
     if (m_hLastHeaderKVPairIndex == -1 || valLen <= 0)
-        return LS_FAIL;
+        return -1;
 
-    assert(m_hLastHeaderKVPairIndex < getTotalCount());
-    resp_kvpair *pKv = getKvPair(m_hLastHeaderKVPairIndex);
+    assert(m_hLastHeaderKVPairIndex < m_lsxpack.size());
+    lsxpack_header *pKv = getKvPair(m_hLastHeaderKVPairIndex);
 
     //check if it is the end
-    if (m_buf.size() != pKv->valOff + pKv->valLen + 2)
-        return LS_FAIL;
+    if (m_buf.size() != pKv->val_offset + pKv->val_len + 2)
+        return -1;
 
-    if (pKv->keyLen == 0)
-        return LS_FAIL;
+    if (pKv->name_len == 0)
+        return -1;
 
     if (m_buf.available() < valLen)
     {
         if (m_buf.grow(valLen))
-            return LS_FAIL;
+            return -1;
     }
 
     //Only update the valLen of the kvpair
-    pKv->valLen += valLen;
+    pKv->val_len += valLen;
     m_buf.used(-2);  //move back two char, to replace the \r\n at the end
     m_buf.append_unsafe(pVal, valLen);
     m_buf.append_unsafe("\r\n", 2);
@@ -454,8 +594,9 @@ int HttpRespHeaders::add(http_header_t *headerArray, int size, int method)
     int ret = 0;
     for (int i = 0; i < size; ++i)
     {
-        if (0 != add(headerArray[i].index, headerArray[i].val,
-                     headerArray[i].valLen, method))
+        if (0 != add(headerArray[i].index, headerArray[i].name,
+                     headerArray[i].nameLen,
+                     headerArray[i].val, headerArray[i].valLen, method))
         {
             ret = -1;
             break;
@@ -471,11 +612,11 @@ void HttpRespHeaders::_del(int kvOrderNum)
     if (kvOrderNum <= -1)
         return;
 
-    resp_kvpair *pKv = getKvPair(kvOrderNum);
-    if ((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) > 0)
-        _del((pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1);
+    lsxpack_header *pKv = getKvPair(kvOrderNum);
+    if ((pKv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) > 0)
+        _del((pKv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1);
 
-    memset(pKv, 0, sizeof(resp_kvpair));
+    memset(pKv, 0, sizeof(lsxpack_header));
     m_flags |= HRH_F_HAS_HOLE;
     ++m_iHeaderRemovedCount;
 }
@@ -486,7 +627,7 @@ void HttpRespHeaders::_del(int kvOrderNum)
 int HttpRespHeaders::del(const char *pName, int nameLen)
 {
     assert(nameLen > 0);
-    size_t idx = getIndex(pName);
+    size_t idx = getIndex(pName, nameLen);
     if (idx == H_HEADER_END)
     {
         int kvOrderNum = getHeaderKvOrder(pName, nameLen);
@@ -502,8 +643,8 @@ int HttpRespHeaders::del(const char *pName, int nameLen)
 //del() will make some {0,0,0,0} kvpair in the list and make hole
 int HttpRespHeaders::del(INDEX headerIndex)
 {
-    if (headerIndex < 0)
-        return LS_FAIL;
+    if (headerIndex < 0 || headerIndex >= H_HEADER_END)
+        return -1;
 
     if (m_KVPairindex[headerIndex] != 0xFF)
     {
@@ -524,15 +665,17 @@ char *HttpRespHeaders::getContentTypeHeader(int &len)
         return NULL;
     }
 
-    resp_kvpair *pKv = getKvPair(index);
-    len = pKv->valLen;
+    lsxpack_header *pKv = getKvPair(index);
+    len = pKv->val_len;
     return getVal(pKv);
 }
 
 
-//The below calling will not maintain the kvpaire when regular case
+//The below calling will not maintance the kvpaire when regular case
 int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
 {
+    if (!pStr)
+        return -1;
     //When SPDY format, we need to parse it and add one by one
     const char *pName = NULL;
     int nameLen = 0;
@@ -550,6 +693,7 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
                         pBEnd - pLineBegin);
         if (pLineEnd == NULL)
             pLineEnd = pBEnd;
+
         pMark = (const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
         if (pMark != NULL)
         {
@@ -568,13 +712,10 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
 
             //This way, all the value use APPEND as default
             if (add(pName, nameLen, pVal, valLen, method) == -1)
-                return LS_FAIL;
+                return -1;
         }
         else
             pLineBegin = pLineEnd + 1;
-
-        if (pBEnd <= pLineBegin + 1)
-            break;
     }
     return 0;
 }
@@ -583,22 +724,17 @@ int HttpRespHeaders::parseAdd(const char *pStr, int len, int method)
 int HttpRespHeaders::getHeaderKvOrder(const char *pName,
                                       unsigned int nameLen)
 {
-    int index = -1;
-    int total = getTotalCount();
-    resp_kvpair *pKv = NULL;
+    lsxpack_header *pKv;
 
-    for (int i = 0; i < total; ++i)
+    for (pKv = m_lsxpack.begin(); pKv < m_lsxpack.end(); ++pKv)
     {
-        pKv = getKvPair(i);
-        if (pKv->keyLen == (int)nameLen &&
+        if (pKv->name_len == (int)nameLen &&
             strncasecmp(pName, getName(pKv), nameLen) == 0)
         {
-            index = i;
-            break;
+            return pKv - m_lsxpack.begin();
         }
     }
-
-    return index;
+    return -1;
 }
 
 
@@ -606,7 +742,7 @@ int HttpRespHeaders::getHeader(int kvOrderNum, int *idx, struct iovec *name,
                                 struct iovec *iov, int maxIovCount)
 {
     int count = 0;
-    resp_kvpair *pKv;
+    lsxpack_header *pKv;
     if (name)
     {
         name->iov_base = NULL;
@@ -615,19 +751,19 @@ int HttpRespHeaders::getHeader(int kvOrderNum, int *idx, struct iovec *name,
     while (kvOrderNum >= 0 && count < maxIovCount)
     {
         pKv = getKvPair(kvOrderNum);
-        if (pKv->keyLen > 0)
+        if (pKv->name_len > 0)
         {
             if (name && 0 == name->iov_len)
             {
                 name->iov_base = getName(pKv);
-                name->iov_len = pKv->keyLen;
+                name->iov_len = pKv->name_len;
                 if (idx != NULL)
-                    *idx = pKv->hdr_idx;
+                    *idx = pKv->app_index;
             }
             iov[count].iov_base = getVal(pKv);
-            iov[count++].iov_len = pKv->valLen;
+            iov[count++].iov_len = pKv->val_len;
         }
-        kvOrderNum = (pKv->next_index & BYPASS_HIGHEST_BIT_MASK) - 1;
+        kvOrderNum = (pKv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1;
     }
     return count;
 }
@@ -637,6 +773,8 @@ int  HttpRespHeaders::getHeader(INDEX index, struct iovec *iov,
                                 int maxIovCount)
 {
     int kvOrderNum = -1;
+    if (index >= H_HEADER_END)
+        return 0;
     if (m_KVPairindex[index] != 0xFF)
         kvOrderNum = m_KVPairindex[index];
 
@@ -647,7 +785,7 @@ int  HttpRespHeaders::getHeader(INDEX index, struct iovec *iov,
 int HttpRespHeaders::getHeader(const char *pName, int nameLen,
                                struct iovec *iov, int maxIovCount)
 {
-    INDEX idx = getIndex(pName);
+    INDEX idx = getIndex(pName, nameLen);
     if (idx != H_HEADER_END)
         return getHeader(idx, iov, maxIovCount);
 
@@ -656,20 +794,35 @@ int HttpRespHeaders::getHeader(const char *pName, int nameLen,
 }
 
 
-const char *HttpRespHeaders::getHeader(INDEX index,
-                                       int *valLen) const
+const char *HttpRespHeaders::getHeader(INDEX index, int *valLen) const
 {
-    resp_kvpair *pKv;
+    const lsxpack_header *pKv;
+    if (index >= H_HEADER_END)
+        return 0;
     if (m_KVPairindex[index] == 0xFF)
         return NULL;
     pKv = getKvPair(m_KVPairindex[index]);
-    *valLen = pKv->valLen;
+    *valLen = pKv->val_len;
     return getVal(pKv);
 }
 
 
-int HttpRespHeaders::getFirstHeader(const char *pName, int nameLen,
-                                    const char **val, int &valLen)
+char *HttpRespHeaders::getHeaderToUpdate(INDEX index, int *valLen)
+{
+    lsxpack_header *pKv;
+    if (index >= H_HEADER_END)
+        return 0;
+    if (m_KVPairindex[index] == 0xFF)
+        return NULL;
+    pKv = getKvPair(m_KVPairindex[index]);
+    lsxpack_header_mark_val_changed(pKv);
+    *valLen = pKv->val_len;
+    return getVal(pKv);
+}
+
+
+int HttpRespHeaders::getHeader(const char *pName, int nameLen, const char **val,
+                               int &valLen)
 {
     struct iovec iov[1];
     if (getHeader(pName, nameLen, iov, 1) == 1)
@@ -679,7 +832,7 @@ int HttpRespHeaders::getFirstHeader(const char *pName, int nameLen,
         return 0;
     }
     else
-        return LS_FAIL;
+        return -1;
 }
 
 
@@ -692,6 +845,8 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
     case 'a':
         if (strncasecmp(pHeader, "ccept-ranges", 12) == 0)
             idx = H_ACCEPT_RANGES;
+        else if (strncasecmp(pHeader, "lt-svc", 6) == 0)
+            idx = H_ALT_SVC;
         break;
     case 'c':
         switch(*(pHeader+7) | 0x20)
@@ -782,8 +937,8 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
     case 'v':
         if (strncasecmp(pHeader, "ary", 3) == 0)
             idx = H_VARY;
-        //else if (strncasecmp(pHeader, "ersion", 6) == 0)
-        //    idx = H_HTTP_VERSION;
+        else if (strncasecmp(pHeader, "ersion", 6) == 0)
+            idx = H_HTTP_VERSION;
         break;
     case 'w':
         if (strncasecmp(pHeader, "ww-authenticate", 15) == 0)
@@ -792,7 +947,9 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
     case 'x':
         if (strncasecmp(pHeader, "-powered-by", 11) == 0)
             idx = H_X_POWERED_BY;
-        if (strncasecmp(pHeader, "-litespeed-", 11) == 0)
+        else if (strncasecmp(pHeader, "-lsadc-backend", 14) == 0)
+            idx = H_LSADC_BACKEND;
+        else if (strncasecmp(pHeader, "-litespeed-", 11) == 0)
         {
             pHeader += 11;
             switch(*pHeader | 0x20)
@@ -812,23 +969,29 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
                     idx = H_X_LITESPEED_TAG;
                 break;
             case 'p':
-                if (strncasecmp(pHeader, "purge2", 6) == 0)
-                    idx = H_HEADER_END; //No support for now
-                else if (strncasecmp(pHeader, "purge", 5) == 0)
+                if (strncasecmp(pHeader, "purge", 5) == 0)
                     idx = H_X_LITESPEED_PURGE;
                 break;
             case 'v':
                 if (strncasecmp(pHeader, "vary", 4) == 0)
                     idx = H_X_LITESPEED_VARY;
                 break;
+            case 'a':
+                if (strncasecmp(pHeader, "alt-svc", 7) == 0)
+                    idx = H_X_LITESPEED_ALT_SVC;
+                break;
             }
         }
+        break;
+    case 'u':
+        if (strncasecmp(pHeader, "pgrade", 6) == 0)
+            idx = H_UPGRADE;
         break;
     case ':': //only SPDY 3
         if (strncasecmp(pHeader, "status", 6) == 0)
             idx = H_CGI_STATUS;
-        //else if (strncasecmp(pHeader, "version", 7) == 0)
-        //    idx = H_HTTP_VERSION;
+        else if (strncasecmp(pHeader, "version", 7) == 0)
+            idx = H_HTTP_VERSION;
         break;
 
     default:
@@ -838,14 +1001,25 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
 }
 
 
+HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader, int len)
+{
+    INDEX idx = getIndex(pHeader);
+    if (idx != H_HEADER_END)
+    {
+        if (getNameLen(idx) != len)
+            idx = H_HEADER_END;
+    }
+    return idx;
+}
+
+
 int HttpRespHeaders::nextHeaderPos(int pos)
 {
     int ret = -1;
-    int total = getTotalCount();
-    for (int i = pos + 1; i < total; ++i)
+    for (int i = pos + 1; i < m_lsxpack.size(); ++i)
     {
-        if (getKvPair(i)->keyLen > 0
-            && ((getKvPair(i)->next_index & HIGHEST_BIT_NUMBER) == 0))
+        if (getKvPair(i)->name_len > 0
+            && ((getKvPair(i)->chain_next_idx & HIGHEST_BIT_NUMBER) == 0))
         {
             ret = i;
             break;
@@ -859,7 +1033,6 @@ int HttpRespHeaders::getAllHeaders(struct iovec *iov_key,
                                    struct iovec *iov_val, int maxIovCount)
 {
     int count = 0;
-    int total = getTotalCount();
 //     if (withStatusLine)
 //     {
 //         const StatusLineString& statusLine = HttpStatusLine::getStatusLine( m_iHttpVersion, m_iHttpCode );
@@ -868,15 +1041,15 @@ int HttpRespHeaders::getAllHeaders(struct iovec *iov_key,
 //         ++count;
 //     }
 
-    for (int i = 0; i < total && count < maxIovCount; ++i)
+    for (int i = 0; i < m_lsxpack.size() && count < maxIovCount; ++i)
     {
-        resp_kvpair *pKv = getKvPair(i);
-        if (pKv->keyLen > 0)
+        lsxpack_header *pKv = getKvPair(i);
+        if (pKv->name_len > 0)
         {
-            iov_key[count].iov_base = m_buf.begin() + pKv->keyOff;
-            iov_key[count].iov_len = pKv->keyLen;
-            iov_val[count].iov_base = m_buf.begin() + pKv->valOff;
-            iov_val[count].iov_len = pKv->valLen;
+            iov_key[count].iov_base = m_buf.begin() + pKv->name_offset;
+            iov_key[count].iov_len = pKv->name_len;
+            iov_val[count].iov_base = m_buf.begin() + pKv->val_offset;
+            iov_val[count].iov_len = pKv->val_len;
             ++count;
         }
     }
@@ -896,18 +1069,20 @@ int HttpRespHeaders::appendToIovExclude(IOVec *iovec, const char *pName,
                                         int nameLen) const
 {
     int total = 0;
-    resp_kvpair *pKv;
+    const lsxpack_header *pKv = m_lsxpack.begin();
+    const lsxpack_header *pKvEnd = m_lsxpack.end();
 
-    for (int i = 0; (pKv = getKvPair(i)) != NULL; ++i)
+    while (pKv < pKvEnd)
     {
-        if ((pKv->keyLen > 0)
-            && ((pKv->keyLen != nameLen)
-                || (strncasecmp(m_buf.begin() + pKv->keyOff, pName, nameLen))))
+        if ((pKv->name_len > 0)
+            && ((pKv->name_len != nameLen)
+                || (strncasecmp(m_buf.begin() + pKv->name_offset, pName, nameLen))))
         {
-            iovec->appendCombine(m_buf.begin() + pKv->keyOff,
-                                 pKv->keyLen + pKv->valLen + 4);
-            total += pKv->keyLen + pKv->valLen + 4;
+            iovec->appendCombine(m_buf.begin() + pKv->name_offset,
+                                 pKv->name_len + pKv->val_len + 4);
+            total += pKv->name_len + pKv->val_len + 4;
         }
+        ++pKv;
     }
     return total;
 }
@@ -916,45 +1091,48 @@ int HttpRespHeaders::appendToIovExclude(IOVec *iovec, const char *pName,
 int HttpRespHeaders::mergeAll()
 {
     int total = 0;
-    resp_kvpair *pKv;
+    lsxpack_header *pKv = m_lsxpack.begin();
+    lsxpack_header *pKvEnd = m_lsxpack.end();
     AutoBuf tmp(m_buf.size());
 
-    for (int i = 0; (pKv = getKvPair(i)) != NULL; ++i)
+    while (pKv < pKvEnd)
     {
-        if (pKv->keyLen > 0)
+        if (pKv->name_len > 0)
         {
-            int len = pKv->keyLen + pKv->valLen + 4;
-            tmp.append(m_buf.begin() + pKv->keyOff, len);
-            int diff = total - pKv->keyOff;
-            pKv->keyOff = total;
-            pKv->valOff += diff;
+            int len = pKv->name_len + pKv->val_len + 4;
+            tmp.append(m_buf.begin() + pKv->name_offset, len);
+            int diff = total - pKv->name_offset;
+            pKv->name_offset = total;
+            pKv->val_offset += diff;
             total += len;
         }
+        ++pKv;
     }
     m_buf.swap(tmp);
     return total;
 }
 
 
-void HttpRespHeaders::dump(LogSession *pILog, int dump_header) const
+void HttpRespHeaders::dump(LogSession *pILog, int dump_header)
 {
-    LS_DBG_H(pILog, "Resp headers, status: %d, total: %d, removed: %d, unique:%d, "
+    LS_DBG_H(pILog, "Resp headers, total: %d, removed: %d, unique:%d, "
                     "has hole: %d, buffer size: %d",
-             (int)m_iHttpCode,
-        (int)getTotalCount(), (int)m_iHeaderRemovedCount,
+        (int)m_lsxpack.size(), (int)m_iHeaderRemovedCount,
         (int)m_iHeaderUniqueCount, (int)m_flags,
         (int)m_buf.size() );
-    resp_kvpair *pKv = getKvPair(0);
-    resp_kvpair *pKvEnd = pKv + getTotalCount();
+    lsxpack_header *pKv = m_lsxpack.begin();
+    lsxpack_header *pKvEnd = m_lsxpack.end();
+
     while (pKv < pKvEnd)
     {
-        if (pKv->keyLen > 0)
+        if (pKv->name_len > 0)
         {
-            int len = pKv->keyLen + pKv->valLen + 4;
-            LS_DBG_H(pILog, "    %.*s", len, m_buf.begin() + pKv->keyOff);
+            int len = pKv->name_len + pKv->val_len + 4;
+            LS_DBG_H(pILog, "    %.*s", len, m_buf.begin() + pKv->name_offset);
         }
         ++pKv;
     }
+
 }
 
 
@@ -990,15 +1168,26 @@ int HttpRespHeaders::appendToIov(IOVec *iovec, int &addCrlf)
  */
 int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 {
+    if (m_iHttpCode == SC_100)
+    {
+        iovec->clear(1);
+        const StatusLineString &statusLine = HttpStatusLine::getInstance().getStatusLine(
+                m_iHttpVersion, m_iHttpCode);
+        iovec->push_front(statusLine.get(), statusLine.getLen());
+        m_iHeadersTotalLen = statusLine.getLen() + 2;
+        iovec->append("\r\n", 2);
+        return 0;
+    }
     if (m_iKeepAlive)
-        add(&HttpRespHeaders::s_keepaliveHeader, 1);
+    {
+        add(s_keepaliveHeader, 1);
+    }
     else
-        add(&HttpRespHeaders::s_concloseHeader, 1);
+        add(&s_concloseHeader, 1);
 
-    iovec->clear();
-    const StatusLineString &statusLine =
-        HttpStatusLine::getInstance().getStatusLine(m_iHttpVersion,
-                m_iHttpCode);
+    iovec->clear(1);
+    const StatusLineString &statusLine = HttpStatusLine::getInstance().getStatusLine(
+            m_iHttpVersion, m_iHttpCode);
     iovec->push_front(statusLine.get(), statusLine.getLen());
     m_iHeadersTotalLen = statusLine.getLen();
     int addCrlf = 1;
@@ -1015,50 +1204,82 @@ int HttpRespHeaders::outputNonSpdyHeaders(IOVec *iovec)
 
 void HttpRespHeaders::buildCommonHeaders()
 {
-    HttpRespHeaders::s_commonHeaders[0].index    = HttpRespHeaders::H_DATE;
-    HttpRespHeaders::s_commonHeaders[0].val      =
-        HttpRespHeaders::s_sDateHeaders;
-    HttpRespHeaders::s_commonHeaders[0].valLen   = 29;
+    s_commonHeaders[0].index    = HttpRespHeaders::H_DATE;
+    s_commonHeaders[0].name     = s_sCommonHeaders;
+    s_commonHeaders[0].nameLen  = 4;
+    s_commonHeaders[0].val      = s_sCommonHeaders + 6;
+    s_commonHeaders[0].valLen   = 29;
 
-    HttpRespHeaders::s_commonHeaders[1].index    = HttpRespHeaders::H_SERVER;
-    HttpRespHeaders::s_commonHeaders[1].val      =
-        HttpServerVersion::getVersion();
-    HttpRespHeaders::s_commonHeaders[1].valLen   =
-        HttpServerVersion::getVersionLen();
+//     s_commonHeaders[1].index    =
+//         HttpRespHeaders::H_ACCEPT_RANGES;
+//     s_commonHeaders[1].name     = s_sCommonHeaders + 37;
+//     s_commonHeaders[1].nameLen  = 13;
+//     s_commonHeaders[1].val      = s_sCommonHeaders + 52;
+//     s_commonHeaders[1].valLen   = 5;
 
+    s_commonHeaders[1].index    = HttpRespHeaders::H_SERVER;
+    s_commonHeaders[1].name     = s_sCommonHeaders + 37;
+    s_commonHeaders[1].nameLen  = 6;
+    s_commonHeaders[1].val      = HttpServerVersion::getVersion();
+    s_commonHeaders[1].valLen   = HttpServerVersion::getVersionLen();
 
-    HttpRespHeaders::s_gzipHeaders.index    =
-        HttpRespHeaders::H_CONTENT_ENCODING;
-    HttpRespHeaders::s_gzipHeaders.val      = "gzip";
-    HttpRespHeaders::s_gzipHeaders.valLen   = 4;
+    s_turboChargedBy.index      = HttpRespHeaders::H_UNKNOWN;
+    s_turboChargedBy.name       = s_sTurboCharged;
+    s_turboChargedBy.nameLen    = 18;
+    s_turboChargedBy.val        = HttpServerVersion::getVersion();
+    s_turboChargedBy.valLen     = HttpServerVersion::getVersionLen();
 
-    HttpRespHeaders::s_brHeaders.index    =
-        HttpRespHeaders::H_CONTENT_ENCODING;
-    HttpRespHeaders::s_brHeaders.val      = "br";
-    HttpRespHeaders::s_brHeaders.valLen   = 2;
+    s_gzipHeaders[0].index    = HttpRespHeaders::H_CONTENT_ENCODING;
+    s_gzipHeaders[0].name     = s_sGzipEncodingHeader;
+    s_gzipHeaders[0].nameLen  = 16;
+    s_gzipHeaders[0].val      = s_sGzipEncodingHeader + 18;
+    s_gzipHeaders[0].valLen   = 4;
 
-    HttpRespHeaders::s_varyHeaders.index    = HttpRespHeaders::H_VARY;
-    HttpRespHeaders::s_varyHeaders.val      = "Accept-Encoding";
-    HttpRespHeaders::s_varyHeaders.valLen   = 15;
-
-    HttpRespHeaders::s_keepaliveHeader.index   = HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_keepaliveHeader.val     = "Keep-Alive";
-    HttpRespHeaders::s_keepaliveHeader.valLen  = 10;
-
-    HttpRespHeaders::s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;
-    HttpRespHeaders::s_concloseHeader.val      = "close";
-    HttpRespHeaders::s_concloseHeader.valLen   = 5;
-
-    HttpRespHeaders::s_chunkedHeader.index    =
-        HttpRespHeaders::H_TRANSFER_ENCODING;
-    HttpRespHeaders::s_chunkedHeader.val      = "chunked";
-    HttpRespHeaders::s_chunkedHeader.valLen   = 7;
+    s_gzipHeaders[1].index    = HttpRespHeaders::H_VARY;
+    s_gzipHeaders[1].name     = s_sGzipEncodingHeader + 24;
+    s_gzipHeaders[1].nameLen  = 4;
+    s_gzipHeaders[1].val      = s_sGzipEncodingHeader + 30;
+    s_gzipHeaders[1].valLen   = 15;
 
 
-    HttpRespHeaders::s_acceptRangeHeader.index    =
-        HttpRespHeaders::H_ACCEPT_RANGES;
-    HttpRespHeaders::s_acceptRangeHeader.val      = "bytes";
-    HttpRespHeaders::s_acceptRangeHeader.valLen   = 5;
+    s_brHeaders[0].index    = HttpRespHeaders::H_CONTENT_ENCODING;
+    s_brHeaders[0].name     = s_sBrEncodingHeader;
+    s_brHeaders[0].nameLen  = 16;
+    s_brHeaders[0].val      = s_sBrEncodingHeader + 18;
+    s_brHeaders[0].valLen   = 2;
+
+    s_brHeaders[1].index    = HttpRespHeaders::H_VARY;
+    s_brHeaders[1].name     = s_sBrEncodingHeader + 22;
+    s_brHeaders[1].nameLen  = 4;
+    s_brHeaders[1].val      = s_sBrEncodingHeader + 28;
+    s_brHeaders[1].valLen   = 15;
+
+    s_keepaliveHeader[0].index    = HttpRespHeaders::H_CONNECTION;
+    s_keepaliveHeader[0].name     = s_sConnKeepAliveHeader;
+    s_keepaliveHeader[0].nameLen  = 10;
+    s_keepaliveHeader[0].val      = s_sConnKeepAliveHeader +
+            12;
+    s_keepaliveHeader[0].valLen   = 10;
+
+    s_keepaliveHeader[1].index    = HttpRespHeaders::H_KEEP_ALIVE;
+    s_keepaliveHeader[1].name     = s_sConnKeepAliveHeader +
+            24;
+    s_keepaliveHeader[1].nameLen  = 10;
+    s_keepaliveHeader[1].val      = s_sConnKeepAliveHeader +
+            36;
+    s_keepaliveHeader[1].valLen   = 18;
+
+    s_concloseHeader.index    = HttpRespHeaders::H_CONNECTION;
+    s_concloseHeader.name     = s_sConnCloseHeader;
+    s_concloseHeader.nameLen  = 10;
+    s_concloseHeader.val      = s_sConnCloseHeader + 12;
+    s_concloseHeader.valLen   = 5;
+
+    s_chunkedHeader.index    = HttpRespHeaders::H_TRANSFER_ENCODING;
+    s_chunkedHeader.name     = s_sChunkedHeader;
+    s_chunkedHeader.nameLen  = 17;
+    s_chunkedHeader.val      = s_sChunkedHeader + 19;
+    s_chunkedHeader.valLen   = 7;
 
     updateDateHeader();
 }
@@ -1067,35 +1288,61 @@ void HttpRespHeaders::buildCommonHeaders()
 void HttpRespHeaders::updateDateHeader()
 {
     char achDateTime[60];
-    char *p = DateTime::getRFCTime(DateTime::s_curTime, achDateTime);
-    if (p)
-        memcpy(HttpRespHeaders::s_sDateHeaders, achDateTime, 29);
+    DateTime::getRFCTime(DateTime::s_curTime, achDateTime);
+    assert(strlen(achDateTime) == 29);
+    memcpy(s_sCommonHeaders + 6, achDateTime, 29);
 }
 
 
 void HttpRespHeaders::hideServerSignature(int hide)
 {
     if (hide == 2) //hide all
-        HttpRespHeaders::s_commonHeadersCount = 1;
+        s_commonHeadersCount = 1;
     else
     {
         HttpServerVersion::hideDetail(!hide);
-        HttpRespHeaders::s_commonHeaders[1].valLen   =
+        s_commonHeaders[1].valLen   =
             HttpServerVersion::getVersionLen();
     }
 
 }
 
-void HttpRespHeaders::addTruboCharged()
+
+void HttpRespHeaders::convertLscCookie()
 {
-    if (s_commonHeadersCount > 1)
+    if (m_KVPairindex[H_LSC_COOKIE] == 0xff)
+        return;
+    int kvOrderNum = m_KVPairindex[H_LSC_COOKIE];
+    lsxpack_header * pKv = NULL;
+
+    while (kvOrderNum >= 0)
     {
-        addWithUnknownHeader(s_sTurboCharged, 18,
-                             HttpServerVersion::getVersion(),
-                             HttpServerVersion::getVersionLen(),
-                             LSI_HEADEROP_SET);
+        pKv = getKvPair(kvOrderNum);
+        char *pName = getName(pKv);
+        assert(strncasecmp(pName, "Lsc-", 4) == 0);
+        *pName++ = 's';
+        *pName++ = 'e';
+        *pName++ = 't';
+        assert(pKv->app_index == H_LSC_COOKIE);
+        pKv->app_index = H_SET_COOKIE;
+        pKv->flags = (lsxpack_flag)(pKv->flags &
+                ~(LSXPACK_NAME_HASH|LSXPACK_NAMEVAL_HASH));
+        kvOrderNum = (pKv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1;
     }
+
+    if (m_KVPairindex[H_SET_COOKIE] != 0xff)
+    {
+        assert(pKv != NULL);
+        pKv->chain_next_idx = ((m_KVPairindex[H_SET_COOKIE] + 1)
+                        | (pKv->chain_next_idx & HIGHEST_BIT_NUMBER));
+        pKv = getKvPair(m_KVPairindex[H_SET_COOKIE]);
+        pKv->chain_next_idx |= HIGHEST_BIT_NUMBER;
+        --m_iHeaderUniqueCount;
+    }
+    m_KVPairindex[H_SET_COOKIE] = m_KVPairindex[H_LSC_COOKIE];
+    m_KVPairindex[H_LSC_COOKIE] = 0xff;
 }
+
 
 void HttpRespHeaders::dropConnectionHeaders()
 {
@@ -1104,6 +1351,40 @@ void HttpRespHeaders::dropConnectionHeaders()
     del(H_PROXY_CONNECTION);
     del(H_TRANSFER_ENCODING);
     //del(H_UPGRADE);
+}
+
+
+void HttpRespHeaders::copy(const HttpRespHeaders &headers)
+{
+    struct iovec iov[100], *pIov, *pIovEnd;
+    int max = 100;
+    max = getHeader(H_SET_COOKIE, iov, 100);
+    if (max > 0)
+    {
+        AutoBuf tmp;
+        tmp.swap(m_buf);
+        copyEx(headers);
+        pIovEnd = &iov[max];
+        for (pIov = iov; pIov < pIovEnd; ++pIov)
+            add(H_SET_COOKIE, "Set-Cookie", 10, (char *)pIov->iov_base,
+                pIov->iov_len, LSI_HEADER_ADD);
+    }
+    else
+        copyEx(headers);
+}
+
+
+void HttpRespHeaders::copyEx(const HttpRespHeaders &headers)
+{
+    m_flags |= (headers.m_flags & HRH_F_HAS_PUSH);
+    m_buf.clear();
+    m_buf.append(headers.m_buf.begin(), headers.m_buf.size());
+
+    m_lsxpack.guarantee(headers.m_lsxpack.size() + 5);
+    m_lsxpack.copy(headers.m_lsxpack);
+
+    memmove(&m_KVPairindex[0], &headers.m_KVPairindex[0],
+            (char *)(&m_iHeadersTotalLen + 1) - (char *)&m_KVPairindex[0]);
 }
 
 
@@ -1150,4 +1431,685 @@ int HttpRespHeaders::toHpackIdx(int index)
         return lookup[index];
     return -15;
 };
+
+
+
+static const int appresp2qpack[36] = {
+    32,    //"accept-ranges"
+    -1,    //"connection"
+    54,    //"content-type"
+     4,    //"content-length"
+    43,    //"content-encoding"
+    -1,    //"content-range"
+     3,    //"content-disposition"
+    41,    //"cache-control"
+     6,    //"date"
+     7,    //"etag"
+    -1,    //"expires"
+    -1,    //"keep-alive"
+    10,    //"last-modified"
+    12,    //"location"
+    -1,    //"x-litespeed-location"
+    -1,    //"x-litespeed-cache-control"
+    -1,    //"pragma"
+    -1,    //"proxy-connection"
+    92,    //"server"
+    14,    //"set-cookie"
+    -1,    //"status"
+    -1,    //"transfer-encoding"
+    60,    //"vary"
+    -1,    //"www-authenticate"
+    -1,    //"x-litespeed-cache"
+    -1,    //"x-litespeed-purge"
+    -1,    //"x-litespeed-tag"
+    -1,    //"x-litespeed-vary"
+    -1,    //"lsc-cookie"
+    -1,    //"x-powered-by"
+    11,    //"link"
+    -1,    //"version"
+    83,    //"alt-svc"
+    -1,    //"x-litespeed-alt-svc"
+    -1,    //"x-lsadc-backend"
+    -1,    //"upgrade"
+};
+
+static int
+lookup_appresp2qpack (int idx)
+{
+    if (idx >= 0 && (unsigned) idx < sizeof(appresp2qpack) / sizeof(appresp2qpack[0]))
+        return appresp2qpack[idx];
+    else
+        return -1;
+}
+
+
+static void buildQpackIdx(lsxpack_header *hdr)
+{
+    if (hdr->flags & LSXPACK_QPACK_IDX)
+        return;
+    int idx = -1;
+    if (hdr->hpack_index)
+        idx = UnpackedHeaders::hpack2qpack(hdr->hpack_index);
+    if (idx == -1 && (hdr->flags & LSXPACK_APP_IDX)
+        && hdr->app_index != HttpRespHeaders::H_HEADER_END)
+        idx = lookup_appresp2qpack(hdr->app_index);
+    if (idx != -1)
+    {
+        hdr->qpack_index = idx;
+        hdr->flags = (lsxpack_flag)(hdr->flags | LSXPACK_QPACK_IDX);
+    }
+
+}
+
+
+static const int appresp2hpack[36] = {
+    18,    //"accept-ranges"
+    0,     //"connection"
+    31,    //"content-type"
+    28,    //"content-length"
+    26,    //"content-encoding"
+    30,    //"content-range"
+    25,    //"content-disposition"
+    24,    //"cache-control"
+    33,    //"date"
+    34,    //"etag"
+    36,    //"expires"
+    0,     //"keep-alive"
+    44,    //"last-modified"
+    46,    //"location"
+    0,     //"x-litespeed-location"
+    0,     //"x-litespeed-cache-control"
+    0,     //"pragma"
+    0,     //"proxy-connection"
+    54,    //"server"
+    55,    //"set-cookie"
+    0,     //"status"
+    57,    //"transfer-encoding"
+    59,    //"vary"
+    61,    //"www-authenticate"
+    0,     //"x-litespeed-cache"
+    0,     //"x-litespeed-purge"
+    0,     //"x-litespeed-tag"
+    0,     //"x-litespeed-vary"
+    0,     //"lsc-cookie"
+    0,     //"x-powered-by"
+    45,    //"link"
+    0,     //"version"
+    0,     //"alt-svc"
+    0,     //"x-litespeed-alt-svc"
+    0,     //"x-lsadc-backend"
+    0,     //"upgrade"
+};
+
+
+static int
+lookup_appresp2hpack (int idx)
+{
+    if (idx >= 0 && (unsigned) idx < sizeof(appresp2hpack) / sizeof(appresp2hpack[0]))
+        return appresp2hpack[idx];
+    else
+        return 0;
+}
+
+
+static void buildHpackIdx(lsxpack_header *hdr)
+{
+    if (hdr->hpack_index)
+        return;
+    int idx = LSHPACK_HDR_UNKNOWN;
+    if (hdr->flags & LSXPACK_QPACK_IDX)
+    {
+        idx = UnpackedHeaders::qpack2hpack(hdr->qpack_index);
+        //hdr->flags = (lsxpack_flag)(hdr->flags & ~LSXPACK_VAL_MATCHED);
+    }
+    if (idx == LSHPACK_HDR_UNKNOWN && (hdr->flags & LSXPACK_APP_IDX)
+        && hdr->app_index != HttpRespHeaders::H_HEADER_END)
+        idx = lookup_appresp2hpack(hdr->app_index);
+    if (idx != LSHPACK_HDR_UNKNOWN)
+    {
+        hdr->hpack_index = idx;
+    }
+}
+
+
+void HttpRespHeaders::prepareSendXpack(bool is_qpack)
+{
+    if (is_qpack)
+        prepareSendQpack();
+    else
+        prepareSendHpack();
+}
+
+
+void HttpRespHeaders::prepareSendQpack()
+{
+    lsxpack_header *hdr = m_lsxpack.begin();
+    memset(hdr, 0, sizeof(*hdr));
+    hdr->flags = (lsxpack_flag)(LSXPACK_QPACK_IDX | LSXPACK_VAL_MATCHED);
+    switch(getHttpCode())
+    {
+    case SC_100:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_100;
+        break;
+    case SC_200:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_200;
+        break;
+    case SC_204:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_204;
+        break;
+    case SC_206:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_206;
+        break;
+    case SC_302:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_302;
+        break;
+    case SC_304:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_304;
+        break;
+    case SC_400:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_400;
+        break;
+    case SC_403:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_403;
+        break;
+    case SC_404:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_404;
+        break;
+    case SC_421:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_421;
+        break;
+    case SC_425:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_425;
+        break;
+    case SC_500:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_500;
+        break;
+    case SC_503:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_503;
+        break;
+    default:
+        hdr->qpack_index = LSQPACK_TNV_STATUS_103;
+        hdr->flags = (lsxpack_flag)(LSXPACK_QPACK_IDX);
+        break;
+    }
+    hdr->buf = (char *)HttpStatusCode::getInstance().getCodeString(getHttpCode());
+    hdr->val_offset = 0;
+    hdr->val_len = 3;
+
+    ++hdr;
+    for(; hdr < end(); ++hdr)
+    {
+        if (!hdr->buf)
+            continue;
+        if (hdr->buf != m_buf.begin())
+        {
+            hdr->buf = m_buf.begin();
+        }
+        assert(hdr->name_offset + hdr->name_len <= m_buf.size());
+        assert(hdr->val_offset + hdr->val_len <= m_buf.size());
+
+        buildQpackIdx(hdr);
+    }
+}
+
+
+void HttpRespHeaders::prepareSendHpack()
+{
+    lsxpack_header *hdr = m_lsxpack.begin();
+    memset(hdr, 0, sizeof(*hdr));
+    hdr->flags = (lsxpack_flag)(LSXPACK_HPACK_VAL_MATCHED);
+    switch(getHttpCode())
+    {
+    case SC_200:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_200;
+        break;
+    case SC_204:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_204;
+        break;
+    case SC_206:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_206;
+        break;
+    case SC_304:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_304;
+        break;
+    case SC_400:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_400;
+        break;
+    case SC_404:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_404;
+        break;
+    case SC_500:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_500;
+        break;
+    default:
+        hdr->hpack_index = LSHPACK_HDR_STATUS_200;
+        hdr->flags = (lsxpack_flag)(hdr->flags & ~LSXPACK_HPACK_VAL_MATCHED);
+        break;
+    }
+    hdr->buf = (char *)HttpStatusCode::getInstance().getCodeString(getHttpCode());
+    hdr->val_offset = 0;
+    hdr->val_len = 3;
+
+    ++hdr;
+    for(; hdr < end(); ++hdr)
+    {
+        if (!hdr->buf)
+            continue;
+        if (hdr->buf != m_buf.begin())
+        {
+            hdr->buf = m_buf.begin();
+        }
+        assert(hdr->name_offset + hdr->name_len <= m_buf.size());
+        assert(hdr->val_offset + hdr->val_len <= m_buf.size());
+
+        buildHpackIdx(hdr);
+    }
+}
+
+
+static const int hpack2appresp[LSHPACK_MAX_INDEX] = {
+    UPK_HDR_UNKNOWN,                           //":authority"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_PATH,                              //":path"
+    UPK_HDR_PATH,                              //":path"
+    UPK_HDR_SCHEME,                            //":scheme"
+    UPK_HDR_SCHEME,                            //":scheme"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_UNKNOWN,                           //"accept-charset"
+    UPK_HDR_UNKNOWN,                           //"accept-encoding"
+    UPK_HDR_UNKNOWN,                           //"accept-language"
+    HttpRespHeaders::H_ACCEPT_RANGES,          //"accept-ranges"
+    UPK_HDR_UNKNOWN,                           //"accept"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-origin"
+    UPK_HDR_UNKNOWN,                           //"age"
+    UPK_HDR_UNKNOWN,                           //"allow"
+    UPK_HDR_UNKNOWN,                           //"authorization"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CONTENT_DISPOSITION,    //"content-disposition"
+    HttpRespHeaders::H_CONTENT_ENCODING,       //"content-encoding"
+    UPK_HDR_UNKNOWN,                           //"content-language"
+    HttpRespHeaders::H_CONTENT_LENGTH,         //"content-length"
+    UPK_HDR_UNKNOWN,                           //"content-location"
+    HttpRespHeaders::H_CONTENT_RANGE,          //"content-range"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    UPK_HDR_UNKNOWN,                           //"cookie"
+    HttpRespHeaders::H_DATE,                   //"date"
+    HttpRespHeaders::H_ETAG,                   //"etag"
+    UPK_HDR_UNKNOWN,                           //"expect"
+    HttpRespHeaders::H_EXPIRES,                //"expires"
+    UPK_HDR_UNKNOWN,                           //"from"
+    UPK_HDR_UNKNOWN,                           //"host"
+    UPK_HDR_UNKNOWN,                           //"if-match"
+    UPK_HDR_UNKNOWN,                           //"if-modified-since"
+    UPK_HDR_UNKNOWN,                           //"if-none-match"
+    UPK_HDR_UNKNOWN,                           //"if-range"
+    UPK_HDR_UNKNOWN,                           //"if-unmodified-since"
+    HttpRespHeaders::H_LAST_MODIFIED,          //"last-modified"
+    HttpRespHeaders::H_LINK,                   //"link"
+    HttpRespHeaders::H_LOCATION,               //"location"
+    UPK_HDR_UNKNOWN,                           //"max-forwards"
+    UPK_HDR_UNKNOWN,                           //"proxy-authenticate"
+    UPK_HDR_UNKNOWN,                           //"proxy-authorization"
+    UPK_HDR_UNKNOWN,                           //"range"
+    UPK_HDR_UNKNOWN,                           //"referer"
+    UPK_HDR_UNKNOWN,                           //"refresh"
+    UPK_HDR_UNKNOWN,                           //"retry-after"
+    HttpRespHeaders::H_SERVER,                 //"server"
+    HttpRespHeaders::H_SET_COOKIE,             //"set-cookie"
+    UPK_HDR_UNKNOWN,                           //"strict-transport-security"
+    HttpRespHeaders::H_TRANSFER_ENCODING,      //"transfer-encoding"
+    UPK_HDR_UNKNOWN,                           //"user-agent"
+    HttpRespHeaders::H_VARY,                   //"vary"
+    UPK_HDR_UNKNOWN,                           //"via"
+    HttpRespHeaders::H_WWW_AUTHENTICATE,       //"www-authenticate"
+};
+
+
+int HttpRespHeaders::hpack2RespIdx(int hpack_index)
+{
+    if (hpack_index > 0 && hpack_index <= LSHPACK_MAX_INDEX)
+        return hpack2appresp[hpack_index - 1];
+    return UPK_HDR_UNKNOWN;
+};
+
+#define QPACK_MAX_INDEX 99
+static const int qpack2appresp[QPACK_MAX_INDEX] = {
+    UPK_HDR_UNKNOWN,                           //":authority"
+    UPK_HDR_PATH,                              //":path"
+    UPK_HDR_UNKNOWN,                           //"age"
+    HttpRespHeaders::H_CONTENT_DISPOSITION,    //"content-disposition"
+    HttpRespHeaders::H_CONTENT_LENGTH,         //"content-length"
+    UPK_HDR_UNKNOWN,                           //"cookie"
+    HttpRespHeaders::H_DATE,                   //"date"
+    HttpRespHeaders::H_ETAG,                   //"etag"
+    UPK_HDR_UNKNOWN,                           //"if-modified-since"
+    UPK_HDR_UNKNOWN,                           //"if-none-match"
+    HttpRespHeaders::H_LAST_MODIFIED,          //"last-modified"
+    HttpRespHeaders::H_LINK,                   //"link"
+    HttpRespHeaders::H_LOCATION,               //"location"
+    UPK_HDR_UNKNOWN,                           //"referer"
+    HttpRespHeaders::H_SET_COOKIE,             //"set-cookie"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_METHOD,                            //":method"
+    UPK_HDR_SCHEME,                            //":scheme"
+    UPK_HDR_SCHEME,                            //":scheme"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_UNKNOWN,                           //"accept"
+    UPK_HDR_UNKNOWN,                           //"accept"
+    UPK_HDR_UNKNOWN,                           //"accept-encoding"
+    HttpRespHeaders::H_ACCEPT_RANGES,          //"accept-ranges"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-headers"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-headers"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-origin"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CACHE_CTRL,             //"cache-control"
+    HttpRespHeaders::H_CONTENT_ENCODING,       //"content-encoding"
+    HttpRespHeaders::H_CONTENT_ENCODING,       //"content-encoding"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    HttpRespHeaders::H_CONTENT_TYPE,           //"content-type"
+    UPK_HDR_UNKNOWN,                           //"range"
+    UPK_HDR_UNKNOWN,                           //"strict-transport-security"
+    UPK_HDR_UNKNOWN,                           //"strict-transport-security"
+    UPK_HDR_UNKNOWN,                           //"strict-transport-security"
+    HttpRespHeaders::H_VARY,                   //"vary"
+    HttpRespHeaders::H_VARY,                   //"vary"
+    UPK_HDR_UNKNOWN,                           //"x-content-type-options"
+    UPK_HDR_UNKNOWN,                           //"x-xss-protection"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_STATUS,                            //":status"
+    UPK_HDR_UNKNOWN,                           //"accept-language"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-credentials"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-credentials"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-headers"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-methods"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-methods"
+    UPK_HDR_UNKNOWN,                           //"access-control-allow-methods"
+    UPK_HDR_UNKNOWN,                           //"access-control-expose-headers"
+    UPK_HDR_UNKNOWN,                           //"access-control-request-headers"
+    UPK_HDR_UNKNOWN,                           //"access-control-request-method"
+    UPK_HDR_UNKNOWN,                           //"access-control-request-method"
+    HttpRespHeaders::H_ALT_SVC,                //"alt-svc"
+    UPK_HDR_UNKNOWN,                           //"authorization"
+    UPK_HDR_UNKNOWN,                           //"content-security-policy"
+    UPK_HDR_UNKNOWN,                           //"early-data"
+    UPK_HDR_UNKNOWN,                           //"expect-ct"
+    UPK_HDR_UNKNOWN,                           //"forwarded"
+    UPK_HDR_UNKNOWN,                           //"if-range"
+    UPK_HDR_UNKNOWN,                           //"origin"
+    UPK_HDR_UNKNOWN,                           //"purpose"
+    HttpRespHeaders::H_SERVER,                 //"server"
+    UPK_HDR_UNKNOWN,                           //"timing-allow-origin"
+    UPK_HDR_UNKNOWN,                           //"upgrade-insecure-requests"
+    UPK_HDR_UNKNOWN,                           //"user-agent"
+    UPK_HDR_UNKNOWN,                           //"x-forwarded-for"
+    UPK_HDR_UNKNOWN,                           //"x-frame-options"
+    UPK_HDR_UNKNOWN,                           //"x-frame-options"
+};
+
+
+int HttpRespHeaders::qpack2RespIdx(int qpack_index)
+{
+    if (qpack_index >= 0 && qpack_index < QPACK_MAX_INDEX)
+        return qpack2appresp[qpack_index];
+    return UPK_HDR_UNKNOWN;
+};
+
+
+lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
+{
+    if (hdr == NULL || hdr->buf == NULL)
+        return end();
+
+    int idx = UPK_HDR_UNKNOWN;
+    if (!is_qpack)
+        idx = HttpRespHeaders::hpack2RespIdx(hdr->hpack_index);
+    else if (hdr->flags & LSXPACK_QPACK_IDX)
+        idx = HttpRespHeaders::qpack2RespIdx(hdr->qpack_index);
+    if (idx != UPK_HDR_UNKNOWN)
+    {
+        hdr->app_index = idx;
+        hdr->flags = (lsxpack_flag)(hdr->flags | LSXPACK_APP_IDX);
+    }
+    const char *name = lsxpack_header_get_name(hdr);
+    const char *val = lsxpack_header_get_value(hdr);
+    if (*name == ':')
+    {
+        if (hdr->name_len == 7 && strncmp(name, ":status", 7) == 0)
+        {
+            int code = SC_200;
+            if (!is_qpack)
+            {
+                switch(hdr->hpack_index)
+                {
+                case LSHPACK_HDR_STATUS_204:
+                    code = SC_204;
+                    break;
+                case LSHPACK_HDR_STATUS_206:
+                    code = SC_206;
+                    break;
+                case LSHPACK_HDR_STATUS_304:
+                    code = SC_304;
+                    break;
+                case LSHPACK_HDR_STATUS_400:
+                    code = SC_400;
+                    break;
+                case LSHPACK_HDR_STATUS_404:
+                    code = SC_404;
+                    break;
+                case LSHPACK_HDR_STATUS_500:
+                    code = SC_500;
+                    break;
+                default:
+                    if (strncmp(val, "200", 3) != 0)
+                    {
+                        code = HttpStatusCode::getInstance().codeToIndex(val);
+                        if (code == -1)
+                            code = SC_200;
+                    }
+                    break;
+                }
+            }
+            else
+            {
+                if (!(hdr->flags & LSXPACK_QPACK_IDX))
+                    hdr->qpack_index = LSQPACK_TNV_STATUS_103;
+                switch(hdr->qpack_index)
+                {
+                case LSQPACK_TNV_STATUS_100:
+                    code = SC_100;
+                    break;
+                case LSQPACK_TNV_STATUS_200:
+                    code = SC_200;
+                    break;
+                case LSQPACK_TNV_STATUS_204:
+                    code = SC_204;
+                    break;
+                case LSQPACK_TNV_STATUS_206:
+                    code = SC_206;
+                    break;
+                case LSQPACK_TNV_STATUS_302:
+                    code = SC_302;
+                    break;
+                case LSQPACK_TNV_STATUS_304:
+                    code = SC_304;
+                    break;
+                case LSQPACK_TNV_STATUS_400:
+                    code = SC_400;
+                    break;
+                case LSQPACK_TNV_STATUS_403:
+                    code = SC_403;
+                    break;
+                case LSQPACK_TNV_STATUS_404:
+                    code = SC_404;
+                    break;
+                case LSQPACK_TNV_STATUS_421:
+                    code = SC_421;
+                    break;
+                case LSQPACK_TNV_STATUS_425:
+                    code = SC_425;
+                    break;
+                case LSQPACK_TNV_STATUS_500:
+                    code = SC_500;
+                    break;
+                case LSQPACK_TNV_STATUS_503:
+                    code = SC_503;
+                    break;
+                case LSQPACK_TNV_STATUS_103:
+                default:
+                    code = HttpStatusCode::getInstance().codeToIndex(val);
+                    if (code == -1)
+                        code = SC_200;
+                    break;
+                }
+            }
+            headers->addStatusLine(HTTP_1_1, code, 0);
+            headers->m_working = NULL;
+            if (connector)
+                HttpCgiTool::processStatusCode(connector, code);
+        }
+        else
+            return LSXPACK_ERR_UNNEC_REQ_PSDO_HDR;
+    }
+    else
+    {
+        if (!regular_header)
+        {
+            if (!headers->getHttpCode())
+                return LSXPACK_ERR_INCOMPL_REQ_PSDO_HDR;
+            regular_header = true;
+        }
+        if (idx == UPK_HDR_UNKNOWN)
+        {
+            idx = HttpRespHeaders::getIndex(name, hdr->name_len);
+            for(const char *p = name; p < name + hdr->name_len; ++p)
+                if (isupper(*p))
+                    return LSXPACK_ERR_UPPERCASE_HEADER;
+            if (idx == HttpRespHeaders::H_CONNECTION)
+                return LSXPACK_ERR_BAD_REQ_HEADER;
+            if (idx != HttpRespHeaders::H_UNKNOWN)
+            {
+                hdr->app_index = idx;
+                hdr->flags = (lsxpack_flag)(hdr->flags | LSXPACK_APP_IDX);
+            }
+        }
+        total_size += hdr->name_len + hdr->val_len + 4;
+        if (total_size >= 65535)
+            return LSXPACK_ERR_HEADERS_TOO_LARGE;
+        if (!connector || HttpCgiTool::processHeaderLine2(connector, idx,
+                name, hdr->name_len, val, hdr->val_len) == 1)
+        {
+            if (hdr == headers->m_working)
+            {
+                headers->commitWorkingHeader();
+                if (hdr->app_index == HttpRespHeaders::H_LINK)
+                {
+                    if (memmem(val, hdr->val_len, "preload", 7) != NULL)
+                        headers->m_flags |= HRH_F_HAS_PUSH;
+                }
+            }
+            else
+                headers->add((HttpRespHeaders::INDEX)idx, name, hdr->name_len,
+                            val, hdr->val_len, LSI_HEADER_ADD);
+        }
+        else
+        {
+            headers->m_working = NULL;
+        }
+    }
+    return LSXPACK_OK;
+}
+
+
+lsxpack_err_code UpkdRespHdrBuilder::end()
+{
+    if (!headers->getHttpCode())
+        return LSXPACK_ERR_INCOMPL_REQ_PSDO_HDR;
+
+    if (headers->m_working)
+    {
+        headers->m_working = NULL;
+    }
+
+    //headers->endHeader();
+    return LSXPACK_OK;
+}
+
+
+lsxpack_header_t *UpkdRespHdrBuilder::prepareDecode(lsxpack_header_t *hdr,
+                                                size_t mini_buf_size)
+{
+    assert(!hdr || !hdr->buf || hdr->buf == headers->m_buf.begin());
+    if (mini_buf_size > MAX_BUF_SIZE)
+    {
+        if (hdr && hdr == headers->m_working)
+            headers->m_working = NULL;
+        return NULL;
+    }
+    if ((size_t)headers->m_buf.available() < mini_buf_size + 2)
+    {
+        size_t increase_to = (mini_buf_size + 2 + 255) & (~255);
+        if (headers->m_buf.guarantee(increase_to) == -1)
+            return NULL;
+        assert((size_t)headers->m_buf.available() >= mini_buf_size + 2);
+    }
+    if (!hdr)
+    {
+        assert(headers->m_working == NULL);
+        hdr = headers->m_working = headers->m_lsxpack.newObj();
+        headers->m_lsxpack.pop();
+        lsxpack_header_prepare_decode(hdr, headers->m_buf.begin(),
+            headers->m_buf.size(), headers->m_buf.available() - 2);
+    }
+    else
+    {
+        if (!hdr->buf)
+            lsxpack_header_prepare_decode(hdr, headers->m_buf.begin(),
+                headers->m_buf.size(), headers->m_buf.available() - 2);
+        else
+        {
+            if (hdr->buf != headers->m_buf.begin())
+                hdr->buf = headers->m_buf.begin();
+            hdr->val_len = headers->m_buf.available() - 2;
+        }
+    }
+    assert(hdr->buf + hdr->name_offset + hdr->val_len <= headers->m_buf.buf_end());
+    return hdr;
+}
+
 

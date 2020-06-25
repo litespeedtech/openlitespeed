@@ -19,8 +19,8 @@
 #define DATETIME_H
 
 
-
 #include <time.h>
+#include <lsr/ls_atomic.h>
 
 #define RFC_1123_TIME_LEN 29
 class DateTime
@@ -34,6 +34,11 @@ public:
     static time_t parseHttpTime(const char *s, int len);
     static char  *getRFCTime(time_t t, char *buf);
     static char  *getLogTime(time_t lTime, char *pBuf, int bGMT = 0);
+
+    static inline time_t getCurTime()
+    {   return ls_atomic_value(&s_curTime);      }
+    static inline int getCurTimeUs()
+    {   return ls_atomic_value(&s_curTimeUs);     }
 
 };
 

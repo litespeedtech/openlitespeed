@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpcgitool.h"
+#include "ls.h"
 
 #include <http/httpdefs.h>
 #include <http/httpextconnector.h>
@@ -84,16 +85,16 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
 
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char *pName, int nameLen,
-                                   const char *pValue, int valLen, int &status)
+                                   const char *pValue, int valLen)
 {
     HttpRespHeaders::INDEX index;
 
     index = HttpRespHeaders::getIndex(pName);
     if ((index < HttpRespHeaders::H_HEADER_END) &&
-        (nameLen == HttpRespHeaders::getHeaderStringLen(index)))
+        (nameLen == HttpRespHeaders::getNameLen(index)))
     {
         return processHeaderLine(pExtConn, index, pName, nameLen, pValue,
-                                 valLen, status);
+                                 valLen);
 
     }
 //    if (( pName < pValue )&&(pValue - (pName + nameLen) < 5 ))
@@ -107,18 +108,19 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char  *pLineBegin,
-                                   const char *pLineEnd, int &status)
+                                   const char *pLineEnd)
 {
     HttpRespHeaders::INDEX index;
     //int tmpIndex;
     const char *pKeyEnd = NULL;
     const char *pValue = pLineBegin;
+    int &status = pExtConn->getRespState();
     int nameLen = 0;
 
     index = HttpRespHeaders::getIndex(pValue);
     if (index < HttpRespHeaders::H_HEADER_END)
     {
-        pValue += HttpRespHeaders::getHeaderStringLen(index);
+        pValue += HttpRespHeaders::getNameLen(index);
 
         while ((pValue < pLineEnd) && isspace(*pValue))
             ++pValue;
@@ -126,7 +128,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             index = HttpRespHeaders::H_HEADER_END;
         else
         {
-            nameLen = HttpRespHeaders::getHeaderStringLen(index);
+            nameLen = HttpRespHeaders::getNameLen(index);
             do { ++pValue; }
             while ((pValue < pLineEnd) && isspace(*pValue));
         }
@@ -173,16 +175,17 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         return 0;
     }
     return processHeaderLine(pExtConn, index, pLineBegin, nameLen, pValue,
-                             pLineEnd - pValue, status);
+                             pLineEnd - pValue);
 }
 
 
-int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
+int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
                                    int index, const char *pName, int nameLen,
-                                   const char *pValue, int valLen, int &status)
+                                   const char *pValue, int valLen)
 {
     HttpResp *pResp = pExtConn->getHttpSession()->getResp();
     HttpReq *pReq = pExtConn->getHttpSession()->getReq();
+    int &status = pExtConn->getRespState();
     int tmpIndex;
 
     switch (index)
@@ -259,7 +262,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         }
         return 0;
     case HttpRespHeaders::H_TRANSFER_ENCODING:
-        pResp->setContentLen(LSI_RSP_BODY_SIZE_CHUNKED);
+        pResp->setContentLen(LSI_BODY_SIZE_CHUNK);
         return 0;
     case HttpRespHeaders::H_LINK:
         //pExtConn->getHttpSession()->processLinkHeader(pValue, pLineEnd - pValue);
@@ -276,7 +279,7 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
             status |= HEC_RESP_CONN_CLOSE;
         return 0;
     case HttpRespHeaders::H_CONTENT_LENGTH:
-        if (pResp->getContentLen() == LSI_RSP_BODY_SIZE_UNKNOWN)
+        if (pResp->getContentLen() == LSI_BODY_SIZE_UNKNOWN)
         {
             off_t lContentLen = strtoll(pValue, NULL, 10);
             if ((lContentLen >= 0) && (lContentLen != LLONG_MAX))
@@ -311,20 +314,38 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
         }
         break;
     }
-    if (index != HttpRespHeaders::H_HEADER_END)
-        return pResp->appendHeader(index, pName, nameLen, pValue, valLen);
-    else
+    return 1;
+}
+
+
+void HttpCgiTool::processStatusCode(HttpExtConnector *connector, int code)
+{
+    connector->getHttpSession()->getReq()->updateNoRespBodyByStatus(code);
+}
+
+
+int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
+                                   int index, const char *pName, int nameLen,
+                                   const char *pValue, int valLen)
+{
+    int ret = processHeaderLine2(pExtConn, index, pName, nameLen,
+                           pValue, valLen);
+    if (ret == 1)
     {
-        return pResp->getRespHeaders().addWithUnknownHeader(pName, nameLen,
-                                                            pValue, valLen,
-                                                            LSI_HEADEROP_ADD);
+        LS_DBG_H(pExtConn->getHttpSession()->getLogSession(),
+                "append response header: %.*s: %.*s", nameLen, pName,
+                valLen, pValue);
+        return pExtConn->getHttpSession()->getResp()->appendHeader(
+                    index, pName, nameLen, pValue, valLen);
     }
+    return ret;
 }
 
 
 int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
-                                 const char *pBuf, int size, int &status)
+                                 const char *pBuf, int size)
 {
+    int &status = pExtConn->getRespState();
     const char *pEnd = pBuf + size;
     const char *pLineEnd;
     const char *pLineBegin;
@@ -364,7 +385,7 @@ int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
             continue;
         }
         if (processHeaderLine(pExtConn, pValue,
-                              pLineEnd, status) == -1)
+                              pLineEnd) == -1)
             return LS_FAIL;
     }
     return pCur - pBuf;

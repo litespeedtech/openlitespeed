@@ -19,7 +19,7 @@
 #include "hiostream.h"
 #include <assert.h>
 #include <lsr/ls_str.h>
-#include <spdy/unpackedheaders.h>
+#include <h2/unpackedheaders.h>
 
 static const ls_str_t s_sProtoName[] =
 {
@@ -44,6 +44,18 @@ const ls_str_t *HioStream::getProtocolName(HiosProtocol proto)
 
 HioStream::~HioStream()
 {
+    if (m_pReqHeaders)
+        delete m_pReqHeaders;
+}
+
+
+void HioStream::reset(int32_t timeStamp)
+{
+    if (m_pReqHeaders)
+        delete m_pReqHeaders;
+    LS_ZERO_FILL(m_pReqHeaders, m_connInfo);
+    StreamStat::reset();
+    setActiveTime(timeStamp);
 }
 
 

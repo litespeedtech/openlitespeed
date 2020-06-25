@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -15,39 +15,56 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "h2streampool.h"
-#include "h2stream.h"
-#include "unpackedheaders.h"
+#ifndef H2STREAM_H
+#define H2STREAM_H
 
-typedef ObjPool<H2Stream>       Pool;
-static Pool s_stream_pool;
+#include <lsdef.h>
+#include <http/hiostream.h>
+#include <h2/unpackedheaders.h>
+#include <h2/h2protocol.h>
+#include <h2/h2streambase.h>
+#include <util/linkedobj.h>
+#include <util/loopbuf.h>
+#include <util/datetime.h>
+#include <lstl/thash.h>
 
-void H2StreamPool::recycle(H2Stream *pStream)
+#include <inttypes.h>
+
+class H2Connection;
+
+class H2Stream : public H2StreamBase, public HioStream
 {
-    pStream->reset();
-    s_stream_pool.recycle(pStream);
-}
+
+public:
+    H2Stream();
+    ~H2Stream();
+
+    void reset();
+
+    void switchWriteToRead() {};
+
+    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+
+    int push(UnpackedHeaders *hdrs);
+
+    int onInitConnected();
+    int onTimer();
+    int onClose();
+    int onRead();
+    int onWrite();
+    int onPeerShutdown();
 
 
-H2Stream *H2StreamPool::getH2Stream()
-{
-    H2Stream *p;
-    p = s_stream_pool.get();
-    return p;
-}
+private:
+    bool operator==(const H2Stream &other) const;
+
+protected:
+    virtual const char *buildLogId();
+
+private:
+
+    LS_NO_COPY_ASSIGN(H2Stream);
+};
 
 
-void H2StreamPool::recycle(H2Stream **pStream, int n)
-{
-    for(int i = 0; i < n; ++i)
-        pStream[i]->reset();
-    s_stream_pool.recycle((void **)pStream, n);
-}
-
-
-int H2StreamPool::getH2Streams(H2Stream **pStream, int n)
-{
-    int ret = s_stream_pool.get(pStream, n);
-    return ret;
-}
-
+#endif // H2STREAM_H

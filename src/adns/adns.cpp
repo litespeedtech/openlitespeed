@@ -5,6 +5,7 @@
 
 #include "adns.h"
 
+#include <edio/evtcbque.h>
 #include <log4cxx/logger.h>
 #include <shm/lsshmhash.h>
 #include <util/datetime.h>
@@ -34,10 +35,12 @@ LS_SINGLETON(Adns);
 Adns::Adns()
     : m_pCtx( NULL )
     , m_iCounter(0)
-    , m_iPendingEvt(0)
     , m_pShmHash(NULL)
     , m_tmLastTrim(0)
 {
+    ls_mutex_setup(&m_mutex);
+
+    evtcbhead_reset(this);
 }
 
 
@@ -54,10 +57,12 @@ void Adns::trimCache()
         return;
     if (DateTime::s_curTime - m_tmLastTrim > 60)
     {
+        ls_mutex_lock(&m_mutex);
         m_tmLastTrim = DateTime::s_curTime;
         m_pShmHash->lock();
         m_pShmHash->trim(DateTime::s_curTime - DNS_CACHE_TTL, NULL, 0);
         m_pShmHash->unlock();
+        ls_mutex_unlock(&m_mutex);
     }
 }
 
@@ -71,6 +76,7 @@ const char *Adns::getCacheValue(const char * pName, int nameLen,
     LsShmHash::iteroffset iterOff;
     ls_strpair_t parms;
     ls_str_set(&parms.key, (char *)pName, nameLen);
+    ls_mutex_lock(&m_mutex);
     m_pShmHash->lock();
     iterOff = m_pShmHash->findIterator(&parms);
     if (iterOff.m_iOffset != 0)
@@ -99,6 +105,7 @@ const char *Adns::getCacheValue(const char * pName, int nameLen,
         }
     }
     m_pShmHash->unlock();
+    ls_mutex_unlock(&m_mutex);
     return ret;
 }
 
@@ -135,18 +142,24 @@ int Adns::initShm(int uid, int gid)
 {
     if ( m_pShmHash )
         return 0;
+    ls_mutex_lock(&m_mutex);
     if ((m_pShmHash = LsShmHash::open(
         "adns_cache", "dns_cache", 1000, LSSHM_FLAG_LRU)) != NULL)
     {
         m_pShmHash->getPool()->getShm()->chperm(uid, gid, 0600);
         m_pShmHash->disableAutoLock();
     }
+    ls_mutex_unlock(&m_mutex);
     return 0;
 }
 
 int Adns::shutdown()
 {
-      dns_close( m_pCtx );
+    dns_close( m_pCtx );
+
+    if (evtcbhead_is_active(this))
+        EvtcbQue::getInstance().removeSessionCb(this);
+
 //    if ( m_pCtx )
 //    {
 //        dns_free( m_pCtx );
@@ -251,6 +264,7 @@ void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
         printLookupError(ctx, pAdnsReq);
 
+    ls_mutex_lock(&Adns::getInstance().m_mutex);
     LsShmHash *pCache = Adns::getInstance().getShmHash();
     if (pCache)
     {
@@ -258,6 +272,7 @@ void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
         pCache->insert(pAdnsReq->name, strlen(pAdnsReq->name), sIp, ipLen);
         pCache->unlock();
     }
+    ls_mutex_unlock(&Adns::getInstance().m_mutex);
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, ipLen, sIp);
 
@@ -298,6 +313,7 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
         }
     }
 
+    ls_mutex_lock(&Adns::getInstance().m_mutex);
     LsShmHash *pCache = Adns::getInstance().getShmHash();
     if (pCache)
     {
@@ -305,6 +321,7 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
         pCache->insert(pAdnsReq->name, nameLen, p, n);
         pCache->unlock();
     }
+    ls_mutex_unlock(&Adns::getInstance().m_mutex);
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, n, p);
     //else
@@ -364,7 +381,7 @@ AdnsReq *Adns::getHostByName(const char * pName, int type,
         pAdnsReq = NULL;
     }
     else
-        m_iPendingEvt = 1;
+        wantCheckDnsEvents();
     return pAdnsReq;
 }
 
@@ -423,7 +440,7 @@ AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_p
         pAdnsReq = NULL;
     }
     else
-        m_iPendingEvt = 1;
+        wantCheckDnsEvents();
     return pAdnsReq;
 }
 
@@ -432,7 +449,6 @@ int Adns::handleEvents( short events )
 {
     if ( events & POLLIN )
         dns_ioevent( m_pCtx, DateTime::s_curTime );
-
     return 0;
 }
 
@@ -457,6 +473,20 @@ void Adns::setTimeOut(int tmSec)
 void Adns::checkDnsEvents()
 {
     dns_timeouts( m_pCtx, -1, DateTime::s_curTime );
+}
+
+
+int Adns::checkDnsEventsCb(evtcbhead_t *, const long , void *)
+{
+    Adns::getInstance().checkDnsEvents();
+    return 0;
+}
+
+
+void Adns::wantCheckDnsEvents()
+{
+    if (!evtcbhead_get_tail_ts(this))
+        EvtcbQue::getInstance().schedule_once_nowait(checkDnsEventsCb, this, 0, NULL);
 }
 
 

@@ -32,7 +32,7 @@
 
 
 HttpResp::HttpResp(ls_xpool_t *pool)
-    : m_respHeaders(pool)
+    : m_respHeaders()
     , m_pRespBodyBuf(NULL)
     , m_pGzipBuf(NULL)
 {
@@ -53,7 +53,7 @@ void HttpResp::reset(int delCookies)
     else
         m_respHeaders.reset2();
 
-    m_lEntityLength = LSI_RSP_BODY_SIZE_UNKNOWN;
+    m_lEntityLength = LSI_BODY_SIZE_UNKNOWN;
     m_lEntityFinished = 0;
     resetRespBody();
 }

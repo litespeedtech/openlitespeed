@@ -331,159 +331,46 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c, lsquic_conn_ctx_t *h)
 //     return pInfo->checkAccess();
 // }
 
-static void * createUnpackedHeaders(void *hsi_ctx,
-                                          int is_push_promise)
+static void * createUnpackedHeaders(void *hsi_ctx, lsquic_stream_t *stream,
+                                    int is_push_promise)
 {
-    return new QuicUpkdHdrs();
+    bool is_qpack = (stream != NULL);
+    UnpackedHeaders *hdrs = new UnpackedHeaders();
+    return new UpkdHdrBuilder(hdrs, is_qpack);
 }
 
 
-static enum lsquic_header_status endUnpackedHeader(QuicUpkdHdrs *qhdrs)
+static int processUnpackedHeader(void *hdr_set, lsxpack_header_t *hdr)
 {
-    if (!qhdrs->scheme || !qhdrs->headers.isComplete())
-        return LSQUIC_HDR_ERR_INCOMPL_REQ_PSDO_HDR;
-
-    if (qhdrs->cookie_count > 0)
-    {
-        qhdrs->total_cookie_size += ((qhdrs->cookie_count - 1) << 1) ;
-        qhdrs->total_size += qhdrs->total_cookie_size + 6 + 4;
-        if (qhdrs->total_size >= 65535)
-            return LSQUIC_HDR_ERR_HEADERS_TOO_LARGE;
-        qhdrs->headers.appendCookieHeader(qhdrs->cookies, qhdrs->cookie_count,
-                                    qhdrs->total_cookie_size);
-    }
-
-    qhdrs->headers.endHeader();
-    return LSQUIC_HDR_OK;
-}
-
-
-static enum lsquic_header_status processUnpackedHeader(
-    void *hdr_set, unsigned name_idx, const char *name, unsigned name_len,
-    const char *val, unsigned val_len)
-{
-    QuicUpkdHdrs *qhdrs = (QuicUpkdHdrs *)hdr_set;
-    if (name == NULL)
-    {
-        return endUnpackedHeader(qhdrs);
-    }
-
-    int idx = UnpackedHeaders::convertHorQpackIdx(name_idx);
-
-    if (name_len > 2 && name[0] == ':')
-    {
-        if (qhdrs->regular_header)
-            return LSQUIC_HDR_ERR_MISPLACED_PSDO_HDR;
-        if (val_len == 0)
-            return LSQUIC_HDR_ERR_HEADERS_TOO_LARGE;   //invalid size
-        if (idx == UPK_HDR_UNKNOWN)
-        {
-            switch(name[1])
-            {
-            case 'a':
-                if (name_len == 10 && memcmp(name, ":authority", 10) == 0)
-                    idx = HttpHeader::H_HOST;
-                break;
-            case 'm':
-                if (name_len == 7 && memcmp(name, ":method", 7) == 0)
-                    idx = UPK_HDR_METHOD;
-                break;
-            case 'p':
-                if (name_len == 5 && memcmp(name, ":path", 5) == 0)
-                    idx = UPK_HDR_PATH;
-                break;
-            case 's':
-                if (name_len == 7 && memcmp(name, ":scheme", 7) == 0)
-                    idx = UPK_HDR_SCHEME;
-                break;
-            default:
-                return LSQUIC_HDR_ERR_UNNEC_REQ_PSDO_HDR;
-            }
-        }
-        switch(idx)
-        {
-        case HttpHeader::H_HOST:         //":authority",
-            if (qhdrs->headers.setHost2(val, val_len) == LS_FAIL)
-                return LSQUIC_HDR_ERR_DUPLICATE_PSDO_HDR;
-            break;
-        case UPK_HDR_METHOD:  //":method"
-            //If second time have the :method, ERROR
-            if (qhdrs->headers.setMethod(val, val_len) == LS_FAIL)
-                return LSQUIC_HDR_ERR_DUPLICATE_PSDO_HDR;
-            break;
-        case UPK_HDR_PATH:  //":path"
-            //If second time have the :path, ERROR
-            if (qhdrs->headers.setUrl2(val, val_len) == LS_FAIL)
-                return LSQUIC_HDR_ERR_DUPLICATE_PSDO_HDR;
-            break;
-        case UPK_HDR_SCHEME:  //":scheme"
-            if (qhdrs->scheme)
-                return LSQUIC_HDR_ERR_DUPLICATE_PSDO_HDR;
-            qhdrs->scheme = true;
-            //Do nothing
-            //We set to (char *)"HTTP/1.1"
-            break;
-        case UPK_HDR_STATUS:    //":status"
-            return LSQUIC_HDR_ERR_UNNEC_REQ_PSDO_HDR;
-        default:
-            return LSQUIC_HDR_ERR_UNNEC_REQ_PSDO_HDR;
-        }
-    }
-    else
-    {
-        if (!qhdrs->regular_header)
-        {
-            if (!qhdrs->headers.isComplete())
-                return LSQUIC_HDR_ERR_INCOMPL_REQ_PSDO_HDR;
-            qhdrs->regular_header = true;
-        }
-        if (idx == UPK_HDR_UNKNOWN)
-        {
-            for(const char *p = name; p < name + name_len; ++p)
-                if (isupper(*p))
-                    return LSQUIC_HDR_ERR_UPPERCASE_HEADER;
-            if (name_len == 10 && memcmp(name, "connection", 10) == 0)
-                return LSQUIC_HDR_ERR_BAD_REQ_HEADER;
-            else if (name_len == 6 && memcmp(name, "cookie", 6) == 0)
-                idx = HttpHeader::H_COOKIE;
-        }
-        if (idx == HttpHeader::H_COOKIE)
-        {
-            if (qhdrs->cookie_count < 256)
-            {
-                if (ls_str(&qhdrs->cookies[qhdrs->cookie_count], val,
-                            val_len) == NULL)
-                    return LSQUIC_HDR_ERR_NOMEM;
-                qhdrs->total_cookie_size += val_len;
-                ++qhdrs->cookie_count;
-            }
-            return LSQUIC_HDR_OK;
-        }
-        else if (name_len == 2 && memcmp(name, "te", 2) == 0)
-        {
-            if (val_len != 8 || strncasecmp("trailers", val, 8) != 0)
-                return LSQUIC_HDR_ERR_BAD_REQ_HEADER;
-        }
-        qhdrs->total_size += name_len + val_len + 4;
-        if (qhdrs->total_size >= 65535)
-            return LSQUIC_HDR_ERR_HEADERS_TOO_LARGE;
-        qhdrs->headers.appendHeader(idx, name, name_len, val, val_len);
-    }
-    return LSQUIC_HDR_OK;
+    UpkdHdrBuilder *qhdrs = (UpkdHdrBuilder *)hdr_set;
+    assert(hdr == qhdrs->getWorking());
+    return qhdrs->process(hdr);
 }
 
 
 static void releaseUnpackedHeaders(void *hdr_set)
 {
-    delete (QuicUpkdHdrs *)hdr_set;
+    delete (UpkdHdrBuilder *)hdr_set;
+}
+
+
+static struct lsxpack_header *
+prepareDecodeUnpackedHeader(void *hdr_set, struct lsxpack_header *hdr,
+                            size_t minimum_size)
+{
+    UpkdHdrBuilder *qhdrs = (UpkdHdrBuilder *)hdr_set;
+    return qhdrs->prepareDecode(hdr, minimum_size);
 }
 
 
 static struct lsquic_hset_if s_quic_hpack_hdr_callback =
 {
     createUnpackedHeaders,
+    prepareDecodeUnpackedHeader,
     processUnpackedHeader,
     releaseUnpackedHeaders,
+    (lsquic_hsi_flag)(LSQUIC_HSI_HTTP1X | LSQUIC_HSI_HASH_NAME
+                                        | LSQUIC_HSI_HASH_NAMEVAL),
 };
 
 
@@ -513,17 +400,22 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
     pConnInfo->m_remotePort = GSockAddr::getPort(pPeer);
     //pStream->setConnInfo(getStream()->getConnInfo());
     pStream->init(s);
-    QuicUpkdHdrs *hdrs = (QuicUpkdHdrs *)lsquic_stream_get_hset(s);
-    if (hdrs)
-    {
-        if (pStream->processUpkdHdrs(hdrs) == LS_FAIL)
-        {
-            delete pStream;
-            return NULL;
-        }
-    }
-    else
+    if (lsquic_stream_is_pushed(s))
         pStream->continueRead();
+    else
+    {
+        void *hdr_set = (UpkdHdrBuilder *)lsquic_stream_get_hset(s);
+        if (hdr_set)
+        {
+            if (pStream->processHdrSet(hdr_set) == LS_FAIL)
+            {
+                delete pStream;
+                return NULL;
+            }
+        }
+        else
+            pStream->continueRead();
+    }
 
     token = NtwkIOLink::getToken();
     assert(token < N_STREAM_Qs);

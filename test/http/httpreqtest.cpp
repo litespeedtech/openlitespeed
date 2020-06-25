@@ -138,7 +138,7 @@ SUITE(HttpReqTest)
         CHECK(req.getOrgReqURLLen() == 51);
         for (int i = 0; i < (int)(sizeof(pSample) / sizeof(char *)); i += 2)
         {
-            int index = HttpHeader::getIndex(pSample[i]);
+            int index = HttpHeader::getIndex(pSample[i], strlen(pSample[i]));
             const char *pHeader = req.getHeader(index);
 
             if (!*pHeader)
@@ -224,7 +224,7 @@ SUITE(HttpReqTest)
         CHECK(req.getOrgReqURLLen() == 41);
         for (int i = 0; i < (int)(sizeof(pSample) / sizeof(char *)); i += 2)
         {
-            int index = HttpHeader::getIndex(pSample[i]);
+            int index = HttpHeader::getIndex(pSample[i], strlen(pSample[i]));
             const char *pHeader = req.getHeader(index);
 
             if (!*pHeader)
@@ -287,12 +287,12 @@ SUITE(HttpReqTest)
         int status = req.getStatus();
         CHECK(HttpReq::HEADER_OK == status);
         CHECK(HttpMethod::HTTP_GET == req.getMethod());
-        int index = HttpHeader::getIndex("Referer");
+        int index = HttpHeader::getIndex("Referer", strlen("Referer"));
         const char *pHeader = req.getHeader(index);
         CHECK(*pHeader);
         CHECK(req.getHeaderLen(index) == 0);
         CHECK(req.getOrgReqURLLen() == 1);
-        index = HttpHeader::getIndex("Accept-Encoding");
+        index = HttpHeader::getIndex("Accept-Encoding", strlen("Accept-Encoding"));
         pHeader = req.getHeader(index);
         CHECK(*pHeader);
         CHECK(req.getHeaderLen(index) == 0);

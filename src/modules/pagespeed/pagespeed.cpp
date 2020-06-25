@@ -1102,7 +1102,7 @@ static int ChildInit(lsi_param_t *rec)
     return 0;
 }
 
-static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *);
+static int BaseFetchDoneCb(evtcbhead_s *session_, long, void *);
 static int CreateBaseFetch(PsMData *pMyData, lsi_session_t *session,
                     RequestContextPtr request_context,
                     RequestHeaders *request_headers,
@@ -1690,7 +1690,7 @@ static int StartRecordForInPlace(PsMData *pMyData, lsi_session_t *session)
 
 
 static int BaseFetchHandler(PsMData *pMyData, lsi_session_t *session);
-static int InPlaceBaseFetchDoneCb(evtcbtail_s *session_, long param, void *pParam)
+static int InPlaceBaseFetchDoneCb(evtcbhead_s *session_, long param, void *pParam)
 {
     g_api->log((lsi_session_t *)session_, LSI_LOG_DEBUG,
                "[%s] InPlaceBaseFetchDoneCb(), session=%p.\n", ModuleName,
@@ -2930,7 +2930,7 @@ static int CopyRespBody(PsMData *pMyData, lsi_session_t *session)
 
 
 //This event shoule occur only once!
-static int BaseFetchDoneCb(evtcbtail_s *session_, long, void *)
+static int BaseFetchDoneCb(evtcbhead_s *session_, long, void *)
 {
     g_api->log((lsi_session_t *)session_, LSI_LOG_DEBUG,
                "[%s] BaseFetchDoneCb(), session=%p.\n", ModuleName,

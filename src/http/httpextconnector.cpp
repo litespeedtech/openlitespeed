@@ -135,7 +135,7 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
                 return -2;
         }
     }
-    ret = HttpCgiTool::parseRespHeader(this, pWBuf, bufLen, m_iRespState);
+    ret = HttpCgiTool::parseRespHeader(this, pWBuf, bufLen);
     if (ret > 0)
     {
         m_iRespHeaderSize += ret;
@@ -671,7 +671,7 @@ void HttpExtConnector::extProcessorError(int errCode)
 const char   *HttpExtConnector::getLogId()
 {
     if (m_pSession)
-        return m_pSession->getLogId();
+        return m_pSession->getLogSession()->getLogId();
     else
         return "idle";
 }
@@ -680,7 +680,7 @@ const char   *HttpExtConnector::getLogId()
 LOG4CXX_NS::Logger *HttpExtConnector::getLogger() const
 {
     if (m_pSession)
-        return m_pSession->getLogger();
+        return m_pSession->getLogSession()->getLogger();
     else
         return NULL;
 

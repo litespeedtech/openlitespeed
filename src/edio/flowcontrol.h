@@ -19,33 +19,21 @@
 #define FLOWCONTROL_H
 
 
-class InputFlowControl
+class IoFlowControl
 {
 public:
-    InputFlowControl() {};
-    virtual ~InputFlowControl() {};
+    IoFlowControl() {};
+    virtual ~IoFlowControl() {};
     virtual void suspendRead() = 0;
     virtual void continueRead() = 0;
-    virtual void suspendNotify() = 0;
-    virtual void resumeNotify() = 0;
-};
-
-class OutputFlowControl
-{
-public:
-    OutputFlowControl() {};
-    virtual ~OutputFlowControl() {};
+    virtual void suspendNotify() {};
+    virtual void resumeNotify() {};
 
     virtual void suspendWrite() = 0;
     virtual void continueWrite() = 0;
+
 };
 
-class IOFlowControl : virtual public OutputFlowControl
-    , virtual public InputFlowControl
-{
-public:
-    IOFlowControl() {};
-    virtual ~IOFlowControl() {};
-};
+#define IOFlowControl IoFlowControl
 
 #endif

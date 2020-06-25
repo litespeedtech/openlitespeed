@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -36,6 +36,6 @@ const char *getH2FrameName(unsigned char bframeType)
 {
     if (bframeType < H2_FRAME_MAX_TYPE)
         return s_sH2FrameName[bframeType];
-    return "UNKONWN";
+    return "UNKNOWN";
 }
 

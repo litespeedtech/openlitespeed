@@ -209,11 +209,11 @@ public:
 
     const char *getCodeString(http_sc_t code)
     {
-        return m_aSC[code]->m_status;
+        return m_aSC[code]->m_status + 1;
     }
     int getCodeStringLen(http_sc_t code)
     {
-        return m_aSC[code]->status_size;
+        return m_aSC[code]->status_size - 1;
     }
     const char *getHeaders(http_sc_t code)
     {

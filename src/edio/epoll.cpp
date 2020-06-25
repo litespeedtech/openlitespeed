@@ -404,8 +404,8 @@ void epoll::applyEvents()
 
 void epoll::appendEvent(int fd)
 {
-    if (m_pUpdates->getSize() >= m_pUpdates->getCapacity())
-        m_pUpdates->guarantee(m_pUpdates->getCapacity() << 1);
+    if (m_pUpdates->size() >= m_pUpdates->capacity())
+        m_pUpdates->guarantee(m_pUpdates->capacity() << 1);
     int *p = m_pUpdates->getNew();
     *p = fd;
 }

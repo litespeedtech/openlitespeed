@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
     <title>Bot Verification</title>
     <script>
@@ -9,13 +10,13 @@
             document.getElementById('lsrecaptcha-form').submit();
         }
 
-        var onloadCallback = async function() {
+        var onloadCallback = function() {
             var cont = grecaptcha.render('recaptchadiv', {
                 'sitekey': '<!--#echo var="ENV:LSRECAPTCHA_SITE_KEY"-->',
                 'callback': onSubmit,
                 <!--#echo var="ENV:LSRECAPTCHA_TYPE_PARAM"-->
             });
-            await grecaptcha.execute(cont);
+            grecaptcha.execute(cont);
         };
     </script>
     <style>

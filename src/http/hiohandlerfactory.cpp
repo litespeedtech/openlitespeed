@@ -20,7 +20,7 @@
 
 #include <http/httpresourcemanager.h>
 #include <http/httpsession.h>
-#include <spdy/h2connection.h>
+#include <h2/h2connection.h>
 #include <spdy/spdyconnection.h>
 
 HioHandler *HioHandlerFactory::getHandler(HiosProtocol proto)

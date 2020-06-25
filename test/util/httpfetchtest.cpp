@@ -37,6 +37,7 @@ TEST(httpfetchTest_Test)
     printf("THIS TEST CAN ONLY TEST BY DEBUG with breakpoints\n");
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
+    MultiplexerFactory::initDefault();
     Multiplexer *mult = MultiplexerFactory::getMultiplexer();
     HttpFetch *pHttpFetch = new HttpFetch;
     //pHttpFetch->setResProcessor(NULL, p);

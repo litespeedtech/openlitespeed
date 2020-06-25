@@ -1038,8 +1038,9 @@ static long create_event(evtcb_pf cb,
 static long create_event(evtcb_pf cb, const lsi_session_t *session,
                          long lParam, void *pParam, int nowait)
 {
-    return (long)EvtcbQue::getInstance().schedule(cb, session,
+    EvtcbQue::getInstance().schedule(cb, (evtcbhead_t *)session,
             lParam, pParam, nowait);
+    return 0;
 }
 
 
@@ -1056,7 +1057,7 @@ static long get_event_obj(evtcb_pf cb, const lsi_session_t *session,
                          long lParam, void *pParam)
 {
    // return (long)EvtcbQue::getInstance().getNodeObj(cb, pSession, lParam, pParam);
-    evtcbnode_s *pEvtObj = EvtcbQue::getInstance().getNodeObj(cb, session, lParam, pParam);
+    evtcbnode_s *pEvtObj = EvtcbQue::getInstance().getNodeObj(cb, (evtcbhead_t *)session, lParam, pParam);
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession)
         pSession->setBackRefPtr(EvtcbQue::getSessionRefPtr(pEvtObj));
@@ -1084,7 +1085,7 @@ static const char *get_req_header(const lsi_session_t *session, const char *key,
     if (pSession == NULL)
         return NULL;
     HttpReq *pReq = pSession->getReq();
-    size_t idx = HttpHeader::getIndex(key);
+    size_t idx = HttpHeader::getIndex(key, keyLen);
     if (idx != HttpHeader::H_HEADER_END)
     {
         *valLen = pReq->getHeaderLen(idx);
@@ -1172,7 +1173,7 @@ static int get_cookie_by_index(const lsi_session_t *session, int index, ls_strpa
     HttpReq *pReq = pSession->getReq();
     pReq->parseCookies();
     const CookieList &list = pReq->getCookieList();
-    if (index < 0 || index >= list.getSize())
+    if (index < 0 || index >= list.size())
       return LS_FALSE;
 
     const cookieval_t val = list.begin()[index];
@@ -2646,7 +2647,7 @@ static void foreach_req_cookie(const HttpSession *session, const char *filter,
     const_cast<HttpReq *>(pReq)->parseCookies();
     const CookieList &list = const_cast<HttpReq *>(pReq)->getCookieList();
 
-    for (int index = 0; index < list.getSize(); ++index)
+    for (int index = 0; index < list.size(); ++index)
     {
         const cookieval_t val = list.begin()[index];
         cookie.key.ptr = const_cast<HttpReq *>(pReq)->getHeaderBuf().getp(val.keyOff);

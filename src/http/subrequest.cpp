@@ -213,7 +213,7 @@ int HttpSession::attachSubSession(HttpSession *pSubSess)
 {
     HioChainStream *pStream = (HioChainStream *)pSubSess->getStream();
     pStream->setParentSession(this);
-    pSubSess->getResp()->setContentLen(LSI_RSP_BODY_SIZE_UNKNOWN);
+    pSubSess->getResp()->setContentLen(LSI_BODY_SIZE_UNKNOWN);
     pStream->setFlag(HIO_FLAG_PASS_THROUGH, 1);
     m_pCurSubSession = pSubSess;
     if (pStream->isWantWrite())

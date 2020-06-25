@@ -35,11 +35,12 @@ StatusLineString::StatusLineString(int version, int code)
     if (code > 0)
     {
         int verLen = HttpVer::getVersionStringLen(version);
-        int codeLen = HttpStatusCode::getInstance().getCodeStringLen(code);
+        int codeLen = HttpStatusCode::getInstance().getCodeStringLen(code) + 1;
         m_iLineLen = verLen + codeLen ;
         m_pLine = s_pEnd;
         memcpy(s_pEnd, HttpVer::getVersionString(version), verLen);
-        memcpy(s_pEnd + verLen, HttpStatusCode::getInstance().getCodeString(code),
+        s_pEnd[verLen] = ' ';
+        memcpy(s_pEnd + verLen + 1, HttpStatusCode::getInstance().getCodeString(code),
                codeLen);
         s_pEnd += m_iLineLen;
     }

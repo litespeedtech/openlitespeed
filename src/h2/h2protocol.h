@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,7 +18,6 @@
 #ifndef H2PROTOCOL_H
 #define H2PROTOCOL_H
 
-#include <spdy/protocoldef.h>
 #include <lsdef.h>
 
 #include <arpa/inet.h>
@@ -107,6 +106,9 @@ enum H2ErrorCode
 };
 
 
+#define H2_CLIENT_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
+#define H2_CLIENT_PREFACE_LEN   24
+
 #define H2_FRAME_HEADER_SIZE        9
 #define H2_PING_FRAME_PAYLOAD_SIZE  8
 
@@ -117,9 +119,9 @@ class H2FrameHeader
     unsigned char m_bFlags;
     unsigned char m_iStreamId[4];
 
-    uint32_t      m_payload[];
 public:
-    H2FrameHeader() {}
+    H2FrameHeader()
+    {   memset(this, 0, sizeof(*this));  }
     ~H2FrameHeader() {}
     H2FrameHeader(uint32_t len, H2FrameType type, uint8_t flags)
         : m_bType(type)
@@ -171,7 +173,6 @@ public:
         m_bLength[ 1 ] = (l >> 8) & 0xff;
         m_bLength[ 2 ] = l & 0xff;
     }
-    const uint32_t *getPayload() const  {   return m_payload;      }
 
     LS_NO_COPY_ASSIGN(H2FrameHeader);
 };
@@ -219,5 +220,6 @@ public:
 
 #define MAX_HTTP2_HEADERS_SIZE      65536
 #define MAX_HEADER_TABLE_SIZE       (512 * 1024)
+#define H2_TMP_HDR_BUFF_SIZE        65536
 
 #endif // H2PROTOCOL_H

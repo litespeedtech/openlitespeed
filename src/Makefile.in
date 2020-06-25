@@ -155,9 +155,8 @@ am_openlitespeed_OBJECTS = modules/prelinkedmods.$(OBJEXT) \
 	lsr/ls_strlist.$(OBJEXT) lsr/ls_strtool.$(OBJEXT) \
 	lsr/ls_time.$(OBJEXT) lsr/ls_tsstack.$(OBJEXT) \
 	lsr/ls_xpool.$(OBJEXT) lsr/xxhash.$(OBJEXT) \
-	lsr/offloader.$(OBJEXT) lsr/reuseport.$(OBJEXT) \
-	thread/mtnotifier.$(OBJEXT) thread/pthreadcond.$(OBJEXT) \
-	thread/pthreadmutex.$(OBJEXT) \
+	thread/offloader.$(OBJEXT) thread/mtnotifier.$(OBJEXT) \
+	thread/pthreadcond.$(OBJEXT) thread/pthreadmutex.$(OBJEXT) \
 	thread/pthreadworkqueue.$(OBJEXT) thread/thread.$(OBJEXT) \
 	thread/workcrew.$(OBJEXT) thread/worker.$(OBJEXT) \
 	thread/crewworker.$(OBJEXT)
@@ -167,11 +166,12 @@ openlitespeed_DEPENDENCIES = ./main/libmain.a ./http/libhttp.a \
 	./extensions/libextensions.a ./log4cxx/liblog4cxx.a \
 	./socket/libsocket.a ./sslpp/libsslpp.a ./ssi/libssi.a \
 	./edio/libedio.a ./lsiapi/liblsiapi.a ./modules/libmodules.a \
-	./shm/liblsshm.a ./adns/libadns.a ./quic/libquic.a \
-	./liblsquic/liblsquic.a ./spdy/libspdy.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(AM_OPENSSL_LIBS) $(am__DEPENDENCIES_1) \
+	./shm/liblsshm.a ./adns/libadns.a ./h2/libh2.a \
+	./quic/libquic.a ./liblsquic/liblsquic.a ./spdy/libspdy.a \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) $(AM_OPENSSL_LIBS) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -551,8 +551,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
-   lsr/offloader.cpp \
-   lsr/reuseport.cpp \
+   thread/offloader.cpp \
    thread/mtnotifier.cpp \
    thread/pthreadcond.cpp \
    thread/pthreadmutex.cpp \
@@ -560,21 +559,22 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    thread/thread.cpp \
    thread/workcrew.cpp \
    thread/worker.cpp \
-   thread/crewworker.cpp
+   thread/crewworker.cpp 
 
 openlitespeed_LDADD = ./main/libmain.a ./http/libhttp.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
+        ./h2/libh2.a \
         ./quic/libquic.a ./liblsquic/liblsquic.a ./spdy/libspdy.a \
         $(LIBBROTLI) $(LIBMMDB) $(EXTRA_LIBS) \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) ${IP2LOCATION_LIBS} \
         -ludns -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = $(OPENSSL_LDFLAGS) -L/usr/lib -L/usr/local/lib -L/usr/lib64  
-AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/src/lshpack  -I$(top_srcdir)/src/liblsquic/ls-qpack -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 AM_CXXFLAGS = -std=c++0x
-SUBDIRS = socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns quic liblsquic
+SUBDIRS = socket http h2 spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns quic liblsquic
 
 # the library search path.
 openlitespeed_LDFLAGS = $(all_libraries)
@@ -886,16 +886,14 @@ lsr/ls_xpool.$(OBJEXT): lsr/$(am__dirstamp) \
 	lsr/$(DEPDIR)/$(am__dirstamp)
 lsr/xxhash.$(OBJEXT): lsr/$(am__dirstamp) \
 	lsr/$(DEPDIR)/$(am__dirstamp)
-lsr/offloader.$(OBJEXT): lsr/$(am__dirstamp) \
-	lsr/$(DEPDIR)/$(am__dirstamp)
-lsr/reuseport.$(OBJEXT): lsr/$(am__dirstamp) \
-	lsr/$(DEPDIR)/$(am__dirstamp)
 thread/$(am__dirstamp):
 	@$(MKDIR_P) thread
 	@: > thread/$(am__dirstamp)
 thread/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) thread/$(DEPDIR)
 	@: > thread/$(DEPDIR)/$(am__dirstamp)
+thread/offloader.$(OBJEXT): thread/$(am__dirstamp) \
+	thread/$(DEPDIR)/$(am__dirstamp)
 thread/mtnotifier.$(OBJEXT): thread/$(am__dirstamp) \
 	thread/$(DEPDIR)/$(am__dirstamp)
 thread/pthreadcond.$(OBJEXT): thread/$(am__dirstamp) \
@@ -961,12 +959,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/ls_time.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/ls_tsstack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/ls_xpool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/offloader.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/reuseport.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/xxhash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@modules/$(DEPDIR)/prelinkedmods.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/crewworker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/mtnotifier.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/offloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/pthreadcond.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/pthreadmutex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/pthreadworkqueue.Po@am__quote@

@@ -3,6 +3,10 @@
 #include <lsdef.h>
 #include <util/autostr.h>
 
+
+#define MULTI_CERT_ALL   1
+#define MULTI_CERT_ECC   2
+
 class SslContextConfig
 {
 public:

@@ -8,6 +8,8 @@
 #define ADNS_H
 
 #include <lsdef.h>
+#include <lsr/ls_evtcb.h>
+
 #include <time.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -21,6 +23,8 @@ class LsShmHash;
 class Adns;
 
 #include <edio/eventreactor.h>
+#include <lsr/ls_atomic.h>
+#include <lsr/ls_lock.h>
 #include <util/tsingleton.h>
 
 typedef void (* addrLookupCbV4)(struct dns_ctx *, struct dns_rr_a4 *, void *);
@@ -67,7 +71,7 @@ private:
 };
 
 
-class Adns : public EventReactor, public TSingleton<Adns>
+class Adns : public EventReactor, public evtcbhead_s, public TSingleton<Adns>
 {
     friend class TSingleton<Adns>;
 
@@ -108,15 +112,9 @@ public:
 
     void       checkCacheTTL();
     
-    void       processPendingEvt()  
-    {
-        if (m_iPendingEvt)
-        {
-            checkDnsEvents();
-            m_iPendingEvt = 0;
-        }
-    }
-    
+    void       processPendingEvt()
+    {}
+
 private:
     Adns();
     ~Adns();
@@ -126,6 +124,8 @@ private:
     static void printLookupError(struct dns_ctx *ctx, AdnsReq *pAdnsReq);
 
     void checkDnsEvents();
+    static int checkDnsEventsCb(evtcbhead_t *, const long , void *);
+    void wantCheckDnsEvents();
     LsShmHash  *getShmHash()    {   return m_pShmHash;  }
 
 
@@ -134,6 +134,7 @@ private:
     short               m_iPendingEvt;
     LsShmHash          *m_pShmHash;
     time_t              m_tmLastTrim;
+    ls_mutex_t          m_mutex;
 
     LS_NO_COPY_ASSIGN(Adns);
 };

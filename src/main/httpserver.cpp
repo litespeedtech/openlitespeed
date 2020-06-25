@@ -399,6 +399,8 @@ private:
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
     void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod);
+    void fixConfDirsPermission();
+
     int configServerBasic2(const XmlNode *pRoot, const char *pSwapDir);
     int configMultiplexer(const XmlNode *pNode);
     void configVHTemplateToListenerMap(const XmlNodeList *pList,
@@ -608,7 +610,11 @@ int generateConnReport(int fd)
                         "SSL_BPS_IN: %ld, SSL_BPS_OUT: %ld\n"
                         "MAXCONN: %d, MAXSSL_CONN: %d, PLAINCONN: %d, "
                         "AVAILCONN: %d, IDLECONN: %d, SSLCONN: %d, AVAILSSL: %d\n"
-                        "REQ_RATE []: REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d\n",
+                        "REQ_RATE []: REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d, "
+                        "PUB_CACHE_HITS_PER_SEC: %d, TOTAL_PUB_CACHE_HITS: %d, "
+                        "PRIVATE_CACHE_HITS_PER_SEC: %d, TOTAL_PRIVATE_CACHE_HITS: %d, "
+                        "STATIC_HITS_PER_SEC: %d, TOTAL_STATIC_HITS: %d\n",
+
                         HttpStats::getBytesRead() / 1024,
                         HttpStats::getBytesWritten() / 1024,
                         HttpStats::getSSLBytesRead() / 1024,
@@ -620,7 +626,15 @@ int generateConnReport(int fd)
                         ctrl.getMaxConns() - ctrl.availConn()
                         - HttpStats::getIdleConns(),
                         HttpStats::getReqStats()->getRPS(),
-                        HttpStats::getReqStats()->getTotal());
+                        HttpStats::getReqStats()->getTotal(),
+
+                        HttpStats::getReqStats()->getPubHitsPS(),
+                        HttpStats::getReqStats()->getTotalPubHits(),
+                        HttpStats::getReqStats()->getPrivHitsPS(),
+                        HttpStats::getReqStats()->getTotalPrivHits(),
+                        HttpStats::getReqStats()->getHitsPS(),
+                        HttpStats::getReqStats()->getTotalHits());
+
     write(fd, achBuf, n);
 
     HttpStats::setBytesRead(0);
@@ -2361,13 +2375,10 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 //     if (val)
 //         FileCacheDataEx::setMaxMMapCacheSize(0);
 
-    const char *pValue = pNode->getChildValue("SSLCryptoDevice");
+    const char *pValue = pNode->getChildValue("sslDefaultCiphers");
+    if (pValue)
+        SslUtil::setDefaultCipherList(pValue);
 
-    if (SslEngine::init(pValue) == -1)
-    {
-        LS_WARN(&currentCtx, "Failed to initialize SSL Accelerator Device: %s,"
-                " SSL hardware acceleration is disabled!", pValue);
-    }
     SslContext::setUseStrongDH(currentCtx.getLongValue(pNode, "SSLStrongDhKey",
                                0, 1, 1));
 
@@ -2726,6 +2737,58 @@ void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, i
     }
 }
 
+void HttpServerImpl::fixConfDirsPermission()
+{
+    bool rootuser = (getuid() == 0);
+    if (!rootuser)
+        return ;
+
+    struct passwd *pw = getpwnam("lsadm");
+    if (!pw)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
+        return ;
+    }
+
+    uid_t uid = pw->pw_uid;
+    gid_t gid = ServerProcessConfig::getInstance().getGid();
+    int mod = 0750;
+    bool needUpdated = false;
+
+    char  achBuf[4096];
+    const char *testDir[] = {"conf", "conf/templates", "conf/vhosts", };
+
+    const char *pRoot = MainServerConfig::getInstance().getServerRoot();
+
+    for (int i = 0; i < sizeof(testDir) / sizeof(const char *); ++i)
+    {
+        ls_snprintf(achBuf, 4096, "%s/%s/", pRoot, testDir[i]);
+
+        struct stat sb;
+        int iStat = stat(achBuf, &sb);
+        if (iStat == -1)
+        {
+            LS_NOTICE("[fixConfAndDirs] \"%s\" does not exist!!!", achBuf);
+            break;
+        }
+
+        if (sb.st_uid != uid || sb.st_gid != gid || (sb.st_mode & 0777) != mod)
+        {
+            LS_NOTICE("[testAndFixDirs] \"%s\" own or permission need to be changed.", achBuf);
+            needUpdated = true;
+            break;
+        }
+    }
+
+    if (needUpdated)
+    {
+        ls_snprintf(achBuf, 4096, "chown -R %s:%s %s/conf/; chmod -R 0750 %s/conf/ ",
+                    "lsadm", MainServerConfig::getInstance().getGroup(), pRoot, pRoot);
+        system(achBuf);
+    }
+
+}
+
 
 int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                                        const char *pSwapDir)
@@ -2770,7 +2833,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 3, 0));
+                    "useIpInProxyHeader", 0, 4, 0));
 
         denyAccessFiles(NULL, ".ht*", 0);
 
@@ -3270,13 +3333,22 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         testAndFixDirs("autoupdate", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("tmp", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("tmp/ocspcache", procConf.getUid(), procConf.getGid(), 0700);
+        fixConfDirsPermission();
 
-        //Fix Conf now
-        pw = getpwnam("lsadm");
-        if (!pw)
-            LS_ERROR(ConfigCtx::getCurConfigCtx(), "Get lsadm passwd failed.");
-        else
-            testAndFixDirs("conf", pw->pw_uid, procConf.getGid(), 0750);
+        char syscmd[1024] = {0};
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+        snprintf(syscmd, 1024, "usermod -a -G %s lsadm", MainServerConfigObj.getGroup());
+#endif
+
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
+        snprintf(syscmd, 1024, "pw usermod lsadm -G %s", MainServerConfigObj.getGroup());
+#endif
+
+#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+        snprintf(syscmd, 1024, "dseditgroup -o edit -a lsadm -t user %s", MainServerConfigObj.getGroup());
+#endif
+        if (*syscmd)
+            ::system(syscmd);
 
         return 0;
     }

@@ -35,10 +35,10 @@ public:
     void    release()               {   ls_objarray_release(this); }
     void    clear()                 {   sizenow = 0; }
 
-    int     getCapacity() const     {   return sizemax;     }
-    int     getSize() const         {   return sizenow;     }
+    int     capacity() const        {   return sizemax;     }
     int     size() const            {   return sizenow;     }
-    
+    int     getSize() const         {   return sizenow;     }
+
     int     getObjSize() const      {   return objsize;     }
     void   *getArray()              {   return parray;      }
     const void *getArray() const    {   return parray;      }
@@ -83,13 +83,14 @@ public:
     void    init(int objSize)           {   ls_objarray_init(this, objSize); }
     void    release(ls_xpool_t *pool)
     {   ls_objarray_release_xpool(this, pool); }
-    void    clear()                             {   sizenow = 0; }
+    void    clear()                     {   sizenow = 0; }
 
-    int     getCapacity() const                 {   return sizemax;     }
-    int     getSize() const                     {   return sizenow;     }
-    int     getObjSize() const                  {   return objsize;     }
-    void   *getArray()                          {   return parray;      }
-    const void *getArray() const                {   return parray;      }
+    int     capacity() const            {   return sizemax;     }
+    int     size() const                {   return sizenow;     }
+    int     getSize() const         {   return sizenow;     }
+    int     getObjSize() const          {   return objsize;     }
+    void   *getArray()                  {   return parray;      }
+    const void *getArray() const        {   return parray;      }
     void   *getObj(int index) const     {   return ls_objarray_getobj(this, index);}
     void   *getNew()                    {   return ls_objarray_getnew(this); }
 
@@ -123,13 +124,29 @@ public:
     T      *newObj()                    {   return getNew();    }
 
     T *begin()      {   return  getArray();    }
-    T *end()        {   return (T *)getArray() + getSize();   }
+    T *end()        {   return (T *)getArray() + size();   }
 
     const T *begin() const     {   return  getArray();    }
-    const T *end() const       {   return (const T *)getArray() + getSize();   }
+    const T *end() const       {   return (const T *)getArray() + size();   }
+
+    T *get(int index)
+    {
+        if (index >= 0 && index < size())
+            return begin() + index;
+        else
+            return NULL;
+    }
+
+    const T *get(int index) const
+    {
+        if (index >= 0 && index < size())
+            return begin() + index;
+        else
+            return NULL;
+    }
 
     void deleteObj(T *iter)   {   iter->~T();                 }
-    
+
     void releaseObjects()
     {
         T *b = begin();
@@ -138,12 +155,12 @@ public:
             deleteObj(b);
         clear();
     }
-    
+
     void copy(const TObjArray &other)
     {
-        setCapacity(other.getCapacity());
-        setSize(other.getSize());
-        memmove(getArray(), other.getArray(), getSize() * sizeof(T));
+        setCapacity(other.capacity());
+        setSize(other.size());
+        memmove(getArray(), other.getArray(), size() * sizeof(T));
     }
 
     int guarantee(int numObj)
@@ -175,16 +192,32 @@ public:
     T      *newObj()                    {   return getNew();    }
 
     T *begin()      {   return  getArray();    }
-    T *end()        {   return (T *)getArray() + getSize();   }
+    T *end()        {   return (T *)getArray() + size();   }
 
     const T *begin() const     {   return  getArray();    }
-    const T *end() const       {   return (const T *)getArray() + getSize();   }
+    const T *end() const       {   return (const T *)getArray() + size();   }
+
+    T *get(int index)
+    {
+        if (index >= 0 && index < size())
+            return begin() + index;
+        else
+            return NULL;
+    }
+
+    const T *get(int index) const
+    {
+        if (index >= 0 && index < size())
+            return begin() + index;
+        else
+            return NULL;
+    }
 
     void copy(ObjArrayXpool &other, ls_xpool_t *pool)
     {
-        setCapacity(pool, other.getCapacity());
-        setSize(other.getSize());
-        memmove(getArray(), other.getArray(), getSize() * sizeof(T));
+        setCapacity(pool, other.capacity());
+        setSize(other.size());
+        memmove(getArray(), other.getArray(), size() * sizeof(T));
     }
 
     int guarantee(ls_xpool_t *pool, int numObj)

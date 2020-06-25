@@ -628,7 +628,7 @@ int ProxyConn::processResp()
             m_iRespBodySize = pHEC->getHttpSession()->getResp()->getContentLen();
             LS_DBG_L(this, "Response body size of proxy reply is %lld",
                      (long long)m_iRespBodySize);
-            if (m_iRespBodySize == LSI_RSP_BODY_SIZE_CHUNKED)
+            if (m_iRespBodySize == LSI_BODY_SIZE_CHUNK)
                 setupChunkIS();
             else if (!(respState & HEC_RESP_CONT_LEN))
                 m_iRespBodySize = INT_MAX;

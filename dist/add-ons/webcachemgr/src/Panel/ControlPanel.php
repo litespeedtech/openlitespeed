@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.12';
+    const PANEL_API_VERSION = '1.13.1';
 
     /**
      * @since 1.9
@@ -69,6 +69,11 @@ abstract class ControlPanel
      * @var string
      */
     const NOT_SET = '__LSC_NOTSET__';
+
+    /**
+     * @var string
+     */
+    protected $panelName = '';
 
     /**
      * @var string
@@ -113,10 +118,13 @@ abstract class ControlPanel
     protected static $minAPIFilePath = '';
 
     /**
-     * @var null|ControlPanel
+     * @var null|ControlPanel  Object that extends ControlPanel abstract class.
      */
     protected static $instance;
 
+    /**
+     * @throws LSCMException  Thrown indirectly.
+     */
     protected function __construct()
     {
         /**
@@ -124,8 +132,9 @@ abstract class ControlPanel
          * 'ob_gzhandler' etc.
          */
         $this->phpOptions = '-d disable_functions=ini_set -d opcache.enable=0 '
-                . '-d max_execution_time=' . static::PHP_TIMEOUT . ' -d memory_limit=512M '
-                . '-d register_argc_argv=1 -d zlib.output_compression=0 -d output_handler= '
+                . '-d max_execution_time=' . static::PHP_TIMEOUT
+                . ' -d memory_limit=512M -d register_argc_argv=1 '
+                . '-d zlib.output_compression=0 -d output_handler= '
                 . '-d safe_mode=0 -d open_basedir=';
 
         $this->initConfPaths();
@@ -142,7 +151,8 @@ abstract class ControlPanel
      *
      * @deprecated
      * @param string  $className  A fully qualified control panel class name
-     * @return ControlPanel|null
+     * @return ControlPanel|null  Object that extends ControlPanel abstract
+     *                            class.
      * @throws LSCMException
      */
     public static function initByClassName( $className )
@@ -151,7 +161,8 @@ abstract class ControlPanel
 
             if ( $className == 'custom' ) {
                 $lsws_home = realpath(__DIR__ . '/../../../../');
-                $customPanelFile = "{$lsws_home}/admin/lscdata/custom/CustomPanel.php";
+                $customPanelFile =
+                    "{$lsws_home}/admin/lscdata/custom/CustomPanel.php";
 
                 if ( ! file_exists($customPanelFile)
                         || ! include_once $customPanelFile ) {
@@ -162,8 +173,10 @@ abstract class ControlPanel
 
                 $className = '\Lsc\Wp\Panel\CustomPanel';
 
-                $isSubClass =
-                        is_subclass_of($className, '\Lsc\Wp\Panel\CustomPanelBase');
+                $isSubClass = is_subclass_of(
+                    $className,
+                    '\Lsc\Wp\Panel\CustomPanelBase'
+                );
 
                 if ( ! $isSubClass ) {
                     $msg = 'Class CustomPanel must extend class '
@@ -185,8 +198,10 @@ abstract class ControlPanel
 
             if ( $instanceClassName != $className ) {
                 throw new LSCMException(
-                        "Could not initialize {$className} instance as an instance of another "
-                        . "class ({$instanceClassName}) has already been created.");
+                    "Could not initialize {$className} instance as an instance "
+                        . "of another class ({$instanceClassName}) has already "
+                        . 'been created.'
+                );
             }
         }
 
@@ -199,13 +214,15 @@ abstract class ControlPanel
      * @deprecated
      *
      * @param string  $name
-     * @return ControlPanel
+     * @return ControlPanel  Object that extends ControlPanel abstract class.
      * @throws LSCMException
      */
     public static function init( $name )
     {
         if ( static::$instance != null ) {
-            throw new LSCMException('ControlPanel cannot be initialized twice.');
+            throw new LSCMException(
+                'ControlPanel cannot be initialized twice.'
+            );
         }
 
         switch ($name) {
@@ -216,7 +233,9 @@ abstract class ControlPanel
                 $className = 'Plesk';
                 break;
             default:
-                throw new LSCMException("Control panel '{$name}' is not supported.");
+                throw new LSCMException(
+                    "Control panel '{$name}' is not supported."
+                );
         }
 
         return static::initByClassName("\Lsc\Wp\Panel\\{$className}");
@@ -228,7 +247,7 @@ abstract class ControlPanel
      * initialized if it has not yet been initialized already.
      *
      * @param string $className  Fully qualified class name.
-     * @return ControlPanel
+     * @return ControlPanel  Object that extends ControlPanel abstract class.
      * @throws LSCMException  Indirectly thrown by static::initByClassName().
      */
     public static function getClassInstance( $className = '' )
@@ -237,7 +256,9 @@ abstract class ControlPanel
             static::initByClassName($className);
         }
         elseif ( static::$instance == null ) {
-            throw new LSCMException('Could not get instance, ControlPanel not initialized. ');
+            throw new LSCMException(
+                'Could not get instance, ControlPanel not initialized. '
+            );
         }
 
         return static::$instance;
@@ -247,7 +268,7 @@ abstract class ControlPanel
      * Deprecated on 02/06/19. Use getClassInstance() instead.
      *
      * @deprecated
-     * @return ControlPanel
+     * @return ControlPanel  Object that extends ControlPanel abstract class.
      */
     public static function getInstance()
     {
@@ -301,9 +322,9 @@ abstract class ControlPanel
     public function verifyCacheSetup()
     {
         if ( !$this->isCacheEnabled() ) {
-            $msg = 'LSCache is not included in the current LiteSpeed license. Please purchase the '
-                    . 'LSCache add-on or upgrade to a license type that includes LSCache and try '
-                    . 'again.';
+            $msg = 'LSCache is not included in the current LiteSpeed license. '
+                    . 'Please purchase the LSCache add-on or upgrade to a '
+                    . 'license type that includes LSCache and try again.';
 
             throw new LSCMException($msg, LSCMException::E_PERMISSION);
         }
@@ -345,9 +366,14 @@ abstract class ControlPanel
 
         $this->vhCacheRoot = $vhCacheRoot;
 
-        $this->log("Virtual Host cache root set to {$vhCacheRoot}", Logger::L_INFO);
+        $this->log(
+            "Virtual Host cache root set to {$vhCacheRoot}",
+            Logger::L_INFO
+        );
 
-        if ( $this->vhCacheRoot[0] == '/' && !file_exists($this->vhCacheRoot) ) {
+        if ( $this->vhCacheRoot[0] == '/'
+                && !file_exists($this->vhCacheRoot) ) {
+
             /**
              * 01/29/19: Temporarily create top virtual host cache root
              * directory to avoid LSWS setting incorrect owner/group and
@@ -371,8 +397,8 @@ abstract class ControlPanel
         $statusFile = '/tmp/lshttpd/.status';
 
         if ( !file_exists($statusFile) ) {
-            $msg = 'Cannot determine LSCache availability. Please start/switch to LiteSpeed Web '
-                    . 'Server before trying again.';
+            $msg = 'Cannot determine LSCache availability. Please start/switch '
+                    . 'to LiteSpeed Web Server before trying again.';
 
             throw new LSCMException($msg, LSCMException::E_PERMISSION);
         }
@@ -386,7 +412,9 @@ abstract class ControlPanel
         $line = fread($f, 128);
         fclose($f);
 
-        if ( preg_match('/FEATURES: ([0-9\.]+)/', $line, $m) && ($m[1] & 1) == 1 ) {
+        if ( preg_match('/FEATURES: ([0-9\.]+)/', $line, $m)
+                && ($m[1] & 1) == 1 ) {
+
             return true;
         }
 
@@ -458,6 +486,11 @@ abstract class ControlPanel
         return $this->vhCacheRoot;
     }
 
+    /**
+     *
+     * @return void
+     * @throws LSCMException  Thrown in some existing implementations.
+     */
     abstract protected function initConfPaths();
 
     abstract protected function prepareDocrootMap();
@@ -558,7 +591,10 @@ abstract class ControlPanel
 
         if ( $svrCacheRoot ) {
             $this->serverCacheRoot = $svrCacheRoot;
-            $this->log("Server level cache root is {$svrCacheRoot}.", Logger::L_DEBUG);
+            $this->log(
+                "Server level cache root is {$svrCacheRoot}.",
+                Logger::L_DEBUG
+            );
         }
         else {
             $this->serverCacheRoot = static::NOT_SET;
@@ -567,11 +603,17 @@ abstract class ControlPanel
 
         if ( $vhCacheRoot ) {
             $this->vhCacheRoot = $vhCacheRoot;
-            $this->log("Virtual Host level cache root is {$vhCacheRoot}.", Logger::L_DEBUG);
+            $this->log(
+                "Virtual Host level cache root is {$vhCacheRoot}.",
+                Logger::L_DEBUG
+            );
         }
         else {
             $this->vhCacheRoot = static::NOT_SET;
-            $this->log('Virtual Host level cache root is not set.', Logger::L_INFO);
+            $this->log(
+                'Virtual Host level cache root is not set.',
+                Logger::L_INFO
+            );
         }
     }
 
@@ -633,7 +675,8 @@ abstract class ControlPanel
             $cacheroot = $this->defaultSvrCacheRoot;
         }
 
-        $cacheRootLine = "<IfModule LiteSpeed>\nCacheRoot {$cacheroot}\n</IfModule>\n\n";
+        $cacheRootLine =
+            "<IfModule LiteSpeed>\nCacheRoot {$cacheroot}\n</IfModule>\n\n";
 
         if ( !file_exists($this->apacheConf) ) {
             file_put_contents($this->apacheConf, $cacheRootLine);
@@ -644,11 +687,15 @@ abstract class ControlPanel
         else {
 
             if ( !is_writable($this->apacheConf) ) {
-                throw new LSCMException('Apache Config is not writeable. No changes made.');
+                throw new LSCMException(
+                    'Apache Config is not writeable. No changes made.'
+                );
             }
 
             if ( !Util::createBackup($this->apacheConf) ) {
-                throw new LSCMException('Could not backup Apache config. No changes made.');
+                throw new LSCMException(
+                    'Could not backup Apache config. No changes made.'
+                );
             }
             else {
                 $file_contents = file($this->apacheConf);
@@ -656,13 +703,18 @@ abstract class ControlPanel
                 if ( preg_grep('/^\s*<IfModule +LiteSpeed *>/im', $file_contents) ) {
 
                     if ( preg_grep('/^\s*CacheRoot +/im', $file_contents) ) {
-                        $file_contents = preg_replace('/^\s*CacheRoot +.+/im',
-                                "CacheRoot {$cacheroot}", $file_contents);
+                        $file_contents = preg_replace(
+                            '/^\s*CacheRoot +.+/im',
+                            "CacheRoot {$cacheroot}",
+                            $file_contents
+                        );
                     }
                     else {
-                        $file_contents = preg_replace('/^\s*<IfModule +LiteSpeed *>/im',
-                                "<IfModule LiteSpeed>\nCacheRoot {$cacheroot}",
-                                $file_contents);
+                        $file_contents = preg_replace(
+                            '/^\s*<IfModule +LiteSpeed *>/im',
+                            "<IfModule LiteSpeed>\nCacheRoot {$cacheroot}",
+                            $file_contents
+                        );
                     }
                 }
                 else {
@@ -675,15 +727,27 @@ abstract class ControlPanel
 
         $this->serverCacheRoot = $cacheroot;
 
-        $this->log("Server level cache root set to {$cacheroot}", Logger::L_INFO);
+        $this->log(
+            "Server level cache root set to {$cacheroot}",
+            Logger::L_INFO
+        );
 
         if ( file_exists($cacheroot) ) {
             exec("/bin/rm -rf {$cacheroot}");
-            $this->log('Server level cache root directory removed for proper permission.',
-                    Logger::L_DEBUG);
+            $this->log(
+                'Server level cache root directory removed for proper '
+                    . 'permission.',
+                Logger::L_DEBUG
+            );
         }
     }
 
+    /**
+     *
+     * @param array   $file_contents
+     * @param string  $vhCacheRoot
+     * @return array
+     */
     abstract protected function addVHCacheRootSection( $file_contents,
             $vhCacheRoot = 'lscache' );
 
@@ -696,13 +760,16 @@ abstract class ControlPanel
     {
         if ( !is_writable($vhConf) ) {
             throw new LSCMException(
-                    "Could not write to VH config {$vhConf}. No changes made.",
-                    LSCMException::E_PERMISSION);
+                "Could not write to VH config {$vhConf}. No changes made.",
+                LSCMException::E_PERMISSION
+            );
         }
         if ( !Util::createBackup($vhConf) ) {
             throw new LSCMException(
-                    "Could not backup Virtual Host config file {$vhConf}. No changes made.",
-                    LSCMException::E_PERMISSION);
+                "Could not backup Virtual Host config file {$vhConf}. No "
+                    . 'changes made.',
+                LSCMException::E_PERMISSION
+            );
         }
 
         $file_contents = file($vhConf);
@@ -714,9 +781,11 @@ abstract class ControlPanel
                         "CacheRoot {$vhCacheRoot}", $file_contents);
             }
             else {
-                $modified_contents = preg_replace('/^\s*<IfModule +LiteSpeed *>/im',
-                        "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}",
-                        $file_contents);
+                $modified_contents = preg_replace(
+                    '/^\s*<IfModule +LiteSpeed *>/im',
+                    "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}",
+                    $file_contents
+                );
             }
         }
         else {
@@ -846,6 +915,11 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.13.1',
+            '1.13.0.3',
+            '1.13.0.2',
+            '1.13.0.1',
+            '1.13',
             '1.12',
             '1.11',
             '1.10',

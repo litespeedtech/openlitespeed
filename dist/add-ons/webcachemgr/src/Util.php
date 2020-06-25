@@ -426,6 +426,7 @@ class Util
      *
      * @param string   $dir         Directory path
      * @param boolean  $keepParent  Only remove directory contents when true.
+     * @return boolean
      */
     public static function rrmdir( $dir, $keepParent = false )
     {

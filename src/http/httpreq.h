@@ -28,6 +28,7 @@ enum
 
 
 #include <http/httpheader.h>
+#include <http/httpmethod.h>
 #include <http/httpstatuscode.h>
 
 #include "httpvhost.h"
@@ -55,7 +56,7 @@ enum
 #define REWRITE_PERDIR          (1<<8)
 #define REWRITE_QSD             (1<<9)
 #define REWRITE_CACHE_CONF      (1<<10)
-#define CACHE_DECOMPRESS        (1<<11)
+#define REBUILD_COOKIE_UPKHDR   (1<<11)
 #define NO_RESP_BODY            (1<<12)
 #define IS_ERROR_PAGE           (1<<13)
 #define LSCACHE_FRONTEND        (1<<14)
@@ -183,7 +184,7 @@ public:
     void reset()
     {   clear(); m_iSessIdx = 0;    }
 
-    void cookieClassify(cookieval_t *pCookieEntry,
+    int cookieClassify(cookieval_t *pCookieEntry,
                         const char *pCookies, int nameLen,
                         const char *pVal, int valLen);
 
@@ -271,6 +272,7 @@ private:
     //const HttpContext * m_pHTAContext;
     const HttpContext  *m_pFMContext;
     VMemBuf            *m_pReqBodyBuf;
+    UnpackedHeaders    *m_pUpkdHeaders;
     HttpRange          *m_pRange;
     HttpVHost          *m_pVHost;
     const char         *m_pForcedType;
@@ -339,7 +341,7 @@ private:
         m_commonHeaderLen[index] = len;
     }
     key_value_pair *getCurHeaderIdx()
-    {   return m_unknHeaders.getObj(m_unknHeaders.getSize() - 1);   }
+    {   return m_unknHeaders.getObj(m_unknHeaders.size() - 1);   }
     key_value_pair *newUnknownHeader();
 
     key_value_pair *newKeyValueBuf();
@@ -683,7 +685,7 @@ public:
 
     int  getUnknownHeaderCount() const
     {
-        return m_unknHeaders.getSize();
+        return m_unknHeaders.size();
     }
     const char *getUnknownHeaderByIndex(int idx, int &keyLen,
                                         const char *&pValue, int &valLen) const;
@@ -884,6 +886,8 @@ public:
     cookieval_t *getCookie(const char *pName, int nameLen);
     cookieval_t *insertCookieIndex(const char *pName, int nameLen);
     int parseCookies();
+    int parseCookies(const char *cookies, const char *end);
+    int parseOneCookie(const char *pCookies, const char *pValEnd);
     int copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
                                  int cookieLen);
     CookieList  &getCookieList() { return   m_cookies; }

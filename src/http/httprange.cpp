@@ -86,15 +86,15 @@ HttpRange::HttpRange(off_t entityLen)
 
 int HttpRange::count() const
 {
-    return m_array.getSize();
+    return m_array.size();
 }
 
 ByteRange *HttpRange::getSlot(ls_xpool_t *pool)
 {
-    if (m_array.getCapacity() == 0)
+    if (m_array.capacity() == 0)
         m_array.guarantee(pool, 3);
-    else if (m_array.getCapacity() <= m_array.getSize() + 1)
-        m_array.guarantee(pool, m_array.getCapacity() * 2);
+    else if (m_array.capacity() <= m_array.size() + 1)
+        m_array.guarantee(pool, m_array.capacity() * 2);
     return m_array.getNew();
 }
 

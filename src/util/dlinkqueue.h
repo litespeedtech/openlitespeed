@@ -35,6 +35,13 @@ public:
         : m_iTotal(0)
     {}
     ~LinkQueue() {}
+
+    void clear()
+    {
+        m_head.setNext(NULL);
+        m_iTotal = 0;
+    }
+
     int size() const    {   return m_iTotal;    }
     void push(LinkedObj *pObj)
     {   m_head.addNext(pObj);     ++m_iTotal;     }
@@ -78,9 +85,16 @@ public:
     ~DLinkQueue()
     {}
     int size() const    {   return m_iTotal;    }
+    void setSize(int s) {   m_iTotal = s;                      }
+
     bool empty() const  {   return m_head.next() == &m_head;   }
 
     DLinkedObj *head()   {   return  &m_head;      }
+
+    void clear()
+    {
+        reset();
+    }
 
     void append(DLinkedObj *pReq)
     {

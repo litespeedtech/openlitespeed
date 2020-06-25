@@ -43,7 +43,7 @@
 #include <lsr/ls_hash.h>
 #include <lsr/ls_strtool.h>
 #include <lsr/ls_xpool.h>
-#include <spdy/unpackedheaders.h>
+#include <h2/unpackedheaders.h>
 #include <ssi/ssiruntime.h>
 #include <util/blockbuf.h>
 #include <util/gpath.h>
@@ -414,7 +414,7 @@ static int processUserAgent(const char *pUserAgent, int len)
     int iType = UA_UNKNOWN;
     if (len <= 0 || !pUserAgent)
         return iType;
-    
+
     char achUA[256];
     switch(*pUserAgent)
     {
@@ -495,10 +495,10 @@ void HttpReq::classifyUrl()
 
     if (memcmp(pUrlEnd - 11, "/robots.txt", 11) == 0)
         m_iUrlType = URL_ROBOTS_TXT;
-    else if (m_curURL.keyLen >= 12
+    else if (iUrlLen >= 12
             && memcmp(pUrlEnd- 12, "/favicon.ico", 12) == 0)
         m_iUrlType = URL_FAVICON;
-    else if (m_curURL.keyLen >= 28
+    else if (iUrlLen >= 28
              && memcmp(getURI(), "/.well-known/acme-challenge/", 28) == 0)
         m_iUrlType = URL_ACME_CHALLENGE;
     else if (iUrlLen >= pRecaptchaUrl->len()
@@ -533,9 +533,17 @@ int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
         return result;
 
     m_ver = HTTP_1_1;
+    if (m_method == HttpMethod::HTTP_POST)
+        m_lEntityLength = LSI_BODY_SIZE_UNKNOWN;
     keepAlive(0);
 
     result = processUnpackedHeaderLines(header);
+    if (!result)
+    {
+        m_pUpkdHeaders = header;
+        m_pUpkdHeaders->setSharedBuf(&m_headerBuf);
+        m_pUpkdHeaders->clearHostLen();
+    }
     return result;
 }
 
@@ -851,7 +859,7 @@ int HttpReq::processHeaderLines()
                         "CVE-2014-7169 signature detected in request header!");
                 return SC_400;
             }
-            index = HttpHeader::getIndex(pLineBegin);
+            index = HttpHeader::getIndex2(pLineBegin);
             if (index < HttpHeader::H_TE)
             {
                 m_commonHeaderLen[ index ] = pTemp1 - pTemp;
@@ -908,9 +916,9 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
     key_value_pair *pCurHeader = NULL;
     int index;
     int ret = 0;
-
-    const req_header_entry *begin = headers->getEntryBegin();
-    const req_header_entry *end   = headers->getEntryEnd();
+    int cookie_headers = 0;
+    const lsxpack_header *begin = headers->req_hdr_begin();
+    const lsxpack_header *end   = headers->end();
 
     m_upgradeProto = UPD_PROTO_NONE; //0;
     while (begin < end)
@@ -923,14 +931,39 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
                     "CVE-2014-7169 signature detected in request header!");
             return SC_400;
         }
-        index = begin->name_index;
+        index = begin->app_index;
         if (index == UPK_HDR_UNKNOWN)
-            index = HttpHeader::getIndex(name);
+        {
+            index = HttpHeader::getIndex(name, begin->name_len);
+            ((lsxpack_header *)begin)->app_index = index;
+            ((lsxpack_header *)begin)->flags = (lsxpack_flag)(begin->flags | LSXPACK_APP_IDX);
+        }
         if (index >= 0 && index < HttpHeader::H_TE)
         {
-            m_commonHeaderLen[ index ] = begin->val_len;
-            m_commonHeaderOffset[index] = value - m_headerBuf.begin();
-            ret = processHeader(index);
+            if (index == HttpHeader::H_COOKIE)
+            {
+                m_iContextState |= COOKIE_PARSED;
+                parseCookies(value, value + begin->val_len);
+                ++cookie_headers;
+                if (m_commonHeaderOffset[HttpHeader::H_COOKIE] == 0)
+                {
+                    m_commonHeaderOffset[HttpHeader::H_COOKIE] = begin->val_offset;
+                    headers->setHeaderPos(index, begin - headers->begin());
+                }
+                m_commonHeaderLen[HttpHeader::H_COOKIE] = begin->val_offset + begin->val_len
+                            - m_commonHeaderOffset[HttpHeader::H_COOKIE];
+            }
+            else
+            {
+                assert((index == HttpHeader::H_HOST
+                         && (!begin->name_offset || !begin->name_len
+                            || memcmp(name, ":authority", 10) == 0))
+                       || index == (int)HttpHeader::getIndex(name, begin->name_len));
+                m_commonHeaderLen[index] = begin->val_len;
+                m_commonHeaderOffset[index] = begin->val_offset;
+                ret = processHeader(index);
+                headers->setHeaderPos(index, begin - headers->begin());
+            }
         }
         else if (index >= 0 && index < HttpHeader::H_HEADER_END)
         {
@@ -947,12 +980,17 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
             pCurHeader->valLen = begin->val_len;
 
             ret = processUnknownHeader(pCurHeader, name, value);
+            if (*name == ' ')   //has been erased
+                ((lsxpack_header *)begin)->buf = NULL;
         }
-
         if (ret != 0)
             return ret;
         ++begin;
     }
+
+    if (cookie_headers < m_cookies.size())
+        orContextState(REBUILD_COOKIE_UPKHDR);
+
     m_iHttpHeaderEnd = m_iReqHeaderBufFinished
         = m_iReqHeaderBufRead = m_headerBuf.size();
     m_iHeaderStatus = HEADER_OK;
@@ -1164,10 +1202,10 @@ key_value_pair *HttpReq::newKeyValueBuf()
 
 key_value_pair *HttpReq::newUnknownHeader()
 {
-    if (m_unknHeaders.getCapacity() == 0)
+    if (m_unknHeaders.capacity() == 0)
         m_unknHeaders.guarantee(m_pPool, 10);
-    else if (m_unknHeaders.getCapacity() <= m_unknHeaders.getSize() + 1)
-        m_unknHeaders.guarantee(m_pPool, m_unknHeaders.getCapacity() * 2);
+    else if (m_unknHeaders.capacity() <= m_unknHeaders.size() + 1)
+        m_unknHeaders.guarantee(m_pPool, m_unknHeaders.capacity() * 2);
     return m_unknHeaders.getNew();
 }
 
@@ -3113,6 +3151,7 @@ int HttpReq::removeCookie(const char *pName, int nameLen)
     cookieval_t *pEntry = getCookie(pName, nameLen);
     if (pEntry)
     {
+        orContextState(REBUILD_COOKIE_UPKHDR);
         if (m_cookies.getSize() == 1)
             m_commonHeaderOffset[ HttpHeader::H_COOKIE ] = 0;
         else
@@ -3129,11 +3168,11 @@ int HttpReq::removeCookie(const char *pName, int nameLen)
 
 
 cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
-                                const char *pValue,
-                                int valLen)
+                                const char *pValue, int valLen)
 {
     char *p;
     cookieval_t *pIdx = NULL;
+    int is_delete = 0;
     int keyOff, valOff;
     if (m_commonHeaderLen[ HttpHeader::H_COOKIE ] >= 16384 ||
         (int)m_commonHeaderLen[ HttpHeader::H_COOKIE ] + valLen + nameLen + 1 >
@@ -3144,13 +3183,15 @@ cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
                  m_commonHeaderLen[ HttpHeader::H_COOKIE ]);
         return NULL;
     }
+    if (!pValue || strncasecmp(pValue, "deleted", 7) == 0)
+        is_delete = 1;
     pIdx = getCookie(pName, nameLen);
     if (pIdx)
     {
         if (valLen <= pIdx->valLen)
         {
             p = (char *)m_headerBuf.getp(pIdx->valOff);
-            if ((valLen == pIdx->valLen) &&
+            if ((valLen == pIdx->valLen) && pValue &&
                 (memcmp(pValue, p, valLen) == 0))
             {
                 LS_DBG_L(getLogSession(), "same value [%.*s=%.*s].",
@@ -3173,12 +3214,17 @@ cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
                 memset(p + valLen, ' ', diff);
                 pIdx->valLen = valLen;
             }
+            orContextState(REBUILD_COOKIE_UPKHDR);
             return pIdx;
         }
         p = m_headerBuf.getp(pIdx->keyOff);
         memset((char *)p, ' ', m_headerBuf.getp(pIdx->valOff) + pIdx->valLen
                - p);
     }
+    orContextState(REBUILD_COOKIE_UPKHDR);
+    if (is_delete)
+        return NULL;
+
     if (m_cookies.getSize() == 0)
     {
         //create cookie: header
@@ -3300,65 +3346,86 @@ cookieval_t *HttpReq::getCookie(const char *pName, int nameLen)
 
 int HttpReq::parseCookies()
 {
-    const char *pCookies;
-    const char *pEnd;
-    const char *p, *pVal, *pNameEnd, *pValEnd;
-    int nameOff, valOff, len;
-
+    const char *cookies;
     if (m_iContextState & COOKIE_PARSED)
         return 0;
     m_iContextState |= COOKIE_PARSED;
 
-    pCookies = getHeader(HttpHeader::H_COOKIE);
-    len = getHeaderLen(HttpHeader::H_COOKIE);
-    if (!pCookies || !*pCookies || len == 0)
-        return 0;
-    pEnd = pCookies + len ;
-    for (; pCookies < pEnd; pCookies = p + 1)
+    if (isHeaderSet(HttpHeader::H_COOKIE))
     {
-        p = (const char *)memchr(pCookies, ';', pEnd - pCookies);
-        if (!p)
-            p = pEnd;
-        pValEnd = p;
-        while (isspace(*pCookies))
-            ++pCookies;
-        if (p == pCookies)
-            continue;
-        pVal = (const char *)memchr(pCookies, '=', p - pCookies);
-        if (!pVal)
-            continue;
-        pNameEnd = pVal++;
-        while (isspace(*pVal))
-            ++pVal;
-        nameOff = pCookies - m_headerBuf.begin();
-        valOff = pVal - m_headerBuf.begin();
-        while (isspace(pValEnd[-1]))
-            --pValEnd;
-
-        cookieval_t *pCookieEntry = m_cookies.insertCookieIndex(m_pPool,
-                                    &m_headerBuf, pCookies, pNameEnd - pCookies);
-        if (!pCookieEntry)
-            return -1;
-
-        pCookieEntry->keyOff    = nameOff;
-        pCookieEntry->flag      = 0;
-        pCookieEntry->keyLen    = pNameEnd - pCookies;
-        pCookieEntry->valOff    = valOff;
-        pCookieEntry->valLen    = pValEnd - pVal;
-        m_cookies.cookieClassify(pCookieEntry, pCookies, pCookieEntry->keyLen,
-                                 pVal, pCookieEntry->valLen);
+        cookies = getHeader(HttpHeader::H_COOKIE);
+        return parseCookies(cookies, cookies + getHeaderLen(HttpHeader::H_COOKIE));
     }
     return 0;
 }
+
+
+int HttpReq::parseCookies(const char *cookies, const char *end)
+{
+    const char *pValEnd;
+
+    if (!*cookies || end <= cookies)
+        return 0;
+    for (; cookies < end; cookies = pValEnd + 1)
+    {
+        pValEnd = (const char *)memchr(cookies, ';', end - cookies);
+        if (!pValEnd)
+            pValEnd = end;
+        if (parseOneCookie(cookies, pValEnd) == LS_FAIL)
+            return LS_FAIL;
+    }
+    return 0;
+}
+
+
+int HttpReq::parseOneCookie(const char *cookie, const char *val_end)
+{
+    const char *pVal;
+    const char *pNameEnd;
+    while (isspace(*cookie))
+        ++cookie;
+    if (val_end == cookie)
+        return LS_OK;
+    pVal = (const char *)memchr(cookie, '=', val_end - cookie);
+    if (!pVal)
+        return LS_OK;
+    pNameEnd = pVal++;
+    while (pVal < val_end && isspace(*pVal))
+        ++pVal;
+    int nameOff = cookie - m_headerBuf.begin();
+    int valOff = pVal - m_headerBuf.begin();
+    while (isspace(val_end[-1]))
+        --val_end;
+
+    cookieval_t *pCookieEntry = m_cookies.insertCookieIndex(m_pPool,
+                                    &m_headerBuf, cookie, pNameEnd - cookie);
+    if (!pCookieEntry)
+        return LS_FAIL;
+
+    pCookieEntry->keyOff    = nameOff;
+    pCookieEntry->flag      = 0;
+    pCookieEntry->keyLen    = pNameEnd - cookie;
+    pCookieEntry->valOff    = valOff;
+    pCookieEntry->valLen    = val_end - pVal;
+    if (m_cookies.cookieClassify(pCookieEntry, cookie, pCookieEntry->keyLen,
+                                    pVal, pCookieEntry->valLen))
+    {
+        LS_DBG_L(getLogSession(), "Session ID cookie[%.*s=%.*s].",
+                    (int)pCookieEntry->keyLen, cookie,
+                    (int)pCookieEntry->valLen, pVal);
+    }
+    return LS_OK;
+}
+
 
 cookieval_t *CookieList::insertCookieIndex(ls_xpool_t *pool,
         AutoBuf *pData,
         const char *pName, int nameLen)
 {
-    if (getCapacity() == 0)
+    if (capacity() == 0)
         guarantee(pool, 10);
-    else if (getCapacity() <= getSize() + 1)
-        guarantee(pool, getCapacity() * 2);
+    else if (capacity() <= getSize() + 1)
+        guarantee(pool, capacity() * 2);
 
     cookieval_t *pCookieEntry = getNew();
     if (!pCookieEntry)
@@ -3387,33 +3454,48 @@ cookieval_t *CookieList::insertCookieIndex(ls_xpool_t *pool,
     return pCookieEntry;
 }
 
-void CookieList::cookieClassify(cookieval_t *pCookieEntry,
+
+int CookieList::cookieClassify(cookieval_t *pCookieEntry,
                                 const char *pCookies, int nameLen,
                                 const char *pVal, int valLen)
 {
-    if (valLen >= 32)
+    if (valLen < 16)
+        return 0;
+    int set = 0;
+    switch(nameLen)
     {
-        if (nameLen == 8 && strncasecmp(pCookies, "frontend", 8) == 0)
+    case 8:
+        if (strncasecmp(pCookies, "frontend", 8) == 0)
         {
             pCookieEntry->flag |= COOKIE_FLAG_FRONTEND;
             if (!isSessIdxSet() ||
                 ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
-                setSessIdx(pCookieEntry - begin());
+                set = 1;
         }
-        else if (nameLen == 9 && strncasecmp(pCookies, "PHPSESSID", 9) == 0)
+        break;
+    case 9:
+        if (strncasecmp(pCookies, "PHPSESSID", 9) == 0)
         {
             pCookieEntry->flag |= COOKIE_FLAG_PHPSESSID;
             if (!isSessIdxSet())
-                setSessIdx(pCookieEntry - begin());
+                set = 1;
         }
-        else if (nameLen == 10 && strncasecmp(pCookies, "xf_session", 10) == 0)
+        break;
+    case 10:
+        if (strncasecmp(pCookies, "xf_session", 10) == 0)
         {
             pCookieEntry->flag |= COOKIE_FLAG_XF_SESSID;
             if (!isSessIdxSet() ||
                 ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
-                setSessIdx(pCookieEntry - begin());
+                set = 1;
         }
+        break;
     }
+    if (set)
+    {
+        setSessIdx(pCookieEntry - begin());
+    }
+    return set;
 }
 
 int HttpReq::copyCookieHeaderToBufEnd(int oldOff, const char *pCookie,
@@ -3601,14 +3683,15 @@ int HttpReq::dropReqHeader(int index)
     if (m_commonHeaderOffset[index] == 0)
         return 0;
     char *pOld = (char *)getHeader(index);
-    int oldLen = getHeaderLen(index);
-    char *pValEnd = pOld + oldLen;
-    while(pOld[-1] != '\n')
-        --pOld;
-    --pOld;
-    if (pOld[-1] == '\r')
-        --pOld;
-    memset(pOld, ' ', pValEnd - pOld);
+    char *pHeaderName = pOld - HttpHeader::getHeaderStringLen(index) - 1;
+    if (*pHeaderName != '\n')
+    {
+        while(pHeaderName[-1] != '\n')
+            --pHeaderName;
+    }
+    if (m_pUpkdHeaders)
+        m_pUpkdHeaders->dropHeader(index, m_commonHeaderOffset[index]);
+    memset(pHeaderName, 'x', HttpHeader::getHeaderStringLen(index));
     m_commonHeaderOffset[index] = 0;
     return 0;
 }

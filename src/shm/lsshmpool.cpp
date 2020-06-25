@@ -957,7 +957,15 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
     LsShmSize_t avail;
     LsShmPoolMap *pDataMap = getDataMap();
 
+TRY_AGAIN:
     avail = pDataMap->x_chunk.x_iEnd - pDataMap->x_chunk.x_iStart;
+    if (avail > 0 && (pDataMap->x_chunk.x_iEnd - 1) >> LARGE_PAGE_BITS
+                     > pDataMap->x_chunk.x_iStart >> LARGE_PAGE_BITS)
+    {
+        avail = (((pDataMap->x_chunk.x_iStart >> LARGE_PAGE_BITS) + 1)
+                    << LARGE_PAGE_BITS)
+                - pDataMap->x_chunk.x_iStart;
+    }
     numAvail = avail / size;
     if (numAvail)
     {
@@ -980,6 +988,12 @@ LsShmOffset_t LsShmPool::allocFromDataChunk(LsShmSize_t size,
         // releaseData(offset, avail);
         releaseOffset = offset;
         releaseSize = avail;
+        if (pDataMap->x_chunk.x_iEnd - pDataMap->x_chunk.x_iStart >= size)
+        {
+            releaseData(releaseOffset, releaseSize);
+            pDataMap->x_stat.m_iFreeChunk -= releaseSize;
+            goto TRY_AGAIN;
+        }
     }
     else
     {

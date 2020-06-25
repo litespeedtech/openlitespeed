@@ -120,7 +120,7 @@ SUITE(HttpHeaderTest)
 
         for (int i = 0; i < LSI_RSPHDR_END; ++i)
         {
-            p = HttpRespHeaders::m_sPresetHeaders[i];
+            p = HttpRespHeaders::getNameList()[i];
             //l = HttpRespHeaders::m_iPresetHeaderLen[i];
 
             HttpRespHeaders::INDEX index = HttpRespHeaders::getIndex(
@@ -190,7 +190,7 @@ SUITE(HttpHeaderTest)
                     respHeaders[i]);
             CHECK(index == respHeaderIndex[i]);
             CHECK((int)strlen(respHeaders[i]) ==
-                  HttpRespHeaders::getHeaderStringLen(index));
+                  HttpRespHeaders::getNameLen(index));
         }
     }
 
@@ -274,7 +274,7 @@ SUITE(HttpHeaderTest)
         //ProfileTime prof( "HttpHeader lookup benchmark" );
         int size = sizeof(s_pHeaders) / sizeof(char *);
         for (int i = 0; i < 1000000; i++)
-            HttpHeader::getIndex(s_pHeaders[ rand() % size ]);
+            HttpHeader::getIndex2(s_pHeaders[ rand() % size ]);
     }
 
 
@@ -463,8 +463,7 @@ SUITE(HttpHeaderTest)
 
         char headerData2[] = ":\r\n\r\n";
 
-        ls_xpool_t *pool = ls_xpool_new();
-        HttpRespHeaders h(pool);
+        HttpRespHeaders h;
         h.reset();
 
         h.parseAdd(headerData, sizeof(headerData) - 1, LSI_HEADEROP_ADD);
@@ -475,8 +474,7 @@ SUITE(HttpHeaderTest)
 
     TEST(respHeaders)
     {
-        ls_xpool_t *pool = ls_xpool_new();
-        HttpRespHeaders h(pool);
+        HttpRespHeaders h;
         IOVec io;
         const char *pVal = NULL;
         int valLen = 0;
@@ -638,10 +636,10 @@ SUITE(HttpHeaderTest)
             CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
 
-            h.getFirstHeader("date", 4, &pVal, valLen);
+            h.getHeader("date", 4, &pVal, valLen);
             CHECK(memcmp(pVal, "Thu, 16 May 2099 20:32:23 GMT", valLen) == 0);
 
-            h.getFirstHeader("Allow", 5, &pVal, valLen);
+            h.getHeader("Allow", 5, &pVal, valLen);
             CHECK(memcmp(pVal, "*.*; .zip; .rar; .exe; .flv", valLen) == 0);
 
             h.parseAdd("MytestHeader: TTTTTTTTTTTT\r\nMyTestHeaderii: IIIIIIIIIIIIIIIIIIIII\r\n",
@@ -649,7 +647,7 @@ SUITE(HttpHeaderTest)
 
             CHECK(h.getUniqueCnt() == 10);
             CHECK(h.getCount() == 12);
-            h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
+            h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
             CHECK(memcmp(pVal, "TTTTTTTTTTTT", valLen) == 0);
 
             //Same name, but since no check,  will be appended directly. But SPDY, will check and parse it.
@@ -658,7 +656,7 @@ SUITE(HttpHeaderTest)
 
             CHECK(h.getUniqueCnt() == 10);
             CHECK(h.getCount() == 12);
-            h.getFirstHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
+            h.getHeader("MytestHeader", strlen("MytestHeader"), &pVal, valLen);
             CHECK(memcmp(pVal, "TTTTTTTTTTTT3", valLen) == 0);
 
             h.addStatusLine(0, SC_404, 1);
@@ -736,7 +734,6 @@ SUITE(HttpHeaderTest)
         DisplayBothHeader(&io, kk, h.getCount(), &h);
         CheckIoHeader(&io, sTestHdr, __PRETTY_FUNCTION__, __LINE__);
 
-        ls_xpool_delete(pool);
 
         /*
 

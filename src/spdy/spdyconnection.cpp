@@ -1072,7 +1072,7 @@ int SpdyConnection::compressHeaders(HttpRespHeaders *pRespHeaders)
         pCur += sizeof(s_achSpdy3StatusLine) - 1;
     }
     const char *p = HttpStatusCode::getInstance().getCodeString(
-            pRespHeaders->getHttpCode()) + 1;
+            pRespHeaders->getHttpCode());
     *pCur++ = *p++;
     *pCur++ = *p++;
     *pCur++ = *p++;

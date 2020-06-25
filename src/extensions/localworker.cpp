@@ -451,8 +451,8 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                         config.getName());
             return LS_FAIL;
         }
-        
-        
+
+
         LS_INFO("[LocalWorker::workerExec] VHost:%s suExec check "
                 "uid %d gid %d setuidmode %d.",
                 pVHost->getName(), pVHost->getUid(), pVHost->getGid(),
@@ -1041,7 +1041,7 @@ TRY_AGAIN:
     }
 
     removeOldDetachedSocket();
-    
+
     ret = CoreSocket::listen(service_addr, config.getBackLog(), &fd,
                              LS_SOCK_NODELAY, -1, -1);
     if (fd == -1)

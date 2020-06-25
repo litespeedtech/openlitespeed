@@ -143,6 +143,11 @@ public:
         m_pBegin = m_pEnd = (struct iovec *)m_aStore + 5;
     }
 
+    void clear(int start)
+    {
+        m_pBegin = m_pEnd = (struct iovec *)m_aStore + start;
+    }
+
     int  bytes() const;
     int  shrinkTo(unsigned int newSize, unsigned int additional);
     int  finish(int &finishLen);

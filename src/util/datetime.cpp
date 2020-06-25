@@ -19,7 +19,6 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <lsr/ls_atomic.h>
 #include <lsr/ls_threadcheck.h>
 
 time_t DateTime::s_curTime = time(NULL);
@@ -241,7 +240,7 @@ DateTime::~DateTime()
 static const char aMonths[56] =
     "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec ";
 
-        
+
 char *DateTime::getLogTime(time_t lTime, char *pBuf, int bGMT)
 {
     static char     bufs[2][40];

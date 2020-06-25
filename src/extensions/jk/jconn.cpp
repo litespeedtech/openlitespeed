@@ -275,7 +275,6 @@ int JConn::processPacketContent(unsigned char *&p, unsigned char *pEnd)
 
 int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
 {
-    int &status = getConnector()->getRespState();
     while (m_iNumHeader > 0)
     {
         if (pEnd - p < 4)
@@ -320,7 +319,7 @@ int JConn::readRespHeader(unsigned char *&p, unsigned char *pEnd)
         if (HttpCgiTool::processHeaderLine(
                 getConnector(),
                 pHeaderName, headerNameLen,
-                pHeaderVal, headerValLen, status) == -1)
+                pHeaderVal, headerValLen) == -1)
             return LS_FAIL;
 
     }

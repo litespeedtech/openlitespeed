@@ -46,6 +46,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "httpstats.h"
 
 
 RedirectHandler::RedirectHandler()
@@ -109,7 +110,7 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
     pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_LENGTH, p + 16,
                                 pSendfileInfo->getECache()->getCLHeader().len() - 18);
 
-    pResp->getRespHeaders().appendAcceptRange();
+    pResp->getRespHeaders().addAcceptRanges();
 
     return 0;
 }
@@ -448,6 +449,8 @@ int StaticFileHandler::process(HttpSession *pSession,
         }
     }
 
+    pSession->incStatsCacheHits(0);
+
     //if ( code == SC_200 )
     if ((!isSSI) && (code == SC_200))
     {
@@ -609,7 +612,7 @@ int StaticFileHandler::process(HttpSession *pSession,
         else
         {
             /**
-             * Serving not done, add flag to save to static file cache when 
+             * Serving not done, add flag to save to static file cache when
              * response is done
              */
             pSession->setFlag(HSF_SAVE_STX_FILE_CACHE);
@@ -738,8 +741,7 @@ static int sendMultipart(HttpSession *pSession, HttpRange &range)
         if (headerLen)
         {
             ret = pSession->writeRespBody(range.getPartHeader(), headerLen);
-            LS_DBG_L(pSession->getLogger(), "[%s] send part header %d bytes",
-                     pSession->getLogId(), ret);
+            LS_DBG_L(pSession, "send part header %d bytes", ret);
 
             if (ret > 0)
             {

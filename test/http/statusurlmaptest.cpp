@@ -30,11 +30,11 @@ TEST(StatusUrlMapTest_test)
     int i;
     for (i = SC_300; i < SC_END; ++i)
         CHECK(map1.getUrl(i) == NULL);
-    for (i = 300; i < 309; ++i)
+    for (i = 300; i <= 308; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url3xx") == 0);
-    for (i = 400; i < 425; ++i)
+    for (i = 400; i <= 431; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url4xx") == 0);
-    for (i = 500; i < 511; ++i)
+    for (i = 500; i <= 513; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url5xx") == 0);
 
     for (i = SC_300; i < SC_400; ++i)

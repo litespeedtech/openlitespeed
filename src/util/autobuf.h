@@ -90,6 +90,7 @@ public:
 
     char   *begin() const           {   return pbuf;  }
     char   *end() const             {   return pend;  }
+    char *buf_end()                 {   return pbufend;   }
 
     void    used(int size)          {   pend += size;  }
     void    clear()                 {   pend = pbuf;  }
@@ -114,12 +115,13 @@ public:
     int     xGrow(int size, ls_xpool_t *pool)
     {   return ls_buf_xgrow(this, size, pool);  }
 
-    bool    empty() const           {   return (pbuf == pend);  }
-    bool    full() const            {   return (pend == pbufend);  }
+    bool    empty() const           {   return (pbuf == pend);      }
+    bool    full() const            {   return (pend == pbufend);   }
 
-    int     getOffset(const char *p) const        {   return p - pbuf;  }
-    char   *getp(int offset) const                  {   return pbuf + offset;  }
-    void    swap(AutoBuf &rhs)      {   ls_buf_swap(this, &rhs);  }
+    int     getOffset(const char *p) const  {   return p - pbuf;        }
+    char   *getp(int offset) const          {   return pbuf + offset;   }
+    char   *get_ptr(int offset) const       {   return pbuf + offset;   }
+    void    swap(AutoBuf &rhs)              {   ls_buf_swap(this, &rhs);}
 
     int     pop_front_to(char *pBuf, int size)
     {   return ls_buf_popfrontto(this, pBuf, size);  }
@@ -142,7 +144,7 @@ public:
         used(size);
         return size;
     }
-    
+
     int reserve_append(int size)
     {
         if (size == 0)
@@ -155,7 +157,7 @@ public:
         used(size);
         return size;
     }
-    
+
 
     int appendAllocOnly(int size)
     {
@@ -178,8 +180,8 @@ public:
 
     static void xDestroy(AutoBuf *p, ls_xpool_t *pool)
     {   ls_buf_xd(p, pool);  }
-    
-    
+
+
     int make_room_deepcopy(int pos, int size)
     {
         if (size == 0)
@@ -195,7 +197,7 @@ public:
         used(size);
         return size;
     }
-    
+
 };
 
 class XAutoBuf : private ls_xbuf_t

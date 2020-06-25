@@ -36,20 +36,20 @@ TEST(objArrayTest_test)
     ObjArrayXpool *pArray = new ObjArrayXpool(sizeof(testpair_t));
     ls_xpool_t *pool = ls_xpool_new();
 
-    CHECK(pArray->getCapacity() == 0);
-    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->capacity() == 0);
+    CHECK(pArray->size() == 0);
     CHECK(pArray->getArray() == NULL);
     pArray->guarantee(pool, 10);
-    CHECK(pArray->getCapacity() == 10);
-    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->capacity() == 10);
+    CHECK(pArray->size() == 0);
     CHECK(pArray->getArray() != NULL);
     for (i = 0; i < 10; ++i)
     {
         testpair_t *buf = (testpair_t *)pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    CHECK(pArray->getSize() == 10);
-    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->size() == 10);
+    CHECK(pArray->capacity() == 10);
     CHECK(pArray->getNew() == NULL);
     for (i = 0; i < 10; ++i)
     {
@@ -60,8 +60,8 @@ TEST(objArrayTest_test)
     CHECK(pArray->getObj(-1) == NULL);
     CHECK(pArray->getObj(11) == NULL);
     pArray->guarantee(pool, 20);
-    CHECK(pArray->getCapacity() == 20);
-    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->capacity() == 20);
+    CHECK(pArray->size() == 10);
     CHECK(pArray->getArray() != NULL);
     CHECK(pArray->getObj(15) == NULL);
     for (i = 10; i < 20; ++i)
@@ -75,8 +75,8 @@ TEST(objArrayTest_test)
         CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
     pArray->setCapacity(pool, 30);
-    CHECK(pArray->getCapacity() == 30);
-    CHECK(pArray->getSize() == 20);
+    CHECK(pArray->capacity() == 30);
+    CHECK(pArray->size() == 20);
     CHECK(pArray->getArray() != NULL);
     for (i = 20; i < 30; ++i)
     {
@@ -97,20 +97,20 @@ TEST(objArrayTest_test)
     //Test with global pool.
     pArray = new ObjArrayXpool(sizeof(testpair_t));
 
-    CHECK(pArray->getCapacity() == 0);
-    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->capacity() == 0);
+    CHECK(pArray->size() == 0);
     CHECK(pArray->getArray() == NULL);
     pArray->guarantee(NULL, 10);
-    CHECK(pArray->getCapacity() == 10);
-    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->capacity() == 10);
+    CHECK(pArray->size() == 0);
     CHECK(pArray->getArray() != NULL);
     for (i = 0; i < 10; ++i)
     {
         testpair_t *buf = (testpair_t *)pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    CHECK(pArray->getSize() == 10);
-    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->size() == 10);
+    CHECK(pArray->capacity() == 10);
     CHECK(pArray->getNew() == NULL);
     for (i = 0; i < 10; ++i)
     {
@@ -118,8 +118,8 @@ TEST(objArrayTest_test)
         CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
     pArray->guarantee(NULL, 20);
-    CHECK(pArray->getCapacity() == 20);
-    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->capacity() == 20);
+    CHECK(pArray->size() == 10);
     CHECK(pArray->getArray() != NULL);
     pArray->release(NULL);
 }
@@ -130,20 +130,20 @@ TEST(TObjArrayTest_test)
     TObjArrayXpool<testpair_t> *pArray = new TObjArrayXpool<testpair_t>();
     ls_xpool_t *pool = ls_xpool_new();
 
-    CHECK(pArray->getCapacity() == 0);
-    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->capacity() == 0);
+    CHECK(pArray->size() == 0);
     CHECK(pArray->getArray() == NULL);
     pArray->guarantee(pool, 10);
-    CHECK(pArray->getCapacity() == 10);
-    CHECK(pArray->getSize() == 0);
+    CHECK(pArray->capacity() == 10);
+    CHECK(pArray->size() == 0);
     CHECK(pArray->getArray() != NULL);
     for (i = 0; i < 10; ++i)
     {
         testpair_t *buf = pArray->getNew();
         buf->key = buf->val = i + 1;
     }
-    CHECK(pArray->getSize() == 10);
-    CHECK(pArray->getCapacity() == 10);
+    CHECK(pArray->size() == 10);
+    CHECK(pArray->capacity() == 10);
     CHECK(pArray->getNew() == NULL);
     for (i = 0; i < 10; ++i)
     {
@@ -154,8 +154,8 @@ TEST(TObjArrayTest_test)
     CHECK(pArray->getObj(-1) == NULL);
     CHECK(pArray->getObj(11) == NULL);
     pArray->guarantee(pool, 20);
-    CHECK(pArray->getCapacity() == 20);
-    CHECK(pArray->getSize() == 10);
+    CHECK(pArray->capacity() == 20);
+    CHECK(pArray->size() == 10);
     CHECK(pArray->getArray() != NULL);
     CHECK(pArray->getObj(15) == NULL);
     for (i = 10; i < 20; ++i)
@@ -169,8 +169,8 @@ TEST(TObjArrayTest_test)
         CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
     pArray->setCapacity(pool, 30);
-    CHECK(pArray->getCapacity() == 30);
-    CHECK(pArray->getSize() == 20);
+    CHECK(pArray->capacity() == 30);
+    CHECK(pArray->size() == 20);
     CHECK(pArray->getArray() != NULL);
     for (i = 20; i < 30; ++i)
     {

@@ -748,7 +748,7 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                         *pHeaderEnd = 0;
                         if (HttpCgiTool::processHeaderLine(
                                 getConnector(),
-                                m_pRespHeaderProcess, pHeaderEnd, status) == -1)
+                                m_pRespHeaderProcess, pHeaderEnd) == -1)
                             return LS_FAIL;
                         m_pRespHeaderProcess += len;
                     }

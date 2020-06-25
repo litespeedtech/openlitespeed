@@ -105,7 +105,7 @@ public:
     int getTimeout() const                  {   return m_iTimeoutSec;   }
     void writeLog(const char *s);
     void enableDebug(int d)                 {   m_iEnableDebug = d;     }
-    time_t getTimeStart() const             {   return m_tmStart;       }
+    time_t getTimeStart() const             {   return m_tmStart.tv_sec;   }
 
     void setUseSsl(int s)                   {   m_iSsl = s;             }
     int isUseSsl() const                    {   return m_iSsl;          }
@@ -119,6 +119,10 @@ public:
     int appendExtraHeaders(const char *pHdrs, int len);
     const char *getRespHeader(const char *pName) const;
     X509 *getSslCert() const;
+
+    int get_nslookup_time() const       {   return m_nslookup_time;     }
+    int get_conn_time() const           {   return m_conn_time;         }
+    int get_req_time() const            {   return m_req_time;          }
     
     int syncFetch(const char *pURL, char *pRespBuf, int respBufLen, int timeout,
                     const char *pReqBody = NULL, int reqBodyLen = 0,
@@ -159,7 +163,10 @@ private:
     AutoBuf     m_resHeaderBuf;
 
     HttpFetchDriver *m_pHttpFetchDriver;
-    time_t      m_tmStart;
+    timeval     m_tmStart;
+    int         m_nslookup_time;
+    int         m_conn_time;
+    int         m_req_time;
     int         m_iTimeoutSec;
     int         m_iReqInited;
     log4cxx::Logger     *m_pLogger;
@@ -195,6 +202,7 @@ private:
 
     int verifyDomain();
     void addRespHeader(char *pLineBegin, char *pLineEnd);
+    void updateConnectTime();
 
     
 };

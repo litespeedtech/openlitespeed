@@ -19,6 +19,7 @@
 #include "loggingevent.h"
 #include "level.h"
 
+#include <lsr/ls_internal.h>
 #include <util/gfactory.h>
 
 #include <ctype.h>
@@ -175,6 +176,9 @@ int PatternLayout::format(LoggingEvent *pEvent, char *pBuf, int len)
                 }
                 pBuf += lsnprintf(pBuf, pEnd - pBuf, "%d%03d",
                                  (int)tv_diff.tv_sec, (int)(tv_diff.tv_usec / 1000));
+                break;
+            case 't':
+                pBuf += snprintf(pBuf, pEnd - pBuf, "T%d", ls_thr_seq());
                 break;
             case 'u':   /* not supported */
             case 'x':   /* not supported */

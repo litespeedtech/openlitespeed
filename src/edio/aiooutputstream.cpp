@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,9 +18,9 @@
 
 #include <edio/aiooutputstream.h>
 #include <edio/sigeventdispatcher.h>
-#include <lsr/ls_fileio.h>
+#include <lsr/ls_lock.h>
 #include <util/autobuf.h>
-#include <util/resourcepool.h>
+#include <util/ni_fio.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -78,10 +78,9 @@ AioReq::AioReq()
     m_aiocb.aio_reqprio = 0;
 #if defined(LS_AIO_USE_KQ)
     m_aiocb.aio_sigevent.sigev_notify = SIGEV_KEVENT;
-    //m_aiocb.aio_sigevent.sigev_notify_kevent_flags = EV_ONESHOT;
-#elif defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
+    m_aiocb.aio_sigevent.sigev_notify_kevent_flags = EV_ONESHOT;
+#elif defined(LS_AIO_USE_SIGNAL)
     m_aiocb.aio_sigevent.sigev_notify = SIGEV_SIGNAL;
-    //m_aiocb.aio_sigevent.sigev_signo = HS_AIO;
 #endif
 }
 
@@ -91,25 +90,27 @@ int AioOutputStream::open(const char *pathname, int flags, mode_t mode)
     if (m_closeRequested)
         m_closeRequested = 0;
     if (getfd() == -1)
-        setfd(ls_fio_open(pathname, flags, mode));
-    return getfd();
+        setfd(nio_open(pathname, flags, mode));
+    int ret = getfd();
+    return ret;
 }
 
 
 int AioOutputStream::close()
 {
-    if (getfd() == -1)
-        return LS_OK;
-    if (m_pRecv)
-        flush();
-    if (m_pSend)
-        m_closeRequested = 1;
-    else
+    if (getfd() != -1)
     {
-        ls_fio_close(getfd());
-        setfd(-1);
-        m_closeRequested = 0;
-        m_flushRequested = 0;
+        if (m_pRecv)
+            flushEx();
+        if (m_pSend)
+            m_closeRequested = 1;
+        else
+        {
+            nio_close(getfd());
+            setfd(-1);
+            m_closeRequested = 0;
+            m_flushRequested = 0;
+        }
     }
     return LS_OK;
 }
@@ -127,45 +128,84 @@ int AioOutputStream::syncWrite(const char *pBuf, int len)
         lock.l_len = 1;
         fcntl(getfd(), F_SETLK, &lock);
     }
-    ret = ls_fio_write(getfd(), pBuf, len);
+    ret = nio_write(getfd(), pBuf, len);
     if (m_iFlock)
     {
         lock.l_type = F_UNLCK;
         fcntl(getfd(), F_SETLK, &lock);
     }
     return ret;
-
 }
 
 
+#define MAX_AIO_BUFFER_SIZE (256 * 1024)
 int AioOutputStream::append(const char *pBuf, int len)
 {
+    int ret;
     if (getfd() == -1)
+    {
         return LS_FAIL;
+    }
     if (!m_async)
     {
-#ifdef AIOSTREAM_DEBUG
-        printf("AIOSTREAM: Reg Writing %.*s, %d\n", len, pBuf, len);
-#endif
-        return syncWrite(pBuf, len);
+        ret = syncWrite(pBuf, len);
+        return ret;
     }
-
     if (!m_pRecv)
-        m_pRecv = ResourcePool::getInstance().getAutoBuf();
-#ifdef AIOSTREAM_DEBUG
-    printf("AIOSTREAM: Aio Writing %.*s, %d\n", len, pBuf, len);
-#endif
-    return m_pRecv->append(pBuf, len);
+        m_pRecv = new AutoBuf();
+    ret = m_pRecv->append(pBuf, len);
+    if (m_pRecv->size() >= MAX_AIO_BUFFER_SIZE)
+    {
+        if (m_pSend == NULL)
+        {
+            m_pSend = m_pRecv;
+            m_pRecv = NULL;
+
+            if (write(getfd(), m_pSend->begin(), m_pSend->size(),
+                    0, (EventHandler *)this))
+                ret = LS_FAIL;
+            else
+                m_flushRequested = 0;
+        }
+        else
+        {
+            len = m_pRecv->size();
+            ret = syncWrite(m_pRecv->begin(), len);
+            m_pRecv->clear();
+            if (ret < len)
+                ret = -1;
+        }
+    }
+    return ret;
 }
 
 
 #define LS_AIO_MAXBUF 4096
 int AioOutputStream::onEvent()
 {
-    ResourcePool::getInstance().recycle(m_pSend);
-    m_pSend = NULL;
+    ls_mutex_lock(&m_mutex);
+    if (m_pSend)
+    {
+        int err = getError();
+        if (err != EINPROGRESS)
+        {
+            assert(m_pSend->begin() == getBuf());
+            delete m_pSend;
+            m_pSend = NULL;
+        }
+        else
+        {
+            ls_mutex_unlock(&m_mutex);
+            return LS_OK;
+        }
+    }
     if (m_flushRequested)
-        return flush();
+    {
+        int ret = flushEx();
+        ls_mutex_unlock(&m_mutex);
+        return ret;
+    }
+    ls_mutex_unlock(&m_mutex);
     if (m_closeRequested)
         return close();
     return LS_OK;
@@ -175,12 +215,33 @@ int AioOutputStream::onEvent()
 int AioOutputStream::flush()
 {
 #if defined(LS_AIO_USE_AIO)
+    ls_mutex_lock(&m_mutex);
+    int ret = flushEx();
+    ls_mutex_unlock(&m_mutex);
+#endif // defined(LS_AIO_USE_AIO)
+    return ret;
+}
+
+
+int AioOutputStream::flushEx()
+{
+#if defined(LS_AIO_USE_AIO)
     if (!m_pRecv)
         return LS_OK;
     else if (m_pSend)
     {
-        m_flushRequested = 1;
-        return LS_OK;
+        int err = getError();
+        if (err == EINPROGRESS)
+        {
+            m_flushRequested = 1;
+            return LS_OK;
+        }
+        else //succeed or failed with error
+        {
+            assert(m_pSend->begin() == getBuf());
+            delete m_pSend;
+            m_pSend = NULL;
+        }
     }
     else if (getfd() == -1)
         return LS_FAIL;

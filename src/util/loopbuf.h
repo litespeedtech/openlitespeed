@@ -139,6 +139,10 @@ public:
 
     void iovInsert(IOVec &vect) const;
     void iovAppend(IOVec &vect) const;
+    void iov_insert(IOVec &vect) const
+    {   return iovInsert(vect); }
+    void iov_append(IOVec &vect) const
+    {   return iovAppend(vect);    }
 
 
     static void xDestroy(LoopBuf *p, ls_xpool_t *pool)

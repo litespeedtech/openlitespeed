@@ -14,7 +14,7 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 SET(LSQUIC_SERVER_MODE 1)
 
-include_directories( BEFORE  include ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
+include_directories( BEFORE  include src/lshpack src/liblsquic/ls-qpack ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
 link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
 
 SET (CMAKE_C_COMPILER         "/usr/bin/clang")
@@ -55,7 +55,7 @@ add_definitions(-DPOOL_TESTING)
 #add_definitions(-DLS_WORKCREW_DEBUG)
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
-#Add definition for QUIC 
+#Add definition for QUIC
 add_definitions(-DH3_ALPN="\\x05h3-25\\x05h3-27")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
@@ -67,7 +67,7 @@ find_package(Git QUIET)
 if (GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
   option(GIT_SUBMODULE "Check submodules during build" ON)
   if (GIT_SUBMODULE)
-    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --force
                     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                     RESULT_VARIABLE GIT_SUBMOD_RESULT)
     if(NOT GIT_SUBMOD_RESULT EQUAL "0")

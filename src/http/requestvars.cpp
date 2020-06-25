@@ -496,9 +496,8 @@ int RequestVars::parseHttpHeader(const char *pName, int len,
     }
     else
     {
-        int idx = HttpHeader::getIndex(pName);
-        if ((idx < HttpHeader::H_HEADER_END) &&
-            (len == HttpHeader::getHeaderStringLen(idx)))
+        int idx = HttpHeader::getIndex(pName, len);
+        if (idx < HttpHeader::H_HEADER_END)
             ret = idx;
         else
         {
@@ -770,7 +769,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         return i;
     case REF_STATUS_CODE:
         memmove(pValue, HttpStatusCode::getInstance().getCodeString(
-                    pReq->getStatusCode()) + 1,
+                    pReq->getStatusCode()),
                 3);
         pValue[3] = 0;
         return 3;
@@ -788,10 +787,10 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
 
     case REF_BYTES_TOTAL:
         i = StringTool::offsetToStr(pValue, bufLen,
-                                    pSession->getBytesRecv() + 
+                                    pSession->getBytesRecv() +
                                     pSession->getBytesSent());
         return i;
-        
+
     case REF_HTTPS:
         i = snprintf(pValue, bufLen, "%s", pSession->isHttps() ? "on" : "off");
         return i;
@@ -940,7 +939,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
         HioCrypto *pCrypto = pSession->getCrypto();
         if (!pCrypto)
             return 0;
-        
+
         return pCrypto->getEnv((HioCrypto::ENV)(HioCrypto::CRYPTO_VERSION +
                                 (type - LSI_VAR_SSL_VERSION)), pValue, bufLen);
     }

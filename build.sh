@@ -140,6 +140,9 @@ preparelibquic()
             rm -rf src/liblsquic
             mv lsquic/src/liblsquic src/
             
+            rm -rf src/lshpack
+            mv lsquic/src/lshpack src/
+            
             rm include/lsquic.h
             mv lsquic/include/lsquic.h  include/
             rm include/lsquic_types.h
@@ -232,6 +235,11 @@ prepareLinux()
                     cat /etc/lsb-release | grep "DISTRIB_RELEASE=18." >/dev/null
                     if [ $? = 0 ] ; then
                         OSTYPE=UBUNTU18
+                    else
+                        cat /etc/lsb-release | grep "DISTRIB_RELEASE=20." >/dev/null
+                        if [ $? = 0 ] ; then
+                            OSTYPE=UBUNTU20
+                        fi
                     fi
                 fi
             fi
@@ -259,7 +267,7 @@ prepareLinux()
         
         #other debian OS, we still can 
         if [ "${OSTYPE}" = "unknowlinux" ] ; then
-            echo It seems you are not using ubuntu 14,16,18 and Debian 7/8/9/10.
+            echo It seems you are not using ubuntu 14,16,18,20 and Debian 7/8/9/10.
             echo But we still can try to go further.
         fi
         
@@ -480,6 +488,34 @@ freebsdFix()
     fi
 }
 
+
+fixPagespeed()
+{
+PSOLVERSION=1.11.33.4
+cat << EOF > ../thirdparty/psol-$PSOLVERSION/include/pagespeed/kernel/base/scoped_ptr.h
+/**
+* Due the compiling issue, this file was updated from the original file.
+*/
+#ifndef PAGESPEED_KERNEL_BASE_SCOPED_PTR_H_
+#define PAGESPEED_KERNEL_BASE_SCOPED_PTR_H_
+#include "base/memory/scoped_ptr.h"
+
+namespace net_instaweb {
+template<typename T> class scoped_array : public scoped_ptr<T[]> {
+public:
+    scoped_array() : scoped_ptr<T[]>() {}
+    explicit scoped_array(T* t) : scoped_ptr<T[]>(t) {}
+};
+}
+#endif
+
+EOF
+
+
+
+
+}
+
 cd `dirname "$0"`
 CURDIR=`pwd`
 
@@ -510,8 +546,8 @@ if [ "${ISLINUX}" != "yes" ] ; then
     sed -i -e "s/psol/ /g"  ./build_ols.sh
 fi
 
-./build_ols.sh
 
+./build_ols.sh
 
 cd ${CURDIR}
 
@@ -524,6 +560,10 @@ cp ${STDC_LIB} ../thirdparty/lib64/
 cp ../thirdparty/src/brotli/out/*.a          ../thirdparty/lib64/
 cp ../thirdparty/src//libxml2/.libs/*.a      ../thirdparty/lib64/
 cp ../thirdparty/src/libmaxminddb/include/*  ../thirdparty/include/
+
+if [ "${ISLINUX}" = "yes" ] ; then
+    fixPagespeed
+fi
 
 #special case modsecurity
 cd src/modules/modsecurity-ls

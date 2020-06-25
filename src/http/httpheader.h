@@ -43,7 +43,7 @@ enum
 class HttpHeader
 {
 public:
-    enum
+    enum index
     {
         // most common request-header
         H_ACCEPT = 0,
@@ -117,9 +117,10 @@ public:
         H_HTTP_VERSION,
         */
 
-        H_HEADER_END
+        H_HEADER_END,
+        H_UNKNOWN = H_HEADER_END
     };
-    static size_t getIndex(const char *pHeader);
+
     static size_t getIndex2(const char *pHeader);
     static size_t getIndex(const char *pHeader, int len);
 
@@ -136,6 +137,7 @@ private:
     void operator=(const HttpHeader &rhs);
     HttpHeader();
     ~HttpHeader();
+    static size_t getIndex(const char *pHeader);
 
 public:
     static int getHeaderStringLen(int iIndex)
@@ -157,7 +159,7 @@ public:
         FLAG_RELEASE_ENV   = 32,
         FLAG_REQ_HDR_OP    = 64,
     };
-    
+
     //static size_t getRespHeaderIndex( const char * pHeader );
     HeaderOp()
     {
@@ -194,7 +196,7 @@ public:
 
     char isInherited() const    {   return m_iFlag & FLAG_INHERITED;        }
     char isComplexValue() const {   return m_iFlag & FLAG_COMPLEX_VALUE;    }
-    
+
     char isReqHeader() const    {   return m_iFlag & FLAG_REQ_HDR_OP;       }
 
     const char *getName() const     {  return m_pName;     }
@@ -206,7 +208,7 @@ public:
     int16_t  getIndex() const       {   return m_iIndex;    }
     const AutoStr2 *getEnv() const  {   return m_pEnv;      }
     void setEnv(const char *pEnv, int len);
-    
+
 private:
 
     int16_t         m_iIndex;
@@ -217,7 +219,7 @@ private:
     const char     *m_pName;
     const char     *m_pStrVal;
     AutoStr2       *m_pEnv;
-    
+
     LS_NO_COPY_ASSIGN(HeaderOp);
 };
 
@@ -250,14 +252,14 @@ public:
     {   return end() - begin();     }
 
     HeaderOp *append(int16_t index, const char *pName, u_int16_t nameLen,
-                     const char *pVal, u_int16_t valLen, 
+                     const char *pVal, u_int16_t valLen,
                      int8_t op = LSI_HEADER_ADD, int is_req = 0);
 
     void inherit(const HttpHeaderOps &parent);
     int parseOp(const char *pLineBegin, const char *pCurEnd, int is_req);
     short has_req_op() const    {   return m_has_req_op;    }
     short has_resp_op() const   {   return m_has_resp_op;   }
-    
+
 private:
     AutoBuf m_buf;
     short   m_has_req_op;

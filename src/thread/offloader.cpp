@@ -1,20 +1,5 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+
+
 #include <lsr/ls_offload.h>
 #include <thread/workcrew.h>
 #include <edio/eventnotifier.h>
@@ -27,17 +12,17 @@
 
 void *process_offload(ls_offload *task)
 {
-    if (!task->is_canceled)
+    if (!ls_atomic_value(&task->is_canceled))
     {
         LS_DBG_L("[OFFLOAD] worker process Task: %p.\n",  task);
-        task->state = LS_OFFLOAD_PROCESSING;
+        ls_atomic_set(&task->state, LS_OFFLOAD_PROCESSING);
         task->api->perform(task);
-        task->state = LS_OFFLOAD_IN_FINISH_QUEUE;
+        ls_atomic_set(&task->state, LS_OFFLOAD_IN_FINISH_QUEUE);
     }
     else
     {
         LS_DBG_L("[OFFLOAD] Task %p is canceled, bypass.\n",  task);
-        task->state = LS_OFFLOAD_BYPASS;
+        ls_atomic_set(&task->state, LS_OFFLOAD_BYPASS);
     }
     return NULL;
 }
@@ -63,7 +48,7 @@ public:
 
     int start(Multiplexer *pMplx, int workers);
 
-    int init();
+    int init(int min_idle, int max_idle, int nice_pri);
 
     int startProcessor(int workers = 1);
 
@@ -88,7 +73,7 @@ Offloader::~Offloader()
 }
 
 
-int Offloader::init()
+int Offloader::init(int min_idle, int max_idle, int nice_pri)
 {
     if (!m_pFinishedQueue)
     {
@@ -109,7 +94,7 @@ int Offloader::init()
             return -1;
         }
 
-        m_crew->dropPriorityBy(1);
+        m_crew->dropPriorityBy(nice_pri);
     }
     return 0;
 }
@@ -125,13 +110,15 @@ int Offloader::addJob(ls_offload *data)
     assert(data->api->on_task_done != NULL);
     assert(data->api->perform != NULL);
     assert(data->api->release != NULL);
+    assert(ls_atomic_value(&data->state) == LS_OFFLOAD_NOT_INUSE ||
+           ls_atomic_value(&data->state) >= LS_OFFLOAD_FINISH_CB);
 
     ++data->ref_cnt;
-    data->state = LS_OFFLOAD_ENQUEUE;
+    ls_atomic_set(&data->state, LS_OFFLOAD_ENQUEUE);
     rc = m_crew->addJob((ls_lfnodei_t *)data);
     if (rc == -1)
     {
-        data->state = LS_OFFLOAD_ENQUEUE_FAIL;
+        ls_atomic_set(&data->state, LS_OFFLOAD_ENQUEUE_FAIL);
         data->api->release(data);
     }
     return rc;
@@ -165,18 +152,18 @@ int Offloader::onNotified(int count)
             LS_NOTICE("Offloader::onNotified(), Bad Event Object Returned.");
             return LS_FAIL;
         }
+        (void)ls_atomic_set(&task->task_link, NULL);
         if (!task->is_canceled)
         {
             LS_DBG_L("[%s] on_task_done %p.\n", get_log_id(), task);
-            assert(task->state == LS_OFFLOAD_IN_FINISH_QUEUE);
-            task->state = LS_OFFLOAD_FINISH_CB;
+            assert(ls_atomic_value(&task->state) == LS_OFFLOAD_IN_FINISH_QUEUE);
+            ls_atomic_set(&task->state, LS_OFFLOAD_FINISH_CB);
             task->api->on_task_done(task->param_task_done);
-            task->state = LS_OFFLOAD_FINISH_CB_DONE;
         }
         else
         {
             LS_DBG_L("[%s] task %p has been canceled.\n", get_log_id(), task);
-            task->state = LS_OFFLOAD_FINISH_CB_BYPASS;
+            ls_atomic_set(&task->state, LS_OFFLOAD_FINISH_CB_BYPASS);
         }
         LS_DBG_L("[%s] release task %p.\n", get_log_id(), task);
         task->api->release(task);
@@ -186,16 +173,17 @@ int Offloader::onNotified(int count)
 }
 
 
-struct Offloader *offloader_new(const char *log_id, int workers)
+struct Offloader *offloader_new2(const char *log_id, int workers,
+                                int min_idle, int max_idle, int nice_pri)
 {
     Offloader *offload = new Offloader();
-    if (offload->init() == -1)
+    offload->set_log_id(log_id);
+    if (offload->init(min_idle, max_idle, nice_pri) == -1)
     {
         delete offload;
         return NULL;
     }
     offload->start(MultiplexerFactory::getMultiplexer(), workers);
-    offload->set_log_id(log_id);
     LS_INFO("[%s] created offloader with %d workers.\n", offload->get_log_id(), workers);
     return offload;
 }

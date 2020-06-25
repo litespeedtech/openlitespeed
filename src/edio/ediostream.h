@@ -29,29 +29,27 @@
 #include <util/iovec.h>
 
 
-class EdIS : public InputStream, virtual public InputFlowControl
+class EdIoStream : public InputStream, public OutputStream
+                 , virtual public IoFlowControl
 {
 public:
-    EdIS()  {}
-    virtual ~EdIS() {}
-
-    virtual int  onRead() = 0;
+    EdIoStream()  {}
+    virtual ~EdIoStream() {}
+    virtual int shutdown()  {   return -1;      }
+    virtual int sendfile(int fdSrc, off_t off, size_t size, int flag)
+    { return -1; }
+    virtual int onRead()            {   return 0;   }
+    virtual int onWrite()           {   return 0;   }
+    virtual int onPeerShutdown()    {   return 0;   }
+    virtual int onPeerClose()       {   return 0;   }
+    virtual int onClose()           {   return 0;   }
+    virtual int onAbort()           {   return 0;   }
 };
 
-class EdOS : public OutputStream, virtual public OutputFlowControl
-{
-public:
-    EdOS()  {}
-    virtual ~EdOS() {}
-
-    virtual int  onWrite() = 0;
-
-};
 
 class Multiplexer;
 class LoopBuf;
-class EdStream : public EventReactor, public EdIS,
-    public EdOS
+class EdStream : public EventReactor, virtual public EdIoStream
 {
     Multiplexer *m_pMplex;
 

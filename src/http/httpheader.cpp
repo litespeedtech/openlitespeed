@@ -285,7 +285,7 @@ size_t HttpHeader::getIndex2(const char *pHeader)
     if (idx < H_HEADER_END)
     {
         char ch = *(pHeader + getHeaderStringLen(idx));
-        if ((!ch) || (ch == ' ') || (ch == '\t'))
+        if (!ch || ch == ' ' || ch == '\t' || ch == ':')
             return idx;
     }
     return H_HEADER_END;

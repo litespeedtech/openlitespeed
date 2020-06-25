@@ -93,8 +93,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
-   lsr/offloader.cpp \
-   lsr/reuseport.cpp \
+   thread/offloader.cpp \
    thread/mtnotifier.cpp \
    thread/pthreadcond.cpp \
    thread/pthreadmutex.cpp \
@@ -102,7 +101,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    thread/thread.cpp \
    thread/workcrew.cpp \
    thread/worker.cpp \
-   thread/crewworker.cpp
+   thread/crewworker.cpp 
    
 
 
@@ -110,16 +109,17 @@ openlitespeed_LDADD =  ./main/libmain.a ./http/libhttp.a \
         ./extensions/libextensions.a ./log4cxx/liblog4cxx.a ./socket/libsocket.a \
         ./sslpp/libsslpp.a  ./ssi/libssi.a ./edio/libedio.a ./lsiapi/liblsiapi.a \
         ./modules/libmodules.a ./shm/liblsshm.a  ./adns/libadns.a \
+        ./h2/libh2.a \
         ./quic/libquic.a ./liblsquic/liblsquic.a ./spdy/libspdy.a \
         $(LIBBROTLI) $(LIBMMDB) $(EXTRA_LIBS) \
         $(AM_OPENSSL_LIBS) $(EXPAT_LIBS)  $(PCRE_LIBS) ${IP2LOCATION_LIBS} \
         -ludns -lz -lexpat -lpthread $(DL_LIB_OPTION) $(RT_LIB_OPTION)
 
 AM_LDFLAGS = $(OPENSSL_LDFLAGS) -L/usr/lib -L/usr/local/lib -L/usr/lib64  
-AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
+AM_CPPFLAGS = -std=c++0x -I$(top_srcdir)/ssl/include/ -I$(top_srcdir)/src/lshpack  -I$(top_srcdir)/src/liblsquic/ls-qpack -I$(top_srcdir)/include -I$(top_srcdir)/src  $(PCRE_CFLAGS) $(EXPAT_CFLAGS)
 AM_CXXFLAGS = -std=c++0x
 
-SUBDIRS =  socket http spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns quic liblsquic
+SUBDIRS =  socket http h2 spdy sslpp ssi extensions log4cxx main edio lsiapi  modules shm adns quic liblsquic
 
 
 # the library search path.

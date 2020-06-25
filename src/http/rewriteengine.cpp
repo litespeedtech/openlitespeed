@@ -1068,8 +1068,7 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
         if (!m_statusCode)
             pCode = "200";
         else
-            pCode = HttpStatusCode::getInstance().getCodeString(m_statusCode)
-                    + 1;
+            pCode = HttpStatusCode::getInstance().getCodeString(m_statusCode);
         pSession->getReq()->addEnv("REDIRECT_STATUS", 15, pCode, 3);
     }
     else if (m_logLevel > 0)

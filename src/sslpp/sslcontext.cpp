@@ -107,7 +107,9 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         {
             ret = pNewContext->setMultiKeyCertFile(pConfig->m_sKeyFile[0].c_str(),
                             SslUtil::FILETYPE_PEM, pConfig->m_sCertFile[0].c_str(),
-                            SslUtil::FILETYPE_PEM, pConfig->m_iCertChain);
+                            SslUtil::FILETYPE_PEM, pConfig->m_iCertChain,
+                            pConfig->m_iEnableMultiCerts == MULTI_CERT_ECC
+                                                  );
             if (pConfig->m_sCAFile.c_str()
                 && strcmp(pConfig->m_sCertFile[0].c_str(),
                             pConfig->m_sCAFile.c_str()) == 0)
@@ -548,17 +550,18 @@ int SslContext::setKeyCertificateFile(const char *pKeyFile, int iKeyType,
 }
 
 
-static const int max_certs = 4;
-static const int max_path_len = 512;
 int SslContext::setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
                                     const char *pCertFile, int iCertType,
-                                    int chained)
+                                    int chained, int ecc_only)
 {
+    int max_path_len = 4096;
     int i, iCertLen, iKeyLen, iLoaded = 0;
     char achCert[max_path_len], achKey[max_path_len];
-    const char *apExt[max_certs] = {"", ".rsa", ".dsa", ".ecc"};
+    const char *apExt[4] = {"", ".ecc", ".rsa", ".dsa"};
+    int max_certs = 4;
     char *pCertCur, *pKeyCur;
-
+    if (ecc_only)
+        max_certs = 2;
     iCertLen = snprintf(achCert, max_path_len, "%s", pCertFile);
     pCertCur = achCert + iCertLen;
     iKeyLen = snprintf(achKey, max_path_len, "%s", pKeyFile);
@@ -1005,7 +1008,7 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
  * it will become simply "h3"
  */
 #ifndef H3_ALPN
-#define H3_ALPN "\x05h3-22"
+#define H3_ALPN "\x05h3-25\x05h3-27"
 #endif
 #define H3_ALSZ (sizeof(H3_ALPN) - 1)
 

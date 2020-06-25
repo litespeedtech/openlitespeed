@@ -69,10 +69,22 @@ class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
         {
             iter.second()->getReqStats()->finalizeRpt();
             int len = ls_snprintf(achBuf, 1024, "REQ_RATE [%s]: "
-                                  "REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d\n",
+                                  "REQ_PROCESSING: %d, REQ_PER_SEC: %d, TOT_REQS: %d, "
+                                  "PUB_CACHE_HITS_PER_SEC: %d, TOTAL_PUB_CACHE_HITS: %d, "
+                                  "PRIVATE_CACHE_HITS_PER_SEC: %d, TOTAL_PRIVATE_CACHE_HITS: %d, "
+                                  "STATIC_HITS_PER_SEC: %d, TOTAL_STATIC_HITS: %d\n",
                                   iter.first(), iter.second()->getRef(),
                                   iter.second()->getReqStats()->getRPS(),
-                                  iter.second()->getReqStats()->getTotal());
+                                  iter.second()->getReqStats()->getTotal(),
+
+                                  iter.second()->getReqStats()->getPubHitsPS(),
+                                  iter.second()->getReqStats()->getTotalPubHits(),
+                                  iter.second()->getReqStats()->getPrivHitsPS(),
+                                  iter.second()->getReqStats()->getTotalPrivHits(),
+
+
+                                  iter.second()->getReqStats()->getHitsPS(),
+                                  iter.second()->getReqStats()->getTotalHits());
             iter.second()->getReqStats()->reset();
             if (::write(fd, achBuf, len) != len)
                 return LS_FAIL;

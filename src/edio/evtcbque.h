@@ -18,11 +18,13 @@
 #ifndef CALLBACKQUEUE_H
 #define CALLBACKQUEUE_H
 
+#include <lsdef.h>
 #include <lsr/ls_evtcb.h>
-#include <lsr/ls_lock.h>
 #include <util/dlinkqueue.h>
 #include <util/tsingleton.h>
 #include <edio/eventnotifier.h>
+
+#define EQF_RUNNING         (1<<0)
 
 struct evtcbnode_s;
 
@@ -32,53 +34,115 @@ public:
     virtual int onNotified(int count){return 0;};
 };
 
-#define NUM_SESS_QUES 4
-
 class EvtcbQue : public TSingleton<EvtcbQue>
 {
-private:
-    // These locks protects the session queues
-    // (except the head - which is static)
-    ls_mutex_t m_sessLks[NUM_SESS_QUES];
-    ls_mutex_t m_runQlock;
-    ls_mutex_t m_nodePoolLock;
-
-    ls_atom_32_t      m_notified;
-    EvtcbQueNotifier *m_pNotifier;
-
     friend class TSingleton<EvtcbQue>;
 
     EvtcbQue();
     ~EvtcbQue();
 
-    TDLinkQueue<evtcbnode_s>  m_sessCallbackObjList[NUM_SESS_QUES];
-    TDLinkQueue<evtcbnode_s>  m_curRunQ; // have to keep as member rather than local/auto
-                                         // to support removeSessionCb
+    DLinkQueue  m_callbackObjList;
 
-    static void logState(const char *s, evtcbnode_s *p, const char * extra = NULL);
     void runOne(evtcbnode_s *pObj);
-    void appendCur(TDLinkQueue<evtcbnode_s>  *tmpQ);
-    void runCur();
 
+    evtcbnode_s *extractSession(evtcbnode_s *pObj);
+    void runNodes(evtcbnode_s *pObj);
+
+    void setFlag(uint32_t f)        {   m_iFlag |= f;               }
+    void clearFlag(uint32_t f)      {   m_iFlag &= ~f;              }
+    uint32_t getFlag() const        {   return m_iFlag;             }
+    uint32_t getFlag(int mask)      {   return m_iFlag & mask;      }
+
+    static void logState(const char *s, evtcbnode_s *p);
 
 public:
-    void run(evtcbtail_t * pSession);
+    void run(evtcbhead_t *session);
     void run();
+
+    int initNotifier();
+
     void recycle(evtcbnode_s *pObj);
 
-    evtcbnode_s * getNodeObj(evtcb_pf cb, const evtcbtail_t *session,
+    evtcbnode_s * getNodeObj(evtcb_pf cb, evtcbhead_t *session,
                              long lParam, void *pParam);
 
-    void schedule(evtcbnode_s *pObj, bool nowait = true);
-    evtcbnode_s *schedule(evtcb_pf cb, const evtcbtail_t *session,
-                          long lParam, void *pParam, bool nowait);
-    int removeSessionCb(evtcbtail_t * pSession);
+    void schedule(evtcbnode_s *pObj);
+    evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
+                          long lParam, void *pParam);
+    int schedule_once(evtcbnode_s *pObj);
+    evtcbnode_s *schedule_once(evtcb_pf cb, evtcbhead_t *session,
+                          long lParam, void *pParam);
 
-    static evtcbtail_t **getSessionRefPtr(evtcbnode_s *nodeObj);
+    void schedule_nowait(evtcbnode_s *pObj)
+    {
+        schedule(pObj);
+        notify();
+    }
 
-    void resetEvtcbTail(evtcbtail_t * session); // should really have a lock in session
+    evtcbnode_s * schedule_nowait(evtcb_pf cb, evtcbhead_t *session,
+                                  long lParam, void *pParam)
+    {
+        evtcbnode_s *pRet;
+        if ((pRet = schedule(cb, session, lParam, pParam)) != NULL)
+            notify();
+        return pRet;
+    }
+
+    int schedule_once_nowait(evtcbnode_s *pObj)
+    {
+        int ret;
+        if ((ret = schedule_once(pObj)) == 0)
+            notify();
+        return ret;
+    }
+
+    evtcbnode_s * schedule_once_nowait(evtcb_pf cb, evtcbhead_t *session,
+                                       long lParam, void *pParam)
+    {
+        evtcbnode_s *pRet;
+        if ((pRet = schedule_once(cb, session, lParam, pParam)) != NULL)
+            notify();
+        return pRet;
+    }
+
+    evtcbnode_s *schedule(evtcb_pf cb, evtcbhead_t *session,
+                          long lParam, void *pParam, int no_wait)
+    {
+        evtcbnode_s *pRet;
+        if ((pRet = schedule_once(cb, session, lParam, pParam)) != NULL)
+        {
+            if (no_wait)
+                notify();
+        }
+        return pRet;
+    }
+
+    void schedule(evtcbnode_s *pObj, int no_wait)
+    {
+        schedule(pObj);
+        if (no_wait)
+            notify();
+    }
+
+
+    void notify()
+    {   m_pNotifier->notify();      }
+
+    void removeSessionCb(evtcbhead_t *session);
+
+    static evtcbhead_t **getSessionRefPtr(evtcbnode_s *nodeObj);
+
+    int size() const                {   return m_callbackObjList.size();    }
+
+    void sessionDebug(evtcbhead_t *session);
 
     LS_NO_COPY_ASSIGN(EvtcbQue);
+
+private:
+    int32_t             m_lock;
+    uint32_t            m_iFlag;
+    EvtcbQueNotifier   *m_pNotifier;
+
 };
 
 LS_SINGLETON_DECL(EvtcbQue);

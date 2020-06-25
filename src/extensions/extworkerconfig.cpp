@@ -163,10 +163,13 @@ void ExtWorkerConfig::altServerAddr()
     {
     case AF_UNIX:
         {
+            AutoStr2 s = m_sURL.c_str();
             char *p1 = (char *)m_pServerAddr->getUnix();
             char *p = p1 + strlen(m_sURL.c_str()) - 5;
             int seq = rand() % 1000;
             ls_snprintf(p, p1 + 102 - p, ".%03d", seq);
+            s.append(p, 4);
+            m_sURL.setStr(s.c_str());
         }
         break;
     case AF_INET:

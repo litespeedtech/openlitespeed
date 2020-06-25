@@ -59,7 +59,7 @@ QuicShm::~QuicShm()
         m_pServerConf->close();
 
     if (m_pInternalShiCtx)
-        stock_shared_hash_destroy((struct stock_shared_hash *)m_pInternalShiCtx);
+        lsquic_stock_shared_hash_destroy((struct stock_shared_hash *)m_pInternalShiCtx);
     
     if (m_pCidMap)
         m_pCidMap->close();
@@ -201,7 +201,7 @@ int QuicShm::init(const char *pShmDir)
 {
     /* TODO: check return values in the several function calls below: */
     m_pInternalShi = (struct lsquic_shared_hash_if *)&stock_shi;
-    m_pInternalShiCtx = stock_shared_hash_new();
+    m_pInternalShiCtx = lsquic_stock_shared_hash_new();
     if (openShmPacketPool(".quicshmdata", pShmDir) == LS_FAIL)
         return LS_FAIL;
     return openShmMapPool(".quicshmmap", pShmDir);

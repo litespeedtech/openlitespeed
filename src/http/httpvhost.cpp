@@ -704,10 +704,10 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
             LS_DBG_L(ConfigCtx::getCurConfigCtx(),
                      "path %s not accessible, added null context %p.",
                      achRealPath, pContext0);
-            
-            
-            
-            
+
+
+
+
             break;
         }
 
@@ -1319,7 +1319,7 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
             default:
                 ret = ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath,
                         pLocation);
-                
+
                 /**
                  * Since it is expanded, now we try to add tail / dor DIR if not have
                  */
@@ -1913,7 +1913,7 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     char appURL[MAX_URI_LEN];
     if (!pStartupFile || *pStartupFile == '\0')
         pStartupFile = "index.wsgi";
-    
+
     //Add a _ between the URI and the startupFile
     achURI[uriLen++] = '_';
     memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
@@ -2638,7 +2638,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
-    else if (type != HandlerType::HT_REDIRECT && 
+    else if (type != HandlerType::HT_REDIRECT &&
         *pLocation != '$' && *pLocation != '/')
     {
         defLocation.setStr("$DOC_ROOT/");

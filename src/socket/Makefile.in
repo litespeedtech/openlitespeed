@@ -112,10 +112,11 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libsocket_a_AR = $(AR) $(ARFLAGS)
 libsocket_a_LIBADD =
-am_libsocket_a_OBJECTS = gsockaddr.$(OBJEXT) hostinfo.$(OBJEXT) \
-	tcpsockopt.$(OBJEXT) tcpserversocket.$(OBJEXT) \
-	tcpconnection.$(OBJEXT) streamsocket.$(OBJEXT) \
-	serversocket.$(OBJEXT) coresocket.$(OBJEXT)
+am_libsocket_a_OBJECTS = reuseport.$(OBJEXT) gsockaddr.$(OBJEXT) \
+	hostinfo.$(OBJEXT) tcpsockopt.$(OBJEXT) \
+	tcpserversocket.$(OBJEXT) tcpconnection.$(OBJEXT) \
+	streamsocket.$(OBJEXT) serversocket.$(OBJEXT) \
+	coresocket.$(OBJEXT)
 libsocket_a_OBJECTS = $(am_libsocket_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -344,7 +345,7 @@ top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libsocket.a
 AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
 libsocket_a_METASOURCES = AUTO
-libsocket_a_SOURCES = gsockaddr.cpp hostinfo.cpp tcpsockopt.cpp tcpserversocket.cpp tcpconnection.cpp \
+libsocket_a_SOURCES = reuseport.cpp gsockaddr.cpp hostinfo.cpp tcpsockopt.cpp tcpserversocket.cpp tcpconnection.cpp \
 		streamsocket.cpp serversocket.cpp coresocket.cpp 
 
 all: all-am
@@ -398,6 +399,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coresocket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gsockaddr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hostinfo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reuseport.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serversocket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/streamsocket.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcpconnection.Po@am__quote@

@@ -22,8 +22,6 @@
 #include <http/httprespheaders.h>
 
 #define RANGE_HEADER_LEN    22
-#define LSI_RSP_BODY_SIZE_CHUNKED (-1)
-#define LSI_RSP_BODY_SIZE_UNKNOWN (-2)
 
 class AutoStr2;
 class GzipBuf;
@@ -71,8 +69,8 @@ public:
     int appendHeader(int index, const char *pName, int nameLen,
                      const char *pValue, int valLen)
     {
-        return m_respHeaders.add((HttpRespHeaders::INDEX)index,
-                                 pValue, valLen, LSI_HEADEROP_ADD);
+        return m_respHeaders.add((HttpRespHeaders::INDEX)index, pName, nameLen,
+                                 pValue, valLen, LSI_HEADER_ADD);
     }
 
     void prepareHeaders(const HttpReq *pReq, int addAcceptRange = 0);
@@ -108,7 +106,7 @@ public:
 
     void addBrotliEncodingHeader()
     {
-        m_respHeaders.addBrotliEncodingHeader();
+        m_respHeaders.addBrEncodingHeader();
     }
 
     void appendChunked()
@@ -117,7 +115,7 @@ public:
     }
 
     int addExpiresHeader(time_t getLastMod, const ExpiresCtrl *pExpireDefault);
-    
+
     int setContentTypeHeader(const char *pType, int typeLen,
                              const AutoStr2 *pCharset);
 
@@ -126,7 +124,7 @@ public:
     const char *getContentTypeHeader(int &len)  {    return m_respHeaders.getContentTypeHeader(len);  }
 
     int  appendLastMod(long tmMod);
-    
+
     int addCookie(const char *pName, const char *pVal,
                   const char *path, const char *domain, int expires,
                   int secure, int httponly);

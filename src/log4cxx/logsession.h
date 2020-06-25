@@ -43,7 +43,7 @@ public:
 
     int  isLogIdBuilt() const
     {
-        return ( ls_atomic_fetch_add(&((LogSession *)this)->m_logId.len, 0) );
+        return ( ls_atomic_value(&((LogSession *)this)->m_logId.len) );
     }
 
 
@@ -183,6 +183,8 @@ public:
         ls_spinlock_unlock(&m_buildLock);
     }
 
+    LogSession *getLogSession()                 {   return this;    }
+    const LogSession *getLogSession() const     {   return this;    }
 
     size_t getIdLen()               {   return m_logId.len;                 }
 

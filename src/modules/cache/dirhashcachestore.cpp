@@ -184,11 +184,11 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     }
     else
     {
-        if (!getManager()->isInTracker(hash.getKey(), HASH_KEY_LEN, 
+        if (!getManager()->isInTracker(hash.getKey(), HASH_KEY_LEN,
                                        pKey->m_pIP != NULL))
             return NULL;
     }
-    
+
     if ((pEntry == NULL) || (pEntry->getFdStore() == -1))
     {
         if (!pathLen)
@@ -243,7 +243,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
         {
             if (isCreatorAlive(pEntry))
             {
-                g_api->log(NULL, LSI_LOG_INFO, 
+                g_api->log(NULL, LSI_LOG_INFO,
                            "[CACHE] %p [%s], is under construction by PID: %d",
                             pEntry, pEntry->getHashKey().to_str(NULL),
                             pEntry->getHeader().m_pidCreator);
@@ -253,10 +253,10 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
             {
                 removeDeadEntry(pEntry, hash, achBuf);
                 pEntry = NULL;
-            }    
+            }
             return pEntry;
         }
-        
+
         updateEntryState((DirHashCacheEntry *)pEntry);
         if (stale)
         {
@@ -285,7 +285,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     g_api->log(NULL, LSI_LOG_DEBUG,
                "[CACHE] check [%p] against cache manager, tag: '%s' \n",
                pEntry, pEntry->getTag().c_str());
-    
+
     if (!dispose )
     {
         int flag = getManager()->isPurged(pEntry, pKey, (lastCacheFlush >= 0));
@@ -342,7 +342,7 @@ int DirHashCacheStore::isCreatorAlive(CacheEntry *pEntry)
 {
     if (pEntry->getHeader().m_pidCreator == 0)
         return 0;
-    return (kill(pEntry->getHeader().m_pidCreator, 0) != -1 
+    return (kill(pEntry->getHeader().m_pidCreator, 0) != -1
             || errno != ESRCH);
 }
 
@@ -684,15 +684,19 @@ int DirHashCacheStore::updateEntryExpire(CacheEntry* pEntry)
         errno = EBADF;
         return -1;
     }
-    
+
     pEntry->getHeader().m_tmExpire += DateTime::s_curTime -
                                       pEntry->getHeader().m_tmCreated;
+    off_t curOffset = lseek(fd, 0, SEEK_CUR);
+
     if (nio_lseek(fd, pEntry->getStartOffset() + CACHE_ENTRY_MAGIC_LEN,
                   SEEK_SET) == -1)
         return -1;
-    if (nio_write(fd, &pEntry->getHeader(), sizeof(CeHeader)) <
-        (int)sizeof(CeHeader))
+    const char *pHeaders = (const char *)&pEntry->getHeader();
+    if (nio_write(fd, pHeaders, sizeof(CeHeader)) < (int)sizeof(CeHeader))
         return -1;
+
+    lseek(fd, curOffset, SEEK_SET);
     return 0;
 }
 
@@ -725,14 +729,6 @@ int DirHashCacheStore::publish(CacheEntry *pEntry)
         errno = EBADF;
         return -1;
     }
-    pEntry->getHeader().m_tmExpire += DateTime::s_curTime -
-                                      pEntry->getHeader().m_tmCreated;
-    if (nio_lseek(fd, pEntry->getStartOffset() + 4, SEEK_SET) == -1)
-        return -1;
-    if (nio_write(fd, &pEntry->getHeader(), sizeof(CeHeader)) <
-        (int)sizeof(CeHeader))
-        return -1;
-
     pEntry->setBuilding(0);
     if (updateEntryExpire(pEntry) != 0)
         return -1;
@@ -748,11 +744,11 @@ int DirHashCacheStore::publish(CacheEntry *pEntry)
     achTmp[len - 4] = 0;
     if (pEntry->isDirty())
     {
-        g_api->log(NULL, LSI_LOG_DEBUG, 
+        g_api->log(NULL, LSI_LOG_DEBUG,
                    "[CACHE] [%s] is marked dirty, do not add to hash.", achTmp);
         return 0;
     }
-    
+
     return updateHashEntry(pEntry);
 }
 
@@ -760,15 +756,15 @@ int DirHashCacheStore::publish(CacheEntry *pEntry)
 void DirHashCacheStore::removeEntryByHash(const unsigned char *pKey, int isPrivate)
 {
     char achBuf[4096];
-    char *pathEnd; 
+    char *pathEnd;
     pathEnd = &achBuf[0] + buildCacheLocation(achBuf, 4096, pKey, isPrivate);
 
     g_api->log(NULL, LSI_LOG_DEBUG, "[CACHE] remove cache object [%s].\n", achBuf);
     unlink(achBuf);
-    
+
     pathEnd -= 2 * HASH_KEY_LEN + 1;
     assert(*pathEnd == '/');
-    
+
     *pathEnd = 0;
     if (rmdir(achBuf) == 0)
     {
@@ -780,11 +776,11 @@ void DirHashCacheStore::removeEntryByHash(const unsigned char *pKey, int isPriva
 }
 
 
-void DirHashCacheStore::removeDeadEntry(CacheEntry *pEntry, 
+void DirHashCacheStore::removeDeadEntry(CacheEntry *pEntry,
                                         const CacheHash &hash,
                                         char *achBuf)
 {
-    getManager()->removeTracking((const char *)hash.getKey(), 
+    getManager()->removeTracking((const char *)hash.getKey(),
                                     HASH_KEY_LEN, pEntry->isPrivate());
     if (!achBuf[0])
         buildCacheLocation(achBuf, 4096, hash.getKey(), pEntry->isPrivate());

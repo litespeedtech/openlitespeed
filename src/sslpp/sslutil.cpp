@@ -755,18 +755,8 @@ long SslUtil::getOptions(SSL_CTX *pCtx)
 }
 
 
-int SslUtil::setCipherList(SSL_CTX *pCtx, const char *pList)
-{
-    char cipher[4096];
-
-    if (!pList || !*pList || (strncasecmp(pList, "ALL:", 4) == 0)
-        || (strncasecmp(pList, "SSLv3:", 6) == 0)
-        || (strncasecmp(pList, "TLSv1:", 6) == 0))
-    {
-        //snprintf( cipher, 4095, "RC4:%s", pList );
-        //strcpy( cipher, "ALL:HIGH:!aNULL:!SSLV2:!eNULL" );
-#if OPENSSL_VERSION_NUMBER >= 0x10001000L
-        strcpy(cipher, "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
+static char s_default_cipher_list[4096] =
+               "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
                "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:"
                "DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:"
                "kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:"
@@ -779,33 +769,32 @@ int SslUtil::setCipherList(SSL_CTX *pCtx, const char *pList)
                "DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:"
                "AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:"
                "CAMELLIA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:"
-               "!MD5:!PSK:!aECDH"
-              );
-//         strcpy( cipher, "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 "
-//                         "EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 "
-//                         "EECDH+aRSA+RC4 EECDH EDH+aRSA RC4 !aNULL !eNULL !LOW "
-//                         "!3DES !MD5 !SSLv2 !EXP !PSK !SRP "
-//                         "!DSSTLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:"
-//                 );
+               "!MD5:!PSK:!aECDH";
 
-//             strcpy( cipher, "ECDHE-RSA-AES128-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA128:"
-//                             "DHE-RSA-AES128-GCM-SHA384:DHE-RSA-AES128-GCM-SHA128:"
-//                             "ECDHE-RSA-AES128-SHA384:ECDHE-RSA-AES128-SHA128:"
-//                             "ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES128-SHA:"
-//                             "DHE-RSA-AES128-SHA128:DHE-RSA-AES128-SHA128:"
-//                             "DHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:ECDHE-RSA-DES-CBC3-SHA"
-//                             ":EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA384:AES128-GCM-SHA128:"
-//                             "AES128-SHA128:AES128-SHA128:AES128-SHA:AES128-SHA:"
-//                             "DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4"
-//                     );
-        //strcpy( cipher, "HIGH:!MD5:!aNULL:!EDH@strength" );
+void SslUtil::setDefaultCipherList(const char *pList)
+{
+    if (!pList)
+        return;
+    buildCipherList(s_default_cipher_list, sizeof(s_default_cipher_list),
+                    pList);
+}
+
+
+// It is possible that this function does not move to buf. Use the returned pointer.
+const char *SslUtil::buildCipherList(char *buf, int iMaxBufLen, const char *pList)
+{
+    if (!pList || !*pList || (strncasecmp(pList, "ALL:", 4) == 0)
+        || (strncasecmp(pList, "SSLv3:", 6) == 0)
+        || (strncasecmp(pList, "TLSv1:", 6) == 0))
+    {
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+        lstrncpy(buf, s_default_cipher_list, iMaxBufLen);
 #else
-        strcpy(cipher,
+        lsnprintf(buf, iMaxBufLen,
                "RC4:HIGH:!aNULL:!MD5:!SSLv2:!eNULL:!EDH:!LOW:!EXPORT56:!EXPORT40");
 
 #endif
-        //strcpy( cipher, "RC4:-EXP:-SSLv2:-ADH" );
-        pList = cipher;
+        pList = buf;
     }
     else
     {
@@ -822,15 +811,28 @@ int SslUtil::setCipherList(SSL_CTX *pCtx, const char *pList)
         {
             if (!p)
                 p = ":";
-            snprintf(cipher, 4095, "%.*sECDHE-ECDSA-AES128-GCM-SHA256%c"
+            lsnprintf(buf, iMaxBufLen, "%.*sECDHE-ECDSA-AES128-GCM-SHA256%c"
                      "ECDHE-RSA-AES128-GCM-SHA256%c%s",
                      (int)(pBegin - pList), pList, *p, *p, pBegin);
-            pList = cipher;
+            pList = buf;
         }
     }
+    return pList;
+}
 
+
+int SslUtil::useCipherList(SSL_CTX *pCtx, const char *pList)
+{
     LS_DBG_L( "[SSL] set ciphers to %s", pList );
     return SSL_CTX_set_cipher_list(pCtx, pList) == 1;
+}
+
+
+int SslUtil::setCipherList(SSL_CTX *pCtx, const char *pList)
+{
+    char cipher[4096];
+    pList = buildCipherList(cipher, sizeof(cipher), pList);
+    return useCipherList(pCtx, pList);
 }
 
 

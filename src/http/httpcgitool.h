@@ -37,19 +37,21 @@ public:
     static int processContentType(HttpSession *pSession,
                                   const char *pValue, int valLen);
     static int processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue);
-    
+
     static int processHeaderLine(HttpExtConnector *pExtConn,
                                  const char *pName, int nameLen,
-                                 const char *pValue, int valLen, int &status);
+                                 const char *pValue, int valLen);
     static int processHeaderLine(HttpExtConnector *pExtConn, int index,
                                  const char *pLineBegin, int nameLen,
-                                 const char *pValue, int valLen, int &status);
+                                 const char *pValue, int valLen);
+    static int processHeaderLine2(HttpExtConnector *pExtConn, int index,
+                                 const char *pLineBegin, int nameLen,
+                                 const char *pValue, int valLen);
     static int processHeaderLine(HttpExtConnector *pExtConn,
-                                 const char *pValue, const char *pLineEnd, int &status);
+                                 const char *pValue, const char *pLineEnd);
+    static void processStatusCode(HttpExtConnector* connector, int code);
     static int parseRespHeader(HttpExtConnector *pExtConn,
-                               char *pBuf, int size, int &status);
-    static int parseRespHeader(HttpExtConnector *pExtConn,
-                               const char *pBuf, int size, int &status);
+                               const char *pBuf, int size);
     static int buildEnv(IEnv *pEnv, HttpSession *pSession);
     static int buildFcgiEnv(FcgiEnv *pEnv, HttpSession *pSession);
     static void buildServerEnv();

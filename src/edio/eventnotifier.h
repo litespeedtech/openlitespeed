@@ -61,6 +61,8 @@ public:
     }
 #endif
     void uninitNotifier(Multiplexer *pMultiplexer);
+    void setPending(int pending)
+    {   ls_atomic_setint(&m_pending, pending);    }
 
     virtual int onNotified(int count) = 0;
 private:

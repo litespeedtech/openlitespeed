@@ -52,6 +52,8 @@ public:
     {   return s_pMultiplexer;  }
     static void setMultiplexer(Multiplexer *pMultiplexer)
     {   s_pMultiplexer = pMultiplexer;  }
+    static int initDefault();
+
     LS_NO_COPY_ASSIGN(MultiplexerFactory);
 };
 

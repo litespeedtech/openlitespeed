@@ -20,6 +20,7 @@
 #include <lsdef.h>
 #include <edio/aiosendfile.h>
 #include <edio/evtcbque.h>
+#include <h2/unpackedheaders.h>
 #include <http/chunkinputstream.h>
 #include <http/chunkoutputstream.h>
 #include <http/clientcache.h>
@@ -421,6 +422,32 @@ void HttpSession::logAccess(int cancelled)
     }
     else if (shouldLogAccess())
         HttpLog::logAccess(NULL, 0, this);
+}
+
+void HttpSession::incStatsCacheHits(int type)
+{
+    HttpVHost *pVhost = m_request.getVHost();
+    if (!pVhost)
+        return ;
+
+    switch (type)
+    {
+    case 0: //static file cache
+        HttpStats::getReqStats()->incStxCacheHits();
+        pVhost->getReqStats()->incStxCacheHits();
+        break;
+    case 1: //public cache
+        HttpStats::getReqStats()->incPubCacheHits();
+        pVhost->getReqStats()->incPubCacheHits();
+        break;
+    case 2: //private cache
+        HttpStats::getReqStats()->incPrivCacheHits();
+        pVhost->getReqStats()->incPrivCacheHits();
+        break;
+    default:
+        break;
+    }
+
 }
 
 
@@ -1113,12 +1140,27 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
     p = pProxyHeader;
     while (pIpBegin < pEnd)
     {
-        while ((pIpBegin < pEnd) && isspace(*pIpBegin))
-            ++pIpBegin;
-
-        p = (char *)memchr(pIpBegin, ',', pEnd - pIpBegin);
-        if (!p)
+        if (HttpServerConfig::getInstance().getUseProxyHeader() == 4)
+        {
+            while(pEnd > pIpBegin && (isspace(pEnd[-1]) || ',' == pEnd[-1]))
+                --pEnd;
+            p = (const char *)memrchr(pIpBegin, ',', pEnd - pIpBegin);
+            if (p)
+                pIpBegin = p + 1;
+            while ((pIpBegin < pEnd) && isspace(*pIpBegin))
+                ++pIpBegin;
             p = pEnd;
+        }
+        else
+        {
+            while ((pIpBegin < pEnd) && isspace(*pIpBegin))
+                ++pIpBegin;
+
+            p = (char *)memchr(pIpBegin, ',', pEnd - pIpBegin);
+            if (!p)
+                p = pEnd;
+        }
+
         len = p - pIpBegin;
         if ((len <= 0) || (len > 255))
         {
@@ -1296,7 +1338,7 @@ int HttpSession::processNewReqInit()
     {
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
-    if ((useProxyHeader == 1)
+    if ((useProxyHeader == 1) || (useProxyHeader == 4)
         || (((useProxyHeader == 2) || (useProxyHeader == 3))
             && (getClientInfo()->getAccess() == AC_TRUST)))
     {
@@ -2130,7 +2172,7 @@ int HttpSession::processContextAuth()
             else
                 satisfy = satisfyAny;
         }
-        if (!satisfy)
+        if (!satisfy && ! m_request.isChallenge())
         {
             if (aaa.m_pRequired && aaa.m_pHTAuth)
             {
@@ -2504,8 +2546,7 @@ int HttpSession::sendHttpError(const char *pAdditional)
 {
     int statusCode = m_request.getStatusCode();
     LS_DBG_L(getLogSession(), "HttpSession::sendHttpError(), code = '%s'.",
-             HttpStatusCode::getInstance().getCodeString(m_request.getStatusCode()) +
-             1);
+             HttpStatusCode::getInstance().getCodeString(m_request.getStatusCode()));
     if ((statusCode < 0) || (statusCode >= SC_END))
     {
         LS_ERROR(getLogSession(), "Invalid HTTP status code: %d!", statusCode);
@@ -2515,8 +2556,7 @@ int HttpSession::sendHttpError(const char *pAdditional)
     {
         HttpStats::inc503Errors();
         LS_NOTICE(getLogSession(), "oops! %s",
-                  HttpStatusCode::getInstance()
-                                    .getCodeString(m_request.getStatusCode()));
+                  HttpStatusCode::getInstance().getCodeString(m_request.getStatusCode()));
         m_request.dumpHeader();
     }
     if (m_iFlag & HSF_NO_ERROR_PAGE)
@@ -2626,7 +2666,7 @@ int HttpSession::buildErrorResponse(const char *errMsg)
 //             return 0;
 //         }
 //         if (errMsg == NULL)
-//             errMsg = HttpStatusCode::getInstance().getRealHtml( errCode );
+//             errMsg = HttpStatusCode::getRealHtml( errCode );
 //         if (errMsg)
 //         {
 //             appendDynBody(errMsg, strlen(errMsg));
@@ -3122,7 +3162,7 @@ void HttpSession::setupChunkOS(int nobuffer)
 {
     if (getStream()->isSpdy() || (m_iFlag & HSF_SUB_SESSION))
         return;
-    m_response.setContentLen(LSI_RSP_BODY_SIZE_CHUNKED);
+    m_response.setContentLen(LSI_BODY_SIZE_CHUNK);
     if ((m_request.getVersion() == HTTP_1_1) && (nobuffer != 2))
     {
         m_response.appendChunked();
@@ -3526,6 +3566,18 @@ inline int HttpSession::useGzip()
 
 extern int addModgzipFilter(lsi_session_t *session, int isSend,
                             uint8_t compressLevel);
+
+int HttpSession::addModgzipFilter(int isSend, uint8_t compressLevel)
+{
+    if (m_sessionHooks.isNotInited())
+        return -1;
+
+    if (::addModgzipFilter((LsiSession *)this, isSend, compressLevel) == -1)
+        return LS_FAIL;
+
+    return 0;
+}
+
 int HttpSession::setupGzipFilter()
 {
     if (testFlag(HSF_RESP_HEADER_SENT))
@@ -3543,7 +3595,7 @@ int HttpSession::setupGzipFilter()
         if (recvhkptNogzip || hkptNogzip || !(gz & REQ_GZIP_ACCEPT))
         {
             //setup decompression filter at RECV_RESP_BODY filter
-            if (addModgzipFilter((LsiSession *)this, 0, 0) == -1)
+            if (addModgzipFilter(0, 0) == -1)
                 return LS_FAIL;
             m_response.getRespHeaders().del(
                 HttpRespHeaders::H_CONTENT_ENCODING);
@@ -3569,8 +3621,7 @@ int HttpSession::setupGzipFilter()
         }
         else //turn on compression at SEND_RESP_BODY filter
         {
-            if (addModgzipFilter((LsiSession *)this, 1,
-                                 HttpServerConfig::getInstance().getCompressLevel()) == -1)
+            if (addModgzipFilter(1, HttpServerConfig::getInstance().getCompressLevel()) == -1)
                 return LS_FAIL;
             m_response.addGzipEncodingHeader();
             //The below do not set the flag because compress won't update the resp VMBuf to decompressed
@@ -3605,7 +3656,7 @@ int HttpSession::setupGzipBuf()
                 (getGzipBuf()->beginStream() == 0))
             {
                 LS_DBG_M(getLogSession(), "setupGzipBuf() begin GZIP stream.\n");
-                m_response.setContentLen(LSI_RSP_BODY_SIZE_UNKNOWN);
+                m_response.setContentLen(LSI_BODY_SIZE_UNKNOWN);
                 m_response.addGzipEncodingHeader();
                 m_request.orGzip(UPSTREAM_GZIP);
                 setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
@@ -3989,7 +4040,7 @@ int HttpSession::endResponse(int success)
     // FIXME ols orig code
 //     if (!isRespHeaderSent() && (m_response.getContentLen() < 0))
     if (!m_request.noRespBody() && !isRespHeaderSent()
-        && ((m_response.getContentLen() == LSI_RSP_BODY_SIZE_UNKNOWN)
+        && ((m_response.getContentLen() == LSI_BODY_SIZE_UNKNOWN)
             || m_request.getContextState(RESP_CONT_LEN_SET)))
     {
         // header is not sent yet, no body sent yet.
@@ -4074,7 +4125,7 @@ int HttpSession::flushBody()
 }
 
 
-int HttpSession::call_nextRequest(evtcbtail_t *p, long , void *)
+int HttpSession::call_nextRequest(evtcbhead_t *p, long , void *)
 {
     HttpSession *pSession = (HttpSession *)p;
     pSession->nextRequest();
@@ -4388,7 +4439,17 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
     p = extraHeaders;
 
     addBittoCookie(cookie, id);
-    return getStream()->push(&uri, &host, extraHeaders);
+    UnpackedHeaders *header = new UnpackedHeaders();
+    ls_str_t method;
+    method.ptr = (char *)"GET";
+    method.len = 3;
+    if (header->set(&method, &uri, &host, extraHeaders) != LS_OK)
+    {
+        delete header;
+        return LS_FAIL;
+    }
+    return getStream()->push(header);
+
 }
 
 
@@ -4508,13 +4569,12 @@ int HttpSession::sendRespHeaders()
         ls_mutex_lock(&p->m_respHeaderLock);
         setMtFlag(HSF_MT_RESP_HDR_SENT);
     }
-    m_response.getRespHeaders().prepareFinalize();
 
     int isNoBody = isNoRespBody();
     if (!isNoBody)
     {
         if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_BODY))
-            m_response.setContentLen(LSI_RSP_BODY_SIZE_UNKNOWN);
+            m_response.setContentLen(LSI_BODY_SIZE_UNKNOWN);
         if (m_response.getContentLen() >= 0)
             m_response.appendContentLenHeader();
         else
@@ -4876,7 +4936,7 @@ int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
     if (!pBuf)
         pBuf = ls_palloc(STATIC_FILE_BLOCK_SIZE);
     remain = m_aioReq.read(pData->getECache()->getfd(), pBuf,
-                           len, pData->getCurPos(), (AioEventHandler *)this);
+                           len, pData->getCurPos(), (EventHandler *)this);
     if (remain != 0)
         return LS_FAIL;
     setFlag(HSF_AIO_READING);
@@ -5247,7 +5307,7 @@ int HttpSession::contentEncodingFixup()
     {
         if (pContentEncoding)
         {
-            if (addModgzipFilter((LsiSession *)this, 1, 0) == -1)
+            if (addModgzipFilter(1, 0) == -1)
                 return LS_FAIL;
             m_response.getRespHeaders().del(HttpRespHeaders::H_CONTENT_ENCODING);
             clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
@@ -5258,8 +5318,7 @@ int HttpSession::contentEncodingFixup()
     {
         if (m_response.getContentLen() > 200)// && getReq()->getStatusCode() < SC_400)
         {
-            if (addModgzipFilter((LsiSession *)this, 1,
-                                 HttpServerConfig::getInstance().getCompressLevel()) == -1)
+            if (addModgzipFilter(1, HttpServerConfig::getInstance().getCompressLevel()) == -1)
                 return LS_FAIL;
             m_response.addGzipEncodingHeader();
             //The below do not set the flag because compress won't update the resp VMBuf to decompressed
@@ -5399,19 +5458,18 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
     return onWriteEx();
 }
 
-void HttpSession::setBackRefPtr(evtcbtail_t ** v)
+void HttpSession::setBackRefPtr(evtcbhead_t ** v)
 {
     LS_DBG_M(getLogSession(),
                  "setBackRefPtr() called, set to %p.", *v);
-    evtcbtail_t::back_ref_ptr = v;
+    evtcbhead_t::back_ref_ptr = v;
 }
 
 
 void HttpSession::resetEvtcb()
 {
     LS_DBG_H("%s calling resetEvtcbTail on this %p\n", __func__, this);
-    EvtcbQue::getInstance().resetEvtcbTail(this);
-    evtcbtail_t::back_ref_ptr = NULL;
+    evtcbhead_reset(this);
 }
 
 
@@ -5427,13 +5485,13 @@ void HttpSession::cancelEvent(evtcbnode_s * v)
 
 void HttpSession::resetBackRefPtr()
 {
-    if (evtcbtail_t::back_ref_ptr)
+    if (evtcbhead_t::back_ref_ptr)
     {
         LS_DBG_M(getLogSession(),
                  "resetBackRefPtr() called. previous value is %p:%p.",
-                 evtcbtail_t::back_ref_ptr, *evtcbtail_t::back_ref_ptr);
-        *evtcbtail_t::back_ref_ptr = NULL;
-        evtcbtail_t::back_ref_ptr = NULL;
+                 evtcbhead_t::back_ref_ptr, *evtcbhead_t::back_ref_ptr);
+        *evtcbhead_t::back_ref_ptr = NULL;
+        evtcbhead_t::back_ref_ptr = NULL;
     }
 }
 
@@ -6352,5 +6410,6 @@ int HttpSession::setUriQueryString(int action, const char *uri,
 int HttpSession::removeSessionCbs(long lParam, void * pParam)
 {
     LS_DBG_M(getLogSession(), "calling removeSessionCb on this %p\n", this);
-    return EvtcbQue::getInstance().removeSessionCb(this);
+    EvtcbQue::getInstance().removeSessionCb(this);
+    return 0;
 }

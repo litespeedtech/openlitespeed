@@ -51,6 +51,7 @@
 #include <util/vmembuf.h>
 #include <util/httpfetch.h>
 #include <socket/gsockaddr.h>
+#include <edio/evtcbque.h>
 
 #include <sys/sysctl.h>
 
@@ -82,7 +83,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu Apr 16 19:54:23 UTC 2020)"
+#define BUILDTIME  " (built: Thu Jun 25 20:05:03 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -444,7 +445,7 @@ int LshttpdMain::startAdminSocket()
     if (m_fdAdmin != -1)
         ::fcntl(m_fdAdmin, F_SETFD, FD_CLOEXEC);
     HttpServerConfig::getInstance().setAdminSock(strdup(achBuf));
-    LS_NOTICE("[ADMIN] server socket: %s", achBuf);
+    LS_NOTICE("[ADMIN] server socket: %s, fd %d.", achBuf, m_fdAdmin);
     return 0;
 }
 
@@ -1036,9 +1037,9 @@ int LshttpdMain::init(int argc, char *argv[])
         m_pServer->initAdns();
         m_pServer->enableAioLogging();
         m_pServer->startServing();
+        EvtcbQue::getInstance().initNotifier();
         cleanEnvVars();
-        
-        
+
         WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
         pGWC->startProcessing();
         if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
@@ -1257,6 +1258,7 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     m_pServer->startServing();
     //setIntercommFds(pProc->m_iProcNo);
     m_pServer->enableAioLogging();
+    EvtcbQue::getInstance().initNotifier();
     if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
         && (m_pServer->initAioSendFile() != 0))
     {
@@ -1594,14 +1596,14 @@ int LshttpdMain::guardCrash()
     pfds[2].events = POLLIN;
 
     s_iRunning = 1;
-    
-    LS_NOTICE("Instance is ready for service.");
+
+    LS_NOTICE("Instance is ready for service. m_fdCmd %d, m_fdAdmin %d.", m_fdCmd, m_fdAdmin);
     m_pServer->restartMark(2);
-    
+
     m_pServer->adjustListeners(iNumChildren);
-    
+
     startTimer();
-    
+
     while (s_iRunning > 0)
     {
         if (DateTime::s_curTime - lLastForkTime > 60)
@@ -1639,6 +1641,7 @@ int LshttpdMain::guardCrash()
         ret = ::poll(pfds, 3, 1000);
         if (ret > 0)
         {
+            LS_NOTICE("guardCrash poll return %d.", ret);
             if (pfds[0].revents && m_fdCmd != -1)
                 processChildCmd();
             else if (pfds[1].revents && m_fdAdmin != -1)

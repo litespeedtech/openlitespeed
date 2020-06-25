@@ -1,11 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
 
-#include_directories ("/usr/include/openssl")
-
-cmake_policy(SET CMP0002 OLD)
-
-
-########### next target ###############
 
 SET(http_STAT_SRCS
    moduserdir.cpp

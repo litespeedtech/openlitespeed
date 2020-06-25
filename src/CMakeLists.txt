@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 link_directories("/usr/lib64")
 
-include_directories(lshpack)
 
 add_subdirectory(adns)
 add_subdirectory(edio)
@@ -22,6 +21,7 @@ add_subdirectory(sslpp)
 add_subdirectory(ssi)
 add_subdirectory(thread)
 add_subdirectory(util)
+add_subdirectory(h2)
 
 ########### next target ###############
 
@@ -149,7 +149,7 @@ SET( litespeedlib
     cache modgzip lsiapi main http spdy ssi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns
-    quic lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
+    quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
     libz.a libpcre.a libexpat.a libxml2.a
     ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns
