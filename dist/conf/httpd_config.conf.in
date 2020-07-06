@@ -151,7 +151,7 @@ scriptHandler{
 railsDefaults{
     binPath                  %RUBY_BIN%
     railsEnv                 1 
-    maxConns                 1 
+    maxConns                 3
     env                      LSAPI_MAX_IDLE=60 
     initTimeout              60 
     retryTimeout             0 
