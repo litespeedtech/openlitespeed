@@ -474,11 +474,21 @@ void NtwkIOLink::suspendWrite()
 {
     LS_DBG_L(this, "NtwkIOLink::suspendWrite()...");
     setFlag(HIO_FLAG_WANT_WRITE, 0);
-    if (!((isSSL()) && (m_ssl.wantWrite())) && m_hasBufferedData == 0)
+    if (isSSL())
     {
-        MultiplexerFactory::getMultiplexer()->suspendWrite(this);
-        LS_DBG_L(this, "Write suspended");
+        if (m_ssl.wantWrite() || m_ssl.wpending() > 0)
+        {
+            LS_DBG_L(this, "Pending SSL data, cannot suspend write.");
+            return;
+        }
+        if (m_hasBufferedData)
+        {
+            LS_DBG_L(this, "Pending buffered data, cannot suspend write.");
+            return;
+        }
     }
+    MultiplexerFactory::getMultiplexer()->suspendWrite(this);
+    LS_DBG_L(this, "Write suspended");
 }
 
 
@@ -511,7 +521,16 @@ void NtwkIOLink::switchWriteToRead()
 {
     setFlag(HIO_FLAG_WANT_READ, 1);
     setFlag(HIO_FLAG_WANT_WRITE, 0);
-    MultiplexerFactory::getMultiplexer()->switchWriteToRead(this);
+    if (isSSL() && m_ssl.wpending() > 0)
+    {
+        LS_DBG_L(this, "[LSTLS] has buffered data, do not stop write.");
+        MultiplexerFactory::getMultiplexer()->continueRead(this);
+    }
+    else
+    {
+        LS_DBG_L(this, "switchWriteToRead()");
+        MultiplexerFactory::getMultiplexer()->switchWriteToRead(this);
+    }
 }
 
 
@@ -663,7 +682,7 @@ void NtwkIOLink::setSSLAgain()
         MultiplexerFactory::getMultiplexer()->suspendRead(this);
     }
 
-    if (m_ssl.wantWrite() || getFlag(HIO_FLAG_WANT_WRITE))
+    if (m_ssl.wantWrite() || m_ssl.wpending() > 0 || getFlag(HIO_FLAG_WANT_WRITE))
     {
         dumpState("setSSLAgain", "CW");
         MultiplexerFactory::getMultiplexer()->continueWrite(this);
@@ -1480,6 +1499,7 @@ int NtwkIOLink::writevExT(LsiSession *pOS, const iovec *vector, int count)
 
 void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
 {
+    pThis->setAllowWrite();
     if (pThis->flushSslWpending() == 1)
         pThis->releaseIdleSslBuffer();
 

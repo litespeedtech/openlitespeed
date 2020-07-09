@@ -498,9 +498,13 @@ void HttpReq::classifyUrl()
     else if (iUrlLen >= 12
             && memcmp(pUrlEnd- 12, "/favicon.ico", 12) == 0)
         m_iUrlType = URL_FAVICON;
-    else if (iUrlLen >= 28
-             && memcmp(getURI(), "/.well-known/acme-challenge/", 28) == 0)
-        m_iUrlType = URL_ACME_CHALLENGE;
+    else if (iUrlLen >= 13 && memcmp(pUrl, "/.well-known/", 13) == 0)
+    {
+        if (iUrlLen >= 28 && memcmp(pUrl + 13, "acme-challenge/", 15) == 0)
+            m_iUrlType = URL_ACME_CHALLENGE;
+        else
+            m_iUrlType = URL_WELL_KNOWN;
+    }
     else if (iUrlLen >= pRecaptchaUrl->len()
             && memcmp(pUrlEnd- pRecaptchaUrl->len(), pRecaptchaUrl->c_str(), pRecaptchaUrl->len()) == 0)
         m_iUrlType = URL_CAPTCHA;
@@ -1070,9 +1074,11 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
             memset((char *)(name - 2), 0x20, 7 + pCurHeader->valLen + 4);//
         }
     }
-    else if (pCurHeader->keyLen == 16
-                && (strncasecmp(name, "CF-Connecting-IP", 16) == 0))
-        m_iCfIpHeader = m_unknHeaders.getSize();
+    else if ((pCurHeader->keyLen == 16
+                 && (strncasecmp(name, "CF-Connecting-IP", 16) == 0))
+             || (pCurHeader->keyLen == 9
+                 && (strncasecmp(name, "X-Real-IP", 9) == 0)))
+        m_iCfRealIpHeader = m_unknHeaders.getSize();
     else if (pCurHeader->keyLen == 17
                 && strncasecmp(name, "X-Forwarded-Proto", 17) == 0)
     {
@@ -1786,6 +1792,10 @@ int HttpReq::checkSuffixHandler(const char *pURI, int len, int &cacheable)
     if (!m_pContext->isAppContext())
         LS_DBG_L(getLogSession(), "Cannot find appropriate handler for [%s].",
                  pURI);
+
+#ifdef LS_ENABLE_DEBUG
+    LS_ERROR(getLogSession(), "checkSuffixHandler for [%s] return 404.", pURI);
+#endif
     return SC_404;
 }
 
@@ -1854,7 +1864,7 @@ int HttpReq::setMimeBySuffix(const char *pSuffix)
     {
         if (getPathInfoLen() > 0)   //Path info is not allowed for static file
         {
-            LS_INFO(getLogSession(),
+            LS_ERROR(getLogSession(),
                     "URI '%s' refers to a static file with PATH_INFO [%s].",
                     getURI(), getPathInfo());
             return SC_404;
@@ -1950,7 +1960,7 @@ int HttpReq::processContext()
 
     if (!m_pVHost)
     {
-        LS_DBG_H(getLogSession(), "No Vhost found");
+        LS_ERROR(getLogSession(), "No Vhost found");
         return SC_404;
     }
     if (m_pVHost->getRootContext().getMatchList())
@@ -1965,7 +1975,7 @@ int HttpReq::processContext()
         m_pContext = m_pVHost->bestMatch(pURI, iURILen);
         if (!m_pContext)
         {
-            LS_DBG_L(getLogSession(), "No context found for URI: [%s].", pURI);
+            LS_ERROR(getLogSession(), "No context found for URI: [%s].", pURI);
             return SC_404;
         }
         LS_DBG_H(getLogSession(), "Find context with URI: [%s], "
@@ -2155,7 +2165,14 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
         ret = fileStat(pBuf, &m_fileStat);
         if (ret == -1 && m_lastStatRes == EACCES)
         {
-            LS_DBG_L(getLogSession(), "File not accessible [%s].", pBuf);
+
+#ifdef LS_ENABLE_DEBUG
+            LS_ERROR(getLogSession(),
+#else
+            LS_DBG_L(getLogSession(),
+#endif
+                        "File not accessible [%s].", pBuf);
+
             return SC_403;
         }
 
@@ -2171,8 +2188,17 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
                 {
                     if (++p != pEnd)
                     {
+
                         if ((!m_pContext->isAppContext()) &&  (!isFavicon()))
-                            LS_DBG_L(getLogSession(), "File not found [%s].", pBuf);
+                        {
+
+#ifdef LS_ENABLE_DEBUG
+                            LS_ERROR(getLogSession(),
+#else
+                            LS_DBG_L(getLogSession(),
+#endif
+                                    "File not found [%s].", pBuf);
+                        }
                         return SC_404;
                     }
                 }
@@ -2918,11 +2944,15 @@ const char *HttpReq::getUnknownHeaderByIndex(int idx, int &keyLen,
 }
 
 
-const char *HttpReq::getCfIpHeader(int &len)
+const char *HttpReq::getCfRealIpHeader(char *name, int &len)
 {
-    key_value_pair *pIdx = getUnknHeaderPair(m_iCfIpHeader - 1);
+    key_value_pair *pIdx = getUnknHeaderPair(m_iCfRealIpHeader - 1);
     if (pIdx)
     {
+        assert(pIdx->keyLen < 20);
+        memcpy(name, m_headerBuf.getp(pIdx->keyOff), pIdx->keyLen);
+        name[pIdx->keyLen] = 0;
+        len = pIdx->valLen;
         len = pIdx->valLen;
         return m_headerBuf.getp(pIdx->valOff);
     }

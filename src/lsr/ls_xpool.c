@@ -654,7 +654,7 @@ ls_inline void ls_std_inslist(
     {
         pTail->next = pOld1 = pOld;
     }
-    while((pOld = ls_atomic_casvptr(pList, pNew, pOld)) != pOld1);
+    while((pOld = ls_atomic_casvptr(pList, pOld, pNew)) != pOld1);
     return;
 }
 
