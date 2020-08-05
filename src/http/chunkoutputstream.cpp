@@ -136,7 +136,7 @@ int ChunkOutputStream::write(const char *pBuf, int size)
         pBuf += m_iLastBufLen;
         m_pLastBufBegin = NULL;
         m_iLastBufLen = 0;
-        if (!left)
+        if (left <= 0)
             return size;
     }
 
@@ -158,10 +158,9 @@ int ChunkOutputStream::write(const char *pBuf, int size)
         if (ret > 0)
         {
             left -= ret;
-            if (!left)
+            if (left <= 0)
                 return size;
             pBuf += ret;
-            assert(left > 0);
         }
         else if (!ret)
             return size - left;

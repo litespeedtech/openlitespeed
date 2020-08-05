@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 17</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><span class="current"><a href="AdminSecurity_Help.html">Admin Console Security</a></span></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -91,12 +101,12 @@
 <section class="toc-row"><header><a href="#adminUser">WebAdmin User</a></header><p>
 </p></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl"><h3>Access Control<span class="ls-permlink"><a href="#accessControl"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies what sub networks and/or IP addresses can access the server.  At the server level, this setting will affect all virtual hosts. You can also set up  access control unique to each virtual host at the virtual host level. Virtual host level settings will NOT  override server level settings. <br/><br/> Blocking/Allowing an IP is determined by the combination of the allowed list and the denied list.  If you want to block only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in  the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> and list the blocked IPs or sub-networks in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span>.  If you want to allow only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span>  in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span> and list the allowed IPs or sub-networks in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span>.  The setting of the smallest scope that fits for an IP will be used to determine access.<br/><br/> <b>Server Level:</b> Trusted IPs or sub-networks must be specified in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> by adding a  trailing "T". Trusted IPs or sub-networks are not affected by connection/throttling limits.  Only server level access control can set up trusted IPs/sub-networks.</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Use this at the server level for general restrictions that apply to all virtual hosts.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_allow"><h3>Allowed List<span class="ls-permlink"><a href="#accessControl_allow"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the list of IPs or sub-networks allowed. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks.  A trailing "T" can be used to indicate a trusted IP or sub-network, such as <span class="val">192.168.1.*T</span>.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1] <br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or  [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Trusted IPs or sub-networks set at the server level access  control will be excluded from connection/throttling limits.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_deny"><h3>Denied List<span class="ls-permlink"><a href="#accessControl_deny"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the list of IPs or sub-networks disallowed.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks.  <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1] <br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or  [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
+<section><div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl"><h3>Access Control<span class="ls-permlink"><a href="#accessControl"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies what sub networks and/or IP addresses can access the server. At the server level, this setting will affect all virtual hosts. You can also set up access control unique to each virtual host at the virtual host level. Virtual host level settings will NOT override server level settings.<br/><br/> Blocking/Allowing an IP is determined by the combination of the allowed list and the denied list. If you want to block only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> and list the blocked IPs or sub-networks in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span>. If you want to allow only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span> and list the allowed IPs or sub-networks in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span>. The setting of the smallest scope that fits for an IP will be used to determine access.<br/><br/> <b>Server Level:</b> Trusted IPs or sub-networks must be specified in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> by adding a trailing "T". Trusted IPs or sub-networks are not affected by connection/throttling limits. Only server level access control can set up trusted IPs/sub-networks.</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Use this at the server level for general restrictions that apply to all virtual hosts.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_allow"><h3>Allowed List<span class="ls-permlink"><a href="#accessControl_allow"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the list of IPs or sub-networks allowed. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks. A trailing "T" can be used to indicate a trusted IP or sub-network, such as <span class="val">192.168.1.*T</span>.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Trusted IPs or sub-networks set at the server level access control will be excluded from connection/throttling limits.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_deny"><h3>Denied List<span class="ls-permlink"><a href="#accessControl_deny"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the list of IPs or sub-networks disallowed.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="adminUser"><h3>WebAdmin User<span class="ls-permlink"><a href="#adminUser"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Change the username and password for the WebAdmin Console.  The old password must be entered and verified in order to save changes.</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

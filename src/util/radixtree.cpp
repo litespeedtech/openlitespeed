@@ -782,13 +782,14 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
     ls_str_t hashMatch;
     int iOffset;
     int i, iExact = getNumExact();
+
     switch (getState())
     {
     case RNSTATE_NOCHILD:
         break;
     case RNSTATE_CNODE:
         pTmp = m_pCHeaders;
-        if ((pTmp->len == iLabelLen)
+        if (pTmp && (pTmp->len == iLabelLen)
             && (rnDoCmp(iFlags, &pTmp->label[0], pLabel, pTmp->len) == 0))
         {
             pHeader = pTmp;
@@ -804,7 +805,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
         return 1;
     case RNSTATE_PNODE:
         pTmp = m_pCHeaders;
-        if ((pTmp->len == iLabelLen)
+        if (pTmp && (pTmp->len == iLabelLen)
             && (rnDoCmp(iFlags, &pTmp->label[0], pLabel, iLabelLen) == 0))
         {
             pHeader = pTmp;
@@ -815,7 +816,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
         pTmp = m_pCHeaders;
         for (i = 0; i < iExact; ++i)
         {
-            if ((iLabelLen == pTmp->len)
+            if (pTmp && (iLabelLen == pTmp->len)
                 && (rnDoCmp(iFlags, &pTmp->label[0], pLabel, pTmp->len) == 0))
             {
                 pHeader = pTmp;
@@ -842,7 +843,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
         for (i = 0; i < iExact; ++i)
         {
             pTmp = m_pPHeaders[i];
-            if ((iLabelLen == pTmp->len)
+            if (pTmp && (iLabelLen == pTmp->len)
                 && (rnDoCmp(iFlags, &pTmp->label[0], pLabel, pTmp->len) == 0))
             {
                 pHeader = pTmp;

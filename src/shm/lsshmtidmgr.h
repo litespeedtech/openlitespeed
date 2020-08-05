@@ -23,7 +23,10 @@
 
 #include <assert.h>
 
-#define TIDTBLBLK_MAXSZ     1024
+// Set max table block size to 1024.
+#define TIDTBLBLK_SHIFT     10
+#define TIDTBLBLK_MAXSZ     (1<<TIDTBLBLK_SHIFT)
+#define TID2BLKIDX(x)       (x>>TIDTBLBLK_SHIFT)
 
 #define TIDDEL_MAGIC_NUMBER  0x8000000000000000ull
 
@@ -71,7 +74,7 @@ public:
     int checkTidTbl();
 
     void linkTid(LsShmHIterOff offElem, uint64_t *pTid);
-    void unlinkTid(uint64_t tid);
+    void unlinkTid(uint64_t tid, uint64_t delTid);
     void tidReplaceTid(LsShmHElem *pElem, LsShmHIterOff offElem, uint64_t *pTid);
 
     LsShmHIterOff doSet(const void *pKey, int iKeyLen, const void *pVal,
@@ -86,12 +89,9 @@ public:
     void clearCb();
     uint64_t getTidCb(LsShmHElem *pElem);
 
-    int  setTidTblDel(uint64_t tid, uint64_t *pTid)
-    {   return setTidTblEnt(tid, pTid);  }
-
     uint64_t       *nxtTidTblVal(uint64_t *pTid, void **ppBlk);
 
-    bool isTidValIterOff(uint64_t tidVal)
+    bool isTidValIterOff(uint64_t tidVal) const
     {   return ((tidVal & TIDDEL_MAGIC_NUMBER) != 0);   }
 
     uint64_t        iterOff2tidVal(LsShmHIterOff iterOff)
@@ -114,9 +114,23 @@ public:
 
     uint64_t getLastTid() const
     {   return getTidInfo()->x_tid;   }
+    void updateLastTid(uint64_t tid)
+    {
+        LsShmTidInfo *pTidInfo = getTidInfo();
+        if (pTidInfo->x_tid < tid)
+            pTidInfo->x_tid = tid;
+    }
 
     uint64_t getLastTidPreClear() const
     {   return getTidInfo()->x_lastTidPreClear; }
+
+    uint64_t getBlkCnt() const
+    {   return getTidInfo()->x_iBlkCnt;         }
+
+    void statBlkCnt(uint64_t *aiBlkCnt) const;
+
+    uint64_t trim();
+
 private:
     LsShmTidMgr(const LsShmTidMgr &other);
     LsShmTidMgr &operator=(const LsShmTidMgr &other);
@@ -130,11 +144,17 @@ private:
     int  setTidTblIter(LsShmHIterOff iterOff, uint64_t *pTid)
     {   return setTidTblEnt(iterOff2tidVal(iterOff), pTid);  }
 
+    int  setTidTblDel(uint64_t tid, uint64_t *pTid)
+    {   return setTidTblEnt(tid, pTid);  }
+
     LsShmTidTblBlk  *tid2tblBlk(uint64_t tid);
 
     uint64_t        *nxtValInBlk(LsShmTidTblBlk *pBlk, int *pIndx);
     
-    LsShmOffset_t    allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t curSize, int &remapped);
+    LsShmOffset_t    allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t curSize,
+                                 LsShmSize_t newSize, int &remapped);
+
+    int              shiftBlkIdx(uint64_t numToRemove, int &remapped);
 
     LsShmHash       *m_pHash;
     LsShmOffset_t    m_iOffset;

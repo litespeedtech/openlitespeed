@@ -112,19 +112,21 @@ class CValidation
         if ($tid == 'L_GENERAL' || $tid == 'ADM_L_GENERAL') {
             return $this->chkPostTbl_L_GENERAL($extracted);
         } elseif ($view == 'sl' || $view == 'al') { // will ignore vhlevel
-            if ($tid == 'LVT_SSL_CERT')
+            if ($tid == 'LVT_SSL_CERT') {
                 return $this->chkPostTbl_L_SSL_CERT($extracted);
+            }
         }
         elseif ($view == 'admin') {
-            if ($tid == 'ADM_USR')
+            if ($tid == 'ADM_USR') {
                 return $this->chkPostTbl_ADM_USR($extracted);
-            elseif ($tid == 'ADM_USR_NEW')
+            }
+            elseif ($tid == 'ADM_USR_NEW') {
                 return $this->chkPostTbl_ADM_USR_NEW($extracted);
+            }
         }
         elseif ($tid == 'V_UDB') {
             return $this->chkPostTbl_ADM_USR_NEW($extracted);
         }
-
 
         return 1;
     }
@@ -180,8 +182,9 @@ class CValidation
             $isValid = -1;
         }
 
-        if ($isValid == -1)
+        if ($isValid == -1) {
             return -1;
+        }
 
         $newpass = $this->encryptPass($pass);
         $d->AddChild(new CNode('passwd', $newpass));
@@ -200,8 +203,9 @@ class CValidation
             $isValid = -1;
         }
 
-        if ($isValid == -1)
+        if ($isValid == -1) {
             return -1;
+        }
 
         $newpass = $this->encryptPass($pass);
         $d->AddChild(new CNode('passwd', $newpass));
@@ -220,11 +224,13 @@ class CValidation
         $nodes = $confdata->GetRootNode()->GetChildren('listener');
 
         foreach ($nodes as $ref => $node) {
-            if ($ref == $lastref)
+            if ($ref == $lastref) {
                 continue;
+            }
             $nodeport = $node->GetChildVal('port');
-            if ($port != $nodeport)
+            if ($port != $nodeport) {
                 continue;
+            }
 
             $nodeip = $node->GetChildVal('ip');
             if ($ip == $nodeip || $ip == 'ANY' || $nodeip == 'ANY') {
@@ -250,7 +256,7 @@ class CValidation
     protected function chkPostTbl_L_SSL_CERT($d)
     {
         $isValid = 1;
-        if ($this->isCurrentListenerSecure($disp)) {
+        if ($this->isCurrentListenerSecure()) {
             $err = 'Value must be set for secured listener. ';
             if ($d->GetChildVal('keyFile') == null) {
                 $d->SetChildErr('keyFile', $err);
@@ -427,19 +433,34 @@ class CValidation
         return false;
     }
 
+    protected function get_cleaned_abs_path($attr_minVal, &$path, &$err)
+    {
+        if ($this->get_abs_path($attr_minVal, $path, $err) == 1) {
+            $absname = $this->clean_absolute_path($path);
+            return $absname;
+        }
+        return null;
+    }
+
+    protected function clean_absolute_path($abspath)
+    {
+        $absname = PathTool::clean($abspath);
+        if ( isset( $_SERVER['LS_CHROOT'] ) )	{
+            $root = $_SERVER['LS_CHROOT'];
+            $len = strlen($root);
+            if ( strncmp( $absname, $root, $len ) == 0 ) {
+                $absname = substr($absname, $len);
+            }
+        }
+        return $absname;
+    }
+
     protected function test_file(&$absname, &$err, $attr)
     {
         if ($attr->_maxVal == null)
             return 1; // no permission test
 
-        $absname = PathTool::clean($absname);
-        if (isset($_SERVER['LS_CHROOT'])) {
-            $root = $_SERVER['LS_CHROOT'];
-            $len = strlen($root);
-            if (strncmp($absname, $root, $len) == 0) {
-                $absname = substr($absname, $len);
-            }
-        }
+        $absname = $this->clean_absolute_path($absname);
 
         if ($attr->_type == 'file0') {
             if (!file_exists($absname)) {
@@ -581,7 +602,7 @@ class CValidation
         return $res;
     }
 
-    protected function chk_file1($attr, &$path, &$err)
+    protected function get_abs_path($attr_minVal, &$path, &$err)
     {
         if (!strlen($path)) {
             $err = "Invalid Path.";
@@ -595,13 +616,13 @@ class CValidation
         }
 
         if ($s == '/') {
-            return $this->test_file($path, $err, $attr);
+            return 1;
         }
 
-        if ($attr->_minVal == 1) {
+        if ($attr_minVal == 1) {
             $err = 'only accept absolute path. ';
             return -1;
-        } elseif ($attr->_minVal == 2) {
+        } elseif ($attr_minVal == 2) {
             if (strncasecmp('$SERVER_ROOT', $path, 12) == 0) {
                 $path = SERVER_ROOT . substr($path, 13);
             } elseif ($s == '$') {
@@ -610,7 +631,7 @@ class CValidation
             } else {
                 $path = SERVER_ROOT . $path; // treat as relative to SERVER_ROOT
             }
-        } elseif ($attr->_minVal == 3) {
+        } elseif ($attr_minVal == 3) {
             if (strncasecmp('$SERVER_ROOT', $path, 12) == 0) {
                 $path = SERVER_ROOT . substr($path, 13);
             } elseif (strncasecmp('$VH_ROOT', $path, 8) == 0) {
@@ -628,7 +649,16 @@ class CValidation
             }
         }
 
-        return $this->test_file($path, $err, $attr);
+        return 1;
+    }
+
+    protected function chk_file1($attr, &$path, &$err)
+    {
+        $res = $this->get_abs_path($attr->_minVal, $path, $err);
+        if ($res == 1) {
+            return $this->test_file($path, $err, $attr);
+        }
+        return $res;
     }
 
     protected function chkAttr_uri($attr, $node)

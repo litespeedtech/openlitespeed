@@ -18,8 +18,9 @@
 #ifndef LS_MODULE_H
 #define LS_MODULE_H
 
-#include <lsr/ls_types.h>
 #include <lsr/ls_evtcb.h>
+#include <lsr/ls_log.h>
+#include <lsr/ls_types.h>
 #include <lsr/ls_edio.h>
 
 #include <stdio.h>
@@ -1141,12 +1142,12 @@ enum LSI_REQ_HEADER_ID
      * "Transfer-Encoding" request header.
      */
     LSI_HDR_TRANSFER_ENCODING,
-    
+
     /***
      * Add a padding to make the indexes match server internal indexes.
      */
     LSI_HDR_TE_PADDING,
-    
+
     /**
      * "X-LiteSpeed-Purge" request header.
      */
@@ -1535,8 +1536,8 @@ typedef struct lsi_module_s     lsi_module_t;
 typedef struct lsi_api_s        lsi_api_t;
 typedef struct lsi_param_s      lsi_param_t;
 typedef struct lsi_hookinfo_s   lsi_hookchain_t;
-// typedef struct evtcbhead_s      lsi_session_t;
-typedef struct evtcbtail_s      lsi_session_t;
+typedef struct evtcbhead_s      lsi_session_t;
+//typedef struct evtcbtail_s      lsi_session_t;
 typedef struct lsi_serverhook_s lsi_serverhook_t;
 typedef struct lsi_reqhdlr_s    lsi_reqhdlr_t;
 typedef struct lsi_confparser_s lsi_confparser_t;
@@ -3842,17 +3843,17 @@ struct lsi_api_s
      */
     int (*expand_current_server_variable)(int level, const char *variable,
                                          char *buf, int max_len);
-    
+
     //FIXME: why these functions not in use
 //     lsi_session_t * (* new_subreq)(lsi_session_t *pSession, lsi_subreq_t *pSubReq);
-// 
+//
 //     int (* exec_subreq)(lsi_session_t *pSession, lsi_session_t *pSubSess);
-//     
+//
 //     int (* close_subreq)(lsi_session_t *pSession, lsi_session_t *pSubSess);
-//     
+//
 //     int (* include_subreq_resp)(lsi_session_t *pSession, lsi_session_t *pSubSess);
 
-    
+
     /**
      * @brief module_log is used to write the formatted log to the error log
      * associated with a module.

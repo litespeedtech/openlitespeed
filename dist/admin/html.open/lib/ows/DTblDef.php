@@ -99,18 +99,27 @@ class DTblDef extends DTblDefBase
 		$attr_mime = self::NewPathAttr('mime', DMsg::ALbl('l_mimesettings'), 'file', 2, 'rw', false);
 		$attr_mime->_href = '&t=S_MIME_TOP';
 
-		$attrs = array(
-				$attr_mime,
-				self::NewBoolAttr('disableInitLogRotation', DMsg::ALbl('l_disableinitlogrotation')),
-				self::NewSelAttr('showVersionNumber', DMsg::ALbl('l_serversig'),
-						array('0'=>DMsg::ALbl('o_hidever'), '1'=>DMsg::ALbl('o_showver'), '2'=>DMsg::ALbl('o_hidefullheader')), false),
-				$this->_attrs['enableIpGeo'],
-				self::NewSelAttr('useIpInProxyHeader', DMsg::ALbl('l_useipinproxyheader'),
-						array('0'=>DMsg::ALbl('o_no'), '1'=>DMsg::ALbl('o_yes'),
-                            '2'=>DMsg::ALbl('o_trustediponly'), '3' =>DMsg::ALbl('o_keepheaderfortrusted')) ),
-				$this->_attrs['adminEmails'],
-		);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_generalsettings'), $attrs);
+		$attrs = [
+            $attr_mime,
+            self::NewBoolAttr('disableInitLogRotation', DMsg::ALbl('l_disableinitlogrotation')),
+            self::NewSelAttr('showVersionNumber', DMsg::ALbl('l_serversig'),
+                    [
+                        '0' => DMsg::ALbl('o_hidever'),
+                        '1' => DMsg::ALbl('o_showver'),
+                        '2' => DMsg::ALbl('o_hidefullheader'),
+                    ], false),
+            $this->_attrs['enableIpGeo'],
+            self::NewSelAttr('useIpInProxyHeader', DMsg::ALbl('l_useipinproxyheader'),
+                    [
+                        '0' => DMsg::ALbl('o_no'),
+                        '1' => DMsg::ALbl('o_yes'),
+                        '2' => DMsg::ALbl('o_trustediponly'),
+                        '3' => DMsg::ALbl('o_keepheaderfortrusted'),
+                        '4' => DMsg::ALbl('o_use_last_ip_for elb'),
+            ]),
+            $this->_attrs['adminEmails'],
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_generalsettings'), $attrs);
 	}
 
     protected function add_S_AUTOLOADHTA($id)
@@ -142,7 +151,7 @@ class DTblDef extends DTblDefBase
 
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
     }
-
+    
     protected function add_VT_REWRITE_CTRL($id)
     {
         $attrs = array(
@@ -726,7 +735,7 @@ class DTblDef extends DTblDefBase
 				self::NewCustFlagAttr('address', DMsg::ALbl('l_address'), (DAttr::BM_HIDE | DAttr::BM_NOEDIT), false),
 				$ip, $port,
 				self::NewCheckBoxAttr('binding', DMsg::ALbl('l_binding'), $bindoptions, true, 'listenerBinding'),
-                //self::NewBoolAttr('reusePort', DMsg::ALbl('l_reuseport')),
+                self::NewBoolAttr('reusePort', DMsg::ALbl('l_reuseport')),
 				self::NewBoolAttr('secure', DMsg::ALbl('l_secure'), false, 'listenerSecure'),
 				$this->_attrs['note'],
 		);

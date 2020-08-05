@@ -131,9 +131,9 @@ void ls_lfqueue_delete(ls_lfqueue_t *pThis)
 int ls_lfqueue_put(ls_lfqueue_t *pThis, ls_lfnodei_t *data)
 {
     LS_TH_PCQ_PUT(pThis);
-    data->next = NULL;
+    (void)ls_atomic_setptr(&data->next, NULL);
     ls_lfnodei_t *prev = ls_atomic_setptr((void **)&pThis->phead, data);
-    prev->next = data;
+    (void)ls_atomic_setptr((void **)&prev->next, data);
     LS_TH_BEFORE(prev);
     LS_TH_BEFORE(data);
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
@@ -170,7 +170,7 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
     // maybe if this->head == this->tail.m_ptr,
     // tail.m_ptr could point to either new head or old head?
     LS_TH_BENIGN(pThis, "ok read, handled in atomic");
-    tail.m_ptr = pThis->tail.m_ptr;
+    tail.m_ptr = (void *)ls_atomic_value(&pThis->tail.m_ptr);
     tail.m_seq = pThis->tail.m_seq;
     while (1)
     {
@@ -181,10 +181,10 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
             return NULL;
 
         LS_TH_BENIGN(pnode, "ok read, handled in atomic");
-        if (pnode->next)
+        if (ls_atomic_value(&pnode->next))
         {
             // more elements between tail and head
-            xchg.m_ptr = (void *)pnode->next;
+            xchg.m_ptr = (void *)ls_atomic_value(&pnode->next);
             xchg.m_seq = tail.m_seq + 1;
 
             ls_atomic_dcasv(
@@ -202,7 +202,7 @@ ls_lfnodei_t *ls_lfqueue_get(ls_lfqueue_t *pThis)
         else
         {
             // no next - only one item in queue
-            ls_lfnodei_t *p = (ls_lfnodei_t *)pThis->phead;
+            ls_lfnodei_t *p = (ls_lfnodei_t *)ls_atomic_value(&pThis->phead);
             if (pnode != p)
             {
                 // but it doesn't match phead - must have changed
@@ -269,5 +269,5 @@ ls_lfnodei_t *ls_lfqueue_timedget(ls_lfqueue_t *pThis,
 
 int ls_lfqueue_empty(ls_lfqueue_t *pThis)
 {
-    return (pThis->tail.m_ptr == NULL);
+    return ls_atomic_value(&pThis->tail.m_ptr) == 0;
 }

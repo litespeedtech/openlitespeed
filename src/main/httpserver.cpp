@@ -924,10 +924,12 @@ void HttpServerImpl::onTimerSecond()
 {
     HttpRespHeaders::updateDateHeader();
     HttpLog::onTimer();
-    ClientCache::getClientCache()->onTimer();
     m_vhosts.onTimer();
     if (m_lStartTime > 0)
+    {
+        ClientCache::getClientCache()->onTimer();
         generateRTReport();
+    }
 
     ServerInfo::getServerInfo()->setAdnsOp(1);
     Adns::getInstance().trimCache();
@@ -951,6 +953,12 @@ void HttpServerImpl::onTimer10Secs()
 
 void HttpServerImpl::onTimer30Secs()
 {
+    /***
+     * When server is quiting, do nothing
+     */
+    if (m_lStartTime <= 0)
+        return ;
+
     ClientCache::getClientCache()->onTimer30Secs();
     StaticFileCache::getInstance().onTimer();
     m_vhosts.onTimer30Secs();
@@ -1250,11 +1258,16 @@ void HttpServerImpl::offsetChroot()
 void HttpServerImpl::releaseAll()
 {
     ExtAppRegistry::stopAll();
+#define  TO_AVOID_EXIT_CRASH
+#ifndef  TO_AVOID_EXIT_CRASH
     StaticFileCache::getInstance().releaseAll();
+#endif
     m_listeners.clear();
     m_oldListeners.clear();
     m_toBeReleasedListeners.clear();
+#ifndef  TO_AVOID_EXIT_CRASH
     m_vhosts.release_objects();
+#endif
     m_toBeReleasedVHosts.release_objects();
     ::signal(SIGCHLD, SIG_DFL);
     ExtAppRegistry::shutdown();
@@ -2322,13 +2335,10 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 //     if (val)
 //         FileCacheDataEx::setMaxMMapCacheSize(0);
 
-    const char *pValue = pNode->getChildValue("SSLCryptoDevice");
+    const char *pValue = pNode->getChildValue("sslDefaultCiphers");
+    if (pValue)
+        SslUtil::setDefaultCipherList(pValue);
 
-    if (SslEngine::init(pValue) == -1)
-    {
-        LS_WARN(&currentCtx, "Failed to initialize SSL Accelerator Device: %s,"
-                " SSL hardware acceleration is disabled!", pValue);
-    }
     SslContext::setUseStrongDH(currentCtx.getLongValue(pNode, "SSLStrongDhKey",
                                0, 1, 1));
 
@@ -2783,7 +2793,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 3, 0));
+                    "useIpInProxyHeader", 0, 4, 0));
 
         denyAccessFiles(NULL, ".ht*", 0);
 
@@ -2815,6 +2825,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         m_serverContext.setModuleConfig(ModuleManager::getInstance().getGlobalModuleConfig(), 0);
         m_serverContext.initExternalSessionHooks();
         return 0;
+
     }
 
     return LS_FAIL;
@@ -3256,19 +3267,30 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableh2c",
                     0, 1, 0));
 
-        long l = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+        long val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                  "gracefulRestartTimeout", -1, INT_MAX, 300);
-        if (l == -1)
-            l = 3600 * 24;
-        HttpServerConfig::getInstance().setRestartTimeOut(l);
+        if (val == -1)
+            val = 3600 * 24;
+        HttpServerConfig::getInstance().setRestartTimeOut(val);
 
-        HttpServerConfig::getInstance().setEnableLve(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0,
-                                                       3, 0));
+        val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0,
+                                                       3, 0);
+        HttpServerConfig::getInstance().setEnableLve(val);
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "enableLVE: %ld", val);
+
 
         HttpServerConfig::getInstance().setCpuAffinity(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0,
                                                        64, 0));
+
+        val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "bubbleWrap",
+                0, 2, HttpServerConfig::BWRAP_DISABLED);
+        HttpServerConfig::getInstance().setBwrap((HttpServerConfig::BwrapConfigValues)val);
+
+        const char *cmd = ConfigCtx::getCurConfigCtx()->getTag(pRoot, "bubbleWrapCmd", 0, 0);
+        HttpServerConfig::getInstance().setBwrapCmdLine(cmd);
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "bubbleWrap: %ld, cmd: '%s'", val, cmd);
+
 
         //this value can only be set once when server start.
         if (MainServerConfigObj.getCrashGuard() == 2)

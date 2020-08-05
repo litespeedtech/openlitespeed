@@ -58,6 +58,7 @@ END_LOG4CXX_NS
 #define VH_CGROUP           2048
 #define VH_RECAPTCHA        4096
 #define VH_QUIC_LISTENER    8192
+#define VH_BWRAP            16384
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -146,6 +147,14 @@ typedef  THash<url_id_data_t *> UrlIdHash;
 
 class HttpVHost : public RefCounter, public HttpLogSource
 {
+public:
+    enum BwrapConfigValues
+    {
+        BWRAP_NOT_SET = 0,
+        BWRAP_OFF,
+        BWRAP_ON
+    };
+
 private:
     ReqStats            m_reqStats;
     AccessLog          *m_pAccessLog[MAX_ACCESS_LOG];
@@ -308,6 +317,9 @@ public:
 
     void enableCGroup(int enable)       {   setFeature(VH_CGROUP, enable);    }
     int  enableCGroup() const             {   return m_iFeatures & VH_CGROUP;   }
+
+    void enableBwrap(int enable)       {   setFeature(VH_BWRAP, enable);    }
+    int  enableBwrap() const             {   return m_iFeatures & VH_BWRAP;    }
 
     void enableQuic(int enable)       {   setFeature(VH_QUIC, enable);    }
     int  enableQuic() const             {   return m_iFeatures & VH_QUIC;   }

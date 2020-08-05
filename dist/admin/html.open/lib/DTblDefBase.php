@@ -241,7 +241,7 @@ class DTblDefBase
             'fileName2'   => self::NewPathAttr('fileName', DMsg::ALbl('l_filename'), 'file0', 2, 'r', false),
             'fileName3'   => self::NewPathAttr('fileName', DMsg::ALbl('l_filename'), 'file0', 3, 'r', true),
             'rollingSize'     => self::NewIntAttr('rollingSize', DMsg::ALbl('l_rollingsize'), true, null, null, 'log_rollingSize'),
-            'keepDays'        => self::NewIntAttr('keepDays', DMsg::ALbl('l_keepdays'), true, 0, null, 'accessLog_keepDays'),
+            'keepDays'        => self::NewIntAttr('keepDays', DMsg::ALbl('l_keepdays'), true, 0, null, 'log_keepDays'),
             'logFormat'       => self::NewTextAttr('logFormat', DMsg::ALbl('l_logformat'), 'cust', true, 'accessLog_logFormat'),
             'logHeaders'      => self::NewCheckBoxAttr('logHeaders', DMsg::ALbl('l_logheaders'), array('1' => 'Referrer', '2' => 'UserAgent', '4' => 'Host', '0' => DMsg::ALbl('o_none')), true, 'accessLog_logHeader'),
             'compressArchive' => self::NewBoolAttr('compressArchive', DMsg::ALbl('l_compressarchive'), true, 'accessLog_compressArchive'),
@@ -336,6 +336,7 @@ class DTblDefBase
             self::NewSelAttr('logLevel', DMsg::ALbl('l_loglevel'), $this->_options['logLevel'], false, 'log_logLevel'),
             self::NewSelAttr('debugLevel', DMsg::ALbl('l_debuglevel'), array('10' => DMsg::ALbl('o_high'), '5' => DMsg::ALbl('o_medium'), '2' => DMsg::ALbl('o_low'), '0' => DMsg::ALbl('o_none')), false, 'log_debugLevel'),
             $this->_attrs['rollingSize'],
+            $this->_attrs['keepDays'],
             self::NewBoolAttr('enableStderrLog', DMsg::ALbl('l_enablestderrlog'), true, 'log_enableStderrLog')
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_serverlog'), $attrs, 'fileName');
@@ -397,7 +398,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_geoipdb'), $attrs, 'geoipDBFile', 'geolocationDB');
     }
 
-    private function add_S_IP2LOCATION($id)
+    protected function add_S_IP2LOCATION($id)
     {
         $attrs = array(
             self::NewPathAttr('ip2locDBFile', DMsg::ALbl('l_ip2locDBFile'), 'filep', 2, 'r'),
@@ -427,8 +428,8 @@ class DTblDefBase
     protected function add_S_TUNING_REQ($id)
     {
         $attrs = array(
-            self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 16384),
-            self::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 16380),
+            self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 65530),
+            self::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 65530),
             self::NewIntAttr('maxReqBodySize', DMsg::ALbl('l_maxreqbodysize'), false, '1M', null),
             self::NewIntAttr('maxDynRespHeaderSize', DMsg::ALbl('l_maxdynrespheadersize'), false, 200, '64K'),
             self::NewIntAttr('maxDynRespSize', DMsg::ALbl('l_maxdynrespsize'), false, '1M', null)
@@ -438,7 +439,7 @@ class DTblDefBase
 
     protected function add_S_TUNING_GZIP($id)
     {
-        $parseFormat = "/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)$/";
+		$parseFormat = "/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)|default$/";
 
         $attrs = array(
             // general
@@ -460,7 +461,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_gzipbr'), $attrs);
     }
 
-    private function add_S_TUNING_QUIC($id)
+    protected function add_S_TUNING_QUIC($id)
 	{
         $congest_options = ['' => 'Default', '1' => 'Cubic', '2' => 'BBR'];
 		$attrs = array(
@@ -524,7 +525,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $attrs, 'perClientConnLimit');
     }
 
-	private function add_S_SEC_RECAP($id)
+	protected function add_S_SEC_RECAP($id)
 	{
 		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
 		$parseHelp = DMsg::ALbl('parse_recaptchakey');
@@ -545,7 +546,7 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
 	}
 
-	private function add_VT_SEC_RECAP($id)
+	protected function add_VT_SEC_RECAP($id)
 	{
 		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
 		$parseHelp = DMsg::ALbl('parse_recaptchakey');
@@ -559,6 +560,23 @@ class DTblDefBase
             self::NewIntAttr('regConnLimit', DMsg::ALbl('l_concurrentReqLimit'), true, 0, null, 'recaptchaVhReqLimit'),
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
+	}
+    
+	protected function add_S_SEC_BUBBLEWRAP($id)
+	{
+        $attrs = [
+            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), array('0' => DMsg::ALbl('o_disabled'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on'))),
+            self::NewTextAreaAttr('bubbleWrapCmd', DMsg::ALbl('l_bubblewrapcmd'), 'cust', true, 3, null, 0),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_bubblewrap'), $attrs);
+	}
+
+	protected function add_VT_SEC_BUBBLEWRAP($id)
+	{
+        $attrs = [
+            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), array('' => DMsg::ALbl('o_notset'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on'))),
+        ];
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_bubblewrap'), $attrs);
 	}
 
     protected function add_S_SEC_DENY($id)
@@ -1084,7 +1102,8 @@ class DTblDefBase
             self::NewBoolAttr('useServer', DMsg::ALbl('l_useServer'), false, 'logUseServer'),
             $this->_attrs['fileName3']->dup(null, null, 'vhlog_fileName'),
             self::NewSelAttr('logLevel', DMsg::ALbl('l_loglevel'), $this->_options['logLevel'], true, 'vhlog_logLevel'),
-            $this->_attrs['rollingSize']
+            $this->_attrs['rollingSize'],
+            $this->_attrs['keepDays'],
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhlog'), $attrs, 'fileName');
     }

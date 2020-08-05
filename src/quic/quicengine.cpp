@@ -849,7 +849,7 @@ void QuicEngine::setDebugLog(int is_enable)
 void QuicEngine::maybeProcessConns()
 {
     int diff;
-    if (lsquic_engine_earliest_adv_tick(m_pEngine, &diff))
+    if (lsquic_engine_earliest_adv_tick(m_pEngine, &diff) && diff <= 0)
         lsquic_engine_process_conns(m_pEngine);
 }
 

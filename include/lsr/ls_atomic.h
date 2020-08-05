@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2015  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -70,7 +70,6 @@ typedef union
 #endif
                  ))) ls_atom_xptr_t;
 
-
 #define ls_atomic_and_fetch         __sync_and_and_fetch
 #define ls_atomic_or_fetch          __sync_or_and_fetch
 
@@ -86,31 +85,41 @@ typedef union
 #define USE_GCC_ATOMIC
 #ifdef USE_GCC_ATOMIC
 
-#define ls_atomic_setchar           __sync_lock_test_and_set
-#define ls_atomic_setshort          __sync_lock_test_and_set
 #define ls_atomic_setint            __sync_lock_test_and_set
 #define ls_atomic_setlong           __sync_lock_test_and_set
 #define ls_atomic_setptr            __sync_lock_test_and_set
+#define ls_atomic_set8              __sync_lock_test_and_set
+#define ls_atomic_set16             __sync_lock_test_and_set
 #define ls_atomic_set32             __sync_lock_test_and_set
 #define ls_atomic_set64             __sync_lock_test_and_set
+#define ls_atomic_set               __sync_lock_test_and_set
 
 #define ls_atomic_clrint            __sync_lock_release
 #define ls_atomic_clrlong           __sync_lock_release
 #define ls_atomic_clrptr            __sync_lock_release
+#define ls_atomic_clr8              __sync_lock_release
+#define ls_atomic_clr16             __sync_lock_release
 #define ls_atomic_clr32             __sync_lock_release
 #define ls_atomic_clr64             __sync_lock_release
+#define ls_atomic_clr               __sync_lock_release
 
 #define ls_atomic_casint            __sync_bool_compare_and_swap
 #define ls_atomic_caslong           __sync_bool_compare_and_swap
 #define ls_atomic_casptr            __sync_bool_compare_and_swap
+#define ls_atomic_cas8              __sync_bool_compare_and_swap
+#define ls_atomic_cas16             __sync_bool_compare_and_swap
 #define ls_atomic_cas32             __sync_bool_compare_and_swap
 #define ls_atomic_cas64             __sync_bool_compare_and_swap
+#define ls_atomic_cas               __sync_bool_compare_and_swap
 
 #define ls_atomic_casvint           __sync_val_compare_and_swap
 #define ls_atomic_casvlong          __sync_val_compare_and_swap
 #define ls_atomic_casvptr           __sync_val_compare_and_swap
+#define ls_atomic_casv8             __sync_val_compare_and_swap
+#define ls_atomic_casv16            __sync_val_compare_and_swap
 #define ls_atomic_casv32            __sync_val_compare_and_swap
 #define ls_atomic_casv64            __sync_val_compare_and_swap
+#define ls_atomic_casv              __sync_val_compare_and_swap
 
 #define ls_barrier                  __sync_synchronize
 #define ls_atomic_add               __sync_add_and_fetch
@@ -122,24 +131,63 @@ typedef union
 #define ls_atomic_fetch_add         __sync_fetch_and_add
 #define ls_atomic_fetch_sub         __sync_fetch_and_sub
 
-#if defined( __i386__ )||defined( __arm__ )
+#if defined( __i386__ )
 
+#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
+ls_atomic_inline unsigned char ls_atomic_dcas(volatile ls_atom_xptr_t *ptr,
+        ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
+{
+    unsigned char result;
+    __asm__ __volatile__(
+        "lock cmpxchg8b %1\n\t"
+        "setz %0\n"
+        : "=q"(result)
+        , "+m"(*ptr)
+        : "a"(cmpptr->m_ptr), "d"(cmpptr->m_seq)
+        , "b"(newptr->m_ptr), "c"(newptr->m_seq)
+        : "cc"
+    );
+    return result;
+
+}
+
+ls_atomic_inline void ls_atomic_dcasv(volatile ls_atom_xptr_t *ptr,
+                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+{
+    __asm__ __volatile__(
+        "lock cmpxchg8b %0\n\t"
+        : "+m"(*ptr)
+        , "=a"(oldptr->m_ptr)
+        , "=d"(oldptr->m_seq)
+        : "a"(cmpptr->m_ptr), "d"(cmpptr->m_seq)
+        , "b"(newptr->m_ptr), "c"(newptr->m_seq)
+    );
+    return;
+
+}
+
+#else
 ls_atomic_inline char ls_atomic_dcas(ls_atom_xptr_t *ptr,
                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
 {
-    return __sync_bool_compare_and_swap(
-               &ptr->m_whole, cmpptr->m_whole, newptr->m_whole);
+    return __sync_bool_compare_and_swap(&ptr->m_whole, cmpptr->m_whole,
+                                        newptr->m_whole);
 }
 
 ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
-                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+                                      ls_atom_xptr_t *cmpptr,
+                                      ls_atom_xptr_t *newptr,
+                                      ls_atom_xptr_t *oldptr)
 {
-    oldptr->m_whole = __sync_val_compare_and_swap(
-                          &ptr->m_whole, cmpptr->m_whole, newptr->m_whole);
+    oldptr->m_whole = __sync_val_compare_and_swap(&ptr->m_whole, cmpptr->m_whole,
+                                                  newptr->m_whole);
     return;
 }
+#endif
+#endif
 
-#elif defined( __aarch64__ )
+#if defined( __arm__ )||defined( __aarch64__ )
+
 ls_atomic_inline char ls_atomic_dcas(ls_atom_xptr_t *ptr,
                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr)
 {
@@ -149,12 +197,14 @@ ls_atomic_inline char ls_atomic_dcas(ls_atom_xptr_t *ptr,
 }
 
 ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
-                                      ls_atom_xptr_t *cmpptr, ls_atom_xptr_t *newptr, ls_atom_xptr_t *oldptr)
+                                      ls_atom_xptr_t *cmpptr,
+                                      ls_atom_xptr_t *newptr,
+                                      ls_atom_xptr_t *oldptr)
 {
     oldptr->m_whole = cmpptr->m_whole;
     __atomic_compare_exchange(&ptr->m_whole, &oldptr->m_whole,
-                                    &newptr->m_whole, 0, __ATOMIC_SEQ_CST,
-                                    __ATOMIC_SEQ_CST);
+                              &newptr->m_whole, 0, __ATOMIC_SEQ_CST,
+                              __ATOMIC_SEQ_CST);
     return;
 }
 
@@ -167,10 +217,6 @@ ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
 
 #if defined( __i386__ )
 
-#define ls_atomic_setchar(ptr, val) \
-    (int)ls_atomic_set8((uint8_t *)ptr, (uint8_t)val)
-#define ls_atomic_setshort(ptr, val) \
-    (int)ls_atomic_set16((uint16_t *)ptr, (uint16_t)val)
 #define ls_atomic_setint(ptr, val) \
     (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setlong(ptr, val) \
@@ -198,10 +244,6 @@ ls_atomic_inline void ls_atomic_dcasv(ls_atom_xptr_t *ptr,
 
 #elif defined( __x86_64 )||defined( __x86_64__ )
 
-#define ls_atomic_setchar(ptr, val) \
-    (int)ls_atomic_set8((uint8_t *)ptr, (uint8_t)val)
-#define ls_atomic_setshort(ptr, val) \
-    (int)ls_atomic_set16((uint16_t *)ptr, (uint16_t)val)
 #define ls_atomic_setint(ptr, val) \
     (int)ls_atomic_set32((uint32_t *)ptr, (uint32_t)val)
 #define ls_atomic_setlong(ptr, val) \
@@ -245,7 +287,7 @@ ls_atomic_inline void ls_atomic_sub(ls_atom_32_t *ptr, int32_t val)
 
 ls_atomic_inline int32_t ls_atomic_fetch_add(ls_atom_32_t *ptr, int32_t val)
 {
-    register int32_t result;
+    int32_t result;
     __asm__ __volatile__(
         "lock; xadd{l} {%0,%1|%1,%0}"
         : "=r"(result), "=m"(*ptr)
@@ -294,16 +336,6 @@ ls_atomic_inline int32_t ls_atomic_sub_fetch(ls_atom_32_t *ptr, int32_t val)
         , "+r"(save)
     );
     return val + save;
-}
-
-ls_atomic_inline uint8_t ls_atomic_set8(uint8_t *ptr, uint8_t val)
-{
-    __asm__ __volatile__(
-        "xchg %0,%1\n"
-        : "+r"(val)
-        , "+m"(*ptr)
-    );
-    return val;
 }
 
 ls_atomic_inline uint32_t ls_atomic_set32(uint32_t *ptr, uint32_t val)
@@ -497,6 +529,12 @@ ls_atomic_inline void ls_atomic_dcasv(volatile ls_atom_xptr_t *ptr,
 
 #define ls_atomic_load( v, px )  {   v = *px; ls_barrier();     }
 #define ls_atomic_store( pv, x ) {   ls_barrier(); *pv = x;     }
+
+#ifndef __ATOMIC_RELAXED
+#define ls_atomic_value(px)   ls_atomic_fetch_add(px, 0)
+#else
+#define ls_atomic_value(px)   __atomic_load_n(px, __ATOMIC_RELAXED)
+#endif
 
 #endif // LS_ATOMIC_H
 

@@ -155,7 +155,7 @@ am_openlitespeed_OBJECTS = modules/prelinkedmods.$(OBJEXT) \
 	lsr/ls_strlist.$(OBJEXT) lsr/ls_strtool.$(OBJEXT) \
 	lsr/ls_time.$(OBJEXT) lsr/ls_tsstack.$(OBJEXT) \
 	lsr/ls_xpool.$(OBJEXT) lsr/xxhash.$(OBJEXT) \
-	lsr/offloader.$(OBJEXT) thread/mtnotifier.$(OBJEXT) \
+	thread/offloader.$(OBJEXT) thread/mtnotifier.$(OBJEXT) \
 	thread/pthreadcond.$(OBJEXT) thread/pthreadmutex.$(OBJEXT) \
 	thread/pthreadworkqueue.$(OBJEXT) thread/thread.$(OBJEXT) \
 	thread/workcrew.$(OBJEXT) thread/worker.$(OBJEXT) \
@@ -550,7 +550,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
-   lsr/offloader.cpp \
+   thread/offloader.cpp \
    thread/mtnotifier.cpp \
    thread/pthreadcond.cpp \
    thread/pthreadmutex.cpp \
@@ -884,14 +884,14 @@ lsr/ls_xpool.$(OBJEXT): lsr/$(am__dirstamp) \
 	lsr/$(DEPDIR)/$(am__dirstamp)
 lsr/xxhash.$(OBJEXT): lsr/$(am__dirstamp) \
 	lsr/$(DEPDIR)/$(am__dirstamp)
-lsr/offloader.$(OBJEXT): lsr/$(am__dirstamp) \
-	lsr/$(DEPDIR)/$(am__dirstamp)
 thread/$(am__dirstamp):
 	@$(MKDIR_P) thread
 	@: > thread/$(am__dirstamp)
 thread/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) thread/$(DEPDIR)
 	@: > thread/$(DEPDIR)/$(am__dirstamp)
+thread/offloader.$(OBJEXT): thread/$(am__dirstamp) \
+	thread/$(DEPDIR)/$(am__dirstamp)
 thread/mtnotifier.$(OBJEXT): thread/$(am__dirstamp) \
 	thread/$(DEPDIR)/$(am__dirstamp)
 thread/pthreadcond.$(OBJEXT): thread/$(am__dirstamp) \
@@ -957,11 +957,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/ls_time.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/ls_tsstack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/ls_xpool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/offloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@lsr/$(DEPDIR)/xxhash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@modules/$(DEPDIR)/prelinkedmods.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/crewworker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/mtnotifier.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/offloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/pthreadcond.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/pthreadmutex.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@thread/$(DEPDIR)/pthreadworkqueue.Po@am__quote@

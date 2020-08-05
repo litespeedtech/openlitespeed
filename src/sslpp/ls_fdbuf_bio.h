@@ -20,11 +20,10 @@ extern "C" {
 
 typedef struct ls_fdbio_data {
     uint8_t     *m_rbuf;
+    uint8_t      m_spacer[2];
     uint16_t     m_rbuf_used;
     uint16_t     m_rbuf_read;
     uint16_t     m_rbuf_size;
-    uint8_t      m_is_closed;
-    uint8_t      m_need_read_event;
 
     uint8_t     *m_wbuf;
     int32_t      m_wbuf_size;
@@ -33,9 +32,14 @@ typedef struct ls_fdbio_data {
     int32_t      m_flag;
 } ls_fdbio_data;
 
-#define LS_FDBIO_WBLOCK         1
-#define LS_FDBIO_BUFFERING      2
-
+enum LS_FDBIO_FLAG
+{
+    LS_FDBIO_WBLOCK = 1,
+    LS_FDBIO_BUFFERING = 2,
+    LS_FDBIO_CLOSED = 4,
+    LS_FDBIO_NEED_READ_EVT = 8,
+    LS_FDBIO_RBUF_ALLOC = 16
+};
 
 /**
  * @brief ls_fdbuf_bio_init called during the connection constructor, 
@@ -57,6 +61,7 @@ void ls_fdbuf_bio_init(ls_fdbio_data *fdbio);
 struct bio_st *ls_fdbio_create(int fd, ls_fdbio_data *fdbio);
 
 int ls_fdbio_flush(ls_fdbio_data *fdbio, int fd);
+int ls_fdbio_buff_input(ls_fdbio_data *fdbio, int fd);
 
 ls_inline void ls_fdbio_set_wbuff(ls_fdbio_data *fdbio, int dobuff)
 {
@@ -76,7 +81,8 @@ ls_inline int ls_fdbio_is_wbuf_idle(ls_fdbio_data *fdbio)
 
 ls_inline int ls_fdbio_is_rbuf_idle(ls_fdbio_data *fdbio)
 {
-    return fdbio->m_rbuf && fdbio->m_rbuf_used == fdbio->m_rbuf_read;
+    return (fdbio->m_flag & LS_FDBIO_RBUF_ALLOC)
+            && fdbio->m_rbuf_used == fdbio->m_rbuf_read;
 }
 
 ls_inline void ls_fdbio_release_idle_buffer(ls_fdbio_data *fdbio)

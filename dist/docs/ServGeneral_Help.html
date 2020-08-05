@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 17</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -125,7 +135,7 @@ location where LiteSpeed web server has been installed (your_home_dir/lsws or
 <div class="helpitem"><article class="ls-helpitem"><div><header id="disableInitLogRotation"><h3>Disable Initial Log Rotation<span class="ls-permlink"><a href="#disableInitLogRotation"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to enable/disable rotation of server error log file at startup. Initial log rotation is enabled by default when using value "Not Set".</p> <h4>Syntax</h4><p>Select from radio box</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="showVersionNumber"><h3>Server Signature<span class="ls-permlink"><a href="#showVersionNumber"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to show the server signature and version number in the response header's "Server" value. There are three options: when set to <span class="val">Hide Version</span>, only <span class="val">LiteSpeed</span> is shown. When set to <span class="val">Show Version</span>, LiteSpeed and the version number are shown.  When set to <span class="val">Hide Full Header</span>, the entire Server header will not be shown in the response header.</p> <h4>Syntax</h4><p>Select from drop down list</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Set to <span class="val">Hide Version</span> if you do not wish to expose the server version number.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="enableIpGeo"><h3>Enable GeoLocation Lookup<span class="ls-permlink"><a href="#enableIpGeo"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p> Specifies whether to enable/disable IP Geolocation lookup. Can be set at server, virtual host, or context level. IP Geolocation is disabled by default when using value "Not Set".</p> <h4>Syntax</h4><p>Select from radio box</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">Use Client IP in Header</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">DB File Path</a></span>,</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="useIpInProxyHeader"><h3>Use Client IP in Header<span class="ls-permlink"><a href="#useIpInProxyHeader"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to use the IP address listed in the "X-Forwarded-For" HTTP request header for all IP address-related features, including connection/bandwidth throttling, access control, and IP geolocation.<br/><br/> This feature is useful if your web server is behind a load balancer or a proxy server. If you select "Trusted IP Only", then X-Forwarded-For IP will be used only when the request  is coming from trusted IPs defined in the server-level <span class="tagl"><a href="ServSecurity_Help.html#accessControl_allow">Allowed List</a></span>.<br/><br/> "Keep Header from Trusted IP" is the same as "Trusted IP Only", but the X-Forwarded-For header used for the backend will not be modified to include the connecting peer address.</p> <h4>Syntax</h4><p>Select from drop down list</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="useIpInProxyHeader"><h3>Use Client IP in Header<span class="ls-permlink"><a href="#useIpInProxyHeader"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to use the first most valid IP IP address listed in the "X-Forwarded-For" HTTP request header for all IP address-related features, including connection/bandwidth throttling, access control, and IP geolocation.<br/><br/> This feature is useful if your web server is behind a load balancer or a proxy server. If you select <span class="val">Trusted IP Only</span>, then X-Forwarded-For IP will be used only when the request is coming from trusted IPs defined in the server-level <span class="tagl"><a href="ServSecurity_Help.html#accessControl_allow">Allowed List</a></span>.<br/><br/> <span class="val">Keep Header from Trusted IP</span> is the same as <span class="val">Trusted IP Only</span>, but the X-Forwarded-For header used for the backend will not be modified to include the connecting peer address.<br/><br/> <span class="val">Use Last IP (for AWS ELB)</span> will use the last IP address in the "X-Forwarded-For" list. Select this option if you are using AWS Elastic Load Balancer or expect the real IP to appended to the end of the "X-Forwarded-For" list.</p> <h4>Syntax</h4><p>Select from drop down list</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="adminEmails"><h3>Administrator Email<span class="ls-permlink"><a href="#adminEmails"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the server administrator's email address(es). If specified, administrators will be notified by email of important events (for example, when the LiteSpeed service is restarted automatically due to crash detection or when license is expiring).</p> <h4>Syntax</h4><p>Comma delimited list of email address.</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> Email alert feature will only work if the server has an active MX server such as postfix, exim, or sendmail.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="indexFiles"><h3>Index Files<span class="ls-permlink"><a href="#indexFiles"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies names of index files that will be searched sequentially when a URL is mapped to a directory. You can customize it at the server, virtual host, and context level.</p> <h4>Syntax</h4><p>Comma-delimited list of index filenames.</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> Only set index files that you need.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="autoIndex"><h3>Auto Index<span class="ls-permlink"><a href="#autoIndex"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to generate a directory index on the fly when index files listed in <span class="tagl"><a href="#indexFiles">Index Files</a></span> are not available in a directory. This option is customizable at the virtual host and context level, and is inherited along the directory tree until it is explicitly overridden. You can customize the generated index page. Please check online wiki How-tos.</p> <h4>Syntax</h4><p>Select from radio box</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> It is recommended to turn off Auto Index wherever possible to prevent revealing confidential data.</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#indexFiles">Index Files</a></span>, <span class="tagl"><a href="#autoIndexURI">Auto Index URI</a></span></p> </article> </div>
@@ -145,7 +155,7 @@ location where LiteSpeed web server has been installed (your_home_dir/lsws or
 <div class="helpitem"><article class="ls-helpitem"><div><header id="ip2locDBFile"><h3>IP2Location DB File Path<span class="ls-permlink"><a href="#ip2locDBFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The location of a valid database file.</p> <h4>Syntax</h4><p>Filename which can be an absolute path or a relative path to $SERVER_ROOT.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="ip2locDBCache"><h3>DB Cache Type<span class="ls-permlink"><a href="#ip2locDBCache"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The caching method used. The default value is <span class="val">Memory</span>.</p> <h4>Syntax</h4><p>Select from drop down list</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

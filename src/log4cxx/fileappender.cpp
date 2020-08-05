@@ -66,6 +66,12 @@ int FileAppender::reopenExist()
 
 int FileAppender::open()
 {
+    MutexLocker lock(m_stream.get_mutex());
+    return open2();
+}
+
+int FileAppender::open2()
+{
     if (getfd() != -1)
         return 0;
     const char *pName = getName();
@@ -93,6 +99,7 @@ int FileAppender::open()
 
 int FileAppender::close()
 {
+    MutexLocker lock(m_stream.get_mutex());
     if (getfd() != -1)
         return m_stream.close();
     return 0;
@@ -100,8 +107,10 @@ int FileAppender::close()
 
 int FileAppender::append(const char *pBuf, int len)
 {
+    MutexLocker lock(m_stream.get_mutex());
+
     if (getfd() == -1)
-        if (open() == -1)
+        if (open2() == -1)
             return LS_FAIL;
     return m_stream.append(pBuf, len);
 }

@@ -7,7 +7,7 @@
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014-2019
+* @copyright  Copyright (c) LiteSpeed 2014-2020
 * @link       https://www.litespeedtech.com/
 */
 
@@ -177,6 +177,8 @@ $_gmsg['l_binpath'] = 'Binary Path';
 $_gmsg['l_blockbadreq'] = 'Block Bad Request';
 $_gmsg['l_botWhiteList'] = 'Bot White List';
 $_gmsg['l_brcompress'] = 'Brotli Compression';
+$_gmsg['l_bubblewrap'] = 'Bubblewrap Container';
+$_gmsg['l_bubblewrapcmd'] = 'Bubblewrap Command';
 $_gmsg['l_byteslog'] = 'Bytes log';
 $_gmsg['l_cacertfile'] = 'CA Certificate File';
 $_gmsg['l_cacertpath'] = 'CA Certificate Path';
@@ -601,6 +603,7 @@ $_gmsg['o_thrucgidaemon'] = 'Yes (Through CGI Daemon)';
 $_gmsg['o_trustediponly'] = 'Trusted IP Only';
 $_gmsg['o_useapachebinwrapper'] = 'Use Apache binary wrapper';
 $_gmsg['o_userhomedironly'] = 'User\'s Home Directory Only';
+$_gmsg['o_use_last_ip_for elb'] = 'Use Last IP (for AWS ELB)';
 $_gmsg['o_vhroot'] = 'Virtual Host Root';
 $_gmsg['o_weekly'] = 'Weekly';
 $_gmsg['o_yes'] = 'Yes';

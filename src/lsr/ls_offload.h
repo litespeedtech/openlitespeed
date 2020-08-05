@@ -1,22 +1,9 @@
-/*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+
+
 #ifndef LS_OFFLOAD_H
 #define LS_OFFLOAD_H
+
+#include <lsdef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +27,6 @@ enum LS_OFFLOAD_STATE
     LS_OFFLOAD_PROCESSING,
     LS_OFFLOAD_IN_FINISH_QUEUE,
     LS_OFFLOAD_FINISH_CB,
-    LS_OFFLOAD_FINISH_CB_DONE,
     LS_OFFLOAD_FINISH_CB_BYPASS,
     LS_OFFLOAD_BYPASS,
     LS_OFFLOAD_ENQUEUE_FAIL
@@ -57,10 +43,16 @@ typedef struct ls_offload
 } ls_offload_t;
 
 struct Offloader;
-struct Offloader *offloader_new(const char *log_id, int workers);
+struct Offloader *offloader_new2(const char *log_id, int workers,
+                                int min_idle, int max_idle, int nice_pri);
+ls_inline struct Offloader *offloader_new(const char *log_id, int workers)
+{   return offloader_new2(log_id, workers, 1, 10, 1);   }
+
 int offloader_enqueue(struct Offloader *, struct ls_offload *task);
 
 #ifdef __cplusplus
 }
 #endif
+
+
 #endif //LS_OFFLOAD_H

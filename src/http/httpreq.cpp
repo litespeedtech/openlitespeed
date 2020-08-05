@@ -414,7 +414,7 @@ static int processUserAgent(const char *pUserAgent, int len)
     int iType = UA_UNKNOWN;
     if (len <= 0 || !pUserAgent)
         return iType;
-    
+
     char achUA[256];
     switch(*pUserAgent)
     {
@@ -495,12 +495,16 @@ void HttpReq::classifyUrl()
 
     if (memcmp(pUrlEnd - 11, "/robots.txt", 11) == 0)
         m_iUrlType = URL_ROBOTS_TXT;
-    else if (m_curURL.keyLen >= 12
+    else if (iUrlLen >= 12
             && memcmp(pUrlEnd- 12, "/favicon.ico", 12) == 0)
         m_iUrlType = URL_FAVICON;
-    else if (m_curURL.keyLen >= 28
-             && memcmp(getURI(), "/.well-known/acme-challenge/", 28) == 0)
-        m_iUrlType = URL_ACME_CHALLENGE;
+    else if (iUrlLen >= 13 && memcmp(pUrl, "/.well-known/", 13) == 0)
+    {
+        if (iUrlLen >= 28 && memcmp(pUrl + 13, "acme-challenge/", 15) == 0)
+            m_iUrlType = URL_ACME_CHALLENGE;
+        else
+            m_iUrlType = URL_WELL_KNOWN;
+    }
     else if (iUrlLen >= pRecaptchaUrl->len()
             && memcmp(pUrlEnd- pRecaptchaUrl->len(), pRecaptchaUrl->c_str(), pRecaptchaUrl->len()) == 0)
         m_iUrlType = URL_CAPTCHA;
@@ -1032,9 +1036,11 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
             memset((char *)(name - 2), 0x20, 7 + pCurHeader->valLen + 4);//
         }
     }
-    else if (pCurHeader->keyLen == 16
-                && (strncasecmp(name, "CF-Connecting-IP", 16) == 0))
-        m_iCfIpHeader = m_unknHeaders.getSize();
+    else if ((pCurHeader->keyLen == 16
+                 && (strncasecmp(name, "CF-Connecting-IP", 16) == 0))
+             || (pCurHeader->keyLen == 9
+                 && (strncasecmp(name, "X-Real-IP", 9) == 0)))
+        m_iCfRealIpHeader = m_unknHeaders.getSize();
     else if (pCurHeader->keyLen == 17
                 && strncasecmp(name, "X-Forwarded-Proto", 17) == 0)
     {
@@ -2880,11 +2886,15 @@ const char *HttpReq::getUnknownHeaderByIndex(int idx, int &keyLen,
 }
 
 
-const char *HttpReq::getCfIpHeader(int &len)
+const char *HttpReq::getCfRealIpHeader(char *name, int &len)
 {
-    key_value_pair *pIdx = getUnknHeaderPair(m_iCfIpHeader - 1);
+    key_value_pair *pIdx = getUnknHeaderPair(m_iCfRealIpHeader - 1);
     if (pIdx)
     {
+        assert(pIdx->keyLen < 20);
+        memcpy(name, m_headerBuf.getp(pIdx->keyOff), pIdx->keyLen);
+        name[pIdx->keyLen] = 0;
+        len = pIdx->valLen;
         len = pIdx->valLen;
         return m_headerBuf.getp(pIdx->valOff);
     }

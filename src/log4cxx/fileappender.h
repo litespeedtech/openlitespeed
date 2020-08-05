@@ -30,9 +30,6 @@ BEGIN_LOG4CXX_NS
 
 class FileAppender : public Appender
 {
-    ino_t           m_ino;
-    AioOutputStream m_stream;
-
 protected:
     explicit FileAppender(const char *pName)
         : Appender(pName)
@@ -40,7 +37,7 @@ protected:
         , m_stream()
     {}
     Duplicable *dup(const char *pName);
-
+    int open2();
 public:
     virtual ~FileAppender() {};
     static int init();
@@ -53,6 +50,9 @@ public:
     void setAsync()                         {   return m_stream.setAsync();     }
     int flush()                             {   return m_stream.flush();        }
 
+private:
+    ino_t           m_ino;
+    AioOutputStream m_stream;
 
     LS_NO_COPY_ASSIGN(FileAppender);
 };

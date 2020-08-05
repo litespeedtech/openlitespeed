@@ -264,7 +264,7 @@ prepareLinux()
         
         #other debian OS, we still can 
         if [ "${OSTYPE}" = "unknowlinux" ] ; then
-            echo It seems you are not using ubuntu 14,16,18,20 and Debian 7/8/9/10.
+            echo It seems you are not using ubuntu 14,16,18 and Debian 7/8/9/10.
             echo But we still can try to go further.
         fi
         
@@ -533,9 +533,7 @@ git clone https://github.com/litespeedtech/third-party.git
 mv third-party thirdparty
 mkdir thirdparty/lib64
 cd thirdparty/script/
-git pull
-#Only for 1.6.14
-git reset --hard 41eab3fb08ba59229382e3edf8e0cc5e26d1c03e
+
 
  
 sed -i -e "s/unittest-cpp/ /g" ./build_ols.sh

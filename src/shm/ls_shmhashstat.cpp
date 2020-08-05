@@ -18,6 +18,7 @@
 
 #include <shm/lsshmpool.h>
 #include <shm/lsshmhash.h>
+#include <shm/lsshmtidmgr.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -165,6 +166,7 @@ void doStatShmHash(LsShmHash *pHash)
 {
     LsHashStat hStat;
     LsHashLruInfo *pLru;
+    LsShmTidMgr *pTidMgr;
     MyStat mystat;
     LsShmHTableStat *pStat =
         (LsShmHTableStat *)pHash->offset2ptr(pHash->getHTableStatOffset());
@@ -222,6 +224,27 @@ void doStatShmHash(LsShmHash *pHash)
                 break;
         }
         fprintf(stdout, "%s\n", str);
+    }
+
+    if ((pTidMgr = pHash->getTidMgr()) != NULL)
+    {
+        uint64_t aiBlkCnt[4] = {0, 0, 0, 0};
+        uint64_t iBlkCnt = pHash->statTidBlkCnt(aiBlkCnt);
+
+        fprintf(stdout, "TID\n"
+                        "total tid blocks:          %lu\n"
+                        "Cur blk tid iter cnt:      %lu\n"
+                        "Cur blk tid del cnt:       %lu\n"
+                        "Old blk tid iter cnt:      %lu\n"
+                        "Old blk tid del cnt:       %lu\n",
+                iBlkCnt,
+                aiBlkCnt[0],
+                aiBlkCnt[1],
+                aiBlkCnt[2],
+                aiBlkCnt[3]
+               );
+        fflush(stdout);
+
     }
     return;
 }

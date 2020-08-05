@@ -700,7 +700,7 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                 swapIntEndian(&m_respInfo.m_cntHeaders);
                 swapIntEndian(&m_respInfo.m_status);
             }
-            if (m_respInfo.m_status)
+            if (m_respInfo.m_status && m_respInfo.m_status != 200)
             {
                 int code;
                 code = HttpStatusCode::getInstance().codeToIndex(m_respInfo.m_status);

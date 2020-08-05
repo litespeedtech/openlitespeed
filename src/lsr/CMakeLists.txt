@@ -38,7 +38,6 @@ SET(lsr_STAT_SRCS
    ls_tsstack.c
    ls_xpool.c
    xxhash.c
-   offloader.cpp
 )
 
 add_library(lsr STATIC ${lsr_STAT_SRCS} )

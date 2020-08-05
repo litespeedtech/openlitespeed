@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2018  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -24,13 +24,13 @@
 #include <lsr/ls_types.h>
 
 #include <assert.h>
-#include <stdint.h>
+#include <errno.h>
+#include <limits.h>
 #include <pthread.h>
+#include <signal.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <errno.h>
-#include <signal.h>
-#include <limits.h>
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include <linux/futex.h>
@@ -78,11 +78,11 @@ typedef pthread_mutex_t     ls_mutex_t;
 #endif
 
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-#include <os/lock.h>
-typedef os_unfair_lock ls_pspinlock_t;
-#define ls_pspinlock_lock          os_unfair_lock_lock
-#define ls_pspinlock_trylock       os_unfair_lock_trylock
-#define ls_pspinlock_unlock        os_unfair_lock_unlock
+#include <libkern/OSAtomic.h>
+typedef OSSpinLock ls_pspinlock_t;
+#define ls_pspinlock_lock          OSSpinLockLock
+#define ls_pspinlock_trylock       OSSpinLockTry
+#define ls_pspinlock_unlock        OSSpinLockUnlock
 #else
 typedef pthread_spinlock_t ls_pspinlock_t;
 #define ls_pspinlock_lock          pthread_spin_lock
@@ -193,31 +193,6 @@ ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 
 #endif
 
-#if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-
-#define ls_futex_wait_priv         ls_futex_wait
-#define ls_futex_wake_priv         ls_futex_wake
-#define ls_futex_wakeall_priv      ls_futex_wakeall
-ls_inline int ls_futex_wake(int *futex)
-{
-//Not implemented for MAC OS
-    return 0;
-}
-
-ls_inline int ls_futex_wakeall(int *futex)
-{
-//Not implemented for MAC OS
-    return 0;
-}
-
-ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
-{
-    usleep(1000);
-    return 0;
-}
-
-#endif
-
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
@@ -245,7 +220,6 @@ ls_inline int ls_futex_wakeall_priv(int *futex)
 {
     return syscall(SYS_futex, futex, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
 }
-
 
 ls_inline int ls_futex_wait_priv(int *futex, int val, struct timespec *timeout)
 {
@@ -338,24 +312,12 @@ ls_inline int ls_futex_safe_lock(ls_mutex_t *p)
     do
     {
         if (ls_spin_pid != (int)(lockpid & LS_FUTEX_PID_MASK)
-            && (kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0) && (errno == ESRCH)
+            && kill(lockpid & LS_FUTEX_PID_MASK, 0) < 0 && errno == ESRCH
             && ls_atomic_casint(p, lockpid, ls_spin_pid | LS_FUTEX_HAS_WAITER))
-                // successfully swapped old process id lockpid to (ours + has waiter),
-                // (would fail if lock was changed by someone else)
-        {
-            // was already locked, we stole it: LS_TH_LOCKED(p, 1); // call it a write lock
             return -(lockpid & LS_FUTEX_PID_MASK);
-                // return (- old lockpid ), we have it (swapped OK), but leave it marked with HAS_WAITER?
-        }
-
-        // either the lock holder pid exists, or the lock has changed since we got lockpid
-        // and we failed to do the casint
         if ((lockpid & LS_FUTEX_HAS_WAITER)
             || ls_atomic_casint(p, lockpid, lockpid | LS_FUTEX_HAS_WAITER) != 0)
-            // either already marked as having waiter or we just marked it so
             ls_futex_wait(p, lockpid | LS_FUTEX_HAS_WAITER, &x_time);
-            // wait for a wake(), continue immed if p != lockpid+ has waiter
-            // can wake spuriously or from timeout
     }
     while ((lockpid = ls_atomic_casvint(p, LS_LOCK_AVAIL,
                                         ls_spin_pid | LS_FUTEX_HAS_WAITER)) != LS_LOCK_AVAIL);
@@ -449,7 +411,7 @@ ls_inline int ls_futex_trylock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_unlock(ls_mutex_t *p)
 {
-    assert(ls_atomic_fetch_add(p, 0) != 0);
+    assert(ls_atomic_value(p) != 0);
     LS_TH_UNLOCKED(p, 1); // call it a write lock
     return (ls_atomic_setint(p, LS_LOCK_AVAIL) == LS_FUTEX_LOCKED2) ?
            ls_futex_wake(p) : 0;
@@ -467,7 +429,7 @@ ls_inline int ls_futex_unlock(ls_mutex_t *p)
  */
 ls_inline int ls_futex_locked(ls_mutex_t *p)
 {
-    return ls_atomic_fetch_add(p, 0) != 0;
+    return ls_atomic_value(p) != 0;
 }
 
 
@@ -670,7 +632,6 @@ int ls_atomic_spin_setup(ls_atom_spinlock_t *p);
 
 int ls_pthread_mutex_setup(pthread_mutex_t *);
 
-
 ls_inline int ls_pthread_mutex_locked(pthread_mutex_t *p)
 {
     if (pthread_mutex_trylock(p) == 0)
@@ -681,12 +642,33 @@ ls_inline int ls_pthread_mutex_locked(pthread_mutex_t *p)
     return 1;
 }
 
-
 int ls_pspinlock_setup(ls_pspinlock_t *p);
 
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef __cplusplus
+class MutexLocker
+{
+public:
+    MutexLocker(ls_mutex_t &mutex)
+        : m_mutex(mutex)
+    {
+        ls_mutex_lock(&m_mutex);
+    }
+
+    ~MutexLocker()
+    {   ls_mutex_unlock(&m_mutex);  }
+
+private:
+    ls_mutex_t &m_mutex;
+};
+
+
+#endif
+
+
 
 #endif //LS_LOCK_H
 

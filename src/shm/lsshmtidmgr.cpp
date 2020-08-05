@@ -17,10 +17,9 @@
 *****************************************************************************/
 #include <shm/lsshmtidmgr.h>
 
-
 #define LSSHMTID_BLKIDX_INCR    0x100
 #define LSSHMTID_BLKIDX_CMP     (LSSHMTID_BLKIDX_INCR - 1)
-#define LSSHMTID_BLKIDX_SIZE(x) (x * sizeof(LsShmOffset_t))
+#define LSSHMTID_BLKIDX_SIZE(x) ((x) * sizeof(LsShmOffset_t))
 
 typedef struct
 {
@@ -96,7 +95,7 @@ void LsShmTidMgr::linkTid(LsShmHIterOff offElem, uint64_t *pTid)
 }
 
 
-void LsShmTidMgr::unlinkTid(uint64_t tid)
+void LsShmTidMgr::unlinkTid(uint64_t tid, uint64_t delTid)
 {
     clrTidTblEnt(tid);
     // new delete tid only processed here in master;
@@ -104,6 +103,8 @@ void LsShmTidMgr::unlinkTid(uint64_t tid)
     if (m_pHash->isTidMaster())
     {
         uint64_t tidNew = 0;
+        if (delTid)
+            tidNew = delTid;
         setTidTblDel(tid, &tidNew);  // careful, may remap
     }
 }
@@ -112,7 +113,7 @@ void LsShmTidMgr::unlinkTid(uint64_t tid)
 void LsShmTidMgr::tidReplaceTid(LsShmHElem *pElem, LsShmHIterOff offElem, uint64_t *pTid)
 {
     LsShmTidLink *pLink = (LsShmTidLink *)pElem->getExtraPtr(m_iIterOffset);
-    unlinkTid(pLink->x_tid);
+    unlinkTid(pLink->x_tid, 0);
     linkTid(offElem, pTid);
 }
 
@@ -135,7 +136,7 @@ LsShmHIterOff LsShmTidMgr::doSet(const void* pKey, int iKeyLen,
                 memmove(pElem->getVal(), pVal, iValLen);
             pElem->setValLen(iValLen);
             pLink = (LsShmTidLink *)pElem->getExtraPtr(m_iIterOffset);
-            unlinkTid(pLink->x_tid);
+            unlinkTid(pLink->x_tid, 0);
             return offElem;
         }
         else
@@ -180,7 +181,7 @@ void LsShmTidMgr::eraseIterCb(LsShmHElem* pElem)
     if ((tid = pLink->x_tid) != 0)
     {
         pLink->x_tid = 0;
-        unlinkTid(tid);
+        unlinkTid(tid, 0);
     }
 }
 
@@ -206,17 +207,18 @@ uint64_t LsShmTidMgr::getTidCb(LsShmHElem* pElem)
 
 
 LsShmOffset_t LsShmTidMgr::allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t oldCnt,
-                                       int &remapped)
+                                       LsShmSize_t newCnt, int &remapped)
 {
     LsShmOffset_t off, *pOld, *pNew;
-    LsShmSize_t newCnt = oldCnt + LSSHMTID_BLKIDX_INCR;
+    if (0 == newCnt)
+        newCnt = oldCnt + LSSHMTID_BLKIDX_INCR;
     if ((off = m_pHash->alloc2(LSSHMTID_BLKIDX_SIZE(newCnt), remapped)) == 0)
         return 0;
     if (oldIdx == 0)
         return off;
     pOld = (LsShmOffset_t *)m_pHash->offset2ptr(oldIdx);
     pNew = (LsShmOffset_t *)m_pHash->offset2ptr(off);
-    memmove(pNew, pOld, LSSHMTID_BLKIDX_SIZE(oldCnt));
+    memmove(pNew, pOld, LSSHMTID_BLKIDX_SIZE((oldCnt < newCnt ? oldCnt : newCnt)));
     m_pHash->release2(oldIdx, LSSHMTID_BLKIDX_SIZE(oldCnt));
     return off;
 }
@@ -237,7 +239,7 @@ LsShmOffset_t LsShmTidMgr::growTidTbl(uint64_t base, int &remapped)
     if ((pTidInfo->x_iBlkCnt & LSSHMTID_BLKIDX_CMP) == 0)
     {
         if ((idxOff = allocBlkIdx(pTidInfo->x_iBlkIdxOff, pTidInfo->x_iBlkCnt,
-                                  iRemap)) == 0)
+                                  0, iRemap)) == 0)
         {
             m_pHash->release2(blkOff, sizeof(LsShmTidTblBlk));
             return 0;
@@ -308,6 +310,7 @@ int LsShmTidMgr::setTidTblEnt(uint64_t tidVal, uint64_t *pTid)
         ++pBlk->x_iIterCnt;
     else
     {
+        // Currently expects unlinkTid() to call clrTidTblEnt(), which decrements x_iIterCnt.
         ++pBlk->x_iDelCnt;
     }
     pBlk->x_iTidVals[indx] = tidVal;
@@ -318,7 +321,7 @@ int LsShmTidMgr::setTidTblEnt(uint64_t tidVal, uint64_t *pTid)
 void LsShmTidMgr::clrTidTblEnt(uint64_t tid)
 {
     LsShmTidTblBlk *pBlk;
-    if ((pBlk = tid2tblBlk(tid)) != NULL)
+    if ((pBlk = tid2tblBlk(tid)) != NULL && tid >= pBlk->x_tidBase)
     {
         pBlk->x_iTidVals[tid % TIDTBLBLK_MAXSZ] = 0;
         --pBlk->x_iIterCnt;
@@ -332,11 +335,13 @@ LsShmTidTblBlk *LsShmTidMgr::tid2tblBlk(uint64_t tid)
     LsShmOffset_t *pBlkOff;
     LsShmTidInfo *pTidInfo = getTidInfo();
     if (tid < pTidInfo->x_lastTidPreClear)
-        tid = pTidInfo->x_lastTidPreClear;
-    uint64_t iBlkIdx = (tid >> 10) - (pTidInfo->x_lastTidPreClear >> 10);
+        return NULL;
+    uint64_t iBlkIdx = TID2BLKIDX(tid) - TID2BLKIDX(pTidInfo->x_lastTidPreClear);
     if ((pTidInfo->x_iBlkIdxOff == 0) || (iBlkIdx >= pTidInfo->x_iBlkCnt))
         return NULL;
     pBlkOff = (LsShmOffset_t *)m_pHash->offset2ptr(pTidInfo->x_iBlkIdxOff);
+    if (0 == pBlkOff[iBlkIdx])
+        return NULL;
     return (LsShmTidTblBlk *)m_pHash->offset2ptr(pBlkOff[iBlkIdx]);
 }
 
@@ -387,3 +392,198 @@ uint64_t *LsShmTidMgr::nxtValInBlk(LsShmTidTblBlk *pBlk, int *pIndx)
     return NULL;
 }
 
+
+int LsShmTidMgr::shiftBlkIdx(uint64_t numToRemove, int &remapped)
+{
+    LsShmTidInfo *pTidInfo = getTidInfo();
+    LsShmOffset_t idxOff, *pBlkIdx = (LsShmOffset_t *)m_pHash->offset2ptr(pTidInfo->x_iBlkIdxOff);
+    remapped = 0;
+
+    memmove(pBlkIdx, &pBlkIdx[numToRemove], LSSHMTID_BLKIDX_SIZE(pTidInfo->x_iBlkCnt - numToRemove));
+
+    LsShmSize_t curBlkIdxSize = pTidInfo->x_iBlkCnt & ~LSSHMTID_BLKIDX_CMP;
+    if (pTidInfo->x_iBlkCnt - numToRemove < curBlkIdxSize)
+    {
+        // We removed enough blocks to downsize blkIdx.
+        if (curBlkIdxSize < pTidInfo->x_iBlkCnt)
+            curBlkIdxSize += LSSHMTID_BLKIDX_INCR;
+
+        LsShmSize_t newBlkIdxSize = (pTidInfo->x_iBlkCnt - numToRemove) & ~LSSHMTID_BLKIDX_CMP;
+
+        if (newBlkIdxSize < (pTidInfo->x_iBlkCnt - numToRemove))
+            newBlkIdxSize += LSSHMTID_BLKIDX_INCR;
+
+        // If the assert fails, we have a bad comparison.
+        assert(newBlkIdxSize != curBlkIdxSize);
+
+        if ((idxOff = allocBlkIdx(pTidInfo->x_iBlkIdxOff, curBlkIdxSize, newBlkIdxSize,
+                                  remapped)) == 0)
+        {
+            // Trouble spot. May have a SHM leak if we cannot shrink the current block.
+            return -1;
+        }
+        if (remapped)
+            pTidInfo = getTidInfo();
+        pTidInfo->x_iBlkIdxOff = idxOff;
+        pBlkIdx = (LsShmOffset_t *)m_pHash->offset2ptr(idxOff);
+    }
+    // At this point, data is remapped. Need to update rest of TidInfo.
+
+    pTidInfo->x_iBlkCnt -= numToRemove;
+    pTidInfo->x_iTidTblStrtOff = pBlkIdx[0];
+    pTidInfo->x_lastTidPreClear = ((LsShmTidTblBlk *)m_pHash->offset2ptr(pTidInfo->x_iTidTblStrtOff))->x_tidBase;
+    ((LsShmTidTblBlk *)m_pHash->offset2ptr(pTidInfo->x_iTidTblStrtOff))->x_iPrev = 0;
+
+    return 0;
+}
+
+
+uint64_t LsShmTidMgr::trim()
+{
+    LsShmTidInfo *pTidInfo = getTidInfo();
+    LsShmOffset_t *pBlkIdx = (LsShmOffset_t *)m_pHash->offset2ptr(pTidInfo->x_iBlkIdxOff);
+    LsShmOffset_t off = pTidInfo->x_iTidTblStrtOff;
+
+    uint64_t blksRemoved = 0,
+            blksIter = 0,
+            blksTotal = pTidInfo->x_iBlkCnt - 1;
+
+    if (0 == off || blksTotal == 0)
+        return 0;
+
+    assert(off == pBlkIdx[blksRemoved]);
+
+    while ((blksIter < blksTotal)
+        && ((off == 0)
+            || (0 == ((LsShmTidTblBlk *)m_pHash->offset2ptr(off))->x_iIterCnt)))
+    {
+        if (off)
+        {
+            // off can be released.
+            m_pHash->release2(off, (LsShmSize_t)sizeof(LsShmTidTblBlk));
+            pBlkIdx[blksIter] = 0;
+            ++blksRemoved;
+        }
+        off = pBlkIdx[++blksIter];
+    }
+
+    if (blksIter)
+    {
+        int remapped = 0;
+        if (0 == shiftBlkIdx(blksIter, remapped))
+        {
+            if (remapped)
+                pTidInfo = getTidInfo();
+            pBlkIdx = (LsShmOffset_t *)m_pHash->offset2ptr(pTidInfo->x_iBlkIdxOff);
+            blksIter = 1; // We know 0 is not empty or it is the current block.
+            blksTotal = pTidInfo->x_iBlkCnt - 1;
+        }
+        else
+        {
+            // Failed to allocate a new block for the block idx.
+            // We will continue where iter left off.
+            // Assumptions: x_iBlkCnt is unchanged. hash did not remap.
+            ++blksIter;
+            // Total remains unchanged. Try to remap on next tick.
+        }
+    }
+
+    for (; blksIter < blksTotal; ++ blksIter)
+    {
+        off = pBlkIdx[blksIter];
+        if (0 == off)
+            continue;
+
+        LsShmTidTblBlk *pBlk = (LsShmTidTblBlk *)m_pHash->offset2ptr(off);
+        if (0 == pBlk->x_iIterCnt)
+        {
+            if (pBlk->x_iNext)
+                ((LsShmTidTblBlk *)m_pHash->offset2ptr(pBlk->x_iNext))->x_iPrev = pBlk->x_iPrev;
+            if (pBlk->x_iPrev)
+                ((LsShmTidTblBlk *)m_pHash->offset2ptr(pBlk->x_iPrev))->x_iNext = pBlk->x_iNext;
+            pBlkIdx[blksIter] = 0;
+
+            m_pHash->release2(off, (LsShmSize_t)sizeof(LsShmTidTblBlk));
+            ++blksRemoved;
+        }
+    }
+
+    return blksRemoved;
+}
+
+
+//#define TIDMGR_STAT_DEBUG 1
+void LsShmTidMgr::statBlkCnt(uint64_t *aiBlkCnt) const
+{
+    LsShmTidInfo *pTidInfo = getTidInfo();
+    uint64_t i = 0, cnt = pTidInfo->x_iBlkCnt - 1;
+    LsShmOffset_t off, *pBlkIdx = NULL;
+
+    if (0 == pTidInfo->x_iBlkIdxOff)
+    {
+#ifdef TIDMGR_STAT_DEBUG
+        fprintf(stdout, "tid info not used.\n");
+#endif
+        return;
+    }
+
+    pBlkIdx = (LsShmOffset_t *)m_pHash->offset2ptr(pTidInfo->x_iBlkIdxOff);
+    for(; i < cnt; ++i)
+    {
+        off = pBlkIdx[i];
+        if (off != 0)
+        {
+            LsShmTidTblBlk *pBlk = (LsShmTidTblBlk *)m_pHash->offset2ptr(off);
+            aiBlkCnt[2] += pBlk->x_iIterCnt;
+            aiBlkCnt[3] += pBlk->x_iDelCnt;
+#ifdef TIDMGR_STAT_DEBUG
+            fprintf(stdout, "iter %lu blk off %u base %lu, iter cnt %d del cnt %d\n",
+                    i, off, pBlk->x_tidBase, pBlk->x_iIterCnt, pBlk->x_iDelCnt);
+            if (pBlk->x_iIterCnt)
+            {
+                int j;
+                for (j = 0; j < TIDTBLBLK_MAXSZ; ++j)
+                {
+
+                    fprintf(stdout, "idx %d val %lu is iter %d\n",
+                            j, pBlk->x_iTidVals[j], isTidValIterOff(pBlk->x_iTidVals[j]));
+                }
+            }
+        }
+        else
+            fprintf(stdout, "iter %lu blk off 0.\n", i);
+#else
+        }
+#endif
+    }
+
+    // current block
+    off = pBlkIdx[i];
+    if (off != 0)
+    {
+        LsShmTidTblBlk *pBlk = (LsShmTidTblBlk *)m_pHash->offset2ptr(off);
+        aiBlkCnt[0] = pBlk->x_iIterCnt;
+        aiBlkCnt[1] = pBlk->x_iDelCnt;
+
+#ifdef TIDMGR_STAT_DEBUG
+        fprintf(stdout, "current blk off %u base %lu, iter cnt %d del cnt %d\n",
+                off, pBlk->x_tidBase, pBlk->x_iIterCnt, pBlk->x_iDelCnt);
+
+        if (pBlk->x_iIterCnt)
+        {
+            int j;
+            for (j = 0; j < TIDTBLBLK_MAXSZ; ++j)
+            {
+
+                fprintf(stdout, "idx %d val %lu is iter %d\n",
+                        j, pBlk->x_iTidVals[j], isTidValIterOff(pBlk->x_iTidVals[j]));
+            }
+        }
+    }
+    else
+        fprintf(stdout, "current blk empty\n");
+#else
+    }
+#endif
+
+}

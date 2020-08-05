@@ -58,16 +58,19 @@ class PathTool
             $err = is_file($path) ? "Already exists $path" : "name conflicting with an existing directory $path";
             return false;
         }
+        $dir = substr($path, 0, (strrpos($path, '/')));
+        $special_note = '';
         $dirmode = 0700; // default
         $filemode = 0600;
         $specials = ['userDB:location', 'groupDB:location'];
-        if (in_array($attrName, $specials) && strpos($path, '/lsws/conf/') !== false) {
-            $dirmode = 0755; // conf dir will be group protected
+        if (in_array($attrName, $specials)) {
+            $special_note = 'WebAdmin user does not have permission to create this file. You can manually create it and populate the data. Make sure it is readable by the user that web server is running as (usually nobody).';
+            $dirmode = 0755; 
             $filemode = 0644;
         }
-        $dir = substr($path, 0, (strrpos($path, '/')));
+        
         if (!PathTool::createDir($dir, $dirmode, $err)) {
-            $err = 'failed to create file ' . $path;
+            $err .= '. ' . $special_note;
             return false;
         }
 
@@ -75,7 +78,7 @@ class PathTool
             chmod($path, $filemode);
             return true;
         }
-
+        $err = 'failed to create file ' . $path . '. ' . $special_note;
         return false;
     }
 

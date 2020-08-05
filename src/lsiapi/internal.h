@@ -93,7 +93,7 @@ typedef struct lsi_module_internal_s
 //# error not enough space reserved for internal data in struct lsi_module_t
 //#endif
 
-class LsiSession : public evtcbtail_s
+class LsiSession : public evtcbhead_t
 {
 public:
     LsiSession() { m_pModuleConfig = NULL; };

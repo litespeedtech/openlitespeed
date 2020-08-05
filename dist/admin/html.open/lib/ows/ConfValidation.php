@@ -55,6 +55,5 @@ class ConfValidation extends CValidation
         }
 
         return $isValid;
-    }
-    
+    }    
 }

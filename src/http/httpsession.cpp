@@ -1139,12 +1139,27 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
     p = pProxyHeader;
     while (pIpBegin < pEnd)
     {
-        while ((pIpBegin < pEnd) && isspace(*pIpBegin))
-            ++pIpBegin;
-
-        p = (char *)memchr(pIpBegin, ',', pEnd - pIpBegin);
-        if (!p)
+        if (HttpServerConfig::getInstance().getUseProxyHeader() == 4)
+        {
+            while(pEnd > pIpBegin && (isspace(pEnd[-1]) || ',' == pEnd[-1]))
+                --pEnd;
+            p = (const char *)memrchr(pIpBegin, ',', pEnd - pIpBegin);
+            if (p)
+                pIpBegin = p + 1;
+            while ((pIpBegin < pEnd) && isspace(*pIpBegin))
+                ++pIpBegin;
             p = pEnd;
+        }
+        else
+        {
+            while ((pIpBegin < pEnd) && isspace(*pIpBegin))
+                ++pIpBegin;
+
+            p = (char *)memchr(pIpBegin, ',', pEnd - pIpBegin);
+            if (!p)
+                p = pEnd;
+        }
+
         len = p - pIpBegin;
         if ((len <= 0) || (len > 255))
         {
@@ -1332,18 +1347,19 @@ int HttpSession::processNewReqInit()
     {
         //m_request.orGzip(REQ_GZIP_ACCEPT | httpServConf.getGzipCompress());
     }
-    if ((useProxyHeader == 1)
+    if ((useProxyHeader == 1) || (useProxyHeader == 4)
         || (((useProxyHeader == 2) || (useProxyHeader == 3))
             && (getClientInfo()->getAccess() == AC_TRUST)))
     {
+        char name_buf[20];
         const char *pName;
         const char *pProxyHeader;
         int len;
         if (((useProxyHeader == 2) || (useProxyHeader == 3))
-            && m_request.isCfIpSet())
+            && m_request.isCfRealIpSet())
         {
-            pName = "CF-Connecting-IP";
-            pProxyHeader = m_request.getCfIpHeader(len);
+            pProxyHeader = m_request.getCfRealIpHeader(name_buf, len);
+            pName = name_buf;
         }
         else
         {
@@ -1745,7 +1761,8 @@ int HttpSession::getVHostAccess()
         m_pVHostAcl = pAcl;
     }
 
-    LS_DBG_M(getLogSession(), "getVHostAccess, acl returned access %d", m_iVHostAccess);
+    LS_DBG_M(getLogSession(), "getVHostAccess, host %p, acl returned access %d",
+             pVHost, m_iVHostAccess);
     return m_iVHostAccess;
 }
 
@@ -1824,6 +1841,16 @@ bool HttpSession::shouldAvoidRecaptcha()
     {
         LS_DBG_M(getLogSession(), "[RECAPTCHA] Favicon request, skip recaptcha.");
         return true;
+    }
+    else if (m_request.getUrlType() == URL_WELL_KNOWN
+            || m_request.getUrlType() == URL_ACME_CHALLENGE)
+    {
+        getClientInfo()->incAllowedBotHits();
+        if (!getClientInfo()->isReachBotLimit())
+        {
+            LS_DBG(getLogSession(), "[RECAPITCHA] /.well-known/ request, skip recaptcha.");
+            return true;
+        }
     }
 
 //     if (getStream() && getStream()->isFromLocalAddr())
@@ -2166,7 +2193,7 @@ int HttpSession::processContextAuth()
             else
                 satisfy = satisfyAny;
         }
-        if (!satisfy)
+        if (!satisfy && ! m_request.isChallenge())
         {
             if (aaa.m_pRequired && aaa.m_pHTAuth)
             {
@@ -2421,7 +2448,7 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     {
         LS_DBG_L(getLogSession(), "HttpSession::CGroup don't activate, type: %s "
                  "vHost: %p, vHost->enableCGroup: %s, config.getCGroupAllow: %s\n",
-                 (m_request.getHttpHandler()->getType() == HandlerType::HT_CGI) ? "CGI" : "NOT CGI",
+                 HandlerType::getHandlerTypeString(m_request.getHttpHandler()->getType()),
                  pVHost, ((pVHost) && (pVHost->enableCGroup())) ? "YES" : "NO",
                  ServerProcessConfig::getInstance().getCGroupAllow() ? "YES" : "NO");
     }
@@ -2905,8 +2932,8 @@ int HttpSession::onWriteEx()
 
     if (m_iFlag & HSF_CUR_SUB_SESSION_DONE)
         curSubSessionCleanUp();
-
-    switch (getState())
+    int state = getState();
+    switch (state)
     {
     case HSS_THROTTLING:
         ret = handlerProcess(m_request.getHttpHandler());
@@ -4121,7 +4148,7 @@ int HttpSession::flushBody()
 }
 
 
-int HttpSession::call_nextRequest(evtcbtail_t *p, long , void *)
+int HttpSession::call_nextRequest(evtcbhead_t *p, long , void *)
 {
     HttpSession *pSession = (HttpSession *)p;
     pSession->nextRequest();
@@ -4923,7 +4950,7 @@ int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
     if (!pBuf)
         pBuf = ls_palloc(STATIC_FILE_BLOCK_SIZE);
     remain = m_aioReq.read(pData->getECache()->getfd(), pBuf,
-                           len, pData->getCurPos(), (AioEventHandler *)this);
+                           len, pData->getCurPos(), (EventHandler *)this);
     if (remain != 0)
         return LS_FAIL;
     setFlag(HSF_AIO_READING);
@@ -4979,6 +5006,7 @@ int HttpSession::sendStaticFileAio(SendFileInfo *pData)
 
 int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 {
+    char buf[STATIC_FILE_BLOCK_SIZE];
     const char *pBuf;
     off_t written;
     off_t remain;
@@ -5027,7 +5055,6 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     }
 #endif
 
-    BlockBuf tmpBlock;
     while ((remain = pData->getRemain()) > 0)
     {
         len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain : STATIC_FILE_BLOCK_SIZE ;
@@ -5041,10 +5068,11 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
         }
         else
         {
-            pBuf = VMemBuf::mapTmpBlock(pData->getfd(), tmpBlock, pData->getCurPos());
-            if (!pBuf)
-                return -1;
-            written = tmpBlock.getBufEnd() - pBuf;
+            pBuf = buf;
+            written = pread(pData->getfd(), buf, len, pData->getCurPos());
+            if (written <= 0)
+                return LS_FAIL;
+
             if (written > remain)
                 written = remain;
             if (written <= 0)
@@ -5052,8 +5080,6 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
         }
 
         len = writeRespBodyBlockInternal(pData, pBuf, written);
-        if (!pData->getECache())
-            VMemBuf::releaseBlock(&tmpBlock);
         if (len < 0)
             return len;
         else if (len == 0)
@@ -5101,6 +5127,7 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
           LSI_FLAG_PROCESS_STATIC))
         return sendStaticFileEx(pData);
 
+    char buf[STATIC_FILE_BLOCK_SIZE];
     const char *pBuf;
     off_t written;
     off_t remain;
@@ -5131,7 +5158,6 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
     param.flag_out = &buffered;
 
 
-    BlockBuf tmpBlock;
     while ((remain = pData->getRemain()) > 0)
     {
         len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain : STATIC_FILE_BLOCK_SIZE ;
@@ -5145,18 +5171,17 @@ int HttpSession::sendStaticFile(SendFileInfo *pData)
         }
         else
         {
-            pBuf = VMemBuf::mapTmpBlock(pData->getfd(), tmpBlock, pData->getCurPos());
-            if (!pBuf)
-                return -1;
-            written = tmpBlock.getBufEnd() - pBuf;
+            pBuf = buf;
+            written = pread(pData->getfd(), buf, len, pData->getCurPos());
+            if (written <= 0)
+                return LS_FAIL;
+
             if (written > remain)
                 written = remain;
             if (written <= 0)
                 return -1;
         }
         len = writeRespBodyBlockFilterInternal(pData, pBuf, written, &param);
-        if (!pData->getECache())
-            VMemBuf::releaseBlock(&tmpBlock);
         if (len < 0)
             return len;
         else if (len == 0)
@@ -5445,19 +5470,18 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
     return onWriteEx();
 }
 
-void HttpSession::setBackRefPtr(evtcbtail_t ** v)
+void HttpSession::setBackRefPtr(evtcbhead_t ** v)
 {
     LS_DBG_M(getLogSession(),
                  "setBackRefPtr() called, set to %p.", *v);
-    evtcbtail_t::back_ref_ptr = v;
+    evtcbhead_t::back_ref_ptr = v;
 }
 
 
 void HttpSession::resetEvtcb()
 {
     LS_DBG_H("%s calling resetEvtcbTail on this %p\n", __func__, this);
-    EvtcbQue::getInstance().resetEvtcbTail(this);
-    evtcbtail_t::back_ref_ptr = NULL;
+    evtcbhead_reset(this);
 }
 
 
@@ -5473,13 +5497,13 @@ void HttpSession::cancelEvent(evtcbnode_s * v)
 
 void HttpSession::resetBackRefPtr()
 {
-    if (evtcbtail_t::back_ref_ptr)
+    if (evtcbhead_t::back_ref_ptr)
     {
         LS_DBG_M(getLogSession(),
                  "resetBackRefPtr() called. previous value is %p:%p.",
-                 evtcbtail_t::back_ref_ptr, *evtcbtail_t::back_ref_ptr);
-        *evtcbtail_t::back_ref_ptr = NULL;
-        evtcbtail_t::back_ref_ptr = NULL;
+                 evtcbhead_t::back_ref_ptr, *evtcbhead_t::back_ref_ptr);
+        *evtcbhead_t::back_ref_ptr = NULL;
+        evtcbhead_t::back_ref_ptr = NULL;
     }
 }
 
@@ -6398,5 +6422,6 @@ int HttpSession::setUriQueryString(int action, const char *uri,
 int HttpSession::removeSessionCbs(long lParam, void * pParam)
 {
     LS_DBG_M(getLogSession(), "calling removeSessionCb on this %p\n", this);
-    return EvtcbQue::getInstance().removeSessionCb(this);
+    EvtcbQue::getInstance().removeSessionCb(this);
+    return 0;
 }

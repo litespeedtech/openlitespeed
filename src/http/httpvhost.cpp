@@ -704,10 +704,10 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
             LS_DBG_L(ConfigCtx::getCurConfigCtx(),
                      "path %s not accessible, added null context %p.",
                      achRealPath, pContext0);
-            
-            
-            
-            
+
+
+
+
             break;
         }
 
@@ -897,6 +897,15 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
         pAdminEmails = "";
     setAdminEmails(pAdminEmails);
 
+    LS_DBG("VHost config: %p, Server level bwrap: %d\n", this,
+           HttpServerConfig::getInstance().getBwrap());
+    if (HttpServerConfig::getInstance().getBwrap()
+        != HttpServerConfig::BWRAP_DISABLED)
+    {
+        enableBwrap(ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "bubbleWrap",
+            0, 2, HttpServerConfig::getInstance().getBwrap()) == HttpVHost::BWRAP_ON);
+        LS_DBG("VHost bwrap: %d\n", enableBwrap());
+    }
     return 0;
 
 }
@@ -1319,12 +1328,12 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
             default:
                 ret = ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRealPath,
                         pLocation);
-                
+
                 /**
                  * Since it is expanded, now we try to add tail / dor DIR if not have
                  */
                 pathLen = strlen(achRealPath);
-                if (pathLen > 0 && pathLen < sizeof(achRealPath) - 1 &&
+                if (pathLen > 0 && (size_t)pathLen < sizeof(achRealPath) - 1 &&
                     ret == 0 && achRealPath[pathLen - 1] != '/')
                 {
                     struct stat st;
@@ -1913,7 +1922,7 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     char appURL[MAX_URI_LEN];
     if (!pStartupFile || *pStartupFile == '\0')
         pStartupFile = "index.wsgi";
-    
+
     //Add a _ between the URI and the startupFile
     achURI[uriLen++] = '_';
     memccpy(&achURI[uriLen], pStartupFile, 0, MAX_URI_LEN - uriLen);
@@ -2638,7 +2647,7 @@ int HttpVHost::configContext(const XmlNode *pContextNode)
 
         pLocation = defLocation.c_str();
     }
-    else if (type != HandlerType::HT_REDIRECT && 
+    else if (type != HandlerType::HT_REDIRECT &&
         *pLocation != '$' && *pLocation != '/')
     {
         defLocation.setStr("$DOC_ROOT/");

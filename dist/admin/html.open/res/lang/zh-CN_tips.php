@@ -90,8 +90,6 @@ $_tipsdb['accessLog_compressArchive'] = new DAttrHelp("压缩存档", '指定是
 
 $_tipsdb['accessLog_fileName'] = new DAttrHelp("文件名", '指定访问日志文件的文件名。', '[性能建议] 将访问日志文件放置在一个单独的磁盘上。', '文件2', '');
 
-$_tipsdb['accessLog_keepDays'] = new DAttrHelp("保留天数", '指定访问日志文件将被保存在磁盘上多少天。 只有超出指定天数的回滚日志文件会被删除。 当前的日志文件不会被删除，无论它包含了多少天的数据。 如果你不想自动删除过时的、很旧的日志文件， 将该值设置为0。', '', '无符号整数', '');
-
 $_tipsdb['accessLog_logFormat'] = new DAttrHelp("日志格式", ' 指定访问日志的格式。 设置之后，它将覆盖&quot;记录头部&quot; 的设定。', '', '字符串。日志格式的语法与Apache 2.0自定义 <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">日志格式</a>兼容。', '一般日志格式（CLF）<br/>	&quot;%h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/>支持虚拟主机的一般日志格式<br/>	&quot;%v %h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/>NCSA扩展/组合日志格式<br/>	&quot;%h %l %u %t \&quot;%r\&quot; %>s %b \&quot;%{Referer}i\&quot; \&quot;%{User-agent}i\&quot; <br/><br/>记录Foobar的cookie值<br/>   &quot;%{Foobar}C&quot;');
 
 $_tipsdb['accessLog_logHeader'] = new DAttrHelp("记录头部", '指定是否记录HTTP请求头: Referer、 UserAgent和Host。', '[性能建议] 如果你不需要在访问日志中记录这些头部信息，关闭这个功能。', '复选框', '');
@@ -149,6 +147,10 @@ $_tipsdb['binPath'] = new DAttrHelp("Binary Path", 'The location of the App Serv
 $_tipsdb['blockBadReq'] = new DAttrHelp("封锁坏请求", '封锁持续发送坏HTTP请求的IP&quot;禁止期（秒）&quot;所设置的时长。默认为{VAL}Yes。 这有助于封锁反复发送垃圾请求的僵尸网络攻击。', '', '布尔值', '');
 
 $_tipsdb['brStaticCompressLevel'] = new DAttrHelp("Brotli Compression Level (Static File)", 'Specifies the level of Brotli compression applied to static files. Ranges from 1 (lowest) to 11 (highest).<br/><br/>This setting will only take effect when &quot;启用压缩&quot; and &quot;自动更新静态文件&quot; are enabled.<br/><br/>Default value: 5', ' Save network bandwidth. Text-based responses such as html, css, and javascript files benefit the most and on average can be compressed to half of their original size.', 'Number between 1 and 11.', '');
+
+$_tipsdb['bubbleWrap'] = new DAttrHelp("Bubblewrap Container", 'Set to On if you wish to start CGI processes (including PHP programs) in a bubblewrap sandbox. See <a href=&quot;https://wiki.archlinux.org/index.php/Bubblewrap&quot;>https://wiki.archlinux.org/index.php/Bubblewrap</a> for details on using bubblewrap. Bubblewrap must be installed on your system prior to using this setting.<br/><br/>This setting cannot be turned on at the Virtual Host level if set to &quot;Disabled&quot; at the Server level.<br/><br/>Default values:<br/><b>Server level:</b> Disabled<br/><b>VH level:</b> Inherit Server level setting', '', 'Select from drop down list', '');
+
+$_tipsdb['bubbleWrapCmd'] = new DAttrHelp("Bubblewrap Command", 'The full bubblewrap use command, including the bubblewrap program itself. More on configuring this command can be found here: <a href=&quot;https://openlitespeed.org/kb/bubblewrap-in-openlitespeed/&quot;>   https://openlitespeed.org/kb/bubblewrap-in-openlitespeed/ </a>. If not specified, the default command listed below will be used.<br/><br/>Default value: /bin/bwrap --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind-try /lib64 /lib64 --ro-bind /bin /bin --ro-bind /sbin /sbin --dir /var --dir /tmp --proc /proc --symlink../tmp var/tmp --dev /dev --ro-bind-try /etc/localtime /etc/localtime --ro-bind-try /etc/ld.so.cache /etc/ld.so.cache --ro-bind-try /etc/resolv.conf /etc/resolv.conf --ro-bind-try /etc/ssl /etc/ssl --ro-bind-try /etc/pki /etc/pki --ro-bind-try /etc/man_db.conf /etc/man_db.conf --ro-bind-try /home/$USER /home/$USER --bind-try /var/lib/mysql/mysql.sock /var/lib/mysql/mysql.sock --bind-try /home/mysql/mysql.sock /home/mysql/mysql.sock --bind-try /tmp/mysql.sock /tmp/mysql.sock  --unshare-all --share-net --die-with-parent --dir /run/user/$UID ‘$PASSWD 65534’ ‘$GROUP 65534’', '', '', '');
 
 $_tipsdb['certChain'] = new DAttrHelp("Chained Certificate", 'Specifies whether the certificate is a chained certificate or not. The file that stores a certificate chain must be in PEM format, and the certificates must be in the chained order, from the lowest level (the actual client or server certificate) to the highest level (root) CA.', '', 'Select from radio box', '');
 
@@ -390,6 +392,8 @@ $_tipsdb['log_enableStderrLog'] = new DAttrHelp("启用标准错误日志（stde
 
 $_tipsdb['log_fileName'] = new DAttrHelp("文件名", '指定日志文件的路径。', '[性能建议] 将日志文件放置在一个单独的磁盘上。', '文件2', '');
 
+$_tipsdb['log_keepDays'] = new DAttrHelp("Keep Days", 'Specifies how many days the access log file will be kept on disk.  Only rotated log files older than the specified number of days will be deleted. The current  log file will not be touched regardless how many days worth of data it contains.  If you do not want to auto-delete stale and very old log files, set this to 0.', '', '无符号整数', '');
+
 $_tipsdb['log_logLevel'] = new DAttrHelp("日志级别", '指定日志文件中记录的日志级别。 可用级别（由高到低）为: ERROR、 WARNING、NOTICE、INFO和DEBUG。 只有级别与当前设置相同或更高的消息将被记录（级别越低记录越详细）。', '[性能建议] 使用DEBUG日志级别对 性能没有任何影响，除非&quot;调试级别&quot;没有被设置为NONE.。我们推荐将日志级别设置为DEBUG，将 调试级别值设置为NONE。这样设置意味着你的磁盘不会被调试日志塞满，但是你可以使用&quot;Toggle Debug Logging&quot; 控制调试输出。这个操作可以实时启用或关闭调试记录， 对于调试繁忙的生产服务器非常有用。', '选项', '');
 
 $_tipsdb['log_rollingSize'] = new DAttrHelp("回滚大小", '指定何时日志文件需要回滚，也称为日志循环。 当文件大小超过回滚限制后，在使用的日志文件将在同一目录中被重命名 为log_name.mm_dd_yyyy(.sequence)，一个新的日志文件将被创建。 回滚的日志文件的实际大小有时会比限制值稍微大一些。 将值设置为0将禁用日志循环。', '请用“K”，“M”，“G”代表千字节，兆字节和千兆字节。', '无符号整数', '');
@@ -604,7 +608,7 @@ $_tipsdb['shHandlerName'] = new DAttrHelp("处理器名称", '当处理器类型
 
 $_tipsdb['shType'] = new DAttrHelp("类型", '指定处理这些脚本文件的外部程序类型。 可用类型有：CGI, FastCGI, Web服务器, LSAPI应用程序, 负载均衡器, 或 Servlet引擎。 对于FastCGI, Web服务器和Servlet引擎，需要指定&quot;处理器名称&quot;。 这是在&quot;External Apps&quot;部分预设定的外部程序名称。', '', '选项', '');
 
-$_tipsdb['shmDefaultDir'] = new DAttrHelp("Default SHM Directory", 'Changes shared memory&#039;s default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.', '', 'Path', '');
+$_tipsdb['shmDefaultDir'] = new DAttrHelp("Default SHM Directory", 'Changes shared memory&#039;s default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.', '', 'path', '');
 
 $_tipsdb['showVersionNumber'] = new DAttrHelp("服务器签名", '指定是否在响应头的Server参数中显示服务器签名和版本号。 有三个选项: 当设置为Hide Version时、只显示LiteSpeed。当设置为 Show Version，显示LiteSpeed和版本号。  设置为Hide Full Header时，整个Server头都不会显示在响应报头中。', '[安全建议] 如果你不想暴露服务器的版本号，设置为Hide Version。', '布尔值', '');
 
@@ -615,6 +619,8 @@ $_tipsdb['sndBufSize'] = new DAttrHelp("发送缓冲区大小", '每个TCP套接
 $_tipsdb['softLimit'] = new DAttrHelp("连接软限制", '指定来自单个IP的并发连接的软限制。 并发连接数低于&quot;连接硬限制&quot;时，此软限制可以在&quot;宽限期（秒）&quot;期间临时超过， 但Keep-Alive连接将被尽快断开，直到连接数低于软限制。 如果&quot;宽限期（秒）&quot;之后，连接数仍然超过软限制，相应的IP将被封锁 &quot;禁止期（秒）&quot;所设置的时长。<br/><br/>例如，如果页面包含许多小图像，浏览器可能会尝试同时建立许多连接，尤其是HTTP/1.0客户端。你应当在短时间内允许这些连接。<br/><br/>HTTP/1.1客户端还可能建立多个连接，以加快下载，另外SSL需要为非SSL连接建立单独的连接。确保限制设置正确， 以免影响正常服务。建议限制在5与10之间。', '[安全建议] 一个较低的数字将使得服务器可以服务更多独立的客户。<br/>[安全建议] 受信任的IP或子网不受影响。<br/>[性能建议] 使用大量并发客户端进行性能评测时，请设置一个较高的值。', '无符号整数', '');
 
 $_tipsdb['sslCert'] = new DAttrHelp("SSL Private Key & Certificate", 'Every SSL listener requires a paired SSL private key and SSL certificate. Multiple SSL listeners can share the same key and certificate.<br/><br/>You can generate SSL private keys yourself using an SSL software package, such as OpenSSL. SSL certificates can also be purchased from an authorized certificate issuer like VeriSign or Thawte. You can also sign the certificate yourself. Self-signed certificates will not be trusted by web browsers and should not be used on public websites containing critical data. However, a self-signed certificate is good enough for internal use, e.g. for encrypting traffic to LiteSpeed Web Server&#039;s WebAdmin Console.', '', '', '');
+
+$_tipsdb['sslDefaultCiphers'] = new DAttrHelp("Default Cipher Suite", 'Default cipher suite for SSL certificates.<br/><br/>Default value: Server Internal Default (Based on current best practices)', '', 'Colon-separated string of cipher specifications.', '');
 
 $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("Enable Multiple SSL Certificates", 'Allows listeners/vhosts to set multiple SSL certificates.  If multiple certificates are enabled, the certificates/keys are expected to follow a naming scheme.  If the cert is named server.crt, other possible cert names are server.crt.rsa, server.crt.dsa, server.crt.ecc. If &quot;Not Set&quot;, defaults to &quot;No&quot;.', '', 'Select from radio box', '');
 
@@ -726,7 +732,7 @@ $_tipsdb['vhlog_fileName'] = new DAttrHelp("File Name", 'Specifies the path for 
 
 $_tipsdb['vhlog_logLevel'] = new DAttrHelp("日志级别", '指定日志记录级别。可用级别（从高到低）为ERROR,  WARNING, NOTICE, INFO, 和 DEBUG。 只有当消息等级高于或与当前设置相同时才被记录。 如果您希望将此设置为DEBUG，您也需要设置服务器日志级别为DEBUG。 调试的级别只能在服务器级别通过&quot;调试级别&quot;控制。', '[性能建议] 除非&quot;调试级别&quot;设置为NONE以外的日志级别, 否则DEBUG级别不会对性能产生任何影响，推荐采用。', '选项', '');
 
-$_tipsdb['viewlog'] = new DAttrHelp("Server Log Viewer", 'The Server Log Viewer is a convenient tool for browsing the  current server log to check for errors or problems.  The log viewer  searches the server log file in blocks for the specified log level.    The default block size is 20KB. You can use the Begin,   End, Next, and Prev buttons to navigate a large log file.', 'The size of a dynamically generated page is limited by &quot;动态回应主内容最大大小&quot;.   So if the block is too big, the page might be truncated.', '', '');
+$_tipsdb['viewlog'] = new DAttrHelp("Server Log Viewer", 'The Server Log Viewer is a convenient tool for browsing the  current server log to check for errors or problems.  The log viewer  searches the server log file in blocks for the specified log level.    The default block size is 20KB. You can use the Begin, End, Next, and Prev buttons to navigate a large log file.', 'The size of a dynamically generated page is limited by &quot;动态回应主内容最大大小&quot;.   So if the block is too big, the page might be truncated.', '', '');
 
 $_tipsdb['virtualHostMapping'] = new DAttrHelp("Virtual Host Mappings", 'Specifies the relationship between the listener and virtual hosts. Listeners and virtual hosts are associated by domain names. An HTTP request will be routed to a virtual host with a matching domain name. One listener can map to multiple virtual hosts for different domain names. One virtual host can also be mapped from different listeners. One listener can allow one catchall virtual host with the domain name value &quot;*&quot;. When there is no explicitly matched domain name in the listener&#039;s mapping, the listener will forward the request to that catchall virtual host.', ' Only add necessary mappings. If the listener is mapped to only one virtual host, then only set up a catchall mapping &quot;*&quot;.', '', '');
 
@@ -779,6 +785,10 @@ $_tipsdb['EDTP:backlog'] = array('Local applications can be started by the web s
 
 $_tipsdb['EDTP:binPath'] = array('','');
 
+$_tipsdb['EDTP:bubbleWrap'] = array('');
+
+$_tipsdb['EDTP:bubbleWrapCmd'] = array('');
+
 $_tipsdb['EDTP:cgi_path'] = array('A CGI context can be used to specify a directory only contains CGI scripts. Path can be absolute path or relative to $SERVER_ROOT, $VH_ROOT or $DOC_ROOT(default). Path and URI must be ended with &quot;/&quot; for a cgi-bin directory.','If only a specific script is needed in that directory, it is recommended to create a CGI context for that script only. In this case, path and URI need not be a directory. For e.g., path can be ~/myapp/myscript.pl, URI can be /myapp/myscript.pl. All other files will not be served as CGI.');
 
 $_tipsdb['EDTP:checkSymbolLink'] = array('Check-Symbolic-Link control will take effect only if Follow-Symbolic-Link is turned on. This controls whether symbolic links are checked against Access Denied Directories.');
@@ -787,7 +797,7 @@ $_tipsdb['EDTP:compressibleTypes'] = array('Compressible Types is a list of MIME
 
 $_tipsdb['EDTP:ctxType'] = array('<b>Static</b> context can be used to map a URI to a directory either outside document root or within it.','<b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.','<b>Servlet</b> context is used to import a specific servlet under a web application.','<b>Fast CGI</b> context is a mount point of Fast CGI application.','<b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.','<b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.','<b>CGI</b> context can be used to specify a directory only contains CGI scripts.','<b>Load Balancer</b> context can be used to assign a different cluster for that context.','<b>Redirect</b> context can set up an internal or external redirect URI.','<b>App Server</b> context is specifically used for Rack/Rails, WSGI, and Node.js applications.<br>','<b>Module handler</b> context is a mount point of hander type modules.');
 
-$_tipsdb['EDTP:docRoot'] = array('Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.');
+$_tipsdb['EDTP:docRoot'] = array('Document root will not be created by the server automatically if it does not already exist. Please ensure that both the directory exists and it is owned by the correct user.','Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.');
 
 $_tipsdb['EDTP:domainName'] = array('Enter all the domains that you want this listener to respond to. Use comma &quot;,&quot; to separate individual domain.','You can choose only one virtual host to handle all unspecified domains, put &quot;*&quot; in domains.');
 
@@ -849,7 +859,7 @@ $_tipsdb['EDTP:log_rollingSize'] = array('A new log file will be created if curr
 
 $_tipsdb['EDTP:maxCGIInstances'] = array('Limits resources that a CGI program can use. This helps against DoS attacks.','Max CGI Instances controls how many CGI processes the web server can launch.');
 
-$_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 10K or 1M.');
+$_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240 or 10K.');
 
 $_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative to $SERVER_ROOT.');
 
@@ -915,7 +925,7 @@ $_tipsdb['EDTP:swappingDir'] = array('Swapping directory is recommended to be pl
 
 $_tipsdb['EDTP:userDBLocation'] = array('It is recommended that the database be stored under the $SERVER_ROOT/conf/vhosts/$VH_NAME/ directory.');
 
-$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.');
+$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual host root and modify it to be user owned.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.');
 
 $_tipsdb['EDTP:vhaccessLog_fileName'] = array('Log file path can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.');
 

@@ -126,8 +126,9 @@ private:
 
     int setKeyCertificateFile(const char *pKeyCertFile, int iType,
                                int chained);
-    int  setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
-                             const char *pCertFile, int iCertType, int chained);
+    int setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
+                            const char *pCertFile, int iCertType,
+                            int chained, int ecc_only);
     int setCertificateFile(const char *pFile, int type, int chained);
     int setCertificateChainFile(const char *pFile);
     // int setCertificateChainFile(bio_st *pBio);

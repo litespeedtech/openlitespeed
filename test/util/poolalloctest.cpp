@@ -37,6 +37,7 @@ public:
     std::string s2;
 };
 
+#if 0
 class TestAllocator : public
     std::map< int, dummy, std::less<int>, PoolAllocator<dummy> >
 {
@@ -66,5 +67,6 @@ TEST(PoolAllocTest_test)
         profile1.printTime(pStdAlloc, 100000);
     }
 }
+#endif
 
 #endif

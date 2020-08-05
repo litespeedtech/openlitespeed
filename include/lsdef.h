@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #define LS_OK       0
 #define LS_FAIL     (-1)
 

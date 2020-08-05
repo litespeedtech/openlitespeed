@@ -56,8 +56,40 @@ public:
 int CustomFormat::parseFormat(const char *psFormat)
 {
     char achBuf[4096];
+    static const char *s_disallow[] =
+    {   "wget", "curl", "bash", "sh", "cat", "more", "less", "strings"    };
 
-    char *pEnd;
+    char ch;
+    const char *src = psFormat;
+    char *p1 = achBuf;
+    while(p1 < &achBuf[sizeof(achBuf) -1] && (ch = *src++) != '\0')
+    {
+        if (ch != '\'' && ch != '"' && ch != '\\')
+            *p1++ = ch;
+        if (ch == '`')
+            return -1;
+    }
+    *p1 = 0;
+    if (strstr(achBuf, "/bin/") || strstr(achBuf, "/tmp/")
+        || strstr(achBuf, "/etc/") || strstr(achBuf, "<<<"))
+        return -1;
+    for(int i = 0; i < (int)(sizeof(s_disallow) / sizeof(char *)); ++i)
+    {
+        const char *key = s_disallow[i];
+        const char *f = achBuf;
+        const char *p;
+        p = strstr(f, key);
+        while (p)
+        {
+            if ((p == achBuf || !isalpha(*(p - 1)))
+                && !isalpha(*(p + strlen(key))))
+                return -1;
+            p += strlen(key);
+        }
+    }
+    lstrncpy(achBuf, psFormat, 4096);
+
+    char *pEnd = &achBuf[strlen(achBuf)];
     char *p = achBuf;
     char *pBegin = achBuf;
     char *pItemEnd = NULL;
@@ -65,7 +97,6 @@ int CustomFormat::parseFormat(const char *psFormat)
     int itemId;
     int nonstring_items = 0;
 
-    lstrncpy(achBuf, psFormat, 4096);
     pEnd = &achBuf[strlen(achBuf)];
     if (strstr(achBuf, "/bin/") || strstr(achBuf, "/tmp/")
         || strstr(achBuf, "/etc/"))

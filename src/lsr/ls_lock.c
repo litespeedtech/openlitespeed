@@ -153,7 +153,7 @@ int ls_pspinlock_setup(ls_pspinlock_t   *p)
 {
     int code;
 #if defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
-    *p = OS_UNFAIR_LOCK_INIT;
+    *p = OS_SPINLOCK_INIT;
     code = 0;
 #else
     code = pthread_spin_init((pthread_spinlock_t *)p,

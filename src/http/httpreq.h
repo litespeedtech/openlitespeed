@@ -93,6 +93,7 @@ enum
     URL_GENERIC,
     URL_FAVICON,
     URL_ROBOTS_TXT,
+    URL_WELL_KNOWN,
     URL_ACME_CHALLENGE,
     URL_CAPTCHA,
 };
@@ -250,7 +251,7 @@ private:
     char                m_method;
     char                m_iUserAgentType;
     short               m_iUrlType;
-    short               m_iCfIpHeader;
+    short               m_iCfRealIpHeader;
     int                 m_iEnvCount;
 
     unsigned short      m_ver;
@@ -687,8 +688,8 @@ public:
     }
     const char *getUnknownHeaderByIndex(int idx, int &keyLen,
                                         const char *&pValue, int &valLen) const;
-    char isCfIpSet() const                      {   return m_iCfIpHeader;   }
-    const char *getCfIpHeader(int &len);
+    char isCfRealIpSet() const          {   return m_iCfRealIpHeader;   }
+    const char *getCfRealIpHeader(char *name, int &len);
 
     void setCrypto(HioCrypto *p)        {    m_pCrypto = p;         }
     HioCrypto *getCrypto() const        {   return m_pCrypto;       }

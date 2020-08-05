@@ -1038,8 +1038,9 @@ static long create_event(evtcb_pf cb,
 static long create_event(evtcb_pf cb, const lsi_session_t *session,
                          long lParam, void *pParam, int nowait)
 {
-    return (long)EvtcbQue::getInstance().schedule(cb, session,
+    EvtcbQue::getInstance().schedule(cb, (evtcbhead_t *)session,
             lParam, pParam, nowait);
+    return 0;
 }
 
 
@@ -1056,7 +1057,7 @@ static long get_event_obj(evtcb_pf cb, const lsi_session_t *session,
                          long lParam, void *pParam)
 {
    // return (long)EvtcbQue::getInstance().getNodeObj(cb, pSession, lParam, pParam);
-    evtcbnode_s *pEvtObj = EvtcbQue::getInstance().getNodeObj(cb, session, lParam, pParam);
+    evtcbnode_s *pEvtObj = EvtcbQue::getInstance().getNodeObj(cb, (evtcbhead_t *)session, lParam, pParam);
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession)
         pSession->setBackRefPtr(EvtcbQue::getSessionRefPtr(pEvtObj));

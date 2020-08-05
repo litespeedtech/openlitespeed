@@ -16,6 +16,7 @@
 #include <stdlib.h>
 
 #include <lsdef.h>
+#include <lsr/ls_log.h>
 #include <lsr/ls_pool.h>
 #include <socket/ls_sock.h>
 #include <sslpp/ls_fdbuf_bio.h>
@@ -86,13 +87,14 @@ int ls_fdbio_alloc_rbuff(ls_fdbio_data *fdbio, int size)
 {
     DEBUG_MESSAGE("[FDBIO] alloc read buf %d\n", size);
     assert(fdbio->m_rbuf_used == fdbio->m_rbuf_read);
-    if (fdbio->m_rbuf && fdbio->m_rbuf_size >= size)
+    if ((fdbio->m_flag & LS_FDBIO_RBUF_ALLOC) && fdbio->m_rbuf_size >= size)
         return LS_OK;
     void *buf = ls_palloc(size);
     if (buf)
     {
-        if (fdbio->m_rbuf)
+        if (fdbio->m_flag & LS_FDBIO_RBUF_ALLOC)
             ls_pfree(fdbio->m_rbuf);
+        fdbio->m_flag |= LS_FDBIO_RBUF_ALLOC;
         fdbio->m_rbuf = (uint8_t *)buf;
         fdbio->m_rbuf_size = size;
         fdbio->m_rbuf_used = fdbio->m_rbuf_read = 0;
@@ -109,12 +111,32 @@ int ls_fdbio_alloc_rbuff(ls_fdbio_data *fdbio, int size)
 
 void ls_fdbio_release_rbuff(ls_fdbio_data *fdbio)
 {
-    if (fdbio->m_rbuf == NULL)
+    if ((fdbio->m_flag & LS_FDBIO_RBUF_ALLOC) == 0)
         return;
     assert(fdbio->m_rbuf_used == fdbio->m_rbuf_read);
     DEBUG_MESSAGE("[FDBIO] free rbuf %d\n", (int)fdbio->m_rbuf_size);
     ls_pfree(fdbio->m_rbuf);
     fdbio->m_rbuf = NULL;
+    fdbio->m_flag &= ~LS_FDBIO_RBUF_ALLOC;
+}
+
+
+int ls_fdbio_buff_input(ls_fdbio_data *fdbio, int fd)
+{
+    if (!(fdbio->m_flag & LS_FDBIO_RBUF_ALLOC)
+        && ls_fdbio_alloc_rbuff(fdbio, fdbio->m_rbuf_size) != LS_OK)
+        return 0;
+    int ret = fdbio->m_rbuf_size - fdbio->m_rbuf_used;
+    if (ret <= 0)
+        return 0;
+    ret = ls_read(fd, fdbio->m_rbuf + fdbio->m_rbuf_used, ret);
+    if (ret > 0)
+        fdbio->m_rbuf_used += ret;
+    else if (ret == 0)
+        return -1;
+    else if (SIMPLE_RETRY(errno))
+        return 0;
+    return ret;
 }
 
 
@@ -125,15 +147,14 @@ static int bio_fd_read(BIO *b, char *out, int outl)
     ls_fdbio_data *fdbio = LS_FDBUF_FROM_BIO(b);
     int fd = BIO_get_fd(b, 0);
     int total = 0;
-    DEBUG_MESSAGE("[BIO] bio_fd_read: %p, %d bytes on %d\n", b,
-                  outl, fd);
+    DEBUG_MESSAGE("[BIO] bio_fd_read((%p:%d), %p, %d)\n", b, fd, out, outl);
     if ((out == NULL) || (!outl))
     {
         INFO_MESSAGE("[BIO] bio_fd_read NO BUFFER!!\n");
         err = EINVAL;
         return -1;
     }
-    if (fdbio->m_is_closed)
+    if (fdbio->m_flag & LS_FDBIO_CLOSED)
     {
         DEBUG_MESSAGE("[BIO] bio_fd_read: CLOSED ON PREVIOUS READ\n");
         errno = 0;
@@ -142,47 +163,67 @@ static int bio_fd_read(BIO *b, char *out, int outl)
     while (total < outl)
     {
         int buffered = fdbio->m_rbuf_used - fdbio->m_rbuf_read;
-        int rd_remaining = outl - total;
+        int rd_remain = outl - total;
         int copy = 0;
+        uint8_t *buf = (fdbio->m_flag & LS_FDBIO_RBUF_ALLOC)
+                        ? fdbio->m_rbuf : (uint8_t *)&fdbio->m_rbuf;
         if (buffered)
         {
-            copy = (buffered > rd_remaining) ? rd_remaining : buffered;
-            DEBUG_MESSAGE("[BIO] bio_fd_read: Use buffered %d of %d\n",
-                          copy, rd_remaining);
-            memcpy(&out[total], &fdbio->m_rbuf[fdbio->m_rbuf_read], copy);
+            copy = (buffered > rd_remain) ? rd_remain : buffered;
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Use existing buffer %d/%d\n",
+                          copy, buffered);
+            memcpy(&out[total], buf + fdbio->m_rbuf_read, copy);
             fdbio->m_rbuf_read += copy;
             total += copy;
             if (total >= outl)
             {
-                DEBUG_MESSAGE("[BIO] bio_fd_read: GOT TOTAL %d\n",
-                              total);
+                DEBUG_MESSAGE("[BIO] bio_fd_read(%p, %d) return %d\n",
+                              out, outl, total);
                 return total;
             }
             fdbio->m_rbuf_used = 0;
             fdbio->m_rbuf_read = 0;
-            rd_remaining = outl - total;
+            rd_remain = outl - total;
         }
-        if ((rd_remaining < fdbio->m_rbuf_size)
-            && (fdbio->m_rbuf || ls_fdbio_alloc_rbuff(fdbio, fdbio->m_rbuf_size) == LS_OK))
+        if ((rd_remain < fdbio->m_rbuf_size)
+            && ((fdbio->m_flag & LS_FDBIO_RBUF_ALLOC)
+                || ls_fdbio_alloc_rbuff(fdbio, fdbio->m_rbuf_size) == LS_OK))
         {
-            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into buffer\n");
             ret = ls_read(fd, fdbio->m_rbuf, fdbio->m_rbuf_size);
+            DEBUG_MESSAGE("[BIO] bio_fd_read: read into buffer (%p, %d) = %d\n",
+                fdbio->m_rbuf, fdbio->m_rbuf_size, ret);
             if (ret < fdbio->m_rbuf_size)
-                fdbio->m_need_read_event = 1;
+                fdbio->m_flag |= LS_FDBIO_NEED_READ_EVT;
             buffered = ret;
         }
         else
         {
-            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into data\n");
-            ret = ls_read(fd, out + total, rd_remaining);
-            if (ret < rd_remaining)
-                fdbio->m_need_read_event = 1;
-            buffered = 0;
+            struct iovec iov[2];
+            iov[0].iov_base = out + total;
+            iov[0].iov_len = rd_remain;
+            iov[1].iov_base = buf;
+            iov[1].iov_len = 5;
+
+            ret = ls_readv(fd, iov, 2);
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into data(%p, %d) ret: %d\n",
+                out + total, rd_remain, ret);
+            if (ret < rd_remain)
+            {
+                buffered = 0;
+                fdbio->m_flag |= LS_FDBIO_NEED_READ_EVT;
+            }
+            else
+            {
+                buffered = ret - rd_remain;
+                ret = rd_remain;
+            }
+            if (ret > 0)
+                total += ret;
         }
         if (ret == 0)
         {
             DEBUG_MESSAGE("[BIO] bio_fd_read: CLOSED\n");
-            fdbio->m_is_closed = 1;
+            fdbio->m_flag |= LS_FDBIO_CLOSED;
             errno = 0;
             return total;
         }
@@ -208,11 +249,6 @@ static int bio_fd_read(BIO *b, char *out, int outl)
             fdbio->m_rbuf_used = buffered;
             fdbio->m_rbuf_read = 0;
             DEBUG_MESSAGE("[BIO] bio_fd_read: Preserve read: %d\n", ret);
-        }
-        else
-        {
-            total += ret;
-            DEBUG_MESSAGE("[BIO] bio_fd_read: Read into data: %d\n", ret);
         }
     }
     return total;

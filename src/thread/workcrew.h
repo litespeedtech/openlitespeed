@@ -150,16 +150,16 @@ public:
      * @return current workers (total slots - empty slots)
      */
     int32_t size() const
-    {    return ls_atomic_fetch_add((volatile int32_t *)&m_iRunningWorkers, 0);    }
+    {    return ls_atomic_value(&m_iRunningWorkers);    }
 
 
 
-    int32_t minIdle() const { return ls_atomic_fetch_add((volatile int32_t *)&m_minIdle, 0);        }
-    int32_t maxIdle() const { return ls_atomic_fetch_add((volatile int32_t *)&m_maxIdle, 0);        }
+    int32_t minIdle() const { return ls_atomic_value(&m_minIdle);        }
+    int32_t maxIdle() const { return ls_atomic_value(&m_maxIdle);        }
     int32_t adjustIdle(int32_t min, int32_t max);
-    int32_t idles() const   { return ls_atomic_fetch_add((volatile int32_t *)&m_idleWorkers, 0);    }
+    int32_t idles() const   { return ls_atomic_value(&m_idleWorkers);    }
 
-    int32_t maxWorkers() const { return ls_atomic_fetch_add((volatile int32_t *)&m_maxWorkers, 0); };
+    int32_t maxWorkers() const { return ls_atomic_value(&m_maxWorkers); };
     int32_t maxWorkers(int32_t num);
 
     /** @addJob
@@ -186,18 +186,23 @@ public:
 
     void pushCleanup(void (*routine)(void *), void * arg);
 
+    void setInitCb(void (*routine)(void *), void * arg);
+
     void dropPriorityBy(int n)  {   m_nice = n;     }
 
 private:
-    class CleanUp
+    class Callback
     {
     public:
         void (*routine)(void *);
         void *arg;
-        CleanUp( void (*routine)(void *), void *arg)
+        Callback()
+            : routine(NULL), arg(NULL)
+        {}
+
+        Callback( void (*routine)(void *), void *arg)
             : routine(routine), arg(arg)
-        {
-        }
+        {}
     };
     void markNoCleanup();
 
@@ -221,7 +226,8 @@ private:
     int32_t                     m_idleWorkers;
     int32_t                     m_iRunningWorkers;
     sigset_t                    m_sigBlock;
-    TPointerList<CleanUp>       m_cleanUp;
+    TPointerList<Callback>      m_cleanUp;
+    Callback                    m_initCb;
 
 
 #ifdef LS_WORKCREW_DEBUG
@@ -237,7 +243,7 @@ private:
         ls_mutex_lock(&m_crewLock);
         long csize=m_crew.size(), empty=m_emptySlots.size(), sz=size(),
              idle=idles(),  minw=minIdle(), maxw=maxWorkers();
-        int state=ls_atomic_fetch_add(&m_stateFutex, 0);
+        int state = ls_atomic_value(&m_stateFutex);
         ls_mutex_unlock(&m_crewLock);
         snprintf(msg, 255, "crew %ld empty %ld size %ld idle %ld state %d min %ld max %ld",
                 csize, empty, sz, idle, state, minw, maxw);

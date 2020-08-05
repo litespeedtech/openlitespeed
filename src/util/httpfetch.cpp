@@ -44,6 +44,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 static int HttpFetchCounter = 0;
 
@@ -74,11 +75,16 @@ HttpFetch::HttpFetch()
     , m_iSsl(0)
     , m_iVerifyCert(0)
     , m_pHttpFetchDriver(NULL)
-    , m_tmStart(0)
     , m_iTimeoutSec(-1)
     , m_iReqInited(0)
     , m_iEnableDebug(0)
 {
+    m_tmStart.tv_sec = 0;
+    m_tmStart.tv_usec = 0;
+    m_nslookup_time = -1;
+    m_conn_time = -1;
+    m_req_time = -1;
+
     m_pLogger = log4cxx::Logger::getRootLogger();
     m_iLoggerId = HttpFetchCounter ++;
     //m_pLogger->info( "HttpFetch[%d]::HttpFetch()", getLoggerId() );
@@ -177,6 +183,11 @@ void HttpFetch::reset()
     m_iHostLen      = 0;
     m_reqBodyLen    = 0;
     m_iReqInited    = 0;
+    m_tmStart.tv_sec = 0;
+    m_tmStart.tv_usec = 0;
+    m_nslookup_time = -1;
+    m_conn_time = -1;
+    m_req_time = -1;
     if (m_pServerAddr)
     {
         delete m_pServerAddr;
@@ -283,6 +294,7 @@ int HttpFetch::startDnsLookup(const char *addrServer)
     m_pServerAddr = new GSockAddr();
     int flag = NO_ANY;
     int ret;
+    gettimeofday(&m_tmStart, NULL);
     if (!m_nonblocking)
     {
         flag |= DO_NSLOOKUP_DIRECT;
@@ -448,7 +460,7 @@ int HttpFetch::startReq(const char *pURL, int nonblock, int enableDriver,
     if (initReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
         return -1;
     m_nonblocking = nonblock;
-    m_enableDriver = enableDriver;
+    m_enableDriver = (enableDriver || nonblock);
 
     if (m_pServerAddr)
         return startReq(pURL, nonblock, enableDriver, pBody, bodyLen, pSaveFile,
@@ -469,7 +481,7 @@ int HttpFetch::startReq(const char *pURL, int nonblock, int enableDriver,
     if (initReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
         return -1;
     m_nonblocking = nonblock;
-    m_enableDriver = (enableDriver || isUseSsl());
+    m_enableDriver = (enableDriver || nonblock);
 
     if(m_pServerAddr != &sockAddr )
     {
@@ -487,8 +499,20 @@ int HttpFetch::startProcess()
         m_pHttpFetchDriver = new HttpFetchDriver(this);
     if (m_iTimeoutSec <= 0)
         m_iTimeoutSec = 60;
-    m_tmStart = time(NULL);
-
+    if (m_tmStart.tv_sec != 0)
+    {
+        timeval tv;
+        gettimeofday(&tv, NULL);
+        uint64_t us = (tv.tv_sec - m_tmStart.tv_sec) * 1000000 +
+                      (tv.tv_usec - m_tmStart.tv_usec);
+        m_nslookup_time = us / 100;   //in unit of 1/10 of millisecond.
+        memcpy(&m_tmStart, &tv, sizeof(tv));
+     }
+    else
+    {
+        gettimeofday(&m_tmStart, NULL);
+    }
+    m_conn_time = -1;
     return startProcessReq(*m_pServerAddr);
 
 }
@@ -583,6 +607,16 @@ int HttpFetch::pollEvent(int evt, int timeoutSecs)
 }
 
 
+void HttpFetch::updateConnectTime()
+{
+    timeval tv;
+    gettimeofday(&tv, NULL);
+    unsigned long us = (tv.tv_sec - m_tmStart.tv_sec) * 1000000 +
+                    (tv.tv_usec - m_tmStart.tv_usec);
+    m_conn_time = us / 10;   //in unit of 1/100 of millisecond.
+}
+
+
 int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
 {
     m_reqState = STATE_CONNECTING;
@@ -621,7 +655,13 @@ int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
     }
     if (ret == 0)
     {
+        updateConnectTime();
         m_reqState = STATE_CONNECTED; //connected, sending request header
+        if (m_nonblocking == 2)
+        {
+            closeConnection();
+            return -1;
+        }
         ret = sendReq();
     }
     else
@@ -663,7 +703,14 @@ int HttpFetch::sendReq()
             endReq(ERROR_CONN_FAILURE);
             return -1;
         }
+        updateConnectTime();
         m_reqState = STATE_CONNECTED;
+        if (m_nonblocking == 2)
+        {
+            closeConnection();
+            return -1;
+        }
+
     //fall through
     case STATE_CONNECTED:
         if ((m_iSsl) && (!m_ssl.isConnected()))
@@ -974,7 +1021,14 @@ int HttpFetch::endReq(int res)
         {
             m_reqState = STATE_RCVD_RESP_BODY;
             if (m_pBuf->getfd() != -1)
+            {
                 m_pBuf->exactSize();
+                timeval tv;
+                gettimeofday(&tv, NULL);
+                unsigned long us = (tv.tv_sec - m_tmStart.tv_sec) * 1000000 +
+                                (tv.tv_usec - m_tmStart.tv_usec);
+                m_req_time = us / 100;   //in unit of 1/10 of millisecond.
+            }
         }
 //        m_pBuf->close();
     }
@@ -1020,7 +1074,7 @@ int HttpFetch::process()
     while ((m_fdHttp != -1) && (m_reqState < STATE_SENT_REQ_BODY))
         sendReq();
     while ((m_fdHttp != -1) && (m_reqState < STATE_RCVD_RESP_BODY)
-        && m_tmStart + m_iTimeoutSec > time(NULL))
+        && m_tmStart.tv_sec + m_iTimeoutSec > time(NULL))
         recvResp();
     // req may be complete at this point if fetch is blocking and recvResp read returned -1.
     // This will return -1 in that case because upon completion, the fetch fd is set to -1 and reqState is 0.

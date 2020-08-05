@@ -110,6 +110,7 @@ public:
     const char *getTlsExtHostName();
 
     int getSpdyVersion();
+    int getAlpnResult()     {   return getSpdyVersion();    }
 
     int updateOnGotCert();
     
@@ -125,9 +126,12 @@ public:
     // raw data which can be used in a redirect (see ntwkiolink.cpp).
     char *getRawBuffer(int *len);
     bool hasPendingIn() const
-    {   return m_bio.m_rbuf_used > m_bio.m_rbuf_read;   }
+    {   return m_bio.m_rbuf_used > m_bio.m_rbuf_read || SSL_pending(m_ssl) > 0;   }
 
     void releaseIdleBuffer();
+    int  bufferInput();
+    bool needReadEvent() const;
+
 
     bool isWaitingAsyncCert() const
     {   return (getFlag(F_ASYNC_CERT | F_ASYNC_CERT_FAIL) == F_ASYNC_CERT); }

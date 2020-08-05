@@ -289,7 +289,7 @@ private:
             m_pEnableArray[i] = new int8_t[iSize];
             memset(m_pEnableArray[i], 0, iSize);
         }
-        ls_atomic_setshort(&m_iStatus, INITED);
+        ls_atomic_set16(&m_iStatus, INITED);
 
         return 0;
     }
@@ -327,7 +327,7 @@ public:
                 memset(m_pEnableArray[i], 0, iLevelSize * sizeof(int8_t));
                 m_iFlag[i] = 0;
             }
-            ls_atomic_setshort(&m_iStatus,INITED);
+            ls_atomic_set16(&m_iStatus,INITED);
         }
     }
 
@@ -391,7 +391,7 @@ public:
                 updateFlag(aEnableHkpts[i]);
             }
         }
-        ls_atomic_setshort(&m_iStatus, HASOWN);
+        ls_atomic_set16(&m_iStatus, HASOWN);
         return LS_OK;
     }
 
@@ -414,7 +414,7 @@ public:
     void reset()
     {
         if (ls_atomic_fetch_or(&m_iStatus, 0) >= INITED)
-            ls_atomic_setshort(&m_iStatus, INITED);
+            ls_atomic_set16(&m_iStatus, INITED);
     };
 
 

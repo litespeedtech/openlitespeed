@@ -25,6 +25,7 @@ class AutoStr2;
 
 class ServerProcessConfig : public TSingleton< ServerProcessConfig >
 {
+private:
     friend class TSingleton< ServerProcessConfig >;
 
     uid_t                  m_uid;
@@ -80,6 +81,7 @@ public:
 
     void setCGroupDefault(int enabled)    {   m_cgroupDefault = enabled;  }
     int getCGroupDefault() const            {   return m_cgroupDefault;     }
+
 };
 
 LS_SINGLETON_DECL(ServerProcessConfig);

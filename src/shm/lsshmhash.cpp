@@ -1619,6 +1619,15 @@ int LsShmHash::trim(time_t tmCutoff, LsShmHash::TrimCb func, void *arg)
         offElem = next;
     }
     pLru->n_exp += del;
+
+    static time_t s_i30SecTimer = 0;
+    time_t curTm = time((time_t *)NULL);
+    if (getTidMgr() && s_i30SecTimer + 30 < curTm)
+    {
+        s_i30SecTimer = curTm;
+        trimTid();
+    }
+
     autoUnlock();
     return del;
 }
@@ -1696,6 +1705,12 @@ int LsShmHash::trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg)
     pLru->n_exp += del;
     autoUnlock();
     return del;
+}
+
+
+uint64_t LsShmHash::trimTid()
+{
+    return getTidMgr()->trim();
 }
 
 
@@ -1911,17 +1926,14 @@ LsShmHash::iteroffset LsShmHash::prevTmLruIterOff(time_t tmCutoff)
 }
 
 
-LsShmHash::iteroffset LsShmHash::tid2IterOff(uint64_t tid, void *&pSearchState) const
+LsShmHash::iteroffset LsShmHash::tid2IterOff(uint64_t tid) const
 {
     LsShmTidTblBlk *pTblBlk = NULL;
     iteroffset iterOff = {0};
-    pSearchState = NULL;
     if (NULL == m_pTidMgr)
         return iterOff;
     assert(m_pPool->getShm()->isLocked(m_pShmLock));
     iterOff = m_pTidMgr->tid2iterOff(tid, &pTblBlk);
-    if (pSearchState)
-        pSearchState = pTblBlk;
     return iterOff;
 }
 
@@ -1956,6 +1968,18 @@ void LsShmHash::assignTid(LsShmHash::iteroffset iterOff, uint64_t tid)
     m_pTidMgr->linkTid(iterOff, &tid);
     autoUnlock();
 }
+
+
+void LsShmHash::updateLastTid(uint64_t tid)
+{
+    if (NULL == m_pTidMgr)
+        return;
+
+    autoLockChkRehash();
+    m_pTidMgr->updateLastTid(tid);
+    autoUnlock();
+}
+
 
 uint64_t LsShmHash::getMinTid() const
 {
@@ -2197,11 +2221,30 @@ int LsShmHash::move(iteroffset iterOff, LsShmHash *pSrcHash,
         pDestHash->replace(destOff, pDestHash->offset2iterator(destOff),
                            iterOff, iter);
     else
+    {
+        LsShmSize_t transferSize = LsShmPool::size2roundSize(iter->x_iLen);
         pDestHash->insertAlloced(iterOff, iter);
+        pSrcHash->getHTable()->x_stat.m_iHashInUse -= transferSize;
+        pDestHash->getHTable()->x_stat.m_iHashInUse += transferSize;
+    }
     if (pDestHash->getTidMgr() != NULL && pDestHash->isTidMaster())
         pDestHash->getTidMgr()->insertIterCb(iterOff);
     if (pSrcHash->getFlags() & LSSHM_FLAG_LRU)
         pDestHash->linkMvTopTime(iterOff, lasttime);
 
     return LS_OK;
+}
+
+
+uint64_t LsShmHash::statTidBlkCnt(uint64_t *aiBlkCnt)
+{
+    uint64_t blkCnt = 0;
+    autoLockChkRehash();
+    if (getTidMgr())
+    {
+        getTidMgr()->statBlkCnt(aiBlkCnt);
+        blkCnt = getTidMgr()->getBlkCnt();
+    }
+    autoUnlock();
+    return blkCnt;
 }

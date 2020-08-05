@@ -22,6 +22,7 @@
 #include <http/handlertype.h>
 #include <http/httplog.h>
 #include <http/httpvhost.h>
+#include <http/serverprocessconfig.h>
 #include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
@@ -38,6 +39,7 @@
 #include <stdio.h>
 #include "extensions/localworkerconfig.h"
 #include "extensions/localworker.h"
+#include "httpserverconfig.h"
 
 
 static char DEFAULT_MIME_TYPE[] = "application/octet-stream";
@@ -1436,9 +1438,13 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
                     XmlNode *pNode = (XmlNode*)app_node_ptr->xml_node;
                     const char *pUser = pNode->getChildValue("extUser");
                     const char *pGroup = pNode->getChildValue("extGroup");
-                    if (!pUser && !pGroup &&
+                    bool needOwnBwrap = (HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_OFF) &&
+                                        vhost->enableBwrap();
+
+                    if ((!pUser && !pGroup &&
                         (vhost->getUid() != pApp->getConfig().getUid() ||
                         vhost->getGid() != pApp->getConfig().getGid()))
+                        || needOwnBwrap)
                     {
                         /**
                         * Since the uid /gid not match with the setting in

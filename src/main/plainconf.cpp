@@ -84,6 +84,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"binding",                                  NULL},
     {"botwhitelist",                             NULL},
     {"brstaticcompresslevel",                    NULL},
+    {"bubblewrap",                               NULL},
+    {"bubblewrapcmd",                            NULL},
     {"byteslog",                                 NULL},
     {"cacertfile",                               NULL},
     {"cacertpath",                               NULL},
@@ -1433,6 +1435,7 @@ void plainconf::loadConfFile(const char *path)
             checkInFile(path);
     }
 
+    logToMem(LOG_LEVEL_INFO, "Finished parsing file %s", path);
 }
 
 

@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 17</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -89,9 +99,9 @@
 <h1>Virtual Host General</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>General</header><p>
 <a href="#docRoot">文档根</a> | <a href="#vhadminEmails">管理员邮箱</a> | <a href="#vhEnableGzip">启用GZIP</a> | <a href="#enableIpGeo">启用IP地理定位</a> | <a href="#cgroups">cgroups</a></p></section>
 <section class="toc-row"><header>虚拟主机日志</header><p>
-<a href="#logUseServer">使用服务器日志</a> | <a href="#vhlog_fileName">File Name</a> | <a href="#vhlog_logLevel">日志级别</a> | <a href="#log_rollingSize">回滚大小</a></p></section>
+<a href="#logUseServer">使用服务器日志</a> | <a href="#vhlog_fileName">File Name</a> | <a href="#vhlog_logLevel">日志级别</a> | <a href="#log_rollingSize">回滚大小</a> | <a href="#log_keepDays">Keep Days</a></p></section>
 <section class="toc-row"><header>访问日志</header><p>
-<a href="#aclogUseServer">日志管理</a> | <a href="#vhaccessLog_fileName">File Name</a> | <a href="#accessLog_pipedLogger">Piped Logger</a> | <a href="#accessLog_logFormat">日志格式</a> | <a href="#accessLog_logHeader">记录头部</a> | <a href="#log_rollingSize">回滚大小</a> | <a href="#accessLog_keepDays">保留天数</a> | <a href="#accessLog_bytesLog">字节记录</a> | <a href="#accessLog_compressArchive">压缩存档</a></p></section>
+<a href="#aclogUseServer">日志管理</a> | <a href="#vhaccessLog_fileName">File Name</a> | <a href="#accessLog_pipedLogger">Piped Logger</a> | <a href="#accessLog_logFormat">日志格式</a> | <a href="#accessLog_logHeader">记录头部</a> | <a href="#log_rollingSize">回滚大小</a> | <a href="#log_keepDays">Keep Days</a> | <a href="#accessLog_bytesLog">字节记录</a> | <a href="#accessLog_compressArchive">压缩存档</a></p></section>
 <section class="toc-row"><header>Index Files</header><p>
 <a href="#indexUseServer">使用服务器索引文件</a> | <a href="#indexFiles">索引文件</a> | <a href="#autoIndex">自动索引</a> | <a href="#autoIndexURI">自动索引URI</a></p></section>
 <section class="toc-row"><header><a href="#errPage">Customized Error Pages</a></header><p>
@@ -116,12 +126,12 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhlog_fileName"><h3>File Name<span class="ls-permlink"><a href="#vhlog_fileName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the path for the log file.</p> <h4>Syntax</h4><p>Filename which can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> Place the log file on a separate disk.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhlog_logLevel"><h3>日志级别<span class="ls-permlink"><a href="#vhlog_logLevel"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定日志记录级别。可用级别（从高到低）为<span class="val">ERROR</span>,  <span class="val">WARNING</span>, <span class="val">NOTICE</span>, <span class="val">INFO</span>, 和 <span class="val">DEBUG</span>。 只有当消息等级高于或与当前设置相同时才被记录。 如果您希望将此设置为<span class="val">DEBUG</span>，您也需要设置服务器日志级别为<span class="val">DEBUG</span>。 调试的级别只能在服务器级别通过<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>控制。</p> <h4>Syntax</h4><p>选项</p> <h4>Tips</h4><p>[性能建议] 除非<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>设置为<span class="val">NONE</span>以外的日志级别, 否则<span class="val">DEBUG</span>级别不会对性能产生任何影响，推荐采用。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="log_rollingSize"><h3>回滚大小<span class="ls-permlink"><a href="#log_rollingSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定何时日志文件需要回滚，也称为日志循环。 当文件大小超过回滚限制后，在使用的日志文件将在同一目录中被重命名 为log_name.mm_dd_yyyy(.sequence)，一个新的日志文件将被创建。 回滚的日志文件的实际大小有时会比限制值稍微大一些。 将值设置为<span class="val">0</span>将禁用日志循环。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> 请用“K”，“M”，“G”代表千字节，兆字节和千兆字节。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="log_keepDays"><h3>Keep Days<span class="ls-permlink"><a href="#log_keepDays"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies how many days the access log file will be kept on disk.  Only rotated log files older than the specified number of days will be deleted. The current  log file will not be touched regardless how many days worth of data it contains.  If you do not want to auto-delete stale and very old log files, set this to <span class="val">0</span>.</p> <h4>Syntax</h4><p>无符号整数</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="aclogUseServer"><h3>日志管理<span class="ls-permlink"><a href="#aclogUseServer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定写入访问日志的地点。这里有三个选项： 1. 写入到服务器的访问日志； 2. 为虚拟主机创建一个访问日志； 3. 禁用访问日志记录。</p> <h4>Syntax</h4><p>选项</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhaccessLog_fileName"><h3>File Name<span class="ls-permlink"><a href="#vhaccessLog_fileName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The access log filename.</p> <h4>Syntax</h4><p>Filename which can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.</p> <h4>Tips</h4><p><span title="Performance" class="ls-icon-performance"></span> Put access log file on a separate disk.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_pipedLogger"><h3>Piped Logger<span class="ls-permlink"><a href="#accessLog_pipedLogger"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the external application that will receive the access log data sent by LiteSpeed through a pipe on its STDIN stream (file handle is 0).  When this field is specified, the access log will be sent only to the logger  application and not the access log file specified in previous entry.<br/><br/> The logger application must be defined in <span class="tagP"><a href="#ExtApp_Help">External Apps</a></span> section first.  Server-level access logging can only use an external logger application  defined at the server level. Virtual host-level access logging can only use a logger application defined at the virtual host level.<br/><br/> The logger process is spawned in the same way as other external  (CGI/FastCGI/LSAPI) processes. This means it will execute as the  user ID specified in the virtual host's <span class="tagl"><a href="VirtualHosts_Help.html#setUidMode">外部应用程序设置UID模式</a></span>  settings and will never run on behalf of a privileged user. <br/><br/> LiteSpeed web server performs simple load balancing among multiple logger  applications if more than one instance of a logger application is configured.  LiteSpeed server always attempts to keep the number of logger applications  as low as possible. Only when one logger application fails to process access  log entries in time will the server attempt to spawn another instance of  the logger application. <br/><br/> If a logger crashes, the web server will start another instance but the  log data in the stream buffer will be lost. It is possible to lose log  data if external loggers cannot keep up with the speed and volume of the log stream.</p> <h4>Syntax</h4><p>Select from drop down list</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_logFormat"><h3>日志格式<span class="ls-permlink"><a href="#accessLog_logFormat"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p> 指定访问日志的格式。 设置之后，它将覆盖<span class="tagl"><a href="#accessLog_logHeader">记录头部</a></span> 的设定。</p> <h4>Syntax</h4><p>字符串。日志格式的语法与Apache 2.0自定义 <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">日志格式</a>兼容。</p> <h4>Example</h4><div class="ls-example">一般日志格式（CLF）<br/> 	"%h %l %u %t \"%r\" %>s %b"<br/><br/> 支持虚拟主机的一般日志格式<br/> 	"%v %h %l %u %t \"%r\" %>s %b"<br/><br/> NCSA扩展/组合日志格式<br/> 	"%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" <br/><br/> 记录Foobar的cookie值<br/>    "%{Foobar}C"</div><h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logHeader">记录头部</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_logHeader"><h3>记录头部<span class="ls-permlink"><a href="#accessLog_logHeader"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否记录HTTP请求头: <span class="val">Referer</span>、 <span class="val">UserAgent</span>和<span class="val">Host</span>。</p> <h4>Syntax</h4><p>复选框</p> <h4>Tips</h4><p>[性能建议] 如果你不需要在访问日志中记录这些头部信息，关闭这个功能。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logFormat">日志格式</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_keepDays"><h3>保留天数<span class="ls-permlink"><a href="#accessLog_keepDays"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定访问日志文件将被保存在磁盘上多少天。 只有超出指定天数的回滚日志文件会被删除。 当前的日志文件不会被删除，无论它包含了多少天的数据。 如果你不想自动删除过时的、很旧的日志文件， 将该值设置为<span class="val">0</span>。</p> <h4>Syntax</h4><p>无符号整数</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_bytesLog"><h3>字节记录<span class="ls-permlink"><a href="#accessLog_bytesLog"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定带宽字节日志文件的路径。设置后，将创建一份兼容cPanel面板的带宽日志。这将记录 一个请求传输的总字节数，包括请求内容和响应内容。</p> <h4>Syntax</h4><p>文件2</p> <h4>Tips</h4><p>[性能建议] 将日志文件放置在一个单独的磁盘上。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_compressArchive"><h3>压缩存档<span class="ls-permlink"><a href="#accessLog_compressArchive"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否压缩回滚日志以节省磁盘空间。</p> <h4>Syntax</h4><p>布尔值</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> 日志文件是高度可压缩的，建议采取压缩以减少旧日志的磁盘占用量。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="indexUseServer"><h3>使用服务器索引文件<span class="ls-permlink"><a href="#indexUseServer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否使用服务器的索引文件。 如果设置为<span class="val">Yes</span>，那么只有服务器的设置将被使用。 如果设置为<span class="val">No</span>，那么服务器的设置将不会被使用。 如果设置为<span class="val">Addition</span>，那么附加的索引文件可以被添加到此虚拟主机服务器的索引文件列表中。 如果想要禁用此虚拟主机的索引文件，您可以将该值设置为<span class="val">No</span>，并将索引文件栏留空。</p> <h4>Syntax</h4><p>选项</p> </article> </div>
@@ -143,7 +153,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="shHandlerName"><h3>处理器名称<span class="ls-permlink"><a href="#shHandlerName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>当处理器类型为FastCGI，Web服务器，LSAPI，负载均衡器或Servlet引擎时， 指定处理脚本文件的外部程序名称。</p> <h4>Syntax</h4><p>选项</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="phpIniOverride"><h3>php.ini Override<span class="ls-permlink"><a href="#phpIniOverride"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Used to overwrite php.ini settings in the current context (Virtual Host level or Context level).<br/><br/> Supported directives are:<br/> php_value<br/> php_flag<br/> php_admin_value<br/> php_admin_flag<br/><br/> All other lines/directives will be ignored.</p> <h4>Syntax</h4><p>Override syntax is similar to Apache, a newline separated list of directives and their values with each directive being prepended by php_value, php_flag, php_admin_value, or php_admin_flag appropriately.</p> <h4>Example</h4><div class="ls-example">php_value include_path ".:/usr/local/lib/php"<br/> php_admin_flag engine on<br/> php_admin_value open_basedir "/home"</div></article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

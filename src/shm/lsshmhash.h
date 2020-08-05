@@ -558,7 +558,7 @@ public:
             getLruNewest() : iter->getLruLinkPrev());
     }
 
-    iteroffset tid2IterOff(uint64_t tid, void *&pSearchState) const;
+    iteroffset tid2IterOff(uint64_t tid) const;
 
     // Returns the next tid with a value. outOffset and outDelTid will be zeroed.
     // If the tid is a 'delete', outDelTid will be set to the tid deleted.
@@ -566,6 +566,7 @@ public:
     uint64_t nextTidVal(uint64_t tidIn, void *&pSearchState,
             iteroffset &outOffset, uint64_t &outDelTid) const;
     void assignTid(iteroffset iterOff, uint64_t tid);
+    void updateLastTid(uint64_t tid);
 
     uint64_t getMinTid() const;
     uint64_t getLastTid() const;
@@ -597,6 +598,7 @@ public:
     //  @brief stat
     //  @brief gether statistic on HashTable
     int stat(LsHashStat *pHashStat, for_each_fn2 fun, void *pData);
+    uint64_t statTidBlkCnt(uint64_t *aiBlkCnt);
 
     // LRU stuff
     LsHashLruInfo *getLru();
@@ -609,6 +611,8 @@ public:
     int trim(time_t tmCutoff, LsShmHash::TrimCb cb, void *arg);
     int trimsize(int need, LsShmHash::TrimCb cb, void *arg);
     int trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg);
+    // Must have lock outside method.
+    uint64_t trimTid();
     
     int checkLru();
     int checkLruLink();

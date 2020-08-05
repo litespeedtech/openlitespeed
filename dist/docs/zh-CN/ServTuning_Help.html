@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 17</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -88,25 +98,24 @@
 <article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServLog_Help.html">Server Log</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="ServSecurity_Help.html">Server Security</a> &#187;</div></div>
 <h1>Server Tuning</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>OS Optimization</header><p>
 <a href="#shmDefaultDir">Default SHM Directory</a></p></section>
-<section class="toc-row"><header>Connection Tuning</header><p>
-<a href="#maxConnections">Max Connections</a> | <a href="#maxSSLConnections">最大SSL连接数</a> | <a href="#connTimeout">连接超时时长</a> | <a href="#maxKeepAliveReq">最大持续连接请求数</a> | <a href="#smartKeepAlive">智能持续连接</a> | <a href="#keepAliveTimeout">持续连接超时时长</a> | <a href="#sndBufSize">发送缓冲区大小</a> | <a href="#rcvBufSize">接收缓冲区大小</a></p></section>
+<section class="toc-row"><header>Connection</header><p>
+<a href="#maxConnections">Max Connections</a> | <a href="#maxSSLConnections">最大SSL连接数</a> | <a href="#connTimeout">连接超时时长</a> | <a href="#maxKeepAliveReq">最大持续连接请求数</a> | <a href="#keepAliveTimeout">持续连接超时时长</a> | <a href="#sndBufSize">发送缓冲区大小</a> | <a href="#rcvBufSize">接收缓冲区大小</a></p></section>
 <section class="toc-row"><header>请求/响应调整</header><p>
 <a href="#maxReqURLLen">最大请求URL长度</a> | <a href="#maxReqHeaderSize">最大请求头大小</a> | <a href="#maxReqBodySize">最大请求主内容大小</a> | <a href="#maxDynRespHeaderSize">动态回应报头最大大小</a> | <a href="#maxDynRespSize">动态回应主内容最大大小</a></p></section>
 <section class="toc-row"><header>Static File Delivery Optimization</header><p>
 <a href="#maxCachedFileSize">最大小文件缓存</a> | <a href="#totalInMemCacheSize">小文件缓存总大小</a> | <a href="#maxMMapFileSize">最大MMAP文件大小</a> | <a href="#totalMMapCacheSize">总MMAP缓存大小</a> | <a href="#useSendfile">使用sendfile()</a> | <a href="#fileETag">文件ETag</a></p></section>
 <section class="toc-row"><header>GZIP/Brotli Compression</header><p>
 <a href="#enableGzipCompress">启用压缩</a> | <a href="#compressibleTypes">压缩类型</a> | <a href="#enableDynGzipCompress">启用动态压缩</a> | <a href="#gzipCompressLevel">压缩级别（动态内容）</a> | <a href="#enableBrCompress">Brotli Compression Level (Dynamic Content)</a> | <a href="#gzipAutoUpdateStatic">自动更新静态文件</a> | <a href="#gzipStaticCompressLevel">压缩级别（静态内容）</a> | <a href="#brStaticCompressLevel">Brotli Compression Level (Static File)</a> | <a href="#gzipCacheDir">静态GZIP缓存目录</a> | <a href="#gzipMaxFileSize">静态文件最大尺寸</a> | <a href="#gzipMinFileSize">静态文件最小尺寸</a></p></section>
-<section class="toc-row"><header>SSL Global Setting</header><p>
-<a href="#sslStrongDhKey">SSL Strong DH Key</a> | <a href="#sslEnableMultiCerts">Enable Multiple SSL Certificates</a> | <a href="#sslSessionCache">Enable Session Cache</a> | <a href="#sslSessionCacheSize">Session Cache Size (bytes)</a> | <a href="#sslSessionCacheTimeout">Session Cache Timeout (secs)</a> | <a href="#sslSessionTickets">Enable Session Tickets</a> | <a href="#sslSessionTicketLifetime">SSL Session Ticket Lifetime (secs)</a> | <a href="#sslSessionTicketKeyFile">SSL Session Ticket Key File</a></p></section>
+<section class="toc-row"><header>SSL Global Settings</header><p>
+<a href="#sslDefaultCiphers">Default Cipher Suite</a> | <a href="#sslStrongDhKey">SSL Strong DH Key</a> | <a href="#sslEnableMultiCerts">Enable Multiple SSL Certificates</a> | <a href="#sslSessionCache">Enable Session Cache</a> | <a href="#sslSessionCacheSize">Session Cache Size (bytes)</a> | <a href="#sslSessionCacheTimeout">Session Cache Timeout (secs)</a> | <a href="#sslSessionTickets">Enable Session Tickets</a> | <a href="#sslSessionTicketLifetime">SSL Session Ticket Lifetime (secs)</a> | <a href="#sslSessionTicketKeyFile">SSL Session Ticket Key File</a></p></section>
 <section class="toc-row"><header>QUIC</header><p>
 <a href="#quicEnable">Enable QUIC</a> | <a href="#quicShmDir">QUIC SHM Directory</a> | <a href="#quicVersions">QUIC Versions</a> | <a href="#quicCongestionCtrl">Congestion Control</a> | <a href="#quicCfcw">Connection Flow Control Window</a> | <a href="#quicMaxCfcw">Max Connection Flow Control Window</a> | <a href="#quicSfcw">Stream Flow Control Window</a> | <a href="#quicMaxSfcw">Max Stream Flow Control Window</a> | <a href="#quicMaxStreams">Max Concurrent Streams Per Connection</a> | <a href="#quicHandshakeTimeout">Handshake Timeout</a> | <a href="#quicIdleTimeout">Idle Timeout</a></p></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="shmDefaultDir"><h3>Default SHM Directory<span class="ls-permlink"><a href="#shmDefaultDir"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Changes shared memory's default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.</p> <h4>Syntax</h4><p>Path</p> </article> </div>
+<section><div class="helpitem"><article class="ls-helpitem"><div><header id="shmDefaultDir"><h3>Default SHM Directory<span class="ls-permlink"><a href="#shmDefaultDir"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Changes shared memory's default directory to the specified path. If the directory does not exist, it will be created. All SHM data will be stored in this directory unless otherwise specified.</p> <h4>Syntax</h4><p>path</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxConnections"><h3>Max Connections<span class="ls-permlink"><a href="#maxConnections"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the maximum number of concurrent connections that the server can accept. This includes both plain TCP connections and SSL connections. Once the maximum concurrent connections limit is reached, the server will close Keep-Alive connections when they complete active requests.</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> When the server is started by "root" user, the server will try to adjust the per-process file descriptor limits automatically, however, if this fails, you may need to increase this limit manually.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxSSLConnections"><h3>最大SSL连接数<span class="ls-permlink"><a href="#maxSSLConnections"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定服务器接受的并发SSL连接的最大数量。 由于总的并发SSL和非SSL连接不能超过<span class="tagl"><a href="#maxConnections">Max Connections</a></span>规定的限额， 允许的并发SSL连接的实际数量必须低于此限制。</p> <h4>Syntax</h4><p>无符号整数</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="connTimeout"><h3>连接超时时长<span class="ls-permlink"><a href="#connTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定在处理一个请求时所允许的最长连接闲置时间。 如果它在此期间一直闲置，例如没有I/O活动，连接将被关闭。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[安全建议] 将值设置得尽可能低，在可能的拒绝服务攻击中，这可以帮助释放无效连接所占用的连接数。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#keepAliveTimeout">持续连接超时时长</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxKeepAliveReq"><h3>最大持续连接请求数<span class="ls-permlink"><a href="#maxKeepAliveReq"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定通过持续连接（持久）会话处理的请求的最大数量。一旦达 到此限制，连接将被关闭。您也可以为每个虚拟主机单独设置限制。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[性能建议] 设置为合理的较高的值。值为“1”或“0”时将禁用持续连接。</p> <h4>See Also</h4><p class="ls-text-small">Virtual Host <span class="tagl"><a href="VirtualHosts_Help.html#vhMaxKeepAliveReq">最大Keep-Alive请求数</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="smartKeepAlive"><h3>智能持续连接<span class="ls-permlink"><a href="#smartKeepAlive"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否启用智能持续连接。此选项只在<span class="tagl"><a href="#maxKeepAliveReq">最大持续连接请求数</a></span>的值大于1 时有效。启用之后，您还可以在虚拟主机级别启用或禁用它。智能持久连接将只为 JavaScript、CSS样式表和图像文件请求建立持续连接。对于HTML页面，连接 不会被保持活跃。这有助于更高效地服务更多用户。通常包含多个图像和脚本的 网页将在初次请求之后被浏览器缓存。 通过一个持续连接来发送那些非HTML静态文件，同时通过另一非持续连接发送 text/html文件的做法更为高效。这种方法将减少闲置连接，进而提高处理并发请 求和更多用户的能力。</p> <h4>Syntax</h4><p>布尔值</p> <h4>Tips</h4><p>[性能建议] 为高负载网站启用该功能。</p> <h4>See Also</h4><p class="ls-text-small">Virtual Host <span class="tagl"><a href="VirtualHosts_Help.html#vhSmartKeepAlive">智能Keep-Alive</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="keepAliveTimeout"><h3>持续连接超时时长<span class="ls-permlink"><a href="#keepAliveTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定持续连接请求的最长闲置时间。 如果在这段时间内没有接收到新的请求，该连接将被关闭。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[安全和性能建议] 我们建议您将值设置得刚好足够处理单个页面 视图的所有请求。没有必要延长持续连接时间。较小的值可以减少闲置 连接，提高能力，以服务更多的用户，并防范拒绝服务攻击。<span class="val">2-5</span>秒 对大多数应用是合理范围。Litespeed在非持续连接环境是非常高效的。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sndBufSize"><h3>发送缓冲区大小<span class="ls-permlink"><a href="#sndBufSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>每个TCP套接字的发送缓冲区的大小。设定值为<span class="val">0</span>使用 操作系统默认的缓冲区大小。<span class="val">65535</span>是允许的最大缓冲区大小。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[性能建议] 如果您的网站服务大量的静态文件，增加发送缓冲区 大小来提高性能。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="rcvBufSize"><h3>接收缓冲区大小<span class="ls-permlink"><a href="#rcvBufSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>每个TCP套接字的接收缓冲区的大小。设定值为<span class="val">0</span>使用 操作系统默认的缓冲区大小。<span class="val">65535</span>是允许的最大缓冲区大小。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p>[性能建议] 处理大载荷入站请求，如文件上传时，大的接收缓冲区会提高性能。</p> </article> </div>
@@ -132,6 +141,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="gzipCacheDir"><h3>静态GZIP缓存目录<span class="ls-permlink"><a href="#gzipCacheDir"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定目录路径来存储静态内容的压缩文件。默认是<span class="tagl"><a href="#swappingDir">交换目录</a></span>。</p> <h4>Syntax</h4><p>目录路径</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="gzipMaxFileSize"><h3>静态文件最大尺寸<span class="ls-permlink"><a href="#gzipMaxFileSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定LiteSpeed可以自动创建压缩文件的静态文件最大尺寸。</p> <h4>Syntax</h4><p>不小于1K的字节数。</p> <h4>Tips</h4><p>[性能建议] 不建议使用LiteSpeed创建/更新较大文件的压缩文件。 压缩操作会占用整个服务器进程并且在压缩结束前新请求都无法被处理。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="gzipMinFileSize"><h3>静态文件最小尺寸<span class="ls-permlink"><a href="#gzipMinFileSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定LiteSpeed创建相应压缩文件的静态文件最小尺寸。</p> <h4>Syntax</h4><p>不小于200的字节数。</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> 因为流量节省可以忽略不计，所以压缩非常小的文件是没有必要的。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="sslDefaultCiphers"><h3>Default Cipher Suite<span class="ls-permlink"><a href="#sslDefaultCiphers"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Default cipher suite for SSL certificates.<br/><br/> Default value: Server Internal Default (Based on current best practices)</p> <h4>Syntax</h4><p>Colon-separated string of cipher specifications.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sslStrongDhKey"><h3>SSL Strong DH Key<span class="ls-permlink"><a href="#sslStrongDhKey"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies whether to use 2048 or 1024 bit DH keys for SSL handshakes. If set to "Yes", 2048 bit DH keys will be used for 2048 bit SSL keys and certificates. 1024 bit DH keys will still be used in other situations. Default is "Yes".<br/><br/> Earlier versions of Java do not support DH key size higher than 1024 bits. If Java client compatibility is required, this should be set to "No".</p> <h4>Syntax</h4><p>radio</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sslEnableMultiCerts"><h3>Enable Multiple SSL Certificates<span class="ls-permlink"><a href="#sslEnableMultiCerts"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Allows listeners/vhosts to set multiple SSL certificates.  If multiple certificates are enabled, the certificates/keys are expected to follow a naming scheme.  If the cert is named server.crt, other possible cert names are server.crt.rsa, server.crt.dsa, server.crt.ecc. If "Not Set", defaults to "No".</p> <h4>Syntax</h4><p>Select from radio box</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="sslSessionCache"><h3>Enable Session Cache<span class="ls-permlink"><a href="#sslSessionCache"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Enables session ID caching using OpenSSL's default setting. Server-level setting must be set to "Yes" for Virtual Host setting to take effect.<br/><br/> Default values:<br/> <b>Server-level:</b> Yes<br/> <b>VH-Level:</b> Yes</p> <h4>Syntax</h4><p>Select from radio box</p> </article> </div>
@@ -152,7 +162,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="quicHandshakeTimeout"><h3>Handshake Timeout<span class="ls-permlink"><a href="#quicHandshakeTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The time in seconds a new QUIC connection is given to complete its handshake, after which the connection is aborted. Default value is <span class="val">10</span>.</p> <h4>Syntax</h4><p>Integer number between 1 and 15</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="quicIdleTimeout"><h3>Idle Timeout<span class="ls-permlink"><a href="#quicIdleTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The time in seconds after which an idle QUIC connection will be closed. Default value is <span class="val">30</span>.</p> <h4>Syntax</h4><p>Integer number between 10 and 30</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

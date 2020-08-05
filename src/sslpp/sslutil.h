@@ -73,6 +73,9 @@ public:
     static void initCtx(SSL_CTX *pCtx, int method, char renegProtect);
     static long setOptions(SSL_CTX *pCtx, long options);
     static long getOptions(SSL_CTX *pCtx);
+    static void setDefaultCipherList(const char *pList);
+    static const char *buildCipherList(char *buf, int iMaxBufLen, const char *pList);
+    static int useCipherList(SSL_CTX *pCtx, const char *pList);
     static int setCipherList(SSL_CTX *pCtx, const char *pList);
     static void updateProtocol(SSL_CTX *pCtx, int method);
     static int enableShmSessionCache(SSL_CTX *pCtx);

@@ -531,7 +531,7 @@ public:
     int getVHostAccess();
 
     HttpSessionState getState() const       {   return (HttpSessionState)ls_atomic_fetch_or(const_cast<short *>(&m_iState), 0);  };
-    void setState(HttpSessionState state)   {   ls_atomic_setshort(&m_iState, (short)state);            };
+    void setState(HttpSessionState state)   {   ls_atomic_set16(&m_iState, (short)state);            };
     int getServerAddrStr(char *pBuf, int len);
     int isAlive();
     int setUpdateStaticFileCache(const char *pPath, int pathLen,
@@ -775,7 +775,7 @@ public:
     const lsi_reqhdlr_t *getModHandler()
     {   return ls_atomic_fetch_add(&m_pModHandler,0);}
 
-    void setBackRefPtr(evtcbtail_t ** v);
+    void setBackRefPtr(evtcbhead_t ** v);
     void resetBackRefPtr();
     void cancelEvent(evtcbnode_s * v);
 

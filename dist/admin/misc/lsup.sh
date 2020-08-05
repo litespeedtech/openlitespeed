@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.71-2/28/2020
+LSUPVERSION=v2.80-7/13/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 PIDFILE=/tmp/lshttpd/lshttpd.pid
@@ -507,6 +507,7 @@ if [ -f ${LSWSHOME}/VERSION ] ; then
 fi
 
 stopService
+mv /tmp/lshttpd/bak_core /tmp/lshttpdcore
 rm -rf /tmp/lshttpd/*
 if [ -e /dev/shm/ols ] ; then
     rm -rf /dev/shm/ols/*

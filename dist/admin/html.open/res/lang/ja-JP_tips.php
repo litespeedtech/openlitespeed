@@ -90,8 +90,6 @@ $_tipsdb['accessLog_compressArchive'] = new DAttrHelp("アーカイブを圧縮�
 
 $_tipsdb['accessLog_fileName'] = new DAttrHelp("ファイル名", 'アクセスログファイル名。', '[パフォーマンス]アクセスログファイルを別のディスクに入れます。', 'ファイル名への絶対パス又は$SERVER_ROOTからの相対パス', '');
 
-$_tipsdb['accessLog_keepDays'] = new DAttrHelp("保持日数", 'アクセスログファイルをディスクに保管する日数を指定します。 指定した日数より古いローテーションしたログファイルのみが削除されます。 現在のログファイルには、それに含まれるデータの日数にかかわらず、表示されません。 古いログファイルを自動削除しない場合は、 0 に設定します。', '', '整数', '');
-
 $_tipsdb['accessLog_logFormat'] = new DAttrHelp("Log Format", ' アクセスログのログ形式を指定します。 ログフォーマットが設定されると、&quot;ログヘッダー&quot;の設定より優先されます。', '', '文字列。ログフォーマットの構文はApache 2.0のカスタムと互換性があります  <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">log format</a>。', '<br> <b>共通ログフォーマット（CLF）</b><br/>    &quot;%h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/><b>バーチャルホストによる共通ログフォーマット</b><br/>    &quot;%v %h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/><b>NCSA拡張/結合ログフォーマット</b><br/>    &quot;%h %l %u %t \&quot;%r\&quot; %>s %b \&quot;%{Referer}i\&quot; \&quot;%{User-agent}i\&quot; <br/><br/><b>FoobarのログCookie値</b><br/>    &quot;%{Foobar}C&quot;');
 
 $_tipsdb['accessLog_logHeader'] = new DAttrHelp("ログヘッダー", 'Referer、UserAgent、HostのいずれかをHTTPリクエストヘッダとして記録するかどうかを指定します。', '[パフォーマンス]これらのヘッダーがアクセスログに必要ない場合は、これをオフにします。', 'チェックボックス', '');
@@ -149,6 +147,10 @@ $_tipsdb['binPath'] = new DAttrHelp("Binary Path", 'The location of the App Serv
 $_tipsdb['blockBadReq'] = new DAttrHelp("不良リクエストをブロックする", '&quot;禁止期間（秒）&quot;に不正な形式のHTTP要求を送信し続けるIPをブロックします。 デフォルトははいです。 これは、ジャンク要求を繰り返し送信するボットネット攻撃をブロックするのに役立ちます。', '', 'ラジオボックスから選択', '');
 
 $_tipsdb['brStaticCompressLevel'] = new DAttrHelp("Brotli Compression Level (Static File)", 'Specifies the level of Brotli compression applied to static files. Ranges from 1 (lowest) to 11 (highest).<br/><br/>This setting will only take effect when &quot;圧縮を有効にする&quot; and &quot;静的ファイルの自動更新&quot; are enabled.<br/><br/>Default value: 5', ' Save network bandwidth. Text-based responses such as html, css, and javascript files benefit the most and on average can be compressed to half of their original size.', 'Number between 1 and 11.', '');
+
+$_tipsdb['bubbleWrap'] = new DAttrHelp("Bubblewrap Container", 'Set to On if you wish to start CGI processes (including PHP programs) in a bubblewrap sandbox. See <a href=&quot;https://wiki.archlinux.org/index.php/Bubblewrap&quot;>https://wiki.archlinux.org/index.php/Bubblewrap</a> for details on using bubblewrap. Bubblewrap must be installed on your system prior to using this setting.<br/><br/>This setting cannot be turned on at the Virtual Host level if set to &quot;Disabled&quot; at the Server level.<br/><br/>Default values:<br/><b>Server level:</b> Disabled<br/><b>VH level:</b> Inherit Server level setting', '', 'ドロップダウンリストから選択', '');
+
+$_tipsdb['bubbleWrapCmd'] = new DAttrHelp("Bubblewrap Command", 'The full bubblewrap use command, including the bubblewrap program itself. More on configuring this command can be found here: <a href=&quot;https://openlitespeed.org/kb/bubblewrap-in-openlitespeed/&quot;>   https://openlitespeed.org/kb/bubblewrap-in-openlitespeed/ </a>. If not specified, the default command listed below will be used.<br/><br/>Default value: /bin/bwrap --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind-try /lib64 /lib64 --ro-bind /bin /bin --ro-bind /sbin /sbin --dir /var --dir /tmp --proc /proc --symlink../tmp var/tmp --dev /dev --ro-bind-try /etc/localtime /etc/localtime --ro-bind-try /etc/ld.so.cache /etc/ld.so.cache --ro-bind-try /etc/resolv.conf /etc/resolv.conf --ro-bind-try /etc/ssl /etc/ssl --ro-bind-try /etc/pki /etc/pki --ro-bind-try /etc/man_db.conf /etc/man_db.conf --ro-bind-try /home/$USER /home/$USER --bind-try /var/lib/mysql/mysql.sock /var/lib/mysql/mysql.sock --bind-try /home/mysql/mysql.sock /home/mysql/mysql.sock --bind-try /tmp/mysql.sock /tmp/mysql.sock  --unshare-all --share-net --die-with-parent --dir /run/user/$UID ‘$PASSWD 65534’ ‘$GROUP 65534’', '', '', '');
 
 $_tipsdb['certChain'] = new DAttrHelp("チェーン証明書", '証明書がチェーン証明書であるかどうかを指定します。 チェーン証明を格納するファイルは、PEM形式でなければならず、証明書は最下位レベル（実際のクライアントまたはサーバー証明書）から最上位（ルート）CAまでの連鎖の順序でなければなりません。', '', 'ラジオボックスから選択', '');
 
@@ -390,6 +392,8 @@ $_tipsdb['log_enableStderrLog'] = new DAttrHelp("stderrログを有効にする"
 
 $_tipsdb['log_fileName'] = new DAttrHelp("ファイル名", 'ログファイルのパスを指定します。', '[パフォーマンス]ログファイルを別のディスクに配置します。', 'ファイル名への絶対パス又は$SERVER_ROOTからの相対パス', '');
 
+$_tipsdb['log_keepDays'] = new DAttrHelp("Keep Days", 'Specifies how many days the access log file will be kept on disk.  Only rotated log files older than the specified number of days will be deleted. The current  log file will not be touched regardless how many days worth of data it contains.  If you do not want to auto-delete stale and very old log files, set this to 0.', '', '整数', '');
+
 $_tipsdb['log_logLevel'] = new DAttrHelp("ログレベル", 'ログファイルに含めるログのレベルを指定します。 使用可能なレベルは、エラー、警告、通知、情報および DEBUG です。 現在の設定以上のレベルのメッセージのみが記録されます。', '[パフォーマンス] &quot;デバッグレベル&quot;が NONE 以外のレベルに設定されていない限り、 DEBUG ログレベルを使用してもパフォーマンスに影響はありません。 ログレベルを DEBUG に設定し、デバッグレベルを NONE に設定することをお勧めします。 これらの設定は、ハードディスクにデバッグログを書き込まないことを意味しますが、&quot;デバッグログを切り替える&quot;アクションを使用してデバッグ出力を制御することができます。 これにより、デバッグログのオン/オフを切り替えることができ、多忙な運用サーバーのデバッグに役立ちます。', '選択', '');
 
 $_tipsdb['log_rollingSize'] = new DAttrHelp("ローテーションサイズ（バイト）", '現在のログファイルをロールオーバーする必要があるとき、つまりログローテーションを指定します。 ファイルサイズがロールオーバー制限を超えると、アクティブなログファイルは同じディレクトリにlog_name.mm_dd_yyyy（.sequence）という名前に変更され、新しいアクティブなログファイルが作成されます。 回転ログファイルが実際に作成されると、そのサイズはこのサイズ制限より少し大きくなることがあります。 ログのローテーションを無効にするには、 0 に設定します。', 'キロ、メガ、ギガバイトの数字に「K」、「M」、「G」を追加します。', '整数', '');
@@ -616,6 +620,8 @@ $_tipsdb['softLimit'] = new DAttrHelp("接続ソフトリミット", '1つのIP�
 
 $_tipsdb['sslCert'] = new DAttrHelp("SSL秘密鍵と証明書", 'すべてのSSLリスナーには、ペアのSSL秘密鍵とSSL証明書が必要です。 複数のSSLリスナーは、同じ鍵と証明書を共有できます。<br/>OpenSSLなどのSSLソフトウェアパッケージを使用して、SSL秘密鍵を自分で生成することができます。 SSL証明書は、VeriSignやThawteのような認可された証明書の発行者から購入することもできます。 自分で証明書に署名することもできます。 自己署名証明書はWebブラウザから信頼されないため、重要なデータを含む公開Webサイトでは使用しないでください。 ただし、自己署名証明書は内部使用に十分適しており、 例えば LiteSpeed WebサーバーのWebAdminコンソールへのトラフィックを暗号化します。', '', '', '');
 
+$_tipsdb['sslDefaultCiphers'] = new DAttrHelp("Default Cipher Suite", 'Default cipher suite for SSL certificates.<br/><br/>Default value: Server Internal Default (Based on current best practices)', '', 'Colon-separated string of cipher specifications.', '');
+
 $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("複数のSSL証明書を有効にする", 'リスナー/バーチャルホストが複数のSSL証明書を設定できるようにします。 複数の証明書が有効な場合、証明書/キーは命名規則に従うことが想定されます。 証明書の名前がserver.crtの場合、その他の可能な証明書名はserver.crt.rsa、server.crt.dsa、server.crt.eccです。 「未設定」の場合、デフォルトは「いいえ」です。', '', 'ラジオボックスから選択', '');
 
 $_tipsdb['sslOCSP'] = new DAttrHelp("OCSPステープリング", 'オンライン証明書ステータスプロトコル（OCSP）は、デジタル証明書が有効かどうかを確認するより効率的な方法です。 OCSP応答者である他のサーバーと通信して、証明書失効リスト（CRL）をチェックする代わりに証明書が有効であることを確認します。<br/>OCSPステープリングは、このプロトコルのさらなる改良であり、証明書が要求されるたびにではなく、定期的な間隔でサーバーがOCSPレスポンダを確認できるようにします。 詳細については、<a href=&quot;http://en.wikipedia.org/wiki/OCSP_Stapling&quot;>OCSP Wikipedia</a>のページをご覧ください。', '', '', '');
@@ -778,6 +784,10 @@ $_tipsdb['EDTP:autoFix503'] = array('<b>自動修正 503 エラー</b>を有効�
 $_tipsdb['EDTP:backlog'] = array('ローカルアプリケーションは、Webサーバーによって開始できます。 この場合、パス、バックログ、インスタンス数を指定する必要があります。');
 
 $_tipsdb['EDTP:binPath'] = array('','');
+
+$_tipsdb['EDTP:bubbleWrap'] = array('');
+
+$_tipsdb['EDTP:bubbleWrapCmd'] = array('');
 
 $_tipsdb['EDTP:cgi_path'] = array('CGIコンテキストを使用して、ディレクトリにCGIスクリプトのみを指定することができます。 パスは絶対パスでも、$SERVER_ROOT、$VH_ROOT、$DOC_ROOT（デフォルト）でもかまいません。 パスとURIは、cgi-binディレクトリのために &quot;/&quot;で終わらなければなりません。','そのディレクトリに特定のスクリプトだけが必要な場合は、そのスクリプトのCGIコンテキストを作成することをお勧めします。 この場合、pathとURIはディレクトリである必要はありません。 たとえば、pathは〜/myapp/myscript.pl、URIは/myapp/myscript.plです。 その他のファイルはすべてCGIとして提供されません。');
 

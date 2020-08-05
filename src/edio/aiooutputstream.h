@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013  LiteSpeed Technologies, Inc.                        *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -20,12 +20,29 @@
 
 #include <lsdef.h>
 #include <edio/eventhandler.h>
+#include <lsr/ls_atomic.h>
+#include <lsr/ls_lock.h>
 
 #include <aio.h>
 #include <sys/types.h>
 
 #include <signal.h>
 
+
+#define LS_AIO_USE_AIO
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+//#include <linux/version.h>
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)
+//#define LS_AIO_USE_SIGFD
+//#else
+#define LS_AIO_USE_SIGNAL
+//#endif // LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)
+#elif defined(__FreeBSD__ ) || defined(__OpenBSD__)
+#define LS_AIO_USE_KQ
+#else
+#undef LS_AIO_USE_AIO
+#endif // defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
 #ifdef LS_AIO_USE_KQ
 #include <sys/event.h>
@@ -44,17 +61,13 @@ private:
 public:
     AioReq();
 
-    void *getBuf()
-    {
-        void *p = (void *)m_aiocb.aio_buf;
-        m_aiocb.aio_buf = NULL;
-        return p;
-    }
+    void *getBuf() const
+    {   return (void *)m_aiocb.aio_buf;     }
 
-    off_t getOffset()
+    off_t getOffset() const
     {   return m_aiocb.aio_offset;  }
 
-    int getError()
+    int getError() const
     {   return aio_error(&m_aiocb);   }
 
     //NOTICE: If the error is EINPROGRESS, the result of this is undefined.
@@ -62,36 +75,25 @@ public:
     {   return aio_return(&m_aiocb);  }
 
     int read(int fildes, void *buf, int nbytes, int offset,
-             EventHandler *pHandler)
+                    EventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_read(&m_aiocb);
     }
+    
     int write(int fildes, void *buf, int nbytes, int offset,
-              EventHandler *pHandler)
+                     EventHandler *pHandler)
     {
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_write(&m_aiocb);
     }
-
     static void setSigNo(int signo)     {   s_rtsigNo = signo;  }
-
+    
     LS_NO_COPY_ASSIGN(AioReq);
 };
 
 class AioOutputStream : public EventHandler, private AioReq
 {
-    int             m_fd;
-    char            m_async;
-    char            m_flushRequested;
-    char            m_closeRequested;
-    char            m_iFlock;
-    AutoBuf        *m_pRecv;
-    AutoBuf        *m_pSend;
-
-private:
-    int syncWrite(const char *pBuf, int len);
-
 public:
 
     AioOutputStream()
@@ -104,16 +106,20 @@ public:
         , m_pRecv(NULL)
         , m_pSend(NULL)
     {
+        ls_mutex_setup(&m_mutex);
     }
     virtual ~AioOutputStream() {};
 
-    int getfd() const               {   return m_fd;            }
-    void setfd(int fd)            {   m_fd = fd;              }
+    int getfd() const               {   return ls_atomic_fetch_add((int *)&m_fd, 0); }
+    void setfd(int fd)              {   ls_atomic_setint(&m_fd, fd );   }
     int open(const char *pathname, int flags, mode_t mode);
     int close();
     bool isAsync() const            {   return m_async == 1;    }
 
-    void setFlock(int l)           {   m_iFlock = l;           }
+    void setFlock(int l)
+    {
+        m_iFlock = l;
+    }
 
     void setAsync()
     {
@@ -125,6 +131,29 @@ public:
     int append(const char *pBuf, int len);
     virtual int onEvent();
     int flush();
+    
+#ifdef LS_AIO_USE_KQ
+    static void setAiokoLoaded();
+    static short aiokoIsLoaded();
+#endif
+
+    ls_mutex_t &get_mutex()  {   return m_mutex; }
+
+private:
+    int syncWrite(const char *pBuf, int len);
+    int flushEx();
+
+private:
+    ls_atom_int_t   m_fd;
+    char            m_async;
+    char            m_flushRequested;
+    char            m_closeRequested;
+    char            m_iFlock;
+
+    ls_mutex_t      m_mutex;
+    AutoBuf        *m_pRecv;
+    AutoBuf        *m_pSend;
+
     LS_NO_COPY_ASSIGN(AioOutputStream);
 };
 

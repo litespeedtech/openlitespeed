@@ -151,6 +151,7 @@ int CgidWorker::spawnCgid(int fd, char *pData, const char *secret)
 {
     int pid;
     const char *pChroot = "";
+
     if (ServerProcessConfig::getInstance().getChroot() != NULL)
         pChroot = ServerProcessConfig::getInstance().getChroot()->c_str();
     snprintf(pData, 255, "uds:/%s%s", pChroot,

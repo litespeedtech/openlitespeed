@@ -14,8 +14,10 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
-  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
+  <h2 class="ls-text-thin">
+    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
+  </h2>
+  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 17</h3>
   <hr/>
   <div>
     <ul>
@@ -60,7 +62,9 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+            <li>
+              <a href="Java_Web_App_Context.html">Java Web App Context</a>
+            </li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -78,8 +82,14 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
-          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin Listener General
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+          </li>
         </ul>
       </li>
     </ul>
@@ -113,7 +123,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="procSoftLimit"><h3>进程软限制<span class="ls-permlink"><a href="#procSoftLimit"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>限制一个用户可以创建的进程总数。所有存在的进程都将被统计在内， 而不是只包括新启动的进程。如果限制被设置为<span class="val">10</span>，并且一个用户下 有超过10个进程在运行，那么网站服务器将不会再为该用户（通过 suEXEC） 启动新进程。<br/><br/> 此限制的主要目的是为了防范“fork炸弹”攻击或过量使用，而不是限制正常使用 （如果该限制被设置的过低，它将被服务器忽略）。确保留有足够空余。 本项目可以在服务器级别或独立的外部应用程序级别设置。如果未在独立的外部应用程 序级别设定限制，将使用服务器级别的限制。如果在两个级别都没有设置该限制， 或者限制值设为<span class="val">0</span>，将使用操作系统的默认设置。</p> <h4>Syntax</h4><p>无符号整数</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> PHP scripts can call for forking processes. The main purpose of this limit is as a last line of defense to prevent fork bombs and other attacks caused by PHP processes creating other processes.<br/><br/> Setting this setting too low can severely hurt functionality. The setting will thus be ignored below certain levels.<br/><br/> When <b>Run On Start Up</b> is set to "Yes (Daemon mode)", the actual process limit will be higher than this setting to make sure parent processes are not limited.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="procHardLimit"><h3>进程硬限制<span class="ls-permlink"><a href="#procHardLimit"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>与<span class="tagl"><a href="#procSoftLimit">进程软限制</a></span>非常相同，但是，在用户进程中软限制 可以被放宽到硬限制的数值。硬限制可以在服务器级别或独立的外部应用程序级别设 置。如果未在独立的外部应用程序级别设定限制，将使用服务器级别的限制。 如果在两个级别都没有设置该限制，或者限制值设为<span class="val">0</span>，将使用操 作系统的默认设置。</p> <h4>Syntax</h4><p>无符号整数</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

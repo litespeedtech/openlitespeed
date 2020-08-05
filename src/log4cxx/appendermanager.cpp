@@ -68,9 +68,8 @@ Appender *AppenderManager::getAppender()
         else
             return m_pCurAppender;
         break;
-    default:
-        return NULL;
     }
+    return NULL;
 }
 
 Appender *AppenderManager::findAppender(Appender *pExcept)

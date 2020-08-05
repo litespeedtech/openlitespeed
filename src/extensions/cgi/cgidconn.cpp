@@ -24,6 +24,7 @@
 #include <http/httpcgitool.h>
 #include <http/httpextconnector.h>
 #include <http/httpresourcemanager.h>
+#include <http/httpserverconfig.h>
 #include <http/httpsession.h>
 #include <http/serverprocessconfig.h>
 #include <log4cxx/logger.h>
@@ -263,12 +264,27 @@ int CgidConn::addRequest(ExtRequest *pReq)
     setConnector((HttpExtConnector *)pReq);
     int ret;
     HttpReq *req = getConnector()->getHttpSession()->getReq();
+
+    int type = -1;
     if (req->getContextState(EXEC_EXT_CMD))
+    {
+        type = 0;
         ret = buildSSIExecHeader(1);
+    }
     else if (req->getContextState(EXEC_CMD_PARSE_RES))
+    {
+        type = 1;
         ret = buildSSIExecHeader(0);
+    }
     else
+    {
+        type = 2;
         ret = buildReqHeader();
+    }
+
+    LS_DBG_M(this, "CgidConn::addRequest() pReq %p, type %d, ret %d.",
+        pReq, type, ret);
+
     if (ret)
     {
 //        LS_DBG_L(this, "Request header can't fit into 8K buffer, "
@@ -403,6 +419,18 @@ int CgidConn::buildReqHeader()
         while (pPlus);
     }
     m_req.appendArgv(NULL, 0);
+
+    const HttpVHost *pVHost = pReq->getVHost();
+    if ((pVHost && pVHost->enableBwrap() &&
+         HttpServerConfig::getInstance().getBwrap() != HttpServerConfig::BWRAP_DISABLED) ||
+        (HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_ON))
+    {
+        const char *cmdline = HttpServerConfig::getInstance().getBwrapCmdLine();
+        m_req.add("LS_BWRAP", "1");
+        if (cmdline)
+            m_req.add("LS_BWRAP_CMDLINE", cmdline);
+    }
+
 
     HttpCgiTool::buildEnv(&m_req, pSession);
 

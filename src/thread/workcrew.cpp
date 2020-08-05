@@ -106,6 +106,38 @@ void WorkCrew::init()
     ls_mutex_setup(&m_addWorker);
     sigemptyset(&m_sigBlock);
     sigaddset(&m_sigBlock, SIGCHLD);
+    sigaddset(&m_sigBlock, SIGHUP);
+    sigaddset(&m_sigBlock, SIGINT);
+    sigaddset(&m_sigBlock, SIGQUIT);
+    //sigaddset(&m_sigBlock, SIGILL);
+    sigaddset(&m_sigBlock, SIGABRT);
+    sigaddset(&m_sigBlock, SIGIOT);
+    //sigaddset(&m_sigBlock, SIGBUS);
+    //sigaddset(&m_sigBlock, SIGFPE);
+    //sigaddset(&m_sigBlock, SIGKILL);
+    sigaddset(&m_sigBlock, SIGUSR1);
+    //sigaddset(&m_sigBlock, SIGSEGV);
+    sigaddset(&m_sigBlock, SIGUSR2);
+    sigaddset(&m_sigBlock, SIGPIPE);
+    sigaddset(&m_sigBlock, SIGALRM);
+    sigaddset(&m_sigBlock, SIGTERM);
+    //sigaddset(&m_sigBlock, SIGSTKFLT);
+    sigaddset(&m_sigBlock, SIGCONT);
+    //sigaddset(&m_sigBlock, SIGSTOP);
+
+    // less commonly used signal, do not bother for now.
+//     sigaddset(&m_sigBlock, SIGTSTP);
+//     sigaddset(&m_sigBlock, SIGTTIN);
+//     sigaddset(&m_sigBlock, SIGTTOU);
+//     sigaddset(&m_sigBlock, SIGURG);
+//     sigaddset(&m_sigBlock, SIGXCPU);
+//     sigaddset(&m_sigBlock, SIGXFSZ);
+//     sigaddset(&m_sigBlock, SIGVTALRM);
+//     sigaddset(&m_sigBlock, SIGPROF);
+//     sigaddset(&m_sigBlock, SIGWINCH);
+//     sigaddset(&m_sigBlock, SIGIO);
+//     sigaddset(&m_sigBlock, SIGPWR);
+//     sigaddset(&m_sigBlock, SIGSYS);
 
     if (m_maxIdle < m_minIdle)
         m_maxIdle = m_minIdle;
@@ -140,7 +172,7 @@ WorkCrew::~WorkCrew()
     m_cleanUp.release_objects();
     ls_mutex_unlock(&m_crewLock);
 
-    int count = ls_atomic_fetch_add(&m_iRunningWorkers, 0);
+    int count = ls_atomic_value(&m_iRunningWorkers);
     if (count > 0)
     {
         while(count-- > 0)
@@ -156,7 +188,7 @@ int WorkCrew::getSlot()
     int32_t slot = LS_FAIL;
 
     ls_mutex_lock(&m_crewLock);
-    if (size() < ls_atomic_fetch_add(&m_maxWorkers, 0))
+    if (size() < ls_atomic_value(&m_maxWorkers))
     {
         if (m_emptySlots.size())
         {
@@ -189,36 +221,30 @@ int WorkCrew::addWorker()
     int32_t slot;
 
     slot = getSlot();
-    if (slot == -1)
-        return LS_FAIL;
+
     CrewWorker *worker = new CrewWorker(this, slot);
     if (!worker)
+    {
+        releaseSlot(slot);
         return LS_FAIL;
+    }
+
     // TODO see if this is a real issue - new should take care of it? LS_TH_NEWMEM(worker, sizeof(CrewWorker));
     worker->blockSigs(&m_sigBlock);
     m_crew[slot] = worker;
 
-    if (worker)
+    ls_atomic_fetch_add(&m_iRunningWorkers, 1);
+    if ( (ret = worker->start()) )
     {
-        ls_atomic_fetch_add(&m_iRunningWorkers, 1);
-        if ( (ret = worker->start()) )
-        {
-            ls_atomic_fetch_add(&m_iRunningWorkers, -1);
-            m_crew[slot] = NULL;
-            delete worker;
-        }
-        else
-        {
-            if (m_crew[slot])
-            {
-                DPRINTF("ADDWRKR START Worker tid %lu in slot %d, %s\n",
-                    worker->getHandle(), slot, pStatus());
-            }
-            return 0;
-        }
+        ls_atomic_fetch_add(&m_iRunningWorkers, -1);
+        m_crew[slot] = NULL;
+        delete worker;
+        releaseSlot(slot);
+        return(LS_FAIL);
     }
-    releaseSlot(slot);
-    return(LS_FAIL);
+    DPRINTF("ADDWRKR START Worker tid %lu in slot %d, %s\n",
+            worker->getHandle(), slot, pStatus());
+    return LS_OK;
 }
 
 
@@ -234,7 +260,7 @@ ls_lfnodei_t *WorkCrew::getJob(bool poll)
     ls_lfnodei_t *pWork;
     pWork = NULL;
     if (poll) {
-        if (m_pJobQueue->get(&pWork, size) != 0)
+        if (m_pJobQueue->get(&pWork, size, 0) != 0)
             return NULL;
     }
     else {
@@ -306,7 +332,7 @@ void WorkCrew::stopProcessing(int disard)
         //LS_TH_BENIGN(&m_stateFutex, "ok read");
         do {
             ret = ls_futex_wait_priv(&m_stateFutex, STOPPING, &timeout);
-        } while (0 == ret && STOPPING == ls_atomic_fetch_add(&m_stateFutex, 0));
+        } while (0 == ret && STOPPING == ls_atomic_value(&m_stateFutex));
         //LS_TH_FLUSH();
 
         if (m_stateFutex == STOPPED) {
@@ -329,14 +355,14 @@ void WorkCrew::stopProcessing(int disard)
 
 
     LS_DBG_H("WorkCrew::stopProcessing(), Stopping Processor.");
-    ls_atomic_setptr(&m_pFinishedQueue, NULL);
+    (void)ls_atomic_setptr(&m_pFinishedQueue, NULL);
 }
 
 
 int WorkCrew::putFinishedItem(ls_lfnodei_t *item)
 {
     int ret;
-    ls_lfqueue_t *q = ls_atomic_fetch_add(&m_pFinishedQueue, 0);
+    ls_lfqueue_t *q = ls_atomic_value(&m_pFinishedQueue);
     ret = ls_lfqueue_put(q, item);
     if (m_pNotifier)
     {
@@ -352,7 +378,7 @@ int WorkCrew::addJob(ls_lfnodei_t *item)
     int ret;
     DPRINTF("ADDJOB new job from thread %ld %s\n",
             pthread_self(), pStatus());
-    if (ls_atomic_fetch_add(&m_stateFutex, 0) >= STOPPING)
+    if (ls_atomic_value(&m_stateFutex) >= STOPPING)
     {
         return LS_FAIL;
     }
@@ -361,20 +387,20 @@ int WorkCrew::addJob(ls_lfnodei_t *item)
 #else
     ret = m_pJobQueue->append(&item, 1);
 #endif
-    if (ls_atomic_fetch_add(&m_idleWorkers, 0) >= ls_atomic_fetch_add(&m_minIdle, 0)
+    if (ls_atomic_value(&m_idleWorkers) >= ls_atomic_value(&m_minIdle)
         || ls_mutex_trylock(&m_addWorker) != 0 )
     {
         return ret;
     }
     int i = 0;
-    while(ls_atomic_fetch_or(&m_stateFutex, 0) == RUNNING && size() < ls_atomic_fetch_add(&m_maxWorkers, 0))
+    while(ls_atomic_value(&m_stateFutex) == RUNNING && size() < ls_atomic_value(&m_maxWorkers))
     {
-        int32_t idleWorkers = ls_atomic_fetch_add(&m_idleWorkers, 0);
-        if (ls_atomic_fetch_add(&idleWorkers, 0) >= ls_atomic_fetch_add(&m_minIdle, 0))
+        int32_t idleWorkers = ls_atomic_value(&m_idleWorkers);
+        if (ls_atomic_value(&idleWorkers) >= ls_atomic_value(&m_minIdle))
             break;
         DPRINTF("ADDJOB GROW %s\n", pStatus());
         addWorker();
-        if (i++ > ls_atomic_fetch_add(&m_maxIdle, 0))
+        if (i++ > ls_atomic_value(&m_maxIdle))
             break;
     }
     ls_mutex_unlock(&m_addWorker);
@@ -389,12 +415,6 @@ void WorkCrew::workerDied(CrewWorker *pWorker)
     int32_t slot = pWorker->getSlot();
     if (slot == -1)
         return;
-    if (slot < 0 || slot >= m_crew.size() || !m_crew[slot])
-    {
-        printf("Race condition!  slot: %d, size: %ld, m_crew[%d]: %p\n",
-               slot, m_crew.size(), slot, m_crew[slot]);
-        assert(0);
-    }
     assert(slot >= 0 && slot < m_crew.size() && m_crew[slot]);
     m_emptySlots.push_back(slot);
     m_crew[slot] = NULL;
@@ -402,7 +422,7 @@ void WorkCrew::workerDied(CrewWorker *pWorker)
 
     for (int i = 0; i < m_cleanUp.size(); i++)
     {
-        CleanUp * cp = m_cleanUp[i];
+        Callback * cp = m_cleanUp[i];
         if (cp->routine)
         {
             cp->routine(cp->arg);
@@ -478,6 +498,9 @@ void WorkCrew::stopAllWorkers(int discard)
 void *WorkCrew::workerRoutine(CrewWorker * pWorker)
 {
     int32_t tidles;
+
+    if (m_initCb.routine)
+        m_initCb.routine(m_initCb.arg);
     // sanity check from prior code - optional?
     if (!m_pProcess) {
         DPRINTF("GAPJ WRKBAD slot %d can't run %s\n", pWorker->getSlot(), pStatus());
@@ -512,7 +535,7 @@ void *WorkCrew::workerRoutine(CrewWorker * pWorker)
         {
             DPRINTF("WRKRTN processing job slot %d %s\n", pWorker->getSlot(), pStatus());
             m_pProcess(job);
-            if (ls_atomic_fetch_add(&m_pFinishedQueue, 0))
+            if (ls_atomic_value(&m_pFinishedQueue))
                 putFinishedItem(job);
 
             DPRINTF("WRKRTN DONE processing job slot %d ret %p %s\n", pWorker->getSlot(), ret, pStatus());
@@ -538,6 +561,14 @@ void *WorkCrew::workerRoutine(CrewWorker * pWorker)
 
 void WorkCrew::pushCleanup(void (*routine)(void *), void * arg)
 {
-    CleanUp * cp = new CleanUp(routine, arg);
+    Callback * cp = new Callback(routine, arg);
     m_cleanUp.push_back(cp);
 }
+
+
+void WorkCrew::setInitCb(void (*routine)(void *), void * arg)
+{
+    m_initCb.routine = routine;
+    m_initCb.arg = arg;
+}
+

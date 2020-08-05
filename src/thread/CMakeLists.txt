@@ -13,6 +13,7 @@ SET(thread_STAT_SRCS
    workcrew.cpp
    worker.cpp
    crewworker.cpp
+   offloader.cpp
 )
 
 add_library(thread STATIC ${thread_STAT_SRCS} )

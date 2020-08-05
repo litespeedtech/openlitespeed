@@ -22,6 +22,7 @@
 #include "cgi/suexec.h"
 #include "registry/extappregistry.h"
 
+#include <http/httpserverconfig.h>
 #include <http/httpvhost.h>
 #include <http/serverprocessconfig.h>
 #include <log4cxx/logger.h>
@@ -506,13 +507,50 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
             config.getGid(), config.getCommand(),
             uid, gid);
 
+    LS_DBG("Check bwrap, pVHost: %p\n", pVHost);
+
+    int set_bwrap = 0;
+    Env env2;
+    Env *penv = config.getEnv();
+
+    if ((pVHost && pVHost->enableBwrap()) ||
+        (!pVHost && HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_ON))
+    {
+        int from_vhost = pVHost && pVHost->enableBwrap();
+        set_bwrap = 1;
+        LS_DBG("Enabling bwrap from %s\n", from_vhost ? "VHost" : "ServerConfig");
+    }
+    else
+        LS_DBG("pVHost enableBwrap: %d, procConfig.getBwrap: %d\n",
+               pVHost && pVHost->enableBwrap(), HttpServerConfig::getInstance().getBwrap());
+    if (set_bwrap)
+    {
+        const char *enable_title = (char *)"LS_BWRAP";
+        char **env = penv->get();
+        while (*env)
+        {
+            LS_DBG("Rebuild env: %s\n", *env);
+            env2.add(*env);
+            env++;
+        }
+        env2.add(enable_title, "1");
+        if (HttpServerConfig::getInstance().getBwrapCmdLine())
+        {
+            const char *cmdline_title = (char *)"LS_BWRAP_CMDLINE";
+            LS_DBG("Rebuild add env: %s\n", HttpServerConfig::getInstance().getBwrapCmdLine());
+            env2.add(cmdline_title, HttpServerConfig::getInstance().getBwrapCmdLine());
+        }
+        env2.add((const char *)NULL);
+        penv = &env2;
+    }
+
     int rfd = -1;
     int pid;
     //if ( config.getStartByServer() == 2 )
     //{
     pid = SUExec::getSUExec()->cgidSuEXEC(
               MainServerConfig::getInstance().getServerRoot(), &rfd, fd, argv,
-              config.getEnv()->get(), NULL);
+              penv->get(), NULL);
     //}
     //else
     //{
@@ -527,7 +565,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
             config.getName());
 
         pid = SUExec::spawnChild(config.getCommand(), fd, -1,
-                                 config.getEnv()->get(),
+                                 penv->get(),
                                  config.getPriority(), config.getRLimits(),
                                  config.getUmask(), uid, gid);
     }

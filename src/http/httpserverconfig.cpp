@@ -63,6 +63,8 @@ HttpServerConfig::HttpServerConfig()
     , m_iChildren(1)
     , m_pAdminSock(NULL)
     , m_pGlobalVHost(NULL)
+    , m_bwrap(BWRAP_DISABLED)
+    , m_pBwrapCmdLine(NULL)
 {
     m_pDeniedDir = new DeniedDir();
 }

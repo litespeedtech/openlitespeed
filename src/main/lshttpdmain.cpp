@@ -51,6 +51,7 @@
 #include <util/vmembuf.h>
 #include <util/httpfetch.h>
 #include <socket/gsockaddr.h>
+#include <edio/evtcbque.h>
 
 #include <sys/sysctl.h>
 
@@ -82,7 +83,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu Jun 18 15:04:04 UTC 2020)"
+#define BUILDTIME  " (built: Wed Aug  5 17:58:31 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -1035,6 +1036,7 @@ int LshttpdMain::init(int argc, char *argv[])
         allocatePidTracker();
         m_pServer->initAdns();
         m_pServer->enableAioLogging();
+        EvtcbQue::getInstance().initNotifier();
         cleanEnvVars();
         WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
         pGWC->startProcessing();
@@ -1253,6 +1255,7 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
 
     m_pServer->reinitMultiplexer();
     m_pServer->enableAioLogging();
+    EvtcbQue::getInstance().initNotifier();
     if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
         && (m_pServer->initAioSendFile() != 0))
     {
@@ -1590,10 +1593,10 @@ int LshttpdMain::guardCrash()
     pfds[2].events = POLLIN;
 
     s_iRunning = 1;
-    
+
     LS_NOTICE("Instance is ready for service.");
     m_pServer->restartMark(2);
-    
+
     startTimer();
     while (s_iRunning > 0)
     {

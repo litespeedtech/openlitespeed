@@ -177,8 +177,10 @@ int LogRotate::testRolling(Appender *pAppender, off_t rollingSize,
         }
         return ret;
     }
-    else if ((st.st_uid != uid) || (st.st_gid != gid))
+    if ((st.st_uid != uid) || (st.st_gid != gid))
         chown(pName, uid, gid);
+    if (st.st_mode & 0111)
+        chmod(pName, st.st_mode & ~0111);
     if (rollingSize <= 0)
         return ret;
     return (st.st_size > rollingSize);
@@ -189,6 +191,10 @@ int LogRotate::postRotate(Appender *pAppender, uid_t uid, gid_t gid)
     pAppender->close();
     pAppender->open();
     fchown(pAppender->getfd(), uid, gid);
+    struct stat st;
+    fstat(pAppender->getfd(), &st);
+    if (st.st_mode & 0111)
+        fchmod(pAppender->getfd(), st.st_mode & ~0111);
     if (pAppender->getKeepDays() > 0)
     {
         time_t tm = time(NULL) - 3600L * 24 * pAppender->getKeepDays();

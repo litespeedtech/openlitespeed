@@ -74,7 +74,7 @@ class DMsg
 
     public static function SetLang($lang)
     {
-        if (array_key_exists($lang, self::$_supported)) {
+        if (PHP_SAPI !== 'cli' && array_key_exists($lang, self::$_supported)) {
             $_SESSION[DMsg::_COOKIE_LANG_] = $lang;
             self::$_curlang = '';
             self::$_curtips = '';
@@ -267,7 +267,7 @@ class DMsg
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014-2019
+* @copyright  Copyright (c) LiteSpeed 2014-2020
 * @link       https://www.litespeedtech.com/
 */
 

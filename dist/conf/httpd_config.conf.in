@@ -69,7 +69,7 @@ tuning{
     enableDynGzipCompress        1 
     gzipCompressLevel            6 
     brStaticCompressLevel        6
-    compressibleTypes            text/*, application/x-javascript, application/xml, application/javascript, image/svg+xml,application/rss+xml
+    compressibleTypes            default
     gzipAutoUpdateStatic         1 
     gzipMinFileSize              300 
     

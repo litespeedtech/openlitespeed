@@ -93,7 +93,7 @@ openlitespeed_SOURCES = modules/prelinkedmods.cpp httpdtest.cpp main.cpp \
    lsr/ls_tsstack.c \
    lsr/ls_xpool.c \
    lsr/xxhash.c \
-   lsr/offloader.cpp \
+   thread/offloader.cpp \
    thread/mtnotifier.cpp \
    thread/pthreadcond.cpp \
    thread/pthreadmutex.cpp \
