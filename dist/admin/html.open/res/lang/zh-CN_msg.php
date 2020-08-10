@@ -779,7 +779,7 @@ $_gmsg['l_reuseport'] = '启用REUSEPORT';
 
 $_gmsg['o_off'] = '关'; 
 $_gmsg['o_on'] = '开'; 
-$_gmsg['o_use_last_ip_for elb'] = '使用最后一个IP（对于AWS ELB）'; 
+$_gmsg['o_use_last_ip_for elb'] = '使用最新的IP（对于AWS ELB）'; 
 $_gmsg['o_yesdetachmode'] = '是（独立模式）'; 
 
 
