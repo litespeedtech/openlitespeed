@@ -1,15 +1,15 @@
 <?php
 
 /**
- *  * WebAdmin Language File
- *  * 中文(zh-CN)
- *  *
- *  * Please Note: These language files will be overwritten during software updates.
- *  *
- *  * @author     LiteSpeed Technoglogies
- *  * @copyright  Copyright (c) LiteSpeed 2014-2020
- *  * @link       https://www.litespeedtech.com/
- *  */
+ * WebAdmin Language File
+* 中文(zh-CN)
+*
+* Please Note: These language files will be overwritten during software updates.
+*
+* @author     LiteSpeed Technoglogies
+* @copyright  Copyright (c) LiteSpeed 2014-2020
+* @link       https://www.litespeedtech.com/
+*/
 
 global $_gmsg;
 
@@ -686,15 +686,15 @@ $_gmsg['service_willrefresh'] = '该页面将在几秒钟后刷新...';
 
 $_gmsg['buildphp_addonmodules'] = '附加模块'; 
 $_gmsg['buildphp_binarylocnote'] = '如果编译执行成功，PHP二进制将在%%server_root%%fcgi-bin/下以
-			%%binname%%为名创建，并且符号链接lsphp%%phpver%%会被创建或更新为最新编译的PHP二进制。
-					如果%%binname%%已经存在，他将被重命名为%%binname%%.bak。'; 
+		%%binname%%为名创建，并且符号链接lsphp%%phpver%%会被创建或更新为最新编译的PHP二进制。
+		如果%%binname%%已经存在，他将被重命名为%%binname%%.bak。'; 
 $_gmsg['buildphp_compilerflags'] = '编译器标志'; 
 $_gmsg['buildphp_confparam'] = '配置参数'; 
 $_gmsg['buildphp_confsaved'] = '配置保存成功。你可以在下一次编译时使用。'; 
 $_gmsg['buildphp_detaillog'] = '详细日志 '; 
 $_gmsg['buildphp_eaccelerator'] = '(操作码缓存) 只支持PHP 5.2 ~ 5.4'; 
 $_gmsg['buildphp_enableextnote'] = '如要开启扩展，请确认以下内容已添加至php.ini配置文件中。
-										另外，你需要检查日志详细信息来确认扩展安装的目录并且将该目录路径添加至你的php.ini配置文件中。'; 
+									另外，你需要检查日志详细信息来确认扩展安装的目录并且将该目录路径添加至你的php.ini配置文件中。'; 
 $_gmsg['buildphp_errchmod'] = 'chmod失败'; 
 $_gmsg['buildphp_errcreatescript'] = '创建脚本失败'; 
 $_gmsg['buildphp_errinprogress'] = '当前批处理正在运行。'; 
@@ -710,11 +710,11 @@ $_gmsg['buildphp_mailheader1'] = 'PHP邮件头补丁';
 $_gmsg['buildphp_mailheader2'] = '确认邮件源'; 
 $_gmsg['buildphp_mainstatus'] = '主状态'; 
 $_gmsg['buildphp_manualrunnotice'] = '<p>出于安全原因，请登入您的服务器并从shell运行预设置的脚本。你可以通过这个界面监控脚本运行。</p>
-		<p>如果编译成功，请根据需求更新php.ini。为了让更新生效，请进行一次平滑重启。</p>
-			<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href=\\\"https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php\\\" target=\\\"_blank\\\">LiteSpeed wiki</a></p>
-				<p>如果你以root身份登入，你可以直接运行命令：<br><code>%%manual_script%%</code></p>
-					<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
-						<code>sudo %%manual_script%%</code></p>'; 
+	<p>如果编译成功，请根据需求更新php.ini。为了让更新生效，请进行一次平滑重启。</p>
+	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href=\\\"https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php\\\" target=\\\"_blank\\\">LiteSpeed wiki</a></p>
+	<p>如果你以root身份登入，你可以直接运行命令：<br><code>%%manual_script%%</code></p>
+	<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
+	<code>sudo %%manual_script%%</code></p>'; 
 $_gmsg['buildphp_nobrowserrefresh'] = '请不要在PHP编译过程中使用浏览器刷新，后退及前进功能。'; 
 $_gmsg['buildphp_opcodecache'] = '操作码缓存'; 
 $_gmsg['buildphp_phpver'] = 'PHP版本'; 
@@ -731,11 +731,11 @@ $_gmsg['buildphp_useprevconf'] = '使用上一次编译的配置文件';
 
 $_gmsg['mail_failedlogin'] = 'LiteSpeed管理员控制台登陆失败'; 
 $_gmsg['mail_failedlogin_c'] = '近期发生了一次失败的LiteSpeed登陆。失败登陆信息如下
-		日期/时间: %%date%%
-			用户名: %%authUser%%
-				IP 地址: %%ip%%
-					URL: %%url%%
-					如果你并不熟悉该IP地址，请按照下列建议来保护管理员控制台：
+	日期/时间: %%date%%
+	用户名: %%authUser%%
+	IP 地址: %%ip%%
+	URL: %%url%%
+如果你并不熟悉该IP地址，请按照下列建议来保护管理员控制台：
 1. 请在管理员控制台设置中设置允许访问列表，限制特定的IP访问;
 2. 更改默认7080监听端口;
 3. 不要使用简单密码;
@@ -781,6 +781,5 @@ $_gmsg['o_off'] = '关';
 $_gmsg['o_on'] = '开'; 
 $_gmsg['o_use_last_ip_for elb'] = '使用最后一个IP（对于AWS ELB）'; 
 $_gmsg['o_yesdetachmode'] = '是（独立模式）'; 
-
 
 
