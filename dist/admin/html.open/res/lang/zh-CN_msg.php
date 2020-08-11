@@ -180,7 +180,7 @@ $_gmsg['l_cachereqcookie'] = '缓存带Cookie的请求';
 $_gmsg['l_cacherespcookie'] = '缓存带Cookie的响应'; 
 $_gmsg['l_cachestaleage'] = '缓存陈旧时间（秒）'; 
 $_gmsg['l_cachestoragesettings'] = '缓存存储设置'; 
-$_gmsg['l_certchain'] = '链式证书'; 
+$_gmsg['l_certchain'] = '证书链'; 
 $_gmsg['l_certfile'] = '证书文件'; 
 $_gmsg['l_cgidsock'] = 'CGI守护进程套接字'; 
 $_gmsg['l_cgipriority'] = 'CGI优先级'; 
@@ -779,7 +779,7 @@ $_gmsg['l_reuseport'] = '启用REUSEPORT';
 
 $_gmsg['o_off'] = '关'; 
 $_gmsg['o_on'] = '开'; 
-$_gmsg['o_use_last_ip_for elb'] = '使用最新的IP（对于AWS ELB）'; 
+$_gmsg['o_use_last_ip_for elb'] = '使用最后一个IP（对于AWS ELB）'; 
 $_gmsg['o_yesdetachmode'] = '是（独立模式）'; 
 
 
