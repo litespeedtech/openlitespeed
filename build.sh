@@ -28,7 +28,7 @@ VERSIONNUMBER=
 if [ "${OS}" = "FreeBSD" ] ; then
     APP_MGRS="pkg"
 elif [ "${OS}" = "Linux" ] ; then
-    APP_MGRS="yum apt apt-get zypper"
+    APP_MGRS="yum apt apt-get zypper apk"
 elif [ "${OS}" = "Darwin" ] ; then
     APP_MGRS="port brew"
 else
@@ -79,7 +79,12 @@ getVersionNumber()
 
 installCmake()
 {
-    ${APP_MGR_CMD} -y install git cmake
+    if [ "${APP_MGR_CMD}" = "apk" ] ; then
+        ${APP_MGR_CMD} add --update git cmake
+    else
+        ${APP_MGR_CMD} -y install git cmake
+    fi
+
     if [ $? = 0 ] ; then
         CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
         getVersionNumber $CMAKEVER
@@ -108,7 +113,12 @@ installCmake()
 
 installgo()
 {
-    ${APP_MGR_CMD} -y install golang-go
+    if [ "${APP_MGR_CMD}" = "apk" ] ; then
+        ${APP_MGR_CMD} add --update go
+    else
+        ${APP_MGR_CMD} -y install golang-go
+    fi
+
     if [ $? = 0 ] ; then
         echo go installed.
     else
@@ -292,6 +302,21 @@ prepareLinux()
 
         
         
+    elif [ -f /etc/alpine-release ] ; then
+        OSTYPE=ALPINE
+        ${APP_MGR_CMD} add make
+        ${APP_MGR_CMD} add gcc g++
+        ${APP_MGR_CMD} add patch
+        installCmake
+        ${APP_MGR_CMD} add git libtool linux-headers bsd-compat-headers curl
+        ${APP_MGR_CMD} add automake autoconf
+        ${APP_MGR_CMD} add build-base expat-dev zlib-dev
+        installgo
+        sed -i -e "s/u_int32_t/uint32_t/g" $(grep -rl u_int32_t src/)
+        sed -i -e "s/u_int64_t/uint64_t/g" $(grep -rl u_int64_t src/)
+        sed -i -e "s/u_int8_t/uint8_t/g" $(grep -rl u_int8_t src/)
+        sed -i -e "s@<sys/sysctl.h>@<linux/sysctl.h>@g" $(grep -rl "<sys/sysctl.h>" src/)
+        sed -i -e "s/PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_MUTEX_NORMAL/g" src/lsr/ls_lock.c
     else 
         echo May not support your platform, but we can do a try to install some tools.
         ${APP_MGR_CMD} -y update
@@ -407,6 +432,10 @@ updateSrcCMakelistfile()
         sed -i -e "s/-Wl,--whole-archive//g"  src/CMakeLists.txt
         sed -i -e "s/-Wl,--no-whole-archive//g"  src/CMakeLists.txt
     fi
+
+    if [ "${OSTYPE}" = "ALPINE" ] ; then
+        sed -i -e "s/c_nonshared//g"  src/CMakeLists.txt
+    fi
     
 }
 
@@ -429,7 +458,9 @@ updateModuleCMakelistfile()
     fi
     
     if [ "${ISLINUX}" = "yes" ] ; then
-        echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
+        if [ ! "${OSTYPE}" = "ALPINE" ] ; then
+            echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
+        fi
     
     fi
     
@@ -572,10 +603,11 @@ cd ../../../
 #Done of modsecurity
 
 fixshmdir
-
+set -e
 cmake .
 make
 cp src/openlitespeed  dist/bin/
+set +x
 
 cpModuleSoFiles
 

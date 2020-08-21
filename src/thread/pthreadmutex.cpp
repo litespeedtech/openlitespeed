@@ -16,7 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "pthreadmutex.h"
-#if (defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)) && !defined( NDEBUG )
+#if (defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)) && !defined( NDEBUG ) && defined(PTHREAD_MUTEX_ERRORCHECK_NP)
 
 #ifndef PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
 # define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP \
