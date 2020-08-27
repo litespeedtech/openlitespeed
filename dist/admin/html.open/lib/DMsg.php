@@ -74,7 +74,7 @@ class DMsg
 
     public static function SetLang($lang)
     {
-        if (array_key_exists($lang, self::$_supported)) {
+        if (PHP_SAPI !== 'cli' && array_key_exists($lang, self::$_supported)) {
             $_SESSION[DMsg::_COOKIE_LANG_] = $lang;
             self::$_curlang = '';
             self::$_curtips = '';

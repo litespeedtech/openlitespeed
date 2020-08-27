@@ -1503,7 +1503,8 @@ lsxpack_header_t *UpkdHdrBuilder::prepareDecode(lsxpack_header_t *hdr,
 
     if ((size_t)headers->m_buf->available() < mini_buf_size + 2)
     {
-        if (headers->m_buf->size() + mini_buf_size >= MAX_BUF_SIZE)
+        size_t increase_to = (mini_buf_size + 2 + 255) & (~255);
+        if (increase_to >= MAX_BUF_SIZE)
         {
             if (hdr && hdr == working)
             {
@@ -1512,7 +1513,6 @@ lsxpack_header_t *UpkdHdrBuilder::prepareDecode(lsxpack_header_t *hdr,
             }
             return NULL;
         }
-        size_t increase_to = (mini_buf_size + 2 + 255) & (~255);
         if (headers->m_buf->guarantee(increase_to) == -1)
             return NULL;
         assert((size_t)headers->m_buf->available() >= mini_buf_size + 2);

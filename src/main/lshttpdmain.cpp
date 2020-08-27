@@ -83,7 +83,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Thu Jul  9 13:51:56 UTC 2020)"
+#define BUILDTIME  " (built: Wed Aug 26 21:07:31 UTC 2020)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -1641,7 +1641,7 @@ int LshttpdMain::guardCrash()
         ret = ::poll(pfds, 3, 1000);
         if (ret > 0)
         {
-            LS_NOTICE("guardCrash poll return %d.", ret);
+            //LS_NOTICE("guardCrash poll return %d.", ret);
             if (pfds[0].revents && m_fdCmd != -1)
                 processChildCmd();
             else if (pfds[1].revents && m_fdAdmin != -1)

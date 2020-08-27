@@ -21,6 +21,7 @@
 #include <http/httpstatuscode.h>
 #include <util/datetime.h>
 #include <util/pool.h>
+#include <log4cxx/logger.h>
 
 #if !defined( __FreeBSD__ ) && \
     !defined(macintosh) && !defined(__APPLE__) && !defined(__APPLE_CC__)
@@ -32,7 +33,7 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <string.h>
-
+#include <bcrypt.h>
 
 
 UserDir::~UserDir()
@@ -406,6 +407,55 @@ static int verifyApMD5(const char *pStored, const char *pPasswd)
 }
 
 
+/*
+ * This is a best effort implementation. Nothing prevents a compiler from
+ * optimizing this function and making it vulnerable to timing attacks, but
+ * this method is commonly used in crypto libraries like NaCl.
+ *
+ * Return value is zero if both strings are equal and nonzero otherwise.
+*/
+static int timing_safe_strcmp(const char *str1, const char *str2)
+{
+        const unsigned char *u1;
+        const unsigned char *u2;
+        int ret;
+        int i;
+
+        int len1 = strlen(str1);
+        int len2 = strlen(str2);
+
+        /* In our context both strings should always have the same length
+         * because they will be hashed passwords. */
+        if (len1 != len2)
+                return 1;
+
+        /* Force unsigned for bitwise operations. */
+        u1 = (const unsigned char *)str1;
+        u2 = (const unsigned char *)str2;
+
+        ret = 0;
+        for (i = 0; i < len1; ++i)
+                ret |= (u1[i] ^ u2[i]);
+
+        return ret;
+}
+
+extern "C" char *_crypt_blowfish_rn(const char *key, const char *setting,
+        char *output, int size);
+
+static int verifyBcrypt(const char *hash, const char *passwd)
+{
+    char outhash[BCRYPT_HASHSIZE];
+
+    char *aux;
+    aux = _crypt_blowfish_rn(passwd, hash, outhash, BCRYPT_HASHSIZE);
+    if (aux == NULL)
+        return -1;
+
+    return timing_safe_strcmp(hash, outhash);
+}
+
+
 int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
                           int len,
                           const char *pPasswd, int encryptMethod,
@@ -421,6 +471,9 @@ int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
     const char *pStored = pUser->getPasswd();
 //    if (( encryptMethod == m_encryptMethod )||
 //        ( m_encryptMethod == AuthUser::ENCRYPT_UNKNOWN ))
+
+    //LS_DBG("[UserDir::authenticate] EncMethod %d, pStored %s, passwd %s.",
+    //       pUser->getEncMethod(), pStored, pPasswd);
     if (pStored)
     {
         switch (pUser->getEncMethod())
@@ -433,6 +486,7 @@ int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
         case ENCRYPT_CRYPT:
             if (strcmp(pStored, crypt(pPasswd, pStored)) == 0)
                 return 0;
+            LS_ERROR("[UserDir::authenticate] Failed in ENCRYPT_CRYPT type.");
             break;
         case ENCRYPT_MD5:
             if (verifyMD5(pStored, pPasswd, 0) == 0)
@@ -454,6 +508,11 @@ int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
             if (verifySHA(pStored, pPasswd, 1) == 0)
                 return 0;
             break;
+        case ENCRYPT_BCRYPT:
+            if (verifyBcrypt(pStored, pPasswd) == 0)
+                return 0;
+            break;
+
         }
     }
     return SC_401;

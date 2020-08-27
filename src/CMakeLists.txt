@@ -148,13 +148,13 @@ add_executable(ls_shmhashstat
 SET( litespeedlib
     cache modgzip lsiapi main http spdy ssi
     registry cgi fcgi jk extensions lsapi proxy
-    socket sslpp lsshm thread log4cxx adns
+    socket sslpp lsshm thread log4cxx adns 
     quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
     libz.a libpcre.a libexpat.a libxml2.a
     ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns
     -nodefaultlibs pthread rt stdc++
-    ${CMAKE_DL_LIBS} crypt m gcc_eh c c_nonshared gcc 
+    ${CMAKE_DL_LIBS} crypt bcrypt m gcc_eh c c_nonshared gcc 
 )
 
 target_link_libraries(openlitespeed ${litespeedlib} )

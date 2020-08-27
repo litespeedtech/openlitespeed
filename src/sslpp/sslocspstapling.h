@@ -21,6 +21,7 @@
 #define SSLOCSPSTAPLING_H
 #include <socket/gsockaddr.h>
 #include <util/autostr.h>
+#include <time.h>
 
 class SslContext;
 class HttpFetch;
@@ -50,7 +51,7 @@ public:
     int certVerify(OCSP_RESPONSE *pResponse, OCSP_BASICRESP *pBasicResp,
                    X509_STORE *pXstore);
     void releaseRespData();
-    void updateRespData(OCSP_RESPONSE *pResponse);
+    int updateRespData(OCSP_RESPONSE *pResponse);
     int getRequestData(unsigned char **pReqData);
     void setCertFile(const char *Certfile);
 
@@ -67,18 +68,19 @@ private:
 
     unsigned char  *m_pReqData;
     uint32_t        m_iDataLen;
+    int             m_iocspRespMaxAge;
     unsigned char  *m_pRespData;
     GSockAddr       m_addrResponder;
 
-    AutoStr2        m_sCertfile;
-    AutoStr2        m_sCAfile;
+    AutoStr         m_sCertfile;
+    AutoStr         m_sCAfile;
     AutoStr2        m_sOcspResponder;
-    AutoStr2        m_sRespfile;
-    AutoStr2        m_sRespfileTmp;
-    int             m_iocspRespMaxAge;
+    AutoStr         m_sRespfile;
+    AutoStr         m_sRespfileTmp;
     ASN1_TIME      *m_notBefore;
     SslContext     *m_pCtx;
-    uint32_t        m_RespTime;
+    time_t          m_RespTime;
+    time_t          m_statTime;
     OCSP_CERTID    *m_pCertId;
 
 

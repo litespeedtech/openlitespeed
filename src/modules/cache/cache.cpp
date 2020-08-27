@@ -1725,7 +1725,7 @@ static int createEntry(lsi_param_t *rec)
     {
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]createEntry quit, code 2.\n", ModuleNameStr);
+                   "[%s]createEntry quit sue to internal error.\n", ModuleNameStr);
         return 0;
     }
 
@@ -1767,7 +1767,7 @@ static int createEntry(lsi_param_t *rec)
     {
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]createEntry abort, code 1.\n", ModuleNameStr);
+                   "[%s]createEntry abort due to cache is set to OFF.\n", ModuleNameStr);
         return 0;
     }
 

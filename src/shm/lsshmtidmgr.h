@@ -49,7 +49,7 @@ typedef struct
     LsShmOffset_t   x_iLockOff;
 } LsShmTidInfo;
 
-typedef struct
+struct LsShmTidTblBlk
 {
     uint64_t        x_tidBase;
     int16_t         x_iIterCnt;
@@ -57,7 +57,7 @@ typedef struct
     LsShmOffset_t   x_iNext;
     LsShmOffset_t   x_iPrev;
     uint64_t        x_iTidVals[TIDTBLBLK_MAXSZ];
-} LsShmTidTblBlk;
+} ;
 
 class LsShmTidMgr
 {
@@ -89,7 +89,7 @@ public:
     void clearCb();
     uint64_t getTidCb(LsShmHElem *pElem);
 
-    uint64_t       *nxtTidTblVal(uint64_t *pTid, void **ppBlk);
+    uint64_t       *nxtTidTblVal(uint64_t *pTid, LsShmTidTblBlk **ppBlk);
 
     bool isTidValIterOff(uint64_t tidVal) const
     {   return ((tidVal & TIDDEL_MAGIC_NUMBER) != 0);   }
@@ -99,6 +99,23 @@ public:
 
     LsShmOffset_t   tidVal2iterOff(uint64_t tidVal)
     {   return (tidVal & ~TIDDEL_MAGIC_NUMBER);   }
+
+    int getTidVal(uint64_t tid, LsShmTidTblBlk **ppBlk, uint64_t *val)
+    {
+        LsShmTidTblBlk *pBlk;
+        if (*ppBlk && tid >= (*ppBlk)->x_tidBase
+            && tid < ((*ppBlk)->x_tidBase + TIDTBLBLK_MAXSZ))
+            pBlk = *ppBlk;
+        else
+        {
+            *ppBlk = pBlk = tid2tblBlk(tid);
+            if (pBlk == NULL)
+                return -1;
+        }
+        *val = pBlk->x_iTidVals[tid % TIDTBLBLK_MAXSZ];
+        return 0;
+    }
+
 
     LsShmHIterOff   tid2iterOff(uint64_t tid, LsShmTidTblBlk **ppBlk)
     {

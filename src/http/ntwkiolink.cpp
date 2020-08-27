@@ -440,6 +440,8 @@ int NtwkIOLink::handleEvents(short evt)
     case HIOS_SHUTDOWN:
         closeSocket();
         break;
+    default:
+        break;
     }
     return 0;
 }

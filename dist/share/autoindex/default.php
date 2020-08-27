@@ -184,12 +184,12 @@ function readDirList( $path, &$excludes, &$map )
 
 function printOneEntry( $base, $name, $fileStat, $setting )
 {
-    $encoded = str_replace(array('%2F', '%26amp%3B'), array('/', '%26'), 
+    $encoded = str_replace(array('%2F', '%26amp%3B'), array('/', '%26'),
                            rawurlencode( $base . $fileStat->name ));
     if ( isset($_SERVER['LS_FI_OFF'])&& $_SERVER['LS_FI_OFF'] )
     {
         $buf = '<li>' . '<a href="' . $encoded .
-                 $fileStat->isdir.'">' . sprintf( $setting->nameFormat, htmlspecialchars($name)."</a></li>\n");
+                 $fileStat->isdir.'">' . sprintf( $setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE)."</a></li>\n");
     }
     else
     {
@@ -199,7 +199,7 @@ function printOneEntry( $base, $name, $fileStat, $setting )
         {
             $name = substr( $name, 0, $setting->nameWidth - 3 ). '...';
         }
-        $buf .= sprintf( $setting->nameFormat, htmlspecialchars($name)."</a>");
+        $buf .= sprintf( $setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE)."</a>");
         if ( $fileStat->mtime != -1 )
             $buf .= date($setting->Time_Format, $fileStat->mtime);
         else
@@ -222,7 +222,7 @@ function printIncludes( $path, $name )
     {
         $filename = $path . $n;
 
-        if ( file_exists($filename) )
+        if ( file_exists($filename) && !is_link($filename))
         {
             $content = file_get_contents($filename);
             if ( $n == $name )
@@ -307,9 +307,8 @@ function cmpDD( $a, $b )
 }
 
 
+ini_set('open_basedir', $_SERVER['DOCUMENT_ROOT']);
 
-
-//phpinfo();
 $pos = strpos( $_SERVER['REQUEST_URI'], '?' );
 if ( $pos === FALSE )
 {
@@ -374,10 +373,11 @@ else
 }
 
 
-echo "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">
+echo "<!DOCTYPE html>
 <html>
   <head>
-  <meta http-equiv=\"Content-type\" content=\"text/html; charset=UTF-8\"/>
+  <meta http-equiv=\"Content-type\" content=\"text/html; charset=UTF-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
   <title>Index of ", $uri, "</title></head>
   <body>
     <h1>Index of ", $uri, "</h1>";

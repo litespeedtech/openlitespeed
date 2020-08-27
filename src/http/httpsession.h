@@ -728,6 +728,7 @@ public:
     void setSendFileBeginEnd(off_t start, off_t end);
     void prepareHeaders();
     int sendRespHeaders();
+    int addExpiresHeader();
     void addLocationHeader();
 
     void setAccessLogOff()      {   setFlag(HSF_ACCESS_LOG_OFF);    }

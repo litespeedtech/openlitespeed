@@ -55,6 +55,13 @@ void HttpLog::parse_error(const char *pCurLine, const char *pError)
 }
 
 
+void HttpLog::parse_warn(const char *pCurLine, const char *pError)
+{
+    LS_WARN(s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
+             s_pLogId, pError, pCurLine);
+}
+
+
 void HttpLog::setCurLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 {
     s_pCurLogger = pLogger;

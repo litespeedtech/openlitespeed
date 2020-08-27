@@ -140,6 +140,7 @@ stop()
 delay_stop()
 {
     killwatch
+    kill -USR2 $PID
     kill -HUP $PID
     ret=$?
     if  [ $ret -eq 0 ]; then
@@ -147,7 +148,6 @@ delay_stop()
 #        sleep 1
 #    fi
         echo "[OK] $DESC: graceful stop."
-        sleep 3
     else
         echo "[ERROR] can not kill $DESC"
     fi

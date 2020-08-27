@@ -20,6 +20,7 @@
 #include <http/httpcontext.h>
 #include <util/pool.h>
 #include <util/radixtree.h>
+#include <log4cxx/logger.h>
 
 #include <errno.h>
 #include <string.h>
@@ -82,7 +83,13 @@ int ContextTree::add(HttpContext *pContext)
 const HttpContext *ContextTree::bestMatch(const char *pURI,
         int iUriLen) const
 {
-    return (HttpContext *)m_pURITree->bestMatch(pURI, iUriLen);
+    const HttpContext *pContext = (HttpContext *)m_pURITree->bestMatch(pURI, iUriLen);
+    if (!pContext)
+    {
+        LS_DBG("ContextTree::bestMatch %.*s return NULL (m_iFlags_NoContext %d)",
+                 iUriLen, pURI, m_pURITree->getNoContext());
+    }
+    return pContext;
 }
 
 

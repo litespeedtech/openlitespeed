@@ -493,8 +493,10 @@ int HttpServerImpl::authAdminReq(char *pAuth)
     *pEnd = 0;
     int ret = pRealm->authenticate(NULL, pUserName, nameLen, pPasswd,
                                    ENCRYPT_PLAIN, NULL);
-    if (ret != 0)
+    if (ret != 0) {
+        LS_DBG("[ADMIN] UserName %.*s, Password %s", nameLen, pUserName, pPasswd);
         LS_ERROR("[ADMIN] authentication failed!");
+    }
     *pEnd = '\n';
     return ret;
 }
@@ -944,10 +946,12 @@ void HttpServerImpl::onTimerSecond()
 {
     HttpRespHeaders::updateDateHeader();
     HttpLog::onTimer();
-    ClientCache::getClientCache()->onTimer();
     m_vhosts.onTimer();
     if (m_lStartTime > 0)
+    {
+        ClientCache::getClientCache()->onTimer();
         generateRTReport();
+    }
 
     ServerInfo::getServerInfo()->setAdnsOp(1);
     Adns::getInstance().trimCache();
@@ -971,6 +975,12 @@ void HttpServerImpl::onTimer10Secs()
 
 void HttpServerImpl::onTimer30Secs()
 {
+    /***
+     * When server is quiting, do nothing
+     */
+    if (m_lStartTime <= 0)
+        return ;
+
     ClientCache::getClientCache()->onTimer30Secs();
     StaticFileCache::getInstance().onTimer();
     m_vhosts.onTimer30Secs();
@@ -1270,11 +1280,16 @@ void HttpServerImpl::offsetChroot()
 void HttpServerImpl::releaseAll()
 {
     ExtAppRegistry::stopAll();
+#define  TO_AVOID_EXIT_CRASH
+#ifndef  TO_AVOID_EXIT_CRASH
     StaticFileCache::getInstance().releaseAll();
+#endif
     m_listeners.clear();
     m_oldListeners.clear();
     m_toBeReleasedListeners.clear();
+#ifndef  TO_AVOID_EXIT_CRASH
     m_vhosts.release_objects();
+#endif
     m_toBeReleasedVHosts.release_objects();
     ::signal(SIGCHLD, SIG_DFL);
     ExtAppRegistry::shutdown();

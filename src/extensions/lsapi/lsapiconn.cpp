@@ -700,12 +700,15 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                 swapIntEndian(&m_respInfo.m_cntHeaders);
                 swapIntEndian(&m_respInfo.m_status);
             }
-            if (m_respInfo.m_status)
+            if (m_respInfo.m_status && m_respInfo.m_status != 200)
             {
                 int code;
                 code = HttpStatusCode::getInstance().codeToIndex(m_respInfo.m_status);
                 if (code != -1)
+                {
                     getConnector()->getHttpSession()->getReq()->updateNoRespBodyByStatus(code);
+                    LS_DBG_M(this, "set status: %d", m_respInfo.m_status);
+                }
             }
         }
         else
@@ -742,23 +745,54 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                 int len = *p;
                 if (len > 0)
                 {
-                    if (m_pRespHeaderProcess + len <= pEnd)
+                    int partialHeaderLen = getConnector()->getPartialHeaderLen();
+                    if (partialHeaderLen > 0)
                     {
-                        char *pHeaderEnd = m_pRespHeaderProcess + len - 1;
-                        *pHeaderEnd = 0;
-                        if (HttpCgiTool::processHeaderLine(
-                                getConnector(),
-                                m_pRespHeaderProcess, pHeaderEnd) == -1)
-                            return LS_FAIL;
-                        m_pRespHeaderProcess += len;
+                        if (m_pRespHeaderProcess + len - partialHeaderLen <= pEnd)
+                        {
+                            char *pHeaderEnd = m_pRespHeaderProcess + len - partialHeaderLen - 1;
+                            *pHeaderEnd++ = 0;
+                            getConnector()->appendPartialHeader(
+                                m_pRespHeaderProcess, pHeaderEnd - m_pRespHeaderProcess);
+                            m_pRespHeaderProcess = pHeaderEnd;
+                            if (getConnector()->processCompleteRespHeader() == -1)
+                                return -1;
+                        }
+                        else
+                        {
+                            getConnector()->appendPartialHeader(
+                                m_pRespHeaderProcess, pEnd - m_pRespHeaderProcess);
+                            m_pRespHeaderProcess = pEnd;
+                            return 0;
+                        }
                     }
                     else
-                        return 0;
+                    {
+                        if (m_pRespHeaderProcess + len <= pEnd)
+                        {
+                            char *pHeaderEnd = m_pRespHeaderProcess + len - 1;
+                            *pHeaderEnd = 0;
+                            if (HttpCgiTool::processHeaderLine(
+                                    getConnector(),
+                                    m_pRespHeaderProcess, pHeaderEnd) == -1)
+                                return -1;
+                            m_pRespHeaderProcess += len;
+                        }
+                        else
+                        {
+                            getConnector()->appendPartialHeader(
+                                m_pRespHeaderProcess, pEnd - m_pRespHeaderProcess);
+                            m_pRespHeaderProcess = pEnd;
+                            return 0;
+                        }
+                    }
                 }
                 ++m_iCurRespHeader;
             }
             status |= HttpReq::HEADER_OK;
-            getConnector()->respHeaderDone();
+            int ret = getConnector()->respHeaderDone();
+            if (ret != 0 && ret != LSI_SUSPEND)
+                return -1;
         }
         ++m_respState;
     }
@@ -778,8 +812,16 @@ int LsapiConn::processRespHeader()
     {
         while (m_iPacketLeft > 0)
         {
-            len = ExtConn::read(m_pRespHeader, m_pRespHeaderBufEnd - m_pRespHeader);
-            LS_DBG_M(this, "Process response header %d bytes", len);
+            int headerLeft = m_pRespHeaderBufEnd - m_pRespHeader;
+            /***
+             * 7/16/2020 David added the following 2 lines to avodi try to read(buf, 0).
+             */
+            if (headerLeft <= 0)
+                break;
+
+            len = ExtConn::read(m_pRespHeader, headerLeft);
+            LS_DBG_M(this, "Process response header (packetLeft %d) headerLeft %d, return %d",
+                     m_iPacketLeft, headerLeft, len);
             if (len > 0)
             {
                 m_iPacketLeft -= len;

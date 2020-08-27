@@ -490,6 +490,7 @@ void HttpSession::resumeSSI()
 
 void HttpSession::nextRequest()
 {
+    LS_DBG_M(getLogSession(), "calling removeSessionCb on this %p\n", this);
     EvtcbQue::getInstance().removeSessionCb(this);
 
     LS_DBG_L(getLogSession(), "HttpSession::nextRequest()!");
@@ -499,9 +500,6 @@ void HttpSession::nextRequest()
             return;
         incReqProcessed();
     }
-
-    LS_DBG_M(getLogSession(), "calling removeSessionCb on this %p\n", this);
-    EvtcbQue::getInstance().removeSessionCb(this);
 
     getStream()->flush();
     setState(HSS_WAITING);
@@ -547,7 +545,7 @@ void HttpSession::nextRequest()
 
         m_lReqTime = DateTime::s_curTime;
         m_iReqTimeUs = DateTime::s_curTimeUs;
-        m_sendFileInfo.release();
+
         m_response.reset();
         m_request.reset(1);
         releaseMtSessData();
@@ -4559,6 +4557,27 @@ void HttpSession::processServerPush()
                                              LSI_HEADEROP_MERGE);
         }
     }
+}
+
+
+int HttpSession::addExpiresHeader()
+{
+    int ret;
+    const ExpiresCtrl *pExpireDefault = getReq()->shouldAddExpires();
+    if (pExpireDefault && pExpireDefault->isEnabled())
+    {
+        const MimeSetting *pMime = getReq()->getMimeType();
+        if (pMime->getExpires()->getBase())
+            pExpireDefault = pMime->getExpires();
+        if (pExpireDefault->getBase())
+        {
+            ret = getResp()->addExpiresHeader(m_sendFileInfo.getFileData()
+                                            ->getLastMod(), pExpireDefault);
+            if (ret)
+                return ret;
+        }
+    }
+    return LS_OK;
 }
 
 

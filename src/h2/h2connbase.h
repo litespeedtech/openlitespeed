@@ -33,22 +33,34 @@
 
 #include "lshpack.h"
 
+enum h2flag
+{
+    H2_CONN_FLAG_GOAWAY         = (1<<0),
+    H2_CONN_FLAG_PREFACE        = (1<<1),
+    H2_CONN_FLAG_SETTING_RCVD   = (1<<2),
+    H2_CONN_FLAG_SETTING_SENT   = (1<<3),
+    H2_CONN_FLAG_CONFIRMED      = (1<<4),
+    H2_CONN_FLAG_FLOW_CTRL      = (1<<5),
+    H2_CONN_HEADERS_START       = (1<<6),
+    H2_CONN_FLAG_WAIT_PROCESS   = (1<<7),
+    H2_CONN_FLAG_NO_PUSH        = (1<<8),
+    H2_CONN_FLAG_WANT_FLUSH     = (1<<9),
+    H2_CONN_FLAG_IN_EVENT       = (1<<10),
+    H2_CONN_FLAG_PAUSE_READ     = (1<<11),
+    H2_CONN_FLAG_DIRECT_BUF     = (1<<12),
+    H2_CONN_FLAG_AUTO_RECYCLE   = (1<<13),
+    H2_CONN_FLAG_PENDING_STREAM = (1<<14),
+};
 
-#define H2_CONN_FLAG_GOAWAY         (1<<0)
-#define H2_CONN_FLAG_PREFACE        (1<<1)
-#define H2_CONN_FLAG_SETTING_RCVD   (1<<2)
-#define H2_CONN_FLAG_SETTING_SENT   (1<<3)
-#define H2_CONN_FLAG_CONFIRMED      (1<<4)
-#define H2_CONN_FLAG_FLOW_CTRL      (1<<5)
-#define H2_CONN_HEADERS_START       (1<<6)
-#define H2_CONN_FLAG_WAIT_PROCESS   (1<<7)
-#define H2_CONN_FLAG_NO_PUSH        (1<<8)
-#define H2_CONN_FLAG_WANT_FLUSH     (1<<9)
-#define H2_CONN_FLAG_IN_EVENT       (1<<10)
-#define H2_CONN_FLAG_PAUSE_READ     (1<<11)
-#define H2_CONN_FLAG_DIRECT_BUF     (1<<12)
-#define H2_CONN_FLAG_AUTO_RECYCLE   (1<<13)
-#define H2_CONN_FLAG_PENDING_STREAM (1<<14)
+inline enum h2flag operator|(enum h2flag a, enum h2flag b)
+{
+    return static_cast<enum h2flag>((uint)a | (uint)b);
+}
+inline enum h2flag operator~(enum h2flag a)
+{
+    return static_cast<enum h2flag>(~(uint)a);
+}
+
 
 #define H2_STREAM_PRIORITYS         (8)
 
@@ -112,13 +124,13 @@ public:
 
     void needWriteEvent()
     {
-        if ((m_h2_flag & H2_CONN_FLAG_IN_EVENT) == 0)
+        if ((m_h2flag & H2_CONN_FLAG_IN_EVENT) == 0)
         {
             if (isEmpty())
                 continueWrite();
         }
         else
-            m_h2_flag |= H2_CONN_FLAG_WAIT_PROCESS;
+            set_h2flag(H2_CONN_FLAG_WAIT_PROCESS);
     }
 
     virtual int onWriteEx2() = 0;
@@ -126,18 +138,25 @@ public:
     virtual int decodeHeaders(uint32_t id, unsigned char *src, int length,
                               unsigned char iHeaderFlag) = 0;
 
+    void set_h2flag(h2flag flag)
+    {
+        m_h2flag = m_h2flag | flag;   }
+    void clr_h2flag(h2flag flag)
+    {
+        m_h2flag = (enum h2flag)(m_h2flag & (~flag));    }
+
     void wantFlush()
     {
-        if ((m_h2_flag & H2_CONN_FLAG_IN_EVENT))
-            m_h2_flag |= H2_CONN_FLAG_WANT_FLUSH;
+        if ((m_h2flag & H2_CONN_FLAG_IN_EVENT))
+            set_h2flag(H2_CONN_FLAG_WANT_FLUSH);
         else
             continueWrite();
     }
 
     void wantFlush2()
     {
-        if ((m_h2_flag & H2_CONN_FLAG_IN_EVENT))
-            m_h2_flag |= H2_CONN_FLAG_WANT_FLUSH;
+        if ((m_h2flag & H2_CONN_FLAG_IN_EVENT))
+            set_h2flag(H2_CONN_FLAG_WANT_FLUSH);
         else if (getBuf()->empty())
             continueWrite();
     }
@@ -175,9 +194,9 @@ public:
     {   return m_iPeerMaxFrameSize;         }
 
 
-    int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag, 
+    int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
                            H2FrameType type, const char *pBuf, int size);
-    
+
     int sendWindowUpdateFrame(uint32_t id, int32_t delta)
     {   return sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta, true);   }
 
@@ -216,7 +235,7 @@ public:
     int getWeightedPriority(H2StreamBase* s);
 
     bool isDirectBuffer() const
-    {   return m_h2_flag & H2_CONN_FLAG_DIRECT_BUF;   }
+    {   return m_h2flag & H2_CONN_FLAG_DIRECT_BUF;   }
 
     virtual ssize_t directBuffer(const char *data, size_t size)
     {   return -1;  }
@@ -326,10 +345,10 @@ protected:
     int32_t         m_tmIdleBegin;
 
     uint32_t        m_pendingStreamId;
+    enum h2flag     m_h2flag;
     uint16_t        m_pendingOutSize;
     uint16_t        m_pendingUsed;
     short           m_iControlFrames;
-    short           m_h2_flag;
     char            m_inputState;
     uint8_t         m_padLen;
     H2FrameHeader   m_curH2Header;

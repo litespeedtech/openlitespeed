@@ -53,7 +53,8 @@ int SpdyStream::init(uint32_t StreamID,
     clearLogId();
 
     setState(HIOS_CONNECTED);
-    setFlag((flags & (SPDY_CTRL_FLAG_FIN | SPDY_CTRL_FLAG_UNIDIRECTIONAL)), 1);
+    setFlag((enum stream_flag)(flags & (HIO_FLAG_PEER_SHUTDOWN
+                                        | HIO_FLAG_LOCAL_SHUTDOWN)), 1);
 
     m_bufIn.clear();
     m_uiStreamID  = StreamID;
@@ -91,8 +92,9 @@ int SpdyStream::appendReqData(char *pData, int len, uint8_t flags)
         m_iWindowIn -= len;
     //Note: SPDY_CTRL_FLAG_FIN is directly mapped to HIO_FLAG_PEER_SHUTDOWN
     //      SPDY_CTRL_FLAG_UNIDIRECTIONAL is directly mapped to HIO_FLAG_LOCAL_SHUTDOWN
-    if (flags & (SPDY_CTRL_FLAG_FIN | SPDY_CTRL_FLAG_UNIDIRECTIONAL))
-        setFlag(flags & (SPDY_CTRL_FLAG_FIN | SPDY_CTRL_FLAG_UNIDIRECTIONAL), 1);
+    if ((enum stream_flag)flags & (HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_LOCAL_SHUTDOWN))
+        setFlag((enum stream_flag)(flags & (HIO_FLAG_PEER_SHUTDOWN
+                                            | HIO_FLAG_LOCAL_SHUTDOWN)), 1);
 
     if (isWantRead())
         getHandler()->onReadEx();

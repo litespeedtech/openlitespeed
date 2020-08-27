@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.1';
+    const PANEL_API_VERSION = '1.13.2';
 
     /**
      * @since 1.9
@@ -123,9 +123,23 @@ abstract class ControlPanel
     protected static $instance;
 
     /**
+     *
      * @throws LSCMException  Thrown indirectly.
      */
     protected function __construct()
+    {
+        $this->init2();
+    }
+
+    /**
+     * Temporary function name until existing deprecated public static init()
+     * function is removed.
+     *
+     * @since 1.13.2
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
+    protected function init2()
     {
         /**
          * output_handler value cleared to avoid compressed output through
@@ -915,6 +929,7 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.13.2',
             '1.13.1',
             '1.13.0.3',
             '1.13.0.2',

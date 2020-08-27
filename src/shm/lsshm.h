@@ -192,6 +192,7 @@ public:
     LsShmOffset_t xdataOffset() const   {   return (LsShmOffset_t)s_iShmHdrSize;    }
 
     LsShmLock *getLocks()               {   return &m_locks;    }
+    ls_shmlock_t *getMainLock()         {   return m_pShmLock;  }
 
     LsShmOffset_t allocLock()           {   return m_locks.allocLock();     }
     int freeLock(ls_shmlock_t *pLock)   {   return m_locks.freeLock(pLock); }

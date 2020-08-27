@@ -79,7 +79,7 @@ HioHandler *H2Connection::get()
 int H2Connection::onInitConnected()
 {
     if (getStream()->isWriteBuffer())
-        m_h2_flag |= H2_CONN_FLAG_DIRECT_BUF;
+        set_h2flag(H2_CONN_FLAG_DIRECT_BUF);
     setOS(getStream());
     getStream()->continueRead();
     return 0;
@@ -94,16 +94,16 @@ H2Connection::~H2Connection()
 int H2Connection::onReadEx()
 {
     int ret;
-    m_h2_flag &= ~(H2_CONN_FLAG_WAIT_PROCESS | H2_CONN_FLAG_PENDING_STREAM);
-    m_h2_flag |= H2_CONN_FLAG_IN_EVENT;
+    clr_h2flag(H2_CONN_FLAG_WAIT_PROCESS | H2_CONN_FLAG_PENDING_STREAM);
+    set_h2flag(H2_CONN_FLAG_IN_EVENT);
     ret = onReadEx2();
-    if (isPauseWrite() && (m_h2_flag & H2_CONN_FLAG_PENDING_STREAM))
+    if (isPauseWrite() && (m_h2flag & H2_CONN_FLAG_PENDING_STREAM))
         processPendingStreams();
-    if ((m_h2_flag & H2_CONN_FLAG_WAIT_PROCESS) != 0)
+    if ((m_h2flag & H2_CONN_FLAG_WAIT_PROCESS) != 0)
         onWriteEx2();
-    m_h2_flag &= ~H2_CONN_FLAG_IN_EVENT;
+    clr_h2flag(H2_CONN_FLAG_IN_EVENT);
     //if (getBuf()->size() > 0)
-    if (m_h2_flag & H2_CONN_FLAG_WANT_FLUSH)
+    if (m_h2flag & H2_CONN_FLAG_WANT_FLUSH)
         flush();
     return ret;
 }
@@ -141,7 +141,7 @@ int H2Connection::decodeHeaders(uint32_t id, unsigned char *pSrc, int length,
 
     pStream->setFlag(HIO_FLAG_INIT_SESS, 1);
     add2PriorityQue(pStream);
-    m_h2_flag |= H2_CONN_FLAG_PENDING_STREAM;
+    set_h2flag(H2_CONN_FLAG_PENDING_STREAM);
     //pStream->onInitConnected(NULL, 0);
     //if (pStream->getState() != HIOS_CONNECTED)
     //    recycleStream(pStream->getStreamID());
@@ -205,12 +205,12 @@ H2StreamBase *H2Connection::getNewStream(uint8_t ubH2_Flags)
     m_mapStream.insert(pStream);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
-    uint32_t flag = (ubH2_Flags & H2_CTRL_FLAG_FIN) | HIO_FLAG_FLOWCTRL
-                    | HIO_FLAG_SENDFILE | HIO_FLAG_WRITE_BUFFER;
-    if (!(m_h2_flag & H2_CONN_FLAG_NO_PUSH))
-        flag |= HIO_FLAG_PUSH_CAPABLE;
+    enum stream_flag flag = (enum stream_flag)(ubH2_Flags & H2_CTRL_FLAG_FIN)
+            | HIO_FLAG_FLOWCTRL | HIO_FLAG_SENDFILE | HIO_FLAG_WRITE_BUFFER;
+    if (!(m_h2flag & H2_CONN_FLAG_NO_PUSH))
+        flag = flag | HIO_FLAG_PUSH_CAPABLE;
     if (getStream()->getFlag(HIO_FLAG_ALTSVC_SENT))
-        flag |= HIO_FLAG_ALTSVC_SENT;
+        flag = flag | HIO_FLAG_ALTSVC_SENT;
     pStream->setFlag(flag, 1);
     pStream->init(this, &m_priority);
     pStream->setConnInfo(getStream()->getConnInfo());
@@ -235,11 +235,11 @@ int H2Connection::h2cUpgrade(HioHandler *pSession, const char * pBuf, int size)
 
         pStream->set_key(1); //Through upgrade h2c, it is 1.
         m_mapStream.insert(pStream);
-        uint32_t flag = HIO_FLAG_FLOWCTRL | HIO_FLAG_WRITE_BUFFER;
-        if (!(m_h2_flag & H2_CONN_FLAG_NO_PUSH))
-            flag |= HIO_FLAG_PUSH_CAPABLE;
+        enum stream_flag flag = HIO_FLAG_FLOWCTRL | HIO_FLAG_WRITE_BUFFER;
+        if (!(m_h2flag & H2_CONN_FLAG_NO_PUSH))
+            flag = flag | HIO_FLAG_PUSH_CAPABLE;
         if (getStream()->getFlag(HIO_FLAG_ALTSVC_SENT))
-            flag |= HIO_FLAG_ALTSVC_SENT;
+            flag = flag | HIO_FLAG_ALTSVC_SENT;
         pStream->setFlag(flag, 1);
         pStream->init(this, NULL);
         onInitConnected();
@@ -283,7 +283,7 @@ int H2Connection::flush()
         getStream()->setFlag(HIO_FLAG_PAUSE_WRITE, 1);
     }
     else
-        m_h2_flag &= ~H2_CONN_FLAG_WANT_FLUSH;
+        clr_h2flag(H2_CONN_FLAG_WANT_FLUSH);
     return getStream()->flush();
 }
 
@@ -304,7 +304,7 @@ int H2Connection::onCloseEx()
 int H2Connection::onTimerEx()
 {
     int result = 0;
-    if (m_h2_flag & H2_CONN_FLAG_GOAWAY)
+    if (m_h2flag & H2_CONN_FLAG_GOAWAY)
     {
         result = releaseAllStream();
         getStream()->handlerReadyToRelease();
@@ -330,7 +330,7 @@ int H2Connection::doGoAway(H2ErrorCode status)
     sendGoAwayFrame(status);
     getStream()->handlerReadyToRelease();
     getStream()->tobeClosed();
-    if ((m_h2_flag & H2_CONN_FLAG_IN_EVENT) == 0)
+    if ((m_h2flag & H2_CONN_FLAG_IN_EVENT) == 0)
         getStream()->continueWrite();
     return 0;
 }
@@ -387,7 +387,7 @@ H2StreamBase* H2Connection::createPushStream(uint32_t pushStreamId,
     m_mapStream.insert(pStream);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
-    uint32_t flag = HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_FLOWCTRL
+    enum stream_flag flag = HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_FLOWCTRL
                     | HIO_FLAG_INIT_SESS | HIO_FLAG_IS_PUSH
                     | HIO_FLAG_WRITE_BUFFER
                     | HIO_FLAG_WANT_WRITE | HIO_FLAG_ALTSVC_SENT;
@@ -458,7 +458,7 @@ int H2Connection::onWriteEx2()
                 return 1;
         }
         else
-            m_h2_flag |= H2_CONN_FLAG_WANT_FLUSH;
+            set_h2flag(H2_CONN_FLAG_WANT_FLUSH);
     }
     if (getStream()->isPauseWrite())
     {
@@ -476,16 +476,16 @@ int H2Connection::onWriteEx2()
 
 int H2Connection::onWriteEx()
 {
-    m_h2_flag |= H2_CONN_FLAG_IN_EVENT;
+    set_h2flag(H2_CONN_FLAG_IN_EVENT);
     int wantWrite = onWriteEx2();
-    m_h2_flag &= ~H2_CONN_FLAG_IN_EVENT;
+    clr_h2flag(H2_CONN_FLAG_IN_EVENT);
 
     if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
     {
         getStream()->suspendWrite();
-        if (m_h2_flag & H2_CONN_FLAG_PAUSE_READ)
+        if (m_h2flag & H2_CONN_FLAG_PAUSE_READ)
         {
-            m_h2_flag &= ~H2_CONN_FLAG_PAUSE_READ;
+            clr_h2flag(H2_CONN_FLAG_PAUSE_READ);
             getStream()->continueRead();
         }
     }

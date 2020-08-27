@@ -44,17 +44,7 @@ class UnpackedHeaders;
 #define HIOS_SHUTDOWN       SS_SHUTDOWN
 #define HIOS_RESET          SS_RESET
 
-enum HiosProtocol
-{
-    HIOS_PROTO_HTTP  = 0,
-    HIOS_PROTO_SPDY2 = 1,
-    HIOS_PROTO_SPDY3 = 2,
-    HIOS_PROTO_SPDY31 = 3,
-    HIOS_PROTO_HTTP2 = 4,
-    HIOS_PROTO_QUIC = 5,
-    HIOS_PROTO_HTTP3 = 6,
-    HIOS_PROTO_MAX
-};
+#define HiosProtocol        stream_protocol
 
 #define HIO_FLAG_PEER_SHUTDOWN      SS_FLAG_PEER_SHUTDOWN
 #define HIO_FLAG_LOCAL_SHUTDOWN     SS_FLAG_LOCAL_SHUTDOWN
@@ -67,18 +57,18 @@ enum HiosProtocol
 #define HIO_EVENT_PROCESSING        SS_EVENT_PROCESSING
 #define HIO_FLAG_DELAY_FLUSH        SS_FLAG_DELAY_FLUSH
 #define HIO_FLAG_WRITE_BUFFER       SS_FLAG_WRITE_BUFFER
-#define HIO_FLAG_BLACK_HOLE         (1<<11)
-#define HIO_FLAG_FROM_LOCAL         (1<<12)
-#define HIO_FLAG_PUSH_CAPABLE       (1<<13)
-#define HIO_FLAG_INIT_SESS          (1<<14)
-#define HIO_FLAG_IS_PUSH            (1<<15)
-#define HIO_FLAG_PASS_THROUGH       (1<<16)
-#define HIO_FLAG_SENDFILE           (1<<17)
-#define HIO_FLAG_FLOWCTRL           (1<<18)
-#define HIO_FLAG_PRI_SET            (1<<19)
-#define HIO_FLAG_ALTSVC_SENT        (1<<20)
-#define HIO_FLAG_PASS_SETCOOKIE     (1<<21)
-#define HIO_FLAG_RESP_HEADER_SENT   (1<<22)
+#define HIO_FLAG_BLACK_HOLE         SS_FLAG_BLACK_HOLE
+#define HIO_FLAG_FROM_LOCAL         SS_FLAG_FROM_LOCAL
+#define HIO_FLAG_PUSH_CAPABLE       SS_FLAG_PUSH_CAPABLE
+#define HIO_FLAG_INIT_SESS          SS_FLAG_INIT_SESS
+#define HIO_FLAG_IS_PUSH            SS_FLAG_IS_PUSH
+#define HIO_FLAG_PASS_THROUGH       SS_FLAG_PASS_THROUGH
+#define HIO_FLAG_SENDFILE           SS_FLAG_SENDFILE
+#define HIO_FLAG_FLOWCTRL           SS_FLAG_FLOWCTRL
+#define HIO_FLAG_PRI_SET            SS_FLAG_PRI_SET
+#define HIO_FLAG_ALTSVC_SENT        SS_FLAG_ALTSVC_SENT
+#define HIO_FLAG_PASS_SETCOOKIE     SS_FLAG_PASS_SETCOOKIE
+#define HIO_FLAG_RESP_HEADER_SENT   SS_FLAG_RESP_HEADER_SENT
 
 
 #define HIO_EOR                     1
@@ -231,7 +221,7 @@ public:
     }
 
     const ls_str_t *getProtocolName() const
-    {   return getProtocolName((HiosProtocol)getProtocol());   }
+    {   return getProtocolName(getProtocol());   }
 
     static const ls_str_t *getProtocolName(HiosProtocol proto);
 

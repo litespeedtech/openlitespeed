@@ -53,7 +53,7 @@ class LsapiConn: public ExtConn
     char                       *m_pRespHeaderProcess;
     struct lsapi_packet_header  m_respHeader;
     struct lsapi_resp_info      m_respInfo;
-    char                        m_respBuf[4096];
+    char                        m_respBuf[8192];
 
 
     int     processPacketHeader(char *pBuf, int len);

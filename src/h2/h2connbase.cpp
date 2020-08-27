@@ -109,7 +109,7 @@ int H2ConnBase::verifyClientPreface()
                  " got [%.24s], close.", sPreface);
         return LS_FAIL;
     }
-    m_h2_flag |= H2_CONN_FLAG_PREFACE;
+    set_h2flag(H2_CONN_FLAG_PREFACE);
     return 0;
 }
 
@@ -139,7 +139,7 @@ int H2ConnBase::parseFrame()
             //if (m_curH2Header.getType() != H2_FRAME_DATA)
             //    m_inputState = ST_CONTROL_FRAME;
         }
-        if (!(m_h2_flag & H2_CONN_FLAG_SETTING_RCVD))
+        if (!(m_h2flag & H2_CONN_FLAG_SETTING_RCVD))
         {
             if (m_curH2Header.getType() != H2_FRAME_SETTINGS)
             {
@@ -150,7 +150,7 @@ int H2ConnBase::parseFrame()
             }
         }
 
-        if ((m_h2_flag & H2_CONN_HEADERS_START) == H2_CONN_HEADERS_START
+        if ((m_h2flag & H2_CONN_HEADERS_START) == H2_CONN_HEADERS_START
             && m_curH2Header.getType() != H2_FRAME_CONTINUATION)
             return LS_FAIL;
 
@@ -216,7 +216,7 @@ void H2ConnBase::updateWindow()
 int H2ConnBase::processInput()
 {
     int ret;
-    if (!(m_h2_flag & H2_CONN_FLAG_PREFACE))
+    if (!(m_h2flag & H2_CONN_FLAG_PREFACE))
     {
         if (m_bufInput.size() < H2_CLIENT_PREFACE_LEN)
             return 0;
@@ -294,7 +294,7 @@ int H2ConnBase::onReadEx2()
         {
             if (getBuf()->size() >= MAX_OUT_BUF_SIZE)
             {
-                m_h2_flag |= H2_CONN_FLAG_PAUSE_READ;
+                set_h2flag(H2_CONN_FLAG_PAUSE_READ);
                 suspendRead();
             }
             if (m_bufInput.empty() && m_bufInput.capacity() > 4096)
@@ -448,9 +448,9 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
                      iEntries);
             return LS_FAIL;
         }
-        if (m_h2_flag & H2_CONN_FLAG_SETTING_SENT)
+        if (m_h2flag & H2_CONN_FLAG_SETTING_SENT)
         {
-            m_h2_flag |= H2_CONN_FLAG_CONFIRMED;
+            set_h2flag(H2_CONN_FLAG_CONFIRMED);
             return 0;
         }
         else
@@ -513,7 +513,7 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
         case H2_SETTINGS_MAX_CONCURRENT_STREAMS:
             m_iMaxPushStreams = iEntryValue ;
             if (m_iMaxPushStreams == 0)
-                m_h2_flag |= H2_CONN_FLAG_NO_PUSH;
+                set_h2flag(H2_CONN_FLAG_NO_PUSH);
             break;
         case H2_SETTINGS_MAX_HEADER_LIST_SIZE:
             break;
@@ -523,7 +523,7 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
             if (!iEntryValue)
             {
                 m_iMaxPushStreams = 0;
-                m_h2_flag |= H2_CONN_FLAG_NO_PUSH;
+                set_h2flag(H2_CONN_FLAG_NO_PUSH);
             }
             break;
         default:
@@ -531,7 +531,7 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
         }
     }
     m_iCurrentFrameRemain = 0;
-    m_h2_flag |= H2_CONN_FLAG_SETTING_RCVD;
+    set_h2flag(H2_CONN_FLAG_SETTING_RCVD);
 
     if (++m_iControlFrames > MAX_CONTROL_FRAMES_RATE)
     {
@@ -557,7 +557,7 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
 
 int H2ConnBase::sendSettingsFrame(bool disable_push)
 {
-    if (m_h2_flag & H2_CONN_FLAG_SETTING_SENT)
+    if (m_h2flag & H2_CONN_FLAG_SETTING_SENT)
         return 0;
 
     static char s_settings[][6] =
@@ -578,7 +578,7 @@ int H2ConnBase::sendSettingsFrame(bool disable_push)
     LS_DBG_H(getLogSession(), "send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
              " INITIAL_WINDOW_SIZE: %d",
              m_iServerMaxStreams, m_iStreamInInitWindowSize);
-    m_h2_flag |= H2_CONN_FLAG_SETTING_SENT;
+    set_h2flag(H2_CONN_FLAG_SETTING_SENT);
 
     H2FrameHeader wu_header(4, H2_FRAME_WINDOW_UPDATE, 0, 0);
     memcpy(&buf[settings_payload_size + 9], &wu_header, 9);
@@ -977,18 +977,18 @@ int H2ConnBase::processDataFramePadding(H2FrameHeader *pHeader)
 
 int H2ConnBase::processContinuationFrame(H2FrameHeader *pHeader)
 {
-    if (m_h2_flag & H2_CONN_FLAG_GOAWAY)
+    if (m_h2flag & H2_CONN_FLAG_GOAWAY)
         return 0;
     uint32_t id = pHeader->getStreamId();
     if ((id != m_uiLastStreamId)
-        || (m_h2_flag & H2_CONN_HEADERS_START) == 0)
+        || (m_h2flag & H2_CONN_HEADERS_START) == 0)
     {
         LS_DBG_L(getLogSession(), "received unexpected CONTINUATION frame, expect id: %d, "
-                 " connection flag: %d", m_uiLastStreamId, m_h2_flag);
+                 " connection flag: %d", m_uiLastStreamId, m_h2flag);
         return LS_FAIL;
     }
     if (pHeader->getFlags() & H2_FLAG_END_HEADERS)
-        m_h2_flag &= ~H2_CONN_HEADERS_START;
+        clr_h2flag(H2_CONN_HEADERS_START);
 
     return processHeaderIn(id, pHeader->getFlags());
 }
@@ -1092,7 +1092,7 @@ int H2ConnBase::processPriority(uint32_t id)
 int H2ConnBase::processHeadersFrame(H2FrameHeader *pHeader)
 {
     uint32_t id = pHeader->getStreamId();
-    if (m_h2_flag & H2_CONN_FLAG_GOAWAY)
+    if (m_h2flag & H2_CONN_FLAG_GOAWAY)
         return 0;
 
     if (verifyStreamId(id) == LS_FAIL)
@@ -1123,7 +1123,7 @@ int H2ConnBase::processHeadersFrame(H2FrameHeader *pHeader)
         memset(&m_priority, 0, sizeof(m_priority));
 
     if ((iHeaderFlag & H2_FLAG_END_HEADERS) == 0)
-        m_h2_flag |= H2_CONN_HEADERS_START;
+        set_h2flag(H2_CONN_HEADERS_START);
 
     m_bufInflate.clear();
     return processHeaderIn(id, iHeaderFlag);
@@ -1325,13 +1325,13 @@ H2StreamBase *H2ConnBase::findStream(uint32_t uiStreamID)
 
 int H2ConnBase::processGoAwayFrame(H2FrameHeader *pHeader)
 {
-    if (!(m_h2_flag & H2_CONN_FLAG_GOAWAY))
+    if (!(m_h2flag & H2_CONN_FLAG_GOAWAY))
     {
         doGoAway((pHeader->getStreamId() != 0)?
                  H2_ERROR_PROTOCOL_ERROR:
                  H2_ERROR_NO_ERROR);
     }
-    m_h2_flag |= (short)H2_CONN_FLAG_GOAWAY;
+    set_h2flag(H2_CONN_FLAG_GOAWAY);
 
     onCloseEx();
     return LS_OK;
@@ -1494,8 +1494,8 @@ void H2ConnBase::add2PriorityQue(H2StreamBase *stream)
              stream->getPriority());
 
     m_priQue[stream->getPriority()].append(stream);
-    m_h2_flag |= H2_CONN_FLAG_WAIT_PROCESS;
-    if ((m_h2_flag & H2_CONN_FLAG_IN_EVENT) == 0 && m_iCurDataOutWindow > 0)
+    set_h2flag(H2_CONN_FLAG_WAIT_PROCESS);
+    if ((m_h2flag & H2_CONN_FLAG_IN_EVENT) == 0 && m_iCurDataOutWindow > 0)
         continueWrite();
 }
 
@@ -1706,7 +1706,7 @@ int H2ConnBase::processPendingStreams()
     }
 
     //if (getBuf()->size() > 0)
-    if (m_h2_flag & H2_CONN_FLAG_WANT_FLUSH)
+    if (m_h2flag & H2_CONN_FLAG_WANT_FLUSH)
         flush();
     return wantWrite;
 }
@@ -1768,7 +1768,7 @@ int H2ConnBase::processQueue()
     }
 
     //if (getBuf()->size() > 0)
-    if (m_h2_flag & H2_CONN_FLAG_WANT_FLUSH)
+    if (m_h2flag & H2_CONN_FLAG_WANT_FLUSH)
         flush();
     return wantWrite;
 }

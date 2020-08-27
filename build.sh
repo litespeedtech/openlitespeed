@@ -19,7 +19,7 @@
 
 ###    Author: dxu@litespeedtech.com (David Shue)
 
-VERSION=1.0.0
+VERSION=1.0.1
 moduledir="modreqparser modinspector uploadprogress "
 OS=`uname`
 ISLINUX=no
@@ -28,7 +28,7 @@ VERSIONNUMBER=
 if [ "${OS}" = "FreeBSD" ] ; then
     APP_MGRS="pkg"
 elif [ "${OS}" = "Linux" ] ; then
-    APP_MGRS="yum apt apt-get zypper"
+    APP_MGRS="yum apt apt-get zypper apk"
 elif [ "${OS}" = "Darwin" ] ; then
     APP_MGRS="port brew"
 else
@@ -79,7 +79,12 @@ getVersionNumber()
 
 installCmake()
 {
-    ${APP_MGR_CMD} -y install git cmake
+    if [ "${APP_MGR_CMD}" = "apk" ] ; then
+        ${APP_MGR_CMD} add --update git cmake
+    else
+        ${APP_MGR_CMD} -y install git cmake
+    fi
+    
     if [ $? = 0 ] ; then
         CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
         getVersionNumber $CMAKEVER
@@ -108,7 +113,12 @@ installCmake()
 
 installgo()
 {
-    ${APP_MGR_CMD} -y install golang-go
+    if [ "${APP_MGR_CMD}" = "apk" ] ; then
+        ${APP_MGR_CMD} add --update go
+    else
+        ${APP_MGR_CMD} -y install golang-go
+    fi
+    
     if [ $? = 0 ] ; then
         echo go installed.
     else
@@ -283,14 +293,28 @@ prepareLinux()
         apt-get -y install libexpat-dev
         
         installCmake
-        apt-get -y install git libtool 
+        apt-get -y install git libtool ca-certificates
         apt-get -y install autotools-dev
         apt-get -y install autoreconf
         apt-get -y install autoheader 
         apt-get -y install automake 
         installgo
 
-        
+    elif [ -f /etc/alpine-release ] ; then
+        OSTYPE=ALPINE
+        ${APP_MGR_CMD} add make
+        ${APP_MGR_CMD} add gcc g++
+        ${APP_MGR_CMD} add patch
+        installCmake
+        ${APP_MGR_CMD} add git libtool linux-headers bsd-compat-headers curl
+        ${APP_MGR_CMD} add automake autoconf
+        ${APP_MGR_CMD} add build-base expat-dev zlib-dev
+        installgo
+        sed -i -e "s/u_int32_t/uint32_t/g" $(grep -rl u_int32_t src/)
+        sed -i -e "s/u_int64_t/uint64_t/g" $(grep -rl u_int64_t src/)
+        sed -i -e "s/u_int8_t/uint8_t/g" $(grep -rl u_int8_t src/)
+        sed -i -e "s@<sys/sysctl.h>@<linux/sysctl.h>@g" $(grep -rl "<sys/sysctl.h>" src/)
+        sed -i -e "s/PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_MUTEX_NORMAL/g" src/lsr/ls_lock.c    
         
     else 
         echo May not support your platform, but we can do a try to install some tools.
@@ -299,7 +323,7 @@ prepareLinux()
         ${APP_MGR_CMD} -y install clang 
         ${APP_MGR_CMD} -y install patch 
         installCmake
-        ${APP_MGR_CMD} -y install git libtool 
+        ${APP_MGR_CMD} -y install git libtool ca-certificates
         ${APP_MGR_CMD} -y install autotools-dev
         ${APP_MGR_CMD} -y install autoreconf
         ${APP_MGR_CMD} -y install autoheader 
@@ -408,6 +432,9 @@ updateSrcCMakelistfile()
         sed -i -e "s/-Wl,--no-whole-archive//g"  src/CMakeLists.txt
     fi
     
+    if [ "${OSTYPE}" = "ALPINE" ] ; then
+        sed -i -e "s/c_nonshared//g"  src/CMakeLists.txt
+    fi
 }
 
 updateModuleCMakelistfile()
@@ -428,9 +455,11 @@ updateModuleCMakelistfile()
         echo "add_subdirectory(modsecurity-ls)" >> src/modules/CMakeLists.txt
     fi
     
+    #For linux but not alpine, add pagespeed module
     if [ "${ISLINUX}" = "yes" ] ; then
-        echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
-    
+        if [ ! "${OSTYPE}" = "ALPINE" ] ; then
+            echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
+        fi
     fi
     
     
@@ -539,8 +568,8 @@ mkdir thirdparty/lib64
 cd thirdparty/script/
 
 
- 
-sed -i -e "s/unittest-cpp/ /g" ./build_ols.sh
+#Remove  unittest-cpp and add bcrypt
+sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
 
 if [ "${ISLINUX}" != "yes" ] ; then
     sed -i -e "s/psol/ /g"  ./build_ols.sh

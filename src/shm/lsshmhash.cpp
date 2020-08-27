@@ -698,8 +698,8 @@ int LsShmHash::rehash()
     LsShmSize_t newSize;
     LsShmOffset_t newIdxOff;
     LsShmOffset_t newBitOff;
-    LsShmHIterOff *pIdxOld;
-    LsShmHIterOff *pIdxNew;
+    LsShmHIterOff *pOldTbl;
+    LsShmHIterOff *pNewTbl;
     LsShmHIterOff *opIdx;
     LsShmHIterOff *npIdx;
     iterator iter;
@@ -717,25 +717,24 @@ int LsShmHash::rehash()
               );
 #endif
     LsShmHTable *pTable = getHTable();
-    pIdxOld = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
+    pOldTbl = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     if (pTable->x_iHIdx != pTable->x_iHIdxNew)          // rehash in progress
     {
         newSize = pTable->x_iCapacityNew;
         newIdxOff = pTable->x_iHIdxNew;
-        pIdxNew = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff);
+        pNewTbl = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff);
         if ((iterOff.m_iOffset = pTable->x_iWorkIterOff) != 0)    // iter in progress
         {
             iter = offset2iterator(iterOff);
-            npIdx = pIdxNew + getIndex(iter->x_hkey, newSize);
+            npIdx = pNewTbl + getIndex(iter->x_hkey, newSize);
             if (npIdx->m_iOffset != iterOff.m_iOffset)            // not there yet
             {
-                opIdx = pIdxOld + getIndex(iter->x_hkey, oldSize);
+                opIdx = pOldTbl + getIndex(iter->x_hkey, oldSize);
                 if (opIdx->m_iOffset == iterOff.m_iOffset)
                     opIdx->m_iOffset = iter->x_iNext.m_iOffset;   // remove from old
                 iter->x_iNext.m_iOffset = npIdx->m_iOffset;
                 npIdx->m_iOffset = iterOff.m_iOffset;
             }
-
         }
     }
     else
@@ -749,29 +748,34 @@ int LsShmHash::rehash()
         uint8_t *ptr = (uint8_t *)offset2ptr(newBitOff);
         ::memset(ptr, 0, szTable + szBitMap);
         newIdxOff = newBitOff + szBitMap;
-        pIdxNew = (LsShmHIterOff *)(ptr + szBitMap);
+        pNewTbl = (LsShmHIterOff *)(ptr + szBitMap);
         pTable = getHTable();
         pTable->x_iBitMap = newBitOff;
         pTable->x_iBitMapSz = szBitMap;
         pTable->x_iCapacityNew = newSize;
         pTable->x_iHIdxNew = newIdxOff;
-        iterOff = begin();
     }
 
-    pIdxOld = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
+    iterOff = begin();
+    pOldTbl = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     while(iterOff.m_iOffset != 0)
     {
-        uint32_t hashIndx;
+        uint32_t new_idx;
         iter = offset2iterator(iterOff);
+        opIdx = pOldTbl + getIndex(iter->x_hkey, oldSize);
         iterNextOff = next(iterOff);
-        hashIndx = getIndex(iter->x_hkey, newSize);
-        npIdx = pIdxNew + hashIndx;
-        setBitMapEnt(hashIndx);
+        new_idx = getIndex(iter->x_hkey, newSize);
+        npIdx = pNewTbl + new_idx;
+        setBitMapEnt(new_idx);
+
         pTable->x_iWorkIterOff = iterOff.m_iOffset;
-        (pIdxOld + getIndex(iter->x_hkey, oldSize))->m_iOffset = iter->x_iNext.m_iOffset;
+        assert(opIdx->m_iOffset == iterOff.m_iOffset);
+        opIdx->m_iOffset = iter->x_iNext.m_iOffset;
+        assert(npIdx->m_iOffset != iterOff.m_iOffset);
         iter->x_iNext.m_iOffset = npIdx->m_iOffset;
         npIdx->m_iOffset = iterOff.m_iOffset;
         iterOff = iterNextOff;
+
         if (++count > oldSize + oldSize / 2)
         {
             fprintf(stderr, "LsShmHash::rehash() is in a infinity loop, likely due to SHM corruption. remove corrupted file.");
@@ -931,6 +935,7 @@ void LsShmHash::remove(iteroffset iterOff, iterator iter)
     LsShmHElem *pElem;
     LsShmOffset_t next = iter->x_iNext.m_iOffset;     // in case of remap in tid list
 
+    validateIndexSlot(hashIndx);
 
     //NOTE:race condition, two process release the object at the same time.
     //     ShmHash was not properly locked.
@@ -956,6 +961,8 @@ void LsShmHash::remove(iteroffset iterOff, iterator iter)
     {
         m_pTidMgr->eraseIterCb(iter);
         pIdx = getHidx(hashIndx);
+
+        validateIndexSlot(hashIndx);
     }
     if (offset == iterOff.m_iOffset)
     {
@@ -975,12 +982,15 @@ void LsShmHash::remove(iteroffset iterOff, iterator iter)
             // next offset...
             offset = pElem->x_iNext.m_iOffset;
         }
+        validateIndexSlot(hashIndx);
+
     }
 
     decrTableSize();
     if (m_iFlags & LSSHM_FLAG_LRU)
     {
         removeFromLru(iter);
+        validateIndexSlot(hashIndx);
         if (getLru()->n_current != getHTable()->x_iSize)
         {
             LsHashLruInfo info = *getLru();
@@ -1120,9 +1130,12 @@ void LsShmHash::insertAlloced(iteroffset iterOff, iterator iter)
 {
     uint32_t hashIndx = getIndex(iter->x_hkey, capacity());
     LsShmHIterOff *pIdx = getHidx(hashIndx);
+
+    validateIndexSlot(hashIndx);
     iter->x_iNext.m_iOffset = pIdx->m_iOffset;
     pIdx->m_iOffset = iterOff.m_iOffset;
     setBitMapEnt(hashIndx);
+    validateIndexSlot(hashIndx);
 
 #ifdef DEBUG_RUN
     SHM_NOTICE("LsShmHash::insert %6d %X size %d cap %d <%p> %d",
@@ -1138,6 +1151,7 @@ void LsShmHash::insertAlloced(iteroffset iterOff, iterator iter)
     if (m_iFlags & LSSHM_FLAG_LRU)
     {
         addToLru(iter, iterOff);
+        validateIndexSlot(hashIndx);
         if (getLru()->n_current != getHTable()->x_iSize)
         {
             LsHashLruInfo info = *getLru();
@@ -1163,6 +1177,8 @@ void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
     LsShmSize_t size = oldIter->x_iLen;
     uint32_t hashIndx = getIndex(oldIter->x_hkey, capacity());
     LsShmHIterOff *pIdx = getHidx(hashIndx);
+    validateIndexSlot(hashIndx);
+
     LsShmOffset_t offset = pIdx->m_iOffset;
     LsShmHElem *pElem;
     LsShmOffset_t next = oldIter->x_iNext.m_iOffset;     // in case of remap in tid list
@@ -1192,6 +1208,7 @@ void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
     {
         m_pTidMgr->eraseIterCb(oldIter);
         pIdx = getHidx(hashIndx);
+        validateIndexSlot(hashIndx);
     }
 
     if (offset == oldIterOff.m_iOffset)
@@ -1199,6 +1216,7 @@ void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
         pIdx->m_iOffset = newIterOff.m_iOffset;
         newIter->x_iNext.m_iOffset = next;
         oldIter->x_iNext.m_iOffset = 0;
+        validateIndexSlot(hashIndx);
     }
     else
     {
@@ -1210,6 +1228,7 @@ void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
                 pElem->x_iNext.m_iOffset = newIterOff.m_iOffset;
                 newIter->x_iNext.m_iOffset = next;
                 oldIter->x_iNext.m_iOffset = 0;
+                validateIndexSlot(hashIndx);
                 break;
             }
             // next offset...
@@ -1221,6 +1240,8 @@ void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
     {
         removeFromLru(oldIter);
         addToLru(newIter, newIterOff);
+        validateIndexSlot(hashIndx);
+
         if (getLru()->n_current != getHTable()->x_iSize)
         {
             LsHashLruInfo info = *getLru();
@@ -1260,26 +1281,31 @@ LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
     pOld = (LsShmHElem *)m_pPool->offset2ptr(iterOff.m_iOffset);
         // pNew->x_iNext.m_iOffset = 0;
     pNew->x_hkey = pOld->x_hkey;
-
     setIterKey(pNew, pOld->getKey());
+    uint32_t hashIndx = getIndex(pNew->x_hkey, capacity());
+
     if (front)
         front = size_to_grow;
     ::memcpy(pNew->getVal() + front, pOld->getVal(), pOld->getValLen());
 
     eraseIteratorHelper(iterOff);
     if (m_iFlags & LSSHM_FLAG_LRU)
+    {
         addToLru(pNew, offset);
+        validateIndexSlot(hashIndx);
+    }
     if (m_pTidMgr != NULL && isTidMaster())
     {
         m_pTidMgr->insertIterCb(offset);
         pNew = offset2iterator(offset);
+        validateIndexSlot(hashIndx);
     }
 
-    uint32_t hashIndx = getIndex(pNew->x_hkey, capacity());
     LsShmHIterOff *pIdx = getHidx(hashIndx);
     pNew->x_iNext.m_iOffset = pIdx->m_iOffset;
     pIdx->m_iOffset = offset.m_iOffset;
     setBitMapEnt(hashIndx);
+    validateIndexSlot(hashIndx);
 
     incrTableSize();
     return offset;
@@ -1938,7 +1964,7 @@ LsShmHash::iteroffset LsShmHash::tid2IterOff(uint64_t tid) const
 }
 
 
-uint64_t LsShmHash::nextTidVal(uint64_t tidIn, void *&pSearchState,
+uint64_t LsShmHash::nextTidVal(uint64_t tidIn, LsShmTidTblBlk *&pSearchState,
         LsShmHash::iteroffset &outOffset, uint64_t &outDelTid) const
 {
     outOffset.m_iOffset = 0;
@@ -1956,6 +1982,26 @@ uint64_t LsShmHash::nextTidVal(uint64_t tidIn, void *&pSearchState,
 
     }
     return tidIn;
+}
+
+
+int LsShmHash::getTidVal(uint64_t tid, LsShmTidTblBlk **pCurBlk,
+        iteroffset *outOffset, uint64_t *outDelTid) const
+{
+    outOffset->m_iOffset = 0;
+    *outDelTid = 0;
+    if (NULL == m_pTidMgr)
+        return -1;
+    assert(m_pPool->getShm()->isLocked(m_pShmLock));
+    uint64_t tid_val;
+    if (m_pTidMgr->getTidVal(tid, pCurBlk, &tid_val) != -1)
+    {
+        if (m_pTidMgr->isTidValIterOff(tid_val))
+            outOffset->m_iOffset = m_pTidMgr->tidVal2iterOff(tid_val);
+        else
+            *outDelTid = tid_val;
+    }
+    return -1;
 }
 
 
@@ -2120,6 +2166,40 @@ int LsShmHash::statIdx(iteroffset iterOff, for_each_fn2 fun, void *pUdata)
     return numInIdx;
 }
 
+#if DEBUG_SHM_HASH
+int LsShmHash::validateIndexSlot(uint32_t index)
+{
+    LsShmHIterOff offset = *getHidx(index);
+    LsShmHElem *pElem;
+    int count = 0;
+    LsShmOffset_t history[4096];
+
+    while (offset.m_iOffset != 0)
+    {
+        history[count++] = offset.m_iOffset;
+        if (count >= (int)(sizeof(history) / sizeof(LsShmOffset_t)))
+        {
+            //history overflow, should not happen.
+            abort();
+        }
+        else
+        {
+            for(int i = 0; i < count - 1; ++i)
+            {
+                //detect duplicate.
+                if (history[i] == offset.m_iOffset)
+                    abort();
+            }
+        }
+        pElem = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
+        //must fall into the same slot
+        if (pElem->x_hkey % capacity() != index)
+            abort();
+        offset.m_iOffset = pElem->x_iNext.m_iOffset;
+    }
+    return LS_OK;
+}
+#endif
 
 //
 //  @brief stat - populate the statistic of the hash table

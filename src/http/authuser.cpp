@@ -83,12 +83,13 @@ int AuthUser::addGroup(const char *pGroup)
 
 void AuthUser::updatePasswdEncMethod()
 {
-    if (strncmp(m_passwd.c_str(), "$apr1$", 6) == 0)
+    const char *pass = m_passwd.c_str();
+    if (strncmp(pass, "$apr1$", 6) == 0)
         setEncMethod(ENCRYPT_APMD5);
-    else if (strncasecmp(m_passwd.c_str(), "{sha}", 5) == 0)
+    else if (strncasecmp(pass, "{sha}", 5) == 0)
     {
         char buf[128];
-        const char *p = m_passwd.c_str() + 5;
+        const char *p = pass + 5;
         int len = ls_base64_decode(p, strlen(p), buf);
         if (len == 20)
         {
@@ -96,6 +97,10 @@ void AuthUser::updatePasswdEncMethod()
             setEncMethod(ENCRYPT_SHA);
         }
     }
+    else if (pass[0] == '$' && pass[1] == '2' && pass[3] == '$'
+             && (pass[2] == 'y' || pass[2] == 'a'))
+        setEncMethod(ENCRYPT_BCRYPT);
+
 }
 
 

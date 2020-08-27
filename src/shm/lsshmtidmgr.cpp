@@ -346,13 +346,13 @@ LsShmTidTblBlk *LsShmTidMgr::tid2tblBlk(uint64_t tid)
 }
 
 
-uint64_t *LsShmTidMgr::nxtTidTblVal(uint64_t *pTid, void **ppBlk)
+uint64_t *LsShmTidMgr::nxtTidTblVal(uint64_t *pTid, LsShmTidTblBlk **ppBlk)
 {
     uint64_t *pVal;
     int indx;
     LsShmOffset_t off;
     LsShmTidTblBlk *pBlk;
-    if ((pBlk = (LsShmTidTblBlk *)*ppBlk) == NULL)
+    if ((pBlk = *ppBlk) == NULL)
         pBlk = tid2tblBlk(*pTid);
     if (pBlk == NULL)
         return NULL;
@@ -370,7 +370,7 @@ uint64_t *LsShmTidMgr::nxtTidTblVal(uint64_t *pTid, void **ppBlk)
         pBlk = (LsShmTidTblBlk *)m_pHash->offset2ptr(off);
     }
     *pTid = pBlk->x_tidBase + indx;
-    *ppBlk = (void *)pBlk;
+    *ppBlk = pBlk;
     return pVal;
 }
 

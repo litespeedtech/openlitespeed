@@ -608,6 +608,13 @@ int RewriteRule::parseRuleSubst(const char *&pRuleStr, const char *pEnd,
         return LS_FAIL;
     }
 
+    if (strncmp(argBegin, "–", argEnd - argBegin) == 0)
+    {
+        HttpLog::parse_warn(s_pCurLine,
+                            "Detects unicode '-', repaces with ascii '-'.");
+        m_flag |= RULE_FLAG_NOREWRITE;
+        return 0;
+    }
     if (strncmp(argBegin, "-", argEnd - argBegin) == 0)
     {
         m_flag |= RULE_FLAG_NOREWRITE;

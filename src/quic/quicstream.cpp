@@ -52,12 +52,14 @@ int QuicStream::init(lsquic_stream_t *s)
     else
         setProtocol(HIOS_PROTO_QUIC);
 
-    int flag = HIO_FLAG_FLOWCTRL;
+    enum stream_flag flag = HIO_FLAG_FLOWCTRL;
     /* Turn on the push capable flag: check it when push() is called and
      * unset it if necessary.
      */
-    if (!lsquic_stream_is_pushed(m_pStream))
-        flag |= HIO_FLAG_PUSH_CAPABLE;
+    if (lsquic_stream_is_pushed(m_pStream))
+        flag = flag | HIO_FLAG_IS_PUSH;
+    else
+        flag = flag | HIO_FLAG_PUSH_CAPABLE;
     setFlag(flag, 1);
 
     setState(HIOS_CONNECTED);
@@ -83,8 +85,8 @@ int QuicStream::processHdrSet(void *hdr_set)
 {
     UnpackedHeaders *hdrs;
     assert(hdr_set);
-    if (lsquic_stream_is_pushed(m_pStream))
-        hdrs = (UnpackedHeaders *)hdr_set;
+    if ((long)hdr_set & 0x1L)
+        hdrs = (UnpackedHeaders *)((long)hdr_set & ~0x1L);
     else
     {
         UpkdHdrBuilder *builder = (UpkdHdrBuilder *)hdr_set;
@@ -280,7 +282,8 @@ int QuicStream::push(UnpackedHeaders *hdrs)
     hdrs->prepareSendXpack(getProtocol() == HIOS_PROTO_HTTP3);
     headers.headers = (lsxpack_header *)hdrs->begin();
     headers.count = hdrs->end() - hdrs->begin();
-    pushed = lsquic_conn_push_stream(pConn, hdrs, m_pStream, &headers);
+    pushed = lsquic_conn_push_stream(pConn, (void *)((long)hdrs | 0x1L),
+                                     m_pStream, &headers);
     if (pushed == 0)
         return 0;
 
@@ -423,6 +426,13 @@ int QuicStream::onWrite()
 int QuicStream::onClose()
 {
     LS_DBG_L(this, "QuicStream::onClose()");
+    if (getFlag() & HIO_FLAG_IS_PUSH)
+    {
+        UnpackedHeaders *hdrs;
+        hdrs = (UnpackedHeaders *)lsquic_stream_get_hset(m_pStream);
+        if (hdrs)
+            delete hdrs;
+    }
     if (getHandler())
         getHandler()->onCloseEx();
     m_pStream = NULL;

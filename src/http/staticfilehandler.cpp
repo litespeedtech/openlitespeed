@@ -131,7 +131,7 @@ static int processFlvStream(HttpSession *pSession, off_t start)
     {
         HttpResp *pResp = pSession->getResp();
         pSession->resetResp();
-
+        pSession->addExpiresHeader();
         pResp->parseAdd(pData->getFileData()->getHeaderBuf(),
                         pData->getFileData()->getHeaderLen());
 
@@ -352,6 +352,8 @@ int processH264Stream(HttpSession *pSession, double start)
 
     pSession->resetResp();
 
+    pSession->addExpiresHeader();
+
     off_t contentLen = 0;
     if (calcMoovContentLen(pSession, contentLen) == -1)
     {
@@ -550,14 +552,7 @@ int StaticFileHandler::process(HttpSession *pSession,
                 break;
             case SC_200:
                 {
-                    const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
-                    if (pExpireDefault)
-                    {
-                        ret = pResp->addExpiresHeader(pCache->getLastMod(),
-                                                      pExpireDefault);
-                        if (ret)
-                            return ret;
-                    }
+                    pSession->addExpiresHeader();
                     if (pReq->getRedirHdrs())
                     {
                         pResp->parseAdd(pReq->getRedirHdrs(),
@@ -661,7 +656,7 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
     StaticFileCacheData *pData = pData1->getFileData();
     off_t bodyLen;
     HttpRespHeaders &buf = pResp->getRespHeaders();
-
+    pSession->addExpiresHeader();
     if (range.count() == 1)
     {
         const char *p = pData->getHeaderBuf();

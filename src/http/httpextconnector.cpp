@@ -649,6 +649,17 @@ void HttpExtConnector::suspend()
     getHttpSession()->suspendEventNotify();
 }
 
+int HttpExtConnector::processCompleteRespHeader()
+{
+    const char *pEnd = m_respHeaderBuf.end();
+    while (pEnd[-1] == '\0')
+        --pEnd;
+    int ret = HttpCgiTool::processHeaderLine(this,
+              m_respHeaderBuf.begin(), pEnd);
+    m_respHeaderBuf.clear();
+    return ret;
+
+}
 
 void HttpExtConnector::extProcessorError(int errCode)
 {

@@ -350,7 +350,10 @@ static int processUnpackedHeader(void *hdr_set, lsxpack_header_t *hdr)
 
 static void releaseUnpackedHeaders(void *hdr_set)
 {
-    delete (UpkdHdrBuilder *)hdr_set;
+    if ((long)hdr_set & 0x1L)
+        delete (UnpackedHeaders *)((long)hdr_set & ~0x1L);
+    else
+        delete (UpkdHdrBuilder *)hdr_set;
 }
 
 
@@ -771,7 +774,7 @@ void QuicEngine::setDebugLog(int is_enable)
 void QuicEngine::maybeProcessConns()
 {
     int diff;
-    if (lsquic_engine_earliest_adv_tick(m_pEngine, &diff))
+    if (lsquic_engine_earliest_adv_tick(m_pEngine, &diff) && diff <= 0)
         lsquic_engine_process_conns(m_pEngine);
 }
 
@@ -794,3 +797,13 @@ int QuicEngine::nextEventTime()
     }
     return -1;
 }
+
+#if 0
+//test code
+void testQuicEnginePointerHack()
+{
+    UnpackedHeaders *hdrs = new UnpackedHeaders();
+    void *p = (void *)((long)hdrs | 0x1);
+    releaseUnpackedHeaders(p);
+}
+#endif

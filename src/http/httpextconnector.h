@@ -134,6 +134,12 @@ public:
     int  isAlive();
     void suspend();
 
+    int appendPartialHeader(char *pBuf, int len)
+    {   return m_respHeaderBuf.append(pBuf, len);    }
+    int getPartialHeaderLen() const
+    {   return m_respHeaderBuf.size(); }
+    int processCompleteRespHeader();
+
     char *getRespBuf(size_t &len);
 
     int reqHeaderDone();

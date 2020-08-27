@@ -26,7 +26,7 @@
 
 class StringList;
 
-enum
+enum htpss_enc_type
 {
     ENCRYPT_UNKNOWN,
     ENCRYPT_PLAIN,
@@ -35,14 +35,15 @@ enum
     ENCRYPT_APMD5,
     ENCRYPT_SHA,
     ENCRYPT_SMD5,
-    ENCRYPT_SSHA
+    ENCRYPT_SSHA,
+    ENCRYPT_BCRYPT,
 };
 
 class AuthData : public KeyData
 {
-    long        m_lTimestamp;
-    short       m_exist;
-    short       m_encMethod;
+    long            m_lTimestamp;
+    short           m_exist;
+    htpss_enc_type  m_encMethod:16;
 public:
     AuthData()
         : m_lTimestamp(0)
@@ -53,13 +54,13 @@ public:
 
 
     long getTimestamp() const           {   return m_lTimestamp;    }
-    void setTimestamp(long stamp)     {   m_lTimestamp = stamp;   }
+    void setTimestamp(long stamp)       {   m_lTimestamp = stamp;   }
 
     short isExist()  const              {   return m_exist;         }
-    void  setExist(short exist)       {   m_exist = exist;        }
+    void  setExist(short exist)         {   m_exist = exist;        }
 
     short getEncMethod() const          {   return m_encMethod;     }
-    void  setEncMethod(short m)       {   m_encMethod = m;        }
+    void setEncMethod(htpss_enc_type m) {   m_encMethod = m;        }
     LS_NO_COPY_ASSIGN(AuthData);
 };
 

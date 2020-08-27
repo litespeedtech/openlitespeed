@@ -380,7 +380,6 @@ int HttpRespHeaders::appendHeader(lsxpack_header *pKv, int hdr_idx, const char *
     pUpdKv->name_offset = m_buf.size();
     pUpdKv->name_len = len;
     pUpdKv->app_index = hdr_idx;
-    pUpdKv->val_offset = pUpdKv->name_offset + nameLen + 2;
     if (hdr_idx != H_HEADER_END)
         pUpdKv->flags = (lsxpack_flag)(pUpdKv->flags | LSXPACK_APP_IDX);
     appendLowerCase(m_buf.end(), pName, len);
@@ -394,6 +393,7 @@ int HttpRespHeaders::appendHeader(lsxpack_header *pKv, int hdr_idx, const char *
         m_buf.append_unsafe(',');  //for append and merge case
         ++ pUpdKv->val_len;
     }
+    pUpdKv->val_offset = pUpdKv->name_offset + nameLen + 2;
     m_buf.append_unsafe(pVal, valLen);
     m_buf.append_unsafe('\r');
     m_buf.append_unsafe('\n');
@@ -2004,14 +2004,20 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
                 HttpCgiTool::processStatusCode(connector, code);
         }
         else
+        {
+            headers->m_working = NULL;
             return LSXPACK_ERR_UNNEC_REQ_PSDO_HDR;
+        }
     }
     else
     {
         if (!regular_header)
         {
             if (!headers->getHttpCode())
+            {
+                headers->m_working = NULL;
                 return LSXPACK_ERR_INCOMPL_REQ_PSDO_HDR;
+            }
             regular_header = true;
         }
         if (idx == UPK_HDR_UNKNOWN)
@@ -2019,9 +2025,17 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
             idx = HttpRespHeaders::getIndex(name, hdr->name_len);
             for(const char *p = name; p < name + hdr->name_len; ++p)
                 if (isupper(*p))
+                {
+                    headers->m_working = NULL;
                     return LSXPACK_ERR_UPPERCASE_HEADER;
+                }
             if (idx == HttpRespHeaders::H_CONNECTION)
-                return LSXPACK_ERR_BAD_REQ_HEADER;
+            {
+                headers->m_working = NULL;
+                // Ignore it silently is better way to handle it.
+                return LSXPACK_OK;
+                //return LSXPACK_ERR_BAD_REQ_HEADER;
+            }
             if (idx != HttpRespHeaders::H_UNKNOWN)
             {
                 hdr->app_index = idx;
@@ -2030,7 +2044,10 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
         }
         total_size += hdr->name_len + hdr->val_len + 4;
         if (total_size >= 65535)
+        {
+            headers->m_working = NULL;
             return LSXPACK_ERR_HEADERS_TOO_LARGE;
+        }
         if (!connector || HttpCgiTool::processHeaderLine2(connector, idx,
                 name, hdr->name_len, val, hdr->val_len) == 1)
         {
