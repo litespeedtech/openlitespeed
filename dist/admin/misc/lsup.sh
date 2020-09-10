@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.81-8/12/2020
+LSUPVERSION=v2.82-9/10/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 PIDFILE=/tmp/lshttpd/lshttpd.pid
@@ -337,6 +337,9 @@ Usage: lsup.sh [-t] | [-c] | [[-d] [-r] | [-v|-e VERSION]]
   
   -d
      Choose Debug version to upgrade or downgrade, will do clean like -c at the same time.
+
+  -s
+     Choose Asan version to upgrade or downgrade, will do clean like -c at the same time.
      
   -b
      Choose under development version instead of released version. <special option, be careful>
@@ -379,6 +382,9 @@ do
     if [ "x$1" = "x-d" ] ; then
         ISDEBUG=yes
         shift
+    elif [ "x$1" = "x-s" ] ; then
+        ISASAN=yes
+        shift    
     elif [ "x$1" = "x-b" ] ; then
         ISBETA=yes
         shift
@@ -459,7 +465,10 @@ else
 fi
 
 if [ "x${ISLINUX}" = "xyes" ] ; then
-    if [ "$ISDEBUG" = "yes" ] ; then
+    
+    if [ "$ISASAN" = "yes" ] ; then
+        URLMODE=a.
+    elif [ "$ISDEBUG" = "yes" ] ; then
         URLMODE=d.
     else
         URLMODE=
