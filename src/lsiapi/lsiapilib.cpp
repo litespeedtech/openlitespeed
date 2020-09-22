@@ -1100,6 +1100,7 @@ static const char *get_req_header_by_id(const lsi_session_t *session, int idx,
                                         int *valLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    *valLen = 0;
     if (pSession == NULL)
         return NULL;
     HttpReq *pReq = pSession->getReq();

@@ -21,7 +21,20 @@ extends CustomPanelBase
          */
         $this->panelName = 'customPanel';
 
+        /** @noinspection PhpUnhandledExceptionInspection */
         parent::__construct();
+    }
+
+    /**
+     *
+     * @since 1.13.2
+     */
+    protected function init2()
+    {
+        $this->panelName = 'customPanel';
+
+        /** @noinspection PhpUnhandledExceptionInspection */
+        parent::init2();
     }
 
     /**

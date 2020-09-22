@@ -7,11 +7,11 @@
 # @copyright (c) 2017-2020
 # *********************************************/
 
-VERSION='1.11'
+VERSION='1.11.1.1'
 OS=$(uname -s)
-SCRIPT_DIR=$(cd $(dirname ${0}) && pwd)
+SCRIPT_DIR=$(cd "$(dirname "${0}")" && pwd)
 
-cd $SCRIPT_DIR
+cd "${SCRIPT_DIR}" || { echo "Unable to cd to script dir ${SCRIPT_DIR}"; exit 1; }
 
 LSWS_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
 PHP_SCRIPT="${LSWS_DIR}/add-ons/webcachemgr/bootstrap_cli.php"
@@ -27,31 +27,32 @@ END_COLOR='\e[0m'
 printHeader()
 {
     # $1 title , $2 descr
-	printf "\n${YELLOW}${1}${END_COLOR}\n${2}\n"
+	printf "\n${YELLOW}%s${END_COLOR}\n%s\n" "${1}" "${2}"
 }
 
 printLabelDesc()
 {
-	printf "\n${YELLOW}${1}${END_COLOR} ${2}\n\n"
+	printf "\n${YELLOW}%s${END_COLOR} %s\n\n" "${1}" "${2}"
 }
 
 printCmdOption()
 {
-    printf "${CYAN}${1}${END_COLOR} ${GREEN}${2}${END_COLOR}\n"
-    printf "    ${3}\n\n" | fold -sw 80
+    printf "${CYAN}%s${END_COLOR} ${GREEN}%s${END_COLOR}\n" "${1}" "${2}"
+    printf "    %s\n\n" "${3}" | fold -sw 80
 }
 
 printExample()
 {
-	printf "  ${L_GRAY}${1}:${END_COLOR}\n"
-	printf "  ./lscmctl ${2}\n\n"
+	printf "  ${L_GRAY}%s:${END_COLOR}\n" "${1}"
+	printf "  ./lscmctl %s\n\n" "${2}"
 }
 
-printHelp() 
+printHelp()
 {
 	printHeader "LiteSpeed Cache Manager CLI Tool v${VERSION}"
-	printLabelDesc 'Usage:' './lscmctl [-php path/to/php] command [flag/parameter]' 
+	printLabelDesc 'Usage:' './lscmctl [-php path/to/php] command [flag/parameter]'
 	printLabelDesc 'Possible Commands:'
+    # shellcheck disable=SC2016
     printCmdOption 'setcacheroot' '[-svr <cache root>] [-vh <cache root>]' 'List/Set server and/or virtual host cache roots. This command will list the current server and virtual host cache roots when no additional input is given. Use -svr and -vh to set those cache roots. The '"'"'$'"'"' character is not allowed when setting virtual host cache root. Virtual host cache root values starting with a '"'"'/'"'"' will automatically have '"'"'/$vh_user'"'"' appended to the end (this format was chosen to maintain compatibility with CageFS).'
     printCmdOption 'setversion' '[{--list | --latest | <version>}]' 'List/Set active LSCWP version. This command will list the currently active version when no additional input is given. Use --list to show available versions or --latest to switch to the latest available version. A valid version number can also be provided to switch to that version specifically. This must be set before performing other lscmctl operations.'
 	printCmdOption 'scan' '[-n] [-e]' 'Scan for all WordPress installations. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. Add the -n flag to only discover new installations. By adding the -e flag, LSC-WP will be enabled on all installations after scanning is complete.'
@@ -90,61 +91,70 @@ printHelp()
 
 updateMinAPIVerFile()
 {
-    local MIN_VER=$(wget -q https://www.litespeed.sh/sub/shared/MIN_VER -O -)
-    local RET=$?
+    MIN_VER=$(wget -q https://www.litespeed.sh/sub/shared/MIN_VER -O -)
+    RET=$?
 
     if [ "$RET" != "0" ] ; then
         errorExit "Failed to download latest MIN_VER file with wget exit status ${RET}."
     fi
 
-    echo $MIN_VER > "$SHARED_API_MIN_VER_FILE"
+    echo "${MIN_VER}" > "${SHARED_API_MIN_VER_FILE}"
 }
 
 apiNeedsUpdate()
 {
-    local UPDATE_MIN_VER=1
+    UPDATE_MIN_VER=1
 
-    if [ -f "$SHARED_API_VERSION_FILE" ] ; then
-        `test $(find "$SHARED_API_VERSION_FILE" -mmin -1440)`
+    if [ -f "${SHARED_API_VERSION_FILE}" ] ; then
+        test "$(find "${SHARED_API_VERSION_FILE}" -mmin -1440)"
 
-        if [ "$?" = "0" ] ; then
+        # shellcheck disable=SC2181
+        if [ "${?}" = "0" ] ; then
             UPDATE_MIN_VER=0
         fi
     fi
 
-    if [ $UPDATE_MIN_VER ] ; then
+    if [ ! -f "${SHARED_API_MIN_VER_FILE}" ] || [ $UPDATE_MIN_VER ] ; then
         updateMinAPIVerFile
     fi
 
-    local CURR_VER=$(cat "$SHARED_API_VERSION_FILE")
-    local MIN_VER=$(cat "$SHARED_API_MIN_VER_FILE")
+    CURR_VER=$(cat "${SHARED_API_VERSION_FILE}")
+    MIN_VER=$(cat "${SHARED_API_MIN_VER_FILE}")
 
-    local CURR_MAJOR=$(echo $CURR_VER | awk -F"." '{print $1}')
-    local MIN_MAJOR=$(echo $MIN_VER | awk -F"." '{print $1}')
+    CURR_MAJOR=$(echo "${CURR_VER}" | awk -F"." '{print $1}')
+    MIN_MAJOR=$(echo "${MIN_VER}" | awk -F"." '{print $1}')
 
-    if [ $CURR_MAJOR -lt $MIN_MAJOR ] ; then
+    if [ "${CURR_MAJOR}" -lt "${MIN_MAJOR}" ] ; then
         return 0
+    elif [ "${CURR_MAJOR}" -gt "${MIN_MAJOR}" ] ; then
+        return 1
     fi
 
-    local CURR_MINOR=$(echo $CURR_VER | awk -F"." '{print $2}')
-    local MIN_MINOR=$(echo $MIN_VER | awk -F"." '{print $2}')
+    CURR_MINOR=$(echo "${CURR_VER}" | awk -F"." '{print $2}')
+    MIN_MINOR=$(echo "${MIN_VER}" | awk -F"." '{print $2}')
 
-    if [ $CURR_MINOR -lt $MIN_MINOR ] ; then
+    if [ "${CURR_MINOR}" -lt "${MIN_MINOR}" ] ; then
         return 0
+    elif [ "${CURR_MINOR}" -gt "${MIN_MINOR}" ] ; then
+        return 1
     fi
 
-    local CURR_IMPROVEMENT=$(echo $CURR_VER | awk -F"." '{print match($3, /[^ ]/) ? $3 : 0}')
-    local MIN_IMPROVEMENT=$(echo $MIN_VER | awk -F"." '{print match($3, /[^ ]/) ? $3 : 0}')
+    CURR_IMPROVEMENT=$(echo "${CURR_VER}" | awk -F"." '{print match($3, /[^ ]/) ? $3 : 0}')
+    MIN_IMPROVEMENT=$(echo "${MIN_VER}" | awk -F"." '{print match($3, /[^ ]/) ? $3 : 0}')
 
-    if [ $CURR_IMPROVEMENT -lt $MIN_IMPROVEMENT ] ; then
+    if [ "${CURR_IMPROVEMENT}" -lt "${MIN_IMPROVEMENT}" ] ; then
         return 0
+    elif [ "${CURR_IMPROVEMENT}" -gt "${MIN_IMPROVEMENT}" ] ; then
+        return 1
     fi
 
-    local CURR_PATCH=$(echo $CURR_VER | awk -F"." '{print match($4, /[^ ]/) ? $4 : 0}')
-    local MIN_PATCH=$(echo $MIN_VER | awk -F"." '{print match($4, /[^ ]/) ? $4 : 0}')
+    CURR_PATCH=$(echo "${CURR_VER}" | awk -F"." '{print match($4, /[^ ]/) ? $4 : 0}')
+    MIN_PATCH=$(echo "${MIN_VER}" | awk -F"." '{print match($4, /[^ ]/) ? $4 : 0}')
 
-    if [ $CURR_PATCH -lt $MIN_PATCH ] ; then
+    if [ "${CURR_PATCH}" -lt "${MIN_PATCH}" ] ; then
         return 0
+    elif [ "${CURR_PATCH}" -gt "${MIN_PATCH}" ] ; then
+        return 1
     fi
 
     return 1
@@ -161,7 +171,7 @@ enforceMinAPIVer()
 runUpdate()
 {
 
-    if [ "$1" = "--update-lib" ] && ! apiNeedsUpdate ; then
+    if [ "${1}" = "--update-lib" ] && ! apiNeedsUpdate ; then
         echo "Shared code library already meets minimum API version requirements."
         echo "Done!"
         return
@@ -172,14 +182,14 @@ runUpdate()
     URL="https://shared.litespeed.sh/latest"
 
     echo "Downloading latest shared code tar file..."
-    wget -q --tries=1 --no-check-certificate "$URL" -O "$LOCAL_TAR_FILE"
+    wget -q --tries=1 --no-check-certificate "${URL}" -O "${LOCAL_TAR_FILE}"
 
     RET=$?
 
-    if [ "$RET" != "0" ] ; then
+    if [ "${RET}" != "0" ] ; then
 
-        if [ -f "$LOCAL_TAR_FILE" ] ; then
-            /bin/rm -f "$LOCAL_TAR_FILE"
+        if [ -f "${LOCAL_TAR_FILE}" ] ; then
+            /bin/rm -f "${LOCAL_TAR_FILE}"
         fi
 
         errorExit "Failed to download latest shared code with wget exit status ${RET}."
@@ -187,43 +197,43 @@ runUpdate()
 
     MD5_VALUE=$(wget -q https://shared.litespeed.sh/latest/md5 -O -)
 
-    if [ "$MD5_VALUE" = "" ] ; then
-        /bin/rm -f "$LOCAL_TAR_FILE"
+    if [ "${MD5_VALUE}" = "" ] ; then
+        /bin/rm -f "${LOCAL_TAR_FILE}"
         errorExit "Failed to wget latest shared code md5 value."
     fi
 
     if [ "x${OS}" = "xFreeBSD" ] ; then
-        LOCAL_MD5_VAL=$(md5 $LOCAL_TAR_FILE | awk '{ print $4 }')
+        LOCAL_MD5_VAL=$(md5 "${LOCAL_TAR_FILE}" | awk '{ print $4 }')
     else
-        LOCAL_MD5_VAL=$(md5sum $LOCAL_TAR_FILE | awk '{ print $1 }')
+        LOCAL_MD5_VAL=$(md5sum "${LOCAL_TAR_FILE}" | awk '{ print $1 }')
     fi
 
     echo "Checking tar file md5..."
 
-    if [ "$MD5_VALUE" != "$LOCAL_MD5_VAL" ] ; then
-        /bin/rm -f "$LOCAL_TAR_FILE"
+    if [ "${MD5_VALUE}" != "${LOCAL_MD5_VAL}" ] ; then
+        /bin/rm -f "${LOCAL_TAR_FILE}"
         errorExit "Md5 mismatch for shared code! Aborting."
     fi
 
     SHARED_CODE_DIR="${ADDONS_DIR}/webcachemgr"
 
-    if [ -d "$SHARED_CODE_DIR" ] ; then
+    if [ -d "${SHARED_CODE_DIR}" ] ; then
         echo "Removing existing shared code directory..."
-        /bin/rm -rf "$SHARED_CODE_DIR"
+        /bin/rm -rf "${SHARED_CODE_DIR}"
     fi
 
     echo "Extracting downloaded shared code..."
-    tar -xzf "$LOCAL_TAR_FILE" -C "$ADDONS_DIR"
+    tar -xzf "${LOCAL_TAR_FILE}" -C "${ADDONS_DIR}"
 
     RET=$?
 
-    if [ "$RET" != "0" ] ; then
-        /bin/rm -f "$LOCAL_TAR_FILE"
+    if [ "${RET}" != "0" ] ; then
+        /bin/rm -f "${LOCAL_TAR_FILE}"
         errorExit "Failed to extract tar.gz file with tar exit status ${RET}."
     fi
 
     echo "Removing local shared code tar file..."
-    /bin/rm -f "$LOCAL_TAR_FILE"
+    /bin/rm -f "${LOCAL_TAR_FILE}"
 
     echo "Updating lscmctl script..."
     /bin/mv -f "${ADDONS_DIR}/lscmctl" "${ADDONS_DIR}/../admin/misc/lscmctl"
@@ -233,7 +243,7 @@ runUpdate()
 
 errorExit()
 {
-    printf "${YELLOW}ERROR: ${END_COLOR} ${1}\n\n"
+    printf "${YELLOW}ERROR: ${END_COLOR} %s\n\n" "${1}"
     exit 1
 }
 
@@ -243,21 +253,21 @@ setPanelClassName()
 
     x=$(/usr/local/cpanel/cpanel -V 2>/dev/null)
 
-    if [ "$x" ]; then
+    if [ "${x}" ]; then
         PANEL_CLASS_NAME='\Lsc\Wp\Panel\CPanel'
         return
     fi
 
     x=$(plesk version 2>/dev/null)
 
-    if [ "$x" ]; then
+    if [ "${x}" ]; then
         PANEL_CLASS_NAME='\Lsc\Wp\Panel\Plesk'
         return
     fi
 
     x=$(/usr/local/directadmin/directadmin v 2>/dev/null)
 
-    if [ "$x" ]; then
+    if [ "${x}" ]; then
         PANEL_CLASS_NAME='\Lsc\Wp\Panel\DirectAdmin'
         return
     fi
@@ -268,11 +278,11 @@ setPanelClassName()
     fi
 }
 
-selectPHP() 
+selectPHP()
 {
-    if [ "$1" = "-php" ]
+    if [ "${1}" = "-php" ]
     then
-        if [ -x "$2" ] ; then
+        if [ -x "${2}" ] ; then
             PHP_BIN="${2} -d disable_functions="
             return 2
         else
@@ -280,13 +290,13 @@ selectPHP()
         fi
     else
         #Use default admin php binary
-        local DEFAULT_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php5"
-        local OLS_DA_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php"
+        DEFAULT_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php5"
+        OLS_DA_PHP_BIN="${LSWS_DIR}/admin/fcgi-bin/admin_php"
 
-        if [ ! -x "$DEFAULT_PHP_BIN" ] ; then
+        if [ ! -x "${DEFAULT_PHP_BIN}" ] ; then
 
-            if [ -x "$OLS_DA_PHP_BIN" ] ; then
-                DEFAULT_PHP_BIN="$OLS_DA_PHP_BIN"
+            if [ -x "${OLS_DA_PHP_BIN}" ] ; then
+                DEFAULT_PHP_BIN="${OLS_DA_PHP_BIN}"
             else
                 errorExit "Could not find default admin PHP binary."
             fi
@@ -296,26 +306,26 @@ selectPHP()
     fi
 }
 
-if [ "$1" = "--help" ]
+if [ "${1}" = "--help" ]
 then
     printHelp
     exit 0
 fi
 
-if [ "$1" = "--update-lib" ] || [ "$1" = "--force-update-lib" ]
+if [ "${1}" = "--update-lib" ] || [ "${1}" = "--force-update-lib" ]
 then
-    runUpdate $1
+    runUpdate "${1}"
     exit 0;
 fi
 
 enforceMinAPIVer
 setPanelClassName
 
-if [ "$PANEL_CLASS_NAME" = '' ] ; then
+if [ "${PANEL_CLASS_NAME}" = '' ] ; then
     errorExit 'Supported Control Panel not detected. Aborting!'
-fi    
+fi
 
-selectPHP $1 $2
+selectPHP "${1}" "${2}"
 
 if [ $? = 2 ] ; then
     shift 2
@@ -325,4 +335,4 @@ if [ $# = 0 ] ; then
     errorExit "Missing input command. Try --help for a full list of available commands with examples."
 fi
 
-$PHP_BIN "$PHP_SCRIPT" "$PANEL_CLASS_NAME" "$@"
+$PHP_BIN "${PHP_SCRIPT}" "${PANEL_CLASS_NAME}" "${@}"

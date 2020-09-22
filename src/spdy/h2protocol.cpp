@@ -36,6 +36,8 @@ const char *getH2FrameName(unsigned char bframeType)
 {
     if (bframeType < H2_FRAME_MAX_TYPE)
         return s_sH2FrameName[bframeType];
+    if ((bframeType - 0xb) % 0x1f == 0)
+        return "GREASE";
     return "UNKONWN";
 }
 

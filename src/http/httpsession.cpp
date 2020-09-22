@@ -4564,6 +4564,27 @@ void HttpSession::processServerPush()
 }
 
 
+int HttpSession::addExpiresHeader()
+{
+    int ret;
+    const ExpiresCtrl *pExpireDefault = getReq()->shouldAddExpires();
+    if (pExpireDefault)
+    {
+        const MimeSetting *pMime = getReq()->getMimeType();
+        if (pMime->getExpires()->getBase())
+            pExpireDefault = pMime->getExpires();
+        if (pExpireDefault->getBase())
+        {
+            ret = getResp()->addExpiresHeader(m_sendFileInfo.getFileData()
+                                            ->getLastMod(), pExpireDefault);
+            if (ret)
+                return ret;
+        }
+    }
+    return LS_OK;
+}
+
+
 int HttpSession::sendRespHeaders()
 {
     if (!getFlag(HSF_RESP_HEADER_DONE))

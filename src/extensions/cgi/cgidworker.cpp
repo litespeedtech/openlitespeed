@@ -366,6 +366,11 @@ int CgidWorker::config(const XmlNode *pNode1)
         "cgroups", 0, 2, 0) == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON);
 #endif
 
+
+    if (MainServerConfig::getInstance().getConfTestMode())
+        return 0;
+
+
     CgidWorker::setCgidWorkerPid(
         start(MainServerConfig::getInstance().getServerRoot(), psChroot,
               procConfig.getUid(), procConfig.getGid(),

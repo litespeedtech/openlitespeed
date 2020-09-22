@@ -20,6 +20,7 @@
 #include "cachestore.h"
 #include "cachehash.h"
 #include "cacheentry.h"
+#include <log4cxx/logger.h>
 #include <util/datetime.h>
 
 #include "shmcachemanager.h"
@@ -62,16 +63,26 @@ int CacheStore::addToHash(CacheEntry *pEntry)
     return 0;
 }
 
-void CacheStore::addToDirtyList(CacheEntry *pEntry)
+
+void CacheStore::addToDirtyList(CacheEntry *pEntry, const char *reason)
 {
-    g_api->log(NULL, LSI_LOG_DEBUG, 
-               "[CACHE] addTodirtyList(): %p [%s], ref: %d, flag: %hx",
-               pEntry, pEntry->getHashKey().to_str(NULL), pEntry->getRef(),
+    if (pEntry->isDirty())
+    {
+        LS_DBG("[CACHE] addTodirtyList(): %p [%s], %s, ref: %d, flag: %hx, "
+               "already in dirty list, no need to add.",
+               pEntry, pEntry->getHashKey().to_str(NULL), reason, pEntry->getRef(),
                pEntry->getHeader().m_flag);
+        return;
+    }
+    LS_DBG("[CACHE] addTodirtyList(): %p [%s], %s, ref: %d, flag: %hx",
+           pEntry, pEntry->getHashKey().to_str(NULL), reason, pEntry->getRef(),
+           pEntry->getHeader().m_flag);
 
     pEntry->setDirty();
+    pEntry->incRef();
     m_dirtyList.push_back(pEntry);
 }
+
 
 int CacheStore::initManager()
 {
@@ -111,10 +122,10 @@ int CacheStore::dispose(CacheStore::iterator iter, int isRemovePermEntry)
     erase(iter);
     if (isRemovePermEntry)
         removePermEntry(pEntry);
-    if (pEntry->getRef() <= 0)
+    if (pEntry->getRef() <= 0 && pEntry->isNoWaiting())
         delete pEntry;
     else
-        m_dirtyList.push_back(pEntry);
+        addToDirtyList(pEntry, "dispose");
     return 0;
 }
 
@@ -184,7 +195,7 @@ void CacheStore::houseKeeping()
     for (TPointerList< CacheEntry >::iterator it = m_dirtyList.begin();
          it != m_dirtyList.end();)
     {
-        if ((*it)->getRef() == 0)
+        if ((*it)->getRef() == 0 && (*it)->isNoWaiting())
         {
             delete *it;
             it = m_dirtyList.erase(it);
@@ -223,7 +234,7 @@ int CacheStore::cleanByTrackingCb(void * pIter, void *pParam)
 {
     LsShmHash::iterator iter = (LsShmHash::iterator)pIter;
     shm_objtrack_t *pData = (shm_objtrack_t *)iter->getVal();
-    
+
     if (pData->x_tmExpire < DateTime::s_curTime)
     {
         CacheStore *pThis = (CacheStore *)pParam;

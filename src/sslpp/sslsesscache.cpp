@@ -398,11 +398,10 @@ int SslSessCache::stat()
 
 uint32_t SslSessCache::getSessCnt() const
 {
-    LsHashStat stat;
     m_pSessStore->lock();
-    m_pSessStore->stat(&stat, checkStatElem, m_pSessStore);
+    uint32_t cnt = m_pSessStore->size();
     m_pSessStore->unlock();
-    return stat.num;
+    return cnt;
 }
 
 

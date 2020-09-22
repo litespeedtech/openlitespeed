@@ -1166,8 +1166,6 @@ class WPCaller
                 "{$locale} {$this->installedLscwpVer}"
             );
         }
-
-        return;
     }
 
     private function includeLSCWPAdvancedCacheFile()

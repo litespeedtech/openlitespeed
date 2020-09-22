@@ -17,11 +17,26 @@ use \Lsc\Wp\WPInstall;
 class Plesk extends ControlPanel
 {
 
+    /**
+     *
+     * @throws LSCMException Thrown indirectly.
+     */
     public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     *
+     * @since 1.13.2
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
+    protected function init2()
     {
         $this->panelName = 'Plesk';
         $this->defaultSvrCacheRoot = '/var/www/vhosts/lscache/';
-        parent::__construct();
+        parent::init2();
     }
 
     /**

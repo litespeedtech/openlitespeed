@@ -32,6 +32,9 @@ set_cgi_error_t set_cgi_error = NULL;
 int s_bwrap_extra_bytes = BWRAP_ALLOCATE_EXTRA_DEFAULT;
 static char *s_bwrap_bin = NULL;
 
+static int add_argv(char *begin_param, int *argc, char ***oargv,
+                    bwrap_mem_t **mem);
+
 #ifdef DO_BWRAP_DEBUG
 int s_bwrap_debug = 1;
 void debug_message (const char *fmt, ...)
@@ -267,15 +270,143 @@ static int bwrap_file(int passwd, char *begin_param, char *wildcard, int *argc,
 }
 
 
+static int bwrap_copy_params(char *begin_param, char **source, char **target)
+{
+    const char *whitespace = " \t";
+    DEBUG_MESSAGE("For copy, parsing: %s\n", begin_param);
+    int leading_space = strspn(begin_param, whitespace);
+    if (leading_space == (int)strlen(begin_param))
+    {
+        set_cgi_error("Copy parameter must include a source (and target)", NULL);
+        return -1;
+    }
+    *source = &begin_param[leading_space];
+    char *source_end = strpbrk(*source, whitespace);
+    if (!source_end)
+    {
+        set_cgi_error("Copy parameter must include a source a space (and target)", NULL);
+        return -1;
+    }
+    *source_end = 0;
+    DEBUG_MESSAGE("Copy source: %s\n", *source);
+    begin_param = source_end + 1;
+    leading_space = strspn(begin_param, whitespace);
+    *target = &begin_param[leading_space];
+    if (!**target)
+    {
+        set_cgi_error("Copy parameter must include a source, a space, and a target", NULL);
+        return -1;
+    }
+
+    DEBUG_MESSAGE("bwrap_copy_params: source: %s, target: %s\n", *source, *target);
+
+    return 0;
+}
+
+
+static int bwrap_copy(int try, char *begin_param, char *wildcard, int *argc,
+                      char ***oargv, bwrap_mem_t **mem)
+{
+    const int block_size = 4096;
+    char *title = BWRAP_VAR_COPY, *source = NULL, *target = NULL, block[block_size];
+    int data[2] = { -1, -1 }, fd = -1, got, *fds;
+    char **argv = *oargv;
+    
+    if (bwrap_copy_params(wildcard, &source, &target))
+        return -1;
+    if (pipe(data))
+    {
+        set_cgi_error("Error creating pipe for", title);
+        return -1;
+    }
+
+    (*mem)->m_statics->m_copy_num++;
+    fds = realloc((*mem)->m_statics->m_copy_fds, 
+                  sizeof(int) * (*mem)->m_statics->m_copy_num);
+    if (!fds)
+    {
+        set_cgi_error("Insufficient memory allocating copy fd list", source);
+        close(data[0]);
+        return -1;
+    }
+    fds[(*mem)->m_statics->m_copy_num - 1] = data[0];
+    (*mem)->m_statics->m_copy_fds = fds;
+    snprintf(begin_param, strlen(title) + 1, "%u", data[0]); // Ok to step on it
+    if (add_argv("--file", argc, oargv, mem) ||
+        add_argv(begin_param, argc, oargv, mem) ||
+        add_argv(target, argc, oargv, mem) ||
+        add_argv(source, argc, oargv, mem)) // add source to get wildcards resolved
+        return -1;
+    
+    --(*argc); // Pull out source
+    if (try && access(source, 0))
+    {
+        DEBUG_MESSAGE("Source file not accessible and try specified.  Return\n");
+        close(data[0]);
+        close(data[1]);
+        (*argc) -= 3;
+        return 0;
+    }
+    source = argv[*argc];
+    target = argv[*argc - 1];
+    DEBUG_MESSAGE("Copy final source: %s, final target: %s\n", source, target);
+    fd = open(source, O_RDONLY);
+    if (fd == -1)
+    {
+        set_cgi_error("Error opening during copy:", source);
+        close(data[0]);
+        close(data[1]);
+        (*argc) -= 3;
+        return -1;
+    }
+    DEBUG_MESSAGE("For copy, doing copy\n");
+    while ((got = read(fd, block, block_size)) > 0)
+    {
+        DEBUG_MESSAGE("Writing %d bytes\n", got);
+        if (write(data[1], block, got) != got)
+        {
+            set_cgi_error("Error writing during copy:", source);
+            close(data[0]);
+            close(data[1]);
+            close(fd);
+            (*argc) -= 3;
+            return -1;
+        }
+    }
+    if (got == -1)
+    {
+        set_cgi_error("Error reading during copy:", source);
+        close(data[0]);
+        close(data[1]);
+        close(fd);
+        (*argc) -= 3;
+        return -1;
+    }
+    close(fd);
+    close(data[1]);
+    data[1] = -1;
+    DEBUG_MESSAGE("For copy, finished copy\n");
+    return 0;
+}
+
+
 static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
                           char ***oargv, bwrap_mem_t **mem)
 {
-    char *wildcard, *key, **argv = *oargv;
+    char *bwrap_var_user = BWRAP_VAR_USER,
+         *bwrap_var_homedir = BWRAP_VAR_HOMEDIR,
+         *bwrap_var_uid = BWRAP_VAR_UID,
+         *bwrap_var_gid = BWRAP_VAR_GID,
+         *bwrap_var_passwd = BWRAP_VAR_PASSWD,
+         *bwrap_var_group = BWRAP_VAR_GROUP,
+         *bwrap_var_copy = BWRAP_VAR_COPY,
+         *bwrap_var_copy_try = BWRAP_VAR_COPY_TRY,
+         *wildcard, *key, **argv = *oargv;
     int key_len, wildcard_len;
-    if (!strncmp(begin_wildcard, key = BWRAP_VAR_USER, key_len = strlen(BWRAP_VAR_USER)) ||
-        !strncmp(begin_wildcard, key = BWRAP_VAR_HOMEDIR, key_len = strlen(BWRAP_VAR_HOMEDIR)))
+    if (!strncmp(begin_wildcard, key = bwrap_var_user, key_len = strlen(bwrap_var_user)) ||
+        !strncmp(begin_wildcard, key = bwrap_var_homedir, key_len = strlen(bwrap_var_homedir)))
     {
-        if (!(*mem)->m_statics->m_user_str)
+        if (!(*mem)->m_statics->m_username_str)
         {
             struct passwd *pwd;
             if (!(pwd = getpwuid(geteuid())))
@@ -286,45 +417,56 @@ static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
             else
             {
                 int extra_len;
-                if ((key == BWRAP_VAR_USER && !pwd->pw_name) ||
-                    (key == BWRAP_VAR_HOMEDIR && !pwd->pw_dir))
+                if (!pwd->pw_name)
                 {
-                    set_cgi_error("Symbolic $USER or $HOMEDIR wildcard specified"
-                                  " with NULL value in /etc/passwd", NULL);
+                    set_cgi_error("Effective user has no name and $USER or "
+                                  "$HOMEDIR wildcard specified", NULL);
                     return -1;
                 }
-                char *field = (key == BWRAP_VAR_HOMEDIR) ? pwd->pw_dir : pwd->pw_name;
-                extra_len = strlen(field) + 1;
-                if (((*mem)->m_extra < extra_len) &&
-                    (bwrap_allocate_extra(mem, extra_len)))
-                    return -1;
-                (*mem)->m_statics->m_user_str = (char *)(*mem) + (*mem)->m_total - (*mem)->m_extra;
-                (*mem)->m_extra -= extra_len;
-                strncpy((*mem)->m_statics->m_user_str, field, extra_len);
-                DEBUG_MESSAGE("Copied in user, statics: %p, uid[0]: %d\n",
-                              (*mem)->m_statics, (*mem)->m_statics->m_uid_fds[0]);
+                else
+                {
+                    int name_len = strlen(pwd->pw_name) + 1;
+                    char *field_name = pwd->pw_name;
+                    int dir_len = strlen(pwd->pw_dir) + 1;
+                    char *field_dir = pwd->pw_dir;
+                    extra_len = name_len + dir_len;
+                    if (((*mem)->m_extra < extra_len) &&
+                        (bwrap_allocate_extra(mem, extra_len)))
+                        return -1;
+                    (*mem)->m_statics->m_username_str = (char *)(*mem) + (*mem)->m_total - (*mem)->m_extra;
+                    (*mem)->m_statics->m_userdir_str = (*mem)->m_statics->m_username_str + name_len;
+                    (*mem)->m_extra -= extra_len;
+                    strncpy((*mem)->m_statics->m_username_str, field_name, name_len);
+                    strncpy((*mem)->m_statics->m_userdir_str, field_dir, dir_len);
+                    DEBUG_MESSAGE("Copied in user, statics: %p, uid[0]: %d\n",
+                                  (*mem)->m_statics, (*mem)->m_statics->m_uid_fds[0]);
+                }
             }
         }
-        wildcard = (*mem)->m_statics->m_user_str;
+        wildcard = (key == bwrap_var_user) ? (*mem)->m_statics->m_username_str : (*mem)->m_statics->m_userdir_str;
     }
-    else if (!strncmp(begin_wildcard, key = BWRAP_VAR_UID, key_len = 4))
+    else if (!strncmp(begin_wildcard, key = bwrap_var_uid, key_len = 4))
     {
         if (!(*mem)->m_statics->m_uid_str[0])
             snprintf((*mem)->m_statics->m_uid_str,
                      sizeof((*mem)->m_statics->m_uid_str), "%u", geteuid());
         wildcard = (*mem)->m_statics->m_uid_str;
     }
-    else if (!strncmp(begin_wildcard, key = BWRAP_VAR_GID, key_len = 4))
+    else if (!strncmp(begin_wildcard, key = bwrap_var_gid, key_len = 4))
     {
         if (!(*mem)->m_statics->m_gid_str[0])
             snprintf((*mem)->m_statics->m_gid_str,
                      sizeof((*mem)->m_statics->m_gid_str), "%u", getegid());
         wildcard = (*mem)->m_statics->m_gid_str;
     }
-    else if ((!strncmp(begin_wildcard, key = BWRAP_VAR_PASSWD, key_len = 7)) ||
-             (!strncmp(begin_wildcard, key = BWRAP_VAR_GROUP, key_len = 6)))
+    else if ((!strncmp(begin_wildcard, key = bwrap_var_passwd, key_len = 7)) ||
+             (!strncmp(begin_wildcard, key = bwrap_var_group, key_len = 6)))
         return bwrap_file(key_len == 7, begin_param, &begin_wildcard[key_len],
                           argc, oargv, mem);
+    else if (!strncmp(begin_wildcard, key = bwrap_var_copy_try, key_len = 9) ||
+             !strncmp(begin_wildcard, key = bwrap_var_copy, key_len = 5))
+        return bwrap_copy(key == bwrap_var_copy_try, begin_param, 
+                          &begin_wildcard[key_len], argc, oargv, mem);
     else
     {
         set_cgi_error("Unknown variable name", begin_wildcard);
@@ -610,6 +752,13 @@ void bwrap_free(bwrap_mem_t **mem)
             close((*mem)->m_statics->m_gid_fds[0]);
         if ((*mem)->m_statics->m_gid_fds[1])
             close((*mem)->m_statics->m_gid_fds[1]);
+        if ((*mem)->m_statics->m_copy_fds)
+        {
+            int i;
+            for (i = 0; i < (*mem)->m_statics->m_copy_num; ++i)
+                close((*mem)->m_statics->m_copy_fds[i]);
+            free((*mem)->m_statics->m_copy_fds);
+        }
     }
     while (mem && *mem)
     {

@@ -107,6 +107,7 @@ public:
     static void perror(const char *pStr, const char *pError);
     static void setCurLogger(LOG4CXX_NS::Logger *pLogger, const char *pId);
     static void parse_error(const char *pCurLine, const char *pError);
+    static void parse_warn(const char *pCurLine, const char *pError);
 
     LS_NO_COPY_ASSIGN(HttpLog);
 };

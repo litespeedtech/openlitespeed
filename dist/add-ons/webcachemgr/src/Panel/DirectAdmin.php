@@ -2,6 +2,7 @@
 
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
+ *
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
  * @copyright: (c) 2019-2020
  * ******************************************* */
@@ -17,16 +18,28 @@ class DirectAdmin extends ControlPanel
 
     protected function __construct()
     {
+        /** @noinspection PhpUnhandledExceptionInspection */
+        parent::__construct();
+    }
+
+    /**
+     *
+     * @since 1.13.2
+     */
+    protected function init2()
+    {
         $this->panelName = 'DirectAdmin';
         $this->defaultSvrCacheRoot = '/home/lscache/';
-        parent::__construct();
+
+        /** @noinspection PhpUnhandledExceptionInspection */
+        parent::init2();
     }
 
     protected function initConfPaths()
     {
         $this->apacheConf = '/etc/httpd/conf/extra/httpd-includes.conf';
         $this->apacheVHConf = '/usr/local/directadmin/data/templates/custom/'
-            . 'cust_httpd.CUSTOM.2.pre';
+                . 'cust_httpd.CUSTOM.2.pre';
     }
 
     /**
@@ -142,6 +155,8 @@ class DirectAdmin extends ControlPanel
     /**
      * Gets a list of found docroots and associated server names.
      * Only needed for scan.
+     *
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function prepareDocrootMap()
     {

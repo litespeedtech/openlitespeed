@@ -21,6 +21,7 @@
 #include <http/httpstatuscode.h>
 #include <util/datetime.h>
 #include <util/pool.h>
+#include <log4cxx/logger.h>
 
 #if !defined( __FreeBSD__ ) && \
     !defined(macintosh) && !defined(__APPLE__) && !defined(__APPLE_CC__)
@@ -421,6 +422,10 @@ int UserDir::authenticate(HttpSession *pSession, const char *pUserName,
     const char *pStored = pUser->getPasswd();
 //    if (( encryptMethod == m_encryptMethod )||
 //        ( m_encryptMethod == AuthUser::ENCRYPT_UNKNOWN ))
+
+
+    LS_DBG("[UserDir::authenticate] EncMethod %d, pStored %p, passwd %s.",
+           pUser->getEncMethod(), pStored, pUser->getPasswd());
     if (pStored)
     {
         switch (pUser->getEncMethod())

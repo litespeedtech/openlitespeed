@@ -460,7 +460,7 @@ StrStrHashMap plainconf::m_confFileHash;
  */
 void plainconf::logToMem(char errorLevel, const char *format, ...)
 {
-#define MAX_LOG_LINE_LENGTH     1024
+#define MAX_LOG_LINE_LENGTH     4096
     char buf[MAX_LOG_LINE_LENGTH];
     sprintf(buf, "%c[PlainConf] ", errorLevel);
     int len = strlen(buf);

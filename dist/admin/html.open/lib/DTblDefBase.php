@@ -184,6 +184,11 @@ class DTblDefBase
         $this->_options['logLevel'] = array('ERROR'  => 'ERROR', 'WARN'   => 'WARNING',
             'NOTICE' => 'NOTICE', 'INFO'   => 'INFO', 'DEBUG'  => 'DEBUG');
 
+        $this->_options['aclogctrl'] = [
+            0 => DMsg::ALbl('o_ownlogfile'),
+            1 => DMsg::ALbl('o_serverslogfile'),
+            2 => DMsg::ALbl('o_disabled')];
+
         $this->_options['lsrecaptcha'] = [
             '0' => DMsg::ALbl('o_notset'),
             '1' => DMsg::ALbl('o_checkbox'),
@@ -344,15 +349,13 @@ class DTblDefBase
 
     protected function add_S_ACLOG_TOP($id)
     {
-        $align = array('center', 'center', 'center');
-
-        $attrs = array(
+        $attrs = [
             $this->_attrs['fileName2']->dup(null, null, 'accessLog_fileName'),
             $this->_attrs['logFormat'],
             $this->_attrs['rollingSize'],
-            self::NewActionAttr('S_ACLOG', 'Ed')
-        );
-        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG', $align);
+            self::NewActionAttr('S_ACLOG', 'Ed'),
+            ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG');
     }
 
     protected function add_S_ACLOG($id)
@@ -1110,22 +1113,20 @@ class DTblDefBase
 
     protected function add_V_ACLOG_TOP($id)
     {
-        $align = array('center', 'center', 'center');
-
-        $attrs = array(
-            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), array(0 => DMsg::ALbl('o_ownlogfile'), 1 => DMsg::ALbl('o_serverslogfile'), 2 => DMsg::ALbl('o_disabled')), false, 'aclogUseServer'),
+        $attrs = [
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer'),
             $this->_attrs['fileName3']->dup(null, null, 'accessLog_fileName'),
             $this->_attrs['logFormat'],
             $this->_attrs['rollingSize'],
-            self::NewActionAttr('V_ACLOG', 'Ed')
-        );
-        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'V_ACLOG', $align);
+            self::NewActionAttr('V_ACLOG', 'Ed'),
+            ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'V_ACLOG');
     }
 
     protected function add_V_ACLOG($id)
     {
         $attrs = array(
-            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), array(0 => DMsg::ALbl('o_ownlogfile'), 1 => DMsg::ALbl('o_serverslogfile'), 2 => DMsg::ALbl('o_disabled')), false, 'aclogUseServer'),
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer'),
             $this->_attrs['fileName3']->dup(null, null, 'vhaccessLog_fileName'),
             self::NewSelAttr('pipedLogger', DMsg::ALbl('l_pipedlogger'), 'extprocessor:logger', true, 'accessLog_pipedLogger'),
             $this->_attrs['logFormat'],
@@ -1417,8 +1418,14 @@ class DTblDefBase
 
     protected function add_T_ACLOG_TOP($id)
     {
-        $this->_tblDef[$id] = $this->DupTblDef('V_ACLOG_TOP', $id);
-        $this->_tblDef[$id]->ResetAttrEntry(1, $this->_attrs['tp_vrFile']);
+        $attrs = [
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer'),
+            $this->_attrs['tp_vrFile'],
+            $this->_attrs['logFormat'],
+            $this->_attrs['rollingSize'],
+            self::NewActionAttr('T_ACLOG', 'Ed'),
+            ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'T_ACLOG');
     }
 
     protected function add_T_ACLOG($id)

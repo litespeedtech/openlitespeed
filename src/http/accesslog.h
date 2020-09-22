@@ -25,9 +25,9 @@
 
 #include <sys/types.h>
 
-#define MAX_BUFFERED_LEN 8192
-#define MAX_LOG_LINE_LEN 4096
-#define LOG_BUF_SIZE MAX_BUFFERED_LEN + MAX_LOG_LINE_LEN
+#define MAX_BUFFERED_LEN    16384
+#define MAX_LOG_LINE_LEN    8192
+#define LOG_BUF_SIZE        (MAX_BUFFERED_LEN + MAX_LOG_LINE_LEN)
 
 #define LOG_REFERER     1
 #define LOG_USERAGENT   2

@@ -55,6 +55,13 @@ void HttpLog::parse_error(const char *pCurLine, const char *pError)
 }
 
 
+void HttpLog::parse_warn(const char *pCurLine, const char *pError)
+{
+    LS_WARN(s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
+             s_pLogId, pError, pCurLine);
+}
+
+
 void HttpLog::setCurLogger(LOG4CXX_NS::Logger *pLogger, const char *pId)
 {
     s_pCurLogger = pLogger;
@@ -173,8 +180,7 @@ LOG4CXX_NS::Logger *HttpLog::getErrorLogger()
     return logger();
 }
 
-#define MAX_PATH_LEN                4096
-#define MAX_LOG_LINE_LEN            4096
+#define MAX_PATH_LEN                8192
 int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
 {
     accessLog()->log(pVHost, len, pSession);

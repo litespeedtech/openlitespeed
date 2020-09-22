@@ -68,6 +68,8 @@ void LocInfo::release()
 const char *LocInfo::getLocEnv(const char *pEnvName)
 {
     static char s_achBuf[16] = { 0 };
+    if (m_pRecord == NULL)
+        return NULL;
     if (strncasecmp(pEnvName, "IP2LOCATION_", 12) == 0)
         pEnvName += 12;
     else

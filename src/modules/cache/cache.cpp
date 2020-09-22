@@ -2685,14 +2685,22 @@ static int checkAssignHandler(lsi_param_t *rec)
     //re-store it
     //bool doPublic = cacheCtrl.isPublicCacheable() || myData->pConfig->isCheckPublic();
     bool doPublic = true;
-    int encodingLen;
-    const char *encoding = g_api->get_req_header_by_id(rec->session,
+    int encodingLen = 0;
+    char *encoding = (char *)g_api->get_req_header_by_id(rec->session,
                                                        LSI_HDR_ACC_ENCODING,
                                                        &encodingLen);
-    myData->reqCompressType = (encodingLen >= 4 && strcasestr(encoding, "gzip"));
-    if (myData->reqCompressType == LSI_NO_COMPRESS &&
-        encodingLen >= 2 && strcasestr(encoding, "br"))
-        myData->reqCompressType = LSI_BR_COMPRESS;
+    if (!encoding)
+        myData->reqCompressType = LSI_NO_COMPRESS;
+    else
+    {
+        char orgChar = encoding[encodingLen];
+        encoding[encodingLen] = 0;
+        myData->reqCompressType = (encodingLen >= 4 && strcasestr(encoding, "gzip"));
+        if (myData->reqCompressType == LSI_NO_COMPRESS &&
+            encodingLen >= 2 && strcasestr(encoding, "br"))
+            myData->reqCompressType = LSI_BR_COMPRESS;
+        encoding[encodingLen] = orgChar;
+    }
 
     myData->iCacheState = lookUpCache(rec, myData,
                                    cacheCtrl.getFlags() & CacheCtrl::no_vary,

@@ -53,6 +53,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 static char * s_pOcspCachePath = NULL;
@@ -114,10 +115,14 @@ int SslOcspStapling::callback(SSL *ssl)
     iResult = SSL_TLSEXT_ERR_NOACK;
     if (m_RespTime == UINT_MAX)
         return iResult;
+    unsigned char *resp_data = m_pRespData;
     update();
     if (m_pRespData && m_iDataLen > 0)
     {
-#ifndef OPENSSL_IS_BORINGSSL
+#ifdef OPENSSL_IS_BORINGSSL
+        if (m_pRespData != resp_data)
+            SSL_set_ocsp_response(ssl, m_pRespData, m_iDataLen);
+#else
         unsigned char *pOcspResp;
         /*OpenSSL will free pOcspResp by itself */
         pOcspResp = (unsigned char *)malloc(m_iDataLen);
@@ -168,11 +173,13 @@ SslOcspStapling::SslOcspStapling()
     : m_pHttpFetch(NULL)
     , m_pReqData(NULL)
     , m_iDataLen(0)
-    , m_pRespData(NULL)
     , m_iocspRespMaxAge(3600 * 24)
+    , m_pRespData(NULL)
     , m_notBefore(NULL)
     , m_pCtx(NULL)
     , m_RespTime(0)
+    , m_statTime(0)
+    , m_nextUpdate(0)
     , m_pCertId(NULL)
 {
 }
@@ -232,10 +239,26 @@ int SslOcspStapling::update()
     struct stat st;
     if (m_RespTime == UINT_MAX)
         return 0;
-    if (m_RespTime != 0 && m_RespTime + m_iocspRespMaxAge >= DateTime::s_curTime)
+    //NOTE: test code , to test clearing out expired OCSP response
+    //if (m_pRespData && m_statTime + 10 <= DateTime::s_curTime)
+    //    m_nextUpdate = DateTime::s_curTime;
+    if (m_pRespData && m_nextUpdate <= DateTime::s_curTime)
     {
-        return 0;
+        LS_DBG("[OCSP] %s: OCSP response expired, cur: %ld, resp_create: %ld, expire: %ld.\n",
+                    m_sRespfile.c_str(), DateTime::s_curTime, m_RespTime, m_nextUpdate);
+        releaseRespData();
+        if (m_statTime != DateTime::s_curTime)
+        {
+            m_statTime = DateTime::s_curTime;
+            goto TRY_CREATE_REQ;
+        }
+        else
+            return 0;
     }
+    if (m_statTime != 0 && m_statTime + 60 >= DateTime::s_curTime)
+        return 0;
+
+    m_statTime = DateTime::s_curTime;
 
     if (::stat(m_sRespfile.c_str(), &st) == 0)
     {
@@ -248,6 +271,10 @@ int SslOcspStapling::update()
         {
             if (m_RespTime == st.st_mtime)
                 return 0;
+
+            LS_DBG("[OCSP] %s: file timestamp updated, current: %ld, file: %ld\n",
+                      m_sRespfile.c_str(), m_RespTime, st.st_mtime);
+
             if (verifyRespFile(0) == LS_OK)
             {
                 m_RespTime = st.st_mtime;
@@ -255,6 +282,8 @@ int SslOcspStapling::update()
             }
         }
     }
+
+TRY_CREATE_REQ:
     ret = ::stat(m_sRespfileTmp.c_str(), &st);
     if (ret != 0 || st.st_mtime + 30 < DateTime::s_curTime)
     {
@@ -416,7 +445,7 @@ void SslOcspStapling::releaseRespData()
 }
 
 
-void SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
+int SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
 {
     unsigned char *pOcspResp;
     m_iDataLen = i2d_OCSP_RESPONSE(pResponse, NULL);
@@ -433,13 +462,28 @@ void SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
         if (m_iDataLen <= 0)
         {
             releaseRespData();
+            return -1;
         }
 #ifdef OPENSSL_IS_BORINGSSL
         else if (m_pCtx)
             SSL_CTX_set_ocsp_response(m_pCtx->get(), m_pRespData, m_iDataLen);
 #endif
+        return 0;
     }
+    return -1;
 }
+
+
+time_t ASN1_TIME_to_time_t(const ASN1_TIME * asn1)
+{
+    int days = 0, seconds = 0;
+    if (!ASN1_TIME_diff(&days, &seconds, NULL, asn1))
+        return -1;
+    time_t t = time(NULL);
+    t += days * 86400 + seconds;
+    return t;
+}
+
 
 int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
                                 OCSP_BASICRESP *pBasicResp, X509_STORE *pXstore)
@@ -467,14 +511,23 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         }
         int find_status = OCSP_resp_find_status(pBasicResp, m_pCertId, &n,
                                       NULL, NULL, &pThisupdate, &pNextupdate);
-        //NOTE: get around an issue with response have wrong nextupdate time.
-        //      do not check it for now.
-        pNextupdate = NULL;
         int validate = -100;
 
         if (find_status == 1 && n == V_OCSP_CERTSTATUS_GOOD)
         {
             int day, sec;
+            //NOTE: get around an issue with response have wrong nextupdate time.
+            //      make sure it is later than thisupdate.
+            if (pThisupdate && pNextupdate)
+            {
+                if (ASN1_TIME_diff(&day, &sec, pThisupdate, pNextupdate) == 0
+                    || (day <= 0 && sec <= 0))
+                {
+                    LS_NOTICE("[OCSP] %s: Bad next_update time day: %d, sec: %d, "
+                                "set it to NULL\n", m_sCertfile.c_str(), day, sec);
+                    pNextupdate = NULL;
+                }
+            }
             if (m_notBefore && ASN1_TIME_diff(&day, &sec, m_notBefore, pThisupdate)
                 && (day > 0 || sec > 0))
                 validate = OCSP_check_validity(pThisupdate, pNextupdate, 300, -1);
@@ -482,6 +535,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
 
         if (validate == 1)
         {
+            m_nextUpdate = ASN1_TIME_to_time_t(pNextupdate);
             iResult = 0;
         }
         else
@@ -519,12 +573,18 @@ int SslOcspStapling::verifyRespFile(int is_new_resp)
     const unsigned char *pCopy;
     size_t              ulSize;
     X509_STORE *pXstore;
+    const char *file_name;
     if (is_new_resp)
-        pBio = BIO_new_file(m_sRespfileTmp.c_str(), "r");
+        file_name = m_sRespfileTmp.c_str();
     else
-        pBio = BIO_new_file(m_sRespfile.c_str(), "r");
+        file_name = m_sRespfile.c_str();
+
+    pBio = BIO_new_file(file_name, "r");
     if (pBio == NULL)
+    {
+        LS_ERROR("[OCSP] %s: Failed to open file.\n", file_name);
         return -1;
+    }
 
 #ifdef OPENSSL_IS_BORINGSSL
     if (1 != BIO_read_asn1(pBio, &pBuf, &ulSize, 100 * 1024))
@@ -542,6 +602,7 @@ int SslOcspStapling::verifyRespFile(int is_new_resp)
 #endif
     if (pResponse == NULL)
     {
+        LS_ERROR("[OCSP] %s: Failed to load OCSP RESPONSE.\n", file_name);
         return -1;
     }
 
@@ -556,6 +617,8 @@ int SslOcspStapling::verifyRespFile(int is_new_resp)
                 iResult = certVerify(pResponse, pBasicResp, pXstore);
                 if (iResult == 0 && is_new_resp)
                 {
+                    LS_DBG("[OCSP] %s: Update OCSP response file\n",
+                        m_sRespfile.c_str());
                     unlink(m_sRespfile.c_str());
                     rename(m_sRespfileTmp.c_str(), m_sRespfile.c_str());
                     struct stat st;
@@ -566,7 +629,11 @@ int SslOcspStapling::verifyRespFile(int is_new_resp)
             OCSP_BASICRESP_free(pBasicResp);
         }
         if (iResult == 0)
-            updateRespData(pResponse);
+        {
+            iResult = updateRespData(pResponse);
+            LS_DBG("[OCSP] %s: Update OCSP response data: %s\n",
+                   file_name, (iResult == 0) ? "succeed" : "fail");
+        }
     }
     OCSP_RESPONSE_free(pResponse);
     return iResult;

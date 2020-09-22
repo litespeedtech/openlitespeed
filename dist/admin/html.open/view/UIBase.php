@@ -319,7 +319,8 @@ class UIBase
 
 		switch($type) {
 			case "int": return (int) $temp;
-			case "float": return (float) $temp;
+			case "float": // filter_var($temp, FILTER_VALIDATE_FLOAT, FILTER_FLAG_ALLOW_THOUSAND); filter module not in admin_php
+                return (float)str_replace(',', '', $temp);
 			case "string": return trim((string) $temp);
 			case "array": return (is_array($temp) ?  $temp : NULL);
 			case "object": return (is_object($temp) ?  $temp : NULL);

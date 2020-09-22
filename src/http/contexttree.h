@@ -49,6 +49,7 @@ public:
     const HttpContext *getRootContext() const  {   return m_pRootContext;  }
     void setRootContext(const HttpContext *pContext);
     void setRootLocation(const char *pLocation, int iLocLen);
+    const char *getURITreeRootLable();
 
     int add(HttpContext *pContext);
     const HttpContext *bestMatch(const char *pURI, int iUriLen) const;

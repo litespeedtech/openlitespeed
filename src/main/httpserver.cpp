@@ -485,8 +485,10 @@ int HttpServerImpl::authAdminReq(char *pAuth)
     *pEnd = 0;
     int ret = pRealm->authenticate(NULL, pUserName, nameLen, pPasswd,
                                    ENCRYPT_PLAIN, NULL);
-    if (ret != 0)
+    if (ret != 0) {
+        LS_DBG("[ADMIN] UserName %.*s, Password %s", nameLen, pUserName, pPasswd);
         LS_ERROR("[ADMIN] authentication failed!");
+    }
     *pEnd = '\n';
     return ret;
 }
@@ -1267,8 +1269,8 @@ void HttpServerImpl::releaseAll()
     m_toBeReleasedListeners.clear();
 #ifndef  TO_AVOID_EXIT_CRASH
     m_vhosts.release_objects();
-#endif
     m_toBeReleasedVHosts.release_objects();
+#endif
     ::signal(SIGCHLD, SIG_DFL);
     ExtAppRegistry::shutdown();
     ClientCache::clearObjPool();
@@ -1677,6 +1679,16 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         SslContext *pSSLCtx = NULL;
         if (pAddr == NULL)
             break;
+
+        GSockAddr sockAddr;
+        if (sockAddr.set(pAddr, 0) == -1)
+        {
+            LS_ERROR(&currentCtx, "Failed to config listener [%s]: bad socket address [%s]", pName, pAddr);
+            break;
+        }
+        char buf[256];
+        if (strncmp(pAddr, "*:", 2) != 0)
+            pAddr = sockAddr.toString(buf, sizeof(buf));
 
         int secure = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "secure", 0,
                      1, 0);

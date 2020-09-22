@@ -446,6 +446,7 @@ void LsShm::close()
 
 void LsShm::cleanup()
 {
+    MEMCHK_UNPOISON(&(x_pShmMap->x_iMagic), 8);
     unmap();
     if (m_iFd != -1)
     {

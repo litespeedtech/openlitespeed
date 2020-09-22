@@ -105,8 +105,11 @@ class PanelController
     }
 
     /**
+     *
      * @deprecated
+     *
      * @return int
+     * @throws LSCMException  Thrown indireclty.
      */
     public function manageOperationsSubController()
     {
@@ -116,6 +119,7 @@ class PanelController
     /**
      *
      * @return int
+     * @throws LSCMException  Thrown indirectly.
      */
     public function manageCacheOperations()
     {
@@ -271,6 +275,7 @@ class PanelController
     /**
      *
      * @return boolean
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function checkScanAction()
     {

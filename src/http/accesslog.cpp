@@ -55,7 +55,7 @@ public:
 
 int CustomFormat::parseFormat(const char *psFormat)
 {
-    char achBuf[4096];
+    char achBuf[MAX_LOG_LINE_LEN];
     static const char *s_disallow[] =
     {   "wget", "curl", "bash", "sh", "cat", "more", "less", "strings"    };
 
@@ -87,7 +87,7 @@ int CustomFormat::parseFormat(const char *psFormat)
             p += strlen(key);
         }
     }
-    lstrncpy(achBuf, psFormat, 4096);
+    lstrncpy(achBuf, psFormat, MAX_LOG_LINE_LEN);
 
     char *pEnd = &achBuf[strlen(achBuf)];
     char *p = achBuf;

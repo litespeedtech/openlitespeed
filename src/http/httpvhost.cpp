@@ -678,6 +678,10 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
 HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
 {
     HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
+    LS_DBG_L(ConfigCtx::getCurConfigCtx(), "HttpVHost::bestMatch %.*s (len %d) return %p, loc %s,"
+            " m_contexts root lable %s.",
+            iUriLen, pURI, iUriLen, pContext, pContext ? pContext->getLocation() : "nil",
+            m_contexts.getURITreeRootLable());
 
     AutoStr2 missURI; //A while URI start with /
     AutoStr2 missLoc;  //A loc should be added to pContext location for the full path
@@ -1600,6 +1604,8 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
 
     LocalWorkerConfig &config = pWorker->getConfig();
+    if (maxConns < 2)
+        maxConns = 2;
     setDefaultConfig(config, pRailsRunner, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();

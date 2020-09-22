@@ -773,7 +773,7 @@ class CValidation
         if (preg_match($attr->_minVal, $val)) {
             return 1;
         } else {
-            $err = "invalid format {$attr->_minVal} - $val, syntax is {$attr->_maxVal}";
+            $err = "invalid format \"$val\". Syntax is {$attr->_minVal} - {$attr->_maxVal}";
             return -1;
         }
     }

@@ -78,6 +78,10 @@ int ContextTree::add(HttpContext *pContext)
     return LS_OK;
 }
 
+const char *ContextTree::getURITreeRootLable()
+{
+    return m_pURITree->getRootLabel();
+}
 
 const HttpContext *ContextTree::bestMatch(const char *pURI,
         int iUriLen) const

@@ -226,6 +226,7 @@ public:
     int for_each2(rn_foreach2 fun, void *pUData);
 
     void printTree();
+    const char *getRootLabel();
 
 private:
     RadixTree(const RadixTree &rhs);

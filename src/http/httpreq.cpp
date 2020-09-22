@@ -2587,9 +2587,9 @@ const ExpiresCtrl *HttpReq::shouldAddExpires()
         p = &m_pVHost->getExpires();
     else
         p = HttpMime::getMime()->getDefault()->getExpires();
-    if (p->isEnabled() && m_pMimeType)
+    if (p->isEnabled())
     {
-        if (m_pMimeType->getExpires()->getBase())
+        if (m_pMimeType && m_pMimeType->getExpires()->getBase())
             p = m_pMimeType->getExpires();
         else if (!p->getBase())
             p = NULL;

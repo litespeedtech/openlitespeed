@@ -19,7 +19,7 @@
 
 ###    Author: dxu@litespeedtech.com (David Shue)
 
-VERSION=1.0.0
+VERSION=1.0.1
 moduledir="modreqparser modinspector uploadprogress "
 OS=`uname`
 ISLINUX=no
@@ -535,8 +535,8 @@ mkdir thirdparty/lib64
 cd thirdparty/script/
 
 
- 
-sed -i -e "s/unittest-cpp/ /g" ./build_ols.sh
+#Remove  unittest-cpp and add bcrypt
+sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
 
 if [ "${ISLINUX}" != "yes" ] ; then
     sed -i -e "s/psol/ /g"  ./build_ols.sh

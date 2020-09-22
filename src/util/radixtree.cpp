@@ -294,6 +294,10 @@ void *RadixTree::bestMatch(const char *pLabel, int iLabelLen) const
                                m_iFlags | RTFLAG_BESTMATCH);
 }
 
+const char *RadixTree::getRootLabel()
+{
+    return  m_pRoot ? &m_pRoot->label[0] : "";
+}
 
 int RadixTree::for_each(rn_foreach fun)
 {

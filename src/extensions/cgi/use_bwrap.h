@@ -23,6 +23,8 @@ extern int s_bwrap_extra_bytes;
 #define BWRAP_VAR_UID       "$UID"
 #define BWRAP_VAR_USER      "$USER"
 #define BWRAP_VAR_HOMEDIR   "$HOMEDIR"
+#define BWRAP_VAR_COPY      "$COPY"
+#define BWRAP_VAR_COPY_TRY  "$COPY-TRY"
 
 #define BWRAP_DEFAULT_BIN   "/bin/bwrap"
 #define BWRAP_DEFAULT_BIN2  "/usr/bin/bwrap"
@@ -44,12 +46,15 @@ extern int s_bwrap_extra_bytes;
                             " --ro-bind-try /etc/ssl /etc/ssl"\
                             " --ro-bind-try /etc/pki /etc/pki"\
                             " --ro-bind-try /etc/man_db.conf /etc/man_db.conf"\
-                            " --ro-bind-try " BWRAP_VAR_HOMEDIR " " BWRAP_VAR_HOMEDIR\
+                            " --ro-bind-try /usr/local/bin/msmtp /etc/alternatives/mta"\
+                            " --ro-bind-try /usr/local/bin/msmtp /usr/sbin/exim"\
+                            " --bind-try " BWRAP_VAR_HOMEDIR " " BWRAP_VAR_HOMEDIR\
                             " --bind-try /var/lib/mysql/mysql.sock /var/lib/mysql/mysql.sock"\
                             " --bind-try /home/mysql/mysql.sock /home/mysql/mysql.sock"\
                             " --bind-try /tmp/mysql.sock /tmp/mysql.sock"\
                             " --bind-try /run/mysqld/mysqld.sock /run/mysqld/mysqld.sock"\
                             " --bind-try /var/run/mysqld/mysqld.sock /var/run/mysqld/mysqld.sock"\
+                            " '$COPY-TRY /etc/exim.jail/$USER.conf $HOMEDIR/.msmtprc'"\
                             " --unshare-all"\
                             " --share-net"\
                             " --die-with-parent"\
@@ -65,9 +70,12 @@ typedef struct bwrap_statics_s
 {
     char  m_uid_str[11];
     char  m_gid_str[11];
-    char *m_user_str;
+    char *m_username_str;
+    char *m_userdir_str;
     int   m_uid_fds[2];
     int   m_gid_fds[2];
+    int   m_copy_num;   // The number of copied fds
+    int  *m_copy_fds;   // A reallocated array of fds used for copies.
 } bwrap_statics_t;
 
 typedef struct bwrap_mem_s
