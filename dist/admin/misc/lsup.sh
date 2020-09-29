@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.82-9/10/2020
+LSUPVERSION=v2.83-9/29/2020
 LOCKFILE=/tmp/olsupdatingflag
 
 PIDFILE=/tmp/lshttpd/lshttpd.pid
@@ -65,6 +65,18 @@ stopService()
     if [ $RUNNING -eq 1 ] ; then
         ${LSWSCTRL} stop
     fi
+    
+    FPID=`cat $PIDFILE`
+    if [ "x$FPID" != "x" ]; then
+        kill -9 $FPID 2>/dev/null
+    fi    
+    
+    #when FPID not exist, try again
+    FPID=`ps -ef | grep openlitespeed | grep -v grep | awk '{print $2}'`
+    if [ "x$FPID" != "x" ]; then
+        kill -9 $FPID 2>/dev/null
+    fi    
+    
 }
 
 
@@ -441,7 +453,7 @@ if [ -f ${LOCKFILE} ] ; then
         echoG "${LOCKFILE} exists, timestamp is $FILETIME, current time is $SYSTEMTIME, removed it."
         rm -rf ${LOCKFILE}
     else
-        echoR "Openlitespeed is updating, quit."
+        echoR "Openlitespeed is updating, quit. (You may run -c to remove the lock file and try again.)"
         exit 0
     fi
 fi
@@ -536,7 +548,9 @@ if [ -f ${LSWSHOME}/VERSION ] ; then
 fi
 
 stopService
-mv /tmp/lshttpd/bak_core /tmp/lshttpdcore
+if [ -e /tmp/lshttpd/bak_core ] ; then
+    mv /tmp/lshttpd/bak_core /tmp/lshttpdcore
+fi
 rm -rf /tmp/lshttpd/*
 if [ -e /dev/shm/ols ] ; then
     rm -rf /dev/shm/ols/*
