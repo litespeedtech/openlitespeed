@@ -18,6 +18,7 @@
 #include "extworkerconfig.h"
 
 #include <http/httpdefs.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <main/configctx.h>
 #include <socket/gsockaddr.h>
@@ -195,7 +196,6 @@ void ExtWorkerConfig::removeUnusedSocket()
 
 void ExtWorkerConfig::config(const XmlNode *pNode)
 {
-    const char *pValue;
     int iMaxConns = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                     "maxConns", 1, 10000, 5);
     int iRetryTimeout = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
@@ -233,15 +233,25 @@ void ExtWorkerConfig::config(const XmlNode *pNode)
     addEnv(sEnvPadding);
     if (pList)
     {
+        char pBuf[MAX_PATH_LEN] = {0};
         XmlNodeList::const_iterator iter;
 
         for (iter = pList->begin(); iter != pList->end(); ++iter)
         {
-            pValue = (*iter)->getValue();
+            const char *pValue;
+            if ((pValue = (*iter)->getValue()) != NULL)
+            {
+                if (ConfigCtx::getCurConfigCtx()->expandVariable(pValue,
+                    pBuf, MAX_PATH_LEN, 1) < 0)
+                {
+                    LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                             "expand env: %s error", pValue);
+                    continue;
+                }
 
-            if (pValue)
-                addEnv((*iter)->getValue());
+                pValue = pBuf;
+                addEnv(pValue);
+            }
         }
     }
-
 }
