@@ -493,7 +493,7 @@ class DTblDefBase
         $a_restrictedScriptPermissionMask->SetFlag($flag);
         $a_restrictedDirPermissionMask = self::NewParseTextAttr('restrictedDirPermissionMask', DMsg::ALbl('l_restricteddirpermissionmask'), $parseFormat, $parseHelp);
         $a_restrictedDirPermissionMask->SetFlag($flag);
-        
+
         $attrs = [
             self::NewSelAttr('followSymbolLink', DMsg::ALbl('l_followsymbollink'), $this->_options['symbolLink'], false),
             self::NewBoolAttr('checkSymbolLink', DMsg::ALbl('l_checksymbollink'), false),
@@ -560,7 +560,7 @@ class DTblDefBase
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
 	}
-    
+
 	protected function add_S_SEC_BUBBLEWRAP($id)
 	{
         $attrs = [
@@ -1383,7 +1383,7 @@ class DTblDefBase
             self::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'), '/\$VH_NAME.*\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
             $this->_attrs['vh_maxKeepAliveReq'],
         );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, 'Base', $attrs); // todo: title change
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_base'), $attrs);
     }
 
     protected function add_T_SEC_FILE($id)
