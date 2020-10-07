@@ -633,6 +633,7 @@ HttpContext *HttpVHost::addContext(const char *pUri, int type,
     {
         setContext(pContext, pUri, type, pLocation, pHandler, allowBrowse, 0);
         ret = addContext(pContext);
+        LS_DBG_L("[%s] HttpVHost::addContext uri %s <%p> return %d\n", TmpLogId::getLogId(), pUri, pContext, ret);
         if (ret != 0)
         {
             delete pContext;
@@ -678,6 +679,8 @@ bool HttpVHost::dirMatch(HttpContext * &pContext, const char *pURI,
 HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
 {
     HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
+    LS_DBG_L(ConfigCtx::getCurConfigCtx(), "HttpVHost::bestMatch %.*s (len %d) return %p, loc %s.",
+             iUriLen, pURI, iUriLen, pContext, pContext ? pContext->getLocation() : "nil");
 
     AutoStr2 missURI; //A while URI start with /
     AutoStr2 missLoc;  //A loc should be added to pContext location for the full path
@@ -897,6 +900,15 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
         pAdminEmails = "";
     setAdminEmails(pAdminEmails);
 
+    LS_DBG("VHost config: %p, Server level bwrap: %d\n", this,
+           HttpServerConfig::getInstance().getBwrap());
+    if (HttpServerConfig::getInstance().getBwrap()
+        != HttpServerConfig::BWRAP_DISABLED)
+    {
+        enableBwrap(ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "bubbleWrap",
+            0, 2, HttpServerConfig::getInstance().getBwrap()) == HttpVHost::BWRAP_ON);
+        LS_DBG("VHost bwrap: %d\n", enableBwrap());
+    }
     return 0;
 
 }
@@ -1324,7 +1336,7 @@ HttpContext *HttpVHost::configContext(const char *pUri, int type,
                  * Since it is expanded, now we try to add tail / dor DIR if not have
                  */
                 pathLen = strlen(achRealPath);
-                if (pathLen > 0 && pathLen < sizeof(achRealPath) - 1 &&
+                if (pathLen > 0 && (size_t)pathLen < sizeof(achRealPath) - 1 &&
                     ret == 0 && achRealPath[pathLen - 1] != '/')
                 {
                     struct stat st;
@@ -1591,6 +1603,8 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
 
     LocalWorkerConfig &config = pWorker->getConfig();
+    if (maxConns < 2)
+        maxConns = 2;
     setDefaultConfig(config, pRailsRunner, maxConns, maxIdle, pAppDefault);
 
     config.clearEnv();

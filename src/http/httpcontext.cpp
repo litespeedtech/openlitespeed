@@ -49,6 +49,8 @@
 #include <string.h>
 #include <unistd.h>
 
+const int MAX_LINE_LENGTH = 8192;
+
 CtxInt HttpContext::s_defaultInternal =
 {
     NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1256,7 +1258,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
                                    char *pRule, const char *htaccessPath)
 {
     RewriteRuleList *pRuleList;
-    char achHandler[1024] = {0};
+    char achHandler[MAX_LINE_LENGTH] = {0};
 
     AutoStr2 rule = "";
     if (pRule)
@@ -1268,7 +1270,7 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
     if (htaccessPath && strlen(htaccessPath) > 1)
     {
         if (ConfigCtx::getCurConfigCtx()->expandVariable(htaccessPath, achHandler,
-                    1024, 1) < 0)
+                    MAX_LINE_LENGTH, 1) < 0)
         {
 
             LS_ERROR(ConfigCtx::getCurConfigCtx(),
@@ -1389,8 +1391,8 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
         setPHPConfig(pConfig);
     }
 
-    char m_achError[1024] = {0};
-    char m_achValue[1024] = {0};
+    char m_achError[MAX_LINE_LENGTH] = {0};
+    char m_achValue[MAX_LINE_LENGTH] = {0};
     int id;
     XmlNodeList::const_iterator iter;
     const char *tags[] = {"php_value",  "php_flag",
@@ -1408,7 +1410,7 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
                 if ((config = pItem->getValue()) != NULL)
                 {
                     if (ConfigCtx::getCurConfigCtx()->expandVariable(config,
-                        m_achValue, 1024, 1) < 0)
+                        m_achValue, MAX_LINE_LENGTH, 1) < 0)
                     {
                         LS_ERROR(ConfigCtx::getCurConfigCtx(),
                                  "expand #%d: %s %s error", i, tags[i], config);
@@ -1450,7 +1452,7 @@ int HttpContext::config(const RewriteMapList *pMapList,
     configAccess(pContextNode);
     configExtAuthorizer(pContextNode);
 
-    getExpires().config(pContextNode, NULL, this);
+    getExpires().config(pContextNode,  &pRootContext.getExpires(), this);
     pValue = pContextNode->getChildValue("expiresByType");
 
     if (pValue && (*pValue))

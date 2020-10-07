@@ -90,8 +90,6 @@ $_tipsdb['accessLog_compressArchive'] = new DAttrHelp("Compress Archive", 'Speci
 
 $_tipsdb['accessLog_fileName'] = new DAttrHelp("File Name", 'The access log filename.', ' Put access log file on a separate disk.', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
 
-$_tipsdb['accessLog_keepDays'] = new DAttrHelp("Keep Days", 'Specifies how many days the access log file will be kept on disk.  Only rotated log files older than the specified number of days will be deleted. The current  log file will not be touched regardless how many days worth of data it contains.  If you do not want to auto-delete stale and very old log files, set this to 0.', '', 'Integer number', '');
-
 $_tipsdb['accessLog_logFormat'] = new DAttrHelp("Log Format", ' Specifies the log format for the access log. When log format is set, it will override the &quot;Log Headers&quot; setting.', '', 'String. The syntax of log format is compatible with Apache 2.0&#039;s custom  <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">log format</a>.', '<b>Common Log Format (CLF)</b><br/>    &quot;%h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/><b>Common Log Format with Virtual Host</b><br/>    &quot;%v %h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/><b>NCSA extended/combined log format</b><br/>    &quot;%h %l %u %t \&quot;%r\&quot; %>s %b \&quot;%{Referer}i\&quot; \&quot;%{User-agent}i\&quot; <br/><br/><b>Log cookie value of Foobar</b><br/>    &quot;%{Foobar}C&quot;');
 
 $_tipsdb['accessLog_logHeader'] = new DAttrHelp("Log Headers", 'Specifies whether to log HTTP request headers: Referer, UserAgent, and Host.', ' Turn this off if you do not need these headers in the access log.', 'Select from checkbox', '');
@@ -176,7 +174,7 @@ $_tipsdb['clientVerify'] = new DAttrHelp("Client Verification", ' Specifies the 
 
 $_tipsdb['compilerflags'] = new DAttrHelp("Compiler Flags", 'Add additional compiler flags, like optimized compiler options.', '', 'Supported flags are CFLAGS, CXXFLAGS, CPPFLAGS, LDFLAGS. Use a space to separate different flags.  Use single quotes (not double quotes) for flag values.', 'CFLAGS=&#039;-O3 -msse2 -msse3 -msse4.1 -msse4.2 -msse4 -mavx&#039;');
 
-$_tipsdb['compressibleTypes'] = new DAttrHelp("Compressible Types", 'Specifies what MIME types are allowed to be compressed.', ' Only allow types that will benefit from GZIP/Brotli compression. Binary files such as gif/png/jpeg images and flash files do not benefit from compression.', 'MIME type list separated by commas. Wild card &quot;*&quot; and negate sign &quot;!&quot; are allowed, such as text/*, !text/js.', 'If you want to compress text/* but not text/css, you can have a rule like text/*, !text/css. &quot;!&quot; will exclude that MIME type.');
+$_tipsdb['compressibleTypes'] = new DAttrHelp("Compressible Types", 'Specifies what MIME types are allowed to be compressed. Leave this setting unset or enter default to use the server built-in default list which should already cover most mime-types.<br/><br/>Default value: text/*,application/x-javascript,application/javascript,application/xml,image/svg+xml,application/rss+xml, application/json,application/vnd.ms-fontobject,application/x-font,application/x-font-opentype, application/x-font-truetype,application/x-font-ttf,font/eot,font/opentype,font/otf,font/ttf,image/x-icon, image/vnd.microsoft.icon,application/xhtml+xml', ' Only allow types that will benefit from GZIP/Brotli compression. Binary files such as gif/png/jpeg images and flash files do not benefit from compression.', 'MIME type list separated by commas. Wild card &quot;*&quot; and negate sign &quot;!&quot; are allowed, such as text/*, !text/js.', 'If you want to compress text/* but not text/css, you can have a rule like text/*, !text/css. &quot;!&quot; will exclude that MIME type.');
 
 $_tipsdb['configFile'] = new DAttrHelp("Config File", 'The configuration filename and directory for this virtual host. The configuration file must be under the $SERVER_ROOT/conf/vhosts/ directory.', '$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf is recommended', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
 
@@ -370,7 +368,7 @@ $_tipsdb['lbapp'] = new DAttrHelp("Load Balancer", 'Specifies the name of the lo
 
 $_tipsdb['listenerBinding'] = new DAttrHelp("Binding", 'Specifies which lshttpd child process the listener is assigned to. Different child processes can be used to handle requests to different listeners by manually associating a listener with a process. By default, a listener is assigned to all child processes.', '', 'Select from checkbox', '');
 
-$_tipsdb['listenerIP'] = new DAttrHelp("IP Address", 'Specifies the IP of this listener. All available IP addresses are listed. IPv6 addresses are enclosed in &quot;[ ]&quot;. To listen on all IPv4 IP addresses, select ANY. To listen on all IPv4 and IPv6 IP addresses, select [ANY]. In order to serve both IPv4 and IPv6 clients, an IPv4-mapped IPv6 address should be used instead of a plain IPv4 address. An IPv4-mapped IPv6 address is written as [::FFFF:x.x.x.x].', ' If your machine has multiple IPs on different sub-networks, you can select a specific IP to only allow traffic from the corresponding sub-network.', 'Select from drop down list', '');
+$_tipsdb['listenerIP'] = new DAttrHelp("IP Address", 'Specifies the IP of this listener. All available IP addresses are listed. IPv6 addresses are enclosed in &quot;[ ]&quot;.<br/><br/>To listen on all IPv4 IP addresses, select ANY. To listen on all IPv4 and IPv6 IP addresses, select [ANY].<br/><br/>In order to serve both IPv4 and IPv6 clients, an IPv4-mapped IPv6 address should be used instead of a plain IPv4 address. An IPv4-mapped IPv6 address is written as [::FFFF:x.x.x.x].', ' If your machine has multiple IPs on different sub-networks, you can select a specific IP to only allow traffic from the corresponding sub-network.', 'Select from drop down list', '');
 
 $_tipsdb['listenerModules'] = new DAttrHelp("Listener Modules", 'Listener module configuration data is, by default inherited from the Server module configuration.   The Listener Modules are limited to the TCP/IP Layer 4 hooks.', '', '', '');
 
@@ -394,6 +392,8 @@ $_tipsdb['log_enableStderrLog'] = new DAttrHelp("Enable stderr Log", 'Specifies 
 
 $_tipsdb['log_fileName'] = new DAttrHelp("File Name", 'Specifies the path for the log file.', ' Place the log file on a separate disk.', 'Filename which can be an absolute path or a relative path to $SERVER_ROOT.', '');
 
+$_tipsdb['log_keepDays'] = new DAttrHelp("Keep Days", 'Specifies how many days the access log file will be kept on disk.  Only rotated log files older than the specified number of days will be deleted. The current  log file will not be touched regardless how many days worth of data it contains.  If you do not want to auto-delete stale and very old log files, set this to 0.', '', 'Integer number', '');
+
 $_tipsdb['log_logLevel'] = new DAttrHelp("Log Level", 'Specifies the level of logging to include in your log file.  Available levels (from high to low) are: ERROR,  WARNING, NOTICE, INFO and DEBUG.  Only messages with level higher or equal to the current setting will be logged.', ' Using DEBUG log level does not have any performance impact, unless &quot;Debug Level&quot; is set to a level other than NONE. It&#039;s recommended to set Log Level to DEBUG and Debug Level to NONE. These settings mean that you will not fill up your  hard disk with debug logging, but you will be able to use the &quot;Toggle Debug Logging&quot;  action to control debug output. This action can turn debug logging on and off on the fly,   and is useful for debugging busy production servers.', 'Select from drop down list', '');
 
 $_tipsdb['log_rollingSize'] = new DAttrHelp("Rolling Size (bytes)", 'Specifies when the current log file needs to be rolled over, also known as log rotation.  When the file size is over the rollover limit, the active log file will be renamed  to log_name.mm_dd_yyyy(.sequence) in the same directory and a new active log file will be created. The actual size of the rotated log file once it is created will sometimes be a little bigger than  this size limit. Set to 0 to disable log rotation.', 'Append &quot;K&quot;, &quot;M&quot;, &quot;G&quot; to the number for kilo-, mega- and giga- bytes.', 'Integer number', '');
@@ -416,7 +416,7 @@ $_tipsdb['maxConnections'] = new DAttrHelp("Max Connections", 'Specifies the max
 
 $_tipsdb['maxConns'] = new DAttrHelp("Max Connections", 'Specifies the maximum number of concurrent connections that can be established between the server and an external application. This setting controls how many requests can be processed concurrently by an external application, however, the real limit also depends on the external application itself. Setting this value higher will not help if the external application is not fast enough or cannot scale to a large number of concurrent requests.', ' Setting a high value does not directly translate to higher performance. Setting the limit to a value that will not overload the external application will provide the best performance/throughput.', 'Integer number', '');
 
-$_tipsdb['maxDynRespHeaderSize'] = new DAttrHelp("Max Dynamic Response Header Size (bytes)", 'Specifies the maximum header size of a dynamically generated response. Hard limit is 64K.<br/><br/>Default value: 16K', ' Set it reasonably low to help recognize bad responses dynamically generated by external applications.', 'Integer number', '');
+$_tipsdb['maxDynRespHeaderSize'] = new DAttrHelp("Max Dynamic Response Header Size (bytes)", 'Specifies the maximum header size of a dynamically generated response. Hard limit is 131072 bytes or 128K.<br/><br/>Default value: 32768 or 32K', ' Set it reasonably low to help recognize bad responses dynamically generated by external applications.', 'Integer number', '');
 
 $_tipsdb['maxDynRespSize'] = new DAttrHelp("Max Dynamic Response Body Size (bytes)", 'Specifies the maximum body size of a dynamically generated response. Hard limit is 2047MB.', ' Set the limit reasonably low to help identify bad responses. It is not uncommon to malformed scripts to contain an infinite loop which leads to infinity-sized responses.', 'Integer number', '');
 
@@ -428,9 +428,9 @@ $_tipsdb['maxMindDBEnv'] = new DAttrHelp("Environment Variables", 'Assign the re
 
 $_tipsdb['maxReqBodySize'] = new DAttrHelp("Max Request Body Size (bytes)", 'Specifies the maximum size of an HTTP request body. For a 32Bit OS, 2GB is the hard limit.  For a 64Bit OS, it is virtually unlimited.', ' To help prevent DoS attacks, try to constrain this limit to only what is really needed. Your swapping space must have enough free space to accommodate this limit.', 'Integer number', '');
 
-$_tipsdb['maxReqHeaderSize'] = new DAttrHelp("Max Request Header Size (bytes)", 'Specifies the maximum size of an HTTP request header including request URL. Hard limit is 16380 bytes.', ' Set it reasonably low to reduce memory usage and help identify bogus requests and DoS attacks.<br/>4-8K is big enough for most web sites.', 'Integer number', '');
+$_tipsdb['maxReqHeaderSize'] = new DAttrHelp("Max Request Header Size (bytes)", 'Specifies the maximum size of an HTTP request header including request URL. Hard limit is 131072 bytes or 128K.<br/><br/>Default value: 32768 or 32K', ' Set it reasonably low to reduce memory usage and help identify bogus requests and DoS attacks.<br/>4-8K is big enough for most web sites under normal circumstances.', 'Integer number', '');
 
-$_tipsdb['maxReqURLLen'] = new DAttrHelp("Max Request URL Length (bytes)", 'Specifies the maximum size of a request URL. URL is the full text address used to access a server resource including the query string. 64K bytes is the hard limit.', ' Set it reasonably low to reduce memory usage and help identify bogus requests and DoS attacks.<br/>2-3K is big enough for most web sites unless the HTTP GET method is used with large query strings instead of POST.', 'Integer number', '');
+$_tipsdb['maxReqURLLen'] = new DAttrHelp("Max Request URL Length (bytes)", 'Specifies the maximum size of a request URL. URL is the full text address used to access a server resource including the query string. Hard limit is 65530 bytes. Values larger than this, such as 64K (6 bytes larger), will be treated as if 65530 was used.<br/><br/>Default value: 8192 or 8K.', ' Set it reasonably low to reduce memory usage and help identify bogus requests and DoS attacks.<br/>2-3K is big enough for most web sites unless the HTTP GET method is used with large query strings instead of POST.', 'Integer number', '');
 
 $_tipsdb['maxSSLConnections'] = new DAttrHelp("Max SSL Connections", 'Specifies the maximum number of concurrent SSL connections the server will accept. Since total concurrent SSL and non-SSL connections cannot exceed the limit specified by &quot;Max Connections&quot;, the actual number of concurrent SSL connections allowed must be lower than this limit.', '', 'Integer number', '');
 
@@ -496,17 +496,23 @@ $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enabl
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web Server", 'Specifies the name of the external web server. This external web server must be defined in the &quot;External Apps&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
+$_tipsdb['quicBasePLPMTU'] = new DAttrHelp("PLPMTU Base Value", 'The maximum value of PLPMTU (maximum packet size without headers) in bytes that QUIC will use by default. Setting this to 0 will allow QUIC to pick the size.<br/><br/>This setting should be set lower than &quot;PLPMTU Max Value&quot;.<br/><br/>Default value: 0', '', '0 or integer number between 1200 and 65527', '');
+
 $_tipsdb['quicCfcw'] = new DAttrHelp("Connection Flow Control Window", 'The initial size of the buffer allocated for a QUIC connection. Default value is 1.5M.', 'A larger window size will use more memory.', 'Number between 64K and 512M', '');
 
 $_tipsdb['quicCongestionCtrl'] = new DAttrHelp("Congestion Control", 'The congestion control algorithm used. This can be set manually or left up to the QUIC library in use by selecting the &quot;Default&quot; option.<br/><br/>Default value: Default', '', 'Select from drop down list', '');
 
 $_tipsdb['quicEnable'] = new DAttrHelp("Enable QUIC", 'Enables the QUIC network protocol server wide. Default value is Yes.', 'When this setting is set to Yes, QUIC can still be disabled at the listener level through the &quot;Allow QUIC&quot; setting, or at the virtual host level through the &quot;Enable QUIC&quot; setting.', 'Select from radio box', '');
 
+$_tipsdb['quicEnableDPLPMTUD'] = new DAttrHelp("Enable DPLPMTUD", 'Enable Datagram Packetization Layer Path Maximum Transmission Unit Discovery (DPLPMTUD).<br/><br/><b><a href=&quot;https://tools.ietf.org/html/rfc8899&quot;>Background on DPLPMTUD (RFC 8899)</a></b><br/><br/>Default value: Yes', '', 'Select from radio box', '');
+
 $_tipsdb['quicHandshakeTimeout'] = new DAttrHelp("Handshake Timeout", 'The time in seconds a new QUIC connection is given to complete its handshake, after which the connection is aborted. Default value is 10.', '', 'Integer number between 1 and 15', '');
 
 $_tipsdb['quicIdleTimeout'] = new DAttrHelp("Idle Timeout", 'The time in seconds after which an idle QUIC connection will be closed. Default value is 30.', '', 'Integer number between 10 and 30', '');
 
 $_tipsdb['quicMaxCfcw'] = new DAttrHelp("Max Connection Flow Control Window", 'Specifies the maximum size that a connection flow control window buffer is allowed to reach due to window auto-tuning.<br/><br/>Default value is 0, which means that the value of &quot;Connection Flow Control Window&quot; is used and no auto-tuning is performed.', 'A larger window size will use more memory.', '0 or a number between 64K and 512M', '');
+
+$_tipsdb['quicMaxPLPMTU'] = new DAttrHelp("PLPMTU Max Value", 'The PLPMTU (maximum packet size without headers) probe upper limit in bytes. This setting is used to limit the &quot;maximum packet size&quot; in the DPLPMTUD search space.  Setting this to 0 will allow QUIC to pick the size (By default LSQUIC assumes that MTU is 1,500 bytes (Ethernet)).<br/><br/>This setting should be set higher than &quot;PLPMTU Base Value&quot;.<br/>Default value: 0', '', '0 or integer number between 1200 and 65527', '');
 
 $_tipsdb['quicMaxSfcw'] = new DAttrHelp("Max Stream Flow Control Window", 'Specifies the maximum size that a stream flow control window is allowed to reach due to window auto-tuning.<br/><br/>Default value is 0, which means that the value of &quot;Stream Flow Control Window&quot; is used and no auto-tuning is performed.', 'A larger window size will use more memory.', '0 or a number between 64K and 128M', '');
 
@@ -797,7 +803,7 @@ $_tipsdb['EDTP:compressibleTypes'] = array('Compressible Types is a list of MIME
 
 $_tipsdb['EDTP:ctxType'] = array('<b>Static</b> context can be used to map a URI to a directory either outside document root or within it.','<b>Java Web App</b> context is used to automatically import a predefined Java Application in an AJPv13 compilant Java servlet engine.','<b>Servlet</b> context is used to import a specific servlet under a web application.','<b>Fast CGI</b> context is a mount point of Fast CGI application.','<b>LiteSpeed SAPI</b> context can be used to associate a URI with an LSAPI application.','<b>Proxy</b> context enables this virtual host to serve as a transparant reverse proxy server to an external web server or application server.','<b>CGI</b> context can be used to specify a directory only contains CGI scripts.','<b>Load Balancer</b> context can be used to assign a different cluster for that context.','<b>Redirect</b> context can set up an internal or external redirect URI.','<b>App Server</b> context is specifically used for Rack/Rails, WSGI, and Node.js applications.<br>','<b>Module handler</b> context is a mount point of hander type modules.');
 
-$_tipsdb['EDTP:docRoot'] = array('Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.');
+$_tipsdb['EDTP:docRoot'] = array('Document root will not be created by the server automatically if it does not already exist. Please ensure that both the directory exists and it is owned by the correct user.','Set up your document root here, which can be absolute path or relative to $SERV_ROOT or $VH_ROOT','Document root is referred as $DOC_ROOT in this virtual host, which can be used in other path configuration.');
 
 $_tipsdb['EDTP:domainName'] = array('Enter all the domains that you want this listener to respond to. Use comma &quot;,&quot; to separate individual domain.','You can choose only one virtual host to handle all unspecified domains, put &quot;*&quot; in domains.');
 
@@ -859,7 +865,7 @@ $_tipsdb['EDTP:log_rollingSize'] = array('A new log file will be created if curr
 
 $_tipsdb['EDTP:maxCGIInstances'] = array('Limits resources that a CGI program can use. This helps against DoS attacks.','Max CGI Instances controls how many CGI processes the web server can launch.');
 
-$_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240, 10K or 1M.');
+$_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240 or 10K.');
 
 $_tipsdb['EDTP:mime'] = array('MIME settings can be edited from the previous page. You can specify the mime configuration file location which can be either be an absolute path or relative to $SERVER_ROOT.');
 
@@ -925,7 +931,7 @@ $_tipsdb['EDTP:swappingDir'] = array('Swapping directory is recommended to be pl
 
 $_tipsdb['EDTP:userDBLocation'] = array('It is recommended that the database be stored under the $SERVER_ROOT/conf/vhosts/$VH_NAME/ directory.');
 
-$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual host root and modify it.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.');
+$_tipsdb['EDTP:vhRoot'] = array('All directories must pre-exist. This web interface will not create the directory for you. If you are creating a new virtual host, you can create an empty root directory and set it up from the beginning; or you can copy the &quot;Example&quot; virtual root that shipped with the package to this virtual host root and modify it to be user owned.','Virtual host root ($VH_ROOT) can be absolute path or relative to $SERVER_ROOT.');
 
 $_tipsdb['EDTP:vhaccessLog_fileName'] = array('Log file path can be an absolute path or a relative path to $SERVER_ROOT, $VH_ROOT.');
 

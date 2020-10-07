@@ -1976,6 +1976,8 @@ int HttpReq::processContext()
         if (!m_pContext)
         {
             LS_ERROR(getLogSession(), "No context found for URI: [%s].", pURI);
+            //Add the below asset will casue DEBUG version crash
+            assert(!(iURILen == 1 && pURI[0] == '/'));
             return SC_404;
         }
         LS_DBG_H(getLogSession(), "Find context with URI: [%s], "
@@ -2645,9 +2647,9 @@ const ExpiresCtrl *HttpReq::shouldAddExpires()
         p = &m_pVHost->getExpires();
     else
         p = HttpMime::getMime()->getDefault()->getExpires();
-    if (p->isEnabled() && m_pMimeType)
+    if (p->isEnabled())
     {
-        if (m_pMimeType->getExpires()->getBase())
+        if (m_pMimeType && m_pMimeType->getExpires()->getBase())
             p = m_pMimeType->getExpires();
         else if (!p->getBase())
             p = NULL;

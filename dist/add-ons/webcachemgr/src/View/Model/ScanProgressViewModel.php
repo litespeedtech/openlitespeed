@@ -1,9 +1,11 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ *
+ * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright (c) 2018-2020
+ * @deprecated 1.13.3  This file will be removed in a future release.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -12,6 +14,10 @@ use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Logger;
 
+/**
+ *
+ * @deprecated 1.13.3
+ */
 class ScanProgressViewModel
 {
 
@@ -33,7 +39,9 @@ class ScanProgressViewModel
     protected $tplData = array();
 
     /**
+     *
      * @param int  $mgrStep
+     * @throws LSCMException  Thrown indirectly.
      */
     public function __construct( $mgrStep )
     {
@@ -42,6 +50,10 @@ class ScanProgressViewModel
         $this->init();
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     protected function init()
     {
         $this->setTitle();
@@ -76,6 +88,10 @@ class ScanProgressViewModel
         $this->tplData[self::FLD_TITLE] = $title;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     protected function setIconPath()
     {
         $iconPath = '';
@@ -100,6 +116,11 @@ class ScanProgressViewModel
         $this->tplData[self::FLD_HOME_DIR_COUNT] = count($info['homeDirs']);
     }
 
+    /**
+     *
+     * @return string
+     * @throws LSCMException  Thrown indirectly.
+     */
     public function getTpl()
     {
         return Context::getOption()->getSharedTplDir() . '/ScanProgress.tpl';

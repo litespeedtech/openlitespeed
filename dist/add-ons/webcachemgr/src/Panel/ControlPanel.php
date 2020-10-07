@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.2';
+    const PANEL_API_VERSION = '1.13.3.1';
 
     /**
      * @since 1.9
@@ -293,6 +293,7 @@ abstract class ControlPanel
      *
      * @param string  $serverName
      * @return string|null
+     * @throws LSCMException  Thrown indirectly.
      */
     public function mapDocRoot( $serverName )
     {
@@ -441,6 +442,7 @@ abstract class ControlPanel
      * @param int       $offset
      * @param null|int  $length
      * @return string[]
+     * @throws LSCMException  Thrown indirectly.
      */
     public function getDocRoots( $offset = 0, $length = null )
     {
@@ -455,10 +457,17 @@ abstract class ControlPanel
      * Used in PleskEscalate.
      *
      * @return mixed[][]
+     *
+     * @noinspection PhpUnused
+     * @noinspection PhpDocMissingThrowsInspection
      */
     public function getDocrootMap()
     {
         if ( $this->docRootMap == null ) {
+            /**
+             * LSCMException not thrown in Plesk implementation.
+             * @noinspection PhpUnhandledExceptionInspection
+             */
             $this->prepareDocrootMap();
         }
 
@@ -507,6 +516,10 @@ abstract class ControlPanel
      */
     abstract protected function initConfPaths();
 
+    /**
+     *
+     * @throws LSCMException  Thrown in some existing implementations.
+     */
     abstract protected function prepareDocrootMap();
 
     abstract public function getPhpBinary( WPInstall $wpInstall );
@@ -635,9 +648,7 @@ abstract class ControlPanel
      *
      * @param string  $msg
      * @param int     $level
-     * @throws LSCMException  Indirectly thrown by Logger::error(),
-     *                        Logger::warn(), Logger::notice(), Logger::info(),
-     *                        Logger::verbose(), and Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function log( $msg, $level )
     {
@@ -929,6 +940,10 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.13.3.1',
+            '1.13.3',
+            '1.13.2.2',
+            '1.13.2.1',
             '1.13.2',
             '1.13.1',
             '1.13.0.3',

@@ -44,7 +44,6 @@
 #include <time.h>
 #include <unistd.h>
 
-
 #if defined(__FreeBSD__)
 # include <sys/param.h>
 #endif

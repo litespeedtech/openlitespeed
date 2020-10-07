@@ -1289,8 +1289,8 @@ void HttpServerImpl::releaseAll()
     m_toBeReleasedListeners.clear();
 #ifndef  TO_AVOID_EXIT_CRASH
     m_vhosts.release_objects();
-#endif
     m_toBeReleasedVHosts.release_objects();
+#endif
     ::signal(SIGCHLD, SIG_DFL);
     ExtAppRegistry::shutdown();
     ClientCache::clearObjPool();
@@ -1745,6 +1745,16 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         SslContext *pSSLCtx = NULL;
         if (pAddr == NULL)
             break;
+
+        GSockAddr sockAddr;
+        if (sockAddr.set(pAddr, 0) == -1)
+        {
+            LS_ERROR(&currentCtx, "Failed to config listener [%s]: bad socket address [%s]", pName, pAddr);
+            break;
+        }
+        char buf[256];
+        if (strncmp(pAddr, "*:", 2) != 0)
+            pAddr = sockAddr.toString(buf, sizeof(buf));
 
         int secure = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "secure", 0,
                      1, 0);
@@ -2880,6 +2890,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         m_serverContext.setModuleConfig(ModuleManager::getInstance().getGlobalModuleConfig(), 0);
         m_serverContext.initExternalSessionHooks();
         return 0;
+
     }
 
     return LS_FAIL;
@@ -3321,19 +3332,30 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableh2c",
                     0, 1, 0));
 
-        long l = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+        long val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
                  "gracefulRestartTimeout", -1, INT_MAX, 300);
-        if (l == -1)
-            l = 3600 * 24;
-        HttpServerConfig::getInstance().setRestartTimeOut(l);
+        if (val == -1)
+            val = 3600 * 24;
+        HttpServerConfig::getInstance().setRestartTimeOut(val);
 
-        HttpServerConfig::getInstance().setEnableLve(
-            ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0,
-                                                       3, 0));
+        val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0,
+                                                       3, 0);
+        HttpServerConfig::getInstance().setEnableLve(val);
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "enableLVE: %ld", val);
+
 
         HttpServerConfig::getInstance().setCpuAffinity(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0,
                                                        64, 0));
+
+        val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "bubbleWrap",
+                0, 2, HttpServerConfig::BWRAP_DISABLED);
+        HttpServerConfig::getInstance().setBwrap((HttpServerConfig::BwrapConfigValues)val);
+
+        const char *cmd = ConfigCtx::getCurConfigCtx()->getTag(pRoot, "bubbleWrapCmd", 0, 0);
+        HttpServerConfig::getInstance().setBwrapCmdLine(cmd);
+        LS_INFO(ConfigCtx::getCurConfigCtx(), "bubbleWrap: %ld, cmd: '%s'", val, cmd);
+
 
         //this value can only be set once when server start.
         if (MainServerConfigObj.getCrashGuard() == 2)

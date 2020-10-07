@@ -88,6 +88,35 @@ class Plesk extends ControlPanel
 
     /**
      *
+     * @since 1.13.3
+     *
+     * @return string
+     */
+    protected function getVhDir()
+    {
+        $vhDir = '/var/www/vhosts';
+
+        $psaConfFile = '/etc/psa/psa.conf';
+
+        if ( file_exists($psaConfFile) ) {
+            $file_content = file_get_contents($psaConfFile);
+
+            $ret = preg_match(
+                '/HTTPD_VHOSTS_D\s+([^\s]+)/',
+                $file_content,
+                $m
+            );
+
+            if ( $ret == 1 ) {
+                $vhDir = $m[1];
+            }
+        }
+
+        return $vhDir;
+    }
+
+    /**
+     *
      * @throws LSCMException  Thrown indirectly.
      */
     protected function initConfPaths()
@@ -213,8 +242,13 @@ class Plesk extends ControlPanel
      */
     protected function prepareDocrootMap()
     {
-        $cmd = 'grep -hro --exclude="stat_ttl.conf" --exclude="*.bak" --exclude="last_httpd.conf" '
-                . '"DocumentRoot.*\|ServerName.*\|ServerAlias.*" /var/www/vhosts/system/*/conf/*';
+
+        $vhDir = $this->getVhDir();
+
+        $cmd = 'grep -hro --exclude="stat_ttl.conf" --exclude="*.bak" '
+            . '--exclude="last_httpd.conf" '
+            . '"DocumentRoot.*\|ServerName.*\|ServerAlias.*" '
+            . "{$vhDir}/system/*/conf/*";
         exec( $cmd, $lines);
 
         /**

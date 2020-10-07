@@ -53,6 +53,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 static char * s_pOcspCachePath = NULL;
@@ -114,10 +115,14 @@ int SslOcspStapling::callback(SSL *ssl)
     iResult = SSL_TLSEXT_ERR_NOACK;
     if (m_RespTime == UINT_MAX)
         return iResult;
+    unsigned char *resp_data = m_pRespData;
     update();
     if (m_pRespData && m_iDataLen > 0)
     {
-#ifndef OPENSSL_IS_BORINGSSL
+#ifdef OPENSSL_IS_BORINGSSL
+        if (m_pRespData != resp_data)
+            SSL_set_ocsp_response(ssl, m_pRespData, m_iDataLen);
+#else
         unsigned char *pOcspResp;
         /*OpenSSL will free pOcspResp by itself */
         pOcspResp = (unsigned char *)malloc(m_iDataLen);
@@ -174,6 +179,7 @@ SslOcspStapling::SslOcspStapling()
     , m_pCtx(NULL)
     , m_RespTime(0)
     , m_statTime(0)
+    , m_nextUpdate(0)
     , m_pCertId(NULL)
 {
 }
@@ -233,6 +239,22 @@ int SslOcspStapling::update()
     struct stat st;
     if (m_RespTime == UINT_MAX)
         return 0;
+    //NOTE: test code , to test clearing out expired OCSP response
+    //if (m_pRespData && m_statTime + 10 <= DateTime::s_curTime)
+    //    m_nextUpdate = DateTime::s_curTime;
+    if (m_pRespData && m_nextUpdate <= DateTime::s_curTime)
+    {
+        LS_DBG("[OCSP] %s: OCSP response expired, cur: %ld, resp_create: %ld, expire: %ld.\n",
+                    m_sRespfile.c_str(), DateTime::s_curTime, m_RespTime, m_nextUpdate);
+        releaseRespData();
+        if (m_statTime != DateTime::s_curTime)
+        {
+            m_statTime = DateTime::s_curTime;
+            goto TRY_CREATE_REQ;
+        }
+        else
+            return 0;
+    }
     if (m_statTime != 0 && m_statTime + 60 >= DateTime::s_curTime)
         return 0;
 
@@ -260,6 +282,8 @@ int SslOcspStapling::update()
             }
         }
     }
+
+TRY_CREATE_REQ:
     ret = ::stat(m_sRespfileTmp.c_str(), &st);
     if (ret != 0 || st.st_mtime + 30 < DateTime::s_curTime)
     {
@@ -449,6 +473,18 @@ int SslOcspStapling::updateRespData(OCSP_RESPONSE *pResponse)
     return -1;
 }
 
+
+time_t ASN1_TIME_to_time_t(const ASN1_TIME * asn1)
+{
+    int days = 0, seconds = 0;
+    if (!ASN1_TIME_diff(&days, &seconds, NULL, asn1))
+        return -1;
+    time_t t = time(NULL);
+    t += days * 86400 + seconds;
+    return t;
+}
+
+
 int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
                                 OCSP_BASICRESP *pBasicResp, X509_STORE *pXstore)
 {
@@ -499,6 +535,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
 
         if (validate == 1)
         {
+            m_nextUpdate = ASN1_TIME_to_time_t(pNextupdate);
             iResult = 0;
         }
         else

@@ -126,7 +126,9 @@ public:
         return ((size + (LSSHM_SHM_UNITSIZE - 1)) / LSSHM_SHM_UNITSIZE);
     };
 
-    LsShmOffset_t  alloc2(LsShmSize_t size, int &remapped);
+    LsShmOffset_t  alloc2(LsShmSize_t size);
+    LsShmOffset_t  alloc2(LsShmSize_t size, int &remapped)
+    {    return alloc2(size);   }
     void  release2(LsShmOffset_t offset, LsShmSize_t size);
     void  mvFreeList();
     void  mvFreeBucket();
@@ -196,7 +198,7 @@ private:
     
     LsShmOffset_t getReg(const char *name);
 
-    LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
+    LsShmOffset_t allocPage(LsShmSize_t pagesize);
     void releasePageLocked(LsShmOffset_t offset, LsShmSize_t pagesize);
     void releasePageNoJoinLocked(LsShmOffset_t offset, LsShmSize_t pagesize);
 
@@ -235,7 +237,7 @@ private:
 
     void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size);
 
-    LsShmOffset_t  alloc2Ex(LsShmSize_t size, int &remapped);
+    LsShmOffset_t  alloc2Ex(LsShmSize_t size);
     void releasePageLockParent(LsShmOffset_t offset, LsShmSize_t size);
     void release2Ex(LsShmOffset_t offset, LsShmSize_t size);
     void release2NoJoin(LsShmOffset_t offset, LsShmSize_t size);

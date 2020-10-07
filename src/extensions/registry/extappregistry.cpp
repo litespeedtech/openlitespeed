@@ -195,15 +195,15 @@ void ExtAppSubRegistry::onTimer()
          iter != m_pRegistry->end();
          iter = m_pRegistry->next(iter))
         iter.second()->onTimer();
-    
+
     //Every 10 seconds to check the restart file changed or not
     struct stat st;
     if(stat(s_lsphpRestartFlagFile, &st) == 0)
     {
         LocalWorker::s_tmRestartPhp = st.st_mtime;
     }
-    
-    
+
+
 }
 
 
@@ -423,7 +423,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
 
         /**
          * Add the VHost name to the end of the pURI to avoid conflict with others
-         * 
+         *
          */
         if (addr.set(pUri, NO_ANY | DO_NSLOOKUP))
         {
@@ -433,9 +433,9 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
 
         iAutoStart = ConfigCtx::getCurConfigCtx()->
                                 getLongValue(pNode, "autoStart", 0, 2, 1);
-    
+
         pPath = pNode->getChildValue("path");
-        
+
         if (iAutoStart)
         {
             if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(buf, pPath) != 0)
@@ -509,7 +509,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
             config.setUGid(pVHost->getUid(), pVHost->getGid());
         }
     }
-    
+
     return 0;
 }
 
@@ -595,7 +595,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
 
 
     /**
-     * For proxy type, will not add the uid to the name to avoid 
+     * For proxy type, will not add the uid to the name to avoid
      * can not find it later
      */
     if(pVHost && iType != HandlerType::HT_PROXY)
@@ -604,10 +604,10 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         pName = appNameVh;
     }
     ConfigCtx currentCtx(pName);
-    
+
     iType -= HandlerType::HT_CGI;
-    
-    
+
+
     pWorker = getApp(iType, pName);
     if (pWorker)
     {
@@ -615,7 +615,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
                 pName);
         return pWorker;
     }
-    
+
 
     pUri = ConfigCtx::getCurConfigCtx()->getExpandedTag(pNode, "address",
             achAddress, 128);
@@ -672,7 +672,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
                         pUri, appUriVh);
                 pUri = appUriVh;
             }
-            
+
             if (uriInUse)
             {
                 LS_ERROR(&currentCtx, "socket address %s is used, give up!", pUri);
@@ -692,7 +692,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
                 }
             }
         }
-            
+
         pPath = pNode->getChildValue("path");
 
         if ((iAutoStart) && ((!pPath || !*pPath)))
@@ -735,7 +735,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         LS_ERROR(&currentCtx, "failed to add external processor: %s!", pName);
         return NULL;
     }
-    
+
     pConfig = pWorker->getConfigPointer();
     assert(pConfig);
 
@@ -790,10 +790,10 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         }
     }
 
-        
+
     /***
      * If is server level, need to save the XmlNode
-     * 
+     *
      */
     if (!pVHost)
     {
@@ -809,8 +809,8 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
                       pName, pNode, MAX_EXT_APP_NUMBER);
         }
     }
-    
-    
+
+
     return pWorker;
 
 }

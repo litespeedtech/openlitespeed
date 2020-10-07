@@ -446,6 +446,7 @@ void LsShm::close()
 
 void LsShm::cleanup()
 {
+    MEMCHK_UNPOISON(&(x_pShmMap->x_iMagic), 8);
     unmap();
     if (m_iFd != -1)
     {
@@ -786,12 +787,10 @@ void LsShm::unmap()
 }
 
 
-LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize, int &remap)
+LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize)
 {
     LsShmOffset_t offset;
     LsShmSize_t availSize;
-
-    remap = 0;
 
     //
     //  MUTEX SHOULD BE HERE for multi process/thread environment

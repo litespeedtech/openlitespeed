@@ -347,8 +347,15 @@ int H2ConnBase::processFrame(H2FrameHeader *pHeader)
         return processContinuationFrame(pHeader);
     case H2_FRAME_PING:
         return processPingFrame(pHeader);
+    case H2_FRAME_GREASE0:
+    case H2_FRAME_GREASE1:
+    case H2_FRAME_GREASE2:
+    case H2_FRAME_GREASE3:
+    case H2_FRAME_GREASE4:
+    case H2_FRAME_GREASE5:
+    case H2_FRAME_GREASE6:
+    case H2_FRAME_GREASE7:
     default:
-        sendPingFrame(H2_FLAG_ACK, (uint8_t *)"\0\0\0\0\0\0\0\0");
         break;
     }
     return 0;
@@ -470,7 +477,8 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
         iEntryID = ((uint16_t)p[0] << 8) | p[1];
         iEntryValue = beReadUint32(&p[2]);
         LS_DBG_L(getLogSession(), "%s(%d) value: %d",
-                 (iEntryID < 7) ? cpEntryNames[iEntryID] : "INVALID", iEntryID,
+                 (iEntryID < 7) ? cpEntryNames[iEntryID] :
+                    ((iEntryID & 0xa0a) == 0xa0a) ? "GREASE" : "INVALID", iEntryID,
                  iEntryValue);
         switch (iEntryID)
         {
@@ -742,7 +750,7 @@ void H2ConnBase::skipRemainData()
 int H2ConnBase::processDataFrame(H2FrameHeader *pHeader)
 {
     uint32_t streamID = pHeader->getStreamId();
-    
+
     printLogMsg(pHeader);
     if (streamID == 0 || streamID > m_uiLastStreamId)
         return LS_FAIL;

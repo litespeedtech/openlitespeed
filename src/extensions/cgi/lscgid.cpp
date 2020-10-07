@@ -49,9 +49,30 @@
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include "cgroupconn.h"
 #include "cgroupuse.h"
+#include "use_bwrap.h"
 #endif
 
-#define uint32_t unsigned long
+void ls_stderr(const char * fmt, ...)
+{
+    char buf[1024];
+    char *p = buf;
+    struct timeval  tv;
+    struct tm       tm;
+    gettimeofday(&tv, NULL);
+    localtime_r(&tv.tv_sec, &tm);
+    p += snprintf(p, 1024, "%04d-%02d-%02d %02d:%02d:%02d.%06d ",
+        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        tm.tm_hour, tm.tm_min, tm.tm_sec, (int)tv.tv_usec);
+    fprintf(stderr, "%.*s", (int)(p - buf), buf);
+
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    fprintf(stderr, "%s", buf);
+    //Comment out the below line currently
+    //DEBUG_MESSAGE("stderr message: %s", buf);
+}
 
 static uid_t        s_uid;
 
@@ -80,7 +101,7 @@ static int (*fp_lve_leave)(struct liblve *, uint32_t *) = NULL;
 static int (*fp_lve_jail)(struct passwd *, char *) = NULL;
 static int load_lve_lib()
 {
-    s_liblve = dlopen("liblve.so.0", RTLD_LAZY);
+    s_liblve = dlopen("liblve.so.0", RTLD_NOW | RTLD_GLOBAL);
     if (s_liblve)
     {
         fp_lve_is_available = (lve_is_available)dlsym(s_liblve, "lve_is_available");
@@ -93,14 +114,20 @@ static int load_lve_lib()
                 {
                     setreuid(s_uid, uid);
                     if (!(*fp_lve_is_available)())
+                    {
                         s_enable_lve = 0;
+                        ls_stderr("LVE disabled, lve_is_available() failure.\n");
+                    }
                     setreuid(uid, s_uid);
                 }
             }
         }
     }
     else
+    {
         s_enable_lve = 0;
+        ls_stderr("LVE disabled, dlopen() failed: %s.\n", dlerror());
+    }
     return (s_liblve) ? 0 : -1;
 }
 
@@ -130,9 +157,10 @@ static int init_lve()
         s_lve = NULL;
         return LS_FAIL;
     }
-    //fprintf( stderr, "lscgid (%d) LVE initialized !\n", getpid() );
+    //ls_stderr("lscgid (%d) LVE initialized !\n", s_pid );
 
-    //fprintf( stderr, "lscgid (%d) LVE initialized: %d, %p !\n", getpid(), s_enable_lve, fp_lve_jail );
+    //ls_stderr("lscgid (%d) LVE initialized: %d, %p !\n", s_pid,
+    //        s_enable_lve, fp_lve_jail );
     return 0;
 
 }
@@ -156,6 +184,13 @@ static void log_cgi_error(const char *func, const char *arg,
     write(STDERR_FILENO, err, n);
 }
 
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+static void set_cgi_error(char *func, char *arg)
+{
+    log_cgi_error(func, arg, NULL);
+}
+#endif
 
 static int timed_read(int fd, char *pBuf, int len, int timeout)
 {
@@ -297,7 +332,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 
 static int applyLimits(lscgid_req *pCGI)
 {
-    //fprintf( stderr, "Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
+    //ls_stderr("Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
     //                        pCGI->m_data.rlim_cur );
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
     if (pCGI->m_data.rlim_cur)
@@ -326,13 +361,25 @@ static int applyLimits(lscgid_req *pCGI)
 }
 
 
-static int changeStderrLog(const char *path)
+//called after uid/gid/chroot change
+static int changeStderrLog(lscgid_t *pCGI)
 {
+    const char *path = pCGI->m_stderrPath;
+    if (pCGI->m_pChroot)
+    {
+        if (pCGI->m_data.m_chrootPathLen > 1
+            && strncmp(path, pCGI->m_pChroot, pCGI->m_data.m_chrootPathLen) == 0)
+        {
+            path += pCGI->m_data.m_chrootPathLen;
+            if (*path != '/')
+                --path;
+        }
+    }
     int newfd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (newfd == -1)
     {
-        fprintf(stderr, "lscgid (%d): failed to change stderr log to: %s\n",
-                getpid(), path);
+        ls_stderr("lscgid (%d): failed to change stderr log to: %s\n",
+                  getpid(), path);
         return -1;
     }
     if (newfd != 2)
@@ -412,6 +459,36 @@ static int cgroup_process(lscgid_t *pCGI)
 #endif
 
 
+//called before uid/gid/chroot change.
+static int fixStderrLogPermission(lscgid_t *pCGI)
+{
+    struct stat st;
+    const char *path = pCGI->m_stderrPath;
+
+    if (lstat(path, &st) == -1)
+        return 0;
+    if (S_ISLNK(st.st_mode))
+        return -1;
+    if (st.st_uid != pCGI->m_data.m_uid && pCGI->m_data.m_uid > 0)
+    {
+        pCGI->m_stderrPath = NULL;
+        int newfd = open(path, O_WRONLY | O_APPEND, 0644);
+        if (newfd == -1)
+        {
+            ls_stderr("lscgid (%d): failed to open stderr: %s\n",
+                      getpid(), path);
+            return -1;
+        }
+        if (newfd != 2)
+        {
+            dup2(newfd, 2);
+            close(newfd);
+        }
+    }
+    return 0;
+}
+
+
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
@@ -419,13 +496,12 @@ static int execute_cgi(lscgid_t *pCGI)
     cgroup_process(pCGI);
 #endif
 
-
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");
     applyLimits(&pCGI->m_data);
 
     if (pCGI->m_stderrPath)
-        changeStderrLog(pCGI->m_stderrPath);
+        fixStderrLogPermission(pCGI);
 
 
 #ifdef HAS_CLOUD_LINUX
@@ -445,8 +521,8 @@ static int execute_cgi(lscgid_t *pCGI)
         }
         if (ret < 0)
         {
-            fprintf(stderr, "lscgid (%d): enter LVE (%d) : result: %d !\n", getpid(),
-                    pCGI->m_data.m_uid, ret);
+            ls_stderr("lscgid (%d): enter LVE (%d) : result: %d !\n", getpid(),
+                      pCGI->m_data.m_uid, ret);
             log_cgi_error("lscgid", NULL, "lve_enter() failure, reached resource limit");
             return 500;
         }
@@ -464,10 +540,10 @@ static int execute_cgi(lscgid_t *pCGI)
             ret = (*fp_lve_jail)(pw, error_msg);
             if (ret < 0)
             {
-                fprintf(stderr, "lscgid (%d): LVE jail(%d) ressult: %d, error: %s !\n",
-                        getpid(), pCGI->m_data.m_uid, ret, error_msg);
-                log_cgi_error("lscgid", NULL, "jail() failure");
-                return 500;
+                ls_stderr("lscgid (%d): LVE jail(%d) result: %d, error: %s !\n",
+                          getpid(), pCGI->m_data.m_uid, ret, error_msg);
+                //set_cgi_error( "lscgid: CloudLinux jail() failure.", NULL );
+                return 508;
             }
         }
     }
@@ -481,6 +557,11 @@ static int execute_cgi(lscgid_t *pCGI)
                     pCGI->m_pChroot) == -1)
             return 403;
     }
+
+    if (pCGI->m_stderrPath)
+        changeStderrLog(pCGI);
+
+
     ch = *(pCGI->m_argv[0]);
     * pCGI->m_argv[0] = 0;
     const char *dir = pCGI->m_cwdPath;
@@ -515,7 +596,16 @@ static int execute_cgi(lscgid_t *pCGI)
     }
 
     umask(pCGI->m_data.m_umask);
-    //fprintf( stderr, "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    {
+        int rc = 0, done = 0;
+        rc = exec_using_bwrap(pCGI, set_cgi_error, &done);
+        if (rc || done)
+            return rc;
+    }
+#endif
+
+    //ls_stderr( "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
     if (execve(pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env) == -1)
     {
         log_cgi_error("lscgid: execve()", pCGI->m_pCGIDir, NULL);
@@ -543,16 +633,16 @@ static int process_req_data(lscgid_t *cgi_req)
     p += cgi_req->m_data.m_exePathLen;
     if (p > pEnd)
     {
-        fprintf(stderr, "exePathLen=%d\n", cgi_req->m_data.m_exePathLen);
+        ls_stderr("exePathLen=%d\n", cgi_req->m_data.m_exePathLen);
         return 500;
     }
     cgi_req->m_argv[0] = p;
     p += cgi_req->m_data.m_exeNameLen + 1;
 
-//    fprintf( stderr, "exePath=%s\n", cgi_req->m_pCGIDir );
-//    fprintf( stderr, "nargv=%d\n", cgi_req->m_data.m_nargv );
-//    fprintf( stderr, "exeName=%s\n", cgi_req->m_argv[0] );
-//    fprintf( stderr, "exePath ends with %s\n",
+//    ls_stderr("exePath=%s\n", cgi_req->m_pCGIDir );
+//    ls_stderr("nargv=%d\n", cgi_req->m_data.m_nargv );
+//    ls_stderr("exeName=%s\n", cgi_req->m_argv[0] );
+//    ls_stderr("exePath ends with %s\n",
 //            cgi_req->m_pCGIDir + cgi_req->m_data.m_exePathLen );
 
     for (i = 1; i < cgi_req->m_data.m_nargv - 1; ++i)
@@ -568,11 +658,11 @@ static int process_req_data(lscgid_t *cgi_req)
         p += len;
         if (p > pEnd)
             return 500;
-//        fprintf( stderr, "arg %d, len=%d, str=%s\n", i, len, cgi_req->m_argv[i] );
+//        ls_stderr("arg %d, len=%d, str=%s\n", i, len, cgi_req->m_argv[i] );
     }
     if (*p != 0 || *(p + 1) != 0)
     {
-        fprintf(stderr, "argv is not terminated with \\0\\0\n");
+        ls_stderr("argv is not terminated with \\0\\0\n");
         return 500;
     }
     p += sizeof(short);
@@ -580,7 +670,7 @@ static int process_req_data(lscgid_t *cgi_req)
         return 500;
     cgi_req->m_argv[i] = NULL;
 
-//    fprintf( stderr, "nenv=%d\n", cgi_req->m_data.m_nenv );
+//    ls_stderr("nenv=%d\n", cgi_req->m_data.m_nenv );
     for (i = 0; i < cgi_req->m_data.m_nenv - 1; ++i)
     {
 #if defined( sparc )
@@ -591,6 +681,8 @@ static int process_req_data(lscgid_t *cgi_req)
         p += sizeof(short);
 #endif
         cgi_req->m_env[i] = p;
+        //ls_stderr("env %d, len=%d, str=%s\n", i, len, cgi_req->m_env[i]);
+
         if (*p == 'L')
         {
             if (strncasecmp(p, "LS_STDERR_LOG=", 14) == 0)
@@ -609,17 +701,16 @@ static int process_req_data(lscgid_t *cgi_req)
         p += len;
         if (p > pEnd)
             return 500;
-//        fprintf( stderr, "env %d, len=%d, str=%s\n", i, len, cgi_req->m_env[i] );
     }
     if (*p != 0 || *(p + 1) != 0)
     {
-        fprintf(stderr, "env is not terminated with \\0\\0\n");
+        ls_stderr("env is not terminated with \\0\\0\n");
         return 500;
     }
     p += sizeof(short);
     if (p != pEnd)
     {
-        fprintf(stderr, "header is too big\n");
+        ls_stderr("header is too big\n");
         return 500;
     }
     cgi_req->m_env[i] = NULL;
@@ -687,7 +778,7 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
     ret = process_req_header(cgi_req);
     if (ret)
         return ret;
-    //fprintf( stderr, "1 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
+    //ls_stderr("1 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
     //                        cgi_req->m_data.m_data.rlim_cur );
 
     if (cgi_req->m_data.m_type == LSCGID_TYPE_SUEXEC)
@@ -716,8 +807,8 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
         if ((FDPass::readFd(fd, &nothing, 1, &cgi_req->m_fdReceived) == -1) ||
             (cgi_req->m_fdReceived == -1))
         {
-            fprintf(stderr, "lscgid: read_fd() fd %d failed: %s\n",
-                    fd, strerror(errno));
+            ls_stderr("lscgid: read_fd() failed: %s\n",
+                    strerror(errno));
             return 500;
         }
         if (cgi_req->m_fdReceived != STDIN_FILENO)
@@ -727,7 +818,7 @@ static int recv_req(int fd, lscgid_t *cgi_req, int timeout)
             cgi_req->m_fdReceived = -1;
         }
     }
-    //fprintf( stderr, "2 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
+    //ls_stderr("2 Proc: %ld, data: %ld\n", cgi_req->m_data.m_nproc.rlim_cur,
     //                        cgi_req->m_data.m_data.rlim_cur );
     return 0;
 
@@ -832,7 +923,7 @@ static void sigterm(int sig)
 static void sigusr1(int sig)
 {
     pid_t pid = getppid();
-    if (pid != -1)
+    if (pid != -1 && pid != 1)
         kill(pid, SIGHUP);
 }
 
@@ -863,19 +954,18 @@ static void processSigchild()
             int sig_num = WTERMSIG(status[1]);
             if (sig_num != 15)
             {
-                fprintf(stderr,
-                        "Cgid: Child process with pid: %d was killed by signal: %d, core dump: %d\n",
-                        status[0], sig_num,
+                ls_stderr("Cgid: Child process with pid: %d was killed by signal: %d, core dump: %d\n",
+                          status[0], sig_num,
 #ifdef WCOREDUMP
-                        WCOREDUMP(status[1])
+                          WCOREDUMP(status[1])
 #else
-                        - 1
+                          - 1
 #endif
 
                        );
             }
         }
-        //fprintf( stderr, "reape child %d: status: %d\n", pid, status );
+        //ls_stderr( "reape child %d: status: %d\n", pid, status );
     }
 
 }
@@ -930,7 +1020,6 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
 #ifdef HAS_CLOUD_LINUX
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-
     if ((sEnv = getenv("LVE_ENABLE")) != NULL)
     {
         s_enable_lve = atol(sEnv);

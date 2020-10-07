@@ -241,7 +241,9 @@ public:
 //     void *getObsData(LsShmHElem *pElem, LsShmObserver *pObserver) const;
     void *getObsData(LsShmHElem *pElem) const;
 
-    LsShmOffset_t alloc2(LsShmSize_t size, int &remapped);
+    LsShmOffset_t alloc2(LsShmSize_t size);
+    LsShmOffset_t alloc2(LsShmSize_t size, int &remapped)
+    {   return alloc2(size);    }
 
     void release2(LsShmOffset_t offset, LsShmSize_t size);
 

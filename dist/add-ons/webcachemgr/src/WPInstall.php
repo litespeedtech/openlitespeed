@@ -16,22 +16,89 @@ use \Lsc\Wp\Context\Context;
 class WPInstall
 {
 
+    /**
+     * @var int
+     */
     const ST_PLUGIN_ACTIVE = 1;
+
+    /**
+     * @var int
+     */
     const ST_PLUGIN_INACTIVE = 2;
+
+    /**
+     * @var int
+     */
     const ST_LSC_ADVCACHE_DEFINED = 4;
+
+    /**
+     * @var int
+     */
     const ST_FLAGGED = 8;
+
+    /**
+     * @var int
+     */
     const ST_ERR_SITEURL = 16;
+
+    /**
+     * @var int
+     */
     const ST_ERR_DOCROOT = 32;
+
+    /**
+     * @var int
+     */
     const ST_ERR_EXECMD = 64;
+
+    /**
+     * @var int
+     */
     const ST_ERR_TIMEOUT = 128;
+
+    /**
+     * @var int
+     */
     const ST_ERR_EXECMD_DB = 256;
+
+    /**
+     * @var int
+     */
     const ST_ERR_WPCONFIG = 1024;
+
+    /**
+     * @var int
+     */
     const ST_ERR_REMOVE = 2048;
+
+    /**
+     * @var string
+     */
     const FLD_STATUS = 'status';
+
+    /**
+     * @var string
+     */
     const FLD_DOCROOT = 'docroot';
+
+    /**
+     * @var string
+     */
     const FLD_SERVERNAME = 'server_name';
+
+    /**
+     * @var string
+     */
     const FLD_SITEURL = 'site_url';
+
+    /**
+     * @var string
+     */
     const FLAG_FILE = '.litespeed_flag';
+
+    /**
+     * @var string
+     */
     const FLAG_NEW_LSCWP = '.lscm_new_lscwp';
 
     /**
@@ -120,9 +187,13 @@ class WPInstall
      */
     public function __toString()
     {
-        return sprintf("%s (status=%d docroot=%s siteurl=%s)", $this->path,
-                $this->data[self::FLD_STATUS], $this->data[self::FLD_DOCROOT],
-                $this->data[self::FLD_SITEURL]);
+        return sprintf(
+            "%s (status=%d docroot=%s siteurl=%s)",
+            $this->path,
+            $this->data[self::FLD_STATUS],
+            $this->data[self::FLD_DOCROOT],
+            $this->data[self::FLD_SITEURL]
+        );
     }
 
     /**
@@ -278,17 +349,15 @@ class WPInstall
     /**
      *
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by Logger::uiError(),
-     *                        Logger::notice(), $this->addUserFlagFile(), and
-     *                        Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function hasValidPath()
     {
         if ( !is_dir($this->path) || !is_dir("{$this->path}/wp-admin") ) {
             $this->setStatusBit(self::ST_ERR_REMOVE);
 
-            $msg = "{$this->path} - Could not be found and has been removed from Cache "
-                    . 'Manager list.';
+            $msg = "{$this->path} - Could not be found and has been removed "
+                . 'from Cache Manager list.';
             Logger::uiError($msg);
             Logger::notice($msg);
         }
@@ -296,9 +365,10 @@ class WPInstall
             $this->setStatusBit(self::ST_ERR_WPCONFIG);
             $this->addUserFlagFile(false);
 
-            $msg = "{$this->path} - Could not find a valid wp-config.php file. Install has been "
-                    . "flagged.";
-            Logger::debug($msg);
+            $msg = "{$this->path} - Could not find a valid wp-config.php file. "
+                . 'Install has been flagged.';
+            Logger::uiError($msg);
+            Logger::error($msg);
         }
         else {
             return true;
@@ -392,8 +462,12 @@ class WPInstall
         $serverName = strtolower($info['host']);
         $this->setData(self::FLD_SERVERNAME, $serverName);
 
-        $siteUrlTrim =
-                isset($info['path']) ? "{$info['host']}{$info['path']}" : $info['host'];
+        $siteUrlTrim = $info['host'];
+
+        if ( isset($info['path']) ) {
+            $siteUrlTrim .= $info['path'];
+        }
+
         $this->setData(self::FLD_SITEURL, $siteUrlTrim);
 
         $docRoot = ControlPanel::getClassInstance()->mapDocRoot($serverName);
@@ -403,8 +477,8 @@ class WPInstall
             $this->setStatus(self::ST_ERR_DOCROOT);
             $this->addUserFlagFile(false);
 
-            $msg = "{$this->path} - Could not find matching document root for WP "
-                    . "siteurl/servername {$serverName}.";
+            $msg = "{$this->path} - Could not find matching document root for "
+                . "WP siteurl/servername {$serverName}.";
 
             $this->setCmdStatusAndMsg(UserCommand::EXIT_ERROR, $msg);
             Logger::error($msg);
@@ -420,6 +494,7 @@ class WPInstall
      * @deprecated
      * @param string  $siteUrl
      * @return boolean
+     * @throws LSCMException  Thrown indirectly.
      */
     public function setSiteUrl( $siteUrl )
     {
@@ -431,8 +506,7 @@ class WPInstall
      *
      * @param boolean  $runningAsUser
      * @return boolean  True when install has a flag file created/already.
-     * @throws LSCMException  Indirectly thrown by
-     *                        Context::getFlagFileContent().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function addUserFlagFile( $runningAsUser = true )
     {
@@ -523,7 +597,7 @@ class WPInstall
      *
      * @param boolean  $forced
      * @return int
-     * @throws LSCMException  Indirectly thrown by UserCommand::issue().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function refreshStatus( $forced = false )
     {
@@ -538,14 +612,15 @@ class WPInstall
     /**
      *
      * @param string  $pluginDir
+     * @throws LSCMException  Thrown indirectly.
      */
     public function removePluginFiles( $pluginDir )
     {
         if ( file_exists(dirname($pluginDir)) && file_exists($pluginDir) ) {
             exec("rm -rf {$pluginDir}");
 
-            $msg = "{$this->path} - Removed LSCache for WordPress plugin files from plugins "
-                    . 'directory';
+            $msg = "{$this->path} - Removed LSCache for WordPress plugin files "
+                . 'from plugins directory';
             Logger::debug($msg);
         }
     }
@@ -564,7 +639,7 @@ class WPInstall
     /**
      *
      * @param null|int  $status
-     * @return boolean
+     * @return bool
      */
     public function hasFatalError( $status = null )
     {
@@ -573,22 +648,20 @@ class WPInstall
         }
 
         $errMask = (self::ST_ERR_EXECMD
-                | self::ST_ERR_EXECMD_DB
-                | self::ST_ERR_TIMEOUT
-                | self::ST_ERR_SITEURL
-                | self::ST_ERR_DOCROOT
-                | self::ST_ERR_WPCONFIG);
+            | self::ST_ERR_EXECMD_DB
+            | self::ST_ERR_TIMEOUT
+            | self::ST_ERR_SITEURL
+            | self::ST_ERR_DOCROOT
+            | self::ST_ERR_WPCONFIG
+        );
 
-        $fatal = ($status & $errMask) > 0;
-
-        return $fatal;
+        return (($status & $errMask) > 0);
     }
 
     /**
      *
      * @return string
-     * @throws LSCMException  Indirectly thrown by
-     *                        ControlPanel::getClassInstance().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function getPhpBinary()
     {

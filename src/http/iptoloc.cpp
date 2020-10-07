@@ -68,6 +68,8 @@ void LocInfo::release()
 const char *LocInfo::getLocEnv(const char *pEnvName)
 {
     static char s_achBuf[16] = { 0 };
+    if (m_pRecord == NULL)
+        return NULL;
     if (strncasecmp(pEnvName, "IP2LOCATION_", 12) == 0)
         pEnvName += 12;
     else
@@ -307,12 +309,12 @@ int IpToLoc::loadIpToLocDbFile(char *pFile, int flag)
         return LS_FAIL;
     }
 
-    if (IP2Location_open_mem(pIpToLoc, (IP2Location_mem_type)flag) == -1)
+    if (IP2Location_open_mem(pIpToLoc, (IP2Location_lookup_mode)flag) == -1)
     {
         LS_ERROR("loadIpToLocDbFile %s open mem failed.", pFile);
     }
 
-    int fd = fileno(pIpToLoc->filehandle);
+    int fd = fileno(pIpToLoc->file);
     if (fd != -1)
         ::fcntl(fd, F_SETFD, FD_CLOEXEC);
 

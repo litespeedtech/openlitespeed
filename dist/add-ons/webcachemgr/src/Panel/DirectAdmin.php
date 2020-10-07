@@ -155,6 +155,8 @@ class DirectAdmin extends ControlPanel
     /**
      * Gets a list of found docroots and associated server names.
      * Only needed for scan.
+     *
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function prepareDocrootMap()
     {

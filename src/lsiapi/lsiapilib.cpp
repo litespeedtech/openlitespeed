@@ -1100,6 +1100,7 @@ static const char *get_req_header_by_id(const lsi_session_t *session, int idx,
                                         int *valLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
+    *valLen = 0;
     if (pSession == NULL)
         return NULL;
     HttpReq *pReq = pSession->getReq();
@@ -1946,8 +1947,19 @@ static int  get_access_log_string(const lsi_session_t *session,
     if ((pSession == NULL) || (!log_pattern) || (!buf))
         return LS_FAIL;
 
-    int ret = AccessLog::getLogString(pSession, log_pattern, buf, bufLen);
-    return ret;
+    if (pSession->getReq())
+    {
+        AccessLog *pLogger = NULL;
+        HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
+        if (host && (pLogger = host->getAccessLog()) != NULL)
+        {
+
+            int ret = pLogger->getLogString(pSession, log_pattern, buf, bufLen);
+            return ret;
+        }
+    }
+
+    return LS_FAIL;
 }
 
 

@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Server Users' Manual - External Apps</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - External Apps." />
+  <title>OpenLiteSpeed Users' Manual - External Apps</title>
+  <meta name="description" content="OpenLiteSpeed Users' Manual - External Apps." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
   <link rel="shortcut icon" href="../img/favicon.ico" />
@@ -95,7 +95,7 @@
     </ul>
   </div>
 </aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServSecurity_Help.html">Server Security</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="ScriptHandler_Help.html">Script Handler</a> &#187;</div></div>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServSecurity_Help.html">服务器安全</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="ScriptHandler_Help.html">脚本处理程序</a> &#187;</div></div>
 <h1>External Apps</h1><section class="ls-spacer-small-bottom">LiteSpeed web server can forward requests to external applications to process and generate dynamic content.
 
 
@@ -183,11 +183,11 @@ define CGI applications in the {PAGE=ExtApp_Help} section.
 External applications can be configured at the server level or at the virtual host level. When configured at the server level, the
 application can be used by all virtual hosts. When configured at the virtual host level, it can only be used by that virtual host.</section>
 <h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>New External App</header><p>
-<a href="#extAppType">Type</a></p></section>
+<a href="#extAppType">类型</a></p></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppType"><h3>Type<span class="ls-permlink"><a href="#extAppType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the type of external application. Application types are differentiated by the service they provide or the protocol they use to communicate with the server. Choose from <ul>   <li><span class="val">FastCGI</span>: a FastCGI application with a <span class="val">Responder</span> role.</li>   <li><span class="val">FastCGI Authorizer</span>: a FastCGI application with an <span class="val">Authorizer</span> role</li>   <li><span class="val">Servlet Engine</span>: a servlet engine with an AJPv13 connector, such as Tomcat.</li>   <li><span class="val">Web Server</span>: a web server or application server that supports HTTP protocol.</li>   <li><span class="val">LiteSpeed SAPI App</span>: an application that communicates with the web server using LSAPI protocol.</li>   <li><span class="val">Load Balancer</span>: a virtual application that can balance load among worker applications.</li>   <li><span class="val">Piped Logger</span>: an application that can process access log entries received on its STDIN stream.</li> </ul></p> <h4>Syntax</h4><p>Select from drop down list</p> <h4>Tips</h4><p><span title="Information" class="ls-icon-info"></span> Most applications will use either LSAPI or FastCGI protocol. LSAPI supports PHP, Ruby, and Python. Perl can be used with FastCGI. (PHP, Ruby, and Python can also be set up to run using FastCGI, but they run faster using LSAPI.) Java uses servlet engines.</p> </article> </div>
+<section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppType"><h3>类型<span class="ls-permlink"><a href="#extAppType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定外部应用程序的类型。 应用程序类型根据它们提供的服务或与服务器通信所使用的协议而有所不同。 从中选择 <ul>   <li><span class="val">FastCGI</span>: a FastCGI application with a <span class="val">Responder</span> role.</li>   <li><span class="val">FastCGI Authorizer</span>: a FastCGI application with an <span class="val">Authorizer</span> role</li>   <li><span class="val">Servlet Engine</span>: a servlet engine with an AJPv13 connector, such as Tomcat.</li>   <li><span class="val">Web Server</span>: a web server or application server that supports HTTP protocol.</li>   <li><span class="val">LiteSpeed SAPI App</span>: an application that communicates with the web server using LSAPI protocol.</li>   <li><span class="val">Load Balancer</span>: a virtual application that can balance load among worker applications.</li>   <li><span class="val">Piped Logger</span>: an application that can process access log entries received on its STDIN stream.</li> </ul></p> <h4>Syntax</h4><p>从列表中选择</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> Most applications will use either LSAPI or FastCGI protocol. LSAPI supports PHP, Ruby, and Python. Perl can be used with FastCGI. (PHP, Ruby, and Python can also be set up to run using FastCGI, but they run faster using LSAPI.) Java uses servlet engines.</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
 </div></div>
 </body>
 </html>

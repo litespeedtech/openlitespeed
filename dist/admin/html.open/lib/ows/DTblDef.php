@@ -492,6 +492,7 @@ class DTblDef extends DTblDefBase
 		$attrs = array(
 				$this->_attrs['ctx_type'],
 				self::NewViewAttr('uri', DMsg::ALbl('l_uri')),
+                self::NewBoolAttr('allowBrowse', DMsg::ALbl('l_allowbrowse'), false),
 				self::NewCustFlagAttr('order', DMsg::ALbl('l_order'), (DAttr::BM_NOFILE | DAttr::BM_NOEDIT), true, 'ctxseq'),
 				self::NewActionAttr($this->_options['ctxTbl'], 'vEd')
 		);

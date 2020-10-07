@@ -84,6 +84,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"binding",                                  NULL},
     {"botwhitelist",                             NULL},
     {"brstaticcompresslevel",                    NULL},
+    {"bubblewrap",                               NULL},
+    {"bubblewrapcmd",                            NULL},
     {"byteslog",                                 NULL},
     {"cacertfile",                               NULL},
     {"cacertpath",                               NULL},
@@ -462,7 +464,7 @@ StrStrHashMap plainconf::m_confFileHash;
  */
 void plainconf::logToMem(char errorLevel, const char *format, ...)
 {
-#define MAX_LOG_LINE_LENGTH     1024
+#define MAX_LOG_LINE_LENGTH     4096
     char buf[MAX_LOG_LINE_LENGTH];
     sprintf(buf, "%c[PlainConf] ", errorLevel);
     int len = strlen(buf);
@@ -1437,6 +1439,7 @@ void plainconf::loadConfFile(const char *path)
             checkInFile(path);
     }
 
+    logToMem(LOG_LEVEL_INFO, "Finished parsing file %s", path);
 }
 
 

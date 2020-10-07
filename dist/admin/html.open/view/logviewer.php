@@ -22,9 +22,8 @@ echo UI::content_header('fa-list', DMsg::UIStr('menu_tools'), DMsg::UIStr('menu_
 									<a href="javascript:void(0);">Choose a different file</a>
 								</li>
 							</ul>
-						</div-->
+						</div -->
 			<code id="cur_log_file"></code>
-			<a href="javascript:download_log()" class="btn btn-xs btn-default"><i class="fa fa-download"></i></a>
 			<span class="pull-right"><?php DMsg::EchoUIStr('service_size')?>: <code id="cur_log_size"></code>KB</span>
 			</legend>
 
@@ -128,8 +127,9 @@ echo UI::content_header('fa-list', DMsg::UIStr('menu_tools'), DMsg::UIStr('menu_
 		}
 
 		function download_log() {
-			document.logform.id.value = 'downloadlog';
-			document.logform.filename.value = $("#cur_log_file").text();
+            document.logform.act.value = 'downloadlog';
+			//document.logform.id.value = 'downloadlog';
+			//document.logform.filename.value = $("#cur_log_file").text();
 			document.logform.submit();
 		}
 	// pagefunction

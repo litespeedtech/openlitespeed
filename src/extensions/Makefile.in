@@ -123,16 +123,16 @@ am_libextensions_a_OBJECTS = loadbalancer.$(OBJEXT) \
 	cgi/cgidreq.$(OBJEXT) cgi/cgidconfig.$(OBJEXT) \
 	cgi/cgidworker.$(OBJEXT) cgi/cgidconn.$(OBJEXT) \
 	cgi/cgroupconn.$(OBJEXT) cgi/cgroupuse.$(OBJEXT) \
-	fcgi/fcgienv.$(OBJEXT) fcgi/fcgiappconfig.$(OBJEXT) \
-	fcgi/fcgiapp.$(OBJEXT) fcgi/fcginamevaluepair.$(OBJEXT) \
-	fcgi/fcgiconnection.$(OBJEXT) fcgi/fcgirecord.$(OBJEXT) \
-	jk/jkajp13.$(OBJEXT) jk/jworker.$(OBJEXT) \
-	jk/jworkerconfig.$(OBJEXT) jk/jconn.$(OBJEXT) \
-	proxy/proxyconfig.$(OBJEXT) proxy/proxyworker.$(OBJEXT) \
-	proxy/proxyconn.$(OBJEXT) registry/extappregistry.$(OBJEXT) \
-	registry/appconfig.$(OBJEXT) lsapi/lsapiworker.$(OBJEXT) \
-	lsapi/lsapireq.$(OBJEXT) lsapi/lsapiconn.$(OBJEXT) \
-	lsapi/lsapiconfig.$(OBJEXT)
+	cgi/use_bwrap.$(OBJEXT) fcgi/fcgienv.$(OBJEXT) \
+	fcgi/fcgiappconfig.$(OBJEXT) fcgi/fcgiapp.$(OBJEXT) \
+	fcgi/fcginamevaluepair.$(OBJEXT) fcgi/fcgiconnection.$(OBJEXT) \
+	fcgi/fcgirecord.$(OBJEXT) jk/jkajp13.$(OBJEXT) \
+	jk/jworker.$(OBJEXT) jk/jworkerconfig.$(OBJEXT) \
+	jk/jconn.$(OBJEXT) proxy/proxyconfig.$(OBJEXT) \
+	proxy/proxyworker.$(OBJEXT) proxy/proxyconn.$(OBJEXT) \
+	registry/extappregistry.$(OBJEXT) registry/appconfig.$(OBJEXT) \
+	lsapi/lsapiworker.$(OBJEXT) lsapi/lsapireq.$(OBJEXT) \
+	lsapi/lsapiconn.$(OBJEXT) lsapi/lsapiconfig.$(OBJEXT)
 libextensions_a_OBJECTS = $(am_libextensions_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -150,12 +150,30 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CFLAGS) $(CFLAGS)
+AM_V_CC = $(am__v_CC_@AM_V@)
+am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
+am__v_CC_0 = @echo "  CC      " $@;
+am__v_CC_1 = 
+CCLD = $(CC)
+LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CCLD = $(am__v_CCLD_@AM_V@)
+am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+am__v_CCLD_0 = @echo "  CCLD    " $@;
+am__v_CCLD_1 = 
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) \
 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
@@ -364,6 +382,7 @@ libextensions_a_METASOURCES = AUTO
 libextensions_a_SOURCES = loadbalancer.cpp localworkerconfig.cpp localworker.cpp pidlist.cpp iprocessortimer.cpp httpextprocessor.cpp \
   extrequest.cpp extworker.cpp extconn.cpp extworkerconfig.cpp l4conn.cpp \
   cgi/lscgid.cpp cgi/suexec.cpp cgi/cgidreq.cpp cgi/cgidconfig.cpp cgi/cgidworker.cpp cgi/cgidconn.cpp cgi/cgroupconn.cpp cgi/cgroupuse.cpp \
+  cgi/use_bwrap.c \
   fcgi/fcgienv.cpp fcgi/fcgiappconfig.cpp fcgi/fcgiapp.cpp fcgi/fcginamevaluepair.cpp fcgi/fcgiconnection.cpp fcgi/fcgirecord.cpp \
   jk/jkajp13.cpp jk/jworker.cpp jk/jworkerconfig.cpp jk/jconn.cpp \
   proxy/proxyconfig.cpp proxy/proxyworker.cpp proxy/proxyconn.cpp \
@@ -373,7 +392,7 @@ libextensions_a_SOURCES = loadbalancer.cpp localworkerconfig.cpp localworker.cpp
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cpp .lo .o .obj
+.SUFFIXES: .c .cpp .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -427,6 +446,8 @@ cgi/cgidconn.$(OBJEXT): cgi/$(am__dirstamp) \
 cgi/cgroupconn.$(OBJEXT): cgi/$(am__dirstamp) \
 	cgi/$(DEPDIR)/$(am__dirstamp)
 cgi/cgroupuse.$(OBJEXT): cgi/$(am__dirstamp) \
+	cgi/$(DEPDIR)/$(am__dirstamp)
+cgi/use_bwrap.$(OBJEXT): cgi/$(am__dirstamp) \
 	cgi/$(DEPDIR)/$(am__dirstamp)
 fcgi/$(am__dirstamp):
 	@$(MKDIR_P) fcgi
@@ -530,6 +551,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@cgi/$(DEPDIR)/cgroupuse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cgi/$(DEPDIR)/lscgid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cgi/$(DEPDIR)/suexec.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cgi/$(DEPDIR)/use_bwrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@fcgi/$(DEPDIR)/fcgiapp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@fcgi/$(DEPDIR)/fcgiappconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@fcgi/$(DEPDIR)/fcgiconnection.Po@am__quote@
@@ -549,6 +571,30 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@proxy/$(DEPDIR)/proxyworker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@registry/$(DEPDIR)/appconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@registry/$(DEPDIR)/extappregistry.Po@am__quote@
+
+.c.o:
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
+
+.c.obj:
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.c.lo:
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

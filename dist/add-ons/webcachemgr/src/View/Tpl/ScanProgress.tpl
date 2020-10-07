@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * @deprecated 1.13.3  This template file has been deprecated and will be
+ *                     removed in a future update. Please use new templates
+ *                     ScanProgressStep1.tpl and ScanProgressStep2.tpl instead.
+ */
+
 use \Lsc\Wp\View\Model\ScanProgressViewModel as ViewModel;
 
 $title = $this->viewModel->getTplData(ViewModel::FLD_TITLE);

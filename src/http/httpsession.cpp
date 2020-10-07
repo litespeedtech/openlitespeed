@@ -1750,7 +1750,8 @@ int HttpSession::getVHostAccess()
         m_pVHostAcl = pAcl;
     }
 
-    LS_DBG_M(getLogSession(), "getVHostAccess, acl returned access %d", m_iVHostAccess);
+    LS_DBG_M(getLogSession(), "getVHostAccess, host %p, acl returned access %d",
+             pVHost, m_iVHostAccess);
     return m_iVHostAccess;
 }
 
@@ -2436,7 +2437,7 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     {
         LS_DBG_L(getLogSession(), "HttpSession::CGroup don't activate, type: %s "
                  "vHost: %p, vHost->enableCGroup: %s, config.getCGroupAllow: %s\n",
-                 (m_request.getHttpHandler()->getType() == HandlerType::HT_CGI) ? "CGI" : "NOT CGI",
+                 HandlerType::getHandlerTypeString(m_request.getHttpHandler()->getType()),
                  pVHost, ((pVHost) && (pVHost->enableCGroup())) ? "YES" : "NO",
                  ServerProcessConfig::getInstance().getCGroupAllow() ? "YES" : "NO");
     }
@@ -2918,8 +2919,8 @@ int HttpSession::onWriteEx()
 
     if (m_iFlag & HSF_CUR_SUB_SESSION_DONE)
         curSubSessionCleanUp();
-
-    switch (getState())
+    int state = getState();
+    switch (state)
     {
     case HSS_THROTTLING:
         ret = handlerProcess(m_request.getHttpHandler());
@@ -4564,7 +4565,7 @@ int HttpSession::addExpiresHeader()
 {
     int ret;
     const ExpiresCtrl *pExpireDefault = getReq()->shouldAddExpires();
-    if (pExpireDefault && pExpireDefault->isEnabled())
+    if (pExpireDefault)
     {
         const MimeSetting *pMime = getReq()->getMimeType();
         if (pMime->getExpires()->getBase())

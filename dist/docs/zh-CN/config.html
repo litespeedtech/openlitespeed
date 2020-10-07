@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Server Users' Manual - Configuration</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Configuration." />
+  <title>OpenLiteSpeed Users' Manual - Configuration</title>
+  <meta name="description" content="OpenLiteSpeed Users' Manual - Configuration." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
   <link rel="shortcut icon" href="../img/favicon.ico" />
@@ -95,102 +95,87 @@
     </ul>
   </div>
 </aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="security.html">Security</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="webconsole.html">Web Console</a> &#187;</div></div>
-<h1>Configuration</h1>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="security.html">Security</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="webconsole.html">Web Console</a> &#187;</div></div>
+<h1>配置</h1>
 
 <section>
 <a name="con"></a><h3><b>Concepts</b></h3>
 
-<p>Here are some basic concepts you should know before going into the detail of the configuration.</p>
+<p>在配置之前，您需要了解以下一些基本概念.</p>
 
-<a name="vh"></a><h3>Virtual Hosts</h3>
+<a name="vh"></a><h3>虚拟主机</h3>
 
-<p>LiteSpeed web server can host multiple web sites (virtual hosts) with one server instance.</p> 
+<p>LiteSpeed Web服务器可以通过一个服务器托管多个网站（虚拟主机）.</p> 
 
-<p>Traditionally, virtual hosts are classified into two types: IP-based virtual hosts and 
-  name-based virtual hosts. 
-  IP-based virtual hosts are web sites that have their own unique IP addresses. Name-based 
-  virtual hosts are web sites that are distinguished by their domain name and 
-  thus may share an IP address with other sites. There is no clear 
-  distinction between these two categories in LiteSpeed 
-  Web Server. IP-based virtual hosts are considered just a special kind of
-  name-based virtual host. Both of them can be easily configured, or even mixed 
-  together.</p>
-<p>Unlike other web servers, LiteSpeed Web Server does not have a default web site.
-  Every web site is configured as a virtual host even if only one web site is hosted.</p> 
+<p>传统上，虚拟主机分为两种：基于IP的虚拟主机和 基于域的虚拟主机。
+  基于IP的虚拟主机是具有自己唯一IP地址的网站. 基于域的虚拟主机是通过域名区分的，
+  因此可以与其他网站共享IP地址。在LiteSpeed Web Server中的这两个类别之间没有明显区别. 
+  基于IP的虚拟主机只是一种特殊的基于域的虚拟主机。 它们都可以轻松配置，甚至可以混合.</p>
+<p>与其他Web服务器不同，LiteSpeed Web Server没有默认网站。
+  即使仅托管一个网站，每个网站都被配置为虚拟主机。</p> 
 
-<a name="l"></a><h3>Listeners</h3>
+<a name="l"></a><h3>侦听器</h3>
 
-<p>In LiteSpeed Web Server, a listener is a server socket that listens on a
-  specific IP address and TCP port. If you imagine the web server as a building, the listeners are 
-  the doors (each with its own IP address and port).
-  Clients (browsers) have to go through a door (a listener) to submit their requests.</p>
+<p>在LiteSpeed Web Server中，侦听器是一个服务器套接字，用于侦听特定的IP地址和TCP端口.
+ 如果您将Web服务器想象为建筑物，那么侦听器就是门(每个都有自己的IP地址和端口)
+  客户（浏览器）必须经过一扇门（侦听器）才能提交他们的请求。</p>
   
-<p>For each listener, an IP address and a port number need to be specified. 
-  IP address can be any valid local IP address, or you can set a wildcard IP
-  (*) that refers to all available IP addresses on that machine. 
-  A port is an integer between 0 and 65535. 
-  The default port for HTTP is 80 and 443 for HTTPS. 
-  Other ports can be used, though,  on UNIX machines, only the super user &quot;root&quot; 
-  has permission to use ports below 1024.</p>
+<p>对于每个侦听器，需要指定IP地址和端口号。 
+  IP地址可以是任何有效的本地IP地址，
+  也可以设置一个通配符IP（*）来引用该计算机上的所有可用IP地址。
+  端口是0到65535之间的整数。
+  HTTP的默认端口是80，HTTPS的默认端口是443。
+  其他端口也可以使用，但是在UNIX机器上，只有超级用户 &quot;root&quot; 才有权使用1024以下的端口。</p>
   
-<p>Only one listener is allowed for each IP and port combination.
-  Thus, if a listener is configured to one port with the wildcard IP address,
-  you cannot configure another listener to the same port, even if you specify 
-  a particular IP. For example, if there are multiple IP addresses on the web 
-  server machine, and HTTP traffic needs to be allowed on port 8080 for all 
-  IP addresses, this can be configured in two ways: set up one
-  listener using the wildcard IP (*) and port 8080, or set up multiple
-  listeners, one for each IP, all listening to port 8080. These two methods 
-  cannot be mixed on a single port.</p>
+<p>每个IP和端口组合只允许一个侦听器。
+  因此，如果将侦听器配置为一个具有通配符IP地址的端口
+  即使指定了特定的IP，也不能将另一个侦听器配置到同一端口。
+  例如, 如果web服务器上有多个IP地址,
+  所有IP地址的8080端口都需要允许HTTP通信, 有两种方式: 
+  使用通配符IP（*）和端口8080设置一个侦听器,
+  或者设置多个侦听器,
+  每个IP一个，全部监听端口8080. 
+  这两种方法不能在一个端口上混合使用。</p>
     
-<p>There are two types of listeners in LiteSpeed Web Server: plain and secure 
-  (SSL). Each secure listener requires a paired SSL private key and SSL certificate. 
-  The private key can be generated with an SSL toolkit like 
-  OpenSSL. The SSL certificate can be self-signed or obtained from 
-  an SSL certificate issuer like VeriSign or Thawte. You can share the same private 
-  key and certificate pair among multiple listeners. </p>    
+<p>LiteSpeed Web Server中有两种类型的侦听器: 简单和安全(SSL). 
+  每个安全侦听器都需要成对的SSL私钥和SSL证书。 
+  私钥可以使用SSL工具包生成，例如OpenSSL.
+  SSL证书可以是自签名的，也可以从
+  SSL证书颁发者购买，例如VeriSign或Thawte。 
+  您可以在多个侦听器之间共享相同的私钥和证书。 </p>    
 
-<a name="map"></a><h3>Listener to Virtual Host Mapping</h3>
+<a name="map"></a><h3>虚拟主机映射的侦听器</h3>
 
-<p>LiteSpeed's Listener to Virtual Host Mapping provides extra flexibility, allowing you 
-  to:</p>
+<p>LiteSpeed的虚拟主机映射侦听器的灵活性，使您能够:</p>
 <ul>
-<li>map one listener to one virtual host.</li>
-<li>map one listener to different virtual hosts for different domain names.</li>
-<li>map multiple listeners to the same virtual host.</li>
-<li>map multiple listeners to multiple virtual hosts depending on their domain names.</li>
+<li>将一个侦听器映射到一个虚拟主机.</li>
+<li>将一个侦听器映射到不同域名的不同虚拟主机。</li>
+<li>将多个侦听器映射到同一虚拟主机.</li>
+<li>根据其域名将多个侦听器映射到多个虚拟主机.</li>
 </ul>
 
-<p>In Listener to Virtual Host Mapping, every listener has a virtual host lookup table 
-  with key-value pairs that specify a domain name (key) for 
-  a particular virtual host (value).</p>
+<p>在虚拟主机映射的侦听器中，每个侦听器都有一个虚拟主机查找表，
+该表具有键值对，这些键值对为特定的虚拟主机（值）指定域名（键）。</p>
 
-<p>When a browser tries to retrieve a web page from a web server, it first uses a DNS lookup to 
-find the IP address associated with that domain name. It then sends a request to establish a 
-TCP connection with the web server on a specific IP and port. If there is a listener assigned 
-to that IP and port, a connection is established. The browser then sends an HTTP 
-  request, which includes, in the header, the domain name of the web site being accessed. 
- The web server checks the lookup table associated with that listener for the domain name 
- in the request. If a match is found, the request is routed to the virtual host for processing.</p>
+<p>当浏览器尝试从Web服务器检索网页时, 它首先使用DNS查找来查找与该域名关联的IP地址.
+ 然后，它发送一个请求，以在特定IP和端口上与Web服务器建立TCP连接。
+ 如果有分配给该IP和端口的侦听器,则建立连接。 然后浏览器发送HTTP请求, 
+ 请求在标头种含有的域名.网络服务器检查与该侦听器关联的查找表中请求中的域名. 
+ 如果找到匹配项，则将请求路由到虚拟主机进行处理。</p>
 
-<p>In order to make a virtual host accessible through a specific listener, you must
-make sure that:</p>
+<p>为了使虚拟主机可以通过特定的侦听器访问，您必须确保:</p>
 <ol>
-	<li>DNS is configured properly to map the domain name of the web site to the
-IP used by that listener. How to configure DNS is beyond the scope of this document.</li>
-    <li>A mapping to the virtual host for that domain name exists in the listener's 
-      lookup table.</li>
+	<li>DNS已正确配置为网站域名映射到的侦听器的IP。 如何配置DNS超出了本文档的范围.</li>
+    <li>侦听器的查找表中存在该域名到虚拟主机的映射.</li>
 </ol>
 
-<p>A catchall virtual host can be specified for one listener with the wild card domain name 
-    "*". When the server cannot find a matching virtual host, the request will be routed 
-    to the catchall virtual host. If there is no such catchall virtual host configured, 
-    the web server will return error code 404.</p>
+<p>可以为一个侦听器使用通配符域名“*”指定一个默认虚拟主机。
+ 当服务器找不到匹配的虚拟主机时，请求将被路由到默认虚拟主机。 
+ 如果没有配置这样的的虚拟主机，则Web服务器将返回错误代码404。</p>
 
 
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
 </div></div>
 </body>
 </html>

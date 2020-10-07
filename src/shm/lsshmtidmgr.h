@@ -70,7 +70,7 @@ public:
     ~LsShmTidMgr() {}
     int  init(LsShmHash *pHash, LsShmOffset_t off, bool blkinit);
     void clrTidTbl();
-    LsShmOffset_t growTidTbl(uint64_t base, int &remapped);
+    LsShmOffset_t growTidTbl(uint64_t base);
     int checkTidTbl();
 
     void linkTid(LsShmHIterOff offElem, uint64_t *pTid);
@@ -169,9 +169,9 @@ private:
     uint64_t        *nxtValInBlk(LsShmTidTblBlk *pBlk, int *pIndx);
     
     LsShmOffset_t    allocBlkIdx(LsShmOffset_t oldIdx, LsShmSize_t curSize,
-                                 LsShmSize_t newSize, int &remapped);
+                                 LsShmSize_t newSize);
 
-    int              shiftBlkIdx(uint64_t numToRemove, int &remapped);
+    int              shiftBlkIdx(uint64_t numToRemove);
 
     LsShmHash       *m_pHash;
     LsShmOffset_t    m_iOffset;

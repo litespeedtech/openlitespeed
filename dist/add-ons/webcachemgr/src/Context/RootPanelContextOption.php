@@ -1,6 +1,6 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
@@ -9,7 +9,6 @@
 
 namespace Lsc\Wp\Context;
 
-use \Lsc\Wp\Context\ContextOption;
 use \Lsc\Wp\Logger;
 
 class RootPanelContextOption extends ContextOption

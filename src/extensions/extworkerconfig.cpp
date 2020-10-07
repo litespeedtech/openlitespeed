@@ -18,12 +18,11 @@
 #include "extworkerconfig.h"
 
 #include <http/httpdefs.h>
-#include <log4cxx/logger.h>
 #include <lsr/ls_strtool.h>
 #include <main/configctx.h>
 #include <socket/gsockaddr.h>
 #include <util/xmlnode.h>
-
+#include <log4cxx/logger.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -254,4 +253,5 @@ void ExtWorkerConfig::config(const XmlNode *pNode)
             }
         }
     }
+
 }

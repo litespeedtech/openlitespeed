@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Server Users' Manual - Installation</title>
-  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Installation." />
+  <title>OpenLiteSpeed Users' Manual - Installation</title>
+  <meta name="description" content="OpenLiteSpeed Users' Manual - Installation." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
   <link rel="shortcut icon" href="../img/favicon.ico" />
@@ -95,18 +95,18 @@
     </ul>
   </div>
 </aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
-<h1>Installation/Uninstallation</h1>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
+<h1>安装/卸载</h1>
 
-<h2>Minimum system requirements</h2>
+<h2>最低系统要求</h2>
 <ul>
   <li>
-    <strong>Operating System:</strong>
+    <strong>操作系统:</strong>
     <ul>
-      <li>Linux(i386): kernel 2.4 and up, glibc-2.2 and up</li>
-      <li>CentOS: 5 and up</li>
-      <li>Ubuntu: 8.04 and up</li>
-      <li>Debian: 4 and up</li>
+      <li>Linux(i386): kernel 2.4或更高, glibc-2.2 或更高</li>
+      <li>CentOS: 5 或更高</li>
+      <li>Ubuntu: 8.04 或更高</li>
+      <li>Debian: 4 或更高</li>
       <li>FreeBSD(i386): 4.5 and up</li>
       <li>MacOSX: 10.3 and up</li>
     </ul>
@@ -114,130 +114,109 @@
   <li>
     <strong>CPU:</strong>
     <ul>
-      <li>Intel: 80486 and up</li>
+      <li>Intel: 80486 或更高</li>
       <li>PowerPC: PowerPC G4</li>
     </ul>
   </li>
-  <li><strong>Memory:</strong> 32MB and up</li>
+  <li><strong>内存:</strong> 32MB 或更高</li>
   <li>
-    <strong>Disk:</strong>
+    <strong>硬盘:</strong>
     <ul>
-      <li>Installation: 200MB</li>
-      <li>Runtime: 300MB and up, swapping space depends on usage.</li>
+      <li>安装时: 200MB</li>
+      <li>运行时: 300MB或更高, 交换空间取决于使用情况。</li>
     </ul>
   </li>
 </ul>
 
-<h2>Installation</h2>
+<h2>安装</h2>
 <p>
-  Installation must be performed in a command line terminal. For testing
-  purposes, LiteSpeed Web Server can be installed into a home directory by a
-  non-privileged user. For production use, it should be installed into a system
-  directory.
+  安装必须在命令行终端中执行。 出于测试目的，
+  非特权用户可以将LiteSpeed Web Server安装到主目录中。 
+  对于生产用途，应将其安装到系统目录中。
 </p>
 
 <p>
-  In Mac OS X, the root user is disabled by default. It can be enabled using a
-  series of actions detailed on the Apple website. You can also use the sudo
-  command to install LSWS into a system directory without enabling the root
-  user, but system folders will still only be manipulable by the root user.
-  This means that every time you want to control LSWS from the command line
-  terminal (like when you want to start or stop LSWS), you will have to use the
-  sudo command.
+  在Mac OS X中，默认情况下禁用root用户。 可以使用Apple网站上的详述操作来启用它.
+  您也可以使用sudo命令在不启用root用户的情况下将LSWS安装到系统目录中，
+  但是系统文件夹仍然只能由root用户操作。
+  这意味着每次您要从命令行终端控制LSWS时（例如，启动或停止LSWS时），
+  都必须使用sudo命令。
 </p>
 
-<h3>Installation Steps:</h3>
+<h3>安装步骤:</h3>
 <p>
-  Visit the
+  访问
   <a href="https://openlitespeed.org/kb/" target="_blank" rel="noopener">
-    OpenLiteSpeed Knowledge Base
+    OpenLiteSpeed知识库
   </a>
-  for a list of installation methods.
+  查看有关安装方法的列表。
 </p>
 
-<h2>Getting Started</h2>
+<h2>开始</h2>
 <ol>
   <li>
     <p>
-      For detailed information on controlling the server processes, please see
-      the Administration Guide.
+      有关控制服务器进程的详细信息，请参阅《管理指南》。
     </p>
     <p>
-      To start the server, simply run [your_install_dir]/bin/lswsctrl start.
-      (To stop it, run [your_install_dir]/bin/lswsctrl stop.)
-    </p>
-  </li>
-  <li>
-    <p>A sample site should be running on the server.</p>
-    <p>
-      To access your site, point your browser to http://[address]:8088/,
-      [address] being the IP address or domain name of your web server machine.
-      Use &quot;localhost&quot; if the server is on the machine you are using.
-      "8088" is the default port. If you chose another port for LiteSpeed
-      during installation, use the port you designated.
-    </p>
-    <p>
-      A congratulations page linked to other testing pages should load into the
-      browser when pointed to the above address. If not, try testing the
-      WebAdmin Console interface.
+     要启动LSWS，只需运行 [您的安装文件夹]/bin/lswsctrl.
+      (停止请运行 [您的安装文件夹]/bin/lswsctrl.)
     </p>
   </li>
   <li>
-    <p>The default port for the WebAdmin console is 7080.</p>
+    <p>示例站点应在服务器上运行.</p>
     <p>
-      Plug http://[address]:7080/, into your browser to go to the WebAdmin
-      interface. (If you changed the port for WebAdmin during installation,
-      use that port instead.)
+      如果想访问您的网站,请访问 http://[address]:8088/,
+      [address] 是您的Web服务器的IP地址或域名。
+      如果服务器在您使用的计算机上,使用&quot;localhost&quot; 
+      "8088"是默认的端口. 如果在安装过程中为LiteSpeed选择了另一个端口，请使用您指定的端口。
     </p>
     <p>
-      Remember that for [address] you can use &quot;localhost&quot; if you're
-      currently using the machine the server is on.
+     当访问上述地址时，应为祝贺的测试页面。 如果不是，请尝试访问WebAdmin控制台界面。
+    </p>
+  </li>
+  <li>
+    <p>WebAdmin控制台的默认端口是 7080.</p>
+    <p>
+      访问http://[address]:7080/来进入WebAdmin.
+      (如果在安装过程中更改了WebAdmin的端口，请改用该端口。)
     </p>
     <p>
-      The WebAdmin welcome page should load. Click the &quot;Log on&quot; link
-      and use the administrator's username and password specified during
-      installation to log on.
+      记住对于[address],如果服务器在您使用的计算机上你可以使用 &quot;localhost&quot; 
     </p>
     <p>
-      For detailed information regarding configuration, please refer to our
-      Configuration Guide, or click the &quot;Help&quot; link at the top of
-      each page.
+      TWebAdmin欢迎页面应该加载。 点击 &quot;Log on&quot; 链接,
+      并使用安装期间指定的管理员用户名和密码登录。
+    </p>
+    <p>
+      有关配置的详细信息，请参阅我们的配置指南，或单击顶部的“帮助”。
     </p>
   </li>
   <li>
     <p>
-      If your server uses firewall, please make sure that localhost is trusted.
+      如果您的服务器使用防火墙，请确保本地主机受信任。
     </p>
     <p>
-      For instance, Linux with IPTables should include a rule ALLOW INPUT from
-      LO.
+      例如，带有IPTables的Linux应该包括LO的ALLOW INPUT规则。
     </p>
   </li>
   <li>
     <p>
-      If your web site and the WebAdmin Console are inaccessible, please take
-      a look at the error log [your_install_dir]/logs/error.log.
+     如果您的网站和WebAdmin Console无法访问，请查看错误日志 [your_install_dir]/logs/error.log.
     </p>
     <p>
-      If there is a TCP port conflict with other server applications, the web
-      server should be reinstalled with an available port. The following
-      command can be used to find an available port:
+      如果与其他服务器应用程序存在TCP端口冲突，则应使用可用端口重新安装Web服务器。 可以使用以下命令查找可用端口:
       <span class="cmd">netstat -an | grep XXXX </span>
-      XXXX is a port number. If the port is available, the command will produce
-      no output.
+      XXXX是端口号。 如果端口可用，该命令将不产生任何输出。
     </p>
     <p>
-      If the swapping directory is not writable, you can either grant writing
-      permission for the swapping directory to the user whom the web server is
-      running as, or change the swapping directory's configurations manually.
-      The swapping directory is configured in the server's XML configuration
-      file: [your_install_dir]/conf/httpd_config.xml. Search the XML file for
-      swappingDir. The default location for the swapping directory is
-      /tmp/lshttpd/swap.
+      如果交换目录不可写，则可以将交换目录的写权限授予运行Web服务器的用户，也可以手动更改交换目录的配置。 
+      交换目录在服务器的XML配置文件中配置:
+       [your_install_dir]/conf/httpd_config.xml.
+       在XML文件中搜索swappingDir。 交换目录的默认位置是/tmp/lshttpd/swap。
     </p>
     <p>
-      If you still have problems with installation, please check out our wiki
-      or post your problem on our support forum.
+      如果您仍然有安装问题，请查看我们的Wiki或将您的问题发布在我们的支持论坛上。
     </p>
   </li>
 </ol>
@@ -245,25 +224,22 @@
 <h2>Notes</h2>
 <ul>
   <li>
-    OpenLiteSpeed supports both native LiteSpeed XML configuration files and
-    plain text configuration files (for those used to editing Apache's
-    httpd.conf). Run [your_install_dir]/conf/switch_config.sh to switch between
-    these formats.
+   OpenLiteSpeed支持本机LiteSpeed XML配置文件和纯文本配置文件（用于编辑Apache的httpd.conf的文件）
+    运行 [your_install_dir]/conf/switch_config.sh l来在这些格式之间切换。
   </li>
   <li>
-    On FreeBSD, Mac OS X, Ubuntu, and Debian, the shipped PHP (for CentOS) will
-    not run. You will need to build a new PHP for OpenLiteSpeed in order to run
-    PHP applications with OpenLiteSpeed.
+   在FreeBSD，Mac OS X，Ubuntu和Debian上，附带的PHP（对于CentOS）将无法运行。
+    您将需要为OpenLiteSpeed构建新的PHP，以便使用OpenLiteSpeed运行PHP应用程序。
   </li>
 </ul>
 
-<h2>Uninstallation Steps</h2>
+<h2>卸载步骤</h2>
 <ol>
   <li>
-    Stop OpenLiteSpeed if it is running: [your_install_dir]/bin/lswsctrl stop
+    如果OpenLiteSpeed正在运行，则停止它: [your_install_dir]/bin/lswsctrl stop
   </li>
-  <li>Remove the install directory: rm -rf [your_install_dir]</li>
-</ol></article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+  <li>删除安装文件夹: rm -rf [your_install_dir]</li>
+</ol></article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
 </div></div>
 </body>
 </html>

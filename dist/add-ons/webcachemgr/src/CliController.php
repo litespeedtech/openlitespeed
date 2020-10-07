@@ -9,6 +9,7 @@
 
 namespace Lsc\Wp;
 
+use \Exception;
 use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\Panel\ControlPanel;
 use \Lsc\Wp\Panel\CPanel;
@@ -89,7 +90,7 @@ class CliController
      *
      * @param string $action
      * @param WPInstallStorage $wpInstallStorage
-     * @return null
+     * @return void
      * @throws LSCMException
      */
     private function checkDataFile( $action,
@@ -190,7 +191,7 @@ class CliController
     /**
      *
      * @param string[]  $args
-     * @return null
+     * @return void
      * @throws LSCMException  Thrown directly and indirectly.
      */
     private function handleSetCacheRootInput( &$args )
@@ -282,7 +283,7 @@ class CliController
     /**
      *
      * @param string[]  $args
-     * @return null
+     * @return void
      * @throws LSCMException
      */
     private function handleSetVersionInput( &$args )
@@ -519,23 +520,6 @@ class CliController
 
     /**
      *
-     * @param CPanel $controlPanel
-     */
-    private function initNewCpanelPluginConf( CPanel $controlPanel )
-    {
-        $lswsHome = realpath(__DIR__ . '/../../..');
-
-        $controlPanel->UpdateCpanelPluginConf(
-                CPanel::USER_PLUGIN_SETTING_LSWS_DIR, $lswsHome);
-
-        $vhCacheRoot = $controlPanel->getVHCacheRoot();
-
-        $controlPanel->UpdateCpanelPluginConf(
-                CPanel::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT, $vhCacheRoot);
-    }
-
-    /**
-     *
      * @param string[]  $args
      * @throws LSCMException
      */
@@ -665,6 +649,10 @@ class CliController
         }
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     private function displayCacheRoots()
     {
        $controlPanel = ControlPanel::getClassInstance();
@@ -692,7 +680,7 @@ EOF;
     /**
      *
      * @param string[]  $args
-     * @throws LSCMException
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     private function parseCommands( $args )
     {
@@ -725,9 +713,11 @@ EOF;
                 $this->handleScanInput($args);
                 break;
 
+
             case 'enable':
             case 'disable':
             case 'upgrade':
+            /** @noinspection PhpMissingBreakStatementInspection */
             case 'unflag':
 
                 if ( $this->isMassOperation($args) ) {
@@ -770,6 +760,7 @@ EOF;
     /**
      *
      * @param string        $action
+     * @throws LSCMException  Thrown indirectly.
      */
     private function doCacheRootCommand( $action )
     {
@@ -806,6 +797,9 @@ EOF;
         Util::ensureVHCacheRootInCage($vhCacheRoot);
     }
 
+    /**
+     * @throws LSCMException  Thrown indirectly.
+     */
     private function doSpecialCommand()
     {
         $controlPanel = ControlPanel::getClassInstance();
@@ -823,7 +817,6 @@ EOF;
                         break;
 
                     case 'new':
-                        $this->initNewCpanelPluginConf($controlPanel);
                         echo 'LiteSpeed cPanel plugin installed, auto install '
                                 . "turned on.\n\n";
                         break;
@@ -835,7 +828,7 @@ EOF;
 
             case 'cpanelPluginUninstall':
                 /* @var $controlPanel CPanel */
-                $controlPanel->uninstallCpanelPlugin();
+                CPanel::uninstallCpanelPlugin();
 
                 echo 'LiteSpeed cPanel plugin uninstalled successfully, auto '
                         . "install turned off.\n\n";
@@ -880,6 +873,10 @@ EOF;
         }
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     private function doVersionCommand()
     {
         $pluginVerInstance = PluginVersion::getInstance();
@@ -924,6 +921,10 @@ EOF;
         }
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     private function doWPInstallStorageAction()
     {
         $extraArgs = array();
@@ -997,6 +998,10 @@ EOF;
         }
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     private function runCommand()
     {
         foreach ( $this->cacheRootCmds as $action ) {
@@ -1028,7 +1033,7 @@ EOF;
             $cli = new self();
             $cli->runCommand();
         }
-        catch ( \Exception $e )
+        catch ( Exception $e )
         {
             echo "[ERROR] {$e->getMessage()}\n\n";
             exit(1);

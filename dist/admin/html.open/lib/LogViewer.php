@@ -116,8 +116,9 @@ class LogFilter
 
     function SetRange($from, $size)
     {
-        if ($from < 0)
+        if ($from < 0 && $from !== self::POS_FILEEND) {
             $from = 0;
+        }
         $this->_frominput = $from;
         $this->_blksize = $size;
         $this->_output = '';
@@ -155,7 +156,6 @@ class LogViewer
         $block = UIBase::GrabGoodInput('any', 'blksize', 'float');
         $act = UIBase::GrabGoodInput('any', 'act');
 
-
         switch ($act) {
             case 'begin':
                 $startinput = 0;
@@ -170,7 +170,6 @@ class LogViewer
                 $startinput += $block;
                 break;
         }
-
         $filter = new LogFilter($filename);
 
         $filter->Set(LogFilter::FLD_LEVEL, $level);

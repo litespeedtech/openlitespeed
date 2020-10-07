@@ -66,17 +66,19 @@ public:
 
     virtual ~CacheEntry();
 
-    void setLastAccess(long tm)   {   m_lastAccess = tm;  }
+    bool isNoWaiting() const;
+
+    void setLastAccess(long tm)     {   m_lastAccess = tm;  }
     long getLastAccess() const      {   return m_lastAccess;    }
 
     void setLastPurgrCheck(long tm);
     long getLastPurgrCheck() const  {   return m_lastPurgrCheck;}
-    
+
     void incHits()                  {   ++m_iHits;          }
     void clearHits()                {   m_iHits = 0;        }
     long getHits() const            {   return m_iHits;     }
 
-    
+
     void setDirty()                 {   m_isDirty = 1;          }
     void setBuilding(int v)         {   m_isBuilding = (v != 0);}
     int  isDirty() const            {   return m_isDirty;       }
@@ -134,7 +136,7 @@ public:
     {
         m_header.m_flag = (m_header.m_flag & ~CeHeader::CEH_IN_CONSTRUCT);
         m_header.m_flag &= (~CeHeader::CEH_BR & ~CeHeader::CEH_GZIP);
-        
+
         if (compressed_method == 2)
             m_header.m_flag |= CeHeader::CEH_BR;
         else if (compressed_method == 1)
@@ -151,7 +153,7 @@ public:
         else
             return 0;
     }
-    
+
 
     int isUpdating() const
     {   return m_header.m_flag & CeHeader::CEH_UPDATING;    }
@@ -203,16 +205,16 @@ public:
 private:
     long        m_lastAccess;
     long        m_lastPurgrCheck;
-   
+
     int         m_iMaxStale;
-    
+
     /**
      * When this reach 10, then means currrent cache need to change gzip/ungzip
      */
     uint32_t    m_iHits:29;
     uint32_t    m_isDirty:1;
     uint32_t    m_isBuilding:1;
-    
+
     int         m_needDelay; //delay serving if have cache, in URI_MAP instead of recv req header */
     CacheHash   m_hashKey;
 

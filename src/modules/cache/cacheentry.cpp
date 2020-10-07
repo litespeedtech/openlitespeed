@@ -56,6 +56,10 @@ void CacheEntry::appendToWaitQ(DLinkedObj *pObj)
 }
 
 
+bool CacheEntry::isNoWaiting() const
+{   return !m_pWaitQue || m_pWaitQue->empty();  }
+
+
 int CacheKey::getPrivateId(char *pBuf, char *pBufEnd)
 {
     char *p = pBuf;

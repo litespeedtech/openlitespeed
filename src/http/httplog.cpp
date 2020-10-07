@@ -180,8 +180,7 @@ LOG4CXX_NS::Logger *HttpLog::getErrorLogger()
     return logger();
 }
 
-#define MAX_PATH_LEN                4096
-#define MAX_LOG_LINE_LEN            4096
+#define MAX_PATH_LEN                8192
 int HttpLog::logAccess(const char *pVHost, int len, HttpSession *pSession)
 {
     accessLog()->log(pVHost, len, pSession);

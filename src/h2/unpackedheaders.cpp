@@ -943,17 +943,10 @@ int UnpackedHeaders::updateHeader(int app_index, const char *val, int val_len)
     }
     if (!iter)
     {
-        iter = m_lsxpack.newObj();
-        if (!iter)
-            return LS_FAIL;
-        memset(iter, 0, sizeof(*iter));
-        iter->app_index = app_index;
-        iter->flags = LSXPACK_APP_IDX;
-        if (app_index >= 0 && app_index < HttpHeader::H_TE)
-        {
-            if (m_commonHeaderPos[app_index] == 0)
-                m_commonHeaderPos[app_index] = iter - m_lsxpack.begin();
-        }
+        return appendHeader(app_index,
+                            HttpHeader::getHeaderNameLowercase(app_index),
+                            HttpHeader::getHeaderStringLen(app_index),
+                            val, val_len);
     }
 
     iter->val_offset = m_buf->size();

@@ -176,7 +176,10 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
 
                 //updated by another process, do not remove current object on disk
                 erase(iter);
-                addToDirtyList(pEntry);
+                if (pEntry->getRef() > 0)
+                    addToDirtyList(pEntry, "getCacheEntry, modified");
+                else
+                    delete pEntry;
                 pEntry = NULL;
                 iter = end();
             }
@@ -538,7 +541,7 @@ void DirHashCacheStore::cancelEntryInMem(CacheEntry* pEntry)
     }
     if (pEntry->getRef() > 0)
     {
-        addToDirtyList(pEntry);
+        addToDirtyList(pEntry, "cancelEntryInMem");
     }
     else
         delete pEntry;

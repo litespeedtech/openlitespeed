@@ -30,6 +30,15 @@ class HttpVHost;
 
 class HttpServerConfig : public TSingleton<HttpServerConfig>
 {
+public:
+    enum BwrapConfigValues
+    {
+        BWRAP_DISABLED = 0,
+        BWRAP_OFF,
+        BWRAP_ON
+    };
+
+private:
     friend class TSingleton<HttpServerConfig>;
 
     int32_t         m_iMaxURLLen;
@@ -69,10 +78,13 @@ class HttpServerConfig : public TSingleton<HttpServerConfig>
     int             m_iEnableH2c;
     int             m_iProcNo;
     int             m_iChildren;
+
     const char     *m_pAdminSock;
     DeniedDir      *m_pDeniedDir;
     HttpVHost      *m_pGlobalVHost;
 
+    BwrapConfigValues      m_bwrap;
+    const char            *m_pBwrapCmdLine;
 
     void operator=(const HttpServerConfig &rhs);
     HttpServerConfig(const HttpServerConfig &rhs);
@@ -133,7 +145,7 @@ public:
 
     void setUsePagespeed(int n)                  {   m_iUsePagespeed = n;      }
     int getUsePagespeed() const          { return m_iUsePagespeed;               }
-    
+
 
     void setMaxURLLen(int len);
     void setMaxHeaderBufLen(int len);
@@ -205,6 +217,12 @@ public:
 
     void setEnableMultiCerts(int v)  { m_iEnableMultiCerts = v; }
     int  getEnableMultiCerts() const { return m_iEnableMultiCerts; }
+
+    void setBwrap(BwrapConfigValues c)      {   m_bwrap = c;                }
+    BwrapConfigValues getBwrap() const      {   return m_bwrap;             }
+
+    void setBwrapCmdLine(const char *c)     {   m_pBwrapCmdLine = c;        }
+    const char *getBwrapCmdLine() const     {   return m_pBwrapCmdLine;     }
 };
 
 LS_SINGLETON_DECL(HttpServerConfig);

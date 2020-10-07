@@ -184,6 +184,11 @@ class DTblDefBase
         $this->_options['logLevel'] = array('ERROR'  => 'ERROR', 'WARN'   => 'WARNING',
             'NOTICE' => 'NOTICE', 'INFO'   => 'INFO', 'DEBUG'  => 'DEBUG');
 
+        $this->_options['aclogctrl'] = [
+            0 => DMsg::ALbl('o_ownlogfile'),
+            1 => DMsg::ALbl('o_serverslogfile'),
+            2 => DMsg::ALbl('o_disabled')];
+
         $this->_options['lsrecaptcha'] = [
             '0' => DMsg::ALbl('o_notset'),
             '1' => DMsg::ALbl('o_checkbox'),
@@ -208,7 +213,7 @@ class DTblDefBase
             }
         }
         $ipo = [];
-        $ipo['ANY'] = 'ANY';
+        $ipo['ANY'] = 'ANY IPv4';
         $ipstr = isset($_SERVER['LSWS_IPV4_ADDRS']) ? $_SERVER['LSWS_IPV4_ADDRS'] : '';
         if ($ipstr != '') {
             $ips = explode(',', $ipstr);
@@ -241,7 +246,7 @@ class DTblDefBase
             'fileName2'   => self::NewPathAttr('fileName', DMsg::ALbl('l_filename'), 'file0', 2, 'r', false),
             'fileName3'   => self::NewPathAttr('fileName', DMsg::ALbl('l_filename'), 'file0', 3, 'r', true),
             'rollingSize'     => self::NewIntAttr('rollingSize', DMsg::ALbl('l_rollingsize'), true, null, null, 'log_rollingSize'),
-            'keepDays'        => self::NewIntAttr('keepDays', DMsg::ALbl('l_keepdays'), true, 0, null, 'accessLog_keepDays'),
+            'keepDays'        => self::NewIntAttr('keepDays', DMsg::ALbl('l_keepdays'), true, 0, null, 'log_keepDays'),
             'logFormat'       => self::NewTextAttr('logFormat', DMsg::ALbl('l_logformat'), 'cust', true, 'accessLog_logFormat'),
             'logHeaders'      => self::NewCheckBoxAttr('logHeaders', DMsg::ALbl('l_logheaders'), array('1' => 'Referrer', '2' => 'UserAgent', '4' => 'Host', '0' => DMsg::ALbl('o_none')), true, 'accessLog_logHeader'),
             'compressArchive' => self::NewBoolAttr('compressArchive', DMsg::ALbl('l_compressarchive'), true, 'accessLog_compressArchive'),
@@ -336,6 +341,7 @@ class DTblDefBase
             self::NewSelAttr('logLevel', DMsg::ALbl('l_loglevel'), $this->_options['logLevel'], false, 'log_logLevel'),
             self::NewSelAttr('debugLevel', DMsg::ALbl('l_debuglevel'), array('10' => DMsg::ALbl('o_high'), '5' => DMsg::ALbl('o_medium'), '2' => DMsg::ALbl('o_low'), '0' => DMsg::ALbl('o_none')), false, 'log_debugLevel'),
             $this->_attrs['rollingSize'],
+            $this->_attrs['keepDays'],
             self::NewBoolAttr('enableStderrLog', DMsg::ALbl('l_enablestderrlog'), true, 'log_enableStderrLog')
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_serverlog'), $attrs, 'fileName');
@@ -343,15 +349,13 @@ class DTblDefBase
 
     protected function add_S_ACLOG_TOP($id)
     {
-        $align = array('center', 'center', 'center');
-
-        $attrs = array(
+        $attrs = [
             $this->_attrs['fileName2']->dup(null, null, 'accessLog_fileName'),
             $this->_attrs['logFormat'],
             $this->_attrs['rollingSize'],
-            self::NewActionAttr('S_ACLOG', 'Ed')
-        );
-        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG', $align);
+            self::NewActionAttr('S_ACLOG', 'Ed'),
+            ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG');
     }
 
     protected function add_S_ACLOG($id)
@@ -427,8 +431,8 @@ class DTblDefBase
     protected function add_S_TUNING_REQ($id)
     {
         $attrs = array(
-            self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 16384),
-            self::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 16380),
+            self::NewIntAttr('maxReqURLLen', DMsg::ALbl('l_maxrequrllen'), false, 200, 65530),
+            self::NewIntAttr('maxReqHeaderSize', DMsg::ALbl('l_maxreqheadersize'), false, 1024, 65530),
             self::NewIntAttr('maxReqBodySize', DMsg::ALbl('l_maxreqbodysize'), false, '1M', null),
             self::NewIntAttr('maxDynRespHeaderSize', DMsg::ALbl('l_maxdynrespheadersize'), false, 200, '64K'),
             self::NewIntAttr('maxDynRespSize', DMsg::ALbl('l_maxdynrespsize'), false, '1M', null)
@@ -463,7 +467,7 @@ class DTblDefBase
     protected function add_S_TUNING_QUIC($id)
 	{
         $congest_options = ['' => 'Default', '1' => 'Cubic', '2' => 'BBR'];
-		$attrs = array(
+		$attrs = [
             self::NewBoolAttr('quicEnable', DMsg::ALbl('l_enablequic')),
             self::NewTextAttr('quicShmDir', DMsg::ALbl('l_quicshmdir'), 'cust'),
             self::NewTextAttr('quicVersions', DMsg::ALbl('l_quicversions'), 'cust'),
@@ -475,7 +479,10 @@ class DTblDefBase
             self::NewIntAttr('quicMaxStreams', DMsg::ALbl('l_quicmaxstreams'), true, 10, 1000),
             self::NewIntAttr('quicHandshakeTimeout', DMsg::ALbl('l_quichandshaketimeout'), true, 1, 15),
             self::NewIntAttr('quicIdleTimeout', DMsg::ALbl('l_quicidletimeout'), true, 10, 30),
-			);
+            self::NewBoolAttr('quicEnableDPLPMTUD', DMsg::ALbl('l_quicenabledplpmtud')),
+            self::NewIntAttr('quicBasePLPMTU', DMsg::ALbl('l_quicbaseplpmtu'), true, 0, 65527),
+            self::NewIntAttr('quicMaxPLPMTU', DMsg::ALbl('l_quicmaxplpmtu'), true, 0, 65527),
+			];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_quic'), $attrs);
 	}
 
@@ -493,7 +500,7 @@ class DTblDefBase
         $a_restrictedScriptPermissionMask->SetFlag($flag);
         $a_restrictedDirPermissionMask = self::NewParseTextAttr('restrictedDirPermissionMask', DMsg::ALbl('l_restricteddirpermissionmask'), $parseFormat, $parseHelp);
         $a_restrictedDirPermissionMask->SetFlag($flag);
-
+        
         $attrs = [
             self::NewSelAttr('followSymbolLink', DMsg::ALbl('l_followsymbollink'), $this->_options['symbolLink'], false),
             self::NewBoolAttr('checkSymbolLink', DMsg::ALbl('l_checksymbollink'), false),
@@ -560,7 +567,7 @@ class DTblDefBase
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
 	}
-
+    
 	protected function add_S_SEC_BUBBLEWRAP($id)
 	{
         $attrs = [
@@ -1101,29 +1108,28 @@ class DTblDefBase
             self::NewBoolAttr('useServer', DMsg::ALbl('l_useServer'), false, 'logUseServer'),
             $this->_attrs['fileName3']->dup(null, null, 'vhlog_fileName'),
             self::NewSelAttr('logLevel', DMsg::ALbl('l_loglevel'), $this->_options['logLevel'], true, 'vhlog_logLevel'),
-            $this->_attrs['rollingSize']
+            $this->_attrs['rollingSize'],
+            $this->_attrs['keepDays'],
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhlog'), $attrs, 'fileName');
     }
 
     protected function add_V_ACLOG_TOP($id)
     {
-        $align = array('center', 'center', 'center');
-
-        $attrs = array(
-            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), array(0 => DMsg::ALbl('o_ownlogfile'), 1 => DMsg::ALbl('o_serverslogfile'), 2 => DMsg::ALbl('o_disabled')), false, 'aclogUseServer'),
+        $attrs = [
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer'),
             $this->_attrs['fileName3']->dup(null, null, 'accessLog_fileName'),
             $this->_attrs['logFormat'],
             $this->_attrs['rollingSize'],
-            self::NewActionAttr('V_ACLOG', 'Ed')
-        );
-        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'V_ACLOG', $align);
+            self::NewActionAttr('V_ACLOG', 'Ed'),
+            ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'V_ACLOG');
     }
 
     protected function add_V_ACLOG($id)
     {
         $attrs = array(
-            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), array(0 => DMsg::ALbl('o_ownlogfile'), 1 => DMsg::ALbl('o_serverslogfile'), 2 => DMsg::ALbl('o_disabled')), false, 'aclogUseServer'),
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer'),
             $this->_attrs['fileName3']->dup(null, null, 'vhaccessLog_fileName'),
             self::NewSelAttr('pipedLogger', DMsg::ALbl('l_pipedlogger'), 'extprocessor:logger', true, 'accessLog_pipedLogger'),
             $this->_attrs['logFormat'],
@@ -1415,8 +1421,14 @@ class DTblDefBase
 
     protected function add_T_ACLOG_TOP($id)
     {
-        $this->_tblDef[$id] = $this->DupTblDef('V_ACLOG_TOP', $id);
-        $this->_tblDef[$id]->ResetAttrEntry(1, $this->_attrs['tp_vrFile']);
+        $attrs = [
+            self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer'),
+            $this->_attrs['tp_vrFile'],
+            $this->_attrs['logFormat'],
+            $this->_attrs['rollingSize'],
+            self::NewActionAttr('T_ACLOG', 'Ed'),
+            ];
+        $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'T_ACLOG');
     }
 
     protected function add_T_ACLOG($id)

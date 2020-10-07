@@ -81,6 +81,7 @@ private:
     SslContext     *m_pCtx;
     time_t          m_RespTime;
     time_t          m_statTime;
+    time_t          m_nextUpdate;
     OCSP_CERTID    *m_pCertId;
 
 

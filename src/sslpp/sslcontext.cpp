@@ -928,10 +928,6 @@ int SslContext::servername_cb(SSL *pSSL, void *arg)
     pNewCtx = pCtx->get();
     if (pNewCtx == SSL_get_SSL_CTX(pSSL))
         return SslUtil::CERTCB_RET_OK;
-#ifdef OPENSSL_IS_BORINGSSL
-    // Check OCSP again when the context needs to be changed.
-    pCtx->initOCSP();
-#endif
     SSL_set_SSL_CTX(pSSL, pNewCtx);
     SSL_set_verify(pSSL, SSL_CTX_get_verify_mode(pNewCtx), NULL);
     SSL_set_verify_depth(pSSL, SSL_CTX_get_verify_depth(pNewCtx));
@@ -1103,13 +1099,11 @@ int SslContext::enableSpdy(int level)
     return 0;
 }
 
-#ifndef OPENSSL_IS_BORINGSSL
 static int sslCertificateStatus_cb(SSL *ssl, void *data)
 {
     SslOcspStapling *pStapling = (SslOcspStapling *)data;
     return pStapling->callback(ssl);
 }
-#endif
 
 int SslContext::initOCSP()
 {
@@ -1127,10 +1121,8 @@ int SslContext::initStapling()
 {
     if (m_pStapling->init(this) == -1)
         return -1;
-#ifndef OPENSSL_IS_BORINGSSL
     SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
     SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);
-#endif
     return 0;
 }
 

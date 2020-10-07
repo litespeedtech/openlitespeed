@@ -317,9 +317,9 @@ void *LsShmHash::getObsData(LsShmHElem *pElem) const
 }
 
 
-LsShmOffset_t LsShmHash::alloc2(LsShmSize_t size, int &remapped)
+LsShmOffset_t LsShmHash::alloc2(LsShmSize_t size)
 {
-    LsShmOffset_t ret = m_pPool->alloc2(size, remapped);
+    LsShmOffset_t ret = m_pPool->alloc2(size);
     if (ret != 0)
         getHTable()->x_stat.m_iHashInUse += LsShmPool::size2roundSize(size);
     return ret;
@@ -457,9 +457,7 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
                                      int iMode, int iFlags,
                                      LsShmOffset_t lockOffset)
 {
-    int remapped;
-    // NOTE: system is not up yet... ignore remap here
-    LsShmOffset_t offset = pPool->alloc2(sizeof(LsShmHTable), remapped);
+    LsShmOffset_t offset = pPool->alloc2(sizeof(LsShmHTable));
     if (offset == 0)
     {
         return 0;
@@ -468,7 +466,7 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
     init_size = roundUp(init_size);
     int szTable = sz2TableSz(init_size);
     int szBitMap = sz2BitMapSz(init_size);
-    LsShmOffset_t iBase = pPool->alloc2(szTable + szBitMap, remapped);
+    LsShmOffset_t iBase = pPool->alloc2(szTable + szBitMap);
 
     if (iBase == 0)
     {
@@ -739,11 +737,10 @@ int LsShmHash::rehash()
     }
     else
     {
-        int remapped;
         newSize = s_primeList[findRange(oldSize) + growFactor()];
         szTable = sz2TableSz(newSize);
         szBitMap = sz2BitMapSz(newSize);
-        if ((newBitOff = alloc2(szTable + szBitMap, remapped)) == 0)
+        if ((newBitOff = alloc2(szTable + szBitMap)) == 0)
             return LS_FAIL;
         uint8_t *ptr = (uint8_t *)offset2ptr(newBitOff);
         ::memset(ptr, 0, szTable + szBitMap);
@@ -1067,9 +1064,8 @@ LsShmHash::iteroffset LsShmHash::allocIter(int keyLen, int realValLen)
     int valLen = realValLen + m_dataExtraSpace;
     LsShmHElemLen_t elementSize = sizeof(LsShmHElem) + valueOff
                       + sizeof(ls_vardata_t) + round4(valLen);
-    int remapped;
     iteroffset offset;
-    offset.m_iOffset = alloc2(elementSize, remapped);
+    offset.m_iOffset = alloc2(elementSize);
     if (offset.m_iOffset == 0)
         return offset;
     LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
@@ -1265,9 +1261,8 @@ LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
     int valLen = pOld->getValLen();
     int valOff = pOld->x_iValOff;
     int newTotalSize = pOld->x_iLen + round4(size_to_grow);
-    int remapped;
     iteroffset offset;
-    offset.m_iOffset = alloc2(newTotalSize, remapped);
+    offset.m_iOffset = alloc2(newTotalSize);
     if (offset.m_iOffset == 0)
         return offset;
     LsShmHElem *pNew = offset2iterator(offset);

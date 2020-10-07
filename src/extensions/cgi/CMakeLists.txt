@@ -14,6 +14,7 @@ SET(cgi_STAT_SRCS
    lscgid.cpp
    cgroupconn.cpp
    cgroupuse.cpp
+   use_bwrap.c
 )
 
 add_library(cgi STATIC ${cgi_STAT_SRCS})

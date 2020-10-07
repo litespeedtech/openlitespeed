@@ -63,6 +63,8 @@ HttpServerConfig::HttpServerConfig()
     , m_iChildren(1)
     , m_pAdminSock(NULL)
     , m_pGlobalVHost(NULL)
+    , m_bwrap(BWRAP_DISABLED)
+    , m_pBwrapCmdLine(NULL)
 {
     m_pDeniedDir = new DeniedDir();
 }
@@ -118,9 +120,12 @@ void HttpServerConfig::setMaxDynRespHeaderLen(uint32_t len)
 int HttpServerConfig::getSpdyKeepaliveTimeout()
 {
     int timeout = m_iKeepAliveTimeout;
-    timeout *= ConnLimitCtrl::getInstance().getSslAvailRatio() / 10 + 5;
-    if (timeout > 60)
-        timeout = 60;
+    if (timeout > 0)
+    {
+        timeout *= ConnLimitCtrl::getInstance().getSslAvailRatio() / 10 + 5;
+        if (timeout > 60)
+            timeout = 60;
+    }
     return timeout;
 }
 

@@ -87,7 +87,7 @@ public:
 
 
     int addToHash(CacheEntry *pEntry);
-    void addToDirtyList(CacheEntry *pEntry);
+    void addToDirtyList(CacheEntry *pEntry, const char *reason);
 
     CacheManager *getManager()   {   return m_pManager;    }
 
@@ -106,11 +106,11 @@ public:
     int getCacheDirPath(char *pBuf, int len,
         const unsigned char *pHashKey, int isPrivate);
     void debug_dump(CacheEntry *pEntry, const char *msg);
-    
+
     int cleanByTracking(int public_max, int private_max);
-    
+
     static int cleanByTrackingCb(void *, void *);
-    
+
     virtual void removeEntryByHash(const unsigned char * pKey, int keyLen) = 0;
 
 protected:
