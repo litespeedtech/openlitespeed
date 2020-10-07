@@ -22,7 +22,7 @@ include("view/inc/nav.php");
 		</ol>
 		<!-- end breadcrumb -->
 		<span class="hide pull-right well well-sm text-warning"><i class="fa fa-bell"></i> <?php DMsg::EchoUIStr('note_configmodified')?></span>
-        <span id="readonlynotice" class="hide pull-right well well-sm text-warning"></span>
+		<span id="readonlynotice" class="hide pull-right well well-sm text-warning"></span>
 	</div>
 	<!-- END RIBBON -->
 
@@ -47,8 +47,7 @@ include("view/inc/nav.php");
 			<span class="txt-color-white">LiteSpeed WebAdmin Console © 2014-2020 <?php DMsg::EchoUIStr('note_copyrightreserved')?></span>
 		</div>
 		<div class="col-xs-6 col-sm-6 text-right hidden-xs">
-			<i class="txt-color-blueLight hidden-mobile"> <i class="fa fa-clock-o"></i>
-			<i><?php DMsg::EchoUIStr('note_dataretrievedat')?> <span id="lst_UpdateStamp"></span> </i>
+			<span class="txt-color-blueLight hidden-mobile"><i class="fa fa-clock-o"></i> <i><?php DMsg::EchoUIStr('note_dataretrievedat')?> <span id="lst_UpdateStamp"></span></i></span>
 		</div>
 	</div>
 </div>
