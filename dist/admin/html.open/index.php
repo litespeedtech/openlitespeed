@@ -62,5 +62,4 @@ include("view/inc/nav.php");
 ?>
 
 	</body>
-
 </html>

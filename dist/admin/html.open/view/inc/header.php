@@ -37,10 +37,10 @@
 		<script src="/res/js/libs/jquery-ui-1.12.1.min.js"></script>
 
 	</head>
-      		<?php
-			if ($no_main_header)
-				return;
-		?>
+<?php
+if ($no_main_header)
+	return;
+?>
 	<body>
 
 		<!-- POSSIBLE CLASSES: minified, fixed-ribbon, fixed-header, fixed-width
@@ -88,7 +88,7 @@ Your browser doesn't support SVG
 
 		<!-- logout button -->
 		<div id="logout" class="btn-header transparent pull-right">
-			<span> <a href="/login.php?logoff=1" title="' . DMsg::UIStr('note_signout') . '" data-action="userLogout" data-logout-msg="' . DMsg::UIStr('note_logout') . '"><i class="fa fa-sign-out"></i></a> </span>
+			<span> <a href="/login.php?logoff=1" title="' . DMsg::UIStr('note_signout') . '" data-action="userLogout"><i class="fa fa-sign-out"></i></a> </span>
 		</div>
 		<!-- end logout button -->
 
