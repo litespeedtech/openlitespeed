@@ -9,7 +9,7 @@
                 $.ajax({
                     type: "POST",
                     url: "view/serviceMgr.php",
-                    data: {act: "restart"},
+                    data: {"act": "restart"},
                     beforeSend: function () {
                         $.smallBox({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
