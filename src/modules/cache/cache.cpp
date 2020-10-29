@@ -1438,8 +1438,9 @@ int checkBypassHeader(const char *header, int len)
         "content-encoding",
         "set-cookie",
         "x-litespeed-cache", //bypass itself, otherwise always value is 'miss'
+        "connection",  //https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
     };
-    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, 17, };
+    int8_t headersBypassLen[] = {  13, 4, 4, 14, 17, 16, 10, 17, 10,};
 
     int count = sizeof(headersBypass) / sizeof(const char *);
     for (int i = 0; i < count ; ++i)
@@ -1920,7 +1921,7 @@ static int createEntry(lsi_param_t *rec)
     {
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s] createEntry failed.\n", ModuleNameStr);
+                   "[%s] createEntry failed, may due to no permission to write file or file is updating.\n", ModuleNameStr);
         return 0;
     }
 

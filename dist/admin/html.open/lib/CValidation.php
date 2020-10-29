@@ -219,6 +219,8 @@ class CValidation
         $ip = $d->GetChildVal('ip');
         $port = $d->GetChildVal('port');
 
+        $is_v6ip = ($ip == '[ANY]') || (strpos($ip, ':') !== false);
+
         $confdata = $this->_disp->Get(DInfo::FLD_ConfData);
         $lastref = $this->_disp->GetLast(DInfo::FLD_REF);
         $nodes = $confdata->GetRootNode()->GetChildren('listener');
@@ -233,7 +235,11 @@ class CValidation
             }
 
             $nodeip = $node->GetChildVal('ip');
-            if ($ip == $nodeip || $ip == 'ANY' || $nodeip == 'ANY') {
+            $is_v6node = ($nodeip == '[ANY]') || (strpos($nodeip, ':') !== false);
+            if (($ip == $nodeip)
+                    || ($ip == '[ANY]' && $is_v6node) || ($is_v6ip && $nodeip == '[ANY]')
+                    || ($ip == 'ANY' && !$is_v6node) || (!$is_v6ip && $nodeip == 'ANY')) {
+                // ANY is IPv4, [ANY] is IPv6
                 $d->SetChildErr('port', 'This port is already in use.');
                 $isValid = -1;
                 break;
@@ -386,7 +392,7 @@ class CValidation
 
     protected function chkAttr_name_val($attr, $val, &$err)
     {
-        if (preg_match("/[<>&%]/", $val)) {
+        if (preg_match("/[{}<>&%]/", $val)) {
             $err = 'invalid characters in name';
             return -1;
         }

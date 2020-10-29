@@ -317,9 +317,9 @@ void *LsShmHash::getObsData(LsShmHElem *pElem) const
 }
 
 
-LsShmOffset_t LsShmHash::alloc2(LsShmSize_t size, int &remapped)
+LsShmOffset_t LsShmHash::alloc2(LsShmSize_t size)
 {
-    LsShmOffset_t ret = m_pPool->alloc2(size, remapped);
+    LsShmOffset_t ret = m_pPool->alloc2(size);
     if (ret != 0)
         getHTable()->x_stat.m_iHashInUse += LsShmPool::size2roundSize(size);
     return ret;
@@ -457,9 +457,7 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
                                      int iMode, int iFlags,
                                      LsShmOffset_t lockOffset)
 {
-    int remapped;
-    // NOTE: system is not up yet... ignore remap here
-    LsShmOffset_t offset = pPool->alloc2(sizeof(LsShmHTable), remapped);
+    LsShmOffset_t offset = pPool->alloc2(sizeof(LsShmHTable));
     if (offset == 0)
     {
         return 0;
@@ -468,7 +466,7 @@ LsShmOffset_t LsShmHash::allocHTable(LsShmPool * pPool, int init_size,
     init_size = roundUp(init_size);
     int szTable = sz2TableSz(init_size);
     int szBitMap = sz2BitMapSz(init_size);
-    LsShmOffset_t iBase = pPool->alloc2(szTable + szBitMap, remapped);
+    LsShmOffset_t iBase = pPool->alloc2(szTable + szBitMap);
 
     if (iBase == 0)
     {
@@ -698,8 +696,6 @@ int LsShmHash::rehash()
     LsShmSize_t newSize;
     LsShmOffset_t newIdxOff;
     LsShmOffset_t newBitOff;
-    LsShmHIterOff *pOldTbl;
-    LsShmHIterOff *pNewTbl;
     LsShmHIterOff *opIdx;
     LsShmHIterOff *npIdx;
     iterator iter;
@@ -717,19 +713,18 @@ int LsShmHash::rehash()
               );
 #endif
     LsShmHTable *pTable = getHTable();
-    pOldTbl = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     if (pTable->x_iHIdx != pTable->x_iHIdxNew)          // rehash in progress
     {
         newSize = pTable->x_iCapacityNew;
         newIdxOff = pTable->x_iHIdxNew;
-        pNewTbl = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff);
         if ((iterOff.m_iOffset = pTable->x_iWorkIterOff) != 0)    // iter in progress
         {
             iter = offset2iterator(iterOff);
-            npIdx = pNewTbl + getIndex(iter->x_hkey, newSize);
+            npIdx = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff +
+                        sizeof(LsShmHIterOff) * getIndex(iter->x_hkey, newSize));
             if (npIdx->m_iOffset != iterOff.m_iOffset)            // not there yet
             {
-                opIdx = pOldTbl + getIndex(iter->x_hkey, oldSize);
+                opIdx = getHidx(getIndex(iter->x_hkey, oldSize));
                 if (opIdx->m_iOffset == iterOff.m_iOffset)
                     opIdx->m_iOffset = iter->x_iNext.m_iOffset;   // remove from old
                 iter->x_iNext.m_iOffset = npIdx->m_iOffset;
@@ -739,16 +734,14 @@ int LsShmHash::rehash()
     }
     else
     {
-        int remapped;
         newSize = s_primeList[findRange(oldSize) + growFactor()];
         szTable = sz2TableSz(newSize);
         szBitMap = sz2BitMapSz(newSize);
-        if ((newBitOff = alloc2(szTable + szBitMap, remapped)) == 0)
+        if ((newBitOff = alloc2(szTable + szBitMap)) == 0)
             return LS_FAIL;
         uint8_t *ptr = (uint8_t *)offset2ptr(newBitOff);
         ::memset(ptr, 0, szTable + szBitMap);
         newIdxOff = newBitOff + szBitMap;
-        pNewTbl = (LsShmHIterOff *)(ptr + szBitMap);
         pTable = getHTable();
         pTable->x_iBitMap = newBitOff;
         pTable->x_iBitMapSz = szBitMap;
@@ -757,15 +750,15 @@ int LsShmHash::rehash()
     }
 
     iterOff = begin();
-    pOldTbl = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     while(iterOff.m_iOffset != 0)
     {
         uint32_t new_idx;
         iter = offset2iterator(iterOff);
-        opIdx = pOldTbl + getIndex(iter->x_hkey, oldSize);
+        opIdx = getHidx(getIndex(iter->x_hkey, oldSize));
         iterNextOff = next(iterOff);
         new_idx = getIndex(iter->x_hkey, newSize);
-        npIdx = pNewTbl + new_idx;
+        npIdx = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff +
+                    sizeof(LsShmHIterOff) * new_idx);
         setBitMapEnt(new_idx);
 
         pTable->x_iWorkIterOff = iterOff.m_iOffset;
@@ -1067,9 +1060,8 @@ LsShmHash::iteroffset LsShmHash::allocIter(int keyLen, int realValLen)
     int valLen = realValLen + m_dataExtraSpace;
     LsShmHElemLen_t elementSize = sizeof(LsShmHElem) + valueOff
                       + sizeof(ls_vardata_t) + round4(valLen);
-    int remapped;
     iteroffset offset;
-    offset.m_iOffset = alloc2(elementSize, remapped);
+    offset.m_iOffset = alloc2(elementSize);
     if (offset.m_iOffset == 0)
         return offset;
     LsShmHElem *pNew = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
@@ -1265,9 +1257,8 @@ LsShmHash::iteroffset LsShmHash::iterGrowValue(iteroffset iterOff,
     int valLen = pOld->getValLen();
     int valOff = pOld->x_iValOff;
     int newTotalSize = pOld->x_iLen + round4(size_to_grow);
-    int remapped;
     iteroffset offset;
-    offset.m_iOffset = alloc2(newTotalSize, remapped);
+    offset.m_iOffset = alloc2(newTotalSize);
     if (offset.m_iOffset == 0)
         return offset;
     LsShmHElem *pNew = offset2iterator(offset);

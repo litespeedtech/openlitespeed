@@ -496,17 +496,23 @@ $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enabl
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web Server", 'Specifies the name of the external web server. This external web server must be defined in the &quot;External Apps&quot; section at the server or virtual host level.', '', 'Select from drop down list', '');
 
+$_tipsdb['quicBasePLPMTU'] = new DAttrHelp("PLPMTU Base Value", 'The maximum value of PLPMTU (maximum packet size without headers) in bytes that QUIC will use by default. Setting this to 0 will allow QUIC to pick the size.<br/><br/>This setting should be set lower than &quot;PLPMTU Max Value&quot;.<br/><br/>Default value: 0', '', '0 or integer number between 1200 and 65527', '');
+
 $_tipsdb['quicCfcw'] = new DAttrHelp("Connection Flow Control Window", 'The initial size of the buffer allocated for a QUIC connection. Default value is 1.5M.', 'A larger window size will use more memory.', 'Number between 64K and 512M', '');
 
 $_tipsdb['quicCongestionCtrl'] = new DAttrHelp("Congestion Control", 'The congestion control algorithm used. This can be set manually or left up to the QUIC library in use by selecting the &quot;Default&quot; option.<br/><br/>Default value: Default', '', 'Select from drop down list', '');
 
 $_tipsdb['quicEnable'] = new DAttrHelp("Enable QUIC", 'Enables the QUIC network protocol server wide. Default value is Yes.', 'When this setting is set to Yes, QUIC can still be disabled at the listener level through the &quot;Allow QUIC&quot; setting, or at the virtual host level through the &quot;Enable QUIC&quot; setting.', 'Select from radio box', '');
 
+$_tipsdb['quicEnableDPLPMTUD'] = new DAttrHelp("Enable DPLPMTUD", 'Enable Datagram Packetization Layer Path Maximum Transmission Unit Discovery (DPLPMTUD).<br/><br/><b><a href=&quot;https://tools.ietf.org/html/rfc8899&quot;>Background on DPLPMTUD (RFC 8899)</a></b><br/><br/>Default value: Yes', '', 'Select from radio box', '');
+
 $_tipsdb['quicHandshakeTimeout'] = new DAttrHelp("Handshake Timeout", 'The time in seconds a new QUIC connection is given to complete its handshake, after which the connection is aborted. Default value is 10.', '', 'Integer number between 1 and 15', '');
 
 $_tipsdb['quicIdleTimeout'] = new DAttrHelp("Idle Timeout", 'The time in seconds after which an idle QUIC connection will be closed. Default value is 30.', '', 'Integer number between 10 and 30', '');
 
 $_tipsdb['quicMaxCfcw'] = new DAttrHelp("Max Connection Flow Control Window", 'Specifies the maximum size that a connection flow control window buffer is allowed to reach due to window auto-tuning.<br/><br/>Default value is 0, which means that the value of &quot;Connection Flow Control Window&quot; is used and no auto-tuning is performed.', 'A larger window size will use more memory.', '0 or a number between 64K and 512M', '');
+
+$_tipsdb['quicMaxPLPMTU'] = new DAttrHelp("PLPMTU Max Value", 'The PLPMTU (maximum packet size without headers) probe upper limit in bytes. This setting is used to limit the &quot;maximum packet size&quot; in the DPLPMTUD search space.  Setting this to 0 will allow QUIC to pick the size (By default LSQUIC assumes that MTU is 1,500 bytes (Ethernet)).<br/><br/>This setting should be set higher than &quot;PLPMTU Base Value&quot;.<br/>Default value: 0', '', '0 or integer number between 1200 and 65527', '');
 
 $_tipsdb['quicMaxSfcw'] = new DAttrHelp("Max Stream Flow Control Window", 'Specifies the maximum size that a stream flow control window is allowed to reach due to window auto-tuning.<br/><br/>Default value is 0, which means that the value of &quot;Stream Flow Control Window&quot; is used and no auto-tuning is performed.', 'A larger window size will use more memory.', '0 or a number between 64K and 128M', '');
 

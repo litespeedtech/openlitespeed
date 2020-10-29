@@ -402,9 +402,9 @@ $servstatplot = array(
             $.SmartMessageBox({
                 title: "<i class='fa fa-lg fa-cube txt-color-green'></i> <span class='txt-color-orangeDark'><strong>" + acttitle + "</strong></span>",
                 content: vn,
-                buttons: '[No][Yes]'
+                buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
             }, function (ButtonPressed) {
-                if (ButtonPressed === "Yes") {
+                if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_go') ?>") {
 
                     $.ajax({
                         type: "POST",

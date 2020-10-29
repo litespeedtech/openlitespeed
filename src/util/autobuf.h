@@ -134,6 +134,13 @@ public:
     int     append(const char *pBuf)
     {   return ls_buf_append(this, pBuf);  }
 
+    void append(char ch)
+    {
+        if (available() < 1)
+            grow(1);
+        *pend++ = ch;
+    }
+
     void    append_unsafe(char ch)  {   *pend++ = ch;  }
 
     int append_unsafe(const char *pBuf, int size)

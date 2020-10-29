@@ -207,9 +207,8 @@ int LsShmPool::init(LsShm *shm, const char *name, LsShmPool *gpool)
             // create memory for new Pool
             // allocate header from SYS POOL
             LsShmOffset_t offset;
-            int remapped;
             int rndPoolMemSz = roundDataSize(sizeof(LsShmPoolMem));
-            offset = allocPage(LSSHM_SHM_UNITSIZE, remapped);
+            offset = allocPage(LSSHM_SHM_UNITSIZE);
             if (offset == 0)
             {
                 m_status = LSSHM_BADMAPFILE;
@@ -441,13 +440,13 @@ void LsShmPool::destroy()
 }
 
 
-LsShmOffset_t LsShmPool::alloc2Ex(LsShmSize_t size, int &remapped)
+LsShmOffset_t LsShmPool::alloc2Ex(LsShmSize_t size)
 {
     LsShmOffset_t offset;
 
     if (size >= LSSHM_SHM_UNITSIZE)
     {
-        if ((offset = allocPage(size, remapped)) != 0)
+        if ((offset = allocPage(size)) != 0)
         {
             incrCheck(&getDataMap()->x_stat.m_iPgAllocated, roundSize2pages(size));
         }
@@ -467,18 +466,17 @@ LsShmOffset_t LsShmPool::alloc2Ex(LsShmSize_t size, int &remapped)
 }
 
 
-LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size, int &remapped)
+LsShmOffset_t LsShmPool::alloc2(LsShmSize_t size)
 {
     LsShmOffset_t offset;
     if ((size == 0) || (size&0x80000000) || (size>LSSHM_MAXSIZE)) 
         return 0;
 
-    remapped = 0;
     size = roundDataSize(size);
     autoLock();
     do
     {
-        offset = alloc2Ex(size, remapped);
+        offset = alloc2Ex(size);
         if (size > LARGE_PAGE_SIZE)
             break;
         int end_page = (offset + size - 1) >> LARGE_PAGE_BITS;
@@ -1006,14 +1004,11 @@ TRY_AGAIN:
     if (needed < LSSHM_SHM_UNITSIZE)
         needed = LSSHM_SHM_UNITSIZE;
 
-    int remapped = 0;
-    if ((offset = allocPage(needed, remapped)) == 0)
+    if ((offset = allocPage(needed)) == 0)
     {
         num = 0;
         return 0;
     }
-    if (remapped != 0)
-        pDataMap = getDataMap();
     pDataMap->x_stat.m_iFreeChunk += needed;
 
     if (releaseOffset != 0)
@@ -1259,21 +1254,20 @@ bool LsShmPool::isFreeBlockBelow(
 }
 
 
-LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize, int &remap)
+LsShmOffset_t LsShmPool::allocPage(LsShmSize_t pagesize)
 {
     LsShmOffset_t offset;
 
     if ((pagesize&0x80000000) || (pagesize>LSSHM_MAXSIZE))
         return 0;
     pagesize = roundPageSize(pagesize);
-    remap = 0;
 
     LsShmPool *pPagePool = ((m_pParent != NULL) ? m_pParent : this);
     if (m_pParent != NULL)
         pPagePool->autoLock();
     if ((offset = pPagePool->getFromFreeList(pagesize)) == 0)
     {
-        if ((offset = m_pShm->allocPage(pagesize, remap)) == 0)
+        if ((offset = m_pShm->allocPage(pagesize)) == 0)
         {
             goto out;
         }

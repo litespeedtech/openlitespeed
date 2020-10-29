@@ -680,7 +680,7 @@ EOF;
     /**
      *
      * @param string[]  $args
-     * @throws LSCMException
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     private function parseCommands( $args )
     {

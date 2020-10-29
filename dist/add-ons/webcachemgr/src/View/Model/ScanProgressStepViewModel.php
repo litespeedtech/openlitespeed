@@ -2,10 +2,9 @@
 
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
- *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
- * @deprecated 1.13.3  This file will be removed in a future release.
+ * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright: (c) 2020
+ * @since 1.13.3
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -16,29 +15,62 @@ use \Lsc\Wp\Logger;
 
 /**
  *
- * @deprecated 1.13.3
+ * @since 1.13.3
  */
-class ScanProgressViewModel
+class ScanProgressStepViewModel
 {
 
+    /**
+     * @since 1.13.3
+     * @var string
+     */
     const FLD_TITLE = 'title';
-    const FLD_ICON = 'icon';
-    const FLD_MGR_STEP = 'mgrStep';
-    const FLD_HOME_DIR_COUNT = 'homeDirCount';
-    const OP_SCAN = 1;
-    const OP_DISCOVER_NEW = 2;
 
     /**
+     * @since 1.13.3
+     * @var string
+     */
+    const FLD_ICON = 'icon';
+
+    /**
+     * @since 1.13.3
+     * @var string
+     */
+    const FLD_MGR_STEP = 'mgrStep';
+
+    /**
+     * @since 1.13.3
+     * @var string
+     */
+    const FLD_TOTAL_COUNT = 'totalCount';
+
+    /**
+     * @since 1.13.3
+     * @var string
+     */
+    const FLD_INSTALLS_COUNT = 'installsCount';
+
+    /**
+     * @since 1.13.3
+     * @var int
+     */
+    const OP_SCAN = 1;
+
+    /**
+     * @since 1.13.3
      * @var int
      */
     protected $mgrStep;
 
     /**
+     * @since 1.13.3
      * @var (int|string)[]
      */
     protected $tplData = array();
 
     /**
+     *
+     * @since 1.13.3
      *
      * @param int  $mgrStep
      * @throws LSCMException  Thrown indirectly.
@@ -52,6 +84,8 @@ class ScanProgressViewModel
 
     /**
      *
+     * @since 1.13.3
+     *
      * @throws LSCMException  Thrown indirectly.
      */
     protected function init()
@@ -62,6 +96,8 @@ class ScanProgressViewModel
     }
 
     /**
+     *
+     * @since 1.13.3
      *
      * @param string  $field
      * @return null|int|string
@@ -75,6 +111,10 @@ class ScanProgressViewModel
         return $this->tplData[$field];
     }
 
+    /**
+     *
+     * @since 1.13.3
+     */
     protected function setTitle()
     {
 
@@ -89,6 +129,8 @@ class ScanProgressViewModel
     }
 
     /**
+     *
+     * @since 1.13.3
      *
      * @throws LSCMException  Thrown indirectly.
      */
@@ -109,21 +151,43 @@ class ScanProgressViewModel
         $this->tplData[self::FLD_ICON] = $iconPath;
     }
 
+    /**
+     *
+     * @since 1.13.3
+     */
     protected function grabSessionData()
     {
         $info = $_SESSION['scanInfo'];
 
-        $this->tplData[self::FLD_HOME_DIR_COUNT] = count($info['homeDirs']);
+        if ( !empty($info['homeDirs']) ) {
+            $total = count($info['homeDirs']);
+        }
+        else {
+            $total = count($info['installs']);
+        }
+
+        $this->tplData[self::FLD_TOTAL_COUNT] = $total;
     }
 
     /**
+     *
+     * @since 1.13.3
      *
      * @return string
      * @throws LSCMException  Thrown indirectly.
      */
     public function getTpl()
     {
-        return Context::getOption()->getSharedTplDir() . '/ScanProgress.tpl';
+        $info = $_SESSION['scanInfo'];
+
+        if ( !empty($info['homeDirs']) ) {
+            return Context::getOption()->getSharedTplDir()
+                . '/ScanProgressStep1.tpl';
+        }
+        else {
+            return Context::getOption()->getSharedTplDir()
+                . '/ScanProgressStep2.tpl';
+        }
     }
 
 }

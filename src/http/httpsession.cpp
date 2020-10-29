@@ -3265,7 +3265,7 @@ off_t HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
 
     if (written > 0)
     {
-        m_response.written(written);
+        bytesSent(written);
         LS_DBG_M(getLogSession(), "Response body sent: %lld.\n",
                  (long long)m_response.getBodySent());
     }
@@ -3275,14 +3275,21 @@ off_t HttpSession::writeRespBodySendFile(int fdFile, off_t offset,
 #endif
 
 
+inline void HttpSession::bytesSent(int bytes)
+{
+    m_response.written(bytes);
+    /*
+     * lslbd has the below code
+    if (m_request.getVHost())
+        ((HttpVHost *)m_request.getVHost())->bytesSent(bytes, m_request.isHttps());
+    */
+}
+
 /**
   * @return -1 error
   *          0 complete
   *          1 continue
   */
-
-
-
 int HttpSession::writeRespBodyDirect(const char *pBuf, int size)
 {
     int written;
@@ -3294,7 +3301,7 @@ int HttpSession::writeRespBodyDirect(const char *pBuf, int size)
     {
         LS_DBG_H(getLogSession(), "writeRespBodyDirect(): write(%p, %d) written %d, total sent: %lld\n",
                  pBuf, size, written, (long long)m_response.getBodySent() + written);
-        m_response.written(written);
+        bytesSent(written);
     }
     return written;
 }
@@ -3500,12 +3507,19 @@ void HttpSession::rewindRespBodyBuf()
 
 int HttpSession::sendDynBody()
 {
-    size_t toWrite;
-    char *pBuf;
-
-    while (((pBuf = getRespBodyBuf()->getReadBuffer(toWrite)) != NULL)
-           && (toWrite > 0))
+    while (1)
     {
+        size_t toWrite;
+        char *pBuf = getRespBodyBuf()->getReadBuffer(toWrite);
+
+        LS_DBG_M(getLogSession(),
+                 "sendDynBody() buffer: %p, len: %zd, sent %lld\n",
+                    pBuf, toWrite, (long long)m_lDynBodySent);
+        if (!pBuf)
+            return LS_FAIL;
+
+        if (toWrite <= 0)
+            break;
         int len = toWrite;
         if (m_response.getContentLen() > 0)
         {
@@ -3519,12 +3533,19 @@ int HttpSession::sendDynBody()
             }
         }
 
+
+        /**
+         * 10/28/2020 -- David
+         * Since we keep have crash for big file serving from this function,
+         * add this assert here,
+         * If the buffer is meesy up, access the last byte will crash.
+         */
+        assert(*(pBuf + len -1) == 0x00 || *(pBuf + len -1) != 0x00);
         int ret = writeRespBody(pBuf, len);
         LS_DBG_M(getLogSession(), "writeRespBody() len = %d, returned %d.\n",
                  len, ret);
         if (ret > 0)
         {
-            assert(ret <= len);
             m_lDynBodySent += ret;
             getRespBodyBuf()->readUsed(ret);
             if (ret < len)
@@ -5478,7 +5499,7 @@ int HttpSession::handleAioSFEvent(Aiosfcb *event)
     }
     else if (written > 0)
     {
-        m_response.written(written);
+        bytesSent(written);
         LS_DBG_M(getLogSession(), "Aio Response body sent: %lld.",
                  (long long)m_response.getBodySent());
         m_sendFileInfo.incCurPos(written);

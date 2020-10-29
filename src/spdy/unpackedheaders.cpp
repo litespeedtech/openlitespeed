@@ -215,7 +215,7 @@ static int lookup[] =
     -58,                            //"timing-allow-origin"
     -59,                            //"upgrade-insecure-requests"
     HttpHeader::H_USERAGENT,        //"user-agent"
-    -60,                            //"x-forwarded-for"
+    HttpHeader::H_X_FORWARDED_FOR,  //"x-forwarded-for"
     -61,                            //"x-frame-options"
     -62,                            //"x-frame-options"
 };

@@ -22,5 +22,5 @@ MemoryAccounting=false
 
 [Install]
 WantedBy=multi-user.target
-Alias=lsws.service
+#Alias=lsws.service
 Alias=openlitespeed.service

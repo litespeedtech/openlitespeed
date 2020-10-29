@@ -53,18 +53,16 @@ class AccessLog
     AutoBuf m_buf;
 
     int appendStr(const char *pStr, int len);
-    static int appendStrNoQuote(char *pBuf, int len, int escape, const char *pSrc,
-                                int srcLen, AccessLog *pLogger);
-    void customLog(HttpSession *pSession, CustomFormat *pLogFmt);
-    static int customLog(HttpSession *pSession, CustomFormat *pLogFmt,
-                         char *pOutBuf, int buf_len,  AccessLog *pLogger);
-    static int appendEscape(char *pBuf, int destLen, const char *pStr, int len);
+    void appendStrNoQuote(int escape, const char *pSrc, int srcLen);
+    void customLog(HttpSession *pSession, CustomFormat *pLogFmt, bool doFlush = true);
 
 public:
     explicit AccessLog(const char *pPath);
     AccessLog();
     ~AccessLog();
     int init(const char *pName, int pipe);
+
+    char *appendReqVar(HttpSession *pSession, int id);
     void log(HttpSession *pSession);
     void log(const char *pVHostName, int len, HttpSession *pSession);
     void flush();
@@ -86,15 +84,14 @@ public:
     char getCompress() const;
     const char *getLogPath() const;
     int  reopenExist();
-    void appendEscape(const char *data, int len);
+    int appendEscape(const char *data, int len);
 
     void closeNonPiped();
     void setRollingSize(off_t size);
     int  setCustomLog(const char *pFmt);
-    static int  getLogString(HttpSession *pSession, const char *log_pattern,
-                             char *pBuf, int bufLen);
+    int  getLogString(HttpSession *pSession, const char *log_pattern, char *pBuf, int bufLen);
 
-    static CustomFormat *parseLogFormat(const char *pFmt);
+    CustomFormat *parseLogFormat(const char *pFmt);
 
     LS_NO_COPY_ASSIGN(AccessLog);
 };

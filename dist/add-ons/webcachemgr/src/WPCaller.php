@@ -262,7 +262,10 @@ class WPCaller
         if ( $install->getDocRoot() == null ) {
 
             if ( ($siteUrl = $this->getSiteURL()) === '' ) {
-                Logger::uiError('Could not retrieve siteURL to match against known docroots.');
+                Logger::uiError(
+                    'Could not retrieve siteURL to match against known '
+                        . 'docroots.'
+                );
                 $install->addUserFlagFile();
 
                 return (WPInstall::ST_ERR_SITEURL | WPInstall::ST_FLAGGED);

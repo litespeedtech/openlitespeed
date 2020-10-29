@@ -496,17 +496,23 @@ $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enabl
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web服务器", '指定外部Web服务器的名称。 此外部Web服务器必须在服务器或虚拟主机级别的&quot;External Apps&quot;中定义', '', '从列表中选择', '');
 
+$_tipsdb['quicBasePLPMTU'] = new DAttrHelp("PLPMTU Base Value", 'The maximum value of PLPMTU (maximum packet size without headers) in bytes that QUIC will use by default. Setting this to 0 will allow QUIC to pick the size.<br/><br/>This setting should be set lower than &quot;PLPMTU Max Value&quot;.<br/><br/>Default value: 0', '', '0 or integer number between 1200 and 65527', '');
+
 $_tipsdb['quicCfcw'] = new DAttrHelp("流连接窗口控制", '为QUIC连接分配的缓冲区的初始大小。 默认值为 1.5M 。', '更大的窗口大小将使用更多的内存。', 'Number between 64K and 512M', '');
 
 $_tipsdb['quicCongestionCtrl'] = new DAttrHelp("拥塞控制", '使用的拥塞控制算法。 可以手动设置，也可以选择“默认”选项，将其保留到的QUIC库中。<br/><br/>默认值:: Default', '', '从列表中选择', '');
 
 $_tipsdb['quicEnable'] = new DAttrHelp("启用QUIC", '在整个服务器范围内启用QUIC网络协议。 默认值为是。', '当此设置设置为是时，仍然可以通过&quot;允许QUIC&quot;设置在侦听器级别 或通过&quot;启用QUIC&quot;设置在虚拟主机级别禁用QUIC', '从单选框选择', '');
 
+$_tipsdb['quicEnableDPLPMTUD'] = new DAttrHelp("Enable DPLPMTUD", 'Enable Datagram Packetization Layer Path Maximum Transmission Unit Discovery (DPLPMTUD).<br/><br/><b><a href=&quot;https://tools.ietf.org/html/rfc8899&quot;>Background on DPLPMTUD (RFC 8899)</a></b><br/><br/>Default value: Yes', '', '从单选框选择', '');
+
 $_tipsdb['quicHandshakeTimeout'] = new DAttrHelp("握手超时时间", '给出新的QUIC连接完成其握手的时间（以秒为单位），超过限制时间后连接将中止。 默认值为10。', '', 'Integer number between 1 and 15', '');
 
 $_tipsdb['quicIdleTimeout'] = new DAttrHelp("空闲超时时间（秒）", '空闲的QUIC连接将被关闭的时间（以秒为单位）。 默认值为 30 。', '', 'Integer number between 10 and 30', '');
 
 $_tipsdb['quicMaxCfcw'] = new DAttrHelp("最大连接流量窗口值设置", '指定由于连接流控制窗口缓冲区的最大大小 auto-tuning.<br/><br/>默认值为 0 ，这意味着将使用&quot;流连接窗口控制&quot;的值，并且不会自动调整。', '更大的窗口大小将使用更多的内存。', '0 or a number between 64K and 512M', '');
+
+$_tipsdb['quicMaxPLPMTU'] = new DAttrHelp("PLPMTU Max Value", 'The PLPMTU (maximum packet size without headers) probe upper limit in bytes. This setting is used to limit the &quot;maximum packet size&quot; in the DPLPMTUD search space.  Setting this to 0 will allow QUIC to pick the size (By default LSQUIC assumes that MTU is 1,500 bytes (Ethernet)).<br/><br/>This setting should be set higher than &quot;PLPMTU Base Value&quot;.<br/>Default value: 0', '', '0 or integer number between 1200 and 65527', '');
 
 $_tipsdb['quicMaxSfcw'] = new DAttrHelp("最大流量窗口值设置", '指定由于自动调整而允许流控制窗口达到的最大大小。<br/><br/>默认值为0，这意味着将使用&quot;连接流量窗口值&quot;的值，并且不会自动调整', '更大的窗口大小将使用更多的内存。', '0 or a number between 64K and 128M', '');
 

@@ -1,9 +1,10 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @Author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @Copyright: (c) 2018
+ *
+ * @author  LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
+ * @copyright  (c) 2018-2020
  * ******************************************* */
 
 namespace Lsc\Wp\View;
@@ -36,7 +37,7 @@ class AjaxView
      *
      * @param string  $tplID
      * @return string
-     * @throws LSCMException
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     public function getAjaxContent( $tplID = '' )
     {
@@ -51,9 +52,7 @@ class AjaxView
             throw $e;
         }
 
-        $content = ob_get_clean();
-
-        return $content;
+        return ob_get_clean();
     }
 
     /**

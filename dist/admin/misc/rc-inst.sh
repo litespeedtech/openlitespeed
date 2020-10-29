@@ -111,6 +111,7 @@ if [ "${SYSTEMDDIR}" != "" ] ; then
 
     cp -f ${CURDIR}/lshttpd.service ${SYSTEMDDIR}/lshttpd.service
     chmod 644 ${SYSTEMDDIR}/lshttpd.service
+    ln -sf ${SYSTEMDDIR}/lshttpd.service ${SYSTEMDDIR}/lsws.service
 
     systemctl daemon-reload
     systemctl enable lshttpd.service

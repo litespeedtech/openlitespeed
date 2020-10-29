@@ -565,6 +565,7 @@ public:
     long getReqTime() const {   return m_lReqTime;  }
     int32_t getReqTimeUs() const    {   return m_iReqTimeUs;    }
 
+    void bytesSent(int bytes);
     int writeRespBodyDirect(const char *pBuf, int size);
     int writeRespBody(const char *pBuf, int len);
 

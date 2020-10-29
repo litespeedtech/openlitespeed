@@ -213,7 +213,7 @@ class DTblDefBase
             }
         }
         $ipo = [];
-        $ipo['ANY'] = 'ANY';
+        $ipo['ANY'] = 'ANY IPv4';
         $ipstr = isset($_SERVER['LSWS_IPV4_ADDRS']) ? $_SERVER['LSWS_IPV4_ADDRS'] : '';
         if ($ipstr != '') {
             $ips = explode(',', $ipstr);
@@ -467,7 +467,7 @@ class DTblDefBase
     protected function add_S_TUNING_QUIC($id)
 	{
         $congest_options = ['' => 'Default', '1' => 'Cubic', '2' => 'BBR'];
-		$attrs = array(
+		$attrs = [
             self::NewBoolAttr('quicEnable', DMsg::ALbl('l_enablequic')),
             self::NewTextAttr('quicShmDir', DMsg::ALbl('l_quicshmdir'), 'cust'),
             self::NewTextAttr('quicVersions', DMsg::ALbl('l_quicversions'), 'cust'),
@@ -479,7 +479,10 @@ class DTblDefBase
             self::NewIntAttr('quicMaxStreams', DMsg::ALbl('l_quicmaxstreams'), true, 10, 1000),
             self::NewIntAttr('quicHandshakeTimeout', DMsg::ALbl('l_quichandshaketimeout'), true, 1, 15),
             self::NewIntAttr('quicIdleTimeout', DMsg::ALbl('l_quicidletimeout'), true, 10, 30),
-			);
+            self::NewBoolAttr('quicEnableDPLPMTUD', DMsg::ALbl('l_quicenabledplpmtud')),
+            self::NewIntAttr('quicBasePLPMTU', DMsg::ALbl('l_quicbaseplpmtu'), true, 0, 65527),
+            self::NewIntAttr('quicMaxPLPMTU', DMsg::ALbl('l_quicmaxplpmtu'), true, 0, 65527),
+			];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_quic'), $attrs);
 	}
 
@@ -1386,7 +1389,7 @@ class DTblDefBase
             self::NewParseTextAttr('configFile', DMsg::ALbl('l_configfile'), '/\$VH_NAME.*\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
             $this->_attrs['vh_maxKeepAliveReq'],
         );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, 'Base', $attrs); // todo: title change
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_base'), $attrs);
     }
 
     protected function add_T_SEC_FILE($id)

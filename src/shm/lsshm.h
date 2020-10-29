@@ -155,7 +155,7 @@ public:
 
     LsShmOffset_t getMapStatOffset() const;
 
-    LsShmOffset_t allocPage(LsShmSize_t pagesize, int &remapped);
+    LsShmOffset_t allocPage(LsShmSize_t pagesize);
     int reserveAddrSpace(LsShmSize_t total)
     {   return m_addrMap.mapAddrSpace(total);  }
 

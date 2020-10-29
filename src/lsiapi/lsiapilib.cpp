@@ -1947,8 +1947,19 @@ static int  get_access_log_string(const lsi_session_t *session,
     if ((pSession == NULL) || (!log_pattern) || (!buf))
         return LS_FAIL;
 
-    int ret = AccessLog::getLogString(pSession, log_pattern, buf, bufLen);
-    return ret;
+    if (pSession->getReq())
+    {
+        AccessLog *pLogger = NULL;
+        HttpVHost *host = (HttpVHost *)pSession->getReq()->getVHost();
+        if (host && (pLogger = host->getAccessLog()) != NULL)
+        {
+
+            int ret = pLogger->getLogString(pSession, log_pattern, buf, bufLen);
+            return ret;
+        }
+    }
+
+    return LS_FAIL;
 }
 
 

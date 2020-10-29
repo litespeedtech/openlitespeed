@@ -1361,7 +1361,7 @@ NEXT_RULE:
                                              m_pQS, m_qsLen, pSession->isHttps()) == 0)
                 {
                     pReq->setRewriteLocation((char *)m_pSourceURL, m_sourceURLLen,
-                                             m_pQS, m_qsLen, m_flag & RULE_FLAG_NOESCAPE);
+                                             m_pQS, m_qsLen, (m_flag & RULE_FLAG_NOESCAPE) == 0);
                     pReq->orContextState(REWRITE_REDIR);
                 }
                 else
