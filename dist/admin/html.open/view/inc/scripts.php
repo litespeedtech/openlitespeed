@@ -5,11 +5,10 @@
             buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
         }, function (ButtonPressed) {
             if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_go') ?>") {
-
                 $.ajax({
                     type: "POST",
                     url: "view/serviceMgr.php",
-                    data: {act: "restart"},
+                    data: {"act": "restart"},
                     beforeSend: function () {
                         $.smallBox({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
@@ -23,9 +22,7 @@
                         location.reload(true);
                     }
                 });
-
             }
-
         });
     }
 
@@ -36,7 +33,6 @@
             buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
         }, function (ButtonPressed) {
             if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_go') ?>") {
-
                 $.ajax({
                     type: "POST",
                     url: "view/serviceMgr.php",
@@ -54,9 +50,7 @@
                         setTimeout(refreshLog, 2000);
                     }
                 });
-
             }
-
         });
     }
 </script>
@@ -79,7 +73,6 @@
 
 <!-- MAIN APP JS FILE -->
 <script src="/res/js/lst-app.min.js"></script>
-
 
 <script type="text/javascript">
     // DO NOT REMOVE : GLOBAL FUNCTIONS!

@@ -83,6 +83,7 @@ $_gmsg['note_collapsemenu'] = 'Collapse Menu';
 $_gmsg['note_configmodified'] = 'Configuration has been modified. To apply changes, please perform a graceful restart.';
 $_gmsg['note_confirm_delete'] = 'Are you sure you want to delete this entry? This will be permanently removed from the configuration file.';
 $_gmsg['note_confirm_instantiate'] = 'Are you sure you want to instantiate this virtual host? This will create a dedicated configuration file for this virtual host.';
+$_gmsg['note_confirm_logout'] = 'Logout';
 $_gmsg['note_copyrightreserved'] = 'All Rights Reserved.';
 $_gmsg['note_curbranch'] = 'current branch';
 $_gmsg['note_curver'] = 'Current Version';
@@ -90,6 +91,7 @@ $_gmsg['note_dataretrievedat'] = 'Data retrieved at';
 $_gmsg['note_entfeature'] = 'This feature is available in Enterprise Edition';
 $_gmsg['note_example'] = 'Example';
 $_gmsg['note_fullscreen'] = 'Full Screen';
+$_gmsg['note_home'] = 'Home';
 $_gmsg['note_inputerr'] = 'Input error detected. Please resolve the error(s).';
 $_gmsg['note_loadavg'] = 'System Load Avg';
 $_gmsg['note_logout'] = 'You can improve your security further after logging out by closing this opened browser';
@@ -113,6 +115,8 @@ $_gmsg['err_invalidpath'] = 'Invalid path';
 $_gmsg['err_invalidvalat'] = 'Invalid value at';
 $_gmsg['err_loggedoff'] = 'You have logged off.';
 $_gmsg['err_login'] = 'Invalid credentials.';
+$_gmsg['err_menuanchornotexist'] = 'Error - menu anchor does not exist';
+$_gmsg['err_page_404'] = 'Error 404! Page not found.';
 $_gmsg['err_parentdirnotexist'] = 'Parent directory does not exist';
 $_gmsg['err_requireabspath'] = 'Require absolute path';
 $_gmsg['err_sessiontimeout'] = 'Your session has timed out.';
@@ -775,5 +779,3 @@ If you do not recognize the IP address, please follow below recommended ways to 
 2. change the listener port from default value 7080;
 3. do not use simple password;
 4. use https for admin console.';
-
-
