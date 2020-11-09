@@ -417,7 +417,7 @@ class Logger
      * @since 1.9
      *
      * @return string
-     * @throws LSCMException  Indirectly thrown by static::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getAdditionalTagInfo()
     {
@@ -451,7 +451,7 @@ class Logger
      *
      * @param int  $type
      * @return string[]
-     * @throws LSCMException  Indirectly thrown by static::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getUiMsgs( $type )
     {
@@ -489,7 +489,7 @@ class Logger
      * @deprecated
      * @param string  $msg
      * @param int     $type
-     * @throws LSCMException  Indirectly thrown by static::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function addUiMsg( $msg, $type )
     {
@@ -520,7 +520,7 @@ class Logger
      * Calls addUiMsg() with message level static::UI_ERR.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::addUiMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function uiError( $msg )
     {
@@ -541,8 +541,7 @@ class Logger
      *
      * @param string  $msg
      * @param int     $lvl
-     * @throws LSCMException  Indirectly thrown by static::me() and
-     *                        static::me()->p_log().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function logMsg( $msg, $lvl )
     {
@@ -553,7 +552,7 @@ class Logger
      * Calls logMsg() with message level static::L_ERROR.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::logMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function error( $msg )
     {
@@ -564,7 +563,7 @@ class Logger
      * Calls logMsg() with message level static::L_WARN.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::logMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function warn( $msg )
     {
@@ -575,7 +574,7 @@ class Logger
      * Calls logMsg() with message level static::L_NOTICE.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::logMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function notice( $msg )
     {
@@ -586,7 +585,7 @@ class Logger
      * Calls logMsg() with message level static::L_INFO.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::logMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function info( $msg )
     {
@@ -597,7 +596,7 @@ class Logger
      * Calls logMsg() with message level static::L_VERBOSE.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::logMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function verbose( $msg )
     {
@@ -608,7 +607,7 @@ class Logger
      * Calls logMsg() with message level static::L_DEBUG.
      *
      * @param string  $msg
-     * @throws LSCMException  Indirectly thrown by static::logMsg().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function debug( $msg )
     {
@@ -635,8 +634,7 @@ class Logger
      *
      * @param string  $msg
      * @param int     $lvl
-     * @throws LSCMException  Indirectly thrown by $this->writeToFile and
-     *                        $this->echoEntries().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function log( $msg, $lvl )
     {
@@ -658,7 +656,7 @@ class Logger
      * @param LogEntry[]|object[]  $entries  Array of objects that implement
      *                                       all LogEntry class public
      *                                       functions.
-     * @throws LSCMException  Indirectly thrown by $e->getOutput().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function writeToFile( $entries )
     {
@@ -685,7 +683,7 @@ class Logger
      * @param LogEntry[]|object[]  $entries  Array of objects that implement
      *                                       all LogEntry class public
      *                                       functions.
-     * @throws LSCMException  Indirectly thrown by $entry->getOutput().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected function echoEntries( $entries )
     {

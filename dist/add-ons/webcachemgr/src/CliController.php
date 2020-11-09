@@ -96,7 +96,7 @@ class CliController
     private function checkDataFile( $action,
             WPInstallStorage $wpInstallStorage) {
 
-        if ( $action == 'scan' ) {
+        if ( $action == WPInstallStorage::CMD_SCAN ) {
             /**
              * Always allowed.
              */
@@ -112,13 +112,13 @@ class CliController
                 case WPInstallStorage::ERR_CORRUPTED:
                 case WPInstallStorage::ERR_VERSION_HIGH:
                     $msg = 'Scan data could not be read! Please scan again '
-                            . '(without the \'-n\' flag) before attempting any '
-                            . "cache operations.\n";
+                        . '(without the \'-n\' flag) before attempting any '
+                        . "cache operations.\n";
                     break;
                 case WPInstallStorage::ERR_VERSION_LOW:
                     $msg = 'Scan data file format has been changed for this '
-                            . 'version. Please scan again (without the \'-n\' '
-                            . "flag) before attempting any cache operations.\n";
+                        . 'version. Please scan again (without the \'-n\' '
+                        . "flag) before attempting any cache operations.\n";
                     break;
                 //no default
             }
@@ -127,9 +127,9 @@ class CliController
                 && $wpInstallStorage->getCount() == 0 ) {
 
             $msg = 'No WordPress installations discovered in the previous '
-                    . 'scan. If you have any newly installed WordPress '
-                    . 'installations, please scan again or add them with'
-                    . "command 'addinstalls'.\n";
+                . 'scan. If you have any newly installed WordPress '
+                . 'installations, please scan again or add them with command '
+                . "'addinstalls'.\n";
         }
 
         if ( $msg != '' ) {
@@ -168,12 +168,12 @@ class CliController
         }
         elseif ( $status & WPInstall::ST_ERR_DOCROOT ) {
             $msg .= 'Could not match WordPress siteURL to a known control '
-                    . 'panel docroot.';
+                . 'panel docroot.';
         }
         elseif ( $status & WPInstall::ST_ERR_EXECMD ) {
             $msg .= 'WordPress fatal error encountered during action '
-                    . 'execution. This is most likely caused by custom code in '
-                    . 'this WordPress installation.';
+                . 'execution. This is most likely caused by custom code in '
+                . 'this WordPress installation.';
         }
         elseif ( $status & WPInstall::ST_ERR_EXECMD_DB ) {
             $msg .= 'Error establishing WordPress database connection.';
@@ -322,15 +322,15 @@ class CliController
     {
         if ( ($key = array_search('-n', $args)) !== false ) {
             unset($args[$key]);
-            $this->commands[] = 'discoverNew';
+            $this->commands[] = WPInstallStorage::CMD_DISCOVER_NEW;
         }
         else {
-            $this->commands[] = 'scan';
+            $this->commands[] = WPInstallStorage::CMD_SCAN;
         }
 
         if ( ($key = array_search('-e', $args)) !== false ) {
             unset($args[$key]);
-            $this->commands[] = 'mass_enable';
+            $this->commands[] = UserCommand::CMD_MASS_ENABLE;
         }
     }
 
@@ -385,7 +385,7 @@ class CliController
 
             if ( ($key = array_search('-m', $args)) !== false ) {
                 unset($args[$key]);
-                $this->commands[] = 'mass_dash_notify';
+                $this->commands[] = UserCommand::CMD_MASS_DASH_NOTIFY;
             }
             else {
 
@@ -410,7 +410,7 @@ class CliController
                     throw new LSCMException("Invalid WP Path: {$path}.");
                 }
 
-                $this->commands[] = 'dash_notify';
+                $this->commands[] = UserCommand::CMD_DASH_NOTIFY;
                 $this->currWpPath = rtrim($path, '/');
 
                 unset($args[$key], $args[$key + 1]);
@@ -422,7 +422,8 @@ class CliController
 
                 if ( empty($args[$key + 1]) ) {
                     throw new LSCMException(
-                            'Invalid Command, missing \'-msgfile\' value.');
+                        'Invalid Command, missing \'-msgfile\' value.'
+                    );
                 }
 
                 $msgFilePath = $args[$key + 1];
@@ -495,7 +496,7 @@ class CliController
             $arg1 = array_shift($args);
 
             if ( $arg1 == '-m' ) {
-                $this->commands[] = 'mass_dash_disable';
+                $this->commands[] = UserCommand::CMD_MASS_DASH_DISABLE;
             }
             else {
                 $path = $arg1;
@@ -512,7 +513,7 @@ class CliController
                     throw new LSCMException("Invalid WP Path: {$path}.");
                 }
 
-                $this->commands[] = 'dash_disable';
+                $this->commands[] = UserCommand::CMD_DASH_DISABLE;
                 $this->currWpPath = rtrim($path, '/');
             }
         }
@@ -695,6 +696,7 @@ EOF;
 
         switch ($cmd) {
             case 'setcacheroot':
+
                 if ( $panelClassName == 'custom' ) {
                     throw new LSCMException(
                         'Command \'setcacheroot\' cannot be used in the '
@@ -813,12 +815,12 @@ EOF;
 
                     case 'update':
                         echo 'Updated LiteSpeed cPanel plugin to current '
-                                . "version\n\n";
+                            . "version\n\n";
                         break;
 
                     case 'new':
                         echo 'LiteSpeed cPanel plugin installed, auto install '
-                                . "turned on.\n\n";
+                            . "turned on.\n\n";
                         break;
 
                     //no default
@@ -831,27 +833,27 @@ EOF;
                 CPanel::uninstallCpanelPlugin();
 
                 echo 'LiteSpeed cPanel plugin uninstalled successfully, auto '
-                        . "install turned off.\n\n";
+                    . "install turned off.\n\n";
                 break;
 
             case 'cpanelPluginAutoInstallStatus':
                 $state = (CPanel::isCpanelPluginAutoInstallOn()) ? 'On' : 'Off';
 
                 echo "Auto install is currently {$state} for the LiteSpeed "
-                        . "cPanel plugin.\n";
+                    . "cPanel plugin.\n";
                 echo 'Use command \'cpanelplugin -autoinstall {0 | 1}\' to '
-                        . "turn auto install off/on respectively.\n\n";
+                    . "turn auto install off/on respectively.\n\n";
                 break;
 
             case 'cpanelPluginAutoInstallOn':
 
                 if ( CPanel::turnOnCpanelPluginAutoInstall() ) {
                     echo 'Auto install is now On for LiteSpeed cPanel plugin.'
-                            . "\n\n";
+                        . "\n\n";
                 }
                 else {
                     echo 'Failed to turn off auto install for LiteSpeed cPanel '
-                            . "plugin.\n\n";
+                        . "plugin.\n\n";
                 }
 
                 break;
@@ -860,11 +862,11 @@ EOF;
 
                 if ( CPanel::turnOffCpanelPluginAutoInstall() ) {
                     echo 'Auto install is now Off for LiteSpeed cPanel plugin.'
-                            . "\n\n";
+                        . "\n\n";
                 }
                 else {
                     echo 'Failed to turn on auto install for LiteSpeed cPanel '
-                            . "plugin.\n\n";
+                        . "plugin.\n\n";
                 }
 
                 break;
@@ -887,7 +889,7 @@ EOF;
                 $allowedVers = $pluginVerInstance->getAllowedVersions();
 
                 echo "Available versions are: \n" . implode("\n",$allowedVers)
-                        . "\n";
+                    . "\n";
                 break;
 
             case 'latest':
@@ -902,7 +904,7 @@ EOF;
 
                 if ( $latest == $currVer ) {
                     echo "Current version, {$latest}, is already the latest "
-                            . "version.\n";
+                        . "version.\n";
                 }
                 else {
                     $pluginVerInstance->setActiveVersion($latest);
@@ -932,9 +934,10 @@ EOF;
 
         $lscmDataFiles = Context::getLSCMDataFiles();
 
-        $wpInstallStorage =
-                new WPInstallStorage($lscmDataFiles['dataFile'],
-                        $lscmDataFiles['custDataFile']);
+        $wpInstallStorage = new WPInstallStorage(
+            $lscmDataFiles['dataFile'],
+            $lscmDataFiles['custDataFile']
+        );
 
         if ($this->currWpPath) {
             $list = array( $this->currWpPath );
@@ -947,17 +950,19 @@ EOF;
 
             switch ( $action ) {
 
-                case 'upgrade':
-                case 'mass_upgrade':
+                case UserCommand::CMD_UPGRADE:
+                case UserCommand::CMD_MASS_UPGRADE:
                     $pluginVerInstance = PluginVersion::getInstance();
 
-                    $extraArgs[] = implode(',',
-                            $pluginVerInstance->getKnownVersions(true));
+                    $extraArgs[] = implode(
+                        ',',
+                        $pluginVerInstance->getShortVersions()
+                    );
                     $extraArgs[] = $pluginVerInstance->getCurrentVersion();
                     break;
 
-                case 'dash_notify':
-                case 'mass_dash_notify':
+                case UserCommand::CMD_DASH_NOTIFY:
+                case UserCommand::CMD_MASS_DASH_NOTIFY:
                     DashNotifier::prepLocalDashPluginFiles();
 
                     $slug = '';
@@ -967,11 +972,11 @@ EOF;
                     }
 
                     $msgInfoJSON = json_encode(
-                            array(
-                                'msg' => $this->input['msg'],
-                                'plugin' => $slug,
-                                'plugin_name' => ''
-                            )
+                        array(
+                            'msg' => $this->input['msg'],
+                            'plugin' => $slug,
+                            'plugin_name' => ''
+                        )
                     );
 
                     $extraArgs[] = base64_encode($msgInfoJSON);
@@ -987,9 +992,8 @@ EOF;
 
             $wpInstallStorage->doAction($action, $list, $extraArgs);
 
-            if ( $action == 'status' ) {
-                $wpInstall =
-                        $wpInstallStorage->getWPInstall($this->currWpPath);
+            if ( $action == UserCommand::CMD_STATUS ) {
+                $wpInstall = $wpInstallStorage->getWPInstall($this->currWpPath);
 
                 $this->printStatusMsg($wpInstall);
             }

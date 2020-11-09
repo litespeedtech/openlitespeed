@@ -74,9 +74,9 @@ typedef struct
 
 class LsShmPool : public ls_shmpool_s
 {
+    friend class LsShm;
 public:
     LsShmPool();
-    ~LsShmPool();
 
 public:
     LsShmHash *getNamedHash(const char *name, LsShmSize_t init_size,
@@ -246,6 +246,9 @@ private:
     LsShmPool(const LsShmPool &other);
     LsShmPool &operator=(const LsShmPool &other);
     bool operator==(const LsShmPool &other);
+
+    //NOTE: make it private to disallow direct call, only use LsShmPool->close().
+    ~LsShmPool();
 
     uint32_t            m_iMagic;
     LsShm              *m_pShm;         // SHM handle

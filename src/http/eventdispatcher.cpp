@@ -250,7 +250,7 @@ int EventDispatcher::run()
             QuicEngine::detectBusyLoop(to);
         }
         ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
-                  MLTPLX_TIMEOUT);
+                  to);
         if ((ret == -1) && errno)
         {
             if (!((errno == EINTR) || (errno == EAGAIN)))

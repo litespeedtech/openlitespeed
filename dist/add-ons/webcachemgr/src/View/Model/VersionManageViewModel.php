@@ -1,9 +1,9 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ * @copyright: (c) 2018-2020
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -24,7 +24,7 @@ class VersionManageViewModel
     const FLD_ERR_MSGS = 'errMsgs';
     const FLD_STATE = 'state';
     const ST_INSTALLS_DISCOVERED = 2;
-    const ST_NO_INSTALLS_DISCOVERED = 1;
+    const ST_NO_NON_ERROR_INSTALLS_DISCOVERED = 1;
     const ST_SCAN_NEEDED = 0;
 
     /**
@@ -40,6 +40,7 @@ class VersionManageViewModel
     /**
      *
      * @param WPInstallStorage  $wpInstallStorage
+     * @throws LSCMException  Thrown indirectly.
      */
     public function __construct( WPInstallStorage $wpInstallStorage )
     {
@@ -48,6 +49,10 @@ class VersionManageViewModel
         $this->init();
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     protected function init()
     {
         $this->setIconPath();
@@ -97,7 +102,9 @@ class VersionManageViewModel
         }
         catch ( LSCMException $e )
         {
-            Logger::debug($e->getMessage() . ' Could not get active LSCWP version.');
+            Logger::debug(
+                $e->getMessage() . ' Could not get active LSCWP version.'
+            );
 
             $currVer = false;
         }
@@ -114,7 +121,7 @@ class VersionManageViewModel
             }
             else {
                 $this->tplData[self::FLD_STATE] =
-                        self::ST_NO_INSTALLS_DISCOVERED;
+                    self::ST_NO_NON_ERROR_INSTALLS_DISCOVERED;
             }
         }
         else {
@@ -122,18 +129,24 @@ class VersionManageViewModel
         }
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     protected function setVerListData()
     {
         $vermgr = PluginVersion::getInstance();
 
         try
         {
-            $verList = $vermgr->getKnownVersions(true);
+            $verList = $vermgr->getShortVersions();
             $allowedList = $vermgr->getAllowedVersions();
         }
         catch ( LSCMException $e )
         {
-            Logger::debug($e->getMessage() . ' Could not retrieve version list.');
+            Logger::debug(
+                $e->getMessage() . ' Could not retrieve version list.'
+            );
 
             $verList = $allowedList = array();
         }

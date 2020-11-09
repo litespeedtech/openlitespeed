@@ -114,13 +114,14 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
   </p>
 </div>
 
-<?php elseif ( $state == ViewModel::ST_NO_INSTALLS_DISCOVERED): ?>
+<?php elseif ( $state == ViewModel::ST_NO_NON_ERROR_INSTALLS_DISCOVERED): ?>
 
 <div>
   <p>
-    No WordPress installations discovered in the previous scan
-    (Installations with a Cache Status of "Error" are not counted). If you have
-    any newly installed WordPress installations, please go to
+    No WordPress installations with a non-error status discovered in the
+    previous scan (Installations with a Cache Status of "Error" are not
+    counted). If you have any newly installed WordPress installations, please go
+    to
     <a href="?do=lscwp_manage" title="Go to Manage Cache Installations">
       Manage Cache Installations
     </a>

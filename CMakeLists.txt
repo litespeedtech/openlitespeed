@@ -3,6 +3,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 Project(openlitespeed)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
+INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 4)
@@ -56,7 +57,7 @@ add_definitions(-DPOOL_TESTING)
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 #Add definition for QUIC
-add_definitions(-DH3_ALPN="\\x05h3-27\\x05h3-29\\x05h3-30")
+add_definitions(-DH3_ALPN="\\x05h3-29\\x05h3-31")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")

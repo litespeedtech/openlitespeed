@@ -84,8 +84,7 @@ class LogEntry
      *
      * @param int  $logLvl
      * @return string
-     * @throws LSCMException  Indirectly thrown by
-     *                        Logger::getAdditionalTagInfo().
+     * @throws LSCMException  Thrown indirectly.
      */
     public function getOutput( $logLvl )
     {

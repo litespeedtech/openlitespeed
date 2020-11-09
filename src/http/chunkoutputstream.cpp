@@ -113,11 +113,24 @@ int ChunkOutputStream::write(const char *pBuf, int size)
     assert(m_pOS != NULL);
     if (m_iTotalPending)
     {
-        if (m_pLastBufBegin && pBuf != m_pLastBufBegin)
+        if (m_pLastBufBegin )
         {
-            m_iov.adjust(m_pLastBufBegin, pBuf, m_iLastBufLen);
-            m_pLastBufBegin = pBuf;
+            if (pBuf != m_pLastBufBegin)
+            {
+                m_iov.adjust(m_pLastBufBegin, pBuf, m_iLastBufLen);
+                m_pLastBufBegin = pBuf;
+            }
+            else
+            {
+                //NOTE: size could be less than m_iLastBufLen for repeated attempts
+                // when bandwidth throttling is involved. We have to use
+                // m_iLastBufLen,
+                // this function could return a value larger than the input "size"
+                if (size < m_iLastBufLen)
+                    size = m_iLastBufLen;
+            }
         }
+
         ret = flush2();
         switch (ret)
         {
@@ -130,6 +143,7 @@ int ChunkOutputStream::write(const char *pBuf, int size)
         }
     }
 
+    left = size;
     if (m_pLastBufBegin != NULL)
     {
         left -= m_iLastBufLen;

@@ -436,7 +436,11 @@ plainconfKeywords plainconf::sKeywords[] =
     {"quicpush", NULL},
     {"quiccongestionctrl", NULL},
     {"quicloglevel", NULL},
-
+    {"quicqpackexperiment", NULL},
+    {"quicenabledplpmtud", NULL},
+    {"quicbaseplpmtu", NULL},
+    {"quicmaxplpmtu", NULL},
+    {"quicmtuprobetimer", NULL},
     {"reuseport",      NULL},
 
 };

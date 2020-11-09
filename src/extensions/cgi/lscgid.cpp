@@ -70,8 +70,6 @@ void ls_stderr(const char * fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     fprintf(stderr, "%s", buf);
-    //Comment out the below line currently
-    //DEBUG_MESSAGE("stderr message: %s", buf);
 }
 
 static uid_t        s_uid;

@@ -202,7 +202,18 @@ lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
         return NULL;
     }
 
-    pClientInfo = ClientCache::getInstance().getClientInfo((sockaddr *)pPeer);
+    if ((AF_INET6 == pPeer->sa_family) &&
+        (IN6_IS_ADDR_V4MAPPED(&((sockaddr_in6 *)pPeer)->sin6_addr)))
+    {
+        char serverAddr[28] = {0};
+        struct sockaddr *pAddr = (sockaddr *)serverAddr;
+        pAddr->sa_family = AF_INET;
+        memmove(&((sockaddr_in *)pAddr)->sin_addr.s_addr, &((char *)pPeer)[20], 4);
+        pClientInfo = ClientCache::getInstance().getClientInfo((sockaddr *)pAddr);
+    }
+    else
+        pClientInfo = ClientCache::getInstance().getClientInfo((sockaddr *)pPeer);
+
     if (!pClientInfo ||
         (int) pClientInfo->getConns() >= pClientInfo->getPerClientHardLimit())
     {
@@ -704,6 +715,12 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 //     lsquic_logger_lopt("pacer=info");
     bool isQuicLogEnable = (LS_LOG_ENABLED(log4cxx::Level::DBG_HIGH));
     setDebugLog(isQuicLogEnable);
+
+    // QPACK Experiment logging requires QPACK decoder and encoder handlers
+    // to log at NOTICE level:
+    if (m_config.es_qpack_experiment
+                            && !LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
+        lsquic_logger_lopt("qdec-hdl=notice,qenc-hdl=notice");
 
     m_pMultiplexer = pMplx;
 

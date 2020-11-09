@@ -58,7 +58,7 @@ namespace SuiteQuicShm {
 };
 #endif
 
-#define QUIC_SHM_PACKET_SIZE 1370
+#define QUIC_SHM_PACKET_SIZE 1500
 
 class QuicShm : public TSingleton<QuicShm>
 {

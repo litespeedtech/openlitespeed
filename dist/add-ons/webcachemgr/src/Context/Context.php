@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @copyright (c) 2018-2020
  * ******************************************* */
 
 namespace Lsc\Wp\Context;
@@ -106,8 +106,11 @@ class Context
             $setInMpFile = ! empty($result);
 
             if ( ! $setInMpFile ) {
-                file_put_contents($mpFile, "\n{$localPluginDir}",
-                        FILE_APPEND);
+                file_put_contents(
+                    $mpFile,
+                    "\n{$localPluginDir}",
+                    FILE_APPEND
+                );
 
                 Logger::notice('Added data dir to cagefs.mp.');
             }
@@ -128,8 +131,10 @@ class Context
     protected function createDataDir()
     {
         if ( !file_exists($this->dataDir) && !mkdir($this->dataDir, 0755) ) {
-            throw new LSCMException("Fail to create data directory {$this->dataDir}.",
-                    LSCMException::E_PERMISSION);
+            throw new LSCMException(
+                "Fail to create data directory {$this->dataDir}.",
+                LSCMException::E_PERMISSION
+            );
         }
     }
 
@@ -145,15 +150,17 @@ class Context
                 && !mkdir(Context::LOCAL_PLUGIN_DIR, 0755) ) {
 
             throw new LSCMException(
-                    "Fail to create local plugin directory " . Context::LOCAL_PLUGIN_DIR . '.',
-                    LSCMException::E_PERMISSION);
+                "Fail to create local plugin directory "
+                    . Context::LOCAL_PLUGIN_DIR . '.',
+                LSCMException::E_PERMISSION
+            );
         }
     }
 
     /**
      *
      * @return ContextOption
-     * @throws LSCMException  Indirectly thrown by self::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getOption()
     {
@@ -176,8 +183,10 @@ class Context
             /**
              * Do not allow, must initialize first.
              */
-            throw new LSCMException('Context cannot be initialized twice.',
-                    LSCMException::E_PROGRAM);
+            throw new LSCMException(
+                'Context cannot be initialized twice.',
+                LSCMException::E_PROGRAM
+            );
         }
 
         self::$instance = new self($contextOption);
@@ -206,7 +215,7 @@ class Context
     protected function hasInsufficentPermissions()
     {
         $expectedPermissions =
-                self::$instance->options->getExpectedPermissions();
+            self::$instance->options->getExpectedPermissions();
 
         return (self::$instance->isRoot < $expectedPermissions);
     }
@@ -223,13 +232,17 @@ class Context
             /**
              * Do not allow, must initialize first.
              */
-            throw new LSCMException('Uninitialized context.',
-                    LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                'Uninitialized context.',
+                LSCMException::E_NON_FATAL
+            );
         }
 
         if ( $checkPerms && self::$instance->hasInsufficentPermissions() ) {
-            throw new LSCMException('Access denied: Insufficient permissions.',
-                    LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                'Access denied: Insufficient permissions.',
+                LSCMException::E_NON_FATAL
+            );
         }
 
         return self::$instance;
@@ -262,8 +275,7 @@ class Context
     /**
      *
      * @return string[]
-     * @throws LSCMException  Indirectly thrown by self::me() and
-     *                        Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getLSCMDataFiles()
     {
@@ -278,7 +290,10 @@ class Context
             throw new LSCMException($msg);
         }
 
-        return array( 'dataFile' => $dataFile, 'custDataFile' => $custDataFile );
+        return array(
+            'dataFile' => $dataFile,
+            'custDataFile' => $custDataFile
+        );
     }
 
     /**
@@ -293,18 +308,17 @@ class Context
     /**
      *
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by self::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function isPrivileged()
     {
-        $rootCapable = self::me()->isRoot > ContextOption::IS_NOT_ROOT;
-        return $rootCapable;
+        return (self::me()->isRoot > ContextOption::IS_NOT_ROOT);
     }
 
     /**
      *
      * @return int
-     * @throws LSCMException  Indirectly thrown by self::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getScanDepth()
     {
@@ -314,7 +328,7 @@ class Context
     /**
      *
      * @return int
-     * @throws LSCMException Indirectly thrown by self::me().
+     * @throws LSCMException Thrown indirectly.
      */
     public static function getActionTimeout()
     {
@@ -333,7 +347,7 @@ class Context
     /**
      *
      * @return string
-     * @throws LSCMException  Indirectly thrown by self::me().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function getFlagFileContent()
     {

@@ -1279,7 +1279,19 @@ void HttpServerImpl::offsetChroot()
 
 void HttpServerImpl::releaseAll()
 {
+    LS_NOTICE("HttpServerImpl::releaseAll called, pid %d,", getpid());
     ExtAppRegistry::stopAll();
+
+//#define CRASH_TEST
+#ifdef  CRASH_TEST
+    //TEST crash here
+    char *s = new char[10];
+    delete []s;
+    delete []s;
+    delete []s;
+#endif
+
+
 #define  TO_AVOID_EXIT_CRASH
 #ifndef  TO_AVOID_EXIT_CRASH
     StaticFileCache::getInstance().releaseAll();
@@ -1287,14 +1299,15 @@ void HttpServerImpl::releaseAll()
     m_listeners.clear();
     m_oldListeners.clear();
     m_toBeReleasedListeners.clear();
+    ::signal(SIGCHLD, SIG_DFL);
+
 #ifndef  TO_AVOID_EXIT_CRASH
     m_vhosts.release_objects();
     m_toBeReleasedVHosts.release_objects();
-#endif
-    ::signal(SIGCHLD, SIG_DFL);
     ExtAppRegistry::shutdown();
     ClientCache::clearObjPool();
     HttpResourceManager::getInstance().releaseAll();
+#endif
     delete HttpAioSendFile::getHttpAioSendFile();
     HttpMime::releaseMIMEList();
 }
@@ -1356,6 +1369,8 @@ int HttpServerImpl::gracefulShutdown()
     //suspend listener socket,
     //m_listeners.suspendAll();
     //close all listener socket.
+    //11/3/2020 David added SigStop here.
+    HttpSignals::setSigStop();
     m_lStartTime = -1;
     m_listeners.stopAll();
     //close keepalive connections
@@ -3897,8 +3912,19 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 
     settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 2, 1);
 
+    settings.es_qpack_experiment = GET_VAL(pNode, "quicQPACKExperiment", 0,
+        LONG_MAX /* No limit for future compatibility */, LSQUIC_DF_QPACK_EXPERIMENT);
+
     settings.es_proc_time_thresh = 100000;
     settings.es_pace_packets = 1;
+
+    settings.es_dplpmtud = GET_VAL(pNode, "quicEnableDPLPMTUD", 0, 1, 1);
+    /* 28: 20 bytes for IPv4 header and 8 for UDP header.
+     * The default is 0 to let lsquic pick.
+     */
+    settings.es_base_plpmtu = GET_VAL(pNode, "quicBasePLPMTU", 0, USHRT_MAX - 28, 0);
+    settings.es_max_plpmtu = GET_VAL(pNode, "quicMaxPLPMTU", 0, USHRT_MAX - 28, 0);
+    settings.es_mtu_probe_timer = GET_VAL(pNode, "quicMTUProbeTimer", 0, UINT_MAX, 0);
 
     pLogLevel = pNode->getChildValue("quicLogLevel");
     if (!pLogLevel || strlen(pLogLevel) < 4)

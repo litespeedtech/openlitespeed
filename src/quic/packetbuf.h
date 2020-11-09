@@ -55,7 +55,7 @@ typedef struct quicshm_packet_buf
 #ifndef _NOT_USE_SHM_
                  QUIC_SHM_PACKET_SIZE
 #else
-                 1370
+                 1472
 #endif
                                      ];
 } packet_buf_t;

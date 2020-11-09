@@ -758,7 +758,11 @@ int StaticFileCacheData::buildCompressedPaths()
         mkdir(achPath, 0700);
         achPath[n - 3] = '/';
         if ((mkdir(achPath, 0700) == -1) && (errno != EEXIST))
+        {
+            LS_DBG_H("[StaticFileCacheData::buildCompressedPaths] mkdir %s failed.",
+                     achPath);
             return LS_FAIL;
+        }
     }
 
     StringTool::hexEncode((const char *)&achHash[1], MD5_DIGEST_LENGTH - 1,
@@ -766,12 +770,20 @@ int StaticFileCacheData::buildCompressedPaths()
     n += 30;
     char *pReal = m_gzippedPath.prealloc(n + 6);
     if ((!pReal) || (!m_bredPath.prealloc(n + 6)))
+    {
+        LS_DBG_H("[StaticFileCacheData::buildCompressedPaths] error. pReal %p m_gzippedPath %s m_bredPath %s.",
+               pReal, m_gzippedPath.c_str(), m_bredPath.c_str());
         return LS_FAIL;
+    }
     lstrncpy(pReal, achPath, n + 6);
     m_gzippedPath.setLen(n);
     memmove(pReal + n , ".lsz\0\0", 6);
     if (!m_bredPath.setStr(pReal, n + 6))
+    {
+        LS_DBG_H("[StaticFileCacheData::buildCompressedPaths] m_bredPath.setStr error. pReal %p n %d.",
+               pReal, n);
         return LS_FAIL;
+    }
     char *pBred = m_bredPath.buf();
     pBred[n + 3] = 'b'; // .lsb
     m_bredPath.setLen(n);

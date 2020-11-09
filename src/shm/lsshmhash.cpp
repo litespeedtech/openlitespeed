@@ -696,8 +696,6 @@ int LsShmHash::rehash()
     LsShmSize_t newSize;
     LsShmOffset_t newIdxOff;
     LsShmOffset_t newBitOff;
-    LsShmHIterOff *pOldTbl;
-    LsShmHIterOff *pNewTbl;
     LsShmHIterOff *opIdx;
     LsShmHIterOff *npIdx;
     iterator iter;
@@ -715,19 +713,18 @@ int LsShmHash::rehash()
               );
 #endif
     LsShmHTable *pTable = getHTable();
-    pOldTbl = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     if (pTable->x_iHIdx != pTable->x_iHIdxNew)          // rehash in progress
     {
         newSize = pTable->x_iCapacityNew;
         newIdxOff = pTable->x_iHIdxNew;
-        pNewTbl = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff);
         if ((iterOff.m_iOffset = pTable->x_iWorkIterOff) != 0)    // iter in progress
         {
             iter = offset2iterator(iterOff);
-            npIdx = pNewTbl + getIndex(iter->x_hkey, newSize);
+            npIdx = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff +
+                        sizeof(LsShmHIterOff) * getIndex(iter->x_hkey, newSize));
             if (npIdx->m_iOffset != iterOff.m_iOffset)            // not there yet
             {
-                opIdx = pOldTbl + getIndex(iter->x_hkey, oldSize);
+                opIdx = getHidx(getIndex(iter->x_hkey, oldSize));
                 if (opIdx->m_iOffset == iterOff.m_iOffset)
                     opIdx->m_iOffset = iter->x_iNext.m_iOffset;   // remove from old
                 iter->x_iNext.m_iOffset = npIdx->m_iOffset;
@@ -745,7 +742,6 @@ int LsShmHash::rehash()
         uint8_t *ptr = (uint8_t *)offset2ptr(newBitOff);
         ::memset(ptr, 0, szTable + szBitMap);
         newIdxOff = newBitOff + szBitMap;
-        pNewTbl = (LsShmHIterOff *)(ptr + szBitMap);
         pTable = getHTable();
         pTable->x_iBitMap = newBitOff;
         pTable->x_iBitMapSz = szBitMap;
@@ -754,15 +750,15 @@ int LsShmHash::rehash()
     }
 
     iterOff = begin();
-    pOldTbl = (LsShmHIterOff *)m_pPool->offset2ptr(pTable->x_iHIdx);
     while(iterOff.m_iOffset != 0)
     {
         uint32_t new_idx;
         iter = offset2iterator(iterOff);
-        opIdx = pOldTbl + getIndex(iter->x_hkey, oldSize);
+        opIdx = getHidx(getIndex(iter->x_hkey, oldSize));
         iterNextOff = next(iterOff);
         new_idx = getIndex(iter->x_hkey, newSize);
-        npIdx = pNewTbl + new_idx;
+        npIdx = (LsShmHIterOff *)m_pPool->offset2ptr(newIdxOff +
+                    sizeof(LsShmHIterOff) * new_idx);
         setBitMapEnt(new_idx);
 
         pTable->x_iWorkIterOff = iterOff.m_iOffset;

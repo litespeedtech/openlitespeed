@@ -26,8 +26,8 @@
 class session;
 
 #define MNAME                       mod_security
-#define ModuleNameStr               "Mod_Security"
-#define VERSIONNUMBER               "1.3"
+#define ModuleNameStr               "mod_security"
+#define VERSIONNUMBER               "1.4"
 
 #define MODULE_VERSION_INFO         ModuleNameStr " " VERSIONNUMBER
 

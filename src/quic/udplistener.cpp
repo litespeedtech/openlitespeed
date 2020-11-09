@@ -146,7 +146,7 @@ void UdpListener::onMyEvent(int signo)
 #endif
 
 
-#define MAX_PACKET_SZ 1370
+#define MAX_PACKET_SZ 1472
 
 /* There are `n_alloc' elements in `vecs', `local_addresses', and
  * `peer_addresses' arrays.  `ctlmsg_data' is n_alloc * CTL_SZ.  Each packets
@@ -700,7 +700,7 @@ int UdpListener::sendPackets(const struct lsquic_out_spec *spec,
     {
         if (errno == EPERM)
             ret = count;
-        else
+        else if (errno != EMSGSIZE)
         {
             int err = errno;
             MultiplexerFactory::getMultiplexer()->continueWrite(this);
@@ -1691,6 +1691,24 @@ int UdpListener::setSockOptions(int fd)
     {
         LS_WARN(this, "cannot set receive buffer to %d bytes: %s", val,
                   strerror(errno));
+    }
+
+    if (AF_INET == m_addr.get()->sa_family)
+    {
+#if __linux__
+        val = IP_PMTUDISC_DO;
+        ret = setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER, &val, sizeof(val));
+#elif WIN32
+        val = 1;
+        ret = setsockopt(fd, IPPROTO_IP, IP_DONTFRAGMENT, (char *) &val, sizeof(val));
+#else
+        val = 1;
+        ret = setsockopt(fd, IPPROTO_IP, IP_DONTFRAG, &val, sizeof(val));
+#endif
+        if (0 != ret)
+        {
+            return -1;
+        }
     }
 
     return ret;
