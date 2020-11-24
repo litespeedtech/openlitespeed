@@ -972,6 +972,10 @@ class CData
         }
         fclose($fd);
 
+        if (file_exists($filepath)) {
+            $this->copy_permission($filepath, "{$filepath}.new");
+        }
+
         @unlink("{$filepath}.bak");
         if (file_exists($filepath) && !rename($filepath, "{$filepath}.bak")) {
             error_log("failed to rename {$filepath} to {$filepath}.bak");

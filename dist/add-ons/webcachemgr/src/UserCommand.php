@@ -98,7 +98,7 @@ class UserCommand
      * @param int        $lines      Number of $output lines read into the
      *                               error msg.
      * @return string                Message to be displayed instead.
-     * @throws LSCMException  Indirectly thrown by Logger::error().
+     * @throws LSCMException  Thrown indirectly.
      */
     private static function handleUnexpectedError( $wpInstall, &$err, $lines )
     {
@@ -111,8 +111,10 @@ class UserCommand
          */
         if ( $lines < 500 ) {
             $match = false;
+
             $commonErrs = array(
-                WPInstall::ST_ERR_EXECMD_DB => 'Error establishing a database connection'
+                WPInstall::ST_ERR_EXECMD_DB =>
+                    'Error establishing a database connection'
             );
 
             foreach ( $commonErrs as $statusBit => $commonErr ) {
@@ -131,7 +133,7 @@ class UserCommand
             if ( !$match ) {
                 Logger::error("{$path} - {$err}");
                 return "{$msg} See " . ContextOption::LOG_FILE_NAME
-                        . " for more information.";
+                    . " for more information.";
             }
         }
 
@@ -145,10 +147,7 @@ class UserCommand
      *
      * @param WPInstall  $wpInstall
      * @param string     $output
-     * @throws LSCMException  Indirectly thrown by
-     *                        PluginVersion::retrieveTranslation(),
-     *                        self::getIssueCmd(), Logger::debug(), and
-     *                        PluginVersion::removeTranslationZip().
+     * @throws LSCMException  Thrown indirectly.
      */
     private static function handleGetTranslationOutput( WPInstall $wpInstall,
             $output )
@@ -165,8 +164,9 @@ class UserCommand
             exec($subCmd, $subOutput, $subReturn_var);
 
             Logger::debug(
-                    "Issue sub command {$subAction}={$subReturn_var} {$wpInstall}\n"
-                    . "{$subCmd}");
+                'Issue sub command '
+                    . "{$subAction}={$subReturn_var} {$wpInstall}\n{$subCmd}"
+            );
             Logger::debug('sub output = ' . var_export($subOutput, true));
 
             foreach ( $subOutput as $subLine ) {
@@ -178,8 +178,10 @@ class UserCommand
                     $locale = $translationInfo[0];
                     $lscwpVer = $translationInfo[1];
 
-                    PluginVersion::removeTranslationZip($locale,
-                            $lscwpVer);
+                    PluginVersion::removeTranslationZip(
+                        $locale,
+                        $lscwpVer
+                    );
                 }
             }
         }
@@ -195,9 +197,7 @@ class UserCommand
      * @param int        $cmdStatus
      * @param string     $err
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by
-     *                        $wpInstall->populateDataFromUrl() and
-     *                        self::handleGetTranslationOutput().
+     * @throws LSCMException  Thrown indirectly.
      */
     private static function handleResultOutput( WPInstall $wpInstall, $line,
             &$retStatus, &$cmdStatus, &$err )
@@ -242,8 +242,7 @@ class UserCommand
      * @since 1.9
      *
      * @param WPInstall  $wpInstall
-     * @throws LSCMException  Indirectly thrown by self::getIssueCmd() and
-     *                        Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     private static function removeLeftoverLscwpFiles( $wpInstall )
     {
@@ -252,9 +251,10 @@ class UserCommand
 
         exec($subCmd, $subOutput, $subReturn_var);
 
-        Logger::debug("Issue sub command "
-                . "{$subAction}={$subReturn_var} {$wpInstall}\n"
-                . "{$subCmd}");
+        Logger::debug(
+            "Issue sub command "
+                . "{$subAction}={$subReturn_var} {$wpInstall}\n{$subCmd}"
+        );
         Logger::debug('sub output = ' . var_export($subOutput, true));
 
         $wpInstall->removeNewLscwpFlagFile();
@@ -266,9 +266,7 @@ class UserCommand
      * @param WPInstall  $wpInstall
      * @param mixed[]    $extraArgs
      * @return string
-     * @throws LSCMException  Indirectly thrown by
-     *                        $wpInstall->getPhpBinary() and
-     *                        Context::getOption().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected static function getIssueCmd( $action, WPInstall $wpInstall,
             $extraArgs = array() )
@@ -295,8 +293,8 @@ class UserCommand
         $file = __FILE__;
 
         return "{$su} -c \"cd {$path}/wp-admin && timeout {$timeout} {$phpBin} "
-                . "{$file} {$action} {$path} {$docRoot} {$serverName} {$env}"
-                . (($modifier !== '') ? " {$modifier}\"" : '"');
+            . "{$file} {$action} {$path} {$docRoot} {$serverName} {$env}"
+            . (($modifier !== '') ? " {$modifier}\"" : '"');
     }
 
     /**
@@ -322,8 +320,10 @@ class UserCommand
 
         exec($cmd, $output, $return_var);
 
-        Logger::debug("getValueFromWordPress command "
-            . "{$action}={$return_var} {$wpInstall}\n{$cmd}");
+        Logger::debug(
+            "getValueFromWordPress command "
+                . "{$action}={$return_var} {$wpInstall}\n{$cmd}"
+        );
         Logger::debug('output = ' . var_export($output, true));
 
         $debug = $upgrade = $err = '';
@@ -393,7 +393,8 @@ class UserCommand
         exec($cmd, $output, $return_var);
 
         Logger::debug(
-                "Issue command {$action}={$return_var} {$wpInstall}\n{$cmd}");
+            "Issue command {$action}={$return_var} {$wpInstall}\n{$cmd}"
+        );
         Logger::debug('output = ' . var_export($output, true));
 
         if ( $wpInstall->hasNewLscwpFlagFile() ) {
@@ -430,8 +431,15 @@ class UserCommand
             }
             elseif ( strpos($line, '[RESULT]') !== false ) {
 
-                if ( !self::handleResultOutput($wpInstall, $line, $retStatus,
-                        $cmdStatus, $err) ) {
+                $ret = self::handleResultOutput(
+                    $wpInstall,
+                    $line,
+                    $retStatus,
+                    $cmdStatus,
+                    $err
+                );
+
+                if ( !$ret ) {
 
                     /**
                      * Problem handling RESULT output, ignore other output.
@@ -518,8 +526,11 @@ class UserCommand
                 Logger::error("{$wpInstall->getPath()} - {$err}");
             }
             else {
-                $msg = self::handleUnexpectedError($wpInstall, $err,
-                        $unexpectedLines);
+                $msg = self::handleUnexpectedError(
+                    $wpInstall,
+                    $err,
+                    $unexpectedLines
+                );
             }
         }
 
@@ -586,8 +597,10 @@ class UserCommand
             $extraArgs )
     {
         if ( !self::isSupportedIssueCmd($action) ) {
-            throw new LSCMException("Illegal action {$action}.",
-                    LSCMException::E_PROGRAM);
+            throw new LSCMException(
+                "Illegal action {$action}.",
+                LSCMException::E_PROGRAM
+            );
         }
 
         if ( !$wpInstall->hasValidPath() ) {
@@ -602,8 +615,8 @@ class UserCommand
 
                 if ( $wpInstall->hasFlagFile() ) {
                     Logger::debug(
-                            'Bypass mass operation for flagged install '
-                            . $wpInstall);
+                        "Bypass mass operation for flagged install {$wpInstall}"
+                    );
                     return false;
                 }
 
@@ -617,9 +630,10 @@ class UserCommand
                     if ( $wpInstall->hasFatalError() ) {
                         $wpInstall->addUserFlagFile(false);
 
-                        $msg = 'Bypassed mass operation for error install and '
-                                . "flagged {$wpInstall}";
-                        Logger::debug($msg);
+                        Logger::debug(
+                            'Bypassed mass operation for error install and '
+                                . "flagged {$wpInstall}"
+                        );
                         return false;
                     }
                 }

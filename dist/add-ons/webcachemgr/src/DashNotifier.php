@@ -38,8 +38,7 @@ class DashNotifier
      * @since 1.9
      *
      * @return void
-     * @throws LSCMException  Indirectly thrown by self::getLatestVersion(),
-     *                        self::downloadVersion(), and Logger::error().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function prepLocalDashPluginFiles()
     {
@@ -116,7 +115,7 @@ class DashNotifier
      * @since 1.9
      *
      * @param string  $version
-     * @throws LSCMException  Indirectly thrown by self::wgetPlugin().
+     * @throws LSCMException  Thrown indirectly.
      */
     protected static function downloadVersion( $version )
     {
@@ -135,8 +134,7 @@ class DashNotifier
      *
      * @param string   $version
      * @param boolean  $saveMD5
-     * @throws LSCMException  Indirectly thrown by Logger::info() and
-     *                        Util::unzipFile().
+     * @throws LSCMException  Thrown directly and indirectly.
      */
     protected static function wgetPlugin( $version, $saveMD5 = false )
     {

@@ -92,6 +92,12 @@ public:
     int updateEnv(const char *name, const char *value)
     {   return m_env.update(name, value);     }
 
+    void addEnvIfNotExist(const char *pEnv, const char *name)
+    {
+        if (!m_env.find(name))
+            m_env.add(pEnv);
+    }
+
     const Env *getEnv() const           {   return &m_env;      }
     Env *getEnv()                       {   return &m_env;      }
     void clearEnv()                     {   m_env.clear();      }
@@ -119,11 +125,11 @@ public:
 
     void setPersistConn(int keepAlive) {  m_iKeepAlive = keepAlive;   }
     short isPersistConn() const          {   return m_iKeepAlive;       }
-    
+
     void setDetached(int v) {  m_iDetached = v;   }
     short isDetached() const          {   return m_iDetached;       }
-    
-    
+
+
 
     void setKeepAliveTimeout(int to)  {   m_iKeepAliveTimeout = to;   }
     int  getKeepAliveTimeout() const    {   return m_iKeepAliveTimeout; }

@@ -1836,11 +1836,11 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     config.addEnv(achName);
 
     snprintf(achName, MAX_PATH_LEN, "PYTHONPATH=.:%s", &achFileName[iChrootlen]);
-    config.addEnv(achName);
+    config.addEnvIfNotExist(achName, "PYTHONPATH");
 
     snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%sstderr.log",
              &achFileName[m_sChroot.len()]);
-    config.addEnv(achName);
+    config.addEnvIfNotExist(achName, "LSAPI_STDERR_LOG");
     addHomeEnv(this, config.getEnv());
 
     if (pPythonEnv)
@@ -1851,9 +1851,9 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     if (maxConns > 1)
     {
         snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
-        config.addEnv(achName);
+        config.addEnvIfNotExist(achName, "LSAPI_CHILDREN");
         snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
-        config.addEnv(achName);
+        config.addEnvIfNotExist(achName, "LSAPI_KEEP_LISTEN");
     }
     else
         config.setSelfManaged(0);

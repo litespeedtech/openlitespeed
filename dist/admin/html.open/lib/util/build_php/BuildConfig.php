@@ -25,8 +25,8 @@ class BuildConfig
 
             case self::PHP_VERSION: return
                         array(
-                            '7.4.11',
-                            '7.3.23',
+                            '7.4.12',
+                            '7.3.24',
                             '7.2.34',
                             '7.1.33',
                             '7.0.33',

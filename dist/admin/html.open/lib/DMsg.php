@@ -10,11 +10,11 @@ class DMsg
     const LANG_JAPANES = 'japanes';
     const _COOKIE_LANG_ = 'litespeed_admin_lang';
 
-    private static $_supported = array(
-        self::LANG_ENGLISH => array('English', 'en-US'),
-        self::LANG_CHINESE => array('中文', 'zh-CN'),
-        self::LANG_JAPANES => array('日本語', 'ja-JP')
-    );
+    private static $_supported = [
+        self::LANG_ENGLISH => ['English', 'en-US'],
+        self::LANG_CHINESE => ['中文', 'zh-CN'],
+        self::LANG_JAPANES => ['日本語', 'ja-JP'],
+    ];
     private static $_curlang = '';
     private static $_curtips = '';
 

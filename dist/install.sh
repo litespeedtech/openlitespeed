@@ -148,6 +148,13 @@ check_os()
                     OSNAME=centos
                     OSVER=7
 
+                else
+                    cat /etc/redhat-release | grep " 8." >/dev/null
+                    if [ $? = 0 ] ; then
+                        OSNAMEVER=CENTOS8
+                        OSNAME=centos
+                        OSVER=8
+                    fi
                 fi
             fi
         fi
@@ -180,6 +187,14 @@ check_os()
                         OSNAME=ubuntu
                         OSVER=bionic
                         MARIADBCPUARCH="arch=amd64"
+                    else
+                        cat /etc/lsb-release | grep "DISTRIB_RELEASE=20." >/dev/null
+                        if [ $? = 0 ] ; then
+                            OSNAMEVER=UBUNTU20
+                            OSNAME=ubuntu
+                            OSVER=focal
+                            MARIADBCPUARCH="arch=amd64"
+                        fi    
                     fi
                 fi
             fi

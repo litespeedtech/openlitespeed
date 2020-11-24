@@ -2828,12 +2828,18 @@ static int checkCtrlEnv(lsi_param_t *rec)
 
     if (myData == NULL)
         myData = createMData(rec);
+
     if (myData->pCacheCtrlVary == NULL)
         myData->pCacheCtrlVary = new AutoStr2;
+    else
+    {
+        //11/11/2020 added, if exist, just append so will keep the old one
+        myData->pCacheCtrlVary->append(";", 1);
+    }
 
     if (rec->len1 > 5 && strncasecmp((const char *)rec->ptr1, "vary=", 5) == 0)
     {
-        myData->pCacheCtrlVary->setStr((const char *)rec->ptr1 + 5,
+        myData->pCacheCtrlVary->append((const char *)rec->ptr1 + 5,
                                        rec->len1 - 5);
         return 0;
     }

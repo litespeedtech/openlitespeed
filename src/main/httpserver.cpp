@@ -1259,7 +1259,19 @@ void HttpServerImpl::offsetChroot()
 
 void HttpServerImpl::releaseAll()
 {
+    LS_NOTICE("HttpServerImpl::releaseAll called, pid %d,", getpid());
     ExtAppRegistry::stopAll();
+
+//#define CRASH_TEST
+#ifdef  CRASH_TEST
+    //TEST crash here
+    char *s = new char[10];
+    delete []s;
+    delete []s;
+    delete []s;
+#endif
+
+
 #define  TO_AVOID_EXIT_CRASH
 #ifndef  TO_AVOID_EXIT_CRASH
     StaticFileCache::getInstance().releaseAll();
@@ -1267,14 +1279,15 @@ void HttpServerImpl::releaseAll()
     m_listeners.clear();
     m_oldListeners.clear();
     m_toBeReleasedListeners.clear();
+    ::signal(SIGCHLD, SIG_DFL);
+
 #ifndef  TO_AVOID_EXIT_CRASH
     m_vhosts.release_objects();
     m_toBeReleasedVHosts.release_objects();
-#endif
-    ::signal(SIGCHLD, SIG_DFL);
     ExtAppRegistry::shutdown();
     ClientCache::clearObjPool();
     HttpResourceManager::getInstance().releaseAll();
+#endif
     delete HttpAioSendFile::getHttpAioSendFile();
     HttpMime::releaseMIMEList();
 }
@@ -1336,6 +1349,8 @@ int HttpServerImpl::gracefulShutdown()
     //suspend listener socket,
     //m_listeners.suspendAll();
     //close all listener socket.
+    //11/3/2020 David added SigStop here.
+    HttpSignals::setSigStop();
     m_lStartTime = -1;
     m_listeners.stopAll();
     //close keepalive connections

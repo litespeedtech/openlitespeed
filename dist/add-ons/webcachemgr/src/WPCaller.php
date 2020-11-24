@@ -242,7 +242,7 @@ class WPCaller
              * Get siteurl value from DB directly.
              */
             $query = "SELECT option_value FROM {$table_prefix}options "
-                    . "WHERE option_name = 'siteurl'";
+                . "WHERE option_name = 'siteurl'";
             $siteURL = $wpdb->get_var($query);
         }
 
@@ -294,7 +294,7 @@ class WPCaller
                 . '/wp-content/advanced-cache.php';
 
             if ( (version_compare($this->installedLscwpVer, '3.0.4', '>=') && !file_exists($advCacheFile))
-                || (defined('LSCACHE_ADV_CACHE') && LSCACHE_ADV_CACHE === true) ) {
+                    || (defined('LSCACHE_ADV_CACHE') && LSCACHE_ADV_CACHE === true) ) {
 
                 $status |= WPInstall::ST_LSC_ADVCACHE_DEFINED;
             }
@@ -421,18 +421,20 @@ class WPCaller
             }
 
             $thirdPartyCachePluginSlug =
-                    $this->checkForKnownNonAdvCachePlugins();
+                $this->checkForKnownNonAdvCachePlugins();
 
             if ( $thirdPartyCachePluginSlug != '' ) {
                 $this->currInstall->addUserFlagFile();
 
-                $msg = 'Cannot Enable LSCWP - Detected another active cache '
-                        . "plugin \"{$thirdPartyCachePluginSlug}\". Flag set.";
-                Logger::uiError($msg);
+                Logger::uiError(
+                    'Cannot Enable LSCWP - Detected another active cache '
+                        . "plugin \"{$thirdPartyCachePluginSlug}\". Flag set."
+                );
 
-                $msg = 'Ignore - Detected another active cache plugin '
-                        . "\"{$thirdPartyCachePluginSlug}\". Flagged.";
-                Logger::notice($msg);
+                Logger::notice(
+                    'Ignore - Detected another active cache plugin '
+                        . "\"{$thirdPartyCachePluginSlug}\". Flagged."
+                );
 
                 return false;
             }
@@ -448,11 +450,11 @@ class WPCaller
             else {
                 $this->currInstall->addUserFlagFile();
 
-                $msg = 'LSCWP Already Enabled But Not Caching - Detected '
-                        . 'another active cache plugin. Please visit the '
-                        . 'WordPress Dashboard for further instructions.';
-
-                Logger::uiError($msg);
+                Logger::uiError(
+                    'LSCWP Already Enabled But Not Caching - Detected another '
+                        . 'active cache plugin. Please visit the WordPress '
+                        . 'Dashboard for further instructions.'
+                );
                 Logger::notice(
                     'Ignore - Existing install but advanced cache not set'
                 );
@@ -515,16 +517,18 @@ class WPCaller
         unlink($lscwpZip);
 
         if ( $unzipRet !== true ) {
-            throw new LSCMException("Unable to extract downloaded LSCWP files.",
-                    LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                "Unable to extract downloaded LSCWP files.",
+                LSCMException::E_NON_FATAL
+            );
         }
 
         $this->currInstall->addNewLscwpFlagFile();
 
         $customIni = Context::LOCAL_PLUGIN_DIR . '/'
-                . PluginVersion::LSCWP_DEFAULTS_INI_FILE_NAME;
+            . PluginVersion::LSCWP_DEFAULTS_INI_FILE_NAME;
         $defaultIni = "{$pluginDir}/litespeed-cache/data/"
-                . PluginVersion::LSCWP_DEFAULTS_INI_FILE_NAME;
+            . PluginVersion::LSCWP_DEFAULTS_INI_FILE_NAME;
 
         if ( file_exists($customIni) ) {
             copy($customIni, $defaultIni);
@@ -556,9 +560,11 @@ class WPCaller
     {
         /** @noinspection PhpUndefinedConstantInspection */
         $pluginDir = WP_PLUGIN_DIR;
-        $url = 'https://downloads.wordpress.org/plugin/litespeed-cache.latest-stable.zip';
+        $url = 'https://downloads.wordpress.org/plugin/'
+            . 'litespeed-cache.latest-stable.zip';
 
-        $wget_command = "wget -q --tries=1 --no-check-certificate {$url} -P {$pluginDir}";
+        $wget_command =
+            "wget -q --tries=1 --no-check-certificate {$url} -P {$pluginDir}";
         exec($wget_command, $output, $return_var);
 
         if ( $return_var === 0 && file_exists($lscwpZip) ) {
@@ -570,7 +576,8 @@ class WPCaller
         /**
          * Fall back to curl incase wget is disabled for user.
          */
-        $curl_command = "cd {$pluginDir} && curl -O -s --retry 1 --insecure {$url}";
+        $curl_command =
+            "cd {$pluginDir} && curl -O -s --retry 1 --insecure {$url}";
         exec($curl_command, $output, $return_var);
 
         if ( $return_var === 0 && file_exists($lscwpZip) ) {
@@ -597,7 +604,7 @@ class WPCaller
     {
         /** @noinspection PhpUndefinedConstantInspection */
         $isNewInstall =
-                PluginVersion::getInstance()->prepareUserInstall(WP_PLUGIN_DIR);
+            PluginVersion::getInstance()->prepareUserInstall(WP_PLUGIN_DIR);
 
         if ( $isNewInstall ) {
             $this->installedLscwpVer = $this->getPluginVersionFromFile();
@@ -658,7 +665,9 @@ class WPCaller
 
         if ( $status & WPInstall::ST_PLUGIN_INACTIVE ) {
             Logger::notice('Ignore - Already disabled');
-            Logger::uiSuccess('LiteSpeed Cache Already Disabled - No Action Taken');
+            Logger::uiSuccess(
+                'LiteSpeed Cache Already Disabled - No Action Taken'
+            );
 
             return false;
         }
@@ -668,13 +677,15 @@ class WPCaller
             if ( !($status & WPInstall::ST_LSC_ADVCACHE_DEFINED) ) {
                 $this->currInstall->addUserFlagFile();
 
-                $msg = 'LSCWP Detected As Manually Enabled But Not Caching - Flag Set. If '
-                        . 'desired, this installation can be disabled from the '
-                        . 'Manage Cache Installations screen.';
-
-                Logger::uiSuccess($msg);
+                Logger::uiSuccess(
+                    'LSCWP Detected As Manually Enabled But Not Caching - Flag '
+                        . 'Set. If desired, this installation can be disabled '
+                        . 'from the Manage Cache Installations screen.'
+                );
                 Logger::notice(
-                        'Ignore for mass disable - Installed manually as advanced cache not set.');
+                    'Ignore for mass disable - Installed manually as advanced '
+                        . 'cache not set.'
+                );
 
                 return false;
             }
@@ -683,9 +694,10 @@ class WPCaller
             if ( is_plugin_active_for_network(self::LSCWP_PLUGIN) ) {
                 $this->currInstall->addUserFlagFile();
 
-                $msg = 'LiteSpeed Cache Detected As Network Activated - '
-                        . 'Flag Set & No Action Taken';
-                Logger::uiSuccess($msg);
+                Logger::uiSuccess(
+                    'LiteSpeed Cache Detected As Network Activated - Flag Set '
+                        . '& No Action Taken'
+                );
 
                 return false;
             }
@@ -803,26 +815,30 @@ class WPCaller
             return false;
         }
 
-        $match = false;
+        foreach ( $fromVersions as $fromVer ) {
 
-        foreach ( $fromVersions as $ver ) {
+            $fromVerParts = explode('.', $fromVer);
+            $installedVerParts = explode('.', $this->installedLscwpVer);
 
-            if ( strpos($ver, '.x') !== false ) {
-                $ver1 = explode('.', $ver);
-                $ver2 = explode('.', $this->installedLscwpVer);
+            $i = 0;
+            $stop = sizeof($fromVerParts);
 
-                if ( $ver1[0] === $ver2[0] && $ver1[1] === $ver2[1] ) {
-                    $match = true;
+            while (true) {
+
+                if ( $i == $stop || $fromVerParts[$i] == 'x' ) {
+                    return true;
+                }
+                elseif ( !isset($installedVerParts[$i])
+                        || $installedVerParts[$i] != $fromVerParts[$i] ) {
+
                     break;
                 }
-            }
-            elseif ( $ver === $this->installedLscwpVer ) {
-                $match = true;
-                break;
+
+                $i++;
             }
         }
 
-        return $match;
+        return false;
     }
 
     /**
@@ -945,11 +961,12 @@ class WPCaller
         if ( !($status & WPInstall::ST_LSC_ADVCACHE_DEFINED) ) {
             $status = $this->performDisable(true);
 
-            $msg = 'Detected another active cache plugin. Please deactivate '
-                    . 'the detected plugin and try again. You may also try '
+            Logger::uiError(
+                'Detected another active cache plugin. Please deactivate the '
+                    . 'detected plugin and try again. You may also try '
                     . 'manually installing through the WordPress Dashboard and '
-                    . 'following the instructions given.';
-            Logger::uiError($msg);
+                    . 'following the instructions given.'
+            );
 
             $this->massIncr = 'FAIL';
         }
@@ -968,9 +985,10 @@ class WPCaller
                 $this->currInstall->addUserFlagFile();
                 $status = $this->currInstall->getStatus();
 
-                $msg = 'LSCWP Enabled But Not Caching - Please visit the '
-                        . 'WordPress Dashboard for further instructions.';
-                Logger::uiError($msg);
+                Logger::uiError(
+                    'LSCWP Enabled But Not Caching - Please visit the '
+                        . 'WordPress Dashboard for further instructions.'
+                );
 
                 $this->massIncr = 'SUCC';
             }
@@ -1039,17 +1057,19 @@ class WPCaller
          * @noinspection PhpUndefinedMethodInspection
          * @noinspection PhpUndefinedConstantInspection
          */
-        $upgrader->run(array(
-            'package' => $lscwpPackageURL,
-            'destination' => WP_PLUGIN_DIR,
-            'clear_destination' => true,
-            'clear_working' => true,
-            'hook_extra' => array(
-                'plugin' => $this->pluginEntry,
-                'type' => 'plugin',
-                'action' => 'update',
+        $upgrader->run(
+            array(
+                'package' => $lscwpPackageURL,
+                'destination' => WP_PLUGIN_DIR,
+                'clear_destination' => true,
+                'clear_working' => true,
+                'hook_extra' => array(
+                    'plugin' => $this->pluginEntry,
+                    'type' => 'plugin',
+                    'action' => 'update',
+                )
             )
-        ));
+        );
 
         /**
          * Start new messages on a new line
@@ -1080,8 +1100,10 @@ class WPCaller
          * @noinspection PhpUndefinedFunctionInspection
          */
         if ( !$upgrader->result || is_wp_error($upgrader->result) ) {
-            throw new LSCMException("Failed to upgrade to v{$ver}.",
-            LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                "Failed to upgrade to v{$ver}.",
+                LSCMException::E_NON_FATAL
+            );
         }
 
         $this->updateTranslationFiles();
@@ -1127,7 +1149,7 @@ class WPCaller
         }
 
         $localTranslationDir = Context::LOCAL_PLUGIN_DIR
-                . "/{$this->installedLscwpVer}/translations";
+            . "/{$this->installedLscwpVer}/translations";
 
         $moFileName = "litespeed-cache-{$locale}.mo";
         $poFileName = "litespeed-cache-{$locale}.po";
@@ -1135,7 +1157,7 @@ class WPCaller
         $localPoFile = "{$localTranslationDir}/{$poFileName}";
         $zipFile = "{$localTranslationDir}/{$locale}.zip";
         $translationFlag = "{$localTranslationDir}/"
-                . PluginVersion::TRANSLATION_CHECK_FLAG_BASE . "_{$locale}";
+            . PluginVersion::TRANSLATION_CHECK_FLAG_BASE . "_{$locale}";
 
         $langDir =
             $this->currInstall->getPath() . '/wp-content/languages/plugins';
@@ -1157,8 +1179,10 @@ class WPCaller
 
             /** @noinspection PhpUndefinedFunctionInspection */
             if ( unzip_file($zipFile, $langDir) !== true ) {
-                $this->outputResult('BAD_TRANSLATION',
-                        "{$locale} {$this->installedLscwpVer}");
+                $this->outputResult(
+                    'BAD_TRANSLATION',
+                    "{$locale} {$this->installedLscwpVer}"
+                );
             }
         }
         elseif ( !file_exists($translationFlag) ||
@@ -1174,7 +1198,7 @@ class WPCaller
     private function includeLSCWPAdvancedCacheFile()
     {
         $advCacheFile = $this->currInstall->getPath()
-                . '/wp-content/advanced-cache.php';
+            . '/wp-content/advanced-cache.php';
 
         if ( file_exists($advCacheFile) ) {
             $content = file_get_contents($advCacheFile);
@@ -1372,7 +1396,7 @@ class WPCaller
         $pattern5 = '/define\(\s*[\'"]SUNRISE[\'"]\s*,[^;]*;/';
 
         $config_content =
-                file_get_contents($this->currInstall->getWpConfigFile());
+            file_get_contents($this->currInstall->getWpConfigFile());
 
         if ( preg_match($pattern1, $config_content, $m1)
                 && preg_match($pattern2, $m1[0]) ) {
@@ -1388,20 +1412,24 @@ class WPCaller
 
         if ( $isMultiSite ) {
 
-            if ( !preg_match('/define\(\s*[\'"]DOMAIN_CURRENT_SITE[\'"]\s*,\s*[\'"](.+)[\'"]\s*\)\s*;/',
-                    $config_content, $m2) ) {
+            $domainPattern = '/define\(\s*[\'"]DOMAIN_CURRENT_SITE[\'"]\s*,'
+                . '\s*[\'"](.+)[\'"]\s*\)\s*;/';
 
+            if ( !preg_match($domainPattern, $config_content, $m2) ) {
                 throw new LSCMException(
-                        'Cannot find DOMAIN_CURRENT_SITE with MULTISITE defined.');
+                    'Cannot find DOMAIN_CURRENT_SITE with MULTISITE defined.'
+                );
             }
 
             $this->currInstall->setServerName($m2[1]);
 
-            if ( !preg_match('/define\(\s*[\'"]PATH_CURRENT_SITE[\'"]\s*,\s*[\'"](.+)[\'"]\s*\)\s*;/',
-                    $config_content, $m3) ) {
+            $pathPattern = '/define\(\s*[\'"]PATH_CURRENT_SITE[\'"]\s*,'
+                . '\s*[\'"](.+)[\'"]\s*\)\s*;/';
 
+            if ( !preg_match($pathPattern, $config_content, $m3) ) {
                 throw new LSCMException(
-                        'Cannot find PATH_CURRENT_SITE with MULTISITE defined.');
+                    'Cannot find PATH_CURRENT_SITE with MULTISITE defined.'
+                );
             }
 
             $this->setEnvVar('REQUEST_URI', $m3[1]);
@@ -1581,7 +1609,9 @@ class WPCaller
             $file = $wpPath . $file;
 
             if ( !file_exists($file) ) {
-                throw new LSCMException("Could not include missing file {$file}.");
+                throw new LSCMException(
+                    "Could not include missing file {$file}."
+                );
             }
 
             /** @noinspection PhpIncludeInspection */

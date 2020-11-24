@@ -3511,7 +3511,12 @@ int HttpSession::sendDynBody()
     {
         size_t toWrite;
         char *pBuf = getRespBodyBuf()->getReadBuffer(toWrite);
-
+#define DAVID_TEST
+#ifdef  DAVID_TEST
+        if (toWrite > 8192) {
+            LS_ERROR("[HttpSession::sendDynBody] getReadBuffer %d > 8192", toWrite);
+        }
+#endif //DAVID_TEST
         LS_DBG_M(getLogSession(),
                  "sendDynBody() buffer: %p, len: %zd, sent %lld\n",
                     pBuf, toWrite, (long long)m_lDynBodySent);
@@ -5672,6 +5677,12 @@ int HttpSession::smProcessReq()
             m_iFlag |= HSF_URI_MAPPED;
             preUriMap();
             runEventHkpt(LSI_HKPT_URI_MAP, HSPS_BEGIN_HANDLER_PROCESS);
+
+            /**
+             * In this state, if req body done or no req body, go through the hook
+             */
+            if (getFlag(HSF_REQ_BODY_DONE) == HSF_REQ_BODY_DONE)
+                ret = runEventHkpt(LSI_HKPT_RCVD_REQ_BODY, HSPS_BEGIN_HANDLER_PROCESS);
             break;
 
         case HSPS_HKPT_RCVD_REQ_BODY_PROCESSING:

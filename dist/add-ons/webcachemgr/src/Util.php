@@ -260,7 +260,7 @@ class Util
      * @param string  $file
      * @param string  $backup
      * @return boolean
-     * @throws LSCMException  Indrectly thrown by Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     private static function matchFileSettings( $file, $backup )
     {
@@ -283,7 +283,8 @@ class Util
         return true;
     }
 
-    private static function getBackupSuffix( $filepath, $bak = '_lscachebak_orig' )
+    private static function getBackupSuffix( $filepath,
+            $bak = '_lscachebak_orig' )
     {
         $i = 1;
 
@@ -311,7 +312,9 @@ class Util
         $backup = $filepath . $bak;
 
         if ( !copy($filepath, $backup) ) {
-            Logger::debug("Could not backup file {$filepath} to location {$backup}");
+            Logger::debug(
+                "Could not backup file {$filepath} to location {$backup}"
+            );
 
             return false;
         }
@@ -319,13 +322,17 @@ class Util
         Logger::verbose("Created file{$backup}");
 
         if ( !self::matchFileSettings($filepath, $backup) ) {
-            Logger::debug("Could not backup file {$filepath} to location {$backup}");
+            Logger::debug(
+                "Could not backup file {$filepath} to location {$backup}"
+            );
 
             return false;
         }
 
         Logger::debug('Matched owner/group setting for both files');
-        Logger::info("Successfully backed up file {$filepath} to location {$backup}");
+        Logger::info(
+            "Successfully backed up file {$filepath} to location {$backup}"
+        );
 
         return true;
     }
@@ -334,7 +341,7 @@ class Util
      * @param string  $zipFile
      * @param string  $dest
      * @return boolean
-     * @throws LSCMException  Indirectly thrown by Logger::debug().
+     * @throws LSCMException  Thrown indirectly.
      */
     public static function unzipFile( $zipFile, $dest )
     {
@@ -355,7 +362,11 @@ class Util
 
         $output = array();
 
-        exec("unzip {$zipFile} -d {$dest} > /dev/null 2>&1", $output, $return_var);
+        exec(
+            "unzip {$zipFile} -d {$dest} > /dev/null 2>&1",
+            $output,
+            $return_var
+        );
 
         if ( $return_var == 0 ) {
             return true;
@@ -410,8 +421,11 @@ class Util
 
                 if ( !preg_grep('!^\s*' . $escVHCacheRoot . '!im', $file_contents) ) {
                     $remount = true;
-                    file_put_contents($cageFsFile, "\n{$vhCacheRoot}",
-                            FILE_APPEND);
+                    file_put_contents(
+                        $cageFsFile,
+                        "\n{$vhCacheRoot}",
+                        FILE_APPEND
+                    );
                 }
             }
 
