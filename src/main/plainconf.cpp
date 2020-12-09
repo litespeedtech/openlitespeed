@@ -441,6 +441,16 @@ plainconfKeywords plainconf::sKeywords[] =
     {"quicbaseplpmtu", NULL},
     {"quicmaxplpmtu", NULL},
     {"quicmtuprobetimer", NULL},
+    {"quicdelayedAcks", NULL},
+    {"quicptpcperiodicity", NULL},
+    {"quicptpcdyntarget", NULL},
+    {"quicptpcmaxpacktol", NULL},
+    {"quicptpctarget", NULL},
+    {"quicptpcpropgain", NULL},
+    {"quicptpcintgain", NULL},
+    {"quicptpcerrthresh", NULL},
+    {"quicptpcerrdivisor", NULL},
+
     {"reuseport",      NULL},
 
 };

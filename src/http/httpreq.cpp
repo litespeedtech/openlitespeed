@@ -928,7 +928,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
     while (begin < end)
     {
         name = m_headerBuf.begin() + begin->name_offset;
-        value = name + begin->name_len + 2;
+        value = m_headerBuf.begin() + begin->val_offset;
         if (strncmp(value, "() {", 4) == 0)
         {
             LS_INFO(getLogSession(), "Status 400: CVE-2014-6271, "

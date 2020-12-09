@@ -1003,6 +1003,8 @@ int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
             skip = 1;
         else if ((strncmp("has_js=", pCookie, 7) == 0)
                  || (strncmp("_lscache_vary", pCookie, 13) == 0)
+                 || (strncmp("wordpress_test_cookie", pCookie, 21) == 0)
+                 || (strncmp("ls_smartpush", pCookie, 12) == 0)
                  || (strncmp("bb_forum_view=", pCookie, 14) == 0))
             skip = 1;
         else if (strncmp("frontend=", pCookie, 9) == 0)
@@ -1016,7 +1018,7 @@ int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
             p = copyCookie(p, pDestEnd, pIndex, pCookie);
         ++pIndex;
     }
-    *p = '\0';
+    *p = 0;
     return p - pDest;
 }
 
@@ -2829,13 +2831,23 @@ static int checkCtrlEnv(lsi_param_t *rec)
 
     if (myData == NULL)
         myData = createMData(rec);
+
     if (myData->pCacheCtrlVary == NULL)
         myData->pCacheCtrlVary = new AutoStr2;
+    else
+    {
+        //11/11/2020 added, if exist, just append so will keep the old one
+        myData->pCacheCtrlVary->append(";", 1);
+    }
 
     if (rec->len1 > 5 && strncasecmp((const char *)rec->ptr1, "vary=", 5) == 0)
     {
-        myData->pCacheCtrlVary->setStr((const char *)rec->ptr1 + 5,
+        myData->pCacheCtrlVary->append((const char *)rec->ptr1 + 5,
                                        rec->len1 - 5);
+
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]checkCtrlEnv append %.*s.\n", ModuleNameStr, rec->len1,
+                   (const char *)rec->ptr1);
         return 0;
     }
 

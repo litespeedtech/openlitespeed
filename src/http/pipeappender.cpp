@@ -125,7 +125,7 @@ int PipeAppender::close()
 
 int PipeAppender::append(const char *pBuf, int len)
 {
-    if (Appender::getfd() == -1)
+    if (PipeAppender::getfd() == -1)
         if (open() == -1)
             return LS_FAIL;
     if (!m_buf.empty())
@@ -134,14 +134,14 @@ int PipeAppender::append(const char *pBuf, int len)
         if (!m_buf.empty())
             return m_buf.cache(pBuf, len, 0);
     }
-    if (Appender::getfd() == -1)
+    if (PipeAppender::getfd() == -1)
         return LS_FAIL;
-    int ret = ::ls_fio_write(Appender::getfd(), pBuf, len);
+    int ret = ::ls_fio_write(PipeAppender::getfd(), pBuf, len);
     if (ret < len)
     {
         if ((ret > -1) || (errno == EAGAIN))
         {
-            LS_NOTICE("[PipeAppender:%d] cache output: %d", Appender::getfd(),
+            LS_NOTICE("[PipeAppender:%d] cache output: %d", PipeAppender::getfd(),
                       len - ret);
             MultiplexerFactory::getMultiplexer()->continueWrite(this);
             return m_buf.cache(pBuf, len, (ret == -1) ? 0 : ret);
@@ -154,18 +154,18 @@ int PipeAppender::append(const char *pBuf, int len)
 
 int PipeAppender::flush()
 {
-    LS_NOTICE("[PipeAppender:%d] flush() cache size: %d", Appender::getfd(),
+    LS_NOTICE("[PipeAppender:%d] flush() cache size: %d", PipeAppender::getfd(),
               m_buf.size());
     if (!m_buf.empty())
     {
-        if (Appender::getfd() == -1)
+        if (PipeAppender::getfd() == -1)
             if (open() == -1)
                 return -1;
         IOVec iov;
         m_buf.getIOvec(iov);
-        if (Appender::getfd() == -1)
+        if (PipeAppender::getfd() == -1)
             return LS_FAIL;
-        int ret = ::writev(Appender::getfd(), iov.get(), iov.len());
+        int ret = ::writev(PipeAppender::getfd(), iov.get(), iov.len());
         LS_NOTICE("[PipeAppender] flush() writev() return %d", ret);
         if (ret > 0)
         {

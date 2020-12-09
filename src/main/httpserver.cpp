@@ -115,6 +115,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <math.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -1718,22 +1719,24 @@ int HttpServerImpl::configListenerVHostMap(const XmlNode *pRoot,
 int HttpServerImpl::enableQuicListener(HttpListener *pListener)
 {
     QuicEngine *pQuic = HttpServer::getInstance().getQuicEngine();
-    if (pQuic && pListener->getQuicListener() == NULL)
-    {
+    assert(pQuic);
+
+    if (pListener->getQuicListener() == NULL)
         pListener->bindUdpPort();
-        UdpListener *pUdp = pListener->getQuicListener();
-        VHostMap *pMap = pListener->getVHostMap();
-        if (pUdp)
-        {
-            int s;
-            char alt_svc[512];
-            pMap->setQuicListener(pUdp);
-            s = pQuic->getAltSvcVerStr(pUdp->getPort(), alt_svc, sizeof(alt_svc));
-            if (0 == s)
-                pMap->setAltSvc(alt_svc);
-            else
-                LS_ERROR("cannot generate Alt-Svc string");
-        }
+
+    //12/4/2020, David added to cover pUdp is not NULL case, reported by Gilles BOUVIER
+    UdpListener *pUdp = pListener->getQuicListener();
+    VHostMap *pMap = pListener->getVHostMap();
+    if (pUdp)
+    {
+        int s;
+        char alt_svc[512];
+        pMap->setQuicListener(pUdp);
+        s = pQuic->getAltSvcVerStr(pUdp->getPort(), alt_svc, sizeof(alt_svc));
+        if (0 == s)
+            pMap->setAltSvc(alt_svc);
+        else
+            LS_ERROR("cannot generate Alt-Svc string");
     }
     return 0;
 }
@@ -3910,10 +3913,41 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 
     settings.es_support_push = GET_VAL(pNode, "quicPush", 0, 1, 1);
 
-    settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 2, 1);
+    settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 3, LSQUIC_DF_CC_ALGO);
 
     settings.es_qpack_experiment = GET_VAL(pNode, "quicQPACKExperiment", 0,
         LONG_MAX /* No limit for future compatibility */, LSQUIC_DF_QPACK_EXPERIMENT);
+
+    /* Settings dealing with the Delayed ACKS extension: */
+    settings.es_delayed_acks = GET_VAL(pNode, "quicDelayedAcks", 0, 1,
+                                                        LSQUIC_DF_DELAYED_ACKS);
+    settings.es_ptpc_periodicity = GET_VAL(pNode, "quicPtpcPeriodicity", 0,
+                                        LONG_MAX, LSQUIC_DF_PTPC_PERIODICITY);
+    settings.es_ptpc_dyn_target = GET_VAL(pNode, "quicPtpcDynTarget", 0, 1,
+                                        LSQUIC_DF_PTPC_DYN_TARGET);
+    settings.es_ptpc_max_packtol = GET_VAL(pNode, "quicPtpcMaxPacktol", 0, LONG_MAX,
+                                        LSQUIC_DF_PTPC_MAX_PACKTOL);
+    const struct {
+        const char  *name;
+        float       *setting;
+    } *fs, float_settings[] = {
+        { "quicPtpcTarget",     &settings.es_ptpc_target,      },
+        { "quicPtpcPropGain",   &settings.es_ptpc_prop_gain,   },
+        { "quicPtpcIntGain",    &settings.es_ptpc_int_gain,    },
+        { "quicPtpcErrThresh",  &settings.es_ptpc_err_thresh,  },
+        { "quicPtpcErrDivisor", &settings.es_ptpc_err_divisor, },
+    };
+    for (fs = float_settings; fs < float_settings + sizeof(float_settings)
+                                            / sizeof(float_settings[0]); ++fs)
+    {
+        const char *val_str = pNode->getChildValue(fs->name);
+        if (val_str)
+        {
+            const float val = atof(val_str);
+            if (!isnan(val))
+                *fs->setting = val;
+        }
+    }
 
     settings.es_proc_time_thresh = 100000;
     settings.es_pace_packets = 1;

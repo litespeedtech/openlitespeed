@@ -17,14 +17,57 @@ use \Lsc\Wp\LSCMException;
 class VersionManageViewModel
 {
 
+    /**
+     * @var string
+     */
     const FLD_ICON = 'icon';
+
+    /**
+     * @var string
+     */
     const FLD_VERSION_LIST = 'versionList';
+
+    /**
+     * @var string
+     */
     const FLD_ALLOWED_VER_LIST = 'allowedList';
+
+    /**
+     * @var string
+     */
     const FLD_ACTIVE_VER = 'activeVer';
+
+    /**
+     * @var string
+     */
     const FLD_ERR_MSGS = 'errMsgs';
+
+    /**
+     * @var string
+     */
     const FLD_STATE = 'state';
+
+    /**
+     * @var int
+     */
     const ST_INSTALLS_DISCOVERED = 2;
+
+    /**
+     * @deprecated 1.13.4.1  Added back as a deprecated constant after accidental
+     *                       removal in v1.13.4. Use
+     *                       self::ST_NO_NON_ERROR_INSTALLS_DISCOVERED instead.
+     * @var int
+     */
+    const ST_NO_INSTALLS_DISCOVERED = 1;
+
+    /**
+     * @var int
+     */
     const ST_NO_NON_ERROR_INSTALLS_DISCOVERED = 1;
+
+    /**
+     * @var int
+     */
     const ST_SCAN_NEEDED = 0;
 
     /**

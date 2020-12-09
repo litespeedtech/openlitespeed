@@ -399,7 +399,10 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
 {
     //NOTE: should this happen?
     if (CgidWorker::getCgidWorker() == NULL)
+    {
+        LS_ERROR("[suEXEC] Failed to getCgidWorker.");
         return LS_FAIL;
+    }
 
 
     int pid = -1;
@@ -432,12 +435,12 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
         CgidWorker::getCgidWorker()->getConfig().getServerAddr(), 0,
         &fdReq, 1);
 
-    if (ret)
+    if (ret || fdReq == -1)
     {
         const GSockAddr &server = CgidWorker::getCgidWorker()->
                                 getConfig().getServerAddr();
-        LS_ERROR("[suEXEC] Failed to connect %s, return %d",
-                 server.toString(), ret);
+        LS_ERROR("[suEXEC] Failed to connect %s, return %d, fdReq %d.",
+                 server.toString(), ret, fdReq);
     }
 
     if (fdReq != -1)

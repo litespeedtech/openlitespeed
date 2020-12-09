@@ -5275,6 +5275,14 @@ int HttpSession::finalizeHeader(int ver, int code)
         if (altsvc && altsvc->len() > 0)
             getResp()->getRespHeaders().add("Alt-Svc", 7,
                                             altsvc->c_str(), altsvc->len());
+        LS_DBG_L(getLogSession(), "finalizeHeader() added Alt-Svc with value %*.s.",
+                 altsvc->len(), altsvc->c_str());
+    }
+    else
+    {
+        LS_DBG_L(getLogSession(), "finalizeHeader() did not add Alt-Svc for"
+                " QUIC is disabled (m_iFlag %ld Vhost %p).",
+                m_iFlag, m_request.getVHost());
     }
 
     return ret;

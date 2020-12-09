@@ -598,7 +598,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
      * For proxy type, will not add the uid to the name to avoid
      * can not find it later
      */
-    if(pVHost && iType != HandlerType::HT_PROXY)
+    if(pVHost && iType != HandlerType::HT_PROXY && iType != HandlerType::HT_LOGGER)
     {
         pVHost->getUniAppName(pName, appNameVh, 256);
         pName = appNameVh;

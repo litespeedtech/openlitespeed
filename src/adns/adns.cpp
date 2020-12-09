@@ -532,3 +532,92 @@ int Adns::getHostByNameV6Sync(const char *pName, in6_addr *addr)
     }
     return -1;
 }
+
+
+AdnsFetch::AdnsFetch()
+    : m_pAdnsReq(NULL)
+{
+}
+
+
+AdnsFetch::~AdnsFetch()
+{
+    release();
+}
+
+
+int AdnsFetch::tryResolve(const char *name_port, char *name_only,
+                          int family, int flag)
+{
+    int  gotAddr = m_resolvedAddr.set2(family, name_port, flag, name_only);
+
+    if (gotAddr == -1)
+        return LS_FAIL;
+    else if (gotAddr == 1)
+        return LS_OK;
+
+    if (!(flag & SKIP_ADNS_CACHE))
+    {
+        int ipLen;
+        const char *pIp = Adns::getInstance().getHostByNameInCache(name_only,
+                            ipLen, family);
+        if (pIp)
+        {
+            return m_resolvedAddr.setIp(m_resolvedAddr.get(), pIp, ipLen);
+        }
+    }
+    return LS_FAIL;
+}
+
+
+int AdnsFetch::asyncLookup(int family, const char *name_only,
+                           lookup_pf callback, void *param)
+{
+    AdnsReq *req;
+
+    if (!callback)
+        return LS_FAIL;
+
+    req = Adns::getInstance().getHostByName(name_only, family, callback, param);
+
+    if (req)
+    {
+         if (m_pAdnsReq)
+             release();
+         m_pAdnsReq = req;
+         req->incRefCount();
+         return LS_TRUE;
+    }
+    return LS_FAIL;
+}
+
+
+int AdnsFetch::setResolvedIp(const void *pIP, int ip_len)
+{
+    int ret = m_resolvedAddr.setIp(m_resolvedAddr.get(), pIP, ip_len);
+    return ret;
+}
+
+
+void AdnsFetch::setResolvedAddr(const sockaddr *addr)
+{
+    m_resolvedAddr.set(addr);
+}
+
+
+void AdnsFetch::cancel()
+{
+    release();
+}
+
+
+void AdnsFetch::release()
+{
+    if (m_pAdnsReq)
+    {
+        m_pAdnsReq->setCallback(NULL);
+        Adns::release(m_pAdnsReq);
+        m_pAdnsReq = NULL;
+    }
+}
+
