@@ -423,7 +423,7 @@ int SslTicket::ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
 
         if (pSessKey->expireSec < (DateTime::s_curTime + (m_iLifetime >> 1)))
         {
-            LS_WARN("[SSLTicket] ticketCb() SHM keys need rotation");
+            LS_NOTICE("[SSLTicket] ticketCb() SHM keys need rotation");
             checkShmExpire(pShmData);
             memmove(&m_keys, &pShmData->m_keys,
                     (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
