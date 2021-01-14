@@ -311,6 +311,7 @@ int EventDispatcher::run()
             HttpSignals::resetEvents();
             if (sigEvent & HS_USR2)
             {
+                LS_NOTICE("Toggle debug logging requested by SIGUSR2!");
                 HttpLog::toggleDebugLog();
             }
             if (sigEvent & HS_CHILD)

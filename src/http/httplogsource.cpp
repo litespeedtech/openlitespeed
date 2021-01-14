@@ -266,10 +266,14 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
 
     if (setDebugLevel)
     {
-        pValue = pNode->getChildValue("debugLevel");
-
-        if (pValue != NULL)
-            HttpLog::setDebugLevel(atoi(pValue));
+        int level = 0;
+        if (HttpLog::getLogLevel() == LOG4CXX_NS::Level::DEBUG)
+        {
+            pValue = pNode->getChildValue("debugLevel");
+            if (pValue != NULL)
+                level = atoi(pValue);
+        }
+        HttpLog::setDebugLevel(level);
 
         if (HttpLog::getErrorLogger()->getAppender())
         {

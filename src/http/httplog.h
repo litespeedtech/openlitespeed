@@ -90,6 +90,7 @@ public:
     static void setDebugLevel(int level);
     static void toggleDebugLog();
 
+    static int  getLogLevel();
     static void setLogLevel(int level);
     static void setLogLevel(const char *pLevel);
     static void setLogPattern(const char *pPattern);

@@ -156,6 +156,12 @@ void HttpLog::toggleDebugLog()
 }
 
 
+int  HttpLog::getLogLevel()
+{
+    return logger()->getLevel();
+}
+
+
 void HttpLog::setLogLevel(int level)
 {
     logger()->setLevel(level);
