@@ -18,44 +18,60 @@
 #ifndef CONTEXTTREE_H
 #define CONTEXTTREE_H
 
-#include <cstddef>
-
-
+class AutoStr2;
 class HttpContext;
+class ContextList;
+class ContextNode;
 class HttpVHost;
-class RadixNode;
-class RadixTree;
+class StringList;
+class HttpHandler;
 
 class ContextTree
 {
-    RadixTree          *m_pURITree;
-    RadixTree          *m_pLocTree;
-    const HttpContext  *m_pRootContext;
-
-    static int updateChildren(void *pObj, void *pUData, const char *pKey,
-                              int iKeyLen);
-    static int inherit(void *pObj, void *pUData, const char *pKey,
-                       int iKeyLen);
-
-    HttpContext *getParentContext(RadixNode *pCurNode);
-    void updateTreeAfterAdd(RadixNode *pRadixNode, HttpContext *pContext);
+    ContextNode          *m_pRootNode;
+    const HttpContext    *m_pRootContext;
+    ContextNode          *m_pLocRootNode;
+    char                 *m_pLocRootPath;
+    int                   m_iLocRootPathLen;
 
     ContextTree(const ContextTree &rhs);
     void operator=(const ContextTree &rhs);
+
 public:
     ContextTree();
+    //ContextTree( const char * pPrefix, int len );
     ~ContextTree();
 
     const HttpContext *getRootContext() const  {   return m_pRootContext;  }
-    void setRootContext(const HttpContext *pContext);
-    void setRootLocation(const char *pLocation, int iLocLen);
-    const char *getURITreeRootLable();
+
+    const char   *getPrefix(int &iPrefixLen);
+    ContextNode *getRootNode() const           {   return m_pRootNode;     }
+
+    ContextNode *findNode(const char *pPrefix);
+
+    ContextNode *addNode(const char *pPrefix, int len,
+                         ContextNode *pCurNode,
+                         char *pStart, long lastCheck = 0);
+
+    HttpContext *removeMatchContext(const char *pURI);
 
     int add(HttpContext *pContext);
-    const HttpContext *bestMatch(const char *pURI, int iUriLen) const;
-    const HttpContext *matchLocation(const char *pLoc, int iLocLen) const;
-    HttpContext *getContext(const char *pURI, int iUriLen) const;
+    const HttpContext *bestMatch(const char *pURI, int len) const;
+    const HttpContext *matchLocation(const char *pLocation, int len) const;
+    HttpContext *getContext(const char *pURI) const;
+    HttpContext *getContext(const char *pURI, int regex) const;
+    HttpContext *addContextByUri(const char *pBegin, int tmLastCheck);
+
+    void setRootContext(const HttpContext *pContext)
+    {   m_pRootContext = pContext;  }
+    void setRootLocation(const char *pLocation);
     void contextInherit();
+
+    const HttpContext *matchIndexes(const StringList *pIndexList,
+                                    AutoStr2 *&pIdx) const;
+    const HttpContext *matchIndex(const char *pIndex) const;
+
+    //void merge( const ContextTree & rhs );
 };
 
 

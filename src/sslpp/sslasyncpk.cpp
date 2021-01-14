@@ -336,16 +336,17 @@ ssl_apk_offload_t *ssl_apk_prepare(SSL *ssl, ls_offload_api *api, void *param)
 }
 
 
-void ssl_ctx_enable_apk(SSL_CTX *ctx)
+bool ssl_ctx_enable_apk(SSL_CTX *ctx)
 {
-    DEBUG_MESSAGE("[SSL_CTX] newContext: %p\n", ctx);
     if (s_ssl_apk_index != -1)
     {
         SSL_CTX_set_private_key_method(ctx, &s_async_private_key_method);
-        DEBUG_MESSAGE("[SSL_CTX] private_key_method enabled\n");
+        DEBUG_MESSAGE("[SSL_CTX:%p] private_key_method enabled\n", ctx);
+        return true;
     }
     else
-        DEBUG_MESSAGE("[SSL_CTX] private_key_method not enabled\n");
+        DEBUG_MESSAGE("[SSL_CTX:%p] private_key_method not enabled\n", ctx);
+    return false;
 }
 
 

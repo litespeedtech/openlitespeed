@@ -67,6 +67,8 @@ HTAuth::~HTAuth()
 
 void HTAuth::setName(const char *pName)
 {
+    if (m_pName)
+        Pool::deallocate2(m_pName);
     m_pName = (char *)Pool::dupstr(pName);
     buildWWWAuthHeader(pName);
 }

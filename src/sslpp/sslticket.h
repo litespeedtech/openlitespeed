@@ -49,6 +49,7 @@ class SslTicket
 
     static int  initShm(int uid, int gid);
     static int  checkShmExpire(STShmData_t *pShmData);
+    static void dumpKeyExpires(const char *msg, const RotateKeys_t *keys);
 public:
 
     static int  ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,

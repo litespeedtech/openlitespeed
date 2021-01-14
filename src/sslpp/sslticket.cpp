@@ -166,6 +166,16 @@ int SslTicket::initShm(int uid, int gid)
 }
 
 
+void SslTicket::dumpKeyExpires(const char *msg, const RotateKeys_t *keys)
+{
+    LS_DBG("[SSLTicket] %s, time: %ld, Prev:%d: %ld, Cur:%d: %ld, Next:%d: %ld",
+           msg, DateTime::s_curTime,
+           keys->m_idxPrev, keys->m_aKeys[keys->m_idxPrev].expireSec,
+           keys->m_idxCur, keys->m_aKeys[keys->m_idxCur].expireSec,
+           keys->m_idxNext, keys->m_aKeys[keys->m_idxNext].expireSec);
+}
+
+
 int SslTicket::init(const char* pFileName, long int timeout, int uid, int gid)
 {
     STShmData_t *pShmData;
@@ -238,7 +248,7 @@ int SslTicket::init(const char* pFileName, long int timeout, int uid, int gid)
 
     if (loadKeyFromFile(pFileName, &newKey) == LS_FAIL)
     {
-        LOGDBG("Load key from file failed.");
+        LS_ERROR("[SSLTicket] Load key from file failed.");
         return LS_FAIL;
     }
 
@@ -288,8 +298,8 @@ int SslTicket::onTimer()
     pNext = &pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxNext];
     if (pCur->expireSec > (DateTime::s_curTime + (m_iLifetime >> 1)))
     {
-//         LOGDBG("Not expired");
         m_pKeyStore->unlock();
+        LS_DBG("[SSLTicket] Not expired");
         return 0; // Not expired.
     }
     if (m_pFile != NULL)
@@ -299,21 +309,21 @@ int SslTicket::onTimer()
 
         if (stat(m_pFile->c_str(), &st) != 0)
         {
-            LOGERR("Stat failed");
             m_pKeyStore->unlock();
+            LS_ERROR("[SSLTicket] Stat failed");
             return LS_FAIL;
         }
         if (st.st_mtime < pShmData->m_tmLastAccess)
         {
             pCur->expireSec += (m_iLifetime >> 1);
-            LOGDBG("File was not modified");
             m_pKeyStore->unlock();
+            LS_DBG("[SSLTicket] File was not modified");
             return LS_OK;
         }
         if (loadKeyFromFile(m_pFile->c_str(), &newKey, &st) == LS_FAIL)
         {
-            LOGDBG("Load key from file failed.");
             m_pKeyStore->unlock();
+            LS_ERROR("[SSLTicket] Load key from file failed.");
             return LS_FAIL;
         }
         pShmData->m_tmLastAccess = DateTime::s_curTime;
@@ -328,11 +338,12 @@ int SslTicket::onTimer()
     }
     else
     {
-//         LOGDBG("Rotate!");
+        LS_DBG("[SSLTicket] Rotate!");
         RAND_bytes((unsigned char *)pPrev, SSLTICKET_KEYSIZE);
         pPrev->expireSec = pCur->expireSec + m_iLifetime;
     }
     rotateIndices(pShmData->m_keys.m_idxPrev, pShmData->m_keys.m_idxCur, pShmData->m_keys.m_idxNext);
+    dumpKeyExpires("SHM keys after rotation", &pShmData->m_keys);
     m_pKeyStore->unlock();
     return LS_OK;
 }
@@ -394,6 +405,8 @@ int SslTicket::ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
     STShmData_t *pShmData;
     STKey_t *pSessKey = &m_keys.m_aKeys[m_keys.m_idxCur];
 
+    dumpKeyExpires("ticketCb() in memory keys", &m_keys);
+
     if (pSessKey->expireSec < (DateTime::s_curTime + (m_iLifetime >> 1)))
     {
 
@@ -405,26 +418,37 @@ int SslTicket::ticketCb(SSL *pSSL, unsigned char aName[16], unsigned char *iv,
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
         memmove(&m_keys, &pShmData->m_keys,
                 (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
-        m_pKeyStore->unlock();
+        dumpKeyExpires("ticketCb() synced SHM keys to in memory keys", &m_keys);
         pSessKey = &m_keys.m_aKeys[m_keys.m_idxCur];
+
+        if (pSessKey->expireSec < (DateTime::s_curTime + (m_iLifetime >> 1)))
+        {
+            LS_WARN("[SSLTicket] ticketCb() SHM keys need rotation");
+            checkShmExpire(pShmData);
+            memmove(&m_keys, &pShmData->m_keys,
+                    (sizeof(STKey_t) + sizeof(short)) * SSLTICKET_NUMKEYS);
+            dumpKeyExpires("ticketCb() synced rotated SHM keys to in memory keys", &m_keys);
+            pSessKey = &m_keys.m_aKeys[m_keys.m_idxCur];
+        }
+        m_pKeyStore->unlock();
     }
 
     if (enc == 1)
     {
         if ((ret = RAND_bytes(iv, EVP_MAX_IV_LENGTH)) == -1)
         {
-            LOGDBG("RAND_bytes not supported.");
+            LS_ERROR("[SSLTicket] RAND_bytes not supported.");
             return -1;
         }
         else if (ret == 0)
         {
-            LOGDBG("RAND_bytes failed.");
+            LS_ERROR("[SSLTicket] RAND_bytes failed.");
             return -1;
         }
 
         if (pSessKey->expireSec < DateTime::s_curTime)
         {
-            LOGERR("ERROR: Current Key already expired!");
+            LS_ERROR("[SSLTicket] Current Key already expired!");
             return -1;
         }
 

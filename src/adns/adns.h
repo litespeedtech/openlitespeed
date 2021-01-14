@@ -25,6 +25,7 @@ class Adns;
 #include <edio/eventreactor.h>
 #include <lsr/ls_atomic.h>
 #include <lsr/ls_lock.h>
+#include <socket/gsockaddr.h>
 #include <util/tsingleton.h>
 
 typedef void (* addrLookupCbV4)(struct dns_ctx *, struct dns_rr_a4 *, void *);
@@ -68,6 +69,30 @@ private:
     long             start_time;
     unsigned short   ref_count;
     unsigned short   type;//PF_INET, PF_INET6
+};
+
+
+class AdnsFetch
+{
+public:
+    AdnsFetch();
+    ~AdnsFetch();
+
+    bool isInProgress() const   {   return m_pAdnsReq != NULL;  }
+    int tryResolve(const char *name, char *name_only,
+                   int family, int flag);
+    int asyncLookup(int family, const char *name, lookup_pf callback, void *ctx);
+
+    int setResolvedIp(const void *pIP, int ip_len);
+    const GSockAddr &getResolvedAddr() const {  return m_resolvedAddr;  }
+    void setResolvedAddr(const sockaddr *addr);
+
+    void cancel();
+    void release();
+
+private:
+    AdnsReq  *m_pAdnsReq;
+    GSockAddr m_resolvedAddr;
 };
 
 

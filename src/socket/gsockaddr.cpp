@@ -90,7 +90,10 @@ int GSockAddr::allocate(int family)
 void GSockAddr::release()
 {
     if (m_pSockAddr)
+    {
         Pool::deallocate(m_pSockAddr, m_len);
+        m_pSockAddr = NULL;
+    }
 }
 
 /**
@@ -541,4 +544,26 @@ int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
 //
 // }
 
+int GSockAddr::setIp(struct sockaddr *result, const void *ip, int len)
+{
+    if (!result || !ip)
+        return -1;
+    void *dest = NULL;
+    if (result->sa_family == PF_INET)
+    {
+        if (len == sizeof(in_addr))
+            dest = &((sockaddr_in *)result)->sin_addr;
+    }
+    else
+    {
+        if (len == sizeof(in6_addr))
+            dest = &((sockaddr_in6 *)result)->sin6_addr;
+    }
+    if (dest)
+    {
+        memmove(dest, ip, len);
+        return 0;
+    }
+    return -1;
+}
 

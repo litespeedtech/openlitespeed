@@ -302,6 +302,8 @@ void HttpReq::resetHeaderBuf(int discard)
 
 int HttpReq::setQS(const char *qs, int qsLen)
 {
+    if (m_iRedirects > 0 && m_curUrl.val.ptr == m_pUrls[m_iRedirects - 1].val.ptr)
+        ls_str_set(&m_curUrl.val, NULL, 0);
     return ls_str_xsetstr(&m_curUrl.val, qs, qsLen, m_pPool);
 }
 
@@ -3145,9 +3147,8 @@ cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
     char *p;
     cookieval_t *pIdx = NULL;
     int keyOff, valOff;
-    if (m_commonHeaderLen[ HttpHeader::H_COOKIE ] >= 16384 ||
-        (int)m_commonHeaderLen[ HttpHeader::H_COOKIE ] + valLen + nameLen + 1 >
-        32768)
+    if ((int)m_commonHeaderLen[ HttpHeader::H_COOKIE ] + valLen + nameLen + 1 >
+        65535)
     {
         LS_DBG_L(getLogSession(),
                  "Cookie size [%hd] is too large, stop updating cookie from Set-Cookie.",

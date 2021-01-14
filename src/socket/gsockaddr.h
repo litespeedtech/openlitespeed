@@ -30,6 +30,8 @@
 #define NO_ANY          2
 #define ADDR_ONLY       4
 #define DO_NSLOOKUP_DIRECT  8
+#define DO_HOST_OVERRIDE    16
+#define SKIP_ADNS_CACHE     32
 
 class AdnsReq;
 class GSockAddr
@@ -43,30 +45,41 @@ private:
         struct sockaddr_un   *m_un;
     };
 
-    int m_len;
+    uint16_t m_len;
+    uint16_t m_flag;
+
     int allocate(int family);
     void release();
-    int set2(int family, const char *pURL, int tag, char *pDest);
+
     int doLookup(int family, const char *p, int tag);
 
 public:
+
+    // There is no explicit need to make this private, it is just not used outside of this class.
+    void reinit()
+    {
+        m_pSockAddr = NULL;
+        m_len = 0;
+        m_flag = 0;
+    }
+
     GSockAddr()
     {
-        ::memset(this, 0, sizeof(GSockAddr));
+        reinit();
     }
     explicit GSockAddr(int family)
     {
-        ::memset(this, 0, sizeof(GSockAddr));
+        reinit();
         allocate(family);
     }
     GSockAddr(const in_addr_t addr, const in_port_t port)
     {
-        ::memset(this, 0, sizeof(GSockAddr));
+        reinit();
         set(addr, port);
     }
     explicit GSockAddr(const struct sockaddr *pAddr)
     {
-        ::memset(this, 0, sizeof(GSockAddr));
+        reinit();
         allocate(pAddr->sa_family);
         memmove(m_pSockAddr, pAddr, m_len);
     }
@@ -79,7 +92,7 @@ public:
     operator const struct sockaddr *() const   {   return m_pSockAddr;  }
     explicit GSockAddr(const struct sockaddr_in &rhs)
     {
-        ::memset(this, 0, sizeof(GSockAddr));
+        reinit();
         allocate(AF_INET);
         memmove(m_pSockAddr, &rhs, sizeof(rhs));
     }
@@ -112,6 +125,19 @@ public:
     int set(const char *pURL, int tag);
     int set(int family, const char *pURL, int tag = 0);
 
+    void set(const struct sockaddr *addr)
+    {
+        if ((!m_pSockAddr) || (m_pSockAddr->sa_family != addr->sa_family))
+            allocate(addr->sa_family);
+        memmove(m_pSockAddr, addr, m_len);
+    }
+
+    void set(const GSockAddr *addr)
+    {   set(addr->get());   }
+
+
+    int set2(int family, const char *pURL, int tag, char *pDest);
+
     int asyncSet(int family, const char *pURL, int tag
                  , int (*lookup_pf)(void *arg, const long lParam, void *pParam)
                  , void *ctx, AdnsReq **pReq);
@@ -132,6 +158,10 @@ public:
 
     static int compareAddr(const struct sockaddr *pAddr1,
                            const struct sockaddr *pAddr2);
+
+    static int compare(const struct sockaddr *pAddr1,
+                       const struct sockaddr *pAddr2);
+    static int setIp(struct sockaddr *result, const void *ip, int len);
 };
 
 #endif

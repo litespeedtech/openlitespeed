@@ -124,12 +124,19 @@ public:
     void operator=(const RealmMap &rhs);
 };
 
-typedef struct _static_file_data
+struct static_file_data_t
 {
+    static_file_data_t()
+        : tmaccess(0)
+        , pData(NULL)
+        {}
+    ~static_file_data_t();
+
     AutoStr2 url;
     time_t tmaccess;
     StaticFileCacheData *pData;
-} static_file_data_t;
+
+};
 
 typedef  THash<static_file_data_t *> UrlStxFileHash;
 

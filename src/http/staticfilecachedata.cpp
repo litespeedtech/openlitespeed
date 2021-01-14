@@ -592,7 +592,7 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
         *p = 'l';
         unlink(pPath->buf());
         *p = 0;
-        exit(1);
+        _exit(1);
     }
 }
 

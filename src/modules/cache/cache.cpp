@@ -1003,6 +1003,8 @@ int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
             skip = 1;
         else if ((strncmp("has_js=", pCookie, 7) == 0)
                  || (strncmp("_lscache_vary", pCookie, 13) == 0)
+                 || (strncmp("wordpress_test_cookie", pCookie, 21) == 0)
+                 || (strncmp("ls_smartpush", pCookie, 12) == 0)
                  || (strncmp("bb_forum_view=", pCookie, 14) == 0))
             skip = 1;
         else if (strncmp("frontend=", pCookie, 9) == 0)
@@ -1016,7 +1018,7 @@ int getPrivateCacheCookie(HttpReq *pReq, char *pDest, char *pDestEnd)
             p = copyCookie(p, pDestEnd, pIndex, pCookie);
         ++pIndex;
     }
-    *p = '\0';
+    *p = 0;
     return p - pDest;
 }
 
@@ -1419,7 +1421,6 @@ static int releaseMData(void *data)
 
         if (myData->pCacheVary)
             delete myData->pCacheVary;
-        memset(myData, 0, sizeof(MyMData));
         delete myData;
     }
     return 0;
@@ -1457,11 +1458,13 @@ int checkBypassHeader(const char *header, int len)
 int writeHttpHeader(int fd, AutoStr2 *str, const char *key, int key_len,
                     const char *val, int val_len)
 {
-    write(fd, key, key_len);
-    write(fd, ": ", 2);
+    IOVec iov;
+    iov.append(key, key_len);
+    iov.append(": ", 2);
     if (val_len > 0)
-        write(fd, val, val_len);
-    write(fd, "\r\n", 2);
+        iov.append(val, val_len);
+    iov.append("\r\n", 2);
+    writev(fd, iov.get(), iov.len());
 
 #ifdef CACHE_RESP_HEADER
     str->append(key, key_len);
@@ -2841,6 +2844,10 @@ static int checkCtrlEnv(lsi_param_t *rec)
     {
         myData->pCacheCtrlVary->append((const char *)rec->ptr1 + 5,
                                        rec->len1 - 5);
+
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s]checkCtrlEnv append %.*s.\n", ModuleNameStr, rec->len1,
+                   (const char *)rec->ptr1);
         return 0;
     }
 
@@ -3417,27 +3424,29 @@ static int handlerProcess(const lsi_session_t *session)
                 return 0;
             }
 
-
-            str.setStr(buff, CeHeader.m_lenETag);
-            pEtag = (char *)str.c_str();
-
-            char *pUpdate = pEtag + str.len() - 4;
-            if (*pUpdate++ == ';')
+            if (CeHeader.m_lenETag > 4)
             {
-                if (compressType == 0)
+                str.setStr(buff, CeHeader.m_lenETag);
+                pEtag = (char *)str.c_str();
+
+                char *pUpdate = pEtag + str.len() - 4;
+                if (*pUpdate++ == ';')
                 {
-                    *pUpdate++ = ';';
-                    *pUpdate++ = ';';
-                }
-                else if (compressType == 1)
-                {
-                    *pUpdate++ = 'g';
-                    *pUpdate++ = 'z';
-                }
-                else if (compressType == 2)
-                {
-                    *pUpdate++ = 'b';
-                    *pUpdate++ = 'r';
+                    if (compressType == 0)
+                    {
+                        *pUpdate++ = ';';
+                        *pUpdate++ = ';';
+                    }
+                    else if (compressType == 1)
+                    {
+                        *pUpdate++ = 'g';
+                        *pUpdate++ = 'z';
+                    }
+                    else if (compressType == 2)
+                    {
+                        *pUpdate++ = 'b';
+                        *pUpdate++ = 'r';
+                    }
                 }
             }
 

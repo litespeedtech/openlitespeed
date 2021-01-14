@@ -185,7 +185,8 @@ public:
     }
 
     LsShmXSize_t avail() const
-    {   return x_pStats->m_iFileSize - x_pStats->m_iUsedSize;   }
+    {   return (x_pStats->m_iFileSize > x_pStats->m_iUsedSize)
+                ? x_pStats->m_iFileSize - x_pStats->m_iUsedSize : 0;   }
 
     LsShmStatus_t status() const        {   return m_status;    }
 

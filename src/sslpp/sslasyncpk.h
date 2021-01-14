@@ -32,7 +32,7 @@ ssl_apk_offload_t *ssl_apk_prepare(SSL *ssl, ls_offload_api *api, void *param);
 
 void ssl_apk_release(SSL *ssl);
 
-void ssl_ctx_enable_apk(SSL_CTX *ctx);
+bool ssl_ctx_enable_apk(SSL_CTX *ctx);
 
 
 #endif

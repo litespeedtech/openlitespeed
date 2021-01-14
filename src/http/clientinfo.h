@@ -62,6 +62,8 @@ class ClientInfo
     char        m_achSockAddr[24];
     AutoStr2    m_sAddr;
     AutoStr2    m_sHostName;
+    LsiModuleData   m_moduleData;
+
     uint32_t    m_iFlags;
     int32_t     m_iConns;
     GeoInfo    *m_pGeoInfo;
@@ -69,7 +71,6 @@ class ClientInfo
 #ifdef USE_IP2LOCATION
     LocInfo    *m_pLocInfo;
 #endif
-    LsiModuleData   m_moduleData;
 
     time_t      m_tmOverLimit;
     short       m_sslNewConn;

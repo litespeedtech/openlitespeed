@@ -823,7 +823,7 @@ const char *SslUtil::buildCipherList(char *buf, int iMaxBufLen, const char *pLis
 
 int SslUtil::useCipherList(SSL_CTX *pCtx, const char *pList)
 {
-    LS_DBG_L( "[SSL] set ciphers to %s", pList );
+    LS_DBG_L( "[SSL:%p] set ciphers to %s", pCtx, pList );
     return SSL_CTX_set_cipher_list(pCtx, pList) == 1;
 }
 

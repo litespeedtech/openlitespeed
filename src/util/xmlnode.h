@@ -35,12 +35,13 @@ public:
 };
 
 
+class AttrMap;
 class XmlNode
 {
 private:
-    XmlNode(const XmlNode &rhs) {}
-    void operator=(const XmlNode &rhs) {}
-    XmlNodeImpl *m_pImpl;
+    XmlNode(const XmlNode &rhs);
+    void operator=(const XmlNode &rhs);
+    XmlNodeImpl *m_impl;
 
 public:
     XmlNode();
@@ -48,21 +49,23 @@ public:
 
     int init(const char *name, const char **attr);
     int addChild(const char *name, XmlNode *pChild);
-    const XmlNode *getChild(const char *name, int bOptional  = 0) const;
-    XmlNode *getChild(const char *name, int bOptional = 0);
+    const XmlNode *getChild(const char *name, int bOptional) const;
+    const XmlNode *getChild(const char *name) const;
+    XmlNode *getChild(const char *name);
     const XmlNodeList *getChildren(const char *name) const;
     int getAllChildren(XmlNodeList &list) const;
     int getAllChildren(XmlNodeList &list);
     int hasChild();
-    const char *getChildValue(const char *name, int bKeyName = 0) const;
-    int getChildValueLen(const char *name, int bKeyName = 0) const;
+    const char *getChildValue(const char *name, int bKeyName) const;
+    int getChildValueLen(const char *name, int bKeyName) const;
+    const char *getChildValue(const char *name) const;
     const char *getAttr(const char *name) const;
+    const AttrMap *getAllAttr() const;
     const char *getName() const;
     const char *getValue() const;
     int getValueLen() const;
     long long getLongValue(const char *pTag, long long min, long long max,
                            long long def, int base = 10) const;
-
     int setValue(const char *value, int len);
     XmlNode *getParent() const;
     int xmlOutput(FILE *fd, int depth) const;

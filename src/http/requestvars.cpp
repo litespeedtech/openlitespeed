@@ -63,10 +63,22 @@ SubstItem::~SubstItem()
 {
     if (m_value.m_pStr)
     {
-        if ((m_type == REF_STRING) || (m_type == REF_ENV))
+        switch (m_type)
+        {
+        case REF_STRING:
+        case REF_ENV:
+        case REF_HTTP_HEADER:
+        case REF_SSI_VAR:
+        case REF_RESP_HEADER:
             delete m_value.m_pStr;
-        if (m_type == REF_FORMAT_STR)
+            break;
+        case REF_FORMAT_STR:
             delete(SubstFormat *)m_value.m_pAny;
+            break;
+        case REF_EXPR:
+            delete(Expression *)m_value.m_pAny;
+            break;
+        }
     }
 }
 
@@ -82,6 +94,8 @@ SubstItem::SubstItem(const SubstItem &rhs)
         {
         case REF_STRING:
         case REF_ENV:
+        case REF_SSI_VAR:
+        case REF_RESP_HEADER:
             m_value.m_pStr = new AutoStr2(*rhs.m_value.m_pStr);
             break;
         case REF_FORMAT_STR:
@@ -1139,8 +1153,8 @@ static const char *const s_pHeaders[] =
     "if-modified-since",
     "if-match",
     "if-none-match",
-    "if-unmodified-since",
     "if-range",
+    "if-unmodified-since",
     "keep-alive",
     "range",
     "x-forwarded-for",

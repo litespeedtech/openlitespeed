@@ -86,6 +86,8 @@ VHostMap::~VHostMap()
 
     if (m_pSslContext)
         delete m_pSslContext;
+    if (m_pQuicListener)
+        delete m_pQuicListener;
     clear();
 
 }

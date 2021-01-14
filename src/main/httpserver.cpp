@@ -514,13 +514,13 @@ int HttpServerImpl::start()
     HttpCgiTool::buildServerEnv();
     if (isServerOk() == -1)
         return LS_FAIL;
-    LS_NOTICE("[Child: %d] Setup swapping space...", m_pid);
+    LS_NOTICE("Setup swapping space...");
     if (setupSwap() == - 1)
     {
-        LS_ERROR("[Child: %d] Failed to setup swapping space!", m_pid);
+        LS_ERROR("Failed to setup swapping space!");
         return LS_FAIL;
     }
-    LS_NOTICE("[Child: %d] %s starts successfully!", m_pid,
+    LS_NOTICE("%s starts successfully!",
               HttpServerVersion::getVersion());
     ConnLimitCtrl::getInstance().setListeners(&m_listeners);
     m_lStartTime = time(NULL);
@@ -529,9 +529,9 @@ int HttpServerImpl::start()
     if (1 == HttpServerConfig::getInstance().getProcNo())
         ZConfManager::getInstance().sendStartUp();
     m_dispatcher.run();
-    LS_NOTICE("[Child: %d] Start shutting down gracefully ...", m_pid);
+    LS_NOTICE("Start shutting down gracefully ...");
     gracefulShutdown();
-    LS_NOTICE("[Child: %d] Shut down successfully! ", m_pid);
+    LS_NOTICE("Shut down successfully! ");
     StdErrLogger::getInstance().dupAppenderFdToStdErr();
     return 0;
 
@@ -540,7 +540,7 @@ int HttpServerImpl::start()
 
 int HttpServerImpl::shutdown()
 {
-    LS_NOTICE("[Child: %d] Shutting down ...!", m_pid);
+    LS_NOTICE("Shutting down ...!");
     HttpSignals::setSigStop();
     return 0;
 }
@@ -1259,7 +1259,7 @@ void HttpServerImpl::offsetChroot()
 
 void HttpServerImpl::releaseAll()
 {
-    LS_NOTICE("HttpServerImpl::releaseAll called, pid %d,", getpid());
+    LS_NOTICE("HttpServerImpl::releaseAll called.");
     ExtAppRegistry::stopAll();
 
 //#define CRASH_TEST
@@ -1271,6 +1271,8 @@ void HttpServerImpl::releaseAll()
     delete []s;
 #endif
 
+    if (m_pQuicEngine)
+        delete m_pQuicEngine;
 
 #define  TO_AVOID_EXIT_CRASH
 #ifndef  TO_AVOID_EXIT_CRASH
@@ -2482,7 +2484,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                 pTKFile = achTKFile;
         }
         long iTicketLifetime = currentCtx.getLongValue(pNode,
-                               "sslSessionTicketLifetime", 216000, INT_MAX, 216000);
+                               "sslSessionTicketLifetime", 600, 86400, 3600);
         SslTicket::init(pTKFile, iTicketLifetime, getuid(), getgid());
     }
 
@@ -3806,8 +3808,6 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 
     assert(pNode);
     pShmDir = pNode->getChildValue("quicShmDir");
-    if (!pShmDir)
-        pShmDir = "/dev/shm";
 
     lsquic_engine_init_settings(&settings, LSENG_SERVER);
 
@@ -4047,8 +4047,7 @@ int HttpServerImpl::changeUserChroot()
     else
     {
         LS_NOTICE(ConfigCtx::getCurConfigCtx(),
-                  "[child: %d] Successfully change current user to %s",
-                  getpid(), pUser);
+                  "Successfully change current user to %s", pUser);
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
         enableCoreDump();
 #endif
@@ -4056,8 +4055,7 @@ int HttpServerImpl::changeUserChroot()
         if (pChroot)
         {
             LS_NOTICE(ConfigCtx::getCurConfigCtx(),
-                      "[child: %d] Successfully change root directory to %s",
-                      getpid(), pChroot);
+                      "Successfully change root directory to %s", pChroot);
         }
     }
 
@@ -4111,8 +4109,7 @@ void HttpServerImpl::enableCoreDump()
         if (dumpable == -1)
             LS_WARN(ConfigCtx::getCurConfigCtx(), "prctl: get dumpable failed ");
         else
-            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Child: %d] Core dump is %s.",
-                      getpid(),
+            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Core dump is %s.",
                       (dumpable) ? "enabled" : "disabled");
     }
 #endif

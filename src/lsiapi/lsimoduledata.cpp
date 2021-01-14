@@ -32,7 +32,7 @@ bool LsiModuleData::initData(int count)
         if (m_iCount > 0)
             return false;
         else
-            delete m_pData;
+            delete [] m_pData;
     }
 
     m_pData = new void_pointer[count];

@@ -569,7 +569,7 @@ void Awstats::config(HttpVHost *pVHost, int val, char *achBuf, size_t achBufSz,
         if (ConfigCtx::getCurConfigCtx()->getValidPath(achBuf,
                 "$SERVER_ROOT/add-ons/awstats/wwwroot/cgi-bin/",
                 "AWStats CGI-BIN directory"))
-            ; // Ignore result for now
+        {}    ; // Ignore result for now
 
         if (pVHost->getRootContext().determineMime("pl",
                 NULL)->getHandler()->getType())
