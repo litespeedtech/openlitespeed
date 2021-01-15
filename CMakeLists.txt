@@ -6,8 +6,8 @@ INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
-set(openlitespeed_MINOR_VERSION 4)
-set(openlitespeed_PATCH_VERSION 0)
+set(openlitespeed_MINOR_VERSION 7)
+set(openlitespeed_PATCH_VERSION 8)
 set(openlitespeed_VERSION
     ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 
@@ -18,49 +18,83 @@ SET(LSQUIC_SERVER_MODE 1)
 include_directories( BEFORE  include src/lshpack src/liblsquic/ls-qpack ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
 link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
 
-SET (CMAKE_C_COMPILER         "/usr/bin/clang")
-SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
+#SET (CMAKE_C_COMPILER         "/usr/bin/clang")
+#SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 
 IF (CMAKE_BUILD_TYPE MATCHES "Debug")
+## thread sanitizer
+    #set (TSAN "1")
     set (ASAN "1")
-    set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
+    set (BUILD_TEST "1")
     add_definitions(-DRUN_TEST)
     set(libUnitTest  libUnitTest++.a)
-
-ELSE ()
-    set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter ")
+###############################################################################
 ENDIF()
 
-## thread sanitizer
-#set (TSAN "1")
+
+IF (CMAKE_BUILD_TYPE MATCHES "tsan")
+    set (TSAN "1")
+ENDIF()
+
+IF (CMAKE_BUILD_TYPE MATCHES "asan")
+    set (ASAN "1")
+ENDIF()
+
+IF (CMAKE_BUILD_TYPE MATCHES "heaptrack")
+    set(MY_CMAKE_FLAGS  "-g -O0 ")
+    add_definitions(-DASAN_DBG)
+    add_definitions(-DDEBUG_POOL)
+ENDIF()
+
+IF (CMAKE_BUILD_TYPE MATCHES "prof")
+    set(MY_CMAKE_FLAGS "-g -pg -O2 -D_PROFILE_ -DNDEBUG")
+ENDIF()
+
+IF (CMAKE_BUILD_TYPE MATCHES "pkgdbg")
+    set(MY_CMAKE_FLAGS "-g -O0")
+ENDIF()
+
+
+
 IF(TSAN)
-    set(MY_CMAKE_TSAN_FLAG  " -DUSE_THREADCHECK -DDYNAMIC_ANNOTATIONS_ENABLED -fsanitize=thread -fsanitize-blacklist=${PROJECT_SOURCE_DIR}/thread_sanitizer_blacklist")
+    set(MY_CMAKE_FLAGS  "-g -O0 -DUSE_THREADCHECK -DDYNAMIC_ANNOTATIONS_ENABLED -fsanitize=thread -fsanitize-blacklist=${PROJECT_SOURCE_DIR}/thread_sanitizer_blacklist")
+    add_definitions(-DASAN_DBG)
+    set(LIBSAN  libtsan.a)
+    #-fsanitize-blacklist=${PROJECT_SOURCE_DIR}/thread_sanitizer_blacklist")
 ELSE(TSAN)
-    #set (ASAN "1")
-    set(MY_CMAKE_TSAN_FLAG  " ")
+    ## address sanitizer
+    IF(ASAN)
+        set(MY_CMAKE_FLAGS  "-g -O0 -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
+        add_definitions(-DWANT_LSAN)
+        add_definitions(-DLS_VG_DEBUG)
+        add_definitions(-DASAN_DBG)
+        add_definitions(-DDEBUG_POOL)
+        set(LIBSAN  libasan.a)
+        #-fsanitize-address-use-after-scope
+    ENDIF(ASAN)
 ENDIF(TSAN)
 
+if (CMAKE_C_COMPILER MATCHES "clang")
+    unset(LIBSAN)
+endif()
 
-## address sanitizer
-IF(ASAN)
-    set(MY_CMAKE_ASAN_FLAG  " -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
-    #-fsanitize-address-use-after-scope
-ELSE(ASAN)
-    set(MY_CMAKE_ASAN_FLAG  " ")
-ENDIF(ASAN)
+set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-unused-function")
 
-set(MY_CMAKE_WARNING_FLAG  " -Wall -Wextra -Wno-unused-parameter")
+if(OPT_SSE4)
+set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -march=corei7 -maes -mpclmul -mpopcnt")
+endif(OPT_SSE4)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${MY_CMAKE_FLAGS}")
+
 
 #set(MY_CMAKE_POOL_FLAG  " -DPOOL_TESTING -DUSE_VALGRIND")
-add_definitions(-DPOOL_TESTING)
+#add_definitions(-DPOOL_TESTING)
 #add_definitions(-DLS_WORKCREW_DEBUG)
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 #Add definition for QUIC
 add_definitions(-DH3_ALPN="\\x05h3-29\\x05h3-31")
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
-set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS} ${MY_CMAKE_WARNING_FLAG} ${MY_CMAKE_TSAN_FLAG} ${MY_CMAKE_ASAN_FLAG}")
 
 
 # Update submodules as needed
@@ -80,10 +114,10 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
 
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-find_package(ZLIB REQUIRED)
+#find_package(ZLIB REQUIRED)
 ##find_package(LibLdap REQUIRED)
-find_package(PCRE REQUIRED)
-find_package(EXPAT REQUIRED)
+#find_package(PCRE REQUIRED)
+#find_package(EXPAT REQUIRED)
 #find_package(OpenSSL REQUIRED)
 
 
@@ -121,4 +155,7 @@ add_definitions( ${LFS_CFLAGS} )
 add_definitions(-DUSE_UDNS)
 
 add_subdirectory(src)
+
+if (BUILD_TEST)
 add_subdirectory(test)
+endif()
