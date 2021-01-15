@@ -147,6 +147,7 @@ int HttpListener::enableQuic()
     {
         LS_NOTICE(this, "Failed to enable QUIC at address: %s",
                   m_pMapVHost->getAddrStr()->c_str());
+        delete pUdp;
         return -1;
     }
 }

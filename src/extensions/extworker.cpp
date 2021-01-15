@@ -466,10 +466,9 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
     m_reqStats.finalizeRpt();
     int inUseConn = m_connPool.getTotalConns() - m_connPool.getFreeConns();
     const HttpVHost *pVHost = m_pConfig->getVHost();
-    if ((!pVHost || strcmp(pVHost->getName(), DEFAULT_ADMIN_SERVER_NAME) != 0)
-        &&
-        (m_connPool.getTotalConns() > 0) && (m_iState != ST_NOTSTARTED))
-
+    if ((!pVHost || !pVHost->getName()
+         || strcmp(pVHost->getName(), DEFAULT_ADMIN_SERVER_NAME) != 0)
+        && (m_connPool.getTotalConns() > 0) && (m_iState != ST_NOTSTARTED))
     {
         p += ls_snprintf(p, &achBuf[4096] - p,
                          "EXTAPP [%s] [%s] [%s]: CMAXCONN: %d, EMAXCONN: %d, "

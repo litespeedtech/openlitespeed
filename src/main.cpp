@@ -27,79 +27,36 @@
 #include <stdlib.h>
 
 
-/*
-#include <sys/mman.h>
-void test_mmap()
+//#define WANT_LSAN 1
+#if !WANT_LSAN
+
+int ls_lsan_off = 1;
+
+extern "C" const char* __asan_default_options()
+{ return "disable_coredump=0:unmap_shadow_on_exit=1:detect_leaks=0:abort_on_error=1"; }
+
+#else
+
+int ls_lsan_off = 0;
+
+extern "C" const char* __asan_default_options()
+{ return "disable_coredump=0:unmap_shadow_on_exit=1:abort_on_error=1"; }
+
+
+extern "C" const char* __lsan_default_suppressions()
 {
-    int fd;
-    fd = open( "mmap_test", O_RDWR | O_CREAT | O_TRUNC, 0600 );
-    assert( fd != -1 );
-    assert( ftruncate( fd, 4096 ) != -1 );
-    char * pBuf =( char*) mmap( NULL, 4096, PROT_READ | PROT_WRITE,
-                MAP_SHARED , fd, 0 );
-    //munmap( pBuf2, 4096 );
-    assert( pBuf );
-    memset( pBuf, 'A', 4096 );
-    ftruncate( fd, 8192 );
-    memset( pBuf, 'B', 2048 );
-    char * pBuf1 =( char*) mmap( NULL, 4096, PROT_READ | PROT_WRITE,
-                MAP_SHARED , fd, 4096 );
-    assert( pBuf1 );
-    memset( pBuf1, 'C', 4096 );
-    memset( pBuf, 'D', 1024 );
-    munmap( pBuf1, 4096 );
-    munmap( pBuf, 4096 );
-    close( fd );
+    return "leak:chunk_alloc";
+};
 
-}
-*/
-//static int testExec()
-//{
-//    int ret = fork();
-//    if ( ret )
-//        return ret;
-//    ret = execlp( "ls", "ls -la", NULL );
-//    printf( "execle error!" );
-//    exit( -1 );
-//    return ret;
-//}
-//#include <util/emailsender.h>
 
-//#include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <arpa/inet.h>
-//#include <util/sysinfo/nicdetect.h>
-//static int testNICDetect( )
-//{
-//    struct ifi_info * pHead = NICDetect::get_ifi_info( AF_INET, 1 );
-//    struct ifi_info * iter;
-//    char temp[40];
-//    for( iter = pHead; iter != NULL; iter = iter->ifi_next )
-//    {
-//        //if ( iter->ifi_hlen > 0 )
-//        {
-//            printf( "%s-%s-%X:%X:%X:%X:%X:%X\n", iter->ifi_name,
-//                    inet_ntop( iter->ifi_addr->sa_family,
-//                        &(((sockaddr_in *)iter->ifi_addr)->sin_addr),
-//                        temp, 40 ),
-//
-//                    iter->ifi_haddr[0], iter->ifi_haddr[1],
-//                    iter->ifi_haddr[2], iter->ifi_haddr[3],
-//                    iter->ifi_haddr[4], iter->ifi_haddr[5] );
-//        }
-//    }
-//    if ( pHead )
-//        NICDetect::free_ifi_info( pHead );
-//    return 0;
-//}
+#endif
+
+extern "C" int __lsan_is_turned_off() { return ls_lsan_off; }
+
 
 static LshttpdMain *s_pLshttpd = NULL;
 int main(int argc, char *argv[])
 {
-    //test_mmap();
-    //testExec();
-//    testNICDetect();
     s_pLshttpd = new LshttpdMain();
     if (!s_pLshttpd)
     {
@@ -112,12 +69,4 @@ int main(int argc, char *argv[])
 }
 
 
-//#define WANT_LSAN
-#ifndef WANT_LSAN
-extern "C" const char* __asan_default_options()
-{ return "disable_coredump=0:unmap_shadow_on_exit=1:detect_leaks=0:abort_on_error=1"; }
-#else
-extern "C" const char* __asan_default_options()
-{ return "disable_coredump=0:unmap_shadow_on_exit=1:abort_on_error=1"; }
-#endif
 

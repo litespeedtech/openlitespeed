@@ -802,6 +802,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
             return -1;
         m_pCHeaders = pTmp;
         pHeader = (rnheader_t *)((char *)m_pCHeaders + iOffset);
+        memset(pHeader, 0, sizeof(*pHeader));
         return 1;
     case RNSTATE_PNODE:
         pTmp = m_pCHeaders;
@@ -836,6 +837,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
             }
             m_pCHeaders = pTmp;
             pHeader = (rnheader_t *)((char *)pTmp + iOffset);
+            memset(pHeader, 0, sizeof(*pHeader));
             return 1;
         }
         break;
@@ -867,6 +869,7 @@ int RadixNode::getHeader(int iFlags, ls_xpool_t *pool, const char *pLabel,
     if (pTmp == NULL)
         return -1;
     pHeader = pTmp;
+    memset(pHeader, 0, sizeof(*pHeader));
     return 1;
 }
 

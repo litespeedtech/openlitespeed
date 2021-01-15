@@ -360,7 +360,6 @@ void SslCertComp::disableCertCompDecomp(SSL_CTX *ctx)
 
 void SslCertComp::enableCertComp(SSL_CTX *ctx)
 {
-    DEBUG_MESSAGE("[SSLCertComp] enableCertComp: %p\n", ctx);
     if (s_activate_comp)
     {
         if (s_iSSL_CTX_index < 0)
@@ -368,11 +367,13 @@ void SslCertComp::enableCertComp(SSL_CTX *ctx)
         
         if (!(SSL_CTX_add_cert_compression_alg(ctx, TLSEXT_cert_compression_brotli,
                                                certCompressFuncBrotli, NULL)))
-            INFO_MESSAGE("[SSLCertComp] Requested cert compression but unable to "
-                         "register Brotli\n");
+            INFO_MESSAGE("[SSL_CTX:%p] Requested cert compression but unable to "
+                         "register Brotli\n", ctx);
+        else
+            DEBUG_MESSAGE("[SSL_CTX:%p] Enabled Cert Compession\n", ctx);
     }
     else
-        DEBUG_MESSAGE("[SSLCertComp] Cert compression not enabled\n");
+        DEBUG_MESSAGE("[SSL_CTX:%p] Cert compression not enabled\n", ctx);
 }
 
     

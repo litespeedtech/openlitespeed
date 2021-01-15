@@ -90,7 +90,10 @@ int GSockAddr::allocate(int family)
 void GSockAddr::release()
 {
     if (m_pSockAddr)
+    {
         Pool::deallocate(m_pSockAddr, m_len);
+        m_pSockAddr = NULL;
+    }
 }
 
 /**

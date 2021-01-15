@@ -127,8 +127,8 @@ public:
 
     void set(const struct sockaddr *addr)
     {
-        reinit();
-        allocate(addr->sa_family);
+        if ((!m_pSockAddr) || (m_pSockAddr->sa_family != addr->sa_family))
+            allocate(addr->sa_family);
         memmove(m_pSockAddr, addr, m_len);
     }
 

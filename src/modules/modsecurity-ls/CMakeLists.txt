@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall -lxml2 -lcurl")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall")
 
 include_directories(${PROJECT_SOURCE_DIR}/../thirdparty/ModSecurity/headers/)
 
@@ -15,6 +15,9 @@ add_library(mod_security SHARED
 )
 
 
-target_link_libraries(mod_security libmodsecurity.a -llmdb -lxml2 -lcurl -lcrypto -lssl -lyajl )
+target_link_libraries(mod_security libmodsecurity.a
+    -nodefaultlibs libstdc++.a
+    pthread rt -llmdb -lxml2 -lcurl -lGeoIP -lcrypto -lssl -lz -lpcre -lyajl
+    ${LIBSAN} crypt m gcc_eh c c_nonshared gcc)
 
 set_target_properties(mod_security PROPERTIES PREFIX "")

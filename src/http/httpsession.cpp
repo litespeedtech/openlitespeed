@@ -3102,7 +3102,10 @@ void HttpSession::closeSession()
     //    getStream()->wantWrite(0);
     getStream()->handlerReadyToRelease();
     getStream()->shutdown();
-    resetBackRefPtr();
+    // getStream()->shutdown() may close and recycle the HioStream
+    // and HttpSession, so it should be the end of current HttpSession
+    // should not try to use and member function of HttpSession or HioStream
+    // later.
 }
 
 

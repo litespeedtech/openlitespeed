@@ -109,6 +109,12 @@ void HttpLog::init()
 }
 
 
+void HttpLog::updateLogPatternWithPid(int pid)
+{
+    lsnprintf( s_logPattern, sizeof(s_logPattern), "%%d [%%p] [%d] %%m", pid);
+}
+
+
 bool HttpLog::isEnabled(Logger *pLogger, int level)
 {
     if (pLogger)
@@ -147,6 +153,12 @@ void HttpLog::toggleDebugLog()
         setDebugLevel(0);
     else
         setDebugLevel(10);
+}
+
+
+int  HttpLog::getLogLevel()
+{
+    return logger()->getLevel();
 }
 
 

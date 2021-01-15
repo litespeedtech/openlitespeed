@@ -730,6 +730,8 @@ int bwrap_exec(lscgid_t *pCGI, int argc, char *argv[], int *done)
             DEBUG_MESSAGE("argv[%d] = %s\n", i, argv[i]);
         }
     }
+    if (applyLimits(pCGI) == 403)
+        return 403;
     if (execve(argv[0], argv, pCGI->m_env) == -1)
     {
         set_cgi_error("lscgid: execve()", pCGI->m_pCGIDir);

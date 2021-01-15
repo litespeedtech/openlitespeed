@@ -62,6 +62,8 @@ class ClientInfo
     char        m_achSockAddr[24];
     AutoStr2    m_sAddr;
     AutoStr2    m_sHostName;
+    LsiModuleData   m_moduleData;
+
     uint32_t    m_iFlags;
     int32_t     m_iConns;
     GeoInfo    *m_pGeoInfo;
@@ -69,7 +71,6 @@ class ClientInfo
 #ifdef USE_IP2LOCATION
     LocInfo    *m_pLocInfo;
 #endif
-    LsiModuleData   m_moduleData;
 
     time_t      m_tmOverLimit;
     short       m_sslNewConn;
@@ -117,7 +118,7 @@ public:
     void setAddr(const struct sockaddr *pAddr);
 
     bool isFromLocalAddr(const sockaddr* server_addr) const;
-    
+
     void clearFlag( int flag )          {   m_iFlags &= ~flag;          }
     void setFlag( int flag )            {   m_iFlags |= flag;           }
     int isFlagSet( int flag ) const     {   return m_iFlags & flag;     }
@@ -175,7 +176,11 @@ public:
     short incSslNewConn()               {   return ++m_sslNewConn;      }
     short getSslNewConn()               {   return m_sslNewConn;        }
     void  setSslNewConn(int n)          {   m_sslNewConn = n;           }
-    void  setGeoInfo(GeoInfo *geoInfo)  {   m_pGeoInfo = geoInfo;       }
+    void  setGeoInfo(GeoInfo *geoInfo)  {
+        if (m_pGeoInfo)
+            delete m_pGeoInfo;
+        m_pGeoInfo = geoInfo;
+    }
     GeoInfo *getGeoInfo() const         {   return m_pGeoInfo;          }
 
 #ifdef USE_IP2LOCATION

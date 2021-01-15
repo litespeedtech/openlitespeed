@@ -42,6 +42,7 @@ typedef struct
 } lscgid_t;
 
 
+extern int applyLimits(lscgid_t *pCGI);
 
 #ifdef __cplusplus
 }

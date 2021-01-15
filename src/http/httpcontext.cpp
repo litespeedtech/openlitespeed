@@ -96,10 +96,6 @@ HttpContext::~HttpContext()
 
     if ((m_iConfigBits & BIT_CTXINT))
         Pool::deallocate(m_pInternal, sizeof(CtxInt));
-    if ((m_iConfigBits & BIT_MODULECONFIG))
-        delete m_pInternal->m_pModuleConfig;
-    if ((m_iConfigBits & BIT_SESSIONHOOKS))
-        delete m_pInternal->m_pSessionHooks;
 }
 
 int HttpContext::setHeaderOps(const char *pLogId, const char *pHeaders,
@@ -175,7 +171,12 @@ void HttpContext::releaseHTAConf()
             delete m_pInternal->m_pFilesMatchList;
         if ((m_iConfigBits & BIT_EXTRA_HEADER) && (m_pInternal->m_pHeaderOps))
             delete m_pInternal->m_pHeaderOps;
-
+        if ((m_iConfigBits & BIT_MODULECONFIG))
+            delete m_pInternal->m_pModuleConfig;
+        if ((m_iConfigBits & BIT_SESSIONHOOKS))
+            delete m_pInternal->m_pSessionHooks;
+        if (m_iConfigBits2 & BIT2_WEBSOCKADDR)
+            m_pInternal->m_GSockAddr.~GSockAddr();
         releaseHTAuth();
         releaseAccessControl();
         releaseMIME();

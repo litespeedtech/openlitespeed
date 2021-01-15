@@ -209,7 +209,7 @@ class HttpContext
 
     AutoStr2            m_sContextURI;
     AutoStr2            m_sLocation;
-    int                 m_iConfigBits;
+    uint32_t            m_iConfigBits;
 
     URIMatch             *m_pURIMatch;
 
@@ -251,7 +251,7 @@ public:
 
 
     int configPhpConfig(const XmlNode *pNode);
-    
+
     int set(const char *pURI, const char *pRoot,
             const HttpHandler *pHandler, bool allowBrowse = true, int regex = 0);
 
@@ -275,7 +275,7 @@ public:
     uint32_t isCacheable() const       {   return m_iConfigBits2 & BIT2_URI_CACHEABLE; }
 
     uint32_t isNullContext()           { return m_iConfigBits2 & BIT2_NULL_CONTEXT; }
-    
+
     const char *getLocation() const {   return m_sLocation.c_str();    }
     int getLocationLen() const       {   return m_sLocation.len();      }
 
@@ -420,7 +420,7 @@ public:
     unsigned char rewriteEnabled() const     {   return m_iRewriteEtag & REWRITE_MASK;    }
     void setRewriteInherit(int a) {   setConfigBit(BIT_REWRITE_INHERIT, a); }
     int  isRewriteInherit() const   {   return m_iConfigBits & BIT_REWRITE_INHERIT; }
-    int  isRewriteEnabled() const   
+    int  isRewriteEnabled() const
     {   return rewriteEnabled();  }
 
     RewriteRuleList *getRewriteRules() const

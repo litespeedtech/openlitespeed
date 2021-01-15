@@ -328,33 +328,39 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 }
 
 
-static int applyLimits(lscgid_req *pCGI)
+int applyLimits(lscgid_t *cgid)
 {
+    lscgid_req *req = &cgid->m_data;
     //ls_stderr("Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
     //                        pCGI->m_data.rlim_cur );
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
-    if (pCGI->m_data.rlim_cur)
+    if (req->m_data.rlim_cur)
     {
 #if defined(RLIMIT_AS)
-        setrlimit(RLIMIT_AS, &pCGI->m_data);
+        setrlimit(RLIMIT_AS, &req->m_data);
 #elif defined(RLIMIT_DATA)
-        setrlimit(RLIMIT_DATA, &pCGI->m_data);
+        setrlimit(RLIMIT_DATA, &req->m_data);
 #elif defined(RLIMIT_VMEM)
-        setrlimit(RLIMIT_VMEM, &pCGI->m_data);
+        setrlimit(RLIMIT_VMEM, &req->m_data);
 #endif
     }
 #endif
 
 #if defined(RLIMIT_NPROC)
-    if (pCGI->m_nproc.rlim_cur)
-        setrlimit(RLIMIT_NPROC, &pCGI->m_nproc);
+    if (req->m_nproc.rlim_cur)
+        setrlimit(RLIMIT_NPROC, &req->m_nproc);
 #endif
 
 #if defined(RLIMIT_CPU)
-    //if (pCGI->m_cpu.rlim_cur)
-    //    setrlimit(RLIMIT_CPU, &pCGI->m_cpu);
+    //if (req->m_cpu.rlim_cur)
+    //    setrlimit(RLIMIT_CPU, &req->m_cpu);
 #endif
 
+    if ((!s_uid) && (req->m_uid || req->m_gid))
+    {
+        if (setUIDs(req->m_uid, req->m_gid, cgid->m_pChroot) == -1)
+            return 403;
+    }
     return 0;
 }
 
@@ -496,7 +502,6 @@ static int execute_cgi(lscgid_t *pCGI)
 
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");
-    applyLimits(&pCGI->m_data);
 
     if (pCGI->m_stderrPath)
         fixStderrLogPermission(pCGI);
@@ -549,13 +554,6 @@ static int execute_cgi(lscgid_t *pCGI)
 
 #endif
 
-    if ((!s_uid) && (pCGI->m_data.m_uid || pCGI->m_data.m_gid))
-    {
-        if (setUIDs(pCGI->m_data.m_uid, pCGI->m_data.m_gid,
-                    pCGI->m_pChroot) == -1)
-            return 403;
-    }
-
     if (pCGI->m_stderrPath)
         changeStderrLog(pCGI);
 
@@ -602,6 +600,9 @@ static int execute_cgi(lscgid_t *pCGI)
             return rc;
     }
 #endif
+
+    if (applyLimits(pCGI) == 403)
+        return 403;
 
     //ls_stderr( "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
     if (execve(pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env) == -1)

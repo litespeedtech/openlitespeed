@@ -55,6 +55,7 @@ class HttpLog
     ~HttpLog();
 public:
     static void init();
+    static void updateLogPatternWithPid(int pid);
     static void setServerRoot(const char *s) { s_serverRoot.setStr(s);  }
     static int logAccess(const char *pVHost, int len, HttpSession *pSession);
     static void error_num(int __errnum, const char *__file,
@@ -89,6 +90,7 @@ public:
     static void setDebugLevel(int level);
     static void toggleDebugLog();
 
+    static int  getLogLevel();
     static void setLogLevel(int level);
     static void setLogLevel(const char *pLevel);
     static void setLogPattern(const char *pPattern);

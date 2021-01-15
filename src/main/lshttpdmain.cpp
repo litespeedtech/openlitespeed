@@ -83,7 +83,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Wed 09 Dec 2020 05:18:06 PM UTC)"
+#define BUILDTIME  " (built: Thu Jan 14 17:14:02 UTC 2021)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -959,13 +959,14 @@ int LshttpdMain::init(int argc, char *argv[])
 #endif
     }
 
+    m_pid = getpid();
+
     if (!m_iConfTestMode)
     {
         enableCoreDump();
 
         if (testRunningServer() != 0)
             return 2;
-        m_pid = getpid();
         if (m_pidFile.writePid(m_pid))
             return 2;
 
@@ -973,7 +974,9 @@ int LshttpdMain::init(int argc, char *argv[])
             startAdminSocket();
     }
 
-    QuicEngine::setpid(getpid());
+    HttpLog::updateLogPatternWithPid(m_pid);
+
+    QuicEngine::setpid(m_pid);
 
 #ifndef IS_LSCPD
     ret = config();
@@ -1239,6 +1242,9 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     monstartup ((u_long) &__executable_start, (u_long) &__etext);
 #endif
 
+    pProc->m_pid = getpid();
+    HttpLog::updateLogPatternWithPid(pProc->m_pid);
+
     int cpu_count = HttpServerConfig::getInstance().getCpuAffinity();
     if (cpu_count > 0)
     {
@@ -1278,6 +1284,8 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
 
     LsShmPool::setPid(pProc->m_pid);
     QuicEngine::setpid(pProc->m_pid);
+
+    m_pool.recycle(pProc);
 }
 
 int LshttpdMain::startChild(ChildProc *pProc)
@@ -1301,7 +1309,6 @@ int LshttpdMain::startChild(ChildProc *pProc)
     if (pProc->m_pid == 0)
     {
         //child process
-        pProc->m_pid = getpid();
         onNewChildStart(pProc);
         return 0;
     }
@@ -1525,10 +1532,17 @@ void LshttpdMain::gracefulRestart()
     m_pidFile.closePidFile();
     unlink(getPidFile());
     m_pidFile.writePidFile(GRACEFUL_PID_FILE, m_pid);
-    m_pServer->passListeners();
+
     int pid = fork();
     if (!pid)
     {
+        pid = getpid();
+        LS_NOTICE( "Forked [%d] for graceful restart.", pid);
+
+        LS_NOTICE( "Start passing listener sockets through forked child [%d].", pid);
+        HttpLog::updateLogPatternWithPid(pid);
+        m_pServer->passListeners();
+
         char achCmd[1024];
         int fd = StdErrLogger::getInstance().getStdErr();
         if (fd != 2)
@@ -1674,7 +1688,7 @@ int LshttpdMain::guardCrash()
     if (GlobalServerSessionHooks->isEnabled(LSI_HKPT_MAIN_ATEXIT))
         GlobalServerSessionHooks->runCallbackNoParam(LSI_HKPT_MAIN_ATEXIT, NULL);
 
-    LS_NOTICE("[PID:%d] Server Stopped!\n", getpid());
+    LS_NOTICE("Server Stopped!\n");
     exit(ret);
 }
 
@@ -1976,7 +1990,7 @@ int LshttpdMain::processChildCmd()
     if (n > 0)
     {
         achBuf[n] = 0;
-        LS_NOTICE("[%d] Cmd from child: [%.*s]", m_pid, n, achBuf);
+        LS_NOTICE("Cmd from child: [%.*s]", n, achBuf);
 
         char *colon = (char *)memchr(achBuf, ':', n);
         if (!colon)

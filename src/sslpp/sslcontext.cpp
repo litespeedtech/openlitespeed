@@ -47,7 +47,7 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
         // it will have irrelevant file system data in it?
 
         SslContext* pNewContext = new SslContext( SslContext::SSL_ALL );
-        LS_DBG_L("[SSL] Create SSL context (ZConf)");
+        LS_DBG_L("[SSL] [CONFIG] Create SslContext (ZConf): %p", pNewContext);
         if (!pNewContext)
         {
             LS_DBG_L("[SSL] Insufficient memory\n");
@@ -79,7 +79,9 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
     }
 
 #ifdef SSL_ASYNC_PK
-    ssl_ctx_enable_apk(pContext->m_pCtx);
+    bool enabled = ssl_ctx_enable_apk(pContext->m_pCtx);
+    LS_DBG_L("[SSL:%p] %s asynchronized private key signing.\n", pContext,
+             enabled ? "Disable" : "Enable");
 #endif
 
 #ifdef SSLCERTCOMP
@@ -97,7 +99,7 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
               pContext->isCertFileChanged( pConfig->m_sCertFile[0].c_str() )))
     {
         pNewContext = new SslContext( SslContext::SSL_ALL );
-        LS_DBG_L("[SSL] Create SSL context.");
+        LS_DBG_L("[SSL] [CONFIG] Create SslContext: %p.", pNewContext);
         if (!pNewContext)
         {
             LS_DBG_L("[SSL] Insufficient memory\n");
@@ -134,8 +136,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         }
         if ( !ret )
         {
-            LS_ERROR( "[SSL] Config SSL Context with Certificate File: %s"
-                    " and Key File:%s get SSL error: %s",
+            LS_ERROR( "[SSL:%p] Config SSL Context with Certificate File: %s"
+                    " and Key File:%s get SSL error: %s", pNewContext,
                     pConfig->m_sCertFile[0].c_str(), pConfig->m_sKeyFile[0].c_str(),
                     SslError().what());
             delete pNewContext;
@@ -145,8 +147,9 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
             && ( !pNewContext->setCALocation( pConfig->m_sCAFile.c_str(),
                             pConfig->m_sCAPath.c_str(), pConfig->m_iClientVerify )))
         {
-            LS_ERROR( "[SSL] Failed to setup Certificate Authority "
+            LS_ERROR( "[SSL:%p] Failed to setup Certificate Authority "
                       "Certificate File: '%s', Path: '%s', SSL error: %s",
+                      pNewContext,
                       pConfig->m_sCAFile.c_str() ? pConfig->m_sCAFile.c_str() : "",
                       pConfig->m_sCAPath.c_str() ? pConfig->m_sCAPath.c_str() : "",
                       SslError().what());
@@ -165,21 +168,29 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
     }
 #endif
     if (pConfig->m_sCaChainFile.c_str())
+    {
+        LS_DBG_L("[SSL:%p] Set CA Chain file: %s\n", pContext,
+            pConfig->m_sCaChainFile.c_str());
         if (pContext->setCertificateChainFile(
                  pConfig->m_sCaChainFile.c_str()) <= 0)
-    {
-        LS_ERROR("[SSL] Vhost %s: failed to set Certificate Chain file: %s"
-                 , pConfig->m_sName.c_str(), pConfig->m_sCaChainFile.c_str());
+            LS_ERROR("[SSL:%p] Vhost %s: failed to set Certificate Chain file: %s"
+                , pContext
+                , pConfig->m_sName.c_str(), pConfig->m_sCaChainFile.c_str());
     }
 
+    LS_DBG_L("[SSL:%p] %s renegociation protect\n", pContext,
+             pConfig->m_iInsecReneg ? "Disable" : "Enable");
     pContext->setRenegProtect(!pConfig->m_iInsecReneg);
 
+    LS_DBG_L("[SSL:%p] Set SSL protcol: %d\n", pContext,
+             pConfig->m_iProtocol);
     pContext->setProtocol( pConfig->m_iProtocol );
     if ( pConfig->m_iEnableECDHE )
     {
+        LS_DBG_L("[SSL:%p] Enable ECDHE\n", pContext);
         if ( pContext->initECDH() == LS_FAIL )
         {
-            LS_ERROR("[SSL] Init ECDH failed.");
+            LS_ERROR("[SSL] Init ECDHE failed.");
             if (pNewContext)
                 delete pNewContext;
             return NULL;
@@ -187,6 +198,7 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
     }
     if ( pConfig->m_iEnableDHE )
     {
+        LS_DBG_L("[SSL:%p] Enable DH\n", pContext);
         if ( pContext->initDH( pConfig->m_sDHParam.c_str() ) == LS_FAIL )
         {
             LS_ERROR("[SSL] Init DH failed.");
@@ -198,7 +210,7 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
 
     if (pConfig->m_iEnableCache)
     {
-
+        LS_DBG_L("[SSL:%p] Enable SHM session cache\n", pContext);
         if (pContext->enableShmSessionCache() == LS_FAIL)
         {
             LS_ERROR("[SSL] Enable session cache failed.");
@@ -208,6 +220,8 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         }
     }
 
+    LS_DBG_L("[SSL:%p] %s session ticket.\n", pContext,
+        pConfig->m_iEnableTicket ? "Enable" : "Disable");
     if (pConfig->m_iEnableTicket == 1)
     {
         if (pContext->enableSessionTickets() == LS_FAIL)
@@ -223,24 +237,31 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
 
     if ( pConfig->m_iEnableSpdy != 0 )
     {
+        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", pContext,
+                 (int)pConfig->m_iEnableSpdy);
         if ( pContext->enableSpdy( pConfig->m_iEnableSpdy ) == -1 )
         {
-            LS_ERROR("[SSL] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
-                        pConfig->m_iEnableSpdy);
+            LS_ERROR("[SSL:%p] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
+                     pContext, pConfig->m_iEnableSpdy);
             if (pNewContext)
                 delete pNewContext;
             return NULL;
         }
     }
+    LS_DBG_L("[SSL:%p] set Cipher: %s.\n", pContext,
+             pConfig->m_sCiphers.c_str());
     pContext->setCipherList( pConfig->m_sCiphers.c_str() );
 
     if (pConfig->m_iEnableStapling)
     {
+        LS_DBG_L("[SSL:%p] enable OCSP stapling.\n", pContext);
         pContext->configStapling(pConfig);
     }
 
 #ifdef SSL_ASYNC_PK
-    ssl_ctx_enable_apk(pContext->m_pCtx);
+    bool enabled = ssl_ctx_enable_apk(pContext->m_pCtx);
+    LS_DBG_L("[SSL:%p] %s asynchronized private key signing.\n", pContext,
+             enabled ? "Disable" : "Enable");
 #endif
 
 #ifdef SSLCERTCOMP
@@ -447,7 +468,7 @@ int SslContext::init(int iMethod)
     m_pCtx = SSL_CTX_new(meth);
     if (m_pCtx)
     {
-        LS_DBG_L("[SslCertComp] Create SSL_CTX: %p\n", m_pCtx);
+        LS_DBG_L("[SSL:%p] Create SSL_CTX: %p\n", this, m_pCtx);
         SslUtil::initCtx(m_pCtx, iMethod, m_iRenegProtect);
         //initDH( NULL );
         //initECDH();

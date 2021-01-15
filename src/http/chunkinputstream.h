@@ -41,6 +41,7 @@ class ChunkInputStream : public InputStream
     int readTrailingCRLF();
     int readChunkContent(char *&pBuf, int &size, int &len);
     int parseChunkLen();
+    int parseChunkLen(char *pLineEnd);
     int skipTrailer();
 
     void updateLastBytes(char *pBuf, int len) {}

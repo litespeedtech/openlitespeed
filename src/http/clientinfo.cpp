@@ -135,6 +135,10 @@ void ClientInfo::release()
         m_pLocInfo = NULL;
     }
 #endif
+
+    //FIXME: this may cause memory leak if it holds unreleased objects.
+    //       but, it is better than reusing it with wrong data.
+    m_moduleData.clear();
 }
 
 

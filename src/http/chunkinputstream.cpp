@@ -100,49 +100,35 @@ int ChunkInputStream::bufRead(char *pBuf, int len, int prefetch)
     return ret;
 }
 
+
 int ChunkInputStream::nextChunk()
 {
-    if (m_iBufLen >= MAX_CHUNK_LEN_BUF_SIZE)
-        return LS_FAIL;
-    int len = (m_iBufLen) ? MAX_CHUNK_LEN_BUF_SIZE - m_iBufLen : 8;
-    len = m_pIS->read(&m_achChunkLenBuf[ m_iBufLen ], len);
-    if (len > 0)
+    while(m_iBufLen < MAX_CHUNK_LEN_BUF_SIZE)
     {
+        int len = (m_iBufLen) ? MAX_CHUNK_LEN_BUF_SIZE - m_iBufLen : 16;
+        len = m_pIS->read(&m_achChunkLenBuf[ m_iBufLen ], len);
+        if (len == 0)
+            return 0;
+        else if (len < 0)
+            break;
         updateLastBytes(&m_achChunkLenBuf[ m_iBufLen ], len);
         m_iBufLen += len;
-        return parseChunkLen();
+        char *pLineEnd = (char *)memchr(m_achChunkLenBuf, '\n', m_iBufLen);
+        if (pLineEnd)
+        {
+            return parseChunkLen(pLineEnd);
+        }
     }
-    else if (len == 0)
-        return len;
-    //m_iChunkLen = INVALID_CHUNK;
-    return LS_FAIL;
+    return -1;
 }
+
 
 int ChunkInputStream::parseChunkLen()
 {
     char *pLineEnd = (char *)memchr(m_achChunkLenBuf, '\n', m_iBufLen);
     if (pLineEnd)
     {
-        m_iBufUsed = (pLineEnd - (char *)m_achChunkLenBuf) + 1;
-        if (m_iBufUsed >= m_iBufLen)
-            m_iBufUsed = m_iBufLen = 0;
-        if (pLineEnd[-1] == '\r')
-            --pLineEnd;
-        char *p = m_achChunkLenBuf;
-        StringTool::strTrim((const char *&)p, (const char *&)pLineEnd);
-        *pLineEnd = 0;
-        char *p1;
-        long lLen = strtol(p, &p1, 16);
-        if (((!*p1) || (*p1 == ' ') || (*p1 == ';')) && (p1 != p))
-        {
-            m_iChunkLen = lLen;
-            if (m_iChunkLen)
-                m_iRemain = lLen + 2;
-            else
-                m_iRemain = -2;
-
-            return 1;
-        }
+        return parseChunkLen(pLineEnd);
     }
     else
     {
@@ -150,8 +136,52 @@ int ChunkInputStream::parseChunkLen()
             return 0;
     }
     //m_iChunkLen = INVALID_CHUNK;
-    return LS_FAIL;
+    return -1;
 }
+
+
+int ChunkInputStream::parseChunkLen(char *pLineEnd)
+{
+    m_iBufUsed = (pLineEnd - (char *)m_achChunkLenBuf) + 1;
+    if (m_iBufUsed >= m_iBufLen)
+        m_iBufUsed = m_iBufLen = 0;
+    if (pLineEnd[-1] == '\r')
+        --pLineEnd;
+    char *p = m_achChunkLenBuf;
+    StringTool::strTrim((const char *&)p, (const char *&)pLineEnd);
+    *pLineEnd = 0;
+    char *p1;
+    long lLen = strtol(p, &p1, 16);
+    if (((!*p1) || (*p1 == ' ') || (*p1 == ';')) && (p1 != p))
+    {
+        m_iChunkLen = lLen;
+        if (m_iChunkLen)
+            m_iRemain = lLen + 2;
+        else
+        {
+            m_iRemain = -2;
+            switch(m_iBufLen - m_iBufUsed)
+            {
+            case 1:
+                if (m_achChunkLenBuf[m_iBufUsed] != '\n')
+                    return 1;
+                break;
+            case 2:
+                if (m_achChunkLenBuf[m_iBufUsed] == '\r'
+                    && m_achChunkLenBuf[m_iBufUsed + 1] == '\n')
+                    break;
+                //fall through
+            default:
+                return 1;
+            }
+            m_iChunkLen = CHUNK_EOF;
+            m_iRemain = 0;
+        }
+        return 1;
+    }
+    return -1;
+}
+
 
 int ChunkInputStream::readTrailingCRLF()
 {

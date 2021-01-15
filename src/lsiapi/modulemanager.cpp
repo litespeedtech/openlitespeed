@@ -958,7 +958,7 @@ int ModuleConfig::parseConfig(const XmlNode *pNode, lsi_module_t *pModule,
         ModuleConfig::setFilterEnable(config, atoi(pValue));
 
     pValue = pNode->getChildValue("param");
-    iValueLen = pNode->getChildValueLen("param");
+    iValueLen = pNode->getChildValueLen("param", 0);
 
     config->data_flag = LSI_CONFDATA_NONE;
     if (pModule->config_parser && pModule->config_parser->parse_config)

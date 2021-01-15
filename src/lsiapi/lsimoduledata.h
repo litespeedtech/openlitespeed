@@ -62,6 +62,12 @@ public:
                    && "Addon Module must release data when session finishes");
     }
 
+    void clear()
+    {
+        if (m_pData)
+            memset(m_pData, 0, sizeof(void *) * m_iCount);
+    }
+
 protected:
     void    **m_pData;
     int     m_iCount;

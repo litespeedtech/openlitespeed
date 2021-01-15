@@ -81,7 +81,7 @@ public:
                                unsigned count);
     static struct ssl_ctx_st * sniCb(void *pCtx, const sockaddr *pLocal,
                                      const char *sni);
-    static struct ssl_ctx_st * getSslCtxCb(void *peer_ctx);
+    static struct ssl_ctx_st * getSslCtxCb(void *peer_ctx, const sockaddr *);
 
     static lsquic_conn_ctx_t *onNewConn(void *stream_if_ctx,
                                              lsquic_conn_t *c);

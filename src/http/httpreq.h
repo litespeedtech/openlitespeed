@@ -227,7 +227,7 @@ private:
     KVPairArray         m_unknHeaders;
 
     //Comment:The order of the below 3 varibles should NOT be changed!!!
-    short               m_commonHeaderLen[HttpHeader::H_TE];
+    uint16_t            m_commonHeaderLen[HttpHeader::H_TE];
     int                 m_commonHeaderOffset[HttpHeader::H_TE];
     int                 m_headerIdxOff;
     int                 m_reqLineOff;
