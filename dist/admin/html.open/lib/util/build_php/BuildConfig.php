@@ -24,18 +24,18 @@ class BuildConfig
         switch ($field) {
 
             case self::PHP_VERSION: return
-                        array(
-                            '7.4.12',
-                            '7.3.24',
-                            '7.2.34',
-                            '7.1.33',
-                            '7.0.33',
-                            '5.6.40',
-                            '5.5.38',
-                            '5.4.45',
-                            '5.3.29');
+						['8.0.1',
+							'7.4.14',
+							'7.3.26',
+							'7.2.34',
+							'7.1.33',
+							'7.0.33',
+							'5.6.40',
+							'5.5.38',
+							'5.4.45',
+							'5.3.29'];
 
-            case self::LSAPI_VERSION: return '7.8';
+			case self::LSAPI_VERSION: return '7.8';
 
             case self::SUHOSIN_VERSION: return '0.9.38';
 
@@ -67,11 +67,12 @@ class BuildConfig
             case self::DEFAULT_INSTALL_DIR:
                 return SERVER_ROOT . 'lsphp';  // actual dir will include . php base version.
             case self::DEFAULT_PARAMS:
-                return array(
-                    '7' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-mcrypt --with-pdo-mysql --enable-ftp --enable-zip --with-curl --enable-soap --enable-xml --enable-json  --with-openssl --enable-bcmath',
+                return [
+                    '8' => '--with-mysqli --with-zlib --enable-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-pdo-mysql --enable-ftp --with-zip --with-curl --enable-soap --enable-xml --with-openssl --enable-bcmath',
+                    '7' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-mcrypt --with-pdo-mysql --enable-ftp --enable-zip --with-curl --enable-soap --enable-xml --enable-json --with-openssl --enable-bcmath',
                     '5' => '--with-mysqli --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-mbstring --with-iconv --with-mysql --with-mcrypt --with-pdo --with-pdo-mysql --enable-ftp --enable-zip --with-curl --enable-soap --enable-xml --enable-json  --with-openssl --enable-bcmath',
                     '4' => '--with-mysql  --with-zlib --with-gd --enable-shmop --enable-sockets --enable-sysvsem --enable-sysvshm --enable-magic-quotes --enable-mbstring'
-                );
+                ];
         }
     }
 

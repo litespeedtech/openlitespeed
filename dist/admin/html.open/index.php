@@ -21,7 +21,7 @@ include("view/inc/nav.php");
 			<!-- This is auto generated -->
 		</ol>
 		<!-- end breadcrumb -->
-		<span class="hide pull-right well well-sm text-warning"><i class="fa fa-bell"></i> <?php DMsg::EchoUIStr('note_configmodified'); ?></span>
+		<span id="restartnotice" class="hide pull-right well well-sm text-warning"><i class="fa fa-bell"></i> <?php DMsg::EchoUIStr('note_configmodified'); ?></span>
         <span id="readonlynotice" class="hide pull-right well well-sm text-warning"></span>
 	</div>
 	<!-- END RIBBON -->
@@ -44,7 +44,7 @@ include("view/inc/nav.php");
 <div class="page-footer">
 	<div class="row">
 		<div class="col-xs-12 col-sm-6">
-			<span class="txt-color-white">LiteSpeed WebAdmin Console © 2014-2020 <?php DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
+			<span class="txt-color-white">LiteSpeed WebAdmin Console © 2014-2021 <?php DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
 		</div>
 		<div class="col-xs-6 col-sm-6 text-right hidden-xs">
 			<i class="txt-color-blueLight hidden-mobile"> <i class="fa fa-clock-o"></i>

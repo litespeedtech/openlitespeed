@@ -243,6 +243,7 @@ class ControllerBase
 		elseif ($disp_act == 'D' )
 		{
 			$confdata->DeleteEntry($this->_disp);
+			$this->setChanged(true);
 			$needTrim = 1;
 		}
 		elseif ( $disp_act == 'I' )
@@ -268,9 +269,9 @@ class ControllerBase
 		}
 
 		$ctxseq = UIBase::GrabGoodInputWithReset('ANY', 'ctxseq', 'int');
-		if ($ctxseq != 0) {
-			if ($this->_curOne->ChangeContextSeq($ctxseq))
-				$needTrim = 1;
+		if ($ctxseq != 0 && $this->_curOne->ChangeContextSeq($ctxseq)) {
+			$this->setChanged(true);
+			$needTrim = 1;
 		}
 
 		if ( $needTrim ) {

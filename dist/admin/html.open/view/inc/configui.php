@@ -94,7 +94,7 @@ $page_nav = array(
 								'url_target' => '_blank'),
 						'slack' => array(
 								'title' => DMsg::UIStr('menu_slack'),
-								'url' => 'https://litespeedtech.com/slack',
+								'url' => 'https://www.litespeedtech.com/slack',
 								'url_target' => '_blank'),
 						'cloudimage' => array(
 								'title' => DMsg::UIStr('menu_cloudimage'),
@@ -112,7 +112,7 @@ $no_main_header = false; //set true for lock.php and login.php
 
 $footer_lic_info = '
 		Open LiteSpeed is an open source HTTP server.
-				Copyright (C) 2013-2020  Lite Speed Technologies, Inc.
+				Copyright (C) 2013-2021  Lite Speed Technologies, Inc.
 
 				This program is free software: you can redistribute it and/or modify
 				it under the terms of the GNU General Public License as published by

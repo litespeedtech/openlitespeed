@@ -480,7 +480,7 @@ class PluginVersion
 
         $pluginSrc =
                 Context::LOCAL_PLUGIN_DIR . "/{$version}/" . self::PLUGIN_NAME;
-        exec("/bin/cp -rf {$pluginSrc} {$pluginDir}");
+        exec("/bin/cp --preserve=mode -rf {$pluginSrc} {$pluginDir}");
 
         if ( !file_exists($lscwp_plugin) ) {
             throw new LSCMException(
