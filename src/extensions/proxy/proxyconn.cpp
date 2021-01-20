@@ -330,11 +330,14 @@ int ProxyConn::sendReqHeader()
     m_iReqHeaderSize = m_iTotalPending;
     m_iReqBodySize = pReq->getContentFinished();
     setInProcess(1);
-    LS_DBG_L("Proxy Request Headers:" );
-    log4cxx::Logger *pLogger = getLogger();
-    if (!pLogger)
-        pLogger = log4cxx::Logger::getDefault();
-    pLogger->lograw(m_iovec.begin(), m_iovec.len());
+    if (LOG4CXX_NS::Level::isEnabled(LOG4CXX_NS::Level::DBG_HIGH))
+    {
+        LS_DBG_L("Proxy Request Headers:" );
+        log4cxx::Logger *pLogger = getLogger();
+        if (!pLogger)
+            pLogger = log4cxx::Logger::getDefault();
+        pLogger->lograw(m_iovec.begin(), m_iovec.len());
+    }
     return 1;
 }
 
