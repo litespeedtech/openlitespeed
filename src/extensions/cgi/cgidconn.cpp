@@ -343,7 +343,7 @@ int CgidConn::buildSSIExecHeader(int checkContext)
     m_req.buildReqHeader(uid, gid, priority,
                          ServerProcessConfig::getInstance().getUMask(),
                          pChroot, ret, pDir, strlen(pDir),
-                         ((CgidWorker *)getWorker())->getConfig().getRLimits());
+                         ((CgidWorker *)getWorker())->getConfig().getRLimits(), 0);
     p = &argv[1];
     while (*p)
     {
@@ -396,7 +396,7 @@ int CgidConn::buildReqHeader()
     m_req.buildReqHeader(uid, gid, priority,
                          ServerProcessConfig::getInstance().getUMask(),
                          pChroot, ret, pReal, pReq->getRealPath()->len(),
-                         ((CgidWorker *)getWorker())->getConfig().getRLimits());
+                         ((CgidWorker *)getWorker())->getConfig().getRLimits(), 0);
     if (pQueryString && (memchr(pQueryString, '=',
                                 pQsEnd - pQueryString) == NULL))
     {
@@ -431,6 +431,8 @@ int CgidConn::buildReqHeader()
             m_req.add("LS_BWRAP_CMDLINE", cmdline);
     }
 
+    if (pVHost && pVHost->enableCGroup())
+        m_req.add("LS_CGROUP", "1");
 
     HttpCgiTool::buildEnv(&m_req, pSession);
 

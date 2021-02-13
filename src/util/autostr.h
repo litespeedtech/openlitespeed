@@ -93,6 +93,8 @@ public:
     {
         return ls_str_dup(this, pStr, strlen(pStr));
     }
+    void    release()                                { ls_str_d(this); }
+
 
     //operator const char *() const   {   return m_pStr;  }
 

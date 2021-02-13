@@ -14,7 +14,6 @@
 
 @SET_MAKE@
 
-
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -89,7 +88,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-subdir = src/spdy
+subdir = src/adns
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/ax_check_openssl.m4 \
@@ -100,8 +99,7 @@ am__aclocal_m4_deps = $(top_srcdir)/ax_check_zlib.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
-DIST_COMMON = $(srcdir)/Makefile.am $(noinst_HEADERS) \
-	$(am__DIST_COMMON)
+DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h
 CONFIG_CLEAN_FILES =
@@ -112,12 +110,10 @@ AM_V_AR = $(am__v_AR_@AM_V@)
 am__v_AR_ = $(am__v_AR_@AM_DEFAULT_V@)
 am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
-libspdy_a_AR = $(AR) $(ARFLAGS)
-libspdy_a_LIBADD =
-am_libspdy_a_OBJECTS = spdyprotocol.$(OBJEXT) spdyconnection.$(OBJEXT) \
-	spdystream.$(OBJEXT) spdyzlibfilter.$(OBJEXT) \
-	spdystreampool.$(OBJEXT) spdydebug.$(OBJEXT)
-libspdy_a_OBJECTS = $(am_libspdy_a_OBJECTS)
+libadns_a_AR = $(AR) $(ARFLAGS)
+libadns_a_LIBADD =
+am_libadns_a_OBJECTS = adns.$(OBJEXT)
+libadns_a_OBJECTS = $(am_libadns_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -156,14 +152,13 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(libspdy_a_SOURCES)
-DIST_SOURCES = $(libspdy_a_SOURCES)
+SOURCES = $(libadns_a_SOURCES)
+DIST_SOURCES = $(libadns_a_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-HEADERS = $(noinst_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -340,14 +335,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-noinst_LIBRARIES = libspdy.a
-AM_CPPFLAGS = -I$(top_srcdir)/openssl/include/ -I$(top_srcdir)/include -I$(top_srcdir)/src
-libspdy_a_METASOURCES = AUTO
-libspdy_a_SOURCES = spdyprotocol.cpp spdyconnection.cpp spdystream.cpp \
-		spdyzlibfilter.cpp spdystreampool.cpp  \
-		spdydebug.cpp
 
-noinst_HEADERS = 
+####### kdevelop will overwrite this part!!! (begin)##########
+noinst_LIBRARIES = libadns.a
+INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/src
+libadns_a_METASOURCES = AUTO
+libadns_a_SOURCES = adns.cpp
 all: all-am
 
 .SUFFIXES:
@@ -361,9 +354,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign src/spdy/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign src/adns/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign src/spdy/Makefile
+	  $(AUTOMAKE) --foreign src/adns/Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
@@ -385,10 +378,10 @@ $(am__aclocal_m4_deps):
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
 
-libspdy.a: $(libspdy_a_OBJECTS) $(libspdy_a_DEPENDENCIES) $(EXTRA_libspdy_a_DEPENDENCIES) 
-	$(AM_V_at)-rm -f libspdy.a
-	$(AM_V_AR)$(libspdy_a_AR) libspdy.a $(libspdy_a_OBJECTS) $(libspdy_a_LIBADD)
-	$(AM_V_at)$(RANLIB) libspdy.a
+libadns.a: $(libadns_a_OBJECTS) $(libadns_a_DEPENDENCIES) $(EXTRA_libadns_a_DEPENDENCIES) 
+	$(AM_V_at)-rm -f libadns.a
+	$(AM_V_AR)$(libadns_a_AR) libadns.a $(libadns_a_OBJECTS) $(libadns_a_LIBADD)
+	$(AM_V_at)$(RANLIB) libadns.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -396,12 +389,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyconnection.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdydebug.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyprotocol.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdystream.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdystreampool.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spdyzlibfilter.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/adns.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -517,7 +505,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LIBRARIES) $(HEADERS)
+all-am: Makefile $(LIBRARIES)
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -638,6 +626,8 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+
+####### kdevelop will overwrite this part!!! (end)############
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -222,7 +222,8 @@ $servstatplot = array(
                     logdiv.find("#dash_logfound").text(log.logfound).attr('title', log.logfoundmesg);
                     logdiv.find("#dash_logbody").html(log.log_body);
                     logdiv.find("#dash_logtbl").dataTable(
-                            {"ordering": false}
+						{"ordering": true, // change to true to enable ordering
+						"order": [[0, "desc"]]} // add this to choose default order by time descending
                     );
                     lst_refreshFooterTime();
                     logdiv.find(".lst-spin-icon").html('<a href="javascript:refreshLog();" title="<?php DMsg::EchoUIStr('btn_refresh') ?>"><i class="fa fa-refresh"></i></a>');

@@ -154,6 +154,7 @@
 static int s_achPid[256];
 static int s_curPid = 0;
 //int     SslContext::s_iEnableMultiCerts = 0;
+static int s_lsquic_inited;
 
 const char *sStatDir = DEFAULT_TMP_DIR;
 
@@ -1313,6 +1314,8 @@ void HttpServerImpl::releaseAll()
 #endif
     delete HttpAioSendFile::getHttpAioSendFile();
     HttpMime::releaseMIMEList();
+    if (s_lsquic_inited)
+        lsquic_global_cleanup();
 }
 
 
@@ -2455,7 +2458,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                                 1024 * 1024)
     );
     StaticFileCacheData::setStaticBrOptions(
-        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 11, 6)
+        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 0, 11, 6)
     );
 
 
@@ -3863,6 +3866,9 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     enableQuic = GET_VAL(pNode, "quicEnable", 0, 1, QUIC_ENABLED_BY_DEFAULT);
     if (!enableQuic)
         return 0;
+
+    lsquic_global_init(LSQUIC_GLOBAL_SERVER);
+    s_lsquic_inited = 1;
 
     assert(pNode);
     pShmDir = pNode->getChildValue("quicShmDir");

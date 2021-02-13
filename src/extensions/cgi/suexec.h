@@ -22,6 +22,7 @@
 
 #include <lsdef.h>
 
+
 class RLimits;
 class SUExec
 {
@@ -31,6 +32,7 @@ class SUExec
 public:
     SUExec();
     ~SUExec();
+
     static int buildArgv(char *pCmd, char **pDir, char **pArgv, int argvLen);
     static int spawnChild(const char *pAppCmd, int fdIn, int fdOut,
                           char *const *env, int priority, const RLimits *pLimits,
@@ -38,11 +40,9 @@ public:
 
     int prepare(int uid, int gid, int priority, int umaskVal,
                 const char *pChroot, int chrootLen,
-                const char *pReal, int pathLen, const RLimits *pLimits)
-    {
-        return m_req.buildReqHeader(uid, gid, priority, umaskVal,
-                                    pChroot, chrootLen, pReal, pathLen, pLimits);
-    }
+                const char *pReal, int pathLen,
+                const char *const *pArgv, const char *const *pEnv,
+                const RLimits *pLimits, int flags);
 
     int appendArgv(const char *pArgv, int len)
     {   return m_req.appendArgv(pArgv, len);  }
@@ -53,8 +53,7 @@ public:
     int checkLScgid(const char *path);
     int suEXEC(const char *pServerRoot, int *pfd, int fdListen,
                char *const *pArgv, char *const *pEnv, const RLimits *pLimits);
-    int cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
-                   char *const *pArgv, char *const *env, const RLimits *pLimits);
+    int cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd);
 
     static void initSUExec()
     {   s_pSUExec = new SUExec();    }

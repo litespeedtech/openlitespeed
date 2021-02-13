@@ -59,6 +59,7 @@ class ExtWorkerConfig
     char        m_iStartByServer;
     char        m_iRefAddr;
     char        m_iDaemonSuEXEC;
+    char        m_iDropCaps;
 
     uid_t       m_uid;
     gid_t       m_gid;
@@ -145,6 +146,9 @@ public:
 
     char getDaemonSuEXEC() const        {   return m_iDaemonSuEXEC;     }
     void setDaemonSuEXEC(int s)       {   m_iDaemonSuEXEC = s;        }
+
+    char getDropCaps() const        {   return m_iDropCaps;     }
+    void setDropCaps(int s)       {   m_iDropCaps = s;        }
 
     uid_t getUid() const            {   return m_uid;   }
     gid_t getGid() const            {   return m_gid;   }

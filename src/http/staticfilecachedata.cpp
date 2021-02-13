@@ -863,12 +863,30 @@ int StaticFileCacheData::readyCompressed(char compressMode)
         }
     }
 
-    if (compressMode & SFCD_MODE_BROTLI)
+    if ((compressMode & SFCD_MODE_BROTLI) && s_iBrCompressLevel == 0)
+        compressMode &= ~SFCD_MODE_BROTLI;
+
+    if (compressMode & SFCD_MODE_BROTLI) // brotli active AND not valid
     {
         statBr = ls_fio_stat(m_bredPath.c_str(), &stBr);
         LS_DBG_H("readyCompressed() path %s statBr %d",
-                 m_bredPath.c_str(), statBr);
+                m_bredPath.c_str(), statBr);
+        if ((statBr == -1) || (stBr.st_mtime != getLastMod()))
+        {
+            // update br
+            if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr, 1)))
+            {
+                LS_DBG_H("readyCompressed compress br error %s.",
+                         m_bredPath.c_str());
+                compressMode &= ~SFCD_MODE_BROTLI;
+            }
+            else
+                compressMode &= ~SFCD_MODE_GZIP;
+        }
+        else
+            compressMode &= ~SFCD_MODE_GZIP;
     }
+
     if (compressMode & SFCD_MODE_GZIP)
     {
         statGz = ls_fio_stat(m_gzippedPath.c_str(), &stGzip);
@@ -876,43 +894,12 @@ int StaticFileCacheData::readyCompressed(char compressMode)
                 || (stGzip.st_mtime != getLastMod()));
         LS_DBG_H("readyCompressed() path %s statGz %d retGz %d",
                  m_gzippedPath.c_str(), statGz, retGz);
-    }
-
-    if (compressMode & SFCD_MODE_BROTLI) // brotli active AND not valid
-    {
-        if ((statBr != -1) && (stBr.st_mtime == getLastMod()))
-        {
-            // use br
-        }
-        else if (!(compressMode & SFCD_MODE_GZIP) || retGz)
-        {
-            // update br
-            if ((statBr = compressHelper(m_bredPath, m_pBrotli, stBr, statBr, 1)))
-            {
-                LS_DBG_H("readyCompressed compress br error %s.",
-                         m_bredPath.c_str());
-                return LS_FAIL;
-            }
-        }
-        else
-        {
-            compressMode &= ~SFCD_MODE_BROTLI;
-        }
-    }
-    else if (compressMode & SFCD_MODE_GZIP)
-    {
         if (retGz && (statGz = compressHelper(m_gzippedPath, m_pGzip, stGzip, statGz, 0)))
         {
             LS_DBG_H("readyCompressed() compress gzip error %s or file size not suitable for gzip.",
                     m_gzippedPath.c_str());
             return LS_FAIL;
         }
-        // else use gz
-    }
-    else
-    {
-        LS_ERROR("Compress with both Brotli and Gzip turned off.");
-        return LS_FAIL;
     }
 
     if ((compressMode & SFCD_MODE_BROTLI)

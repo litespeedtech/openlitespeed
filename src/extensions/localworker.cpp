@@ -502,68 +502,50 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         *(argv[0] - 1) = '/';
     else
         pDir = argv[0];
-    SUExec::getSUExec()->prepare(uid, gid, config.getPriority(),
-                                 config.getUmask(),
-                                 pChrootPath, chrootLen,
-                                 pDir, strlen(pDir), config.getRLimits());
 
-    LS_NOTICE("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
-            " final uid %d gid %d.",
-            config.getName(), config.getUid(),
-            config.getGid(), config.getCommand(),
-            uid, gid);
-
-    LS_DBG("Check bwrap, pVHost: %p\n", pVHost);
-
-    int set_bwrap = 0;
-    Env env2;
-    Env *penv = config.getEnv();
-
-    if ((pVHost && pVHost->enableBwrap()) ||
-        (!pVHost && HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_ON))
+    int flags = 0;
+    LS_DBG("Check bwrap, cgroups, pVHost: %p\n", pVHost);
+    if ((pVHost && pVHost->enableBwrap())
+        || (!pVHost && HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_ON))
     {
-        int from_vhost = pVHost && pVHost->enableBwrap();
-        set_bwrap = 1;
-        LS_DBG("Enabling bwrap from %s\n", from_vhost ? "VHost" : "ServerConfig");
+        flags |= LSCGID_FLAG_BWRAP;
+        LS_DBG("Enabling bwrap from %s\n", pVHost ? "VHost" : "ServerConfig");
     }
     else
         LS_DBG("pVHost enableBwrap: %d, procConfig.getBwrap: %d\n",
                pVHost && pVHost->enableBwrap(), HttpServerConfig::getInstance().getBwrap());
-    if (set_bwrap)
+
+    if ((pVHost && pVHost->enableCGroup())
+        || (!pVHost && ServerProcessConfig::getInstance().getCGroupDefault()))
     {
-        const char *enable_title = (char *)"LS_BWRAP";
-        char **env = penv->get();
-        while (*env)
-        {
-            LS_DBG("Rebuild env: %s\n", *env);
-            env2.add(*env);
-            env++;
-        }
-        env2.add(enable_title, "1");
-        if (HttpServerConfig::getInstance().getBwrapCmdLine())
-        {
-            const char *cmdline_title = (char *)"LS_BWRAP_CMDLINE";
-            LS_DBG("Rebuild add env: %s\n", HttpServerConfig::getInstance().getBwrapCmdLine());
-            env2.add(cmdline_title, HttpServerConfig::getInstance().getBwrapCmdLine());
-        }
-        env2.add((const char *)NULL);
-        penv = &env2;
+        LS_DBG("Enabling Cgroups from %s\n", pVHost ? "VHost" : "ServerConfig");
+        flags |= LSCGID_FLAG_CGROUP;
     }
+
+    if (config.getDropCaps())
+    {
+        LS_DBG("LSCGID_FLAG_DROP_CAPS is set\n");
+        flags |= LSCGID_FLAG_DROP_CAPS;
+    }
+    SUExec::getSUExec()->prepare(uid, gid, config.getPriority(),
+                                 config.getUmask(),
+                                 pChrootPath, chrootLen,
+                                 pDir, strlen(pDir),
+                                 argv, config.getEnv()->get(),
+                                 config.getRLimits(),
+                                 flags);
+
+    LS_NOTICE("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
+            " final uid %d gid %d, flags: %d.",
+            config.getName(), config.getUid(),
+            config.getGid(), config.getCommand(),
+            uid, gid, flags);
 
     int rfd = -1;
     int pid;
-    //if ( config.getStartByServer() == 2 )
-    //{
+
     pid = SUExec::getSUExec()->cgidSuEXEC(
-              MainServerConfig::getInstance().getServerRoot(), &rfd, fd, argv,
-              penv->get(), NULL);
-    //}
-    //else
-    //{
-    //    pid = HttpGlobals::s_pSUExec->suEXEC(
-    //        HttpGlobals::s_pServerRoot, &rfd, fd, argv,
-    //        config.getEnv()->get(), NULL );
-    //}
+              MainServerConfig::getInstance().getServerRoot(), &rfd, fd);
 
     if (pid == -1)
     {
@@ -571,7 +553,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
             config.getName());
 
         pid = SUExec::spawnChild(config.getCommand(), fd, -1,
-                                 penv->get(),
+                                 config.getEnv()->get(),
                                  config.getPriority(), config.getRLimits(),
                                  config.getUmask(), uid, gid);
     }

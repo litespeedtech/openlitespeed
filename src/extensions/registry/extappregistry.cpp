@@ -544,6 +544,71 @@ void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst, int dst_len, i
 }
 
 
+static bool isBlackListed(const char *key, const char **blacklist, int size)
+{
+    for (int i = 0; i < size; ++i)
+        if (0 == strcmp(blacklist[i], key))
+            return true;
+    return false;
+}
+
+
+static int validateBinPath(const char *path)
+{
+    const char *p;
+    if (!path)
+        return LS_OK;
+    if (strstr(path, "/../"))
+        return LS_FAIL;
+    p = strrchr(path, '/');
+    if (!p)
+        p = path;
+    else
+        p += 1;
+
+    static const char *s_blocked[] =
+    {   "bash", "dash", "ksh", "sh", "ncat", "nc"   };
+
+    if (isBlackListed(p, s_blocked, sizeof(s_blocked)/sizeof(const char *)))
+        return LS_FAIL;
+    return LS_OK;
+}
+
+
+static int validateCmdParam(const char *param)
+{
+    const char *p = param;
+    while(isspace(*p))
+        ++p;
+    if (!*p)
+        return LS_OK;
+    if (strstr(param, "/dev/tcp/") != NULL)
+        return LS_FAIL;
+
+    const char *s_blocked_cmd[] =
+    {   "bash", "dash", "ksh", "sh"     };
+    int s_blocked_cmd_len[] =
+    {   4, 4, 3, 2  };
+
+    for(uint i = 0; i < sizeof(s_blocked_cmd) / sizeof(const char *); ++i)
+    {
+        const char *begin = param;
+        while((p = strstr(begin, s_blocked_cmd[i])) != NULL)
+        {
+            char ch = *(p - 1);
+            if (isspace(ch) || (ispunct(ch) && ch != '.' && ch != '_' && ch != '-'))
+            {
+                char after = *(p + s_blocked_cmd_len[i]);
+                if (after == '\0' || isspace(after)
+                    || (ispunct(ch) && ch != '.' && ch != '_' && ch != '-'))
+                    return LS_FAIL;
+            }
+            begin += s_blocked_cmd_len[i];
+        }
+    }
+    return LS_OK;
+}
+
 
 /**
  * When it is from server level, the pVhost is NULL
@@ -712,6 +777,14 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
             if (p)
                 *p = 0;
 
+            if (validateBinPath(pCmd) == LS_FAIL)
+            {
+                LS_ERROR(&currentCtx, "invalid command path - '%s', "
+                         "it cannot be started by Web server!",
+                         pCmd);
+                return NULL;
+            }
+
             if (access(pCmd, X_OK) == -1)
             {
                 LS_ERROR(&currentCtx, "invalid path - %s, "
@@ -720,7 +793,15 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
             }
 
             if (p)
+            {
                 *p = ' ';
+                if (validateCmdParam(p + 1) == LS_FAIL)
+                {
+                    LS_ERROR(&currentCtx, "invalid command parameter - '%s', "
+                            "it cannot be started by Web server!", p + 1);
+                    return NULL;
+                }
+            }
 
             if (pCmd != buf)
                 buf[len] = *buf;

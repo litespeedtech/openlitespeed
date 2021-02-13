@@ -130,28 +130,6 @@ class DTblDef extends DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_rewritecontrol'), $attrs);
     }
 
-    protected function add_S_SEC_CGI($id)
-    {
-        $attrs = array(
-            self::NewTextAttr('cgidSock', DMsg::ALbl('l_cgidsock'), 'addr'),
-            self::NewIntAttr('maxCGIInstances', DMsg::ALbl('l_maxCGIInstances'), true, 1, 2000),
-            self::NewIntAttr('minUID', DMsg::ALbl('l_minuid'), true, 10),
-            self::NewIntAttr('minGID', DMsg::ALbl('l_mingid'), true, 5),
-            self::NewIntAttr('forceGID', DMsg::ALbl('l_forcegid'), true, 0),
-            $this->_attrs['cgiUmask'],
-            $this->_attrs['priority']->dup(null, DMsg::ALbl('l_cgipriority'), 'CGIPriority'),
-            self::NewIntAttr('CPUSoftLimit', DMsg::ALbl('l_cpusoftlimit'), true, 0),
-            self::NewIntAttr('CPUHardLimit', DMsg::ALbl('l_cpuhardlimit'), true, 0),
-            $this->_attrs['memSoftLimit'],
-            $this->_attrs['memHardLimit'],
-            $this->_attrs['procSoftLimit'],
-            $this->_attrs['procHardLimit'],
-            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), array('0' => DMsg::ALbl('o_off'), '1' => DMsg::ALbl('o_on'), '2' => DMsg::ALbl('o_disabled'))),
-        );
-
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
-    }
-    
     protected function add_VT_REWRITE_CTRL($id)
     {
         $attrs = array(
@@ -435,27 +413,29 @@ class DTblDef extends DTblDefBase
 
     protected function add_V_GENERAL($id)
     {
-        $attrs = array(
+        $attrs = [
             self::NewTextAttr('docRoot', DMsg::ALbl('l_docroot'), 'cust', false), //no validation, maybe suexec owner
             $this->_attrs['tp_vhDomain'], // this setting is a new way, will merge with listener map settings for backward compatible
             $this->_attrs['tp_vhAliases'],
             $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
             $this->_attrs['vh_enableGzip'],
+			$this->_attrs['vh_enableBr'],
             $this->_attrs['enableIpGeo'],
-            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), array('0' => DMsg::ALbl('o_off'), '1' => DMsg::ALbl('o_on'))),
-        );
+			$this->_attrs['vh_cgroups'],
+        ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_g'), $attrs);
     }
 
     protected function add_T_GENERAL2($id)
     {
-        $attrs = array(
+        $attrs = [
             $this->_attrs['tp_vrFile']->dup('docRoot', DMsg::ALbl('l_docroot'), 'templateVHDocRoot'),
             $this->_attrs['adminEmails']->dup(null, null, 'vhadminEmails'),
             $this->_attrs['vh_enableGzip'],
+			$this->_attrs['vh_enableBr'],
             $this->_attrs['enableIpGeo'],
-            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), array('0' => DMsg::ALbl('o_off'), '1' => DMsg::ALbl('o_on'))),
-        );
+			$this->_attrs['vh_cgroups'],
+        ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_base2'), $attrs);
     }
 

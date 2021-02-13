@@ -38,6 +38,10 @@ extern "C"
 #define LSCGID_TYPE_CGI         0
 #define LSCGID_TYPE_SUEXEC      1
 
+#define LSCGID_FLAG_DROP_CAPS   (1 << 0)
+#define LSCGID_FLAG_BWRAP       (1 << 1)
+#define LSCGID_FLAG_CGROUP      (1 << 2)
+
 typedef struct
 {
     short   m_version;
@@ -55,6 +59,7 @@ typedef struct
     gid_t   m_gid;
     int     m_priority;
     int     m_umask;
+    int     m_flags;
 
 
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)

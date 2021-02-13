@@ -518,20 +518,20 @@ int StaticFileHandler::process(HttpSession *pSession,
         }
     }
 
-    char compressed = (((pReq->gzipAcceptable() == GZIP_REQUIRED)
-                        || (pReq->brAcceptable() == BR_REQUIRED)) &&
-                       ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
-                         | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
-                        & LSI_FLAG_DECOMPRESS_REQUIRED) == 0);
-
-    char mode = (pReq->brAcceptable() == BR_REQUIRED ? SFCD_MODE_BROTLI : 0);
-    if (pReq->gzipAcceptable() == GZIP_REQUIRED &&
-        pReq->brAcceptable() != BR_REQUIRED)
-        mode |= SFCD_MODE_GZIP;
-
-    ret = pInfo->readyCacheData(compressed, mode);
-    LS_DBG_L(pReq->getLogSession(), "readyCacheData(%d, %d) return %d",
-             compressed, mode, ret);
+    char mode = 0;
+    if ((pReq->gzipAcceptable() == GZIP_REQUIRED
+         || pReq->brAcceptable() == BR_REQUIRED)
+        && ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
+             | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
+            & LSI_FLAG_DECOMPRESS_REQUIRED) == 0)
+    {
+        mode = (pReq->brAcceptable() == BR_REQUIRED ? SFCD_MODE_BROTLI : 0);
+        if (pReq->gzipAcceptable() == GZIP_REQUIRED)
+            mode |= SFCD_MODE_GZIP;
+    }
+    ret = pInfo->readyCacheData(mode);
+    LS_DBG_L(pReq->getLogSession(), "readyCacheData(%d) return %d",
+             mode, ret);
     FileCacheDataEx *pECache = pInfo->getECache();
 
     if (!ret)

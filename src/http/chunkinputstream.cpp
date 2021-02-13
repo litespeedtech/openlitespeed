@@ -133,7 +133,7 @@ int ChunkInputStream::parseChunkLen()
     else
     {
         if (m_iBufLen < MAX_CHUNK_LEN_BUF_SIZE)
-            return 0;
+            return 1;
     }
     //m_iChunkLen = INVALID_CHUNK;
     return -1;

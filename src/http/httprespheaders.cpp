@@ -1896,6 +1896,9 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
     if (hdr == NULL || hdr->buf == NULL)
         return end();
 
+    if (hdr->name_len == 0)  //Ignore bad header without a name
+        return LSXPACK_OK;
+
     int idx = UPK_HDR_UNKNOWN;
     if (!is_qpack)
         idx = HttpRespHeaders::hpack2RespIdx(hdr->hpack_index);

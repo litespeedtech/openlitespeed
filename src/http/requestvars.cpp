@@ -1344,12 +1344,12 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
             pSession->getReq()->keepAlive(false);
             return 0;
         }
-        //else if ( strcasecmp( pName, "noconntimeout" ) == 0 )
-        //{
-        //    LS_DBG_M(pSession->getLogSession(),
-        //            "turn off connection timeout.");
-        //    pSession->setFlag( HSF_NO_CONN_TIMEOUT );
-        //}
+        else if (strcasecmp(pName, "noconntimeout") == 0)
+        {
+            LS_DBG_M(pSession->getLogSession(),
+                    "turn off connection timeout.");
+            pSession->setFlag(HSF_NO_CONN_TIMEOUT);
+        }
         else if (strcasecmp(pName, "no-gzip") == 0)
         {
             if (strncmp(pValue, "0", 1) != 0)

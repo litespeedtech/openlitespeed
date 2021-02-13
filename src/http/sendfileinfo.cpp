@@ -96,16 +96,16 @@ void SendFileInfo::release()
 
 }
 
-int SendFileInfo::readyCacheData(char compress, char mode)
+int SendFileInfo::readyCacheData(char compress)
 {
     int ret;
 
     if ((compress) && (m_pFileData->getMimeType()->getExpires()->compressible()))
     {
-        ret = m_pFileData->readyCompressed(mode);
+        ret = m_pFileData->readyCompressed(compress);
         if (ret == 0)
         {
-            if ((mode & SFCD_MODE_BROTLI) && (m_pFileData->getBrotli() != NULL))
+            if ((compress & SFCD_MODE_BROTLI) && (m_pFileData->getBrotli() != NULL))
                 setECache(m_pFileData->getBrotli());
             else
                 setECache(m_pFileData->getGzip());

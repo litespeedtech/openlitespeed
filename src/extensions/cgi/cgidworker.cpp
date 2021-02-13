@@ -222,6 +222,9 @@ int CgidWorker::watchDog(const char *pServerRoot, const char *pChroot,
 
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+extern bool is_cgroup_v2_available();
+
 static int cgroup_validate(void)
 {
     struct passwd *pwd;
@@ -231,44 +234,50 @@ static int cgroup_validate(void)
         LS_INFO("You allow cgroups, but are not running as root; disabled.\n");
         return -1;
     }
-    pwd = getpwnam("nobody");
-    if (pwd)
+
+    if (is_cgroup_v2_available())
     {
-        int pid = fork();
-        if (pid == 0)
-        {
-            // child
-            CGroupConn conn;
-            if (!(conn.create()))
-            {
-                CGroupUse use(&conn);
-                int apply = 0;
-                int validate = 0;
-                if ((!(apply = use.apply(pwd->pw_uid))) &&
-                    (!(validate = use.validate())))
-                {
-                    exit(0);
-                }
-            }
-            exit(1);
-        }
-        if (pid > 0)
-        {
-            int result;
-            waitpid(pid, &result, 0);
-            if (WIFEXITED(result) && (WEXITSTATUS(result) == 0))
-            {
-                LS_DBG_H("Ok to run cgroups\n");
-                return 0;
-            }
-        }
+         LS_DBG_H("Ok to run cgroups\n");
+         return 0;
     }
-    else {
-        LS_INFO("To validate cgroups, 'nobody' user required and not found\n");
-        return -1;
-    }
-    LS_INFO("You allow cgroups, but your OS does not support it; disabled.  "
-            "Try installing glib\n");
+
+//     pwd = getpwnam("nobody");
+//     if (pwd)
+//     {
+//         int pid = fork();
+//         if (pid == 0)
+//         {
+//             // child
+//             CGroupConn conn;
+//             if (!(conn.create()))
+//             {
+//                 CGroupUse use(&conn);
+//                 int apply = 0;
+//                 int validate = 0;
+//                 if ((!(apply = use.apply(pwd->pw_uid))) &&
+//                     (!(validate = use.validate())))
+//                 {
+//                     exit(0);
+//                 }
+//             }
+//             exit(1);
+//         }
+//         if (pid > 0)
+//         {
+//             int result;
+//             waitpid(pid, &result, 0);
+//             if (WIFEXITED(result) && (WEXITSTATUS(result) == 0))
+//             {
+//                 LS_DBG_H("Ok to run cgroups\n");
+//                 return 0;
+//             }
+//         }
+//     }
+//     else {
+//         LS_INFO("To validate cgroups, 'nobody' user required and not found\n");
+//         return -1;
+//     }
+    LS_INFO("You allow cgroups, but your OS does not support it; disabled.");
     return -1;
 }
 #endif
@@ -357,15 +366,15 @@ int CgidWorker::config(const XmlNode *pNode1)
                     NULL, TmpLogId::getLogId());
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    procConfig.setCGroupAllow(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
-        "cgroups", 0, 2, 0) != ServerProcessConfig::CGROUP_CONFIG_DISALLOW);
+    int cgroups = ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
+        "cgroups", 0, 2, 0);
+    procConfig.setCGroupAllow(
+        cgroups != ServerProcessConfig::CGROUP_CONFIG_DISALLOW);
     if ((procConfig.getCGroupAllow()) && (cgroup_validate() == -1))
         procConfig.setCGroupAllow(0);
 
-    procConfig.setCGroupDefault(ConfigCtx::getCurConfigCtx()->getLongValue(pNode1,
-        "cgroups", 0, 2, 0) == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON);
+    procConfig.setCGroupDefault(cgroups);
 #endif
-
 
     if (MainServerConfig::getInstance().getConfTestMode())
         return 0;

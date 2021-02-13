@@ -39,10 +39,13 @@ typedef struct
     char       *m_stderrPath;
     char       *m_cwdPath;
     int         m_fdReceived;
+    char        m_bwrap;
+    char        m_cgroup;
+
 } lscgid_t;
 
 
-extern int applyLimits(lscgid_t *pCGI);
+extern int apply_rlimits_uid_chroot_stderr(lscgid_t *pCGI);
 
 #ifdef __cplusplus
 }

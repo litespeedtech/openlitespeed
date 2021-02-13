@@ -299,7 +299,7 @@ int SslTicket::onTimer()
     if (pCur->expireSec > (DateTime::s_curTime + (m_iLifetime >> 1)))
     {
         m_pKeyStore->unlock();
-        LS_DBG("[SSLTicket] Not expired");
+        //LS_DBG("[SSLTicket] Not expired");
         return 0; // Not expired.
     }
     if (m_pFile != NULL)

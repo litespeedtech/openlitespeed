@@ -1407,6 +1407,13 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
             else if (hdr->name_len == 6 && memcmp(name, "cookie", 6) == 0)
                 idx = HttpHeader::H_COOKIE;
+            else if (hdr->name_len == 0)
+            {
+                //NOTE: skip blank header
+                headers->m_lsxpack.pop();
+                working = NULL;
+                return LSXPACK_OK;
+            }
         }
         if (idx == HttpHeader::H_COOKIE)
         {

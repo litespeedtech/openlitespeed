@@ -1299,7 +1299,7 @@ int HttpSession::processHttp2Upgrade(const HttpVHost *pVHost)
 
 void HttpSession::extCmdDone()
 {
-    m_iFlag &= ~HSF_EXEC_POPEN;
+    clearFlag2(HSF2_EXEC_POPEN);
     EvtcbQue::getInstance().schedule(m_cbExtCmd,
                                      this,
                                      m_lExtCmdParam,
@@ -2424,24 +2424,6 @@ int HttpSession::handlerProcess(const HttpHandler *pHandler)
     if (ret)
         return ret;
 
-    const HttpVHost *pVHost = m_request.getVHost();
-    if ((type == HandlerType::HT_CGI) &&
-        (((pVHost) && (pVHost->enableCGroup())) ||
-         ((!pVHost) && (ServerProcessConfig::getInstance().getCGroupAllow()) &&
-          (ServerProcessConfig::getInstance().getCGroupDefault()))))
-    {
-        LS_DBG_L(getLogSession(), "HttpSession::CGroup activate");
-        m_request.addEnv("LS_CGROUP", 9, "Y", 1);
-    }
-    else
-    {
-        LS_DBG_L(getLogSession(), "HttpSession::CGroup don't activate, type: %s "
-                 "vHost: %p, vHost->enableCGroup: %s, config.getCGroupAllow: %s\n",
-                 HandlerType::getHandlerTypeString(m_request.getHttpHandler()->getType()),
-                 pVHost, ((pVHost) && (pVHost->enableCGroup())) ? "YES" : "NO",
-                 ServerProcessConfig::getInstance().getCGroupAllow() ? "YES" : "NO");
-    }
-
     setState(HSS_PROCESSING);
     pTC->incReqProcessed( dyn );
     ret = m_pHandler->process(this, m_request.getHttpHandler());
@@ -3361,8 +3343,13 @@ int HttpSession::detectKeepAliveTimeout(int delta)
 int HttpSession::detectConnectionTimeout(int delta)
 {
     const HttpServerConfig &config = HttpServerConfig::getInstance();
-    if ((uint32_t)(DateTime::s_curTime) > getStream()->getActiveTime() +
-        (uint32_t)(config.getConnTimeout()))
+
+    int timeout = 0;
+    long idle = DateTime::s_curTime - (int)getStream()->getActiveTime();
+    if (idle > config.getConnTimeout() && (!getFlag(HSF_NO_CONN_TIMEOUT)))
+        timeout = 1;
+
+    if (timeout)
     {
 //         if (pNtwkIOLink->getfd() != pNtwkIOLink->getPollfd()->fd)
 //             LS_ERROR(getLogSession(),
@@ -4068,9 +4055,9 @@ int HttpSession::endResponse(int success)
     if (testAndSetFlag(HSF_HANDLER_DONE) == 0)
         return 0;
 
-    if (m_iFlag & HSF_EXEC_EXT_CMD)
+    if (getFlag2(HSF2_EXEC_EXT_CMD))
     {
-        m_iFlag &= ~HSF_EXEC_EXT_CMD;
+        clearFlag2(HSF2_EXEC_EXT_CMD);
         resumeSSI();
         return 0;
     }
@@ -4711,6 +4698,7 @@ int HttpSession::execExtCmd(const char *pCmd, int len, int mode)
 {
     m_request.setRealPath(pCmd, len);
     m_request.orContextState(mode);
+    setFlag2(HSF2_EXEC_EXT_CMD);
     return execExtCmdEx();
 }
 

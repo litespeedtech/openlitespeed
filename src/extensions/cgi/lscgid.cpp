@@ -50,6 +50,8 @@
 #include "cgroupconn.h"
 #include "cgroupuse.h"
 #include "use_bwrap.h"
+#include <sys/prctl.h>
+#include <linux/capability.h>
 #endif
 
 void ls_stderr(const char * fmt, ...)
@@ -279,7 +281,7 @@ static int cgiError(int fd, int status)
 }
 
 
-static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
+static int set_uid_chroot(uid_t uid, gid_t gid, char *pChroot)
 {
     int rv;
 
@@ -328,43 +330,6 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 }
 
 
-int applyLimits(lscgid_t *cgid)
-{
-    lscgid_req *req = &cgid->m_data;
-    //ls_stderr("Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
-    //                        pCGI->m_data.rlim_cur );
-#if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
-    if (req->m_data.rlim_cur)
-    {
-#if defined(RLIMIT_AS)
-        setrlimit(RLIMIT_AS, &req->m_data);
-#elif defined(RLIMIT_DATA)
-        setrlimit(RLIMIT_DATA, &req->m_data);
-#elif defined(RLIMIT_VMEM)
-        setrlimit(RLIMIT_VMEM, &req->m_data);
-#endif
-    }
-#endif
-
-#if defined(RLIMIT_NPROC)
-    if (req->m_nproc.rlim_cur)
-        setrlimit(RLIMIT_NPROC, &req->m_nproc);
-#endif
-
-#if defined(RLIMIT_CPU)
-    //if (req->m_cpu.rlim_cur)
-    //    setrlimit(RLIMIT_CPU, &req->m_cpu);
-#endif
-
-    if ((!s_uid) && (req->m_uid || req->m_gid))
-    {
-        if (setUIDs(req->m_uid, req->m_gid, cgid->m_pChroot) == -1)
-            return 403;
-    }
-    return 0;
-}
-
-
 //called after uid/gid/chroot change
 static int changeStderrLog(lscgid_t *pCGI)
 {
@@ -395,7 +360,127 @@ static int changeStderrLog(lscgid_t *pCGI)
 }
 
 
+int apply_rlimits_uid_chroot_stderr(lscgid_t *cgid)
+{
+    lscgid_req *req = &cgid->m_data;
+    //ls_stderr("Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
+    //                        pCGI->m_data.rlim_cur );
+#if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
+    if (req->m_data.rlim_cur)
+    {
+#if defined(RLIMIT_AS)
+        setrlimit(RLIMIT_AS, &req->m_data);
+#elif defined(RLIMIT_DATA)
+        setrlimit(RLIMIT_DATA, &req->m_data);
+#elif defined(RLIMIT_VMEM)
+        setrlimit(RLIMIT_VMEM, &req->m_data);
+#endif
+    }
+#endif
+
+#if defined(RLIMIT_NPROC)
+    if (req->m_nproc.rlim_cur)
+        setrlimit(RLIMIT_NPROC, &req->m_nproc);
+#endif
+
+#if defined(RLIMIT_CPU)
+    //if (req->m_cpu.rlim_cur)
+    //    setrlimit(RLIMIT_CPU, &req->m_cpu);
+#endif
+
+    if ((!s_uid) && (req->m_uid || req->m_gid))
+    {
+        if (set_uid_chroot(req->m_uid, req->m_gid, cgid->m_pChroot) == -1)
+            return 403;
+    }
+
+    if (cgid->m_stderrPath)
+        changeStderrLog(cgid);
+
+    return 0;
+}
+
+
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+
+static const char *s_user_slice_dir = NULL;
+
+static int detect_cgroup_user_slice_dir()
+{
+    struct stat st;
+    if (stat("/sys/fs/cgroup/user.slice", &st) == 0)
+        s_user_slice_dir = "/sys/fs/cgroup/user.slice";
+    else if (stat("/sys/fs/cgroup/systemd/user.slice", &st) == 0)
+        s_user_slice_dir = "/sys/fs/cgroup/systemd/user.slice";
+    else
+    {
+        s_user_slice_dir = (const char *)-1LL;
+        return -1;
+    }
+    return 0;
+}
+
+
+bool is_cgroup_v2_available()
+{
+    if (s_user_slice_dir == NULL)
+        detect_cgroup_user_slice_dir();
+    if (s_user_slice_dir == (const char *)-1LL)
+        return false;
+    return true;
+}
+
+
+static int cgroup_v2(int uid, int pid)
+{
+    char user_slice[1024];
+
+    if (!is_cgroup_v2_available())
+        return -1;
+
+    snprintf(user_slice, sizeof(user_slice), "%s/user-%d.slice",
+             s_user_slice_dir, uid);
+    if (mkdir(user_slice, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == 0
+        || errno == EEXIST)
+    {
+        strcat(user_slice, "/litespeed-exec.scope");
+        if (mkdir(user_slice, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
+                    == 0 || errno == EEXIST)
+        {
+            strcat(user_slice, "/cgroup.procs");
+            FILE *fp = fopen(user_slice, "a");
+            //if there is no cgroup, we may hit permission denied. Wait moment.
+            if (fp == NULL)
+            {
+                struct timespec ns;
+                ns.tv_sec = 0;
+                ns.tv_nsec = 1 * 1000000; //10ms
+                int count = 200;
+                while (fp == NULL && count--)
+                {
+                    nanosleep(&ns, NULL);
+                    fp = fopen(user_slice, "a");
+                }
+            }
+            if (fp == NULL)
+            {
+                ls_stderr("Error opening %s for writing: %s", user_slice,
+                        strerror(errno));
+                return -1;
+            }
+            else
+            {
+                fprintf(fp, "%d\n", (int) pid);
+                fclose(fp);
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+
 static int cgroup_env(lscgid_t *pCGI)
 {
     if (getuid())
@@ -496,9 +581,8 @@ static int fixStderrLogPermission(lscgid_t *pCGI)
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    cgroup_process(pCGI);
-#endif
+    uid_t uid;
+    uint32_t pid = (uint32_t)getpid();
 
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");
@@ -506,6 +590,14 @@ static int execute_cgi(lscgid_t *pCGI)
     if (pCGI->m_stderrPath)
         fixStderrLogPermission(pCGI);
 
+    uid = pCGI->m_data.m_uid;
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (pCGI->m_cgroup && uid != 0)
+    {
+        cgroup_v2(uid, pid);
+    }
+#endif
 
 #ifdef HAS_CLOUD_LINUX
 
@@ -524,7 +616,7 @@ static int execute_cgi(lscgid_t *pCGI)
         }
         if (ret < 0)
         {
-            ls_stderr("lscgid (%d): enter LVE (%d) : result: %d !\n", getpid(),
+            ls_stderr("lscgid (%d): enter LVE (%d) : result: %d !\n", pid,
                       pCGI->m_data.m_uid, ret);
             log_cgi_error("lscgid", NULL, "lve_enter() failure, reached resource limit");
             return 500;
@@ -544,7 +636,7 @@ static int execute_cgi(lscgid_t *pCGI)
             if (ret < 0)
             {
                 ls_stderr("lscgid (%d): LVE jail(%d) result: %d, error: %s !\n",
-                          getpid(), pCGI->m_data.m_uid, ret, error_msg);
+                          pid, pCGI->m_data.m_uid, ret, error_msg);
                 //set_cgi_error( "lscgid: CloudLinux jail() failure.", NULL );
                 return 508;
             }
@@ -554,9 +646,13 @@ static int execute_cgi(lscgid_t *pCGI)
 
 #endif
 
-    if (pCGI->m_stderrPath)
-        changeStderrLog(pCGI);
-
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (pCGI->m_data.m_flags & LSCGID_FLAG_DROP_CAPS)
+    {
+        if (0 != prctl(PR_CAPBSET_DROP, CAP_SETUID, 0, 0, 0))
+            ls_stderr("dropping capabilities failed: %s", strerror(errno));
+    }
+#endif
 
     ch = *(pCGI->m_argv[0]);
     * pCGI->m_argv[0] = 0;
@@ -601,7 +697,7 @@ static int execute_cgi(lscgid_t *pCGI)
     }
 #endif
 
-    if (applyLimits(pCGI) == 403)
+    if (apply_rlimits_uid_chroot_stderr(pCGI) == 403)
         return 403;
 
     //ls_stderr( "execute_cgi m_umask=%03o\n", pCGI->m_data.m_umask );
@@ -695,6 +791,18 @@ static int process_req_data(lscgid_t *cgi_req)
                 --i;
                 --cgi_req->m_data.m_nenv;
                 cgi_req->m_cwdPath = p + 7;
+            }
+            else if (strncasecmp(p, "LS_BWRAP=", 9) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_bwrap = strtol(p + 9, NULL, 10);
+            }
+            else if (strncasecmp(p, "LS_CGROUP=", 10) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_cgroup = strtol(p + 10, NULL, 10);
             }
         }
         p += len;

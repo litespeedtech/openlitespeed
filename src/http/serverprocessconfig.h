@@ -45,9 +45,9 @@ private:
 public:
     enum CGroupConfigValues
     {
-        CGROUP_CONFIG_DEFAULT_OFF = 0,
+        CGROUP_CONFIG_DISALLOW = 0,
+        CGROUP_CONFIG_DEFAULT_OFF,
         CGROUP_CONFIG_DEFAULT_ON,
-        CGROUP_CONFIG_DISALLOW
     };
 
     ~ServerProcessConfig();

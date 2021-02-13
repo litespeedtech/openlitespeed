@@ -45,7 +45,11 @@ function startApplication() {
     http.Server.prototype.realListen = http.Server.prototype.listen;
     http.Server.prototype.listen = customListen;
     http.Server.prototype.address = lsnode_address;
-    require(startupFile);
+    var app = require(startupFile);
+    if (!LsNode.listenDone) {
+        if (typeof app.listen === "function")
+            app.listen(3000);
+    }
 }
 
 

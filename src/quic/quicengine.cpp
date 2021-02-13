@@ -118,36 +118,39 @@ int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
 
     off = 0;
     versions = lsquic_engine_quic_versions(m_pEngine);
+
+    alpn = lsquic_get_h3_alpns(versions);
+    if (alpn)
+    {
+        const char *const *const begin_alpn = alpn;
+
+        while (*alpn)
+            ++alpn;
+
+        /* Reverse the order, placing newer QUIC versions first */
+        for (alpn = alpn - 1; alpn >= begin_alpn; --alpn)
+        {
+            n = snprintf(alt_svc + off, sz - off,
+                    "%s%s=\":%hu\"; ma=2592000", off ? ", " : "", *alpn, port);
+            if (n < 0 || (size_t) n >= sz - off)
+                goto end;
+            off += (unsigned) n;
+        }
+    }
+
     gquic_versions = lsquic_get_alt_svc_versions(versions);
     if (gquic_versions && gquic_versions[0])
     {
         n = snprintf(alt_svc + off, sz - off,
-                "quic=\":%hu\"; ma=2592000; v=\"%s\"", port, gquic_versions);
+                "%squic=\":%hu\"; ma=2592000; v=\"%s\"", off ? ", " : "",
+                                                        port, gquic_versions);
         if (n < 0 || (size_t) n >= sz - off)
-            return -1;
-        off += (unsigned) n;
-    }
-
-    alpn = lsquic_get_h3_alpns(versions);
-    if (!alpn)
-    {
-        alt_svc[off] = '\0';
-        goto end;
-    }
-
-    for ( ; *alpn; ++alpn)
-    {
-        n = snprintf(alt_svc + off, sz - off,
-                "%s%s=\":%hu\"; ma=2592000", off ? ", " : "", *alpn, port);
-        if (n < 0 || (size_t) n >= sz - off)
-        {
-            alt_svc[off] = '\0';
             goto end;
-        }
         off += (unsigned) n;
     }
 
   end:
+    alt_svc[off] = '\0';
     if (off > 0)
         return 0;
     else
@@ -764,7 +767,6 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
     m_pEngine = lsquic_engine_new(LSENG_HTTP_SERVER, &api);
     if (!m_pEngine)
         return LS_FAIL;
-    lsquic_global_init (LSQUIC_GLOBAL_SERVER);
     return LS_OK;
 }
 
