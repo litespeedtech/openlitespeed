@@ -82,8 +82,8 @@ public:
         m_pAioBuf = NULL;
         m_lAioLen = 0;
     }
-    int readyCacheData(char compress, char mode = 1);
-    
+    int readyCacheData(char compress);
+
     void copy(const SendFileInfo &rhs)
     {   memcpy(this, &rhs, sizeof(SendFileInfo));      }
 

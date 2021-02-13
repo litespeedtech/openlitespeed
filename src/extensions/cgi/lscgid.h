@@ -39,6 +39,9 @@ typedef struct
     char       *m_stderrPath;
     char       *m_cwdPath;
     int         m_fdReceived;
+    char        m_bwrap;
+    char        m_cgroup;
+
 } lscgid_t;
 
 

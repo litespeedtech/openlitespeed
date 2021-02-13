@@ -1299,7 +1299,7 @@ enum rop UdpListener::readOnePacket(struct read_iter *iter)
      */
     if (0 != lsquic_cid_from_packet(
                 (const unsigned char *) msg.msg_iov[0].iov_base,
-                                                msg.msg_iov[0].iov_len, &cid))
+                                                nread, &cid))
         return ROP_OK;
 
 #ifndef _NOT_USE_SHM_

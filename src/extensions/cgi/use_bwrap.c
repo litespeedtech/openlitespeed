@@ -32,7 +32,7 @@ set_cgi_error_t set_cgi_error = NULL;
 int s_bwrap_extra_bytes = BWRAP_ALLOCATE_EXTRA_DEFAULT;
 static char *s_bwrap_bin = NULL;
 
-static int add_argv(char *begin_param, int *argc, char ***oargv,
+static int add_argv(lscgid_t *pCGI, char *begin_param, int *argc, char ***oargv,
                     bwrap_mem_t **mem);
 
 #ifdef DO_BWRAP_DEBUG
@@ -304,7 +304,7 @@ static int bwrap_copy_params(char *begin_param, char **source, char **target)
 }
 
 
-static int bwrap_copy(int try, char *begin_param, char *wildcard, int *argc,
+static int bwrap_copy(lscgid_t *pCGI, int try, char *begin_param, char *wildcard, int *argc,
                       char ***oargv, bwrap_mem_t **mem)
 {
     const int block_size = 4096;
@@ -332,10 +332,10 @@ static int bwrap_copy(int try, char *begin_param, char *wildcard, int *argc,
     fds[(*mem)->m_statics->m_copy_num - 1] = data[0];
     (*mem)->m_statics->m_copy_fds = fds;
     snprintf(begin_param, strlen(title) + 1, "%u", data[0]); // Ok to step on it
-    if (add_argv("--file", argc, oargv, mem) ||
-        add_argv(begin_param, argc, oargv, mem) ||
-        add_argv(target, argc, oargv, mem) ||
-        add_argv(source, argc, oargv, mem)) // add source to get wildcards resolved
+    if (add_argv(pCGI, "--file", argc, oargv, mem) ||
+        add_argv(pCGI, begin_param, argc, oargv, mem) ||
+        add_argv(pCGI, target, argc, oargv, mem) ||
+        add_argv(pCGI, source, argc, oargv, mem)) // add source to get wildcards resolved
         return -1;
     
     --(*argc); // Pull out source
@@ -390,8 +390,8 @@ static int bwrap_copy(int try, char *begin_param, char *wildcard, int *argc,
 }
 
 
-static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
-                          char ***oargv, bwrap_mem_t **mem)
+static int bwrap_variable(lscgid_t *pCGI, char *begin_param, char *begin_wildcard, 
+                          int *argc, char ***oargv, bwrap_mem_t **mem)
 {
     char *bwrap_var_user = BWRAP_VAR_USER,
          *bwrap_var_homedir = BWRAP_VAR_HOMEDIR,
@@ -406,10 +406,12 @@ static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
     if (!strncmp(begin_wildcard, key = bwrap_var_user, key_len = strlen(bwrap_var_user)) ||
         !strncmp(begin_wildcard, key = bwrap_var_homedir, key_len = strlen(bwrap_var_homedir)))
     {
+        DEBUG_MESSAGE("User/homedir wildcard: %s, username_str: %s, pCGI uid: %d\n", 
+                      key, (*mem)->m_statics->m_username_str, pCGI->m_data.m_uid);
         if (!(*mem)->m_statics->m_username_str)
         {
             struct passwd *pwd;
-            if (!(pwd = getpwuid(geteuid())))
+            if (!(pwd = getpwuid(pCGI->m_data.m_uid)))
             {
                 set_cgi_error("Error getting passwd entry for effective user", strerror(errno));
                 return -1;
@@ -449,7 +451,7 @@ static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
     {
         if (!(*mem)->m_statics->m_uid_str[0])
             snprintf((*mem)->m_statics->m_uid_str,
-                     sizeof((*mem)->m_statics->m_uid_str), "%u", geteuid());
+                     sizeof((*mem)->m_statics->m_uid_str), "%u", pCGI->m_data.m_uid);
         wildcard = (*mem)->m_statics->m_uid_str;
     }
     else if (!strncmp(begin_wildcard, key = bwrap_var_gid, key_len = 4))
@@ -465,7 +467,7 @@ static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
                           argc, oargv, mem);
     else if (!strncmp(begin_wildcard, key = bwrap_var_copy_try, key_len = 9) ||
              !strncmp(begin_wildcard, key = bwrap_var_copy, key_len = 5))
-        return bwrap_copy(key == bwrap_var_copy_try, begin_param, 
+        return bwrap_copy(pCGI, key == bwrap_var_copy_try, begin_param, 
                           &begin_wildcard[key_len], argc, oargv, mem);
     else
     {
@@ -503,7 +505,7 @@ static int bwrap_variable(char *begin_param, char *begin_wildcard, int *argc,
 }
 
 
-static int add_argv(char *begin_param, int *argc, char ***oargv,
+static int add_argv(lscgid_t *pCGI, char *begin_param, int *argc, char ***oargv,
                     bwrap_mem_t **mem)
 {
     char **argv = *oargv;
@@ -527,7 +529,7 @@ static int add_argv(char *begin_param, int *argc, char ***oargv,
     }
     else if ((begin_wildcard = strchr(begin_param, '$')))
     {
-        if (bwrap_variable(begin_param, begin_wildcard, argc, oargv, mem))
+        if (bwrap_variable(pCGI, begin_param, begin_wildcard, argc, oargv, mem))
             return -1;
     }
     else if (!strcmp(begin_param, "bash") || !strcmp(begin_param, "/bin/bash") ||
@@ -608,7 +610,8 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
     if (!bwrap_cmdline)
     {
         DEBUG_MESSAGE("LS_BWRAP_CMDLINE not set, use default\n");
-        bwrap_cmdline = (s_bwrap_bin == BWRAP_DEFAULT_BIN) ? BWRAP_DEFAULT : BWRAP_DEFAULT2;
+        bwrap_cmdline = ((!strcmp(s_bwrap_bin, BWRAP_DEFAULT_BIN)) ? 
+            BWRAP_DEFAULT : BWRAP_DEFAULT2);
     }
     else
         DEBUG_MESSAGE("LS_BWRAP_CMDLINE set, use: %s\n", bwrap_cmdline);
@@ -685,7 +688,7 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
         if (end_param)
         {
             *ch = 0;
-            if (add_argv(begin_param, argc, &argv, mem))
+            if (add_argv(pCGI, begin_param, argc, &argv, mem))
             {
                 rc = -1;
                 break;
@@ -700,7 +703,7 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
         rc = -1;
     }
     if (!rc && begin_param)
-        rc = add_argv(begin_param, argc, &argv, mem);
+        rc = add_argv(pCGI, begin_param, argc, &argv, mem);
     if (rc)
     {
         bwrap_free(mem);
@@ -777,9 +780,8 @@ int exec_using_bwrap(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *done)
     int argc;
     char **argv;
     bwrap_mem_t *mem = NULL;
-    char *lsbwrap = cgi_getenv(pCGI, "LS_BWRAP");
-    DEBUG_MESSAGE("LS_BWRAP set to %s\n", lsbwrap);
-    if (!lsbwrap)
+    DEBUG_MESSAGE("LS_BWRAP %s set\n", pCGI->m_bwrap ? "IS" : "IS_NOT");
+    if (!pCGI->m_bwrap)
         return 0;
 
     rc = build_bwrap_exec(pCGI, cgi_error, &argc, &argv, done, &mem);

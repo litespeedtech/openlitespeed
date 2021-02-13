@@ -394,15 +394,15 @@ int send_fd(int fd, int sendfd)
 }
 
 
-int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
-                       char *const *pArgv, char *const *env, const RLimits *pLimits)
+int SUExec::prepare(int uid, int gid, int priority, int umaskVal,
+            const char *pChroot, int chrootLen,
+            const char *pReal, int pathLen,
+            const char *const *pArgv, const char *const *env,
+            const RLimits *pLimits, int flags)
 {
-    //NOTE: should this happen?
-    if (CgidWorker::getCgidWorker() == NULL)
-        return LS_FAIL;
-
-
-    int pid = -1;
+    int ret = m_req.buildReqHeader(uid, gid, priority, umaskVal,
+                                pChroot, chrootLen, pReal, pathLen, pLimits,
+                                flags);
     while (1)
     {
         ++pArgv;        //skip the first argv
@@ -413,20 +413,37 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd,
 
     while (1)
     {
+        if (!*env)
+        {
+            char buf[256];
+            if (flags & LSCGID_FLAG_BWRAP)
+            {
+                int n = snprintf(buf, sizeof(buf), "LS_BWRAP=1");
+                m_req.appendEnv(buf, n);
+            }
+            if (flags & LSCGID_FLAG_CGROUP)
+            {
+                int n = snprintf(buf, sizeof(buf), "LS_CGROUP=1");
+                m_req.appendEnv(buf, n);
+            }
+        }
         m_req.appendEnv(*env, *env ? strlen(*env) : 0);
         if (!*env)
             break;
         ++env;
     }
-#ifdef _HAS_LVE_
-    if ((CgidWorker::getCgidWorker()->getLVE())
-        && (m_req.getCgidReq()->m_uid))
-        sLVE[11] = CgidWorker::getCgidWorker()->getLVE() + '0';
-#endif
+    return ret;
+}
 
+
+int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd)
+{
+    //NOTE: should this happen?
+    if (CgidWorker::getCgidWorker() == NULL)
+        return LS_FAIL;
+
+    int pid = -1;
     int fdReq = -1;
-
-
 
     int ret = CoreSocket::connect(
         CgidWorker::getCgidWorker()->getConfig().getServerAddr(), 0,

@@ -549,6 +549,22 @@ class CValidation
         return false;
     }
 
+	protected function check_cmd_invalid_str($cmd)
+	{
+		// check if it's allowed command, do not allow ' " -c -i /dev/tcp bash sh csh tcsh ksh zsh
+		$cmd = str_replace('.', 'a', $cmd); // replace . with char before pattern check
+		$pattern = '#("|\'|;|-c|-i|/dev/tcp|\Wbash\W|\Wsh\W|\Wcsh\W|\Wtcsh\W|\Wzsh\W|\Wksh\W)#';
+
+		if (preg_match($pattern, $cmd, $m)) {
+			return $m[0];
+		}
+		$cmd = str_replace('\\', '', $cmd); // remove all escape & try again
+		if (preg_match($pattern, $cmd, $m)) {
+			return $m[0];
+		}
+		return null;
+	}
+
     public function chkAttr_file_val($attr, $val, &$err)
     {
         // apply to all
@@ -568,10 +584,15 @@ class CValidation
             $path = substr($val, 0, strrpos($val, '/'));
         } else {
             $path = $val;
-            if ($attr->_type == 'file1') {
+            if ($attr->_type == 'file1') { // file1 is command
+				$invalid_str = $this->check_cmd_invalid_str($path);
+				if ($invalid_str) {
+					$err = 'Cannot contain string ' . htmlspecialchars($invalid_str, ENT_QUOTES);
+					return -1;
+				}
                 $pos = strpos($val, ' ');
                 if ($pos > 0) {
-                    $path = substr($val, 0, $pos);
+                    $path = substr($val, 0, $pos); // check first part is valid path
                 }
             }
         }
@@ -779,7 +800,12 @@ class CValidation
         if (preg_match($attr->_minVal, $val)) {
             return 1;
         } else {
-            $err = "invalid format \"$val\". Syntax is {$attr->_minVal} - {$attr->_maxVal}";
+			if ($attr->_maxVal) { // has parse_help
+				$err = "invalid format \"$val\". Syntax is {$attr->_minVal} - {$attr->_maxVal}";
+			} else {
+				// when no parse_help, do not show syntax, e.g. used for not allowed value.
+				$err = "invalid value \"$val\"."; 
+			}
             return -1;
         }
     }

@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - Security</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - Security." />
+  <title>Open LiteSpeed Web Server Users' Manual - Security</title>
+  <meta name="description" content="Open LiteSpeed Web Server Users' Manual - Security." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
   <link rel="shortcut icon" href="../img/favicon.ico" />
@@ -14,10 +14,8 @@
   <figure>
     <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
   </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 18</h3>
+  <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a></h3>
+  <h5 class="ls-text-muted">Version 1.6 &nbsp;&#8212;&nbsp;Rev. 2</h5>
   <hr/>
   <div>
     <ul>
@@ -62,9 +60,7 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
+            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
@@ -82,68 +78,84 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li>
-            <a href="AdminListeners_General_Help.html">
-              Admin Listener General
-            </a>
-          </li>
-          <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
-          </li>
+          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
         </ul>
       </li>
     </ul>
   </div>
 </aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="admin.html">Administration</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="config.html">Configuration</a> &#187;</div></div>
-<h1>安全</h1>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="admin.html">Administration</a></div><div class="center"><a href="index.html">Home</a></div><div class="next"><a href="config.html">Configuration</a> &#187;</div></div>
+<h1>Security</h1>
 
-<p>LiteSpeed Web Server在设计安全性时是首要考虑因素。
-LSWS支持SSL，具有服务器和虚拟主机级别的访问控制，
-以及特定于context的领域保护。 除了这些标准功能，
-LSWS还具有以下特殊安全功能: </p>
+<p>LiteSpeed Web Server is designed with security as a top consideration. 
+LSWS supports SSL, has access control at server and virtual host levels, 
+and context-specific realm protection. Besides these standard features, 
+LSWS also has the following special security features: </p>
 
 <ol>
-	<li><h3>连接级别限制:</h3>
+	<li><h3>Connection level limits:</h3>
 	  <ul>
-	    <li>IP级限制限制了与单个IP地址之间的网络带宽，而与连接数无关。</li>
-	    <li> IP级别的连接限制了与单个IP地址的并发连接数。 
-	    	您可以通过WebAdmin控制台中的软连接限制，硬连接限制，宽限期和禁止期设置来控制。 </li>
+	    <li> IP-level throttling limits network bandwidth to and from a single IP 
+	      address regardless of the number of connections. </li>
+	    <li> IP-level connection accounting limits the number of concurrent connections 
+	      from a single IP address. You can controll this with the connection 
+	      soft limit, connection hard limit, grace 
+	      period, and banned period settings in the WebAdmin console. </li>
 	  </ul>
 	</li>
-	<li><h3> 请求检查:</h3>
-	  	<p> LiteSpeed Web服务器将审核每个HTTP请求。 “ /” 不允许在URL编码中,
-	  	 因此拒绝访问隐藏文件和其父目录。.</p>
-	    <p>请求大小受LiteSpeed Web服务器的最大请求URL长度，最大请求标头长度和最大请求正文长度的限制。 </p>
+	<li><h3>Request checking:</h3>
+	  	<p> Every HTTP request is vetted by LiteSpeed Web Server. "/." is not allowed in
+	    a decoded URL, thus denying accessing hidden files and parent directories.</p>
+	    <p>Request size is limited by LiteSpeed Web Server's max request URL length, 
+	    max request header length, and max request body length settings. </p>
     </li>
-	<li><h3>静态文件检查:</h3>
-  		<p>只有满足以下条件，LiteSpeed Web Server才会提供静态文件: </p>
+	<li><h3>Static file checking:</h3>
+  		<p>LiteSpeed Web Server will serve a static file only if the following conditions 
+    are satisfied: </p>
 	  <ul>
-	    <li>每个人都可以读取该文件。</li>
-	    <li>该文件不可执行.</li>
-	    <li>该文件不在拒绝访问目录列表中.</li>
-	    <li>如果不允许符号链接，那么文件不应包含符号链接。 </li>
-	    <li>默认情况下，LiteSpeed Web Server不会通过列出目录文件来索引目录，除非明确的启用它.</li>
+	    <li>The file is readable by everyone.</li>
+	    <li>The file is not executable.</li>
+	    <li>The file is not in the access denied directory list.</li>
+	    <li>The file does not contain symbolic link if symbolic links are not allowed. </li>
+	    <li>By default, LiteSpeed Web Server does not index a directory by listing its
+	        files, it has to be enabled explicitly.</li>
 	  </ul>
 	</li>
-	<li><h3>外部应用防火墙:</h3>
-		<p>LiteSpeed Web Server将请求转发到外部应用程序以处理/生成动态内容。 这些应用程序会占用大量系统资源.
-当系统资源消耗达到一定程度时，整个系统的性能将严重降低-例如当必须使用交换空间时. 进行DoS攻击的一种方法是将大量并发请求发送给Web服务器，
-使外部程序忙于处理对繁琐的请求。</p>
-<p>LiteSpeed Web Server可以限制请求并控制外部应用程序的并发数量，以防止系统资源过度使用. LSWSh会缓存请求，并仅将完成的请求转发到外部应用程序. 
-这意味着当服务器接收请求时，外部应用程序将不会等待. LSWS还缓存了外部应用程序的响应，以便可以在响应完成后立即释放外部应用程序，而不必等待客户端收到完整的响应。
-这样服务器可以使用更少的外部应用程序进程来服务更多的请求并获得更高的性能和可扩展性。 
-LiteSpeed Web Server还使用虚拟内存来缓存请求和响应正文，以在不牺牲性能的情况下最大程度地减少系统内存的使用. </p></li>
-  <li><h3>CGI资源消耗限制:</h3>
-<p>LiteSpeed Web Server限制了CGI应用程序可以消耗的系统资源量。 对于每个对CGI脚本的请求，Web服务器都需要启动一个独立的CGI进程来处理它
- 在Unix系统上，并发进程数是有限的。 使用CGI资源消耗限制，可以配置Web服务器可以启动的并发CGI进程的最大数量。 过多的并发进程将降低整个系统的性能。 （CGI进程是DoS攻击的常用武器。）,可以为每个用户指定系统进程限制，以控制CGI应用程序最多可以产生的进程数,每个进程都受到CPU和内存限制的限制</p>
+	<li><h3>External application firewall:</h3>
+		<p>LiteSpeed Web Server forwards requests to external applications to process/generate 
+dynamic content. Those applications can use a lot of system resources. The performance of the 
+whole system will be severely degraded when system resource consumption reaches a certain point 
+-- when swapping space has to be used, for example. One way to conduct a DoS attack is to flood 
+the web server with concurrent requests to a cumbersome external application.</p>
+<p>LiteSpeed Web Server can pipeline requests and control the concurrent level of external 
+application use to prevent overconsumption of system resources. LSWS caches requests and only 
+forwards completed requests to the external application. This means the external application 
+will not be held waiting while the server is receiving the request. LSWS also caches the 
+external application's response so that the external application can be released as soon as 
+the response is completed and does not have to wait for the client to receive the complete response. 
+This way the server can utilize fewer external application instances to serve more concurrent 
+requests and achieve higher performance and scalability. LiteSpeed Web Server also uses its 
+own virtual memory to cache the request and response body to minimize the usage of system 
+memory without sacrificing performance. </p></li>
+  <li><h3>CGI resources consumption limit:</h3>
+<p>LiteSpeed Web Server restricts the amount of system resources that can be consumed by
+ CGI applications. For each request to a CGI script, the web server needs to
+ start a standalone CGI process to handle it. On a Unix system, the number of concurrent 
+ processes is limited. With the CGI resources consumption limit, you can configure 
+ the maximum number of concurrent CGI instances that the web server can launch.  
+Excessive concurrent processes will degrade the performance 
+of the whole system. (CGI processes are a common weapon for DoS attacks.)
+A system process limit can be specified per user in order to control the number
+of processes that can be spawned by a CGI application. Each process is further confined by CPU and memory limits.</p>
 </li>
-  <li><h3>suEXEC增强CGI/FastCGI的安全性:</h3>
-<p>为了降低CGI或Fast CGI脚本的安全风险，LiteSpeed Web Server可以通过以“suEXEC”模式运行,来限制CGI脚本可以使用的系统资源。
-"suEXEC”会使用与Web服务器不同的用户ID启动CGI或Fast CGI脚本. 通过防止一个用户的CGI脚本访问其他用户的文件，这大大提高了共享托管环境中的安全性。</p>
+  <li><h3>Enhanced CGI/FastCGI security with suEXEC:</h3>
+<p>In order to reduce the security risks of a CGI or Fast CGI script, LiteSpeed Web Server can restrict the system resources the CGI script can access by running it in "suEXEC" mode. 
+"suEXEC" starts the CGI or Fast CGI script with a different user ID from that of the web server. This greatly improves security in
+shared hosting environment by preventing one user's CGI script from accessing other users' files.</p>
 </li>
 </ol>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
+</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2018. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>
 </body>
 </html>

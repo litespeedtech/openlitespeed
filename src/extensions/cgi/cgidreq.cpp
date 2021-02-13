@@ -151,7 +151,8 @@ void CgidReq::clear()
 
 int CgidReq::buildReqHeader(int uid, int gid, int priority, int umaskVal,
                             const char *pChroot, int chrootLen,
-                            const char *pReal, int pathLen, const RLimits *pLimits)
+                            const char *pReal, int pathLen, const RLimits *pLimits,
+                            int flags)
 {
     lscgid_req *pHeader = getCgidReq();
     const char *pEnd;
@@ -159,6 +160,7 @@ int CgidReq::buildReqHeader(int uid, int gid, int priority, int umaskVal,
     //pReal = pReq->getRealPath()->c_str();
     pHeader->m_uid = uid;
     pHeader->m_gid = gid;
+    pHeader->m_flags = flags;
     if (pChroot)
     {
         pHeader->m_chrootPathLen = chrootLen + 1;

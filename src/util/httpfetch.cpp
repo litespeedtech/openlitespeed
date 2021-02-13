@@ -748,6 +748,15 @@ int HttpFetch::sendReq()
         else
             break;
     //fall through
+
+    case STATE_RCVD_STATUS:
+    case STATE_RCVD_RESP_HEADER:
+    case STATE_RCVD_RESP_BODY:
+        //NOTE: if server send response before request body finishs, the state could be
+        //     updated to process response, it is not optimum, but without bigger change
+        //     we can try continue to finish request body.
+
+        // fall through
     case STATE_SENT_REQ_HEADER: //send request body
         if (m_reqBodyLen)
         {
@@ -775,7 +784,8 @@ int HttpFetch::sendReq()
             }
         }
         m_resHeaderBuf.clear();
-        m_reqState = STATE_SENT_REQ_BODY;
+        if (m_reqState == STATE_SENT_REQ_HEADER)
+            m_reqState = STATE_SENT_REQ_BODY;
         if (m_enableDriver)
             m_pHttpFetchDriver->switchWriteToRead();
     }
@@ -929,6 +939,12 @@ int HttpFetch::recvResp()
         {
             switch (m_reqState)
             {
+            case STATE_SENT_REQ_HEADER:
+                //NOTE: after sent request header, server could start to send reply,
+                //      even finish the reply, so we need to start receiving response
+                //      otherwise, it could causes a infinity loop.
+
+                // fall through
             case STATE_WAIT_RESP: //waiting response status line
                 if (getLine(p, pEnd, pLineBegin, pLineEnd))
                 {
@@ -1004,6 +1020,10 @@ int HttpFetch::recvResp()
                     return endReq(0);
                 p += len;
                 break;
+            default:
+                assert("We hit a infinity loop case" == NULL);
+                // to avoid the hard infinity loop. still could cause a tight event loop.
+                return 0;
             }
         }
     }
@@ -1071,7 +1091,8 @@ int HttpFetch::processEvents(short revent)
 
 int HttpFetch::process()
 {
-    while ((m_fdHttp != -1) && (m_reqState < STATE_SENT_REQ_BODY))
+    while (m_fdHttp != -1
+        && (m_reqState < STATE_SENT_REQ_BODY || m_reqSent < m_reqBodyLen))
         sendReq();
     while ((m_fdHttp != -1) && (m_reqState < STATE_RCVD_RESP_BODY)
         && m_tmStart.tv_sec + m_iTimeoutSec > time(NULL))

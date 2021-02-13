@@ -36,6 +36,8 @@ class LocalWorkerConfig : public ExtWorkerConfig
     int         m_iPhpHandler;
 
     void operator=(const LocalWorkerConfig &rhs);
+    int isUserBlocked(const char *pUser);
+    int isGidBlackListed(gid_t gid);
 public:
     explicit LocalWorkerConfig(const char *pName);
     LocalWorkerConfig();

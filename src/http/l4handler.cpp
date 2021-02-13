@@ -59,8 +59,24 @@ int L4Handler::onReadEx()
     bool empty = m_pL4conn->getBuf()->empty();
     int space;
 
-    while ((space = m_pL4conn->getBuf()->contiguous()) > 0)
+    while (true)
     {
+        space = m_pL4conn->getBuf()->contiguous();
+        if (space <= 0)
+        {
+            if (m_pL4conn->doWrite() == LS_FAIL)
+                goto ERROR;
+            if (!m_pL4conn->getBuf()->empty() && empty)
+                m_pL4conn->continueWrite();
+
+            if ((space = m_pL4conn->getBuf()->available()) <= 0)
+            {
+                suspendRead();
+                LS_DBG_L(getLogSession(), "L4Handler: suspendRead");
+                return 0;
+            }
+        }
+
         int n = getStream()->read(m_pL4conn->getBuf()->end(), space);
         LS_DBG_L(getLogSession(), "L4Handler: read [%d]", n);
 
@@ -69,15 +85,13 @@ int L4Handler::onReadEx()
         else if (n == 0)
             break;
         else // if (n < 0)
-        {
-            closeBothConnection();
-            return LS_FAIL;
-        }
+            goto ERROR;
     }
 
     if (!m_pL4conn->getBuf()->empty())
     {
-        m_pL4conn->doWrite();
+        if (m_pL4conn->doWrite() == LS_FAIL)
+            goto ERROR;
         if (!m_pL4conn->getBuf()->empty() && empty)
             m_pL4conn->continueWrite();
 
@@ -89,6 +103,9 @@ int L4Handler::onReadEx()
     }
 
     return 0;
+ERROR:
+    closeBothConnection();
+    return LS_FAIL;
 }
 
 
@@ -154,7 +171,7 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
         pBuff->append("\n\n", 2);
 
     continueRead();
-    
+
     LS_DBG_L(getLogSession(),
              "L4Handler: init web socket, reqheader [%.*s], len [%d]",
              req.getHttpHeaderLen(), req.getOrgReqLine(),

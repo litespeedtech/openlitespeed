@@ -298,6 +298,7 @@ private:
     AutoStr2            m_lastStatPath;
     struct stat         m_lastStat;
     int                 m_lastStatRes;
+    AutoStr2            m_headerLeftOver;
 
     static_file_data_t *m_pUrlStaticFileData;
 
@@ -902,6 +903,9 @@ public:
 
     void appendReqHeader( const char *pName, int iNameLen,
                           const char *pValue, int iValLen);
+
+    void saveHeaderLeftOver();
+    void restoreHeaderLeftOver();
 
     void classifyUrl();
 

@@ -3207,8 +3207,9 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 
     enableCGroup((ServerProcessConfig::getInstance().getCGroupAllow()) ?
                  ConfigCtx::getCurConfigCtx()->getLongValue(
-                     pVhConfNode, "cgroups", 0, 1,
-                     ServerProcessConfig::getInstance().getCGroupDefault()) : 0);
+                     pVhConfNode, "cgroups", 1, 2,
+                     ServerProcessConfig::getInstance().getCGroupDefault())
+                       == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON : 0);
 
     if (!is_uid_set)
         updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());

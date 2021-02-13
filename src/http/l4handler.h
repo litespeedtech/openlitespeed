@@ -37,11 +37,13 @@ public:
               int iIpLen);
 
     LoopBuf    *getBuf()            {   return m_buf;  }
-    void        continueRead()      {   getStream()->continueRead();   }
-    void        suspendRead()       {   getStream()->suspendRead();   }
-    void        suspendWrite()      {   getStream()->suspendWrite();    }
-    void        continueWrite()     {   getStream()->continueWrite();    }
+    void        continueRead()      {   getStream()->continueRead();        }
+    void        suspendRead()       {   getStream()->suspendRead();         }
+    void        suspendWrite()      {   getStream()->suspendWrite();        }
+    void        continueWrite()     {   getStream()->continueWrite();       }
+    bool        isWantRead() const  {   return getStream()->isWantRead();   }
 
+    int         onReadEx();
     void        doWrite();
     void        closeBothConnection();
 
@@ -54,7 +56,6 @@ private:
     int onTimerEx()         {   return 0;   }
     int onCloseEx()         {   return 0;   }
     int onWriteEx();
-    int onReadEx();
     int onInitConnected()   {   return 0;   };
 
 public:

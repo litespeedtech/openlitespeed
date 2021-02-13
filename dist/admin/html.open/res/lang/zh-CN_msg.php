@@ -7,32 +7,27 @@
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014-2020
+* @copyright  Copyright (c) LiteSpeed 2014-2019
 * @link       https://www.litespeedtech.com/
 */
 
 global $_gmsg;
 
-$_gmsg['menu_cloudimage'] = '云镜像';
 $_gmsg['menu_cluster'] = '集群';
 $_gmsg['menu_community'] = '社区';
 $_gmsg['menu_compilephp'] = '编译 PHP';
 $_gmsg['menu_dashboard'] = '主面板';
-$_gmsg['menu_devgroup'] = '开发者邮件列表';
 $_gmsg['menu_docs'] = '文档';
-$_gmsg['menu_forum'] = '论坛';
 $_gmsg['menu_general'] = '常规';
 $_gmsg['menu_guides'] = '配置指南';
 $_gmsg['menu_help'] = '帮助';
 $_gmsg['menu_home'] = '首页';
 $_gmsg['menu_logviewer'] = '查看服务器日志';
-$_gmsg['menu_releaselog'] = '发布日志';
 $_gmsg['menu_restart'] = '平滑重启';
 $_gmsg['menu_rtstats'] = '实时统计';
 $_gmsg['menu_serv'] = '服务器';
 $_gmsg['menu_sl'] = '监听器';
 $_gmsg['menu_sl_'] = '监听器';
-$_gmsg['menu_slack'] = 'Slack';
 $_gmsg['menu_toggledebug'] = '调试日志开关';
 $_gmsg['menu_tools'] = '工具';
 $_gmsg['menu_tp'] = '虚拟主机模板';
@@ -51,7 +46,7 @@ $_gmsg['tab_ext'] = '外部应用程序';
 $_gmsg['tab_g'] = '常规';
 $_gmsg['tab_log'] = '日志';
 $_gmsg['tab_mod'] = '模块';
-$_gmsg['tab_rails'] = '应用服务器';
+$_gmsg['tab_rails'] = 'App Server';
 $_gmsg['tab_requestfilter'] = '请求过滤';
 $_gmsg['tab_rewrite'] = '重写';
 $_gmsg['tab_sec'] = '安全';
@@ -85,7 +80,6 @@ $_gmsg['note_configmodified'] = '配置已修改。要使修改生效，请进�
 $_gmsg['note_confirm_delete'] = '你确定要删除这个条目吗？这将从配置文件中被永久移除。';
 $_gmsg['note_confirm_instantiate'] = '你确定你想要实例化这个虚拟主机吗？这将为该虚拟主机创建一个独立的配置文件。';
 $_gmsg['note_copyrightreserved'] = '保留所有权利。';
-$_gmsg['note_curbranch'] = '当前分支';
 $_gmsg['note_curver'] = '当前版本';
 $_gmsg['note_dataretrievedat'] = '数据接收于';
 $_gmsg['note_entfeature'] = '这个特性仅适用于企业版';
@@ -98,7 +92,6 @@ $_gmsg['note_multicpufeature'] = '这个特性仅适用于多CPU版';
 $_gmsg['note_newver'] = '新版本';
 $_gmsg['note_number'] = '数值';
 $_gmsg['note_numvalidrange'] = '数值有效范围';
-$_gmsg['note_readonly_mode'] = '在配置文件中检测到包含文件,进入只读模式.';
 $_gmsg['note_select_option'] = '请选择';
 $_gmsg['note_serv_level'] = '服务器级';
 $_gmsg['note_signout'] = '注销';
@@ -142,7 +135,6 @@ $_gmsg['l_allowdirectaccess'] = '允许直接访问';
 $_gmsg['l_allowedRobotHits'] = '允许的机器人命中';
 $_gmsg['l_allowedhosts'] = '允许的域名';
 $_gmsg['l_allowoverride'] = '允许覆盖';
-$_gmsg['l_allowquic'] = '允许QUIC';
 $_gmsg['l_allowsetuid'] = '允许设置UID';
 $_gmsg['l_allowsymbollink'] = '跟随符号链接';
 $_gmsg['l_apachebinpath'] = 'Apache执行程序路径';
@@ -178,10 +170,6 @@ $_gmsg['l_binpath'] = '二进制文件路径';
 $_gmsg['l_blockbadreq'] = '屏蔽坏请求';
 $_gmsg['l_botWhiteList'] = '机器人白名单';
 $_gmsg['l_brcompress'] = 'Brotli压缩';
-$_gmsg['l_brcompresslevel'] = 'Brotli压缩级别（动态内容）';
-$_gmsg['l_brstaticcompresslevel'] = 'Brotli压缩级别（静态文件）';
-$_gmsg['l_bubblewrap'] = 'Bubblewrap 容器';
-$_gmsg['l_bubblewrapcmd'] = 'Bubblewrap 命令';
 $_gmsg['l_byteslog'] = '字节日志';
 $_gmsg['l_cacertfile'] = 'CA 证书文件';
 $_gmsg['l_cacertpath'] = 'CA 证书路径';
@@ -192,12 +180,11 @@ $_gmsg['l_cachereqcookie'] = '缓存带Cookie的请求';
 $_gmsg['l_cacherespcookie'] = '缓存带Cookie的响应';
 $_gmsg['l_cachestaleage'] = '缓存陈旧时间（秒）';
 $_gmsg['l_cachestoragesettings'] = '缓存存储设置';
-$_gmsg['l_certchain'] = '证书链';
+$_gmsg['l_certchain'] = '链式证书';
 $_gmsg['l_certfile'] = '证书文件';
 $_gmsg['l_cgidsock'] = 'CGI守护进程套接字';
 $_gmsg['l_cgipriority'] = 'CGI优先级';
 $_gmsg['l_cgisettings'] = 'CGI设置';
-$_gmsg['l_cgroups'] = '控制组群';
 $_gmsg['l_checksymbollink'] = '检查符号链接';
 $_gmsg['l_chrootpath'] = 'Chroot路径';
 $_gmsg['l_ciphers'] = '加密器';
@@ -207,15 +194,14 @@ $_gmsg['l_compressarchive'] = '压缩存档';
 $_gmsg['l_compressibletypes'] = '压缩类型';
 $_gmsg['l_concurrentReqLimit'] = '并发请求限制';
 $_gmsg['l_configfile'] = '配置文件';
-$_gmsg['l_congestionctrl'] = '拥塞控制';
 $_gmsg['l_connection'] = '连接';
 $_gmsg['l_conntimeout'] = '连接超时时长（秒）';
 $_gmsg['l_contextlist'] = '资源集列表';
 $_gmsg['l_cpuaffinity'] = 'CPU亲缘性';
 $_gmsg['l_cpuhardlimit'] = 'CPU硬限制（秒）';
 $_gmsg['l_cpusoftlimit'] = 'CPU软限制（秒）';
-$_gmsg['l_crlfile'] = '客户端吊销文件';
-$_gmsg['l_crlpath'] = ' 客户端吊销路径';
+$_gmsg['l_crlfile'] = '客户端回收文件';
+$_gmsg['l_crlpath'] = '客户端回收路径';
 $_gmsg['l_ctxas'] = 'App Server资源集定义';
 $_gmsg['l_ctxb'] = '负载均衡器资源集定义';
 $_gmsg['l_ctxc'] = 'CGI资源集定义';
@@ -260,7 +246,6 @@ $_gmsg['l_enablehotlinkctrl'] = '启用盗链防护';
 $_gmsg['l_enableipgeo'] = '启用IP地理定位';
 $_gmsg['l_enablelve'] = 'Cloud Linux';
 $_gmsg['l_enableprivatecache'] = '启用私有缓存';
-$_gmsg['l_enablequic'] = '启用QUIC';
 $_gmsg['l_enablerailshosting'] = '启用共享主机';
 $_gmsg['l_enablerewrite'] = '启用重写';
 $_gmsg['l_enablescript'] = '启用脚本/外部应用程序';
@@ -311,12 +296,10 @@ $_gmsg['l_groupname'] = '组名';
 $_gmsg['l_groups'] = '组定义';
 $_gmsg['l_gzip'] = 'Gzip压缩';
 $_gmsg['l_gzipautoupdatestatic'] = '自动更新静态文件';
-$_gmsg['l_gzipbr'] = 'GZIP/Brotli压缩';
 $_gmsg['l_gzipcachedir'] = '静态GZIP缓存目录';
 $_gmsg['l_gzipcompresslevel'] = '压缩级别（动态内容）';
 $_gmsg['l_gzipmaxfilesize'] = '静态文件最大尺寸（字节）';
 $_gmsg['l_gzipminfilesize'] = '静态文件最小尺寸（字节）';
-$_gmsg['l_gzipstaticcompresslevel'] = 'GZIP压缩级别（静态文件）';
 $_gmsg['l_handlername'] = '处理器名称';
 $_gmsg['l_handlertype'] = '处理器类型';
 $_gmsg['l_hardlimit'] = '连接数硬限制';
@@ -421,16 +404,6 @@ $_gmsg['l_process'] = '进程';
 $_gmsg['l_prochardlimit'] = '进程硬限制';
 $_gmsg['l_procsoftlimit'] = '进程软限制';
 $_gmsg['l_protocolver'] = '协议版本';
-$_gmsg['l_quic'] = 'QUIC';
-$_gmsg['l_quiccfcw'] = '连接流量控制窗口';
-$_gmsg['l_quichandshaketimeout'] = '握手超时时间（秒）';
-$_gmsg['l_quicidletimeout'] = '空闲超时时间（秒）';
-$_gmsg['l_quicmaxcfcw'] = '最大连接流量窗口值设置';
-$_gmsg['l_quicmaxsfcw'] = '最大流量窗口值设置';
-$_gmsg['l_quicmaxstreams'] = '每个连接的最大并发数';
-$_gmsg['l_quicsfcw'] = '连接流量窗口值';
-$_gmsg['l_quicshmdir'] = 'QUIC SHM 目录';
-$_gmsg['l_quicversions'] = 'QUIC 版本';
 $_gmsg['l_railsapplimit'] = '单账号最大应用程序数量';
 $_gmsg['l_railshosting'] = 'Rack/Rails共享主机';
 $_gmsg['l_railssettings'] = 'App Server设置';
@@ -456,7 +429,6 @@ $_gmsg['l_restrictedpermissionmask'] = '限制权限掩码';
 $_gmsg['l_restrictedscriptpermissionmask'] = '脚本限制权限掩码';
 $_gmsg['l_retrytimeout'] = '重试超时时间（秒）';
 $_gmsg['l_retypepass'] = '确认新密码';
-$_gmsg['l_reuseport'] = '启用REUSEPORT';
 $_gmsg['l_rewritebase'] = '重写基准';
 $_gmsg['l_rewritecontrol'] = '重写控制';
 $_gmsg['l_rewritedocrootrules'] = '文档根目录重写规则';
@@ -597,8 +569,6 @@ $_gmsg['o_noabort'] = '不终止';
 $_gmsg['o_nofornph'] = '对不可解析的头(NPH)为否';
 $_gmsg['o_none'] = '无';
 $_gmsg['o_notset'] = '未设置';
-$_gmsg['o_off'] = '关';
-$_gmsg['o_on'] = '开';
 $_gmsg['o_overridecpanelrestartscript'] = '替代cPanel重启HTTPD的脚本';
 $_gmsg['o_ownlogfile'] = '自有日志文件';
 $_gmsg['o_sameasserver'] = '与服务器相同';
@@ -607,14 +577,12 @@ $_gmsg['o_showver'] = '显示版本';
 $_gmsg['o_size'] = '大小';
 $_gmsg['o_thrucgidaemon'] = '通过CGI守护进程';
 $_gmsg['o_trustediponly'] = '仅限受信任的IP';
-$_gmsg['o_use_last_ip_for elb'] = '使用最后一个IP（对于AWS ELB）';
 $_gmsg['o_useapachebinwrapper'] = '使用apache运行替身';
 $_gmsg['o_userhomedironly'] = '只有用户主目录';
 $_gmsg['o_vhroot'] = '虚拟主机根目录';
 $_gmsg['o_weekly'] = '每周';
 $_gmsg['o_yes'] = '是';
 $_gmsg['o_yesdaemonmode'] = 'Yes (Daemon Mode)';
-$_gmsg['o_yesdetachmode'] = '是（独立模式）';
 
 
 $_gmsg['parse_awstatsuri'] = '以 / 开头并且以 / 结尾';
@@ -743,7 +711,7 @@ $_gmsg['buildphp_mailheader2'] = '确认邮件源';
 $_gmsg['buildphp_mainstatus'] = '主状态';
 $_gmsg['buildphp_manualrunnotice'] = '<p>出于安全原因，请登入您的服务器并从shell运行预设置的脚本。你可以通过这个界面监控脚本运行。</p>
 	<p>如果编译成功，请根据需求更新php.ini。为了让更新生效，请进行一次平滑重启。</p>
-	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a></p>
+	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href=\"https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php\" target=\"_blank\">LiteSpeed wiki</a></p>
 	<p>如果你以root身份登入，你可以直接运行命令：<br><code>%%manual_script%%</code></p>
 	<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
 	<code>sudo %%manual_script%%</code></p>';

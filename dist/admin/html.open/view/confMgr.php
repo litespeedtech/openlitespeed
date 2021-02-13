@@ -32,7 +32,7 @@ var pagefunction = function() {
     <?php }
 
    if (Service::HasChanged()) { ?>
-	var span = $("#ribbon span");
+	var span = $("#restartnotice");
 	if (span.hasClass("hide"))
 		span.removeClass("hide");
 <?php } ?>

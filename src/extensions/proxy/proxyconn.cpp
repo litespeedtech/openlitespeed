@@ -53,6 +53,8 @@ ProxyConn::ProxyConn()
 
 ProxyConn::~ProxyConn()
 {
+    if (m_pChunkIS)
+        HttpResourceManager::getInstance().recycle(m_pChunkIS);
 }
 
 

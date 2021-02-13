@@ -158,31 +158,43 @@ class DTblDefBase
 
         $this->_options['symbolLink'] = array('1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_ifownermatch'), '0' => DMsg::ALbl('o_no'));
 
-        $this->_options['extType'] = array(
-            'fcgi'         => DMsg::ALbl('l_fcgiapp'), 'fcgiauth'     => DMsg::ALbl('l_extfcgiauth'),
-            'lsapi'        => DMsg::ALbl('l_extlsapi'),
-            'servlet'      => DMsg::ALbl('l_extservlet'), 'proxy'        => DMsg::ALbl('l_extproxy'),
-            'logger'       => DMsg::ALbl('l_extlogger'),
-            'loadbalancer' => DMsg::ALbl('l_extlb'));
+		$this->_options['disable_off_on'] = ['0' => DMsg::ALbl('o_disabled'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on')];
 
-        $this->_options['extTbl'] = array(
-            0              => 'type', 1              => 'A_EXT_FCGI',
-            'fcgi'         => 'A_EXT_FCGI', 'fcgiauth'     => 'A_EXT_FCGIAUTH',
-            'lsapi'        => 'A_EXT_LSAPI',
-            'servlet'      => 'A_EXT_SERVLET', 'proxy'        => 'A_EXT_PROXY',
-            'logger'       => 'A_EXT_LOGGER',
-            'loadbalancer' => 'A_EXT_LOADBALANCER');
+		$this->_options['notset_off_on'] = ['' => DMsg::ALbl('o_notset'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on')];
 
-        $this->_options['tp_extTbl'] = array(
-            0              => 'type', 1              => 'T_EXT_FCGI',
-            'fcgi'         => 'T_EXT_FCGI', 'fcgiauth'     => 'T_EXT_FCGIAUTH',
-            'lsapi'        => 'T_EXT_LSAPI',
-            'servlet'      => 'T_EXT_SERVLET', 'proxy'        => 'T_EXT_PROXY',
-            'logger'       => 'T_EXT_LOGGER',
-            'loadbalancer' => 'T_EXT_LOADBALANCER');
+        $this->_options['extType'] = [
+			'fcgi' => DMsg::ALbl('l_fcgiapp'),
+			'fcgiauth' => DMsg::ALbl('l_extfcgiauth'),
+			'lsapi' => DMsg::ALbl('l_extlsapi'),
+			'servlet' => DMsg::ALbl('l_extservlet'),
+			'proxy' => DMsg::ALbl('l_extproxy'),
+			'logger' => DMsg::ALbl('l_extlogger'),
+			'loadbalancer' => DMsg::ALbl('l_extlb')];
 
-        $this->_options['logLevel'] = array('ERROR'  => 'ERROR', 'WARN'   => 'WARNING',
-            'NOTICE' => 'NOTICE', 'INFO'   => 'INFO', 'DEBUG'  => 'DEBUG');
+		$this->_options['extTbl'] = [
+			0 => 'type',
+			1 => 'A_EXT_FCGI',
+			'fcgi' => 'A_EXT_FCGI',
+			'fcgiauth' => 'A_EXT_FCGIAUTH',
+			'lsapi' => 'A_EXT_LSAPI',
+			'servlet' => 'A_EXT_SERVLET',
+			'proxy' => 'A_EXT_PROXY',
+			'logger' => 'A_EXT_LOGGER',
+			'loadbalancer' => 'A_EXT_LOADBALANCER'];
+
+		$this->_options['tp_extTbl'] = [
+			0 => 'type',
+			1 => 'T_EXT_FCGI',
+			'fcgi' => 'T_EXT_FCGI',
+			'fcgiauth' => 'T_EXT_FCGIAUTH',
+			'lsapi' => 'T_EXT_LSAPI',
+			'servlet' => 'T_EXT_SERVLET',
+			'proxy' => 'T_EXT_PROXY',
+			'logger' => 'T_EXT_LOGGER',
+			'loadbalancer' => 'T_EXT_LOADBALANCER'];
+
+		$this->_options['logLevel'] = ['ERROR'  => 'ERROR', 'WARN'   => 'WARNING',
+            'NOTICE' => 'NOTICE', 'INFO'   => 'INFO', 'DEBUG'  => 'DEBUG'];
 
         $this->_options['aclogctrl'] = [
             0 => DMsg::ALbl('o_ownlogfile'),
@@ -237,6 +249,10 @@ class DTblDefBase
         $ctxOrder = self::NewViewAttr('order', DMsg::ALbl('l_order'));
         $ctxOrder->SetFlag(DAttr::BM_NOFILE | DAttr::BM_HIDE | DAttr::BM_NOEDIT);
 
+		$forbidden_ext_groups = ['root', 'sudo', 'wheel', 'shadow', 'lsadm'];
+		$forbidden_ext_users = ['root', 'lsadm'];
+
+
         $attrs = array(
             'priority'    => self::NewIntAttr('priority', DMsg::ALbl('l_priority'), true, -20, 20),
             'indexFiles'  => self::NewTextAreaAttr('indexFiles', DMsg::ALbl('l_indexfiles'), 'fname', true, 2, null, 0, 0, 1),
@@ -269,8 +285,8 @@ class DTblDefBase
             'ext_backlog'      => self::NewIntAttr('backlog', DMsg::ALbl('l_backlog'), true, 1, 100),
             'ext_instances'    => self::NewIntAttr('instances', DMsg::ALbl('l_instances'), true, 0, 1000),
             'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), array('' => '', '1' => DMsg::ALbl('o_yes'), '3' => DMsg::ALbl('o_yesdetachmode'), '2' => DMsg::ALbl('o_yesdaemonmode'), '0' => DMsg::ALbl('o_no'), )),
-            'ext_user'         => self::NewTextAttr('extUser', DMsg::ALbl('l_suexecuser'), 'cust'),
-            'ext_group'        => self::NewTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), 'cust'),
+            'ext_user'         => self::NewParseTextAttr('extUser', DMsg::ALbl('l_suexecuser'), "/^(?!(?:" . implode('|', $forbidden_ext_users). ")\\b)/", null),
+            'ext_group'        => self::NewParseTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), "/^(?!(?:" . implode('|', $forbidden_ext_groups). ")\\b)/", null),
             'cgiUmask'      => self::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_umask')),
             'memSoftLimit'  => self::NewIntAttr('memSoftLimit', DMsg::ALbl('l_memsoftlimit'), true, 0),
             'memHardLimit'  => self::NewIntAttr('memHardLimit', DMsg::ALbl('l_memhardlimit'), true, 0),
@@ -290,7 +306,9 @@ class DTblDefBase
             'tp_vrFile' => self::NewParseTextAttr('fileName', DMsg::ALbl('l_filename'), '/(\$VH_NAME)|(\$VH_ROOT)/', DMsg::ALbl('parse_tpfile'), false, 'templateFileRef'),
             'tp_name'            => self::NewParseTextAttr('name', DMsg::ALbl('l_name'), $this->_options['tp_vname'][0], $this->_options['tp_vname'][1], false, 'tpextAppName'),
             'vh_maxKeepAliveReq' => self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
-            'vh_enableGzip'      => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
+			'vh_cgroups'		=> self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), $this->_options['notset_off_on']),
+            'vh_enableGzip'      => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablegzip'), true, 'vhEnableGzip'),
+			'vh_enableBr'      => self::NewBoolAttr('enableBr', DMsg::ALbl('l_enablebrotli'), true, 'vhEnableBr'),
             'vh_allowSymbolLink' => self::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
             'vh_enableScript'    => self::NewBoolAttr('enableScript', DMsg::ALbl('l_enablescript'), false),
             'vh_restrained'      => self::NewBoolAttr('restrained', DMsg::ALbl('l_restrained'), false),
@@ -451,11 +469,11 @@ class DTblDefBase
             // dyn
             self::NewBoolAttr('enableDynGzipCompress', DMsg::ALbl('l_enabledyngzipcompress'), false),
             self::NewIntAttr('gzipCompressLevel', DMsg::ALbl('l_gzipcompresslevel'), true, 1, 9),
-           // self::NewIntAttr('enableBrCompress', DMsg::ALbl('l_brcompresslevel'), true, 0, 6),
+           // self::NewIntAttr('enableBrCompress', DMsg::ALbl('l_brcompresslevel'), true, 0, 6), // OLS does not support dynamic brotli
             // static
             self::NewBoolAttr('gzipAutoUpdateStatic', DMsg::ALbl('l_gzipautoupdatestatic')),
             self::NewIntAttr('gzipStaticCompressLevel', DMsg::ALbl('l_gzipstaticcompresslevel'), true, 1, 9),
-            self::NewIntAttr('brStaticCompressLevel', DMsg::ALbl('l_brstaticcompresslevel'), true, 1, 11),
+            self::NewIntAttr('brStaticCompressLevel', DMsg::ALbl('l_brstaticcompresslevel'), true, 0, 11), // 0 will disable
             self::NewTextAttr('gzipCacheDir', DMsg::ALbl('l_gzipcachedir'), 'cust'),
             self::NewIntAttr('gzipMaxFileSize', DMsg::ALbl('l_gzipmaxfilesize'), true, '1K'),
             self::NewIntAttr('gzipMinFileSize', DMsg::ALbl('l_gzipminfilesize'), true, 200)
@@ -479,9 +497,6 @@ class DTblDefBase
             self::NewIntAttr('quicMaxStreams', DMsg::ALbl('l_quicmaxstreams'), true, 10, 1000),
             self::NewIntAttr('quicHandshakeTimeout', DMsg::ALbl('l_quichandshaketimeout'), true, 1, 15),
             self::NewIntAttr('quicIdleTimeout', DMsg::ALbl('l_quicidletimeout'), true, 10, 30),
-            self::NewBoolAttr('quicEnableDPLPMTUD', DMsg::ALbl('l_quicenabledplpmtud')),
-            self::NewIntAttr('quicBasePLPMTU', DMsg::ALbl('l_quicbaseplpmtu'), true, 0, 65527),
-            self::NewIntAttr('quicMaxPLPMTU', DMsg::ALbl('l_quicmaxplpmtu'), true, 0, 65527),
 			];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_quic'), $attrs);
 	}
@@ -531,6 +546,28 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_perclientthrottle'), $attrs, 'perClientConnLimit');
     }
 
+    protected function add_S_SEC_CGI($id)
+    {
+        $attrs = [
+            self::NewTextAttr('cgidSock', DMsg::ALbl('l_cgidsock'), 'addr'),
+            self::NewIntAttr('maxCGIInstances', DMsg::ALbl('l_maxCGIInstances'), true, 1, 2000),
+            self::NewIntAttr('minUID', DMsg::ALbl('l_minuid'), true, 10),
+            self::NewIntAttr('minGID', DMsg::ALbl('l_mingid'), true, 5),
+            self::NewIntAttr('forceGID', DMsg::ALbl('l_forcegid'), true, 0),
+            $this->_attrs['cgiUmask'],
+            $this->_attrs['priority']->dup(null, DMsg::ALbl('l_cgipriority'), 'CGIPriority'),
+            self::NewIntAttr('CPUSoftLimit', DMsg::ALbl('l_cpusoftlimit'), true, 0),
+            self::NewIntAttr('CPUHardLimit', DMsg::ALbl('l_cpuhardlimit'), true, 0),
+            $this->_attrs['memSoftLimit'],
+            $this->_attrs['memHardLimit'],
+            $this->_attrs['procSoftLimit'],
+            $this->_attrs['procHardLimit'],
+            self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), $this->_options['disable_off_on']),
+        ];
+
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cgisettings'), $attrs, 'cgiResource');
+    }
+
 	protected function add_S_SEC_RECAP($id)
 	{
 		$parseFormat = "/^[[:alnum:]-_]{20,100}$/";
@@ -567,11 +604,11 @@ class DTblDefBase
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
 	}
-    
+
 	protected function add_S_SEC_BUBBLEWRAP($id)
 	{
         $attrs = [
-            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), array('0' => DMsg::ALbl('o_disabled'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on'))),
+            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), $this->_options['disable_off_on']),
             self::NewTextAreaAttr('bubbleWrapCmd', DMsg::ALbl('l_bubblewrapcmd'), 'cust', true, 3, null, 0),
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_bubblewrap'), $attrs);
@@ -580,7 +617,7 @@ class DTblDefBase
 	protected function add_VT_SEC_BUBBLEWRAP($id)
 	{
         $attrs = [
-            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), array('' => DMsg::ALbl('o_notset'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on'))),
+            self::NewSelAttr('bubbleWrap', DMsg::ALbl('l_bubblewrap'), $this->_options['notset_off_on']),
         ];
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_bubblewrap'), $attrs);
 	}
@@ -1004,10 +1041,21 @@ class DTblDefBase
         $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ssl'), $attrs, 'sslCert');
     }
 
-    protected function add_LVT_SSL($id)
+    protected function add_L_SSL($id)
     {
         $attrs = array(
             self::NewCheckBoxAttr('sslProtocol', DMsg::ALbl('l_protocolver'), array('1' => 'SSL v3.0', '2' => 'TLS v1.0', '4' => 'TLS v1.1', '8' => 'TLS v1.2', '16' => 'TLS v1.3')),
+            self::NewTextAttr('ciphers', DMsg::ALbl('l_ciphers'), 'cust'),
+            self::NewBoolAttr('enableECDHE', DMsg::ALbl('l_enableecdhe')),
+            self::NewBoolAttr('enableDHE', DMsg::ALbl('l_enabledhe')),
+            self::NewTextAttr('DHParam', DMsg::ALbl('l_dhparam'), 'cust'),
+        );
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs);
+    }
+
+    protected function add_VT_SSL($id)
+    {
+        $attrs = array(
             self::NewTextAttr('ciphers', DMsg::ALbl('l_ciphers'), 'cust'),
             self::NewBoolAttr('enableECDHE', DMsg::ALbl('l_enableecdhe')),
             self::NewBoolAttr('enableDHE', DMsg::ALbl('l_enabledhe')),

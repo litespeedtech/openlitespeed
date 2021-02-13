@@ -281,6 +281,88 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
 }
 
 
+int LocalWorkerConfig::isUserBlocked(const char *pUser)
+{
+    static const char *forbidden_users[] = { "root", "lsadm", };
+    const char **name;
+
+    for (name = forbidden_users; name < forbidden_users
+            + sizeof(forbidden_users) / sizeof(forbidden_users[0]); ++name)
+        if (0 == strcmp(*name, pUser))
+            return 1;
+
+    return 0;
+}
+
+
+int LocalWorkerConfig::isGidBlackListed(gid_t gid)
+{
+    static const char *forbidden_groups[] = { "root", "lsadm", "sudo",
+                                                    "wheel", "shadow", };
+    struct group group, *group_result;
+    const char **name;
+    size_t buflen;
+    char *buf;
+    int retval = 1;
+    char local_buf[0x400];
+
+    // Start with buffer on the stack.  If it's not large enough, we will
+    // use dynamic memory.
+    buf = local_buf;
+    buflen = sizeof(local_buf);
+
+  getgrgid_r_again:
+    if (0 == getgrgid_r(gid, &group, buf, buflen, &group_result))
+    {
+        for (name = forbidden_groups; name < forbidden_groups
+                + sizeof(forbidden_groups) / sizeof(forbidden_groups[0]); ++name)
+            if (0 == strcmp(*name, group_result->gr_name))
+            {
+                LS_DBG_L("LocalWorkerConfig::isGidBlackListed: group `%s'"
+                    " is forbidden", *name);
+                goto end;
+            }
+        LS_DBG_L("LocalWorkerConfig::isGidBlackListed: group `%s' OK",
+            group_result->gr_name);
+    }
+    else if (errno == ERANGE && buf == local_buf)
+    {
+        buflen = sysconf(_SC_GETGR_R_SIZE_MAX);
+        if ((size_t) -1 == buflen)
+        {
+            LS_DBG_L("LocalWorkerConfig::isGidBlackListed: unknown size "
+                "needed for getgrgid_r");
+            goto end;
+        }
+        buf = (char *) malloc(buflen);
+        if (!buf)
+        {
+            LS_WARN("LocalWorkerConfig::isGidBlackListed: malloc(%zu) failed",
+                                                                        buflen);
+            goto end;
+        }
+        LS_DBG_L("LocalWorkerConfig::isGidBlackListed: retry with larger "
+            "buffer of %zu bytes", buflen);
+        goto getgrgid_r_again;
+    }
+    else
+    {
+        LS_DBG_H("LocalWorkerConfig::isGidBlackListed: getgrgid_r failed: %s",
+            strerror(errno));
+        goto end;
+    }
+
+    LS_DBG_L("LocalWorkerConfig::isGidBlackListed: gid %d is not "
+                                                        "blacklisted", gid);
+    retval = 0;
+
+  end:
+    if (buf != local_buf)
+        free(buf);
+    return retval;
+}
+
+
 void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
         int iType, char *sHomeDir, size_t szHomeDir)
 {
@@ -295,8 +377,14 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
     {
         if ((int) gid == -1)
             gid = pw->pw_gid;
-
-        if ((iType != EA_LOGGER)
+        if (isGidBlackListed(gid))
+            gid = ServerProcessConfig::getInstance().getGid();
+        if (isUserBlocked(pw->pw_name))
+        {
+            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "ExtApp suExec: configured "
+                "user %s is blocked", pw->pw_name);
+        }
+        else if ((iType != EA_LOGGER)
             && ((pw->pw_uid < ServerProcessConfig::getInstance().getUidMin())
                 || (gid < ServerProcessConfig::getInstance().getGidMin())))
         {
@@ -319,4 +407,5 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
             lstrncpy(sHomeDir, "/home/nobody", szHomeDir); //If failed, use default as
     }
     setUGid(uid, gid);
+    setDropCaps(1);
 }

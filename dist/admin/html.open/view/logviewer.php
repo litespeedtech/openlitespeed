@@ -114,7 +114,8 @@ echo UI::content_header('fa-list', DMsg::UIStr('menu_tools'), DMsg::UIStr('menu_
 				logform.find("#startpos").val(log.startpos);
 				logform.find("#blksize").val(log.blksize);
 				$("#dash_logtbl").dataTable(
-						{"ordering": false,
+						{"ordering": true, // change to true to enable ordering
+						"order": [[0, "asc"]], // add this to choose default order by time descending
 						"lengthMenu":[[30,50,100,200],[30,50,100,200]]}
 				);
 				lst_refreshFooterTime();

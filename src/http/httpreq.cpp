@@ -236,6 +236,8 @@ void HttpReq::resetHeaderBuf(int discard)
         m_iReqHeaderBufRead = m_iReqHeaderBufFinished = HEADER_BUF_PAD;
         m_headerBuf.resize(HEADER_BUF_PAD);
     }
+    if (!discard)
+        restoreHeaderLeftOver();
 }
 
 
@@ -3747,9 +3749,36 @@ int HttpReq::applyHeaderOps(HttpSession * pSession,
 }
 
 
+void HttpReq::saveHeaderLeftOver()
+{
+    if (m_iReqHeaderBufFinished < m_headerBuf.size())
+    {
+        m_headerLeftOver.setStr(m_headerBuf.getp(m_iReqHeaderBufFinished),
+                                m_headerBuf.size() - m_iReqHeaderBufFinished);
+    }
+}
+
+
+void HttpReq::restoreHeaderLeftOver()
+{
+    if (m_headerLeftOver.len() > 0)
+    {
+        m_headerBuf.append(m_headerLeftOver.c_str(), m_headerLeftOver.len());
+        m_iReqHeaderBufRead = m_headerBuf.size();
+        m_headerLeftOver.release();
+    }
+}
+
+
 void HttpReq::popHeaderEndCrlf()
 {
     int pop = 1;
+    if (m_iHttpHeaderEnd < m_headerBuf.size())
+    {
+        saveHeaderLeftOver();
+        m_headerBuf.resize(m_iHttpHeaderEnd);
+        m_iReqHeaderBufFinished = m_iHttpHeaderEnd;
+    }
     if (*(m_headerBuf.end() - 2) == '\r')
         ++pop;
     m_headerBuf.pop_end(pop);

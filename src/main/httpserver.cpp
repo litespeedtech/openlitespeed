@@ -2399,7 +2399,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                                 1024 * 1024)
     );
     StaticFileCacheData::setStaticBrOptions(
-        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 1, 11, 6)
+        currentCtx.getLongValue(pNode, "brStaticCompressLevel", 0, 11, 6)
     );
 
 

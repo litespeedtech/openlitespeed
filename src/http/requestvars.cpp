@@ -802,10 +802,10 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
 
     case REF_BYTES_TOTAL:
         i = StringTool::offsetToStr(pValue, bufLen,
-                                    pSession->getBytesRecv() + 
+                                    pSession->getBytesRecv() +
                                     pSession->getBytesSent());
         return i;
-        
+
     case REF_HTTPS:
         i = snprintf(pValue, bufLen, "%s", pSession->isHttps() ? "on" : "off");
         return i;
@@ -954,7 +954,7 @@ int RequestVars::getReqVar2(HttpSession *pSession, int type, char *&pValue,
         HioCrypto *pCrypto = pSession->getCrypto();
         if (!pCrypto)
             return 0;
-        
+
         return pCrypto->getEnv((HioCrypto::ENV)(HioCrypto::CRYPTO_VERSION +
                                 (type - LSI_VAR_SSL_VERSION)), pValue, bufLen);
     }
@@ -1345,12 +1345,12 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
             pSession->getReq()->keepAlive(false);
             return 0;
         }
-        //else if ( strcasecmp( pName, "noconntimeout" ) == 0 )
-        //{
-        //    LS_DBG_M(pSession->getLogSession(),
-        //            "turn off connection timeout.");
-        //    pSession->setFlag( HSF_NO_CONN_TIMEOUT );
-        //}
+        else if (strcasecmp(pName, "noconntimeout") == 0)
+        {
+            LS_DBG_M(pSession->getLogSession(),
+                    "turn off connection timeout.");
+            pSession->setFlag(HSF_NO_CONN_TIMEOUT);
+        }
         else if (strcasecmp(pName, "no-gzip") == 0)
         {
             if (strncmp(pValue, "0", 1) != 0)

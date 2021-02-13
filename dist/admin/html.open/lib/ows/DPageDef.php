@@ -68,7 +68,7 @@ class DPageDef
 			new DTblMap(['virtualHostList:*virtualHost', '*virtualhost$name' ], 'V_TOPD'),
 			new DTblMap(['listenerList:*listener', '*listener$name' ], ['L_GENERAL',
 				new DTblMap(['vhostMapList:*vhostMap', '*vhmap$vhost' ], 'L_VHMAP'),
-				'LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY',
+				'LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY',
 				new DTblMap(['moduleList:*module', '*module$name' ], 'L_MOD') ]),
 			new DTblMap(['vhTemplateList:*vhTemplate', '*vhTemplate$name' ], ['T_TOPD', new DTblMap(['*member', '*member$vhName' ], 'T_MEMBER') ]),
 			'SERVICE_SUSPENDVH' ]) ;
@@ -101,7 +101,7 @@ class DPageDef
                                 new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
                                 'VT_REWRITE_RULE']),
                     new DTblMap('vhssl',
-                            ['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
+                            ['LVT_SSL_CERT', 'VT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
                     new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
                     new DTblMap(['moduleList:*module','*module$name'],
                             ['VT_MOD',
@@ -142,7 +142,7 @@ class DPageDef
                                             new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
                                             'VT_REWRITE_RULE']),
                                 new DTblMap('vhssl',
-                                        ['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
+                                        ['LVT_SSL_CERT', 'VT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
                                 new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
                                 new DTblMap(['moduleList:*module','*module$name'],
                                         ['VT_MOD',
@@ -162,7 +162,7 @@ class DPageDef
 						new DTblMap(['logging:accessLog','accesslog$fileName'], 'ADM_ACLOG'),
 						new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
 						new DTblMap(['listenerList:*listener','*listener$name'],
-								['ADM_L_GENERAL', 'LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY'])
+								['ADM_L_GENERAL', 'LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY'])
 				]);
 
 		$this->_fileDef['admin'] = $map;
@@ -252,7 +252,7 @@ class DPageDef
 
 		$id = 'lsec';
 		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('*listener$name',
-				['LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
+				['LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
 		$this->_pageDef['sl_'][$id] = $page;
 
 		$id = 'lmod';
@@ -382,11 +382,11 @@ class DPageDef
 
 		$id = 'vhssl';
 		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('vhssl',
-				['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
+				['LVT_SSL_CERT', 'VT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('virtualHostConfig:vhssl',
-				['LVT_SSL_CERT', 'LVT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
+				['LVT_SSL_CERT', 'VT_SSL', 'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'wsp';
@@ -426,7 +426,7 @@ class DPageDef
 		$this->_pageDef['al_'][$id] = $page ;
 
 		$id = 'lsec' ;
-		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('*listener$name', ['LVT_SSL_CERT', 'LVT_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY' ])) ;
+		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('*listener$name', ['LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY' ])) ;
 		$this->_pageDef['al_'][$id] = $page ;
 	}
 

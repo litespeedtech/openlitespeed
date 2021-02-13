@@ -256,6 +256,7 @@ $_gmsg['l_enabledyngzipcompress'] = 'Enable GZIP Dynamic Compression';
 $_gmsg['l_enableecdhe'] = 'Enable ECDH Key Exchange';
 $_gmsg['l_enableexpires'] = 'Enable Expires';
 $_gmsg['l_enablegzip'] = 'Enable GZIP Compression';
+$_gmsg['l_enablebrotli'] = 'Enable Brotli Compression';
 $_gmsg['l_enableh2c'] = 'Enable HTTP/2 Over Cleartext TCP';
 $_gmsg['l_enablehooks'] = 'Enable Module';
 $_gmsg['l_enablehotlinkctrl'] = 'Enable Hotlink Protection';

@@ -64,7 +64,7 @@ int L4conn::onWrite()
 {
     LS_DBG_L(getLogSession(), "L4conn::onWrite()");
     if (getfd() == -1)  //event pending before close() called.
-        return -1;
+        return LS_FAIL;
 
     int ret;
     switch (m_iState)
@@ -76,6 +76,8 @@ int L4conn::onWrite()
     //fall through
     case PROCESSING:
         ret = doWrite();
+        if (ret != LS_FAIL && m_pL4Handler->isWantRead() && getBuf()->empty())
+            ret = m_pL4Handler->onReadEx();
         break;
     case CLOSING:
     case DISCONNECTED:
@@ -83,7 +85,7 @@ int L4conn::onWrite()
     default:
         return 0;
     }
-    if (ret == -1)
+    if (ret == LS_FAIL)
         m_pL4Handler->closeBothConnection();
     return ret;
 }
@@ -227,10 +229,7 @@ int L4conn::doRead()
         if (n > 0)
             m_pL4Handler->getBuf()->used(n);
         else if (n < 0)
-        {
-            m_pL4Handler->closeBothConnection();
             return LS_FAIL;
-        }
     }
 
     if (!m_pL4Handler->getBuf()->empty())
@@ -264,10 +263,7 @@ int L4conn::doWrite()
         else if (n == 0)
             break;
         else // if (n < 0)
-        {
-            m_pL4Handler->closeBothConnection();
             return LS_FAIL;
-        }
 
     }
 

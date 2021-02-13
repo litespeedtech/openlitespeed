@@ -339,31 +339,32 @@ class UIBase
 		return $val;
 	}
 
-	public static function GrabGoodInputWithReset($origin, $name, $type='')
+	public static function GrabGoodInputWithReset($origin, $name, $type = '')
 	{
 		$val = self::GrabInput($origin, $name, $type);
-		if ( $val != NULL && strpos($val, '<') !== FALSE )
-		{
-			switch(strtoupper($origin)) {
+		// forbid '<', allow '?<' for expuri
+		$need_reset = (($val != NULL) && (strpos($val, '<') !== FALSE && strpos($val, '?<') === FALSE));
+
+		if ($need_reset) {
+			switch (strtoupper($origin)) {
 				case "REQUEST":
-				case "ANY":	$_REQUEST[$name] = NULL;
-				break;
+				case "ANY": $_REQUEST[$name] = NULL;
+					break;
 				case "GET": $_GET[$name] = NULL;
-				break;
+					break;
 				case "POST": $_POST[$name] = NULL;
-				break;
+					break;
 				case "COOKIE": $_COOKIE[$name] = NULL;
-				break;
+					break;
 				case "FILE": $_FILES[$name] = NULL;
-				break;
+					break;
 				case "SERVER": $_SERVER[$name] = NULL;
-				break;
+					break;
 			}
 			$val = NULL;
 		}
 		return $val;
 	}
-
 
 }
 

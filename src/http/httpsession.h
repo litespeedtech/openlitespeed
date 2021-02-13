@@ -133,15 +133,13 @@ enum HSPState
 #define HSF_HANDLER_WRITE_SUSPENDED (1<<3)
 #define HSF_RESP_FLUSHED            (1<<4)
 #define HSF_REQ_BODY_DONE           (1<<5)
-
 #define HSF_AIO_READING             (1<<6)
 #define HSF_ACCESS_LOG_OFF          (1<<7)
 #define HSF_NO_ERROR_PAGE           (1<<8)
-#define HSF_EXEC_EXT_CMD            (1<<9)
-#define HSF_EXEC_POPEN              (1<<10)
-#define HSF_HOOK_SESSION_STARTED    (1<<11)
-#define HSF_NO_ABORT                (1<<12)
 
+#define HSF_HOOK_SESSION_STARTED    (1<<10)
+#define HSF_NO_CONN_TIMEOUT         (1<<11)
+#define HSF_NO_ABORT                (1<<12)
 #define HSF_RECV_RESP_BUFFERED      (1<<13)
 #define HSF_SEND_RESP_BUFFERED      (1<<14)
 
@@ -170,6 +168,8 @@ enum HSPState
 
 //Start flag2
 #define HSF2_IS_HTTP2               (1<<0)
+#define HSF2_EXEC_EXT_CMD           (1<<9)
+#define HSF2_EXEC_POPEN             (1<<10)
 
 
 typedef int (*SubSessionCb)(HttpSession *pSubSession, void *param,
@@ -665,7 +665,7 @@ public:
     GzipBuf *getGzipBuf() const     {   return getResp()->getGzipBuf();     }
     void setGzipBuf(GzipBuf *pGzip) {   getResp()->setGzipBuf(pGzip);       }
 
-    int execExtCmd(const char *pCmd, int len, int mode = HSF_EXEC_EXT_CMD);
+    int execExtCmd(const char *pCmd, int len, int mode = 0);
 
     int handlerProcess(const HttpHandler *pHandler);
     int getParsedScript(SsiScript *&pScript);
