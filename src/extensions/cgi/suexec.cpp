@@ -24,6 +24,7 @@
 #include "cgidconfig.h"
 
 #include <http/serverprocessconfig.h>
+#include <http/httpserverconfig.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <socket/coresocket.h>
@@ -420,6 +421,10 @@ int SUExec::prepare(int uid, int gid, int priority, int umaskVal,
             {
                 int n = snprintf(buf, sizeof(buf), "LS_BWRAP=1");
                 m_req.appendEnv(buf, n);
+                const char *cmdline = HttpServerConfig::getInstance().getBwrapCmdLine();
+                if (cmdline)
+                    m_req.add("LS_BWRAP_CMDLINE", cmdline);
+
             }
             if (flags & LSCGID_FLAG_CGROUP)
             {
