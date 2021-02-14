@@ -77,7 +77,7 @@ const char *getStaplingErrMsg() { return s_ErrMsg.c_str(); }
 
 static void setLastErrMsg(const char *format, ...)
 {
-    const unsigned int MAX_LINE_LENGTH = 1024;
+    const unsigned int MAX_LINE_LENGTH = 4096;
     char s[MAX_LINE_LENGTH] = {0};
     va_list ap;
     va_start(ap, format);
@@ -154,7 +154,9 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
     }
     else
     {
-        setLastErrMsg("Received bad OCSP response. ReponderUrl=%s, StatusCode=%d, ContentType=%s\n",
+        setLastErrMsg("[OCSP] %s: Received bad OCSP response. ReponderUrl=%s, "
+                      "StatusCode=%d, ContentType=%s\n",
+                      m_sCertfile.c_str(),
                       m_sOcspResponder.c_str(), istatusCode,
                       ((pRespContentType) ? (pRespContentType) : ("")));
         //printf("%s\n", s_ErrMsg.c_str());
@@ -211,7 +213,8 @@ int SslOcspStapling::init(SslContext *pSslCtx)
     pCert = load_cert(m_sCertfile.c_str());
     if (pCert == NULL)
     {
-        setLastErrMsg("Failed to load file: %s!\n", m_sCertfile.c_str());
+        setLastErrMsg("[OCSP] %s: Failed to load certificate file!\n",
+                      m_sCertfile.c_str());
         return -1;
     }
 
@@ -338,7 +341,8 @@ int SslOcspStapling::getResponder(X509 *pCert)
         pCAt = load_cert(m_sCAfile.c_str());
         if (pCAt == NULL)
         {
-            setLastErrMsg("Failed to load file: %s!\n", m_sCAfile.c_str());
+            setLastErrMsg("[OCSP] %s: Failed to load CA file!\n",
+                          m_sCAfile.c_str());
             return -1;
         }
 
@@ -346,7 +350,8 @@ int SslOcspStapling::getResponder(X509 *pCert)
         X509_free(pCAt);
         if (strResp == NULL)
         {
-            setLastErrMsg("Failed to get responder!\n");
+            setLastErrMsg("[OCSP] %s: Failed to get responder from CA!\n",
+                          m_sCAfile.c_str());
             return -1;
         }
     }
@@ -362,7 +367,8 @@ int SslOcspStapling::getResponder(X509 *pCert)
         return 0;
     }
     X509_email_free(strResp);
-    setLastErrMsg("Failed to get responder Url!\n");
+    setLastErrMsg("[OCSP] %s: Failed to get responder Url!\n",
+                  m_sCAfile.c_str());
     return -1;
 }
 
@@ -429,7 +435,8 @@ int SslOcspStapling::createRequest()
                            (const char *)m_pReqData, len,
                            m_sRespfileTmp.c_str(), "application/ocsp-request", 
                            NULL);
-    setLastErrMsg("%p, len = %d\n", m_pHttpFetch, len);
+    LS_DBG("[OCSP] %s: %p, len = %d\n", m_sCertfile.c_str(),
+            m_pHttpFetch, len);
     //printf("%s\n", s_ErrMsg.c_str());
     return 0;
 }
@@ -554,7 +561,8 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     }
     if (iResult)
     {
-        setLastErrMsg("%s", SslError().what());
+        setLastErrMsg("[OCSP] %s: OCSP_basic_verify() error: %s",
+                      m_sCertfile.c_str(), SslError().what());
         ERR_clear_error();
         if (m_pHttpFetch)
             m_pHttpFetch->writeLog(s_ErrMsg.c_str());
@@ -680,25 +688,29 @@ int SslOcspStapling::getCertId(X509 *pCert)
     pXstore = SSL_CTX_get_cert_store(m_pCtx->get());
     if (pXstore == NULL)
     {
-        setLastErrMsg("SSL_CTX_get_cert_store failed!");
+        setLastErrMsg("[OCSP] %s: SSL_CTX_get_cert_store failed!",
+                      m_sCertfile.c_str());
         return -1;
     }
     pXstore_ctx = X509_STORE_CTX_new();
     if (pXstore_ctx == NULL)
     {
-        setLastErrMsg("X509_STORE_CTX_new failed!");
+        setLastErrMsg("[OCSP] %s: X509_STORE_CTX_new failed!",
+                      m_sCertfile.c_str());
         return -1;
     }
     if (X509_STORE_CTX_init(pXstore_ctx, pXstore, NULL, NULL) == 0)
     {
-        setLastErrMsg("X509_STORE_CTX_init failed!");
+        setLastErrMsg("[OCSP] %s: X509_STORE_CTX_init failed!",
+                      m_sCertfile.c_str());
         return -1;
     }
     n = X509_STORE_CTX_get1_issuer(&pXissuer, pXstore_ctx, pCert);
     X509_STORE_CTX_free(pXstore_ctx);
     if ((n == -1) || (n == 0))
     {
-        setLastErrMsg("X509_STORE_CTX_get1_issuer failed!");
+        setLastErrMsg("[OCSP] %s: X509_STORE_CTX_get1_issuer failed!",
+                      m_sCertfile.c_str());
         return -1;
     }
     m_pCertId = OCSP_cert_to_id(NULL, pCert, pXissuer);
