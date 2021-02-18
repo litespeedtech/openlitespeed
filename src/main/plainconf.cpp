@@ -435,6 +435,8 @@ plainconfKeywords plainconf::sKeywords[] =
     {"quicidletimeout", NULL},
     {"quicpush", NULL},
     {"quiccongestionctrl", NULL},
+
+    {"allowextappsetuid", NULL},
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,
