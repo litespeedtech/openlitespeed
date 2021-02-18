@@ -65,6 +65,7 @@ HttpServerConfig::HttpServerConfig()
     , m_pGlobalVHost(NULL)
     , m_bwrap(BWRAP_DISABLED)
     , m_pBwrapCmdLine(NULL)
+    , m_iAllowExtAppSetuid(1)
 {
     m_pDeniedDir = new DeniedDir();
 }

@@ -2655,6 +2655,12 @@ int HttpServerImpl::configSecurity(const XmlNode *pRoot)
                                      "banPeriod", 1, INT_MAX, 60));
         }
 
+        const int iAllowExtAppSetuid = currentCtx.getLongValue(pNode,
+                                                "allowExtAppSetuid", 0, 1, 1);
+        LS_INFO("setuid %s allowed in Ext Apps",
+            iAllowExtAppSetuid ? "is" : "is not");
+        config.setAllowExtAppSetuid(iAllowExtAppSetuid);
+
         // CGI
         CgidWorker *pWorker = (CgidWorker *) ExtAppRegistry::addApp(
                                   EA_CGID, LSCGID_NAME);

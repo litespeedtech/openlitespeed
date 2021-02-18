@@ -78,6 +78,7 @@ private:
     int             m_iEnableH2c;
     int             m_iProcNo;
     int             m_iChildren;
+    int             m_iAllowExtAppSetuid;
 
     const char     *m_pAdminSock;
     DeniedDir      *m_pDeniedDir;
@@ -223,6 +224,9 @@ public:
 
     void setBwrapCmdLine(const char *c)     {   m_pBwrapCmdLine = c;        }
     const char *getBwrapCmdLine() const     {   return m_pBwrapCmdLine;     }
+
+    void setAllowExtAppSetuid(int val)      {  m_iAllowExtAppSetuid = val;  }
+    int getAllowExtAppSetuid() const        {  return m_iAllowExtAppSetuid; }
 };
 
 LS_SINGLETON_DECL(HttpServerConfig);

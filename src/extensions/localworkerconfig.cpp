@@ -407,5 +407,6 @@ void LocalWorkerConfig::configExtAppUserGroup(const XmlNode *pNode,
             lstrncpy(sHomeDir, "/home/nobody", szHomeDir); //If failed, use default as
     }
     setUGid(uid, gid);
-    setDropCaps(1);
+    if (!HttpServerConfig::getInstance().getAllowExtAppSetuid())
+        setDropCaps(1);
 }

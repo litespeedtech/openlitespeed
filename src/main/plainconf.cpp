@@ -453,6 +453,7 @@ plainconfKeywords plainconf::sKeywords[] =
 
     {"reuseport",      NULL},
 
+    {"allowextappsetuid", NULL},
 };
 
 static HashStringMap<plainconfKeywords *> allKeyword(29, GHash::hfCiString,

@@ -50,6 +50,7 @@ ExtWorkerConfig::ExtWorkerConfig(const char *pName)
     , m_gid(-1)
     , m_pServerAddr(new GSockAddr())
     , m_pOrgEnv(NULL)
+    , m_iDropCaps(0)
 {
 }
 
@@ -72,6 +73,7 @@ ExtWorkerConfig::ExtWorkerConfig()
     , m_gid(-1)
     , m_pServerAddr(new GSockAddr())
     , m_pOrgEnv(NULL)
+    , m_iDropCaps(0)
 {}
 
 
@@ -102,6 +104,7 @@ ExtWorkerConfig::ExtWorkerConfig(const ExtWorkerConfig &rhs)
     m_iDaemonSuEXEC = rhs.m_iDaemonSuEXEC;
     m_uid = rhs.m_uid;
     m_gid = rhs.m_gid;
+    m_iDropCaps = rhs.m_iDropCaps;
     if (m_iRefAddr)
         m_pServerAddr = rhs.m_pServerAddr;
     else
