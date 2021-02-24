@@ -85,14 +85,12 @@ installCmake()
         ${APP_MGR_CMD} -y install git cmake
     fi
     
-    if [ $? = 0 ] ; then
-        CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
-        getVersionNumber $CMAKEVER
+    CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
+    getVersionNumber $CMAKEVER
         
-        if [ $VERSIONNUMBER -gt 3000000 ] ; then
-            echo cmake installed.
-            return
-        fi
+    if [ $VERSIONNUMBER -gt 3000000 ] ; then
+        echo cmake installed.
+        return
     fi
     
     version=3.14
@@ -118,6 +116,8 @@ installgo()
     else
         ${APP_MGR_CMD} -y install golang-go
     fi
+
+    which go
     
     if [ $? = 0 ] ; then
         echo go installed.
@@ -145,18 +145,6 @@ preparelibquic()
             git checkout ${LIBQUICVER}
             git submodule update --init --recursive
             cd ..
-            
-            #cp files for autotool
-            rm -rf src/liblsquic
-            mv lsquic/src/liblsquic src/
-            
-            rm -rf src/lshpack
-            mv lsquic/src/lshpack src/
-            
-            rm include/lsquic.h
-            mv lsquic/include/lsquic.h  include/
-            rm include/lsquic_types.h
-            mv lsquic/include/lsquic_types.h include/
             
         fi
     fi
