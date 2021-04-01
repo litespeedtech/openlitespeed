@@ -301,7 +301,8 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
          * Since pValStr is not null terminated, so do a length checking here
          *
          */
-        if (valLen + 1 > max_file_len - strlen(cachePath))
+        const size_t iCachePathLen = strlen(cachePath);
+        if (iCachePathLen + (size_t) valLen + 1 /* slash */ >= max_file_len)
         {
             g_api->log(NULL, LSI_LOG_ERROR,
                            "[%s]parseConfig failed to set the storagepath "
@@ -312,8 +313,9 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
             return -1;
         }
 
-        strncat(cachePath, pValStr, valLen);
-        strncat(cachePath, "/", 1);
+        memcpy(cachePath + iCachePathLen, pValStr, valLen);
+        cachePath[iCachePathLen + valLen + 0] = '/';
+        cachePath[iCachePathLen + valLen + 1] = '\0';
 
         if (createCachePath(cachePath, 0770) == -1)
         {
@@ -2184,7 +2186,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
                 //if it is lsc-cookie, then change to Set-Cookie
                 if (iov_key[i].iov_len == 10 &&
                     strncasecmp(pKey, "lsc-cookie", 10) == 0)
-                    pKey = "Set-Cookie";
+                    pKey = (char *) "Set-Cookie";
             }
 
 #ifdef CACHE_RESP_HEADER
@@ -2504,7 +2506,7 @@ MyMData *createMData(lsi_param_t *rec)
     MyMData *myData = new MyMData;
     assert(myData);
 
-    memset(myData, 0, sizeof(MyMData));
+    memset((void *) myData, 0, sizeof(MyMData));
     g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP, (void *)myData);
 
     CacheConfig *pConfig = (CacheConfig *)g_api->get_config(

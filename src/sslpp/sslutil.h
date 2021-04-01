@@ -34,6 +34,8 @@ public:
         CERTCB_RET_ERR  =  0,
         CERTCB_RET_OK   =  1
     };
+    static SSL_CTX *newCtx();
+    static void freeCtx(SSL_CTX *pCtx);
     static void setUseStrongDH(int use);
     static int initDH(SSL_CTX *pCtx, const char *pFile, int iKeyLen);
     static int copyDH(SSL_CTX *pCtx, SSL_CTX *pSrcCtx);

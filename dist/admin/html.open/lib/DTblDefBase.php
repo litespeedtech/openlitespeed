@@ -327,7 +327,7 @@ class DTblDefBase
             'appserverEnv' => self::NewSelAttr('appserverEnv', DMsg::ALbl('l_runtimemode'), array('' => '', '0' => 'Development', '1' => 'Production', '2' => 'Staging')),
             'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
             'enableIpGeo'  => self::NewBoolAttr('enableIpGeo', DMsg::ALbl('l_enableipgeo')),
-            'note'         => self::NewTextAreaAttr('note', DMsg::ALbl('l_notes'), 'cust', true, 4, null, 0),
+            'note'         => self::NewTextAreaAttr('note', DMsg::ALbl('l_notes'), 'note', true, 4, null, 0),
         );
         $this->_attrs = $attrs;
     }

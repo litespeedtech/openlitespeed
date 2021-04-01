@@ -5,8 +5,8 @@ Project(openlitespeed)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
 set(openlitespeed_MAJOR_VERSION 1)
-set(openlitespeed_MINOR_VERSION 4)
-set(openlitespeed_PATCH_VERSION 0)
+set(openlitespeed_MINOR_VERSION 6)
+set(openlitespeed_PATCH_VERSION 21)
 set(openlitespeed_VERSION
     ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 
@@ -78,6 +78,14 @@ if (CMAKE_C_COMPILER MATCHES "clang")
 endif()
 
 set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-unused-function")
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Suppress gcc warnings about BoringSSL's openssl/stack.h
+    set(MY_CMAKE_FLAGS "${MY_CMAKE_FLAGS} -Wno-ignored-qualifiers")
+    # TODO Suppress some of our own warnings (we should clean these up):
+    set(MY_CMAKE_FLAGS "${MY_CMAKE_FLAGS} -Wno-unused-result")
+    set(MY_CMAKE_FLAGS "${MY_CMAKE_FLAGS} -Wno-format-truncation")
+endif()
 
 if(OPT_SSE4)
 set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -march=corei7 -maes -mpclmul -mpopcnt")

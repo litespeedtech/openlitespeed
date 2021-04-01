@@ -49,6 +49,7 @@ public:
     virtual int getfd() const               {   return m_stream.getfd();        }
     void setAsync()                         {   return m_stream.setAsync();     }
     int flush()                             {   return m_stream.flush();        }
+    AioOutputStream *getStream()            {   return &m_stream;               }
 
 private:
     ino_t           m_ino;

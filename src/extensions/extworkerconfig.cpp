@@ -46,11 +46,11 @@ ExtWorkerConfig::ExtWorkerConfig(const char *pName)
     , m_iStartByServer(0)
     , m_iRefAddr(0)
     , m_iDaemonSuEXEC(0)
+    , m_iDropCaps(0)
     , m_uid(-1)
     , m_gid(-1)
     , m_pServerAddr(new GSockAddr())
     , m_pOrgEnv(NULL)
-    , m_iDropCaps(0)
 {
 }
 
@@ -69,11 +69,11 @@ ExtWorkerConfig::ExtWorkerConfig()
     , m_iStartByServer(0)
     , m_iRefAddr(0)
     , m_iDaemonSuEXEC(0)
+    , m_iDropCaps(0)
     , m_uid(-1)
     , m_gid(-1)
     , m_pServerAddr(new GSockAddr())
     , m_pOrgEnv(NULL)
-    , m_iDropCaps(0)
 {}
 
 

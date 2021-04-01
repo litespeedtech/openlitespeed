@@ -16,6 +16,8 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 
+#include <netinet/in.h>
+
 #include "iptoloc.h"
 
 #ifdef USE_IP2LOCATION
@@ -28,7 +30,6 @@
 
 #include <fcntl.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <sys/types.h>

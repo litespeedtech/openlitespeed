@@ -97,7 +97,10 @@ public:
     VMemBuf *getResult() const              {   return m_pBuf;          }
     void releaseResult();
     void reset();
-    void setProxyServerAddr(const char *pAddr);
+    int setProxyServerAddr(const char *pAddr);
+    int setProxyServerAddr(const struct sockaddr *pAddr,
+                           const char *addr_str);
+
     const char *getProxyServerAddr() const  {   return m_psProxyServerAddr;  }
 
     void closeConnection();

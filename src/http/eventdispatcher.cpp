@@ -324,20 +324,27 @@ int EventDispatcher::run()
 }
 
 
-int EventDispatcher::linger(int timeout)
+int EventDispatcher::linger(int listenerStopped, int timeout)
 {
     int ret;
-    long endTime = time(NULL) + timeout;
+    long lastEventTime = DateTime::s_curTime;
+    long endTime;
     int nextQuicEventMilliSec, to;
     QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
     MultiplexerFactory::getMultiplexer()->setPriHandler(NULL);
-    if (pQuicEngine)
+    if (listenerStopped && pQuicEngine)
         pQuicEngine->startCooldown();
-    startTimer();
-    while ((time(NULL) < endTime)
-           && (ConnLimitCtrl::getInstance().getMaxConns()
-               > ConnLimitCtrl::getInstance().availConn()
-                   || QuicEngine::activeConnsCount() > 0))
+
+    if (listenerStopped == 1)
+        endTime = DateTime::s_curTime + timeout;
+    else
+        endTime = DateTime::s_curTime + 3600 * 24 * 30;
+
+    while (DateTime::s_curTime < endTime
+           && (!listenerStopped
+                || ConnLimitCtrl::getInstance().getMaxConns()
+                    > ConnLimitCtrl::getInstance().availConn()
+                || QuicEngine::activeConnsCount() > 0))
     {
         to = MLTPLX_TIMEOUT;
         if (pQuicEngine)
@@ -349,8 +356,7 @@ int EventDispatcher::linger(int timeout)
                 to = nextQuicEventMilliSec;
             }
         }
-        ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(
-                  MLTPLX_TIMEOUT);
+        ret = MultiplexerFactory::getMultiplexer()->waitAndProcessEvents(to);
         if (ret == -1)
         {
             if (!((errno == EINTR) || (errno == EAGAIN)))
@@ -359,14 +365,33 @@ int EventDispatcher::linger(int timeout)
                 return 1;
             }
         }
+        else if (ret > 0)
+            lastEventTime = DateTime::s_curTime;
+        else if ((listenerStopped) && (DateTime::s_curTime - lastEventTime > 7200))
+        {
+            LS_NOTICE("Stop lingering due to idle");
+            break;
+        }
         Adns::getInstance().processPendingEvt();
 #ifdef LS_HAS_RTSIG
         SigEventDispatcher::getInstance().processSigEvent();
 #endif
-        EvtcbQue::getInstance().run();
 
         if (pQuicEngine)
             pQuicEngine->processEvents();
+
+        if ((!listenerStopped) &&
+            (HttpServer::getInstance().restartMark(1)))
+        {
+            LS_NOTICE("New litespeed process is ready, stops listeners");
+            listenerStopped = 1;
+            HttpServer::getInstance().stopListeners();
+            if (pQuicEngine)
+                pQuicEngine->startCooldown();
+            endTime = DateTime::s_curTime + timeout;
+        }
+
+        EvtcbQue::getInstance().run();
 
         if (HttpSignals::gotSigAlarm())
         {
@@ -377,6 +402,8 @@ int EventDispatcher::linger(int timeout)
             HttpServer::cleanPid();
 
     }
+    if (!listenerStopped)
+        HttpServer::getInstance().stopListeners();
     return 0;
 }
 

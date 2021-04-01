@@ -800,7 +800,10 @@ int LsShmHash::release_hash_elem(LsShmHash::iteroffset iterOff,
 void LsShmHash::clear()
 {
     LsShmHTable *pTable = getHTable();
-    int n = for_each2(begin(), end(), release_hash_elem, this);
+#ifndef NDEBUG
+    int n =
+#endif
+            for_each2(begin(), end(), release_hash_elem, this);
     assert(n == (int)size());
 
     ::memset(offset2ptr(pTable->x_iBitMap), 0,
@@ -986,8 +989,10 @@ void LsShmHash::remove(iteroffset iterOff, iterator iter)
         validateIndexSlot(hashIndx);
         if (getLru()->n_current != getHTable()->x_iSize)
         {
+#ifndef NDEBUG
             LsHashLruInfo info = *getLru();
             LsShmHTable table = *getHTable();
+#endif
             getPool()->getShm()->backupBrokenFile();
             assert(info.n_current == table.x_iSize);
         }
@@ -1146,8 +1151,10 @@ void LsShmHash::insertAlloced(iteroffset iterOff, iterator iter)
         validateIndexSlot(hashIndx);
         if (getLru()->n_current != getHTable()->x_iSize)
         {
+#ifndef NDEBUG
             LsHashLruInfo info = *getLru();
             LsShmHTable table = *getHTable();
+#endif
             getPool()->getShm()->backupBrokenFile();
             assert(info.n_current == table.x_iSize);
         }
@@ -1236,8 +1243,10 @@ void LsShmHash::replace(iteroffset oldIterOff, iterator oldIter,
 
         if (getLru()->n_current != getHTable()->x_iSize)
         {
+#ifndef NDEBUG
             LsHashLruInfo info = *getLru();
             LsShmHTable table = *getHTable();
+#endif
             getPool()->getShm()->backupBrokenFile();
             assert(info.n_current == table.x_iSize);
         }
@@ -2089,7 +2098,9 @@ int LsShmHash::checkLruLink()
 
     if (valcnt == pLru->n_current)
     {
+#ifndef NDEBUG
         LsShmOffset_t *p = array.end() - 1;
+#endif
         offElem = pLru->linkNewest;
         while (offElem.m_iOffset != 0)
         {

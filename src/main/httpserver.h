@@ -113,6 +113,7 @@ public:
     void setBlackBoard(char *pBuf);
     void passListeners();
     void recoverListeners();
+    void stopListeners();
 
     int  restartMark(int cmd);
     int  initMultiplexer(const char *pType);

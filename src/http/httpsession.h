@@ -123,6 +123,7 @@ enum HSPState
     HSPS_WEBSOCKET,
     HSPS_DROP_CONNECTION,
     HSPS_HTTP_ERROR,
+    // Don't forget to update s_stateName!
     HSPS_END
 
 };

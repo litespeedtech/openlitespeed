@@ -147,7 +147,6 @@ delay_stop()
 #        sleep 1
 #    fi
         echo "[OK] $DESC: graceful stop."
-        sleep 3
     else
         echo "[ERROR] can not kill $DESC"
     fi
@@ -162,6 +161,7 @@ do_restart()
             echo "[ERROR] cannot gracefully restart $DESC"
         else
             echo "[OK] Send SIGUSR1 to $PID"
+            sleep 1
         fi
     else
         start
@@ -246,6 +246,7 @@ restart     - gracefully restart web server with zero down time
 reload      - same as restart
 condrestart - gracefully restart web server if server is running
 try-restart - same as condrestart
+fullrestart - do full stop then start
 status      - show service status
 help        - this screen
 
@@ -264,6 +265,14 @@ case "$1" in
     condrestart|try-restart)
         if [ $RUNNING -eq 1 ]; then
             restart
+        fi
+        ;;
+    fullrestart)
+        if [ $RUNNING -eq 1 ]; then
+            service lsws stop
+            sleep 1
+            test_running
+            service lsws start
         fi
         ;;
     status)

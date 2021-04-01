@@ -112,7 +112,7 @@ static const char * s_stateName[HSPS_END] =
     "HSPS_CHECK_AUTH_ACCESS",
     "HSPS_AUTHORIZER",
     "HSPS_HKPT_HTTP_AUTH",
-    "HSPS_AUTH_DONE",  //21
+    "HSPS_AUTH_DONE",
     "HSPS_BEGIN_HANDLER_PROCESS",
     "HSPS_HKPT_RCVD_REQ_BODY_PROCESSING",
     "HSPS_HKPT_RCVD_RESP_HEADER",
@@ -132,6 +132,7 @@ static const char * s_stateName[HSPS_END] =
     "HSPS_NEXT_REQUEST",
     "HSPS_CLOSE_SESSION",
     "HSPS_RELEASE_RESOURCE",
+    "HSPS_HANDLER_PRE_PROCESSING",
     "HSPS_HANDLER_PROCESSING",
     "HSPS_WEBSOCKET",
     "HSPS_DROP_CONNECTION",
@@ -2815,6 +2816,7 @@ int HttpSession::onReadEx()
         recycle();
     }
 
+    (void) ret; // XXX This silences the warning
     return 0;
 }
 
@@ -3504,7 +3506,7 @@ int HttpSession::sendDynBody()
 #define DAVID_TEST
 #ifdef  DAVID_TEST
         if (toWrite > 8192) {
-            LS_ERROR("[HttpSession::sendDynBody] getReadBuffer %d > 8192", toWrite);
+            LS_ERROR("[HttpSession::sendDynBody] getReadBuffer %zu > 8192", toWrite);
         }
 #endif //DAVID_TEST
         LS_DBG_M(getLogSession(),
@@ -5270,7 +5272,7 @@ int HttpSession::finalizeHeader(int ver, int code)
     else
     {
         LS_DBG_L(getLogSession(), "finalizeHeader() did not add Alt-Svc for"
-                " QUIC is disabled (m_iFlag %ld Vhost %p).",
+                " QUIC is disabled (m_iFlag %" PRIu32 " Vhost %p).",
                 m_iFlag, m_request.getVHost());
     }
 

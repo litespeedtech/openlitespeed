@@ -36,7 +36,7 @@
 
 GSockAddr::GSockAddr(const GSockAddr &rhs)
 {
-    ::memset(this, 0, sizeof(GSockAddr));
+    ::memset((void *) this, 0, sizeof(GSockAddr));
     *this = rhs;
 }
 
@@ -96,13 +96,17 @@ void GSockAddr::release()
     }
 }
 
+
 /**
   * @param pURL  the destination of the connection, format of the string is:
   *              TCP connection "192.168.0.1:800", "TCP://192.168.0.1:800"
   *              UDP  "UDP:192.168.0.1:800"
   *              Unix Domain Stream Socket "UDS:///tmp/foo.bar"
   *              Unix Doamin Digram Socket "UDD:///tmp/foo.bar"
+  *              Unix Doamin Digram Socket "unix:///tmp/foo.bar"
+  *              Unix Doamin Digram Socket "unix:/tmp/foo.bar"
   */
+static
 const char *parseURL(const char *pURL, int *domain)
 {
     if (pURL == NULL)
@@ -114,6 +118,11 @@ const char *parseURL(const char *pURL, int *domain)
         {
             *domain = AF_INET6;
             pURL += 7;
+        }
+        else if (strncasecmp(pURL, "unix:/", 6) == 0)
+        {
+            *domain = AF_UNIX;
+            pURL += 5;
         }
         else  if (*pURL != '[')
             *domain = AF_INET;
@@ -131,8 +140,8 @@ const char *parseURL(const char *pURL, int *domain)
             else
                 *domain = AF_INET6;
         }
-        else if ((strncasecmp(pURL, "UDS:", 4) == 0) ||
-                 (strncasecmp(pURL, "UDD:", 4) == 0))
+        else if (strncasecmp(pURL, "UDS:", 4) == 0
+                 || strncasecmp(pURL, "UDD:", 4) == 0)
         {
             *domain = AF_UNIX;
             pURL += 5;
@@ -140,8 +149,52 @@ const char *parseURL(const char *pURL, int *domain)
         else
             return NULL;
     }
+    if (*domain == AF_UNIX)
+    {
+        if (*pURL != '/')
+            --pURL;
+    }
     return pURL;
 }
+
+
+#ifndef NDEBUG
+void
+test_parseURL (void)
+{
+    const struct {
+        /* Input: */
+        const char *in;
+        /* Output: */
+        const char *out;
+        int domain;
+    } *test, tests[] = {
+        {  "uds:/path",      "uds:/path", AF_INET,  }, // Failure: UDS needs 2+ slashes
+        {  "uds://path",     "/path",     AF_UNIX,  },
+        {  "uds:///path",    "//path",    AF_UNIX,  },
+        {  "uds:////path",   "///path",   AF_UNIX,  },
+        {  "udd:/path",      "udd:/path", AF_INET,  }, // Failure: UDD needs 2+ slashes
+        {  "udd://path",     "/path",     AF_UNIX,  },
+        {  "udd:///path",    "//path",    AF_UNIX,  },
+        {  "udd:////path",   "///path",   AF_UNIX,  },
+        {  "unix:/path",     "/path",     AF_UNIX,  },
+        {  "unix://path",    "//path",    AF_UNIX,  },
+        {  "unix:///path",   "///path",   AF_UNIX,  },
+        {  "unix:////path",  "////path",  AF_UNIX,  },
+    };
+
+    for (test = tests; test < tests + sizeof(tests) / sizeof(tests[0]); ++test)
+    {
+        int domain = -1;
+        const char *path;
+
+        path = parseURL(test->in, &domain);
+        assert(0 == strcmp(test->out, path));
+        assert(test->domain == domain);
+    }
+}
+#endif
+
 
 //Only deal with "http://" and "https://" cases
 //ie: "http://www.litespeedtech.com/about-litespeed-technologies-inc.html"
@@ -306,6 +359,7 @@ int GSockAddr::set(int family, const char *pURL, int tag)
         if ((tag & ADDR_ONLY) == 0
             && (tag & (DO_NSLOOKUP | DO_NSLOOKUP_DIRECT)) != 0)
             return doLookup(family, achDest, tag);
+        /* fallthru */
     case -1:
     default:
         return -1;

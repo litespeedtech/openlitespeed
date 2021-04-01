@@ -444,7 +444,6 @@ void AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt, bool doF
     HttpReq *pReq = pSession->getReq();
     LogFormatItem *pItem;
     const char *pValue = NULL;
-    char *pBuf;
     int n;
     int escape;
     while (iter != pLogFmt->end())
@@ -507,7 +506,7 @@ void AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt, bool doF
             break;
 
         default:
-            pBuf = appendReqVar(pSession, pItem->m_itemId);
+            (void) appendReqVar(pSession, pItem->m_itemId);
             break;
 
         }

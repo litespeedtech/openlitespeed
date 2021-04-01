@@ -309,7 +309,7 @@ class CValidation
         }
 
         $chktype = array('uint', 'name', 'vhname', 'dbname', 'admname', 'sel', 'sel1', 'sel2',
-            'bool', 'file', 'filep', 'file0', 'file1', 'filetp', 'filevh', 'path',
+            'bool', 'file', 'filep', 'file0', 'file1', 'filetp', 'filevh', 'path', 'note',
             'uri', 'expuri', 'url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse');
 
         if (!in_array($attr->_type, $chktype)) {
@@ -398,6 +398,15 @@ class CValidation
         }
         if (strlen($val) > 100) {
             $err = 'name cannot be longer than 100 characters';
+            return -1;
+        }
+        return 1;
+    }
+
+    protected function chkAttr_note($attr, $node)
+    {
+        if (preg_match("/[{}<]/", $node->Get(CNode::FLD_VAL), $m)) { // avoid <script, also {} for conf format
+            $node->SetErr("character $m[0] not allowed");
             return -1;
         }
         return 1;

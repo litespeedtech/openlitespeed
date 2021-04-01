@@ -94,6 +94,12 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
     }
 
     data->m_pkey = SSL_get_privatekey(ssl);
+    if (NULL == data->m_pkey)
+    {
+        ERROR_MESSAGE("[SSL: %p] Key is NULL!\n", ssl);
+        return ssl_private_key_failure;
+    }
+
     if (EVP_PKEY_id(data->m_pkey) !=
             SSL_get_signature_algorithm_key_type(signature_algorithm))
     {

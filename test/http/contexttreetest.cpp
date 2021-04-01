@@ -75,7 +75,7 @@ SUITE(ContextTreeTest)
         pRoot = new HttpContext();
         pRoot->set(u0, r1, NULL);
         tree.setRootContext(pRoot);
-        tree.setRootLocation(r1, strlen(r1));
+        tree.setRootLocation(r1);
 
         c0 = new HttpContext();
         c0->set(u0, r1, NULL);
@@ -166,7 +166,7 @@ SUITE(ContextTreeTest)
         pRoot = new HttpContext();
         pRoot->set(u0, p0, NULL);
         tree.setRootContext(pRoot);
-        tree.setRootLocation(p0, strlen(p0));
+        tree.setRootLocation(p0);
         pRoot1 = new HttpContext();
         pRoot1->set(u0, p0, NULL);
         pAdmin = new HttpContext();

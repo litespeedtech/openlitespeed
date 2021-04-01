@@ -36,9 +36,10 @@
 
 
 SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
-        const char * pKey, const char * pCert, const char * pBundle)
+        const char * pKey, const char * pCert, const char *pBundle)
 {
     int ret;
+    SslContext *pNewContext = NULL;
     if (( !pContext )
             // || ( !pContext->isZConf )
        )
@@ -46,7 +47,7 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
         // TODO: what should happen if old context was not zconf?
         // it will have irrelevant file system data in it?
 
-        SslContext* pNewContext = new SslContext( SslContext::SSL_ALL );
+        pNewContext = new SslContext( SslContext::SSL_ALL );
         LS_DBG_L("[SSL] [CONFIG] Create SslContext (ZConf): %p", pNewContext);
         if (!pNewContext)
         {
@@ -62,19 +63,22 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
     }
     if ((ret = SslUtil::loadPrivateKey(pContext->m_pCtx, (void*) pKey, strlen(pKey))) <= 1) {
         LS_ERROR( "[SSL] Config SSL Context (ZConf) with key failed.");
-        // delete pNewContext;
+        if (pNewContext)
+            delete pNewContext;
         return NULL;
     }
     pContext->m_iKeyLen = ret;
     if ((ret = SslUtil::loadCert(pContext->m_pCtx, (void*)pCert, strlen(pCert))) != 1) {
         LS_ERROR( "[SSL] Config SSL Context (ZConf) with cert failed.");
-        // delete pNewContext;
+        if (pNewContext)
+            delete pNewContext;
         return NULL;
     }
 
-    if (!SslUtil::loadCA(pContext->m_pCtx, pBundle)) {
+    if (pBundle != NULL && (LS_FAIL == pContext->loadCA(pBundle))) {
         LS_ERROR( "[SSL] Config SSL Context (ZConf) with bundle failed.");
-        // delete pNewContext;
+        if (pNewContext)
+            delete pNewContext;
         return NULL;
     }
 
@@ -88,6 +92,37 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
     SslCertComp::enableCertComp(pContext->m_pCtx);
 #endif
     return pContext;
+}
+
+int SslContext::loadCA(const char *pBundle)
+{
+
+    if (pBundle != NULL)
+    {
+        if (!SslUtil::loadCA(m_pCtx, pBundle)) {
+            LS_ERROR( "[SSL] Config SSL Context (ZConf) with bundle failed.");
+            return LS_FAIL;
+        }
+    }
+    else if (SslUtil::getDefaultCAFile() != NULL || SslUtil::getDefaultCAPath() != NULL)
+    {
+        if (!setCALocation(SslUtil::getDefaultCAFile(), SslUtil::getDefaultCAPath(), 0))
+        {
+            LS_ERROR( "[SSL] Config SSL Context (ZConf) with default bundle failed.");
+            return LS_FAIL;
+        }
+#ifdef OPENSSL_IS_BORINGSSL
+        if (SslUtil::getDefaultCAFile() != NULL)
+        {
+            //BoringSSL does not build the CA Chain with setCALocation
+            //So, we do it explicitly
+            if (setCertificateChainFile(SslUtil::getDefaultCAFile()) <= 0)
+                LS_ERROR("[SSL] ZConf: failed to set Certificate Chain file: %s",
+                    SslUtil::getDefaultCAFile());
+        }
+#endif
+    }
+    return LS_OK;
 }
 
 SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
@@ -121,6 +156,7 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
         }
         else
         {
+            ret = 0;
             for(int i = 0; i <= pConfig->m_iKeyCerts; ++i )
             {
                 ret = pNewContext->setKeyCertificateFile(pConfig->m_sKeyFile[i].c_str(),
@@ -178,151 +214,152 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
                 , pConfig->m_sName.c_str(), pConfig->m_sCaChainFile.c_str());
     }
 
-    LS_DBG_L("[SSL:%p] %s renegociation protect\n", pContext,
-             pConfig->m_iInsecReneg ? "Disable" : "Enable");
-    pContext->setRenegProtect(!pConfig->m_iInsecReneg);
-
-    LS_DBG_L("[SSL:%p] Set SSL protcol: %d\n", pContext,
-             pConfig->m_iProtocol);
-    pContext->setProtocol( pConfig->m_iProtocol );
-    if ( pConfig->m_iEnableECDHE )
+    if (LS_FAIL == pContext->configOptions(pConfig))
     {
-        LS_DBG_L("[SSL:%p] Enable ECDHE\n", pContext);
-        if ( pContext->initECDH() == LS_FAIL )
-        {
-            LS_ERROR("[SSL] Init ECDHE failed.");
-            if (pNewContext)
-                delete pNewContext;
-            return NULL;
-        }
+        if (pNewContext)
+            delete pNewContext;
+        return NULL;
     }
-    if ( pConfig->m_iEnableDHE )
-    {
-        LS_DBG_L("[SSL:%p] Enable DH\n", pContext);
-        if ( pContext->initDH( pConfig->m_sDHParam.c_str() ) == LS_FAIL )
-        {
-            LS_ERROR("[SSL] Init DH failed.");
-            if (pNewContext)
-                delete pNewContext;
-            return NULL;
-        }
-    }
-
-    if (pConfig->m_iEnableCache)
-    {
-        LS_DBG_L("[SSL:%p] Enable SHM session cache\n", pContext);
-        if (pContext->enableShmSessionCache() == LS_FAIL)
-        {
-            LS_ERROR("[SSL] Enable session cache failed.");
-            if (pNewContext)
-                delete pNewContext;
-            return NULL;
-        }
-    }
-
-    LS_DBG_L("[SSL:%p] %s session ticket.\n", pContext,
-        pConfig->m_iEnableTicket ? "Enable" : "Disable");
-    if (pConfig->m_iEnableTicket == 1)
-    {
-        if (pContext->enableSessionTickets() == LS_FAIL)
-        {
-            LS_ERROR("[SSL] Enable session ticket failed.");
-            if (pNewContext)
-                delete pNewContext;
-            return NULL;
-        }
-    }
-    else
-        pContext->disableSessionTickets();
-
-    if ( pConfig->m_iEnableSpdy != 0 )
-    {
-        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", pContext,
-                 (int)pConfig->m_iEnableSpdy);
-        if ( pContext->enableSpdy( pConfig->m_iEnableSpdy ) == -1 )
-        {
-            LS_ERROR("[SSL:%p] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
-                     pContext, pConfig->m_iEnableSpdy);
-            if (pNewContext)
-                delete pNewContext;
-            return NULL;
-        }
-    }
-    LS_DBG_L("[SSL:%p] set Cipher: %s.\n", pContext,
-             pConfig->m_sCiphers.c_str());
-    pContext->setCipherList( pConfig->m_sCiphers.c_str() );
-
-    if (pConfig->m_iEnableStapling)
-    {
-        LS_DBG_L("[SSL:%p] enable OCSP stapling.\n", pContext);
-        pContext->configStapling(pConfig);
-    }
-
-#ifdef SSL_ASYNC_PK
-    bool enabled = ssl_ctx_enable_apk(pContext->m_pCtx);
-    LS_DBG_L("[SSL:%p] %s asynchronized private key signing.\n", pContext,
-             enabled ? "Disable" : "Enable");
-#endif
 
 #ifdef SSLCERTCOMP
     SslCertComp::enableCertComp(pContext->m_pCtx);
-#endif
-
-#ifdef _ENTERPRISE_
-    if (pConfig->m_iClientVerify)
-    {
-        pContext->setClientVerify(pConfig->m_iClientVerify,
-                                  pConfig->m_iVerifyDepth);
-    }
 #endif
 
     return pContext;
 }
 
 
-int SslContext::configStapling(SslContextConfig *pConfig)
+int SslContext::configOptions(SslContextConfig *pConfig)
+{
+
+    LS_DBG_L("[SSL:%p] %s renegociation protect\n", this,
+             pConfig->m_iInsecReneg ? "Disable" : "Enable");
+    setRenegProtect(!pConfig->m_iInsecReneg);
+
+    if (pConfig->m_iProtocol)
+    {
+        LS_DBG_L("[SSL:%p] Set SSL protcol: %d\n", this,
+                 pConfig->m_iProtocol);
+        setProtocol( pConfig->m_iProtocol );
+    }
+    if ( pConfig->m_iEnableECDHE )
+    {
+        LS_DBG_L("[SSL:%p] Enable ECDHE\n", this);
+        if ( initECDH() == LS_FAIL )
+        {
+            LS_ERROR("[SSL] Init ECDHE failed.");
+            return LS_FAIL;
+        }
+    }
+    if ( pConfig->m_iEnableDHE )
+    {
+        LS_DBG_L("[SSL:%p] Enable DH\n", this);
+        if ( initDH( pConfig->m_sDHParam.c_str() ) == LS_FAIL )
+        {
+            LS_ERROR("[SSL] Init DH failed.");
+            return LS_FAIL;
+        }
+    }
+
+    if (pConfig->m_iEnableCache)
+    {
+        LS_DBG_L("[SSL:%p] Enable SHM session cache\n", this);
+        if (enableShmSessionCache() == LS_FAIL)
+        {
+            LS_ERROR("[SSL] Enable session cache failed.");
+            return LS_FAIL;
+        }
+    }
+
+    LS_DBG_L("[SSL:%p] %s session ticket.\n", this,
+        pConfig->m_iEnableTicket ? "Enable" : "Disable");
+    if (pConfig->m_iEnableTicket == 1)
+    {
+        if (enableSessionTickets() == LS_FAIL)
+        {
+            LS_ERROR("[SSL] Enable session ticket failed.");
+            return LS_FAIL;
+        }
+    }
+    else
+        disableSessionTickets();
+
+    if ( pConfig->m_iEnableSpdy != 0 )
+    {
+        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", this,
+                 (int)pConfig->m_iEnableSpdy);
+        if ( enableSpdy( pConfig->m_iEnableSpdy ) == -1 )
+        {
+            LS_ERROR("[SSL:%p] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
+                     this, pConfig->m_iEnableSpdy);
+            return LS_FAIL;
+        }
+    }
+    LS_DBG_L("[SSL:%p] set Cipher: %s.\n", this,
+             pConfig->m_sCiphers.c_str());
+    setCipherList( pConfig->m_sCiphers.c_str() );
+
+    if (pConfig->m_iEnableStapling)
+    {
+        int ret = configStapling(pConfig->m_sCertFile[0].c_str(),
+            pConfig->m_iOcspMaxAge, pConfig->m_sOcspResponder.c_str());
+        LS_DBG_L("[SSL:%p] Enable OCSP stapling %s.\n", this,
+            (ret == LS_OK) ? "succeed" : "failed");
+    }
+
+#ifdef SSL_ASYNC_PK
+    bool enabled = ssl_ctx_enable_apk(m_pCtx);
+    LS_DBG_L("[SSL:%p] %s asynchronized private key signing.\n", this,
+             enabled ? "Disable" : "Enable");
+#endif
+
+#ifdef _ENTERPRISE_
+    if (pConfig->m_iClientVerify)
+    {
+        setClientVerify(pConfig->m_iClientVerify,
+                                  pConfig->m_iVerifyDepth);
+    }
+#endif
+    return LS_OK;
+}
+
+
+int SslContext::configStapling(const char *name, int max_age,
+                               const char *responder)
 {
     SslOcspStapling *pSslOcspStapling = getStapling();
     if (pSslOcspStapling != NULL)
-        return 0;
+        return LS_OK;
     pSslOcspStapling = new SslOcspStapling;
     if (!pSslOcspStapling)
     {
         LS_ERROR("[SSL] OCSP Stapling can't be enabled: Insufficient memory\n");
-        return -1;
+        return LS_FAIL;
     }
     setStapling(pSslOcspStapling) ;
-    pSslOcspStapling->setCertFile(pConfig->m_sCertFile[0].c_str());
-    if (pConfig->m_sCAFile.c_str())
-    {
-        if (!pConfig->m_sCaChainFile.c_str())
-            setCertificateChainFile(pConfig->m_sCAFile.c_str());
-        pSslOcspStapling->setCAFile(pConfig->m_sCAFile.c_str());
-    }
-    else if (pConfig->m_sCaChainFile.c_str())
-        pSslOcspStapling->setCAFile(pConfig->m_sCaChainFile.c_str());
+    pSslOcspStapling->setCertName(name);
 
-    if (pConfig->m_iOcspMaxAge > 10)
+    if (max_age > 10)
     {
-        if (pConfig->m_iOcspMaxAge > 3600 * 24 * 4)
-            pConfig->m_iOcspMaxAge = 3600 * 24 * 4;
-        pSslOcspStapling->setRespMaxAge(pConfig->m_iOcspMaxAge);
+        if (max_age > 3600 * 24 * 4)
+            max_age = 3600 * 24 * 4;
+        pSslOcspStapling->setRespMaxAge(max_age);
     }
 
-    if (pConfig->m_sOcspResponder.c_str())
-        pSslOcspStapling->setOcspResponder(pConfig->m_sOcspResponder.c_str());
+    if (responder)
+        pSslOcspStapling->setOcspResponder(responder);
 
-    if (initStapling() == -1)
+    if (initStapling() == LS_FAIL)
     {
-        LS_ERROR("[SSL] OCSP Stapling can't be enabled [%s].",
-                    getStaplingErrMsg());
+        LS_NOTICE("[SSL_CTX: %p] OCSP Stapling can't be enabled: %s.",
+                  this, getStaplingErrMsg());
         delete pSslOcspStapling;
         setStapling(NULL) ;
 
-        return -1;
+        return LS_FAIL;
     }
     m_iEnableOcsp = 1;
-    return 0;
+    return LS_OK;
 }
 
 
@@ -457,15 +494,13 @@ int SslContext::init(int iMethod)
 {
     if (m_pCtx != NULL)
         return 0;
-    SSL_METHOD *meth;
     if (initSSL())
         return -1;
     
     m_iMethod = iMethod;
     m_iEnableSpdy = 0;
     m_iEnableOcsp = 0;
-    meth = (SSL_METHOD *)SSLv23_method();
-    m_pCtx = SSL_CTX_new(meth);
+    m_pCtx = SslUtil::newCtx();
     if (m_pCtx)
     {
         LS_DBG_L("[SSL:%p] Create SSL_CTX: %p\n", this, m_pCtx);
@@ -512,7 +547,7 @@ void SslContext::release()
     {
         SSL_CTX *pCtx = m_pCtx;
         m_pCtx = NULL;
-        SSL_CTX_free(pCtx);
+        SslUtil::freeCtx(pCtx);
     }
     if (m_pStapling)
     {
@@ -1140,11 +1175,11 @@ int SslContext::initOCSP()
 
 int SslContext::initStapling()
 {
-    if (m_pStapling->init(this) == -1)
-        return -1;
+    if (m_pStapling->init(this) == LS_FAIL)
+        return LS_FAIL;
     SSL_CTX_set_tlsext_status_cb(m_pCtx, sslCertificateStatus_cb);
     SSL_CTX_set_tlsext_status_arg(m_pCtx, m_pStapling);
-    return 0;
+    return LS_OK;
 }
 
 

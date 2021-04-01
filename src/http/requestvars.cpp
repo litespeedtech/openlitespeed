@@ -1080,12 +1080,15 @@ const char *RequestVars::getCookieValue(HttpReq *pReq,
 {
 #define TEST_NEW_FUN
 #ifdef TEST_NEW_FUN
+    // FIXME: the test introduces different behavior to the function
     //TODO: do some test right now, use these code to return the specified cookie
     cookieval_t *cookie = pReq->getCookie(pCookieName, nameLen);
     if (!cookie)
         return NULL;
+#ifndef NDEBUG
     int cookieLen = cookie->valLen;
     char *pcookieval = pReq->getHeaderBuf().getp(cookie->valOff);
+#endif
 
 #endif
 

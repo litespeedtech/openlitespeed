@@ -393,7 +393,7 @@ private:
     int configAccessDeniedDir(const XmlNode *pNode);
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
-    void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod);
+    void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, mode_t mod);
     void fixConfDirsPermission();
 
     int configServerBasic2(const XmlNode *pRoot, const char *pSwapDir);
@@ -1348,13 +1348,15 @@ int removeMatchFile(const char *pDir, const char *prefix)
 
 int HttpServerImpl::gracefulShutdown()
 {
-    //suspend listener socket,
-    //m_listeners.suspendAll();
-    //close all listener socket.
-    //11/3/2020 David added SigStop here.
-    HttpSignals::setSigStop();
+    int listenerStopped = 0;
+
     m_lStartTime = -1;
-    m_listeners.stopAll();
+    if (restartMark(1))
+    {
+        LS_NOTICE("New litespeed process is ready, stop listeners");
+        m_listeners.stopAll();
+        listenerStopped = 1;
+    }
     //close keepalive connections
     HttpServerConfig::getInstance().setMaxKeepAliveRequests(0);
     HttpServerConfig::getInstance().setKeepAliveTimeout(0);
@@ -1365,9 +1367,11 @@ int HttpServerImpl::gracefulShutdown()
     // change to lower priority
     nice(3);
     //linger for a while
-    return m_dispatcher.linger(
-               HttpServerConfig::getInstance().getRestartTimeout());
-
+    LS_NOTICE("Event-loop lingering start.");
+    int ret = m_dispatcher.linger(listenerStopped,
+                               HttpServerConfig::getInstance().getRestartTimeout());
+    LS_NOTICE("Event-loop lingering done.");
+    return ret;
 }
 
 
@@ -2695,7 +2699,7 @@ static const char *getAutoIndexURI(const XmlNode *pNode)
     return pURI;
 }
 
-void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod)
+void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, mode_t mod)
 {
     char  achBuf[4096];
     ls_snprintf(achBuf, 4096, "%s/%s/",
@@ -2747,7 +2751,7 @@ void HttpServerImpl::fixConfDirsPermission()
 
     uid_t uid = pw->pw_uid;
     gid_t gid = ServerProcessConfig::getInstance().getGid();
-    int mod = 0750;
+    mode_t mod = 0750;
     bool needUpdated = false;
 
     char  achBuf[4096];
@@ -2755,7 +2759,7 @@ void HttpServerImpl::fixConfDirsPermission()
 
     const char *pRoot = MainServerConfig::getInstance().getServerRoot();
 
-    for (int i = 0; i < sizeof(testDir) / sizeof(const char *); ++i)
+    for (unsigned i = 0; i < sizeof(testDir) / sizeof(const char *); ++i)
     {
         ls_snprintf(achBuf, 4096, "%s/%s/", pRoot, testDir[i]);
 
@@ -3631,7 +3635,6 @@ int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
     //}
 
     RLimits limits;
-    memset( &limits, 0, sizeof( limits ) );
     config.setRLimits( &limits );
 
     Env * pEnv = config.getEnv();
@@ -5205,6 +5208,14 @@ int HttpServer::updateVHost(const char *pName, HttpVHost *pVHost)
 void HttpServer::passListeners()
 {
     m_impl->m_listeners.passListeners();
+}
+
+
+void HttpServer::stopListeners()
+{
+    LS_INFO("Stop all listeners.");
+    m_impl->m_listeners.stopAll();
+    HttpServerConfig::getInstance().setMaxKeepAliveRequests(0);
 }
 
 

@@ -819,6 +819,7 @@ int UdpListener::feedOwnedPacketToEngine(UdpListener *pListener,
         return 0;
     default:
         LS_WARN("unexpected return value from lsquic: %d", s);
+        // fallthru
     case  1:
     case -1:
         return -1;

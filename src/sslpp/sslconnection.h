@@ -135,7 +135,7 @@ public:
 
     bool isWaitingAsyncCert() const
     {   return (getFlag(F_ASYNC_CERT | F_ASYNC_CERT_FAIL) == F_ASYNC_CERT); }
-    bool wantAsyncCtx(SSL_CTX *&pInput);
+    int wantAsyncCtx(bool isWantWait);
 
 private:
     SSL    *m_ssl;

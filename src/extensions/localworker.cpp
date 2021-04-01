@@ -872,7 +872,7 @@ int LocalWorker::processPid(int pid, const char * path)
 #define DETACHED_PIDINFO_MIN_SIZE 24
 bool LocalWorker::loadDetachedPid(int fd, DetachedPidInfo_t *detached_pid)
 {
-     memset(detached_pid, 0, sizeof(*detached_pid));
+    memset((void *) detached_pid, 0, sizeof(*detached_pid));
     return pread(fd, detached_pid, sizeof(DetachedPidInfo_t), 0)
             >= DETACHED_PIDINFO_MIN_SIZE;
 }
