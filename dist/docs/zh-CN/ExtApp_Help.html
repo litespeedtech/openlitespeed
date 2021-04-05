@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - External Apps</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - External Apps." />
+  <title>OpenLiteSpeed Users' Manual - 外部应用</title>
+  <meta name="description" content="OpenLiteSpeed Users' Manual - 外部应用." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
   <link rel="shortcut icon" href="../img/favicon.ico" />
@@ -96,39 +96,35 @@
   </div>
 </aside>
 <article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServSecurity_Help.html">服务器安全</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="ScriptHandler_Help.html">脚本处理程序</a> &#187;</div></div>
-<h1>External Apps</h1><section class="ls-spacer-small-bottom">LiteSpeed web server can forward requests to external applications to process and generate dynamic content.
+<h1>外部应用</h1><section class="ls-spacer-small-bottom">LiteSpeed网络服务器可以转发外部应用程序的请求，以处理和生成动态内容。
 
 
-Since 2.0, LiteSpeed Web Server has supported seven types of external applications: CGI, FastCGI, web server, servlet
+从2.0版本起, LiteSpeed Web Server已经支持了7种外部应用: CGI, FastCGI, web server, servlet
 engine, LiteSpeed SAPI application, load balancer, and piped logger.
 
 <ul>
   <li>
-    CGI stands for Common Gateway Interface. The current standard is CGI/1.1. CGI applications run in standalone
-    processes. A CGI process is started for each request and will exit after finishing the request.
+    CGI是Common Gateway Interface的缩写. 目前的标准是 CGI/1.1.
+    CGI应用程序在独立的进程中运行. 一个CGI进程将为每个请求启动,并且在完成请求后退出.
   </li>
   <li>
-    FastCGI is a fast, open, and secure web server interface that solves the performance problems inherent in CGI without
-    introducing the overhead and complexity of proprietary APIs (Application Programming Interfaces).  For more information,
-    please visit <a href="http://www.fastcgi.com">http://www.fastcgi.com</a>.
+    FastCGI 是一个快速,开源,安全的web服务器接口,它解决了CGI固有的性能问题,而没有引入专有API(应用编程接口),
+    对于更多的信息,请访问 <a href="http://www.fastcgi.com">http://www.fastcgi.com</a>.
 
 
-    On LiteSpeed Web Server, FastCGI applications can take two roles: generating dynamic responses (a responder role) or
-    authorizing requests (an authorizer role). LiteSpeed Web Server further defines two types of FastCGI applications: local
-    FastCGI and remote FastCGI. Local FastCGI applications are started automatically by the web server on demand.
-    Remote FastCGI applications are not started by the web server. (They can run on a remote machine or on the same
-    machine.)
+    在 LiteSpeed Web Server, FastCGI 应用可以发挥两种作用: 创造动态响应 (响应者角色) 或者
+    授权请求 (授权者的角色). LiteSpeed Web Server进一步定义了两种类型的FastCGI应用程序:本地FastCGI和远程FastCGI.
+    Web服务器可根据需要自动启动本地FastCGI应用程序.
+    Web服务器不会启动远程FastCGI应用程序。 (它们可以在远程计算机或同一计算机上运行)
   </li>
   <li>
-    A web server is a server application that supports HTTP 1.0/1.1 protocols. LiteSpeed web server can serve as a
-    transparent reverse proxy to accelerate and protect web servers and application servers. When communicating with
-    backend web servers, LiteSpeed will always try to utilize persistent connections in order to achieve the highest
-    performance.
+    Web服务器是指支持HTTP 1.0/1.1协议的服务器应用程序. LiteSpeed网络服务器可以作为一个透明的反向代理来加速和保护网络服务器和应用服务器.
+    在与后端网络服务器进行通信时，LiteSpeed将始终尝试利用持久连接，以实现最高性能。
   </li>
   <li>
-    A servlet engine is an application, like Apache Tomcat and Jetty, that implements Java servlets and Java Server Pages.
-    LiteSpeed can communicate with servlet engines through AJPv1.3 (Apache JServ Protocol version 1.3). Servlet engine
-    cannot be started by the web server and can be setup to run on a remote machine.
+    像Apache Tomcat和Jetty,servlet引擎是实现了Java servlets和Java Server Pages的应用程序.
+    LiteSpeed可以通过AJPv1.3（Apache JServ协议1.3版）与servlet引擎进行通信.
+    Servlet引擎不能由Web服务器启动，可以设置在远程机器上运行.
   </li>
   <li>
     A LiteSpeed SAPI (LiteSpeed Server Application Programming Interface) application is an application that communicates
@@ -182,7 +178,7 @@ define CGI applications in the {PAGE=ExtApp_Help} section.
 
 External applications can be configured at the server level or at the virtual host level. When configured at the server level, the
 application can be used by all virtual hosts. When configured at the virtual host level, it can only be used by that virtual host.</section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>New External App</header><p>
+<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>新外部应用</header><p>
 <a href="#extAppType">类型</a></p></section>
 </section>
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppType"><h3>类型<span class="ls-permlink"><a href="#extAppType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定外部应用程序的类型。 应用程序类型根据它们提供的服务或与服务器通信所使用的协议而有所不同。 从中选择 <ul>   <li><span class="val">FastCGI</span>: a FastCGI application with a <span class="val">Responder</span> role.</li>   <li><span class="val">FastCGI Authorizer</span>: a FastCGI application with an <span class="val">Authorizer</span> role</li>   <li><span class="val">Servlet Engine</span>: a servlet engine with an AJPv13 connector, such as Tomcat.</li>   <li><span class="val">Web Server</span>: a web server or application server that supports HTTP protocol.</li>   <li><span class="val">LiteSpeed SAPI App</span>: an application that communicates with the web server using LSAPI protocol.</li>   <li><span class="val">Load Balancer</span>: a virtual application that can balance load among worker applications.</li>   <li><span class="val">Piped Logger</span>: an application that can process access log entries received on its STDIN stream.</li> </ul></p> <h4>Syntax</h4><p>从列表中选择</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> Most applications will use either LSAPI or FastCGI protocol. LSAPI supports PHP, Ruby, and Python. Perl can be used with FastCGI. (PHP, Ruby, and Python can also be set up to run using FastCGI, but they run faster using LSAPI.) Java uses servlet engines.</p> </article> </div>

@@ -549,7 +549,7 @@ class DTbl
 
                     if ($this->_hasNote && (($note = $data->GetChildVal('note')) != null)) {
                         $buf .= '<a href="javascript:void(0);" class="pull-right" rel="tooltip" data-placement="right"
-								data-original-title="' . $note . '" data-html="true">
+								 data-original-title="' . htmlspecialchars(htmlspecialchars($note, ENT_QUOTES), ENT_QUOTES) . '" data-html="true">
 								<i class="fa fa-info-circle"></i></a>';
                     }
                 } else
