@@ -113,6 +113,7 @@ public:
     void passListeners();
     void recoverListeners();
     void adjustListeners(int iNumChildren);
+    void stopListeners();
 
     int  restartMark(int cmd);
     int  initMultiplexer(const char *pType);
@@ -133,7 +134,7 @@ public:
     virtual int setErrorLogFile(const char *pFileName);
     virtual void setErrorLogRollingSize(off_t size, int keep_days);
     virtual AccessLog *getAccessLog() const;
-    
+
     void startServing();
     void enableAioLogging();
     const StringList *getIndexFileList() const;

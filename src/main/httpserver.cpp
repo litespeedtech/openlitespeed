@@ -400,7 +400,7 @@ private:
     int configAccessDeniedDir(const XmlNode *pNode);
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
-    void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod);
+    void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, mode_t mod);
     void fixConfDirsPermission();
 
     int configServerBasic2(const XmlNode *pRoot, const char *pSwapDir);
@@ -772,9 +772,11 @@ HttpListener *HttpServerImpl::addListener(const char *pName,
     }
     else
     {
-        pListener->beginConfig();
-        m_oldListeners.remove(pListener);
         LS_NOTICE("Reuse current listener [%s].", pName);
+        pListener->beginConfig();
+        if (reuseport)
+            pListener->enableReusePort();
+        m_oldListeners.remove(pListener);
     }
     m_listeners.add(pListener);
     return pListener;
@@ -1372,13 +1374,15 @@ int removeMatchFile(const char *pDir, const char *prefix)
 
 int HttpServerImpl::gracefulShutdown()
 {
-    //suspend listener socket,
-    //m_listeners.suspendAll();
-    //close all listener socket.
-    //11/3/2020 David added SigStop here.
-    HttpSignals::setSigStop();
+    int listenerStopped = 0;
+
     m_lStartTime = -1;
-    m_listeners.stopAll();
+    if (restartMark(1))
+    {
+        LS_NOTICE("New litespeed process is ready, stop listeners");
+        m_listeners.stopAll();
+        listenerStopped = 1;
+    }
     //close keepalive connections
     HttpServerConfig::getInstance().setMaxKeepAliveRequests(0);
     HttpServerConfig::getInstance().setKeepAliveTimeout(0);
@@ -1389,9 +1393,11 @@ int HttpServerImpl::gracefulShutdown()
     // change to lower priority
     nice(3);
     //linger for a while
-    return m_dispatcher.linger(
-               HttpServerConfig::getInstance().getRestartTimeout());
-
+    LS_NOTICE("Event-loop lingering start.");
+    int ret = m_dispatcher.linger(listenerStopped,
+                               HttpServerConfig::getInstance().getRestartTimeout());
+    LS_NOTICE("Event-loop lingering done.");
+    return ret;
 }
 
 
@@ -1807,8 +1813,11 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         LS_DBG_L("Config listener [%s] [%s]", pName, pAddr);
 
 
-        int reuseport = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                                        "reusePort", 0, 1, 1);
+        int reuseport = 0;
+
+        if (!isAdmin)
+            reuseport = ConfigCtx::getCurConfigCtx()->getLongValue(
+                    pNode, "reusePort", 0, 1, 1);
 
         HttpListener *pListener = NULL;
         pListener = addListener(pName, pAddr, reuseport);
@@ -1868,6 +1877,8 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         {
             unsigned long long binding = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "binding",
                           LONG_MIN, LONG_MAX, -1);
+            if (isAdmin)
+                binding = 1;
 
             if ((binding & ((1 << iNumChildren) - 1)) == 0)
             {
@@ -2547,6 +2558,14 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         SslTicket::init(pTKFile, iTicketLifetime, getuid(), getgid());
     }
 
+    const char *pOcspProxy;
+    if ((pOcspProxy = pNode->getChildValue("sslOcspProxy")) != NULL)
+    {
+        int ret = SslOcspStapling::setProxy(pOcspProxy);
+        LS_DBG("[OCSP] %s set OCSP verification using proxy server: %s",
+               (ret == LS_OK) ? "Successfully" : "Failed to", pOcspProxy);
+    }
+
     const char *pCAFile;
     char achCAFile[MAX_PATH_LEN];
     const char *pCAPath;
@@ -2754,7 +2773,7 @@ static const char *getAutoIndexURI(const XmlNode *pNode)
     return pURI;
 }
 
-void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, int mod)
+void HttpServerImpl::testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, mode_t mod)
 {
     char  achBuf[4096];
     ls_snprintf(achBuf, 4096, "%s/%s/",
@@ -2806,7 +2825,7 @@ void HttpServerImpl::fixConfDirsPermission()
 
     uid_t uid = pw->pw_uid;
     gid_t gid = ServerProcessConfig::getInstance().getGid();
-    int mod = 0750;
+    mode_t mod = 0750;
     bool needUpdated = false;
 
     char  achBuf[4096];
@@ -2814,7 +2833,7 @@ void HttpServerImpl::fixConfDirsPermission()
 
     const char *pRoot = MainServerConfig::getInstance().getServerRoot();
 
-    for (int i = 0; i < sizeof(testDir) / sizeof(const char *); ++i)
+    for (unsigned i = 0; i < sizeof(testDir) / sizeof(const char *); ++i)
     {
         ls_snprintf(achBuf, 4096, "%s/%s/", pRoot, testDir[i]);
 
@@ -3690,7 +3709,6 @@ int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
     //}
 
     RLimits limits;
-    memset( &limits, 0, sizeof( limits ) );
     config.setRLimits( &limits );
 
     Env * pEnv = config.getEnv();
@@ -5326,6 +5344,14 @@ void HttpServer::adjustListeners(int iNumChildren)
 void HttpServer::passListeners()
 {
     m_impl->m_listeners.passListeners();
+}
+
+
+void HttpServer::stopListeners()
+{
+    LS_INFO("Stop all listeners.");
+    m_impl->m_listeners.stopAll();
+    HttpServerConfig::getInstance().setMaxKeepAliveRequests(0);
 }
 
 

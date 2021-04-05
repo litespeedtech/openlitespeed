@@ -51,7 +51,8 @@ PHPConfig::PHPConfig()
 
 
 PHPConfig::PHPConfig(const PHPConfig &rhs)
-    : m_lsapiEnv(256)
+    : HashStringMap<PHPValue *>()
+    , m_lsapiEnv(256)
 {
     HashStringMap< PHPValue *>::iterator iter;
     for (iter = rhs.begin();

@@ -107,6 +107,8 @@ public:
     int registEvent();
     int activeReusePort(int seq, const char *addr_str);
     int bindReusePort(int s_children, const char* getAddrStr);
+    int startReusePortSocket(int start, int total, const char* addr_str);
+    int adjustReusePortCount(int count, const char *addr_str);
 
 #ifndef _NOT_USE_SHM_
 public: /* These need to be public because we access them from handlePackets */

@@ -689,11 +689,11 @@ void SslConnection::tryReuseCachedSession(const char *pHost, int iHostLen)
 }
 
 
-bool SslConnection::wantAsyncCtx(SSL_CTX *&pCtx)
+int SslConnection::wantAsyncCtx(bool isWantWait)
 {
-    int ret = false;
+    int ret = 0;
 
-    if (pCtx != (SSL_CTX *)-1L)
+    if (!isWantWait)
     {
         if (wantCert()) // wanted cert and got it.
         {
@@ -705,14 +705,14 @@ bool SslConnection::wantAsyncCtx(SSL_CTX *&pCtx)
     else if (wantCert()) // wanted cert and it failed.
     {
         LS_DBG_H("[SSLSNI] Fetch async cert completed already, do not fetch again.");
-        pCtx = NULL;
+        ret = -1;
         setFlag(F_ASYNC_CERT_FAIL, 1);
         m_iWant &= ~WANT_CERT;
     }
     else
     {
         LS_DBG_H("[SSLSNI] need to pause SSL accept to fetch cert.");
-        ret = true;
+        ret = 1;
         assert(0 == wantCert()); // We should not already want cert.
     }
 

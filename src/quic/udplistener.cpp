@@ -826,6 +826,7 @@ int UdpListener::feedOwnedPacketToEngine(UdpListener *pListener,
         return 0;
     default:
         LS_WARN("unexpected return value from lsquic: %d", s);
+        // fallthru
     case  1:
     case -1:
         return -1;
@@ -1616,8 +1617,8 @@ int UdpListener::bindReusePort(int count, const char* addr_str)
                            addr_str);
             return -1;
         }
-        LS_NOTICE("[UDP %s] #%d SO_REUSEPORT socket started, fd: %d",
-               addr_str, i, fd);
+        LS_NOTICE("[UDP %s] SO_REUSEPORT #%d socket started, fd: %d",
+               addr_str, i + 1, fd);
         m_reusePortFds[i] = fd;
     }
     m_reusePortFds.setSize(count);
@@ -1754,8 +1755,8 @@ void UdpListener::addReusePortSocket(int fd, const char *addr_str)
         *m_reusePortFds.newObj() = getfd();
     }
     *m_reusePortFds.newObj() = fd;
-    LS_NOTICE("[UDP %s] Recovering server socket, SO_REUSEPORT #%d",
-                addr_str, m_reusePortFds.size());
+    LS_NOTICE("[UDP %s] Recovering server socket, SO_REUSEPORT #%d, fd: %d",
+                addr_str, m_reusePortFds.size(), fd);
 }
 
 
@@ -1765,10 +1766,53 @@ int UdpListener::activeReusePort(int seq, const char *addr_str)
     int fd = m_reusePortFds.getActiveFd(seq, &n);
     if (fd != -1)
     {
-        LS_NOTICE("[UDP %s] Activates #%d->%d SO_REUSEPORT socket: %d",
-                  addr_str, seq, n, fd);
+        LS_NOTICE("[UDP %s] Worker #%d activates SO_REUSEPORT #%d socket, fd: %d",
+                  addr_str, seq, n + 1, fd);
         setfd(fd);
         return 0;
     }
     return -1;
 }
+
+
+int UdpListener::startReusePortSocket(int start, int total, const char* addr_str)
+{
+    int i, fd;
+    LS_NOTICE("[UDP %s] Add SO_REUSEPORT sockets, #%d to #%d",
+                addr_str, start + 1, total);
+    m_reusePortFds.guarantee(total);
+    for(i = start; i < total; ++i)
+    {
+        fd = bind2(LS_SOCK_REUSEPORT);
+        if (fd == -1)
+        {
+            if (errno != EACCES)
+                LS_NOTICE("[UDP %s] failed to start SO_REUSEPORT socket",
+                           addr_str);
+            return -1;
+        }
+        LS_DBG("[UDP %s] SO_REUSEPORT #%d socket started, fd: %d",
+               addr_str, i + 1, fd);
+        m_reusePortFds[i] = fd;
+    }
+    m_reusePortFds.setSize(total);
+    return 0;
+}
+
+
+int UdpListener::adjustReusePortCount(int count, const char *addr_str)
+{
+    if (m_reusePortFds.size() == 0 && getfd() != -1)
+        *m_reusePortFds.newObj() = getfd();
+    if (count > m_reusePortFds.size())
+        return startReusePortSocket(m_reusePortFds.size(), count, addr_str);
+    else if (count < m_reusePortFds.size())
+    {
+        LS_NOTICE("[UDP %s] Shink SO_REUSEPORT socket count from %d to %d",
+                    addr_str, m_reusePortFds.size(), count);
+        return m_reusePortFds.shrink(count);
+    }
+    return 0;
+}
+
+

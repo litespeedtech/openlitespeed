@@ -104,6 +104,9 @@ public:
     DLinkedObj *next() const
     {   return (DLinkedObj *)LinkedObj::next();     }
 
+    void clear()
+    {   setNext(NULL);  m_pPrev = NULL; }
+
     void addNext(DLinkedObj *pNext)
     {
         assert(pNext);
@@ -156,7 +159,7 @@ public:
             setNext(pNext->next());
             if (next())
                 next()->m_pPrev = this;
-            memset(pNext, 0, sizeof(DLinkedObj));
+            pNext->clear();
         }
         return pNext;
     }
@@ -181,7 +184,7 @@ public:
             m_pPrev = pPrev->m_pPrev;
             if (m_pPrev)
                 m_pPrev->setNext(this);
-            memset(pPrev, 0, sizeof(DLinkedObj));
+            pPrev->clear();
         }
         return pPrev;
     }
@@ -193,7 +196,7 @@ public:
             pNext->m_pPrev = m_pPrev;
         if (m_pPrev)
             m_pPrev->setNext(next());
-        memset(this, 0, sizeof(DLinkedObj));
+        clear();
         return pNext;
     }
 

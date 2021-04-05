@@ -902,7 +902,7 @@ int ShmCacheManager::initCacheInfo(LsShmPool *pPool)
         *pMagic = CACHE_INFO_MAGIC;
         CacheInfo *pInfo = (CacheInfo *)pPool->offset2ptr(infoOff + sizeof(
                                int32_t));
-        memset(pInfo, 0, sizeof(*pInfo));
+        memset((void *) pInfo, 0, sizeof(*pInfo));
         pInfo->setPurgeTime(time(NULL) + 1, 0);
         pCacheInfoReg = pPool->getShm()->addReg("CACHINFO");
         //should use CAS to make sure nobody take over it before us
@@ -1207,7 +1207,7 @@ int ShmCacheManager::addTracking2(CacheEntry * pEntry, LsShmHash *pTracker)
                                               HASH_KEY_LEN, &valLen, &flag);
     if (offVal != 0)
     {
-        CacheInfo *pInfo = getCacheInfo();
+//         CacheInfo *pInfo = getCacheInfo();
         pData = (shm_objtrack_t *)pTracker->offset2ptr(offVal);
         if (flag & LSSHM_VAL_CREATED)
             memset(pData, 0, sizeof(*pData));

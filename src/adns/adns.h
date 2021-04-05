@@ -154,12 +154,14 @@ private:
     LsShmHash  *getShmHash()    {   return m_pShmHash;  }
 
 
-    struct dns_ctx *    m_pCtx;
-    short               m_iCounter;
-    short               m_iPendingEvt;
+    struct dns_ctx     *m_pCtx;
     LsShmHash          *m_pShmHash;
+    pthread_t           m_lockedBy;
     time_t              m_tmLastTrim;
     ls_mutex_t          m_mutex;
+    ls_mutex_t          m_udns_mutex;
+    short               m_iCounter;
+    short               m_iPendingEvt;
 
     LS_NO_COPY_ASSIGN(Adns);
 };

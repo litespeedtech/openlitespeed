@@ -504,6 +504,10 @@ static struct lsquic_stream_if s_quic_if =
     NULL,
     NULL,
     NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
 };
 
 

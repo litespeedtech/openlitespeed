@@ -522,11 +522,17 @@ void *WorkCrew::workerRoutine(CrewWorker * pWorker)
         if (!job)
         {
             DPRINTF("WRKRTN poll job failed slot %d %s\n", pWorker->getSlot(), pStatus());
-            int32_t idle = ls_atomic_fetch_add(&m_idleWorkers, 1);
+#ifndef NDEBUG
+            int32_t idle =
+#endif
+                           ls_atomic_fetch_add(&m_idleWorkers, 1);
             DPRINTF("WRKRTN IDLE slot %d %s\n", pWorker->getSlot(), pStatus());
             // timed get
             job = getJob();
-            idle = ls_atomic_sub_fetch(&m_idleWorkers, 1);
+#ifndef NDEBUG
+            idle =
+#endif
+                   ls_atomic_sub_fetch(&m_idleWorkers, 1);
             assert(idle >= 0);
             DPRINTF("WRKRTN NOT IDLE slot %d %s\n", pWorker->getSlot(), pStatus());
             DPRINTF("WRKRTN %s job slot %d %s\n", (job ? "GOT" : "NO"), pWorker->getSlot(), pStatus());

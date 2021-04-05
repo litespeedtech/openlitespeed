@@ -102,7 +102,7 @@ int ExtWorker::start()
 static int setConnToClose(void *p)
 {
     ExtConn *pConn = (ExtConn *)(IConnection *)p;
-    pConn->setToClose(1);
+    pConn->keepAliveOff();
     return 0;
 }
 
@@ -115,7 +115,6 @@ int ExtWorker::clearCurConnPool()
         pConn->close();
         m_connPool.removeConn(pConn);
     }
-    m_iLingerConns += m_connPool.getTotalConns();
     m_connPool.for_each(setConnToClose);
     return m_iLingerConns;
 }

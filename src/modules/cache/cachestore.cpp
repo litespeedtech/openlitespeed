@@ -58,7 +58,10 @@ void CacheStore::setStorageRoot(const char *pRoot)
 int CacheStore::addToHash(CacheEntry *pEntry)
 {
     assert(pEntry->isDirty() == 0);
-    iterator iter = insert((char *)pEntry->getHashKey().getKey(), pEntry);
+#ifndef NDEBUG
+    iterator iter =
+#endif
+                    insert((char *)pEntry->getHashKey().getKey(), pEntry);
     assert(iter != end());
     return 0;
 }

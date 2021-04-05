@@ -3784,7 +3784,7 @@ int HttpReq::applyOp(HttpSession *pSession, HttpRespHeaders *pRespHeader,
     else if (!pRespHeader)
         return 0;
 
-   if (pOp->getOperator() == LSI_HEADER_UNSET)
+    if (pOp->getOperator() == LSI_HEADER_UNSET)
     {
         if (pOp->getIndex() != HttpRespHeaders::H_UNKNOWN)
             pRespHeader->del((HttpRespHeaders::INDEX)pOp->getIndex());

@@ -41,7 +41,7 @@ public:
     int reinit();
     int run();
     int stop();
-    int linger(int timeout);
+    int linger(int listenerStopped, int timeout);
     void updateDebugLevel();
     //HttpResourceManager * getResManager()
     //{   return &m_ResManager;   }

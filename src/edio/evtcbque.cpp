@@ -327,7 +327,7 @@ evtcbnode_s *EvtcbQue::schedule_once(evtcb_pf cb, evtcbhead_t *session,
 void EvtcbQue::recycle(evtcbnode_s *pObj)
 {
     logState("recycle()", pObj);
-    memset(pObj, 0, sizeof(evtcbnode_s));
+    memset((void *) pObj, 0, sizeof(evtcbnode_s));
     ls_atomic_spin_lock(&s_poolLock);
     s_pCbnodePool->recycle(pObj);
     ls_atomic_spin_unlock(&s_poolLock);

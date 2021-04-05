@@ -17,13 +17,54 @@
 *****************************************************************************/
 #include "cacheconfig.h"
 #include "ls.h"
+#include <new>
 
 #include "dirhashcachestore.h"
 #include <http/httpvhost.h>
 
+
+int CacheKeyModList::parseAppend(const char *pConfig, int len)
+{
+    int op = 0;
+    if (len < 5)
+        return -1;
+
+    if ((*pConfig | 0x20) == 'c' && len >= 5)
+    {
+        if (strncasecmp(pConfig, "clear", 5) == 0)
+        {
+            clear();
+            return 0;
+        }
+    }
+
+    if (*pConfig != '-')
+        return -1;
+
+    const char *pEnd = pConfig + len;
+    ++pConfig;
+    if ((*pConfig | 0x20) == 'q' && (*(pConfig + 1) | 0x20) == 's'
+        && *(pConfig + 2) == ':')
+    {
+        pConfig += 3;
+        if (*(pEnd - 1) == '*')
+        {
+            op = CACHE_KEY_QS_DEL_PREFIX;
+            --pEnd;
+        }
+        else
+            op = CACHE_KEY_QS_DEL_EXACT;
+        CacheKeyMod *obj = new(newObj()) CacheKeyMod();
+        obj->m_operator = op;
+        ls_str_dup(&obj->m_str, pConfig, pEnd - pConfig);
+    }
+    return 0;
+}
+
+
 CacheConfig::CacheConfig()
     : m_iCacheConfigBits(0)
-    , m_iCacheFlag(0x027C)   //0000 0010 0111 1100
+    , m_iCacheFlag(0x0027C)   //0 0000 0010 0111 1100
     , m_defaultAge(3600)
     , m_privateAge(3600)
     , m_iMaxStale(200)
@@ -41,6 +82,7 @@ CacheConfig::CacheConfig()
     , m_pStore(NULL)
     , m_pPurgeUri(NULL)
     , m_pVaryList(NULL)
+    , m_pKeyModList(NULL)
 {
 }
 
@@ -57,6 +99,8 @@ CacheConfig::~CacheConfig()
         free(m_pPurgeUri);
     if (m_iOwnVaryList && m_pVaryList)
         delete m_pVaryList;
+    if (m_pKeyModList && (m_iCacheConfigBits & CACHE_KEY_MOD_SET))
+        delete m_pKeyModList;
 
     m_pUrlExclude = NULL;
     m_pVaryList = NULL;
@@ -74,14 +118,7 @@ void CacheConfig::inherit(const CacheConfig *pParent)
 {
     if (pParent)
     {
-        if (!(m_iCacheConfigBits & CACHE_MAX_AGE_SET))
-            m_defaultAge = pParent->m_defaultAge;
-        if (!(m_iCacheConfigBits & CACHE_PRIVATE_AGE_SET))
-            m_privateAge = pParent->m_privateAge;
-        if (!(m_iCacheConfigBits & CACHE_STALE_AGE_SET))
-            m_iMaxStale = pParent->m_iMaxStale;
-        if (!(m_iCacheConfigBits & CACHE_MAX_OBJ_SIZE))
-            m_lMaxObjSize = pParent->m_lMaxObjSize;
+        m_pKeyModList = pParent->m_pKeyModList;
         m_iCacheFlag = (m_iCacheFlag & m_iCacheConfigBits) |
                        (pParent->m_iCacheFlag & ~m_iCacheConfigBits);
         m_pParentUrlExclude = pParent->m_pUrlExclude;
@@ -151,3 +188,15 @@ void CacheConfig::setVaryList(StringList *pList)
     m_iOwnVaryList = 1;
 }
 
+
+int CacheConfig::parseCacheKeyMod(const char *pConfig, int len)
+{   
+    if ((m_iCacheConfigBits & CACHE_KEY_MOD_SET) == 0)
+    {
+        CacheKeyModList *pParent = m_pKeyModList;
+        m_pKeyModList = new CacheKeyModList();
+        m_pKeyModList->setParent(pParent);
+        m_iCacheConfigBits = m_iCacheConfigBits | CACHE_KEY_MOD_SET;
+    }
+    return m_pKeyModList->parseAppend(pConfig, len);
+}

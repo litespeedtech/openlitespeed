@@ -28,7 +28,9 @@ void Addr2OffMap::release()
     if (m_table)
     {
         free(m_table);
-        LS_ZERO_FILL(m_table, m_tableSize);
+        m_table = NULL;
+        m_tableEnd = NULL;
+        m_tableSize = 0;
     }
 }
 
@@ -36,8 +38,8 @@ void Addr2OffMap::release()
 void Addr2OffMap::swap(Addr2OffMap &rhs)
 {
     char buf[sizeof(Addr2OffMap)];
-    memmove(buf, &rhs, sizeof(buf));
-    memmove(&rhs, this, sizeof(buf));
+    memmove(buf, (void *) &rhs, sizeof(buf));
+    memmove((void *) &rhs, this, sizeof(buf));
     memmove(this, buf, sizeof(buf));
 }
 
@@ -131,7 +133,9 @@ int AddrMap::addLargePage(AddrOffPair info, size_t size)
 {
     assert((info.m_offset & LARGE_PAGE_MASK) == 0);
     assert((size   & LARGE_PAGE_MASK) == 0);
+#ifndef NDEBUG
     int page = info.m_offset >> LARGE_PAGE_BITS;
+#endif
     assert(page == m_off2ptrTable.size());
     char * end = info.m_ptr + size;
     while(info.m_ptr < end)

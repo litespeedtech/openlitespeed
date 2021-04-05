@@ -1255,6 +1255,7 @@ void ReqParser::testQueryString()
     assert(parser.m_pArgs[2].keyLen == 7);
     assert(parser.m_pArgs[2].valueOffset == 36);
     assert(parser.m_pArgs[2].valueLen == 12);
+    (void) res; // silence warning in optimized build
 }
 
 void ReqParser::testMultipart()

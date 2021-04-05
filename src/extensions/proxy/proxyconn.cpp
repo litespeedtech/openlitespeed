@@ -330,7 +330,7 @@ int ProxyConn::sendReqHeader()
         m_iTotalPending += headerLen;
     }
     m_iReqHeaderSize = m_iTotalPending;
-    m_iReqBodySize = pReq->getContentFinished();
+    m_iReqBodySize = pReq->getContentLength();
     setInProcess(1);
     if (LOG4CXX_NS::Level::isEnabled(LOG4CXX_NS::Level::DBG_HIGH))
     {
@@ -614,6 +614,8 @@ int ProxyConn::processResp()
             //debug code
             //::write(1, HttpResourceManager::getGlobalBuf(),
             //        pBuf - HttpResourceManager::getGlobalBuf() );
+            if (respState & HEC_RESP_CONN_CLOSE)
+                keepAliveOff();
             HttpReq *pReq = pHEC->getHttpSession()->getReq();
             if (pReq->noRespBody())
             {
@@ -802,6 +804,7 @@ int ProxyConn::removeRequest(ExtRequest *pReq)
 
 int  ProxyConn::endOfReqBody()
 {
+    m_lReqSentTime = time(NULL);
     if (m_iTotalPending)
     {
         int ret = flush();
@@ -809,7 +812,6 @@ int  ProxyConn::endOfReqBody()
             return ret;
     }
     suspendWrite();
-    m_lReqSentTime = time(NULL);
     return 0;
 }
 
@@ -854,6 +856,17 @@ void ProxyConn::finishRecvBuf()
 void ProxyConn::cleanUp()
 {
     setConnector(NULL);
+    if (!m_lReqSentTime)
+    {
+        LS_DBG_L(this, "Request body was not completed, close.");
+        close();
+    }
+    else if (!getWorker()->getConfigPointer()->isPersistConn())
+    {
+        LS_DBG_L(this, "Non-Persistent connection, close.");
+        close();
+    }
+
     reset();
     recycle();
 }

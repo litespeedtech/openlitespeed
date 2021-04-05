@@ -687,9 +687,18 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     if ((pUri == NULL) && (iType != HandlerType::HT_LOGGER))
         return NULL;
 
-    //Check http or https for proxy type
+    //Check whether proxy is a UNIX Domain Type.  If it is not, check http
+    //or https.
     if (iType == EA_PROXY)
     {
+        if (strncasecmp(pUri, "uds://", 6) == 0
+            || strncasecmp(pUri, "unix:/", 6) == 0)
+        {
+            LS_DBG_L(&currentCtx, "ExtApp Proxy UNIX Domain Socket `%s'",
+                                                                    pUri + 5);
+            goto set_addr;
+        }
+
         if (strncasecmp(pUri, "https://", 8) == 0)
             isHttps = 1;
 
@@ -708,6 +717,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         LS_DBG_L(&currentCtx, "ExtApp Proxy isHttps %d, Uri %s.",  isHttps, pUri);
     }
 
+  set_addr:
     if (addr.set(pUri, NO_ANY | DO_NSLOOKUP))
     {
         LS_ERROR(&currentCtx, "failed to set socket address %s!", pUri);

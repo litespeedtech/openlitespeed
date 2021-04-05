@@ -155,6 +155,8 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
             break;
         if (((strncasecmp(pRules, "RewriteCond", 11) == 0) &&
              (isspace(*(pRules + 11)))) ||
+            ((strncasecmp(pRules, "CacheKeyModify", 14) == 0) &&
+             (isspace(*(pRules + 14)))) ||
             ((strncasecmp(pRules, "RewriteRule", 11) == 0) &&
              (isspace(*(pRules + 11)))))
         {
@@ -916,8 +918,12 @@ int RewriteEngine::setCookie(char *pBuf, int len, HttpSession *pSession)
 }
 
 
+// EEF: Expand Env Flag
+#define EEF_CACHE_KEY_MOD (1 << 0)
+
+
 int RewriteEngine::expandEnv(const RewriteRule *pRule,
-                             HttpSession *pSession, AutoStr2 &cacheCtlStr)
+                 HttpSession *pSession, AutoStr2 &cacheCtlStr, int *eef_flags)
 {
     RewriteSubstFormat *pEnv = pRule->getEnv()->begin();
     const char *pKey;
@@ -995,6 +1001,13 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                         RequestVars::setEnv(pSession, "LSCACHE_VARY_COOKIE", 19,
                                             pValue, pValEnd - pValue);
                     }
+                    else if (strcasecmp(pKey + 6, "Key-Mod") == 0)
+                    {
+                        RequestVars::setEnv(pSession, "cache-key-mod", 13,
+                            pValue, pValEnd - pValue);
+                        needSet = false;
+                        *eef_flags |= EEF_CACHE_KEY_MOD;
+                    }
                 }
 
                 if (needSet)
@@ -1019,8 +1032,13 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
 {
     char *pBuf;
     int flag = pRule->getFlag();
-    expandEnv(pRule, pSession, cacheCtlStr);
+    int eef_flags = 0;
+    expandEnv(pRule, pSession, cacheCtlStr, &eef_flags);
     m_rewritten |= 1;
+    if (eef_flags & EEF_CACHE_KEY_MOD)
+        // This environment variable is only used by the callback set in the
+        // cache module.  Do not pass it along.
+        RequestVars::setEnv(pSession, "!cache-key-mod", 14, "", 0);
     if (!(flag & RULE_FLAG_NOREWRITE))
     {
         int len = REWRITE_BUF_SIZE - 1;

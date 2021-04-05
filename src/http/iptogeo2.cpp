@@ -387,7 +387,7 @@ int GeoIpData2::check_entry_data_list(
     MMDB_entry_data_list_s *entry_data_list, 
     MMDB_entry_data_list_s **entry_data_list_next, char *key_full) 
 {
-    LS_DBG("[GEO] check_entry_data_list: key: %s\n", key_full);
+    LS_DBG("[GEO] check_entry_data_list: key: %s\n", key_full ? key_full : "");
     if (!entry_data_list) 
     {
         LS_ERROR("[GEO] NULL entry data list while interpreting GEO result\n");
@@ -436,12 +436,8 @@ int GeoIpData2::check_entry_data_list(
         /* A customer found a bug where there might be multiple array elements
          * so we need to be able to deal with an array element (as is 
          * documented.  */
-        int implied_index = 0;
         if (key_full == NULL)
-        {
             key_full = (char *)"0";
-            implied_index = 1;
-        }
         int index = 0;
         entry_data_list = entry_data_list->next; 
         LS_DBG("[GEO] Array: Count: %d\n", count);

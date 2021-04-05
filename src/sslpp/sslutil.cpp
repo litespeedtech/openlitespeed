@@ -245,6 +245,19 @@ static void freeDH(void *parent, void *ptr, CRYPTO_EX_DATA *ad,
 }
 
 
+SSL_CTX *SslUtil::newCtx()
+{
+    SSL_METHOD *meth = (SSL_METHOD *)SSLv23_method();
+    return SSL_CTX_new(meth);
+}
+
+
+void SslUtil::freeCtx(SSL_CTX *pCtx)
+{
+    SSL_CTX_free(pCtx);
+}
+
+
 static long s_iDHParamIdx = -1;
 int SslUtil::initDH(SSL_CTX *pCtx, const char *pFile, int iKeyLen)
 {
@@ -298,7 +311,7 @@ int SslUtil::initECDH(SSL_CTX *pCtx)
     SSL_CTX_set_options(pCtx, SSL_OP_SINGLE_ECDH_USE);
 
 #if (defined SSL_CTRL_SET_ECDH_AUTO || defined SSL_CTX_set_ecdh_auto)
-    SSL_CTX_set_ecdh_auto(pCtx, 1);
+    (void) SSL_CTX_set_ecdh_auto(pCtx, 1);
 #elif (defined SSL_CTX_set1_curves_list || defined SSL_CTRL_SET_CURVES_LIST)
     SSL_CTX_set1_curves_list(pCtx, (char *) "X25519:secp384r1:prime256v1");
 

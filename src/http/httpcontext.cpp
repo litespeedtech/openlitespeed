@@ -182,7 +182,7 @@ void HttpContext::releaseHTAConf()
         releaseMIME();
         releaseDefaultCharset();
 
-        memset(m_pInternal, 0 , sizeof(CtxInt));
+        memset((void *) m_pInternal, 0 , sizeof(CtxInt));
         m_iConfigBits = BIT_CTXINT;
     }
     else
@@ -355,7 +355,7 @@ int HttpContext::allocateInternal()
         m_pInternal = (CtxInt *)Pool::allocate(sizeof(CtxInt));
         if (!m_pInternal)
             return LS_FAIL;
-        memset(m_pInternal, 0, sizeof(CtxInt));
+        memset((void *) m_pInternal, 0, sizeof(CtxInt));
         m_iConfigBits |= BIT_CTXINT;
     }
     return 0;

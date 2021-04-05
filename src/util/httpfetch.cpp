@@ -382,7 +382,7 @@ int HttpFetch::verifyDomain()
         return -1;
     len = BIO_read(pBio, out, 511);
     BIO_free(pBio);
-    if ((len - 3 != m_iHostLen) || (memcmp(out + 3, m_achHost, m_iHostLen)))
+    if ((len - 3 < m_iHostLen) || (memcmp(out + 3, m_achHost, m_iHostLen)))
         return -1;
     return 0;
 }
@@ -1099,35 +1099,48 @@ int HttpFetch::process()
         recvResp();
     // req may be complete at this point if fetch is blocking and recvResp read returned -1.
     // This will return -1 in that case because upon completion, the fetch fd is set to -1 and reqState is 0.
-    return (m_reqState == STATE_RCVD_RESP_BODY) ? 0 : -1;
+    return (m_reqState == STATE_RCVD_RESP_BODY
+            || m_reqState == STATE_FINISH) ? 0 : -1;
 }
 
 
-void HttpFetch::setProxyServerAddr(const char *pAddr)
+int HttpFetch::setProxyServerAddr(const char *pAddr)
 {
-    if (m_pServerAddr)
+    GSockAddr addr;
+    if (addr.set(pAddr, NO_ANY | DO_NSLOOKUP) == -1)
     {
-        delete  m_pServerAddr;
-        m_pServerAddr = NULL;
+        m_pLogger->error("HttpFetch[%d] invalid proxy server address '%s', "
+                         "ignore.", getLoggerId(), pAddr);
+        return LS_FAIL;
     }
+    return setProxyServerAddr(addr.get(), pAddr);
+}
 
-    if (pAddr)
+
+int HttpFetch::setProxyServerAddr(const struct sockaddr *pAddr,
+                                  const char *addr_str)
+{
+    if (!pAddr)
+        return LS_FAIL;
+
+    if (!m_pServerAddr)
     {
         m_pServerAddr = new GSockAddr();
-        if (m_pServerAddr->set(pAddr, NO_ANY | DO_NSLOOKUP) == -1)
-        {
-            delete m_pServerAddr;
-            m_pServerAddr = NULL;
-            m_pLogger->error("HttpFetch[%d] invalid proxy server address '%s', ignore.", getLoggerId(), pAddr);
-            return;
-        }
-        if (m_iEnableDebug)
-            m_pLogger->info("HttpFetch[%d]::setProxyServerAddr %s",
-                            getLoggerId(), pAddr);
-        if (m_psProxyServerAddr)
-            free(m_psProxyServerAddr);
-        m_psProxyServerAddr = strdup(pAddr);
+        if (!m_pServerAddr)
+            return LS_FAIL;
     }
+    m_pServerAddr->set(pAddr);
+
+    if (m_psProxyServerAddr)
+        free(m_psProxyServerAddr);
+    if (!addr_str)
+        addr_str = m_pServerAddr->toString();
+    if (addr_str)
+        m_psProxyServerAddr = strdup(addr_str);
+    if (m_iEnableDebug)
+        m_pLogger->info("HttpFetch[%d]::setProxyServerAddr %s",
+                        getLoggerId(), m_psProxyServerAddr);
+    return LS_OK;
 }
 
 

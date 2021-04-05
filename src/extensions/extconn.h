@@ -103,6 +103,7 @@ public:
     int  onInitConnected();
     void onSecTimer();
 
+    void keepAliveOff();
     int  markToClose();
 
     int  reconnect();

@@ -227,7 +227,7 @@ extern bool is_cgroup_v2_available();
 
 static int cgroup_validate(void)
 {
-    struct passwd *pwd;
+//    struct passwd *pwd;
 
     if (getuid())
     {

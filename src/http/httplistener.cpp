@@ -64,8 +64,8 @@ HttpListener::HttpListener(const char *pName, const char *pAddr)
     , m_iBinding(0xffffffffffffffffULL)
     , m_iAdmin(0)
     , m_isSSL(0)
-    , m_flag(0)
     , m_iSendZconf(0)
+    , m_flag(0)
     , m_pAdcPortList(NULL)
 {
     if (m_pMapVHost)
@@ -81,8 +81,8 @@ HttpListener::HttpListener()
     , m_iBinding(0xffffffffffffffffULL)
     , m_iAdmin(0)
     , m_isSSL(0)
-    , m_flag(0)
     , m_iSendZconf(0)
+    , m_flag(0)
     , m_pAdcPortList(NULL)
 {
 }
@@ -209,7 +209,7 @@ int HttpListener::assign(int fd, struct sockaddr *pAddr)
         snprintf(achAddr, 128, "[::]:%hu", (unsigned short)m_sockAddr.getPort());
     else
         m_sockAddr.toString(achAddr, 128);
-    LS_NOTICE("[%s] Recovering server socket", achAddr);
+    LS_NOTICE("[%s] Recovering server socket, fd: %d", achAddr, fd);
     if (m_pMapVHost)
         m_pMapVHost->setAddrStr(achAddr);
     if ((m_sockAddr.family() == AF_INET6)
@@ -285,51 +285,40 @@ int HttpListener::setSockAttr(int fd)
     return 0;
 }
 
+
+int HttpListener::adjustReusePortCount(int total)
+{
+    if (m_pUdpListener)
+        m_pUdpListener->adjustReusePortCount(total, getAddrStr());
+    if (total > m_reusePortFds.size())
+        return startReusePortSocket(m_reusePortFds.size(), total);
+    else if (total < m_reusePortFds.size())
+    {
+        LS_NOTICE("[%s] Shink SO_REUSEPORT socket count from #%d to #%d",
+                    getAddrStr(), m_reusePortFds.size(), total);
+        return m_reusePortFds.shrink(total);
+    }
+    return 0;
+}
+
+
 void HttpListener::adjustFds(int iNumChildren)
 {
-    int i, ret, fd;
-    if (!isReusePort())
+    if (!(m_flag & LS_SOCK_REUSEPORT))
         return;
+    if (m_reusePortFds.size() == 0 && getfd() != -1)
+        *m_reusePortFds.newObj() = getfd();
 
-    if (m_reusePortFds.size() > iNumChildren)
-    {
-        for (i=iNumChildren; i<m_reusePortFds.size(); ++i)
-        {
-            LS_INFO("[%s] adjustFds: close fd %d.", getAddrStr(),
-                    m_reusePortFds[i]);
-            close(m_reusePortFds[i]);
-        }
-    }
-    else if (m_reusePortFds.size() < iNumChildren)
-    {
-        m_reusePortFds.guarantee(iNumChildren);
-        for(i = m_reusePortFds.size(); i < iNumChildren; ++i)
-        {
-            ret = CoreSocket::listen(m_sockAddr,
-                                     SmartSettings::getSockBacklog(),
-                                     &fd,
-                                     LS_SOCK_NODELAY | LS_SOCK_REUSEPORT,
-                                     m_iSockSendBufSize, m_iSockRecvBufSize);
-            if (ret != 0 && ret != EACCES)
-            {
-                LS_INFO("[%s] adjustFds: failed to start SO_REUSEPORT socket.",
-                            getAddrStr());
-                //m_flag &= ~LS_SOCK_REUSEPORT;
-                return ;
-            }
-            LS_INFO("[%s] adjustFds: SO_REUSEPORT #%d started, fd: %d",
-                   getAddrStr(), i, fd);
-            m_reusePortFds[i] = fd;
-        }
-    }
-    m_reusePortFds.setSize(iNumChildren);
+    adjustReusePortCount(iNumChildren);
 }
 
 
 void HttpListener::enableReusePort()
 {
+    LS_INFO("[%s] Enable SO_REUSEPORT .", getAddrStr());
     m_flag |= LS_SOCK_REUSEPORT;
 }
+
 
 void HttpListener::addUdpSocket(int fd)
 {
@@ -380,11 +369,21 @@ int HttpListener::bindUdpPort()
 }
 
 
-int HttpListener::startReusePortSocket(int count)
+
+int HttpListener::startReusePortSocket(int total)
+{
+    return startReusePortSocket(0, total);
+}
+
+
+int HttpListener::startReusePortSocket(int start, int total)
 {
     int i, ret, fd;
-    m_reusePortFds.guarantee(count);
-    for(i = 0; i < count; ++i)
+    LS_NOTICE("[%s] Add SO_REUSEPORT socket, #%d to #%d",
+                getAddrStr(), start + 1, total);
+    m_reusePortFds.guarantee(total);
+
+    for(i = start; i < total; ++i)
     {
         ret = CoreSocket::listen(m_sockAddr, SmartSettings::getSockBacklog(), &fd,
                                  LS_SOCK_NODELAY | LS_SOCK_REUSEPORT,
@@ -397,14 +396,15 @@ int HttpListener::startReusePortSocket(int count)
             m_flag &= ~LS_SOCK_REUSEPORT;
             return ret;
         }
-        LS_DBG("[%s] #%d SO_REUSEPORT started, fd: %d",
-               getAddrStr(), i, fd);
+        LS_DBG("[%s] SO_REUSEPORT #%d started, fd: %d",
+               getAddrStr(), i + 1, fd);
         ::fcntl(fd, F_SETFD, FD_CLOEXEC);
         m_reusePortFds[i] = fd;
     }
-    m_reusePortFds.setSize(count);
+    m_reusePortFds.setSize(total);
     return 0;
 }
+
 
 int HttpListener::closeUnActiveReusePort()
 {
@@ -418,12 +418,12 @@ int HttpListener::activeReusePort(int seq)
     int fd = m_reusePortFds.getActiveFd(seq, &n);
     if (fd == -1)
     {
-        LS_NOTICE("[%s] Activates #%d->%d SO_REUSEPORT socket, failed.",
-                getAddrStr(), seq, n);
+        LS_NOTICE("[%s] Worker #%d activates SO_REUSEPORT #%d socket, failed.",
+                getAddrStr(), seq, n + 1);
         return -1;
     }
-    LS_NOTICE("[%s] Activates #%d->%d SO_REUSEPORT socket: %d",
-                getAddrStr(), seq, n, fd);
+    LS_NOTICE("[%s] Worker #%d activates SO_REUSEPORT #%d socket, fd: %d",
+                getAddrStr(), seq, n + 1, fd);
     setSockAttr(fd);
     setfd(fd);
     return 0;
@@ -448,8 +448,8 @@ void HttpListener::addReusePortSocket(int fd)
 {
     if (HttpServerConfig::getInstance().getChildren() <= 1)
     {
-        LS_DBG("[%s] Close extra SO_REUSEPORT TCP listener, fd: %d.", getAddrStr(),
-               fd);
+        LS_INFO("[%s] Close extra SO_REUSEPORT TCP listener, fd: %d.",
+                getAddrStr(), fd);
         close(fd);
         return;
     }
@@ -460,8 +460,8 @@ void HttpListener::addReusePortSocket(int fd)
         *m_reusePortFds.newObj() = getfd();
     }
     *m_reusePortFds.newObj() = fd;
-    LS_NOTICE("[%s] SO_REUSEPORT #%d, recovering server socket.",
-                getAddrStr(), m_reusePortFds.size());
+    LS_NOTICE("[%s] SO_REUSEPORT #%d, recovering server socket, fd: %d.",
+                getAddrStr(), m_reusePortFds.size(), fd);
 }
 
 

@@ -1161,6 +1161,29 @@ int RewriteRule::parse(char *&pRule, const RewriteMapList *pMaps)
                 pCur = pLineEnd + 1;
                 return ret;
             }
+            else if ((strncasecmp(pCur, "CacheKeyModify", 14) == 0) &&
+                     (isspace(*(pCur + 14))))
+            {
+                // To support CacheKeyModify directive here, we convert into an
+                // equivalent rewrite rule that always matches.
+                //
+                char buf[1024];
+                // Trim leading whitespace:
+                for (pCur = pCur + 15; pCur < pLineEnd && isspace(*pCur); ++pCur)
+                    ;
+                // Trim trailing whitespace:
+                char *pLast;
+                for (pLast = pLineEnd; pLast > pCur && isspace(pLast[-1]); --pLast)
+                    ;
+                const int nw = snprintf(buf, sizeof(buf),
+                    "\"^\" \"-\" [E=\"cache-key-mod:%.*s\"]",
+                    (int) (pLast - pCur), pCur);
+                if (nw < 0 || (size_t) nw >= sizeof(buf))
+                    return LS_FAIL;
+                int ret = parseRule(buf, buf + nw, pMaps);
+                pCur = pLineEnd + 1;
+                return ret;
+            }
             else
             {
                 HttpLog::parse_error(s_pCurLine,  "invalid rewrite directive ");

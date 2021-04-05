@@ -216,7 +216,7 @@ int HttpLog::checkLogPathValid(const char *org)
     if (len < 5)
         return 0;
 
-    int i;
+    unsigned i;
     for (i=0; i<sizeof(excludeFileList)/ sizeof(char *); ++i)
     {
         int ll = strlen(excludeFileList[i]);

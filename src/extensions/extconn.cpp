@@ -288,16 +288,21 @@ int ExtConn::onError()
 }
 
 
+void ExtConn::keepAliveOff()
+{
+    if (!isToClose())
+    {
+        setToClose(1);
+        m_pWorker->incLingerConn();
+    }
+}
+
+
 int ExtConn::markToClose()
 {
     if (getReq())
     {
-        if (!isToClose())
-        {
-            setToClose(1);
-            m_pWorker->incLingerConn();
-            return 0;
-        }
+        keepAliveOff();
     }
     else
     {

@@ -96,7 +96,7 @@ class RewriteEngine : public TSingleton<RewriteEngine>
     int processRewrite(const RewriteRule *pRule, HttpSession *pSession,
                        AutoStr2 &cacheCtlStr);
     int expandEnv(const RewriteRule *pRule, HttpSession *pSession,
-                  AutoStr2 &cacheCtlStr);
+                  AutoStr2 &cacheCtlStr, int *eef_flags);
     int setCookie(char *pBuf, int len, HttpSession *pSession);
     const RewriteRule *getNextRule(const RewriteRule *pRule,
                                    const HttpContext *&pContext, const HttpContext *&pRootContext);
