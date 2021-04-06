@@ -950,12 +950,10 @@ void HttpServerImpl::onTimerSecond()
 {
     HttpRespHeaders::updateDateHeader();
     HttpLog::onTimer();
+    ClientCache::getClientCache()->onTimer();
     m_vhosts.onTimer();
     if (m_lStartTime > 0)
-    {
-        ClientCache::getClientCache()->onTimer();
         generateRTReport();
-    }
 
     ServerInfo::getServerInfo()->setAdnsOp(1);
     Adns::getInstance().trimCache();
