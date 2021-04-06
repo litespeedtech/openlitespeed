@@ -118,12 +118,15 @@ static void processTimer()
     DateTime::s_curTimeUs = tv.tv_usec;
     NtwkIOLink::setPrevToken(NtwkIOLink::getToken());
     NtwkIOLink::setToken(tv.tv_usec / (1000000 / TIMER_PRECISION));
-    QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
-    if (pQuicEngine)
-        pQuicEngine->onTimer();
-    if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
-        HttpServer::getInstance().onTimer();
-    MultiplexerFactory::getMultiplexer()->timerExecute();
+    if (NtwkIOLink::getToken() != NtwkIOLink::getPrevToken())
+    {
+        QuicEngine *pQuicEngine = HttpServer::getInstance().getQuicEngine();
+        if (pQuicEngine)
+            pQuicEngine->onTimer();
+        if (NtwkIOLink::getToken() < NtwkIOLink::getPrevToken())
+            HttpServer::getInstance().onTimer();
+        MultiplexerFactory::getMultiplexer()->timerExecute();
+    }
 }
 
 
@@ -376,6 +379,7 @@ int EventDispatcher::linger(int listenerStopped, int timeout)
 #ifdef LS_HAS_RTSIG
         SigEventDispatcher::getInstance().processSigEvent();
 #endif
+        processTimer();
 
         if (pQuicEngine)
             pQuicEngine->processEvents();
@@ -396,7 +400,6 @@ int EventDispatcher::linger(int listenerStopped, int timeout)
         if (HttpSignals::gotSigAlarm())
         {
             HttpSignals::resetEvents();
-            processTimer();
         }
         if (HttpSignals::gotSigChild())
             HttpServer::cleanPid();
