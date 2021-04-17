@@ -32,6 +32,12 @@ class WPCaller
     private $currInstall;
 
     /**
+     * @since 1.13.4.4
+     * @var string
+     */
+    private $advancedCacheFile;
+
+    /**
      * @var boolean
      */
     private $loadLscwp;
@@ -67,6 +73,21 @@ class WPCaller
     {
         $this->currInstall = $curInstall;
         $this->loadLscwp = $loadLscwp;
+
+        $this->init();
+    }
+
+    /**
+     *
+     * @since 1.13.4.4
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
+    private function init()
+    {
+        $this->advancedCacheFile =
+                "{$this->currInstall->getPath()}/wp-content/advanced-cache.php";
+
         $this->initWp();
     }
 
@@ -221,7 +242,6 @@ class WPCaller
      * @global string  $table_prefix
      * @return string
      *
-     * @noinspection PhpFullyQualifiedNameUsageInspection
      * @noinspection PhpUndefinedClassInspection
      */
     private function getSiteURL()
@@ -247,6 +267,38 @@ class WPCaller
         }
 
         return $siteURL;
+    }
+
+    /**
+     *
+     * @since 1.13.4.3
+     *
+     * @return bool
+     */
+    private function generic3rdPartyAdvCachePluginExists()
+    {
+        if ( version_compare($this->installedLscwpVer, '3.0.4', '>=') ) {
+
+            /**
+             * Old LSCWP advanced-cache.php file is no longer used in these
+             * versions but is also never cleaned up. As a result, any existing
+             * advanced-cache.php files need to have their contents checked to
+             * avoid detecting an old LSCWP advanced-cache.php file as a generic
+             * 3rd-party advanced-cache plugin.
+             */
+
+            if ( file_exists($this->advancedCacheFile)
+                    && file_get_contents($this->advancedCacheFile) !== ''
+                    && !$this->advancedCacheFileHasLscacheDefine() ) {
+
+                return true;
+            }
+        }
+        elseif ( !defined('LSCACHE_ADV_CACHE') || LSCACHE_ADV_CACHE !== true ) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -290,16 +342,11 @@ class WPCaller
             //TODO: Get rid of ST_LSC_ADVCACHE_DEFINED status or replace with
             //      new "is caching enabled" define check.
 
-            $advCacheFile = $this->currInstall->getPath()
-                . '/wp-content/advanced-cache.php';
-
-            if ( (version_compare($this->installedLscwpVer, '3.0.4', '>=') && !file_exists($advCacheFile))
-                    || (defined('LSCACHE_ADV_CACHE') && LSCACHE_ADV_CACHE === true) ) {
-
-                $status |= WPInstall::ST_LSC_ADVCACHE_DEFINED;
+            if ( $this->generic3rdPartyAdvCachePluginExists() ) {
+                $status |= WPInstall::ST_FLAGGED;
             }
             else {
-                $status |= WPInstall::ST_FLAGGED;
+                $status |= WPInstall::ST_LSC_ADVCACHE_DEFINED;
             }
         }
         else {
@@ -911,7 +958,6 @@ class WPCaller
      * @return int
      * @throws LSCMException  Thrown indirectly.
      *
-     * @noinspection PhpFullyQualifiedNameUsageInspection
      * @noinspection PhpUndefinedClassInspection
      */
     private function disable_lscwp( $uninstall )
@@ -1195,17 +1241,30 @@ class WPCaller
         }
     }
 
+    /**
+     *
+     * @since 1.13.4.4
+     *
+     * @return bool
+     */
+    private function advancedCacheFileHasLscacheDefine()
+    {
+        $content = file_get_contents($this->advancedCacheFile);
+
+        if ( strpos($content, 'LSCACHE_ADV_CACHE') !== false ) {
+            return true;
+        }
+
+        return false;
+    }
+
     private function includeLSCWPAdvancedCacheFile()
     {
-        $advCacheFile = $this->currInstall->getPath()
-            . '/wp-content/advanced-cache.php';
+        if ( file_exists($this->advancedCacheFile) ) {
 
-        if ( file_exists($advCacheFile) ) {
-            $content = file_get_contents($advCacheFile);
-
-            if ( strpos($content, 'LSCACHE_ADV_CACHE') !== false ) {
+            if ( $this->advancedCacheFileHasLscacheDefine() ) {
                 /** @noinspection PhpIncludeInspection */
-                include_once $advCacheFile;
+                include_once $this->advancedCacheFile;
             }
         }
     }
@@ -1279,7 +1338,6 @@ class WPCaller
      * @return int
      *
      * @noinspection PhpUndefinedClassInspection
-     * @noinspection PhpFullyQualifiedNameUsageInspection
      * @noinspection PhpUnusedParameterInspection
      */
     public function dashDisable( $extraArgs, $massOp = false )

@@ -2404,11 +2404,13 @@ static int rcvdRespHeaderHook(lsi_param_t *rec)
     if (content_type == NULL)
         return 0;
 
-    int in_place = false;
     int html_rewrite = false;
+    //int in_place = false;
     if (content_type->IsImage() || content_type->IsCss()
         || content_type->IsJs())
-        in_place = true;
+    {
+        //in_place = true;
+    }
     else if (content_type->IsHtmlLike())
         html_rewrite = true;
     else

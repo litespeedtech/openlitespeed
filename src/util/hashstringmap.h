@@ -42,9 +42,6 @@ public:
             : m_iter((GHash::iterator)iter)
         {}
 
-        iterator(const iterator &rhs) : m_iter(rhs.m_iter)
-        {}
-
         const char *first() const
         {  return (const char *)(m_iter->first());   }
 

@@ -7,7 +7,7 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 8)
+set(openlitespeed_PATCH_VERSION 10)
 set(openlitespeed_VERSION
     ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 
@@ -80,6 +80,14 @@ endif()
 
 set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-unused-function")
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Suppress gcc warnings about BoringSSL's openssl/stack.h
+    set(MY_CMAKE_FLAGS "${MY_CMAKE_FLAGS} -Wno-ignored-qualifiers")
+    # TODO Suppress some of our own warnings (we should clean these up):
+    set(MY_CMAKE_FLAGS "${MY_CMAKE_FLAGS} -Wno-unused-result")
+    set(MY_CMAKE_FLAGS "${MY_CMAKE_FLAGS} -Wno-format-truncation")
+endif()
+
 if(OPT_SSE4)
 set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -march=corei7 -maes -mpclmul -mpopcnt")
 endif(OPT_SSE4)
@@ -94,7 +102,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${MY_CMAKE_FLAGS}")
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 #Add definition for QUIC
-add_definitions(-DH3_ALPN="\\x05h3-29\\x05h3-31")
+add_definitions(-DH3_ALPN="\\x05h3-29\\x05h3-34\\x02h3")
 
 
 # Update submodules as needed

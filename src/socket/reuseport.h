@@ -16,6 +16,8 @@ public:
 
     int getActiveFd(int seq, int *n);
 
+    int shrink(int size);
+
     void close();
 };
 

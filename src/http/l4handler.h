@@ -44,7 +44,7 @@ public:
     bool        isWantRead() const  {   return getStream()->isWantRead();   }
 
     int         onReadEx();
-    void        doWrite();
+    int         doWrite();
     void        closeBothConnection();
 
 private:

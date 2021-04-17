@@ -185,9 +185,9 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
 }
 
 
-void L4Handler::doWrite()
+int L4Handler::doWrite()
 {
-    onWriteEx();
+    return onWriteEx();
 }
 
 

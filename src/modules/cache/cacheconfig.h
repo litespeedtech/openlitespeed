@@ -21,10 +21,68 @@
 
 #include <util/autostr.h>
 #include <util/aho.h>
+#include <util/objarray.h>
 #include <http/vhostmap.h>
 
 
-//Default setting         0000 0010 0111 1100
+enum
+{
+    CACHE_KEY_QS_DEL_EXACT,
+    CACHE_KEY_QS_DEL_PREFIX,
+};
+
+
+struct CacheKeyMod
+{
+    ls_str_t m_str;
+    int      m_operator;
+public:
+    CacheKeyMod()
+        : m_operator(0)
+    {
+        ls_str_blank(&m_str);
+    }
+
+    ~CacheKeyMod()
+    {
+        ls_str_d(&m_str);
+    }
+};
+
+
+class CacheKeyModList : public TObjArray<CacheKeyMod>
+{
+public:
+    CacheKeyModList()
+        : m_pParent(NULL)
+    {}
+
+    ~CacheKeyModList()
+    {
+        clear();
+    }
+
+    void clear()
+    {
+        CacheKeyMod* iter = begin();
+        for (iter = begin(); iter != end(); ++iter)
+            iter->~CacheKeyMod();
+        TObjArray<CacheKeyMod>::clear();
+        m_pParent = NULL;
+    }
+
+    int parseAppend(const char *pConfig, int len);
+
+    void setParent(CacheKeyModList *pParent)    {   m_pParent = pParent;    }
+    CacheKeyModList *getParent() const          {   return m_pParent;       }
+
+private:
+    CacheKeyModList *m_pParent;
+
+};
+
+
+//Default setting         0 0000 0010 0111 1100
 #define CACHE_ENABLE_PUBLIC                 (1<<0)
 #define CACHE_ENABLE_PRIVATE                (1<<1)
 #define CACHE_CHECK_PUBLIC                  (1<<2)
@@ -41,6 +99,7 @@
 #define CACHE_MAX_OBJ_SIZE                  (1<<13)
 #define CACHE_NO_VARY                       (1<<14)
 #define CACHE_ADD_ETAG                      (1<<15)
+#define CACHE_KEY_MOD_SET                   (1<<16)
 
 
 class StringList;
@@ -132,10 +191,12 @@ public:
         m_pPurgeUri = strndup(val,valLen);
     };
 
+    int parseCacheKeyMod(const char *pConfig, int len);
+    CacheKeyModList *getKeyModList() const     {   return m_pKeyModList;   }
 
 private:
-    short   m_iCacheConfigBits;
-    short   m_iCacheFlag;
+    int     m_iCacheConfigBits;
+    int     m_iCacheFlag;
     int     m_defaultAge;
     int     m_privateAge;
     int     m_iMaxStale;
@@ -154,6 +215,7 @@ private:
     DirHashCacheStore *m_pStore;
     char       *m_pPurgeUri; //server and Vhost level can have it
     StringList *m_pVaryList; 
+    CacheKeyModList *m_pKeyModList;
 };
 
 #endif

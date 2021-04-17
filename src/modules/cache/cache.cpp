@@ -167,6 +167,14 @@ struct MyMData
      */
     AutoStr2        *pCacheVary;
 
+    /**
+     * Keeps a copy of rewritten query string if necessary
+     */
+    AutoStr2        qsBuf;
+
+    // If there is no query string, this list is not constructed.
+    class CacheKeyModList *pCacheKeyModList;
+
     unsigned char   iCacheState;
     unsigned char   iMethod;
     unsigned char   iHaveAddedHook;
@@ -219,6 +227,7 @@ static lsi_config_key_t paramArray[] =
     {"addEtag",                 17, 0},
     {"purgeUri",                18, 0},
     {"reqHeaderVary",           19, 0},
+    {"CacheKeyModify",          20, 0},
 
     {NULL, 0, 0} //Must have NULL in the last item
 };
@@ -301,7 +310,8 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
          * Since pValStr is not null terminated, so do a length checking here
          *
          */
-        if (valLen + 1 > max_file_len - strlen(cachePath))
+        const size_t iCachePathLen = strlen(cachePath);
+        if (iCachePathLen + (size_t) valLen + 1 /* slash */ >= max_file_len)
         {
             g_api->log(NULL, LSI_LOG_ERROR,
                            "[%s]parseConfig failed to set the storagepath "
@@ -312,8 +322,9 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
             return -1;
         }
 
-        strncat(cachePath, pValStr, valLen);
-        strncat(cachePath, "/", 1);
+        memcpy(cachePath + iCachePathLen, pValStr, valLen);
+        cachePath[iCachePathLen + valLen + 0] = '/';
+        cachePath[iCachePathLen + valLen + 1] = '\0';
 
         if (createCachePath(cachePath, 0770) == -1)
         {
@@ -472,6 +483,7 @@ static int parseLine(CacheConfig *pConfig, int param_id,
     case 15:
     case 18:
     case 19:
+    case 20:
         return i; //return the index for next step parsing
 
     case 16:
@@ -622,6 +634,7 @@ static int setVaryList(CacheConfig *pConfig, const char *val, int valLen)
     return 0;
 }
 
+
 static void *ParseConfig(module_param_info_t *param, int param_count,
                          void *_initial_config, int level, const char *name)
 {
@@ -660,6 +673,8 @@ static void *ParseConfig(module_param_info_t *param, int param_count,
             pConfig->setPurgeUri(param[i].val, param[i].val_len);
         else if (ret == 19)
             setVaryList(pConfig, param[i].val, param[i].val_len);
+        else if (ret == 20)
+            pConfig->parseCacheKeyMod(param[i].val, param[i].val_len);
 
     }
 
@@ -1189,9 +1204,132 @@ int appBufToCacheKey(const lsi_session_t *session, const char *buf,
 }
 
 
-void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
-                   int noVary, CacheKey *pKey, int useCurQS)
+#define MAX_QS_MOD_COUNT 1000
+
+struct QsInfo
 {
+    const char *qs_index[MAX_QS_MOD_COUNT];
+    const char **qs_index_end;
+    const char *pQsEnd;
+    char qs_remove[MAX_QS_MOD_COUNT];
+    int remove_cnt;
+    int remove_size;
+};
+
+
+static void applyOneModList(const lsi_session_t *session, QsInfo *pQsInfo,
+                                            const CacheKeyModList *pModList)
+{
+    if (pModList->getParent())
+        applyOneModList(session, pQsInfo, pModList->getParent());
+    
+    int count = pQsInfo->qs_index_end - pQsInfo->qs_index;
+    char *p_qs_remove;
+    const char **p_qs_idx;
+    for (auto iter = pModList->begin(); iter != pModList->end(); ++iter)
+    {
+        if (iter->m_operator > CACHE_KEY_QS_DEL_PREFIX)
+            continue;
+        for(p_qs_idx = &pQsInfo->qs_index[0], p_qs_remove = pQsInfo->qs_remove; 
+            p_qs_idx < pQsInfo->qs_index_end; ++p_qs_idx, ++p_qs_remove)
+        {
+            if (*p_qs_remove == 1)
+                continue;
+            if (memcmp(*p_qs_idx, iter->m_str.ptr, iter->m_str.len) != 0)
+                continue;
+            if (iter->m_operator == CACHE_KEY_QS_DEL_EXACT)
+            {
+                if (*p_qs_idx + iter->m_str.len < pQsInfo->pQsEnd  
+                    && *(*p_qs_idx + iter->m_str.len) != '=')
+                    continue;
+                g_api->log(session, LSI_LOG_DEBUG,
+                    "[CACHE] Remove exact matched QS key [%.*s],\n",
+                       (int)iter->m_str.len, iter->m_str.ptr);
+            }
+            else
+                g_api->log(session, LSI_LOG_DEBUG,
+                    "[CACHE] Remove prefix matched QS key [%.*s],\n",
+                       (int)iter->m_str.len, iter->m_str.ptr);
+            *p_qs_remove = 1;
+            ++pQsInfo->remove_cnt;
+            pQsInfo->remove_size += *(p_qs_idx + 1) - *p_qs_idx;
+        }
+        if (pQsInfo->remove_cnt >= count)
+            break;
+    }
+}
+
+
+enum QSAction { QSA_UNMODIFIED, QSA_DELETED, QSA_UPDATED, };
+
+static enum QSAction
+applyModListToQueryString(const lsi_session_t *session,
+            const char *pQs, const CacheKeyModList *pModList, AutoStr2 *qsBuf)
+{
+    QsInfo qsInfo;
+    qsInfo.qs_index_end = &qsInfo.qs_index[0];
+    *qsInfo.qs_index_end++ = pQs;
+    qsInfo.pQsEnd = pQs + strlen(pQs);
+    const char *p = pQs;
+    while(p < qsInfo.pQsEnd)
+    {
+        p = (const char *)memchr(p, '&', qsInfo.pQsEnd - p);
+        if (!p)
+            break;
+        p++;
+        if (p != qsInfo.pQsEnd)
+        {
+            *qsInfo.qs_index_end++ = p;
+            if (qsInfo.qs_index_end >= &qsInfo.qs_index[MAX_QS_MOD_COUNT - 1])
+                break;
+        }
+    }
+    *qsInfo.qs_index_end = qsInfo.pQsEnd;
+    
+    memset(qsInfo.qs_remove, 0, qsInfo.qs_index_end - qsInfo.qs_index);
+    qsInfo.remove_cnt = 0;
+    qsInfo.remove_size = 0;
+
+    applyOneModList(session, &qsInfo, pModList);
+    
+    if (qsInfo.remove_cnt == 0)
+        return QSA_UNMODIFIED;
+    if (qsInfo.remove_cnt >= qsInfo.qs_index_end - qsInfo.qs_index)
+        return QSA_DELETED;
+
+    qsBuf->setStr(pQs);
+    const char **p_qs_idx;
+    char *p_qs_remove;
+    char *pNewQs = qsBuf->buf();
+    char *pKeyBufEnd = pNewQs + qsBuf->len();
+    for(p_qs_idx = &qsInfo.qs_index[0], p_qs_remove = qsInfo.qs_remove;
+        p_qs_idx < qsInfo.qs_index_end; ++p_qs_idx, ++p_qs_remove)
+    {
+        if (*p_qs_remove == 0)
+        {
+            int len = *(p_qs_idx + 1) - *p_qs_idx;
+            if (len > pKeyBufEnd - pNewQs)
+                len = pKeyBufEnd - pNewQs;
+            memmove(pNewQs, *p_qs_idx, len);
+            pNewQs += len;
+        }
+    }
+    assert(pNewQs > qsBuf->buf());
+    if (pNewQs[-1] == '&')
+        --pNewQs;
+    *pNewQs = 0;
+    qsBuf->setLen(pNewQs - qsBuf->buf());
+    g_api->log(session, LSI_LOG_DEBUG,
+        "[CACHE] modified QS in cache key is [%s],\n", qsBuf->c_str());
+    return QSA_UPDATED;
+}
+
+
+void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
+                   int noVary, MyMData *myData)
+{
+    const int useCurQS = 1;
+    CacheKey *const pKey = &myData->cacheKey;
     int iQSLen = 0;
     int ipLen = 0;
     char pCookieBuf[MAX_HEADER_LEN] = {0};
@@ -1286,6 +1424,36 @@ void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
     else
         pKey->m_iCookiePrivate = 0;
 
+    if (pQs && pQs[0]
+            && (myData->pCacheKeyModList || pConfig->getKeyModList()))
+    {
+        CacheKeyModList *pCacheKeyModList;
+
+        if (myData->pCacheKeyModList)
+        {
+            pCacheKeyModList = myData->pCacheKeyModList;
+            pCacheKeyModList->setParent(pConfig->getKeyModList());
+        }
+        else
+            pCacheKeyModList = pConfig->getKeyModList();
+
+        switch (applyModListToQueryString(session, pQs, pCacheKeyModList,
+                                                            &myData->qsBuf))
+        {
+        case QSA_DELETED:
+            pQs = NULL;
+            iQSLen = 0;
+            break;
+        case QSA_UPDATED:
+            pQs = myData->qsBuf.c_str();
+            iQSLen = myData->qsBuf.len();
+            break;
+        default:
+            // QSA_UNMODIFIED: do nothing
+            break;
+        }
+    }
+
     pKey->m_pUri = uri;
     pKey->m_iUriLen = uriLen;
     pKey->m_pQs = pQs;
@@ -1343,7 +1511,7 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                   CacheHash *cePublicHash, CacheHash *cePrivateHash,
                   CacheConfig *pConfig, CacheEntry **pEntry, bool doPublic)
 {
-    buildCacheKey(rec->session, uri, uriLen, no_vary, &myData->cacheKey, 1);
+    buildCacheKey(rec->session, uri, uriLen, no_vary, myData);
     dumpCacheKey(rec->session, &myData->cacheKey);
     calcCacheHash2(rec->session, &myData->cacheKey, cePublicHash,
                   cePrivateHash);
@@ -1421,6 +1589,11 @@ static int releaseMData(void *data)
 
         if (myData->pCacheVary)
             delete myData->pCacheVary;
+
+        if (myData->pCacheKeyModList)
+            delete myData->pCacheKeyModList;
+
+        myData->qsBuf.release();
         delete myData;
     }
     return 0;
@@ -1866,7 +2039,7 @@ static int createEntry(lsi_param_t *rec)
         buildCacheKey(rec->session, myData->cacheKey.m_pUri,
                       myData->cacheKey.m_iUriLen,
                       myData->cacheCtrl.getFlags() & CacheCtrl::no_vary,
-                      &myData->cacheKey, 1);
+                      myData);
         calcCacheHash2(rec->session, &myData->cacheKey,
                       &myData->cePublicHash, &myData->cePrivateHash);
 
@@ -2185,7 +2358,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
                 //if it is lsc-cookie, then change to Set-Cookie
                 if (iov_key[i].iov_len == 10 &&
                     strncasecmp(pKey, "lsc-cookie", 10) == 0)
-                    pKey = "Set-Cookie";
+                    pKey = (char *) "Set-Cookie";
             }
 
 #ifdef CACHE_RESP_HEADER
@@ -2505,7 +2678,7 @@ MyMData *createMData(lsi_param_t *rec)
     MyMData *myData = new MyMData;
     assert(myData);
 
-    memset(myData, 0, sizeof(MyMData));
+    memset((void *) myData, 0, sizeof(MyMData));
     g_api->set_module_data(rec->session, &MNAME, LSI_DATA_HTTP, (void *)myData);
 
     CacheConfig *pConfig = (CacheConfig *)g_api->get_config(
@@ -2873,6 +3046,45 @@ static int checkCtrlEnv(lsi_param_t *rec)
     return 0;
 }
 
+
+static int checkKeyMod(lsi_param_t *rec)
+{
+    MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
+                      LSI_DATA_HTTP);
+    const char *const keyModStr = (const char *) rec->ptr1;
+    const int         keyModLen = rec->len1;
+    int len_unused;
+
+    if (!(keyModLen && keyModStr))
+        return -1;
+
+    if (!g_api->get_req_query_string(rec->session, &len_unused))
+        return 0;   // No query string: nothing to modify
+
+    if (myData == NULL)
+    {
+        myData = createMData(rec);
+        if (!myData)
+            return -1;
+    }
+
+    if (!myData->pCacheKeyModList)
+    {
+        myData->pCacheKeyModList = new CacheKeyModList();
+        if (!myData->pCacheKeyModList)
+            return -1;
+    }
+
+    myData->pCacheKeyModList->parseAppend(keyModStr, keyModLen);
+    g_api->log(rec->session, LSI_LOG_DEBUG,
+        "[%s] %s: after appending `%.*s', mod list has %d elements.\n",
+        ModuleNameStr, __func__, keyModLen, keyModStr,
+        myData->pCacheKeyModList->size());
+
+    return 0;
+}
+
+
 int releaseIpCounter(void *data)
 {
     //No malloc, needn't free, but functions must be presented.
@@ -2903,6 +3115,7 @@ static int init(lsi_module_t *pModule)
     g_api->init_module_data(pModule, releaseIpCounter, LSI_DATA_IP);
     g_api->register_env_handler("cache-control", 13, checkCtrlEnv);
     g_api->register_env_handler("cache-vary",    10, checkVaryEnv);
+    g_api->register_env_handler("cache-key-mod", 13, checkKeyMod);
 
 //     g_api->register_env_handler("setcachedata", 12, setCacheUserData);
 //     g_api->register_env_handler("getcachedata", 12, getCacheUserData);

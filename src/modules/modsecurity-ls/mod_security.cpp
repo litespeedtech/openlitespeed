@@ -292,12 +292,15 @@ static int process_intervention (Transaction *t, lsi_param_t *rec)
         free(intervention.url);
     }
 
+    const char *log;
     if (intervention.log == NULL) {
-        intervention.log = (char *)"(no log message was specified)";
+        log = "(no log message was specified)";
         g_api->log(rec->session, LSI_LOG_DEBUG, "[Module:%s]"
                    "No log message specified\n",
                    ModuleNameStr);
     }
+    else
+        log = intervention.log;
     g_api->log(rec->session, LSI_LOG_INFO, "[Module:%s]"
                "Intervention status code triggered: %d\n",
                ModuleNameStr, intervention.status);
@@ -305,9 +308,11 @@ static int process_intervention (Transaction *t, lsi_param_t *rec)
         // NOT always logged in callback
         g_api->log(rec->session, LSI_LOG_INFO, "[Module:%s]"
                    "Log Message: %s\n",
-                   ModuleNameStr, intervention.log);
+                   ModuleNameStr, log);
     }
     g_api->set_status_code(rec->session, intervention.status);
+    if (intervention.log)
+        free(intervention.log);
     return intervention.status;
 }
 

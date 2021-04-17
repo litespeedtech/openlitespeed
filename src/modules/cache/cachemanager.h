@@ -183,7 +183,11 @@ private:
     uint32_t        m_tmLastCleanDiskCache;
     uint32_t        m_iLastCleanSessPurge;
     uint32_t        m_iFlags;
-    char            m_reserved[252] __attribute__ ((unused)); /* Padding, do not remove */
+    char            m_reserved[252] /* Padding, do not remove */
+#if __clang__
+                                    __attribute__((unused))
+#endif
+                                                           ;
 };
 
 

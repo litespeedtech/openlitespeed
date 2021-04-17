@@ -328,7 +328,7 @@ char *DateTime::getLogTime(time_t lTime, char *pBuf, int bGMT)
             strcpy((char *)new_value.m_ptr, pBuf);
             new_value.m_seq = lTime;
             ls_atomic_dcasv(&time_and_str, &cur_value, &new_value, &old_value);
-            ls_atomic_setptr(&freeBuf, (char *)old_value.m_ptr);
+            (void) ls_atomic_setptr(&freeBuf, (char *)old_value.m_ptr);
         }
 
         //lastGMT = bGMT;

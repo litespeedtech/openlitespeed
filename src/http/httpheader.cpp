@@ -597,7 +597,7 @@ void HttpHeaderOps::inherit(const HttpHeaderOps &parent)
                                      (-n)*sizeof(HeaderOp)) == -1)
             return;
     }
-    memmove(begin(), parent.begin(), parent.size() * sizeof(HeaderOp));
+    memmove((void *) begin(), parent.begin(), parent.size() * sizeof(HeaderOp));
     for (iter = begin(); iter < begin() + parent.size(); ++iter)
         iter->setInheritFlag();
     if (parent.m_has_req_op)

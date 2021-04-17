@@ -17,14 +17,13 @@
 *****************************************************************************/
 
 #include <sslpp/sslocspstapling.h>
+#include <log4cxx/logger.h>
 #include <sslpp/sslerror.h>
 #include <sslpp/sslcontext.h>
-
-#include <util/httpfetch.h>
-#include <util/vmembuf.h>
-#include <util/stringtool.h>
 #include <util/datetime.h>
-#include <log4cxx/logger.h>
+#include <util/httpfetch.h>
+#include <util/stringtool.h>
+#include <util/vmembuf.h>
 
 #include <assert.h>
 #if __cplusplus <= 199711L && !defined(static_assert)
@@ -36,6 +35,7 @@
 #include <openssl/pem.h>
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
+#include <openssl/md5.h>
 #include <openssl/rand.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -72,6 +72,25 @@ const char *SslOcspStapling::getCachePath()
 }
 
 
+static struct sockaddr_storage s_proxy_addr_space;
+const struct sockaddr *SslOcspStapling::s_proxy_addr = NULL;
+int SslOcspStapling::setProxy(const char *pProxyAddrStr)
+{
+    GSockAddr addr;
+    if (addr.set(pProxyAddrStr, NO_ANY | DO_NSLOOKUP) == -1)
+    {
+        LS_ERROR("[OCSP] Invalid proxy server address '%s', "
+                         "ignore.", pProxyAddrStr);
+        return LS_FAIL;
+    }
+
+    memmove(&s_proxy_addr_space, addr.get(), addr.len());
+
+    s_proxy_addr = (const struct sockaddr *)&s_proxy_addr_space;
+    return LS_OK;
+}
+
+
 static AutoStr2 s_ErrMsg;
 const char *getStaplingErrMsg() { return s_ErrMsg.c_str(); }
 
@@ -90,17 +109,6 @@ static void setLastErrMsg(const char *format, ...)
     s_ErrMsg.setStr(s, ret);
 }
 
-
-static X509 *load_cert(const char *pPath)
-{
-    X509 *pCert;
-    BIO *bio = BIO_new_file(pPath, "r");
-    if (bio == NULL)
-        return NULL;
-    pCert = PEM_read_bio_X509_AUX(bio, NULL, NULL, NULL);
-    BIO_free(bio);
-    return pCert;
-}
 
 static int OcspRespCb(void *pArg, HttpFetch *pHttpFetch)
 {
@@ -156,7 +164,7 @@ int SslOcspStapling::processResponse(HttpFetch *pHttpFetch)
     {
         setLastErrMsg("[OCSP] %s: Received bad OCSP response. ReponderUrl=%s, "
                       "StatusCode=%d, ContentType=%s\n",
-                      m_sCertfile.c_str(),
+                      m_sCertName.c_str(),
                       m_sOcspResponder.c_str(), istatusCode,
                       ((pRespContentType) ? (pRespContentType) : ("")));
         //printf("%s\n", s_ErrMsg.c_str());
@@ -201,28 +209,16 @@ SslOcspStapling::~SslOcspStapling()
 
 int SslOcspStapling::init(SslContext *pSslCtx)
 {
-    int             iResult;
+    int             iResult = LS_FAIL;
     X509           *pCert;
 
     m_pCtx = pSslCtx;
-    pCert = NULL;
-    iResult = -1;
-
-    //SSL_CTX_set_default_verify_paths( m_pCtx );
-
-    pCert = load_cert(m_sCertfile.c_str());
-    if (pCert == NULL)
-    {
-        setLastErrMsg("[OCSP] %s: Failed to load certificate file!\n",
-                      m_sCertfile.c_str());
-        return -1;
-    }
+    pCert = SSL_CTX_get0_certificate(pSslCtx->get());
 
     if ((getCertId(pCert) == 0) && (getResponder(pCert) == 0))
     {
-        //m_addrResponder.setHttpUrl(m_sOcspResponder.c_str(),
-        //                           m_sOcspResponder.len());
         iResult = 0;
+        certIdToOcspRespFileName();
         //update();
         const ASN1_TIME *not_before;
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L || defined(OPENSSL_IS_BORINGSSL)
@@ -232,7 +228,6 @@ int SslOcspStapling::init(SslContext *pSslCtx)
 #endif
         ASN1_TIME_to_generalizedtime((ASN1_TIME *)not_before, &m_notBefore);
     }
-    X509_free(pCert);
     return iResult;
 }
 
@@ -301,7 +296,6 @@ TRY_CREATE_REQ:
 int SslOcspStapling::getResponder(X509 *pCert)
 {
     char                    *pUrl;
-    X509                    *pCAt;
     STACK_OF(X509)          *pXchain;
     int                     i;
     int                     n;
@@ -336,24 +330,24 @@ int SslOcspStapling::getResponder(X509 *pCert)
     }
     if (strResp == NULL)
     {
-        if (m_sCAfile.c_str() == NULL)
-            return -1;
-        pCAt = load_cert(m_sCAfile.c_str());
-        if (pCAt == NULL)
-        {
-            setLastErrMsg("[OCSP] %s: Failed to load CA file!\n",
-                          m_sCAfile.c_str());
-            return -1;
-        }
-
-        strResp = X509_get1_ocsp(pCAt);
-        X509_free(pCAt);
-        if (strResp == NULL)
-        {
+//         if (m_sCAfile.c_str() == NULL)
+//             return -1;
+//         pCAt = load_cert(m_sCAfile.c_str());
+//         if (pCAt == NULL)
+//         {
+//             setLastErrMsg("[OCSP] %s: Failed to load CA file!\n",
+//                           m_sCAfile.c_str());
+//             return -1;
+//         }
+//
+//         strResp = X509_get1_ocsp(pCAt);
+//         X509_free(pCAt);
+//         if (strResp == NULL)
+//         {
             setLastErrMsg("[OCSP] %s: Failed to get responder from CA!\n",
-                          m_sCAfile.c_str());
+                          m_sCertName.c_str());
             return -1;
-        }
+//         }
     }
 #if OPENSSL_VERSION_NUMBER >= 0x1000004fL
     pUrl = (char *)sk_OPENSSL_STRING_value(strResp, 0);
@@ -368,7 +362,7 @@ int SslOcspStapling::getResponder(X509 *pCert)
     }
     X509_email_free(strResp);
     setLastErrMsg("[OCSP] %s: Failed to get responder Url!\n",
-                  m_sCAfile.c_str());
+                    m_sCertName.c_str());
     return -1;
 }
 
@@ -431,11 +425,13 @@ int SslOcspStapling::createRequest()
     m_pHttpFetch = new HttpFetch();
     m_pHttpFetch->setCallBack(OcspRespCb, this);
     m_pHttpFetch->setTimeout(30);  //Set Req timeout as 30 seconds
+    if (s_proxy_addr)
+        m_pHttpFetch->setProxyServerAddr(s_proxy_addr, NULL);
     m_pHttpFetch->startReq(m_sOcspResponder.c_str(), 1, 1, 
                            (const char *)m_pReqData, len,
                            m_sRespfileTmp.c_str(), "application/ocsp-request", 
                            NULL);
-    LS_DBG("[OCSP] %s: %p, len = %d\n", m_sCertfile.c_str(),
+    LS_DBG("[OCSP] %s: %p, len = %d\n", m_sCertName.c_str(),
             m_pHttpFetch, len);
     //printf("%s\n", s_ErrMsg.c_str());
     return 0;
@@ -513,7 +509,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     {
         if (m_pCertId == NULL)
         {
-            LS_NOTICE("[OCSP] %s: cert ID is NULL\n", m_sCertfile.c_str());
+            LS_NOTICE("[OCSP] %s: cert ID is NULL\n", m_sCertName.c_str());
             return 1;
         }
         int find_status = OCSP_resp_find_status(pBasicResp, m_pCertId, &n,
@@ -531,7 +527,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
                     || (day <= 0 && sec <= 0))
                 {
                     LS_NOTICE("[OCSP] %s: Bad next_update time day: %d, sec: %d, "
-                                "set it to NULL\n", m_sCertfile.c_str(), day, sec);
+                                "set it to NULL\n", m_sCertName.c_str(), day, sec);
                     pNextupdate = NULL;
                 }
             }
@@ -548,13 +544,13 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
         else
         {
             LS_NOTICE("[OCSP] %s: verify failed, find_status: %d, status: %d, validate: %d\n",
-                      m_sCertfile.c_str(), find_status, n, validate);
+                        m_sCertName.c_str(), find_status, n, validate);
         }
     }
     else
     {
         LS_NOTICE("[OCSP] %s: OCSP_basic_verify() failed: %s\n",
-                  m_sCertfile.c_str(), SslError().what());
+                    m_sCertName.c_str(), SslError().what());
         m_pCtx->disableOscp();
         m_RespTime = UINT_MAX;
 
@@ -562,7 +558,7 @@ int SslOcspStapling::certVerify(OCSP_RESPONSE *pResponse,
     if (iResult)
     {
         setLastErrMsg("[OCSP] %s: OCSP_basic_verify() error: %s",
-                      m_sCertfile.c_str(), SslError().what());
+                        m_sCertName.c_str(), SslError().what());
         ERR_clear_error();
         if (m_pHttpFetch)
             m_pHttpFetch->writeLog(s_ErrMsg.c_str());
@@ -689,20 +685,20 @@ int SslOcspStapling::getCertId(X509 *pCert)
     if (pXstore == NULL)
     {
         setLastErrMsg("[OCSP] %s: SSL_CTX_get_cert_store failed!",
-                      m_sCertfile.c_str());
+                        m_sCertName.c_str());
         return -1;
     }
     pXstore_ctx = X509_STORE_CTX_new();
     if (pXstore_ctx == NULL)
     {
         setLastErrMsg("[OCSP] %s: X509_STORE_CTX_new failed!",
-                      m_sCertfile.c_str());
+                        m_sCertName.c_str());
         return -1;
     }
     if (X509_STORE_CTX_init(pXstore_ctx, pXstore, NULL, NULL) == 0)
     {
         setLastErrMsg("[OCSP] %s: X509_STORE_CTX_init failed!",
-                      m_sCertfile.c_str());
+                        m_sCertName.c_str());
         return -1;
     }
     n = X509_STORE_CTX_get1_issuer(&pXissuer, pXstore_ctx, pCert);
@@ -710,7 +706,7 @@ int SslOcspStapling::getCertId(X509 *pCert)
     if ((n == -1) || (n == 0))
     {
         setLastErrMsg("[OCSP] %s: X509_STORE_CTX_get1_issuer failed!",
-                      m_sCertfile.c_str());
+                        m_sCertName.c_str());
         return -1;
     }
     m_pCertId = OCSP_cert_to_id(NULL, pCert, pXissuer);
@@ -718,20 +714,39 @@ int SslOcspStapling::getCertId(X509 *pCert)
     return 0;
 }
 
-void SslOcspStapling::setCertFile(const char *Certfile)
+
+void SslOcspStapling::setCertName (const char *name)
 {
-    char RespFile[4096], *pExt;
+    m_sCertName.setStr(name);
+}
+
+
+void SslOcspStapling::certIdToOcspRespFileName()
+{
+    char file_name_buf[4096], *pExt;
     unsigned char md5[16];
     char md5Str[35] = {0};
     int iLen;
-    m_sCertfile.setStr(Certfile);
-    StringTool::getMd5(Certfile, strlen(Certfile), md5);
+    MD5_CTX ctx;
+
+    MD5_Init(&ctx);
+    if (m_pCertId->issuerKeyHash && m_pCertId->issuerKeyHash->length)
+        MD5_Update(&ctx, m_pCertId->issuerKeyHash->data,
+                  m_pCertId->issuerKeyHash->length);
+    if (m_pCertId->issuerNameHash && m_pCertId->issuerNameHash->length)
+        MD5_Update(&ctx, m_pCertId->issuerNameHash->data,
+                  m_pCertId->issuerNameHash->length);
+    if (m_pCertId->serialNumber && m_pCertId->serialNumber->length)
+        MD5_Update(&ctx, m_pCertId->serialNumber->data,
+                  m_pCertId->serialNumber->length);
+    MD5_Final(md5, &ctx);
     StringTool::hexEncode((const char *)md5, 16, md5Str);
     md5Str[32] = 0;
-    iLen = snprintf(RespFile, 4095, "%s/R%s", s_pOcspCachePath, md5Str);
-    pExt = RespFile + iLen;
+
+    iLen = snprintf( file_name_buf, 4095, "%sR%s", s_pOcspCachePath, md5Str);
+    pExt = file_name_buf + iLen;
     snprintf(pExt, 5, ".rsp");
-    m_sRespfile.setStr(RespFile);
+    m_sRespfile.setStr( file_name_buf );
     snprintf(pExt, 5, ".tmp");
-    m_sRespfileTmp.setStr(RespFile);
+    m_sRespfileTmp.setStr( file_name_buf );
 }

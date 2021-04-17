@@ -6,14 +6,15 @@ Wants=network-online.target
 
 [Service]
 Type=forking
-#PIDFile=/var/run/openlitespeed.pid
-PIDFile=/tmp/lshttpd/lshttpd.pid
+PIDFile=/var/run/openlitespeed.pid
 ExecStart=%LSWS_CTRL% start
 ExecReload=%LSWS_CTRL% restart 
 ExecStop=%LSWS_CTRL% delay-stop
 
 KillMode=none
 PrivateTmp=false
+Restart=on-failure
+RestartSec=5
 
 # do not want to be limited in anyway
 CPUAccounting=false

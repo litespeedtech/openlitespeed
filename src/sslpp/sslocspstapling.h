@@ -53,15 +53,16 @@ public:
     void releaseRespData();
     int updateRespData(OCSP_RESPONSE *pResponse);
     int getRequestData(unsigned char **pReqData);
-    void setCertFile(const char *Certfile);
+    void setCertName (const char *Certfile);
+    void certIdToOcspRespFileName();
 
     void setOcspResponder(const char *url)    {   m_sOcspResponder.setStr(url);     }
-    void setCAFile(const char *CAfile)        {   m_sCAfile.setStr(CAfile);         }
     void setRespMaxAge(const int iMaxAge)     {   m_iocspRespMaxAge = iMaxAge;      }
     void setRespfile(const char *Respfile)    {   m_sRespfile.setStr(Respfile);     }
     
     static void setCachePath(const char *pPath);
     static const char *getCachePath();
+    static int setProxy(const char *pProxyAddrStr);
 
 private:
     HttpFetch      *m_pHttpFetch;
@@ -72,8 +73,7 @@ private:
     unsigned char  *m_pRespData;
     GSockAddr       m_addrResponder;
 
-    AutoStr         m_sCertfile;
-    AutoStr         m_sCAfile;
+    AutoStr         m_sCertName;
     AutoStr2        m_sOcspResponder;
     AutoStr         m_sRespfile;
     AutoStr         m_sRespfileTmp;
@@ -83,7 +83,7 @@ private:
     time_t          m_statTime;
     time_t          m_nextUpdate;
     OCSP_CERTID    *m_pCertId;
-
+    static const struct sockaddr *s_proxy_addr;
 
 };
 

@@ -399,8 +399,9 @@ int StaticFileHandler::process(HttpSession *pSession,
 
     int isSSI = (pSession->getSsiRuntime() != NULL);
 
-//     if (pReq->getMethod() >= HttpMethod::HTTP_POST)
-//         return SC_405;
+    if (pReq->getMethod() > HttpMethod::HTTP_POST && code == SC_200)
+        return SC_501;
+
     SendFileInfo *pInfo = pSession->getSendFileInfo();
     const AutoStr2 *pPath = pReq->getRealPath();
 

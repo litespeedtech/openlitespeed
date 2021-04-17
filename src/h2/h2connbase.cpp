@@ -279,7 +279,10 @@ int H2ConnBase::onReadEx2()
             else if (m_inputState == ST_SKIP_REMAIN)
                 ret = processDataFrameSkipRemain(&m_curH2Header);
             else
+            {
+                ret = -1;
                 assert(false);
+            }
             if (ret > 0)
             {
                 total += ret;

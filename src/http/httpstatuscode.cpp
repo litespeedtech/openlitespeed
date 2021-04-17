@@ -198,7 +198,7 @@ StatusCode::StatusCode(int code, const char *pStatus,
                              pStatus, pStatus[1], pStatus[2], pStatus[3], &pStatus[5],
                              message);
             //p += ls_snprintf( p, pEnd - p, "%s", message );
-            if ((code >= SC_403) || (code <= SC_404))
+            if ((code >= SC_403) && (code <= SC_404))
                 p += snprintf(p, pEnd - p,
                               "<div style=\"color:#f0f0f0; font-size:12px;margin:auto;padding:0px 30px 0px 30px;"
                               "position:relative;clear:both;height:100px;margin-top:-101px;background-color:#474747;"

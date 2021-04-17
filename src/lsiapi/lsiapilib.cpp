@@ -3294,7 +3294,6 @@ static int parse_req_args_ts(const lsi_session_t *session, int parse_req_body,
              __func__, parse_req_body, uploadPassByPath, uploadTmpDir, uploadTmpFilePermission);
 
     MtParamParseReqArgs params;
-    MtSessData *pMtData;
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
@@ -3307,7 +3306,6 @@ static int parse_req_args_ts(const lsi_session_t *session, int parse_req_body,
         return LS_FAIL;
     }
 
-    pMtData = pSession->getMtSessData();
     params.m_pUploadTmpDir = uploadTmpDir;
     params.m_parseReqBody = parse_req_body;
     params.m_uploadPassByPath = uploadPassByPath;

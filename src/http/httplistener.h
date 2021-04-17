@@ -53,8 +53,8 @@ class HttpListener : public EventReactor, public LogSession
     unsigned long long  m_iBinding;
     char                m_iAdmin;
     char                m_isSSL;
-    int                 m_flag;
     char                m_iSendZconf;
+    int                 m_flag;
     AutoStr            *m_pAdcPortList;
 
     ModuleConfig        m_moduleConfig;
@@ -157,6 +157,7 @@ public:
     void addReusePortSocket(int fd);
     int  activeReusePort(int seq);
     int closeUnActiveReusePort();
+    int adjustReusePortCount(int total);
 
     int getFdCount(int* maxfd);
     int passFds(int arg1);
@@ -171,6 +172,7 @@ public:
     void addUdpSocket(int fd);
     int bindUdpPort();
     int startReusePortSocket(int count);
+    int startReusePortSocket(int start, int total);
 
 };
 

@@ -60,7 +60,7 @@ int DirHashCacheEntry::loadCeHeader()
         return LS_FAIL;
     if (*pId != CE_ID)
         return LS_FAIL;
-    memmove(&getHeader(), &achBuf[CACHE_ENTRY_MAGIC_LEN], sizeof(CeHeader));
+    memmove((void *) &getHeader(), &achBuf[CACHE_ENTRY_MAGIC_LEN], sizeof(CeHeader));
     int len = getHeader().m_keyLen;
     if (len > 0)
     {

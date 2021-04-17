@@ -72,11 +72,10 @@ public:
     class PacketBufIter
     {
     private:
-        LsShmOffset_t   m_firstOffset, m_lastOffset, m_nextOffset;
+        LsShmOffset_t   m_lastOffset, m_nextOffset;
     public:
         explicit PacketBufIter(LsShmOffset_t firstOffset, LsShmOffset_t lastOffset)
-            : m_firstOffset(firstOffset)
-            , m_lastOffset(lastOffset)
+            : m_lastOffset(lastOffset)
             , m_nextOffset(firstOffset)
             {}
         struct quicshm_packet_buf *

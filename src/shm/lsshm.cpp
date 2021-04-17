@@ -377,10 +377,10 @@ void LsShm::backupBrokenFile()
     int len = snprintf(target, 4096, "%s.bad", m_pFileName);
     rename(m_pFileName, target);
 
-    char lock_target[4096];
+    char lock_target[5000];
     len -= 7;
     strcpy(&target[len], "lock");
-    snprintf(lock_target, 4096, "%s.bad", target);
+    snprintf(lock_target, sizeof(lock_target), "%s.bad", target);
     rename(target, lock_target);
     if (s_fatalErrorCb)
         (*s_fatalErrorCb)();    
@@ -761,12 +761,14 @@ LsShmStatus_t LsShm::remap()
                   (unsigned long)x_pShmMap->x_stat.m_iFileSize);
         if ( x_pShmMap->x_stat.m_iFileSize - mystat.st_size > 100 * 1024 * 1024)
         {
+#ifndef NDEBUG
             LsShmMap mapCopy = *x_pShmMap;
+#endif
             deleteFile();
             if (s_fatalErrorCb)
                 (*s_fatalErrorCb)();
             
-            assert( (const char *)"bad file size." == (const char *)&mapCopy);
+            assert(mapCopy.x_stat.m_iFileSize > 0 && !"bad file size.");
         }
     }
     LsShmXSize_t size = x_pShmMap->x_stat.m_iFileSize;

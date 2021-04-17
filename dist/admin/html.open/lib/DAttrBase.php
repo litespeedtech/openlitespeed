@@ -423,7 +423,7 @@ class DAttrBase
             foreach ($this->_maxVal as $val => $disp) {
                 $id = $name . $val;
                 $input .= "<input type=\"checkbox\" id=\"{$id}\" name=\"{$id}\" value=\"{$val}\"";
-                if (($value & $val) || ($value === $val) || ($value === '0' && $val === 0))
+                if (($value === $val) || ($value === '0' && $val === 0) || (intval($value) & intval($val)) > 0)
                     $input .= $checked;
                 $input .= ($val == '0') ? $js0 : $js1;
                 $input .= "> <label for=\"{$id}\"> $disp </label> $spacer";

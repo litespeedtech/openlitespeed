@@ -50,6 +50,9 @@ public:
     static SslContext *config(SslContext *pContext, const char *pZcDomainName,
         const char * pKey, const char * pCert, const char * pBundle);
 
+    int loadCA(const char *pBundle);
+    int configOptions(SslContextConfig *pConfig);
+
     // public because called from SslContextHash::addIP:
     int setKeyCertificateFile(const char *pKeyFile, int iKeyType,
                                const char *pCertFile, int iCertType,
@@ -66,7 +69,7 @@ public:
 
     SSL_CTX *get() const        {   return m_pCtx;          }
     void set(SSL_CTX * ctx)     {   m_pCtx = ctx;           }
-    
+
     bool checkPrivateKey();
 
     SSL *newSSL();
@@ -97,6 +100,10 @@ public:
     int initOCSP();
     void updateOcsp();
     void disableOscp()              {   m_iEnableOcsp = 0;      }
+    void setOcspStapling(int v)     {   m_iEnableOcsp = v;      }
+    char getOcspStapling() const    {   return m_iEnableOcsp;   }
+    int  configStapling(const char *name, int max_age, const char *responder);
+
     static void setSniLookupCb(SslSniLookupCb pCb);
     static SslContext *getSslContext(SSL_CTX *ctx);
     static void setAlpnCb(SSL_CTX *ctx, void *arg);
@@ -150,7 +157,6 @@ private:
     int  enableShmSessionCache();
     int  enableSessionTickets();
     void disableSessionTickets();
-    int  configStapling(SslContextConfig *pConfig);
 };
 
 

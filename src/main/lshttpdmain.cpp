@@ -53,8 +53,6 @@
 #include <socket/gsockaddr.h>
 #include <edio/evtcbque.h>
 
-#include <sys/sysctl.h>
-
 #include <extensions/cgi/cgidworker.h>
 #include <extensions/registry/extappregistry.h>
 #include <openssl/crypto.h>
@@ -83,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Sat Feb 13 22:01:39 UTC 2021)"
+#define BUILDTIME  " (built: Tue Apr  6 13:08:27 UTC 2021)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -969,6 +967,9 @@ int LshttpdMain::init(int argc, char *argv[])
             return 2;
         if (m_pidFile.writePid(m_pid))
             return 2;
+        PidFile varRunPid;
+        varRunPid.writePidFile("/var/run/openlitespeed.pid", m_pid);
+        varRunPid.closePidFile();
 
         if (!MainServerConfig::getInstance().getDisableWebAdmin())
             startAdminSocket();
@@ -1003,9 +1004,6 @@ int LshttpdMain::init(int argc, char *argv[])
             PidFile pidfile;
             ConfigCtx::getCurConfigCtx()->getAbsolute(achBuf, getPidFile(), 0);
             pidfile.writePidFile(achBuf, m_pid);
-//             PidFile varRunPid;
-//             varRunPid.writePidFile("/var/run/openlitespeed.pid", m_pid);
-//             varRunPid.closePidFile();
         }
     }
 
@@ -1551,9 +1549,11 @@ void LshttpdMain::gracefulRestart()
         achCmd[len - 10] = 0;
         chdir(achCmd);
         achCmd[len - 10] = '/';
+        umask(022);
+        LS_NOTICE( "Starting new instance: execute '%s'.", achCmd);
         if (execl(achCmd, "litespeed", NULL))
             LS_ERROR("Failed to start new instance of LiteSpeed Web server!");
-        exit(0);
+        _exit(0);
     }
     if (pid == -1)
         LS_ERROR("Failed to restart the server!");

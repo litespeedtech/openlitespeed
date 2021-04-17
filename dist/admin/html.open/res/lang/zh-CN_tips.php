@@ -630,7 +630,7 @@ $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("启用多个SSL证书", '允许
 
 $_tipsdb['sslOCSP'] = new DAttrHelp("OCSP装订", '在线证书状态协议（OCSP）是更加有效的检查数字证书是否有效的方式。 它通过与另一台服务器（OCSP响应服务器）通信，以获取证书有效的验证，而不是通过证书吊销列表（CRL）进行检查。<br/><br/>OCSP装订是对该协议的进一步改进，允许服务器以固定的时间间隔而不是每次请求证书时与OCSP响应程序进行检查。 有关更多详细信息，请参见<a href=&quot;https://zh.wikipedia.org/wiki/%E5%9C%A8%E7%BA%BF%E8%AF%81%E4%B9%A6%E7%8A%B6%E6%80%81%E5%8D%8F%E8%AE%AE&quot;> OCSP Wikipedia页面</a>。', '', '', '');
 
-$_tipsdb['sslProtocol'] = new DAttrHelp("协议版本", '指定将使用哪个版本的SSL协议。 您可以选择 SSL v3.0 和TLS v1.0 。 从OpenSSL 1.0.1开始，还支持TLS v1.1 ，TLS v1.2 。  还可以通过BoringSSL。支持TLS v1.3 ', '将此字段保留为空白将默认启用TLS v1.0，TLS v1.1和TLS v1.2。 TLS v1.3需要BoringSSL，并且在基础SSL库支持的情况下也会启用。', '', '');
+$_tipsdb['sslOcspProxy'] = new DAttrHelp("OCSP Proxy", 'Socket address used as the proxy server address for OCSP verification. Leave this setting unset If not using a proxy.<br/><br/>Default value: not set', '', 'Socket Address', '');
 
 $_tipsdb['sslProtocolSetting'] = new DAttrHelp("SSL协议", '自定义侦听器接受的SSL协议。', '', '', '');
 
@@ -920,8 +920,6 @@ $_tipsdb['EDTP:shType'] = array('脚本处理程序可以是CGI，FCGI应用程�
 $_tipsdb['EDTP:sndBufSize'] = array('数值可以为10240、10K或1M。','如果发送/接收缓冲区大小设置为0，则将使用操作系统默认的TCP缓冲区大小。');
 
 $_tipsdb['EDTP:softLimit'] = array('在此处设置IP级别的速率限制。 数值将四舍五入至4K单位。 设置为“ 0”以禁用宽带限制。','只要没有超过硬限制,连接数就可以在宽限期内暂时超过软限制,超过宽限时间后,如果连接数仍然超过软限制，相应的IP将被封锁屏蔽时长设置的时间');
-
-$_tipsdb['EDTP:sslProtocol'] = array('必须在“常规”>“地址设置”中<b>安全</b>中选择“是”。','对于SSL版本和加密级别，请选择所有您要接受的协议。');
 
 $_tipsdb['EDTP:sslSessionCache'] = array('会话缓存使客户端可以在设置的时间内恢复会话，而不必重新执行SSL握手。 您可以使用<b>启用会话缓存</ b>为客户端分配会话ID，或者通过创建和使用会话记录单来做到这一点。');
 

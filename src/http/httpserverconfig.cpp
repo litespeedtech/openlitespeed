@@ -61,11 +61,11 @@ HttpServerConfig::HttpServerConfig()
     , m_iEnableH2c(0)
     , m_iProcNo(0)
     , m_iChildren(1)
+    , m_iAllowExtAppSetuid(1)
     , m_pAdminSock(NULL)
     , m_pGlobalVHost(NULL)
     , m_bwrap(BWRAP_DISABLED)
     , m_pBwrapCmdLine(NULL)
-    , m_iAllowExtAppSetuid(1)
 {
     m_pDeniedDir = new DeniedDir();
 }

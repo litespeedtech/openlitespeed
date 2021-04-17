@@ -110,7 +110,7 @@ $_tipsdb['adminUser'] = new DAttrHelp("WebAdmin User", 'Change the username and 
 
 $_tipsdb['allowBrowse'] = new DAttrHelp("Accessible", 'Specifies whether this context can be accessed. Set to No to deny access. You can use this feature to protect the specified directory from being visited. You may use it when you are updating contents for this context or you have special data in this directory.', '', 'Select from radio box', '');
 
-$_tipsdb['allowQuic'] = new DAttrHelp("Open HTTP3/QUIC (UDP) port", 'Allows the use of the HTTP3/QUIC network protocol for virtual hosts mapped to this listener. For this setting to take effect, &quot;Enable Enable HTTP3/QUIC&quot; must also be set to Yes at the server level. Default value is Yes.', 'When this setting is set to Yes, HTTP3/QUIC can still be disabled at the virtual host level through the &quot;Enable HTTP3/QUIC&quot; setting.', '', '');
+$_tipsdb['allowQuic'] = new DAttrHelp("Open HTTP3/QUIC (UDP) port", 'Allows the use of the HTTP3/QUIC network protocol for virtual hosts mapped to this listener. For this setting to take effect, &quot;Enable HTTP3/QUIC&quot; must also be set to Yes at the server level. Default value is Yes.', 'When this setting is set to Yes, HTTP3/QUIC can still be disabled at the virtual host level through the &quot;Enable HTTP3/QUIC&quot; setting.', '', '');
 
 $_tipsdb['allowSetUID'] = new DAttrHelp("Allow Set UID", 'Specifies whether the set UID bit is allowed for CGI scripts. If the set UID bit is allowed and the set UID bit is enabled for a CGI script, no matter which user the CGI script was started on behalf of, the user ID of the CGI process will switch to the user ID of the owner of the CGI script.<br/>The default is &quot;Off&quot;.', ' Do not allow Set UID CGI scripts whenever possible, as it is inherently a security risk.', 'Select from radio box', '');
 
@@ -264,7 +264,7 @@ $_tipsdb['extAuthorizer'] = new DAttrHelp("Authorizer", 'Specifies an external a
 
 $_tipsdb['extGroup'] = new DAttrHelp("Run As Group", 'The external application will run as this specified group name. If not set, Virtual Host level settings will be inherited.<br/><br/>Default value: Not Set', '', 'Valid group name.', '');
 
-$_tipsdb['extMaxIdleTime'] = new DAttrHelp("Max Idle Time", 'Specifies the maximum idle time before an external application is stopped by the server, freeing idle resources. When set to &quot;-1&quot;, the external application will not be stopped by the server unless running in ProcessGroup mode where idle external applications will be stopped after 30 seconds. The default value is &quot;-1&quot;.', ' This feature is especially useful in the mass hosting environment where, in order to prevent files owned by one virtual host from being accessed by the external application scripts of another virtual host, many different applications are run at the same time in SetUID mode. Set this value low to prevent these external applications from idling unnecessarily.', 'Select from radio box', '');
+$_tipsdb['extMaxIdleTime'] = new DAttrHelp("Max Idle Time", 'Specifies the maximum idle time before an external application is stopped by the server, freeing idle resources. When set to &quot;-1&quot;, the external application will not be stopped by the server unless running in ProcessGroup mode where idle external applications will be stopped after 30 seconds.<br/><br/>Default value: -1{/val}', ' This feature is especially useful in the mass hosting environment where, in order to prevent files owned by one virtual host from being accessed by the external application scripts of another virtual host, many different applications are run at the same time in SetUID mode. Set this value low to prevent these external applications from idling unnecessarily.', 'Integer number', '');
 
 $_tipsdb['extUmask'] = new DAttrHelp("umask", 'Sets default umask for this external application&#039;s processes. See  man 2 umask  for details. The default value taken from the server-level &quot;umask&quot; setting.', '', 'value valid range [000]-[777].', '');
 
@@ -500,7 +500,7 @@ $_tipsdb['quicCfcw'] = new DAttrHelp("Connection Flow Control Window", 'The init
 
 $_tipsdb['quicCongestionCtrl'] = new DAttrHelp("Congestion Control", 'The congestion control algorithm used. This can be set manually or left up to the QUIC library in use by selecting the &quot;Default&quot; option.<br/><br/>Default value: Default', '', 'Select from drop down list', '');
 
-$_tipsdb['quicEnable'] = new DAttrHelp("Enable Enable HTTP3/QUIC", 'Enables the HTTP3/QUIC network protocol server wide. Default value is Yes.', 'When this setting is set to Yes, HTTP3/QUIC can still be disabled at the listener level through the &quot;Open HTTP3/QUIC (UDP) port&quot; setting, or at the virtual host level through the &quot;Enable HTTP3/QUIC&quot; setting.', 'Select from radio box', '');
+$_tipsdb['quicEnable'] = new DAttrHelp("Enable HTTP3/QUIC", 'Enables the HTTP3/QUIC network protocol server wide. Default value is Yes.', 'When this setting is set to Yes, HTTP3/QUIC can still be disabled at the listener level through the &quot;Open HTTP3/QUIC (UDP) port&quot; setting, or at the virtual host level through the &quot;Enable HTTP3/QUIC&quot; setting.', 'Select from radio box', '');
 
 $_tipsdb['quicEnableDPLPMTUD'] = new DAttrHelp("Enable DPLPMTUD", 'Enable Datagram Packetization Layer Path Maximum Transmission Unit Discovery (DPLPMTUD).<br/><br/><b><a href=&quot;https://tools.ietf.org/html/rfc8899&quot;>Background on DPLPMTUD (RFC 8899)</a></b><br/><br/>Default value: Yes', '', 'Select from radio box', '');
 
@@ -630,7 +630,7 @@ $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("Enable Multiple SSL Certificate
 
 $_tipsdb['sslOCSP'] = new DAttrHelp("OCSP Stapling", 'Online Certificate Status Protocol (OCSP) is a more efficient method of checking whether a digital certificate is valid. It works by communicating with another server — the OCSP responder — to get verification that the certificate is valid instead of checking through certificate revocation lists (CRL).<br/><br/>OCSP stapling is a further improvement on this protocol, allowing the server to check with the OCSP responder at regular intervals instead of every time a certificate is requested. See the <a href=&quot;http://en.wikipedia.org/wiki/OCSP_Stapling&quot;>OCSP Wikipedia page</a> for more details.', '', '', '');
 
-$_tipsdb['sslProtocol'] = new DAttrHelp("Protocol Version", 'Specifies which version of the SSL protocol will be used. You can choose from SSL v3.0 and TLS v1.0. Since OpenSSL 1.0.1, TLS v1.1, TLS v1.2 are also supported. TLS v1.3 is also supported via BoringSSL.', 'Leaving this field blank will enable TLS v1.0, TLS v1.1, and TLS v1.2 by default. TLS v1.3 requires BoringSSL and will also be enabled if the underlying SSL library supports it.', '', '');
+$_tipsdb['sslOcspProxy'] = new DAttrHelp("OCSP Proxy", 'Socket address used as the proxy server address for OCSP verification. Leave this setting unset If not using a proxy.<br/><br/>Default value: not set', '', 'Socket Address', '');
 
 $_tipsdb['sslProtocolSetting'] = new DAttrHelp("SSL Protocol", 'Customizes SSL protocols accepted by the listener.', '', '', '');
 
@@ -718,7 +718,7 @@ $_tipsdb['vhEnableBr'] = new DAttrHelp("Enable Brotli Compression", 'Specifies w
 
 $_tipsdb['vhEnableGzip'] = new DAttrHelp("Enable GZIP Compression", 'Specifies whether to enable GZIP compression for this virtual host. This setting is only effective when &quot;Enable GZIP Compression&quot; is set to Yes at the server level.', '', 'Select from radio box', '');
 
-$_tipsdb['vhEnableQuic'] = new DAttrHelp("Enable HTTP3/QUIC", 'Enables the HTTP3/QUIC network protocol for this virtual host. For this setting to take effect, both &quot;Enable Enable HTTP3/QUIC&quot; and &quot;Open HTTP3/QUIC (UDP) port&quot; must also be set to Yes at the server and listener levels respectively. Default value is Yes.', 'When this setting is set to No, the HTTP3/QUIC advertisement will no longer be sent. If a browser still contains cached HTTP3/QUIC information and HTTP3/QUIC is still enabled at the server and listener levels, an HTTP3/QUIC connection will continue to be used until this information is no longer cached or an HTTP3/QUIC protocol error is encountered.', 'Select from radio box', '');
+$_tipsdb['vhEnableQuic'] = new DAttrHelp("Enable HTTP3/QUIC", 'Enables the HTTP3/QUIC network protocol for this virtual host. For this setting to take effect, both &quot;Enable HTTP3/QUIC&quot; and &quot;Open HTTP3/QUIC (UDP) port&quot; must also be set to Yes at the server and listener levels respectively. Default value is Yes.', 'When this setting is set to No, the HTTP3/QUIC advertisement will no longer be sent. If a browser still contains cached HTTP3/QUIC information and HTTP3/QUIC is still enabled at the server and listener levels, an HTTP3/QUIC connection will continue to be used until this information is no longer cached or an HTTP3/QUIC protocol error is encountered.', 'Select from radio box', '');
 
 $_tipsdb['vhMaxKeepAliveReq'] = new DAttrHelp("Max Keep-Alive Requests", 'Specifies the maximum requests that can be served through a keep-alive (persistent) connection. Connections will be closed once this limit is reached. You can specify a different limit for each virtual hosts. This number cannot exceed the server-level &quot;Max Keep-Alive Requests&quot; limit.', ' Set to a reasonably high value. A value of &quot;1&quot; or less will disable keep-alive connections.', 'Integer number', '');
 
@@ -920,8 +920,6 @@ $_tipsdb['EDTP:shType'] = array('Script handler can be a CGI, an FCGI app, a mod
 $_tipsdb['EDTP:sndBufSize'] = array('Numbers can be represented as 10240, 10K or 1M.','If send/receive buffer size is 0, OS default TCP buffer size will be used.');
 
 $_tipsdb['EDTP:softLimit'] = array('Set IP level throttle limit here. The number will be rounded up to 4K units. Set to &quot;0&quot; to disable throttling.','Number of connections can temporarily exceed Soft Limit during Grace Period as long as under Hard Limit. After Grace Period, if it is still above Soft Limit, then no more connections will be allowed from that IP for time of Banned Period.');
-
-$_tipsdb['EDTP:sslProtocol'] = array('&quot;Yes&quot; must be selected for <b>Secure</b> in General > Address Settings.','For SSL versions and encryption levels, please select all you want to accept.');
 
 $_tipsdb['EDTP:sslSessionCache'] = array('Session caching allows a client to resume a session within a set amount of time without having to re-perform an SSL handshake. You can do this by assigning clients a session ID using  <b>Enable Session Cache</b>, or by creating and using session tickets.');
 

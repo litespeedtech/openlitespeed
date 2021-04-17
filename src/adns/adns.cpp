@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,11 +35,13 @@ LS_SINGLETON(Adns);
 
 Adns::Adns()
     : m_pCtx( NULL )
-    , m_iCounter(0)
     , m_pShmHash(NULL)
+    , m_lockedBy(0)
     , m_tmLastTrim(0)
+    , m_iCounter(0)
 {
     ls_mutex_setup(&m_mutex);
+    ls_mutex_setup(&m_udns_mutex);
 
     evtcbhead_reset(this);
 }
@@ -371,10 +374,16 @@ AdnsReq *Adns::getHostByName(const char * pName, int type,
     pAdnsReq->cb = cb;
     pAdnsReq->arg = arg;
     pAdnsReq->start_time = DateTime::s_curTime;
+
+    bool need_lock = (!m_lockedBy || !pthread_equal(m_lockedBy, pthread_self()));
+    if (need_lock)
+        ls_mutex_lock(&m_udns_mutex);
     if (type != PF_INET6)
         pQuery = dns_submit_a4( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV4)getHostByNameCb, pAdnsReq);
     else
         pQuery = dns_submit_a6( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV6)getHostByNameCb, pAdnsReq);
+    if (need_lock)
+        ls_mutex_unlock(&m_udns_mutex);
     if (pQuery == NULL)
     {
         delete pAdnsReq;
@@ -430,10 +439,16 @@ AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_p
     pAdnsReq->arg = arg;
     pAdnsReq->start_time = DateTime::s_curTime;
 
+    bool need_lock = (!m_lockedBy || !pthread_equal(m_lockedBy, pthread_self()));
+    if (need_lock)
+        ls_mutex_lock(&m_udns_mutex);
     if (type != PF_INET6)
         pQuery = dns_submit_a4ptr( m_pCtx, (in_addr *)pName, getHostByAddrCb, pAdnsReq);
     else
         pQuery = dns_submit_a6ptr( m_pCtx, (in6_addr *)pName, getHostByAddrCb, pAdnsReq);
+    if (need_lock)
+        ls_mutex_unlock(&m_udns_mutex);
+
     if (pQuery == NULL)
     {
         delete pAdnsReq;
@@ -448,7 +463,13 @@ AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_p
 int Adns::handleEvents( short events )
 {
     if ( events & POLLIN )
-        dns_ioevent( m_pCtx, DateTime::s_curTime );
+    {
+        ls_mutex_lock(&m_udns_mutex);
+        m_lockedBy = pthread_self();
+        dns_ioevent(m_pCtx, DateTime::s_curTime);
+        m_lockedBy = 0;
+        ls_mutex_unlock(&m_udns_mutex);
+    }
     return 0;
 }
 
@@ -472,7 +493,11 @@ void Adns::setTimeOut(int tmSec)
 
 void Adns::checkDnsEvents()
 {
-    dns_timeouts( m_pCtx, -1, DateTime::s_curTime );
+    ls_mutex_lock(&m_udns_mutex);
+    m_lockedBy = pthread_self();
+    dns_timeouts(m_pCtx, -1, DateTime::s_curTime);
+    m_lockedBy = 0;
+    ls_mutex_unlock(&m_udns_mutex);
 }
 
 
