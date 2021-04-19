@@ -154,7 +154,7 @@ int HttpVHostMap::add(HttpVHost *pHost)
         for (iter = m_impl->begin(); iter != iterEnd; iter = m_impl->next(iter))
         {
             if (iter.second() == pHost)
-                return LS_FAIL;
+                return LS_OK;
         }
 
         return !m_impl->insert(pHost->getName(), pHost);

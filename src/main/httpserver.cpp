@@ -3147,8 +3147,7 @@ int HttpServerImpl::configVHosts(const XmlNode *pRoot)
 
             if (pVHost)
             {
-                if (addVHost(pVHost))
-                    delete pVHost;
+                addVHost(pVHost);
             }
         }
     }

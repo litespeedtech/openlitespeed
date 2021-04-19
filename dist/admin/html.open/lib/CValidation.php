@@ -763,6 +763,16 @@ class CValidation
         if (preg_match("/^([[:alnum:]._-]+|\[[[:xdigit:]:]+\]):(\d)+$/", $v)) {
             return 1;
         }
+		if ($this->isUdsAddr($v)) {
+            return 1;
+		}
+
+        $node->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path or unix:path');
+        return -1;
+    }
+
+	protected function isUdsAddr($v)
+	{
 		// check UDS:// unix:
 		if (preg_match('/^(UDS:\/\/|unix:)(.+)$/i', $v, $m)) {
             $v = $m[2];
@@ -772,19 +782,21 @@ class CValidation
                 return 1;
             }
 		}
-
-        $node->SetErr('invalid address: correct syntax is "IPV4|IPV6_address:port" or UDS://path or unix:path');
-        return -1;
-    }
+		return 0;
+	}
 
     protected function chkAttr_wsaddr($attr, $node)
     {
-        if (preg_match("/^((http|https):\/\/)?([[:alnum:]._-]+|\[[[:xdigit:]:]+\])(:\d+)?$/", $node->Get(CNode::FLD_VAL))) {
+		$v = $node->Get(CNode::FLD_VAL);
+        if (preg_match("/^((http|https):\/\/)?([[:alnum:]._-]+|\[[[:xdigit:]:]+\])(:\d+)?$/", $v)) {
             return 1;
-        } else {
-            $node->SetErr('invalid address: correct syntax is "[http|https://]IPV4|IPV6_address[:port]". ');
-            return -1;
-        }
+        } 
+		if ($this->isUdsAddr($v)) {
+            return 1;
+		}
+
+        $node->SetErr('invalid address: correct syntax is "[http|https://]IPV4|IPV6_address[:port]" or Unix Domain Socket address "UDS://path or unix:path".');
+        return -1;
     }
 
     protected function chkAttr_bool($attr, $node)

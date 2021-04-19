@@ -754,6 +754,18 @@ void plainconf::appendValueToKey(XmlNode *curNode, const char *key, const char *
 }
 
 
+static void appendToValue(XmlNode *pNode, const char *line, int len)
+{
+    if (pNode->getValue() == NULL)
+        pNode->setValue(line, len);
+    else
+    {
+        pNode->appendValue("\n", 1);
+        pNode->appendValue(line, len);
+    }
+}
+
+
 void plainconf::addModuleWithParam(XmlNode *pCurNode,
                                    const char *moduleName, const char *param)
 {
@@ -974,6 +986,11 @@ void plainconf::parseLine(const char *fileName, int lineNumber,
         }
         else
         {
+            if (strcasecmp(pCurNode->getName(), "botwhitelist") == 0)
+            {
+                appendToValue(pCurNode, p, pEnd - p);
+                return ;
+            }
             if (!bNameSet)
                 strcatchr(name, *p, MAX_NAME_LENGTH);
             else

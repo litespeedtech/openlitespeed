@@ -780,8 +780,8 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
         return NULL;
     else if ((pKey = getTag(pNode, "keyFile")) == NULL)
         return NULL;
-    
-    config.m_iEnableMultiCerts = 
+
+    config.m_iEnableMultiCerts =
                     HttpServerConfig::getInstance().getEnableMultiCerts();
     if (config.m_iEnableMultiCerts)
     {

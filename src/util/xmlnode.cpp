@@ -225,6 +225,14 @@ int XmlNode::setValue(const char *value, int len)
 }
 
 
+int XmlNode::appendValue(const char *value, int len)
+{
+    m_impl->m_sValue.append(value, len);
+    return m_impl->m_sValue.len();
+}
+
+
+
 int XmlNode::hasChild()
 {
     if (!m_impl->m_pChildrenMap)
