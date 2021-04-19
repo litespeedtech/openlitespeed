@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2020  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -89,8 +89,8 @@ typedef struct
 //  UI24    Flags;          //No flags defined, set to 0
     UI32    OffsetCount;    //The number of offsets in the Offsets table
     void   *Offsets;        //A table of absolute chunk offsets within the file
-    //if BoxType == 'stco¡¦ UI32[OffsetCount]
-    //if BoxType == 'co64¡¦ UI64[OffsetCount]
+    //if BoxType == 'stcoï¿½ï¿½ UI32[OffsetCount]
+    //if BoxType == 'co64ï¿½ï¿½ UI64[OffsetCount]
     uint32_t newFirstEntry;
     uint32_t newLastEntry;
     int64_t deltaOffset;
@@ -229,7 +229,7 @@ typedef struct
     //The creation time of the track,expressed as seconds elapsed since midnight, January 1, 1904 (UTC)
 //  UI64    ModificationTime;//if Version == 0:UI32; if Version == 1:UI64
     //The last modification time of the F4V file, expressed as seconds elapsed since midnight, January 1, 1904 (UTC)
-//  UI32    TrackID;        //The track¡¦s unique identifier
+//  UI32    TrackID;        //The trackï¿½ï¿½s unique identifier
 //  UI32    Reserved;       //set to 0
     UI64    Duration;       //if Version == 0:UI32; if Version == 1:UI64
     //The duration of the track, expressed in the TimeScale defined in the mvhd box for this track
