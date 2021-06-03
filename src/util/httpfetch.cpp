@@ -889,6 +889,7 @@ int HttpFetch::recvResp()
 {
     int ret = 0;
     int len;
+    int save_errno;
     char *p;
     char *pEnd;
     char *pLineBegin;
@@ -911,12 +912,13 @@ int HttpFetch::recvResp()
             ret = m_ssl.read(buf.begin(), 8192);
         else
             ret = ::nio_read(m_fdHttp, buf.begin(), 8192);
+        save_errno = errno;
         if (m_iEnableDebug)
             m_pLogger->info("HttpFetch[%d]::recvResp fd=%d ret=%d",
                             getLoggerId(), m_fdHttp, ret);
         if (ret == 0)
         {
-            if (errno == EWOULDBLOCK)
+            if (save_errno == EAGAIN)
                 break;
             if (m_respBodyLen == -1)
                 return endReq(0);
@@ -929,8 +931,13 @@ int HttpFetch::recvResp()
         else if (ret < 0)
         {
             if ((m_respBodyLen == -1)
-                && ((m_iSsl && (errno == ECONNRESET)) || !m_nonblocking))
+                && ((m_iSsl && (save_errno == ECONNRESET)) || !m_nonblocking))
                 return endReq(0);
+            else if (save_errno != EAGAIN)
+            {
+                endReq(ERROR_HTTP_RECV_RESP_FAILURE);
+                return -1;
+            }
             break;
         }
         p = buf.begin();

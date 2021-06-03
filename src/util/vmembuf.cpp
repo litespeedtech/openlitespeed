@@ -365,7 +365,7 @@ BlockBuf *VMemBuf::getAnonMapBlock(size_t size)
     int blocks = (size + s_iBlockSize - 1) / s_iBlockSize;
     size = blocks * s_iBlockSize;
     char *pBuf = (char *) mmap(NULL, size, PROT_READ | PROT_WRITE,
-                               MAP_ANON | MAP_SHARED, -1, 0);
+                               MAP_ANON | MAP_PRIVATE, -1, 0);
     if (pBuf == MAP_FAILED)
     {
         perror("Anonymous mmap() failed");
@@ -1161,6 +1161,22 @@ int VMemBuf::copyToFile(off_t  startOff, off_t  len,
     return ret;
 
 }
+
+
+int VMemBuf::writeToFile(int fd)
+{
+    char *pBuf;
+    size_t size;
+    while (((pBuf = getReadBuffer(size)) != NULL)
+            && (size > 0))
+    {
+        if (::write(fd, pBuf, size) < (ssize_t)size)
+            return LS_FAIL;
+        readUsed(size);
+    }
+    return LS_OK;
+}
+
 
 int VMemBuf::copyToBuf(char *pBuf, int offset, int len)
 {

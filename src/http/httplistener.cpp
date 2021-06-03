@@ -381,7 +381,11 @@ int HttpListener::startReusePortSocket(int start, int total)
     int i, ret, fd;
     LS_NOTICE("[%s] Add SO_REUSEPORT socket, #%d to #%d",
                 getAddrStr(), start + 1, total);
-    m_reusePortFds.guarantee(total);
+    m_reusePortFds.guarantee(total - m_reusePortFds.size());
+
+    if (start == 1)
+        ls_setsockopt(m_reusePortFds[0], SOL_SOCKET, SO_REUSEPORT,
+                      (char *)(&start), sizeof(start));
 
     for(i = start; i < total; ++i)
     {

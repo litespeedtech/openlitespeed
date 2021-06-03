@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2021
  * ******************************************* */
 
 namespace Lsc\Wp;
@@ -16,6 +16,42 @@ use \Lsc\Wp\Panel\CPanel;
 
 class CliController
 {
+
+    /**
+     * @since 1.13.5
+     * @var string
+     */
+    const SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_OFF = 'cpanelPluginAutoInstallOff';
+
+    /**
+     * @since 1.13.5
+     * @var string
+     */
+    const SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_ON = 'cpanelPluginAutoInstallOn';
+
+    /**
+     * @since 1.13.5
+     * @var string
+     */
+    const SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_STATUS = 'cpanelPluginAutoInstallStatus';
+
+    /**
+     * @since 1.13.5
+     * @var string
+     */
+    const SPECIAL_CMD_CPANEL_PLUGIN_FIX_CONF = 'cpanelPluginFixConf';
+
+    /**
+     * @since 1.13.5
+     * @var string
+     */
+    const SPECIAL_CMD_CPANEL_PLUGIN_INSTALL = 'cpanelPluginInstall';
+
+    /**
+     * @since 1.13.5
+     * @var string
+     */
+    const SPECIAL_CMD_CPANEL_PLUGIN_UNINSTALL = 'cpanelPluginUninstall';
 
     /**
      * @var string[]
@@ -536,27 +572,31 @@ class CliController
         }
 
         if ( $args[0] == '--install' ) {
-            $this->specialCmd = 'cpanelPluginInstall';
+            $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_INSTALL;
             unset($args[0]);
         }
         elseif ( $args[0] == '--uninstall' ) {
-            $this->specialCmd = 'cpanelPluginUninstall';
+            $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_UNINSTALL;
             unset($args[0]);
         }
         elseif ( $args[0] == '-autoinstall' ) {
 
             if ( !isset($args[1]) ) {
-                $this->specialCmd = 'cpanelPluginAutoInstallStatus';
+                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_STATUS;
             }
             elseif ( "{$args[1]}" === '1' ) {
-                $this->specialCmd = 'cpanelPluginAutoInstallOn';
+                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_ON;
                 unset($args[1]);
             }
             elseif ( "{$args[1]}" === '0' ) {
-                $this->specialCmd = 'cpanelPluginAutoInstallOff';
+                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_OFF;
                 unset($args[1]);
             }
 
+            unset($args[0]);
+        }
+        elseif ( $args[0] == '--fixconf') {
+            $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_FIX_CONF;
             unset($args[0]);
         }
     }
@@ -808,7 +848,7 @@ EOF;
 
         switch($this->specialCmd) {
 
-            case 'cpanelPluginInstall':
+            case self::SPECIAL_CMD_CPANEL_PLUGIN_INSTALL:
                 /* @var $controlPanel CPanel */
 
                 switch ( $controlPanel->installCpanelPlugin() ) {
@@ -828,15 +868,14 @@ EOF;
 
                 break;
 
-            case 'cpanelPluginUninstall':
-                /* @var $controlPanel CPanel */
+            case self::SPECIAL_CMD_CPANEL_PLUGIN_UNINSTALL:
                 CPanel::uninstallCpanelPlugin();
 
                 echo 'LiteSpeed cPanel plugin uninstalled successfully, auto '
                     . "install turned off.\n\n";
                 break;
 
-            case 'cpanelPluginAutoInstallStatus':
+            case self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_STATUS:
                 $state = (CPanel::isCpanelPluginAutoInstallOn()) ? 'On' : 'Off';
 
                 echo "Auto install is currently {$state} for the LiteSpeed "
@@ -845,7 +884,7 @@ EOF;
                     . "turn auto install off/on respectively.\n\n";
                 break;
 
-            case 'cpanelPluginAutoInstallOn':
+            case self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_ON:
 
                 if ( CPanel::turnOnCpanelPluginAutoInstall() ) {
                     echo 'Auto install is now On for LiteSpeed cPanel plugin.'
@@ -858,7 +897,7 @@ EOF;
 
                 break;
 
-            case 'cpanelPluginAutoInstallOff':
+            case self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_OFF:
 
                 if ( CPanel::turnOffCpanelPluginAutoInstall() ) {
                     echo 'Auto install is now Off for LiteSpeed cPanel plugin.'
@@ -868,6 +907,14 @@ EOF;
                     echo 'Failed to turn on auto install for LiteSpeed cPanel '
                         . "plugin.\n\n";
                 }
+
+                break;
+
+            case self::SPECIAL_CMD_CPANEL_PLUGIN_FIX_CONF:
+                /* @var $controlPanel CPanel */
+                $controlPanel->updateCoreCpanelPluginConfSettings();
+
+                echo "Attempted to fix user-end cPanel Plugin conf.\n\n";
 
                 break;
 

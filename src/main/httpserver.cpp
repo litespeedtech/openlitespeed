@@ -3938,6 +3938,8 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
                      = GET_VAL(pNode, "quicHandshakeTimeout", 1, 15, 10)
                                               * 1000000 /* Microseconds */;
 
+    settings.es_ping_period = 21;
+
     settings.es_support_push = GET_VAL(pNode, "quicPush", 0, 1, 1);
 
     settings.es_cc_algo = GET_VAL(pNode, "quicCongestionCtrl", 0, 3, LSQUIC_DF_CC_ALGO);
@@ -4591,7 +4593,7 @@ int HttpServerImpl::initLscpd()
     lstrncpy(pEnd, "/" LSCPD_VHOST_NAME "/logs/error.log",
             sizeof(achBuf) - (pEnd - achBuf));
     pVHost->setErrorLogFile(achBuf);
-    pVHost->setErrorLogRollingSize( 10 * 1024 * 1024, 30 );
+    pVHost->setErrorLogRollingSize( 10 * 1024 * 1024, 30, 0);
     pVHost->setLogLevel( "DEBUG" );
 
     lstrncpy(pEnd, "/" LSCPD_VHOST_NAME "/access.log",
@@ -4746,7 +4748,7 @@ int HttpServerImpl::initSampleServer()
         &HttpServer::getInstance().getServerContext());
     lstrncpy(pEnd, "/logs/vhost1.log", sizeof(achBuf) - (pEnd - achBuf));
     pVHost->setErrorLogFile(achBuf);
-    pVHost->setErrorLogRollingSize(8192, 10);
+    pVHost->setErrorLogRollingSize(8192, 10, 0);
     pVHost->setLogLevel("DEBUG");
     //strcpy( pEnd, "/logs/vhost1_access.log" );
     //pVHost->setAccessLogFile( achBuf );
@@ -5207,10 +5209,12 @@ int HttpServer::setAccessLogFile(const char *pFileName, int pipe)
 }
 
 
-void HttpServer::setErrorLogRollingSize(off_t size, int keep_days)
+void HttpServer::setErrorLogRollingSize(off_t size, int keep_days, int compress)
 {
     HttpLog::getErrorLogger()->getAppender()->setRollingSize(size);
     HttpLog::getErrorLogger()->getAppender()->setKeepDays(keep_days);
+    if (compress != -1)
+        HttpLog::getErrorLogger()->getAppender()->setCompress(compress);
 }
 
 

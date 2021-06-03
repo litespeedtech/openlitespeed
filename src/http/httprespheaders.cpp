@@ -1380,7 +1380,7 @@ void HttpRespHeaders::copyEx(const HttpRespHeaders &headers)
     m_buf.clear();
     m_buf.append(headers.m_buf.begin(), headers.m_buf.size());
 
-    m_lsxpack.guarantee(headers.m_lsxpack.size() + 5);
+    m_lsxpack.guarantee(headers.m_lsxpack.size() + 5 - m_lsxpack.size());
     m_lsxpack.copy(headers.m_lsxpack);
 
     memmove(&m_KVPairindex[0], &headers.m_KVPairindex[0],

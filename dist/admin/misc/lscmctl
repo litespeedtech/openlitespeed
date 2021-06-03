@@ -4,10 +4,10 @@
 # LiteSpeed Cache Management Script
 #
 # @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
-# @copyright (c) 2017-2020
+# @copyright (c) 2017-2021
 # *********************************************/
 
-VERSION='1.11.1.1'
+VERSION='1.11.2'
 OS=$(uname -s)
 SCRIPT_DIR=$(cd "$(dirname "${0}")" && pwd)
 
@@ -64,7 +64,7 @@ printHelp()
     printCmdOption 'status' '<wp path>' 'Get the most up to date LSC-WP status for the provided WordPress installation.'
     printCmdOption 'dashnotify' '{-m | -wppath <wp path>} [-plugin <plugin slug>] {-msgfile <message file path> | -msg <message>}' 'Notify all discovered WordPress installations with the provided message (plain text or HTML) using the Dash Notifier WordPress plugin with the -m parameter or a single installation by providing the path to the WordPress installation directory. A plugin slug can be included to have an install/activate button for that plugin added to the message as well. Installations containing a '"'"'.dash_notifier_bypass'"'"' file will not be notified.'
 	printCmdOption 'dashnotifyremove' '{-m | <wp path>}' 'Remove Dash Notifier plugin (and notification messages) from all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
-    printCmdOption 'cpanelplugin' '{--install | --uninstall | -autoinstall [{0 | 1}]}' '[cPanel/WHM Environment Only] Install or uninstall the LiteSpeed user-end plugin for cPanel for all cPanel accounts using the '"'"'--install'"'"' and '"'"'--uninstall'"'"' input flags. The plugin will appear as "LiteSpeed Web Cache Manager" under '"'"'Advanced'"'"' in the user'"'"'s cPanel dashboard. The '"'"'-autoinstall'"'"' input param can be used to check the current auto install status. When turned on, the cPanel plugin will be automatically installed when installing/updating the WHM plugin. Use '"'"'-autoinstall {0 | 1}'"'"' to manually turn this off and on respectively.'
+    printCmdOption 'cpanelplugin' '{--install | --uninstall | -autoinstall [{0 | 1}] | --fixconf}' '[cPanel/WHM Environment Only] Install or uninstall the LiteSpeed user-end plugin for cPanel for all cPanel accounts using the '"'"'--install'"'"' and '"'"'--uninstall'"'"' input flags. The plugin will appear as "LiteSpeed Web Cache Manager" under '"'"'Advanced'"'"' in the user'"'"'s cPanel dashboard. The '"'"'-autoinstall'"'"' input param can be used to check the current auto install status. When turned on, the cPanel plugin will be automatically installed when installing/updating the WHM plugin. Use '"'"'-autoinstall {0 | 1}'"'"' to manually turn this off and on respectively. The '"'"'--fixConf'"'"' input param can be used to re-populate the cPanel plugin'"'"'s configuration file values in case of an issue.'
     printCmdOption 'addinstalls' '{-wpinstall <wp path> <docroot> <server name> <site url>} | -wpinstallsfile <installs file path>}' 'Add a WordPress installation to existing scan data. This "custom" data will be stored in it'"'"'s own lscm.data.cust data file under the "lsws/admin/lscdata" directory. A single installation can be added using the -wpinstall parameter with space separated list of installation info in the required order (<wp path> <docroot> <server name> <site url>). Multiple installations can be added at once using the -wpinstallsfile parameter to provide the path to an installs file containing a newline separated list of installation info in the expected format.'
     printCmdOption '--update-lib' '' 'Update the lscmctl script and the required shared library to their latest versions only if the currently installed versions are no longer supported.'
     printCmdOption '--force-update-lib' '' 'Force update the lscmctl script and the required shared library to their latest versions. It is not recommended that this command be included in any cron jobs, use command '"'"'--update-lib'"'"' instead.'

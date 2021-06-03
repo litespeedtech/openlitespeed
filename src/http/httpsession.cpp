@@ -3071,16 +3071,9 @@ void HttpSession::closeSession()
 
     logAccess(getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN));
 
-    releaseResources();
-
     LsiapiBridge::releaseModuleData(LSI_DATA_HTTP, getModuleData());
 
-    //For reuse condition, need to reset the sessionhooks
-    m_sessionHooks.reset();
-
-    LS_DBG_M(getLogSession(), "calling removeSessionCb on this %p\n", this);
-    EvtcbQue::getInstance().removeSessionCb(this);
-
+    releaseResources();
 
     //if (!(testFlag(HSF_SUB_SESSION)))
     //    getStream()->wantWrite(0);

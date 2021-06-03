@@ -98,14 +98,14 @@ public:
     char *getReadBuffer(size_t  &size);
     char *getWriteBuffer(size_t  &size);
 
-    void readUsed(off_t  len)     
-    {   
+    void readUsed(off_t  len)
+    {
         ls_atomic_spin_lock(&m_lock);
-        m_pCurRPos += len;      
+        m_pCurRPos += len;
         ls_atomic_spin_unlock(&m_lock);
     }
-    void writeUsed(off_t  len)    
-    {   
+    void writeUsed(off_t  len)
+    {
         ls_atomic_spin_lock(&m_lock);
         m_pCurWPos += len;
         ls_atomic_spin_unlock(&m_lock);
@@ -145,8 +145,9 @@ public:
     const char *acquireBlockBuf(off_t offset, int *size);
     void releaseBlockBuf(off_t offset);
 
-    void initBlank(int type);    
+    void initBlank(int type);
     int copyToBuf(char *buf, int offset, int len);
+    int writeToFile(int fd);
 };
 
 class MMapVMemBuf : public VMemBuf
@@ -157,7 +158,7 @@ public:
     {
         initBlank(VMBUF_ANON_MAP);
     }
-    
+
     explicit MMapVMemBuf(int TargetSize);
 };
 

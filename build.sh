@@ -28,7 +28,7 @@ VERSIONNUMBER=
 if [ "${OS}" = "FreeBSD" ] ; then
     APP_MGRS="pkg"
 elif [ "${OS}" = "Linux" ] ; then
-    APP_MGRS="yum apt apt-get zypper apk"
+    APP_MGRS="apt apt-get yum zypper apk"
 elif [ "${OS}" = "Darwin" ] ; then
     APP_MGRS="port brew"
 else
@@ -122,8 +122,8 @@ installgo()
     if [ $? = 0 ] ; then
         echo go installed.
     else
-        wget https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz
-        tar -xvf go1.6.linux-amd64.tar.gz
+        wget https://golang.org/dl/go1.16.3.linux-amd64.tar.gz
+        tar -xvf go1.16.3.linux-amd64.tar.gz
         mv -f go /usr/local
         export PATH=/usr/local/go/bin:${PATH}
     fi

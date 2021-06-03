@@ -4,15 +4,15 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2017-2020
+ * @copyright (c) 2017-2021
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
 
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Util;
-use \Lsc\Wp\WPInstall;
+use Lsc\Wp\Logger;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\Util;
+use Lsc\Wp\WPInstall;
 
 class CPanel extends ControlPanel
 {
@@ -23,9 +23,15 @@ class CPanel extends ControlPanel
     const USER_PLUGIN_INSTALL_SCRIPT = '/usr/local/cpanel/whostmgr/docroot/cgi/lsws/res/ls_web_cache_mgr/install.sh';
 
     /**
+     * @since 1.13.2
      * @var string
      */
-    const USER_PLUGIN_UNINSTALL_SCRIPT = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/uninstall.sh';
+    const USER_PLUGIN_DIR = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager';
+
+    /**
+     * @var string
+     */
+    const USER_PLUGIN_UNINSTALL_SCRIPT = self::USER_PLUGIN_DIR . '/uninstall.sh';
 
     /**
      * @since 1.13.2
@@ -34,22 +40,21 @@ class CPanel extends ControlPanel
     const USER_PLUGIN_BACKUP_DIR = '/tmp/lscp-plugin-tmp';
 
     /**
-     * @since 1.13.2
+     * @since 1.13.5
      * @var string
      */
-    const USER_PLUGIN_DIR = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager';
-
+    const USER_PLUGIN_DATA_DIR = self::USER_PLUGIN_DIR . '/data';
 
     /**
      * @since 1.13.2
      * @var string  Old location for cPanel user-end plugin conf file.
      */
-    const USER_PLUGIN_CONF_OLD = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/lswcm.conf';
+    const USER_PLUGIN_CONF_OLD = self::USER_PLUGIN_DIR . '/lswcm.conf';
 
     /**
      * @var string
      */
-    const USER_PLUGIN_CONF = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager/data/lswcm.conf';
+    const USER_PLUGIN_CONF = self::USER_PLUGIN_DATA_DIR . '/lswcm.conf';
 
     /**
      * @var string
@@ -116,7 +121,7 @@ class CPanel extends ControlPanel
     {
         $this->panelName = 'cPanel/WHM';
         $this->defaultSvrCacheRoot = '/home/lscache/';
-        $this->cpanelPluginDataDir = self::USER_PLUGIN_DIR . '/data';
+        $this->cpanelPluginDataDir = self::USER_PLUGIN_DATA_DIR;
         $this->cpanelPluginTplDir = self::USER_PLUGIN_DIR . '/landing';
         $this->cpanelPluginCustTransDir = self::USER_PLUGIN_DIR . '/lang/cust';
         $this->tmpCpanelPluginDataDir = self::USER_PLUGIN_BACKUP_DIR . '/data';
@@ -169,12 +174,12 @@ class CPanel extends ControlPanel
      * @param string  $vhCacheRoot
      * @return array
      */
-    protected function addVHCacheRootSection( $file_contents,
-            $vhCacheRoot = 'lscache' )
+    protected function addVHCacheRootSection(
+            $file_contents, $vhCacheRoot = 'lscache' )
     {
         array_unshift(
             $file_contents,
-            "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n\n"
+            "<IfModule LiteSpeed>\nCacheRoot $vhCacheRoot\n</IfModule>\n\n"
         );
 
         return $file_contents;
@@ -186,8 +191,8 @@ class CPanel extends ControlPanel
      * @param string  $vhCacheRoot
      * @throws LSCMException  Thrown directly and indirectly.
      */
-    public function createVHConfAndSetCacheRoot( $vhConf,
-            $vhCacheRoot = 'lscache' )
+    public function createVHConfAndSetCacheRoot(
+            $vhConf, $vhCacheRoot = 'lscache' )
     {
         $vhConfDir = dirname($vhConf);
 
@@ -195,31 +200,33 @@ class CPanel extends ControlPanel
 
             if ( !mkdir($vhConfDir, 0755) ) {
                 throw new LSCMException(
-                    "Failed to create directory {$vhConfDir}."
+                    "Failed to create directory $vhConfDir."
                 );
             }
 
-            $this->log("Created directory {$vhConfDir}", Logger::L_DEBUG);
+            $this->log("Created directory $vhConfDir", Logger::L_DEBUG);
         }
 
         $content =
-            "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>";
+            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>";
 
         if ( false === file_put_contents($vhConf, $content) ) {
-            throw new LSCMException("Failed to create file {$vhConf}.");
+            throw new LSCMException("Failed to create file $vhConf.");
         }
 
-        $this->log("Created file {$vhConf}.", Logger::L_DEBUG);
+        $this->log("Created file $vhConf.", Logger::L_DEBUG);
     }
 
     public function applyVHConfChanges()
     {
         exec('/scripts/ensure_vhost_includes --all-users');
 
-        self::UpdateCpanelPluginConf(
-            self::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT,
-            $this->vhCacheRoot
-        );
+        if ( file_exists(self::USER_PLUGIN_DIR) ) {
+            self::UpdateCpanelPluginConf(
+                    self::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT,
+                    $this->vhCacheRoot
+            );
+        }
     }
 
     /**
@@ -301,7 +308,7 @@ class CPanel extends ControlPanel
             }
             else {
                 Logger::debug(
-                    "Unused line when preparing docroot map: {$line}."
+                    "Unused line when preparing docroot map: $line."
                 );
             }
         }
@@ -340,7 +347,7 @@ class CPanel extends ControlPanel
         $phpBin = '/usr/local/bin/php '
             . "--ea-reference-dir={$wpInstall->getPath()}/wp-admin";
 
-        return "{$phpBin} {$this->phpOptions}";
+        return "$phpBin $this->phpOptions";
     }
 
     /**
@@ -380,7 +387,7 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @return boolean
+     * @return string
      * @throws LSCMException  Thrown directly and indirectly.
      */
     public function installCpanelPlugin()
@@ -394,22 +401,29 @@ class CPanel extends ControlPanel
         }
 
         $existingInstall = true;
-        $oldLogic = false;
 
-        if ( !file_exists(self::USER_PLUGIN_CONF) ) {
+        if ( !file_exists(self::USER_PLUGIN_CONF)
+                && !file_exists(self::USER_PLUGIN_CONF_OLD) ) {
 
-            if ( file_exists(self::USER_PLUGIN_CONF_OLD) ) {
-                $oldLogic = true;
-            }
-            else {
-                $existingInstall = false;
-            }
+            $existingInstall = false;
         }
 
         if ( $existingInstall ) {
-            self::backupCpanelPluginDataFiles($oldLogic);
+
+            if ( self::backupCpanelPluginDataFiles() == false ) {
+                throw new LSCMException(
+                    'Failed to backup cPanel user-end plugin data files. '
+                        . 'Aborting install/update operation.'
+                );
+            }
+
             exec(self::USER_PLUGIN_INSTALL_SCRIPT);
-            self::restoreCpanelPluginDataFiles($oldLogic);
+
+            if ( self::restoreCpanelPluginDataFiles() == false ) {
+                Logger::error(
+                    'Failed to restore cPanel user-end plugin data files.'
+                );
+            }
         }
         else {
             exec(self::USER_PLUGIN_INSTALL_SCRIPT);
@@ -425,12 +439,12 @@ class CPanel extends ControlPanel
      *
      * @since 1.13.2
      * @since 1.13.2.2  Made function static.
+     * @since ???       Removed optional param $oldLogic.
      *
-     * @param bool  $oldLogic
      * @return bool
      * @throws LSCMException
      */
-    protected static function backupCpanelPluginDataFiles( $oldLogic = false )
+    protected static function backupCpanelPluginDataFiles()
     {
         if ( !file_exists(self::USER_PLUGIN_DIR) ) {
             return false;
@@ -447,7 +461,7 @@ class CPanel extends ControlPanel
             );
         }
 
-        $cpanelPluginDataDir = self::USER_PLUGIN_DIR . '/data';
+        $cpanelPluginDataDir = self::USER_PLUGIN_DATA_DIR;
         $cpanelPluginTplDir = self::USER_PLUGIN_DIR . '/landing';
         $cpanelPluginCustTransDir = self::USER_PLUGIN_DIR . '/lang/cust';
 
@@ -460,21 +474,26 @@ class CPanel extends ControlPanel
          * overwrite when moving back.
          */
 
-        if ($oldLogic) {
+        if ( file_exists(self::USER_PLUGIN_CONF) ) {
+            $backupCmds = "/bin/mv $cpanelPluginDataDir "
+                    . self::USER_PLUGIN_BACKUP_DIR . '/;';
+        }
+        elseif ( file_exists(self::USER_PLUGIN_CONF_OLD) ) {
+            mkdir(self::USER_PLUGIN_BACKUP_DIR . '/data');
+
             $backupCmds = '/bin/mv ' . self::USER_PLUGIN_CONF_OLD . " "
-                . self::USER_PLUGIN_BACKUP_DIR . '/lswcm.conf;';
+                . self::USER_PLUGIN_BACKUP_DIR . '/data/;';
         }
         else {
-            $backupCmds = "/bin/mv {$cpanelPluginDataDir} "
-                . self::USER_PLUGIN_BACKUP_DIR . '/;';
+            return false;
         }
 
         $backupCmds .= ' /bin/mv '
-            . "{$cpanelPluginTplDir} " . self::USER_PLUGIN_BACKUP_DIR . '/; '
-            . "/bin/rm -rf {$tmpCpanelPluginTplDir}/default; "
+            . "$cpanelPluginTplDir " . self::USER_PLUGIN_BACKUP_DIR . '/; '
+            . "/bin/rm -rf $tmpCpanelPluginTplDir/default; "
             . '/bin/mv '
-            . "{$cpanelPluginCustTransDir} {$tmpCpanelPluginCustTransDir}; "
-            . "/bin/rm -rf {$tmpCpanelPluginCustTransDir}/README";
+            . "$cpanelPluginCustTransDir $tmpCpanelPluginCustTransDir; "
+            . "/bin/rm -rf $tmpCpanelPluginCustTransDir/README";
 
         exec($backupCmds);
 
@@ -485,11 +504,11 @@ class CPanel extends ControlPanel
      *
      * @since 1.13.2
      * @since 1.13.2.2  Made function static.
+     * @since ???       Removed optional param $oldLogic.
      *
-     * @param bool  $oldLogic
      * @return bool
      */
-    protected static function restoreCpanelPluginDataFiles( $oldLogic = false )
+    protected static function restoreCpanelPluginDataFiles()
     {
         if ( !file_exists(self::USER_PLUGIN_BACKUP_DIR)
                 || !file_exists(self::USER_PLUGIN_DIR) ) {
@@ -501,29 +520,24 @@ class CPanel extends ControlPanel
         $tmpCpanelPluginTplDir = self::USER_PLUGIN_BACKUP_DIR . '/landing';
         $tmpCpanelPluginCustTransDir = self::USER_PLUGIN_BACKUP_DIR . '/cust';
 
-        $cpanelPluginDataDir = self::USER_PLUGIN_DIR . '/data';
         $cpanelPluginLangDir = self::USER_PLUGIN_DIR . '/lang';
 
         if ( !file_exists($cpanelPluginLangDir) ) {
             mkdir($cpanelPluginLangDir, 0755);
         }
 
-        if ( file_exists($cpanelPluginDataDir) ) {
-            $cpanelPluginConfFile = self::USER_PLUGIN_CONF;
-        }
-        else {
-            $cpanelPluginConfFile = self::USER_PLUGIN_CONF_OLD;
+        if ( !file_exists(self::USER_PLUGIN_DATA_DIR) ) {
+            /**
+             * Cover old conf file location
+             */
+            copy(
+                "$tmpCpanelPluginDataDir/lswcm.conf",
+                self::USER_PLUGIN_DIR . '/lswcm.conf'
+            );
         }
 
-        if ( $oldLogic ) {
-            $restoreCmds = '/bin/mv -f '
-                . self::USER_PLUGIN_BACKUP_DIR
-                . "/lswcm.conf {$cpanelPluginConfFile};";
-        }
-        else {
-            $restoreCmds = '/bin/cp -prf '
-                . "{$tmpCpanelPluginDataDir} " . self::USER_PLUGIN_DIR . "/;";
-        }
+        $restoreCmds = '/bin/cp -prf '
+            . "$tmpCpanelPluginDataDir " . self::USER_PLUGIN_DIR . "/;";
 
         /**
          * Replace cPanel plugin conf file, templates, and custom
@@ -531,9 +545,9 @@ class CPanel extends ControlPanel
          */
         $restoreCmds .=
             " /bin/cp -prf "
-            . "{$tmpCpanelPluginTplDir} " . self::USER_PLUGIN_DIR . "/; "
+            . "$tmpCpanelPluginTplDir " . self::USER_PLUGIN_DIR . "/; "
             . "/bin/cp -prf "
-            . "{$tmpCpanelPluginCustTransDir} {$cpanelPluginLangDir}/; "
+            . "$tmpCpanelPluginCustTransDir $cpanelPluginLangDir/; "
             . '/bin/rm -rf ' . self::USER_PLUGIN_BACKUP_DIR;
 
         exec($restoreCmds);
@@ -566,8 +580,9 @@ class CPanel extends ControlPanel
      * operation to the currently discovered values.
      *
      * @since 1.13.2.2
+     * @since 1.13.5  Changed function visibility to public.
      */
-    private function updateCoreCpanelPluginConfSettings()
+    public function updateCoreCpanelPluginConfSettings()
     {
         $lswsHome = realpath(__DIR__ . '/../../../..');
 
@@ -593,42 +608,43 @@ class CPanel extends ControlPanel
      */
     public static function UpdateCpanelPluginConf( $setting, $value )
     {
-        $confFile = '';
+        if ( !file_exists(self::USER_PLUGIN_CONF)
+                && file_exists(self::USER_PLUGIN_CONF_OLD) ) {
+
+            if ( !file_exists(self::USER_PLUGIN_DATA_DIR) ) {
+                mkdir(self::USER_PLUGIN_DATA_DIR);
+            }
+
+            copy(self::USER_PLUGIN_CONF_OLD, self::USER_PLUGIN_CONF);
+        }
 
         if ( file_exists(self::USER_PLUGIN_CONF) ) {
-            $confFile = self::USER_PLUGIN_CONF;
-        }
-        elseif ( file_exists(self::USER_PLUGIN_CONF_OLD) ) {
-            $confFile = self::USER_PLUGIN_CONF_OLD;
-        }
-
-        if ( $confFile != '' ) {
 
             switch( $setting ) {
 
                 case self::USER_PLUGIN_SETTING_LSWS_DIR:
                     $pattern = '/LSWS_HOME_DIR = ".*"/';
-                    $replacement = "LSWS_HOME_DIR = \"{$value}\"";
+                    $replacement = "LSWS_HOME_DIR = \"$value\"";
                     break;
 
                 case self::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT:
                     $pattern = '/VHOST_CACHE_ROOT = ".*"/';
-                    $replacement = "VHOST_CACHE_ROOT = \"{$value}\"";
+                    $replacement = "VHOST_CACHE_ROOT = \"$value\"";
                     break;
 
                 default:
                     return;
             }
 
-            $content = file_get_contents($confFile);
+            $content = file_get_contents(self::USER_PLUGIN_CONF);
 
             if ( preg_match($pattern, $content) ) {
                 $content = preg_replace($pattern, $replacement, $content);
 
-                file_put_contents($confFile, $content);
+                file_put_contents(self::USER_PLUGIN_CONF, $content);
             }
             else {
-                file_put_contents($confFile, $replacement, FILE_APPEND);
+                file_put_contents(self::USER_PLUGIN_CONF, $replacement, FILE_APPEND);
             }
         }
     }

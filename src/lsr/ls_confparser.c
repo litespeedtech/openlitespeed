@@ -206,8 +206,7 @@ static void ls_add_to_list(ls_confparser_t *pThis, const char *pBegin,
     if (ls_objarray_getsize(&pThis->plist) >=
         ls_objarray_getcapacity(&pThis->plist))
     {
-        ls_objarray_guarantee(&pThis->plist,
-                              ls_objarray_getcapacity(&pThis->plist) + 10);
+        ls_objarray_guarantee(&pThis->plist, 16);
     }
     p = ls_objarray_getnew(&pThis->plist);
 

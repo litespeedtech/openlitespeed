@@ -1072,7 +1072,7 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
  * it will become simply "h3"
  */
 #ifndef H3_ALPN
-#define H3_ALPN "\x05h3-27\\x05h3-29\\x05h3-32"
+#define H3_ALPN "\x02h3\x05h3-29"
 #endif
 #define H3_ALSZ (sizeof(H3_ALPN) - 1)
 
