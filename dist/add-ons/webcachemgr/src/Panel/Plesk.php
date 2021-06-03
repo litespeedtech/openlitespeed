@@ -47,35 +47,42 @@ class Plesk extends ControlPanel
      */
     public function getPleskOS()
     {
-        $cmd = '';
-
-        $supportedOS = array(
+        $supportedOsList = array(
             'centos',
             'virtuozzo',
             'cloudlinux',
             'redhat',
+            'rhel',
             'ubuntu',
             'debian'
         );
 
-        if ( is_readable('/etc/os-release') ) {
-            $cmd = 'grep ^ID= /etc/os-release | cut -d"=" -f2 | xargs';
-        }
-        elseif ( is_readable('/etc/lsb-release') ) {
-            $cmd = 'grep ^DISTRIB_ID= /etc/lsb-release | cut -d"=" -f2 | xargs';
-        }
-        elseif ( is_readable('/etc/redhat-release') ) {
-            $cmd = 'cat /etc/redhat-release | awk \'{print $1}\'';
-        }
-        elseif ( file_exists('/etc/debian_version') ) {
+        $cmds = array();
+
+        if ( file_exists('/etc/debian_version') ) {
             return 'debian';
         }
 
-        if ( $cmd ) {
-            $OS = strtolower(trim(shell_exec($cmd)));
+        if ( is_readable('/etc/os-release') ) {
+            $cmds[] = 'grep ^ID= /etc/os-release | cut -d"=" -f2 | xargs';
+        }
 
-            if ( in_array($OS, $supportedOS) ) {
-                return $OS;
+        if ( is_readable('/etc/lsb-release') ) {
+            $cmds[] = 'grep ^DISTRIB_ID= /etc/lsb-release | cut -d"=" -f2 | xargs';
+        }
+
+        if ( is_readable('/etc/redhat-release') ) {
+            $cmds[] = 'cat /etc/redhat-release | awk \'{print $1}\'';
+        }
+
+        foreach ( $cmds as $cmd ) {
+            $OS = trim(shell_exec($cmd));
+
+            foreach ( $supportedOsList as $supportedOs ) {
+
+                if ( stripos($OS, $supportedOs) !== false ) {
+                    return $supportedOs;
+                }
             }
         }
 

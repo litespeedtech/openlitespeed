@@ -280,7 +280,7 @@ public:
     virtual void setLogLevel(const char *pLevel);
     virtual int  setAccessLogFile(const char *pFileName, int pipe);
     virtual int  setErrorLogFile(const char *pFileName);
-    virtual void setErrorLogRollingSize(off_t size, int keep_days);
+    virtual void setErrorLogRollingSize(off_t size, int keep_days, int compress);
 
     virtual AccessLog *getAccessLog() const
     {   return m_lastAccessLog ? m_lastAccessLog : m_pAccessLog[0];    }

@@ -400,7 +400,7 @@ int SslUtil::loadPemWithMissingDash(const char *pFile, char *buf, int bufLen,
         pEnd--;
     p = pEnd;
 
-    while (p[-1] == '-')
+    while (p > buf && p[-1] == '-')
         --p;
     while (p + 5 > pEnd)
         *pEnd++ = '-';

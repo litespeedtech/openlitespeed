@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.4.4';
+    const PANEL_API_VERSION = '1.13.5.2';
 
     /**
      * @since 1.9
@@ -206,7 +206,8 @@ abstract class ControlPanel
             }
             catch ( \Exception $e ){
                 throw new LSCMException(
-                    "Could not create object with class name {$className}"
+                    "Could not create object with class name {$className}. "
+                        . "Error: {$e->getMessage()}"
                 );
             }
         }
@@ -953,6 +954,9 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array (
+            '1.13.5.2',
+            '1.13.5.1',
+            '1.13.5',
             '1.13.4.4',
             '1.13.4.3',
             '1.13.4.2',

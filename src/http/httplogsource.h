@@ -46,7 +46,8 @@ public:
     virtual void setLogLevel(const char *pLevel) = 0;
     virtual int setAccessLogFile(const char *pFileName, int pipe) = 0;
     virtual int setErrorLogFile(const char *pFileName) = 0;
-    virtual void setErrorLogRollingSize(off_t size, int keep_days) = 0;
+    virtual void setErrorLogRollingSize(off_t size, int keep_days,
+                                        int compress) = 0;
     virtual void setBytesLogFilePath(const char *pFileName,
                                      off_t rollingSize) {}
     virtual void enableAccessLog(int size) {}

@@ -379,12 +379,14 @@ void HttpVHost::setLogLevel(const char *pLevel)
 }
 
 
-void HttpVHost::setErrorLogRollingSize(off_t size, int keep_days)
+void HttpVHost::setErrorLogRollingSize(off_t size, int keep_days, int compress)
 {
     if (m_pLogger)
     {
         m_pLogger->getAppender()->setRollingSize(size);
         m_pLogger->getAppender()->setKeepDays(keep_days);
+        if (compress != -1)
+            m_pLogger->getAppender()->setCompress(compress);
     }
 }
 

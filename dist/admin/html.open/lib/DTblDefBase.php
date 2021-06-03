@@ -265,7 +265,7 @@ class DTblDefBase
             'keepDays'        => self::NewIntAttr('keepDays', DMsg::ALbl('l_keepdays'), true, 0, null, 'log_keepDays'),
             'logFormat'       => self::NewTextAttr('logFormat', DMsg::ALbl('l_logformat'), 'cust', true, 'accessLog_logFormat'),
             'logHeaders'      => self::NewCheckBoxAttr('logHeaders', DMsg::ALbl('l_logheaders'), array('1' => 'Referrer', '2' => 'UserAgent', '4' => 'Host', '0' => DMsg::ALbl('o_none')), true, 'accessLog_logHeader'),
-            'compressArchive' => self::NewBoolAttr('compressArchive', DMsg::ALbl('l_compressarchive'), true, 'accessLog_compressArchive'),
+            'compressArchive' => self::NewBoolAttr('compressArchive', DMsg::ALbl('l_compressarchive'), true, 'log_compressArchive'),
             'extraHeaders' => self::NewTextAreaAttr('extraHeaders', DMsg::ALbl('l_extraHeaders'), 'cust', true, 5, null, 1, 1),
             'scriptHandler_type' => self::NewSelAttr('type', DMsg::ALbl('l_handlertype'), $this->_options['scriptHandler'], false, 'shType', 'onChange="lst_conf(\'c\')"'),
             'scriptHandler' => self::NewSelAttr('handler', DMsg::ALbl('l_handlername'), 'extprocessor:$$type', false, 'shHandlerName'),
@@ -360,6 +360,7 @@ class DTblDefBase
             self::NewSelAttr('debugLevel', DMsg::ALbl('l_debuglevel'), array('10' => DMsg::ALbl('o_high'), '5' => DMsg::ALbl('o_medium'), '2' => DMsg::ALbl('o_low'), '0' => DMsg::ALbl('o_none')), false, 'log_debugLevel'),
             $this->_attrs['rollingSize'],
             $this->_attrs['keepDays'],
+			$this->_attrs['compressArchive'],
             self::NewBoolAttr('enableStderrLog', DMsg::ALbl('l_enablestderrlog'), true, 'log_enableStderrLog')
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_serverlog'), $attrs, 'fileName');
@@ -1161,6 +1162,7 @@ class DTblDefBase
             self::NewSelAttr('logLevel', DMsg::ALbl('l_loglevel'), $this->_options['logLevel'], true, 'vhlog_logLevel'),
             $this->_attrs['rollingSize'],
             $this->_attrs['keepDays'],
+			$this->_attrs['compressArchive'],
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhlog'), $attrs, 'fileName');
     }
@@ -1187,8 +1189,8 @@ class DTblDefBase
             $this->_attrs['logHeaders'],
             $this->_attrs['rollingSize'],
             $this->_attrs['keepDays'],
+            $this->_attrs['compressArchive'],
             self::NewPathAttr('bytesLog', DMsg::ALbl('l_byteslog'), 'file0', 3, 'r', true, 'accessLog_bytesLog'),
-            $this->_attrs['compressArchive']
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName');
     }
@@ -1537,8 +1539,8 @@ class DTblDefBase
             $this->_attrs['logHeaders'],
             $this->_attrs['rollingSize'],
             $this->_attrs['keepDays'],
+            $this->_attrs['compressArchive'],
             self::NewPathAttr('bytesLog', DMsg::ALbl('l_byteslog'), 'file0', 3, 'r', true, 'accessLog_bytesLog'),
-            $this->_attrs['compressArchive']
         );
         $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName');
     }

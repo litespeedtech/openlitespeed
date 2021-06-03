@@ -1606,7 +1606,7 @@ int UdpListener::bind()
 int UdpListener::bindReusePort(int count, const char* addr_str)
 {
     int i, fd;
-    m_reusePortFds.guarantee(count);
+    m_reusePortFds.guarantee(count - m_reusePortFds.size());
     for(i = 0; i < count; ++i)
     {
         fd = bind2(LS_SOCK_REUSEPORT);
@@ -1780,7 +1780,12 @@ int UdpListener::startReusePortSocket(int start, int total, const char* addr_str
     int i, fd;
     LS_NOTICE("[UDP %s] Add SO_REUSEPORT sockets, #%d to #%d",
                 addr_str, start + 1, total);
-    m_reusePortFds.guarantee(total);
+    m_reusePortFds.guarantee(total - m_reusePortFds.size());
+
+    if (start == 1)
+        ls_setsockopt(m_reusePortFds[0], SOL_SOCKET, SO_REUSEPORT,
+                      (char *)(&start), sizeof(start));
+
     for(i = start; i < total; ++i)
     {
         fd = bind2(LS_SOCK_REUSEPORT);

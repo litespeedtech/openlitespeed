@@ -1213,9 +1213,9 @@ key_value_pair *HttpReq::newKeyValueBuf()
 key_value_pair *HttpReq::newUnknownHeader()
 {
     if (m_unknHeaders.capacity() == 0)
-        m_unknHeaders.guarantee(m_pPool, 10);
+        m_unknHeaders.guarantee(m_pPool, 16);
     else if (m_unknHeaders.capacity() <= m_unknHeaders.size() + 1)
-        m_unknHeaders.guarantee(m_pPool, m_unknHeaders.capacity() * 2);
+        m_unknHeaders.guarantee(m_pPool, m_unknHeaders.capacity());
     return m_unknHeaders.getNew();
 }
 
@@ -3458,9 +3458,9 @@ cookieval_t *CookieList::insertCookieIndex(ls_xpool_t *pool,
         const char *pName, int nameLen)
 {
     if (capacity() == 0)
-        guarantee(pool, 10);
+        guarantee(pool, 8);
     else if (capacity() <= getSize() + 1)
-        guarantee(pool, capacity() * 2);
+        guarantee(pool, capacity());
 
     cookieval_t *pCookieEntry = getNew();
     if (!pCookieEntry)

@@ -558,17 +558,14 @@ int StaticFileCacheData::tryCreateCompressed(char useBrotli)
     close(fd);
     if (size < 409600)
     {
-
         long ret = compressFile(useBrotli);
         if (ret == -1)
             LS_WARN("Failed to compress file %s, file size %ld!",
                     m_real.c_str(), (long)size);
-
         *p = 'l';
         unlink(pPath->buf());
         *p = 0;
         return ret;
-
     }
     else
     {
@@ -635,7 +632,7 @@ int StaticFileCacheData::compressFile(char useBrotli)
 
     GzipBuf gzBuf;
     Compressor *pCompressor;
-    VMemBuf compressedFile;
+    VMemBuf compressBuf;
     int iCompressLevel;
 
 #ifdef USE_BROTLI
@@ -666,24 +663,28 @@ int StaticFileCacheData::compressFile(char useBrotli)
             return LS_FAIL;
     }
 
+    if (compressBuf.set(VMBUF_ANON_MAP, 8192) == LS_FAIL)
+        return LS_FAIL;
+
     char achFileName[4096];
     snprintf(achFileName, 4096, "%s.XXXXXX", pPath->c_str());
     int fd = mkstemp(achFileName);
-    ret = compressedFile.setFd(achFileName, fd);
-    if (ret)
+    if (fd == -1)
+        return LS_FAIL;
+
+    pCompressor->setCompressCache(&compressBuf);
+    if (pCompressor->beginStream())
     {
         close(fd);
-        return ret;
-    }
-    pCompressor->setCompressCache(&compressedFile);
-    if (pCompressor->beginStream())
         return LS_FAIL;
+    }
     off_t offset = 0;
     int len;
     off_t wanted;
     const char *pData;
     char achBuf[8192];
-    while (true)
+    ret = 0;
+    while (ret == 0)
     {
         wanted = getFileSize() - offset;
         if (wanted <= 0)
@@ -694,18 +695,24 @@ int StaticFileCacheData::compressFile(char useBrotli)
             len = 8192;
         pData = m_fileData.getCacheData(offset, wanted, achBuf, len);
         if (wanted <= 0)
-            return LS_FAIL;
-        if (pCompressor->write(pData, wanted) == LS_FAIL)
-            return LS_FAIL;
+            ret = LS_FAIL;
+        else if (pCompressor->write(pData, wanted) == LS_FAIL)
+            ret = LS_FAIL;
         offset += wanted;
-
+        if (compressBuf.getCurWOffset() >= 8192)
+        {
+            if (compressBuf.writeToFile(fd) == LS_FAIL)
+                ret = LS_FAIL;
+            pCompressor->resetCompressCache();
+        }
     }
-    if (0 == pCompressor->endStream())
+    if (ret == 0 && 0 == pCompressor->endStream())
     {
         off_t size;
-        if (compressedFile.exactSize(&size) == 0)
+        if (compressBuf.writeToFile(fd) == 0)
         {
-            compressedFile.close();
+            size = lseek(fd, (size_t)0, SEEK_CUR);
+            close(fd);
             unlink(pPath->buf());
             rename(achFileName, pPath->buf());
 
@@ -717,6 +724,7 @@ int StaticFileCacheData::compressFile(char useBrotli)
             return size;
         }
     }
+    close(fd);
     return LS_FAIL;
 }
 

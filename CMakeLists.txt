@@ -7,7 +7,7 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 10)
+set(openlitespeed_PATCH_VERSION 11)
 set(openlitespeed_VERSION
     ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 
@@ -102,7 +102,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${MY_CMAKE_FLAGS}")
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 #Add definition for QUIC
-add_definitions(-DH3_ALPN="\\x05h3-29\\x05h3-34\\x02h3")
+add_definitions(-DH3_ALPN="\\x02h3\\x05h3-29")
 
 
 # Update submodules as needed

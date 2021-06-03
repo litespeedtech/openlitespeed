@@ -86,8 +86,6 @@ $_tipsdb['accessDenyDir'] = new DAttrHelp("拒绝访问的目录", '指定应该
 
 $_tipsdb['accessLog_bytesLog'] = new DAttrHelp("字节记录", '指定带宽字节日志文件的路径。设置后，将创建一份兼容cPanel面板的带宽日志。这将记录 一个请求传输的总字节数，包括请求内容和响应内容。', '[性能建议] 将日志文件放置在一个单独的磁盘上。', '文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。', '');
 
-$_tipsdb['accessLog_compressArchive'] = new DAttrHelp("压缩存档", '指定是否压缩回滚日志以节省磁盘空间。', '日志文件是高度可压缩的，建议采取压缩以减少旧日志的磁盘占用量。', '从单选框选择', '');
-
 $_tipsdb['accessLog_fileName'] = new DAttrHelp("文件名", '指定访问日志文件的文件名。', '[性能建议] 将访问日志文件放置在一个单独的磁盘上。', '文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。', '');
 
 $_tipsdb['accessLog_logFormat'] = new DAttrHelp("日志格式", ' 指定访问日志的格式。 设置之后，它将覆盖&quot;记录头部&quot; 的设定。', '', '字符串。日志格式的语法与Apache 2.0自定义 <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">log format</a>.', '<b>一般日志格式（CLF）</b><br/>    &quot;%h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/><b>支持虚拟主机的一般日志格式</b><br/>    &quot;%v %h %l %u %t \&quot;%r\&quot; %>s %b&quot;<br/><br/><b>NCSA扩展/组合日志格式</b><br/>    &quot;%h %l %u %t \&quot;%r\&quot; %>s %b \&quot;%{Referer}i\&quot; \&quot;%{User-agent}i\&quot; <br/><br/><b>记录Foobar的cookie值</b><br/>    &quot;%{Foobar}C&quot;');
@@ -242,7 +240,7 @@ $_tipsdb['errPage'] = new DAttrHelp("自定义错误页面", '当服务器在处
 
 $_tipsdb['errURL'] = new DAttrHelp("URL", '指定自定义错误页的URL。 当返回相应HTTP状态时服务器会将请求转发到该URL。 如果此URL指向一个不存在的地址，自带的错误页面将被使用。 该URL可以是一个静态文件，动态生成的页面，或者其他网站的页面 （网址开头为&quot;http(s): //&quot;）。 当转发到在其他网站上的页面时，客户端会收到一个重定向状态码 来替代原本的状态码。', '', 'URL', '');
 
-$_tipsdb['expWSAddress'] = new DAttrHelp("地址", '外部网络服务器使用的HTTP或HTTPS地址。', '[安全建议] 如果代理到同一台机器上运行的另一台Web服务器，请将IP地址设置为localhost或127.0.0.1，这样从其他机器上就无法访问外部应用程序。', 'IPv4 或 IPV6 地址(:端口). 如果外部Web服务器使用HTTPS，则在前面加上 &quot;https://&quot;。  如果外部Web服务器使用标准端口80或443，则端口是可选的。', '192.168.0.10<br/>127.0.0.1:5434<br/>https://10.0.8.9<br/>https://127.0.0.1:5438');
+$_tipsdb['expWSAddress'] = new DAttrHelp("地址", '外部网络服务器使用的HTTP,HTTPS或Unix域套接字(UDS)地址。', '[安全建议] 如果代理到同一台机器上运行的另一台Web服务器，请将IP地址设置为localhost或127.0.0.1，这样从其他机器上就无法访问外部应用程序。', 'IPv4 或 IPV6 地址(:端口),UDS://path或unix:path 如果外部Web服务器使用HTTPS，则在前面加上 &quot;https://&quot;。  如果外部Web服务器使用标准端口80或443，则端口是可选的。', '192.168.0.10<br/>127.0.0.1:5434<br/>https://10.0.8.9<br/>https://127.0.0.1:5438<br/>UDS://tmp/lshttpd/php.sock<br/>unix:/tmp/lshttpd/php.sock');
 
 $_tipsdb['expiresByType'] = new DAttrHelp("按类型过期", '为各个MIME类型分别指定Expires头设置。', '', '逗号分隔的“MIME-类型=A|M秒数”的列表。 文件将在基准时间（A|M）加指定秒数的时间后失效。<br/><br/>“A”代表基准时间为客户端的访问时间，“M”代表文件的最后修改时间。 MIME-类型可使用通配符“*”，如image/*。', '');
 
@@ -383,6 +381,8 @@ $_tipsdb['lname'] = new DAttrHelp("Name - Listener", 'The unique name that ident
 $_tipsdb['location'] = new DAttrHelp("位置", '指定此context在文件系统中的对应位置。<br/><br/>Default value: $DOC_ROOT + &quot;URI&quot;', '', 'It can be an absolute path or path relative to $SERVER_ROOT, $VH_ROOT, or $DOC_ROOT. $DOC_ROOT is the default relative path, and can be omitted.<br/><br/>If the &quot;URI&quot; is a regular expression, then the matched sub-string can be used to form the &quot;Root&quot; string. The matched sub-string can be referenced with the values &quot;$1&quot; - &quot;$9&quot;. &quot;$0&quot; and &quot;&&quot; can be used to reference the whole matched string. Additionally, a query string can be set by appending a &quot;?&quot; followed by the query string. Be careful. &quot;&&quot; should be escaped as &quot;\&&quot; in the query string.', 'A plain URI like /examples/ with &quot;位置&quot; set to /home/john/web_examples will map the request &quot;/examples/foo/bar.html&quot; to file &quot;/home/john/web_examples/foo/bar.html&quot;.<br/>To simulate Apache&#039;s mod_userdir, set URI to exp: ^/~([A-Za-z0-9]+)(.*), set &quot;位置&quot; to /home/$1/public_html$2. With these settings, a request of URI /~john/foo/bar.html will map to file /home/john/public_html/foo/bar.html.');
 
 $_tipsdb['logUseServer'] = new DAttrHelp("使用服务器日志", '指定是否将虚拟主机的日志信息放置到服务器日志文件中，而不是创建独自的日志文件。', '', '从单选框选择', '');
+
+$_tipsdb['log_compressArchive'] = new DAttrHelp("压缩存档", '指定是否压缩回滚日志以节省磁盘空间。', '日志文件是高度可压缩的，建议采取压缩以减少旧日志的磁盘占用量。', '从单选框选择', '');
 
 $_tipsdb['log_debugLevel'] = new DAttrHelp("调试级别", '指定调试日志级别。 要使用此功能，&quot;日志级别&quot;必须设置为DEBUG。 在“调试级别”设置为NONE时，即使&quot;日志级别&quot; 设置为DEBUG，调试日志也是被禁用的。 在正在运行的服务器上，&quot;Toggle Debug Logging&quot;可以被用于 控制调试级别而无需重启。', '[性能建议] 重要！如果你不需要详细的调试日志记录， 应始终将其设置为NONE。启用调试日志记录将严重降低服务性能 ，且可能在很短时间耗尽磁盘空间。 调试日志记录包括每个请求和响应的详细信息。<br/><br/>我们推荐将日志级别设置为DEBUG，调试级别设置为NONE。 这些设置意味着你的磁盘不会被调试日志塞满， 但是你可以使用&quot;Toggle Debug Logging&quot; 控制调试输出。这个动作可以实时启用或关闭调试记录， 对于调试繁忙的生产服务器非常有用。', '从列表中选择', '');
 
@@ -750,7 +750,7 @@ $_tipsdb['vreload'] = new DAttrHelp("Restart - Virtual Host", 'The Restart actio
 
 $_tipsdb['vstatus'] = new DAttrHelp("Status - Virtual Host", 'The current status of a virtual host.   The status can be: Running, Stopped, Restart Required,   or Running - Removed from Configuration.  <ul>     <li>Running means the virtual host is loaded and in service.</li>     <li>Stopped means the virtual host is loaded but not in service (disabled). </li>     <li> Restart Required means this is a newly added virtual host and          the server has not yet loaded its configuration. </li>     <li>Running - Removed from Configuration means the virtual host has been deleted      from the server&#039;s configuration but it is still in service. </li> </ul>', '', '', '');
 
-$_tipsdb['wsaddr'] = new DAttrHelp("地址", 'WebSocket 后端使用的唯一网络套接字地址。 支持 IPv4 套接字、IPv6 套接字和 Unix 域套接字 (UDS)。 IPv4 和 IPv6 套接字可用于网络上的通信。 只有当 WebSocket 后端与服务器在同一台机器上时，才能使用 UDS。', ' If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.', 'IPv4 or IPV6 address:port or UDS://path', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock.');
+$_tipsdb['wsaddr'] = new DAttrHelp("地址", 'WebSocket 后端使用的唯一网络套接字地址。 支持 IPv4 套接字、IPv6 套接字和 Unix 域套接字 (UDS)。 IPv4 和 IPv6 套接字可用于网络上的通信。 只有当 WebSocket 后端与服务器在同一台机器上时，才能使用 UDS。', ' If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.', 'IPv4/IPv6 address:port, UDS://path, or unix:path', '127.0.0.1:5434 <br/>UDS://tmp/lshttpd/php.sock<br/>unix:/tmp/lshttpd/php.sock');
 
 $_tipsdb['wsgiBin'] = new DAttrHelp("WSGI路径", 'LiteSpeed Python Web服务器的可执行文件（lswsgi）的路径。<br/><br/>This 可执行文件是通过使用LiteSpeed的WSGI LSAPI模块编译Python生成的。', '', '绝对路径', '');
 

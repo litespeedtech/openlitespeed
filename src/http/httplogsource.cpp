@@ -212,7 +212,7 @@ int HttpLogSource::initAllLog(const char *pRoot)
     setErrorLogFile(achBuf);
     setLogLevel("DEBUG");
     off_t rollSize = 1024 * 10240;
-    setErrorLogRollingSize(rollSize, 30);
+    setErrorLogRollingSize(rollSize, 30, 0);
     HttpLog::setDebugLevel(0);
 
     lstrncpy(pEnd, "/logs/stderr.log", sizeof(achBuf) - (pEnd - p));
@@ -259,7 +259,9 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
                 INT_MAX, 1024 * 10240);
     int days = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "keepDays", 0,
                LLONG_MAX, 30);
-    setErrorLogRollingSize(rollSize, days);
+    int compress = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "compressArchive", -1,
+               1, -1);
+    setErrorLogRollingSize(rollSize, days, compress);
 
     m_iAioErrorLog = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                      "enableaiolog", 0, 1, -1);

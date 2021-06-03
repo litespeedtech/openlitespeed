@@ -201,12 +201,16 @@ int ls_objarray_setcapacity_xpool(ls_objarray_t *pThis, ls_xpool_t *pool,
  * be specified; otherwise, it should be NULL.
  *
  * @param[in] pThis - A pointer to an initalized objarray object.
- * @param[in] numObj - The number of objects to guarantee.
+ * @param[in] numObj - The number of free objects to guarantee.
  * @return -1 if fail, 0 if success.
  */
 ls_inline int ls_objarray_guarantee(ls_objarray_t *pThis,
                                      int numObj)
-{   return ls_objarray_setcapacity(pThis, numObj /*+ pThis->sizenow*/);    }
+{
+    if (pThis->sizemax - pThis->sizenow >= numObj)
+        return 0;
+    return ls_objarray_setcapacity(pThis, numObj + pThis->sizenow);
+}
 
 
 /** @ls_objarray_guarantee_xpool
@@ -217,12 +221,16 @@ ls_inline int ls_objarray_guarantee(ls_objarray_t *pThis,
  *
  * @param[in] pThis - A pointer to an initalized objarray object.
  * @param[in] pool - A pointer to the session pool if the user wishes to use one.  NULL if not.
- * @param[in] numObj - The number of objects to guarantee.
+ * @param[in] numObj - The number of free objects to guarantee.
  * @return -1 if fail, 0 if success.
  */
 ls_inline int ls_objarray_guarantee_xpool(ls_objarray_t *pThis,
                                      ls_xpool_t *pool, int numObj)
-{   return ls_objarray_setcapacity_xpool(pThis, pool, numObj /*+ pThis->sizenow*/);    }
+{
+    if (pThis->sizemax - pThis->sizenow >= numObj)
+        return 0;
+    return ls_objarray_setcapacity_xpool(pThis, pool, numObj + pThis->sizenow);
+}
 
 
 /** @ls_objarray_getobj
