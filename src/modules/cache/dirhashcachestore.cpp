@@ -153,6 +153,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     int pathLen = 0;
     int ret = 0;
 
+    setLastError(0);
     if (iter != end())
     {
         pEntry = iter.second();
@@ -418,6 +419,7 @@ int DirHashCacheStore::createCacheFile(const CacheHash *pHash, bool is_private)
     struct stat st;
     TempUmask tumsk(0007);
 
+    setLastError(0);
     lstrncpy(&achBuf[n], ".tmp", sizeof(achBuf) - n);
     if (nio_stat(achBuf, &st) == 0)
     {
@@ -434,14 +436,18 @@ int DirHashCacheStore::createCacheFile(const CacheHash *pHash, bool is_private)
     if ((nio_stat(achBuf, &st) == -1) && (errno == ENOENT))
     {
         if (createMissingPath(achBuf, pPathEnd, is_private) == -1)
+        {
+            setLastError(errno);
             return -1;
-
+        }
     }
     *pPathEnd = '/';
 
     int fd = ::open(achBuf, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0660);
     if (fd != -1)
         ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+    else
+        setLastError(errno);
     //LS_INFO( "createCacheEntry(), open fd: %d", fd ));
     return fd;
 }

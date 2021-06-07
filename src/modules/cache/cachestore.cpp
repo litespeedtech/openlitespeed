@@ -33,6 +33,7 @@ CacheStore::CacheStore()
     , m_iTotalEntries(0)
     , m_iTotalHit(0)
     , m_iTotalMiss(0)
+    , m_lastError(0)
     , m_pManager(NULL)
 {
 }
