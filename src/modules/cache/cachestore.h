@@ -108,6 +108,8 @@ public:
     void debug_dump(CacheEntry *pEntry, const char *msg);
 
     int cleanByTracking(int public_max, int private_max);
+    int getLastError() const    {   return m_lastError; }
+    void setLastError(int err)  {   m_lastError = err;  }
 
     static int cleanByTrackingCb(void *, void *);
 
@@ -121,6 +123,7 @@ private:
     int m_iTotalEntries;
     int m_iTotalHit;
     int m_iTotalMiss;
+    int m_lastError;
 
     TPointerList< CacheEntry >       m_dirtyList;
     CacheManager                    *m_pManager;

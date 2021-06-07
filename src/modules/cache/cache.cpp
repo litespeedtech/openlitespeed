@@ -1222,7 +1222,7 @@ static void applyOneModList(const lsi_session_t *session, QsInfo *pQsInfo,
 {
     if (pModList->getParent())
         applyOneModList(session, pQsInfo, pModList->getParent());
-    
+
     int count = pQsInfo->qs_index_end - pQsInfo->qs_index;
     char *p_qs_remove;
     const char **p_qs_idx;
@@ -1230,7 +1230,7 @@ static void applyOneModList(const lsi_session_t *session, QsInfo *pQsInfo,
     {
         if (iter->m_operator > CACHE_KEY_QS_DEL_PREFIX)
             continue;
-        for(p_qs_idx = &pQsInfo->qs_index[0], p_qs_remove = pQsInfo->qs_remove; 
+        for(p_qs_idx = &pQsInfo->qs_index[0], p_qs_remove = pQsInfo->qs_remove;
             p_qs_idx < pQsInfo->qs_index_end; ++p_qs_idx, ++p_qs_remove)
         {
             if (*p_qs_remove == 1)
@@ -1239,7 +1239,7 @@ static void applyOneModList(const lsi_session_t *session, QsInfo *pQsInfo,
                 continue;
             if (iter->m_operator == CACHE_KEY_QS_DEL_EXACT)
             {
-                if (*p_qs_idx + iter->m_str.len < pQsInfo->pQsEnd  
+                if (*p_qs_idx + iter->m_str.len < pQsInfo->pQsEnd
                     && *(*p_qs_idx + iter->m_str.len) != '=')
                     continue;
                 g_api->log(session, LSI_LOG_DEBUG,
@@ -1285,13 +1285,13 @@ applyModListToQueryString(const lsi_session_t *session,
         }
     }
     *qsInfo.qs_index_end = qsInfo.pQsEnd;
-    
+
     memset(qsInfo.qs_remove, 0, qsInfo.qs_index_end - qsInfo.qs_index);
     qsInfo.remove_cnt = 0;
     qsInfo.remove_size = 0;
 
     applyOneModList(session, &qsInfo, pModList);
-    
+
     if (qsInfo.remove_cnt == 0)
         return QSA_UNMODIFIED;
     if (qsInfo.remove_cnt >= qsInfo.qs_index_end - qsInfo.qs_index)
@@ -2082,23 +2082,35 @@ static int createEntry(lsi_param_t *rec)
         return 0;
     }
 
+    CacheHash *hash = NULL;
     if (myData->cacheCtrl.isPrivateCacheable())
-        myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                             myData->cePrivateHash, &myData->cacheKey);
+        hash = &myData->cePrivateHash;
     else if (myData->cacheCtrl.isPublicCacheable())
     {
         if (myData->iCacheState != CE_STATE_UPDATE_STALE)
+            hash = &myData->cePublicHash;
+    }
+
+    if (hash)
+    {
+        myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
+                                 *hash, &myData->cacheKey);
+        if (myData->pEntry == NULL)
         {
-            myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                                 myData->cePublicHash, &myData->cacheKey);
+            int error = myData->pConfig->getStore()->getLastError();
+            if (error == EPERM)
+                g_api->log(rec->session, LSI_LOG_ERROR,
+                   "[%s] createEntry failed, may due to no permission to write file.\n", ModuleNameStr);
+            else
+                g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s] createEntry is being created by another worker.\n", ModuleNameStr);
+
         }
     }
 
     if (myData->pEntry == NULL)
     {
         clearHooks(rec->session);
-        g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s] createEntry failed, may due to no permission to write file or file is updating.\n", ModuleNameStr);
         return 0;
     }
 
