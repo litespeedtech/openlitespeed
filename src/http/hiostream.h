@@ -162,6 +162,7 @@ public:
     virtual int onTimer()             {    return 0;   }
 
     virtual int detectClose()       {   return 0;   }
+    virtual void enableSocketKeepAlive() {}
 
     void reset(int32_t timeStamp);
 

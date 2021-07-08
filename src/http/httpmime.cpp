@@ -1101,14 +1101,23 @@ void HttpMime::setHandler(MimeSetting *pSetting, void *pValue)
 }
 
 
-int HttpMime::needCharset(const char *pMIME)
+bool HttpMime::needCharset(const char *pMimeType, int len)
 {
-    if (*pMIME != 't')
-        return 0;
-    if ((strncmp(pMIME, "text/html", 9) != 0) &&
-        (strncmp(pMIME, "text/plain", 10) != 0))
-        return 0;
-    return 1;
+    char ch = *pMimeType;
+    if (ch != 't' && ch != 'a')
+        return false;
+    if (strncmp(pMimeType, "text/", 5) == 0)
+        return true;
+    if (len >= 16 && strncmp(pMimeType, "application/", 12) == 0)
+    {
+        if (strncasecmp(pMimeType + 12, "x-javascript", 12) == 0)
+            return true;
+        if (strncasecmp(pMimeType + 12, "javascript", 10) == 0)
+            return true;
+        if (strncasecmp(pMimeType + 12, "json", 4) == 0)
+            return true;
+    }
+    return false;
 }
 
 

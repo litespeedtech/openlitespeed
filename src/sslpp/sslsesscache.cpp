@@ -87,7 +87,7 @@ SslSessCache::~SslSessCache()
 }
 
 
-int SslSessCache::initShm(int uid, int gid)
+int SslSessCache::initShm(int uid, int gid, int tid_flag)
 {
     LsShm *pShm;
     LsShmPool *pPool;
@@ -98,7 +98,7 @@ int SslSessCache::initShm(int uid, int gid)
     if ((pPool = pShm->getGlobalPool()) == NULL)
         return LS_FAIL;
     if ((m_pSessStore = pPool->getNamedHash(shmSslCache, 10000,
-                        LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU | LSSHM_FLAG_TID)) != NULL)
+                        LsShmHash::hash32id, memcmp, LSSHM_FLAG_LRU | tid_flag)) != NULL)
     {
         m_pSessStore->disableAutoLock(); // we will be responsible for the lock
         s_numNew = 0;
@@ -114,7 +114,8 @@ int SslSessCache::initShm(int uid, int gid)
 }
 
 
-int SslSessCache::init(int32_t iTimeout, int iMaxEntries, int uid, int gid)
+int SslSessCache::init(int32_t iTimeout, int iMaxEntries,
+                       int uid, int gid, int tid_flag)
 {
     if (isReady())
     {
@@ -123,9 +124,9 @@ int SslSessCache::init(int32_t iTimeout, int iMaxEntries, int uid, int gid)
     }
     m_expireSec = iTimeout;
     m_maxEntries = iMaxEntries;
-    int ret = initShm(uid, gid);
+    int ret = initShm(uid, gid, tid_flag);
     if (ret == LS_FAIL)  //try again after remove old SHM file.
-        ret = initShm(uid, gid);
+        ret = initShm(uid, gid, tid_flag);
     return ret;
 }
 

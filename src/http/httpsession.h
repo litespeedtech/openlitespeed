@@ -74,6 +74,7 @@ enum  HttpSessionState
     HSS_AIO_COMPLETE,
     HSS_IO_ERROR,
     HSS_COMPLETE,
+    HSS_DROP,
     HSS_RECYCLING,
     HSS_TOBERECYCLED
 };
@@ -137,7 +138,7 @@ enum HSPState
 #define HSF_AIO_READING             (1<<6)
 #define HSF_ACCESS_LOG_OFF          (1<<7)
 #define HSF_NO_ERROR_PAGE           (1<<8)
-
+#define HSF_TCP_KEEPALIVE           (1<<9)
 #define HSF_HOOK_SESSION_STARTED    (1<<10)
 #define HSF_NO_CONN_TIMEOUT         (1<<11)
 #define HSF_NO_ABORT                (1<<12)
@@ -678,6 +679,10 @@ public:
     void setSsiRuntime(SsiRuntime *p)       {   m_pSsiRuntime = p;          }
     void releaseSsiRuntime();
     int setupSsiRuntime();
+
+    void dropConnection();
+    void forceClose();
+    void process444(const char *pHeaderVal);
 
     int isDropConnection() const
     {   return m_processState == HSPS_DROP_CONNECTION;  }

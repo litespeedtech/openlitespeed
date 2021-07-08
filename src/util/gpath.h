@@ -50,6 +50,7 @@ public:
 
     static int  initReadLinkCache();
     static void clearReadLinkCache();
+    static int  safeCreateFile( const char *pFile, int mode);
 
 };
 

@@ -331,6 +331,9 @@ public:
     //{   m_baseIO.getThrottleCtrl().setLimit( limit );    }
 
     int onTimer();
+
+    void enableSocketKeepAlive();
+
     int isFromLocalAddr() const;
 
     //void stopThrottleTimer();

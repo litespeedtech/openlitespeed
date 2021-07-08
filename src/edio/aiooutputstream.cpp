@@ -183,7 +183,7 @@ int AioOutputStream::append(const char *pBuf, int len)
 #define LS_AIO_MAXBUF 4096
 int AioOutputStream::onEvent()
 {
-    ls_mutex_lock(&m_mutex);
+    MutexLocker lock(m_mutex);
     if (m_pSend)
     {
         int err = getError();
@@ -195,17 +195,14 @@ int AioOutputStream::onEvent()
         }
         else
         {
-            ls_mutex_unlock(&m_mutex);
             return LS_OK;
         }
     }
     if (m_flushRequested)
     {
         int ret = flushEx();
-        ls_mutex_unlock(&m_mutex);
         return ret;
     }
-    ls_mutex_unlock(&m_mutex);
     if (m_closeRequested)
         return close();
     return LS_OK;

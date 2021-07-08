@@ -31,47 +31,7 @@
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
-#include <sys/syscall.h>
-
-#if !defined( __NR_signalfd )
-#if defined(__x86_64__)
-#define __NR_signalfd 282
-#elif defined(__i386__)
-#define __NR_signalfd 321
-#else
-#error Cannot detect your architecture!
-#endif //defined(__i386__)
-#endif //!defined(__NR_signalfd )
-
-#define SIZEOF_SIG (_NSIG / 8)
-#define SIZEOF_SIGSET (SIZEOF_SIG > sizeof(sigset_t) ? sizeof(sigset_t): SIZEOF_SIG)
-
-
-struct signalfd_siginfo
-{
-    u_int32_t ssi_signo;
-    int32_t ssi_errno;
-    int32_t ssi_code;
-    u_int32_t ssi_pid;
-    u_int32_t ssi_uid;
-    int32_t ssi_fd;
-    u_int32_t ssi_tid;
-    u_int32_t ssi_band;
-    u_int32_t ssi_overrun;
-    u_int32_t ssi_trapno;
-    int32_t ssi_status;
-    int32_t ssi_int;
-    u_int64_t ssi_ptr;
-    u_int64_t ssi_utime;
-    u_int64_t ssi_stime;
-    u_int64_t ssi_addr;
-    u_int8_t __pad[48];
-};
-
-static inline int signalfd(int ufc, sigset_t const *mask, int flag)
-{
-    return syscall(__NR_signalfd, ufc, mask, SIZEOF_SIGSET);
-}
+#include <sys/signalfd.h>
 
 #endif //defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 

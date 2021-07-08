@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2017-2020
+ * @copyright (c) 2017-2021
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.5.2';
+    const PANEL_API_VERSION = '1.13.7';
 
     /**
      * @since 1.9
@@ -531,6 +531,13 @@ abstract class ControlPanel
      */
     abstract protected function prepareDocrootMap();
 
+    /**
+     *
+     * @param WPInstall $wpInstall
+     *
+     * @return string
+     * @throws LSCMException  Thrown in some existing implementations.
+     */
     abstract public function getPhpBinary( WPInstall $wpInstall );
 
     /**
@@ -953,7 +960,9 @@ abstract class ControlPanel
      */
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
-        $supportedAPIVers = array (
+        $supportedAPIVers = array(
+            '1.13.7',
+            '1.13.6',
             '1.13.5.2',
             '1.13.5.1',
             '1.13.5',

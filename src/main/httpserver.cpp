@@ -2534,7 +2534,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                            "sslSessionCacheTimeout",
                            0, INT_MAX, 216000);
         if (SslSessCache::getInstance().init(iSslCacheTimeout,
-            iSslCacheSize, getuid(), getgid()) != LS_OK)
+            iSslCacheSize, getuid(), getgid(), 0) != LS_OK)
         {
             LS_WARN("Failed to init SSL Session Id Cache");
             return -1;

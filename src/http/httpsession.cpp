@@ -575,6 +575,9 @@ void HttpSession::nextRequest()
 
         releaseResources();
         setClientInfo(pInfo->m_pClientInfo);
+        ls_atomic_setint((volatile uint32_t*)&m_iFlag, 0);
+        ls_atomic_setint((volatile uint32_t*)&m_iFlag2, 0);
+
         setProcessState(HSPS_READ_REQ_HEADER);
 
         if (m_request.pendingHeaderDataLen())
@@ -590,7 +593,6 @@ void HttpSession::nextRequest()
             setState(HSS_WAITING);
             HttpStats::incIdleConns();
         }
-        resetBackRefPtr();
     }
 }
 
@@ -1215,6 +1217,8 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
     }
 
     ClientInfo *pInfo = ClientCache::getInstance().getClientInfo(pAddr);
+    if (!pInfo)
+        return 0;
     LS_DBG_L(getLogSession(),
              "update REMOTE_ADDR based on %s header to %s",
              pHeaderName, achIP);
@@ -1225,22 +1229,27 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
 
     if (pInfo == m_pClientInfo)
         return 0;
+
+    setFlag(HSF_BEHIND_PROXY);
+
     //NOTE: do not decrease the count for the real IP.
     //      increase count for the x-forwarded-for IP.
     //      we decrease it in nextrequest() when change it back to real IP.
     //m_pClientInfo->decConn();
-    //pInfo->incConn(1);
-
+    pInfo->incConn();
     m_pClientInfo = pInfo;
-    LS_DBG_L("[%s] increase connection count to %ld.",
+
+    if (getLogSession()->isLogIdBuilt())
+        getLogSession()->lockAddOrReplaceFrom('>', getPeerAddrString());
+
+    LS_DBG_L("[%s] increase connection count to %d.",
              m_pClientInfo->getAddrString(), m_pClientInfo->getConns());
-    setFlag(HSF_BEHIND_PROXY);
     if (pInfo)
     {
         if (pInfo->checkAccess())
         {
             LS_INFO(getLogSession(),
-                "Client IP from header: %s, cur conns: %zu, access denied",
+                "Client IP from header: %s, cur conns: %d, access denied",
                 pInfo->getAddrString(), pInfo->getConns());
             return SC_403;
         }
@@ -1945,9 +1954,13 @@ int HttpSession::rewriteToRecaptcha(bool blockIfTooManyAttempts)
     LS_DBG_M(getLogSession(), "[RECAPTCHA] Try to rewrite request to recaptcha.");
     ClientInfo *pClientInfo = getClientInfo();
 
-    if (blockIfTooManyAttempts && !recaptchaAttemptsAvail())
+    if (blockIfTooManyAttempts && !recaptchaAttemptsAvail()
+        && !m_request.isCaptcha() )
+    {
+        pClientInfo->markAsBot(getReq()->getVhostName(), BOT_CAPTCHA);
+        dropConnection();
         return 0;
-
+    }
 
     if (!m_request.isCaptcha() &&  hasPendingCaptcha())
     {
@@ -2972,6 +2985,37 @@ int HttpSession::cleanUpHandler(HSPState nextStateAfterMtEnd)
 }
 
 
+void HttpSession::dropConnection()
+{
+    LS_DBG_L(getLogSession(), "drop connections from this IP.\n");
+    if (getClientInfo()->getAccess() == AC_ALLOW)
+        getClientInfo()->setAccess(AC_DENY);
+    forceClose();
+}
+
+
+void HttpSession::forceClose()
+{
+    if (getStream())
+    {
+        getStream()->setAbortedFlag();
+        getStream()->setState( HIOS_CLOSING );
+        getStream()->wantWrite(1);
+    }
+    setState(HSS_DROP);
+    setProcessState(HSPS_DROP_CONNECTION);
+}
+
+
+void HttpSession::process444(const char *pHeaderVal)
+{
+    if (strncasecmp(pHeaderVal, "BLOCK", 5) == 0)
+        dropConnection();
+    else
+        forceClose();
+}
+
+
 int HttpSession::onCloseEx()
 {
     closeSession();
@@ -3014,6 +3058,15 @@ void HttpSession::releaseResources()
     {
         HttpResourceManager::getInstance().recycle(m_pChunkIS);
         m_pChunkIS = NULL;
+    }
+
+    if (getFlag(HSF_BEHIND_PROXY) && m_pClientInfo)
+    {
+        m_pClientInfo->decConn();
+        LS_DBG_L("[%s] reduce connection count to %d.",
+                    m_pClientInfo->getAddrString(), m_pClientInfo->getConns());
+        assert(m_pClientInfo->getConns() >= 0);
+        m_pClientInfo = NULL;
     }
 
     m_sendFileInfo.release();
@@ -3343,7 +3396,11 @@ int HttpSession::detectConnectionTimeout(int delta)
     long idle = DateTime::s_curTime - (int)getStream()->getActiveTime();
     if (idle > config.getConnTimeout() && (!getFlag(HSF_NO_CONN_TIMEOUT)))
         timeout = 1;
-
+    else if (idle > 60 && !getStream()->isSpdy() && config.isCooldown())
+    {
+        if (testAndSetFlag(HSF_TCP_KEEPALIVE))
+            getStream()->enableSocketKeepAlive();
+    }
     if (timeout)
     {
 //         if (pNtwkIOLink->getfd() != pNtwkIOLink->getPollfd()->fd)

@@ -212,12 +212,10 @@ int ClientInfo::checkAccess()
             if (DateTime::s_curTime - getOverLimitTime()
                 >= ClientInfo::getOverLimitGracePeriod())
             {
-                LS_NOTICE("[%s] is over per client soft connection limit: %d for %d seconds,"
-                          " close connection!",
-                          getAddrString(), iSoftLimit,
+                LS_NOTICE("[%s] reached per client soft connection limit: %d for %d seconds,"
+                          " close connection!", getAddrString(), iSoftLimit,
                           (int)(DateTime::s_curTime - getOverLimitTime()));
-                setOverLimitTime(DateTime::s_curTime);
-                setAccess(AC_BLOCK);
+                markAsBot( "N/A", BOT_OVER_SOFT );
                 return 1;
             }
             else
@@ -230,10 +228,9 @@ int ClientInfo::checkAccess()
             setOverLimitTime(DateTime::s_curTime);
         if ((int)getConns() >= ClientInfo::getPerClientHardLimit())
         {
-            LS_NOTICE("[%s] Reached per client connection hard limit: %d, close connection!",
-                      getAddrString(), ClientInfo::getPerClientHardLimit());
-            setOverLimitTime(DateTime::s_curTime);
-            setAccess(AC_BLOCK);
+            LS_NOTICE("[%s] Reached per client hard connection limit: %d, current: %d, close connection!",
+                      getAddrString(), ClientInfo::getPerClientHardLimit(), getConns());
+            markAsBot( "N/A", BOT_OVER_HARD );
             return 1;
         }
     //fall through
@@ -241,6 +238,45 @@ int ClientInfo::checkAccess()
     default:
         break;
     }
+    return 0;
+}
+
+
+static const char * s_reason[BOT_REASON_COUNT] =
+{
+    "Unknown",
+    "OverConnSoftLimit",
+    "OverConnHardLimit",
+    "TooManyBadRequests",
+    "FailedCaptchaVerify",
+    "HTTP_flood",
+    "DetectByRewriteRule",
+    "TooManyNon2xxStatus",
+    "WordPressBruteForce"
+};
+
+
+int ClientInfo::markAsBot(const char *pVhostName, enum BOT_REASON code)
+{
+    LS_LOG_F(log4cxx::Level::WARN, NULL,
+             "[%s] bot detected for vhost [%s], reason: %s, close connection!\n",
+              getAddrString(), pVhostName, s_reason[code&31]);
+    if (getAccess() == AC_TRUST)
+    {
+        LS_NOTICE( "[%s] trusted, ignore!", getAddrString());
+        return -1;
+    }
+    if (getFlag(CIF_LOCAL_ADDR))
+    {
+        LS_NOTICE( "[%s] is a local address, ignore!", getAddrString());
+        return -1;
+    }
+
+    setOverLimitTime(DateTime::s_curTime);
+    //if ( code != BOT_TOO_MANY_BAD_REQ )
+    setAccess(AC_BLOCK);
+    setBotReason(code);
+    //m_bot_reason = code;
     return 0;
 }
 

@@ -1299,7 +1299,7 @@ int UpkdHdrBuilder::guarantee(int size)
     if (avail > size)
         return LS_OK;
     int require = tmp_max << 1;
-    while(require < size)
+    while(require < tmp_used + size)
         require <<= 1;
     if (require >= 65536)
         return LS_FAIL;
@@ -1504,7 +1504,7 @@ lsxpack_header_t *UpkdHdrBuilder::prepareDecode(lsxpack_header_t *hdr,
     if ((size_t)headers->m_buf->available() < mini_buf_size + 2)
     {
         size_t increase_to = (mini_buf_size + 2 + 255) & (~255);
-        if (increase_to >= MAX_BUF_SIZE)
+        if (increase_to + headers->m_buf->size() >= MAX_BUF_SIZE)
         {
             if (hdr && hdr == working)
             {

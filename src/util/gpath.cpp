@@ -616,5 +616,31 @@ int GPath::createMissingPath(char *pBuf, int mode)
 }
 
 
+int GPath::safeCreateFile( const char *pFile, int mode)
+{
+    char achTmp[4096];
+    int fd;
+    int n = snprintf(achTmp, 4095, "%s.XXXXXX", pFile);
+    if (n > 4095)
+        return -1;
+    fd = mkstemp(achTmp);
+    if (fd != -1)
+    {
+        fcntl(fd, F_SETFD,  FD_CLOEXEC);
+        if (rename(achTmp, pFile) == -1)
+        {
+            int err_save = errno;
+            unlink(achTmp);
+            close(fd);
+            fd = -1;
+            errno = err_save;
+        }
+        else
+            chmod(pFile, mode);
+    }
+    return fd;
+}
+
+
 
 
