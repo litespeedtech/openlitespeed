@@ -660,7 +660,6 @@ void QuicEngine::onStreamTimer()
 QuicEngine::QuicEngine()
     : m_pEngine(NULL)
     , m_pMultiplexer(NULL)
-    , m_cooldown(0)
 {
     memset(&m_config, 0, sizeof(m_config));
 }
@@ -777,7 +776,6 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 
 void QuicEngine::startCooldown()
 {
-    m_cooldown = 1;
     if (m_pEngine)
         lsquic_engine_cooldown(m_pEngine);
 }

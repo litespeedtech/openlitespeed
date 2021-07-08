@@ -2095,7 +2095,7 @@ lsxpack_header_t *UpkdRespHdrBuilder::prepareDecode(lsxpack_header_t *hdr,
                                                 size_t mini_buf_size)
 {
     assert(!hdr || !hdr->buf || hdr->buf == headers->m_buf.begin());
-    if (mini_buf_size > MAX_BUF_SIZE)
+    if (mini_buf_size + headers->m_buf.size() >= MAX_BUF_SIZE)
     {
         if (hdr && hdr == headers->m_working)
             headers->m_working = NULL;

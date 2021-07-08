@@ -4,14 +4,14 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2021
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Panel\ControlPanel;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\Panel\ControlPanel;
 
 /**
  * map to data file
@@ -190,13 +190,15 @@ class WPInstallStorage
         }
 
         if ( $data === false || !is_array($data) || !isset($data['__VER__']) ) {
-            throw new LSCMException("{$dataFile} - Data is corrupt.",
-                    self::ERR_CORRUPTED);
+            throw new LSCMException(
+                "$dataFile - Data is corrupt.",
+                self::ERR_CORRUPTED
+            );
         }
 
         if ( ($err = $this->verifyDataFileVer($dataFile, $data['__VER__'])) ) {
             throw new LSCMException(
-                "{$dataFile} - Data file version issue.",
+                "$dataFile - Data file version issue.",
                 $err
             );
         }
@@ -205,8 +207,15 @@ class WPInstallStorage
 
         $wpInstalls = array();
 
-        foreach ( $data as $path => $idata ) {
+        foreach ( $data as $utf8Path => $idata ) {
+            $path = utf8_decode($utf8Path);
             $i = new WPInstall($path);
+
+            $idata[WPInstall::FLD_SITEURL] =
+                    urldecode($idata[WPInstall::FLD_SITEURL]);
+            $idata[WPInstall::FLD_SERVERNAME] =
+                    urldecode($idata[WPInstall::FLD_SERVERNAME]);
+
             $i->initData($idata);
             $wpInstalls[$path] = $i;
         }
@@ -397,7 +406,15 @@ class WPInstallStorage
             foreach ( $wpInstalls as $path => $install ) {
 
                 if ( !$install->shouldRemove() ) {
-                    $data[$path] = $install->getData();
+                    $utf8Path = utf8_encode($path);
+
+                    $data[$utf8Path] = $install->getData();
+
+                    $siteUrl = &$data[$utf8Path][WPInstall::FLD_SITEURL];
+                    $siteUrl = urlencode($siteUrl);
+
+                    $serverName = &$data[$utf8Path][WPInstall::FLD_SERVERNAME];
+                    $serverName = urlencode($serverName);
                 }
             }
 
@@ -408,7 +425,7 @@ class WPInstallStorage
         file_put_contents($dataFile, $file_str, LOCK_EX);
         chmod($dataFile, 0600);
 
-        $this->log("Data file saved {$dataFile}", Logger::L_DEBUG);
+        $this->log("Data file saved $dataFile", Logger::L_DEBUG);
     }
 
     /**
@@ -447,7 +464,7 @@ class WPInstallStorage
     public static function updateDataFile( $dataFile, $dataFileVer )
     {
         Logger::info(
-            "{$dataFile} - Old data file version detected. Attempting to "
+            "$dataFile - Old data file version detected. Attempting to "
                 . 'update...'
         );
 
@@ -460,7 +477,7 @@ class WPInstallStorage
                 || ! Util::createBackup($dataFile) ) {
 
             Logger::error(
-                "{$dataFile} - Data file could not be updated to version "
+                "$dataFile - Data file could not be updated to version "
                     . self::DATA_VERSION
             );
 
@@ -496,7 +513,7 @@ class WPInstallStorage
                 {
                     throw new LSCMException(
                         $e->getMessage()
-                            . " Could not prepare {$action} action items."
+                            . " Could not prepare $action action items."
                     );
                 }
 
@@ -622,7 +639,7 @@ class WPInstallStorage
                 );
             }
 
-            if ( $action = UserCommand::CMD_MASS_ENABLE
+            if ( $action == UserCommand::CMD_MASS_ENABLE
                     && ($wpInstall->getCmdStatus() & UserCommand::EXIT_FAIL)
                     && preg_match('/Source Package not available/', $wpInstall->getCmdMsg()) ) {
 
@@ -740,7 +757,7 @@ class WPInstallStorage
     protected function scan( $docroot, $forceRefresh = false )
     {
         $depth = Context::getScanDepth();
-        $cmd = "find -L {$docroot} -maxdepth {$depth} -name wp-admin -print";
+        $cmd = "find -L $docroot -maxdepth $depth -name wp-admin -print";
         $directories = shell_exec($cmd);
 
         /**
@@ -750,7 +767,7 @@ class WPInstallStorage
          * /home/user/public_html/wp/wp-admin
          */
         $hasMatches = preg_match_all(
-            "|{$docroot}(.*)(?=/wp-admin)|",
+            "|$docroot(.*)(?=/wp-admin)|",
             $directories,
             $matches
         );
@@ -770,7 +787,7 @@ class WPInstallStorage
                 $this->wpInstalls[$wp_path] = new WPInstall($wp_path);
                 $refresh = true;
                 $this->log(
-                    "New installation found: {$wp_path}",
+                    "New installation found: $wp_path",
                     Logger::L_INFO
                 );
 
@@ -780,15 +797,14 @@ class WPInstallStorage
                     unset($this->custWpInstalls[$wp_path]);
 
                     $this->log(
-                        "Installation removed from custom data file:  "
-                            . $wp_path,
+                        "Installation removed from custom data file: $wp_path",
                         Logger::L_INFO
                     );
                 }
             }
             else {
                 $this->log(
-                    "Installation already found: {$wp_path}",
+                    "Installation already found: $wp_path",
                     Logger::L_DEBUG
                 );
             }
@@ -811,7 +827,7 @@ class WPInstallStorage
     public function scan2( $docroot )
     {
         $depth = Context::getScanDepth();
-        $cmd = "find -L {$docroot} -maxdepth {$depth} -name wp-admin -print";
+        $cmd = "find -L $docroot -maxdepth $depth -name wp-admin -print";
         $directories = shell_exec($cmd);
 
         /**
@@ -821,7 +837,7 @@ class WPInstallStorage
          * /home/user/public_html/wp/wp-admin
          */
         $hasMatches = preg_match_all(
-            "|{$docroot}(.*)(?=/wp-admin)|",
+            "|$docroot(.*)(?=/wp-admin)|",
             $directories,
             $matches
         );
@@ -861,7 +877,7 @@ class WPInstallStorage
 
         if ( !isset($this->wpInstalls[$wpPath]) ) {
             $this->wpInstalls[$wpPath] = new WPInstall($wpPath);
-            $this->log("New installation found: {$wpPath}", Logger::L_INFO);
+            $this->log("New installation found: $wpPath", Logger::L_INFO);
 
             if ( $this->custWpInstalls != null &&
                 isset($this->custWpInstalls[$wpPath]) ) {
@@ -869,14 +885,14 @@ class WPInstallStorage
                 unset($this->custWpInstalls[$wpPath]);
 
                 $this->log(
-                    "Installation removed from custom data file:  {$wpPath}",
+                    "Installation removed from custom data file: $wpPath",
                     Logger::L_INFO
                 );
             }
         }
         else {
             $this->log(
-                "Installation already found: {$wpPath}",
+                "Installation already found: $wpPath",
                 Logger::L_DEBUG
             );
         }
@@ -917,7 +933,7 @@ class WPInstallStorage
             if ( count($info) != 4 ) {
                 $this->log(
                     'Incorrect number of values for custom installation input '
-                        . "string on line {$line}. Skipping.",
+                        . "string on line $line. Skipping.",
                     Logger::L_INFO
                 );
 
@@ -929,10 +945,10 @@ class WPInstallStorage
             $serverName = $info[2];
             $siteUrl = $info[3];
 
-            if ( !file_exists("{$wpPath}/wp-admin") ) {
+            if ( !file_exists("$wpPath/wp-admin") ) {
                 $this->log(
-                    "No 'wp-admin' directory found for {$wpPath} on line "
-                        . "{$line}. Skipping.",
+                    "No 'wp-admin' directory found for $wpPath on line "
+                        . "$line. Skipping.",
                     Logger::L_INFO
                 );
 
@@ -941,7 +957,7 @@ class WPInstallStorage
 
             if ( !(substr($wpPath, 0, strlen($docroot)) === $docroot) ) {
                 $this->log(
-                    "docroot not contained in {$wpPath} on line {$line}. "
+                    "docroot not contained in $wpPath on line $line. "
                         . 'Skipping.',
                     Logger::L_INFO
                 );
@@ -957,13 +973,13 @@ class WPInstallStorage
                 $this->custWpInstalls[$wpPath]->refreshStatus();
 
                 $this->log(
-                    "New installation added to custom data file: {$wpPath}",
+                    "New installation added to custom data file: $wpPath",
                     Logger::L_INFO
                 );
             }
             else {
                 $this->log(
-                    "Installation already found during scan: {$wpPath}. "
+                    "Installation already found during scan: $wpPath. "
                         . 'Skipping.',
                     Logger::L_INFO
                 );
@@ -997,7 +1013,7 @@ class WPInstallStorage
             }
 
             if ( $msg = $WPInstall->getCmdMsg() ) {
-                $msgType[] = "{$WPInstall->getPath()} - {$msg}";
+                $msgType[] = "{$WPInstall->getPath()} - $msg";
             }
         }
 

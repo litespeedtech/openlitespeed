@@ -355,7 +355,7 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
     }
 
     getClientInfo()->incConn();
-    LS_DBG_L(this, "concurrent conn: %zd", pInfo->m_pClientInfo->getConns());
+    LS_DBG_L(this, "concurrent conn: %d", pInfo->m_pClientInfo->getConns());
 
     //FIXME below code is from lslbd, should we use this flag?
 //     if (pInfo->m_pClientInfo->isFromLocalAddr(
@@ -912,7 +912,7 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
             ConnLimitCtrl::getInstance().decConn();
             pThis->getClientInfo()->decConn();
             pThis->m_iPeerShutdown |= IO_COUNTED;
-            LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %zd.",
+            LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %d.",
                      ConnLimitCtrl::getInstance().availConn(),
                      pThis->getClientInfo()->getConns());
         }
@@ -945,7 +945,7 @@ void NtwkIOLink::closeSocket()
     {
         ctrl.decConn();
         getClientInfo()->decConn();
-        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %zd",
+        LS_DBG_L(this, "Available Connections: %d, concurrent conn: %d",
                  ctrl.availConn(), getClientInfo()->getConns());
     }
 
@@ -995,6 +995,13 @@ static int matchToken(int token)
 void NtwkIOLink::releaseIdleSslBuffer()
 {
     m_ssl.releaseIdleBuffer();
+}
+
+
+void NtwkIOLink::enableSocketKeepAlive()
+{
+    int v = 1;
+    setsockopt(getfd(), SOL_SOCKET, SO_KEEPALIVE, (char *) &v, sizeof (int));
 }
 
 

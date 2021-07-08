@@ -38,8 +38,8 @@ public:
     UdpListenerList()
     {}
     ~UdpListenerList();
-    
-    LS_NO_COPY_ASSIGN(UdpListenerList);    
+
+    LS_NO_COPY_ASSIGN(UdpListenerList);
 };
 
 class QuicEngine
@@ -49,14 +49,13 @@ public:
     ~QuicEngine();
     lsquic_engine_settings *getConfig()
     {   return &m_config;       }
-    
+
     int init(Multiplexer * pMplx, const char *pShmDir,
              const struct lsquic_engine_settings *, const char *quicLogLevel);
-    
+
     void startCooldown();
-    int  isCooldown() const                 {   return m_cooldown;      }
-    
-    Multiplexer *getMultiplexer() const     {   return m_pMultiplexer;  } 
+
+    Multiplexer *getMultiplexer() const     {   return m_pMultiplexer;  }
     lsquic_engine_t *getEngine() const      {   return m_pEngine;       }
 
     //UdpListener *startUdpListener(HttpListener *pTcpPeer, VHostMap *pMap);
@@ -93,8 +92,8 @@ public:
                             const lsquic_cid_t *cids, unsigned count);
     static void removeOldSCIDs(void *ctx, void **peer_ctx,
                             const lsquic_cid_t *cids, unsigned count);
- 
-    static lsquic_stream_ctx_t *onNewStream(void *stream_if_ctx, 
+
+    static lsquic_stream_ctx_t *onNewStream(void *stream_if_ctx,
                                                  lsquic_stream_t *s);
     static void onStreamRead(lsquic_stream_t *s, lsquic_stream_ctx_t *h);
     static void onStreamWrite(lsquic_stream_t *s, lsquic_stream_ctx_t *h);
@@ -104,14 +103,14 @@ public:
     static void setDebugLog(int is_enable);
 
     static pid_t getpid()           {   return s_pid;   }
-    static void  setpid( pid_t pid);    
+    static void  setpid( pid_t pid);
     int getAltSvcVerStr(unsigned short port, char *, size_t);
 
     static unsigned activeConnsCount(void)
     {   return s_active_conns;  }
 
     static void detectBusyLoop(int);
-    
+
 private:
     static void recycleStreams();
 
@@ -119,16 +118,15 @@ private:
     Multiplexer            *m_pMultiplexer;
     lsquic_engine_settings  m_config;
     UdpListenerList         m_udpListeners;
-    int                     m_cooldown;
     static unsigned         s_active_conns;
-    
+
     static TDLinkQueue<QuicStream> s_streamQueues[10];
     static TPointerList<QuicStream> s_streamsTobeRecycled;
 
     static ssl_ctx_lookup_func s_extraLookup;
 
     static pid_t            s_pid;
-    
+
     LS_NO_COPY_ASSIGN(QuicEngine);
 };
 

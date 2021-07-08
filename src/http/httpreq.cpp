@@ -3575,6 +3575,9 @@ int HttpReq::checkUrlStaicFileCache()
 
         HttpVHost *host = (HttpVHost *)getVHost();
         m_pUrlStaticFileData = host->getUrlStaticFileData(getURI());
+        if (m_pUrlStaticFileData
+            && m_pUrlStaticFileData->tmaccess < DateTime::s_curTime - 1)
+            m_pUrlStaticFileData->tmaccess = DateTime::s_curTime - 1;
     }
     return 0;
 }

@@ -24,9 +24,9 @@ class BuildConfig
         switch ($field) {
 
             case self::PHP_VERSION: return
-						['8.0.1',
-							'7.4.14',
-							'7.3.26',
+						['8.0.7',
+							'7.4.20',
+							'7.3.28',
 							'7.2.34',
 							'7.1.33',
 							'7.0.33',

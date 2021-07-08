@@ -50,7 +50,8 @@ class SslSessCache : public TSingleton<SslSessCache>
 public:
     static int watchCtx(SSL_CTX *pCtx);
 
-    int     init(int32_t iTimeout, int iMaxEntries, int uid, int gid);
+    int     init(int32_t iTimeout, int iMaxEntries,
+                 int uid, int gid, int tid_flag);
     int     isReady() const              {   return m_pSessStore != NULL;   }
     int32_t getExpireSec() const         {   return m_expireSec;            }
     void    setExpireSec(int32_t iExpire){   m_expireSec = iExpire;         }
@@ -90,7 +91,7 @@ public:
 private:
     SslSessCache();
     ~SslSessCache();
-    int    initShm(int uid, int gid);
+    int    initShm(int uid, int gid, int tid_flag);
     SslSessData_t *getLockedSessionDataEx(LsShmHash *pHash,
             const unsigned char *id, int len);
 

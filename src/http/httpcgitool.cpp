@@ -66,7 +66,7 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
     if (pReq->getStatusCode() == SC_304)
         return 0;
 
-    if (HttpMime::needCharset(pValue))
+    if (HttpMime::needCharset(pValue, valLen))
     {
         pCharset = pReq->getDefaultCharset();
         if (pCharset && (p = (char *)memchr(pValue, ';', valLen)) != NULL)
@@ -259,6 +259,11 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
             }
             if ((status & HEC_RESP_AUTHORIZER) && (tmpIndex == SC_200))
                 status |= HEC_RESP_AUTHORIZED;
+            if (tmpIndex == SC_444)
+            {
+                pExtConn->getHttpSession()->process444(pValue + 4);
+                return -1;
+            }
         }
         return 0;
     case HttpRespHeaders::H_TRANSFER_ENCODING:
@@ -374,18 +379,24 @@ int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
         int index;
         if ((*(pValue + 4) == '/') && memcmp(pValue, "HTTP/1.", 7) == 0)
         {
-            index = HttpStatusCode::getInstance().codeToIndex(pValue + 9);
+            pValue += 9;
+            index = HttpStatusCode::getInstance().codeToIndex(pValue);
             if (index != -1)
             {
                 pExtConn->getHttpSession()->getReq()->updateNoRespBodyByStatus(index);
                 status |= HEC_RESP_NPH2;
                 if ((status & HEC_RESP_AUTHORIZER) && (index == SC_200))
                     status |= HEC_RESP_AUTHORIZED;
+                if (index == SC_444)
+                {
+                    pExtConn->getHttpSession()->process444(pValue + 4);
+                    return -1;
+                }
+
             }
             continue;
         }
-        if (processHeaderLine(pExtConn, pValue,
-                              pLineEnd) == -1)
+        if (processHeaderLine(pExtConn, pValue,  pLineEnd) == -1)
             return LS_FAIL;
     }
     return pCur - pBuf;

@@ -1164,9 +1164,9 @@ void HttpFetch::closeConnection()
 
         if (m_iEnableDebug)
             m_pLogger->info("HttpFetch[%d]::closeConnection fd=%d ", getLoggerId(), m_fdHttp);
+        stopDriver();
         close(m_fdHttp);
         m_fdHttp = -1;
-        stopDriver();
     }
 }
 

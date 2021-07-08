@@ -125,7 +125,7 @@ public:
     static void setCompressible(MimeSetting *pSetting, void *pValue);
     static void setExpire(MimeSetting *pSetting, void *pValue);
     static void setHandler(MimeSetting *pSetting, void *pValue);
-    static int  needCharset(const char *pMIME);
+    static bool needCharset(const char *pMIME, int len);
     static int  isValidMimeType(const char *pDescr);
     static int  shouldKeepAlive(const char *pMIME);
     static int getExtAppGUid(const XmlNode* pExtAppNode, uid_t &udi, gid_t &gid);

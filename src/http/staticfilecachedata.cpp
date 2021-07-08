@@ -397,7 +397,8 @@ int StaticFileCacheData::buildFixedHeaders(int etag)
     int size = 6 + 30 + 17 + RFC_1123_TIME_LEN
                + 20 + m_pMimeType->getMIME()->len() + 10 ;
     const char *pCharset;
-    if (m_pCharset && HttpMime::needCharset(m_pMimeType->getMIME()->c_str()))
+    if (m_pCharset && HttpMime::needCharset(
+            m_pMimeType->getMIME()->c_str(), m_pMimeType->getMIME()->len()))
     {
         pCharset = m_pCharset->c_str();
         size += m_pCharset->len();

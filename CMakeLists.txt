@@ -7,7 +7,7 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 11)
+set(openlitespeed_PATCH_VERSION 12)
 set(openlitespeed_VERSION
     ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
 

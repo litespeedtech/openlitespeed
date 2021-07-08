@@ -4,15 +4,15 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2021
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
 
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Util;
-use \Lsc\Wp\WPInstall;
+use Lsc\Wp\Logger;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\Util;
+use Lsc\Wp\WPInstall;
 
 class Plesk extends ControlPanel
 {
@@ -68,7 +68,8 @@ class Plesk extends ControlPanel
         }
 
         if ( is_readable('/etc/lsb-release') ) {
-            $cmds[] = 'grep ^DISTRIB_ID= /etc/lsb-release | cut -d"=" -f2 | xargs';
+            $cmds[] = 'grep ^DISTRIB_ID= /etc/lsb-release | cut -d"=" -f2 '
+                . '| xargs';
         }
 
         if ( is_readable('/etc/redhat-release') ) {
@@ -135,6 +136,7 @@ class Plesk extends ControlPanel
             case 'virtuozzo':
             case 'cloudlinux':
             case 'redhat':
+            case 'rhel':
                 $this->apacheConf = '/etc/httpd/conf.d/lscache.conf';
                 break;
 
@@ -161,7 +163,7 @@ class Plesk extends ControlPanel
         }
 
         $this->apacheVHConf = '/usr/local/psa/admin/conf/templates'
-                . '/custom/domain/domainVirtualHost.php';
+            . '/custom/domain/domainVirtualHost.php';
     }
 
     protected function serverCacheRootSearch()
@@ -190,12 +192,12 @@ class Plesk extends ControlPanel
      * @param string  $vhCacheRoot
      * @return array
      */
-    protected function addVHCacheRootSection( $file_contents,
-            $vhCacheRoot = 'lscache' )
+    protected function addVHCacheRootSection(
+        $file_contents, $vhCacheRoot = 'lscache' )
     {
         return preg_replace(
             '!^\s*</VirtualHost>!im',
-            "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n"
+            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>\n"
                 . '</VirtualHost>',
             $file_contents
         );
@@ -207,33 +209,42 @@ class Plesk extends ControlPanel
      * @param string $vhCacheRoot
      * @throws LSCMException  Thrown indirectly.
      */
-    public function createVHConfAndSetCacheRoot( $vhConf,
-            $vhCacheRoot = 'lscache' )
+    public function createVHConfAndSetCacheRoot(
+        $vhConf, $vhCacheRoot = 'lscache' )
     {
-        $vhConfTmpl = '/usr/local/psa/admin/conf/templates/default/domain/domainVirtualHost.php';
+        $vhConfTmpl = '/usr/local/psa/admin/conf/templates/default/domain/'
+            . 'domainVirtualHost.php';
         $vhConfDir = dirname($vhConf);
 
         if ( !file_exists($vhConfDir) ) {
             mkdir($vhConfDir, 0755, true);
 
-            $this->log("Created directory {$vhConfDir}", Logger::L_DEBUG);
+            $this->log("Created directory $vhConfDir", Logger::L_DEBUG);
         }
 
         copy($vhConfTmpl, $vhConf);
         Util::matchPermissions($vhConfTmpl, $vhConf);
 
-        $this->log("Copied Virtual Host conf template file {$vhConfTmpl} to {$vhConf}",
-                Logger::L_DEBUG);
+        $this->log(
+            "Copied Virtual Host conf template file $vhConfTmpl to $vhConf",
+            Logger::L_DEBUG
+        );
 
         $file_contents = file($vhConf);
 
-        $replaced_content = preg_replace('!^\s*</VirtualHost>!im',
-                "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n</VirtualHost>",
-                $file_contents);
+        $replaced_content = preg_replace(
+            '!^\s*</VirtualHost>!im',
+            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>"
+                . "\n</VirtualHost>",
+            $file_contents
+        );
 
         file_put_contents($vhConf, $replaced_content);
 
-        $this->log("Virutal Host cache root set to {$vhCacheRoot}", Logger::L_INFO);
+        $this->log(
+            "Virutal Host cache root set to $vhCacheRoot",
+            Logger::L_INFO
+        );
     }
 
     public function applyVHConfChanges()
@@ -255,7 +266,7 @@ class Plesk extends ControlPanel
         $cmd = 'grep -hro --exclude="stat_ttl.conf" --exclude="*.bak" '
             . '--exclude="last_httpd.conf" '
             . '"DocumentRoot.*\|ServerName.*\|ServerAlias.*" '
-            . "{$vhDir}/system/*/conf/*";
+            . "$vhDir/system/*/conf/*";
         exec( $cmd, $lines);
 
         /**
@@ -298,7 +309,7 @@ class Plesk extends ControlPanel
             }
 
             $serverNameAsUrl =
-                    (preg_match('#^https?://#', $m1[1])) ? $m1[1] : "http://{$m1[1]}";
+                (preg_match('#^https?://#', $m1[1])) ? $m1[1] : "http://$m1[1]";
 
             $UrlInfo = parse_url($serverNameAsUrl);
             $names[] = $UrlInfo['host'];
@@ -326,7 +337,7 @@ class Plesk extends ControlPanel
                 }
                 else {
                     $tmpDocrootMap[$docroot] =
-                            array_merge($tmpDocrootMap[$docroot], $names);
+                        array_merge($tmpDocrootMap[$docroot], $names);
                 }
 
                 $x++;
@@ -350,7 +361,8 @@ class Plesk extends ControlPanel
             $index++;
         }
 
-        $this->docRootMap = array( 'docroots' => $roots, 'names' => $serverNames );
+        $this->docRootMap =
+            array( 'docroots' => $roots, 'names' => $serverNames );
     }
 
     /**
@@ -397,10 +409,12 @@ class Plesk extends ControlPanel
             $escapedServerName = escapeshellarg($serverName);
 
             $cmd = 'plesk db -Ne "SELECT s.value '
-                    . 'FROM ((domains d INNER JOIN hosting h ON h.dom_id=d.id) '
-                    . 'INNER JOIN ServiceNodeEnvironment s ON h.php_handler_id=s.name) '
-                    . "WHERE d.name={$escapedServerName} AND s.section='phphandlers'\" "
-                    . '| sed -n \'s:.*<clipath>\(.*\)</clipath>.*:\1:p\'';
+                . 'FROM ((domains d INNER JOIN hosting h ON h.dom_id=d.id) '
+                . 'INNER JOIN ServiceNodeEnvironment s '
+                . 'ON h.php_handler_id=s.name) '
+                . "WHERE d.name=$escapedServerName "
+                . 'AND s.section=\'phphandlers\'" '
+                . '| sed -n \'s:.*<clipath>\(.*\)</clipath>.*:\1:p\'';
 
             $binPath = trim(shell_exec($cmd));
         }
@@ -412,7 +426,7 @@ class Plesk extends ControlPanel
             $phpBin = $defaultBinary;
         }
 
-        return "{$phpBin} {$this->phpOptions}";
+        return "$phpBin $this->phpOptions";
     }
 
 }

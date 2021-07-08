@@ -26,11 +26,29 @@
 #include <util/autostr.h>
 #include <http/ip2geo.h>
 
+enum BOT_REASON
+{
+    BOT_UNKOWN,
+    BOT_OVER_SOFT,
+    BOT_OVER_HARD,
+    BOT_TOO_MANY_BAD_REQ,
+    BOT_CAPTCHA,
+    BOT_FLOOD,
+    BOT_REWRITE_RULE,
+    BOT_TOO_MANY_BAD_STATUS,
+    BOT_BRUTE_FORCE,
+    BOT_REASON_COUNT,
+};
+
+
 #define CIF_NEED_RESET      (1<<0)
 #define CIF_GOOG_TEST       (1<<1)
 #define CIF_GOOG_REAL       (1<<2)
 #define CIF_GOOG_FAKE       (1<<3)
-#define CIF_CAPTCHA_PENDING (1<<4)
+#define CIF_GOOG_RDNS       (1<<4)
+#define CIF_CAPTCHA_PENDING (1<<5)
+#define CIF_TEST_LOCAL_ADDR (1<<6)
+#define CIF_LOCAL_ADDR      (1<<7)
 
 #if 0
 #include <shm/lsshmcache.h>
@@ -79,6 +97,7 @@ class ClientInfo
     int         m_iHits;
     time_t      m_lastConnect;
     int         m_iAccess;
+    enum BOT_REASON  m_bot_reason;
 
     ThrottleControl     m_ctlThrottle;
     static int          s_iSoftLimitPC;
@@ -121,6 +140,7 @@ public:
 
     void clearFlag( int flag )          {   m_iFlags &= ~flag;          }
     void setFlag( int flag )            {   m_iFlags |= flag;           }
+    int getFlag( int flag ) const       {   return m_iFlags & flag;     }
     int isFlagSet( int flag ) const     {   return m_iFlags & flag;     }
 
     int isNeedTestHost() const
@@ -139,9 +159,9 @@ public:
     const char *getHostName() const     {   return m_sHostName.c_str(); }
     int getHostNameLen() const          {   return m_sHostName.len();   }
 
-    size_t incConn()                    {   return ++m_iConns;          }
-    size_t decConn()                    {   return --m_iConns;          }
-    size_t getConns() const             {   return m_iConns;            }
+    int32_t incConn()                   {   return ++m_iConns;          }
+    int32_t decConn()                   {   return --m_iConns;          }
+    int32_t getConns() const            {   return m_iConns;            }
 
     void incCaptchaTries()              {   ++m_iCaptchaTries;          }
     uint16_t getCaptchaTries() const    {   return m_iCaptchaTries;     }
@@ -187,6 +207,12 @@ public:
     LocInfo *allocateLocInfo();
     LocInfo *getLocInfo() const        {   return m_pLocInfo;      }
 #endif
+
+    int  markAsBot(const char * pDomain, enum BOT_REASON reason);
+    void setBotReason(enum BOT_REASON reason)
+    {   m_bot_reason = reason;          }
+    enum BOT_REASON getBotReason() const
+    {   return m_bot_reason;        }
 
     LsiModuleData *getModuleData()      {   return &m_moduleData;   }
 

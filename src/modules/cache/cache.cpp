@@ -1973,14 +1973,6 @@ static int createEntry(lsi_param_t *rec)
         return 0;
     }
 
-    if (count && myData->hasCacheFrontend == 0)
-    {
-        g_api->remove_resp_header(rec->session,
-                                  LSI_RSPHDR_LITESPEED_CACHE_CONTROL,
-                                  NULL,
-                                  0);
-    }
-
     /**
      * TODO  should we do all case for test vary?
      */

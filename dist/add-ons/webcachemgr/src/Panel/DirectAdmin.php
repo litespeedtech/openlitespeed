@@ -4,14 +4,15 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2019-2020
+ * @copyright: (c) 2019-2021
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
 
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\WPInstall;
+use DirectoryIterator;
+use Lsc\Wp\Logger;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\WPInstall;
 
 class DirectAdmin extends ControlPanel
 {
@@ -39,7 +40,7 @@ class DirectAdmin extends ControlPanel
     {
         $this->apacheConf = '/etc/httpd/conf/extra/httpd-includes.conf';
         $this->apacheVHConf = '/usr/local/directadmin/data/templates/custom/'
-                . 'cust_httpd.CUSTOM.2.pre';
+            . 'cust_httpd.CUSTOM.2.pre';
     }
 
     /**
@@ -79,7 +80,7 @@ class DirectAdmin extends ControlPanel
      */
     public function daVhCacheRootSearch( $confDir )
     {
-        $files = new \DirectoryIterator($confDir);
+        $files = new DirectoryIterator($confDir);
 
         foreach ( $files as $file ) {
             $filename = $file->getFilename();
@@ -105,12 +106,12 @@ class DirectAdmin extends ControlPanel
      * @param string  $vhCacheRoot
      * @return array
      */
-    protected function addVHCacheRootSection( $file_contents,
-            $vhCacheRoot = 'lscache' )
+    protected function addVHCacheRootSection(
+        $file_contents, $vhCacheRoot = 'lscache' )
     {
         array_unshift(
             $file_contents,
-            "<IfModule LiteSpeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>\n\n"
+            "<IfModule LiteSpeed>\nCacheRoot $vhCacheRoot\n</IfModule>\n\n"
         );
 
         return $file_contents;
@@ -121,8 +122,8 @@ class DirectAdmin extends ControlPanel
      * @param string  $vhConf
      * @throws LSCMException
      */
-    public function createVHConfAndSetCacheRoot( $vhConf,
-            $vhCacheRoot = 'lscache' )
+    public function createVHConfAndSetCacheRoot(
+        $vhConf, $vhCacheRoot = 'lscache' )
     {
         $vhConfDir = dirname($vhConf);
 
@@ -130,21 +131,21 @@ class DirectAdmin extends ControlPanel
 
             if ( !mkdir($vhConfDir, 0755) ) {
                 throw new LSCMException(
-                    "Failed to create directory {$vhConfDir}."
+                    "Failed to create directory $vhConfDir."
                 );
             }
 
-            $this->log("Created directory {$vhConfDir}", Logger::L_DEBUG);
+            $this->log("Created directory $vhConfDir", Logger::L_DEBUG);
         }
 
         $content =
-            "<IfModule Litespeed>\nCacheRoot {$vhCacheRoot}\n</IfModule>";
+            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>";
 
         if ( false === file_put_contents($vhConf, $content) ) {
-            throw new LSCMException("Failed to create file {$vhConf}.");
+            throw new LSCMException("Failed to create file $vhConf.");
         }
 
-        $this->log("Created file {$vhConf}.", Logger::L_DEBUG);
+        $this->log("Created file $vhConf.", Logger::L_DEBUG);
     }
 
     public function applyVHConfChanges()
@@ -153,16 +154,19 @@ class DirectAdmin extends ControlPanel
     }
 
     /**
-     * Gets a list of found docroots and associated server names.
-     * Only needed for scan.
      *
+     * @since 1.13.7
+     *
+     * @return array
      * @throws LSCMException  Thrown indirectly.
      */
-    protected function prepareDocrootMap()
+    private function getHttpdConfDocrootMapInfo()
     {
-        $cmd = 'grep -hro "DocumentRoot.*\|ServerAlias.*\|ServerName.*" '
-                . '/usr/local/directadmin/data/users/*/httpd.conf';
-        exec($cmd, $lines);
+        exec(
+            'grep -hro "DocumentRoot.*\|ServerAlias.*\|ServerName.*" '
+                . '/usr/local/directadmin/data/users/*/httpd.conf',
+            $lines
+        );
 
         /**
          * [0]=servername, [1]=serveraliases, [2]=docroot, [3]=servername, etc.
@@ -184,7 +188,7 @@ class DirectAdmin extends ControlPanel
          */
 
         $docRoots = array();
-        $curServerName = $curServerAliases = $curDocRoot = '';
+        $curServerName = $curServerAliases = '';
 
         foreach ( $lines as $line ) {
 
@@ -217,19 +221,155 @@ class DirectAdmin extends ControlPanel
                         && is_dir($curDocRoot)
                         && !is_link($curDocRoot) ) {
 
-                    $docRoots[$curDocRoot] =
-                            "{$curServerName} {$curServerAliases}";
+                    $docRoots[$curDocRoot] = explode(' ', $curServerAliases);
+                    $docRoots[$curDocRoot][] = $curServerName;
                 }
 
                 /**
                  * Looking for next data set
                  */
-                $curServerName = $curServerAliases = $curDocRoot = '';
+                $curServerName = $curServerAliases = '';
             }
             else {
                 Logger::debug(
-                    "Unused line when preparing docroot map: {$line}."
+                    "Unused line when preparing docroot map: $line."
                 );
+            }
+        }
+
+        return $docRoots;
+    }
+
+    /**
+     *
+     * @since 1.13.7
+     *
+     * @return array
+     * @throws LSCMException Thrown indirectly.
+     */
+    private function getOpenlitespeedConfDocrootMapInfo()
+    {
+        exec(
+            'grep -hro "docRoot.*\|vhDomain.*\|vhAliases.*" '
+                . '/usr/local/directadmin/data/users/*/openlitespeed.conf',
+            $lines
+        );
+
+        /**
+         * [0]=docroot, [1]=servername, [2]=serveraliases, [3]=docroot, etc.
+         * Not unique & not sorted.
+         *
+         * Example:
+         * docRoot                   /home/test/domains/test.com/public_html
+         * vhDomain                  test.com
+         * vhAliases                 www.test.com
+         * docRoot                   /home/test/domains/test.com/public_html
+         * vhDomain                  testalias.com
+         * vhAliases                 www.testalias.com
+         * docRoot                   /home/test/domains/test.com/private_html
+         * vhDomain                  test.com
+         * vhAliases                 www.test.com
+         * docRoot                   /home/test/domains/test.com/private_html
+         * vhDomain                  testalias.com
+         * vhAliases                 www.testalias.com
+         * docRoot                   /home/test_2/domains/test2.com/public_html
+         * vhDomain                  test2.com
+         * vhAliases                 www.test2.com
+         * docRoot                   /home/test_2/domains/test2.com/private_html
+         * vhDomain                  test2.com
+         * vhAliases                 www.test2.com
+         */
+
+        $docRoots = array();
+        $curServerName = $curDocRoot = '';
+
+        foreach ( $lines as $line ) {
+
+            if ($curDocRoot == '') {
+
+                if (strpos($line, 'docRoot') === 0) {
+                    /**
+                     * 7 is strlen('docRoot')
+                     */
+                    $curDocRoot = trim(substr($line, 7));
+                }
+            }
+            elseif (strpos($line, 'vhDomain') === 0) {
+                /**
+                 * 8 is strlen('vhDomain')
+                 */
+                $curServerName = trim(substr($line, 8));
+            }
+            elseif (strpos($line, 'vhAliases') === 0) {
+                /**
+                 * 9 is strlen('vhAliases')
+                 */
+                $curServerAlias = trim(substr($line, 9));
+
+                /**
+                 * Avoid possible duplicate detections due to
+                 * public_html/private_html symlinks.
+                 */
+                if (is_dir($curDocRoot) && !is_link($curDocRoot)) {
+
+                    if ( !isset($docRoots[$curDocRoot]) ) {
+                        $docRoots[$curDocRoot] =
+                            [ $curServerName, $curServerAlias ];
+                    }
+                    else {
+
+                        if ( !in_array($curServerName, $docRoots[$curDocRoot]) ) {
+                            $docRoots[$curDocRoot][] = $curServerName;
+                        }
+
+                        if ( !in_array($curServerAlias, $docRoots[$curDocRoot]) ) {
+                            $docRoots[$curDocRoot][] = $curServerAlias;
+                        }
+                    }
+                }
+
+                /**
+                 * Looking for next data set
+                 */
+                $curDocRoot = $curServerName = '';
+
+            }
+            else {
+                Logger::debug(
+                    "Unused line when preparing docroot map: $line."
+                );
+            }
+        }
+
+        return $docRoots;
+    }
+
+    /**
+     * Gets a list of found docroots and associated server names.
+     * Only needed for scan.
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
+    protected function prepareDocrootMap()
+    {
+        $httpdConfDocrootMapInfo = $this->getHttpdConfDocrootMapInfo();
+        $openlitespeedConfDocrootMapInfo =
+            $this->getOpenlitespeedConfDocrootMapInfo();
+
+        $docRootMapInfo = $httpdConfDocrootMapInfo;
+
+        foreach ( $openlitespeedConfDocrootMapInfo as $oDocRoot => $oDomains ) {
+
+            if ( !isset($docRootMapInfo[$oDocRoot]) ) {
+                $docRootMapInfo[$oDocRoot] = $oDomains;
+            }
+            else {
+
+                foreach ( $oDomains as $oDomain ) {
+                    if ( !in_array($oDomain, $docRootMapInfo[$oDocRoot]) ) {
+                        $docRootMapInfo[$oDocRoot][] = $oDomain;
+                    }
+                }
             }
         }
 
@@ -237,13 +377,12 @@ class DirectAdmin extends ControlPanel
         $servernames = array();
         $index = 0;
 
-        foreach ( $docRoots as $docRoot => $line ) {
-            $names = preg_split('/\s+/', trim($line), -1, PREG_SPLIT_NO_EMPTY);
-            $names = array_unique($names);
+        foreach ( $docRootMapInfo as $docRoot => $domains ) {
+            $domains = array_unique($domains);
             $roots[$index] = $docRoot;
 
-            foreach ( $names as $n ) {
-                $servernames[$n] = $index;
+            foreach ( $domains as $domain ) {
+                $servernames[$domain] = $index;
             }
 
             $index++;
@@ -258,29 +397,58 @@ class DirectAdmin extends ControlPanel
      * given servername/docroot combination and return the PHP handler version
      * if set.
      *
-     * @param WPInstall  $wpInstall
+     * @param WPInstall $wpInstall
+     *
      * @return string
+     * @throws LSCMException
      */
     protected function getCustomPhpHandlerVer( $wpInstall )
     {
         $ver = '';
 
         $user = $wpInstall->getOwnerInfo('user_name');
-        $confFile = "/usr/local/directadmin/data/users/{$user}/httpd.conf";
 
-        $serverName = $wpInstall->getServerName();
-        $docRoot = $wpInstall->getDocRoot();
+        $httpdConfFile = "/usr/local/directadmin/data/users/$user/httpd.conf";
+        $olsConfFile =
+            "/usr/local/directadmin/data/users/$user/openlitespeed.conf";
 
-        $escServerName = str_replace('.', '\.', $serverName);
-        $escDocRoot = str_replace(array('.', '/'), array('\.', '\/'), $docRoot);
+        $escServerName = str_replace('.', '\.', $wpInstall->getServerName());
+        $escDocRoot = str_replace(
+            array('.', '/'),
+            array('\.', '\/'),
+            $wpInstall->getDocRoot()
+        );
 
-        $pattern = "/VirtualHost(?:(?!<\/VirtualHost).)*"
-                . "ServerName {$escServerName}(?:(?!<\/VirtualHost).)*"
-                . "DocumentRoot {$escDocRoot}(?:(?!<\/VirtualHost).)*"
-                . 'AddHandler ([^\s]*)/s';
+        if ( file_exists($httpdConfFile) ) {
+            $confFile = $httpdConfFile;
+            $pattern = '/VirtualHost'
+                . '(?:(?!<\/VirtualHost).)*'
+                . "ServerName $escServerName"
+                . '(?:(?!<\/VirtualHost).)*'
+                . "DocumentRoot $escDocRoot"
+                . '(?:(?!<\/VirtualHost).)*'
+                . 'AddHandler.* \.php(\d\d)/sU';
+        }
+        elseif ( file_exists($olsConfFile) ) {
+            $confFile = $olsConfFile;
+            $pattern = '/virtualHost\s'
+                . '(?:(?!}\s*\n*virtualHost).)*?'
+                . '{'
+                . '(?:(?!}\s*\n*virtualHost).)*?'
+                . "(?:\s|\n)docRoot\s+$escDocRoot(?:\s|\n)"
+                . '(?:(?!}\s*\n*virtualHost).)*?'
+                . "(?:\s|\n)vhDomain\s+$escServerName(?:\s|\n)"
+                . '(?:(?!}\s*\n*virtualHost).)*?'
+                . '(?:\s|\n)scripthandler(?:\s|\n)*{'
+                . '(?:(?!}\s*\n*virtualHost).)*?'
+                . '\sphp(\d\d)(?=\s|\n)/s';
+        }
+        else {
+            throw new LSCMException('Could not find valid user data conf file');
+        }
 
          if ( preg_match($pattern, file_get_contents($confFile), $m) ) {
-            $ver = substr(trim($m[1]), -2);
+            $ver = $m[1];
          }
 
          return $ver;
@@ -288,8 +456,10 @@ class DirectAdmin extends ControlPanel
 
     /**
      *
-     * @param WPInstall  $wpInstall
+     * @param WPInstall $wpInstall
+     *
      * @return string
+     * @throws LSCMException  Thrown indirectly.
      */
     public function getPhpBinary( WPInstall $wpInstall )
     {
@@ -297,14 +467,14 @@ class DirectAdmin extends ControlPanel
 
         if ( ($ver = $this->getCustomPhpHandlerVer($wpInstall)) != '' ) {
 
-            $customBin = "/usr/local/php{$ver}/bin/php";
+            $customBin = "/usr/local/php$ver/bin/php";
 
             if ( file_exists($customBin) && is_executable($customBin) ) {
                 $phpBin = $customBin;
             }
         }
 
-        return "{$phpBin} {$this->phpOptions}";
+        return "$phpBin $this->phpOptions";
     }
 
 }

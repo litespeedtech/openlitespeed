@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "rewriteengine.h"
 
+#include <http/clientinfo.h>
 #include <http/handlertype.h>
 #include <http/handlerfactory.h>
 #include <http/httpcontext.h>
@@ -955,6 +956,25 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
             StringTool::strTrim(pValue, pValEnd);
             *(char *)pKeyEnd = 0;
             *(char *)pValEnd = 0;
+
+            int blockBot = 0;
+            if (strcasecmp(pKey, "blockbot") == 0)
+            {
+                LS_INFO(pSession->getLogSession(),
+                        "[REWRITE] detect bad robot, block!");
+                blockBot = 1;
+            }
+            if (blockBot)
+            {
+                if ( pSession->getClientInfo()->markAsBot(
+                    pSession->getReq()->getVhostName(), BOT_REWRITE_RULE) == 0)
+                {
+                    pSession->getReq()->setStatusCode(SC_403);
+                    pSession->dropConnection();
+                    return URL_REWRITE_ABORT;
+                }
+            }
+
             if ((pRule->getAction() == RULE_ACTION_PROXY) &&
                 (strcasecmp(pKey, "Proxy-Host") == 0))
             {

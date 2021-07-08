@@ -21,15 +21,16 @@
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
 #include <edio/evtcbque.h>
-#include <util/datetime.h>
+#include <http/connlimitctrl.h>
 #include <http/httpdefs.h>
 #include <http/httplog.h>
+#include <http/httpserverconfig.h>
 #include <http/httpsignals.h>
 #include <http/ntwkiolink.h>
-#include <http/connlimitctrl.h>
 #include <log4cxx/logger.h>
 #include <main/httpserver.h>
 #include <quic/quicengine.h>
+#include <util/datetime.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/time.h>
@@ -303,7 +304,10 @@ int EventDispatcher::linger(int listenerStopped, int timeout)
         pQuicEngine->startCooldown();
 
     if (listenerStopped == 1)
+    {
+        HttpServerConfig::getInstance().setCooldown();
         endTime = DateTime::s_curTime + timeout;
+    }
     else
         endTime = DateTime::s_curTime + 3600 * 24 * 30;
 
@@ -355,6 +359,7 @@ int EventDispatcher::linger(int listenerStopped, int timeout)
             LS_NOTICE("New litespeed process is ready, stops listeners");
             listenerStopped = 1;
             HttpServer::getInstance().stopListeners();
+            HttpServerConfig::getInstance().setCooldown();
             if (pQuicEngine)
                 pQuicEngine->startCooldown();
             endTime = DateTime::s_curTime + timeout;

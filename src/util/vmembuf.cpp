@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include <util/vmembuf.h>
 #include <util/blockbuf.h>
+#include <util/gpath.h>
 
 #include <assert.h>
 #include <fcntl.h>
@@ -547,10 +548,11 @@ int VMemBuf::set(const char *pFileName, int size)
     if (pFileName)
     {
         m_fileName = pFileName;
-        m_iFd = ::open(pFileName, O_RDWR | O_CREAT | O_TRUNC, 0600);
+        m_iFd = GPath::safeCreateFile(pFileName, 0600);
         if (m_iFd < 0)
         {
-            perror("Failed to open temp file for swapping");
+            fprintf(stderr, "VMemBuf::set(file, size) failed to open file %s: %s",
+                    pFileName, strerror(errno));
             return LS_FAIL;
         }
 

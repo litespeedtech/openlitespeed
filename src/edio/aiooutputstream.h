@@ -80,7 +80,7 @@ public:
         setcb(fildes, buf, nbytes, offset, pHandler);
         return aio_read(&m_aiocb);
     }
-    
+
     int write(int fildes, void *buf, int nbytes, int offset,
                      EventHandler *pHandler)
     {
@@ -88,7 +88,7 @@ public:
         return aio_write(&m_aiocb);
     }
     static void setSigNo(int signo)     {   s_rtsigNo = signo;  }
-    
+
     LS_NO_COPY_ASSIGN(AioReq);
 };
 
@@ -110,8 +110,8 @@ public:
     }
     virtual ~AioOutputStream() {};
 
-    int getfd() const               {   return ls_atomic_fetch_add((int *)&m_fd, 0); }
-    void setfd(int fd)              {   ls_atomic_setint(&m_fd, fd );   }
+    int getfd() const               {   return m_fd;            }
+    void setfd(int fd)              {   m_fd = fd;              }
     int open(const char *pathname, int flags, mode_t mode);
     int close();
     bool isAsync() const            {   return m_async == 1;    }
@@ -131,7 +131,7 @@ public:
     int append(const char *pBuf, int len);
     virtual int onEvent();
     int flush();
-    
+
 #ifdef LS_AIO_USE_KQ
     static void setAiokoLoaded();
     static short aiokoIsLoaded();
@@ -144,7 +144,7 @@ private:
     int flushEx();
 
 private:
-    ls_atom_int_t   m_fd;
+    int             m_fd;
     char            m_async;
     char            m_flushRequested;
     char            m_closeRequested;

@@ -497,15 +497,16 @@ class ControllerBase
 			$chrootOffset = isset($_SERVER['LS_CHROOT']) ? strlen( $_SERVER['LS_CHROOT']) : 0;
 			$addr = substr( $ADMSOCK, 5 + $chrootOffset );
 			if ( !socket_connect( $sock, $addr ) ) {
-				error_log( 'cmd ' . $cmd . ' failed to connect to server! socket_connect() failed: ' . socket_strerror(socket_last_error()) . " $ADMSOCK\n" );
+				error_log( 'cmd ' . $cmd . ' failed to connect to server via admsock! socket_connect() failed: ' . socket_strerror(socket_last_error()) . " $ADMSOCK\n" );
 				return false;
 			}
 		}
 		else {
+			error_log('admin.sock is not set. Please check lsws/admin/tmp/ directory and empty all files there, then restart.');
 			$sock = socket_create( AF_INET, SOCK_STREAM, SOL_TCP );
 			$addr = explode( ":", $ADMSOCK );
 			if ( !socket_connect( $sock, $addr[0], intval( $addr[1] ) ) ) {
-				error_log( 'cmd ' . $cmd . ' failed to connect to server! socket_connect() failed: ' . socket_strerror(socket_last_error()) . " $ADMSOCK\n" );
+				error_log( 'cmd ' . $cmd . ' failed to connect to server via AF_INET! socket_connect() failed: ' . socket_strerror(socket_last_error()) . " $ADMSOCK\n" );
 				return false;
 			}
 		}

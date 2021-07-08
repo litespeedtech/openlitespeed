@@ -57,6 +57,7 @@ private:
     int8_t          m_iBrCompress;
     int8_t          m_iEnableLve;
     int8_t          m_iUsePagespeed;
+    int8_t          m_cooldown;
 
     int16_t         m_iCheckDeniedSymLink;
     int16_t         m_iEnableMultiCerts;
@@ -227,6 +228,10 @@ public:
 
     void setAllowExtAppSetuid(int val)      {  m_iAllowExtAppSetuid = val;  }
     int getAllowExtAppSetuid() const        {  return m_iAllowExtAppSetuid; }
+
+    void setCooldown()                      {   m_cooldown = 1;     }
+    int isCooldown() const                  {   return m_cooldown;  }
+
 };
 
 LS_SINGLETON_DECL(HttpServerConfig);

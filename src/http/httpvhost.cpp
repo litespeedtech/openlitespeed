@@ -3914,7 +3914,8 @@ void HttpVHost::urlStaticFileHashClean()
     {
         static_file_data_t *data = (static_file_data_t *)itt.second();
         itn = m_pUrlStxFileHash->next(itt);
-        if (data->pData->getRef() <= 1)
+        if (data->tmaccess < DateTime::s_curTime - 60
+            && data->pData->getRef() <= 1)
         {
             LS_DBG_L("[VHost:%s][static file cache] Clean HashT.", getName());
             m_pUrlStxFileHash->erase(itt);
