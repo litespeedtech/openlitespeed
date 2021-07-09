@@ -574,6 +574,11 @@ preparelibquic
 
 STDC_LIB=`g++ -print-file-name='libstdc++.a'`
 cp ${STDC_LIB} ../thirdparty/lib64/
+if [ ! $? -eq 0 ]; then
+    STDC_LIB=`g++ -print-file-name='libstdc++fs.a'`
+    cp ${STDC_LIB} ../thirdparty/lib64/libstdc++.a
+fi
+
 cp ../thirdparty/src/brotli/out/*.a          ../thirdparty/lib64/
 cp ../thirdparty/src//libxml2/.libs/*.a      ../thirdparty/lib64/
 cp ../thirdparty/src/libmaxminddb/include/*  ../thirdparty/include/
