@@ -81,7 +81,7 @@ $_gmsg['btn_yes'] = '是';
 
 
 $_gmsg['note_collapsemenu'] = '收起菜单';
-$_gmsg['note_configmodified'] = '配置已修改。要使修改生效，请进行平滑重启。';
+$_gmsg['note_configmodified'] = '配置已修改。要使修改生效，请平滑重启Openlitespeed。';
 $_gmsg['note_confirm_delete'] = '你确定要删除这个条目吗？这将从配置文件中被永久移除。';
 $_gmsg['note_confirm_instantiate'] = '你确定你想要实例化这个虚拟主机吗？这将为该虚拟主机创建一个独立的配置文件。';
 $_gmsg['note_copyrightreserved'] = '保留所有权利。';
