@@ -15,8 +15,8 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 SET(LSQUIC_SERVER_MODE 1)
 
-include_directories( BEFORE  include src/lshpack src/liblsquic/ls-qpack ${PROJECT_SOURCE_DIR}/../thirdparty/include/)
-link_directories( ${PROJECT_SOURCE_DIR}/../thirdparty/lib/)
+include_directories( BEFORE  include src/lshpack src/liblsquic/ls-qpack ${PROJECT_SOURCE_DIR}/../third-party/include/)
+link_directories( ${PROJECT_SOURCE_DIR}/../third-party/lib/)
 
 #SET (CMAKE_C_COMPILER         "/usr/bin/clang")
 #SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
