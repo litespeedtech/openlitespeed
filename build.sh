@@ -406,7 +406,10 @@ updateSrcCMakelistfile()
     commentout 'SET (CMAKE_CXX_COMPILER'   CMakeLists.txt
     
     sed -i -e "s/\${unittest_STAT_SRCS}//g"  src/CMakeLists.txt
-    
+    sed -i -e "s/libstdc++.a //g"  src/CMakeLists.txt
+    sed -i -e "s/-nodefaultlibs //g"  src/CMakeLists.txt
+    sed -i -e "s/-nodefaultlibs libstdc++.a//g"  src/modules/modsecurity-ls/CMakeLists.txt
+
     commentout  ls_llmq.c  src/lsr/CMakeLists.txt
     commentout  ls_llxq.c  src/lsr/CMakeLists.txt
     
@@ -425,6 +428,7 @@ updateSrcCMakelistfile()
     fi
 }
 
+
 updateModuleCMakelistfile()
 {
     echo "cmake_minimum_required(VERSION 2.8)" > src/modules/CMakeLists.txt
@@ -439,7 +443,7 @@ updateModuleCMakelistfile()
         done
     fi
     
-    if [ -f ../thirdparty/lib/libmodsecurity.a ] ; then
+    if [ -f ../third-party/lib/libmodsecurity.a ] ; then
         echo "add_subdirectory(modsecurity-ls)" >> src/modules/CMakeLists.txt
     fi
     
@@ -453,6 +457,7 @@ updateModuleCMakelistfile()
     
 }
 
+
 cpModuleSoFiles()
 {
     if [ ! -d dist/modules/ ] ; then
@@ -460,21 +465,18 @@ cpModuleSoFiles()
     fi
     
     for module in ${moduledir}; do
-        cp -f src/modules/${module}/*.so dist/modules/
+        cp -f build/src/modules/${module}/*.so dist/modules/
     done
     
     if [ -e src/modules/modsecurity-ls/mod_security.so ] ; then
-        cp -f src/modules/modsecurity-ls/mod_security.so dist/modules/
+        cp -f build/src/modules/modsecurity-ls/mod_security.so dist/modules/
     fi
     
     if [ -e src/modules/pagespeed/modpagespeed.so ] ; then
-        cp -f src/modules/pagespeed/modpagespeed.so dist/modules/
+        cp -f build/src/modules/pagespeed/modpagespeed.so dist/modules/
     fi
-    
-    
-    
-    
 }
+
 
 fixshmdir()
 {
@@ -509,7 +511,7 @@ freebsdFix()
 fixPagespeed()
 {
 PSOLVERSION=1.11.33.4
-cat << EOF > ../thirdparty/psol-$PSOLVERSION/include/pagespeed/kernel/base/scoped_ptr.h
+cat << EOF > ../third-party/psol-$PSOLVERSION/include/pagespeed/kernel/base/scoped_ptr.h
 /**
 * Due the compiling issue, this file was updated from the original file.
 */
@@ -550,21 +552,22 @@ fi
 
 
 cd ..
-git clone https://github.com/litespeedtech/third-party.git
-mv third-party thirdparty
-mkdir thirdparty/lib64
-cd thirdparty/script/
+if [ ! -d third-party ]; then
 
+    git clone https://github.com/litespeedtech/third-party.git
+    mkdir third-party/lib64
+    cd third-party/script/
 
-#Remove  unittest-cpp and add bcrypt
-sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
+    #Remove  unittest-cpp and add bcrypt
+    sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
 
-if [ "${ISLINUX}" != "yes" ] ; then
-    sed -i -e "s/psol/ /g"  ./build_ols.sh
+    if [ "${ISLINUX}" != "yes" ] ; then
+        sed -i -e "s/psol/ /g"  ./build_ols.sh
+    fi
+
+    ./build_ols.sh
+
 fi
-
-
-./build_ols.sh
 
 cd ${CURDIR}
 
@@ -572,16 +575,6 @@ updateSrcCMakelistfile
 updateModuleCMakelistfile
 preparelibquic
 
-STDC_LIB=`g++ -print-file-name='libstdc++.a'`
-cp ${STDC_LIB} ../thirdparty/lib64/
-if [ ! $? -eq 0 ]; then
-    STDC_LIB=`g++ -print-file-name='libstdc++fs.a'`
-    cp ${STDC_LIB} ../thirdparty/lib64/libstdc++.a
-fi
-
-cp ../thirdparty/src/brotli/out/*.a          ../thirdparty/lib64/
-cp ../thirdparty/src//libxml2/.libs/*.a      ../thirdparty/lib64/
-cp ../thirdparty/src/libmaxminddb/include/*  ../thirdparty/include/
 
 if [ "${ISLINUX}" = "yes" ] ; then
     fixPagespeed
@@ -589,15 +582,27 @@ fi
 
 #special case modsecurity
 cd src/modules/modsecurity-ls
-ln -sf ../../../../thirdparty/src/ModSecurity .
+ln -sf ../../../../third-party/src/ModSecurity .
 cd ../../../
 #Done of modsecurity
 
 fixshmdir
 
-cmake .
-make
-cp src/openlitespeed  dist/bin/
+if [ "x$1" == "xDebug" ]; then
+    BUILD=Debug
+else
+    BUILD=RelWithDebInfo
+fi
+
+if [ ! -d build ]; then
+    mkdir build
+fi
+cd build
+cmake -DCMAKE_BUILD_TYPE=$BUILD ..
+make -j2
+cd ..
+
+cp build/src/openlitespeed  dist/bin/
 
 cpModuleSoFiles
 

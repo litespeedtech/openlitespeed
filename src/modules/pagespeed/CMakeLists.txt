@@ -16,7 +16,7 @@ else()
 endif()
 
 set(PSOL_VER 1.11.33.4)
-set(PSOL_LIB ${PROJECT_SOURCE_DIR}/../thirdparty/psol-${PSOL_VER})
+set(PSOL_LIB ${PROJECT_SOURCE_DIR}/../third-party/psol-${PSOL_VER})
 
 include_directories(
                 ${PSOL_LIB}/include

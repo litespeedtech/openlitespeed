@@ -438,11 +438,6 @@ if [ "x$IS_LSCPD" != "xyes" ] ; then
     rm $LSWS_HOME/bin/lshttpd
     ln -sf ./openlitespeed $LSWS_HOME/bin/lshttpd
     
-    if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
-        ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
-        echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
-    fi
-
     if [ ! -f "$LSWS_HOME/fcgi-bin/lsphp" ]; then
         cp -f "$LSWS_HOME/admin/fcgi-bin/admin_php" "$LSWS_HOME/fcgi-bin/lsphp5"
         chown "$SDIR_OWN" "$LSWS_HOME/fcgi-bin/lsphp5"
@@ -465,6 +460,10 @@ if [ "x$IS_LSCPD" != "xyes" ] ; then
         fi
     fi
 
+    if [ ! -f "$LSWS_HOME/admin/conf/htpasswd" ] ; then
+        ENCRYPT_PASS=`"$LSWS_HOME/admin/fcgi-bin/admin_php" -q "$LSWS_HOME/admin/misc/htpasswd.php" $PASS_ONE`
+        echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
+    fi
 
     #compress_admin_file
     if [ ! -f "$LSWS_HOME/admin/conf/jcryption_keypair" ]; then
