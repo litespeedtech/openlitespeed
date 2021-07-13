@@ -31,7 +31,7 @@ inst_admin_php()
 
     if [ ! -d "$LSWS_HOME/admin/fcgi-bin/" ] ; then
         mkdir -p "$LSWS_HOME/admin/fcgi-bin/"
-        echo "Mkdir $LSWS_HOME/admin/fcgi-bin/ for installing admni_php"
+        echo "Mkdir $LSWS_HOME/admin/fcgi-bin/ for installing admin_php"
     fi
         
     if [ "x$OS" = "xLinux" ] ; then
