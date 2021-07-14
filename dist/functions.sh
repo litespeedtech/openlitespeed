@@ -961,7 +961,7 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib logs modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc  
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib logs modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN docs/bn-BD admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc  
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD cgid admin/cgid admin/cgid/secret
     util_mkdir "$DIR_OWN" $SDIR_MOD  tmp/ocspcache
@@ -1081,7 +1081,7 @@ installation()
     ln -sf ./lshttpd.$VERSION $LSWS_HOME/bin/lshttpd
     ln -sf lshttpd $LSWS_HOME/bin/litespeed
 
-	util_cpfile "$SDIR_OWN" $DOC_MOD docs/* docs/css/* docs/img/* docs/ja-JP/* docs/zh-CN/*
+	util_cpfile "$SDIR_OWN" $DOC_MOD docs/* docs/css/* docs/img/* docs/ja-JP/* docs/zh-CN/* docs/bn-BD/*
 	util_cpfile "$SDIR_OWN" $DOC_MOD VERSION GPL.txt  
 
 	if [ -f $LSWS_HOME/autoupdate/download ]; then

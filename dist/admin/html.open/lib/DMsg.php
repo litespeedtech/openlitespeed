@@ -8,12 +8,14 @@ class DMsg
     const LANG_ENGLISH = 'english';
     const LANG_CHINESE = 'chinese';
     const LANG_JAPANES = 'japanes';
+    const LANG_BENGALI = 'bengali';
     const _COOKIE_LANG_ = 'litespeed_admin_lang';
 
     private static $_supported = [
         self::LANG_ENGLISH => ['English', 'en-US'],
         self::LANG_CHINESE => ['中文', 'zh-CN'],
         self::LANG_JAPANES => ['日本語', 'ja-JP'],
+        self::LANG_BENGALI => ['বাংলা', 'bn-BD'],
     ];
     private static $_curlang = '';
     private static $_curtips = '';
