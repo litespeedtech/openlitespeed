@@ -706,7 +706,7 @@ void AccessLog::log(HttpSession *pSession)
     m_buf.append_unsafe('"');
     m_buf.append_unsafe(' ');
     m_buf.append_unsafe(
-        HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode()), 5);
+        HttpStatusCode::getInstance().getCodeString(pReq->getStatusCode()), 4);
     if (contentWritten == 0)
         m_buf.append_unsafe('-');
     else
