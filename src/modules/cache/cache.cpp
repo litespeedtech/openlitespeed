@@ -821,10 +821,10 @@ static int32_t getVaryFlag(const lsi_session_t *session, CacheConfig *pConfig)
                 if (isVaryHdrBypassed((*iter)->c_str(), (*iter)->len()))
                     continue;
 
-                g_api->log(session, LSI_LOG_WARN, "[%s] vary request header"
+                g_api->log(session, LSI_LOG_INFO, "[%s] vary request header"
                             " \"%.*s\" not defined!\n",
                            ModuleNameStr, (*iter)->len(), (*iter)->c_str());
-                return LS_FAIL;
+                continue;
             }
             flag |= (1 << index);
         }
@@ -1981,12 +1981,11 @@ static int createEntry(lsi_param_t *rec)
     if (iVaryFlag == LS_FAIL)
     {
         /**
-         * will stop the hook chain and cause 500 error
+         * will stop the hook chain
          */
-        g_api->set_status_code(rec->session, 500);
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]createEntry set 500 error and returned.\n",
+                       "[%s] getVaryFlag failure, cancel cache.\n",
                        ModuleNameStr);
         return 0;
     }
