@@ -672,6 +672,9 @@ void AccessLog::log(HttpSession *pSession)
     char *pAddr;
     char achTemp[100];
     pSession->setAccessLogOff();
+    if (pReq->getOrgReqLineLen() == 0)
+        return;
+
     if (m_iPipedLog)
     {
         if (!m_pManager)
