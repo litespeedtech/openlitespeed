@@ -717,20 +717,20 @@ void AccessLog::log(HttpSession *pSession)
     if (getAccessLogHeader() & LOG_REFERER)
     {
         m_buf.append_unsafe(' ');
-        appendEscape(pReq->getHeader(HttpHeader::H_REFERER),
-                     pReq->getHeaderLen(HttpHeader::H_REFERER));
+        appendStr(pReq->getHeader(HttpHeader::H_REFERER),
+                  pReq->getHeaderLen(HttpHeader::H_REFERER));
     }
     if (getAccessLogHeader() & LOG_USERAGENT)
     {
         m_buf.append_unsafe(' ');
-        appendEscape(pReq->getHeader(HttpHeader::H_USERAGENT),
-                     pReq->getHeaderLen(HttpHeader::H_USERAGENT));
+        appendStr(pReq->getHeader(HttpHeader::H_USERAGENT),
+                  pReq->getHeaderLen(HttpHeader::H_USERAGENT));
     }
     if (getAccessLogHeader() & LOG_VHOST)
     {
         m_buf.append_unsafe(' ');
-        appendEscape(pReq->getHeader(HttpHeader::H_HOST),
-                     pReq->getHeaderLen(HttpHeader::H_HOST));
+        appendStr(pReq->getHeader(HttpHeader::H_HOST),
+                  pReq->getHeaderLen(HttpHeader::H_HOST));
     }
     m_buf.append_unsafe('\n');
     if ((m_buf.available() < MAX_LOG_LINE_LEN)
@@ -741,16 +741,12 @@ void AccessLog::log(HttpSession *pSession)
 
 int AccessLog::appendStr(const char *pStr, int len)
 {
+    if (m_buf.available() < len + 3)
+        flush();
     if (*pStr)
     {
         m_buf.append_unsafe('"');
-        if ((len > 4096) || (m_buf.available() <= len + 2))
-        {
-            flush();
-            m_pAppender->append(pStr, len);
-        }
-        else
-            m_buf.append_unsafe(pStr, len);
+        appendEscape(pStr, len);
         m_buf.append_unsafe('"');
     }
     else
