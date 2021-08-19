@@ -57,8 +57,25 @@ int FileAppender::reopenExist()
         return 0;
     if (m_ino != st.st_ino)
     {
-        close();
-        return open();
+        MutexLocker lock(m_stream.get_mutex());
+        if (getfd() != -1)
+            m_stream.close();
+        return open2();
+    }
+    return 0;
+}
+
+
+int FileAppender::reopenIfNeed()
+{
+    const char *pName = getName();
+    struct stat st;
+    if (stat(pName, &st) == -1 || m_ino != st.st_ino)
+    {
+        MutexLocker lock(m_stream.get_mutex());
+        if (getfd() != -1)
+            m_stream.close();
+        return open2();
     }
     return 0;
 }

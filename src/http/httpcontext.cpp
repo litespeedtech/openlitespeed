@@ -1023,6 +1023,8 @@ const MimeSetting *HttpContext::determineMime(const char *pSuffix,
         if (pMimeType)
             return pMimeType;
     }
+    else
+        return HttpMime::getBlank();
     if (m_pInternal->m_pMIME)
     {
         pMimeType = m_pInternal->m_pMIME->getDefault();

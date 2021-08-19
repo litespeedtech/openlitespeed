@@ -505,11 +505,6 @@ void HttpSession::nextRequest()
     getStream()->flush();
     setState(HSS_WAITING);
 
-
-    m_sendFileInfo.release();
-    //m_sendFileInfo.reset();
-    releaseReqParser();
-
     //for SSI, should resume
     if (getSsiRuntime())
         return releaseSsiRuntime();
@@ -537,19 +532,10 @@ void HttpSession::nextRequest()
         m_curHookRet = 0;
         m_sessionHooks.reset();
         m_sessionHooks.disableAll();
-        m_iFlag = 0;
-        m_iFlag2 = 0;
         ls_atomic_setint(&m_iMtFlag, 0);
         logAccess(0);
         ++m_iReqServed;
         getStream()->resetBytesCount();
-
-        m_lReqTime = DateTime::s_curTime;
-        m_iReqTimeUs = DateTime::s_curTimeUs;
-
-        m_response.reset();
-        m_request.reset(1);
-        releaseMtSessData();
 
         const ConnInfo *pInfo = getStream()->getConnInfo();
         if (pInfo->m_pCrypto)
@@ -560,11 +546,6 @@ void HttpSession::nextRequest()
         else
             m_request.setCrypto(NULL);
 
-        if (getRespBodyBuf())
-            releaseRespBody();
-        if (getGzipBuf())
-            releaseGzipBuf();
-
         getStream()->switchWriteToRead();
         if (isLogIdBuilt())
         {
@@ -574,6 +555,7 @@ void HttpSession::nextRequest()
         }
 
         releaseResources();
+
         setClientInfo(pInfo->m_pClientInfo);
         ls_atomic_setint((volatile uint32_t*)&m_iFlag, 0);
         ls_atomic_setint((volatile uint32_t*)&m_iFlag2, 0);
@@ -3372,10 +3354,12 @@ int HttpSession::detectKeepAliveTimeout(int delta)
 
         }
         else if ((int)getClientInfo()->getConns() >
-                 (ClientInfo::getPerClientSoftLimit() >> 1))
+                 ClientInfo::getPerClientSoftLimit())
         {
-            LS_DBG_M(getLogSession(), "Number of connections is over the soft "
-                     "limit, close conn!");
+            LS_DBG_M(getLogSession(), "Number of connections: %d is over the soft "
+                     "limit: %d, close conn!", (int)getClientInfo()->getConns(),
+                     ClientInfo::getPerClientSoftLimit()
+                    );
             c = 1;
         }
     }
@@ -3524,7 +3508,7 @@ void HttpSession::rewindRespBodyBuf()
     if (getRespBodyBuf())
     {
         off_t wPos = getRespBodyBuf()->getCurWBlkPos();
-        if (wPos < 2048 * 1024)
+        if (wPos < 20480 * 1024)
             return;
         LS_DBG_M(getLogger(),
                  "[%s] Rewind RespBodyBuf, current size: %lld \n",
@@ -5167,8 +5151,6 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 
             if (written > remain)
                 written = remain;
-            if (written <= 0)
-                return -1;
         }
 
         len = writeRespBodyBlockInternal(pData, pBuf, written);

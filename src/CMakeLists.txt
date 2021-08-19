@@ -137,7 +137,9 @@ add_executable(ls_shmhashstat
 #     httpdtest.cpp
 # )
 
-
+if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+  set(LIBATOMIC atomic)
+endif()
 
 # NOTE: When creating a new directory, the order it is placed in this list
 # matters.  Everything listed depends on things listed AFTER it, though
@@ -153,7 +155,7 @@ SET( litespeedlib
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
     libz.a libpcre.a libexpat.a libxml2.a
     ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns
-    -nodefaultlibs pthread rt ${LIBSAN}
+    -nodefaultlibs pthread rt ${LIBSAN} ${LIBATOMIC}
     ${CMAKE_DL_LIBS} libstdc++.a crypt bcrypt m gcc_eh c c_nonshared gcc
 )
 

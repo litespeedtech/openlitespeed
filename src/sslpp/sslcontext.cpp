@@ -26,6 +26,7 @@
 #include <sslpp/sslcertcomp.h>
 
 #include <log4cxx/logger.h>
+#include <util/stringtool.h>
 
 #include <assert.h>
 #if __cplusplus <= 199711L && !defined(static_assert)
@@ -225,8 +226,150 @@ SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
                 , pContext
                 , pConfig->m_sName.c_str(), pConfig->m_sCaChainFile.c_str());
     }
-
     if (LS_FAIL == pContext->configOptions(pConfig))
+    {
+        if (pNewContext)
+            delete pNewContext;
+        return NULL;
+    }
+
+#ifdef SSLCERTCOMP
+    SslCertComp::enableCertComp(pContext->m_pCtx);
+#endif
+
+    return pContext;
+}
+
+
+SslContext *SslContext::configMultiCerts(SslContext *pContext, SslContextConfig *pConfig)
+{
+    SslContext *pMain = NULL;
+    SslContext *pEcc = NULL;
+    SslContext* pNewContext = NULL;
+
+    if ( pConfig->m_iEnableMultiCerts )
+    {
+        pMain = configOneCert(NULL, pConfig->m_sKeyFile[0].c_str(),
+                             pConfig->m_sCertFile[0].c_str(),
+                             NULL, pConfig);
+        char cert[4096], key[4096];
+        struct stat st;
+        lsnprintf(cert, sizeof(cert), "%s.ecc", pConfig->m_sCertFile[0].c_str());
+        lsnprintf(key, sizeof(key), "%s.ecc", pConfig->m_sKeyFile[0].c_str());
+        if (stat(cert, &st) == 0 && stat(key, &st) == 0)
+            pEcc = configOneCert(NULL, key, cert, NULL, pConfig);
+    }
+    else
+    {
+        for(int i = 0; i <= pConfig->m_iKeyCerts; ++i )
+        {
+            pNewContext = configOneCert(NULL, pConfig->m_sKeyFile[i].c_str(),
+                                        pConfig->m_sCertFile[i].c_str(),
+                                        NULL, pConfig);
+            if (pNewContext)
+            {
+                if (pNewContext->m_iKeyType == TLSEXT_signature_ecdsa)
+                {
+                    if (pEcc)
+                        delete pNewContext;
+                    else
+                        pEcc = pNewContext;
+                }
+                else
+                {
+                    if (pMain)
+                        delete pNewContext;
+                    else
+                        pMain = pNewContext;
+                }
+            }
+        }
+    }
+    if (pMain)
+    {
+        if (pEcc)
+            pMain->m_pEccCtx = pEcc;
+    }
+    else
+        if (pEcc)
+            pMain = pEcc;
+    return pMain;
+}
+
+
+SslContext *SslContext::configOneCert(SslContext *pContext, const char * key_file,
+                                      const char * cert_file, const char * bundle_file,
+                                      SslContextConfig *pConfig)
+{
+    int ret;
+    SslContext* pNewContext = NULL;
+    if (!pContext || pContext->isKeyFileChanged(key_file)
+        || pContext->isCertFileChanged(cert_file))
+    {
+        pNewContext = new SslContext(SslContext::SSL_ALL);
+        if (!pNewContext)
+        {
+            LS_DBG_L("[SSL] Failed to create SSL Context, insufficient memory\n");
+            return NULL;
+        }
+        else
+            LS_DBG_L("[SSL] Create New SSL context.");
+
+        ret = pNewContext->setKeyCertificateFile(key_file,
+                    SslUtil::FILETYPE_PEM, cert_file,
+                    SslUtil::FILETYPE_PEM, pConfig->m_iCertChain);
+        if (!ret)
+        {
+            LS_ERROR( "[SSL] Config SSL Context with Certificate File: %s"
+                    " and Key File:%s get SSL error: %s",
+                    cert_file, key_file, SslError().what());
+            delete pNewContext;
+            return NULL;
+        }
+
+        STACK_OF(X509) *sk = NULL;
+        SSL_CTX_get0_chain_certs(pNewContext->get(), &sk);
+        if (!sk)
+        {
+            if (!bundle_file && pConfig->m_sCAFile.c_str())
+                bundle_file = pConfig->m_sCAFile.c_str();
+            if (bundle_file)
+            {
+                if (strcmp(cert_file, bundle_file) == 0)
+                    bundle_file = NULL;
+                else
+                {
+                    if (pNewContext->setCertificateChainFile(bundle_file) <= 0)
+                    {
+                        LS_ERROR("[SSL] Vhost %s: failed to set Certificate Chain file: %s"
+                                , pConfig->m_sName.c_str(), bundle_file);
+                        delete pNewContext;
+                        return NULL;
+                    }
+                }
+            }
+        }
+
+        if (pConfig->m_iClientVerify
+            && (pConfig->m_sCAFile.c_str() || pConfig->m_sCAPath.c_str()))
+        {
+            if (!pNewContext->setCALocation( pConfig->m_sCAFile.c_str(),
+                  pConfig->m_sCAPath.c_str(), pConfig->m_iClientVerify))
+            {
+                LS_ERROR( "[SSL] Failed to setup Certificate Authority "
+                        "Certificate File: '%s', Path: '%s', SSL error: %s",
+                        pConfig->m_sCAFile.c_str() ? pConfig->m_sCAFile.c_str() : "",
+                        pConfig->m_sCAPath.c_str() ? pConfig->m_sCAPath.c_str() : "",
+                        SslError().what());
+                delete pNewContext;
+                return NULL;
+            }
+        }
+
+        pContext = pNewContext;
+    }
+
+    if (pContext->configOptions(pConfig) == LS_FAIL)
     {
         if (pNewContext)
             delete pNewContext;
@@ -252,23 +395,23 @@ int SslContext::configOptions(SslContextConfig *pConfig)
     {
         LS_DBG_L("[SSL:%p] Set SSL protcol: %d\n", this,
                  pConfig->m_iProtocol);
-        setProtocol( pConfig->m_iProtocol );
+        setProtocol(pConfig->m_iProtocol);
     }
-    if ( pConfig->m_iEnableECDHE )
+    if (pConfig->m_iEnableECDHE)
     {
         LS_DBG_L("[SSL:%p] Enable ECDHE\n", this);
-        if ( initECDH() == LS_FAIL )
+        if (initECDH() == LS_FAIL)
         {
-            LS_ERROR("[SSL] Init ECDHE failed.");
+            LS_ERROR("[SSL] Init ECDH failed.");
             return LS_FAIL;
         }
     }
-    if ( pConfig->m_iEnableDHE )
+    if (pConfig->m_iEnableDHE)
     {
         LS_DBG_L("[SSL:%p] Enable DH\n", this);
-        if ( initDH( pConfig->m_sDHParam.c_str() ) == LS_FAIL )
+        if (initDH( pConfig->m_sDHParam.c_str() ) == LS_FAIL)
         {
-            LS_ERROR("[SSL] Init DH failed.");
+            LS_ERROR("[SSL:%p] Init DH failed.", this);
             return LS_FAIL;
         }
     }
@@ -278,7 +421,7 @@ int SslContext::configOptions(SslContextConfig *pConfig)
         LS_DBG_L("[SSL:%p] Enable SHM session cache\n", this);
         if (enableShmSessionCache() == LS_FAIL)
         {
-            LS_ERROR("[SSL] Enable session cache failed.");
+            LS_ERROR("[SSL:%p] Enable session cache failed.", this);
             return LS_FAIL;
         }
     }
@@ -289,18 +432,17 @@ int SslContext::configOptions(SslContextConfig *pConfig)
     {
         if (enableSessionTickets() == LS_FAIL)
         {
-            LS_ERROR("[SSL] Enable session ticket failed.");
+            LS_ERROR("[SSL:%p] Enable session ticket failed.", this);
             return LS_FAIL;
         }
     }
     else
         disableSessionTickets();
 
-    if ( pConfig->m_iEnableSpdy != 0 )
+    if (pConfig->m_iEnableSpdy != 0)
     {
-        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", this,
-                 (int)pConfig->m_iEnableSpdy);
-        if ( enableSpdy( pConfig->m_iEnableSpdy ) == -1 )
+        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", this, (int)pConfig->m_iEnableSpdy);
+        if (enableSpdy( pConfig->m_iEnableSpdy ) == LS_FAIL)
         {
             LS_ERROR("[SSL:%p] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
                      this, pConfig->m_iEnableSpdy);
@@ -309,8 +451,9 @@ int SslContext::configOptions(SslContextConfig *pConfig)
     }
     LS_DBG_L("[SSL:%p] set Cipher: %s.\n", this,
              pConfig->m_sCiphers.c_str());
-    setCipherList( pConfig->m_sCiphers.c_str() );
+    setCipherList(pConfig->m_sCiphers.c_str());
 
+    LS_DBG_L("[SSL:%p] set Cipher: %s.\n", this, pConfig->m_sCiphers.c_str());
     if (pConfig->m_iEnableStapling)
     {
         int ret = configStapling(pConfig->m_sCertFile[0].c_str(),
@@ -327,10 +470,7 @@ int SslContext::configOptions(SslContextConfig *pConfig)
 
 #ifdef _ENTERPRISE_
     if (pConfig->m_iClientVerify)
-    {
-        setClientVerify(pConfig->m_iClientVerify,
-                                  pConfig->m_iVerifyDepth);
-    }
+        setClientVerify(pConfig->m_iClientVerify, pConfig->m_iVerifyDepth);
 #endif
     return LS_OK;
 }
@@ -531,6 +671,7 @@ int SslContext::init(int iMethod)
 
 SslContext::SslContext(int iMethod)
     : m_pCtx(NULL)
+    , m_pEccCtx(NULL)
     , m_iMethod(iMethod)
     , m_iRenegProtect(1)
     , m_iEnableSpdy(0)
@@ -565,6 +706,11 @@ void SslContext::release()
     {
         delete m_pStapling;
         m_pStapling = NULL;
+    }
+    if (m_pEccCtx)
+    {
+        delete m_pEccCtx;
+        m_pEccCtx = NULL;
     }
 }
 
@@ -614,6 +760,7 @@ int SslContext::setKeyCertificateFile(const char *pKeyFile, int iKeyType,
         return false;
     if (!setPrivateKeyFile(pKeyFile, iKeyType))
         return false;
+
     return  SSL_CTX_check_private_key(m_pCtx) == 1;
 }
 
@@ -647,6 +794,7 @@ int SslContext::setMultiKeyCertFile(const char *pKeyFile, int iKeyType,
                          achKey, achCert);
                 return false;
             }
+            LS_DBG("Loaded key file %s and cert file %s", achKey, achCert);
             iLoaded = 1;
         }
     }
@@ -662,12 +810,12 @@ int SslContext::setCertificateFile(const char *pFile, int type,
     ::stat(pFile, &m_stCert);
     if (init(m_iMethod))
         return false;
-    if (chained)
-        return SSL_CTX_use_certificate_chain_file(m_pCtx, pFile) == 1;
-    else
+    int ret = SslUtil::loadCertFile(m_pCtx, pFile, type);
+    if (ret == -1)
     {
-        int ret = SslUtil::loadCertFile(m_pCtx, pFile, type);
-        if (ret == -1)
+        if (chained)
+            return SSL_CTX_use_certificate_chain_file(m_pCtx, pFile) == 1;
+        else
             return SSL_CTX_use_certificate_file(m_pCtx, pFile,
                                                 SslUtil::translateType(type));
     }
@@ -702,14 +850,34 @@ int SslContext::setPrivateKeyFile(const char *pFile, int type)
         return false;
     if (init(m_iMethod))
         return false;
-//     if (loadPrivateKeyFile(pFile, type) == -1)
     if ((ret = SslUtil::loadPrivateKeyFile(m_pCtx, pFile, type)) <= 1)
     {
-        return SSL_CTX_use_PrivateKey_file(m_pCtx, pFile,
-                                           SslUtil::translateType(type)) == 1;
+        ret = SSL_CTX_use_PrivateKey_file(m_pCtx, pFile,
+                                          SslUtil::translateType(type)) == 1;
     }
-    m_iKeyLen = ret;
-    return 1;
+    if (ret >= 1)
+    {
+        EVP_PKEY *pkey = SSL_CTX_get0_privatekey(m_pCtx);
+        if (pkey)
+        {
+            int id = EVP_PKEY_base_id(pkey);
+            if (id == EVP_PKEY_EC)
+                m_iKeyType = TLSEXT_signature_ecdsa;
+            else if (id == EVP_PKEY_RSA)
+                m_iKeyType = TLSEXT_signature_rsa;
+            else if (id == EVP_PKEY_DSA)
+                m_iKeyType = TLSEXT_signature_dsa;
+            else
+                m_iKeyType = TLSEXT_signature_anonymous;
+
+            m_iKeyLen = EVP_PKEY_size(pkey);
+        }
+        else
+            ret = -1;
+    }
+    else
+        ret = -1;
+    return ret != -1;
 }
 
 bool SslContext::checkPrivateKey()
@@ -932,8 +1100,36 @@ int  SslContext::privatekey_decrypt( const char * pPrivateKeyFile, const char * 
 
 static SslSniLookupCb s_sniLookup = NULL;
 
-void SslContext::setSniLookupCb(SslSniLookupCb pCb)
-{   s_sniLookup = pCb;      }
+SslSniLookupCb SslContext::setSniLookupCb(SslSniLookupCb pCb)
+{
+    SslSniLookupCb old = s_sniLookup;
+    s_sniLookup = pCb;
+    return old;
+}
+
+static SslContext *DefaultAsyncSniLookupCb(void *arg, const char *name,
+                                int name_len,
+                                AsyncCertDoneCb cb, void *cb_param)
+{
+    if (s_sniLookup)
+        return s_sniLookup(arg, name);
+    return NULL;
+}
+
+
+static SslAsyncSniLookupCb s_asyncSniLookup = DefaultAsyncSniLookupCb;
+
+SslAsyncSniLookupCb SslContext::setAsyncSniLookupCb(SslAsyncSniLookupCb cb)
+{
+    assert(cb != s_asyncSniLookup);
+    SslAsyncSniLookupCb old = s_asyncSniLookup;
+    s_asyncSniLookup = cb;
+    return old;
+}
+
+
+SslAsyncSniLookupCb SslContext::getAsyncSniLookupCb()
+{   return s_asyncSniLookup;    }
 
 
 static int verifyProtocol(SSL *pSSL, long newCtxOptions)
@@ -976,35 +1172,78 @@ void SslContext::enableClientSessionReuse()
 }
 
 
-int SslContext::servername_cb(SSL *pSSL, void *arg)
+static enum ssl_select_cert_result_t select_cert_cb(const SSL_CLIENT_HELLO *cli_hello)
 {
-    SSL_CTX *pNewCtx;
-    SslContext *pCtx = NULL;
+    SSL *ssl = cli_hello->ssl;
+
+    if (!ssl)
+        return ssl_select_cert_success;
+    int ecdsa = SslUtil::isEcdsaSupported(cli_hello->cipher_suites,
+                                          cli_hello->cipher_suites_len);
+    if (ecdsa)
+    {
+        SslConnection *conn = SslConnection::get(ssl);
+        if (conn)
+            conn->setFlag(SslConnection::F_ECDSA_AVAIL, 1);
+        else
+            SslConnection::setSpecialExData(ssl,
+                (void *)(long)SslConnection::F_ECDSA_AVAIL);
+    }
+
+    return ssl_select_cert_success;
+
+}
+
+
+int SslContext::applyToSsl(SSL *pSsl)
+{
+    SSL_CTX *pNewCtx = get();
+    if (pNewCtx == SSL_get_SSL_CTX(pSsl))
+        return SslUtil::CERTCB_RET_OK;
+#ifdef OPENSSL_IS_BORINGSSL
+    // Check OCSP again when the context needs to be changed.
+    initOCSP();
+#endif
+    SSL_set_SSL_CTX(pSsl, pNewCtx);
+    SSL_set_verify(pSsl, SSL_CTX_get_verify_mode(pNewCtx), NULL);
+    SSL_set_verify_depth(pSsl, SSL_CTX_get_verify_depth(pNewCtx));
+
     long newCtxOptions;
-    const char *servername = SSL_get_servername(pSSL,
-                             TLSEXT_NAMETYPE_host_name);
-    if (!servername || !*servername)
+    newCtxOptions = SSL_CTX_get_options(pNewCtx);
+    SSL_clear_options(pSsl, SSL_get_options(pSsl) & ~newCtxOptions);
+    SSL_set_options(pSsl, newCtxOptions);
+
+    return SslUtil::CERTCB_RET_OK;
+}
+
+
+int SslContext::servername_cb(SSL *ssl, void *arg)
+{
+    SslContext *pCtx = NULL;
+    char name[512];
+    int len;
+    len = SslUtil::getLcaseServerName(ssl, name, sizeof(name));
+    if (len < 4)
         return SslUtil::CERTCB_RET_OK;
     if (s_sniLookup)
-        pCtx = (*s_sniLookup)(arg, servername);
+        pCtx = (*s_sniLookup)(arg, name);
     if (!pCtx)
     {
-
-        LS_DBG_H("SslContext::servername_cb() no ctx found.");
+        LS_DBG_H("SslContext::servername_cb() no ctx found for '%s'.", name);
         return SslUtil::CERTCB_RET_OK;
     }
-    pNewCtx = pCtx->get();
-    if (pNewCtx == SSL_get_SSL_CTX(pSSL))
-        return SslUtil::CERTCB_RET_OK;
-    SSL_set_SSL_CTX(pSSL, pNewCtx);
-    SSL_set_verify(pSSL, SSL_CTX_get_verify_mode(pNewCtx), NULL);
-    SSL_set_verify_depth(pSSL, SSL_CTX_get_verify_depth(pNewCtx));
+    if (pCtx->getEccCtx())
+    {
+        int ecdsa_avail = 0;
+        SslConnection *conn = SslConnection::get(ssl);
+        if (conn && ((void *)conn == (void *)(long)SslConnection::F_ECDSA_AVAIL
+                     || conn->getFlag(SslConnection::F_ECDSA_AVAIL)))
+            ecdsa_avail = 1;
+        if (ecdsa_avail)
+            pCtx = pCtx->getEccCtx();
+    }
 
-    newCtxOptions = SSL_CTX_get_options(pNewCtx);
-    SSL_clear_options(pSSL,
-                      SSL_get_options(pSSL) & ~newCtxOptions);
-    SSL_set_options(pSSL, newCtxOptions);
-    return verifyProtocol(pSSL, newCtxOptions);
+    return pCtx->applyToSsl(ssl);
 }
 
 
@@ -1015,6 +1254,20 @@ int SslContext::initSNI(void *param)
     return 0;
 }
 
+
+int SslContext::initSniMultiCert(void *param)
+{
+    assert(s_sniLookup != NULL);
+    SSL_CTX_set_cert_cb(m_pCtx, servername_cb, param);
+    SSL_CTX_set_select_certificate_cb(m_pCtx, select_cert_cb);
+    return 0;
+}
+
+
+void SslContext::enableSelectCertCb()
+{
+    SSL_CTX_set_select_certificate_cb(m_pCtx, select_cert_cb);
+}
 
 
 #ifdef _ENTERPRISE_
@@ -1126,11 +1379,15 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
 {
     SslContext *pCtx = (SslContext *)arg;
     SslConnection *pConn = SslConnection::get(pSSL);
-    if (pConn && pConn->getFlag(SslConnection::F_DISABLE_HTTP2))
-        return SSL_TLSEXT_ERR_NOACK;
-    unsigned char alpn_idx = pCtx->getEnableSpdy();
-    if (pConn)
-        alpn_idx &= ~8; // No HTTP/3 on TCP connection
+    unsigned char alpn_idx;
+    if (pConn && pConn != (void *)(long)SslConnection::F_ECDSA_AVAIL)
+    {
+        if (pConn->getFlag(SslConnection::F_DISABLE_HTTP2))
+            return SSL_TLSEXT_ERR_NOACK;
+        alpn_idx = pCtx->getEnableSpdy() & ~8; // No HTTP/3 on TCP connection
+    }
+    else
+        alpn_idx = pCtx->getEnableSpdy();
     if (SSL_select_next_proto((unsigned char **) out, outlen,
                               (const unsigned char *)NEXT_PROTO_STRING[ alpn_idx ],
                               NEXT_PROTO_STRING_LEN[ alpn_idx ],

@@ -98,10 +98,12 @@ public:
     static int enableShmSessionCache(SSL_CTX *pCtx);
     static int enableSessionTickets(SSL_CTX *pCtx);
     static void disableSessionTickets(SSL_CTX *pCtx);
+    static int getLcaseServerName(SSL *pSsl, char *name, int len);
+    static bool isEcdsaSupported(const uint8_t *ciphers, size_t len);
 
-    static asyncCertFunc addAsyncCertLookup;
-    static asyncCertFunc removeAsyncCertLookup;
-    static void setAsyncCertFunc(asyncCertFunc add, asyncCertFunc remove)
+    static AsyncCertFunc addAsyncCertLookup;
+    static AsyncCertFunc removeAsyncCertLookup;
+    static void setAsyncCertFunc(AsyncCertFunc add, AsyncCertFunc remove)
     {
         if (add)
             addAsyncCertLookup = add;

@@ -37,9 +37,12 @@ typedef struct x509_st X509;
 typedef struct ssl_cipher_st SSL_CIPHER;
 typedef struct ssl_session_st SSL_SESSION;
 
-typedef int (*asyncCertDoneCb)(void *arg, const char *pDomain);
-typedef int (*asyncCertFunc)(asyncCertDoneCb cb, void *pParam,
+typedef int (*AsyncCertDoneCb)(void *arg, const char *pDomain);
+typedef int (*AsyncCertFunc)(AsyncCertDoneCb cb, void *pParam,
                              const char *pDomain, int iDomainLen);
+
+#define asyncCertDoneCb AsyncCertDoneCb
+#define asyncCertFunc AsyncCertFunc
 
 #ifdef OPENSSL_IS_BORINGSSL
 #define SSL_ASYNC_PK    // The determiner in ALL the code which uses this class.

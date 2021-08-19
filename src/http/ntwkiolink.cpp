@@ -875,6 +875,11 @@ int NtwkIOLink::shutdown()
         if (!isPeerShutdown())
         {
             releaseHandler();
+            if (m_iHeaderToSend > 0)
+            {
+                m_iov.clear();
+                m_iHeaderToSend = 0;
+            }
             if (getState() == HIOS_CONNECTED)
                 setState(HIOS_CLOSING);
             MultiplexerFactory::getMultiplexer()->continueWrite(this);

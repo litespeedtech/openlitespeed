@@ -45,6 +45,7 @@ public:
     virtual int open();
     virtual int close();
     virtual int reopenExist();
+    virtual int reopenIfNeed();
     virtual int append(const char *pBuf, int len);
     virtual int getfd() const               {   return m_stream.getfd();        }
     void setAsync()                         {   return m_stream.setAsync();     }

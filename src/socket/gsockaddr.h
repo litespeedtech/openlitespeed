@@ -129,7 +129,8 @@ public:
     {
         if ((!m_pSockAddr) || (m_pSockAddr->sa_family != addr->sa_family))
             allocate(addr->sa_family);
-        memmove(m_pSockAddr, addr, m_len);
+        if (m_pSockAddr)
+            memmove(m_pSockAddr, addr, m_len);
     }
 
     void set(const GSockAddr *addr)

@@ -80,6 +80,7 @@ public:
     virtual int open()  = 0;
     virtual int close() = 0;
     virtual int reopenExist() = 0;
+    virtual int reopenIfNeed()      {   return 0;           }
     virtual int append(const char *pBuf, int len) = 0 ;
     virtual int append(LoggingEvent *pEvent);
     virtual int isFull()            {   return 0;               }

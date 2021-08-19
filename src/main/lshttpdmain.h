@@ -63,7 +63,7 @@ class HttpServer;
 class LshttpdMain
 {
     HttpServer         *m_pServer;
-    HttpConfigLoader *m_pBuilder;
+    HttpConfigLoader   *m_pBuilder;
     AutoStr             m_sCtrlFile;
     PidFile             m_pidFile;
     pid_t               m_pid;
@@ -114,7 +114,7 @@ class LshttpdMain
     void applyChanges();
     int testRunningServer();
     const char *getPidFile();
-    
+
     void printVersion();
     void parseOpt(int argc, char *argv[]);
     char *allocateBlackBoard();
@@ -123,10 +123,9 @@ class LshttpdMain
 
     void deallocateBlackBoard(char *pBuf);
 
-    
     int startCmdChannel();
     int processChildCmd();
-    
+
     int             startChild(ChildProc *pProc);
     void            onNewChildStart(ChildProc * pProc);
     int             childDead(int pid);

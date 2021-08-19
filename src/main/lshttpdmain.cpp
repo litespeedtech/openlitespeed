@@ -81,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Wed Jul  7 02:28:18 UTC 2021)"
+#define BUILDTIME  " (built: Tue Aug 17 14:56:00 UTC 2021)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -430,9 +430,9 @@ int LshttpdMain::startAdminSocket()
         //snprintf(achBuf, 255, "127.0.0.1:%d", 7000 + rand() % 1000 );
         if (CoreSocket::listen(achBuf, 10, &m_fdAdmin, 0 , 0) == 0)
             break;
-        if (!(i % 20))
+        if (i > 0 && !(i % 10))
         {
-            snprintf(achBuf, 1024, "rm -rf '%s%sadmin/tmp/admin.sock.*'",
+            snprintf(achBuf, 1024, "rm -rf '%s%sadmin/tmp/'admin.sock.*",
                      (pProcChroot != NULL) ? pProcChroot->c_str() : "",
                      MainServerConfig::getInstance().getServerRoot());
             system(achBuf);
@@ -846,6 +846,19 @@ static void enableCoreDump()
         ::setrlimit(RLIMIT_CORE, &rl);
     }
 
+#if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
+    rl.rlim_cur = rl.rlim_max = RLIM_INFINITY;
+
+#if defined(RLIMIT_AS)
+    setrlimit(RLIMIT_AS, &rl);
+#elif defined(RLIMIT_DATA)
+    setrlimit(RLIMIT_DATA, &rl);
+#elif defined(RLIMIT_VMEM)
+    setrlimit(RLIMIT_VMEM, &rl);
+#endif
+
+#endif
+
     ::chdir(DEFAULT_TMP_DIR);
 }
 
@@ -958,6 +971,7 @@ int LshttpdMain::init(int argc, char *argv[])
     }
 
     m_pid = getpid();
+    MainServerConfig::getInstance().setWatchDogPid(m_pid);
 
     if (!m_iConfTestMode)
     {

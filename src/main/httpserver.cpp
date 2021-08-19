@@ -98,6 +98,7 @@
 #include <sslpp/sslutil.h>
 
 #include <util/accesscontrol.h>
+#include <util/accessdef.h>
 #include <util/autostr.h>
 #include <util/daemonize.h>
 #include <util/datetime.h>
@@ -224,11 +225,13 @@ private:
     AccessControl       m_accessCtrl;
     AutoStr             m_sSwapDirectory;
     AutoStr2            m_sRTReportFile;
+    AutoStr2            m_sIpv4;
+    AutoStr2            m_sIpv6;
     HttpMime            m_httpMime;
     long                m_lStartTime;
     pid_t               m_pid;
     gid_t               m_pri_gid;
-    HttpFetch          *m_pAutoUpdFetch[2];
+    HttpFetch          *m_pAutoUpdFetch[3];
     QuicEngine         *m_pQuicEngine;
 
     HttpServerImpl(const HttpServerImpl &rhs);
@@ -252,7 +255,7 @@ private:
 
     ~HttpServerImpl()
     {
-        for(int i=0; i<2; ++i)
+        for(int i = 0; i < 3; ++i)
         {
             if (m_pAutoUpdFetch[i])
                 delete m_pAutoUpdFetch[i];
@@ -398,6 +401,17 @@ private:
     void setMaxSSLConns(int32_t conns);
     int configSecurity(const XmlNode *pRoot);
     int configAccessDeniedDir(const XmlNode *pNode);
+
+    void maybeDownloadQuicCloudTrustIp();
+    static int asyncDownloadQuicCloudIpCb(void *pArg, HttpFetch *pHttpFetch);
+    void asyncDownloadQuicCloudTrustIp();
+    int downloadQuicCloudTrustIp();
+    void gracefulRestartIfIpsChange();
+    void updateQuicCloudTrustIp(bool force);
+    void addCfTrustIp();
+    void addLocalTrustIp();
+    void detectAllIps();
+
     int denyAccessFiles(HttpVHost *pVHost, const char *pFile, int regex);
     int configMime(const XmlNode *pRoot);
     void testAndFixDirs(const char *pSuffix, uid_t uid, gid_t gid, mode_t mod);
@@ -1207,8 +1221,54 @@ void HttpServerImpl::checkOLSUpdate()
              curVer / 1000000, (curVer / 10000) % 100);
     m_pAutoUpdFetch[1]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               addrResponder2);
+    asyncDownloadQuicCloudTrustIp();
 }
 
+
+int HttpServerImpl::asyncDownloadQuicCloudIpCb(void *pArg, HttpFetch *pHttpFetch)
+{
+    HttpServerImpl *pServerImpl = (HttpServerImpl *)pArg;
+    int istatusCode = pHttpFetch->getStatusCode() ;
+    const char *path = pHttpFetch->getResult()->getTempFileName();
+    if (istatusCode != 200)
+        unlink(path);
+    else
+    {
+        char final_path[4096];
+        lsnprintf(final_path, sizeof(final_path),
+                "%stmp/download-quic-cloud-ips",
+                MainServerConfig::getInstance().getServerRoot());
+        rename(path, final_path);
+        pServerImpl->gracefulRestartIfIpsChange();
+
+    }
+
+    return 0;
+}
+
+
+void HttpServerImpl::asyncDownloadQuicCloudTrustIp()
+{
+    char path[4096];
+
+    if (m_pAutoUpdFetch[2])
+    {
+        if ((m_pAutoUpdFetch[2])->isInUse())
+        {
+            LS_INFO("HttpFetch is still in use for daily download QUIC.cloud whitelist IP, skip this attempt.");
+            return;
+        }
+        delete m_pAutoUpdFetch[2];
+    }
+    LS_INFO("Daily download QUIC.cloud whitelist IP to tmp/download-quic-cloud-ips ...");
+    lsnprintf(path, sizeof(path), "%stmp/download-quic-cloud-ips.tmp",
+              MainServerConfig::getInstance().getServerRoot());
+
+    m_pAutoUpdFetch[2] = new HttpFetch();
+    m_pAutoUpdFetch[2]->setTimeout(15);  //Set Req timeout as 30 seconds
+    m_pAutoUpdFetch[2]->setCallBack(asyncDownloadQuicCloudIpCb, this);
+    m_pAutoUpdFetch[2]->startReq("https://quic.cloud/ips?ln", 1, 1, NULL, 0, path);
+}
 
 
 void HttpServerImpl::onTimer60Secs()
@@ -1222,7 +1282,10 @@ void HttpServerImpl::onTimer60Secs()
     static int s_count = 0;
     if (s_count == 0)
     {
-        checkOLSUpdate();
+        if (1 == HttpServerConfig::getInstance().getProcNo())
+        {
+            checkOLSUpdate();
+        }
         s_count = 30;    //Check it every 30 minutes
     }
     --s_count;
@@ -1928,7 +1991,7 @@ int HttpServerImpl::startAdminListener(const XmlNode *pRoot, const char *pName)
 {
     ConfigCtx currentCtx("admin", "listener");
 
-    if (configListeners(pRoot->getChild(pName), 1) <= 0)
+    if (!pRoot->getChild(pName) || configListeners(pRoot->getChild(pName), 1) <= 0)
     {
         LS_ERROR(&currentCtx, "No listener is available for admin virtual host!");
         return LS_FAIL;
@@ -2049,7 +2112,7 @@ static void setPHPHandler(HttpContext *pCtx, HttpHandler *pHandler,
 }
 
 
-static int detectIP(char family, char *str, char *pEnd)
+static int detectIP(char family, char *str, char *pEnd, int ip_only)
 {
     struct ifi_info *pHead = NICDetect::get_ifi_info(family, 1);
     struct ifi_info *iter;
@@ -2073,8 +2136,10 @@ static int detectIP(char family, char *str, char *pEnd)
                 {
                     if (pBegin != str)
                         *str++ = ',';
-
-                    str += ls_snprintf(str, pEnd - str, "%s:[%s]", iter->ifi_name, temp);
+                    if (ip_only)
+                        str += ls_snprintf(str, pEnd - str, "[%s]", temp);
+                    else
+                        str += ls_snprintf(str, pEnd - str, "%s:[%s]", iter->ifi_name, temp);
                 }
             }
             else
@@ -2082,7 +2147,10 @@ static int detectIP(char family, char *str, char *pEnd)
                 if (pBegin != str)
                     *str++ = ',';
 
-                str += ls_snprintf(str, pEnd - str, "%s:%s", iter->ifi_name, temp);
+                if (ip_only)
+                    str += ls_snprintf(str, pEnd - str, "%s", temp);
+                else
+                    str += ls_snprintf(str, pEnd - str, "%s:%s", iter->ifi_name, temp);
             }
         }
     }
@@ -2159,12 +2227,12 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
 
     lstrncpy(pEnv, "LSWS_IPV4_ADDRS=", sizeof(pEnv));
 
-    if (detectIP(AF_INET, pEnv + strlen(pEnv), &pEnv[8192]) == 0)
+    if (detectIP(AF_INET, pEnv + strlen(pEnv), &pEnv[8192], 0) == 0)
         pFcgiApp->getConfig().addEnv(pEnv);
 
     lstrncpy(pEnv, "LSWS_IPV6_ADDRS=", sizeof(pEnv));
 
-    if (detectIP(AF_INET6, pEnv + strlen(pEnv), &pEnv[8192]) == 0)
+    if (detectIP(AF_INET6, pEnv + strlen(pEnv), &pEnv[8192], 0) == 0)
         pFcgiApp->getConfig().addEnv(pEnv);
 
     pFcgiApp->getConfig().addEnv("PATH=/bin:/usr/bin:/usr/local/bin");
@@ -2611,6 +2679,163 @@ int HttpServerImpl::configAccessDeniedDir(const XmlNode *pNode)
 }
 
 
+void HttpServerImpl::maybeDownloadQuicCloudTrustIp()
+{
+    HttpFetch fetch;
+    struct stat st;
+    char path[4096];
+    const char *pRoot = MainServerConfig::getInstance().getServerRoot();
+    lsnprintf(path, sizeof(path), "%stmp/download-quic-cloud-ips",
+              pRoot);
+    if (stat(path, &st) == 0 && st.st_mtime > time(NULL) - 3600 * 24)
+        return;
+    downloadQuicCloudTrustIp();
+}
+
+
+int HttpServerImpl::downloadQuicCloudTrustIp()
+{
+    HttpFetch fetch;
+    char path[4096];
+    const char *pRoot = MainServerConfig::getInstance().getServerRoot();
+
+    LS_INFO("Download QUIC.cloud whitelist IP to tmp/download-quic-cloud-ips ...");
+    lsnprintf(path, sizeof(path), "%stmp/download-quic-cloud-ips.tmp",
+              pRoot);
+    int ret = fetch.startReq("https://quic.cloud/ips?ln", 0, 1, NULL, 0, path);
+    if (ret == 0)
+    {
+        ret = fetch.process();
+        if (ret == LS_OK && fetch.getStatusCode() == 200)
+        {
+            char final_path[4096];
+            lsnprintf(final_path, sizeof(final_path),
+                    "%stmp/download-quic-cloud-ips",
+                    pRoot);
+            rename(path, final_path);
+            return LS_OK;
+        }
+    }
+    return LS_FAIL;
+}
+
+
+void HttpServerImpl::gracefulRestartIfIpsChange()
+{
+    char current_ip_list[40960] = "";
+    int current_len;
+    char new_ip_list[40960] = "";
+    int new_len;
+    const char *pRoot = MainServerConfig::getInstance().getServerRoot();
+
+    new_len = GPath::readFile(new_ip_list, sizeof(new_ip_list) - 1,
+                              "tmp/download-quic-cloud-ips", pRoot);
+    if (new_len > 0)
+        new_ip_list[new_len] = '\0';
+
+    current_len = GPath::readFile(current_ip_list, sizeof(current_ip_list) - 1,
+                                  "admin/conf/quic-cloud-ips", pRoot);
+    if (current_len > 0)
+        current_ip_list[current_len] = '\0';
+
+    if (new_len > 0)
+    {
+        if (current_len != new_len
+            || memcmp(new_ip_list, current_ip_list, new_len) != 0)
+        {
+            LS_NOTICE("QUIC.cloud IP list has been changed, request  "
+                      "a graceful restart.");
+            ServerInfo::getServerInfo()->setRestart(1);
+        }
+    }
+}
+
+
+void HttpServerImpl::updateQuicCloudTrustIp(bool force)
+{
+    char current_ip_list[40960] = "";
+    int current_len;
+    char new_ip_list[40960] = "";
+    int new_len;
+    char *list = current_ip_list;
+    const char *pRoot = MainServerConfig::getInstance().getServerRoot();
+
+    new_len = GPath::readFile(new_ip_list, sizeof(new_ip_list) - 1,
+                              "tmp/download-quic-cloud-ips", pRoot);
+    if (new_len > 0)
+        new_ip_list[new_len] = '\0';
+
+    current_len = GPath::readFile(current_ip_list, sizeof(current_ip_list) - 1,
+                                  "admin/conf/quic-cloud-ips", pRoot);
+    if (current_len > 0)
+        current_ip_list[current_len] = '\0';
+
+    if (new_len > 0)
+    {
+        if (current_len != new_len
+            || memcmp(new_ip_list, current_ip_list, new_len) != 0)
+        {
+            GPath::writeFile(new_ip_list, new_len,
+                             "admin/conf/quic-cloud-ips", 0644, pRoot);
+            list = new_ip_list;
+            current_len = new_len;
+        }
+        else if (!force)
+            return;
+    }
+    else if (!force)
+        return;
+    if (current_len > 0)
+    {
+        if (!AccessControl::getAccessCtrl())
+            AccessControl::setAccessCtrl(&m_accessCtrl);
+
+        LS_INFO("Add QUIC.cloud IPs from admin/conf/quic-cloud-ips to trusted ACL ...");
+        m_accessCtrl.addList(list, AC_TRUST);
+    }
+}
+
+
+void HttpServerImpl::addCfTrustIp()
+{
+    static char s_cfSubnetV4[] =
+            "173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,"
+            "103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,"
+            "190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,"
+            "198.41.128.0/17,162.158.0.0/15,104.16.0.0/12,"
+            "172.64.0.0/13,131.0.72.0/22";
+    static char s_cfSubnetV6[] =
+            "2400:cb00::/32,2606:4700::/32,2803:f800::/32,"
+            "2405:b500::/32,2405:8100::/32,2a06:98c0::/29,"
+            "2c0f:f248::/32";
+
+    if (!AccessControl::getAccessCtrl())
+        AccessControl::setAccessCtrl(&m_accessCtrl);
+
+    LS_INFO("Add CloudFlare Subnets to trusted ACL ...");
+    int n = m_accessCtrl.addList(s_cfSubnetV4, AC_TRUST);
+    LS_DBG("Add CloudFlare %d IPv4 subnets: '%s'", n, s_cfSubnetV4);
+    n = m_accessCtrl.addList(s_cfSubnetV6, AC_TRUST);
+    LS_DBG("Add CloudFlare %d IPv6 subnets: '%s'", n, s_cfSubnetV6);
+}
+
+
+void HttpServerImpl::addLocalTrustIp()
+{
+    if (m_sIpv4.len() > 0)
+    {
+        m_accessCtrl.addList(m_sIpv4.c_str(), AC_TRUST);
+        LS_DBG("[ACL] Add local IPv4 as trusted IP: '%s'", m_sIpv4.c_str());
+    }
+    if (m_sIpv6.len() > 0)
+    {
+        m_accessCtrl.addList(m_sIpv6.c_str(), AC_TRUST);
+        LS_DBG("[ACL] Add local IPv6 as trusted IP: '%s'", m_sIpv6.c_str());
+    }
+}
+
+
+
 int HttpServerImpl::configSecurity(const XmlNode *pRoot)
 {
     const XmlNode *pNode = pRoot->getChild("security", 1);
@@ -2717,6 +2942,7 @@ int HttpServerImpl::configMime(const XmlNode *pRoot)
                 "MIME config") != 0)
             return LS_FAIL;
 
+        HttpMime::initBlank();
         if (HttpMime::getMime()->loadMime(achBuf) == 0)
         {
             //Check in the mime file
@@ -2927,6 +3153,19 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         }
 
         configSecurity(pRoot);
+
+        sv = currentCtx.getLongValue(pRoot, "autoDetectCdn", 0, 3, 3);
+        if (sv & 1)
+        {   //quic.cloud
+            maybeDownloadQuicCloudTrustIp();
+            updateQuicCloudTrustIp(true);
+        }
+        if (sv & 2)
+            addCfTrustIp();
+
+        sv = currentCtx.getLongValue(pRoot, "autoWhiteListLocalIps", 0, 1, 1);
+        if (sv)
+            addLocalTrustIp();
 
         pNode = pRoot->getChild("lsrecaptcha");
         if (pNode) {
@@ -4008,6 +4247,16 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
 }
 
 
+void HttpServerImpl::detectAllIps()
+{
+    char buf[8192];
+    if (detectIP(AF_INET, buf, &buf[8191], 1) == 0)
+        m_sIpv4.setStr(buf);
+    if (detectIP(AF_INET6, buf, &buf[8191], 1) == 0)
+        m_sIpv6.setStr(buf);
+}
+
+
 int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 {
     int ret;
@@ -4030,6 +4279,7 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
                 pri, new_pri);
     }
 
+    detectAllIps();
 
     ret = configServerBasic2(pRoot, pRoot->getChildValue("swappingDir"));
 
@@ -4083,7 +4333,6 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
     }
     if (initGroups())
         return LS_FAIL;
-
 
     if (!MainServerConfig::getInstance().getDisableWebAdmin())
     {

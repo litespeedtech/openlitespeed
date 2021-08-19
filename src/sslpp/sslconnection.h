@@ -47,11 +47,12 @@ public:
 
     enum
     {
-        F_HANDSHAKE_DONE    = 1,
+        F_ECDSA_AVAIL       = 1,
         F_DISABLE_HTTP2     = 2,
         F_ASYNC_CERT        = 4,
         F_ASYNC_PK          = 8,
         F_ASYNC_CERT_FAIL   = 16,
+        F_HANDSHAKE_DONE    = 32,
     };
 
     char wantRead() const   {   return m_iWant & WANT_READ;     }
@@ -91,8 +92,8 @@ public:
     int tryagain();
     void setWriteBuffering(int buffering);
 
-    int asyncFetchCert(asyncCertDoneCb cb, void *pParam);
-    void cancelAsyncFetchCert(asyncCertDoneCb cb, void *pParam);
+    int asyncFetchCert(AsyncCertDoneCb cb, void *pParam);
+    void cancelAsyncFetchCert(AsyncCertDoneCb cb, void *pParam);
 
     char getStatus() const   {   return m_iStatus;   }
 
@@ -131,6 +132,7 @@ public:
 
     static void initConnIdx();
     static SslConnection *get(const SSL *ssl);
+    static void setSpecialExData(SSL *ssl, void *data);
 
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);

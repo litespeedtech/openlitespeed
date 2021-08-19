@@ -47,8 +47,14 @@ public:
     int applyProcLimit() const;
     void setDataLimit(rlim_t cur, rlim_t max);
     void setProcLimit(rlim_t cur, rlim_t max);
+#if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
+    struct rlimit *getDataLimit() {   return &m_data;     }
+#endif
 #if defined(RLIMIT_NPROC)
-    struct rlimit *getProcLimit() {    return &m_nproc;    }
+    struct rlimit *getProcLimit() {   return &m_nproc;    }
+#endif
+#if defined(RLIMIT_CPU)
+    struct rlimit *getCpuLimit()  {   return &m_cpu;      }
 #endif
     void setCPULimit(rlim_t cur, rlim_t max);
     void reset();

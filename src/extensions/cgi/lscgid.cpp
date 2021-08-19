@@ -416,6 +416,7 @@ static int detect_cgroup_user_slice_dir()
     else
     {
         s_user_slice_dir = (const char *)-1LL;
+        ls_stderr("CGROUPS: No user slice dir - you must configure for cgroups v2\n");
         return -1;
     }
     return 0;
@@ -465,17 +466,25 @@ static int cgroup_v2(int uid, int pid)
             }
             if (fp == NULL)
             {
-                ls_stderr("Error opening %s for writing: %s", user_slice,
-                        strerror(errno));
+                ls_stderr("Cgroups Error opening %s for writing: %s", user_slice,
+                          strerror(errno));
                 return -1;
             }
             else
             {
-                fprintf(fp, "%d\n", (int) pid);
-                fclose(fp);
+                if (fprintf(fp, "%d\n", (int) pid) < 0)
+                    ls_stderr("Cgroups Error writing to %s: %s", user_slice,
+                              strerror(errno));
+                if (fclose(fp) < 0)
+                    ls_stderr("Cgroups Error closing %s: %s", user_slice,
+                              strerror(errno));
+                ls_stderr("Cgroups returning success file: %s, pid: %d\n",
+                          user_slice, pid);
                 return 0;
             }
         }
+        else
+            ls_stderr("Cgroups Error creating user slice directory: %s\n", strerror(errno));
     }
     return -1;
 }

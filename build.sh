@@ -22,6 +22,7 @@
 VERSION=1.0.1
 moduledir="modreqparser modinspector uploadprogress "
 OS=`uname`
+MACHINE=`uname -m`
 ISLINUX=no
 VERSIONNUMBER=
 
@@ -204,20 +205,13 @@ prepareLinux()
             exit 1
         fi
         
-        yum -y install git
-        yum -y install cmake
+        yum -y install git cmake
         installCmake
         
-        yum -y install libtool 
-        yum -y install autoreconf 
-        yum -y install autoheader 
-        yum -y install automake 
-        yum -y install wget 
-        yum -y install go 
-        yum -y install clang 
-        yum -y install patch 
-        yum -y install expat-devel
-        
+        yum -y install libtool autoreconf autoheader automake wget go clang patch expat-devel
+        if [ "${MACHINE}" = "aarch64" ]; then
+            yum -y install libatomic
+        fi
         
     #now for debian and Ubuntu    
     elif [ -f /etc/debian_version ] ; then     
@@ -271,22 +265,15 @@ prepareLinux()
         
         apt-get -y update
         apt-get -f -y install
-        apt-get -y install gcc g++
-        apt-get -y install wget
-        apt-get -y install curl
-        apt-get -y install make
-        
-        apt-get -y install clang 
-        apt-get -y install patch 
-        apt-get -y install libexpat-dev
+        apt-get -y install gcc g++ wget curl make clang patch libexpat-dev
         
         installCmake
-        apt-get -y install git libtool ca-certificates
-        apt-get -y install autotools-dev
-        apt-get -y install autoreconf
-        apt-get -y install autoheader 
-        apt-get -y install automake 
+        apt-get -y install git libtool ca-certificates autotools-dev autoreconf autoheader automake
         installgo
+
+        if [ "${MACHINE}" = "aarch64" ]; then
+            apt-get -y install libatomic1
+        fi
 
     elif [ -f /etc/alpine-release ] ; then
         OSTYPE=ALPINE
@@ -448,7 +435,7 @@ updateModuleCMakelistfile()
     fi
     
     #For linux but not alpine, add pagespeed module
-    if [ "${ISLINUX}" = "yes" ] ; then
+    if [ "${ISLINUX}" = "yes" ] && [ "${MACHINE}" = "x86_64" ]; then
         if [ ! "${OSTYPE}" = "ALPINE" ] ; then
             echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
         fi
@@ -530,9 +517,6 @@ public:
 
 EOF
 
-
-
-
 }
 
 cd `dirname "$0"`
@@ -561,7 +545,7 @@ if [ ! -d third-party ]; then
     #Remove  unittest-cpp and add bcrypt
     sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
 
-    if [ "${ISLINUX}" != "yes" ] ; then
+    if [ "${ISLINUX}" != "yes" ] || [ "${MACHINE}" != "x86_64" ] ; then
         sed -i -e "s/psol/ /g"  ./build_ols.sh
     fi
 
@@ -576,7 +560,7 @@ updateModuleCMakelistfile
 preparelibquic
 
 
-if [ "${ISLINUX}" = "yes" ] ; then
+if [ "${ISLINUX}" != "yes" ] || [ "${MACHINE}" != "x86_64" ] ; then
     fixPagespeed
 fi
 

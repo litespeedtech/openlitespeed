@@ -451,13 +451,18 @@ class WPInstall
      * and docRoot data. If a matching docRoot cannot be found using the
      * serverName, the install will be flagged and an ST_ERR_DOCROOT status set.
      *
-     * @param string  $url
+     * @param string $url
+     *
      * @return boolean
      * @throws LSCMException  Thrown indirectly.
      */
     public function populateDataFromUrl( $url )
     {
-        $info = parse_url($url);
+        /** @noinspection HttpUrlsUsage */
+        $parseSafeUrl =
+            (preg_match('#^https?://#', $url)) ? $url : "http://$url";
+
+        $info = parse_url($parseSafeUrl);
 
         $serverName = strtolower($info['host']);
         $this->setData(self::FLD_SERVERNAME, $serverName);

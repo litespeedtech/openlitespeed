@@ -1139,14 +1139,19 @@ int HttpFetch::setProxyServerAddr(const struct sockaddr *pAddr,
     m_pServerAddr->set(pAddr);
 
     if (m_psProxyServerAddr)
+    {
         free(m_psProxyServerAddr);
+        m_psProxyServerAddr = NULL;
+    }
     if (!addr_str)
         addr_str = m_pServerAddr->toString();
     if (addr_str)
+    {
         m_psProxyServerAddr = strdup(addr_str);
-    if (m_iEnableDebug)
-        m_pLogger->info("HttpFetch[%d]::setProxyServerAddr %s",
-                        getLoggerId(), m_psProxyServerAddr);
+        if (m_iEnableDebug)
+            m_pLogger->info("HttpFetch[%d]::setProxyServerAddr %s",
+                            getLoggerId(), m_psProxyServerAddr);
+    }
     return LS_OK;
 }
 

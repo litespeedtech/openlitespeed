@@ -35,6 +35,7 @@
 
 #include <lsdef.h>
 #include <log4cxx/logger.h>
+#include <util/stringtool.h>
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -544,7 +545,7 @@ int SslUtil::loadCertFile(SSL_CTX *pCtx, const char *pFile, int type)
     if (len == -1)
         return -1;
 
-    return loadCert(pCtx, pBegin, len);
+    return loadCert(pCtx, pBegin, len, 1);
 }
 
 int SslUtil::loadPrivateKeyFile(SSL_CTX *pCtx, const char *pFile, int type)
@@ -703,7 +704,7 @@ int SslUtil::setCertificateChain(SSL_CTX *pCtx, BIO * bio)
 static void SslConnection_ssl_info_cb(const SSL *pSSL, int where, int ret)
 {
     SslConnection *pConnection = SslConnection::get(pSSL);
-    if (!pConnection)
+    if (!pConnection || pConnection == (void *)(long)SslConnection::F_ECDSA_AVAIL)
         return;
     if ((where & SSL_CB_HANDSHAKE_START)
         && pConnection->getFlag(SslConnection::F_HANDSHAKE_DONE)
@@ -897,6 +898,37 @@ void SslUtil::updateProtocol(SSL_CTX *pCtx, int method)
     if (!(method & SslContext::SSL_TLSv13))
         setOptions(pCtx, SSL_OP_NO_TLSv1_3);
 #endif
+}
+
+
+int SslUtil::getLcaseServerName(SSL *pSsl, char *name, int len)
+{
+    const char *servername = SSL_get_servername(pSsl,
+                             TLSEXT_NAMETYPE_host_name);
+    len -= 1;
+    StringTool::strnlower(servername, name, len);
+    name[len] = 0;
+    return len;
+}
+
+
+bool SslUtil::isEcdsaSupported(const uint8_t *ciphers, size_t len)
+{
+    const SSL_CIPHER *cipher;
+    if (len % 2 != 0)
+        return false;
+    for (; len != 0; len -= 2, ciphers += 2)
+    {
+        uint16_t cipher_id = ( ciphers[0] << 8) | ciphers[1];
+        cipher = SSL_get_cipher_by_value(cipher_id);
+        if (cipher)
+        {
+            int auth_nid = SSL_CIPHER_get_auth_nid(cipher);
+            if (auth_nid == NID_auth_ecdsa || auth_nid == NID_auth_any)
+                return true;
+        }
+    }
+    return false;
 }
 
 

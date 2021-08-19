@@ -100,8 +100,9 @@ inline int buildStaticFileHeaders(HttpResp *pResp, HttpReq *pReq,
                                 p + 15, RFC_1123_TIME_LEN);
     p += 15 + RFC_1123_TIME_LEN + 2;
 
-    if (pResp->getRespHeaders().getHeader(HttpRespHeaders::H_CONTENT_TYPE,
-                                          &iETagLen) == NULL)
+    if (pData->getMimeType() != HttpMime::getBlank()
+        && pResp->getRespHeaders().getHeader(HttpRespHeaders::H_CONTENT_TYPE,
+                                            &iETagLen) == NULL)
         pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
                                     p + 14, pData->getHeaderLen() -
                                     (p - pData->getHeaderBuf()) - 14 - 2);

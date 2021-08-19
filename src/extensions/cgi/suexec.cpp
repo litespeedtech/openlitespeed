@@ -478,7 +478,13 @@ int SUExec::cgidSuEXEC(const char *pServerRoot, int *pfd, int listenFd)
             LS_ERROR("[suEXEC] Failed to write %d bytes to lscgid, written: %d",
                      size, len);
         }
-        send_fd(fdReq, listenFd);
+        if (send_fd(fdReq, listenFd) < 0)
+        {
+            LS_ERROR("[suEXEC] Failed to send to fdReq: %s", strerror(errno));
+            close(fdReq);
+            return LS_FAIL;
+        }
+
         pid = 0;
         if (read(fdReq, &pid, 4) != 4)
         {
