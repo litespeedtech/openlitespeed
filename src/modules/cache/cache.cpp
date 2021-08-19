@@ -1461,6 +1461,7 @@ void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
     pKey->m_sCookie.setStr(pCookieBuf);
 }
 
+
 static void dumpCacheKey(const lsi_session_t *session, const CacheKey *pKey)
 {
     g_api->log(session, LSI_LOG_DEBUG,
@@ -1489,6 +1490,7 @@ static void dumpCacheHash(const lsi_session_t *session, const char *desc,
           );
 }
 
+
 off_t getEntryContentLength(MyMData *myData)
 {
     int part1offset = myData->pEntry->getPart1Offset();
@@ -1504,12 +1506,23 @@ off_t getEntryContentLength(MyMData *myData)
 }
 
 
+static void setCacheEntry(MyMData *data, CacheEntry *pEntry)
+{
+    if (!data || pEntry == data->pEntry)
+        return;
+    if (data->pEntry)
+        data->pEntry->decRef();
+    if (pEntry)
+        pEntry->incRef();
+    data->pEntry = pEntry;
+}
+
 
 short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                   const char *uri, int uriLen,
                   DirHashCacheStore *pDirHashCacheStore,
                   CacheHash *cePublicHash, CacheHash *cePrivateHash,
-                  CacheConfig *pConfig, CacheEntry **pEntry, bool doPublic)
+                  CacheConfig *pConfig, bool doPublic)
 {
     buildCacheKey(rec->session, uri, uriLen, no_vary, myData);
     dumpCacheKey(rec->session, &myData->cacheKey);
@@ -1518,13 +1531,15 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
     dumpCacheHash(rec->session, "Public hash", cePublicHash);
     dumpCacheHash(rec->session, "Private hash", cePrivateHash);
 
+    CacheEntry *pEntry;
     long lastCacheFlush = (long)g_api->get_module_data(rec->session, &MNAME,
                           LSI_DATA_IP);
 
-    *pEntry = pDirHashCacheStore->getCacheEntry(*cePrivateHash,
+    pEntry = pDirHashCacheStore->getCacheEntry(*cePrivateHash,
               &myData->cacheKey, pConfig->getMaxStale(), lastCacheFlush);
-    if (*pEntry && (!(*pEntry)->isStale() || (*pEntry)->isUpdating())
-        && !(*pEntry)->isUnderConstruct())
+    setCacheEntry(myData, pEntry);
+    if (pEntry && (!pEntry->isStale() || pEntry->isUpdating())
+        && !pEntry->isUnderConstruct())
         return CE_STATE_HAS_PRIVATE_CACHE;
 
     if (doPublic)
@@ -1533,39 +1548,39 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
         //Attemp to set the ipLen to negative number for checking public cache
         int savedIpLen = myData->cacheKey.m_ipLen;
         myData->cacheKey.m_ipLen = 0 - savedIpLen;
-        *pEntry = pDirHashCacheStore->getCacheEntry(*cePublicHash,
+        pEntry = pDirHashCacheStore->getCacheEntry(*cePublicHash,
                   &myData->cacheKey, pConfig->getMaxStale(), -1);
+        setCacheEntry(myData, pEntry);
         myData->cacheKey.m_ipLen = savedIpLen;
-        if (*pEntry)
+        if (pEntry)
         {
-            if ((*pEntry)->isStale() && !(*pEntry)->isUpdating())
+            if (pEntry->isStale() && !pEntry->isUpdating())
             {
                 CacheEntry *pNewEntry = myData->pConfig->getStore()->
                                         createCacheEntry(myData->cePublicHash,
                                         &myData->cacheKey);
                 if (pNewEntry)
                 {
-                    myData->pEntry = pNewEntry;
+                    setCacheEntry(myData, pNewEntry);
                     return CE_STATE_UPDATE_STALE;
                 }
                 else
                 {
-
                     g_api->log(rec->session, LSI_LOG_ERROR,
                                "[%s] createEntry failed for update stale.\n",
                                ModuleNameStr);
                 }
             }
 
-            if (!(*pEntry)->isUnderConstruct())
+            if (!pEntry->isUnderConstruct())
                 return CE_STATE_HAS_PUBLIC_CACHE;
             else
                 return CE_STATE_NOCACHE;
         }
     }
 
-    if (*pEntry)
-        (*pEntry)->setStale(1);
+    if (pEntry)
+        pEntry->setStale(1);
 
     return CE_STATE_NOCACHE;
 }
@@ -1576,6 +1591,9 @@ static int releaseMData(void *data)
     MyMData *myData = (MyMData *)data;
     if (myData)
     {
+        if (myData->pEntry)
+            myData->pEntry->decRef();
+
         if (myData->pOrgUri)
             delete []myData->pOrgUri;
 
@@ -1739,7 +1757,9 @@ static int cancelCache(lsi_param_t *rec)
         {
             g_api->log(rec->session, LSI_LOG_DEBUG, "[%s]cache cancelled.\n",
                        ModuleNameStr);
-            myData->pConfig->getStore()->cancelEntry(myData->pEntry, 1);
+            CacheEntry * pEntry = myData->pEntry;
+            setCacheEntry(myData, NULL);
+            myData->pConfig->getStore()->cancelEntry(pEntry, 1);
         }
         if (myData->zstream)
         {
@@ -2084,8 +2104,8 @@ static int createEntry(lsi_param_t *rec)
 
     if (hash)
     {
-        myData->pEntry = myData->pConfig->getStore()->createCacheEntry(
-                                 *hash, &myData->cacheKey);
+        setCacheEntry(myData, myData->pConfig->getStore()->createCacheEntry(
+                                 *hash, &myData->cacheKey));
         if (myData->pEntry == NULL)
         {
             int error = myData->pConfig->getStore()->getLastError();
@@ -2350,19 +2370,19 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         {
             pKey = (char *)iov_key[i].iov_base;
             //If no frontend, no need to save some cache headers
-            if (myData->hasCacheFrontend == 0)
-            {
-                if (iov_key[i].iov_len > 12 &&
-                    strncasecmp("X-LiteSpeed-", pKey, 12) == 0)
-                {
-                    continue;
-                }
-
-                //if it is lsc-cookie, then change to Set-Cookie
-                if (iov_key[i].iov_len == 10 &&
-                    strncasecmp(pKey, "lsc-cookie", 10) == 0)
-                    pKey = (char *) "Set-Cookie";
-            }
+//             if (myData->hasCacheFrontend == 0)
+//             {
+//                 if (iov_key[i].iov_len > 12 &&
+//                     strncasecmp("X-LiteSpeed-", pKey, 12) == 0)
+//                 {
+//                     continue;
+//                 }
+//
+//                 //if it is lsc-cookie, then change to Set-Cookie
+//                 if (iov_key[i].iov_len == 10 &&
+//                     strncasecmp(pKey, "lsc-cookie", 10) == 0)
+//                     pKey = (char *) "Set-Cookie";
+//             }
 
 #ifdef CACHE_RESP_HEADER
             headersBufSize += writeHttpHeader(fd, &(myData->m_pEntry->m_sRespHeader),
@@ -2409,12 +2429,17 @@ int cacheTofile(lsi_param_t *rec)
     int len = 0;
     void *pRespBodyBuf = g_api->get_resp_body_buf(rec->session);
     long maxObjSz = myData->pConfig->getMaxObjSize();
-    if (maxObjSz > 0 && g_api->get_body_buf_size(pRespBodyBuf) > maxObjSz)
+    off_t bodyBufSize = g_api->get_body_buf_size(pRespBodyBuf);
+    g_api->log(rec->session, LSI_LOG_DEBUG,
+        "[%s:cacheTofile] response body size: %ld, max cache object size: %ld\n",
+        ModuleNameStr, bodyBufSize, maxObjSz);
+
+    if (maxObjSz > 0 && bodyBufSize > maxObjSz)
     {
         cancelCache(rec);
         g_api->log(rec->session, LSI_LOG_DEBUG,
                    "[%s:cacheTofile] cache cancelled, body buffer size %ld > maxObjSize %ld\n",
-                   ModuleNameStr, g_api->get_body_buf_size(pRespBodyBuf), maxObjSz);
+                   ModuleNameStr, bodyBufSize, maxObjSz);
         return 0;
     }
 
@@ -2427,6 +2452,10 @@ int cacheTofile(lsi_param_t *rec)
             break;
 
         ret = deflateBufAndWriteToFile(myData, (unsigned char *)pBuf, len, 0, fd);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+               "[%s:cacheTofile] save response body, offset: %ld, buf: %p, size: %d, ret: %d, cache size: %ld\n",
+               ModuleNameStr, offset, pBuf, len, ret, iCahcedSize + ret);
+
         if (ret == -1)
         {
             myData->saveFailed = 1;
@@ -2890,7 +2919,6 @@ static int checkAssignHandler(lsi_param_t *rec)
                                    &myData->cePublicHash,
                                    &myData->cePrivateHash,
                                    myData->pConfig,
-                                   &myData->pEntry,
                                    doPublic);
 
     g_api->log(rec->session, LSI_LOG_DEBUG,
@@ -2919,6 +2947,8 @@ static int checkAssignHandler(lsi_param_t *rec)
 #endif
             )
         {
+            assert(myData->pEntry);
+            assert(myData->pEntry->getFdStore() != -1);
 
             if (LS_OK != g_api->register_req_handler(rec->session, &MNAME, 0))
             {
@@ -3293,13 +3323,6 @@ static void processPurge(const lsi_session_t *session, const char *pValue,
     g_api->log(session, LSI_LOG_DEBUG,  "processPurge: %.*s\n", valLen, pValue);
 }
 
-static void decref_and_free_data(MyMData *myData, const lsi_session_t *session)
-{
-    if (myData->pEntry)
-        myData->pEntry->decRef();
-    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
-}
-
 
 static void updateCacheEntry(CacheConfig *pConfig, CacheEntry *pEntry, int tmpfd,
                              char *tmppath, int compressType, off_t length)
@@ -3576,7 +3599,6 @@ static int handlerProcess(const lsi_session_t *session)
         return 0;
     }
 
-    myData->pEntry->incRef();
     myData->pEntry->setLastAccess(DateTime::s_curTime);
 
     char tmBuf[RFC_1123_TIME_LEN + 1];
@@ -3605,10 +3627,11 @@ static int handlerProcess(const lsi_session_t *session)
                                  PROT_READ, MAP_SHARED, fd, 0);
             if (buff == (char *)(-1))
             {
-                decref_and_free_data(myData, session);
                 g_api->log(session, LSI_LOG_ERROR,
-                           "[%s]handlerProcess return 500 due to cant alloc memory.\n",
-                           ModuleNameStr);
+                           "[%s] mmap() failed, fd: %d, size: %d, error: %s, "
+                           "handlerProcess return 500.\n",
+                           ModuleNameStr, fd, part2offset, strerror(errno));
+                g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
                 return 500;
             }
             pBuffOrg = buff;
@@ -3635,7 +3658,7 @@ static int handlerProcess(const lsi_session_t *session)
                 if (pBuffOrg)
                     munmap((caddr_t)pBuffOrg, part2offset);
                 g_api->end_resp(session);
-                decref_and_free_data(myData, session);
+                g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
                 g_api->log(session, LSI_LOG_DEBUG,
                            "[%s]handlerProcess return 304.\n", ModuleNameStr);
                 return 0;
@@ -3795,7 +3818,7 @@ static int handlerProcess(const lsi_session_t *session)
 
     if (pBuffOrg)
         munmap((caddr_t)pBuffOrg, part2offset);
-    decref_and_free_data(myData, session);
+    g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
     return ret;
 }
 

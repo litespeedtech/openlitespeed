@@ -34,7 +34,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.7';
+    const PANEL_API_VERSION = '1.13.9';
 
     /**
      * @since 1.9
@@ -961,6 +961,9 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.13.9',
+            '1.13.8',
+            '1.13.7.1',
             '1.13.7',
             '1.13.6',
             '1.13.5.2',

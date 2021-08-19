@@ -3024,7 +3024,8 @@ int HttpVHost::configVHModuleUrlFilter2(lsi_module_t *pModule,
             bRegex = 1;
 
         pContext = getContext(pValue, strlen(pValue), bRegex);
-        parseModuleConfigParam(pModule, (const HttpContext *)pContext);
+        if (pContext)
+            parseModuleConfigParam(pModule, (const HttpContext *)pContext);
     }
     return ret;
 }

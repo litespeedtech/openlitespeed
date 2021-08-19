@@ -181,15 +181,15 @@ int CgidReq::buildReqHeader(int uid, int gid, int priority, int umaskVal,
     pHeader->m_nargv = 1;
     if (pLimits)
     {
-        memmove(
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
-            &pHeader->m_data,
-#elif defined(RLIMIT_NPROC)
-            &pHeader->m_nproc,
-#elif defined(RLIMIT_CPU)
-            &pHeader->m_cpu,
+        memcpy(&pHeader->m_data, ((RLimits *)pLimits)->getDataLimit(), sizeof(struct rlimit));
 #endif
-            pLimits, sizeof(RLimits));
+#if defined(RLIMIT_NPROC)
+        memcpy(&pHeader->m_nproc, ((RLimits *)pLimits)->getProcLimit(), sizeof(struct rlimit));
+#endif
+#if defined(RLIMIT_CPU)
+        memcpy(&pHeader->m_cpu, ((RLimits *)pLimits)->getCpuLimit(), sizeof(struct rlimit));
+#endif
     }
 
     return 0;

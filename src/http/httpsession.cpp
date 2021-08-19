@@ -3508,7 +3508,7 @@ void HttpSession::rewindRespBodyBuf()
     if (getRespBodyBuf())
     {
         off_t wPos = getRespBodyBuf()->getCurWBlkPos();
-        if (wPos < 2048 * 1024)
+        if (wPos < 20480 * 1024)
             return;
         LS_DBG_M(getLogger(),
                  "[%s] Rewind RespBodyBuf, current size: %lld \n",
@@ -5151,8 +5151,6 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 
             if (written > remain)
                 written = remain;
-            if (written <= 0)
-                return -1;
         }
 
         len = writeRespBodyBlockInternal(pData, pBuf, written);

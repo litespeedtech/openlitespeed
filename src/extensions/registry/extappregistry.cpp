@@ -438,7 +438,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
 
         if (iAutoStart)
         {
-            if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(buf, pPath) != 0)
+            if (!pPath || ConfigCtx::getCurConfigCtx()->getAbsoluteFile(buf, pPath) != 0)
                 return -1;
 
             char *pCmd = buf;

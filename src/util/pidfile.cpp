@@ -105,7 +105,7 @@ int PidFile::writePid(int pid)
     while (1)
     {
         ret = fstat(m_iFd, &m_st);
-        if ((ret == -1) && (errno = EINTR))
+        if ((ret == -1) && (errno == EINTR))
             continue;
         return ret;
     }

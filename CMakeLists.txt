@@ -7,9 +7,9 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 12)
+set(openlitespeed_PATCH_VERSION 13)
 set(openlitespeed_VERSION
-    ${FOOBAR_MAJOR_VERSION}.${FOOBAR_MINOR_VERSION}.${FOOBAR_PATCH_VERSION})
+    ${openlitespeed_MAJOR_VERSION}.${openlitespeed_MINOR_VERSION}.${openlitespeed_PATCH_VERSION})
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 

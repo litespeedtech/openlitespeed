@@ -672,7 +672,7 @@ int DirHashCacheStore::renameDiskEntry(CacheEntry *pEntry, char *pFrom,
     if ((validate & DHCS_DEST_CHECK)
         && (stat(achTo, &stTo) != -1))        // old
     {
-        if (stFromFd.st_mtime >= stTo.st_mtime)
+        if (!(validate & DHCS_SOURCE_MATCH) || stFromFd.st_mtime >= stTo.st_mtime)
             unlink(achTo);
         else
             return -3;

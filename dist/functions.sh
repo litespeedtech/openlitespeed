@@ -28,36 +28,36 @@ detectdlcmd()
 
 init()
 {
-	LSINSTALL_DIR=`pwd`
-	VERSION=`cat VERSION`
+    LSINSTALL_DIR=`pwd`
+    VERSION=`cat VERSION`
 
-	export LSINSTALL_DIR
+    export LSINSTALL_DIR
 
-	DIR_MOD=755
-	SDIR_MOD=700
-	EXEC_MOD=555
-	CONF_MOD=600
-	DOC_MOD=644
+    DIR_MOD=755
+    SDIR_MOD=700
+    EXEC_MOD=555
+    CONF_MOD=600
+    DOC_MOD=644
 
-	INST_USER=`id`
-	INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
+    INST_USER=`id`
+    INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
 
-	SYS_NAME=`uname -s`
-	if [ "x$SYS_NAME" = "xFreeBSD" ] || [ "x$SYS_NAME" = "xNetBSD" ] || [ "x$SYS_NAME" = "xDarwin" ] ; then
-		PS_CMD="ps -ax"
-		ID_GROUPS="id"
+    SYS_NAME=`uname -s`
+    if [ "x$SYS_NAME" = "xFreeBSD" ] || [ "x$SYS_NAME" = "xNetBSD" ] || [ "x$SYS_NAME" = "xDarwin" ] ; then
+        PS_CMD="ps -ax"
+        ID_GROUPS="id"
         TEST_BIN="/bin/test"
-		ROOTGROUP="wheel"
+        ROOTGROUP="wheel"
     else
-		PS_CMD="ps -ef"
-		ID_GROUPS="id -a"
+        PS_CMD="ps -ef"
+        ID_GROUPS="id -a"
         TEST_BIN="/usr/bin/test"
-		ROOTGROUP="root"
-	fi
-	SETUP_PHP=0
-	SET_LOGIN=0
-	ADMIN_PORT=7080
-	INSTALL_TYPE="upgrade"
+        ROOTGROUP="root"
+    fi
+    SETUP_PHP=0
+    SET_LOGIN=0
+    ADMIN_PORT=7080
+    INSTALL_TYPE="upgrade"
     SERVER_NAME=`uname -n`
     ADMIN_EMAIL="root@localhost"
     AP_PORT_OFFSET=2000
@@ -74,51 +74,51 @@ init()
 
 license()
 {
-	more ./LICENSE
-	cat <<EOF
+    more ./LICENSE
+    cat <<EOF
 
 IMPORTANT: In order to continue installation you must agree with above 
            license terms by typing "Yes" with capital "Y"! 
 
 EOF
-	SUCC=0
-	TRY=1
-	while [ $SUCC -eq "0" ]; do
-		printf "%s" "Do you agree with above license? "  
-		read YES_NO
-		if [ "x$YES_NO" != "xYes" ]; then
-			if [ $TRY -lt 3 ]; then
-				echo "Sorry, wrong answer! Type 'Yes' with capital 'Y', try again!"
-				TRY=`expr $TRY + 1`
-			else
-				echo "Abort installation!" 
-				exit 0
-			fi
+    SUCC=0
+    TRY=1
+    while [ $SUCC -eq "0" ]; do
+        printf "%s" "Do you agree with above license? "
+        read YES_NO
+        if [ "x$YES_NO" != "xYes" ]; then
+            if [ $TRY -lt 3 ]; then
+                echo "Sorry, wrong answer! Type 'Yes' with capital 'Y', try again!"
+                TRY=`expr $TRY + 1`
+            else
+                echo "Abort installation!"
+                exit 0
+            fi
 
-		else
-			SUCC=1
-		fi
-	done
-	clear
+        else
+            SUCC=1
+        fi
+    done
+    clear
 }
 
 readCurrentConfig()
 {
-	OLD_USER_CONF=`grep "user" "$LSWS_HOME/conf/httpd_config.conf"`
-	OLD_GROUP_CONF=`grep "group" "$LSWS_HOME/conf/httpd_config.conf"`
-	OLD_USER=`expr "$OLD_USER_CONF" : '\s*user\s*\(\S*\)'`
-	OLD_GROUP=`expr "$OLD_GROUP_CONF" : '\s*group\s*\(\S*\)'`
-	if [ "x$OLD_USER" != "x" ]; then
-		WS_USER=$OLD_USER
-	fi
-	if [ "x$OLD_GROUP" != "x" ]; then
-		WS_GROUP=$OLD_GROUP
-	else
-		D_GROUP=`$ID_GROUPS $WS_USER`
-		WS_GROUP=`expr "$D_GROUP" : '.*gid=[0-9]*(\(.*\)) groups=.*'`
-	fi
-	DIR_OWN=$WS_USER:$WS_GROUP
-	CONF_OWN=$WS_USER:$WS_GROUP
+    OLD_USER_CONF=`grep "user" "$LSWS_HOME/conf/httpd_config.conf"`
+    OLD_GROUP_CONF=`grep "group" "$LSWS_HOME/conf/httpd_config.conf"`
+    OLD_USER=`expr "$OLD_USER_CONF" : '\s*user\s*\(\S*\)'`
+    OLD_GROUP=`expr "$OLD_GROUP_CONF" : '\s*group\s*\(\S*\)'`
+    if [ "x$OLD_USER" != "x" ]; then
+        WS_USER=$OLD_USER
+    fi
+    if [ "x$OLD_GROUP" != "x" ]; then
+        WS_GROUP=$OLD_GROUP
+    else
+        D_GROUP=`$ID_GROUPS $WS_USER`
+        WS_GROUP=`expr "$D_GROUP" : '.*gid=[0-9]*(\(.*\)) groups=.*'`
+    fi
+    DIR_OWN=$WS_USER:$WS_GROUP
+    CONF_OWN=$WS_USER:$WS_GROUP
 
 }
 
@@ -129,32 +129,32 @@ readCurrentConfig()
 install_dir()
 {
 
-	SUCC=0
-	INSTALL_TYPE="reinstall"
-	SET_LOGIN=1
+    SUCC=0
+    INSTALL_TYPE="reinstall"
+    SET_LOGIN=1
 
-	if [ $INST_USER = "root" ]; then
+    if [ $INST_USER = "root" ]; then
         DEST_RECOM="/usr/local/lsws"
         if [ -f "/opt/lsws/conf/httpd_config.conf" ]; then
             DEST_RECOM="/opt/lsws"
         fi
-		WS_USER="nobody"
-	else 
-		cat <<EOF
+        WS_USER="nobody"
+    else
+        cat <<EOF
 
 As you are not the 'root' user, you may not be able to install the
 web server into a system directory or enable chroot, the web server 
 process will run on behalf of current user - '$INST_USER'.
 
 EOF
-		WS_USER=$INST_USER
-		DEST_RECOM="~/lsws"
-	fi
+        WS_USER=$INST_USER
+        DEST_RECOM="~/lsws"
+    fi
 
 
 
-	while [ $SUCC -eq "0" ];  do
-		cat <<EOF
+    while [ $SUCC -eq "0" ];  do
+        cat <<EOF
 
 Please specify the destination directory. You must have permissions to 
 create and manage the directory. It is recommended to install the web server 
@@ -164,30 +164,30 @@ ATTENTION: The user '$WS_USER' must be able to access the destination
            directory.
 
 EOF
-		printf "%s" "Destination [$DEST_RECOM]: "
-		read TMP_DEST
-		echo ""
-		if [ "x$TMP_DEST" = "x" ]; then
-			TMP_DEST=$DEST_RECOM
-		fi
-		if [ `expr "$TMP_DEST" : '~'` -gt 0 ]; then 
-			LSWS_HOME="$HOME`echo $TMP_DEST | sed 's/^~//' `"
-		else
-			LSWS_HOME=$TMP_DEST
-		fi
-		if [ `expr "$LSWS_HOME" : '\/'` -eq 0 ]; then
-			echo "[ERROR] Must be absolute path!"
-		else
-			SUCC=1
-		fi
-		if [ ! -d "$LSWS_HOME" ]; then
-			mkdir "$LSWS_HOME"
-			if [ ! $? -eq 0 ]; then
-				SUCC=0
-			fi
-		fi
-		if [ -f "$LSWS_HOME/conf/httpd_config.conf" ]; then
-			cat <<EOF
+        printf "%s" "Destination [$DEST_RECOM]: "
+        read TMP_DEST
+        echo ""
+        if [ "x$TMP_DEST" = "x" ]; then
+            TMP_DEST=$DEST_RECOM
+        fi
+        if [ `expr "$TMP_DEST" : '~'` -gt 0 ]; then
+            LSWS_HOME="$HOME`echo $TMP_DEST | sed 's/^~//' `"
+        else
+            LSWS_HOME=$TMP_DEST
+        fi
+        if [ `expr "$LSWS_HOME" : '\/'` -eq 0 ]; then
+            echo "[ERROR] Must be absolute path!"
+        else
+            SUCC=1
+        fi
+        if [ ! -d "$LSWS_HOME" ]; then
+            mkdir "$LSWS_HOME"
+            if [ ! $? -eq 0 ]; then
+                SUCC=0
+            fi
+        fi
+        if [ -f "$LSWS_HOME/conf/httpd_config.conf" ]; then
+            cat <<EOF
 
 Found old configuration file under destination directory $LSWS_HOME. 
 
@@ -197,117 +197,117 @@ To change directory, press 'C' or 'c'.
 
 EOF
 
-			printf "%s" "Would you like to Upgrade, Reinstall or Change directory [U/r/c]? "
-			read TMP_URC
-			echo ""
-			if [ "x$TMP_URC" = "x" ]; then
-				INSTALL_TYPE="upgrade"
-				SET_LOGIN=0
-			else 
-				if [ `expr "$TMP_URC" : '[Uu]'` -gt 0 ]; then
-					INSTALL_TYPE="upgrade"
-					SET_LOGIN=0
-				else 
-					if [ `expr "$TMP_URC" : '[Rr]'` -gt 0 ]; then
-						INSTALL_TYPE="reinstall"
-						SET_LOGIN=1
-					else 
-					#if [ `expr "$TMP_URC" : '[Cc]'` -gt 0 ]; then
-						SUCC=0
-					fi
-				fi
-			fi
+            printf "%s" "Would you like to Upgrade, Reinstall or Change directory [U/r/c]? "
+            read TMP_URC
+            echo ""
+            if [ "x$TMP_URC" = "x" ]; then
+                INSTALL_TYPE="upgrade"
+                SET_LOGIN=0
+            else
+                if [ `expr "$TMP_URC" : '[Uu]'` -gt 0 ]; then
+                    INSTALL_TYPE="upgrade"
+                    SET_LOGIN=0
+                else
+                    if [ `expr "$TMP_URC" : '[Rr]'` -gt 0 ]; then
+                        INSTALL_TYPE="reinstall"
+                        SET_LOGIN=1
+                    else
+                    #if [ `expr "$TMP_URC" : '[Cc]'` -gt 0 ]; then
+                        SUCC=0
+                    fi
+                fi
+            fi
 
-		fi
+        fi
 
-	done
+    done
 
-	export LSWS_HOME
+    export LSWS_HOME
 
-	if [ -f "$LSWS_HOME/conf/httpd_config.conf" ]; then
-		readCurrentConfig
-	else
-		INSTALL_TYPE="reinstall"
-	fi
+    if [ -f "$LSWS_HOME/conf/httpd_config.conf" ]; then
+        readCurrentConfig
+    else
+        INSTALL_TYPE="reinstall"
+    fi
 
 
-	DIR_OWN=$WS_USER:$WS_GROUP
-	CONF_OWN=$WS_USER:$WS_GROUP
+    DIR_OWN=$WS_USER:$WS_GROUP
+    CONF_OWN=$WS_USER:$WS_GROUP
 
-	chmod $DIR_MOD "$LSWS_HOME"
+    chmod $DIR_MOD "$LSWS_HOME"
 }
 
 
 admin_login()
 {
-	if [ $INSTALL_TYPE = "upgrade" ]; then
-		printf "%s" "Would you like to reset the login password for Administration Web Interface [y/N]? "
-		read TMP_URC
-		echo ""
-		if [ "x$TMP_URC" != "x" ]; then
-			if [ `expr "$TMP_URC" : '[Yy]'` -gt 0 ]; then
-				SET_LOGIN=1
-			fi
-		fi
-	fi		
+    if [ $INSTALL_TYPE = "upgrade" ]; then
+        printf "%s" "Would you like to reset the login password for Administration Web Interface [y/N]? "
+        read TMP_URC
+        echo ""
+        if [ "x$TMP_URC" != "x" ]; then
+            if [ `expr "$TMP_URC" : '[Yy]'` -gt 0 ]; then
+                SET_LOGIN=1
+            fi
+        fi
+    fi
 
-	if [ $SET_LOGIN -eq 1 ]; then
+    if [ $SET_LOGIN -eq 1 ]; then
 
 # get admin user name and password
 
-		SUCC=0
-		cat <<EOF
+        SUCC=0
+        cat <<EOF
 
 Please specify the user name of the administrator.
 This is the user name required to log into the administration web interface.
 
 EOF
 
-		printf "%s" "User name [admin]: "
-		read ADMIN_USER
-		if [ "x$ADMIN_USER" = "x" ]; then
-			ADMIN_USER=admin
-		fi
+        printf "%s" "User name [admin]: "
+        read ADMIN_USER
+        if [ "x$ADMIN_USER" = "x" ]; then
+            ADMIN_USER=admin
+        fi
 
-		cat <<EOF
+        cat <<EOF
 
 Please specify the administrator's password.
 This is the password required to log into the administration web interface.
 
 EOF
 
-		while [ $SUCC -eq "0" ];  do
-			printf "%s" "Password: "
-			stty -echo
-			read PASS_ONE
-			stty echo
-			echo ""
-			if [ `expr "$PASS_ONE" : '.*'` -ge 6 ]; then
-				printf "%s" "Retype password: "
-				stty -echo
-				read PASS_TWO
-				stty echo
-				echo ""
-				if [ "x$PASS_ONE" = "x$PASS_TWO" ]; then
-					SUCC=1
-				else
-					echo ""
-					echo "[ERROR] Sorry, passwords does not match. Try again!"
-					echo ""
-				fi
-			else
-				echo ""
-				echo "[ERROR] Sorry, password must be at least 6 characters!"
-				echo ""
-			fi
-		done
+        while [ $SUCC -eq "0" ];  do
+            printf "%s" "Password: "
+            stty -echo
+            read PASS_ONE
+            stty echo
+            echo ""
+            if [ `expr "$PASS_ONE" : '.*'` -ge 6 ]; then
+                printf "%s" "Retype password: "
+                stty -echo
+                read PASS_TWO
+                stty echo
+                echo ""
+                if [ "x$PASS_ONE" = "x$PASS_TWO" ]; then
+                    SUCC=1
+                else
+                    echo ""
+                    echo "[ERROR] Sorry, passwords does not match. Try again!"
+                    echo ""
+                fi
+            else
+                echo ""
+                echo "[ERROR] Sorry, password must be at least 6 characters!"
+                echo ""
+            fi
+        done
 
 
 # generate password file
-		ENCRYPT_PASS=`"$LSINSTALL_DIR/admin/fcgi-bin/admin_php" -q "$LSINSTALL_DIR/admin/misc/htpasswd.php" $PASS_ONE`
-		echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSINSTALL_DIR/admin/conf/htpasswd"
+        ENCRYPT_PASS=`"$LSINSTALL_DIR/admin/fcgi-bin/admin_php" -q "$LSINSTALL_DIR/admin/misc/htpasswd.php" $PASS_ONE`
+        echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSINSTALL_DIR/admin/conf/htpasswd"
 
-	fi
+    fi
 
 }
 
@@ -315,8 +315,8 @@ EOF
 getUserGroup()
 {
 
-	if [ $INST_USER = "root" ]; then
-		cat <<EOF
+    if [ $INST_USER = "root" ]; then
+        cat <<EOF
 
 As you are the root user, you must choose the user and group
 whom the web server will be running as. For security reason, you should choose
@@ -325,110 +325,110 @@ a non-system user who does not have login shell and home directory such as
 
 EOF
 # get user name 
-		SUCC=0
-		while [ $SUCC -eq "0" ]; do
-			printf "%s" "User [$WS_USER]: "
-			read TMP_USER
-			if [ "x$TMP_USER" = "x" ]; then
-				TMP_USER=$WS_USER
-			fi
-			USER_INFO=`id $TMP_USER 2>/dev/null`
-			TST_USER=`expr "$USER_INFO" : 'uid=.*(\(.*\)) gid=.*'`
-			if [ "x$TST_USER" = "x$TMP_USER" ]; then
-				USER_ID=`expr "$USER_INFO" : 'uid=\(.*\)(.*) gid=.*'`
-				if [ $USER_ID -gt 10 ]; then  
-					WS_USER=$TMP_USER
-					SUCC=1
-				else
-					cat <<EOF
+        SUCC=0
+        while [ $SUCC -eq "0" ]; do
+            printf "%s" "User [$WS_USER]: "
+            read TMP_USER
+            if [ "x$TMP_USER" = "x" ]; then
+                TMP_USER=$WS_USER
+            fi
+            USER_INFO=`id $TMP_USER 2>/dev/null`
+            TST_USER=`expr "$USER_INFO" : 'uid=.*(\(.*\)) gid=.*'`
+            if [ "x$TST_USER" = "x$TMP_USER" ]; then
+                USER_ID=`expr "$USER_INFO" : 'uid=\(.*\)(.*) gid=.*'`
+                if [ $USER_ID -gt 10 ]; then
+                    WS_USER=$TMP_USER
+                    SUCC=1
+                else
+                    cat <<EOF
 
 [ERROR] It is not allowed to run LiteSpeed web server on behalf of a 
 privileged user, user id must be greater than 10. The user id of user 
 '$TMP_USER' is '$USER_ID'.
 
 EOF
-				fi
-			else
-				cat <<EOF 
+                fi
+            else
+                cat <<EOF
 
 [ERROR] '$TMP_USER' is not valid user name in your system, please choose 
 another user or create user '$TMP_USER' first.
 
 EOF
 
-			fi
-		done
-	fi
+            fi
+        done
+    fi
 
 # get group name 
-	SUCC=0
-	TMP_GROUPS=`groups $WS_USER`
-	TST_GROUPS=`expr "$TMP_GROUPS" : '.*:\(.*\)'`
-	if [ "x$TST_GROUPS" = "x" ]; then
-		TST_GROUPS=$TMP_GROUPS
-	fi
+    SUCC=0
+    TMP_GROUPS=`groups $WS_USER`
+    TST_GROUPS=`expr "$TMP_GROUPS" : '.*:\(.*\)'`
+    if [ "x$TST_GROUPS" = "x" ]; then
+        TST_GROUPS=$TMP_GROUPS
+    fi
 
-	D_GROUP=`$ID_GROUPS $WS_USER`
-	D_GROUP=`expr "$D_GROUP" : '.*gid=[0-9]*(\(.*\)) groups=.*'`
-	echo "Please choose the group that the web server running as."
-	echo 
-	while [ $SUCC -eq "0" ];  do
-		echo "User '$WS_USER' is the member of following group(s): $TST_GROUPS"
-		printf "%s" "Group [$D_GROUP]: "
-		read TMP_GROUP
-		if [ "x$TMP_GROUP" = "x" ]; then
-			TMP_GROUP=$D_GROUP
-		fi
-		GRP_RET=`echo $TST_GROUPS | grep -w "$TMP_GROUP"`
-		if [ "x$GRP_RET" != "x" ]; then
-			WS_GROUP=$TMP_GROUP
-			SUCC=1
-		else
-			cat <<EOF
+    D_GROUP=`$ID_GROUPS $WS_USER`
+    D_GROUP=`expr "$D_GROUP" : '.*gid=[0-9]*(\(.*\)) groups=.*'`
+    echo "Please choose the group that the web server running as."
+    echo
+    while [ $SUCC -eq "0" ];  do
+        echo "User '$WS_USER' is the member of following group(s): $TST_GROUPS"
+        printf "%s" "Group [$D_GROUP]: "
+        read TMP_GROUP
+        if [ "x$TMP_GROUP" = "x" ]; then
+            TMP_GROUP=$D_GROUP
+        fi
+        GRP_RET=`echo $TST_GROUPS | grep -w "$TMP_GROUP"`
+        if [ "x$GRP_RET" != "x" ]; then
+            WS_GROUP=$TMP_GROUP
+            SUCC=1
+        else
+            cat <<EOF
 
 [ERROR] '$TMP_GROUP' is not valid group for user '$WS_USER', please choose
 another group in the list or add user '$WS_USER' to group '$TMP_GROUP' 
 first.
 
 EOF
-		fi
-	done
+        fi
+    done
 
-	DIR_OWN=$WS_USER:$WS_GROUP
-	CONF_OWN=$WS_USER:$WS_GROUP
+    DIR_OWN=$WS_USER:$WS_GROUP
+    CONF_OWN=$WS_USER:$WS_GROUP
 
-	if [ $INST_USER = "root" ]; then
-		if [ $SUCC -eq "1" ]; then
-			chown -R "$DIR_OWN" "$LSWS_HOME"
-		fi
-	fi
+    if [ $INST_USER = "root" ]; then
+        if [ $SUCC -eq "1" ]; then
+            chown -R "$DIR_OWN" "$LSWS_HOME"
+        fi
+    fi
 }
 
 stopLshttpd()
 {
-	RUNNING_PROCESS=`$PS_CMD | grep lshttpd | grep -v grep`
-	if [ "x$RUNNING_PROCESS" != "x" ]; then
-		cat <<EOF
+    RUNNING_PROCESS=`$PS_CMD | grep lshttpd | grep -v grep`
+    if [ "x$RUNNING_PROCESS" != "x" ]; then
+        cat <<EOF
 LiteSpeed web server is running, in order to continue installation, the server 
 must be stopped.
 
 EOF
-		printf "Would you like to stop it now? [Y/n]"
-		read TMP_YN
-		echo ""
-		if [ "x$TMP_YN" = "x" ] || [ `expr "$TMP_YN" : '[Yy]'` -gt 0 ]; then
-			$LSINSTALL_DIR/bin/lswsctrl stop
-			sleep 1
-			RUNNING_PROCESS=`$PS_CMD | grep lshttpd | grep -v grep`
-			if [ "x$RUNNING_PROCESS" != "x" ]; then
-				echo "Failed to stop server, abort installation!"
-				exit 1
-			fi
-		else
-			echo "Abort installation!"
-			exit 1
-		fi
-	fi
+        printf "Would you like to stop it now? [Y/n]"
+        read TMP_YN
+        echo ""
+        if [ "x$TMP_YN" = "x" ] || [ `expr "$TMP_YN" : '[Yy]'` -gt 0 ]; then
+            $LSINSTALL_DIR/bin/lswsctrl stop
+            sleep 1
+            RUNNING_PROCESS=`$PS_CMD | grep lshttpd | grep -v grep`
+            if [ "x$RUNNING_PROCESS" != "x" ]; then
+                echo "Failed to stop server, abort installation!"
+                exit 1
+            fi
+        else
+            echo "Abort installation!"
+            exit 1
+        fi
+    fi
 
 }
 
@@ -436,7 +436,7 @@ EOF
 # get normal TCP port
 getServerPort()
 {
-	cat <<EOF
+    cat <<EOF
 
 Please specify the port for normal HTTP service.
 Port 80 is the standard HTTP port, only 'root' user is allowed to use 
@@ -447,88 +447,88 @@ You can access the normal web page at http://<YOUR_HOST>:<HTTP_PORT>/
 
 EOF
 
-	SUCC=0
-	DEFAULT_PORT=8088
-	while [ $SUCC -eq "0" ];  do
-		printf "%s" "HTTP port [$DEFAULT_PORT]: "
-		read TMP_PORT
-		if [ "x$TMP_PORT" = "x" ]; then
-			TMP_PORT=$DEFAULT_PORT
-		fi
-		SUCC=1
-		if [ `expr "$TMP_PORT" : '.*[^0-9]'` -gt 0 ]; then
-			echo "[ERROR] Only digits is allowed, try again!"
-			SUCC=0
-		fi
-		if  [ $SUCC -eq 1 ]; then
-			if [ $INST_USER != "root" ]; then
-				if [ $TMP_PORT -le 1024 ]; then
-					echo "[ERROR] Only 'root' can use port below 1024, try again!"
-					SUCC=0
-				fi
-			fi
-		fi
-		if [ $SUCC -eq 1 ]; then
-			if [ `netstat -an | grep -w $TMP_PORT | grep -w LISTEN | wc -l` -gt 0 ]; then
-				echo "[ERROR] Port $TMP_PORT is in use now, stop the server using this port first,"
-				echo "        or choose another port."
-				SUCC=0
-			fi
-		fi
-	done
+    SUCC=0
+    DEFAULT_PORT=8088
+    while [ $SUCC -eq "0" ];  do
+        printf "%s" "HTTP port [$DEFAULT_PORT]: "
+        read TMP_PORT
+        if [ "x$TMP_PORT" = "x" ]; then
+            TMP_PORT=$DEFAULT_PORT
+        fi
+        SUCC=1
+        if [ `expr "$TMP_PORT" : '.*[^0-9]'` -gt 0 ]; then
+            echo "[ERROR] Only digits is allowed, try again!"
+            SUCC=0
+        fi
+        if  [ $SUCC -eq 1 ]; then
+            if [ $INST_USER != "root" ]; then
+                if [ $TMP_PORT -le 1024 ]; then
+                    echo "[ERROR] Only 'root' can use port below 1024, try again!"
+                    SUCC=0
+                fi
+            fi
+        fi
+        if [ $SUCC -eq 1 ]; then
+            if [ `netstat -an | grep -w $TMP_PORT | grep -w LISTEN | wc -l` -gt 0 ]; then
+                echo "[ERROR] Port $TMP_PORT is in use now, stop the server using this port first,"
+                echo "        or choose another port."
+                SUCC=0
+            fi
+        fi
+    done
 
-	HTTP_PORT=$TMP_PORT
+    HTTP_PORT=$TMP_PORT
 }
 
 
 # get administration TCP port
 getAdminPort()
 {
-	cat <<EOF
+    cat <<EOF
 
 Please specify the HTTP port for the administration web interface,
 which can be accessed through http://<YOUR_HOST>:<ADMIN_PORT>/
 
 EOF
 
-	SUCC=0
-	DEFAULT_PORT=7080
-	while [ $SUCC -eq "0" ];  do
-		printf "%s" "Admin HTTP port [$DEFAULT_PORT]: "
-		read TMP_PORT
-		if [ "x$TMP_PORT" = "x" ]; then
-			TMP_PORT=$DEFAULT_PORT
-		fi
-		SUCC=1
-		if [ `expr "$TMP_PORT" : '.*[^0-9]'` -gt 0 ]; then
-			echo "[ERROR] Only digits is allowed, try again!"
-			SUCC=0
-		fi
-		if  [ $SUCC -eq 1 ]; then
-			if [ $INST_USER != "root" ]; then
-				if [ $TMP_PORT -le 1024 ]; then
-					echo "[ERROR] Only 'root' can use port below 1024, try again!"
-					SUCC=0
-				fi
-			fi
-		fi
-		if  [ $SUCC -eq 1 ]; then
-			if [ $TMP_PORT -eq $HTTP_PORT ]; then
-				echo "[ERROR] The admin HTTP port must be different from the normal HTTP port!"
-				SUCC=0
-			fi
-		fi
+    SUCC=0
+    DEFAULT_PORT=7080
+    while [ $SUCC -eq "0" ];  do
+        printf "%s" "Admin HTTP port [$DEFAULT_PORT]: "
+        read TMP_PORT
+        if [ "x$TMP_PORT" = "x" ]; then
+            TMP_PORT=$DEFAULT_PORT
+        fi
+        SUCC=1
+        if [ `expr "$TMP_PORT" : '.*[^0-9]'` -gt 0 ]; then
+            echo "[ERROR] Only digits is allowed, try again!"
+            SUCC=0
+        fi
+        if  [ $SUCC -eq 1 ]; then
+            if [ $INST_USER != "root" ]; then
+                if [ $TMP_PORT -le 1024 ]; then
+                    echo "[ERROR] Only 'root' can use port below 1024, try again!"
+                    SUCC=0
+                fi
+            fi
+        fi
+        if  [ $SUCC -eq 1 ]; then
+            if [ $TMP_PORT -eq $HTTP_PORT ]; then
+                echo "[ERROR] The admin HTTP port must be different from the normal HTTP port!"
+                SUCC=0
+            fi
+        fi
 
-		if [ $SUCC -eq 1 ]; then
-			if [ `netstat -an | grep -w $TMP_PORT | grep -w LISTEN | wc -l` -gt 0 ]; then
-				echo "[ERROR] Port $TMP_PORT is in use, stop the server that using this port first,"
-				echo "        or choose another port."
-				SUCC=0
-			fi
-		fi
-	done
+        if [ $SUCC -eq 1 ]; then
+            if [ `netstat -an | grep -w $TMP_PORT | grep -w LISTEN | wc -l` -gt 0 ]; then
+                echo "[ERROR] Port $TMP_PORT is in use, stop the server that using this port first,"
+                echo "        or choose another port."
+                SUCC=0
+            fi
+        fi
+    done
 
-	ADMIN_PORT=$TMP_PORT
+    ADMIN_PORT=$TMP_PORT
 }
 
 configAdminEmail()
@@ -571,7 +571,7 @@ EOF
 
 enablePHPHandler()
 {
-	cat <<EOF
+    cat <<EOF
 
 You can setup a global script handler for PHP with the pre-built PHP engine
 shipped with this package now. The PHP engine runs as Fast CGI which  
@@ -581,31 +581,31 @@ engine.
 
 EOF
 
-	SUCC=0
-	SETUP_PHP=1
-	printf "%s" "Setup up PHP [Y/n]: "
-	read TMP_YN
-	if [ "x$TMP_YN" != "x" ]; then
-		if [ `expr "$TMP_YN" : '[Nn]'` -gt 0 ]; then
-			SETUP_PHP=0
-		fi
-	fi
-	if [ $SETUP_PHP -eq 1 ]; then
-		PHP_SUFFIX="php"
-		printf "%s" "Suffix for PHP script(comma separated list) [$PHP_SUFFIX]: " 
-		read TMP_SUFFIX
-		if [ "x$TMP_SUFFIX" != "x" ]; then
-			PHP_SUFFIX=$TMP_SUFFIX
-		fi
-#		PHP_PORT=5101
-#		SUCC=0
-#		while [ $SUCC -eq "0" ];  do
-#			if [ `netstat -an | grep -w $PHP_PORT | grep -w LISTEN | wc -l` -eq 0 ]; then
-#				SUCC=1
-#			fi
-#			PHP_PORT=`expr $PHP_PORT + 1`
-#		done
-	fi
+    SUCC=0
+    SETUP_PHP=1
+    printf "%s" "Setup up PHP [Y/n]: "
+    read TMP_YN
+    if [ "x$TMP_YN" != "x" ]; then
+        if [ `expr "$TMP_YN" : '[Nn]'` -gt 0 ]; then
+            SETUP_PHP=0
+        fi
+    fi
+    if [ $SETUP_PHP -eq 1 ]; then
+        PHP_SUFFIX="php"
+        printf "%s" "Suffix for PHP script(comma separated list) [$PHP_SUFFIX]: "
+        read TMP_SUFFIX
+        if [ "x$TMP_SUFFIX" != "x" ]; then
+            PHP_SUFFIX=$TMP_SUFFIX
+        fi
+#        PHP_PORT=5101
+#        SUCC=0
+#        while [ $SUCC -eq "0" ];  do
+#            if [ `netstat -an | grep -w $PHP_PORT | grep -w LISTEN | wc -l` -eq 0 ]; then
+#                SUCC=1
+#            fi
+#            PHP_PORT=`expr $PHP_PORT + 1`
+#        done
+    fi
 }
 
 
@@ -627,12 +627,12 @@ buildConfigFiles()
         sed -e "s/%ADMIN_PORT%/$ADMIN_PORT/" "$LSINSTALL_DIR/admin/conf/admin_config.conf.in" > "$LSINSTALL_DIR/admin/conf/admin_config.conf"
     fi
     
-#	sed -e "s/%USER%/$WS_USER/" -e "s#%DEFAULT_TMP_DIR%#$DEFAULT_TMP_DIR#" -e "s/%GROUP%/$WS_GROUP/" -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e  "s/%RUBY_BIN%/$RUBY_PATH/" -e "s/%SERVER_NAME%/$SERVER_NAME/" "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf.tmp"
-#	if [ $SETUP_PHP -eq 1 ]; then
-#		sed -e "s/%PHP_BEGIN%//" -e "s/%PHP_END%//" -e "s/%PHP_SUFFIX%/$PHP_SUFFIX/" -e "s/%PHP_PORT%/$PHP_PORT/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
-#	else
-#		sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
-#	fi
+#    sed -e "s/%USER%/$WS_USER/" -e "s#%DEFAULT_TMP_DIR%#$DEFAULT_TMP_DIR#" -e "s/%GROUP%/$WS_GROUP/" -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e  "s/%RUBY_BIN%/$RUBY_PATH/" -e "s/%SERVER_NAME%/$SERVER_NAME/" "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf.tmp"
+#    if [ $SETUP_PHP -eq 1 ]; then
+#        sed -e "s/%PHP_BEGIN%//" -e "s/%PHP_END%//" -e "s/%PHP_SUFFIX%/$PHP_SUFFIX/" -e "s/%PHP_PORT%/$PHP_PORT/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
+#    else
+#        sed -e "s/%PHP_BEGIN%/<!--/" -e "s/%PHP_END%/-->/" -e "s/%PHP_SUFFIX%/php/" -e "s/%PHP_PORT%/5201/" "$LSINSTALL_DIR/conf/httpd_config.conf.tmp" > "$LSINSTALL_DIR/conf/httpd_config.conf"
+#    fi
 
     sed -e "s/%USER%/$WS_USER/" -e "s/%GROUP%/$WS_GROUP/" -e "s#%DEFAULT_TMP_DIR%#$DEFAULT_TMP_DIR#"  -e "s/%ADMIN_EMAIL%/$ADMIN_EMAIL/" -e "s/%HTTP_PORT%/$HTTP_PORT/" -e "s/%RUBY_BIN%/$RUBY_PATH/"  "$LSINSTALL_DIR/conf/httpd_config.conf.in" > "$LSINSTALL_DIR/conf/httpd_config.conf"
 
@@ -640,70 +640,70 @@ buildConfigFiles()
 
 util_mkdir()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	for arg
-	  do
-	  if [ ! -d "$LSWS_HOME/$arg" ]; then
-		  mkdir "$LSWS_HOME/$arg"
-	  fi
-	  chown "$OWNER" "$LSWS_HOME/$arg"
-	  chmod $PERM  "$LSWS_HOME/$arg"
-	done
-	
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    for arg
+      do
+      if [ ! -d "$LSWS_HOME/$arg" ]; then
+          mkdir "$LSWS_HOME/$arg"
+      fi
+      chown "$OWNER" "$LSWS_HOME/$arg"
+      chmod $PERM  "$LSWS_HOME/$arg"
+    done
+
 }
 
 
 util_cpfile()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	for arg
-	  do
-	  if [ -f "$LSINSTALL_DIR/$arg" ]; then 
-	    cp -f "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg"
-	    chown "$OWNER" "$LSWS_HOME/$arg"
-	    chmod $PERM  "$LSWS_HOME/$arg"
-	  fi
-	done
-	
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    for arg
+      do
+      if [ -f "$LSINSTALL_DIR/$arg" ]; then
+        cp -f "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg"
+        chown "$OWNER" "$LSWS_HOME/$arg"
+        chmod $PERM  "$LSWS_HOME/$arg"
+      fi
+    done
+
 }
 
 util_ccpfile()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	for arg
-	  do
-	  if [ ! -f "$LSWS_HOME/$arg" ] && [ -f "$LSINSTALL_DIR/$arg" ]; then
-	    cp "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg"
-	  fi
-	  if [ -f "$LSWS_HOME/$arg" ]; then
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    for arg
+      do
+      if [ ! -f "$LSWS_HOME/$arg" ] && [ -f "$LSINSTALL_DIR/$arg" ]; then
+        cp "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg"
+      fi
+      if [ -f "$LSWS_HOME/$arg" ]; then
         chown "$OWNER" "$LSWS_HOME/$arg"
         chmod $PERM  "$LSWS_HOME/$arg"
       fi
-	done
+    done
 }
 
 
 util_cpdir()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	for arg
-	  do
-	  cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg/"
-	  chown -R "$OWNER" "$LSWS_HOME/$arg/"*
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    for arg
+      do
+      cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg/"
+      chown -R "$OWNER" "$LSWS_HOME/$arg/"*
       #chmod -R $PERM  $LSWS_HOME/$arg/*
-	done
+    done
 }
 
 util_cp_htaccess()
@@ -719,127 +719,127 @@ util_cp_htaccess()
 
 util_cpdirv()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	VERSION=$1
-	shift
-	for arg
-	  do
-	  cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg.$VERSION/"
-	  chown -R "$OWNER" "$LSWS_HOME/$arg.$VERSION"
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    VERSION=$1
+    shift
+    for arg
+      do
+      cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg.$VERSION/"
+      chown -R "$OWNER" "$LSWS_HOME/$arg.$VERSION"
       $TEST_BIN -L "$LSWS_HOME/$arg"
       if [ $? -eq 0 ]; then
-		  rm -f "$LSWS_HOME/$arg"
-	  fi
-	  FILENAME=`basename $arg`
-	  ln -sf "./$FILENAME.$VERSION/" "$LSWS_HOME/$arg"
+          rm -f "$LSWS_HOME/$arg"
+      fi
+      FILENAME=`basename $arg`
+      ln -sf "./$FILENAME.$VERSION/" "$LSWS_HOME/$arg"
               #chmod -R $PERM  $LSWS_HOME/$arg/*
-	done
+    done
 }
 
 util_cpfilev()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	VERSION=$1
-	shift
-	for arg
-	  do
-	  cp -f "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg.$VERSION"
-	  chown "$OWNER" "$LSWS_HOME/$arg.$VERSION"
-	  chmod $PERM  "$LSWS_HOME/$arg.$VERSION"
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    VERSION=$1
+    shift
+    for arg
+      do
+      cp -f "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg.$VERSION"
+      chown "$OWNER" "$LSWS_HOME/$arg.$VERSION"
+      chmod $PERM  "$LSWS_HOME/$arg.$VERSION"
       $TEST_BIN -L "$LSWS_HOME/$arg"
       if [ $? -eq 0 ]; then
-		  rm -f "$LSWS_HOME/$arg"
-	  fi
-	  FILENAME=`basename $arg`
-	  ln -sf "./$FILENAME.$VERSION" "$LSWS_HOME/$arg"
-	done
+          rm -f "$LSWS_HOME/$arg"
+      fi
+      FILENAME=`basename $arg`
+      ln -sf "./$FILENAME.$VERSION" "$LSWS_HOME/$arg"
+    done
 }
 
 
 installation1()
 {
     umask 022
-	if [ $INST_USER = "root" ]; then
-		SDIR_OWN="root:$ROOTGROUP"
+    if [ $INST_USER = "root" ]; then
+        SDIR_OWN="root:$ROOTGROUP"
         chown $SDIR_OWN $LSWS_HOME
-	else
-		SDIR_OWN=$DIR_OWN
-	fi
-	sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc"
+    else
+        SDIR_OWN=$DIR_OWN
+    fi
+    sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc"
 
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	for arg
-	  do
-	  if [ ! -f "$LSWS_HOME/$arg" ]; then
-		  cp "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg"
-	  fi
-	  chown "$OWNER" "$LSWS_HOME/$arg"
-	  chmod $PERM  "$LSWS_HOME/$arg"
-	done
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    for arg
+      do
+      if [ ! -f "$LSWS_HOME/$arg" ]; then
+          cp "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg"
+      fi
+      chown "$OWNER" "$LSWS_HOME/$arg"
+      chmod $PERM  "$LSWS_HOME/$arg"
+    done
 }
 
 
 util_cpdir()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	for arg
-	  do
-	  cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg/"
-	  chown -R "$OWNER" "$LSWS_HOME/$arg/"*
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    for arg
+      do
+      cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg/"
+      chown -R "$OWNER" "$LSWS_HOME/$arg/"*
       #chmod -R $PERM  $LSWS_HOME/$arg/*
-	done
+    done
 }
 
 
 
 util_cpdirv()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	VERSION=$1
-	shift
-	for arg
-	  do
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    VERSION=$1
+    shift
+    for arg
+      do
       if [ -d "$LSINSTALL_DIR/$arg" ]; then
         cp -R "$LSINSTALL_DIR/$arg/"* "$LSWS_HOME/$arg.$VERSION/"
         chown -R "$OWNER" "$LSWS_HOME/$arg.$VERSION"
         $TEST_BIN -L "$LSWS_HOME/$arg"
         if [ $? -eq 0 ]; then
-		  rm -f "$LSWS_HOME/$arg"
+          rm -f "$LSWS_HOME/$arg"
         fi
         FILENAME=`basename $arg`
         ln -sf "./$FILENAME.$VERSION/" "$LSWS_HOME/$arg"
               #chmod -R $PERM  $LSWS_HOME/$arg/*
       fi
-	done
+    done
 }
 
 util_cpfilev()
 {
-	OWNER=$1
-	PERM=$2
-	shift
-	shift
-	VERSION=$1
-	shift
-	for arg
-	  do
-	  if [ -f "$LSINSTALL_DIR/$arg" ]; then
-	  
+    OWNER=$1
+    PERM=$2
+    shift
+    shift
+    VERSION=$1
+    shift
+    for arg
+      do
+      if [ -f "$LSINSTALL_DIR/$arg" ]; then
+
         cp -f "$LSINSTALL_DIR/$arg" "$LSWS_HOME/$arg.$VERSION"
         chown "$OWNER" "$LSWS_HOME/$arg.$VERSION"
         chmod $PERM  "$LSWS_HOME/$arg.$VERSION"
@@ -850,7 +850,7 @@ util_cpfilev()
         FILENAME=`basename $arg`
         ln -sf "./$FILENAME.$VERSION" "$LSWS_HOME/$arg"
       fi
-	done
+    done
 }
 
 compress_admin_file()
@@ -912,13 +912,16 @@ installation_lscpd()
             CONF_OWN="lsadm:lsadm"
         fi
         SDIR_OWN="root:$ROOTGROUP"
+        LOGDIR_OWN="root:$WS_GROUP"
         chown $SDIR_OWN $LSWS_HOME
     else
         SDIR_OWN=$DIR_OWN
+        LOGDIR_OWN=$DIR_OWN
     fi
     
-    util_mkdir "$SDIR_OWN" $DIR_MOD  bin conf fcgi-bin php lib logs modules  share share/autoindex share/autoindex/icons    
-    util_mkdir "$CONF_OWN" $SDIR_MOD   phpbuild 
+    util_mkdir "$SDIR_OWN" $DIR_MOD  bin conf fcgi-bin php lib modules  share share/autoindex share/autoindex/icons
+    util_mkdir "$LOGDIR_OWN" "0750" logs
+    util_mkdir "$CONF_OWN" $SDIR_MOD   phpbuild
     util_mkdir "$DIR_OWN" $SDIR_MOD tmp tmp/ocspcache autoupdate cyberpanel
     
     find "$DEFAULT_TMP_DIR" -type s -atime +1 -delete 2>/dev/null
@@ -936,7 +939,7 @@ installation_lscpd()
 installation()
 {   
     umask 022
-	if [ $INST_USER = "root" ]; then
+    if [ $INST_USER = "root" ]; then
         export PATH=/sbin:/usr/sbin:$PATH
         if [ "x$SYS_NAME" = "xLinux" ]; then
             create_lsadm
@@ -949,11 +952,13 @@ installation()
         if [ $? -eq 0 ]; then
             CONF_OWN="lsadm:lsadm"
         fi
-		SDIR_OWN="root:$ROOTGROUP"
+        SDIR_OWN="root:$ROOTGROUP"
+        LOGDIR_OWN="root:$WS_GROUP"
         chown $SDIR_OWN $LSWS_HOME
-	else
-		SDIR_OWN=$DIR_OWN
-	fi
+    else
+        SDIR_OWN=$DIR_OWN
+        LOGDIR_OWN=$DIR_OWN
+    fi
     sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc"
     sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lsws.rc.gentoo.in" > "$LSINSTALL_DIR/admin/misc/lsws.rc.gentoo"
     sed "s:%LSWS_CTRL%:$LSWS_HOME/bin/lswsctrl:" "$LSINSTALL_DIR/admin/misc/lshttpd.service.in" > "$LSINSTALL_DIR/admin/misc/lshttpd.service"
@@ -961,7 +966,8 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib logs modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN admin/logs add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc  
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc
+    util_mkdir "$LOGDIR_OWN" "0750" logs admin/logs
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD cgid admin/cgid admin/cgid/secret
     util_mkdir "$DIR_OWN" $SDIR_MOD  tmp/ocspcache
@@ -994,39 +1000,39 @@ installation()
     util_cpfile "$SDIR_OWN" $EXEC_MOD  fcgi-bin/RailsRunner.rb  fcgi-bin/RailsRunner.rb.2.3
 
     util_cpfile "$SDIR_OWN" $EXEC_MOD  lsrecaptcha/_recaptcha lsrecaptcha/_recaptcha.shtml
-	util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/rc-inst.sh admin/misc/admpass.sh admin/misc/rc-uninst.sh admin/misc/uninstall.sh admin/misc/lsws.rc admin/misc/lsws.rc.gentoo admin/misc/enable_phpa.sh admin/misc/mgr_ver.sh admin/misc/gzipStatic.sh admin/misc/fp_install.sh admin/misc/create_admin_keypair.sh admin/misc/awstats_install.sh admin/misc/update.sh admin/misc/cleancache.sh admin/misc/lsup.sh admin/misc/testbeta.sh
+    util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/rc-inst.sh admin/misc/admpass.sh admin/misc/rc-uninst.sh admin/misc/uninstall.sh admin/misc/lsws.rc admin/misc/lsws.rc.gentoo admin/misc/enable_phpa.sh admin/misc/mgr_ver.sh admin/misc/gzipStatic.sh admin/misc/fp_install.sh admin/misc/create_admin_keypair.sh admin/misc/awstats_install.sh admin/misc/update.sh admin/misc/cleancache.sh admin/misc/lsup.sh admin/misc/testbeta.sh
     util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/ap_lsws.sh.in admin/misc/build_ap_wrapper.sh admin/misc/cpanel_restart_httpd.in admin/misc/build_admin_php.sh admin/misc/convertxml.sh admin/misc/lscmctl
-	util_cpfile "$SDIR_OWN" $DOC_MOD admin/misc/gdb-bt admin/misc/htpasswd.php admin/misc/php.ini admin/misc/genjCryptionKeyPair.php admin/misc/purge_cache_byurl.php
+    util_cpfile "$SDIR_OWN" $DOC_MOD admin/misc/gdb-bt admin/misc/htpasswd.php admin/misc/php.ini admin/misc/genjCryptionKeyPair.php admin/misc/purge_cache_byurl.php
     util_cpfile "$SDIR_OWN" $DOC_MOD admin/misc/convertxml.php  admin/misc/lshttpd.service 
     
     
-	if [ $SET_LOGIN -eq 1 ]; then
-		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/htpasswd
-	else
-		util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/htpasswd
-	fi
-	if [ $INSTALL_TYPE = "upgrade" ]; then
-		util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.conf
-		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
-		util_ccpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.conf conf/mime.properties conf/templates/ccl.conf conf/templates/phpsuexec.conf conf/templates/rails.conf
+    if [ $SET_LOGIN -eq 1 ]; then
+        util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/htpasswd
+    else
+        util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/htpasswd
+    fi
+    if [ $INSTALL_TYPE = "upgrade" ]; then
+        util_ccpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.conf
+        util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
+        util_ccpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.conf conf/mime.properties conf/templates/ccl.conf conf/templates/phpsuexec.conf conf/templates/rails.conf
         $TEST_BIN ! -L "$LSWS_HOME/bin/lshttpd"
         if [ $? -eq 0 ]; then
-        	mv -f "$LSWS_HOME/bin/lshttpd" "$LSWS_HOME/bin/lshttpd.old"
+            mv -f "$LSWS_HOME/bin/lshttpd" "$LSWS_HOME/bin/lshttpd.old"
         fi
-    	$TEST_BIN ! -L "$LSWS_HOME/bin/lswsctrl"
+        $TEST_BIN ! -L "$LSWS_HOME/bin/lswsctrl"
         if [ $? -eq 0 ]; then
-        	mv -f "$LSWS_HOME/bin/lswsctrl" "$LSWS_HOME/bin/lswsctrl.old"
+            mv -f "$LSWS_HOME/bin/lswsctrl" "$LSWS_HOME/bin/lswsctrl.old"
         fi
-    	$TEST_BIN ! -L "$LSWS_HOME/admin/html"
+        $TEST_BIN ! -L "$LSWS_HOME/admin/html"
         if [ $? -eq 0 ]; then
-        	mv -f "$LSWS_HOME/admin/html" "$LSWS_HOME/admin/html.old"
+            mv -f "$LSWS_HOME/admin/html" "$LSWS_HOME/admin/html.old"
         fi
 
         if [ ! -f "$LSWS_HOME/conf/vhosts/Example/vhconf.conf" ]; then
-			util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
-		fi
-		
-		#test if contains Example/html Example/cgi-bin and copy when installation
+            util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
+        fi
+
+        #test if contains Example/html Example/cgi-bin and copy when installation
         if [ ! -d "$LSWS_HOME/Example/html" ]; then
             util_mkdir "$SDIR_OWN" $DIR_MOD Example/html
             util_cpdir "$SDIR_OWN" $DOC_MOD Example/html
@@ -1036,19 +1042,19 @@ installation()
             util_mkdir "$SDIR_OWN" $DIR_MOD Example/cgi-bin
             util_cpdir "$SDIR_OWN" $DOC_MOD Example/cgi-bin
         fi
-		
-	else
-		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.conf
-		util_cpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.conf conf/templates/phpsuexec.conf conf/templates/rails.conf
-		util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
-		util_cpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.conf conf/mime.properties conf/httpd_config.conf
-        util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
-		util_mkdir "$SDIR_OWN" $DIR_MOD Example/html Example/cgi-bin 
-		util_cpdir "$SDIR_OWN" $DOC_MOD Example/html Example/cgi-bin
-		util_cp_htaccess "$SDIR_OWN" $DOC_MOD Example/html
-	fi
 
-	#change conf own as lsadm:nobody permission 750
+    else
+        util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/admin_config.conf
+        util_cpfile "$CONF_OWN" $CONF_MOD conf/templates/ccl.conf conf/templates/phpsuexec.conf conf/templates/rails.conf
+        util_cpfile "$CONF_OWN" $CONF_MOD admin/conf/php.ini admin/conf/${SSL_HOSTNAME}.key admin/conf/${SSL_HOSTNAME}.crt
+        util_cpfile "$CONF_OWN" $CONF_MOD conf/httpd_config.conf conf/mime.properties conf/httpd_config.conf
+        util_cpdir "$CONF_OWN" $CONF_MOD conf/vhosts/Example
+        util_mkdir "$SDIR_OWN" $DIR_MOD Example/html Example/cgi-bin
+        util_cpdir "$SDIR_OWN" $DOC_MOD Example/html Example/cgi-bin
+        util_cp_htaccess "$SDIR_OWN" $DOC_MOD Example/html
+    fi
+
+    #change conf own as lsadm:nobody permission 750
     chown -R lsadm:$WS_GROUP "$LSWS_HOME/conf/"
     chmod -R 0750 "$LSWS_HOME/conf/"
     
@@ -1058,15 +1064,15 @@ installation()
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.crt
     util_cpfile "$CONF_OWN" $DOC_MOD conf/${SSL_HOSTNAME}.key
     
-	util_mkdir "$DIR_OWN" $DIR_MOD Example/logs Example/fcgi-bin
-	util_cpdir "$SDIR_OWN" $DOC_MOD admin/html.$VERSION
-	rm -rf $LSWS_HOME/admin/html
-	ln -sf ./html.$VERSION $LSWS_HOME/admin/html
+    util_mkdir "$DIR_OWN" $DIR_MOD Example/logs Example/fcgi-bin
+    util_cpdir "$SDIR_OWN" $DOC_MOD admin/html.$VERSION
+    rm -rf $LSWS_HOME/admin/html
+    ln -sf ./html.$VERSION $LSWS_HOME/admin/html
 
 
-	util_cpfile "$SDIR_OWN" $EXEC_MOD bin/updateagent
+    util_cpfile "$SDIR_OWN" $EXEC_MOD bin/updateagent
     util_cpfile "$SDIR_OWN" $EXEC_MOD bin/wswatch.sh
-	util_cpfilev "$SDIR_OWN" $EXEC_MOD $VERSION bin/lswsctrl bin/lshttpd 
+    util_cpfilev "$SDIR_OWN" $EXEC_MOD $VERSION bin/lswsctrl bin/lshttpd
 
     #if [ -e "$LSINSTALL_DIR/bin/lshttpd.dbg" ]; then
     #    if [ -f "$LSINSTALL_DIR/bin/lshttpd.dbg.$VERSION" ]; then
@@ -1081,12 +1087,12 @@ installation()
     ln -sf ./lshttpd.$VERSION $LSWS_HOME/bin/lshttpd
     ln -sf lshttpd $LSWS_HOME/bin/litespeed
 
-	util_cpfile "$SDIR_OWN" $DOC_MOD docs/* docs/css/* docs/img/* docs/ja-JP/* docs/zh-CN/*
-	util_cpfile "$SDIR_OWN" $DOC_MOD VERSION GPL.txt  
+    util_cpfile "$SDIR_OWN" $DOC_MOD docs/* docs/css/* docs/img/* docs/ja-JP/* docs/zh-CN/*
+    util_cpfile "$SDIR_OWN" $DOC_MOD VERSION GPL.txt
 
-	if [ -f $LSWS_HOME/autoupdate/download ]; then
-		rm $LSWS_HOME/autoupdate/download
-	fi
+    if [ -f $LSWS_HOME/autoupdate/download ]; then
+        rm $LSWS_HOME/autoupdate/download
+    fi
 
 
 }
@@ -1094,7 +1100,7 @@ installation()
 
 setupPHPAccelerator()
 {
-	cat <<EOF
+    cat <<EOF
 
 PHP Opcode Cache Setup
 
@@ -1110,17 +1116,17 @@ Note: If an opcode cache has been installed already, you do not need to
 
 EOF
 
-	printf "%s" "Would you like to change PHP opcode cache setting [y/N]? "
+    printf "%s" "Would you like to change PHP opcode cache setting [y/N]? "
 
-	read PHPACC
-	echo
+    read PHPACC
+    echo
 
-	if [ "x$PHPACC" = "x" ]; then
-		PHPACC=n
-	fi
-	if [ `expr "$PHPACC" : '[Yy]'` -gt 0 ]; then
-		$LSWS_HOME/admin/misc/enable_phpa.sh
-	fi
+    if [ "x$PHPACC" = "x" ]; then
+        PHPACC=n
+    fi
+    if [ `expr "$PHPACC" : '[Yy]'` -gt 0 ]; then
+        $LSWS_HOME/admin/misc/enable_phpa.sh
+    fi
 }
 
 
@@ -1167,31 +1173,31 @@ gen_selfsigned_cert()
 
    # set default value
     if [ "${SSL_COUNTRY}" = "" ] ; then
-	SSL_COUNTRY=US
+    SSL_COUNTRY=US
     fi
 
     if [ "${SSL_STATE}" = "" ] ; then
-	SSL_STATE="New Jersey"
+    SSL_STATE="New Jersey"
     fi
 
     if [ "${SSL_LOCALITY}" = "" ] ; then
-	SSL_LOCALITY=Virtual
+    SSL_LOCALITY=Virtual
     fi
 
     if [ "${SSL_ORG}" = "" ] ; then
-	SSL_ORG=LiteSpeedCommunity
+    SSL_ORG=LiteSpeedCommunity
     fi
     
     if [ "${SSL_ORGUNIT}" = "" ] ; then
-	SSL_ORGUNIT=Testing
+    SSL_ORGUNIT=Testing
     fi
 
     if [ "${SSL_HOSTNAME}" = "" ] ; then
-	SSL_HOSTNAME=webadmin
+    SSL_HOSTNAME=webadmin
     fi
 
     if [ "${SSL_EMAIL}" = "" ] ; then
-	SSL_EMAIL=.
+    SSL_EMAIL=.
     fi
 
     csr="${SSL_HOSTNAME}.csr"
@@ -1227,7 +1233,7 @@ EOF
 
 finish()
 {
-	cat <<EOF
+    cat <<EOF
 Congratulations! The LiteSpeed Web Server has been successfully installed.
 Command line script - "$LSWS_HOME/bin/lswsctrl"
 can be used to start or stop the server.
@@ -1252,26 +1258,26 @@ or http://<ip_or_Hostname_of_this_machine>:<ADMIN_PORT>/
 
 EOF
 
-	if [ $INST_USER = "root" ]; then
-		if [ $INSTALL_TYPE != "upgrade" ]; then
-			printf "%s\n%s" "Would you like to have LiteSpeed Web Server started automatically" "when the server restarts [Y/n]? "
-			read START_SERVER
-			echo 
+    if [ $INST_USER = "root" ]; then
+        if [ $INSTALL_TYPE != "upgrade" ]; then
+            printf "%s\n%s" "Would you like to have LiteSpeed Web Server started automatically" "when the server restarts [Y/n]? "
+            read START_SERVER
+            echo
 
-			if [ "x$START_SERVER" = "x" ]; then
-				START_SERVER=y
-			fi
-			if [ `expr "$START_SERVER" : '[Yy]'` -gt 0 ]; then
-				$LSWS_HOME/admin/misc/rc-inst.sh
-			else
-				cat <<EOF
+            if [ "x$START_SERVER" = "x" ]; then
+                START_SERVER=y
+            fi
+            if [ `expr "$START_SERVER" : '[Yy]'` -gt 0 ]; then
+                $LSWS_HOME/admin/misc/rc-inst.sh
+            else
+                cat <<EOF
 If you want to start the web server automatically later, just run 
-	"$LSWS_HOME//rc-inst.sh"
+    "$LSWS_HOME//rc-inst.sh"
 to install the service control script.
 
 EOF
-			fi
-		fi
+            fi
+        fi
         if [ "x$HOST_PANEL" != "x" ]; then
             cat << EOF 
 
@@ -1307,52 +1313,52 @@ EOF
 
 
         fi
-	fi
+    fi
 
 
 
-	if [ $INSTALL_TYPE != "upgrade" ]; then
-		printf "%s" "Would you like to start it right now [Y/n]? "
-	else
-		printf "%s" "Would you like to restart it right now [Y/n]? "
-	fi
-	read START_SERVER
-	echo 
+    if [ $INSTALL_TYPE != "upgrade" ]; then
+        printf "%s" "Would you like to start it right now [Y/n]? "
+    else
+        printf "%s" "Would you like to restart it right now [Y/n]? "
+    fi
+    read START_SERVER
+    echo
 
-	if [ "x$START_SERVER" = "x" ]; then
-		START_SERVER=y
-	fi
+    if [ "x$START_SERVER" = "x" ]; then
+        START_SERVER=y
+    fi
 
-	if [ `expr "$START_SERVER" : '[Yy]'` -gt 0 ]; then
-		if [ $INSTALL_TYPE != "upgrade" ]; then
-			"$LSWS_HOME/bin/lswsctrl" start
-		else
-			"$LSWS_HOME/bin/lswsctrl" restart
-		fi
-	else
-		exit 0
-	fi
+    if [ `expr "$START_SERVER" : '[Yy]'` -gt 0 ]; then
+        if [ $INSTALL_TYPE != "upgrade" ]; then
+            "$LSWS_HOME/bin/lswsctrl" start
+        else
+            "$LSWS_HOME/bin/lswsctrl" restart
+        fi
+    else
+        exit 0
+    fi
 
-	sleep 1
-	RUNNING_PROCESS=`$PS_CMD | grep lshttpd | grep -v grep`
+    sleep 1
+    RUNNING_PROCESS=`$PS_CMD | grep lshttpd | grep -v grep`
 
-	if [ "x$RUNNING_PROCESS" != "x" ]; then
+    if [ "x$RUNNING_PROCESS" != "x" ]; then
 
-		cat <<EOF
+        cat <<EOF
 
 LiteSpeed Web Server started successfully! Have fun!
 
 EOF
-		exit 0
-	else
+        exit 0
+    else
 
-		cat <<EOF
+        cat <<EOF
 
 [ERROR] Failed to start the web server. For trouble shooting information,
         please refer to documents in "$LSWS_HOME/docs/".
 
 EOF
-	fi
+    fi
 
 }
 

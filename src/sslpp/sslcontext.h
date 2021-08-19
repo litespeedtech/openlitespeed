@@ -25,6 +25,7 @@
   */
 #include <sys/stat.h>
 #include <stdint.h>
+#include <sslpp/ssldef.h>
 
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
@@ -34,6 +35,13 @@ class SslOcspStapling;
 class SslContextConfig;
 
 typedef SslContext *(*SslSniLookupCb)(void *arg, const char *pName);
+typedef SslContext *(*SslAsyncSniLookupCb)(void *arg, const char *name,
+                                           int name_len,
+                                           AsyncCertDoneCb cb, void *cb_param);
+
+
+#define SNI_LOOKUP_PENDING  ((SslContext *)-1L)
+#define SNI_LOOKUP_FAIL     ((SslContext *)-2L)
 
 #define SSL_CTX_PENDING ((SSL_CTX *)-1L)
 
@@ -62,6 +70,12 @@ public:
     static SslContext *config(SslContext *pContext, const char *pZcDomainName,
         const char * pKey, const char * pCert, const char * pBundle);
 
+    static SslContext *configMultiCerts(SslContext *pContext,
+                                        SslContextConfig *pConfig);
+    static SslContext *configOneCert(SslContext *pContext, const char * key_file,
+                                     const char * cert_file, const char * bundle_file,
+                                     SslContextConfig *pConfig);
+
     int loadCA(const char *pBundle);
     int configOptions(SslContextConfig *pConfig);
 
@@ -88,6 +102,10 @@ public:
     void setProtocol(int method);
 
     int initSNI(void *param);
+    int initSniMultiCert(void *param);
+    void enableSelectCertCb();
+    int applyToSsl(SSL *pSsl);
+
     static int servername_cb(SSL *pSSL, void *arg);
 
     static int  initSSL();
@@ -116,17 +134,24 @@ public:
     char getOcspStapling() const    {   return m_iEnableOcsp;   }
     int  configStapling(const char *name, int max_age, const char *responder);
 
-    static void setSniLookupCb(SslSniLookupCb pCb);
+    int selectCert(SSL *pSSL, const char *name, const void *cli_hello);
+    SslContext *getEccCtx() const   {   return m_pEccCtx;       }
+
+    static SslSniLookupCb setSniLookupCb(SslSniLookupCb pCb);
+    static SslAsyncSniLookupCb setAsyncSniLookupCb(SslAsyncSniLookupCb pCb);
+    static SslAsyncSniLookupCb getAsyncSniLookupCb();
     static SslContext *getSslContext(SSL_CTX *ctx);
     static void setAlpnCb(SSL_CTX *ctx, void *arg);
 
 private:
     SSL_CTX    *m_pCtx;
+    SslContext *m_pEccCtx;
     char        m_iMethod;
     char        m_iRenegProtect;
     char        m_iEnableSpdy;
     char        m_iEnableOcsp;
-    int         m_iKeyLen;
+    short       m_iKeyLen;
+    short       m_iKeyType;
     long        m_tmLastAccess;
     struct stat m_stKey;
     struct stat m_stCert;

@@ -47,6 +47,7 @@ static char DEFAULT_MIME_TYPE[] = "application/octet-stream";
 static StringList *s_pMIMEList = NULL;
 
 HttpMime *HttpMime::s_pMime = NULL;
+MimeSetting *HttpMime::s_pBlankMime = NULL;
 
 //class MimeSettingList : public TPointerList<MimeSetting>{};
 
@@ -705,6 +706,16 @@ MimeSetting *HttpMime::initDefault(char *pMIME)
             m_pDefault->setMIME(::getMIME(pMIME));
     }
     return m_pDefault;
+}
+
+
+void HttpMime::initBlank()
+{
+    if (!s_pBlankMime)
+    {
+        s_pBlankMime = new MimeSetting();
+        s_pBlankMime->setMIME(::getMIME(""));
+    }
 }
 
 

@@ -79,6 +79,7 @@ private:
     MIMESuffixMap    *m_pSuffixMap;
     MimeSetting      *m_pDefault;
     static HttpMime  *s_pMime;
+    static MimeSetting * s_pBlankMime;
 
     void operator=(const HttpMime &rhs) {}
 
@@ -148,6 +149,9 @@ public:
     static void addMimeHandler(const HttpHandler *pHdlr, char *pMime,
                                HttpMime *pHttpMime,
                                const char *pSuffix);
+
+    static void initBlank();
+    static MimeSetting *getBlank()      {   return s_pBlankMime;    }
 
     static void setMime(HttpMime *pMime)
     {   s_pMime = pMime;    }

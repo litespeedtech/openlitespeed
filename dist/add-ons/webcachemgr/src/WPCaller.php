@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2021
  * *******************************************
  */
 
@@ -305,13 +305,17 @@ class WPCaller
      *
      * WP Functions: is_plugin_active()
      *
-     * @param WPInstall  $install
+     * @since 1.13.8  Added optional parameter $output.
+     *
+     * @param WPInstall $install
+     * @param bool      $output
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
-    private function checkStatus( WPInstall $install )
+    private function checkStatus( WPInstall $install, $output = false )
     {
-        if ( $install->getDocRoot() == null ) {
+        if ( $output == true ) {
 
             if ( ($siteUrl = $this->getSiteURL()) === '' ) {
                 Logger::uiError(
@@ -372,13 +376,14 @@ class WPCaller
 
     /**
      *
-     * @param boolean  $output
+     * @param boolean $output
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
     public function updateStatus( $output = false )
     {
-        $status = $this->checkStatus($this->currInstall);
+        $status = $this->checkStatus($this->currInstall, $output);
         $this->currInstall->setStatus($status);
 
         if ( $output ) {

@@ -171,7 +171,7 @@ int main(int ac, char *av[])
     pRootContext->set(aUriNames[0], aDirNames[0], NULL);
 
     pTree->setRootContext(pRootContext);
-    pTree->setRootLocation(aDirNames[0], strlen(aDirNames[0]));
+    pTree->setRootLocation(aDirNames[0]);
 
 //     tentest(pTree, loops);
     singletest(pTree, loops);

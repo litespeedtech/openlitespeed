@@ -245,7 +245,7 @@ static int doCompression(lsi_param_t *rec, zbufinfo_t *pBufInfo,
          */
         if (ret == Z_BUF_ERROR)
             ret = Z_OK;
-        
+
         if (ret >= Z_OK)
         {
             consumed = rec->len1 - pStream->avail_in;
@@ -264,7 +264,7 @@ static int doCompression(lsi_param_t *rec, zbufinfo_t *pBufInfo,
                 written += sz;
             else if (sz < 0)
             {
-                g_api->log(rec->session, LSI_LOG_ERROR,
+                g_api->log(rec->session, LSI_LOG_DEBUG,
                            "[%s%s] compressbuf in %d, return %d (written %d, "
                            "flag in %d)\n", pModuleStr, pCompressStr,
                            rec->len1, sz, written, rec->flag_in);

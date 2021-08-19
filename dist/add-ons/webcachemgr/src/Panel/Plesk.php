@@ -54,7 +54,8 @@ class Plesk extends ControlPanel
             'redhat',
             'rhel',
             'ubuntu',
-            'debian'
+            'debian',
+            'almalinux'
         );
 
         $cmds = array();
@@ -89,7 +90,8 @@ class Plesk extends ControlPanel
 
         throw new LSCMException(
             'Plesk detected with unsupported OS. '
-                . '(Not CentOS/Virtuozzo/Cloudlinux/RedHat/Ubuntu/Debian)',
+                . '(Not CentOS/Virtuozzo/Cloudlinux/RedHat/Ubuntu/Debian/'
+                . 'AlmaLinux)',
             LSCMException::E_UNSUPPORTED
         );
     }
@@ -137,6 +139,7 @@ class Plesk extends ControlPanel
             case 'cloudlinux':
             case 'redhat':
             case 'rhel':
+            case 'almalinux':
                 $this->apacheConf = '/etc/httpd/conf.d/lscache.conf';
                 break;
 

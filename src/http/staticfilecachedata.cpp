@@ -440,11 +440,13 @@ int StaticFileCacheData::buildFixedHeaders(int etag)
     p += 15;
     DateTime::getRFCTime(m_fileData.getLastMod(), p);
     p += RFC_1123_TIME_LEN;
-
-    p += ls_snprintf(p, pEnd - p ,
-                     "\r\nContent-Type: %s%s\r\n",
-                     m_pMimeType->getMIME()->c_str(), pCharset);
-
+    *p++ = '\r';
+    *p++ = '\n';
+    if (m_pMimeType != HttpMime::getBlank())
+    {
+        p += ls_snprintf(p, pEnd - p, "Content-Type: %s%s\r\n",
+                        m_pMimeType->getMIME()->c_str(), pCharset);
+    }
     m_sHeaders.setLen(p - m_sHeaders.buf());
     m_iValidateHeaderLen = (m_iETagLen ? (6 + m_iETagLen + 2) : 0) + 15 + 2 +
                            RFC_1123_TIME_LEN ;

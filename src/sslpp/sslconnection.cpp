@@ -89,6 +89,12 @@ void SslConnection::setSSL(SSL *ssl)
 }
 
 
+void SslConnection::setSpecialExData(SSL *ssl, void *data)
+{
+    SSL_set_ex_data(ssl, s_iConnIdx, data);
+}
+
+
 SslConnection *SslConnection::get(const SSL *ssl)
 {
     return (SslConnection *)SSL_get_ex_data(ssl, s_iConnIdx);

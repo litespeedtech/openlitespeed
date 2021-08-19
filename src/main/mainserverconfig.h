@@ -49,10 +49,11 @@ private:
     StringList      m_sSuspendedVhosts;
     int             m_iDisableWebAdmin;
     int             m_iConfTestMode;
-    int             s_fdCmd;
+    int             m_fdCmd;
+    int             m_pidWatchdog;
 
-    app_node_st  m_stExtAppXmlNodeS[MAX_EXT_APP_NUMBER];
-    int             m_iEextAppXmlNodeSSize;
+    app_node_st     m_stExtAppXmlNodeS[MAX_EXT_APP_NUMBER];
+    int             m_iExtAppXmlNodeSize;
 
     void operator=(const MainServerConfig &rhs);
     MainServerConfig(const MainServerConfig &rhs);
@@ -65,15 +66,16 @@ private:
         , m_iDisableLogRotate(0)
         , m_iDisableWebAdmin(0)
         , m_iConfTestMode(0)
-        , s_fdCmd(-1)
-        , m_iEextAppXmlNodeSSize(0)
+        , m_fdCmd(-1)
+        , m_pidWatchdog(-1)
+        , m_iExtAppXmlNodeSize(0)
     {}
 public:
     int  getCrashGuard() const          {   return m_iCrashGuard;   }
-    void setCrashGuard(int guard)     {   m_iCrashGuard = guard;  }
+    void setCrashGuard(int guard)       {   m_iCrashGuard = guard;  }
     void setServerName(const char *pServerName)  {   m_sServerName = pServerName;}
-    void setAdminEmails(const char *pEmails)      {   m_sAdminEmails = pEmails;   }
-    void setGDBPath(const char *pGdbPath)         {   m_gdbPath = pGdbPath;       }
+    void setAdminEmails(const char *pEmails)     {   m_sAdminEmails = pEmails;   }
+    void setGDBPath(const char *pGdbPath)        {   m_gdbPath = pGdbPath;       }
     void setServerRoot(const char *pServerRoot)  {   m_sServerRoot = pServerRoot;}
     void setChroot(const char *pChroot)          {   m_sChroot = pChroot;        }
     void setGroup(const char *pGroup)            {   m_sGroup = pGroup;          }
@@ -81,33 +83,36 @@ public:
     void setAutoIndexURI(const char *pAutoIndexURI) {   m_sAutoIndexURI = pAutoIndexURI;}
     void setEnableCoreDump(int iEnableCoreDump)     {  m_iEnableCoreDump = iEnableCoreDump; }
     void setDisableLogRotateAtStartup(int n)        {  m_iDisableLogRotate = n; }
-    void setConfTestMode(int n)                  {   m_iConfTestMode = n;      }
-    void setGlobalfdCmd(int n)                  { s_fdCmd = n; }
+    void setConfTestMode(int n)                  {   m_iConfTestMode = n;   }
+    void setGlobalfdCmd(int n)                   {   m_fdCmd = n;           }
 
     const char *getServerName()    const   {   return m_sServerName.c_str();   }
     const char *getAdminEmails()   const   {   return m_sAdminEmails.c_str();  }
     const char *getGDBPath()       const   {   return m_gdbPath.c_str();       }
     const char *getServerRoot()    const   {   return m_sServerRoot.c_str();   }
     const char *getChroot()        const   {   return m_sChroot.c_str();       }
-    const AutoStr2 *getpsChroot()   const   {   return &m_sChroot;              }
-    int    getChrootlen()     const         {   return m_sChroot.len();         }
+    const AutoStr2 *getpsChroot()   const  {   return &m_sChroot;              }
+    int    getChrootlen()     const        {   return m_sChroot.len();         }
     const char *getGroup()         const   {   return m_sGroup.c_str();        }
     const char *getUser()          const   {   return m_sUser.c_str();         }
     const char *getAutoIndexURI()  const   {   return m_sAutoIndexURI.c_str(); }
-    int  getEnableCoreDump()  const         {   return m_iEnableCoreDump;       }
-    int  getDisableLogRotateAtStartup()  const         {   return m_iDisableLogRotate;       }
-    StringList &getSuspendedVhosts()        {   return m_sSuspendedVhosts;      }
+    int getEnableCoreDump()  const         {   return m_iEnableCoreDump;       }
+    int getDisableLogRotateAtStartup() const  {   return m_iDisableLogRotate;  }
+    StringList &getSuspendedVhosts()       {   return m_sSuspendedVhosts;      }
 
-    void setDisableWebAdmin(int v)         {   m_iDisableWebAdmin = v;          }
-    int getDisableWebAdmin() const         {   return m_iDisableWebAdmin;            }
-    int getConfTestMode() const          { return m_iConfTestMode;               }
-    int getGlobalfdCmd() const            { return s_fdCmd; }
+    void setDisableWebAdmin(int v)         {   m_iDisableWebAdmin = v;         }
+    int getDisableWebAdmin() const         {   return m_iDisableWebAdmin;      }
+    int getConfTestMode() const            {   return m_iConfTestMode;         }
+    int getGlobalfdCmd() const             {   return m_fdCmd;                 }
+
+    void setWatchDogPid(int pid)           {   m_pidWatchdog = pid;            }
+    int getWatchDogPid() const             {   return m_pidWatchdog;           }
 
     int insertExtAppXmlNode(app_node_st *key_pointer)
     {
-        if (m_iEextAppXmlNodeSSize < MAX_EXT_APP_NUMBER - 1)
+        if (m_iExtAppXmlNodeSize < MAX_EXT_APP_NUMBER - 1)
         {
-            m_stExtAppXmlNodeS[m_iEextAppXmlNodeSSize ++] = *key_pointer;
+            m_stExtAppXmlNodeS[m_iExtAppXmlNodeSize ++] = *key_pointer;
             return 0;
         }
         return -1;
@@ -116,7 +121,7 @@ public:
 
     app_node_st *getExtAppXmlNode(char *extAppName)
     {
-        for (int i=0; i<m_iEextAppXmlNodeSSize; ++i)
+        for (int i=0; i<m_iExtAppXmlNodeSize; ++i)
         {
             if (strcmp(m_stExtAppXmlNodeS[i].key.c_str(), extAppName) == 0)
                 return &m_stExtAppXmlNodeS[i];
@@ -124,7 +129,7 @@ public:
         return NULL;
     }
 
-    int getExtAppXmlNodeCount() { return m_iEextAppXmlNodeSSize; }
+    int getExtAppXmlNodeCount() { return m_iExtAppXmlNodeSize; }
 
 };
 
