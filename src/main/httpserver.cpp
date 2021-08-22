@@ -1221,7 +1221,6 @@ void HttpServerImpl::checkOLSUpdate()
              curVer / 1000000, (curVer / 10000) % 100);
     m_pAutoUpdFetch[1]->startReq(sUrl, 1, 1, NULL, 0, sAutoUpdFile.c_str(), NULL,
                               addrResponder2);
-    asyncDownloadQuicCloudTrustIp();
 }
 
 
@@ -1234,11 +1233,6 @@ int HttpServerImpl::asyncDownloadQuicCloudIpCb(void *pArg, HttpFetch *pHttpFetch
         unlink(path);
     else
     {
-        char final_path[4096];
-        lsnprintf(final_path, sizeof(final_path),
-                "%stmp/download-quic-cloud-ips",
-                MainServerConfig::getInstance().getServerRoot());
-        rename(path, final_path);
         pServerImpl->gracefulRestartIfIpsChange();
 
     }
@@ -1250,6 +1244,7 @@ int HttpServerImpl::asyncDownloadQuicCloudIpCb(void *pArg, HttpFetch *pHttpFetch
 void HttpServerImpl::asyncDownloadQuicCloudTrustIp()
 {
     char path[4096];
+    struct stat sb;
 
     if (m_pAutoUpdFetch[2])
     {
@@ -1260,6 +1255,16 @@ void HttpServerImpl::asyncDownloadQuicCloudTrustIp()
         }
         delete m_pAutoUpdFetch[2];
     }
+
+    lsnprintf(path, sizeof(path), "%stmp/download-quic-cloud-ips",
+              MainServerConfig::getInstance().getServerRoot());
+
+    if (stat(path, &sb) != -1)
+    {
+        if (DateTime::s_curTime - sb.st_mtime < 86400) //Less than 1 day
+            return ;
+    }
+
     LS_INFO("Daily download QUIC.cloud whitelist IP to tmp/download-quic-cloud-ips ...");
     lsnprintf(path, sizeof(path), "%stmp/download-quic-cloud-ips.tmp",
               MainServerConfig::getInstance().getServerRoot());
@@ -1285,6 +1290,7 @@ void HttpServerImpl::onTimer60Secs()
         if (1 == HttpServerConfig::getInstance().getProcNo())
         {
             checkOLSUpdate();
+            asyncDownloadQuicCloudTrustIp();
         }
         s_count = 30;    //Check it every 30 minutes
     }
@@ -2729,12 +2735,12 @@ void HttpServerImpl::gracefulRestartIfIpsChange()
     const char *pRoot = MainServerConfig::getInstance().getServerRoot();
 
     new_len = GPath::readFile(new_ip_list, sizeof(new_ip_list) - 1,
-                              "tmp/download-quic-cloud-ips", pRoot);
+                              "tmp/download-quic-cloud-ips.tmp", pRoot);
     if (new_len > 0)
         new_ip_list[new_len] = '\0';
 
     current_len = GPath::readFile(current_ip_list, sizeof(current_ip_list) - 1,
-                                  "admin/conf/quic-cloud-ips", pRoot);
+                                  "tmp/download-quic-cloud-ips", pRoot);
     if (current_len > 0)
         current_ip_list[current_len] = '\0';
 
@@ -2745,8 +2751,18 @@ void HttpServerImpl::gracefulRestartIfIpsChange()
         {
             LS_NOTICE("QUIC.cloud IP list has been changed, request  "
                       "a graceful restart.");
-            ServerInfo::getServerInfo()->setRestart(1);
+
+            ServerInfo::getServerInfo()->setRestart(2);
         }
+        char tmp_path[4096];
+        lsnprintf(tmp_path, sizeof(tmp_path),
+                "%stmp/download-quic-cloud-ips.tmp",
+                MainServerConfig::getInstance().getServerRoot());
+        char final_path[4096];
+        lsnprintf(final_path, sizeof(final_path),
+                "%stmp/download-quic-cloud-ips",
+                MainServerConfig::getInstance().getServerRoot());
+        rename(tmp_path, final_path);
     }
 }
 

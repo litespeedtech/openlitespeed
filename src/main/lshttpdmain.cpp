@@ -81,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Tue Aug 17 14:56:00 UTC 2021)"
+#define BUILDTIME  " (built: Sun Aug 22 21:16:07 UTC 2021)"
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -1387,12 +1387,13 @@ int LshttpdMain::checkRestartReq()
     pProc = (ChildProc *)m_childrenList.begin();
     while (pProc)
     {
-        if (((ServerInfo *)pProc->m_pBlackBoard)->getRestart())
+        int restart = ((ServerInfo *)pProc->m_pBlackBoard)->getRestart();
+        if (restart)
         {
-            LS_NOTICE("Child Process:%d request a graceful server restart ...",
-                      pProc->m_pid);
+            LS_NOTICE("Child Process:%d request a graceful server restart: %d ...",
+                      pProc->m_pid, restart);
             const char *pAdminEmails = MainServerConfigObj.getAdminEmails();
-            if ((pAdminEmails) && (*pAdminEmails))
+            if (restart == 1 && (pAdminEmails) && (*pAdminEmails))
             {
                 char achSubject[512];
                 static struct utsname      s_uname;

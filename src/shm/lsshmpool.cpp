@@ -306,7 +306,7 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
                                    LsShmSize_t init_size, LsShmHasher_fn hf,
                                    LsShmValComp_fn vc, int iFlags)
 {
-    LsShmHash *pObj;
+    LsShmHash *pObj = NULL;
     GHash::iterator itor;
 
     if (name == NULL)
@@ -322,26 +322,36 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
                                            vc)) != (LsShmHash *)-1))
         return pObj;
 
-    LsShmOffset_t offReg = getReg(name);
-    if (offReg == 0)
-        return NULL;
-    LsShmReg * pReg = (LsShmReg *)offset2ptr(offReg);
-    if (!pReg)
-        return NULL;
-
-    if (pReg->x_iValue == 0)
+    int isAutoLock = m_iAutoLock;
+    if (isAutoLock)
     {
-        LsShmOffset_t offset = allocateNewHash( init_size, hf != NULL, iFlags);
-        if (offset != 0)
-        {
-            pReg = (LsShmReg *)offset2ptr(offReg);
-            pReg->x_iValue = offset;
-        }
+        m_iAutoLock = 0;
+        lock();
     }
-    if (!pReg->x_iValue)
-        return NULL;
+    assert(getShm()->isLocked(m_pShmLock));
 
-    return newHashByOffset(pReg->x_iValue, name, hf, vc, iFlags);
+    LsShmOffset_t offReg = getReg(name);
+    LsShmReg * pReg;
+    if (offReg && (pReg = (LsShmReg *)offset2ptr(offReg)) != NULL)
+    {
+        if (pReg->x_iValue == 0)
+        {
+            LsShmOffset_t offset = allocateNewHash( init_size, hf != NULL, iFlags);
+            if (offset != 0)
+            {
+                pReg = (LsShmReg *)offset2ptr(offReg);
+                pReg->x_iValue = offset;
+            }
+        }
+        if (pReg->x_iValue)
+            pObj = newHashByOffset(pReg->x_iValue, name, hf, vc, iFlags);
+    }
+    if (isAutoLock)
+    {
+        unlock();
+        m_iAutoLock = 1;
+    }
+    return pObj;
 }
 
 
