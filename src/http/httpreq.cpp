@@ -1487,12 +1487,12 @@ static void sanitizeHeaderValue(char *pHeaderVal, int len)
 int HttpReq::setRewriteLocation(char *pURI, int uriLen,
                                 const char *pQS, int qsLen, int escape)
 {
-    int totalLen = uriLen + qsLen + 2 + ((escape) ? uriLen : 0);
+    int totalLen = uriLen + qsLen + 12 + ((escape) ? uriLen : 0);
     if (totalLen > MAX_URL_LEN)
-        totalLen = MAX_URL_LEN;
+        totalLen = MAX_URL_LEN + 10;
 
     char *p = (char *)ls_xpool_alloc(m_pPool, totalLen + URL_INDEX_PAD);
-    char *pEnd = p + totalLen - 1;
+    char *pEnd = p + totalLen - 8;
     ls_str_set(&m_location, p, totalLen);
     if (escape)
         p += HttpUtil::escape(pURI, p, pEnd - p - 4);

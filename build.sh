@@ -560,7 +560,7 @@ updateModuleCMakelistfile
 preparelibquic
 
 
-if [ "${ISLINUX}" != "yes" ] || [ "${MACHINE}" != "x86_64" ] ; then
+if [ "${ISLINUX}" = "yes" ] && [ "${MACHINE}" = "x86_64" ] ; then
     fixPagespeed
 fi
 
