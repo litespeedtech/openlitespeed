@@ -1254,6 +1254,7 @@ void HttpServerImpl::asyncDownloadQuicCloudTrustIp()
             return;
         }
         delete m_pAutoUpdFetch[2];
+        m_pAutoUpdFetch[2] = NULL;
     }
 
     lsnprintf(path, sizeof(path), "%stmp/download-quic-cloud-ips",
