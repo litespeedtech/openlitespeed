@@ -1,6 +1,5 @@
 <?php
 
-//$_SERVER['LS_FI_OFF'] = true;
 // To customize look & feel of generated index page
 class UserSettings
 {
@@ -20,7 +19,7 @@ class UserSettings
 		'*,t',
 		'*.lsz',
 		];
-	public $Time_Format = ' Y-m-d H:i ';
+	public $Time_Format = ' d-M-Y H:i ';
 	public $IconPath = '/_autoindex/icons';
 	public $nameWidth = 80;
 	public $nameFormat;
@@ -64,20 +63,24 @@ class AllImgs
 	{
 		$this->mapping = [
 			new IMG_Mapping(['gif', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'svg', 'raw'],
-                                        'image.svg', '[IMG]'),
-                        new IMG_Mapping(['txt', 'md5', 'c', 'cpp', 'cc', 'h', 'sh', 'html', 'htm', 'shtml', 'php', 'phtml', 'css', 'js'],
-                                        'file-text.svg', '[TXT]'),
-                        new IMG_Mapping(['gz', 'tgz', 'zip', 'Z', 'z', 'bin', 'exe'],
-                                        'file.svg', '[CMP]'),
-                        new IMG_Mapping(['mpg', 'avi', 'mpeg', 'ram', 'wmv'],
-                                        'video.svg', '[VID]'),
-                        new IMG_Mapping(['mp3', 'mp2', 'ogg', 'wav', 'wma', 'aac', 'mp4', 'rm'],
-                                        'music.svg', '[SND]'),
+					'image.png', '[IMG]'),
+			new IMG_Mapping(['html', 'htm', 'shtml', 'php', 'phtml', 'css', 'js'],
+					'html.png', '[HTM]'),
+			new IMG_Mapping(['txt', 'md5', 'c', 'cpp', 'cc', 'h', 'sh'],
+					'text.png', '[TXT]'),
+			new IMG_Mapping(['gz', 'tgz', 'zip', 'Z', 'z'],
+					'compress.png', '[CMP]'),
+			new IMG_Mapping(['bin', 'exe'],
+					'binary.png', '[BIN]'),
+			new IMG_Mapping(['mpg', 'avi', 'mpeg', 'ram', 'wmv'],
+					'movie.png', '[VID]'),
+			new IMG_Mapping(['mp3', 'mp2', 'ogg', 'wav', 'wma', 'aac', 'mp4', 'rm'],
+					'sound.png', '[SND]'),
 		];
 
-		$this->default_img = new IMG_Mapping(null, 'file.svg', 'unknown', '');
-		$this->dir_img = new IMG_Mapping(null, 'folder-fill.svg', 'directory', '');
-		$this->parent_img = new IMG_Mapping(null, 'corner-left-up.svg', 'up', '');
+		$this->default_img = new IMG_Mapping(null, 'unknown.png', 'unknown', '');
+		$this->dir_img = new IMG_Mapping(null, 'folder.png', 'directory', '');
+		$this->parent_img = new IMG_Mapping(null, 'up.png', 'up', '');
 	}
 
 	public function findImgMapping($file)
@@ -177,24 +180,24 @@ function printOneEntry($base, $name, $fileStat, $setting)
 	$encoded = str_replace(['%2F', '%26amp%3B'], ['/', '%26'],
 			rawurlencode($base . $fileStat->name));
 	if (isset($_SERVER['LS_FI_OFF']) && $_SERVER['LS_FI_OFF']) {
-		$buf = '<tr><td>' . '<a href="' . $encoded .
-				$fileStat->isdir . '">' . sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td></tr>\n");
+		$buf = '<li>' . '<a href="' . $encoded .
+				$fileStat->isdir . '">' . sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></li>\n");
 	} else {
-		$buf = '<tr><td>' . '<a href="' . $encoded . $fileSata->isdir . '">' . '<img class="icon" src="' . $setting->IconPath . '/' . $fileStat->img->imageName .
-				'" alt="' . $fileStat->img->alt . '">';
+		$buf = '<img src="' . $setting->IconPath . '/' . $fileStat->img->imageName .
+				'" alt="' . $fileStat->img->alt . '"> <a href="' . $encoded . $fileStat->isdir . '">';
 		if (strlen($name) > $setting->nameWidth) {
 			$name = substr($name, 0, $setting->nameWidth - 3) . '...';
 		}
-		$buf .= sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td>");
-		if ($fileStat->mtime != -1 && $name != 'Parent Directory')
-			$buf .= '<td>' . date($setting->Time_Format, $fileStat->mtime) . '</td>';
+		$buf .= sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a>");
+		if ($fileStat->mtime != -1)
+			$buf .= date($setting->Time_Format, $fileStat->mtime);
 		else
-			$buf .= '<td>                   </td>';
+			$buf .= '                   ';
 		if ($fileStat->size != -1)
-			$buf .= sprintf("<td>%7ldk  </td>", ($fileStat->size + 1023) / 1024);
+			$buf .= sprintf("%7ldk  ", ( $fileStat->size + 1023 ) / 1024);
 		else
-                        $buf .= ($name == 'Parent Directory') ? '<td>         </td>' : '<td>       -  </td>';
-		$buf .= '<td>     </td>' . '</tr>' . $fileStat->img->desc;
+			$buf .= '       -  ';
+		$buf .= '     ' . $fileStat->img->desc;
 		$buf .= "\n";
 	}
 	echo $buf;
@@ -209,10 +212,9 @@ function printIncludes($path, $name)
 		if (file_exists($filename) && !is_link($filename)) {
 			$content = file_get_contents($filename);
 			if ($n == $name) {
-				$text = ($name == 'HEADER')  ? ' class="header-text"' : ' class="readme-text"';
-				echo "<div${text}>\n";
+				echo "<pre>\n";
 				echo $content;
-				echo "</div>\n";
+				echo "</pre>\n";
 			} else { // html format
 				echo $content;
 			}
@@ -333,10 +335,8 @@ echo "<!DOCTYPE html>
   <head>
   <meta http-equiv=\"Content-type\" content=\"text/html; charset=UTF-8\" />
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
-  <link rel=\"stylesheet\" href=\"/_autoindex/assets/css/autoindex.css\" />
   <title>Index of ", $uri, "</title></head>
   <body>
-    <div class=\"content\">
     <h1>Index of ", $uri, "</h1>";
 
 if (isset($setting->HeaderName)) {
@@ -344,38 +344,11 @@ if (isset($setting->HeaderName)) {
 }
 
 if ($using_fancyIndex) {
-	$header = "<div id=\"table-list\"><table id=\"table-content\">\n";
+	$header = "<ul>\n";
 } else {
-	if ($sortOrder == 'NA') {
-		$name_sort_order = ' aria-sort="ascending" ';
-		$date_sort_order = '';
-		$size_sort_order = '';
-	} elseif ($sortOrder == 'ND') {
-		$name_sort_order = ' aria-sort="descending" ';
-                $date_sort_order = '';
-                $size_sort_order = '';
-	}
-	if ($sortOrder == 'MA') {
-                $name_sort_order = '';
-                $date_sort_order = ' aria-sort="ascending" ';
-                $size_sort_order = '';
-        } elseif ($sortOrder == 'MD') {
-                $name_sort_order = '';
-                $date_sort_order = ' aria-sort="descending" ';
-                $size_sort_order = '';
-        }
-	if ($sortOrder== 'SA') {
-                $name_sort_order = '';
-                $date_sort_order = '';
-                $size_sort_order = ' aria-sort="ascending" ';
-        } elseif ($sortOrder == 'SD') {
-                $name_sort_order = '';
-                $date_sort_order = '';
-                $size_sort_order = ' aria-sort="descending" ';
-        }
-	$header = "<div id=\"table-list\"><table id=\"table-content\"><thead class=\"t-header\"><tr><th class=\"colname\" ${name_sort_order}><a class=\"name\" href='?$NameSort'>";
-	$header .= sprintf($setting->nameFormat, 'Name</a></th>');
-	$header .= " <th class=\"colname\" ${date_sort_order}><a href='?$ModSort'>Last Modified</a></th>         <th class=\"colname\" ${size_sort_order}><a href='?$SizeSort'>Size</a></th>  <th><a href='?$DescSort'>Description</a></th></tr></thead>\n";
+	$header = "<pre><img src=\"$setting->IconPath/blank.png\" alt=\"     \"> <a href='?$NameSort'>";
+	$header .= sprintf($setting->nameFormat, 'Name</a>');
+	$header .= " <a href='?$ModSort'>Last modified</a>         <a href='?$SizeSort'>Size</a>  <a href='?$DescSort'>Description</a>\n   <hr>";
 }
 echo $header;
 
@@ -396,9 +369,9 @@ usort($list, $cmpFunc);
 printFileList($list, $uri, $setting);
 
 if ($using_fancyIndex) {
-	echo "</table></div>\n";
+	echo "</ul>\n";
 } else {
-	echo "</table></div>";
+	echo "</pre><hr>";
 }
 
 if (isset($setting->ReadmeName)) {
@@ -406,6 +379,5 @@ if (isset($setting->ReadmeName)) {
 }
 
 echo '<address>Proudly Served by LiteSpeed Web Server at ' . $_SERVER['SERVER_NAME'] . ' Port ' . $_SERVER['SERVER_PORT'] . "</address>
-</div>
 </body>
 </html>";
