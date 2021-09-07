@@ -686,6 +686,8 @@ bool HttpSession::endOfReqBody()
 {
     if (m_pChunkIS)
         return m_pChunkIS->eos();
+    else if (m_request.isBodySizeUnknown())
+        return getStream()->isEos();
     else
         return (m_request.getBodyRemain() <= 0);
 }
@@ -876,7 +878,14 @@ int HttpSession::readReqBody()
             }
         }
         else if (ret == -1)
+        {
+            if (endOfReqBody())
+            {
+                getStream()->wantRead(0);
+                break;
+            }
             return SC_400;
+        }
         else if (ret == -2)
             return getModuleDenyCode(LSI_HKPT_RECV_REQ_BODY);
     }
@@ -979,8 +988,9 @@ int HttpSession::readReqBodyTermination(LsiSession *pSession, char *pBuf,
         len = pThis->m_pChunkIS->read(pBuf, size);
     else
     {
-        off_t toRead = pThis->m_request.getBodyRemain();
-        if (toRead > size)
+        off_t toRead;
+        if (pThis->m_request.isBodySizeUnknown()
+            || (toRead = pThis->m_request.getBodyRemain()) > size)
             toRead = size ;
         if (toRead > 0)
             len = pThis->read(pBuf, toRead);

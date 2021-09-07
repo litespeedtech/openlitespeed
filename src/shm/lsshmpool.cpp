@@ -328,7 +328,14 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
         m_iAutoLock = 0;
         lock();
     }
-    assert(getShm()->isLocked(m_pShmLock));
+
+    if(!getShm()->isLocked(m_pShmLock))
+    {
+        int lock_pid = *m_pShmLock;
+        SHM_WARN("LsShmPool::getNamedHash locked by %d, lock again", lock_pid);
+        lock();
+        assert(getShm()->isLocked(m_pShmLock));
+    }
 
     LsShmOffset_t offReg = getReg(name);
     LsShmReg * pReg;

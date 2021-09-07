@@ -107,18 +107,17 @@ int H2StreamBase::read(char *buf, int len)
         return -1;
 
     read_out = m_bufRcvd.moveTo(buf, len);
-    if (read_out == 0)
-    {
-        if (getFlag(HIO_FLAG_PEER_SHUTDOWN))
-        {
-            return -1; //EOF (End of File) There is no more data need to be read
-        }
-    }
     if (read_out > 0)
     {
         setActiveTime(DateTime::s_curTime);
         adjWindowToUpdate(read_out);
         windowUpdate();
+    }
+    if (getFlag(HIO_FLAG_PEER_SHUTDOWN) && (read_out == 0 || m_bufRcvd.empty()))
+    {
+        setFlag(SS_FLAG_READ_EOS, 1);
+        if (read_out == 0)
+            return -1;
     }
     return read_out;
 }

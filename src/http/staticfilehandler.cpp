@@ -676,7 +676,8 @@ static int buildRangeHeaders(HttpSession *pSession, HttpRange &range)
                                     p + 15, RFC_1123_TIME_LEN);
         p += 15 + RFC_1123_TIME_LEN + 2;
 
-        pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
+        if (pData->getMimeType() != HttpMime::getBlank())
+            pResp->getRespHeaders().add(HttpRespHeaders::H_CONTENT_TYPE,
                                     p + 14, pData->getHeaderLen() -
                                     (p - pData->getHeaderBuf()) - 14 - 2);
 

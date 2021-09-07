@@ -54,7 +54,7 @@ enum stream_flag
     SS_FLAG_PASS_SETCOOKIE     = (1<<21),
     SS_FLAG_RESP_HEADER_SENT   = (1<<22),
     SS_FLAG_BLACK_HOLE         = (1<<23),
-
+    SS_FLAG_READ_EOS           = (1<<24),
 };
 
 inline enum stream_flag operator|(enum stream_flag a, enum stream_flag b)
@@ -122,6 +122,7 @@ public:
 
     bool isPauseWrite()  const  {   return getFlag(SS_FLAG_PAUSE_WRITE);    }
     bool isPeerShutdown() const {   return getFlag(SS_FLAG_PEER_SHUTDOWN);  }
+    bool isEos() const          {   return getFlag(SS_FLAG_READ_EOS);       }
     bool isWriteBuffer() const  {   return getFlag(SS_FLAG_WRITE_BUFFER);   }
 
     void handlerReadyToRelease(){   setFlag(SS_FLAG_HANDLER_RELEASE, 1);    }

@@ -42,6 +42,8 @@ struct http_header_t;
 #define HRH_F_HAS_PUSH  2
 #define HRH_F_LC_NAME   4
 
+#define HRH_IDX_NONE    0xFFFF
+
 class HttpRespHeaders
 {
     friend class UpkdRespHdrBuilder;
@@ -166,7 +168,7 @@ public:
     char *getHeaderToUpdate(INDEX index, int *valLen);
 
     int  isHeaderSet(INDEX index) const
-    {   return m_KVPairindex[index] != 0xff;    }
+    {   return m_KVPairindex[index] != HRH_IDX_NONE;    }
 
     //For LSIAPI using//return number of header appended to iov
     int getAllHeaders(struct iovec *iov_key,
@@ -208,7 +210,7 @@ public:
 
     static void hideServerHeader()  {   s_showServerHeader = 0;     }
     void clearSetCookieIndex()
-    {   m_KVPairindex[H_SET_COOKIE] = 0xff;    }
+    {   m_KVPairindex[H_SET_COOKIE] = HRH_IDX_NONE;    }
     void dropConnectionHeaders();
     void convertLscCookie();
     void dropCacheHeaders()
@@ -231,7 +233,7 @@ private:
     TObjArray<lsxpack_header> m_lsxpack;
     lsxpack_header_t   *m_working;
 
-    unsigned char       m_KVPairindex[H_HEADER_END];
+    uint16_t            m_KVPairindex[H_HEADER_END];
     unsigned char       m_flags;
     unsigned char       m_iHeaderBuilt;
     short               m_iHeaderRemovedCount;

@@ -218,14 +218,8 @@ int QuicStream::checkReadRet(int ret)
     switch(ret)
     {
     case 0:
-        if (getState() != HIOS_SHUTDOWN)
-        {
-            LS_DBG_L(this, "End of stream detected, CLOSING!");
-#ifdef _ENTERPRISE_   //have the connection closed quickly
-            setFlag(HIO_FLAG_PEER_SHUTDOWN, 1);
-#endif
-            setState(HIOS_CLOSING);
-        }
+        LS_DBG_L(this, "End of stream detected, mark EOF");
+        setFlag(HIO_FLAG_PEER_SHUTDOWN | SS_FLAG_READ_EOS, 1);
         return -1;
     case -1:
         switch(errno)

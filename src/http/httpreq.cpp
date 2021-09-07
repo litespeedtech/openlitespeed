@@ -1030,7 +1030,7 @@ int HttpReq::processHeader(int index)
         {
             if (getMethod() <= HttpMethod::HTTP_HEAD)
                 return SC_400;
-            m_lEntityLength = CHUNKED;
+            m_lEntityLength = LSI_BODY_SIZE_CHUNK;
         }
         break;
     case HttpHeader::H_USERAGENT:

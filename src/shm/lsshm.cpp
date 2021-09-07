@@ -801,13 +801,14 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize)
         if (lock() > 0)
             return 0; // no lock acquired...
 
+    LsShmXSize_t needSize = 0;
+    LsShmXSize_t targetSize = 0;
     // Allocate from heap space
     availSize = avail();
     LsShmSize_t availAddrSize = m_addrMap.getAvailAddrSpace(
         x_pShmMap->x_stat.m_iUsedSize, pagesize);
     if (pagesize > availSize || pagesize > availAddrSize)
     {
-        LsShmXSize_t needSize = 0;
         // min 16 unit at a time
 
         LS_DBG("[SHM] [PID:%d] To alloc page: %d bytes at offset: %ld, availAddr: %d\n",
@@ -819,7 +820,7 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize)
 
         if (needSize > 0)
         {
-            LsShmXSize_t targetSize = x_pShmMap->x_stat.m_iFileSize + needSize;
+            targetSize = x_pShmMap->x_stat.m_iFileSize + needSize;
             targetSize = (targetSize + (16 * LSSHM_SHM_UNITSIZE - 1)) &
                             ~(16 * LSSHM_SHM_UNITSIZE - 1);
 

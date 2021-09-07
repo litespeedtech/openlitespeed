@@ -72,6 +72,7 @@ int H2Stream::onInitConnected()
 
 int H2Stream::onPeerShutdown()
 {
+    H2StreamBase::onPeerShutdown();
     if (getFlag(HIO_FLAG_INIT_SESS))
     {
         if (((H2Connection *)m_pH2Conn)->assignStreamHandler(this) == LS_FAIL)
