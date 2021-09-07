@@ -181,7 +181,7 @@ function printOneEntry($base, $name, $fileStat, $setting)
                                 $fileStat->isdir . '">' . sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td></tr>\n");
         } else {
                 $no_sort = ($name == 'Parent Directory') ? ' data-sort-method="none"' : '';
-		$dir_sort = ($fileStat->isdir) ? 'data-sort=*' . $name : '';
+		        $dir_sort = ($fileStat->isdir) ? 'data-sort=*' . $name : '';
                 $buf = "<tr${no_sort}><td ${dir_sort}>" . '<a href="' . $encoded . $fileSata->isdir . '">' . '<img class="icon" src="' . $setting->IconPath . '/' . $fileStat->img->imageName .
                                 '" alt="' . $fileStat->img->alt . '">';
                 if (strlen($name) > $setting->nameWidth) {
@@ -189,13 +189,13 @@ function printOneEntry($base, $name, $fileStat, $setting)
                 }
                 $buf .= sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td>");
                 if ($fileStat->mtime != -1 && $name != 'Parent Directory')
-			$buf .= '<td data-sort=' . strtotime(date($setting->Time_Format, $fileStat->mtime)) . '>' . date($setting->Time_Format, $fileStat->mtime) . '</td>';
+			            $buf .= '<td data-sort=' . strtotime(date($setting->Time_Format, $fileStat->mtime)) . '>' . date($setting->Time_Format, $fileStat->mtime) . '</td>';
                 else
                         $buf .= '<td>                   </td>';
                 if ($fileStat->size != -1)
-			$buf .= sprintf("<td data-sort='%d'>%7ldk  </td>" , $fileStat->size , ( $fileStat->size + 1023 ) / 1024);
+			            $buf .= sprintf("<td data-sort='%d'>%7ldk  </td>" , $fileStat->size , ( $fileStat->size + 1023 ) / 1024);
                 else
-			$buf .= ($name == 'Parent Directory') ? '<td>         </td>' : '<td>       -  </td>';
+			            $buf .= ($name == 'Parent Directory') ? '<td>         </td>' : '<td>       -  </td>';
                 $buf .= '<td>     </td>' . '</tr>' . $fileStat->img->desc;
                 $buf .= "\n";
         }
@@ -351,8 +351,8 @@ if ($using_fancyIndex) {
         $header = "<div id=\"table-list\"><table id=\"table-content\">\n";
 } else {
         $header = "<div id=\"table-list\"><table id=\"table-content\"><thead class=\"t-header\"><tr><th class=\"colname\"><a class=\"name\" href='?$NameSort' onclick=\"return false\" >";
-	$header .= sprintf($setting->nameFormat, 'Name</a></th>');
-	$header .= " <th class=\"colname\" data-sort-method='number'><a href='?$ModSort' onclick=\"return false\">Last Modified</a></th>         <th class=\"colname\" data-sort-method='number'><a href='?$SizeSort' onclick=\"return false\">Size</a></th>  <th><a href='?$DescSort' onclick=\"return false\">Description</a></th></tr></thead>\n";
+	    $header .= sprintf($setting->nameFormat, 'Name</a></th>');
+	    $header .= " <th class=\"colname\" data-sort-method='number'><a href='?$ModSort' onclick=\"return false\">Last Modified</a></th>         <th class=\"colname\" data-sort-method='number'><a href='?$SizeSort' onclick=\"return false\">Size</a></th>  <th><a href='?$DescSort' onclick=\"return false\">Description</a></th></tr></thead>\n";
 }
 echo $header;
 
