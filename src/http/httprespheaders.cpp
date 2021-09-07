@@ -148,7 +148,7 @@ inline lsxpack_header *HttpRespHeaders::newHdrEntry()
 
 void HttpRespHeaders::reset2()
 {
-    if (m_KVPairindex[H_SET_COOKIE] == 0xFF)
+    if (m_KVPairindex[H_SET_COOKIE] == HRH_IDX_NONE)
     {
         reset();
         return;
@@ -174,7 +174,7 @@ void HttpRespHeaders::reset()
     m_flags = 0;
     m_iHeaderUniqueCount = 0;
     m_buf.clear();
-    memset(m_KVPairindex, 0xFF, H_HEADER_END);
+    memset(m_KVPairindex, 0xFF, sizeof(m_KVPairindex));
     memset(m_lsxpack.begin(), 0, sizeof(lsxpack_header));
     m_lsxpack.setSize(1);
     m_working = NULL;
@@ -290,7 +290,7 @@ int HttpRespHeaders::addKvPairIdx(lsxpack_header *new_hdr)
         && new_hdr->app_index != H_UNKNOWN)
     {
         int idx = new_hdr->app_index;
-        if (m_KVPairindex[idx] == 0xFF)
+        if (m_KVPairindex[idx] == HRH_IDX_NONE)
         {
             m_KVPairindex[idx] = new_hdr - m_lsxpack.begin();
         }
@@ -459,7 +459,7 @@ lsxpack_header *HttpRespHeaders::getExistKv(INDEX index,
     }
     else
     {
-        if (m_KVPairindex[index] != 0xFF)
+        if (m_KVPairindex[index] != HRH_IDX_NONE)
             return getKvPair(m_KVPairindex[index]);
     }
     return NULL;
@@ -502,7 +502,7 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pName, unsigned nameLen,
     else
     {
         //verifyHeaderLength(headerIndex,  pName, nameLen);
-        if (m_KVPairindex[headerIndex] == 0xFF)
+        if (m_KVPairindex[headerIndex] == HRH_IDX_NONE)
             m_KVPairindex[headerIndex] = m_lsxpack.size();
         kvOrderNum = m_KVPairindex[headerIndex];
     }
@@ -646,10 +646,10 @@ int HttpRespHeaders::del(INDEX headerIndex)
     if (headerIndex < 0 || headerIndex >= H_HEADER_END)
         return -1;
 
-    if (m_KVPairindex[headerIndex] != 0xFF)
+    if (m_KVPairindex[headerIndex] != HRH_IDX_NONE)
     {
         _del(m_KVPairindex[headerIndex]);
-        m_KVPairindex[headerIndex] = 0xFF;
+        m_KVPairindex[headerIndex] = HRH_IDX_NONE;
         --m_iHeaderUniqueCount;
     }
     return 0;
@@ -659,7 +659,7 @@ int HttpRespHeaders::del(INDEX headerIndex)
 char *HttpRespHeaders::getContentTypeHeader(int &len)
 {
     int index = m_KVPairindex[HttpRespHeaders::H_CONTENT_TYPE];
-    if (index == 0xFF)
+    if (index == HRH_IDX_NONE)
     {
         len = -1;
         return NULL;
@@ -775,7 +775,7 @@ int  HttpRespHeaders::getHeader(INDEX index, struct iovec *iov,
     int kvOrderNum = -1;
     if (index >= H_HEADER_END)
         return 0;
-    if (m_KVPairindex[index] != 0xFF)
+    if (m_KVPairindex[index] != HRH_IDX_NONE)
         kvOrderNum = m_KVPairindex[index];
 
     return getHeader(kvOrderNum, NULL, NULL, iov, maxIovCount);
@@ -799,7 +799,7 @@ const char *HttpRespHeaders::getHeader(INDEX index, int *valLen) const
     const lsxpack_header *pKv;
     if (index >= H_HEADER_END)
         return 0;
-    if (m_KVPairindex[index] == 0xFF)
+    if (m_KVPairindex[index] == HRH_IDX_NONE)
         return NULL;
     pKv = getKvPair(m_KVPairindex[index]);
     *valLen = pKv->val_len;
@@ -812,7 +812,7 @@ char *HttpRespHeaders::getHeaderToUpdate(INDEX index, int *valLen)
     lsxpack_header *pKv;
     if (index >= H_HEADER_END)
         return 0;
-    if (m_KVPairindex[index] == 0xFF)
+    if (m_KVPairindex[index] == HRH_IDX_NONE)
         return NULL;
     pKv = getKvPair(m_KVPairindex[index]);
     lsxpack_header_mark_val_changed(pKv);
@@ -1310,7 +1310,7 @@ void HttpRespHeaders::hideServerSignature(int hide)
 
 void HttpRespHeaders::convertLscCookie()
 {
-    if (m_KVPairindex[H_LSC_COOKIE] == 0xff)
+    if (m_KVPairindex[H_LSC_COOKIE] == HRH_IDX_NONE)
         return;
     int kvOrderNum = m_KVPairindex[H_LSC_COOKIE];
     lsxpack_header * pKv = NULL;
@@ -1330,7 +1330,7 @@ void HttpRespHeaders::convertLscCookie()
         kvOrderNum = (pKv->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) - 1;
     }
 
-    if (m_KVPairindex[H_SET_COOKIE] != 0xff)
+    if (m_KVPairindex[H_SET_COOKIE] != HRH_IDX_NONE)
     {
         assert(pKv != NULL);
         pKv->chain_next_idx = ((m_KVPairindex[H_SET_COOKIE] + 1)
@@ -1340,7 +1340,7 @@ void HttpRespHeaders::convertLscCookie()
         --m_iHeaderUniqueCount;
     }
     m_KVPairindex[H_SET_COOKIE] = m_KVPairindex[H_LSC_COOKIE];
-    m_KVPairindex[H_LSC_COOKIE] = 0xff;
+    m_KVPairindex[H_LSC_COOKIE] = HRH_IDX_NONE;
 }
 
 

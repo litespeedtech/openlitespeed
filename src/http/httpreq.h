@@ -18,20 +18,12 @@
 #ifndef HTTPREQ_H
 #define HTTPREQ_H
 
-class SslConnection;
-enum
-{
-    REQ_BODY_UNKNOWN,
-    REQ_BODY_FORM,
-    REQ_BODY_MULTIPART
-};
-
-
 #include <http/httpheader.h>
 #include <http/httpmethod.h>
 #include <http/httpstatuscode.h>
 
 #include "httpvhost.h"
+#include <ls.h>
 #include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
 #include <lsr/ls_atomic.h>
@@ -44,7 +36,15 @@ enum
 #include <sys/types.h>
 #include <time.h>
 
-#define CHUNKED                 -1
+class SslConnection;
+enum
+{
+    REQ_BODY_UNKNOWN,
+    REQ_BODY_FORM,
+    REQ_BODY_MULTIPART
+};
+
+
 #define MAX_REDIRECTS           10
 
 #define PROCESS_CONTEXT         (1<<0)
@@ -510,7 +510,11 @@ public:
     const char *getAuthUser() const         {   return m_pAuthUser;         }
 
     bool isChunked() const
-    {   return m_lEntityLength == CHUNKED;  }
+    {   return m_lEntityLength == LSI_BODY_SIZE_CHUNK;  }
+
+    bool isBodySizeUnknown() const
+    {   return m_lEntityLength == LSI_BODY_SIZE_UNKNOWN;  }
+
     off_t getBodyRemain() const
     {   return m_lEntityLength - m_lEntityFinished; }
 

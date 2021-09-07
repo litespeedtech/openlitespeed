@@ -119,6 +119,7 @@ int SpdyStream::read(char *buf, int len)
     {
         if (getFlag(HIO_FLAG_PEER_SHUTDOWN))
         {
+            setFlag(SS_FLAG_READ_EOS, 1);
             return LS_FAIL; //EOF (End of File) There is no more data need to be read
         }
     }

@@ -279,6 +279,7 @@ private:
 
     void used(LsShmSize_t size)
     {
+        assert(x_pStats->m_iFileSize >= x_pStats->m_iUsedSize + size);
         x_pStats->m_iUsedSize += size;
     }
 

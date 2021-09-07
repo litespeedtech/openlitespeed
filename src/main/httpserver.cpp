@@ -255,11 +255,6 @@ private:
 
     ~HttpServerImpl()
     {
-        for(int i = 0; i < 3; ++i)
-        {
-            if (m_pAutoUpdFetch[i])
-                delete m_pAutoUpdFetch[i];
-        }
     }
 
     int initAdns()

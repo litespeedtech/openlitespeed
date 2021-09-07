@@ -68,8 +68,8 @@ typedef ls_spinlock_t           ls_shmlock_t;
 #ifdef USE_PIDSPINLOCK
 #define ls_shmlock_setup        ls_atomic_spin_setup
 #define ls_shmlock_lock         ls_atomic_spin_pidlock
-#define ls_shmlock_trylock      ls_atomic_pidspin_trylock
-#define ls_shmlock_unlock       ls_atomic_spin_unlock
+#define ls_shmlock_trylock      ls_atomic_spin_pidtrylock
+#define ls_shmlock_unlock       ls_atomic_spin_pidunlock
 #define ls_shmlock_locked       ls_atomic_pidlocked
 #else
 #define ls_shmlock_setup        ls_spinlock_setup
