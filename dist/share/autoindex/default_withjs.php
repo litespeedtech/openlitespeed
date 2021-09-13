@@ -64,15 +64,15 @@ class AllImgs
 	{
 		$this->mapping = [
 			new IMG_Mapping(['gif', 'png', 'jpg', 'jpeg', 'tif', 'tiff', 'bmp', 'svg', 'raw'],
-                                        'image.svg', '[IMG]'),
-                        new IMG_Mapping(['txt', 'md5', 'c', 'cpp', 'cc', 'h', 'sh', 'html', 'htm', 'shtml', 'php', 'phtml', 'css', 'js'],
-                                        'file-text.svg', '[TXT]'),
-                        new IMG_Mapping(['gz', 'tgz', 'zip', 'Z', 'z', 'bin', 'exe'],
-                                        'file.svg', '[CMP]'),
-                        new IMG_Mapping(['mpg', 'avi', 'mpeg', 'ram', 'wmv'],
-                                        'video.svg', '[VID]'),
-                        new IMG_Mapping(['mp3', 'mp2', 'ogg', 'wav', 'wma', 'aac', 'mp4', 'rm'],
-                                        'music.svg', '[SND]'),
+					'image.svg', '[IMG]'),
+			new IMG_Mapping(['txt', 'md5', 'c', 'cpp', 'cc', 'h', 'sh', 'html', 'htm', 'shtml', 'php', 'phtml', 'css', 'js'],
+					'file-text.svg', '[TXT]'),
+			new IMG_Mapping(['gz', 'tgz', 'zip', 'Z', 'z', 'bin', 'exe'],
+					'file.svg', '[CMP]'),
+			new IMG_Mapping(['mpg', 'avi', 'mpeg', 'ram', 'wmv'],
+					'video.svg', '[VID]'),
+			new IMG_Mapping(['mp3', 'mp2', 'ogg', 'wav', 'wma', 'aac', 'mp4', 'rm'],
+					'music.svg', '[SND]'),
 		];
 
 		$this->default_img = new IMG_Mapping(null, 'file.svg', 'unknown', '');
@@ -174,30 +174,32 @@ function readDirList($path, &$excludes, &$map)
 
 function printOneEntry($base, $name, $fileStat, $setting)
 {
-	$encoded = str_replace(['%2F', '%26amp%3B'], ['/', '%26'],
-			rawurlencode($base . $fileStat->name));
-	if (isset($_SERVER['LS_FI_OFF']) && $_SERVER['LS_FI_OFF']) {
-		$buf = '<tr><td>' . '<a href="' . $encoded .
-				$fileStat->isdir . '">' . sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td></tr>\n");
-	} else {
-		$buf = '<tr><td>' . '<a href="' . $encoded . $fileSata->isdir . '">' . '<img class="icon" src="' . $setting->IconPath . '/' . $fileStat->img->imageName .
-				'" alt="' . $fileStat->img->alt . '">';
-		if (strlen($name) > $setting->nameWidth) {
-			$name = substr($name, 0, $setting->nameWidth - 3) . '...';
-		}
-		$buf .= sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td>");
-		if ($fileStat->mtime != -1 && $name != 'Parent Directory')
-			$buf .= '<td>' . date($setting->Time_Format, $fileStat->mtime) . '</td>';
-		else
-			$buf .= '<td>                   </td>';
-		if ($fileStat->size != -1)
-			$buf .= sprintf("<td>%7ldk  </td>", ($fileStat->size + 1023) / 1024);
-		else
-            $buf .= ($name == 'Parent Directory') ? '<td>         </td>' : '<td>       -  </td>';
-		$buf .= '<td>     </td>' . '</tr>' . $fileStat->img->desc;
-		$buf .= "\n";
-	}
-	echo $buf;
+        $encoded = str_replace(['%2F', '%26amp%3B'], ['/', '%26'],
+                        rawurlencode($base . $fileStat->name)); 
+        if (isset($_SERVER['LS_FI_OFF']) && $_SERVER['LS_FI_OFF']) {
+                $buf = '<tr><td>' . '<a href="' . $encoded .
+                                $fileStat->isdir . '">' . sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td></tr>\n");
+        } else {
+                $no_sort = ($name == 'Parent Directory') ? ' data-sort-method="none"' : '';
+		        $dir_sort = ($fileStat->isdir) ? 'data-sort=*' . $name : '';
+                $buf = "<tr${no_sort}><td ${dir_sort}>" . '<a href="' . $encoded . $fileSata->isdir . '">' . '<img class="icon" src="' . $setting->IconPath . '/' . $fileStat->img->imageName .
+                                '" alt="' . $fileStat->img->alt . '">';
+                if (strlen($name) > $setting->nameWidth) {
+                        $name = substr($name, 0, $setting->nameWidth - 3) . '...';
+                }
+                $buf .= sprintf($setting->nameFormat, htmlspecialchars($name, ENT_SUBSTITUTE) . "</a></td>");
+                if ($fileStat->mtime != -1 && $name != 'Parent Directory')
+			            $buf .= '<td data-sort=' . strtotime(date($setting->Time_Format, $fileStat->mtime)) . '>' . date($setting->Time_Format, $fileStat->mtime) . '</td>';
+                else
+                        $buf .= '<td>                   </td>';
+                if ($fileStat->size != -1)
+			            $buf .= sprintf("<td data-sort='%d'>%7ldk  </td>" , $fileStat->size , ( $fileStat->size + 1023 ) / 1024);
+                else
+			            $buf .= ($name == 'Parent Directory') ? '<td>         </td>' : '<td>       -  </td>';
+                $buf .= '<td>     </td>' . '</tr>' . $fileStat->img->desc;
+                $buf .= "\n";
+        }
+        echo $buf;
 }
 
 function printIncludes($path, $name)
@@ -209,11 +211,11 @@ function printIncludes($path, $name)
 		if (file_exists($filename) && !is_link($filename)) {
 			$content = file_get_contents($filename);
 			if ($n == $name) {
-				$text = ($name == 'HEADER')  ? ' class="header-text"' : ' class="readme-text"';
-				echo "<div${text}>\n";
-				echo $content;
-				echo "</div>\n";
-			} else { // html format
+				$text = ($name == 'HEADER') ? 'class="header-text"' : 'class="readme-text"';
+                                echo "<div ${text}>\n";
+                                echo $content;
+                                echo "</div>\n";
+    			} else { // html format
 				echo $content;
 			}
 			break;
@@ -238,7 +240,7 @@ function printFileList($list, $base_uri, $setting)
 
 function cmpNA($a, $b)
 {
-	return strcmp($a->name, $b->name);
+	return strcasecmp($a->name, $b->name);
 }
 
 function cmpND($a, $b)
@@ -334,48 +336,23 @@ echo "<!DOCTYPE html>
   <meta http-equiv=\"Content-type\" content=\"text/html; charset=UTF-8\" />
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
   <link rel=\"stylesheet\" href=\"/_autoindex/assets/css/autoindex.css\" />
-  <title>Index of ", $uri, "</title></head>
+  <script src=\"/_autoindex/assets/js/tablesort.js\"></script>
+  <script src=\"/_autoindex/assets/js/tablesort.number.js\"></script>
+  <title>Index of ", $uri, " - with JS</title></head>
   <body>
     <div class=\"content\">
-    <h1>Index of ", $uri, "</h1>";
+    <h1>Index of ", $uri, " - with JS</h1>";
 
 if (isset($setting->HeaderName)) {
 	printIncludes($path, $setting->HeaderName);
 }
 
 if ($using_fancyIndex) {
-	$header = "<div id=\"table-list\"><table id=\"table-content\">\n";
+        $header = "<div id=\"table-list\"><table id=\"table-content\">\n";
 } else {
-	if ($sortOrder == 'NA') {
-		$name_sort_order = ' aria-sort="ascending" ';
-		$date_sort_order = '';
-		$size_sort_order = '';
-	} elseif ($sortOrder == 'ND') {
-		$name_sort_order = ' aria-sort="descending" ';
-                $date_sort_order = '';
-                $size_sort_order = '';
-	}
-	if ($sortOrder == 'MA') {
-                $name_sort_order = '';
-                $date_sort_order = ' aria-sort="ascending" ';
-                $size_sort_order = '';
-        } elseif ($sortOrder == 'MD') {
-                $name_sort_order = '';
-                $date_sort_order = ' aria-sort="descending" ';
-                $size_sort_order = '';
-        }
-	if ($sortOrder== 'SA') {
-                $name_sort_order = '';
-                $date_sort_order = '';
-                $size_sort_order = ' aria-sort="ascending" ';
-        } elseif ($sortOrder == 'SD') {
-                $name_sort_order = '';
-                $date_sort_order = '';
-                $size_sort_order = ' aria-sort="descending" ';
-        }
-	$header = "<div id=\"table-list\"><table id=\"table-content\"><thead class=\"t-header\"><tr><th class=\"colname\" ${name_sort_order}><a class=\"name\" href='?$NameSort'>";
-	$header .= sprintf($setting->nameFormat, 'Name</a></th>');
-	$header .= " <th class=\"colname\" ${date_sort_order}><a href='?$ModSort'>Last Modified</a></th>         <th class=\"colname\" ${size_sort_order}><a href='?$SizeSort'>Size</a></th>  <th><a href='?$DescSort'>Description</a></th></tr></thead>\n";
+        $header = "<div id=\"table-list\"><table id=\"table-content\"><thead class=\"t-header\"><tr><th class=\"colname\"><a class=\"name\" href='?$NameSort' onclick=\"return false\" >";
+	    $header .= sprintf($setting->nameFormat, 'Name</a></th>');
+	    $header .= " <th class=\"colname\" data-sort-method='number'><a href='?$ModSort' onclick=\"return false\">Last Modified</a></th>         <th class=\"colname\" data-sort-method='number'><a href='?$SizeSort' onclick=\"return false\">Size</a></th>  <th><a href='?$DescSort' onclick=\"return false\">Description</a></th></tr></thead>\n";
 }
 echo $header;
 
@@ -391,6 +368,7 @@ if ($uri != '/') {
 		printOneEntry($base, 'Parent Directory', $fileStat, $setting);
 	}
 }
+
 $cmpFunc = "cmp$sortOrder";
 usort($list, $cmpFunc);
 printFileList($list, $uri, $setting);
@@ -407,5 +385,6 @@ if (isset($setting->ReadmeName)) {
 
 echo '<address>Proudly Served by LiteSpeed Web Server at ' . $_SERVER['SERVER_NAME'] . ' Port ' . $_SERVER['SERVER_PORT'] . "</address>
 </div>
+<script>new Tablesort(document.getElementById('table-content'));</script>
 </body>
 </html>";
