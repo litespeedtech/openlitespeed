@@ -772,3 +772,15 @@ $_gmsg['mail_failedlogin_c'] = '近期发生了一次失败的LiteSpeed登陆。
 4. 使用https登陆管理员控制台。';
 
 
+
+$_gmsg['note_confirm_logout'] = '登出';
+$_gmsg['note_home'] = '主页';
+
+
+$_gmsg['err_menuanchornotexist'] = 'Error - 菜单未找到';
+$_gmsg['err_page_404'] = 'Error 404! 页面未找到~.';
+
+
+$_gmsg['l_quicbaseplpmtu'] = 'PLPMTU 基础值';
+$_gmsg['l_quicenabledplpmtud'] = '启用 DPLPMTUD';
+$_gmsg['l_quicmaxplpmtu'] = 'PLPMTU 最大值';
