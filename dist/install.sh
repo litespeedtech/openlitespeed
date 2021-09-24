@@ -243,7 +243,7 @@ inst_lsphp7()
     elif [ "x$OSNAME" = "xubuntu" ] || [ "x$OSNAME" = "xdebian" ] ; then
         install_lsphp7_debian
     else
-        echo [Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu.
+        echo "[Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu."
     fi
 }
 
@@ -252,7 +252,7 @@ inst_lsphp7()
 cd `dirname "$0"`
 . ./functions.sh
 if [ $? != 0 ] ; then
-    echo [ERROR] Can not include 'functions.sh'.
+    echo "[ERROR] Can not include 'functions.sh'."
     exit 1
 fi
 
