@@ -4698,9 +4698,6 @@ int HttpSession::sendRespHeaders()
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
         m_response.getRespHeaders().dump(getLogSession(), 1);
 
-    if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
-        m_response.getRespHeaders().dump(getLogSession(), 1);
-
     getStream()->sendRespHeaders(&m_response.getRespHeaders(), isNoBody);
     setState(HSS_WRITING);
     return 0;

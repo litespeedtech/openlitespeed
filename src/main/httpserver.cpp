@@ -3472,6 +3472,38 @@ void HttpServerImpl::verifyStatDir(const char *path)
     }
 }
 
+
+static int fixSymLinkLog(const char *pPath)
+{
+    struct stat st;
+    int ret = lstat(pPath, &st);
+    if (ret == 0)
+    {
+        if (S_ISLNK(st.st_mode))
+        {
+            unlink(pPath);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+static int fixLogDirPermission(const char *pPath)
+{
+    struct stat st;
+    int ret = lstat(pPath, &st);
+    if (ret == 0)
+    {
+        if (st.st_mode & S_IXOTH)
+            return 0;
+        chmod(pPath, st.st_mode | S_IXOTH);
+        return 1;
+    }
+    return 0;
+}
+
+
 int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 {
     struct passwd *pw;
@@ -3554,23 +3586,23 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             procConf.setUid(pw->pw_uid);
             m_pri_gid = pw->pw_gid;
 
+            if (fixSymLinkLog(HttpLog::getErrorLogFileName()))
+                GPath::safeCreateFile(HttpLog::getErrorLogFileName(), 0640);
+            chown(HttpLog::getErrorLogFileName(),
+                procConf.getUid(), procConf.getGid());
+
             if (getuid() == 0)
             {
-                chown(HttpLog::getErrorLogFileName(),
-                      procConf.getUid(), procConf.getGid());
-                chown(HttpLog::getAccessLogFileName(),
-                      procConf.getUid(), procConf.getGid());
-
                 /**
-                 * Fix /cgid/ DIR permission because user can change
-                 * user/group setting and will cause permission error.
-                 */
+                   * Fix /cgid/ DIR permission because user can change
+                   * user/group setting and will cause permission error.
+                   */
                 AutoStr2 sDir = MainServerConfig::getInstance().getServerRoot();
                 sDir.append("cgid/", 5);
 
                 /**
-                 * Some user may not have such DIR, Mkdir first
-                 */
+                   * Some user may not have such DIR, Mkdir first
+                   */
                 struct stat sb;
                 if (stat(sDir.c_str(), &sb) == -1)
                     mkdir(sDir.c_str(), 0710);
@@ -4403,6 +4435,12 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 
 
     HttpServer::getInstance().initAccessLog(pRoot, 1);
+    ServerProcessConfig &procConf = ServerProcessConfig::getInstance();
+    if ((HttpLog::getAccessLogFileName()))
+        GPath::safeCreateFile(HttpLog::getAccessLogFileName(), 0640);
+    chown(HttpLog::getAccessLogFileName(),
+          procConf.getUid(), procConf.getGid());
+
     configVHosts(pRoot);
     configZconfSvrConf(pRoot);
     configListenerVHostMap(pRoot, NULL);

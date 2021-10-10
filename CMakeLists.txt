@@ -65,7 +65,6 @@ ELSE(TSAN)
     ## address sanitizer
     IF(ASAN)
         set(MY_CMAKE_FLAGS  "-g -O0 -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer")
-        add_definitions(-DWANT_LSAN)
         add_definitions(-DLS_VG_DEBUG)
         add_definitions(-DASAN_DBG)
         add_definitions(-DDEBUG_POOL)

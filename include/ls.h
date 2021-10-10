@@ -1291,6 +1291,10 @@ enum LSI_RESP_HEADER_ID
     LSI_RSPHDR_LSADC_BACKEND,
     LSI_RSPHDR_UPGRADE,
     /**
+     * LiteSpeed Purge id.
+     */
+    LSI_RSPHDR_LITESPEED_PURGE2,
+    /**
      * Header end id.
      */
     LSI_RSPHDR_END,

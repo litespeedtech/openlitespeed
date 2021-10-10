@@ -164,10 +164,18 @@ int LogRotate::roll(Appender *pAppender, uid_t uid, gid_t gid,
 int LogRotate::testRolling(Appender *pAppender, off_t rollingSize,
                            uid_t uid, gid_t gid)
 {
-    int ret = 0;
     const char *pName = pAppender->getName();
     struct stat st;
-    if (nio_stat(pName, &st) == -1)
+    int ret = lstat(pName, &st);
+    if (ret == 0)
+    {
+        if (S_ISLNK(st.st_mode))
+        {
+            unlink(pName);
+            ret = -1;
+        }
+    }
+    if (ret == -1)
     {
         if (*pName == '/')
         {
@@ -175,14 +183,14 @@ int LogRotate::testRolling(Appender *pAppender, off_t rollingSize,
             pAppender->open();
             fchown(pAppender->getfd(), uid, gid);
         }
-        return ret;
+        return 0;
     }
     if ((st.st_uid != uid) || (st.st_gid != gid))
-        chown(pName, uid, gid);
+        lchown(pName, uid, gid);
     if (st.st_mode & 0111)
         chmod(pName, st.st_mode & ~0111);
     if (rollingSize <= 0)
-        return ret;
+        return 0;
     return (st.st_size > rollingSize);
 }
 

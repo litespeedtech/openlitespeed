@@ -56,7 +56,7 @@
 #define MAX_CACHE_CONTROL_LENGTH    128
 #define MAX_RESP_HEADERS_NUMBER     50
 #define MNAME                       cache
-#define ModuleNameStr               "Module:Cache"
+#define ModuleNameStr               "CACHE"
 #define CACHEMODULEKEY              "_lsi_module_cache_handler__"
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
@@ -183,6 +183,8 @@ struct MyMData
     CacheHash       cePublicHash;
     CacheHash       cePrivateHash;
     CacheKey        cacheKey;
+    uint16_t        orgUriLen;
+    uint16_t        hostPortLen;
     uint8_t         hkptIndex;
     uint8_t         hasCacheFrontend;
     uint8_t         reqCompressType; //0, no, 1: gzip, 2:br
@@ -760,6 +762,9 @@ static void uriToTag(const lsi_session_t *session,
     unsigned long long md = XXH64_digest(&state);
     StringTool::hexEncode((const char *)&md, 8, tag);
     tag[16] = 0x00;  //Must add null terminate
+    g_api->log(session, LSI_LOG_DEBUG, "[CACHE] URI: %.*s to TAG: %s\n",
+               urlLen, url, tag);
+
 }
 
 
@@ -767,10 +772,11 @@ static int testFlagWithShm(const lsi_session_t *session,
                            MyMData *myData, int32_t flag)
 {
     CacheManager *pManager = myData->pConfig->getStore()->getManager();
-    int32_t id = pManager->getUrlVaryId(myData->pOrgUri, strlen(myData->pOrgUri));
+    int32_t id = pManager->getUrlVaryId(myData->pOrgUri,
+                                        myData->orgUriLen + myData->hostPortLen);
 
     g_api->log(session, LSI_LOG_DEBUG,
-               "[%s]testFlagWithShm() flag %d, id in shm %d.\n",
+               "[%s] testFlagWithShm() flag %d, id in shm %d.\n",
                ModuleNameStr, flag, id);
     /**
      * For not exist case (-1), treat as 0
@@ -782,9 +788,11 @@ static int testFlagWithShm(const lsi_session_t *session,
         return 0;
 
     if (flag <= 0)
-        pManager->delUrlVary(myData->pOrgUri, strlen(myData->pOrgUri));
+        pManager->delUrlVary(myData->pOrgUri,
+                             myData->orgUriLen + myData->hostPortLen);
     else
-        pManager->addUrlVary(myData->pOrgUri, strlen(myData->pOrgUri), flag);
+        pManager->addUrlVary(myData->pOrgUri,
+                             myData->orgUriLen + myData->hostPortLen, flag);
     return 1;
 }
 
@@ -1755,7 +1763,7 @@ static int cancelCache(lsi_param_t *rec)
         if (myData->iCacheState == CE_STATE_WILLCACHE
             || myData->iCacheState == CE_STATE_UPDATE_STALE)
         {
-            g_api->log(rec->session, LSI_LOG_DEBUG, "[%s]cache cancelled.\n",
+            g_api->log(rec->session, LSI_LOG_DEBUG, "[%s] cache cancelled.\n",
                        ModuleNameStr);
             CacheEntry * pEntry = myData->pEntry;
             setCacheEntry(myData, NULL);
@@ -1831,8 +1839,14 @@ static int endCache(lsi_param_t *rec)
             {
                 //Check if file optimized, if not, do not store it
                 cancelCache(rec);
-                g_api->log(rec->session, LSI_LOG_DEBUG,
-                           "[%s]cache cancelled due to error occurred or no optimization.\n",
+                if (myData->orgFileLength == 0)
+                    g_api->log(rec->session, LSI_LOG_DEBUG,
+                           "[%s] Cache body size is zero, cancelled.\n",
+                           ModuleNameStr);
+                else
+                    g_api->log(rec->session, LSI_LOG_DEBUG,
+                           "[%s] cache cancelled due to error occurred "
+                           "or no optimization.\n",
                            ModuleNameStr);
             }
             else if (myData->pEntry && myData->iCacheState == CE_STATE_WILLCACHE)
@@ -1841,7 +1855,7 @@ static int endCache(lsi_param_t *rec)
                 if (fd < 0)
                 {
                     g_api->log(rec->session, LSI_LOG_ERROR,
-                           "[%s]cache cancelled due to FdStore not initialized.\n",
+                           "[%s] cache cancelled due to FdStore not initialized.\n",
                            ModuleNameStr);
                     return cancelCache(rec);
                 }
@@ -1869,7 +1883,7 @@ static int endCache(lsi_param_t *rec)
                 myData->pConfig->getStore()->getManager()->addTracking(myData->pEntry);
                 myData->iCacheState = CE_STATE_CACHED;  //Succeed
                 g_api->log(NULL, LSI_LOG_DEBUG,
-                           "[%s]published %s, content length %ld.\n",
+                           "[%s] published %s, content length %ld.\n",
                            ModuleNameStr, myData->pOrgUri,
                            myData->orgFileLength);
             }
@@ -1901,13 +1915,25 @@ static int getControlFlag(CacheConfig *pConfig)
 
 static void processPurge(const lsi_session_t *session,
                          const char *pValue, int valLen);
+
 static int createEntry(lsi_param_t *rec)
 {
     //If have special cache headers, handle them here even if myData is NULL.
-    struct iovec iov[5];
+    struct iovec iov[100];
     int count = g_api->get_resp_header(rec->session,
                                        LSI_RSPHDR_LITESPEED_PURGE,
-                                       NULL, 0, iov, 5);
+                                       NULL, 0, iov, sizeof(iov)/sizeof(iov[0]));
+    for (int i = 0; i < count; ++i)
+    {
+        int valLen = iov[i].iov_len;
+        const char *pVal = (const char *)iov[i].iov_base;
+        if (pVal && valLen > 0)
+            processPurge(rec->session, pVal, valLen);
+    }
+
+    count = g_api->get_resp_header(rec->session,
+                                   LSI_RSPHDR_LITESPEED_PURGE2,
+                                   NULL, 0, iov, sizeof(iov)/sizeof(iov[0]));
     for (int i = 0; i < count; ++i)
     {
         int valLen = iov[i].iov_len;
@@ -1923,7 +1949,8 @@ static int createEntry(lsi_param_t *rec)
         clearHooks(rec->session);
         //Update to use default logger since when internal error occured, session logger may be messy up
         g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[%s]createEntry quit due to internal error.\n", ModuleNameStr);
+                   "[%s] createEntry quit due to internal error.\n",
+                   ModuleNameStr);
         return 0;
     }
 
@@ -1965,7 +1992,8 @@ static int createEntry(lsi_param_t *rec)
     {
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]createEntry abort due to cache is set to OFF.\n", ModuleNameStr);
+                   "[%s] createEntry abort due to cache is set to OFF.\n",
+                   ModuleNameStr);
         return 0;
     }
 
@@ -1976,7 +2004,7 @@ static int createEntry(lsi_param_t *rec)
     {
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]cacheTofile to be cancelled for HEAD request.\n",
+                   "[%s] cacheTofile to be cancelled for HEAD request.\n",
                    ModuleNameStr);
         return 0;
     }
@@ -1988,7 +2016,7 @@ static int createEntry(lsi_param_t *rec)
     {
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]cacheTofile to be cancelled for error page, code=%d.\n",
+                   "[%s] cacheTofile to be cancelled for error page, code=%d.\n",
                    ModuleNameStr, code);
         return 0;
     }
@@ -2005,8 +2033,8 @@ static int createEntry(lsi_param_t *rec)
          */
         clearHooks(rec->session);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s] getVaryFlag failure, cancel cache.\n",
-                       ModuleNameStr);
+                   "[%s] getVaryFlag failure, cancel cache.\n",
+                   ModuleNameStr);
         return 0;
     }
 
@@ -2036,7 +2064,7 @@ static int createEntry(lsi_param_t *rec)
         {
             clearHooks(rec->session);
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]cacheTofile to be cancelled for having respcookie.\n",
+                       "[%s] cacheTofile to be cancelled for having respcookie.\n",
                        ModuleNameStr);
             return 0;
         }
@@ -2055,7 +2083,7 @@ static int createEntry(lsi_param_t *rec)
                       &myData->cePublicHash, &myData->cePrivateHash);
 
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]CacheKey and hash updated.\n", ModuleNameStr);
+                   "[%s] CacheKey and hash updated.\n", ModuleNameStr);
         dumpCacheHash(rec->session, "Updated Public hash",
                       &myData->cePublicHash);
         dumpCacheHash(rec->session, "Updated Private hash",
@@ -2078,7 +2106,7 @@ static int createEntry(lsi_param_t *rec)
         {
             clearHooks(rec->session);
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]cacheTofile to be cancelled for static file type.\n",
+                       "[%s] cacheTofile to be cancelled for static file type.\n",
                        ModuleNameStr);
             return 0;
         }
@@ -2150,7 +2178,7 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
     int fd = myData->pEntry->getFdStore();
     g_api->log(rec->session,
                (fd != -1 ? LSI_LOG_DEBUG : LSI_LOG_ERROR),
-               "[%s]save to %s cachestore by cacheHeader(), uri:%s\n", ModuleNameStr,
+               "[%s] save to %s cachestore by cacheHeader(), uri:%s\n", ModuleNameStr,
                ((myData->cacheCtrl.isPrivateCacheable()) ? "private" : "public"),
                myData->pOrgUri);
 
@@ -2239,10 +2267,11 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         offset = keyLen + 1;
     }
 
-
-    int uri_len = 0;
-    const char *uri = g_api->get_req_uri(rec->session, &uri_len);
-    uriToTag(rec->session, uri, uri_len, 1, tag + offset);
+    uriToTag(rec->session, myData->pOrgUri + myData->hostPortLen,
+             myData->orgUriLen, 1, tag + offset);
+    g_api->log(rec->session, LSI_LOG_DEBUG,
+               "[%s] cacheHeader() set cache TAG to %.*s\n",
+               ModuleNameStr, offset + 16, tag);
 
     myData->pEntry->setTag(tag, offset + 16);
     delete []tag;
@@ -2431,14 +2460,14 @@ int cacheTofile(lsi_param_t *rec)
     long maxObjSz = myData->pConfig->getMaxObjSize();
     off_t bodyBufSize = g_api->get_body_buf_size(pRespBodyBuf);
     g_api->log(rec->session, LSI_LOG_DEBUG,
-        "[%s:cacheTofile] response body size: %ld, max cache object size: %ld\n",
+        "[%s] cacheTofile() response body size: %ld, max cache object size: %ld\n",
         ModuleNameStr, bodyBufSize, maxObjSz);
 
     if (maxObjSz > 0 && bodyBufSize > maxObjSz)
     {
         cancelCache(rec);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s:cacheTofile] cache cancelled, body buffer size %ld > maxObjSize %ld\n",
+                   "[%s] cacheTofile() cache cancelled, body buffer size %ld > maxObjSize %ld\n",
                    ModuleNameStr, bodyBufSize, maxObjSz);
         return 0;
     }
@@ -2453,7 +2482,7 @@ int cacheTofile(lsi_param_t *rec)
 
         ret = deflateBufAndWriteToFile(myData, (unsigned char *)pBuf, len, 0, fd);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-               "[%s:cacheTofile] save response body, offset: %ld, buf: %p, size: %d, ret: %d, cache size: %ld\n",
+               "[%s] cacheTofile() save response body, offset: %ld, buf: %p, size: %d, ret: %d, cache size: %ld\n",
                ModuleNameStr, offset, pBuf, len, ret, iCahcedSize + ret);
 
         if (ret == -1)
@@ -2475,12 +2504,12 @@ int cacheTofile(lsi_param_t *rec)
         iCahcedSize += ret;
         myData->pEntry->setPart2Len(iCahcedSize);
         g_api->log(rec->session, LSI_LOG_DEBUG,
-               "[%s:cacheTofile] stored, size %ld\n",
+               "[%s] cacheTofile() stored, size %ld\n",
                ModuleNameStr, offset);
     }
     else
         g_api->log(rec->session, LSI_LOG_ERROR,
-               "[%s:cacheTofile] Failed due to write file error!\n",
+               "[%s] cacheTofile() Failed due to write file error!\n",
                ModuleNameStr);
     endCache(rec);
 
@@ -2521,7 +2550,7 @@ int cacheTofileFilter(lsi_param_t *rec)
         {
             cancelCache(rec);
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s:cacheTofileFilter] cache cancelled, current size to cache %d > maxObjSize %ld\n",
+                       "[%s] cacheTofileFilter() cache cancelled, current size to cache %d > maxObjSize %ld\n",
                        ModuleNameStr, part2Len + ret, maxObjSz);
             return ret;
         }
@@ -2532,7 +2561,7 @@ int cacheTofileFilter(lsi_param_t *rec)
         {
             myData->saveFailed = 1;
             g_api->log(rec->session, LSI_LOG_ERROR,
-               "[%s:cacheTofileFilter] Failed due a write error!\n",
+               "[%s] cacheTofileFilter() Failed due a write error!\n",
                ModuleNameStr);
             return rec->len1;
         }
@@ -2544,7 +2573,7 @@ int cacheTofileFilter(lsi_param_t *rec)
             myData->pEntry->setPart2Len(part2Len + len);
             myData->orgFileLength += ret;
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                    "[%s:cacheTofileFilter] stored, size %d, now part2len %d\n",
+                    "[%s] cacheTofileFilter() stored, size %d, now part2len %d\n",
                     ModuleNameStr, len, part2Len + len);
         }
     }
@@ -2561,7 +2590,7 @@ static int isReqCacheable(lsi_param_t *rec, CacheConfig *pConfig)
         if (pQS && iQSLen > 0)
         {
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]isReqCacheable return 0 for has QS but qscache disabled.\n",
+                       "[%s] isReqCacheable return 0 for has QS but qscache disabled.\n",
                        ModuleNameStr);
             return 0;
         }
@@ -2574,7 +2603,7 @@ static int isReqCacheable(lsi_param_t *rec, CacheConfig *pConfig)
         if (pCookie && cookieLen > 0)
         {
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]isReqCacheable return 0 for has reqcookie but reqcookie disabled.\n",
+                       "[%s] isReqCacheable return 0 for has reqcookie but reqcookie disabled.\n",
                        ModuleNameStr);
             return 0;
         }
@@ -2735,6 +2764,8 @@ MyMData *createMData(lsi_param_t *rec)
         memcpy(uri + hostLen + 1, port, portLen);
         g_api->get_req_org_uri(rec->session, uri + hostLen + 1 + portLen,
                                uriLen + 1);
+        myData->orgUriLen = uriLen;
+        myData->hostPortLen = hostLen + portLen + 1;
         uriLen += (hostLen + 1 + portLen); //Set the the right uriLen
         uri[uriLen] = 0x00; //NULL terminated
         myData->pOrgUri = uri;
@@ -2782,7 +2813,7 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (!pConfig)
     {
         g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s]checkAssignHandler config error.\n", ModuleNameStr);
+                   "[%s] checkAssignHandler config error.\n", ModuleNameStr);
         return bypassUrimapHook(rec, myData);
     }
 
@@ -2790,7 +2821,7 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (uriLen <= 0)
     {
         g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s]checkAssignHandler get uri length error.\n", ModuleNameStr);
+                   "[%s] checkAssignHandler get uri length error.\n", ModuleNameStr);
         return bypassUrimapHook(rec, myData);
     }
 
@@ -2820,7 +2851,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                                    (void *)(long)DateTime_s_curTime);
         }
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]checkAssignHandler returned, method %s[%d].\n",
+                   "[%s] checkAssignHandler returned, method %s[%d].\n",
                    ModuleNameStr, httpMethod, method);
         return bypassUrimapHook(rec, myData);
     }
@@ -2832,7 +2863,7 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (rangeRequest && rangeRequestLen > 0)
     {
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]checkAssignHandler returned, not support rangeRequest [%.*s].\n",
+                   "[%s] checkAssignHandler returned, not support rangeRequest [%.*s].\n",
                    ModuleNameStr, rangeRequestLen, rangeRequest);
         return bypassUrimapHook(rec, myData);
     }
@@ -2844,7 +2875,7 @@ static int checkAssignHandler(lsi_param_t *rec)
             if (!isReqCacheable(rec, pConfig))
             {
                 g_api->log(rec->session, LSI_LOG_DEBUG,
-                           "[%s]checkAssignHandler returned, no check and no cache.\n",
+                           "[%s] checkAssignHandler returned, no check and no cache.\n",
                            ModuleNameStr);
                 return 0;  //Do not bypass Urimap hook for may use it next
             }
@@ -2861,13 +2892,13 @@ static int checkAssignHandler(lsi_param_t *rec)
     if (myData->iMethod == HTTP_PURGE || myData->iMethod == HTTP_REFRESH)
     {
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]checkAssignHandler get HTTP PURGE/REFRESH.\n",
+                       "[%s] checkAssignHandler get HTTP PURGE/REFRESH.\n",
                        ModuleNameStr);
 
         if (LS_OK != g_api->register_req_handler(rec->session, &MNAME, 0))
         {
             g_api->log(rec->session, LSI_LOG_WARN,
-                       "[%s]checkAssignHandler register_req_handler failed.\n",
+                       "[%s] checkAssignHandler register_req_handler failed.\n",
                        ModuleNameStr);
             g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                     releaseMData);
@@ -2914,7 +2945,8 @@ static int checkAssignHandler(lsi_param_t *rec)
 
     myData->iCacheState = lookUpCache(rec, myData,
                                    cacheCtrl.getFlags() & CacheCtrl::no_vary,
-                                   myData->pOrgUri, strlen(myData->pOrgUri),
+                                   myData->pOrgUri,
+                                   myData->orgUriLen + myData->hostPortLen,
                                    myData->pConfig->getStore(),
                                    &myData->cePublicHash,
                                    &myData->cePrivateHash,
@@ -2922,7 +2954,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                                    doPublic);
 
     g_api->log(rec->session, LSI_LOG_DEBUG,
-               "[%s]checkAssignHandler lookUpCache, myData %p entry %p state %d.\n",
+               "[%s] checkAssignHandler lookUpCache, myData %p entry %p state %d.\n",
                ModuleNameStr, myData, myData->pEntry, myData->iCacheState);
 
     if (g_api->get_req_env(rec->session, "LSCACHE_FRONTEND", 16, val, 2) > 0
@@ -2953,7 +2985,7 @@ static int checkAssignHandler(lsi_param_t *rec)
             if (LS_OK != g_api->register_req_handler(rec->session, &MNAME, 0))
             {
                 g_api->log(rec->session, LSI_LOG_WARN,
-                           "[%s]checkAssignHandler register_req_handler failed.\n",
+                           "[%s] checkAssignHandler register_req_handler failed.\n",
                            ModuleNameStr);
                 g_api->free_module_data(rec->session, &MNAME, LSI_DATA_HTTP,
                                         releaseMData);
@@ -2967,7 +2999,7 @@ static int checkAssignHandler(lsi_param_t *rec)
                 //myData->pEntry->incHits();
                 myData->iHaveAddedHook = 3; //state of using handler
                 g_api->log(rec->session, LSI_LOG_DEBUG,
-                           "[%s]checkAssignHandler register_req_handler OK.\n",
+                           "[%s] checkAssignHandler register_req_handler OK.\n",
                            ModuleNameStr);
             }
             disableRcvdRespHeaderFilter(rec->session);
@@ -2976,7 +3008,7 @@ static int checkAssignHandler(lsi_param_t *rec)
         else
         {
             g_api->log(rec->session, LSI_LOG_INFO,
-                       "[%s]checkAssignHandler found cachestate %d but set to not check.\n",
+                       "[%s] checkAssignHandler found cachestate %d but set to not check.\n",
                        ModuleNameStr, myData->iCacheState);
 #ifdef USE_RECV_REQ_HEADER_HOOK
             //may have another chance to check
@@ -2994,7 +3026,7 @@ static int checkAssignHandler(lsi_param_t *rec)
 
             //g_api->set_session_hook_flag( rec->_session, LSI_HKPT_RCVD_RESP_BODY, &MNAME, 1 );
             g_api->log(rec->session, LSI_LOG_DEBUG,
-                       "[%s]checkAssignHandler Add Hooks.\n", ModuleNameStr);
+                       "[%s] checkAssignHandler Add Hooks.\n", ModuleNameStr);
             bypassUrimapHook(rec, NULL);
         }
         else
@@ -3053,7 +3085,7 @@ static int checkCtrlEnv(lsi_param_t *rec)
                                        rec->len1 - 5);
 
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]checkCtrlEnv append %.*s.\n", ModuleNameStr, rec->len1,
+                   "[%s] checkCtrlEnv append %.*s.\n", ModuleNameStr, rec->len1,
                    (const char *)rec->ptr1);
         return 0;
     }
@@ -3073,7 +3105,7 @@ static int checkCtrlEnv(lsi_param_t *rec)
         g_api->enable_hook(rec->session, &MNAME, 1, &hkpt, 1);
         myData->iHaveAddedHook = 1;
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s]checkEnv Add Hooks.\n", ModuleNameStr);
+                   "[%s] checkEnv Add Hooks.\n", ModuleNameStr);
     }
 
     return 0;
@@ -3202,15 +3234,15 @@ static void purgeAllByTag(const lsi_session_t *session, MyMData *myData,
     pStore->getManager()->processPrivatePurgeCmd(&key,
             pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
     g_api->log(session, LSI_LOG_DEBUG,
-               "PURGE private cache for [%s]: %.*s\n",
-               key.m_pIP, valLen, pValue);
+               "[%s] PURGE private cache for [%s]: %.*s\n",
+               ModuleNameStr, key.m_pIP, valLen, pValue);
 
 
 
     pStore->getManager()->processPurgeCmd(
         pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
-    g_api->log(session, LSI_LOG_DEBUG,  "PURGE public cache: %.*s\n",
-               valLen, pValue);
+    g_api->log(session, LSI_LOG_DEBUG,  "[%s] PURGE public cache: %.*s\n",
+               ModuleNameStr, valLen, pValue);
 }
 
 static void processPurge2(const lsi_session_t *session,
@@ -3287,15 +3319,15 @@ static void processPurge2(const lsi_session_t *session,
         pStore->getManager()->processPrivatePurgeCmd(&key,
                 pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
         g_api->log(session, LSI_LOG_DEBUG,
-                   "PURGE private cache for [%s]: %.*s\n",
-                   key.m_pIP, valLen, pValue);
+                   "[%s] PURGE private cache for [%s]: %.*s\n",
+                   ModuleNameStr, key.m_pIP, valLen, pValue);
     }
     else
     {
         pStore->getManager()->processPurgeCmd(
             pValue, valLen, DateTime::s_curTime, DateTime::s_curTimeUs / 1000, stale);
-        g_api->log(session, LSI_LOG_DEBUG,  "PURGE public cache: %.*s\n",
-                   valLen, pValue);
+        g_api->log(session, LSI_LOG_DEBUG,  "[%s] PURGE public cache: %.*s\n",
+                   ModuleNameStr, valLen, pValue);
     }
 
 }
@@ -3320,7 +3352,8 @@ static void processPurge(const lsi_session_t *session, const char *pValue,
         }
         pBegin = p+1;
     }
-    g_api->log(session, LSI_LOG_DEBUG,  "processPurge: %.*s\n", valLen, pValue);
+    g_api->log(session, LSI_LOG_DEBUG, "[%s] processPurge: %.*s\n",
+               ModuleNameStr, valLen, pValue);
 }
 
 
@@ -3373,7 +3406,7 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
     pid_t pid = fork();
     if (pid < 0)
     {
-        g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState fork failed.\n",
+        g_api->log(NULL, LSI_LOG_ERROR, "[%s] toggleGzipState fork failed.\n",
                ModuleNameStr);
         return ;
     }
@@ -3381,7 +3414,7 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
     if (pid > 0)
     {
         g_api->log(NULL, LSI_LOG_DEBUG,
-               "[%s]toggleGzipState fork pid %d to processing.\n",
+               "[%s] toggleGzipState fork pid %d to processing.\n",
                ModuleNameStr, pid);
         return;
     }
@@ -3404,7 +3437,7 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
             else
             {
                 g_api->log(NULL, LSI_LOG_DEBUG,
-                           "[%s]toggleGzipState processing too long %ld seconds.\n",
+                           "[%s] toggleGzipState processing too long %ld seconds.\n",
                            ModuleNameStr,
                            (long)DateTime_s_curTime - (long)sb.st_ctime);
                 unlink(tmppath);
@@ -3415,7 +3448,7 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
         if (tmpfd == -1)
         {
             g_api->log(NULL, LSI_LOG_DEBUG,
-                           "[%s]toggleGzipState can not open file %s.\n",
+                           "[%s] toggleGzipState can not open file %s.\n",
                            ModuleNameStr, tmppath);
             exit (0);
         }
@@ -3425,7 +3458,7 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
         z_stream *zstream = new z_stream;
         if (!zstream)
         {
-            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState alloc"
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s] toggleGzipState alloc"
                         " memory for zstream error.\n", ModuleNameStr);
             closeTmpFile(tmpfd, tmppath);
             exit (0);
@@ -3455,7 +3488,7 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
         {
             uninitZstream(zstream, compress);
             closeTmpFile(tmpfd, tmppath);
-            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState mmap"
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s] toggleGzipState mmap"
                         " error.\n", ModuleNameStr);
             exit (0);
         }
@@ -3471,20 +3504,20 @@ static void toggleGzipState(MyMData *myData, int needCompressType)
 
         off_t ret = compressbuf(zstream, compress, buff, length, tmpfd, 1);
         g_api->log(NULL, LSI_LOG_DEBUG,
-                   "[%s]toggleGzipState write %lld bytes to file %s.\n",
+                   "[%s] toggleGzipState write %lld bytes to file %s.\n",
                    ModuleNameStr, (long long)ret, tmppath);
 
         if (ret <= 0)
         {
             //failed
             closeTmpFile(tmpfd, tmppath);
-            g_api->log(NULL, LSI_LOG_ERROR, "[%s]toggleGzipState compressbuf"
+            g_api->log(NULL, LSI_LOG_ERROR, "[%s] toggleGzipState compressbuf"
                         " error.\n", ModuleNameStr);
         }
         else
         {
             updateCacheEntry(pConfig, pEntry, tmpfd, tmppath, needCompressType, ret);
-            g_api->log(NULL, LSI_LOG_DEBUG, "[%s]toggleGzipState updated"
+            g_api->log(NULL, LSI_LOG_DEBUG, "[%s] toggleGzipState updated"
                         " the cache entry.\n", ModuleNameStr);
         }
         uninitZstream(zstream, compress);
@@ -3502,7 +3535,7 @@ static int handlerProcess(const lsi_session_t *session)
     if (!myData)
     {
         g_api->log(session, LSI_LOG_ERROR,
-                   "[%s]internal error during handlerProcess.\n", ModuleNameStr);
+                   "[%s] internal error during handlerProcess.\n", ModuleNameStr);
         return 500;
     }
 
@@ -3534,7 +3567,7 @@ static int handlerProcess(const lsi_session_t *session)
             {
                 g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
                 g_api->log(session, LSI_LOG_DEBUG,
-                   "[%s]Processed PURGE http AUTH error.\n", ModuleNameStr);
+                   "[%s] Processed PURGE http AUTH error.\n", ModuleNameStr);
                 return 405;
             }
         }
@@ -3542,10 +3575,8 @@ static int handlerProcess(const lsi_session_t *session)
 
         bool bPurgeTags = false;
         char *pConfUri = myData->pConfig->getPurgeUri();
-        int uri_len = 0;
-        const char *uri = g_api->get_req_uri(session, &uri_len);
 
-        if (pConfUri && strcasecmp(pConfUri, uri) == 0)
+        if (pConfUri && strcasecmp(pConfUri, myData->pOrgUri) == 0)
             bPurgeTags = true;
 
         if (bPurgeTags)
@@ -3574,23 +3605,24 @@ static int handlerProcess(const lsi_session_t *session)
              */
 
             char tag[17] = {0};
-            uriToTag(session, uri, uri_len, 1, tag);
+            uriToTag(session, myData->pOrgUri + myData->hostPortLen,
+                     myData->orgUriLen, 1, tag);
             purgeAllByTag(session, myData, tag, 16, stale);
 
-            g_api->set_resp_content_length(session, strlen(myData->pOrgUri) + 24);
+            g_api->set_resp_content_length(session, myData->orgUriLen + 24);
             g_api->append_resp_body(session, "Processed ", 10);
             g_api->append_resp_body(session,
                                     stale ? "REFRESH" : "PURGE",
                                     stale ? 7 : 5);
 
             g_api->append_resp_body(session, " by \"", 5);
-            g_api->append_resp_body(session, myData->pOrgUri,
-                    strlen(myData->pOrgUri));
+            g_api->append_resp_body(session, myData->pOrgUri + myData->hostPortLen,
+                                    myData->orgUriLen);
             g_api->append_resp_body(session, "\".\r\n", 4);
         }
 
         g_api->log(NULL, LSI_LOG_DEBUG,
-                    "[%s]Did %s %s with tag: %d.\n", ModuleNameStr,
+                    "[%s] Did %s %s with tag: %d.\n", ModuleNameStr,
                     stale ? "REFRESH" : "PURGE",
                     myData->pOrgUri, bPurgeTags);
 
@@ -3660,7 +3692,7 @@ static int handlerProcess(const lsi_session_t *session)
                 g_api->end_resp(session);
                 g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
                 g_api->log(session, LSI_LOG_DEBUG,
-                           "[%s]handlerProcess return 304.\n", ModuleNameStr);
+                           "[%s] handlerProcess return 304.\n", ModuleNameStr);
                 return 0;
             }
 
@@ -3693,7 +3725,7 @@ static int handlerProcess(const lsi_session_t *session)
             g_api->set_resp_header(session, LSI_RSPHDR_ETAG, NULL, 0, pEtag,
                                    CeHeader.m_lenETag, LSI_HEADEROP_SET);
             g_api->log(session, LSI_LOG_DEBUG,
-                       "[%s]handlerProcess add etag %s.\n",
+                       "[%s] handlerProcess add etag %s.\n",
                        ModuleNameStr, pEtag);
         }
 
@@ -3745,7 +3777,7 @@ static int handlerProcess(const lsi_session_t *session)
 
     g_api->set_status_code(session, CeHeader.m_statusCode);
     g_api->log(session, LSI_LOG_DEBUG,
-                       "[%s]handlerProcess set_status_code %d.\n",
+                       "[%s] handlerProcess set_status_code %d.\n",
                        ModuleNameStr, CeHeader.m_statusCode);
 
     //assert(strcasestr(myData->pOrgUri, "fonts/ProximaNova-Regular.woff") == NULL);
@@ -3768,7 +3800,7 @@ static int handlerProcess(const lsi_session_t *session)
             g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_ENCODING,
                                    NULL, 0, "gzip", 4, LSI_HEADEROP_SET);
             g_api->log(session, LSI_LOG_DEBUG,
-                       "[%s]set_resp_header [Content-Encoding: gzip].\n",
+                       "[%s] set_resp_header [Content-Encoding: gzip].\n",
                        ModuleNameStr);
 
             if (myData->reqCompressType == LSI_NO_COMPRESS)
@@ -3782,7 +3814,7 @@ static int handlerProcess(const lsi_session_t *session)
             g_api->set_resp_header(session, LSI_RSPHDR_CONTENT_ENCODING,
                                    NULL, 0, "br", 2, LSI_HEADEROP_SET);
             g_api->log(session, LSI_LOG_DEBUG,
-                       "[%s]set_resp_header [Content-Encoding: br].\n",
+                       "[%s] set_resp_header [Content-Encoding: br].\n",
                        ModuleNameStr);
         }
         g_api->set_resp_buffer_compress_method(session, compressType);
@@ -3792,7 +3824,7 @@ static int handlerProcess(const lsi_session_t *session)
         //int fd = myData->pEntry->getFdStore();
 
         g_api->log(session, LSI_LOG_DEBUG,
-                   "[%s]handlerProcess fd %d, offset %d, length %ld\n",
+                   "[%s] handlerProcess fd %d, offset %d, length %ld\n",
                    ModuleNameStr, fd, part2offset, length);
 
         if (g_api->send_file2(session, fd, part2offset, length) == 0)
@@ -3806,7 +3838,7 @@ static int handlerProcess(const lsi_session_t *session)
         if (myData->pEntry->getHits() >= 10)
         {
             g_api->log(session, LSI_LOG_DEBUG,
-                       "[%s]handlerProcess check entry hit %ld times, "
+                       "[%s] handlerProcess check entry hit %ld times, "
                        "will change to compressType from %d to %d.\n",
                        ModuleNameStr, myData->pEntry->getHits(),
                        compressType, myData->reqCompressType);
