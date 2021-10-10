@@ -208,7 +208,7 @@ prepareLinux()
         yum -y install git cmake
         installCmake
         
-        yum -y install libtool autoreconf autoheader automake wget go clang patch expat-devel
+        yum -y install libtool autoconf autoheader automake wget go clang patch expat-devel
         if [ "${MACHINE}" = "aarch64" ]; then
             yum -y install libatomic
         fi
@@ -268,7 +268,7 @@ prepareLinux()
         apt-get -y install gcc g++ wget curl make clang patch libexpat-dev
         
         installCmake
-        apt-get -y install git libtool ca-certificates autotools-dev autoreconf autoheader automake
+        apt-get -y install git libtool ca-certificates autotools-dev autoconf automake
         installgo
 
         if [ "${MACHINE}" = "aarch64" ]; then
@@ -300,7 +300,7 @@ prepareLinux()
         installCmake
         ${APP_MGR_CMD} -y install git libtool ca-certificates
         ${APP_MGR_CMD} -y install autotools-dev
-        ${APP_MGR_CMD} -y install autoreconf
+        ${APP_MGR_CMD} -y install autoconf
         ${APP_MGR_CMD} -y install autoheader 
         ${APP_MGR_CMD} -y install automake 
         installgo
