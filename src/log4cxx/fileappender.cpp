@@ -89,6 +89,7 @@ int FileAppender::open()
 
 int FileAppender::open2()
 {
+    struct stat st;
     if (getfd() != -1)
         return 0;
     const char *pName = getName();
@@ -97,6 +98,16 @@ int FileAppender::open2()
         errno = EINVAL;
         return LS_FAIL;
     }
+    int ret = lstat(pName, &st);
+    if (ret == 0)
+    {
+        if (S_ISLNK(st.st_mode))
+        {
+            if (unlink(pName) == -1)
+                return LS_FAIL;
+        }
+    }
+
     int flag = O_WRONLY | O_CREAT;
     if (!getAppendMode())
         flag |= O_TRUNC ;
@@ -107,7 +118,6 @@ int FileAppender::open2()
         return LS_FAIL;
     m_stream.setFlock(getFlock());
 
-    struct stat st;
     if (::fstat(getfd(), &st) != -1)
         m_ino = st.st_ino;
     fcntl(getfd(), F_SETFD, FD_CLOEXEC);

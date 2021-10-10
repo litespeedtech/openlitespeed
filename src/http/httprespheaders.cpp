@@ -106,7 +106,8 @@ const char *s_sHeaders[HttpRespHeaders::H_HEADER_END] =
     "alt-svc",
     "X-LiteSpeed-Alt-Svc",
     "X-LSADC-Backend",
-    "Upgrade"
+    "Upgrade",
+    "X-LiteSpeed-Purge2",
 };
 
 
@@ -121,7 +122,7 @@ int HttpRespHeaders::s_iHeaderLen[H_HEADER_END + 1] =
     13, 10, 12, 14, 16, 13, 19, 13, //cache-control
     4, 4, 7, 10, 13, 8, 20, 25, //x-litespeed-cache-control
     6, 16, 6, 10, 6, 17, 4, 16, 17, 17, 15, 16, 10, 12, //x-powered-by
-    4, 7, 7, 19, 15, 7, 0
+    4, 7, 7, 19, 15, 7, 18, 0
 };
 
 
@@ -970,7 +971,12 @@ HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
                 break;
             case 'p':
                 if (strncasecmp(pHeader, "purge", 5) == 0)
-                    idx = H_X_LITESPEED_PURGE;
+                {
+                    if (*(pHeader + 5) == '2')
+                        idx = H_X_LITESPEED_PURGE2;
+                    else
+                        idx = H_X_LITESPEED_PURGE;
+                }
                 break;
             case 'v':
                 if (strncasecmp(pHeader, "vary", 4) == 0)

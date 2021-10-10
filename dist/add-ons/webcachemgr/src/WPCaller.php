@@ -10,7 +10,7 @@
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\Context\Context;
+use Lsc\Wp\Context\Context;
 
 /**
  * Calls WP internal functions in SHORTINIT mode.
@@ -65,8 +65,9 @@ class WPCaller
 
     /**
      *
-     * @param WPInstall  $curInstall
-     * @param boolean    $loadLscwp
+     * @param WPInstall $curInstall
+     * @param boolean   $loadLscwp
+     *
      * @throws LSCMException  Thrown indirectly.
      */
     private function __construct( WPInstall $curInstall, $loadLscwp )
@@ -93,8 +94,9 @@ class WPCaller
 
     /**
      *
-     * @param WPInstall  $currInstall
-     * @param boolean    $loadLscwp
+     * @param WPInstall $currInstall
+     * @param boolean   $loadLscwp
+     *
      * @return WPCaller
      * @throws LSCMException  Thrown indirectly.
      */
@@ -112,8 +114,9 @@ class WPCaller
 
     /**
      *
-     * @param int     $errno  Not used at this time.
-     * @param string  $errstr
+     * @param int    $errno   Not used at this time.
+     * @param string $errstr
+     *
      * @return boolean
      *
      * @noinspection PhpUnusedParameterInspection
@@ -145,9 +148,11 @@ class WPCaller
      * in WP function update_option().
      *
      * @deprecated
-     * @param mixed   $value      New option value.
-     * @param string  $option     Option name in db.
-     * @param mixed   $old_value  Old option value.
+     *
+     * @param mixed  $value      New option value.
+     * @param string $option     Option name in db.
+     * @param mixed  $old_value  Old option value.
+     *
      * @return mixed
      */
     public static function lock_database( $value, $option, $old_value )
@@ -170,6 +175,19 @@ class WPCaller
     }
 
     /**
+     * Redefine disabled PHP global/core functions that no longer exist
+     * (PHP 8+).
+     *
+     * @since 1.13.10
+     */
+    private static function redefineDisabledFunctions()
+    {
+        if ( version_compare(phpversion(), '8.0', '>=') ) {
+            include_once(__DIR__ . '/RedefineGlobalFuncs.php');
+        }
+    }
+
+    /**
      * @return string[]
      */
     public function getOutputResult()
@@ -181,8 +199,8 @@ class WPCaller
      * Adds key value pair to $this->outputResult to be grabbed later in
      * the $output variable of the UserCommand::issue() exec call.
      *
-     * @param string  $key
-     * @param mixed   $value
+     * @param string $key
+     * @param mixed  $value
      */
     private function outputResult( $key, $value )
     {
@@ -203,7 +221,7 @@ class WPCaller
 
         foreach ( $msgQueue as $logEntry ) {
             $label = Logger::getLvlDescr($logEntry->getLvl());
-            $debugMsgs[] = "[{$label}] {$logEntry->getMsg()}";
+            $debugMsgs[] = "[$label] {$logEntry->getMsg()}";
         }
 
         return $debugMsgs;
@@ -238,8 +256,9 @@ class WPCaller
      * WP Variables $wpdb, $table_prefix
      * WP Functions: get_option()
      *
-     * @global \wpdb    $wpdb
-     * @global string  $table_prefix
+     * @global \wpdb  $wpdb
+     * @global string $table_prefix
+     *
      * @return string
      *
      * @noinspection PhpUndefinedClassInspection
@@ -433,7 +452,7 @@ class WPCaller
              * @noinspection PhpUndefinedConstantInspection
              * @noinspection PhpUndefinedFunctionInspection
              */
-            if ( file_exists(WP_PLUGIN_DIR . "/{$plugin}")
+            if ( file_exists(WP_PLUGIN_DIR . "/$plugin")
                     && is_plugin_active($plugin) ) {
 
                 return $slug;
@@ -448,8 +467,9 @@ class WPCaller
      * WP Constants: WP_PLUGIN_DIR
      * WP Functions: get_option()
      *
-     * @param boolean  $isMassAction
-     * @param boolean  $isNewInstall
+     * @param boolean $isMassAction
+     * @param boolean $isNewInstall
+     *
      * @return boolean
      * @throws LSCMException  Thrown indirectly.
      */
@@ -480,12 +500,12 @@ class WPCaller
 
                 Logger::uiError(
                     'Cannot Enable LSCWP - Detected another active cache '
-                        . "plugin \"{$thirdPartyCachePluginSlug}\". Flag set."
+                        . "plugin \"$thirdPartyCachePluginSlug\". Flag set."
                 );
 
                 Logger::notice(
                     'Ignore - Detected another active cache plugin '
-                        . "\"{$thirdPartyCachePluginSlug}\". Flagged."
+                        . "\"$thirdPartyCachePluginSlug\". Flagged."
                 );
 
                 return false;
@@ -525,14 +545,14 @@ class WPCaller
      */
     public function directEnable()
     {
-        $isNewInstall = (file_exists($this->pluginEntry)) ? false : true;
+        $isNewInstall = !file_exists($this->pluginEntry);
 
         if ( !$this->canEnable(false, $isNewInstall) ) {
             $this->outputResult('STATUS', $this->currInstall->getStatus());
             return UserCommand::EXIT_FAIL;
         }
 
-        if (!$isNewInstall) {
+        if ( !$isNewInstall ) {
             $status = $this->enable_lscwp();
         }
         else {
@@ -557,7 +577,7 @@ class WPCaller
         /** @noinspection PhpUndefinedConstantInspection */
         $pluginDir = WP_PLUGIN_DIR;
 
-        $lscwpZip = "{$pluginDir}/litespeed-cache.latest-stable.zip";
+        $lscwpZip = "$pluginDir/litespeed-cache.latest-stable.zip";
 
         $this->downloadLSCWPZip($lscwpZip);
 
@@ -579,7 +599,7 @@ class WPCaller
 
         $customIni = Context::LOCAL_PLUGIN_DIR . '/'
             . PluginVersion::LSCWP_DEFAULTS_INI_FILE_NAME;
-        $defaultIni = "{$pluginDir}/litespeed-cache/data/"
+        $defaultIni = "$pluginDir/litespeed-cache/data/"
             . PluginVersion::LSCWP_DEFAULTS_INI_FILE_NAME;
 
         if ( file_exists($customIni) ) {
@@ -604,7 +624,8 @@ class WPCaller
      *
      * WP Constants: WP_PLUGIN_DIR
      *
-     * @param string  $lscwpZip
+     * @param string $lscwpZip
+     *
      * @return null
      * @throws LSCMException
      */
@@ -616,27 +637,27 @@ class WPCaller
             . 'litespeed-cache.latest-stable.zip';
 
         $wget_command =
-            "wget -q --tries=1 --no-check-certificate {$url} -P {$pluginDir}";
+            "wget -q --tries=1 --no-check-certificate $url -P $pluginDir";
         exec($wget_command, $output, $return_var);
 
         if ( $return_var === 0 && file_exists($lscwpZip) ) {
             return;
         }
 
-        $exMsg = "Failed to download LSCWP with wget exit status {$return_var}";
+        $exMsg = "Failed to download LSCWP with wget exit status $return_var";
 
         /**
-         * Fall back to curl incase wget is disabled for user.
+         * Fall back to curl in case wget is disabled for user.
          */
         $curl_command =
-            "cd {$pluginDir} && curl -O -s --retry 1 --insecure {$url}";
+            "cd $pluginDir && curl -O -s --retry 1 --insecure $url";
         exec($curl_command, $output, $return_var);
 
         if ( $return_var === 0 && file_exists($lscwpZip) ) {
             return;
         }
 
-        $exMsg .= " and curl exit status {$return_var}.";
+        $exMsg .= " and curl exit status $return_var.";
 
         throw new LSCMException($exMsg, LSCMException::E_NON_FATAL);
     }
@@ -645,8 +666,9 @@ class WPCaller
      *
      * WP Constants: WP_PLUGIN_DIR
      *
-     * @param array    $extraArgs  Not used at this time.
-     * @param boolean  $massOp     True when called from massEnable().
+     * @param array   $extraArgs  Not used at this time.
+     * @param boolean $massOp     True when called from massEnable().
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      *
@@ -688,7 +710,8 @@ class WPCaller
 
     /**
      *
-     * @param string[]  $extraArgs
+     * @param string[] $extraArgs
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
@@ -707,7 +730,8 @@ class WPCaller
      *
      * WP Functions: is_plugin_active_for_network()
      *
-     * @param boolean  $isMassAction
+     * @param boolean $isMassAction
+     *
      * @return boolean
      * @throws LSCMException  Thrown indirectly.
      */
@@ -760,8 +784,9 @@ class WPCaller
 
     /**
      *
-     * @param string[]  $extraArgs  Not used at this time.
-     * @param boolean   $massOp     True when called from MassDisable().
+     * @param string[] $extraArgs  Not used at this time.
+     * @param boolean  $massOp     True when called from MassDisable().
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      *
@@ -792,7 +817,8 @@ class WPCaller
 
     /**
      *
-     * @param string[]  $extraArgs
+     * @param string[] $extraArgs
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
@@ -820,25 +846,26 @@ class WPCaller
         $dir = WP_PLUGIN_DIR . '/litespeed-cache';
 
         if ( version_compare($this->installedLscwpVer, '3.0', '>=') ) {
-            require_once "${dir}/src/admin.cls.php";
+            require_once "$dir/src/admin.cls.php";
         }
         elseif ( version_compare($this->installedLscwpVer, '1.1.2.2', '>') ) {
-            require_once "{$dir}/admin/litespeed-cache-admin.class.php";
+            require_once "$dir/admin/litespeed-cache-admin.class.php";
         }
         else {
-            require_once "{$dir}/admin/class-litespeed-cache-admin.php";
+            require_once "$dir/admin/class-litespeed-cache-admin.php";
         }
 
         if ( version_compare($this->installedLscwpVer, '1.1.0', '<')
                 && version_compare($this->installedLscwpVer, '1.0.6', '>') ) {
 
-            require_once "{$dir}/admin/class-litespeed-cache-admin-rules.php";
+            require_once "$dir/admin/class-litespeed-cache-admin-rules.php";
         }
     }
 
     /**
      *
-     * @param boolean  $uninstall
+     * @param boolean $uninstall
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
@@ -850,9 +877,10 @@ class WPCaller
 
     /**
      *
-     * @param string[]  $fromVersions
-     * @param string    $toVersion
-     * @param boolean   $massOp        Not used at this time.
+     * @param string[] $fromVersions
+     * @param string   $toVersion
+     * @param boolean  $massOp        Not used at this time.
+     *
      * @return boolean
      *
      * @noinspection PhpUnusedParameterInspection
@@ -896,7 +924,8 @@ class WPCaller
     /**
      *
      * @param string[] $extraArgs
-     * @param boolean $massOp
+     * @param boolean  $massOp
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
@@ -920,6 +949,7 @@ class WPCaller
     /**
      *
      * @param string[] $extraArgs
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
@@ -938,7 +968,7 @@ class WPCaller
      *
      * WP Functions: deactivate_plugins(), delete_plugins()
      *
-     * @param boolean  $uninstall
+     * @param boolean $uninstall
      */
     private function deactivate_lscwp( $uninstall )
     {
@@ -946,7 +976,7 @@ class WPCaller
         deactivate_plugins(self::LSCWP_PLUGIN);
 
         if ( $uninstall ) {
-            //add some msg about having removed plugin files?
+            //Todo: add some msg about having removed plugin files?
             /** @noinspection PhpUndefinedFunctionInspection */
             delete_plugins(array( self::LSCWP_PLUGIN ));
         }
@@ -958,8 +988,10 @@ class WPCaller
      * WP Variables: $wpdb
      * WP Functions: switch_to_blog(), restore_current_blog()
      *
-     * @global \wpdb    $wpdb
-     * @param boolean  $uninstall
+     * @global \wpdb $wpdb
+     *
+     * @param boolean $uninstall
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      *
@@ -971,7 +1003,7 @@ class WPCaller
         if ( MULTISITE ) {
             global $wpdb;
 
-            $blogs = $wpdb->get_col("SELECT blog_id FROM {$wpdb->blogs};");
+            $blogs = $wpdb->get_col("SELECT blog_id FROM $wpdb->blogs;");
 
             foreach ( $blogs as $id ) {
                 /** @noinspection PhpUndefinedFunctionInspection */
@@ -1040,14 +1072,12 @@ class WPCaller
                     'LSCWP Enabled But Not Caching - Please visit the '
                         . 'WordPress Dashboard for further instructions.'
                 );
-
-                $this->massIncr = 'SUCC';
             }
             else {
                 Logger::uiSuccess('LSCWP Enabled');
-
-                $this->massIncr = 'SUCC';
             }
+
+            $this->massIncr = 'SUCC';
         }
 
         return $status;
@@ -1060,8 +1090,9 @@ class WPCaller
      *               wp_clean_plugins_cache()
      * WP Classes: Plugin_Upgrader
      *
-     * @param string   $ver
-     * @param boolean  $runHooks
+     * @param string  $ver
+     * @param boolean $runHooks
+     *
      * @throws LSCMException
      */
     private function upgrade_lscwp( $ver, $runHooks = true )
@@ -1077,14 +1108,11 @@ class WPCaller
          */
         $upgrader = new \Plugin_Upgrader;
 
-        /** @noinspection PhpUndefinedMethodInspection */
         $upgrader->init();
-
-        /** @noinspection PhpUndefinedMethodInspection */
         $upgrader->upgrade_strings();
 
         $lscwpPackageURL =
-            "https://downloads.wordpress.org/plugin/litespeed-cache.{$ver}.zip";
+            "https://downloads.wordpress.org/plugin/litespeed-cache.$ver.zip";
 
         if ( $runHooks ) {
             /** @noinspection PhpUndefinedFunctionInspection */
@@ -1105,7 +1133,6 @@ class WPCaller
         }
 
         /**
-         * @noinspection PhpUndefinedMethodInspection
          * @noinspection PhpUndefinedConstantInspection
          */
         $upgrader->run(
@@ -1147,12 +1174,11 @@ class WPCaller
         }
 
         /**
-         * @noinspection PhpUndefinedFieldInspection
          * @noinspection PhpUndefinedFunctionInspection
          */
         if ( !$upgrader->result || is_wp_error($upgrader->result) ) {
             throw new LSCMException(
-                "Failed to upgrade to v{$ver}.",
+                "Failed to upgrade to v$ver.",
                 LSCMException::E_NON_FATAL
             );
         }
@@ -1185,7 +1211,7 @@ class WPCaller
     /**
      * Checks for local plugin translation files and copies them to the plugin
      * languages directory if able. This function will also attempt to inform
-     * the root user when a locales translation should be retrieved or removed.
+     * the root user when a locale's translation should be retrieved or removed.
      *
      * WP Functions: get_locale(), unzip_file()
      * WP Classes: WP_Filesystem
@@ -1200,15 +1226,15 @@ class WPCaller
         }
 
         $localTranslationDir = Context::LOCAL_PLUGIN_DIR
-            . "/{$this->installedLscwpVer}/translations";
+            . "/$this->installedLscwpVer/translations";
 
-        $moFileName = "litespeed-cache-{$locale}.mo";
-        $poFileName = "litespeed-cache-{$locale}.po";
-        $localMoFile = "{$localTranslationDir}/{$moFileName}";
-        $localPoFile = "{$localTranslationDir}/{$poFileName}";
-        $zipFile = "{$localTranslationDir}/{$locale}.zip";
-        $translationFlag = "{$localTranslationDir}/"
-            . PluginVersion::TRANSLATION_CHECK_FLAG_BASE . "_{$locale}";
+        $moFileName = "litespeed-cache-$locale.mo";
+        $poFileName = "litespeed-cache-$locale.po";
+        $localMoFile = "$localTranslationDir/$moFileName";
+        $localPoFile = "$localTranslationDir/$poFileName";
+        $zipFile = "$localTranslationDir/$locale.zip";
+        $translationFlag = "$localTranslationDir/"
+            . PluginVersion::TRANSLATION_CHECK_FLAG_BASE . "_$locale";
 
         $langDir =
             $this->currInstall->getPath() . '/wp-content/languages/plugins';
@@ -1218,8 +1244,8 @@ class WPCaller
         }
 
         if ( file_exists($localMoFile) && file_exists($localPoFile) ) {
-            copy($localMoFile, "{$langDir}/{$moFileName}");
-            copy($localPoFile, "{$langDir}/{$poFileName}");
+            copy($localMoFile, "$langDir/$moFileName");
+            copy($localPoFile, "$langDir/$poFileName");
         }
         elseif ( file_exists($zipFile) ) {
             /**
@@ -1232,7 +1258,7 @@ class WPCaller
             if ( unzip_file($zipFile, $langDir) !== true ) {
                 $this->outputResult(
                     'BAD_TRANSLATION',
-                    "{$locale} {$this->installedLscwpVer}"
+                    "$locale $this->installedLscwpVer"
                 );
             }
         }
@@ -1241,7 +1267,7 @@ class WPCaller
 
             $this->outputResult(
                 'GET_TRANSLATION',
-                "{$locale} {$this->installedLscwpVer}"
+                "$locale $this->installedLscwpVer"
             );
         }
     }
@@ -1274,14 +1300,20 @@ class WPCaller
         }
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly.
+     */
     public function removeLscwpPluginFiles()
     {
         $this->currInstall->removePluginFiles(dirname($this->pluginEntry));
     }
 
     /**
-     * @param string[]  $extraArgs
-     * @param boolean   $massOp     Not used at this time.
+     *
+     * @param string[] $extraArgs
+     * @param boolean  $massOp     Not used at this time.
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      *
@@ -1297,7 +1329,7 @@ class WPCaller
             DashNotifier::prepareUserInstall();
 
             if ( DashNotifier::doNotify($jsonInfo) ) {
-                Logger::uiSuccess('Notfied Successfully');
+                Logger::uiSuccess('Notified Successfully');
                 $this->massIncr = 'SUCC';
                 $ret = UserCommand::EXIT_SUCC;
             }
@@ -1315,7 +1347,8 @@ class WPCaller
 
     /**
      *
-     * @param string[]  $extraArgs
+     * @param string[] $extraArgs
+     *
      * @return int
      * @throws LSCMException  Thrown indirectly.
      */
@@ -1337,9 +1370,11 @@ class WPCaller
      * WP Functions: switch_to_blog(), restore_current_blog(),
      *               is_plugin_active()
      *
-     * @global \wpdb    $wpdb
-     * @param string[]  $extraArgs  Unused for now.
-     * @param boolean   $massOp
+     * @global \wpdb $wpdb
+     *
+     * @param string[] $extraArgs  Unused for now.
+     * @param boolean  $massOp
+     *
      * @return int
      *
      * @noinspection PhpUndefinedClassInspection
@@ -1351,7 +1386,7 @@ class WPCaller
         if ( MULTISITE ) {
             global $wpdb;
 
-            $blogs = $wpdb->get_col("SELECT blog_id FROM {$wpdb->blogs};");
+            $blogs = $wpdb->get_col("SELECT blog_id FROM $wpdb->blogs;");
 
             foreach ( $blogs as $id ) {
                 /** @noinspection PhpUndefinedFunctionInspection */
@@ -1383,7 +1418,8 @@ class WPCaller
 
     /**
      *
-     * @param array  $extraArgs
+     * @param array $extraArgs
+     *
      * @return int
      */
     public function massDashDisable( $extraArgs )
@@ -1403,7 +1439,8 @@ class WPCaller
      *
      * @since 1.12
      *
-     * @param boolean  $setOutputResult
+     * @param boolean $setOutputResult
+     *
      * @return string
      */
     public function getQuicCloudAPIKey( $setOutputResult = false )
@@ -1427,13 +1464,13 @@ class WPCaller
      *
      * @since 1.9.8
      *
-     * @param string  $key
-     * @param mixed   $val
+     * @param string $key
+     * @param mixed  $val
      */
     private function setEnvVar( $key, $val )
     {
         $_SERVER[$key] = $val;
-        putenv("{$key}={$val}");
+        putenv("$key=$val");
     }
 
     /**
@@ -1510,8 +1547,9 @@ class WPCaller
      * WP Functions: wp_plugin_directory_constants(), wp_cookie_constants()
      * WP Classes: WP_Query
      *
-     * @global \wpdb  $wpdb
-     * @global array  $shortcode_tags
+     * @global \wpdb $wpdb
+     * @global array $shortcode_tags
+     *
      * @throws LSCMException  Thrown directly and indirectly.
      *
      * @noinspection PhpUndefinedClassInspection
@@ -1546,12 +1584,12 @@ class WPCaller
          *
          * @noinspection PhpIncludeInspection
          */
-        include_once "{$wpPath}/wp-includes/version.php";
+        include_once "$wpPath/wp-includes/version.php";
 
         /** @noinspection PhpUndefinedVariableInspection */
         if ( version_compare($wp_version, '4.0', '<') ) {
             throw new LSCMException(
-                "Detected WordPress version as {$wp_version}. Version 4.0 '
+                "Detected WordPress version as $wp_version. Version 4.0 '
                     . 'required at minimum."
             );
         }
@@ -1559,7 +1597,7 @@ class WPCaller
         /**
          * Set needed server variables.
          */
-        $_SERVER['SCRIPT_FILENAME'] = "{$wpPath}/wp-admin/plugins.php";
+        $_SERVER['SCRIPT_FILENAME'] = "$wpPath/wp-admin/plugins.php";
 
         if ( ! $this->isMultisite() ) {
             $this->setEnvVar('REQUEST_URI', '');
@@ -1668,12 +1706,14 @@ class WPCaller
          */
         unset($_SERVER['REQUEST_METHOD']);
 
+        self::redefineDisabledFunctions();
+
         foreach ( $includeFiles as $file ) {
             $file = $wpPath . $file;
 
             if ( !file_exists($file) ) {
                 throw new LSCMException(
-                    "Could not include missing file {$file}."
+                    "Could not include missing file $file."
                 );
             }
 

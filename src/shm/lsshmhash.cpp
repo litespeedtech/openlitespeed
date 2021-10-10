@@ -443,6 +443,8 @@ LsShmHash::LsShmHash(LsShmPool *pool, const char *name,
     }
     else
     {
+        if (NULL == m_vc)
+            m_vc = memcmp;
         m_insert = insertNum;
         m_update = updateNum;
         m_set = setNum;
@@ -608,6 +610,8 @@ LsShmHash *LsShmHash::checkHTable(GHash::iterator itor, LsShmPool *pool,
                                   const char *name, LsShmHasher_fn hf, LsShmValComp_fn vc)
 {
     LsShmHash *pObj;
+    if (NULL == hf && NULL == vc)
+        vc = memcmp;
     if (((pObj = (LsShmHash *)(ls_shmhash_t *)itor->second()) == NULL)
         || (pObj->m_iMagic != LSSHM_HASH_MAGIC)
         || (pObj->m_hf != hf)
