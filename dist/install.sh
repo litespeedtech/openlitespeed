@@ -122,6 +122,12 @@ install_lsphp7_debian()
     fi
 }
 
+check_arch()
+{
+    CPU_ARCH=$(uname -m)
+    echo -e "\n$CPU_ARCH detected.\n"
+}
+
 check_os()
 {
     OSNAMEVER=
@@ -238,12 +244,13 @@ check_os()
 inst_lsphp7()
 {
     check_os
-    if [ "x$OSNAME" = "xcentos" ] ; then
+    check_arch
+    if [ "x$OSNAME" = "xcentos" ] && [ "x$CPU_ARCH" = "xx86_64" ] ; then
         install_lsphp7_centos
-    elif [ "x$OSNAME" = "xubuntu" ] || [ "x$OSNAME" = "xdebian" ] ; then
+    elif [ "x$OSNAME" = "xubuntu" ] || [ "x$OSNAME" = "xdebian" ] && [ "x$CPU_ARCH" = "xx86_64" ] ; then
         install_lsphp7_debian
     else
-        echo "[Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu."
+        echo "[Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu in x86_64 architecture."
     fi
 }
 
