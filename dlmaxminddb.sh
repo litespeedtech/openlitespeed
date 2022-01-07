@@ -16,7 +16,7 @@ if [ $? != 0 ] ; then
 fi
 
 
-VERSION=1.3.2
+VERSION=1.5.2
 URL=https://github.com/maxmind/libmaxminddb/archive/$VERSION.tar.gz
 
 if [ ! -f "libmaxminddb/src/.libs/libmaxminddb.a" ] ; then
