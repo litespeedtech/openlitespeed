@@ -17,9 +17,9 @@ Documentation
 Users can find all OpenLiteSpeed documentation on the [OpenLiteSpeed site](https://openlitespeed.org), 
 but here are some quick links to important parts of the site:
 
-[Installation](https://openlitespeed.org/mediawiki/index.php/Help:Installation)
+[Installation](https://openlitespeed.org/kb/category/installation/)
 
-[Configuration](https://openlitespeed.org/mediawiki/index.php/Help:Configuration)
+[Configuration](https://openlitespeed.org/kb/category/configuration/)
 
 [Road map](https://openlitespeed.org/mediawiki/index.php/Road_Map)
 
