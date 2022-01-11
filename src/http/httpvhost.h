@@ -43,22 +43,23 @@ class Appender;
 END_LOG4CXX_NS
 
 #define LS_NEVER_FOLLOW     0
-#define LS_ALWAYS_FOLLOW    1
-#define LS_FOLLOW_OWNER     2
+#define LS_ALWAYS_FOLLOW    (1<<0)
+#define LS_FOLLOW_OWNER     (1<<1)
 #define VH_SYM_CTRL         3
-#define VH_ENABLE           4
-#define VH_SERVER_ENABLE    8
-#define VH_ENABLE_SCRIPT    16
-#define VH_QUIC             32
-#define VH_RESTRAINED       64
-#define VH_ACC_LOG          128
-#define VH_GZIP             256
-#define VH_BR               512
-#define VH_AUTOLOADHTACCESS  1024
-#define VH_CGROUP           2048
-#define VH_RECAPTCHA        4096
-#define VH_QUIC_LISTENER    8192
-#define VH_BWRAP            16384
+#define VH_ENABLE           (1<<2)
+#define VH_SERVER_ENABLE    (1<<3)
+#define VH_ENABLE_SCRIPT    (1<<4)
+#define VH_QUIC             (1<<5)
+#define VH_RESTRAINED       (1<<6)
+#define VH_ACC_LOG          (1<<7)
+#define VH_GZIP             (1<<8)
+#define VH_BR               (1<<9)
+#define VH_AUTOLOADHTACCESS (1<<10)
+#define VH_CGROUP           (1<<11)
+#define VH_RECAPTCHA        (1<<12)
+#define VH_QUIC_LISTENER    (1<<13)
+#define VH_BWRAP            (1<<14)
+#define VH_STRICT_OWNER     (1<<15)
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -171,13 +172,15 @@ private:
     ThrottleLimits      m_throttle;
 
     int16_t             m_iMaxKeepAliveRequests;
+    char                m_iRewriteLogLevel;
+    char                m_iGlobalMatchContext;
 
-    int                 m_iFeatures;
+    uint32_t            m_iFeatures;
 
-    AccessCache        *m_pAccessCache;
     ContextTree         m_contexts;
     HttpContext         m_rootContext;
     AutoStr2            m_sVhRoot;
+    AccessCache        *m_pAccessCache;
     HotlinkCtrl        *m_pHotlinkCtrl;
     RealmMap            m_realmMap;
     StringList          m_matchNameList;
@@ -187,15 +190,14 @@ private:
     AutoStr2            m_sName;
     AutoStr2            m_sAdminEmails;
     AutoStr2            m_sAutoIndexURI;
+    AutoStr2            m_sChroot;
 
     int                 m_iMappingRef;
+    int                 m_PhpXmlNodeSSize;
 
     uid_t               m_uid;
     gid_t               m_gid;
-    char                m_iRewriteLogLevel;
-    char                m_iGlobalMatchContext;
-    int                 m_iDummy2;
-    AutoStr2            m_sChroot;
+
     RewriteMapList     *m_pRewriteMaps;
     SslContext         *m_pSSLCtx;
     SsiTagConfig       *m_pSSITagConfig;
@@ -205,7 +207,6 @@ private:
 
     UrlStxFileHash     *m_pUrlStxFileHash;
     php_xml_st          m_pPhpXmlNodeS[MAX_VHOST_PHP_NUM];
-    int                 m_PhpXmlNodeSSize;
 
     UrlIdHash          *m_pUrlIdHash;
 
@@ -603,6 +604,10 @@ public:
      * return the bit of the url added to the hash
      */
     int getIdBitOfUrl(const char *url);
+
+    bool isStrictOwner() const      {   return m_iFeatures & VH_STRICT_OWNER;   }
+    void setStrictOwner(int v)
+    {   setFeature(VH_STRICT_OWNER, v);         }
 
     int isRecaptchaEnabled() const      {   return m_iFeatures & VH_RECAPTCHA;  }
     const Recaptcha *getRecaptcha() const   {   return m_pRecaptcha;        }

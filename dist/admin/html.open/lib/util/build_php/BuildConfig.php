@@ -23,19 +23,20 @@ class BuildConfig
         // you can update the below list to include your versions
         switch ($field) {
 
-            case self::PHP_VERSION: return
-						['8.0.7',
-							'7.4.20',
-							'7.3.28',
-							'7.2.34',
-							'7.1.33',
-							'7.0.33',
-							'5.6.40',
-							'5.5.38',
-							'5.4.45',
-							'5.3.29'];
+			case self::PHP_VERSION:
+				return [
+					'8.0.11',
+					'7.4.24',
+					'7.3.31',
+					'7.2.34',
+					'7.1.33',
+					'7.0.33',
+					'5.6.40',
+					'5.5.38',
+					'5.4.45',
+					'5.3.29'];
 
-			case self::LSAPI_VERSION: return '7.8';
+			case self::LSAPI_VERSION: return '7.9';
 
             case self::SUHOSIN_VERSION: return '0.9.38';
 

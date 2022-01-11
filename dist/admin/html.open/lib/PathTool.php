@@ -5,7 +5,7 @@ class PathTool
 
     public static function getAbsolutePath($root, $path)
     {
-        if ($path{-1} != '/')
+        if (substr($path, -1) != '/')
             $path .= '/';
 
         $newPath = $this->getAbsoluteFile($root, $path);
@@ -14,7 +14,7 @@ class PathTool
 
     public static function getAbsoluteFile($root, $path)
     {
-        if ($path{0} != '/')
+        if (substr($path, 0, 1) != '/')
             $path = $root . '/' . $path;
 
         $newPath = $this->clean($path);

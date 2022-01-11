@@ -1428,6 +1428,8 @@ int HttpContext::configPhpConfig(const XmlNode *pNode)
             }
         }
     }
+    if (pConfig->size() > 0)
+        pConfig->buildLsapiEnv();
     return 0;
 }
 

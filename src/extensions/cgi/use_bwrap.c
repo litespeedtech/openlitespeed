@@ -488,13 +488,14 @@ static int bwrap_variable(lscgid_t *pCGI, char *begin_param, char *begin_wildcar
         return -1;
     }
     wildcard_len = strlen(wildcard);
-    if (wildcard_len <= key_len)
+    if (wildcard_len < key_len)
     {
         argv[*argc] = begin_param;
         memcpy(begin_wildcard, wildcard, wildcard_len + 1);
         if (wildcard_len < key_len)
             memmove(begin_wildcard + wildcard_len, begin_wildcard + key_len,
                     strlen(begin_wildcard + key_len) + 1);
+        DEBUG_MESSAGE("AddArgv argv[%d]: %s\n", *argc, argv[*argc]);
     }
     else
     {
@@ -512,6 +513,7 @@ static int bwrap_variable(lscgid_t *pCGI, char *begin_param, char *begin_wildcar
                begin_param + before_wildcard_len + key_len,
                strlen(begin_param + before_wildcard_len + key_len) + 1);
         argv[*argc] = arg;
+        DEBUG_MESSAGE("AddArgv argv[%d]: %s\n", *argc, argv[*argc]);
     }
     ++*argc;
     return 0;
@@ -566,7 +568,7 @@ char *cgi_getenv(lscgid_t *pCGI, const char *title)
 {
     int title_len = strlen(title);
     char **env = pCGI->m_env;
-    DEBUG_MESSAGE("getenv(%s): %s\n", title, getenv(title));
+    DEBUG_MESSAGE("getenv(%s): (real env %s)\n", title, getenv(title));
     while (*env)
     {
         if (!strncmp(title, *env, title_len) && ((*env)[title_len] == '=') &&
@@ -632,16 +634,23 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
     DEBUG_MESSAGE("Using bwrap_cmdline: %s\n", bwrap_cmdline);
     cmdline_len = strlen(bwrap_cmdline);
     cgi_args = count_args(pCGI->m_argv);
-    argv_max = sizeof(char *) * (cmdline_len + cgi_args + 1);
+    argv_max = cmdline_len + cgi_args + 1;
     /* Special cases! */
     if (strstr(bwrap_cmdline, BWRAP_VAR_PASSWD))
         argv_max += 2; // Can only occur once so this is ok
     if (strstr(bwrap_cmdline, BWRAP_VAR_GROUP))
         argv_max += 2; // Can only occur once so this is ok
+    argv_max *= sizeof(char *);
     total = sizeof(bwrap_mem_t) + argv_max + cmdline_len + 1 +
             sizeof(bwrap_statics_t) + BWRAP_ALLOCATE_EXTRA;
     *mem = malloc(total);
-    if (!mem)
+    /* mem order:
+     *  - bwrap_mem_t
+     *  - bwrap argv (m_data) thru argv_max
+     *  - bwrap_args
+     *  - m_statics */
+    DEBUG_MESSAGE("mem: %p, total: %d, max_p: %p\n", *mem, total, (*mem)+total);
+    if (!*mem)
     {
         set_cgi_error("lscgid failed to allocate bwrap initial memory", NULL);
         *done = 1;
@@ -650,14 +659,14 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
     memset(*mem, 0, sizeof(bwrap_mem_t));
     (*mem)->m_extra = BWRAP_ALLOCATE_EXTRA;
     (*mem)->m_total = total;
-    *oargv = (char **)&(*mem)->m_data[0];
+    *oargv = (char **)(&(*mem)->m_data[0]);
     argv = *oargv;
     bwrap_args = (char *)*oargv + argv_max;
     strncpy(bwrap_args, bwrap_cmdline, cmdline_len + 1);
     (*mem)->m_statics = (bwrap_statics_t *)(bwrap_args + cmdline_len + 1);
     memset((*mem)->m_statics, 0, sizeof(bwrap_statics_t));
     ch = bwrap_args;
-    DEBUG_MESSAGE("bwrap_args: %s\n", bwrap_args);
+    DEBUG_MESSAGE("bwrap_args %p: %s\n", bwrap_args, bwrap_args);
     *argc = 0;
     if (!strncmp(ch, "bwrap", 5))
     {
@@ -722,6 +731,7 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
         bwrap_free(mem);
         *oargv = NULL;
         *done = 1;
+        DEBUG_MESSAGE("return 500!");
         return 500;
     }
     for (i = 0; i < cgi_args; ++i)
@@ -731,6 +741,9 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
         ++*argc;
     }
     argv[*argc] = NULL;
+    DEBUG_MESSAGE("mem: %p, total: %d, max_p: %p endp: %p, argc: %d, argc max: %d Final bwrap_cmdline: %s\n", 
+                  (*mem), total, (*mem)+total, (char *)(*mem)->m_statics + sizeof(bwrap_statics_t),
+                  *argc, argv_max / sizeof(char *), cgi_getenv(pCGI, "LS_BWRAP_CMDLINE"));
     return 0;
 }
 
@@ -740,7 +753,7 @@ int bwrap_exec(lscgid_t *pCGI, int argc, char *argv[], int *done)
     *done = 0;
     {
         int i;
-        DEBUG_MESSAGE("About to bwrap_exec %d params\n", argc);
+        DEBUG_MESSAGE("About to bwrap_exec %d params, cmd_line: %s\n", argc, cgi_getenv(pCGI, "LS_BWRAP_CMDLINE"));
         for (i = 0; i < argc; ++i)
         {
             DEBUG_MESSAGE("argv[%d] = %s\n", i, argv[i]);
@@ -794,7 +807,7 @@ int exec_using_bwrap(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *done)
     int argc;
     char **argv;
     bwrap_mem_t *mem = NULL;
-    DEBUG_MESSAGE("LS_BWRAP %s set\n", pCGI->m_bwrap ? "IS" : "IS_NOT");
+    DEBUG_MESSAGE("LS_BWRAP %s set, pid: %d\n", pCGI->m_bwrap ? "IS" : "IS_NOT", getpid());
     if (!pCGI->m_bwrap)
         return 0;
 

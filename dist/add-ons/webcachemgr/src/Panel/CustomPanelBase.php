@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2020
+ * @copyright (c) 2020-2021
  * @since 1.10
  * ******************************************* */
 
@@ -20,13 +20,21 @@ extends ControlPanel
      * requirements in parent class ControlPanel.
      *
      */
-    protected function initConfPaths() {}
-    protected function serverCacheRootSearch() {}
-    protected function vhCacheRootSearch() {}
-    protected function addVHCacheRootSection( $file_contents,
-            $vhCacheRoot = 'lscache' ) {}
-    public function verifyCacheSetup() {}
-    public function createVHConfAndSetCacheRoot( $vhConf,
-            $vhCacheRoot = 'lscache' ) {}
+    protected function initConfPaths()
+    {}
+    protected function serverCacheRootSearch()
+    {}
+    protected function vhCacheRootSearch()
+    {}
+    protected function addVHCacheRootSection(
+        $file_contents, $vhCacheRoot = 'lscache' )
+    {}
+    public function verifyCacheSetup()
+    {}
+    public function createVHConfAndSetCacheRoot(
+        $vhConf, $vhCacheRoot = 'lscache' )
+    {}
+    public function applyVHConfChanges()
+    {}
 
 }

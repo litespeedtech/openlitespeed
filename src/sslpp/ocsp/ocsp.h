@@ -150,7 +150,6 @@ typedef struct ocsp_one_request_st {
 } OCSP_ONEREQ;
 
 DECLARE_STACK_OF(OCSP_ONEREQ)
-DECLARE_ASN1_SET_OF(OCSP_ONEREQ)
 
 /*-  TBSRequest      ::=     SEQUENCE {
  *       version             [0] EXPLICIT Version DEFAULT v1,
@@ -284,7 +283,6 @@ typedef struct ocsp_single_response_st {
 } OCSP_SINGLERESP;
 
 DECLARE_STACK_OF(OCSP_SINGLERESP)
-DECLARE_ASN1_SET_OF(OCSP_SINGLERESP)
 
 /*-  ResponseData ::= SEQUENCE {
  *      version              [0] EXPLICIT Version DEFAULT v1,

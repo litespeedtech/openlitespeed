@@ -45,6 +45,7 @@ HttpServerConfig::HttpServerConfig()
     , m_iEnableLve(0)
     , m_iUsePagespeed(0)
     , m_cooldown(0)
+    , m_forceStrictOwner(0)
     , m_iCheckDeniedSymLink(0)
     , m_iEnableMultiCerts(0)
     , m_iMaxFcgiInstances(2000)
@@ -75,6 +76,8 @@ HttpServerConfig::HttpServerConfig()
 HttpServerConfig::~HttpServerConfig()
 {
     delete m_pDeniedDir;
+    if (m_pBwrapCmdLine)
+        free(m_pBwrapCmdLine);
 }
 
 

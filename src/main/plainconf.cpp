@@ -1319,6 +1319,8 @@ void plainconf::loadConfFile(const char *path)
         size_t  nMultiLineModeSignLen = 0;  //>0 is mulline mode
         bool bInHashT = false;
         char *pBuf = NULL;
+        int fileSize;
+        int n;
 
 #ifdef ENABLE_CONF_HASH
         if (m_confFileHash.size() > 0)
@@ -1342,30 +1344,37 @@ void plainconf::loadConfFile(const char *path)
             }
 
             fseek(fp, 0L, SEEK_END);
-            int bufLen = ftell(fp);
+            fileSize = ftell(fp);
             rewind(fp);
-            if (bufLen > 10 * 1024 * 1024)
+            if (fileSize > 100 * 1024 * 1024)
             {
-                logToMem(LOG_LEVEL_ERR, "Conf file %s is too large (%dMB)!!", path, bufLen / (1024 * 1024));
+                logToMem(LOG_LEVEL_ERR, "Conf file %s is too large (%dMB)!!", path, fileSize / (1024 * 1024));
                 fclose(fp);
                 return ;
             }
-            pBuf = new char[bufLen + 1];
-            fread(pBuf, 1, bufLen, fp);
-            pBuf[bufLen] = 0;
+            pBuf = new char[fileSize + 1];
+            n = fread(pBuf, 1, fileSize, fp);
+            if (n > 0)
+                pBuf[n] = 0;
             fclose(fp);
 #ifdef ENABLE_CONF_HASH
             m_confFileHash.insert_update(path, pBuf);
 #endif
+            if (n <= 0)
+            {
+                delete [] pBuf;
+                logToMem(LOG_LEVEL_ERR, "Failed to read configuration file %s!", path);
+                return;
+            }
         }
 
         char *pBufStart = pBuf;
-        char *pBufEnd = pBuf + strlen(pBuf);
+        char *pBufEnd = pBuf + n;
 
         while(pBufStart < pBufEnd)
         {
             ++lineNumber;
-            char *pLineEnd = strchr(pBufStart, '\n');
+            char *pLineEnd = (char *)memchr(pBufStart, '\n', pBufEnd - pBufStart);
             if (!pLineEnd)
                 pLineEnd = pBufEnd;
 

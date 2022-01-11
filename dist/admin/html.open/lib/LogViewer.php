@@ -225,7 +225,7 @@ class LogViewer
                     $filter->AddLogEntry($cur_level, $cur_time, $cur_mesg);
                     $found = false;
                 }
-                $cur_level = $levels[$c28{0}];
+                $cur_level = $levels[substr($c28, 0, 1)];
                 if ($cur_level <= $filterlevel && preg_match("/^\d{4}-\d{2}-\d{2} /", $buffer)) {
                     // start a new line
                     $found = true;

@@ -385,7 +385,7 @@ int OCSP_basic_verify(OCSP_BASICRESP *bs, STACK_OF(X509) *certs,
     X509 *signer, *x;
     STACK_OF(X509) *chain = NULL;
     STACK_OF(X509) *untrusted = NULL;
-    X509_STORE_CTX ctx;
+    X509_STORE_CTX *ctx = NULL;
     size_t i;
     int ret = 0;
     ret = ocsp_find_signer(&signer, bs, certs, st, flags);
@@ -422,19 +422,24 @@ int OCSP_basic_verify(OCSP_BASICRESP *bs, STACK_OF(X509) *certs,
         } else {
             untrusted = bs->certs;
         }
-        init_res = X509_STORE_CTX_init(&ctx, st, signer, untrusted);
+        ctx = X509_STORE_CTX_new();
+        if (!ctx) {
+            ret = -1;
+            OPENSSL_PUT_ERROR(OCSP, ERR_R_X509_LIB);
+            goto end;
+        }
+        init_res = X509_STORE_CTX_init(ctx, st, signer, untrusted);
         if (!init_res) {
             ret = -1;
             OPENSSL_PUT_ERROR(OCSP, ERR_R_X509_LIB);
             goto end;
         }
 
-        X509_STORE_CTX_set_purpose(&ctx, X509_PURPOSE_OCSP_HELPER);
-        ret = X509_verify_cert(&ctx);
-        chain = X509_STORE_CTX_get1_chain(&ctx);
-        X509_STORE_CTX_cleanup(&ctx);
+        X509_STORE_CTX_set_purpose(ctx, X509_PURPOSE_OCSP_HELPER);
+        ret = X509_verify_cert(ctx);
+        chain = X509_STORE_CTX_get1_chain(ctx);
         if (ret <= 0) {
-            i = X509_STORE_CTX_get_error(&ctx);
+            i = X509_STORE_CTX_get_error(ctx);
             OPENSSL_PUT_ERROR(OCSP, OCSP_R_CERTIFICATE_VERIFY_ERROR);
             ERR_add_error_data(2, "Verify error:",
                                X509_verify_cert_error_string(i));
@@ -470,6 +475,8 @@ int OCSP_basic_verify(OCSP_BASICRESP *bs, STACK_OF(X509) *certs,
     }
 
  end:
+    if (ctx)
+        X509_STORE_CTX_free(ctx);
     if (chain)
         sk_X509_pop_free(chain, X509_free);
     if (bs->certs && certs)
@@ -653,7 +660,8 @@ static int ocsp_match_issuerid(X509 *cert, OCSP_CERTID *cid,
 static int ocsp_check_delegated(X509 *x, int flags)
 {
     X509_check_purpose(x, -1, 0);
-    if ((x->ex_flags & EXFLAG_XKUSAGE) && (x->ex_xkusage & XKU_OCSP_SIGN))
+    if ((X509_get_extension_flags(x) & EXFLAG_XKUSAGE)
+        && (X509_get_extended_key_usage(x) & XKU_OCSP_SIGN))
         return 1;
     OPENSSL_PUT_ERROR(OCSP, OCSP_R_MISSING_OCSPSIGNING_USAGE);
     return 0;

@@ -840,7 +840,15 @@ EOF;
     }
 
     /**
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->installCpanelPlugin() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     CPanel::uninstallCpanelPlugin() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->updateCoreCpanelPluginConfSettings() call.
      */
     private function doSpecialCommand()
     {

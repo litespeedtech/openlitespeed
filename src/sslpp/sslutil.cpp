@@ -66,22 +66,6 @@ static int defaultAsyncCert(asyncCertDoneCb cb, void *pParam,
 asyncCertFunc SslUtil::removeAsyncCertLookup = defaultAsyncCert;
 asyncCertFunc SslUtil::addAsyncCertLookup = NULL;
 
-static const int s_iSystems = 4;
-static const char *s_aSystemFiles[] =
-{
-    "/etc/ssl/certs/ca-certificates.crt",       // Debian/Ubuntu
-    "/etc/pki/tls/certs/ca-bundle.crt",         // Centos/Red Hat/Fedora
-    "/usr/local/share/certs/ca-root-nss.crt",   // FreeBSD
-    "/etc/ssl/ca-bundle.pem",                   // OpenSUSE
-};
-static const char *s_aSystemDirs[] =
-{
-    "/etc/ssl/certs/",                  // Debian/Ubuntu
-    "/etc/pki/tls/certs/",              // Centos/Red Hat/Fedora
-    "/usr/local/share/certs/",          // FreeBSD
-    "/etc/ssl/",                        // OpenSUSE
-};
-
 /* 1024bits dh
 -----BEGIN DH PARAMETERS-----
 MIGHAoGBAIKf6/zj7gQ0hi0zZKYr3ntl8MdKOlO1VSkUFPyuXobXNLFtvcyVKxxe
@@ -594,34 +578,11 @@ bool SslUtil::loadCA(SSL_CTX *pCtx, const char *pCAFile, const char *pCAPath,
 
 int SslUtil::initDefaultCA(const char* pCAFile, const char* pCAPath)
 {
-    int i;
 
-    if (!pCAFile)
-    {
-        for (i = 0; i < s_iSystems; ++i)
-        {
-            if (access(s_aSystemFiles[i], F_OK) == 0)
-            {
-                s_pDefaultCAFile = s_aSystemFiles[i];
-                break;
-            }
-        }
-    }
-    else
+    if (pCAFile)
         s_pDefaultCAFile = pCAFile;
 
-    if (!pCAPath)
-    {
-        for (i = 0; i < s_iSystems; ++i)
-        {
-            if (access(s_aSystemDirs[i], F_OK) == 0)
-            {
-                s_pDefaultCAPath = s_aSystemDirs[i];
-                break;
-            }
-        }
-    }
-    else
+    if (pCAPath)
         s_pDefaultCAPath = pCAPath;
     return 0;
 }

@@ -119,7 +119,7 @@ int PHPConfig::parse(int id, const char *pArgs,
     while (isspace(*pArg1))
         ++pArg1;
 
-    const char *pArg2 = StringTool::strNextArg(pArg1);
+    const char *pArg2 = StringTool::strNextArg(pArg1, " =\t\r\n");
     if (pArg2)
         *(char *)pArg2++ = 0;
     else

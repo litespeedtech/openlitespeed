@@ -1104,6 +1104,7 @@ LsShmOffset_t LsShmPool::getFromFreeList(LsShmSize_t size)
             reduceFreeFromBot(ap, offset, left);
             return offset + left;
         }
+        assert(offset != ap->x_iFreeNext);
         offset = ap->x_iFreeNext;
     }
     return 0; // no match
@@ -1153,10 +1154,22 @@ void LsShmPool::disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp)
     if (myPrev != 0)
     {
         xp = (LShmFreeTop *)offset2ptr(myPrev);
+        if (xp->x_iFreeNext == myNext)
+        {
+            assert(!"Looping link corruption detected in SHM free pages");
+            myNext = 0;
+        }
         xp->x_iFreeNext = myNext;
     }
     else
+    {
+        if (pDataMap->x_iFreePageList == myNext)
+        {
+            assert(!"Looping link corruption detected in head of SHM free pages");
+            myNext = 0;
+        }
         pDataMap->x_iFreePageList = myNext;
+    }
     if (myNext != 0)
     {
         xp = (LShmFreeTop *)offset2ptr(myNext);

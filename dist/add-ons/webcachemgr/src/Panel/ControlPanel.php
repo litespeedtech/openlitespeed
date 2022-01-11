@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.10.1';
+    const PANEL_API_VERSION = '1.13.11.1';
 
     /**
      * @since 1.9
@@ -378,7 +378,12 @@ abstract class ControlPanel
      *
      * @param string $vhCacheRoot
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->writeVHCacheRoot()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->applyVHConfChanges()
+     *     call.
      */
     public function setVHCacheRoot( $vhCacheRoot = 'lscache' )
     {
@@ -880,11 +885,10 @@ abstract class ControlPanel
 
     /**
      * Note: Visibility is public to better accommodate escalation functions.
+     *
+     * @throws LSCMException  Thrown by some implementations.
      */
-    public function applyVHConfChanges()
-    {
-        //override in child class when needed.
-    }
+    abstract public function applyVHConfChanges();
 
     /**
      *
@@ -982,6 +986,9 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.13.11.1',
+            '1.13.11',
+            '1.13.10.2',
             '1.13.10.1',
             '1.13.10',
             '1.13.9',

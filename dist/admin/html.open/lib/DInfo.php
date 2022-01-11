@@ -83,16 +83,16 @@ class DInfo
         }
 
         if (($pos = strpos($this->_mid, '_')) > 0) {
-            $this->_view = substr($this->_mid, 0, $pos + 1);
-            $this->_viewName = substr($this->_mid, $pos + 1);
-            if ($this->_pid == '' || $this->_view == 'sl' || $this->_view == 'sl_' || $this->_view == 'al' || $this->_view == 'al_' || $this->_pid == 'base' || $this->_pid == 'mbr')
-                $this->_ref = $this->_viewName; // still in serv conf
-        }
-        else {
-            $this->_view = $this->_mid;
-        }
+			$this->_view = substr($this->_mid, 0, $pos + 1);
+			$this->_viewName = substr($this->_mid, $pos + 1);
+			if ($this->_pid == '' || $this->_view == 'sl' || $this->_view == 'sl_' || $this->_view == 'al' || $this->_view == 'al_' || $this->_pid == 'base' || $this->_pid == 'mbr') {
+				$this->_ref = $this->_viewName; // still in serv conf
+			}
+		} else {
+			$this->_view = $this->_mid;
+		}
 
-        $this->_confType = ( $this->_mid[0] == 'a' ) ? self::CT_ADMIN : self::CT_SERV;
+		$this->_confType = ( $this->_mid[0] == 'a' ) ? self::CT_ADMIN : self::CT_SERV;
 
         $this->_tabs = DPageDef::GetInstance()->GetTabDef($this->_view);
 
@@ -109,13 +109,16 @@ class DInfo
             if ($t != null) {
                 $this->_tid = $t;
                 $t1 = UIBase::GrabGoodInputWithReset('request', 't1');
-                if ($t1 != null && ( $this->GetLast(self::FLD_TID) != $t1))
+                if ($t1 != null && ( $this->GetLast(self::FLD_TID) != $t1)) {
                     $this->_tid .= '`' . $t1;
+				}
 
-                if (($r = UIBase::GrabGoodInputWithReset('request', 'r')) != null)
+                if (($r = UIBase::GrabGoodInputWithReset('request', 'r')) != null) {
                     $this->_ref = $r;
-                if (($r1 = UIBase::GrabGoodInputWithReset('request', 'r1')) != null)
+				}
+                if (($r1 = UIBase::GrabGoodInputWithReset('request', 'r1')) != null) {
                     $this->_ref .= '`' . $r1;
+				}
             }
         }
 
@@ -137,26 +140,27 @@ class DInfo
 
         $this->_sort = UIBase::GrabGoodInput("request", 'sort');
 
-        $this->_allActions = array(
-            'a' => array(DMsg::UIStr('btn_add'), 'fa-plus'),
-            'v' => array(DMsg::UIStr('btn_view'), 'fa-search-plus'),
-            'E' => array(DMsg::UIStr('btn_edit'), 'fa-edit'),
-            's' => array(DMsg::UIStr('btn_save'), 'fa-save'),
-            'B' => array(DMsg::UIStr('btn_back'), 'fa-reply'), //'fa-level-up'
-            'n' => array(DMsg::UIStr('btn_next'), 'fa-step-forward'),
-            'd' => array(DMsg::UIStr('btn_delete'), 'fa-trash-o'),
-            'D' => array(DMsg::UIStr('btn_delete'), 'fa-trash-o'),
-            'C' => array(DMsg::UIStr('btn_cancel'), 'fa-angle-double-left'),
-            'i' => array(DMsg::UIStr('btn_instantiate'), 'fa-cube'),
-            'I' => array(DMsg::UIStr('btn_instantiate'), 'fa-cube'),
-            'X' => array(DMsg::UIStr('btn_view'), 'fa-search-plus'));
-    }
+        $this->_allActions = [
+			'a' => [DMsg::UIStr('btn_add'), 'fa-plus'],
+			'v' => [DMsg::UIStr('btn_view'), 'fa-search-plus'],
+			'E' => [DMsg::UIStr('btn_edit'), 'fa-edit'],
+			's' => [DMsg::UIStr('btn_save'), 'fa-save'],
+			'B' => [DMsg::UIStr('btn_back'), 'fa-reply'], //'fa-level-up'
+			'n' => [DMsg::UIStr('btn_next'), 'fa-step-forward'],
+			'd' => [DMsg::UIStr('btn_delete'), 'fa-trash-o'],
+			'D' => [DMsg::UIStr('btn_delete'), 'fa-trash-o'],
+			'C' => [DMsg::UIStr('btn_cancel'), 'fa-angle-double-left'],
+			'i' => [DMsg::UIStr('btn_instantiate'), 'fa-cube'],
+			'I' => [DMsg::UIStr('btn_instantiate'), 'fa-cube'],
+			'X' => [DMsg::UIStr('btn_view'), 'fa-search-plus'],
+		];
+	}
 
     public function Get($field)
     {
         switch ($field) {
             case self::FLD_CtrlUrl:
-                return "{$this->_ctrlUrl}m={$this->_mid}&p={$this->_pid}";
+				return sprintf('%sm=%s&p=%s', $this->_ctrlUrl, urlencode($this->_mid), $this->_pid);
             case self::FLD_View: return $this->_view;
             case self::FLD_ViewName: return $this->_viewName;
             case self::FLD_TopMsg: return $this->_topMsg;
@@ -174,25 +178,25 @@ class DInfo
             case self::FLD_ICONTITLE:
                 switch ($this->_view) {
                     case 'serv':
-                        return array('fa-globe', DMsg::UIStr('menu_serv'));
+                        return ['fa-globe', DMsg::UIStr('menu_serv')];
                     case 'sl':
-                        return array('fa-chain', DMsg::UIStr('menu_sl'));
+                        return ['fa-chain', DMsg::UIStr('menu_sl')];
                     case 'sl_':
-                        return array('fa-chain', DMsg::UIStr('menu_sl_') . ' ' . $this->_viewName);
+                        return ['fa-chain', DMsg::UIStr('menu_sl_') . ' ' . $this->_viewName];
                     case 'vh':
-                        return array('fa-cubes', DMsg::UIStr('menu_vh'));
+                        return ['fa-cubes', DMsg::UIStr('menu_vh')];
                     case 'vh_':
-                        return array('fa-cube', DMsg::UIStr('menu_vh_') . ' ' . $this->_viewName);
+                        return ['fa-cube', DMsg::UIStr('menu_vh_') . ' ' . $this->_viewName];
                     case 'tp':
-                        return array('fa-files-o', DMsg::UIStr('menu_tp'));
+                        return ['fa-files-o', DMsg::UIStr('menu_tp')];
                     case 'tp_':
-                        return array('fa-files-o', DMsg::UIStr('menu_tp_') . ' ' . $this->_viewName);
+                        return ['fa-files-o', DMsg::UIStr('menu_tp_') . ' ' . $this->_viewName];
                     case 'admin':
-                        return array('fa-gear', DMsg::UIStr('menu_webadmin'));
+                        return ['fa-gear', DMsg::UIStr('menu_webadmin')];
                     case 'al':
-                        return array('fa-chain', DMsg::UIStr('menu_webadmin') . ' - ' . DMsg::UIStr('menu_sl'));
+                        return ['fa-chain', DMsg::UIStr('menu_webadmin') . ' - ' . DMsg::UIStr('menu_sl')];
                     case 'al_':
-                        return array('fa-chain', DMsg::UIStr('menu_webadmin') . ' - ' . DMsg::UIStr('menu_sl_') . ' ' . $this->_viewName);
+                        return ['fa-chain', DMsg::UIStr('menu_webadmin') . ' - ' . DMsg::UIStr('menu_sl_') . ' ' . $this->_viewName];
                 }
                 break;
             default: error_log("invalid DInfo field : $field\n");
@@ -222,10 +226,11 @@ class DInfo
                 break;
             case self::FLD_ViewName:
                 $this->_viewName = $value;
-                if ($value == null) // by delete
+                if ($value == null) { // by delete
                     $value = '';
-                else
+				} else {
                     $value = '_' . $value;
+				}
 
                 if (($pos = strpos($this->_mid, '_')) > 0) {
                     $this->_mid = substr($this->_mid, 0, $pos) . $value;
@@ -245,19 +250,19 @@ class DInfo
 
     public function InitUIProps($props)
     {
-        $props->Set(UIProperty::FLD_FORM_HIDDENVARS, array(
+        $props->Set(UIProperty::FLD_FORM_HIDDENVARS, [
             'a'  => 'v',
             'm'  => $this->_mid,
             'p'  => $this->_pid,
             't'  => $this->_tid,
             'r'  => $this->_ref,
-            'tk' => $this->_token));
+            'tk' => $this->_token]);
 
         if ($this->_servData != null) {
             $props->Set(UIProperty::FLD_SERVER_NAME, $this->_servData->GetId());
         }
 
-        $uri = $this->_ctrlUrl . 'm=' . $this->_mid;
+        $uri = $this->_ctrlUrl . 'm=' . urlencode($this->_mid);
 
         $tabs = [];
         $uri .= '&p=';
@@ -288,8 +293,6 @@ class DInfo
 
         $chars = preg_split('//', $actions, -1, PREG_SPLIT_NO_EMPTY);
 
-        $ctrlUrl = $this->Get(DInfo::FLD_CtrlUrl);
-
         $cur_tid = $this->GetLast(self::FLD_TID);
         foreach ($chars as $act) {
             $name = $this->_allActions[$act][0];
@@ -298,14 +301,15 @@ class DInfo
                 $act = 'B';
             }
 
-            if ($act == 'B' && $this->_isPrintingLinkedTbl)
+            if ($act == 'B' && $this->_isPrintingLinkedTbl) {
                 continue; // do not print Back for linked view
+			}
 
             if ($act == 's' || $act == 'n') {
                 $href = "javascript:lst_conf('$act','','','')";
             } elseif ($act == 'X') {
                 //vhtop=>vh_... tptop=>tp_.... sltop=>sl_...
-                $href = $this->_ctrlUrl . 'm=' . $this->_view . '_' . $editRef;
+                $href = $this->_ctrlUrl . 'm=' . urlencode($this->_view . '_' . $editRef);
                 $act = 'v';
             } else {
 
@@ -335,44 +339,46 @@ class DInfo
                 $t = addslashes($t);
                 $r = addslashes($r);
 
-                //$t = '&t=' . $t;
-                //$r = '&r=' . urlencode($r);
-                //$href = $ctrlUrl . $t . $r . '&a=' . $act . '&tk=' . $this->_token;
                 $href = "javascript:lst_conf('$act', '', '$t', '$r')";
             }
-            $actdata[$act] = array('label' => $name, 'href' => $href, 'ico' => $ico);
+            $actdata[$act] = ['label' => $name, 'href' => $href, 'ico' => $ico];
         }
         return $actdata;
     }
 
     public function TrimLastId()
     {
-        if (($pos = strrpos($this->_tid, '`')) !== false)
+        if (($pos = strrpos($this->_tid, '`')) !== false) {
             $this->_tid = substr($this->_tid, 0, $pos);
-        else
+		} else {
             $this->_tid = null;
+		}
 
-        if (($pos = strrpos($this->_ref, '`')) !== false)
+        if (($pos = strrpos($this->_ref, '`')) !== false) {
             $this->_ref = substr($this->_ref, 0, $pos);
-        elseif ($this->_view == 'sl_' || $this->_view == 'al_' || $this->_pid == 'base' || $this->_pid == 'mbr')
+		} elseif ($this->_view == 'sl_' || $this->_view == 'al_' || $this->_pid == 'base' || $this->_pid == 'mbr') {
             $this->_ref = $this->_viewName; // still in serv conf
-        else
+		} else {
             $this->_ref = null;
+		}
     }
 
     public function GetLast($field)
     {
         $id = null;
-        if ($field == self::FLD_TID)
+        if ($field == self::FLD_TID) {
             $id = $this->_tid;
-        elseif ($field == self::FLD_REF)
+		} elseif ($field == self::FLD_REF) {
             $id = $this->_ref;
+		}
 
-        if ($id != null && ($pos = strrpos($id, '`')) !== false)
-            if (strlen($id) > $pos + 1)
+        if ($id != null && ($pos = strrpos($id, '`')) !== false) {
+            if (strlen($id) > $pos + 1) {
                 $id = substr($id, $pos + 1);
-            else
+			} else {
                 $id = '';
+			}
+		}
 
         return $id;
     }
@@ -380,10 +386,11 @@ class DInfo
     public function GetFirst($field)
     {
         $id = null;
-        if ($field == self::FLD_TID)
+        if ($field == self::FLD_TID) {
             $id = $this->_tid;
-        elseif ($field == self::FLD_REF)
+		} elseif ($field == self::FLD_REF) {
             $id = $this->_ref;
+		}
 
         if ($id != null && ($pos = strpos($id, '`')) !== false) {
             $id = substr($id, 0, $pos);
@@ -394,10 +401,10 @@ class DInfo
 
     public function GetParentRef()
     {
-        if (($pos = strrpos($this->_ref, '`')) !== false)
+        if (($pos = strrpos($this->_ref, '`')) !== false) {
             return substr($this->_ref, 0, $pos);
-        else
-            return '';
+		}
+		return '';
     }
 
     public function SwitchToSubTid($extracted)
@@ -415,10 +422,11 @@ class DInfo
         $newkey = $extracted->GetChildVal($subtbls[0]);
         $subtid = '';
         if ($newkey != null) {
-            if ($newkey == '0' || !isset($subtbls[$newkey]))
+            if ($newkey == '0' || !isset($subtbls[$newkey])) {
                 $subtid = $subtbls[1];
-            else
+			} else {
                 $subtid = $subtbls[$newkey];
+			}
         }
 
         $this->_tid = $tid0 . $subtid;
@@ -445,8 +453,9 @@ class DInfo
             if ($type == 'module') {
                 $modules = $this->_servData->GetChildrenValues('module');
                 if ($modules != null) {
-                    foreach ($modules as $mn)
+                    foreach ($modules as $mn) {
                         $o[$mn] = $mn;
+					}
                 }
                 return $o;
             }
@@ -455,12 +464,14 @@ class DInfo
             if (($servexps = $this->_servData->GetRootNode()->GetChildren('extprocessor')) != null) {
                 if (is_array($servexps)) {
                     foreach ($servexps as $exname => $ex) {
-                        if ($ex->GetChildVal('type') == $type)
+                        if ($ex->GetChildVal('type') == $type) {
                             $exps[] = $exname;
+						}
                     }
                 }
-                elseif ($servexps->GetChildVal('type') == $type)
+                elseif ($servexps->GetChildVal('type') == $type) {
                     $exps[] = $servexps->Get(CNode::FLD_VAL);
+				}
             }
 
             if ($this->_view == DInfo::CT_SERV) {
@@ -477,11 +488,12 @@ class DInfo
             if (($vhexps = $this->_confData->GetRootNode()->GetChildren($loc)) != null) {
                 if (is_array($vhexps)) {
                     foreach ($vhexps as $exname => $ex) {
-                        if ($ex->GetChildVal('type') == $type)
+                        if ($ex->GetChildVal('type') == $type) {
                             $o[$exname] = "[VHost Level]: $exname";
+						}
                     }
                 }
-                else if ($vhexps->GetChildVal('type') == $type) {
+                elseif ($vhexps->GetChildVal('type') == $type) {
                     $exname = $vhexps->Get(CNode::FLD_VAL);
                     $o[$exname] = '[' . DMsg::UIStr('note_vh_level') . "]: $exname";
                 }
@@ -489,17 +501,19 @@ class DInfo
             return $o;
         }
 
-        if (in_array($loc, array('virtualhost', 'listener', 'module'))) {
+        if (in_array($loc, ['virtualhost', 'listener', 'module'])) {
             $names = $this->_servData->GetChildrenValues($loc);
         } elseif ($loc == 'realm') {
-            if ($this->_view == DInfo::CT_TP)
+            if ($this->_view == DInfo::CT_TP) {
                 $loc = "virtualHostConfig:$loc";
+			}
             $names = $this->_confData->GetChildrenValues($loc);
         }
 
         sort($names);
-        foreach ($names as $name)
+        foreach ($names as $name) {
             $o[$name] = $name;
+		}
 
         return $o;
     }
