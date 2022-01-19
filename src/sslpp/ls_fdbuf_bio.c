@@ -98,10 +98,10 @@ void ls_fdbuf_bio_init(ls_fdbio_data *fdbio)
 
 int ls_fdbio_alloc_rbuff(ls_fdbio_data *fdbio, int size)
 {
-    DEBUG_MESSAGE("[FDBIO] alloc read buf %d\n", size);
     assert(fdbio->m_rbuf_used == fdbio->m_rbuf_read);
     if ((fdbio->m_flag & LS_FDBIO_RBUF_ALLOC) && fdbio->m_rbuf_size >= size)
         return LS_OK;
+    DEBUG_MESSAGE("[FDBIO] alloc read buf %d\n", size);
     void *buf = ls_palloc(size);
     if (buf)
     {
@@ -173,6 +173,8 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         errno = 0;
         return 0;
     }
+    if (outl > fdbio->m_rbuf_max_block)
+        fdbio->m_rbuf_max_block = outl;
     while (total < outl)
     {
         int buffered = fdbio->m_rbuf_used - fdbio->m_rbuf_read;
@@ -197,6 +199,11 @@ static int bio_fd_read(BIO *b, char *out, int outl)
             fdbio->m_rbuf_used = 0;
             fdbio->m_rbuf_read = 0;
             rd_remain = outl - total;
+            if (fdbio->m_rbuf_size < fdbio->m_rbuf_max_block + 5)
+            {
+                ls_fdbio_alloc_rbuff(fdbio, fdbio->m_rbuf_max_block + 5);
+                buf = fdbio->m_rbuf;
+            }
         }
         if ((rd_remain < fdbio->m_rbuf_size)
             && ((fdbio->m_flag & LS_FDBIO_RBUF_ALLOC)

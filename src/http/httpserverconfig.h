@@ -58,9 +58,10 @@ private:
     int8_t          m_iEnableLve;
     int8_t          m_iUsePagespeed;
     int8_t          m_cooldown;
+    int8_t          m_forceStrictOwner;
 
-    int16_t         m_iCheckDeniedSymLink;
-    int16_t         m_iEnableMultiCerts;
+    int8_t          m_iCheckDeniedSymLink;
+    int8_t          m_iEnableMultiCerts;
 
     int32_t         m_iMaxFcgiInstances;
 
@@ -86,7 +87,7 @@ private:
     HttpVHost      *m_pGlobalVHost;
 
     BwrapConfigValues      m_bwrap;
-    const char            *m_pBwrapCmdLine;
+    char *                 m_pBwrapCmdLine;
 
     void operator=(const HttpServerConfig &rhs);
     HttpServerConfig(const HttpServerConfig &rhs);
@@ -176,9 +177,12 @@ public:
     int32_t getRequiredBits() const         {   return m_iRequiredBits;     }
     void setRequiredBits(int32_t bits)      {   m_iRequiredBits = bits;     }
 
-    void    checkDeniedSymLink(int32_t c)   {   m_iCheckDeniedSymLink = c;  }
-    int32_t checkDeniedSymLink()
+    void   checkDeniedSymLink(int8_t c)     {   m_iCheckDeniedSymLink = c;  }
+    int8_t checkDeniedSymLink() const
     {   return m_iCheckDeniedSymLink;   }
+
+    void   forceStrictOwner(int8_t c)       {   m_forceStrictOwner = c;     }
+    int8_t forceStrictOwner() const         {   return m_forceStrictOwner;  }
 
     void    setScriptForbiddenBits(int32_t bit)
     { m_iScriptForbiddenBits = bit;   }
@@ -207,10 +211,10 @@ public:
     void setAdminSock(const char *pVal)     {   m_pAdminSock = pVal;        }
     const char *getAdminSock() const        {   return m_pAdminSock;        }
 
-    DeniedDir *getDeniedDir()               {   return m_pDeniedDir;        }
+    DeniedDir *getDeniedDir() const         {   return m_pDeniedDir;        }
 
     void setGlobalVHost(HttpVHost *pVal)    {   m_pGlobalVHost = pVal;      }
-    HttpVHost *getGlobalVHost()             {   return m_pGlobalVHost;      }
+    HttpVHost *getGlobalVHost() const       {   return m_pGlobalVHost;      }
 
     int getSpdyKeepaliveTimeout();
 
@@ -223,7 +227,7 @@ public:
     void setBwrap(BwrapConfigValues c)      {   m_bwrap = c;                }
     BwrapConfigValues getBwrap() const      {   return m_bwrap;             }
 
-    void setBwrapCmdLine(const char *c)     {   m_pBwrapCmdLine = c;        }
+    void setBwrapCmdLine(const char *c)     {   m_pBwrapCmdLine = strdup(c);}
     const char *getBwrapCmdLine() const     {   return m_pBwrapCmdLine;     }
 
     void setAllowExtAppSetuid(int val)      {  m_iAllowExtAppSetuid = val;  }

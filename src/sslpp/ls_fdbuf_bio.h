@@ -33,7 +33,7 @@ extern "C" {
 
 typedef struct ls_fdbio_data {
     uint8_t     *m_rbuf;
-    uint8_t      m_spacer[2];
+    uint16_t     m_rbuf_max_block;
     uint16_t     m_rbuf_used;
     uint16_t     m_rbuf_read;
     uint16_t     m_rbuf_size;

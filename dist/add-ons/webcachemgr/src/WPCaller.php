@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2021
+ * @copyright (c) 2018-2022
  * *******************************************
  */
 
@@ -896,25 +896,29 @@ class WPCaller
         }
 
         foreach ( $fromVersions as $fromVer ) {
-
             $fromVerParts = explode('.', $fromVer);
             $installedVerParts = explode('.', $this->installedLscwpVer);
 
             $i = 0;
-            $stop = sizeof($fromVerParts);
 
-            while (true) {
+            while ( isset($fromVerParts[$i]) ) {
+                $fromVerPart = $fromVerParts[$i];
 
-                if ( $i == $stop || $fromVerParts[$i] == 'x' ) {
+                if ( $fromVerPart == 'x' ) {
                     return true;
                 }
-                elseif ( !isset($installedVerParts[$i])
-                        || $installedVerParts[$i] != $fromVerParts[$i] ) {
 
-                    break;
+                if ( !isset($installedVerParts[$i])
+                        || $installedVerParts[$i] != $fromVerPart ) {
+
+                    continue 2;
                 }
 
                 $i++;
+            }
+
+            if ( !isset($installedVerParts[$i]) ) {
+                return true;
             }
         }
 
@@ -1045,10 +1049,12 @@ class WPCaller
             $status = $this->performDisable(true);
 
             Logger::uiError(
-                'Detected another active cache plugin. Please deactivate the '
-                    . 'detected plugin and try again. You may also try '
-                    . 'manually installing through the WordPress Dashboard and '
-                    . 'following the instructions given.'
+                'Detected '
+                    . "{$this->currInstall->getPath()}/wp-content/advanced-cache.php "
+                    . 'as belonging to another cache plugin. Please deactivate '
+                    . 'the related cache plugin and try again. You may also '
+                    . 'try manually installing through the WordPress Dashboard '
+                    . 'and following the instructions given.'
             );
 
             $this->massIncr = 'FAIL';

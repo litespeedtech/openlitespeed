@@ -2317,7 +2317,25 @@ int HttpReq::processPath(const char *pURI, int uriLen, char *pBuf,
     }
 
     m_pRealPath = &m_sRealPathStore;
-    return ret;
+    return checkStrictOwnership(m_sRealPathStore.c_str(), m_fileStat.st_uid);
+}
+
+
+int HttpReq::checkStrictOwnership(const char *path, uid_t st_uid)
+{
+    if (!m_pVHost->isStrictOwner())
+        return 0;
+    uid_t uid = m_pVHost->getUid();
+    if (st_uid != uid
+        && st_uid != ServerProcessConfig::getInstance().getUid()
+        && st_uid != 0)
+    {
+        LS_INFO(getLogSession(),
+                "owner of file does not match owner of vhost, path [%s], access denied.",
+                path);
+        return SC_403;
+    }
+    return 0;
 }
 
 

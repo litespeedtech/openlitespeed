@@ -116,11 +116,6 @@ rm -rf $BASE_DIR/phpbuild
 rm -rf $BASE_DIR/add-ons/snmp_monitoring
 
 
-#Do not remove the modules here since the modules were created by user besides cache.so
-rm $BASE_DIR/modules/cache.so
-
-
-
 if [ $DELETE_ALL -ne 0 ]; then
 	FILES=`ls $BASE_DIR | wc -l`
 	if [ $FILES -eq 0 ]; then 

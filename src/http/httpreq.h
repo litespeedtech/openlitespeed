@@ -322,6 +322,7 @@ private:
                           int len);
     int processSuffix(const char *pURI, const char *pURIEnd, int &cacheable);
     int filesMatch(const char *pEnd);
+    int checkStrictOwnership(const char *path, uid_t st_uid);
 
     int checkSuffixHandler(const char *pURI, int len, int &cacheable);
 

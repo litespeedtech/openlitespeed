@@ -280,8 +280,8 @@ class ManageViewModel
         if ( $wpInstall->hasFatalError($wpStatus) ) {
             $countData[self::COUNT_DATA_ERROR]++;
 
-            $link = 'https://www.litespeedtech.com/support/wiki/doku.php/'
-                . 'litespeed_wiki:cpanel:whm-plugin-cache-manager-error-status';
+            $link = 'https://docs.litespeedtech.com/cp/cpanel'
+                . '/wp-cache-management/#whm-plugin-cache-manager-error-status';
 
             $stateMsg = '';
 

@@ -165,14 +165,27 @@ int ChunkInputStream::parseChunkLen(char *pLineEnd)
             case 1:
                 if (m_achChunkLenBuf[m_iBufUsed] != '\n')
                     return 1;
+                ++m_iBufUsed;
                 break;
             case 2:
                 if (m_achChunkLenBuf[m_iBufUsed] == '\r'
                     && m_achChunkLenBuf[m_iBufUsed + 1] == '\n')
+                {
+                    m_iBufUsed += 2;
                     break;
+                }
                 //fall through
             default:
                 return 1;
+            }
+            if (m_iBufUsed >= m_iBufLen)
+                m_iBufLen = 0;
+            else
+            {
+                memmove(m_achChunkLenBuf, &m_achChunkLenBuf[m_iBufUsed],
+                        m_iBufLen - m_iBufUsed);
+                m_iBufLen -= m_iBufUsed;
+                m_iBufUsed = 0;
             }
             m_iChunkLen = CHUNK_EOF;
             m_iRemain = 0;

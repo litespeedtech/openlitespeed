@@ -241,6 +241,8 @@ HttpVHost::HttpVHost(const char *pHostName)
     : m_pLogger(NULL)
     , m_pBytesLog(NULL)
     , m_iMaxKeepAliveRequests(100)
+    , m_iRewriteLogLevel(0)
+    , m_iGlobalMatchContext(1)
     , m_iFeatures(VH_ENABLE | VH_SERVER_ENABLE |
                   VH_ENABLE_SCRIPT | LS_ALWAYS_FOLLOW |
                   VH_GZIP)
@@ -251,17 +253,14 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_sAdminEmails("")
     , m_sAutoIndexURI("/_autoindex/default.php")
     , m_iMappingRef(0)
+    , m_PhpXmlNodeSSize(0)
     , m_uid(500)
     , m_gid(500)
-    , m_iRewriteLogLevel(0)
-    , m_iGlobalMatchContext(1)
-    , m_iDummy2(0)
     , m_pRewriteMaps(NULL)
     , m_pSSLCtx(NULL)
     , m_pSSITagConfig(NULL)
     , m_pRecaptcha(NULL)
     , m_lastAccessLog(NULL)
-    , m_PhpXmlNodeSSize(0)
 {
     char achBuf[10] = "/";
     m_rootContext.set(achBuf, "/nON eXIST",
@@ -2291,7 +2290,13 @@ HttpContext *HttpVHost::configAppContext(const XmlNode *pNode,
         {
             pValue = (*iter)->getValue();
             if (pValue)
+            {
+                char achEnv[65536] = {0};
+                if (ConfigCtx::getCurConfigCtx()->expandVariable(
+                        pValue, achEnv, sizeof(achEnv)) >= 0)
+                    pValue = achEnv;
                 env.add(pValue);
+            }
         }
     }
 
@@ -2831,6 +2836,8 @@ void HttpVHost::checkAndAddNewUriFormModuleList(const XmlNodeList
     for (iter0 = pModuleList->begin(); iter0 != pModuleList->end(); ++iter0)
     {
         const XmlNode *p0 = (*iter0)->getChild("urlfilterlist", 1);
+        if (!p0)
+            continue;
         const XmlNodeList *pfilterList = p0->getChildren("urlfilter");
         if (pfilterList)
         {
@@ -3124,7 +3131,8 @@ int HttpVHost::parseVHModulesParams(const XmlNode *pVhConfNode,
         {
             pNode = *iter;
             p0 = pNode->getChild("urlfilterlist", 1);
-
+            if (!p0)
+                continue;
             const XmlNodeList *pfilterList = p0->getChildren("urlfilter");
             if (pfilterList)
             {
@@ -3593,6 +3601,9 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         pVHnew->followSymLink(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                               "allowSymbolLink", 0, 2,
                               HttpServerConfig::getInstance().getFollowSymLink()));
+        pVHnew->setStrictOwner(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
+                              "forceStrictOwnership", 0, 1,
+                              HttpServerConfig::getInstance().forceStrictOwner()));
         pVHnew->enableScript(ConfigCtx::getCurConfigCtx()->getLongValue(
                                  pNode, "enableScript", 0, 1, 1));
         pVHnew->serverEnabled(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
@@ -3602,9 +3613,6 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
 
         pVHnew->setUidMode(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                            "setUIDMode", 0, 2, 0));
-
-
-
 
         pVHnew->setMaxKAReqs(ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                              "maxKeepAliveReq", 0, 32767,

@@ -2873,6 +2873,9 @@ int HttpServerImpl::configSecurity(const XmlNode *pRoot)
             currentCtx.getLongValue(pNode1, "followSymbolLink", 0, 2, 1));
         config.checkDeniedSymLink(currentCtx.getLongValue(pNode1,
                                   "checkSymbolLink", 0, 1, 0));
+        config.forceStrictOwner(currentCtx.getLongValue(pNode1,
+                                  "forceStrictOwnership", 0, 1, 0));
+
         config.setRequiredBits(
             currentCtx.getLongValue(pNode1, "requiredPermissionMask", 0, 0177777, 004,
                                     8));
@@ -4436,7 +4439,8 @@ int HttpServerImpl::configServer(int reconfig, XmlNode *pRoot)
 
     HttpServer::getInstance().initAccessLog(pRoot, 1);
     ServerProcessConfig &procConf = ServerProcessConfig::getInstance();
-    if ((HttpLog::getAccessLogFileName()))
+    if (HttpLog::getAccessLogFileName()
+        && fixSymLinkLog(HttpLog::getAccessLogFileName()))
         GPath::safeCreateFile(HttpLog::getAccessLogFileName(), 0640);
     chown(HttpLog::getAccessLogFileName(),
           procConf.getUid(), procConf.getGid());

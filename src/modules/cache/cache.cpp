@@ -61,7 +61,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.62"
+#define MODULE_VERSION_INFO         "1.63"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -3048,6 +3048,8 @@ static int checkAssignHandler(lsi_param_t *rec)
 
 static int checkVaryEnv(lsi_param_t *rec)
 {
+    if (!rec->ptr1 || rec->len1 <= 0)
+        return 0;
     MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
                       LSI_DATA_HTTP);
     if (myData == NULL)

@@ -46,7 +46,7 @@ class CData
 
         error_log("Migrate plain conf to xml from $SERVER_ROOT\n");
 
-        if ($SERVER_ROOT{-1} != '/')
+        if (substr($SERVER_ROOT, -1) != '/')
             $SERVER_ROOT .= '/';
 
         define('SERVER_ROOT', $SERVER_ROOT);
@@ -77,7 +77,7 @@ class CData
             die("Require removexml as input param with value 1 or 0.");
 
         error_log("Migrate xml to plain conf under server root $SERVER_ROOT\n");
-        if ($SERVER_ROOT{-1} != '/')
+        if (substr($SERVER_ROOT, -1) != '/')
             $SERVER_ROOT .= '/';
 
         define('SERVER_ROOT', $SERVER_ROOT);

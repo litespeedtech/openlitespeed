@@ -237,9 +237,9 @@ class DTbl
             }
             $url = $disp->Get(DInfo::FLD_CtrlUrl);
             if ($disp->Get(DInfo::FLD_TID) != null)
-                $url .= '&t=' . $disp->Get(DInfo::FLD_TID);
+                $url .= '&t=' . urlencode($disp->Get(DInfo::FLD_TID));
             if ($disp->Get(DInfo::FLD_REF) != null)
-                $url .= '&r=' . $disp->Get(DInfo::FLD_REF);
+                $url .= '&r=' . urlencode($disp->Get(DInfo::FLD_REF));
 
             if ($this->_icon != null)
                 $buf .= '<th></th>';
@@ -255,18 +255,23 @@ class DTbl
                 }
 
                 $buf .= '>' . $attr->_label;
-                if ($hasSort && $attr->_type != 'action') {
-                    $buf .= ' <a href="' . $url . '&sort=' . $this->_id . '`';
+				if ($hasSort && $attr->_type != 'action') {
+					$sort = $this->_id . '`';
                     if ($this->_sorted_tbl && ($this->_sort_key == $attr->GetKey())) {
-                        if ($this->_sort_ascend == 1)
-                            $buf .= '0' . $attr->GetKey() . '"><i class="pull-right fa fa-sort-asc"></i>';
-                        else
-                            $buf .= '1' . $attr->GetKey() . '"> <i class="pull-right fa fa-sort-desc"></i>';
+                        if ($this->_sort_ascend == 1) {
+							$sort .= '0' . $attr->GetKey();
+							$icon = 'fa-sort-asc';
+						} else {
+							$sort .= '1' . $attr->GetKey();
+							$icon = 'fa-sort-desc';
+						}
                     }
                     else {
-                        $buf .= '1' . $attr->GetKey() . '"> <i class="pull-right fa fa-sort"></i>';
+						$sort .= '1' . $attr->GetKey();
+						$icon = 'fa-sort';
                     }
-                    $buf .= '</a>';
+                    $buf .= ' <a href="' . $url . '&sort=' . urlencode($sort)
+							. '"><i class="pull-right fa ' . $icon . '"></i></a>';
                 }
                 if ($attr->_type == 'ctxseq') {
                     $attr->_hrefLink = $url . $attr->_href;
@@ -450,14 +455,35 @@ class DTbl
         if ($attr->_href) {
             //$link = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
             $link = $disp->Get(DInfo::FLD_CtrlUrl);
-            if ($disp->Get(DInfo::FLD_TID) != null)
+            if ($disp->Get(DInfo::FLD_TID) != null) {
                 $link .= '&t=' . $disp->Get(DInfo::FLD_TID);
-            if ($disp->Get(DInfo::FLD_REF) != null)
-                $link .= '&r=' . $disp->Get(DInfo::FLD_REF);
+			}
+            if ($disp->Get(DInfo::FLD_REF) != null) {
+                $link .= '&r=' . urlencode($disp->Get(DInfo::FLD_REF));
+			}
 
             $link .= $attr->_href;
             $attr->_hrefLink = str_replace('$R', urlencode($disp->Get(DInfo::FLD_REF)), $link);
         }
+
+        if ($attr->_href) {
+            //$link = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
+            $link = $disp->Get(DInfo::FLD_CtrlUrl);
+			$t = $disp->Get(DInfo::FLD_TID);
+			$r = $disp->Get(DInfo::FLD_REF);
+			if ($t) {
+				$link .= '&t=' . $t;
+			}
+			if ($r) {
+				$r = urlencode($r);
+				$link .= '&r=' . $r;
+			}
+
+            $link .= $attr->_href;
+            $attr->_hrefLink = str_replace('$R', $r, $link);
+        }
+
+
 
         $buf .= ($attr->toHtml($node));
 

@@ -421,7 +421,7 @@ class CValidation
     {
         $node->SetVal(preg_replace("/\s+/", ' ', $node->Get(CNode::FLD_VAL)));
         $val = $node->Get(CNode::FLD_VAL);
-        if (preg_match("/[,;<>&%]/", $val)) {
+        if (preg_match("/[,;<>&%=\(\)\"']/", $val)) {
             $node->SetErr('Invalid characters found in name');
             return -1;
         }
@@ -645,7 +645,7 @@ class CValidation
             return -1;
         }
 
-        $s = $path{0};
+        $s = substr($path, 0, 1);
 
         if (strpos($path, '$VH_NAME') !== false) {
             $path = str_replace('$VH_NAME', $this->_disp->Get(DInfo::FLD_ViewName), $path);
@@ -710,7 +710,7 @@ class CValidation
     protected function chkAttr_expuri($attr, $node)
     {
         $val = $node->Get(CNode::FLD_VAL);
-        if ($val{0} == '/' || strncmp($val, 'exp:', 4) == 0) {
+        if (substr($val, 0, 1) == '/' || strncmp($val, 'exp:', 4) == 0) {
             return 1;
         } else {
             $node->SetErr('URI must start with "/" or "exp:"');
@@ -721,7 +721,7 @@ class CValidation
     protected function chkAttr_url($attr, $node)
     {
         $val = $node->Get(CNode::FLD_VAL);
-        if (( $val{0} != '/' ) && ( strncmp($val, 'http://', 7) != 0 ) && ( strncmp($val, 'https://', 8) != 0 )) {
+        if (( substr($val, 0, 1) != '/' ) && ( strncmp($val, 'http://', 7) != 0 ) && ( strncmp($val, 'https://', 8) != 0 )) {
             $node->SetErr('URL must start with "/" or "http(s)://"');
             return -1;
         }

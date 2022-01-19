@@ -20,7 +20,7 @@ class RawFiles
         $parentid = $index - 1;
         $level = ($index > 0) ? $this->_list[$parentid][1] + 1 : 0;
         $fullpath = $filename;
-        if ($filename{0} != '/') {
+        if (substr($filename, 0, 1) != '/') {
             if ($parentid) {
                 $fullpath = $this->_list[$parentid][3] . '/' . $filename;
             } else {
