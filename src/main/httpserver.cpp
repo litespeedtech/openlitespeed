@@ -3684,7 +3684,8 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         HttpServerConfig::getInstance().setBwrap((HttpServerConfig::BwrapConfigValues)val);
 
         const char *cmd = ConfigCtx::getCurConfigCtx()->getTag(pRoot, "bubbleWrapCmd", 0, 0);
-        HttpServerConfig::getInstance().setBwrapCmdLine(cmd);
+        if (cmd)
+            HttpServerConfig::getInstance().setBwrapCmdLine(cmd);
         LS_INFO(ConfigCtx::getCurConfigCtx(), "bubbleWrap: %ld, cmd: '%s'", val, cmd);
 
 
