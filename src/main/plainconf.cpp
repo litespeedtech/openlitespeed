@@ -1353,6 +1353,13 @@ void plainconf::loadConfFile(const char *path)
                 fclose(fp);
                 return ;
             }
+            if (fileSize <= 0)
+            {
+                logToMem(LOG_LEVEL_ERR, "Conf file %s is blank, skip.", path);
+                fclose(fp);
+                return ;
+            }
+
             pBuf = new char[fileSize + 1];
             n = fread(pBuf, 1, fileSize, fp);
             if (n > 0)
