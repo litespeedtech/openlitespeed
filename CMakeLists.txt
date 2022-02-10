@@ -7,11 +7,12 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 14)
+set(openlitespeed_PATCH_VERSION 15)
 set(openlitespeed_VERSION
     ${openlitespeed_MAJOR_VERSION}.${openlitespeed_MINOR_VERSION}.${openlitespeed_PATCH_VERSION})
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_SKIP_BUILD_RPATH TRUE)
 
 SET(LSQUIC_SERVER_MODE 1)
 

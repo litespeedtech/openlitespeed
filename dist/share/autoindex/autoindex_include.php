@@ -14,6 +14,12 @@ class UserSettings
 
 	/**
 	 *
+	 * For JS version, if the file list has more than this limit, we will show the name filter
+	 */
+	public static $FILTER_SHOW = 6;
+
+	/**
+	 *
 	 * @return string if you return empty string or null, will not check and include any Header
 	 */
 	public static function getHeaderName()
@@ -297,6 +303,7 @@ class Directory
 
 	private $list;
 	private $path;
+	private $len;
 
 	public function __construct($path)
 	{
@@ -316,11 +323,17 @@ class Directory
 			}
 		}
 		closedir($handle);
+		$this->len = count($this->list);
 	}
 
 	public function cannotLoad()
 	{
 		return ($this->list === null);
+	}
+
+	public function getListCount()
+	{
+		return $this->len;
 	}
 
 	public function sortList($order)
@@ -592,7 +605,38 @@ class IndexWithJS extends Index
 
 	protected function getEndBodyScripts()
 	{
-		return '<script>new Tablesort(document.getElementById("table-content"));</script>';
+		if ($this->dir->getListCount() >= UserSettings::$FILTER_SHOW) {
+		return <<<EJS
+<script>
+	new Tablesort(document.getElementById("table-content"));
+	var keywordInput = document.getElementById('filter-keyword');
+	document.addEventListener('keyup', filterTable);
+
+	function filterTable(e) {
+		if (e.target.id != 'filter-keyword') return;
+
+		var cols = document.querySelectorAll('tbody td:first-child');
+		var keyword = keywordInput.value.toLowerCase();
+		for (i = 0; i < cols.length; i++) {
+			var text = cols[i].textContent.toLowerCase();
+			if (text != 'parent directory') {
+				cols[i].parentNode.style.display = text.indexOf(keyword) === -1 ? 'none' : 'table-row';
+			}
+		}
+	}
+</script>
+EJS;
+		} else {
+			return '<script>new Tablesort(document.getElementById("table-content"));</script>';
+		}
+	}
+
+	protected function printHeader()
+	{
+		parent::printHeader();
+		if ($this->dir->getListCount() >= UserSettings::$FILTER_SHOW) {
+			echo '<div id="table-filter"><input type="text" name="keyword" id="filter-keyword" placeholder="Filter Name"></div>' . "\n";
+		}
 	}
 
 	protected function printFancyTableHeader()

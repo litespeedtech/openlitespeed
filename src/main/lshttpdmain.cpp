@@ -81,7 +81,11 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  " (built: Tue Jan 11 20:12:26 UTC 2022)"
+#define BUILDTIME  "built: Tue Feb  8 17:55:20 UTC 2022"
+
+static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
+        " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";
+static const char *getVersionFull() {   return s_pVersionFull;  }
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
@@ -261,10 +265,12 @@ int LshttpdMain::SendCrashNotification(pid_t pid, int signal, int coredump,
                            "OS: %s\n"
                            "Release: %s\n"
                            "Version: %s\n"
+                           "Build: %s\n"
                            "Machine: %s\n\n"
                            "If the call stack information does not show up here, "
                            "please compress and forward the core file located in %s.\n\n",
-                           HttpServerVersion::getVersion(),
+                           getVersionFull(),
+                           BUILDTIME,
                            s_uname.sysname,
                            s_uname.release,
                            s_uname.version,
@@ -781,7 +787,7 @@ int LshttpdMain::testRunningServer()
 
 void LshttpdMain::printVersion()
 {
-    printf("%s%s%s\n\tmodule versions:\n%s\n",
+    printf("%s (BUILD %s)%s\n\tmodule versions:\n%s\n",
            HttpServerVersion::getVersion(), BUILDTIME,
 
 #ifdef LS_ENABLE_DEBUG
@@ -956,7 +962,7 @@ int LshttpdMain::init(int argc, char *argv[])
 #endif
 
 
-    LS_NOTICE("Loading %s%s ...", HttpServerVersion::getVersion(), BUILDTIME);
+    LS_NOTICE("Loading %s ...", getVersionFull());
     LS_NOTICE("Using [%s]", SSLeay_version(SSLEAY_VERSION));
 
 

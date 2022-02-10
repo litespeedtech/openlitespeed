@@ -172,4 +172,39 @@ public:
 };
 
 
+class Str2Str2
+{
+public:
+    AutoStr2 str1;
+    AutoStr2 str2;
+};
+
+
+class Str2Str2HashMap : public HashStringMap<Str2Str2 *>
+{
+public:
+    Str2Str2HashMap(int initsize = 29, GHash::hasher hf = GHash::hfString,
+                  GHash::kcmp_ne vc = GHash::cmpString)
+        : HashStringMap<Str2Str2 * >(initsize, hf, vc)
+    {};
+    ~Str2Str2HashMap() {  release_objects();   };
+    iterator insert_update(const char *pKey, int keyLen, const char *pValue, int valLen)
+    {
+        iterator iter = find(pKey);
+        if (iter != end())
+        {
+            iter.second()->str2.setStr(pValue, valLen);
+            return iter;
+        }
+        else
+        {
+            Str2Str2 *pStr = new Str2Str2();
+            pStr->str1.setStr(pKey, keyLen);
+            pStr->str2.setStr(pValue, valLen);
+            return insert(pStr->str1.c_str(), pStr);
+        }
+    }
+};
+
+
 #endif

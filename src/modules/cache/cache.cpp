@@ -61,7 +61,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.63"
+#define MODULE_VERSION_INFO         "1.64"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -1243,7 +1243,8 @@ static void applyOneModList(const lsi_session_t *session, QsInfo *pQsInfo,
         {
             if (*p_qs_remove == 1)
                 continue;
-            if (memcmp(*p_qs_idx, iter->m_str.ptr, iter->m_str.len) != 0)
+            if (*(p_qs_idx + 1) - *p_qs_idx < (int)iter->m_str.len
+                || memcmp(*p_qs_idx, iter->m_str.ptr, iter->m_str.len) != 0)
                 continue;
             if (iter->m_operator == CACHE_KEY_QS_DEL_EXACT)
             {
@@ -1838,7 +1839,6 @@ static int endCache(lsi_param_t *rec)
                  myData->orgFileLength == myData->pEntry->getHeader().m_lSize))
             {
                 //Check if file optimized, if not, do not store it
-                cancelCache(rec);
                 if (myData->orgFileLength == 0)
                     g_api->log(rec->session, LSI_LOG_DEBUG,
                            "[%s] Cache body size is zero, cancelled.\n",

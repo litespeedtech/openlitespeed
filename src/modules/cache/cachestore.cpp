@@ -252,8 +252,11 @@ int CacheStore::cleanByTrackingCb(void * pIter, void *pParam)
 
 int CacheStore::cleanByTracking(int public_max, int private_max)
 {
-    getManager()->trimExpiredByTracking(0, public_max, CacheStore::cleanByTrackingCb, this);
-    getManager()->trimExpiredByTracking(1, private_max, CacheStore::cleanByTrackingCb, this);
+    if (getManager())
+    {
+        getManager()->trimExpiredByTracking(0, public_max, CacheStore::cleanByTrackingCb, this);
+        getManager()->trimExpiredByTracking(1, private_max, CacheStore::cleanByTrackingCb, this);
+    }
     return 0;
 }
 
