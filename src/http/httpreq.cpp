@@ -2768,7 +2768,7 @@ void HttpReq::dumpHeader()
     if (pEnd < pBegin)
         pEnd = (char *)pBegin;
     *pEnd = 0;
-    LS_INFO(getLogSession(), "Content len: %lld, Request line: \n%s",
+    LS_INFO(getLogSession(), "Content len: %lld, request line: '%s'",
             (long long)m_lEntityLength, pBegin);
     if (m_iRedirects > 0)
     {

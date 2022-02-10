@@ -466,7 +466,7 @@ StringList plainconf::errorLogList;
 GPointerList plainconf::gModuleList;
 
 #ifdef ENABLE_CONF_HASH
-StrStrHashMap plainconf::m_confFileHash;
+Str2Str2HashMap plainconf::m_confFileHash;
 #endif
 
 
@@ -1321,15 +1321,16 @@ void plainconf::loadConfFile(const char *path)
         bool bInHashT = false;
         char *pBuf = NULL;
         int fileSize;
-        int n;
+        int n = 0;
 
 #ifdef ENABLE_CONF_HASH
         if (m_confFileHash.size() > 0)
         {
-            StrStrHashMap::iterator it = m_confFileHash.find(path);
+            Str2Str2HashMap::iterator it = m_confFileHash.find(path);
             if (it != NULL)
             {
                 pBuf = (char *)it.second()->str2.c_str();
+                n = it.second()->str2.len();
                 bInHashT = true;
                 logToMem(LOG_LEVEL_INFO, "File %s loaded, use memory in hashT, size %d.", path, strlen(pBuf));
             }
@@ -1353,13 +1354,20 @@ void plainconf::loadConfFile(const char *path)
                 fclose(fp);
                 return ;
             }
+            if (fileSize <= 0)
+            {
+                logToMem(LOG_LEVEL_ERR, "Conf file %s is blank, skip.", path);
+                fclose(fp);
+                return ;
+            }
+
             pBuf = new char[fileSize + 1];
             n = fread(pBuf, 1, fileSize, fp);
-            if (n > 0)
+            if (n >= 0)
                 pBuf[n] = 0;
             fclose(fp);
 #ifdef ENABLE_CONF_HASH
-            m_confFileHash.insert_update(path, pBuf);
+            m_confFileHash.insert_update(path, strlen(path), pBuf, n);
 #endif
             if (n <= 0)
             {

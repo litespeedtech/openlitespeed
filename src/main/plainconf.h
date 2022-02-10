@@ -123,7 +123,7 @@ public:
     static StringList errorLogList;
     static bool bErrorLogSetup;
 #ifdef ENABLE_CONF_HASH
-    static StrStrHashMap m_confFileHash;
+    static Str2Str2HashMap m_confFileHash;
 #endif
 
 };
