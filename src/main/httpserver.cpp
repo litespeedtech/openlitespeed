@@ -2299,8 +2299,7 @@ HttpVHost *HttpServerImpl::createAdminVhost(LocalWorker *pFcgiApp,
     ConfigCtx::getCurConfigCtx()->getAbsoluteFile(achRootPath,
             "$SERVER_ROOT/conf/");
     pVHostAdmin->setUidMode(UID_DOCROOT);
-    pVHostAdmin->updateUGid(TmpLogId::getLogId(),
-                            &achRootPath[iChrootLen]);
+    pVHostAdmin->updateUGid(TmpLogId::getLogId(), &achRootPath[iChrootLen], 0);
 
     pAdminSock = HttpServerConfig::getInstance().getAdminSock();
     if (pAdminSock != NULL)

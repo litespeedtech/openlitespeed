@@ -254,6 +254,7 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_sAutoIndexURI("/_autoindex/default.php")
     , m_iMappingRef(0)
     , m_PhpXmlNodeSSize(0)
+    , m_uidOwner(500)
     , m_uid(500)
     , m_gid(500)
     , m_pRewriteMaps(NULL)
@@ -543,18 +544,12 @@ void HttpVHost::addRewriteMap(const char *pName, const char *pLocation)
 }
 
 
-void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
+void HttpVHost::updateUGid(const char *pLogId, const char *pPath, int is_uid_set)
 {
     struct stat st;
     char achBuf[8192];
     char *p = achBuf;
     ServerProcessConfig &procConfig = ServerProcessConfig::getInstance();
-    if (getRootContext().getSetUidMode() != UID_DOCROOT)
-    {
-        setUid(procConfig.getUid());
-        setGid(procConfig.getGid());
-        return;
-    }
     if (procConfig.getChroot() != NULL)
     {
         lstrncpy(p, procConfig.getChroot()->c_str(), sizeof(achBuf));
@@ -569,22 +564,30 @@ void HttpVHost::updateUGid(const char *pLogId, const char *pPath)
     }
     else
     {
+        setOwnerUid(st.st_uid);
+        if (is_uid_set)
+            return;
         if (st.st_uid < procConfig.getUidMin())
         {
-            LS_WARN("[%s] Uid of %s is smaller than minimum requirement"
+            LS_WARN("[%s] Uid of %s is %d, smaller than minimum requirement"
                     " %d, use server uid!",
-                    pLogId, achBuf, procConfig.getUidMin());
+                    pLogId, achBuf, st.st_uid, procConfig.getUidMin());
             st.st_uid = procConfig.getUid();
         }
         if (st.st_gid < procConfig.getGidMin())
         {
             st.st_gid = procConfig.getGid();
-            LS_WARN("[%s] Gid of %s is smaller than minimum requirement"
+            LS_WARN("[%s] Gid of %s is %d, smaller than minimum requirement"
                     " %d, use server gid!",
-                    pLogId, achBuf, procConfig.getGidMin());
+                    pLogId, achBuf, st.st_gid, procConfig.getGidMin());
         }
         setUid(st.st_uid);
         setGid(st.st_gid);
+    }
+    if (!is_uid_set && getRootContext().getSetUidMode() != UID_DOCROOT)
+    {
+        setUid(procConfig.getUid());
+        setGid(procConfig.getGid());
     }
 }
 
@@ -3223,8 +3226,7 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
                      ServerProcessConfig::getInstance().getCGroupDefault())
                        == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON : 0);
 
-    if (!is_uid_set)
-        updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str());
+    updateUGid(TmpLogId::getLogId(), getDocRoot()->c_str(), is_uid_set);
 
     const XmlNode *p0;
     HttpContext *pRootContext = &getRootContext();

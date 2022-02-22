@@ -195,6 +195,7 @@ private:
     int                 m_iMappingRef;
     int                 m_PhpXmlNodeSSize;
 
+    uid_t               m_uidOwner;
     uid_t               m_uid;
     gid_t               m_gid;
 
@@ -386,10 +387,13 @@ public:
     void getUniAppName(const char *app_name, char *dst, int dst_len) const
     {    ExtAppRegistry::getUniAppUri(app_name, dst, dst_len, getUid()); }
 
-    void setUid(uid_t uid)    {   m_uid = uid;    }
+    void setOwnerUid(uid_t uid) {   m_uidOwner = uid;       }
+    uid_t getOwnerUid() const   {   return m_uidOwner;      }
+
+    void setUid(uid_t uid)      {   m_uid = uid;    }
     uid_t getUid() const        {   return m_uid;   }
 
-    void setGid(gid_t gid)    {   m_gid = gid;    }
+    void setGid(gid_t gid)      {   m_gid = gid;    }
     gid_t getGid() const        {   return m_gid;   }
 
     void incMappingRef()        {   ++m_iMappingRef;        }
@@ -418,7 +422,7 @@ public:
     void addRewriteMap(const char *pName, const char *pLocation);
     void addRewriteRule(char *pRules);
 
-    void updateUGid(const char *pLogId, const char *pPath);
+    void updateUGid(const char *pLogId, const char *pPath, int is_uid_set);
 
     const AutoStr2 *getAutoIndexURI() const
     {   return &m_sAutoIndexURI;    }
