@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2017-2021
+ * @copyright (c) 2017-2022
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.13.11.1';
+    const PANEL_API_VERSION = '1.13.13.1';
 
     /**
      * @since 1.9
@@ -986,6 +986,9 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.13.13.1',
+            '1.13.13',
+            '1.13.12',
             '1.13.11.1',
             '1.13.11',
             '1.13.10.2',

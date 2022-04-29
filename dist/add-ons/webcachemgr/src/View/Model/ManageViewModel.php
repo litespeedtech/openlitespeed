@@ -10,6 +10,7 @@
 namespace Lsc\Wp\View\Model;
 
 use \Lsc\Wp\Context\Context;
+use Lsc\Wp\Util;
 use \Lsc\Wp\WPInstallStorage;
 use \Lsc\Wp\WPInstall;
 use \Lsc\Wp\PluginVersion;
@@ -255,7 +256,9 @@ class ManageViewModel
                         $this->getStatusDisplayData($wpInstall, $countData),
                     'flagData' =>
                         $this->getFlagDisplayData($wpInstall, $countData),
-                    'siteUrl' => $wpInstall->getData(WPInstall::FLD_SITEURL)
+                    'siteUrl' => Util::tryIdnToUtf8(
+                        $wpInstall->getData(WPInstall::FLD_SITEURL)
+                    )
                 );
 
                 $listData[$wpInstall->getPath()] = $info;

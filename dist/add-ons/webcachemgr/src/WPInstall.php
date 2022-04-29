@@ -192,7 +192,7 @@ class WPInstall
             $this->path,
             $this->data[self::FLD_STATUS],
             $this->data[self::FLD_DOCROOT],
-            $this->data[self::FLD_SITEURL]
+            Util::tryIdnToUtf8($this->data[self::FLD_SITEURL])
         );
     }
 
@@ -231,7 +231,10 @@ class WPInstall
      */
     public function setServerName( $serverName )
     {
-        return $this->setData(self::FLD_SERVERNAME, $serverName);
+        return $this->setData(
+            self::FLD_SERVERNAME,
+            Util::tryIdnToAscii($serverName)
+        );
     }
 
     /**
@@ -243,7 +246,10 @@ class WPInstall
      */
     public function setSiteUrlDirect( $siteUrl )
     {
-        return $this->setData(self::FLD_SITEURL, $siteUrl);
+        return $this->setData(
+            self::FLD_SITEURL,
+            Util::tryIdnToAscii($siteUrl)
+        );
     }
 
     /**
@@ -464,10 +470,11 @@ class WPInstall
 
         $info = parse_url($parseSafeUrl);
 
-        $serverName = strtolower($info['host']);
+        $serverName = Util::tryIdnToAscii($info['host']);
+
         $this->setData(self::FLD_SERVERNAME, $serverName);
 
-        $siteUrlTrim = $info['host'];
+        $siteUrlTrim = $serverName;
 
         if ( isset($info['path']) ) {
             $siteUrlTrim .= $info['path'];
@@ -482,8 +489,8 @@ class WPInstall
             $this->setStatus(self::ST_ERR_DOCROOT);
             $this->addUserFlagFile(false);
 
-            $msg = "{$this->path} - Could not find matching document root for "
-                . "WP siteurl/servername {$serverName}.";
+            $msg = "$this->path - Could not find matching document root for "
+                . "WP siteurl/servername $serverName.";
 
             $this->setCmdStatusAndMsg(UserCommand::EXIT_ERROR, $msg);
             Logger::error($msg);

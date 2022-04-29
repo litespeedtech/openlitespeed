@@ -43,6 +43,11 @@ ServerInfo::ServerInfo(char *pBegin, char *pEnd)
 
 ServerInfo::~ServerInfo()
 {
+    if (m_pChroot)
+    {
+        free(m_pChroot);
+        m_pChroot = NULL;
+    }
 }
 
 void ServerInfo::addUnixSocket(const char *pSock, struct stat *pStat)

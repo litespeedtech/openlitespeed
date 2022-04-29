@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2022
  * *******************************************
  */
 
@@ -416,16 +416,18 @@ class PluginVersion
         if ( $isforced || !file_exists($this->versionFile)
                 || (time() - filemtime($this->versionFile)) > 86400 ) {
 
+            if ( !file_exists(Context::LOCAL_PLUGIN_DIR) ) {
+                $this->createDownloadDir();
+            }
+
             $content = Util::get_url_contents($versionsUrl);
 
-            if ( !empty($content) ) {
-
-                if ( !file_exists(Context::LOCAL_PLUGIN_DIR) ) {
-                    $this->createDownloadDir();
-                }
-
+            if ( !empty($content) && substr($content, 0, 7) == 'allowed' ) {
                 file_put_contents($this->versionFile, $content);
                 Logger::info('LSCache for WordPress version list updated');
+            }
+            else {
+                touch($this->versionFile);
             }
         }
     }

@@ -466,4 +466,70 @@ class Util
         return false;
     }
 
+    /**
+     * Wrapper for idn_to_utf8() function call to avoid "undefined" exceptions
+     * when PHP intl module is not installed and enabled.
+     *
+     * @since 1.13.13.1
+     *
+     * @param string $domain
+     * @param int    $flags
+     * @param int|null    $variant
+     * @param array|null $idna_info
+     *
+     * @return false|string
+     */
+    public static function tryIdnToUtf8(
+              $domain,
+              $flags = 0,
+              $variant = null,
+        array &$idna_info = null )
+    {
+        if ( function_exists('idn_to_utf8') ) {
+
+            if ( $variant == null ) {
+                $variant = INTL_IDNA_VARIANT_UTS46;
+            }
+
+            return idn_to_utf8($domain, $flags, $variant, $idna_info);
+        }
+
+        return $domain;
+    }
+
+    /**
+     * Wrapper for idn_to_ascii() function call to avoid "undefined" exceptions
+     * when PHP intl module is not installed and enabled.
+     *
+     * @since 1.13.13.1
+     *
+     * @param string     $domain
+     * @param int|null   $flags
+     * @param int|null   $variant
+     * @param array|null $idna_info
+     *
+     * @return false|string
+     */
+   public static function tryIdnToAscii(
+             $domain,
+             $flags = null,
+             $variant = null,
+       array &$idna_info = null )
+   {
+       if ( function_exists('idn_to_ascii') ) {
+
+           if ($flags = null ) {
+               $flags = IDNA_DEFAULT;
+           }
+
+           if ( $variant == null ) {
+               $variant = INTL_IDNA_VARIANT_UTS46;
+           }
+
+           return idn_to_ascii($domain, $flags, $variant, $idna_info);
+       }
+
+       return $domain;
+   }
+
 }

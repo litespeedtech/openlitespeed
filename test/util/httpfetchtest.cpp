@@ -21,10 +21,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <adns/adns.h>
 #include "socket/gsockaddr.h"
 #include "unittest-cpp/UnitTest++.h"
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <edio/evtcbque.h>
 #include <lsr/ls_base64.h>
 #include <sslpp/sslutil.h>
 #include <util/vmembuf.h>
@@ -48,6 +50,9 @@ TEST(httpfetchTest_Test)
     int bodyLen = 0;
     const char *pSaveFile = "./lswslogo3.png";
 
+
+    Adns::getInstance().init();
+    EvtcbQue::getInstance().initNotifier();
 
     pHttpFetch->setProxyServerAddr("127.0.0.1:8000");
     int ret = pHttpFetch->startReq("http://www.litespeedtech.com/templates/litespeed/images/lswslogo3.png",

@@ -32,7 +32,7 @@ TEST(StatusUrlMapTest_test)
         CHECK(map1.getUrl(i) == NULL);
     for (i = 300; i <= 308; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url3xx") == 0);
-    for (i = 400; i <= 431; ++i)
+    for (i = 400; i <= 451; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url4xx") == 0);
     for (i = 500; i <= 513; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url5xx") == 0);

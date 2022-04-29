@@ -228,8 +228,7 @@ int VMemBuf::shrinkBuf(off_t size)
         m_iCurTotalSize -= pBuf->getBlockSize();
         recycle(pBuf);
     }
-    if (!m_bufList.empty())
-        m_pCurWBlock = m_pCurRBlock = m_bufList.begin();
+    rewindToBeginning();
     return 0;
 }
 
@@ -317,22 +316,27 @@ int VMemBuf::reinit(off_t TargetSize)
         ls_atomic_spin_unlock(&s_LockAnonPool);
     }
     // All locks are off now.
+    rewindToBeginning();
+    return 0;
+}
+
+
+void VMemBuf::rewindToBeginning()
+{
     if (!m_bufList.empty())
     {
-
+        validateCurWPos();
         m_pCurWBlock = m_pCurRBlock = m_bufList.begin();
         if (*m_pCurWBlock)
         {
             m_curWBlkPos = m_curRBlkPos = (*m_pCurWBlock)->getBlockSize();
             m_pCurRPos = m_pCurWPos = (*m_pCurWBlock)->getBuf();
-        }
-        else
-        {
-            m_curWBlkPos = m_curRBlkPos = 0;
-            m_pCurRPos = m_pCurWPos = NULL;
+            validateCurWPos();
+            return;
         }
     }
-    return 0;
+    m_curWBlkPos = m_curRBlkPos = 0;
+    m_pCurRPos = m_pCurWPos = NULL;
 }
 
 
@@ -449,9 +453,8 @@ int VMemBuf::set(int type, int size)
     if (pBlock)
     {
         appendBlock(pBlock);
-        m_pCurRPos = m_pCurWPos = pBlock->getBuf();
-        m_iCurTotalSize = m_curRBlkPos = m_curWBlkPos = pBlock->getBlockSize();
-        m_pCurRBlock = m_pCurWBlock = m_bufList.begin();
+        rewindToBeginning();
+        m_iCurTotalSize = m_curRBlkPos;
     }
     return 0;
 }
@@ -532,9 +535,8 @@ int VMemBuf::set(int type, BlockBuf *pBlock)
     assert(pBlock);
     m_iType = type;
     appendBlock(pBlock);
-    m_pCurRBlock = m_pCurWBlock = m_bufList.begin();
-    m_pCurRPos = m_pCurWPos = pBlock->getBuf();
-    m_iCurTotalSize = m_curRBlkPos = m_curWBlkPos = pBlock->getBlockSize();
+    rewindToBeginning();
+    m_iCurTotalSize = m_curRBlkPos;
     return 0;
 }
 
@@ -596,6 +598,7 @@ void VMemBuf::rewindReadWriteBuf()
 #endif
     ls_atomic_spin_lock(&m_lock);
     m_pCurRBlock = m_bufList.begin();
+    validateCurWPos();
     if (m_pCurRBlock)
     {
         m_curRBlkPos = (*m_pCurRBlock)->getBlockSize();
@@ -613,6 +616,7 @@ void VMemBuf::rewindReadWriteBuf()
         m_curRBlkPos = m_curWBlkPos;
         m_pCurRPos = m_pCurWPos;
     }
+    validateCurWPos();
     ls_atomic_spin_unlock(&m_lock);
 }
 
@@ -620,6 +624,7 @@ void VMemBuf::rewindReadWriteBuf()
 void VMemBuf::rewindWriteBuf()
 {
     ls_atomic_spin_lock(&m_lock);
+    validateCurWPos();
     if (m_pCurRBlock)
     {
         if (m_pCurWBlock != m_pCurRBlock)
@@ -635,6 +640,7 @@ void VMemBuf::rewindWriteBuf()
         m_curRBlkPos = m_curWBlkPos;
         m_pCurRPos = m_pCurWPos;
     }
+    validateCurWPos();
     ls_atomic_spin_unlock(&m_lock);
 
 }
@@ -733,12 +739,7 @@ int VMemBuf::mapNextWBlock()
         }
 #endif
         ls_atomic_spin_lock(&m_lock);
-        m_pCurWBlock = m_pCurRBlock = m_bufList.begin();
-        m_curWBlkPos = 0;
-        m_curRBlkPos = (*m_pCurWBlock)->getBlockSize();
-        m_pCurRPos = (*m_pCurWBlock)->getBuf();
-        m_curWBlkPos += (*m_pCurWBlock)->getBlockSize();
-        m_pCurWPos = (*m_pCurWBlock)->getBuf();
+        rewindToBeginning();
         ls_atomic_spin_unlock(&m_lock);
     }
     return 0;
@@ -765,7 +766,7 @@ int VMemBuf::grow()
         }
         break;
     case VMBUF_FILE_MAP:
-        if (ftruncate(m_iFd, m_iCurTotalSize + s_iBlockSize) == -1)
+        if (posix_fallocate(m_iFd, m_iCurTotalSize, s_iBlockSize) == -1)
         {
             perror("Failed to increase temp file size with ftrancate()");
             return LS_FAIL;
@@ -824,8 +825,17 @@ char *VMemBuf::getReadBuffer(size_t &size)
 }
 
 
+void VMemBuf::validateCurWPos() const
+{
+    assert(!m_pCurWBlock || !(*m_pCurWBlock)
+            || (m_pCurWPos >= (*m_pCurWBlock)->getBuf()
+                && m_pCurWPos <= (*m_pCurWBlock)->getBufEnd()));
+}
+
+
 char *VMemBuf::getWriteBuffer(size_t &size)
 {
+    validateCurWPos();
     if ((!m_pCurWBlock) || (m_pCurWPos >= (*m_pCurWBlock)->getBufEnd()))
     {
         if (mapNextWBlock() != 0)
@@ -833,6 +843,7 @@ char *VMemBuf::getWriteBuffer(size_t &size)
             return NULL;
         }
     }
+    validateCurWPos();
     size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
     return m_pCurWPos;
 }
@@ -1101,7 +1112,7 @@ int VMemBuf::copyToFile(off_t  startOff, off_t  len,
     //destSize -= destSize % s_iBlockSize;
     if (st.st_size < destSize)
     {
-        if (ftruncate(fd, destSize) == -1)
+        if (posix_fallocate(fd, st.st_size, destSize) == -1)
             return LS_FAIL;
     }
     BlockBuf destBlock;

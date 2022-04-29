@@ -47,6 +47,7 @@ private:
     void operator=(const HttpResp &rhs);
 
 
+    void rewindRespBodyBuf2();
     void addWWWAuthHeader(const HttpReq *pReq);
 public:
     explicit HttpResp(ls_xpool_t *pool);
@@ -79,6 +80,7 @@ public:
     VMemBuf *getRespBodyBuf() const        {   return m_pRespBodyBuf;  }
     void setRespBodyBuf(VMemBuf *pBuf)    {   m_pRespBodyBuf = pBuf;  }
     void resetRespBody();
+    void rewindRespBodyBuf();
 
     GzipBuf *getGzipBuf() const            {   return m_pGzipBuf;      }
     void setGzipBuf(GzipBuf *pGzip)      {   m_pGzipBuf = pGzip;     }

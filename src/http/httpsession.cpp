@@ -3376,7 +3376,8 @@ int HttpSession::detectKeepAliveTimeout(int delta)
     if (c)
     {
         HttpStats::decIdleConns();
-        getStream()->close();
+        setState(HSS_DROP);
+        getStream()->tobeClosed();
     }
     return c;
 }
@@ -3523,13 +3524,7 @@ void HttpSession::rewindRespBodyBuf()
         LS_DBG_M(getLogger(),
                  "[%s] Rewind RespBodyBuf, current size: %lld \n",
                  getLogId(), (long long)wPos);
-        if (getGzipBuf())
-            getGzipBuf()->resetCompressCache();
-        else
-        {
-            getRespBodyBuf()->rewindReadBuf();
-            getRespBodyBuf()->rewindWriteBuf();
-        }
+        m_response.rewindRespBodyBuf();
     }
 }
 
@@ -3625,6 +3620,7 @@ int HttpSession::setupRespBodyBuf()
                      (long long)m_response.getContentLen());
             return LS_FAIL;
         }
+        getRespBodyBuf()->validateCurWPos();
         m_lDynBodySent = 0;
     }
     return 0;
@@ -3689,7 +3685,11 @@ int HttpSession::setupGzipFilter()
         if (!hkptNogzip)
         {
             if (!getRespBodyBuf()->empty())
+            {
+                getRespBodyBuf()->validateCurWPos();
                 getRespBodyBuf()->rewindWriteBuf();
+                getRespBodyBuf()->validateCurWPos();
+            }
             if (m_response.getContentLen() > 200 ||
                 m_response.getContentLen() < 0)
             {
@@ -3939,16 +3939,7 @@ int HttpSession::shouldSuspendReadingResp()
 
 void HttpSession::resetRespBodyBuf()
 {
-
-    {
-        if (getGzipBuf())
-            getGzipBuf()->resetCompressCache();
-        else
-        {
-            getRespBodyBuf()->rewindReadBuf();
-            getRespBodyBuf()->rewindWriteBuf();
-        }
-    }
+    m_response.rewindRespBodyBuf();
 }
 
 

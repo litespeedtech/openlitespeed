@@ -839,15 +839,15 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd,
             m_flag |= RULE_FLAG_NOESCAPE;
             pRuleStr += 8;
         }
-        else if (strncasecmp(pRuleStr, "ne", 2) == 0)
-        {
-            m_flag |= RULE_FLAG_NOESCAPE;
-            pRuleStr += 2;
-        }
         else if (strncasecmp(pRuleStr, "next", 4) == 0)
         {
             m_flag |= RULE_FLAG_NEXT;
             pRuleStr += 4;
+        }
+        else if (strncasecmp(pRuleStr, "ne", 2) == 0)
+        {
+            m_flag |= RULE_FLAG_NOESCAPE;
+            pRuleStr += 2;
         }
         else    // 'N'
         {

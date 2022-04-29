@@ -250,6 +250,8 @@ static int bio_fd_read(BIO *b, char *out, int outl)
         if (ret < 0) 
         {
             err = errno;
+            DEBUG_MESSAGE("[BIO] bio_fd_read: Read error: (%d) %s \n",
+                            err, strerror(err));
             if (total)
             {
                 DEBUG_MESSAGE("[BIO] bio_fd_read: error but I have data\n");

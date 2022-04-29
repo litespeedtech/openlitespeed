@@ -156,8 +156,11 @@ int GzipBuf::endStream()
 
 int GzipBuf::resetCompressCache()
 {
+    m_pCompressCache->validateCurWPos();
     m_pCompressCache->rewindReadBuf();
+    m_pCompressCache->validateCurWPos();
     m_pCompressCache->rewindWriteBuf();
+    m_pCompressCache->validateCurWPos();
     size_t size;
     m_zstr.next_out = (unsigned char *)
                       m_pCompressCache->getWriteBuffer(size);
