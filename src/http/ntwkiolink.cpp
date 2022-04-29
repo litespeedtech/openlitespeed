@@ -1031,7 +1031,7 @@ int NtwkIOLink::onTimer()
         }
 
         if (detectClose())
-            return 0;
+            return 1;
         m_iInProcess = 1;
         (*m_pFpList->m_onTimer_fp)(this);
         m_iInProcess = 0;
@@ -1320,6 +1320,7 @@ int NtwkIOLink::detectClose()
     {
         LS_DBG_M(this, "Shutdown time out!");
         closeSocket();
+        return 1;
     }
     else if (getState() == HIOS_CONNECTED)
     {

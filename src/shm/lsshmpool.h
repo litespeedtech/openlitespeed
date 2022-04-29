@@ -233,7 +233,7 @@ private:
     LsShmOffset_t getFromFreeList(LsShmSize_t pagesize);
     void reduceFreeFromBot(LShmFreeTop *ap,
                            LsShmOffset_t offset, LsShmSize_t newsize);
-    void disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp);
+    void disconnectFromFree(LShmFreeTop *ap, LsShmOffset_t offset);
 
     void incrCheck(LsShmXSize_t *ptr, LsShmSize_t size);
 

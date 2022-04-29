@@ -9,7 +9,7 @@
 
 namespace Lsc\Wp\Panel;
 
-use \Lsc\Wp\WPInstall;
+use Lsc\Wp\WPInstall;
 
 class CustomPanel
 extends CustomPanelBase

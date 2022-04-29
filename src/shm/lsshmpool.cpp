@@ -1126,8 +1126,7 @@ void LsShmPool::reduceFreeFromBot(
     {
         // remove myself from freelist
         markTopUsed(ap);
-        disconnectFromFree(ap,
-            (LShmFreeBot *)offset2ptr(ap->x_iFreeSize - sizeof(LShmFreeBot)));
+        disconnectFromFree(ap, offset);
         return;
     }
 
@@ -1143,7 +1142,7 @@ void LsShmPool::reduceFreeFromBot(
 }
 
 
-void LsShmPool::disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp)
+void LsShmPool::disconnectFromFree(LShmFreeTop *ap, LsShmOffset_t offset)
 {
     LsShmOffset_t myNext, myPrev;
     myNext = ap->x_iFreeNext;
@@ -1156,7 +1155,12 @@ void LsShmPool::disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp)
         xp = (LShmFreeTop *)offset2ptr(myPrev);
         if (xp->x_iFreeNext == myNext)
         {
-            assert(!"Looping link corruption detected in SHM free pages");
+            LS_ERROR("[SHM] [%d-%d:%p] Looping link corruption detected in SHM"
+                     " free pages, both current and next are 0x%x, head is 0x%x",
+                     s_pid, m_pShm->getfd(), this, myNext,
+                     pDataMap->x_iFreePageList);
+            if (pDataMap->x_iFreePageList == offset)
+                pDataMap->x_iFreePageList = 0;
             myNext = 0;
         }
         xp->x_iFreeNext = myNext;
@@ -1165,7 +1169,9 @@ void LsShmPool::disconnectFromFree(LShmFreeTop *ap, LShmFreeBot *bp)
     {
         if (pDataMap->x_iFreePageList == myNext)
         {
-            assert(!"Looping link corruption detected in head of SHM free pages");
+            LS_ERROR("[SHM] [%d-%d:%p] Looping link corruption detected in "
+                    "head of SHM free pages, both link head and next are 0x%x",
+                     s_pid, m_pShm->getfd(), this, myNext);
             myNext = 0;
         }
         pDataMap->x_iFreePageList = myNext;
@@ -1246,7 +1252,7 @@ bool LsShmPool::isFreeBlockBelow(
                 markTopUsed(ap);
                 if (joinFlag == 2)
                 {
-                    disconnectFromFree(ap, bp);
+                    disconnectFromFree(ap, belowOffset);
                     // merge to top
                     LShmFreeTop *xp = (LShmFreeTop *)offset2ptr(offset);
                     xp->x_iFreeSize += ap->x_iFreeSize;

@@ -76,6 +76,7 @@ private:
     void recycle(BlockBuf *pBuf);
 
     int  remapBlock(BlockBuf *pBlock, off_t pos);
+    void rewindToBeginning();
 
 public:
     void deallocate();
@@ -107,7 +108,9 @@ public:
     void writeUsed(off_t  len)
     {
         ls_atomic_spin_lock(&m_lock);
+        validateCurWPos();
         m_pCurWPos += len;
+        validateCurWPos();
         ls_atomic_spin_unlock(&m_lock);
     }
     char *getCurRPos() const       {   return m_pCurRPos;      }
@@ -148,6 +151,7 @@ public:
     void initBlank(int type);
     int copyToBuf(char *buf, int offset, int len);
     int writeToFile(int fd);
+    void validateCurWPos() const;
 };
 
 class MMapVMemBuf : public VMemBuf

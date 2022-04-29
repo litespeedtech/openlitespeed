@@ -60,12 +60,30 @@ void HttpResp::reset(int delCookies)
 
 void HttpResp::resetRespBody()
 {
+    rewindRespBodyBuf();
     if (m_pGzipBuf)
         m_pGzipBuf->reinit();
+}
+
+
+void HttpResp::rewindRespBodyBuf()
+{
+    if (m_pGzipBuf)
+        m_pGzipBuf->resetCompressCache();
+    else
+        rewindRespBodyBuf2();
+}
+
+
+void HttpResp::rewindRespBodyBuf2()
+{
     if (m_pRespBodyBuf)
     {
+        m_pRespBodyBuf->validateCurWPos();
         m_pRespBodyBuf->rewindReadBuf();
+        m_pRespBodyBuf->validateCurWPos();
         m_pRespBodyBuf->rewindWriteBuf();
+        m_pRespBodyBuf->validateCurWPos();
     }
 }
 

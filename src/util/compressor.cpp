@@ -42,14 +42,6 @@ Compressor::~Compressor()
 }
 
 
-int Compressor::resetCompressCache()
-{
-    m_pCompressCache->rewindReadBuf();
-    m_pCompressCache->rewindWriteBuf();
-    return 0;
-}
-
-
 int Compressor::processFile(int type, const char *pFileName,
                          const char *pCompressFileName)
 {

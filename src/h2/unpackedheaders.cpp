@@ -1407,6 +1407,8 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
             else if (hdr->name_len == 6 && memcmp(name, "cookie", 6) == 0)
                 idx = HttpHeader::H_COOKIE;
+            else if (hdr->name_len == 17 && memcmp(name, "transfer-encoding", 17) == 0)
+                idx = HttpHeader::H_TRANSFER_ENCODING;
             else if (hdr->name_len == 0)
             {
                 //NOTE: skip blank header
@@ -1450,6 +1452,11 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
             tmp_used += hdr->val_len;
             ++cookie_count;
             return LSXPACK_OK;
+        }
+        else if (idx == HttpHeader::H_TRANSFER_ENCODING)
+        {
+            if (hdr->val_len == 7 && strncasecmp(val, "chunked", 7) == 0)
+                return LSXPACK_ERR_BAD_REQ_HEADER;
         }
         else if (hdr->name_len == 2 && memcmp(name, "te", 2) == 0)
         {

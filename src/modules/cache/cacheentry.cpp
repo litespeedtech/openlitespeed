@@ -159,7 +159,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
     if (pKey->m_iQsLen > 0)
     {
         if ((*p  != '?') ||
-            (memcmp(p + 1, pKey->m_pQs, pKey->m_iQsLen) != 0))
+            (strncmp(p + 1, pKey->m_pQs, pKey->m_iQsLen) != 0))
             return -2;
         p += pKey->m_iQsLen + 1;
     }
@@ -167,7 +167,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
     if (pKey->m_iCookieVary > 0)
     {
         if ((*p  != '#') ||
-            (memcmp(p + 1, pKey->m_sCookie.c_str(), pKey->m_iCookieVary) != 0))
+            (strncmp(p + 1, pKey->m_sCookie.c_str(), pKey->m_iCookieVary) != 0))
             return -3;
         p += pKey->m_iCookieVary + 1;
 
@@ -188,7 +188,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
             if (!isPublic)
             {
                 if ((*p  != '~') ||
-                    (memcmp(p + 1, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
+                    (strncmp(p + 1, pKey->m_sCookie.c_str() + pKey->m_iCookieVary,
                             pKey->m_iCookiePrivate) != 0))
                     return -4;
             }
@@ -198,7 +198,7 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
         if (!isPublic)
         {
             if ((*p  != '@') ||
-                (memcmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
+                (strncmp(p + 1, pKey->m_pIP, pKey->m_ipLen) != 0))
                 return -5;
             p += pKey->m_ipLen + 1;
         }

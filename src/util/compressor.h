@@ -59,7 +59,7 @@ public:
     virtual int reset() = 0;
     virtual const char *getLastError() const = 0;
 
-    virtual int resetCompressCache();
+    virtual int resetCompressCache() = 0;
     virtual int write(const char *pBuf, int len) = 0;
     virtual int processFile(int type, const char *pFileName,
                     const char *pCompressFileName);

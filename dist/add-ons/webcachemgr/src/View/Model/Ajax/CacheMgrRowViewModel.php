@@ -11,6 +11,7 @@ namespace Lsc\Wp\View\Model\Ajax;
 use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\PluginVersion;
+use Lsc\Wp\Util;
 use \Lsc\Wp\WPInstall;
 
 class CacheMgrRowViewModel
@@ -79,7 +80,9 @@ class CacheMgrRowViewModel
             'statusData' =>
             $this->getStatusDisplayData(),
             'flagData' => $this->getFlagDisplayData(),
-            'siteUrl' => $this->wpInstall->getData(WPInstall::FLD_SITEURL)
+            'siteUrl' => Util::tryIdnToUtf8(
+                $this->wpInstall->getData(WPInstall::FLD_SITEURL)
+            )
         );
 
         $listData[$this->wpInstall->getPath()] = $info;
