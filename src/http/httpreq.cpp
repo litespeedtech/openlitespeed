@@ -2331,7 +2331,7 @@ int HttpReq::checkStrictOwnership(const char *path, uid_t st_uid)
                    m_pVHost->getDocRoot()->len()) == 0)
     {
         uid_t uid = m_pVHost->getOwnerUid();
-        if (st_uid != uid
+        if (st_uid != uid && st_uid != m_pVHost->getUid()
             && st_uid != ServerProcessConfig::getInstance().getUid()
             && st_uid != 0)
         {
