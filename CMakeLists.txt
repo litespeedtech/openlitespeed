@@ -7,7 +7,7 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 15)
+set(openlitespeed_PATCH_VERSION 16)
 set(openlitespeed_VERSION
     ${openlitespeed_MAJOR_VERSION}.${openlitespeed_MINOR_VERSION}.${openlitespeed_PATCH_VERSION})
 

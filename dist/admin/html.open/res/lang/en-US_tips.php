@@ -664,7 +664,7 @@ $_tipsdb['swappingDir'] = new DAttrHelp("Swapping Directory", 'Specifies the dir
 
 $_tipsdb['templateFile'] = new DAttrHelp("Template File", 'Specifies the path to the configuration file of this template. The file must be located within $SERVER_ROOT/conf/templates/ with a &quot;.conf&quot; filename. If the file you designate does not exist, after trying to save the template an error will appear with the link &quot;CLICK TO CREATE&quot;. This link will generate a new empty template file. When you delete the template, the entry will be removed from your configurations, but the actual template config file will not be deleted.', '', 'path', '');
 
-$_tipsdb['templateFileRef'] = new DAttrHelp("File Name Used In Template", 'Specifies a path for the file to be used for member virtual hosts.   Variable $VH_NAME or $VH_ROOT must appear in the path so  each member virtual host will have its own file.', '', 'string', '');
+$_tipsdb['templateFileRef'] = new DAttrHelp("Config File", 'Specifies the unique path for each member virtual host&#039;s configuration file. Variable $VH_NAME or $VH_ROOT must appear in the path so each member virtual host will have its own configuration file.', '', 'path with $VH_NAME or $VH_ROOT variable', '');
 
 $_tipsdb['templateName'] = new DAttrHelp("Template Name", 'A unique name for the template.', '', '', '');
 
