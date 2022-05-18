@@ -1,7 +1,7 @@
 #!/bin/sh
 ##############################################################################
 #    Open LiteSpeed is an open source HTTP server.                           #
-#    Copyright (C) 2013 - 2019 LiteSpeed Technologies, Inc.                  #
+#    Copyright (C) 2013 - 2022 LiteSpeed Technologies, Inc.                  #
 #                                                                            #
 #    This program is free software: you can redistribute it and/or modify    #
 #    it under the terms of the GNU General Public License as published by    #
@@ -22,14 +22,14 @@
 VERSION=1.0.1
 moduledir="modreqparser modinspector uploadprogress "
 OS=`uname`
-MACHINE=`uname -m`
+ARCH=`arch`
 ISLINUX=no
 VERSIONNUMBER=
 
 if [ "${OS}" = "FreeBSD" ] ; then
     APP_MGRS="pkg"
 elif [ "${OS}" = "Linux" ] ; then
-    APP_MGRS="apt apt-get yum zypper apk"
+    APP_MGRS="apt apt-get dnf yum zypper apk"
 elif [ "${OS}" = "Darwin" ] ; then
     APP_MGRS="port brew"
 else
@@ -83,7 +83,7 @@ installCmake()
     if [ "${APP_MGR_CMD}" = "apk" ] ; then
         ${APP_MGR_CMD} add --update git cmake
     else
-        ${APP_MGR_CMD} -y install git cmake
+        ${APP_MGR_CMD} install -y git cmake
     fi
     
     CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
@@ -104,12 +104,14 @@ installCmake()
     cd cmake-${version}.${build}/
     
     ./bootstrap
-    make -j4
+    jobs=$(nproc)
+    make -j${jobs}
     make install
     cmake --version
     cd ${CURDIR}
 }
 
+# lsrecaptcha requirement
 installgo()
 {
     if [ "${APP_MGR_CMD}" = "apk" ] ; then
@@ -153,27 +155,21 @@ preparelibquic()
 
 prepareLinux()
 {
-    OSTYPE=unknowlinux
+    OSTYPE=unknownlinux
     if [ -f /etc/redhat-release ] ; then
         OSTYPE=CENTOS
-        yum -y update
-        yum -y install epel-release 
-        cat /etc/redhat-release | grep " 6." >/dev/null
-        if [ $? = 0 ] ; then
-            OSTYPE=CENTOS6
-        else
-            cat /etc/redhat-release | grep " 7." >/dev/null
-            if [ $? = 0 ] ; then
-                OSTYPE=CENTOS7
-             else
-                cat /etc/redhat-release | grep " 8." >/dev/null
-                if [ $? = 0 ] ; then
-                    OSTYPE=CENTOS8
-                fi
-            fi
+        yum update -y
+        yum install -y epel-release 
+        output=$(cat /etc/redhat-release)
+        if echo $output | grep " 7."; then
+            OSTYPE=CENTOS7
+        elif echo $output | grep " 8."; then
+            OSTYPE=CENTOS8
+        elif echo $output | grep " 9."; then
+            OSTYPE=CENTOS9
         fi
         
-        if [ "${OSTYPE}" = "CENTOS7" ] || [ "${OSTYPE}" = "CENTOS6" ] ; then
+        if [ "${OSTYPE}" = "CENTOS7" ] ; then
             if [ ! -f ./installing ] ; then    
                 yum -y install centos-release-scl
                 which yum-config-manager
@@ -188,20 +184,11 @@ prepareLinux()
                 exit 0
             fi
             
-            if [ "${OSTYPE}" = "CENTOS6" ] ; then
-                curl -L -O http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz
-                tar zxf autoconf-2.69.tar.gz
-                cd autoconf-2.69
-                ./configure
-                make && make install
-                cd ..  
-            fi
-            
-        elif [ "${OSTYPE}" = "CENTOS8" ] ; then
-            yum -y groupinstall "Development Tools"
+        elif [ "${OSTYPE}" = "CENTOS8" ] || [ "${OSTYPE}" = "CENTOS9" ] ; then
+            dnf -y groupinstall "Development Tools"
 
         else
-            echo This script only works on 6/7/8 for centos family._Static_assert
+            echo This script only works on 7/8/9 for centos family._Static_assert
             exit 1
         fi
         
@@ -209,57 +196,35 @@ prepareLinux()
         installCmake
         
         yum -y install libtool autoconf autoheader automake wget go clang patch expat-devel
-        if [ "${MACHINE}" = "aarch64" ]; then
+        if [ "${ARCH}" = "aarch64" ]; then
             yum -y install libatomic
         fi
         
     #now for debian and Ubuntu    
-    elif [ -f /etc/debian_version ] ; then     
+    elif [ -f /etc/debian_version ] ; then
         if [ -f /etc/lsb-release ] ; then
-            cat /etc/lsb-release | grep "DISTRIB_RELEASE=14." >/dev/null
-            if [ $? = 0 ] ; then
-                OSTYPE=UBUNTU14
-            else
-                cat /etc/lsb-release | grep "DISTRIB_RELEASE=16." >/dev/null
-                if [ $? = 0 ] ; then
-                    OSTYPE=UBUNTU16
-                else
-                    cat /etc/lsb-release | grep "DISTRIB_RELEASE=18." >/dev/null
-                    if [ $? = 0 ] ; then
-                        OSTYPE=UBUNTU18
-                    else
-                        cat /etc/lsb-release | grep "DISTRIB_RELEASE=20." >/dev/null
-                        if [ $? = 0 ] ; then
-                            OSTYPE=UBUNTU20
-                        fi
-                    fi
-                fi
+            output=$(cat /etc/*release)
+            if echo $output | grep "18.04"; then
+                OSTYPE=UBUNTU18
+            elif echo $output | grep "20.04"; then
+                OSTYPE=UBUNTU20
+            elif echo $output | grep "22.04"; then
+                OSTYPE=UBUNTU22
             fi
         elif [ -f /etc/debian_version ] ; then
-            cat /etc/debian_version | grep "^7." >/dev/null
-            if [ $? = 0 ] ; then
-                OSTYPE=DEBIAN7
-            else
-                cat /etc/debian_version | grep "^8." >/dev/null
-                if [ $? = 0 ] ; then
-                    OSTYPE=DEBIAN8
-                else
-                    cat /etc/debian_version | grep "^9." >/dev/null
-                    if [ $? = 0 ] ; then
-                        OSTYPE=DEBIAN9
-                    else
-                        cat /etc/debian_version | grep "^10." >/dev/null
-                        if [ $? = 0 ] ; then
-                            OSTYPE=DEBIAN10
-                        fi
-                    fi
-                fi
+            output=$(cat /etc/*release)
+            if echo $output | grep "Debian GNU/Linux 9"; then
+                OSTYPE=DEBIAN9
+            elif echo $output | grep "Debian GNU/Linux 10"; then
+                OSTYPE=DEBIAN10
+            elif echo $output | grep "Debian GNU/Linux 11"; then
+                OSTYPE=DEBIAN11
             fi
         fi
         
         #other debian OS, we still can 
-        if [ "${OSTYPE}" = "unknowlinux" ] ; then
-            echo It seems you are not using ubuntu 14,16,18,20 and Debian 7/8/9/10.
+        if [ "${OSTYPE}" = "unknownlinux" ] ; then
+            echo It seems you are not using ubuntu 18/20/22 and Debian 9/10/11.
             echo But we still can try to go further.
         fi
         
@@ -271,7 +236,7 @@ prepareLinux()
         apt-get -y install git libtool ca-certificates autotools-dev autoconf automake
         installgo
 
-        if [ "${MACHINE}" = "aarch64" ]; then
+        if [ "${ARCH}" = "aarch64" ]; then
             apt-get -y install libatomic1
         fi
 
@@ -435,7 +400,7 @@ updateModuleCMakelistfile()
     fi
     
     #For linux but not alpine, add pagespeed module
-    if [ "${ISLINUX}" = "yes" ] && [ "${MACHINE}" = "x86_64" ]; then
+    if [ "${ISLINUX}" = "yes" ] && [ "${ARCH}" = "x86_64" ]; then
         if [ ! "${OSTYPE}" = "ALPINE" ] ; then
             echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
         fi
@@ -545,7 +510,8 @@ if [ ! -d third-party ]; then
     #Remove  unittest-cpp and add bcrypt
     sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
 
-    if [ "${ISLINUX}" != "yes" ] || [ "${MACHINE}" != "x86_64" ] ; then
+    # Remove psol for non x86_64 non linux systems
+    if [ "${ISLINUX}" != "yes" ] || [ "${ARCH}" != "x86_64" ] ; then
         sed -i -e "s/psol/ /g"  ./build_ols.sh
     fi
 
@@ -560,7 +526,7 @@ updateModuleCMakelistfile
 preparelibquic
 
 
-if [ "${ISLINUX}" = "yes" ] && [ "${MACHINE}" = "x86_64" ] ; then
+if [ "${ISLINUX}" = "yes" ] && [ "${ARCH}" = "x86_64" ] ; then
     fixPagespeed
 fi
 
@@ -583,7 +549,8 @@ if [ ! -d build ]; then
 fi
 cd build
 cmake -DCMAKE_BUILD_TYPE=$BUILD ..
-make -j2
+jobs=$(nproc)
+make -j${jobs}
 cd ..
 
 cp build/src/openlitespeed  dist/bin/
