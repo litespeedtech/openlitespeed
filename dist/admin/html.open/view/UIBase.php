@@ -76,7 +76,7 @@ class UIBase
 
 	public static function content_header($icon, $title, $subtitle='')
 	{
-		$serverload = implode(', ', sys_getloadavg());
+		$serverload = implode(', ', array_map(function($load) { return round($load, 5); }, \sys_getloadavg()));
 		$pid = Service::ServiceData(SInfo::DATA_PID);
 
 		if ($subtitle != '')
