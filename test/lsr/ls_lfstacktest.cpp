@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -225,7 +225,7 @@ static void *benchRun(void *arg)
     {
         pNodes[i] = new StackNode(1);
     }
-    
+
     for (j = 0; j < iLoops; ++j)
     {
         for (i = 0; i < iIterations; ++i)

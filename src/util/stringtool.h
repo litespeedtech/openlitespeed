@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -81,7 +81,7 @@ public:
                                   const char *pDelim = NULL, int delimLen = 0);
     static char *memNextArg(char **s, int len, const char *pDelim = NULL,
                             int delimLen = 0);
-    
+
     static const char *strNextArg(const char *&s, const char *pDelim = NULL)
     {   return ls_strnextarg(&s, pDelim);   }
     static char *strNextArg(char *&s, const char *pDelim = NULL)

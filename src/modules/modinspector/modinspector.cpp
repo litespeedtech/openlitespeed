@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -56,7 +56,7 @@ static void *modinspector_parseConfig(module_param_info_t *param, int param_coun
     if (!myConf)
         return NULL;
 
-    
+
     memset(myConf, 0, sizeof(scanner_param_st));
     if (param == NULL || param_count <= 0)
     {

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -50,7 +50,7 @@ int LsiApiConst::get_cgi_header_count(void)
 }
 
 
-const char *LsiApiConst::get_cgi_header(int index) 
+const char *LsiApiConst::get_cgi_header(int index)
 {
     return CGI_HEADERS[index];
 }

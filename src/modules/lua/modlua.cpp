@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -182,7 +182,7 @@ static int luaHandler(const lsi_session_t *session)
     g_api->set_handler_write_state(session, 0);
     int debLevel = 0;
     if (*g_api->_log_level_ptr >= LSI_LOG_DEBUG)
-        debLevel = (*g_api->_log_level_ptr - LSI_LOG_DEBUG) / 10; 
+        debLevel = (*g_api->_log_level_ptr - LSI_LOG_DEBUG) / 10;
     LsLuaEngine::setDebugLevel(debLevel);
     return LsLuaEngine::runScript(session, luafile, pUser,
                                   &(pData->m_pSession), LSLUA_HOOK_HANDLER);
@@ -273,7 +273,7 @@ lsi_config_key_t myParam[] =
     {"maxruntime", 0, 0},
     {"maxlinecount", 0, 0},
     {"jitlinemod", 0, 0},
-    {"pause", 0, 0}, 
+    {"pause", 0, 0},
     {NULL, 0, 0}
 };
 

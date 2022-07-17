@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -48,12 +48,12 @@ public:
     typedef struct db_found_s db_found_t;
 
 private:
-    IpToGeo2 *m_IpToGeo2;    
+    IpToGeo2 *m_IpToGeo2;
     db_found_t *m_db_found;
     int parseEnv();
     int m_did_parse_env;
     int m_tried_parse_env;
-    
+
     char *strutf8(MMDB_entry_data_s *entry_data, char *key);
     char *strint(MMDB_entry_data_s *entry_data, char *key);
     char *strdouble(MMDB_entry_data_s *entry_data, char *key);
@@ -63,12 +63,12 @@ private:
     char *extractInt(MMDB_entry_data_s *entry_data);
     char *extractDouble(MMDB_entry_data_s *entry_data);
     char *extractBoolean(MMDB_entry_data_s *entry_data);
-    int process_map_key(int db, char *key, 
+    int process_map_key(int db, char *key,
                         MMDB_entry_data_list_s *entry_data_list);
-    int process_array_entry(int db, char *key,  
+    int process_array_entry(int db, char *key,
                             MMDB_entry_data_s *entry_data);
-    int check_entry_data_list(int db, MMDB_entry_data_list_s *entry_data_list, 
-                              MMDB_entry_data_list_s **entry_data_list_next, 
+    int check_entry_data_list(int db, MMDB_entry_data_list_s *entry_data_list,
+                              MMDB_entry_data_list_s **entry_data_list_next,
                               char *key_full);
     int simple_data_type(MMDB_entry_data_s *entry_data);
     char *extract_simple_data(MMDB_entry_data_s *entry_data);
@@ -98,7 +98,7 @@ public:
     // Called only after config and setEnv
     GeoInfo *lookUp(uint32_t addr);
     GeoInfo *lookUpV6(in6_addr addr);
-    // Just for IpToGeo2 
+    // Just for IpToGeo2
     GeoInfo *lookUp(const char *pIP);
     GeoInfo *lookUpV6(const char *pIP);
 
@@ -119,9 +119,9 @@ private:
                      char *variable, int var_len,
                      char *database, int database_len,
                      char *map, int map_len);
-    int validateEnv(const char *pEnvAliasMap, const char *variable, 
+    int validateEnv(const char *pEnvAliasMap, const char *variable,
                     const char *database, const char *map, int *db, int *found);
-    int addEnv(const char *pEnvAliasMap, const char *variable, 
+    int addEnv(const char *pEnvAliasMap, const char *variable,
                const char *database, const char *map, const int db);
     int defaultEnv();
 public:
@@ -129,7 +129,7 @@ public:
     typedef struct env_s env_t;
     struct dbs_s;
     typedef struct dbs_s dbs_t;
-private:    
+private:
     int    m_ndbs;
     dbs_t *m_dbs;
     int    m_did_add_env;

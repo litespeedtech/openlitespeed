@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -18,7 +18,7 @@
 #ifndef _LS_MEMCHECK_H_
 #define _LS_MEMCHECK_H_
 
-//this file is not available under gcc 
+//this file is not available under gcc
 //#include <sanitizer/asan_interface.h>
 
 //add our own
@@ -43,7 +43,7 @@ extern "C" {
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size) \
   __asan_unpoison_memory_region((addr), (size))
 #else
-#define ASAN_POISON_MEMORY_REGION(addr, size) 
+#define ASAN_POISON_MEMORY_REGION(addr, size)
 #define ASAN_UNPOISON_MEMORY_REGION(addr, size)
 #endif
 
@@ -63,21 +63,21 @@ extern "C" {
 #define VG_DEL_POOL(a)
 #define VG_POOL_ALLOC(a, b, c)
 #define VG_POOL_FREE(a, b)
-#define VG_POISON(a, b) 
-#define VG_UNPOISON(a, b) 
+#define VG_POISON(a, b)
+#define VG_UNPOISON(a, b)
 #endif /* USE_VALGRIND */
-        
-#define ASAN_POISON(p, s)       ASAN_POISON_MEMORY_REGION(p, s)
-#define ASAN_UNPOISON(p, s)     ASAN_UNPOISON_MEMORY_REGION(p, s)    
 
-#define MEMCHK_NEWPOOL(pool, b, c)  VG_NEW_POOL(pool, b, c) 
+#define ASAN_POISON(p, s)       ASAN_POISON_MEMORY_REGION(p, s)
+#define ASAN_UNPOISON(p, s)     ASAN_UNPOISON_MEMORY_REGION(p, s)
+
+#define MEMCHK_NEWPOOL(pool, b, c)  VG_NEW_POOL(pool, b, c)
 #define MEMCHK_DESTROY_POOL(pool)   VG_DEL_POOL(pool)
 
 #define MEMCHK_POISON_CHKNUL(p, s) \
     do { if (p != NULL) {VG_POISON(p, s); ASAN_POISON(p, s); } } while(0)
 #define MEMCHK_POISON(p, s) \
     do { VG_POISON(p, s); ASAN_POISON(p, s); } while(0)
-        
+
 #define MEMCHK_UNPOISON_CHKNUL(p, s) \
     do { if (p != NULL) {VG_UNPOISON(p, s); ASAN_UNPOISON(p, s); } } while(0)
 #define MEMCHK_UNPOISON(p, s) \
@@ -85,13 +85,13 @@ extern "C" {
 
 #define MEMCHK_ALLOC(pool, p, s) \
     do { VG_POOL_ALLOC(pool, p, s); ASAN_UNPOISON(p, s); } while(0)
-    
+
 #define MEMCHK_ALLOC_CHKNUL(pool, p, s) \
     do { if (p != NULL) {VG_POOL_ALLOC(pool, p, s); ASAN_UNPOISON(p, s); } } while(0)
 
 #define MEMCHK_FREE(pool, p, s) \
     do { VG_POOL_FREE(pool, p); ASAN_POISON(p, s); } while(0)
-    
-        
+
+
 #endif      //_LS_MEMCEHCK_H_
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -91,7 +91,7 @@ bool LsiBaseFetch::HandleWrite(const StringPiece &sp,
                                MessageHandler *handler)
 {
 //This will create a lot of log, disable it currently
-//     g_api->log(NULL, LSI_LOG_DEBUG, 
+//     g_api->log(NULL, LSI_LOG_DEBUG,
 //                "[Thr:PAGESPEED] LsiBaseFetch::HandleWrite(), "
 //                "Response body: %zd bytes.\n", sp.size());
     Lock();
@@ -139,9 +139,9 @@ int LsiBaseFetch::CollectHeaders(const lsi_session_t *session)
     int content_len_set = content_length_known();
     if (content_len_set)
         g_api->set_resp_content_length(session, content_length());
-    g_api->log(session, LSI_LOG_DEBUG, 
+    g_api->log(session, LSI_LOG_DEBUG,
                "[modpagespeed] LsiBaseFetch::CollectHeaders(), "
-               "content-len known: %d, call CopyRespHeadersToServer()\n", 
+               "content-len known: %d, call CopyRespHeadersToServer()\n",
                content_len_set);
 
     return CopyRespHeadersToServer((lsi_session_t *)session, *pagespeed_headers,
@@ -161,7 +161,7 @@ void LsiBaseFetch::HandleHeadersComplete()
 {
     int statusCode = response_headers()->status_code();
     bool statusOk = (statusCode != 0 && statusCode < 400);
-    g_api->log(NULL, LSI_LOG_DEBUG, 
+    g_api->log(NULL, LSI_LOG_DEBUG,
                "[Thr:PAGESPEED] LsiBaseFetch::HandleHeadersComplete(), "
                "status code: %d.\n", statusCode);
 
@@ -180,7 +180,7 @@ void LsiBaseFetch::HandleHeadersComplete()
 
 bool LsiBaseFetch::HandleFlush(MessageHandler *handler)
 {
-    g_api->log(NULL, LSI_LOG_DEBUG, 
+    g_api->log(NULL, LSI_LOG_DEBUG,
                "[Thr:PAGESPEED] LsiBaseFetch::HandleFlush().\n");
     //RequestCollection();
     return true;
@@ -204,7 +204,7 @@ void LsiBaseFetch::HandleDone(bool success)
     Lock();
     m_bDoneCalled = true;
     Unlock();
-    g_api->log(NULL, LSI_LOG_DEBUG, 
+    g_api->log(NULL, LSI_LOG_DEBUG,
                "[Thr:PAGESPEED] LsiBaseFetch::HandleDone(%d), "
                "RequestCollection() for event: %ld\n", success, m_lEventObj);
     RequestCollection();

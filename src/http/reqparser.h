@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -82,14 +82,14 @@ public:
     bool getEnableUploadFile()  {   return m_pFileUploadConfig != NULL; }
     int  isParsePost() const    {   return m_iParseState == PARSE_START;   }
     bool isParseDone() const    {   return m_iParseState == PARSE_DONE; }
-    bool isParseUploadByFilePath() const 
+    bool isParseUploadByFilePath() const
     {   return m_pFileUploadConfig != NULL; }
 
     int  beginParsePost();
 
     const char *getReqVar(HttpSession *pSession, int varId, int &len,
                           char *pBegin, int bufLen);
-    
+
     int getArgCount() const         {   return m_args;      }
     int getQsArgCount() const       {   return m_qsArgs;    }
     int getPostArgCount() const     {   return m_postArgs;  }
@@ -101,17 +101,17 @@ public:
         return getArgByIndex(index + m_qsBegin, pArg, NULL);
     }
     int getPostArgByIndex(int index, ls_strpair_t *pArg, char **filePath)
-    {   
+    {
         if (index < 0 || index >= m_postArgs)
             return -1;
         return getArgByIndex(index + m_postArgs, pArg, filePath);
     }
-    
-    bool isFile(int index) 
-    { 
+
+    bool isFile(int index)
+    {
         if (index < 0 || index > m_args)
             return false;
-        return (m_pArgs[index].filePath != NULL);  
+        return (m_pArgs[index].filePath != NULL);
     }
 
 

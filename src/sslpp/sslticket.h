@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -49,7 +49,7 @@ typedef struct rotatkeys_s
     short         m_idxNext;
 } RotateKeys_t;
 
-class SslTicket 
+class SslTicket
 {
     static LsShmHash      *m_pKeyStore;
     static AutoStr2       *m_pFile;

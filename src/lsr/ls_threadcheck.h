@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -44,7 +44,7 @@
 #define LS_TH_NOT_BEFORE_MUTEX(mu) ANNOTATE_NOT_HAPPENS_BEFORE_MUTEX(mu)
 #define LS_TH_BENIGN(a,b) ANNOTATE_BENIGN_RACE(a,b)
 #define LS_TH_EXPECT(a,b) ANNOTATE_EXPECT_RACE(a,b)
-#define LS_TH_FLUSH() ANNOTATE_FLUSH_EXPECTED_RACES() 
+#define LS_TH_FLUSH() ANNOTATE_FLUSH_EXPECTED_RACES()
 
 #else /* no checking or no thread sanitizer */
 

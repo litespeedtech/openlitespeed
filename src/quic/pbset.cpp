@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -31,7 +31,7 @@ struct SetOfPbBucket
         sopb_slots          = 1;
         sopb_packet_bufs[0] = packet_buf;
     }
-    
+
     STAILQ_ENTRY(SetOfPbBucket)    sopb_next_all;
     TAILQ_ENTRY(SetOfPbBucket)     sopb_next_avail;
     uint64_t                       sopb_slots;
@@ -94,7 +94,7 @@ SetOfPacketBuffers::removePacketBuf()
     struct SetOfPbBucket *bucket;
     struct quicshm_packet_buf *packet_buf;
     unsigned slot;
-    
+
     bucket = STAILQ_FIRST(&m_BucketsAll);
     if (bucket)
     {

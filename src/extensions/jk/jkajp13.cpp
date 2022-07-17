@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -285,7 +285,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
         *p++ = AJP_A_QUERY_STRING;
         appendString(p, pAttr, n);
     }
-    
+
     HioCrypto *pCrypto = pSession->getCrypto();
     if (pCrypto)
     {
@@ -299,21 +299,21 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
             *p++ = AJP_A_SSL_SESSION;
             appendString(p, pVal, n);
         }
-    
+
         n = pCrypto->getEnv(HioCrypto::CIPHER, pVal, sizeof(buf));
         if (pEnd2 - p < n)
             return LS_FAIL;
         *p++ = AJP_A_SSL_CIPHER;
         appendString(p, pVal, n);
-    
-    
+
+
         pVal = buf;
         n = pCrypto->getEnv(HioCrypto::CIPHER_USEKEYSIZE, pVal, sizeof(buf));
         if (pEnd2 - p < n)
             return LS_FAIL;
         *p++ = AJP_A_SSL_KEY_SIZE;
         appendString(p, pVal, n);
-  
+
         X509 *pClientCert = pCrypto->getPeerCertificate();
         if (pClientCert)
         {

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -50,8 +50,8 @@ struct udpheader {
 
 struct sockaddr;
 rawsock_t init_rawsock();
-int send_udp_spoof( rawsock_t sd, char * raw_sock_buf, int buf_size, 
-            unsigned int src_ip, unsigned int dst_ip, 
+int send_udp_spoof( rawsock_t sd, char * raw_sock_buf, int buf_size,
+            unsigned int src_ip, unsigned int dst_ip,
             unsigned short int src_port, unsigned short int dst_port,
             unsigned short ip_id );
 

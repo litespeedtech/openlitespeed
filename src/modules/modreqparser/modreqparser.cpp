@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -34,7 +34,7 @@
 extern lsi_module_t MNAME;
 /***
  * Set the config of this module in SERVER, VHOST and context level as below
- * uploadTmpDir              /tmp/lshttpd/ 
+ * uploadTmpDir              /tmp/lshttpd/
  * uploadTmpFilePermission   666
  * uploadPassByPath          1
  */
@@ -97,7 +97,7 @@ static void *_parseConfig(module_param_info_t *param, int param_count,
         case 1:
             pConfig->permission = strtol(param[i].val, NULL, 8);
             break;
-            
+
         case 2:
             pConfig->byPath = strtol(param[i].val, NULL, 10);
             break;
@@ -125,7 +125,7 @@ static int enableReqParser(lsi_param_t *rec)
                    "[%s]enableReqParser error 1.\n", ModuleNameStr);
         return 0;
     }
-    
+
     g_api->parse_req_args(rec->session, 1, pConfig->byPath, pConfig->tmpDir->c_str(),
                           pConfig->permission);
     return 0;

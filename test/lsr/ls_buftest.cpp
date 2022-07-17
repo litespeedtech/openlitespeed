@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -187,7 +187,7 @@ TEST(ls_xbuftest_test)
 #ifdef LSR_BUF_DEBUG
     printf("Start LSR XBuf Test\n");
 #endif
-    
+
     CHECK(0 == ls_xbuf(&buf, 0, pool));
     CHECK(0 == ls_xbuf_size(&buf));
     CHECK(0 == ls_xbuf_capacity(&buf));

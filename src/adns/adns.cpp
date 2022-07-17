@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -225,7 +225,7 @@ void Adns::release(AdnsReq *pReq)
         return;
     if (--pReq->ref_count == 0)
     {
-        //fprintf(stderr, "release AdnsReq %p\n", pReq); 
+        //fprintf(stderr, "release AdnsReq %p\n", pReq);
         delete pReq;
     }
 }
@@ -341,8 +341,8 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, n, p);
     //else
-    //    fprintf(stderr, "AdnsReq %p for %s skip callback, cb: %p, arg: %p\n", 
-    //            pAdnsReq, pAdnsReq->name, pAdnsReq->cb, pAdnsReq->arg); 
+    //    fprintf(stderr, "AdnsReq %p for %s skip callback, cb: %p, arg: %p\n",
+    //            pAdnsReq, pAdnsReq->name, pAdnsReq->cb, pAdnsReq->arg);
 
     if (rr)
         free(rr);
@@ -372,7 +372,7 @@ const char *Adns::getHostByNameInCache(const char * pName, int &length,
 }
 
 
-AdnsReq *Adns::getHostByName(const char * pName, int type, 
+AdnsReq *Adns::getHostByName(const char * pName, int type,
                              lookup_pf cb, void *arg)
 {
     dns_query * pQuery;
@@ -380,8 +380,8 @@ AdnsReq *Adns::getHostByName(const char * pName, int type,
     AdnsReq *pAdnsReq = new AdnsReq;
     if (!pAdnsReq)
         return NULL;
-    //fprintf(stderr, "AdnsReq %p created for getHostByName %s\n", 
-    //        pAdnsReq, pName); 
+    //fprintf(stderr, "AdnsReq %p created for getHostByName %s\n",
+    //        pAdnsReq, pName);
     pAdnsReq->type = type;
     pAdnsReq->name = getCacheName(pName, type);
     pAdnsReq->cb = cb;
@@ -441,7 +441,7 @@ AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_p
     if (!pAdnsReq)
         return NULL;
 
-    //fprintf(stderr, "AdnsReq %p created for getHostByAddr\n", pAdnsReq); 
+    //fprintf(stderr, "AdnsReq %p created for getHostByAddr\n", pAdnsReq);
     int type = pAddr->sa_family;
     pAdnsReq->type = type;
     int length;

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -36,7 +36,7 @@ public:
     virtual int process(HttpSession *pSession, const HttpHandler *pHandler);
     virtual void onTimer() {};
     virtual int onRead(HttpSession *pSession);
-    
+
     static  void initGlobalWorkCrew();
     static  WorkCrew *getGlobalWorkCrew();
 
@@ -45,7 +45,7 @@ private:
     int mt_onWrite(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
     int mt_process(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
     int mt_onRead(HttpSession *pSession, const lsi_reqhdlr_t *pModuleHandler);
-    
+
 };
 
 #endif // MODULEHANDLER_H

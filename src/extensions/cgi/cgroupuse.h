@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -27,13 +27,13 @@
 
 /**
  * @class CGroupUse
- * @brief Create an instance of this class after you have done the fork and 
- * but are still root.  It applies the CGroup info by changing the slice the 
+ * @brief Create an instance of this class after you have done the fork and
+ * but are still root.  It applies the CGroup info by changing the slice the
  * process runs in.
  * @note This class does not do error reporting or debug logging.
  **/
 
-class CGroupUse 
+class CGroupUse
 {
 private:
     friend class CGroupConn;
@@ -42,15 +42,15 @@ private:
     int child_validate(pid_t pid);
     int m_uid;
 #define CUSE_UNIT_FORMAT "run-%u.scope"
-    
+
 public:
     /**
      * @fn CGroupUse
-     * @brief Constructor, call with a pointer to the connection. 
+     * @brief Constructor, call with a pointer to the connection.
      **/
     CGroupUse(CGroupConn *conn);
     ~CGroupUse();
-    
+
     /**
      * @fn int validate(int uid)
      * @brief Call after the connection has been created but before using the
@@ -68,13 +68,13 @@ public:
     int validate();
     /**
      * @fn int apply(int uid)
-     * @brief Call after the fork running as root.                        
+     * @brief Call after the fork running as root.
      * @param[in] uid: the UID to run the task as.  Must exist.
      * @return 0 if success or -1 if it failed.  If it failed you can call
      * getErrorText to get the details.
      **/
     int apply(int uid);
- 
+
     LS_NO_COPY_ASSIGN(CGroupUse);
 };
 
