@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -51,7 +51,7 @@ static void *waitThread(void *arg) {
 
 static void *signalThread(void *arg) {
     MtNotifier *pmtNotifier = (MtNotifier *)arg;
-    
+
     printf("Entered signal thread\n");
     pmtNotifier->notify();
     printf("Called signal, set something and broadcast\n");
@@ -67,13 +67,13 @@ TEST(MTNOTIFIER_BLOCK_RELEASE_TEST)
     pthread_t waitThreadID;
     pthread_t signalThreadID;
     pthread_attr_t pthread_attrWait, pthread_attrSignal;
-    
+
     pthread_attr_init(&pthread_attrWait);
     pthread_attr_init(&pthread_attrSignal);
-    
+
     pthread_create(&waitThreadID, &pthread_attrWait, waitThread, &mtNotifier);
     pthread_create(&signalThreadID, &pthread_attrSignal, signalThread, &mtNotifier);
-    
+
     sleep(1); // Give it a second to finish.
     CHECK(didWait);
     CHECK(didSignal);

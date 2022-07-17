@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -42,7 +42,7 @@ public:
     typedef int (*pri_handler)();
     typedef void (*command_fn)(EventReactor *pThis);
 
-    EventReactor() 
+    EventReactor()
         : m_cntHup(0)
         , m_eventSet(0)
         , m_flags(0)
@@ -87,10 +87,10 @@ public:
     void clearRevent()                  {   m_pollfd.revents = 0;    }
     void assignRevent(short event)      {   m_pollfd.revents = event;}
     short getAssignedRevent()           {   return m_pollfd.revents; }
-    
+
     void updateEventSet()               {   m_eventSet = m_pfd->events;     }
     int  isApplyEvents() const          {   return m_eventSet != m_pfd->events;  }
-    
+
     void addFlag(unsigned short flag)   {   m_flags |= flag;        }
     void removeFlag(unsigned short flag){   m_flags &= ~flag;       }
     unsigned short getEvtFlag() const   {   return m_flags;         }

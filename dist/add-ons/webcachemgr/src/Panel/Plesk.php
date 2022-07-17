@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2021
+ * @copyright (c) 2018-2022
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;

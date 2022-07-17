@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -104,7 +104,7 @@ int  CoreSocket::connect(const GSockAddr &server, int iFLTag, int *fd,
     {
         errno = EINVAL;
         return -1;
-    }    
+    }
 #if !defined(_USE_F_STACK) || !(defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__))
     if (user)
     {
@@ -119,19 +119,19 @@ int  CoreSocket::connect(const GSockAddr &server, int iFLTag, int *fd,
     if (server.len() < 16)
         return -1;
 
-#ifdef _USE_F_STACK    
+#ifdef _USE_F_STACK
     if (user)
         *fd = ls_socket_fstack(server.family(), type, 0);
     else
-#endif        
+#endif
         *fd = ::socket(server.family(), type, 0);
-    
+
     if (*fd == -1)
         return -1;
     if ((iFLTag) && !user)
         ::fcntl(*fd, F_SETFL, iFLTag);
 
-#ifdef _USE_F_STACK    
+#ifdef _USE_F_STACK
     if (user)
     {
         int on = 1;
@@ -215,7 +215,7 @@ int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
         errno = EINVAL;
         return -1;
     }
-#endif    
+#endif
     ret = bind(server, SOCK_STREAM, fd, flag);
     if (ret)
         return ret;
@@ -240,7 +240,7 @@ int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
             ls_setsockopt(*fd, IPPROTO_TCP, TCP_FASTOPEN, &val, sizeof(int));
         }
 #endif
-        
+
     }
 
     ret = ls_listen(*fd, backLog);
@@ -255,7 +255,7 @@ int CoreSocket::listen(const GSockAddr &server, int backLog, int *fd,
 }
 
 
-int CoreSocket::bind(const GSockAddr &server, int type, int *fd, 
+int CoreSocket::bind(const GSockAddr &server, int type, int *fd,
                      int flag)
 {
     int ret;
@@ -286,7 +286,7 @@ int CoreSocket::bind(const GSockAddr &server, int type, int *fd,
         && ls_setsockopt(*fd, SOL_SOCKET, SO_REUSEPORT,
                       (char *)(&val), sizeof(val)) != 0)
         goto ERROR;
-#if defined(IPV6_V6ONLY) 
+#if defined(IPV6_V6ONLY)
     if (!(flag & LS_SOCK_USERSOCKET) &&
         server.family() == AF_INET6
         && IN6_IS_ADDR_UNSPECIFIED(&(server.getV6()->sin6_addr)))
@@ -342,10 +342,10 @@ int CoreSocket::close()
 int CoreSocket::enableFastOpen(int fd, int queLen)
 {
     int ret = 1;
-#ifdef _USE_F_STACK    
+#ifdef _USE_F_STACK
     if (is_usersock(fd))
         return -1;
-#endif    
+#endif
 #if defined(linux) || defined(__linux) || defined(__linux__)
 #ifndef TCP_FASTOPEN
 #define TCP_FASTOPEN 23
@@ -353,7 +353,7 @@ int CoreSocket::enableFastOpen(int fd, int queLen)
     static int isTfoAvail = 1;
     if (!isTfoAvail)
         return -1;
-    
+
     ret = ls_setsockopt(fd, SOL_TCP, TCP_FASTOPEN, &queLen, sizeof(queLen));
     if ((ret == -1)&&(errno == ENOPROTOOPT))
         isTfoAvail = 0;

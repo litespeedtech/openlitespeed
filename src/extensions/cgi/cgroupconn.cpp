@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -22,7 +22,7 @@
 
 CGroupConn::CGroupConn()
 {
-    m_conn = NULL; 
+    m_conn = NULL;
     m_proxy = NULL;
     m_err = NULL;
     m_err_num = CERR_NO_ERROR;
@@ -63,8 +63,8 @@ int CGroupConn::load_gdb()
         //printf("Unable to load symbol: %s\n", lib);
         set_error(CERR_SYSTEM_ERROR);
         return -1;
-    }    
-    
+    }
+
     m_gio20 = dlopen(lib = (char *)"libgio-2.0.so", RTLD_LAZY);
     if (!m_gio20)
         m_gio20 = dlopen("libgio-2.0.so.0", RTLD_LAZY);
@@ -79,7 +79,7 @@ int CGroupConn::load_gdb()
     m_g_dbus_proxy_call_sync = (tg_dbus_proxy_call_sync)dlsym(m_gio20, lib = (char *)"g_dbus_proxy_call_sync");
     m_g_variant_builder_add_value = (tg_variant_builder_add_value)dlsym(m_gio20, lib = (char *)"g_variant_builder_add_value");
     m_g_variant_builder_add = (tg_variant_builder_add)dlsym(m_gio20, lib = (char *)"g_variant_builder_add");
-    
+
     if ((!m_g_bus_get_sync) ||
         (!m_g_dbus_proxy_new_sync) ||
         (!m_g_dbus_proxy_call_sync) ||
@@ -89,7 +89,7 @@ int CGroupConn::load_gdb()
         //printf("Unable to load symbol: %s\n", lib);
         set_error(CERR_SYSTEM_ERROR);
         return -1;
-    }    
+    }
 
     m_gobject20 = dlopen(lib = (char *)"libgobject-2.0.so", RTLD_LAZY);
     if (!m_gobject20)
@@ -106,7 +106,7 @@ int CGroupConn::load_gdb()
         //printf("Unable to load symbol: %s\n", lib);
         set_error(CERR_SYSTEM_ERROR);
         return -1;
-    }   
+    }
     //printf("Loaded glib\n");
     return 0;
 }
@@ -119,13 +119,13 @@ void CGroupConn::clear_err()
     if (m_g_clear_error)
         m_g_clear_error(&m_err);
     m_err_num = CERR_NO_ERROR;
-}    
-    
+}
+
 int CGroupConn::create()
 {
     if (load_gdb() == -1)
         return -1;
-    
+
     clear_err();
     m_conn = m_g_bus_get_sync(G_BUS_TYPE_SYSTEM,
                               NULL, // GCancellable
@@ -171,11 +171,11 @@ CGroupConn::~CGroupConn()
         dlclose(m_glib20);
 }
 
-   
+
 char *CGroupConn::getErrorText()
 {
     enum CGroupErrors errnum = m_err_num;
-    switch (errnum) 
+    switch (errnum)
     {
         case CERR_GDERR :
             return m_err->message;

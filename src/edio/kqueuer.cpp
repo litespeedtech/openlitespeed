@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -400,6 +400,6 @@ void KQueuer::wantWrite(EventReactor *pHandler, int want)
 }
 
 
-#endif //defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) 
+#endif //defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
 //|| defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
 

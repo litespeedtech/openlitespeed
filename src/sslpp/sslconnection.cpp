@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -202,7 +202,7 @@ int SslConnection::writev(const struct iovec *vect, int count,
     char *pBufEnd;
     char *pCurEnd;
     char achBuf[4096];
-    
+
     pBufEnd = achBuf + 4096;
     pCurEnd = achBuf;
     for (; vect < pEnd ;)
@@ -271,7 +271,7 @@ int SslConnection::flush()
 int SslConnection::shutdown(int bidirectional)
 {
     assert(m_ssl);
-    
+
     m_flag = 0;
     if (m_iStatus == ACCEPTING)
     {
@@ -319,7 +319,7 @@ int SslConnection::accept()
                       this);
         return -1;
     }
-    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p, ctx: %p\n", this, 
+    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p, ctx: %p\n", this,
                   m_ssl, SSL_get_SSL_CTX(m_ssl));
     setFlag(F_ASYNC_PK, 0);
     ret = SSL_do_handshake(m_ssl);
@@ -474,7 +474,7 @@ int SslConnection::connect()
 
 
 int SslConnection::tryagain()
-{    
+{
     DEBUG_MESSAGE("[SSL: %p] tryagain!\n", this);
     assert(m_ssl);
     switch (m_iStatus)
@@ -547,7 +547,7 @@ int SslConnection::getSpdyVersion()
     int v = 0;
 
     DEBUG_MESSAGE("[SSL: %p] getSpdyVersion\n", this);
-    
+
 #ifdef LS_ENABLE_SPDY
     unsigned int             len = 0;
     const unsigned char     *data = NULL;

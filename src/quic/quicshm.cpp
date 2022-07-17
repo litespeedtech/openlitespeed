@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -38,7 +38,7 @@ static pid_t s_pid = -1;
 
 void QuicShm::setPid(pid_t pid)
 {
-    s_pid = pid;    
+    s_pid = pid;
 }
 
 
@@ -60,10 +60,10 @@ QuicShm::~QuicShm()
 
     if (m_pInternalShiCtx)
         lsquic_stock_shared_hash_destroy((struct stock_shared_hash *)m_pInternalShiCtx);
-    
+
     if (m_pCidMap)
         m_pCidMap->close();
-    
+
     if (m_pPidPacketOffsetMap)
         m_pPidPacketOffsetMap->close();
 }
@@ -93,7 +93,7 @@ int QuicShm::openShmPacketPool(const char *fileName, const char *pShmDir)
         }
         m_pPacketPool->disableAutoLock();
 
-//         /* FIXME: for testing only */ 
+//         /* FIXME: for testing only */
 //         int remapped;
 //         LsShmOffset_t off;
 //         for (int i=0; i<10; ++i)
@@ -105,8 +105,8 @@ int QuicShm::openShmPacketPool(const char *fileName, const char *pShmDir)
 //                 break;
 //             }
 //         }
-//         /* FIXME: for testing only */ 
-        
+//         /* FIXME: for testing only */
+
         ret = 0;
         break;
     }
@@ -151,7 +151,7 @@ int QuicShm::openShmMapPool(const char *fileName, const char *pShmDir)
 
         m_pPidPacketOffsetMap = m_pMapPool->getNamedHash("PIDOFFSET", 5,
                                                     _self_hash, memcmp, 0);
-        
+
         m_pMapPool->unlock();
         m_pMapPool->enableAutoLock();
 
@@ -169,7 +169,7 @@ int QuicShm::openShmMapPool(const char *fileName, const char *pShmDir)
         }
         else
         {
-//             /* FIXME: for testing only */ 
+//             /* FIXME: for testing only */
 //             int remapped;
 //             LsShmOffset_t off;
 //             for (int i=0; i<10; ++i)
@@ -177,7 +177,7 @@ int QuicShm::openShmMapPool(const char *fileName, const char *pShmDir)
 //                 off = m_pMapPool->alloc2(1 * 1024 * 1024, remapped);
 //                 if (off)
 //                     m_pMapPool->release2(off, 1 * 1024 * 1024);
-//                 
+//
 //                 off = m_pMapPool->alloc2(100 * 1024 * 1024, remapped);
 //                 if (off)
 //                 {
@@ -185,7 +185,7 @@ int QuicShm::openShmMapPool(const char *fileName, const char *pShmDir)
 //                     break;
 //                 }
 //             }
-//             /* FIXME: for testing only */ 
+//             /* FIXME: for testing only */
             m_pCidMap->disableAutoLock();
             m_pPidPacketOffsetMap->disableAutoLock();
             ret = 0;
@@ -252,20 +252,20 @@ int QuicShm::insertItem(void *hash_ctx, void *key, unsigned int key_sz, void *da
     char *buf = new char[valLen];
     if (!buf)
         return -1;
-    
+
     char *p = buf;
     memcpy(p, &expiry, sizeof(time_t));
     p += sizeof(time_t);
-    
+
     memcpy(p, &key_sz, sizeof(unsigned int));
     p += sizeof(unsigned int);
-    
+
     memcpy(p, &data_sz, sizeof(unsigned int));
     p += sizeof(unsigned int);
-    
+
     memcpy(p, key, key_sz);
     p += key_sz;
-    
+
     memcpy(p, data, data_sz);
     p += data_sz;
 
@@ -288,7 +288,7 @@ int QuicShm::lookupItem(void *hash_ctx, const void *key, unsigned key_sz, void *
 
     LsShmHash *pHash = (LsShmHash *)hash_ctx;
     deleteExpiredItems(pHash);
-    
+
     ls_strpair_t parms;
     ls_str_set(&parms.key, (char *)key, key_sz);
     LsShmHash::iteroffset iterOff = pHash->findIterator(&parms);
@@ -297,13 +297,13 @@ int QuicShm::lookupItem(void *hash_ctx, const void *key, unsigned key_sz, void *
 
     LsShmHash::iterator iter = pHash->offset2iterator(iterOff);
     assert(iter);
-    
+
     int ValLen = iter->getValLen();
     uint8_t *buf = iter->getVal();
     uint8_t *p = buf;
     unsigned int key_len, data_len;
     time_t expiry;
-    
+
     memcpy(&expiry, p, sizeof(time_t));
     p += sizeof(time_t);
     memcpy(&key_len, p, sizeof(unsigned int));
@@ -321,7 +321,7 @@ int QuicShm::lookupItem(void *hash_ctx, const void *key, unsigned key_sz, void *
     void *key_copy = malloc(key_len);
     memcpy(key_copy, p, key_len);
     p += key_len;
-    
+
     *data = (char *)malloc(data_len);
     memcpy(*data, p, data_len);
     *data_sz = data_len;
@@ -337,7 +337,7 @@ int QuicShm::deleteItem(void *hash_ctx, const void *key, unsigned key_sz)
     struct lsquic_shared_hash_if *pInternalShi = QuicShm::getInstance().getInternalShi();
     void *pInternalShiCtx = QuicShm::getInstance().getInternalShiCtx();
     pInternalShi->shi_delete(pInternalShiCtx, key, key_sz);
-    
+
     LsShmHash *pHash = (LsShmHash *)hash_ctx;
     ls_strpair_t parms;
     ls_str_set(&parms.key, (char *)key, key_sz);
@@ -361,7 +361,7 @@ pid_t QuicShm::lookupCidPid(const lsquic_cid_t *cid, ShmCidPidInfo *pInfo)
     ls_str_set(&parms.key, (char *) cid->idbuf, cid->len);
     LsShmHash::iteroffset iterOff;
     LsShmHash::iterator iter;
-    
+
     iterOff = m_pCidMap->findIterator(&parms);
     if (iterOff.m_iOffset == 0)
     {
@@ -392,7 +392,7 @@ pid_t QuicShm::lookupCidPid(const lsquic_cid_t *cid, ShmCidPidInfo *pInfo)
         assert(iter);
 
         memcpy(&pid, iter->getVal(), sizeof(pid));
-        if (pid > 0 && iter->getLruLasttime() != DateTime::s_curTime) 
+        if (pid > 0 && iter->getLruLasttime() != DateTime::s_curTime)
         {
             LS_DBG_LC("[QuicShm::lookupCidPid]: update LRU for CID: %" CID_FMT,
                      CID_BITS(cid));
@@ -435,7 +435,7 @@ void QuicShm::lookupCidPids(const lsquic_cid_t *cids, ShmCidPidInfo *pids,
 }
 
 
-void QuicShm::markBadCidItems(const lsquic_cid_t *cids, unsigned count, 
+void QuicShm::markBadCidItems(const lsquic_cid_t *cids, unsigned count,
                               pid_t pid)
 {
     LsShmHash::iteroffset iterOff;
@@ -457,7 +457,7 @@ void QuicShm::markBadCidItems(const lsquic_cid_t *cids, unsigned count,
 
             assert(iter->getValLen() == sizeof(pid_t));
             memcpy(iter->getVal(), &pid, sizeof(pid_t));
-            if (iter->getLruLasttime() != DateTime::s_curTime) 
+            if (iter->getLruLasttime() != DateTime::s_curTime)
                 m_pCidMap->touchLru(iterOff);
         }
     }
@@ -742,7 +742,7 @@ QuicShm::getNewPacketBuffer()
     packet_buf->qpb_off = offset;
     packet_buf->prev_offset = 0;
     packet_buf->next_offset = 0;
-    LS_DBG_L("[PID: %d] [QuicShm::getNewPacketBuffer] offset %d, packet %p", 
+    LS_DBG_L("[PID: %d] [QuicShm::getNewPacketBuffer] offset %d, packet %p",
              s_pid, offset, packet_buf);
     return packet_buf;
 }
@@ -887,7 +887,7 @@ QuicShm::getPidInfo(pid_t pid, QuicShm::PidInfo &info,
         LS_DBG_H("%s: pid %d not found", __func__, pid);
         return GPIS_NOT_FOUND;
     }
-    
+
     iter = m_pPidPacketOffsetMap->offset2iterator(iterOff);
     assert(iter);
     if (iter)
@@ -937,7 +937,7 @@ QuicShm::removeFromFreeQueue(packet_buf_t *packetBuf)
     LS_DBG_M("[PID: %d] removeFromFreeQueue packet %u (prev: %u, next: %u). "
         , s_pid, packetBuf->qpb_off,
         packetBuf->prev_offset, packetBuf->next_offset);
- 
+
     if (packetBuf->prev_offset)
         prevPacketBuf = packetOffset2ptr(packetBuf->prev_offset);
     else
@@ -995,7 +995,7 @@ QuicShm::removeFromFreeQueue(packet_buf_t *packetBuf)
 enum QuicShm::atpq
 QuicShm::appendToPendQueue(pid_t pid, struct quicshm_packet_buf *packet_buf,
                             time_t now)
-{    
+{
     QuicShm::PidInfo info;
     packet_buf_t *last_buf;
     LsShmHash::iterator iter;
@@ -1078,7 +1078,7 @@ QuicShm::appendToPendQueue(pid_t pid, struct quicshm_packet_buf *packet_buf,
 int
 QuicShm::appendPacketsToFreeQueue(struct quicshm_packet_buf *begin,
                                   struct quicshm_packet_buf *end)
-{    
+{
     QuicShm::PidInfo info;
     packet_buf_t *last_buf;
 
@@ -1224,7 +1224,7 @@ QuicShm::popFirstPendingOffset(pid_t pid)
     QuicShm::PidInfo info;
     LsShmOffset_t retvalOffset;
     LsShmHash::iterator iter;
-    
+
     retvalOffset = 0;
     m_pPidPacketOffsetMap->lock();
     if (getPidInfo(pid, info, iter) != GPIS_FOUND)
@@ -1304,7 +1304,7 @@ void QuicShm::cleanupPidShm(pid_t pid)
     LsShmHash::iterator iter;
     GpiStatus status;
 
-    LS_DBG_L("[PID %d] [QuicShm::cleanupPidShm] cleaning up after pid %d%s", 
+    LS_DBG_L("[PID %d] [QuicShm::cleanupPidShm] cleaning up after pid %d%s",
              s_pid, pid, pid == s_pid ? " (ourselves)" : "");
 
     m_pPidPacketOffsetMap->lock();

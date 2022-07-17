@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -65,7 +65,7 @@ public:
 
     /* search for matches in an aho corasick tree. */
     unsigned int search(AhoState *start_state, const char *string, size_t size,
-                        size_t startpos, size_t *out_start, size_t *out_end, 
+                        size_t startpos, size_t *out_start, size_t *out_end,
                         AhoState **out_last_state, void **pattern_ctx)
     {
         return ls_aho_search(this, start_state, string, size, startpos,

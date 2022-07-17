@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -45,7 +45,7 @@ class CGroupUse;
 
 /**
  * @note The following definitions are taken from glib.  If you import gio/gio.h
- * you'll get these so you'll need to comment them out.  
+ * you'll get these so you'll need to comment them out.
  **/
 typedef uint32_t GQuark;
 
@@ -63,14 +63,14 @@ typedef enum
   G_BUS_TYPE_SESSION = 2
 } GBusType;
 #define G_VARIANT_TYPE_ARRAY                ((const GVariantType *) "a*")
-    
+
 
 /**
  * @note End of duplicate gio.h definitions.
  **/
 
 /**
- * @class CGroupConn  
+ * @class CGroupConn
  * @brief Every task (including subtasks) which need to access CGroups needs
  * to create an instance of this class which is passed into the CGroupUse
  * class.  Typically you create the CGroupConn and then immediately use it
@@ -83,9 +83,9 @@ class CGroupConn
 private:
     friend class CGroupUse;
     /**
-     * @enum CGroupErrors 
-     * @brief If a method (in either this class or the attached CGroupUse 
-     * class) returns -1, you must call set_error with one of these errors 
+     * @enum CGroupErrors
+     * @brief If a method (in either this class or the attached CGroupUse
+     * class) returns -1, you must call set_error with one of these errors
      * indicating the cause of the error.  Used in getErrorText.
      **/
     enum CGroupErrors {
@@ -95,18 +95,18 @@ private:
         CERR_BAD_SYSTEMD,
         CERR_SYSTEM_ERROR
     };
-    
+
     _GDBusConnection *m_conn;
     _GDBusProxy      *m_proxy;
     GError           *m_err;
     CGroupErrors      m_err_num;
-    /** 
+    /**
      * @note Stuff for glib that would be statically included if possible
      **/
     void             *m_glib20;
     void             *m_gio20;
     void             *m_gobject20;
-    typedef void (*tg_clear_error)(GError       **err);    
+    typedef void (*tg_clear_error)(GError       **err);
     tg_clear_error m_g_clear_error;
     typedef GVariant *(*tg_variant_new)(const char          *format_string,
                                         ...);
@@ -120,7 +120,7 @@ private:
                                            const GVariantType   *format_string,
                                            ...);
     tg_variant_builder_add m_g_variant_builder_add;
-    
+
     typedef GDBusConnection *(*tg_bus_get_sync)(GBusType            bus_type,
                                                 void               *cancellable,
                                                 GError            **error);
@@ -142,10 +142,10 @@ private:
                                                  void                *cancellable,
                                                  GError             **error);
     tg_dbus_proxy_call_sync m_g_dbus_proxy_call_sync;
-    
+
     typedef void *(*tg_object_unref)(void * object);
     tg_object_unref m_g_object_unref;
-    
+
     int load_gdb();
     /**
      * @note End of glib static include stuff
@@ -153,14 +153,14 @@ private:
     void set_error(enum CGroupErrors err)
     {   m_err_num = err;   }
     void clear_err();
-        
+
 public:
     CGroupConn();
     ~CGroupConn();
-    
+
     /**
      * @fn int create()
-     * @brief Call after instantiation to perform the actual creation.  
+     * @brief Call after instantiation to perform the actual creation.
      * @return 0 if success or -1 if it failed.  If it failed you can call
      * getErrorText to get the details.
      **/
@@ -169,8 +169,8 @@ public:
      * @fn char *getErrorText
      * @brief Call if a method returns -1 in either this class or the attached
      * CGroupUse class(s).
-     * @return A pointer to a text description of the problem for error 
-     * reporting or debugging.  
+     * @return A pointer to a text description of the problem for error
+     * reporting or debugging.
      **/
     char *getErrorText(); // For any functions returning -1
 
@@ -178,8 +178,8 @@ public:
      * @fn int getErrorNum
      * @brief Call if a method returns -1 in either this class or the attached
      * CGroupUse class(s).
-     * @return A number that might mean something to someone (actually one of 
-     * the enumerated types).   
+     * @return A number that might mean something to someone (actually one of
+     * the enumerated types).
      **/
     int  getErrorNum(); // For any functions returning -1
 

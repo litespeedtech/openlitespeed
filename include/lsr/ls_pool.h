@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -112,11 +112,11 @@ char *ls_pdupstr(const char *p);
  * @ls_preserve
  * @brief Changes the size of a block of memory allocated
  *   from the global memory pool.
- * @details If new_sz is equal or smaller than the current 
+ * @details If new_sz is equal or smaller than the current
  *   memory block size, the old memory block wont be changed.
  *   If the memory size is increasing, the contents will NOT be copied to new
- *   memory block, if need to keep old content unchanged, use ls_prealloc 
- *   instead. 
+ *   memory block, if need to keep old content unchanged, use ls_prealloc
+ *   instead.
  *   If the current pointer \e pOld argument is NULL, ls_preserve effectively
  *   becomes ls_palloc to allocate new memory.
  *

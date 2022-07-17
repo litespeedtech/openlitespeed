@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -34,7 +34,7 @@
  * struct sockaddr_storage peer_addr  128 bytes
  * ecn  1 byte
  * packet data (current packet length bytes)
- * 
+ *
  * PACKETBUFSZIE = 1683 (hold 40 + 4 + 4 + 4 + sizeof(struct sockaddr_storage) * 2 + QUIC_SHM_PACKET_SIZE + 1)
  */
 #define  PACKETBUFRESERVEHEAD   40
