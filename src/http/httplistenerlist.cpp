@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -301,8 +301,8 @@ void HttpListenerList::recvListeners()
                 pListener->assign(fd, pAddr);
                 push_back(pListener);
                 sort(s_compare);
-                
-                LS_NOTICE("Recv listener %s, copy fd %d to %d.", 
+
+                LS_NOTICE("Recv listener %s, copy fd %d to %d.",
                       pListener->getAddrStr(),
                       startfd, fd);
             }
@@ -374,7 +374,7 @@ int HttpListenerList::saveInUseListnersTo(HttpListenerList &rhs)
     int add = 0;
     iterator iter;
     for (iter = begin(); iter != end();)
-    {   
+    {
         (*iter)->stop();
         if ((*iter)->getVHostMap()->getRef() <= 0)
         {

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -538,7 +538,7 @@ static int setFileHook(int index, module_param_info_t *param,
                    myParam[param->key_index].config_key);
         return -1;
     }
-    
+
     pUser->setFilterPath(index, param->val, param->val_len);
     g_api->log(NULL, LSI_LOG_NOTICE,
                "%s LUA SET %s = %.*s\n",
@@ -573,7 +573,7 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
         return pUser;
     }
 
-    
+
     for (int i=0; i<param_count; ++i)
     {
         switch(param[i].key_index)
@@ -652,7 +652,7 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                        pUser->getMaxRunTime(),
                        pUser->getMaxRunTime() ? "ENABLED" : "DISABLED");
             break;
-            
+
         case 7:
             //"maxlinecount"
             if ((line = strtol(param[i].val, NULL, 0)) >= 0)
@@ -669,7 +669,7 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                        pUser->getMaxLineCount(),
                        pUser->getMaxLineCount() ? "ENABLED" : "DISABLED");
             break;
-            
+
         case 8:
             //"jitlinemod"
             if ((line = strtol(param[i].val, NULL, 0)) > 0)
@@ -681,7 +681,7 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                        param[i].val,
                        s_iJitLineMod);
             break;
-            
+
         case 9:
             //"pause"
             if ((sec = strtol(param[i].val, NULL, 0)) > 0)

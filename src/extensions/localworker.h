@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -68,14 +68,14 @@ class LocalWorker : public ExtWorker
     RestartMarker      *m_pRestartMarker;
     DetachedProcess_t  *m_pDetached;
 
-    
+
     void        moveToStopList();
 public:
     static time_t       s_tmRestartPhp;
-    
+
     explicit LocalWorker(int type);
 
-    
+
     ~LocalWorker();
 
     LocalWorkerConfig &getConfig() const;
@@ -102,12 +102,12 @@ public:
     int tryRestart();
     int restart();
     int addNewProcess();
-    
+
     virtual void onTimer();
 
     int startWorker();
     void setRestartMarker(const char* path, int reset_me_path_pos);
-    
+
     static int workerExec(LocalWorkerConfig &config, int fd);
     static void configRlimit(RLimits *pRLimits, const XmlNode *pNode);
 
@@ -118,7 +118,7 @@ public:
     bool detectBinaryChange();
     int processPid(int pid, const char * path);
 
-    
+
     bool loadDetachedPid(int fd, DetachedPidInfo_t *detached_pid);
     void saveDetachedPid(int fd, DetachedPidInfo_t *detached_pid,
                                     const char *path);
@@ -135,9 +135,9 @@ public:
     //             can be `-HTTP_Status_Code`
 
     int startDetachedWorker(int force);
-    
-    
-    
+
+
+
     LS_NO_COPY_ASSIGN(LocalWorker);
 };
 

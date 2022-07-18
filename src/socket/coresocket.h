@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -32,11 +32,11 @@
 
 #define INVALID_FD  -1
 
-/* These two flags can be specified in the 'nodelay' option of listen or 
+/* These two flags can be specified in the 'nodelay' option of listen or
  * connect.  They can be combined.  Note that if LS_SOCK_USERSOCKET is
  * specified, it is automatically non-blocking, so be ready for that.  */
-/* User socket "connect" note: if the connect fails with an errno of 
- * EINPROGRESS you will need to return control to the event loop and 
+/* User socket "connect" note: if the connect fails with an errno of
+ * EINPROGRESS you will need to return control to the event loop and
  * complete the function by calling connect_finish().  */
 #define LS_SOCK_NODELAY         1
 #define LS_SOCK_USERSOCKET      2
@@ -106,7 +106,7 @@ public:
     /* connect_finish is only used for user-land sockets and is only required
      * if the connect returns -1 with errno == EINPROGRESS */
     static int  connect_finish(int fd);
-    static int  bind(const GSockAddr &server, int type, int *fd, 
+    static int  bind(const GSockAddr &server, int type, int *fd,
                      int flag = 0);
     static int  listen(const char *pURL, int backlog, int *fd,
                        int flag = LS_SOCK_NODELAY,
@@ -141,7 +141,7 @@ public:
         return ls_setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(int));
 //#endif
     }
-    
+
     static int enableFastOpen(int fd, int queLen);
 
     static void setIpv6Only(int only);

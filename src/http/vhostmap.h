@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -124,14 +124,14 @@ private:
     typedef THash<VHostMap *>      IpMap;
     IpMap       m_map;
     SslContext       *m_pSslContext;
-    
-    
+
+
     SubIpMap(const SubIpMap &rhs);
     void operator=(const SubIpMap &rhs);
 public:
     SubIpMap();
     ~SubIpMap();
-    
+
     SslContext *getSslContext() const      {   return m_pSslContext;   }
     void setDefaultSslCtx(SslContext *p);
 

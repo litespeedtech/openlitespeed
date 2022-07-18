@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -23,12 +23,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 extern "C" {
 #endif
 /**
  * @file ls_sock.h
- * @brief Include file for library which allows you to use both native and 
+ * @brief Include file for library which allows you to use both native and
  * user-land sockets with the same basic API (some minor changes, see below).
  */
 
@@ -43,8 +43,8 @@ extern "C" {
  */
 
 /**
- * @def _USE_USER_SOCK       
- * @brief If defined, then user-land sockets are enabled.  
+ * @def _USE_USER_SOCK
+ * @brief If defined, then user-land sockets are enabled.
  */
 
 #ifdef _USE_USER_SOCK
@@ -55,7 +55,7 @@ extern "C" {
 #define ls_sock_init(a,b,c)
 #define ls_run(a,b)         while (1) a(b)
 
-#ifdef __cplusplus 
+#ifdef __cplusplus
 #define ls_bind(a,b,c)      ::bind(a,b,c)
 #define ls_connect(a,b,c)   ::connect(a,b,c)
 #define is_usersock(sockfd) 0

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -42,7 +42,7 @@ class FileCacheDataEx : public RefCounter
     friend class StaticFileCacheData;
 
     AutoStr2        m_sCLHeader;
-    
+
     int             m_fd;
     off_t           m_lSize;
     ino_t           m_inode;
@@ -79,7 +79,7 @@ public:
     void setStatus(int status)    {   m_iStatus = status; }
     int  getStatus()  const         {   return m_iStatus;   }
 
-   
+
     int  isCached() const           {   return m_iStatus;  }
     int  isMapped() const
     {   return (m_iStatus == MMAPED);     }
@@ -150,7 +150,7 @@ class StaticFileCacheData : public CacheElement
     int buildFixedHeaders(int etag);
     int buildCompressedCache(FileCacheDataEx *&pData, const struct stat &st);
     int tryCreateCompressed(char useBrotli);
-    
+
     int buildCompressedPaths();
     int detectTrancate();
 
@@ -194,14 +194,14 @@ public:
 
     int getBypassModsec() const         { return m_bypassModsec;    }
     void setBypassModsec(int v)         { m_bypassModsec = v; }
-    
+
     int testMod(HttpReq *pReq);
     int testUnMod(HttpReq *pReq);
     int testIfRange(const char *pIR, int len);
     int release();
     time_t getLastMod() const       {   return m_fileData.getLastMod();   }
     ino_t getINode() const          {   return m_fileData.getINode();     }
-    
+
     bool isDirty(const struct stat &fileStat) const
     {   return m_fileData.isDirty(fileStat);      }
     int needUpdateHeaders(const MimeSetting *pMIME,

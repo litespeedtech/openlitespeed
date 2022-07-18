@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -30,20 +30,20 @@
 
 #include <lsdef.h>
 
-class SslCertComp 
+class SslCertComp
 {
-    SslCertComp(); 
+    SslCertComp();
     ~SslCertComp();
-    
+
 public:
-    typedef struct 
+    typedef struct
     {
         int     m_input_len;
         int     m_len;
         uint8_t m_comp[1];
     } comp_cache_t;
-    
-    static void activateComp(bool activate);      
+
+    static void activateComp(bool activate);
     static void activateDecomp(bool activate);
     static void enableCertComp(SSL_CTX *ctx);
     static void enableCertDecomp(SSL_CTX *ctx);

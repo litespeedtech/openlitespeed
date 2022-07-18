@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -62,7 +62,7 @@ public:
     bool InitLsiUrlAsyncFetchers();
 
     static void InitStats(Statistics *statistics);
-    LsServerContext *MakeLsServerContext(StringPiece hostname, int port, 
+    LsServerContext *MakeLsServerContext(StringPiece hostname, int port,
                                          int uninitialized);
     virtual ServerContext *NewServerContext();
 

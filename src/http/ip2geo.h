@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -36,7 +36,7 @@ public:
     virtual ~GeoInfo() { };
     virtual const char *getGeoEnv(const char *pEnvName) = 0;
     virtual int addGeoEnv(IEnv *pEnv) = 0;
-    
+
 private:
     LS_NO_COPY_ASSIGN(GeoInfo);
 };
@@ -47,15 +47,15 @@ public:
     // Call the constructor AFTER having configured everything
     Ip2Geo() { }
     virtual ~Ip2Geo() { };
-    
+
     virtual int config(const XmlNodeList *pList) = 0;
 
     // Called only after config and setEnv
     // Note that GeoInfo is allocated and returned from a successful lookup
     virtual GeoInfo *lookUp(uint32_t addr) = 0;
     virtual GeoInfo *lookUpV6(in6_addr addr) = 0;
-    
-private:    
+
+private:
     LS_NO_COPY_ASSIGN(Ip2Geo);
 };
 

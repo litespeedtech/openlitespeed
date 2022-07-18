@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -35,7 +35,7 @@ public:
     };
     HioCrypto()             {}
     virtual ~HioCrypto()    {}
-    
+
     virtual int getEnv(HioCrypto::ENV id, char *&val,int maxValLen) = 0;
     virtual X509 *getPeerCertificate() const
     {   return NULL;    }
@@ -45,7 +45,7 @@ public:
     {   return 0;       }
     int  buildVerifyErrorString(char *pBuf, int len) const
     {   return 0;       }
-    
+
 };
 
 

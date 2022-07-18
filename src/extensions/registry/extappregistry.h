@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -92,7 +92,7 @@ public:
     static void shutdown();
     static int generateRTReport(int fd);
     static int hasUri(const char *uri);
-    
+
     static void getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, int loop = 0);
     static int configVhostOwnPhp(HttpVHost *pVHost);
     static ExtWorker *configExtApp(const XmlNode *pNode, const HttpVHost *pVHost);
@@ -101,7 +101,7 @@ public:
     static int configExtApps(const XmlNode *pRoot, const HttpVHost *pVHost);
     static RLimits *getRLimits()    {   return s_pRLimits;  }
     static void setRLimits(RLimits *pRLimits)   {   s_pRLimits = pRLimits;  }
-    
+
     LS_NO_COPY_ASSIGN(ExtAppRegistry);
 };
 
@@ -118,8 +118,8 @@ public:
     static int markToStop(pid_t pid, int kill_type);
     static void sendKillCmdToWatchdog(pid_t pid, int kill_type, long lastmod);
     static void addMarkToStop(pid_t pid, int kill_type, long lastmod);
-    
-    
+
+
     LS_NO_COPY_ASSIGN(PidRegistry);
 };
 
