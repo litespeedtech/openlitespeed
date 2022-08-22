@@ -136,99 +136,84 @@ check_os()
     MARIADBCPUARCH=
     
     if [ -f /etc/redhat-release ] ; then
-        cat /etc/redhat-release | grep " 5." >/dev/null
-        if [ $? = 0 ] ; then
-            OSNAMEVER=CENTOS5
-            OSNAME=centos
-            OSVER=5
-        else
-            cat /etc/redhat-release | grep " 6." >/dev/null
-            if [ $? = 0 ] ; then
-                OSNAMEVER=CENTOS6
-                OSNAME=centos
-                OSVER=6
-            else
-                cat /etc/redhat-release | grep " 7." >/dev/null
-                if [ $? = 0 ] ; then
-                    OSNAMEVER=CENTOS7
-                    OSNAME=centos
-                    OSVER=7
-
-                else
-                    cat /etc/redhat-release | grep " 8." >/dev/null
-                    if [ $? = 0 ] ; then
-                        OSNAMEVER=CENTOS8
-                        OSNAME=centos
-                        OSVER=8
-                    fi
-                fi
-            fi
-        fi
+        OSNAME=centos
+        case $(cat /etc/centos-release | tr -dc '0-9.'|cut -d \. -f1) in 
+        6)
+            OSNAMEVER=CENTOS6
+            OSVER=6
+            ;;
+        7)
+            OSNAMEVER=CENTOS7
+            OSVER=7
+            ;;
+        8)
+            OSNAMEVER=CENTOS8
+            OSVER=8
+            ;;
+        esac
     elif [ -f /etc/lsb-release ] ; then
-        cat /etc/lsb-release | grep "DISTRIB_RELEASE=12." >/dev/null
-        if [ $? = 0 ] ; then
+        OSNAME=ubuntu
+        case $(cat /etc/os-release | grep UBUNTU_CODENAME | cut -d = -f 2) in
+        precise)
             OSNAMEVER=UBUNTU12
-            OSNAME=ubuntu
             OSVER=precise
             MARIADBCPUARCH="arch=amd64,i386"
-            
-        else
-            cat /etc/lsb-release | grep "DISTRIB_RELEASE=14." >/dev/null
-            if [ $? = 0 ] ; then
-                OSNAMEVER=UBUNTU14
-                OSNAME=ubuntu
-                OSVER=trusty
-                MARIADBCPUARCH="arch=amd64,i386,ppc64el"
-            else
-                cat /etc/lsb-release | grep "DISTRIB_RELEASE=16." >/dev/null
-                if [ $? = 0 ] ; then
-                    OSNAMEVER=UBUNTU16
-                    OSNAME=ubuntu
-                    OSVER=xenial
-                    MARIADBCPUARCH="arch=amd64,i386,ppc64el"
-                else
-                    cat /etc/lsb-release | grep "DISTRIB_RELEASE=18." >/dev/null
-                    if [ $? = 0 ] ; then
-                        OSNAMEVER=UBUNTU18
-                        OSNAME=ubuntu
-                        OSVER=bionic
-                        MARIADBCPUARCH="arch=amd64"
-                    else
-                        cat /etc/lsb-release | grep "DISTRIB_RELEASE=20." >/dev/null
-                        if [ $? = 0 ] ; then
-                            OSNAMEVER=UBUNTU20
-                            OSNAME=ubuntu
-                            OSVER=focal
-                            MARIADBCPUARCH="arch=amd64"
-                        fi    
-                    fi
-                fi
-            fi
-        fi    
+            ;;           
+        trusty)
+            OSNAMEVER=UBUNTU14
+            OSVER=trusty
+            MARIADBCPUARCH="arch=amd64,i386,ppc64el"
+            ;;        
+        xenial)
+            OSNAMEVER=UBUNTU16
+            OSVER=xenial
+            MARIADBCPUARCH="arch=amd64,i386,ppc64el"
+            ;;
+        bionic)
+            OSNAMEVER=UBUNTU18
+            OSVER=bionic
+            MARIADBCPUARCH="arch=amd64"
+            ;;
+        focal)            
+            OSNAMEVER=UBUNTU20
+            OSVER=focal
+            MARIADBCPUARCH="arch=amd64"
+            ;;
+        jammy)            
+            OSNAMEVER=UBUNTU22
+            OSVER=jammy
+            MARIADBCPUARCH="arch=amd64"
+            ;;            
+        esac
     elif [ -f /etc/debian_version ] ; then
-        cat /etc/debian_version | grep "^7." >/dev/null
-        if [ $? = 0 ] ; then
+        OSNAME=debian
+        case $(cat /etc/os-release | grep VERSION_CODENAME | cut -d = -f 2) in
+        wheezy)
             OSNAMEVER=DEBIAN7
-            OSNAME=debian
             OSVER=wheezy
             MARIADBCPUARCH="arch=amd64,i386"
-        else
-            cat /etc/debian_version | grep "^8." >/dev/null
-            if [ $? = 0 ] ; then
-                OSNAMEVER=DEBIAN8
-                OSNAME=debian
-                OSVER=jessie
-                MARIADBCPUARCH="arch=amd64,i386"
-            else
-                cat /etc/debian_version | grep "^9." >/dev/null
-                if [ $? = 0 ] ; then
-                    OSNAMEVER=DEBIAN9
-                    OSNAME=debian
-                    OSVER=stretch
-                    MARIADBCPUARCH="arch=amd64,i386"
-                fi
-            fi
-        fi
+            ;;        
+        jessie)
+            OSNAMEVER=DEBIAN8
+            OSVER=jessie
+            MARIADBCPUARCH="arch=amd64,i386"
+            ;;
+        stretch) 
+            OSNAMEVER=DEBIAN9
+            OSVER=stretch
+            MARIADBCPUARCH="arch=amd64,i386"
+            ;;
+        buster)
+            OSNAMEVER=DEBIAN10
+            OSVER=buster
+            MARIADBCPUARCH="arch=amd64,i386"
+            ;;
+        bullseye)
+            OSNAMEVER=DEBIAN11
+            OSVER=bullseye
+            MARIADBCPUARCH="arch=amd64,i386"
+            ;;
+        esac         
     fi
 
     if [ "x$OSNAMEVER" != "x" ] ; then
