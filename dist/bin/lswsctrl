@@ -7,8 +7,8 @@ PROG="$0"
 #    WSWATCH=1
 #fi
 
-EXECUTABLE=litespeed
-DESC="litespeed"
+EXECUTABLE=openlitespeed
+DESC="openlitespeed"
 BASE_DIR=`dirname "$PROG"`
 cd "$BASE_DIR"
 BASE_DIR=`pwd`
