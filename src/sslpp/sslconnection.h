@@ -19,6 +19,7 @@
 #ifndef SSLCONNECTION_H
 #define SSLCONNECTION_H
 #include <lsdef.h>
+#include <lsr/ls_types.h>
 #include <sslpp/ssldef.h>
 #include <sslpp/hiocrypto.h>
 #include <sslpp/ls_fdbuf_bio.h>
@@ -72,6 +73,8 @@ public:
 
     void setSSL(SSL *ssl);
     SSL *getSSL() const    {   return m_ssl;   }
+
+    void setLogSession(ls_logger_t *log_sess);
 
     void release();
     int setfd(int fd);
@@ -127,7 +130,7 @@ public:
     int getAlpnResult()     {   return getSpdyVersion();    }
 
     int updateOnGotCert();
-
+    
     void enableRbio() {};
 
     static void initConnIdx();
@@ -136,7 +139,7 @@ public:
 
     static int getCipherBits(const SSL_CIPHER *pCipher, int *algkeysize);
     static int isClientVerifyOptional(int i);
-
+    
     // Can only be called after the first failed accept or read, to obtain the
     // raw data which can be used in a redirect (see ntwkiolink.cpp).
     char *getRawBuffer(int *len);
@@ -153,13 +156,13 @@ public:
     int wantAsyncCtx(bool isWantWait);
 
 private:
+    ls_fdbio_data m_bio;
     SSL    *m_ssl;
     SslClientSessCache *m_pSessCache;
     short   m_flag;
     char    m_iStatus;
     char    m_iWant;
     static int32_t s_iConnIdx;
-    ls_fdbio_data m_bio;
 
     LS_NO_COPY_ASSIGN(SslConnection);
 };

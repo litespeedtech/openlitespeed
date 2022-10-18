@@ -161,8 +161,8 @@ int SslTicket::initShm(int uid, int gid)
         LOGDBG("Open LsShm Failed.");
         return LS_FAIL;
     }
-    pShm->chperm(uid, gid, 0600);
-
+    pShm->chperm(uid, gid, 0600);   
+    
     if ((pShmPool = pShm->getGlobalPool()) == NULL)
     {
         LOGDBG("Get Global Pool Failed.");
@@ -238,13 +238,13 @@ int SslTicket::init(const char* pFileName, long int timeout, int uid, int gid)
             return LS_FAIL;
         }
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-        memmove(&pShmData->m_keys, &m_keys, sizeof(m_keys) );
+        memmove(&pShmData->m_keys, &m_keys, sizeof(m_keys) ); 
         pShmData->m_tmLastAccess = DateTime::s_curTime;
         m_pKeyStore->unlock();
         return LS_OK;
     }
     pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-    memmove(&m_keys, &pShmData->m_keys, sizeof(m_keys) );
+    memmove(&m_keys, &pShmData->m_keys, sizeof(m_keys) ); 
     m_pKeyStore->unlock();
     pCur = &m_keys.m_aKeys[m_keys.m_idxCur];
     if (pCur->expireSec > (DateTime::s_curTime + (timeout >> 1)))
@@ -255,7 +255,7 @@ int SslTicket::init(const char* pFileName, long int timeout, int uid, int gid)
         m_pKeyStore->lock();
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
         checkShmExpire(pShmData);
-        memmove(&m_keys, &pShmData->m_keys, sizeof(m_keys) );
+        memmove(&m_keys, &pShmData->m_keys, sizeof(m_keys) ); 
         m_pKeyStore->unlock();
         return LS_OK;
     }
@@ -285,7 +285,7 @@ int SslTicket::init(const char* pFileName, long int timeout, int uid, int gid)
         memmove(&m_keys.m_aKeys[m_keys.m_idxCur], &newKey, SSLTICKET_KEYSIZE);
         m_pKeyStore->lock();
         pShmData = (STShmData_t *)m_pKeyStore->offset2ptr(m_iOff);
-        memmove(&pShmData->m_keys, &m_keys, sizeof(m_keys) );
+        memmove(&pShmData->m_keys, &m_keys, sizeof(m_keys) ); 
     }
     m_keys.m_aKeys[m_keys.m_idxCur].expireSec = DateTime::s_curTime + timeout;
     pShmData->m_keys.m_aKeys[pShmData->m_keys.m_idxCur].expireSec
@@ -401,7 +401,7 @@ int SslTicket::checkShmExpire(STShmData_t *pShmData)
 
     RAND_bytes((unsigned char *)pPrev, SSLTICKET_KEYSIZE);
     pPrev->expireSec = pNext->expireSec + (m_iLifetime >> 1);
-    rotateIndices(pShmData->m_keys.m_idxPrev, pShmData->m_keys.m_idxCur,
+    rotateIndices(pShmData->m_keys.m_idxPrev, pShmData->m_keys.m_idxCur, 
                   pShmData->m_keys.m_idxNext);
     return LS_OK;
 }

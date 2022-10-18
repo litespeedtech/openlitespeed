@@ -35,7 +35,7 @@ public:
     };
     HioCrypto()             {}
     virtual ~HioCrypto()    {}
-
+    
     virtual int getEnv(HioCrypto::ENV id, char *&val,int maxValLen) = 0;
     virtual X509 *getPeerCertificate() const
     {   return NULL;    }
@@ -45,7 +45,7 @@ public:
     {   return 0;       }
     int  buildVerifyErrorString(char *pBuf, int len) const
     {   return 0;       }
-
+    
 };
 
 

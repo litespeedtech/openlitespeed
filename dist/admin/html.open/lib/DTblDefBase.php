@@ -1101,7 +1101,7 @@ class DTblDefBase
             self::NewTextAttr('ocspResponder', DMsg::ALbl('l_ocspresponder'), 'httpurl'),
             self::NewTextAttr('ocspCACerts', DMsg::ALbl('l_ocspcacerts'), 'cust'),
         );
-        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ocspstapling'), $attrs);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ocspstapling'), $attrs, 'sslOCSP');
     }
 
     protected function add_T_TOP($id)

@@ -596,14 +596,18 @@ HttpContext *HttpVHost::setContext(HttpContext *pContext,
                                    const char *pUri, int type, const char *pLocation, const char *pHandler,
                                    int allowBrowse, int match)
 {
+    char appNameVh[256];
     const HttpHandler *pHdlr = HandlerFactory::getInstance(type, pHandler);
 
     if (!pHdlr)
     {
-        LS_ERROR("[%s] Can not find handler with type: %d, name: %s.",
-                 TmpLogId::getLogId(), type, (pHandler) ? pHandler : "");
+        getUniAppName(pHandler, appNameVh, 256);
+        pHdlr = HandlerFactory::getInstance(type, appNameVh);
+        if (!pHdlr)
+            LS_ERROR("[%s] Can not find handler with type: %d, name: %s.",
+                    TmpLogId::getLogId(), type, (pHandler) ? pHandler : "");
     }
-    else if (type > HandlerType::HT_CGI)
+    if (pHdlr && type > HandlerType::HT_CGI)
         pHdlr = isHandlerAllowed(pHdlr, type, pHandler);
     if (!pHdlr)
     {

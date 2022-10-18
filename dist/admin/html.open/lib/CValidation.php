@@ -562,7 +562,7 @@ class CValidation
 	{
 		// check if it's allowed command, do not allow ' " -c -i /dev/tcp bash sh csh tcsh ksh zsh
 		$cmd = str_replace('.', 'a', $cmd); // replace . with char before pattern check
-		$pattern = '#("|\'|;|-c|-i|/dev/tcp|\Wbash\W|\Wsh\W|\Wcsh\W|\Wtcsh\W|\Wzsh\W|\Wksh\W)#';
+		$pattern = '#("|\'|;|-c|-i|/dev/tcp|curl|wget|fetch|\Wbash\W|\Wsh\W|\Wcsh\W|\Wtcsh\W|\Wzsh\W|\Wksh\W)#';
 
 		if (preg_match($pattern, $cmd, $m)) {
 			return $m[0];

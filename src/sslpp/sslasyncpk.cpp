@@ -78,16 +78,16 @@ static ssl_private_key_result_t AsyncPrivateKeyDecrypt(
 static ssl_private_key_result_t AsyncPrivateKeyComplete(
     SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out);
 
-static const SSL_PRIVATE_KEY_METHOD s_async_private_key_method =
+static const SSL_PRIVATE_KEY_METHOD s_async_private_key_method = 
     { AsyncPrivateKeySign, AsyncPrivateKeyDecrypt, AsyncPrivateKeyComplete };
 
 
 static ssl_private_key_result_t AsyncPrivateKeySign(
-    SSL* ssl, uint8_t* out, size_t* out_len, size_t max_out,
+    SSL* ssl, uint8_t* out, size_t* out_len, size_t max_out, 
     uint16_t signature_algorithm, const uint8_t* in, size_t in_len)
 {
     ssl_apk_offload_t *data = (ssl_apk_offload_t *)SSL_get_ex_data(ssl, s_ssl_apk_index);
-
+    
     if (!data)
     {
         DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeySign method not defined\n", ssl);
@@ -128,7 +128,7 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
         ERROR_MESSAGE("[SSL: %p] AsyncPrivateKeySign unable to allocate memory:"
                       " %ld bytes\n", ssl, in_len + max_out);
         return ssl_private_key_failure;
-    }
+    }    
     data->m_in = (uint8_t *)data->m_sign + max_out;
     memcpy(data->m_in, in, in_len);
     data->m_in_len = in_len;
@@ -136,7 +136,7 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
 
     DEBUG_MESSAGE("[SSL: %p] AsyncPrivateKeySign add job: %p, max_out: %ld, "
                   "in_len: %ld\n", ssl, data, max_out, in_len);
-    if (offloader_enqueue(s_offloader, &data->m_header) == LS_FAIL)
+    if (offloader_enqueue(s_offloader, &data->m_header, NULL) == LS_FAIL)
     {
         ERROR_MESSAGE("[SSL: %p] AsyncPrivateKeySign SSL add of job of sign "
                       "failed\n", ssl);
@@ -153,8 +153,8 @@ static ssl_private_key_result_t AsyncPrivateKeySign(
 }
 
 
-static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl,
-    uint8_t *out, size_t *out_len, size_t max_out)
+static ssl_private_key_result_t AsyncPrivateKeyComplete(SSL *ssl, 
+    uint8_t *out, size_t *out_len, size_t max_out) 
 {
     ssl_apk_offload_t *data = (ssl_apk_offload_t *)SSL_get_ex_data(ssl, s_ssl_apk_index);
 

@@ -39,14 +39,13 @@ Logger *Logger::s_pDefault = NULL;
 extern "C" {
 #endif
 
-void c_log(int level, const char *format, ...)
+void c_log(int level, ls_logger_t *log_sess, const char *format, ...)
 {
     if ( log4cxx::Level::isEnabled( level ) )
     {
-        log4cxx::Logger *l = log4cxx::Logger::getDefault();
         va_list  va;
         va_start(va, format);
-        l->vlog(level, format, va);
+        Logger::s_vlog(level, (LogSession *)log_sess, format, va, 0);
         va_end(va);
     }
 }
@@ -197,6 +196,7 @@ void Logger::lograw(const struct iovec *pIov, int len)
     }
     
 }
+
 
 void Logger::s_vlog(int level, LogSession *pLogSession,
                     const char *format, va_list args, int flag)

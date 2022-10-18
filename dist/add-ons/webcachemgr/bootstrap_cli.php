@@ -2,14 +2,15 @@
 
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
- * @Author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @Copyright: (c) 2018
+ *
+ * @author Michael Alegre
+ * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Context\RootCLIContextOption;
-use \Lsc\Wp\CliController;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\Context\RootCLIContextOption;
+use Lsc\Wp\CliController;
 
 require_once __DIR__ . '/autoloader.php';
 

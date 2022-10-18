@@ -98,7 +98,7 @@ void AuthUser::updatePasswdEncMethod()
         }
     }
     else if (pass[0] == '$' && pass[1] == '2' && pass[3] == '$'
-             && (pass[2] == 'y' || pass[2] == 'a'))
+             && (pass[2] == 'y' || pass[2] == 'a' || pass[2] == 'b'))
         setEncMethod(ENCRYPT_BCRYPT);
 
 }

@@ -20,8 +20,9 @@
 #define __LS_FDBUF_BIO_H__
 
 #include <lsdef.h>
+#include <lsr/ls_types.h>
 
-#ifdef __cplusplus
+#ifdef __cplusplus 
 extern "C" {
 #endif
 
@@ -32,6 +33,7 @@ extern "C" {
  */
 
 typedef struct ls_fdbio_data {
+    ls_logger_t *m_logger;
     uint8_t     *m_rbuf;
     uint16_t     m_rbuf_max_block;
     uint16_t     m_rbuf_used;
@@ -55,16 +57,16 @@ enum LS_FDBIO_FLAG
 };
 
 /**
- * @brief ls_fdbuf_bio_init called during the connection constructor,
+ * @brief ls_fdbuf_bio_init called during the connection constructor, 
  * initializes the BIO access.
- * @param[out] fdbio is initialized for later use.
+ * @param[out] fdbio is initialized for later use.                             
  * @return None.
  */
 void ls_fdbuf_bio_init(ls_fdbio_data *fdbio);
 
 
 /**
- * @brief ls_fdbio_create initializes the use of BIOs.  Call once per
+ * @brief ls_fdbio_create initializes the use of BIOs.  Call once per 
  * connection.
  * @param[in] fd The socket fd for the connection.
  * @param[out] fdbio ls_fdbuf_bio to be used as the BIO for the connection.
@@ -112,7 +114,7 @@ ls_inline int ls_fdbio_is_wblock(ls_fdbio_data *fdbio)
 ls_inline void ls_fdbio_clear_wblock(ls_fdbio_data *fdbio)
 {    fdbio->m_flag &= ~LS_FDBIO_WBLOCK;    }
 
-#ifdef __cplusplus
+#ifdef __cplusplus 
 }
 #endif
 

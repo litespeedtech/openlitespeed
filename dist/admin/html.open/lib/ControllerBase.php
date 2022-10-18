@@ -62,6 +62,15 @@ class ControllerBase
 		return (isset($_SESSION['changed']) ? $_SESSION['changed'] : false);
 	}
 
+	public static function getServerLoad()
+	{
+		$avgload = \sys_getloadavg();
+		if ($avgload === false) {
+			return 'N/A';
+		}
+		return implode(', ', array_map(function($load) { return round($load, 3); }, $avgload));
+	}
+
 	protected function setChanged($changed)
 	{
 		$_SESSION['changed'] = $changed;

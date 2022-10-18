@@ -861,7 +861,7 @@ static int get_req_headers(const lsi_session_t *session, struct iovec *iov_key,
                            struct iovec *iov_val, int maxIovCount)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    if (pSession == NULL)
+    if (pSession == NULL || maxIovCount <= 0)
         return LS_FAIL;
 
     HttpReq *pReq = pSession->getReq();
@@ -880,6 +880,8 @@ static int get_req_headers(const lsi_session_t *session, struct iovec *iov_key,
             iov_val[index].iov_len = pReq->getHeaderLen(i);
 
             ++index;
+            if (index >= maxIovCount)
+                return index;
         }
     }
 
@@ -900,6 +902,8 @@ static int get_req_headers(const lsi_session_t *session, struct iovec *iov_key,
             iov_val[index].iov_len = valLen;
 
             ++index;
+            if (index >= maxIovCount)
+                break;
         }
     }
 

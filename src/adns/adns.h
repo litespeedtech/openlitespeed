@@ -121,7 +121,7 @@ public:
 
     static int  deleteCache();
     void        trimCache();
-
+    
     char *getCacheName(const char *pName, int type);
     const char *getCacheValue(const char * pName, int nameLen, int &valLen,
                                int max_ttl = 0);
@@ -135,10 +135,10 @@ public:
     const char *getHostByAddrInCache(const struct sockaddr * pAddr,
                                      int &length, int max_ttl = 0);
     AdnsReq *getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_pf cb);
-
+    
     static int setResult(const struct sockaddr *result, const void *ip, int len);
     static void release(AdnsReq *pReq);
-
+    
 
     int  handleEvents(short events);
     int  onTimer();
@@ -148,7 +148,7 @@ public:
     static int getHostByNameV6Sync(const char *pName, in6_addr *addr);
 
     void       checkCacheTTL();
-
+    
     void       processPendingEvt()
     {}
 

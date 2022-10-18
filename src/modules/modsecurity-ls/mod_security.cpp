@@ -31,8 +31,8 @@ class session;
 
 #define MODULE_VERSION_INFO         ModuleNameStr " " VERSIONNUMBER
 
-#define MAX_RESP_HEADERS_NUMBER     50
-#define MAX_REQ_HEADERS_NUMBER      50
+#define MAX_RESP_HEADERS_NUMBER     200
+#define MAX_REQ_HEADERS_NUMBER      200
 #define STATUS_OK                   200
 #define CHECKBODYTRUE               (RulesSetProperties::TrueConfigBoolean)
 /////////////////////////////////////////////////////////////////////////////

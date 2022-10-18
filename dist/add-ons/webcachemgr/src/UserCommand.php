@@ -3,18 +3,18 @@
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @author Michael Alegre
+ * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
-use \Exception;
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Context\ContextOption;
-use \Lsc\Wp\Context\UserCLIContextOption;
-use \Lsc\Wp\Panel\ControlPanel;
+use Exception;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\Context\ContextOption;
+use Lsc\Wp\Context\UserCLIContextOption;
+use Lsc\Wp\Panel\ControlPanel;
 
 /**
  * Running as user - suexec
@@ -22,29 +22,124 @@ use \Lsc\Wp\Panel\ControlPanel;
 class UserCommand
 {
 
+    /**
+     * @var int
+     */
     const EXIT_ERROR = 1;
+
+    /**
+     * @var int
+     */
     const EXIT_SUCC = 2;
+
+    /**
+     * @var int
+     */
     const EXIT_FAIL = 4;
+
+    /**
+     * @var int
+     */
     const EXIT_INCR_SUCC = 8;
+
+    /**
+     * @var int
+     */
     const EXIT_INCR_FAIL = 16;
+
+    /**
+     * @var int
+     */
     const EXIT_INCR_BYPASS = 32;
+
+    /**
+     * @var int
+     */
     const RETURN_CODE_TIMEOUT = 124;
+
+    /**
+     * @var string
+     */
     const CMD_STATUS = 'status';
+
+    /**
+     * @var string
+     */
     const CMD_ENABLE = 'enable';
+
+    /**
+     * @var string
+     */
     const CMD_DIRECT_ENABLE = 'direct_enable';
+
+    /**
+     * @var string
+     */
     const CMD_MASS_ENABLE = 'mass_enable';
+
+    /**
+     * @var string
+     */
     const CMD_DISABLE = 'disable';
+
+    /**
+     * @var string
+     */
     const CMD_MASS_DISABLE = 'mass_disable';
+
+    /**
+     * @var string
+     */
     const CMD_UPGRADE = 'upgrade';
+
+    /**
+     * @var string
+     */
     const CMD_MASS_UPGRADE = 'mass_upgrade';
+
+    /**
+     * @var string
+     */
     const CMD_UPDATE_TRANSLATION = 'update_translation';
+
+    /**
+     * @var string
+     */
     const CMD_REMOVE_LSCWP_PLUGIN_FILES = 'remove_lscwp_plugin_files';
+
+    /**
+     * @var string
+     */
     const CMD_DASH_NOTIFY = 'dash_notify';
+
+    /**
+     * @var string
+     */
     const CMD_MASS_DASH_NOTIFY = 'mass_dash_notify';
+
+    /**
+     * @var string
+     */
     const CMD_DASH_DISABLE = 'dash_disable';
+
+    /**
+     * @var string
+     */
     const CMD_MASS_DASH_DISABLE = 'mass_dash_disable';
+
+    /**
+     * @var string
+     */
     const CMD_DASH_GET_MSG = 'dash_get_msg';
+
+    /**
+     * @var string
+     */
     const CMD_DASH_ADD_MSG = 'dash_add_msg';
+
+    /**
+     * @var string
+     */
     const CMD_DASH_DELETE_MSG = 'dash_delete_msg';
 
     /**
@@ -56,7 +151,7 @@ class UserCommand
     /**
      * @var bool
      */
-    private $asUser = false;
+    private $asUser;
 
     /**
      * @var WPInstall
@@ -75,14 +170,13 @@ class UserCommand
 
     /**
      *
-     * @param boolean $asUser
-     * @throws LSCMException  Thrown indirectly.
+     * @param bool $asUser
+     *
+     * @throws LSCMException  Thrown indirectly by Context::initialize() call.
      */
     private function __construct( $asUser = false )
     {
-        $this->asUser = $asUser;
-
-        if ( $asUser ) {
+        if ( ($this->asUser = $asUser) ) {
             require_once __DIR__ . '/../autoloader.php';
             date_default_timezone_set('UTC');
             Context::initialize(new UserCLIContextOption('userCommand'));
@@ -93,14 +187,20 @@ class UserCommand
      * Handles logging unexpected error output (or not if too long) and returns
      * a crafted message to be displayed instead.
      *
-     * @param WPInstall  $wpInstall  WordPress Installation object.
-     * @param string     $err        Compiled error message.
-     * @param int        $lines      Number of $output lines read into the
-     *                               error msg.
-     * @return string                Message to be displayed instead.
-     * @throws LSCMException  Thrown indirectly.
+     * @param WPInstall $wpInstall  WordPress Installation object.
+     * @param string    $err        Compiled error message.
+     * @param int       $lines      Number of $output lines read into the error
+     *     msg.
+     *
+     * @return string  Message to be displayed instead.
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
      */
-    private static function handleUnexpectedError( $wpInstall, &$err, $lines )
+    private static function handleUnexpectedError(
+        WPInstall $wpInstall,
+                  $err,
+                  $lines )
     {
         $msg = 'Unexpected Error Encountered!';
         $path = $wpInstall->getPath();
@@ -120,67 +220,80 @@ class UserCommand
             foreach ( $commonErrs as $statusBit => $commonErr ) {
 
                 if ( strpos($err, $commonErr) !== false ) {
-
                     $wpInstall->unsetStatusBit(WPInstall::ST_ERR_EXECMD);
                     $wpInstall->setStatusBit($statusBit);
 
-                    $msg .= " {$commonErr}.";
+                    $msg .= " $commonErr.";
                     $match = true;
                     break;
                 }
             }
 
             if ( !$match ) {
-                Logger::error("{$path} - {$err}");
-                return "{$msg} See " . ContextOption::LOG_FILE_NAME
+                Logger::error("$path - $err");
+                return "$msg See " . ContextOption::LOG_FILE_NAME
                     . " for more information.";
             }
         }
 
-        Logger::error("{$path} - {$msg}");
+        Logger::error("$path - $msg");
         return $msg;
+    }
+
+    /**
+     * Parse out locale and plugin version information from issue() result
+     * output GET_TRANSLATION or BAD_TRANSLATION line.
+     *
+     * @since 1.14
+     *
+     * @param string $line
+     *
+     * @return string[]
+     */
+    private static function parseTranslationLocaleAndPluginVer( $line )
+    {
+        list($locale, $pluginVer) = explode(' ', $line);
+
+        return array( 'locale' => $locale, 'pluginVer' => $pluginVer );
     }
 
     /**
      *
      * @since 1.9
      *
-     * @param WPInstall  $wpInstall
-     * @param string     $output
-     * @throws LSCMException  Thrown indirectly.
+     * @param WPInstall $wpInstall
+     * @param string    $output
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     PluginVersion::retrieveTranslation() call.
+     * @throws LSCMException  Thrown indirectly by self::subCommandIssue() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     PluginVersion::removeTranslationZip() call.
      */
-    private static function handleGetTranslationOutput( WPInstall $wpInstall,
-            $output )
+    private static function handleGetTranslationOutput(
+        WPInstall $wpInstall,
+                  $output )
     {
-        $translationInfo = explode(' ', $output);
-        $locale = $translationInfo[0];
-        $lscwpVer = $translationInfo[1];
+        $translationInfo = self::parseTranslationLocaleAndPluginVer($output);
 
-        if ( PluginVersion::retrieveTranslation($locale, $lscwpVer) ) {
+        $translationRetrieved = PluginVersion::retrieveTranslation(
+            $translationInfo['locale'],
+            $translationInfo['pluginVer']
+        );
 
-            $subAction = self::CMD_UPDATE_TRANSLATION;
-            $subCmd = self::getIssueCmd($subAction, $wpInstall);
-
-            exec($subCmd, $subOutput, $subReturn_var);
-
-            Logger::debug(
-                'Issue sub command '
-                    . "{$subAction}={$subReturn_var} {$wpInstall}\n{$subCmd}"
-            );
-            Logger::debug('sub output = ' . var_export($subOutput, true));
+        if ( $translationRetrieved ) {
+            $subOutput =
+                self::subCommandIssue(self::CMD_UPDATE_TRANSLATION, $wpInstall);
 
             foreach ( $subOutput as $subLine ) {
 
-                if ( preg_match('/BAD_TRANSLATION=(.+)/', $subLine,
-                        $m) ) {
-
-                    $translationInfo = explode(' ', $m[1]);
-                    $locale = $translationInfo[0];
-                    $lscwpVer = $translationInfo[1];
+                if ( preg_match('/BAD_TRANSLATION=(.+)/', $subLine, $m) ) {
+                    $badTranslationInfo =
+                        self::parseTranslationLocaleAndPluginVer($m[1]);
 
                     PluginVersion::removeTranslationZip(
-                        $locale,
-                        $lscwpVer
+                        $badTranslationInfo['locale'],
+                        $badTranslationInfo['pluginVer']
                     );
                 }
             }
@@ -191,16 +304,25 @@ class UserCommand
      *
      * @since 1.9
      *
-     * @param WPInstall  $wpInstall
-     * @param string     $line
-     * @param int        $retStatus
-     * @param int        $cmdStatus
-     * @param string     $err
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     * @param WPInstall $wpInstall
+     * @param string    $line
+     * @param int       $retStatus
+     * @param int       $cmdStatus
+     * @param string    $err
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     $wpInstall->populateDataFromUrl() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     self::handleGetTranslationOutput() call.
      */
-    private static function handleResultOutput( WPInstall $wpInstall, $line,
-            &$retStatus, &$cmdStatus, &$err )
+    private static function handleResultOutput(
+        WPInstall $wpInstall,
+                  $line,
+                  &$retStatus,
+                  &$cmdStatus,
+                  &$err )
     {
         if ( preg_match('/SITEURL=(.+)/', $line, $m) ) {
 
@@ -232,44 +354,43 @@ class UserCommand
             self::handleGetTranslationOutput($wpInstall, $m[1]);
         }
         else {
-            $err .= "Unexpected result line: {$line}\n";
+            $err .= "Unexpected result line: $line\n";
         }
 
         return true;
     }
 
     /**
+     *
      * @since 1.9
      *
-     * @param WPInstall  $wpInstall
-     * @throws LSCMException  Thrown indirectly.
+     * @param WPInstall $wpInstall
+     *
+     * @throws LSCMException  Thrown indirectly by self::subCommandIssue() call.
      */
-    private static function removeLeftoverLscwpFiles( $wpInstall )
+    private static function removeLeftoverLscwpFiles( WPInstall $wpInstall )
     {
-        $subAction = self::CMD_REMOVE_LSCWP_PLUGIN_FILES;
-        $subCmd = self::getIssueCmd($subAction, $wpInstall);
-
-        exec($subCmd, $subOutput, $subReturn_var);
-
-        Logger::debug(
-            "Issue sub command "
-                . "{$subAction}={$subReturn_var} {$wpInstall}\n{$subCmd}"
-        );
-        Logger::debug('sub output = ' . var_export($subOutput, true));
+        self::subCommandIssue(self::CMD_REMOVE_LSCWP_PLUGIN_FILES, $wpInstall);
 
         $wpInstall->removeNewLscwpFlagFile();
     }
 
     /**
      *
-     * @param string     $action
-     * @param WPInstall  $wpInstall
-     * @param mixed[]    $extraArgs
+     * @param string    $action
+     * @param WPInstall $wpInstall
+     * @param array     $extraArgs
+     *
      * @return string
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by $wpInstall->getPhpBinary()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
      */
-    protected static function getIssueCmd( $action, WPInstall $wpInstall,
-            $extraArgs = array() )
+    protected static function getIssueCmd(
+                  $action,
+        WPInstall $wpInstall,
+        array     $extraArgs = array() )
     {
         $su = $wpInstall->getSuCmd();
         $timeout = ControlPanel::PHP_TIMEOUT;
@@ -292,28 +413,36 @@ class UserCommand
         $modifier = implode(' ', $extraArgs);
         $file = __FILE__;
 
-        return "{$su} -c \"cd {$path}/wp-admin && timeout {$timeout} {$phpBin} "
-            . "{$file} {$action} {$path} {$docRoot} {$serverName} {$env}"
-            . (($modifier !== '') ? " {$modifier}\"" : '"');
+        return "$su -c \"cd $path/wp-admin && timeout $timeout $phpBin $file "
+            . "$action $path $docRoot $serverName $env"
+            . (($modifier !== '') ? " $modifier\"" : '"');
     }
 
     /**
      *
      * @since 1.12
      *
-     * @param string     $action
-     * @param WPInstall  $wpInstall
-     * @param string[]   $extraArgs
-     * @return null|mixed
-     * @throws LSCMException  Thrown indirectly.
+     * @param string    $action
+     * @param WPInstall $wpInstall
+     * @param string[]  $extraArgs
+     *
+     * @return null|string
+     *
+     * @throws LSCMException  Thrown indirectly by self::preIssueValidation()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by self::getIssueCmd() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::logMsg() call.
+     * @throws LSCMException  Thrown indirectly by Logger::logMsg() call.
      */
-    public static function getValueFromWordPress( $action,
-            WPInstall $wpInstall, $extraArgs = array() )
+    public static function getValueFromWordPress(
+                  $action,
+        WPInstall $wpInstall,
+        array     $extraArgs = array() )
     {
-        $ret = null;
-
         if ( !self::preIssueValidation($action, $wpInstall, $extraArgs) ) {
-            return $ret;
+            return null;
         }
 
         $cmd = self::getIssueCmd($action, $wpInstall, $extraArgs);
@@ -321,11 +450,11 @@ class UserCommand
         exec($cmd, $output, $return_var);
 
         Logger::debug(
-            "getValueFromWordPress command "
-                . "{$action}={$return_var} {$wpInstall}\n{$cmd}"
+            "getValueFromWordPress command $action=$return_var $wpInstall\n$cmd"
         );
         Logger::debug('output = ' . var_export($output, true));
 
+        $ret = null;
         $debug = $upgrade = $err = '';
         $curr = &$err;
 
@@ -344,7 +473,7 @@ class UserCommand
                     $ret = $m[1];
                 }
                 else {
-                    $err .= "Unexpected result line {$line}\n";
+                    $err .= "Unexpected result line $line\n";
                 }
             }
             elseif ( ($pos = strpos($line, '[DEBUG]')) !== false ) {
@@ -356,18 +485,18 @@ class UserCommand
                 $curr = &$upgrade;
             }
             else {
-                $curr .= "{$line}\n";
+                $curr .= "$line\n";
             }
         }
 
         $path = $wpInstall->getPath();
 
         if ( $debug ) {
-            Logger::logMsg("{$path} - {$debug}", Logger::L_DEBUG);
+            Logger::logMsg("$path - $debug", Logger::L_DEBUG);
         }
 
         if ( $err ) {
-            Logger::logMsg("{$path} - {$err}", Logger::L_ERROR);
+            Logger::logMsg("$path - $err", Logger::L_ERROR);
         }
 
         return $ret;
@@ -375,14 +504,62 @@ class UserCommand
 
     /**
      *
-     * @param string     $action
-     * @param WPInstall  $wpInstall
-     * @param string[]   $extraArgs
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     * @since 1.14
+     *
+     * @param string    $subAction
+     * @param WPInstall $wpInstall
+     *
+     * @return string[]
+     *
+     * @throws LSCMException  Thrown indirectly by self::getIssueCmd() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
-    public static function issue( $action, WPInstall $wpInstall,
-            $extraArgs = array() )
+    private static function subCommandIssue(
+        $subAction,
+        WPInstall $wpInstall )
+    {
+        $subCmd = self::getIssueCmd($subAction, $wpInstall);
+
+        exec($subCmd, $subOutput, $subReturn_var);
+
+        Logger::debug(
+            "Issue sub command $subAction=$subReturn_var $wpInstall\n$subCmd"
+        );
+        Logger::debug('sub output = ' . var_export($subOutput, true));
+
+        return $subOutput;
+    }
+
+    /**
+     *
+     * @param string    $action
+     * @param WPInstall $wpInstall
+     * @param string[]  $extraArgs
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by self::preIssueValidation()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by self::getIssueCmd() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     self::removeLeftoverLscwpFiles() call.
+     * @throws LSCMException  Thrown indirectly by self::handleResultOutput()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::logMsg() call.
+     * @throws LSCMException  Thrown indirectly by Logger::logMsg() call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->addUserFlagFile()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
+     * @throws LSCMException  Thrown indirectly by self::handleUnexpectedError()
+     *     call.
+     */
+    public static function issue(
+                  $action,
+        WPInstall $wpInstall,
+        array     $extraArgs = array() )
     {
         if ( !self::preIssueValidation($action, $wpInstall, $extraArgs) ) {
             return false;
@@ -393,7 +570,7 @@ class UserCommand
         exec($cmd, $output, $return_var);
 
         Logger::debug(
-            "Issue command {$action}={$return_var} {$wpInstall}\n{$cmd}"
+            "Issue command $action=$return_var $wpInstall\n$cmd"
         );
         Logger::debug('output = ' . var_export($output, true));
 
@@ -404,13 +581,16 @@ class UserCommand
         $errorStatus = $retStatus = $cmdStatus = 0;
 
         switch ( $return_var ) {
+
             case UserCommand::RETURN_CODE_TIMEOUT:
                 $errorStatus |= WPInstall::ST_ERR_TIMEOUT;
                 break;
+
             case UserCommand::EXIT_ERROR:
             case 255:
                 $errorStatus |= WPInstall::ST_ERR_EXECMD;
                 break;
+
             //no default
         }
 
@@ -447,7 +627,7 @@ class UserCommand
                     return false;
                 }
             }
-            elseif ( $pos = (strpos($line, '[SUCCESS]')) !== false ) {
+            elseif ( ($pos = strpos($line, '[SUCCESS]')) !== false ) {
                 $succ .= substr($line, $pos + 9) . "\n";
                 $curr = &$succ;
             }
@@ -455,16 +635,16 @@ class UserCommand
                 $err .= substr($line, $pos + 7) . "\n";
                 $curr = &$err;
             }
-            elseif ( ($pos = strpos($line, '[LOG]')) !== false ) {
+            elseif ( strpos($line, '[LOG]') !== false ) {
 
                 if ( $logMsg != '' ) {
                     Logger::logMsg(trim($logMsg), $logLvl);
                     $logMsg = '';
                 }
 
-                if ( preg_match('/\[(\d+)\] (.+)/', $line, $m) ) {
+                if ( preg_match('/\[(\d+)] (.+)/', $line, $m) ) {
                     $logLvl = $m[1];
-                    $logMsg = "{$wpInstall->getPath()} - {$m[2]}\n";
+                    $logMsg = "{$wpInstall->getPath()} - $m[2]\n";
                 }
 
                 $curr = &$logMsg;
@@ -482,7 +662,7 @@ class UserCommand
                     $unexpectedLines++;
                 }
 
-                $curr .= "{$line}\n";
+                $curr .= "$line\n";
             }
         }
 
@@ -523,7 +703,7 @@ class UserCommand
 
             if ( $isExpectedOutput ) {
                 $msg = $err;
-                Logger::error("{$wpInstall->getPath()} - {$err}");
+                Logger::error("{$wpInstall->getPath()} - $err");
             }
             else {
                 $msg = self::handleUnexpectedError(
@@ -541,34 +721,27 @@ class UserCommand
 
     /**
      *
-     * @param string[]  $args
+     * @param string[] $args
+     *
      * @return null|WPInstall
      */
-    public static function newFromCmdArgs( &$args )
+    public static function newFromCmdArgs( array &$args )
     {
-        $wpPath = array_shift($args);
+        if ( !($wpPath = array_shift($args))
+                || !($docRoot = array_shift($args))
+                || !($serverName = array_shift($args)) ) {
 
-        if ( !$wpPath || !is_dir($wpPath) ) {
             return null;
         }
 
-        $docRoot = array_shift($args);
-
-        if ( !$docRoot ) {
-            return null;
-        }
-
-        $serverName = array_shift($args);
-
-        if ( !$serverName ) {
+        if ( !is_dir($wpPath) ) {
             return null;
         }
 
         /**
          * LSCWP_REF used by LSCWP plugin.
          */
-        $env = array_shift($args);
-        define('LSCWP_REF', $env);
+        define('LSCWP_REF', array_shift($args));
 
         $install = new WPInstall($wpPath);
 
@@ -585,20 +758,34 @@ class UserCommand
 
     /**
      *
-     * @param string     $action
-     * @param WPInstall  $wpInstall
-     * @param string[]   $extraArgs  Not used at the moment.
-     * @return boolean
-     * @throws LSCMException  Thrown directly and indirectly.
+     * @param string    $action
+     * @param WPInstall $wpInstall
+     * @param string[]  $extraArgs  Not used at the moment.
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown when $action value is unsupported.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->hasValidPath()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->refreshStatus()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->addUserFlagFile()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     DashNotifier::prepLocalDashPluginFiles() call.
      *
      * @noinspection PhpUnusedParameterInspection
      */
-    private static function preIssueValidation( $action, WPInstall $wpInstall,
-            $extraArgs )
+    private static function preIssueValidation(
+                  $action,
+        WPInstall $wpInstall,
+        array     $extraArgs )
     {
         if ( !self::isSupportedIssueCmd($action) ) {
             throw new LSCMException(
-                "Illegal action {$action}.",
+                "Illegal action $action.",
                 LSCMException::E_PROGRAM
             );
         }
@@ -607,15 +794,15 @@ class UserCommand
             return false;
         }
 
-        switch ($action) {
+        switch ( $action ) {
+
             case self::CMD_MASS_ENABLE:
             case self::CMD_MASS_DISABLE:
-            /** @noinspection PhpMissingBreakStatementInspection */
             case self::CMD_MASS_UPGRADE:
 
                 if ( $wpInstall->hasFlagFile() ) {
                     Logger::debug(
-                        "Bypass mass operation for flagged install {$wpInstall}"
+                        "Bypass mass operation for flagged install $wpInstall"
                     );
                     return false;
                 }
@@ -632,7 +819,7 @@ class UserCommand
 
                         Logger::debug(
                             'Bypassed mass operation for error install and '
-                                . "flagged {$wpInstall}"
+                                . "flagged $wpInstall"
                         );
                         return false;
                     }
@@ -652,8 +839,8 @@ class UserCommand
 
     /**
      *
-     * @since 1.9  Changed echo'd output format to include "[LOG][$lvl] $msg".
-     *             Stopped echo'ing "[DEBUG] $msg" output.
+     * @since 1.9  Changed echoed output format to include "[LOG][$lvl] $msg".
+     *     Stopped echoing "[DEBUG] $msg" output.
      *
      * @return int
      */
@@ -670,9 +857,10 @@ class UserCommand
                 $ret = self::EXIT_SUCC;
             }
             else {
-                $proc = WPCaller::getInstance($this->currInstall, true);
+                $proc = WPCaller::getInstance($this->currInstall);
 
-                switch ($this->action) {
+                switch ( $this->action ) {
+
                     case self::CMD_STATUS:
                         $ret = $proc->updateStatus(true);
                         break;
@@ -741,22 +929,22 @@ class UserCommand
             echo "LS UserCommand Output Start\n";
 
             foreach ( $proc->getOutputResult() as $key => $value ) {
-                echo "[RESULT] {$key}={$value}\n";
+                echo "[RESULT] $key=$value\n";
             }
 
             foreach ( Logger::getUiMsgs(Logger::UI_SUCC) as $msg ) {
-                echo "[SUCCESS] {$msg}\n";
+                echo "[SUCCESS] $msg\n";
             }
 
             foreach ( Logger::getUiMsgs(Logger::UI_ERR) as $msg ) {
-                echo "[ERROR] {$msg}\n";
+                echo "[ERROR] $msg\n";
             }
 
             foreach ( Logger::getLogMsgQueue() as $logEntry ) {
                 $lvl = $logEntry->getLvl();
                 $msg = $logEntry->getMsg();
 
-                echo "[LOG][{$lvl}] {$msg}\n";
+                echo "[LOG][$lvl] $msg\n";
             }
         }
         catch ( Exception $e )
@@ -779,7 +967,8 @@ class UserCommand
     /**
      *
      * @param string $action
-     * @return boolean
+     *
+     * @return bool
      */
     private static function isSupportedIssueCmd( $action )
     {
@@ -807,7 +996,8 @@ class UserCommand
     /**
      *
      * @param string[] $args
-     * @return boolean
+     *
+     * @return bool
      */
     private function initArgs( $args )
     {
@@ -829,7 +1019,10 @@ class UserCommand
     /**
      *
      * @return UserCommand
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by "new self()" call.
+     *
+     * @noinspection PhpDocRedundantThrowsInspection
      */
     private static function getUserCommand()
     {
@@ -841,9 +1034,8 @@ class UserCommand
         }
 
         $args = $_SERVER['argv'];
-        $script = array_shift($args);
 
-        if ( $script != __FILE__ ) {
+        if ( array_shift($args) != __FILE__ ) {
             return null;
         }
 
@@ -859,7 +1051,7 @@ class UserCommand
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by self::getUserCommand() call.
      */
     public static function run()
     {

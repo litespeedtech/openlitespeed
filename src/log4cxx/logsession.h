@@ -24,7 +24,7 @@
 #include <log4cxx/nsdefs.h>
 #include <util/autostr.h>
 #include <lsr/ls_lock.h>
-#include <lsr/ls_str.h>
+#include <lsr/ls_log.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -34,7 +34,7 @@ BEGIN_LOG4CXX_NS
 class Logger;
 END_LOG4CXX_NS
 
-class LogSession
+class LogSession : protected ls_logger_s
 {
 public:
     LogSession();
@@ -195,15 +195,6 @@ public:
 
 protected:
 
-    /*
-     * m_logId.ptr should always be either NULL or allocated memory of
-     * at least MAX_LOGID_LEN + 1. logging code assumes sufficient space
-     * left in buffer.
-     * m_logId.len should always be 0 (before build or after clear) or the
-     * length of the base string built during build. loggers modify the buffer
-     * past len for supplemental info.
-     */
-    ls_str_t            m_logId;
 
 private:
     // WARNING: assume LOCKED

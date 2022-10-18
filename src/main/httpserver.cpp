@@ -2057,8 +2057,8 @@ int HttpServerImpl::configAdminConsole(const XmlNode *pNode)
         return 0;
 
     char achRules[] =
-        "RewriteCond %{REQUEST_URI} !^/(index|login)\\.php\n"
-        "RewriteCond %{REQUEST_URI} !^/view/(serviceMgr|confMgr|ajax_data|dashboard|logviewer|compilePHP|realtimestats)\\.php \n"
+        "RewriteCond %{REQUEST_URI} !^/(index|login)\\.php$\n"
+        "RewriteCond %{REQUEST_URI} !^/view/(serviceMgr|confMgr|ajax_data|dashboard|logviewer|compilePHP|realtimestats)\\.php$\n"
         "RewriteRule \\.php - [F]\n";
     pVHostAdmin->getRootContext().configRewriteRule(NULL, achRules, NULL);
     pVHostAdmin->getRootContext().enableRewrite(1);
@@ -4034,6 +4034,11 @@ int HttpServerImpl::configLsrecaptchaContexts()
                 "Detect and use custom recaptcha page, %s.", achPath);
         Recaptcha::setStaticUrl("/.lsrecap/_recaptcha_custom.shtml");
     }
+
+    char headers[] = "set cache-control no-cache,no-store\n"
+                      "set x-frame-options SAMEORIGIN\n"  ;
+    pStaticContext->setHeaderOps(ConfigCtx::getCurConfigCtx()->getLogId(),
+                                 headers, sizeof(headers) - 1);
 
     HttpContext *pVerifierCtx = pGlobalVHost->addContext(Recaptcha::getDynUrl()->c_str(),
             HandlerType::HT_LSAPI, NULL, "lsrecaptcha", 1);

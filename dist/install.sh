@@ -3,7 +3,7 @@
 OSNAMEVER=UNKNOWN
 OSNAME=
 OSVER=
-OSTYPE=`getconf LONG_BIT`
+ARCH=`arch`
 MARIADBCPUARCH=
 DLCMD=
 LSPHPVER=74
@@ -11,7 +11,6 @@ MYIP=
 
 testMyIP()
 {   
-    detectdlcmd
     $DLCMD $LSWS_HOME/myip http://cyberpanel.sh/?ip
     MYIP=`cat $LSWS_HOME/myip`
     rm $LSWS_HOME/myip
@@ -19,9 +18,7 @@ testMyIP()
 
 inst_admin_php()
 {
-    # detect download method
     OS=`uname -s`
-    detectdlcmd
 
     HASADMINPHP=n
     if [ -f "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
@@ -35,10 +32,12 @@ inst_admin_php()
     fi
         
     if [ "x$OS" = "xLinux" ] ; then
-        if [ "x$OSTYPE" != "x64" ] ; then
-            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
-        else
+        if [ "x$ARCH" = "xx86_64" ] ; then
             $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64/lsphp5
+        elif [ "x$ARCH" = "xaarch64" ] ; then
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp7_bin/aarch64/lsphp
+        else
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386/lsphp5
         fi
         
         if [ $? = 0 ] ; then 
@@ -51,7 +50,7 @@ inst_admin_php()
 #        fi
 
     elif [ "x$OS" = "xFreeBSD" ] ; then
-        if [ "x$OSTYPE" != "x64" ] ; then
+        if [ "x$ARCH" != "xamd64" ] ; then
            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
         else
            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
@@ -84,7 +83,7 @@ install_lsphp7_centos()
     ND=nd
     
     yum -y $action epel-release
-    rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el$OSVER.noarch.rpm
+    rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el$OSVER.noarch.rpm
     yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap lsphp$LSPHPVER-json
     
     if [ ! -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
@@ -107,8 +106,8 @@ install_lsphp7_debian()
         echo "deb http://rpms.litespeedtech.com/debian/ $OSVER main"  > /etc/apt/sources.list.d/lst_debian_repo.list
     fi
     
-    wget -O /etc/apt/trusted.gpg.d/lst_debian_repo.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
-    wget -O /etc/apt/trusted.gpg.d/lst_repo.gpg http://rpms.litespeedtech.com/debian/lst_repo.gpg
+    ${DLCMD} /etc/apt/trusted.gpg.d/lst_debian_repo.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
+    ${DLCMD} /etc/apt/trusted.gpg.d/lst_repo.gpg http://rpms.litespeedtech.com/debian/lst_repo.gpg
     apt-get -y update
     
     apt-get -y install lsphp$LSPHPVER lsphp$LSPHPVER-mysql lsphp$LSPHPVER-imap lsphp$LSPHPVER-common lsphp$LSPHPVER-curl lsphp$LSPHPVER-json
@@ -301,6 +300,7 @@ shift
 IS_LSCPD=$9
 
 
+detectdlcmd
 VERSION=open
 SETUP_PHP=1
 PHP_SUFFIX="php"

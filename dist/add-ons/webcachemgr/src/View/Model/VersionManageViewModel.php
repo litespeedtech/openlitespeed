@@ -2,17 +2,18 @@
 
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2020
+ *
+ * @author Michael Alegre
+ * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
 
-use \Lsc\Wp\WPInstallStorage;
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\PluginVersion;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
+use Lsc\Wp\WPInstallStorage;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\PluginVersion;
+use Lsc\Wp\Logger;
+use Lsc\Wp\LSCMException;
 
 class VersionManageViewModel
 {
@@ -53,9 +54,10 @@ class VersionManageViewModel
     const ST_INSTALLS_DISCOVERED = 2;
 
     /**
-     * @deprecated 1.13.4.1  Added back as a deprecated constant after accidental
-     *                       removal in v1.13.4. Use
-     *                       self::ST_NO_NON_ERROR_INSTALLS_DISCOVERED instead.
+     * @deprecated 1.13.4.1  Added back as a deprecated constant after
+     *     accidental removal in v1.13.4. Use
+     *     self::ST_NO_NON_ERROR_INSTALLS_DISCOVERED instead.
+     *
      * @var int
      */
     const ST_NO_INSTALLS_DISCOVERED = 1;
@@ -82,8 +84,9 @@ class VersionManageViewModel
 
     /**
      *
-     * @param WPInstallStorage  $wpInstallStorage
-     * @throws LSCMException  Thrown indirectly.
+     * @param WPInstallStorage $wpInstallStorage
+     *
+     * @throws LSCMException  Thrown indirectly by $this->init() call.
      */
     public function __construct( WPInstallStorage $wpInstallStorage )
     {
@@ -94,7 +97,11 @@ class VersionManageViewModel
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by $this->setIconPath() call.
+     * @throws LSCMException  Thrown indirectly by $this->setActiveVerData()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->setVerListData() call.
+     * @throws LSCMException  Thrown indirectly by $this->setMsgData() call.
      */
     protected function init()
     {
@@ -107,7 +114,8 @@ class VersionManageViewModel
 
     /**
      *
-     * @param string  $field
+     * @param string $field
+     *
      * @return null|boolean|string|string[]
      */
     public function getTplData( $field )
@@ -120,31 +128,35 @@ class VersionManageViewModel
 
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     */
     protected function setIconPath()
     {
         $iconPath = '';
 
-        try
-        {
+        try {
             $iconDir = Context::getOption()->getIconDir();
-            $iconPath = "{$iconDir}/lscwpCurrentVersion.svg";
+            $iconPath = "$iconDir/lscwpCurrentVersion.svg";
         }
-        catch ( LSCMException $e )
-        {
+        catch ( LSCMException $e ) {
             Logger::debug($e->getMessage() . ' Could not get icon directory.');
         }
 
         $this->tplData[self::FLD_ICON] = $iconPath;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     */
     protected function setActiveVerData()
     {
-        try
-        {
+        try {
             $currVer = PluginVersion::getCurrentVersion();
         }
-        catch ( LSCMException $e )
-        {
+        catch ( LSCMException $e ) {
             Logger::debug(
                 $e->getMessage() . ' Could not get active LSCWP version.'
             );
@@ -174,7 +186,9 @@ class VersionManageViewModel
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by PluginVersion::getInstance()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     protected function setVerListData()
     {
@@ -198,11 +212,21 @@ class VersionManageViewModel
         $this->tplData[self::FLD_ALLOWED_VER_LIST] = $allowedList;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     */
     protected function setMsgData()
     {
         $this->tplData[self::FLD_ERR_MSGS] = Logger::getUiMsgs(Logger::UI_ERR);
     }
 
+    /**
+     *
+     * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
+     */
     public function getTpl()
     {
         return Context::getOption()->getSharedTplDir() . '/VersionManage.tpl';
