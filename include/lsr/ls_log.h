@@ -18,6 +18,7 @@
 #ifndef LS_LOG_H
 #define LS_LOG_H
 
+#include <lsr/ls_str.h>
 #include <lsr/ls_types.h>
 
 #ifdef __cplusplus
@@ -42,6 +43,18 @@ enum LS_LOG_LEVEL
     LS_LOG_UNKNOWN = 10000
 };
 
+struct ls_logger_s
+{
+    /*
+     * m_logId.ptr should always be either NULL or allocated memory of
+     * at least MAX_LOGID_LEN + 1. logging code assumes sufficient space
+     * left in buffer.
+     * m_logId.len should always be 0 (before build or after clear) or the
+     * length of the base string built during build. loggers modify the buffer
+     * past len for supplemental info.
+     */
+    ls_str_t            m_logId;
+};
 
 #define LSR_DBG_H( ... ) \
     do { \
@@ -84,9 +97,9 @@ enum LS_LOG_LEVEL
         c_log( LS_LOG_ERROR, __VA_ARGS__); \
     }while(0)
 
-void c_log(int level, const char *format, ...)
+void c_log(int level, ls_logger_t *log_sess, const char *format, ...)
 #if __GNUC__
-    __attribute__((format(printf, 2, 3)))
+    __attribute__((format(printf, 3,4)))
 #endif
     ;
 

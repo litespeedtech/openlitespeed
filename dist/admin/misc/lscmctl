@@ -3,11 +3,11 @@
 # /********************************************
 # LiteSpeed Cache Management Script
 #
-# @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
-# @copyright (c) 2017-2022
+# @author Michael Alegre
+# @copyright (c) 2017-2022 LiteSpeed Technologies, Inc.
 # *********************************************/
 
-VERSION='1.11.2'
+VERSION='1.12'
 OS=$(uname -s)
 SCRIPT_DIR=$(cd "$(dirname "${0}")" && pwd)
 
@@ -55,13 +55,14 @@ printHelp()
     # shellcheck disable=SC2016
     printCmdOption 'setcacheroot' '[-svr <cache root>] [-vh <cache root>]' 'List/Set server and/or virtual host cache roots. This command will list the current server and virtual host cache roots when no additional input is given. Use -svr and -vh to set those cache roots. The '"'"'$'"'"' character is not allowed when setting virtual host cache root. Virtual host cache root values starting with a '"'"'/'"'"' will automatically have '"'"'/$vh_user'"'"' appended to the end (this format was chosen to maintain compatibility with CageFS).'
     printCmdOption 'setversion' '[{--list | --latest | <version>}]' 'List/Set active LSCWP version. This command will list the currently active version when no additional input is given. Use --list to show available versions or --latest to switch to the latest available version. A valid version number can also be provided to switch to that version specifically. This must be set before performing other lscmctl operations.'
-	printCmdOption 'scan' '[-n] [-e]' 'Scan for all WordPress installations. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. Add the -n flag to only discover new installations. By adding the -e flag, LSC-WP will be enabled on all installations after scanning is complete.'
+	printCmdOption 'scan' '[-n] [-e]' 'Scan for all WordPress installations. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. Add the -n flag to only discover new installations. By adding the -e flag, LSCWP will be enabled on all known installations after scanning is complete.'
+    printCmdOption 'scannew' '[-en] ' 'Scan for WordPress installations not already discovered in a previous scan. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. By adding the -en flag, LSCWP will be enabled only on newly discovered installations after scanning is complete. If you would rather enable LSCWP for all known installations, after scanning for previously undiscovered installations, please use command '"'"'scan -n -e'"'"' instead.'
 	printCmdOption 'enable' '{-m | <wp path>}' 'Enables LSWCP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
 	printCmdOption 'disable' '{-m | <wp path>}' 'Disables LSWCP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
     printCmdOption 'upgrade' '{-m | <wp path>}' 'Upgrade LSWCP for all discovered WordPress installations to the current active version with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
     printCmdOption 'flag' '<wp path>' 'Flag a single WordPress installation. Flagged installations will be skipped during mass operations.'
     printCmdOption 'unflag' '{-m | <wp path>}' 'Unflag all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory. Flagged installations will be skipped during mass operations.'
-    printCmdOption 'status' '<wp path>' 'Get the most up to date LSC-WP status for the provided WordPress installation.'
+    printCmdOption 'status' '<wp path>' 'Get the most up to date LSCWP status for the provided WordPress installation.'
     printCmdOption 'dashnotify' '{-m | -wppath <wp path>} [-plugin <plugin slug>] {-msgfile <message file path> | -msg <message>}' 'Notify all discovered WordPress installations with the provided message (plain text or HTML) using the Dash Notifier WordPress plugin with the -m parameter or a single installation by providing the path to the WordPress installation directory. A plugin slug can be included to have an install/activate button for that plugin added to the message as well. Installations containing a '"'"'.dash_notifier_bypass'"'"' file will not be notified.'
 	printCmdOption 'dashnotifyremove' '{-m | <wp path>}' 'Remove Dash Notifier plugin (and notification messages) from all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
     printCmdOption 'cpanelplugin' '{--install | --uninstall | -autoinstall [{0 | 1}] | --fixconf}' '[cPanel/WHM Environment Only] Install or uninstall the LiteSpeed user-end plugin for cPanel for all cPanel accounts using the '"'"'--install'"'"' and '"'"'--uninstall'"'"' input flags. The plugin will appear as "LiteSpeed Web Cache Manager" under '"'"'Advanced'"'"' in the user'"'"'s cPanel dashboard. The '"'"'-autoinstall'"'"' input param can be used to check the current auto install status. When turned on, the cPanel plugin will be automatically installed when installing/updating the WHM plugin. Use '"'"'-autoinstall {0 | 1}'"'"' to manually turn this off and on respectively. The '"'"'--fixConf'"'"' input param can be used to re-populate the cPanel plugin'"'"'s configuration file values in case of an issue.'
@@ -76,10 +77,10 @@ printHelp()
     printExample 'Set active LSCWP version to latest available' 'setversion --latest'
     printExample 'Set active LSCWP version to v1.5' 'setversion 1.5'
 	printExample 'Discover all installations' 'scan'
-    printExample 'Discover new installations only, passing in path to PHP binary' '-php /path/to/php/ scan -n'
-	printExample 'Enable LSC-WP on all discovered installations' 'enable -m'
-	printExample 'Disable LSC-WP for a single installation' 'disable /home/user/public_html/wp'
-    printExample 'Get LSC-WP status for a single installation' 'status /home/user/public_html/wp'
+    printExample 'Discover new installations only, passing in path to PHP binary' '-php /path/to/php/ scannew'
+	printExample 'Enable LSCWP on all discovered installations' 'enable -m'
+	printExample 'Disable LSCWP for a single installation' 'disable /home/user/public_html/wp'
+    printExample 'Get LSCWP status for a single installation' 'status /home/user/public_html/wp'
     printExample 'Send a simple dashboard message to a single discovered WordPress installation' 'dashnotify -wppath /path/to/wp/install -msg "Hello World!"'
     printExample 'Broadcast a dashboard message recommending the LiteSpeed Cache for WordPress plugin to all discovered WordPress installations' 'dashnotify -m -plugin litespeed-cache -msgfile /path/to/msg/file'
     printExample 'Remove dashboard notifications (and Dash Notifier plugin) from all discovered WordPress installations' 'dashnotifyremove -m'

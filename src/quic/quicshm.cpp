@@ -318,12 +318,10 @@ int QuicShm::lookupItem(void *hash_ctx, const void *key, unsigned key_sz, void *
         return -1;
     }
 
-    void *key_copy = malloc(key_len);
-    memcpy(key_copy, p, key_len);
+    void *key_copy = p;
     p += key_len;
 
-    *data = (char *)malloc(data_len);
-    memcpy(*data, p, data_len);
+    *data = p;
     *data_sz = data_len;
 
     pInternalShi->shi_insert(pInternalShiCtx, key_copy, key_sz, *data,

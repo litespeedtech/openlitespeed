@@ -299,7 +299,7 @@ class DAttrBase
             }
         }
         else {
-            $o .= $this->toHtmlContent($node, $refUrl);
+			$o .= $this->toHtmlContent($node, $refUrl);
         }
         return $o;
     }

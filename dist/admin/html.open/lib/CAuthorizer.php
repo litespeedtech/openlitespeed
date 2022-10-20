@@ -82,7 +82,17 @@ class CAuthorizer
 
     public function IsValid()
     {
-        return !( ($_SESSION['valid'] !== true) || (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']) === false));
+		if ($_SESSION['valid'] !== true) {
+			return false;
+		} 
+		// otherwise enforce referrer exists
+		if (!isset($_SERVER['HTTP_REFERER'])) {
+			return false;
+		}
+		if (strpos($_SERVER['HTTP_REFERER'], $_SERVER['HTTP_HOST']) === false) {
+			return false;
+		}
+		return true;
     }
 
     public static function GetToken()

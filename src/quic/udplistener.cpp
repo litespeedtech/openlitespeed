@@ -630,7 +630,10 @@ ssize_t UdpListener::send(struct iovec *iov, size_t iovlen,
             const struct sockaddr *src, const struct sockaddr *dest, int ecn)
 {
     if (getEvents() & POLLOUT)
+    {
+        errno = EAGAIN;
         return -1;
+    }
     ssize_t ret = sendPacket(iov, iovlen, src, dest, ecn);
     if (ret == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == ENOBUFS))
     {
@@ -666,7 +669,10 @@ int UdpListener::sendPackets(const struct lsquic_out_spec *spec,
     } ancil [ sizeof(mmsgs) / sizeof(mmsgs[0]) ];
 
     if (getEvents() & POLLOUT)
+    {
+        errno = EAGAIN;
         return -1;
+    }
 
     for (i = 0; spec < end && i < sizeof(mmsgs) / sizeof(mmsgs[0]); ++i, ++spec)
     {
@@ -1694,10 +1700,10 @@ int UdpListener::setSockOptions(int fd)
                   strerror(errno));
     }
 
-    if (AF_INET == m_addr.get()->sa_family)
+    if (AF_INET == m_addr.family())
     {
 #if __linux__
-        val = IP_PMTUDISC_DO;
+        val = IP_PMTUDISC_PROBE;
         ret = setsockopt(fd, IPPROTO_IP, IP_MTU_DISCOVER, &val, sizeof(val));
 #elif WIN32
         val = 1;
@@ -1711,7 +1717,14 @@ int UdpListener::setSockOptions(int fd)
             return -1;
         }
     }
-
+    else if (AF_INET6 == m_addr.family())
+    {
+#if __linux__
+        val = IP_PMTUDISC_PROBE;
+        ret = setsockopt(getfd(), IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+                         &val, sizeof(val));
+#endif
+    }
     return ret;
 }
 

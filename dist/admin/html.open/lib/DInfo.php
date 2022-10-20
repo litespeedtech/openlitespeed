@@ -434,71 +434,9 @@ class DInfo
 
     public function GetDerivedSelOptions($tid, $loc, $node)
     {
-        $o = [];
 
         if (substr($loc, 0, 13) == 'extprocessor:') {
-            $type = substr($loc, 13);
-            if ($type == '$$type') {
-                if ($node != null) {
-                    $type = $node->GetChildVal('type');
-                }
-                if ($type == null) { // default
-                    $type = 'fcgi';
-                }
-            }
-            if ($type == 'cgi') {
-                $o['cgi'] = 'CGI Daemon';
-                return $o;
-            }
-            if ($type == 'module') {
-                $modules = $this->_servData->GetChildrenValues('module');
-                if ($modules != null) {
-                    foreach ($modules as $mn) {
-                        $o[$mn] = $mn;
-					}
-                }
-                return $o;
-            }
-
-            $exps = [];
-            if (($servexps = $this->_servData->GetRootNode()->GetChildren('extprocessor')) != null) {
-                if (is_array($servexps)) {
-                    foreach ($servexps as $exname => $ex) {
-                        if ($ex->GetChildVal('type') == $type) {
-                            $exps[] = $exname;
-						}
-                    }
-                }
-                elseif ($servexps->GetChildVal('type') == $type) {
-                    $exps[] = $servexps->Get(CNode::FLD_VAL);
-				}
-            }
-
-            if ($this->_view == DInfo::CT_SERV) {
-                foreach ($exps as $exname) {
-                    $o[$exname] = $exname;
-                }
-                return $o;
-            }
-            foreach ($exps as $exname) {
-                $o[$exname] = '[' . DMsg::UIStr('note_serv_level') . "]: $exname";
-            }
-
-            $loc = ($this->_view == DInfo::CT_TP) ? 'virtualHostConfig:extprocessor' : 'extprocessor';
-            if (($vhexps = $this->_confData->GetRootNode()->GetChildren($loc)) != null) {
-                if (is_array($vhexps)) {
-                    foreach ($vhexps as $exname => $ex) {
-                        if ($ex->GetChildVal('type') == $type) {
-                            $o[$exname] = "[VHost Level]: $exname";
-						}
-                    }
-                }
-                elseif ($vhexps->GetChildVal('type') == $type) {
-                    $exname = $vhexps->Get(CNode::FLD_VAL);
-                    $o[$exname] = '[' . DMsg::UIStr('note_vh_level') . "]: $exname";
-                }
-            }
-            return $o;
+			return $this->getDerivedSelOptions_extprocessor($tid, $loc, $node);
         }
 
         if (in_array($loc, ['virtualhost', 'listener', 'module'])) {
@@ -511,12 +449,83 @@ class DInfo
         }
 
         sort($names);
+        $o = [];
         foreach ($names as $name) {
             $o[$name] = $name;
 		}
 
         return $o;
     }
+
+	protected function getDerivedSelOptions_extprocessor($tid, $loc, $node)
+	{
+        $o = [];
+        // substr($loc, 0, 13) == 'extprocessor:')
+		$type = substr($loc, 13);
+		if ($type == '$$type') {
+			if ($node != null) {
+				$type = $node->GetChildVal('type');
+			}
+			if ($type == null) { // default
+				$type = 'fcgi';
+			}
+		}
+		if ($type == 'cgi') {
+			$o['cgi'] = 'CGI Daemon';
+			return $o;
+		}
+		if ($type == 'module') {
+			$modules = $this->_servData->GetChildrenValues('module');
+			if ($modules != null) {
+				foreach ($modules as $mn) {
+					$o[$mn] = $mn;
+				}
+			}
+			return $o;
+		}
+
+		$exps = [];
+		if (($servexps = $this->_servData->GetRootNode()->GetChildren('extprocessor')) != null) {
+			if (is_array($servexps)) {
+				foreach ($servexps as $exname => $ex) {
+					if ($ex->GetChildVal('type') == $type) {
+						$exps[] = $exname;
+					}
+				}
+			}
+			elseif ($servexps->GetChildVal('type') == $type) {
+				$exps[] = $servexps->Get(CNode::FLD_VAL);
+			}
+		}
+
+		if ($this->_view == DInfo::CT_SERV) {
+			foreach ($exps as $exname) {
+				$o[$exname] = $exname;
+			}
+			return $o;
+		}
+
+		foreach ($exps as $exname) {
+			$o[$exname] = '[' . DMsg::UIStr('note_serv_level') . "]: $exname";
+		}
+
+		$loc = ($this->_view == DInfo::CT_TP) ? 'virtualHostConfig:extprocessor' : 'extprocessor';
+		if (($vhexps = $this->_confData->GetRootNode()->GetChildren($loc)) != null) {
+			if (is_array($vhexps)) {
+				foreach ($vhexps as $exname => $ex) {
+					if ($ex->GetChildVal('type') == $type) {
+						$o[$exname] = '[' . DMsg::UIStr('note_vh_level') . "]: $exname";
+					}
+				}
+			}
+			elseif ($vhexps->GetChildVal('type') == $type) {
+				$exname = $vhexps->Get(CNode::FLD_VAL);
+				$o[$exname] = '[' . DMsg::UIStr('note_vh_level') . "]: $exname";
+				$o[$n[0]] = $n[1];
+			}
+		}
+		return $o;
+	}
 
     public function GetVHRoot()
     {

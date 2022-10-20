@@ -297,7 +297,10 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c)
     LS_DBG_H("QuicEngine::onConnClosed (%p)\n", c);
     ClientInfo *pClientInfo = (ClientInfo *)h;
     if (pClientInfo)
+    {
         pClientInfo->decConn();
+        lsquic_conn_set_ctx(c, NULL);
+    }
     s_active_conns--;
     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, current: %u.",
              pClientInfo ? pClientInfo->getAddrString() : "N/A", s_active_conns);

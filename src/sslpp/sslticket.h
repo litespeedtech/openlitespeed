@@ -49,7 +49,7 @@ typedef struct rotatkeys_s
     short         m_idxNext;
 } RotateKeys_t;
 
-class SslTicket
+class SslTicket 
 {
     static LsShmHash      *m_pKeyStore;
     static AutoStr2       *m_pFile;

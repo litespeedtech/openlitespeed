@@ -57,7 +57,7 @@ public:
         SSL_TLSv11  = 4,
         SSL_TLSv12  = 8,
         SSL_TLSv13  = 16,
-        SSL_TLS_SAFE = 28,
+        SSL_TLS_SAFE = 24,
         SSL_TLS     = 30,
         SSL_ALL     = 31
     };

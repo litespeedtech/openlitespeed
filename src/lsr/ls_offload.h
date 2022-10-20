@@ -48,7 +48,8 @@ struct Offloader *offloader_new2(const char *log_id, int workers,
 ls_inline struct Offloader *offloader_new(const char *log_id, int workers)
 {   return offloader_new2(log_id, workers, 1, 10, 1);   }
 
-int offloader_enqueue(struct Offloader *, struct ls_offload *task);
+int offloader_enqueue(struct Offloader *, struct ls_offload *task,
+                      void *log_sess);
 
 #ifdef __cplusplus
 }

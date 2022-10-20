@@ -30,20 +30,20 @@
 
 #include <lsdef.h>
 
-class SslCertComp
+class SslCertComp 
 {
-    SslCertComp();
+    SslCertComp(); 
     ~SslCertComp();
-
+    
 public:
-    typedef struct
+    typedef struct 
     {
         int     m_input_len;
         int     m_len;
         uint8_t m_comp[1];
     } comp_cache_t;
-
-    static void activateComp(bool activate);
+    
+    static void activateComp(bool activate);      
     static void activateDecomp(bool activate);
     static void enableCertComp(SSL_CTX *ctx);
     static void enableCertDecomp(SSL_CTX *ctx);

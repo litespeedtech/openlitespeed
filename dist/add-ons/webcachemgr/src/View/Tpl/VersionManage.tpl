@@ -3,8 +3,9 @@
 
 <?php
 
-use \Lsc\Wp\View\Model\VersionManageViewModel as ViewModel;
+use Lsc\Wp\View\Model\VersionManageViewModel as ViewModel;
 
+/** @noinspection DuplicatedCode */
 $icon = $this->viewModel->getTplData(ViewModel::FLD_ICON);
 $activeVer = $this->viewModel->getTplData(ViewModel::FLD_ACTIVE_VER);
 $verList = $this->viewModel->getTplData(ViewModel::FLD_VERSION_LIST);
@@ -37,7 +38,7 @@ $this->loadTplBlock('SectionTitle.tpl', $d);
 
 <div>
   <p>
-    [Feature Disabled] Unable to find/retrieve LSCWP version list.
+    [Feature Disabled] Unable to find/retrieve valid LSCWP version list.
   </p>
 </div>
 
@@ -60,7 +61,12 @@ $this->loadTplBlock('SectionTitle.tpl', $d);
         </span>
       </td>
       <td>
-        New Active Version
+        <label
+            for="lscwpActiveSelector"
+            style="font-weight: normal; margin-bottom: unset;"
+        >
+          New Active Version
+        </label>
         <select id="lscwpActiveSelector">
 
           <?php
@@ -79,9 +85,12 @@ $this->loadTplBlock('SectionTitle.tpl', $d);
         </select>
       </td>
       <td id="switchVerBtn">
-        <button type="button" class="nowrap lsws-primary-btn"
-                title="Switch LiteSpeed Cache plugin to the version selected"
-                onclick="javascript:lscwpVermgr('switchTo');">
+        <button
+            type="button"
+            class="nowrap lsws-primary-btn"
+            title="Switch LiteSpeed Cache plugin to the version selected"
+            onclick="lscwpVermgr('switchTo');"
+        >
           Switch Version
         </button>
       </td>
@@ -133,7 +142,7 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
 
 <div>
   <p>
-    [Feature Disabled] Unable to find/retrieve LSCWP version list.
+    [Feature Disabled] Unable to find/retrieve valid LSCWP version list.
   </p>
 </div>
 
@@ -153,13 +162,23 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
 <table id="lscwp-upgrade-mgr">
   <tbody>
     <tr>
-      <td valign="top" style="margin-top: 9px;">From Version(s):</td>
-      <td align="center">
+      <td style="margin-top: 9px; vertical-align: top;">From Version(s):</td>
+      <td style="text-align: center;">
         <table class="datatable nowrap">
           <thead>
             <tr>
               <th style="text-align: center;">
-                <input type="checkbox" onClick="selectAll(this)" /> Select All
+                <input
+                    type="checkbox"
+                    id="fromSelectAll"
+                    onClick="selectAll(this)"
+                />
+                <label
+                    for="fromSelectAll"
+                    style="font-weight: normal; margin-bottom: unset;"
+                >
+                  Select All
+                </label>
               </th>
             </tr>
           </thead>
@@ -174,9 +193,18 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
 
             <tr>
               <td>
-                <input type="checkbox" name="selectedVers[]"
-                       value="<?php echo $safeVer; ?>" />
-                <?php echo $safeVer; ?>
+                <input
+                    type="checkbox"
+                    id="from_<?php echo $safeVer; ?>"
+                    name="selectedVers[]"
+                    value="<?php echo $safeVer; ?>"
+                />
+                <label
+                    for="from_<?php echo $safeVer; ?>"
+                    style="font-weight: normal; margin-bottom: unset;"
+                >
+                  <?php echo $safeVer; ?>
+                </label>
               </td>
             </tr>
 
@@ -185,8 +213,13 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
           </tbody>
         </table>
       </td>
-      <td valign="top">
-        Upgrade To:
+      <td style="vertical-align: top;">
+        <label
+            for="lscwpUpgradeSelector"
+            style="font-weight: normal; margin-bottom: unset;"
+        >
+          Upgrade To:
+        </label>
         <select id="lscwpUpgradeSelector">
 
           <?php
@@ -203,10 +236,12 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
 
         </select>
       </td>
-      <td valign="top" align="center">
-        <button type="button" title="Force version change for all matching selections"
-                onclick="javascript:lscwpVermgr('upgradeTo');"
-                class="upgrade-btn lsws-primary-btn">
+      <td style="vertical-align: top; text-align: center;">
+        <button
+            type="button" title="Force version change for all matching selections"
+            onclick="lscwpVermgr('upgradeTo');"
+            class="upgrade-btn lsws-primary-btn"
+        >
           Upgrade
         </button>
       </td>

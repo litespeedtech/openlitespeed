@@ -316,19 +316,21 @@ class DTbl
                     $is_num = true;
                     foreach ($dlayer as $key => $node) {
                         $val = $node->GetChildVal($this->_sort_key);
-                        if ($is_num && !is_numeric($val))
+                        if ($is_num && !is_numeric($val)) {
                             $is_num = false;
+						}
                         $sorted[$key] = $val;
                     }
                     $flag = $is_num ? SORT_NUMERIC : SORT_STRING;
-                    if ($this->_sort_ascend == 1)
+                    if ($this->_sort_ascend == 1) {
                         asort($sorted, $flag);
-                    else
+					} else {
                         arsort($sorted, $flag);
+					}
                     $keys = array_keys($sorted);
-                } else
+                } else {
                     $keys = array_keys($dlayer);
-
+				}
                 $action_attr = null;
                 foreach ($this->_dattrs as $attr) {
                     if ($attr->_type == 'action') {
@@ -411,10 +413,8 @@ class DTbl
         if ($attr->_type == 'sel1' && $node != null && $node->GetChildVal($attr->GetKey()) != null) {
             $attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($this->_id, $attr->_minVal, $node));
         }
-
         $buf = '<tr>';
         if ($attr->_label) {
-
             if ($is_blocked) {
                 $buf .= '<td class="xtbl_label_blocked">';
             } else {
@@ -436,13 +436,12 @@ class DTbl
             $buf .= '</td>';
         }
 
-        if ($this->_cols == 1) {
-
-            //$buf .= '</tr><tr class="xtbl_value"><td';
-            $buf .= '</tr><tr ><td';
-        } else {
-            $buf .= '<td';
-        }
+        if ($this->_cols == 1 && $attr->_label) {
+			$buf .= '</tr><tr>'; // 1 col label, occupy its own tr
+		}
+		
+		$buf .= '<td';
+		
         if ($attr->blockedVersion()) {
             $buf .= ' class="xtbl_value_blocked"';
         }

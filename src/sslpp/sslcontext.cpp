@@ -67,7 +67,7 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
             LS_DBG_L("[SSL] Insufficient memory\n");
             return NULL;
         }
-
+        
         if (pNewContext->init())
             return NULL;
 
@@ -648,7 +648,7 @@ int SslContext::init(int iMethod)
         return 0;
     if (initSSL())
         return -1;
-
+    
     m_iMethod = iMethod;
     m_iEnableSpdy = 0;
     m_iEnableOcsp = 0;
@@ -695,7 +695,7 @@ void SslContext::release()
 {
 #ifdef SSLCERTCOMP
     SslCertComp::disableCertCompDecomp(m_pCtx);
-#endif
+#endif        
     if (m_pCtx != NULL && m_pCtx != SSL_CTX_PENDING)
     {
         SSL_CTX *pCtx = m_pCtx;

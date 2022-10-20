@@ -38,6 +38,8 @@ enum ETAG_ENCODING
 
 struct http_header_t;
 
+#define LS_RESP_HDR_DROP (-2)
+
 #define HRH_F_HAS_HOLE  1
 #define HRH_F_HAS_PUSH  2
 #define HRH_F_LC_NAME   4

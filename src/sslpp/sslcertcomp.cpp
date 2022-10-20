@@ -68,7 +68,7 @@ static bool s_activate_decomp = false;
 static int  s_iBrCompressLevel = 6;
 static int  s_iSSL_CTX_index = -1;
 
-static void freeCtxData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx,
+static void freeCtxData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, 
                         long argl, void *argp)
 {
     assert(idx == s_iSSL_CTX_index);
@@ -80,8 +80,8 @@ static void freeCtxData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx,
 }
 
 
-static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx,
-                                             SslCertComp::comp_cache_t *cache,
+static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx, 
+                                             SslCertComp::comp_cache_t *cache, 
                                              int in_size,
                                              char *readBuffer, size_t len)
 {
@@ -92,41 +92,41 @@ static SslCertComp::comp_cache_t *cache_data(SSL_CTX *ctx,
             return NULL;
         cache->m_input_len = in_size;
         cache->m_len = len;
-        memcpy(cache->m_comp, readBuffer, len);
+        memcpy(cache->m_comp, readBuffer, len);    
     }
     else
     {
         SslCertComp::comp_cache_t *recache;
-        recache = (SslCertComp::comp_cache_t *)ls_prealloc(cache, cache->m_len +
+        recache = (SslCertComp::comp_cache_t *)ls_prealloc(cache, cache->m_len + 
                                                            sizeof(int) * 2 + len);
         if (recache)
         {
             memcpy(&recache->m_comp[recache->m_len], readBuffer, len);
-            recache->m_len += len;
+            recache->m_len += len;    
             cache = recache;
         }
-        else
+        else 
         {
             return NULL;
-        }
+        }    
     }
     SSL_CTX_set_ex_data(ctx, s_iSSL_CTX_index, (void *)cache);
     return cache;
 }
 
 
-static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data,
-                            size_t in_size,
-#ifdef ZBUF_H
-                            Zbuf *zbuf,
+static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data, 
+                            size_t in_size, 
+#ifdef ZBUF_H                            
+                            Zbuf *zbuf, 
 #else
                             Compressor *zbuf,
-#endif
+#endif                            
                             int level)
 {
     DEBUG_MESSAGE("[SSLCertComp] Compressing %ld bytes\n", in_size);
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
-
+    
     SslCertComp::comp_cache_t *cache;
     cache = (SslCertComp::comp_cache_t *)SSL_CTX_get_ex_data(ctx, s_iSSL_CTX_index);
     if (cache)
@@ -149,15 +149,15 @@ static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data,
             cache = NULL;
         }
     }
-
+    
     VMemBuf   vmembuf;
-
-    if (vmembuf.set(VMBUF_MALLOC,
-#ifdef ZBUF_H
+    
+    if (vmembuf.set(VMBUF_MALLOC, 
+#ifdef ZBUF_H                            
                     in_size
 #else
                     (int)in_size
-#endif
+#endif                    
                    ) == LS_FAIL)
     {
         ERROR_MESSAGE("[SSLCertComp] Unable to set memory buffer\n");
@@ -165,15 +165,15 @@ static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data,
     }
     zbuf->setCompressCache(&vmembuf);
     if (zbuf->init(
-#ifdef ZBUF_H
-                   Zbuf::MODE_COMPRESS,
+#ifdef ZBUF_H                            
+                   Zbuf::MODE_COMPRESS, 
 #else
                    Compressor::COMPRESSOR_COMPRESS,
-#endif
+#endif                   
                    level
-#ifdef ZBUF_H
+#ifdef ZBUF_H                            
                    , 0
-#endif
+#endif                   
                   ) == LS_FAIL)
     {
         ERROR_MESSAGE("[SSLCertComp] Unable to initialize compression\n");
@@ -220,7 +220,7 @@ static int certCompressFunc(SSL *ssl, CBB *out, const uint8_t *in_data,
 }
 
 
-static int certCompressFuncBrotli(SSL *ssl, CBB *out, const uint8_t *in,
+static int certCompressFuncBrotli(SSL *ssl, CBB *out, const uint8_t *in, 
                                   size_t in_len)
 {
     BrotliBuf brotBuf;
@@ -229,26 +229,26 @@ static int certCompressFuncBrotli(SSL *ssl, CBB *out, const uint8_t *in,
 
 
 static int certDecompressFunc(SSL *ssl, CRYPTO_BUFFER **out,
-                              size_t uncompressed_len, const uint8_t *in,
+                              size_t uncompressed_len, const uint8_t *in, 
                               size_t in_len,
-#ifdef ZBUF_H
-                              Zbuf *zbuf,
+#ifdef ZBUF_H                            
+                              Zbuf *zbuf, 
 #else
                               Compressor *zbuf,
-#endif
+#endif                            
                               int level)
 {
     DEBUG_MESSAGE("[SSLCertComp] Decompressing %ld bytes to %ld bytes\n", in_len,
                   uncompressed_len);
 
     VMemBuf   vmembuf;
-
-    if (vmembuf.set(VMBUF_MALLOC,
-#ifdef ZBUF_H
+    
+    if (vmembuf.set(VMBUF_MALLOC, 
+#ifdef ZBUF_H                            
                     in_len
 #else
                     (int)in_len
-#endif
+#endif                    
                    ) == LS_FAIL)
     {
         ERROR_MESSAGE("[SSLCertComp] Decompress Unable to set memory buffer\n");
@@ -256,15 +256,15 @@ static int certDecompressFunc(SSL *ssl, CRYPTO_BUFFER **out,
     }
     zbuf->setCompressCache(&vmembuf);
     if (zbuf->init(
-#ifdef ZBUF_H
-                   Zbuf::MODE_DECOMPRESS,
+#ifdef ZBUF_H                            
+                   Zbuf::MODE_DECOMPRESS, 
 #else
                    Compressor::COMPRESSOR_DECOMPRESS,
-#endif
+#endif                   
                    level
-#ifdef ZBUF_H
+#ifdef ZBUF_H                            
                    , 0
-#endif
+#endif                   
                   ) == LS_FAIL)
     {
         ERROR_MESSAGE("[SSLCertComp] Unable to initialize decompression\n");
@@ -323,7 +323,7 @@ static int certDecompressFunc(SSL *ssl, CRYPTO_BUFFER **out,
 
 
 static int certDecompressFuncBrotli(SSL *ssl, CRYPTO_BUFFER **out,
-                                    size_t uncompressed_len, const uint8_t *in,
+                                    size_t uncompressed_len, const uint8_t *in, 
                                     size_t in_len)
 {
     BrotliBuf brotBuf;
@@ -342,26 +342,26 @@ SslCertComp::~SslCertComp()
 
 
 void SslCertComp::activateComp(bool activate)
-{
+{   
     DEBUG_MESSAGE("[SSLCertComp] %sactivating compression!\n", activate ? "" : "de");
-    s_activate_comp = activate;
+    s_activate_comp = activate;  
     if ((activate) && (s_iSSL_CTX_index < 0))
         s_iSSL_CTX_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, freeCtxData);
 }
 
 
 void SslCertComp::activateDecomp(bool activate)
-{
+{   
     DEBUG_MESSAGE("[SSLCertComp] %sactivating decompression!\n", activate ? "" : "de");
-    s_activate_decomp = activate;
+    s_activate_decomp = activate;  
     if ((activate) && (s_iSSL_CTX_index < 0))
         s_iSSL_CTX_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, freeCtxData);
 }
 
 
 void SslCertComp::setBrCompressLevel(int level)
-{
-    s_iBrCompressLevel = level;
+{ 
+    s_iBrCompressLevel = level; 
 }
 
 
@@ -376,7 +376,7 @@ void SslCertComp::enableCertComp(SSL_CTX *ctx)
     {
         if (s_iSSL_CTX_index < 0)
             s_iSSL_CTX_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, freeCtxData);
-
+        
         if (!(SSL_CTX_add_cert_compression_alg(ctx, TLSEXT_cert_compression_brotli,
                                                certCompressFuncBrotli, NULL)))
             INFO_MESSAGE("[SSL_CTX:%p] Requested cert compression but unable to "
@@ -388,7 +388,7 @@ void SslCertComp::enableCertComp(SSL_CTX *ctx)
         DEBUG_MESSAGE("[SSL_CTX:%p] Cert compression not enabled\n", ctx);
 }
 
-
+    
 void SslCertComp::enableCertDecomp(SSL_CTX *ctx)
 {
     DEBUG_MESSAGE("[SSLCertComp] enableCertDecomp: %p\n", ctx);
@@ -396,7 +396,7 @@ void SslCertComp::enableCertDecomp(SSL_CTX *ctx)
     {
         if (s_iSSL_CTX_index < 0)
             s_iSSL_CTX_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, freeCtxData);
-
+        
         if (!(SSL_CTX_add_cert_compression_alg(ctx, TLSEXT_cert_compression_brotli,
                                                NULL, certDecompressFuncBrotli)))
             INFO_MESSAGE("[SSLCertComp] Requested cert decompression but unable to "
@@ -406,5 +406,5 @@ void SslCertComp::enableCertDecomp(SSL_CTX *ctx)
         DEBUG_MESSAGE("[SSLCertComp] Cert decompression not enabled\n");
 }
 
-
+    
 #endif // SSLCERTCOMP

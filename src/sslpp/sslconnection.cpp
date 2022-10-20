@@ -19,6 +19,7 @@
 #include "sslconnection.h"
 
 #include <log4cxx/logger.h>
+#include <log4cxx/logsession.h>
 #include <lsr/ls_pool.h>
 #include <assert.h>
 #if __cplusplus <= 199711L && !defined(static_assert)
@@ -49,8 +50,8 @@
 #define DEBUG_MESSAGE(...)     printf(__VA_ARGS__);
 #define ERROR_MESSAGE(...)     fprintf(stderr, __VA_ARGS__);
 #else
-#define DEBUG_MESSAGE(...)     LS_DBG_L(__VA_ARGS__)
-#define ERROR_MESSAGE(...)     LS_ERROR(__VA_ARGS__)
+#define DEBUG_MESSAGE(...)     LS_DBG_L((LogSession *)m_bio.m_logger, __VA_ARGS__)
+#define ERROR_MESSAGE(...)     LS_ERROR((LogSession *)m_bio.m_logger, __VA_ARGS__)
 #endif
 
 #else
@@ -87,6 +88,10 @@ void SslConnection::setSSL(SSL *ssl)
     m_flag = 0;
     SSL_set_ex_data(ssl, s_iConnIdx, (void *)this);
 }
+
+
+void SslConnection::setLogSession(ls_logger_t *log_sess)
+{   m_bio.m_logger = log_sess;  }
 
 
 void SslConnection::setSpecialExData(SSL *ssl, void *data)
@@ -202,7 +207,7 @@ int SslConnection::writev(const struct iovec *vect, int count,
     char *pBufEnd;
     char *pCurEnd;
     char achBuf[4096];
-
+    
     pBufEnd = achBuf + 4096;
     pCurEnd = achBuf;
     for (; vect < pEnd ;)
@@ -271,7 +276,7 @@ int SslConnection::flush()
 int SslConnection::shutdown(int bidirectional)
 {
     assert(m_ssl);
-
+    
     m_flag = 0;
     if (m_iStatus == ACCEPTING)
     {
@@ -319,7 +324,7 @@ int SslConnection::accept()
                       this);
         return -1;
     }
-    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p, ctx: %p\n", this,
+    DEBUG_MESSAGE("[SSL: %p] Call SSL_do_handshake, ssl: %p, ctx: %p\n", this, 
                   m_ssl, SSL_get_SSL_CTX(m_ssl));
     setFlag(F_ASYNC_PK, 0);
     ret = SSL_do_handshake(m_ssl);
@@ -381,6 +386,11 @@ int SslConnection::checkError(int ret)
     case SSL_ERROR_SSL:
         if (m_iWant == LAST_WRITE)
         {
+            if (ERR_peek_error() == SSL_R_PROTOCOL_IS_SHUTDOWN)
+            {
+                errno = ECONNRESET;
+                break;
+            }
             m_iWant |= WANT_WRITE;
             ERR_clear_error();
             return 0;
@@ -474,7 +484,7 @@ int SslConnection::connect()
 
 
 int SslConnection::tryagain()
-{
+{    
     DEBUG_MESSAGE("[SSL: %p] tryagain!\n", this);
     assert(m_ssl);
     switch (m_iStatus)
@@ -547,7 +557,7 @@ int SslConnection::getSpdyVersion()
     int v = 0;
 
     DEBUG_MESSAGE("[SSL: %p] getSpdyVersion\n", this);
-
+    
 #ifdef LS_ENABLE_SPDY
     unsigned int             len = 0;
     const unsigned char     *data = NULL;

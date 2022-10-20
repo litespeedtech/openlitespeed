@@ -20,6 +20,7 @@
 #include <util/stringtool.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -154,6 +155,8 @@ int ChunkInputStream::parseChunkLen(char *pLineEnd)
     long lLen = strtol(p, &p1, 16);
     if (((!*p1) || (*p1 == ' ') || (*p1 == ';')) && (p1 != p))
     {
+        if (lLen < 0 || lLen > INT_MAX)
+            return -1;
         m_iChunkLen = lLen;
         if (m_iChunkLen)
             m_iRemain = lLen + 2;
@@ -285,6 +288,8 @@ int ChunkInputStream::skipTrailer()
                     m_iRemain = -3;
                 ++pBegin;
                 break;
+            default:
+                return -1;
             }
         }
     }

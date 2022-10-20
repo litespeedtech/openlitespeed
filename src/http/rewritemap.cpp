@@ -38,6 +38,8 @@ KeyData *RewriteMapFile::parseLine(const char *pKey, int keyLen,
                                    char *pLine, char *pLineEnd)
 {
     RewriteMapData *pData;
+    if (pLine >= pLineEnd)
+        return NULL;
     pData = new RewriteMapData();
     if (pData)
     {

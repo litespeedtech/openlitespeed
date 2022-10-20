@@ -265,6 +265,7 @@ void HttpRespHeaders::replaceHeader(lsxpack_header *pKv, const char *pVal,
     char *pOldVal = getVal(pKv);
     memcpy(pOldVal, pVal, valLen);
     memset(pOldVal + valLen, ' ', pKv->val_len - valLen);
+    pKv->val_len = valLen;
     lsxpack_header_mark_val_changed(pKv);
 }
 
@@ -1105,12 +1106,14 @@ int HttpRespHeaders::mergeAll()
     {
         if (pKv->name_len > 0)
         {
-            int len = pKv->name_len + pKv->val_len + 4;
+            int len = pKv->name_len + pKv->val_len + 2;
             tmp.append(m_buf.begin() + pKv->name_offset, len);
+            tmp.append_unsafe('\r');
+            tmp.append_unsafe('\n');
             int diff = total - pKv->name_offset;
             pKv->name_offset = total;
             pKv->val_offset += diff;
-            total += len;
+            total += len + 2;
         }
         ++pKv;
     }
@@ -1442,7 +1445,7 @@ int HttpRespHeaders::toHpackIdx(int index)
 
 static const int appresp2qpack[36] = {
     32,    //"accept-ranges"
-    -1,    //"connection"
+    LS_RESP_HDR_DROP,    //"connection"
     54,    //"content-type"
      4,    //"content-length"
     43,    //"content-encoding"
@@ -1452,17 +1455,17 @@ static const int appresp2qpack[36] = {
      6,    //"date"
      7,    //"etag"
     -1,    //"expires"
-    -1,    //"keep-alive"
+    LS_RESP_HDR_DROP,    //"keep-alive"
     10,    //"last-modified"
     12,    //"location"
     -1,    //"x-litespeed-location"
     -1,    //"x-litespeed-cache-control"
     -1,    //"pragma"
-    -1,    //"proxy-connection"
+    LS_RESP_HDR_DROP,    //"proxy-connection"
     92,    //"server"
     14,    //"set-cookie"
     -1,    //"status"
-    -1,    //"transfer-encoding"
+    LS_RESP_HDR_DROP,    //"transfer-encoding"
     60,    //"vary"
     -1,    //"www-authenticate"
     -1,    //"x-litespeed-cache"
@@ -1476,7 +1479,7 @@ static const int appresp2qpack[36] = {
     83,    //"alt-svc"
     -1,    //"x-litespeed-alt-svc"
     -1,    //"x-lsadc-backend"
-    -1,    //"upgrade"
+    LS_RESP_HDR_DROP,    //"upgrade"
 };
 
 static int
@@ -1501,8 +1504,13 @@ static void buildQpackIdx(lsxpack_header *hdr)
         idx = lookup_appresp2qpack(hdr->app_index);
     if (idx != -1)
     {
-        hdr->qpack_index = idx;
-        hdr->flags = (lsxpack_flag)(hdr->flags | LSXPACK_QPACK_IDX);
+        if (idx == LS_RESP_HDR_DROP)
+            hdr->buf = NULL;
+        else
+        {
+            hdr->qpack_index = idx;
+            hdr->flags = (lsxpack_flag)(hdr->flags | LSXPACK_QPACK_IDX);
+        }
     }
 
 }
@@ -1510,7 +1518,7 @@ static void buildQpackIdx(lsxpack_header *hdr)
 
 static const int appresp2hpack[36] = {
     18,    //"accept-ranges"
-    0,     //"connection"
+    LS_RESP_HDR_DROP,    //"connection"
     31,    //"content-type"
     28,    //"content-length"
     26,    //"content-encoding"
@@ -1520,17 +1528,17 @@ static const int appresp2hpack[36] = {
     33,    //"date"
     34,    //"etag"
     36,    //"expires"
-    0,     //"keep-alive"
+    LS_RESP_HDR_DROP,    //"keep-alive"
     44,    //"last-modified"
     46,    //"location"
     0,     //"x-litespeed-location"
     0,     //"x-litespeed-cache-control"
     0,     //"pragma"
-    0,     //"proxy-connection"
+    LS_RESP_HDR_DROP,    //"proxy-connection"
     54,    //"server"
     55,    //"set-cookie"
     0,     //"status"
-    57,    //"transfer-encoding"
+    LS_RESP_HDR_DROP,    //"transfer-encoding"
     59,    //"vary"
     61,    //"www-authenticate"
     0,     //"x-litespeed-cache"
@@ -1544,7 +1552,7 @@ static const int appresp2hpack[36] = {
     0,     //"alt-svc"
     0,     //"x-litespeed-alt-svc"
     0,     //"x-lsadc-backend"
-    0,     //"upgrade"
+    LS_RESP_HDR_DROP,     //"upgrade"
 };
 
 
@@ -1573,7 +1581,10 @@ static void buildHpackIdx(lsxpack_header *hdr)
         idx = lookup_appresp2hpack(hdr->app_index);
     if (idx != LSHPACK_HDR_UNKNOWN)
     {
-        hdr->hpack_index = idx;
+        if (idx == LS_RESP_HDR_DROP)
+            hdr->buf = NULL;
+        else
+            hdr->hpack_index = idx;
     }
 }
 

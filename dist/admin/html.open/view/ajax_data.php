@@ -9,9 +9,11 @@ require_once('inc/auth.php') ;
 
 function ajax_pid_load()
 {
-    $data = array( 'pid' => Service::ServiceData(SInfo::DATA_PID),
-        'serverload' => implode(', ', array_map(function($load) { return round($load, 5); }, \sys_getloadavg())) ) ;
-    echo json_encode($data) ;
+	$data = [
+		'pid' => Service::ServiceData(SInfo::DATA_PID),
+		'serverload' => Service::getServerLoad(),
+			];
+	echo json_encode($data);
 }
 
 function ajax_dashstat()

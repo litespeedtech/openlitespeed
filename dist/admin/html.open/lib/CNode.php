@@ -243,9 +243,15 @@ class CNode
     {
         if ($this->_raw_tag != '') {
             $this->_raw_content .= $cur_comment;
-            if ($this->_raw_content != '') {
-                $child = new CNode($this->_raw_tag, $this->_raw_content, self::T_KV | self::T_RAW);
-                $this->AddChild($child);
+            if (trim($this->_raw_content) != '') {
+                $child = $this->GetChildren($this->_raw_tag);
+				if ($child != null) {
+					// append to existing
+					$child->_v .= "\n" . $this->_raw_content;
+				} else {
+	                $child = new CNode($this->_raw_tag, $this->_raw_content, self::T_KV | self::T_RAW);
+		            $this->AddChild($child);
+				}
             } else {
                 // backward compatible, mark existing node to raw
                 $child = $this->GetChildren($this->_raw_tag);

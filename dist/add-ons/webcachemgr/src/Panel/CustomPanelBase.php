@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2020-2022
+ * @copyright (c) 2020-2021
  * @since 1.10
  * ******************************************* */
 

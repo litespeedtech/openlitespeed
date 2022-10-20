@@ -3,8 +3,8 @@
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2022
+ * @author Michael Alegre
+ * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -35,6 +35,12 @@ class WPInstallStorage
      * @var string
      */
     const CMD_DISCOVER_NEW = 'discoverNew';
+
+    /**
+     * @since 1.14
+     * @var string
+     */
+    const CMD_DISCOVER_NEW_AND_ENABLE = 'discoverNewAndEnable';
 
     /**
      * @since 1.13.3
@@ -126,9 +132,10 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $dataFile
-     * @param string  $custDataFile
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $dataFile
+     * @param string $custDataFile
+     *
+     * @throws LSCMException  Thrown indirectly by $this->init() call.
      */
     public function __construct( $dataFile, $custDataFile = '' )
     {
@@ -140,7 +147,8 @@ class WPInstallStorage
     /**
      *
      * @return int
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     protected function init()
     {
@@ -174,9 +182,14 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $dataFile
+     * @param string $dataFile
+     *
      * @return WPInstall[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown when data file is corrupt.
+     * @throws LSCMException  Thrown when there is a data file version issue.
+     * @throws LSCMException  Thrown indirectly by $this->verifyDataFileVer()
+     *     call.
      */
     protected function getDataFileData( $dataFile )
     {
@@ -234,7 +247,8 @@ class WPInstallStorage
 
     /**
      *
-     * @param bool  $nonFatalOnly
+     * @param bool $nonFatalOnly
+     *
      * @return int
      */
     public function getCount( $nonFatalOnly = false )
@@ -338,7 +352,8 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $path
+     * @param string $path
+     *
      * @return WPInstall|null
      */
     public function getWPInstall( $path )
@@ -371,7 +386,7 @@ class WPInstallStorage
 
     /**
      *
-     * @param WPInstall  $wpInstall
+     * @param WPInstall $wpInstall
      */
     public function addWPInstall( WPInstall $wpInstall )
     {
@@ -380,7 +395,8 @@ class WPInstallStorage
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by $this->saveDataFile() call.
+     * @throws LSCMException  Thrown indirectly by $this->saveDataFile() call.
      */
     public function syncToDisk()
     {
@@ -393,9 +409,10 @@ class WPInstallStorage
 
     /**
      *
-     * @param string       $dataFile
-     * @param WPInstall[]  $wpInstalls
-     * @throws LSCMException  Thrown indirectly.
+     * @param string           $dataFile
+     * @param WPInstall[]|null $wpInstalls
+     *
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
     protected function saveDataFile( $dataFile, $wpInstalls )
     {
@@ -421,8 +438,7 @@ class WPInstallStorage
             ksort($data);
         }
 
-        $file_str = json_encode($data);
-        file_put_contents($dataFile, $file_str, LOCK_EX);
+        file_put_contents($dataFile, json_encode($data), LOCK_EX);
         chmod($dataFile, 0600);
 
         $this->log("Data file saved $dataFile", Logger::L_DEBUG);
@@ -430,10 +446,13 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $dataFile
-     * @param string  $dataFileVer
+     * @param string $dataFile
+     * @param string $dataFileVer
+     *
      * @return int
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     * @throws LSCMException  Thrown indirectly by $this->updateDataFile() call.
      */
     protected function verifyDataFileVer( $dataFile, $dataFileVer )
     {
@@ -456,10 +475,14 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $dataFile
-     * @param string  $dataFileVer
+     * @param string $dataFile
+     * @param string $dataFileVer
+     *
      * @return bool
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     * @throws LSCMException  Thrown indirectly by Util::createBackup() call.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
      */
     public static function updateDataFile( $dataFile, $dataFileVer )
     {
@@ -493,13 +516,17 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $action
+     * @param string $action
+     *
      * @return string[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown when "get docroots" command fails.
+     * @throws LSCMException  Thrown when $action value is unsupported.
      */
     protected function prepareActionItems( $action )
     {
         switch ($action) {
+
             case self::CMD_SCAN:
             case self::CMD_SCAN2:
             case self::CMD_DISCOVER_NEW:
@@ -524,6 +551,7 @@ class WPInstallStorage
             case UserCommand::CMD_MASS_DASH_DISABLE:
             case self::CMD_MASS_UNFLAG:
                 return $this->getPaths();
+
             default:
                 throw new LSCMException('Missing parameter(s).');
         }
@@ -531,12 +559,35 @@ class WPInstallStorage
 
     /**
      *
-     * @param string    $action
-     * @param string    $path
-     * @param string[]  $extraArgs
-     * @throws LSCMException  Thrown indirectly.
+     * @param string   $action
+     * @param string   $path
+     * @param string[] $extraArgs
+     *
+     * @throws LSCMException  Thrown when an invalid LSCWP version is selected
+     *     in action UserCommand::CMD_MASS_UPGRADE.
+     * @throws LSCMException  Thrown when LSCWP version fails to download in
+     *     action UserCommand::CMD_MASS_UPGRADE.
+     * @throws LSCMException  Thrown when LSCWP source package is not available
+     *     in action UserCommand::CMD_MASS_UPGRADE.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->hasValidPath()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->addUserFlagFile()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->hasValidPath()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->refreshStatus()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $wpInstall->addUserFlagFile()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by PluginVersion::getInstance()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     PluginVersion::getInstance()->getAllowedVersions() call.
+     * @throws LSCMException  Thrown indirectly by UserCommand::issue() call.
+     * @throws LSCMException  Thrown indirectly by $this->syncToDisk() call.
+     * @throws LSCMException  Thrown indirectly by $this->syncToDisk() call.
      */
-    protected function doWPInstallAction( $action, $path, $extraArgs )
+    protected function doWPInstallAction( $action, $path, array $extraArgs )
     {
         if ( ($wpInstall = $this->getWPInstall($path)) == null ) {
             $wpInstall = new WPInstall($path);
@@ -654,20 +705,40 @@ class WPInstallStorage
 
     /**
      *
-     * @param string               $action
-     * @param null|string[]        $list
-     * @param string[]|string[][]  $extraArgs
+     * @param string              $action
+     * @param null|string[]       $list
+     * @param string[]|string[][] $extraArgs
+     *
      * @return string[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by $this->prepareActionItems()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by Context::getActionTimeout()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->scan() call.
+     * @throws LSCMException  Thrown indirectly by $this->addNewWPInstall()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->addCustomInstallations() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     PluginVersion::getCurrentVersion() call.
+     * @throws LSCMException  Thrown indirectly by PluginVersion::getInstance()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     PluginVersion::getInstance()->setActiveVersion() call.
+     * @throws LSCMException  Thrown indirectly by $this->doWPInstallAction()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->syncToDisk() call.
      */
-    public function doAction( $action, $list, $extraArgs = array() )
+    public function doAction( $action, $list, array $extraArgs = array() )
     {
         if ( $list === null ) {
             $list = $this->prepareActionItems($action);
         }
 
         $count = count($list);
-        $this->log("doAction {$action} for {$count} items", Logger::L_VERBOSE);
+        $this->log("doAction $action for $count items", Logger::L_VERBOSE);
         $endTime = $count > 1 ? Context::getActionTimeout() : 0;
         $finishedList = array();
 
@@ -704,9 +775,7 @@ class WPInstallStorage
                 break;
 
             case self::CMD_ADD_CUST_WPINSTALLS:
-                $wpInstallsInfo = $extraArgs[0];
-
-                $this->addCustomInstallations($wpInstallsInfo);
+                $this->addCustomInstallations($extraArgs[0]);
                 break;
 
             default:
@@ -717,8 +786,9 @@ class WPInstallStorage
                     /**
                      * Ensure that current version is locally downloaded.
                      */
-                    $currVer = PluginVersion::getCurrentVersion();
-                    PluginVersion::getInstance()->setActiveVersion($currVer);
+                    PluginVersion::getInstance()
+                    ->setActiveVersion(PluginVersion::getCurrentVersion())
+                    ;
                 }
 
                 foreach ( $list as $path ) {
@@ -749,16 +819,24 @@ class WPInstallStorage
      *
      * @deprecated 1.13.3  Use $this->scan2() instead.
      *
-     * @param string  $docroot
-     * @param bool    $forceRefresh
+     * @param string $docroot
+     * @param bool   $forceRefresh
+     *
      * @return void
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getScanDepth() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->wpInstalls[$wp_path]->refreshStatus() call.
      */
     protected function scan( $docroot, $forceRefresh = false )
     {
-        $depth = Context::getScanDepth();
-        $cmd = "find -L $docroot -maxdepth $depth -name wp-admin -print";
-        $directories = shell_exec($cmd);
+        $directories = shell_exec(
+            "find -L $docroot -maxdepth " . Context::getScanDepth()
+                . ' -name wp-admin -print'
+        );
 
         /**
          * Example:
@@ -820,15 +898,18 @@ class WPInstallStorage
      *
      * @since 1.13.3
      *
-     * @param string   $docroot
+     * @param string $docroot
+     *
      * @return string[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getScanDepth() call.
      */
     public function scan2( $docroot )
     {
-        $depth = Context::getScanDepth();
-        $cmd = "find -L $docroot -maxdepth $depth -name wp-admin -print";
-        $directories = shell_exec($cmd);
+        $directories = shell_exec(
+            "find -L $docroot -maxdepth " . Context::getScanDepth()
+                .' -name wp-admin -print'
+        );
 
         /**
          * Example:
@@ -852,8 +933,7 @@ class WPInstallStorage
         $wpPaths = array();
 
         foreach ( $matches[1] as $path ) {
-            $wpPath = realpath($docroot . $path);
-            $wpPaths[] = $wpPath;
+            $wpPaths[] = realpath($docroot . $path);
         }
 
         return $wpPaths;
@@ -861,13 +941,18 @@ class WPInstallStorage
 
     /**
      * Add a new WPInstall object to WPInstallStorage's $wpInstalls[] given a
-     * path to a WordPress installation and refresh it's status . If a WPInstall
-     * object already exists for the given path, refresh it's status.
+     * path to a WordPress installation and refresh its status. If a WPInstall
+     * object already exists for the given path, refresh its status.
      *
      * @since 1.13.3
      *
-     * @param string  $wpPath
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $wpPath
+     *
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->wpInstalls[$wpPath]->refreshStatus() call.
      */
     protected function addNewWPInstall( $wpPath )
     {
@@ -879,8 +964,8 @@ class WPInstallStorage
             $this->wpInstalls[$wpPath] = new WPInstall($wpPath);
             $this->log("New installation found: $wpPath", Logger::L_INFO);
 
-            if ( $this->custWpInstalls != null &&
-                isset($this->custWpInstalls[$wpPath]) ) {
+            if ( $this->custWpInstalls != null
+                    && isset($this->custWpInstalls[$wpPath]) ) {
 
                 unset($this->custWpInstalls[$wpPath]);
 
@@ -903,11 +988,20 @@ class WPInstallStorage
 
     /**
      *
-     * @param string[]  $wpInstallsInfo
+     * @param string[] $wpInstallsInfo
+     *
      * @return void
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->custWpInstalls[$wpPath]->refreshStatus() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
-    protected function addCustomInstallations( $wpInstallsInfo )
+    protected function addCustomInstallations( array $wpInstallsInfo )
     {
         if ( $this->customDataFile == '' ) {
             $this->log(
@@ -925,8 +1019,7 @@ class WPInstallStorage
         $count = count($wpInstallsInfo);
 
         for ( $i = 0; $i < $count; $i++ ) {
-            $infoString = $wpInstallsInfo[$i];
-            $info = preg_split('/\s+/', trim($infoString));
+            $info = preg_split('/\s+/', trim($wpInstallsInfo[$i]));
 
             $line = $i + 1;
 
@@ -941,9 +1034,6 @@ class WPInstallStorage
             }
 
             $wpPath = $info[0];
-            $docroot = $info[1];
-            $serverName = $info[2];
-            $siteUrl = $info[3];
 
             if ( !file_exists("$wpPath/wp-admin") ) {
                 $this->log(
@@ -954,6 +1044,8 @@ class WPInstallStorage
 
                 continue;
             }
+
+            $docroot = $info[1];
 
             if ( !(substr($wpPath, 0, strlen($docroot)) === $docroot) ) {
                 $this->log(
@@ -968,8 +1060,8 @@ class WPInstallStorage
             if ( !isset($this->wpInstalls[$wpPath]) ) {
                 $this->custWpInstalls[$wpPath] = new WPInstall($wpPath);
                 $this->custWpInstalls[$wpPath]->setDocRoot($docroot);
-                $this->custWpInstalls[$wpPath]->setServerName($serverName);
-                $this->custWpInstalls[$wpPath]->setSiteUrlDirect($siteUrl);
+                $this->custWpInstalls[$wpPath]->setServerName($info[2]);
+                $this->custWpInstalls[$wpPath]->setSiteUrlDirect($info[3]);
                 $this->custWpInstalls[$wpPath]->refreshStatus();
 
                 $this->log(
@@ -1022,13 +1114,19 @@ class WPInstallStorage
 
     /**
      *
-     * @param string  $msg
-     * @param int     $level
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     * @param int    $level
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
+     * @throws LSCMException  Thrown indirectly by Logger::warn() call.
+     * @throws LSCMException  Thrown indirectly by Logger::notice() call.
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     * @throws LSCMException  Thrown indirectly by Logger::verbose() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     protected function log( $msg, $level )
     {
-        $msg = "WPInstallStorage - {$msg}";
+        $msg = "WPInstallStorage - $msg";
 
         switch ($level) {
 

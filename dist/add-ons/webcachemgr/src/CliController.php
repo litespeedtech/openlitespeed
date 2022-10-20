@@ -3,16 +3,16 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2022
+ * @author Michael Alegre
+ * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp;
 
-use \Exception;
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\Panel\ControlPanel;
-use \Lsc\Wp\Panel\CPanel;
+use Exception;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\Panel\ControlPanel;
+use Lsc\Wp\Panel\CPanel;
 
 class CliController
 {
@@ -74,7 +74,7 @@ class CliController
     private $vhCacheRootParam = '';
 
     /**
-     * @var boolean
+     * @var bool
      */
     private $displayCacheRoots = false;
 
@@ -96,13 +96,14 @@ class CliController
     /**
      * Holds any additional command input for use after parseCommands().
      *
-     * @var null|mixed[]
+     * @var null|array
      */
     private $input;
 
     /**
      *
-     * @throws LSCMException
+     * @throws LSCMException  Thrown when script argument count is less than
+     *     expected.
      */
     public function __construct()
     {
@@ -124,62 +125,70 @@ class CliController
      * Checks if current $wpInstallStorage object is capable of having the
      * given non-scan action performed.
      *
-     * @param string $action
+     * @param string           $action
      * @param WPInstallStorage $wpInstallStorage
+     *
      * @return void
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown when scan data cannot be read.
+     * @throws LSCMException  Thrown when expected scan data format has changed.
+     * @throws LSCMException  Thrown when attempting to execute a "mass"
+     *     operation without any discovered installations.
      */
-    private function checkDataFile( $action,
-            WPInstallStorage $wpInstallStorage) {
+    private function checkDataFile(
+                         $action,
+        WPInstallStorage $wpInstallStorage )
+    {
+        if ( $action == WPInstallStorage::CMD_SCAN2 ) {
 
-        if ( $action == WPInstallStorage::CMD_SCAN ) {
             /**
              * Always allowed.
              */
             return;
         }
 
-        $msg = '';
-
         if ( ($err = $wpInstallStorage->getError()) ) {
 
             switch ($err) {
+
                 case WPInstallStorage::ERR_NOT_EXIST:
                 case WPInstallStorage::ERR_CORRUPTED:
                 case WPInstallStorage::ERR_VERSION_HIGH:
-                    $msg = 'Scan data could not be read! Please scan again '
-                        . '(without the \'-n\' flag) before attempting any '
-                        . "cache operations.\n";
-                    break;
+                    throw new LSCMException(
+                        'Scan data could not be read! Please scan again '
+                            . '(without the \'-n\' flag) before attempting any '
+                            . "cache operations.\n"
+                    );
+
                 case WPInstallStorage::ERR_VERSION_LOW:
-                    $msg = 'Scan data file format has been changed for this '
-                        . 'version. Please scan again (without the \'-n\' '
-                        . "flag) before attempting any cache operations.\n";
-                    break;
+                    throw new LSCMException(
+                        'Scan data file format has been changed for this '
+                            . 'version. Please scan again (without the \'-n\' '
+                            . "flag) before attempting any cache operations.\n"
+                    );
+
                 //no default
             }
         }
         elseif ( strpos($action,'mass_') === 0
                 && $wpInstallStorage->getCount() == 0 ) {
 
-            $msg = 'No WordPress installations discovered in the previous '
-                . 'scan. If you have any newly installed WordPress '
-                . 'installations, please scan again or add them with command '
-                . "'addinstalls'.\n";
-        }
-
-        if ( $msg != '' ) {
-            throw new LSCMException($msg);
+            throw new LSCMException(
+                'No WordPress installations discovered in the previous scan. '
+                    . 'If you have any newly installed WordPress '
+                    . 'installations, please scan again or add them with '
+                    . "command 'addinstalls'.\n"
+            );
         }
     }
 
     /**
      *
-     * @param WPInstall  $wpInstall
+     * @param WPInstall $wpInstall
      */
     private function printStatusMsg( WPInstall $wpInstall )
     {
-        $msg = "{$this->currWpPath} - Status: ";
+        $msg = "$this->currWpPath - Status: ";
 
         $status = $wpInstall->getStatus();
 
@@ -221,16 +230,29 @@ class CliController
             $msg .= 'Could not find a valid wp-config.php file.';
         }
 
-        echo "{$msg}\n\n";
+        echo "$msg\n\n";
     }
 
     /**
      *
-     * @param string[]  $args
+     * @param string[] $args
+     *
      * @return void
-     * @throws LSCMException  Thrown directly and indirectly.
+     *
+     * @throws LSCMException  Thrown when -svr parameter is passed without a
+     *     value.
+     * @throws LSCMException  Thrown when -svr parameter value points to a
+     *     non-empty directory.
+     * @throws LSCMException  Thrown when -vh parameter is passed without a
+     *     value.
+     * @throws LSCMException  Thrown when -vh parameter value contains invalid
+     *     character '$'.
+     * @throws LSCMException  Thrown when -vh parameter value points to a
+     *     non-empty directory.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
      */
-    private function handleSetCacheRootInput( &$args )
+    private function handleSetCacheRootInput( array &$args )
     {
         if ( empty($args) ) {
             $this->cacheRootCmds[] = 'listCacheRoots';
@@ -251,7 +273,7 @@ class CliController
 
             $currSvrCacheRoot = $controlPanel->getServerCacheRoot();
 
-            if ( $this->svrCacheRootParam != $currSvrCacheRoot) {
+            if ( $this->svrCacheRootParam != $currSvrCacheRoot ) {
 
                 if ( !Util::is_dir_empty($this->svrCacheRootParam) ) {
                     throw new LSCMException(
@@ -290,7 +312,7 @@ class CliController
 
             if ( $this->vhCacheRootParam[0] == '/' ) {
                 $updatedVhCacheRoot =
-                        rtrim($this->vhCacheRootParam, '/') . '/$vh_user';
+                    rtrim($this->vhCacheRootParam, '/') . '/$vh_user';
 
                 if ( $updatedVhCacheRoot != $currVHCacheRoot
                         && ! Util::is_dir_empty($this->vhCacheRootParam) ) {
@@ -318,11 +340,13 @@ class CliController
 
     /**
      *
-     * @param string[]  $args
+     * @param string[] $args
+     *
      * @return void
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown when passed version set value is invalid.
      */
-    private function handleSetVersionInput( &$args )
+    private function handleSetVersionInput( array &$args )
     {
         if ( ($key = array_search('--list', $args)) !== false ) {
             unset($args[$key]);
@@ -343,8 +367,8 @@ class CliController
 
         $v = array_shift($args);
 
-        if ( preg_match('/[1-9]\.[0-9](?:\.[0-9])*(?:\.[0-9])*/', $v) !== 1 ) {
-            throw new LSCMException("Invalid version number ({$v}).");
+        if ( preg_match('/[1-9]\.\d(?:\.\d)*(?:\.\d)*/', $v) !== 1 ) {
+            throw new LSCMException("Invalid version number ($v).");
         }
 
         $this->versionCmd = $v;
@@ -352,16 +376,16 @@ class CliController
 
     /**
      *
-     * @param string[]  $args
+     * @param string[] $args
      */
-    private function handleScanInput( &$args )
+    private function handleScanInput( array &$args )
     {
         if ( ($key = array_search('-n', $args)) !== false ) {
             unset($args[$key]);
-            $this->commands[] = WPInstallStorage::CMD_DISCOVER_NEW;
+            $this->commands[] = WPInstallStorage::CMD_DISCOVER_NEW2;
         }
         else {
-            $this->commands[] = WPInstallStorage::CMD_SCAN;
+            $this->commands[] = WPInstallStorage::CMD_SCAN2;
         }
 
         if ( ($key = array_search('-e', $args)) !== false ) {
@@ -372,10 +396,26 @@ class CliController
 
     /**
      *
-     * @param string[]  $args
-     * @return boolean
+     * @param string[] $args
      */
-    private function isMassOperation( &$args )
+    private function handleScanNewInput( array &$args )
+    {
+        if ( ($key = array_search('-en', $args)) !== false ) {
+            unset($args[$key]);
+            $this->commands[] = WPInstallStorage::CMD_DISCOVER_NEW_AND_ENABLE;
+        }
+        else {
+            $this->commands[] = WPInstallStorage::CMD_DISCOVER_NEW2;
+        }
+    }
+
+    /**
+     *
+     * @param string[] $args
+     *
+     * @return bool
+     */
+    private function isMassOperation( array &$args )
     {
         if ( ($key = array_search('-m', $args)) !== false ) {
             unset($args[$key]);
@@ -387,11 +427,14 @@ class CliController
 
     /**
      *
-     * @param string    $cmd
-     * @param string[]  $args
-     * @throws LSCMException
+     * @param string   $cmd
+     * @param string[] $args
+     *
+     * @throws LSCMException  Thrown when expected WP path value is not
+     *     provided.
+     * @throws LSCMException  Thrown when provided an invalid WP path value.
      */
-    private function handleSingleOperationInput( $cmd, &$args )
+    private function handleSingleOperationInput( $cmd, array &$args )
     {
         $path = array_shift($args);
 
@@ -402,7 +445,7 @@ class CliController
         $wpInstall = new WPInstall($path);
 
         if ( !$wpInstall->hasValidPath() ) {
-            throw new LSCMException("Invalid WP Path: {$path}.");
+            throw new LSCMException("Invalid WP Path: $path.");
         }
 
         $this->commands[] = $cmd;
@@ -411,11 +454,35 @@ class CliController
 
     /**
      *
-     * @param string    $cmdType
-     * @param string[]  $args
-     * @throws LSCMException
+     * @param string   $cmdType
+     * @param string[] $args
+     *
+     * @throws LSCMException  Thrown when neither -m nor -wppath parameters are
+     *     provided in notify command.
+     * @throws LSCMException  Thrown when -wppath parameter is passed without a
+     *     value in notify command.
+     * @throws LSCMException  Thrown when provided -wppath parameter value is
+     *     invalid in notify command.
+     * @throws LSCMException  Thrown when -msgfile parameter is passed without a
+     *     value in notify command.
+     * @throws LSCMException  Thrown when provided -msgfile parameter value
+     *     points to a non-existent file in notify command.
+     * @throws LSCMException  Thrown when unable to get file contents of the
+     *     file pointed to by provided -msgfile value in notify command.
+     * @throws LSCMException  Thrown when neither -msgfile nor -msg parameters
+     *     are provided in notify command.
+     * @throws LSCMException  Thrown when parameter -msg is passed without a
+     *     value in notify command.
+     * @throws LSCMException  Thrown when expected -plugin parameter is not
+     *     provided in notify command.
+     * @throws LSCMException  Thrown when provided -plugin parameter value does
+     *     not a known plugin slug in notify command.
+     * @throws LSCMException  Thrown when neither -m flag nor WP path value are
+     *     provided in remove command.
+     * @throws LSCMException  Thrown when provided WP path value is invalid in
+     *     remove command.
      */
-    private function handleDashNotifyInput( $cmdType, &$args )
+    private function handleDashNotifyInput( $cmdType, array &$args )
     {
         if ( $cmdType == 'notify' ) {
 
@@ -443,7 +510,7 @@ class CliController
                 $wpInstall = new WPInstall($path);
 
                 if ( !$wpInstall->hasValidPath() ) {
-                    throw new LSCMException("Invalid WP Path: {$path}.");
+                    throw new LSCMException("Invalid WP Path: $path.");
                 }
 
                 $this->commands[] = UserCommand::CMD_DASH_NOTIFY;
@@ -451,8 +518,6 @@ class CliController
 
                 unset($args[$key], $args[$key + 1]);
             }
-
-            $dashInput = array();
 
             if ( ($key = array_search('-msgfile', $args)) !== false ) {
 
@@ -494,7 +559,7 @@ class CliController
                 $message = $args[$key + 1];
             }
 
-            $dashInput['msg'] = $message;
+            $dashInput = array( 'msg' => $message );
 
             unset($args[$key], $args[$key + 1]);
 
@@ -508,15 +573,15 @@ class CliController
 
                 $slug = $args[$key + 1];
 
-                $url =
-                    "https://api.wordpress.org/plugins/info/1.0/{$slug}.json";
-                $pluginInfoJSON = Util::get_url_contents($url);
+                $pluginInfoJSON = Util::get_url_contents(
+                    "https://api.wordpress.org/plugins/info/1.0/$slug.json"
+                );
 
                 $pluginInfo = json_decode($pluginInfoJSON, true);
 
                 if ( empty($pluginInfo['name']) ) {
                     throw new LSCMException(
-                        'Could not find a plugin mathcing the provided plugin '
+                        'Could not find a plugin matching the provided plugin '
                             . 'slug.'
                     );
                 }
@@ -539,14 +604,14 @@ class CliController
 
                 if ( $path == null ) {
                     throw new LSCMException(
-                        'Invalid Command, missing WP path.'
+                        'Invalid Command, missing \'-m\' flag or WP path value.'
                     );
                 }
 
                 $wpInstall = new WPInstall($path);
 
                 if ( !$wpInstall->hasValidPath() ) {
-                    throw new LSCMException("Invalid WP Path: {$path}.");
+                    throw new LSCMException("Invalid WP Path: $path.");
                 }
 
                 $this->commands[] = UserCommand::CMD_DASH_DISABLE;
@@ -557,10 +622,14 @@ class CliController
 
     /**
      *
-     * @param string[]  $args
-     * @throws LSCMException
+     * @param string[] $args
+     *
+     * @throws LSCMException  Thrown when command 'cpanelplugin' is used in a
+     *     non-cPanel environment.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
      */
-    private function handleCpanelPluginInput( &$args )
+    private function handleCpanelPluginInput( array &$args )
     {
         $controlPanel = ControlPanel::getClassInstance();
 
@@ -571,42 +640,67 @@ class CliController
             );
         }
 
-        if ( $args[0] == '--install' ) {
-            $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_INSTALL;
-            unset($args[0]);
-        }
-        elseif ( $args[0] == '--uninstall' ) {
-            $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_UNINSTALL;
-            unset($args[0]);
-        }
-        elseif ( $args[0] == '-autoinstall' ) {
+        switch ($args[0]) {
 
-            if ( !isset($args[1]) ) {
-                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_STATUS;
-            }
-            elseif ( "{$args[1]}" === '1' ) {
-                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_ON;
-                unset($args[1]);
-            }
-            elseif ( "{$args[1]}" === '0' ) {
-                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_OFF;
-                unset($args[1]);
-            }
+            case '--install':
+                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_INSTALL;
+                unset($args[0]);
+                break;
 
-            unset($args[0]);
-        }
-        elseif ( $args[0] == '--fixconf') {
-            $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_FIX_CONF;
-            unset($args[0]);
+            case '--uninstall':
+                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_UNINSTALL;
+                unset($args[0]);
+                break;
+
+            case '-autoinstall':
+
+                if ( !isset($args[1]) ) {
+                    $this->specialCmd =
+                        self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_STATUS;
+                }
+                elseif ( "$args[1]" === '1' ) {
+                    $this->specialCmd =
+                        self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_ON;
+                    unset($args[1]);
+                }
+                elseif ( "$args[1]" === '0' ) {
+                    $this->specialCmd =
+                        self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_OFF;
+                    unset($args[1]);
+                }
+
+                unset($args[0]);
+                break;
+
+            case '--fixconf':
+                $this->specialCmd = self::SPECIAL_CMD_CPANEL_PLUGIN_FIX_CONF;
+                unset($args[0]);
+                break;
+
+            //no default
         }
     }
 
     /**
      *
-     * @param string[]  $args
-     * @throws LSCMException
+     * @param string[] $args
+     *
+     * @throws LSCMException  Thrown when -wpinstall parameter is passed without
+     *     a value.
+     * @throws LSCMException  Thrown when expected 'docroot' value is not
+     *     provided when using parameter -wpinstall.
+     * @throws LSCMException  Thrown when expected 'server name' value is not
+     *     provided when using parameter -wpinstall.
+     * @throws LSCMException  Thrown when expected 'site url' value is not
+     *     provided when using parameter -wpinstall.
+     * @throws LSCMException  Thrown when -wpinstallsfile parameter is passed
+     *     without a value.
+     * @throws LSCMException  Thrown when provided -wpinstallsfile parameter
+     *     value points to a non-existent file.
+     * @throws LSCMException  Thrown when unable to get file contents of the
+     *     file pointed to by provided -wpinstallsfile parameter value.
      */
-    private function handleAddInstallsInput( &$args )
+    private function handleAddInstallsInput( array &$args )
     {
         switch ($args[0]) {
 
@@ -618,7 +712,7 @@ class CliController
                     );
                 }
 
-                $wpInstallsInfo = "{$args[1]}";
+                $wpInstallsInfo = "$args[1]";
 
                 if ( empty($args[2]) ) {
                     throw new LSCMException(
@@ -626,7 +720,7 @@ class CliController
                     );
                 }
 
-                $wpInstallsInfo .= " {$args[2]}";
+                $wpInstallsInfo .= " $args[2]";
 
                 if ( empty($args[3]) ) {
                     throw new LSCMException(
@@ -634,7 +728,7 @@ class CliController
                     );
                 }
 
-                $wpInstallsInfo .= " {$args[3]}";
+                $wpInstallsInfo .= " $args[3]";
 
                 if ( empty($args[4]) ) {
                     throw new LSCMException(
@@ -642,7 +736,7 @@ class CliController
                     );
                 }
 
-                $wpInstallsInfo .= " {$args[4]}";
+                $wpInstallsInfo .= " $args[4]";
 
                 $this->commands[] = WPInstallStorage::CMD_ADD_CUST_WPINSTALLS;
 
@@ -676,23 +770,23 @@ class CliController
                     );
                 }
 
-                $wpInstallsInfo = explode("\n", trim($fileContent));
-
                 $this->commands[] = WPInstallStorage::CMD_ADD_CUST_WPINSTALLS;
 
-                $input = array( 'addInstallsInfo' => $wpInstallsInfo );
-                $this->input = $input;
+                $this->input = array(
+                    'addInstallsInfo' => explode("\n", trim($fileContent))
+                );
 
                 unset($args[0], $args[1]);
                 break;
 
-            // no default case
+            // no default
         }
     }
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
      */
     private function displayCacheRoots()
     {
@@ -711,8 +805,8 @@ class CliController
 
        echo <<<EOF
 
-Server Cache Root:        {$svrCacheRoot}
-Virtual Host Cache Root:  {$vhCacheRoot}
+Server Cache Root:        $svrCacheRoot
+Virtual Host Cache Root:  $vhCacheRoot
 
 
 EOF;
@@ -720,10 +814,31 @@ EOF;
 
     /**
      *
-     * @param string[]  $args
-     * @throws LSCMException  Thrown directly and indirectly.
+     * @param string[] $args
+     *
+     * @throws LSCMException  Thrown when command setcacheroot is used in the
+     *     CustomPanel context.
+     * @throws LSCMException  Thrown when an unrecognized command is provided.
+     * @throws LSCMException  Thrown when not all provided command arguments are
+     *     recognized or used when provided with a valid command.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleSetCacheRootInput() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleSetVersionInput() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleSingleOperationInput() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleDashNotifyInput() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleDashNotifyInput() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleCpanelPluginInput() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->handleAddInstallsInput() call.
      */
-    private function parseCommands( $args )
+    private function parseCommands( array $args )
     {
         $panelClassName = array_shift($args);
 
@@ -755,6 +870,9 @@ EOF;
                 $this->handleScanInput($args);
                 break;
 
+            case 'scannew':
+                $this->handleScanNewInput($args);
+                break;
 
             case 'enable':
             case 'disable':
@@ -763,7 +881,7 @@ EOF;
             case 'unflag':
 
                 if ( $this->isMassOperation($args) ) {
-                    $this->commands[] = "mass_{$cmd}";
+                    $this->commands[] = "mass_$cmd";
                     break;
                 }
 
@@ -801,8 +919,14 @@ EOF;
 
     /**
      *
-     * @param string        $action
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $action
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->setServerCacheRoot() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->setVHCacheRoot() call.
      */
     private function doCacheRootCommand( $action )
     {
@@ -811,6 +935,7 @@ EOF;
         $controlPanel = ControlPanel::getClassInstance();
 
         switch ( $action ) {
+
             case 'setSvrCacheRoot':
                 $controlPanel->setServerCacheRoot($this->svrCacheRootParam);
                 $restartRequired = true;
@@ -835,8 +960,7 @@ EOF;
             Util::restartLsws();
         }
 
-        $vhCacheRoot = $controlPanel->getVHCacheRoot();
-        Util::ensureVHCacheRootInCage($vhCacheRoot);
+        Util::ensureVHCacheRootInCage($controlPanel->getVHCacheRoot());
     }
 
     /**
@@ -886,7 +1010,7 @@ EOF;
             case self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_STATUS:
                 $state = (CPanel::isCpanelPluginAutoInstallOn()) ? 'On' : 'Off';
 
-                echo "Auto install is currently {$state} for the LiteSpeed "
+                echo "Auto install is currently $state for the LiteSpeed "
                     . "cPanel plugin.\n";
                 echo 'Use command \'cpanelplugin -autoinstall {0 | 1}\' to '
                     . "turn auto install off/on respectively.\n\n";
@@ -923,7 +1047,6 @@ EOF;
                 $controlPanel->updateCoreCpanelPluginConfSettings();
 
                 echo "Attempted to fix user-end cPanel Plugin conf.\n\n";
-
                 break;
 
             //no default
@@ -932,7 +1055,18 @@ EOF;
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by PluginVersion::getInstance()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->getAllowedVersions() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->getLatestVersion() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->setActiveVersion() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->getCurrentVersion() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->setActiveVersion() call.
      */
     private function doVersionCommand()
     {
@@ -958,7 +1092,7 @@ EOF;
                 }
 
                 if ( $latest == $currVer ) {
-                    echo "Current version, {$latest}, is already the latest "
+                    echo "Current version, $latest, is already the latest "
                         . "version.\n";
                 }
                 else {
@@ -970,7 +1104,7 @@ EOF;
             case 'active':
                 $currVer = $pluginVerInstance->getCurrentVersion();
 
-                echo "Current active version is {$currVer}.\n";
+                echo "Current active version is $currVer.\n";
                 break;
 
             default:
@@ -980,12 +1114,33 @@ EOF;
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by Context::getLSCMDataFiles()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by "new WPInstallStorage()"
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->checkDataFile() call.
+     * @throws LSCMException  Thrown indirectly by PluginVersion::getInstance()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->getShortVersions() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $pluginVerInstance->getCurrentVersion() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     DashNotifier::prepLocalDashPluginFiles() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance()->getDocRoots() call.
+     * @throws LSCMException  Thrown indirectly by $wpInstallStorage->scan2()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $wpInstallStorage->doAction()
+     *     call.
      */
     private function doWPInstallStorageAction()
     {
         $extraArgs = array();
         $list = null;
+        $originalAction = null;
 
         $lscmDataFiles = Context::getLSCMDataFiles();
 
@@ -994,16 +1149,16 @@ EOF;
             $lscmDataFiles['custDataFile']
         );
 
-        if ($this->currWpPath) {
+        if ( $this->currWpPath ) {
             $list = array( $this->currWpPath );
         }
 
         foreach ( $this->commands as $action ) {
-            $this->checkDataFile($action , $wpInstallStorage);
+            $this->checkDataFile($action, $wpInstallStorage);
 
-            echo "\nPerforming {$action} operation. Please be patient...\n\n";
+            echo "\nPerforming $action operation. Please be patient...\n\n";
 
-            switch ( $action ) {
+            switch ($action) {
 
                 case UserCommand::CMD_UPGRADE:
                 case UserCommand::CMD_MASS_UPGRADE:
@@ -1042,10 +1197,50 @@ EOF;
                     $extraArgs[] = $this->input['addInstallsInfo'];
                     break;
 
+                case WPInstallStorage::CMD_SCAN2:
+                case WPInstallStorage::CMD_DISCOVER_NEW2:
+                case WPInstallStorage::CMD_DISCOVER_NEW_AND_ENABLE:
+                    $wpPaths = array();
+                    $docroots = ControlPanel::getClassInstance()->getDocRoots();
+
+                    foreach ( $docroots as $docroot ) {
+                        $wpPaths = array_merge(
+                            $wpPaths,
+                            $wpInstallStorage->scan2($docroot)
+                        );
+                    }
+
+                    $list = array();
+
+                    if ( $action == WPInstallStorage::CMD_DISCOVER_NEW2
+                            || $action == WPInstallStorage::CMD_DISCOVER_NEW_AND_ENABLE ) {
+
+                        foreach( $wpPaths as $wpPath ) {
+
+                            if ( $wpInstallStorage->getWPInstall($wpPath) == null ) {
+                                $list[] = $wpPath;
+                            }
+                        }
+                    }
+                    else {
+                        $list = array_merge($list, $wpPaths);
+                    }
+
+                    $originalAction = $action;
+                    $action = WPInstallStorage::CMD_ADD_NEW_WPINSTALL;
+                    break;
+
                 // no default case
             }
 
             $wpInstallStorage->doAction($action, $list, $extraArgs);
+
+            if ( $originalAction == WPInstallStorage::CMD_DISCOVER_NEW_AND_ENABLE ) {
+                $wpInstallStorage->doAction(
+                    UserCommand::CMD_MASS_ENABLE,
+                    $list
+                );
+            }
 
             if ( $action == UserCommand::CMD_STATUS ) {
                 $wpInstall = $wpInstallStorage->getWPInstall($this->currWpPath);
@@ -1053,13 +1248,30 @@ EOF;
                 $this->printStatusMsg($wpInstall);
             }
 
-            echo "\n{$action} complete!\n\n";
+            if ( $originalAction != null ) {
+                $action = $originalAction;
+            }
+
+            echo "\n$action complete!\n\n";
         }
     }
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by $this->doCacheRootCommand()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->verifyCacheSetup() call.
+     * @throws LSCMException  Thrown indirectly by $this->displayCacheRoots()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->doSpecialCommand()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->doVersionCommand()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->doWPInstallStorageAction() call.
      */
     private function runCommand()
     {

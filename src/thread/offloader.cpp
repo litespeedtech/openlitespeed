@@ -52,7 +52,7 @@ public:
 
     int startProcessor(int workers = 1);
 
-    int addJob(ls_offload *task);
+    int addJob(ls_offload *task, LogSession *log_sess);
 
     int onNotified(int count);
 };
@@ -100,11 +100,11 @@ int Offloader::init(int min_idle, int max_idle, int nice_pri)
 }
 
 
-int Offloader::addJob(ls_offload *data)
+int Offloader::addJob(ls_offload *data, LogSession *log_sess)
 {
     int rc;
 
-    LS_DBG_L("[%s] Offloader::addJob: %p.\n", get_log_id(), data);
+    LS_DBG_L(log_sess, "[%s] Offloader::addJob: %p.\n", get_log_id(), data);
     assert(data->task_link == NULL);
     assert(data->api != NULL);
     assert(data->api->on_task_done != NULL);
@@ -189,8 +189,8 @@ struct Offloader *offloader_new2(const char *log_id, int workers,
 }
 
 
-int offloader_enqueue(struct Offloader * offload, ls_offload *task)
+int offloader_enqueue(struct Offloader * offload, ls_offload *task, void *log_sess)
 {
-    return offload->addJob(task);
+    return offload->addJob(task, (LogSession *)log_sess);
 }
 
