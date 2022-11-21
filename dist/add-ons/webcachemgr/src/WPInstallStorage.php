@@ -456,7 +456,7 @@ class WPInstallStorage
      */
     protected function verifyDataFileVer( $dataFile, $dataFileVer )
     {
-        $res = version_compare($dataFileVer, self::DATA_VERSION);
+        $res = Util::betterVersionCompare($dataFileVer, self::DATA_VERSION);
 
         if ( $res == 1 ) {
             Logger::info(
@@ -838,17 +838,22 @@ class WPInstallStorage
                 . ' -name wp-admin -print'
         );
 
-        /**
-         * Example:
-         * /home/user/public_html/wordpress/wp-admin
-         * /home/user/public_html/blog/wp-admin
-         * /home/user/public_html/wp/wp-admin
-         */
-        $hasMatches = preg_match_all(
-            "|$docroot(.*)(?=/wp-admin)|",
-            $directories,
-            $matches
-        );
+        $hasMatches = false;
+
+        if ( $directories ) {
+
+            /**
+             * Example:
+             * /home/user/public_html/wordpress/wp-admin
+             * /home/user/public_html/blog/wp-admin
+             * /home/user/public_html/wp/wp-admin
+             */
+            $hasMatches = preg_match_all(
+                "|$docroot(.*)(?=/wp-admin)|",
+                $directories,
+                $matches
+            );
+        }
 
         if ( ! $hasMatches ) {
             /**
@@ -911,17 +916,21 @@ class WPInstallStorage
                 .' -name wp-admin -print'
         );
 
-        /**
-         * Example:
-         * /home/user/public_html/wordpress/wp-admin
-         * /home/user/public_html/blog/wp-admin
-         * /home/user/public_html/wp/wp-admin
-         */
-        $hasMatches = preg_match_all(
-            "|$docroot(.*)(?=/wp-admin)|",
-            $directories,
-            $matches
-        );
+        $hasMatches = false;
+
+        if ( $directories ) {
+            /**
+             * Example:
+             * /home/user/public_html/wordpress/wp-admin
+             * /home/user/public_html/blog/wp-admin
+             * /home/user/public_html/wp/wp-admin
+             */
+            $hasMatches = preg_match_all(
+                "|$docroot(.*)(?=/wp-admin)|",
+                $directories,
+                $matches
+            );
+        }
 
         if ( ! $hasMatches ) {
             /**

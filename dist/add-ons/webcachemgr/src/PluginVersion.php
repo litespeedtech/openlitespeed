@@ -505,7 +505,7 @@ class PluginVersion
      */
     protected function filterVerList( $ver )
     {
-        return version_compare($ver, '1.2.2', '>');
+        return Util::betterVersionCompare($ver, '1.2.2', '>');
     }
 
     /**

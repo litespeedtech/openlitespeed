@@ -242,9 +242,9 @@ int CustomFormat::parseFormat(const char *psFormat)
                     if (strncasecmp(pBegin, "remote", 6) == 0)
                     {
                         itemId = REF_REMOTE_PORT;
+                        break;
                     }
                     pBegin = NULL;
-                    break;
                 }
                 itemId = REF_SERVER_PORT;
                 break;

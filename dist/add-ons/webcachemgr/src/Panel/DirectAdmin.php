@@ -404,20 +404,22 @@ class DirectAdmin extends ControlPanel
      */
     protected function getCustomPhpHandlerVer( $wpInstall )
     {
+        if ( ($serverName = $wpInstall->getServerName()) == null
+                || ($docroot = $wpInstall->getDocRoot()) == null ) {
+
+            return '';
+        }
+
         $ver = '';
+
+        $escServerName = str_replace('.', '\.', $serverName);
+        $escDocRoot = str_replace(array('.', '/'), array('\.', '\/'), $docroot);
 
         $user = $wpInstall->getOwnerInfo('user_name');
 
         $httpdConfFile = "/usr/local/directadmin/data/users/$user/httpd.conf";
         $olsConfFile =
             "/usr/local/directadmin/data/users/$user/openlitespeed.conf";
-
-        $escServerName = str_replace('.', '\.', $wpInstall->getServerName());
-        $escDocRoot = str_replace(
-            array('.', '/'),
-            array('\.', '\/'),
-            $wpInstall->getDocRoot()
-        );
 
         if ( file_exists($httpdConfFile) ) {
             $confFile = $httpdConfFile;

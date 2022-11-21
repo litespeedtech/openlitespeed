@@ -187,12 +187,19 @@ class WPInstall
      */
     public function __toString()
     {
+        if ( $this->data[self::FLD_SITEURL] ) {
+            $siteUrl = Util::tryIdnToUtf8($this->data[self::FLD_SITEURL]);
+        }
+        else {
+            $siteUrl = '';
+        }
+
         return sprintf(
             "%s (status=%d docroot=%s siteurl=%s)",
             $this->path,
             $this->data[self::FLD_STATUS],
             $this->data[self::FLD_DOCROOT],
-            Util::tryIdnToUtf8($this->data[self::FLD_SITEURL])
+            $siteUrl
         );
     }
 

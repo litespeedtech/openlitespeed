@@ -4,7 +4,7 @@
  * LiteSpeed Web Server WordPress Dash Notifier
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2019
+ * @copyright (c) 2019-2022
  * *******************************************
  */
 
@@ -75,7 +75,7 @@ class DashNotifier
             try {
                 $latestVer = self::getLatestVersion();
 
-                if ( version_compare($latestVer, $localVer, '<') ) {
+                if ( Util::betterVersionCompare($latestVer, $localVer, '<') ) {
                     self::downloadVersion($latestVer);
                 }
             }

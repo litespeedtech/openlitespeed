@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2022
  * *******************************************
  */
 
@@ -518,7 +518,7 @@ class Util
    {
        if ( function_exists('idn_to_ascii') ) {
 
-           if ($flags = null ) {
+           if ( $flags == null ) {
                $flags = IDNA_DEFAULT;
            }
 
@@ -531,5 +531,31 @@ class Util
 
        return $domain;
    }
+
+    /**
+     * Version comparison function capable of properly comparing versions with
+     * trailing ".0" groups such as '6.1' which is equal to '6.1.0' which is
+     * equal to '6.1.000.0' etc.
+     *
+     * @since release_ver_placeholder
+     *
+     * @param string      $ver1
+     * @param string      $ver2
+     * @param string|null $operator
+     *
+     * @return bool|int
+     */
+    public static function betterVersionCompare(
+        $ver1,
+        $ver2,
+        $operator = null )
+    {
+        $pattern = '/(\.0+)+($|-)/';
+
+        $trimmedVer1 = preg_replace($pattern, '', $ver1);
+        $trimmedVer2 = preg_replace($pattern, '', $ver2);
+
+        return version_compare($trimmedVer1, $trimmedVer2, $operator);
+    }
 
 }

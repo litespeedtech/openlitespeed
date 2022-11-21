@@ -800,7 +800,7 @@ class CPanel extends ControlPanel
         if ( file_exists($versionFile) ) {
             $versionNum = file_get_contents($versionFile);
 
-            if ( version_compare($versionNum, '2.1.2.2','>') ) {
+            if ( Util::betterVersionCompare($versionNum, '2.1.2.2','>') ) {
                 return self::USER_PLUGIN_CONF;
             }
         }

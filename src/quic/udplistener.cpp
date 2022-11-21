@@ -1721,7 +1721,7 @@ int UdpListener::setSockOptions(int fd)
     {
 #if __linux__
         val = IP_PMTUDISC_PROBE;
-        ret = setsockopt(getfd(), IPPROTO_IPV6, IPV6_MTU_DISCOVER,
+        ret = setsockopt(fd, IPPROTO_IPV6, IPV6_MTU_DISCOVER,
                          &val, sizeof(val));
 #endif
     }
