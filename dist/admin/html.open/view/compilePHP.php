@@ -284,14 +284,17 @@ class CompilePHPUI
     		$input .= $this->input_checkbox('addonAPC', $options->GetValue('AddOnAPC'), '<a href="http://pecl.php.net/package/APC" target="_blank" rel="noopener noreferrer">APC</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::APC_VERSION));
 		}
 
-		if ($supported['xcache']) {
-			$input .= $this->input_checkbox('addonXCache', $options->GetValue('AddOnXCache'), '<a href="http://xcache.lighttpd.net/" target="_blank" rel="noopener noreferrer">XCache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::XCACHE_VERSION));
-		}
 		if ($supported['opcache']) {
             $input .= $this->input_checkbox('addonOPcache', $options->GetValue('AddOnOPcache'), '<a href="http://pecl.php.net/package/ZendOpcache" target="_blank" rel="noopener noreferrer">Zend OPcache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION));
 		}
 		if ($supported['memcache']) {
 			$input .= $this->input_checkbox('addonMemCache', $options->GetValue('AddOnMemCache'), '<a href="http://pecl.php.net/package/memcache" target="_blank" rel="noopener noreferrer">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION));
+		}
+		if ($supported['memcache7']) {
+			$input .= $this->input_checkbox('addonMemCache7', $options->GetValue('AddOnMemCache7'), '<a href="http://pecl.php.net/package/memcache" target="_blank" rel="noopener noreferrer">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE7_VERSION));
+		}
+		if ($supported['memcache8']) {
+			$input .= $this->input_checkbox('addonMemCache8', $options->GetValue('AddOnMemCache8'), '<a href="http://pecl.php.net/package/memcache" target="_blank" rel="noopener noreferrer">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE8_VERSION));
 		}
 		if ($supported['memcachd']) {
 			$input .= $this->input_checkbox('addonMemCachd', $options->GetValue('AddOnMemCachd'), '<a href="http://pecl.php.net/package/memcached" target="_blank" rel="noopener noreferrer">memcached</a> (PHP extension for interfacing with memcached via libmemcached library) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHED_VERSION));

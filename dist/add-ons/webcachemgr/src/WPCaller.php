@@ -182,7 +182,7 @@ class WPCaller
      */
     private static function redefineDisabledFunctions()
     {
-        if ( version_compare(phpversion(), '8.0', '>=') ) {
+        if ( Util::betterVersionCompare(phpversion(), '8.0', '>=') ) {
             include_once(__DIR__ . '/RedefineGlobalFuncs.php');
         }
     }
@@ -296,7 +296,7 @@ class WPCaller
      */
     private function generic3rdPartyAdvCachePluginExists()
     {
-        if ( version_compare($this->installedLscwpVer, '3.0.4', '>=') ) {
+        if ( Util::betterVersionCompare($this->installedLscwpVer, '3.0.4', '>=') ) {
 
             /**
              * Old LSCWP advanced-cache.php file is no longer used in these
@@ -313,6 +313,7 @@ class WPCaller
                 return true;
             }
         }
+        /** @noinspection PhpUndefinedConstantInspection */
         elseif ( !defined('LSCACHE_ADV_CACHE') || LSCACHE_ADV_CACHE !== true ) {
             return true;
         }
@@ -845,18 +846,18 @@ class WPCaller
         /** @noinspection PhpUndefinedConstantInspection */
         $dir = WP_PLUGIN_DIR . '/litespeed-cache';
 
-        if ( version_compare($this->installedLscwpVer, '3.0', '>=') ) {
+        if ( Util::betterVersionCompare($this->installedLscwpVer, '3.0', '>=') ) {
             require_once "$dir/src/admin.cls.php";
         }
-        elseif ( version_compare($this->installedLscwpVer, '1.1.2.2', '>') ) {
+        elseif ( Util::betterVersionCompare($this->installedLscwpVer, '1.1.2.2', '>') ) {
             require_once "$dir/admin/litespeed-cache-admin.class.php";
         }
         else {
             require_once "$dir/admin/class-litespeed-cache-admin.php";
         }
 
-        if ( version_compare($this->installedLscwpVer, '1.1.0', '<')
-                && version_compare($this->installedLscwpVer, '1.0.6', '>') ) {
+        if ( Util::betterVersionCompare($this->installedLscwpVer, '1.1.0', '<')
+                && Util::betterVersionCompare($this->installedLscwpVer, '1.0.6', '>') ) {
 
             require_once "$dir/admin/class-litespeed-cache-admin-rules.php";
         }
@@ -1593,7 +1594,7 @@ class WPCaller
         include_once "$wpPath/wp-includes/version.php";
 
         /** @noinspection PhpUndefinedVariableInspection */
-        if ( version_compare($wp_version, '4.0', '<') ) {
+        if ( Util::betterVersionCompare($wp_version, '4.0', '<') ) {
             throw new LSCMException(
                 "Detected WordPress version as $wp_version. Version 4.0 '
                     . 'required at minimum."
@@ -1644,7 +1645,7 @@ class WPCaller
         $includeFiles[] = '/wp-includes/class-wp-walker.php';
         $includeFiles[] = '/wp-includes/capabilities.php';
 
-        if ( version_compare($wp_version, '4.4.0', '>=') ) {
+        if ( Util::betterVersionCompare($wp_version, '4.4.0', '>=') ) {
             $includeFiles[] = '/wp-includes/class-wp-roles.php';
             $includeFiles[] = '/wp-includes/class-wp-role.php';
             $includeFiles[] = '/wp-includes/class-wp-user.php';
@@ -1670,11 +1671,11 @@ class WPCaller
         $includeFiles[] = '/wp-includes/http.php';
         $includeFiles[] = '/wp-includes/class-http.php';
 
-        if ( version_compare($wp_version, '4.6.0', '>=') ) {
+        if ( Util::betterVersionCompare($wp_version, '4.6.0', '>=') ) {
             $includeFiles[] = '/wp-includes/class-wp-http-requests-response.php';
         }
 
-        if ( version_compare($wp_version, '4.7.0', '>=') ) {
+        if ( Util::betterVersionCompare($wp_version, '4.7.0', '>=') ) {
             $includeFiles[] = '/wp-includes/class-wp-http-requests-hooks.php';
 
             /**
@@ -1683,9 +1684,13 @@ class WPCaller
             $includeFiles[] = '/wp-includes/class-wp-query.php';
         }
 
-        if ( version_compare($wp_version, '5.0.0', '>=') ) {
+        if ( Util::betterVersionCompare($wp_version, '5.0.0', '>=') ) {
             $includeFiles[] = '/wp-includes/blocks.php';
             $includeFiles[] = '/wp-includes/class-wp-block-parser.php';
+        }
+
+        if ( Util::betterVersionCompare($wp_version, '6.1.0', '>=') ) {
+            $includeFiles[] = '/wp-includes/class-wp-textdomain-registry.php';
         }
 
         $includeFiles[] = '/wp-includes/ms-functions.php';
@@ -1758,6 +1763,10 @@ class WPCaller
         $GLOBALS['wp_the_query'] = new \WP_Query();
         $GLOBALS['wp_query'] = $GLOBALS['wp_the_query'];
 
+        if ( Util::betterVersionCompare($wp_version, '6.1.0', '>=') ) {
+            $GLOBALS['wp_textdomain_registry'] = new \WP_Textdomain_Registry();
+        }
+
         /** @noinspection PhpUndefinedConstantInspection */
         $this->pluginEntry = WP_PLUGIN_DIR . '/' . self::LSCWP_PLUGIN;
 
@@ -1767,7 +1776,7 @@ class WPCaller
 
             $this->installedLscwpVer = $this->getPluginVersionFromFile();
 
-            if ( version_compare($this->installedLscwpVer, '3.0.4', '<') ) {
+            if ( Util::betterVersionCompare($this->installedLscwpVer, '3.0.4', '<') ) {
                 $this->includeLSCWPAdvancedCacheFile();
             }
         }

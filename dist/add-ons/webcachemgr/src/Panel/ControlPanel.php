@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.14.0.3';
+    const PANEL_API_VERSION = '1.14.1.2';
 
     /**
      * @since 1.9
@@ -966,7 +966,7 @@ abstract class ControlPanel
         $minAPIVer = static::getMinAPIVer();
 
         if ( $minAPIVer == ''
-                || version_compare(static::PANEL_API_VERSION, $minAPIVer, '<') ) {
+                || Util::betterVersionCompare(static::PANEL_API_VERSION, $minAPIVer, '<') ) {
 
             return false;
         }
@@ -986,6 +986,9 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.14.1.2',
+            '1.14.1.1',
+            '1.14.1',
             '1.14.0.3',
             '1.14.0.2',
             '1.14.0.1',
@@ -1049,10 +1052,10 @@ abstract class ControlPanel
         $maxSupportedAPIVer = $supportedAPIVers[0];
         $minSupportedAPIVer = end($supportedAPIVers);
 
-        if ( version_compare($panelAPIVer, $maxSupportedAPIVer, '>') ) {
+        if ( Util::betterVersionCompare($panelAPIVer, $maxSupportedAPIVer, '>') ) {
             return static::PANEL_API_VERSION_TOO_HIGH;
         }
-        elseif ( version_compare($panelAPIVer, $minSupportedAPIVer, '<') ) {
+        elseif ( Util::betterVersionCompare($panelAPIVer, $minSupportedAPIVer, '<') ) {
             return static::PANEL_API_VERSION_TOO_LOW;
         }
         elseif ( ! in_array($panelAPIVer, $supportedAPIVers) ) {
