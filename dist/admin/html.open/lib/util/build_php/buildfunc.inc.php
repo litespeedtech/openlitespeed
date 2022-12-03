@@ -689,7 +689,7 @@ class BuildTool
         $this->ext_options['MemCache7'] = $ext;
 
         $ext = array('__extension_name__' => 'MemCache');
-        $ver = 'memcache-' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION8);
+        $ver = 'memcache-' . BuildConfig::GetVersion(BuildConfig::MEMCACHE8_VERSION);
         $ext['__extension_dir__'] = $ver;
         $ext['__extension_src__'] = $ver . '.tgz';
         $ext['__extension_download_url__'] = 'http://pecl.php.net/get/' . $ver . '.tgz';
