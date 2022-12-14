@@ -65,7 +65,7 @@ done
 
 ENCRYPT_PASS=`$CUR_DIR/../fcgi-bin/admin_php -q $CUR_DIR/htpasswd.php $PASS_ONE`
 #echo "$ADMIN_USER:$ENCRYPT_PASS" > $CUR_DIR/../conf/htpasswd 
-sed -i 's/'$ADMIN_USER':.*/'$ADMIN_USER':'$ENCRYPT_PASS'/' $CUR_DIR/../conf/htpasswd
+sed -i 's/'$ADMIN_USER':.*/'$ADMIN_USER':'${ENCRYPT_PASS//\//\\/}'/' $CUR_DIR/../conf/htpasswd
 if [ $? -eq 0 ]; then
 	echo "$ADMIN_USER password is updated successfully!"
 fi
