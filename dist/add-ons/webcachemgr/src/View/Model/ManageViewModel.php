@@ -3,40 +3,111 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @author    Michael Alegre
+ * @copyright 2018-2023 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
 
-use \Lsc\Wp\Context\Context;
+use Lsc\Wp\Context\Context;
 use Lsc\Wp\Util;
-use \Lsc\Wp\WPInstallStorage;
-use \Lsc\Wp\WPInstall;
-use \Lsc\Wp\PluginVersion;
-use \Lsc\Wp\Logger;
-use \Lsc\Wp\LSCMException;
+use Lsc\Wp\WPInstallStorage;
+use Lsc\Wp\WPInstall;
+use Lsc\Wp\PluginVersion;
+use Lsc\Wp\Logger;
+use Lsc\Wp\LSCMException;
 
 class ManageViewModel
 {
 
+    /**
+     * @var string
+     */
     const FLD_ICON_DIR = 'iconDir';
+
+    /**
+     * @var string
+     */
     const FLD_SCAN_BTN_NAME = 'scanBtnName';
+
+    /**
+     * @var string
+     */
     const FLD_BTN_STATE = 'btnState';
+
+    /**
+     * @var string
+     */
     const FLD_ACTIVE_VER = 'activeVer';
+
+    /**
+     * @var string
+     */
     const FLD_SHOW_LIST = 'showList';
+
+    /**
+     * @var string
+     */
     const FLD_LIST_DATA = 'listData';
+
+    /**
+     * @var string
+     */
     const FLD_COUNT_DATA = 'countData';
+
+    /**
+     * @var string
+     */
     const FLD_INFO_MSGS = 'infoMsgs';
+
+    /**
+     * @var string
+     */
     const FLD_SUCC_MSGS = 'succMsgs';
+
+    /**
+     * @var string
+     */
     const FLD_ERR_MSGS = 'errMsgs';
+
+    /**
+     * @var string
+     */
     const FLD_WARN_MSGS = 'warnMsgs';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_INSTALLS = 'installs';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_ENABLED = 'enabled';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_DISABLED = 'disabled';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_WARN = 'warn';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_ERROR = 'err';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_FLAGGED = 'flagged';
+
+    /**
+     * @var string
+     */
     const COUNT_DATA_UNFLAGGED = 'unflagged';
 
     /**
@@ -45,7 +116,7 @@ class ManageViewModel
     protected $wpInstallStorage;
 
     /**
-     * @var mixed[]
+     * @var array
      */
     protected $tplData = array();
 
@@ -59,62 +130,65 @@ class ManageViewModel
      * @var string[][]
      */
     protected $statusInfo = array(
-        'disabled' => array(
-            'sort' => 'disabled',
-            'state' => '<span '
+        'disabled'               => array(
+            'sort'           => 'disabled',
+            'state'          => '<span '
                 . 'class="glyphicon glyphicon-flash status-disabled" '
                 . 'data-uk-tooltip title="LSCWP is disabled."></span>',
-            'btn_content' => '<span class="enable_btn"></span>',
-            'btn_title' => 'Click to enable LSCache',
-            'onclick' => 'onclick="javascript:lscwpEnableSingle(this);"',
+            'btn_content'    => '<span class="enable_btn"></span>',
+            'btn_title'      => 'Click to enable LSCache',
+            'onclick'        => 'onclick="javascript:lscwpEnableSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip',
-            'btn_state' => ''
+            'btn_state'      => ''
         ),
-        'enabled' => array(
-            'sort' => 'enabled',
-            'state' => '<span '
+        'enabled'                => array(
+            'sort'           => 'enabled',
+            'state'          => '<span '
                 . 'class="glyphicon glyphicon-flash status-enabled" '
                 . 'data-uk-tooltip title="LSCWP is enabled."></span>',
-            'btn_content' => '<span class="disable_btn"></span>',
-            'btn_title' => 'Click to disable LSCache',
-            'onclick' => 'onclick="javascript:lscwpDisableSingle(this);"',
+            'btn_content'    => '<span class="disable_btn"></span>',
+            'btn_title'      => 'Click to disable LSCache',
+            'onclick'        =>
+                'onclick="javascript:lscwpDisableSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip',
-            'btn_state' => ''
+            'btn_state'      => ''
         ),
-        'adv_cache' => array(
-            'sort' => 'warning',
-            'state' => '<span class="status-warning" data-uk-tooltip '
+        'adv_cache'              => array(
+            'sort'           => 'warning',
+            'state'          => '<span class="status-warning" data-uk-tooltip '
                 . 'title="LSCache is enabled but not caching. Please visit the '
                 . 'WordPress Dashboard for more information."></span>',
-            'btn_content' => '<span class="disable_btn"></span>',
-            'btn_title' => 'Click to disable LSCache',
-            'onclick' => 'onclick="javascript:lscwpDisableSingle(this);"',
+            'btn_content'    => '<span class="disable_btn"></span>',
+            'btn_title'      => 'Click to disable LSCache',
+            'onclick'        =>
+                'onclick="javascript:lscwpDisableSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip',
-            'btn_state' => ''
+            'btn_state'      => ''
         ),
         'disabled_no_active_ver' => array(
-            'sort' => 'disabled',
-            'state' => '<span '
+            'sort'           => 'disabled',
+            'state'          => '<span '
                 . 'class="glyphicon glyphicon-flash status-disabled" '
                 . 'data-uk-tooltip title="LSCWP is disabled."></span>',
-            'btn_content' => '<span class="inactive-action-btn" '
+            'btn_content'    => '<span class="inactive-action-btn" '
                 . 'data-uk-tooltip '
                 . 'title="No active LSCWP version set! Cannot enable LSCache.">'
                 . '</span>',
-            'onclick' => '',
+            'btn_title'      => '',
+            'onclick'        => '',
             'btn_attributes' => '',
-            'btn_state' => 'disabled',
+            'btn_state'      => 'disabled',
         ),
-        'error' => array(
-            'sort' => 'error',
+        'error'                  => array(
+            'sort'           => 'error',
             /**
              * 'state' added individually later.
              */
-            'btn_title' => '',
-            'btn_content' => '<span class="inactive-action-btn"></span>',
-            'onclick' => '',
+            'btn_title'      => '',
+            'btn_content'    => '<span class="inactive-action-btn"></span>',
+            'onclick'        => '',
             'btn_attributes' => '',
-            'btn_state' => 'disabled'
+            'btn_state'      => 'disabled'
         )
     );
 
@@ -124,28 +198,30 @@ class ManageViewModel
      */
     protected $flagInfo = array(
         'unflagged' => array(
-            'sort' => 'unflagged',
-            'icon' => '<span '
+            'sort'           => 'unflagged',
+            'icon'           => '<span '
                 . 'class="glyphicon glyphicon-flag ls-flag ls-flag-unset">'
                 . '</span>',
-            'btn_title' => 'Click to set flag',
-            'onclick' => 'onclick="javascript:lscwpFlagSingle(this);"',
+            'btn_title'      => 'Click to set flag',
+            'onclick'        => 'onclick="javascript:lscwpFlagSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip'
         ),
-        'flagged' => array(
-            'sort' => 'flagged',
-            'icon' => '<span '
+        'flagged'   => array(
+            'sort'           => 'flagged',
+            'icon'           => '<span '
                 . 'class="glyphicon glyphicon-flag ls-flag ls-flag-set">'
                 . '</span>',
-            'btn_title' => 'Click to unset flag',
-            'onclick' => 'onclick="javascript:lscwpUnflagSingle(this);"',
+            'btn_title'      => 'Click to unset flag',
+            'onclick'        => 'onclick="javascript:lscwpUnflagSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip'
         ),
     );
 
     /**
      *
-     * @param WPInstallStorage  $wpInstallStorage
+     * @param WPInstallStorage $wpInstallStorage
+     *
+     * @throws LSCMException  Thrown indirectly by $this->init() call.
      */
     public function __construct( WPInstallStorage $wpInstallStorage )
     {
@@ -154,6 +230,13 @@ class ManageViewModel
         $this->init();
     }
 
+    /**
+     *
+     * @throws LSCMException  thrown indirectly by $this->setIconDir() call.
+     * @throws LSCMException  thrown indirectly by $this->setActiveVerData()
+     *     call.
+     * @throws LSCMException  thrown indirectly by $this->setMsgData() call.
+     */
     protected function init()
     {
         $this->setIconDir();
@@ -165,7 +248,8 @@ class ManageViewModel
 
     /**
      *
-     * @param string  $field
+     * @param string $field
+     *
      * @return null|mixed
      */
     public function getTplData( $field )
@@ -177,6 +261,10 @@ class ManageViewModel
         return $this->tplData[$field];
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     */
     protected function setIconDir()
     {
         $iconDir = '';
@@ -220,9 +308,8 @@ class ManageViewModel
         }
         else {
             $this->tplData[self::FLD_SHOW_LIST] = true;
-            $discoveredCount = $this->wpInstallStorage->getCount();
 
-            if ( $discoveredCount > 0 ) {
+            if ( $this->wpInstallStorage->getCount() > 0 ) {
                 $btnState = '';
             }
         }
@@ -236,12 +323,12 @@ class ManageViewModel
         $listData = array();
 
         $countData = array(
-            self::COUNT_DATA_INSTALLS => 0,
-            self::COUNT_DATA_ENABLED => 0,
-            self::COUNT_DATA_DISABLED => 0,
-            self::COUNT_DATA_WARN => 0,
-            self::COUNT_DATA_ERROR => 0,
-            self::COUNT_DATA_FLAGGED => 0,
+            self::COUNT_DATA_INSTALLS  => 0,
+            self::COUNT_DATA_ENABLED   => 0,
+            self::COUNT_DATA_DISABLED  => 0,
+            self::COUNT_DATA_WARN      => 0,
+            self::COUNT_DATA_ERROR     => 0,
+            self::COUNT_DATA_FLAGGED   => 0,
             self::COUNT_DATA_UNFLAGGED => 0
         );
 
@@ -251,17 +338,16 @@ class ManageViewModel
             $countData[self::COUNT_DATA_INSTALLS] = count($wpInstalls);
 
             foreach ( $wpInstalls as $wpInstall ) {
-                $info = array(
+                $listData[$wpInstall->getPath()] = array(
                     'statusData' =>
                         $this->getStatusDisplayData($wpInstall, $countData),
-                    'flagData' =>
+                    'flagData'   =>
                         $this->getFlagDisplayData($wpInstall, $countData),
-                    'siteUrl' => Util::tryIdnToUtf8(
+                    'siteUrl'    => Util::tryIdnToUtf8(
                         $wpInstall->getData(WPInstall::FLD_SITEURL)
                     )
                 );
 
-                $listData[$wpInstall->getPath()] = $info;
             }
         }
 
@@ -271,12 +357,14 @@ class ManageViewModel
 
     /**
      *
-     * @param WPInstall  $wpInstall
-     * @param int[]      $countData
+     * @param WPInstall $wpInstall
+     * @param int[]     $countData
+     *
      * @return string[]
      */
-    protected function getStatusDisplayData( WPInstall $wpInstall,
-            &$countData )
+    protected function getStatusDisplayData(
+        WPInstall $wpInstall,
+        array     &$countData )
     {
         $wpStatus = $wpInstall->getStatus();
 
@@ -320,16 +408,14 @@ class ManageViewModel
             $stateMsg .= ' Click for more information.';
 
             $currStatusData = $this->statusInfo['error'];
-            $currStatusData['state'] = "<a href=\"{$link}\" target=\"_blank\" "
-                . "rel=\"noopener\" data-uk-tooltip title =\"{$stateMsg}\" "
+            $currStatusData['state'] = "<a href=\"$link\" target=\"_blank\" "
+                . "rel=\"noopener\" data-uk-tooltip title =\"$stateMsg\" "
                 . 'class="status-error"></a>';
         }
         elseif ( ($wpStatus & WPInstall::ST_PLUGIN_INACTIVE ) ) {
             $countData[self::COUNT_DATA_DISABLED]++;
 
-            $currVer = $this->getTplData(self::FLD_ACTIVE_VER);
-
-            if ( $currVer == false ) {
+            if ( !$this->getTplData(self::FLD_ACTIVE_VER) ) {
                 $currStatusData = $this->statusInfo['disabled_no_active_ver'];
             }
             else {
@@ -350,15 +436,16 @@ class ManageViewModel
 
     /**
      *
-     * @param WPInstall  $wpInstall
-     * @param int[]      $countData
+     * @param WPInstall $wpInstall
+     * @param int[]     $countData
+     *
      * @return string[]
      */
-    protected function getFlagDisplayData( WPInstall $wpInstall, &$countData )
+    protected function getFlagDisplayData(
+        WPInstall $wpInstall,
+        array     &$countData )
     {
-        $wpStatus = $wpInstall->getStatus();
-
-        if ( ($wpStatus & WPInstall::ST_FLAGGED ) ) {
+        if ( ($wpInstall->getStatus() & WPInstall::ST_FLAGGED ) ) {
             $countData[self::COUNT_DATA_FLAGGED]++;
             $currFlagData = $this->flagInfo['flagged'];
         }
@@ -370,6 +457,10 @@ class ManageViewModel
         return $currFlagData;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     */
     protected function setActiveVerData()
     {
         try
@@ -396,28 +487,41 @@ class ManageViewModel
         $this->tplData[self::FLD_ACTIVE_VER] = $currVer;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     */
     protected function setMsgData()
     {
+        $this->tplData[self::FLD_INFO_MSGS] =
+            Logger::getUiMsgs(Logger::UI_INFO);
+
+        $this->tplData[self::FLD_WARN_MSGS] =
+            Logger::getUiMsgs(Logger::UI_WARN);
+
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();
 
-        $infoMsgs = Logger::getUiMsgs(Logger::UI_INFO);
-        $succMsgs = array_merge(
+        $this->tplData[self::FLD_SUCC_MSGS] = array_merge(
             $msgs['succ'],
             Logger::getUiMsgs(Logger::UI_SUCC)
         );
-        $errMsgs = array_merge(
+
+        $this->tplData[self::FLD_ERR_MSGS] = array_merge(
             $msgs['fail'],
             $msgs['err'],
             Logger::getUiMsgs(Logger::UI_ERR)
         );
-        $warnMsgs = Logger::getUiMsgs(Logger::UI_WARN);
-
-        $this->tplData[self::FLD_INFO_MSGS] = $infoMsgs;
-        $this->tplData[self::FLD_SUCC_MSGS] = $succMsgs;
-        $this->tplData[self::FLD_ERR_MSGS] = $errMsgs;
-        $this->tplData[self::FLD_WARN_MSGS] = $warnMsgs;
     }
 
+    /**
+     *
+     * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
+     */
     public function getTpl()
     {
         return Context::getOption()->getSharedTplDir() . '/Manage.tpl';

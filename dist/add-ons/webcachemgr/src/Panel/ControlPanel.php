@@ -3,8 +3,8 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2017-2022
+ * @author    Michael Alegre
+ * @copyright 2017-2023 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.14.1.2';
+    const PANEL_API_VERSION = '1.14.5';
 
     /**
      * @since 1.9
@@ -109,7 +109,7 @@ abstract class ControlPanel
 
     /**
      * @var null|array[]  'docroots' => (index => docroots),
-     *                    'names' => (servername => index)
+     *                    'names'    => (servername => index)
      */
     protected $docRootMap = null;
 
@@ -126,7 +126,7 @@ abstract class ControlPanel
 
     /**
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by $this->init2() call.
      */
     protected function __construct()
     {
@@ -139,7 +139,7 @@ abstract class ControlPanel
      *
      * @since 1.13.2
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by $this->initConfPaths() call.
      */
     protected function init2()
     {
@@ -170,8 +170,15 @@ abstract class ControlPanel
      * @param string $className  A fully qualified control panel class name.
      *
      * @return ControlPanel|null  Object that extends ControlPanel abstract
-     *                            class.
-     * @throws LSCMException
+     *     class.
+     *
+     * @throws LSCMException  Thrown when unable to include custom panel file.
+     * @throws LSCMException  Thrown when class 'CustomPanel' does not extend
+     *     class '\Lsc\Wp\Panel\CustomPanelBase'.
+     * @throws LSCMException  Re-thrown when "new $className()" call throws an
+     *     exception.
+     * @throws LSCMException  Thrown when an instance of a different
+     *     ControlPanel/CustomPanel extending class has already been created.
      */
     public static function initByClassName( $className )
     {
@@ -238,7 +245,11 @@ abstract class ControlPanel
      * @param string $name
      *
      * @return ControlPanel  Object that extends ControlPanel abstract class.
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown when static::$instance is not null.
+     * @throws LSCMException  Thrown when provided $name is not recognized.
+     * @throws LSCMException  Thrown indirectly by static::initByClassName()
+     *     call.
      */
     public static function init( $name )
     {
@@ -257,11 +268,11 @@ abstract class ControlPanel
                 break;
             default:
                 throw new LSCMException(
-                    "Control panel '{$name}' is not supported."
+                    "Control panel '$name' is not supported."
                 );
         }
 
-        return static::initByClassName("\Lsc\Wp\Panel\\{$className}");
+        return static::initByClassName("\Lsc\Wp\Panel\\$className");
     }
 
     /**
@@ -272,7 +283,10 @@ abstract class ControlPanel
      * @param string $className  Fully qualified class name.
      *
      * @return ControlPanel  Object that extends ControlPanel abstract class.
-     * @throws LSCMException  Thrown directly and indirectly.
+     *
+     * @throws LSCMException  Thrown when static::$instance is null.
+     * @throws LSCMException  Thrown indirectly by static::initByClassName()
+     *     call.
      */
     public static function getClassInstance( $className = '' )
     {
@@ -294,6 +308,9 @@ abstract class ControlPanel
      * @deprecated
      *
      * @return ControlPanel  Object that extends ControlPanel abstract class.
+     *
+     * @throws LSCMException  Thrown indirectly by static::getClassInstance()
+     *     call.
      */
     public static function getInstance()
     {
@@ -305,7 +322,9 @@ abstract class ControlPanel
      * @param string $serverName
      *
      * @return string|null
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by $this->prepareDocrootMap()
+     *     call.
      */
     public function mapDocRoot( $serverName )
     {
@@ -325,7 +344,11 @@ abstract class ControlPanel
 
     /**
      *
-     * @return boolean
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by $this->getServerCacheRoot()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->getVHCacheRoot() call.
      */
     public function areCacheRootsSet()
     {
@@ -344,7 +367,14 @@ abstract class ControlPanel
 
     /**
      *
-     * @throws LSCMException
+     * @throws LSCMException  Thrown when cache is not enabled for the current
+     *     LiteSpeed license.
+     * @throws LSCMException  Thrown indirectly by $this->getServerCacheRoot()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->setServerCacheRoot()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by $this->getVHCacheRoot() call.
+     * @throws LSCMException  Thrown indirectly by $this->setVHCacheRoot() call.
      */
     public function verifyCacheSetup()
     {
@@ -415,8 +445,7 @@ abstract class ControlPanel
              * permissions for the directory outside the cage.
              */
 
-            $topVHCacheRoot = str_replace('/$vh_user', '', $vhCacheRoot);
-            mkdir($topVHCacheRoot, 0755, true);
+            mkdir(str_replace('/$vh_user', '', $vhCacheRoot), 0755, true);
         }
 
         $this->applyVHConfChanges();
@@ -424,8 +453,11 @@ abstract class ControlPanel
 
     /**
      *
-     * @return boolean
-     * @throws LSCMException
+     * @return bool
+     *
+     * @throws LSCMException  Thrown when status file is not found.
+     * @throws LSCMException  Thrown when status file cannot be read.
+     *
      */
     public function isCacheEnabled()
     {
@@ -433,8 +465,8 @@ abstract class ControlPanel
 
         if ( !file_exists($statusFile) ) {
             throw new LSCMException(
-                'Cannot determine LSCache availability. Please start/switch '
-                    . 'to LiteSpeed Web Server before trying again.',
+                'Cannot determine LSCache availability. Please start/switch to '
+                    . 'LiteSpeed Web Server before trying again.',
                 LSCMException::E_PERMISSION
             );
         }
@@ -466,7 +498,9 @@ abstract class ControlPanel
      * @param null|int $length
      *
      * @return string[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by $this->prepareDocrootMap()
+     *     call.
      */
     public function getDocRoots( $offset = 0, $length = null )
     {
@@ -510,6 +544,8 @@ abstract class ControlPanel
     /**
      *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by $this->initCacheRoots() call.
      */
     public function getServerCacheRoot()
     {
@@ -523,6 +559,8 @@ abstract class ControlPanel
     /**
      *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by $this->initCacheRoots() call.
      */
     public function getVHCacheRoot()
     {
@@ -536,6 +574,7 @@ abstract class ControlPanel
     /**
      *
      * @return void
+     *
      * @throws LSCMException  Thrown in some existing implementations.
      */
     abstract protected function initConfPaths();
@@ -551,6 +590,7 @@ abstract class ControlPanel
      * @param WPInstall $wpInstall
      *
      * @return string
+     *
      * @throws LSCMException  Thrown in some existing implementations.
      */
     abstract public function getPhpBinary( WPInstall $wpInstall );
@@ -594,17 +634,19 @@ abstract class ControlPanel
      */
     public function getCacheRootSetting( $file )
     {
-        $cacheRoot = '';
-
         if ( file_exists($file) ) {
-            $file_content = file_get_contents($file);
+            $matchFound = preg_match(
+                '/^\s*CacheRoot (.+)/im',
+                file_get_contents($file),
+                $matches
+            );
 
-            if ( preg_match('/^\s*CacheRoot (.+)/im', $file_content, $matches) ) {
-                $cacheRoot = trim($matches[1]);
+            if ( $matchFound ) {
+                return trim($matches[1]);
             }
         }
 
-        return $cacheRoot;
+        return '';
     }
 
     /**
@@ -614,21 +656,21 @@ abstract class ControlPanel
      */
     public function getLSWSCacheRootSetting()
     {
-        $svrCacheRoot = '';
-
         $serverConf = __DIR__ . '/../../../../conf/httpd_config.xml';
 
         if ( file_exists($serverConf) ) {
-            $file_content = file_get_contents($serverConf);
+            $matchFound = preg_match(
+                '!<cacheStorePath>(.+)</cacheStorePath>!i',
+                file_get_contents($serverConf),
+                $matches
+            );
 
-            $pattern = '!<cacheStorePath>(.+)</cacheStorePath>!i';
-
-            if ( preg_match($pattern, $file_content, $matches) ) {
-                $svrCacheRoot = trim($matches[1]);
+            if ( $matchFound ) {
+                return trim($matches[1]);
             }
         }
 
-        return $svrCacheRoot;
+        return '';
     }
 
     abstract protected function serverCacheRootSearch();
@@ -638,6 +680,11 @@ abstract class ControlPanel
     /**
      * Checks server and VH conf files for cacheroot settings and populates in
      * object if found.
+     *
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
     protected function initCacheRoots()
     {
@@ -652,7 +699,7 @@ abstract class ControlPanel
         if ( $svrCacheRoot ) {
             $this->serverCacheRoot = $svrCacheRoot;
             $this->log(
-                "Server level cache root is {$svrCacheRoot}.",
+                "Server level cache root is $svrCacheRoot.",
                 Logger::L_DEBUG
             );
         }
@@ -664,7 +711,7 @@ abstract class ControlPanel
         if ( $vhCacheRoot ) {
             $this->vhCacheRoot = $vhCacheRoot;
             $this->log(
-                "Virtual Host level cache root is {$vhCacheRoot}.",
+                "Virtual Host level cache root is $vhCacheRoot.",
                 Logger::L_DEBUG
             );
         }
@@ -682,7 +729,12 @@ abstract class ControlPanel
      * @param string $msg
      * @param int    $level
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
+     * @throws LSCMException  Thrown indirectly by Logger::warn() call.
+     * @throws LSCMException  Thrown indirectly by Logger::notice() call.
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     * @throws LSCMException  Thrown indirectly by Logger::verbose() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     protected function log( $msg, $level )
     {
@@ -789,13 +841,11 @@ abstract class ControlPanel
 
         $this->serverCacheRoot = $cacheroot;
 
-        $this->log(
-            "Server level cache root set to $cacheroot",
-            Logger::L_INFO
-        );
+        $this->log("Server level cache root set to $cacheroot", Logger::L_INFO);
 
         if ( file_exists($cacheroot) ) {
             exec("/bin/rm -rf $cacheroot");
+
             $this->log(
                 'Server level cache root directory removed for proper '
                     . 'permission.',
@@ -812,15 +862,21 @@ abstract class ControlPanel
      * @return array
      */
     abstract protected function addVHCacheRootSection(
-        $file_contents,
-        $vhCacheRoot = 'lscache'
+        array $file_contents,
+              $vhCacheRoot = 'lscache'
     );
 
     /**
      *
      * @param string $vhConf
      *
-     * @throws LSCMException  Thrown directly and indirectly.
+     * @throws LSCMException  Thrown when virtual host conf file is not
+     *     writeable.
+     * @throws LSCMException  Thrown when a backup of the virtual host conf file
+     *     could not be made.
+     * @throws LSCMException  Thrown when "write to virtual host conf file" call
+     *     fails.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
     public function writeVHCacheRoot( $vhConf, $vhCacheRoot = 'lscache' )
     {
@@ -923,8 +979,9 @@ abstract class ControlPanel
     {
         $minVerFile = static::getMinAPIFilePath();
 
-        $minVerURL = 'https://www.litespeed.sh/sub/shared/MIN_VER';
-        $content = Util::get_url_contents($minVerURL);
+        $content = Util::get_url_contents(
+            'https://www.litespeed.sh/sub/shared/MIN_VER'
+        );
 
         if ( !empty($content) ) {
             file_put_contents($minVerFile, $content);
@@ -959,7 +1016,7 @@ abstract class ControlPanel
      *
      * @since 1.9.7
      *
-     * @return boolean
+     * @return bool
      */
     public static function meetsMinAPIVerRequirement()
     {
@@ -979,13 +1036,20 @@ abstract class ControlPanel
      * @since 1.9
      *
      * @param string $panelAPIVer  Shared code API version used by the panel
-     *                             plugin.
+     *     plugin.
      *
      * @return int
      */
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.14.5',
+            '1.14.4.1',
+            '1.14.4',
+            '1.14.3.2',
+            '1.14.3.1',
+            '1.14.3',
+            '1.14.2',
             '1.14.1.2',
             '1.14.1.1',
             '1.14.1',
@@ -1049,13 +1113,10 @@ abstract class ControlPanel
             '1.0'
         );
 
-        $maxSupportedAPIVer = $supportedAPIVers[0];
-        $minSupportedAPIVer = end($supportedAPIVers);
-
-        if ( Util::betterVersionCompare($panelAPIVer, $maxSupportedAPIVer, '>') ) {
+        if ( Util::betterVersionCompare($panelAPIVer, $supportedAPIVers[0], '>') ) {
             return static::PANEL_API_VERSION_TOO_HIGH;
         }
-        elseif ( Util::betterVersionCompare($panelAPIVer, $minSupportedAPIVer, '<') ) {
+        elseif ( Util::betterVersionCompare($panelAPIVer, end($supportedAPIVers), '<') ) {
             return static::PANEL_API_VERSION_TOO_LOW;
         }
         elseif ( ! in_array($panelAPIVer, $supportedAPIVers) ) {
@@ -1071,9 +1132,9 @@ abstract class ControlPanel
      * @deprecated 1.9  Use checkPanelAPICompatibility() instead.
      *
      * @param string $panelAPIVer  Shared code API version used by the panel
-     *                             plugin.
+     *     plugin.
      *
-     * @return boolean
+     * @return bool
      */
     public static function isPanelAPICompatible( $panelAPIVer )
     {

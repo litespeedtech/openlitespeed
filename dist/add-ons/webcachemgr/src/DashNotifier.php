@@ -4,7 +4,7 @@
  * LiteSpeed Web Server WordPress Dash Notifier
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2019-2022
+ * @copyright (c) 2019-2023
  * *******************************************
  */
 
@@ -247,7 +247,7 @@ class DashNotifier
             /**
              * Used to pass info to the Dash Notifier Plugin.
              */
-            define( 'DASH_NOTIFIER_MSG', $jsonInfo);
+            define( 'DASH_NOTIFIER_MSG', $jsonInfo, false);
 
             if ( !is_plugin_active(self::DASH_PLUGIN) ) {
 

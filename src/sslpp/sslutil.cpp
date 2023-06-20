@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2021  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -56,6 +56,9 @@ static DH *s_pDHs[3] = {   NULL, NULL, NULL    };
 const char *SslUtil::s_pDefaultCAFile = NULL;
 const char *SslUtil::s_pDefaultCAPath = NULL;
 
+static const char *s_pVerifyCaFile = NULL;
+static const char *s_pVerifyCaPath = NULL;
+
 static int defaultAsyncCert(asyncCertDoneCb cb, void *pParam,
                             const char *pDomain, int iDomainLen)
 {
@@ -65,6 +68,22 @@ static int defaultAsyncCert(asyncCertDoneCb cb, void *pParam,
 
 asyncCertFunc SslUtil::removeAsyncCertLookup = defaultAsyncCert;
 asyncCertFunc SslUtil::addAsyncCertLookup = NULL;
+
+static const int s_iSystems = 4;
+static const char *s_aSystemFiles[] =
+{
+    "/etc/ssl/certs/ca-certificates.crt",       // Debian/Ubuntu
+    "/etc/pki/tls/certs/ca-bundle.crt",         // Centos/Red Hat/Fedora
+    "/usr/local/share/certs/ca-root-nss.crt",   // FreeBSD
+    "/etc/ssl/ca-bundle.pem",                   // OpenSUSE
+};
+static const char *s_aSystemDirs[] =
+{
+    "/etc/ssl/certs/",                  // Debian/Ubuntu
+    "/etc/pki/tls/certs/",              // Centos/Red Hat/Fedora
+    "/usr/local/share/certs/",          // FreeBSD
+    "/etc/ssl/",                        // OpenSUSE
+};
 
 /* 1024bits dh
 -----BEGIN DH PARAMETERS-----
@@ -576,6 +595,7 @@ bool SslUtil::loadCA(SSL_CTX *pCtx, const char *pCAFile, const char *pCAPath,
     return ret != 0;
 }
 
+
 int SslUtil::initDefaultCA(const char* pCAFile, const char* pCAPath)
 {
 
@@ -586,6 +606,52 @@ int SslUtil::initDefaultCA(const char* pCAFile, const char* pCAPath)
         s_pDefaultCAPath = pCAPath;
     return 0;
 }
+
+
+void SslUtil::detectVerifyCA()
+{
+    int i;
+
+    if (s_pVerifyCaFile)
+        return;
+    for (i = 0; i < s_iSystems; ++i)
+    {
+        if (access(s_aSystemFiles[i], F_OK) == 0)
+        {
+            s_pVerifyCaFile = s_aSystemFiles[i];
+            break;
+        }
+    }
+
+    if (s_pVerifyCaPath)
+        return;
+    for (i = 0; i < s_iSystems; ++i)
+    {
+        if (access(s_aSystemDirs[i], F_OK) == 0)
+        {
+            s_pVerifyCaPath = s_aSystemDirs[i];
+            break;
+        }
+    }
+    return;
+}
+
+
+const char *SslUtil::getVerifyCAFile()
+{
+    if (!s_pVerifyCaFile)
+        detectVerifyCA();
+    return s_pVerifyCaFile;
+}
+
+
+const char *SslUtil::getVerifyCAPath()
+{
+    if (!s_pVerifyCaPath)
+        detectVerifyCA();
+    return s_pVerifyCaPath;
+}
+
 
 bool SslUtil::loadCA(SSL_CTX *pCtx, const char *pCAbuf)
 {

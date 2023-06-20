@@ -97,6 +97,16 @@
 
 #endif
 
+#elif defined(__aarch64__)
+
+#if defined(linux) || defined(__linux) || defined(__linux__)
+#define LS_PLATFORM "aarch64-linux"
+#elif defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+#define LS_PLATFORM "aarch64-osx"
+#else
+#define LS_PLATFORM "aarch64-unknown"
+#endif
+
 
 #elif defined(__sparc) || defined(__sparc__)
 #if defined(sun) || defined(__sun)

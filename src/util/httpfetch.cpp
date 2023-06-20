@@ -49,35 +49,36 @@
 static int HttpFetchCounter = 0;
 
 HttpFetch::HttpFetch()
-    : m_fdHttp(-1)
-    , m_pBuf(NULL)
+    : m_pBuf(NULL)
+    , m_fdHttp(-1)
     , m_statusCode(0)
     , m_pReqBuf(NULL)
     , m_reqBufLen(0)
     , m_reqSent(0)
     , m_pExtraReqHdrs(NULL)
     , m_reqHeaderLen(0)
+    , m_connTimeout(10)
     , m_iHostLen(0)
+    , m_pollEvents(0)
     , m_reqState(STATE_NOT_INUSE)
     , m_nonblocking(0)
     , m_enableDriver(0)
     , m_pReqBody(NULL)
     , m_reqBodyLen(0)
-    , m_connTimeout(10)
     , m_respBodyLen(-1)
     , m_pRespContentType(NULL)
-    , m_respBodyRead(0)
+    , m_respBodyRcvd(0)
     , m_psProxyServerAddr(NULL)
     , m_pServerAddr(NULL)
     , m_pAdnsReq(NULL)
     , m_callback(NULL)
     , m_callbackArg(NULL)
-    , m_iSsl(0)
-    , m_iVerifyCert(0)
     , m_pHttpFetchDriver(NULL)
     , m_iTimeoutSec(-1)
     , m_iReqInited(0)
     , m_iEnableDebug(0)
+    , m_iSsl(0)
+    , m_iVerifyCert(0)
 {
     m_tmStart.tv_sec = 0;
     m_tmStart.tv_usec = 0;
@@ -295,7 +296,7 @@ int HttpFetch::startDnsLookup(const char *addrServer)
     int flag = NO_ANY;
     int ret;
     gettimeofday(&m_tmStart, NULL);
-    if (!m_nonblocking)
+    if (!m_nonblocking || m_nonblocking == MODE_NON_BLOCKING_SYNC_DNS)
     {
         flag |= DO_NSLOOKUP_DIRECT;
         ret = m_pServerAddr->set(PF_INET, addrServer, flag);
@@ -354,9 +355,17 @@ static SSL *getSslContext()
 void HttpFetch::setSSLAgain()
 {
     if (m_ssl.wantRead())
-        m_pHttpFetchDriver->switchWriteToRead();
+    {
+        m_pollEvents = POLLIN;
+        if (m_pHttpFetchDriver)
+            m_pHttpFetchDriver->switchWriteToRead();
+    }
     if (m_ssl.wantWrite())
-        m_pHttpFetchDriver->switchReadToWrite();
+    {
+        m_pollEvents = POLLOUT;
+        if (m_pHttpFetchDriver)
+            m_pHttpFetchDriver->switchReadToWrite();
+    }
 }
 
 
@@ -390,6 +399,7 @@ int HttpFetch::verifyDomain()
 
 int HttpFetch::connectSSL()
 {
+    int ret;
     if (!m_ssl.getSSL())
     {
         m_ssl.setSSL(getSslContext());
@@ -399,8 +409,8 @@ int HttpFetch::connectSSL()
         if (m_iVerifyCert)
         {
             // verify
-            const char *pCAFile = SslUtil::getDefaultCAFile();
-            const char *pCAPath = SslUtil::getDefaultCAPath();
+            const char *pCAFile = SslUtil::getVerifyCAFile();
+            const char *pCAPath = SslUtil::getVerifyCAPath();
             SSL_set_verify(m_ssl.getSSL(),
                            SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
             SSL_CTX *pCtx = SSL_get_SSL_CTX(m_ssl.getSSL());
@@ -412,7 +422,12 @@ int HttpFetch::connectSSL()
         m_achHost[m_iHostLen] = ch;
         m_ssl.tryReuseCachedSession(m_achHost, m_iHostLen);
     }
-    int ret = m_ssl.connect();
+    if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
+    {
+        closeConnection();
+        return ERROR_CONN_TIMEOUT;
+    }
+    ret = m_ssl.connect();
     int verifyOk;
     switch (ret)
     {
@@ -434,6 +449,7 @@ int HttpFetch::connectSSL()
         }
         LS_DBG_M(m_pLogger, "HttpFetch[%d]:: [SSL] connected, session reuse: %d",
                  getLoggerId(), m_ssl.isSessionReused());
+        m_pollEvents = POLLOUT;
         break;
     default:
         if (!m_ssl.isVerifyOk())
@@ -620,7 +636,7 @@ void HttpFetch::updateConnectTime()
 int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
 {
     m_reqState = STATE_CONNECTING;
-
+    m_pollEvents = POLLIN | POLLOUT;
     if (m_iEnableDebug)
         m_pLogger->info("HttpFetch[%d]::startProcessReq sockAddr=%s",
                          getLoggerId(), sockAddr.toString());
@@ -632,7 +648,7 @@ int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
 
     if (!m_nonblocking)
     {
-        if ((ret = pollEvent(POLLIN|POLLOUT, m_connTimeout)) != 1)
+        if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
         {
             closeConnection();
             return ERROR_CONN_TIMEOUT;
@@ -650,8 +666,8 @@ int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
                 return -1;
             }
         }
-        int val = fcntl(m_fdHttp, F_GETFL, 0);
-        fcntl(m_fdHttp, F_SETFL, val & (~O_NONBLOCK));
+//         int val = fcntl(m_fdHttp, F_GETFL, 0);
+//         fcntl(m_fdHttp, F_SETFL, val & (~O_NONBLOCK));
     }
     if (ret == 0)
     {
@@ -693,6 +709,11 @@ int HttpFetch::sendReq()
     {
     case STATE_CONNECTING: //connecting
         {
+            if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
+            {
+                closeConnection();
+                return ERROR_CONN_TIMEOUT;
+            }
             socklen_t len = sizeof(int);
             ret = getsockopt(m_fdHttp, SOL_SOCKET, SO_ERROR, &error, &len);
         }
@@ -743,6 +764,7 @@ int HttpFetch::sendReq()
         if (m_reqSent >= m_reqHeaderLen)
         {
             m_reqState = STATE_SENT_REQ_HEADER;
+            m_pollEvents = POLLOUT;
             m_reqSent = 0;
         }
         else
@@ -786,7 +808,8 @@ int HttpFetch::sendReq()
         m_resHeaderBuf.clear();
         if (m_reqState == STATE_SENT_REQ_HEADER)
             m_reqState = STATE_SENT_REQ_BODY;
-        if (m_enableDriver)
+        m_pollEvents = POLLIN;
+        if (m_pHttpFetchDriver)
             m_pHttpFetchDriver->switchWriteToRead();
     }
     if ((ret == -1) && (errno != EAGAIN))
@@ -885,6 +908,24 @@ const char *HttpFetch::getRespHeader(const char *pName) const
 }
 
 
+int HttpFetch::saveRespBody(const char *buf, size_t len)
+{
+    int ret;
+    if (m_pBuf->getfd() != -1)
+        ret = write(m_pBuf->getfd(), buf, len);
+    else
+        ret = m_pBuf->write(buf, len);
+    if (ret < (int)len)
+    {
+        if (m_iEnableDebug)
+            m_pLogger->info("HttpFetch[%d]::failed to save response body %zd "
+                            "byes, fd=%d, ret=%d, errno=%d", getLoggerId(), len,
+                            m_pBuf->getfd(), ret, errno);
+    }
+    return ret;
+}
+
+
 int HttpFetch::recvResp()
 {
     int ret = 0;
@@ -900,14 +941,19 @@ int HttpFetch::recvResp()
         ret = connectSSL();
         if (ret != 1)
             return ret;
-        m_pHttpFetchDriver->continueWrite();
+        m_pollEvents |= POLLOUT;
+        if (m_pHttpFetchDriver)
+            m_pHttpFetchDriver->continueWrite();
         return 0;
     }
     while (m_statusCode >= 0)
     {
-        ret = pollEvent(POLLIN, 1);
+        ret = pollEvent(m_pollEvents, m_connTimeout);
         if (ret != 1)
-            break;
+        {
+            endReq(ERROR_CONN_TIMEOUT);
+            return -1;
+        }
         if (m_iSsl)
             ret = m_ssl.read(buf.begin(), 8192);
         else
@@ -1005,7 +1051,7 @@ int HttpFetch::recvResp()
                     else if (pLineBegin == pLineEnd)
                     {
                         m_reqState = STATE_RCVD_RESP_HEADER;
-                        m_respBodyRead = 0;
+                        m_respBodyRcvd = 0;
                         if ((m_respBodyLen == 0) || (m_respBodyLen < -1))
                             return endReq(0);
 
@@ -1018,12 +1064,13 @@ int HttpFetch::recvResp()
                 }
                 break;
             case STATE_RCVD_RESP_HEADER: //waiting response body
-                if ((len = m_pBuf->write(p, pEnd - p)) == -1)
+                if ((len = saveRespBody(p, pEnd - p)) < pEnd - p)
                 {
                     endReq(ERROR_HTTP_RECV_RESP_FAILURE);
                     return -1;
                 }
-                if ((m_respBodyLen > 0) && (m_pBuf->writeBufSize() >= m_respBodyLen))
+                m_respBodyRcvd += len;
+                if ((m_respBodyLen > 0) && (m_respBodyRcvd >= m_respBodyLen))
                     return endReq(0);
                 p += len;
                 break;
@@ -1049,7 +1096,7 @@ int HttpFetch::endReq(int res)
             m_reqState = STATE_RCVD_RESP_BODY;
             if (m_pBuf->getfd() != -1)
             {
-                m_pBuf->exactSize();
+                m_pBuf->seekWriteEof();
                 timeval tv;
                 gettimeofday(&tv, NULL);
                 unsigned long us = (tv.tv_sec - m_tmStart.tv_sec) * 1000000 +
@@ -1098,9 +1145,11 @@ int HttpFetch::processEvents(short revent)
 
 int HttpFetch::process()
 {
+    m_pollEvents = POLLOUT;
     while (m_fdHttp != -1
         && (m_reqState < STATE_SENT_REQ_BODY || m_reqSent < m_reqBodyLen))
         sendReq();
+    m_pollEvents = POLLIN;
     while ((m_fdHttp != -1) && (m_reqState < STATE_RCVD_RESP_BODY)
         && m_tmStart.tv_sec + m_iTimeoutSec > time(NULL))
         recvResp();

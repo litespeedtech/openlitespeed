@@ -830,9 +830,10 @@ int FcgiConnection::pendingWrite(const char *pBuf, int size, int type)
     }
     size -= packetSize;
     pBuf += packetSize;
-    if ((size > 0)
-        || (m_iTotalPending > FCGI_MAX_PACKET_SIZE)
-        || (m_iCurStreamHeader >= 56))
+    if (size > 0
+        || m_iTotalPending > ((type == FCGI_STDIN) ? FCGI_MAX_STDIN_PENDING
+                                                   : FCGI_MAX_PACKET_SIZE)
+        || m_iCurStreamHeader >= 56)
     {
         int ret1 = flush();
         if (ret1 == -1)

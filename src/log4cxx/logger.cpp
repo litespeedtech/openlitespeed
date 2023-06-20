@@ -122,6 +122,42 @@ static int logSanitize(char *pBuf, int len)
 }
 
 
+int logEscape(const char *src, int src_len, char *dest, int dest_len)
+{
+    const char *src_end = src + src_len;
+    char *p = dest;
+    char *dest_end = dest + dest_len;
+    while (src < src_end && p < dest_end - 1)
+    {
+        if (*src < 0x20)
+        {
+            switch (*src)
+            {
+            case '\t':
+                *p++ = '\\';
+                *p++ = 't';
+                break;
+            case '\n':
+                *p++ = '\\';
+                *p++ = 'n';
+                break;
+            case '\r':
+                *p++ = '\\';
+                *p++ = 'r';
+                break;
+            default:
+                *p++ = '.';
+                break;
+            }
+        }
+        else
+            *p++ = *src;
+        ++src;
+    }
+    return p - dest;
+}
+
+
 void Logger::vlog(int level, const char *pId, const char *format,
                   va_list args,
                   int flag)

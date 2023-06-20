@@ -3,8 +3,8 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2019-2021
+ * @author    Michael Alegre
+ * @copyright 2019-2023 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -75,7 +75,8 @@ class DirectAdmin extends ControlPanel
      * Searches the given directories '.pre' and '.post' files for CacheRoot
      * setting.
      *
-     * @param string  $confDir  Directory to be searched.
+     * @param string $confDir  Directory to be searched.
+     *
      * @return string
      */
     public function daVhCacheRootSearch( $confDir )
@@ -102,12 +103,14 @@ class DirectAdmin extends ControlPanel
 
     /**
      *
-     * @param array   $file_contents
-     * @param string  $vhCacheRoot
+     * @param array  $file_contents
+     * @param string $vhCacheRoot
+     *
      * @return array
      */
     protected function addVHCacheRootSection(
-        $file_contents, $vhCacheRoot = 'lscache' )
+        array $file_contents,
+              $vhCacheRoot = 'lscache' )
     {
         array_unshift(
             $file_contents,
@@ -119,11 +122,19 @@ class DirectAdmin extends ControlPanel
 
     /**
      *
-     * @param string  $vhConf
-     * @throws LSCMException
+     * @param string $vhConf
+     * @param string $vhCacheRoot
+     *
+     * @throws LSCMException  Thrown when mkdir() call fails to create virtual
+     *     host conf directory.
+     * @throws LSCMException  Thrown when file_put_contents() call fails to
+     *     create virtual host conf file.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
     public function createVHConfAndSetCacheRoot(
-        $vhConf, $vhCacheRoot = 'lscache' )
+        $vhConf,
+        $vhCacheRoot = 'lscache' )
     {
         $vhConfDir = dirname($vhConf);
 
@@ -138,8 +149,7 @@ class DirectAdmin extends ControlPanel
             $this->log("Created directory $vhConfDir", Logger::L_DEBUG);
         }
 
-        $content =
-            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>";
+        $content = "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>";
 
         if ( false === file_put_contents($vhConf, $content) ) {
             throw new LSCMException("Failed to create file $vhConf.");
@@ -158,12 +168,13 @@ class DirectAdmin extends ControlPanel
      * @since 1.13.7
      *
      * @return array
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     private function getHttpdConfDocrootMapInfo()
     {
         exec(
-            'grep -hro "DocumentRoot.*\|ServerAlias.*\|ServerName.*" '
+            'grep -hros "DocumentRoot.*\|ServerAlias.*\|ServerName.*" '
                 . '/usr/local/directadmin/data/users/*/httpd.conf',
             $lines
         );
@@ -231,9 +242,7 @@ class DirectAdmin extends ControlPanel
                 $curServerName = $curServerAliases = '';
             }
             else {
-                Logger::debug(
-                    "Unused line when preparing docroot map: $line."
-                );
+                Logger::debug("Unused line when preparing docroot map: $line.");
             }
         }
 
@@ -245,12 +254,13 @@ class DirectAdmin extends ControlPanel
      * @since 1.13.7
      *
      * @return array
-     * @throws LSCMException Thrown indirectly.
+     *
+     * @throws LSCMException Thrown indirectly by Logger::debug() call.
      */
     private function getOpenlitespeedConfDocrootMapInfo()
     {
         exec(
-            'grep -hro "docRoot.*\|vhDomain.*\|vhAliases.*" '
+            'grep -hros "docRoot.*\|vhDomain.*\|vhAliases.*" '
                 . '/usr/local/directadmin/data/users/*/openlitespeed.conf',
             $lines
         );
@@ -314,7 +324,7 @@ class DirectAdmin extends ControlPanel
 
                     if ( !isset($docRoots[$curDocRoot]) ) {
                         $docRoots[$curDocRoot] =
-                            [ $curServerName, $curServerAlias ];
+                            array( $curServerName, $curServerAlias );
                     }
                     else {
 
@@ -335,9 +345,7 @@ class DirectAdmin extends ControlPanel
 
             }
             else {
-                Logger::debug(
-                    "Unused line when preparing docroot map: $line."
-                );
+                Logger::debug("Unused line when preparing docroot map: $line.");
             }
         }
 
@@ -348,15 +356,16 @@ class DirectAdmin extends ControlPanel
      * Gets a list of found docroots and associated server names.
      * Only needed for scan.
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->getHttpdConfDocrootMapInfo() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->getOpenlitespeedConfDocrootMapInfo() call.
      */
     protected function prepareDocrootMap()
     {
-        $httpdConfDocrootMapInfo = $this->getHttpdConfDocrootMapInfo();
+        $docRootMapInfo = $this->getHttpdConfDocrootMapInfo();
         $openlitespeedConfDocrootMapInfo =
             $this->getOpenlitespeedConfDocrootMapInfo();
-
-        $docRootMapInfo = $httpdConfDocrootMapInfo;
 
         foreach ( $openlitespeedConfDocrootMapInfo as $oDocRoot => $oDomains ) {
 
@@ -366,6 +375,7 @@ class DirectAdmin extends ControlPanel
             else {
 
                 foreach ( $oDomains as $oDomain ) {
+
                     if ( !in_array($oDomain, $docRootMapInfo[$oDocRoot]) ) {
                         $docRootMapInfo[$oDocRoot][] = $oDomain;
                     }
@@ -400,9 +410,11 @@ class DirectAdmin extends ControlPanel
      * @param WPInstall $wpInstall
      *
      * @return string
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown when a valid user data conf file could not
+     *     be found.
      */
-    protected function getCustomPhpHandlerVer( $wpInstall )
+    protected function getCustomPhpHandlerVer( WPInstall $wpInstall )
     {
         if ( ($serverName = $wpInstall->getServerName()) == null
                 || ($docroot = $wpInstall->getDocRoot()) == null ) {
@@ -461,6 +473,7 @@ class DirectAdmin extends ControlPanel
      * @param WPInstall $wpInstall
      *
      * @return string
+     *
      * @throws LSCMException  Thrown indirectly.
      */
     public function getPhpBinary( WPInstall $wpInstall )

@@ -69,7 +69,11 @@ public:
                        int cv);
     static bool loadCA(SSL_CTX *pCtx, const char *pCAbuf);
 
+    static void detectVerifyCA();
+    static const char *getVerifyCAFile();
+    static const char *getVerifyCAPath();
     static int initDefaultCA(const char *pCAFile, const char *pCAPath);
+
     static const char *getDefaultCAFile()
     {
         if (!s_pDefaultCAFile)

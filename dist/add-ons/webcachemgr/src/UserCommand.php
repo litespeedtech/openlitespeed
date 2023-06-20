@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author Michael Alegre
- * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
+ * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -741,7 +741,7 @@ class UserCommand
         /**
          * LSCWP_REF used by LSCWP plugin.
          */
-        define('LSCWP_REF', array_shift($args));
+        define('LSCWP_REF', array_shift($args), false);
 
         $install = new WPInstall($wpPath);
 
@@ -1058,7 +1058,7 @@ class UserCommand
         if ( $cmd = self::getUserCommand() ) {
 
             if ( !defined('LSCM_RUN_AS_USER') ) {
-                define('LSCM_RUN_AS_USER', 1);
+                define('LSCM_RUN_AS_USER', 1, false);
             }
 
             $ret = $cmd->runAsUser();

@@ -17,7 +17,7 @@
   <h2 class="ls-text-thin">
     OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
   </h2>
-  <h3 class="ls-text-muted">Version 1.7 &nbsp;&#8212;&nbsp;Rev. 19</h3>
+  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 0</h3>
   <hr/>
   <div>
     <ul>
@@ -97,7 +97,7 @@
 </aside>
 <article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServLog_Help.html">服务器日志</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="ServSecurity_Help.html">服务器安全</a> &#187;</div></div>
 <h1>服务器调节</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>操作系统优化</header><p>
-<a href="#shmDefaultDir">默认SHM目录</a></p></section>
+<a href="#shmDefaultDir">默认SHM目录</a> | <a href="#proxyProtocol">PROXY protocol</a></p></section>
 <section class="toc-row"><header>连接</header><p>
 <a href="#maxConnections">最大连接数</a> | <a href="#maxSSLConnections">最大SSL连接数</a> | <a href="#connTimeout">连接超时时间(secs)</a> | <a href="#maxKeepAliveReq">最大持续连接请求数</a> | <a href="#keepAliveTimeout">持续连接超时时长</a> | <a href="#sndBufSize">发送缓冲区大小</a> | <a href="#rcvBufSize">接收缓冲区大小 (bytes)</a></p></section>
 <section class="toc-row"><header>请求/响应</header><p>
@@ -112,6 +112,7 @@
 <a href="#quicEnable">启用HTTP3/QUIC</a> | <a href="#quicShmDir">QUIC SHM 目录</a> | <a href="#quicVersions">HTTP3/QUIC版本</a> | <a href="#quicCongestionCtrl">拥塞控制</a> | <a href="#quicCfcw">流连接窗口控制</a> | <a href="#quicMaxCfcw">最大连接流量窗口值设置</a> | <a href="#quicSfcw">连接流量窗口值</a> | <a href="#quicMaxSfcw">最大流量窗口值设置</a> | <a href="#quicMaxStreams">每个连接的最大并发数</a> | <a href="#quicHandshakeTimeout">握手超时时间</a> | <a href="#quicIdleTimeout">空闲超时时间（秒）</a> | <a href="#quicEnableDPLPMTUD">启用 DPLPMTUD</a> | <a href="#quicBasePLPMTU">PLPMTU 默认值</a> | <a href="#quicMaxPLPMTU">PLPMTU的最大值</a></p></section>
 </section>
 <section><div class="helpitem"><article class="ls-helpitem"><div><header id="shmDefaultDir"><h3>默认SHM目录<span class="ls-permlink"><a href="#shmDefaultDir"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>将共享内存的默认目录更改为指定的路径。 如果该目录不存在，则将创建该目录。除非另有说明，否则所有SHM数据都将存储在此目录中。</p> <h4>Syntax</h4><p>path</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="proxyProtocol"><h3>PROXY protocol<span class="ls-permlink"><a href="#proxyProtocol"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>List of IPs/subnets for front-end proxies that communicate with this server using PROXY protocol. Once set, the server will use PROXY protocol for incoming connections from listed IPs/subnets or fall back to a regular connection if PROXY protocol is unavailable.<br/><br/> Applies to HTTP, HTTPS, HTTP2, and websocket connections.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxConnections"><h3>最大连接数<span class="ls-permlink"><a href="#maxConnections"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定服务器可以接受的最大并发连接数。这包括纯TCP连接和SSL连接。 一旦达到此限制，服务器将在完成活动请求时关闭“Keep-Alive”的连接。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> 当服务器由"root"用户启动时，服务器会尝试自动调整每个进程的文件描述符限制，但是，如果自动调整失败，你可能需要手动增加此限制。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="maxSSLConnections"><h3>最大SSL连接数<span class="ls-permlink"><a href="#maxSSLConnections"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定服务器将接受的最大并发SSL连接数。 由于并发SSL和非SSL的连接总数不能超过<span class="tagl"><a href="#maxConnections">最大连接数</a></span>的限制，因此允许的最大SSL连接的数量须低于此限制。</p> <h4>Syntax</h4><p>整数</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="connTimeout"><h3>连接超时时间(secs)<span class="ls-permlink"><a href="#connTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定一个请求允许的最大连接空闲时间。 如果在这段时间内连接一直处于空闲状态(即没有I/O活动），则它将被关闭。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[安全建议] 将值设置得尽可能低，在可能的拒绝服务攻击中，这可以帮助释放无效连接所占用的连接数。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#keepAliveTimeout">持续连接超时时长</a></span></p> </article> </div>

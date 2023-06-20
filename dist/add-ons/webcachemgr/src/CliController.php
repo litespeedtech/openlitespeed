@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author Michael Alegre
- * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
+ * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp;
@@ -251,6 +251,10 @@ class CliController
      *     non-empty directory.
      * @throws LSCMException  Thrown indirectly by
      *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->getServerCacheRoot() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->getVHCacheRoot() call.
      */
     private function handleSetCacheRootInput( array &$args )
     {
@@ -787,6 +791,10 @@ class CliController
      *
      * @throws LSCMException  Thrown indirectly by
      *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->getServerCacheRoot() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->getVHCacheRoot() call.
      */
     private function displayCacheRoots()
     {
@@ -849,7 +857,8 @@ EOF;
 
         $cmd = array_shift($args);
 
-        switch ($cmd) {
+        switch ( $cmd ) {
+
             case 'setcacheroot':
 
                 if ( $panelClassName == 'custom' ) {
@@ -927,6 +936,9 @@ EOF;
      *     $controlPanel->setServerCacheRoot() call.
      * @throws LSCMException  Thrown indirectly by
      *     $controlPanel->setVHCacheRoot() call.
+     * @throws LSCMException  Thrown indirectly by Util::restartLsws() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $controlPanel->getVHCacheRoot() call.
      */
     private function doCacheRootCommand( $action )
     {
@@ -1072,12 +1084,12 @@ EOF;
     {
         $pluginVerInstance = PluginVersion::getInstance();
 
-        switch ($this->versionCmd) {
+        switch ( $this->versionCmd ) {
 
             case 'list':
-                $allowedVers = $pluginVerInstance->getAllowedVersions();
 
-                echo "Available versions are: \n" . implode("\n",$allowedVers)
+                echo "Available versions are: \n"
+                    . implode("\n",$pluginVerInstance->getAllowedVersions())
                     . "\n";
                 break;
 
@@ -1102,9 +1114,10 @@ EOF;
                 break;
 
             case 'active':
-                $currVer = $pluginVerInstance->getCurrentVersion();
 
-                echo "Current active version is $currVer.\n";
+                echo "Current active version is "
+                    . $pluginVerInstance->getCurrentVersion()
+                    .  ".\n";
                 break;
 
             default:
@@ -1158,7 +1171,7 @@ EOF;
 
             echo "\nPerforming $action operation. Please be patient...\n\n";
 
-            switch ($action) {
+            switch ( $action ) {
 
                 case UserCommand::CMD_UPGRADE:
                 case UserCommand::CMD_MASS_UPGRADE:
@@ -1169,6 +1182,7 @@ EOF;
                         $pluginVerInstance->getShortVersions()
                     );
                     $extraArgs[] = $pluginVerInstance->getCurrentVersion();
+
                     break;
 
                 case UserCommand::CMD_DASH_NOTIFY:
@@ -1190,11 +1204,13 @@ EOF;
                     );
 
                     $extraArgs[] = base64_encode($msgInfoJSON);
+
                     break;
 
                 case WPInstallStorage::CMD_ADD_CUST_WPINSTALLS:
                     $list = array();
                     $extraArgs[] = $this->input['addInstallsInfo'];
+
                     break;
 
                 case WPInstallStorage::CMD_SCAN2:
@@ -1228,6 +1244,7 @@ EOF;
 
                     $originalAction = $action;
                     $action = WPInstallStorage::CMD_ADD_NEW_WPINSTALL;
+
                     break;
 
                 // no default case
@@ -1299,13 +1316,11 @@ EOF;
 
     public static function run()
     {
-        try
-        {
+        try {
             $cli = new self();
             $cli->runCommand();
         }
-        catch ( Exception $e )
-        {
+        catch ( Exception $e ) {
             echo "[ERROR] {$e->getMessage()}\n\n";
             exit(1);
         }

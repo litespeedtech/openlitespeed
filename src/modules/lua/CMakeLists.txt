@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 2.8)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
-set(LUAJITDIR "${PROJECT_SOURCE_DIR}/../thirdparty/include/luajit-2.0/")
+set(LUAJITDIR "${PROJECT_SOURCE_DIR}/../third-party/include/luajit-2.0/")
 include_directories(${LUAJITDIR})
 
 set(CMAKE_VERBOSE_MAKEFILE ON)

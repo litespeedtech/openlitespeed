@@ -107,6 +107,7 @@ SslContext *SslContext::config(SslContext *pContext, const char *pZcDomainName,
     return pContext;
 }
 
+
 int SslContext::loadCA(const char *pBundle)
 {
 
@@ -116,8 +117,16 @@ int SslContext::loadCA(const char *pBundle)
             LS_ERROR( "[SSL] Config SSL Context (ZConf) with bundle failed.");
             return LS_FAIL;
         }
+        return LS_OK;
     }
-    else if (SslUtil::getDefaultCAFile() != NULL || SslUtil::getDefaultCAPath() != NULL)
+    else
+        return loadDefaultCA();
+}
+
+
+int SslContext::loadDefaultCA()
+{
+    if (SslUtil::getDefaultCAFile() != NULL || SslUtil::getDefaultCAPath() != NULL)
     {
         if (!setCALocation(SslUtil::getDefaultCAFile(), SslUtil::getDefaultCAPath(), 0))
         {
@@ -137,6 +146,7 @@ int SslContext::loadCA(const char *pBundle)
     }
     return LS_OK;
 }
+
 
 SslContext *SslContext::config(SslContext *pContext, SslContextConfig *pConfig)
 {
@@ -1217,6 +1227,17 @@ int SslContext::applyToSsl(SSL *pSsl)
 }
 
 
+int SslContext::s_sni_not_found_rc = SslUtil::CERTCB_RET_OK;
+
+void SslContext::set_strict_sni(int strict)
+{
+    if (strict)
+        s_sni_not_found_rc = SslUtil::CERTCB_RET_ERR;
+    else
+        s_sni_not_found_rc = SslUtil::CERTCB_RET_OK;
+}
+
+
 int SslContext::servername_cb(SSL *ssl, void *arg)
 {
     SslContext *pCtx = NULL;
@@ -1230,7 +1251,7 @@ int SslContext::servername_cb(SSL *ssl, void *arg)
     if (!pCtx)
     {
         LS_DBG_H("SslContext::servername_cb() no ctx found for '%s'.", name);
-        return SslUtil::CERTCB_RET_OK;
+        return s_sni_not_found_rc;
     }
     if (pCtx->getEccCtx())
     {

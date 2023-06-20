@@ -81,7 +81,7 @@ $_gmsg['btn_yes'] = '是';
 
 
 $_gmsg['note_collapsemenu'] = '收起菜单';
-$_gmsg['note_configmodified'] = '配置已修改。要使修改生效，请平滑重启Openlitespeed。';
+$_gmsg['note_configmodified'] = '配置已修改。要使修改生效，请进行平滑重启。';
 $_gmsg['note_confirm_delete'] = '你确定要删除这个条目吗？这将从配置文件中被永久移除。';
 $_gmsg['note_confirm_instantiate'] = '你确定你想要实例化这个虚拟主机吗？这将为该虚拟主机创建一个独立的配置文件。';
 $_gmsg['note_copyrightreserved'] = '保留所有权利。';
@@ -772,15 +772,3 @@ $_gmsg['mail_failedlogin_c'] = '近期发生了一次失败的LiteSpeed登陆。
 4. 使用https登陆管理员控制台。';
 
 
-
-$_gmsg['note_confirm_logout'] = '登出';
-$_gmsg['note_home'] = '主页';
-
-
-$_gmsg['err_menuanchornotexist'] = 'Error - 菜单未找到';
-$_gmsg['err_page_404'] = 'Error 404! 页面未找到~.';
-
-
-$_gmsg['l_quicbaseplpmtu'] = 'PLPMTU 基础值';
-$_gmsg['l_quicenabledplpmtud'] = '启用 DPLPMTUD';
-$_gmsg['l_quicmaxplpmtu'] = 'PLPMTU 最大值';

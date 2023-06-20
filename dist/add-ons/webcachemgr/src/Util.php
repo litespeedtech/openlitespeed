@@ -3,26 +3,27 @@
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2022
+ * @author    Michael Alegre
+ * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
 
+use ZipArchive;
+
 class Util
 {
 
     /**
      *
-     * @param string  $tag
+     * @param string $tag
+     *
      * @return string
      */
     public static function get_request_var( $tag )
     {
-        $varValue = null;
-
         if ( isset($_REQUEST[$tag]) ) {
             return trim($_REQUEST[$tag]);
         }
@@ -39,21 +40,18 @@ class Util
         }
 
         if ( $querystring != ''
-                && preg_match("/(?:^|\?|&){$tag}=([^&]+)/", $querystring, $m) ) {
+                && preg_match("/(?:^|\?|&)$tag=([^&]+)/", $querystring, $m) ) {
 
-            $varValue = $m[1];
+            return trim($m[1]);
         }
 
-         if ( $varValue != null ) {
-            $varValue = trim($varValue);
-        }
-
-        return $varValue;
+        return null;
     }
 
     /**
      *
-     * @param string  $tag
+     * @param string $tag
+     *
      * @return array
      */
     public static function get_request_list( $tag )
@@ -76,7 +74,7 @@ class Util
             }
 
             if ( $querystring != ''
-                    && preg_match_all("/(?:^|\?|&){$tag}\[\]=([^&]+)/", $querystring, $m) ) {
+                    && preg_match_all("/(?:^|\?|&)$tag\[]=([^&]+)/", $querystring, $m) ) {
 
                 $varValue = $m[1];
             }
@@ -85,28 +83,34 @@ class Util
         return (is_array($varValue)) ? $varValue : null;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     */
     public static function restartLsws()
     {
         Logger::info('Performing a Graceful Restart to apply changes...');
 
-        $OS = php_uname('s');
-
-        if ( $OS == 'FreeBSD' ) {
+        /**
+         * @noinspection PhpMethodParametersCountMismatchInspection  Suppress
+         *     for PHP 5.x.
+         */
+        if ( php_uname('s') == 'FreeBSD' ) {
             $lswsCtl = '/usr/local/etc/rc.d/lsws.sh';
         }
         else {
             $lswsCtl = '/sbin/service lsws';
         }
 
-        $cmd = "{$lswsCtl} restart";
-        exec($cmd);
+        exec("$lswsCtl restart");
     }
 
     /**
      * @since 2.1.15
      *
-     * @param int   $startTime
-     * @param int   $timeout
+     * @param int $startTime
+     * @param int $timeout
+     *
      * @return bool
      */
     public static function timedOut( $startTime, $timeout )
@@ -121,26 +125,29 @@ class Util
      *
      * @since 2.2.0
      *
-     * @param string  $filepath
-     * @return array             Keys are id, name, group_id
+     * @param string $filepath
+     *
+     * @return array  Keys are id, name, group_id
      */
     public static function populateOwnerInfo( $filepath )
     {
         clearstatcache();
         $ownerID = fileowner($filepath);
         $ownerInfo = posix_getpwuid($ownerID);
-        $name = $ownerInfo['name'];
-        $groupID = filegroup($filepath);
 
-        $info = array(
-            'user_id' => $ownerID,
-            'user_name' => $name,
-            'group_id' => $groupID
+        return array(
+            'user_id'   => $ownerID,
+            'user_name' => $ownerInfo['name'],
+            'group_id'  => filegroup($filepath)
         );
-
-        return $info;
     }
 
+    /**
+     *
+     * @param string $file
+     * @param string $owner
+     * @param string $group
+     */
     public static function changeUserGroup( $file, $owner, $group )
     {
         chown($file, $owner);
@@ -152,26 +159,29 @@ class Util
      *
      * @since 2.2.0
      *
-     * @param string  $file1
-     * @param string  $file2
+     * @param string $file1
+     * @param string $file2
      */
     public static function matchPermissions( $file1, $file2 )
     {
         /**
-         * convert dec to oct
+         * convert fileperms() returned dec to oct
          */
-        $perms = (fileperms($file1) & 0777);
-
-        chmod($file2, $perms);
+        chmod($file2, (fileperms($file1) & 0777));
     }
 
     /**
      *
-     * @param string   $url
-     * @param boolean  $headerOnly
+     * @since 1.14.3
+     *
+     * @param string $url
+     * @param bool   $headerOnly
+     *
      * @return string
      */
-    public static function get_url_contents( $url, $headerOnly = false )
+    public static function getUrlContentsUsingFileGetContents(
+        $url,
+        $headerOnly = false )
     {
         if ( ini_get('allow_url_fopen') ) {
             /**
@@ -190,18 +200,34 @@ class Util
             }
         }
 
+        return '';
+    }
+
+    /**
+     *
+     * @since 1.14.3
+     *
+     * @param string $url
+     * @param bool   $headerOnly
+     *
+     * @return string
+     */
+    public static function getUrlContentsUsingPhpCurl(
+        $url,
+        $headerOnly = false )
+    {
         if ( function_exists('curl_version') ) {
             $ch = curl_init();
 
             curl_setopt_array(
-                    $ch,
-                    array(
-                        CURLOPT_URL => $url,
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_HEADER => $headerOnly,
-                        CURLOPT_NOBODY => $headerOnly,
-                        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
-                    )
+                $ch,
+                array(
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HEADER => $headerOnly,
+                    CURLOPT_NOBODY => $headerOnly,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
+                )
             );
 
             $url_content = curl_exec($ch);
@@ -212,22 +238,67 @@ class Util
             }
         }
 
-        $cmd = 'curl';
+        return '';
+    }
+
+    /**
+     *
+     * @since 1.14.3
+     *
+     * @param string $url
+     * @param string $headerOnly
+     *
+     * @return string
+     */
+    public static function getUrlContentsUsingExecCurl(
+        $url,
+        $headerOnly = false )
+    {
+        $cmd = 'curl -s';
 
         if ( $headerOnly ) {
-            $cmd .= ' -s -I';
+            $cmd .= ' -I';
         }
 
-        $url_content = exec("{$cmd} {$url}", $output, $ret);
+        exec("$cmd $url", $output, $ret);
 
         if ( $ret === 0 ) {
-            $url_content = implode("\n", $output);
-            return $url_content;
+            return implode("\n", $output);
         }
 
         return '';
     }
 
+    /**
+     *
+     * @param string $url
+     * @param bool   $headerOnly
+     *
+     * @return string
+     */
+    public static function get_url_contents( $url, $headerOnly = false )
+    {
+        $content = self::getUrlContentsUsingFileGetContents($url, $headerOnly);
+
+        if ( $content != '' ) {
+            return $content;
+        }
+
+        $content = self::getUrlContentsUsingPhpCurl($url, $headerOnly);
+
+        if ( $content != '' ) {
+            return $content;
+        }
+
+        return self::getUrlContentsUsingExecCurl($url, $headerOnly);
+    }
+
+    /**
+     *
+     * @param string $dir
+     *
+     * @return false|string
+     */
     public static function DirectoryMd5( $dir )
     {
         if ( !is_dir($dir) ) {
@@ -240,8 +311,7 @@ class Util
         while ( ($entry = $d->read()) !== false ) {
 
             if ( $entry != '.' && $entry != '..' ) {
-
-                $currEntry = "{$dir}/{$entry}";
+                $currEntry = "$dir/$entry";
 
                 if ( is_dir($currEntry) ) {
                     $filemd5s[] = self::DirectoryMd5($currEntry);
@@ -257,10 +327,14 @@ class Util
     }
 
     /**
-     * @param string  $file
-     * @param string  $backup
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @param string $file
+     * @param string $backup
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     private static function matchFileSettings( $file, $backup )
     {
@@ -269,11 +343,11 @@ class Util
         $groupID = filegroup($file);
 
         if ( $ownerID === false || $groupID === false ) {
-            Logger::debug("Could not get owner/group of file {$file}");
+            Logger::debug("Could not get owner/group of file $file");
 
             unlink($backup);
 
-            Logger::debug("Removed file {$backup}");
+            Logger::debug("Removed file $backup");
             return false;
         }
 
@@ -283,8 +357,16 @@ class Util
         return true;
     }
 
-    private static function getBackupSuffix( $filepath,
-            $bak = '_lscachebak_orig' )
+    /**
+     *
+     * @param string $filepath
+     * @param string $bak
+     *
+     * @return string
+     */
+    private static function getBackupSuffix(
+        $filepath,
+        $bak = '_lscachebak_orig' )
     {
         $i = 1;
 
@@ -302,28 +384,35 @@ class Util
 
     /**
      *
-     * @param string  $filepath
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $filepath
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::verbose() call.
+     * @throws LSCMException  Thrown indirectly by self::matchFileSettings()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
      */
     public static function createBackup( $filepath )
     {
-        $bak = self::getBackupSuffix($filepath);
-        $backup = $filepath . $bak;
+        $backup = $filepath . self::getBackupSuffix($filepath);
 
         if ( !copy($filepath, $backup) ) {
             Logger::debug(
-                "Could not backup file {$filepath} to location {$backup}"
+                "Could not backup file $filepath to location $backup"
             );
 
             return false;
         }
 
-        Logger::verbose("Created file{$backup}");
+        Logger::verbose("Created file $backup");
 
         if ( !self::matchFileSettings($filepath, $backup) ) {
             Logger::debug(
-                "Could not backup file {$filepath} to location {$backup}"
+                "Could not backup file $filepath to location $backup"
             );
 
             return false;
@@ -331,22 +420,26 @@ class Util
 
         Logger::debug('Matched owner/group setting for both files');
         Logger::info(
-            "Successfully backed up file {$filepath} to location {$backup}"
+            "Successfully backed up file $filepath to location $backup"
         );
 
         return true;
     }
 
     /**
-     * @param string  $zipFile
-     * @param string  $dest
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @param string $zipFile
+     * @param string $dest
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     public static function unzipFile( $zipFile, $dest )
     {
         if ( class_exists('\ZipArchive') ) {
-            $zipArchive = new \ZipArchive();
+            $zipArchive = new ZipArchive();
 
             if ( $zipArchive->open($zipFile) === true ) {
                 $extracted = $zipArchive->extractTo($dest);
@@ -357,13 +450,13 @@ class Util
                 }
             }
 
-            Logger::debug("Could not unzip {$zipFile} using ZipArchive.");
+            Logger::debug("Could not unzip $zipFile using ZipArchive.");
         }
 
         $output = array();
 
         exec(
-            "unzip {$zipFile} -d {$dest} > /dev/null 2>&1",
+            "unzip $zipFile -d $dest > /dev/null 2>&1",
             $output,
             $return_var
         );
@@ -372,7 +465,7 @@ class Util
             return true;
         }
         else {
-            Logger::debug("Could not unzip {$zipFile} from cli.");
+            Logger::debug("Could not unzip $zipFile from cli.");
         }
 
         return false;
@@ -381,12 +474,13 @@ class Util
     /**
      * Check if directory is empty.
      *
-     * @param string  $dir
-     * @return boolean
+     * @param string $dir
+     *
+     * @return bool
      */
     public static function is_dir_empty( $dir )
     {
-        if ( ($handle = @opendir($dir)) == false ) {
+        if ( !($handle = @opendir($dir)) ) {
             return true;
         }
 
@@ -402,35 +496,32 @@ class Util
 
     /**
      *
-     * @param string  $vhCacheRoot
+     * @param string $vhCacheRoot
      */
     public static function ensureVHCacheRootInCage( $vhCacheRoot )
     {
         $cageFsFile = '/etc/cagefs/cagefs.mp';
 
-        $remount = false;
-
         if ( file_exists($cageFsFile) ) {
 
-            $file_contents = file($cageFsFile);
-
             if ( $vhCacheRoot[0] == '/' ) {
+                $cageVhCacheRoot =
+                    '%' . str_replace('/$vh_user', '', $vhCacheRoot);
 
-                $vhCacheRoot = '%' . str_replace('/$vh_user', '', $vhCacheRoot);
-                $escVHCacheRoot = str_replace('!', '\!', $vhCacheRoot);
+                $matchFound = preg_grep(
+                    "!^\s*" . str_replace('!', '\!', $cageVhCacheRoot) . "!im",
+                    file($cageFsFile)
+                );
 
-                if ( !preg_grep('!^\s*' . $escVHCacheRoot . '!im', $file_contents) ) {
-                    $remount = true;
+                if ( !$matchFound ) {
                     file_put_contents(
                         $cageFsFile,
-                        "\n{$vhCacheRoot}",
+                        "\n$cageVhCacheRoot",
                         FILE_APPEND
                     );
-                }
-            }
 
-            if ( $remount ) {
-                exec('/usr/sbin/cagefsctl --remount-all');
+                    exec('/usr/sbin/cagefsctl --remount-all');
+                }
             }
         }
     }
@@ -438,15 +529,16 @@ class Util
     /**
      * Recursively a directory's contents and optionally the directory itself.
      *
-     * @param string   $dir         Directory path
-     * @param boolean  $keepParent  Only remove directory contents when true.
-     * @return boolean
+     * @param string $dir         Directory path
+     * @param bool   $keepParent  Only remove directory contents when true.
+     *
+     * @return bool
      */
     public static function rrmdir( $dir, $keepParent = false )
     {
         if ( $dir != '' && is_dir($dir) ) {
 
-            foreach ( glob("{$dir}/*") as $file ) {
+            foreach ( glob("$dir/*") as $file ) {
 
                 if ( is_dir($file) ) {
                     self::rrmdir($file);
@@ -472,9 +564,9 @@ class Util
      *
      * @since 1.13.13.1
      *
-     * @param string $domain
-     * @param int    $flags
-     * @param int|null    $variant
+     * @param string     $domain
+     * @param int        $flags
+     * @param int|null   $variant
      * @param array|null $idna_info
      *
      * @return false|string
@@ -537,7 +629,7 @@ class Util
      * trailing ".0" groups such as '6.1' which is equal to '6.1.0' which is
      * equal to '6.1.000.0' etc.
      *
-     * @since release_ver_placeholder
+     * @since 1.14.2
      *
      * @param string      $ver1
      * @param string      $ver2
@@ -552,10 +644,11 @@ class Util
     {
         $pattern = '/(\.0+)+($|-)/';
 
-        $trimmedVer1 = preg_replace($pattern, '', $ver1);
-        $trimmedVer2 = preg_replace($pattern, '', $ver2);
-
-        return version_compare($trimmedVer1, $trimmedVer2, $operator);
+        return version_compare(
+            preg_replace($pattern, '', $ver1),
+            preg_replace($pattern, '', $ver2),
+            $operator
+        );
     }
 
 }

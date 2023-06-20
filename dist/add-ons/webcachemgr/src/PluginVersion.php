@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author Michael Alegre
- * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
+ * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -127,9 +127,8 @@ class PluginVersion
     /**
      *
      * @deprecated 4.1.3  Use "$formatted = true" equivalent function
-     *                    $this->getShortVersions() instead. Un-formatted
-     *                    version of this list will no longer be available once
-     *                    this function is removed.
+     *     $this->getShortVersions() instead. Un-formatted version of this list
+     *     will no longer be available once this function is removed.
      *
      * @param bool $formatted
      *
@@ -156,7 +155,7 @@ class PluginVersion
                     $ver2 = explode('.', $ver);
 
                     if ( $ver1[0] !== $ver2[0] || $ver1[1] !== $ver2[1] ) {
-                        $ver = "{$ver2[0]}.{$ver2[1]}.x";
+                        $ver = "$ver2[0].$ver2[1].x";
                     }
                 }
 
@@ -264,7 +263,6 @@ class PluginVersion
     protected function checkOldVersionFiles()
     {
         $dataDir = Context::getLSCMDataDir();
-        $oldVersionsFile = "$dataDir/lscwp_versions";
         $oldActiveFile = "$dataDir/lscwp_active_version";
 
         if ( file_exists($oldActiveFile) ) {
@@ -274,7 +272,7 @@ class PluginVersion
             }
 
             rename($oldActiveFile, $this->activeFile);
-            unlink($oldVersionsFile);
+            unlink("$dataDir/lscwp_versions");
         }
     }
 
@@ -302,8 +300,7 @@ class PluginVersion
         if ( $activeVersion == '' ) {
 
             try {
-                $latestVer = self::getLatestVersion();
-                $activeVersion = $latestVer;
+                $activeVersion = self::getLatestVersion();
             }
             catch ( LSCMException $e ) {
                 Logger::debug($e->getMessage());
@@ -333,7 +330,7 @@ class PluginVersion
     /**
      *
      * @deprecated 4.1.3  This function will be removed in favor of
-     *                    pre-formatted $this->setShortVersions().
+     *     pre-formatted $this->setShortVersions().
      *
      * @throws LSCMException  Thrown when LSCWP version list cannot be found.
      */
@@ -346,9 +343,11 @@ class PluginVersion
             );
         }
 
-        $content = trim(file_get_contents($this->versionFile));
-
-        preg_match('/old\s{(.*)}/sU', $content, $m);
+        preg_match(
+            '/old\s{(.*)}/sU',
+            trim(file_get_contents($this->versionFile)),
+            $m
+        );
 
         $this->knownVersions = explode("\n", trim($m[1]));
     }
@@ -367,11 +366,13 @@ class PluginVersion
             );
         }
 
-        $content = trim(file_get_contents($this->versionFile));
+        $matchFound = preg_match(
+            '/allowed\s{(.*)}/sU',
+            trim(file_get_contents($this->versionFile)),
+            $m
+        );
 
-        preg_match('/allowed\s{(.*)}/sU', $content, $m);
-
-        if ( ($list = trim($m[1])) == '' ) {
+        if ( !$matchFound || ($list = trim($m[1])) == '' ) {
             throw new LSCMException(
                 'LSCWP version list is empty.',
                 LSCMException::E_NON_FATAL
@@ -397,11 +398,13 @@ class PluginVersion
             );
         }
 
-        $content = trim(file_get_contents($this->versionFile));
+        $matchFound = preg_match(
+            '/short\s{(.*)}/sU',
+            trim(file_get_contents($this->versionFile)),
+            $m
+        );
 
-        preg_match('/short\s{(.*)}/sU', $content, $m);
-
-        if ( ($list = trim($m[1])) == '' ) {
+        if ( !$matchFound || ($list = trim($m[1])) == '' ) {
             throw new LSCMException(
                 'LSCWP version list is empty.',
                 LSCMException::E_NON_FATAL
@@ -426,40 +429,42 @@ class PluginVersion
      */
     public function setActiveVersion( $version, $init = false )
     {
-        try {
-            $currVer = ($init) ? '' : $this->getCurrentVersion();
-        }
-        catch ( LSCMException $e ) {
-            $currVer = '';
-        }
-
         $allowedVers = $this->getAllowedVersions();
 
-        if ( !in_array($version, $allowedVers) ) {
-            $badVer = $version;
+        if ( in_array($version, $allowedVers) ) {
+            $activeVer = $version;
+        }
+        else {
+
+            try {
+                $currVer = ($init) ? '' : $this->getCurrentVersion();
+            }
+            catch ( LSCMException $e ) {
+                $currVer = '';
+            }
 
             if ( $currVer != '' ) {
-                $version = $currVer;
+                $activeVer = $currVer;
             }
             else {
-                $version = $allowedVers[0];
+                $activeVer = $allowedVers[0];
             }
 
             Logger::error(
-                "Version $badVer not in allowed list, reset active "
-                    . "version to $version."
+                "Version $version not in allowed list, reset active "
+                    . "version to $activeVer."
             );
         }
 
-        if ( $version != $this->getActiveVersion() ) {
+        if ( $activeVer != $this->getActiveVersion() ) {
 
-            if ( !$this->hasDownloadedVersion($version) ) {
-                $this->downloadVersion($version);
+            if ( !$this->hasDownloadedVersion($activeVer) ) {
+                $this->downloadVersion($activeVer);
             }
 
-            $this->currVersion = $version;
-            file_put_contents($this->activeFile, $version);
-            Logger::notice("Current active LSCWP version is now $version.");
+            $this->currVersion = $activeVer;
+            file_put_contents($this->activeFile, $activeVer);
+            Logger::notice("Current active LSCWP version is now $activeVer.");
         }
     }
 
@@ -472,8 +477,6 @@ class PluginVersion
     protected function refreshVersionList( $isforced = false )
     {
         clearstatcache();
-        $versionsUrl =
-            'https://www.litespeedtech.com/packages/lswpcache/version_list_v2';
 
         if ( $isforced || !file_exists($this->versionFile)
                 || (time() - filemtime($this->versionFile)) > 86400 ) {
@@ -482,15 +485,26 @@ class PluginVersion
                 $this->createDownloadDir();
             }
 
-            $content = Util::get_url_contents($versionsUrl);
+            $url = 'https://www.litespeedtech.com/packages/lswpcache'
+                . '/version_list_v2';
 
-            if ( !empty($content) && substr($content, 0, 7) == 'allowed' ) {
-                file_put_contents($this->versionFile, $content);
-                Logger::info('LSCache for WordPress version list updated');
+            $content = Util::get_url_contents($url);
+
+            if ( empty($content) || substr($content, 0, 7) != 'allowed' ) {
+                /**
+                 * Try again using cli curl directly to bypass potential
+                 * reCAPTCHA issues.
+                 */
+                $content = Util::getUrlContentsUsingExecCurl($url);
+
+                if ( empty($content) || substr($content, 0, 7) != 'allowed' ) {
+                    touch($this->versionFile);
+                    return;
+                }
             }
-            else {
-                touch($this->versionFile);
-            }
+
+            file_put_contents($this->versionFile, $content);
+            Logger::info('LSCache for WordPress version list updated');
         }
     }
 
@@ -552,9 +566,11 @@ class PluginVersion
             );
         }
 
-        $pluginSrc =
-                Context::LOCAL_PLUGIN_DIR . "/$version/" . self::PLUGIN_NAME;
-        exec("/bin/cp --preserve=mode -rf $pluginSrc $pluginDir");
+        exec(
+            '/bin/cp --preserve=mode -rf '
+                . Context::LOCAL_PLUGIN_DIR . "/$version/" . self::PLUGIN_NAME
+                . " $pluginDir"
+        );
 
         if ( !file_exists($lscwp_plugin) ) {
             throw new LSCMException(
@@ -598,10 +614,7 @@ class PluginVersion
             return false;
         }
 
-        $md5_stored_val = file_get_contents($md5file);
-        $md5_val = Util::DirectoryMd5($plugin);
-
-        return ( $md5_stored_val == $md5_val );
+        return ( file_get_contents($md5file) == Util::DirectoryMd5($plugin) );
     }
 
     /**
@@ -622,13 +635,11 @@ class PluginVersion
     {
         Logger::info("Downloading LSCache for WordPress v$version...");
 
-        $plugin = "$dir/" . self::PLUGIN_NAME;
         $zipFile = self::PLUGIN_NAME . ".$version.zip";
-        $localZipFile = "$dir/$zipFile";
 
         exec(
-            'wget -q --tries=1 --no-check-certificate'
-                . " https://downloads.wordpress.org/plugin/$zipFile -P $dir",
+            'wget -q --tries=1 --no-check-certificate '
+                . "https://downloads.wordpress.org/plugin/$zipFile -P $dir",
             $output,
             $return_var
         );
@@ -641,15 +652,19 @@ class PluginVersion
             );
         }
 
-        $extracted = Util::unzipFile($localZipFile, $dir);
+        $localZipFile = "$dir/$zipFile";
+
+        $extractedZip = Util::unzipFile($localZipFile, $dir);
         unlink($localZipFile);
 
-        if ( !$extracted ) {
+        if ( !$extractedZip ) {
             throw new LSCMException(
                 "Unable to unzip $localZipFile",
                 LSCMException::E_NON_FATAL
             );
         }
+
+        $plugin = "$dir/" . self::PLUGIN_NAME;
 
         if ( !file_exists("$plugin/" . self::PLUGIN_NAME . '.php') ) {
             throw new LSCMException(
@@ -700,7 +715,8 @@ class PluginVersion
      *
      * @return bool
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     * @throws LSCMException  Thrown indirectly by Util::unzipFile() call.
      */
     public static function retrieveTranslation( $locale, $pluginVer )
     {
@@ -725,11 +741,11 @@ class PluginVersion
          * checked through user failure to unzip through WP func unzip_file()
          * as we do not assume that root has the ability to unzip.
          */
-        $url = 'https://downloads.wordpress.org/translation/plugin/'
-            . "litespeed-cache/$pluginVer/$locale.zip";
-
         exec(
-            "wget -q --tries=1 --no-check-certificate $url -P $translationDir",
+            'wget -q --tries=1 --no-check-certificate '
+                . 'https://downloads.wordpress.org/translation/plugin/'
+                . "litespeed-cache/$pluginVer/$locale.zip "
+                . "-P $translationDir",
             $output,
             $return_var
         );

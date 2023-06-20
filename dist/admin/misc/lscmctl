@@ -4,10 +4,10 @@
 # LiteSpeed Cache Management Script
 #
 # @author Michael Alegre
-# @copyright (c) 2017-2022 LiteSpeed Technologies, Inc.
+# @copyright (c) 2017-2023 LiteSpeed Technologies, Inc.
 # *********************************************/
 
-VERSION='1.12'
+VERSION='1.12.2'
 OS=$(uname -s)
 SCRIPT_DIR=$(cd "$(dirname "${0}")" && pwd)
 
@@ -244,7 +244,7 @@ runUpdate()
 
 errorExit()
 {
-    printf "${YELLOW}ERROR: ${END_COLOR} %s\n\n" "${1}"
+    printf "${YELLOW}ERROR: ${END_COLOR} %s\n\n" "${1}" >&2
     exit 1
 }
 
@@ -259,7 +259,7 @@ setPanelClassName()
         return
     fi
 
-    x=$(plesk version 2>/dev/null)
+    x=$(/usr/sbin/plesk version 2>/dev/null)
 
     if [ "${x}" ]; then
         PANEL_CLASS_NAME='\Lsc\Wp\Panel\Plesk'

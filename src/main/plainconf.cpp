@@ -283,6 +283,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"sslconnlimit",                             NULL},
     {"ssldefaultcafile",                         NULL},
     {"ssldefaultcapath",                         NULL},
+    {"ssldefaultciphers",                        NULL},
     {"sslenablemulticerts",                      NULL},
     {"sslsessioncache",                          NULL},
     {"sslsessioncachesize",                      NULL},
