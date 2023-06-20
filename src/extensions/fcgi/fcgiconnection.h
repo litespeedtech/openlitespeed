@@ -29,7 +29,8 @@
 
 //#define FCGI_MPLX
 
-#define FCGI_MAX_PACKET_SIZE    8192
+#define FCGI_MAX_PACKET_SIZE    65535
+#define FCGI_MAX_STDIN_PENDING  8192
 
 class FcgiApp;
 class Multiplexer;

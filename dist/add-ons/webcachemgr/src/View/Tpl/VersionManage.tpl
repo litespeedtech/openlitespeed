@@ -47,7 +47,8 @@ $this->loadTplBlock('SectionTitle.tpl', $d);
 <div>
   <span class="hint">
     Sets the LiteSpeed Cache plugin version to be used in all future "Enable"
-    operations.
+    operations. (To ensure stability, there may be a delay before new LiteSpeed
+    Cache plugin versions appear in this list)
   </span>
 </div>
 <br />
@@ -153,7 +154,8 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
     Upgrades active LiteSpeed Cache plugins matching the selection in the
     "From Version" list to the version chosen under "Upgrade To".
     <br />
-    Flagged installations will be skipped.
+    Flagged installations will be skipped. (To ensure stability, there may be a
+    delay before new LiteSpeed Cache plugin versions appear in this list)
   </span>
 </div>
 
@@ -163,11 +165,11 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
   <tbody>
     <tr>
       <td style="margin-top: 9px; vertical-align: top;">From Version(s):</td>
-      <td style="text-align: center;">
+      <td style="text-align: left;">
         <table class="datatable nowrap">
           <thead>
             <tr>
-              <th style="text-align: center;">
+              <th>
                 <input
                     type="checkbox"
                     id="fromSelectAll"
@@ -193,6 +195,7 @@ if ( $state == ViewModel::ST_SCAN_NEEDED ):
 
             <tr>
               <td>
+                <span style="width: 20px; display: inline-block;"></span>
                 <input
                     type="checkbox"
                     id="from_<?php echo $safeVer; ?>"

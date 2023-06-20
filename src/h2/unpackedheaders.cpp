@@ -1326,7 +1326,12 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
     else if (hdr->flags & LSXPACK_QPACK_IDX)
         idx = UnpackedHeaders::qpack2ReqIdx(hdr->qpack_index);
     const char *name = lsxpack_header_get_name(hdr);
-    const char *val = hdr->buf + hdr->val_offset;
+    char *val = hdr->buf + hdr->val_offset;
+    char *p = val;
+    while (p < val + hdr->val_len
+        && (p = (char *)memchr(p, '\n', val + hdr->val_len - p)))
+        *p++ = ' ';
+
     if ((idx >= UPK_HDR_METHOD && idx <= UPK_HDR_STATUS)
         || (hdr->name_len > 2 && name[0] == ':'))
     {

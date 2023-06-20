@@ -524,7 +524,8 @@ int ExtAppRegistry::hasUri(const char *uri)
 }
 
 
-void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, int loop)
+void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst,
+                                  int dst_len, int uid, uint loop)
 {
     int len = strlen(app_uri);
 
@@ -540,7 +541,10 @@ void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst, int dst_len, i
         return ;
     }
 
-    snprintf(dst + len, dst_len - len, ".%d%d", uid, loop);
+    if (loop == 0)
+        snprintf(dst + len, dst_len - len, ".%d%u", uid, loop);
+    else
+        snprintf(dst + len, dst_len - len, ".%d.%u", uid, loop);
 }
 
 
@@ -736,15 +740,28 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         {
             int loop = 0;
             int uriInUse = 0;
+            uint hash = 0;
+            const char *pOrgUri = pUri;
+            if ((uriInUse = hasUri(pUri)) != 0)
+            {
+                LS_INFO(&currentCtx, "socket address %s is used", pUri);
+                hash = XXH32(pName, strlen(pName), 0);
+                ExtAppRegistry::getUniAppUri(pOrgUri, appUriVh, 256,
+                                        (pVHost ? pVHost->getUid() :
+                                        ServerProcessConfig::getInstance().getUid()),
+                                        hash % 10000);
+                LS_INFO(&currentCtx, "will try %s instead.", appUriVh);
+                pUri = appUriVh;
+
+            }
             while (((uriInUse = hasUri(pUri)) != 0) && ++loop < 10)
             {
-                ExtAppRegistry::getUniAppUri(pUri, appUriVh, 256,
+                LS_INFO(&currentCtx, "socket address %s is used", pUri);
+                ExtAppRegistry::getUniAppUri(pOrgUri, appUriVh, 256,
                                         (pVHost ? pVHost->getUid() :
                                         ServerProcessConfig::getInstance().getUid()),
                                         loop);
-                LS_INFO(&currentCtx,
-                        "socket address %s is used, will try use %s instead.",
-                        pUri, appUriVh);
+                LS_INFO(&currentCtx, "will try %s instead.", appUriVh);
                 pUri = appUriVh;
             }
 

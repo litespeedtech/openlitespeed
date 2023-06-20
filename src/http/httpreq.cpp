@@ -1139,7 +1139,7 @@ int HttpReq::postProcessHost(const char *pCur, const char *pBEnd)
     if (pstrfound)
         m_iHostLen = pstrfound - pCur;
     else
-        m_iHostLen += pBEnd - pCur;
+        m_iHostLen = pBEnd - pCur;
     if (!m_iHostLen)
         m_iHostOff = 0;
 

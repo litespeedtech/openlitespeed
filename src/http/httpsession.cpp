@@ -5709,7 +5709,9 @@ int HttpSession::smProcessReq()
         case HSPS_HANDLER_PRE_PROCESSING:
             m_iFlag |= HSF_URI_MAPPED;
             preUriMap();
-            runEventHkpt(LSI_HKPT_URI_MAP, HSPS_BEGIN_HANDLER_PROCESS);
+            ret = runEventHkpt(LSI_HKPT_URI_MAP, HSPS_BEGIN_HANDLER_PROCESS);
+            if (ret)
+                break;
 
             /**
              * In this state, if req body done or no req body, go through the hook

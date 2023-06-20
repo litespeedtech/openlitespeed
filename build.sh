@@ -20,7 +20,6 @@
 ###    Author: dxu@litespeedtech.com (David Shue)
 
 VERSION=1.0.1
-moduledir="modreqparser modinspector uploadprogress "
 OS=`uname`
 ARCH=`arch`
 ISLINUX=no
@@ -390,6 +389,7 @@ updateModuleCMakelistfile()
     if [ "${OS}" = "Darwin" ] ; then
         echo Mac OS bypass all module right now
     else
+        moduledir="modreqparser modinspector uploadprogress "
         for module in ${moduledir}; do
             echo "add_subdirectory(${module})" >> src/modules/CMakeLists.txt
         done
@@ -420,11 +420,11 @@ cpModuleSoFiles()
         cp -f build/src/modules/${module}/*.so dist/modules/
     done
     
-    if [ -e src/modules/modsecurity-ls/mod_security.so ] ; then
+    if [ -e build/src/modules/modsecurity-ls/mod_security.so ] ; then
         cp -f build/src/modules/modsecurity-ls/mod_security.so dist/modules/
     fi
     
-    if [ -e src/modules/pagespeed/modpagespeed.so ] ; then
+    if [ -e build/src/modules/pagespeed/modpagespeed.so ] ; then
         cp -f build/src/modules/pagespeed/modpagespeed.so dist/modules/
     fi
 }
@@ -535,6 +535,12 @@ cd src/modules/modsecurity-ls
 ln -sf ../../../../third-party/src/ModSecurity .
 cd ../../../
 #Done of modsecurity
+
+cd src/modules/lsrecaptcha
+export GOPATH=$CUR_PATH/src/modules/lsrecaptcha
+go build lsrecaptcha
+cp lsrecaptcha ../../../dist/lsrecaptcha/_recaptcha
+cd ../../../
 
 fixshmdir
 

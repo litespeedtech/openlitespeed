@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2022
+ * @copyright (c) 2018-2023
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -43,6 +43,7 @@ class Plesk extends ControlPanel
      * More reliable than php_uname('s')
      *
      * @return string
+     *
      * @throws LSCMException  Thrown when supported OS is not detected.
      */
     public function getPleskOS()
@@ -132,7 +133,8 @@ class Plesk extends ControlPanel
     {
         $OS = $this->getPleskOS();
 
-        switch ($OS) {
+        switch ( $OS ) {
+
             case 'centos':
             case 'virtuozzo':
             case 'cloudlinux':
@@ -205,8 +207,8 @@ class Plesk extends ControlPanel
      * @return array
      */
     protected function addVHCacheRootSection(
-        $file_contents,
-        $vhCacheRoot = 'lscache' )
+        array $file_contents,
+              $vhCacheRoot = 'lscache' )
     {
         return preg_replace(
             '!^\s*</VirtualHost>!im',
@@ -313,9 +315,10 @@ class Plesk extends ControlPanel
         $lineCount = count($lines);
 
         while ( $x <  $lineCount ) {
-            $pattern = '/ServerName\s+"([^"]+)"/';
+            $matchFound =
+                preg_match('/ServerName\s+"([^"]+)"/', $lines[$x], $m1);
 
-            if ( preg_match($pattern, $lines[$x], $m1) != 1 ) {
+            if ( !$matchFound ) {
                 /**
                  * Invalid start of group, skip.
                  */
@@ -391,6 +394,9 @@ class Plesk extends ControlPanel
     protected function getDefaultPhpBinary()
     {
         $binaryList = array (
+            '/opt/plesk/php/8.2/bin/php',
+            '/opt/plesk/php/8.1/bin/php',
+            '/opt/plesk/php/8.0/bin/php',
             '/opt/plesk/php/7.4/bin/php',
             '/opt/plesk/php/7.3/bin/php',
             '/opt/plesk/php/7.2/bin/php',
@@ -411,7 +417,7 @@ class Plesk extends ControlPanel
 
     /**
      *
-     * @param WPInstall $wpInstall  Not used
+     * @param WPInstall $wpInstall
      *
      * @return string
      */

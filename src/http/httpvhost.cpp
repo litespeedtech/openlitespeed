@@ -112,9 +112,7 @@ UserDir *RealmMap::get(const char *pFile, const char *pGroup)
 UserDir *HttpVHost::getFileUserDir(
     const char *pName, const char *pFile, const char *pGroup)
 {
-    PlainFileUserDir *pDir = (PlainFileUserDir *)m_realmMap.get(pFile, pGroup);
-    if (pDir)
-        return pDir;
+    PlainFileUserDir *pDir;
     if (pName)
     {
         pDir = (PlainFileUserDir *)getRealm(pName);

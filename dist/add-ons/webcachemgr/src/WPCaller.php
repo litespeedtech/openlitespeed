@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2022
+ * @copyright (c) 2018-2023
  * *******************************************
  */
 
@@ -1541,7 +1541,7 @@ class WPCaller
 
             $this->setEnvVar('REQUEST_URI', $m3[1]);
 
-            define('WP_NETWORK_ADMIN', true);
+            define('WP_NETWORK_ADMIN', true, false);
         }
 
         return $isMultiSite;
@@ -1576,13 +1576,13 @@ class WPCaller
         /**
          * Attempt to override any WordPress memory limits.
          */
-        define('WP_MEMORY_LIMIT', '512M');
-        define('WP_MAX_MEMORY_LIMIT', '512M');
+        define('WP_MEMORY_LIMIT', '512M', false);
+        define('WP_MAX_MEMORY_LIMIT', '512M', false);
 
         /**
          * Only load core WordPress functionality.
          */
-        define('SHORTINIT', true);
+        define('SHORTINIT', true, false);
 
         $wpPath = $this->currInstall->getPath();
 
@@ -1707,7 +1707,7 @@ class WPCaller
         /**
          * Force WP to use PHP I/O file handling.
          */
-        define('FS_METHOD', 'direct');
+        define('FS_METHOD', 'direct', false);
 
         /**
          * Trigger an early return from WP Rocket advanced-cache.php to prevent
@@ -1737,7 +1737,7 @@ class WPCaller
         /**
          * Needs to be defined after including files.
          */
-        define('WP_ADMIN', true);
+        define('WP_ADMIN', true, false);
 
         /**
          * Define common WP constants and set 'wp_plugin_paths' array.

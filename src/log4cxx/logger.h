@@ -396,6 +396,9 @@ public:
 };
 
 
+extern int logEscape(const char *src, int src_len, char *dest, int dest_len);
+
+
 END_LOG4CXX_NS
 
 #endif

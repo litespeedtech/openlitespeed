@@ -22,6 +22,7 @@
 #include <http/httpresp.h>
 #include <util/ni_fio.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 #include <util/datetime.h>
@@ -130,7 +131,8 @@ int DirHashCacheEntry::allocate(int size)
         return LS_FAIL;
     if (st.st_size < size)
     {
-        if (ftruncate(fd, size) == -1)
+        if ((errno = posix_fallocate(fd, st.st_size,
+                                     size - st.st_size)) != 0)
             return LS_FAIL;
     }
     return 0;

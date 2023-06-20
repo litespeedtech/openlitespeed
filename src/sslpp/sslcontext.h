@@ -77,6 +77,7 @@ public:
                                      SslContextConfig *pConfig);
 
     int loadCA(const char *pBundle);
+    int loadDefaultCA();
     int configOptions(SslContextConfig *pConfig);
 
     // public because called from SslContextHash::addIP:
@@ -116,6 +117,7 @@ public:
     static int  publickey_decrypt(const unsigned char *pPubKey, int keylen,
                                   const char *encrypted,
                                   int len, char *decrypted, int bufLen);
+    static void set_strict_sni(int strict);
 
 #ifdef _ENTERPRISE_
     void setClientVerify(int mode, int depth);
@@ -155,6 +157,7 @@ private:
     long        m_tmLastAccess;
     struct stat m_stKey;
     struct stat m_stCert;
+    static int  s_sni_not_found_rc;
 
     SslOcspStapling *m_pStapling;
 

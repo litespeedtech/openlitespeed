@@ -688,6 +688,28 @@ int VMemBuf::setROffset(off_t offset)
 }
 
 
+int VMemBuf::seekWriteEof()
+{
+    struct stat st;
+    fstat(getfd(), &st);
+    m_iCurTotalSize = st.st_size;
+    off_t block_pos = m_iCurTotalSize & ~(s_iBlockSize - 1);
+    off_t target_size = ((m_iCurTotalSize + s_iBlockSize) & ~(s_iBlockSize - 1));
+    while(m_bufList.size() < (int)(target_size / s_iBlockSize))
+    {
+        m_bufList.push_back(new MmapBlockBuf(NULL, s_iBlockSize));
+    }
+    assert(m_iCurTotalSize > block_pos);
+    m_pCurWBlock = &m_bufList[block_pos / s_iBlockSize];
+    if (remapBlock(*m_pCurWBlock, block_pos) == -1)
+        return -1;
+
+    m_curWBlkPos = block_pos + s_iBlockSize;
+    m_pCurWPos = (*m_pCurWBlock)->getBuf() + (m_iCurTotalSize - block_pos);
+    return 0;
+}
+
+
 int VMemBuf::mapNextWBlock()
 {
     if (!m_pCurWBlock || m_pCurWBlock + 1 >= m_bufList.end())

@@ -71,6 +71,14 @@ public:
         STATE_FINISH = STATE_NOT_INUSE,
     };
     
+    enum
+    {
+        MODE_BLOCKING,
+        MODE_NON_BLOCKING,
+        MODE_TEST_CONNECT,
+        MODE_NON_BLOCKING_SYNC_DNS,
+    };
+
     HttpFetch();
     ~HttpFetch();
     void setCallBack(hf_callback cb, void *pArg)
@@ -131,25 +139,26 @@ public:
                     const char *pReqBody = NULL, int reqBodyLen = 0,
                     const char *pContentType = NULL);
 private:
-    int         m_fdHttp;
     VMemBuf    *m_pBuf;
+    int         m_fdHttp;
     int         m_statusCode;
     char       *m_pReqBuf;
     int         m_reqBufLen;
     int         m_reqSent;
     char       *m_pExtraReqHdrs;
     int         m_reqHeaderLen;
-    int         m_iHostLen;
+    int         m_connTimeout;
+    short       m_iHostLen;
+    short       m_pollEvents;
     short       m_reqState;
     char        m_nonblocking;
     char        m_enableDriver;
     const char *m_pReqBody;
     int64_t     m_reqBodyLen;
-    int         m_connTimeout;
 
     int64_t     m_respBodyLen;
     char       *m_pRespContentType;
-    int64_t     m_respBodyRead;
+    int64_t     m_respBodyRcvd;
     char       *m_psProxyServerAddr;
     GSockAddr  *m_pServerAddr;
     AdnsReq    *m_pAdnsReq;
@@ -157,8 +166,6 @@ private:
     hf_callback m_callback;
     void       *m_callbackArg;
 
-    short       m_iSsl;
-    short       m_iVerifyCert;
     SslConnection  m_ssl;
     StrStrHashMap  m_respHeaders;
 
@@ -166,15 +173,17 @@ private:
     AutoBuf     m_resHeaderBuf;
 
     HttpFetchDriver *m_pHttpFetchDriver;
+    log4cxx::Logger *m_pLogger;
     timeval     m_tmStart;
     int         m_nslookup_time;
     int         m_conn_time;
     int         m_req_time;
     int         m_iTimeoutSec;
     int         m_iReqInited;
-    log4cxx::Logger     *m_pLogger;
     int         m_iLoggerId;
     int         m_iEnableDebug;
+    short       m_iSsl;
+    short       m_iVerifyCert;
 
 
     int endReq(int res);
@@ -197,6 +206,7 @@ private:
 
     int sendReq();
     int recvResp();
+    int saveRespBody(const char *buf, size_t len);
     void startDriver();
     void stopDriver();
     int initReq(const char *pURL, const char *pBody, int bodyLen,

@@ -8,7 +8,7 @@ header("Expires: -1");
 header("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
 header("Pragma: no-cache");
 header("X-Frame-Options: SAMEORIGIN");
-header("X-XSS-Protection: 1;mode=block");
+header("Content-Security-Policy: frame-ancestors 'self'");
 header("Referrer-Policy: same-origin");
 header("X-Content-Type-Options: nosniff");
 

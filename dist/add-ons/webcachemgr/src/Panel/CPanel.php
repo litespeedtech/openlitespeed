@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2017-2022
+ * @copyright (c) 2017-2023
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -171,7 +171,8 @@ class CPanel extends ControlPanel
     protected function initConfPaths()
     {
         $this->apacheConf = '/etc/apache2/conf.d/includes/pre_main_global.conf';
-        $this->apacheVHConf = '/etc/apache2/conf.d/userdata/lscache_vhosts.conf';
+        $this->apacheVHConf =
+            '/etc/apache2/conf.d/userdata/lscache_vhosts.conf';
     }
 
     /**
@@ -204,12 +205,14 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @param array   $file_contents
-     * @param string  $vhCacheRoot
+     * @param array  $file_contents
+     * @param string $vhCacheRoot
+     *
      * @return array
      */
     protected function addVHCacheRootSection(
-            $file_contents, $vhCacheRoot = 'lscache' )
+        array $file_contents,
+              $vhCacheRoot = 'lscache' )
     {
         array_unshift(
             $file_contents,
@@ -221,12 +224,19 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @param string  $vhConf
-     * @param string  $vhCacheRoot
-     * @throws LSCMException  Thrown directly and indirectly.
+     * @param string $vhConf
+     * @param string $vhCacheRoot
+     *
+     * @throws LSCMException  Thrown when virtual host conf directory cannot be
+     *     created.
+     * @throws LSCMException  Thrown when virtual host conf file cannot be
+     *     created.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
     public function createVHConfAndSetCacheRoot(
-            $vhConf, $vhCacheRoot = 'lscache' )
+        $vhConf,
+        $vhCacheRoot = 'lscache' )
     {
         $vhConfDir = dirname($vhConf);
 
@@ -274,15 +284,17 @@ class CPanel extends ControlPanel
      * Gets a list of found docroots and associated server names.
      * Only needed for scan.
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     protected function prepareDocrootMap()
     {
-        $cmd =
-            'grep -hro --exclude="cache" --exclude="main" --exclude="*.cache" '
-            . '"documentroot.*\|serveralias.*\|servername.*" '
-            . '/var/cpanel/userdata/*';
-        exec($cmd, $lines);
+        exec(
+            'grep -hro '
+                . '--exclude="cache" --exclude="main" --exclude="*.cache" '
+                . '"documentroot.*\|serveralias.*\|servername.*" '
+                . '/var/cpanel/userdata/*',
+            $lines
+        );
 
         /**
          * [0]=docroot, [1]=serveraliases, [2]=servername, [3]=docroot, etc.
@@ -348,9 +360,7 @@ class CPanel extends ControlPanel
                 $cur = '';
             }
             else {
-                Logger::debug(
-                    "Unused line when preparing docroot map: $line."
-                );
+                Logger::debug("Unused line when preparing docroot map: $line.");
             }
         }
 
@@ -376,7 +386,8 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @param WPInstall  $wpInstall
+     * @param WPInstall $wpInstall
+     *
      * @return string
      */
     public function getPhpBinary( WPInstall $wpInstall )
@@ -385,15 +396,14 @@ class CPanel extends ControlPanel
          * cPanel php wrapper should accurately detect the correct binary in
          * EA4 when EA4 only directive '--ea-reference-dir' is provided.
          */
-        $phpBin = '/usr/local/bin/php '
-            . "--ea-reference-dir={$wpInstall->getPath()}/wp-admin";
-
-        return "$phpBin $this->phpOptions";
+        return '/usr/local/bin/php '
+            . "--ea-reference-dir={$wpInstall->getPath()}/wp-admin "
+            . $this->phpOptions;
     }
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public static function isCpanelPluginAutoInstallOn()
     {
@@ -406,7 +416,7 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public static function turnOnCpanelPluginAutoInstall()
     {
@@ -419,7 +429,7 @@ class CPanel extends ControlPanel
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public static function turnOffCpanelPluginAutoInstall()
     {
@@ -464,7 +474,7 @@ class CPanel extends ControlPanel
 
             exec(self::USER_PLUGIN_INSTALL_SCRIPT);
 
-            if ( self::restoreCpanelPluginDataFiles() == false ) {
+            if ( !self::restoreCpanelPluginDataFiles() ) {
                 Logger::error(
                     'Failed to restore cPanel user-end plugin data files.'
                 );
@@ -514,19 +524,11 @@ class CPanel extends ControlPanel
             );
         }
 
-        $cpanelPluginTplDir = "$pluginDir/landing";
-        $cpanelPluginCustTransDir = "$pluginDir/lang/cust";
-
-        $tmpCpanelPluginTplDir = self::USER_PLUGIN_BACKUP_DIR . '/landing';
-        $tmpCpanelPluginCustTransDir = self::USER_PLUGIN_BACKUP_DIR . '/cust';
-
         /**
          * Move existing conf file (if needed), templates, and custom
          * translations to temp directory and remove default template dir to
          * prevent overwrite when moving back.
          */
-
-        $backupCmds = '';
 
         $activeConfFile =
             self::getInstalledCpanelPluginActiveConfFileLocation($pluginDir);
@@ -535,16 +537,21 @@ class CPanel extends ControlPanel
             return false;
         }
 
+        $backupCmds = '';
+
         if ( $activeConfFile != self::USER_PLUGIN_CONF ) {
             $backupCmds .= "/bin/mv $activeConfFile "
                 . self::USER_PLUGIN_BACKUP_DIR . '/;';
         }
 
+        $tmpCpanelPluginCustTransDir = self::USER_PLUGIN_BACKUP_DIR . '/cust';
+
         $backupCmds .= '/bin/mv '
-            . "$cpanelPluginTplDir " . self::USER_PLUGIN_BACKUP_DIR . '/;'
-            . "/bin/rm -rf $tmpCpanelPluginTplDir/default;"
+            . "$pluginDir/landing " . self::USER_PLUGIN_BACKUP_DIR . '/;'
+            . "/bin/rm -rf "
+            . self::USER_PLUGIN_BACKUP_DIR . '/landing/default;'
             . '/bin/mv '
-            . "$cpanelPluginCustTransDir $tmpCpanelPluginCustTransDir;"
+            . "$pluginDir/lang/cust $tmpCpanelPluginCustTransDir;"
             . "/bin/rm -rf $tmpCpanelPluginCustTransDir/README";
 
         exec($backupCmds);
@@ -580,8 +587,6 @@ class CPanel extends ControlPanel
         }
 
         $tmpCpanelPluginConfFile = self::USER_PLUGIN_BACKUP_DIR . '/lswcm.conf';
-        $tmpCpanelPluginTplDir = self::USER_PLUGIN_BACKUP_DIR . '/landing';
-        $tmpCpanelPluginCustTransDir = self::USER_PLUGIN_BACKUP_DIR . '/cust';
 
         foreach ( $pluginInstalls as $pluginInstall ) {
 
@@ -600,26 +605,24 @@ class CPanel extends ControlPanel
                     return false;
                 }
 
-                copy(
-                    $tmpCpanelPluginConfFile,
-                    $activeConfFile
-                );
+                copy($tmpCpanelPluginConfFile, $activeConfFile);
                 chmod($activeConfFile, 0644);
             }
 
             /**
              * Replace cPanel plugin templates, custom translations.
              */
-            $restoreCmds =
-                " /bin/cp -prf "
-                . "$tmpCpanelPluginTplDir " . "$pluginInstall/; "
-                . "/bin/cp -prf "
-                . "$tmpCpanelPluginCustTransDir $cpanelPluginLangDir/";
-
-            exec($restoreCmds);
+            exec(
+                '/bin/cp -prf '
+                    . self::USER_PLUGIN_BACKUP_DIR . "/landing $pluginInstall/;"
+                    . '/bin/cp -prf '
+                    . self::USER_PLUGIN_BACKUP_DIR
+                    . "/cust $cpanelPluginLangDir/"
+            );
         }
 
         exec('/bin/rm -rf ' . self::USER_PLUGIN_BACKUP_DIR);
+
         return true;
     }
 
@@ -627,7 +630,7 @@ class CPanel extends ControlPanel
      *
      * @since 1.13.2.2  Made function static.
      *
-     * @throws LSCMException
+     * @throws LSCMException  Thrown when unable to find uninstall script.
      */
     public static function uninstallCpanelPlugin()
     {
@@ -644,8 +647,8 @@ class CPanel extends ControlPanel
         }
         else {
             throw new LSCMException(
-                'Unable to find cPanel user-end plugin uninstallation script.'
-                    . ' Plugin may already be uninstalled.'
+                'Unable to find cPanel user-end plugin uninstallation script. '
+                    . 'Plugin may already be uninstalled.'
             );
         }
 
@@ -663,23 +666,20 @@ class CPanel extends ControlPanel
      *
      * @throws LSCMException  Thrown indirectly by
      *     self::UpdateCpanelPluginConf() call.
+     * @throws LSCMException  Thrown indirectly by $this->getVHCacheRoot() call.
      * @throws LSCMException  Thrown indirectly by
      *     self::UpdateCpanelPluginConf() call.
      */
     public function updateCoreCpanelPluginConfSettings()
     {
-        $lswsHome = realpath(__DIR__ . '/../../../..');
-
         self::UpdateCpanelPluginConf(
             self::USER_PLUGIN_SETTING_LSWS_DIR,
-            $lswsHome
+            realpath(__DIR__ . '/../../../..')
         );
-
-        $vhCacheRoot = $this->getVHCacheRoot();
 
         self::UpdateCpanelPluginConf(
             self::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT,
-            $vhCacheRoot
+            $this->getVHCacheRoot()
         );
     }
 
@@ -687,8 +687,8 @@ class CPanel extends ControlPanel
      *
      * @since 1.13.2.2  Made function static.
      *
-     * @param string  $setting
-     * @param mixed   $value
+     * @param string $setting
+     * @param mixed  $value
      *
      * @throws LSCMException  Thrown when unable to determine active cPanel
      *     user-end plugin conf file location usually indicating that the
@@ -716,8 +716,8 @@ class CPanel extends ControlPanel
             if ( $activeConfFile == '' ) {
                 throw new LSCMException(
                     'Unable to determine active conf file location for cPanel '
-                    . 'user-end plugin. cPanel user-end plugin is likely not '
-                    . 'installed.'
+                        . 'user-end plugin. cPanel user-end plugin is likely '
+                        . 'not installed.'
                 );
             }
 
@@ -737,7 +737,7 @@ class CPanel extends ControlPanel
 
                     if ( $activeConfFile == "$pluginInstall/" . self::USER_PLUGIN_RELATIVE_CONF_OLD_2
                         && !file_exists($dataDir)
-                        && !mkdir($dataDir)) {
+                        && !mkdir($dataDir) ) {
 
                         throw new LSCMException(
                             "Failed to create directory $dataDir."
@@ -751,7 +751,7 @@ class CPanel extends ControlPanel
             if ( file_exists($activeConfFile) ) {
                 chmod($activeConfFile, 0644);
 
-                switch ($setting) {
+                switch ( $setting ) {
 
                     case self::USER_PLUGIN_SETTING_LSWS_DIR:
                         $pattern = '/LSWS_HOME_DIR = ".*"/';
@@ -790,6 +790,8 @@ class CPanel extends ControlPanel
      *
      * @since 1.13.11
      *
+     * @param string $pluginDir
+     *
      * @return string
      */
     protected static function getInstalledCpanelPluginActiveConfFileLocation(
@@ -798,9 +800,13 @@ class CPanel extends ControlPanel
         $versionFile = "$pluginDir/VERSION";
 
         if ( file_exists($versionFile) ) {
-            $versionNum = file_get_contents($versionFile);
+            $verGreaterThan2_1_2_2 = Util::betterVersionCompare(
+                file_get_contents($versionFile),
+                '2.1.2.2',
+                '>'
+            );
 
-            if ( Util::betterVersionCompare($versionNum, '2.1.2.2','>') ) {
+            if ( $verGreaterThan2_1_2_2 ) {
                 return self::USER_PLUGIN_CONF;
             }
         }
