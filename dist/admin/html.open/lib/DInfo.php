@@ -71,11 +71,11 @@ class DInfo
     public function InitConf()
     {
         $has_pid = false;
-        $mid = UIBase::GrabGoodInput("request", 'm');
+        $mid = UIBase::GrabGoodInput("get", 'm');
 
         if ($mid != null) {
             $this->_mid = $mid;
-            $pid = UIBase::GrabGoodInput("request", 'p');
+            $pid = UIBase::GrabGoodInput("get", 'p');
             if ($pid != null) {
                 $this->_pid = $pid;
                 $has_pid = true;
