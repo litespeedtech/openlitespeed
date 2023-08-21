@@ -668,12 +668,12 @@ void LocalWorker::configRlimit(RLimits *pRLimits, const XmlNode *pNode)
         ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "CPUHardLimit", 0,
                 INT_MAX, 0));
     long memSoft = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "memSoftLimit", 0, LONG_MAX, 0);
+                   "memSoftLimit", -1, LONG_MAX, 0);
     long memHard = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                   "memHardLimit", 0, LONG_MAX, 0);
+                   "memHardLimit", -1, LONG_MAX, 0);
 
-    if ((memSoft & (memSoft < 1024 * 1024)) ||
-        (memHard & (memHard < 1024 * 1024)))
+    if ((memSoft > 0 && (memSoft < 1024 * 1024)) ||
+        (memHard > 0 && (memHard < 1024 * 1024)))
     {
         LS_ERROR(ConfigCtx::getCurConfigCtx(),
                  "Memory limit is too low with %ld/%ld",

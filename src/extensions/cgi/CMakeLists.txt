@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 #include_directories("/usr/lib64/glib-2.0/include")
 #include_directories("/usr/include/glib-2.0")

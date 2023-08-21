@@ -1,5 +1,5 @@
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)

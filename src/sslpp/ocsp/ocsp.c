@@ -98,6 +98,7 @@
 #include <sslpp/ocsp/ocsp.h>
 #include <openssl/asn1t.h>
 #include <openssl/asn1.h>
+#include <openssl/type_check.h>
 
 #include <string.h>
 

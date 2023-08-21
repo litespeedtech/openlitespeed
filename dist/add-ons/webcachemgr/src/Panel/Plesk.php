@@ -44,6 +44,8 @@ class Plesk extends ControlPanel
      *
      * @return string
      *
+     * @throws LSCMException  Thrown when supported Plesk OS detection command
+     *     fails.
      * @throws LSCMException  Thrown when supported OS is not detected.
      */
     public function getPleskOS()
@@ -80,7 +82,15 @@ class Plesk extends ControlPanel
         }
 
         foreach ( $cmds as $cmd ) {
-            $OS = trim(shell_exec($cmd));
+
+            if ( !($output = shell_exec($cmd)) ) {
+                throw new LSCMException(
+                    'Supported Plesk OS detection command failed.',
+                    LSCMException::E_UNSUPPORTED
+                );
+            }
+
+            $OS = trim($output);
 
             foreach ( $supportedOsList as $supportedOs ) {
 
@@ -260,7 +270,7 @@ class Plesk extends ControlPanel
         );
 
         $this->log(
-            "Virutal Host cache root set to $vhCacheRoot",
+            "Virtual Host cache root set to $vhCacheRoot",
             Logger::L_INFO
         );
     }
@@ -307,6 +317,8 @@ class Plesk extends ControlPanel
          * ServerAlias "www.pltest2.com"
          * ServerAlias "ipv4.pltest2.com"
          * DocumentRoot "/var/www/vhosts/pltest2.com/httpdocs"
+         *
+         * @noinspection SpellCheckingInspection
          */
 
         $x = 0;
@@ -426,17 +438,19 @@ class Plesk extends ControlPanel
         $serverName = $wpInstall->getData(WPInstall::FLD_SERVERNAME);
 
         if ( $serverName != null ) {
-            $binPath = trim(
-                shell_exec(
-                    'plesk db -Ne "SELECT s.value '
-                        . 'FROM ((domains d INNER JOIN hosting h ON h.dom_id=d.id) '
-                        . 'INNER JOIN ServiceNodeEnvironment s '
-                        . 'ON h.php_handler_id=s.name) '
-                        . 'WHERE d.name=' . escapeshellarg($serverName)
-                        . ' AND s.section=\'phphandlers\'" '
-                        . '| sed -n \'s:.*<clipath>\(.*\)</clipath>.*:\1:p\''
-                )
+            $output = shell_exec(
+                'plesk db -Ne "SELECT s.value '
+                    . 'FROM ((domains d INNER JOIN hosting h ON h.dom_id=d.id) '
+                    . 'INNER JOIN ServiceNodeEnvironment s '
+                    . 'ON h.php_handler_id=s.name) '
+                    . 'WHERE d.name=' . escapeshellarg($serverName)
+                    . ' AND s.section=\'phphandlers\'" '
+                    . '| sed -n \'s:.*<clipath>\(.*\)</clipath>.*:\1:p\''
             );
+
+            if ( $output ) {
+                $binPath = trim($output);
+            }
         }
 
         if ( !empty($binPath) ) {

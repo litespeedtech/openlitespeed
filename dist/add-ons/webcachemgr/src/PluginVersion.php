@@ -11,6 +11,7 @@
 namespace Lsc\Wp;
 
 use Lsc\Wp\Context\Context;
+use LsUserPanel\Lsc\UserLSCMException;
 
 class PluginVersion
 {
@@ -333,6 +334,9 @@ class PluginVersion
      *     pre-formatted $this->setShortVersions().
      *
      * @throws LSCMException  Thrown when LSCWP version list cannot be found.
+     * @throws LSCMException  Thrown when read LSCWP version list command fails.
+     * @throws LSCMException  Thrown when match against LSCWP version list
+     *     content fails.
      */
     protected function setKnownVersions()
     {
@@ -343,11 +347,19 @@ class PluginVersion
             );
         }
 
-        preg_match(
-            '/old\s{(.*)}/sU',
-            trim(file_get_contents($this->versionFile)),
-            $m
-        );
+        if ( ($content = file_get_contents($this->versionFile)) === false ) {
+            throw new LSCMException(
+                'Failed to read LSCWP version list content.',
+                LSCMException::E_NON_FATAL
+            );
+        }
+
+        if ( preg_match('/old\s{(.*)}/sU', trim($content), $m) != 1 ) {
+            throw new LSCMException(
+                'Failed to get known versions from LSCWP version list content.',
+                LSCMException::E_NON_FATAL
+            );
+        }
 
         $this->knownVersions = explode("\n", trim($m[1]));
     }
@@ -355,6 +367,7 @@ class PluginVersion
     /**
      *
      * @throws LSCMException  Thrown when LSCWP version list cannot be found.
+     * @throws LSCMException  Thrown when read LSCWP version list command fails.
      * @throws LSCMException  Thrown when LSCWP version list content is empty.
      */
     protected function setAllowedVersions()
@@ -366,9 +379,16 @@ class PluginVersion
             );
         }
 
+        if ( ($content = file_get_contents($this->versionFile)) === false ) {
+            throw new LSCMException(
+                'Failed to read LSCWP version list content.',
+                LSCMException::E_NON_FATAL
+            );
+        }
+
         $matchFound = preg_match(
             '/allowed\s{(.*)}/sU',
-            trim(file_get_contents($this->versionFile)),
+            trim($content),
             $m
         );
 
@@ -387,6 +407,7 @@ class PluginVersion
      * @since 4.1.3
      *
      * @throws LSCMException  Thrown when LSCWP version list cannot be found.
+     * @throws LSCMException  Thrown when read LSCWP version list command fails.
      * @throws LSCMException  Thrown when LSCWP version list content is empty.
      */
     protected function setShortVersions()
@@ -398,9 +419,16 @@ class PluginVersion
             );
         }
 
+        if ( ($content = file_get_contents($this->versionFile)) === false ) {
+            throw new LSCMException(
+                'Failed to read LSCWP version list content.',
+                LSCMException::E_NON_FATAL
+            );
+        }
+
         $matchFound = preg_match(
             '/short\s{(.*)}/sU',
-            trim(file_get_contents($this->versionFile)),
+            trim($content),
             $m
         );
 

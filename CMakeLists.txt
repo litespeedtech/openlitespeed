@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 Project(openlitespeed)
@@ -7,7 +7,7 @@ INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
 set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 17)
+set(openlitespeed_PATCH_VERSION 18)
 set(openlitespeed_VERSION
     ${openlitespeed_MAJOR_VERSION}.${openlitespeed_MINOR_VERSION}.${openlitespeed_PATCH_VERSION})
 
@@ -93,7 +93,7 @@ set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -march=corei7 -maes -mpclmul -mpopcnt")
 endif(OPT_SSE4)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${MY_CMAKE_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MY_CMAKE_FLAGS}")
 
 
 add_definitions(-DDISABLE_OBJ_POOL)

@@ -7,7 +7,7 @@
 # @copyright (c) 2017-2023 LiteSpeed Technologies, Inc.
 # *********************************************/
 
-VERSION='1.12.2'
+VERSION='1.12.3'
 OS=$(uname -s)
 SCRIPT_DIR=$(cd "$(dirname "${0}")" && pwd)
 
@@ -57,9 +57,9 @@ printHelp()
     printCmdOption 'setversion' '[{--list | --latest | <version>}]' 'List/Set active LSCWP version. This command will list the currently active version when no additional input is given. Use --list to show available versions or --latest to switch to the latest available version. A valid version number can also be provided to switch to that version specifically. This must be set before performing other lscmctl operations.'
 	printCmdOption 'scan' '[-n] [-e]' 'Scan for all WordPress installations. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. Add the -n flag to only discover new installations. By adding the -e flag, LSCWP will be enabled on all known installations after scanning is complete.'
     printCmdOption 'scannew' '[-en] ' 'Scan for WordPress installations not already discovered in a previous scan. This command will create an lscm.data file under the "lsws/admin/lscdata" directory. By adding the -en flag, LSCWP will be enabled only on newly discovered installations after scanning is complete. If you would rather enable LSCWP for all known installations, after scanning for previously undiscovered installations, please use command '"'"'scan -n -e'"'"' instead.'
-	printCmdOption 'enable' '{-m | <wp path>}' 'Enables LSWCP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
-	printCmdOption 'disable' '{-m | <wp path>}' 'Disables LSWCP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
-    printCmdOption 'upgrade' '{-m | <wp path>}' 'Upgrade LSWCP for all discovered WordPress installations to the current active version with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+	printCmdOption 'enable' '{-m | <wp path>}' 'Enables LSCWP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+	printCmdOption 'disable' '{-m | <wp path>}' 'Disables LSCWP for all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
+    printCmdOption 'upgrade' '{-m | <wp path>}' 'Upgrade LSCWP for all discovered WordPress installations to the current active version with the -m parameter or a single installation by providing the path to the WordPress installation directory.'
     printCmdOption 'flag' '<wp path>' 'Flag a single WordPress installation. Flagged installations will be skipped during mass operations.'
     printCmdOption 'unflag' '{-m | <wp path>}' 'Unflag all discovered WordPress installations with the -m parameter or a single installation by providing the path to the WordPress installation directory. Flagged installations will be skipped during mass operations.'
     printCmdOption 'status' '<wp path>' 'Get the most up to date LSCWP status for the provided WordPress installation.'
@@ -95,7 +95,9 @@ updateMinAPIVerFile()
     MIN_VER=$(wget -q https://www.litespeed.sh/sub/shared/MIN_VER -O -)
     RET=$?
 
-    if [ "$RET" != "0" ] ; then
+    if [ "${RET}" = "127" ] ; then
+        errorExit "Required command 'wget' not found with exit code 127."
+    elif [ "$RET" != "0" ] ; then
         errorExit "Failed to download latest MIN_VER file with wget exit status ${RET}."
     fi
 
@@ -193,7 +195,11 @@ runUpdate()
             /bin/rm -f "${LOCAL_TAR_FILE}"
         fi
 
-        errorExit "Failed to download latest shared code with wget exit status ${RET}."
+        if [ "${RET}" = "127" ] ; then
+            errorExit "Required command 'wget' not found with exit code 127."
+        else
+            errorExit "Failed to download latest shared code with wget exit status ${RET}."
+        fi
     fi
 
     MD5_VALUE=$(wget -q https://shared.litespeed.sh/latest/md5 -O -)
@@ -244,7 +250,7 @@ runUpdate()
 
 errorExit()
 {
-    printf "${YELLOW}ERROR: ${END_COLOR} %s\n\n" "${1}" >&2
+    printf "${YELLOW}ERROR:${END_COLOR} %s\n\n" "${1}" >&2
     exit 1
 }
 

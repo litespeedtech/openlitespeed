@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author Michael Alegre
- * @copyright (c) 2018-2022 LiteSpeed Technologies, Inc.
+ * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -12,6 +12,7 @@ namespace Lsc\Wp;
 
 use Lsc\Wp\Context\Context;
 use Lsc\Wp\Panel\ControlPanel;
+use Lsc\Wp\ThirdParty\Polyfill\Utf8;
 
 /**
  * map to data file
@@ -182,6 +183,19 @@ class WPInstallStorage
 
     /**
      *
+     * @since 1.15
+     *
+     * @param string $dataFile
+     *
+     * @return false|string
+     */
+    protected static function getDataFileContents( $dataFile )
+    {
+        return file_get_contents($dataFile);
+    }
+
+    /**
+     *
      * @param string $dataFile
      *
      * @return WPInstall[]
@@ -193,7 +207,7 @@ class WPInstallStorage
      */
     protected function getDataFileData( $dataFile )
     {
-        $content = file_get_contents($dataFile);
+        $content = static::getDataFileContents($dataFile);
 
         if ( ($data = json_decode($content, true)) === null ) {
             /*
@@ -221,7 +235,7 @@ class WPInstallStorage
         $wpInstalls = array();
 
         foreach ( $data as $utf8Path => $idata ) {
-            $path = utf8_decode($utf8Path);
+            $path = Utf8::decode($utf8Path);
             $i = new WPInstall($path);
 
             $idata[WPInstall::FLD_SITEURL] =
@@ -423,7 +437,7 @@ class WPInstallStorage
             foreach ( $wpInstalls as $path => $install ) {
 
                 if ( !$install->shouldRemove() ) {
-                    $utf8Path = utf8_encode($path);
+                    $utf8Path = Utf8::encode($path);
 
                     $data[$utf8Path] = $install->getData();
 
@@ -902,6 +916,8 @@ class WPInstallStorage
     /**
      *
      * @since 1.13.3
+     * @since 1.15  Changed function visibility from 'public' to
+     *     'public static'.
      *
      * @param string $docroot
      *
@@ -909,7 +925,7 @@ class WPInstallStorage
      *
      * @throws LSCMException  Thrown indirectly by Context::getScanDepth() call.
      */
-    public function scan2( $docroot )
+    public static function scan2( $docroot )
     {
         $directories = shell_exec(
             "find -L $docroot -maxdepth " . Context::getScanDepth()

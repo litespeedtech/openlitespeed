@@ -651,4 +651,31 @@ class Util
         );
     }
 
+    /**
+     *
+     * @since 1.15.0.1
+     *
+     * @param string                            $constantName
+     * @param array|bool|float|int|null|string  $value
+     * @param bool                              $caseInsensitive  Optional
+     *     parameter used for define calls in PHP versions below 7.3.
+     *
+     * @return bool
+     *
+     * @noinspection PhpDeprecationInspection  Ignore deprecation of define()
+     *     parameter $case_insensitive for PHP versions below 7.3.
+     * @noinspection RedundantSuppression
+     */
+    public static function define_wrapper(
+        $constantName,
+        $value,
+        $caseInsensitive = false )
+    {
+        if ( PHP_VERSION_ID < 70300 ) {
+            return define($constantName, $value, $caseInsensitive);
+        }
+        else {
+            return define($constantName, $value);
+        }
+    }
 }

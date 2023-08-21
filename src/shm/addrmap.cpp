@@ -159,7 +159,7 @@ int AddrMap::mapAddrSpace(size_t total)
     size_t bytes = (needed + LARGE_PAGE_MASK ) & ~LARGE_PAGE_MASK;
     pair.m_ptr = (char *) mmap(NULL, bytes + LARGE_PAGE_SIZE, PROT_NONE,
                                MAP_ANON|MAP_SHARED, -1, 0);
-    if (!pair.m_ptr)
+    if (pair.m_ptr == MAP_FAILED)
         return LS_FAIL;
     if (((unsigned long)pair.m_ptr & LARGE_PAGE_MASK) == 0)
         bytes += LARGE_PAGE_SIZE;

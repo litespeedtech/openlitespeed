@@ -741,7 +741,7 @@ class UserCommand
         /**
          * LSCWP_REF used by LSCWP plugin.
          */
-        define('LSCWP_REF', array_shift($args), false);
+        Util::define_wrapper('LSCWP_REF', array_shift($args));
 
         $install = new WPInstall($wpPath);
 
@@ -1058,7 +1058,7 @@ class UserCommand
         if ( $cmd = self::getUserCommand() ) {
 
             if ( !defined('LSCM_RUN_AS_USER') ) {
-                define('LSCM_RUN_AS_USER', 1, false);
+                Util::define_wrapper('LSCM_RUN_AS_USER', 1);
             }
 
             $ret = $cmd->runAsUser();

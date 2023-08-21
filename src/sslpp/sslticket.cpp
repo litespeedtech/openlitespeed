@@ -31,6 +31,7 @@
 #define static_assert(a, b) _Static_assert(a, b)
 #endif
 
+#include <openssl/hmac.h>
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 

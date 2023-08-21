@@ -1222,7 +1222,7 @@ EOF;
                     foreach ( $docroots as $docroot ) {
                         $wpPaths = array_merge(
                             $wpPaths,
-                            $wpInstallStorage->scan2($docroot)
+                            WPInstallStorage::scan2($docroot)
                         );
                     }
 

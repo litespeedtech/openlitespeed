@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.14.5';
+    const PANEL_API_VERSION = '1.16.1';
 
     /**
      * @since 1.9
@@ -1009,7 +1009,11 @@ abstract class ControlPanel
             static::populateMinAPIVerFile();
         }
 
-        return trim(file_get_contents($minVerFile));
+        if ( ($content = file_get_contents($minVerFile)) !== false ) {
+            return trim($content);
+        }
+
+        return '';
     }
 
     /**
@@ -1043,6 +1047,12 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.16.1',
+            '1.16.0.2',
+            '1.16.0.1',
+            '1.16',
+            '1.15.0.1',
+            '1.15',
             '1.14.5',
             '1.14.4.1',
             '1.14.4',
