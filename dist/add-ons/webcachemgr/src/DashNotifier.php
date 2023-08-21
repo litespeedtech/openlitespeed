@@ -38,7 +38,14 @@ class DashNotifier
      * @since 1.9
      *
      * @return void
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown when read dash version file command fails.
+     * @throws LSCMException  Thrown indirectly by self::getLatestVersion()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by self::downloadVersion() call.
+     * @throws LSCMException  Thrown indirectly by self::downloadVersion() call.
+     * @throws LSCMException  Thrown indirectly by self::downloadVersion() call.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
      */
     public static function prepLocalDashPluginFiles()
     {
@@ -50,7 +57,14 @@ class DashNotifier
             return;
         }
 
-        $localVer = trim(file_get_contents($dashVerFile));
+        if ( ($content = file_get_contents($dashVerFile)) === false ) {
+            throw new LSCMException(
+                'prepLocalDashPluginFiles(): Failed to read file '
+                    . self::VER_FILE . ' contents.'
+            );
+        }
+
+        $localVer = trim($content);
 
         $pluginDir = Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME;
 
@@ -96,18 +110,18 @@ class DashNotifier
      */
     public static function getLatestVersion()
     {
-        $latestVer = '';
-        $latestVerUrl = 'https://www.litespeedtech.com/packages/lswpcache/dash_latest';
+        $latestVerUrl =
+            'https://www.litespeedtech.com/packages/lswpcache/dash_latest';
 
         $content = Util::get_url_contents($latestVerUrl);
 
         if ( empty($content) ) {
-            throw new LSCMException('Could not retrieve latest Dash Notifier plugin version');
+            throw new LSCMException(
+                'Could not retrieve latest Dash Notifier plugin version'
+            );
         }
 
-        $latestVer = trim($content);
-
-        return $latestVer;
+        return trim($content);
     }
 
     /**
@@ -247,7 +261,7 @@ class DashNotifier
             /**
              * Used to pass info to the Dash Notifier Plugin.
              */
-            define( 'DASH_NOTIFIER_MSG', $jsonInfo, false);
+            Util::define_wrapper( 'DASH_NOTIFIER_MSG', $jsonInfo);
 
             if ( !is_plugin_active(self::DASH_PLUGIN) ) {
 

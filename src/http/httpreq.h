@@ -164,7 +164,7 @@ typedef struct
 
 #define COOKIE_FLAG_PHPSESSID       1
 #define COOKIE_FLAG_FRONTEND        2
-#define COOKIE_FLAG_XF_SESSID       4
+#define COOKIE_FLAG_APP_SESSID      4
 #define COOKIE_FLAG_RESP_UPDATE     8
 
 
@@ -784,6 +784,7 @@ public:
     int removeSpace(const char **pCur, const char *pBEnd);
     int parseURI(const char *pCur, const char *pBEnd);
     const char *skipSpace(const char *pOrg, const char *pDest);
+    bool validateHeaderName(const char *name, int name_len);
     int processHeader(int index);
     int processUnknownHeader(key_value_pair* pCurHeader,
                              const char* name, const char* value);

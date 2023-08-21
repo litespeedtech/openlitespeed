@@ -469,6 +469,31 @@ class PanelController
 
     /**
      *
+     * @since 1.15
+     *
+     * @param string[] $docroots
+     * @param string[] $wpPaths  Array of discovered WordPress installations
+     *     (passed by address).
+     *
+     * @return int  Completed count.
+     *
+     * @throws LSCMException  Thrown indirectly by WPInstallStorage->scan2()
+     *     call.
+     */
+    protected function runScan2Logic( array $docroots, array &$wpPaths )
+    {
+        foreach ( $docroots as $docroot ) {
+            $wpPaths = array_merge(
+                $wpPaths,
+                WPInstallStorage::scan2($docroot)
+            );
+        }
+
+        return count($docroots);
+    }
+
+    /**
+     *
      * @since 1.13.3
      *
      * @return bool|void  Function outputs ajax and exits without returning a
@@ -478,8 +503,7 @@ class PanelController
      *     $this->panelEnv->getDocroots() call.
      * @throws LSCMException  Thrown indirectly by Logger::uiError() call.
      * @throws LSCMException  Thrown indirectly by $this->getBatchSize() call.
-     * @throws LSCMException  Thrown indirectly by
-     *     $this->wpInstallStorage->scan2() call.
+     * @throws LSCMException  Thrown indirectly by $this->runScan2Logic() call.
      * @throws LSCMException  Thrown indirectly by $this->getBatchSize() call.
      * @throws LSCMException  Thrown indirectly by
      *     $this->wpInstallStorage->doAction() call.
@@ -548,15 +572,14 @@ class PanelController
                 $batch     = array_splice($info['homeDirs'], 0, $batchSize);
 
                 $wpPaths = array();
+                $completedCount = $this->runScan2Logic($batch, $wpPaths);
 
-                foreach ( $batch as $docroot ) {
-                    $wpPaths = array_merge(
-                        $wpPaths,
-                        $this->wpInstallStorage->scan2($docroot)
+                if ( $completedCount != $batchSize ) {
+                    $info['homeDirs'] = array_merge(
+                        array_slice($batch, $completedCount),
+                        $info['homeDirs']
                     );
                 }
-
-                $completedCount = $batchSize;
 
                 if ( $action == WPInstallStorage::CMD_DISCOVER_NEW2 ) {
 

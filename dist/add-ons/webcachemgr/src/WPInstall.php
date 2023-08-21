@@ -4,14 +4,14 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2023
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\Panel\ControlPanel;
-use \Lsc\Wp\Context\Context;
+use Lsc\Wp\Panel\ControlPanel;
+use Lsc\Wp\Context\Context;
 
 class WPInstall
 {
@@ -107,7 +107,7 @@ class WPInstall
     protected $path;
 
     /**
-     * @var mixed[]
+     * @var array
      */
     protected $data;
 
@@ -122,7 +122,7 @@ class WPInstall
     protected $suCmd = null;
 
     /**
-     * @var null|mixed[]  Keys are 'user_id', 'user_name', 'group_id'
+     * @var null|array  Keys are 'user_id', 'user_name', 'group_id'
      */
     protected $ownerInfo = null;
 
@@ -153,7 +153,7 @@ class WPInstall
 
     /**
      *
-     * @param string  $path
+     * @param string $path
      */
     public function __construct( $path )
     {
@@ -162,7 +162,7 @@ class WPInstall
 
     /**
      *
-     * @param string  $path
+     * @param string $path
      */
     protected function init( $path )
     {
@@ -174,10 +174,10 @@ class WPInstall
         }
 
         $this->data = array(
-            self::FLD_STATUS => 0,
-            self::FLD_DOCROOT => null,
+            self::FLD_STATUS     => 0,
+            self::FLD_DOCROOT    => null,
             self::FLD_SERVERNAME => null,
-            self::FLD_SITEURL => null
+            self::FLD_SITEURL    => null
         );
     }
 
@@ -214,8 +214,9 @@ class WPInstall
 
     /**
      *
-     * @param string    $docRoot
-     * @return boolean
+     * @param string $docRoot
+     *
+     * @return bool
      */
     public function setDocRoot( $docRoot )
     {
@@ -233,8 +234,9 @@ class WPInstall
 
     /**
      *
-     * @param string  $serverName
-     * @return boolean
+     * @param string $serverName
+     *
+     * @return bool
      */
     public function setServerName( $serverName )
     {
@@ -248,8 +250,9 @@ class WPInstall
      * Note: Temporary function name until existing deprecated setSiteUrl()
      * function is removed.
      *
-     * @param string  $siteUrl
-     * @return boolean
+     * @param string $siteUrl
+     *
+     * @return bool
      */
     public function setSiteUrlDirect( $siteUrl )
     {
@@ -261,8 +264,9 @@ class WPInstall
 
     /**
      *
-     * @param int  $status
-     * @return boolean
+     * @param int $status
+     *
+     * @return bool
      */
     public function setStatus( $status )
     {
@@ -280,7 +284,8 @@ class WPInstall
 
     /**
      *
-     * @param string  $field
+     * @param string $field
+     *
      * @return mixed|null
      */
     public function getData( $field = '' )
@@ -301,28 +306,29 @@ class WPInstall
 
     /**
      *
-     * @param string  $field
-     * @param mixed   $value
-     * @return boolean
+     * @param string $field
+     * @param mixed  $value
+     *
+     * @return bool
      */
     protected function setData( $field, $value )
     {
-        $updated = false;
-
         if ( $this->data[$field] !== $value ) {
-            $this->changed = $updated = true;
+            $this->changed = true;
             $this->data[$field] = $value;
+
+            return true;
         }
 
-        return $updated;
+        return false;
     }
 
     /**
      * Calling from unserialized data.
      *
-     * @param mixed[]  $data
+     * @param array $data
      */
-    public function initData( $data )
+    public function initData( array $data )
     {
         $this->data = $data;
     }
@@ -338,88 +344,96 @@ class WPInstall
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public function shouldRemove()
     {
-        return ($this->getStatus() & self::ST_ERR_REMOVE) ? true : false;
+        return (bool)(($this->getStatus() & self::ST_ERR_REMOVE));
     }
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public function hasFlagFile()
     {
-        return file_exists("{$this->path}/" . self::FLAG_FILE);
-    }
-
-    public function hasNewLscwpFlagFile()
-    {
-        return file_exists("{$this->path}/" . self::FLAG_NEW_LSCWP);
+        return file_exists("$this->path/" . self::FLAG_FILE);
     }
 
     /**
      *
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     * @return bool
+     */
+    public function hasNewLscwpFlagFile()
+    {
+        return file_exists("$this->path/" . self::FLAG_NEW_LSCWP);
+    }
+
+    /**
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::uiError() call.
+     * @throws LSCMException  Thrown indirectly by Logger::notice() call.
+     * @throws LSCMException  Thrown indirectly by $this->addUserFlagFile()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::uiError() call.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
      */
     public function hasValidPath()
     {
-        if ( !is_dir($this->path) || !is_dir("{$this->path}/wp-admin") ) {
+        if ( !is_dir($this->path) || !is_dir("$this->path/wp-admin") ) {
             $this->setStatusBit(self::ST_ERR_REMOVE);
 
-            $msg = "{$this->path} - Could not be found and has been removed "
-                . 'from Cache Manager list.';
+            $msg = "$this->path - Could not be found and has been removed from "
+                . 'Cache Manager list.';
             Logger::uiError($msg);
             Logger::notice($msg);
+
+            return false;
         }
-        elseif ( $this->getWpConfigFile() == null ) {
+
+        if ( $this->getWpConfigFile() == null ) {
             $this->setStatusBit(self::ST_ERR_WPCONFIG);
             $this->addUserFlagFile(false);
 
-            $msg = "{$this->path} - Could not find a valid wp-config.php file. "
+            $msg = "$this->path - Could not find a valid wp-config.php file. "
                 . 'Install has been flagged.';
             Logger::uiError($msg);
             Logger::error($msg);
-        }
-        else {
-            return true;
+
+            return false;
         }
 
-        return false;
+        return true;
     }
 
     /**
      * Set the provided status bit.
      *
-     * @param int  $bit
+     * @param int $bit
      */
     public function setStatusBit( $bit )
     {
-        $status = $this->getStatus();
-        $status |= $bit;
-        $this->setStatus($status);
+        $this->setStatus(($this->getStatus() | $bit));
     }
 
     /**
      * Unset the provided status bit.
      *
-     * @param int  $bit
+     * @param int $bit
      */
     public function unsetStatusBit( $bit )
     {
-        $status = $this->getStatus();
-        $status &= ~$bit;
-        $this->setStatus($status);
+        $this->setStatus(($this->getStatus() & ~$bit ));
     }
 
     /**
      *
      * @deprecated 1.9.5  Deprecated to avoid confusion with $this->cmdStatus
-     *                    and $this->cmdMsg related functions. Use
-     *                    $this->setStatus() instead.
-     * @param int  $newStatus
+     *     and $this->cmdMsg related functions. Use $this->setStatus() instead.
+     *
+     * @param int $newStatus
      */
     public function updateCommandStatus( $newStatus )
     {
@@ -433,17 +447,17 @@ class WPInstall
     public function getWpConfigFile()
     {
         if ( $this->wpConfigFile === '' ) {
-            $file = "{$this->path}/wp-config.php";
+            $file = "$this->path/wp-config.php";
 
             if ( !file_exists($file) ) {
                 /**
                  *  check parent dir
                  */
                 $parentDir = dirname($this->path);
-                $file = "{$parentDir}/wp-config.php";
+                $file = "$parentDir/wp-config.php";
 
                 if ( !file_exists($file)
-                        || file_exists("{$parentDir}/wp-settings.php") ) {
+                        || file_exists("$parentDir/wp-settings.php") ) {
 
                     /**
                      * If wp-config moved up, in same dir should NOT have
@@ -462,12 +476,20 @@ class WPInstall
     /**
      * Takes a WordPress site URL and uses it to populate serverName, siteUrl,
      * and docRoot data. If a matching docRoot cannot be found using the
-     * serverName, the install will be flagged and an ST_ERR_DOCROOT status set.
+     * serverName, the installation will be flagged and an ST_ERR_DOCROOT status
+     * set.
      *
      * @param string $url
      *
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance()->mapDocRoot() call.
+     * @throws LSCMException  Thrown indirectly by $this->addUserFlagFile()
+     *     call.
+     * @throws LSCMException  Thrown indirectly by Logger::error() call.
      */
     public function populateDataFromUrl( $url )
     {
@@ -511,9 +533,13 @@ class WPInstall
      * Deprecated 06/18/19. Renamed to populateDataFromUrl().
      *
      * @deprecated
-     * @param string  $siteUrl
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @param string $siteUrl
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by $this->populateDataFromUrl()
+     *     call.
      */
     public function setSiteUrl( $siteUrl )
     {
@@ -523,27 +549,37 @@ class WPInstall
     /**
      * Adds the flag file to an installation.
      *
-     * @param boolean  $runningAsUser
-     * @return boolean  True when install has a flag file created/already.
-     * @throws LSCMException  Thrown indirectly.
+     * @param bool $runningAsUser
+     *
+     * @return bool  True when install has a flag file created/already.
+     *
+     * @throws LSCMException  Thrown when unlink() call on preexisting flag file
+     *     fails.
+     * @throws LSCMException  Thrown indirectly by Context::getFlagFileContent()
+     *     call.
      */
     public function addUserFlagFile( $runningAsUser = true )
     {
-        $file = "{$this->path}/" . self::FLAG_FILE;
+        $flagFile = "$this->path/" . self::FLAG_FILE;
 
-        if ( !file_exists($file) ) {
-            $content = Context::getFlagFileContent();
-
-            if ( !file_put_contents($file, $content) ) {
-                return false;
+        if ( file_exists($flagFile) ) {
+            /** Do not trust existing flag file */
+            if ( !unlink($flagFile) ) {
+                throw new LSCMException(
+                    'Failed to remove preexisting untrusted flag file.'
+                );
             }
+        }
+
+        if ( !file_put_contents($flagFile, Context::getFlagFileContent()) ) {
+            return false;
         }
 
         if ( !$runningAsUser ) {
             $ownerInfo = $this->getOwnerInfo();
 
-            chown($file, $ownerInfo['user_id']);
-            chgrp($file, $ownerInfo['group_id']);
+            chown($flagFile, $ownerInfo['user_id']);
+            chgrp($flagFile, $ownerInfo['group_id']);
         }
 
         $this->setStatusBit(self::ST_FLAGGED);
@@ -552,15 +588,15 @@ class WPInstall
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public function removeFlagFile()
     {
-        $file = "{$this->path}/" . self::FLAG_FILE;
+        $flagFile = "$this->path/" . self::FLAG_FILE;
 
-        if ( file_exists($file) ) {
+        if ( file_exists($flagFile) ) {
 
-            if ( !unlink($file) ) {
+            if ( !unlink($flagFile) ) {
                 return false;
             }
         }
@@ -576,11 +612,11 @@ class WPInstall
      * This function should only be called by the installation owner to avoid
      * permission problems involving this file.
      *
-     * @return boolean
+     * @return bool
      */
     public function addNewLscwpFlagFile()
     {
-        $file = "{$this->path}/" . self::FLAG_NEW_LSCWP;
+        $file = "$this->path/" . self::FLAG_NEW_LSCWP;
 
         if ( !file_exists($file) ) {
 
@@ -596,11 +632,11 @@ class WPInstall
      * Remove "In Progress" flag file to indicate that a WPInstall action has
      * been completed.
      *
-     * @return boolean
+     * @return bool
      */
     public function removeNewLscwpFlagFile()
     {
-        $file = "{$this->path}/" . self::FLAG_NEW_LSCWP;
+        $file = "$this->path/" . self::FLAG_NEW_LSCWP;
 
         if ( file_exists($file) ) {
 
@@ -614,9 +650,11 @@ class WPInstall
 
     /**
      *
-     * @param boolean  $forced
+     * @param bool $forced
+     *
      * @return int
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by UserCommand::issue() call.
      */
     public function refreshStatus( $forced = false )
     {
@@ -630,25 +668,29 @@ class WPInstall
 
     /**
      *
-     * @param string  $pluginDir
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $pluginDir
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     public function removePluginFiles( $pluginDir )
     {
         if ( file_exists(dirname($pluginDir)) && file_exists($pluginDir) ) {
-            exec("rm -rf {$pluginDir}");
+            exec("rm -rf $pluginDir");
 
-            $msg = "{$this->path} - Removed LSCache for WordPress plugin files "
-                . 'from plugins directory';
-            Logger::debug($msg);
+            Logger::debug(
+                "$this->path - Removed LSCache for WordPress plugin files from "
+                    . 'plugins directory'
+            );
         }
     }
 
+    /**
+     *
+     * @return bool
+     */
     public function isFlagBitSet()
     {
-        $status = $this->getStatus();
-
-        if ( $status & self::ST_FLAGGED ) {
+        if ( ($this->getStatus() & self::ST_FLAGGED) ) {
             return true;
         }
 
@@ -657,7 +699,8 @@ class WPInstall
 
     /**
      *
-     * @param null|int  $status
+     * @param null|int $status
+     *
      * @return bool
      */
     public function hasFatalError( $status = null )
@@ -666,12 +709,13 @@ class WPInstall
             $status = $this->getData(self::FLD_STATUS);
         }
 
-        $errMask = (self::ST_ERR_EXECMD
-            | self::ST_ERR_EXECMD_DB
-            | self::ST_ERR_TIMEOUT
-            | self::ST_ERR_SITEURL
-            | self::ST_ERR_DOCROOT
-            | self::ST_ERR_WPCONFIG
+        $errMask = (
+            self::ST_ERR_EXECMD
+                | self::ST_ERR_EXECMD_DB
+                | self::ST_ERR_TIMEOUT
+                | self::ST_ERR_SITEURL
+                | self::ST_ERR_DOCROOT
+                | self::ST_ERR_WPCONFIG
         );
 
         return (($status & $errMask) > 0);
@@ -680,13 +724,17 @@ class WPInstall
     /**
      *
      * @return string
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     ControlPanel::getClassInstance()->getPhpBinary() call.
      */
     public function getPhpBinary()
     {
         if ( $this->phpBinary == null ) {
             $this->phpBinary =
-                    ControlPanel::getClassInstance()->getPhpBinary($this);
+                ControlPanel::getClassInstance()->getPhpBinary($this);
         }
 
         return $this->phpBinary;
@@ -695,9 +743,10 @@ class WPInstall
     /**
      * Returns requested owner info.
      *
-     * @param string  $field  Key ('user_id', 'user_name', or 'group_id') in
-     *                         the $ownerInfo array.
-     * @return mixed[]|int|string|null
+     * @param string $field  Key ('user_id', 'user_name', or 'group_id') in the
+     *     $ownerInfo array.
+     *
+     * @return array|int|string|null
      */
     public function getOwnerInfo( $field = '' )
     {
@@ -722,8 +771,7 @@ class WPInstall
     public function getSuCmd()
     {
         if ( $this->suCmd == null ) {
-            $owner = $this->getOwnerInfo('user_name');
-            $this->suCmd = "su {$owner} -s /bin/bash";
+            $this->suCmd = "su {$this->getOwnerInfo('user_name')} -s /bin/bash";
         }
 
         return $this->suCmd;
@@ -750,7 +798,7 @@ class WPInstall
     public function setCmdStatusAndMsg( $status, $msg )
     {
         $this->cmdStatus = $status;
-        $this->cmdMsg = $msg;
+        $this->cmdMsg    = $msg;
     }
 
 }

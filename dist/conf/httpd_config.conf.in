@@ -111,8 +111,8 @@ CGIRLimit{
     priority                                0 
     CPUSoftLimit                            10 
     CPUHardLimit                            50 
-    memSoftLimit                            1460M
-    memHardLimit                            1470M
+    memSoftLimit                            2047M
+    memHardLimit                            2047M
     procSoftLimit                           400 
     procHardLimit                           450 
 }
@@ -138,8 +138,8 @@ extProcessor lsphp{
     backlog                         100 
     instances                       1 
     priority                        0 
-    memSoftLimit                    2047M 
-    memHardLimit                    2047M 
+    memSoftLimit                    0
+    memHardLimit                    0
     procSoftLimit                   1400 
     procHardLimit                   1500 
 }
@@ -161,8 +161,8 @@ railsDefaults{
     runOnStartUp             3
     extMaxIdleTime           300
     priority                 3 
-    memSoftLimit             2047M 
-    memHardLimit             2047M 
+    memSoftLimit             0
+    memHardLimit             0
     procSoftLimit            500 
     procHardLimit            600 
 }
@@ -180,8 +180,8 @@ wsgiDefaults{
     runOnStartUp             3
     extMaxIdleTime           300
     priority                 3 
-    memSoftLimit             2047M 
-    memHardLimit             2047M 
+    memSoftLimit             0
+    memHardLimit             0
     procSoftLimit            500 
     procHardLimit            600 
 }
@@ -199,8 +199,8 @@ nodeDefaults{
     runOnStartUp             3
     extMaxIdleTime           300
     priority                 3 
-    memSoftLimit             2047M 
-    memHardLimit             2047M 
+    memSoftLimit             0
+    memHardLimit             0
     procSoftLimit            500 
     procHardLimit            600 
 }

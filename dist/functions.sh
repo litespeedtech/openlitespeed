@@ -42,6 +42,7 @@ init()
     INST_USER=`id`
     INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
 
+    ARCH=`arch`
     SYS_NAME=`uname -s`
     if [ "x$SYS_NAME" = "xFreeBSD" ] || [ "x$SYS_NAME" = "xNetBSD" ] || [ "x$SYS_NAME" = "xDarwin" ] ; then
         PS_CMD="ps -ax"
@@ -936,6 +937,24 @@ installation_lscpd()
 }
 
 
+install_missing_packages()
+{
+    if [ -f /etc/redhat-release ] ; then
+        output=$(cat /etc/redhat-release)
+        if echo $output | grep " 9."; then
+            yum -y install libxcrypt-compat libnsl
+        fi
+        if [ "${ARCH}" = "aarch64" ]; then
+            yum -y install libatomic
+        fi
+    elif [ -f /etc/debian_version ] ; then
+        if [ "${ARCH}" = "aarch64" ]; then
+            apt -y install libatomic1
+        fi
+    fi
+}
+
+
 installation()
 {   
     umask 022
@@ -943,6 +962,7 @@ installation()
         export PATH=/sbin:/usr/sbin:$PATH
         if [ "x$SYS_NAME" = "xLinux" ]; then
             create_lsadm
+            install_missing_packages
         elif [ "x$SYS_NAME" = "xFreeBSD" ] || [ "x$SYS_NAME" = "xNetBSD" ]; then
             create_lsadm_freebsd
         elif [ "x$SYS_NAME" = "xSunOS" ]; then

@@ -538,6 +538,7 @@ cd ../../../
 
 cd src/modules/lsrecaptcha
 export GOPATH=$CUR_PATH/src/modules/lsrecaptcha
+export GO111MODULE=off
 go build lsrecaptcha
 cp lsrecaptcha ../../../dist/lsrecaptcha/_recaptcha
 cd ../../../

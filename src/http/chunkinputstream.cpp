@@ -152,6 +152,8 @@ int ChunkInputStream::parseChunkLen(char *pLineEnd)
     StringTool::strTrim((const char *&)p, (const char *&)pLineEnd);
     *pLineEnd = 0;
     char *p1;
+    if (pLineEnd > p + 1 && !isxdigit(*(p + 1)))
+        return -1;
     long lLen = strtol(p, &p1, 16);
     if (((!*p1) || (*p1 == ' ') || (*p1 == ';')) && (p1 != p))
     {

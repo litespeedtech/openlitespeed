@@ -221,6 +221,7 @@ int LocalWorkerConfig::config(const XmlNode *pNode)
     if (ExtAppRegistry::getRLimits() != NULL)
         limits = *(ExtAppRegistry::getRLimits());
     limits.setCPULimit(RLIM_INFINITY, RLIM_INFINITY);
+    limits.setDataLimit(RLIM_INFINITY, RLIM_INFINITY);
     LocalWorker::configRlimit(&limits, pNode);
     setRLimits(&limits);
     Env *pEnv = getEnv();

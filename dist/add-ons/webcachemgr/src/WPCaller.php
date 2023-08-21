@@ -1541,7 +1541,7 @@ class WPCaller
 
             $this->setEnvVar('REQUEST_URI', $m3[1]);
 
-            define('WP_NETWORK_ADMIN', true, false);
+            Util::define_wrapper('WP_NETWORK_ADMIN', true);
         }
 
         return $isMultiSite;
@@ -1576,13 +1576,13 @@ class WPCaller
         /**
          * Attempt to override any WordPress memory limits.
          */
-        define('WP_MEMORY_LIMIT', '512M', false);
-        define('WP_MAX_MEMORY_LIMIT', '512M', false);
+        Util::define_wrapper('WP_MEMORY_LIMIT', '512M');
+        Util::define_wrapper('WP_MAX_MEMORY_LIMIT', '512M');
 
         /**
          * Only load core WordPress functionality.
          */
-        define('SHORTINIT', true, false);
+        Util::define_wrapper('SHORTINIT', true);
 
         $wpPath = $this->currInstall->getPath();
 
@@ -1707,7 +1707,7 @@ class WPCaller
         /**
          * Force WP to use PHP I/O file handling.
          */
-        define('FS_METHOD', 'direct', false);
+        Util::define_wrapper('FS_METHOD', 'direct');
 
         /**
          * Trigger an early return from WP Rocket advanced-cache.php to prevent
@@ -1737,7 +1737,7 @@ class WPCaller
         /**
          * Needs to be defined after including files.
          */
-        define('WP_ADMIN', true, false);
+        Util::define_wrapper('WP_ADMIN', true);
 
         /**
          * Define common WP constants and set 'wp_plugin_paths' array.

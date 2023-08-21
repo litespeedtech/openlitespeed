@@ -820,22 +820,24 @@ void HttpReq::setScriptNameLen(int n)
 int HttpReq::processHeaderLines()
 {
     const char *pBEnd = m_headerBuf.end();
-    const char *pMark = NULL;
+    const char *pColon = NULL;
     const char *pLineEnd = NULL;
     const char *pLineBegin  = m_headerBuf.begin() + m_iReqHeaderBufFinished;
     const char *pTemp = NULL;
     const char *pTemp1 = NULL;
+    char *p;
     key_value_pair *pCurHeader = NULL;
     bool headerfinished = false;
     int index;
+    int nameLen;
     int ret = 0;
 
     m_upgradeProto = UPD_PROTO_NONE; //0;
     while ((pLineEnd  = (const char *)memchr(pLineBegin, '\n',
                         pBEnd - pLineBegin)) != NULL)
     {
-        pMark = (const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
-        if (pMark != NULL)
+        pColon = (const char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
+        if (pColon != NULL)
         {
             while (1)
             {
@@ -858,7 +860,17 @@ int HttpReq::processHeaderLines()
                 else
                     continue;
             }
-            pTemp = pMark + 1;
+
+            nameLen = pColon - pLineBegin;
+
+            pTemp = pColon + 1;
+            p = (char *)pTemp;
+            while(p < pLineEnd - 1
+                && (p = (char *)memchr(p, '\r', pLineEnd - 1 - p)) != NULL)
+            {
+                *p++ = ' ';
+            }
+
             pTemp1 = pLineEnd;
             skipSpaceBothSide(pTemp, pTemp1);
             if (strncmp(pTemp, "() {", 4) == 0)
@@ -867,34 +879,52 @@ int HttpReq::processHeaderLines()
                         "CVE-2014-7169 signature detected in request header!");
                 return SC_400;
             }
-            index = HttpHeader::getIndex2(pLineBegin);
+            index = HttpHeader::getIndex(pLineBegin, nameLen);
             if (index < HttpHeader::H_TE)
             {
-                m_commonHeaderLen[ index ] = pTemp1 - pTemp;
-                m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
-                ret = processHeader(index);
+                if (m_commonHeaderOffset[index] == 0)
+                {
+                    m_commonHeaderLen[index] = pTemp1 - pTemp;
+                    m_commonHeaderOffset[index] = pTemp - m_headerBuf.begin();
+                    ret = processHeader(index);
+                }
+                else
+                {
+                    if (index == HttpHeader::H_HOST)
+                        *((char *)pLineBegin + 3) = '2';
+                    index = HttpHeader::H_HEADER_END;
+                }
             }
-            else if (index == HttpHeader::H_HEADER_END)
+            else if (index >= HttpHeader::H_TE
+                && index < HttpHeader::H_HEADER_END )
             {
+                if (m_otherHeaderLen[ index - HttpHeader::H_TE] == 0)
+                {
+                    m_otherHeaderLen[ index - HttpHeader::H_TE] = pTemp1 - pTemp;
+                    m_otherHeaderOffset[index - HttpHeader::H_TE] = pTemp - m_headerBuf.begin();
+                }
+                else
+                    index = HttpHeader::H_HEADER_END;
+                ret = 0;
+            }
+            if (index == HttpHeader::H_HEADER_END)
+            {
+                if (validateHeaderName(pLineBegin, pColon - pLineBegin) == false)
+                    return SC_400;
                 pCurHeader = newUnknownHeader();
                 pCurHeader->keyOff = pLineBegin - m_headerBuf.begin();
-                pCurHeader->keyLen = skipSpace(pMark, pLineBegin) - pLineBegin;
+                pCurHeader->keyLen = skipSpace(pColon, pLineBegin) - pLineBegin;
                 pCurHeader->valOff = pTemp - m_headerBuf.begin();
                 pCurHeader->valLen = pTemp1 - pTemp;
                 ret = processUnknownHeader(pCurHeader, pLineBegin, pTemp);
-            }
-            else
-            {
-                m_otherHeaderLen[ index - HttpHeader::H_TE] = pTemp1 - pTemp;
-                m_otherHeaderOffset[index - HttpHeader::H_TE] = pTemp - m_headerBuf.begin();
-                ret = processHeader(index);
             }
 
             if (ret != 0)
                 return ret;
         }
         pLineBegin = pLineEnd + 1;
-        if ((*(pLineEnd - 1) == '\r') && (*(pLineEnd - 2) == '\n'))
+        if ((*(pLineEnd - 1) == '\n')
+            || (*(pLineEnd - 1) == '\r' && *(pLineEnd - 2) == '\n'))
         {
             headerfinished = true;
             break;
@@ -914,6 +944,40 @@ int HttpReq::processHeaderLines()
                 m_headerBuf.size(), m_headerBuf.begin());
     }
     return 1;
+}
+
+
+bool HttpReq::validateHeaderName(const char *name, int name_len)
+{
+    if (name_len <= 0)
+        return false;
+    const char *p;
+    char ch;
+    for(p = name; p < name + name_len; ++p)
+    {
+        ch = *p;
+        if (isalnum(ch) || ch == '-')
+            continue;
+
+        switch(ch)
+        {
+        case ' ': case '\t':
+        case '(': case ')': case '<': case '>': case '@':
+        case ',': case ';': case ':': case '\\': case '\"':
+        case '/': case '[': case ']': case '?': case '=':
+        case '{': case '}':
+            goto ERROR;
+        default:
+            if (ch <= 0 || iscntrl(ch))
+                goto ERROR;
+        }
+    }
+    return true;
+ERROR:
+    LS_INFO(getLogSession(),
+            "Status 400: Invalid charactor in header name: '%.*s'",
+            name_len, name);
+    return false;
 }
 
 
@@ -967,20 +1031,31 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
                          && (!begin->name_offset || !begin->name_len
                             || memcmp(name, ":authority", 10) == 0))
                        || index == (int)HttpHeader::getIndex(name, begin->name_len));
-                m_commonHeaderLen[index] = begin->val_len;
-                m_commonHeaderOffset[index] = begin->val_offset;
-                ret = processHeader(index);
-                headers->setHeaderPos(index, begin - headers->begin());
+                if (m_commonHeaderOffset[index] == 0)
+                {
+                    m_commonHeaderLen[index] = begin->val_len;
+                    m_commonHeaderOffset[index] = begin->val_offset;
+                    ret = processHeader(index);
+                    headers->setHeaderPos(index, begin - headers->begin());
+                }
+                else
+                {
+                    if (index == HttpHeader::H_HOST && begin->name_len == 4)
+                        *((char *)name + 3) = '2';
+                    index = HttpHeader::H_HEADER_END;
+                }
             }
         }
-        else if (index >= 0 && index < HttpHeader::H_HEADER_END)
+        else if (index >= HttpHeader::H_TE && index < HttpHeader::H_HEADER_END)
         {
             m_otherHeaderLen[ index - HttpHeader::H_TE] = begin->val_len;
             m_otherHeaderOffset[index - HttpHeader::H_TE] = value - m_headerBuf.begin();
-            ret = processHeader(index);
+            ret = 0;
         }
-        else
+        if (index == HttpHeader::H_HEADER_END)
         {
+            if (validateHeaderName(name, begin->name_len) == false)
+                return SC_400;
             pCurHeader = newUnknownHeader();
             pCurHeader->keyOff = begin->name_offset;
             pCurHeader->keyLen = begin->name_len;
@@ -1013,14 +1088,24 @@ int HttpReq::processHeader(int index)
 
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
     const char *pBEnd = pCur + m_commonHeaderLen[ index ];
+    char *p;
     switch (index)
     {
     case HttpHeader::H_HOST:
-        m_iHostOff = m_commonHeaderOffset[index];
-        postProcessHost(pCur, pBEnd);
+        if (m_iHostOff == 0)
+        {
+            m_iHostOff = m_commonHeaderOffset[index];
+            postProcessHost(pCur, pBEnd);
+        }
         break;
     case HttpHeader::H_CONTENT_LENGTH:
-        m_lEntityLength = strtoll(pCur, NULL, 0);
+        if (m_commonHeaderLen[index] == 0)
+            return SC_400;
+        if (!isdigit(*pCur))
+            return SC_400;
+        m_lEntityLength = strtoll(pCur, &p, 10);
+        if (p != pBEnd)
+            return SC_400;
         break;
     case HttpHeader::H_CONTENT_TYPE:
         updateBodyType(pCur);
@@ -3543,12 +3628,32 @@ int CookieList::cookieClassify(cookieval_t *pCookieEntry,
     case 10:
         if (strncasecmp(pCookies, "xf_session", 10) == 0)
         {
-            pCookieEntry->flag |= COOKIE_FLAG_XF_SESSID;
+            pCookieEntry->flag |= COOKIE_FLAG_APP_SESSID;
             if (!isSessIdxSet() ||
                 ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
                 set = 1;
         }
         break;
+    case 11:
+        if (strncasecmp(pCookies, "lsc_private", 11) == 0)
+        {
+            pCookieEntry->flag |= COOKIE_FLAG_APP_SESSID;
+            if (!isSessIdxSet() ||
+                ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
+                set = 1;
+        }
+        break;
+    default:
+        if ((nameLen > 23)
+            && (strncasecmp(pCookies, "wp_woocommerce_session_", 23) == 0
+                || strncasecmp(pCookies, "wordpress_logged_in_", 20) == 0))
+        {
+            pCookieEntry->flag |= COOKIE_FLAG_APP_SESSID;
+            if (!isSessIdxSet() ||
+                ((begin() + getSessIdx())->flag & COOKIE_FLAG_PHPSESSID))
+                set = 1;
+
+        }
     }
     if (set)
     {
