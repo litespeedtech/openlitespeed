@@ -975,7 +975,7 @@ bool HttpReq::validateHeaderName(const char *name, int name_len)
     return true;
 ERROR:
     LS_INFO(getLogSession(),
-            "Status 400: Invalid charactor in header name: '%.*s'",
+            "Status 400: Invalid character in header name: '%.*s'",
             name_len, name);
     return false;
 }
