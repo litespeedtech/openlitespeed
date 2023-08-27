@@ -1179,7 +1179,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
     {
         if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
         {
-            memcpy((char *)value + 12, "Proto ", 6);
+            memcpy((char *)name + 12, "Proto: ", 7);
             pCurHeader->keyLen = 17;
             m_iReqFlag |= IS_FORWARDED_HTTPS;
         }

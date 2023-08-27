@@ -895,9 +895,11 @@ int IpToGeo2::config(const XmlNodeList *pList)
             {
                 // Use a default logical name?
                 if (!(logicalName = getDefaultLogicalName(pFile)))
+                {
                     LS_ERROR("[GEO] no logical name specified for unknown "
                              "database %s\n", pFile);
                     return -1;
+                }
             }
             if (setGeoIpDbFile(pFile, logicalName) == -1)
                 return -1;
