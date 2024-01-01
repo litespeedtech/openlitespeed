@@ -20,6 +20,7 @@
 #include <lsr/ls_lfqueue.h>
 #include <lsr/ls_pool.h>
 #include <lsr/ls_atomic.h>
+#include <lsr/ls_lock.h>
 
 //#define LSR_LLQ_DEBUG
 
@@ -30,15 +31,11 @@
 #include <unistd.h>
 #include <lsr/ls_threadcheck.h>
 
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-#include <linux/futex.h>
-#include <sys/syscall.h>
 
 static inline int do_wait(void *volatile *ptr, struct timespec *timeout)
 {
     int ret = 0;
-    // glibc does not provide a wrapper for futex(2)
-    if (syscall(SYS_futex, (int *)ptr, FUTEX_WAIT, 0, timeout, NULL, 0) < 0)
+    if (ls_futex_wait((int *)ptr, 0, timeout) < 0)
     {
         if ((errno == ETIMEDOUT) || (errno == EINVAL))
             ret = -1;
@@ -54,9 +51,7 @@ static inline int do_wait(void *volatile *ptr, struct timespec *timeout)
 static inline void do_wake(void *volatile *ptr)
 {
     int retry = 3;
-    // glibc does not provide a wrapper for futex(2)
-    while ((syscall(SYS_futex, (int *)ptr, FUTEX_WAKE, 1, NULL, NULL, 0) < 1)
-           && (--retry > 0))
+    while ((ls_futex_wake((int *)ptr) < 1) && --retry > 0)
         ;
     return;
 }
@@ -66,7 +61,6 @@ static inline int no_wait(struct timespec *timeout)
 {
     return (timeout && (timeout->tv_sec == 0) && (timeout->tv_nsec == 0));
 }
-#endif
 
 
 #define MYPAUSE     sched_yield()

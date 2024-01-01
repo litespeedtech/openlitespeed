@@ -583,7 +583,7 @@ int AccessLog::init(const char *pName, int pipe)
     int ret = 0;
     m_iPipedLog = pipe;
 
-    if (pipe)
+    if (pipe == MODE_PIPE)
     {
         setAsyncAccessLog(0);
         m_pManager = new LOG4CXX_NS::AppenderManager();
@@ -626,7 +626,10 @@ int AccessLog::init(const char *pName, int pipe)
         m_pAppender = LOG4CXX_NS::Appender::getAppender(pName);
         if (!m_pAppender)
             return LS_FAIL;
-        ret = m_pAppender->open();
+        if (strcmp(pName, "stdout") == 0 || strcmp(pName, "stderr") == 0)
+            m_iPipedLog = MODE_STREAM;
+        else
+            ret = m_pAppender->open();
     }
     return ret;
 }
@@ -675,7 +678,7 @@ void AccessLog::log(HttpSession *pSession)
     if (pReq->getOrgReqLineLen() == 0)
         return;
 
-    if (m_iPipedLog)
+    if (m_iPipedLog == MODE_PIPE)
     {
         if (!m_pManager)
             return;

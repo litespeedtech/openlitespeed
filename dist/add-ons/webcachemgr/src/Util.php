@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -120,7 +120,7 @@ class Util
 
     /**
      * This function is used to get the file owner by name. Useful in cases
-     * where UID is not accepted or setting a files group to match owner
+     * where UID is not accepted or setting a files group to match its owner
      * (It is not safe to assume UID == GID or GID exists for username 'x').
      *
      * @since 2.2.0
@@ -222,11 +222,11 @@ class Util
             curl_setopt_array(
                 $ch,
                 array(
-                    CURLOPT_URL => $url,
+                    CURLOPT_URL            => $url,
                     CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_HEADER => $headerOnly,
-                    CURLOPT_NOBODY => $headerOnly,
-                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
+                    CURLOPT_HEADER         => $headerOnly,
+                    CURLOPT_NOBODY         => $headerOnly,
+                    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1
                 )
             );
 
@@ -305,7 +305,7 @@ class Util
             return false;
         }
 
-        $filemd5s = array();
+        $fileMd5s = array();
         $d = dir($dir);
 
         while ( ($entry = $d->read()) !== false ) {
@@ -314,16 +314,16 @@ class Util
                 $currEntry = "$dir/$entry";
 
                 if ( is_dir($currEntry) ) {
-                    $filemd5s[] = self::DirectoryMd5($currEntry);
+                    $fileMd5s[] = self::DirectoryMd5($currEntry);
                 }
                 else {
-                    $filemd5s[] = md5_file($currEntry);
+                    $fileMd5s[] = md5_file($currEntry);
                 }
             }
         }
 
         $d->close();
-        return md5(implode('', $filemd5s));
+        return md5(implode('', $fileMd5s));
     }
 
     /**
@@ -472,7 +472,7 @@ class Util
     }
 
     /**
-     * Check if directory is empty.
+     * Check if a given directory is empty.
      *
      * @param string $dir
      *
@@ -529,8 +529,8 @@ class Util
     /**
      * Recursively a directory's contents and optionally the directory itself.
      *
-     * @param string $dir         Directory path
-     * @param bool   $keepParent  Only remove directory contents when true.
+     * @param string $dir        Directory path
+     * @param bool   $keepParent Only remove directory contents when true.
      *
      * @return bool
      */
@@ -538,7 +538,11 @@ class Util
     {
         if ( $dir != '' && is_dir($dir) ) {
 
-            foreach ( glob("$dir/*") as $file ) {
+            if ( ($matches = glob("$dir/*")) === false ) {
+                return false;
+            }
+
+            foreach ( $matches as $file ) {
 
                 if ( is_dir($file) ) {
                     self::rrmdir($file);
@@ -655,9 +659,9 @@ class Util
      *
      * @since 1.15.0.1
      *
-     * @param string                            $constantName
-     * @param array|bool|float|int|null|string  $value
-     * @param bool                              $caseInsensitive  Optional
+     * @param string                           $constantName
+     * @param array|bool|float|int|null|string $value
+     * @param bool                             $caseInsensitive  Optional
      *     parameter used for define calls in PHP versions below 7.3.
      *
      * @return bool

@@ -88,6 +88,9 @@ public:
 
     int pushPromise(uint32_t streamId, UnpackedHeaders *hdrs);
 
+protected:
+    virtual void disableHttp2ByIp();
+
 private:
     int onWriteEx2();
 

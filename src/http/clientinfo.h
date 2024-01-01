@@ -49,6 +49,7 @@ enum BOT_REASON
 #define CIF_CAPTCHA_PENDING (1<<5)
 #define CIF_TEST_LOCAL_ADDR (1<<6)
 #define CIF_LOCAL_ADDR      (1<<7)
+#define CIF_DISABLE_HTTP2   (1<<8)
 
 #if 0
 #include <shm/lsshmcache.h>

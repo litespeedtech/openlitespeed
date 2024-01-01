@@ -879,6 +879,12 @@ int HttpReq::processHeaderLines()
                         "CVE-2014-7169 signature detected in request header!");
                 return SC_400;
             }
+            if (memchr(pTemp, 0, pTemp1 - pTemp))
+            {
+                LS_INFO(getLogSession(), "Status 400: NUL byte in header value!");
+                return SC_400;
+            }
+
             index = HttpHeader::getIndex(pLineBegin, nameLen);
             if (index < HttpHeader::H_TE)
             {
@@ -921,13 +927,19 @@ int HttpReq::processHeaderLines()
 
             if (ret != 0)
                 return ret;
+            pLineBegin = pLineEnd + 1;
         }
-        pLineBegin = pLineEnd + 1;
-        if ((*(pLineEnd - 1) == '\n')
-            || (*(pLineEnd - 1) == '\r' && *(pLineEnd - 2) == '\n'))
+        else
         {
-            headerfinished = true;
-            break;
+            pLineBegin = pLineEnd + 1;
+            if ((*(pLineEnd - 1) == '\n')
+                || (*(pLineEnd - 1) == '\r' && *(pLineEnd - 2) == '\n'))
+            {
+                headerfinished = true;
+                break;
+            }
+            LS_INFO(getLogSession(), "Status 400: header line missing ':'!");
+            return SC_400;
         }
     }
     m_iReqHeaderBufFinished = pLineBegin - m_headerBuf.begin();
@@ -1001,6 +1013,11 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
         {
             LS_INFO(getLogSession(), "Status 400: CVE-2014-6271, "
                     "CVE-2014-7169 signature detected in request header!");
+            return SC_400;
+        }
+        if (memchr(value, 0, begin->val_len))
+        {
+            LS_INFO(getLogSession(), "Status 400: NUL byte in header value!");
             return SC_400;
         }
         index = begin->app_index;
@@ -1111,6 +1128,11 @@ int HttpReq::processHeader(int index)
         updateBodyType(pCur);
         break;
     case HttpHeader::H_TRANSFER_ENCODING:
+        if (*pCur == ',')
+        {
+            LS_INFO(getLogSession(), "Status 400: bad Transfer-Encoding starts with ','!");
+            return SC_400;
+        }
         if (strncasecmp(pCur, "chunked", 7) == 0)
         {
             if (getMethod() <= HttpMethod::HTTP_HEAD)
@@ -1179,7 +1201,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
     {
         if (pCurHeader->valLen == 5 && strncasecmp(value, "https", 5) == 0)
         {
-            memcpy((char *)value + 12, "Proto ", 6);
+            memcpy((char *)name + 12, "Proto: ", 7);
             pCurHeader->keyLen = 17;
             m_iReqFlag |= IS_FORWARDED_HTTPS;
         }
@@ -1773,22 +1795,17 @@ int HttpReq::contextRedirect(const HttpContext *pContext, int destLen)
     int code = pContext->redirectCode();
     if ((code >= SC_400) || ((code != -1) && (code < SC_300)))
         return code;
-    char *pDestURI;
-    if (destLen)
-        pDestURI = HttpResourceManager::getGlobalBuf();
-    else
+    char *pDestURI = HttpResourceManager::getGlobalBuf();
+    if (!destLen)
     {
         int contextURILen = pContext->getURILen();
         int uriLen = getURILen();
-        pDestURI = (char *)pContext->getLocation();
         destLen = pContext->getLocationLen();
+        memmove(pDestURI, pContext->getLocation(), destLen);
         if (contextURILen < uriLen)
         {
-            char *p = HttpResourceManager::getGlobalBuf();
-            memmove(p, pDestURI, destLen);
-            memmove(p + destLen, getURI() + contextURILen,
+            memmove(pDestURI + destLen, getURI() + contextURILen,
                     uriLen - contextURILen + 1);
-            pDestURI = p;
             destLen += uriLen - contextURILen;
         }
     }
@@ -1797,9 +1814,9 @@ int HttpReq::contextRedirect(const HttpContext *pContext, int destLen)
     {
         if (code == -1)
             code = SC_302;
-        int qslen = getQueryStringLen();
-        if (qslen > 0)
+        if (memchr(pDestURI, '?', destLen) == NULL)
         {
+            int qslen = getQueryStringLen();
             memmove(pDestURI + destLen + 1, getQueryString(), qslen);
             *(pDestURI + destLen++) = '?';
             destLen += qslen;

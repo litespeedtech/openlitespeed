@@ -29,7 +29,7 @@ class DirectAdmin extends ControlPanel
      */
     protected function init2()
     {
-        $this->panelName = 'DirectAdmin';
+        $this->panelName           = 'DirectAdmin';
         $this->defaultSvrCacheRoot = '/home/lscache/';
 
         /** @noinspection PhpUnhandledExceptionInspection */
@@ -38,7 +38,7 @@ class DirectAdmin extends ControlPanel
 
     protected function initConfPaths()
     {
-        $this->apacheConf = '/etc/httpd/conf/extra/httpd-includes.conf';
+        $this->apacheConf   = '/etc/httpd/conf/extra/httpd-includes.conf';
         $this->apacheVHConf = '/usr/local/directadmin/data/templates/custom/'
             . 'cust_httpd.CUSTOM.2.pre';
     }
@@ -49,11 +49,11 @@ class DirectAdmin extends ControlPanel
      */
     protected function serverCacheRootSearch()
     {
-        if ( file_exists($this->apacheConf) ) {
-            return $this->getCacheRootSetting($this->apacheConf);
+        if ( !file_exists($this->apacheConf) ) {
+            return '';
         }
 
-        return '';
+        return $this->getCacheRootSetting($this->apacheConf);
     }
 
     /**
@@ -64,11 +64,11 @@ class DirectAdmin extends ControlPanel
     {
         $apacheUserdataDir = dirname($this->apacheVHConf);
 
-        if ( file_exists($apacheUserdataDir) ) {
-            return $this->daVhCacheRootSearch($apacheUserdataDir);
+        if ( !file_exists($apacheUserdataDir) ) {
+            return '';
         }
 
-        return '';
+        return $this->daVhCacheRootSearch($apacheUserdataDir);
     }
 
     /**
@@ -86,10 +86,17 @@ class DirectAdmin extends ControlPanel
         foreach ( $files as $file ) {
             $filename = $file->getFilename();
 
-            if ( strlen($filename) > 4
-                    && (substr_compare($filename, '.pre', -4) === 0
-                        || substr_compare($filename, '.post', -5) === 0) ) {
+            $isPreOrPostFile = (
+                strlen($filename) > 4
+                &&
+                (
+                    substr_compare($filename, '.pre', -4) === 0
+                    ||
+                    substr_compare($filename, '.post', -5) === 0
+                )
+            );
 
+            if ( $isPreOrPostFile ) {
                 $cacheRoot = $this->getCacheRootSetting($file->getPathname());
 
                 if ( $cacheRoot != '' ) {
@@ -149,9 +156,12 @@ class DirectAdmin extends ControlPanel
             $this->log("Created directory $vhConfDir", Logger::L_DEBUG);
         }
 
-        $content = "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>";
+        $bytesWrittenToFile = file_put_contents(
+            $vhConf,
+            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>"
+        );
 
-        if ( false === file_put_contents($vhConf, $content) ) {
+        if ( false === $bytesWrittenToFile ) {
             throw new LSCMException("Failed to create file $vhConf.");
         }
 
@@ -167,7 +177,7 @@ class DirectAdmin extends ControlPanel
      *
      * @since 1.13.7
      *
-     * @return array
+     * @return array[]
      *
      * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
@@ -196,9 +206,11 @@ class DirectAdmin extends ControlPanel
          * ServerName www.dauser1.com
          * ServerAlias www.dauser1.com dauser1.com
          * DocumentRoot /home/dauser1/domains/dauser1.com/private_html
+         *
+         * @noinspection SpellCheckingInspection
          */
 
-        $docRoots = array();
+        $docRoots      = array();
         $curServerName = $curServerAliases = '';
 
         foreach ( $lines as $line ) {
@@ -232,12 +244,12 @@ class DirectAdmin extends ControlPanel
                         && is_dir($curDocRoot)
                         && !is_link($curDocRoot) ) {
 
-                    $docRoots[$curDocRoot] = explode(' ', $curServerAliases);
+                    $docRoots[$curDocRoot]   = explode(' ', $curServerAliases);
                     $docRoots[$curDocRoot][] = $curServerName;
                 }
 
                 /**
-                 * Looking for next data set
+                 * Looking for the next data set
                  */
                 $curServerName = $curServerAliases = '';
             }
@@ -253,7 +265,7 @@ class DirectAdmin extends ControlPanel
      *
      * @since 1.13.7
      *
-     * @return array
+     * @return array[]
      *
      * @throws LSCMException Thrown indirectly by Logger::debug() call.
      */
@@ -288,29 +300,31 @@ class DirectAdmin extends ControlPanel
          * docRoot                   /home/test_2/domains/test2.com/private_html
          * vhDomain                  test2.com
          * vhAliases                 www.test2.com
+         *
+         * @noinspection SpellCheckingInspection
          */
 
-        $docRoots = array();
+        $docRoots      = array();
         $curServerName = $curDocRoot = '';
 
         foreach ( $lines as $line ) {
 
-            if ($curDocRoot == '') {
+            if ( $curDocRoot == '' ) {
 
-                if (strpos($line, 'docRoot') === 0) {
+                if ( strpos($line, 'docRoot') === 0 ) {
                     /**
                      * 7 is strlen('docRoot')
                      */
                     $curDocRoot = trim(substr($line, 7));
                 }
             }
-            elseif (strpos($line, 'vhDomain') === 0) {
+            elseif ( strpos($line, 'vhDomain') === 0 ) {
                 /**
                  * 8 is strlen('vhDomain')
                  */
                 $curServerName = trim(substr($line, 8));
             }
-            elseif (strpos($line, 'vhAliases') === 0) {
+            elseif ( strpos($line, 'vhAliases') === 0 ) {
                 /**
                  * 9 is strlen('vhAliases')
                  */
@@ -320,7 +334,7 @@ class DirectAdmin extends ControlPanel
                  * Avoid possible duplicate detections due to
                  * public_html/private_html symlinks.
                  */
-                if (is_dir($curDocRoot) && !is_link($curDocRoot)) {
+                if ( is_dir($curDocRoot) && !is_link($curDocRoot) ) {
 
                     if ( !isset($docRoots[$curDocRoot]) ) {
                         $docRoots[$curDocRoot] =
@@ -339,7 +353,7 @@ class DirectAdmin extends ControlPanel
                 }
 
                 /**
-                 * Looking for next data set
+                 * Looking for the next data set
                  */
                 $curDocRoot = $curServerName = '';
 
@@ -354,7 +368,7 @@ class DirectAdmin extends ControlPanel
 
     /**
      * Gets a list of found docroots and associated server names.
-     * Only needed for scan.
+     * Only needed for scan operation.
      *
      * @throws LSCMException  Thrown indirectly by
      *     $this->getHttpdConfDocrootMapInfo() call.
@@ -363,7 +377,7 @@ class DirectAdmin extends ControlPanel
      */
     protected function prepareDocrootMap()
     {
-        $docRootMapInfo = $this->getHttpdConfDocrootMapInfo();
+        $docRootMapInfo                  = $this->getHttpdConfDocrootMapInfo();
         $openlitespeedConfDocrootMapInfo =
             $this->getOpenlitespeedConfDocrootMapInfo();
 
@@ -383,12 +397,12 @@ class DirectAdmin extends ControlPanel
             }
         }
 
-        $roots = array();
+        $roots       = array();
         $servernames = array();
-        $index = 0;
+        $index       = 0;
 
         foreach ( $docRootMapInfo as $docRoot => $domains ) {
-            $domains = array_unique($domains);
+            $domains       = array_unique($domains);
             $roots[$index] = $docRoot;
 
             foreach ( $domains as $domain ) {
@@ -422,20 +436,19 @@ class DirectAdmin extends ControlPanel
             return '';
         }
 
-        $ver = '';
-
         $escServerName = str_replace('.', '\.', $serverName);
-        $escDocRoot = str_replace(array('.', '/'), array('\.', '\/'), $docroot);
+        $escDocRoot    =
+            str_replace(array('.', '/'), array('\.', '\/'), $docroot);
 
         $user = $wpInstall->getOwnerInfo('user_name');
 
         $httpdConfFile = "/usr/local/directadmin/data/users/$user/httpd.conf";
-        $olsConfFile =
+        $olsConfFile   =
             "/usr/local/directadmin/data/users/$user/openlitespeed.conf";
 
         if ( file_exists($httpdConfFile) ) {
             $confFile = $httpdConfFile;
-            $pattern = '/VirtualHost'
+            $pattern  = '/VirtualHost'
                 . '(?:(?!<\/VirtualHost).)*'
                 . "ServerName $escServerName"
                 . '(?:(?!<\/VirtualHost).)*'
@@ -445,7 +458,7 @@ class DirectAdmin extends ControlPanel
         }
         elseif ( file_exists($olsConfFile) ) {
             $confFile = $olsConfFile;
-            $pattern = '/virtualHost\s'
+            $pattern  = '/virtualHost\s'
                 . '(?:(?!}\s*\n*virtualHost).)*?'
                 . '{'
                 . '(?:(?!}\s*\n*virtualHost).)*?'
@@ -462,10 +475,10 @@ class DirectAdmin extends ControlPanel
         }
 
          if ( preg_match($pattern, file_get_contents($confFile), $m) ) {
-            $ver = $m[1];
+            return $m[1];
          }
 
-         return $ver;
+         return '';
     }
 
     /**
@@ -474,7 +487,8 @@ class DirectAdmin extends ControlPanel
      *
      * @return string
      *
-     * @throws LSCMException  Thrown indirectly.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->getCustomPhpHandlerVer() call.
      */
     public function getPhpBinary( WPInstall $wpInstall )
     {

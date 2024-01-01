@@ -3,29 +3,55 @@
 /** *********************************************
  * LiteSpeed Web Server WordPress Dash Notifier
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2019-2023
+ * @author    Michael Alegre
+ * @copyright 2019-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\Context\Context;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\WpWrapper\WpConstants;
+use Lsc\Wp\WpWrapper\WpFuncs;
 
 class DashNotifier
 {
 
+    /**
+     * @var string
+     */
     const BYPASS_FLAG = '.dash_notifier_bypass';
+
+    /**
+     * @var string
+     */
     const DASH_MD5 = 'dash_md5';
+
+    /**
+     * @var string
+     */
     const DASH_PLUGIN = 'dash-notifier/dash-notifier.php';
+
+    /**
+     * @var string
+     */
     const DEFAULT_PLUGIN_PATH = '/wp-content/plugins/dash-notifier';
 
     /**
      * @deprecated 1.9
+     *
+     * @var string
      */
     const DOWNLOAD_DIR = '/usr/src/litespeed-wp-plugin';
 
+    /**
+     * @var string
+     */
     const PLUGIN_NAME = 'dash-notifier';
+
+    /**
+     * @var string
+     */
     const VER_FILE = 'dash_ver';
 
     private function __construct()
@@ -52,8 +78,7 @@ class DashNotifier
         $dashVerFile = Context::LOCAL_PLUGIN_DIR . '/' . self::VER_FILE;
 
         if ( ! file_exists($dashVerFile) ) {
-            $latestVer = self::getLatestVersion();
-            self::downloadVersion($latestVer);
+            self::downloadVersion(self::getLatestVersion());
             return;
         }
 
@@ -73,11 +98,13 @@ class DashNotifier
             return;
         }
 
-        $md5File = Context::LOCAL_PLUGIN_DIR . '/' . self::DASH_MD5;
-        $md5StoredVal = file_get_contents($md5File);
-        $md5Val = Util::DirectoryMd5($pluginDir);
+        $isStoredMd5Valid = (
+            file_get_contents(Context::LOCAL_PLUGIN_DIR . '/' . self::DASH_MD5)
+            ==
+            Util::DirectoryMd5($pluginDir)
+        );
 
-        if ( $md5StoredVal != $md5Val ) {
+        if ( !$isStoredMd5Valid ) {
             self::downloadVersion($localVer);
             return;
         }
@@ -106,14 +133,15 @@ class DashNotifier
      * @since 1.9
      *
      * @return string
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown when unable to retrieve latest Dash
+     *     Notifier plugin version.
      */
     public static function getLatestVersion()
     {
-        $latestVerUrl =
-            'https://www.litespeedtech.com/packages/lswpcache/dash_latest';
-
-        $content = Util::get_url_contents($latestVerUrl);
+        $content = Util::get_url_contents(
+            'https://www.litespeedtech.com/packages/lswpcache/dash_latest'
+        );
 
         if ( empty($content) ) {
             throw new LSCMException(
@@ -128,15 +156,16 @@ class DashNotifier
      *
      * @since 1.9
      *
-     * @param string  $version
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $version
+     *
+     * @throws LSCMException  Thrown indirectly by self::wgetPlugin() call.
      */
     protected static function downloadVersion( $version )
     {
         $pluginDir = Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME;
 
         if ( file_exists($pluginDir) ) {
-            exec("/bin/rm -rf {$pluginDir}");
+            exec("/bin/rm -rf $pluginDir");
         }
 
         self::wgetPlugin($version, true);
@@ -146,68 +175,85 @@ class DashNotifier
      *
      * @since 1.9
      *
-     * @param string   $version
-     * @param boolean  $saveMD5
-     * @throws LSCMException  Thrown directly and indirectly.
+     * @param string $version
+     * @param bool   $saveMD5
+     *
+     * @throws LSCMException  Thrown when wget command fails to download
+     *     requested Dash Notifier plugin version.
+     * @throws LSCMException  Thrown when unable to unzip downloaded Dash
+     *     Notifier plugin package.
+     * @throws LSCMException  Thrown when downloaded Dash Notifier plugin
+     *     package is missing an expected file.
+     * @throws LSCMException  Thrown indirectly by Logger::info() call.
+     * @throws LSCMException  Thrown indirectly by Util::unzipFile() call.
      */
     protected static function wgetPlugin( $version, $saveMD5 = false )
     {
-        Logger::info("Downloading Dash Notifier v{$version}...");
+        Logger::info("Downloading Dash Notifier v$version...");
 
-        $pluginDir = Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME;
-        $zipFileName = self::PLUGIN_NAME . ".{$version}.zip";
-        $localZipFile = Context::LOCAL_PLUGIN_DIR . "/{$zipFileName}";
+        $zipFileName  = self::PLUGIN_NAME . ".$version.zip";
 
-        $url = "https://downloads.wordpress.org/plugin/{$zipFileName}";
-        $wget_command = "wget -q --tries=1 --no-check-certificate {$url} -P "
-                . Context::LOCAL_PLUGIN_DIR;
-
-        exec($wget_command, $output, $return_var);
+        exec(
+            "wget -q --tries=1 --no-check-certificate "
+                . "https://downloads.wordpress.org/plugin/$zipFileName -P "
+                . Context::LOCAL_PLUGIN_DIR,
+            $output,
+            $return_var
+        );
 
         if ( $return_var !== 0 ) {
-            throw new LSCMException("Failed to download Dash Notifier v{$version} with wget "
-                    . "exit status {$return_var}.", LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                "Failed to download Dash Notifier v$version with wget exit "
+                    . "status $return_var.",
+                LSCMException::E_NON_FATAL
+            );
         }
+
+        $localZipFile = Context::LOCAL_PLUGIN_DIR . "/$zipFileName";
 
         $extracted = Util::unzipFile($localZipFile, Context::LOCAL_PLUGIN_DIR);
         unlink($localZipFile);
 
         if ( ! $extracted ) {
-            throw new LSCMException("Unable to unzip {$localZipFile}",
-                    LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                "Unable to unzip $localZipFile",
+                LSCMException::E_NON_FATAL
+            );
         }
 
-        $testfile = "{$pluginDir}/" . self::PLUGIN_NAME . '.php';
+        $pluginDir    = Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME;
 
-        if ( ! file_exists($testfile) ) {
-            throw new LSCMException("Unable to download Dash Notifier v{$version}.",
-                    LSCMException::E_NON_FATAL);
+        if ( ! file_exists("$pluginDir/" . self::PLUGIN_NAME . '.php') ) {
+            throw new LSCMException(
+                "Unable to download Dash Notifier v$version.",
+                LSCMException::E_NON_FATAL
+            );
         }
 
         if ( $saveMD5 ) {
-            $md5Val = Util::DirectoryMd5($pluginDir);
-            file_put_contents(Context::LOCAL_PLUGIN_DIR . '/'
-                    . self::DASH_MD5, $md5Val);
+            file_put_contents(
+                Context::LOCAL_PLUGIN_DIR . '/' . self::DASH_MD5,
+                Util::DirectoryMd5($pluginDir)
+            );
         }
 
-        file_put_contents(Context::LOCAL_PLUGIN_DIR . '/' . self::VER_FILE,
-                $version);
+        file_put_contents(
+            Context::LOCAL_PLUGIN_DIR . '/' . self::VER_FILE,
+            $version
+        );
     }
 
     /**
      * Check if WordPress installation should be notified using the Dash
      * Notifier plugin.
      *
-     * @param string  $wpPath  WordPress installation root directory.
-     * @return boolean
+     * @param string $wpPath  Root directory for WordPress installation.
+     *
+     * @return bool
      */
     public static function canNotify( $wpPath )
     {
-        if ( file_exists("{$wpPath}/" . self::BYPASS_FLAG) ) {
-            return false;
-        }
-
-        return true;
+        return !file_exists("$wpPath/" . self::BYPASS_FLAG);
     }
 
     /**
@@ -215,15 +261,17 @@ class DashNotifier
      * copies them to the installation's plugins directory if not found.
      * This function should only be run as the user.
      *
-     * @return boolean            True when new Dash Notifier plugin files are
-     *                             used.
-     * @throws LSCMException
+     * @return bool  True when new Dash Notifier plugin files are used.
+     *
+     * @throws LSCMException  Thrown when unable to copy Dash Notifier plugin
+     *     files to WordPress plugin directory.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     public static function prepareUserInstall()
     {
-        $pluginDir = WP_PLUGIN_DIR;
+        $pluginDir = WpConstants::getWpConstant('WP_PLUGIN_DIR');
 
-        $dashNotifierPlugin = "{$pluginDir}/dash-notifier/dash-notifier.php";
+        $dashNotifierPlugin = "$pluginDir/dash-notifier/dash-notifier.php";
 
         if ( file_exists($dashNotifierPlugin) ) {
             /**
@@ -232,15 +280,22 @@ class DashNotifier
             return false;
         }
 
-        $pluginSrc = Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME;
-        exec("/bin/cp -rf {$pluginSrc} {$pluginDir}");
+        exec(
+            '/bin/cp -rf ' . Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME
+            . " $pluginDir"
+        );
 
         if ( !file_exists($dashNotifierPlugin) ) {
-            throw new LSCMException("Failed to copy Dash Notifier plugin files to "
-            . "{$pluginDir}.", LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                "Failed to copy Dash Notifier plugin files to $pluginDir.",
+                LSCMException::E_NON_FATAL
+            );
         }
 
-        Logger::debug("Copied Dash Notifier plugin files into plugins directory {$pluginDir}");
+        Logger::debug(
+            'Copied Dash Notifier plugin files into plugins directory '
+                . $pluginDir
+        );
 
         return true;
     }
@@ -249,56 +304,64 @@ class DashNotifier
      * Activate Dash Notifier plugin if it is not already activated, and give
      * the plugin any notification data in the form of a JSON encoded array.
      *
-     * @param string  $jsonInfo  Dash Notifier plugin info.
-     * @return boolean
-     * @throws LSCMException
+     * @param string $jsonInfo  Dash Notifier plugin info.
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown when unable to find Dash Notifier plugin
+     *     files.
      */
     public static function doNotify( $jsonInfo )
     {
-
-        if ( file_exists(WP_PLUGIN_DIR . '/' . self::DASH_PLUGIN) ) {
-
+        if (
+            file_exists(
+                WpConstants::getWpConstant('WP_PLUGIN_DIR')
+                    . '/' . self::DASH_PLUGIN
+            )
+        ) {
             /**
              * Used to pass info to the Dash Notifier Plugin.
              */
             Util::define_wrapper( 'DASH_NOTIFIER_MSG', $jsonInfo);
 
-            if ( !is_plugin_active(self::DASH_PLUGIN) ) {
+            if ( !WpFuncs::isPluginActive(self::DASH_PLUGIN) ) {
 
                 /**
                 * Should not check directly, can error on success due to object
                 * cache.
                 */
-               activate_plugin(self::DASH_PLUGIN, '', false, false);
+               WpFuncs::activatePlugin(self::DASH_PLUGIN);
 
-               if ( !is_plugin_active(self::DASH_PLUGIN) ) {
+               if ( !WpFuncs::isPluginActive(self::DASH_PLUGIN) ) {
                    return false;
                }
             }
             else {
-                include WP_PLUGIN_DIR . '/' . self::DASH_PLUGIN;
+                include WpConstants::getWpConstant('WP_PLUGIN_DIR')
+                    . '/' . self::DASH_PLUGIN;
             }
         }
         else {
-            throw new LSCMException('Dash Notifier plugin files are missing. Cannot notify.',
-                    LSCMException::E_NON_FATAL);
+            throw new LSCMException(
+                'Dash Notifier plugin files are missing. Cannot notify.',
+                LSCMException::E_NON_FATAL
+            );
         }
 
         return true;
     }
 
     /**
-     * WP Functions: deactivate_plugins(), delete_plugins()
      *
-     * @param boolean  $uninstall
+     * @param bool $uninstall
      */
     public static function deactivate( $uninstall )
     {
-        deactivate_plugins(self::DASH_PLUGIN);
+        WpFuncs::deactivatePlugins(self::DASH_PLUGIN);
 
         if ( $uninstall ) {
             //add some msg about having removed plugin files?
-            delete_plugins(array( self::DASH_PLUGIN ));
+            WpFuncs::deletePlugins(array( self::DASH_PLUGIN ));
         }
     }
 

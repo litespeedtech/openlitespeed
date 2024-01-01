@@ -686,10 +686,9 @@ bool HttpSession::endOfReqBody()
 {
     if (m_pChunkIS)
         return m_pChunkIS->eos();
-    else if (m_request.isBodySizeUnknown())
-        return getStream()->isEos();
-    else
-        return (m_request.getBodyRemain() <= 0);
+    else if (!m_request.isBodySizeUnknown() && m_request.getBodyRemain() <= 0)
+        return true;
+    return getStream()->isEos();
 }
 
 
@@ -2472,7 +2471,8 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     {
     case HandlerType::HT_STATIC:
         //So, if serve with static file, try use cache first
-        if (m_request.getUrlStaticFileData())
+        if (!m_request.isHeaderSet(HttpHeader::H_RANGE)
+            && m_request.getUrlStaticFileData())
         {
             m_sendFileInfo.setFileData(m_request.getUrlStaticFileData()->pData);
             m_sendFileInfo.setECache(m_request.getUrlStaticFileData()->pData->getFileData());
@@ -4158,6 +4158,8 @@ int HttpSession::flushBody()
         ret = sendStaticFile(&m_sendFileInfo);
     if (ret > 0)
         return LS_AGAIN;
+    else if (ret == -1)
+        return LS_FAIL;
 
     if (m_sessionHooks.isEnabled(LSI_HKPT_SEND_RESP_BODY))
     {

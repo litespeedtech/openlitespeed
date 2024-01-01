@@ -26,4 +26,8 @@ SET(lua_STAT_SRCS
 
 
 add_library(mod_lua MODULE ${lua_STAT_SRCS} ${LUAJITHEADERS})
+target_link_libraries(mod_lua libluajit.a
+    -nodefaultlibs libstdc++.a
+    pthread rt
+    ${LIBSAN} crypt m gcc_eh c c_nonshared gcc)
 set_target_properties(mod_lua PROPERTIES PREFIX "")

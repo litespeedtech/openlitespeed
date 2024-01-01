@@ -3,8 +3,8 @@
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author Michael Alegre
- * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
+ * @author    Michael Alegre
+ * @copyright 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -112,12 +112,12 @@ class WPInstallStorage
     protected $customDataFile;
 
     /**
-     * @var null|WPInstall[]  Key is path
+     * @var null|WPInstall[]  Key is the path to a WordPress installation.
      */
     protected $wpInstalls = null;
 
     /**
-     * @var null|WPInstall[]  Key is path
+     * @var null|WPInstall[]  Key is the path to a WordPress installation.
      */
     protected $custWpInstalls = null;
 
@@ -140,9 +140,9 @@ class WPInstallStorage
      */
     public function __construct( $dataFile, $custDataFile = '' )
     {
-        $this->dataFile = $dataFile;
+        $this->dataFile       = $dataFile;
         $this->customDataFile = $custDataFile;
-        $this->error = $this->init();
+        $this->error          = $this->init();
     }
 
     /**
@@ -239,9 +239,9 @@ class WPInstallStorage
             $i = new WPInstall($path);
 
             $idata[WPInstall::FLD_SITEURL] =
-                    urldecode($idata[WPInstall::FLD_SITEURL]);
+                urldecode($idata[WPInstall::FLD_SITEURL]);
             $idata[WPInstall::FLD_SERVERNAME] =
-                    urldecode($idata[WPInstall::FLD_SERVERNAME]);
+                urldecode($idata[WPInstall::FLD_SERVERNAME]);
 
             $i->initData($idata);
             $wpInstalls[$path] = $i;
@@ -269,30 +269,35 @@ class WPInstallStorage
     {
         $count = 0;
 
-        if ( !$nonFatalOnly ) {
+        if ( $this->wpInstalls != null ) {
 
-            if ( $this->wpInstalls != null ) {
+            if ( $nonFatalOnly ) {
+
+                foreach ( $this->wpInstalls as $install ) {
+
+                    if ( !$install->hasFatalError() ) {
+                        $count++;
+                    }
+                }
+            }
+            else {
                 $count += count($this->wpInstalls);
             }
-
-            if ( $this->custWpInstalls != null ) {
-                $count += count($this->custWpInstalls);
-            }
         }
-        else {
 
-            foreach ( $this->wpInstalls as $install ) {
+        if ( $this->custWpInstalls != null ) {
 
-                if ( !$install->hasFatalError() ) {
-                    $count++;
+            if ( $nonFatalOnly ) {
+
+                foreach ( $this->custWpInstalls as $custInstall ) {
+
+                    if ( !$custInstall->hasFatalError() ) {
+                        $count++;
+                    }
                 }
             }
-
-            foreach ( $this->custWpInstalls as $custInstall ) {
-
-                if ( !$custInstall->hasFatalError() ) {
-                    $count++;
-                }
+            else {
+                $count += count($this->custWpInstalls);
             }
         }
 
@@ -676,10 +681,12 @@ class WPInstallStorage
                 break;
 
             case UserCommand::CMD_MASS_UPGRADE:
-                $allowedVers =
-                    PluginVersion::getInstance()->getAllowedVersions();
+                $isAllowedVer = in_array(
+                    $extraArgs[1],
+                    PluginVersion::getInstance()->getAllowedVersions()
+                );
 
-                if ( !in_array($extraArgs[1], $allowedVers) ) {
+                if ( !$isAllowedVer ) {
                     throw new LSCMException(
                         'Selected LSCWP version ('
                             . htmlspecialchars($extraArgs[1]) . ') is invalid.'
@@ -760,10 +767,9 @@ class WPInstallStorage
 
             case self::CMD_SCAN:
             case self::CMD_DISCOVER_NEW:
-                $forceRefresh = ($action == self::CMD_SCAN);
 
                 foreach ( $list as $path ) {
-                    $this->scan($path, $forceRefresh);
+                    $this->scan($path, ($action == self::CMD_SCAN));
 
                     $finishedList[] = $path;
 
@@ -798,7 +804,7 @@ class WPInstallStorage
                         || $action == UserCommand::CMD_MASS_ENABLE ) {
 
                     /**
-                     * Ensure that current version is locally downloaded.
+                     * Ensure that the current version is locally downloaded.
                      */
                     PluginVersion::getInstance()
                     ->setActiveVersion(PluginVersion::getCurrentVersion())
@@ -876,6 +882,7 @@ class WPInstallStorage
             return;
         }
 
+        /** @noinspection PhpUndefinedVariableInspection */
         foreach ( $matches[1] as $path ) {
             $wp_path = realpath($docroot . $path);
             $refresh = $forceRefresh;
@@ -957,6 +964,7 @@ class WPInstallStorage
 
         $wpPaths = array();
 
+        /** @noinspection PhpUndefinedVariableInspection */
         foreach ( $matches[1] as $path ) {
             $wpPaths[] = realpath($docroot . $path);
         }
@@ -1129,7 +1137,7 @@ class WPInstallStorage
                 continue;
             }
 
-            if ( $msg = $WPInstall->getCmdMsg() ) {
+            if ( ($msg = $WPInstall->getCmdMsg()) ) {
                 $msgType[] = "{$WPInstall->getPath()} - $msg";
             }
         }

@@ -309,6 +309,8 @@ protected:
     }
     void closePendingOut2();
 
+    virtual void disableHttp2ByIp()  {};
+
 private:
     int bufferOutput(const char *data, int size);
     int tryReadFrameHeader();
@@ -332,6 +334,8 @@ protected:
     uint32_t        m_uiPushStreamId;
 
     uint32_t        m_uiLastStreamId;
+    uint32_t        m_uiStreams;
+    uint32_t        m_uiRstStreams;
     H2StreamBase *  m_current;
     struct timeval  m_timevalPing;
     Priority_st     m_priority;

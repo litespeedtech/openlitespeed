@@ -5556,6 +5556,10 @@ void HttpServer::enableAioLogging()
     if (SigEventDispatcher::aiokoIsLoaded())
     {
 #endif
+#if defined(LS_AIO_USE_SIGNAL)
+        AioReq::setSigNo(SigEventDispatcher::getInstance()
+                            .registerRtsig(SIG_EVT_HANDLER, NULL, 0));
+#endif
         HttpLogSource::setAioServerAccessLog(m_iAioAccessLog);
         HttpLogSource::setAioServerErrorLog(m_iAioErrorLog);
         if (m_iAioAccessLog == 1)
