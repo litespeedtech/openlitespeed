@@ -1303,7 +1303,8 @@ int HttpContext::configRewriteRule(const RewriteMapList *pMapList,
     {
         RewriteRule::setLogger(NULL, TmpLogId::getLogId());
         if (RewriteEngine::parseRules(pRule, pRuleList,
-                                      pMapList, this) == 0)
+                                      pMapList, this) == 0
+            && pRuleList->begin())
             setRewriteRules(pRuleList);
         else
             delete pRuleList;

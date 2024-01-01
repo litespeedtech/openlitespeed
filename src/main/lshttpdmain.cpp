@@ -81,7 +81,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  "built: Fri Aug 11 02:00:03 UTC 2023"
+#define BUILDTIME  "built: Thu Dec 28 18:33:46 UTC 2023"
 
 static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
         " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";
@@ -89,7 +89,7 @@ static const char *getVersionFull() {   return s_pVersionFull;  }
 
 #define GlobalServerSessionHooks (LsiApiHooks::getServerSessionHooks())
 
-static char s_iRunning = 0;
+static int  s_iRunning = 0;
 static long s_tmDelayShutdown = 0;
 static long s_tmGraceful = 0;
 char *argv0 = NULL;

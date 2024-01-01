@@ -327,7 +327,7 @@ class PanelController
         $arrSize = count($array);
 
         if ( $batchSize > $arrSize ) {
-            $batchSize = $arrSize;
+            return $arrSize;
         }
 
         return $batchSize;
@@ -602,6 +602,10 @@ class PanelController
                         $flippedInstalls = array_flip($info['installs']);
 
                         $wpInstalls = $this->wpInstallStorage->getWPInstalls();
+
+                        if ( $wpInstalls === null ) {
+                            $wpInstalls = array();
+                        }
 
                         foreach ( $wpInstalls as $wpInstall ) {
                             $wpInstallPath = $wpInstall->getPath();
@@ -1212,8 +1216,6 @@ class PanelController
                 $batchSize = $this->getBatchSize($info['installs']);
                 $batch     = array_splice($info['installs'], 0, $batchSize);
 
-                $finishedList = array();
-
                 try
                 {
                     $finishedList = $this->wpInstallStorage->doAction(
@@ -1235,7 +1237,7 @@ class PanelController
                     Logger::uiError(
                         "{$e->getMessage()} Stopping mass operation."
                     );
-
+                    $finishedList     = array();
                     $info['installs'] = array();
                 }
 
@@ -1474,6 +1476,7 @@ class PanelController
             }
             catch ( LSCMException $e ) {
                 Logger::uiError("{$e->getMessage()} Stopping mass operation.");
+                $finishedList     = array();
                 $info['installs'] = array();
             }
 
@@ -1597,6 +1600,7 @@ class PanelController
             }
             catch ( LSCMException $e ) {
                 Logger::uiError("{$e->getMessage()} Stopping mass operation.");
+                $finishedList     = array();
                 $info['installs'] = array();
             }
 

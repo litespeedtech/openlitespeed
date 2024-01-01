@@ -3,14 +3,14 @@
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @author    Michael Alegre
+ * @copyright 2018-2023 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
 namespace Lsc\Wp;
 
-use \Lsc\Wp\Context\ContextOption;
+use Lsc\Wp\Context\ContextOption;
 
 /**
  * Logger is a pseudo singleton.
@@ -78,15 +78,15 @@ class Logger
     const UI_WARN = 3;
 
     /**
-     * @var null|Logger|object  Object that implements all Logger class
-     *                          public functions (minus setInstance()). Caution,
-     *                          this requirement is not enforced in the code.
+     * @var null|Logger|object  Object that implements all Logger class public
+     *     functions (minus setInstance()). Caution, this requirement is not
+     *     enforced in the code.
      */
     protected static $instance;
 
     /**
      * @var int  Highest log message level allowed to be logged. Set to the
-     *            higher value between $this->logFileLvl and $this->logEchoLvl.
+     *     higher value between $this->logFileLvl and $this->logEchoLvl.
      */
     protected $logLvl;
 
@@ -97,73 +97,67 @@ class Logger
 
     /**
      * @var int  Highest log message level allowed to be written to the log
-     *           file.
+     *     file.
      */
     protected $logFileLvl;
 
     /**
-     *
-     * @var string  Additional tag to be added at the start of any log
-     *              messages.
+     * @var string  Additional tag to be added at the start of any log messages.
      */
     protected $addTagInfo = '';
 
     /**
-     * @var boolean  When set to true, log messages will not be written to the
-     *               log file until this logger object is destroyed.
+     * @var bool  When set to true, log messages will not be written to the log
+     *     file until this logger object is destroyed.
      */
     protected $bufferedWrite;
 
     /**
      * @var LogEntry[]|object[]  Stores created objects that implement all
-     *                           LogEntry class public functions.
+     *     LogEntry class public functions.
      */
     protected $msgQueue = array();
 
     /**
-     * @var int  Highest log message level allowed to echoed.
+     * @var int  Highest log message level allowed to echo.
      */
     protected $logEchoLvl;
 
     /**
-     * @var boolean  When set to true, echoing of log messages is suppressed.
+     * @var bool  When set to true, echoing of log messages is suppressed.
      */
     protected $bufferedEcho;
 
     /**
      * @var string[][]  Leveraged by control panel GUI to store and retrieve
-     *                  display messages. Also used as temporary storage for
-     *                  display only messages by UserCommand.
+     *     display messages. Also used as temporary storage for display only
+     *     messages by UserCommand.
      */
     protected $uiMsgs = array(
         self::UI_INFO => array(),
         self::UI_SUCC => array(),
-        self::UI_ERR => array(),
+        self::UI_ERR  => array(),
         self::UI_WARN => array()
     );
 
     /**
      *
-     * @param ContextOption  $ctxOption
+     * @param ContextOption $ctxOption
      */
     final protected function __construct( ContextOption $ctxOption )
     {
-        $this->logFile = $ctxOption->getDefaultLogFile();
-        $this->logFileLvl = $ctxOption->getLogFileLvl();
+        $this->logFile       = $ctxOption->getDefaultLogFile();
+        $this->logFileLvl    = $ctxOption->getLogFileLvl();
         $this->bufferedWrite = $ctxOption->isBufferedWrite();
-        $this->logEchoLvl = $ctxOption->getLogEchoLvl();
-        $this->bufferedEcho = $ctxOption->isBufferedEcho();
-
-        if ( $this->logEchoLvl >= $this->logFileLvl ) {
-            $logLvl = $this->logEchoLvl;
-        }
-        else {
-            $logLvl = $this->logFileLvl;
-        }
-
-        $this->logLvl = $logLvl;
+        $this->logEchoLvl    = $ctxOption->getLogEchoLvl();
+        $this->bufferedEcho  = $ctxOption->isBufferedEcho();
+        $this->logLvl        = max($this->logEchoLvl, $this->logFileLvl);
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by $this->writeToFile() call.
+     */
     public function __destruct()
     {
         if ( $this->bufferedWrite ) {
@@ -173,14 +167,18 @@ class Logger
 
     /**
      *
-     * @param ContextOption  $contextOption
-     * @throws LSCMException
+     * @param ContextOption $contextOption
+     *
+     * @throws LSCMException  Thrown when a static Logger instance has already
+     *     been initialized.
      */
     public static function Initialize( ContextOption $contextOption )
     {
         if ( static::$instance != null ) {
-            throw new LSCMException('Logger cannot be initialized twice.',
-                    LSCMException::E_PROGRAM);
+            throw new LSCMException(
+                'Logger cannot be initialized twice.',
+                LSCMException::E_PROGRAM
+            );
         }
 
         static::$instance = new static($contextOption);
@@ -194,14 +192,17 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param object  $loggerObj
-     * @throws LSCMException
+     * @param object $loggerObj
+     *
+     * @throws LSCMException  Thrown when Logger instance is already set.
      */
     public static function setInstance( $loggerObj )
     {
         if ( static::$instance != null ) {
-            throw new LSCMException('Logger instance already set.',
-                    LSCMException::E_PROGRAM);
+            throw new LSCMException(
+                'Logger instance already set.',
+                LSCMException::E_PROGRAM
+            );
         }
 
         static::$instance = $loggerObj;
@@ -211,7 +212,9 @@ class Logger
      *
      * @since 1.9
      *
-     * @param string  $logFile
+     * @param string $logFile
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function changeLogFileUsed( $logFile )
     {
@@ -222,7 +225,9 @@ class Logger
      *
      * @since 1.9
      *
-     * @param string  $addInfo
+     * @param string $addInfo
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function setAdditionalTagInfo( $addInfo )
     {
@@ -233,8 +238,8 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param string  $msg
-     * @param int     $type
+     * @param string $msg
+     * @param int    $type
      */
     public function p_addUiMsg( $msg, $type )
     {
@@ -253,11 +258,12 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param LogEntry[]|object[]  $entries  Array of objects that implement
-     *                                       all LogEntry class public
-     *                                       functions.
+     * @param LogEntry[]|object[] $entries  Array of objects that implement all
+     *     LogEntry class public functions.
+     *
+     * @throws LSCMException  Thrown indirectly by $this->echoEntries() call.
      */
-    public function p_echoEntries( $entries )
+    public function p_echoEntries( array $entries )
     {
         $this->echoEntries($entries);
     }
@@ -277,7 +283,7 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @return boolean
+     * @return bool
      */
     public function p_getBufferedEcho()
     {
@@ -288,7 +294,7 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @return boolean
+     * @return bool
      */
     public function p_getBufferedWrite()
     {
@@ -321,33 +327,32 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param int  $type
+     * @param int $type
+     *
      * @return string[]
      */
     public function p_getUiMsgs( $type )
     {
-        $ret = array();
-
         switch ($type) {
             case static::UI_INFO:
             case static::UI_SUCC:
             case static::UI_ERR:
             case static::UI_WARN:
-                $ret = $this->uiMsgs[$type];
-                break;
-            //no default
-        }
+                return $this->uiMsgs[$type];
 
-        return $ret;
+            default:
+                return array();
+        }
     }
 
     /**
      *
      * @since 1.9.1
      *
-     * @param string  $msg
-     * @param int     $lvl
-     * @throws LSCMException  Indirectly thrown in $this->log().
+     * @param string $msg
+     * @param int    $lvl
+     *
+     * @throws LSCMException  Thrown indirectly by $this->log() call.
      */
     public function p_log( $msg, $lvl )
     {
@@ -358,7 +363,7 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param string  $addInfo
+     * @param string $addInfo
      */
     public function p_setAddTagInfo( $addInfo )
     {
@@ -369,7 +374,7 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param string  $logFile
+     * @param string $logFile
      */
     public function p_setLogFile( $logFile )
     {
@@ -380,7 +385,7 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param int  $logFileLvl
+     * @param int $logFileLvl
      */
     public function p_setLogFileLvl( $logFileLvl )
     {
@@ -391,9 +396,9 @@ class Logger
      *
      * @since 1.9.1
      *
-     * @param LogEntry[]|object[]  $msgQueue
+     * @param LogEntry[]|object[] $msgQueue
      */
-    public function p_setMsgQueue( $msgQueue )
+    public function p_setMsgQueue( array $msgQueue )
     {
         $this->msgQueue = $msgQueue;
     }
@@ -402,12 +407,12 @@ class Logger
      *
      * @since 1.9.1
      *
+     * @param LogEntry[]|object[] $entries  Array of objects that implement all
+     *     LogEntry class public functions.
      *
-     * @param LogEntry[]|object[]  $entries  Array of objects that implement
-     *                                       all LogEntry class public
-     *                                       functions.
+     * @throws LSCMException  Thrown indirectly by $this->writeToFile() call.
      */
-    public function p_writeToFile( $entries )
+    public function p_writeToFile( array $entries )
     {
         $this->writeToFile($entries);
     }
@@ -417,7 +422,8 @@ class Logger
      * @since 1.9
      *
      * @return string
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function getAdditionalTagInfo()
     {
@@ -429,6 +435,8 @@ class Logger
      * @since 1.9
      *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function getLogFilePath()
     {
@@ -439,8 +447,10 @@ class Logger
      *
      * @since 1.9
      *
-     * @return LogEntry[]|object[]  Array of objects that implement all
-     *                              LogEntry class public functions.
+     * @return LogEntry[]|object[]  Array of objects that implement all LogEntry
+     *     class public functions.
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function getLogMsgQueue()
     {
@@ -449,9 +459,11 @@ class Logger
 
     /**
      *
-     * @param int  $type
+     * @param int $type
+     *
      * @return string[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function getUiMsgs( $type )
     {
@@ -461,6 +473,10 @@ class Logger
     /**
      * Processes any buffered output, writing it to the log file, echoing it
      * out, or both.
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
+     * @throws LSCMException  Thrown indirectly by $m->p_writeToFile() call.
+     * @throws LSCMException  Thrown indirectly by $m->p_echoEntries() call.
      */
     public static function processBuffer()
     {
@@ -487,9 +503,11 @@ class Logger
      * Deprecated 06/25/19. Visibility going to be changed to "protected".
      *
      * @deprecated
-     * @param string  $msg
-     * @param int     $type
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @param string $msg
+     * @param int    $type
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function addUiMsg( $msg, $type )
     {
@@ -499,7 +517,9 @@ class Logger
     /**
      * Calls addUiMsg() with message level static::UI_INFO.
      *
-     * @param string  $msg
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::addUiMsg() call.
      */
     public static function uiInfo( $msg )
     {
@@ -509,7 +529,9 @@ class Logger
     /**
      * Calls addUiMsg() with message level static::UI_SUCC.
      *
-     * @param string  $msg
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::addUiMsg() call.
      */
     public static function uiSuccess( $msg )
     {
@@ -519,8 +541,9 @@ class Logger
     /**
      * Calls addUiMsg() with message level static::UI_ERR.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::addUiMsg() call.
      */
     public static function uiError( $msg )
     {
@@ -530,7 +553,9 @@ class Logger
     /**
      * Calls addUiMsg() with message level static::UI_WARN.
      *
-     * @param string  $msg
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::addUiMsg() call.
      */
     public static function uiWarning( $msg )
     {
@@ -539,9 +564,11 @@ class Logger
 
     /**
      *
-     * @param string  $msg
-     * @param int     $lvl
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     * @param int    $lvl
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
+     * @throws LSCMException  Thrown indirectly by static::me()->p_log() call.
      */
     public static function logMsg( $msg, $lvl )
     {
@@ -551,8 +578,9 @@ class Logger
     /**
      * Calls logMsg() with message level static::L_ERROR.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::logMsg() call.
      */
     public static function error( $msg )
     {
@@ -562,8 +590,9 @@ class Logger
     /**
      * Calls logMsg() with message level static::L_WARN.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::logMsg() call.
      */
     public static function warn( $msg )
     {
@@ -573,8 +602,9 @@ class Logger
     /**
      * Calls logMsg() with message level static::L_NOTICE.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::logMsg() call.
      */
     public static function notice( $msg )
     {
@@ -584,8 +614,9 @@ class Logger
     /**
      * Calls logMsg() with message level static::L_INFO.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::logMsg() call.
      */
     public static function info( $msg )
     {
@@ -595,8 +626,9 @@ class Logger
     /**
      * Calls logMsg() with message level static::L_VERBOSE.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::logMsg() call.
      */
     public static function verbose( $msg )
     {
@@ -606,8 +638,9 @@ class Logger
     /**
      * Calls logMsg() with message level static::L_DEBUG.
      *
-     * @param string  $msg
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     *
+     * @throws LSCMException  Thrown indirectly by static::logMsg() call.
      */
     public static function debug( $msg )
     {
@@ -617,14 +650,18 @@ class Logger
     /**
      *
      * @return Logger|object  Object that implements all Logger class public
-     *                        functions.
-     * @throws LSCMException
+     *     functions.
+     *
+     * @throws LSCMException  Thrown when Logger instance has not yet been
+     *     initialized.
      */
     protected static function me()
     {
         if ( static::$instance == null ) {
-            throw new LSCMException('Logger Uninitialized.',
-                    LSCMException::E_PROGRAM);
+            throw new LSCMException(
+                'Logger Uninitialized.',
+                LSCMException::E_PROGRAM
+            );
         }
 
         return static::$instance;
@@ -632,9 +669,11 @@ class Logger
 
     /**
      *
-     * @param string  $msg
-     * @param int     $lvl
-     * @throws LSCMException  Thrown indirectly.
+     * @param string $msg
+     * @param int    $lvl
+     *
+     * @throws LSCMException  Thrown indirectly by $this->writeToFile() call.
+     * @throws LSCMException  Thrown indirectly by $this->echoEntries() call.
      */
     protected function log( $msg, $lvl )
     {
@@ -653,12 +692,12 @@ class Logger
 
     /**
      *
-     * @param LogEntry[]|object[]  $entries  Array of objects that implement
-     *                                       all LogEntry class public
-     *                                       functions.
-     * @throws LSCMException  Thrown indirectly.
+     * @param LogEntry[]|object[] $entries  Array of objects that implements all
+     *     LogEntry class public functions.
+     *
+     * @throws LSCMException  Thrown indirectly by $e->getOutput() call.
      */
-    protected function writeToFile( $entries )
+    protected function writeToFile( array $entries )
     {
         $content = '';
 
@@ -669,8 +708,11 @@ class Logger
         if ( $content != '' ) {
 
             if ( $this->logFile ) {
-                file_put_contents($this->logFile, $content,
-                        FILE_APPEND | LOCK_EX);
+                file_put_contents(
+                    $this->logFile,
+                    $content,
+                    FILE_APPEND | LOCK_EX
+                );
             }
             else {
                 error_log($content);
@@ -680,12 +722,12 @@ class Logger
 
     /**
      *
-     * @param LogEntry[]|object[]  $entries  Array of objects that implement
-     *                                       all LogEntry class public
-     *                                       functions.
-     * @throws LSCMException  Thrown indirectly.
+     * @param LogEntry[]|object[] $entries  Array of objects that implement all
+     *     LogEntry class public functions.
+     *
+     * @throws LSCMException  Thrown indirectly by $entry->getOutput() call.
      */
-    protected function echoEntries( $entries )
+    protected function echoEntries( array $entries )
     {
         foreach ( $entries as $entry ) {
 
@@ -697,7 +739,8 @@ class Logger
 
     /**
      *
-     * @param int      $lvl
+     * @param int $lvl
+     *
      * @return string
      */
     public static function getLvlDescr( $lvl )
@@ -734,10 +777,14 @@ class Logger
      * Not used yet. Added for later cases where shared log level should be
      * changed to match panel log level.
      *
-     * @deprecated 1.9.1  Deprecated on 11/22/19. Function is likely not
-     *                    needed after recent logger changes.
-     * @param int  $lvl
-     * @return boolean
+     * @deprecated 1.9.1  Deprecated on 11/22/19. Function is likely not needed
+     *     after recent logger changes.
+     *
+     * @param int $lvl
+     *
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by static::me() call.
      */
     public static function setLogFileLvl( $lvl )
     {
@@ -759,8 +806,9 @@ class Logger
 
     /**
      *
-     * @param int  $lvl
-     * @return boolean
+     * @param int $lvl
+     *
+     * @return bool
      */
     protected static function isValidLogFileLvl( $lvl )
     {

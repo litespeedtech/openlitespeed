@@ -726,6 +726,15 @@ int H2ConnBase::processRstFrame(H2FrameHeader *pHeader)
     if (stream == NULL)
         return 0;
 
+    ++m_uiRstStreams;
+    if (m_uiRstStreams > 500 && m_uiRstStreams > m_uiStreams / 2)
+    {
+        LS_DBG_L(getLogSession(), "HTTP2 rapid reset attack detected, %d out of %d streams was reseted. stop offering HTTP/2.",
+                m_uiRstStreams, m_uiStreams);
+        disableHttp2ByIp();
+        return LS_FAIL;
+    }
+
     unsigned char p[4];
     m_bufInput.moveTo((char *)p, 4);
     m_iCurrentFrameRemain -= 4;

@@ -18,6 +18,8 @@
 #include <lsr/ls_aho.h>
 #include <lsr/ls_pool.h>
 
+#include <inttypes.h>
+
 typedef struct ls_aho_gotonode_s ls_aho_gotonode_t;
 
 struct ls_aho_gotonode_s
@@ -325,7 +327,7 @@ unsigned int ls_aho_search(ls_aho_t *pThis, ls_aho_state_t *start_state,
             for (pInputPtr = string + iStringIter; pInputPtr < string + size;
                  ++pInputPtr)
             {
-                if (*pInputPtr < 0) // Out of range
+                if ((int8_t)*pInputPtr < 0) // Out of range
                     continue;
                 if ((start_state = aAccept[(int) * pInputPtr]) != 0)
                     break;

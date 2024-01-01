@@ -47,6 +47,13 @@ class AccessLog
     LOG4CXX_NS::AppenderManager *m_pManager;
     CustomFormat                 *m_pCustomFormat;
 
+    enum
+    {
+        MODE_REGULA,
+        MODE_PIPE,
+        MODE_STREAM,
+    };
+
     short   m_iAsync;
     short   m_iPipedLog;
     int     m_iAccessLogHeader;
@@ -75,7 +82,6 @@ public:
     void setAsyncAccessLog(short async)   {   m_iAsync = async;           }
     short asyncAccessLog()  const           {   return m_iAsync;           }
 
-    void setPipedLog(short pipe)          {   m_iPipedLog = pipe;         }
     short isPipedLog()  const               {   return m_iPipedLog;        }
 
     LOG4CXX_NS::Appender *getAppender() const      {   return m_pAppender; }

@@ -346,6 +346,10 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
         ConnLimitCtrl::getInstance().incSSLConn();
         setSSL(pInfo->m_pSsl);
         ((ConnInfo *)getConnInfo())->m_pCrypto = &m_ssl;
+        if (pInfo->m_pClientInfo->getFlag(CIF_DISABLE_HTTP2))
+        {
+            m_ssl.setFlag(SslConnection::F_DISABLE_HTTP2, 1);
+        }
         m_ssl.toAccept();
     }
     else

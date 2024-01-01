@@ -3,8 +3,8 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2017-2023
+ * @author    Michael Alegre
+ * @copyright 2017-2023 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -43,7 +43,7 @@ class CPanel extends ControlPanel
     const THEME_PAPER_LANTERN_USER_PLUGIN_DIR = '/usr/local/cpanel/base/frontend/paper_lantern/ls_web_cache_manager';
 
     /**
-     * @deprecated 1.13.11 No longer used.
+     * @deprecated 1.13.11  No longer used.
      * @var string
      */
     const USER_PLUGIN_UNINSTALL_SCRIPT = self::USER_PLUGIN_DIR . '/uninstall.sh';
@@ -157,9 +157,9 @@ class CPanel extends ControlPanel
      */
     protected function init2()
     {
-        $this->panelName = 'cPanel/WHM';
-        $this->defaultSvrCacheRoot = '/home/lscache/';
-        $this->tmpCpanelPluginTplDir =
+        $this->panelName                   = 'cPanel/WHM';
+        $this->defaultSvrCacheRoot         = '/home/lscache/';
+        $this->tmpCpanelPluginTplDir       =
             self::USER_PLUGIN_BACKUP_DIR . '/landing';
         $this->tmpCpanelPluginCustTransDir =
             self::USER_PLUGIN_BACKUP_DIR . '/cust';
@@ -170,7 +170,8 @@ class CPanel extends ControlPanel
 
     protected function initConfPaths()
     {
-        $this->apacheConf = '/etc/apache2/conf.d/includes/pre_main_global.conf';
+        $this->apacheConf   =
+            '/etc/apache2/conf.d/includes/pre_main_global.conf';
         $this->apacheVHConf =
             '/etc/apache2/conf.d/userdata/lscache_vhosts.conf';
     }
@@ -251,10 +252,16 @@ class CPanel extends ControlPanel
             $this->log("Created directory $vhConfDir", Logger::L_DEBUG);
         }
 
-        $content =
-            "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>";
+        $vhConfFileCreated = (
+            file_put_contents(
+                $vhConf,
+                "<IfModule Litespeed>\nCacheRoot $vhCacheRoot\n</IfModule>"
+            )
+            !==
+            false
+        );
 
-        if ( false === file_put_contents($vhConf, $content) ) {
+        if ( !$vhConfFileCreated ) {
             throw new LSCMException("Failed to create file $vhConf.");
         }
 
@@ -274,17 +281,21 @@ class CPanel extends ControlPanel
                 || file_exists(self::THEME_PAPER_LANTERN_USER_PLUGIN_DIR) ) {
 
             self::UpdateCpanelPluginConf(
-                    self::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT,
-                    $this->vhCacheRoot
+                self::USER_PLUGIN_SETTING_VHOST_CACHE_ROOT,
+                $this->vhCacheRoot
             );
         }
     }
 
     /**
      * Gets a list of found docroots and associated server names.
-     * Only needed for scan.
+     * Only needed for scan logic.
      *
+     * @throws LSCMException  Thrown when an error is encountered by
+     *     preg_split() call on trimmed $line value.
      * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     *
+     * @noinspection SpellCheckingInspection
      */
     protected function prepareDocrootMap()
     {
@@ -355,7 +366,7 @@ class CPanel extends ControlPanel
                 $docroots[$cur] .= substr($line, 11);
 
                 /**
-                 * looking for next docroot
+                 * looking for the next docroot
                  */
                 $cur = '';
             }
@@ -370,6 +381,14 @@ class CPanel extends ControlPanel
 
         foreach ( $docroots as $docroot => $line ) {
             $names = preg_split('/\s+/', trim($line), -1, PREG_SPLIT_NO_EMPTY);
+
+            if ( $names === false ) {
+                throw new LSCMException(
+                    'prepareDocrootMap(): Error encountered when calling '
+                        . 'preg_split() on trimmed $line.'
+                );
+            }
+
             $names = array_unique($names);
             $roots[$index] = $docroot;
 
@@ -442,7 +461,7 @@ class CPanel extends ControlPanel
      *
      * @throws LSCMException  Thrown when unable to find cPanel user-end plugin
      *     installation script.
-     * @throws LSCMException Thrown when failing to backup cPanel user-end
+     * @throws LSCMException Thrown when failing to back up cPanel user-end
      *     plugin data files.
      * @throws LSCMException  Thrown indirectly by
      *     self::backupCpanelPluginDataFiles() call.
@@ -527,7 +546,7 @@ class CPanel extends ControlPanel
         /**
          * Move existing conf file (if needed), templates, and custom
          * translations to temp directory and remove default template dir to
-         * prevent overwrite when moving back.
+         * prevent overwriting when moving back.
          */
 
         $activeConfFile =
@@ -630,7 +649,8 @@ class CPanel extends ControlPanel
      *
      * @since 1.13.2.2  Made function static.
      *
-     * @throws LSCMException  Thrown when unable to find uninstall script.
+     * @throws LSCMException  Thrown when unable to find the uninstallation
+     *     script.
      */
     public static function uninstallCpanelPlugin()
     {

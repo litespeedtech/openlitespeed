@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "h2connection.h"
+#include <http/clientinfo.h>
 #include <http/hiohandlerfactory.h>
 #include <http/httpheader.h>
 #include <http/httprespheaders.h>
@@ -201,6 +202,7 @@ H2StreamBase *H2Connection::getNewStream(uint8_t ubH2_Flags)
 
     //pStream = new H2Stream();
     pStream = H2StreamPool::getH2Stream();
+    ++m_uiStreams;
     pStream->set_key(m_uiLastStreamId);
     m_mapStream.insert(pStream);
     if (m_tmIdleBegin)
@@ -312,10 +314,16 @@ int H2Connection::onTimerEx()
     else
     {
         result = timerRoutine();
-        if (!isEmpty() && DateTime::s_curTime - getStream()->getActiveTime() > 20)
+        int idle = DateTime::s_curTime - getStream()->getActiveTime();
+        if (!isEmpty() && idle > 20)
         {
             LS_DBG_L(log_s(), "write() timeout.");
             doGoAway(H2_ERROR_PROTOCOL_ERROR);
+        }
+        else if (idle > 10 && m_mapStream.size() == 0)
+        {
+            m_uiStreams = 0;
+            m_uiRstStreams = 0;
         }
     }
     return result;
@@ -333,6 +341,12 @@ int H2Connection::doGoAway(H2ErrorCode status)
     if ((m_h2flag & H2_CONN_FLAG_IN_EVENT) == 0)
         getStream()->continueWrite();
     return 0;
+}
+
+
+void H2Connection::disableHttp2ByIp()
+{
+    getStream()->getClientInfo()->setFlag(CIF_DISABLE_HTTP2);
 }
 
 

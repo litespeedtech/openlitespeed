@@ -806,6 +806,8 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     else
     {
         pReq->setStatusCode(SC_206);
+        pSession->getSendFileInfo()->setCurPos(0);
+        pSession->getSendFileInfo()->setCurEnd(0);
         if (pReq->getRange())
             delete pReq->getRange();
         pReq->setRange(range);

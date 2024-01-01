@@ -281,6 +281,10 @@ class ManageViewModel
         $this->tplData[self::FLD_ICON_DIR] = $iconDir;
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::uiInfo() call.
+     */
     protected function setBtnDataAndListVisibility()
     {
         $scanBtnName = 'Re-scan';
@@ -460,6 +464,7 @@ class ManageViewModel
     /**
      *
      * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::uiWarning() call.
      */
     protected function setActiveVerData()
     {

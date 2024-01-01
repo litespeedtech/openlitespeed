@@ -180,6 +180,11 @@ ls_inline int ls_futex_wake(int *futex)
     return _umtx_op(futex, UMTX_OP_WAKE, 1, 0, 0);
 }
 
+ls_inline int ls_futex_wake_n(int *futex, int n)
+{
+    return _umtx_op(futex, UMTX_OP_WAKE, n, 0, 0);
+}
+
 ls_inline int ls_futex_wakeall(int *futex)
 {
     return _umtx_op(futex, UMTX_OP_WAKE, INT_MAX, 0, 0);
@@ -199,6 +204,11 @@ ls_inline int ls_futex_wait(int *futex, int val, struct timespec *timeout)
 ls_inline int ls_futex_wake(int *futex)
 {
     return syscall(SYS_futex, futex, FUTEX_WAKE, 1, NULL, NULL, 0);
+}
+
+ls_inline int ls_futex_wake_n(int *futex, int n)
+{
+    return syscall(SYS_futex, futex, FUTEX_WAKE, n, NULL, NULL, 0);
 }
 
 ls_inline int ls_futex_wakeall(int *futex)
@@ -572,7 +582,7 @@ ls_inline int ls_atomic_spin_unlock(ls_atom_spinlock_t *p)
  * @param[in] p - A pointer to the lock.
  * @return 1 - locked, 0 - not locked.
  *
- * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock 
+ * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
  *      ls_atomic_spin_unlock
  */
 ls_inline int ls_atomic_spin_locked(ls_atom_spinlock_t *p)
@@ -605,7 +615,7 @@ ls_inline int ls_atomic_spin_pidunlock(ls_atom_spinlock_t *p)
  * @param[in] p - A pointer to the lock.
  * @return 1 - locked, 0 - not locked.
  *
- * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock 
+ * @see ls_atomic_spin_setup, ls_atomic_spin_lock, ls_atomic_spin_trylock
  *      ls_atomic_spin_unlock
  */
 ls_inline int ls_atomic_pidlocked(ls_atom_spinlock_t *p)

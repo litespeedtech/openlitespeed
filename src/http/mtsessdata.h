@@ -239,16 +239,16 @@ class MtParamSendfile
 {
 public:
     const char     *m_pFile;
-    int             m_fd;
     int64_t         m_start;
     int64_t         m_size;
-    char            m_ret;
+    int             m_fd;
+    int             m_ret;
 
     MtParamSendfile()
         : m_pFile(NULL)
-          , m_fd(0)
           , m_start(0)
           , m_size(0)
+          , m_fd(0)
           , m_ret(0)
     {}
 

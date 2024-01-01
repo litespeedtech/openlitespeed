@@ -441,6 +441,12 @@ int ConfigCtx::getLogFilePath(char *pBuf, const XmlNode *pNode)
     if (pValue == NULL)
         return 1;
 
+    if (strcmp(pValue, "stdout") == 0 || strcmp(pValue, "stderr") == 0)
+    {
+        strcpy(pBuf, pValue);
+        return 0;
+    }
+
     if (getAbsoluteFile(pBuf, pValue) != 0)
     {
         LS_WARN(this, "Path for %s is invalid: %s", "log file",  pValue);

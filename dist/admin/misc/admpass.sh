@@ -26,15 +26,7 @@ This is the password required to login the administration Web interface.
 
 EOF
 
-# have user?
-if [ -z `grep $ADMIN_USER $CUR_DIR/../conf/htpasswd` ]
-then
-	echo "User not found: $ADMIN_USER"
-	exit 0;
-fi
-
 while [ $SUCC -eq "0" ];  do
-	echo "Give password to $ADMIN_USER"
 	printf "%s" "Password: "
 	stty -echo
 	read PASS_ONE
@@ -64,8 +56,8 @@ done
 # generate password file
 
 ENCRYPT_PASS=`$CUR_DIR/../fcgi-bin/admin_php -q $CUR_DIR/htpasswd.php $PASS_ONE`
-#echo "$ADMIN_USER:$ENCRYPT_PASS" > $CUR_DIR/../conf/htpasswd 
-sed -i 's/'$ADMIN_USER':.*/'$ADMIN_USER':'${ENCRYPT_PASS//\//\\/}'/' $CUR_DIR/../conf/htpasswd
+echo "$ADMIN_USER:$ENCRYPT_PASS" > $CUR_DIR/../conf/htpasswd 
 if [ $? -eq 0 ]; then
-	echo "$ADMIN_USER password is updated successfully!"
+	echo "Administrator's username/password is updated successfully!"
 fi
+

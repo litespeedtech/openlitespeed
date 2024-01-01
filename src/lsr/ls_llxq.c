@@ -20,6 +20,7 @@
 #include <lsr/ls_pool.h>
 #include <lsr/ls_atomic.h>
 #include <lsr/ls_lock.h>
+#include <lsr/ls_lock.h>
 
 //#define LSR_LLQ_DEBUG
 
@@ -28,8 +29,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <linux/futex.h>
-#include <sys/syscall.h>
 #include <errno.h>
 #include <lsdef.h>
 
@@ -112,8 +111,7 @@ static inline int do_wait(ls_atom_uint_t *pCnt, ls_atom_uint_t *pIndx,
 {
     int ret = 0;
     ls_atomic_add((int *)pCnt, 1);
-    if (syscall(SYS_futex, (int *)pIndx, FUTEX_WAIT, val, timeout, NULL,
-                0) < 0)
+    if (ls_futex_wait((int *)pIndx, val, timeout) < 0)
     {
         if ((errno == ETIMEDOUT) || (errno == EINVAL))
             ret = -1;
@@ -137,9 +135,7 @@ static inline void do_wake(int cnt, ls_atom_uint_t *ptr, char *msg,
     printf("%d] WAKE UP %s: xxx=%d, put=%d, get=%d\n",
            ls_atomic_add(&MYINDX, 1),
            msg, xxx, (int)pInfo->m_iPutIndx, (int)pInfo->m_iGetIndx);
-    while (((ret =
-                 syscall(SYS_futex, (int *)ptr, FUTEX_WAKE, cnt, NULL, NULL, 0)) < 1)
-           && (--retry > 0))
+    while ((ret = ls_futex_wake_n((int *)ptr, cnt)) < 1 && --retry > 0)
     {
         printf("RETRY wake up %s: ret=%d\n", msg, ret);
         ;
@@ -153,9 +149,7 @@ static inline void do_wake(int cnt, ls_atom_uint_t *ptr, char *msg,
 static inline void do_wake(int cnt, ls_atom_uint_t *ptr)
 {
     int retry = 5;
-    while ((
-               syscall(SYS_futex, (int *)ptr, FUTEX_WAKE, cnt, NULL, NULL, 0) < 1)
-           && (--retry > 0))
+    while (ls_futex_wake_n((int *)ptr, cnt) < 1 && --retry > 0)
         ;
     return;
 }
