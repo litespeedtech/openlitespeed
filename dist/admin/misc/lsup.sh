@@ -11,6 +11,8 @@ CURDIR=`pwd`
 LSWSHOME=`dirname $CURDIR`
 LSWSHOME=`dirname ${LSWSHOME}`
 
+ARCH=$(uname -m)
+
 #When it is new installation, use default DIR
 if [ ! -f ${LSWSHOME}/bin/openlitespeed ] ; then
     LSWSHOME=/usr/local/lsws
@@ -489,7 +491,7 @@ else
     URLMODE=src.
 fi
 
-URL=https://openlitespeed.org/${URLDIR}/openlitespeed-${VERSION}.${URLMODE}tgz
+URL=https://openlitespeed.org/${URLDIR}/openlitespeed-${VERSION}-${ARCH}-linux.${URLMODE}tgz
 echoG "download URL is ${URL}"
 
 testsz=1000000  
@@ -511,7 +513,7 @@ if [ $RET != 0 ] ; then
     else
         echoR "Failed to download $URL, will try our under development version."
         URLDIR=preuse
-        URL=https://openlitespeed.org/${URLDIR}/openlitespeed-${VERSION}.${URLMODE}tgz
+        URL=https://openlitespeed.org/${URLDIR}/openlitespeed-${VERSION}-${ARCH}-linux.${URLMODE}tgz
         echoG "download URL is ${URL}"
         
         RET=1
