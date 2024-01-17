@@ -447,10 +447,16 @@ class WPInstallStorage
                     $data[$utf8Path] = $install->getData();
 
                     $siteUrl = &$data[$utf8Path][WPInstall::FLD_SITEURL];
-                    $siteUrl = urlencode($siteUrl);
+
+                    if ( $siteUrl != null ) {
+                        $siteUrl = urlencode($siteUrl);
+                    }
 
                     $serverName = &$data[$utf8Path][WPInstall::FLD_SERVERNAME];
-                    $serverName = urlencode($serverName);
+
+                    if ( $serverName != null ) {
+                        $serverName = urlencode($serverName);
+                    }
                 }
             }
 

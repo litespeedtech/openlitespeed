@@ -3544,8 +3544,8 @@ int HttpSession::sendDynBody()
         LS_DBG_M(getLogSession(),
                  "sendDynBody() buffer: %p, len: %zd, sent %lld\n",
                     pBuf, toWrite, (long long)m_lDynBodySent);
-        if (!pBuf)
-            return LS_FAIL;
+        if (!pBuf || toWrite <= 0)
+            return LS_OK;
 
         if (toWrite <= 0)
             break;

@@ -1609,7 +1609,6 @@ static char s_errUseSSL[] =
     "<blockquote>Hint: The URL should starts with <b>https</b>://</blockquote> </p>\n"
     "<hr />\n"
     "Powered By LiteSpeed Web Server<br />\n"
-    "<a href='http://www.litespeedtech.com'><i>http://www.litespeedtech.com</i></a>\n"
     "</body></html>\n";
 
 static char s_redirectSSL1[] =
