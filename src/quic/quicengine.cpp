@@ -621,7 +621,9 @@ int QuicEngine::sendPacketsMmsg(
     if (count)
     {
         pListener = (UdpListener *)packets[0].peer_ctx;
-        return pListener->sendPackets(packets, count);
+        int ret = pListener->sendPackets(packets, count);
+        s_sent_packets += (ret > 0);
+        return ret;
     }
     else
         return 0;

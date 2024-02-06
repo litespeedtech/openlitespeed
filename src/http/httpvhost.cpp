@@ -1658,9 +1658,9 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     }
 
     achFileName[pathLen] = 0;
-    snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%s/log/stderr.log",
+    snprintf(achName, MAX_PATH_LEN, "LS_STDERR_LOG=%s/log/stderr.log",
              &achFileName[m_sChroot.len()]);
-    config.addEnv(achName);
+    config.addEnvIfNotExist(achName, "LS_STDERR_LOG");
 
     config.getEnv()->add(pAppDefault->getEnv());
     config.addEnv(NULL);
@@ -1843,9 +1843,9 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     snprintf(achName, MAX_PATH_LEN, "PYTHONPATH=.:%s", &achFileName[iChrootlen]);
     config.addEnvIfNotExist(achName, "PYTHONPATH");
 
-    snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%sstderr.log",
+    snprintf(achName, MAX_PATH_LEN, "LS_STDERR_LOG=%sstderr.log",
              &achFileName[m_sChroot.len()]);
-    config.addEnvIfNotExist(achName, "LSAPI_STDERR_LOG");
+    config.addEnvIfNotExist(achName, "LS_STDERR_LOG");
     addHomeEnv(this, config.getEnv());
 
     if (pPythonEnv)
@@ -2087,10 +2087,10 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
         setDetachedAppEnv(config.getEnv(), maxIdle);
     }
 
-//     achFileName[pathLen] = 0;
-//     snprintf(achName, MAX_PATH_LEN, "LSAPI_STDERR_LOG=%s/log/stderr.log",
-//              &achFileName[iChrootlen]);
-//    config.addEnv(achName);
+    achFileName[pathLen] = 0;
+    snprintf(achName, MAX_PATH_LEN, "LS_STDERR_LOG=%s/log/stderr.log",
+             &achFileName[iChrootlen]);
+    config.addEnvIfNotExist(achName, "LS_STDERR_LOG");
 
     config.getEnv()->add(pAppDefault->getEnv());
     config.addEnv(NULL);
