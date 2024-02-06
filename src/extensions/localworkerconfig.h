@@ -88,6 +88,7 @@ public:
     void setPhpHandler(int v)       { m_iPhpHandler = v;    }
 
     int checkExtAppSelfManagedAndFixEnv(int maxIdleTime);
+    void applyStderrLog();
     int config(const XmlNode *pNode);
     void configExtAppUserGroup(const XmlNode *pNode, int iType, char *sHomeDir,
                                size_t szHomeDir);

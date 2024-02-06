@@ -1602,14 +1602,14 @@ static char s_errUseSSL[] =
     "Cache-Control: private, no-cache, max-age=0\r\n"
     "Pragma: no-cache\r\n"
     "Connection: Close\r\n\r\n"
-    "<html><head><title>400 Bad Request</title></head><body>\n"
+    "<html><head><title>400 Bad Request</title>"
+    "<style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></head><body>\n"
     "<h2>HTTPS is required</h2>\n"
     "<p>This is an SSL protected page, please use the HTTPS scheme instead of "
     "the plain HTTP scheme to access this URL.<br />\n"
     "<blockquote>Hint: The URL should starts with <b>https</b>://</blockquote> </p>\n"
     "<hr />\n"
     "Powered By LiteSpeed Web Server<br />\n"
-    "<a href='http://www.litespeedtech.com'><i>http://www.litespeedtech.com</i></a>\n"
     "</body></html>\n";
 
 static char s_redirectSSL1[] =

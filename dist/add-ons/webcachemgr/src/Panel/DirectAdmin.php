@@ -234,7 +234,7 @@ class DirectAdmin extends ControlPanel
                 /**
                  * 12 is strlen('DocumentRoot')
                  */
-                $curDocRoot = trim(substr($line, 12));
+                $curDocRoot = trim(substr($line, 12), " \n\r\t\v\x00\"");
 
                 /**
                  * Avoid possible duplicate detections due to

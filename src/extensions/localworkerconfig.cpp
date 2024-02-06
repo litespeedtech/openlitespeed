@@ -21,6 +21,7 @@
 
 #include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
+#include <http/stderrlogger.h>
 #include <log4cxx/logger.h>
 #include <main/configctx.h>
 #include <util/rlimits.h>
@@ -131,6 +132,19 @@ static void setDetachedAppEnv(Env *pEnv, int max_idle)
 }
 
 
+void LocalWorkerConfig::applyStderrLog()
+{
+    char buf[MAX_PATH_LEN];
+    if (getEnv()->find("LS_STDERR_LOG"))
+        return;
+    const char *pLogFile = StdErrLogger::getInstance().getLogFileName();
+    if (!pLogFile)
+        pLogFile = "/dev/null";
+    snprintf(buf, MAX_PATH_LEN, "LS_STDERR_LOG=%s", pLogFile);
+    addEnv(buf);
+}
+
+
 int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv(int maxIdleTime)
 {
     static const char *instanceEnv[] =
@@ -176,6 +190,7 @@ int LocalWorkerConfig::checkExtAppSelfManagedAndFixEnv(int maxIdleTime)
         setDetachedAppEnv(pEnv,
                           (maxIdleTime > DETACH_MODE_MIN_MAX_IDLE)
                           ? maxIdleTime : DETACH_MODE_MIN_MAX_IDLE);
+        applyStderrLog();
     }
 
     pEnv->add(0, 0, 0, 0);

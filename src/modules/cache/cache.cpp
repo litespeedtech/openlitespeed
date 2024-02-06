@@ -2744,6 +2744,14 @@ MyMData *createMData(lsi_param_t *rec)
 
     CacheConfig *pConfig = (CacheConfig *)g_api->get_config(
                                rec->session, &MNAME);
+    if (!pConfig)
+    {
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s] cache module is not configured, skip.\n",
+                   ModuleNameStr);
+        return NULL;
+    }
+
     int flag = getControlFlag(pConfig);
     myData->cacheCtrl.init(flag, pConfig->getDefaultAge(), pConfig->getMaxStale());
     myData->pConfig = pConfig;
@@ -3053,7 +3061,11 @@ static int checkVaryEnv(lsi_param_t *rec)
     MyMData *myData = (MyMData *) g_api->get_module_data(rec->session, &MNAME,
                       LSI_DATA_HTTP);
     if (myData == NULL)
+    {
         myData = createMData(rec);
+        if (!myData)
+            return -1;
+    }
 
     if (myData->pCacheVary == NULL)
         myData->pCacheVary = new AutoStr2;
@@ -3071,7 +3083,11 @@ static int checkCtrlEnv(lsi_param_t *rec)
                       LSI_DATA_HTTP);
 
     if (myData == NULL)
+    {
         myData = createMData(rec);
+        if (!myData)
+            return -1;
+    }
 
     if (myData->pCacheCtrlVary == NULL)
         myData->pCacheCtrlVary = new AutoStr2;

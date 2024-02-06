@@ -2471,13 +2471,10 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     {
     case HandlerType::HT_STATIC:
         //So, if serve with static file, try use cache first
-        if (!m_request.isHeaderSet(HttpHeader::H_RANGE)
-            && m_request.getUrlStaticFileData())
+        if (m_request.getUrlStaticFileData())
         {
             m_sendFileInfo.setFileData(m_request.getUrlStaticFileData()->pData);
             m_sendFileInfo.setECache(m_request.getUrlStaticFileData()->pData->getFileData());
-            m_sendFileInfo.setCurPos(0);
-            m_sendFileInfo.setCurEnd(m_request.getUrlStaticFileData()->pData->getFileSize());
             m_sendFileInfo.setParam(NULL);
             setFlag(HSF_STX_FILE_CACHE_READY);
             LS_DBG_L( getLogSession(), "[static file cache] handling static file [ref=%d %d].",
@@ -3334,7 +3331,8 @@ int HttpSession::isExtAppNoAbort()
 
 
 static char s_errTimeout[] =
-    "<html><head><title>500 Internal Server Error</title></head><body>\n"
+    "<html><head><title>500 Internal Server Error</title>"
+    "<style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></head><body>\n"
     "<h2>Request Timeout</h2>\n"
     "<p>This request takes too long to process, it is timed out by the server. "
     "If it should not be timed out, please contact administrator of this web site "
@@ -3544,8 +3542,8 @@ int HttpSession::sendDynBody()
         LS_DBG_M(getLogSession(),
                  "sendDynBody() buffer: %p, len: %zd, sent %lld\n",
                     pBuf, toWrite, (long long)m_lDynBodySent);
-        if (!pBuf)
-            return LS_FAIL;
+        if (!pBuf || toWrite <= 0)
+            return LS_OK;
 
         if (toWrite <= 0)
             break;
@@ -3948,7 +3946,8 @@ void HttpSession::resetRespBodyBuf()
  * the 2nd error is just appended to the content which is already sent
  */
 static char achError413Page[] =
-    "<HTML><HEAD><TITLE>Request Entity Too Large</TITLE></HEAD>"
+    "<HTML><HEAD><TITLE>Request Entity Too Large</TITLE>"
+    "<style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></HEAD>"
     "<BODY BGCOLOR=#FFFFFF><HR><H1>413 Request Entity Too Large</H1>"
     "The dynamic response body size is over the limit. The limit is "
     "set in the key 'maxDynRespSize' located in the tuning section of"

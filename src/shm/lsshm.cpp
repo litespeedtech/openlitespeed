@@ -668,7 +668,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         if (pShmMap->x_stat.m_iFileSize != mystat.st_size)
         {
             SHM_WARN("SHM file [%s] size: %lld, does not match x_stat.m_iFileSize: %ld, correct it",
-                     m_pFileName, mystat.st_size, pShmMap->x_stat.m_iFileSize);
+                     m_pFileName, mystat.st_size, (long)pShmMap->x_stat.m_iFileSize);
             pShmMap->x_stat.m_iFileSize = mystat.st_size;
         }
         
@@ -692,7 +692,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         if (x_pShmMap->x_iLockOffset != 36)
         {
             SHM_WARN("SHM file [%s] bad lock offset: %lld, it should be always 36, correct it",
-                     m_pFileName, x_pShmMap->x_iLockOffset);
+                     m_pFileName, (long long)x_pShmMap->x_iLockOffset);
             x_pShmMap->x_iLockOffset = 36;
         }
         
