@@ -122,9 +122,9 @@ class ControllerBase
 		$pid = $this->_disp->Get(DInfo::FLD_PID);
 		$tid = $this->_disp->Get(DInfo::FLD_TID);
 
-		if ( ($view == DInfo::CT_SERV && strpos($tid, 'S_MIME') !== false)
+		if ( ($view == DInfo::CT_SERV && $tid && strpos($tid, 'S_MIME') !== false)
 			|| ($view == DInfo::CT_ADMIN && $pid == 'usr')
-			|| ($view == DInfo::CT_VH && (strpos($tid, 'V_UDB') !== false || strpos($tid, 'V_GDB') !== false))) {
+			|| ($view == DInfo::CT_VH && $tid && (strpos($tid, 'V_UDB') !== false || strpos($tid, 'V_GDB') !== false))) {
 			$confdata = $this->_special;
 		}
 		elseif (($view == DInfo::CT_VH && $pid != 'base') || ($view == DInfo::CT_TP && $pid != 'mbr')) {
@@ -181,7 +181,7 @@ class ControllerBase
 		}
 
 		// special
-		if ($view == DInfo::CT_SERV && strpos($tid, 'S_MIME') !== false) {
+		if ($view == DInfo::CT_SERV && $tid && strpos($tid, 'S_MIME') !== false) {
 			$mime = $this->_serv->GetChildrenValues('mime');
 			$file = PathTool::GetAbsFile($mime[0], 'SR');
 			$this->_special = new CData(DInfo::CT_EX, $file, 'MIME');
@@ -195,7 +195,7 @@ class ControllerBase
 			if (($conferr = $this->_special->GetConfErr()) != null)
 				$this->_disp->Set(DInfo::FLD_TopMsg, $conferr);
 		}
-		elseif ($view == DInfo::CT_VH &&
+		elseif ($view == DInfo::CT_VH && $tid &&
 				(($isudb = strpos($tid, 'V_UDB')) !== false || strpos($tid, 'V_GDB') !== false )) {
 			$realm = $this->_curOne->GetChildNodeById('realm', $this->_disp->GetFirst(DInfo::FLD_REF));
 			if ($realm != null) {

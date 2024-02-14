@@ -35,6 +35,7 @@
 
 class RLimits;
 
+class AutoBuf;
 class ExtConn;
 class ExtRequest;
 class GSockAddr;
@@ -147,6 +148,8 @@ public:
 
     static int startServerSock(ExtWorkerConfig *pConfig, int backlog);
     int generateRTReport(int fd, const char *pTypeName);
+    int generateRTJsonReport(AutoBuf *buf, const char *pTypeName, int *did);
+    int resetStats(const char *pTypeName);
 
     ReqStats *getReqStats()    {   return &m_reqStats; }
 

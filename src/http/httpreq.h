@@ -96,7 +96,8 @@ enum
     URL_ROBOTS_TXT,
     URL_WELL_KNOWN,
     URL_ACME_CHALLENGE,
-    URL_CAPTCHA,
+    URL_CAPTCHA_VERIFY,
+    URL_CAPTCHA_REQ,
 };
 
 #define GZIP_ENABLED            1
@@ -258,9 +259,9 @@ private:
     unsigned short      m_ver;
     short               m_iRedirects;
 
-    char                m_iReqFlag;
-    char                 m_iAcceptGzip;
-    char                 m_iAcceptBr;
+    uint16_t            m_iReqFlag;
+    char                m_iAcceptGzip;
+    char                m_iAcceptBr;
 
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
@@ -395,6 +396,10 @@ public:
         IS_HTTPS            = 4,
         IS_HTTPS_MASK       = 6,
         IS_NO_CACHE         = 8,
+
+        IS_CAPTCHA_AVOID_TESTED    = 32,
+        IS_CAPTCHA_BYPASS   = 64,
+        IS_TRUSTED          = 128
     };
 
    explicit HttpReq();
@@ -559,7 +564,7 @@ public:
     int  isErrorPage() const
     {   return m_iContextState & IS_ERROR_PAGE; }
 
-    char isKeepAlive() const
+    bool isKeepAlive() const
     {   return m_iReqFlag & IS_KEEPALIVE;     }
     void keepAlive(char keepalive)
     {
@@ -709,7 +714,11 @@ public:
 
     bool isFavicon() const      {   return (m_iUrlType == URL_FAVICON); }
     bool isRobotsTxt() const    {   return m_iUrlType == URL_ROBOTS_TXT;    }
-    bool isCaptcha() const      {   return (m_iUrlType == URL_CAPTCHA); }
+    bool isCaptchaVerify() const
+    {   return (m_iUrlType == URL_CAPTCHA_VERIFY); }
+    bool isCaptchaUrl() const
+    {   return m_iUrlType == URL_CAPTCHA_VERIFY
+                || m_iUrlType == URL_CAPTCHA_REQ; }
     bool isChallenge() const    {   return (m_iUrlType == URL_ACME_CHALLENGE); }
     short getUrlType() const    {   return m_iUrlType;  }
 
@@ -921,7 +930,16 @@ public:
 
     const Recaptcha *getRecaptcha() const;
     void setRecaptchaEnvs();
-    int rewriteToRecaptcha();
+    int rewriteToRecaptcha(const char *reason);
+    bool testedAvoidRecaptcha()
+    {   bool b = m_iReqFlag & IS_CAPTCHA_AVOID_TESTED;
+        m_iReqFlag = m_iReqFlag | IS_CAPTCHA_AVOID_TESTED;
+        return b;
+    }
+    bool getAvoidRecaptcha() const  {   return m_iReqFlag & IS_CAPTCHA_BYPASS;  }
+    void setAvoidRecaptcha()        {   m_iReqFlag = m_iReqFlag | IS_CAPTCHA_BYPASS;    }
+    void setTrusted()               {   m_iReqFlag = m_iReqFlag | IS_TRUSTED;           }
+    bool isTrusted() const          {   return m_iReqFlag & IS_TRUSTED;     }
 
     int checkUrlStaicFileCache();
     static_file_data_t *getUrlStaticFileData() { return m_pUrlStaticFileData;}

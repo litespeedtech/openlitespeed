@@ -205,12 +205,18 @@
 /* Define to 1 if `vfork' works. */
 #undef HAVE_WORKING_VFORK
 
+/* Defined to compile with IOURING */
+#undef IOURING
+
 /* Defined to build lscpd */
 #undef IS_LSCPD
 
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
+
+/* Defined to compile with LS_AIO_USE_LINUX_AIO flag */
+#undef LS_AIO_USE_LINUX_AIO
 
 /* Define if set to debug mode */
 #undef LS_ENABLE_DEBUG

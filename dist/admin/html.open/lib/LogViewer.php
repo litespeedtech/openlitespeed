@@ -9,7 +9,7 @@ class LogFilter
 
     //'E' => 1, 'W' => 2, 'N' => 3, 'I' => 4, 'D' => 5
 
-    private $LEVEL_DESCR = array(1 => 'ERROR', 2 => 'WARNING', 3 => 'NOTICE', 4 => 'INFO', 5 => 'DEBUG');
+    private $LEVEL_DESCR = [1 => 'ERROR', 2 => 'WARNING', 3 => 'NOTICE', 4 => 'INFO', 5 => 'DEBUG'];
 
     const LEVEL_ERR = 1;
     const LEVEL_WARN = 2;
@@ -41,13 +41,13 @@ class LogFilter
     private $_totallines = 0;
     private $_outmesg = '';
 
-    function __construct($filename, $type = self::LOGTYPE_ERRLOG)
+    public function __construct($filename, $type = self::LOGTYPE_ERRLOG)
     {
         $this->_logfile = $filename;
         $this->_logtype = $type;
     }
 
-    function Get($field)
+    public function Get($field)
     {
         switch ($field) {
             case self::FLD_LEVEL: return $this->_level;
@@ -68,12 +68,12 @@ class LogFilter
         }
     }
 
-    function GetLogOutput()
+    public function GetLogOutput()
     {
         return $this->_output;
     }
 
-    function AddLogEntry($level, $time, $message)
+    public function AddLogEntry($level, $time, $message)
     {
         $this->_outlines ++;
         $buf = '<tr><td>' . $time . '</td><td';
@@ -96,7 +96,7 @@ class LogFilter
         $this->_output .= $buf;
     }
 
-    function Set($field, $value)
+    public function Set($field, $value)
     {
         switch ($field) {
             case self::FLD_LEVEL: $this->_level = $value;
@@ -114,7 +114,7 @@ class LogFilter
         }
     }
 
-    function SetRange($from, $size)
+    public function SetRange($from, $size)
     {
         if ($from < 0 && $from !== self::POS_FILEEND) {
             $from = 0;
@@ -124,7 +124,7 @@ class LogFilter
         $this->_output = '';
     }
 
-    function SetMesg($mesg)
+    public function SetMesg($mesg)
     {
         $this->_outmesg = $mesg;
     }
@@ -147,8 +147,9 @@ class LogViewer
     {
         // get from input
         $filename = UIBase::GrabGoodInput('any', 'filename');
-        if ($filename == '')
+        if ($filename == '') {
             return self::GetDashErrLog($errorlogfile);
+		}
 
         // todo: validate
         $level = UIBase::GrabGoodInput('ANY', 'sellevel', 'int');
@@ -193,7 +194,7 @@ class LogViewer
         $file_size = filesize($logfile);
         $filter->Set(LogFilter::FLD_FILE_SIZE, $file_size);
 
-        $frompos = ($frominput == LogFilter::POS_FILEEND) ? ($file_size - $block) : ($frominput * 1024);
+        $frompos = (int)(($frominput == LogFilter::POS_FILEEND) ? ($file_size - $block) : ($frominput * 1024));
         if ($frompos < 0) {
             $frompos = 0;
             $endpos = $file_size;

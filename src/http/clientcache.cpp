@@ -238,6 +238,34 @@ int ClientCache::writeBlockedIP(AutoBuf *pBuf, Cache *pCache)
 }
 
 
+int ClientCache::writeBlockedIPJson(AutoBuf *pBuf, Cache *pCache, int *count)
+{
+    ClientInfo *pInfo;
+    Cache::iterator iter;
+    int len;
+    for (iter = pCache->begin(); iter != pCache->end();
+         iter = pCache->next(iter))
+    {
+        pInfo = iter.second();
+        if ((pInfo) && (pInfo->getAccess() == AC_BLOCK))
+        {
+            if (pBuf->guarantee(256))
+                return -1;
+            len = snprintf(pBuf->end(), 256,
+                          ",\n%s"
+                          "    \"%s\"",
+                          !*count ? 
+                            "  \"blocked_ips\":\n"
+                            "  [\n" : "",
+                          pInfo->getAddrString());
+            pBuf->used(len);
+            (*count)++;
+        }
+    }
+    return 0;
+}
+
+
 int ClientCache::generateBlockedIPReport(int fd)
 {
     AutoBuf buf(1024);
@@ -246,6 +274,18 @@ int ClientCache::generateBlockedIPReport(int fd)
     writeBlockedIP(&buf, &m_v6);
     buf.append_unsafe('\n');
     write(fd, buf.begin(), buf.size());
+    return 0;
+}
+
+
+int ClientCache::generateBlockedIPJsonReport(AutoBuf *buf)
+{
+    int count = 0;
+    if (writeBlockedIPJson(buf, &m_v4, &count) ||
+        writeBlockedIPJson(buf, &m_v6, &count))
+        return -1;
+    if (count)
+        buf->append("\n  ]");
     return 0;
 }
 
@@ -390,7 +430,7 @@ static int addrlookupCb(void *arg, const long length, void *hosts)
 }
 
 
-ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
+ClientInfo *ClientCache::getClientInfo(const struct sockaddr *pPeer)
 {
     const_iterator iter = find(pPeer);
     ClientInfo *pInfo;
@@ -442,6 +482,15 @@ ClientInfo *ClientCache::getClientInfo(struct sockaddr *pPeer)
             pInfo->getThrottleCtrl().setUnlimited();
         else
             pInfo->getThrottleCtrl().adjustLimits(ThrottleControl::getDefault());
+
+        const AccessControl *proxyList = HttpServerConfig::getInstance().getProxyProtocolList();
+        if (proxyList)
+        {
+            int access = proxyList->hasAccess(pPeer);
+            if (access == AC_ALLOW)
+                pInfo->setFlag(CIF_PROTOCOL_PROXY);
+        }
+
         pInfo->getThrottleCtrl().resetQuotas();
 
         //perform domain name lookup

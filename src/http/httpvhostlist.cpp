@@ -17,7 +17,9 @@
 *****************************************************************************/
 #include "httpvhostlist.h"
 #include <http/httpvhost.h>
+#include <util/autobuf.h>
 #include <util/hashstringmap.h>
+#include <log4cxx/logger.h>
 
 #include <stdio.h>
 #include <unistd.h>
@@ -85,11 +87,65 @@ class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
 
                                   iter.second()->getReqStats()->getHitsPS(),
                                   iter.second()->getReqStats()->getTotalHits());
-            iter.second()->getReqStats()->reset();
             if (::write(fd, achBuf, len) != len)
                 return LS_FAIL;
         }
         return 0;
+    }
+
+    int writeRTJsonReport(AutoBuf *buf) const
+    {
+        const_iterator iter;
+        const_iterator iterEnd = end();
+        if (begin() == end())
+            return 0;
+        if (buf->guarantee(256))
+            return -1;
+        int len = ls_snprintf(buf->end(), 256,
+                              ",\n"
+                              "  \"vhost_req_stats\":\n"
+                              "  [\n");
+        buf->used(len);
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
+        {
+            if (buf->guarantee(1024))
+                return -1;
+            len = ls_snprintf(buf->end(), 1024, 
+                              "%s"
+                              "    {\n"
+                              "      \"vhost\": \"%s\",\n"
+                              "      \"processing\": %d,\n"
+                              "      \"per_sec\": %d,\n"
+                              "      \"total\": %d,\n"
+                              "      \"pub_cache_hits_per_sec\": %d,\n"
+                              "      \"total_pub_cache_hits\": %d,\n"
+                              "      \"private_cache_hits_per_sec\": %d,\n"
+                              "      \"total_private_cache_hits\": %d,\n"
+                              "      \"static_hits_per_sec\": %d,\n"
+                              "      \"total_static_hits\": %d\n"
+                              "    }%s",
+                              iter == begin() ? "" : ",\n",
+                              iter.first(), iter.second()->getRef(),
+                              iter.second()->getReqStats()->getRPS(),
+                              iter.second()->getReqStats()->getTotal(),
+                              iter.second()->getReqStats()->getPubHitsPS(),
+                              iter.second()->getReqStats()->getTotalPubHits(),
+                              iter.second()->getReqStats()->getPrivHitsPS(),
+                              iter.second()->getReqStats()->getTotalPrivHits(),
+                              iter.second()->getReqStats()->getHitsPS(),
+                              iter.second()->getReqStats()->getTotalHits(),
+                              next(iter) == iterEnd ? "\n  ]" : "");
+            buf->used(len);
+        }
+        return 0;
+    }
+
+    void resetStats() const
+    {
+        const_iterator iter;
+        const_iterator iterEnd = end();
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
+            iter.second()->getReqStats()->reset();
     }
 
     int writeStatusReport(int fd) const
@@ -107,6 +163,40 @@ class HttpVHostMapImpl: public HashStringMap<HttpVHost *>
                     return LS_FAIL;
             }
         }
+        return 0;
+    }
+
+    int writeStatusJsonReport(int fd) const
+    {
+        const_iterator iter;
+        const_iterator iterEnd = end();
+        char achBuf[1024];
+        int len;
+        int first = 1;
+        LS_DBG("writeStatusJsonReport httpvhostlist.cpp");
+        for (iter = begin(); iter != iterEnd; iter = next(iter))
+        {
+            if (strcmp(iter.first(), DEFAULT_ADMIN_SERVER_NAME) != 0)
+            {
+                LS_DBG("name: %s", iter.first());
+                LS_DBG("enabled: %d", iter.second()->isEnabled());
+                len = ls_snprintf(achBuf, sizeof(achBuf), 
+                                  "%s"
+                                  "      {\n"
+                                  "        \"name\": \"%s\",\n"
+                                  "        \"enabled\": %s\n"
+                                  "      }",
+                                  first ? "  \"vhosts\" : [\n" : ",\n",
+                                  iter.first(), 
+                                  (iter.second()->isEnabled() != 0) ? "true" : "false");
+                if (::write(fd, achBuf, len) != len)
+                    return LS_FAIL;
+                first = 0;
+            }
+        }
+        LS_DBG("terminator");
+        if (!first && ::write(fd, "\n    ]\n", 7) != 7)
+            return LS_FAIL;
         return 0;
     }
 
@@ -249,9 +339,24 @@ int HttpVHostMap::writeRTReport(int fd) const
     return m_impl->writeRTReport(fd);
 }
 
+int HttpVHostMap::writeRTJsonReport(AutoBuf *buf) const
+{
+    return m_impl->writeRTJsonReport(buf);
+}
+
+void HttpVHostMap::resetStats() const
+{
+    m_impl->resetStats();
+}
+
 int HttpVHostMap::writeStatusReport(int fd) const
 {
     return m_impl->writeStatusReport(fd);
+}
+
+int HttpVHostMap::writeStatusJsonReport(int fd) const
+{
+    return m_impl->writeStatusJsonReport(fd);
 }
 
 void HttpVHostMap::release_objects()

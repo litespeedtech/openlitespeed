@@ -60,6 +60,7 @@ END_LOG4CXX_NS
 #define VH_QUIC_LISTENER    (1<<13)
 #define VH_BWRAP            (1<<14)
 #define VH_STRICT_OWNER     (1<<15)
+#define VH_NS               (1<<16)
 
 #define MAX_VHOST_PHP_NUM    100
 
@@ -163,6 +164,13 @@ public:
         BWRAP_ON
     };
 
+    enum NSConfigValues
+    {
+        NS_NOT_SET = 0,
+        NS_OFF,
+        NS_ON
+    };
+
 private:
     ReqStats            m_reqStats;
     AccessLog          *m_pAccessLog[MAX_ACCESS_LOG];
@@ -191,6 +199,7 @@ private:
     AutoStr2            m_sAdminEmails;
     AutoStr2            m_sAutoIndexURI;
     AutoStr2            m_sChroot;
+    AutoStr2            m_sNSConf2;
 
     int                 m_iMappingRef;
     int                 m_PhpXmlNodeSSize;
@@ -330,6 +339,9 @@ public:
     void enableBwrap(int enable)       {   setFeature(VH_BWRAP, enable);    }
     int  enableBwrap() const             {   return m_iFeatures & VH_BWRAP;    }
 
+    void enableNS(int enable)         {   setFeature(VH_NS, enable);    }
+    int  enableNS() const             {   return m_iFeatures & VH_NS;       }
+
     void enableQuic(int enable)       {   setFeature(VH_QUIC, enable);    }
     int  enableQuic() const             {   return m_iFeatures & VH_QUIC;   }
     int  enableQuicListener() const     {   return m_iFeatures & VH_QUIC_LISTENER;   }
@@ -402,6 +414,9 @@ public:
 
     void setChroot(const char *pRoot);
     const AutoStr2 *getChroot() const  {   return &m_sChroot;      }
+
+    void setNSConf2(const char *pNSConf2)   {   m_sNSConf2 = pNSConf2;  }
+    const AutoStr2 *getNSConf2() const      {   return &m_sNSConf2;     }
 
     void setUidMode(int a)    {   m_rootContext.setUidMode(a);      }
     void setChrootMode(int a) {   m_rootContext.setChrootMode(a);   }

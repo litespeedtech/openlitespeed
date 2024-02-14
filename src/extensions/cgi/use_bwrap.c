@@ -17,6 +17,8 @@
 *****************************************************************************/
 
 #include "lscgid.h"
+#include "ns.h"     // For ns_debug_init()
+#include "nsopts.h" // For DEBUG_MESSAGE
 #include "use_bwrap.h"
 #include <ctype.h>
 #include <dlfcn.h>
@@ -118,7 +120,7 @@ static int malloc_ids(char *title, int *nids, char ***ids)
     if (!(*nids % ALLOC_IDS_MIN))
     {
         DEBUG_MESSAGE("realloc ids %d bytes orig: %p\n",
-                      (*nids + ALLOC_IDS_MIN) * sizeof(char *), *ids);
+                      (int)((*nids + ALLOC_IDS_MIN) * sizeof(char *)), *ids);
         (*ids) = realloc(*ids, (*nids + ALLOC_IDS_MIN) * sizeof(char *));
         if (!*ids)
         {
@@ -352,6 +354,8 @@ static int bwrap_copy(lscgid_t *pCGI, int try, char *begin_param, char *wildcard
         return -1;
     
     --(*argc); // Pull out source
+    source = argv[*argc];
+    target = argv[*argc - 1];
     if (try && access(source, 0))
     {
         DEBUG_MESSAGE("Source file not accessible and try specified.  Return\n");
@@ -360,12 +364,13 @@ static int bwrap_copy(lscgid_t *pCGI, int try, char *begin_param, char *wildcard
         (*argc) -= 3;
         return 0;
     }
-    source = argv[*argc];
-    target = argv[*argc - 1];
     DEBUG_MESSAGE("Copy final source: %s, final target: %s\n", source, target);
     fd = open(source, O_RDONLY);
     if (fd == -1)
     {
+        int err = errno;
+        DEBUG_MESSAGE("Error opening source %s: %s during copy\n", source, strerror(err));
+        errno = err;
         set_cgi_error("Error opening during copy:", source);
         close(data[0]);
         close(data[1]);
@@ -373,21 +378,31 @@ static int bwrap_copy(lscgid_t *pCGI, int try, char *begin_param, char *wildcard
         return -1;
     }
     DEBUG_MESSAGE("For copy, doing copy\n");
+    fcntl(data[1], F_SETFL, (fcntl(data[1], F_GETFL, 0) | O_NONBLOCK));
     while ((got = read(fd, block, block_size)) > 0)
     {
-        DEBUG_MESSAGE("Writing %d bytes\n", got);
         if (write(data[1], block, got) != got)
         {
-            set_cgi_error("Error writing during copy:", source);
+            int err = errno;
+            DEBUG_MESSAGE("Error writing: %s during copy\n", strerror(err));
             close(data[0]);
             close(data[1]);
             close(fd);
             (*argc) -= 3;
-            return -1;
+            if (!try)
+            {
+                errno = err;
+                set_cgi_error("Error writing during copy:", source);
+                return -1;
+            }
+            return 0;
         }
     }
-    if (got == -1)
+    if (got < 0)
     {
+        int err = errno;
+        DEBUG_MESSAGE("Error reading %s during copy\n", strerror(err));
+        errno = err;
         set_cgi_error("Error reading during copy:", source);
         close(data[0]);
         close(data[1]);
@@ -616,6 +631,7 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
     int in_double_quote = 0;
     int i, total, argv_max, cgi_args, rc = 0;
 
+    ns_init_debug();
     if (!s_bwrap_bin && get_bwrap_bin())
     {
         *done = 1;
@@ -743,7 +759,7 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
     argv[*argc] = NULL;
     DEBUG_MESSAGE("mem: %p, total: %d, max_p: %p endp: %p, argc: %d, argc max: %d Final bwrap_cmdline: %s\n", 
                   (*mem), total, (*mem)+total, (char *)(*mem)->m_statics + sizeof(bwrap_statics_t),
-                  *argc, argv_max / sizeof(char *), cgi_getenv(pCGI, "LS_BWRAP_CMDLINE"));
+                  *argc, (int)(argv_max / sizeof(char *)), cgi_getenv(pCGI, "LS_BWRAP_CMDLINE"));
     return 0;
 }
 
@@ -764,7 +780,10 @@ int bwrap_exec(lscgid_t *pCGI, int argc, char *argv[], int *done)
 
     if (execve(argv[0], argv, pCGI->m_env) == -1)
     {
-        set_cgi_error("lscgid: execve()", pCGI->m_pCGIDir);
+        int err = errno;
+        DEBUG_MESSAGE("execve returned?  Error: %s\n", strerror(err));
+        errno = err;
+        set_cgi_error("lscgid: execve() (bwrap)", pCGI->m_pCGIDir);
         return 500;
     }
     *done = 1;

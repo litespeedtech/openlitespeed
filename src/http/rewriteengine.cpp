@@ -296,22 +296,28 @@ int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
 static const char s_hex[17] = "0123456789ABCDEF";
 
 
-static char *escape_uri(char *p, const char *pURI, int uriLen)
+static char *escape_uri(char *p, const char *pURI, int uriLen,
+                        int escape_flags, const char *no_escape)
 {
     const char *pURIEnd = pURI + uriLen;
     char ch;
     while (pURI < pURIEnd)
     {
         ch = *pURI++;
-        if (isalnum(ch) || (ch == '_'))
+        if (isalnum(ch) || (ch == '_') || (no_escape && strchr(no_escape, ch)))
             *p++ = ch;
-        else if (ch == ' ')
+        else if (ch == ' ' && !(escape_flags & RULE_FLAG_BNP))
             *p++ = '+';
         else
         {
-            *p++ = '%';
-            *p++ = s_hex[((unsigned char)ch) >> 4 ];
-            *p++ = s_hex[ ch & 0xf ];
+            if (!(escape_flags & RULE_FLAG_BCTLS) || iscntrl(ch))
+            {
+                *p++ = '%';
+                *p++ = s_hex[((unsigned char)ch) >> 4 ];
+                *p++ = s_hex[ ch & 0xf ];
+            }
+            else
+                *p++ = ch;
         }
     }
     return p;
@@ -320,12 +326,12 @@ static char *escape_uri(char *p, const char *pURI, int uriLen)
 
 static int getSubstr(const char *pSource, const int *ovector, int matches,
                      int i,
-                     char *&pValue, int escape)
+                     char *&pValue, int escape_flags, const char *no_escape)
 {
     if (i < matches)
     {
         const int *pParam = ovector + (i << 1);
-        if (!escape)
+        if (!escape_flags)
         {
             pValue = (char *)pSource + *pParam;
             return *(pParam + 1) - *pParam;
@@ -334,7 +340,7 @@ static int getSubstr(const char *pSource, const int *ovector, int matches,
         {
             char *pEnd = pValue;
             pEnd = escape_uri(pEnd, (char *)pSource + *pParam,
-                              *(pParam + 1) - *pParam);
+                              *(pParam + 1) - *pParam, escape_flags, no_escape);
             return pEnd - pValue;
         }
     }
@@ -427,10 +433,10 @@ int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
         break;
     case REF_RULE_SUBSTR:
         return getSubstr(m_pSourceURL, m_ruleVec, m_ruleMatches, pItem->getIndex(),
-                         pValue, m_flag & RULE_FLAG_BR_ESCAPE);
+                         pValue, m_flag & RULE_FLAGS_ESCAPE, m_pNoEscape);
     case REF_COND_SUBSTR:
         return getSubstr(m_pCondBuf, m_condVec, m_condMatches, pItem->getIndex(),
-                         pValue, m_flag & RULE_FLAG_BR_ESCAPE);
+                         pValue, m_flag & RULE_FLAGS_ESCAPE, m_pNoEscape);
     case REF_ENV:
         pValue = (char *)RequestVars::getEnv(pSession, pItem->getStr()->c_str(),
                                              pItem->getStr()->len(), i);
@@ -616,7 +622,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
         ret = pCond->getRegex()->exec(pTest, len, 0, 0, condVec,
                                       MAX_REWRITE_MATCH * 3);
         if (m_logLevel > 2)
-            LS_INFO(pSession->getLogSession(),
+            LS_INFO(pSession,
                     "[REWRITE] Cond: Match '%s' with pattern '%s', result: %d",
                     pTest, pCond->getPattern(), ret);
         if (ret == 0)
@@ -632,7 +638,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
         else
             ret = strcmp(pTest, pCond->getPattern());
         if (m_logLevel > 2)
-            LS_INFO(pSession->getLogSession(),
+            LS_INFO(pSession,
                     "[REWRITE] Cond: Compare '%s' with pattern '%s', result: %d",
                     pTest, pCond->getPattern(), ret);
         switch (code)
@@ -675,14 +681,14 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
                 ret = -1;
             }
             if (m_logLevel > 2)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] Cond: test '%s' with pattern '%s', result: %d",
                         pTest, pCond->getPattern(), ret);
         }
         else
         {
             if (m_logLevel > 2)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] stat( %s ) failed ", pTest);
             ret = -1;
         }
@@ -721,7 +727,7 @@ int RewriteEngine::processRule(const RewriteRule *pRule,
     int ret = pRule->getRegex()->exec(m_pSourceURL, m_sourceURLLen, 0,
                                       0, m_ruleVec, MAX_REWRITE_MATCH * 3);
     if (m_logLevel > 1)
-        LS_INFO(pSession->getLogSession(),
+        LS_INFO(pSession,
                 "[REWRITE] Rule: Match '%s' with pattern '%s', result: %d",
                 m_pSourceURL, pRule->getPattern(), ret);
     if (ret < 0)
@@ -797,6 +803,13 @@ static int isAbsoluteURI(const char *pURI, int len)
         if (strncasecmp(pURI, "ntp://", 6) == 0)
             return 7;
         break;
+    case 'w':
+    case 'W':
+        if (strncasecmp(pURI, "s://", 4) == 0)
+            return 5;
+        if (strncasecmp(pURI, "ss://", 5) == 0)
+            return 6;
+        break;
     }
     return 0;
 }
@@ -837,13 +850,13 @@ int RewriteEngine::processQueryString(HttpSession *pSession, int flag)
                 ++m_qsLen;
             }
             if (m_logLevel > 1)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] append query string '%s'", pBuf);
         }
         else
         {
             if (m_logLevel > 1)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] replace current query string with '%s'",
                         pBuf);
             m_qsLen = 0;
@@ -860,7 +873,7 @@ int RewriteEngine::processQueryString(HttpSession *pSession, int flag)
         if (!(flag & RULE_FLAG_QSAPPEND))
         {
             if (m_logLevel > 1)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] remove current query string");
             m_pQS = m_qsBuf;
             m_qsLen = 0;
@@ -956,88 +969,130 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
             StringTool::strTrim(pValue, pValEnd);
             *(char *)pKeyEnd = 0;
             *(char *)pValEnd = 0;
+        }
+        else
+        {
+            pKey = achBuf;
+            pKeyEnd = &achBuf[len];
+            pValue = pValEnd = pKeyEnd;
+            StringTool::strTrim(pKey, pKeyEnd);
+        }
 
-            int blockBot = 0;
-            if (strcasecmp(pKey, "blockbot") == 0)
+        int blockBot = 0;
+        if (strcasecmp(pKey, "verifycaptcha") == 0)
+        {
+            int ret = pSession->shouldAvoidRecaptcha();
+            if (true == ret)
             {
-                LS_INFO(pSession->getLogSession(),
-                        "[REWRITE] detect bad robot, block!");
-                blockBot = 1;
-            }
-            if (blockBot)
-            {
-                if ( pSession->getClientInfo()->markAsBot(
-                    pSession->getReq()->getVhostName(), BOT_REWRITE_RULE) == 0)
-                {
-                    pSession->getReq()->setStatusCode(SC_403);
-                    pSession->dropConnection();
-                    return URL_REWRITE_ABORT;
-                }
-            }
-
-            if ((pRule->getAction() == RULE_ACTION_PROXY) &&
-                (strcasecmp(pKey, "Proxy-Host") == 0))
-            {
-                pSession->getReq()->setNewHost(pValue,
-                                               pValEnd - pValue);
-                if (m_logLevel > 4)
-                    LS_INFO(pSession->getLogSession(),
-                            "[REWRITE] Set Proxy Host header to: '%s' ",
-                            pValue);
+                LS_DBG(pSession,
+                    "[REWRITE] client is not subject to captcha verification");
+                continue;
             }
             else
             {
-                bool needSet = true;
-                if (strncasecmp(pKey, "cache-", 6) == 0)
-                {
-                    if ((strcasecmp(pKey + 6, "control") == 0) ||
-                        (strcasecmp(pKey + 6, "ctrl") == 0))
-                    {
-                        if (strncasecmp(pValue, "vary=", 5) == 0)
-                        {
-                            pValue += 5;
-                            if (m_logLevel > 4)
-                                LS_INFO(pSession->getLogSession(),
-                                        "[REWRITE] set cache vary value: '%s'",
-                                        pValue);
-                            RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE",
-                                                18, pValue, pValEnd - pValue);
-                            //recover the pValue which need "vary="
-                            pValue -= 5;
-                        }
-                        else if (pValEnd > pValue)
-                        {
-                            if (cacheCtlStr.len() > 0)
-                                cacheCtlStr.append(",", 1);
-                            cacheCtlStr.append(pValue, pValEnd - pValue);
-                            needSet = false;
-                        }
-                    }
-                    else if (strcasecmp(pKey + 6, "Vary") == 0)
-                    {
-                        if (m_logLevel > 4)
-                            LS_INFO(pSession->getLogSession(),
-                                    "[REWRITE] set cache vary on: '%s'", pValue);
-                        RequestVars::setEnv(pSession, "LSCACHE_VARY_COOKIE", 19,
-                                            pValue, pValEnd - pValue);
-                    }
-                    else if (strcasecmp(pKey + 6, "Key-Mod") == 0)
-                    {
-                        RequestVars::setEnv(pSession, "cache-key-mod", 13,
-                            pValue, pValEnd - pValue);
-                        needSet = false;
-                        *eef_flags |= EEF_CACHE_KEY_MOD;
-                    }
-                }
+                LS_DBG(pSession,
+                        "[REWRITE] Verify against recaptcha!");
+                int mode = 0;
+                if (strcasecmp(pValue, "deny") == 0)
+                    mode = 1;
+                else if (strcasecmp(pValue, "drop") == 0)
+                    mode = 2;
 
-                if (needSet)
+                ret = pSession->rewriteToRecaptcha(mode, HSPS_RESTART_PROCESS,
+                                                "Rewrite");
+                if ( ret != 0)
                 {
-                    RequestVars::setEnv(pSession, pKey, pKeyEnd - pKey, pValue,
-                                        pValEnd - pValue);
-                    if (m_logLevel > 4)
-                        LS_INFO(pSession->getLogSession(),
-                                "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
+                    if (ret == SC_403)
+                    {
+                        m_statusCode = SC_403;
+                        m_action = RULE_ACTION_FORBID;
+                    }
+                    if (ret == LSI_SUSPEND)
+                        return URL_RECAP_SUSPEND;
+                    else if (ret == 1)
+                        return URL_RECAP_REWRITE;
+                    return URL_REWRITE_ABORT;
                 }
+            }
+        }
+        else if (strcasecmp(pKey, "blockbot") == 0)
+        {
+            LS_INFO(pSession,
+                    "[REWRITE] detect bad robot, block!");
+            blockBot = 1;
+        }
+        if (blockBot)
+        {
+            if (pSession->getClientInfo()->markAsBot(
+                pSession->getReq()->getVhostName(), BOT_REWRITE_RULE) == 0)
+            {
+                pSession->getReq()->setStatusCode(SC_403);
+                pSession->dropConnection();
+                return URL_REWRITE_ABORT;
+            }
+        }
+        if ((pRule->getAction() == RULE_ACTION_PROXY) &&
+            (strcasecmp(pKey, "Proxy-Host") == 0))
+        {
+            pSession->getReq()->setNewHost(pValue,
+                                            pValEnd - pValue);
+            if (m_logLevel > 4)
+                LS_INFO(pSession,
+                        "[REWRITE] Set Proxy Host header to: '%s' ",
+                        pValue);
+        }
+        else
+        {
+            bool needSet = true;
+            if (strncasecmp(pKey, "cache-", 6) == 0)
+            {
+                if ((strcasecmp(pKey + 6, "control") == 0) ||
+                    (strcasecmp(pKey + 6, "ctrl") == 0))
+                {
+                    if (strncasecmp(pValue, "vary=", 5) == 0)
+                    {
+                        pValue += 5;
+                        if (m_logLevel > 4)
+                            LS_INFO(pSession,
+                                    "[REWRITE] set cache vary value: '%s'",
+                                    pValue);
+                        RequestVars::setEnv(pSession, "LSCACHE_VARY_VALUE",
+                                            18, pValue, pValEnd - pValue);
+                        //recover the pValue which need "vary="
+                        pValue -= 5;
+                    }
+                    else if (pValEnd > pValue)
+                    {
+                        if (cacheCtlStr.len() > 0)
+                            cacheCtlStr.append(",", 1);
+                        cacheCtlStr.append(pValue, pValEnd - pValue);
+                        needSet = false;
+                    }
+                }
+                else if (strcasecmp(pKey + 6, "Vary") == 0)
+                {
+                    if (m_logLevel > 4)
+                        LS_INFO(pSession,
+                                "[REWRITE] set cache vary on: '%s'", pValue);
+                    RequestVars::setEnv(pSession, "LSCACHE_VARY_COOKIE", 19,
+                                        pValue, pValEnd - pValue);
+                }
+                else if (strcasecmp(pKey + 6, "Key-Mod") == 0)
+                {
+                    RequestVars::setEnv(pSession, "cache-key-mod", 13,
+                        pValue, pValEnd - pValue);
+                    needSet = false;
+                    *eef_flags |= EEF_CACHE_KEY_MOD;
+                }
+            }
+
+            if (needSet)
+            {
+                RequestVars::setEnv(pSession, pKey, pKeyEnd - pKey, pValue,
+                                    pValEnd - pValue);
+                if (m_logLevel > 4)
+                    LS_INFO(pSession,
+                            "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
             }
         }
         pEnv = (RewriteSubstFormat *)pEnv->next();
@@ -1066,12 +1121,16 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
         m_pDestURL = m_pFreeBuf;
         m_pFreeBuf = pBuf;
         m_flag = flag;
+        if (m_flag & RULE_FLAG_BNE)
+            m_pNoEscape = pRule->getNoEscape();
+        else
+            m_pNoEscape = NULL;
         pBuf = buildString(pRule->getTargetFmt(), pSession, m_pDestURL, len, 1, 1);
         // log rewrite result here
         if (!pBuf)
         {
             if (m_logLevel > 0)
-                LS_ERROR(pSession->getLogSession(),
+                LS_ERROR(pSession,
                          "[REWRITE] Failed to build the target URI");
             return LS_FAIL;
         }
@@ -1090,7 +1149,7 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
 //         }
 
         if (m_logLevel > 0)
-            LS_INFO(pSession->getLogSession(),
+            LS_INFO(pSession,
                     "[REWRITE] Source URI: '%s' => Result URI: '%s'",
                     m_pSourceURL, pBuf);
         m_rewritten |= 2;
@@ -1110,7 +1169,7 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
         pSession->getReq()->addEnv("REDIRECT_STATUS", 15, pCode, 3);
     }
     else if (m_logLevel > 0)
-        LS_INFO(pSession->getLogSession(), "[REWRITE] No substition");
+        LS_INFO(pSession, "[REWRITE] No substition");
 
     if (pRule->getAction() != RULE_ACTION_NONE)
     {
@@ -1122,7 +1181,7 @@ int RewriteEngine::processRewrite(const RewriteRule *pRule,
     if (pRule->getMimeType())
     {
         if (m_logLevel > 4)
-            LS_INFO(pSession->getLogSession(),
+            LS_INFO(pSession,
                     "[REWRITE] set forced type: '%s'", pRule->getMimeType());
         pSession->getReq()->setForcedType(pRule->getMimeType());
     }
@@ -1212,7 +1271,7 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
         if (m_pStrip)
         {
             if (m_logLevel > 4)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] strip base: '%s' from URI: '%s'",
                         m_pStrip->c_str(), m_pSourceURL);
             m_pSourceURL += m_pStrip->len();
@@ -1272,7 +1331,7 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
             while (pRule && (flag & RULE_FLAG_CHAIN))
             {
                 if (m_logLevel > 5)
-                    LS_INFO(pSession->getLogSession(),
+                    LS_INFO(pSession,
                             "[REWRITE] skip chained rule: '%s'",
                             pRule->getPattern());
                 flag = pRule->getFlag();
@@ -1284,12 +1343,12 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
         if ((flag & RULE_FLAG_LAST) && !pRule->getSkip())
         {
             if (m_logLevel > 5)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] Last Rule, stop!");
             if (flag & RULE_FLAG_END)
             {
                 if (m_logLevel > 5)
-                    LS_INFO(pSession->getLogSession(),
+                    LS_INFO(pSession,
                             "[REWRITE] End rewrite!");
                 pSession->getReq()->orContextState(SKIP_REWRITE);
             }
@@ -1305,12 +1364,12 @@ NEXT_RULE:
                 pRule = getNextRule(NULL, pContext, pRootContext);
             if (++loopCount > 10)
             {
-                LS_ERROR(pSession->getLogSession(),
+                LS_ERROR(pSession,
                          "[REWRITE] Rules loop 10 times, possible infinite loop!");
                 break;
             }
             if (m_logLevel > 5)
-                LS_INFO(pSession->getLogSession(),
+                LS_INFO(pSession,
                         "[REWRITE] Next round, restart from the first rule");
             continue;
         }
@@ -1318,7 +1377,7 @@ NEXT_RULE:
             break;
         int n = pRule->getSkip() + 1;
         if ((n > 1) && (m_logLevel > 5))
-            LS_INFO(pSession->getLogSession(), "[REWRITE] skip next %d rules",
+            LS_INFO(pSession, "[REWRITE] skip next %d rules",
                     n - 1);
         while (pRule && n > 0)
         {
@@ -1331,7 +1390,7 @@ NEXT_RULE:
     if (cacheCtlStr.len() > 0)
     {
         if (m_logLevel > 4)
-            LS_INFO(pSession->getLogSession(),
+            LS_INFO(pSession,
                     "[REWRITE] apply cache-control: '%s'.", cacheCtlStr.c_str());
         RequestVars::setEnv(pSession, "cache-control", 13, cacheCtlStr.c_str(),
                             cacheCtlStr.len());
@@ -1370,7 +1429,7 @@ NEXT_RULE:
                     m_sourceURLLen += baseLen;
                     pBuf[m_sourceURLLen] = 0;
                     if ((m_logLevel > 4) && (m_pBase))
-                        LS_INFO(pSession->getLogSession(),
+                        LS_INFO(pSession,
                                 "[REWRITE] prepend rewrite base: '%s', final URI: '%s'",
                                 m_pBase->c_str(), m_pSourceURL);
                 }
@@ -1403,7 +1462,7 @@ NEXT_RULE:
                 }
                 else
                 {
-                    LS_INFO(pSession->getLogSession(),
+                    LS_INFO(pSession,
                             "[REWRITE] detect external loop redirection with target URL: %s, skip.",
                             m_pSourceURL);
                     m_rewritten = m_statusCode = 0;
@@ -1420,7 +1479,12 @@ NEXT_RULE:
                     https = 1;
                 else if (strncasecmp(m_pSourceURL, "http://", 7) != 0)
                 {
-                    LS_ERROR("[REWRITE] Absolute URL with leading 'http://' or 'https://' is "
+                    if (strncasecmp(m_pSourceURL, "ws://", 5) == 0
+                        || strncasecmp(m_pSourceURL, "wss://", 6) == 0)
+                    {
+                        return URL_HANDLER_WEBSOCKET;
+                    }
+                    LS_ERROR(pSession, "[REWRITE] Absolute URL with leading 'http://' or 'https://' is "
                              "required for proxy, URL: %s", m_pSourceURL);
                     return SC_500;
                 }
@@ -1428,7 +1492,7 @@ NEXT_RULE:
                 char *pHostEnd = strchr(pHost, '/');
                 if ((!pHostEnd) || (pHostEnd == pHost))
                 {
-                    LS_ERROR("[REWRITE] Can not determine proxy host name");
+                    LS_ERROR(pSession, "[REWRITE] Can not determine proxy host name");
                     return SC_500;
                 }
                 *pHostEnd = 0;
@@ -1436,14 +1500,14 @@ NEXT_RULE:
                                                   HandlerType::HT_PROXY, pHost);
                 if (!pHandler)
                 {
-                    LS_ERROR("[REWRITE] Proxy target is not defined on "
+                    LS_ERROR(pSession, "[REWRITE] Proxy target is not defined on "
                              "external application list, please add a 'web server'"
                              " with name '%s'", pHost);
                     return SC_500;
                 }
                 if (https && !((ProxyWorker *)pHandler)->getConfig().getSsl())
                 {
-                    LS_ERROR("[REWRITE] Rewrite target require HTTPS, Proxy target is not HTTPS, "
+                    LS_ERROR(pSession, "[REWRITE] Rewrite target require HTTPS, Proxy target is not HTTPS, "
                              "please change 'web server' '%s' using https://... address "
                              , pHost);
                     return SC_500;

@@ -11,12 +11,12 @@
         }
 
         var onloadCallback = function() {
-            var cont = grecaptcha.render('recaptchadiv', {
+            var cont = <!--#echo var="ENV:LSRECAPTCHA_JS_OBJ_NAME"-->.render('recaptchadiv', {
                 'sitekey': '<!--#echo var="ENV:LSRECAPTCHA_SITE_KEY"-->',
                 'callback': onSubmit,
                 <!--#echo var="ENV:LSRECAPTCHA_TYPE_PARAM"-->
             });
-            grecaptcha.execute(cont);
+            <!--#echo var="ENV:LSRECAPTCHA_JS_OBJ_NAME"-->.execute(cont);
         };
     </script>
     <style>
@@ -51,7 +51,7 @@
             <div id="recaptchadiv" class="recaptcha-center"></div>
         </form>
     </div>
-    <script src="https://www.recaptcha.net/recaptcha/api.js?onload=onloadCallback&render=explicit"
+    <script src="<!--#echo var="ENV:LSRECAPTCHA_JS_URI"-->?onload=onloadCallback&render=explicit"
             async defer>
     </script>
 </body>

@@ -76,7 +76,7 @@ if ($msg != '') {
 </div>
 <div class="row" style="margin:40px"></div>
 <div class="footer">
-        <p class="text-center lst-copyright">Copyright &copy; 2014-2022 <a href="https://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> </p>
+        <p class="text-center lst-copyright">Copyright &copy; 2014-2024 <a href="https://www.litespeedtech.com">LiteSpeed Technologies, Inc.</a> </p>
 </div>
 
 <?php

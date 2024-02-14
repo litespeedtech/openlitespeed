@@ -2,6 +2,8 @@
 
 global $_tipsdb;
 
+$_tipsdb['AIOBlockSize'] = new DAttrHelp("AIO Block Size", 'Specifies the sent block size for AIO. This block size multiplied by the total files being processed should be less than the physical memory of the server, otherwise, AIO will not help. If your server has enough memory, you can choose a bigger size.<br/><br/>Default value: 128K', '', '从列表中选择', '');
+
 $_tipsdb['CACertFile'] = new DAttrHelp("CA证书文件", '指定包含证书颁发机构（CA）证书的证书链文件。 按照优先顺序，此文件只是PEM编码的证书文件的串联。 这可以用作替代或 除了&quot;CA证书路径&quot;。 这些证书用于客户端证书身份验证和构建服务器证书链，除了服务器证书之外，这些证书还将发送到浏览器。', '', '文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。', '');
 
 $_tipsdb['CACertPath'] = new DAttrHelp("CA证书路径", '指定证书颁发机构（CA）证书的目录。 这些证书用于客户端证书身份验证和构建服务器证书链，除了服务器证书之外，这些证书还将发送到浏览器。', '', 'path', '');
@@ -160,7 +162,7 @@ $_tipsdb['cgiResource'] = new DAttrHelp("CGI Settings", 'The following settings 
 
 $_tipsdb['cgi_path'] = new DAttrHelp("路径", '指定CGI脚本的位置.', '', 'The path can be a directory that contains a group of CGI scripts, like $VH_ROOT/myapp/cgi-bin/. In this case, the context &quot;URI&quot; must end with &quot;/&quot;, like /app1/cgi/. The Path can also specify only one CGI script, like $VH_ROOT/myapp/myscript.pl. This script should have the corresponding &quot;URI&quot; /myapp/myscript.pl.', '');
 
-$_tipsdb['cgidSock'] = new DAttrHelp("CGI守护进程套接字", '用于与CGI守护进程沟通的唯一套接字地址。为了 最佳性能和安全性，LiteSpeed服务器使用一个独立的CGI 守护进程来产生CGI脚本的子进程。 默认套接字是“uds://$SERVER_ROOT/admin/conf/.cgid.sock”。 如果你需要放置在另一个位置，在这里指定一​​个Unix域套接字。', '', 'UDS://path', 'UDS://tmp/lshttpd/cgid.sock');
+$_tipsdb['cgidSock'] = new DAttrHelp("CGI守护进程套接字", '用于与CGI守护进程沟通的唯一套接字地址。为了 最佳性能和安全性，LiteSpeed服务器使用一个独立的CGI 守护进程来产生CGI脚本的子进程。 默认套接字是uds://$SERVER_ROOT/admin/lscgid/.cgid.sock。 如果你需要放置在另一个位置，在这里指定一​​个Unix域套接字。', '', 'UDS://path', 'UDS://tmp/lshttpd/cgid.sock');
 
 $_tipsdb['cgroups'] = new DAttrHelp("cgroups", '如果当前操作系统支持(目前支持RedHat/Centos Linux v7.5+和Ubuntu 18.04+)，则将cgroup设置应用于此CGI进程。 。 当前执行的用户将用于确定要应用的cgroup配置。<br/>在服务器级别将此设置为Disabled将在服务器范围内禁用此设置。 在其他情况下，可以在虚拟主机级别覆盖服务器级别的设置。<br/><br/>默认值:<br/><b>服务器级别:</b> Off<br/><b>虚拟主机级别:</b> 继承服务器级别设置', '', '从列表中选择', '');
 
@@ -354,6 +356,8 @@ $_tipsdb['javaWebAppContext'] = new DAttrHelp("Java Web App Context", 'Many peop
 
 $_tipsdb['javaWebApp_location'] = new DAttrHelp("伪造", '指定包含此Web应用程序的目录。 应包含以下文件 &quot;WEB-INF/web.xml&quot;.<br/><br/>默认值：$DOC_ROOT + &quot;URI&quot;', '', 'path', '');
 
+$_tipsdb['jsonReports'] = new DAttrHelp("Output JSON reports", 'Output additional JSON formatted report files, with the .json extension, to the /tmp/lshttpd directory.<br/><br/>Default value: No', ' This is useful for application developers who may want to integrate LiteSpeed status and real-time reports into their applications using standard JSON processing tools built-in to most programming languages.', '从单选框选择', 'When set to Yes, .status.json and .rtreport.json, .rtreport.2.json, etc report files will be created in addition to the usual .status and .rtreport, .rtreport.2, etc report files.');
+
 $_tipsdb['keepAliveTimeout'] = new DAttrHelp("持续连接超时时长", '指定持续连接请求的最长闲置时间。 如果在这段时间内没有接收到新的请求，该连接将被关闭。 这个设置只适用于HTTP/1.1连接。HTTP/2连接有较长的闲置时间，不受此设置影响。', '[安全和性能建议] 我们建议您将值设置得刚好足够处理单个页面 视图的所有请求。没有必要延长持续连接时间。较小的值可以减少闲置 连接，提高能力，以服务更多的用户，并防范拒绝服务攻击。2-5秒 对大多数应用是合理范围。Litespeed在非持续连接环境是非常高效的。', '整数', '');
 
 $_tipsdb['keyFile'] = new DAttrHelp("私钥文件", 'SSL私钥文件的文件名。 密钥文件不应被加密。', '[安全建议] 私钥文件应放在一个安全的目录中，该目录应 允许对运行服务器的用户具有只读的访问权限。', '文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。', '');
@@ -462,6 +466,12 @@ $_tipsdb['moduleNameSel'] = new DAttrHelp("模块", '模块名称。 该模块�
 
 $_tipsdb['modulename'] = new DAttrHelp("模块", '服务器启动时要加载的外部或内部模块的名称。<br/><br/><b>外部模块</b><br/>用于外部模块的值必须与 $SERVER_ROOT/modules/modulename.so 下的“.so”文件名匹配， 以便服务器应用程序加载该文件。 在注册新模块后需要重新启动服务器。<br/><br/><b>内部模块</b><br/>内部模块使用的值必须与构建模块时使用的名称匹配 例如，对于服务器附带的内部缓存模块，必须将其设置为“缓存”。', '', '字符串', '');
 
+$_tipsdb['namespace'] = new DAttrHelp("Namespace Container", 'Set to Enabled if you wish to start CGI processes (including PHP programs) in a namespace container sandbox. Only used when &quot;Bubblewrap Container&quot; is set to Disabled.<br/><br/>When not Disabled at the Server level, this settings value can be overridden at the Virtual Host level.<br/><br/>Default values:<br/><b>Server level:</b> Disabled<br/><b>Virtual Host Level:</b> Inherit Server level setting', '', '从列表中选择', '');
+
+$_tipsdb['namespaceConf'] = new DAttrHelp("Namespace Template File", 'Path to an existing configuration file containing a list of directories to be mounted along with the methods used to mount them. When &quot;Namespace Container&quot; is set to Enabled and this value is not set, the following secure default configuration settings will be used:<br/><br/> /tmp,tmp<br/>/usr,ro-bind<br/>/lib,ro-bind<br/>/lib64,ro-bind-try<br/>/bin,ro-bind<br/>/sbin,ro-bind<br/>/var,dir<br/>/var/www,ro-bind-try<br/>/proc,proc<br/>../tmp var/tmp,symlink<br/>/dev,dev<br/>/etc/localtime,ro-bind-try<br/>/etc/ld.so.cache,ro-bind-try<br/>/etc/resolv.conf,ro-bind-try<br/>/etc/ssl,ro-bind-try<br/>/etc/pki,ro-bind-try<br/>/etc/man_db.conf,ro-bind-try<br/>/usr/local/bin/msmtp /etc/alternatives/mta,ro-bind-try<br/>/usr/local/bin/msmtp /usr/sbin/exim,ro-bind-try<br/>$HOMEDIR,bind-try<br/>/var/lib/mysql/mysql.sock,bind-try<br/>/home/mysql/mysql.sock,bind-try<br/>/tmp/mysql.sock,bind-try<br/>/run/mysqld/mysqld.sock,bind-try<br/>/var/run/mysqld.sock,bind-try<br/>/run/user/$UID,dir<br/>$PASSWD<br/>$GROUP<br/>/etc/exim.jail/$USER.conf $HOMEDIR/.msmtprc,copy-try<br/>/etc/php.ini,ro-bind-try<br/>/etc/php-fpm.conf,ro-bind-try<br/>/etc/php-fpm.d,ro-bind-try<br/>/var/run,ro-bind-try<br/>/var/lib,ro-bind-try ', '', '绝对路径或相对于$SERVER_ROOT的相对路径。', '');
+
+$_tipsdb['namespaceConfVhAdd'] = new DAttrHelp("Additional Namespace Template File", 'Path to an existing configuration file containing a list of directories to be mounted along with the methods used to mount them. If &quot;Namespace Template File&quot; is also set at the Server level, both files will be used.', '', '可以说绝对路径,也可以是相对于$SERVER_ROOT或$VH_ROOT的相对路径。', '');
+
 $_tipsdb['nodeBin'] = new DAttrHelp("Node路径", 'Node.js执行文件的路径.', '', '绝对路径', '');
 
 $_tipsdb['nodeDefaults'] = new DAttrHelp("Node.js App Default Settings", 'Default configurations for Node.js applications. These settings can be overriden at the context level.', '', '', '');
@@ -491,6 +501,8 @@ $_tipsdb['procHardLimit'] = new DAttrHelp("进程硬限制", '与&quot;进程软
 $_tipsdb['procSoftLimit'] = new DAttrHelp("进程软限制", '限制用户可以创建的进程总数.所有现有的进程都将被计算在这个限制之内,而不仅仅是要启动的新进程。<br/><br/>该限制可以在服务器级别或单个外部应用级别进行设置.如果未在应用级别设置，则将使用服务器级别的限制. 如果该值为0或服务器级和应用级都没有设置,将使用操作系统的默认设置', 'PHP scripts can call for forking processes. The main purpose of this limit is as a last line of defense to prevent fork bombs and other attacks caused by PHP processes creating other processes.<br/><br/>Setting this setting too low can severely hurt functionality. The setting will thus be ignored below certain levels.<br/><br/>When <b>Run On Start Up</b> is set to &quot;Yes (Daemon mode)&quot;, the actual process limit will be higher than this setting to make sure parent processes are not limited.', '整数', '');
 
 $_tipsdb['proxyContext'] = new DAttrHelp("Proxy Context", 'A Proxy Context enables this virtual host as a transparent reverse proxy server. This proxy server can run in front of any web servers or application servers that support HTTP protocol. The External web server that this virtual host proxies for  has to be defined in &quot;外部应用&quot; before you can set up a Proxy Context.', '', '', '');
+
+$_tipsdb['proxyProtocol'] = new DAttrHelp("PROXY protocol", 'List of IPs/subnets for front-end proxies that communicate with this server using PROXY protocol. Once set, the server will use PROXY protocol for incoming connections from listed IPs/subnets or fall back to a regular connection if PROXY protocol is unavailable.<br/><br/>Applies to HTTP, HTTPS, HTTP2, and websocket connections.', '', 'Comma delimited list of IP addresses or sub-networks.', '');
 
 $_tipsdb['proxyWebServer'] = new DAttrHelp("Web服务器", '指定外部Web服务器的名称。 此外部Web服务器必须在服务器或虚拟主机级别的&quot;外部应用&quot;中定义', '', '从列表中选择', '');
 
@@ -646,6 +658,8 @@ $_tipsdb['sslSessionTicketLifetime'] = new DAttrHelp("SSL会话记录单生存�
 
 $_tipsdb['sslSessionTickets'] = new DAttrHelp("启用会话记录单", '使用OpenSSL的默认会话票证设置启用会话记录单。 服务器级别设置必须设置为“是”才能使虚拟主机设置生效。<br/>默认值:<br/><b>服务器级别:</b> Yes<br/><b>虚拟主机级别:</b> Yes', '', '从单选框选择', '');
 
+$_tipsdb['sslStrictSni'] = new DAttrHelp("Strict SNI Certificate", 'Specifies whether to strictly require a dedicated virtual host certificate configuration. When enabled, SSL connections to virtual hosts without a dedicated certificate configuration will fail instead of using a default catch-all certificate.<br/><br/>Default value: No', '', '从单选框选择', '');
+
 $_tipsdb['sslStrongDhKey'] = new DAttrHelp("SSL强DH密钥", '指定是使用2048位还是1024位DH密钥进行SSL握手。 如果设置为“是”，则2048位DH密钥将用于2048位SSL密钥和证书。 在其他情况下，仍将使用1024位DH密钥。 默认值为“是”。 Java的早期版本不支持大于1024位的DH密钥大小。 如果需要Java客户端兼容性，则应将其设置为“否”。', '', 'radio', '');
 
 $_tipsdb['statDir'] = new DAttrHelp("统计输出目录", '实时统计报告文件将写入的目录。 默认目录是 <b>/tmp/lshttpd/</b> .', '在服务器操作期间，.rtreport文件将每秒写入一次。 为避免不必要的磁盘写入，请将其设置为RAM磁盘。<br/>.rtreport文件可以与第三方监控软件一起使用，以跟踪服务器的运行状况。', '绝对路径', '');
@@ -695,6 +709,8 @@ $_tipsdb['uploadTmpDir'] = new DAttrHelp("临时文件路径", '在扫描请求�
 $_tipsdb['uploadTmpFilePermission'] = new DAttrHelp("临时文件权限", '设置<b>临时文件路径</b>目录中的文件权限。 服务器级别是全局设置，可以被虚拟主机级别的设置覆盖。', '', '3 digits octet number. Default value is 666.', '');
 
 $_tipsdb['uri'] = new DAttrHelp("URI", '指定此context下的URI。这个URI应该以&quot;/&quot;开始。 如果一个URI以&quot;/&quot;结束，那么该context将包含这个URI下的所有下级URI。', '', 'URI', '');
+
+$_tipsdb['useAIO'] = new DAttrHelp("Use AIO", 'Specifies whether to use asynchronous I/O to serve static files along with the AIO implementation to use. Options LINUX AIO and io_uring are only available on Linux machines.<br/><br/>Default value: No', ' AIO can help improve performance in servers with a high I/O wait.<br/> When io_uring is selected but not supported on the current machine, Linux AIO will be used instead.', '从列表中选择', '');
 
 $_tipsdb['useIpInProxyHeader'] = new DAttrHelp("使用报头中的客户端IP", '指定是否将在HTTP请求报头中的X-Forwarded-For参数列出的IP地址，用于 所有的IP地址相关的功能，包括 连接/带宽限制、访问控制和IP地理定位。<br/><br/>如果你的Web服务器放置在负载均衡器或代理服务器之后，此功能非常有用。 如果您选择了“仅限受信任的IP”，只有在请求来自受信任IP时，X-Forwarded-For 中的IP才会被使用。受信任IP可在服务器级别的&quot;允许列表&quot;中定义。<br/><br/>来自受信任IP的保留标头与仅受信任IP 相同，但是用于后端的X-Forwarded-For标头不会被修改为包括连接对等地址。<br/><br/>使用最后一个IP (对与 AWS ELB)将使用 &quot;X-Forwarded-For &quot;列表中的最后一个 IP 地址。如果您正在使用 AWS Elastic Load Balancer 或期望将真实 IP 附加到 &quot;X-Forwarded-For &quot;列表的末尾，请选择此选项。', '', '从列表中选择', '');
 
@@ -868,6 +884,10 @@ $_tipsdb['EDTP:maxCGIInstances'] = array('限制CGI程序可以使用的资源,�
 $_tipsdb['EDTP:maxReqHeaderSize'] = array('Numbers can be represented as 10240 or 10K.');
 
 $_tipsdb['EDTP:mime'] = array('可以从上一页编辑MIME设置。 您可以指定mime配置文件的位置 可以是绝对路径，也可以是相对于$SERVER_ROOT的路径。');
+
+$_tipsdb['EDTP:namespace'] = array('');
+
+$_tipsdb['EDTP:namespaceConf'] = array('');
 
 $_tipsdb['EDTP:nodeBin'] = array('');
 

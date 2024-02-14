@@ -245,6 +245,7 @@ const char *FileCacheDataEx::getCacheData(
 {
     if (isCached())
     {
+        LS_DBG_M("getCacheData, using cache\n");
         if (offset > m_lSize)
         {
             wanted = 0;
@@ -256,6 +257,7 @@ const char *FileCacheDataEx::getCacheData(
     }
     else
     {
+        LS_DBG_M("getCacheData, reading file %d\n", m_fd);
         assert(m_fd != -1);
 //         off_t off = ls_fio_lseek(m_fd, offset, SEEK_SET);
 // //        LS_DBG_H( "lseek() return %d", (int)off );

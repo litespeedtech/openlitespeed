@@ -333,15 +333,55 @@ int CustomFormat::parseFormat(const char *psFormat)
 }
 
 
-static int logTime(AutoBuf *pBuf, time_t lTime, const char *pFmt)
+static int logTime(AutoBuf *pBuf, time_t lTime, uint32_t microsec,
+                   const char *pFmt)
 {
-    struct tm gmt;
-    struct tm *pTm = gmtime_r(&lTime, &gmt);
     int n;
-    n = strftime(pBuf->end(), pBuf->available(), pFmt, pTm);
+    unsigned long long v = 0;
+    const char *fmt = NULL;
+    if (pFmt && *pFmt != '%')
+    {
+        if (strcmp(pFmt, "sec") == 0)
+        {
+            v = lTime;
+            fmt = "%lld";
+        }
+        else if (strcmp(pFmt, "msec") == 0)
+        {
+            v = (uint64_t)lTime * 1000 + microsec / 1000;
+            fmt = "%lld";
+        }
+        else if (strcmp(pFmt, "usec") == 0)
+        {
+            v = (uint64_t)lTime * 1000000 + microsec;
+            fmt = "%lld";
+        }
+        else if (strcmp(pFmt, "msec_frac") == 0)
+        {
+            v = microsec / 1000;
+            fmt = "%03lld";
+        }
+        else if (strcmp(pFmt, "usec_frac") == 0)
+        {
+            v = microsec;
+            fmt = "%06lld";
+        }
+    }
+    if (fmt)
+    {
+        n = lsnprintf(pBuf->end(), pBuf->available(), fmt, v);
+    }
+    else
+    {
+        struct tm gmt;
+        struct tm *pTm = localtime_r(&lTime, &gmt);
+        if (pFmt)
+            n = strftime(pBuf->end(), pBuf->available(), pFmt, pTm);
+        else
+            n = 0;
+    }
     pBuf->used(n);
     return 0;
-
 }
 
 
@@ -450,7 +490,8 @@ void AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt, bool doF
             break;
         case REF_STRFTIME:
             if (pItem->m_sExtra.c_str())
-                logTime(&m_buf, pSession->getReqTime(), pItem->m_sExtra.c_str());
+                logTime(&m_buf, pSession->getReqTime(),
+                        pSession->getReqTimeUs(), pItem->m_sExtra.c_str());
             else
             {
                 DateTime::getLogTime(pSession->getReqTime(), m_buf.end());

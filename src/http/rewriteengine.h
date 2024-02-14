@@ -69,6 +69,7 @@ class RewriteEngine : public TSingleton<RewriteEngine>
     const AutoStr2 *m_pStrip;
     const RewriteSubstFormat *m_pLastCondStr;
     char           *m_pLastTestStr;
+    const char     *m_pNoEscape;
     int             m_lastTestStrLen;
     int             m_noStat;
     struct stat     m_st;

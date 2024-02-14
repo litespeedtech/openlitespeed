@@ -61,7 +61,7 @@ H2ConnBase::H2ConnBase()
     , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
     , m_iCurDataOutWindow(H2_FCW_INIT_SIZE)
     , m_iDataInWindow(H2_FCW_INIT_SIZE)
-    , m_iStreamInInitWindowSize(H2_FCW_INIT_SIZE * 4)
+    , m_iStreamInInitWindowSize(H2_FCW_64K * 16 * 8)
     , m_iServerMaxStreams(100)
     , m_iStreamOutInitWindowSize(H2_FCW_INIT_SIZE)
     , m_iMaxPushStreams(100)
@@ -187,29 +187,27 @@ int H2ConnBase::parseFrame()
 void H2ConnBase::consumedWindowIn(int bytes)
 {
     m_iInBytesToUpdate += bytes;
-    LS_DBG_L(getLogSession(), "Connection input WINDOW consumed: %d of %d.",
+    LS_DBG_L(getLogSession(), "WINDOW_IN consumed: %d/%d.",
              m_iInBytesToUpdate, m_iDataInWindow);
-    updateWindow();
+    if (m_iDataInWindow / 2 < m_iInBytesToUpdate)
+        updateWindow();
 }
 
 
 void H2ConnBase::updateWindow()
 {
-    if (m_iDataInWindow / 2 < m_iInBytesToUpdate)
+    if (m_iInBytesToUpdate >= m_iDataInWindow)
     {
-        if (m_iInBytesToUpdate >= m_iDataInWindow)
-        {
-            LS_DBG_L(getLogSession(), "Connection RECV window used up, increase window size by %d to %d.",
-                 m_iDataInWindow / 2, m_iDataInWindow / 2 + m_iDataInWindow);
-            m_iInBytesToUpdate += m_iDataInWindow / 2;
-            m_iDataInWindow += m_iDataInWindow / 2;
-        }
-        else
-            LS_DBG_L(getLogSession(), "Send connection WINDOW_UPDATE, used: %d/%d.",
-                 m_iInBytesToUpdate, m_iDataInWindow);
-        sendWindowUpdateFrame(0, m_iInBytesToUpdate);
-        m_iInBytesToUpdate = 0;
+        LS_DBG_L(getLogSession(), "Connection RECV window used up, increase window size by %d to %d.",
+                m_iDataInWindow / 2, m_iDataInWindow / 2 + m_iDataInWindow);
+        m_iInBytesToUpdate += m_iDataInWindow / 2;
+        m_iDataInWindow += m_iDataInWindow / 2;
     }
+    else
+        LS_DBG_L(getLogSession(), "Send connection WINDOW_UPDATE, used: %d/%d.",
+                m_iInBytesToUpdate, m_iDataInWindow);
+    sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, 0, m_iInBytesToUpdate, true);
+    m_iInBytesToUpdate = 0;
 }
 
 
@@ -571,11 +569,11 @@ int H2ConnBase::sendSettingsFrame(bool disable_push)
     if (m_h2flag & H2_CONN_FLAG_SETTING_SENT)
         return 0;
 
-    static char s_settings[][6] =
+    static uint8_t s_settings[][6] =
     {
         //{0x00, H2_SETTINGS_HEADER_TABLE_SIZE,     0x00, 0x00, 0x10, 0x00 },
         {0x00, H2_SETTINGS_MAX_CONCURRENT_STREAMS,  0x00, 0x00, 0x00, 0x64 },
-        {0x00, H2_SETTINGS_INITIAL_WINDOW_SIZE,     0x00, 0x04, 0x00, 0x00 },
+        {0x00, H2_SETTINGS_INITIAL_WINDOW_SIZE,     0x00, 0x80, 0x00, 0x00 },
         {0x00, H2_SETTINGS_MAX_FRAME_SIZE,          0x00, 0x00, 0x40, 0x00 },
         {0x00, H2_SETTINGS_ENABLE_PUSH,             0x00, 0x00, 0x00, 0x00 },
         //{0x00, H2_SETTINGS_MAX_HEADER_LIST_SIZE,  0x00, 0x00, 0x40, 0x00 },
@@ -593,8 +591,8 @@ int H2ConnBase::sendSettingsFrame(bool disable_push)
 
     H2FrameHeader wu_header(4, H2_FRAME_WINDOW_UPDATE, 0, 0);
     memcpy(&buf[settings_payload_size + 9], &wu_header, 9);
-    appendNbo4Bytes(&buf[settings_payload_size + 18], H2_FCW_INIT_SIZE * 8);
-    m_iDataInWindow += H2_FCW_INIT_SIZE * 8;
+    appendNbo4Bytes(&buf[settings_payload_size + 18], H2_FCW_64K * 16 * 16);
+    m_iDataInWindow += H2_FCW_64K * 16 * 16;
     guaranteeOutput(buf, settings_payload_size + 22);
     return 0;
 }
@@ -837,7 +835,7 @@ int H2ConnBase::processDataFrame(H2FrameHeader *pHeader)
         m_bufInput.pop_front(len);
     }
 
-    LS_DBG_H(stream, "processDataFrame() buffered: %d, window to update: %d.",
+    LS_DBG_H(stream, "processDataFrame() buffered: %d, WINDOW_IN to update: %d.",
              stream->getBufIn()->size(), stream->getWindowToUpdate());
 
     if (pHeader->getFlags() & H2_CTRL_FLAG_FIN)

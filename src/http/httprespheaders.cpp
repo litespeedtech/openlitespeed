@@ -29,6 +29,7 @@
 #include <lsqpack.h>
 
 #include <ctype.h>
+#include <util/stringlist.h>
 
 //FIXME: need to update the comments
 /*******************************************************************************
@@ -424,13 +425,21 @@ static int hasValue(const char *existVal, int existValLen, const char *val,
     const char *pEnd = existVal + existValLen;
     while (p < pEnd && pEnd - p >= valLen)
     {
-        if (memcmp(p, val, valLen) == 0 &&
-            ((pEnd - p == valLen) ? 1 : (*(p + valLen) == ',')))
-            return 1;
-
+        if (memcmp(p, val, valLen) == 0)
+        {
+            const char *p1 = p + valLen;
+            while(p1 < pEnd && isspace(*p1))
+                ++p1;
+            if (p1 == pEnd || *p1 == ',')
+                return 1;
+        }
         p = (const char *)memchr((void *)p, ',', pEnd - p);
         if (p)
+        {
             ++p;
+            while(p < pEnd && isspace(*p))
+                ++p;
+        }
         else
             break;
     }
@@ -532,9 +541,40 @@ int HttpRespHeaders::add(INDEX headerIndex, const char *pName, unsigned nameLen,
     if ((method == LSI_HEADER_MERGE || method == LSI_HEADER_ADD)
         && (pKv->val_len > 0))
     {
-        if ((headerIndex != H_SET_COOKIE || method != LSI_HEADER_ADD)
-            && hasValue(getVal(pKv), pKv->val_len, pVal, valLen))
-            return 0;//if exist when merge, ignor, otherwise same as append
+        if (headerIndex != H_SET_COOKIE || method != LSI_HEADER_ADD)
+        {
+            if (memchr(pVal, ',', valLen) != NULL)
+            {
+                AutoBuf new_val;
+                StringList values;
+                values.split(pVal, pVal + valLen, ",");
+                StringList::iterator iter;
+                for (iter = values.begin(); iter != values.end(); ++iter)
+                {
+                    if (!hasValue(getVal(pKv), pKv->val_len, (*iter)->c_str(),
+                                 (*iter)->len()))
+                    {
+                        if (!new_val.empty())
+                            new_val.append(",", 1);
+                        new_val.append((*iter)->c_str(), (*iter)->len());
+                    }
+                }
+                if (new_val.empty())
+                    return 0;
+
+                m_hLastHeaderKVPairIndex = kvOrderNum;
+                //Under append situation, if has existing key and valLen > 0, then makes a hole
+                if (pKv->val_len > 0 && method != LSI_HEADER_ADD)
+                {
+                    assert(pKv->name_len > 0);
+                    m_flags |= HRH_F_HAS_HOLE;
+                }
+                return appendHeader(pKv, headerIndex, pName, nameLen,
+                                    new_val.begin(), new_val.size(), method);
+            }
+            else if (hasValue(getVal(pKv), pKv->val_len, pVal, valLen))
+                return 0;//if exist when merge, ignor, otherwise same as append
+        }
     }
 
     m_hLastHeaderKVPairIndex = kvOrderNum;

@@ -38,7 +38,7 @@
 #if defined(__i386__) || defined(__ia64__) || defined(__x86_64) || defined(__x86_64__)
 #define cpu_relax()         asm volatile("pause\n": : :"memory")
 #else
-#define cpu_relax()         ;
+#define cpu_relax()         {};
 #endif
 
 static inline bool llxq_atom_cmp_and_swap(

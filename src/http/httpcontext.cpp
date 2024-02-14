@@ -55,7 +55,7 @@ CtxInt HttpContext::s_defaultInternal =
 {
     NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, GSockAddr()
+    NULL, NULL, NULL, NULL, NULL
 } ;
 
 
@@ -176,7 +176,12 @@ void HttpContext::releaseHTAConf()
         if ((m_iConfigBits & BIT_SESSIONHOOKS))
             delete m_pInternal->m_pSessionHooks;
         if (m_iConfigBits2 & BIT2_WEBSOCKADDR)
-            m_pInternal->m_GSockAddr.~GSockAddr();
+        {
+            if (m_pInternal->m_pAddrWebSock)
+                delete m_pInternal->m_pAddrWebSock;
+            if (m_pInternal->m_pWebSockAddrStr)
+                free(m_pInternal->m_pWebSockAddrStr);
+        }
         releaseHTAuth();
         releaseAccessControl();
         releaseMIME();
@@ -687,6 +692,12 @@ void HttpContext::inherit(const HttpContext *pRootContext)
         if (!(m_iConfigBits & BIT_SESSIONHOOKS))
             m_pInternal->m_pSessionHooks = m_pParent->m_pInternal->m_pSessionHooks;
 
+        if (!(m_iConfigBits2 & BIT2_WEBSOCKADDR))
+        {
+            m_pInternal->m_pAddrWebSock = m_pParent->m_pInternal->m_pAddrWebSock;
+            m_pInternal->m_pWebSockAddrStr = m_pParent->m_pInternal->m_pWebSockAddrStr;
+            setFeaturesBit(BIT_F_WSS, m_pParent->m_iFeatures & BIT_F_WSS);
+        }
     }
 
     if (!(m_iConfigBits & BIT_ENABLE_EXPIRES))
@@ -1182,11 +1193,30 @@ void HttpContext::getAAAData(struct AAAData &data) const
 }
 
 
-void HttpContext::setWebSockAddr(const GSockAddr &gsockAddr)
+void HttpContext::setWebSockAddr(const char *addrStr,
+                                 const GSockAddr *gsockAddr, bool ssl)
 {
     if (!allocateInternal())
     {
-        m_pInternal->m_GSockAddr = gsockAddr;
+        if (gsockAddr)
+        {
+            if (m_pInternal->m_pAddrWebSock)
+                *m_pInternal->m_pAddrWebSock = *gsockAddr;
+            else
+                m_pInternal->m_pAddrWebSock = new GSockAddr(*gsockAddr);
+        }
+        else
+            m_pInternal->m_pAddrWebSock = NULL;
+        if (addrStr)
+        {
+            if (m_pInternal->m_pWebSockAddrStr
+                && (m_iConfigBits2 & BIT2_WEBSOCKADDR))
+                free(m_pInternal->m_pWebSockAddrStr);
+            m_pInternal->m_pWebSockAddrStr = strdup(addrStr);
+        }
+        else
+            m_pInternal->m_pWebSockAddrStr = NULL;
+        setFeaturesBit(BIT_F_WSS, ssl);
         m_iConfigBits2 |= BIT2_WEBSOCKADDR;
     }
 }

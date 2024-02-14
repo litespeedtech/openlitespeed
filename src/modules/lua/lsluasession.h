@@ -107,9 +107,10 @@ public:
         LsLuaLog(L, LSI_LOG_NOTICE, 0,
                  "TRACE %s {%p, %p} [%p %p] %d %d",
                  tag, pSess, L,
-                 pSess ? pSess->getLuaState() : NULL, pSess->getHttpSession(),
-                 pSess->m_iKey,
-                 pSess->isFlagSet(LLF_LUADONE)
+                 pSess ? pSess->getLuaState() : NULL,
+                 pSess ? pSess->getHttpSession() : NULL,
+                 pSess ? pSess->m_iKey : 0,
+                 pSess ? pSess->isFlagSet(LLF_LUADONE) : 0
                 );
     }
     inline int *getRefPtr()

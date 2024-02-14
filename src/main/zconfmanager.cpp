@@ -402,7 +402,7 @@ int ZConfManager::hashConf(AutoBuf *pBuf, const char *path,
 // the inability to write to the file should not impact the server up.
 void ZConfManager::prepareServerUp()
 {
-    char path[256];
+    char path[MAX_PATH_LEN];
 
     if (!isFlagSet(ZCMF_SENDZCUP))
     {

@@ -22,9 +22,9 @@
 #include <lsr/ls_atomic.h>
 #include <edio/eventhandler.h>
 #include <edio/aiooutputstream.h>
+#include <edio/aioreqeventhandler.h>
 #include <http/httpreq.h>
 #include <http/httpresp.h>
-
 #include <http/httpsessionmt.h>
 //#include <http/ntwkiolink.h>
 #include <edio/eventreactor.h>
@@ -34,6 +34,7 @@
 #include <http/sendfileinfo.h>
 #include <lsiapi/internal.h>
 #include <lsiapi/lsimoduledata.h>
+#include "config.h"
 
 class ReqHandler;
 class VHostMap;
@@ -56,6 +57,7 @@ class MtParamSendfile;
 class MtParamParseReqArgs;
 class MtLocalBufQ;
 class HioCrypto;
+class LsAioReq;
 
 enum  HttpSessionState
 {
@@ -119,6 +121,8 @@ enum HSPState
     HSPS_NEXT_REQUEST,
     HSPS_CLOSE_SESSION,
     HSPS_RELEASE_RESOURCE,
+    HSPS_RECAPTCHA_THROTTLING,
+    HSPS_RESTART_PROCESS,
     HSPS_HANDLER_PRE_PROCESSING,
     HSPS_HANDLER_PROCESSING,
     HSPS_WEBSOCKET,
@@ -187,6 +191,7 @@ class HttpSession
     , public HioHandler
     , public ls_lfnodei_t
     , virtual public LogSession
+    , public AioReqEventHandler
 {
     HttpReq               m_request;
     HttpResp              m_response;
@@ -196,7 +201,8 @@ class HttpSession
     MtSessData           *m_pMtSessData;
 
     HttpSessionHooks      m_sessionHooks;
-    HSPState              m_processState;
+    HSPState              m_processState:8;
+    HSPState              m_nextProcessState:8;
     int                   m_suspendPasscode;
     int                   m_curHookLevel;
 
@@ -242,6 +248,7 @@ class HttpSession
 
     AioReq                m_aioReq;
     Aiosfcb              *m_pAiosfcb;
+    LsAioReq             *m_pLsAioReq;
 
     uint32_t              m_sn;
     ReqParser            *m_pReqParser;
@@ -445,18 +452,27 @@ private:
     int  detectKeepAliveTimeout(int delta);
     int  detectConnectionTimeout(int delta);
     void resumeSSI();
+    int getStaticFileBlock(SendFileInfo *pData, off_t remain, char **buffer,
+                           int *read);
     int sendStaticFile(SendFileInfo *pData);
     int sendStaticFileEx(SendFileInfo *pData);
-#ifdef LS_AIO_USE_AIO
+    int postAsyncRead(SendFileInfo *pData);
+    int processAsyncData(SendFileInfo *pData);
+    int sendStaticFileAsync(SendFileInfo *pData);
     int aioRead(SendFileInfo *pData, void *pBuf = NULL);
     int sendStaticFileAio(SendFileInfo *pData);
-#endif
     int writeRespBodyBlockInternal(SendFileInfo *pData, const char *pBuf,
                                    int written);
     int writeRespBodyBlockFilterInternal(SendFileInfo *pData, const char *pBuf,
                                          int written, lsi_param_t *param = NULL);
     int chunkSendfile(int fdSrc, off_t off, size_t size);
     int processWebSocketUpgrade(HttpVHost *pVHost);
+    int switchToWebSocket(const GSockAddr *pAddr, bool ssl,
+                          const char *url, int url_len);
+    int switchToWebSocket(const char *pAddr, bool ssl,
+                          const char *url, int url_len);
+    int switchToWebSocket(const char *pWsUrl);
+
     int processHttp2Upgrade(const HttpVHost *pVHost);
 
     //int resumeHandlerProcess();
@@ -680,10 +696,6 @@ public:
     void releaseSsiRuntime();
     int setupSsiRuntime();
 
-    void dropConnection();
-    void forceClose();
-    void process444(const char *pHeaderVal);
-
     int isDropConnection() const
     {   return m_processState == HSPS_DROP_CONNECTION;  }
 
@@ -777,6 +789,8 @@ public:
     virtual int onAioEvent();
     int handleAioSFEvent(Aiosfcb *event);
 
+    int onAioReqEvent();
+
     void setModHandler(const lsi_reqhdlr_t *pHandler)
     {   (void)ls_atomic_setptr(&m_pModHandler, pHandler);   }
 
@@ -849,15 +863,34 @@ public:
         m_lockMtHolder = 0;
         ls_spinlock_unlock(&m_lockMtRace);
     }
+
+    void dropConnection();
+    void forceClose();
+    void process444(const char* pValue);
+
     bool isRecaptchaEnabled() const
     {   return (m_request.getRecaptcha() != NULL);      }
     bool shouldAvoidRecaptcha();
+    bool shouldAvoidRecaptchaEx();
     bool isUseRecaptcha(int isEarlyDetect = 0);
     bool hasPendingCaptcha() const;
     bool recaptchaAttemptsAvail() const;
-    int rewriteToRecaptcha(bool blockIfTooManyAttempts = false);
+    int rewriteToRecaptcha(int block_too_many_failure,
+                           HSPState throttle_resume_state, const char *reason);
     void checkSuccessfulRecaptcha();
     void blockParallelRecaptcha();
+    int retryRecaptcha();
+
+    static int sessionRestartCb(evtcbhead_t *session, const long lParam,
+                                void *pParam);
+    int prepareRestartProcess();
+    int restartProcessing();
+    void scheduleRestart();
+
+    LsAioReq *getLsAioReq()
+    {   return m_pLsAioReq;     }
+    void setLsAioReq(LsAioReq *sess)
+    {   m_pLsAioReq = sess;     }
 };
 
 #endif

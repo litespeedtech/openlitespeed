@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2024  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -23,7 +23,6 @@
 #include <ls.h>
 
 #include <string.h>
-
 
 // #define LSLUA_QUICK_DUMP( L ) LsLuaApi::dumpStack( L, "quick dump", 10 )
 
@@ -84,9 +83,9 @@ typedef void (*pf_getglobal)(lua_State *, const char *);
 typedef int (*pf_getmetatable)(lua_State *, int);
 typedef void (*pf_gettable)(lua_State *, int);
 typedef int (*pf_gettop)(lua_State *);
-typedef int (*pf_insert)(lua_State *, int);
+typedef void (*pf_insert)(lua_State *, int);
 typedef int (*pf_load)(lua_State *, lua_Reader, void *,
-                       const char *, const char *);
+                       const char *);
 typedef int (*pf_loadstring)(lua_State *, const char *);
 typedef int (*pf_newmetatable)(lua_State *, const char *);
 typedef lua_State   *(*pf_newstate)();
@@ -102,14 +101,14 @@ typedef char        *(*pf_prepbuffsize)(luaL_Buffer *, size_t);
 typedef void (*pf_pushboolean)(lua_State *, int);
 typedef void (*pf_pushcclosure)(lua_State *, lua_CFunction, int);
 typedef const char *(*pf_pushfstring)(lua_State *, const char *, ...);
-typedef void (*pf_pushinteger)(lua_State *, int);
+typedef void (*pf_pushinteger)(lua_State *, lua_Integer);
 typedef void (*pf_pushlightuserdata)(lua_State *, void *);
 typedef void (*pf_pushlstring)(lua_State *, const char *, size_t);
 typedef void (*pf_pushnil)(lua_State *);
 typedef void (*pf_pushnumber)(lua_State *, lua_Number);
 typedef void (*pf_pushresult)(luaL_Buffer *);
 typedef void (*pf_pushstring)(lua_State *, const char *);
-typedef void (*pf_pushthread)(lua_State *);
+typedef int (*pf_pushthread)(lua_State *);
 typedef void (*pf_pushvalue)(lua_State *, int);
 typedef const char *(*pf_pushvfstring)(lua_State *, const char *,
                                        va_list);
@@ -122,9 +121,9 @@ typedef int (*pf_ref)(lua_State *, int);
 typedef void (*pf_remove)(lua_State *, int);
 typedef void (*pf_replace)(lua_State *, int);
 typedef int (*pf_setfenv)(lua_State *, int);
-typedef int (*pf_setfield)(lua_State *, int, const char *);
+typedef void (*pf_setfield)(lua_State *, int, const char *);
 typedef void (*pf_setglobal)(lua_State *, const char *);
-typedef void (*pf_setmetatable)(lua_State *, int);
+typedef int (*pf_setmetatable)(lua_State *, int);
 typedef void (*pf_settable)(lua_State *, int);
 typedef void (*pf_settop)(lua_State *, int);
 typedef int (*pf_toboolean)(lua_State *, int);
@@ -145,7 +144,7 @@ typedef int (*pf_pcall)(lua_State *, int, int, int);
 typedef int (*pf_pcallk)(lua_State *, int, int, int, int, lua_CFunction);
 typedef int (*pf_resume)(lua_State *, int);
 typedef int (*pf_resumeP)(lua_State *, lua_State *, int);
-typedef int (*pf_tointeger)(lua_State *, int);
+typedef lua_Integer (*pf_tointeger)(lua_State *, int);
 typedef int (*pf_tointegerx)(lua_State *, int, int *);
 typedef double(*pf_tonumber)(lua_State *, int);
 typedef double(*pf_tonumberx)(lua_State *, int, int *);
@@ -168,13 +167,7 @@ public:
     LsLuaApi();
     ~LsLuaApi();
 
-    static const char *init(const char *pModuleName);
-
-    static inline int jitMode()
-    {   return s_iJitMode;  }
-
-    static inline void setJitMode(int iJitMode)
-    {   s_iJitMode = iJitMode;  }
+    static const char *init();
 
     inline static void pop(lua_State *L, int n)
     {   LsLuaApi::settop(L, -(n) - 1);    }
@@ -192,21 +185,12 @@ public:
 
     static void pushglobaltable(lua_State *L)
     {
-        if (LsLuaApi::jitMode())
-            LsLuaApi::pushvalue(L,
-                                LSLUA_GLOBALSINDEX);
-        else
-            LsLuaApi::rawgeti(L,
-                              LSLUA_REGISTRYINDEX,
-                              LSLUA_RIDX_GLOBALS);
+        LsLuaApi::pushvalue(L, LSLUA_GLOBALSINDEX);
     }
 
     static int upvalueindex(int i)
     {
-        if (LsLuaApi::jitMode())
-            return LSLUA_GLOBALSINDEX - i;
-        else
-            return LSLUA_REGISTRYINDEX - i;
+        return LSLUA_GLOBALSINDEX - i;
     }
 
     inline static void dumpStackCount(lua_State *L, const char *tag)
@@ -347,7 +331,6 @@ private:
     LsLuaApi &operator=(const LsLuaApi &other);
     bool operator==(const LsLuaApi &other);
 
-    static int s_iJitMode;
     static void *s_pLib;
 
     // Patched version of functions.

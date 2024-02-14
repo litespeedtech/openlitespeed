@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 
 #include_directories ("${PROJECT_SOURCE_DIR}/../include")
 #include_directories ("${PROJECT_SOURCE_DIR}/../src")
-#include_directories ("${PROJECT_SOURCE_DIR}/../../thirdparty/include")
+#include_directories ("${PROJECT_SOURCE_DIR}/../../third-party/include")
 #link_directories ("${PROJECT_SOURCE_DIR}/../build/src/modules/modgzip")
 
 ########### next target ###############
@@ -99,7 +99,7 @@ SET(unittest_STAT_SRCS
    unittest_main.cpp
 )
 
-link_directories(${PROJECT_SOURCE_DIR}/../thirdparty/lib/ /usr/local/lib /usr/lib64)
+link_directories(${PROJECT_SOURCE_DIR}/../third-party/lib/ /usr/local/lib /usr/lib64)
 
 add_executable(ols_unittest
     ../src/httpdtest.cpp
@@ -166,7 +166,7 @@ SET( unittestlib
     quic h2 lsquic bcrypt
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     edio udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
-    libz.a libpcre.a libexpat.a libxml2.a
+    ${LINUX_AIO_LIB} libz.a libpcre.a libexpat.a libxml2.a
     ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
     spdy crypt libssl.a libcrypto.a
     -Wl,-Map=ols_unittest.map)
@@ -201,7 +201,7 @@ lsr/ls_lfstacktest.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_lfstacktest lsr thread pthread pcre )
+target_link_libraries(ls_lfstacktest lsr thread pthread pcre rt )
 
 add_executable(ls_llmqtest
 lsr/ls_llmqtest.c
@@ -221,7 +221,7 @@ lsr/ls_stacktest.cpp
 ${lsr_SRCS}
 ${test_SRCS}
 )
-target_link_libraries(ls_stacktest lsr thread pthread pcre )
+target_link_libraries(ls_stacktest lsr thread pthread pcre rt )
 
 add_executable(ls_thrsafetest
 lsr/ls_thrsafetest.cpp

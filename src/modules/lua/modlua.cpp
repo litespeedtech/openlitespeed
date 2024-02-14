@@ -172,12 +172,12 @@ static int luaHandler(const lsi_session_t *session)
     }
     pData->m_pSession = NULL;
     pUser = (LsLuaUserParam *)g_api->get_config(session, &MNAME);
-    uri = (char *)g_api->get_req_uri(session, NULL);
-
+    int uri_len;
+    uri = (char *)g_api->get_req_uri(session, &uri_len);
     n = g_api->get_req_var_by_id(session, LSI_VAR_DOC_ROOT, luafile,
-                                 MAXFILENAMELEN);
-    memmove(luafile + n, uri, strlen(uri));
-    n += strlen(uri);
+                                 MAXFILENAMELEN - uri_len - 1);
+    memmove(luafile + n, uri, uri_len);
+    n += uri_len;
 
     g_api->set_handler_write_state(session, 0);
     int debLevel = 0;

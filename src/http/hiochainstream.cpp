@@ -187,6 +187,7 @@ int HioChainStream::sendfile(int fdSrc, off_t off, size_t size, int flag)
 
 }
 
+
 const char *HioChainStream::buildLogId()
 {
     HttpSession *pSession = (HttpSession *)getHandler();

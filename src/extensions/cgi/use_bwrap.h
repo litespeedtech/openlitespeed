@@ -39,7 +39,8 @@ extern int s_bwrap_extra_bytes;
 #define BWRAP_VAR_COPY      "$COPY"
 #define BWRAP_VAR_COPY_TRY  "$COPY-TRY"
 
-#define BWRAP_DEFAULT_BIN   "/bin/bwrap"
+#define BWRAP_DEFAULT_DIR   "/bin"
+#define BWRAP_DEFAULT_BIN   BWRAP_DEFAULT_DIR "/bwrap"
 #define BWRAP_DEFAULT_BIN2  "/usr/bin/bwrap"
 
 #define BWRAP_DEFAULT_PARAM " --ro-bind /usr /usr"\
@@ -110,22 +111,7 @@ int build_bwrap_exec(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *argc,
 void bwrap_free(bwrap_mem_t **mem);
 int exec_using_bwrap(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *done);
 
-//#define DO_BWRAP_DEBUG
-#ifdef DO_BWRAP_DEBUG
-extern int s_bwrap_debug;
-void debug_message (const char *fmt, ...);
-#ifndef DEBUG_MESSAGE
-#define DEBUG_MESSAGE(fmt, ...) if (s_bwrap_debug) {     \
-    debug_message("File: %s Line #%d " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
-    }
-#endif
-#else
-#define DEBUG_MESSAGE(fmt, ...) {}
-#endif
-
-#else
-#define DEBUG_MESSAGE(fmt, ...) {}
-#endif
+#endif // Linux only
 
 #ifdef __cplusplus
 }

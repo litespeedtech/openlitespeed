@@ -25,6 +25,7 @@
 
 #include <http/serverprocessconfig.h>
 #include <http/httpserverconfig.h>
+#include <http/httpvhost.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
 #include <socket/coresocket.h>
@@ -399,7 +400,7 @@ int SUExec::prepare(int uid, int gid, int priority, int umaskVal,
             const char *pChroot, int chrootLen,
             const char *pReal, int pathLen,
             const char *const *pArgv, const char *const *env,
-            const RLimits *pLimits, int flags)
+            const RLimits *pLimits, int flags, const HttpVHost *pVHost)
 {
     int ret = m_req.buildReqHeader(uid, gid, priority, umaskVal,
                                 pChroot, chrootLen, pReal, pathLen, pLimits,
@@ -416,10 +417,11 @@ int SUExec::prepare(int uid, int gid, int priority, int umaskVal,
     {
         if (!*env)
         {
-            char buf[256];
+            int n;
+            char buf[4096];
             if (flags & LSCGID_FLAG_BWRAP)
             {
-                int n = snprintf(buf, sizeof(buf), "LS_BWRAP=1");
+                n = lsnprintf(buf, sizeof(buf), "LS_BWRAP=1");
                 m_req.appendEnv(buf, n);
                 const char *cmdline = HttpServerConfig::getInstance().getBwrapCmdLine();
                 if (cmdline)
@@ -428,9 +430,34 @@ int SUExec::prepare(int uid, int gid, int priority, int umaskVal,
             }
             if (flags & LSCGID_FLAG_CGROUP)
             {
-                int n = snprintf(buf, sizeof(buf), "LS_CGROUP=1");
+                n = lsnprintf(buf, sizeof(buf), "LS_CGROUP=1");
                 m_req.appendEnv(buf, n);
             }
+
+            if (flags & LSCGID_FLAG_NAMESPACE)
+            {
+                n = snprintf(buf, sizeof(buf), "LS_NS=1");
+                m_req.appendEnv(buf, n);
+                if (HttpServerConfig::getInstance().getNSConf())
+                {
+                    n = snprintf(buf, sizeof(buf), "LS_NS_CONF=%s",
+                        HttpServerConfig::getInstance().getNSConf());
+                    m_req.appendEnv(buf, n);
+                }
+                if (pVHost && pVHost->enableNS())
+                {
+                    n = snprintf(buf, sizeof(buf), "LS_NS_VHOST=%s",
+                                 pVHost->getName());
+                    m_req.appendEnv(buf, n);
+                    if (pVHost->getNSConf2() && pVHost->getNSConf2()->c_str())
+                    {
+                        n = snprintf(buf, sizeof(buf), "LS_NS_CONF2=%s",
+                            pVHost->getNSConf2()->c_str());
+                        m_req.appendEnv(buf, n);
+                    }
+                }
+            }
+
         }
         m_req.appendEnv(*env, *env ? strlen(*env) : 0);
         if (!*env)

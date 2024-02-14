@@ -15,16 +15,15 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
+
 #ifndef L4TUNNEL_H
 #define L4TUNNEL_H
 
-#include <lsdef.h>
 #include <http/hiostream.h>
-
-class GSockAddr;
-class HttpReq;
-class LoopBuf;
-class L4conn;
+#include <http/httpreq.h>
+#include <extensions/ssl4conn.h>
+#include <util/loopbuf.h>
+#include "socket/gsockaddr.h"
 
 class L4Handler : public HioHandler
 {
@@ -34,13 +33,16 @@ public:
     ~L4Handler();
 
     int  init(HttpReq &req, const GSockAddr *pGSockAddr, const char *pIP,
-              int iIpLen);
+              int iIpLen, bool ssl, const char *url, int url_len);
+
+    int  init(HttpReq &req, const char *pAddrStr, const char *pIP,
+              int iIpLen, bool ssl, const char *url, int url_len);
 
     LoopBuf    *getBuf()            {   return m_buf;  }
-    void        continueRead()      {   getStream()->continueRead();        }
-    void        suspendRead()       {   getStream()->suspendRead();         }
-    void        suspendWrite()      {   getStream()->suspendWrite();        }
-    void        continueWrite()     {   getStream()->continueWrite();       }
+    void        continueRead()      {   getStream()->continueRead();    }
+    void        suspendRead()       {   getStream()->suspendRead();     }
+    void        suspendWrite()      {   getStream()->suspendWrite();    }
+    void        continueWrite()     {   getStream()->continueWrite();   }
     bool        isWantRead() const  {   return getStream()->isWantRead();   }
 
     int         onReadEx();
@@ -48,23 +50,18 @@ public:
     void        closeBothConnection();
 
 private:
-    L4conn         *m_pL4conn;
+    Ssl4conn       *m_pL4conn;
     LoopBuf        *m_buf;
 
 
+    void buildWsReq(HttpReq &req, const char *pIP, int iIpLen,
+                    const char *url, int url_len);
     void recycle();
     int onTimerEx()         {   return 0;   }
-    int onCloseEx()         {   return 0;   }
+    int onCloseEx();
     int onWriteEx();
     int onInitConnected()   {   return 0;   };
 
-public:
-    LOG4CXX_NS::Logger *getLogger() const   {   return getStream()->getLogger();   }
-    const char *getLogId() {   return getStream()->getLogId();     }
-    LogSession *getLogSession() const
-    {   return getStream();   }
-
-    LS_NO_COPY_ASSIGN(L4Handler);
 };
 
 #endif // L4TUNNEL_H

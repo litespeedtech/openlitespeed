@@ -20,6 +20,7 @@
 
 
 #include <lsdef.h>
+#include <assert.h>
 #include <stddef.h>
 
 #define MAX_FDINDEX 100000
@@ -69,6 +70,13 @@ public:
         if ((unsigned)fd > m_iUsed)
             m_iUsed = fd;
         m_pIndexes[fd].m_pReactor = pReactor;
+        return LS_OK;
+    }
+
+    int replace(int fd, EventReactor *old, EventReactor *new_handler)
+    {
+        assert((unsigned)fd <= m_iUsed && m_pIndexes[fd].m_pReactor == old);
+        m_pIndexes[fd].m_pReactor = new_handler;
         return LS_OK;
     }
 

@@ -75,6 +75,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"autorestart",                              NULL},
     {"autostart",                                NULL},
     {"autoloadhtaccess",                         NULL},
+    {"autowhitelistlocalips",                    NULL},
 
     {"awstats",                                  NULL},
     {"awstatsuri",                               NULL},
@@ -195,6 +196,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"ip2locdbcache",                            NULL},
     {"ip2locdbfile",                             NULL},
     {"keepalivetimeout",                         NULL},
+    {"jsonreports",                              NULL},
     {"keepdays",                                 NULL},
     {"keyfile",                                  NULL},
     {"keyfile2",                                 NULL},
@@ -238,6 +240,9 @@ plainconfKeywords plainconf::sKeywords[] =
     {"module",                                   NULL},
     {"modulelist",                               NULL},//!!
     {"name",                                     NULL},
+    {"namespace",                                NULL},
+    {"namespaceconf",                            NULL},
+    {"namespaceconfvhadd",                       NULL},
     {"note",                                     NULL},
     {"ocspcacerts",                              NULL},
     {"ocsprespmaxage",                           NULL},
@@ -253,6 +258,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"priority",                                 NULL},
     {"prochardlimit",                            NULL},
     {"procsoftlimit",                            NULL},
+    {"proxyprotocol",                            NULL},
     {"railsdefaults",                            NULL},
     {"wsgiDefaults",                            NULL},
     {"nodeDefaults",                            NULL},
@@ -285,12 +291,14 @@ plainconfKeywords plainconf::sKeywords[] =
     {"ssldefaultcapath",                         NULL},
     {"ssldefaultciphers",                        NULL},
     {"sslenablemulticerts",                      NULL},
+    {"sslpkthreadcores",                         NULL},
     {"sslsessioncache",                          NULL},
     {"sslsessioncachesize",                      NULL},
     {"sslsessioncachetimeout",                   NULL},
     {"sslsessiontickets",                        NULL},
     {"sslsessionticketkeyfile",                  NULL},
     {"sslsessionticketlifetime",                 NULL},
+    {"sslstrictsni",                             NULL},
     {"sslstrongdhkey",                           NULL},
     {"setuidmode",                               NULL},
     {"showversionnumber",                        NULL},
@@ -1267,6 +1275,39 @@ static int appendBuf(AutoBuf *pBuf, const char *pSrc, size_t len)
 }
 
 
+int plainconf::expandIncludePath(const char *includePathIn, wordexp_t *exp)
+{
+    int ret;
+    if ((ret = wordexp(includePathIn, exp, WRDE_NOCMD | WRDE_UNDEF)))
+    {
+        const char *err;
+        switch (ret)
+        {
+            case WRDE_BADCHAR:
+                err = "One of the unquoted characters- <newline>, '|', '&', ';', '<', '>', '(', ')', '{', '}' - appears in words in an inappropriate context";
+                break;
+            case WRDE_BADVAL:
+                err = "Reference to undefined shell variable when WRDE_UNDEF is set in flags";
+                break;
+            case WRDE_CMDSUB:
+                err = "Command substitution requested when WRDE_NOCMD was set in flags";
+                break;
+            case WRDE_NOSPACE:
+                err = "Attempt to allocate memory failed";
+                break;
+            case WRDE_SYNTAX:
+                err = "Shell syntax error, such as unbalanced parentheses or unterminated string";
+                break;
+            default:
+                err = "Unexpected error number";
+        }
+        logToMem(LOG_LEVEL_ERR, "LoadConfFile include file error %s", err);
+        return -1;
+    }
+    return 0;
+}
+
+
 //This function may be recruse called
 void plainconf::loadConfFile(const char *path)
 {
@@ -1282,32 +1323,15 @@ void plainconf::loadConfFile(const char *path)
 
     else if (type == eConfWildcard)
     {
-        AutoStr2 prefixPath = path;
-        const char *p = strrchr(path, '/');
-
-        if (p)
-            prefixPath.setStr(path, p - path);
-
-        struct stat sb;
-
-        //removed the wildchar filename, should be a directory if exist
-        if (stat(prefixPath.c_str(), &sb) == -1)
+        wordexp_t exp;
+        if (expandIncludePath(path, &exp))
+            return;
+        for (size_t i = 0; i < exp.we_wordc; i++)
         {
-            logToMem(LOG_LEVEL_ERR, "LoadConfFile error 1, path:%s directory:%s",
-                     path, prefixPath.c_str());
-            return ;
+            loadConfFile(exp.we_wordv[i]);
         }
-
-        if ((sb.st_mode & S_IFMT) != S_IFDIR)
-        {
-            logToMem(LOG_LEVEL_ERR, "LoadConfFile error 2, path:%s directory:%s",
-                     path, prefixPath.c_str());
-            return ;
-        }
-
-        loadDirectory(prefixPath.c_str(), p + 1);
+        wordfree(&exp);
     }
-
     else //existed file
     {
         const int MAX_LINE_LENGTH = 8192;
@@ -1333,7 +1357,7 @@ void plainconf::loadConfFile(const char *path)
                 pBuf = (char *)it.second()->str2.c_str();
                 n = it.second()->str2.len();
                 bInHashT = true;
-                logToMem(LOG_LEVEL_INFO, "File %s loaded, use memory in hashT, size %d.", path, strlen(pBuf));
+                logToMem(LOG_LEVEL_INFO, "File %s loaded, use memory in hashT, size %d.", path, (int)strlen(pBuf));
             }
         }
 #endif
@@ -1348,6 +1372,14 @@ void plainconf::loadConfFile(const char *path)
 
             fseek(fp, 0L, SEEK_END);
             fileSize = ftell(fp);
+            if (fileSize == -1)
+            {
+                logToMem(LOG_LEVEL_ERR, "Conf file (%s) unexpected error "
+                         "getting pos: %s", path, strerror(errno));
+                fclose(fp);
+                return ;
+            }
+
             rewind(fp);
             if (fileSize > 100 * 1024 * 1024)
             {
@@ -1363,19 +1395,25 @@ void plainconf::loadConfFile(const char *path)
             }
 
             pBuf = new char[fileSize + 1];
-            n = fread(pBuf, 1, fileSize, fp);
-            if (n >= 0)
-                pBuf[n] = 0;
-            fclose(fp);
-#ifdef ENABLE_CONF_HASH
-            m_confFileHash.insert_update(path, strlen(path), pBuf, n);
-#endif
-            if (n <= 0)
+            if (pBuf)
             {
-                delete [] pBuf;
-                logToMem(LOG_LEVEL_ERR, "Failed to read configuration file %s!", path);
-                return;
+                n = fread(pBuf, 1, fileSize, fp);
+                if (n > 0)
+                {
+                    pBuf[n] = 0;
+#ifdef ENABLE_CONF_HASH
+                    m_confFileHash.insert_update(path, strlen(path), pBuf, n);
+#endif
+                }
+                else
+                {
+                    delete [] pBuf;
+                    logToMem(LOG_LEVEL_ERR, "Failed to read configuration file %s!", path);
+                    fclose(fp);
+                    return;
+                }
             }
+            fclose(fp);
         }
 
         char *pBufStart = pBuf;

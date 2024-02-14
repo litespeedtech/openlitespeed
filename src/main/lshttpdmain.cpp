@@ -18,6 +18,9 @@
 #include "lshttpdmain.h"
 
 #include <adns/adns.h>
+#include <edio/iouring.h>
+#include <edio/linuxaio.h>
+#include <edio/lsposixaioreq.h>
 #include <http/httpaiosendfile.h>
 #include <http/httplog.h>
 #include <http/httpserverconfig.h>
@@ -53,6 +56,12 @@
 #include <socket/gsockaddr.h>
 #include <edio/evtcbque.h>
 
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+//For non-linux, we do not need this include file
+#else
+#include <sys/sysctl.h>
+#endif
+
 #include <extensions/cgi/cgidworker.h>
 #include <extensions/registry/extappregistry.h>
 #include <openssl/crypto.h>
@@ -81,7 +90,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  "built: Mon Feb  5 23:11:12 UTC 2024"
+#define BUILDTIME  "built: Wed Feb 14 20:36:16 UTC 2024"
 
 static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
         " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";
@@ -307,19 +316,30 @@ int LshttpdMain::SendCrashNotification(pid_t pid, int signal, int coredump,
 }
 
 
+static void onTimerCheckKill();
+
 void LshttpdMain::onGuardTimer()
 {
     MainServerConfig  &MainServerConfigObj =  MainServerConfig::getInstance();
     static int s_count = 0;
+    static time_t prev = 0;
     DateTime::s_curTime = time(NULL);
-//#if !defined( RUN_TEST )
+
+    if (s_iRunning <= 0)
+        return;
+
+    onTimerCheckKill();
+    if (prev == DateTime::s_curTime)
+        return;
+    prev = DateTime::s_curTime;
+
     if (m_pidFile.testAndRelockPidFile(getPidFile(), m_pid))
     {
         LS_NOTICE("Failed to lock PID file, restart server gracefully ...");
         gracefulRestart();
         return;
     }
-//#endif
+
     CgidWorker::checkRestartCgid(MainServerConfigObj.getServerRoot(),
                                  MainServerConfigObj.getChroot(),
                                  ServerProcessConfig::getInstance().getPriority());
@@ -1063,9 +1083,6 @@ int LshttpdMain::init(int argc, char *argv[])
 
         WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
         pGWC->startProcessing();
-        if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
-            && (m_pServer->initAioSendFile() != 0))
-            return LS_FAIL;
     }
     //if ( fcntl( 5, F_GETFD, 0 ) > 0 )
     //    printf( "find it!\n" );
@@ -1283,10 +1300,19 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     //setIntercommFds(pProc->m_iProcNo);
     m_pServer->enableAioLogging();
     EvtcbQue::getInstance().initNotifier();
-    if ((HttpServerConfig::getInstance().getUseSendfile() == 2)
-        && (m_pServer->initAioSendFile() != 0))
+    if ((HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_POSIX 
+        && LsPosixAioReq::load()) 
+#if defined(LS_AIO_USE_LINUX_AIO)
+        || (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_LINUX_AIO
+            && LinuxAio::getInstance().load()) 
+#endif
+#if defined(IOURING)
+        || (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_IOURING
+            && Iouring::getInstance().load())
+#endif
+        )
     {
-        HttpServerConfig::getInstance().setUseSendfile(1);
+        HttpServerConfig::getInstance().setUseAio(HttpServerConfig::AIO_OFF);
     }
     if (m_fdAdmin != -1)
     {
@@ -1721,6 +1747,16 @@ void LshttpdMain::processSignal()
     if (HttpSignals::gotSigStop())
     {
         LS_NOTICE("SIGTERM received, stop server...");
+        struct rusage rself;
+        struct rusage rchildren;
+        getrusage(RUSAGE_SELF, &rself);
+        getrusage(RUSAGE_CHILDREN, &rchildren);
+        LS_NOTICE("Parent CPU %ld.%ld seconds user time, %ld.%ld seconds system time\n"
+                  "Child tasks %ld.%ld seconds user time, %ld.%ld seconds system time\n",
+                  rself.ru_utime.tv_sec, rself.ru_utime.tv_usec,
+                  rself.ru_stime.tv_sec, rself.ru_stime.tv_usec,
+                  rchildren.ru_utime.tv_sec, rchildren.ru_utime.tv_usec,
+                  rchildren.ru_stime.tv_sec, rchildren.ru_stime.tv_usec);
         s_iRunning = -1;
     }
     if (HttpSignals::gotSigUsr1())
@@ -1856,7 +1892,7 @@ static int parseChildCmd(const char *pAction)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
-static long getProcessStartTime(int pid)
+static long getProcessNameStartTime(int pid, char *proc_name)
 {
     int             mib[4];
     size_t          len;
@@ -1871,11 +1907,9 @@ static long getProcessStartTime(int pid)
     if (sysctl(mib, 4, &kp, &len, NULL, 0) != 0) {
         return -1;
     }
-#if defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__)
+    memccpy(proc_name, kp.ki_comm, 0, COMMLEN + 1);
+
     return kp.ki_start.tv_sec;
-#else
-    return kp.kp_proc.p_un.__p_starttime.tv_sec;
-#endif
 }
 #endif
 
@@ -1895,7 +1929,7 @@ static long getBootTime()
     if (fd < 0)
         return -1;
 
-    int ret = read(fd, stat_buf, sizeof(stat_buf) - 1);
+    int ret = read(fd, stat_buf, sizeof(stat_buf));
 
     close(fd);
 
@@ -1912,7 +1946,7 @@ static long getBootTime()
 }
 
 
-static long getProcessStartTimeSinceBoot(int pid)
+static long getProcessNameStartTimeSinceBoot(int pid, char *proc_name)
 {
     char stat_buf[4096];
     char proc_pid_path[80];
@@ -1927,10 +1961,19 @@ static long getProcessStartTimeSinceBoot(int pid)
 
     if(ret < 0)
         return -1;
+    char *pName = (char *)memchr(stat_buf, '(', ret);
+    if (!pName)
+        return -1;
+    ++pName;
 
     char *p = (char *)memchr(stat_buf, ')', ret);
     if (!p)
         return -1;
+    if (p - pName <= 0 || p - pName > 255)
+        return -1;
+    memcpy(proc_name, pName, p - pName);
+    proc_name[p - pName] = '\0';
+
     char *end = p + ret;
     p += 2;
     int i;
@@ -1946,9 +1989,9 @@ static long getProcessStartTimeSinceBoot(int pid)
 }
 
 
-static long getProcessStartTime(int pid)
+static long getProcessNameStartTime(int pid, char *proc_name)
 {
-    long diff = getProcessStartTimeSinceBoot(pid);
+    long diff = getProcessNameStartTimeSinceBoot(pid, proc_name);
     if (diff == -1)
         return -1;
     long boot_time = getBootTime();
@@ -1958,6 +2001,20 @@ static long getProcessStartTime(int pid)
     return real;
 }
 #endif
+
+
+struct KillData
+{
+    long start_time;
+    int pid;
+    int kill_type;
+};
+
+#include <util/objarray.h>
+typedef TObjArray<KillData> KillTracker;
+
+static KillTracker *s_pKillTrackerFree = NULL;
+static KillTracker *s_pKillTrackerCur = NULL;
 
 
 static int killExtApp(char *pCmd, int cmdLen)
@@ -1976,8 +2033,8 @@ static int killExtApp(char *pCmd, int cmdLen)
         ++colon;
         timestamp = atol(colon);
     }
-
-    long start_time = getProcessStartTime(pid);
+    char proc_name[256];
+    long start_time = getProcessNameStartTime(pid, proc_name);
     if (start_time == -1)
     {
         LS_INFO("Failed to get process [%d] start time, not running, skip killing.", pid);
@@ -1986,8 +2043,14 @@ static int killExtApp(char *pCmd, int cmdLen)
 
     if (timestamp && start_time - timestamp > 60)
     {
-        LS_INFO("process [%d] pid start mtime(%ld) - 60 > pid file mtime (%ld), skip killing.",
-                pid, start_time, timestamp);
+        LS_INFO("process [%d] start time does match, skip killing, expected: %ld, get: %ld.", pid, timestamp, start_time);
+        return -1;
+    }
+
+    if (strcmp(proc_name, "systemd-journald") == 0
+        || strcmp(proc_name, "dovecot") == 0)
+    {
+        LS_INFO("Process %d (%s) should not be killed, skip.", pid, proc_name);
         return -1;
     }
 
@@ -1996,11 +2059,48 @@ static int killExtApp(char *pCmd, int cmdLen)
     {
         if (::kill(pid, s_sigKillType[ kill_type + 4 ]) == 0)
         {
-            LS_INFO("[CLEANUP] Send signal: %d to process: %d",
-                    s_sigKillType[ kill_type + 4 ], pid);
+            LS_INFO("[CLEANUP] Send signal: %d to process: %d (%s)",
+                    s_sigKillType[ kill_type + 4 ], pid, proc_name);
+        }
+        if (kill_type == KILL_TYPE_TERM)
+        {
+            if (s_pKillTrackerCur == NULL)
+                s_pKillTrackerCur = new KillTracker();
+            KillData * data = s_pKillTrackerCur->newObj();
+            if (data)
+            {
+                data->pid = pid;
+                data->kill_type = kill_type;
+                data->start_time = start_time;
+            }
         }
     }
     return 0;
+}
+
+
+static void onTimerCheckKill()
+{
+    KillTracker *p = s_pKillTrackerFree;
+    s_pKillTrackerFree = s_pKillTrackerCur;
+    s_pKillTrackerCur = p;
+    if (!p)
+        return;
+    KillTracker::iterator iter;
+    for(iter = p->begin(); iter != p->end(); ++iter)
+    {
+        char proc_name[256];
+        long start_time = getProcessNameStartTime(iter->pid, proc_name);
+        if (start_time != -1 && start_time == iter->start_time)
+        {
+            if (::kill(iter->pid, SIGKILL) == 0)
+            {
+                LS_INFO("[CLEANUP] Process %d (%s) wont stop after SIGTERM, send SIGKILL.",
+                        iter->pid, proc_name);
+            }
+        }
+    }
+    p->clear();
 }
 
 

@@ -43,20 +43,14 @@ const (
 func initVerifier() {
 }
 
-func validateForm(r *http.Request) bool {
-	err := r.ParseForm()
-
-	if err != nil {
-		log.Printf("Failed to parse form, %+v", err)
-		return false
-	}
-
-	return (r.PostFormValue(recaptchaFormName) != "")
-}
 
 func verifyResp(w http.ResponseWriter, r *http.Request) {
 
-	val := r.PostFormValue(recaptchaFormName)
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("Failed to parse form, %+v", err)
+		return
+	}
 
 	reqEnvs := getReqEnv(r)
 	if reqEnvs == nil {
@@ -66,12 +60,31 @@ func verifyResp(w http.ResponseWriter, r *http.Request) {
 
 	ip := reqEnvs["REMOTE_ADDR"]
 	secretKey := reqEnvs[envNameSecretKey]
+	js_obj_name := reqEnvs["LSRECAPTCHA_JS_OBJ_NAME"];
 
-	googleReqVars := url.Values{"secret": {secretKey},
-		"remoteip": {ip},
-		"response": {val}}
+	var api_url = recaptchaServerName
+	var form_var_name string
 
-	resp, err := http.PostForm(recaptchaServerName, googleReqVars)
+	if js_obj_name == "hcaptcha" {
+		form_var_name = "h-captcha-response";
+		api_url = "https://api.hcaptcha.com/siteverify"
+	} else {
+		form_var_name = recaptchaFormName;
+		api_url = recaptchaServerName;
+	}
+
+	val := r.PostFormValue(form_var_name)
+	if (val == "" ) {
+		log.Printf("POST form value %s is blank", form_var_name)
+		return;
+	}
+
+	reqVars := url.Values{"secret": {secretKey},
+			"remoteip": {ip},
+			"response": {val}}
+
+	resp, err := http.PostForm(api_url, reqVars)
+
 
 	if err != nil {
 		log.Printf("Failed to post form. %+v", err)

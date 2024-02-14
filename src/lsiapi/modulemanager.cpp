@@ -438,7 +438,6 @@ int ModuleManager::unloadModules()
         pLmHttpHandler = (LsiModule *) iter.second();
         free((void *)MODULE_NAME(pLmHttpHandler->getModule()));
         delete pLmHttpHandler;
-        pLmHttpHandler = NULL;
     }
     clear();
     free(m_pModuleArray);

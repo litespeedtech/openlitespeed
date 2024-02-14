@@ -544,6 +544,8 @@ int StaticFileHandler::process(HttpSession *pSession,
 
         if (!isSSI)
         {
+            LS_DBG_L(pReq->getLogSession(), "staticFileHandle, !isSSI, code: %d\n",
+                     code);
             pSession->resetResp();
 //            pResp->prepareHeaders( pReq, 1 );
             switch (code)
@@ -580,6 +582,8 @@ int StaticFileHandler::process(HttpSession *pSession,
         } //Xuedong Add for SSI Start
         else
         {
+            LS_DBG_L(pReq->getLogSession(), "staticFileHandle, isSSI. end?\n");
+
             //pSession->flushDynBody( 1 );
             if (pSession->getGzipBuf() &&
                 (pECache != pCache->getGzip()))

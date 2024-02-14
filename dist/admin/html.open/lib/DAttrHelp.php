@@ -13,7 +13,9 @@ class DAttrHelp
     {
         $this->name = $name;
         $this->desc = $desc;
-        $this->tips = str_replace('<br>', '<br/>', $tips);
+		if ($tips) {
+			$this->tips = str_replace('<br>', '<br/>', $tips);
+		}
         $this->syntax = $syntax;
         $this->example = $example;
     }

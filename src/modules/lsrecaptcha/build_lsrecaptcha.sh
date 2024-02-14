@@ -16,6 +16,8 @@ if which setenv ; then
 else
     export GOPATH="${CUR_PATH}"
 fi
+export GO111MODULE=off
+export CGO_ENABLED=1
 
 echo "GOPATH set to ${GOPATH}"
 go build lsrecaptcha

@@ -141,12 +141,22 @@ int H2Connection::decodeHeaders(uint32_t id, unsigned char *pSrc, int length,
     }
 
     pStream->setFlag(HIO_FLAG_INIT_SESS, 1);
-    add2PriorityQue(pStream);
-    set_h2flag(H2_CONN_FLAG_PENDING_STREAM);
-    //pStream->onInitConnected(NULL, 0);
-    //if (pStream->getState() != HIOS_CONNECTED)
-    //    recycleStream(pStream->getStreamID());
-
+    if (pStream->getFlag(HIO_FLAG_PEER_SHUTDOWN))
+    {
+        add2PriorityQue(pStream);
+        set_h2flag(H2_CONN_FLAG_PENDING_STREAM);
+    }
+    else
+    {
+        assignStreamHandler(pStream);
+        if (pStream->isWantWrite() && (pStream->getWindowOut() > 0))
+        {
+            if (!pStream->next())
+                m_priQue[pStream->getPriority()].append(pStream);
+        }
+        if (pStream->getState() != HIOS_CONNECTED)
+            recycleStream(pStream);
+    }
     return 0;
 }
 

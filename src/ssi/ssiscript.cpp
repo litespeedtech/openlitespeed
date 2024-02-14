@@ -883,6 +883,11 @@ int SsiScript::processSsiFile(SsiTagConfig *pConfig, int fd,
                           MAP_SHARED | MAP_FILE, fd, 0);
 
     m_pContent = new VMemBuf();
+    if (!m_pContent)
+    {
+        LS_ERROR("Insufficient memory allocating VMemBuf in processSsiFile()");
+        return -1;
+    }
     m_pContent->set(VMBUF_FILE_MAP, new MmapBlockBuf(pBegin, pStat->st_size));
     m_pContent->writeUsed(pStat->st_size);
 

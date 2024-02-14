@@ -134,6 +134,7 @@ public:
     int addDefaultVHost(HttpVHost *pVHost);
 
     int writeStatusReport(int fd);
+    int writeStatusJsonReport(int fd, int first, int last);
     int mapDomainList(HttpVHost *pVHost, const char *pDomains);
 
     IolinkSessionHooks  *getSessionHooks() {  return &m_iolinkSessionHooks;    }

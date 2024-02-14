@@ -116,6 +116,9 @@ public:
     {};
     ~TObjArray() {};
 
+    typedef T* iterator;
+    typedef const T* const_iterator;
+
     void    init()                      {   ObjArray::init(sizeof(T));   }
     T      *getArray()                  {   return (T *)ObjArray::getArray(); }
     const T*getArray() const            {   return (const T *)ObjArray::getArray(); }

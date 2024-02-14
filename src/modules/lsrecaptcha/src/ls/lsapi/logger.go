@@ -173,6 +173,9 @@ func (w *fileLogger) Write(output []byte) (int, error) {
 
 // Perform the actual act of rotating and reopening file.
 func (w *fileLogger) rotate() (err error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
 	// Close existing file if open
 	if w.handle != nil {
 		err = w.handle.Close()

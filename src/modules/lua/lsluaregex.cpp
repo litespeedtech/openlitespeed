@@ -217,12 +217,8 @@ static int LsLuaRegexDoPcre(lua_State *L, LsLuaSession *pSession,
     ls_xpool_t *pool = g_api->get_session_pool(pSession->getHttpSession());
 
     if ((r->namedpatscount = ls_pcre_getnamedsubcnt(r->pcre)) < 0)
-    {
-        if (r->cachemode)
-            ls_pcre_delete(r->pcre);
         return LsLuaApi::serverError(L, "Regex",
                                      "Getting named subs count error.");
-    }
 
     if (r->dfamode)
     {

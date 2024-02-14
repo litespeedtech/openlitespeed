@@ -742,7 +742,7 @@ $_gmsg['buildphp_mainstatus'] = 'メインステータス';
 $_gmsg['buildphp_manualrunnotice'] = '<p>セキュリティ上の理由から、サーバーにログインし、シェルから事前生成されたスクリプトを実行してください。
 	この画面から進行状況を監視することができます。</p>
 	<p>正常にビルドできたら、必要に応じてphp.iniを更新してください。 変更を適用するには、緩やかな再起動を実行してください。</p>
-	<p>Iエラーにより停止した場合は、パッケージを紛失したためにインストールした後、同じコマンドを再実行すると、このページに更新されたログが表示されます。LSPHPの詳細については、次のURLを参照してください <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a>.</p>
+	<p>Iエラーにより停止した場合は、パッケージを紛失したためにインストールした後、同じコマンドを再実行すると、このページに更新されたログが表示されます。LSPHPの詳細については、次のURLを参照してください <a href="https://docs.litespeedtech.com/lsws/extapp/php/" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a>.</p>
 	<p>rootとしてログインした場合は、次のコマンドを直接実行できます: <br><code>%%manual_script%%</code></p>
 	<p>sudo権限を持つユーザーとしてログインした場合は、sudoでコマンドを実行し、プロンプトの後にrootパスワードを入力することができます。
 	<code>sudo %%manual_script%%</code></p>';

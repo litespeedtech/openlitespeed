@@ -50,6 +50,7 @@ enum BOT_REASON
 #define CIF_TEST_LOCAL_ADDR (1<<6)
 #define CIF_LOCAL_ADDR      (1<<7)
 #define CIF_DISABLE_HTTP2   (1<<8)
+#define CIF_PROTOCOL_PROXY  (1<<9)
 
 #if 0
 #include <shm/lsshmcache.h>
@@ -76,6 +77,7 @@ typedef LsShmCache                  TShmClientPool;
 
 struct sockaddr;
 class LocInfo;
+class SslContext;
 class ClientInfo
 {
     char        m_achSockAddr[24];
@@ -86,6 +88,7 @@ class ClientInfo
     uint32_t    m_iFlags;
     int32_t     m_iConns;
     GeoInfo    *m_pGeoInfo;
+    SslContext *m_sslContext;
 
 #ifdef USE_IP2LOCATION
     LocInfo    *m_pLocInfo;
@@ -93,12 +96,12 @@ class ClientInfo
 
     time_t      m_tmOverLimit;
     short       m_sslNewConn;
+    enum BOT_REASON m_bot_reason:16;
     uint16_t    m_iCaptchaTries;
     uint16_t    m_iAllowedBotHits;
     int         m_iHits;
     time_t      m_lastConnect;
     int         m_iAccess;
-    enum BOT_REASON  m_bot_reason;
 
     ThrottleControl     m_ctlThrottle;
     static int          s_iSoftLimitPC;
@@ -146,6 +149,10 @@ public:
 
     int isNeedTestHost() const
     {   return m_iFlags & CIF_GOOG_TEST;    }
+
+    bool isProtocolProxy() const
+    {   return getFlag(CIF_PROTOCOL_PROXY);        }
+
     int checkHost();
     void verifyIp(void *ip, const long length);
 
@@ -203,6 +210,8 @@ public:
         m_pGeoInfo = geoInfo;
     }
     GeoInfo *getGeoInfo() const         {   return m_pGeoInfo;          }
+    void  setSslContext(SslContext *ctx) {  m_sslContext = ctx;         }
+    SslContext *getSslContext()         {   return m_sslContext;        }
 
 #ifdef USE_IP2LOCATION
     LocInfo *allocateLocInfo();

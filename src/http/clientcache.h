@@ -53,6 +53,7 @@ private:
     static int appendDirtyList(const void *pKey, void *pData, void *pList);
     void       clean(Cache *pCache);
     int     writeBlockedIP(AutoBuf *pBuf, Cache *pCache);
+    int     writeBlockedIPJson(AutoBuf *pBuf, Cache *pCache, int *count);
     void    recycle(ClientInfo *pInfo);
 
     ClientCache(int initSize);
@@ -76,9 +77,10 @@ public:
     static void initObjPool();
     static void clearObjPool();
 
-    ClientInfo *getClientInfo(struct sockaddr *pPeer);
+    ClientInfo *getClientInfo(const struct sockaddr *pPeer);
 
     int generateBlockedIPReport(int fd);
+    int generateBlockedIPJsonReport(AutoBuf *buf);
 
     static void initClientCache(int iInitSize)
     {   s_pClients = new ClientCache(iInitSize);    }

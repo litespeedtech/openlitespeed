@@ -57,17 +57,10 @@ int             LsLuaEngine::s_iJitLineMod = 10000;
 int             LsLuaEngine::s_iDebug = 0;
 int             LsLuaEngine::s_iPauseTime =
     500;          // pause time 500 msec per yield
-char           *LsLuaEngine::s_pLuaLib = NULL;
-char            LsLuaEngine::s_aLuaName[0x10] = "LUA";
-const char     *LsLuaEngine::s_pSysLuaLib =
-    "/usr/local/lib/libluajit-5.1.so"; // default
-char           *LsLuaEngine::s_pLuaPath = NULL;
-const char     *LsLuaEngine::s_pSysLuaPath =
-    "/usr/local/lib/lua"; // default LUA_PATH
+char            LsLuaEngine::s_aLuaName[0x10] = "JIT";
 char            LsLuaEngine::s_aVersion[0x20] =
     "LUA-NOT-READY"; // default LUA_VERSION
 
-LsLuaEngine::LSLUA_TYPE LsLuaEngine::s_type = LSLUA_ENGINE_REGULAR;
 LsLuaEngine::LsLuaEngine()
 {
 }
@@ -81,37 +74,18 @@ LsLuaEngine::~LsLuaEngine()
 int LsLuaEngine::init()
 {
     const char *pErr;
-    const char *pLibPath;
-//     char errbuf[MAX_ERRBUF_SIZE];
     s_iReady = 0;     // set no ready
 
-    pLibPath = s_pLuaLib ? s_pLuaLib : s_pSysLuaLib;
-
-    if ((pErr = LsLuaApi::init(pLibPath)) != NULL)
+    if ((pErr = LsLuaApi::init()) != NULL)
     {
         g_api->log(NULL, LSI_LOG_ERROR, "[LUA] Failed to load %s "
                    "from module!\n", pErr);
         return LS_FAIL;
     }
-    if (LsLuaApi::jitMode())
-    {
-        s_type = LSLUA_ENGINE_JIT;
-        strcpy(s_aLuaName, "JIT");
-    }
-    else
-    {
-        s_type = LSLUA_ENGINE_REGULAR;
-        strcpy(s_aLuaName, "LUA");
-    }
     g_api->log(NULL, LSI_LOG_DEBUG,
                "%s REGISTRYINDEX[%d] GLOBALSINDEX[%d]\n",
                s_aLuaName, LSLUA_REGISTRYINDEX,
                LSLUA_GLOBALSINDEX
-              );
-    g_api->log(NULL, LSI_LOG_DEBUG,
-               "%s lib[%s] luapath[%s]\n", s_aLuaName,
-               s_pLuaLib ? s_pLuaLib : "",
-               s_pLuaPath ? s_pLuaPath : ""
               );
     g_api->log(NULL, LSI_LOG_DEBUG,
                "%s maxruntime[%d] maxlinecount[%d]\n",
@@ -122,8 +96,7 @@ int LsLuaEngine::init()
                s_aLuaName, s_iPauseTime, s_iJitLineMod
               );
 
-    if ((s_type == LSLUA_ENGINE_JIT)
-        && (LSLUA_REGISTRYINDEX != -10000))
+    if (LSLUA_REGISTRYINDEX != -10000)
     {
         g_api->log(NULL, LSI_LOG_WARN,
                    "JIT PATCH REGISTRYINDEX IS NOT -10000\n");
@@ -311,8 +284,7 @@ LsLuaSession *LsLuaEngine::prepState(const lsi_session_t *session,
         return NULL;
     }
 
-    if ((LsLuaApi::jitMode())
-        && (LsLuaEngine::setupSandBox(L)))
+    if (LsLuaEngine::setupSandBox(L))
     {
         g_api->log(session, LSI_LOG_ERROR, "%s %d\n",
                    LUA_ERRSTR_SANDBOX, ret);
@@ -431,13 +403,7 @@ int LsLuaEngine::runScript(const lsi_session_t *session, const char *scriptpath,
     case 0:
         if (iCurHook == LSLUA_HOOK_HANDLER)
         {
-            if (LsLuaApi::jitMode())
-                LsLuaApi::getglobal(L, "handle");
-            else
-            {
-                LsLuaApi::getglobal(L, LS_LUA_BOX);
-                LsLuaApi::getfield(L, -1, "handle");
-            }
+            LsLuaApi::getglobal(L, "handle");
             if (LsLuaApi::type(L, -1) == LUA_TFUNCTION)
             {
                 LsLuaApi::getglobal(L, LS_LUA_UD);
@@ -555,7 +521,6 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
                               const char *name)
 {
     int sec, line;
-    char *cp;
     LsLuaUserParam *pParent = (LsLuaUserParam *)initial_config;
     LsLuaUserParam *pUser = new LsLuaUserParam(level);
 
@@ -603,36 +568,14 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
             //luapath
             if (s_iFirstTime)
             {
-                if ((cp = strndup(param[i].val, param[i].val_len)) != NULL)
-                {
-                    if (s_pLuaPath)
-                        free(s_pLuaPath);
-                    s_pLuaPath = cp;
-                }
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                   "%s LUA SET %s = %.*s [%s]\n", name,
-                       myParam[param[i].key_index].config_key,
-                       (int)param[i].val_len,
-                       param[i].val,
-                       s_pLuaPath ? s_pLuaPath : s_pSysLuaPath);
+                // ignore, not needed anymore.
             }
             break;
         case 5:
             //"lib"
             if (s_iFirstTime)
             {
-                if ((cp = strndup(param[i].val, param[i].val_len)) != NULL)
-                {
-                    if (s_pLuaLib)
-                        free(s_pLuaLib);
-                    s_pLuaLib = cp;
-                }
-                g_api->log(NULL, LSI_LOG_NOTICE,
-                   "%s LUA SET %s = %.*s [%s]\n", name,
-                       myParam[param[i].key_index].config_key,
-                       param[i].val_len,
-                       param[i].val,
-                       s_pLuaLib ? s_pLuaLib : "NULL");
+                // ignore, not needed anymore.
             }
             break;
 
@@ -704,11 +647,6 @@ void *LsLuaEngine::parseParam(module_param_info_t *param, int param_count,
 void LsLuaEngine::removeParam(void *config)
 {
     g_api->log(NULL, LSI_LOG_DEBUG, "REMOVE PARAMETERS [%p]\n", config);
-    if (s_pLuaLib)
-    {
-        free(s_pLuaLib);
-        s_pLuaLib = NULL;
-    }
 }
 
 
@@ -880,6 +818,7 @@ LsLuaFuncMap::LsLuaFuncMap(const lsi_session_t *session, lua_State *L,
     int top;
     luaFile_t   loadData;
 
+    m_pNext = NULL;
     if (s_iMapCnt == 0)
     {
         LsLuaApi::createtable(L, 0, 0);
@@ -895,15 +834,17 @@ LsLuaFuncMap::LsLuaFuncMap(const lsi_session_t *session, lua_State *L,
     if ((loadData.fp = fopen(m_pScriptName, "r")) == NULL)
     {
         m_iStatus = -1;
+        memset(&m_stat, 0, sizeof(m_stat));
         goto errout;
     }
     loadData.size = sizeof(loadData.buf);
     loadData.state = 1;
 
-    stat(m_pScriptName, &m_stat);
+    if (stat(m_pScriptName, &m_stat))
+        memset(&m_stat, 0, sizeof(m_stat));
 
     ret = LsLuaApi::load(L, textFileReader, (void *)&loadData,
-                         m_pScriptName, NULL);
+                         m_pScriptName);
     fclose(loadData.fp);
     if (ret)
     {

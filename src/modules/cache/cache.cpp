@@ -1135,7 +1135,7 @@ void calcCacheHash2(const lsi_session_t *session, CacheKey *pKey,
     XXH64_reset(&state, 0);
     XXH64_update(&state, host, len);
 
-    char port[12] = ":";
+    char port[32] = ":";
     g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PORT, port + 1, 10);
     XXH64_update(&state, port, strlen(port));
 

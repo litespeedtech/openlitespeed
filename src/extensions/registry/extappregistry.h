@@ -24,6 +24,7 @@
 #include <util/gpointerlist.h>
 #include <util/autostr.h>
 
+class AutoBuf;
 class ExtWorker;
 class ExtAppMap;
 class XmlNode;
@@ -60,6 +61,8 @@ public:
     void onTimer();
     void runOnStartUp();
     int generateRTReport(int fd, int type);
+    int generateRTJsonReport(AutoBuf *buf, int type, int *did);
+    int resetStats(int type);
 
     LS_NO_COPY_ASSIGN(ExtAppSubRegistry);
 };
@@ -91,6 +94,8 @@ public:
     static void init();
     static void shutdown();
     static int generateRTReport(int fd);
+    static int generateRTJsonReport(AutoBuf *buf);
+    static int resetStats();
     static int hasUri(const char *uri);
 
     static void getUniAppUri(const char *app_uri, char *dst, int dst_len, int uid, uint loop = 0);

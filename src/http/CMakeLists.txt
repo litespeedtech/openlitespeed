@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 
+if(${COMPILE_IO_URING})
+    include_directories(BEFORE SYSTEM liburing ../edio/liburing/include)
+endif()
+
 
 SET(http_STAT_SRCS
    moduserdir.cpp
@@ -87,4 +91,3 @@ SET(http_STAT_SRCS
 )
 
 add_library(http STATIC ${http_STAT_SRCS})
-

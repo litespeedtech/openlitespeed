@@ -336,7 +336,7 @@ class jCryption
         static $primes_cnt = 0;
         if (is_null($primes)) {
             // generate all primes up to 10000
-            $primes = array();
+            $primes = [];
             for ($i = 0; $i < 10000; $i++) {
                 $primes[] = $i;
             }

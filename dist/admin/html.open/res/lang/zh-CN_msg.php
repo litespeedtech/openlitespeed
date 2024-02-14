@@ -741,7 +741,7 @@ $_gmsg['buildphp_mailheader2'] = '确认邮件源';
 $_gmsg['buildphp_mainstatus'] = '主状态';
 $_gmsg['buildphp_manualrunnotice'] = '<p>出于安全原因，请登入您的服务器并从shell运行预设置的脚本。你可以通过这个界面监控脚本运行。</p>
 	<p>如果编译成功，请根据需求更新php.ini。为了让更新生效，请进行一次平滑重启。</p>
-	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a></p>
+	<p>如果由于错误停止，可能是由于丢失了安装包，当你安装完丢失的安装包，重新运行相同命令，该页面将会显示更新后的日志。更多详情，请查看<a href="https://docs.litespeedtech.com/lsws/extapp/php/" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a></p>
 	<p>如果你以root身份登入，你可以直接运行命令：<br><code>%%manual_script%%</code></p>
 	<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
 	<code>sudo %%manual_script%%</code></p>';

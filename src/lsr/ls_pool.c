@@ -205,7 +205,6 @@ ls_inline void ls_sys_putnblk(size_t size, ls_blkctrl_t *p, void *pNew, void *pT
         free(pPtr);
     }
     while (pPtr != pTail);
-    return;
 }
 #endif /* DEBUG_POOL */
 

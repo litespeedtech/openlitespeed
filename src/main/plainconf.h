@@ -35,6 +35,7 @@
 #include <util/stringlist.h>
 #include <util/hashstringmap.h>
 #include <stdio.h>
+#include <wordexp.h>
 
 class XmlNode;
 
@@ -61,6 +62,7 @@ struct plainconfKeywords
 
 class plainconf
 {
+    static int expandIncludePath(const char *includePathIn, wordexp_t *exp);
 public:
     static void init();
     static void release();

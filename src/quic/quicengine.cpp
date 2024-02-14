@@ -118,6 +118,7 @@ int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
 
     off = 0;
     versions = lsquic_engine_quic_versions(m_pEngine);
+    versions &= ~((1 << LSQVER_ID27) | (1 << LSQVER_I002));
 
     alpn = lsquic_get_h3_alpns(versions);
     if (alpn)
@@ -415,7 +416,18 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
                                     pConnInfo->m_pServerAddrInfo->getAddr());
     pConnInfo->m_pCrypto = pStream;
     pConnInfo->m_pClientInfo = pClientInfo;
-    pConnInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(
+    if ((AF_INET6 == pLocal->sa_family) &&
+        (IN6_IS_ADDR_V4MAPPED(&((sockaddr_in6 *)pLocal)->sin6_addr)))
+    {
+        char serverAddr[28] = {0};
+        struct sockaddr *pAddr = (sockaddr *)serverAddr;
+        pAddr->sa_family = AF_INET;
+        memmove(&((sockaddr_in *)pAddr)->sin_addr.s_addr, &((char *)pLocal)[20], 4);
+        pConnInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(
+            pLocal, pUdpListener->getTcpPeer());
+    }
+    else
+        pConnInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(
              pLocal, pUdpListener->getTcpPeer());
     pConnInfo->m_remotePort = GSockAddr::getPort(pPeer);
     //pStream->setConnInfo(getStream()->getConnInfo());
@@ -727,12 +739,6 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 //     lsquic_logger_lopt("pacer=info");
     bool isQuicLogEnable = (LS_LOG_ENABLED(log4cxx::Level::DBG_HIGH));
     setDebugLog(isQuicLogEnable);
-
-    // QPACK Experiment logging requires QPACK decoder and encoder handlers
-    // to log at NOTICE level:
-    if (m_config.es_qpack_experiment
-                            && !LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
-        lsquic_logger_lopt("qdec-hdl=notice,qenc-hdl=notice");
 
     m_pMultiplexer = pMplx;
 

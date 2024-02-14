@@ -43,7 +43,7 @@ class DPage
         $this->_extended = true;
         if ($this->_disp_tid == '') {
             $this->_extended = false;
-        } elseif (($last = strrpos($this->_disp_tid, '`')) > 0) {
+        } elseif ($this->_disp_tid && ($last = strrpos($this->_disp_tid, '`')) > 0) {
             $this->_disp_tid = substr($this->_disp_tid, $last + 1);
         }
 

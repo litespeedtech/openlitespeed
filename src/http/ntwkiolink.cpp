@@ -22,6 +22,7 @@
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <http/clientinfo.h>
+#include <http/clientcache.h>
 #include <http/connlimitctrl.h>
 #include <http/hiohandlerfactory.h>
 #include <http/httpaiosendfile.h>
@@ -56,9 +57,10 @@
 #include <util/gsendfile.h>
 #endif
 
-#define IO_THROTTLE_READ    8
-#define IO_THROTTLE_WRITE   16
-#define IO_COUNTED          32
+#define NIOL_THROTTLE_READ    8
+#define NIOL_THROTTLE_WRITE   16
+#define NIOL_COUNTED          32
+#define NIOL_TRY_PROXY        64
 
 //#define HTTP2_PLAIN_DEV
 
@@ -126,14 +128,14 @@ NtwkIOLink::NtwkIOLink()
     : m_pVHostMap(NULL)
     , m_iRemotePort(0)
     , m_iInProcess(0)
-    , m_iPeerShutdown(0)
+    , m_iFlag(0)
     , m_tmToken(0)
     , m_iSslLastWrite(0)
     , m_iHeaderToSend(0)
     , m_pFpList(NULL)
     , m_sessionHooks()
     , m_hasBufferedData(0)
-    , m_aioSFQ()
+    //, m_aioSFQ()
 {
     m_pModuleConfig = NULL;
 }
@@ -276,7 +278,8 @@ int NtwkIOLink::setupHandler(HiosProtocol verSpdy)
     if (!pHandler)
         return LS_FAIL;
 
-    clearLogId();
+    if (verSpdy != HIOS_PROTO_HTTP)
+        clearLogId();
     setProtocol(verSpdy);
     pHandler->attachStream(this);
     pHandler->onInitConnected();
@@ -340,6 +343,16 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
     if (MultiplexerFactory::getMultiplexer()->add(this,
             POLLIN | POLLHUP | POLLERR) == -1)
         return LS_FAIL;
+
+    getClientInfo()->incConn();
+    LS_DBG_L(this, "concurrent conn: %d", pInfo->m_pClientInfo->getConns());
+
+    if (pInfo->m_pClientInfo->isProtocolProxy())
+    {
+        LS_DBG_L(this, "Try PROXY protocol");
+        m_iFlag |= NIOL_TRY_PROXY;
+    }
+
     //set ssl context
     if (pInfo->m_pSsl)
     {
@@ -358,8 +371,6 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
         setupHandler(HIOS_PROTO_HTTP);
     }
 
-    getClientInfo()->incConn();
-    LS_DBG_L(this, "concurrent conn: %d", pInfo->m_pClientInfo->getConns());
 
     //FIXME below code is from lslbd, should we use this flag?
 //     if (pInfo->m_pClientInfo->isFromLocalAddr(
@@ -420,8 +431,19 @@ int NtwkIOLink::handleEvents(short evt)
             setAllowWrite();
             setFlag(HIO_FLAG_PAUSE_WRITE, 0);
         }
+        else if (m_iFlag & NIOL_TRY_PROXY)
+        {
+            int ret = tryProtocolProxy();
+            LS_DBG_M(this, "tryProtocolProxy() return %d", ret);
+            if (ret != 0)
+                m_iFlag &=~NIOL_TRY_PROXY;
+            else
+                goto skip_read;
+        }
         (*m_pFpList->m_onRead_fp)(this);
     }
+
+skip_read:
     if (event & (POLLHUP | POLLERR))
     {
         m_iInProcess = 0;
@@ -448,6 +470,243 @@ int NtwkIOLink::handleEvents(short evt)
         break;
     }
     return 0;
+}
+
+
+int NtwkIOLink::UpdateClientInfoByProxyProto(const struct sockaddr *from,
+                                             uint16_t from_port)
+{
+    ClientInfo *pInfo = ClientCache::getInstance().getClientInfo(from);
+    if (!pInfo)
+        return 0;
+    LS_DBG_L(getLogSession(),
+             "[PROXY] update client address based on PROXY protocol to %s:%hu, access: %d",
+             pInfo->getAddrString(), from_port, (int)pInfo->getAccess());
+
+    ((ConnInfo *)getConnInfo())->m_remotePort = from_port;
+    if (getClientInfo() == pInfo)
+        return 0;
+
+    getClientInfo()->decConn();
+    pInfo->incConn();
+    setClientInfo(pInfo);
+    if (isLogIdBuilt())
+    {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "%s:%hu", pInfo->getAddrString(), from_port);
+        getLogSession()->lockAddOrReplaceFrom('>', buf);
+    }
+    return 0;
+}
+
+union {
+    struct {
+        char line[108];
+    } v1;
+    struct {
+        uint8_t sig[12];
+        uint8_t ver_cmd;
+        uint8_t fam;
+        uint16_t len;
+        union {
+            struct {  /* for TCP/UDP over IPv4, len = 12 */
+                uint32_t src_addr;
+                uint32_t dst_addr;
+                uint16_t src_port;
+                uint16_t dst_port;
+            } ip4;
+            struct {  /* for TCP/UDP over IPv6, len = 36 */
+                uint8_t  src_addr[16];
+                uint8_t  dst_addr[16];
+                uint16_t src_port;
+                uint16_t dst_port;
+            } ip6;
+            struct {  /* for AF_UNIX sockets, len = 216 */
+                uint8_t src_addr[108];
+                uint8_t dst_addr[108];
+            } unx;
+        } addr;
+    } v2;
+} hdr;
+
+
+int NtwkIOLink::process_proxy_v1(char *line, char *end,
+                                 struct sockaddr_storage *from,
+                                 struct sockaddr_storage *to)
+{
+    char *p = line;
+    int family;
+    void *from_ip;
+    void *to_ip;
+    int from_port;
+    int to_port;
+
+    if (strncmp(p, "TCP4 ", 5) == 0)
+    {
+        from->ss_family = to->ss_family = family = AF_INET;
+        from_ip = &((sockaddr_in *)from)->sin_addr;
+        to_ip = &((sockaddr_in *)to)->sin_addr;
+    }
+    else if (strncmp(p, "TCP6 ", 5) == 0)
+    {
+        from->ss_family = to->ss_family = family = AF_INET6;
+        from_ip = &((sockaddr_in6 *)from)->sin6_addr;
+        to_ip = &((sockaddr_in6 *)to)->sin6_addr;
+    }
+    else
+        return -1;
+    p += 5;
+    char *p1;
+    p1 = (char *)memchr(p, ' ', end - p);
+    if (!p1)
+        return -1;
+    *p1 = '\0';
+    if (inet_pton(family, p, from_ip) != 1)
+        return -1;
+    p = p1 + 1;
+
+    p1 = (char *)memchr(p, ' ', end - p);
+    if (!p1)
+        return -1;
+    *p1 = '\0';
+    if (inet_pton(family, p, to_ip) != 1)
+        return -1;
+    p = p1 + 1;
+
+    from_port = strtol(p, &p1, 10);
+    if (!p1 || p1 == p)
+        return -1;
+    if (from_port < 0 || from_port > 65535)
+        return -1;
+    p = p1 + 1;
+    to_port = strtol(p, &p1, 10);
+    if (!p1 || p1 == p)
+        return -1;
+    if (to_port < 0 || to_port > 65535)
+        return -1;
+    UpdateClientInfoByProxyProto((struct sockaddr *)from, from_port);
+
+    return 1;
+}
+
+
+
+static const char v2sig[13] = "\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A";
+
+/* returns 0 if needs to poll, <0 upon error or >0 if it did the job */
+int NtwkIOLink::tryProtocolProxy()
+{
+    int fd;
+    int size, ret;
+    struct sockaddr_storage from; /* already filled by accept() */
+    struct sockaddr_storage to;   /* already filled by getsockname() */
+
+    fd = getfd();
+    do
+    {
+        ret = recv(fd, &hdr, sizeof(hdr), MSG_PEEK);
+    } while (ret == -1 && errno == EINTR);
+
+    if (ret == -1)
+        return (errno == EAGAIN) ? 0 : -1;
+
+    if (ret >= 16 && memcmp(&hdr.v2, v2sig, 12) == 0
+        && (hdr.v2.ver_cmd & 0xF0) == 0x20)
+    {
+        size = 16 + ntohs(hdr.v2.len);
+        if (ret < size)
+            return -1; /* truncated or too large header */
+
+        switch (hdr.v2.ver_cmd & 0xF)
+        {
+        case 0x01: /* PROXY command */
+            switch (hdr.v2.fam)
+            {
+            case 0x11:  /* TCPv4 */
+                ((struct sockaddr_in *)&from)->sin_family = AF_INET;
+                ((struct sockaddr_in *)&from)->sin_addr.s_addr =
+                    hdr.v2.addr.ip4.src_addr;
+                ((struct sockaddr_in *)&from)->sin_port =
+                    hdr.v2.addr.ip4.src_port;
+                ((struct sockaddr_in *)&to)->sin_family = AF_INET;
+                ((struct sockaddr_in *)&to)->sin_addr.s_addr =
+                    hdr.v2.addr.ip4.dst_addr;
+                ((struct sockaddr_in *)&to)->sin_port =
+                    hdr.v2.addr.ip4.dst_port;
+                {
+                    char src_addr[80], dst_addr[80];
+                    LS_DBG_M(this, "[PROXY] V2 %s:%hu->%s:%hu",
+                        GSockAddr::ntop((struct sockaddr *)&from, src_addr, 80),
+                            ntohs(hdr.v2.addr.ip4.src_port),
+                        GSockAddr::ntop((struct sockaddr *)&to, dst_addr, 80),
+                            ntohs(hdr.v2.addr.ip4.dst_port));
+                    UpdateClientInfoByProxyProto((struct sockaddr *)&from,
+                            ntohs(hdr.v2.addr.ip4.src_port));
+                }
+                goto done;
+            case 0x21:  /* TCPv6 */
+                ((struct sockaddr_in6 *)&from)->sin6_family = AF_INET6;
+                memcpy(&((struct sockaddr_in6 *)&from)->sin6_addr,
+                    hdr.v2.addr.ip6.src_addr, 16);
+                ((struct sockaddr_in6 *)&from)->sin6_port =
+                    hdr.v2.addr.ip6.src_port;
+                ((struct sockaddr_in6 *)&to)->sin6_family = AF_INET6;
+                memcpy(&((struct sockaddr_in6 *)&to)->sin6_addr,
+                    hdr.v2.addr.ip6.dst_addr, 16);
+                ((struct sockaddr_in6 *)&to)->sin6_port =
+                    hdr.v2.addr.ip6.dst_port;
+                {
+                    char src_addr[80], dst_addr[80];
+                    LS_DBG_M(this, "[PROXY] V2 [%s]:%hu->[%s]:%hu",
+                        GSockAddr::ntop((struct sockaddr *)&from, src_addr, 80),
+                            ntohs(hdr.v2.addr.ip6.src_port),
+                        GSockAddr::ntop((struct sockaddr *)&to, dst_addr, 80),
+                            ntohs(hdr.v2.addr.ip6.dst_port));
+                    UpdateClientInfoByProxyProto((struct sockaddr *)&from,
+                            ntohs(hdr.v2.addr.ip6.src_port));
+                }
+                goto done;
+            }
+            /* unsupported protocol, keep local connection address */
+            break;
+        case 0x00: /* LOCAL command */
+            /* keep local connection address for LOCAL */
+            LS_DBG_M(this, "[PROXY] LOCAL command, keep local connection address");
+
+            break;
+        default:
+            return -1; /* not a supported command */
+        }
+    }
+    else if (ret >= 8 && memcmp(hdr.v1.line, "PROXY ", 6) == 0)
+    {
+        //"PROXY TCP4 255.255.255.255 255.255.255.255 65535 65535\r\n"
+        char *end = (char *)memchr(hdr.v1.line, '\r', ret - 1);
+        if (!end || end[1] != '\n')
+            return -1; /* partial or invalid header */
+        *end = '\0'; /* terminate the string to ease parsing */
+        size = end + 2 - hdr.v1.line; /* skip header + CRLF */
+        LS_DBG_M(this, "[PROXY] v1: '%.*s'", size, hdr.v1.line);
+        ret = process_proxy_v1(hdr.v1.line + 6, end, &from, &to);
+        if (ret == -1)
+            return ret;
+        /* parse the V1 header using favorite address parsers like inet_pton.
+          * return -1 upon error, or simply fall through to accept.
+          */
+    }
+    else
+    {
+        /* Wrong protocol */
+        return -1;
+    }
+
+done:
+    /* we need to consume the appropriate amount of data from the socket */
+    do
+    {
+        ret = recv(fd, &hdr, size, 0);
+    } while (ret == -1 && errno == EINTR);
+    return (ret >= 0) ? 1 : -1;
 }
 
 
@@ -916,11 +1175,11 @@ int NtwkIOLink::close_(NtwkIOLink *pThis)
     {
         pThis->shutdown();
         MultiplexerFactory::getMultiplexer()->switchWriteToRead(pThis);
-        if (!(pThis->m_iPeerShutdown & IO_COUNTED))
+        if (!(pThis->m_iFlag & NIOL_COUNTED))
         {
             ConnLimitCtrl::getInstance().decConn();
             pThis->getClientInfo()->decConn();
-            pThis->m_iPeerShutdown |= IO_COUNTED;
+            pThis->m_iFlag |= NIOL_COUNTED;
             LS_DBG_L(pThis, "Available Connections: %d, concurrent conn: %d.",
                      ConnLimitCtrl::getInstance().availConn(),
                      pThis->getClientInfo()->getConns());
@@ -950,7 +1209,7 @@ void NtwkIOLink::closeSocket()
         ctrl.decSSLConn();
         setNoSSL();
     }
-    if (!(m_iPeerShutdown & IO_COUNTED))
+    if (!(m_iFlag & NIOL_COUNTED))
     {
         ctrl.decConn();
         getClientInfo()->decConn();
@@ -962,7 +1221,7 @@ void NtwkIOLink::closeSocket()
     //printf( "socket: %d closed\n", getfd() );
     ::close(getfd());
     setfd(-1);
-    m_aioSFQ.pop_all();
+    //m_aioSFQ.pop_all();
     m_hasBufferedData = 0;
     m_pModuleConfig = NULL;
     if (getHandler())
@@ -1020,13 +1279,14 @@ int NtwkIOLink::onTimer()
     {
         if (this->hasBufferedData() && this->allowWrite())
             this->flush();
+        /*
         if (m_aioSFQ.size())
         {
             Aiosfcb *cb = (Aiosfcb *)m_aioSFQ.begin();
             if (cb->getFlag(AIOSFCB_FLAG_TRYAGAIN))
                 addAioSFJob(cb);
         }
-
+        */
         if (m_ssl.getSSL() && m_ssl.getStatus() == SslConnection::ACCEPTING
             && DateTime::s_curTime - getActiveTime() >= 10)
         {
@@ -1192,7 +1452,6 @@ int NtwkIOLink::sendfile(int fdSrc, off_t off, size_t size, int flag)
     return sendfileFinish(written);
 }
 
-
 int NtwkIOLink::addAioSFJob(Aiosfcb *cb)
 {
     int ret = HttpAioSendFile::getHttpAioSendFile()->addJob(cb);
@@ -1205,7 +1464,6 @@ int NtwkIOLink::addAioSFJob(Aiosfcb *cb)
         cb->clearFlag(AIOSFCB_FLAG_TRYAGAIN);
     return ret;
 }
-
 
 int NtwkIOLink::aiosendfile(Aiosfcb *cb)
 {
@@ -1407,7 +1665,7 @@ void NtwkIOLink::onTimer_T(NtwkIOLink *pThis)
     {
         //pThis->doWrite();
         //if (  pThis->allowWrite() && pThis->wantWrite() )
-        pThis->dumpState("onTimer_T", "CW");
+        //pThis->dumpState("onTimer_T", "CW");
         MultiplexerFactory::getMultiplexer()->continueWrite(pThis);
     }
     if (pThis->allowRead() && pThis->isWantRead())
@@ -1415,7 +1673,7 @@ void NtwkIOLink::onTimer_T(NtwkIOLink *pThis)
         //if ( pThis->getState() != HSS_WAITING )
         //    pThis->doReadT();
         //if ( pThis->allowRead() && pThis->wantRead() )
-        pThis->dumpState("onTimer_T", "CR");
+        //pThis->dumpState("onTimer_T", "CR");
         MultiplexerFactory::getMultiplexer()->continueRead(pThis);
     }
     if (pThis->getHandler())
@@ -1532,7 +1790,7 @@ void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
         pThis->doWrite();
         if (pThis->allowWrite() && pThis->isWantWrite())
         {
-            pThis->dumpState("onTimerSSL_T", "CW");
+            //pThis->dumpState("onTimerSSL_T", "CW");
             MultiplexerFactory::getMultiplexer()->continueWrite(pThis);
         }
     }
@@ -1541,7 +1799,7 @@ void NtwkIOLink::onTimerSSL_T(NtwkIOLink *pThis)
         //if ( pThis->getState() != HSS_WAITING )
         //    pThis->doReadT();
         //if ( pThis->allowRead() && pThis->wantRead() )
-        pThis->dumpState("onTimerSSL_T", "CR");
+        //pThis->dumpState("onTimerSSL_T", "CR");
         MultiplexerFactory::getMultiplexer()->continueRead(pThis);
     }
     if (pThis->getHandler())
@@ -1827,7 +2085,7 @@ int NtwkIOLink::readExSSL_T(LsiSession *pIS, char *pBuf, int size)
     }
     if (size > iQuota)
         size = iQuota;
-    pThis->m_iPeerShutdown &= ~IO_THROTTLE_READ;
+    pThis->m_iFlag &= ~NIOL_THROTTLE_READ;
     int ret = pThis->getSSL()->read(pBuf, size);
     pThis->checkSSLReadRet(ret);
     if (ret > 0)
@@ -1837,7 +2095,7 @@ int NtwkIOLink::readExSSL_T(LsiSession *pIS, char *pBuf, int size)
         if (!pTC->getISQuota())
         {
             MultiplexerFactory::getMultiplexer()->suspendRead(pThis);
-            pThis->m_iPeerShutdown |= IO_THROTTLE_READ;
+            pThis->m_iFlag |= NIOL_THROTTLE_READ;
         }
     }
     return ret;
@@ -1938,12 +2196,12 @@ int NtwkIOLink::writevExSSL_T(LsiSession *pOS, const iovec *vector,
     {
         pCtrl->useOSQuota(Quota);
         MultiplexerFactory::getMultiplexer()->suspendWrite(pThis);
-        pThis->m_iPeerShutdown |= IO_THROTTLE_WRITE;
+        pThis->m_iFlag |= NIOL_THROTTLE_WRITE;
     }
     else
     {
         pCtrl->useOSQuota(ret);
-        pThis->m_iPeerShutdown &= ~IO_THROTTLE_WRITE;
+        pThis->m_iFlag &= ~NIOL_THROTTLE_WRITE;
     }
     return ret;
 }

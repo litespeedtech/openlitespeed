@@ -1986,23 +1986,24 @@ static int StartFetchPageSpeedResource(PsMData *pMyData, lsi_session_t *session)
 }
 
 
-// static int StartPageSpeedProxyFetch(PsMData *pMyData, lsi_session_t *session)
-// {
-//     bool is_proxy = false;
-//     GoogleString mapped_url;
-//     GoogleString host_header;
-//     const GoogleUrl &url = *(pMyData->request->url);
-//
-//     RewriteOptions *options = pMyData->request->options;
-//     if (options->domain_lawyer()->MapOriginUrl(
-//             url, &mapped_url, &host_header, &is_proxy) && is_proxy) {
-//         StartFetchProxy(pMyData, session, kPageSpeedProxy,
-//                         mapped_url, false);
-//         return 1;
-//     }
-//     return 0;
-// }
+/*
+static int StartPageSpeedProxyFetch(PsMData *pMyData, lsi_session_t *session)
+{
+    bool is_proxy = false;
+    GoogleString mapped_url;
+    GoogleString host_header;
+    const GoogleUrl &url = *(pMyData->request->url);
 
+    RewriteOptions *options = pMyData->request->options;
+    if (options->domain_lawyer()->MapOriginUrl(
+            url, &mapped_url, &host_header, &is_proxy) && is_proxy) {
+        StartFetchProxy(pMyData, session, kPageSpeedProxy,
+                        mapped_url, false);
+        return 1;
+    }
+    return 0;
+}
+*/
 
 
 // Send each buffer in the chain to the proxyFetch for optimization.

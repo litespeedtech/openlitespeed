@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <edio/multiplexer.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <poll.h>
 
@@ -48,6 +49,16 @@ void Multiplexer::modEvent(EventReactor *pHandler, short mask,
         pHandler->orMask2(mask);
     else
         pHandler->andMask2(~mask);
+}
+
+
+int Multiplexer::replace(EventReactor *old, EventReactor *new_handler)
+{
+    assert(old->getfd() == new_handler->getfd());
+    short mask = old->getEvents();
+    remove(old);
+    add(new_handler, mask);
+    return LS_OK;
 }
 
 

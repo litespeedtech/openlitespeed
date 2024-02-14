@@ -24,6 +24,7 @@
 
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
+#include <log4cxx/logger.h>
 
 #include <errno.h>
 #include <fcntl.h>

@@ -38,11 +38,6 @@ typedef struct ls_xloopbuf_s ls_xloopbuf_t;
 class LsLuaEngine
 {
 public:
-    enum LSLUA_TYPE
-    {
-        LSLUA_ENGINE_REGULAR = 0,
-        LSLUA_ENGINE_JIT = 1,
-    };
     LsLuaEngine();
     ~LsLuaEngine();
 
@@ -128,16 +123,11 @@ private:
     LsLuaEngine &operator=(const LsLuaEngine &other);
     bool operator==(const LsLuaEngine &other);
 private:
-    static const char  *s_pSysLuaLib;
-    static const char  *s_pSysLuaPath;
     static lua_State   *s_pSystemState;
-    static LSLUA_TYPE   s_type;
     static int          s_iReady;
     //
     //  module parameters
     //
-    static char        *s_pLuaLib;
-    static char        *s_pLuaPath;
     static int
     s_iDebug;        // note: this is internal debug for LUA
     static int          s_iMaxRunTime;   // max allowable runtime in msec

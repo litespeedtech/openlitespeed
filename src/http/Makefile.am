@@ -13,8 +13,10 @@ libhttp_a_SOURCES = httpstatuscode.cpp moduserdir.cpp contextnode.cpp phpconfig.
    httpvhost.cpp httpresourcemanager.cpp ntwkiolink.cpp httpmethod.cpp httpver.cpp  httpstatusline.cpp httpheader.cpp \
    smartsettings.cpp httplistener.cpp httpresp.cpp httpreq.cpp httpsession.cpp moov.cpp  hiostream.cpp hiohandlerfactory.cpp \
    httprespheaders.cpp l4handler.cpp httpaiosendfile.cpp serverprocessconfig.cpp httpstats.cpp reqparser.cpp subrequest.cpp hiochainstream.cpp \
-   iptoloc.cpp iptogeo2.cpp recaptcha.cpp
+   iptoloc.cpp iptogeo2.cpp recaptcha.cpp  httpsessioniouring.cpp httpsessionasync.cpp httpsessionlinuxaio.cpp
 
 
 ####### kdevelop will overwrite this part!!! (end)############
 noinst_HEADERS =
+
+ 

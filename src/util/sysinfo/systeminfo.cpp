@@ -19,6 +19,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 
 SystemInfo::SystemInfo()
@@ -60,4 +63,28 @@ unsigned long long SystemInfo::maxOpenFile(unsigned long long max)
 }
 
 
+int SystemInfo::value(const char *line)
+{
+    const char *colon;
+    colon = strchr(line, ':');
+    if (colon)
+        return atoi(colon + 1);
+    return 0;
+}
 
+
+int SystemInfo::getNumCores()
+{
+    char line[256];
+    int count = 0;
+    FILE *fh = fopen("/proc/cpuinfo", "r");
+    if (!fh)
+        return -1;
+    while (fgets(line, sizeof(line) - 1, fh))
+    {
+        if (!strncmp(line, "processor", 9))
+            count++;
+    }
+    fclose(fh);
+    return count;
+}

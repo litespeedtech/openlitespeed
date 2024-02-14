@@ -22,6 +22,15 @@
 
 #include <adns/adns.h>
 
+#include "edio/aiooutputstream.h"
+#if IOURING
+#include "edio/iouring.h"
+#include "edio/lsiouringreq.h"
+#endif
+#if defined(LS_AIO_USE_LINUX_AIO)
+#include "edio/lslinuxaioreq.h"
+#endif
+#include "edio/lsposixaioreq.h"
 #include <edio/multiplexer.h>
 #include <edio/multiplexerfactory.h>
 #include <edio/sigeventdispatcher.h>
@@ -225,6 +234,7 @@ private:
     AccessControl       m_accessCtrl;
     AutoStr             m_sSwapDirectory;
     AutoStr2            m_sRTReportFile;
+    AutoStr2            m_sRTReportFileJson;
     AutoStr2            m_sIpv4;
     AutoStr2            m_sIpv6;
     HttpMime            m_httpMime;
@@ -292,9 +302,12 @@ private:
     void adjustListeners(int iNumChildren);
     int gracefulShutdown();
     int generateStatusReport();
+    int generateStatusJsonReport();
     void setRTReportName(int proc);
     int generateRTReport();
+    int generateRTJsonReport();
     int generateProcessReport(int fd);
+    int generateProcessJsonReport(AutoBuf *buf);
     HttpListener *newTcpListener(const char *pName, const char *pAddr, int reuseport);
 
     HttpListener *addListener(const char *pName, const char *pAddr, int reuseport);
@@ -606,6 +619,63 @@ int HttpServerImpl::generateStatusReport()
 
     pAppender->append("EOF\n", 4);
     pAppender->close();
+    generateStatusJsonReport();
+    return 0;
+}
+
+
+int HttpServerImpl::generateStatusJsonReport()
+{
+    if (!m_sRTReportFileJson.len())
+    {
+        LS_DBG("Json status reporting not enabled");
+        return 0;
+    }
+    char achBuf[1024] = "";
+    if (ServerProcessConfig::getInstance().getChroot() != NULL)
+    {
+        lstrncpy(achBuf,
+                 ServerProcessConfig::getInstance().getChroot()->c_str(),
+                 sizeof(achBuf));
+    }
+    lstrncat(achBuf, sStatDir, sizeof(achBuf));
+    lstrncat(achBuf, "/.status.json", sizeof(achBuf));
+    LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(achBuf);
+    pAppender->setAppendMode(0);
+    if (pAppender->open())
+    {
+        LS_ERROR("Failed to open the status Json report: %s!", achBuf);
+        return LS_FAIL;
+    }
+    char timeBuf[80];
+    timeval now;
+    gettimeofday(&now, NULL);
+    strftime(timeBuf, sizeof(timeBuf), "%FT%T.", gmtime(&now.tv_sec));
+    int lenJson = ls_snprintf(achBuf, sizeof(achBuf),
+                              "{\n"
+                              "  \"debugging\": %s,\n"
+                              "  \"version\": \"%s\",\n"
+                              "  \"platform\": \"%s\",\n"
+                              "  \"load_timestamp\": \"%s%03dZ\",\n"
+                              "  \"pid\": %d,\n"
+                              "  \"ppid\": %d,\n",
+                              (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_LESS)) ? "true" : "false",
+                              PACKAGE_VERSION, LS_PLATFORM,
+                              timeBuf, now.tv_usec / 1000, getpid(), getppid());
+    if (write(pAppender->getfd(), achBuf, lenJson) != lenJson)
+    {
+        LS_ERROR("File to write the status Json report first line: %s", strerror(errno));
+        pAppender->close();
+        return -1;
+    }
+    int ret = m_listeners.writeStatusJsonReport(pAppender->getfd());
+    if (!ret)
+        ret = m_vhosts.writeStatusJsonReport(pAppender->getfd());
+    if (!ret)
+        pAppender->append("}\n", 2);
+    else
+        LS_ERROR("Failed to generate the status report!");
+    pAppender->close();
     return 0;
 }
 
@@ -650,12 +720,74 @@ int generateConnReport(int fd)
 
     write(fd, achBuf, n);
 
+    return 0;
+}
+
+
+int generateConnJsonReport(AutoBuf *buf)
+{
+    ConnLimitCtrl &ctrl = ConnLimitCtrl::getInstance();
+    if (buf->guarantee(4096))
+        return -1;
+    int SSLConns = ctrl.getMaxSSLConns() - ctrl.availSSLConn();
+    //HttpStats::getReqStats()->finalizeRpt();
+    //if (ctrl.getMaxConns() - ctrl.availConn() - HttpStats::getIdleConns() < 0)
+    //    HttpStats::setIdleConns(ctrl.getMaxConns() - ctrl.availConn());
+    int n = ls_snprintf(buf->end(), 4096,
+                        "  \"bps_in\": %ld,\n"
+                        "  \"bps_out\": %ld,\n"
+                        "  \"ssl_bps_in\": %ld,\n"
+                        "  \"ssl_bps_out\": %ld,\n"
+                        "  \"max_conn\": %d,\n"
+                        "  \"ssl_max_conn\": %d,\n"
+                        "  \"plain_conn\": %d,\n"
+                        "  \"avail_conn\": %d,\n"
+                        "  \"idle_conn\": %d,\n"
+                        "  \"ssl_conn\": %d,\n"
+                        "  \"avail_ssl_conn\": %d,\n"
+                        "  \"server_req_stats\":\n"
+                        "  {\n"
+                        "    \"processing\": %d,\n"
+                        "    \"per_sec\": %d,\n"
+                        "    \"total\": %d,\n"
+                        "    \"pub_cache_hits_per_sec\": %d,\n"
+                        "    \"total_pub_cache_hits\": %d,\n"
+                        "    \"private_cache_hits_per_sec\": %d,\n"
+                        "    \"total_private_cache_hits\": %d,\n"
+                        "    \"static_hits_per_sec\": %d,\n"
+                        "    \"total_static_hits\": %d\n"
+                        "  }",
+                        HttpStats::getBytesRead() / 1024,
+                        HttpStats::getBytesWritten() / 1024,
+                        HttpStats::getSSLBytesRead() / 1024,
+                        HttpStats::getSSLBytesWritten() / 1024,
+                        ctrl.getMaxConns(), ctrl.getMaxSSLConns(),
+                        ctrl.getMaxConns() - SSLConns - ctrl.availConn(),
+                        ctrl.availConn(), HttpStats::getIdleConns(),
+                        SSLConns, ctrl.availSSLConn(),
+                        ctrl.getMaxConns() - ctrl.availConn() -
+                            HttpStats::getIdleConns(),
+                        HttpStats::getReqStats()->getRPS(),
+                        HttpStats::getReqStats()->getTotal(),
+                        HttpStats::getReqStats()->getPubHitsPS(),
+                        HttpStats::getReqStats()->getTotalPubHits(),
+                        HttpStats::getReqStats()->getPrivHitsPS(),
+                        HttpStats::getReqStats()->getTotalPrivHits(),
+                        HttpStats::getReqStats()->getHitsPS(),
+                        HttpStats::getReqStats()->getTotalHits());
+    buf->used(n);
+    return 0;
+}
+
+
+static void resetStats()
+{
     HttpStats::setBytesRead(0);
     HttpStats::setBytesWritten(0);
     HttpStats::setSSLBytesRead(0);
     HttpStats::setSSLBytesWritten(0);
     HttpStats::getReqStats()->reset();
-    return 0;
+
 }
 
 
@@ -689,6 +821,28 @@ int HttpServerImpl::generateProcessReport(int fd)
 }
 
 
+int HttpServerImpl::generateProcessJsonReport(AutoBuf *buf)
+{
+    if (buf->guarantee(256))
+        return -1;
+    long delta = time(NULL) - m_lStartTime;
+    long hours, mins, seconds;
+    seconds = delta % 60;
+    delta /= 60;
+    mins = delta % 60;
+    delta /= 60;
+    hours = delta;
+    int len = ls_snprintf(buf->end(), 256,
+                          "{\n"
+                          "  \"version\": \"%s\",\n"
+                          "  \"running_time\": \"%02ld:%02ld:%02ld\",\n",
+                          PACKAGE_VERSION,
+                          hours, mins, seconds);
+    buf->used(len);
+    return 0;
+}
+
+
 void HttpServerImpl::setRTReportName(int proc)
 {
     if (proc != 1)
@@ -696,6 +850,12 @@ void HttpServerImpl::setRTReportName(int proc)
         char achBuf[256];
         ls_snprintf(achBuf, 256, "%s/.rtreport.%d", sStatDir, proc);
         m_sRTReportFile.setStr(achBuf);
+        if (m_sRTReportFileJson.len())
+        {
+            ls_snprintf(achBuf, sizeof(achBuf), "%s/.rtreport.%d.json",
+                        sStatDir, proc);
+            m_sRTReportFileJson.setStr(achBuf);
+        }
     }
 }
 
@@ -723,6 +883,50 @@ int HttpServerImpl::generateRTReport()
               pAppender->getfd());
 
     pAppender->append("EOF\n", 4);
+    pAppender->close();
+    generateRTJsonReport();
+    resetStats();
+    m_vhosts.resetStats();
+    ExtAppRegistry::resetStats();
+    return 0;
+}
+
+
+int HttpServerImpl::generateRTJsonReport()
+{
+    if (!m_sRTReportFileJson.len())
+        return 0;
+    int ret;
+    AutoBuf buf;
+    ret = buf.guarantee(8192);
+    if (!ret)
+        ret = generateProcessJsonReport(&buf);
+    if (!ret)
+        ret = generateConnJsonReport(&buf);
+    //if (!ret)
+        //ret = m_listeners.writeRTJsonReport(&buf); // Would do nothing
+    if (!ret)
+        ret = m_vhosts.writeRTJsonReport(&buf);
+    if (!ret)
+        ret = ExtAppRegistry::generateRTJsonReport(&buf);
+    if (!ret)
+        ret = ClientCache::getClientCache()->generateBlockedIPJsonReport(&buf);
+    if (ret)
+    {
+        LS_ERROR("Failed to generate the json real time report!");
+        return -1;
+    }
+    buf.append_unsafe("\n}\n", 3);
+    LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(
+                                          m_sRTReportFileJson.c_str());
+    pAppender->setAppendMode(0);
+    if (pAppender->open())
+    {
+        LS_ERROR("Failed to open the json real time report: %s!", m_sRTReportFileJson.c_str());
+        return LS_FAIL;
+    }
+
+    pAppender->append(buf.begin(), buf.size());
     pAppender->close();
     return 0;
 }
@@ -1377,7 +1581,7 @@ void HttpServerImpl::releaseAll()
     ClientCache::clearObjPool();
     HttpResourceManager::getInstance().releaseAll();
 #endif
-    delete HttpAioSendFile::getHttpAioSendFile();
+    //delete HttpAioSendFile::getHttpAioSendFile();
     HttpMime::releaseMIMEList();
     if (s_lsquic_inited)
         lsquic_global_cleanup();
@@ -1474,7 +1678,8 @@ int HttpServerImpl::restartMark(int cmd)
     case 0:
         {
             int fd  = open(achFile, O_WRONLY | O_CREAT, 0644);
-            close(fd);
+            if (fd >= 0)
+                close(fd);
             break;
         }
     case 1:
@@ -1547,6 +1752,10 @@ int HttpServerImpl::reinitMultiplexer()
     ServerInfo::getServerInfo()->setAdnsOp(1);
     initAdns();
     ServerInfo::getServerInfo()->setAdnsOp(0);
+//#if defined(LS_AIO_USE_SIGFD) || defined(LS_AIO_USE_SIGNAL)
+//    SigEventDispatcher::init();
+//#endif
+
     return 0;
 }
 
@@ -2491,12 +2700,39 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
                                        4 + 8 + 16);
     HttpServer::getInstance().getServerContext().setFileEtag(etag);
 
-    int val = currentCtx.getLongValue(pNode, "useSendfile", 0, 2, 0);
-#if defined(LS_AIO_USE_AIO) && defined(LS_AIO_USE_KQ)
-    if (val == 2 && !SigEventDispatcher::aiokoIsLoaded())
-        val = 0;
-#endif
+    int val = currentCtx.getLongValue(pNode, "useSendfile", 0, 1, 0);
     config.setUseSendfile(val);
+
+    int maxAio = HttpServerConfig::AIO_POSIX;
+#if IOURING
+    maxAio = HttpServerConfig::AIO_IOURING;
+#elif defined(LS_AIO_USE_LINUX_AIO)
+    maxAio = AIO_LINUX_AIO;
+#endif
+
+    val = currentCtx.getLongValue(pNode, "useAIO", 0, maxAio, 0);
+    if (val == HttpServerConfig::AIO_POSIX)
+        LsPosixAioReq::load();
+
+#if IOURING
+    if (val == HttpServerConfig::AIO_IOURING && !Iouring::supported(false))
+    {
+        LS_NOTICE(&currentCtx, "io_uring specified, but not supported on this machine.  Downgrading to Linux Aio");
+        val = HttpServerConfig::AIO_LINUX_AIO;
+    }
+#endif
+    config.setUseAio(val);
+
+    if (config.getUseAio())
+    {
+        int val = currentCtx.getLongValue(pNode, "aioBlockSize", 0, 7, 1);
+        if (val == 0)
+            val = 131072;
+        else
+            val = 65536 << val;
+        LS_DBG("Using aioBlockSize: %d", val);
+        config.setAioBlockSize(val);
+    }
 
 //     if (val)
 //         FileCacheDataEx::setMaxMMapCacheSize(0);
@@ -2649,7 +2885,26 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
     }
     SslUtil::initDefaultCA(pCAFile, pCAPath);
 
+    SslContext::set_strict_sni(currentCtx.getLongValue(
+                            pNode, "sslStrictSni", 0, 1, 0));
+
     initQuic(pNode);
+
+    pValue = pNode->getChildValue("proxyProtocol");
+    if (pValue && *pValue)
+    {
+        AccessControl * proxyList = new AccessControl();
+        if (proxyList->addList(pValue, AC_ALLOW) > 0)
+        {
+            LS_INFO("Enable PROXY protocol for %s", pValue);
+            HttpServerConfig::getInstance().setProxyProtocolList(proxyList);
+        }
+        else
+        {
+            LS_WARN("Failed to enabled PROXY protocol for '%s'", pValue);
+            delete proxyList;
+        }
+    }
 
     return 0;
 }
@@ -2757,7 +3012,9 @@ void HttpServerImpl::gracefulRestartIfIpsChange()
         lsnprintf(final_path, sizeof(final_path),
                 "%stmp/download-quic-cloud-ips",
                 MainServerConfig::getInstance().getServerRoot());
-        rename(tmp_path, final_path);
+        if (rename(tmp_path, final_path))
+            LS_INFO("Error renaming %s to %s: %s", tmp_path, final_path,
+                    strerror(errno));
     }
 }
 
@@ -3148,6 +3405,15 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         denyAccessFiles(NULL, ".ht*", 0);
 
+        int jsonStatus = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+                         "jsonReports", 0, 1, 0);
+        if (jsonStatus)
+        {
+            m_sRTReportFileJson = DEFAULT_TMP_DIR "/.rtreport.json";
+            LS_DBG("Activated Json reports");
+        }
+        else
+            LS_DBG("Json reports NOT activated");
 
         if (configMime(pRoot) != 0)
         {
@@ -3491,21 +3757,6 @@ static int fixSymLinkLog(const char *pPath)
 }
 
 
-static int fixLogDirPermission(const char *pPath)
-{
-    struct stat st;
-    int ret = lstat(pPath, &st);
-    if (ret == 0)
-    {
-        if (st.st_mode & S_IXOTH)
-            return 0;
-        chmod(pPath, st.st_mode | S_IXOTH);
-        return 1;
-    }
-    return 0;
-}
-
-
 int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
 {
     struct passwd *pw;
@@ -3517,7 +3768,7 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
     while (1)
     {
 #if defined(LS_AIO_USE_KQ)
-        SigEventDispatcher::setAiokoLoaded();
+        AioOutputStream::setAiokoLoaded();
 #endif
 
         if (!MainServerConfigObj.getConfTestMode())
@@ -3687,6 +3938,32 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             HttpServerConfig::getInstance().setBwrapCmdLine(cmd);
         LS_INFO(ConfigCtx::getCurConfigCtx(), "bubbleWrap: %ld, cmd: '%s'", val, cmd);
 
+        if (HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_DISABLED ||
+            HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_OFF)
+        {
+            long l = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "nameSpace",
+                    0, 2, HttpServerConfig::NS_DISABLED);
+            HttpServerConfig::getInstance().setNS((HttpServerConfig::NSConfigValues)l);
+
+            if (HttpServerConfig::getInstance().getNS() != HttpServerConfig::NS_DISABLED)
+            {
+                char conf_file[MAX_PATH_LEN];
+                const char *conf = ConfigCtx::getCurConfigCtx()->getTag(
+                    pRoot, "nameSpaceConf", 0, 0);
+                if (conf)
+                {
+                    if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(conf_file, conf))
+                        break;
+                    if (access(conf_file, 0))
+                    {
+                        LS_ERROR("Specified name space config file does not exist: %s\n", conf);
+                        break;
+                    }
+                    HttpServerConfig::getInstance().setNSConf(strdup(conf_file));
+                }
+                LS_DBG_L("nameSpace: %ld, file: '%s'", l, conf);
+            }
+        }
 
         //this value can only be set once when server start.
         if (MainServerConfigObj.getCrashGuard() == 2)
@@ -3994,11 +4271,13 @@ int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
     RLimits limits;
     config.setRLimits( &limits );
 
+    config.applyStderrLog();
     Env * pEnv = config.getEnv();
     if ( pEnv->find( "PATH" ) == NULL )
     {
         pEnv->add( "PATH=/bin:/usr/bin" );
     }
+
     pEnv->add( 0, 0, 0, 0 );
     return 0;
 }
@@ -4683,7 +4962,7 @@ int HttpServerImpl::initLscpd()
     HttpServerConfig &httpServerConfig = HttpServerConfig::getInstance();
 
 #if defined(LS_AIO_USE_KQ)
-        SigEventDispatcher::setAiokoLoaded();
+        AioOutputStream::setAiokoLoaded();
 #endif
 
     //similar as configServerBasics
@@ -5553,7 +5832,7 @@ void HttpServer::enableAioLogging()
 #if defined(LS_AIO_USE_AIO)
     int i, count = getVHostCounts();
 #if defined(LS_AIO_USE_KQ)
-    if (SigEventDispatcher::aiokoIsLoaded())
+    if (AioOutputStream::aiokoIsLoaded())
     {
 #endif
 #if defined(LS_AIO_USE_SIGNAL)
@@ -5645,6 +5924,10 @@ void HttpServer::setBlackBoard(char *pBuf)
 
 void HttpServer::generateStatusReport()
 {   m_impl->generateStatusReport();     }
+
+
+void HttpServer::generateJsonStatusReport()
+{   m_impl->generateStatusJsonReport();     }
 
 
 int HttpServer::updateVHost(const char *pName, HttpVHost *pVHost)

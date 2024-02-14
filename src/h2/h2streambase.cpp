@@ -111,6 +111,8 @@ int H2StreamBase::read(char *buf, int len)
     {
         setActiveTime(DateTime::s_curTime);
         adjWindowToUpdate(read_out);
+        LS_DBG_H(this, "WINDOW_IN consumed: %d, to_update: %d.",
+                 read_out, getWindowToUpdate());
         windowUpdate();
     }
     if (getFlag(HIO_FLAG_PEER_SHUTDOWN) && (read_out == 0 || m_bufRcvd.empty()))
@@ -127,7 +129,7 @@ void H2StreamBase::windowUpdate()
 {
     if (m_iWindowToUpdate >= m_pH2Conn->getStreamInInitWindowSize() / 2)
     {
-        m_pH2Conn->sendWindowUpdateFrame(getStreamID(), m_iWindowToUpdate);
+        m_pH2Conn->sendStreamWindowUpdateFrame(getStreamID(), m_iWindowToUpdate);
         m_iWindowToUpdate = 0;
     }
 }
@@ -139,8 +141,9 @@ int H2StreamBase::processRcvdData(char *pData, int len)
     {
         if (m_bufRcvd.append(pData, len) == -1)
             return LS_FAIL;
-        LS_DBG_H(this, "H2StreamBase::processRcvdData(%p, %d), total: %lld",
-            pData, len, (long long)getBytesRecv());
+        LS_DBG_H(this, "H2StreamBase::processRcvdData(%p, %d), total: %lld, "
+                 "buffered: %d, app_want_read: %d",
+            pData, len, (long long)getBytesRecv(), m_bufRcvd.size(), isWantRead());
     }
 //    if (isWantRead())
 //        onRead();
@@ -168,9 +171,9 @@ void H2StreamBase::directInBufUsed(size_t len)
     assert((int)len <= m_bufRcvd.contiguous());
     m_bufRcvd.used(len);
     bytesRecv(len);
-    LS_DBG_H(this, "H2StreamBase::direcInBufUsed(%zd), total: %lld",
-             len, (long long)getBytesRecv());
-
+    LS_DBG_H(this, "H2StreamBase::direcInBufUsed(%zd), total: %lld, "
+            "buffered: %d, app_want_read: %d",
+             len, (long long)getBytesRecv(), m_bufRcvd.size(), isWantRead());
 }
 
 

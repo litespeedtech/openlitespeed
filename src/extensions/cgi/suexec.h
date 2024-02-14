@@ -22,7 +22,7 @@
 
 #include <lsdef.h>
 
-
+class HttpVHost;
 class RLimits;
 class SUExec
 {
@@ -42,7 +42,7 @@ public:
                 const char *pChroot, int chrootLen,
                 const char *pReal, int pathLen,
                 const char *const *pArgv, const char *const *pEnv,
-                const RLimits *pLimits, int flags);
+                const RLimits *pLimits, int flags, const HttpVHost *pVHost);
 
     int appendArgv(const char *pArgv, int len)
     {   return m_req.appendArgv(pArgv, len);  }

@@ -37,6 +37,7 @@ public:
     virtual int init(int capacity = DEFAULT_CAPACITY) { return LS_OK; };
     virtual int add(EventReactor *pHandler, short mask) = 0;
     virtual int remove(EventReactor *pHandler) = 0;
+    virtual int replace(EventReactor *old, EventReactor *new_handler);
     virtual int waitAndProcessEvents(int iTimeoutMilliSec) = 0;
     virtual void timerExecute() = 0;
     virtual void setPriHandler(EventReactor::pri_handler handler) = 0;

@@ -71,7 +71,7 @@ SUITE(StringtoolTest)
 
         pAccept = "ghijkm";
         CHECK((pOutput = (const char *)StringTool::memmem(pInput, strlen(pInput),
-                         pAccept, strlen(pAccept))) == memrchr(pInput, 'g', strlen(pInput)));
+                         pAccept, strlen(pAccept))) == ls_memrchr(pInput, 'g', strlen(pInput)));
 
         pAccept = "sabc";
         CHECK(StringTool::memmem(pInput, strlen(pInput), pAccept,

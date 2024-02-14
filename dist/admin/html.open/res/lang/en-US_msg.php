@@ -213,6 +213,7 @@ $_gmsg['l_configfile'] = 'Config File';
 $_gmsg['l_congestionctrl'] = 'Congestion Control';
 $_gmsg['l_connection'] = 'Connection';
 $_gmsg['l_conntimeout'] = 'Connection Timeout (secs)';
+$_gmsg['l_containers'] = 'Containers';
 $_gmsg['l_contextlist'] = 'Context List';
 $_gmsg['l_cpuaffinity'] = 'CPU Affinity';
 $_gmsg['l_cpuhardlimit'] = 'CPU Hard Limit (sec)';
@@ -245,6 +246,7 @@ $_gmsg['l_docroot'] = 'Document Root';
 $_gmsg['l_domain'] = 'Domain Name';
 $_gmsg['l_domains'] = 'Domains';
 $_gmsg['l_dynreqpersec'] = 'Dynamic Requests/second';
+$_gmsg['l_enableaiolog'] = 'Enable AIO Log';
 $_gmsg['l_enablecache'] = 'Enable Cache';
 $_gmsg['l_enablecensorship'] = 'Enable Request Filtering';
 $_gmsg['l_enablechroot'] = 'Enable chroot';
@@ -335,6 +337,7 @@ $_gmsg['l_ip'] = 'IP Address';
 $_gmsg['l_ip2locDB'] = 'IP2Location DB';
 $_gmsg['l_ip2locDBCache'] = 'DB Cache Type';
 $_gmsg['l_ip2locDBFile'] = 'IP2Location DB File Path';
+$_gmsg['l_jsonreports'] = 'Output JSON reports';
 $_gmsg['l_keepalivetimeout'] = 'Keep-Alive Timeout (secs)';
 $_gmsg['l_keepdays'] = 'Keep Days';
 $_gmsg['l_keyfile'] = 'Private Key File';
@@ -385,6 +388,9 @@ $_gmsg['l_moduleconf'] = 'Module Configuration';
 $_gmsg['l_modulehandler'] = 'Module Handler';
 $_gmsg['l_moduleparams'] = 'Module Parameters';
 $_gmsg['l_name'] = 'Name';
+$_gmsg['l_namespace'] = 'Namespace Container';
+$_gmsg['l_namespaceConf'] = 'Namespace Template File';
+$_gmsg['l_namespaceConfVhAdd'] = 'Additional Namespace Template File';
 $_gmsg['l_newadminuser'] = 'New WebAdmin Console User';
 $_gmsg['l_newcontext'] = 'New Context';
 $_gmsg['l_newextapp'] = 'New External App';
@@ -423,6 +429,7 @@ $_gmsg['l_process'] = 'Process';
 $_gmsg['l_prochardlimit'] = 'Process Hard Limit';
 $_gmsg['l_procsoftlimit'] = 'Process Soft Limit';
 $_gmsg['l_protocolver'] = 'Protocol Version';
+$_gmsg['l_proxyprotocol'] = 'PROXY Protocol';
 $_gmsg['l_quic'] = 'HTTP3/QUIC';
 $_gmsg['l_quicbaseplpmtu'] = 'PLPMTU Base Value';
 $_gmsg['l_quiccfcw'] = 'Connection Flow Control Window';
@@ -501,6 +508,7 @@ $_gmsg['l_sndbufsize'] = 'Send Buffer Size (bytes)';
 $_gmsg['l_softlimit'] = 'Connection Soft Limit';
 $_gmsg['l_ssl'] = 'SSL Private Key & Certificate';
 $_gmsg['l_sslConnLimit'] = 'SSL Connection Limit';
+$_gmsg['l_sslDefaultCiphers'] = 'Default Cipher Suite';
 $_gmsg['l_sslEnableMultiCerts'] = 'Enable Multiple SSL Certificates';
 $_gmsg['l_sslSessionCache'] = 'Enable Session Cache';
 $_gmsg['l_sslSessionCacheSize'] = 'Session Cache Size (bytes)';
@@ -508,6 +516,7 @@ $_gmsg['l_sslSessionCacheTimeout'] = 'Session Cache Timeout (secs)';
 $_gmsg['l_sslSessionTicketKeyFile'] = 'SSL Session Ticket Key File';
 $_gmsg['l_sslSessionTicketLifetime'] = 'SSL Session Ticket Lifetime (secs)';
 $_gmsg['l_sslSessionTickets'] = 'Enable Session Tickets';
+$_gmsg['l_sslStrictSni'] = 'Strict SNI Certificate';
 $_gmsg['l_sslStrongDhKey'] = 'SSL Strong DH Key';
 $_gmsg['l_sslprotocol'] = 'SSL Protocol';
 $_gmsg['l_startupfile'] = 'Startup File';
@@ -574,7 +583,6 @@ $_gmsg['l_workingdir'] = 'Working Directory';
 $_gmsg['l_wsgibin'] = 'WSGI Path';
 $_gmsg['l_wsgisettings'] = 'Python WSGI Default Settings';
 
-
 $_gmsg['o_cagefswithoutsuexec'] = 'CageFS without suEXEC';
 $_gmsg['o_checkbox'] = 'Checkbox';
 $_gmsg['o_custchrootpath'] = 'Customized Chroot Path';
@@ -583,6 +591,7 @@ $_gmsg['o_deprecated'] = 'deprecated';
 $_gmsg['o_disabled'] = 'Disabled';
 $_gmsg['o_enableabortforallreq'] = 'Enable Abort for All Requests';
 $_gmsg['o_enableabortforreqfromexternalip'] = 'Enable Abort for Requests from External IPs';
+$_gmsg['o_hcaptcha'] = 'hCaptcha';
 $_gmsg['o_hidefullheader'] = 'Hide Full Header';
 $_gmsg['o_hidever'] = 'Hide Version';
 $_gmsg['o_high'] = 'High';
@@ -750,7 +759,7 @@ $_gmsg['buildphp_mainstatus'] = 'Main Status';
 $_gmsg['buildphp_manualrunnotice'] = '<p>For security reasons, please log in to your server and run the pre-generated script from shell.
 	You can monitor the progress from this screen.</p>
 	<p>If build successfully, please update php.ini accordingly if needed. To apply changes, please do a graceful restart.</p>
-	<p>If it stops due to errors, it may caused by missing packages, after you install it, rerun the same command and this page will show the updated log. For more information regarding LSPHP, please visit <a href="https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:php" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a>.</p>
+	<p>If it stops due to errors, it may caused by missing packages, after you install it, rerun the same command and this page will show the updated log. For more information regarding LSPHP, please visit <a href="https://docs.litespeedtech.com/lsws/extapp/php/" rel="noopener noreferrer" target="_blank">LiteSpeed wiki</a>.</p>
 	<p>If you log in as root, you can directly run the command: <br><code>%%manual_script%%</code></p>
 	<p>If you log in as a user who has sudo permission, you can run the command with sudo and input root password after prompt.
 	<code>sudo %%manual_script%%</code></p>';

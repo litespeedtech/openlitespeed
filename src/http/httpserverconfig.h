@@ -27,6 +27,7 @@
 class DeniedDir;
 class ConnLimitCtrl;
 class HttpVHost;
+class AccessControl;
 
 class HttpServerConfig : public TSingleton<HttpServerConfig>
 {
@@ -36,6 +37,19 @@ public:
         BWRAP_DISABLED = 0,
         BWRAP_OFF,
         BWRAP_ON
+    };
+    enum NSConfigValues
+    {
+        NS_DISABLED = 0,
+        NS_OFF,
+        NS_ON
+    };
+    enum AioConfigValues
+    {
+        AIO_OFF = 0,
+        AIO_POSIX,
+        AIO_LINUX_AIO,
+        AIO_IOURING,
     };
 
 private:
@@ -50,6 +64,8 @@ private:
     int8_t          m_iSmartKeepAlive;
     int8_t          m_iAutoLoadHtaccess;
     int8_t          m_iUseSendfile;
+    int8_t          m_iUseAio;
+    uint32_t        m_iAioBlockSize;
     int8_t          m_iFollowSymLink;
     int8_t          m_iGzipCompress;
     int8_t          m_iDynGzipCompress;
@@ -85,9 +101,13 @@ private:
     const char     *m_pAdminSock;
     DeniedDir      *m_pDeniedDir;
     HttpVHost      *m_pGlobalVHost;
+    AccessControl  *m_pProxyProtocolList;
 
     BwrapConfigValues      m_bwrap;
     char *                 m_pBwrapCmdLine;
+
+    NSConfigValues  m_ns;
+    const char     *m_pNSConf;
 
     void operator=(const HttpServerConfig &rhs);
     HttpServerConfig(const HttpServerConfig &rhs);
@@ -120,6 +140,12 @@ public:
 
     void setUseSendfile(int8_t val)         {   m_iUseSendfile = val;       }
     int8_t getUseSendfile() const           {   return m_iUseSendfile;      }
+
+    void setUseAio(int8_t val)              {   m_iUseAio = val;            }
+    int8_t getUseAio() const                {   return m_iUseAio;           }
+
+    void setAioBlockSize(uint32_t val)      {   m_iAioBlockSize = val;      }
+    uint32_t getAioBlockSize() const        {   return m_iAioBlockSize;     }
 
     void setFollowSymLink(int32_t follow)   {   m_iFollowSymLink = follow;  }
     int8_t getFollowSymLink() const         {   return m_iFollowSymLink;    }
@@ -233,8 +259,19 @@ public:
     void setAllowExtAppSetuid(int val)      {  m_iAllowExtAppSetuid = val;  }
     int getAllowExtAppSetuid() const        {  return m_iAllowExtAppSetuid; }
 
+    void setNS(NSConfigValues c)            {   m_ns = c;                   }
+    NSConfigValues getNS() const            {   return m_ns;                }
+
+    void setNSConf(const char *c)           {   m_pNSConf = c;              }
+    const char *getNSConf() const           {   return m_pNSConf;           }
+
     void setCooldown()                      {   m_cooldown = 1;     }
     int isCooldown() const                  {   return m_cooldown;  }
+
+    const AccessControl *getProxyProtocolList() const
+    {   return m_pProxyProtocolList;    }
+    void setProxyProtocolList(AccessControl *list)
+    {   m_pProxyProtocolList = list;    }
 
 };
 

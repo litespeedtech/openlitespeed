@@ -49,6 +49,8 @@
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 #include "cgroupconn.h"
 #include "cgroupuse.h"
+#include "ns.h"
+#include "nsopts.h" // For DEBUG_MESSAGE
 #include "use_bwrap.h"
 #include <sys/prctl.h>
 #include <linux/capability.h>
@@ -592,6 +594,20 @@ static int execute_cgi(lscgid_t *pCGI)
     char ch;
     uid_t uid;
     uint32_t pid = (uint32_t)getpid();
+
+    //applyLimits(&pCGI->m_data);
+
+    if (pCGI->m_stderrPath)
+        fixStderrLogPermission(pCGI);
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    {
+        int rc = 0, done = 0;
+        rc = ns_exec(pCGI, &done);
+        if (rc || done)
+            return rc;
+    }
+#endif
 
     if (setpriority(PRIO_PROCESS, 0, pCGI->m_data.m_priority))
         perror("lscgid: setpriority()");

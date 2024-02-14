@@ -106,7 +106,7 @@ private:
     unsigned short      m_iRemotePort;
 
     char                m_iInProcess;
-    char                m_iPeerShutdown;
+    char                m_iFlag;
     int                 m_tmToken;
     int                 m_iSslLastWrite;
     int                 m_iHeaderToSend;
@@ -317,6 +317,12 @@ public:
 
     //Event driven IO interface
     int handleEvents(short event);
+    int tryProtocolProxy();
+    int UpdateClientInfoByProxyProto(const struct sockaddr *from,
+                                     uint16_t from_port);
+    int process_proxy_v1(char *line, char *end,
+                         struct sockaddr_storage *from,
+                         struct sockaddr_storage *to);
 
     void setNotWantRead()   {   setFlag(HIO_FLAG_WANT_READ, 0);  }
     void suspendRead();

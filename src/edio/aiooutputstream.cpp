@@ -18,6 +18,7 @@
 
 #include <edio/aiooutputstream.h>
 #include <edio/sigeventdispatcher.h>
+#include <log4cxx/logger.h>
 #include <lsr/ls_lock.h>
 #include <util/autobuf.h>
 #include <util/ni_fio.h>
@@ -41,16 +42,18 @@
 #include <sys/param.h>
 #include <sys/linker.h>
 
+/* aio.ko no longer used 
 static short s_iAiokoLoaded = -1;
-
+*/
 void AioOutputStream::setAiokoLoaded()
 {
-    s_iAiokoLoaded = (kldfind("aio.ko") != -1);
+    //s_iAiokoLoaded = (kldfind("aio.ko") != -1);
 }
 
 short AioOutputStream::aiokoIsLoaded()
 {
-    return s_iAiokoLoaded;
+    //return s_iAiokoLoaded;
+    return 1;
 }
 #endif
 
@@ -183,6 +186,7 @@ int AioOutputStream::append(const char *pBuf, int len)
 #define LS_AIO_MAXBUF 4096
 int AioOutputStream::onEvent()
 {
+    LS_DBG("AioOutputStream::onEvent");
     MutexLocker lock(m_mutex);
     if (m_pSend)
     {

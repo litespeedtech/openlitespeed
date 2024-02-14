@@ -336,8 +336,12 @@ class DInfo
                 } else {
                     $r = $editref;
                 }
-                $t = addslashes($t);
-                $r = addslashes($r);
+				if ($t) {
+					$t = addslashes($t);
+				}
+				if ($r) {
+					$r = addslashes($r);
+				}
 
                 $href = "javascript:lst_conf('$act', '', '$t', '$r')";
             }
@@ -348,13 +352,13 @@ class DInfo
 
     public function TrimLastId()
     {
-        if (($pos = strrpos($this->_tid, '`')) !== false) {
+        if ($this->_tid && ($pos = strrpos($this->_tid, '`')) !== false) {
             $this->_tid = substr($this->_tid, 0, $pos);
 		} else {
             $this->_tid = null;
 		}
 
-        if (($pos = strrpos($this->_ref, '`')) !== false) {
+        if ($this->_ref && ($pos = strrpos($this->_ref, '`')) !== false) {
             $this->_ref = substr($this->_ref, 0, $pos);
 		} elseif ($this->_view == 'sl_' || $this->_view == 'al_' || $this->_pid == 'base' || $this->_pid == 'mbr') {
             $this->_ref = $this->_viewName; // still in serv conf
@@ -401,7 +405,7 @@ class DInfo
 
     public function GetParentRef()
     {
-        if (($pos = strrpos($this->_ref, '`')) !== false) {
+        if ($this->_ref && ($pos = strrpos($this->_ref, '`')) !== false) {
             return substr($this->_ref, 0, $pos);
 		}
 		return '';
@@ -409,7 +413,7 @@ class DInfo
 
     public function SwitchToSubTid($extracted)
     {
-        if (($pos = strrpos($this->_tid, '`')) !== false) {
+        if ($this->_tid && ($pos = strrpos($this->_tid, '`')) !== false) {
             $tid0 = substr($this->_tid, 0, $pos + 1);
             $tid = substr($this->_tid, $pos + 1);
         } else {
@@ -521,7 +525,6 @@ class DInfo
 			elseif ($vhexps->GetChildVal('type') == $type) {
 				$exname = $vhexps->Get(CNode::FLD_VAL);
 				$o[$exname] = '[' . DMsg::UIStr('note_vh_level') . "]: $exname";
-				$o[$n[0]] = $n[1];
 			}
 		}
 		return $o;

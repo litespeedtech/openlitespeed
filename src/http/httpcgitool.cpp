@@ -542,6 +542,72 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
     char buf[128];
     RadixNode *pNode;
 
+    int set_ns = 0, set_bwrap = 0;
+    const HttpVHost *pVHost = pReq->getVHost();
+
+    LS_DBG("httpcgitool:  Check bwrap, pVHost: %p\n", pVHost);
+
+    if ((pVHost && pVHost->enableBwrap()) ||
+        (!pVHost && HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_ON))
+    {
+        int from_vhost = pVHost && pVHost->enableBwrap();
+        set_bwrap = 1;
+        LS_DBG("Enabling bwrap from %s\n", from_vhost ? "VHost" : "ServerConfig");
+    }
+    else
+        LS_DBG("pVHost enableBwrap: %d, procConfig.getBwrap: %d\n",
+               pVHost && pVHost->enableBwrap(), HttpServerConfig::getInstance().getBwrap());
+    if (set_bwrap)
+    {
+        const char *enable_title = (char *)"LS_BWRAP";
+        pEnv->add(enable_title, "1");
+        ++count;
+        if (HttpServerConfig::getInstance().getBwrapCmdLine())
+        {
+            const char *cmdline_title = (char *)"LS_BWRAP_CMDLINE";
+            LS_DBG("Rebuild add env: %s\n", HttpServerConfig::getInstance().getBwrapCmdLine());
+            pEnv->add(cmdline_title, HttpServerConfig::getInstance().getBwrapCmdLine());
+            ++count;
+        }
+    }
+    else if ((pVHost && pVHost->enableNS()) ||
+             (!pVHost && HttpServerConfig::getInstance().getNS() == HttpServerConfig::NS_ON))
+    {
+        int from_vhost = pVHost && pVHost->enableNS();
+        set_ns = 1;
+        LS_DBG("Enabling namespace from %s\n", from_vhost ? "VHost" : "ServerConfig");
+    }
+    else
+        LS_DBG("pVHost enableNS: %d, procConfig.getNS: %d\n",
+               pVHost && pVHost->enableNS(), HttpServerConfig::getInstance().getNS());
+    if (set_ns)
+    {
+        const char *enable_title = (char *)"LS_NS";
+        pEnv->add(enable_title, "1");
+        ++count;
+        if (HttpServerConfig::getInstance().getNSConf())
+        {
+            const char *cmdline_title = (char *)"LS_NS_CONF";
+            LS_DBG("Rebuild add env: %s\n", HttpServerConfig::getInstance().getNSConf());
+            pEnv->add(cmdline_title, HttpServerConfig::getInstance().getNSConf());
+            ++count;
+        }
+        if (pVHost && pVHost->enableNS())
+        {
+            const char *cmdline_title = (char *)"LS_NS_VHOST";
+            LS_DBG("Rebuild add env: %s\n", pVHost->getName());
+            pEnv->add(cmdline_title, pVHost->getName());
+            ++count;
+            if (pVHost->getNSConf2() && pVHost->getNSConf2()->c_str())
+            {
+                const char *cmdline_title = (char *)"LS_NS_CONF2";
+                LS_DBG("Rebuild add env: %s\n", pVHost->getNSConf2()->c_str());
+                pEnv->add(cmdline_title, pVHost->getNSConf2()->c_str());
+                ++count;
+            }
+        }
+    }
+
     pTemp = pReq->getAuthUser();
     if (pTemp && *pTemp)
     {

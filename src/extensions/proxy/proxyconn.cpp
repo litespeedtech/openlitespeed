@@ -76,9 +76,11 @@ void ProxyConn::init(int fd, Multiplexer *pMplx)
 }
 
 
-static SSL *getSslConn()
+static SSL *getSslConn(SslContext **ctx)
 {
     static SslContext *s_pProxyCtx = NULL;
+    if (ctx)
+        *ctx = NULL;
     if (!s_pProxyCtx)
     {
         s_pProxyCtx = new SslContext();
@@ -93,6 +95,8 @@ static SSL *getSslConn()
         else
             return NULL;
     }
+    if (ctx)
+        *ctx = s_pProxyCtx;
     return s_pProxyCtx->newSSL();
 }
 
@@ -110,7 +114,9 @@ int ProxyConn::connectSSL()
 {
     if (!m_ssl.getSSL())
     {
-        m_ssl.setSSL(getSslConn());
+        SslContext *ctx = NULL;
+        SSL *ssl = getSslConn(&ctx);
+        m_ssl.setSSL(ssl);
         if (!m_ssl.getSSL())
             return LS_FAIL;
         m_ssl.setfd(getfd());

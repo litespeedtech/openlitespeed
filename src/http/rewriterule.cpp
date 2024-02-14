@@ -564,6 +564,7 @@ RewriteRule::RewriteRule()
     , m_flag(0)
     , m_statusCode(0)
     , m_skipRules(0)
+    , m_noEscape(0)
 {
 }
 
@@ -577,6 +578,7 @@ RewriteRule::RewriteRule(const RewriteRule &rhs)
     , m_flag(rhs.m_flag)
     , m_statusCode(rhs.m_statusCode)
     , m_skipRules(rhs.m_skipRules)
+    , m_noEscape(rhs.m_noEscape)
     , m_env(rhs.m_env)
     , m_pattern(rhs.m_pattern)
 {
@@ -674,9 +676,49 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd,
     switch (*pRuleStr)
     {
     case 'B':
-    case 'b':
-        m_flag |= RULE_FLAG_BR_ESCAPE;
-        ++pRuleStr;
+    case 'b':   /**  "B" "BNP" "backrefnoplus"  "BCTLS" "BNE" */
+        if ((*(pRuleStr + 1) | 0x20) == 'n')
+        {
+            if ((*(pRuleStr + 2) | 0x20) == 'p')
+            {
+                m_flag |= RULE_FLAG_BNP;
+                pRuleStr += 3;
+            }
+            else if ((*(pRuleStr + 2) | 0x20) == 'e' && *(pRuleStr + 3) == '=')
+            {
+                pRuleStr += 4;
+                const char *p = StringTool::mempbrk(pRuleStr, pEnd - pRuleStr,
+                                                    " ,]", 3);
+                if (p)
+                {
+                    int len = p - pRuleStr;
+                    if (len > 7)
+                        len = 7;
+                    if (len > 0)
+                    {
+                        memcpy(&m_noEscape, pRuleStr, len);
+                        *(((char *)&m_noEscape) + len) = '\0';
+                        m_flag |= RULE_FLAG_BNE;
+                    }
+                    pRuleStr = p;
+                }
+            }
+        }
+        else if (strncasecmp(pRuleStr, "backrefnoplus", 13) == 0)
+        {
+            m_flag |= RULE_FLAG_BNP;
+            pRuleStr += 13;
+        }
+        else if (strncasecmp(pRuleStr, "BCTLS", 5) == 0)
+        {
+            m_flag |= RULE_FLAG_BCTLS;
+            pRuleStr += 5;
+        }
+        else
+        {
+            m_flag |= RULE_FLAG_BR_ESCAPE;
+            ++pRuleStr;
+        }
         break;
     case 'C':
     case 'c':

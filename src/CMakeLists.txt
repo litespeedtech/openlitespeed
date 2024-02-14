@@ -141,6 +141,12 @@ if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
   set(LIBATOMIC atomic)
 endif()
 
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "FreeBSD")
+  set(STDCXX libc++.a)
+else()
+  set(STDCXX libstdc++.a)
+endif()
+   
 # NOTE: When creating a new directory, the order it is placed in this list
 # matters.  Everything listed depends on things listed AFTER it, though
 # it won't depend on everything after it.  Inter-dependency may be fixed
@@ -148,15 +154,15 @@ endif()
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    cache modgzip lsiapi main http spdy ssi
+    ${ASAN_LIB} cache modgzip lsiapi main http spdy ssi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns 
     quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
     libz.a libpcre.a libexpat.a libxml2.a
-    ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns
-    -nodefaultlibs pthread rt ${LIBSAN} ${LIBATOMIC}
-    ${CMAKE_DL_LIBS} libstdc++.a crypt bcrypt m gcc_eh c c_nonshared gcc
+    ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns ${LINUX_AIO_LIB} 
+    -nodefaultlibs pthread rt ${LIBSAN} ${LIBATOMIC} 
+    ${CMAKE_DL_LIBS} ${STDCXX} crypt bcrypt m gcc_eh c c_nonshared gcc
 )
 
 target_link_libraries(openlitespeed ${litespeedlib} )

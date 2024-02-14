@@ -33,6 +33,13 @@
 #define DO_HOST_OVERRIDE    16
 #define SKIP_ADNS_CACHE     32
 
+typedef union
+{
+    in6_addr    m_addr6;
+    in_addr_t   m_addrs[4];
+} IpAddr6;
+
+
 class AdnsReq;
 class GSockAddr
 {
@@ -118,6 +125,18 @@ public:
     {   return (const struct sockaddr_in6 *)m_pSockAddr; }
     const char *getUnix() const
     {   return ((sockaddr_un *)m_pSockAddr)->sun_path;  }
+
+    static inline void mappedV6toV4( struct sockaddr * pAddr)
+    {
+        if ((AF_INET6 == pAddr->sa_family)&&
+            (IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)pAddr)->sin6_addr)))
+        {
+            pAddr->sa_family = AF_INET;
+            ((struct sockaddr_in *)pAddr)->sin_addr.s_addr = ((IpAddr6 *)&
+                ((struct sockaddr_in6 *)pAddr)->sin6_addr)->m_addrs[3];
+        }
+    }
+
     void set(const in_addr_t addr, const in_port_t port);
 
     void set(const in6_addr *addr, const in_port_t port,

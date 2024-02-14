@@ -18,8 +18,8 @@ fi
 pushd .
 cd `dirname "$0"`
 
-if [ ! -d ../../../../thirdparty ] ; then
-   mkdir ../../../../thirdparty
+if [ ! -d ../../../../third-party ] ; then
+   mkdir ../../../../thirdp-arty
 fi
 
 PSOLVERSION=1.11.33.4
@@ -46,11 +46,11 @@ else
 fi
 
 if [ "x$1" != "x" ]; then
-   ln -sf ../../../../thirdparty/psol-$PSOLVERSION psol
+   ln -sf ../../../../third-party/psol-$PSOLVERSION psol
 fi
 
 
-cd ../../../../thirdparty
+cd ../../../../third-party
 
 if [ ! -f psol-$PSOLVERSION/include/out/Release/obj/gen/net/instaweb/public/version.h ] ; then
 

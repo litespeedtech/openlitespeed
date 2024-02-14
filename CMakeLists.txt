@@ -16,6 +16,28 @@ set(CMAKE_SKIP_BUILD_RPATH TRUE)
 
 SET(LSQUIC_SERVER_MODE 1)
 
+if (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux" AND 
+    CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+    if (${ALPINE})
+        message("Alpine X64")
+    else()
+        message("Set LINUX_X64")
+        set (LINUX_X64 ON)
+    endif()
+endif()
+if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
+    set (NOT_MACOS OFF)
+else()
+    set (NOT_MACOS ON)
+endif()
+OPTION(MOD_PAGESPEED "Whether pagespeed should be built" ${LINUX_X64})
+OPTION(MOD_SECURITY "Whether mod_security should be built" ${NOT_MACOS})
+OPTION(MOD_LUA "Whether Lua should be built" ${LINUX_X64})
+OPTION(MOD_REQPARSER "Whether modreqparser should be built" OFF)
+OPTION(MOD_INSPECTOR "Whether modinspector should be built" OFF)
+OPTION(MOD_UPLOADPROGRESS "Whether uploadprogress should be built" OFF)
+OPTION(MOD_LSPHP "Whether mod_lsphp should be built" OFF)
+
 include_directories( BEFORE  include src/lshpack src/liblsquic/ls-qpack ${PROJECT_SOURCE_DIR}/../third-party/include/)
 link_directories( ${PROJECT_SOURCE_DIR}/../third-party/lib/)
 
@@ -23,6 +45,7 @@ link_directories( ${PROJECT_SOURCE_DIR}/../third-party/lib/)
 #SET (CMAKE_CXX_COMPILER       "/usr/bin/clang++")
 
 IF (CMAKE_BUILD_TYPE MATCHES "Debug")
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
 ## thread sanitizer
     #set (TSAN "1")
     set (ASAN "1")
@@ -30,6 +53,7 @@ IF (CMAKE_BUILD_TYPE MATCHES "Debug")
     add_definitions(-DRUN_TEST)
     set(libUnitTest  libUnitTest++.a)
 ###############################################################################
+endif()
 ENDIF()
 
 
@@ -105,6 +129,20 @@ add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 #Add definition for QUIC
 add_definitions(-DH3_ALPN="\\x02h3\\x05h3-29")
 
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+    # You must set COMPILE_IO_URING to true and NOT comment out -DIOURING OR
+    # set COMPILE_IO_URING to false and comment out -DIOURING
+    set(COMPILE_IO_URING
+        true)
+    add_definitions(-DIOURING)
+    # You must set COMPILE_LINUX_AIO to true and NOT comment out -DLS_AIO_USE_LINUX_AIO OR
+    # set COMPILE_LINUX_AIO to false and comment out -DLS_AIO_USE_LINUX_AIO
+    set(COMPILE_LINUX_AIO
+        true)
+    add_definitions(-DLS_AIO_USE_LINUX_AIO)
+    set(LINUX_AIO_LIB
+        aio)
+endif()
 
 # Update submodules as needed
 find_package(Git QUIET)
@@ -164,6 +202,7 @@ add_definitions( ${LFS_CFLAGS} )
 add_definitions(-DUSE_UDNS)
 
 add_subdirectory(src)
+add_subdirectory(support)
 
 if (BUILD_TEST)
 add_subdirectory(test)

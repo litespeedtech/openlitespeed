@@ -88,6 +88,7 @@ public:
     void assignRevent(short event)      {   m_pollfd.revents = event;}
     short getAssignedRevent()           {   return m_pollfd.revents; }
 
+    unsigned short getRegEvents() const {   return m_eventSet;      }
     void updateEventSet()               {   m_eventSet = m_pfd->events;     }
     int  isApplyEvents() const          {   return m_eventSet != m_pfd->events;  }
 

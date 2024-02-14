@@ -98,6 +98,7 @@ public:
     const AutoStr2 &getPortStr() const   {   return m_sPort; }
     void updateMapping(HttpVHostMap &vhosts);
     int writeStatusReport(int fd);
+    int writeStatusJsonReport(int fd);
 
     SslContext *getSslContext() const      {   return m_pSslContext;   }
     void setSslContext(SslContext *p);
@@ -142,6 +143,7 @@ public:
     int addDefaultVHost(HttpVHost *pVHost);
 
     int writeStatusReport(int fd);
+    int writeStatusJsonReport(int fd);
     void endConfig();
     int hasSSL();
 

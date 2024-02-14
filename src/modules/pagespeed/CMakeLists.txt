@@ -23,6 +23,7 @@ include_directories(
                 ${PSOL_LIB}/include/url
                 ${PSOL_LIB}/include/third_party/apr/src/include
                 ${PSOL_LIB}/include/third_party/chromium/src
+		${PSOL_LIB}/include/third_party/pagespeed
                 ${PSOL_LIB}/include/third_party/protobuf/src/src
                 ${PSOL_LIB}/include/third_party/google-sparsehash/src
                 ${PSOL_LIB}/include/third_party/re2/src

@@ -1092,6 +1092,7 @@ installation()
 
     util_cpfile "$SDIR_OWN" $EXEC_MOD bin/updateagent
     util_cpfile "$SDIR_OWN" $EXEC_MOD bin/wswatch.sh
+    util_cpfile "$SDIR_OWN" $EXEC_MOD bin/unmount_ns
     util_cpfilev "$SDIR_OWN" $EXEC_MOD $VERSION bin/lswsctrl bin/lshttpd
 
     #if [ -e "$LSINSTALL_DIR/bin/lshttpd.dbg" ]; then

@@ -30,7 +30,6 @@
 
 #include <string.h>
 
-
 HttpResp::HttpResp(ls_xpool_t *pool)
     : m_respHeaders()
     , m_pRespBodyBuf(NULL)

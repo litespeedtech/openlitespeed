@@ -24,6 +24,7 @@
 
 #include <http/httpserverconfig.h>
 #include <http/httpvhost.h>
+#include <http/httpserverconfig.h>
 #include <http/serverprocessconfig.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
@@ -503,6 +504,8 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     else
         pDir = argv[0];
 
+    LS_DBG("Check ns, pVHost: %p\n", pVHost);
+
     int flags = 0;
     LS_DBG("Check bwrap, cgroups, pVHost: %p\n", pVHost);
     if ((pVHost && pVHost->enableBwrap())
@@ -512,8 +515,20 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         LS_DBG("Enabling bwrap from %s\n", pVHost ? "VHost" : "ServerConfig");
     }
     else
+    {
         LS_DBG("pVHost enableBwrap: %d, procConfig.getBwrap: %d\n",
                pVHost && pVHost->enableBwrap(), HttpServerConfig::getInstance().getBwrap());
+
+        if ((pVHost && pVHost->enableNS())
+            || (!pVHost && HttpServerConfig::getInstance().getNS() == HttpServerConfig::NS_ON))
+        {
+            flags |= LSCGID_FLAG_NAMESPACE;
+            LS_DBG("Enabling namespace from %s\n", pVHost ? "VHost" : "ServerConfig");
+        }
+        else
+            LS_DBG("pVHost enableNS: %d, procConfig.getNS: %d\n",
+                pVHost && pVHost->enableNS(), HttpServerConfig::getInstance().getNS());
+    }
 
     if ((pVHost && pVHost->enableCGroup())
         || (!pVHost && ServerProcessConfig::getInstance().getCGroupDefault()))
@@ -533,7 +548,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
                                  pDir, strlen(pDir),
                                  argv, config.getEnv()->get(),
                                  config.getRLimits(),
-                                 flags);
+                                 flags, pVHost);
 
     LS_NOTICE("[LocalWorker::workerExec] Config[%s]: suExec uid %d gid %d cmd %s,"
             " final uid %d gid %d, flags: %d.",
@@ -551,11 +566,6 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     {
         LS_ERROR("[LocalWorker::workerExec] Config[%s]: cgidSuEXEC failed.",
             config.getName());
-
-        pid = SUExec::spawnChild(config.getCommand(), fd, -1,
-                                 config.getEnv()->get(),
-                                 config.getPriority(), config.getRLimits(),
-                                 config.getUmask(), uid, gid);
     }
     if (rfd != -1)
         close(rfd);

@@ -44,7 +44,7 @@ include("view/inc/nav.php");
 <div class="page-footer">
 	<div class="row">
 		<div class="col-xs-12 col-sm-6">
-			<span class="txt-color-white">LiteSpeed WebAdmin Console © 2014-2022 <?php DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
+			<span class="txt-color-blueLight">LiteSpeed WebAdmin Console © 2014-2024 <?php DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
 		</div>
 		<div class="col-xs-6 col-sm-6 text-right hidden-xs">
 			<i class="txt-color-blueLight hidden-mobile"> <i class="fa fa-clock-o"></i>

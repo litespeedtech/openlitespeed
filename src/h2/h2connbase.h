@@ -197,8 +197,11 @@ public:
     int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
                            H2FrameType type, const char *pBuf, int size);
 
-    int sendWindowUpdateFrame(uint32_t id, int32_t delta)
-    {   return sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta, true);   }
+    void sendStreamWindowUpdateFrame(uint32_t id, int32_t delta)
+    {
+        sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta, false);
+        updateWindow();
+    }
 
     int sendRstFrame(uint32_t uiStreamID, H2ErrorCode code)
     {

@@ -41,6 +41,7 @@ extern "C"
 #define LSCGID_FLAG_DROP_CAPS   (1 << 0)
 #define LSCGID_FLAG_BWRAP       (1 << 1)
 #define LSCGID_FLAG_CGROUP      (1 << 2)
+#define LSCGID_FLAG_NAMESPACE   (1 << 3)
 
 typedef struct
 {

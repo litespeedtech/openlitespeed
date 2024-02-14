@@ -33,6 +33,7 @@ public:
         TYPE_UNKNOWN,
         TYPE_V2,
         TYPE_INVISIBLE,
+        TYPE_HCAPTCHA,
         TYPE_END,
         TYPE_V3, // not out yet.
     };
@@ -59,6 +60,8 @@ public:
     void setSecretKey(const char *pSiteKey);
     void setSecretKey(AutoStr2 *p)          {   m_pSecretKey = p;           }
     const AutoStr2 *getSecretKey() const    {   return m_pSecretKey;        }
+    const AutoStr2 *getJsUrl() const;
+    const AutoStr2 *getJsObjName() const;
 
     const char *getTypeParam() const    {   return s_apTypeParams[m_iType]; }
 
@@ -96,6 +99,7 @@ private:
     static AutoStr2    *s_pEnvNameSiteKey;
     static AutoStr2    *s_pEnvNameSecretKey;
     static AutoStr2    *s_pEnvNameTypeParam;
+    static AutoStr2    *s_pEnvNameJsUri;
     static const char  *s_pDefaultSiteKey;
     static const char  *s_pDefaultSecretKey;
 

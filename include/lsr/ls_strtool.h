@@ -537,6 +537,7 @@ int ls_snprintf(char *str, size_t size, const char *format, ...);
 
 int ls_vsnprintf(char *str, size_t size, const char *format, va_list args);
 
+void *ls_memrchr(const void *src_void, int c, size_t length);
 
 #ifdef __cplusplus
 }

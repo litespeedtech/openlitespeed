@@ -43,8 +43,9 @@ class DTbl
         $tbl = new DTbl($id, $title, $attrs, $helpkey);
         $tbl->_holderIndex = $index;
         $tbl->_cols = 2;
-        if ($defaultExtract != null)
+        if ($defaultExtract) {
             $tbl->_defaultExtract = $defaultExtract;
+		}
         return $tbl;
     }
 
@@ -135,17 +136,19 @@ class DTbl
 
     public function GetSubTid($node)
     {
-        if ($this->_subTbls == '')
+        if ($this->_subTbls == '') {
             return null;
+		}
 
         $keynode = $node->GetChildren($this->_subTbls[0]);
-        if ($keynode == null)
+        if ($keynode == null) {
             return null;
+		}
         $newkey = $keynode->Get(CNode::FLD_VAL);
         if (($newkey == '0') || !isset($this->_subTbls[$newkey])) {
             return $this->_subTbls[1]; // use default
-        } else
-            return $this->_subTbls[$newkey];
+        }
+		return $this->_subTbls[$newkey];
     }
 
     public function PrintHtml($dlayer, $disp)
@@ -163,10 +166,11 @@ class DTbl
             }
         }
 
-        if ($disp->IsViewAction())
+        if ($disp->IsViewAction()) {
             $this->print_view($dlayer, $disp);
-        else
+		} else {
             $this->print_edit($dlayer, $disp);
+		}
     }
 
     private function get_print_header($disp, $actString, $isEdit = false, $hasSort = false)
@@ -196,10 +200,11 @@ class DTbl
         $ref = $disp->Get(DInfo::FLD_REF);
         if ($this->_showParentRef && $ref != null) {
             $pos = strpos($ref, '`');
-            if ($pos !== false)
+            if ($pos !== false) {
                 $title .= ' - ' . substr($ref, 0, $pos);
-            else
+			} else {
                 $title .= ' - ' . $ref;
+			}
         }
 
         $all_blocked = true;
@@ -236,18 +241,22 @@ class DTbl
                 }
             }
             $url = $disp->Get(DInfo::FLD_CtrlUrl);
-            if ($disp->Get(DInfo::FLD_TID) != null)
+            if ($disp->Get(DInfo::FLD_TID)) {
                 $url .= '&t=' . urlencode($disp->Get(DInfo::FLD_TID));
-            if ($disp->Get(DInfo::FLD_REF) != null)
+			}
+            if ($disp->Get(DInfo::FLD_REF)) {
                 $url .= '&r=' . urlencode($disp->Get(DInfo::FLD_REF));
+			}
 
-            if ($this->_icon != null)
+            if ($this->_icon) {
                 $buf .= '<th></th>';
+			}
 
             foreach ($keys as $i) {
                 $attr = $this->_dattrs[$i];
-                if ($attr->IsFlagOn(DAttr::BM_HIDE))
+                if ($attr->IsFlagOn(DAttr::BM_HIDE)) {
                     continue;
+				}
 
                 $buf .= '<th';
                 if (isset($this->_align[$i]) && $this->_align[$i] != 'left') {
@@ -292,15 +301,17 @@ class DTbl
         $hasB = ($disptid != '');
 
         if ($this->_isTop) {
-            if ($this->_addTbl == null)
+            if ($this->_addTbl == null) {
                 $actString = 'E'; //e';
-            else if ($this->_addTbl != 'N')
+			} elseif ($this->_addTbl != 'N') {
                 $actString = 'a';
-            else
+			} else {
                 $actString = '';
+			}
 
-            if ($hasB)
+            if ($hasB) {
                 $actString .= 'B';
+			}
 
             $hasSort = ($dlayer != null && is_array($dlayer));
             $buf .= $this->get_print_header($disp, $actString, false, $hasSort);
@@ -312,7 +323,7 @@ class DTbl
                 }
 
                 if ($hasSort && $this->_sorted_tbl) {
-                    $sorted = array();
+                    $sorted = [];
                     $is_num = true;
                     foreach ($dlayer as $key => $node) {
                         $val = $node->GetChildVal($this->_sort_key);
@@ -352,8 +363,9 @@ class DTbl
             }
         } else {
             $actString = 'E';
-            if ($hasB)
+            if ($hasB) {
                 $actString .= 'B';
+			}
             if ($ref != null && is_array($dlayer)) {
                 $dlayer = $dlayer[$ref];
             }
@@ -450,21 +462,6 @@ class DTbl
         }
         $buf .= '>';
 
-
-        if ($attr->_href) {
-            //$link = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
-            $link = $disp->Get(DInfo::FLD_CtrlUrl);
-            if ($disp->Get(DInfo::FLD_TID) != null) {
-                $link .= '&t=' . $disp->Get(DInfo::FLD_TID);
-			}
-            if ($disp->Get(DInfo::FLD_REF) != null) {
-                $link .= '&r=' . urlencode($disp->Get(DInfo::FLD_REF));
-			}
-
-            $link .= $attr->_href;
-            $attr->_hrefLink = str_replace('$R', urlencode($disp->Get(DInfo::FLD_REF)), $link);
-        }
-
         if ($attr->_href) {
             //$link = $disp->_ctrlUrl . 'm=' . $disp->_mid . '&p=' . $disp->_pid;
             $link = $disp->Get(DInfo::FLD_CtrlUrl);
@@ -479,22 +476,19 @@ class DTbl
 			}
 
             $link .= $attr->_href;
-            $attr->_hrefLink = str_replace('$R', $r, $link);
+            $attr->_hrefLink = $r ? str_replace('$R', $r, $link) : $link;
         }
 
-
-
         $buf .= ($attr->toHtml($node));
-
-
         $buf .= "</td></tr>\n";
         return $buf;
     }
 
     private function get_print_inputline($dlayer, $disp, $attr)
     {
-        if ($attr->IsFlagOn(DAttr::BM_NOEDIT))
+        if ($attr->IsFlagOn(DAttr::BM_NOEDIT)) {
             return '';
+		}
 
         if ($attr->_type == 'sel1') {
             $attr->SetDerivedSelOptions($disp->GetDerivedSelOptions($this->_id, $attr->_minVal, $dlayer));
@@ -543,24 +537,24 @@ class DTbl
 
         foreach ($keys as $key) {
             $attr = $this->_dattrs[$key];
-            if ($attr->IsFlagOn(DAttr::BM_HIDE))
+            if ($attr->IsFlagOn(DAttr::BM_HIDE)) {
                 continue;
+			}
 
-            if ($key == 0) {
-                if ($this->_icon != null) {
-                    if ($attr->GetKey() == 'type' && is_array($attr->_maxVal) && is_array($this->_icon)) {
-                        $type = $data->GetChildVal('type');
-                        $icon_name = isset($this->_icon[$type]) ? $this->_icon[$type] : 'application';
-                    } else {
-                        $icon_name = $this->_icon;
-                    }
-                    $buf .= '<td class="icon"><img src="/res/img/icons/' . $icon_name . '.gif"></td>';
-                }
+            if ($key == 0 && $this->_icon) {
+				if ($attr->GetKey() == 'type' && is_array($attr->_maxVal) && is_array($this->_icon)) {
+					$type = $data->GetChildVal('type');
+					$icon_name = isset($this->_icon[$type]) ? $this->_icon[$type] : 'application';
+				} else {
+					$icon_name = $this->_icon;
+				}
+				$buf .= '<td class="icon"><img src="/res/img/icons/' . $icon_name . '.gif"></td>';
             }
 
             $buf .= '<td';
-            if (isset($this->_align[$key]))
+            if (isset($this->_align[$key])) {
                 $buf .= ' align="' . $this->_align[$key] . '"';
+			}
             $buf .= '>';
 
             if ($attr->_type == 'action') {
@@ -577,8 +571,9 @@ class DTbl
 								 data-original-title="' . htmlspecialchars(htmlspecialchars($note, ENT_QUOTES), ENT_QUOTES) . '" data-html="true">
 								<i class="fa fa-info-circle"></i></a>';
                     }
-                } else
+                } else {
                     $buf .= $attr->toHtml($data, null);
+				}
             }
             $buf .= '</td>';
         }

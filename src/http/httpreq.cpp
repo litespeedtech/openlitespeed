@@ -511,7 +511,7 @@ void HttpReq::classifyUrl()
     }
     else if (iUrlLen >= pRecaptchaUrl->len()
             && memcmp(pUrlEnd- pRecaptchaUrl->len(), pRecaptchaUrl->c_str(), pRecaptchaUrl->len()) == 0)
-        m_iUrlType = URL_CAPTCHA;
+        m_iUrlType = URL_CAPTCHA_VERIFY;
 }
 
 
@@ -938,7 +938,7 @@ int HttpReq::processHeaderLines()
                 headerfinished = true;
                 break;
             }
-            LS_INFO(getLogSession(), "Status 400: header line missing ':'!");
+            LS_INFO(getLogSession(), "Status 400: header line missing ':'! (%.*s)", (int)(pLineEnd - pLineBegin), pLineBegin);
             return SC_400;
         }
     }
@@ -3361,7 +3361,8 @@ cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
             }
             clearContextState(CACHE_PRIVATE_KEY | CACHE_KEY);
 
-            memmove(p, pValue, valLen);
+            if (pValue)
+                memmove(p, pValue, valLen);
             LS_DBG_L(getLogSession(), "replace cookie [%.*s] with new value [%.*s].",
                      nameLen, pName, valLen, pValue);
             pIdx->flag |= COOKIE_FLAG_RESP_UPDATE;
@@ -4074,17 +4075,20 @@ void HttpReq::setRecaptchaEnvs()
     const AutoStr2 *pSiteKey = pRecaptcha->getSiteKey();
     const AutoStr2 *pSecretKey = pRecaptcha->getSecretKey();
     const char *pTypeParam = pRecaptcha->getTypeParam();
+    const AutoStr2 *js_url = pRecaptcha->getJsUrl();
+    const AutoStr2 *js_obj_name = pRecaptcha->getJsObjName();
 
     if (NULL == pSiteKey || NULL == pSecretKey)
     {
         pSiteKey = pServerRecaptcha->getSiteKey();
         pSecretKey = pServerRecaptcha->getSecretKey();
         pTypeParam = pServerRecaptcha->getTypeParam();
+        js_url = pServerRecaptcha->getJsUrl();
     }
 
     assert(pSiteKey != NULL && pSecretKey != NULL);
 
-    if (isCaptcha() && HttpMethod::HTTP_POST == getMethod())
+    if (isCaptchaVerify() && HttpMethod::HTTP_POST == getMethod())
     {
         addEnv(Recaptcha::getSecretKeyName()->c_str(),
                 Recaptcha::getSecretKeyName()->len(),
@@ -4101,17 +4105,20 @@ void HttpReq::setRecaptchaEnvs()
                 Recaptcha::getTypeParamName()->len(),
                 pTypeParam, strlen(pTypeParam));
     }
+    addEnv("LSRECAPTCHA_JS_URI", 18, js_url->c_str(), js_url->len());
+    addEnv("LSRECAPTCHA_JS_OBJ_NAME", 23, js_obj_name->c_str(), js_obj_name->len());
 }
 
 
-int HttpReq::rewriteToRecaptcha()
+int HttpReq::rewriteToRecaptcha(const char *reason)
 {
+    LS_INFO(getLogSession(), "[RECAPTCHA] Reason: %s.", reason);
     setRecaptchaEnvs();
 
     if (!m_pVHost)
         m_pVHost = HttpServerConfig::getInstance().getGlobalVHost();
 
-    if (isCaptcha() && HttpMethod::HTTP_POST == getMethod())
+    if (isCaptchaVerify() && HttpMethod::HTTP_POST == getMethod())
     {
         LS_DBG_M(getLogSession(), "[RECAPTCHA] Already a captcha request.");
         m_pContext = Recaptcha::getDynCtx();
@@ -4125,6 +4132,7 @@ int HttpReq::rewriteToRecaptcha()
             pUrl->c_str());
     addEnv("cache-control", 13, "no-cache", 8);
 
+    m_iUrlType = URL_CAPTCHA_REQ;
     internalRedirect(pUrl->c_str(), pUrl->len(), 1);
     m_pContext = Recaptcha::getStaticCtx();
     const char *pSuffix = findSuffix(pUrl->c_str(), pUrl->c_str() + pUrl->len());

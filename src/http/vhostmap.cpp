@@ -428,6 +428,77 @@ int VHostMap::writeStatusReport(int fd)
 }
 
 
+int VHostMap::writeStatusJsonReport(int fd)
+{
+    char achBuf[1024];
+    int len;
+    int lvs = 0;
+    if (m_pCatchAll)
+    {
+        len = ls_snprintf(achBuf, sizeof(achBuf),
+                          "%s"
+                          "          {\n"
+                          "            \"vhost\": \"%s\",\n"
+                          "            \"domain\": \"%s\"\n"
+                          "          }%s\n",
+                          !lvs ? "        \"mapping\": [\n" : "",
+                          HttpVHostMap::getName(m_pCatchAll),
+                          "*",
+                          (begin() == end() && 
+                           (!m_pWildMatches || m_pWildMatches->begin() == m_pWildMatches->end())) ? "" : ",");
+        lvs = 1;
+        if (::write(fd, achBuf, len) != len)
+            return LS_FAIL;
+    }
+    const_iterator iter;
+    const_iterator iterEnd = end();
+    for (iter = begin(); iter != iterEnd; iter = next(iter))
+    {
+        len = ls_snprintf(achBuf, sizeof(achBuf),
+                          "%s"
+                          "          {\n"
+                          "            \"vhost\": \"%s\",\n"
+                          "            \"domain\": \"%s\"\n"
+                          "          }%s\n",
+                          !lvs ? "        \"mapping\": [\n" : "",
+                          HttpVHostMap::getName(iter.second()),
+                          iter.first(),
+                          (next(iter) == iterEnd && 
+                           (!m_pWildMatches || m_pWildMatches->begin() == m_pWildMatches->end())) ? "" : ",");
+        lvs = 1;
+        if (::write(fd, achBuf, len) != len)
+            return LS_FAIL;
+    }
+    if (m_pWildMatches)
+    {
+        WildMatchList::iterator iter;
+        for (iter = m_pWildMatches->begin(); iter != m_pWildMatches->end(); ++iter)
+        {
+            len = ls_snprintf(achBuf, sizeof(achBuf),
+                              "%s"
+                              "          {\n"
+                              "            \"vhost\": \"%s\",\n"
+                              "            \"domain\": \"%s\"\n"
+                              "          }%s\n",
+                              !lvs ? "        \"mapping\": [\n" : "",
+                              HttpVHostMap::getName((*iter)->getVHost()),
+                              (*iter)->getPattern(),
+                              (iter + 1 != m_pWildMatches->end()) ? "" : ",");
+            lvs = 1;
+            if (::write(fd, achBuf, len) != len)
+                return LS_FAIL;
+        }
+    }
+    if (lvs)
+    {
+        len = ls_snprintf(achBuf, sizeof(achBuf), "        ]\n");
+        if (::write(fd, achBuf, len) != len)
+            return LS_FAIL;
+    }
+    return 0;
+}
+
+
 HttpVHost *VHostMap::exactMatchVHost(const char *pHost) const
 {
     if (strcmp(pHost, "*") == 0)
@@ -662,6 +733,18 @@ int SubIpMap::writeStatusReport(int fd)
     for (; iter != m_map.end(); iter = m_map.next(iter))
     {
         if (iter.second()->writeStatusReport(fd) == -1)
+            return LS_FAIL;
+    }
+    return 0;
+}
+
+
+int SubIpMap::writeStatusJsonReport(int fd)
+{
+    IpMap::iterator iter = m_map.begin();
+    for (; iter != m_map.end(); iter = m_map.next(iter))
+    {
+        if (iter.second()->writeStatusJsonReport(fd) == -1)
             return LS_FAIL;
     }
     return 0;

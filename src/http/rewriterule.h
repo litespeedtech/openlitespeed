@@ -23,7 +23,7 @@
 #include <util/pcregex.h>
 #include <util/autostr.h>
 #include <util/tlinklist.h>
-
+#include <inttypes.h>
 
 BEGIN_LOG4CXX_NS
 class Logger;
@@ -62,6 +62,13 @@ END_LOG4CXX_NS
 #define RULE_FLAG_QSDISCARD     (1<<12)
 #define RULE_FLAG_END           (1<<13)
 #define RULE_FLAG_BR_ESCAPE     (1<<14)
+
+#define RULE_FLAG_BNP           (1<<19)
+#define RULE_FLAG_BCTLS         (1<<20)
+#define RULE_FLAG_BNE           (1<<21)
+
+#define RULE_FLAGS_ESCAPE  (RULE_FLAG_BR_ESCAPE | RULE_FLAG_BNP \
+                | RULE_FLAG_BCTLS | RULE_FLAG_BNE)
 
 #define RULE_ACTION_NONE        0
 #define RULE_ACTION_REDIRECT    1
@@ -186,9 +193,10 @@ class RewriteRule : public LinkedObj
     RewriteSubstFormat          m_targetFormat;
     AutoStr                     m_sMimeType;
     short                       m_action;
-    short                       m_flag;
+    int                         m_flag;
     int                         m_statusCode;
     int                         m_skipRules;
+    uint64_t                    m_noEscape;
     TLinkList<RewriteSubstFormat> m_env;
     AutoStr                     m_pattern;
 
@@ -214,6 +222,8 @@ public:
     const RewriteCond *getFirstCond() const {   return m_conds.begin();     }
     const RewriteSubstFormat *getTargetFmt() const {   return &m_targetFormat;     }
     const char    *getMimeType() const  {   return m_sMimeType.c_str();     }
+    const char    *getNoEscape() const
+    {   return (const char *)&m_noEscape;    }
     short          getAction() const    {   return m_action;                }
     short          getFlag() const      {   return m_flag;                  }
     int     getStatusCode() const       {   return m_statusCode;            }

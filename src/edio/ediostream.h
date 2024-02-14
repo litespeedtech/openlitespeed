@@ -25,9 +25,9 @@
 #include <edio/eventreactor.h>
 #include <edio/flowcontrol.h>
 #include <edio/inputstream.h>
+#include <edio/multiplexer.h>
 #include <edio/outputstream.h>
 #include <util/iovec.h>
-
 
 class EdIoStream : public InputStream, public OutputStream
                  , virtual public IoFlowControl
@@ -55,9 +55,9 @@ class EdStream : public EventReactor, virtual public EdIoStream
 
     EdStream(const EdStream &rhs);
     void operator=(const EdStream &rhs);
-    virtual int handleEvents(short event);
     int regist(Multiplexer *pMplx, int event = 0);
 protected:
+    virtual int handleEvents(short event);
     void setMultiplexer(Multiplexer *pMplx)
     {   m_pMplex = pMplx; }
 public:
@@ -69,6 +69,13 @@ public:
         setfd(fd);
         m_pMplex = pMplx;
         regist(pMplx, events);
+    }
+
+    void takeover(EdStream *old)
+    {
+        setfd(old->getfd());
+        m_pMplex = old->getCurMplex();
+        m_pMplex->replace(old, this);
     }
 
     virtual void continueRead();

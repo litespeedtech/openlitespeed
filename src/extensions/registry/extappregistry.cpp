@@ -25,6 +25,7 @@
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <socket/gsockaddr.h>
+#include <util/autobuf.h>
 #include <util/hashstringmap.h>
 #include <util/rlimits.h>
 #include <util/staticobj.h>
@@ -214,25 +215,49 @@ void ExtAppSubRegistry::clear()
 }
 
 
+static const char *s_pTypeName[] =
+{
+    "CGI",
+    "FastCGI",
+    "Proxy",
+    "Servlet",
+    "LSAPI",
+    "Logger",
+    "LB",
+};
+
 int ExtAppSubRegistry::generateRTReport(int fd, int type)
 {
-    static const char *s_pTypeName[] =
-    {
-        "CGI",
-        "FastCGI",
-        "Proxy",
-        "Servlet",
-        "LSAPI",
-        "Logger",
-        "LB",
-    };
-
     ExtAppMap::iterator iter;
     for (iter = m_pRegistry->begin();
          iter != m_pRegistry->end();
          iter = m_pRegistry->next(iter))
         iter.second()->generateRTReport(fd, s_pTypeName[ type ]);
     return 0;
+}
+
+
+int ExtAppSubRegistry::generateRTJsonReport(AutoBuf *buf, int type, int *did)
+{
+    ExtAppMap::iterator iter;
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
+        iter.second()->generateRTJsonReport(buf, s_pTypeName[ type ], did);
+    return 0;
+}
+
+
+int ExtAppSubRegistry::resetStats(int type)
+{
+    int rc = 0;
+    ExtAppMap::iterator iter;
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
+        if (iter.second()->resetStats(s_pTypeName[ type ]))
+            rc = -1;
+    return rc;
 }
 
 
@@ -379,6 +404,32 @@ int ExtAppRegistry::generateRTReport(int fd)
     }
     return 0;
 }
+
+int ExtAppRegistry::generateRTJsonReport(AutoBuf *buf)
+{
+    int did = 0;
+    for (int i = 0; i < EA_NUM_APP; ++i)
+    {
+        if (i != EA_LOGGER)
+            s_registry[i]()->generateRTJsonReport(buf, i, &did);
+    }
+    if (did && buf->append("\n  ]", 4) == -1)
+        return -1;
+
+    return 0;
+}
+
+int ExtAppRegistry::resetStats()
+{
+    int rc = 0;
+    for (int i = 0; i < EA_NUM_APP; ++i)
+    {
+        if (i != EA_LOGGER && s_registry[i]()->resetStats(i))
+            rc = -1;
+    }
+    return rc;
+}
+
 
 /**
  * This is only for php which set different user/group in vhost and server level

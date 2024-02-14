@@ -129,10 +129,14 @@
 
 #define REF_RESP_HEADER_BEGIN       200
 
+#define URL_NO_REWRITE          (0)
 #define URL_INTERNAL_REDIRECT   (-1)
 #define URL_HANDLE_PROXY        (-2)
 #define URL_MODIFIED            (-3)
-#define URL_REWRITE_ABORT       (-4)
+#define URL_HANDLER_WEBSOCKET   (-4)
+#define URL_REWRITE_ABORT       (-5)
+#define URL_RECAP_SUSPEND       (-6)
+#define URL_RECAP_REWRITE       (-7)
 
 
 

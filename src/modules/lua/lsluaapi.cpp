@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2024  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -34,15 +34,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-
 // #define LSLUAAPI_DEBUGPRINT
 
 void LsLuaCreateShared(lua_State *);
 void LsLuaCreateSharedmeta(lua_State *);
-
-int LsLuaApi::s_iJitMode = 0;
-void *LsLuaApi::s_pLib = NULL;
-
 
 static LOG4CXX_NS::Logger  *s_pLogger           = NULL;
 static char                 s_logPattern[40]    = "%d [%p] [LUA] %m";
@@ -489,21 +484,18 @@ void LsLuaApi::dumpTable(lua_State *L)
 }
 
 #define LSLUAAPI_DL( name ) \
-    LsLuaApi::name = (pf_##name)dlsym( pLib, "lua_"#name )
+    LsLuaApi::name = (pf_##name)lua_##name
 
 
 #define LSLUAAPI_DL2( name ) \
-    LsLuaApi::name = (pf_##name)dlsym( pLib, "luaL_"#name )
+    LsLuaApi::name = (pf_##name)luaL_##name
 
 const char *LsLuaApi::loadConditional(void *pLib)
 {
     // Multi Condition.
-    if (((LSLUAAPI_DL(objlen)) == NULL)
-        && ((LSLUAAPI_DL(rawlen)) == NULL))
-        return "objlen and rawlen";
-
+    LSLUAAPI_DL(objlen);
+    LsLuaApi::rawlen = LsLuaApi::objlen; // They renamed it!
     // Version Patches.
-    if (LsLuaApi::jitMode())
     {
         if ((LSLUAAPI_DL(getfenv)) == NULL)
             return "getfenv";
@@ -529,54 +521,12 @@ const char *LsLuaApi::loadConditional(void *pLib)
         LsLuaApi::getglobal = LsLuaApi::lsGetGlobal;
         LsLuaApi::setglobal = LsLuaApi::lsSetGlobal;
     }
-    else
-    {
-        if ((LSLUAAPI_DL(getglobal)) == NULL)
-            return "getglobal";
-        if ((LSLUAAPI_DL(pcallk)) == NULL)
-            return "pcallk";
-        if ((LSLUAAPI_DL(resumeP)) == NULL)
-            return "resume";
-        if ((LSLUAAPI_DL(setglobal)) == NULL)
-            return "setglobal";
-        if ((LSLUAAPI_DL(tointegerx)) == NULL)
-            return "tointegerx";
-        if ((LSLUAAPI_DL(tonumberx)) == NULL)
-            return "tonumberx";
-        if ((LSLUAAPI_DL(yieldk)) == NULL)
-            return "yieldk";
-
-        if ((LSLUAAPI_DL2(loadfilex)) == NULL)
-            return "loadfilex";
-        if ((LSLUAAPI_DL2(prepbuffsize)) == NULL)
-            return "prepbuffsize";
-
-        // Macro Defined.
-        LsLuaApi::loadfile = LsLuaApi::lsLoadfilePatch;
-        LsLuaApi::pcall = LsLuaApi::lsPcallPatch;
-        LsLuaApi::prepbuffer = LsLuaApi::lsPrepBuffer;
-        LsLuaApi::resume = LsLuaApi::lsResumePatch;
-        LsLuaApi::tointeger = LsLuaApi::lsToIntegerPatch;
-        LsLuaApi::tonumber = LsLuaApi::lsToNumberPatch;
-        LsLuaApi::yield = LsLuaApi::lsYieldPatch;
-    }
-
     return NULL;
 }
 
 
-const char *LsLuaApi::init(const char *pModuleName)
+const char *LsLuaApi::init()
 {
-    void *pLib = dlopen(pModuleName, RTLD_LOCAL | RTLD_LAZY);
-    if (pLib == NULL)
-        return dlerror();
-    LsLuaApi::s_pLib = pLib;
-
-    if (dlsym(pLib, "luaJIT_setmode") != NULL)
-        LsLuaApi::setJitMode(1);
-    else
-        LsLuaApi::setJitMode(0);
-
     // Lua Library.
     if ((LSLUAAPI_DL(close)) == NULL)
         return "close";
@@ -703,8 +653,7 @@ const char *LsLuaApi::init(const char *pModuleName)
         return "sethook";
     if ((LSLUAAPI_DL(setupvalue)) == NULL)
         return "setupvalue";
-
-    return LsLuaApi::loadConditional(pLib);
+    return LsLuaApi::loadConditional(NULL);
 }
 
 

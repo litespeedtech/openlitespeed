@@ -26,6 +26,7 @@
 #include <lsr/ls_strtool.h>
 #include <socket/coresocket.h>
 #include <socket/gsockaddr.h>
+#include <util/autobuf.h>
 #include <util/datetime.h>
 
 #include <fcntl.h>
@@ -481,6 +482,55 @@ int ExtWorker::generateRTReport(int fd, const char *pTypeName)
                          m_reqStats.getRPS(), m_reqStats.getTotal());
         write(fd, achBuf, p - achBuf);
     }
+    return 0;
+}
+
+
+int ExtWorker::generateRTJsonReport(AutoBuf *buf, const char *pTypeName, int *did)
+{
+    int inUseConn = m_connPool.getTotalConns() - m_connPool.getFreeConns(), len;
+    const HttpVHost *pVHost = m_pConfig->getVHost();
+    if ((!pVHost || !pVHost->getName()
+         || strcmp(pVHost->getName(), DEFAULT_ADMIN_SERVER_NAME) != 0)
+        && (m_connPool.getTotalConns() > 0) && (m_iState != ST_NOTSTARTED))
+    {
+        if (buf->guarantee(1024))
+            return -1;
+        len = ls_snprintf(buf->end(), 1024,
+                          ",\n"
+                          "%s"
+                          "    {\n"
+                          "      \"type\": \"%s\",\n"
+                          "      \"vhost\": \"%s\",\n"
+                          "      \"app_name\": \"%s\",\n"
+                          "      \"max_conn\": %d,\n"
+                          "      \"pool_max_conn\": %d,\n"
+                          "      \"pool_size\": %d,\n"
+                          "      \"in_use_conn\": %d,\n"
+                          "      \"num_idle_conn\": %d,\n"
+                          "      \"wait_queue_depth\": %d,\n"
+                          "      \"req_per_sec\": %d,\n"
+                          "      \"total_reqs\": %d\n"
+                          "    }",
+                          !*did ? "  \"extapps\":\n"
+                                  "  [\n" : "",
+                          pTypeName,
+                          (pVHost && pVHost->getName()) ? pVHost->getName() : "",
+                          m_pConfig->getName(),
+                          m_pConfig->getMaxConns(), m_connPool.getMaxConns(),
+                          m_connPool.getTotalConns(), inUseConn,
+                          m_connPool.getFreeConns(), m_reqQueue.size(),
+                          m_reqStats.getRPS(), m_reqStats.getTotal());
+        buf->used(len);
+        *did = 1;
+    }
+    return 0;
+}
+
+
+int ExtWorker::resetStats(const char *pTypeName)
+{
+    int inUseConn = m_connPool.getTotalConns() - m_connPool.getFreeConns();
     m_reqStats.reset();
     cleanStopPids();
 

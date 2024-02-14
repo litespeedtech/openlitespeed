@@ -15,16 +15,14 @@
 *    You should have received a copy of the GNU General Public License       *
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
-#include "l4handler.h"
 
-#include <extensions/l4conn.h>
-#include <http/httpreq.h>
+#include "l4handler.h"
 #include <log4cxx/logger.h>
-#include <util/loopbuf.h>
+#include <socket/gsockaddr.h>
 
 L4Handler::L4Handler()
 {
-    m_pL4conn = new L4conn(this);
+    m_pL4conn = new Ssl4conn(this);
     m_buf = new LoopBuf(MAX_OUTGOING_BUF_ZISE);
 }
 
@@ -40,16 +38,6 @@ L4Handler::~L4Handler()
 
 void L4Handler::recycle()
 {
-    if (m_buf)
-    {
-        delete m_buf;
-        m_buf = NULL;
-    }
-    if (m_pL4conn)
-    {
-        delete m_pL4conn;
-        m_pL4conn = NULL;
-    }
     delete this;
 }
 
@@ -117,7 +105,8 @@ int L4Handler::onWriteEx()
     while ((length = getBuf()->blockSize()) > 0)
     {
         int n = getStream()->write(getBuf()->begin(), length);
-        LS_DBG_L(getLogSession(), "L4Handler: write [%d of %d]", n, length);
+        LS_DBG_L(getLogSession(), "L4Handler: write [%d of %d]", n,
+                 length);
 
         if (n > 0)
             getBuf()->pop_front(n);
@@ -126,10 +115,9 @@ int L4Handler::onWriteEx()
         else // if (n < 0)
         {
             closeBothConnection();
-            return LS_FAIL;
+            return -1;
         }
     }
-
     getStream()->flush();
 
     if (getBuf()->available() != 0)
@@ -148,12 +136,25 @@ int L4Handler::onWriteEx()
 }
 
 
-int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
-                    const char *pIP, int iIpLen)
+void L4Handler::buildWsReq(HttpReq &req, const char *pIP, int iIpLen,
+                           const char *url, int url_len)
 {
     int hasSlashR = 1; //"\r\n"" or "\n"
     LoopBuf *pBuff = m_pL4conn->getBuf();
-    pBuff->append(req.getOrgReqLine(), req.getHttpHeaderLen());
+    if (url == NULL)
+    {
+        pBuff->append(req.getOrgReqLine(), req.getHttpHeaderLen());
+    }
+    else
+    {
+        pBuff->append(HttpMethod::get(req.getMethod()),
+                      HttpMethod::getLen(req.getMethod()));
+        pBuff->append(' ');
+        pBuff->append(url, url_len);
+        pBuff->append(" HTTP/1.1", 9);
+        pBuff->append(req.getOrgReqLine() + req.getOrgReqLineLen(),
+                      req.getHttpHeaderLen() - req.getOrgReqLineLen());
+    }
     char *pBuffEnd = pBuff->end();
     assert(pBuffEnd[-1] == '\n');
     if (pBuffEnd[-2] == 'n')
@@ -162,22 +163,42 @@ int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
         assert(pBuffEnd[-2] == '\r');
 
     pBuff->used(-1 * hasSlashR - 1);
-    pBuff->append("X-Forwarded-For", 15);
-    pBuff->append(": ", 2);
+    if (req.isHttps())
+        pBuff->append("X-Forwarded-Proto: https\r\n", 26);
+    pBuff->append("X-Forwarded-For: ", 17);
     pBuff->append(pIP, iIpLen);
     if (hasSlashR)
         pBuff->append("\r\n\r\n", 4);
     else
         pBuff->append("\n\n", 2);
 
-    continueRead();
-
     LS_DBG_L(getLogSession(),
-             "L4Handler: init web socket, reqheader [%.*s], len [%d]",
-             req.getHttpHeaderLen(), req.getOrgReqLine(),
-             req.getHttpHeaderLen());
+             "L4Handler: init WebSocket, reqheader [%.*s]",
+             req.getHttpHeaderLen(), req.getOrgReqLine() );
+}
 
-    int ret = m_pL4conn->init(pGSockAddr);
+
+int L4Handler::init(HttpReq &req, const char *pAddrStr,
+                    const char *pIP, int iIpLen, bool ssl,
+                    const char *url, int url_len)
+{
+    buildWsReq(req, pIP, iIpLen, url, url_len);
+
+    int ret = m_pL4conn->init(pAddrStr, ssl);
+    if (ret != 0)
+        return ret;
+
+    return 0;
+}
+
+
+int L4Handler::init(HttpReq &req, const GSockAddr *pGSockAddr,
+                    const char *pIP, int iIpLen, bool ssl,
+                    const char *url, int url_len)
+{
+    buildWsReq(req, pIP, iIpLen, url, url_len);
+
+    int ret = m_pL4conn->init(pGSockAddr, ssl);
     if (ret != 0)
         return ret;
 
@@ -193,7 +214,23 @@ int L4Handler::doWrite()
 
 void L4Handler::closeBothConnection()
 {
-    m_pL4conn->close();
-    getStream()->close();
+    if (m_buf)
+    {
+        delete m_buf;
+        m_buf = NULL;
+        if (m_pL4conn)
+            m_pL4conn->close();
+        if (getStream())
+            getStream()->close();
+    }
+}
+
+
+int L4Handler::onCloseEx()
+{
+    if (m_pL4conn)
+        m_pL4conn->close();
+    //getStream()->handlerReadyToRelease();
+    return 0;
 }
 

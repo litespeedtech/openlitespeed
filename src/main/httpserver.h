@@ -140,6 +140,7 @@ public:
     const StringList *getIndexFileList() const;
     int  test_main(const char *pArgv0);
     void generateStatusReport();
+    void generateJsonStatusReport();
     int  authAdminReq(char *pAuth);
     HttpContext &getServerContext();
     static void cleanPid();
@@ -149,6 +150,7 @@ public:
 //    void reconfigVHost( char *pVHostName, XmlNode* pRoot );
     void setServerRoot(const char *pRoot);
     int initServer(XmlNode *pRoot, int &iReleaseXmlTree, int reconfig = 0);
+    int getThreading();
     void addQuicEngine(QuicEngine *pEngine);
     QuicEngine *getQuicEngine() const;
 };

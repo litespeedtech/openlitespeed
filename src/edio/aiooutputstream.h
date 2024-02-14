@@ -88,6 +88,7 @@ public:
         return aio_write(&m_aiocb);
     }
     static void setSigNo(int signo)     {   s_rtsigNo = signo;  }
+    static int getSigNo()               {   return s_rtsigNo;   }
 
     LS_NO_COPY_ASSIGN(AioReq);
 };
@@ -156,7 +157,6 @@ private:
 
     LS_NO_COPY_ASSIGN(AioOutputStream);
 };
-
 
 
 #endif //AIOOUTPUTSTREAM_H

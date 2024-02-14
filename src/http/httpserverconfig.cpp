@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include "httpserverconfig.h"
-
 #include <http/connlimitctrl.h>
 #include <http/denieddir.h>
 #include <http/httpdefs.h>
@@ -37,6 +36,8 @@ HttpServerConfig::HttpServerConfig()
     , m_iSmartKeepAlive(0)
     , m_iAutoLoadHtaccess(0)
     , m_iUseSendfile(0)
+    , m_iUseAio(0)
+    , m_iAioBlockSize(0)
     , m_iFollowSymLink(1)
     , m_iGzipCompress(0)
     , m_iDynGzipCompress(0)
@@ -66,8 +67,11 @@ HttpServerConfig::HttpServerConfig()
     , m_iAllowExtAppSetuid(1)
     , m_pAdminSock(NULL)
     , m_pGlobalVHost(NULL)
+    , m_pProxyProtocolList(NULL)
     , m_bwrap(BWRAP_DISABLED)
     , m_pBwrapCmdLine(NULL)
+    , m_ns(NS_DISABLED)
+    , m_pNSConf(NULL)
 {
     m_pDeniedDir = new DeniedDir();
 }
@@ -133,7 +137,3 @@ int HttpServerConfig::getSpdyKeepaliveTimeout()
     }
     return timeout;
 }
-
-
-
-

@@ -141,13 +141,14 @@ class CData
 
     public function GetChildrenValues($location, $ref = '')
     {
-        $vals = array();
+        $vals = [];
         $layer = $this->_root->GetChildrenByLoc($location, $ref);
         if ($layer != null) {
-            if (is_array($layer))
+            if (is_array($layer)) {
                 $vals = array_map('strval', array_keys($layer));
-            else
+			} else {
                 $vals[] = $layer->Get(CNode::FLD_VAL);
+			}
         }
         return $vals;
     }
@@ -155,10 +156,10 @@ class CData
     public function GetChildVal($location, $ref = '')
     {
         $layer = $this->_root->GetChildrenByLoc($location, $ref);
-        if ($layer != null && is_a($layer, 'CNode'))
+        if ($layer != null && is_a($layer, 'CNode')) {
             return $layer->Get(CNode::FLD_VAL);
-        else
-            return null;
+		}
+        return null;
     }
 
     public function GetChildNodeById($key, $id)
@@ -176,16 +177,18 @@ class CData
     public function SavePost($extractData, $disp)
     {
         $tid = $disp->GetLast(DInfo::FLD_TID);
-        if ($this->_type == DInfo::CT_EX)
+        if ($this->_type == DInfo::CT_EX) {
             $ref = $disp->GetLast(DInfo::FLD_REF);
-        else
+		} else {
             $ref = $disp->Get(DInfo::FLD_REF);
+		}
         $tblmap = DPageDef::GetPage($disp)->GetTblMap();
         $location = $tblmap->FindTblLoc($tid);
         $this->_root->UpdateChildren($location, $ref, $extractData);
 
-        if (($newref = $extractData->Get(CNode::FLD_VAL)) != null)
+        if (($newref = $extractData->Get(CNode::FLD_VAL)) != null) {
             $this->check_integrity($tid, $newref, $disp);
+		}
 
         $this->SaveFile();
     }
@@ -193,11 +196,13 @@ class CData
     public function ChangeContextSeq($seq)
     {
         $loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
-        if (($ctxs = $this->_root->GetChildren($loc)) == null)
+        if (($ctxs = $this->_root->GetChildren($loc)) == null) {
             return false;
+		}
 
-        if (!is_array($ctxs) || $seq == -1 || $seq == count($ctxs))
+        if (!is_array($ctxs) || $seq == -1 || $seq == count($ctxs)) {
             return false;
+		}
 
         if ($seq > 0) {
             $index = $seq - 1;
@@ -228,15 +233,16 @@ class CData
     public function DeleteEntry($disp)
     {
         $tid = $disp->GetLast(DInfo::FLD_TID);
-        if ($this->_type == DInfo::CT_EX)
+        if ($this->_type == DInfo::CT_EX) {
             $ref = $disp->GetLast(DInfo::FLD_REF);
-        else
+		} else {
             $ref = $disp->Get(DInfo::FLD_REF);
+		}
         $tblmap = DPageDef::GetPage($disp)->GetTblMap();
         $location = $tblmap->FindTblLoc($tid);
 
         $layer = $this->_root->GetChildrenByLoc($location, $ref);
-        if ($layer != null) {
+        if ($layer) {
             $layer->RemoveFromParent();
             $this->check_integrity($tid, null, $disp);
             $this->SaveFile();
@@ -272,13 +278,15 @@ class CData
         $root = $disp->Get(DInfo::FLD_ConfData)->GetRootNode();
 
         if (($tid == 'V_BASE' || $tid == 'V_TOPD') && ($dlayer = $root->GetChildren('listener')) != null) {
-            if (!is_array($dlayer))
+            if (!is_array($dlayer)) {
                 $dlayer = array($dlayer);
+			}
 
             foreach ($dlayer as $listener) {
                 if (($maplayer = $listener->GetChildren('vhmap')) != null) {
-                    if (!is_array($maplayer))
+                    if (!is_array($maplayer)) {
                         $maplayer = array($maplayer);
+					}
                     foreach ($maplayer as $map) {
                         if ($map->Get(CNode::FLD_VAL) == $ref) {
                             if ($newref == null) {
@@ -299,8 +307,9 @@ class CData
             return;
 
         if ($tid == 'L_GENERAL' && ($dlayer = $root->GetChildren('vhTemplate')) != null) {
-            if (!is_array($dlayer))
+            if (!is_array($dlayer)) {
                 $dlayer = array($dlayer);
+			}
 
             foreach ($dlayer as $templ) {
                 if (($listeners = $templ->GetChildVal('listeners')) != null) {
@@ -323,26 +332,31 @@ class CData
             $disp_view = $disp->Get(DInfo::FLD_View);
             $loc = ($disp_view == DInfo::CT_TP) ? 'virtualHostConfig:scripthandler:addsuffix' : 'scripthandler:addsuffix';
             if (($dlayer = $root->GetChildren($loc)) != null) {
-                if (!is_array($dlayer))
+                if (!is_array($dlayer)) {
                     $dlayer = array($dlayer);
+				}
 
                 foreach ($dlayer as $sh) {
-                    if ($sh->GetChildVal('handler') == $ref)
+                    if ($sh->GetChildVal('handler') == $ref) {
                         $sh->SetChildVal('handler', $newref);
+					}
                 }
             }
 
             if ($disp_view != DInfo::CT_SERV) {
                 $loc = ($disp_view == DInfo::CT_TP) ? 'virtualHostConfig:context' : 'context';
                 if (($dlayer = $root->GetChildren($loc)) != null) {
-                    if (!is_array($dlayer))
+                    if (!is_array($dlayer)) {
                         $dlayer = array($dlayer);
+					}
 
                     foreach ($dlayer as $ctx) {
-                        if ($ctx->GetChildVal('authorizer') == $ref)
+                        if ($ctx->GetChildVal('authorizer') == $ref) {
                             $ctx->SetChildVal('authorizer', $newref);
-                        if ($ctx->GetChildVal('handler') == $ref)
+						}
+                        if ($ctx->GetChildVal('handler') == $ref) {
                             $ctx->SetChildVal('handler', $newref);
+						}
                     }
                 }
             }
@@ -350,12 +364,14 @@ class CData
         elseif (strpos($tid, '_REALM_')) { //'T_REALM_FILE','V_REALM_FILE','VT_REALM_LDAP'
             $loc = ($disp->Get(DInfo::FLD_View) == DInfo::CT_TP) ? 'virtualHostConfig:context' : 'context';
             if (($dlayer = $root->GetChildren($loc)) != null) {
-                if (!is_array($dlayer))
+                if (!is_array($dlayer)) {
                     $dlayer = array($dlayer);
+				}
 
                 foreach ($dlayer as $ctx) {
-                    if ($ctx->GetChildVal('realm') == $ref)
+                    if ($ctx->GetChildVal('realm') == $ref) {
                         $ctx->SetChildVal('realm', $newref);
+					}
                 }
             }
         }
@@ -390,12 +406,14 @@ class CData
     private function before_write_conf($root)
     {
         if ($this->_type == DInfo::CT_SERV && ($listeners = $root->GetChildren('listener')) != null) {
-            if (!is_array($listeners))
+            if (!is_array($listeners)) {
                 $listeners = array($listeners);
+			}
             foreach ($listeners as $l) {
                 if (($maps = $l->GetChildren('vhmap')) != null) {
-                    if (!is_array($maps))
+                    if (!is_array($maps)) {
                         $maps = array($maps);
+					}
                     foreach ($maps as $map) {
                         $vn = $map->Get(CNode::FLD_VAL);
                         $domain = $map->GetChildVal('domain');
@@ -407,8 +425,9 @@ class CData
         }
 
         if ($this->_type == DInfo::CT_SERV && ($mods = $root->GetChildren('module')) != null) {
-            if (!is_array($mods))
+            if (!is_array($mods)) {
                 $mods = [$mods];
+			}
             foreach ($mods as $mod) {
                 if ($mod->GetChildVal('internal') != 1) {
                     $mod->RemoveChild('internal'); // if not internal, omit this line
@@ -419,8 +438,9 @@ class CData
         $loc = ($this->_type == DInfo::CT_TP) ? 'virtualHostConfig:scripthandler' : 'scripthandler';
         if (($sh = $root->GetChildren($loc)) != null) {
             if (($shc = $sh->GetChildren('addsuffix')) != null) {
-                if (!is_array($shc))
+                if (!is_array($shc)) {
                     $shc = array($shc);
+				}
                 foreach ($shc as $shcv) {
                     $suffix = $shcv->Get(CNode::FLD_VAL);
                     $type = $shcv->GetChildVal('type');
@@ -434,8 +454,9 @@ class CData
         if ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
             $loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
             if (($ctxs = $root->GetChildren($loc)) != null) {
-                if (!is_array($ctxs))
+                if (!is_array($ctxs)) {
                     $ctxs = array($ctxs);
+				}
                 $order = 1;
                 foreach ($ctxs as $ctx) {
                     if ($ctx->GetChildVal('type') === 'null') {
@@ -458,12 +479,14 @@ class CData
     {
         if ($this->_type == DInfo::CT_SERV) {
             if (($listeners = $root->GetChildren('listener')) != null) {
-                if (!is_array($listeners))
+                if (!is_array($listeners)) {
                     $listeners = array($listeners);
+				}
                 foreach ($listeners as $l) {
                     if (($maps = $l->GetChildren('map')) != null) {
-                        if (!is_array($maps))
+                        if (!is_array($maps)) {
                             $maps = array($maps);
+						}
                         foreach ($maps as $map) {
                             $mapval = $map->Get(CNode::FLD_VAL);
                             if (($pos = strpos($mapval, ' ')) > 0) {
@@ -481,8 +504,9 @@ class CData
             }
 
             if (($vhosts = $root->GetChildren('virtualhost')) != null) {
-                if (!is_array($vhosts))
+                if (!is_array($vhosts)) {
                     $vhosts = array($vhosts);
+				}
                 foreach ($vhosts as $vh) {
                     $vhconf = $vh->GetChildVal('configFile');
                     if (($pos = strpos($vhconf, '.conf')) > 0) {
@@ -494,8 +518,9 @@ class CData
 
             // migrate all tp.xml
             if (($tps = $root->GetChildren('vhTemplate')) != null) {
-                if (!is_array($tps))
+                if (!is_array($tps)) {
                     $tps = array($tps);
+				}
                 foreach ($tps as $tp) {
                     $tpconf = $tp->GetChildVal('templateFile');
                     if (($pos = strpos($tpconf, '.conf')) > 0) {
@@ -509,10 +534,12 @@ class CData
         $loc = ($this->_type == DInfo::CT_TP) ? 'virtualHostConfig:scripthandler' : 'scripthandler';
         if (($sh = $root->GetChildren($loc)) != null) {
             if (($shc = $sh->GetChildren('add')) != null) {
-                if (!is_array($shc))
+                if (!is_array($shc)) {
                     $shc = array($shc);
+				}
                 foreach ($shc as $shcv) {
                     $typeval = $shcv->Get(CNode::FLD_VAL);
+					$m = [];
                     if (preg_match("/^(\w+):(\S+)\s+(.+)$/", $typeval, $m)) {
                         $anode = new CNode('addsuffix', $m[3]);
                         $anode->AddChild(new CNode('suffix', $m[3]));
@@ -528,8 +555,9 @@ class CData
         if ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
             $loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
             if (($ctxs = $root->GetChildren($loc)) != null) {
-                if (!is_array($ctxs))
+                if (!is_array($ctxs)) {
                     $ctxs = array($ctxs);
+				}
                 $order = 1;
                 foreach ($ctxs as $ctx) {
                     if ($ctx->GetChildVal('type') === 'null') {
@@ -581,20 +609,23 @@ class CData
 
         if ($this->_type == DInfo::CT_SERV || $this->_type == DInfo::CT_ADMIN) {
             if (($listeners = $this->_root->GetChildren('listener')) != null) {
-                if (!is_array($listeners))
+                if (!is_array($listeners)) {
                     $listeners = array($listeners);
+				}
                 foreach ($listeners as $l) {
                     $addr = $l->GetChildVal('address');
-                    if ($pos = strrpos($addr, ':')) {
+                    if ($addr && ($pos = strrpos($addr, ':'))) {
                         $ip = substr($addr, 0, $pos);
-                        if ($ip == '*')
+                        if ($ip == '*') {
                             $ip = 'ANY';
+						}
                         $l->AddChild(new CNode('ip', $ip));
                         $l->AddChild(new CNode('port', substr($addr, $pos + 1)));
                     }
                     if (($maps = $l->GetChildren('map')) != null) {
-                        if (!is_array($maps))
+                        if (!is_array($maps)) {
                             $maps = array($maps);
+						}
                         foreach ($maps as $map) {
                             $mapval = $map->Get(CNode::FLD_VAL);
                             if (($pos = strpos($mapval, ' ')) > 0) {
@@ -615,8 +646,9 @@ class CData
         if ($this->_type == DInfo::CT_VH || $this->_type == DInfo::CT_TP) {
             $loc = ($this->_type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
             if (($ctxs = $this->_root->GetChildren($loc)) != null) {
-                if (!is_array($ctxs))
+                if (!is_array($ctxs)) {
                     $ctxs = array($ctxs);
+				}
                 $order = 1;
                 foreach ($ctxs as $ctx) {
                     if ($ctx->GetChildren('type') == null) {
@@ -630,10 +662,12 @@ class CData
         $loc = ($this->_type == DInfo::CT_TP) ? 'virtualHostConfig:scripthandler' : 'scripthandler';
         if (($sh = $this->_root->GetChildren($loc)) != null) {
             if (($shc = $sh->GetChildren('add')) != null) {
-                if (!is_array($shc))
+                if (!is_array($shc)) {
                     $shc = array($shc);
+				}
                 foreach ($shc as $shcv) {
                     $typeval = $shcv->Get(CNode::FLD_VAL);
+					$m = [];
                     if (preg_match("/^(\w+):(\S+)\s+(.+)$/", $typeval, $m)) {
                         $anode = new CNode('addsuffix', $m[3]);
                         $anode->AddChild(new CNode('suffix', $m[3]));
@@ -653,25 +687,25 @@ class CData
             if (!file_exists($this->_path) && !PathTool::createFile($this->_path, $err)) {
                 $this->_conferr = 'Failed to create config file at ' . $this->_path;
                 return false;
-            } else {
-                $this->_root = new CNode(CNode::K_ROOT, $this->_path, CNode::T_ROOT);
-                return true;
             }
+
+			$this->_root = new CNode(CNode::K_ROOT, $this->_path, CNode::T_ROOT);
+            return true;
         }
 
         if (!file_exists($this->_path) || filesize($this->_path) < 10) {
 
             if ($this->_type == DInfo::CT_SERV) {
-                if (file_exists($this->_xmlpath) && !$this->migrate_allxml2conf())
+                if (file_exists($this->_xmlpath) && !$this->migrate_allxml2conf()) {
                     return false;
-                else {
-                    $this->_conferr = 'Failed to find config file at ' . $this->_path;
-                    return false;
-                }
+				}
+                $this->_conferr = 'Failed to find config file at ' . $this->_path;
+                return false;
             } else {
                 if (file_exists($this->_xmlpath)) {
-                    if (!$this->migrate_xml2conf())
+                    if (!$this->migrate_xml2conf()) {
                         return false;
+					}
                 }
                 else {// treat as new vh or tp
                     $this->_root = new CNode(CNode::K_ROOT, $this->_path, CNode::T_ROOT);
@@ -706,7 +740,7 @@ class CData
         }
 
         $this->_root = new CNode(CNode::K_ROOT, $this->_id, CNode::T_ROOT);
-        $items = array();
+        $items = [];
 
         if ($this->_id == 'MIME') {
             foreach ($lines as $line) {
@@ -774,8 +808,9 @@ class CData
             if (is_array($items)) {
                 ksort($items, SORT_STRING);
                 reset($items);
-            } else
+            } else {
                 $items = array($items);
+			}
 
             foreach ($items as $key => $item) {
                 $line = '';
@@ -784,11 +819,11 @@ class CData
                 } elseif ($this->_id == 'ADMUSR' || $this->_id == 'V_UDB') {
                     $line = $item->GetChildVal('name') . ':' . $item->GetChildVal('passwd');
                     $group = $item->GetChildVal('group');
-                    if ($group != null)
+                    if ($group) {
                         $line .= ':' . $group;
+					}
                     $line .= "\n";
-                }
-                else if ($this->_id == 'V_GDB') {
+                } elseif ($this->_id == 'V_GDB') {
                     $line = $item->GetChildVal('name') . ':' . $item->GetChildVal('users') . "\n";
                 }
                 fputs($fd, $line);
@@ -837,11 +872,13 @@ class CData
     private function copy_permission($fromfile, $tofile)
     {
         $owner = fileowner($fromfile);
-        if (fileowner($tofile) != $owner)
+        if (fileowner($tofile) != $owner) {
             chown($tofile, $owner);
+		}
         $perm = fileperms($fromfile);
-        if (fileperms($tofile) != $perm)
+        if (fileperms($tofile) != $perm) {
             chmod($tofile, $perm);
+		}
     }
 
     private function migrate_allxml2conf()
@@ -860,8 +897,9 @@ class CData
 
         // migrate all vh.xml
         if (($vhosts = $root->GetChildren('virtualhost')) != null) {
-            if (!is_array($vhosts))
+            if (!is_array($vhosts)) {
                 $vhosts = array($vhosts);
+			}
             foreach ($vhosts as $vh) {
                 $vhname = $vh->Get(CNode::FLD_VAL);
                 $vhroot = $vh->GetChildVal('vhRoot');
@@ -877,8 +915,9 @@ class CData
 
         // migrate all tp.xml
         if (($tps = $root->GetChildren('vhTemplate')) != null) {
-            if (!is_array($tps))
+            if (!is_array($tps)) {
                 $tps = array($tps);
+			}
             foreach ($tps as $tp) {
                 $tpconf = $tp->GetChildVal('templateFile');
                 $conffile = PathTool::GetAbsFile($tpconf, 'SR');
@@ -915,8 +954,9 @@ class CData
     private function migrate_allconf2xml()
     {
         if (($vhosts = $this->_root->GetChildren('virtualhost')) != null) {
-            if (!is_array($vhosts))
+            if (!is_array($vhosts)) {
                 $vhosts = array($vhosts);
+			}
             $filemap = DPageDef::GetInstance()->GetFileMap(DInfo::CT_VH);
             foreach ($vhosts as $vh) {
                 $vhname = $vh->Get(CNode::FLD_VAL);
@@ -931,8 +971,9 @@ class CData
         }
 
         if (($tps = $this->_root->GetChildren('vhTemplate')) != null) {
-            if (!is_array($tps))
+            if (!is_array($tps)) {
                 $tps = array($tps);
+			}
             $filemap = DPageDef::GetInstance()->GetFileMap(DInfo::CT_TP);
             foreach ($tps as $tp) {
                 $tpconf = $tp->GetChildVal('templateFile');

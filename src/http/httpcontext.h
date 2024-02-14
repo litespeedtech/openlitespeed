@@ -125,6 +125,7 @@ class HttpHeaderOps;
 #define BIT_F_INCLUDES_NOEXEC   (1<<5)
 #define BIT_F_XBIT_HACK_ON      (1<<6)
 #define BIT_F_XBIT_HACK_FULL    (1<<7)
+#define BIT_F_WSS               (1<<8)
 
 #define BIT_F_IPTOLOC_ON        (1<<12)
 
@@ -197,10 +198,12 @@ typedef struct _CTX_INT
     HttpHeaderOps        *m_pHeaderOps;
     SsiConfig            *m_pSsiConfig;
 
-    HttpSessionHooks    *m_pSessionHooks;
-    ModuleConfig        *m_pModuleConfig;
+    HttpSessionHooks     *m_pSessionHooks;
+    ModuleConfig         *m_pModuleConfig;
 
-    GSockAddr             m_GSockAddr;
+    GSockAddr            *m_pAddrWebSock;
+    char                 *m_pWebSockAddrStr;
+
 } CtxInt;
 
 class HttpContext
@@ -488,8 +491,13 @@ public:
     const HttpHeaderOps *getHeaderOps() const
     {   return m_pInternal->m_pHeaderOps;     }
 
-    const GSockAddr *getWebSockAddr() const { return &m_pInternal->m_GSockAddr;   }
-    void setWebSockAddr(const GSockAddr &gsockAddr);
+    const GSockAddr *getWebSockAddr() const
+    {   return m_pInternal->m_pAddrWebSock;   }
+    const char *getWebSockAddrStr() const
+    {   return m_pInternal->m_pWebSockAddrStr;   }
+    void setWebSockAddr(const char *addrStr, const GSockAddr *gsockAddr, bool ssl);
+    bool isWebSockSec() const
+    {   return m_iFeatures & BIT_F_WSS;   }
 
     void setGeoIP(int a)
     {

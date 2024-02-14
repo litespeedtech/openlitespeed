@@ -19,6 +19,7 @@
 
 #include <http/handlerfactory.h>
 #include <http/httphandler.h>
+#include <http/httpserverconfig.h>
 #include <http/handlertype.h>
 #include <http/httplog.h>
 #include <http/httpvhost.h>
@@ -1458,13 +1459,14 @@ int HttpMime::configScriptHandler(const XmlNodeList *pList,
                     XmlNode *pNode = (XmlNode*)app_node_ptr->xml_node;
                     const char *pUser = pNode->getChildValue("extUser");
                     const char *pGroup = pNode->getChildValue("extGroup");
+                    bool needOwnNS = (HttpServerConfig::getInstance().getNS() == HttpServerConfig::NS_OFF) &&
+                                        vhost->enableNS();
                     bool needOwnBwrap = (HttpServerConfig::getInstance().getBwrap() == HttpServerConfig::BWRAP_OFF) &&
                                         vhost->enableBwrap();
-
                     if ((!pUser && !pGroup &&
                         (vhost->getUid() != pApp->getConfig().getUid() ||
-                        vhost->getGid() != pApp->getConfig().getGid()))
-                        || needOwnBwrap)
+                        vhost->getGid() != pApp->getConfig().getGid())) ||
+                        needOwnNS || needOwnBwrap)
                     {
                         /**
                         * Since the uid /gid not match with the setting in

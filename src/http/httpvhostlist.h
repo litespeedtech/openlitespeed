@@ -22,6 +22,7 @@
 
 #include <util/gpointerlist.h>
 
+class AutoBuf;
 class HttpVHost;
 class HttpVHostMapImpl;
 
@@ -54,7 +55,10 @@ public:
     void onTimer30Secs();
     void offsetChroot(const char *pChroot, int len);
     int  writeStatusReport(int fd) const;
+    int  writeStatusJsonReport(int fd) const;
     int  writeRTReport(int fd) const;
+    int  writeRTJsonReport(AutoBuf *buf) const;
+    void resetStats() const;
     void release_objects();
     static void incRef(HttpVHost *pHost);
     static void decRef(HttpVHost *pHost);

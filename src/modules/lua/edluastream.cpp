@@ -42,6 +42,7 @@ EdLuaStream::EdLuaStream()
     , m_iToRead(EDLUA_READ_LINE)
     , m_iToSend(0)
     , m_iTimeoutMs(10000)
+    , m_iReusedTimes(0)
     , m_iRecvTimeout(0)
     , m_iSendTimeout(0)
 {

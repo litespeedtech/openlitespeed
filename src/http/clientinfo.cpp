@@ -76,11 +76,13 @@ ClientInfo::ClientInfo()
     : m_iFlags( 0 )
     , m_iConns( 0 )
     , m_pGeoInfo(NULL)
+    , m_sslContext(NULL)
 #ifdef USE_IP2LOCATION
     , m_pLocInfo(NULL)
 #endif
     , m_tmOverLimit(0)
     , m_sslNewConn(0)
+    , m_bot_reason(BOT_UNKOWN)
     , m_iCaptchaTries( 0 )
     , m_iAllowedBotHits( 0 )
     , m_iHits(0)
@@ -276,7 +278,6 @@ int ClientInfo::markAsBot(const char *pVhostName, enum BOT_REASON code)
     //if ( code != BOT_TOO_MANY_BAD_REQ )
     setAccess(AC_BLOCK);
     setBotReason(code);
-    //m_bot_reason = code;
     return 0;
 }
 

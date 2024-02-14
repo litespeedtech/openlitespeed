@@ -23,12 +23,14 @@
 class SystemInfo
 {
     static int s_iPageSize;
+    static int value(const char *line);
 
 public:
     SystemInfo();
     ~SystemInfo();
     static unsigned long long maxOpenFile(unsigned long long max);
     static int getPageSize();
+    static int getNumCores();
 };
 
 #endif

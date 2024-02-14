@@ -221,6 +221,8 @@ int WorkCrew::addWorker()
     int32_t slot;
 
     slot = getSlot();
+    if (slot == -1)
+        return -1;
 
     CrewWorker *worker = new CrewWorker(this, slot);
     if (!worker)

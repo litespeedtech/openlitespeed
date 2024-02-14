@@ -686,7 +686,7 @@ HttpContext *HttpVHost::bestMatch(const char *pURI, size_t iUriLen)
 {
     HttpContext *pContext = (HttpContext *)m_contexts.bestMatch(pURI, iUriLen);
     LS_DBG_L(ConfigCtx::getCurConfigCtx(), "HttpVHost::bestMatch %.*s (len %d) return %p, loc %s.",
-             (int) iUriLen, pURI, (int) iUriLen, pContext, pContext ? pContext->getLocation() : "nil");
+             (int)iUriLen, pURI, (int)iUriLen, pContext, pContext ? pContext->getLocation() : "nil");
 
     AutoStr2 missURI; //A while URI start with /
     AutoStr2 missLoc;  //A loc should be added to pContext location for the full path
@@ -915,6 +915,39 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
             0, 2, HttpServerConfig::getInstance().getBwrap()) == HttpVHost::BWRAP_ON);
         LS_DBG("VHost bwrap: %d\n", enableBwrap());
     }
+    if (!enableBwrap())
+    {
+        LS_DBG("VHost config: %p, Server level NS: %d\n", this,
+               HttpServerConfig::getInstance().getNS());
+        if (HttpServerConfig::getInstance().getNS()
+            != HttpServerConfig::NS_DISABLED)
+        {
+            enableNS(ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "namespace",
+                0, 2, HttpServerConfig::getInstance().getNS()) == HttpVHost::NS_ON);
+            LS_DBG("VHost NS: %d\n", enableNS());
+            if (enableNS())
+            {
+                const char *pNSConf2 = ConfigCtx::getCurConfigCtx()->getTag(pVhConfNode,
+                                            "nameSpaceConfVhAdd", 0, 0);
+                if (pNSConf2) // Note that this is an optional parameter
+                {
+                    char conf_file[MAX_PATH_LEN];
+                    if (ConfigCtx::getCurConfigCtx()->getAbsoluteFile(conf_file, pNSConf2))
+                        return LS_FAIL;
+
+                    if (access(conf_file, 0))
+                    {
+                        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                                "Unable to find VHost name space file: %s\n",
+                                conf_file);
+                        return LS_FAIL;
+                    }
+                    LS_DBG("VHost NSConf2: %s\n", conf_file);
+                    setNSConf2(conf_file);
+                }
+            }
+        }
+    }
     return 0;
 
 }
@@ -944,9 +977,23 @@ int HttpVHost::configWebsocket(const XmlNode *pWebsocketNode)
             return LS_FAIL;
     }
 
+    bool is_sec = false;
+    if (strncasecmp(pAddress, "wss://", 6) == 0)
+    {
+        is_sec = true;
+        pAddress += 6;
+    }
+
     GSockAddr gsockAddr;
-    gsockAddr.parseAddr(pAddress);
-    pContext->setWebSockAddr(gsockAddr);
+    if (gsockAddr.parseAddr(pAddress) != -1)
+        pContext->setWebSockAddr(NULL, &gsockAddr, is_sec);
+    else
+    {
+        pContext->setWebSockAddr(pAddress, NULL, is_sec);
+        LS_WARN(ConfigCtx::getCurConfigCtx(),
+                "Cannot parse websocket target address: [%s], "
+                "to be resolved at runtime.", pAddress);
+    }
     return 0;
 }
 
@@ -1926,10 +1973,6 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
     if (!pContext)
         return NULL;
 
-    //FIXME any reason for the below code
-    pContext->setWebSockAddr(pWorker->getConfigPointer()->getServerAddr());
-
-
     char appURL[MAX_URI_LEN];
     if (!pStartupFile || *pStartupFile == '\0')
         pStartupFile = "index.wsgi";
@@ -2160,7 +2203,7 @@ HttpContext *HttpVHost::addNodejsContext(const char *pURI,
         return NULL;
 
     //pContext->setHandler(pWorker);
-    pContext->setWebSockAddr(pWorker->getConfigPointer()->getServerAddr());
+    pContext->setWebSockAddr(NULL, &pWorker->getConfigPointer()->getServerAddr(), false);
 
     HttpContext *pDispatch;
     char appURL[MAX_URI_LEN];
@@ -3820,6 +3863,11 @@ int HttpVHost::checkDeniedSubDirs(const char *pUri, const char *pLocation)
 
 void HttpVHost::enableAioLogging()
 {
+    if (!getLogger() || !getLogger()->getAppender())
+    {
+        LS_DBG_L("[VHost:%s] Unable to set async logging", getName());
+        return;
+    }
     if (m_iAioAccessLog < 0)
         m_iAioAccessLog = HttpLogSource::getAioServerAccessLog();
     if (m_iAioErrorLog < 0)

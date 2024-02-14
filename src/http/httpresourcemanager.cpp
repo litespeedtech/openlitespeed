@@ -40,7 +40,9 @@ HttpResourceManager::HttpResourceManager()
     , m_poolGzipBuf(0, 10)
     , m_poolHttpSession(20, 20)
     , m_poolNtwkIoLink(20, 20)
+#ifndef NO_SENDFILE
     , m_pPoolAiosfcb(NULL)
+#endif
 {
 }
 

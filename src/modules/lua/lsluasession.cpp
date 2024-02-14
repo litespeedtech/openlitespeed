@@ -242,7 +242,7 @@ void LsLuaSession::luaLineHookCb(lua_State *L, lua_Debug *ar)
         LsLuaSession *pSession;
         if ((pSession = LsLuaGetSession(L)))
         {
-            if ((!pSession->getLuaCounter()) && LsLuaApi::jitMode())
+            if (!pSession->getLuaCounter())
             {
                 // JIT ignore first hook...
                 pSession->upLuaCounter();
@@ -262,15 +262,6 @@ void LsLuaSession::luaLineHookCb(lua_State *L, lua_Debug *ar)
 
                 LsLuaApi::yield(L, 0);
             }
-#if 0 // FOR JIT it is possible to have thing running... so don't brother to send information out
-            else
-            {
-                LsLuaLog(L, LSI_LOG_NOTICE, 0,
-                         "ERROR: SESSION IGNORE luahook callback [%p] HTTP %p session <%p> %d",
-                         pSession->getLuaState(), pSession->getHttpSession(),
-                         pSession, pSession->getLuaCounter());
-            }
-#endif
         }
     }
 }
@@ -495,10 +486,7 @@ int LsLuaSession::setupLuaEnv(lua_State *L, LsLuaUserParam *pUser)
 
         //  Hack - jit mode will divid the counter by 1000000
         //
-        int linecount = 0;
-        linecount = pUser->getMaxLineCount();
-        if ((LsLuaApi::jitMode()) && (LsLuaEngine::getJitLineMod() > 1))
-            linecount = pUser->getMaxLineCount() / LsLuaEngine::getJitLineMod();
+        int linecount = pUser->getMaxLineCount() / LsLuaEngine::getJitLineMod();
 
         ret = LsLuaApi::sethook(getLuaState(),
                                 LsLuaSession::luaLineHookCb,
@@ -763,20 +751,6 @@ static inline void killThisSession(LsLuaSession *pSession)
 //         }
 
         // Killing/disable the LUA State
-//         if (LsLuaApi::jitMode)
-//         {
-//             if (pSession->getLuaState()
-//                     && (!LsLuaEngine::loadRefX(pSession, pSession->getLuaState() )))
-//             {
-//                 LsLuaClearSession( pSession->getLuaState() );
-//                 LsLuaEngine::unrefX( pSession );
-//             }
-//         }
-//         else
-//         {
-// //            LsLuaApi::close( pSession->getLuaState() );
-//             LsLuaApi::close( pSession->getLuaStateMom() );
-//         }
         if (pSession->getLuaState()
             && (!LsLuaEngine::loadRef(pSession, pSession->getLuaState())))
         {
@@ -1457,11 +1431,11 @@ static int LsLuaReqGetPostArgs(lua_State *L)
 static int LsLuaReqReadBody(lua_State *L)
 {
     LsLuaSession   *pSession = LsLuaGetSession(L);
-    const lsi_session_t *sess = pSession->getHttpSession();
-    int iRet;
-
     if (!pSession)
         return LsLuaApi::userError(L, "req_read_body", "Session not found.");
+
+    const lsi_session_t *sess = pSession->getHttpSession();
+    int iRet;
 
     if ((iRet = LsLuaSession::checkHook(pSession, L, "req_read_body",
                                         LSLUA_HOOK_REWRITE
@@ -1522,9 +1496,6 @@ static int LsLuaReqGetBodyData(lua_State *L)
     }
     while (!g_api->is_body_buf_eof(pBuf, offset));
 
-    if (!count)
-        return LsLuaApi::serverError(L, "get_body_data",
-                                     "Error acquiring body data (count).");
     LsLuaApi::concat(L, count);
     return 1;
 }
@@ -2169,7 +2140,7 @@ static int LsLuaSessRequestbody(lua_State *L)
 
 
 static const int LSLUA_NUM_STATS = 6;
-static void LsLuaSessFillStat(lua_State *L, struct stat st)
+static void LsLuaSessFillStat(lua_State *L, struct stat &st)
 {
     int iFileType;
     LsLuaApi::pushinteger(L, st.st_mtime);
@@ -2862,10 +2833,7 @@ void LsLuaCreateGlobal(lua_State *L)
     LsLuaApi::pushglobaltable(L);
     LsLuaApi::setfield(L, -2, "__index");
     LsLuaApi::setmetatable(L, -2);
-    if (LsLuaApi::jitMode())
-        LsLuaApi::replace(L, LSLUA_GLOBALSINDEX);
-    else
-        LsLuaApi::setglobal(L, LS_LUA_BOX);
+    LsLuaApi::replace(L, LSLUA_GLOBALSINDEX);
 }
 
 

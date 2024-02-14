@@ -267,7 +267,7 @@ class DMsg
 * Please Note: These language files will be overwritten during software updates.
 *
 * @author     LiteSpeed Technoglogies
-* @copyright  Copyright (c) LiteSpeed 2014-2022
+* @copyright  Copyright (c) LiteSpeed 2014-2024
 * @link       https://www.litespeedtech.com/
 */
 

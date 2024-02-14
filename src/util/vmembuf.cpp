@@ -82,6 +82,8 @@ void VMemBuf::setTempFileTemplate(const char *pTemp)
 
 VMemBuf::VMemBuf()
     : m_bufList(4)
+    , m_iNoRecycle(0)
+    , m_pCurWBlock(NULL)
 {
     reset();
 }
@@ -691,7 +693,11 @@ int VMemBuf::setROffset(off_t offset)
 int VMemBuf::seekWriteEof()
 {
     struct stat st;
-    fstat(getfd(), &st);
+    if (fstat(getfd(), &st))
+    {
+        perror("seekWriteEof() failed");
+        return -1;
+    }
     m_iCurTotalSize = st.st_size;
     off_t block_pos = m_iCurTotalSize & ~(s_iBlockSize - 1);
     off_t target_size = ((m_iCurTotalSize + s_iBlockSize) & ~(s_iBlockSize - 1));
@@ -866,7 +872,10 @@ char *VMemBuf::getWriteBuffer(size_t &size)
         }
     }
     validateCurWPos();
-    size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
+    if (m_pCurWBlock)
+        size = (*m_pCurWBlock)->getBufEnd() - m_pCurWPos;
+    else
+        size = 0;
     return m_pCurWPos;
 }
 

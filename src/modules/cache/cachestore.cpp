@@ -41,6 +41,7 @@ CacheStore::CacheStore()
 
 CacheStore::~CacheStore()
 {
+    release_objects();
     m_dirtyList.release_objects();
     if (m_pManager)
         delete m_pManager;

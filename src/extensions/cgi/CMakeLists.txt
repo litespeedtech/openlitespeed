@@ -14,6 +14,10 @@ SET(cgi_STAT_SRCS
    lscgid.cpp
    cgroupconn.cpp
    cgroupuse.cpp
+   ns.c
+   nsopts.c
+   nspersist.c
+   nsutils.c
    use_bwrap.c
 )
 

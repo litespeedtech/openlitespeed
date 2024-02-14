@@ -1,7 +1,7 @@
 #!/bin/sh
 ##############################################################################
 #    Open LiteSpeed is an open source HTTP server.                           #
-#    Copyright (C) 2013 - 2022 LiteSpeed Technologies, Inc.                  #
+#    Copyright (C) 2013 - 2024 LiteSpeed Technologies, Inc.                  #
 #                                                                            #
 #    This program is free software: you can redistribute it and/or modify    #
 #    it under the terms of the GNU General Public License as published by    #
@@ -19,11 +19,25 @@
 
 ###    Author: dxu@litespeedtech.com (David Shue)
 
-VERSION=1.0.1
+VERSION=1.0.2
 OS=`uname`
-ARCH=`arch`
-ISLINUX=no
+if [ "${OS}" = "Linux" ] ; then
+    ISLINUX=yes
+    ARCH=`arch`
+else
+    ISLINUX=no
+    ARCH=
+fi
+if [ -f /etc/alpine-release ] ; then
+    OSTYPE=ALPINE
+else
+    OSTYPE=unknown
+fi
 VERSIONNUMBER=
+DOSUDO=
+MOD_PAGESPEED="ON"
+MOD_SECURITY="ON"
+MOD_LUA="ON"
 
 if [ "${OS}" = "FreeBSD" ] ; then
     APP_MGRS="pkg"
@@ -41,6 +55,7 @@ for APP_MGR in ${APP_MGRS}; do
   APP_MGR_CHECK=`which ${APP_MGR} &>/dev/null`
   if [ $? -eq 0 ] ; then
     APP_MGR_CMD="${APP_MGR}"
+    FULL_APP_MGR_CMD=$APP_MGR_CMD
     break
   fi
 done
@@ -77,12 +92,95 @@ getVersionNumber()
     VERSIONNUMBER=$(( 1000000 * ${VER1} + 1000 * ${VER2} + ${VER3} + 1 ))
 }
 
+
+usage()
+{
+    echo "The build script supports the following options:"
+    echo "   -s : Run package installation functions with 'sudo' so that they work."
+    echo "        This should always be done for a first time build,"
+    echo "        but requires manually entering the root password"
+    echo "   -d : Debug build"
+    echo "   -p ON|OFF : Whether you want pagespeed compiled or not.  Defaults ON only for x64 Linux"
+    echo "   -o ON|OFF : Whether you want mod_security compiled or not.  Defaults ON for everywhere but Mac"
+    echo "   -l ON|OFF : Whether you want lua compiled or not.  Defaults ON only for x64 Linux"
+    exit 1
+}
+
+
+validateOptArg()
+{
+    OPTARG=`echo $1 | tr '[:lower:]' '[:upper:]'`
+    if [ "$OPTARG" != "OFF" ] && [ "$OPTARG" != "ON" ]; then
+        echo "You must specify OFF or ON for a compilation option - you specified $OPTARG"
+        exit 1
+    fi
+}
+
+
+getOptions()
+{
+    MOD_PAGESPEED="OFF"
+    MOD_LUA="OFF"
+    if [ "${ISLINUX}" = "yes" ] && [ "${ARCH}" = "x86_64" ]; then
+        if [ ! "${OSTYPE}" = "ALPINE" ] ; then
+            MOD_PAGESPEED="ON"
+            MOD_LUA="ON"
+            ALPINE="ON"
+        fi
+    fi
+    if [ "${OS}" = "Darwin" ] ; then
+        MOD_SECURITY="OFF"
+    else
+        MOD_SECURITY="ON"
+    fi
+    while getopts ":sdp:o:l:q:i:u:" opt; do
+        case $opt in
+            s)
+                DOSUDO="sudo"
+                FULL_APP_MGR_CMD="$DOSUDO $FULL_APP_MGR_CMD"
+                echo "Running sudo with package installation/check"
+                ;;
+            d)
+                DEBUG="ON"
+                echo "Debug mode"
+                ;;
+            p)
+                validateOptArg $OPTARG
+                MOD_PAGESPEED=$OPTARG
+                echo "MOD_PAGESPEED=$MOD_PAGESPEED"
+                ;;
+            o)
+                validateOptArg $OPTARG
+                MOD_SECURITY=$OPTARG
+                echo "MOD_SECURITY=$MOD_SECURITY"
+                ;;
+            l)
+                validateOptArg $OPTARG
+                MOD_LUA=$OPTARG
+                echo "MOD_LUA=$MOD_LUA"
+                ;;
+            *)
+                echo "Unsupported argument: $arg"
+                usage
+                ;;
+        esac
+    done
+    shift $((OPTIND-1))
+    if [ $# -gt 0 ]; then
+        if [ "x$1" = "xDebug" ]; then
+            DEBUG="ON"
+            echo "Debugging mode triggered by traditional command line"
+        fi
+    fi
+}
+
+
 installCmake()
 {
     if [ "${APP_MGR_CMD}" = "apk" ] ; then
-        ${APP_MGR_CMD} add --update git cmake
+        ${FULL_APP_MGR_CMD} add --update git cmake
     else
-        ${APP_MGR_CMD} install -y git cmake
+        ${FULL_APP_MGR_CMD} install -y git cmake
     fi
     
     CMAKEVER=`cmake --version | grep version | awk  '{print $3}'`
@@ -114,9 +212,9 @@ installCmake()
 installgo()
 {
     if [ "${APP_MGR_CMD}" = "apk" ] ; then
-        ${APP_MGR_CMD} add --update go
+        ${FULL_APP_MGR_CMD} add --update go
     else
-        ${APP_MGR_CMD} -y install golang-go
+        ${FULL_APP_MGR_CMD} -y install golang-go
     fi
 
     which go
@@ -157,26 +255,30 @@ prepareLinux()
     OSTYPE=unknownlinux
     if [ -f /etc/redhat-release ] ; then
         OSTYPE=CENTOS
-        yum update -y
-        yum install -y epel-release 
+        ${FULL_APP_MGR_CMD} update -y
+        ${FULL_APP_MGR_CMD} install -y epel-release 
         output=$(cat /etc/redhat-release)
         if echo $output | grep " 7."; then
             OSTYPE=CENTOS7
         elif echo $output | grep " 8."; then
             OSTYPE=CENTOS8
+        elif echo $output | grep " release 8"; then
+            OSTYPE=CENTOS8
         elif echo $output | grep " 9."; then
+            OSTYPE=CENTOS9
+        elif echo $output | grep " release 9"; then
             OSTYPE=CENTOS9
         fi
         
         if [ "${OSTYPE}" = "CENTOS7" ] ; then
             if [ ! -f ./installing ] ; then    
-                yum -y install centos-release-scl
+                ${FULL_APP_MGR_CMD} -y install centos-release-scl
                 which yum-config-manager
                 if [ $? = 0 ] ; then
-                    yum-config-manager --enable rhel-server-rhscl-7-rpms
+                    $DOSUDO yum-config-manager --enable rhel-server-rhscl-7-rpms
                 fi
 
-                yum -y install devtoolset-7
+                ${FULL_APP_MGR_CMD} -y install devtoolset-7
                 touch ./installing
                 scl enable devtoolset-7 "$0"
                 rm ./installing
@@ -184,19 +286,19 @@ prepareLinux()
             fi
             
         elif [ "${OSTYPE}" = "CENTOS8" ] || [ "${OSTYPE}" = "CENTOS9" ] ; then
-            dnf -y groupinstall "Development Tools"
+            $DOSUDO dnf -y groupinstall "Development Tools"
 
         else
             echo This script only works on 7/8/9 for centos family._Static_assert
             exit 1
         fi
         
-        yum -y install git cmake
+        ${FULL_APP_MGR_CMD} -y install git cmake
         installCmake
         
-        yum -y install libtool autoconf autoheader automake wget go clang patch expat-devel
+        ${FULL_APP_MGR_CMD} -y install libtool autoconf automake wget go clang patch expat-devel libcap-devel libaio-devel
         if [ "${ARCH}" = "aarch64" ]; then
-            yum -y install libatomic
+            ${FULL_APP_MGR_CMD} -y install libatomic
         fi
         
     #now for debian and Ubuntu    
@@ -227,27 +329,27 @@ prepareLinux()
             echo But we still can try to go further.
         fi
         
-        apt-get -y update
-        apt-get -f -y install
-        apt-get -y install gcc g++ wget curl make clang patch libexpat-dev
+        ${FULL_APP_MGR_CMD} -y update
+        ${FULL_APP_MGR_CMD} -f -y install
+        ${FULL_APP_MGR_CMD} -y install gcc g++ wget curl make clang patch libexpat-dev libcap-dev
         
         installCmake
-        apt-get -y install git libtool ca-certificates autotools-dev autoconf automake
+        ${FULL_APP_MGR_CMD} -y install git libtool ca-certificates autotools-dev autoconf automake libaio-dev
         installgo
 
         if [ "${ARCH}" = "aarch64" ]; then
-            apt-get -y install libatomic1
+            ${FULL_APP_MGR_CMD} -y install libatomic1
         fi
 
     elif [ -f /etc/alpine-release ] ; then
         OSTYPE=ALPINE
-        ${APP_MGR_CMD} add make
-        ${APP_MGR_CMD} add gcc g++
-        ${APP_MGR_CMD} add patch
+        ${FULL_APP_MGR_CMD} add make
+        ${FULL_APP_MGR_CMD} add gcc g++
+        ${FULL_APP_MGR_CMD} add patch
         installCmake
-        ${APP_MGR_CMD} add git libtool linux-headers bsd-compat-headers curl
-        ${APP_MGR_CMD} add automake autoconf
-        ${APP_MGR_CMD} add build-base expat-dev zlib-dev
+        ${FULL_APP_MGR_CMD} add git libtool linux-headers bsd-compat-headers curl
+        ${FULL_APP_MGR_CMD} add automake autoconf
+        ${FULL_APP_MGR_CMD} add build-base expat-dev zlib-dev libcap-dev libaio-dev
         installgo
         sed -i -e "s/u_int32_t/uint32_t/g" $(grep -rl u_int32_t src/)
         sed -i -e "s/u_int64_t/uint64_t/g" $(grep -rl u_int64_t src/)
@@ -257,16 +359,16 @@ prepareLinux()
         
     else 
         echo May not support your platform, but we can do a try to install some tools.
-        ${APP_MGR_CMD} -y update
-        ${APP_MGR_CMD} -y install make
-        ${APP_MGR_CMD} -y install clang 
-        ${APP_MGR_CMD} -y install patch 
+        ${FULL_APP_MGR_CMD} -y update
+        ${FULL_APP_MGR_CMD} -y install make
+        ${FULL_APP_MGR_CMD} -y install clang 
+        ${FULL_APP_MGR_CMD} -y install patch 
         installCmake
-        ${APP_MGR_CMD} -y install git libtool ca-certificates
-        ${APP_MGR_CMD} -y install autotools-dev
-        ${APP_MGR_CMD} -y install autoconf
-        ${APP_MGR_CMD} -y install autoheader 
-        ${APP_MGR_CMD} -y install automake 
+        ${FULL_APP_MGR_CMD} -y install git libtool ca-certificates
+        ${FULL_APP_MGR_CMD} -y install autotools-dev libcap-dev
+        ${FULL_APP_MGR_CMD} -y install autoconf
+        ${FULL_APP_MGR_CMD} -y install autoheader 
+        ${FULL_APP_MGR_CMD} -y install automake 
         installgo
         
     fi
@@ -300,31 +402,31 @@ prepareMac()
 {
     echo OS Type is `sw_vers`
     if [ "${APP_MGR_CMD}" = "port" ] ; then 
-        port selfupdate
-        port -f -N install wget
-        port -f -N install curl                             
-        port -f -N install cmake                          
-        port -f -N install git                            
-        port -f -N install libtool                        
-        port -f -N install autoconf                       
-        port -f -N install automake                       
-        port -f -N install go                             
-        port -f -N install patch                          
-        port -f -N install python                         
-        port -f -N install gmake      
+        ${FULL_APP_MGR_CMD} selfupdate
+        ${FULL_APP_MGR_CMD} -f -N install wget
+        ${FULL_APP_MGR_CMD} -f -N install curl                             
+        ${FULL_APP_MGR_CMD} -f -N install cmake                          
+        ${FULL_APP_MGR_CMD} -f -N install git                            
+        ${FULL_APP_MGR_CMD} -f -N install libtool                        
+        ${FULL_APP_MGR_CMD} -f -N install autoconf                       
+        ${FULL_APP_MGR_CMD} -f -N install automake                       
+        ${FULL_APP_MGR_CMD} -f -N install go                             
+        ${FULL_APP_MGR_CMD} -f -N install patch                          
+        ${FULL_APP_MGR_CMD} -f -N install python                         
+        ${FULL_APP_MGR_CMD} -f -N install gmake      
     else
         echo You need to install these tools "wget cmake git libtool autoconf automake go patch python gmake"
-        brew install -f wget
-        brew install -f curl                             
-        brew install -f cmake                          
-        brew install -f git                            
-        brew install -f libtool                        
-        brew install -f autoconf                       
-        brew install -f automake                       
-        brew install -f go                             
-        brew install -f patch                          
-        brew install -f python                         
-        brew install -f gmake      
+        ${FULL_APP_MGR_CMD} install -f wget
+        ${FULL_APP_MGR_CMD} install -f curl                             
+        ${FULL_APP_MGR_CMD} install -f cmake                          
+        ${FULL_APP_MGR_CMD} install -f git                            
+        ${FULL_APP_MGR_CMD} install -f libtool                        
+        ${FULL_APP_MGR_CMD} install -f autoconf                       
+        ${FULL_APP_MGR_CMD} install -f automake                       
+        ${FULL_APP_MGR_CMD} install -f go                             
+        ${FULL_APP_MGR_CMD} install -f patch                          
+        ${FULL_APP_MGR_CMD} install -f python                         
+        ${FULL_APP_MGR_CMD} install -f gmake      
     
     fi
     
@@ -357,9 +459,10 @@ updateSrcCMakelistfile()
     commentout 'SET (CMAKE_CXX_COMPILER'   CMakeLists.txt
     
     sed -i -e "s/\${unittest_STAT_SRCS}//g"  src/CMakeLists.txt
-    sed -i -e "s/libstdc++.a //g"  src/CMakeLists.txt
+    sed -i -e "s/libstdc++.a//g"  src/CMakeLists.txt
     sed -i -e "s/-nodefaultlibs //g"  src/CMakeLists.txt
     sed -i -e "s/-nodefaultlibs libstdc++.a//g"  src/modules/modsecurity-ls/CMakeLists.txt
+    sed -i -e "s/-nodefaultlibs libstdc++.a//g"  src/modules/lua/CMakeLists.txt
 
     commentout  ls_llmq.c  src/lsr/CMakeLists.txt
     commentout  ls_llxq.c  src/lsr/CMakeLists.txt
@@ -376,37 +479,8 @@ updateSrcCMakelistfile()
     
     if [ "${OSTYPE}" = "ALPINE" ] ; then
         sed -i -e "s/c_nonshared//g"  src/CMakeLists.txt
+        sed -i -e "s/c_nonshared//g"  src/modules/modsecurity-ls/CMakeLists.txt
     fi
-}
-
-
-updateModuleCMakelistfile()
-{
-    echo "cmake_minimum_required(VERSION 2.8)" > src/modules/CMakeLists.txt
-    echo "add_subdirectory(modgzip)" >> src/modules/CMakeLists.txt
-    echo "add_subdirectory(cache)" >> src/modules/CMakeLists.txt
-    
-    if [ "${OS}" = "Darwin" ] ; then
-        echo Mac OS bypass all module right now
-    else
-        moduledir="modreqparser modinspector uploadprogress "
-        for module in ${moduledir}; do
-            echo "add_subdirectory(${module})" >> src/modules/CMakeLists.txt
-        done
-    fi
-    
-    if [ -f ../third-party/lib/libmodsecurity.a ] ; then
-        echo "add_subdirectory(modsecurity-ls)" >> src/modules/CMakeLists.txt
-    fi
-    
-    #For linux but not alpine, add pagespeed module
-    if [ "${ISLINUX}" = "yes" ] && [ "${ARCH}" = "x86_64" ]; then
-        if [ ! "${OSTYPE}" = "ALPINE" ] ; then
-            echo "add_subdirectory(pagespeed)" >> src/modules/CMakeLists.txt
-        fi
-    fi
-    
-    
 }
 
 
@@ -416,14 +490,18 @@ cpModuleSoFiles()
         mkdir dist/modules/
     fi
     
-    for module in ${moduledir}; do
-        cp -f build/src/modules/${module}/*.so dist/modules/
+    for module in build/src/modules/*; do
+        cp -f ${module}/*.so dist/modules/
     done
     
     if [ -e build/src/modules/modsecurity-ls/mod_security.so ] ; then
         cp -f build/src/modules/modsecurity-ls/mod_security.so dist/modules/
     fi
-    
+
+    if [ -e build/src/modules/lua/mod_lua.so ] ; then
+        cp -f build/src/modules/lua/mod_lua.so dist/modules/
+    fi
+
     if [ -e build/src/modules/pagespeed/modpagespeed.so ] ; then
         cp -f build/src/modules/pagespeed/modpagespeed.so dist/modules/
     fi
@@ -487,7 +565,7 @@ EOF
 cd `dirname "$0"`
 CURDIR=`pwd`
 
-
+getOptions "$@"
 
 if [ "${OS}" = "FreeBSD" ] ; then
     prepareBsd
@@ -509,10 +587,14 @@ if [ ! -d third-party ]; then
 
     #Remove  unittest-cpp and add bcrypt
     sed -i -e "s/unittest-cpp/bcrypt/g" ./build_ols.sh
-
-    # Remove psol for non x86_64 non linux systems
-    if [ "${ISLINUX}" != "yes" ] || [ "${ARCH}" != "x86_64" ] ; then
+    if [ "$MOD_SECURITY" != "ON" ]; then
+        sed -i -e "s/libmodsec/ /g" ./build_ols.sh
+    fi
+    if [ "$MOD_PAGESPEED" != "ON" ]; then
         sed -i -e "s/psol/ /g"  ./build_ols.sh
+    fi
+    if [ "$MOD_LUA" != "ON" ]; then
+        sed -i -e "s/luajit/ /g" ./build_ols.sh
     fi
 
     ./build_ols.sh
@@ -522,19 +604,20 @@ fi
 cd ${CURDIR}
 
 updateSrcCMakelistfile
-updateModuleCMakelistfile
 preparelibquic
 
 
-if [ "${ISLINUX}" = "yes" ] && [ "${ARCH}" = "x86_64" ] ; then
+if [ "$MOD_PAGESPEED" = "ON" ]; then
     fixPagespeed
 fi
 
-#special case modsecurity
-cd src/modules/modsecurity-ls
-ln -sf ../../../../third-party/src/ModSecurity .
-cd ../../../
-#Done of modsecurity
+if [ "$MOD_SECURITY" = "ON" ]; then
+    #special case modsecurity
+    cd src/modules/modsecurity-ls
+    ln -sf ../../../../third-party/src/ModSecurity .
+    cd ../../../
+    #Done of modsecurity
+fi
 
 cd src/modules/lsrecaptcha
 export GOPATH=$CUR_PATH/src/modules/lsrecaptcha
@@ -545,7 +628,7 @@ cd ../../../
 
 fixshmdir
 
-if [ "x$1" == "xDebug" ]; then
+if [ "$DEBUG" = "ON" ]; then
     BUILD=Debug
 else
     BUILD=RelWithDebInfo
@@ -554,13 +637,30 @@ fi
 if [ ! -d build ]; then
     mkdir build
 fi
+
+rm -f CMakeCache.txt
+rm -f build/CMakeCache.txt
+
 cd build
-cmake -DCMAKE_BUILD_TYPE=$BUILD ..
+if [ "$OSTYPE" = "ALPINE" ]; then
+    CMAKE_ALPINE="-DALPINE=ON"
+else
+    CMAKE_ALPINE=
+fi
+
+cmake -DCMAKE_BUILD_TYPE=$BUILD $CMAKE_ALPINE \
+    -DMOD_PAGESPEED=$MOD_PAGESPEED \
+    -DMOD_SECURITY=$MOD_SECURITY \
+    -DMOD_LUA=$MOD_LUA \
+    ..
 jobs=$(nproc)
 make -j${jobs}
 cd ..
 
 cp build/src/openlitespeed  dist/bin/
+if [ -e build/support/unmount_ns/unmount_ns ] ; then
+    cp build/support/unmount_ns/unmount_ns  dist/bin/
+fi
 
 cpModuleSoFiles
 

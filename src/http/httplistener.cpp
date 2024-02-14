@@ -217,7 +217,8 @@ int HttpListener::assign(int fd, struct sockaddr *pAddr)
         snprintf(achAddr, 128, "[ANY]:%hu", (unsigned short)m_sockAddr.getPort());
     setName(achAddr);
     setSockAttr(fd);
-    m_pMapVHost->setPort(m_sockAddr.getPort());
+    if (m_pMapVHost)
+        m_pMapVHost->setPort(m_sockAddr.getPort());
     setfd(fd);
     return 0;
 }
@@ -579,6 +580,7 @@ int HttpListener::handleEvents(short event)
             limitType = 2;
         }
     }
+    LS_DBG_H(this, "HttpListener::handleEvents\n");
 
     while (iCount < allowed)
     {
@@ -678,14 +680,11 @@ int HttpListener::handleEvents(short event)
 int HttpListener::checkAccess(struct conn_data *pData)
 {
     struct sockaddr *pPeer = (struct sockaddr *) pData->achPeerAddr;
-    if ((AF_INET6 == pPeer->sa_family) &&
-        (IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)pPeer)->sin6_addr)))
-    {
-        pPeer->sa_family = AF_INET;
-        memmove(&((struct sockaddr_in *)pPeer)->sin_addr.s_addr,
-                &pData->achPeerAddr[20], 4);
-    }
+    GSockAddr::mappedV6toV4(pPeer);
+
     ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pPeer);
+    if (!pInfo)
+        return -1;
     pData->pInfo = pInfo;
 
     LS_DBG_H(this, "New connection from %s:%u.", pInfo->getAddrString(),
@@ -894,6 +893,33 @@ int HttpListener::writeStatusReport(int fd)
 }
 
 
+int HttpListener::writeStatusJsonReport(int fd, int first, int last)
+{
+    char achBuf[1024];
+    int len;
+    len = ls_snprintf(achBuf, sizeof(achBuf), 
+                      "%s"
+                      "      {\n"
+                      "        \"name\": \"%s\",\n"
+                      "        \"address\": \"%s\",\n",
+                      first ? "  \"listeners\" : [\n" : "",
+                      getName(), 
+                      getAddrStr());
+    if (::write(fd, achBuf, len) != len)
+        return LS_FAIL;
+    if (getVHostMap()->writeStatusJsonReport(fd) == -1)
+        return LS_FAIL;
+    if (m_pSubIpMap && m_pSubIpMap->writeStatusJsonReport(fd) == -1)
+        return LS_FAIL;
+    const char *endStr = last ? "      }\n    ],\n" : "      },\n";
+    int endStrLen = last ? 15 : 9;
+    if (::write(fd, endStr, endStrLen) != endStrLen)
+        return LS_FAIL;
+    return 0;
+
+}
+
+
 int HttpListener::mapDomainList(HttpVHost *pVHost, const char *pDomains)
 {
     if (pVHost && pVHost->enableQuicListener() &&
@@ -1096,13 +1122,7 @@ int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
         return LS_FAIL;
     }
 
-    if ((AF_INET6 == pAddr->sa_family) &&
-        (IN6_IS_ADDR_V4MAPPED(&((sockaddr_in6 *)pAddr)->sin6_addr)))
-    {
-        pAddr->sa_family = AF_INET;
-        memmove(&((sockaddr_in *)pAddr)->sin_addr.s_addr, &((char *)pAddr)[20], 4);
-    }
-
+    GSockAddr::mappedV6toV4(pAddr);
 
     pInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(pAddr, this);
     const VHostMap * pMap = pInfo->m_pServerAddrInfo->getVHostMap();
@@ -1114,6 +1134,7 @@ int HttpListener::setConnInfo(ConnInfo *pInfo, struct conn_data *pCur)
     }
     if (pMap && pMap->getSslContext())
     {
+        pCur->pInfo->setSslContext(pMap->getSslContext());
         pInfo->m_pSsl = newSsl(pMap->getSslContext());
         if (!pInfo->m_pSsl)
             return LS_FAIL;

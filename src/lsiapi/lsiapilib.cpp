@@ -3205,7 +3205,7 @@ static int read_req_body_ts(const lsi_session_t *session, char *buf, int bufLen)
             pNotifier->lock(); // lock
             // NOTICE: Checking if the req body is done MUST be done before updating the size.
             iReqBodyDone = pSession->getFlag(HSF_REQ_BODY_DONE);
-            p = pReqBuf->getReadBuffer(size);
+            pReqBuf->getReadBuffer(size);
 
             if (0 == size && !iReqBodyDone && !pSession->isMtHandlerCancelled())
             {

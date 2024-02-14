@@ -6,6 +6,7 @@
 enum stream_state
 {
     SS_DISCONNECTED,
+    SS_ADNS_LOOKUP,
     SS_CONNECTING,
     SS_CONNECTED,
     SS_CLOSING,
@@ -24,7 +25,9 @@ enum stream_protocol
     HIOS_PROTO_HTTP2 = 4,
     HIOS_PROTO_QUIC = 5,
     HIOS_PROTO_HTTP3 = 6,
-    HIOS_PROTO_MAX
+    HIOS_PROTO_MAX,
+    SS_PROTO_L4,
+    SS_PROTO_L4SSL,
 };
 
 enum stream_flag

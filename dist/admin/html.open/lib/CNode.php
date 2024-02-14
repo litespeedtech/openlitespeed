@@ -84,7 +84,7 @@ class CNode
         $this->_type = $type;
 
         if ($this->_type != CNode::T_KV) {
-            $this->_els = array();
+            $this->_els = [];
         }
         $this->_v = $val;
         if ($val != null && ($this->_type & self::BM_VAL == 0)) {
@@ -170,8 +170,9 @@ class CNode
     {
         if ($errmsg != '') {
             $this->_e .= $errmsg;
-            if ($this->_errlevel < $level)
+            if ($this->_errlevel < $level) {
                 $this->_errlevel = $level;
+			}
         }
     }
 
@@ -204,36 +205,36 @@ class CNode
     }
 
     public function MergeUnknown($node)
-    {
-        if ($this->_type != self::T_ROOT && !($this->_type & self::BM_BLK)) {
-            echo "Err, should merge at parent level $node->_k $node->_v \n";
-            return;
-        }
+	{
+		if ($this->_type != self::T_ROOT && !($this->_type & self::BM_BLK)) {
+			echo "Err, should merge at parent level $node->_k $node->_v \n";
+			return;
+		}
 
-        foreach ($node->_els as $k => $el) {
-            if (isset($this->_els[$k])) {
-                if (is_a($el, 'CNode')) {
-                    echo " k = $k \n";
-                    $this->_els[$k]->MergeUnknown($el);
-                } else {
-                    foreach ($el as $id => $elm) {
-                        if (isset($this->_els[$k][$id]))
-                            $this->_els[$k][$id]->MergeUnknown($elm);
-                        else
-                            $this->AddChild($elm);
-                    }
-                }
-            }
-            else {
-                if (is_a($el, 'CNode'))
-                    $this->AddChild($el);
-                else
-                    $this->_els[$k] = $el; // move array over
-            }
-        }
-    }
+		foreach ($node->_els as $k => $el) {
+			if (isset($this->_els[$k])) {
+				if (is_a($el, 'CNode')) {
+					echo " k = $k \n";
+					$this->_els[$k]->MergeUnknown($el);
+				} else {
+					foreach ($el as $id => $elm) {
+						if (isset($this->_els[$k][$id]))
+							$this->_els[$k][$id]->MergeUnknown($elm);
+						else
+							$this->AddChild($elm);
+					}
+				}
+			} else {
+				if (is_a($el, 'CNode')) {
+					$this->AddChild($el);
+				} else {
+					$this->_els[$k] = $el; // move array over
+				}
+			}
+		}
+	}
 
-    public function SetRawMap($file_id, $from_line, $to_line, $comment)
+	public function SetRawMap($file_id, $from_line, $to_line, $comment)
     {
         $this->_fileline = new FileLine($file_id, $from_line, $to_line, $comment);
         $this->_changed = false;
@@ -266,32 +267,33 @@ class CNode
     }
 
     public function AddChild($child)
-    {
-        if ($this->_type == self::T_KV) {
-            $this->_type = ($this->_v == '') ? self::T_KB : self::T_KVB;
-        }
-        $child->_parent = $this;
-        $k = $child->_k;
-        if (isset($this->_els[$k])) {
-            if (!is_array($this->_els[$k])) {
-                $first_node = $this->_els[$k];
-                $this->_els[$k] = array();
-                if ($first_node->_v == null)
-                    $this->_els[$k][] = $first_node;
-                else
-                    $this->_els[$k][$first_node->_v] = $first_node;
-            }
-            if ($child->_v == null)
-                $this->_els[$k][] = $child;
-            else
-                $this->_els[$k][$child->_v] = $child;
-        }
-        else {
-            $this->_els[$k] = $child;
-        }
-    }
+	{
+		if ($this->_type == self::T_KV) {
+			$this->_type = ($this->_v == '') ? self::T_KB : self::T_KVB;
+		}
+		$child->_parent = $this;
+		$k = $child->_k;
+		if (isset($this->_els[$k])) {
+			if (!is_array($this->_els[$k])) {
+				$first_node = $this->_els[$k];
+				$this->_els[$k] = [];
+				if ($first_node->_v == null) {
+					$this->_els[$k][] = $first_node;
+				} else {
+					$this->_els[$k][$first_node->_v] = $first_node;
+				}
+			}
+			if ($child->_v == null) {
+				$this->_els[$k][] = $child;
+			} else {
+				$this->_els[$k][$child->_v] = $child;
+			}
+		} else {
+			$this->_els[$k] = $child;
+		}
+	}
 
-    public function AddIncludeChildren($incroot)
+	public function AddIncludeChildren($incroot)
     {
         if (is_array($incroot->_els)) {
             foreach ($incroot->_els as $elm) {
@@ -324,18 +326,19 @@ class CNode
                         return;
                     }
                 }
-            } else
+            } else {
                 unset($this->_parent->_els[$this->_k]);
+			}
             $this->_parent = null;
         }
     }
 
     public function HasDirectChildren($key = '')
     {
-        if ($key == '')
-            return ($this->_els != null && count($this->_els) > 0);
-        else
-            return ($this->_els != null && isset($this->_els[strtolower($key)]));
+		if ($key) {
+			return ($this->_els != null && isset($this->_els[strtolower($key)]));
+		}
+        return ($this->_els != null && count($this->_els) > 0);
     }
 
     public function GetChildren($key)
@@ -345,17 +348,17 @@ class CNode
             $node = $this;
             $keys = explode(':', $key);
             foreach ($keys as $k) {
-                if (isset($node->_els[$k]))
-                    $node = $node->_els[$k];
-                else
-                    return null;
+				if (!isset($node->_els[$k])) {
+					return null;
+				}
+                $node = $node->_els[$k];
             }
             return $node;
         }
-        elseif (isset($this->_els[$key]))
+        elseif (isset($this->_els[$key])) {
             return $this->_els[$key]; // can be array
-        else
-            return null;
+		}
+        return null;
     }
 
     public function GetChildVal($key)
@@ -367,8 +370,9 @@ class CNode
     public function SetChildVal($key, $val)
     {
         $child = $this->GetChildren($key);
-        if ($child == null && !is_a($child, 'CNode'))
+        if ($child == null || !is_a($child, 'CNode')) {
             return false;
+		}
         $child->SetVal($val);
         return true;
     }
@@ -376,12 +380,15 @@ class CNode
     public function SetChildErr($key, $err)
     {
         $child = $this->GetChildren($key);
-        if ($child == null && !is_a($child, 'CNode'))
+        if ($child == null || !is_a($child, 'CNode')) {
             return false;
-        if ($err == null) // clear err
+		}
+        if ($err) {
+			$child->SetErr($err);
+		} else {
+            // clear err
             $child->SetErr(null, 0);
-        else
-            $child->SetErr($err);
+		}
         return true;
     }
 
@@ -391,8 +398,9 @@ class CNode
         if ($layer != null) {
             if (is_array($layer)) {
                 return isset($layer[$id]) ? $layer[$id] : null;
-            } elseif ($layer->_v == $id)
+            } elseif ($layer->_v == $id) {
                 return $layer;
+			}
         }
         return null;
     }
@@ -413,8 +421,9 @@ class CNode
     public function GetChildrenByLoc(&$location, &$ref)
     {
         $node = $this;
-        if ($location == '')
+        if ($location == '') {
             return $node;
+		}
 
         $layers = explode(':', $location);
         foreach ($layers as $layer) {
@@ -429,17 +438,15 @@ class CNode
             $location = substr($location, strpos($location, $layer));
             $layer = strtolower($layer);
             if (!isset($node->_els[$layer])) {
-                if ($ismulti && ($ref == '~')) { // for new child, return parent
-                    return $node;
-                } else {
-                    return null;
-                }
+				// for new child, return parent
+				return ($ismulti && ($ref == '~')) ? $node : null;
             }
 
             $nodelist = $node->_els[$layer];
             if ($ismulti) {
-                if ($ref == '')
+                if ($ref == '') {
                     return $nodelist;
+				}
 
                 if ($ref == '~') { // for new child, return parent
                     return $node;
@@ -464,8 +471,9 @@ class CNode
                         return null;
                     }
                 }
-            } else
+            } else {
                 $node = $nodelist;
+			}
         }
         return $node;
     }
@@ -551,12 +559,14 @@ class CNode
                         }
                         $child->debug_out($buf, $level);
                     }
-                } else
+                } else {
                     $el->debug_out($buf, $level);
+				}
             }
             $buf .= "$indent }\n";
-        } else
+        } else {
             $buf .= "\n";
+		}
     }
 
     public function PrintBuf(&$buf, $level = 0)
@@ -572,17 +582,21 @@ class CNode
             }
         }
 
-        if ($note0 != '')
+        if ($note0) {
             $buf .= str_replace("\n\n", "\n", $note0);
+		}
 
-        if ($this->_errlevel > 0)
+        if ($this->_errlevel > 0) {
             $buf .= "#__ERR__({$this->_errlevel}): $this->_e \n";
+		}
 
-        if ($this->_type & self::BM_IDX)
+        if ($this->_type & self::BM_IDX) {
             return; // do not print index node
+		}
 
-        if (($this->_type != self::T_INC) && ($this->_type & self::BM_INC))
+        if (($this->_type != self::T_INC) && ($this->_type & self::BM_INC)) {
             return; // do not print including nodes
+		}
 
         if ($this->_type & self::BM_RAW) {
             $buf .= rtrim($this->_v) . "\n";
@@ -608,8 +622,9 @@ class CNode
             $buf2 = '';
 
             if ($this->_type & self::BM_BLK) {
-                if ($note0 == '')
+                if ($note0 == '') {
                     $buf1 .= "\n";
+				}
                 $buf1 .= $alias_note;
                 $buf1 .= "{$indent}$key $val";
                 $begin = " {\n";
@@ -624,23 +639,26 @@ class CNode
 
             foreach ($this->_els as $el) {
                 if (is_array($el)) {
-                    foreach ($el as $child)
+                    foreach ($el as $child) {
                         $child->PrintBuf($buf2, $level);
-                } else
+					}
+                } else {
                     $el->PrintBuf($buf2, $level);
+				}
             }
 
-            if ($note1 != '') {
+            if ($note1) {
                 $buf2 .= str_replace("\n\n", "\n", $note1);
             }
 
             // do not print empty block
 
             if ($val != '' || $buf2 != '') {
-                if ($buf2 == '')
+                if ($buf2 == '') {
                     $buf .= $buf1 . "\n";
-                else
+				} else {
                     $buf .= $buf1 . $begin . $buf2 . $end;
+				}
             }
         }
     }
@@ -656,8 +674,9 @@ class CNode
         $value = htmlspecialchars($this->_v);
 
         if (($this->_type & self::BM_VAL) && !($this->_type & self::BM_BLK)) {
-            if ($value !== '')
+            if ($value !== '') {
                 $buf .= "$indent<$key>$value</$key>\n";
+			}
         }
         else {
             $buf1 = '';
@@ -692,16 +711,18 @@ class CNode
             $layers = explode(':', $location);
             foreach ($layers as $layer) {
                 $holder_index = '';
-                if ($layer[0] == '*')
+                if ($layer[0] == '*') {
                     $layer = ltrim($layer, '*');
+				}
                 $varpos = strpos($layer, '$');
                 if ($varpos > 0) {
                     $holder_index = substr($layer, $varpos + 1);
                     $layer = substr($layer, 0, $varpos);
                 }
                 $children = $node->GetChildren($layer);
-                if ($children == null)
+                if ($children == null) {
                     return null;
+				}
 
                 $node = $children;
             }

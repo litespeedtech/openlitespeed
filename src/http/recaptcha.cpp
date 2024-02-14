@@ -34,6 +34,13 @@ AutoStr2 *Recaptcha::s_pDynUrl = new AutoStr2("/.lsrecap/recaptcha");
 AutoStr2 *Recaptcha::s_pEnvNameSiteKey = new AutoStr2("LSRECAPTCHA_SITE_KEY");
 AutoStr2 *Recaptcha::s_pEnvNameSecretKey = new AutoStr2("LSRECAPTCHA_SECRET_KEY");
 AutoStr2 *Recaptcha::s_pEnvNameTypeParam = new AutoStr2("LSRECAPTCHA_TYPE_PARAM");
+AutoStr2 *Recaptcha::s_pEnvNameJsUri = new AutoStr2("LSRECAPTCHA_JS_URI");
+
+static AutoStr2 *s_hcaptcha_js_url = new AutoStr2("https://js.hcaptcha.com/1/api.js");
+static AutoStr2 *s_recaptch_js_url = new AutoStr2("https://www.recaptcha.net/recaptcha/api.js");
+static AutoStr2 *s_hcaptcha_js_obj_name = new AutoStr2("hcaptcha");
+static AutoStr2 *s_recaptch_js_obj_name = new AutoStr2("grecaptcha");
+
 const char *Recaptcha::s_pDefaultSiteKey = "6Ld4O3QUAAAAANo81VuJbgKdb2vqLQyrh28VFyas";
 const char *Recaptcha::s_pDefaultSecretKey = "6Ld4O3QUAAAAAIdc-9U6-NgjIYgTjgduemYA_MUp";
 
@@ -41,13 +48,32 @@ const char *Recaptcha::s_apTypeParams[Recaptcha::TYPE_END] =
 {
     NULL,
     NULL,
-    "'size': 'invisible'"
+    "'size': 'invisible'",
+    NULL
 };
 
 
 void Recaptcha::setStaticUrl(const char *url)
 {
     s_pStaticUrl->setStr(url);
+}
+
+
+const AutoStr2 *Recaptcha::getJsUrl() const
+{
+    if (m_iType == TYPE_HCAPTCHA)
+        return s_hcaptcha_js_url;
+    else
+        return s_recaptch_js_url;
+}
+
+
+const AutoStr2 *Recaptcha::getJsObjName() const
+{
+    if (m_iType == TYPE_HCAPTCHA)
+        return s_hcaptcha_js_obj_name;
+    else
+        return s_recaptch_js_obj_name;
 }
 
 

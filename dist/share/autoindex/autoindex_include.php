@@ -458,7 +458,8 @@ class Index
 		$title = 'Index of ' . $disp_uri;
 
 		echo '<!DOCTYPE html><html><head><meta http-equiv="Content-type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />'
-		. $this->getAssetLinks() . '<title>' . $title . '</title><style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></head>\n'
+
+		. $this->getAssetLinks() . '<title>' . $title . '</title><style>@media (prefers-color-scheme:dark){body{background-color:#000!important}}</style></head>'
 		. '<body><div class="content"><h1 style="color: #555;">' . $title . "</h1>\n";
 
 		$includeHeader = UserSettings::getHeaderName();

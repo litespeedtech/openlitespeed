@@ -210,6 +210,13 @@ int epoll::removeEx(int fd)
 }
 
 
+int epoll::replace(EventReactor *old, EventReactor *new_handler)
+{
+    assert(old->getfd() == new_handler->getfd());
+    return m_reactorIndex.replace(old->getfd(), old, new_handler);
+}
+
+
 int epoll::waitAndProcessEvents(int iTimeoutMilliSec)
 {
     applyEvents();

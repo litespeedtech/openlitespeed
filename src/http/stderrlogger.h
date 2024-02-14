@@ -39,7 +39,7 @@ class StdErrLogger : public EventReactor, public TSingleton<StdErrLogger>
 public:
     ~StdErrLogger();
     int setLogFileName(const char *pName);
-    const char *getLogFileName() const;
+    const char *getLogFileName();
     virtual int handleEvents(short event);
     int getStdErr() const   {   return m_fdStdErr;    }
     int initLogger(Multiplexer *pMultiplexer);

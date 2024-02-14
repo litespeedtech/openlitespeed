@@ -212,7 +212,7 @@ void HttpListenerList::passListeners()
     int sort = 0;
     for (iterator iter = begin(); iter != end(); ++iter)
     {
-        int maxfd, fd_count;
+        int maxfd = 0, fd_count;
         fd_count = (*iter)->getFdCount(&maxfd);
         if (maxfd >= 1000)
             sort = 1;
@@ -282,15 +282,16 @@ void HttpListenerList::recvListeners()
                 int type;
                 socklen_t length = sizeof( int );
 
-                getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &length);
-
-                if (type == SOCK_STREAM)
+                if (!getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &length))
                 {
-                    pListener->addReusePortSocket(fd);
-                }
-                else if (type == SOCK_DGRAM)
-                {
-                    pListener->addUdpSocket(fd);
+                    if (type == SOCK_STREAM)
+                    {
+                        pListener->addReusePortSocket(fd);
+                    }
+                    else if (type == SOCK_DGRAM)
+                    {
+                        pListener->addUdpSocket(fd);
+                    }
                 }
             }
             else
@@ -346,6 +347,20 @@ int HttpListenerList::writeStatusReport(int fd)
     for (iter = begin(); iter != iterEnd; ++iter)
     {
         if ((*iter)->writeStatusReport(fd) == -1)
+            return LS_FAIL;
+    }
+    return 0;
+}
+
+
+int HttpListenerList::writeStatusJsonReport(int fd)
+{
+    iterator iter;
+    iterator iterEnd = end();
+    for (iter = begin(); iter != iterEnd; ++iter)
+    {
+        if ((*iter)->writeStatusJsonReport(fd, iter == begin(), 
+                                           iter + 1 == iterEnd) == -1)
             return LS_FAIL;
     }
     return 0;

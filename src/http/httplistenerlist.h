@@ -53,6 +53,7 @@ public:
     void moveNonExist(HttpListenerList &rhs);
     void removeVHostMappings(HttpVHost *pVHost);
     int  writeStatusReport(int fd);
+    int  writeStatusJsonReport(int fd);
     int  writeRTReport(int fd);
     void releaseUnused();
     int  saveInUseListnersTo(HttpListenerList &rhs);

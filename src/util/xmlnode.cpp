@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <lsr/ls_strtool.h>
 
 #define BUF_SIZE 8192
 
@@ -557,10 +558,10 @@ XmlNode *XmlTreeBuilder::parse(const char *pFilePath, char *pError,
         total += len;
         if (XML_Parse(parser, buf, len, done) == XML_STATUS_ERROR)
         {
-            snprintf(pError, errBufLen, "[%s:%lld] %s \n", pFilePath,
-                     (long long)XML_GetCurrentLineNumber(parser),
-                     XML_ErrorString(XML_GetErrorCode(parser))
-                    );
+            ls_snprintf(pError, errBufLen, "[%s:%d] %s \n", pFilePath,
+                        (int)XML_GetCurrentLineNumber(parser),
+                        XML_ErrorString(XML_GetErrorCode(parser))
+                       );
             XML_ParserFree(parser);
             close(fd);
             if (tree.m_pRoot)
