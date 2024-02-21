@@ -308,6 +308,30 @@ class WPCaller
 
     /**
      *
+     * @since 1.17.0.3
+     *
+     * @param string $advCacheFileContents
+     *
+     * @return bool
+     */
+    private static function advancedCacheFileBelongsToLscwp(
+        $advCacheFileContents
+    )
+    {
+        if ( self::advancedCacheFileHasLscacheDefine($advCacheFileContents) ) {
+            return true;
+        }
+
+        if ( self::advancedCacheFileHasPlaceholderMsg($advCacheFileContents) ) {
+            return true;
+        }
+
+        return false;
+    }
+
+
+    /**
+     *
      * @since 1.13.4.3
      *
      * @return bool
@@ -315,19 +339,25 @@ class WPCaller
     private function generic3rdPartyAdvCachePluginExists()
     {
         if ( Util::betterVersionCompare($this->installedLscwpVer, '3.0.4', '>=') ) {
-            /**
-             * Old LSCWP advanced-cache.php file is no longer used in these
-             * versions but is also never cleaned up. As a result, any existing
-             * advanced-cache.php files need to have their contents checked to
-             * avoid detecting an old LSCWP advanced-cache.php file as a generic
-             * 3rd-party advanced-cache plugin.
-             */
 
-            if ( file_exists($this->advancedCacheFile)
-                    && file_get_contents($this->advancedCacheFile) !== ''
-                    && !$this->advancedCacheFileHasLscacheDefine() ) {
+            if ( file_exists($this->advancedCacheFile) ) {
 
-                return true;
+                $advCacheFileContents =
+                    file_get_contents($this->advancedCacheFile);
+
+                if ( $advCacheFileContents !== '' ) {
+                    /**
+                     * Old LSCWP advanced-cache.php file is no longer used in
+                     * these versions but is also never cleaned up. As a result,
+                     * any existing advanced-cache.php files need to have their
+                     * contents checked to avoid detecting an old LSCWP
+                     * advanced-cache.php file as a generic 3rd-party
+                     * advanced-cache plugin.
+                     */
+                    return !self::advancedCacheFileBelongsToLscwp(
+                        $advCacheFileContents
+                    );
+                }
             }
         }
         elseif ( !defined('LSCACHE_ADV_CACHE')
@@ -1324,21 +1354,42 @@ class WPCaller
     /**
      *
      * @since 1.13.4.4
+     * @since 1.17.0.3  Added required parameter $advCacheFileContents.
+     *
+     * @param string $advCacheFileContents
      *
      * @return bool
      */
-    private function advancedCacheFileHasLscacheDefine()
+    private static function advancedCacheFileHasLscacheDefine(
+        $advCacheFileContents
+    )
+    {
+        $definePosition = strpos($advCacheFileContents, 'LSCACHE_ADV_CACHE');
+
+        return ($definePosition !== false);
+    }
+
+    /**
+     * Check if advanced-cache.php file contains LSCWP placeholder text. This
+     * file with generic placeholder text was re-added by LSCWP for improved
+     * compatibility with WordPress versions lower than v5.3.
+     *
+     * @since 1.17.0.3
+     *
+     * @param string $advCacheFileContent
+     *
+     * @return bool
+     */
+    private static function advancedCacheFileHasPlaceholderMsg(
+        $advCacheFileContent
+    )
     {
         $definePosition = strpos(
-            file_get_contents($this->advancedCacheFile),
-            'LSCACHE_ADV_CACHE'
+            $advCacheFileContent,
+            'A compatibility placeholder for WordPress < v5.3'
         );
 
-        if ( $definePosition !== false ) {
-            return true;
-        }
-
-        return false;
+        return ($definePosition !== false);
     }
 
     private function includeLSCWPAdvancedCacheFile()

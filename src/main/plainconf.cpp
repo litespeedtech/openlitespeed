@@ -1325,10 +1325,14 @@ void plainconf::loadConfFile(const char *path)
     {
         wordexp_t exp;
         if (expandIncludePath(path, &exp))
+        {
+            wordfree(&exp);
             return;
+        }
         for (size_t i = 0; i < exp.we_wordc; i++)
         {
-            loadConfFile(exp.we_wordv[i]);
+            if (strcmp(path, exp.we_wordv[i]))
+                loadConfFile(exp.we_wordv[i]);
         }
         wordfree(&exp);
     }

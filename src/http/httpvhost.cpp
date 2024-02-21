@@ -2004,7 +2004,7 @@ int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
                                    const char *pBinPath)
 {
     const char *defaultBin[2] = { "/usr/local/bin/node", "/usr/bin/node" };
-    if (!pBinPath)
+    if (!pBinPath || !*pBinPath)
     {
         for (int i = 0; i < 2; ++i)
         {
@@ -2015,7 +2015,7 @@ int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
             }
         }
     }
-    if (!pBinPath)
+    if (!pBinPath || !*pBinPath)
     {
         LS_NOTICE("[%s] Cannot find node interpreter, node easy configuration "
                     "is turned off", TmpLogId::getLogId());

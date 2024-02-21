@@ -7,7 +7,7 @@ m4_include(ax_check_libudns.m4)
 m4_include(ax_check_ip2location.m4)
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([openlitespeed],[1.7.19],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
+AC_INIT([openlitespeed],[1.8.0],[info@litespeedtech.com],[openlitespeed],[http://www.litespeedtech.com/])
 AM_INIT_AUTOMAKE([1.0 foreign no-define subdir-objects])
 
 AC_CONFIG_HEADERS(src/config.h:src/config.h.in)
@@ -455,6 +455,9 @@ RT_LIB_OPTION=" -lrt"
 DL_LIB_OPTION=" -ldl"
 if test "$OSNAME" = Linux ; then
     LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
+    AC_DEFINE_UNQUOTED([IOURING], [1], [Defined to compile with IOURING])
+    AC_DEFINE_UNQUOTED([LS_AIO_USE_LINUX_AIO], [1], [Defined to compile with LS_AIO_USE_LINUX_AIO flag])
+    
 fi
 
 if test "$OSNAME" = FreeBSD ; then
@@ -481,6 +484,8 @@ MODULE_VERSION_INFO=`. $srcdir/modverinfo.sh`
 AC_DEFINE_UNQUOTED([LS_MODULE_VERSION_INFO], ["$MODULE_VERSION_INFO"], [The pre-defined modules version info])
 
 AC_CONFIG_FILES(Makefile
+                support/Makefile
+                support/unmount_ns/Makefile
                 src/Makefile
                 src/edio/Makefile
                 src/extensions/Makefile
