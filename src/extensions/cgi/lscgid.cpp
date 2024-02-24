@@ -592,13 +592,19 @@ static int fixStderrLogPermission(lscgid_t *pCGI)
 static int execute_cgi(lscgid_t *pCGI)
 {
     char ch;
-    uid_t uid;
     uint32_t pid = (uint32_t)getpid();
 
     //applyLimits(&pCGI->m_data);
 
     if (pCGI->m_stderrPath)
         fixStderrLogPermission(pCGI);
+
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (pCGI->m_cgroup && pCGI->m_data.m_uid != 0)
+    {
+        cgroup_v2(pCGI->m_data.m_uid, pid);
+    }
+#endif
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     {
@@ -614,15 +620,6 @@ static int execute_cgi(lscgid_t *pCGI)
 
     if (pCGI->m_stderrPath)
         fixStderrLogPermission(pCGI);
-
-    uid = pCGI->m_data.m_uid;
-
-#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
-    if (pCGI->m_cgroup && uid != 0)
-    {
-        cgroup_v2(uid, pid);
-    }
-#endif
 
 #ifdef HAS_CLOUD_LINUX
 
