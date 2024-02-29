@@ -302,6 +302,10 @@ class UIBase
 			break;
 			case "POST": $temp = $_POST;
 			break;
+			case "POST_GET":
+			case "GET_POST":
+				$temp = array_merge($_GET, $_POST);
+				break;
 			case "COOKIE": $temp = $_COOKIE;
 			break;
 			case "FILE": $temp = $_FILES;
