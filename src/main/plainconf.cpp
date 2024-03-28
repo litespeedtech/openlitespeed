@@ -431,7 +431,7 @@ plainconfKeywords plainconf::sKeywords[] =
     {"quicmaxcfcw", NULL},
     {"quicsfcw", NULL},
     {"quicmaxsfcw", NULL},
-    {"quicmaxincomingstreams", NULL},
+    {"quicmaxstreams", NULL},
     {"quicInitMaxIncomingStreamsBidi", NULL},
     {"quichandshaketimeout", NULL},
     {"quicidletimeout", NULL},

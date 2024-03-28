@@ -250,6 +250,8 @@ int ProxyConn::sendReqHeader()
 
     if (pSession->shouldIncludePeerAddr())
         headerLen = addForwardedFor(pBegin);
+    if (pReq->isHeaderSet(HttpHeader::H_TRANSFER_ENCODING))
+        pReq->dropReqHeader(HttpHeader::H_TRANSFER_ENCODING);
 
 #if 1       //always set "Accept-Encoding" header to "gzip"
     char *pAE = (char *)pReq->getHeader(HttpHeader::H_ACC_ENCODING);

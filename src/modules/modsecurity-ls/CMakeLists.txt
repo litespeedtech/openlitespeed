@@ -30,7 +30,7 @@ add_library(mod_security SHARED
 
 target_link_libraries(mod_security libmodsecurity.a
     -nodefaultlibs libstdc++.a
-    pthread rt -llmdb -lxml2 -lcurl -lGeoIP -lssl -lcrypto -lz -lpcre -lyajl
+    pthread rt -llmdb -lxml2 -lcurl -lssl -lcrypto -lz -lpcre -lyajl
     ${LIBSAN} crypt m gcc_eh c c_nonshared gcc)
 
 set_target_properties(mod_security PROPERTIES PREFIX "")

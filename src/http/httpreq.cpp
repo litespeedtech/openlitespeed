@@ -898,6 +898,11 @@ int HttpReq::processHeaderLines()
                 {
                     if (index == HttpHeader::H_HOST)
                         *((char *)pLineBegin + 3) = '2';
+                    else if (index == HttpHeader::H_TRANSFER_ENCODING)
+                    {
+                        LS_INFO(getLogSession(), "Remove duplicate transfer-encoding header!");
+                        memset((void *)pLineBegin, 'x', nameLen);
+                    }
                     index = HttpHeader::H_HEADER_END;
                 }
             }
@@ -1133,7 +1138,8 @@ int HttpReq::processHeader(int index)
             LS_INFO(getLogSession(), "Status 400: bad Transfer-Encoding starts with ','!");
             return SC_400;
         }
-        if (strncasecmp(pCur, "chunked", 7) == 0)
+        if (strncasecmp(pCur, "chunked", 7) == 0
+            && m_commonHeaderLen[index] == 7)
         {
             if (getMethod() <= HttpMethod::HTTP_HEAD)
                 return SC_400;
@@ -2759,6 +2765,7 @@ void HttpReq::tranEncodeToContentLen()
         pBegin + 16 - m_headerBuf.begin();
     m_commonHeaderLen[ HttpHeader::H_CONTENT_LENGTH] = n - 16;
     m_lEntityLength = m_lEntityFinished;
+    m_commonHeaderOffset[HttpHeader::H_TRANSFER_ENCODING] = 0;
 }
 
 
