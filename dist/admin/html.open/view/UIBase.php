@@ -194,7 +194,7 @@ class UIBase
 
                     if (($key == $selValue)
                             && !($selValue === '' && $key === 0)
-                            && !($selValue === NULL && $key === 0)
+                            && !($selValue === null && $key === 0)
                             && !($selValue === '0' && $key === '')
                             && !($selValue === 0 && $key === '')) {
                         $o .= ' selected="selected"';
@@ -240,7 +240,8 @@ class UIBase
 		foreach ($bottomdef as $btngroup) {
 			$buf .= '<div class="col-xs-12 col-sm-3 col-md-3 col-lg-3">';
 			foreach ($btngroup as $div) {
-				$buf .= self::stat_bottom_div($div[0], $div[1], $div[2], $div[3]);
+                $tip = isset($div[4]) ? $div[4] : '';
+				$buf .= self::stat_bottom_div($div[0], $div[1], $div[2], $div[3], $tip);
 			}
 			$buf .= "</div>\n";
 		}
@@ -253,9 +254,16 @@ class UIBase
 
 	}
 
-	private static function stat_bottom_div($seq, $label, $txtclr, $maxclr)
+	private static function stat_bottom_div($seq, $label, $txtclr, $maxclr, $tip)
 	{
-		$buf = '<div>' . $label .': <span class="lst-stat-val';
+        
+        if ($tip && ($dhelp_item = DMsg::GetAttrTip($tip)) != null) {
+            $help = $dhelp_item->Render();
+        } else {
+            $help = '';
+        }
+
+		$buf = '<div>' . $label . ' ' . $help .': <span class="lst-stat-val';
 		if ($txtclr != '') {
 			$buf .= ' text-' . $txtclr;
 		}
@@ -287,53 +295,59 @@ class UIBase
 		return $buf;
 	}
 
-	public static function GrabInput($origin, $name, $type = '')
-	{
-		if($name == '' || $origin == '')
-			return NULL;
+	public static function GrabInput($origin, $name, $type = '') 
+    {
+        if ($name == '' || $origin == '') {
+            return null;
+        }
 
-		$temp = NULL;
+        $temp = null;
 
-		switch(strtoupper($origin)) {
-			case "REQUEST":
-			case "ANY":	$temp = $_REQUEST;
-			break;
-			case "GET": $temp = $_GET;
-			break;
-			case "POST": $temp = $_POST;
-			break;
-			case "COOKIE": $temp = $_COOKIE;
-			break;
-			case "FILE": $temp = $_FILES;
-			break;
-			case "SERVER": $temp = $_SERVER;
-			break;
-			default:
-				die("input extract error.");
-		}
+        switch (strtoupper($origin)) {
+            case "REQUEST":
+            case "ANY": $temp = $_REQUEST;
+                break;
+            case "GET": $temp = $_GET;
+                break;
+            case "POST": $temp = $_POST;
+                break;
+            case "COOKIE": $temp = $_COOKIE;
+                break;
+            case "FILE": $temp = $_FILES;
+                break;
+            case "SERVER": $temp = $_SERVER;
+                break;
+            default:
+                die("input extract error.");
+        }
 
-		if(array_key_exists($name, $temp))
-			$temp =  $temp[$name];
-		else
-			$temp = NULL;
+        if (array_key_exists($name, $temp)) {
+            $temp = $temp[$name];
+        } else {
+            $temp = null;
+        }
 
-		switch($type) {
-			case "int": return (int) $temp;
-			case "float": // filter_var($temp, FILTER_VALIDATE_FLOAT, FILTER_FLAG_ALLOW_THOUSAND); filter module not in admin_php
-                return (float)str_replace(',', '', $temp);
-			case "string": return trim((string) $temp);
-			case "array": return (is_array($temp) ?  $temp : NULL);
-			case "object": return (is_object($temp) ?  $temp : NULL);
-			default: return trim((string) $temp); //default string
-		}
+        switch ($type) {
+            case "int": 
+                return (int) $temp;
+            case "float": // filter_var($temp, FILTER_VALIDATE_FLOAT, FILTER_FLAG_ALLOW_THOUSAND); filter module not in admin_php
+                return (float) str_replace(',', '', $temp);
+            case "string": 
+                return trim((string) $temp);
+            case "array": 
+                return (is_array($temp) ? $temp : null);
+            case "object": 
+                return (is_object($temp) ? $temp : null);
+            default: 
+                return trim((string) $temp); //default string
+        }
+    }
 
-	}
-
-	public static function GrabGoodInput($origin, $name, $type='')
+    public static function GrabGoodInput($origin, $name, $type='')
 	{
 		$val = self::GrabInput($origin, $name, $type);
-		if ( $val != NULL && strpos($val, '<') !== FALSE )	{
-			$val = NULL;
+		if ( $val != null && strpos($val, '<') !== false )	{
+			$val = null;
 		}
 
 		return $val;
@@ -343,25 +357,25 @@ class UIBase
 	{
 		$val = self::GrabInput($origin, $name, $type);
 		// forbid '<', allow '?<' for expuri
-		$need_reset = (($val != NULL) && (strpos($val, '<') !== FALSE && strpos($val, '?<') === FALSE));
+		$need_reset = (($val != null) && (strpos($val, '<') !== false && strpos($val, '?<') === false));
 
 		if ($need_reset) {
 			switch (strtoupper($origin)) {
 				case "REQUEST":
-				case "ANY": $_REQUEST[$name] = NULL;
+				case "ANY": $_REQUEST[$name] = null;
 					break;
-				case "GET": $_GET[$name] = NULL;
+				case "GET": $_GET[$name] = null;
 					break;
-				case "POST": $_POST[$name] = NULL;
+				case "POST": $_POST[$name] = null;
 					break;
-				case "COOKIE": $_COOKIE[$name] = NULL;
+				case "COOKIE": $_COOKIE[$name] = null;
 					break;
-				case "FILE": $_FILES[$name] = NULL;
+				case "FILE": $_FILES[$name] = null;
 					break;
-				case "SERVER": $_SERVER[$name] = NULL;
+				case "SERVER": $_SERVER[$name] = null;
 					break;
 			}
-			$val = NULL;
+			$val = null;
 		}
 		return $val;
 	}

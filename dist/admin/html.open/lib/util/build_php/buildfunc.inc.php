@@ -7,8 +7,8 @@ class BuildOptions
     private $type; //NONE, DEFAULT, IMPORT, INPUT, BUILD
     private $batch_id;
     private $validated = false;
-    private $vals = array(
-        'OptionVersion'   => 3,
+    private $vals = [
+        'OptionVersion'   => 5,
         'PHPVersion'      => '',
         'ExtraPathEnv'    => '',
         'InstallPath'     => '',
@@ -16,14 +16,12 @@ class BuildOptions
         'ConfigParam'     => '',
         'AddOnSuhosin'    => false,
         'AddOnMailHeader' => false,
-        'AddOnAPC'        => false,
         'AddOnMemCache'   => false,
         'AddOnMemCache7'   => false,
         'AddOnMemCache8'   => false,
         'AddOnMemCachd'   => false,
         'AddOnMemCachd7'  => false,
-        'AddonOPcache'    => false
-    );
+    ];
 
     function __construct($version = "")
     {
@@ -90,13 +88,11 @@ class BuildOptions
         $this->vals['ConfigParam'] = $params[$this->base_ver];
         $this->vals['AddOnSuhosin'] = false;
         $this->vals['AddOnMailHeader'] = false;
-        $this->vals['AddOnAPC'] = false;
         $this->vals['AddOnMemCache'] = false;
         $this->vals['AddOnMemCache7'] = false;
         $this->vals['AddOnMemCache8'] = false;
         $this->vals['AddOnMemCachd'] = false;
         $this->vals['AddOnMemCachd7'] = false;
-        $this->vals['AddOnOPcache'] = false;
 
         $this->type = 'DEFAULT';
         $this->validated = true;
@@ -146,23 +142,19 @@ class BuildOptions
         }
         $addon_suhosin = $this->vals['AddOnSuhosin'] ? 'true' : 'false';
         $addon_mailHeader = $this->vals['AddOnMailHeader'] ? 'true' : 'false';
-        $addon_apc = $this->vals['AddOnAPC'] ? 'true' : 'false';
         $addon_memcache = $this->vals['AddOnMemCache'] ? 'true' : 'false';
         $addon_memcache7 = $this->vals['AddOnMemCache7'] ? 'true' : 'false';
         $addon_memcache8 = $this->vals['AddOnMemCache8'] ? 'true' : 'false';
         $addon_memcachd = $this->vals['AddOnMemCachd'] ? 'true' : 'false';
         $addon_memcachd7 = $this->vals['AddOnMemCachd7'] ? 'true' : 'false';
-        $addon_opcache = $this->vals['AddOnOPcache'] ? 'true' : 'false';
 
         $loc = 'document.buildform';
         $buf = "onClick=\"$loc.path_env.value='{$this->vals['ExtraPathEnv']}';
 		$loc.installPath.value = '{$this->vals['InstallPath']}';
 		$loc.compilerFlags.value = '$flags';
 		$loc.configureParams.value = '$params';
-                if ($loc.addonMailHeader != null)
-                    $loc.addonMailHeader.checked = $addon_mailHeader;
-                if ($loc.addonAPC != null)
-                    $loc.addonAPC.checked = $addon_apc;
+        if ($loc.addonMailHeader != null)
+            $loc.addonMailHeader.checked = $addon_mailHeader;
 		if ($loc.addonMemCache != null)
 			$loc.addonMemCache.checked = $addon_memcache;
 		if ($loc.addonMemCache7 != null)
@@ -173,8 +165,6 @@ class BuildOptions
 			$loc.addonMemCachd.checked = $addon_memcachd;
 		if ($loc.addonMemCachd7 != null)
 			$loc.addonMemCachd7.checked = $addon_memcachd7;
-        if ($loc.addonOPcache != null)
-            $loc.addonOPcache.checked = $addon_opcache;
 		if ($loc.addonSuhosin != null)
 			$loc.addonSuhosin.checked = $addon_suhosin;
 		\"";
@@ -226,21 +216,17 @@ class BuildCheck
 		$modules = [];
 		$v = substr($php_version, 0, 4);
 
-		$modules['suhosin'] = in_array($v, ['5.4.', '5.5.', '5.6.']);
+		$modules['suhosin'] = in_array($v, ['5.6.']);
 
-		$modules['apc'] = in_array($v, ['5.3.', '5.4.']); // apc is supported up to 5.4.
+		$modules['mailheader'] = in_array($v, ['5.6.']); // php7 is listed on their site, but compile failed
 
-		$modules['opcache'] = in_array($v, ['5.3.', '5.4.']);   // opcache is built-in since 5.5
-
-		$modules['mailheader'] = in_array($v, ['5.3.', '5.4.', '5.5.', '5.6.']); // php7 is listed on their site, but compile failed
-
-		$modules['memcache'] = in_array($v, ['5.3.', '5.4.', '5.5.', '5.6.']); // php7 not supported
+		$modules['memcache'] = in_array($v, ['5.6.']); // php7 not supported
 
 		$modules['memcache7'] = in_array($v, ['7.0.', '7.1.', '7.2.', '7.3.', '7.4.']); // php7 only
 
-		$modules['memcache8'] = in_array($v, ['8.0.', '8.1.']); // php8 only
+		$modules['memcache8'] = in_array($v, ['8.0.', '8.1.', '8.2.', '8.3.']); // php8 only
 
-		$modules['memcachd'] = in_array($v, ['5.3.', '5.4.', '5.5.', '5.6.']); // php7 not supported
+		$modules['memcachd'] = in_array($v, ['5.6.']); // php7 not supported
 
 		$modules['memcachd7'] = in_array($v, ['7.0.', '7.1.', '7.2.', '7.3.', '7.4.', '8.0.', '8.1.']); // php7,php8
 
@@ -298,13 +284,11 @@ class BuildCheck
 
         $options->SetValue('AddOnSuhosin', (null != UIBase::GrabGoodInput('ANY', 'addonSuhosin')));
         $options->SetValue('AddOnMailHeader', (null != UIBase::GrabGoodInput('ANY', 'addonMailHeader')));
-        $options->SetValue('AddOnAPC', (null != UIBase::GrabGoodInput('ANY', 'addonAPC')));
         $options->SetValue('AddOnMemCache', (null != UIBase::GrabGoodInput('ANY', 'addonMemCache')));
         $options->SetValue('AddOnMemCache7', (null != UIBase::GrabGoodInput('ANY', 'addonMemCache7')));
         $options->SetValue('AddOnMemCache8', (null != UIBase::GrabGoodInput('ANY', 'addonMemCache8')));
         $options->SetValue('AddOnMemCachd', (null != UIBase::GrabGoodInput('ANY', 'addonMemCachd')));
         $options->SetValue('AddOnMemCachd7', (null != UIBase::GrabGoodInput('ANY', 'addonMemCachd7')));
-        $options->SetValue('AddOnOPcache', (null != UIBase::GrabGoodInput('ANY', 'addonOPcache')));
 
         // can be real input err
         $v1 = $this->validate_extra_path_env($options->GetValue('ExtraPathEnv'));
@@ -652,21 +636,11 @@ class BuildTool
         $ver = 'suhosin-' . BuildConfig::GetVersion(BuildConfig::SUHOSIN_VERSION);
         $ext['__extension_dir__'] = $ver;
         $ext['__extension_src__'] = $ver . '.tar.gz';
-        $ext['__extension_download_url__'] = 'http://download.suhosin.org/' . $ver . '.tar.gz';
+        $ext['__extension_download_url__'] = 'http://download.suhosin.org/' . $ver . '.tar.gz'; // https://download.suhosin.org/suhosin-0.9.38.tar.gz
         $ext['__extract_method__'] = 'tar -zxf';
         $ext['__extension_extra_config__'] = '';
 
         $this->ext_options['Suhosin'] = $ext;
-
-        $ext = array('__extension_name__' => 'APC');
-        $ver = 'APC-' . BuildConfig::GetVersion(BuildConfig::APC_VERSION);
-        $ext['__extension_dir__'] = $ver;
-        $ext['__extension_src__'] = $ver . '.tgz';
-        $ext['__extension_download_url__'] = 'http://pecl.php.net/get/' . $ver . '.tgz';
-        $ext['__extract_method__'] = 'tar -zxf';
-        $ext['__extension_extra_config__'] = '--enable-apc';
-
-        $this->ext_options['APC'] = $ext;
 
         $ext = array('__extension_name__' => 'MemCache');
         $ver = 'memcache-' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION);
@@ -717,46 +691,11 @@ class BuildTool
         $ext['__extension_extra_config__'] = '--enable-memcached';
 
         $this->ext_options['MemCachd7'] = $ext;
-
-        $ext = array('__extension_name__' => 'OPcache');
-        $ver = 'zendopcache-' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION);
-        $ext['__extension_dir__'] = $ver;
-        $ext['__extension_src__'] = $ver . '.tgz';
-        $ext['__extension_download_url__'] = 'http://pecl.php.net/get/' . $ver . '.tgz';
-        $ext['__extract_method__'] = 'tar -zxf';
-        $ext['__extension_extra_config__'] = '--enable-opcache';
-
-        $this->ext_options['OPcache'] = $ext;
     }
 
     public static function getExtensionNotes($extensions)
     {
         $notes = [];
-        if (strpos($extensions, 'APC') !== false) {
-            $notes[] = '
-;				=================
-;				APC
-;				=================
-				extension=apc.so
-
-';
-        }
-        if (strpos($extensions, 'OPcache') !== false) {
-            $notes[] = '
-;				=================
-;				Zend OPcache
-;				=================
-				zend_extension=opcache.so
-
-opcache.memory_consumption=128
-opcache.interned_strings_buffer=8
-opcache.max_accelerated_files=4000
-opcache.revalidate_freq=60
-opcache.fast_shutdown=1
-opcache.enable_cli=1
-
-';
-        }
         if (strpos($extensions, 'Suhosin') !== false) {
             $notes[] = '
 ;				=================
@@ -876,9 +815,6 @@ opcache.enable_cli=1
         if ($this->options->GetValue('AddOnSuhosin')) {
             $extList[] = 'Suhosin';
         }
-        if ($this->options->GetValue('AddOnAPC')) {
-            $extList[] = 'APC';
-        }
         if ($this->options->GetValue('AddOnMemCache')) {
             $extList[] = 'MemCache';
         }
@@ -893,9 +829,6 @@ opcache.enable_cli=1
         }
         if ($this->options->GetValue('AddOnMemCachd7')) {
             $extList[] = 'MemCachd7';
-        }
-        if ($this->options->GetValue('AddOnOPcache')) {
-            $extList[] = 'OPcache';
         }
         foreach ($extList as $extName) {
             $newparams = array_merge($params, $this->ext_options[$extName]);

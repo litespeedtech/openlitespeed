@@ -447,8 +447,10 @@ class DAttrBase
 		} else {
 			$options[''] = '';
 		}
-		if ($derived) {
-			$options = array_merge($options, $derived);
+		if ($derived) { // cannot use array_merge, we need to keep the same index in case of numeric key
+            foreach ($derived as $k => $v) {
+                $options[$k] = $v; 
+            }
 		}
 		$this->_maxVal = $options;
 	}

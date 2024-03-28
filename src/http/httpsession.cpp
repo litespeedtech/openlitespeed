@@ -5264,7 +5264,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
         int fd = (pData->getfd() != -1) ?
             pData->getfd() : pData->getFileData()->getFileData()->getfd();
         LS_DBG_M(getLogSession(), "sendStaticFileEx usingLsAioReq %d %d\n",
-                 pData->getfd(), pData->getFileData()->getFileData()->getfd());
+                 pData->getfd(), fd);
 #if IOURING
         if (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_IOURING)
         {
@@ -5275,7 +5275,9 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 return LS_FAIL;
             }
             LS_INFO(getLogSession(), "Using io_uring for transfer of %s",
-                    getSendFileInfo()->getFileData()->getRealPath()->c_str());
+                    getSendFileInfo()->getFileData() ? 
+                        getSendFileInfo()->getFileData()->getRealPath()->c_str() :
+                        "file");
             setLsAioReq(lsIouringReq);
         }
         else
@@ -5290,7 +5292,9 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 return LS_FAIL;
             }
             LS_INFO(getLogSession(), "Using Linux AIO for transfer of %s",
-                    getSendFileInfo()->getFileData()->getRealPath()->c_str());
+                    getSendFileInfo()->getFileData() ? 
+                        getSendFileInfo()->getFileData()->getRealPath()->c_str() :
+                        "file");
             setLsAioReq(lsLinuxAioReq);
         }
         else
@@ -5303,7 +5307,9 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 return LS_FAIL;
             }
             LS_INFO(getLogSession(), "Using Posix AIO for transfer of %s",
-                    getSendFileInfo()->getFileData()->getRealPath()->c_str());
+                    getSendFileInfo()->getFileData() ? 
+                        getSendFileInfo()->getFileData()->getRealPath()->c_str() :
+                        "file");
             setLsAioReq(lsPosixAioReq);
         }
         if (getLsAioReq()->init(HttpServerConfig::getInstance().getAioBlockSize()))

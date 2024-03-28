@@ -23,6 +23,7 @@
 #include <edio/multiplexerfactory.h>
 #include <extensions/extworker.h>
 #include <http/chunkinputstream.h>
+#include <http/chunkoutputstream.h>
 #include <http/httpdefs.h>
 #include <http/httpextconnector.h>
 #include <http/httpreq.h>
@@ -39,15 +40,15 @@
 
 static char s_achForwardHttps[] = "X-Forwarded-Proto: https\r\n";
 static char s_achForwardHost[] = "X-Forwarded-Host: ";
+static char s_achChunkedEncoding[] = "Transfer-encoding: chunked\r\n";
 
 ProxyConn::ProxyConn()
-    : m_iSsl(0)
-    , m_flag(0)
+    : m_flag(0)
+    , m_ssl(NULL)
 {
     lstrncpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ",
              sizeof(m_extraHeader));
-    memset(&m_iTotalPending, 0,
-           ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending);
+    LS_ZERO_FILL(m_iTotalPending, m_pChunkOS);
 }
 
 
@@ -55,6 +56,10 @@ ProxyConn::~ProxyConn()
 {
     if (m_pChunkIS)
         HttpResourceManager::getInstance().recycle(m_pChunkIS);
+    if (m_pChunkOS)
+        HttpResourceManager::getInstance().recycle(m_pChunkOS);
+    if (m_ssl)
+        delete m_ssl;
 }
 
 
@@ -62,12 +67,17 @@ void ProxyConn::init(int fd, Multiplexer *pMplx)
 {
     EdStream::init(fd, pMplx, POLLIN | POLLOUT | POLLHUP | POLLERR);
     reset();
-    m_iSsl = ((ProxyWorker *)getWorker())->getConfig().getSsl();
-    if (m_iSsl)
+    int iSsl = ((ProxyWorker *)getWorker())->getConfig().getSsl();
+    if (iSsl)
     {
-        if(m_ssl.getSSL())
-            m_ssl.release();
-        m_ssl.setClientSessCache(((ProxyWorker *)getWorker())->getSslSessCache());
+        if(m_ssl)
+        {
+            if (m_ssl->getSSL())
+                m_ssl->release();
+        }
+        else
+            m_ssl = new SslConnection();
+        m_ssl->setClientSessCache(((ProxyWorker *)getWorker())->getSslSessCache());
     }
     m_lReqBeginTime = time(NULL);
 
@@ -103,23 +113,23 @@ static SSL *getSslConn(SslContext **ctx)
 
 void ProxyConn::setSSLAgain()
 {
-    if (m_ssl.wantRead())
+    if (m_ssl->wantRead())
         MultiplexerFactory::getMultiplexer()->switchWriteToRead(this);
-    if (m_ssl.wantWrite())
+    if (m_ssl->wantWrite())
         MultiplexerFactory::getMultiplexer()->switchReadToWrite(this);
 }
 
 
 int ProxyConn::connectSSL()
 {
-    if (!m_ssl.getSSL())
+    if (!m_ssl->getSSL())
     {
         SslContext *ctx = NULL;
         SSL *ssl = getSslConn(&ctx);
-        m_ssl.setSSL(ssl);
-        if (!m_ssl.getSSL())
+        m_ssl->setSSL(ssl);
+        if (!m_ssl->getSSL())
             return LS_FAIL;
-        m_ssl.setfd(getfd());
+        m_ssl->setfd(getfd());
         HttpReq *pReq = getConnector()->getHttpSession()->getReq();
         char *pHostName;
         int hostLen = pReq->getNewHostLen();
@@ -134,12 +144,12 @@ int ProxyConn::connectSSL()
         {
             char ch = *(pHostName + hostLen);
             *(pHostName + hostLen) = 0;
-            m_ssl.setTlsExtHostName(pHostName);
+            m_ssl->setTlsExtHostName(pHostName);
             *(pHostName + hostLen) = ch;
         }
-        m_ssl.tryReuseCachedSession(pHostName, hostLen);
+        m_ssl->tryReuseCachedSession(pHostName, hostLen);
     }
-    int ret = m_ssl.connect();
+    int ret = m_ssl->connect();
     switch (ret)
     {
     case 0:
@@ -147,7 +157,7 @@ int ProxyConn::connectSSL()
         break;
     case 1:
         LS_DBG_L(this, "[SSL] connected, session reuse: %d.\n",
-                 m_ssl.isSessionReused());
+                 m_ssl->isSessionReused());
         break;
     default:
         if (errno == EIO)
@@ -162,7 +172,7 @@ int ProxyConn::connectSSL()
 int ProxyConn::doWrite()
 {
     int ret;
-    if ((m_iSsl) && (!m_ssl.isConnected()))
+    if (m_ssl && !m_ssl->isConnected())
     {
         ret = connectSSL();
         if (ret != 1)
@@ -256,6 +266,11 @@ int ProxyConn::sendReqHeader()
 
     if (pSession->shouldIncludePeerAddr())
         headerLen = addForwardedFor(pBegin);
+    if (pReq->getContentLength() != LSI_BODY_SIZE_CHUNK)
+    {
+        if (pReq->isHeaderSet(HttpHeader::H_TRANSFER_ENCODING))
+            pReq->dropReqHeader(HttpHeader::H_TRANSFER_ENCODING);
+    }
 
 #if 1       //always set "Accept-Encoding" header to "gzip"
     char *pAE = (char *)pReq->getHeader(HttpHeader::H_ACC_ENCODING);
@@ -328,6 +343,17 @@ int ProxyConn::sendReqHeader()
         m_iTotalPending += sizeof(s_achForwardHttps) - 1;
     }
 
+    if (pReq->getContentLength() == LSI_BODY_SIZE_CHUNK)
+    {
+        LS_DBG_L(this, "Unfinished request body is chunk encoded, use chunked encoding ." );
+        if (!pReq->isHeaderSet(HttpHeader::H_TRANSFER_ENCODING))
+        {
+            LS_DBG_L(this, "Add request header 'Transfer-encoding: chunked'" );
+            m_iovec.append(s_achChunkedEncoding, sizeof(s_achChunkedEncoding) - 1);
+            m_iTotalPending += sizeof(s_achChunkedEncoding) - 1;
+        }
+        setupChunkOS();
+    }
     //if ( headerLen > 0 )
     {
         pExtraHeader[headerLen++] = '\r';
@@ -340,7 +366,7 @@ int ProxyConn::sendReqHeader()
     setInProcess(1);
     if (LOG4CXX_NS::Level::isEnabled(LOG4CXX_NS::Level::DBG_HIGH))
     {
-        LS_DBG_L("Proxy Request Headers:" );
+        LS_DBG_L(this, "Proxy Request Headers:" );
         log4cxx::Logger *pLogger = getLogger();
         if (!pLogger)
             pLogger = log4cxx::Logger::getDefault();
@@ -353,15 +379,23 @@ int ProxyConn::sendReqHeader()
 int  ProxyConn::sendReqBody(const char *pBuf, int size)
 {
     int ret;
-    if (m_iTotalPending > 0)
+    if (m_pChunkOS)
+    {
+        if (m_iTotalPending > 0)
+        {
+            ret = flush();
+            if (ret)
+                return ret;
+        }
+        LS_DBG_L(this, "send chunk encoded request body, size: %d.", size);
+        ret = m_pChunkOS->write(pBuf, size);
+        m_pChunkOS->flush();
+    }
+    else if (m_iTotalPending > 0)
     {
         m_iovec.append(pBuf, size);
         int total = m_iTotalPending + size;
-        int finished = 0;
-        if (m_iSsl)
-            ret = m_ssl.writev(m_iovec.get(), m_iovec.len(), &finished);
-        else
-            ret = writev(m_iovec, total);
+        ret = writev(m_iovec.get(), m_iovec.len());
         m_iovec.pop_back(1);
         if (ret > 0)
         {
@@ -389,10 +423,7 @@ int  ProxyConn::sendReqBody(const char *pBuf, int size)
     }
     else
     {
-        if (m_iSsl)
-            ret = m_ssl.write(pBuf, size);
-        else
-            ret = write(pBuf, size);
+        ret = write(pBuf, size);
         if (ret > 0)
             m_iReqTotalSent += ret;
     }
@@ -409,10 +440,10 @@ void ProxyConn::abort()
 
 int ProxyConn::close()
 {
-    if (m_iSsl && m_ssl.getSSL())
+    if (m_ssl && m_ssl->getSSL())
     {
         LS_DBG_L(this, "Shutdown Proxy SSL ...");
-        m_ssl.release();
+        m_ssl->release();
     }
     return ExtConn::close();
 }
@@ -423,8 +454,10 @@ void ProxyConn::reset()
     m_iovec.clear();
     if (m_pChunkIS)
         HttpResourceManager::getInstance().recycle(m_pChunkIS);
+    if (m_pChunkOS)
+        HttpResourceManager::getInstance().recycle(m_pChunkOS);
     memset(&m_iTotalPending, 0,
-           ((char *)(&m_pChunkIS + 1)) - (char *)&m_iTotalPending);
+           ((char *)(&m_pChunkOS + 1)) - (char *)&m_iTotalPending);
 }
 
 
@@ -455,12 +488,12 @@ int ProxyConn::read(char *pBuf , int size)
         size -= len;
     }
     int ret;
-    if (m_iSsl)
-        ret = m_ssl.read(pBuf, size);
+    if (m_ssl)
+        ret = m_ssl->read(pBuf, size);
     else
         ret = ExtConn::read(pBuf, size);
     LS_DBG_L(this, "Read Response %d bytes", ret);
-    if (m_iSsl && (ret < 0))
+    if (m_ssl && ret < 0)
         errno = ECONNRESET;
     if (ret > 0)
     {
@@ -482,7 +515,7 @@ int ProxyConn::readvSsl(const struct iovec *vector,
     int ret;
     while (vector < pEnd)
     {
-        ret = m_ssl.read((char *)vector->iov_base, vector->iov_len);
+        ret = m_ssl->read((char *)vector->iov_base, vector->iov_len);
         if (ret > 0)
             total += ret;
         if (ret < 0)
@@ -519,7 +552,7 @@ int ProxyConn::readv(struct iovec *vector, int count)
         }
     }
     int ret;
-    if (m_iSsl)
+    if (m_ssl)
         ret = readvSsl(vector, pEnd);
     else
         ret = ExtConn::readv(vector, pEnd - vector);
@@ -547,11 +580,33 @@ int ProxyConn::readv(struct iovec *vector, int count)
 }
 
 
+int ProxyConn::write(const char *pBuf, int size)
+{
+    int ret;
+    if (m_ssl)
+        ret = m_ssl->write(pBuf, size);
+    else
+        ret = EdStream::write(pBuf, size);
+    return ret;
+}
+
+
+int ProxyConn::writev(const struct iovec *vector, int count)
+{
+    int ret;
+    if (m_ssl)
+        ret = m_ssl->writev(vector, count, NULL);
+    else
+        ret = EdStream::writev(vector, count);
+    return ret;
+}
+
+
 int ProxyConn::doRead()
 {
     int ret;
     LS_DBG_L(this, "ProxyConn::doRead()");
-    if ((m_iSsl) && (!m_ssl.isConnected()))
+    if (m_ssl && !m_ssl->isConnected())
     {
         ret = connectSSL();
         if (ret != 1)
@@ -590,8 +645,8 @@ int ProxyConn::processResp()
     {
         char *p = HttpResourceManager::getGlobalBuf();
         const char *pBuf = p;
-        if (m_iSsl)
-            len = m_ssl.read(p, RESP_HEADER_BUF_SIZE);
+        if (m_ssl)
+            len = m_ssl->read(p, RESP_HEADER_BUF_SIZE);
         else
             len = ExtConn::read(p, RESP_HEADER_BUF_SIZE);
         if (len <= 0)
@@ -688,7 +743,7 @@ int ProxyConn::readRespBody()
                     ret = 0;
                     break;
                 }
-                else if (ret == 0 || m_iSsl == 0)
+                else if (ret == 0 || !m_ssl)
                 {
                     pHEC->flushResp();
                     return 0;
@@ -760,6 +815,15 @@ void ProxyConn::setupChunkIS()
 }
 
 
+void ProxyConn::setupChunkOS()
+{
+    assert(m_pChunkOS == NULL);
+    m_pChunkOS = HttpResourceManager::getInstance().getChunkOutputStream();
+    m_pChunkOS->setStream(this);
+    m_pChunkOS->open();
+}
+
+
 int ProxyConn::doError(int err)
 {
     LS_DBG_L(this, "ProxyConn::doError()");
@@ -817,6 +881,14 @@ int  ProxyConn::endOfReqBody()
         if (ret)
             return ret;
     }
+    if (m_pChunkOS)
+    {
+        LS_DBG_L(this, "endOfReqBody close Chunk OS");
+        m_pChunkOS->close();
+        int ret = m_pChunkOS->flush();
+        if (ret)
+            return ret;
+    }
     suspendWrite();
     return 0;
 }
@@ -827,11 +899,7 @@ int  ProxyConn::flush()
     if (m_iTotalPending)
     {
         int ret;
-        int finished = 0;
-        if (m_iSsl)
-            ret = m_ssl.writev(m_iovec.get(), m_iovec.len(), &finished);
-        else
-            ret = writev(m_iovec, m_iTotalPending);
+        ret = writev(m_iovec.get(), m_iovec.len());
         if (ret >= m_iTotalPending)
         {
             ret -= m_iTotalPending;
@@ -974,9 +1042,10 @@ void ProxyConn::continueRead()
 {
     LS_DBG_L(getLogger(), "[%s] ProxyConn::continueRead(), fd: %d", getLogId(), getfd());
     EdStream::continueRead();
-    if (!isInDoRead() && m_ssl.isConnected())
+    if (m_ssl && m_ssl->isConnected() && m_ssl->hasPendingIn())
     {
-        doRead();
+        if (!isInDoRead())
+            doRead();
     }
 }
 

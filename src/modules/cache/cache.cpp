@@ -61,7 +61,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.64"
+#define MODULE_VERSION_INFO         "1.65"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -262,8 +262,8 @@ static void house_keeping_cb(const void *p)
     {
         pStore->houseKeeping();
         pStore->cleanByTracking(100, 100);
-        g_api->log(NULL, LSI_LOG_DEBUG, "[%s]house_keeping_cb with store %p.\n",
-                   ModuleNameStr, pStore);
+        //g_api->log(NULL, LSI_LOG_DEBUG, "[%s]house_keeping_cb with store %p.\n",
+        //           ModuleNameStr, pStore);
     }
 }
 
@@ -834,7 +834,15 @@ static int32_t getVaryFlag(const lsi_session_t *session, CacheConfig *pConfig)
                            ModuleNameStr, (*iter)->len(), (*iter)->c_str());
                 continue;
             }
-            flag |= (1 << index);
+            if (index == LSI_HDR_COOKIE)
+                g_api->log(session, LSI_LOG_DEBUG, "[%s] skip vary on full cookie header",
+                       ModuleNameStr);
+            else
+            {    g_api->log(session, LSI_LOG_DEBUG, "[%s] add vary request header"
+                       " \"%.*s\" with index %d.\n",
+                       ModuleNameStr, (*iter)->len(), (*iter)->c_str(), index);
+                flag |= (1 << index);
+            }
         }
     }
 
@@ -2820,8 +2828,8 @@ static int checkAssignHandler(lsi_param_t *rec)
                                rec->session, &MNAME);
     if (!pConfig)
     {
-        g_api->log(rec->session, LSI_LOG_ERROR,
-                   "[%s] checkAssignHandler config error.\n", ModuleNameStr);
+        g_api->log(rec->session, LSI_LOG_DEBUG,
+                   "[%s] checkAssignHandler no configuration.\n", ModuleNameStr);
         return bypassUrimapHook(rec, myData);
     }
 

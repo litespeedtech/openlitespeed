@@ -192,6 +192,7 @@ void ChunkOutputStream::reset()
 }
 
 
+// RETURN  0 flushed  1 need more flush   -1 failure.
 int ChunkOutputStream::flush2()
 {
     int ret = m_pOS->writev(m_iov, m_iTotalPending);

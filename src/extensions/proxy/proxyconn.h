@@ -27,6 +27,7 @@
 #define PCF_IN_DO_READ  1
 
 class ChunkInputStream;
+class ChunkOutputStream;
 class ProxyConn : public ExtConn
     , public HttpExtProcessor
 {
@@ -49,16 +50,17 @@ class ProxyConn : public ExtConn
     const char *m_pBufEnd;
 
     ChunkInputStream *m_pChunkIS;
+    ChunkOutputStream *m_pChunkOS;
 
-    short           m_iSsl;
-    short           m_flag;
-    SslConnection   m_ssl;
+    int             m_flag;
+    SslConnection  *m_ssl;
 
     char        m_extraHeader[256];  //X-Forwarded-For
 
     int         processResp();
     int         readRespBody();
     void        setupChunkIS();
+    void        setupChunkOS();
     int         connectSSL();
 
     int         readvSsl(const struct iovec *vector, const struct iovec *pEnd);
@@ -76,6 +78,8 @@ protected:
 
     int read(char *pBuf , int size);
     int readv(struct iovec *vector, int count);
+    virtual int write(const char *pBuf, int size);
+    virtual int writev(const struct iovec *vector, int count);
 
 public:
     virtual int removeRequest(ExtRequest *pReq);
@@ -104,8 +108,6 @@ public:
     virtual int close();
     void reset();
 
-    void setUseSsl(int s)       {   m_iSsl = s;       }
-    short isUseSsl() const      {   return m_iSsl;    }
     short isInDoRead() const    {   return m_flag & PCF_IN_DO_READ;     }
 
     LS_NO_COPY_ASSIGN(ProxyConn);

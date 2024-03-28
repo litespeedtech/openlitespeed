@@ -722,7 +722,6 @@ $_gmsg['buildphp_compilerflags'] = '编译器标志';
 $_gmsg['buildphp_confparam'] = '配置参数';
 $_gmsg['buildphp_confsaved'] = '配置保存成功。你可以在下一次编译时使用。';
 $_gmsg['buildphp_detaillog'] = '详细日志 ';
-$_gmsg['buildphp_eaccelerator'] = '(操作码缓存) 只支持PHP 5.2 ~ 5.4';
 $_gmsg['buildphp_enableextnote'] = '如要开启扩展，请确认以下内容已添加至php.ini配置文件中。
 									另外，你需要检查日志详细信息来确认扩展安装的目录并且将该目录路径添加至你的php.ini配置文件中。';
 $_gmsg['buildphp_errchmod'] = 'chmod失败';
@@ -746,7 +745,6 @@ $_gmsg['buildphp_manualrunnotice'] = '<p>出于安全原因，请登入您的服
 	<p>如果你是以具有sudo权限的用户登入，你可以通过sudo运行命令并输入root密码：
 	<code>sudo %%manual_script%%</code></p>';
 $_gmsg['buildphp_nobrowserrefresh'] = '请不要在PHP编译过程中使用浏览器刷新，后退及前进功能。';
-$_gmsg['buildphp_opcodecache'] = '操作码缓存';
 $_gmsg['buildphp_phpver'] = 'PHP版本';
 $_gmsg['buildphp_restoredefault'] = '恢复默认设置';
 $_gmsg['buildphp_step1'] = '选择PHP版本';
@@ -754,7 +752,7 @@ $_gmsg['buildphp_step2'] = '选择编译选项';
 $_gmsg['buildphp_step3'] = '下载源代码';
 $_gmsg['buildphp_step4'] = '编译并监控';
 $_gmsg['buildphp_stopduetoerr'] = '由于错误停止。请检查日志并手动修复。';
-$_gmsg['buildphp_suhosin'] = '(General Hardening) 只支持PHP5.4和5.5版本';
+$_gmsg['buildphp_suhosin'] = '(General Hardening) 只支持PHP5版本';
 $_gmsg['buildphp_updatever'] = '如果你使用下列列表以外的版本，你需要手动更改设置文件';
 $_gmsg['buildphp_useprevconf'] = '使用上一次编译的配置文件';
 

@@ -282,7 +282,7 @@ class DTblDef extends DTblDefBase
 			$this->_attrs['sslSessionTickets'],
 			self::NewIntAttr('sslSessionTicketLifetime', DMsg::ALbl('l_sslSessionTicketLifetime'), true, 10, 1000000),
 			self::NewTextAttr('sslSessionTicketKeyFile', DMsg::ALbl('l_sslSessionTicketKeyFile'), 'cust'),
-			self::NewParseTextAttr('sslOcspProxy', DMsg::ALbl('l_ocspproxy'), '/^((http|https):\/\/)?([[:alnum:]._-]+|\[[[:xdigit:]:]+\])(:\d+)$/', DMsg::ALbl('parse_ocspproxy')),
+			self::NewParseTextAttr('sslOcspProxy', DMsg::ALbl('l_ocspproxy'), '/^((http|https):\/\/)?([A-z0-9._\-]+|\[[[:xdigit:]:]+\])(:\d+)$/', DMsg::ALbl('parse_ocspproxy')),
 			self::NewBoolAttr('sslStrictSni', DMsg::ALbl('l_sslStrictSni')),
 		];
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_tuningsslsettings'), $attrs, 'sslGlobal');

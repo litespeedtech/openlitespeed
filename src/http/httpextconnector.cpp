@@ -580,7 +580,8 @@ int HttpExtConnector::sendReqBody()
             return written;
         }
     }
-    if (pReq->getBodyRemain() <= 0)
+    if (getHttpSession()->getFlag(HSF_REQ_BODY_DONE)
+        && pReq->getBodyRemain() <= 0)
     {
         setState(getState() & ~HEC_FWD_REQ_BODY);
         reqBodyDone();

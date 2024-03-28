@@ -4499,7 +4499,7 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     settings.es_max_sfcw = GET_VAL(pNode, "quicMaxSfcw", 64 * 1024,
                                 128 * 1024 * 1024, 0);
     settings.es_max_streams_in
-                         = GET_VAL(pNode, "quicMaxIncomingStreams",
+                         = GET_VAL(pNode, "quicMaxStreams",
                                 10, 1000, 500);
     settings.es_init_max_streams_bidi
                          = GET_VAL(pNode, "quicInitMaxIncomingStreamsBidi",

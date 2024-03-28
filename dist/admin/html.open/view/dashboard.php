@@ -3,39 +3,39 @@ require_once('inc/auth.php') ;
 
 echo UI::content_header('fa-home', DMsg::UIStr('menu_dashboard')) ;
 
-$servstatbottom = array(
-    array(
-        array( RealTimeStats::FLD_UPTIME, DMsg::UIStr('service_uptime'), 'success', '' ),
-        array( RealTimeStats::FLD_S_TOT_REQS, DMsg::UIStr('service_totalreq'), 'muted', '' ),
-        array( RealTimeStats::FLD_BLOCKEDIP_COUNT, DMsg::UIStr('service_blockedipcnt'), '', 'pinkDark' )
-    ),
-    array(
-        array( RealTimeStats::FLD_AVAILCONN, DMsg::UIStr('service_availconn'), 'success', '' ),
-        array( RealTimeStats::FLD_PLAINCONN, DMsg::UIStr('service_plainconn'), 'orange', 'pinkDark' ),
-        array( RealTimeStats::FLD_MAXCONN, DMsg::UIStr('service_maxconn'), 'muted', '' )
-    ),
-    array(
-        array( RealTimeStats::FLD_AVAILSSL, DMsg::UIStr('service_availssl'), 'success', '' ),
-        array( RealTimeStats::FLD_SSLCONN, DMsg::UIStr('service_sslconn'), 'orange', 'pinkDark' ),
-        array( RealTimeStats::FLD_MAXSSL_CONN, DMsg::UIStr('service_maxsslconn'), 'muted', '' )
-    ),
-    array(
-        array( RealTimeStats::FLD_S_REQ_PROCESSING, DMsg::UIStr('service_reqprocessing'), 'success', 'pinkDark' ),
-        array( RealTimeStats::FLD_S_REQ_PER_SEC, DMsg::UIStr('service_reqpersec'), 'success', 'green' )
-    )
-        ) ;
+$servstatbottom = [
+    [
+        [RealTimeStats::FLD_UPTIME, DMsg::UIStr('service_uptime'), 'success', ''],
+        [RealTimeStats::FLD_S_TOT_REQS, DMsg::UIStr('service_totalreq'), 'muted', ''],
+        [RealTimeStats::FLD_BLOCKEDIP_COUNT, DMsg::UIStr('service_blockedipcnt'), '', 'pinkDark', 'antiddos_blocked_ip']
+    ],
+    [
+        [RealTimeStats::FLD_AVAILCONN, DMsg::UIStr('service_availconn'), 'success', ''],
+        [RealTimeStats::FLD_PLAINCONN, DMsg::UIStr('service_plainconn'), 'orange', 'pinkDark'],
+        [RealTimeStats::FLD_MAXCONN, DMsg::UIStr('service_maxconn'), 'muted', '']
+    ],
+    [
+        [RealTimeStats::FLD_AVAILSSL, DMsg::UIStr('service_availssl'), 'success', ''],
+        [RealTimeStats::FLD_SSLCONN, DMsg::UIStr('service_sslconn'), 'orange', 'pinkDark'],
+        [RealTimeStats::FLD_MAXSSL_CONN, DMsg::UIStr('service_maxsslconn'), 'muted', '']
+    ],
+    [
+        [RealTimeStats::FLD_S_REQ_PROCESSING, DMsg::UIStr('service_reqprocessing'), 'success', 'pinkDark'],
+        [RealTimeStats::FLD_S_REQ_PER_SEC, DMsg::UIStr('service_reqpersec'), 'success', 'green']
+    ]
+];
 
-$servstatplot = array(
-    array( RealTimeStats::FLD_BPS_IN, DMsg::UIStr('service_bpsin'), true ),
-    array( RealTimeStats::FLD_BPS_OUT, DMsg::UIStr('service_bpsout'), true ),
-    array( RealTimeStats::FLD_SSL_BPS_IN, DMsg::UIStr('service_sslbpsin'), false ),
-    array( RealTimeStats::FLD_SSL_BPS_OUT, DMsg::UIStr('service_sslbpsout'), false ),
-    array( RealTimeStats::FLD_PLAINCONN, DMsg::UIStr('service_plainconn'), true ),
-    array( RealTimeStats::FLD_IDLECONN, DMsg::UIStr('service_idleconn'), false ),
-    array( RealTimeStats::FLD_SSLCONN, DMsg::UIStr('service_sslconn'), true ),
-    array( RealTimeStats::FLD_S_REQ_PROCESSING, DMsg::UIStr('service_reqprocessing'), false ),
-    array( RealTimeStats::FLD_S_REQ_PER_SEC, DMsg::UIStr('service_reqpersec'), true )
-        ) ;
+$servstatplot = [
+    [RealTimeStats::FLD_BPS_IN, DMsg::UIStr('service_bpsin'), true],
+    [RealTimeStats::FLD_BPS_OUT, DMsg::UIStr('service_bpsout'), true],
+    [RealTimeStats::FLD_SSL_BPS_IN, DMsg::UIStr('service_sslbpsin'), false],
+    [RealTimeStats::FLD_SSL_BPS_OUT, DMsg::UIStr('service_sslbpsout'), false],
+    [RealTimeStats::FLD_PLAINCONN, DMsg::UIStr('service_plainconn'), true],
+    [RealTimeStats::FLD_IDLECONN, DMsg::UIStr('service_idleconn'), false],
+    [RealTimeStats::FLD_SSLCONN, DMsg::UIStr('service_sslconn'), true],
+    [RealTimeStats::FLD_S_REQ_PROCESSING, DMsg::UIStr('service_reqprocessing'), false],
+    [RealTimeStats::FLD_S_REQ_PER_SEC, DMsg::UIStr('service_reqpersec'), true]
+];
 ?>
 
 <!-- row -->

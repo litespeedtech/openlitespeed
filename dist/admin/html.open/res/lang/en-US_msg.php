@@ -737,7 +737,6 @@ $_gmsg['buildphp_compilerflags'] = 'Compiler Flags';
 $_gmsg['buildphp_confparam'] = 'Configure Parameters';
 $_gmsg['buildphp_confsaved'] = 'Configuration saved successfully. you can retrieve it for next build.';
 $_gmsg['buildphp_detaillog'] = 'Detailed Log';
-$_gmsg['buildphp_eaccelerator'] = '(Opcode Cache) Only support PHP 5.2 ~ 5.4';
 $_gmsg['buildphp_enableextnote'] = 'To enable the extension, please make sure the following is added to
 				 your php.ini configuration file. In addition, you may need to check the log detail to
 				 determine the directory where your extensions are installed and add the directory to the
@@ -764,7 +763,6 @@ $_gmsg['buildphp_manualrunnotice'] = '<p>For security reasons, please log in to 
 	<p>If you log in as a user who has sudo permission, you can run the command with sudo and input root password after prompt.
 	<code>sudo %%manual_script%%</code></p>';
 $_gmsg['buildphp_nobrowserrefresh'] = 'Please do not use the browser refresh, back and forward buttons while building PHP.';
-$_gmsg['buildphp_opcodecache'] = 'Opcode Cache';
 $_gmsg['buildphp_phpver'] = 'PHP Version';
 $_gmsg['buildphp_restoredefault'] = 'Restore Defaults';
 $_gmsg['buildphp_step1'] = 'Select PHP Version';
@@ -772,7 +770,7 @@ $_gmsg['buildphp_step2'] = 'Choose Build Options';
 $_gmsg['buildphp_step3'] = 'Download Source Code';
 $_gmsg['buildphp_step4'] = 'Compile and Monitor';
 $_gmsg['buildphp_stopduetoerr'] = 'Stopped due to Error. Please check the log and manually fix it.';
-$_gmsg['buildphp_suhosin'] = '(General Hardening) only support PHP 5.4 and 5.5';
+$_gmsg['buildphp_suhosin'] = '(General Hardening) only support PHP5';
 $_gmsg['buildphp_updatever'] = 'If you want to use a version not listed here, you can manually update the settings in ';
 $_gmsg['buildphp_useprevconf'] = 'Use Configuration from Previous Build';
 

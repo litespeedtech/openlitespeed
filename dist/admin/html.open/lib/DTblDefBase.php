@@ -79,14 +79,17 @@ class DTblDefBase
 
 	protected static function NewSelAttr($key, $label, $options, $allowNull = true, $helpKey = null, $inputAttr = null, $multiInd = 0)
 	{
-		if (is_array($options)) // fixed options
+		if (is_array($options)) { // fixed options
 			return new DAttr($key, 'sel', $label, 'select', $allowNull, null, $options, $inputAttr, 0, $helpKey);
+        }
 
 		// derived options
-		if ($multiInd == 0)
+		if ($multiInd == 0) {
 			return new DAttr($key, 'sel1', $label, 'select', $allowNull, $options, null, $inputAttr, 0, $helpKey);
-		else //sel2 is derived and multi and using text
-			return new DAttr($key, 'sel2', $label, 'text', $allowNull, $options, null, $inputAttr, 1, $helpKey);
+        } 
+        
+        //sel2 is derived and multi and using text
+		return new DAttr($key, 'sel2', $label, 'text', $allowNull, $options, null, $inputAttr, 1, $helpKey);
 	}
 
 	protected static function NewCheckBoxAttr($key, $label, $options, $allowNull = true, $helpKey = null, $default = null)
@@ -235,15 +238,17 @@ class DTblDefBase
 				if ($pos = strpos($ip, ':')) {
 					$aip = substr($ip, $pos + 1);
 					$ipo[$aip] = $aip;
-					if ($aip != '127.0.0.1')
+					if ($aip != '127.0.0.1') {
 						$ipv6["[::FFFF:$aip]"] = "[::FFFF:$aip]";
+                    }
 				}
 			}
 		}
-		if ($ipv6str != '')
+		if ($ipv6str != '') {
 			$this->_options['ip'] = $ipo + $ipv6;
-		else
+        } else {
 			$this->_options['ip'] = $ipo;
+        }
 	}
 
 	protected function loadCommonAttrs()
@@ -580,7 +585,7 @@ class DTblDefBase
 
 	protected function add_S_SEC_RECAP($id)
 	{
-		$parseFormat = '/^[[:alnum:]-_]{20,100}$/';
+		$parseFormat = '/^[A-z0-9\-_]{20,100}$/';
 		$parseHelp = DMsg::ALbl('parse_recaptchakey');
 		$botlist = self::NewTextAreaAttr('botWhiteList:list', DMsg::ALbl('l_botWhiteList'), 'cust', true, 5, 'recaptchaBotWhiteList', 0, 1);
 		$botlist->SetFlag(DAttr::BM_RAWDATA);
@@ -601,7 +606,7 @@ class DTblDefBase
 
 	protected function add_VT_SEC_RECAP($id)
 	{
-		$parseFormat = '/^[[:alnum:]-_]{20,100}$/';
+		$parseFormat = '/^[A-z0-9\-_]{20,100}$/';
 		$parseHelp = DMsg::ALbl('parse_recaptchakey');
 
 		$attrs = [
@@ -847,7 +852,6 @@ class DTblDefBase
 			$this->_attrs['suffix'],
 			$this->_attrs['scriptHandler_type'],
 			$this->_attrs['scriptHandler'],
-			$this->_attrs['note'],
 		];
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_shdef'), $attrs, 'suffix');
 	}

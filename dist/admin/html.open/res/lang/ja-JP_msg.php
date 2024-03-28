@@ -721,7 +721,6 @@ $_gmsg['buildphp_compilerflags'] = 'コンパイラフラグ';
 $_gmsg['buildphp_confparam'] = 'パラメータの設定';
 $_gmsg['buildphp_confsaved'] = '設定が正常に保存されました。 あなたは次のビルドのためにそれを取り出すことができます。';
 $_gmsg['buildphp_detaillog'] = '詳細ログ';
-$_gmsg['buildphp_eaccelerator'] = '(Opcode Cache) PHP 5.2〜5.4のみサポート';
 $_gmsg['buildphp_enableextnote'] = '拡張機能を有効にするには、php.ini設定ファイルに以下が追加されていることを確認してください。
 				また、拡張機能がインストールされているディレクトリを特定するためにログの詳細を確認し、
 				php.iniの設定ファイルのextensionsパスにディレクトリを追加する必要があります。';
@@ -747,7 +746,6 @@ $_gmsg['buildphp_manualrunnotice'] = '<p>セキュリティ上の理由から、
 	<p>sudo権限を持つユーザーとしてログインした場合は、sudoでコマンドを実行し、プロンプトの後にrootパスワードを入力することができます。
 	<code>sudo %%manual_script%%</code></p>';
 $_gmsg['buildphp_nobrowserrefresh'] = 'PHPをビルドする際には、ブラウザのリフレッシュ、前後のボタンを使わないでください。';
-$_gmsg['buildphp_opcodecache'] = 'Opcode Cache';
 $_gmsg['buildphp_phpver'] = 'PHPバージョン';
 $_gmsg['buildphp_restoredefault'] = 'デフォルトに戻す';
 $_gmsg['buildphp_step1'] = 'PHPバージョンを選択';
@@ -755,7 +753,7 @@ $_gmsg['buildphp_step2'] = 'ビルドオプションを選択';
 $_gmsg['buildphp_step3'] = 'ソースコードをダウンロード';
 $_gmsg['buildphp_step4'] = 'コンパイルとモニタ';
 $_gmsg['buildphp_stopduetoerr'] = 'エラーのために停止しました。 ログを確認して手動で修正してください。';
-$_gmsg['buildphp_suhosin'] = '（General Hardening）はPHP 5.4と5.5のみをサポートします';
+$_gmsg['buildphp_suhosin'] = '（General Hardening）はPHP5のみをサポートします';
 $_gmsg['buildphp_updatever'] = 'ここに記載されていないバージョンを使用する場合は、手動で設定を更新することができます';
 $_gmsg['buildphp_useprevconf'] = '以前のビルドの設定を使用する';
 

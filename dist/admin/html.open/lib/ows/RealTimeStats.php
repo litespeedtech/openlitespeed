@@ -127,7 +127,7 @@ class RealTimeStats
         }
 
         $m = [];
-        if ($found = preg_match_all("/^BLOCKED_IP: ([0-9 \[\]\.,]*)/m", $this->_rawdata, $m)) {
+        if ($found = preg_match_all("/^BLOCKED_IP: ([0-9 \[\]\.,;:A-Za-f]*)/m", $this->_rawdata, $m)) {
             $blockedips = [];
 
             for ($f = 0; $f < $found; $f ++) {

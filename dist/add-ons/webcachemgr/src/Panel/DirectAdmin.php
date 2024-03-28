@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2019-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2019-2024 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -81,6 +81,10 @@ class DirectAdmin extends ControlPanel
      */
     public function daVhCacheRootSearch( $confDir )
     {
+        if ( !is_dir($confDir) ) {
+            return '';
+        }
+
         $files = new DirectoryIterator($confDir);
 
         foreach ( $files as $file ) {

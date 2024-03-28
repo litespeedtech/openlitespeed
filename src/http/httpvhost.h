@@ -543,7 +543,8 @@ public:
                                   HttpContext *pOldCtx);
 
 
-    int configNodeJsStarter(char *pRunnerCmd, int cmdLen, const char *pBinPath);
+    int configNodeJsStarter(char *pRunnerCmd, int cmdLen, const char *pBinPath,
+                            int is_esm);
     LocalWorker *addNodejsApp(const char *pAppName,
                               const char *appPath, const char *pStartupFile,
                               int maxConns, const char *pRunModeEnv,

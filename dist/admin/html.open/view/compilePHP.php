@@ -279,14 +279,6 @@ class CompilePHPUI
 			$input .= $this->input_checkbox('addonSuhosin', $options->GetValue('AddOnSuhosin'), '<a href="http://suhosin.org" target="_blank" rel="noopener noreferrer">Suhosin</a> ' . DMsg::ALbl('buildphp_suhosin'));
 		}
 
-		$label_opcode = DMsg::ALbl('buildphp_opcodecache');
-        if ($supported['apc']) {
-    		$input .= $this->input_checkbox('addonAPC', $options->GetValue('AddOnAPC'), '<a href="http://pecl.php.net/package/APC" target="_blank" rel="noopener noreferrer">APC</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::APC_VERSION));
-		}
-
-		if ($supported['opcache']) {
-            $input .= $this->input_checkbox('addonOPcache', $options->GetValue('AddOnOPcache'), '<a href="http://pecl.php.net/package/ZendOpcache" target="_blank" rel="noopener noreferrer">Zend OPcache</a> (' . $label_opcode .') V' . BuildConfig::GetVersion(BuildConfig::OPCACHE_VERSION));
-		}
 		if ($supported['memcache']) {
 			$input .= $this->input_checkbox('addonMemCache', $options->GetValue('AddOnMemCache'), '<a href="http://pecl.php.net/package/memcache" target="_blank" rel="noopener noreferrer">memcache</a> (memcached extension) V' . BuildConfig::GetVersion(BuildConfig::MEMCACHE_VERSION));
 		}

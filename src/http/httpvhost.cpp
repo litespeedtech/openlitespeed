@@ -2001,7 +2001,7 @@ HttpContext *HttpVHost::addPythonContext(const char *pURI,
 
 
 int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
-                                   const char *pBinPath)
+                                   const char *pBinPath, int is_esm)
 {
     const char *defaultBin[2] = { "/usr/local/bin/node", "/usr/bin/node" };
     if (!pBinPath || !*pBinPath)
@@ -2021,8 +2021,12 @@ int HttpVHost::configNodeJsStarter(char *pRunnerCmd, int cmdLen,
                     "is turned off", TmpLogId::getLogId());
         return LS_FAIL;
     }
-    snprintf(pRunnerCmd, cmdLen, "%s %sfcgi-bin/lsnode.js", pBinPath,
-             MainServerConfig::getInstance().getServerRoot());
+    if (is_esm)
+        snprintf(pRunnerCmd, cmdLen, "%s %sfcgi-bin/lsnodesm.js", pBinPath,
+                 MainServerConfig::getInstance().getServerRoot());
+    else
+        snprintf(pRunnerCmd, cmdLen, "%s %sfcgi-bin/lsnode.js", pBinPath,
+                 MainServerConfig::getInstance().getServerRoot());
     return 0;
 }
 
@@ -2038,6 +2042,8 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
     char achFileName[MAX_PATH_LEN];
     char achRunnerCmd[MAX_PATH_LEN];
     const char *pNodejsStarter = NULL;
+    int is_esm = 0;
+    int len;
 
     LocalWorkerConfig* pAppDefault = (LocalWorkerConfig*)AppConfig::s_nodeAppConfig.getpAppDefault();
     if (!pAppDefault)
@@ -2057,11 +2063,16 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
         return NULL;
     }
 
+    if (pStartupFile && (len = strlen(pStartupFile)) > 4
+        && strcmp(pStartupFile + len - 4, ".mjs") == 0)
+        is_esm = 1;
+
     if (!pBinPath || *pBinPath == 0x00)
         pBinPath = AppConfig::s_nodeAppConfig.s_binPath.c_str();
 
     if (pBinPath
-        && configNodeJsStarter(achRunnerCmd, sizeof(achRunnerCmd), pBinPath) != -1)
+        && configNodeJsStarter(achRunnerCmd, sizeof(achRunnerCmd),
+                               pBinPath, is_esm) != -1)
     {
         pNodejsStarter = achRunnerCmd;
     }

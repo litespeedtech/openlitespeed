@@ -15,15 +15,20 @@
         <img src="../img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
       </figure>
 <h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
-<h5 class="ls-text-muted">Version 1.4 &nbsp;&#8212;&nbsp;Rev. 5 </h5>
+<h5 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 0</h5>
 <hr/>
 <div>
 <ul>
 <li><a href="license.html">ライセンス</a></li>
 <li><a href="intro.html">はじめに</a></li>
 <li><a href="install.html">インストール</a></li>
-<li><a href="admin.html">管理</a>
-	<ul class="level2"><li><a href="ServerStat_Help.html">サービスマネージャ</a></li></ul></li>
+<li>
+  <a href="admin.html">管理</a>
+  <ul class="level2">
+    <li><a href="ServerStat_Help.html">サービスマネージャ</a></li>
+    <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+  </ul>
+</li>
 <li><a href="security.html">セキュリティ</a></li>
 <li><a href="config.html">設定</a>
 	<ul class="level2">
@@ -107,7 +112,7 @@
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhEnableGzip"><h3>GZIPを有効にする<span class="ls-permlink"><a href="#vhEnableGzip"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>このバーチャルホストに対してGZIP圧縮を有効にするかどうかを指定します。 この設定は、サーバーレベルでGZIP圧縮が有効になっている場合にのみ有効です。 圧縮設定はサーバーレベルで設定されます（チューニング> GZIP）。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#enableGzipCompress">圧縮を有効にする</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhEnableBr"><h3>Enable Brotli Compression<span class="ls-permlink"><a href="#vhEnableBr"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Specifies whether to enable Brotli compression for this virtual host. This setting is only effective when <span class="tagl"><a href="#brStaticCompressLevel">Brotli Compression Level (Static File)</a></span> is set to a non-zero value at the server level.</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#brStaticCompressLevel">Brotli Compression Level (Static File)</a></span></p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="enableIpGeo"><h3>IPジオロケーションを有効にする<span class="ls-permlink"><a href="#enableIpGeo"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p> IPジオロケーション検索を有効/無効にするかどうかを指定します。 サーバ、バーチャルホスト、コンテキストレベルで設定できます。 値 「未設定」を使用すると、IPジオロケーションはデフォルトで無効になります。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">ヘッダーにクライアントIPを使用する</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">DBファイルのパス</a></span>,</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="cgroups"><h3>cgroups<span class="ls-permlink"><a href="#cgroups"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Apply cgroup settings to this CGI process if supported by the current OS. At this time, RedHat/Centos Linux v7.5+ and Ubuntu 18.04+ are supported. The currently executing user will be used to determine which cgroup configuration to apply.<br/><br/> Setting this to <span class="val">Disabled</span> at the Server level will disable this setting server-wide. In all other cases, the Server level setting can be overridden at the Virtual Host level.<br/><br/> Default values:<br/> <b>Server level:</b> Off<br/> <b>VH level:</b> Inherit Server level setting</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="cgroups"><h3>cgroups<span class="ls-permlink"><a href="#cgroups"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>A Linux kernel feature that limits, accounts for, and isolates the resource usage (CPU, memory, disk I/O, network, etc.) of a collection of processes. You must be running cgroups v2 which is determined by the existence of the file <span class="val">/sys/fs/cgroup/cgroup.controllers</span>.<br/><br/> Setting this to <span class="val">Disabled</span> at the Server level will disable this setting server-wide. In all other cases, the Server level setting can be overridden at the Virtual Host level.<br/><br/> Default values:<br/> <b>Server level:</b> Off<br/> <b>VH level:</b> Inherit Server level setting</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="logUseServer"><h3>サーバーのログを使用する<span class="ls-permlink"><a href="#logUseServer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>独自のログファイルを作成するのではなく、このバーチャルホストからのログメッセージをサーバーログファイルに入れるかどうかを指定します。</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhlog_fileName"><h3>File Name<span class="ls-permlink"><a href="#vhlog_fileName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>ログファイルのパスを指定します。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOT、$VH_ROOTからの相対パス。</p> <h4>ヒント</h4><p>[パフォーマンス]ログファイルを別のディスクに配置します。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="vhlog_logLevel"><h3>ログレベル<span class="ls-permlink"><a href="#vhlog_logLevel"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>ロギングのレベルを指定します。 使用可能なレベルは、<span class="val">ERROR</span>、<span class="val">WARNING</span>、<span class="val">NOTICE</span>、<span class="val">INFO</span>、<span class="val">DEBUG</span>です。 現在の設定以上のレベルのメッセージのみが記録されます。 <span class="val">DEBUG</span>に設定する場合は、サーバログレベルを<span class="val">DEBUG</span>に設定する必要があります。 デバッグのレベルは、<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">デバッグレベル</a></span>によってサーバーレベルでのみ制御されます。</p> <h4>構文</h4><p>選択</p> <h4>ヒント</h4><p>[パフォーマンス] <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">デバッグレベル</a></span>が<span class="val">NONE</span>以外のレベルに設定されていない限り、<span class="val">DEBUG</span>ログレベルはパフォーマンスに影響を及ぼさず、推奨されます。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">デバッグレベル</a></span></p> </article> </div>

@@ -2,8 +2,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Serverユーザーズマニュアル - ロードバランサー</title>
-  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - ロードバランサー." />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - Real-Time Statistics</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - Real-Time Statistics." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
   <link rel="shortcut icon" href="../img/favicon.ico" />
@@ -26,7 +26,7 @@
   <a href="admin.html">管理</a>
   <ul class="level2">
     <li><a href="ServerStat_Help.html">サービスマネージャ</a></li>
-    <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+    <li><span class="current"><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></span></li>
   </ul>
 </li>
 <li><a href="security.html">セキュリティ</a></li>
@@ -44,7 +44,7 @@
                 <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
                 <li><a href="External_WS.html">Webサーバー</a></li>
                 <li><a href="External_PL.html">パイプロガー</a></li>
-                <li><span class="current"><a href="External_LB.html">ロードバランサ</a></span></li>
+                <li><a href="External_LB.html">ロードバランサ</a></li>
                 </ul>
 	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
 	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
@@ -85,12 +85,11 @@
 </ul>
 </div>
 </aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="External_PL.html">パイプロガー</a></div><div class="center"><a href="ExtApp_Help.html">外部アプリケーション</a></div><div class="next">&nbsp;</div></div>
-<h1>ロードバランサー</h1><h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header>ロードバランサ</header><p>
-<a href="#extAppName">名前</a> | <a href="#extWorkers">ワーカー</a></p></section>
+<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServerStat_Help.html">WebAdminコンソール - サービス管理</a></div><div class="center"><a href="admin.html">管理</a></div><div class="next">&nbsp;</div></div>
+<h1>Real-Time Statistics</h1><h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header>Server Health</header><p>
+<a href="#antiddos_blocked_ip">Anti-DDoS Blocked IP</a></p></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppName"><h3>名前<span class="ls-permlink"><a href="#extAppName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>この外部アプリケーションの一意の名前。 設定の他の部分でこの名前を使用するときは、この名前で参照します。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="extWorkers"><h3>ワーカー<span class="ls-permlink"><a href="#extWorkers"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>以前に外部ロードバランサで定義されたワーカーグループのリスト。</p> <h4>構文</h4><p>ExternalAppType::ExternalAppNameという形式のカンマ区切りリスト</p> <h4>例</h4><div class="ls-example">fcgi::localPHP, proxy::backend1</div></article> </div>
+<section><div class="helpitem"><article class="ls-helpitem"><div><header id="antiddos_blocked_ip"><h3>Anti-DDoS Blocked IP<span class="ls-permlink"><a href="#antiddos_blocked_ip"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>A comma-separated list of IP addresses blocked by Anti-DDoS protection, each ending with a semi-colon and reason code indicating why the IP address was blocked.<br/><br/> Potential Reason Codes: <ul>   <li><span class="val">A</span>: BOT_UNKNOWN</li>   <li><span class="val">B</span>: BOT_OVER_SOFT</li>   <li><span class="val">C</span>: BOT_OVER_HARD</li>   <li><span class="val">D</span>: BOT_TOO_MANY_BAD_REQ</li>   <li><span class="val">E</span>: BOT_CAPTCHA</li>   <li><span class="val">F</span>: BOT_FLOOD</li>   <li><span class="val">G</span>: BOT_REWRITE_RULE</li>   <li><span class="val">H</span>: BOT_TOO_MANY_BAD_STATUS</li>   <li><span class="val">I</span>: BOT_BRUTE_FORCE</li> </ul><br/><br/> The full list of blocked IPs is also available in the Real-Time Stats report file set in <span class="tagl"><a href="ServGeneral_Help.html#statDir">統計出力ディレクトリ</a></span>.</p> <h4>構文</h4><p>&lt;blocked_ip_address&gt;;&lt;reason_code&gt;</p> <h4>例</h4><div class="ls-example">1.0.100.50;E, 1.0.100.60;D, 1.0.100.70;F</div></article> </div>
 </section>
 </article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div></div>

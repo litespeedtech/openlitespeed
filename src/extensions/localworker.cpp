@@ -531,7 +531,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
     }
 
     if ((pVHost && pVHost->enableCGroup())
-        || (!pVHost && ServerProcessConfig::getInstance().getCGroupDefault()))
+        || (!pVHost && ServerProcessConfig::getInstance().getCGroupDefault() == ServerProcessConfig::CGROUP_CONFIG_DEFAULT_ON))
     {
         LS_DBG("Enabling Cgroups from %s\n", pVHost ? "VHost" : "ServerConfig");
         flags |= LSCGID_FLAG_CGROUP;
