@@ -120,12 +120,8 @@ int StdErrLogger::setLogFileName(const char *pName)
 }
 
 
-const char *StdErrLogger::getLogFileName()
-{   
-    if (!m_pAppender)
-        m_pAppender = HttpLog::getErrorLogger()->getAppender();
-    return m_pAppender->getName();     
-}
+const char *StdErrLogger::getLogFileName() const
+{   return m_pAppender ? m_pAppender->getName() : NULL;     }
 
 
 int StdErrLogger::initLogger(Multiplexer *pMultiplexer)
