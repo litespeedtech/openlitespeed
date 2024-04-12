@@ -208,6 +208,11 @@ class SubstFormat : public TLinkList< SubstItem >
 
     void operator=(const SubstFormat &rhs);
 public:
+    enum type
+    {
+        SFT_REGULAR,
+        SFT_SSI,
+    };
     SubstFormat();
     ~SubstFormat();
     SubstFormat(const SubstFormat &rhs);

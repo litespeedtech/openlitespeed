@@ -20,6 +20,7 @@
 
 
 #include <lsdef.h>
+#include <http/expression.h>
 #include <util/autobuf.h>
 
 #include <util/autostr.h>
@@ -55,74 +56,6 @@ enum
     SSI_ATTR_ENC_URL,
     SSI_ATTR_ENC_ENTITY,
     SSI_ATTR_COUNT
-};
-
-class ExprToken : public LinkedObj
-{
-public:
-    enum
-    {
-        EXP_NONE,
-        EXP_STRING,
-        EXP_FMT,
-        EXP_REGEX,
-        EXP_OPENP,
-        EXP_CLOSEP,
-        EXP_EQ,
-        EXP_NE,
-        EXP_LESS,
-        EXP_LE,
-        EXP_GREAT,
-        EXP_GE,
-        EXP_NOT,
-        EXP_AND,
-        EXP_OR,
-        EXP_END
-    };
-    ExprToken()
-        : m_type(EXP_NONE)
-        , m_obj(NULL)
-    {}
-    ~ExprToken();
-
-    void setToken(int type, void *obj)
-    {   m_type = type; m_obj = obj;     }
-    int getType() const     {   return m_type;  }
-    void *getObj() const   {   return m_obj;   }
-    AutoStr2 *getStr() const   {   return (AutoStr2 *)m_obj;   }
-    SubstFormat *getFormat() const {   return (SubstFormat *)m_obj;   }
-    Pcregex *getRegex() const  {   return (Pcregex *)m_obj;    }
-
-    static int s_priority[EXP_END];
-
-    int getPriority() const {   return s_priority[m_type];  }
-
-    ExprToken *next() const
-    {   return (ExprToken *)LinkedObj::next();  }
-
-private:
-
-    int m_type;
-    void *m_obj;
-
-
-    LS_NO_COPY_ASSIGN(ExprToken);
-};
-
-
-
-
-class Expression : public LinkedObj, public TLinkList<ExprToken>
-{
-    int appendToken(int token);
-    int appendString(const char *pBegin, int len);
-    int appendRegex(const char *pBegin, int len, int flag);
-    int buildPrefix();
-
-public:
-    Expression() {}
-    ~Expression() { release_objects();  }
-    int parse(const char *pBegin, const char *pEnd);
 };
 
 

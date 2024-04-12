@@ -210,4 +210,50 @@ public:
 
     LS_NO_COPY_ASSIGN(DLinkedObj);
 };
+
+
+template< typename T >
+class TlinkNode
+{
+    T *m_pNext;
+
+public:
+    TlinkNode() : m_pNext(NULL) {}
+    explicit TlinkNode(T *next)
+        : m_pNext(next)
+    {}
+
+    T *next() const
+    {   return m_pNext;     }
+
+    void setNext(T *pNext)
+    {   m_pNext = pNext;        }
+
+    void addNext(T *pNext)
+    {
+        T *pTemp = m_pNext;
+        setNext(pNext);
+        pNext->setNext(pTemp);
+    }
+
+    T *removeNext()
+    {
+        T *pNext = m_pNext;
+        if (pNext)
+        {
+            setNext(pNext->m_pNext);
+            pNext->setNext(NULL);
+        }
+        return pNext;
+    }
+
+    void swap(TlinkNode &rhs)
+    {
+        T *pObj = m_pNext;
+        m_pNext = rhs.m_pNext;
+        rhs.m_pNext = pObj;
+    }
+
+};
+
 #endif

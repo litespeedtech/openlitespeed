@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include "rewriterule.h"
 
+#include <http/expression.h>
 #include <http/httplog.h>
 #include <http/httpstatuscode.h>
 #include <http/rewritemap.h>
@@ -333,7 +334,8 @@ int MapRefItem::parse(const char *&pFormatStr, const char *pEnd,
 
 
 RewriteCond::RewriteCond()
-    : m_opcode(COND_OP_REGEX)
+    : m_expr(NULL)
+    , m_opcode(COND_OP_REGEX)
     , dummy(0)
     , m_flag(0)
 {}
@@ -341,6 +343,7 @@ RewriteCond::RewriteCond()
 
 RewriteCond::RewriteCond(const RewriteCond &rhs)
     : LinkedObj()
+    , m_expr(NULL)
     , m_pattern(rhs.m_pattern)
     , m_testStringFormat(rhs.m_testStringFormat)
     , m_opcode(rhs.m_opcode)
@@ -349,11 +352,15 @@ RewriteCond::RewriteCond(const RewriteCond &rhs)
 {
     if (m_opcode == COND_OP_REGEX)
         compilePattern();
+    if (m_opcode == COND_OP_EXPR)
+        parseExpr();
 }
 
 
 RewriteCond::~RewriteCond()
 {
+    if (m_expr)
+        delete m_expr;
 }
 
 
@@ -377,6 +384,8 @@ int RewriteCond::parseTestString(const char *&pRuleStr, const char *pEnd,
 //        m_flag |= RULE_FLAG_NOREWRITE;
 //        return 0;
 //    }
+    if (argEnd - argBegin == 4 && strncmp(argBegin, "expr", 4) == 0)
+        m_flag |= COND_FLAG_EXPR;
     return m_testStringFormat.parse(argBegin, argEnd, pMaps);
 }
 
@@ -395,60 +404,67 @@ int RewriteCond::parseCondPattern(const char *&pRuleStr, const char *pEnd)
             HttpLog::parse_error(s_pCurLine,  pError);
         return LS_FAIL;
     }
-    if (*argBegin == '!')
+    if (m_flag & COND_FLAG_EXPR)
     {
-        ++argBegin;
-        m_flag |= COND_FLAG_NOMATCH;
-        while ((argBegin < argEnd) && (isspace(*argBegin)))
-            argBegin++;
-        stripQuote = 1;
+        m_opcode = COND_OP_EXPR;
     }
-    m_opcode = COND_OP_REGEX;
-    switch (*argBegin)
+    else
     {
-    case '>':
-        m_opcode = COND_OP_GREATER;
-        ++argBegin;
-        stripQuote = 1;
-        break;
-    case '<':
-        m_opcode = COND_OP_LESS;
-        ++argBegin;
-        stripQuote = 1;
-        break;
-    case '=':
-        m_opcode = COND_OP_EQ;
-        ++argBegin;
-        stripQuote = 1;
-        break;
-    case '-':
-        if (argBegin + 2 != argEnd)
-            break;
-        m_pattern.setStr(argBegin, 2);
-        switch (*(argBegin + 1))
+        if (*argBegin == '!')
         {
-        case 'd':
-            m_opcode = COND_OP_DIR;
-            return 0;
-        case 'f':
-            m_opcode = COND_OP_FILE;
-            return 0;
-        case 's':
-            m_opcode = COND_OP_SIZE;
-            return 0;
-        case 'l':
-            m_opcode = COND_OP_SYM;
-            return 0;
-        case 'F':
-            m_opcode = COND_OP_FILE_ACC;
-            return 0;
-        case 'U':
-            m_opcode = COND_OP_URL_ACC;
-            return 0;
-        default:
+            ++argBegin;
+            m_flag |= COND_FLAG_NOMATCH;
+            while ((argBegin < argEnd) && (isspace(*argBegin)))
+                argBegin++;
+            stripQuote = 1;
+        }
+        m_opcode = COND_OP_REGEX;
+        switch (*argBegin)
+        {
+        case '>':
+            m_opcode = COND_OP_GREATER;
+            ++argBegin;
+            stripQuote = 1;
+            break;
+        case '<':
+            m_opcode = COND_OP_LESS;
+            ++argBegin;
+            stripQuote = 1;
+            break;
+        case '=':
+            m_opcode = COND_OP_EQ;
+            ++argBegin;
+            stripQuote = 1;
+            break;
+        case '-':
+            if (argBegin + 2 != argEnd)
+                break;
+            m_pattern.setStr(argBegin, 2);
+            switch (*(argBegin + 1))
+            {
+            case 'd':
+                m_opcode = COND_OP_DIR;
+                return 0;
+            case 'f':
+                m_opcode = COND_OP_FILE;
+                return 0;
+            case 's':
+                m_opcode = COND_OP_SIZE;
+                return 0;
+            case 'l':
+                m_opcode = COND_OP_SYM;
+                return 0;
+            case 'F':
+                m_opcode = COND_OP_FILE_ACC;
+                return 0;
+            case 'U':
+                m_opcode = COND_OP_URL_ACC;
+                return 0;
+            default:
+                break;
+            }
             break;
         }
-        break;
     }
     if (argBegin >= argEnd)
         return LS_FAIL;
@@ -531,6 +547,20 @@ int RewriteCond::praseFlag(const char *&pRuleStr, const char *pEnd)
 }
 
 
+int RewriteCond::parseExpr()
+{
+    m_expr = new Expression();
+    if (m_expr->parseApacheExpr(m_pattern.c_str(),
+                m_pattern.c_str() + strlen(m_pattern.c_str())) == -1)
+    {
+        delete m_expr;
+        LS_ERROR("Failed to parse expression: \"%s\", error: %s",
+                 m_pattern.c_str(), Expression::getLastParseError());
+        return -1;
+    }
+    return 0;
+}
+
 int RewriteCond::compilePattern()
 {
     int flag = REG_EXTENDED;
@@ -555,6 +585,8 @@ int RewriteCond::parse(const char *pRuleStr, const char *pEnd,
         return 0;
     if (m_opcode == COND_OP_REGEX)
         return compilePattern();
+    else if (m_opcode == COND_OP_EXPR)
+        return parseExpr();
     return 0;
 }
 

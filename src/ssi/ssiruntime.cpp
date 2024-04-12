@@ -86,7 +86,7 @@ int SsiRuntime::initConfig(SsiConfig *pConfig)
 }
 
 
-int SsiRuntime::execRegex(Pcregex *pReg, const char *pSubj, int len)
+int SsiRuntime::execRegex(const Pcregex *pReg, const char *pSubj, int len)
 {
     if ((!pReg) || (!pSubj) || (len < 0) || (len >= 40960))
         return LS_FAIL;

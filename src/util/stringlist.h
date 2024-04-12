@@ -31,6 +31,7 @@ public:
     StringList(const StringList &rhs);
     const AutoStr2 *add(const char *pStr, int len);
     const AutoStr2 *add(const char *pStr);
+    const AutoStr2 *find(const char *pString, int len) const;
     const AutoStr2 *find(const char *pString) const;
     int split(const char *pBegin, const char *pEnd, const char *delim);
     void remove(const char *pString);

@@ -34,6 +34,7 @@ END_LOG4CXX_NS
 #define COND_FLAG_NOCASE        1
 #define COND_FLAG_OR            2
 #define COND_FLAG_NOMATCH       4
+#define COND_FLAG_EXPR          16
 
 #define COND_OP_REGEX           0
 #define COND_OP_LESS            1
@@ -45,6 +46,7 @@ END_LOG4CXX_NS
 #define COND_OP_SYM             7
 #define COND_OP_FILE_ACC        8
 #define COND_OP_URL_ACC         9
+#define COND_OP_EXPR            10
 
 #define RULE_FLAG_NONE          0
 #define RULE_FLAG_LAST          (1<<0)
@@ -89,7 +91,7 @@ END_LOG4CXX_NS
 class RewriteMap;
 class RewriteMapList;
 class MapRefItem;
-
+class Expression;
 
 
 
@@ -155,6 +157,7 @@ public:
 class RewriteCond : public LinkedObj
 {
     Pcregex     m_regex;
+    Expression *m_expr;
     AutoStr     m_pattern;
 
     RewriteSubstFormat m_testStringFormat;
@@ -167,6 +170,7 @@ class RewriteCond : public LinkedObj
     int parseCondPattern(const char *&pRuleStr, const char *pEnd);
     int praseFlag(const char *&pRuleStr, const char *pEnd);
     int compilePattern();
+    int parseExpr();
     void operator=(const RewriteCond &rhs);
 
 public:
@@ -175,9 +179,9 @@ public:
     RewriteCond(const RewriteCond &rhs);
     char getOpcode() const          {   return m_opcode;            }
     short getFlag() const           {   return m_flag;              }
-    const char *getPattern() const {   return m_pattern.c_str();   }
+    const char *getPattern() const  {   return m_pattern.c_str();   }
     const Pcregex *getRegex() const {   return &m_regex;            }
-
+    const Expression *getExpr() const {   return m_expr;            }
     const RewriteSubstFormat *getTestStringFormat() const     {   return &m_testStringFormat; }
 
 

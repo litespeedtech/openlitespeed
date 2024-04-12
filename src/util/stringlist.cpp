@@ -95,6 +95,22 @@ const AutoStr2 *StringList::find(const char *pString) const
     return NULL;
 }
 
+
+const AutoStr2 *StringList::find(const char *pString, int len) const
+{
+    if (pString)
+    {
+        for (const_iterator iter = begin(); iter != end(); ++iter)
+        {
+            if (len == (*iter)->len()
+                && strncmp(pString, (*iter)->c_str(), len) == 0)
+                return *iter;
+        }
+    }
+    return NULL;
+}
+
+
 void StringList::remove(const char *pString)
 {
     for (iterator iter = begin(); iter != end(); ++iter)

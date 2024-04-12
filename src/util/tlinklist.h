@@ -117,4 +117,126 @@ public:
 };
 
 
+template< typename T>
+class TslinkList
+{
+    TlinkNode<T> m_first;
+    TlinkNode<T> *m_pLast;
+public:
+    TslinkList() : m_pLast(NULL) {};
+    ~TslinkList() {};
+    TslinkList(const TslinkList &rhs)
+    {
+        T *p = rhs.begin();
+        TlinkNode<T> *pNext = &m_first;
+        T *pObj;
+        while (p)
+        {
+            pObj = new T(*p);
+            if (!pObj)
+                break;
+            pNext->addNext(pObj);
+            pNext = pObj;
+            p = (T *)p->next();
+        }
+        if (pNext == &m_first)
+            m_pLast = NULL;
+        else
+            m_pLast = pNext;
+    }
+    TlinkNode<T> *head()                  {   return &m_first;    }
+    const TlinkNode<T> *head() const      {   return &m_first;    }
+    T *begin() const          {   return m_first.next(); }
+    TlinkNode<T> *tail()
+    {
+        if ((m_pLast) && (m_pLast->next() == NULL))
+            return m_pLast;
+        TlinkNode<T> *p = (m_pLast) ? m_pLast : m_first.next();
+        while (p && p->next())
+            p = p->next();
+        m_pLast = p;
+        return p;
+    }
+
+    TlinkNode<T> *prev(TlinkNode<T> *obj)
+    {
+        TlinkNode<T> *p = m_first.next();
+        if (p == obj)
+            p = NULL;
+        while (p && p->next() != obj)
+            p = p->next();
+        return p;
+    }
+
+    TlinkNode<T> *remove_back()
+    {
+        TlinkNode<T> *p = &m_first;
+        while ((p->next()) && (p->next()->next()))
+            p = p->next();
+        m_pLast = p;
+        p = p->removeNext();
+        if (m_first.next() == NULL)
+            m_pLast = NULL;
+        return p;
+    }
+    void release_objects()
+    {
+        TlinkNode<T> *pDel;
+        while ((pDel = m_first.removeNext()) != NULL)
+            delete(T *)pDel;
+        m_pLast = NULL;
+    }
+    void clear()
+    {
+        m_first.setNext(NULL);
+        m_pLast = NULL;
+    }
+
+    T *pop()
+    {
+        TlinkNode<T> * p = m_first.removeNext();
+        if (!p)
+            return NULL;
+        if (m_first.next() == NULL)
+            m_pLast = NULL;
+        return (T *)p;
+    }
+
+    void append(T *p)
+    {
+        TlinkNode<T> *pNext = tail();
+        if (!pNext)
+            pNext = &m_first;
+        pNext->addNext(p);
+        m_pLast = p;
+    }
+
+    void insert_front(T *p)
+    {
+        m_first.addNext(p);
+        if (m_pLast == NULL)
+            m_pLast = p;
+    }
+
+    int insert_front(TlinkNode<T> *pHead, TlinkNode<T> *pTail)
+    {
+        if (!pHead || !pTail || pTail->next())
+            return -1;
+        TlinkNode<T> *pNext = m_first.next();
+        m_first.setNext(pHead);
+        pTail->setNext(pNext);
+        if (m_pLast == NULL)
+            m_pLast = pTail;
+        return 0;
+    }
+    void swap(TslinkList &rhs)
+    {
+        TlinkNode<T> tmp;
+        tmp = m_first;
+        m_first = rhs.m_first;
+        rhs.m_first = tmp;
+    }
+};
+
+
 #endif

@@ -18,6 +18,7 @@
 #include "rewriteengine.h"
 
 #include <http/clientinfo.h>
+#include <http/expression.h>
 #include <http/handlertype.h>
 #include <http/handlerfactory.h>
 #include <http/httpcontext.h>
@@ -630,6 +631,16 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
         else
             condMatches = ret;
         ret = (ret < 0);
+    }
+    else if (code == COND_OP_EXPR)
+    {
+        ExprRunTime runtime;
+        ret = pCond->getExpr()->eval(pSession, &runtime, "Rewrite Condition");
+        if (m_logLevel > 2)
+            LS_INFO(pSession->getLogSession(),
+                    "[REWRITE] Cond: expr '%s', result: %d",
+                    pCond->getPattern(), ret);
+        ret = (ret <= 0);
     }
     else if ((code >= COND_OP_LESS) && (code <= COND_OP_EQ))
     {

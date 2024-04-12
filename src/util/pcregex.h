@@ -98,6 +98,9 @@ public:
 
     int  getSubStrCount() const  {   return substr;   }
 
+    static const Pcregex *get(const char *pRegex, int options,
+                              int matchLimit = 10000, int recursionLimit = 1000);
+    static void releaseAll();
 
 
     LS_NO_COPY_ASSIGN(Pcregex);

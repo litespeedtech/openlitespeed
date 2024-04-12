@@ -3,8 +3,8 @@
 /** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2023
+ * @author    Michael Alegre
+ * @copyright 2018-2024 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -1817,6 +1817,10 @@ class WPCaller
         $includeFiles[] = '/wp-admin/includes/class-wp-upgrader.php';
         $includeFiles[] = '/wp-admin/includes/misc.php';
         $includeFiles[] = '/wp-admin/includes/template.php';
+
+        if ( Util::betterVersionCompare($wp_version, '6.5.0', '>=') ) {
+            $includeFiles[] = '/wp-includes/class-wp-plugin-dependencies.php';
+        }
 
         set_error_handler('\Lsc\Wp\WPCaller::warning_handler');
 

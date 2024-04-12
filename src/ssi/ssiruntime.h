@@ -102,7 +102,7 @@ public:
     RegexResult *getRegexResult()
     {   return &m_regexResult;      }
 
-    int execRegex(Pcregex *pReg, const char *pSubj, int len);
+    int execRegex(const Pcregex *pReg, const char *pSubj, int len);
 
     void setMainReq(HttpReq *pReq)  {   m_pMainReq = pReq;  }
     HttpReq *getMainReq() const     {   return m_pMainReq;  }

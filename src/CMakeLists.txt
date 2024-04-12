@@ -154,7 +154,7 @@ endif()
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    ${ASAN_LIB} cache modgzip lsiapi main http spdy ssi
+    ${ASAN_LIB} cache modgzip lsiapi main http spdy ssi http
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns 
     quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}

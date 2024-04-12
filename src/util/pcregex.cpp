@@ -16,6 +16,7 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <util/pcregex.h>
+#include <util/hashstringmap.h>
 #include <assert.h>
 #include <ctype.h>
 #include <string.h>
@@ -60,6 +61,69 @@ pcre_jit_stack *Pcregex::getJitStack()
 #endif
 #endif
 
+typedef HashStringMap<Pcregex *>  PcregexStore;
+typedef THash<PcregexStore *>     PcregexStores;
+
+
+static PcregexStores *s_pStores = NULL;
+static int s_reused = 0;
+
+
+const Pcregex *Pcregex::get(const char *pRegStr, int options, int matchLimit,
+                 int recursionLimit)
+{
+    if (s_pStores == NULL)
+        s_pStores = new PcregexStores(10, NULL, NULL);
+    PcregexStores::iterator iterStore = s_pStores->find((void*)(long)options);
+    PcregexStore *pStore;
+    PcregexStore::iterator iter;
+    if (iterStore != s_pStores->end())
+    {
+        pStore = iterStore.second();
+        iter = pStore->find(pRegStr);
+        if (iter != pStore->end())
+        {
+            ls_atomic_fetch_add(&s_reused, 1);
+            return iter.second();
+        }
+    }
+    else
+    {
+        pStore = new PcregexStore(100);
+        s_pStores->insert((void*)(long)options, pStore);
+    }
+
+    Pcregex * pRegex = new Pcregex();
+
+    int ret = pRegex->compile( pRegStr, options, matchLimit, recursionLimit);
+    if (ret == -1)
+    {
+        delete pRegex;
+        pRegex = NULL;
+    }
+    else
+    {
+        pStore->insert(pRegex->pattern, pRegex);
+    }
+
+    return pRegex;
+}
+
+
+void Pcregex::releaseAll()
+{
+    if (!s_pStores)
+        return;
+    PcregexStores::iterator iterStore;
+    for( iterStore = s_pStores->begin(); iterStore != s_pStores->end();)
+    {
+        iterStore.second()->release_objects();
+        iterStore = s_pStores->next(iterStore);
+    }
+    s_pStores->release_objects();
+    delete s_pStores;
+    s_pStores = NULL;
+}
 
 
 

@@ -482,6 +482,11 @@ static int cgroup_v2(int uid, int pid)
                               strerror(errno));
                 ls_stderr("Cgroups returning success file: %s, pid: %d\n",
                           user_slice, pid);
+
+                char systemd_start[128];
+                snprintf(systemd_start, sizeof(systemd_start), "/bin/systemctl start user-%d.slice", uid);
+                system(systemd_start);
+
                 return 0;
             }
         }

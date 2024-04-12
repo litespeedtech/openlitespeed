@@ -112,6 +112,7 @@
 #include <util/daemonize.h>
 #include <util/datetime.h>
 #include <util/gpath.h>
+#include <util/pcregex.h>
 #include <util/pcutil.h>
 #include <util/vmembuf.h>
 #include <util/xmlnode.h>
@@ -1585,6 +1586,7 @@ void HttpServerImpl::releaseAll()
     HttpMime::releaseMIMEList();
     if (s_lsquic_inited)
         lsquic_global_cleanup();
+    Pcregex::releaseAll();
 }
 
 

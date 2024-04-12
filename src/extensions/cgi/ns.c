@@ -127,6 +127,12 @@ SetupOp     s_SetupOp_default[] =
     { SETUP_RO_BIND_MOUNT, "/etc/php-fpm.d", "/etc/php-fpm.d", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_RO_BIND_MOUNT, "/var/run", "/var/run", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_RO_BIND_MOUNT, "/var/lib", "/var/lib", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_RO_BIND_MOUNT, "/etc/imunify360/user_config/", "/etc/imunify360/user_config/", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_RO_BIND_MOUNT, "/etc/sysconfig/imunify360/", "/etc/sysconfig/imunify360/", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_RO_BIND_MOUNT, "/opt/plesk/php", "/opt/plesk/php", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_BIND_MOUNT, "/opt/alt", "/opt/alt", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_BIND_MOUNT, "/opt/psa", "/opt/psa", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_BIND_MOUNT, "/var/lib/php/sessions", "/var/lib/php/sessions", OP_FLAG_ALLOW_NOTEXIST, -1},
     { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
 SetupOp    *s_SetupOp = NULL;

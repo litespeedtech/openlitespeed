@@ -160,7 +160,7 @@ set ( libUnitTest UnitTest++ )
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( unittestlib
-    modgzip cache lsiapi main http lsiapi ssi
+    modgzip cache lsiapi main http ssi http lsiapi
     registry cgi fcgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns
     quic h2 lsquic bcrypt
