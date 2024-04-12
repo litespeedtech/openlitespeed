@@ -1,6 +1,6 @@
 #! /bin/sh
 
-LSUPVERSION=v2.83-9/29/2020
+LSUPVERSION=v2.84-04/12/2024
 LOCKFILE=/tmp/olsupdatingflag
 
 PIDFILE=/tmp/lshttpd/lshttpd.pid
@@ -395,6 +395,7 @@ while [ "x$1" != "x" ]
 do
     if [ "x$1" = "x-d" ] ; then
         ISDEBUG=yes
+        ISBETA=yes
         shift
     elif [ "x$1" = "x-s" ] ; then
         ISASAN=yes
@@ -479,7 +480,7 @@ else
 fi
 
 if [ "x${ISLINUX}" = "xyes" ] ; then
-    
+
     if [ "$ISASAN" = "yes" ] ; then
         URLMODE=a.
     elif [ "$ISDEBUG" = "yes" ] ; then
@@ -588,6 +589,7 @@ else
     stopService
     mv -f ${LSWSHOME}/bin/openlitespeed ${LSWSHOME}/bin/openlitespeed.old
     cp bin/* ${LSWSHOME}/bin/
+    cp lsrecaptcha/* ${LSWSHOME}/lsrecaptcha/
     cp modules/* ${LSWSHOME}/modules/
 fi
 

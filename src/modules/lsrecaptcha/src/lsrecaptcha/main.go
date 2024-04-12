@@ -41,6 +41,8 @@ func router(w http.ResponseWriter, r *http.Request) {
 
 	refHeader := r.Header.Get("Referer")
 
+	r.URL.Query()
+
 	if refHeader != "" {
 		u, err := url.Parse(refHeader)
 		if err != nil {
@@ -48,6 +50,10 @@ func router(w http.ResponseWriter, r *http.Request) {
 		} else {
 			ref = u.EscapedPath()
 		}
+	}
+
+	if r.URL.RawQuery != "" {
+		ref += "?" + r.URL.RawQuery
 	}
 	w.Header().Add("Location", ref)
 	w.WriteHeader(301)
@@ -61,6 +67,7 @@ func main() {
 	initGenerator()
 	initVerifier()
 	lsapi.LogToFile("")
+	lsapi.Init("", "")
 
 	http.HandleFunc("/", router)
 	err := lsapi.ListenAndServe("uds://tmp/lsrecaptcha.sock", nil)
