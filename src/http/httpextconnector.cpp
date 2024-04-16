@@ -293,6 +293,13 @@ void HttpExtConnector::abortReq()
 }
 
 
+
+void HttpExtConnector::setAbort()
+{
+    m_iState |= HEC_ABORT_REQUEST;
+}
+
+
 int HttpExtConnector::extOutputReady()
 {
     int ret = 0;

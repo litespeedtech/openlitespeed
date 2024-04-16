@@ -2287,7 +2287,7 @@ int HttpSession::preUriMap()
 
     if (ret)
     {
-        m_request.addEnv("staticcacheserve", 16, "1", 1);
+        m_request.addEnv("modcache", 8, "0", 1);
         if (pDataSt->pData->getBypassModsec())
             m_request.addEnv("modsecurity", 11, "off", 3);
     }

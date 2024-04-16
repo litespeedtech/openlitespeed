@@ -61,7 +61,7 @@
 #define CACHEMODULEKEYLEN           (sizeof(CACHEMODULEKEY) - 1)
 #define CACHEMODULEROOT             "cachedata/"
 
-#define MODULE_VERSION_INFO         "1.65"
+#define MODULE_VERSION_INFO         "1.66"
 
 //The below info should be gotten from the configuration file
 #define max_file_len        4096
@@ -2808,15 +2808,15 @@ static int sessionBegin(lsi_param_t *rec)
 static int checkAssignHandler(lsi_param_t *rec)
 {
     char val[3] = {0};
-    if (g_api->get_req_env(rec->session, "staticcacheserve", 16, val, 1) > 0
-        && strncasecmp(val, "1", 1) ==  0)
+    if (g_api->get_req_env(rec->session, "modcache", 8, val, 1) > 0
+        && *val == '0')
     {
         int aHkpts[] = {LSI_HKPT_URI_MAP, LSI_HKPT_HTTP_END,
                     LSI_HKPT_HANDLER_RESTART, LSI_HKPT_RCVD_RESP_HEADER};
         g_api->enable_hook(rec->session, &MNAME, 0, aHkpts, 4);
 
         g_api->log(rec->session, LSI_LOG_DEBUG,
-                   "[%s] checkAssignHandler return since req served by internal cache.\n",
+                   "[%s] checkAssignHandler turn off modcache.\n",
                    ModuleNameStr);
         return 0;
     }

@@ -752,7 +752,10 @@ int ProxyConn::readRespBody()
             else
             {
                 if ((errno == ECONNRESET) && (getConnector()))
-                    break;
+                {
+                     pHEC->setAbort();
+                     break;
+                }
                 return LS_FAIL;
             }
         }
@@ -789,7 +792,10 @@ int ProxyConn::readRespBody()
                 if (ret)
                 {
                     if ((errno == ECONNRESET) && (getConnector()))
+                    {
+                        pHEC->setAbort();
                         break;
+                    }
                 }
                 return ret;
             }
