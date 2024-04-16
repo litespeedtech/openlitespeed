@@ -4130,7 +4130,7 @@ int HttpReq::rewriteToRecaptcha()
 
     LS_DBG_M(getLogSession(), "[RECAPTCHA] Internal redirect to [%s].",
             pUrl->c_str());
-    addEnv("cache-control", 13, "no-cache", 8);
+    addEnv("modcache", 8, "0", 1);
 
     internalRedirect(pUrl->c_str(), pUrl->len(), 1);
     m_pContext = Recaptcha::getStaticCtx();
