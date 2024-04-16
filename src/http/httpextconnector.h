@@ -105,6 +105,7 @@ public:
 
     //functions called by the HttpSession
     void abortReq();
+    void setAbort();
     //defined in ReqHandler
     virtual int process(HttpSession *pSession, const HttpHandler *pHandler);
     virtual int onWrite(HttpSession *pSession);
