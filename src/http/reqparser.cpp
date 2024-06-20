@@ -562,10 +562,13 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
     {
         if (!m_ignore_part)
         {
-            if (*(m_decodeBuf.end() - 2) == '\r')
-                m_decodeBuf.pop_end(2);
-            else
-                m_decodeBuf.pop_end(1);
+            if (*(m_decodeBuf.end() - 1) == '\n')
+            {
+                if (*(m_decodeBuf.end() - 2) == '\r')
+                    m_decodeBuf.pop_end(2);
+                else
+                    m_decodeBuf.pop_end(1);
+            }
             *(m_decodeBuf.end()) = 0;
             if (m_args > 0)
             {

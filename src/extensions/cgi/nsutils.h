@@ -43,8 +43,9 @@ extern int    s_proc_fd;
 extern gid_t  s_overflowgid;
 extern uid_t  s_overflowuid;
 extern verbose_callback_t s_verbose_callback;
-extern char  *s_ns_conf;
-extern char  *s_ns_conf2;
+extern int    s_pid_pipe;
+extern pid_t  s_pid_top;
+
 
 #ifdef __cplusplus
 }

@@ -45,20 +45,6 @@
 
 #define N_ELEMENTS(arr) (sizeof (arr) / sizeof ((arr)[0]))
 
-NsInfo s_ns_infos[NS_TYPE_COUNT + 1] = {
-#ifdef CLONE_NEWCGROUP
-  {"cgroup", 1, 1, CLONE_NEWCGROUP},
-#endif
-  {"ipc",    1, 1, CLONE_NEWIPC},
-  {"uts",    1, 1, CLONE_NEWUTS},
-  {"net",    0, 1, CLONE_NEWNET},
-  {"pid",    1, 1, CLONE_NEWPID}, 
-  {"mnt",    1, 1, CLONE_NEWNS},
-  {"user",   0, 1, CLONE_NEWUSER},
-  {NULL,     0, 0, 0}
-};
-
-
 #define REQUIRED_CAPS_0 (CAP_TO_MASK_0 (CAP_SYS_ADMIN) | \
                          CAP_TO_MASK_0 (CAP_SYS_CHROOT) | \
                          CAP_TO_MASK_0 (CAP_NET_ADMIN) | \
@@ -76,6 +62,8 @@ int         s_ns_debug = 0;
 FILE       *s_ns_debug_file = NULL;
 int         s_ns_supported_checked = 0;
 int         s_ns_supported = 0;
+uid_t      *s_disabled_uids = NULL;
+int         s_disabled_uids_count = 0;
 int         s_didinit = 0;
 int         s_persisted = 0;
 char       *s_persisted_VH = NULL;
@@ -86,11 +74,13 @@ int         s_clone_flags;
 uint32_t    s_requested_caps[2] = {0, 0};
 const char *s_host_tty_dev = NULL;
 verbose_callback_t s_verbose_callback = NULL;
+int         s_pid_pipe = -1;
 SetupOp     s_setupOp_all[] =
 {
     { SETUP_BIND_TMP, NULL, "/tmp", OP_FLAG_BWRAP_SYMBOL, -1 },
-    // Does not need a last as it's size is important
+    { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
+int         s_setupOp_all_size = sizeof(s_setupOp_all);
 
 SetupOp     s_SetupOp_default[] = 
 {
@@ -131,15 +121,18 @@ SetupOp     s_SetupOp_default[] =
     { SETUP_RO_BIND_MOUNT, "/etc/sysconfig/imunify360/", "/etc/sysconfig/imunify360/", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_RO_BIND_MOUNT, "/opt/plesk/php", "/opt/plesk/php", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/opt/alt", "/opt/alt", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_BIND_MOUNT, "/opt/cpanel", "/opt/cpanel", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/opt/psa", "/opt/psa", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/var/lib/php/sessions", "/var/lib/php/sessions", OP_FLAG_ALLOW_NOTEXIST, -1},
     { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
+int         s_setupOp_default_size = sizeof(s_SetupOp_default);
 SetupOp    *s_SetupOp = NULL;
 size_t      s_SetupOp_size = 0;
 int         s_setupOp_allocated = 0;
 char       *s_ns_conf = NULL;
 char       *s_ns_conf2 = NULL;
+
 mount_flags_data_t s_mount_flags_data[] = 
 {
     { 0, "rw" },
@@ -250,42 +243,82 @@ int ns_supported()
         s_ns_supported = 0;
         return 0;
     }
-    struct stat sbuf;
-    int unshare_user = 1;
-    
-    if (stat ("/proc/self/ns/user", &sbuf) == 0)
-    {
-        char str_num[STRNUM_SIZE];
-        
-        /* RHEL7 has a kernel module parameter that lets you enable user namespaces */
-        if (stat ("/sys/module/user_namespace/parameters/enable", &sbuf) == 0)
-        {
-            int found = 0;
-            if (read_strfile("/sys/module/user_namespace/parameters/enable", 
-                             &found, sizeof(str_num), str_num) == 0)
-                if (found && str_num[0] == 'N')
-                    unshare_user = 0;
-        }
-
-        /* Check for max_user_namespaces */
-        if (stat ("/proc/sys/user/max_user_namespaces", &sbuf) == 0)
-        {
-            int found = 0;
-            if (read_strfile("/proc/sys/user/max_user_namespaces", &found,
-                             sizeof(str_num), str_num) == 0)
-                if (found && str_num[0] == '0' && str_num[1] == 0)
-                    unshare_user = 0;
-        }
-
-    }
-    if (!unshare_user)
-        nspersist_disable_user_namespace();
-    
     s_ns_supported = 1;
-    if (major < 4 || (major == 4 && minor < 6))
+
+    return 1;
+}
+
+
+static int uid_compare(const void *a, const void *b)
+{
+    if ( *(uid_t *)a <  *(uid_t*)b ) 
+        return -1;
+    if ( *(uid_t*)a == *(uid_t*)b )
+        return 0;
+    return 1;
+}
+
+
+static int ns_read_disabled()
+{
+    if (s_disabled_uids)
+        return 0;
+    char pathname[256], filename[512];
+    readlink("/proc/self/exe", pathname, sizeof(pathname));
+    char *slash = strrchr(pathname, '/');
+    if (slash)
+        *(slash + 1) = 0;
+    snprintf(filename, sizeof(filename), "%s../lsns/conf/ns_disabled_uids.conf",
+             pathname);
+    FILE *fh = fopen(filename, "r");
+    if (!fh)
     {
-        DEBUG_MESSAGE("CGroups NOT supported, v%d.%d\n", major, minor);
-        s_ns_infos[NS_TYPE_CGROUP].enabled = 0;
+        DEBUG_MESSAGE("Error reading disabled file: %s: %s, ok to not be there\n", 
+                      filename, strerror(errno));
+        return 0;
+    }
+    char line[256];    
+    DEBUG_MESSAGE("Reading disabled UIDs in %s\n", filename);
+    while (fgets(line, sizeof(line) - 1, fh))
+    {
+        #define REALLOC_COUNT 1024
+        if (!(s_disabled_uids_count % REALLOC_COUNT))
+        {
+            s_disabled_uids = realloc(s_disabled_uids, sizeof(uid_t) * (s_disabled_uids_count / REALLOC_COUNT + 1) * REALLOC_COUNT);
+            if (!s_disabled_uids) {
+                ls_stderr("Insufficient memory creating namespace disabled table\n");
+                fclose(fh);
+                return -1;
+            }
+        }
+        if (line[0] == '\n')
+            continue;
+        if (!(line[0] >= '0' && line[0] <= '9'))
+        {
+            ls_stderr("Invalid line in namespace disabled file: %s", line);
+            fclose(fh);
+            return -1;
+        }
+        uid_t uid = atoi(line);
+        if (!uid)
+            continue;
+        s_disabled_uids[s_disabled_uids_count] = uid;
+        s_disabled_uids_count++;
+    }
+    fclose(fh);
+    qsort(s_disabled_uids, s_disabled_uids_count, sizeof(uid_t), uid_compare);
+    return 0;
+}
+
+
+int ns_uid_ok(uid_t uid)
+{
+    if (!s_disabled_uids_count)
+        return 1;
+    if (bsearch(&uid, s_disabled_uids, s_disabled_uids_count, sizeof(uid_t), uid_compare))
+    {
+        DEBUG_MESSAGE("Do not run namespaces for UID: %d; in disabled list\n", uid);
+        return 0;
     }
     return 1;
 }
@@ -314,47 +347,6 @@ int get_caps()
 }
 
 
-static int read_overflowids (void)
-{
-    int rc;
-    char str_num[STRNUM_SIZE];
-    rc = read_strfile("/proc/sys/kernel/overflowuid", NULL, sizeof(str_num), 
-                      str_num);
-    if (rc)
-        return rc;
-    s_overflowuid = atoi(str_num);
-    if (s_overflowuid == 0)
-    {
-        ls_stderr("Unexpected overflowuid in: %s\n", str_num);
-        return DEFAULT_ERR_RC;
-    }
-    rc = read_strfile("/proc/sys/kernel/overflowgid", NULL, sizeof(str_num),
-                      str_num);
-    if (rc)
-        return rc;
-    s_overflowgid = atoi(str_num);
-    if (s_overflowgid == 0)
-    {
-        ls_stderr("Unexpected overflowgid in: %s\n", str_num);
-        return DEFAULT_ERR_RC;
-    }
-    return 0;
-}
-
-
-static int check_cgroup_ns()
-{
-    struct stat sbuf;
-    
-    if (!s_ns_infos[NS_TYPE_CGROUP].enabled ||
-        stat ("/proc/self/ns/cgroup", &sbuf))
-        s_ns_infos[NS_TYPE_CGROUP].enabled = 0;
-    
-    DEBUG_MESSAGE("unshare cgroup: %d\n", s_ns_infos[NS_TYPE_CGROUP].enabled);
-    return 0;
-}
-
-
 static void close_pipe(int pipefd[])
 {
     if (pipefd)
@@ -366,110 +358,13 @@ static void close_pipe(int pipefd[])
     }
 }
 
-
-static void free_setupOp(SetupOp *setupOp, int parent_write[], int is_error)
+static void free_setupOp(SetupOp *setupOp, int is_error)
 {
     if (setupOp)
     {
         DEBUG_MESSAGE("Freeing setupOp in free_setupOp\n");
         nsopts_free(&setupOp);
     }
-    nsopts_free_conf(&s_ns_conf, &s_ns_conf2);
-    close_pipe(parent_write);
-}
-
-
-static int preclone_build_user_SetupOp(lscgid_t *pCGI, SetupOp **psetupOp)
-{
-    DEBUG_MESSAGE("preclone_build_user_SetupOp, s_SetupOp_size: %ld\n", s_SetupOp_size);
-    s_SetupOp_size += sizeof(s_setupOp_all);
-    *psetupOp = malloc(s_SetupOp_size);
-    if (!*psetupOp)
-    {
-        int err = errno;
-        ls_stderr("Namespace insufficient memory allocating setupOp\n");
-        return nsopts_rc_from_errno(err);
-    }
-    memcpy(*psetupOp, s_setupOp_all, sizeof(s_setupOp_all));
-    memcpy(((char *)*psetupOp) + sizeof(s_setupOp_all), s_SetupOp, 
-           s_SetupOp_size - sizeof(s_setupOp_all));
-    /* We need to do a deep copy so that the frees work out */
-    SetupOp *setupOp, *op;
-    struct stat st;
-    setupOp = *psetupOp;
-    int rc = 0;
-    for (op = &setupOp[0]; !(op->flags & OP_FLAG_LAST); ++op)
-    {
-        if (rc)
-        {
-            // All of this is to avoid a leak if there's an error
-            op->type = SETUP_NOOP;
-            op->dest = NULL;
-            op->source = NULL;
-            op->flags &= ~(OP_FLAG_ALLOCATED_DEST | OP_FLAG_ALLOCATED_SOURCE);
-            continue;
-        }
-        if (!(op->flags & OP_FLAG_BWRAP_SYMBOL) &&
-            (op->type == SETUP_BIND_MOUNT ||
-             op->type == SETUP_RO_BIND_MOUNT ||
-             op->type == SETUP_DEV_BIND_MOUNT ||
-             op->type == SETUP_MOUNT_PROC ||
-             op->type == SETUP_MOUNT_DEV ||
-             op->type == SETUP_MOUNT_TMPFS ||
-             op->type == SETUP_MOUNT_MQUEUE) &&
-             op->source && stat(op->source, &st))
-        {
-            int err = errno;
-            if (err == ENOENT && (op->flags & OP_FLAG_ALLOW_NOTEXIST))
-            {
-                DEBUG_MESSAGE("Getting rid of mount %s on %s\n", op->source, op->dest);
-                op->type = SETUP_NOOP;
-                op->dest = NULL;
-                op->source = NULL;
-                op->flags &= ~(OP_FLAG_ALLOCATED_DEST | OP_FLAG_ALLOCATED_SOURCE);
-            }
-            else
-            {
-                rc = nsopts_rc_from_errno(err);
-                ls_stderr("Namespace Error accessing required entity: %s: %s\n", 
-                          op->source, strerror(err));
-                op->type = SETUP_NOOP;
-                op->dest = NULL;
-                op->source = NULL;
-                op->flags &= ~(OP_FLAG_ALLOCATED_DEST | OP_FLAG_ALLOCATED_SOURCE);
-                continue; // Keep going to avoid leaks in this structure
-            }
-        }
-        if (op->source)
-        {
-            op->source = strdup(op->source);
-            if (!op->source)
-            {
-                int err = errno;
-                ls_stderr("Namespace error on deep copy of source: %s\n", strerror(err));
-                rc = nsopts_rc_from_errno(err);
-                op->flags &= ~OP_FLAG_ALLOCATED_SOURCE;
-            }
-            else
-                op->flags |= OP_FLAG_ALLOCATED_SOURCE;
-        }
-        if (op->dest)
-        {
-            op->dest = strdup(op->dest);
-            if (!op->dest)
-            {
-                int err = errno;
-                ls_stderr("Namespace error on deep copy of dest: %s\n", strerror(err));
-                rc = nsopts_rc_from_errno(err);
-                op->flags &= ~OP_FLAG_ALLOCATED_DEST;
-            }
-            else
-                op->flags |= OP_FLAG_ALLOCATED_DEST;
-        }
-        /* Keep going on error so that the structure is either deep copied or not */
-    }
-        
-    return rc;
 }
 
 
@@ -494,24 +389,10 @@ static int drop_all_caps(int keep_requested_caps)
     DEBUG_MESSAGE("drop_all_caps\n");
     if (keep_requested_caps)
     {
-        /* Avoid calling capset() unless we need to; currently
-         * systemd-nspawn at least is known to install a seccomp
-         * policy denying capset() for dubious reasons.
-         * <https://github.com/projectatomic/bubblewrap/pull/122>
-         */
-        /*if (!opt_cap_add_or_drop_used && real_uid == 0) */
         {
             assert (!IS_PRIVILEGED);
             return 0;
         }
-        /*
-        data[0].effective = s_requested_caps[0];
-        data[0].permitted = s_requested_caps[0];
-        data[0].inheritable = s_requested_caps[0];
-        data[1].effective = s_requested_caps[1];
-        data[1].permitted = s_requested_caps[1];
-        data[1].inheritable = s_requested_caps[1];
-        */
     }
     if (capset (&hdr, data) < 0)
     {
@@ -559,51 +440,6 @@ static int drop_privs (uid_t uid, int keep_requested_caps,
         int err = errno;
         ls_stderr("Namespace error setting dumpable: %s\n", strerror(err));
         return nsopts_rc_from_errno(err);
-    }
-    return 0;
-}
-
-
-static int ns_parent(lscgid_t *pCGI, int persisted, int *done, pid_t pid, 
-                     int parent_write)
-{
-    int rc;
-    nsipc_parent_done_t parent_done;
-
-    DEBUG_MESSAGE("ns_parent\n");
-    
-    if (IS_PRIVILEGED && !persisted && s_ns_infos[NS_TYPE_USER].enabled)
-    {
-        rc = nsutils_write_uid_gid_map(pCGI->m_data.m_uid, getuid(),
-                                       pCGI->m_data.m_gid, getgid(), 
-                                       pid, 1, 1, 0);
-        if (rc)
-            return rc;
-    }
-    
-    /*
-    rc = drop_privs(pCGI->m_data.m_uid, 0, 0, persisted);
-    if (rc)
-        return rc;
-    rc = handle_die_with_parent();
-    if (rc)
-        return rc;
-    */
-    /* Let child run now that the uid maps are set up */
-    parent_done.m_type = NSIPC_PARENT_DONE;
-    rc = write(parent_write, &parent_done, sizeof(parent_done));
-    close(parent_write);
-    if (rc <= 0)
-    {
-        int err = errno;
-        ls_stderr("Namespace error releasing child, may have died earlier: %s\n", 
-                  strerror(err));
-        return nsopts_rc_from_errno(err);
-    }
-    if (!persisted)
-    {
-        DEBUG_MESSAGE("ns_parent terminate normally\n");
-        persist_exit_child("ns_parent", 0);
     }
     return 0;
 }
@@ -676,19 +512,6 @@ static int set_ambient_capabilities(void)
     return prctl_caps (s_requested_caps, 0, 1);
 }
 
-static int drop_cap_bounding_set (int drop_all)
-{
-    int rc;
-    if (!drop_all)
-        rc = prctl_caps (s_requested_caps, 1, 0);
-    else
-    {
-        uint32_t no_caps[2] = {0, 0};
-        rc = prctl_caps (no_caps, 1, 0);
-    }
-    return rc;
-}
-
 
 static int set_required_caps (void)
 {
@@ -729,15 +552,8 @@ static int switch_to_user_with_privs(lscgid_t *pCGI, int persisted)
     int rc = 0;
     /* If we're in a new user namespace, we got back the bounding set, clear it 
      * again */
-    DEBUG_MESSAGE("switch_to_user_with_privs chroot: %s, user enabled: %d, persisted %d, user vh: %d\n", 
-                  pCGI->m_pChroot, s_ns_infos[NS_TYPE_USER].enabled, persisted, s_ns_infos[NS_TYPE_USER].vh);
-    if (s_ns_infos[NS_TYPE_USER].enabled && !persisted && 
-        !s_ns_infos[NS_TYPE_USER].vh)
-    {
-        rc = drop_cap_bounding_set(0);
-        if (rc)
-            return rc;
-    }
+    DEBUG_MESSAGE("switch_to_user_with_privs chroot: %s, persisted %d, user vh: %d\n", 
+                  pCGI->m_pChroot, persisted, s_persisted_VH != NULL);
 
     if (!IS_PRIVILEGED)
         return rc;
@@ -804,15 +620,13 @@ static int switch_to_user_with_privs(lscgid_t *pCGI, int persisted)
 
 static int build_mount_namespace(lscgid_t *pCGI)
 {
-    //const char *base_path = "/tmp";
     char *base_path;
     
     /* Instead of a tmpfs, use a real disk that won't kill memory.  Begin:*/
     char root_dir[PERSIST_DIR_SIZE];
     char root[PERSIST_DIR_SIZE * 2];
     snprintf(root, sizeof(root), "%s/"PERSIST_NO_VH_PREFIX"root", 
-             persist_namespace_dir_vh(pCGI->m_data.m_uid, NS_TYPE_MNT, root_dir, 
-                                      sizeof(root_dir)));
+             persist_namespace_dir_vh(pCGI->m_data.m_uid, root_dir, sizeof(root_dir)));
     /* Mark everything as slave, so that we still
      * receive mounts from the real root, but don't
      * propagate mounts to the real root. */
@@ -823,14 +637,6 @@ static int build_mount_namespace(lscgid_t *pCGI)
         ls_stderr("Namespace error making / slave: %s\n", strerror(err));
         return nsopts_rc_from_errno(err);
     }
-
-    ///* Create a tmpfs which we will use as / in the namespace */
-    //if (mount ("tmpfs", base_path, "tmpfs", MS_NODEV | MS_NOSUID, NULL) != 0)
-    //{
-    //    int err = errno;
-    //    ls_stderr("Namespace error mounting tmpfs: %s\n", strerror(err));
-    //    return nsopts_rc_from_errno(err);
-    //}
 
     if (mkdir(root, 0777))
     {
@@ -1342,8 +1148,7 @@ static int setup_bind_tmp(lscgid_t *pCGI, SetupOp *op)
         return DEFAULT_ERR_RC;
     }
     char vhdironly[PERSIST_DIR_SIZE];
-    persist_namespace_dir_vh(pCGI->m_data.m_uid, NS_TYPE_MNT, vhdironly,
-                             sizeof(vhdironly));
+    persist_namespace_dir_vh(pCGI->m_data.m_uid, vhdironly, sizeof(vhdironly));
     if (access(vhdironly, 0) && mkdir(vhdironly, 0777/*0700*/))
     {
         int err = errno;
@@ -1445,7 +1250,6 @@ static int presetup_bind_tmp(lscgid_t *pCGI, SetupOp *op, int index)
         op->flags &= ~OP_FLAG_ALLOCATED_SOURCE;
     }
     int bind_tmp_len = strlen(persist_namespace_dir_vh(pCGI->m_data.m_uid, 
-                                                       NS_TYPE_MNT, 
                                                        persist_dir, 
                                                        sizeof(persist_dir))) +
                        PERSIST_NO_VH_PREFIX_LEN + STRNUM_SIZE + 5;
@@ -1457,8 +1261,8 @@ static int presetup_bind_tmp(lscgid_t *pCGI, SetupOp *op, int index)
     }
     op->source = bind_tmp;
     op->flags |= OP_FLAG_ALLOCATED_SOURCE;
-    snprintf(bind_tmp, bind_tmp_len, "%s/"PERSIST_NO_VH_PREFIX"tmp%d",
-             persist_dir, index);
+    snprintf(bind_tmp, bind_tmp_len, "%s/"PERSIST_NO_VH_PREFIX"tmp",
+             persist_dir);
     DEBUG_MESSAGE("presetup_bind_tmp set to: %s\n", bind_tmp);
     return 0;
 }
@@ -1708,16 +1512,6 @@ static int do_copy(uint32_t flags, const char *source, const char *dest, int *fd
     close(*fd);
     *fd = -1;
     
-    //if (bytes != -1)
-    //{
-    //    DEBUG_MESSAGE("Set mode to %o\n", st.st_mode & 0777);
-    //    if (fchmod(fd_dest, st.st_mode & 0777))
-    //        DEBUG_MESSAGE("Ignore error setting mode: %s\n", strerror(errno));
-    //    DEBUG_MESSAGE("Set uid: %d, gid: %d\n", st.st_uid, st.st_gid);
-    //    if (fchown(fd_dest, st.st_uid, st.st_gid))
-    //        DEBUG_MESSAGE("Ignore error setting user/group: %s\n", 
-    //                      strerror(errno));
-    //}
     close(fd_dest);
     if (bytes == -1)
     {
@@ -2561,7 +2355,6 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 break;
               
             case SETUP_NO_UNSHARE_USER:
-                nspersist_disable_user_namespace();
                 break;
                 
             case SETUP_NOOP:
@@ -2587,132 +2380,6 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
         rc = -1;
     }
     return rc;
-}
-
-
-static const char *resolve_string_offset (void *buffer, size_t buffer_size,
-                                          uint32_t offset)
-{
-    if (offset == 0)
-        return NULL;
-
-    if (offset > buffer_size)
-    {
-        ls_stderr("Namespace invalid string offset %d (buffer size %zd)", offset, 
-                  buffer_size);
-        return NULL;
-    }
-
-    return (const char *) buffer + offset;
-}
-
-
-static uint32_t read_priv_sec_op (int read_socket, void *buffer, 
-                                  size_t buffer_size, uint32_t *flags,
-                                  const char **arg1, const char **arg2)
-{
-    const PrivSepOp *op = (const PrivSepOp *) buffer;
-    ssize_t rec_len;
-
-    do
-        rec_len = read (read_socket, buffer, buffer_size - 1);
-    while (rec_len == -1 && errno == EINTR);
-
-    if (rec_len < 0)
-    {
-        int err = errno;
-        ls_stderr("Namespace error reading from privileged socket: %s\n", 
-                  strerror(err));
-        return nsopts_rc_from_errno(err);
-    }
-
-    if (rec_len == 0)
-    {
-        ls_stderr("Namespace child closed socket, see prior error\n");
-        return DEFAULT_ERR_RC;
-    }
-
-    if (rec_len < (ssize_t)sizeof(PrivSepOp))
-    {
-        ls_stderr("Namespace invalid size from helper: %d\n", (int)rec_len);
-        return DEFAULT_ERR_RC;
-    }
-
-    /* Guarantee zero termination of any strings */
-    ((char *) buffer)[rec_len] = 0;
-
-    *flags = op->flags;
-    *arg1 = resolve_string_offset (buffer, rec_len, op->arg1_offset);
-    *arg2 = resolve_string_offset (buffer, rec_len, op->arg2_offset);
-
-    return op->op;
-}
-
-
-static int fork_priv_ops(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
-{
-    pid_t child;
-    int privsep_sockets[2];
-    int rc;
-
-    DEBUG_MESSAGE("fork_priv_ops\n");
-    if (IS_PRIVILEGED && !persisted && s_ns_infos[NS_TYPE_USER].enabled && 
-        !s_ns_infos[NS_TYPE_USER].vh)
-    {
-        if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, privsep_sockets))
-        {
-            int err = errno;
-            ls_stderr("Namespace error creating privsep socket: %s\n", strerror(err));
-            return nsopts_rc_from_errno(err);
-        }
-        child = fork();
-        if (child == -1)
-        {
-            int err = errno;
-            ls_stderr("Namespace error forking unprivileged helper: %s\n", strerror(err));
-            return nsopts_rc_from_errno(err);
-        }
-        if (child == 0)
-        {
-            /* Unprivileged setup process */
-            drop_privs(pCGI->m_data.m_uid, !IS_PRIVILEGED, 1, persisted);
-            close (privsep_sockets[0]);
-            setup_newroot (pCGI, setupOp, privsep_sockets[1]);
-            persist_exit_child("fork_priv_ops", 0);
-        }
-        else
-        {
-            uint32_t buffer[2048];  /* 8k, but is int32 to guarantee nice alignment */
-            uint32_t op, flags;
-            const char *arg1, *arg2;
-            int unpriv_socket = -1;
-
-            unpriv_socket = privsep_sockets[0];
-            close (privsep_sockets[1]);
-            DEBUG_MESSAGE("fork_priv_ops, child: %d\n", child);
-            do
-            {
-                op = read_priv_sec_op (unpriv_socket, buffer, sizeof (buffer),
-                                       &flags, &arg1, &arg2);
-                int rc = privileged_op (-1, op, flags, arg1, arg2, NULL); // Copy not supported here
-                if (rc)
-                    return rc;
-                if (write (unpriv_socket, buffer, 1) != 1)
-                {
-                    int err = errno;
-                    ls_stderr("Namespace error writing to unpriv socket: %s\n", 
-                              strerror(err));
-                    return nsopts_rc_from_errno(err);
-                }
-            }
-            while (op != PRIV_SEP_OP_DONE);
-
-            /* Continue post setup */
-        }
-    }
-    else if ((rc = setup_newroot(pCGI, setupOp, -1)))
-        return rc;
-    return 0;
 }
 
 
@@ -2842,212 +2509,9 @@ static int cleanup_oldroot(lscgid_t *pCGI, int persisted)
         }
     }
 
-    //if (0 != pCGI->m_data.m_uid || 0 != pCGI->m_data.m_gid) 
-    if (!persisted && s_ns_infos[NS_TYPE_USER].enabled)
-    {
-        /* Now that devpts is mounted and we've no need for mount
-           permissions we can create a new userspace and map our uid
-           1:1 */
-        if (unshare (CLONE_NEWUSER))
-        {
-            int err = errno;
-            DEBUG_MESSAGE("ERROR in unshare of CLONE_NEWUSER: %s\n", strerror(err));
-            ls_stderr("Namespace error unsharing user ns: %s\n", strerror(err));
-            return nsopts_rc_from_errno(err);
-        }
-        /* We're in a new user namespace, we got back the bounding set, clear it again */
-        rc = drop_cap_bounding_set (0);
-        if (rc)
-            return rc;
-        DEBUG_MESSAGE("write_uid_gid_map to real values\n");
-        rc = nsutils_write_uid_gid_map (pCGI->m_data.m_uid, 0, 
-                                        pCGI->m_data.m_gid, 0,
-                                        -1, 0, 0, 0);
-        if (rc)
-            return rc;
-        DEBUG_MESSAGE("Did write_uid_gid_map to real values ok\n");
-    }
-    else if (!persisted && !s_ns_infos[NS_TYPE_USER].enabled)
-        DEBUG_MESSAGE("USER_NAMESPACE not enabled, NOT unsharing!\n");
     /* All privileged ops are done now, so drop caps we don't need */
-    rc = drop_privs(pCGI->m_data.m_uid, !IS_PRIVILEGED, s_ns_infos[NS_TYPE_USER].enabled, persisted);
+    rc = drop_privs(pCGI->m_data.m_uid, !IS_PRIVILEGED, 0, persisted);
     return rc;
-}
-
-
-/* Closes all fd:s except 0,1,2 and the passed in array of extra fds */
-static int close_extra_fds (void *data, int fd)
-{
-    int *extra_fds = (int *) data;
-    int i;
-
-    for (i = 0; extra_fds[i] != -1; i++)
-        if (fd == extra_fds[i])
-            return 0;
-
-    if (fd <= 2)
-        return 0;
-
-    close (fd);
-    return 0;
-}
-
-
-static int fdwalk (int proc_fd, int (*cb)(void *data, int   fd), void *data)
-{
-    int open_max;
-    int fd;
-    int dfd;
-    int res = 0;
-    DIR *d;
-
-    dfd = openat (proc_fd, "self/fd", O_DIRECTORY | O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOCTTY);
-    if (dfd == -1)
-        return res;
-
-    if ((d = fdopendir (dfd)))
-    {
-        struct dirent *de;
-
-        while ((de = readdir (d)))
-        {
-            long l;
-            char *e = NULL;
-
-            if (de->d_name[0] == '.')
-                continue;
-
-            errno = 0;
-            l = strtol (de->d_name, &e, 10);
-            if (errno != 0 || !e || *e)
-                continue;
-
-            fd = (int) l;
-
-            if ((long) fd != l)
-                continue;
-
-            if (fd == dirfd (d))
-                continue;
-
-            if ((res = cb (data, fd)) != 0)
-                break;
-        }
-
-        closedir (d);
-        return res;
-    }
-
-    open_max = sysconf (_SC_OPEN_MAX);
-
-    for (fd = 0; fd < open_max; fd++)
-        if ((res = cb (data, fd)) != 0)
-            break;
-
-    return res;
-}
-
-
-static int propagate_exit_status (int status)
-{
-    if (WIFEXITED (status))
-        return WEXITSTATUS (status);
-
-    /* The process died of a signal, we can't really report that, but we
-     * can at least be bash-compatible. The bash manpage says:
-     *   The return value of a simple command is its
-     *   exit status, or 128+n if the command is
-     *   terminated by signal n.
-     */
-    if (WIFSIGNALED (status))
-        return 128 + WTERMSIG (status);
-
-    /* Weird? */
-    return 255;
-}
-
-
-/* This is pid 1 in the app sandbox. It is needed because we're using
- * pid namespaces, and someone has to reap zombies in it. We also detect
- * when the initial process (pid 2) dies and report its exit status to
- * the monitor so that it can return it to the original spawner.
- *
- * When there are no other processes in the sandbox the wait will return
- * ECHILD, and we then exit pid 1 to clean up the sandbox. */
-static int do_init (pid_t initial_pid)
-{
-    int initial_exit_status = 1;
-    /* Optionally bind our lifecycle to that of the caller */
-    handle_die_with_parent ();
-
-    while (1)
-    {
-        pid_t child;
-        int status;
-
-        child = wait (&status);
-        if (child == initial_pid)
-        {
-            initial_exit_status = propagate_exit_status (status);
-        }
-
-        if (child == -1 && errno != EINTR)
-        {
-            if (errno != ECHILD)
-            {
-                int err = errno;
-                ls_stderr("Namespace error in init wait: %s\n", strerror(err));
-                return nsopts_rc_from_errno(err);
-            }
-            DEBUG_MESSAGE("pid_1 error: %s\n", strerror(errno));
-            break;
-        }
-    }
-    DEBUG_MESSAGE("pid_1 terminating: %d\n", initial_exit_status);
-
-    exit(initial_exit_status);
-}
-
-
-static int pid_1()
-{
-    pid_t pid;
-    /* We have to have a pid 1 in the pid namespace, because
-     * otherwise we'll get a bunch of zombies as nothing reaps
-     * them. Alternatively if we're using sync_fd or lock_files we
-     * need some process to own these.
-     */
-
-    if (!s_ns_infos[NS_TYPE_PID].enabled)
-        return 0;
-    
-    DEBUG_MESSAGE("Start pid_1\n");
-    pid = fork ();
-    if (pid == -1)
-    {
-        int err = errno;
-        ls_stderr("Namespace can't fork for pid 1: %s\n", strerror(errno));
-        return nsopts_rc_from_errno(err);
-    }
-    if (pid != 0)
-    {
-        drop_all_caps (0); // ignore rc for now
-
-        /* Close fds in pid 1, except stdio and optionally event_fd
-           (for syncing pid 2 lifetime with monitor_child) and
-           opt_sync_fd (for syncing sandbox lifetime with outside
-           process).
-           Any other fds will been passed on to the child though. */
-        {
-            int dont_close[3];
-            int j = 0;
-            dont_close[j++] = -1;
-            fdwalk (s_proc_fd, close_extra_fds, dont_close);
-        }
-
-        return do_init (pid);
-    }
-    return 0;
 }
 
 
@@ -3075,45 +2539,58 @@ static int pre_exec(lscgid_t *pCGI)
 }
 
 
-static int ns_child(lscgid_t *pCGI, SetupOp *setupOp, int persisted, 
-                    int parent_write)
+static int apply_oom_score_adj(int oom_score_adj)
 {
-    nsipc_parent_done_t parent_done;
+    if (oom_score_adj > 1000 || oom_score_adj < -1000)
+        return -1;
+    int fd = open("/proc/self/oom_score_adj", O_WRONLY, 0644);
+    if (fd == -1)
+        return -1;
+    char buf[80];
+    int n = snprintf(buf, sizeof(buf), "%d", oom_score_adj);
+    write(fd, buf, n);
+    close(fd);
+    return 0;
+}
+
+
+static void debug_ops(SetupOp *setupOp)
+{
+    SetupOp *op;
+
+    DEBUG_MESSAGE("SetupOp =>\n");
+    for (op = setupOp; op->flags != OP_FLAG_LAST; op++) 
+    {
+        DEBUG_MESSAGE("  type: %d, source: %s, dest: %s, flags: 0x%x, fd: %d\n",
+                      op->type, op->source, op->dest, op->flags, op->fd);
+    }
+}
+
+
+static int do_ns(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
+{
     int rc = 0;
-    int err;
     int persist_sibling_child[2] = { -1, -1 }, persist_sibling_rc[2] = { -1, -1 };
     pid_t parent_pid;
     mode_t old_umask = -1;
     char *old_cwd = NULL;
     
-    DEBUG_MESSAGE("Entering child, uid: %d, ppid: %d\n", getuid(), getppid());
+    DEBUG_MESSAGE("Entering do_ns, uid: %d, ppid: %d\n", getuid(), getppid());
+    debug_ops(setupOp);
 
     if (!rc)
         rc = op_as_user(pCGI, setupOp);
 
     if (!rc)
-        rc = persist_child_start(pCGI, persisted, &parent_pid,
-                                 persist_sibling_child, persist_sibling_rc);
+        rc = persist_ns_start(pCGI, persisted, &parent_pid,
+                              persist_sibling_child, persist_sibling_rc);
     if (rc)
         return rc;
-    rc = read(parent_write, &parent_done, sizeof(parent_done));
-    close(parent_write);
-    err = errno;
-    if (rc <= 0)
-    {
-        ls_stderr("Namespace child error reading from parent: %s\n", strerror(err));
-        rc = nsopts_rc_from_errno(err);
-        persist_child_done(persisted, rc, -1, 
-                           persist_sibling_child, persist_sibling_rc);
-        return rc;
-    }
-    else 
-        rc = 0;
-    DEBUG_MESSAGE("Child ok to go\n");
+    DEBUG_MESSAGE("ns ok to go\n");
     if (!rc)
         rc = switch_to_user_with_privs(pCGI, persisted);
     
-    if (!rc && !IS_PRIVILEGED && !persisted && !s_ns_infos[NS_TYPE_USER].vh)
+    if (!rc && !IS_PRIVILEGED && !persisted && !s_persisted_VH)
     {
         /* In the unprivileged case we have to write the uid/gid maps in
          * the child, because we have no caps in the parent */
@@ -3133,11 +2610,14 @@ static int ns_child(lscgid_t *pCGI, SetupOp *setupOp, int persisted,
         rc = build_mount_namespace(pCGI);
 
     if (!rc)
-        rc = fork_priv_ops(pCGI, setupOp, persisted);
+        rc = setup_newroot(pCGI, setupOp, -1);
 
     if (!rc)
         rc = cleanup_oldroot(pCGI, persisted);
     
+    //if (pCGI->m_oom_score_adjust != LS_OOM_NO_ADJ)
+    //    apply_oom_score_adj(pCGI->m_oom_score_adjust);
+
     if (old_umask != (mode_t)-1)
         umask(old_umask);
     if (!rc && !persisted)
@@ -3162,9 +2642,6 @@ static int ns_child(lscgid_t *pCGI, SetupOp *setupOp, int persisted,
     if (!rc && !persisted)
         rc = pre_exec(pCGI);
     
-    if (!rc && !persisted)
-        rc = pid_1();
-
     if (!rc && !persisted && access(pCGI->m_pCGIDir, 0))
     {
         int err = errno;
@@ -3173,17 +2650,46 @@ static int ns_child(lscgid_t *pCGI, SetupOp *setupOp, int persisted,
         rc = nsopts_rc_from_errno(errno);
     }
     
-    rc = persist_child_done(persisted, rc, parent_pid, 
-                            persist_sibling_child, persist_sibling_rc);
+    rc = persist_ns_done(pCGI, persisted, rc, parent_pid, 
+                         persist_sibling_child, persist_sibling_rc);
 
     if (!rc && !persisted)
     {
-        rc = final_exec(pCGI);
+         persist_report_pid(parent_pid, rc);
+         rc = final_exec(pCGI);
     }
     return rc;
 }
 
 
+static int read_overflowids (void)
+{
+    int rc;
+    char str_num[STRNUM_SIZE];
+    rc = read_strfile("/proc/sys/kernel/overflowuid", NULL, sizeof(str_num), 
+                      str_num);
+    if (rc)
+        return rc;
+    s_overflowuid = atoi(str_num);
+    if (s_overflowuid == 0)
+    {
+        ls_stderr("Unexpected overflowuid in: %s\n", str_num);
+        return DEFAULT_ERR_RC;
+    }
+    rc = read_strfile("/proc/sys/kernel/overflowgid", NULL, sizeof(str_num),
+                      str_num);
+    if (rc)
+        return rc;
+    s_overflowgid = atoi(str_num);
+    if (s_overflowgid == 0)
+    {
+        ls_stderr("Unexpected overflowgid in: %s\n", str_num);
+        return DEFAULT_ERR_RC;
+    }
+    return 0;
+}
+
+//OLS ONLY!
 #ifdef UNMOUNT_NS
 char *ns_getenv(lscgid_t *pCGI, const char *title)
 {
@@ -3213,29 +2719,21 @@ char *ns_getenv(lscgid_t *pCGI, const char *title)
 #endif
 
 
-static int init(lscgid_t *pCGI)
+static int init_req(lscgid_t *pCGI)
 {
-    int rc, ns_type;
-    if (getuid())
-    {
-        ls_stderr("To run namespace support, you must run as root.\n");
-        return DEFAULT_ERR_RC;
-    }
-    rc = nsopts_init(pCGI, &s_ns_conf, &s_ns_conf2);
-    if (rc)
-        return rc;
+    int rc;
     rc = nspersist_init(pCGI);
     if (rc)
         return rc;
-    
+
     if (s_didinit)
         return 0;
-    
+
     if (isatty (1))
         s_host_tty_dev = ttyname (1);
 
     DEBUG_MESSAGE("tty device: %s\n", s_host_tty_dev);
-    
+
     /* Never gain any more privs during exec */
     if (prctl (PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
     {
@@ -3249,9 +2747,6 @@ static int init(lscgid_t *pCGI)
     rc = read_overflowids();
     if (rc)
         return rc;
-    rc = check_cgroup_ns();
-    if (rc)
-        return rc;
     s_proc_fd = open("/proc", O_PATH);
     if (s_proc_fd == -1)
     {
@@ -3259,13 +2754,10 @@ static int init(lscgid_t *pCGI)
         ls_stderr("Error opening /proc: %s\n", strerror(err));
         return nsopts_rc_from_errno(err);
     }
-    s_clone_flags = SIGCHLD;
-    for (ns_type = 0; ns_type < NS_TYPE_COUNT; ++ns_type)
-        if (s_ns_infos[ns_type].enabled)
-            s_clone_flags |= s_ns_infos[ns_type].clone_flag;
-        
+    fcntl(s_proc_fd, F_SETFD, FD_CLOEXEC);
+    s_clone_flags = SIGCHLD | CLONE_NEWNS;
     s_didinit = 1;
- 
+
     return 0;
 }
 
@@ -3306,10 +2798,11 @@ void ns_init_debug()
             {
                 s_ns_debug_file = debug_file;
                 DEBUG_MESSAGE("Switched to debug file: %s\n", filename);
+                fcntl(fileno(s_ns_debug_file), F_SETFD, FD_CLOEXEC);
             }
             else
             {
-                DEBUG_MESSAGE("Can't open debug file: leave alone: %s\n", 
+                DEBUG_MESSAGE("Can't open debug file: leave alone: %s\n",
                               strerror(errno));
             }
         }
@@ -3324,7 +2817,7 @@ void ns_init_debug()
 }
 
 
-int ns_init(lscgid_t *pCGI)
+static int ns_init(lscgid_t *pCGI)
 {
     if (getuid())
     {
@@ -3342,11 +2835,13 @@ int ns_init(lscgid_t *pCGI)
         return 0;
     }
     int enabled = atol(lsns);
-    //unsetenv(LS_NS);
     if (enabled)
     {
         ns_init_debug();
-        enabled = init(pCGI) ? -1 : 1;
+        if (ns_read_disabled())
+            return 0;
+        if (!ns_uid_ok(pCGI->m_data.m_uid))
+            return 0;
     }
     return enabled;
 }
@@ -3354,16 +2849,15 @@ int ns_init(lscgid_t *pCGI)
 
 int ns_exec(lscgid_t *pCGI, int *done)
 {
-    SetupOp *setupOp = NULL;
-    int rc, pid, persisted;
-    int parent_write[2] = { -1, -1 };
-    
+    int rc, persisted;
+
     DEBUG_MESSAGE("Entering ns_exec\n");
-    rc = ns_init(pCGI);
-    if (rc != 1)
+    rc = init_req(pCGI);
+    if (rc)
         return rc;
-    
+
     DEBUG_MESSAGE("After ns_init initial user: %d CGI user: %d\n", getuid(), pCGI->m_data.m_uid);
+
     rc = is_persisted(pCGI, &persisted);
     if (rc)
         return rc;
@@ -3379,52 +2873,22 @@ int ns_exec(lscgid_t *pCGI, int *done)
     if (pCGI->m_pChroot)
         DEBUG_MESSAGE("Enter ns_exec, chroot set to: %s\n", pCGI->m_pChroot);
     *done = 0;
-    rc = preclone_build_user_SetupOp(pCGI, &setupOp);
-    if (rc)
-    {
-        free_setupOp(setupOp, parent_write, 1);
-        persist_exit_child("ns_exec (before fork 1)", rc);
-    }
-    if (pipe(parent_write))
-    {
-        int err = errno;
-        ls_stderr("Namespace error creating pipe: %s\n", strerror(err));
-        free_setupOp(setupOp, parent_write, 1);
-        rc = nsopts_rc_from_errno(errno);
-        persist_exit_child("ns_exec (before fork 2)", rc);
-    }
-    pid = fork();
-    //pid = syscall (__NR_clone, s_clone_flags, NULL);
-    if (pid == -1)
-    {
-        int err = errno;
-        ls_stderr("Namespace error in clone of subtask: %s\n", strerror(err));
-        free_setupOp(setupOp, parent_write, 1);
-        rc = nsopts_rc_from_errno(err);
-        persist_exit_child("ns_exec fork error", rc);
-    }
-    if (pid == 0)
-    {
-        close(parent_write[1]);
-        parent_write[1] = -1;
-        rc = ns_child(pCGI, setupOp, persisted, parent_write[0]);
-        
-        /* We only get here if there's an error! */
-        free_setupOp(setupOp, parent_write, 0);
-        persist_exit_child("ns_exec child", rc);
-    }
-    close(parent_write[0]);
-    parent_write[0] = -1;
-    rc = ns_parent(pCGI, persisted, done, pid, parent_write[1]);
-    *done = 1;
-    lock_persist_vh_file(NSPERSIST_LOCK_READ);
-    if (!rc && persisted)
-        rc = persisted_use(pCGI, done);
-    free_setupOp(setupOp, parent_write, rc);
-    persist_exit_child("ns_exec (parent)", rc);
+    rc = do_ns(pCGI, s_SetupOp, persisted);
+    /* We only get here if there's an error! */
+    free_setupOp(s_SetupOp, 0);
+    persist_exit_child("ns_exec child", rc);
     return rc; // Not used - keep the compiler happy
 }
 
+
+int ns_exec_ols(lscgid_t *pCGI, int *done)
+{
+    DEBUG_MESSAGE("Entering ns_exec_ols\n");
+    int rc = ns_init(pCGI);
+    if (rc != 1)
+        return rc;
+    return ns_exec(pCGI, done);
+}
 
 
 void ns_setuser(uid_t uid)
@@ -3443,7 +2907,7 @@ void ns_setverbose_callback(verbose_callback_t callback)
 void ns_done(int unpersist)
 {
     DEBUG_MESSAGE("ns_done\n");
-    nspersist_done(unpersist);
+    nspersist_done(0, unpersist);
     if (s_proc_fd != -1)
     {
         close(s_proc_fd);
@@ -3452,12 +2916,11 @@ void ns_done(int unpersist)
     if (s_setupOp_allocated)
     {
         DEBUG_MESSAGE("ns_done free_setupOp (allocated)\n");
-        free_setupOp(s_SetupOp, NULL, unpersist);
+        free_setupOp(s_SetupOp, unpersist);
     }
     else 
     {
         nsopts_free_members(s_SetupOp);
-        nsopts_free_conf(&s_ns_conf, &s_ns_conf2);
     }
     s_SetupOp = NULL;
     s_setupOp_allocated = 0;
@@ -3469,6 +2932,7 @@ int ns_unpersist_all()
 {
     return unpersist_all();
 }
+
 
 #endif
 

@@ -6,8 +6,8 @@ INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
 
 set(openlitespeed_MAJOR_VERSION 1)
-set(openlitespeed_MINOR_VERSION 7)
-set(openlitespeed_PATCH_VERSION 18)
+set(openlitespeed_MINOR_VERSION 8)
+set(openlitespeed_PATCH_VERSION 2)
 set(openlitespeed_VERSION
     ${openlitespeed_MAJOR_VERSION}.${openlitespeed_MINOR_VERSION}.${openlitespeed_PATCH_VERSION})
 

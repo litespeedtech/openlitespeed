@@ -36,6 +36,7 @@ public:
     EdIoStream()  {}
     virtual ~EdIoStream() {}
     virtual int shutdown()  {   return -1;      }
+    virtual int doneWrite() = 0;
     virtual int sendfile(int fdSrc, off_t off, size_t size, int flag)
     { return -1; }
     virtual int onRead()            {   return 0;   }
@@ -146,6 +147,8 @@ public:
 //    virtual bool wantRead() = 0;
 //    virtual bool wantWrite() = 0;
 //    void updateEvents();
+    int doneWrite()
+    {   return -1;      }
     int close();
     int flush()    {   return LS_OK;    }
     int getSockError(int32_t *error);

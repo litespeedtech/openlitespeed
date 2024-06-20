@@ -56,9 +56,9 @@ protected:
     int                   m_iState;
     int                   m_iRespState;
     int64_t               m_iReqBodySent;
+    int64_t               m_iRespBodyRcvd;
+    int64_t               m_iRespContentLen;
     unsigned int          m_iRespHeaderSize;
-    int64_t               m_iRespBodyLen;
-    int64_t               m_iRespBodySent;
 
 
     int sendReqBody();
@@ -149,7 +149,10 @@ public:
     LOG4CXX_NS::Logger *getLogger() const;
     bool wantWrite() const
     {   return (m_iState & (HEC_FWD_REQ_HEADER | HEC_FWD_REQ_BODY));  }
-    int getRespBodyLen() const {   return m_iRespBodyLen;   }
+
+    int64_t getRespContentLen()         {   return m_iRespContentLen;   }
+    void setRespContentLen(int64_t v)   {   m_iRespContentLen = v;      }
+
     int isNoExtAppAbort() const
     {   return m_iState & HEC_NO_EXTAPP_ABORT;      }
     int flushResp();

@@ -58,6 +58,7 @@ enum stream_flag
     SS_FLAG_RESP_HEADER_SENT   = (1<<22),
     SS_FLAG_BLACK_HOLE         = (1<<23),
     SS_FLAG_READ_EOS           = (1<<24),
+    SS_FLAG_PRI_INCREMENTAL    = (1<<25),
 };
 
 inline enum stream_flag operator|(enum stream_flag a, enum stream_flag b)
@@ -115,6 +116,8 @@ public:
 
     short getPriority() const   {   return m_iPriority;     }
     void setPriority(int pri)   {   m_iPriority = pri;      }
+    bool isPriIncremental() const
+    {   return getFlag(SS_FLAG_PRI_INCREMENTAL);    }
 
     bool isWantRead() const     {   return getFlag(SS_FLAG_WANT_READ);      }
     bool isWantWrite() const    {   return getFlag(SS_FLAG_WANT_WRITE);     }
@@ -127,6 +130,23 @@ public:
     bool isPeerShutdown() const {   return getFlag(SS_FLAG_PEER_SHUTDOWN);  }
     bool isEos() const          {   return getFlag(SS_FLAG_READ_EOS);       }
     bool isWriteBuffer() const  {   return getFlag(SS_FLAG_WRITE_BUFFER);   }
+
+    bool isSendfileAvail() const {   return getFlag(SS_FLAG_SENDFILE);      }
+    bool isFromLocalAddr() const {   return getFlag(SS_FLAG_FROM_LOCAL);    }
+
+    int  isSpdy() const         {   return getProtocol();     }
+    bool isHttp2() const        {   return getProtocol() == HIOS_PROTO_HTTP2; }
+    bool isHttp3() const
+    {   return getProtocol() == HIOS_PROTO_QUIC || getProtocol() == HIOS_PROTO_HTTP3; }
+
+    bool isClosing() const      {   return getState() != SS_CONNECTED;      }
+    bool isConnected() const    {   return getState() == SS_CONNECTED;      }
+
+    void tobeClosed()
+    {
+        if (getState() < SS_SHUTDOWN)
+            setState(SS_CLOSING);
+    }
 
     void handlerReadyToRelease(){   setFlag(SS_FLAG_HANDLER_RELEASE, 1);    }
 private:

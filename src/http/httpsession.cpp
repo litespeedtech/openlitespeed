@@ -1411,6 +1411,11 @@ int HttpSession::hookResumeCallback(lsi_session_t *session, long lParam,
 int HttpSession::processNewReqInit()
 {
     int ret;
+
+    if ( m_request.getHttpHeaderLen() > 0 )
+        LS_DBG_H(getLogSession(), "Headers: %.*s",
+                m_request.getHttpHeaderLen(), m_request.getOrgReqLine() );
+
     HttpServerConfig &httpServConf = HttpServerConfig::getInstance();
     int useProxyHeader = httpServConf.getUseProxyHeader();
     if (getStream()->isSpdy())
@@ -5275,7 +5280,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 return LS_FAIL;
             }
             LS_INFO(getLogSession(), "Using io_uring for transfer of %s",
-                    getSendFileInfo()->getFileData() ? 
+                    getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
             setLsAioReq(lsIouringReq);
@@ -5292,7 +5297,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 return LS_FAIL;
             }
             LS_INFO(getLogSession(), "Using Linux AIO for transfer of %s",
-                    getSendFileInfo()->getFileData() ? 
+                    getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
             setLsAioReq(lsLinuxAioReq);
@@ -5307,7 +5312,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 return LS_FAIL;
             }
             LS_INFO(getLogSession(), "Using Posix AIO for transfer of %s",
-                    getSendFileInfo()->getFileData() ? 
+                    getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
             setLsAioReq(lsPosixAioReq);

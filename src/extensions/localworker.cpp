@@ -28,6 +28,7 @@
 #include <http/serverprocessconfig.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_fileio.h>
+#include <lsr/ls_strtool.h>
 #include <main/configctx.h>
 #include <main/mainserverconfig.h>
 #include <main/serverinfo.h>
@@ -1104,6 +1105,46 @@ TRY_AGAIN:
         m_pDetached->pid_info.pid = 0;
     }
     return 0;
+}
+
+
+int LocalWorker::generateResetAppsJson(AutoBuf *buf, int *did)
+{
+    int guarantee_size = 1024;
+    if (!m_pRestartMarker)
+        return 0;
+        
+    if (!buf->size())
+        guarantee_size = 8192;
+    if (buf->guarantee(guarantee_size))
+    {
+        LS_ERROR("Insufficent memory creating reset apps list");
+        return -1;
+    }
+    if (!buf->size())
+    {
+        memcpy(buf->end(), "{\n", 2);
+        buf->used(2);
+    }
+    else
+    {
+        int total = -2; // Remove JSON termination
+        if (*did)
+            total -= 6; // Remove list termination too
+        buf->used(total);
+        *(buf->end()) = 0;
+        LS_DBG("ResetAppsJson: Remove JSON suffix (total: %d, len: %ld): %s", total, buf->end() - buf->begin(), buf->begin());
+    }
+    int len = ls_snprintf(buf->end(), 1024,
+                          "%s"
+                          "        \"%s\"\n"
+                          "    ]\n}",
+                          !*did ? "    \"reset_list\":\n    [\n" : ",\n",
+                          m_pRestartMarker->getMarkerPath()->c_str());
+    buf->used(len);
+    LS_DBG("ResetAppsJson: %s", buf->begin());
+    *did = 1;
+    return 0;    
 }
 
 

@@ -50,14 +50,14 @@ AutoStr2 HttpLog::s_serverRoot = "";
 
 void HttpLog::parse_error(const char *pCurLine, const char *pError)
 {
-    LS_ERROR(s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
+    LS_ERROR(s_pCurLogger, "[%s] [REWRITE] %s while parsing: %s",
              s_pLogId, pError, pCurLine);
 }
 
 
 void HttpLog::parse_warn(const char *pCurLine, const char *pError)
 {
-    LS_WARN(s_pCurLogger, "[%s] rewrite: %s while parsing: %s",
+    LS_WARN(s_pCurLogger, "[%s] [REWRITE] %s while parsing: %s",
              s_pLogId, pError, pCurLine);
 }
 

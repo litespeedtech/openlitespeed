@@ -97,49 +97,10 @@ struct ConnInfo
 };
 
 
-class HioStat : virtual public StreamStat
-{
-public:
-    HioStat()
-    {}
-
-    ~HioStat()
-    {};
-
-    void setPriority(int pri)
-    {
-        if (pri > HIO_PRIORITY_LOWEST)
-            pri = HIO_PRIORITY_LOWEST;
-        else if (pri < HIO_PRIORITY_HIGHEST)
-            pri = HIO_PRIORITY_HIGHEST;
-        StreamStat::setPriority(pri);
-    }
-
-    void raisePriority(int by = 1)
-    {   setPriority(getPriority() - by);  }
-    void lowerPriority(int by = 1)
-    {   setPriority(getPriority() + by);  }
-
-    bool isSendfileAvail() const {   return getFlag(HIO_FLAG_SENDFILE);     }
-    bool isFromLocalAddr() const {   return getFlag(HIO_FLAG_FROM_LOCAL);   }
-
-    int   isSpdy() const        {   return getProtocol();     }
-    bool  isHttp2() const       {   return getProtocol() == HIOS_PROTO_HTTP2; }
-
-    bool isClosing() const      {   return getState() != HIOS_CONNECTED;      }
-
-    void tobeClosed()
-    {
-        if (getState() < HIOS_SHUTDOWN)
-            setState(HIOS_CLOSING);
-    }
-
-};
-
 
 class HioStream : virtual public LogSession
                 , virtual public EdIoStream
-                , virtual public HioStat
+                , virtual public StreamStat
 {
 
 public:
@@ -163,6 +124,23 @@ public:
 
     virtual int detectClose()       {   return 0;   }
     virtual void enableSocketKeepAlive() {}
+
+    virtual int doneWrite()         {   return -1;  }
+
+    virtual void applyPriority()    {};
+
+    void setPriority(int pri)
+    {
+        if (pri > HIO_PRIORITY_LOWEST)
+            pri = HIO_PRIORITY_LOWEST;
+        else if (pri < HIO_PRIORITY_HIGHEST)
+            pri = HIO_PRIORITY_HIGHEST;
+        if (pri != getPriority())
+        {
+            StreamStat::setPriority(pri);
+            applyPriority();
+        }
+    }
 
     void reset(int32_t timeStamp);
 

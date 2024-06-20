@@ -38,6 +38,31 @@ extern "C"
 int ns_supported();
 
 /**
+ * @fn ns_init_engine
+ * @brief Verifies namespaces are supported and sets up for later use.
+ * @param[in] ns_conf The LS_NS_CONF environment variable
+ * @return 0 if namespaces are not supported, 1 if they are.
+ **/
+int ns_init_engine(const char *ns_conf);
+
+/**
+ * @fn ns_uid_ok
+ * @brief Verifies that this UID has not been disabled for namespaces.
+ * @param[in] uid The uid to verify.
+ * @return 0 if the uid can't be used, 1 if it can.
+ **/
+int ns_uid_ok(uid_t uid);
+
+/**
+* @fn ns_getenv
+* @brief Unique to OLS, gets the environment variables as passed on the wire.
+* @param[in] pCGI the CGI used by lscgid.
+* @param[in] title the value to search for.
+* @return A pointer the the value that matches the title found if any.
+**/
+char *ns_getenv(lscgid_t *pCGI, const char *title);
+
+/**
  * @fn ns_exec
  * @brief Run the program specified in a ns
  * @param[in] pCGI the global parameters
@@ -46,6 +71,14 @@ int ns_supported();
  **/
 int ns_exec(lscgid_t *pCGI, int *done);
 
+/**
+ * @fn ns_exec_ols
+ * @brief Run the program specified in a ns specifically for OLS
+ * @param[in] pCGI the global parameters
+ * @param[out] done whether it did the exec.
+ * @return The return code of the exec or -1 if an error was logged.
+ **/
+int ns_exec_ols(lscgid_t *pCGI, int *done);
 
 /**
 * @fn ns_setuser
@@ -91,22 +124,15 @@ void ns_done(int unpersist);
 **/
 int ns_unpersist_all();
 
-/**
-* @fn ns_getenv
-* @brief Unique to OLS, gets the environment variables as passed on the wire.
-* @param[in] pCGI the CGI used by lscgid.
-* @param[in] title the value to search for.
-* @return A pointer the the value that matches the title found if any.
-**/
-char *ns_getenv(lscgid_t *pCGI, const char *title);
+
 
 /**
- * @fn ns_init
+ * @fn ns_init_req
  * @brief Only used by unmount_ns, initializes when you don't do ns_exec.
  * @return 0 if not specified or initialized, 1 if specified and initialized
  * -1 for an error.
  **/
-int ns_init(lscgid_t *pCGI);
+int ns_init_req(lscgid_t *pCGI);
 
 /**
  * @fn ns_init_debug
@@ -115,6 +141,7 @@ int ns_init(lscgid_t *pCGI);
  * @return None.
  **/
 void ns_init_debug();
+
 
 #ifdef __cplusplus
 }

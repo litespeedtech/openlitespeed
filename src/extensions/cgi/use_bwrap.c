@@ -827,8 +827,6 @@ int exec_using_bwrap(lscgid_t *pCGI, set_cgi_error_t cgi_error, int *done)
     char **argv;
     bwrap_mem_t *mem = NULL;
     DEBUG_MESSAGE("LS_BWRAP %s set, pid: %d\n", pCGI->m_bwrap ? "IS" : "IS_NOT", getpid());
-    if (!pCGI->m_bwrap)
-        return 0;
 
     rc = build_bwrap_exec(pCGI, cgi_error, &argc, &argv, done, &mem);
     if (rc || *done)

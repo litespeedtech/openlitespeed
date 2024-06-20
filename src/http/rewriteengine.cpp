@@ -1096,6 +1096,22 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                     *eef_flags |= EEF_CACHE_KEY_MOD;
                 }
             }
+            else if (strcasecmp(pKey, "http-prio") == 0)
+            {
+                if (*pValue < '0' || *pValue > '7')
+                {
+                    if (m_logLevel > 4)
+                        LS_INFO(pSession,
+                                "[REWRITE] Bad HTTP priority value '%.*s', must between 0 - 7.",
+                                (int)(pValEnd - pValue), pValue);
+                }
+                else
+                {
+                    if (pValEnd > pValue + 1 && *(pValue + 1) == 'i')
+                        pSession->getStream()->setFlag(SS_FLAG_PRI_INCREMENTAL, 1);
+                    pSession->getStream()->setPriority(*pValue - '0');
+                }
+            }
 
             if (needSet)
             {

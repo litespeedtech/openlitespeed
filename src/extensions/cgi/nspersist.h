@@ -32,29 +32,6 @@ extern "C"
  * @brief Only used by ns.c and nspersist.c
  */
 
-typedef struct _NsInfo NsInfo;
-
-struct _NsInfo {
-  const char *name;
-  int         enabled;
-  int         vh;
-  int         clone_flag;
-};
-
-enum NS_TYPE
-{
-#ifdef CLONE_NEWCGROUP
-    NS_TYPE_CGROUP,
-#endif
-    NS_TYPE_IPC,
-    NS_TYPE_UTS,
-    NS_TYPE_NET,
-    NS_TYPE_PID,
-    NS_TYPE_MNT,
-    NS_TYPE_USER,
-    NS_TYPE_COUNT
-};
-
 typedef struct mount_tab_s
 {
     char *mountpoint;
@@ -69,8 +46,8 @@ typedef struct mount_flags_data_s
 
 #define PERSIST_PREFIX          "/var/lsns"
 #define PERSIST_PREFIX_LEN      9
-#define PERSIST_NO_VH_PREFIX    "NOT_VH_"
-#define PERSIST_NO_VH_PREFIX_LEN 7
+#define PERSIST_NO_VH_PREFIX    ""
+#define PERSIST_NO_VH_PREFIX_LEN 0
 #define PERSIST_DIR_SIZE        256
 
 /**
@@ -100,14 +77,6 @@ typedef struct mount_flags_data_s
 int nspersist_init();
 
 /**
- * @fn nspersist_disable_user_namespace
- * @brief Allows a cooperating function to request user_namespace be disabled
- * early in the process as the unshare is done very early as well.
- * @return 0 if no error; -1 if an error.
- **/
-void nspersist_disable_user_namespace();
-
-/**
  * @fn is_persisted
  * @brief Determines if there are persistant namespaces here.
  * @param[in] pCGI the global parameters
@@ -135,18 +104,18 @@ int persisted_use(lscgid_t *pCGI, int *done);
 #define NSPERSIST_LOCK_READ         0
 #define NSPERSIST_LOCK_WRITE        1
 #define NSPERSIST_LOCK_TRY_WRITE    2
+#define NSPERSIST_LOCK_WRITE_NB     3
 #define NSPERSIST_LOCK_NONE         -1
 
 /**
  * @fn lock_persist_vh_file
  * @brief Locks read or write a lock file created by is_persisted.
- * @param[in] write_lock.  2 to TRY a write lock once and take a read
- * lock if you can't get it, 1 to a write lock, 0 to convert a write lock
- * (if any) and instead put in a read lock.
+ * @param[in] report 1 if you wish to report errors to stderr; 0 to suppress
+ * @param[in] write_lock.  One of the NSPERSIST_LOCK_ constants.
  * @param[out] none
  * @return 0 if no error, or an error code.
  **/
-int lock_persist_vh_file(int lock_type);
+int lock_persist_vh_file(int report, int lock_type);
 
 /**
  * @fn unlock_close_persist_vh_file
@@ -158,40 +127,40 @@ int lock_persist_vh_file(int lock_type);
 int unlock_close_persist_vh_file(int delete);
 
 /**
- * @fn persist_child_start
- * @brief In a case where you are rebuilding persistence from scratch, call
- * after the first fork and this function will do the unshare and persist the
- * namespaces.
+ * @fn persist_do_ns
+ * @brief In a case where you are rebuilding persistence from scratch, this 
+ * function will do the unshare and persist the namespaces.
  * @param[in] pCGI the global parameters
  * @param[in] persisted If the non-VH namespaces are persisted.
  * @param[out] parent_pid The pid to be reported back to the caller.
  * @param[out] persist_sibling_child A set of pipes ONLY USED BY
- * persist_child_done.
+ * persist_ns_done.
  * @param[out] persist_sibling_rc A set of pipes ONLY USED BY
- * persist_child_done.
+ * persist_ns_done.
  * @return 0 if no error, or an error code.  The persist
  **/
-int persist_child_start(lscgid_t *pCGI, int persisted,
-                        pid_t *parent_pid, int persist_sibling_child[],
-                        int persist_sibling_rc[]);
+int persist_ns_start(lscgid_t *pCGI, int persisted,
+                     pid_t *parent_pid, int persist_sibling_child[],
+                     int persist_sibling_rc[]);
 
 /**
- * @fn persist_child_done
+ * @fn persist_ns_done
  * @brief In a case where you are rebuilding persistence from scratch, call
- * after you're completely done with the persisted_handle from the child_start
+ * after you're completely done with the persisted_handle from the ns_start
  * and the final return code to allow the child to complete.
+ * @param[in] pCGI the global parameters
  * @param[in] persisted 1 if there are existing persisted namespaces to use and
  * we're only doing the VHost ones.
  * @param[in] rc The return code to be passed to the child to know if it should
  * really persist everyging.
  * @param[in] persist_pid The pid to write to the peristence file.
- * @param[in] persist_sibling_child Created by persist_child_start.
- * @param[in] persist_sibling_rc Created by persist_child_start.
+ * @param[in] persist_sibling_child Created by persist_ns_start.
+ * @param[in] persist_sibling_rc Created by persist_ns_start.
  * @return 0 if no error, or an error code.
  **/
-int persist_child_done(int persisted, int rc,
-                       int persist_pid, int persist_sibling_child[],
-                       int persist_sibling_rc[]);
+int persist_ns_done(lscgid_t *pCGI, int persisted, int rc,
+                    int persist_pid, int persist_sibling_child[],
+                    int persist_sibling_rc[]);
 
 /**
  * @fn nspersist_setuser
@@ -204,22 +173,24 @@ void nspersist_setuser(uid_t uid);
 /**
  * @fn nspersist_done
  * @brief Should only be called by ns_done, finalizes persistence.
+ * @param[in] report 1 if you wish to report errors to stderr; 0 to suppress
  * @param[in] unpersist 1 if you wish to unpersist; 0 for leaving the mounts
  * persisted
  * @return 0 if no error; -1 if an error.
  **/
-int nspersist_done(int unpersist);
+int nspersist_done(int report, int unpersist);
 
 /**
 * @fn unpersist_uid
 * @brief Lets you unpersist all one or all vhosts for a given uid.
 * @warning Again an expensive call, but useful.
+* @param[in] report 1 if you wish to report errors to stderr; 0 to suppress
 * @param[in] uid The uid to unpersist.
 * @param[in] all_vhosts 0 if you wish to unpersist only the set vhost; 
 * 1 for all.
 * @return 0 if there were no errors.
 **/
-int unpersist_uid(uid_t uid, int all_vhosts);
+int unpersist_uid(int report, uid_t uid, int all_vhosts);
 
 /**
 * @fn unpersist_all
@@ -250,13 +221,11 @@ void free_mount_tab(mount_tab_t *mount_tab);
  * @fn persist_namespace_dir_vh
  * @brief Gets the namespace specific dir with VH for the type.
  * @param[in] uid The uid to get the dir for.
- * @param[in] ns_type The type of namespace.
  * @param[out] dirname The dirname to get the namespace dir for.
  * @param[in] dirname_len The size of dirname.
  * @return A pointer to dirname.
  **/
-char *persist_namespace_dir_vh(uid_t uid, enum NS_TYPE ns_type, char *dirname,
-                               int dirname_len);
+char *persist_namespace_dir_vh(uid_t uid, char *dirname, int dirname_len);
 
 /**
  * @fn persist_report_pid
@@ -276,7 +245,9 @@ int persist_report_pid(pid_t pid, int rc);
  **/
 void persist_exit_child(char *desc, int rc);
 
-extern NsInfo s_ns_infos[];
+
+int nspersist_setvhost(char *vhenv);
+
 extern mount_flags_data_t s_mount_flags_data[];
 
 #ifdef __cplusplus

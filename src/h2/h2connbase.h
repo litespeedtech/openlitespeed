@@ -181,8 +181,9 @@ public:
         return ret;
     }
 
-    int32_t getStreamInInitWindowSize() const
+    uint32_t getStreamInInitWindowSize() const
     {   return m_iStreamInInitWindowSize;    }
+    int setStreamInInitWindowsSize(uint32_t size);
 
     int32_t getStreamOutInitWindowSize() const
     {   return m_iStreamOutInitWindowSize;    }
@@ -197,10 +198,11 @@ public:
     int sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
                            H2FrameType type, const char *pBuf, int size);
 
-    void sendStreamWindowUpdateFrame(uint32_t id, int32_t delta)
+    void sendStreamWindowUpdateFrame(uint32_t id, uint32_t delta)
     {
         sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, id, delta, false);
-        updateWindow();
+        if (m_iInBytesToUpdate >= m_iDataInWindow / 2)
+            updateWindow();
     }
 
     int sendRstFrame(uint32_t uiStreamID, H2ErrorCode code)
@@ -329,7 +331,7 @@ protected:
     int32_t         m_iCurrentFrameRemain;
     int32_t         m_iCurDataOutWindow;
     int32_t         m_iDataInWindow;
-    int32_t         m_iStreamInInitWindowSize;
+    uint32_t        m_iStreamInInitWindowSize;
     int32_t         m_iServerMaxStreams;
     int32_t         m_iStreamOutInitWindowSize;
     int32_t         m_iMaxPushStreams;

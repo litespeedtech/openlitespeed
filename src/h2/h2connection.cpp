@@ -133,12 +133,12 @@ int H2Connection::decodeHeaders(uint32_t id, unsigned char *pSrc, int length,
         return LS_FAIL;
     }
 
-    if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) )
-    {
-        LS_DBG_H(log_s(), "decodeHeaders():\r\n%.*s",
-                 headers->getBuf()->size() - 4,
-                 headers->getBuf()->begin() + 4);
-    }
+    // if ( log4cxx::Level::isEnabled( log4cxx::Level::DBG_HIGH ) )
+    // {
+    //     LS_DBG_H(log_s(), "decodeHeaders():\r\n%.*s",
+    //              headers->getBuf()->size() - 4,
+    //              headers->getBuf()->begin() + 4);
+    // }
 
     pStream->setFlag(HIO_FLAG_INIT_SESS, 1);
     if (pStream->getFlag(HIO_FLAG_PEER_SHUTDOWN))

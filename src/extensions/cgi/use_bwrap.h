@@ -57,9 +57,10 @@ extern int s_bwrap_extra_bytes;
                             " --ro-bind-try /etc/imunify360/user_config/ /etc/imunify360/user_config/"\
                             " --ro-bind-try /etc/localtime /etc/localtime"\
                             " --ro-bind-try /etc/ld.so.cache /etc/ld.so.cache"\
-                            " --ro-bind-try /etc/resolv.conf /etc/resolv.conf"\
-                            " --ro-bind-try /etc/ssl /etc/ssl"\
                             " --ro-bind-try /etc/pki /etc/pki"\
+                            " --ro-bind-try /etc/resolv.conf /etc/resolv.conf"\
+                            " --ro-bind-try /etc/sysconfig/imunify360/ /etc/sysconfig/imunify360/"\
+                            " --ro-bind-try /etc/ssl /etc/ssl"\
                             " --ro-bind-try /etc/man_db.conf /etc/man_db.conf"\
                             " --ro-bind-try /etc/sysconfig/imunify360/ /etc/sysconfig/imunify360/"\
                             " --ro-bind-try /opt/plesk/php /opt/plesk/php"\
@@ -71,8 +72,12 @@ extern int s_bwrap_extra_bytes;
                             " --bind-try /var/lib/php/sessions /var/lib/php/sessions"\
                             " --bind-try /var/lib/mysql/mysql.sock /var/lib/mysql/mysql.sock"\
                             " --bind-try /home/mysql/mysql.sock /home/mysql/mysql.sock"\
-                            " --bind-try /tmp/mysql.sock /tmp/mysql.sock"\
+                            " --bind-try /opt/alt /opt/alt"\
+                            " --bind-try /opt/psa /opt/psa"\
                             " --bind-try /run/mysqld/mysqld.sock /run/mysqld/mysqld.sock"\
+                            " --bind-try /tmp/mysql.sock /tmp/mysql.sock"\
+                            " --bind-try /var/lib/mysql/mysql.sock /var/lib/mysql/mysql.sock"\
+                            " --bind-try /var/lib/php/sessions /var/lib/php/sessions"\
                             " --bind-try /var/run/mysqld/mysqld.sock /var/run/mysqld/mysqld.sock"\
                             " '$COPY-TRY /etc/exim.jail/$USER.conf $HOMEDIR/.msmtprc'"\
                             " --unshare-all"\

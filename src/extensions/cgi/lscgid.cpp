@@ -16,7 +16,6 @@
 *    along with this program. If not, see http://www.gnu.org/licenses/.      *
 *****************************************************************************/
 #include <signal.h>
-#include <config.h>
 
 #ifndef _XPG4_2
 # define _XPG4_2
@@ -614,7 +613,7 @@ static int execute_cgi(lscgid_t *pCGI)
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
     {
         int rc = 0, done = 0;
-        rc = ns_exec(pCGI, &done);
+        rc = ns_exec_ols(pCGI, &done);
         if (rc || done)
             return rc;
     }
@@ -716,6 +715,7 @@ static int execute_cgi(lscgid_t *pCGI)
 
     umask(pCGI->m_data.m_umask);
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (pCGI->m_bwrap)
     {
         int rc = 0, done = 0;
         rc = exec_using_bwrap(pCGI, set_cgi_error, &done);
@@ -854,7 +854,6 @@ static int process_req_data(lscgid_t *cgi_req)
 
 
 #define MAX_CGI_DATA_LEN 65536
-
 static int process_req_header(lscgid_t *cgi_req)
 {
     char achMD5[16];
