@@ -53,6 +53,8 @@ public:
     int onRead();
     int onWrite();
     int onPeerShutdown();
+    virtual int doneWrite()
+    {   shutdownWrite(); flush(); return 1;   }
 
 
 private:

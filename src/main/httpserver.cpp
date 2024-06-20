@@ -304,6 +304,7 @@ private:
     int gracefulShutdown();
     int generateStatusReport();
     int generateStatusJsonReport();
+    int generateResetAppsReport();
     void setRTReportName(int proc);
     int generateRTReport();
     int generateRTJsonReport();
@@ -621,6 +622,8 @@ int HttpServerImpl::generateStatusReport()
     pAppender->append("EOF\n", 4);
     pAppender->close();
     generateStatusJsonReport();
+    if (HttpServerConfig::getInstance().getNS() != HttpServerConfig::NS_DISABLED)
+        generateResetAppsReport();
     return 0;
 }
 
@@ -677,6 +680,30 @@ int HttpServerImpl::generateStatusJsonReport()
     else
         LS_ERROR("Failed to generate the status report!");
     pAppender->close();
+    return 0;
+}
+
+
+int HttpServerImpl::generateResetAppsReport()
+{
+    char achBuf[1024] = "";
+    ls_snprintf(achBuf, sizeof(achBuf), "%s/lsns/conf/lscntr.txt", 
+                MainServerConfig::getInstance().getServerRoot());
+    int fd = open(achBuf, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd == -1)
+    {
+        LS_ERROR("Error opening reset apps report: %s: %s", achBuf, strerror(errno));
+        return -1;
+    }
+    AutoBuf buf;
+    ExtAppRegistry::generateResetAppsJson(&buf);
+    if (write(fd, buf.begin(), buf.size()) != buf.size())
+    {
+        LS_ERROR("Error writing reset apps report: %s: %s", achBuf, strerror(errno));
+        close(fd);
+        return -1;
+    }
+    close(fd);
     return 0;
 }
 
@@ -3403,7 +3430,7 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
 
         HttpServerConfig::getInstance().setUseProxyHeader(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                    "useIpInProxyHeader", 0, 4, 0));
+                    "useIpInProxyHeader", 0, 4, 2));
 
         denyAccessFiles(NULL, ".ht*", 0);
 
@@ -3921,11 +3948,10 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             val = 3600 * 24;
         HttpServerConfig::getInstance().setRestartTimeOut(val);
 
-        val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE", 0,
-                                                       3, 0);
+        val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "enableLVE",
+                                                         0, 3, 0);
         HttpServerConfig::getInstance().setEnableLve(val);
         LS_INFO(ConfigCtx::getCurConfigCtx(), "enableLVE: %ld", val);
-
 
         HttpServerConfig::getInstance().setCpuAffinity(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0,
@@ -4257,6 +4283,7 @@ int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
     {
         config.setRunOnStartUp( 0 );
         config.setStartByServer( iAutoStart );
+        config.setDetached(1);
     }
     config.setMaxIdleTime( INT_MAX );
     //if (( instances != 1 )&&
@@ -4279,6 +4306,11 @@ int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
     {
         pEnv->add( "PATH=/bin:/usr/bin" );
     }
+    char achBuf[256];
+    snprintf(achBuf, 200, "LSAPI_PPID_NO_CHECK=1");
+    pEnv->add(achBuf);
+    snprintf(achBuf, 200, "LSAPI_PGRP_MAX_IDLE=300");
+    pEnv->add(achBuf);
 
     pEnv->add( 0, 0, 0, 0 );
     return 0;

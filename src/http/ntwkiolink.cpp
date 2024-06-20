@@ -1162,6 +1162,18 @@ int NtwkIOLink::shutdown()
     return 0;
 }
 
+int NtwkIOLink::doneWrite()
+{
+    if (m_ssl.getSSL() && flushSslWpending() == 0)
+    {
+        SSL_set_shutdown(m_ssl.getSSL(), SSL_SENT_SHUTDOWN);
+    }
+    else
+        ::shutdown(getfd(), 1);
+    return 0;
+}
+
+
 int NtwkIOLink::close_(NtwkIOLink *pThis)
 {
 

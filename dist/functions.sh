@@ -986,8 +986,8 @@ installation()
         rm -rf "$LSWS_HOME/admin/html.$VERSION"
     fi
 
-    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc
-    util_mkdir "$LOGDIR_OWN" "0750" logs admin/logs
+    util_mkdir "$SDIR_OWN" $DIR_MOD admin bin docs fcgi-bin lsrecaptcha php lib modules backup autoupdate tmp cachedata gdata docs/css docs/img docs/ja-JP docs/zh-CN add-ons share share/autoindex share/autoindex/icons admin/fcgi-bin admin/html.$VERSION admin/misc lsns lsns/bin lsns/conf
+    util_mkdir "$LOGDIR_OWN" "0750" logs admin/logs lsns/logs
     util_mkdir "$CONF_OWN" $SDIR_MOD conf conf/cert conf/templates conf/vhosts conf/vhosts/Example admin/conf admin/tmp phpbuild
     util_mkdir "$SDIR_OWN" $SDIR_MOD cgid admin/cgid admin/cgid/secret
     util_mkdir "$DIR_OWN" $SDIR_MOD  tmp/ocspcache
@@ -1019,6 +1019,7 @@ installation()
     util_ccpfile "$SDIR_OWN" $EXEC_MOD fcgi-bin/lsperld.fpl fcgi-bin/RackRunner.rb fcgi-bin/lsnode.js
     util_cpfile "$SDIR_OWN" $EXEC_MOD  fcgi-bin/RailsRunner.rb  fcgi-bin/RailsRunner.rb.2.3
 
+    pkill _recaptcha
     util_cpfile "$SDIR_OWN" $EXEC_MOD  lsrecaptcha/_recaptcha lsrecaptcha/_recaptcha.shtml
     util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/rc-inst.sh admin/misc/admpass.sh admin/misc/rc-uninst.sh admin/misc/uninstall.sh admin/misc/lsws.rc admin/misc/lsws.rc.gentoo admin/misc/enable_phpa.sh admin/misc/mgr_ver.sh admin/misc/gzipStatic.sh admin/misc/fp_install.sh admin/misc/create_admin_keypair.sh admin/misc/awstats_install.sh admin/misc/update.sh admin/misc/cleancache.sh admin/misc/lsup.sh admin/misc/testbeta.sh
     util_cpfile "$SDIR_OWN" $EXEC_MOD admin/misc/ap_lsws.sh.in admin/misc/build_ap_wrapper.sh admin/misc/cpanel_restart_httpd.in admin/misc/build_admin_php.sh admin/misc/convertxml.sh admin/misc/lscmctl

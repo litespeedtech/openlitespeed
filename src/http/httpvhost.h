@@ -199,7 +199,7 @@ private:
     AutoStr2            m_sAdminEmails;
     AutoStr2            m_sAutoIndexURI;
     AutoStr2            m_sChroot;
-    AutoStr2            m_sNSConf2;
+    AutoStr             m_sNSConf2;
 
     int                 m_iMappingRef;
     int                 m_PhpXmlNodeSSize;
@@ -416,7 +416,7 @@ public:
     const AutoStr2 *getChroot() const  {   return &m_sChroot;      }
 
     void setNSConf2(const char *pNSConf2)   {   m_sNSConf2 = pNSConf2;  }
-    const AutoStr2 *getNSConf2() const      {   return &m_sNSConf2;     }
+    const char *getNSConf2() const     {   return m_sNSConf2.c_str();   }
 
     void setUidMode(int a)    {   m_rootContext.setUidMode(a);      }
     void setChrootMode(int a) {   m_rootContext.setChrootMode(a);   }

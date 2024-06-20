@@ -249,6 +249,7 @@ public:
 public:
     void closeSocket();
     bool allowRead() const;
+    virtual int doneWrite();
     int close();
     int  shutdown();
     int  detectClose();

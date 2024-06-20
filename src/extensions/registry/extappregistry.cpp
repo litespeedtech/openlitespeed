@@ -248,6 +248,23 @@ int ExtAppSubRegistry::generateRTJsonReport(AutoBuf *buf, int type, int *did)
 }
 
 
+int ExtAppSubRegistry::generateResetAppsJson(AutoBuf *buf)
+{
+    int did = 0;
+    ExtAppMap::iterator iter;
+    for (iter = m_pRegistry->begin();
+         iter != m_pRegistry->end();
+         iter = m_pRegistry->next(iter))
+    {
+        LocalWorker *localWorker = dynamic_cast<LocalWorker *>(iter.second());
+        if (localWorker)
+            localWorker->generateResetAppsJson(buf, &did);
+    }
+    return 0;
+
+}
+
+
 int ExtAppSubRegistry::resetStats(int type)
 {
     int rc = 0;
@@ -417,6 +434,11 @@ int ExtAppRegistry::generateRTJsonReport(AutoBuf *buf)
         return -1;
 
     return 0;
+}
+
+int ExtAppRegistry::generateResetAppsJson(AutoBuf *buf)
+{
+    return s_registry[EA_LSAPI]()->generateResetAppsJson(buf);
 }
 
 int ExtAppRegistry::resetStats()

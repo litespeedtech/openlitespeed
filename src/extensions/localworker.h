@@ -48,6 +48,7 @@ public:
     {
         return (m_lastmod > m_lastmod_reset_me)? m_lastmod : m_lastmod_reset_me;
     }
+    AutoStr *getMarkerPath()    {   return &m_markerPath;   }
 
 private:
     AutoStr     m_markerPath;
@@ -136,6 +137,7 @@ public:
 
     int startDetachedWorker(int force);
 
+    int generateResetAppsJson(AutoBuf *buf, int *did);
 
 
     LS_NO_COPY_ASSIGN(LocalWorker);

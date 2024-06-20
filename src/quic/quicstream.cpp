@@ -207,6 +207,13 @@ int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
 }
 
 
+void QuicStream::applyPriority()
+{
+    struct lsquic_ext_http_prio prio = { (unsigned char)getPriority(), 1};
+    lsquic_stream_set_http_prio(m_pStream, &prio);
+}
+
+
 int QuicStream::sendfile(int fdSrc, off_t off, size_t size, int flag)
 {
     return 0;
@@ -338,6 +345,12 @@ int QuicStream::write(const char *pBuf, int size)
     }
 
     return ret;
+}
+
+
+int QuicStream::doneWrite()
+{
+    return lsquic_stream_shutdown(m_pStream, 1);
 }
 
 

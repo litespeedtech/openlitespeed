@@ -115,7 +115,7 @@ void nsopts_free_conf(char **nsconf, char **nsconf2)
 }
 
 
-void nsopts_free_all(int *allocated, SetupOp **setupOps, size_t *setupOps_size, 
+void nsopts_free_all(int *allocated, SetupOp **setupOps, size_t *setupOps_size,
                      char **nsconf, char **nsconf2)
 {
     nsopts_free(setupOps);
@@ -220,28 +220,36 @@ static int set_op(SetupOp *op, SetupOpType type, char *source, char *dest,
                   int flags)
 {
     op->type = type;
-    if (source && (flags & OP_FLAG_ALLOCATED_SOURCE))
+    if (source)
     {
-        op->source = strdup(source);
-        if (!op->source)
+        if (!(flags & OP_FLAG_ALLOCATED_SOURCE))
+            op->source = source;
+        else 
         {
-            int err = errno;
-            ls_stderr("Namespace error allocating op source: %s\n", strerror(err));
-            return nsopts_rc_from_errno(err);
+            op->source = strdup(source);
+            if (!op->source)
+            {
+                int err = errno;
+                ls_stderr("Namespace error allocating op source: %s\n", strerror(err));
+                return nsopts_rc_from_errno(err);
+            }
         }
     }
-    if (dest && (flags & OP_FLAG_ALLOCATED_DEST))
+    if (dest)
     {
-        op->dest = strdup(dest);
-        if (!op->dest)
+        if (!(flags & OP_FLAG_ALLOCATED_DEST))
+            op->dest = dest;
+        else
         {
-            int err = errno;
-            ls_stderr("Namespace error allocating op dest: %s\n", strerror(err));
-            return nsopts_rc_from_errno(err);
+            op->dest = strdup(dest);
+            if (!op->dest)
+            {
+                int err = errno;
+                ls_stderr("Namespace error allocating op dest: %s\n", strerror(err));
+                return nsopts_rc_from_errno(err);
+            }
         }
     }
-    if (type == SETUP_NO_UNSHARE_USER)
-        nspersist_disable_user_namespace();
     op->flags = flags;
     DEBUG_MESSAGE("Added op, type: %d, source: %s, dest: %s, flags: %d\n",
                   op->type, op->source, op->dest, op->flags);
@@ -380,13 +388,13 @@ static int find_op(SetupOpType type, char *source, char *dest, int flags,
     int i = 0;
     if (!setupOps)
         return -1;
-    DEBUG_MESSAGE("find_op\n");
+    DEBUG_MESSAGE("find_op, type: %d, dest: %s\n", type, dest);
     if (flags & OP_FLAG_RAW_OP)
     {
         DEBUG_MESSAGE("Raw op, add\n");
         return -1;
     }
-    for (op = &setupOps[0]; !(op->flags & OP_FLAG_LAST); ++op)
+    for (op = &setupOps[0]; !(op->flags & OP_FLAG_LAST); op++)
     {
         if (op->type == type && 
             (type == SETUP_NOOP || type == SETUP_SET_HOSTNAME || 
@@ -395,7 +403,7 @@ static int find_op(SetupOpType type, char *source, char *dest, int flags,
             DEBUG_MESSAGE("FOUND OP type: %d\n", type);
             return i;
         }
-        if (!strcmp(dest, op->dest))
+        if (dest && op->dest && !strcmp(dest, op->dest))
         {
             DEBUG_MESSAGE("FOUND OP type: %d->%d, %s (%s->%s)\n", op->type, type, 
                           dest, source, op->source);
@@ -415,9 +423,12 @@ static int add_op(SetupOpType type, char *source, char *dest, int flags,
     int op, rc = 0;
     DEBUG_MESSAGE("add_op #%d type: %d, source: %s, dest: %s, flags: 0x%x\n",
                   *count, type, source, dest, flags);
+    if (flags & OP_FLAG_LAST)
+        return 0;
     op = find_op(type, source, dest, flags, *count, *allocated, *setupOps);
     if (op >= 0)
     {
+        DEBUG_MESSAGE("Free old op\n");
         SetupOp *setupOps_l = *setupOps;
         nsopts_free_member(&setupOps_l[op]);
     }
@@ -431,7 +442,7 @@ static int add_op(SetupOpType type, char *source, char *dest, int flags,
     if (!rc)
     {
         SetupOp *setupOps_l = *setupOps;
-        rc = set_op(&setupOps_l[op], type, source, dest, flags);
+        rc = set_op(&setupOps_l[op], type, source, dest, flags & ~OP_FLAG_RAW_OP);
     }
     if (!rc)
         *found_op = 1;
@@ -771,7 +782,7 @@ static int process_opts_raw(char *opts_raw, int *count, int *found_op,
 }
 
 
-static int nsopts_parse(const char *nsopts, int *count, int *found_op, 
+static int nsopts_parse(const char *nsopts, int *count, 
                         int *allocated, SetupOp **setupOps, 
                         size_t *setupOps_size)
 {
@@ -780,14 +791,21 @@ static int nsopts_parse(const char *nsopts, int *count, int *found_op,
     rc = read_opts(nsopts, &opts_raw);
     if (rc)
         return rc;
-    rc = process_opts_raw(opts_raw, count, found_op, allocated, setupOps, 
+    int found_op = 0;
+    rc = process_opts_raw(opts_raw, count, &found_op, allocated, setupOps, 
                           setupOps_size);
     free(opts_raw);
+    if (!found_op)
+    {
+        ls_stderr("Namespace expects a specified file %s to have at least "
+                  "one valid line\n", nsopts);
+        return DEFAULT_ERR_RC;
+    }
     return rc;
 }
 
 
-int nsopts_init(lscgid_t *pCGI, char **nsconf, char **nsconf2)
+static int nsopts_init(lscgid_t *pCGI, char **nsconf, char **nsconf2)
 {
     int i;
     char *nsconfl = NULL, *nsconf2l = NULL;
@@ -825,31 +843,56 @@ int nsopts_init(lscgid_t *pCGI, char **nsconf, char **nsconf2)
 }
 
 
-int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps, 
+static int add_static_ops(SetupOp *op_static, int op_static_size, 
+                          int *allocated, int *count,
+                          SetupOp **setupOps, size_t *setupOps_size)
+{
+    int op_count = op_static_size / sizeof(SetupOp), i;
+    for (i = 0; i < op_count; i++)
+    {
+        int found_op = 0, rc;
+        rc = add_op(op_static[i].type, op_static[i].source, 
+                    op_static[i].dest, op_static[i].flags | OP_FLAG_RAW_OP, 
+                    count, &found_op, allocated, setupOps, setupOps_size);
+        if (rc)
+            return rc;
+        *allocated = 1;
+    }
+    return 0;
+}
+
+
+int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
                size_t *setupOps_size, char **nsconf, char **nsconf2)
 {
     int i, rc = 0, count = 0;
     DEBUG_MESSAGE("nsopts_get(%sallocated)\n", *allocated ? "" : "NOT ");
+    rc = nsopts_init(pCGI, nsconf, nsconf2);
+    if (rc)
+        return rc;
     nsopts_free_all(allocated, setupOps, setupOps_size, NULL, NULL);
+    rc = add_static_ops(s_setupOp_all, s_setupOp_all_size, allocated, &count,
+                        setupOps, setupOps_size);
+    if (rc)
+        return rc;
+    *allocated = 1;
     for (i = 0; i < 2; ++i)
     {
-        int found_op = 0;
         const char *env = i ? *nsconf2 : *nsconf;
         if (!env)
-            continue;
-        rc = nsopts_parse(env, &count, &found_op, allocated, setupOps, 
-                          setupOps_size);
+        {
+            if (i == 0)
+                rc = add_static_ops(s_SetupOp_default, s_setupOp_default_size,
+                                    allocated, &count, setupOps, setupOps_size);
+            else
+                continue;
+        }
+        else
+            rc = nsopts_parse(env, &count, allocated, setupOps, setupOps_size);
         if (rc)
         {
             nsopts_free_all(allocated, setupOps, setupOps_size, nsconf, nsconf2);
             return rc;
-        }
-        if (!found_op)
-        {
-            ls_stderr("Namespace expects a specified file %s to have at least "
-                      "one valid line\n", env);
-            nsopts_free_all(allocated, setupOps, setupOps_size, nsconf, nsconf2);
-            return DEFAULT_ERR_RC;
         }
         DEBUG_MESSAGE("nsopts_get rc: %d\n", rc);
         if (rc)

@@ -110,11 +110,11 @@ int nsutils_write_uid_gid_map(uid_t sandbox_uid,
     uid_t old_fsuid = -1;
     char pid_str[STRNUM_SIZE * 6];
 
-    if (!s_ns_infos[NS_TYPE_USER].enabled)
-    {
-        DEBUG_MESSAGE("Skip uid/gid map because user namespace is disabled\n");
-        return 0;
-    }
+    //if (!s_ns_infos[NS_TYPE_USER].enabled)
+    //{
+    //    DEBUG_MESSAGE("Skip uid/gid map because user namespace is disabled\n");
+    //    return 0;
+    //}
     DEBUG_MESSAGE("write_uid_gid_map uid: %d->%d, gid: %d->%d, pid: %d, "
                   "deny_groups: %d, map_root: %d\n",
                   parent_uid, sandbox_uid, parent_gid, sandbox_gid, pid,

@@ -141,7 +141,9 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
         flag |= H2_FLAG_END_STREAM;
         if (getState() != HIOS_SHUTDOWN)
         {
-            markShutdown();
+            setFlag(HIO_FLAG_LOCAL_SHUTDOWN, 1);
+            if (readyToShutdown())
+                markShutdown();
         }
     }
 //     else

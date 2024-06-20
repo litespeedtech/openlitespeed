@@ -693,7 +693,7 @@ int ProxyConn::processResp()
                 return 0;
             }
 
-            m_iRespBodySize = pHEC->getHttpSession()->getResp()->getContentLen();
+            m_iRespBodySize = pHEC->getRespContentLen();
             LS_DBG_L(this, "Response body size of proxy reply is %lld",
                      (long long)m_iRespBodySize);
             if (m_iRespBodySize == LSI_BODY_SIZE_CHUNK)

@@ -59,14 +59,14 @@ int verbose_callback(const char *fmt, ...)
 
 int main(int argc, char *argv[])
 {
-    char dir[512];
-    int ch;
-    int is_all = 0, is_user = 0, rc = 0, user = getuid();
+    char ch, dir[512]; 
+    int is_all = 0, is_user = 0, rc = 0, user;
     char *vhost = NULL;
     lscgid_t CGI;
     
     memset(&CGI, 0, sizeof(CGI));
     
+    DEBUG_MESSAGE("Entering unmount_ns program\n");
     if (getuid())
         return usage("Must be run as root");
     
@@ -124,15 +124,11 @@ int main(int argc, char *argv[])
         setenv(LS_NS_VHOST, vhost, 1);
     else
         setenv(LS_NS_VHOST, "NOVHOST", 1);
-    if (ns_init(&CGI) != 1)
-    {
-        printf("Error in initializing dismount environment\n");
-        return -1;
-    }
+    ns_init_debug();
     if (!is_all && is_user)
         ns_setuser(user);
     if (!is_all)
-        rc = unpersist_uid(user, !vhost);
+        rc = unpersist_uid(1, user, !vhost);
     else
         rc = ns_unpersist_all();
     ns_done(!is_all);

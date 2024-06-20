@@ -449,10 +449,10 @@ int SUExec::prepare(int uid, int gid, int priority, int umaskVal,
                     n = snprintf(buf, sizeof(buf), "LS_NS_VHOST=%s",
                                  pVHost->getName());
                     m_req.appendEnv(buf, n);
-                    if (pVHost->getNSConf2() && pVHost->getNSConf2()->c_str())
+                    if (pVHost->getNSConf2())
                     {
                         n = snprintf(buf, sizeof(buf), "LS_NS_CONF2=%s",
-                            pVHost->getNSConf2()->c_str());
+                            pVHost->getNSConf2());
                         m_req.appendEnv(buf, n);
                     }
                 }

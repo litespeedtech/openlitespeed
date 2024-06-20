@@ -472,7 +472,9 @@ int H2StreamBase::write(const char *buf, int len, int flag)
         if (pkt_size >= end - p && (flag & HIO_EOR))
         {
             fin = H2_FLAG_END_STREAM;
-            markShutdown();
+            setFlag(HIO_FLAG_LOCAL_SHUTDOWN, 1);
+            if (readyToShutdown())
+                markShutdown();
         }
         ret = m_pH2Conn->sendDataFrame(getStreamID(), fin, p, pkt_size);
         LS_DBG_L(this, "H2StreamBase::write(%p, %d, %d) return %d", p, pkt_size, fin, ret);
@@ -577,7 +579,9 @@ int H2StreamBase::sendfile(int fdSrc, off_t off, size_t size, int flag)
         if (pkt_size >= end - cur && (flag & HIO_EOR))
         {
             fin = H2_FLAG_END_STREAM;
-            markShutdown();
+            setFlag(HIO_FLAG_LOCAL_SHUTDOWN, 1);
+            if (readyToShutdown())
+                markShutdown();
         }
         ret = m_pH2Conn->sendfileDataFrame(getStreamID(), fin, fdSrc, cur, pkt_size);
         LS_DBG_L(this, "H2StreamBase::sendfileDataFrame(%d, %lld, %d, %d) return %d",

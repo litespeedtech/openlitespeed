@@ -65,18 +65,20 @@ struct _SetupOp
 
 int nsopts_rc_from_errno(int err);
 
-int nsopts_init(lscgid_t *pCGI, char **nsconf, char **nsconf2);
-
 int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
                size_t *setupOps_size, char **nsconf, char **nsconf2);
 
 void nsopts_free(SetupOp **setupOps);
-void nsopts_free_members(SetupOp *setupOps);
 void nsopts_free_conf(char **nsconf, char **nsconf2);
 void nsopts_free_all(int *allocated, SetupOp **setupOps, size_t *setupOps_size,
                      char **nsconf, char **nsconf2);
+void nsopts_free_members(SetupOp *setupOps);
+
 extern int s_ns_debug;
 extern SetupOp     s_SetupOp_default[];
+extern int         s_setupOp_default_size;
+extern SetupOp     s_setupOp_all[];
+extern int         s_setupOp_all_size;
 
 #if 1
 #include <errno.h>
@@ -131,7 +133,7 @@ static void debug_message (const char *fmt, ...)
     debug_message("%s Line #%d pid: %d " fmt, __FILE__, __LINE__, getpid(), ##__VA_ARGS__); \
     }
 #else
-#define DEBUG_MESSAGE(fmt, ...) {}
+#define DEBUG_MESSAGE(...) {}
 #endif
 
 

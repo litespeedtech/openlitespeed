@@ -61,7 +61,7 @@ H2ConnBase::H2ConnBase()
     , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
     , m_iCurDataOutWindow(H2_FCW_INIT_SIZE)
     , m_iDataInWindow(H2_FCW_INIT_SIZE)
-    , m_iStreamInInitWindowSize(H2_FCW_64K * 16 * 8)
+    , m_iStreamInInitWindowSize(H2_FCW_64K * 4)
     , m_iServerMaxStreams(100)
     , m_iStreamOutInitWindowSize(H2_FCW_INIT_SIZE)
     , m_iMaxPushStreams(100)
@@ -74,6 +74,14 @@ H2ConnBase::H2ConnBase()
     lshpack_enc_use_hist(&m_hpack_enc, 1);
 }
 
+
+int H2ConnBase::setStreamInInitWindowsSize(uint32_t size)
+{
+    if (m_h2flag & H2_CONN_FLAG_SETTING_SENT)
+        return -1;
+    m_iStreamInInitWindowSize = size;
+    return 0;
+}
 
 
 int H2ConnBase::init()
@@ -284,9 +292,8 @@ int H2ConnBase::onReadEx2()
             if (ret > 0)
             {
                 total += ret;
-                continue;
             }
-            if (ret == 0)
+            else if (ret == 0)
                 return total;
             else
                 break;
@@ -584,6 +591,10 @@ int H2ConnBase::sendSettingsFrame(bool disable_push)
         settings_payload_size += 6;
     new (buf) H2FrameHeader(settings_payload_size, H2_FRAME_SETTINGS, 0, 0);
     memcpy(&buf[9], s_settings, settings_payload_size);
+
+    int window_size = htonl(m_iStreamInInitWindowSize);
+    memcpy(&buf[9+8], &window_size, 4);
+
     LS_DBG_H(getLogSession(), "send SETTING frame, MAX_CONCURRENT_STREAMS: %d,"
              " INITIAL_WINDOW_SIZE: %d",
              m_iServerMaxStreams, m_iStreamInInitWindowSize);
@@ -910,12 +921,13 @@ int H2ConnBase::processDataFrameDirectBuffer(H2FrameHeader *pHeader)
 {
     size_t remain;
     int total = 0;
+    int ret;
     assert(m_iCurrentFrameRemain >= m_padLen);
     assert(m_current);
     while ((remain = m_iCurrentFrameRemain - m_padLen) > 0)
     {
         char *buf = m_current->getDirectInBuf(remain);
-        int ret = getInStream()->read(buf, remain);
+        ret = getInStream()->read(buf, remain);
         LS_DBG_H(m_current,
                  "processDataFrameDirectBuffer() read(%p, %zd) return %d.",
                  buf, remain, ret);
@@ -946,7 +958,12 @@ int H2ConnBase::processDataFrameDirectBuffer(H2FrameHeader *pHeader)
     if (m_padLen > 0)
         m_inputState = ST_SKIP_REMAIN;
     else
-        return tryReadFrameHeader();
+    {
+        ret = tryReadFrameHeader();
+        if (ret < 0)
+            return ret;
+        total += ret;
+    }
 
     return total;
 }

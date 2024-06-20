@@ -47,9 +47,9 @@ HttpExtConnector::HttpExtConnector()
     , m_iState(HEC_BEGIN_REQUEST)
     , m_iRespState(0)
     , m_iReqBodySent(0)
+    , m_iRespBodyRcvd(0)
+    , m_iRespContentLen(LSI_BODY_SIZE_UNKNOWN)
     , m_iRespHeaderSize(0)
-    , m_iRespBodyLen(0)
-    , m_iRespBodySent(0)
 {
 }
 
@@ -101,7 +101,8 @@ int HttpExtConnector::releaseProcessor()
 
 void HttpExtConnector::resetConnector()
 {
-    memset(&m_iState, 0, (char *)(&m_iRespBodySent + 1) - (char *)&m_iState);
+    memset(&m_iState, 0, (char *)(&m_iRespHeaderSize + 1) - (char *)&m_iState);
+    m_iRespContentLen = LSI_BODY_SIZE_UNKNOWN;
     m_respHeaderBuf.clear();
 }
 
@@ -262,9 +263,17 @@ int HttpExtConnector::processRespBodyData(const char *pBuf, int len)
     int ret = m_pSession->appendDynBody(pBuf, len);
     if (ret == -1)
         errResponse(SC_500, NULL);
-    else if (m_pSession->shouldSuspendReadingResp())
-        m_pProcessor->suspendRead();
-
+    else
+    {
+        m_iRespBodyRcvd += len;
+        if (m_pSession->shouldSuspendReadingResp())
+        {
+            LS_DBG_M(m_pSession,
+                    "too much pending data, suspend reading response from extapp");
+            m_pProcessor->suspendRead();
+            ret = 0;
+        }
+    }
     //        return checkRespSize();
     return ret;
 }
@@ -365,6 +374,14 @@ int HttpExtConnector::endResponse(int endCode, int protocolStatus)
         m_iRespState |= HttpReq::HEADER_OK;
         LS_NOTICE(this, "Premature end of response header.");
         return errResponse(SC_500, NULL);
+    }
+    if (m_iRespBodyRcvd < m_iRespContentLen &&
+        m_pSession->getReq()->getMethod() != HttpMethod::HTTP_HEAD)
+    {
+        LS_DBG_L(m_pSession, "[EXT] incomplete response body, received %lld of %lld.",
+                 (long long)m_iRespBodyRcvd, (long long)m_iRespContentLen);
+        if (!(m_iState & HEC_ABORT_REQUEST))
+            m_iState |= HEC_ABORT_REQUEST;
     }
     m_iState |= HEC_COMPLETE;
     if (!(m_iState & (HEC_ABORT_REQUEST | HEC_ERROR)) && !endCode

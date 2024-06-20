@@ -51,6 +51,8 @@ public:
     virtual void directInBufUsed(size_t len);
     virtual char *getDirectOutBuf(size_t &size);
     virtual void directOutBufUsed(size_t len);
+    virtual int doneWrite()
+    {   shutdownWrite(); flush(); return 1;   }
 
 
     int read(char *buf, int len);
@@ -103,7 +105,7 @@ public:
     void apply_priority(Priority_st *priority);
 
     void adjWindowToUpdate(int32_t n)   {   m_iWindowToUpdate += n;     }
-    int32_t getWindowToUpdate() const   {   return m_iWindowToUpdate;   }
+    uint32_t getWindowToUpdate() const  {   return m_iWindowToUpdate;   }
     void windowUpdate();
 
 
@@ -115,11 +117,16 @@ protected:
     int dataSent(int ret);
     void shutdownWrite();
     void markShutdown();
+    bool readyToShutdown() const
+    {
+        return getFlag(HIO_FLAG_LOCAL_SHUTDOWN|HIO_FLAG_PEER_SHUTDOWN) ==
+                       (HIO_FLAG_LOCAL_SHUTDOWN|HIO_FLAG_PEER_SHUTDOWN);
+    }
 
 protected:
     LoopBuf         m_bufRcvd;
     H2ConnBase     *m_pH2Conn;
-    int32_t         m_iWindowToUpdate;
+    uint32_t        m_iWindowToUpdate;
     int32_t         m_iWindowOut;
 
     LS_NO_COPY_ASSIGN(H2StreamBase);

@@ -106,6 +106,7 @@ var envExtraChildren int
 var envMaxIdleChildren int
 var envMaxProcessTime int
 var envPpid int
+var envPgrpMaxIdle int
 
 var envRecoverNetwork string
 var envRecoverAddr string
@@ -155,6 +156,7 @@ func initLsapiEnv() {
 	envExtraChildren = envStrToInt("LSAPI_EXTRA_CHILDREN", 0)
 	envMaxIdleChildren = envStrToInt("LSAPI_MAX_IDLE_CHILDREN", 1)
 	envMaxProcessTime = envStrToInt("LSAPI_MAX_PROCESS_TIME", 3600)
+	envPgrpMaxIdle = envStrToInt("LSAPI_PGRP_MAX_IDLE", 0)
 
 	var exist bool
 	envRecoverNetwork, exist = os.LookupEnv(lsapiRecoverNetwork)

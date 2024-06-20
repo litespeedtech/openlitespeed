@@ -268,6 +268,7 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
         return 0;
     case HttpRespHeaders::H_TRANSFER_ENCODING:
         pResp->setContentLen(LSI_BODY_SIZE_CHUNK);
+        pExtConn->setRespContentLen(LSI_BODY_SIZE_CHUNK);
         return 0;
     case HttpRespHeaders::H_LINK:
         //pExtConn->getHttpSession()->processLinkHeader(pValue, pLineEnd - pValue);
@@ -298,7 +299,10 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
                     return LS_FAIL;
                 }
                 else
+                {
+                    pExtConn->setRespContentLen(lContentLen);
                     pResp->setContentLen(lContentLen);
+                }
                 status |= HEC_RESP_CONT_LEN;
                 pReq->orContextState(RESP_CONT_LEN_SET);
             }
@@ -598,11 +602,11 @@ int HttpCgiTool::buildCommonEnv(IEnv *pEnv, HttpSession *pSession)
             LS_DBG("Rebuild add env: %s\n", pVHost->getName());
             pEnv->add(cmdline_title, pVHost->getName());
             ++count;
-            if (pVHost->getNSConf2() && pVHost->getNSConf2()->c_str())
+            if (pVHost->getNSConf2())
             {
                 const char *cmdline_title = (char *)"LS_NS_CONF2";
-                LS_DBG("Rebuild add env: %s\n", pVHost->getNSConf2()->c_str());
-                pEnv->add(cmdline_title, pVHost->getNSConf2()->c_str());
+                LS_DBG("Rebuild add env: %s\n", pVHost->getNSConf2());
+                pEnv->add(cmdline_title, pVHost->getNSConf2());
                 ++count;
             }
         }

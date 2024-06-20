@@ -258,6 +258,7 @@ func getListenerFromStream() DupListener {
 }
 
 func lsapiListenAndServe(addr string, handler http.Handler) error {
+	var last_req_time int64
 	if handler == nil {
 		handler = http.DefaultServeMux
 	}
@@ -276,11 +277,19 @@ func lsapiListenAndServe(addr string, handler http.Handler) error {
 	}
 	defer l.Close()
 
+	last_req_time = time.Now().Unix();
+
 	for IsRunning() {
 		l.SetDeadline(time.Now().Add(time.Second))
 
 		if envPpid != 0 && envPpid != syscall.Getppid() {
 			log.Println("parent pid changed, stop.")
+			close(chStop)
+			break
+		}
+		if (envPgrpMaxIdle > 0 &&
+			time.Now().Unix() - last_req_time > int64(envPgrpMaxIdle)) {
+			log.Println("Max idle time for process group reached, stop.")
 			close(chStop)
 			break
 		}
@@ -293,6 +302,7 @@ func lsapiListenAndServe(addr string, handler http.Handler) error {
 				continue
 			}
 		}
+		last_req_time = time.Now().Unix();
 		w := newWorker(c, handler)
 		Debugf("created worker %p, add one to wait group.\n", w)
 		wg.Add(1)

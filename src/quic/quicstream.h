@@ -53,6 +53,7 @@ public:
     virtual void continueRead();
     virtual void suspendRead();
     virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+    virtual void applyPriority();
 
     virtual int sendfile(int fdSrc, off_t off, size_t size, int flag);
     virtual int readv(iovec *vector, int count);
@@ -61,6 +62,7 @@ public:
     virtual int flush();
     virtual int writev(const iovec *vector, int count);
     virtual int write(const char *pBuf, int size);
+    virtual int doneWrite();
     virtual const char *buildLogId();
     virtual int push(UnpackedHeaders *hdrs);
 

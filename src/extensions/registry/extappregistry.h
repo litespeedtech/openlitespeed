@@ -62,6 +62,7 @@ public:
     void runOnStartUp();
     int generateRTReport(int fd, int type);
     int generateRTJsonReport(AutoBuf *buf, int type, int *did);
+    int generateResetAppsJson(AutoBuf *buf);
     int resetStats(int type);
 
     LS_NO_COPY_ASSIGN(ExtAppSubRegistry);
@@ -95,6 +96,7 @@ public:
     static void shutdown();
     static int generateRTReport(int fd);
     static int generateRTJsonReport(AutoBuf *buf);
+    static int generateResetAppsJson(AutoBuf *buf);
     static int resetStats();
     static int hasUri(const char *uri);
 
