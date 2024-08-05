@@ -1,10 +1,10 @@
 #!/bin/sh
 
-OSNAMEVER=UNKNOWN
-OSNAME=
-OSVER=
-ARCH=`arch`
+REPO_OS=UNKNOWN
+REPO_VER=
+REPO_OS_CODENAME=
 MARIADBCPUARCH=
+ARCH=`arch`
 DLCMD=
 LSPHPVER=74
 MYIP=
@@ -83,7 +83,7 @@ install_lsphp7_centos()
     ND=nd
     
     yum -y $action epel-release
-    rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el$OSVER.noarch.rpm
+    rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el$REPO_OS_CODENAME.noarch.rpm
     yum -y $action lsphp$LSPHPVER lsphp$LSPHPVER-common lsphp$LSPHPVER-gd lsphp$LSPHPVER-process lsphp$LSPHPVER-mbstring lsphp$LSPHPVER-mysql$ND lsphp$LSPHPVER-xml lsphp$LSPHPVER-mcrypt lsphp$LSPHPVER-pdo lsphp$LSPHPVER-imap lsphp$LSPHPVER-json
     
     if [ ! -f "$LSWS_HOME/lsphp$LSPHPVER/bin/lsphp" ] ; then
@@ -103,7 +103,7 @@ install_lsphp7_debian()
 {
     grep -Fq  "http://rpms.litespeedtech.com/debian/" /etc/apt/sources.list.d/lst_debian_repo.list
     if [ $? != 0 ] ; then
-        echo "deb http://rpms.litespeedtech.com/debian/ $OSVER main"  > /etc/apt/sources.list.d/lst_debian_repo.list
+        echo "deb http://rpms.litespeedtech.com/debian/ $REPO_OS_CODENAME main"  > /etc/apt/sources.list.d/lst_debian_repo.list
     fi
     
     ${DLCMD} /etc/apt/trusted.gpg.d/lst_debian_repo.gpg http://rpms.litespeedtech.com/debian/lst_debian_repo.gpg
@@ -129,109 +129,51 @@ check_arch()
 
 check_os()
 {
-    OSNAMEVER=
-    OSNAME=
-    OSVER=
-    MARIADBCPUARCH=
     
-    if [ -f /etc/redhat-release ] ; then
-        OSNAME=centos
-        case $(cat /etc/centos-release | tr -dc '0-9.'|cut -d \. -f1) in 
-        6)
-            OSNAMEVER=CENTOS6
-            OSVER=6
-            ;;
-        7)
-            OSNAMEVER=CENTOS7
-            OSVER=7
-            ;;
-        8)
-            OSNAMEVER=CENTOS8
-            OSVER=8
-            ;;
-        esac
-    elif [ -f /etc/lsb-release ] ; then
-        OSNAME=ubuntu
-        case $(cat /etc/os-release | grep UBUNTU_CODENAME | cut -d = -f 2) in
-        precise)
-            OSNAMEVER=UBUNTU12
-            OSVER=precise
-            MARIADBCPUARCH="arch=amd64,i386"
-            ;;           
-        trusty)
-            OSNAMEVER=UBUNTU14
-            OSVER=trusty
-            MARIADBCPUARCH="arch=amd64,i386,ppc64el"
-            ;;        
-        xenial)
-            OSNAMEVER=UBUNTU16
-            OSVER=xenial
-            MARIADBCPUARCH="arch=amd64,i386,ppc64el"
-            ;;
-        bionic)
-            OSNAMEVER=UBUNTU18
-            OSVER=bionic
-            MARIADBCPUARCH="arch=amd64"
-            ;;
-        focal)            
-            OSNAMEVER=UBUNTU20
-            OSVER=focal
-            MARIADBCPUARCH="arch=amd64"
-            ;;
-        jammy)            
-            OSNAMEVER=UBUNTU22
-            OSVER=jammy
-            MARIADBCPUARCH="arch=amd64"
-            ;;            
-        esac
-    elif [ -f /etc/debian_version ] ; then
-        OSNAME=debian
-        case $(cat /etc/os-release | grep VERSION_CODENAME | cut -d = -f 2) in
-        wheezy)
-            OSNAMEVER=DEBIAN7
-            OSVER=wheezy
-            MARIADBCPUARCH="arch=amd64,i386"
-            ;;        
-        jessie)
-            OSNAMEVER=DEBIAN8
-            OSVER=jessie
-            MARIADBCPUARCH="arch=amd64,i386"
-            ;;
-        stretch) 
-            OSNAMEVER=DEBIAN9
-            OSVER=stretch
-            MARIADBCPUARCH="arch=amd64,i386"
-            ;;
-        buster)
-            OSNAMEVER=DEBIAN10
-            OSVER=buster
-            MARIADBCPUARCH="arch=amd64,i386"
-            ;;
-        bullseye)
-            OSNAMEVER=DEBIAN11
-            OSVER=bullseye
-            MARIADBCPUARCH="arch=amd64,i386"
-            ;;
-        esac         
+    if [ -f '/etc/os-release' ] ; then
+        REPO_OS=$(cat /etc/os-release |  grep '^ID=' | head -n1 | awk -F '=' '{print $2}' | tr -d '"')
+        REPO_VER=$(cat /etc/os-release |  grep '^VERSION_ID=' | head -n1 | awk -F '=' '{print $2}' | tr -d '"')
+        if [ "${REPO_OS}" = 'debian' ] || [ "${REPO_OS}" = 'ubuntu' ] ; then
+            REPO_OS_CODENAME=$(cat /etc/os-release |  grep '^VERSION_CODENAME=' | head -n1 | awk -F '=' '{print $2}' | tr -d '"')
+        fi
+    elif [ -f '/etc/redhat-release' ] ; then
+        REPO_OS=$(cat /etc/redhat-release | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+        REPO_VER=$(cat /etc/redhat-release | grep -Eo '[0-9]+([.][0-9]+)?([.][0-9]+)?')
+    elif [ -f '/etc/lsb-release' ] ; then
+        REPO_OS=$(cat /etc/lsb-release | grep '^DISTRIB_ID=' | awk -F '=' '{print $2}')
+        REPO_VER=$(cat /etc/lsb-release | grep '^DISTRIB_RELEASE=' | awk -F '=' '{print $2}')
+        REPO_OS_CODENAME=$(cat /etc/lsb-release | grep '^DISTRIB_CODENAME=' | awk -F '=' '{print $2}')
+    else
+        echo 'Cannot detect the operating system!'
+        exit 1
     fi
 
-    if [ "x$OSNAMEVER" != "x" ] ; then
-        if [ "x$OSNAME" = "xcentos" ] ; then
-            echo "Current platform is "  "$OSNAME $OSVER."
-        else
-            export DEBIAN_FRONTEND=noninteractive
-            echo "Current platform is "  "$OSNAMEVER $OSNAME $OSVER."
-        fi
+    if [ "${REPO_OS}" = 'centos' ] || [ "${REPO_OS}" = 'rhel' ] || [ "${REPO_OS}" = 'rocky' ] || [ "${REPO_OS}" = 'almalinux' ] || [ "${REPO_OS}" = 'oracle' ] || [ "${REPO_OS}" = 'redhat' ] || [ "${REPO_OS}" = 'virtuozzo' ] || [ "${REPO_OS}" = 'cloudlinux' ] ; then
+        REPO_BASE_OS='centos'
+        REPO_OS_VER=$(echo ${REPO_VER} | cut -c1-1)
+        echo "Current platform is"  "$REPO_BASE_OS $REPO_OS_VER"
+    elif [ "${REPO_OS}" = 'debian' ]; then 
+        export DEBIAN_FRONTEND=noninteractive
+        MARIADBCPUARCH="arch=amd64,i386"
+        echo "Current platform is"  "$REPO_OS $REPO_VER"
+    elif [ "${REPO_OS}" = 'ubuntu' ] ; then
+        export DEBIAN_FRONTEND=noninteractive
+        MARIADBCPUARCH="arch=amd64"
+        echo "Current platform is"  "$REPO_OS $REPO_VER"    
+    else
+        echo "Non-supported operating system: ${REPO_OS}"
+        exit 1
     fi
+
 }
 
 inst_lsphp7()
 {
     check_os
     check_arch
-    if [ "x$OSNAME" = "xcentos" ] && [ "x$CPU_ARCH" = "xx86_64" ] ; then
+    if [ "x$REPO_OS" = "xcentos" ] && [ "x$CPU_ARCH" = "xx86_64" ] ; then
         install_lsphp7_centos
-    elif [ "x$OSNAME" = "xubuntu" ] || [ "x$OSNAME" = "xdebian" ] && [ "x$CPU_ARCH" = "xx86_64" ] ; then
+    elif [ "x$REPO_OS" = "xubuntu" ] || [ "x$REPO_OS" = "xdebian" ] && [ "x$REPO_OS" = "xx86_64" ] ; then
         install_lsphp7_debian
     else
         echo "[Notice] We only have lsphp7 ready for Centos, Debian and Ubuntu in x86_64 architecture."
