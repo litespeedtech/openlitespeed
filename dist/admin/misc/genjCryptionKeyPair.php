@@ -32,7 +32,7 @@ class RSAKeyImport
         $result = '0' ;
         $n = strlen($str) ;
         do {
-            $result = bcadd(bcmul($result, '256'), ord($str{ -- $n})) ;
+            $result = bcadd(bcmul($result, '256'), ord($str[ -- $n])) ;
         } while ( $n > 0 ) ;
         return $result ;
     }
