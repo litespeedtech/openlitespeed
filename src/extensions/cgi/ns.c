@@ -72,12 +72,13 @@ gid_t       s_overflowgid;
 int         s_proc_fd = -1;
 int         s_clone_flags;
 uint32_t    s_requested_caps[2] = {0, 0};
+int         s_not_lscgid = 0;
 const char *s_host_tty_dev = NULL;
 verbose_callback_t s_verbose_callback = NULL;
 int         s_pid_pipe = -1;
 SetupOp     s_setupOp_all[] =
 {
-    { SETUP_BIND_TMP, NULL, "/tmp", OP_FLAG_BWRAP_SYMBOL, -1 },
+    { SETUP_BIND_TMP, BWRAP_VAR_HOMEDIR "/.lsns/tmp", "/tmp", OP_FLAG_BWRAP_SYMBOL, -1 },
     { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
 int         s_setupOp_all_size = sizeof(s_setupOp_all);
@@ -108,7 +109,7 @@ SetupOp     s_SetupOp_default[] =
     { SETUP_BIND_MOUNT, "/tmp/mysql.sock", "/tmp/mysql.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/run/mysqld/mysql.sock", "/run/mysqld/mysqld.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/var/run/mysqld/mysqld.sock", "/var/run/mysqld/mysqld.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
-    { SETUP_MAKE_DIR, NULL, "/run/user/" BWRAP_VAR_UID, OP_FLAG_BWRAP_SYMBOL, -1 },
+    { SETUP_BIND_MOUNT, "/run/user/" BWRAP_VAR_UID, "/run/user/" BWRAP_VAR_UID, OP_FLAG_BWRAP_SYMBOL | OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_MAKE_PASSWD, NULL, BWRAP_VAR_PASSWD, OP_FLAG_BWRAP_SYMBOL | OP_FLAG_NO_CREATE_DEST, -1 },
     { SETUP_MAKE_GROUP, NULL, BWRAP_VAR_GROUP, OP_FLAG_BWRAP_SYMBOL | OP_FLAG_NO_CREATE_DEST, -1 },
     { SETUP_COPY, "/etc/exim.jail/$USER.conf", "$HOMEDIR/.msmtprc", OP_FLAG_ALLOW_NOTEXIST | OP_FLAG_BWRAP_SYMBOL, -1 },
@@ -308,6 +309,32 @@ static int ns_read_disabled()
     fclose(fh);
     qsort(s_disabled_uids, s_disabled_uids_count, sizeof(uid_t), uid_compare);
     return 0;
+}
+
+
+void ns_not_lscgid()
+{
+    s_not_lscgid = 1;
+    DEBUG_MESSAGE("s_not_lscgid set\n");
+}
+
+
+int ns_init_engine(const char *ns_conf)
+{
+    ns_init_debug();
+    if (!ns_supported())
+    {
+        ls_stderr("Namespace specified but not supported - disabled\n");
+        return 0;
+    }
+    if (ns_conf)
+    {
+        s_ns_conf = strdup(ns_conf);
+        DEBUG_MESSAGE("ns_init_engine, main config template LS_NS_CONF set to %s\n", ns_conf);
+    }
+    if (ns_read_disabled() == -1)
+        return 0;
+    return 1;
 }
 
 
@@ -1093,6 +1120,8 @@ static int cleanup_source(SetupOp *op, char **ppch)
     }
     if (!pch || pch == op->source)
     {
+        DEBUG_MESSAGE("Namespace source missing higher level directory: %s\n", 
+                      op->source);
         ls_stderr("Namespace source missing higher level directory: %s\n", 
                   op->source);
         return DEFAULT_ERR_RC;
@@ -1186,7 +1215,8 @@ static int setup_copy(lscgid_t *pCGI, SetupOp *op, int index)
     if (fd == -1)
     {
         int err = errno;
-        if (err == ENOENT && op->flags & OP_FLAG_ALLOW_NOTEXIST)
+        if (err == ENOENT && (op->flags & OP_FLAG_ALLOW_NOTEXIST || 
+                              op->flags & OP_FLAG_SOURCE_CREATE))
         {
             DEBUG_MESSAGE("Does not exist, set op to NOOP: %s\n", op->source);
             op->type = SETUP_NOOP;
@@ -1213,7 +1243,8 @@ static int setup_copy(lscgid_t *pCGI, SetupOp *op, int index)
             int err = errno;
             close(fd);
             close_pipe(fds);
-            if (!(op->flags & OP_FLAG_ALLOW_NOTEXIST))
+            if (!(op->flags & OP_FLAG_ALLOW_NOTEXIST) && 
+                !(op->flags & OP_FLAG_SOURCE_CREATE))
             {
                 ls_stderr("Namespace error writing to pipe in copy: %s", 
                           strerror(err));
@@ -1240,10 +1271,42 @@ static int setup_copy(lscgid_t *pCGI, SetupOp *op, int index)
 }
 
 
+static int use_bind_tmp(lscgid_t *pCGI, SetupOp *op)
+{
+    DEBUG_MESSAGE("use_bind_tmp\n");
+    if (!op->source || !op->dest || !(op->flags & OP_FLAG_BWRAP_SYMBOL) ||
+        !strcmp(op->source, op->dest) ||
+        !strstr(op->source, BWRAP_VAR_HOMEDIR))
+    {
+        DEBUG_MESSAGE("Not a candidate\n");
+        return 1;
+    }
+    struct passwd *pw = getpwuid(pCGI->m_data.m_uid);
+    if (!pw)
+    {
+        DEBUG_MESSAGE("Unable to get home for %d: %s", pCGI->m_data.m_uid, strerror(errno));
+        return 1;
+    }
+    if (access(pw->pw_dir, 0))
+    {
+        DEBUG_MESSAGE("Home does not exist for %d, fall back to tmp method", pCGI->m_data.m_uid);
+        return 1;
+    }
+    DEBUG_MESSAGE("tmp directory use %s as source\n", op->source);
+    return 0;
+}
+
+
 static int presetup_bind_tmp(lscgid_t *pCGI, SetupOp *op, int index)
 {
     char persist_dir[PERSIST_DIR_SIZE];
-                                                
+
+    if (!use_bind_tmp(pCGI, op))
+    {
+        op->flags |= OP_FLAG_SOURCE_CREATE;
+        op->type = SETUP_BIND_MOUNT;
+        return 0;
+    }
     if (op->flags & OP_FLAG_ALLOCATED_SOURCE)
     {
         free(op->source);
@@ -1268,6 +1331,45 @@ static int presetup_bind_tmp(lscgid_t *pCGI, SetupOp *op, int index)
 }
 
 
+static int source_create(char *path, lscgid_t *pCGI)
+{
+    char part_path[1024];
+    char *slash = part_path;
+    strncpy(part_path, path, 1024);
+    DEBUG_MESSAGE("source_create %s\n", path);
+    while ((slash = strchr(slash + 1, '/'))) 
+    {
+        *slash = 0;
+        if (access(part_path, 0))
+        {
+            DEBUG_MESSAGE("create %s, set to %d/%d\n", part_path, 
+                          pCGI->m_data.m_uid, pCGI->m_data.m_gid);
+            if (mkdir(part_path, 0777))
+            {
+                ls_stderr("Namespace error %s creating %s in %s for temp dir", 
+                          strerror(errno), part_path, path);
+                return DEFAULT_ERR_RC;
+            }
+            chown(part_path, pCGI->m_data.m_uid, pCGI->m_data.m_gid);
+        }
+        *slash = '/';
+    }
+    DEBUG_MESSAGE("Full dir test %s\n", path);
+    if (access(path, 0))
+    {
+        DEBUG_MESSAGE("create %s\n", path);
+        if (mkdir(path, 0777))
+        {
+            ls_stderr("Namespace error %s creating %s for temp dir", 
+                      strerror(errno), path);
+            return DEFAULT_ERR_RC;
+        }
+        chown(path, pCGI->m_data.m_uid, pCGI->m_data.m_gid);
+    }
+    return 0;
+}
+
+
 static int op_as_user(lscgid_t *pCGI, SetupOp *setupOp)
 {
     SetupOp *op;
@@ -1279,7 +1381,10 @@ static int op_as_user(lscgid_t *pCGI, SetupOp *setupOp)
                       index, op->type, op->flags, op->source, op->dest);
         ++index;
         if (op->type == SETUP_BIND_TMP && (rc = presetup_bind_tmp(pCGI, op, index)))
+        {
+            DEBUG_MESSAGE("preset tmp return %d\n", rc)
             return rc;
+        }
         if ((op->type == SETUP_BIND_MOUNT || op->type == SETUP_RO_BIND_MOUNT ||
              op->type == SETUP_MAKE_DIR || op->type == SETUP_BIND_TMP ||
              op->type == SETUP_COPY) &&
@@ -1298,7 +1403,8 @@ static int op_as_user(lscgid_t *pCGI, SetupOp *setupOp)
                 {
                     char *new_parm = NULL;
                     rc = bwrap_symbol_in_path(pCGI, parm, &new_parm);
-                    if (rc)
+                    if (rc || (i == 0 && (op->flags & OP_FLAG_SOURCE_CREATE) && 
+                               (rc = source_create(new_parm, pCGI))))
                         return rc;
                     if (!new_parm)
                         continue;
@@ -1444,7 +1550,7 @@ static int do_copy(uint32_t flags, const char *source, const char *dest, int *fd
     }
     if (stat(source, &st))
     {
-        if (flags & OP_FLAG_ALLOW_NOTEXIST)
+        if ((flags & OP_FLAG_ALLOW_NOTEXIST) || (flags & OP_FLAG_SOURCE_CREATE))
         {
             DEBUG_MESSAGE("do_copy source error: %s\n", strerror(errno));
             return 0;
@@ -2415,13 +2521,14 @@ static int resolve_symlinks_in_ops (SetupOp *setupOp)
                 op->source = realpath (old_source, NULL);
                 if (op->source == NULL)
                 {
-                    if (op->flags & OP_FLAG_ALLOW_NOTEXIST && errno == ENOENT)
+                    if ((op->flags & OP_FLAG_ALLOW_NOTEXIST || 
+                         op->flags & OP_FLAG_SOURCE_CREATE) && errno == ENOENT)
                         op->source = old_source;
                     else
                     {
                         int err = errno;
-                        ls_stderr("Namespace error in resolving path: %s: %s\n", 
-                                  old_source, strerror(errno));
+                        ls_stderr("Namespace error in resolving path: %s: %s, flags: 0x%x, errno: %d\n", 
+                                  old_source, strerror(errno), op->flags, err);
                         return nsopts_rc_from_errno(err);
                     }
                 }
@@ -2690,7 +2797,7 @@ static int read_overflowids (void)
 }
 
 //OLS ONLY!
-#ifdef UNMOUNT_NS
+#ifdef NOT_LSCGID
 char *ns_getenv(lscgid_t *pCGI, const char *title)
 {
     DEBUG_MESSAGE("getenv(%s): %s\n", title, getenv(title));

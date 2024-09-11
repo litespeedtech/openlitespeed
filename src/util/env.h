@@ -46,13 +46,14 @@ public:
     int add(const char *pEnv);
     int add(const Env *pEnv);
     const char *find(const char *name) const;
+    const char *find(const char *name, int name_len) const;
     void clear()    { ArrayOfPointer::clear();  }
     char *const *get() const
     {   return &((*this)[0]);   }
     char **get()
     {   return &((*this)[0]);   }
     int update(const char *name, const char *value);
-
+    int addNonExist(const Env *pEnv);
 
     LS_NO_COPY_ASSIGN(Env);
 };

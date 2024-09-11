@@ -49,6 +49,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "httpdefs.h"
 
 
 SubstItem::SubstItem()
@@ -747,6 +748,11 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         pValue = (char *)HttpServerVersion::getVersion();
         return HttpServerVersion::getVersionLen();
     case REF_REQ_LINE:
+        if (pReq->getStatus() == HttpReq::HEADER_REQUEST_LINE)
+        {
+            pValue = pReq->getHeaderBuf().begin() + HEADER_BUF_PAD;
+            return 0;
+        }
         pValue = (char *)pReq->getOrgReqLine();
         return pReq->getOrgReqLineLen();
     case REF_IS_SUBREQ:

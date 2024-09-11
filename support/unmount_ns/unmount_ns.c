@@ -116,15 +116,9 @@ int main(int argc, char *argv[])
         return usage("You must specify -u or -a");
     if (vhost && !is_user)
         return usage("You can only specify a vhost for a single user");
-    if (is_user)
-        CGI.m_data.m_uid = user;
-    
-    putenv(LS_NS "=1");
-    if (vhost)
-        setenv(LS_NS_VHOST, vhost, 1);
-    else
-        setenv(LS_NS_VHOST, "NOVHOST", 1);
     ns_init_debug();
+    if (vhost)
+        nspersist_setvhost(vhost);
     if (!is_all && is_user)
         ns_setuser(user);
     if (!is_all)

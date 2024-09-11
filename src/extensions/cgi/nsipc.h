@@ -32,13 +32,13 @@ typedef struct nsipc_parent_done_s
 typedef struct nsipc_child_started_s
 {
     enum nsipc_msgs m_type;
-    pid_t             m_pid;
+    pid_t           m_pid;
 } nsipc_child_started_t;
 
 typedef struct nsipc_error_s
 {
     enum nsipc_msgs m_type;
-    int               m_rc;
+    int             m_rc;
 } nsipc_error_t;
 
 typedef union nsipc_u

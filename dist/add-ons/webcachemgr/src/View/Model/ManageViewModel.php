@@ -375,45 +375,14 @@ class ManageViewModel
         if ( $wpInstall->hasFatalError($wpStatus) ) {
             $countData[self::COUNT_DATA_ERROR]++;
 
-            $link = 'https://docs.litespeedtech.com/cp/cpanel'
-                . '/wp-cache-management/#whm-plugin-cache-manager-error-status';
+            $fatalErrStateInfo =
+                Util::getFatalErrorStateMessageAndLink($wpStatus);
 
-            $stateMsg = '';
-
-            if ( $wpStatus & WPInstall::ST_ERR_EXECMD ) {
-                $stateMsg = 'WordPress fatal error encountered during action '
-                    . 'execution. This is most likely caused by custom code in '
-                    . 'this WordPress installation.';
-                $link .= '#fatal_error_encountered_during_action_execution';
-            }
-            if ( $wpStatus & WPInstall::ST_ERR_EXECMD_DB ) {
-                $stateMsg = 'Error establishing WordPress database connection.';
-                $link .= '#';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_TIMEOUT ) {
-                $stateMsg = 'Timeout occurred during action execution.';
-                $link .= '#timeout_occurred_during_action_execution';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_SITEURL ) {
-                $stateMsg = 'Could not retrieve WordPress siteURL.';
-                $link .= '#could_not_retrieve_wordpress_siteurl';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_DOCROOT ) {
-                $stateMsg = 'Could not match WordPress siteURL to a known '
-                    . 'control panel docroot.';
-                $link .= '#could_not_match_wordpress_siteurl_to_a_known_'
-                    . 'cpanel_docroot';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_WPCONFIG ) {
-                $stateMsg = 'Could not find a valid wp-config.php file.';
-                $link .= '#could_not_find_a_valid_wp-configphp_file';
-            }
-
-            $stateMsg .= ' Click for more information.';
-
-            $currStatusData = $this->statusInfo['error'];
-            $currStatusData['state'] = "<a href=\"$link\" target=\"_blank\" "
-                . "rel=\"noopener\" data-uk-tooltip title =\"$stateMsg\" "
+            $currStatusData          = $this->statusInfo['error'];
+            $currStatusData['state'] = '<a '
+                . "href=\"{$fatalErrStateInfo['link']}\" "
+                . 'target="_blank" rel="noopener" data-uk-tooltip '
+                . "title =\"{$fatalErrStateInfo['stateMsg']}\" "
                 . 'class="status-error"></a>';
         }
         elseif ( ($wpStatus & WPInstall::ST_PLUGIN_INACTIVE ) ) {

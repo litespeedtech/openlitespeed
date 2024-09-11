@@ -1253,8 +1253,11 @@ int HttpSession::updateClientInfoFromProxyHeader(const char *pHeaderName,
         if (pInfo->checkAccess())
         {
             LS_INFO(getLogSession(),
-                "Client IP from header: %s, cur conns: %d, access denied",
-                pInfo->getAddrString(), pInfo->getConns());
+                "Client IP from header: %s, cur conns: %d, access: %d, overlimit: %ds, access denied",
+                pInfo->getAddrString(), pInfo->getConns(), pInfo->getAccess(),
+                pInfo->getOverLimitTime()
+                    ? (int)(DateTime::s_curTime - pInfo->getOverLimitTime())
+                    : -1);
             return SC_403;
         }
     }

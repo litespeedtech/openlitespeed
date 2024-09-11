@@ -643,7 +643,7 @@ static int is_option(char *option, SetupOpType *type, int *flags)
     else if (!strcmp(option, "tmp"))
     {
         *type = SETUP_BIND_TMP;
-        *flags |= (OP_FLAG_ALLOCATED_DEST | OP_FLAG_BWRAP_SYMBOL);
+        *flags |= (OP_FLAG_ALLOCATED_SOURCE | OP_FLAG_ALLOCATED_DEST | OP_FLAG_BWRAP_SYMBOL);
     }
     else if (!strcmp(option, "copy"))
     {

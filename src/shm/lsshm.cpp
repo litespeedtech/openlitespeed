@@ -843,6 +843,7 @@ LsShmOffset_t LsShm::allocPage(LsShmSize_t pagesize)
         }
     }
     offset = x_pShmMap->x_stat.m_iUsedSize;
+    assert(offset + pagesize <= m_iMaxSizeO);
     used(pagesize);
 out:
     if (m_status == LSSHM_READY)

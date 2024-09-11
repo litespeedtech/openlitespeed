@@ -17,6 +17,7 @@
 *****************************************************************************/
 #include <util/env.h>
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -86,12 +87,20 @@ const char *Env::find(const char *name) const
 {
     if (!name)
         return NULL;
-    int nameLen = strlen(name);
+    int name_len = strlen(name);
+    return find(name, name_len);
+}
+
+
+const char *Env::find(const char *name, int name_len) const
+{
+    if (!name || name_len <= 0)
+        return NULL;
     for (const_iterator iter = begin(); iter != end(); ++iter)
     {
-        if ((*iter) && strncmp(name, (*iter), nameLen) == 0)
+        if ((*iter) && strncmp(name, (*iter), name_len) == 0)
         {
-            const char *p = (*iter) + nameLen;
+            const char *p = (*iter) + name_len;
             while ((*p == ' ') || (*p == '\t'))
                 ++p;
             if (*p == '=')
@@ -100,6 +109,7 @@ const char *Env::find(const char *name) const
     }
     return NULL;
 }
+
 
 int Env::update(const char *name, const char *value)
 {
@@ -141,3 +151,22 @@ int Env::add(const Env *pEnv)
         add(*iter);
     return 0;
 }
+
+
+int Env::addNonExist(const Env *pEnv)
+{
+    for (const_iterator iter = pEnv->begin();
+         iter != pEnv->end() && *iter; ++iter)
+    {
+        const char *p = strchr(*iter, '=');
+        if (!p)
+            continue;
+        while(p > *iter && isspace(*(p - 1)))
+            --p;
+        int len = p - *iter;
+        if (find(*iter, len) == NULL)
+            add(*iter);
+    }
+    return 0;
+}
+

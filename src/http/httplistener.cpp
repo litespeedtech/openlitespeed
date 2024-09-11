@@ -682,7 +682,7 @@ int HttpListener::checkAccess(struct conn_data *pData)
     struct sockaddr *pPeer = (struct sockaddr *) pData->achPeerAddr;
     GSockAddr::mappedV6toV4(pPeer);
 
-    ClientInfo *pInfo = ClientCache::getClientCache()->getClientInfo(pPeer);
+    ClientInfo *pInfo = ClientCache::getInstance().getClientInfo(pPeer);
     if (!pInfo)
         return -1;
     pData->pInfo = pInfo;
@@ -897,13 +897,13 @@ int HttpListener::writeStatusJsonReport(int fd, int first, int last)
 {
     char achBuf[1024];
     int len;
-    len = ls_snprintf(achBuf, sizeof(achBuf), 
+    len = ls_snprintf(achBuf, sizeof(achBuf),
                       "%s"
                       "      {\n"
                       "        \"name\": \"%s\",\n"
                       "        \"address\": \"%s\",\n",
                       first ? "  \"listeners\" : [\n" : "",
-                      getName(), 
+                      getName(),
                       getAddrStr());
     if (::write(fd, achBuf, len) != len)
         return LS_FAIL;

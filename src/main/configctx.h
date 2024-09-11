@@ -105,7 +105,7 @@ public:
     SslContext *newSSLContext(const XmlNode *pNode, const char *pName,
                               SslContext *pOldContext);
     void configCRL(const XmlNode *pNode, SslContext *pSSL);
-    int initOcspCachePath();
+    int initOcspCachePath(const char *pBase);
     int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
 
     static int getPrivateKeyPem(SSL_CTX *pCtx, AutoBuf *pBuf);

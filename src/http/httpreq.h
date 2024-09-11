@@ -399,7 +399,8 @@ public:
 
         IS_CAPTCHA_AVOID_TESTED    = 32,
         IS_CAPTCHA_BYPASS   = 64,
-        IS_TRUSTED          = 128
+        IS_TRUSTED          = 128,
+        IS_BL_COOKIE        = 256
     };
 
    explicit HttpReq();
@@ -789,7 +790,7 @@ public:
     int parseMethod(const char *pCur, const char *pBEnd);
     int parseHost(const char *pCur, const char *pBEnd);
     int parseURL(const char *pCur, const char *pBEnd);
-    int parseProtocol(const char *pCur, const char *pBEnd);
+    int parseProtocol(const char *&pCur, const char *pBEnd);
     int removeSpace(const char **pCur, const char *pBEnd);
     int parseURI(const char *pCur, const char *pBEnd);
     const char *skipSpace(const char *pOrg, const char *pDest);

@@ -173,13 +173,21 @@ int HttpResp::addCookie(const char *pName, const char *pVal,
     char achBuf[8192] = "";
     char *p = achBuf;
 
-    if (!pName || !pVal || !domain)
+    if (!pName || !pVal)
         return LS_FAIL;
 
     if (path == NULL)
         path = "/";
-    p += ls_snprintf(achBuf, 8091, "%s=%s; path=%s; domain=%s",
-                     pName, pVal, path, domain);
+    p += ls_snprintf(achBuf, 8091, "%s=%s; path=%s",
+                     pName, pVal, path);
+    if (p > &achBuf[8091])
+        return -1;
+    if (domain)
+    {
+        p += snprintf(p, &achBuf[8091] - p, "; domain=%s", domain);
+        if (p > &achBuf[8091])
+            return -1;
+    }
     if (expires)
     {
         memcpy(p, "; expires=", 10);

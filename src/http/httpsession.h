@@ -751,7 +751,9 @@ public:
     void addLocationHeader();
 
     void setAccessLogOff()      {   setFlag(HSF_ACCESS_LOG_OFF);    }
-    int shouldLogAccess() const {   return !getFlag(HSF_ACCESS_LOG_OFF);    }
+    bool shouldLogAccess() const
+    {   return (m_request.getStatus() > HttpReq::HEADER_REQUEST_LINE)
+            && !getFlag(HSF_ACCESS_LOG_OFF);    }
 
     void prepareSsiStack(const SsiScript *pScript);
     SsiStack *getSsiStack() const       {    return m_pSsiStack;     }
