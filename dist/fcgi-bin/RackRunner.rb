@@ -133,7 +133,13 @@ else
     }.to_app
 end
 
-ActiveRecord::Base.clear_all_connections! if defined?(ActiveRecord::Base)
+if defined?(ActiveRecord::Base)
+  if defined?(ActiveRecord::Base.connection_pool.release_connection)
+    ActiveRecord::Base.connection_pool.release_connection
+  else
+    ActiveRecord::Base.clear_active_connections!
+  end
+end
 
 begin
     server.run(app, options.merge(:AccessLog => []))

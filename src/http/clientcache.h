@@ -47,7 +47,6 @@ private:
     Cache                   m_v4;
     Cache                   m_v6;
     ClientList              m_toBeRemoved;
-    static ClientCache     *s_pClients;
     static Ip2Geo          *s_ip2geo;
 
     static int appendDirtyList(const void *pKey, void *pData, void *pList);
@@ -82,10 +81,6 @@ public:
     int generateBlockedIPReport(int fd);
     int generateBlockedIPJsonReport(AutoBuf *buf);
 
-    static void initClientCache(int iInitSize)
-    {   s_pClients = new ClientCache(iInitSize);    }
-    static ClientCache *getClientCache()
-    {   return s_pClients;          }
     static void setIp2Geo(Ip2Geo *ip2geo)
     {   s_ip2geo = ip2geo;          }
     static Ip2Geo *getIp2Geo()

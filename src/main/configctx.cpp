@@ -881,24 +881,42 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
 }
 
 
-int ConfigCtx::initOcspCachePath()
+int ConfigCtx::initOcspCachePath(const char *pBase)
 {
     if (SslOcspStapling::getCachePath() == NULL)
     {
         char achBuf[MAX_PATH_LEN];
-        if (getAbsolutePath(achBuf, "$SERVER_ROOT/tmp/ocspcache/") != -1)
-            SslOcspStapling::setCachePath(achBuf);
+        if (pBase)
+        {
+            snprintf(achBuf, sizeof(achBuf), "%s/ocspcache/", pBase);
+        }
         else
-            return -1;
+        {
+            if (getAbsolutePath(achBuf, "$SERVER_ROOT/tmp/ocspcache/") == -1)
+                return LS_FAIL;
+        }
+        if (GPath::createMissingPath(achBuf, 0700) == 0)
+        {
+            chown(achBuf,
+                    ServerProcessConfig::getInstance().getUid(),
+                    ServerProcessConfig::getInstance().getGid());
+        }
+        int off = 0;
+        const char *pChroot = MainServerConfig::getInstance().getChroot();
+        int iChrootLen = MainServerConfig::getInstance().getChrootlen();
+
+        if (iChrootLen > 0
+            && strncmp(achBuf, pChroot, iChrootLen) == 0)
+            off = iChrootLen;
+         SslOcspStapling::setCachePath(&achBuf[off]);
     }
     return 0;
 }
 
+
 int ConfigCtx::configStapling(const XmlNode *pNode,
                                       SslContextConfig *pConf)
 {
-    if (initOcspCachePath() == -1)
-        return -1;
     pConf->m_iOcspMaxAge = getLongValue(pNode, "ocspRespMaxAge", 60,
                                         360000, 3600);
     const char *pResponder = pNode->getChildValue("ocspResponder");

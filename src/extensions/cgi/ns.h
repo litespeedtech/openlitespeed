@@ -46,6 +46,13 @@ int ns_supported();
 int ns_init_engine(const char *ns_conf);
 
 /**
+ * @fn ns_not_lscgid
+ * @brief Allows you to use this facility for other than lscgid.  In particular
+ * suppresses returning the child PID.
+ **/
+void ns_not_lscgid();
+
+/**
  * @fn ns_uid_ok
  * @brief Verifies that this UID has not been disabled for namespaces.
  * @param[in] uid The uid to verify.

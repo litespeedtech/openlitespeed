@@ -682,4 +682,53 @@ class Util
             return define($constantName, $value);
         }
     }
+
+    /**
+     *
+     * @since 1.17.1.1
+     *
+     * @param int $wpStatus
+     *
+     * @return string[]  [ stateMsg => string, link => string ]
+     */
+    public static function getFatalErrorStateMessageAndLink( $wpStatus )
+    {
+        $stateMsg = $anchor = '';
+
+        if ( $wpStatus & WPInstall::ST_ERR_EXECMD ) {
+            $stateMsg = 'WordPress fatal error encountered during action '
+                . 'execution. This is most likely caused by custom code in '
+                . 'this WordPress installation.';
+            $anchor   = '#fatal-error-encountered-during-action-execution';
+        }
+        if ( $wpStatus & WPInstall::ST_ERR_EXECMD_DB ) {
+            $stateMsg = 'Error establishing WordPress database connection.';
+        }
+        elseif ( $wpStatus & WPInstall::ST_ERR_TIMEOUT ) {
+            $stateMsg = 'Timeout occurred during action execution.';
+            $anchor   = '#timeout-occurred-during-action-execution';
+        }
+        elseif ( $wpStatus & WPInstall::ST_ERR_SITEURL ) {
+            $stateMsg = 'Could not retrieve WordPress siteURL.';
+            $anchor   = '#could-not-retrieve-wordpress-siteurl';
+        }
+        elseif ( $wpStatus & WPInstall::ST_ERR_DOCROOT ) {
+            $stateMsg = 'Could not match WordPress siteURL to a known '
+                . 'control panel docroot.';
+            $anchor   = '#could-not-match-wordpress-siteurl-to-a-known-'
+                . 'cpanel-docroot';
+        }
+        elseif ( $wpStatus & WPInstall::ST_ERR_WPCONFIG ) {
+            $stateMsg = 'Could not find a valid wp-config.php file.';
+            $anchor   = '#could-not-find-a-valid-wp-configphp-file';
+        }
+
+        $stateMsg .= ' Click for more information.';
+
+        return array(
+            'stateMsg' => $stateMsg,
+            'link'     => 'https://docs.litespeedtech.com/lsws/cp/cpanel/'
+                . "whm-litespeed-plugin/troubleshooting/$anchor"
+        );
+    }
 }

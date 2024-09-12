@@ -55,6 +55,7 @@ typedef struct mount_tab_line_s
 uid_t s_persist_uid = -1;
 int   s_persist_vh_fd = -1;
 int   s_persist_vh_locked_write = 0;
+extern int s_not_lscgid;
 static int is_persisted_fn(int uid, int *persisted);
 static int open_persist_vh_file(int report, uid_t uid, int lock_type);
 static char *persist_vh_file_name(uid_t uid, char *filename, int filename_size);
@@ -1189,6 +1190,11 @@ static int writeall(int fd, const char *pBuf, int len)
 
 static int report_pid_to_parent(lscgid_t *pCGI, uint32_t pid)
 {
+    if (s_not_lscgid)
+    {
+        DEBUG_MESSAGE("report_pid_to_parent SKIP for not lscgid\n");
+        return 0;
+    }
     DEBUG_MESSAGE("report_pid_to_parent: %d\n", pid);
     if (**pCGI->m_argv == '&')
     {

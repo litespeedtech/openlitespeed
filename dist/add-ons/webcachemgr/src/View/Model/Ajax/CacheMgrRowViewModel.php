@@ -97,69 +97,79 @@ class CacheMgrRowViewModel
     protected function getStatusDisplayData()
     {
         $statusInfo = array(
-            'disabled' => array(
-                'sort' => 'disabled',
-                'state' => '<span class="glyphicon glyphicon-flash status-disabled" data-uk-tooltip '
-                        . 'title="LSCWP is disabled."></span>',
-                'btn_content' => '<span class="enable_btn"></span>',
-                'btn_title' => 'Click to enable LSCache',
-                'onclick' => 'onclick="javascript:lscwpEnableSingle(this);"',
+            'disabled'               => array(
+                'sort'           => 'disabled',
+                'state'          => '<span '
+                    . 'class="glyphicon glyphicon-flash status-disabled" '
+                    . 'data-uk-tooltip title="LSCWP is disabled."></span>',
+                'btn_content'    => '<span class="enable_btn"></span>',
+                'btn_title'      => 'Click to enable LSCache',
+                'onclick'        =>
+                    'onclick="javascript:lscwpEnableSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip',
-                'btn_state' => ''
+                'btn_state'      => ''
             ),
-            'enabled' => array(
-                'sort' => 'enabled',
-                'state' => '<span class="glyphicon glyphicon-flash status-enabled" data-uk-tooltip '
-                        . 'title="LSCWP is enabled."></span>',
-                'btn_content' => '<span class="disable_btn"></span>',
-                'btn_title' => 'Click to disable LSCache',
-                'onclick' => 'onclick="javascript:lscwpDisableSingle(this);"',
+            'enabled'                => array(
+                'sort'           => 'enabled',
+                'state'          => '<span '
+                    . 'class="glyphicon glyphicon-flash status-enabled" '
+                    . 'data-uk-tooltip title="LSCWP is enabled."></span>',
+                'btn_content'    => '<span class="disable_btn"></span>',
+                'btn_title'      => 'Click to disable LSCache',
+                'onclick'        =>
+                    'onclick="javascript:lscwpDisableSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip',
-                'btn_state' => ''
+                'btn_state'      => ''
             ),
-            'adv_cache' => array(
-                'sort' => 'warning',
-                'state' => '<span class="status-warning" data-uk-tooltip '
-                        . 'title="LSCache is enabled but not caching. Please visit the '
-                        . 'WordPress Dashboard for more information."></span>',
-                'btn_content' => '<span class="disable_btn"></span>',
-                'btn_title' => 'Click to disable LSCache',
-                'onclick' => 'onclick="javascript:lscwpDisableSingle(this);"',
+            'adv_cache'              => array(
+                'sort'           => 'warning',
+                'state'          => '<span class="status-warning" '
+                    . 'data-uk-tooltip '
+                    . 'title="LSCache is enabled but not caching. Please visit '
+                    . 'the WordPress Dashboard for more information."></span>',
+                'btn_content'    => '<span class="disable_btn"></span>',
+                'btn_title'      => 'Click to disable LSCache',
+                'onclick'        =>
+                    'onclick="javascript:lscwpDisableSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip',
-                'btn_state' => ''
+                'btn_state'      => ''
             ),
             'disabled_no_active_ver' => array(
-                'sort' => 'disabled',
-                'state' => '<span class="glyphicon glyphicon-flash status-disabled" data-uk-tooltip '
-                        . 'title="LSCWP is disabled."></span>',
-                'btn_content' => '<span class="inactive-action-btn" data-uk-tooltip '
-                        . 'title="No active LSCWP version set! Cannot enable LSCache."></span>',
-                'onclick' => '',
+                'sort'           => 'disabled',
+                'state'          => '<span '
+                    . 'class="glyphicon glyphicon-flash status-disabled" '
+                    . 'data-uk-tooltip title="LSCWP is disabled."></span>',
+                'btn_content'    => '<span class="inactive-action-btn" '
+                    . 'data-uk-tooltip '
+                    . 'title="No active LSCWP version set! Cannot enable '
+                    . 'LSCache."></span>',
+                'onclick'        => '',
                 'btn_attributes' => '',
-                'btn_state' => 'disabled',
+                'btn_state'      => 'disabled',
             ),
-            'error' => array(
-                'sort' => 'error',
+            'error'                  => array(
+                'sort'           => 'error',
                 /**
                  * 'state' added individually later.
                  */
-                'btn_title' => '',
-                'btn_content' => '<span class="inactive-action-btn"></span>',
-                'onclick' => '',
+                'btn_title'      => '',
+                'btn_content'    => '<span class="inactive-action-btn"></span>',
+                'onclick'        => '',
                 'btn_attributes' => '',
-                'btn_state' => 'disabled'
+                'btn_state'      => 'disabled'
             ),
-            'removed' => array(
-                'sort' => 'removed',
-                'state' => '<span class="status-removed" data-uk-tooltip '
-                . 'title="Installation could not be found and has been removed."></span>',
-                'btn_content' => '<span class="inactive-action-btn"></span>',
-                'onclick' => '',
+            'removed'                => array(
+                'sort'           => 'removed',
+                'state'          => '<span class="status-removed" '
+                    . 'data-uk-tooltip '
+                    . 'title="Installation could not be found and has been '
+                    . 'removed."></span>',
+                'btn_content'    => '<span class="inactive-action-btn"></span>',
+                'onclick'        => '',
                 'btn_attributes' => '',
-                'btn_state' => 'disabled',
+                'btn_state'      => 'disabled',
             )
         );
-
 
         $wpStatus = $this->wpInstall->getStatus();
 
@@ -167,46 +177,19 @@ class CacheMgrRowViewModel
             $currStatusData = $statusInfo['removed'];
         }
         elseif ( $this->wpInstall->hasFatalError($wpStatus) ) {
+            $fatalErrStateInfo =
+                Util::getFatalErrorStateMessageAndLink($wpStatus);
 
-            $link = 'https://docs.litespeedtech.com/cp/cpanel'
-                . '/wp-cache-management/#whm-plugin-cache-manager-error-status';
-
-            if ( $wpStatus & WPInstall::ST_ERR_EXECMD ) {
-                $stateMsg = 'WordPress fatal error encountered during action execution. This is '
-                        . 'most likely caused by custom code in this WordPress installation.';
-                $link .= '#fatal_error_encountered_during_action_execution';
-            }
-            if ( $wpStatus & WPInstall::ST_ERR_EXECMD_DB ) {
-                $stateMsg = 'Error establishing WordPress database connection.';
-                $link .= '#';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_TIMEOUT ) {
-                $stateMsg = 'Timeout occurred during action execution.';
-                $link .= '#timeout_occurred_during_action_execution';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_SITEURL ) {
-                $stateMsg = 'Could not retrieve WordPress siteURL.';
-                $link .= '#could_not_retrieve_wordpress_siteurl';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_DOCROOT ) {
-                $stateMsg = 'Could not match WordPress siteURL to a known control panel '
-                        . 'docroot.';
-                $link .= '#could_not_match_wordpress_siteurl_to_a_known_cpanel_docroot';
-            }
-            elseif ( $wpStatus & WPInstall::ST_ERR_WPCONFIG ) {
-                $stateMsg = 'Could not find a valid wp-config.php file.';
-                $link .= '#could_not_find_a_valid_wp-configphp_file';
-            }
-
-            $stateMsg .= ' Click for more info.';
-
-            $currStatusData = $statusInfo['error'];
-            $currStatusData['state'] = "<a href=\"{$link}\" target=\"_blank\" rel=\"noopener\" "
-                    . "data-uk-tooltip title =\"{$stateMsg}\" class=\"status-error\"></a>";
+            $currStatusData          = $statusInfo['error'];
+            $currStatusData['state'] = '<a '
+                . "href=\"{$fatalErrStateInfo['link']}\" "
+                . 'target="_blank" rel="noopener" data-uk-tooltip '
+                . "title =\"{$fatalErrStateInfo['stateMsg']}\" "
+                . 'class="status-error"></a>';
         }
         elseif ( ($wpStatus & WPInstall::ST_PLUGIN_INACTIVE ) ) {
 
-            if ( $this->getActiveVerData() == false ) {
+            if ( !$this->getActiveVerData() ) {
                 $currStatusData = $statusInfo['disabled_no_active_ver'];
             }
             else {

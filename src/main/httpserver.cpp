@@ -385,7 +385,6 @@ private:
     void configCRL(const XmlNode *pNode, SslContext *pSsl);
     SslContext *newSSLContext(const XmlNode *pNode,
                               const char *pName, SslContext *pOldContext);
-    int initOcspCachePath();
     int configStapling(const XmlNode *pNode, SslContextConfig *pConf);
 
     int enableQuicListener(HttpListener *pListener);
@@ -405,7 +404,7 @@ private:
                                    size_t szPhpBin);
     const char *configAdminPhpUri(const XmlNode *pNode);
     int configAdminConsole(const XmlNode *pNode);
-    int configSysShmDirs(char *pConfDir);
+    int configSysShmDirs(ConfigCtx *pConfigCtx, char *pConfDir);
     int configTuning(const XmlNode *pRoot);
     void setMaxConns(int32_t conns);
     void setMaxSSLConns(int32_t conns);
@@ -687,7 +686,7 @@ int HttpServerImpl::generateStatusJsonReport()
 int HttpServerImpl::generateResetAppsReport()
 {
     char achBuf[1024] = "";
-    ls_snprintf(achBuf, sizeof(achBuf), "%s/lsns/conf/lscntr.txt", 
+    ls_snprintf(achBuf, sizeof(achBuf), "%s/lsns/conf/lscntr.txt",
                 MainServerConfig::getInstance().getServerRoot());
     int fd = open(achBuf, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (fd == -1)
@@ -888,10 +887,41 @@ void HttpServerImpl::setRTReportName(int proc)
 }
 
 
+static void createRtRptLink(int count, const char *pRptName,
+                            const char *pStatusName)
+{
+    char achBuf[1024];
+    char achTmp[1024];
+    int i;
+    for(i = 1; i <= count; ++i)
+    {
+        if (i > 1)
+        {
+            snprintf(achTmp, 1024, "%s/%s.%d", sStatDir, pRptName, i);
+            snprintf(achBuf, 1024, "%s/%s.%d", DEFAULT_TMP_DIR, pRptName, i);
+        }
+        else
+        {
+            snprintf(achTmp, 1024, "%s/%s", sStatDir, pRptName);
+            snprintf(achBuf, 1024, "%s/%s", DEFAULT_TMP_DIR, pRptName);
+        }
+        unlink(achBuf);
+        symlink(achTmp, achBuf);
+    }
+    snprintf(achTmp, 1024, "%s/%s", sStatDir, pStatusName);
+    snprintf(achBuf, 1024, "%s/%s", DEFAULT_TMP_DIR, pStatusName);
+    unlink(achBuf);
+    symlink(achTmp, achBuf);
+}
+
+
 int HttpServerImpl::generateRTReport()
 {
+    char achBuf[1024];
+    snprintf(achBuf, 1024, "%s.tmp", m_sRTReportFile.c_str());
+
     LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(
-                                          m_sRTReportFile.c_str());
+                                          achBuf);
     pAppender->setAppendMode(0);
     if (pAppender->open())
     {
@@ -907,11 +937,14 @@ int HttpServerImpl::generateRTReport()
     if (ret)
         LS_ERROR("Failed to generate the real time report!");
     ret = ExtAppRegistry::generateRTReport(pAppender->getfd());
-    ret = ClientCache::getClientCache()->generateBlockedIPReport(
+    ret = ClientCache::getInstance().generateBlockedIPReport(
               pAppender->getfd());
 
     pAppender->append("EOF\n", 4);
     pAppender->close();
+
+    rename(achBuf, m_sRTReportFile.c_str());
+
     generateRTJsonReport();
     resetStats();
     m_vhosts.resetStats();
@@ -938,15 +971,18 @@ int HttpServerImpl::generateRTJsonReport()
     if (!ret)
         ret = ExtAppRegistry::generateRTJsonReport(&buf);
     if (!ret)
-        ret = ClientCache::getClientCache()->generateBlockedIPJsonReport(&buf);
+        ret = ClientCache::getInstance().generateBlockedIPJsonReport(&buf);
     if (ret)
     {
         LS_ERROR("Failed to generate the json real time report!");
         return -1;
     }
     buf.append_unsafe("\n}\n", 3);
+
+    char achBuf[1024];
+    snprintf(achBuf, 1024, "%s.tmp", m_sRTReportFileJson.c_str());
     LOG4CXX_NS::Appender *pAppender = LOG4CXX_NS::Appender::getAppender(
-                                          m_sRTReportFileJson.c_str());
+                                          achBuf);
     pAppender->setAppendMode(0);
     if (pAppender->open())
     {
@@ -956,6 +992,9 @@ int HttpServerImpl::generateRTJsonReport()
 
     pAppender->append(buf.begin(), buf.size());
     pAppender->close();
+
+    rename(achBuf, m_sRTReportFileJson.c_str());
+
     return 0;
 }
 
@@ -1191,7 +1230,7 @@ void HttpServerImpl::onTimerSecond()
 {
     HttpRespHeaders::updateDateHeader();
     HttpLog::onTimer();
-    ClientCache::getClientCache()->onTimer();
+    ClientCache::getInstance().onTimer();
     m_vhosts.onTimer();
     if (m_lStartTime > 0)
         generateRTReport();
@@ -1224,7 +1263,7 @@ void HttpServerImpl::onTimer30Secs()
     if (m_lStartTime <= 0)
         return ;
 
-    ClientCache::getClientCache()->onTimer30Secs();
+    ClientCache::getInstance().onTimer30Secs();
     StaticFileCache::getInstance().onTimer();
     m_vhosts.onTimer30Secs();
     static int s_timeOut = 2;
@@ -2635,7 +2674,7 @@ void HttpServerImpl::setMaxSSLConns(int32_t conns)
 }
 
 
-int HttpServerImpl::configSysShmDirs(char *pConfDir)
+int HttpServerImpl::configSysShmDirs(ConfigCtx *pConfigCtx, char *pConfDir)
 {
     const char *pAppSuffix = "ols";
     const char *pRamdisk, *pBackup2 = "$SERVER_ROOT/admin/tmp";
@@ -2650,13 +2689,16 @@ int HttpServerImpl::configSysShmDirs(char *pConfDir)
     if (pRamdisk != NULL)
     {
         snprintf(achDir, MAX_PATH_LEN, "%s/%s/", pRamdisk, pAppSuffix);
+        pRamdisk = NULL;
         if (GPath::createMissingPath(achDir, 0750) != 0)
             LS_ERROR("Create default directory failed! '%s'", achDir);
         else if ((LsShm::checkDirSpace(achDir) != LSSHM_OK)
                  || (LsShm::addBaseDir(achDir) != LSSHM_OK))
             LS_ERROR("Add default directory failed!  '%s'", achDir);
+        else
+            pRamdisk = achDir;
     }
-
+    pConfigCtx->initOcspCachePath(pRamdisk);
     snprintf(achDir, MAX_PATH_LEN, "/tmp/%s/shm/", pAppSuffix);
     if (LsShm::addBaseDir(achDir) != LSSHM_OK)
         LS_ERROR("Add backup directory 1 failed! '%s'", achDir);
@@ -2848,7 +2890,7 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
             pConfDir = achShmDefDir;
     }
 
-    if (configSysShmDirs(pConfDir) == 0)
+    if (configSysShmDirs(&currentCtx, pConfDir) == 0)
     {
         LS_ERROR("Failed to init any system shm directories.");
         return -1;
@@ -3183,7 +3225,7 @@ int HttpServerImpl::configSecurity(const XmlNode *pRoot)
                                                   ThrottleControl::getDefault(), &currentCtx);
             NtwkIOLink::enableThrottle((ThrottleControl::getDefault()->getOutputLimit()
                                         != INT_MAX));
-            ClientCache::getClientCache()->resetThrottleLimit();
+            ClientCache::getInstance().resetThrottleLimit();
             ClientInfo::setPerClientSoftLimit(currentCtx.getLongValue(pNode1,
                                               "softLimit", 1, INT_MAX,
                                               INT_MAX));
@@ -3405,10 +3447,10 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
         if (pSwapDir)
             setSwapDir(pSwapDir);
 
-        char  achBuf[4096];
-        ls_snprintf(achBuf, 4096, "%s/tmp/ocspcache/",
-                    MainServerConfig::getInstance().getServerRoot());
-        SslOcspStapling::setCachePath(achBuf);
+        // char  achBuf[4096];
+        // ls_snprintf(achBuf, 4096, "%s/tmp/ocspcache/",
+        //             MainServerConfig::getInstance().getServerRoot());
+        // SslOcspStapling::setCachePath(achBuf);
 
         m_serverContext.configAutoIndex(pRoot);
         m_serverContext.configDirIndex(pRoot);
@@ -3433,16 +3475,6 @@ int HttpServerImpl::configServerBasic2(const XmlNode *pRoot,
                     "useIpInProxyHeader", 0, 4, 2));
 
         denyAccessFiles(NULL, ".ht*", 0);
-
-        int jsonStatus = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
-                         "jsonReports", 0, 1, 0);
-        if (jsonStatus)
-        {
-            m_sRTReportFileJson = DEFAULT_TMP_DIR "/.rtreport.json";
-            LS_DBG("Activated Json reports");
-        }
-        else
-            LS_DBG("Json reports NOT activated");
 
         if (configMime(pRoot) != 0)
         {
@@ -3998,9 +4030,35 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
             MainServerConfigObj.setCrashGuard(1);
 
         pValue = pRoot->getChildValue("statDir");
+        if (pValue == NULL)
+        {
+            struct stat st;
+            if (stat("/dev/shm", &st) == 0)
+            {
+                pValue = "/dev/shm/ols/status";
+            }
+        }
         verifyStatDir(pValue);
         m_sRTReportFile = sStatDir;
         m_sRTReportFile.append("/.rtreport", 10);
+        int jsonStatus = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot,
+                         "jsonReports", 0, 1, 0);
+        if (jsonStatus)
+        {
+            m_sRTReportFileJson = sStatDir;
+            m_sRTReportFileJson.append("/.rtreport.json", 15);
+            LS_DBG("Activated Json reports");
+        }
+        else
+            LS_DBG("Json reports NOT activated");
+        if (strcmp(pValue, DEFAULT_TMP_DIR) != 0)
+        {
+            createRtRptLink(HttpServerConfig::getInstance().getChildren(),
+                            ".rtreport", ".status");
+            if (m_sRTReportFileJson.len())
+                createRtRptLink(HttpServerConfig::getInstance().getChildren(),
+                                ".rtreport.json", ".status.json");
+        }
 
         testAndFixDirs("cachedata", procConf.getUid(), procConf.getGid(), 0755);
         testAndFixDirs("autoupdate", procConf.getUid(), procConf.getGid(), 0755);
@@ -4959,8 +5017,6 @@ int HttpServerImpl::initServer(XmlNode *pRoot, int &iReleaseXmlTree,
 //     if (ret)
 //         return ret;
 
-    ClientCache::initClientCache(1000);
-
     beginConfig();
     //ret = configServer( reconfig );
     ret = configServer(reconfig, pRoot);
@@ -5636,7 +5692,6 @@ int HttpServer::test_main(const char *pArgv0)
 
 //    if ( fetch.startReq( "http://www.litespeedtech.com/index.html", 0, "lst_index.html" ) == 0 )
 //        fetch.process();
-    ClientCache::initClientCache(1000);
 
     HttpServerConfig::getInstance().setGzipCompress(1);
     HttpdTest::runTest();

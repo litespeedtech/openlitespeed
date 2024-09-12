@@ -1678,7 +1678,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
             config.addEnv(achName);
         }
     }
-    config.addEnv("RUBYOPT=rubygems");
+
     addHomeEnv(this, config.getEnv());
 
     if (maxConns > 1)
@@ -1709,7 +1709,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
              &achFileName[m_sChroot.len()]);
     config.addEnvIfNotExist(achName, "LS_STDERR_LOG");
 
-    config.getEnv()->add(pAppDefault->getEnv());
+    config.getEnv()->addNonExist(pAppDefault->getEnv());
     config.addEnv(NULL);
     config.setUGid(getUid(), getGid());
     config.setRunOnStartUp(runOnStart);
@@ -1924,7 +1924,7 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
         config.addEnv(achName);
     }
 
-    config.getEnv()->add(pAppDefault->getEnv());
+    config.getEnv()->addNonExist(pAppDefault->getEnv());
     config.addEnv(NULL);
     config.setUGid(getUid(), getGid());
     config.setRunOnStartUp(runOnStart);
@@ -2146,7 +2146,7 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
              &achFileName[iChrootlen]);
     config.addEnvIfNotExist(achName, "LS_STDERR_LOG");
 
-    config.getEnv()->add(pAppDefault->getEnv());
+    config.getEnv()->addNonExist(pAppDefault->getEnv());
     config.addEnv(NULL);
     config.setUGid(getUid(), getGid());
     config.setRunOnStartUp(runOnStart);
@@ -3526,17 +3526,15 @@ int HttpVHost::configRecaptcha(const XmlNode *pNode)
         pSecretKey = Recaptcha::getDefaultSecretKey();
     }
 
-    {
-        const Recaptcha *pGlobalRecaptcha = pGlobalVHost->getRecaptcha();
-        const AutoStr2 *pGlobalSiteKey = (pGlobalRecaptcha ? pGlobalRecaptcha->getSiteKey() : NULL);
-        const AutoStr2 *pGlobalSecretKey = (pGlobalRecaptcha ? pGlobalRecaptcha->getSecretKey() : NULL);
+    const Recaptcha *pGlobalRecaptcha = pGlobalVHost->getRecaptcha();
+    const AutoStr2 *pGlobalSiteKey = (pGlobalRecaptcha ? pGlobalRecaptcha->getSiteKey() : NULL);
+    const AutoStr2 *pGlobalSecretKey = (pGlobalRecaptcha ? pGlobalRecaptcha->getSecretKey() : NULL);
 
-        if ((NULL == pSiteKey && NULL == pGlobalSiteKey)
-            || (NULL == pSecretKey && NULL == pGlobalSecretKey))
-        {
-            LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Missing site or secret key.");
-            return -1;
-        }
+    if ((NULL == pSiteKey && NULL == pGlobalSiteKey)
+        || (NULL == pSecretKey && NULL == pGlobalSecretKey))
+    {
+        LS_NOTICE(ConfigCtx::getCurConfigCtx(), "Missing site or secret key.");
+        return -1;
     }
 
     uint16_t type = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "type",
@@ -3544,9 +3542,11 @@ int HttpVHost::configRecaptcha(const XmlNode *pNode)
     uint16_t maxTries = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
                                 "maxTries", 0, SHRT_MAX, 3);
     int regLimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                            "regConnLimit", 0, INT_MAX, 15000);
+            "regConnLimit", 0, INT_MAX,
+             pGlobalRecaptcha ? pGlobalRecaptcha->getRegConnLimit() : INT_MAX);
     int sslLimit = ConfigCtx::getCurConfigCtx()->getLongValue(pNode,
-                            "sslConnLimit", 0, INT_MAX, 10000);
+            "sslConnLimit", 0, INT_MAX,
+             pGlobalRecaptcha ? pGlobalRecaptcha->getSslConnLimit() : INT_MAX);
 
     Recaptcha *pRecaptcha = new Recaptcha();
 

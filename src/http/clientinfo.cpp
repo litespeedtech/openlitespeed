@@ -205,6 +205,8 @@ int ClientInfo::checkAccess()
     switch (m_iAccess)
     {
     case AC_BLOCK:
+        LS_DBG_L("[%s] Access is blocked!", getAddrString());
+        return 1;
     case AC_DENY:
         LS_DBG_L("[%s] Access is denied!", getAddrString());
         return 1;
@@ -316,7 +318,7 @@ int ClientInfo::checkHost()
 }
 
 
-void ClientInfo::verifyIp(void *ip, const long length)
+void ClientInfo::verifyIp(const void *ip, const long length)
 {
     struct sockaddr *pAddr = (struct sockaddr *)m_achSockAddr;
     void *pOrigAddr;

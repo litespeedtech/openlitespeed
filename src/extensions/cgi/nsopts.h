@@ -47,7 +47,8 @@ typedef enum {
 //#define OP_FLAG_ALLOCATED_OP        16
 #define OP_FLAG_BWRAP_SYMBOL        32
 #define OP_FLAG_RAW_OP              64
-#define OP_FLAG_LAST                128
+#define OP_FLAG_SOURCE_CREATE       128
+#define OP_FLAG_LAST                256
 
 typedef struct _SetupOp SetupOp;
 

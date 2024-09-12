@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-add_definitions(-DUNMOUNT_NS)
+add_definitions(-DNOT_LSCGID)
 
 SET(unmount_ns_SRCS
     unmount_ns.c

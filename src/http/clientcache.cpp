@@ -37,8 +37,6 @@
 Ip2Geo *ClientCache::s_ip2geo = NULL;
 static StaticObj< ObjPool< ClientInfo > > s_pool;
 
-ClientCache *ClientCache::s_pClients = NULL;
-
 void ClientCache::initObjPool()
 {
     s_pool.construct();
@@ -254,7 +252,7 @@ int ClientCache::writeBlockedIPJson(AutoBuf *pBuf, Cache *pCache, int *count)
             len = snprintf(pBuf->end(), 256,
                           ",\n%s"
                           "    \"%s\"",
-                          !*count ? 
+                          !*count ?
                             "  \"blocked_ips\":\n"
                             "  [\n" : "",
                           pInfo->getAddrString());
@@ -423,7 +421,8 @@ static int addrlookupCb(void *arg, const long length, void *hosts)
                                               namelookupCb, pInfo);
         else
         {
-            namelookupCb(pInfo, ipLen, (void *)pIp);
+            Adns::setResult(pInfo->getAddr(), pIp, ipLen);
+            pInfo->verifyIp(pIp, ipLen);
         }
     }
     return 0;

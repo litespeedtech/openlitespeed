@@ -154,7 +154,7 @@ public:
     {   return getFlag(CIF_PROTOCOL_PROXY);        }
 
     int checkHost();
-    void verifyIp(void *ip, const long length);
+    void verifyIp(const void *ip, const long length);
 
     const char *getAddrString() const   {   return m_sAddr.c_str();     }
     int         getAddrStrLen() const   {   return m_sAddr.len();       }

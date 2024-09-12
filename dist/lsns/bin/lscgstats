@@ -1,0 +1,164 @@
+#!/usr/bin/python3
+import argparse, json, logging, os, re
+import common
+
+def validate_environment():
+    if not os.path.exists('/sys/fs/cgroup/cgroup.controllers'):
+        common.fatal_error("cgroups is not v2 on this machine")
+    if os.getuid() != 0:
+        common.fatal_error("this program must be run as root")
+    common.ls_ok()
+    
+def init_pgm():
+    common.init_logging()
+    parser = argparse.ArgumentParser(prog="lscgstats",
+                                     description='LiteSpeed cgroups Statistics Program')
+    parser.add_argument("uid", type=str, nargs='*', default=None, help="uid or user name for -user commands")
+    parser.add_argument('-l', '--log', type=int, help='set logging level, 10=Debug, 20=Info, 30=Warning, 40=Error.  Default is Info')
+    parser.add_argument('-q', '--quiet', action='store_true', help='turns off all logging and only outputs what is requested.')
+    args = parser.parse_args()
+    if not args.quiet or args.log != None:
+        if args.log != None:
+            logging.getLogger().setLevel(args.log)
+        else:
+            logging.getLogger().setLevel(logging.INFO)
+        logging.debug("Entering lscgstats")
+
+    validate_environment()
+    if args.uid == None or len(args.uid) == 0:
+        args.uid = slice_of()
+    users = common.get_users(args.uid)
+    return users
+
+def read_stat(file, pos):
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (file, err))
+    line = f.readline()
+    pieces = line.split(' ')
+    f.close()
+    return pieces[pos]
+
+def read_val(file):
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (file, err))
+    line = f.readline()
+    f.close()
+    return line.rstrip()
+
+def read_param_val(file, param):
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (file, err))
+    for line in f:
+        pieces = line.split(' ')
+        if pieces[0] == param:
+            f.close()
+            return pieces[1].rstrip()
+    f.close()
+    common.fatal_error('Error %s not found in %s' % (param, file))
+
+def user_to_file(user):
+    return 'user-%s.slice' % user.pw_uid
+
+def user_to_filename(user):
+    if user == None:
+        return '/sys/fs/cgroup/user.slice'
+    return '/sys/fs/cgroup/user.slice/%s' % user_to_file(user)
+
+def slice_of():
+    names = os.listdir('/sys/fs/cgroup/user.slice')
+    min_uid = common.get_min_uid()
+    uids = []
+    for name in names:
+        if name.startswith('user-'):
+            pos = name.find('.')
+            if pos == -1:
+                logging.debug('%s has the right starts with but no dot' % name)
+                continue
+            uid = name[5:pos]
+        else:
+            continue
+        if int(uid) < min_uid:
+            logging.debug('Skip uid %d, too low (%d)' % (int(uid), min_uid))
+            continue
+        logging.debug('Adding uid: %s' % uid)
+        uids.append(uid)
+    return uids
+
+def scrape_cpu(user):
+	return read_param_val(user_to_filename(user) + "/cpu.stat", 'usage_usec')
+
+def scrape_io(user, block_devices):
+    file = user_to_filename(user) + "/io.stat"
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        logging.debug('Error opening %s: %s' % (file, err))
+        return '0', '0'
+    bytes = 0
+    ios = 0;
+    for line in f:
+        parm_vals = line.split(' ')
+        maj_min = parm_vals[0].split(':')
+        if int(maj_min[0]) in block_devices and int(maj_min[1]) in block_devices[int(maj_min[0])]:
+            for parm_val in parm_vals:
+                pieces = parm_val.split('=')
+                if len(pieces) == 2:
+                    if pieces[0] == 'rbytes' or pieces[0] == 'wbytes':
+                        bytes = bytes + int(pieces[1])
+                    elif pieces[0] == 'rios' or pieces[0] == 'wios':
+                        ios = ios + int(pieces[1])
+        else:
+            logging.debug('Skip device: %s for io test for major/minor not usable' % parm_vals[0])
+    f.close()
+    return str(bytes), str(ios)
+
+def scrape_mem(user):
+    return read_val(user_to_filename(user) + "/memory.current")
+
+def scrape_tasks(user):
+    return read_val(user_to_filename(user) + "/pids.current")
+
+def list_user(user, dict, block_devices):
+    subdict = {}
+    if user == None:
+        subdict['name'] = '.'
+    else:
+        subdict['name'] = user.pw_name
+    subdict['cpu'] = scrape_cpu(user)
+    subdict['io'], subdict['iops'] = scrape_io(user, block_devices)
+    subdict['mem'] = scrape_mem(user)
+    subdict['tasks'] = scrape_tasks(user)
+    if user == None:
+        logging.debug("uid[.]: " + str(subdict))
+        dict['.'] = subdict
+    else:
+        logging.debug("uid[" + str(user.pw_uid) + ']: ' + str(subdict))
+        dict[user.pw_uid] = subdict
+    
+def command_list(users):
+    dict = {}
+    block_devices = common.get_devices()[1]
+    list_user(None, dict, block_devices)
+    for user in users:
+        list_user(user, dict, block_devices)
+    print(json.dumps(dict, indent=4))
+    return 0
+
+def do_pgm(users):
+    logging.debug("Entering lscgstats")
+    ret = command_list(users)
+    logging.debug("Exiting lscgstats")
+    return ret
+
+def main():
+    users = init_pgm()
+    return do_pgm(users)
+  
+if __name__ == "__main__":
+    main()

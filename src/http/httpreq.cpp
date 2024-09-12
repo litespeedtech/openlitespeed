@@ -528,6 +528,7 @@ int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
     const char *p = pCur + header->getMethodLen();
     m_reqLineOff = HEADER_BUF_PAD;
     result = parseMethod(pCur, p);
+    m_reqLineLen = 0;
     if (result)
         return result;
 
@@ -603,6 +604,7 @@ int HttpReq::processRequestLine()
         }
     }
     m_reqLineOff = pCur - m_headerBuf.begin();
+    m_reqLineLen = 0;
 
     const char *p = pCur;
     while ((p < pLineEnd) && ((*p != ' ') && (*p != '\t')))
@@ -664,6 +666,12 @@ int HttpReq::processRequestLine()
                 m_headerBuf.size(), m_headerBuf.begin());
         return result;
     }
+    if (pCur < pLineEnd - 1)
+    {
+        LS_DBG_L(getLogSession(), "Bad request, garbage after protocol string.\n%.*s\n",
+                m_headerBuf.size(), m_headerBuf.begin());
+        return SC_400;
+    }
     m_reqLineLen = pLineEnd - m_headerBuf.begin() - m_reqLineOff;
     if (*(pLineEnd - 1) == '\r')
         m_reqLineLen --;
@@ -679,7 +687,7 @@ int HttpReq::processRequestLine()
 }
 
 
-int HttpReq::parseProtocol(const char *pCur, const char *pBEnd)
+int HttpReq::parseProtocol(const char *&pCur, const char *pBEnd)
 {
     if (strncasecmp(pCur, "http/1.", 7) != 0)
         return SC_400;
@@ -898,6 +906,11 @@ int HttpReq::processHeaderLines()
                 {
                     if (index == HttpHeader::H_HOST)
                         *((char *)pLineBegin + 3) = '2';
+                    else if (index == HttpHeader::H_CONTENT_LENGTH)
+                    {
+                        LS_INFO(getLogSession(), "Status 400: duplicate content-length!");
+                        return SC_400;
+                    }
                     else if (index == HttpHeader::H_TRANSFER_ENCODING)
                     {
                         LS_INFO(getLogSession(), "Remove duplicate transfer-encoding header!");
@@ -1036,6 +1049,10 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
         {
             if (index == HttpHeader::H_COOKIE)
             {
+                if (begin->val_len > 15
+                    && memmem(value, begin->val_len, "litespeed_role=", 15) != NULL)
+                    m_iReqFlag |= IS_BL_COOKIE;
+
                 m_iContextState |= COOKIE_PARSED;
                 parseCookies(value, value + begin->val_len);
                 ++cookie_headers;
@@ -1109,7 +1126,8 @@ int HttpReq::processHeader(int index)
         return 0;
 
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
-    const char *pBEnd = pCur + m_commonHeaderLen[ index ];
+    int len = m_commonHeaderLen[index];
+    const char *pBEnd = pCur + len;
     char *p;
     switch (index)
     {
@@ -1121,7 +1139,7 @@ int HttpReq::processHeader(int index)
         }
         break;
     case HttpHeader::H_CONTENT_LENGTH:
-        if (m_commonHeaderLen[index] == 0)
+        if (len == 0)
             return SC_400;
         if (!isdigit(*pCur))
             return SC_400;
@@ -1138,24 +1156,24 @@ int HttpReq::processHeader(int index)
             LS_INFO(getLogSession(), "Status 400: bad Transfer-Encoding starts with ','!");
             return SC_400;
         }
-        if (strncasecmp(pCur, "chunked", 7) == 0
-            && m_commonHeaderLen[index] == 7)
+        if (len == 7 && strncasecmp(pCur, "chunked", 7) == 0)
         {
             if (getMethod() <= HttpMethod::HTTP_HEAD)
                 return SC_400;
             m_lEntityLength = LSI_BODY_SIZE_CHUNK;
         }
+        else
+            return SC_501;
         break;
     case HttpHeader::H_USERAGENT:
         m_iUserAgentType = processUserAgent(pCur, pBEnd - pCur);
         break;
     case HttpHeader::H_ACC_ENCODING:
-        if (m_commonHeaderLen[ index ] >= 2)
+        if (len >= 2)
         {
             char ch = *pBEnd;
             *((char *)pBEnd) = 0;
-            if ((m_commonHeaderLen[ index ] >= 4)
-                && (strcasestr(pCur, "gzip") != NULL))
+            if (len >= 4 && strcasestr(pCur, "gzip") != NULL)
                 m_iAcceptGzip = REQ_GZIP_ACCEPT |
                  (HttpServerConfig::getInstance().getGzipCompress() ? GZIP_ENABLED : 0);
             if (strcasestr(pCur, "br") != NULL)
@@ -1169,6 +1187,10 @@ int HttpReq::processHeader(int index)
             keepAlive(strncasecmp(pCur, "clos", 4) != 0);
         else
             keepAlive(strncasecmp(pCur, "keep", 4) == 0);
+        break;
+    case HttpHeader::H_COOKIE:
+        if (len > 15 && memmem(pCur, len, "litespeed_role=", 15) != NULL)
+            m_iReqFlag |= IS_BL_COOKIE;
         break;
     default:
         break;
@@ -1361,6 +1383,12 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
                 getVHost()->getName());
         return SC_403;
     }
+    if (m_iReqFlag & IS_BL_COOKIE)
+    {
+        LS_INFO(getLogSession(), "Forbidden cookie detected, access denied.");
+        return SC_403;
+    }
+
     if (!m_pVHost->enableGzip())
         andGzip(~GZIP_ENABLED);
 
@@ -2747,6 +2775,7 @@ void HttpReq::tranEncodeToContentLen()
     int off = m_commonHeaderOffset[HttpHeader::H_TRANSFER_ENCODING];
     if (!off)
         return;
+    dropReqHeader(HttpHeader::H_CONTENT_LENGTH);
     int len = 8;
     char *pBegin = m_headerBuf.begin() + off - 1;
     while (*pBegin != ':')
@@ -3452,9 +3481,11 @@ cookieval_t *HttpReq::setCookie(const char *pName, int nameLen,
     pIdx->valLen = valLen;
     m_commonHeaderLen[ HttpHeader::H_COOKIE ] += nameLen + valLen + 1;
 
-    m_headerBuf.append("\r\n", 2);
+    m_headerBuf.append("\r\n\r\n", 4);
 
     clearContextState(CACHE_PRIVATE_KEY | CACHE_KEY);
+
+    m_iReqHeaderBufFinished = m_iHttpHeaderEnd = m_headerBuf.size();
 
     return pIdx;
 
