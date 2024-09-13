@@ -2689,8 +2689,13 @@ int HttpServerImpl::configSysShmDirs(ConfigCtx *pConfigCtx, char *pConfDir)
     if (pRamdisk != NULL)
     {
         snprintf(achDir, MAX_PATH_LEN, "%s/%s/", pRamdisk, pAppSuffix);
+        chmod(achDir, 0750);
+        chown(achDir, ServerProcessConfig::getInstance().getUid(),
+                      ServerProcessConfig::getInstance().getGid());
         pRamdisk = NULL;
-        if (GPath::createMissingPath(achDir, 0750) != 0)
+        if (GPath::createMissingPath(achDir, 0750,
+                 ServerProcessConfig::getInstance().getUid(),
+                 ServerProcessConfig::getInstance().getGid()) != 0)
             LS_ERROR("Create default directory failed! '%s'", achDir);
         else if ((LsShm::checkDirSpace(achDir) != LSSHM_OK)
                  || (LsShm::addBaseDir(achDir) != LSSHM_OK))
