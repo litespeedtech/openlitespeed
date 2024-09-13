@@ -46,7 +46,8 @@ public:
                          const char *pBase = NULL);
     static int  writeFile(const char *pBuf, int bufLen, const char *pName,
                           int mode = 0644, const char *pBase = NULL);
-    static int  createMissingPath(char *pBuf, int mode = 0755);
+    static int  createMissingPath(char *pBuf, int mode = 0755, int uid = -1,
+                                  int gid = -1);
 
     static int  initReadLinkCache();
     static void clearReadLinkCache();

@@ -593,7 +593,7 @@ int  GPath::writeFile(const char *pBuf, int bufLen, const char *pName,
     return total;
 }
 
-int GPath::createMissingPath(char *pBuf, int mode)
+int GPath::createMissingPath(char *pBuf, int mode, int uid, int gid)
 {
     struct stat st;
     if (!GPath::isValid(pBuf))
@@ -606,6 +606,8 @@ int GPath::createMissingPath(char *pBuf, int mode)
             {
                 if (mkdir(pBuf, mode) == -1)
                     return LS_FAIL;
+                if ((uid != -1) || (gid != -1))
+                    chown(pBuf, uid, gid);
             }
             *p++ = '/';
             p = strchr(p, '/');
