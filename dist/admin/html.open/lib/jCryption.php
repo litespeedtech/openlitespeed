@@ -225,7 +225,7 @@ class jCryption
         $result = '0';
         $n = strlen($str);
         do {
-            $result = bcadd(bcmul($result, '256'), ord($str { --$n}));
+            $result = bcadd(bcmul($result, '256'), ord($str [ --$n]));
         } while ($n > 0);
         return $result;
     }
@@ -495,7 +495,7 @@ class jCryption
     {
         $tmp = $this->int2bin($num);
         $bit_len = strlen($tmp) * 8;
-        $tmp = ord($tmp {strlen($tmp) - 1});
+        $tmp = ord($tmp [strlen($tmp) - 1]);
         if (!$tmp) {
             $bit_len -= 8;
         }
@@ -558,7 +558,7 @@ class jCryption
         $num = bcdiv($num, 1 << $start_bit);
         $tmp = substr($this->int2bin($num), $start_byte, $byte_length);
         $tmp = str_pad($tmp, $byte_length, "\0");
-        $tmp = substr_replace($tmp, $tmp {$byte_length - 1} & chr(0xff >> (8 - $bit_length)), $byte_length - 1, 1);
+        $tmp = substr_replace($tmp, $tmp [$byte_length - 1] & chr(0xff >> (8 - $bit_length)), $byte_length - 1, 1);
         return $this->bin2int($tmp);
     }
 
