@@ -16,7 +16,7 @@ INIT_DIR=""
 if [ "x`uname -s`" = "xFreeBSD" ]; then
 	if [ -d "/usr/local/etc/rc.d" ]; then
 		
-		rm -f /usr/local/etc/rc.d/lsws.sh
+		rm -f /usr/local/etc/rc.d/lsws
 		echo "[OK] The startup script has been successfully uninstalled!"
 		exit 0
 	fi

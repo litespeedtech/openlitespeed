@@ -38,8 +38,8 @@ fi
 if [ "x`uname -s`" = "xFreeBSD" ]; then
 	if [ -d "/usr/local/etc/rc.d" ]; then
 		
-		cp "$CURDIR/lsws.rc" /usr/local/etc/rc.d/lsws.sh
-		chmod 755 /usr/local/etc/rc.d/lsws.sh
+		cp "$CURDIR/lsws.rc" /usr/local/etc/rc.d/lsws
+		chmod 755 /usr/local/etc/rc.d/lsws
 		echo "[OK] The startup script has been successfully installed!"
 		exit 0
 	else
