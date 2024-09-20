@@ -514,7 +514,9 @@ fixshmdir()
         mkdir /tmp/shm
         chmod 777  /tmp/shm
         sed -i -e "s/\/dev\/shm/\/tmp\/shm/g" dist/conf/httpd_config.conf.in
-        ln -s /tmp/shm /dev/shm
+        if [ "${OS}" = "FreeBSD" ] ; then
+            echo 'link /tmp/shm shm' >> /etc/devfs.conf
+        fi
     fi
 }
 
