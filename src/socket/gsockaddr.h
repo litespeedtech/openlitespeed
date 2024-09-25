@@ -33,6 +33,18 @@
 #define DO_HOST_OVERRIDE    16
 #define SKIP_ADNS_CACHE     32
 
+
+#if defined(linux) || defined(__linux) || defined(__linux__)
+
+#define LS_UDS_MAX_LEN  108
+
+#elif defined(__FreeBSD__ ) || defined(__NetBSD__) || defined(__OpenBSD__) \
+    || defined(macintosh) || defined(__APPLE__) || defined(__APPLE_CC__)
+
+#define LS_UDS_MAX_LEN  104
+
+#endif
+
 typedef union
 {
     in6_addr    m_addr6;

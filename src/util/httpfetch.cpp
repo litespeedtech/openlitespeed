@@ -425,6 +425,8 @@ int HttpFetch::connectSSL()
     if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
     {
         closeConnection();
+        m_reqState = STATE_ERROR;
+        m_statusCode = ERROR_CONN_TIMEOUT;
         return ERROR_CONN_TIMEOUT;
     }
     ret = m_ssl.connect();
@@ -651,6 +653,8 @@ int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
         if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
         {
             closeConnection();
+            m_reqState = STATE_ERROR;
+            m_statusCode = ERROR_CONN_TIMEOUT;
             return ERROR_CONN_TIMEOUT;
         }
         else
@@ -712,6 +716,8 @@ int HttpFetch::sendReq()
             if ((ret = pollEvent(m_pollEvents, m_connTimeout)) != 1)
             {
                 closeConnection();
+                m_reqState = STATE_ERROR;
+                m_statusCode = ERROR_CONN_TIMEOUT;
                 return ERROR_CONN_TIMEOUT;
             }
             socklen_t len = sizeof(int);
