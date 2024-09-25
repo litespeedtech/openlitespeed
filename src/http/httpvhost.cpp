@@ -1467,8 +1467,8 @@ static int buildUdsSocket(char *buf, int max_len, const char *pVhostName,
     char *p = buf;
     int vhost_len = strlen(pVhostName);
     int app_name_len = strlen(pAppName);
-    if (vhost_len + app_name_len > max_len - 24)
-        vhost_len = max_len - 24 - app_name_len;
+    if (vhost_len + app_name_len > max_len - 24 - 1)
+        vhost_len = max_len - 24 - app_name_len - 1;
     memcpy(p, "uds://tmp/lshttpd/", 18);
     p += 18;
     if (vhost_len < 0)
@@ -1645,7 +1645,7 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
     lstrncpy(&achFileName[pathLen], "tmp/sockets", sizeof(achFileName) - pathLen);
     //if ( access( achFileName, W_OK ) == -1 )
     {
-        buildUdsSocket(achName, 108 + 5, getName(), pAppName);
+        buildUdsSocket(achName, LS_UDS_MAX_LEN + 5, getName(), pAppName);
     }
     //else
     //{
@@ -1860,7 +1860,7 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
     if (pWorker)
         return pWorker;
     pWorker = (LocalWorker *) ExtAppRegistry::addApp(EA_LSAPI, achAppName);
-    buildUdsSocket(achName, 108 + 5, getName(), pAppName);
+    buildUdsSocket(achName, LS_UDS_MAX_LEN + 5, getName(), pAppName);
     pWorker->setURL(achName);
 
     if (!pBinPath || *pBinPath == 0x00)
@@ -2096,7 +2096,7 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
     lstrncpy(&achFileName[pathLen], "tmp/sockets", sizeof(achFileName) - pathLen);
     //if ( access( achFileName, W_OK ) == -1 )
     {
-        buildUdsSocket(achName, 108 + 5, this->getName(), pAppName);
+        buildUdsSocket(achName, LS_UDS_MAX_LEN + 5, this->getName(), pAppName);
     }
     //else
     //{
