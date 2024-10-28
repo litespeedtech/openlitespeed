@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 import argparse, subprocess, sys, os, logging, json
-from stat import *
 import common
+from stat import *
+from subprocess import PIPE
 
 def command_requires_uid(command):
     return command in ['disable-uid', 'enable-uid', 'set-min-uid', 'unmount']
@@ -36,7 +37,7 @@ def init_pgm():
     if command_requires_uid(command) and args.uid == None:
         common.fatal_error("You must specify a --uid for the %s command" % command)
     if command_uses_uid(command) and args.uid != None:
-        user = common.get_user(args.uid)
+        user, found = common.get_user(args.uid)
     else:
         user = None
     if command == 'version':
@@ -70,11 +71,11 @@ def command_set_min_uid(args, user):
 
 
 def get_mounted():
-    result = subprocess.run(['mount'], capture_output=True, text=True)
+    result = subprocess.run(['mount'], stdout=PIPE, stderr=PIPE)
     if result.returncode != 0:
-        common.fatal_error('Error in running: mount, errors: ' + result.stdout + ' ' + result.stderr)
+        common.fatal_error('Error in running: mount, errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
     mounted = {}
-    stdout_lines = result.stdout.split('\n')
+    stdout_lines = result.stdout.decode('utf-8').split('\n')
     for line in stdout_lines:
         logging.debug('mount line: %s' % line)
         index = line.find("/var/lsns/")
@@ -139,7 +140,6 @@ def write_disabled_uids(uids):
         f.close()
     except Exception as err:
         common.fatal_error('Error writing UID file: %s' % err)
-    common.restart_external()
 
 
 def command_disable_uid(args, user):
@@ -188,12 +188,12 @@ def command_unmount(args, user):
     else:
         unmount_args.append('-u')
         unmount_args.append(str(user.pw_uid))
-    result = subprocess.run(unmount_args, capture_output=True, text=True)
+    result = subprocess.run(unmount_args, stdout=PIPE, stderr=PIPE)
     if result.returncode != 0:
-        common.fatal_error('Error in running: unmount, errors: ' + result.stdout + ' ' + result.stderr)
+        common.fatal_error('Error in running: unmount, errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
     if not args.quiet:
-        print(result.stdout)
-        print(result.stderr)
+        print(result.stdout.decode('utf-8'))
+        print(result.stderr.decode('utf-8'))
     if args.command == 'unmount-all':
         common.restart_external(None, True)
     else:

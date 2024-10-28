@@ -54,10 +54,6 @@
 /* high 32bit caps needed */
 #define REQUIRED_CAPS_1 0
 
-#ifndef BLOCK_SIZE
-#define BLOCK_SIZE  4096
-#endif
-
 int         s_ns_debug = 0;
 FILE       *s_ns_debug_file = NULL;
 int         s_ns_supported_checked = 0;
@@ -76,6 +72,7 @@ int         s_not_lscgid = 0;
 const char *s_host_tty_dev = NULL;
 verbose_callback_t s_verbose_callback = NULL;
 int         s_pid_pipe = -1;
+int         s_ns_did_init_engine = 0;
 SetupOp     s_setupOp_all[] =
 {
     { SETUP_BIND_TMP, BWRAP_VAR_HOMEDIR "/.lsns/tmp", "/tmp", OP_FLAG_BWRAP_SYMBOL, -1 },
@@ -107,7 +104,7 @@ SetupOp     s_SetupOp_default[] =
     { SETUP_BIND_MOUNT, "/var/lib/mysql/mysql.sock", "/var/lib/mysql/mysql.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/home/mysql/mysql.sock", "/home/mysql/mysql.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/tmp/mysql.sock", "/tmp/mysql.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
-    { SETUP_BIND_MOUNT, "/run/mysqld/mysql.sock", "/run/mysqld/mysqld.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
+    { SETUP_BIND_MOUNT, "/run/mysqld/mysqld.sock", "/run/mysqld/mysqld.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/var/run/mysqld/mysqld.sock", "/var/run/mysqld/mysqld.sock", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/run/user/" BWRAP_VAR_UID, "/run/user/" BWRAP_VAR_UID, OP_FLAG_BWRAP_SYMBOL | OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_MAKE_PASSWD, NULL, BWRAP_VAR_PASSWD, OP_FLAG_BWRAP_SYMBOL | OP_FLAG_NO_CREATE_DEST, -1 },
@@ -331,6 +328,10 @@ int ns_init_engine(const char *ns_conf)
     {
         s_ns_conf = strdup(ns_conf);
         DEBUG_MESSAGE("ns_init_engine, main config template LS_NS_CONF set to %s\n", ns_conf);
+    }
+    else 
+    {
+        DEBUG_MESSAGE("ns_init_engine, no configuration override file\n");
     }
     if (ns_read_disabled() == -1)
         return 0;
@@ -2991,9 +2992,13 @@ int ns_exec(lscgid_t *pCGI, int *done)
 int ns_exec_ols(lscgid_t *pCGI, int *done)
 {
     DEBUG_MESSAGE("Entering ns_exec_ols\n");
-    int rc = ns_init(pCGI);
-    if (rc != 1)
-        return rc;
+    if (!s_ns_did_init_engine)
+    {
+        s_ns_did_init_engine = 1;
+        int rc = ns_init_engine(ns_getenv(pCGI, LS_NS_CONF));
+        if (rc != 1)
+            return rc;
+    }
     return ns_exec(pCGI, done);
 }
 
@@ -3029,6 +3034,11 @@ void ns_done(int unpersist)
     {
         nsopts_free_members(s_SetupOp);
     }
+    if (s_ns_conf) 
+    {
+        free(s_ns_conf);
+        s_ns_conf = NULL;
+    }
     s_SetupOp = NULL;
     s_setupOp_allocated = 0;
     s_SetupOp_size = 0;
@@ -3042,5 +3052,3 @@ int ns_unpersist_all()
 
 
 #endif
-
-

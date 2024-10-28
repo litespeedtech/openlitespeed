@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 import argparse, json, logging, os, pwd, subprocess, sys
-from stat import *
 import common
+from stat import *
+from subprocess import PIPE
 
 def command_requires_uid(command):
     return command in ['list', 'list-user', 'reset', 'reset-user', 'set', 'set-user']
@@ -68,12 +69,12 @@ def read_stat(file, pos):
 
 def run_program(args, fail_reason = ""):
     logging.debug('run: ' + str(args))
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = subprocess.run(args, stdout=PIPE, stderr=PIPE)
     if fail_reason != "" and result.returncode == 0:
         common.fatal_error('Expected: ' + args[0] + ' to fail: ' + fail_reason)
     if fail_reason == "" and result.returncode != 0:
-        common.fatal_error('Error in running: ' + args[0] + ' errors: ' + result.stdout + ' ' + result.stderr)
-    return result.stdout
+        common.fatal_error('Error in running: ' + args[0] + ' errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
+    return result.stdout.decode('utf-8')
 
 def user_to_file(user):
     return 'user-%s.slice' % user.pw_uid
@@ -107,72 +108,18 @@ def get_systemctl_item(result, item):
     logging.debug('systemctl show for ' + item + ':' + value)
     return value
     
-def str_num_values(valstr):
-    if valstr == '':
-        return ''
-    val = int(valstr)
-    if val >= 1099511627776:
-        divisor = 1099511627776
-        qualifier = 'T'
-    elif val >= 1073741824:
-        divisor = 1073741824
-        qualifier = 'G'
-    elif val >= 1048576:
-        divisor = 1048576
-        qualifier = 'M'
-    elif val >= 1024:
-        divisor = 1024
-        qualifier = 'K'
-    else:
-        return valstr
-    if val / divisor < 10:
-        return '%d.%d%s' % (val / divisor, (val / (divisor / 10)) % 10, qualifier)
-    return '%d%s' % (val / divisor, qualifier)
-
-def int_num_values(valstr):
-    if valstr == '' or valstr == '-1':
-        return -1
-    if valstr.isdigit():
-        return int(valstr)
-    if len(valstr) < 2:
-        common.fatal_error('Invalid value specification: %s, must be number optionally followed by T, G, M or K' % valstr)
-    suffix = valstr[len(valstr) - 1].upper()
-    if not suffix.isalpha():
-        suffix = ''
-        prefix = valstr
-    else:
-        prefix = valstr[:len(valstr) - 1]
-    try:
-        pref = float(prefix)
-    except Exception:
-        common.fatal_error('Invalid value specification (prefix): %s, must be number optionally followed by T, G, M or K' % valstr)
-    if suffix == 'T':
-        multiplier = 1099511627776
-    elif suffix == 'G':
-        multiplier = 1073741824
-    elif suffix == 'M':
-        multiplier = 1048576
-    elif suffix == 'K':
-        multiplier = 1024
-    elif suffix == '':
-        multiplier = 1
-    else:
-        common.fatal_error('Invalid value specification (suffix): %s, must be number optionally followed by T, G, M or K' % valstr)
-    fl = pref * multiplier
-    return int(fl)
-
 def get_systemctl_dev_num(result, item):
     val = get_systemctl_item(result, item)
     space = val.find(' ')
     if space == -1:
         return ''
     logging.debug('result %s: %s, val: %s' % (item, val, val[space+1:]))
-    return str_num_values(val[space+1:])
+    return common.str_num_values(val[space+1:])
 
 def get_systemctl_num(result, item):
     val = get_systemctl_item(result, item)
     logging.debug('result %s: %s' % (item, val))
-    return str_num_values(val)
+    return common.str_num_values(val)
 
 def get_systemctl_cpu(result):
     val = get_systemctl_item(result, 'CPUQuotaPerSecUSec')
@@ -211,7 +158,7 @@ def command_list(users):
         users = pwd.getpwall()
         min_uid = common.get_min_uid()
         for listuser in users:
-            if listuser.pw_uid >= min_uid:
+            if listuser.pw_uid >= min_uid and listuser.pw_name != 'nobody':
                 list_user(listuser, dict)
     print(json.dumps(dict, indent=4))
     return 0
@@ -226,11 +173,11 @@ def set_device_parm(args, option, properties):
     if option == common.OPTION_IO:
         title_read = 'IOReadBandwidthMax'
         title_write = 'IOWriteBandwidthMax'
-        val = int_num_values(args.io)
+        val = common.int_num_values(args.io)
     else:
         title_read = 'IOReadIOPSMax'
         title_write = 'IOWriteIOPSMax'
-        val = int_num_values(args.iops)
+        val = common.int_num_values(args.iops)
     for device in devices:
         if val == -1:
             properties.append('%s=' % title_read)
@@ -244,15 +191,15 @@ def set_device_parm(args, option, properties):
 def set_no_device_parm(args, option, properties):
     if option == common.OPTION_CPU:
         title = 'CPUQuota'
-        val = int_num_values(args.cpu)
+        val = common.int_num_values(args.cpu)
         format_set = '%s=%d%%'
     elif option == common.OPTION_MEM:
         title = 'MemoryHigh'
-        val = int_num_values(args.mem)
+        val = common.int_num_values(args.mem)
         format_set = '%s=%d'
     else:
         title = 'TasksMax'
-        val = int_num_values(args.tasks)
+        val = common.int_num_values(args.tasks)
         format_set = '%s=%d'
     if val == -1:
         properties.append('%s=' % title)

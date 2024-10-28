@@ -294,7 +294,11 @@ int ExprToken::addAcl(const char *pBegin, int len)
 {
     assert(m_type == EXP_IPMATCH || m_type == EXP_IPMATCH2);
     if (m_acl == NULL)
+    {
         m_acl = new AccessControl();
+        if (m_acl)
+            m_acl->addList("*", AC_DENY);
+    }
     if (m_acl)
         return m_acl->addList(pBegin, AC_ALLOW);
     return -1;

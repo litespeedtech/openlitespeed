@@ -70,7 +70,7 @@ int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
                size_t *setupOps_size, char **nsconf, char **nsconf2);
 
 void nsopts_free(SetupOp **setupOps);
-void nsopts_free_conf(char **nsconf, char **nsconf2);
+void nsopts_free_conf(char **nsconf2);
 void nsopts_free_all(int *allocated, SetupOp **setupOps, size_t *setupOps_size,
                      char **nsconf, char **nsconf2);
 void nsopts_free_members(SetupOp *setupOps);

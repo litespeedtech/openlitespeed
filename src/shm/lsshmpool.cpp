@@ -1091,12 +1091,27 @@ void LsShmPool::rmFromDataFreeList(LsShmFreeList *pFree)
 
 LsShmOffset_t LsShmPool::getFromFreeList(LsShmSize_t size)
 {
+#define MAX_CNT 100
     LsShmOffset_t offset;
     LShmFreeTop *ap;
+    int cnt = 0;
+    LsShmOffset_t offset_checked[MAX_CNT];
 
     offset = getDataMap()->x_iFreePageList;
-    while (offset != 0)
+    while (offset != 0 && cnt < MAX_CNT)
     {
+        for(int i = 0; i < cnt; ++i)
+        {
+            if (offset_checked[i] == offset)
+            {
+                LS_ERROR("[SHM] [%d-%d:%p] pool free list corruption with duplicates, at "
+                         "offset: %u \n",
+                         s_pid, m_pShm->getfd(), this, offset);
+                abort();
+            }
+        }
+
+        offset_checked[cnt++] = offset;
         ap = (LShmFreeTop *)offset2ptr(offset);
         if (ap->x_iFreeSize >= size)
         {
