@@ -26,7 +26,7 @@
 #include <lsdef.h>
 #include <util/fdpass.h>
 #include <util/stringtool.h>
-
+#include <http/httpserverconfig.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -174,6 +174,7 @@ static pid_t        s_parent;
 static int          s_run = 1;
 static char         s_sDataBuf[16384];
 static int          s_fdControl = -1;
+static int          s_ns_enabled = 0;
 
 
 static void log_cgi_error(const char *func, const char *arg,
@@ -611,6 +612,7 @@ static int execute_cgi(lscgid_t *pCGI)
 #endif
 
 #if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+    if (s_ns_enabled && pCGI->m_ns)
     {
         int rc = 0, done = 0;
         rc = ns_exec_ols(pCGI, &done);
@@ -830,6 +832,12 @@ static int process_req_data(lscgid_t *cgi_req)
                 --i;
                 --cgi_req->m_data.m_nenv;
                 cgi_req->m_cgroup = strtol(p + 10, NULL, 10);
+            }
+            else if (strncasecmp(p, "LS_NS=", LS_NS_LEN + 1) == 0)
+            {
+                --i;
+                --cgi_req->m_data.m_nenv;
+                cgi_req->m_ns = strtol(p + LS_NS_LEN + 1, NULL, 10);
             }
         }
         p += len;
@@ -1166,6 +1174,7 @@ int lscgid_main(int fd, char *argv0, const char *secret, char *pSock)
             init_lve();
 
     }
+    s_ns_enabled = HttpServerConfig::getInstance().getNS();
 #endif
 
 #endif
