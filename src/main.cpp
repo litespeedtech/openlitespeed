@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <new>
 
 
 //#define WANT_LSAN 1
@@ -57,7 +58,7 @@ extern "C" int __lsan_is_turned_off() { return ls_lsan_off; }
 static LshttpdMain *s_pLshttpd = NULL;
 int main(int argc, char *argv[])
 {
-    s_pLshttpd = new LshttpdMain();
+    s_pLshttpd = new (std::nothrow) LshttpdMain();
     if (!s_pLshttpd)
     {
         perror("new LshttpdMain()");
