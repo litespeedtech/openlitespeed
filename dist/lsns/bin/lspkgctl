@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import common
+import errno
 import json
 import logging
 import os
@@ -8,13 +9,14 @@ import pwd
 import re
 import subprocess
 import sys
+import time
 import glob
 
 from stat import *
-from xml.dom.minidom import parse, parseString, Node
+from subprocess import PIPE
 
 def command_requires_pkg(command):
-    return command in ['default', 'list', 'set', 'set-force', 'unset', 'unset-force', 'validate']
+    return command in ['default', 'list', 'set', 'set-force', 'validate']
 
 def validate_environment():
     if os.getuid() != 0:
@@ -26,14 +28,15 @@ def init_pgm():
     parser = argparse.ArgumentParser(prog="lspkgctl",
                                      description='LiteSpeed Packages Control Program')
     parser.add_argument("command", type=str, help="The packages command", 
-                        choices=['default', 'list', 'list-all', 'set', 'set-force', 'unset', 'unset-force', 'validate', 'validate-all', 'version'])
-    parser.add_argument("pkg", type=str, nargs='?', default=None, help="package name")
+                        choices=['default', 'list', 'list-all', 'set', 'set-force', 'validate', 'validate-all', 'version'])
+    parser.add_argument("pkg", type=str, nargs='*', default=None, help="package name")
     parser.add_argument("--cpu", type=str, help="limit CPU access.  Specify a percentage of a complete core, 100 is 1 complete core.  Default is no limit (-1).")
     parser.add_argument("--io", type=str, help="limit I/O access.  Specify in bytes/sec.  Default is no limit (-1).")
     parser.add_argument("--iops", type=str, help="limit I/O access.  Specify in IOs per second.  Default is no limit (-1).")
     parser.add_argument('-l', '--log', type=int, help='set logging level, 10=Debug, 20=Info, 30=Warning, 40=Error.  Default is Info')
     parser.add_argument("--mem", type=str, help="limit virtual memory access.  Specify in bytes.  Default is no limit (-1).")
     parser.add_argument('-q', '--quiet', action='store_true', help='turns off all logging and only outputs what is requested.')
+    parser.add_argument('-s', '--sleep', type=int, default=0, help="number of seconds to pause.  Should only be used when running in the background")
     parser.add_argument("--tasks", type=str, help="limit number of tasks.  Specify a maximum count of tasks that can be started.")
     args = parser.parse_args()
     if not args.quiet or args.log != None:
@@ -55,32 +58,42 @@ def init_pgm():
         sys.exit(0)
     if (command.startswith('set')) and (args.cpu == None and args.io == None and args.iops == None and args.mem == None and args.tasks == None):
         common.fatal_error("You specified command: %s and no qualifier to set with it" % command)
+    if (args.sleep > 0):
+        time.sleep(args.sleep)
     return args
 
 def run_program(args, fail_reason = ""):
     logging.debug('run: ' + str(args))
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = subprocess.run(args, stdout=PIPE, stderr=PIPE)
     if fail_reason != "" and result.returncode == 0:
         common.fatal_error('Expected: ' + args[0] + ' to fail: ' + fail_reason)
     if fail_reason == "" and result.returncode != 0:
-        common.fatal_error('Error in running: ' + args[0] + ' errors: ' + result.stdout + ' ' + result.stderr)
-    return result.stdout
+        common.fatal_error('Error in running: ' + args[0] + ' errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
+    return result.stdout.decode('utf-8')
+
+def initialized_pkg():
+    pkg_json = {}
+    pkg_json['uids'] = []
+    return pkg_json
 
 def read_pkg(pkg):
     try:
         f = open(common.pkg_to_filename(pkg), 'r', encoding="utf-8")
-    except Exception as err:
-        logging.warning('Error opening %s: %s - reinitializing' % (common.pkg_to_filename(pkg), err))
-        return initialize_pkg(pkg, None)
+    except OSError as err:
+        if err.errno == errno.ENOENT:
+            logging.debug('File not found: %s' % common.pkg_to_filename(pkg))
+            return initialized_pkg()
+        logging.warning('Error opening %s: %s - reinitializing' % (common.pkg_to_filename(pkg), err.strerror))
+        return initialized_pkg()
     try:
         pkg_json = json.load(f)
     except Exception as err:
         logging.warning('Error reading %s: %s - reinitialzing' % (common.pkg_to_filename(pkg), err))
-        return initialize_pkg(pkg, None)
+        return initialized_pkg()
     finally:
         f.close()
     if not 'uids' in pkg_json:
-        common.fatal_error("Missing uids in package: %s" % pkg)
+        pkg_json['uids'] = []
     pkg_json['uids'].sort()
     return pkg_json
 
@@ -91,7 +104,8 @@ def list_pkg(pkg):
 def command_list(args, single_list=False):
     pkg_obj = {}
     if single_list or args.command == 'list':
-        pkg_obj[args.pkg] = list_pkg(args.pkg)
+        for pkg in args.pkg:
+            pkg_obj[pkg] = list_pkg(pkg)
     else:
         pkgs = glob.glob(common.pkg_to_filename('*'))
         for f in pkgs:
@@ -128,10 +142,14 @@ def read_pleskplans():
         pat = re.compile( r'\|\s(.*?)\s{1,}\|')
         matches = []
         pos = 0
-        while (match := pat.search(line, pos)) is not None:
-            logging.debug('Appending: %s in %s' % (match[1], line))
-            pos = match.start() + 1
-            matches.append(match[1])
+        while pos < len(line):
+            match = pat.search(line, pos)
+            if match:
+                logging.debug('Appending: %s in %s' % (match[1], line))
+                pos = match.start() + 1
+                matches.append(match[1])
+            else:
+                break
         if len(matches) != 3:
             for match in matches:
                 logging.debug(match)
@@ -146,7 +164,7 @@ def read_pleskplans():
         plans[plan].append(user.pw_uid)
     return plans
 
-def read_userplans():
+def read_usersplans():
     if common.get_plesk():
         return read_pleskplans()
     plans = {}
@@ -155,7 +173,7 @@ def read_userplans():
         if os.path.isfile(planfile):
             plan = os.path.basename(planfile)
             plans[plan] = []
-            logging.info("Add package: %s" % plan)
+            logging.debug("Check package: %s" % plan)
     try:
         f = open('/etc/userplans', 'r', encoding="utf-8")
     except Exception as err:
@@ -178,38 +196,37 @@ def read_userplans():
     f.close()
     return plans
     
-def option_default(opt, pkg_json):
-    if opt in pkg_json and pkg_json[opt] != -1:
+def set_users_to_pkg(opt, users, users_vals, org_pkg, pkg_json, force, args_dict):
+    if args_dict != None and not opt in args_dict:
         return False
-    return True
-
-def pkg_json_defaults(pkg_json):
-    for opt in common.get_options():
-        if not option_default(opt, pkg_json):
-            return False
-    return True
-
-def set_users_to_pkg(users, pkg_json):
-    defaults = True
-    args = [common.get_bin_file('lscgctl')]    
-    for opt in common.get_options():
-        if not option_default(opt, pkg_json):
-            args.append('--%s' % opt)
-            args.append(pkg_json[opt])
-            defaults = False
-        else:
-            args.append('--%s' % opt)
-            args.append('-1')
-    if defaults:
-        args.append('unlimited')
+    pkg_jsonInfinite = arrInfinite(opt, pkg_json)
+    if pkg_jsonInfinite:
+        cgval = '-1'
     else:
-        args.append('set')
-    if len(users) == 0:
-        logging.debug("Do not set users and none to set")
-        return
+        cgval = pkg_json[opt]
+    args = [common.get_bin_file('lscgctl'), '--' + opt, cgval, 'set']    
+    found_diff = False
     for user in users:
+        if not user in pkg_json['uids']:
+            do_force = True
+        else:
+            do_force = force
+        if not do_force and not opt_val_eq(opt, users_vals[str(user)], org_pkg):
+            if not opt in org_pkg or not opt in users_vals[str(user)]:
+                logging.debug('Skip opt %s for %s (not force)' % (opt, str(user)))
+            else:
+                logging.debug('Skip opt %s for %s (not force: %s != %s)' % (opt, str(user), users_vals[str(user)][opt], org_pkg[opt]))
+            continue
+        if opt_val_eq(opt, users_vals[str(user)], pkg_json):
+            logging.debug('Skip opt %s for %s (already value)' % (opt, str(user)))
+            continue
+        logging.debug('Use opt %s for user %s' % (opt, str(user)))
+        found_diff = True
         args.append(str(user))
+    if not found_diff:
+        return False
     run_program(args)
+    return True
 
 def write_pkg(pkg, pkg_json):
     logging.debug('Write pkg: %s as %s' % (pkg, common.pkg_to_filename(pkg)))
@@ -217,139 +234,116 @@ def write_pkg(pkg, pkg_json):
         f = open(common.pkg_to_filename(pkg), 'w', encoding="utf-8")
     except Exception as err:
         common.fatal_error('Error opening %s for write: %s' % (common.pkg_to_filename(pkg), err))
+    for opt in common.get_options():
+        if opt in pkg_json and arrInfinite(opt, pkg_json):
+            del pkg_json[opt]
     try:
         f.write(json.dumps(pkg_json, indent=4))
     except Exception as err:
         common.fatal_error('Error writing %s: %s' % (common.pkg_to_filename(pkg), err))
     f.close()
     
-def revalidate_pkg(pkg, users, pkg_json):
-    rewrite_json = False
-    for user in users:
-        if not user in pkg_json['uids']:
-            logging.info("Add user: %s to package: %s" % (user, pkg))
-            pkg_json['uids'].append(user)
-            rewrite_json = True
-    if rewrite_json:
-        set_users_to_pkg(users, pkg_json)
-    for uid in pkg_json['uids']:
-        if not uid in users:
-            logging.info("Remove user: %s from package: %s" % (uid, pkg))
-            pkg_json['uids'].remove(uid)
-            rewrite_json = True
-    if rewrite_json:
+def revalidate_pkg(pkg, users, users_vals, org_pkg, pkg_json, force, args_dict):
+    logging.debug("revalidate_pkg")
+    test_users = []
+    if force:
+        test_users = users
+    else:
+        for user in users:
+            if not str(user) in pkg_json['uids']:
+                test_users.append(user)
+    updated = False
+    for opt in common.get_options():
+        if set_users_to_pkg(opt, test_users, users_vals, org_pkg, pkg_json, force, args_dict):
+            updated = True
+    if not updated:
+        if set(users) != set(pkg_json['uids']):
+            updated = True
+            logging.debug("Changed users, so update pkg")
+    if updated or org_pkg != pkg_json:
+        pkg_json['uids'] = users
         write_pkg(pkg, pkg_json)
-    return pkg_json
 
-def initialize_pkg(pkg, users):
-    if users is None:
-        plans = read_userplans()
-        users = plans[pkg]
-    pkg_json = {}
-    if len(users) == 0:
-        return
-    pkg_json['uids'] = []
-    for user in users:
-        pkg_json['uids'].append(user)
-    write_pkg(pkg, pkg_json)
-    return pkg_json
-
-def validate_pkg(pkg, users):
-    if users is None:
-        plans = read_userplans()
-        users = plans[pkg]
-    if os.path.isfile(common.pkg_to_filename(pkg)):
-        pkg_json = read_pkg(pkg)
-        pkg_json = revalidate_pkg(pkg, users, pkg_json)
-    else:
-        pkg_json = initialize_pkg(pkg, users)
-    return pkg_json
+def validate_pkg(pkg, users_vals, users):
+    pkg_json = read_pkg(pkg)
+    revalidate_pkg(pkg, users, users_vals, pkg_json, pkg_json, False, None)
     
-def command_validate(args):
-    plans = read_userplans()
+def command_validate(args, users_vals, usersplans):
     if args.command == 'validate-all' or args.command == 'list-all':
-        for plan in plans:
-            plans[plan] = validate_pkg(plan, plans[plan])
+        for pkg in usersplans:
+            validate_pkg(pkg, users_vals, usersplans[pkg])
     else:
-        if not args.pkg in plans:
-            common.fatal_error("You specified package %s and it doesn't exist" % args.pkg)
-        plans[args.pkg] = validate_pkg(args.pkg, plans[args.pkg])
-    return 0
+        for pkg in args.pkg:
+            if not pkg in usersplans:
+                common.fatal_error("Specified package: %s not found" % pkg)
+            validate_pkg(pkg, users_vals, usersplans[pkg])
+
+def arrInfinite(opt, arr):
+    return (not opt in arr) or arr[opt] == None or arr[opt] == '' or arr[opt] == '-1'
+
+def opt_val_eq(opt, arr1, arr2):
+    arr1Infinite = arrInfinite(opt, arr1)
+    arr2Infinite = arrInfinite(opt, arr2)
+    if arr1Infinite or arr2Infinite:
+        return arr1Infinite == arr2Infinite
+    return common.str_num_values(common.int_num_values(arr1[opt])) == common.str_num_values(common.int_num_values(arr2[opt]))
 
 def set_json(args, pkg_json):
     changed = False
     args_dict = vars(args)
     logging.debug('In set_json')
     for opt in common.get_options():
-        if args_dict[opt] != None:
-            logging.debug('Arg %s = %s' % (opt, args_dict[opt]))
-            if not opt in pkg_json or pkg_json[opt] != args_dict[opt]:
+        if not opt_val_eq(opt, args_dict, pkg_json):
+            if opt in args_dict and args_dict[opt] != None:
                 pkg_json[opt] = args_dict[opt]
                 changed = True
             else:
-                logging.debug('   not changed')
-        elif opt in pkg_json:
-            logging.debug('   delete it, if there')
-            if opt in pkg_json:
-                del pkg_json[opt]
-                logging.debug('   deleted')
-            changed = True
+                logging.debug('   not set ' + opt)
         else:
-            logging.debug('Arg %s not specified' % (opt))
-
+            logging.debug('   equal ' + opt)
     if not changed:
-        return False
-    return True
+        logging.debug('set_json nothing changed')
+    return changed
 
-def get_defaults_users(pkg_json):
+def get_users_vals():
     pgm_args = [common.get_bin_file('lscgctl'), 'list-all', 'q']    
     out = run_program(pgm_args)
     try:
-        users_json = json.loads(out)
+        users_vals = json.loads(out)
     except Exception as err:
         common.fatal_error('Error parsing user details: %s' % err)
-    defaults_users = []
-    logging.debug('get_defaults_users for package')
-    for user in pkg_json['uids']:
-        if str(user) in users_json:
-            user_ok = True
-            user_opts = users_json[str(user)]
-            for opt in common.get_options():
-                if user_opts.get(opt) != pkg_json.get(opt) and \
-                   (user_opts.get(opt) != '' or pkg_json.get(opt) != None) and \
-                   (pkg_json.get(opt) == None or user_opts.get(opt).lower() != pkg_json.get(opt).lower()):
-                    logging.debug('For user: %s opt %s different, %s != %s' % (str(user), opt, user_opts.get(opt), pkg_json.get(opt)))
-                    user_ok = False
-                    break
-            if not user_ok:
-                continue
-            logging.debug('Add user %s' % str(user))
-            defaults_users.append(user)
-    return defaults_users
+    return users_vals
 
-def command_set(args):
-    pkg_json = read_pkg(args.pkg)
+def deep_copy(pkg):
+    copy = {}
+    for opt in common.get_options():
+        if opt in pkg:
+            copy[opt] = pkg[opt]
+    return copy
+
+def command_set(args, users_vals, usersplans):
+    all_users = False
     if 'force' in args.command or 'default' == args.command:
-        uids = pkg_json['uids']
-    else:
-        uids = get_defaults_users(pkg_json)
-    if 'set' in args.command:
-        if not set_json(args, pkg_json):
-            return 0
-        write_pkg(args.pkg, pkg_json)
-    set_users_to_pkg(uids, pkg_json)
+        all_users = True
+    for pkg in args.pkg:
+        pkg_json = read_pkg(pkg)
+        org_pkg = deep_copy(pkg_json)
+        if 'set' in args.command:
+            if not set_json(args, pkg_json) and not all_users:
+                continue
+        revalidate_pkg(pkg, usersplans[pkg], users_vals, org_pkg, pkg_json, all_users, vars(args))
     return 0
 
 def do_pgm(args):
     logging.debug("Entering lspkgctl, command: %s" % args.command)
+    users_vals = get_users_vals()
+    usersplans = read_usersplans()
     if 'validate' in args.command or 'list' in args.command:
-        ret = command_validate(args)
+        ret = command_validate(args, users_vals, usersplans)
         if 'list' in args.command:
             ret = command_list(args)
     elif 'set' in args.command or 'default' in args.command:
-        ret = command_set(args)
-    elif 'unset' in args.command:
-        ret = command_set(args)
+        ret = command_set(args, users_vals, usersplans)
     else:
         common.fatal_error('Unexpected command: %s' % args.command)
     logging.debug("Exiting lspkgctl")

@@ -27,7 +27,7 @@ def init_pgm():
     validate_environment()
     if args.uid == None or len(args.uid) == 0:
         args.uid = slice_of()
-    users = common.get_users(args.uid)
+    users = common.get_users(args.uid, True)
     return users
 
 def read_stat(file, pos):

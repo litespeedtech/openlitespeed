@@ -41,6 +41,7 @@ typedef struct
     int         m_fdReceived;
     char        m_bwrap;
     char        m_cgroup;
+    char        m_ns;
 
 } lscgid_t;
 

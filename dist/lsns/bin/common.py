@@ -1,5 +1,6 @@
 import json, logging, os, pwd, subprocess, sys
 from stat import *
+from subprocess import PIPE
 
 VERSION='0.0.1'
 
@@ -11,13 +12,17 @@ OPTION_TASKS=4
 
 this = sys.modules[__name__]
 this.logged = None
+this.serverRoot = '/usr/local/lsws'
 
 def init_logging():
     logging.basicConfig(format="%(asctime)s.%(msecs)03d" + " [%(levelname)s] %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S")
     
 def server_root():
-    return '/usr/local/lsws'
+    return this.serverRoot
+
+def set_server_root(root):
+    this.serverRoot = root
 
 def get_conf_file(fileonly):
     return server_root() + "/lsns/conf/" + fileonly
@@ -32,25 +37,36 @@ def fatal_error(msg):
 def get_options():
     return ['cpu', 'io', 'iops', 'mem', 'tasks']
 
-def get_user(param):
+def get_user(param, no_fatal=False):
     if param.isdigit():
         try:
             user_info = pwd.getpwuid(int(param))
         except Exception as err:
-            fatal_error('Error getting UID for %s: %s' % (param, err))
+            if not no_fatal:
+                fatal_error('Error getting UID for %s: %s' % (param, err))
+            logging.debug('Error getting UID for %s: %s' % (param, err))
+            return None, False
     else:
         try:
             user_info = pwd.getpwnam(param)
         except Exception as err:
-            fatal_error('Error getting UID for %s: %s' % (param, err))
+            if not no_fatal:
+                fatal_error('Error getting name for %s: %s' % (param, err))
+            logging.debug('Error getting name for %s: %s' % (param, err))
+            return None, False
     if user_info.pw_uid < get_min_uid():
-        fatal_error('Specified uid: %d < minimum uid: %d' % (user_info.pw_uid, get_min_uid()))
-    return user_info
+        if not no_fatal:
+            fatal_error('Specified uid: %d < minimum uid: %d' % (user_info.pw_uid, get_min_uid()))
+        logging.debug('Specified uid: %d < minimum uid: %d' % (user_info.pw_uid, get_min_uid()))
+        return None, False
+    return user_info, True
 
-def get_users(uids):
+def get_users(uids, no_fatal=False):
     users = []
     for uid in uids:
-        users.append(get_user(uid))
+        user_info, got = get_user(uid, no_fatal)
+        if got:
+            users.append(user_info)
     return users
 
 def get_plesk():
@@ -114,9 +130,9 @@ def ls_ok():
 
 def touch_restart_external(file, desc):
     logging.debug("restart_external %s by touch: %s" % (desc, file))
-    result = subprocess.run(['touch', file], capture_output=True, text=True)
+    result = subprocess.run(['touch', file], stdout=PIPE, stderr=PIPE)
     if result.returncode != 0:
-        fatal_error('Error in running: touch, errors: ' + result.stdout + ' ' + result.stderr)
+        fatal_error('Error in running: touch, errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
 
 def restart_external(users, all):
     users_used = {}
@@ -177,4 +193,64 @@ def get_devices():
         block_devices[major][minor] = device
     logging.debug('Final devices: ' + str(devices) + ' Block Devices: ' + str(block_devices))
     return devices, block_devices
+
+def str_num_values(valstr):
+    if valstr == '':
+        return ''
+    val = float(valstr)
+    if val >= 1099511627776:
+        divisor = 1099511627776
+        qualifier = 'T'
+    elif val >= 1073741824:
+        divisor = 1073741824
+        qualifier = 'G'
+    elif val >= 1048576:
+        divisor = 1048576
+        qualifier = 'M'
+    elif val >= 1024:
+        divisor = 1024
+        qualifier = 'K'
+    else:
+        return valstr
+    if round(val / divisor) < 10:
+        str_num = '%d.%d%s' % (val / divisor, int(round((val / (divisor / 10)) % 10)), qualifier)
+    else:
+        str_num = '%d%s' % (val / divisor, qualifier)
+    if str(int_num_values(str_num)) == valstr:
+        return str_num
+    logging.debug("%s != %s use %s" % (str(int_num_values(str_num)), valstr, valstr))
+    return valstr
+
+def int_num_values(valstr):
+    if valstr == '' or valstr == '-1':
+        return -1
+    if valstr.isdigit():
+        return int(valstr)
+    if len(valstr) < 2:
+        fatal_error('Invalid value specification: %s, must be number optionally followed by T, G, M or K' % valstr)
+    suffix = valstr[len(valstr) - 1].upper()
+    if not suffix.isalpha():
+        suffix = ''
+        prefix = valstr
+    else:
+        prefix = valstr[:len(valstr) - 1]
+    try:
+        pref = float(prefix)
+    except Exception:
+        fatal_error('Invalid value specification (prefix): %s, must be number optionally followed by T, G, M or K' % valstr)
+    if suffix == 'T':
+        multiplier = 1099511627776
+    elif suffix == 'G':
+        multiplier = 1073741824
+    elif suffix == 'M':
+        multiplier = 1048576
+    elif suffix == 'K':
+        multiplier = 1024
+    elif suffix == '':
+        multiplier = 1
+    else:
+        fatal_error('Invalid value specification (suffix): %s, must be number optionally followed by T, G, M or K' % valstr)
+    logging.debug("int_num %s, %f * %f = %d" % (valstr, pref, multiplier, (int)(pref * multiplier)))
+    fl = pref * multiplier
+    return int(fl)
 

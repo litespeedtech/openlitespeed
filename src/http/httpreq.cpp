@@ -1866,8 +1866,8 @@ int HttpReq::contextRedirect(const HttpContext *pContext, int destLen)
 static const char *findSuffix(const char *pBegin, const char *pEnd)
 {
     const char *pCur = pEnd;
-    if (pBegin < pEnd - 16)
-        pBegin = pEnd - 16;
+    if (pBegin < pEnd - 32)
+        pBegin = pEnd - 32;
     while (pCur > pBegin)
     {
         char ch = *(pCur - 1);

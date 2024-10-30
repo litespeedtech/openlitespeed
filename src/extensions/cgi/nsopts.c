@@ -100,13 +100,8 @@ void nsopts_free(SetupOp **pSetupOps)
 }
 
 
-void nsopts_free_conf(char **nsconf, char **nsconf2)
+void nsopts_free_conf(char **nsconf2)
 {
-    if (nsconf && *nsconf)
-    {
-        free(*nsconf);
-        *nsconf = NULL;
-    }
     if (nsconf2 && *nsconf2)
     {
         free(*nsconf2);
@@ -119,7 +114,7 @@ void nsopts_free_all(int *allocated, SetupOp **setupOps, size_t *setupOps_size,
                      char **nsconf, char **nsconf2)
 {
     nsopts_free(setupOps);
-    nsopts_free_conf(nsconf, nsconf2);
+    nsopts_free_conf(nsconf2);
     *allocated = 0;
     *setupOps_size = 0;
 }
@@ -805,38 +800,28 @@ static int nsopts_parse(const char *nsopts, int *count,
 }
 
 
-static int nsopts_init(lscgid_t *pCGI, char **nsconf, char **nsconf2)
+static int nsopts_init(lscgid_t *pCGI, char **nsconf2)
 {
-    int i;
-    char *nsconfl = NULL, *nsconf2l = NULL;
+    char *nsconf2l = NULL;
     DEBUG_MESSAGE("nsopts_init()\n");
-    for (i = 0; i < 2; ++i)
-    {
-        const char *envname = i ? LS_NS_CONF2 : LS_NS_CONF;
-        char **res = i ? &nsconf2l : &nsconfl;
-        *res = ns_getenv(pCGI, envname);
-        //unsetenv(envname);
-        DEBUG_MESSAGE("%s set to %s\n", envname, *res);
+
+    nsconf2l = ns_getenv(pCGI, LS_NS_CONF2);
+    if (nsconf2l) {
+        DEBUG_MESSAGE("nsconf2: %s\n", nsconf2l);
     }
-    if (((!nsconfl && !*nsconf) || (nsconfl && *nsconf && !strcmp(nsconfl, *nsconf))) &&
-        ((!nsconf2l && !*nsconf2) || (nsconf2l && *nsconf2 && !strcmp(nsconf2l, *nsconf2))))
+    if ((!nsconf2l && !*nsconf2) || (nsconf2l && *nsconf2 && !strcmp(nsconf2l, *nsconf2)))
     {
         DEBUG_MESSAGE("Allocated opts match requested opts, use them\n");
         return 0;
     }
-    nsopts_free_conf(nsconf, nsconf2);
-    for (i = 0; i < 2; ++i)
+    nsopts_free_conf(nsconf2);
+    if (nsconf2l)
     {
-        char *val = i ? nsconf2l : nsconfl;
-        char **res = i ? nsconf2 : nsconf;
-        if (val)
+        *nsconf2 = strdup(nsconf2l);
+        if (!*nsconf2)
         {
-            *res = strdup(val);
-            if (!*res)
-            {
-                ls_stderr("Namespace unable to allocate option name memory: %s\n", val);
-                return DEFAULT_ERR_RC;
-            }
+            ls_stderr("Namespace unable to allocate option name memory: %s\n", nsconf2l);
+            return DEFAULT_ERR_RC;
         }
     }
     return 0;
@@ -867,7 +852,7 @@ int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
 {
     int i, rc = 0, count = 0;
     DEBUG_MESSAGE("nsopts_get(%sallocated)\n", *allocated ? "" : "NOT ");
-    rc = nsopts_init(pCGI, nsconf, nsconf2);
+    rc = nsopts_init(pCGI, nsconf2);
     if (rc)
         return rc;
     nsopts_free_all(allocated, setupOps, setupOps_size, NULL, NULL);
@@ -879,6 +864,7 @@ int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
     for (i = 0; i < 2; ++i)
     {
         const char *env = i ? *nsconf2 : *nsconf;
+        DEBUG_MESSAGE("nsopts_get(%sallocated), i: %d, env: %p\n", *allocated ? "" : "NOT ", i, env);
         if (!env)
         {
             if (i == 0)
