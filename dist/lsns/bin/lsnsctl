@@ -195,7 +195,7 @@ def command_unmount(args, user):
         print(result.stdout.decode('utf-8'))
         print(result.stderr.decode('utf-8'))
     if args.command == 'unmount-all':
-        common.restart_external(None, True)
+        common.restart_external([], True)
     else:
         common.restart_external([user], False)
 

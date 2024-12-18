@@ -139,7 +139,11 @@ public:
     }
 
     LsShmXSize_t shmMaxSize() const {   return m_iMaxShmSize;   }
-    LsShmXSize_t maxSize() const    {   return x_pStats->m_iFileSize;   }
+    LsShmXSize_t getMapFileSize() const
+    {   return ls_atomic_value(&x_pStats->m_iFileSize);         }
+    LsShmXSize_t getUsedSize() const
+    {   return ls_atomic_value(&x_pStats->m_iUsedSize);         }
+
     LsShmXSize_t oldMaxSize() const {   return m_iMaxSizeO;     }
     const char *fileName() const    {   return m_pFileName;     }
     const char *mapName() const     {   return obj.m_pName;      }
@@ -185,8 +189,9 @@ public:
     }
 
     LsShmXSize_t avail() const
-    {   return (x_pStats->m_iFileSize > x_pStats->m_iUsedSize)
-                ? x_pStats->m_iFileSize - x_pStats->m_iUsedSize : 0;   }
+    {   LsShmXSize_t file_size = getMapFileSize();
+        LsShmXSize_t used = getUsedSize();
+        return (file_size > used) ? file_size - used : 0;   }
 
     LsShmStatus_t status() const        {   return m_status;    }
 
@@ -215,7 +220,7 @@ public:
     
     ls_attr_inline LsShmStatus_t chkRemap()
     {
-        return (x_pStats->m_iFileSize == m_iMaxSizeO) ? LSSHM_OK : remap();
+        return (getMapFileSize() == m_iMaxSizeO) ? LSSHM_OK : remap();
     }
 
     LsShmStatus_t remap();
@@ -279,8 +284,8 @@ private:
 
     void used(LsShmSize_t size)
     {
-        assert(x_pStats->m_iFileSize >= x_pStats->m_iUsedSize + size);
-        x_pStats->m_iUsedSize += size;
+        assert(getMapFileSize() >= getUsedSize() + size);
+        ls_atomic_add(&x_pStats->m_iUsedSize, size);
     }
 
     LsShmStatus_t   mapAddrMap(LsShmXSize_t size);

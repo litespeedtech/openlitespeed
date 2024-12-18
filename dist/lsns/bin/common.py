@@ -13,6 +13,7 @@ OPTION_TASKS=4
 this = sys.modules[__name__]
 this.logged = None
 this.serverRoot = '/usr/local/lsws'
+this.min_uid = 0
 
 def init_logging():
     logging.basicConfig(format="%(asctime)s.%(msecs)03d" + " [%(levelname)s] %(message)s",
@@ -80,6 +81,8 @@ def get_def_min_uid():
     return 1000
 
 def get_min_uid():
+    if this.min_uid != 0:
+        return this.min_uid
     fullfile = get_conf_file('lsns.conf')
     try:
         f = open(fullfile, 'r')
@@ -87,7 +90,8 @@ def get_min_uid():
         if this.logged is None:
             logging.info('Error opening %s: %s, continuing with default min uid %d' % (fullfile, err, get_def_min_uid()))
             this.logged = True
-        return get_def_min_uid()
+        this.min_uid = get_def_min_uid()
+        return this.min_uid
     try:
         uidstr = f.readline()
     except Exception as err:
@@ -96,8 +100,9 @@ def get_min_uid():
             this.logged = True
         uidstr = str(get_def_min_uid())
     f.close()
-    logging.debug('Using min uid: %d' % int(uidstr))
-    return int(uidstr)
+    this.min_uid = int(uidstr)
+    logging.debug('Using min uid: %d' % this.min_uid)
+    return this.min_uid
 
 def container_file():
     return server_root() + "/lsns/conf/lscntr.txt"

@@ -141,7 +141,7 @@ public:
     {   m_iAutoLock = 0; }
 
     ls_attr_inline LsShmSize_t getShmMapMaxSize() const
-    {   return m_pShm->maxSize(); }
+    {   return m_pShm->getMapFileSize(); }
 
     LsShmOffset_t getPoolMapStatOffset() const;
 

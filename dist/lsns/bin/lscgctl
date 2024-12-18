@@ -144,7 +144,7 @@ def list_user(user, dict):
     subdict['cpu'] = get_systemctl_cpu(systemctl_results)
     subdict['io'] = get_systemctl_dev_num(systemctl_results, 'IOReadBandwidthMax')
     subdict['iops'] = get_systemctl_dev_num(systemctl_results, 'IOReadIOPSMax')
-    subdict['mem'] = get_systemctl_num(systemctl_results, "MemoryHigh")
+    subdict['mem'] = get_systemctl_num(systemctl_results, "MemoryMax")
     subdict['tasks'] = get_systemctl_num(systemctl_results, 'TasksMax')
     logging.debug("uid[" + str(user.pw_uid) + ']: ' + str(subdict))
     dict[user.pw_uid] = subdict
@@ -194,7 +194,7 @@ def set_no_device_parm(args, option, properties):
         val = common.int_num_values(args.cpu)
         format_set = '%s=%d%%'
     elif option == common.OPTION_MEM:
-        title = 'MemoryHigh'
+        title = 'MemoryMax'
         val = common.int_num_values(args.mem)
         format_set = '%s=%d'
     else:
@@ -205,6 +205,9 @@ def set_no_device_parm(args, option, properties):
         properties.append('%s=' % title)
     else:
         properties.append(format_set % (title, val))
+    if option == common.OPTION_MEM:
+        properties.append('MemoryHigh=')
+
     
 def reset_user(args, user, reload):
     args.cpu = '-1'
