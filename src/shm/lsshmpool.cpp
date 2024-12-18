@@ -1246,7 +1246,7 @@ bool LsShmPool::isFreeBlockBelow(
     LsShmOffset_t offset, LsShmSize_t size, int joinFlag)
 {
     LsShmOffset_t belowOffset = offset + size;
-    if (belowOffset >= m_pShm->maxSize())
+    if (belowOffset >= m_pShm->getMapFileSize())
         return false;
 
     LShmFreeTop *ap = (LShmFreeTop *)offset2ptr(belowOffset);

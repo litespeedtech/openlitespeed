@@ -129,13 +129,16 @@ def plesk_home_dict():
 def read_pleskplans():
     home_dict = plesk_home_dict()
     plans = {}
+    # Thanks to Stas Karpinsky of vangus.co.il for correcting the SQL!
     plan_lines = run_program(['plesk', 'db', \
-                              "SELECT sys_users.login, sys_users.home, " + \
-                                "Templates.name from sys_users join " +  
-                                "PlansSubscriptions on " + 
-                                "PlansSubscriptions.subscription_id = sys_users.id " + 
-                                "join Templates on " + 
-                                "PlansSubscriptions.plan_id = Templates.id"])
+                              "select sys_users.login, sys_users.home, " + \
+                                "Templates.name from sys_users " +  \
+                                "join hosting on sys_users.id = hosting.sys_user_id " + \
+                                "join domains on hosting.dom_id = domains.id " + \
+                                "join Subscriptions on domains.id = Subscriptions.object_id " + \
+                                "and Subscriptions.object_type = 'domain' " + \
+                                "join PlansSubscriptions on Subscriptions.id = PlansSubscriptions.subscription_id " + \
+                                "join Templates on PlansSubscriptions.plan_id = Templates.id"])
     for line in plan_lines.splitlines():
         if line.startswith('+-') or line.startswith('| login'):
             continue

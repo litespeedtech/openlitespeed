@@ -78,7 +78,8 @@ int H2Stream::onPeerShutdown()
         if (((H2Connection *)m_pH2Conn)->assignStreamHandler(this) == LS_FAIL)
             return LS_FAIL;
     }
-    if (getHandler()->detectContentLenMismatch(m_bufRcvd.size()))
+    if (getHandler()
+        && getHandler()->detectContentLenMismatch(m_bufRcvd.size()))
         return LS_FAIL;
     return LS_OK;
 }
