@@ -570,7 +570,7 @@ int AuthRequired::parse(const char *pRequired)
     {
         m_pRequired = new StringList();
         int size = m_pRequired->split(pRequired, pEnd, " ,");
-        if (size > 1)
+        if (m_pRequired->size() > 1 && size > 0)
             m_pRequired->sort();
     }
     return 0;

@@ -40,6 +40,7 @@ GSockAddr::GSockAddr(const GSockAddr &rhs)
     *this = rhs;
 }
 
+
 GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
 {
     if ((!m_pSockAddr) || (m_pSockAddr->sa_family != rhs.sa_family))
@@ -48,6 +49,7 @@ GSockAddr &GSockAddr::operator=(const struct sockaddr &rhs)
         memmove(m_pSockAddr, &rhs, m_len);
     return *this;
 }
+
 
 static int sockAddrLen(int family)
 {
@@ -68,8 +70,6 @@ static int sockAddrLen(int family)
 }
 
 
-
-
 int GSockAddr::allocate(int family)
 {
     if (m_pSockAddr)
@@ -86,6 +86,7 @@ int GSockAddr::allocate(int family)
     else
         return -1;
 }
+
 
 void GSockAddr::release()
 {
@@ -277,7 +278,7 @@ int GSockAddr::set2(int family, const char *pURL, int tag, char *pDest)
     pDest[ 127 ] = 0;
 
     p = &pDest[strlen(pDest)];
-    while (isdigit(p[-1]))
+    while (p > pDest && isdigit(p[-1]))
         --p;
     if (*(p - 1) != ':')
         p = NULL;
@@ -449,7 +450,6 @@ int GSockAddr::asyncSet(int family, const char *pURL, int tag
 }
 
 
-
 int GSockAddr::parseAddr(const char *pString)
 {
     int family = AF_INET;
@@ -487,6 +487,7 @@ const char *GSockAddr::ntop(const struct sockaddr *pAddr, char *pBuf,
 
 }
 
+
 const char *GSockAddr::toString(char *pBuf, int len) const
 {
     if (m_pSockAddr->sa_family == AF_INET6)
@@ -507,6 +508,7 @@ const char *GSockAddr::toString(char *pBuf, int len) const
     return pBuf;
 }
 
+
 const char *GSockAddr::toString() const
 {
     static char s_buf[256];
@@ -522,6 +524,7 @@ void GSockAddr::set(const in_addr_t addr, const in_port_t port)
     m_v4->sin_port = htons(port);
 }
 
+
 void GSockAddr::set(const in6_addr *addr, const in_port_t port,
                     uint32_t flowinfo)
 {
@@ -531,10 +534,12 @@ void GSockAddr::set(const in6_addr *addr, const in_port_t port,
     m_v6->sin6_flowinfo = flowinfo;
 }
 
+
 uint16_t GSockAddr::getPort() const
 {
     return getPort(m_pSockAddr);
 }
+
 
 uint16_t GSockAddr::getPort(const sockaddr *pAddr)
 {
@@ -548,6 +553,7 @@ uint16_t GSockAddr::getPort(const sockaddr *pAddr)
         return 0;
     }
 }
+
 
 void GSockAddr::setPort(uint16_t port)
 {
@@ -569,6 +575,7 @@ GSockAddr &GSockAddr::operator=(const in_addr_t addr)
     return *this;
 }
 
+
 int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
                            const struct sockaddr *pAddr2)
 {
@@ -587,6 +594,7 @@ int GSockAddr::compareAddr(const struct sockaddr *pAddr1,
     }
 
 }
+
 
 static int addr_size[11] = { 0, sizeof(sockaddr_un), sizeof(sockaddr_in),
     0, 0, 0, 0, 0, 0, 0, sizeof(sockaddr_in6) };

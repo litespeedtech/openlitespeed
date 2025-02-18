@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-Project(openlitespeed)
+Project(openlitespeed VERSION 1.8.3)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
-
-set(openlitespeed_MAJOR_VERSION 1)
-set(openlitespeed_MINOR_VERSION 8)
-set(openlitespeed_PATCH_VERSION 2)
-set(openlitespeed_VERSION
-    ${openlitespeed_MAJOR_VERSION}.${openlitespeed_MINOR_VERSION}.${openlitespeed_PATCH_VERSION})
 
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_SKIP_BUILD_RPATH TRUE)

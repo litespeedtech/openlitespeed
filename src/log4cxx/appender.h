@@ -95,7 +95,7 @@ public:
     void setKeepDays(int days)      {   m_iKeepDays = days;     }
     int getKeepDays() const         {   return m_iKeepDays;     }
 
-    virtual void setAsync()         {}
+    virtual void setAsync(int v)    {}
 
 
     LS_NO_COPY_ASSIGN(Appender);

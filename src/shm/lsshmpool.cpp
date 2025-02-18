@@ -570,6 +570,12 @@ void LsShmPool::release2NoJoin(LsShmOffset_t offset, LsShmSize_t size)
 void LsShmPool::release2(LsShmOffset_t offset, LsShmSize_t size)
 {
     size = roundDataSize(size);
+    if (!m_pShm->isOffsetValid(offset + size - 1))
+    {
+        m_pShm->remap();
+        if (!m_pShm->isOffsetValid(offset + size - 1))
+            return;
+    }
     if (size >= LSSHM_SHM_UNITSIZE)
     {
         LsShmPool *pPagePool = ((m_pParent != NULL) ? m_pParent : this);
@@ -826,6 +832,8 @@ LsShmOffset_t LsShmPool::allocFromDataBucket(LsShmSize_t size)
     pBucket = &getDataMap()->x_aFreeBucket[num];
     if ((offset = *pBucket) != 0)
     {
+        if (!m_pShm->isOffsetValid(offset))
+            m_pShm->remap();
         np = (LsShmOffset_t *)offset2ptr(offset);
         if (!m_pShm->isOffsetValid(*np))
         {
@@ -924,6 +932,8 @@ LsShmOffset_t LsShmPool::fillDataBucket(LsShmSize_t bucketNum, LsShmSize_t size)
     xoffset = offset = allocFromDataChunk(size, num);   // might remap
     if (num == 0)
         return offset;  // big problem, no more memory
+    if (!m_pShm->isOffsetValid(xoffset + num * size))
+        m_pShm->remap();
     incrCheck(&getDataMap()->x_stat.m_bckt[bucketNum].m_iBkReleased, num);
 
     // take the first one - save the rest

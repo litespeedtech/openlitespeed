@@ -949,14 +949,16 @@ int HttpReq::processHeaderLines()
         }
         else
         {
-            pLineBegin = pLineEnd + 1;
             if ((*(pLineEnd - 1) == '\n')
                 || (*(pLineEnd - 1) == '\r' && *(pLineEnd - 2) == '\n'))
             {
+                pLineBegin = pLineEnd + 1;
                 headerfinished = true;
                 break;
             }
-            LS_INFO(getLogSession(), "Status 400: header line missing ':'! (%.*s)", (int)(pLineEnd - pLineBegin), pLineBegin);
+            LS_INFO(getLogSession(), "Status 400: header line missing ':', "
+                    "header data: '%.*s'", (int)(pLineEnd - pLineBegin), pLineBegin);
+            pLineBegin = pLineEnd + 1;
             return SC_400;
         }
     }
@@ -1143,7 +1145,9 @@ int HttpReq::processHeader(int index)
             return SC_400;
         if (!isdigit(*pCur))
             return SC_400;
-        m_lEntityLength = strtoll(pCur, &p, 10);
+        if (m_lEntityLength == LSI_BODY_SIZE_CHUNK)
+            return SC_400;
+        m_lEntityLength = strtoull(pCur, &p, 10);
         if (p != pBEnd)
             return SC_400;
         break;
@@ -1248,7 +1252,19 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
         LS_INFO(getLogSession(), "Status 400: HTTPOXY attack detected!");
         return SC_400;
     }
-    return 0;
+    else if (pCurHeader->keyLen == 6
+                && strncasecmp(name, "EXPECT", 6) == 0)
+        {
+            if (strncmp(value, "100", 3) == 0)
+            {
+                LS_DBG_L(getLogSession(), "client expect 100 continue, drop request header.");
+                orContextState(EXPECT_100);
+                //clear the header, do not forward
+                eraseHeader(pCurHeader);
+                m_unknHeaders.pop();
+            }
+        }
+     return 0;
 }
 
 int HttpReq::postProcessHost(const char *pCur, const char *pBEnd)
@@ -3343,6 +3359,21 @@ int HttpReq::checkScriptPermission()
     }
     return 1;
 }
+
+
+void HttpReq::eraseHeader(key_value_pair * pHeader)
+{
+    char *p = m_headerBuf.get_ptr(pHeader->keyOff);
+    if (*(p - 1) == '\n')
+    {
+        --p;
+        if (*(p - 1) == '\r')
+            --p;
+    }
+    memset(p, ' ', m_headerBuf.get_ptr(pHeader->valOff)
+                   + pHeader->valLen - p);
+}
+
 
 int HttpReq::removeCookie(const char *pName, int nameLen)
 {

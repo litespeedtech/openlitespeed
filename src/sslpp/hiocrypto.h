@@ -19,7 +19,10 @@
 #ifndef HIOCRYPTO_H
 #define HIOCRYPTO_H
 #include <unistd.h>
+
 typedef struct x509_st X509;
+class SslContext;
+
 class HioCrypto
 {
 public:
@@ -43,6 +46,8 @@ public:
     {   return 0;       }
     virtual int  isVerifyOk() const
     {   return 0;       }
+    virtual bool verifyContext(SslContext *ctx)
+    {   return true;    }
     int  buildVerifyErrorString(char *pBuf, int len) const
     {   return 0;       }
     

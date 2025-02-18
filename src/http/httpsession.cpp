@@ -69,6 +69,7 @@
 #include <ssi/ssiengine.h>
 #include <ssi/ssiruntime.h>
 #include <ssi/ssiscript.h>
+#include <sslpp/hiocrypto.h>
 #include <thread/mtnotifier.h>
 #include <util/accesscontrol.h>
 #include <util/accessdef.h>
@@ -217,6 +218,8 @@ const struct sockaddr *HttpSession::getPeerAddr() const
 
 bool HttpSession::shouldIncludePeerAddr() const
 {
+    if (getStream()->isFromLocalAddr())
+        return false;
     if (HttpServerConfig::getInstance().getUseProxyHeader() != 3)
         return true;
 
@@ -239,6 +242,8 @@ int HttpSession::onInitConnected()
     {
         m_request.setCrypto(pInfo->m_pCrypto);
         m_request.setHttps();
+        if (getStream()->isHttp3())
+            setFlag2(HSF2_IS_HTTP3, 1);
     }
     else
         m_request.setCrypto(NULL);
@@ -402,6 +407,12 @@ const char * HttpSession::buildLogId()
     if (m_iReqServed > 0)
     {
         len = ls_snprintf( p, pEnd - p, "-%hu", m_iReqServed );
+        p += len;
+    }
+    if (getStream() && m_pClientInfo
+        && m_pClientInfo != getStream()->getClientInfo())
+    {
+        len = ls_snprintf( p, pEnd - p, ">%s", getPeerAddrString());
         p += len;
     }
     const HttpVHost * pVHost = m_request.getVHost();
@@ -1493,6 +1504,15 @@ int HttpSession::processNewReqInit()
         return SC_404;
     }
 
+    if (pVHost->isSslClientAuth())
+    {
+        if (getCrypto()->verifyContext(pVHost->getSslContext()) == false)
+        {
+            LS_DBG_L(getLogSession(), "VHost [%s] require SSL client authentication, SSL_CTX does not match.",
+                     pVHost->getName());
+            return SC_403;
+        }
+    }
     getStream()->setLogger(pVHost->getLogger());
     setLogger(pVHost->getLogger());
     if (getStream()->isLogIdBuilt())
@@ -1528,6 +1548,8 @@ int HttpSession::processNewReqInit()
         processHttp2Upgrade(pVHost);
     }
 
+    if (m_request.getContextState(EXPECT_100))
+        send_100_continue();
     m_request.setStatusCode(SC_200);
     if (getClientInfo()->getAccess() != AC_TRUST)
     {
@@ -1982,12 +2004,12 @@ bool HttpSession::shouldAvoidRecaptchaEx()
         }
     }
 
-//     if (getStream() && getStream()->isFromLocalAddr())
-//     {
-//         LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
-//                 pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
-//         return true;
-//     }
+    if (getStream() && getStream()->isFromLocalAddr())
+    {
+        LS_DBG_M(getLogSession(), "[RECAPTCHA] %.*s is from local address, skip recaptcha.",
+                pClientInfo->getAddrStrLen(), pClientInfo->getAddrString());
+        return true;
+    }
 
     const char *pUserAgent = m_request.getUserAgent();
     int iUserAgentLen = m_request.getUserAgentLen();
@@ -2806,6 +2828,20 @@ int HttpSession::sendDefaultErrorPage(const char * pAdditional)
     return 0;
 }
 
+
+void HttpSession::send_100_continue()
+{
+    static HttpRespHeaders *pHdr = NULL;
+    if (pHdr == NULL)
+    {
+        pHdr = new HttpRespHeaders();
+        pHdr->addStatusLine(m_request.getVersion(), SC_100, 1);
+    }
+
+    LS_DBG_L(getLogSession(), "Send '100 continue' header.");
+    getStream()->sendRespHeaders(pHdr, SHF_MORE_HDRS);
+    getStream()->flush();
+}
 
 
 int HttpSession::buildErrorResponse(const char *errMsg)
@@ -4919,7 +4955,8 @@ int HttpSession::sendRespHeaders()
     if (LS_LOG_ENABLED(LOG4CXX_NS::Level::DBG_HIGH))
         m_response.getRespHeaders().dump(getLogSession(), 1);
 
-    getStream()->sendRespHeaders(&m_response.getRespHeaders(), isNoBody);
+    getStream()->sendRespHeaders(&m_response.getRespHeaders(),
+                                 isNoBody ? SHF_EOS : SHF_NONE);
     setState(HSS_WRITING);
     return 0;
 }

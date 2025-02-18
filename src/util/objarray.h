@@ -95,6 +95,11 @@ public:
     void   *getNew()                    {   return ls_objarray_getnew(this); }
 
     void    setSize(int size)           {   ls_objarray_setsize(this, size); }
+    void    pop()
+    {
+        if (sizenow > 0)
+            --sizenow;
+    }
 
     int setCapacity(ls_xpool_t *pool, int numObj)
     {   return ls_objarray_setcapacity_xpool(this, pool, numObj); }

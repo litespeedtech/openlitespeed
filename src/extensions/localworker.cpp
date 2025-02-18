@@ -577,6 +577,9 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
 
 int LocalWorker::startWorker()
 {
+    if (getConfig().isDetached())
+        return startDetachedWorker(0);
+
     int fd = getfd();
 //      if (m_tmResourceLimited == DateTime::s_curTime)
 //         return -SC_508;

@@ -98,6 +98,12 @@ Duplicable *Logger::dup(const char *pName)
 }
 
 
+void Logger::setAsync(int v)
+{
+    m_pAppender->setAsync(v);
+}
+
+
 static int logSanitize(char *pBuf, int len)
 {
     char *pEnd = pBuf + len - 2;

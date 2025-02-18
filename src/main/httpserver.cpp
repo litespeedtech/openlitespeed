@@ -3146,8 +3146,8 @@ void HttpServerImpl::addCfTrustIp()
             "173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,"
             "103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,"
             "190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,"
-            "198.41.128.0/17,162.158.0.0/15,104.16.0.0/12,"
-            "172.64.0.0/13,131.0.72.0/22";
+            "198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,"
+            "104.24.0.0/14,172.64.0.0/13,131.0.72.0/22";
     static char s_cfSubnetV6[] =
             "2400:cb00::/32,2606:4700::/32,2803:f800::/32,"
             "2405:b500::/32,2405:8100::/32,2a06:98c0::/29,"
@@ -5937,12 +5937,12 @@ void HttpServer::enableAioLogging()
         HttpLogSource::setAioServerErrorLog(m_iAioErrorLog);
         if (m_iAioAccessLog == 1)
         {
-            getAccessLog()->getAppender()->setAsync();
+            getAccessLog()->getAppender()->setAsync(1);
             LS_DBG_L("Enabling AIO for Server Access Logging!");
         }
         if (m_iAioErrorLog == 1)
         {
-            HttpLog::getErrorLogger()->getAppender()->setAsync();
+            HttpLog::getErrorLogger()->setAsync(1);
             LS_DBG_L("Enabling AIO for Server Error Logging!");
         }
 

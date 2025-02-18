@@ -54,14 +54,11 @@ public:
     {   m_iInstances = instances;   }
 
 
-    const char *getCommand() const
-    {   return m_pCommand;  }
+    const char *getCommand() const  {   return m_pCommand;      }
 
-    int getBackLog() const
-    {   return m_iBackLog;  }
+    int getBackLog() const          {   return m_iBackLog;      }
 
-    int getInstances() const
-    {   return m_iInstances;    }
+    int getInstances() const        {   return m_iInstances;    }
 
     void beginConfig();
     void endConfig();
@@ -75,17 +72,17 @@ public:
 
     void setRLimits(const RLimits *pRLimits);
     const RLimits *getRLimits() const    {   return &m_rlimits;   }
-    RLimits *getRLimits()           {   return &m_rlimits;   }
+    RLimits *getRLimits()           {   return &m_rlimits;      }
 
-    int getPriority() const         {   return m_iPriority; }
-    void setPriority(int p)        {   m_iPriority = p;    }
+    int getPriority() const         {   return m_iPriority;     }
+    void setPriority(int p)         {   m_iPriority = p;        }
 
-    void setUmask(int mask)     {   m_umask = mask;       }
-    int getUmask() const         {   return m_umask;      }
+    void setUmask(int mask)         {   m_umask = mask;         }
+    int getUmask() const            {   return m_umask;         }
 
     int isProcPerConn() const       {   return m_iInstances >= getMaxConns();   }
     int isPhpHandler() { return m_iPhpHandler ; }
-    void setPhpHandler(int v)       { m_iPhpHandler = v;    }
+    void setPhpHandler(int v)       {   m_iPhpHandler = v;      }
 
     int checkExtAppSelfManagedAndFixEnv(int maxIdleTime);
     void applyStderrLog();

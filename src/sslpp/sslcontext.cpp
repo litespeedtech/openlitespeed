@@ -478,10 +478,9 @@ int SslContext::configOptions(SslContextConfig *pConfig)
              enabled ? "Disable" : "Enable");
 #endif
 
-#ifdef _ENTERPRISE_
     if (pConfig->m_iClientVerify)
         setClientVerify(pConfig->m_iClientVerify, pConfig->m_iVerifyDepth);
-#endif
+
     return LS_OK;
 }
 
@@ -1291,8 +1290,6 @@ void SslContext::enableSelectCertCb()
 }
 
 
-#ifdef _ENTERPRISE_
-
 /*!
     \fn SslContext::setClientVerify( int mode, int depth)
  */
@@ -1314,6 +1311,8 @@ void SslContext::setClientVerify(int mode, int depth)
               SSL_VERIFY_CLIENT_ONCE;
     }
     SSL_CTX_set_verify(m_pCtx, req, NULL);
+    if (depth <= 0)
+        depth = 1;
     SSL_CTX_set_verify_depth(m_pCtx, depth);
 }
 
@@ -1339,7 +1338,12 @@ int SslContext::addCRL(const char *pCRLFile, const char *pCRLPath)
                          X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
     return 0;
 }
-#endif
+
+
+int SslContext::getVerifyMode()
+{
+    return SSL_CTX_get_verify_mode(m_pCtx);
+}
 
 
 /* This will neeed to be updated as the ID versions change.  Eventually

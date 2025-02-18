@@ -1334,7 +1334,7 @@ static int presetup_bind_tmp(lscgid_t *pCGI, SetupOp *op, int index)
 
 static int source_create(char *path, lscgid_t *pCGI)
 {
-    char part_path[1024];
+    char part_path[1025];
     char *slash = part_path;
     strncpy(part_path, path, 1024);
     DEBUG_MESSAGE("source_create %s\n", path);
@@ -1405,7 +1405,7 @@ static int op_as_user(lscgid_t *pCGI, SetupOp *setupOp)
                     char *new_parm = NULL;
                     rc = bwrap_symbol_in_path(pCGI, parm, &new_parm);
                     if (rc || (i == 0 && (op->flags & OP_FLAG_SOURCE_CREATE) && 
-                               (rc = source_create(new_parm, pCGI))))
+                               (rc = source_create(new_parm ? new_parm : parm, pCGI))))
                         return rc;
                     if (!new_parm)
                         continue;

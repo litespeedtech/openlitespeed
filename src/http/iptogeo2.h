@@ -21,6 +21,7 @@
 #include <config.h>
 #ifdef ENABLE_IPTOGEO2
 
+#include <lsr/ls_lock.h>
 #include <http/ip2geo.h>
 #include "maxminddb.h"
 
@@ -40,7 +41,6 @@ public:
     ~GeoIpData2();
     const char *getGeoEnv(const char *pEnvName);
     int addGeoEnv(IEnv *pEnv);
-    void reset();
     void release();
     struct env_found_s;
     typedef struct env_found_s env_found_t;
@@ -50,10 +50,11 @@ public:
 private:
     IpToGeo2 *m_IpToGeo2;
     db_found_t *m_db_found;
-    int parseEnv();
-    int m_did_parse_env;
-    int m_tried_parse_env;
+    mutable ls_mutex_t m_lock;
+    int8_t m_did_parse_env;
+    int8_t m_tried_parse_env;
 
+    int parseEnv();
     char *strutf8(MMDB_entry_data_s *entry_data, char *key);
     char *strint(MMDB_entry_data_s *entry_data, char *key);
     char *strdouble(MMDB_entry_data_s *entry_data, char *key);

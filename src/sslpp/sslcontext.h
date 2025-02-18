@@ -119,10 +119,9 @@ public:
                                   int len, char *decrypted, int bufLen);
     static void set_strict_sni(int strict);
 
-#ifdef _ENTERPRISE_
     void setClientVerify(int mode, int depth);
     int addCRL(const char *pCRLFile, const char *pCRLPath);
-#endif
+    int getVerifyMode();
 
     unsigned char getEnableSpdy() const      {   return m_iEnableSpdy;   }
     /**

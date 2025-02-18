@@ -599,6 +599,7 @@ static int execute_cgi(lscgid_t *pCGI)
     char ch;
     uint32_t pid = (uint32_t)getpid();
 
+    setsid();
     //applyLimits(&pCGI->m_data);
 
     if (pCGI->m_stderrPath)
@@ -1064,7 +1065,7 @@ static void sigterm(int sig)
 static void sigusr1(int sig)
 {
     pid_t pid = getppid();
-    if (pid != -1 && pid != 1)
+    if (pid == s_parent)
         kill(pid, SIGHUP);
 }
 

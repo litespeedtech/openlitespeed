@@ -52,7 +52,7 @@ public:
     virtual void suspendWrite();
     virtual void continueRead();
     virtual void suspendRead();
-    virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+    virtual int sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag);
     virtual void applyPriority();
 
     virtual int sendfile(int fdSrc, off_t off, size_t size, int flag);

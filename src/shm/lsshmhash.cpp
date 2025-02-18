@@ -347,13 +347,13 @@ LsShmSize_t LsShmHash::size() const
 
 void LsShmHash::LsShmHash::incrTableSize()
 {
-    ++(getHTable()->x_iSize);
+    ls_atomic_add(&getHTable()->x_iSize, 1);
 }
 
 
 void LsShmHash::decrTableSize()
 {
-    --(getHTable()->x_iSize);
+    ls_atomic_sub(&getHTable()->x_iSize, 1);
 }
 
 
@@ -1778,7 +1778,7 @@ void LsShmHash::addToLru(LsShmHElem *pElem, iteroffset offElem)
     pLink->x_lasttime = time((time_t *)NULL);
     pLru->linkNewest = offElem;
     ++pLru->n_add;
-    ++pLru->n_current;
+    ls_atomic_add(&pLru->n_current, 1);
 }
 
 
@@ -1795,7 +1795,7 @@ void LsShmHash::removeFromLru(LsShmHElem *pElem)
         set_linkNext(pLink->x_iLinkPrev, pLink->x_iLinkNext);
     else
         pLru->linkOldest = pLink->x_iLinkNext;
-    --pLru->n_current;
+    ls_atomic_sub(&pLru->n_current, 1);
     pLink->x_iLinkNext.m_iOffset = 0;
     pLink->x_iLinkPrev.m_iOffset = 0;
     if (pLru->n_current == 0)

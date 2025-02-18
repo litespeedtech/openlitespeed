@@ -758,10 +758,8 @@ void ConfigCtx::configCRL(const XmlNode *pNode, SslContext *pSsl)
         pCrlFile = achCrlFile;
     }
 
-#ifdef _ENTERPRISE_
     if (pCrlPath || pCrlFile)
         pSsl->addCRL(achCrlFile, achCrlPath);
-#endif
 }
 
 
@@ -829,6 +827,8 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
 
     cv = getLongValue( pNode, "clientVerify", 0, 3, 0 );
     config.m_iClientVerify = cv;
+    if (cv)
+        config.m_iVerifyDepth = getLongValue(pNode, "verifyDepth", 1, INT_MAX, 1);
 
     config.m_iCertChain = getLongValue( pNode, "certChain", 0, 1, 0 );
     config.m_iProtocol = getLongValue(pNode, "sslProtocol", 1, 31, 28);
@@ -870,10 +870,6 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
 
     if (cv)
     {
-#ifdef _ENTERPRISE_
-        pSsl->setClientVerify(cv, getLongValue(pNode, "verifyDepth", 1, INT_MAX,
-                                               1));
-#endif
         configCRL(pNode, pSsl);
     }
 

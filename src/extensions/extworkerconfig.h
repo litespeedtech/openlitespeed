@@ -75,17 +75,17 @@ public:
     ExtWorkerConfig(const ExtWorkerConfig &rhs);
 
     int setURL(const char *pURL);
-    const char *getURL() const     {   return m_sURL.c_str();  }
+    const char *getURL() const          {   return m_sURL.c_str();  }
     int updateServerAddr(const char *pURL);
 
-    void setMaxConns(int max)         {   m_iMaxConns = max;  }
+    void setMaxConns(int max)           {   m_iMaxConns = max;  }
     int getMaxConns() const             {   return m_iMaxConns; }
 
     void setName(const char *pName);
-    const char *getName() const        {   return m_sName.c_str();  }
+    const char *getName() const         {   return m_sName.c_str();  }
 
-    void setVHost(const HttpVHost *p) {   m_pVHost = p;       }
-    const HttpVHost *getVHost() const  {   return m_pVHost;    }
+    void setVHost(const HttpVHost *p)   {   m_pVHost = p;       }
+    const HttpVHost *getVHost() const   {   return m_pVHost;    }
 
     int addEnv(const char *pEnv)
     {   return m_env.add(pEnv);   }
@@ -102,8 +102,8 @@ public:
     const Env *getEnv() const           {   return &m_env;      }
     Env *getEnv()                       {   return &m_env;      }
     void clearEnv()                     {   m_env.clear();      }
-    void setOrgEnv(const void *p)     {   m_pOrgEnv = p;      }
-    const void *getOrgEnv() const      {   return m_pOrgEnv;   }
+    void setOrgEnv(const void *p)       {   m_pOrgEnv = p;      }
+    const void *getOrgEnv() const       {   return m_pOrgEnv;   }
 
     const GSockAddr &getServerAddr() const
     {   return *m_pServerAddr;        }
@@ -115,40 +115,40 @@ public:
     void altServerAddr();
     void removeUnusedSocket();
 
-    int getRetryTimeout() const     {   return m_iRetryTimeout;     }
-    void setRetryTimeout(int timeout) {   m_iRetryTimeout = timeout;  }
+    int getRetryTimeout() const         {   return m_iRetryTimeout;     }
+    void setRetryTimeout(int timeout)   {   m_iRetryTimeout = timeout;  }
 
     int getTimeout() const          {   return m_iTimeout;      }
-    void setTimeout(int timeout)  {   m_iTimeout = timeout;   }
+    void setTimeout(int timeout)    {   m_iTimeout = timeout;   }
 
     int getBuffering() const        {   return m_iBuffering;    }
-    void setBuffering(int b)      {   m_iBuffering = b;       }
+    void setBuffering(int b)        {   m_iBuffering = b;       }
 
     void setPersistConn(int keepAlive) {  m_iKeepAlive = keepAlive;   }
-    short isPersistConn() const          {   return m_iKeepAlive;       }
+    short isPersistConn() const     {   return m_iKeepAlive;    }
 
-    void setDetached(int v) {  m_iDetached = v;   }
-    short isDetached() const          {   return m_iDetached;       }
+    void setDetached(int v)         {  m_iDetached = v;         }
+    short isDetached() const        {   return m_iDetached;     }
 
 
 
-    void setKeepAliveTimeout(int to)  {   m_iKeepAliveTimeout = to;   }
-    int  getKeepAliveTimeout() const    {   return m_iKeepAliveTimeout; }
+    void setKeepAliveTimeout(int to) {   m_iKeepAliveTimeout = to;   }
+    int  getKeepAliveTimeout() const {   return m_iKeepAliveTimeout; }
 
-    void setMaxIdleTime(int s)         {   m_iMaxIdleTime = s;         }
-    int  getMaxIdleTime() const         {   return m_iMaxIdleTime;      }
+    void setMaxIdleTime(int s)      {   m_iMaxIdleTime = s;         }
+    int  getMaxIdleTime() const     {   return m_iMaxIdleTime;      }
 
-    short getSelfManaged() const        {   return m_iSelfManaged;  }
-    void setSelfManaged(int s)        {   m_iSelfManaged = s;     }
+    short getSelfManaged() const    {   return m_iSelfManaged;      }
+    void setSelfManaged(int s)      {   m_iSelfManaged = s;         }
 
-    char getStartByServer() const       {   return m_iStartByServer;  }
-    void setStartByServer(int s)      {   m_iStartByServer = s;     }
+    char getStartByServer() const   {   return m_iStartByServer;    }
+    void setStartByServer(int s)    {   m_iStartByServer = s;       }
 
-    char getDaemonSuEXEC() const        {   return m_iDaemonSuEXEC;     }
-    void setDaemonSuEXEC(int s)       {   m_iDaemonSuEXEC = s;        }
+    char getDaemonSuEXEC() const    {   return m_iDaemonSuEXEC;     }
+    void setDaemonSuEXEC(int s)     {   m_iDaemonSuEXEC = s;        }
 
-    char getDropCaps() const        {   return m_iDropCaps;     }
-    void setDropCaps(int s)       {   m_iDropCaps = s;        }
+    char getDropCaps() const        {   return m_iDropCaps;         }
+    void setDropCaps(int s)         {   m_iDropCaps = s;            }
 
     uid_t getUid() const            {   return m_uid;   }
     gid_t getGid() const            {   return m_gid;   }

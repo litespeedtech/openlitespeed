@@ -38,11 +38,9 @@ public:
     IPAcc(const IPAcc &rhs)
         : data(rhs.data)
     {}
-    int getAccess() const
-    {   return (long)(data->second());  }
-    const void *key() const
-    {   return data->first();           }
-    bool isNull() const {   return data == NULL; }
+    int getAccess() const       {   return (long)(data->second());  }
+    const void *key() const     {   return data->first();           }
+    bool isNull() const         {   return data == NULL; }
 };
 
 
@@ -74,8 +72,8 @@ public:
     }
 
 
-    void clear()    {   GHash::clear();   }
-    size_t size() const {   return GHash::size();   }
+    void clear()                {   GHash::clear();         }
+    size_t size() const         {   return GHash::size();   }
 
 
     LS_NO_COPY_ASSIGN(IPAccessControl);

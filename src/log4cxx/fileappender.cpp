@@ -37,7 +37,7 @@ Duplicable *FileAppender::dup(const char *pName)
 {
     FileAppender *pAppender = new FileAppender(pName);
     if (m_stream.isAsync())
-        pAppender->setAsync();
+        pAppender->setAsync(1);
     if (strcasecmp(pName, "stdout") == 0)
         pAppender->m_stream.setfd(::dup(1));
     else if (strcasecmp(pName, "stderr") == 0)

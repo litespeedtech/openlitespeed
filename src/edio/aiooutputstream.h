@@ -122,10 +122,10 @@ public:
         m_iFlock = l;
     }
 
-    void setAsync()
+    void setAsync(int v)
     {
 #ifdef LS_AIO_USE_AIO
-        m_async = 1;
+        m_async = v;
 #endif
     }
 

@@ -193,7 +193,7 @@ void QuicStream::suspendRead()
 }
 
 
-int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
+int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, send_hdr_flag hdr_flag)
 {
     lsquic_http_headers_t headers;
 
@@ -203,7 +203,7 @@ int QuicStream::sendRespHeaders(HttpRespHeaders *pRespHeaders, int isNoBody)
     headers.headers = pRespHeaders->begin();
     headers.count = pRespHeaders->end() - pRespHeaders->begin();
 
-    return lsquic_stream_send_headers(m_pStream, &headers, isNoBody);
+    return lsquic_stream_send_headers(m_pStream, &headers, hdr_flag & SHF_EOS);
 }
 
 

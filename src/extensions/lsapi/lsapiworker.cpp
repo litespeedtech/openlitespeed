@@ -46,13 +46,6 @@ int LsapiWorker::startEx()
     int ret = 1;
     LsapiConfig &config = getConfig();
     if (config.getSelfManaged() && (config.getURL()) && (config.getCommand()))
-    {
-        if (config.isDetached())
-        {
-            ret = startDetachedWorker(0);
-        }
-        else
-            ret = startWorker();
-    }
+        ret = startWorker();
     return ret;
 }

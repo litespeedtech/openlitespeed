@@ -43,7 +43,7 @@ public:
 
     void switchWriteToRead() {};
 
-    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag flag);
 
     int push(UnpackedHeaders *hdrs);
 
