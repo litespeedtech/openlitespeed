@@ -29,6 +29,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 
+#include <sslpp/sslcontext.h>
 #include <sslpp/sslerror.h>
 #include <sslpp/sslsesscache.h>
 #include <sslpp/sslcert.h>
@@ -683,6 +684,12 @@ int SslConnection::getEnv(HioCrypto::ENV id, char *&pValue, int bufLen)
         break;
     }
     return ret;
+}
+
+
+bool SslConnection::verifyContext(SslContext *ctx)
+{
+    return SSL_get_SSL_CTX(m_ssl) == ctx->get();
 }
 
 

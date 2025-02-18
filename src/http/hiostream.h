@@ -97,6 +97,14 @@ struct ConnInfo
 };
 
 
+enum send_hdr_flag
+{
+    SHF_NONE = 0,
+    SHF_EOS = 1,
+    SHF_MORE_HDRS = 2,
+    SHF_TRAILER = 4
+};
+
 
 class HioStream : virtual public LogSession
                 , virtual public EdIoStream
@@ -117,7 +125,7 @@ public:
     virtual int readv(struct iovec *vector, int count)
     {       return -1;      }
 
-    virtual int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody) = 0;
+    virtual int sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag flag) = 0;
 
     virtual void switchWriteToRead() = 0;
     virtual int onTimer()             {    return 0;   }

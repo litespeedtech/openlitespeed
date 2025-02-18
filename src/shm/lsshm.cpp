@@ -788,6 +788,7 @@ LsShmStatus_t LsShm::remap()
             assert(mapCopy.x_stat.m_iFileSize > 0 && !"bad file size.");
         }
         xsize = mystat.st_size;
+        ls_atomic_set(&x_pStats->m_iFileSize, xsize);
     }
     //unmap();
     return mapAddrMap(xsize);

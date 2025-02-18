@@ -388,10 +388,10 @@ static int logTime(AutoBuf *pBuf, time_t lTime, uint32_t microsec,
 
 static int fixHttpVer(HttpSession *pSession, char *pBuf, int n)
 {
-    if (pSession->isHttp2())
+    if (pSession->isHttp2() || pSession->isHttp3())
     {
         n -= 2;
-        *(pBuf + n - 1) = '2';
+        *(pBuf + n - 1) = (pSession->isHttp2() ? '2' : '3');
     }
     else if (pSession->getReq()->getVersion() == HTTP_1_0)
         *(pBuf + n - 1) = '0';

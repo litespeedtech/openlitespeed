@@ -174,6 +174,7 @@ enum HSPState
 
 //Start flag2
 #define HSF2_IS_HTTP2               (1<<0)
+#define HSF2_IS_HTTP3               (1<<1)
 #define HSF2_EXEC_EXT_CMD           (1<<9)
 #define HSF2_EXEC_POPEN             (1<<10)
 
@@ -429,6 +430,7 @@ private:
     int readToHeaderBuf();
     int sendHttpError(const char *pAdditional);
     int sendDefaultErrorPage(const char *pAdditional);
+    void send_100_continue();
 
     int detectTimeout();
 
@@ -654,6 +656,7 @@ public:
     int respHeaderDone();
 
     bool isHttp2() const            {   return m_iFlag2 & HSF2_IS_HTTP2;    }
+    bool isHttp3() const            {   return m_iFlag2 & HSF2_IS_HTTP3;    }
 
     void setRespBodyDone()
     {

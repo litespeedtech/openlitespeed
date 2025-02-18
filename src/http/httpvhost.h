@@ -479,6 +479,7 @@ public:
 
     SslContext *getSslContext() const
     {   return m_pSSLCtx;           }
+    int isSslClientAuth() const;
 
     HTAuth *configAuthRealm(HttpContext *pContext,
                             const char *pRealmName);

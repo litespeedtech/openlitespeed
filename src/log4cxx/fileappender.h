@@ -48,7 +48,7 @@ public:
     virtual int reopenIfNeed();
     virtual int append(const char *pBuf, int len);
     virtual int getfd() const               {   return m_stream.getfd();        }
-    void setAsync()                         {   return m_stream.setAsync();     }
+    void setAsync(int v)                    {   return m_stream.setAsync(v);    }
     int flush()                             {   return m_stream.flush();        }
     AioOutputStream *getStream()            {   return &m_stream;               }
 

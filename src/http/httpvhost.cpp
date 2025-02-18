@@ -777,6 +777,12 @@ void HttpVHost::setSslContext(SslContext *pCtx)
 }
 
 
+int HttpVHost::isSslClientAuth() const
+{
+    return m_pSSLCtx ? m_pSSLCtx->getVerifyMode() : 0;
+}
+
+
 HTAuth *HttpVHost::configAuthRealm(HttpContext *pContext,
                                    const char *pRealmName)
 {
@@ -1681,15 +1687,12 @@ LocalWorker *HttpVHost::addRailsApp(const char *pAppName, const char *appPath,
 
     addHomeEnv(this, config.getEnv());
 
-    if (maxConns > 1)
-    {
-        snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
-        config.addEnv(achName);
-        snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
-        config.addEnv(achName);
-    }
-    else
-        config.setSelfManaged(0);
+    snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+    config.addEnv(achName);
+    snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
+    config.addEnv(achName);
+    config.setSelfManaged(1);
+    config.setDetached(1);
     if (config.isDetached())
     {
         if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
@@ -1900,16 +1903,13 @@ LocalWorker *HttpVHost::addPythonApp(const char *pAppName, const char *appPath,
         snprintf(achName, MAX_PATH_LEN, "WSGI_ENV=%s", pPythonEnv);
         config.addEnv(achName);
     }
-    if (maxConns > 1)
-    {
-        snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
-        config.addEnvIfNotExist(achName, "LSAPI_CHILDREN");
-        snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
-        config.addEnvIfNotExist(achName, "LSAPI_KEEP_LISTEN");
-    }
-    else
-        config.setSelfManaged(0);
+    snprintf(achName, MAX_PATH_LEN, "LSAPI_CHILDREN=%d", maxConns);
+    config.addEnvIfNotExist(achName, "LSAPI_CHILDREN");
+    snprintf(achName, MAX_PATH_LEN, "LSAPI_KEEP_LISTEN=2");
+    config.addEnvIfNotExist(achName, "LSAPI_KEEP_LISTEN");
 
+    config.setSelfManaged(1);
+    config.setDetached(1);
     if (config.isDetached())
     {
         if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
@@ -2134,12 +2134,11 @@ LocalWorker *HttpVHost::addNodejsApp(const char *pAppName,
         config.addEnv(achName);
     }
 
-    if (config.isDetached())
-    {
-        if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
-            maxIdle = DETACH_MODE_MIN_MAX_IDLE;
-        setDetachedAppEnv(config.getEnv(), maxIdle);
-    }
+    config.setSelfManaged(1);
+    config.setDetached(1);
+    if (maxIdle < DETACH_MODE_MIN_MAX_IDLE)
+        maxIdle = DETACH_MODE_MIN_MAX_IDLE;
+    setDetachedAppEnv(config.getEnv(), maxIdle);
 
     achFileName[pathLen] = 0;
     snprintf(achName, MAX_PATH_LEN, "LS_STDERR_LOG=%s/log/stderr.log",
@@ -3890,7 +3889,7 @@ void HttpVHost::enableAioLogging()
         {
             if (m_pAccessLog[i] && !m_pAccessLog[i]->isPipedLog())
             {
-                m_pAccessLog[i]->getAppender()->setAsync();
+                m_pAccessLog[i]->getAppender()->setAsync(1);
                 LS_DBG("[VHost:%s] Enable AIO for Access Logging!",
                        getName());
             }
@@ -3898,14 +3897,14 @@ void HttpVHost::enableAioLogging()
     }
     if (m_iAioErrorLog == 1)
     {
-        getLogger()->getAppender()->setAsync();
+        getLogger()->setAsync(1);
         LS_DBG_L("[VHost:%s] Enable AIO for Error Logging!",
                  getName());
     }
 
     if (m_pBytesLog)
     {
-        m_pBytesLog->setAsync();
+        m_pBytesLog->setAsync(1);
         LS_DBG("[VHost:%s] Enable AIO for Bandwidth Logging!",
                getName());
     }

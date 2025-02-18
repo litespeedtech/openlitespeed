@@ -57,7 +57,7 @@ public:
     void switchWriteToRead() {};
 
     int flush();
-    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag);
 
     void suspendRead()
     {   setFlag(HIO_FLAG_WANT_READ, 0);     }

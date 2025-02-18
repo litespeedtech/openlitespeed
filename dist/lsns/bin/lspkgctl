@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 import common
+import csv
 import errno
 import json
 import logging
@@ -19,16 +20,14 @@ def command_requires_pkg(command):
     return command in ['default', 'list', 'set', 'set-force', 'validate']
 
 def validate_environment():
-    if os.getuid() != 0:
-        common.fatal_error("this program must be run as root")
-    common.ls_ok()
+    common.ls_cl_ok()
     
 def init_pgm():
     common.init_logging()
     parser = argparse.ArgumentParser(prog="lspkgctl",
                                      description='LiteSpeed Packages Control Program')
     parser.add_argument("command", type=str, help="The packages command", 
-                        choices=['default', 'list', 'list-all', 'set', 'set-force', 'validate', 'validate-all', 'version'])
+                        choices=['default', 'list', 'list-all', 'set', 'set-force', 'userpkg', 'usersize', 'validate', 'validate-all', 'version'])
     parser.add_argument("pkg", type=str, nargs='*', default=None, help="package name")
     parser.add_argument("--cpu", type=str, help="limit CPU access.  Specify a percentage of a complete core, 100 is 1 complete core.  Default is no limit (-1).")
     parser.add_argument("--io", type=str, help="limit I/O access.  Specify in bytes/sec.  Default is no limit (-1).")
@@ -38,6 +37,8 @@ def init_pgm():
     parser.add_argument('-q', '--quiet', action='store_true', help='turns off all logging and only outputs what is requested.')
     parser.add_argument('-s', '--sleep', type=int, default=0, help="number of seconds to pause.  Should only be used when running in the background")
     parser.add_argument("--tasks", type=str, help="limit number of tasks.  Specify a maximum count of tasks that can be started.")
+    parser.add_argument("--size", type=str, help="set redis package size.  Default is not defined (-1).")
+    parser.add_argument("--user", type=str, help="the user to request the size for.  Required for the commands usersize and userpkg")
     args = parser.parse_args()
     if not args.quiet or args.log != None:
         if args.log != None:
@@ -56,8 +57,10 @@ def init_pgm():
         if args.quiet:
             print(common.VERSION)
         sys.exit(0)
-    if (command.startswith('set')) and (args.cpu == None and args.io == None and args.iops == None and args.mem == None and args.tasks == None):
+    if (command.startswith('set')) and (args.cpu == None and args.io == None and args.iops == None and args.mem == None and args.tasks == None and args.size == None):
         common.fatal_error("You specified command: %s and no qualifier to set with it" % command)
+    if (command == 'usersize' or command == 'userpkg') and not args.user:
+        common.fatal_error("You must specify a --user with the usersize or userpkg commands")
     if (args.sleep > 0):
         time.sleep(args.sleep)
     return args
@@ -76,7 +79,47 @@ def initialized_pkg():
     pkg_json['uids'] = []
     return pkg_json
 
-def read_pkg(pkg):
+def read_pkg_sizes():
+    pkg_sizes = {}
+    try:
+        f = open(common.get_package_size_file(), 'r', encoding="utf-8")
+    except OSError as err:
+        if err.errno == errno.ENOENT:
+            logging.debug('File not found: %s' % common.get_package_size_file())
+            return pkg_sizes
+        logging.warning('Error opening %s: %s - reinitializing' % (common.get_package_size_file(), err.strerror))
+        return pkg_sizes
+    try:
+        reader = csv.reader(f, delimiter=',', quotechar='"')
+        for line in reader:
+            logging.debug('package: [' + line[0] + ']: ' + line[1])
+            pkg_sizes[line[0]] = line[1]
+    except Exception as err:
+        logging.warning('Error reading %s: %s - reinitialzing' % (common.get_package_size_file(), err))
+        return pkg_sizes
+    finally:
+        f.close()
+    return pkg_sizes
+
+def write_pkg_sizes(pkg_sizes):
+    try:
+        f = open(common.get_package_size_file(), 'w', encoding="utf-8")
+    except OSError as err:
+        logging.warning('Error opening %s for write: %s' % (common.get_package_size_file(), err.strerror))
+        return False
+    try:
+        writer = csv.writer(f, delimiter=',', quotechar='"')
+        for pkg in pkg_sizes:
+            logging.debug('package: [' + pkg + ']: ' + pkg_sizes[pkg])
+            writer.writerow([pkg, pkg_sizes[pkg]])
+    except Exception as err:
+        logging.warning('Error writing %s: %s' % (common.get_package_size_file(), err))
+        return False
+    finally:
+        f.close()
+    return True
+
+def read_pkg(pkg, pkg_sizes):
     try:
         f = open(common.pkg_to_filename(pkg), 'r', encoding="utf-8")
     except OSError as err:
@@ -95,24 +138,26 @@ def read_pkg(pkg):
     if not 'uids' in pkg_json:
         pkg_json['uids'] = []
     pkg_json['uids'].sort()
+    if pkg in pkg_sizes:
+        pkg_json['size'] = pkg_sizes[pkg]
     return pkg_json
 
-def list_pkg(pkg):
-    pkg_json = read_pkg(pkg)
+def list_pkg(pkg, pkg_sizes):
+    pkg_json = read_pkg(pkg, pkg_sizes)
     return pkg_json
 
-def command_list(args, single_list=False):
+def command_list(args, pkg_sizes, single_list=False):
     pkg_obj = {}
     if single_list or args.command == 'list':
         for pkg in args.pkg:
-            pkg_obj[pkg] = list_pkg(pkg)
+            pkg_obj[pkg] = list_pkg(pkg, pkg_sizes)
     else:
         pkgs = glob.glob(common.pkg_to_filename('*'))
         for f in pkgs:
             fileonly = os.path.basename(f)
             pkg = fileonly.split('.conf')[0]
             logging.debug('From file: %s, using pkg %s' % (f, pkg))
-            pkg_obj[pkg] = list_pkg(pkg)
+            pkg_obj[pkg] = list_pkg(pkg, pkg_sizes)
     final_json = {}
     final_json['packages'] = pkg_obj
     print(json.dumps(final_json, indent=4))
@@ -129,6 +174,7 @@ def plesk_home_dict():
 def read_pleskplans():
     home_dict = plesk_home_dict()
     plans = {}
+    userplans = {}
     # Thanks to Stas Karpinsky of vangus.co.il for correcting the SQL!
     plan_lines = run_program(['plesk', 'db', \
                               "select sys_users.login, sys_users.home, " + \
@@ -165,12 +211,14 @@ def read_pleskplans():
         if not plan in plans:
             plans[plan] = []
         plans[plan].append(user.pw_uid)
-    return plans
+        userplans[user.pw_name] = plan
+    return plans, userplans
 
 def read_usersplans():
     if common.get_plesk():
         return read_pleskplans()
     plans = {}
+    userplans = {}
     planfiles = glob.glob('/var/cpanel/packages/*')
     for planfile in planfiles:
         if os.path.isfile(planfile):
@@ -195,11 +243,13 @@ def read_usersplans():
                     except Exception as err:
                         common.fatal_error("passwd entry error: %s for user %s" % (err, user))
                     plans[pkg].append(pwd_var.pw_uid)
-                    logging.debug("   add to %s: %s (%d)" % (pkg, user, pwd_var.pw_uid))
+                    userplans[str(pwd_var.pw_name)] = pkg
+                    logging.debug("add to %s: %s (%d)" % (pkg, user, pwd_var.pw_uid))
     f.close()
-    return plans
+    return plans, userplans
     
 def set_users_to_pkg(opt, users, users_vals, org_pkg, pkg_json, force, args_dict):
+    logging.debug("set_users_to_pkg, opt: %s, force: %d" % (opt, force))
     if args_dict != None and not opt in args_dict:
         return False
     pkg_jsonInfinite = arrInfinite(opt, pkg_json)
@@ -227,6 +277,7 @@ def set_users_to_pkg(opt, users, users_vals, org_pkg, pkg_json, force, args_dict
         found_diff = True
         args.append(str(user))
     if not found_diff:
+        logging.debug("no diff for opt: %s" % opt)
         return False
     run_program(args)
     return True
@@ -256,30 +307,34 @@ def revalidate_pkg(pkg, users, users_vals, org_pkg, pkg_json, force, args_dict):
             if not str(user) in pkg_json['uids']:
                 test_users.append(user)
     updated = False
-    for opt in common.get_options():
-        if set_users_to_pkg(opt, test_users, users_vals, org_pkg, pkg_json, force, args_dict):
-            updated = True
+    if not common.is_cl():
+        for opt in common.get_options():
+            logging.debug("opt: %s" % opt)
+            if set_users_to_pkg(opt, test_users, users_vals, org_pkg, pkg_json, force, args_dict):
+                updated = True
+    else:
+        logging.debug("CloudLinux, do not set users")
     if not updated:
         if set(users) != set(pkg_json['uids']):
             updated = True
             logging.debug("Changed users, so update pkg")
-    if updated or org_pkg != pkg_json:
+    if updated or org_pkg != pkg_json or common.is_cl():
         pkg_json['uids'] = users
         write_pkg(pkg, pkg_json)
 
-def validate_pkg(pkg, users_vals, users):
-    pkg_json = read_pkg(pkg)
+def validate_pkg(pkg, pkg_sizes, users_vals, users):
+    pkg_json = read_pkg(pkg, pkg_sizes)
     revalidate_pkg(pkg, users, users_vals, pkg_json, pkg_json, False, None)
     
-def command_validate(args, users_vals, usersplans):
+def command_validate(args, users_vals, usersplans, pkg_sizes):
     if args.command == 'validate-all' or args.command == 'list-all':
         for pkg in usersplans:
-            validate_pkg(pkg, users_vals, usersplans[pkg])
+            validate_pkg(pkg, pkg_sizes, users_vals, usersplans[pkg])
     else:
         for pkg in args.pkg:
             if not pkg in usersplans:
                 common.fatal_error("Specified package: %s not found" % pkg)
-            validate_pkg(pkg, users_vals, usersplans[pkg])
+            validate_pkg(pkg, pkg_sizes, users_vals, usersplans[pkg])
 
 def arrInfinite(opt, arr):
     return (not opt in arr) or arr[opt] == None or arr[opt] == '' or arr[opt] == '-1'
@@ -293,6 +348,8 @@ def opt_val_eq(opt, arr1, arr2):
 
 def set_json(args, pkg_json):
     changed = False
+    if common.is_cl():
+        changed = True
     args_dict = vars(args)
     logging.debug('In set_json')
     for opt in common.get_options():
@@ -317,36 +374,91 @@ def get_users_vals():
         common.fatal_error('Error parsing user details: %s' % err)
     return users_vals
 
-def deep_copy(pkg):
+def deep_copy(pkg, pkg_json, pkg_sizes):
     copy = {}
     for opt in common.get_options():
-        if opt in pkg:
-            copy[opt] = pkg[opt]
+        if opt in pkg_json:
+            copy[opt] = pkg_json[opt]
+    if "size" in pkg_sizes:
+        copy["size"] = pkg_sizes[pkg]
     return copy
 
-def command_set(args, users_vals, usersplans):
+def command_set(args, users_vals, usersplans, pkg_sizes):
     all_users = False
     if 'force' in args.command or 'default' == args.command:
         all_users = True
+    write_sizes = False
     for pkg in args.pkg:
-        pkg_json = read_pkg(pkg)
-        org_pkg = deep_copy(pkg_json)
+        pkg_json = read_pkg(pkg, pkg_sizes)
+        org_pkg = deep_copy(pkg, pkg_json, pkg_sizes)
         if 'set' in args.command:
+            if args.size != None:
+                logging.debug('set for pkg: ' + pkg + ' size: ' + args.size)
+                write_sizes = True
+                if args.size == '-1': 
+                    if pkg in pkg_sizes:
+                        del pkg_sizes[pkg]
+                    if "size" in pkg_json:
+                        logging.debug('delete size from pkg_json')
+                        del pkg_json["size"]
+                else:
+                    pkg_json["size"] = args.size
+                    pkg_sizes[pkg] = args.size
             if not set_json(args, pkg_json) and not all_users:
                 continue
         revalidate_pkg(pkg, usersplans[pkg], users_vals, org_pkg, pkg_json, all_users, vars(args))
+    if write_sizes:
+        write_pkg_sizes(pkg_sizes)
     return 0
+
+def command_usersize(args, pkg_sizes, userplans):
+    rc = 0
+    if str(args.user) in userplans:
+        if userplans[str(args.user)] in pkg_sizes:
+            logging.debug('user: ' + args.user + ' in pkg: ' + userplans[str(args.user)] + ' size: ' + pkg_sizes[userplans[str(args.user)]])
+            print(pkg_sizes[userplans[str(args.user)]])
+        else:
+            logging.debug('user: ' + args.user + ' in pkg: ' + userplans[str(args.user)] + ' BUT HAS NO SIZE')
+            sys.exit(1)
+    else:
+        logging.debug('user: ' + args.user + ' NOT in known packages')
+        sys.exit(1)
+    return rc
+
+def command_userpkg(args, userplans):
+    rc = 0
+    if str(args.user) in userplans:
+        logging.debug('user: ' + args.user + ' in pkg: ' + userplans[str(args.user)])
+        print(userplans[str(args.user)])
+    else:
+        logging.debug('user: ' + args.user + ' NOT in known packages')
+        sys.exit(1)
+    return rc
 
 def do_pgm(args):
     logging.debug("Entering lspkgctl, command: %s" % args.command)
-    users_vals = get_users_vals()
-    usersplans = read_usersplans()
-    if 'validate' in args.command or 'list' in args.command:
-        ret = command_validate(args, users_vals, usersplans)
+    usersplans, uidplans = read_usersplans()
+    if 'usersize' == args.command:
+        pkg_sizes = read_pkg_sizes()
+        ret = command_usersize(args, pkg_sizes, uidplans)
+    elif 'userpkg' == args.command:
+        ret = command_userpkg(args, uidplans)
+    elif 'validate' in args.command or 'list' in args.command:
+        pkg_sizes = read_pkg_sizes()
+        if not common.is_cl():
+            users_vals = get_users_vals()
+        else:
+            users_vals = []
+        ret = command_validate(args, users_vals, usersplans, pkg_sizes)
         if 'list' in args.command:
-            ret = command_list(args)
+            ret = command_list(args, pkg_sizes)
     elif 'set' in args.command or 'default' in args.command:
-        ret = command_set(args, users_vals, usersplans)
+        pkg_sizes = read_pkg_sizes()
+        if not common.is_cl():
+            users_vals = get_users_vals()
+        else:
+            users_vals = []
+        ret = command_set(args, users_vals, usersplans, pkg_sizes)
     else:
         common.fatal_error('Unexpected command: %s' % args.command)
     logging.debug("Exiting lspkgctl")

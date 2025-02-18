@@ -89,7 +89,7 @@ int HioChainStream::passSetCookieToParent()
     return 0;
 }
 
-int HioChainStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
+int HioChainStream::sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag)
 {
 //     m_pRespHeaders = pHeaders;
 //     if (m_pParentSession && getFlag(HIO_FLAG_PASS_SETCOOKIE))

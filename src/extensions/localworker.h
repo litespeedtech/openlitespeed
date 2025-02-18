@@ -48,7 +48,7 @@ public:
     {
         return (m_lastmod > m_lastmod_reset_me)? m_lastmod : m_lastmod_reset_me;
     }
-    AutoStr *getMarkerPath()    {   return &m_markerPath;   }
+    AutoStr *getMarkerPath()        {   return &m_markerPath;   }
 
 private:
     AutoStr     m_markerPath;
@@ -81,7 +81,7 @@ public:
 
     LocalWorkerConfig &getConfig() const;
 
-    PidList *getPidList() const    {   return m_pidList;   }
+    PidList *getPidList() const     {   return m_pidList;   }
     void    addPid(pid_t pid);
     void    removePid(pid_t pid);
     int     startOnDemond(int force);
@@ -89,7 +89,7 @@ public:
     void    cleanStopPids();
     void detectDiedPid();
 
-    void setfd(int fd)            {   m_fdApp = fd;       }
+    void setfd(int fd)              {   m_fdApp = fd;       }
     int getfd() const               {   return m_fdApp;     }
 
     int selfManaged() const;

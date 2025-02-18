@@ -50,6 +50,7 @@ enum
 #define PROCESS_CONTEXT         (1<<0)
 #define CONTEXT_AUTH_CHECKED    (1<<1)
 #define REDIR_CONTEXT           (1<<2)
+#define EXPECT_100              (1<<3)
 #define KEEP_AUTH_INFO          (1<<5)
 #define REWRITE_REDIR           (1<<6)
 #define SKIP_REWRITE            (1<<7)

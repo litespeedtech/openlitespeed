@@ -662,8 +662,13 @@ cd ..
 
 cp build/src/openlitespeed  dist/bin/
 if [ -e build/support/unmount_ns/unmount_ns ] ; then
-    cp build/support/unmount_ns/unmount_ns  dist/bin/
+    cp build/support/unmount_ns/unmount_ns  dist/lsns/bin/
 fi
+
+if [ -e build/support/cmd_ns/cmd_ns ] ; then
+    cp build/support/cmd_ns/cmd_ns  dist/lsns/bin/
+fi
+
 
 cpModuleSoFiles
 

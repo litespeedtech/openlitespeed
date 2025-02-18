@@ -2,7 +2,9 @@ import json, logging, os, pwd, subprocess, sys
 from stat import *
 from subprocess import PIPE
 
-VERSION='0.0.1'
+VERSION='0.0.3' 
+# 0.0.2: Updated for package commands
+# 0.0.3: Updated for limited CloudLinux support
 
 OPTION_CPU=0
 OPTION_IO=1
@@ -14,6 +16,7 @@ this = sys.modules[__name__]
 this.logged = None
 this.serverRoot = '/usr/local/lsws'
 this.min_uid = 0
+this.cl = False
 
 def init_logging():
     logging.basicConfig(format="%(asctime)s.%(msecs)03d" + " [%(levelname)s] %(message)s",
@@ -129,9 +132,21 @@ def pkg_to_filename(pkg):
         os.mkdir(get_pkg_dir(), mode=0o700)
     return get_pkg_dir() + '/%s.conf' % pkg
 
+def get_package_size_file():
+    return server_root() + '/lsns/conf/redis_package_size.conf'
+
 def ls_ok():
-    if os.access(container_file(), 0) == 0:
+    if not os.access(container_file(), os.F_OK):
         fatal_error("You must configure LiteSpeed for LiteSpeed Containers")
+
+def ls_cl_ok():
+    if os.access('/etc/cloudlinux-release', os.F_OK):
+        this.cl = True
+        return
+    ls_ok()
+
+def is_cl():
+    return this.cl
 
 def touch_restart_external(file, desc):
     logging.debug("restart_external %s by touch: %s" % (desc, file))

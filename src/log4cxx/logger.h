@@ -317,6 +317,8 @@ public:
     void setAppender(Appender *pAppender)
     {   m_pAppender = pAppender;    }
 
+    void setAsync(int v);
+
     ls_attr_inline const Layout *getLaout() const
     {   return m_pLayout;  }
     void setLayout(Layout *pLayout)

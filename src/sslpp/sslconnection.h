@@ -107,6 +107,7 @@ public:
     int  buildVerifyErrorString(char *pBuf, int len) const;
 
     virtual int getEnv(HioCrypto::ENV id, char *&val,int maxValLen);
+    virtual bool verifyContext(SslContext *ctx);
 
     const char *getCipherName() const;
 

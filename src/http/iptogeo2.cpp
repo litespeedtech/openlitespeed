@@ -133,6 +133,7 @@ GeoIpData2::GeoIpData2()
     , m_did_parse_env(0)
     , m_tried_parse_env(0)
 {
+    ls_mutex_setup(&m_lock);
 }
 
 
@@ -141,10 +142,6 @@ GeoIpData2::~GeoIpData2()
     release();
 }
 
-void GeoIpData2::reset()
-{
-    release();
-}
 
 void GeoIpData2::release()
 {
@@ -531,6 +528,8 @@ const char* GeoIpData2::getGeoEnv(const char* pEnvName)
         LS_ERROR("[GEO] Attempt to get GeoEnv without first doing lookup\n");
         return NULL;
     }
+
+    MutexLocker lock(m_lock);
     if ((!m_did_parse_env) && (m_tried_parse_env))
     {
         LS_ERROR("[GEO] Attempt to get GeoEnv without environment variables set\n");
@@ -577,6 +576,8 @@ int GeoIpData2::addGeoEnv(IEnv *pEnv)
         LS_ERROR("[GEO] Attempt to add GeoEnv without first doing lookup\n");
         return -1;
     }
+
+    MutexLocker lock(m_lock);
     if (!m_did_parse_env)
         if (parseEnv() == -1)
             return -1;

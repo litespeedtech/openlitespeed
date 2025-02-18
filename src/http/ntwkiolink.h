@@ -239,7 +239,7 @@ public:
     static int getToken()
     {   return s_iTmToken;        }
 
-    int sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody);
+    int sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag);
 
     const char *buildLogId();
     LogSession *getLogSession()        {   return this;        }

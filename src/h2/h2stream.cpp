@@ -131,12 +131,12 @@ int H2Stream::onWrite()
 }
 
 
-int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
+int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag)
 {
     uint8_t flag = 0;
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
-    if (isNoBody)
+    if (hdr_flag & SHF_EOS)
     {
         LS_DBG_L(this, "No response body, set END_STREAM.");
         flag |= H2_FLAG_END_STREAM;
@@ -153,7 +153,7 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
 //             m_pH2Conn->add2PriorityQue(this);
 //     }
     int ret = ((H2Connection *)m_pH2Conn)->sendRespHeaders(this, pHeaders, flag);
-    if (isNoBody)
+    if (hdr_flag & SHF_EOS)
         m_pH2Conn->wantFlush();
     if (ret != LS_FAIL && getFlag(HIO_FLAG_ALTSVC_SENT))
         ((H2Connection *)m_pH2Conn)->getStream()->setFlag(HIO_FLAG_ALTSVC_SENT, 1);

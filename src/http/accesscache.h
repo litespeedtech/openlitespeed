@@ -35,8 +35,7 @@ public:
 
     int  isAllowed(const struct sockaddr *pAddr);
     void onTimer();
-    AccessControl *getAccessCtrl()
-    {   return &m_accessCtrl;    }
+    AccessControl *getAccessCtrl()  {   return &m_accessCtrl;    }
     const AccessControl *getAccessCtrl() const
     {   return &m_accessCtrl;    }
     LS_NO_COPY_ASSIGN(AccessCache);

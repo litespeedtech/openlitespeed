@@ -371,11 +371,9 @@ int NtwkIOLink::setLink(HttpListener *pListener,  int fd, ConnInfo *pInfo)
         setupHandler(HIOS_PROTO_HTTP);
     }
 
-
-    //FIXME below code is from lslbd, should we use this flag?
-//     if (pInfo->m_pClientInfo->isFromLocalAddr(
-//         (const sockaddr *)pInfo->m_pServerAddrInfo->getAddr()))
-//         setFlag(HIO_FLAG_FROM_LOCAL, 1);
+    if (pInfo->m_pClientInfo->isFromLocalAddr(
+        (const sockaddr *)pInfo->m_pServerAddrInfo->getAddr()))
+        setFlag(HIO_FLAG_FROM_LOCAL, 1);
 
     return 0;
 }
@@ -1543,7 +1541,7 @@ int NtwkIOLink::writevEx(LsiSession *pOS, const iovec *vector, int count)
 }
 
 
-int NtwkIOLink::sendRespHeaders(HttpRespHeaders *pHeader, int isNoBody)
+int NtwkIOLink::sendRespHeaders(HttpRespHeaders *pHeader, send_hdr_flag hdr_flag)
 {
     if (pHeader)
     {

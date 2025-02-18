@@ -331,11 +331,11 @@ int SpdyStream::sendData(IOVec *pIov, int total)
 }
 
 
-int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
+int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag)
 {
     if (getState() == HIOS_DISCONNECTED)
         return LS_FAIL;
-    if (isNoBody)
+    if (hdr_flag & SHF_EOS)
     {
         LS_DBG_L(this, "No response body, set FLAG_FIN.");
         setState(HIOS_SHUTDOWN);
@@ -348,7 +348,7 @@ int SpdyStream::sendRespHeaders(HttpRespHeaders *pHeaders, int isNoBody)
     if (getFlag(HIO_FLAG_ALTSVC_SENT))
         m_pSpdyConn->getStream()->setFlag(HIO_FLAG_ALTSVC_SENT, 1);
 
-    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID, isNoBody);
+    return m_pSpdyConn->sendRespHeaders(pHeaders, m_uiStreamID, hdr_flag & SHF_EOS);
 }
 
 int SpdyStream::adjWindowOut(int32_t n)
