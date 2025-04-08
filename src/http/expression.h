@@ -26,9 +26,7 @@ struct ExprRunTime
     jmp_buf      jmp_too_many_recursive;
     ExprRunTime()
     {
-        regex_input = NULL;
-        regex_res = NULL;
-        time_format = NULL;
+        memset(this, 0, sizeof(ExprRunTime));
     }
 };
 

@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2024 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -1396,7 +1396,16 @@ class WPCaller
     {
         if ( file_exists($this->advancedCacheFile) ) {
 
-            if ( $this->advancedCacheFileHasLscacheDefine() ) {
+            $advCacheFileContents =
+                file_get_contents($this->advancedCacheFile);
+
+            if (
+                    $advCacheFileContents !== ''
+                    &&
+                    $this->advancedCacheFileHasLscacheDefine(
+                        $advCacheFileContents
+                    )
+            ) {
                 include_once $this->advancedCacheFile;
             }
         }

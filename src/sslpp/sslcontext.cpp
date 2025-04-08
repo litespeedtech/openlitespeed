@@ -1209,6 +1209,12 @@ int SslContext::applyToSsl(SSL *pSsl)
     SSL_CTX *pNewCtx = get();
     if (pNewCtx == SSL_get_SSL_CTX(pSsl))
         return SslUtil::CERTCB_RET_OK;
+
+    int version = SSL_version(pSsl);
+    if (version < SSL_CTX_get_min_proto_version(pNewCtx)
+        || version > SSL_CTX_get_max_proto_version(pNewCtx))
+        return SslUtil::CERTCB_RET_ERR;
+
 #ifdef OPENSSL_IS_BORINGSSL
     // Check OCSP again when the context needs to be changed.
     initOCSP();
@@ -1221,7 +1227,6 @@ int SslContext::applyToSsl(SSL *pSsl)
     newCtxOptions = SSL_CTX_get_options(pNewCtx);
     SSL_clear_options(pSsl, SSL_get_options(pSsl) & ~newCtxOptions);
     SSL_set_options(pSsl, newCtxOptions);
-
     return SslUtil::CERTCB_RET_OK;
 }
 

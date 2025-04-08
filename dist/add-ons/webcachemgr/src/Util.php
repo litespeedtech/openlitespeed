@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -576,10 +576,11 @@ class Util
      * @return false|string
      */
     public static function tryIdnToUtf8(
-              $domain,
-              $flags = 0,
-              $variant = null,
-        array &$idna_info = null )
+        $domain,
+        $flags = 0,
+        $variant = null,
+        &$idna_info = null
+    )
     {
         if ( function_exists('idn_to_utf8') ) {
 
@@ -607,10 +608,11 @@ class Util
      * @return false|string
      */
    public static function tryIdnToAscii(
-             $domain,
-             $flags = null,
-             $variant = null,
-       array &$idna_info = null )
+       $domain,
+       $flags = null,
+       $variant = null,
+       &$idna_info = null
+   )
    {
        if ( function_exists('idn_to_ascii') ) {
 

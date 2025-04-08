@@ -1,17 +1,15 @@
 <?php
 
-/* * *********************************************
+/** *********************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2019
- * @since 1.9
+ * @author    Michael Alegre
+ * @copyright 2019-2025 LiteSpeed Technologies, Inc.
+ * @since     1.9
  * *******************************************
  */
 
 namespace Lsc\Wp;
-
-use \Lsc\Wp\LSCMException;
 
 /**
  * @since 1.9
@@ -21,28 +19,25 @@ class AjaxResponse
 
     /**
      * @since 1.9
-     * @var AjaxResponse
+     * @var   AjaxResponse
      */
     protected static $instance;
 
     /**
      * @since 1.9
-     * @var string
+     * @var   string
      */
     protected $ajaxContent;
 
     /**
      * @since 1.9
-     * @var string
+     * @var   string
      */
     protected $headerContent;
 
     /**
      *
      * @since 1.9
-     *
-     * @param string  $ajaxContent
-     * @param string  $headerContent
      */
     private function __construct()
     {

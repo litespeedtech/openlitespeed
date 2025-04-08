@@ -146,6 +146,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                               HttpContext *pContext)
 {
     int ret;
+    int skip = 0;
     LinkedObj *pLast = pRuleList->tail();
     if (!pLast)
         pLast = pRuleList->head();
@@ -155,6 +156,52 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
             ++pRules;
         if (!*pRules)
             break;
+        char *pLineEnd = strchr(pRules, '\n');
+        if (strncasecmp(pRules, "<IfModule", 9) == 0)
+        {
+            if (!pLineEnd)
+                break;
+            if (skip > 0)
+                ++skip;
+            else
+            {
+                const char *p = pRules + 9;
+                while(isspace(*p))
+                    ++p;
+                if (memmem(p, pLineEnd - p, "mod_headers", 11) != NULL)
+                {
+                    ++skip;
+                    LS_DBG("Skip begin: '%.*s'",
+                           (int)(pLineEnd - pRules), pRules);
+                }
+            }
+            pRules = pLineEnd + 1;
+            continue;
+
+        }
+        else if (strncasecmp(pRules, "</IfModule>", 11) == 0)
+        {
+            if (skip > 0)
+            {
+                --skip;
+                if (skip == 0)
+                    LS_DBG("Skip ends");
+            }
+            if (!pLineEnd)
+                break;
+            pRules = pLineEnd + 1;
+            continue;
+        }
+        if (skip)
+        {
+            if (!pLineEnd)
+                break;
+            if (*pRules != '#' && pLineEnd > pRules)
+                 LS_DBG("Skip: '%.*s'",
+                        (int)(pLineEnd - pRules), pRules);
+            pRules = pLineEnd + 1;
+            continue;
+        }
         if (((strncasecmp(pRules, "RewriteCond", 11) == 0) &&
              (isspace(*(pRules + 11)))) ||
             ((strncasecmp(pRules, "CacheKeyModify", 14) == 0) &&
@@ -179,7 +226,6 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
         }
         else
         {
-            char *pLineEnd = strchr(pRules, '\n');
             if (pLineEnd)
                 *pLineEnd = 0;
 
@@ -241,9 +287,6 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
                 else
                     LS_ERROR("Invalid value of RewriteEngine: %.*s", len, pRules);
             }
-            else if (strncasecmp(pRules, "<IfModule", 9) == 0 ||
-                     strncasecmp(pRules, "</IfModule>", 11) == 0)
-                LS_INFO("Rewrite directive: %s bypassed.", pRules);
             else if (*pRules != '#')
                 LS_INFO("Invalid rewrite directive: %s", pRules);
 
@@ -642,7 +685,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
                     pCond->getPattern(), ret);
         ret = (ret <= 0);
     }
-    else if ((code >= COND_OP_LESS) && (code <= COND_OP_EQ))
+    else if ((code >= COND_OP_LESS) && (code <= COND_OP_LE))
     {
         if (pCond->getFlag() & COND_FLAG_NOCASE)
             ret = strcasecmp(pTest, pCond->getPattern());
@@ -650,7 +693,7 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
             ret = strcmp(pTest, pCond->getPattern());
         if (m_logLevel > 2)
             LS_INFO(pSession,
-                    "[REWRITE] Cond: Compare '%s' with pattern '%s', result: %d",
+                    "[REWRITE] Cond: String compare '%s' with pattern '%s', result: %d",
                     pTest, pCond->getPattern(), ret);
         switch (code)
         {
@@ -662,6 +705,45 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
             break;
         case COND_OP_EQ:
             ret = (ret != 0);
+            break;
+        case COND_OP_LE:
+            ret = (ret > 0);
+            break;
+        case COND_OP_GE:
+            ret = (ret < 0);
+            break;
+        }
+    }
+    else if ((code >= COND_OP_LESS_NUM) && (code <= COND_OP_NE_NUM))
+    {
+        long long test_num;
+        long long pattern_num;
+        test_num = strtoll(pTest, NULL, 10);
+        pattern_num = strtoll(pCond->getPattern(), NULL, 10);
+        long long comp_ret = test_num - pattern_num;
+        if (m_logLevel > 2)
+            LS_INFO(pSession->getLogSession(),
+                    "[REWRITE] Cond: Numeric compare '%s'(%lld) with pattern '%s'(%lld), result: %lld",
+                    pTest, test_num, pCond->getPattern(), pattern_num, comp_ret);
+        switch (code)
+        {
+        case COND_OP_LESS_NUM:
+            ret = (comp_ret >= 0);
+            break;
+        case COND_OP_GREATER_NUM:
+            ret = (comp_ret <= 0);
+            break;
+        case COND_OP_EQ_NUM:
+            ret = (comp_ret != 0);
+            break;
+        case COND_OP_LE_NUM:
+            ret = (comp_ret > 0);
+            break;
+        case COND_OP_GE_NUM:
+            ret = (comp_ret < 0);
+            break;
+        case COND_OP_NE_NUM:
+            ret = (comp_ret == 0);
             break;
         }
     }
@@ -684,6 +766,9 @@ int RewriteEngine::processCond(const RewriteCond *pCond,
                 break;
             case COND_OP_SYM:
                 ret = !S_ISLNK(m_st.st_mode);
+                break;
+            case COND_OP_EXEC:
+                ret = !(S_ISREG(m_st.st_mode) && m_st.st_mode & S_IXUSR);
                 break;
             case COND_OP_FILE_ACC:
                 ret = !S_ISREG(m_st.st_mode);

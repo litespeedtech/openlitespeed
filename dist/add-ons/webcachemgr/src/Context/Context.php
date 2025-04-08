@@ -3,14 +3,14 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @author    LiteSpeed Technologies, Inc.
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Context;
 
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Logger;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\Logger;
 
 /**
  * Context is a singleton
@@ -69,21 +69,28 @@ class Context
 
     protected function init()
     {
-        $this->dataDir = realpath(__DIR__ . '/../../../..') . '/admin/lscdata';
-        $this->dataFile = $this->dataDir . '/lscm.data';
-        $this->customDataFile = $this->dataDir . '/lscm.data.cust';
-        $this->isRoot = $this->options->isRoot();
+        $this->dataDir        =
+            realpath(__DIR__ . '/../../../..') . '/admin/lscdata';
+        $this->dataFile       = "$this->dataDir/lscm.data";
+        $this->customDataFile = "$this->dataDir/lscm.data.cust";
+        $this->isRoot         = $this->options->isRoot();
     }
 
     /**
      *
      * @since 1.9
      *
-     * @return null
+     * @return void
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     * @throws LSCMException  Thrown indirectly by Logger::notice() call.
+     * @throws LSCMException  Thrown indirectly by Logger::notice() call.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     protected function checkLocalPluginDirInCageFS()
     {
-        $mpFile = '/etc/cagefs/cagefs.mp';
+        $mpFile    = '/etc/cagefs/cagefs.mp';
         $mountFile = '/proc/mounts';
 
         if ( !file_exists($mpFile) ) {
@@ -94,28 +101,28 @@ class Context
 
         $localPluginDir = self::LOCAL_PLUGIN_DIR;
 
-        $pattern = "=^((?!deleted).)*{$localPluginDir}((?!deleted).)*$=m";
-        $result = preg_grep($pattern, file($mountFile));
-        $procMountSet = ! empty($result);
+        $pattern      = "=^((?!deleted).)*$localPluginDir((?!deleted).)*$=m";
+        $result       = preg_grep($pattern, file($mountFile));
+        $procMountSet = !empty($result);
 
         if ( ! $procMountSet ) {
-            Logger::debug("Data dir not set in {$mountFile}.");
+            Logger::debug("Data dir not set in $mountFile.");
 
-            $pattern="=^.*{$localPluginDir}.*$=m";
-            $result = preg_grep($pattern, file($mpFile));
-            $setInMpFile = ! empty($result);
+            $pattern     = "=^.*$localPluginDir.*$=m";
+            $result      = preg_grep($pattern, file($mpFile));
+            $setInMpFile = !empty($result);
 
             if ( ! $setInMpFile ) {
                 file_put_contents(
                     $mpFile,
-                    "\n{$localPluginDir}",
+                    "\n$localPluginDir",
                     FILE_APPEND
                 );
 
                 Logger::notice('Added data dir to cagefs.mp.');
             }
 
-            exec('/usr/sbin/cagefsctl --remount-all', $output, $return_var);
+            exec('/usr/sbin/cagefsctl --remount-all');
 
             Logger::notice('Remounted CageFS.');
         }
@@ -126,13 +133,13 @@ class Context
 
     /**
      *
-     * @throws LSCMException
+     * @throws LSCMException  Thrown when unable to create data dir.
      */
     protected function createDataDir()
     {
         if ( !file_exists($this->dataDir) && !mkdir($this->dataDir, 0755) ) {
             throw new LSCMException(
-                "Fail to create data directory {$this->dataDir}.",
+                "Fail to create data directory $this->dataDir.",
                 LSCMException::E_PERMISSION
             );
         }
@@ -142,13 +149,15 @@ class Context
      *
      * @since 1.9
      *
-     * @throws LSCMException
+     * @throws LSCMException  Thrown when unable to create local plugin dir.
      */
     protected function createLocalPluginDir()
     {
-        if ( !file_exists(Context::LOCAL_PLUGIN_DIR)
-                && !mkdir(Context::LOCAL_PLUGIN_DIR, 0755) ) {
-
+        if (
+                !file_exists(Context::LOCAL_PLUGIN_DIR)
+                &&
+                !mkdir(Context::LOCAL_PLUGIN_DIR, 0755)
+        ) {
             throw new LSCMException(
                 "Fail to create local plugin directory "
                     . Context::LOCAL_PLUGIN_DIR . '.',
@@ -160,7 +169,8 @@ class Context
     /**
      *
      * @return ContextOption
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by self::me() call.
      */
     public static function getOption()
     {
@@ -171,13 +181,23 @@ class Context
      *
      * @since 1.9.1  Added optional parameter $loggerObj.
      *
-     * @param ContextOption  $contextOption
-     * @param object         $loggerObj      Object implementing all public
-     *                                       Logger class functions.
-     * @throws LSCMException
+     * @param ContextOption $contextOption
+     * @param object        $loggerObj      Object implementing all public
+     *     Logger class functions.
+     *
+     * @throws LSCMException  Thrown when Context is already initialized.
+     * @throws LSCMException  Thrown indirectly by Logger::setInstance() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     self::$instance->createDataDir() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     self::$instance->createLocalPluginDir() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     self::$instance->checkLocalPluginDirInCageFS() call.
      */
-    public static function initialize( ContextOption $contextOption,
-            $loggerObj = null )
+    public static function initialize(
+        ContextOption $contextOption,
+                      $loggerObj = null
+    )
     {
         if ( self::$instance != null ) {
             /**
@@ -210,7 +230,7 @@ class Context
      * Checks if the current instance is lacking the expected level of
      * permissions.
      *
-     * @return boolean
+     * @return bool
      */
     protected function hasInsufficentPermissions()
     {
@@ -222,9 +242,12 @@ class Context
 
     /**
      *
-     * @param boolean  $checkPerms
+     * @param bool $checkPerms
+     *
      * @return Context
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown when Context is not initialized.
+     * @throws LSCMException  Thrown when required permissions not met.
      */
     protected static function me( $checkPerms = false )
     {
@@ -251,7 +274,8 @@ class Context
     /**
      *
      * @return string
-     * @throws LSCMException
+     *
+     * @throws LSCMException  Thrown indirectly by self::me() call.
      */
     public static function getLSCMDataDir()
     {
@@ -263,7 +287,11 @@ class Context
      * Deprecated 06/19/19. Shift to using getLSCMDataFiles() instead.
      *
      * @deprecated
+     *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by self::getLSCMDataFiles()
+     *     call.
      */
     public static function getLSCMDataFile()
     {
@@ -275,23 +303,26 @@ class Context
     /**
      *
      * @return string[]
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Re-thrown when self::me() calls throw an
+     *     exception.
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
      */
     public static function getLSCMDataFiles()
     {
         try {
-            $dataFile = self::me(true)->dataFile;
+            $dataFile     = self::me(true)->dataFile;
             $custDataFile = self::me(true)->customDataFile;
         }
         catch ( LSCMException $e ) {
-            $msg = $e->getMessage() . ' Could not get data file paths.';
+            $msg = "{$e->getMessage()} Could not get data file paths.";
             Logger::debug($msg);
 
             throw new LSCMException($msg);
         }
 
         return array(
-            'dataFile' => $dataFile,
+            'dataFile'     => $dataFile,
             'custDataFile' => $custDataFile
         );
     }
@@ -299,6 +330,8 @@ class Context
     /**
      *
      * @return int
+     *
+     * @throws LSCMException  Thrown indirectly by self::me() call.
      */
     public static function isRoot()
     {
@@ -307,8 +340,9 @@ class Context
 
     /**
      *
-     * @return boolean
-     * @throws LSCMException  Thrown indirectly.
+     * @return bool
+     *
+     * @throws LSCMException  Thrown indirectly by self::me() call.
      */
     public static function isPrivileged()
     {
@@ -318,7 +352,8 @@ class Context
     /**
      *
      * @return int
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by self::me() call.
      */
     public static function getScanDepth()
     {
@@ -328,7 +363,8 @@ class Context
     /**
      *
      * @return int
-     * @throws LSCMException Thrown indirectly.
+     *
+     * @throws LSCMException Thrown indirectly by self::me() call.
      */
     public static function getActionTimeout()
     {
@@ -347,7 +383,8 @@ class Context
     /**
      *
      * @return string
-     * @throws LSCMException  Thrown indirectly.
+     *
+     * @throws LSCMException  Thrown indirectly by self::me() call.
      */
     public static function getFlagFileContent()
     {

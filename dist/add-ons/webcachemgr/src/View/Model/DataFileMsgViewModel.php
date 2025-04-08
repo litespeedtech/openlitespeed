@@ -1,20 +1,22 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ *
+ * @author    Michael Alegre
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
 
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\WPInstallStorage;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\WPInstallStorage;
 
 class DataFileMsgViewModel
 {
 
-    const FLD_TITLE = 'title';
+    const FLD_TITLE    = 'title';
     const FLD_DISCOVER = 'discover';
 
     /**
@@ -59,29 +61,32 @@ class DataFileMsgViewModel
 
     private function setTitleAndDiscover()
     {
-        $err = $this->wpInstallStorage->getError();
+        switch ( $this->wpInstallStorage->getError() ) {
 
-        switch ($err) {
             case WPInstallStorage::ERR_NOT_EXIST:
-                $title = 'No Scan Data Found';
+                $title    = 'No Scan Data Found';
                 $discover = 'discover';
                 break;
+
             case WPInstallStorage::ERR_CORRUPTED:
-                $title = 'Scan Data Corrupted';
+                $title    = 'Scan Data Corrupted';
                 $discover = 're-discover';
                 break;
+
             default:
-                $title = 'Scan Data Needs To Be Updated';
+                $title    = 'Scan Data Needs To Be Updated';
                 $discover = 're-discover';
         }
 
-        $this->tplData[self::FLD_TITLE] = $title;
+        $this->tplData[self::FLD_TITLE]    = $title;
         $this->tplData[self::FLD_DISCOVER] = $discover;
     }
 
     /**
      *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
      */
     public function getTpl()
     {

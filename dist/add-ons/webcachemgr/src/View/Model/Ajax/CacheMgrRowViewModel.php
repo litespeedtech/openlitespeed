@@ -1,18 +1,19 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ *
+ * @author    Michael Alegre
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model\Ajax;
 
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\PluginVersion;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\PluginVersion;
 use Lsc\Wp\Util;
-use \Lsc\Wp\WPInstall;
+use Lsc\Wp\WPInstall;
 
 class CacheMgrRowViewModel
 {
@@ -25,13 +26,13 @@ class CacheMgrRowViewModel
     protected $wpInstall;
 
     /**
-     * @var mixed[]
+     * @var array
      */
     protected $tplData = array();
 
     /**
      *
-     * @param WPInstall  $wpInstall
+     * @param WPInstall $wpInstall
      */
     public function __construct( WPInstall $wpInstall )
     {
@@ -48,7 +49,8 @@ class CacheMgrRowViewModel
 
     /**
      *
-     * @param string  $field
+     * @param string $field
+     *
      * @return null|mixed
      */
     public function getTplData( $field )
@@ -62,7 +64,8 @@ class CacheMgrRowViewModel
 
     /**
      *
-     * @param string  $type
+     * @param string $type
+     *
      * @return string
      */
     public function getSortVal( $type )
@@ -74,20 +77,15 @@ class CacheMgrRowViewModel
 
     protected function setListRowData()
     {
-        $listData = array();
-
-        $info = array(
-            'statusData' =>
-            $this->getStatusDisplayData(),
-            'flagData' => $this->getFlagDisplayData(),
-            'siteUrl' => Util::tryIdnToUtf8(
-                $this->wpInstall->getData(WPInstall::FLD_SITEURL)
-            )
-        );
-
-        $listData[$this->wpInstall->getPath()] = $info;
-
-        $this->tplData[self::FLD_LIST_DATA] = $listData;
+        $this->tplData[self::FLD_LIST_DATA] = [
+            $this->wpInstall->getPath() => [
+                'statusData' => $this->getStatusDisplayData(),
+                'flagData'   => $this->getFlagDisplayData(),
+                'siteUrl'    => Util::tryIdnToUtf8(
+                    $this->wpInstall->getData(WPInstall::FLD_SITEURL)
+                )
+            ]
+        ];
     }
 
     /**
@@ -96,8 +94,8 @@ class CacheMgrRowViewModel
      */
     protected function getStatusDisplayData()
     {
-        $statusInfo = array(
-            'disabled'               => array(
+        $statusInfo = [
+            'disabled'               => [
                 'sort'           => 'disabled',
                 'state'          => '<span '
                     . 'class="glyphicon glyphicon-flash status-disabled" '
@@ -108,8 +106,8 @@ class CacheMgrRowViewModel
                     'onclick="javascript:lscwpEnableSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip',
                 'btn_state'      => ''
-            ),
-            'enabled'                => array(
+            ],
+            'enabled'                => [
                 'sort'           => 'enabled',
                 'state'          => '<span '
                     . 'class="glyphicon glyphicon-flash status-enabled" '
@@ -120,8 +118,8 @@ class CacheMgrRowViewModel
                     'onclick="javascript:lscwpDisableSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip',
                 'btn_state'      => ''
-            ),
-            'adv_cache'              => array(
+            ],
+            'adv_cache'              => [
                 'sort'           => 'warning',
                 'state'          => '<span class="status-warning" '
                     . 'data-uk-tooltip '
@@ -133,8 +131,8 @@ class CacheMgrRowViewModel
                     'onclick="javascript:lscwpDisableSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip',
                 'btn_state'      => ''
-            ),
-            'disabled_no_active_ver' => array(
+            ],
+            'disabled_no_active_ver' => [
                 'sort'           => 'disabled',
                 'state'          => '<span '
                     . 'class="glyphicon glyphicon-flash status-disabled" '
@@ -145,9 +143,9 @@ class CacheMgrRowViewModel
                     . 'LSCache."></span>',
                 'onclick'        => '',
                 'btn_attributes' => '',
-                'btn_state'      => 'disabled',
-            ),
-            'error'                  => array(
+                'btn_state'      => 'disabled'
+            ],
+            'error'                  => [
                 'sort'           => 'error',
                 /**
                  * 'state' added individually later.
@@ -157,8 +155,8 @@ class CacheMgrRowViewModel
                 'onclick'        => '',
                 'btn_attributes' => '',
                 'btn_state'      => 'disabled'
-            ),
-            'removed'                => array(
+            ],
+            'removed'                => [
                 'sort'           => 'removed',
                 'state'          => '<span class="status-removed" '
                     . 'data-uk-tooltip '
@@ -167,9 +165,9 @@ class CacheMgrRowViewModel
                 'btn_content'    => '<span class="inactive-action-btn"></span>',
                 'onclick'        => '',
                 'btn_attributes' => '',
-                'btn_state'      => 'disabled',
-            )
-        );
+                'btn_state'      => 'disabled'
+            ]
+        ];
 
         $wpStatus = $this->wpInstall->getStatus();
 
@@ -212,29 +210,35 @@ class CacheMgrRowViewModel
      */
     protected function getFlagDisplayData()
     {
-        $flagInfo = array(
-            0 => array(
+        $flagInfo = [
+            0 => [
                 'sort' => 'unflagged',
-                'icon' => '<span class="glyphicon glyphicon-flag ls-flag ls-flag-unset"></span>',
-                'btn_title' => 'Click to set flag',
-                'onclick' => 'onclick="javascript:lscwpFlagSingle(this);"',
+                'icon'           => '<span '
+                    . 'class="glyphicon glyphicon-flag ls-flag ls-flag-unset"'
+                    . '></span>',
+                'btn_title'      => 'Click to set flag',
+                'onclick'        => 'onclick="lscwpFlagSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip'
-            ),
-            1 => array(
-                'sort' => 'flagged',
-                'icon' => '<span class="glyphicon glyphicon-flag ls-flag ls-flag-set"></span>',
-                'btn_title' => 'Click to unset flag',
-                'onclick' => 'onclick="javascript:lscwpUnflagSingle(this);"',
+            ],
+            1 => [
+                'sort'           => 'flagged',
+                'icon'           => '<span '
+                    . 'class="glyphicon glyphicon-flag ls-flag ls-flag-set"'
+                    . '></span>',
+                'btn_title'      => 'Click to unset flag',
+                'onclick'        => 'onclick="lscwpUnflagSingle(this);"',
                 'btn_attributes' => 'data-uk-tooltip'
-            ),
-            2 => array (
-                'sort' => 'removed',
-                'icon' => '<span class="glyphicon glyphicon-flag ls-flag ls-flag-removed"></span>',
-                'btn_title' => '',
-                'onclick' => '',
+            ],
+            2 => [
+                'sort'           => 'removed',
+                'icon'           => '<span '
+                    . 'class="glyphicon glyphicon-flag ls-flag ls-flag-removed"'
+                    . '></span>',
+                'btn_title'      => '',
+                'onclick'        => '',
                 'btn_attributes' => ''
-            )
-        );
+            ]
+        ];
 
         $wpStatus = $this->wpInstall->getStatus();
 
@@ -253,39 +257,43 @@ class CacheMgrRowViewModel
 
     /**
      *
-     * @return boolean|string
+     * @return bool|string
      */
     protected function getActiveVerData()
     {
-        try
-        {
-            $currVer = PluginVersion::getCurrentVersion();
+        try {
+            return PluginVersion::getCurrentVersion();
         }
-        catch ( LSCMException $e )
-        {
+        catch ( LSCMException $e ) {
             //don't care about the exception in ajax load.
-            $currVer = false;
+            return false;
         }
 
-        return $currVer;
     }
 
     /**
      *
-     * @param string  $tplID
+     * @param string $tplID
+     *
      * @return null|string
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
      */
     public function getTpl( $tplID )
     {
         $sharedTplDir = Context::getOption()->getSharedTplDir();
 
-        switch ($tplID) {
+        switch ( $tplID ) {
+
             case 'actions_td':
-                return "{$sharedTplDir}/Ajax/CacheMgrActionsCol.tpl";
+                return "$sharedTplDir/Ajax/CacheMgrActionsCol.tpl";
+
             case 'status_td':
-                return "{$sharedTplDir}/Ajax/CacheMgrStatusCol.tpl";
+                return "$sharedTplDir/Ajax/CacheMgrStatusCol.tpl";
+
             case 'flag_td':
-                return "{$sharedTplDir}/Ajax/CacheMgrFlagCol.tpl";
+                return "$sharedTplDir/Ajax/CacheMgrFlagCol.tpl";
+
             //no default
         }
     }

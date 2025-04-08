@@ -1,0 +1,391 @@
+#!/usr/bin/python3
+import argparse, json, logging, os, re, shutil, signal, subprocess
+import xml.etree.ElementTree as ET
+from stat import *
+from subprocess import PIPE
+from xml.dom import minidom
+import common
+
+def run_program(args, fail_reason = ""):
+    logging.debug('run: ' + str(args))
+    result = subprocess.run(args, stdout=PIPE, stderr=PIPE)
+    if fail_reason != "" and result.returncode == 0:
+        common.fatal_error('Expected: ' + args[0] + ' to fail: ' + fail_reason)
+    if fail_reason == "" and result.returncode != 0:
+        common.fatal_error('Error in running: ' + args[0] + ' errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
+    return result.stdout.decode('utf-8')
+
+def run_shell_program(cmd, fail_reason = ""):
+    logging.debug('run: ' + cmd)
+    result = subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    if fail_reason != "" and result.returncode == 0:
+        common.fatal_error('Expected: ' + cmd + ' to fail: ' + fail_reason)
+    if fail_reason == "" and result.returncode != 0:
+        common.fatal_error('Error in running: ' + cmd + ' errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
+    return result.stdout.decode('utf-8')
+
+def systemctl_daemon_reload():
+    logging.debug("Do daemon-reload")
+    run_program(['systemctl', 'daemon-reload'])
+
+def validate_environment():
+    if not os.path.exists('/sys/fs/cgroup/cgroup.controllers'):
+        common.fatal_error("cgroups is not v2 on this machine")
+    if os.getuid() != 0:
+        common.fatal_error("this program must be run as root")
+    if not os.path.isfile('/etc/systemd/system.control/user.slice.d/50-IOAccounting.conf'):
+        logging.debug('Activate accounting')
+        run_program(['systemctl', 'set-property', 'user.slice', 'IOAccounting=yes', 'MemoryAccounting=yes', 'TasksAccounting=yes'])
+        systemctl_daemon_reload()
+    
+def init_pgm():
+    common.init_logging()
+    parser = argparse.ArgumentParser(prog="setup",
+                                     description='LiteSpeed Containers Setup Program')
+    parser.add_argument('-l', '--log', type=int, help='set logging level, 10=Debug, 20=Info, 30=Warning, 40=Error.  Default is Info')
+    parser.add_argument('-q', '--quiet', action='store_true', help='turns off all logging and only outputs what is requested.')
+    parser.add_argument('-s', '--server_root', default=common.server_root(), help='the LiteSpeed SERVER_ROOT')
+    parser.add_argument('-c', '--cgroups', type=int, default=1, help='The minimum value for cgroups')
+    parser.add_argument('-i', '--cgroups-init', type=int, default=2, help='The cgroups value if not set currently')
+    parser.add_argument('-n', '--namespace', type=int, default=1, help='The minimum value for namespace')
+    parser.add_argument('-m', '--namespace-init', type=int, default=2, help='The namespace value if not set currently')
+    parser.add_argument('-g', '--no-config', action='store_true', help='Skips checking of LiteSpeed Config')
+    parser.add_argument('-t', '--no-subtree_control', action='store_true', help='Skips checking of system cgroup.subtree_control file')
+    parser.add_argument('-u', '--no-upgrade', action='store_true', help='Does not check the version of LiteSpeed')
+    parser.add_argument('-r', '--revert-config', action='store_true', help='Reverts modified LiteSpeed config file')
+    args = parser.parse_args()
+    if not args.quiet or args.log != None:
+        if args.log != None:
+            logging.getLogger().setLevel(args.log)
+        else:
+            logging.getLogger().setLevel(logging.INFO)
+        logging.debug("Entering setup")
+    common.set_server_root(args.server_root)
+    validate_environment()
+    return args
+
+def config_filename(lsws):
+    if lsws:
+        return common.server_root() + "/conf/httpd_config.xml"
+    return common.server_root() + "/conf/httpd_config.conf"
+
+def config_filename_revert(lsws):
+    return config_filename(lsws) + '_lssetup'
+
+def is_lsws():
+    if (os.path.isfile(config_filename(True))):
+        return True
+    if (os.path.isfile(config_filename(False))):
+        return False
+    common.fatal_error("Can not identify the LiteSpeed system type")
+
+def copy_file_details(source, dest):
+    s = os.stat(source)
+    shutil.copystat(source, dest)
+    os.chown(dest, s.st_uid, s.st_gid)
+
+def set_cgroups(root, val, init):
+    valSet = False
+    findLimit = root.find('./security/CGIRLimit')
+    if findLimit == None:
+        common.fatal_error('Unexpected missing element CGIRLimit in configuration file')
+    cgroups = findLimit.find('cgroups')
+    if cgroups == None:
+        logging.debug('cgroups not in LSWS file')
+        cgroups = ET.SubElement(findLimit, 'cgroups')
+        cgroups.text = str(init)
+        valSet = True
+    elif int(cgroups.text) < val:
+        logging.debug('cgroups bad value in LSWS file')
+        cgroups.text = str(val)
+        valSet = True
+    if valSet:
+        logging.debug('cgroups set')
+    else:
+        logging.debug('cgroups ok')
+        
+    return valSet    
+
+def set_namespace(root, val, init):
+    valSet = False
+    findSecurity = root.find('./security')
+    if findSecurity == None:
+        common.fatal_error('Unexpected missing element Security in configuration file')
+    namespace = findSecurity.find('namespace')
+    if namespace == None:
+        logging.debug('namespace not in LSWS file')
+        namespace = ET.SubElement(findSecurity, 'namespace')
+        namespace.text = str(init)
+        valSet = True
+    elif int(namespace.text) < val:
+        logging.debug('namespace bad value in LSWS file')
+        namespace.text = str(val)
+        valSet = True
+    if valSet:
+        logging.debug('namespace set')
+    else:
+        logging.debug('namespace ok')
+        
+    return valSet    
+
+def lsws_restart():
+    pid = run_shell_program("ps -ef|grep '[l]shttpd - main' | awk -F ' ' '{print $2}'")
+    if pid == '':
+        logging.debug("LiteSpeed not running")
+        return
+    try:
+        os.kill(int(pid), signal.SIGUSR1)
+    except OSError as err:
+        common.fatal_error("Error sending graceful restart to ListSpeed: %s" % err)
+    logging.debug("LiteSpeed restarted")
+    
+def lsws_config(args):
+    file = config_filename(True)
+    try:
+        tree = ET.parse(file)
+    except Exception as err:
+        common.fatal_error('Error parsing configuration: %s' % err)
+    revert = config_filename_revert(True)
+    shutil.copy2(file, revert)
+    copy_file_details(file, revert)
+    valSet = set_cgroups(tree.getroot(), args.cgroups, args.cgroups_init)
+    if set_namespace(tree.getroot(), args.namespace, args.namespace_init):
+        valSet = True
+    if valSet:
+        try:
+            #ET.indent(tree, space='  ')
+            tree.write(file, encoding="UTF-8", xml_declaration=True, short_empty_elements=False)
+        except Exception as err:
+            common.fatal_error('Error updating configuration: %s' % err)
+        lsws_restart()
+            
+def lsws_validate(args):
+    lsws_config(args)
+        
+def rewrite_ols_config(args, cgroupsAt, pastCGIRLimit, cgroupsVal, namespaceAt, lineNo, namespaceVal):
+    file = config_filename(False)
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (file, err))
+    fileout = common.server_root() + "/conf/httpd_config.out"
+    try:
+        w = open(fileout, 'w')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (fileout, err))
+    # Optimize for the do nothing case
+    stop1 = 0
+    replace1 = False
+    if cgroupsAt != 0:
+        if int(cgroupsVal) <= args.cgroups:
+            stop1 = cgroupsAt
+            replace1 = True
+            setCgroups = args.cgroups
+    else:
+        stop1 = pastCGIRLimit
+        setCgroups = args.cgroups_init
+    stop2 = 0
+    replace2 = False
+    if namespaceAt != 0:
+        if int(namespaceVal) <= args.namespace:
+            stop2 = namespaceAt
+            replace2 = True
+            setNS = args.namespace
+    else:
+        stop2 = lineNo
+        setNS = args.namespace_init
+    lineNo = 0
+    try:
+        for line in f:
+            replace = False
+            if lineNo > 0:
+                if lineNo == stop1:
+                    w.write('  cgroups %d\n' % setCgroups)
+                    replace = replace1
+                    logging.debug('writing cgroups %d' % setCgroups)
+                elif lineNo == stop2:
+                    w.write('namespace %d\n'% setNS)
+                    replace = replace2
+                    logging.debug('writing namespace %d' % setNS)
+            if not replace:
+                w.write(line)
+            lineNo += 1
+        f.close()
+        w.close()
+        copy_file_details(file, fileout)
+        os.replace(fileout, file)
+    except Exception as err:
+        common.fatal_error('Error writing OLS config file: %s' % err)
+
+def ols_config(args):
+    logging.debug('OLS config file')
+    file = config_filename(False)
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (file, err))
+    revert = config_filename_revert(False)
+    shutil.copy2(file, revert)
+    copy_file_details(file, revert)
+    # Optimize for the do nothing case
+    inCGIRLimit = False
+    pastCGIRLimit = 0
+    cgroupsAt = 0
+    cgroupsLine = ''
+    namespaceAt = 0
+    namespaceLine = ''
+    lineNo = 0
+    cgroupsVal = 0
+    namespaceVal = 0
+    for line in f:
+        if pastCGIRLimit == 0:
+            if not inCGIRLimit:
+                if line.startswith('CGIRLimit'):
+                    inCGIRLimit = True
+            elif line.find('}') != -1:
+                pastCGIRLimit = lineNo
+            elif line.startswith('  cgroups'):
+                cgroupsLine = line
+                cgroupsAt = lineNo
+        elif line.startswith('namespace'):
+            namespaceLine = line
+            namespaceAt = lineNo
+            break
+        elif line.find('{') != -1:
+            break
+        lineNo += 1
+    f.close()
+    if cgroupsLine != '':
+        cgroupsVal = re.search(r'[\d]+', cgroupsLine).group()
+        logging.debug('OLS cgroups val: %d' % int(cgroupsVal))   
+    if namespaceLine != '':
+        namespaceVal = re.search(r'[\d]+', namespaceLine).group()
+        logging.debug('OLS namespace val: %d' % int(namespaceVal))   
+    if cgroupsLine != '' and int(cgroupsVal) >= args.cgroups and namespaceLine != '' and int(namespaceVal) >= args.namespace:
+        logging.debug('OLS config file needs no mod')   
+        return
+    logging.debug('OLS config file needs mod')   
+    rewrite_ols_config(args, cgroupsAt, pastCGIRLimit, cgroupsVal, namespaceAt, lineNo, namespaceVal)
+    lsws_restart()
+        
+def ols_validate(args):
+    ols_config(args)
+
+def read_oneline_file(file):
+    try:
+        f = open(file, 'r')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (file, err))
+    ln = f.readline()
+    line = ln.rstrip()
+    f.close()
+    return line
+
+def read_subtree_control():
+    line = read_oneline_file('/sys/fs/cgroup/cgroup.subtree_control')
+    pieces = line.split(' ')
+    logging.debug('Read line: %s got %s' % (line, ' '.join(pieces)))
+    return pieces
+
+def build_delegate(controllers):
+    dirname = '/etc/systemd/system/user@.service.d'
+    filename = dirname + '/delegate.conf'
+    if os.path.exists(filename):
+        common.fatal_error("%s already exists - problem in controller management" % filename)
+    try:
+        os.mkdir(dirname)
+    except Exception as err:
+        logging.debug("Error creating service directory: %s" % err)
+    try:
+        w = open(filename, 'w')
+    except Exception as err:
+        common.fatal_error('Error opening %s: %s' % (filename, err))
+    w.write("[Service]\nDelegate=%s\n" % ' '.join(controllers))
+    w.close()
+    systemctl_daemon_reload()
+
+def subtree_control():
+    pieces = read_subtree_control()
+    controllers = ['cpu', 'cpuset', 'io', 'memory', 'pids']
+    missing = []
+    for controller in controllers:
+        if not controller in pieces:
+            missing.append(controller)
+    if len(missing) == 0 or (len(missing) == 1 and missing[0] == 'cpuset'):
+        logging.debug('No controller missing')
+        return
+    logging.debug('Missing the %s controllers' % ' '.join(missing))
+    build_delegate(controllers)
+
+def compare_versions(verstr, minver):
+    verlist = verstr.split('.')
+    minlist = minver.split('.')
+    for index, min in enumerate(minlist):
+        if index > len(verlist):
+            logging.debug('Old version %s < %s (short)' % (verstr, minver))
+            return True
+        dash_index = verlist[index].find('-')
+        if dash_index != -1:
+            verlist[index] = verlist[index][0:dash_index]
+        if int(min) > int(verlist[index]):
+            logging.debug('Old version %s < %s' % (verstr, minver))
+            return True
+        if int(min) < int(verlist[index]):
+            logging.debug('Newer version %s > %s' % (verstr, minver))
+            return False
+    logging.debug('Equal version %s == %s' % (verstr, minver))
+    return False
+
+def get_minver():
+    if is_lsws():
+        return '6.3'
+    return '1.7'
+    
+def needs_upgrade():
+    verstr = read_oneline_file(common.server_root() + '/VERSION')
+    return compare_versions(verstr, get_minver())
+    
+def upgrade():
+    autostr = read_oneline_file(common.server_root() + '/autoupdate/release')
+    upgrade_pgm = common.server_root() + '/admin/misc/lsup.sh'
+    logging.info('Doing LiteSpeed upgrade')
+    if not compare_versions(autostr, get_minver()):
+        run_shell_program(upgrade_pgm + ' -f')
+    else:
+        run_shell_program(upgrade_pgm + ' -d -f -v ' + get_minver())
+        
+def revert_config():
+    lsws = is_lsws()
+    if not os.path.isfile(config_filename_revert(lsws)):
+        common.fatal_error("You do not have a config file to revert")
+    logging.info('Doing LiteSpeed config file revert')
+    os.replace(config_filename_revert(lsws), config_filename(lsws))
+    lsws_restart()
+
+def do_pgm(args):
+    logging.debug("Entering setup")
+    if args.revert_config:
+        revert_config()
+        return;
+    if not args.no_upgrade:
+        if needs_upgrade():
+            upgrade()
+    if not args.no_config:
+        if is_lsws():
+            lsws_validate(args)
+        else:
+            ols_validate(args)
+    else:
+        logging.debug('no-config specified')
+    if not args.no_subtree_control:
+        subtree_control()
+    else:
+        logging.debug('no-subtree_control specified')
+
+def main():
+    args = init_pgm()
+    return do_pgm(args)
+  
+if __name__ == "__main__":
+    main()
+    

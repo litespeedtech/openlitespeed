@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2023 LiteSpeed Technologies, Inc.
+ * @copyright 2023-2025 LiteSpeed Technologies, Inc.
  * @since     1.17
  * *******************************************
  */
@@ -36,7 +36,10 @@ class PluginUpgrader
      *
      * @param \WP_Upgrader_Skin|null $skin
      *
+     * @noinspection PhpDeprecatedImplicitlyNullableParameterInspection
+     * @noinspection PhpFullyQualifiedNameUsageInspection
      * @noinspection PhpUndefinedClassInspection
+     * @noinspection RedundantSuppression
      */
     public function __construct( \WP_Upgrader_Skin $skin = null )
     {

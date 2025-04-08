@@ -1,21 +1,22 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2019
+ *
+ * @author    Michael Alegre
+ * @copyright 2019-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
 
-use \Lsc\Wp\Context\Context;
-use \Lsc\Wp\LSCMException;
-use \Lsc\Wp\Logger;
+use Lsc\Wp\Context\Context;
+use Lsc\Wp\LSCMException;
+use Lsc\Wp\Logger;
 
 class MassDashDisableProgressViewModel
 {
 
-    const FLD_ICON = 'icon';
+    const FLD_ICON           = 'icon';
     const FLD_INSTALLS_COUNT = 'installsCount';
 
     /**
@@ -24,19 +25,23 @@ class MassDashDisableProgressViewModel
     protected $sessionKey = 'massDashDisableInfo';
 
     /**
-     * @var mixed[]
+     * @var array
      */
     protected $tplData = array();
 
     /**
      *
-     * @param string  $action
+     * @throws LSCMException  Thrown indirectly by $this->init() call.
      */
     public function __construct()
     {
         $this->init();
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by $this->setIconPath() call.
+     */
     protected function init()
     {
         $this->setIconPath();
@@ -45,7 +50,8 @@ class MassDashDisableProgressViewModel
 
     /**
      *
-     * @param string  $field
+     * @param string $field
+     *
      * @return null|mixed
      */
     public function getTplData( $field )
@@ -57,18 +63,21 @@ class MassDashDisableProgressViewModel
         return $this->tplData[$field];
     }
 
+    /**
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::debug() call.
+     */
     protected function setIconPath()
     {
         $iconPath = '';
 
         try
         {
-            $iconDir = Context::getOption()->getIconDir();
-            $iconPath = "{$iconDir}/wpNotifier.svg";
+            $iconPath = Context::getOption()->getIconDir() . '/wpNotifier.svg';
         }
         catch ( LSCMException $e )
         {
-            Logger::debug($e->getMessage() . ' Could not get icon directory.');
+            Logger::debug("{$e->getMessage()} Could not get icon directory.");
         }
 
         $this->tplData[self::FLD_ICON] = $iconPath;
@@ -84,11 +93,13 @@ class MassDashDisableProgressViewModel
     /**
      *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
      */
     public function getTpl()
     {
         return Context::getOption()->getSharedTplDir()
-                . '/MassDashDisableProgress.tpl';
+            . '/MassDashDisableProgress.tpl';
     }
 
 }
