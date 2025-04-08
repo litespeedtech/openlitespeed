@@ -637,7 +637,7 @@ int HttpReq::processRequestLine()
                 m_headerBuf.size(), m_headerBuf.begin());
         return SC_400;
     }
-    while ((p < pLineEnd) && ((*p != ' ') && (*p != '\t')))
+    while (p < pLineEnd && *p != ' ' && *p != '\t' && *p != '\r')
         ++p;
     if (p >= pLineEnd || pCur > p)
     {
@@ -655,8 +655,12 @@ int HttpReq::processRequestLine()
     }
 
     pCur = p + 1;
-    while ((p < pLineEnd) && ((*p == ' ') || (*p == '\t')))
+    while (p < pLineEnd && (*p == ' ' || *p == '\t' || *p == '\r'))
+    {
+        if (*p != ' ')
+            *(char *)p = ' ';
         ++p;
+    }
     pCur = p;
 
     result = parseProtocol(pCur, pLineEnd);

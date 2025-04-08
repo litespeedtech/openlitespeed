@@ -44,21 +44,20 @@ inst_admin_php()
             HASADMINPHP=y
             echo "admin_php downloaded."
         fi
-        
 #        if [ -f  "$LSWS_HOME/admin/fcgi-bin/admin_php" ] ; then
 #            HASADMINPHP=y
 #        fi
 
     elif [ "x$OS" = "xFreeBSD" ] ; then
         if [ "x$(uname -m)" != "xamd64" ] ; then
-           $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/i386-freebsd/lsphp5
         else
-           $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
+            $DLCMD $LSWS_HOME/admin/fcgi-bin/admin_php http://www.litespeedtech.com/packages/lsphp5_bin/x86_64-freebsd/lsphp5
         fi
        
         if [ $? = 0 ] ; then 
-           HASADMINPHP=y
-           echo "admin_php downloaded."
+            HASADMINPHP=y
+            echo "admin_php downloaded."
         fi
     fi
 
@@ -66,7 +65,7 @@ inst_admin_php()
         echo -e "\033[38;5;148mStart to build php, this may take several minutes, please waiting ...\033[39m"
         $LSWS_HOME/admin/misc/build_admin_php.sh
     else
-        chmod "$EXEC_MOD" "$LSWS_HOME/admin/fcgi-bin/admin_php"
+        chmod 0755 "$LSWS_HOME/admin/fcgi-bin/admin_php"
     fi
 
     #final checking of existence of admin_php

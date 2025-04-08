@@ -895,34 +895,47 @@ int SslUtil::setCipherList(SSL_CTX *pCtx, const char *pList)
 
 void SslUtil::updateProtocol(SSL_CTX *pCtx, int method)
 {
+    int min = TLS1_3_VERSION;
+    int max = TLS1_3_VERSION;
+    if (!method)
+        return;
+    if (method & SslContext::SSL_v3)
+        min = SSL3_VERSION;
+    else if (method & SslContext::SSL_TLSv1)
+        min = TLS1_VERSION;
+    else if (method & SslContext::SSL_TLSv11)
+        min = TLS1_1_VERSION;
+    else if (method & SslContext::SSL_TLSv12)
+        min = TLS1_2_VERSION;
+
+    if (!(method & SslContext::SSL_TLSv13))
+    {
+        if (method & SslContext::SSL_TLSv12)
+            max = TLS1_2_VERSION;
+        else
+            max = TLS1_1_VERSION;
+    }
+
+    SSL_CTX_set_max_proto_version(pCtx, max);
+    SSL_CTX_set_min_proto_version(pCtx, min);
+
     setOptions(pCtx, SSL_OP_NO_SSLv2);
-    if (!(method & SslContext::SSL_v3))
+    if (min <= SSL3_VERSION && !(method & SslContext::SSL_v3))
         setOptions(pCtx, SSL_OP_NO_SSLv3);
-    if (!(method & SslContext::SSL_TLSv1))
+    if (min <= TLS1_VERSION && !(method & SslContext::SSL_TLSv1))
         setOptions(pCtx, SSL_OP_NO_TLSv1);
 #ifdef SSL_OP_NO_TLSv1_1
-    if (!(method & SslContext::SSL_TLSv11))
+    if (min <= TLS1_1_VERSION && !(method & SslContext::SSL_TLSv11))
         setOptions(pCtx, SSL_OP_NO_TLSv1_1);
 #endif
 #ifdef SSL_OP_NO_TLSv1_2
-    if (!(method & SslContext::SSL_TLSv12))
+    if (min <= TLS1_2_VERSION && max >= TLS1_2_VERSION
+        && !(method & SslContext::SSL_TLSv12))
         setOptions(pCtx, SSL_OP_NO_TLSv1_2);
 #endif
 
-#ifdef TLS1_3_VERSION
-    if (method & SslContext::SSL_TLSv13)
-    {
-        SSL_CTX_set_max_proto_version(pCtx, TLS1_3_VERSION);
-#ifdef OPENSSL_IS_BORINGSSL
-#if defined(TLS1_3_DRAFT23_VERSION) || defined(TLS1_3_DRAFT28_VERSION)
-        SSL_CTX_set_tls13_variant(pCtx, tls13_all);
-#endif
-#endif
-    }
-#endif
-
 #ifdef SSL_OP_NO_TLSv1_3
-    if (!(method & SslContext::SSL_TLSv13))
+    if (max >= TLS1_3_VERSION && !(method & SslContext::SSL_TLSv13))
         setOptions(pCtx, SSL_OP_NO_TLSv1_3);
 #endif
 }

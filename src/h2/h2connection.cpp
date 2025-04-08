@@ -250,8 +250,8 @@ int H2Connection::h2cUpgrade(HioHandler *pSession, const char * pBuf, int size)
         enum stream_flag flag = HIO_FLAG_FLOWCTRL | HIO_FLAG_WRITE_BUFFER;
         if (!(m_h2flag & H2_CONN_FLAG_NO_PUSH))
             flag = flag | HIO_FLAG_PUSH_CAPABLE;
-        if (getStream()->getFlag(HIO_FLAG_ALTSVC_SENT))
-            flag = flag | HIO_FLAG_ALTSVC_SENT;
+        flag = flag | (enum stream_flag)(getStream()->getFlag()
+                        & (HIO_FLAG_ALTSVC_SENT | HIO_FLAG_FROM_LOCAL));
         pStream->setFlag(flag, 1);
         pStream->init(this, NULL);
         onInitConnected();

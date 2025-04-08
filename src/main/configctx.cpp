@@ -831,7 +831,8 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode,
         config.m_iVerifyDepth = getLongValue(pNode, "verifyDepth", 1, INT_MAX, 1);
 
     config.m_iCertChain = getLongValue( pNode, "certChain", 0, 1, 0 );
-    config.m_iProtocol = getLongValue(pNode, "sslProtocol", 1, 31, 28);
+    config.m_iProtocol = getLongValue(pNode, "sslProtocol", 1, 31,
+                                      SslContext::SSL_TLS_SAFE);
     config.m_iEnableECDHE = getLongValue(pNode, "enableECDHE", 0, 1, 1);
     config.m_iEnableDHE = getLongValue(pNode, "enableDHE", 0, 1, 0);
 

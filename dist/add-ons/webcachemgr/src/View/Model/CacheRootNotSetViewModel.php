@@ -1,14 +1,16 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
- * @author: LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright: (c) 2018-2019
+ *
+ * @author    Michael Alegre
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
 
 use Lsc\Wp\Context\Context;
+use Lsc\Wp\LSCMException;
 
 class CacheRootNotSetViewModel
 {
@@ -23,6 +25,8 @@ class CacheRootNotSetViewModel
     /**
      *
      * @return string
+     *
+     * @throws LSCMException  Thrown indirectly by Context::getOption() call.
      */
     public function getTpl()
     {

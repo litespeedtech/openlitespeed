@@ -27,6 +27,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <stdio.h>
@@ -156,6 +157,7 @@ void StdErrLogger::dupAppenderFdToStdErr()
         m_pAppender->open();
     if (m_pAppender->getfd() != -1)
     {
+        fchmod(m_pAppender->getfd(), 0640);
         dup2(m_pAppender->getfd(), STDERR_FILENO);
     }
 }

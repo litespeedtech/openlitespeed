@@ -36,17 +36,29 @@ END_LOG4CXX_NS
 #define COND_FLAG_NOMATCH       4
 #define COND_FLAG_EXPR          16
 
-#define COND_OP_REGEX           0
-#define COND_OP_LESS            1
-#define COND_OP_GREATER         2
-#define COND_OP_EQ              3
-#define COND_OP_DIR             4
-#define COND_OP_FILE            5
-#define COND_OP_SIZE            6
-#define COND_OP_SYM             7
-#define COND_OP_FILE_ACC        8
-#define COND_OP_URL_ACC         9
-#define COND_OP_EXPR            10
+enum RWCOND_OPS
+{
+    COND_OP_REGEX,
+    COND_OP_LESS,
+    COND_OP_GREATER,
+    COND_OP_EQ,
+    COND_OP_GE,
+    COND_OP_LE,
+    COND_OP_LESS_NUM,
+    COND_OP_GREATER_NUM,
+    COND_OP_EQ_NUM,
+    COND_OP_GE_NUM,
+    COND_OP_LE_NUM,
+    COND_OP_NE_NUM,
+    COND_OP_DIR,
+    COND_OP_FILE,
+    COND_OP_SIZE,
+    COND_OP_SYM,
+    COND_OP_EXEC,
+    COND_OP_FILE_ACC,
+    COND_OP_URL_ACC,
+    COND_OP_EXPR,
+};
 
 #define RULE_FLAG_NONE          0
 #define RULE_FLAG_LAST          (1<<0)

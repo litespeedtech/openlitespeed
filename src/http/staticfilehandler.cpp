@@ -815,6 +815,9 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
         if (pReq->getRange())
             delete pReq->getRange();
         pReq->setRange(range);
+        pReq->andGzip(~GZIP_ENABLED);
+        pReq->andBr(~BR_ENABLED);
+
         ret = pData->readyCacheData(0);
         if (!ret)
         {

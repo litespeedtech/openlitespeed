@@ -90,7 +90,7 @@ public:
         // WARNING: assumes LOCKED
         if (!isLogIdBuilt())
             allocLogId();
-        if (MAX_LOGID_LEN - m_logId.len - reserveChars <= 0)
+        if ((ssize_t)(MAX_LOGID_LEN - m_logId.len - reserveChars <= 0))
         {
             fprintf(stderr, "appendLogId error: want to reserve %zd, id length: %zd, id: %.*s\n",
                     reserveChars, m_logId.len, (int)m_logId.len, m_logId.ptr);

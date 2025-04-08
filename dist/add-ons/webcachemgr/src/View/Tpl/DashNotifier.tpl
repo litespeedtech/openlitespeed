@@ -31,7 +31,7 @@ echo '</form>';
     WordPress Dashboard Notification
   </h1>
   <p class="uk-width-medium-2-3 uk-width-small-1-1 uk-text-dark"
-     style="font-size: 15px; margin-left: 0px;">
+     style="font-size: 15px; margin-left: 0;">
     This tool deploys and activates the
     <a href="https://wordpress.org/plugins/dash-notifier/" target='_blank'>WP Dash Notifier</a>
     WordPress plugin on all of the server's WordPress installations.

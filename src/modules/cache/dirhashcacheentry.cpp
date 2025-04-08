@@ -39,10 +39,9 @@ DirHashCacheEntry::DirHashCacheEntry()
 
 DirHashCacheEntry::~DirHashCacheEntry()
 {
-    if (getFdStore() != -1)
-        close(getFdStore());
-
 }
+
+
 //<"LSCH"><CeHeader><CacheKey><ResponseHeader><ResponseBody>
 int DirHashCacheEntry::loadCeHeader()
 {

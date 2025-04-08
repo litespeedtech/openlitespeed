@@ -20,7 +20,7 @@ class RootCLIContextOption extends ContextOption
         $invokerName = 'lscmctl';
         $invokerType = parent::FROM_CLI;
         $isRoot = parent::IS_ROOT;
-        $logFileLvl = Logger::L_INFO;
+        $logFileLvl = Logger::L_DEBUG;//Logger::L_INFO;
         $logEchoLvl = Logger::L_INFO;
         $bufferedWrite = true;
         $bufferedEcho = false;

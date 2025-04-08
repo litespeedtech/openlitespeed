@@ -422,13 +422,25 @@ int RewriteCond::parseCondPattern(const char *&pRuleStr, const char *pEnd)
         switch (*argBegin)
         {
         case '>':
-            m_opcode = COND_OP_GREATER;
             ++argBegin;
+            if (*argBegin == '=')
+            {
+                m_opcode = COND_OP_GE;
+                ++argBegin;
+            }
+            else
+                m_opcode = COND_OP_GREATER;
             stripQuote = 1;
             break;
         case '<':
-            m_opcode = COND_OP_LESS;
             ++argBegin;
+            if (*argBegin == '=')
+            {
+                m_opcode = COND_OP_LE;
+                ++argBegin;
+            }
+            else
+                m_opcode = COND_OP_LESS;
             stripQuote = 1;
             break;
         case '=':
@@ -437,31 +449,62 @@ int RewriteCond::parseCondPattern(const char *&pRuleStr, const char *pEnd)
             stripQuote = 1;
             break;
         case '-':
-            if (argBegin + 2 != argEnd)
-                break;
-            m_pattern.setStr(argBegin, 2);
-            switch (*(argBegin + 1))
+            if (strncmp(argBegin + 1, "eq", 2) == 0)
+                m_opcode = COND_OP_EQ_NUM;
+            else if (strncmp(argBegin + 1, "ne", 2) == 0)
+                m_opcode = COND_OP_NE_NUM;
+            else if (*(argBegin + 1) == 'g')
             {
-            case 'd':
-                m_opcode = COND_OP_DIR;
-                return 0;
-            case 'f':
-                m_opcode = COND_OP_FILE;
-                return 0;
-            case 's':
-                m_opcode = COND_OP_SIZE;
-                return 0;
-            case 'l':
-                m_opcode = COND_OP_SYM;
-                return 0;
-            case 'F':
-                m_opcode = COND_OP_FILE_ACC;
-                return 0;
-            case 'U':
-                m_opcode = COND_OP_URL_ACC;
-                return 0;
-            default:
-                break;
+                if (*(argBegin + 2) == 'e')
+                    m_opcode = COND_OP_GE_NUM;
+                else if (*(argBegin + 2) == 't')
+                    m_opcode = COND_OP_GREATER_NUM;
+            }
+            else if (*(argBegin + 1) == 'l')
+            {
+                if (*(argBegin + 2) == 'e')
+                    m_opcode = COND_OP_LE_NUM;
+                else if (*(argBegin + 2) == 't')
+                    m_opcode = COND_OP_LESS_NUM;
+            }
+            if (m_opcode != COND_OP_REGEX)
+            {
+                m_pattern.setStr(argBegin, 3);
+                argBegin += 3;
+            }
+            else
+            {
+                if (argBegin + 2 != argEnd)
+                    break;
+                m_pattern.setStr(argBegin, 2);
+                switch (*(argBegin + 1))
+                {
+                case 'd':
+                    m_opcode = COND_OP_DIR;
+                    return 0;
+                case 'f':
+                    m_opcode = COND_OP_FILE;
+                    return 0;
+                case 's':
+                    m_opcode = COND_OP_SIZE;
+                    return 0;
+                case 'h':
+                case 'L':
+                case 'l':
+                    m_opcode = COND_OP_SYM;
+                    return 0;
+                case 'x':
+                    m_opcode = COND_OP_EXEC;
+                    return 0;
+                case 'F':
+                    m_opcode = COND_OP_FILE_ACC;
+                    return 0;
+                case 'U':
+                    m_opcode = COND_OP_URL_ACC;
+                    return 0;
+                default:
+                    break;
+                }
             }
             break;
         }

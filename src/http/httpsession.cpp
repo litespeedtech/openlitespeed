@@ -5122,7 +5122,7 @@ int HttpSession::getServerAddrStr(char *pBuf, int len)
 }
 
 
-#define STATIC_FILE_BLOCK_SIZE 16384
+#define STATIC_FILE_BLOCK_SIZE 16384LL
 
 int HttpSession::openStaticFile(const char *pPath, int pathLen,
                                 int *status)
@@ -5494,8 +5494,6 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
          * Update to make sure sendfile size is limit to 2GB per calling
          */
         remain = pData->getRemain();
-        if (remain > SSIZE_MAX)
-            remain = SSIZE_MAX;
 
         len = writeRespBodySendFile(fd, pData->getCurPos(), remain,
                                     pData->getRemain() <= remain);
