@@ -46,7 +46,7 @@ ProxyConn::ProxyConn()
     : m_flag(0)
     , m_ssl(NULL)
 {
-    lstrncpy(m_extraHeader, "Accept-Encoding: gzip\r\nX-Forwarded-For: ",
+    lstrncpy(m_extraHeader, "Accept-Encoding: gzip\r\n",
              sizeof(m_extraHeader));
     LS_ZERO_FILL(m_iTotalPending, m_pChunkOS);
 }
@@ -214,6 +214,7 @@ int ProxyConn::addForwardedFor(const char *pBegin)
     const char *psAddr = NULL;
     int psAddrLen = 0;
 
+    memmove(pExtraHeader, "X-Forwarded-For: ", 17);
     if (*pForward != '\0')
     {
         len = pReq->getHeaderLen(HttpHeader::H_X_FORWARDED_FOR);
