@@ -3617,9 +3617,9 @@ int HttpReq::parseOneCookie(const char *cookie, const char *val_end)
 {
     const char *pVal;
     const char *pNameEnd;
-    while (isspace(*cookie))
+    while (cookie < val_end && isspace(*cookie))
         ++cookie;
-    if (val_end == cookie)
+    if (val_end <= cookie)
         return LS_OK;
     pVal = (const char *)memchr(cookie, '=', val_end - cookie);
     if (!pVal)

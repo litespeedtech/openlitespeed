@@ -90,7 +90,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  "built: Tue Apr  8 16:49:25 UTC 2025"
+#define BUILDTIME  "built: Fri Jul 11 18:55:26 UTC 2025"
 
 static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
         " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";
@@ -1079,6 +1079,7 @@ int LshttpdMain::init(int argc, char *argv[])
         m_pServer->enableAioLogging();
         m_pServer->startServing();
         EvtcbQue::getInstance().initNotifier();
+        initAio();
         cleanEnvVars();
 
         WorkCrew * pGWC = ModuleHandler::getGlobalWorkCrew();
@@ -1266,6 +1267,25 @@ void LshttpdMain::setChildSlot(int num, int val)
 }
 
 
+void LshttpdMain::initAio()
+{
+    if ((HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_POSIX
+        && LsPosixAioReq::load())
+#if defined(LS_AIO_USE_LINUX_AIO)
+        || (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_LINUX_AIO
+            && LinuxAio::getInstance().load())
+#endif
+#if defined(IOURING)
+        || (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_IOURING
+            && Iouring::getInstance().load())
+#endif
+        )
+    {
+        HttpServerConfig::getInstance().setUseAio(HttpServerConfig::AIO_OFF);
+    }
+}
+
+
 #ifdef _PROFILE_
 #include <sys/gmon.h>
 #endif
@@ -1300,20 +1320,7 @@ void LshttpdMain::onNewChildStart(ChildProc * pProc)
     //setIntercommFds(pProc->m_iProcNo);
     m_pServer->enableAioLogging();
     EvtcbQue::getInstance().initNotifier();
-    if ((HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_POSIX 
-        && LsPosixAioReq::load()) 
-#if defined(LS_AIO_USE_LINUX_AIO)
-        || (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_LINUX_AIO
-            && LinuxAio::getInstance().load()) 
-#endif
-#if defined(IOURING)
-        || (HttpServerConfig::getInstance().getUseAio() == HttpServerConfig::AIO_IOURING
-            && Iouring::getInstance().load())
-#endif
-        )
-    {
-        HttpServerConfig::getInstance().setUseAio(HttpServerConfig::AIO_OFF);
-    }
+    initAio();
     if (m_fdAdmin != -1)
     {
         close(m_fdAdmin);

@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -13,11 +13,17 @@ use Lsc\Wp\Context\Context;
 use Lsc\Wp\Logger;
 use Lsc\Wp\LSCMException;
 
-class UnflagAllProgressViewModel
+class FlagUnflagAllProgressViewModel
 {
 
+    const FLD_ACTION         = 'action';
     const FLD_ICON           = 'icon';
     const FLD_INSTALLS_COUNT = 'installsCount';
+
+    /**
+     * @var string  Should be either 'flag' or 'unflag'.
+     */
+    protected $action = '';
 
     /**
      * @var (int|string)[]
@@ -26,10 +32,26 @@ class UnflagAllProgressViewModel
 
     /**
      *
+     * @param string $action  Should be 'flag' or 'unflag'.
+     *
+     * @throws LSCMException  Thrown when $action value is unrecognized.
      * @throws LSCMException  Thrown indirectly by $this->init() call.
      */
-    public function __construct()
+    public function __construct( $action )
     {
+        switch ( $action ) {
+
+            case 'flag':
+            case 'unflag':
+                $this->action = $action;
+                break;
+
+            default:
+                throw new LSCMException(
+                    'Unrecognized $action value passed to FlagUnflagAllProgressViewModel constructor.'
+                );
+        }
+
         $this->init();
     }
 
@@ -40,6 +62,7 @@ class UnflagAllProgressViewModel
     protected function init()
     {
         $this->setIconPath();
+        $this->setAction();
         $this->grabSessionData();
     }
 
@@ -79,10 +102,15 @@ class UnflagAllProgressViewModel
         $this->tplData[self::FLD_ICON] = $iconPath;
     }
 
+    protected function setAction()
+    {
+        $this->tplData[self::FLD_ACTION] = $this->action;
+    }
+
     protected function grabSessionData()
     {
         $this->tplData[self::FLD_INSTALLS_COUNT] =
-            count($_SESSION['unflagInfo']['installs']);
+            count($_SESSION['mass_' . $this->action . '_info']['installs']);
     }
 
     /**
@@ -94,7 +122,7 @@ class UnflagAllProgressViewModel
     public function getTpl()
     {
         return Context::getOption()->getSharedTplDir()
-            . '/UnflagAllProgress.tpl';
+            . '/FlagUnflagAllProgress.tpl';
     }
 
 }

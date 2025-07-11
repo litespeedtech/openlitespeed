@@ -91,8 +91,13 @@ int LsLinuxAioReq::doCancel()
        source it appears to return that for lots of conditions.  */
     int ret = io_cancel(LinuxAio::getInstance().get_context(), &m_iocb, &io_event_result);
     if (ret < 0)
+    {
         LS_DBG_M(getLogSession(), "Cancel failed: %s (%d), context: %p",
                  strerror(-ret), -ret, LinuxAio::getInstance().get_context());
+        setAsyncState(ASYNC_STATE_CANCELING);
+        errno = -ret;
+        return -1;
+    }
     else
     {
         setAsyncState(ASYNC_STATE_CANCELED);

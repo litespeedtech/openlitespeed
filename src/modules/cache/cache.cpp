@@ -1349,7 +1349,7 @@ void buildCacheKey(const lsi_session_t *session, const char *uri, int uriLen,
     CacheKey *const pKey = &myData->cacheKey;
     int iQSLen = 0;
     int ipLen = 0;
-    char pCookieBuf[MAX_HEADER_LEN] = {0};
+    char pCookieBuf[MAX_HEADER_LEN+8] = {0};
     char *pCookieBufEnd = pCookieBuf + MAX_HEADER_LEN;
     const char *pIp = g_api->get_client_ip(session, &ipLen);
     const char *pQs = useCurQS ? g_api->get_req_query_string(session, &iQSLen) : "";
@@ -3294,7 +3294,7 @@ static void processPurge2(const lsi_session_t *session,
     if (strncmp(pValue, "private,", 8) == 0)
     {
         int ipLen;
-        char pCookieBuf[MAX_HEADER_LEN] = {0};
+        char pCookieBuf[MAX_HEADER_LEN+8] = {0};
         char *pCookieBufEnd = pCookieBuf + MAX_HEADER_LEN;
         key.m_pIP = g_api->get_client_ip(session, &ipLen);
         key.m_ipLen = ipLen;
@@ -3773,19 +3773,6 @@ static int handlerProcess(const lsi_session_t *session)
                                       NULL, 0);
             g_api->remove_resp_header(session, -1, "X-LiteSpeed-Purge2", 18);
 
-            struct iovec iov[1] = {{NULL, 0}};
-            int count = g_api->get_resp_header(session, -1, "lsc-cookie",
-                                               10, iov, 1);
-            if (iov[0].iov_len > 0 && count == 1)
-            {
-                g_api->remove_resp_header(session, -1, "lsc-cookie", 10);
-
-                g_api->set_resp_header(session, LSI_RSPHDR_UNKNOWN,
-                           "Set-Cookie", 10,
-                           (char *)iov[0].iov_base, iov[0].iov_len,
-                           LSI_HEADEROP_SET);
-
-            }
         }
     }
 

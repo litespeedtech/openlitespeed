@@ -173,12 +173,6 @@ int LsAioReq::init(int aioBlockSize)
 }
 
 
-bool LsAioReq::ioPending()
-{
-    return m_asyncState == ASYNC_STATE_POSTED;
-}
-
-
 int LsAioReq::cancel()
 {
     if (m_cancel)

@@ -582,16 +582,15 @@ class Util
         &$idna_info = null
     )
     {
-        if ( function_exists('idn_to_utf8') ) {
-
-            if ( $variant == null ) {
-                $variant = INTL_IDNA_VARIANT_UTS46;
-            }
-
-            return idn_to_utf8($domain, $flags, $variant, $idna_info);
+        if ( empty($domain) || !function_exists('idn_to_utf8') ) {
+            return $domain;
         }
 
-        return $domain;
+        if ( $variant == null ) {
+            $variant = INTL_IDNA_VARIANT_UTS46;
+        }
+
+        return idn_to_utf8($domain, $flags, $variant, $idna_info);
     }
 
     /**
@@ -614,20 +613,19 @@ class Util
        &$idna_info = null
    )
    {
-       if ( function_exists('idn_to_ascii') ) {
-
-           if ( $flags == null ) {
-               $flags = IDNA_DEFAULT;
-           }
-
-           if ( $variant == null ) {
-               $variant = INTL_IDNA_VARIANT_UTS46;
-           }
-
-           return idn_to_ascii($domain, $flags, $variant, $idna_info);
+       if ( empty($domain) || !function_exists('idn_to_ascii') ) {
+           return $domain;
        }
 
-       return $domain;
+       if ( $flags == null ) {
+           $flags = IDNA_DEFAULT;
+       }
+
+       if ( $variant == null ) {
+           $variant = INTL_IDNA_VARIANT_UTS46;
+       }
+
+       return idn_to_ascii($domain, $flags, $variant, $idna_info);
    }
 
     /**

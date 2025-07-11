@@ -735,8 +735,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         pValue = (char *)pReq->getHostStr();
         return pReq->getHostStrLen();
     case REF_SERVER_ADDR:
-        pValue = (char *)pReq->getLocalAddrStr()->c_str();
-        return pReq->getLocalAddrStr()->len();
+        return pSession->getServerAddrStr(pValue, bufLen);
     case REF_SERVER_PORT:
         pValue = (char *)pReq->getPortStr().c_str();
         return pReq->getPortStr().len();

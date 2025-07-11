@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp;
@@ -20,17 +20,17 @@ class PanelController
     /**
      * @var int
      */
-    const MGR_STEP_NONE = 0;
+    const MGR_STEP_NONE           = 0;
 
     /**
      * @var int
      */
-    const MGR_STEP_SCAN = 1;
+    const MGR_STEP_SCAN           = 1;
 
     /**
      * @var int
      */
-    const MGR_STEP_DISCOVER_NEW = 2;
+    const MGR_STEP_DISCOVER_NEW   = 2;
 
     /**
      * @var int
@@ -40,17 +40,22 @@ class PanelController
     /**
      * @var int
      */
-    const MGR_STEP_MASS_UNFLAG = 4;
+    const MGR_STEP_MASS_UNFLAG    = 4;
 
     /**
      * @var int
      */
-    const DASH_STEP_NONE = 0;
+    const MGR_STEP_MASS_FLAG      = 5;
 
     /**
      * @var int
      */
-    const DASH_STEP_MASS_DASH_NOTIFY = 1;
+    const DASH_STEP_NONE              = 0;
+
+    /**
+     * @var int
+     */
+    const DASH_STEP_MASS_DASH_NOTIFY  = 1;
 
     /**
      * @var int
@@ -86,7 +91,8 @@ class PanelController
     public function __construct(
         ControlPanel     $panelEnv,
         WPInstallStorage $wpInstallStorage,
-                         $mgrStep = self::MGR_STEP_NONE )
+                         $mgrStep = self::MGR_STEP_NONE
+    )
     {
         $this->panelEnv         = $panelEnv;
         $this->wpInstallStorage = $wpInstallStorage;
@@ -104,18 +110,18 @@ class PanelController
         switch ( $type ) {
 
             case 'dashNotifier':
-                $all_actions = array(
+                $all_actions = [
                     'notify_single'  => UserCommand::CMD_DASH_NOTIFY,
                     'disable_single' => UserCommand::CMD_DASH_DISABLE,
                     'get_msg'        => WPDashMsgs::ACTION_GET_MSG,
                     'add_msg'        => WPDashMsgs::ACTION_ADD_MSG,
                     'delete_msg'     => WPDashMsgs::ACTION_DELETE_MSG
-                );
+                ];
 
                 break;
 
             case 'cacheMgr':
-                $all_actions = array(
+                $all_actions = [
                     'enable_single'         => UserCommand::CMD_ENABLE,
                     'disable_single'        => UserCommand::CMD_DISABLE,
                     'flag_single'           => WPInstallStorage::CMD_FLAG,
@@ -124,8 +130,8 @@ class PanelController
                     'enable_sel'            => UserCommand::CMD_ENABLE,
                     'disable_sel'           => UserCommand::CMD_DISABLE,
                     'flag_sel'              => WPInstallStorage::CMD_FLAG,
-                    'unflag_sel'            => WPInstallStorage::CMD_UNFLAG,
-                );
+                    'unflag_sel'            => WPInstallStorage::CMD_UNFLAG
+                ];
                 break;
 
             default:
@@ -135,7 +141,7 @@ class PanelController
         foreach ( $all_actions as $act => $doAct ) {
 
             if ( Util::get_request_var($act) !== null ) {
-                return array( 'act_key' => $act, 'action' => $doAct );
+                return [ 'act_key' => $act, 'action' => $doAct ];
             }
         }
     }
@@ -171,11 +177,15 @@ class PanelController
      */
     public function manageCacheOperations()
     {
-        if ( $this->checkScanAction()
-                || $this->checkRefreshAction()
-                || $this->checkUnflagAction()
-                || ($actionInfo = $this->getCurrentAction()) == NULL ) {
-
+        if (
+                $this->checkScanAction()
+                ||
+                $this->checkRefreshAction()
+                ||
+                $this->checkFlagActions()
+                ||
+                ($actionInfo = $this->getCurrentAction()) == NULL
+        ) {
             return $this->mgrStep;
         }
 
@@ -209,11 +219,15 @@ class PanelController
      */
     public function manageCacheOperations2()
     {
-        if ( $this->checkScanAction2()
-            || $this->checkRefreshAction()
-            || $this->checkUnflagAction()
-            || ($actionInfo = $this->getCurrentAction()) == NULL ) {
-
+        if (
+                $this->checkScanAction2()
+                ||
+                $this->checkRefreshAction()
+                ||
+                $this->checkFlagActions()
+                ||
+                ($actionInfo = $this->getCurrentAction()) == NULL
+        ) {
             return $this->mgrStep;
         }
 
@@ -237,7 +251,7 @@ class PanelController
      */
     protected function getDashMsgInfoJSON()
     {
-        $msgInfo = array( 'msg' => '', 'plugin' => '', 'plugin_name' => '' );
+        $msgInfo = [ 'msg' => '', 'plugin' => '', 'plugin_name' => '' ];
 
         if ( ($msg = Util::get_request_var('notify_msg')) !== NULL ) {
             $msgInfo['msg'] = trim($msg);
@@ -274,10 +288,13 @@ class PanelController
     {
         $this->dashStep = $dashStep;
 
-        if ( $this->checkDashMassNotifyAction()
-                || $this->checkDashMassDisableAction()
-                || ($actionInfo = $this->getCurrentAction('dashNotifier')) == NULL ) {
-
+        if (
+                $this->checkDashMassNotifyAction()
+                ||
+                $this->checkDashMassDisableAction()
+                ||
+                ($actionInfo = $this->getCurrentAction('dashNotifier')) == NULL
+        ) {
             return $this->dashStep;
         }
 
@@ -324,9 +341,7 @@ class PanelController
             throw new LSCMException($msg);
         }
 
-        $arrSize = count($array);
-
-        if ( $batchSize > $arrSize ) {
+        if ( $batchSize > ($arrSize = count($array)) ) {
             return $arrSize;
         }
 
@@ -344,10 +359,8 @@ class PanelController
      */
     protected function getAjaxViewContent( $viewModel, $tplID = '' )
     {
-        $view = new AjaxView($viewModel);
-
         try {
-            return $view->getAjaxContent($tplID);
+            return (new AjaxView($viewModel))->getAjaxContent($tplID);
         }
         catch ( LSCMException $e ) {
             Logger::error($e->getMessage());
@@ -399,11 +412,11 @@ class PanelController
         }
         elseif ( Util::get_request_var('re-scan') ) {
             $this->mgrStep = self::MGR_STEP_SCAN;
-            $init = true;
+            $init          = true;
         }
         elseif ( Util::get_request_var('scan_more') ) {
             $this->mgrStep = self::MGR_STEP_DISCOVER_NEW;
-            $init = true;
+            $init          = true;
         }
         else {
             return false;
@@ -416,7 +429,7 @@ class PanelController
         $info = &$_SESSION['scanInfo'];
 
         if ( $init ) {
-            $info = array( 'homeDirs' => $this->panelEnv->getDocroots() );
+            $info = [ 'homeDirs' => $this->panelEnv->getDocroots() ];
             return true;
         }
 
@@ -454,14 +467,14 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'completed' => $completedCount,
                     'errMsgs'   => array_merge(
                         $msgs['fail'],
                         $msgs['err'],
                         Logger::getUiMsgs(Logger::UI_ERR)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -472,7 +485,7 @@ class PanelController
      * @since 1.15
      *
      * @param string[] $docroots
-     * @param string[] $wpPaths  Array of discovered WordPress installations
+     * @param string[] $wpPaths   Array of discovered WordPress installations
      *     (passed by address).
      *
      * @return int  Completed count.
@@ -524,11 +537,11 @@ class PanelController
         }
         elseif ( Util::get_request_var('re-scan') ) {
             $this->mgrStep = self::MGR_STEP_SCAN;
-            $init = true;
+            $init          = true;
         }
         elseif ( Util::get_request_var('scan_more') ) {
             $this->mgrStep = self::MGR_STEP_DISCOVER_NEW;
-            $init = true;
+            $init          = true;
         }
         else {
             return false;
@@ -545,21 +558,24 @@ class PanelController
         $info = &$_SESSION['scanInfo'];
 
         if ( $init ) {
-            $info = array(
+            $info = [
                 'homeDirs' => $this->panelEnv->getDocroots(),
-                'installs' => array()
-            );
+                'installs' => []
+            ];
             return true;
         }
 
         $scanStep       = self::MGR_STEP_NONE;
-        $errMsgs        = array();
+        $errMsgs        = [];
         $completedCount = -1;
 
-        if ( !is_array($info)
-                || !array_key_exists('homeDirs', $info)
-                || !array_key_exists('installs', $info) ) {
-
+        if (
+                !is_array($info)
+                ||
+                !array_key_exists('homeDirs', $info)
+                ||
+                !array_key_exists('installs', $info)
+        ) {
             Logger::uiError(
                 'Expected session data missing! Stopping mass operation.'
             );
@@ -571,7 +587,7 @@ class PanelController
                 $batchSize = $this->getBatchSize($info['homeDirs']);
                 $batch     = array_splice($info['homeDirs'], 0, $batchSize);
 
-                $wpPaths = array();
+                $wpPaths        = [];
                 $completedCount = $this->runScan2Logic($batch, $wpPaths);
 
                 if ( $completedCount != $batchSize ) {
@@ -604,7 +620,7 @@ class PanelController
                         $wpInstalls = $this->wpInstallStorage->getWPInstalls();
 
                         if ( $wpInstalls === null ) {
-                            $wpInstalls = array();
+                            $wpInstalls = [];
                         }
 
                         foreach ( $wpInstalls as $wpInstall ) {
@@ -651,14 +667,14 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'scanStep'  => $scanStep,
                     'completed' => $completedCount,
                     'errMsgs'   => array_merge(
                         $errMsgs,
                         Logger::getUiMsgs(Logger::UI_ERR)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -683,7 +699,7 @@ class PanelController
             $init = false;
         }
         elseif ( Util::get_request_var('refresh_status') ) {
-            $init = true;
+            $init          = true;
             $this->mgrStep = self::MGR_STEP_REFRESH_STATUS;
         }
         else {
@@ -697,7 +713,7 @@ class PanelController
         $info = &$_SESSION['refreshInfo'];
 
         if ( $init ) {
-            $info = array( 'installs' => $this->wpInstallStorage->getPaths() );
+            $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
             return true;
         }
 
@@ -735,14 +751,14 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'completed' => $completedCount,
                     'errMsgs'   => array_merge(
                         $msgs['fail'],
                         $msgs['err'],
                         Logger::getUiMsgs(Logger::UI_ERR)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -768,7 +784,7 @@ class PanelController
             $init = false;
         }
         elseif ( Util::get_request_var('mass_unflag') ) {
-            $init = true;
+            $init          = true;
             $this->mgrStep = self::MGR_STEP_MASS_UNFLAG;
         }
         else {
@@ -782,7 +798,7 @@ class PanelController
         $info = &$_SESSION['unflagInfo'];
 
         if ( $init ) {
-            $info = array( 'installs' => $this->wpInstallStorage->getPaths() );
+            $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
             return true;
         }
 
@@ -820,7 +836,7 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'completed' => $completedCount,
                     'errMsgs'   => array_merge(
                         $msgs['fail'],
@@ -831,7 +847,104 @@ class PanelController
                         $msgs['succ'],
                         Logger::getUiMsgs(Logger::UI_SUCC)
                     )
-                )
+                ]
+            )
+        );
+        AjaxResponse::outputAndExit();
+    }
+
+    /**
+     *
+     * @return bool|void  Function outputs ajax and exits without returning a
+     *     value when $init is evaluated to be false.
+     *
+     * @throws LSCMException  Thrown indirectly by Logger::uiError() call.
+     * @throws LSCMException  Thrown indirectly by $this->getBatchSize() call.
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->wpInstallStorage->doAction() call.
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     * @throws LSCMException  Thrown indirectly by Logger::getUiMsgs() call.
+     * @throws LSCMException  Thrown indirectly by AjaxResponse::outputAndExit()
+     *     call.
+     */
+    protected function checkFlagActions()
+    {
+        if ( $this->mgrStep == self::MGR_STEP_MASS_UNFLAG ) {
+            $action = WPInstallStorage::CMD_MASS_UNFLAG;
+            $init   = false;
+        }
+        elseif ( $this->mgrStep == self::MGR_STEP_MASS_FLAG ) {
+            $action = WPInstallStorage::CMD_MASS_FLAG;
+            $init   = false;
+        }
+        elseif ( Util::get_request_var('mass_unflag') ) {
+            $action        = WPInstallStorage::CMD_MASS_UNFLAG;
+            $init          = true;
+            $this->mgrStep = self::MGR_STEP_MASS_UNFLAG;
+        }
+        elseif ( Util::get_request_var('mass_flag') ) {
+            $action        = WPInstallStorage::CMD_MASS_FLAG;
+            $init          = true;
+            $this->mgrStep = self::MGR_STEP_MASS_FLAG;
+        }
+        else {
+            return false;
+        }
+
+        if ( session_status() !== PHP_SESSION_ACTIVE ) {
+            session_start();
+        }
+
+        $info = &$_SESSION["{$action}_info"];
+
+        if ( $init ) {
+            $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
+            return true;
+        }
+
+        $completedCount = -1;
+
+        if ( !isset($info['installs']) ) {
+            Logger::uiError(
+                'Expected session data missing! Stopping mass operation.'
+            );
+        }
+        else {
+            $batchSize = $this->getBatchSize($info['installs']);
+            $batch     = array_splice($info['installs'], 0, $batchSize);
+
+            $completedCount = count(
+                $this->wpInstallStorage->doAction($action, $batch)
+            );
+
+            if ( $completedCount != $batchSize ) {
+                $info['installs'] = array_merge(
+                    array_slice($batch, $completedCount),
+                    $info['installs']
+                );
+            }
+        }
+
+        if ( empty($info['installs']) ) {
+            unset($_SESSION["{$action}_info"]);
+        }
+
+        $msgs = $this->wpInstallStorage->getAllCmdMsgs();
+
+        AjaxResponse::setAjaxContent(
+            json_encode(
+                [
+                    'completed' => $completedCount,
+                    'errMsgs'   => array_merge(
+                        $msgs['fail'],
+                        $msgs['err'],
+                        Logger::getUiMsgs(Logger::UI_ERR)
+                    ),
+                    'succMsgs'  => array_merge(
+                        $msgs['succ'],
+                        Logger::getUiMsgs(Logger::UI_SUCC)
+                    )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -920,10 +1033,7 @@ class PanelController
             $flagString = 'unflagged';
         }
 
-        return array(
-            'status'      => $statusString,
-            'flag_status' => $flagString
-        );
+        return [ 'status' => $statusString, 'flag_status' => $flagString ];
     }
 
     /**
@@ -958,11 +1068,11 @@ class PanelController
 
         $preStatusInfo = $this->getStatusStrings($wpInstall);
 
-        $this->wpInstallStorage->doAction($action, array( $path ));
+        $this->wpInstallStorage->doAction($action, [ $path ]);
 
         $postStatusInfo = $this->getStatusStrings($wpInstall);
 
-        $badgesDown = $badgesUp = array();
+        $badgesDown = $badgesUp = [];
         $removed = false;
 
         if ( $postStatusInfo['status'] == 'removed' ) {
@@ -978,7 +1088,11 @@ class PanelController
                 $badgesUp[]   = $postStatusInfo['status'];
             }
 
-            if ( $preStatusInfo['flag_status'] != $postStatusInfo['flag_status'] ) {
+            if (
+                    $preStatusInfo['flag_status']
+                        !=
+                        $postStatusInfo['flag_status']
+            ) {
 
                 if ( $postStatusInfo['flag_status'] == 'flagged' ) {
                     $badgesUp[] = 'flag';
@@ -1012,8 +1126,8 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
-                    'displayData' => array(
+                [
+                    'displayData' => [
                         'actions_td'    =>
                             $this->getAjaxViewContent($viewModel, 'actions_td'),
                         'status_search' => $statusSort,
@@ -1024,7 +1138,7 @@ class PanelController
                         'flag_sort'     => $flagSort,
                         'flag_td'       =>
                             $this->getAjaxViewContent($viewModel, 'flag_td')
-                    ),
+                    ],
                     'badgesDown'  => $badgesDown,
                     'badgesUp'    => $badgesUp,
                     'removed'     => $removed,
@@ -1037,7 +1151,7 @@ class PanelController
                         $msgs['succ'],
                         Logger::getUiMsgs(Logger::UI_SUCC)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -1055,7 +1169,8 @@ class PanelController
      */
     protected function doWpDashMsgOperation(
         WPDashMsgs $wpDashMsgs,
-                   $action )
+                   $action
+    )
     {
         if ( ($type = Util::get_request_var('msg_type')) !== NULL ) {
             $type = trim($type);
@@ -1068,15 +1183,20 @@ class PanelController
         switch ( $action ) {
 
             case WPDashMsgs::ACTION_GET_MSG:
-                $msgs = $wpDashMsgs->getMsgData($type);
+                $msgs    = $wpDashMsgs->getMsgData($type);
+                $msgInfo = [];
 
-                $msgInfo = array();
-
-                if ( $msgId !== '' && $msgId !== NULL && isset($msgs[$msgId]) ) {
+                if (
+                        $msgId !== ''
+                        &&
+                        $msgId !== NULL
+                        &&
+                        isset($msgs[$msgId])
+                ) {
                     $msgInfo = $msgs[$msgId];
                 }
 
-                $ajaxReturn = array( 'msgInfo' => $msgInfo );
+                $ajaxReturn = [ 'msgInfo' => $msgInfo ];
                 break;
 
             case WPDashMsgs::ACTION_ADD_MSG:
@@ -1095,14 +1215,14 @@ class PanelController
                     $ret = 1;
                 }
 
-                $ajaxReturn = array( 'ret' => $ret );
+                $ajaxReturn = [ 'ret' => $ret ];
 
                 break;
 
             case WPDashMsgs::ACTION_DELETE_MSG:
-                $ajaxReturn = array(
+                $ajaxReturn = [
                     'ret' => ($wpDashMsgs->deleteMsg($type, $msgId)) ? 1 : 0
-                );
+                ];
 
                 break;
 
@@ -1137,31 +1257,27 @@ class PanelController
         if ( $this->wpInstallStorage->getWPInstall($path) === null ) {
             AjaxResponse::setAjaxContent(
                 json_encode(
-                    array(
-                        'errMsgs'  => array(
+                    [
+                        'errMsgs'  => [
                             'Invalid input value detected - Please use the '
                                 . 'exact path displayed in the '
                                 . '"Manage Cache Installations" list when '
                                 . 'testing.'
-                        ),
-                        'succMsgs' => array()
-                    )
+                        ],
+                        'succMsgs' => []
+                    ]
                 )
             );
             AjaxResponse::outputAndExit();
         }
 
-        $this->wpInstallStorage->doAction(
-            $action,
-            array( $path ),
-            array( $msgInfoJSON )
-        );
+        $this->wpInstallStorage->doAction($action, [ $path ], [ $msgInfoJSON ]);
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'errMsgs'  => array_merge(
                         $msgs['fail'],
                         $msgs['err'],
@@ -1171,7 +1287,7 @@ class PanelController
                         $msgs['succ'],
                         Logger::getUiMsgs(Logger::UI_SUCC)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -1197,102 +1313,110 @@ class PanelController
         }
 
         $actionUpper = ucfirst($action);
+        $info        = &$_SESSION["mass{$actionUpper}Info"];
 
-        $info = &$_SESSION["mass{$actionUpper}Info"];
+        switch ( $step ) {
 
-        if ( $step == 1 ) {
-            $info = array('installs' => $this->wpInstallStorage->getPaths() );
-        }
-        elseif ( $step == 2 ) {
-            $completedCount = -1;
-            $succCount = $failCount = $bypassedCount = 0;
+            case 1:
+                $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
+                break;
 
-            if ( !isset($info['installs']) ) {
-                Logger::uiError(
-                    'Expected session data missing! Stopping mass operation.'
-                );
-            }
-            else {
-                $batchSize = $this->getBatchSize($info['installs']);
-                $batch     = array_splice($info['installs'], 0, $batchSize);
+            case 2:
+                $completedCount                          = -1;
+                $succCount = $failCount = $bypassedCount = 0;
 
-                try
-                {
-                    $finishedList = $this->wpInstallStorage->doAction(
-                        "mass_$action",
-                        $batch
-                    );
-
-                    $completedCount = count($finishedList);
-
-                    if ( $completedCount != $batchSize ) {
-                        $info['installs'] = array_merge(
-                            array_slice($batch, $completedCount),
-                            $info['installs']
-                        );
-                    }
-                }
-                catch ( LSCMException $e )
-                {
+                if ( !isset($info['installs']) ) {
                     Logger::uiError(
-                        "{$e->getMessage()} Stopping mass operation."
+                        'Expected session data missing! Stopping mass '
+                            . 'operation.'
                     );
-                    $finishedList     = array();
-                    $info['installs'] = array();
+                }
+                else {
+                    $batchSize = $this->getBatchSize($info['installs']);
+                    $batch     = array_splice($info['installs'], 0, $batchSize);
+
+                    try
+                    {
+                        $finishedList = $this->wpInstallStorage->doAction(
+                            "mass_$action",
+                            $batch
+                        );
+
+                        $completedCount = count($finishedList);
+
+                        if ( $completedCount != $batchSize ) {
+                            $info['installs'] = array_merge(
+                                array_slice($batch, $completedCount),
+                                $info['installs']
+                            );
+                        }
+                    }
+                    catch ( LSCMException $e )
+                    {
+                        Logger::uiError(
+                            "{$e->getMessage()} Stopping mass operation."
+                        );
+                        $finishedList = $info['installs'] = [];
+                    }
+
+                    $workingQueue = $this->wpInstallStorage->getWorkingQueue();
+
+                    foreach ( $finishedList as $path ) {
+                        $wpInstall =
+                            $this->wpInstallStorage->getWPInstall($path);
+
+                        if ( isset($workingQueue[$path]) ) {
+                            $cmdStatus = $workingQueue[$path]->getCmdStatus();
+                        }
+                        else {
+                            $cmdStatus = $wpInstall->getCmdStatus();
+                        }
+
+                        if ( $cmdStatus & UserCommand::EXIT_INCR_SUCC ) {
+                            $succCount++;
+                        }
+                        elseif ( $cmdStatus & UserCommand::EXIT_INCR_FAIL ) {
+                            $failCount++;
+                        }
+                        elseif (
+                                $cmdStatus & UserCommand::EXIT_INCR_BYPASS
+                                ||
+                                $wpInstall->isFlagBitSet()
+                        ) {
+                            $bypassedCount++;
+                        }
+                    }
                 }
 
-                $workingQueue = $this->wpInstallStorage->getWorkingQueue();
-
-                foreach ( $finishedList as $path ) {
-                    $wpInstall = $this->wpInstallStorage->getWPInstall($path);
-
-                    if ( isset($workingQueue[$path]) ) {
-                        $cmdStatus = $workingQueue[$path]->getCmdStatus();
-                    }
-                    else {
-                        $cmdStatus = $wpInstall->getCmdStatus();
-                    }
-
-                    if ( $cmdStatus & UserCommand::EXIT_INCR_SUCC ) {
-                        $succCount++;
-                    }
-                    elseif ( $cmdStatus & UserCommand::EXIT_INCR_FAIL ) {
-                        $failCount++;
-                    }
-                    elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                            || $wpInstall->isFlagBitSet() ) {
-
-                        $bypassedCount++;
-                    }
+                if ( empty($info['installs']) ) {
+                    unset($_SESSION["mass{$actionUpper}Info"]);
                 }
-            }
 
-            if ( empty($info['installs']) ) {
-                unset($_SESSION["mass{$actionUpper}Info"]);
-            }
+                $msgs = $this->wpInstallStorage->getAllCmdMsgs();
 
-            $msgs = $this->wpInstallStorage->getAllCmdMsgs();
-
-            AjaxResponse::setAjaxContent(
-                json_encode(
-                    array(
-                        'completed'     => $completedCount,
-                        'bypassedCount' => $bypassedCount,
-                        'failCount'     => $failCount,
-                        'succCount'     => $succCount,
-                        'errMsgs'       => array_merge(
-                            $msgs['fail'],
-                            $msgs['err'],
-                            Logger::getUiMsgs(Logger::UI_ERR)
-                        ),
-                        'succMsgs'      => array_merge(
-                            $msgs['succ'],
-                            Logger::getUiMsgs(Logger::UI_SUCC)
-                        )
+                AjaxResponse::setAjaxContent(
+                    json_encode(
+                        [
+                            'completed'     => $completedCount,
+                            'bypassedCount' => $bypassedCount,
+                            'failCount'     => $failCount,
+                            'succCount'     => $succCount,
+                            'errMsgs'       => array_merge(
+                                $msgs['fail'],
+                                $msgs['err'],
+                                Logger::getUiMsgs(Logger::UI_ERR)
+                            ),
+                            'succMsgs'      => array_merge(
+                                $msgs['succ'],
+                                Logger::getUiMsgs(Logger::UI_SUCC)
+                            )
+                        ]
                     )
-                )
-            );
-            AjaxResponse::outputAndExit();
+                );
+                AjaxResponse::outputAndExit();
+                break;
+
+            // No default case
         }
     }
 
@@ -1321,87 +1445,97 @@ class PanelController
 
         $info = &$_SESSION['verInfo'];
 
-        if ( $step == 2 ) {
-            /**
-             * init upgrade
-             */
+        switch ( $step ) {
 
-            if ( empty(($verList = Util::get_request_list('selectedVers'))) ) {
+            case 2:
                 /**
-                 * Version list should not be empty
+                 * init upgrade
                  */
-                return;
-            }
 
-            $info = array(
-                'installs' => $this->wpInstallStorage->getPaths(),
-                'verNum'   => Util::get_request_var('version_num'),
-                'verList'  => $verList,
-            );
-        }
-        elseif ( $step == 3 ) {
-            $completedCount = -1;
+                if (
+                    empty(
+                    ($verList = Util::get_request_list('selectedVers'))
+                    )
+                ) {
+                    /**
+                     * Version list should not be empty
+                     */
+                    return;
+                }
 
-            if ( !isset($info['installs']) ) {
-                Logger::uiError(
-                    'Expected session data missing! Stopping mass operation.'
-                );
-            }
-            else {
-                $batchSize = $this->getBatchSize($info['installs']);
-                $batch     = array_splice($info['installs'], 0, $batchSize);
+                $info = [
+                    'installs' => $this->wpInstallStorage->getPaths(),
+                    'verNum'   => Util::get_request_var('version_num'),
+                    'verList'  => $verList
+                ];
 
-                try {
-                    $completedCount = count(
-                        $this->wpInstallStorage->doAction(
-                            UserCommand::CMD_MASS_UPGRADE,
-                            $batch,
-                            /**
-                             * 1 => "from versions" (comma seperated),
-                             * 2 => "to version"
-                             */
-                            array(
-                                implode(',', $info['verList']),
-                                $info['verNum']
-                            )
-                        )
+                break;
+
+            case 3:
+                $completedCount = -1;
+
+                if ( !isset($info['installs']) ) {
+                    Logger::uiError(
+                        'Expected session data missing! Stopping mass '
+                            . 'operation.'
                     );
+                }
+                else {
+                    $batchSize = $this->getBatchSize($info['installs']);
+                    $batch     = array_splice($info['installs'], 0, $batchSize);
 
-                    if ( $completedCount != $batchSize ) {
-                        $info['installs'] = array_merge(
-                            array_slice($batch, $completedCount),
-                            $info['installs']
+                    try {
+                        $completedCount = count(
+                            $this->wpInstallStorage->doAction(
+                                UserCommand::CMD_MASS_UPGRADE,
+                                $batch,
+                                /**
+                                 * 1 => "from versions" (comma seperated),
+                                 * 2 => "to version"
+                                 */
+                                [
+                                    implode(',', $info['verList']),
+                                    $info['verNum']
+                                ]
+                            )
                         );
+
+                        if ( $completedCount != $batchSize ) {
+                            $info['installs'] = array_merge(
+                                array_slice($batch, $completedCount),
+                                $info['installs']
+                            );
+                        }
+                    }
+                    catch ( LSCMException $e ) {
+                        Logger::uiError(
+                            "{$e->getMessage()} Stopping mass operation."
+                        );
+
+                        $info['installs'] = [];
                     }
                 }
-                catch ( LSCMException $e ) {
-                    Logger::uiError(
-                        "{$e->getMessage()} Stopping mass operation."
-                    );
 
-                    $info['installs'] = array();
+                if ( empty($info['installs']) || $completedCount == -1 ) {
+                    unset($_SESSION['verInfo']);
                 }
-            }
 
-            if ( empty($info['installs']) || $completedCount == -1 ) {
-                unset($_SESSION['verInfo']);
-            }
+                $msgs = $this->wpInstallStorage->getAllCmdMsgs();
 
-            $msgs = $this->wpInstallStorage->getAllCmdMsgs();
-
-            AjaxResponse::setAjaxContent(
-                json_encode(
-                    array(
-                        'completed' => $completedCount,
-                        'errMsgs'   => array_merge(
-                            $msgs['fail'],
-                            $msgs['err'],
-                            Logger::getUiMsgs(Logger::UI_ERR)
-                        )
+                AjaxResponse::setAjaxContent(
+                    json_encode(
+                        [
+                            'completed' => $completedCount,
+                            'errMsgs'   => array_merge(
+                                $msgs['fail'],
+                                $msgs['err'],
+                                Logger::getUiMsgs(Logger::UI_ERR)
+                            )
+                        ]
                     )
-                )
-            );
-            AjaxResponse::outputAndExit();
+                );
+                AjaxResponse::outputAndExit();
+                break;
         }
     }
 
@@ -1424,7 +1558,7 @@ class PanelController
             $init = false;
         }
         elseif ( Util::get_request_var('mass-notify') ) {
-            $init = true;
+            $init           = true;
             $this->dashStep = self::DASH_STEP_MASS_DASH_NOTIFY;
         }
         else {
@@ -1438,15 +1572,15 @@ class PanelController
         $info = &$_SESSION['massDashNotifyInfo'];
 
         if ( $init ) {
-            $info = array(
+            $info = [
                 'installs' => $this->wpInstallStorage->getPaths(),
                 'msgInfo'  => base64_encode($this->getDashMsgInfoJSON())
-            );
+            ];
 
             return true;
         }
 
-        $completedCount = -1;
+        $completedCount                          = -1;
         $succCount = $failCount = $bypassedCount = 0;
 
         if ( !isset($info['installs']) ) {
@@ -1462,7 +1596,7 @@ class PanelController
                 $finishedList = $this->wpInstallStorage->doAction(
                     UserCommand::CMD_MASS_DASH_NOTIFY,
                     $batch,
-                    array($info['msgInfo'])
+                    [ $info['msgInfo'] ]
                 );
 
                 $completedCount = count($finishedList);
@@ -1476,8 +1610,7 @@ class PanelController
             }
             catch ( LSCMException $e ) {
                 Logger::uiError("{$e->getMessage()} Stopping mass operation.");
-                $finishedList     = array();
-                $info['installs'] = array();
+                $finishedList = $info['installs'] = [];
             }
 
             $workingQueue = $this->wpInstallStorage->getWorkingQueue();
@@ -1498,9 +1631,11 @@ class PanelController
                 elseif ( $cmdStatus & UserCommand::EXIT_INCR_FAIL ) {
                     $failCount++;
                 }
-                elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                        || $wpInstall->isFlagBitSet() ) {
-
+                elseif (
+                        $cmdStatus & UserCommand::EXIT_INCR_BYPASS
+                        ||
+                        $wpInstall->isFlagBitSet()
+                ) {
                     $bypassedCount++;
                 }
             }
@@ -1514,7 +1649,7 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'completed'     => $completedCount,
                     'bypassedCount' => $bypassedCount,
                     'failCount'     => $failCount,
@@ -1528,7 +1663,7 @@ class PanelController
                         $msgs['succ'],
                         Logger::getUiMsgs(Logger::UI_SUCC)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();
@@ -1553,7 +1688,7 @@ class PanelController
             $init = false;
         }
         elseif ( Util::get_request_var('mass-disable-dash-notifier') ) {
-            $init = true;
+            $init           = true;
             $this->dashStep = self::DASH_STEP_MASS_DASH_DISABLE;
         }
         else {
@@ -1567,11 +1702,11 @@ class PanelController
         $info = &$_SESSION['massDashDisableInfo'];
 
         if ( $init ) {
-            $info = array( 'installs' => $this->wpInstallStorage->getPaths() );
+            $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
             return true;
         }
 
-        $completedCount = -1;
+        $completedCount                          = -1;
         $succCount = $failCount = $bypassedCount = 0;
 
         if ( !isset($info['installs']) ) {
@@ -1600,8 +1735,7 @@ class PanelController
             }
             catch ( LSCMException $e ) {
                 Logger::uiError("{$e->getMessage()} Stopping mass operation.");
-                $finishedList     = array();
-                $info['installs'] = array();
+                $finishedList = $info['installs'] = [];
             }
 
             $workingQueue = $this->wpInstallStorage->getWorkingQueue();
@@ -1622,9 +1756,11 @@ class PanelController
                 elseif ( $cmdStatus & UserCommand::EXIT_INCR_FAIL ) {
                     $failCount++;
                 }
-                elseif ( $cmdStatus & UserCommand::EXIT_INCR_BYPASS
-                        || $wpInstall->isFlagBitSet() ) {
-
+                elseif (
+                        $cmdStatus & UserCommand::EXIT_INCR_BYPASS
+                        ||
+                        $wpInstall->isFlagBitSet()
+                ) {
                     $bypassedCount++;
                 }
             }
@@ -1638,7 +1774,7 @@ class PanelController
 
         AjaxResponse::setAjaxContent(
             json_encode(
-                array(
+                [
                     'completed'     => $completedCount,
                     'bypassedCount' => $bypassedCount,
                     'failCount'     => $failCount,
@@ -1652,7 +1788,7 @@ class PanelController
                         $msgs['succ'],
                         Logger::getUiMsgs(Logger::UI_SUCC)
                     )
-                )
+                ]
             )
         );
         AjaxResponse::outputAndExit();

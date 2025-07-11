@@ -618,7 +618,17 @@ int H2ConnBase::resetStream( uint32_t id, H2StreamBase *pStream, H2ErrorCode cod
     else
         pStream = findStream(id);
     if (pStream || (id > 0 && getBuf()->size() < 16384))
+    {
+        ++m_uiRstStreams;
+        if (m_uiRstStreams > 500 && m_uiRstStreams > m_uiStreams / 2)
+        {
+            LS_INFO(getLogSession(), "HTTP2 MadeYouReset attack detected, %d out of %d streams was reseted. stop offering HTTP/2.",
+                    m_uiRstStreams, m_uiStreams);
+            disableHttp2ByIp();
+            return LS_FAIL;
+        }
         sendRstFrame(id, code);
+    }
     if (pStream)
     {
         pStream->setState(HIOS_RESET);
@@ -738,7 +748,7 @@ int H2ConnBase::processRstFrame(H2FrameHeader *pHeader)
     ++m_uiRstStreams;
     if (m_uiRstStreams > 500 && m_uiRstStreams > m_uiStreams / 2)
     {
-        LS_DBG_L(getLogSession(), "HTTP2 rapid reset attack detected, %d out of %d streams was reseted. stop offering HTTP/2.",
+        LS_INFO(getLogSession(), "HTTP2 rapid reset attack detected, %d out of %d streams was reseted. stop offering HTTP/2.",
                 m_uiRstStreams, m_uiStreams);
         disableHttp2ByIp();
         return LS_FAIL;

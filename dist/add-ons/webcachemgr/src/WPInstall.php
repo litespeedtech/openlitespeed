@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2023
+ * @copyright (c) 2018-2025
  * *******************************************
  */
 
@@ -242,7 +242,7 @@ class WPInstall
     {
         return $this->setData(
             self::FLD_SERVERNAME,
-            Util::tryIdnToAscii($serverName)
+            Util::tryIdnToAscii((string)$serverName)
         );
     }
 
@@ -258,7 +258,7 @@ class WPInstall
     {
         return $this->setData(
             self::FLD_SITEURL,
-            Util::tryIdnToAscii($siteUrl)
+            Util::tryIdnToAscii((string)$siteUrl)
         );
     }
 
@@ -499,7 +499,7 @@ class WPInstall
 
         $info = parse_url($parseSafeUrl);
 
-        $serverName = Util::tryIdnToAscii($info['host']);
+        $serverName = Util::tryIdnToAscii((string)$info['host']);
 
         $this->setData(self::FLD_SERVERNAME, $serverName);
 

@@ -194,15 +194,18 @@ int LsPosixAioReq::doCancel()
              getPos());
     int ret = aio_cancel(getfd(), &m_aiocb);
     if (ret < 0)
+    {
         LS_DBG_M(getLogSession(), "      Cancel failed: %s (%d)",
                  strerror(errno), errno);
+        setAsyncState(ASYNC_STATE_CANCELING);
+    }
     else
     {
         setAsyncState(ASYNC_STATE_CANCELED);
         LS_DBG_M(getLogSession(), "Aio Cancel succeeded, at %ld, ret %d",
                  getPos(), ret);
     }
-    return 0;
+    return ret;
 }
 
 
@@ -217,6 +220,12 @@ int LsPosixAioReq::onEvent()
 #endif
 {
     LS_DBG(getLogSession(), "LsPosixAioReq::onEvent: %p", this);
+    if (getAsyncState() == ASYNC_STATE_CANCELING)
+    {
+        LS_DBG(getLogSession(), "canceling POSXI AIO request, discard result, delete");
+        delete this;
+        return -1;
+    }
     io_complete(POLLIN);
     return 0;
 }

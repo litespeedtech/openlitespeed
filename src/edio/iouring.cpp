@@ -252,9 +252,17 @@ int Iouring::check_pending()
         io_uring_cqe_seen(m_io_uring, cqe);
         if (lsIouringReq->getCancel())
         {
-            DETAILED_DEBUGGING("Canceled fd: %d at %ld ret %d\n",
-                               lsIouringReq->getfd(), lsIouringReq->getPos(), 
-                               lsIouringReq->getRet());
+            LS_DBG(lsIouringReq->getLogSession(),
+                    "Canceled fd: %d at %ld ret %d\n",
+                    lsIouringReq->getfd(), lsIouringReq->getPos(),
+                    lsIouringReq->getRet());
+            if (lsIouringReq->getAsyncState() == ASYNC_STATE_CANCELING)
+            {
+                LS_DBG(lsIouringReq->getLogSession(),
+                       "cancelling Iouring request, discard result, delete");
+                delete lsIouringReq;
+                continue;
+            }
             lsIouringReq->setAsyncState(ASYNC_STATE_IDLE);
         }
         else

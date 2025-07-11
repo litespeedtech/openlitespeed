@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -23,19 +23,19 @@ class WPInstallStorage
     /**
      * @var string
      */
-    const CMD_ADD_CUST_WPINSTALLS = 'addCustWPInstalls';
+    const CMD_ADD_CUST_WPINSTALLS     = 'addCustWPInstalls';
 
     /**
      * @since 1.13.3
      * @var string
      */
-    const CMD_ADD_NEW_WPINSTALL = 'addNewWPInstall';
+    const CMD_ADD_NEW_WPINSTALL       = 'addNewWPInstall';
 
     /**
      * @deprecated 1.13.3  Use CMD_DISCOVER_NEW2 instead.
      * @var string
      */
-    const CMD_DISCOVER_NEW = 'discoverNew';
+    const CMD_DISCOVER_NEW            = 'discoverNew';
 
     /**
      * @since 1.14
@@ -47,34 +47,39 @@ class WPInstallStorage
      * @since 1.13.3
      * @var string
      */
-    const CMD_DISCOVER_NEW2 = 'discoverNew2';
+    const CMD_DISCOVER_NEW2           = 'discoverNew2';
 
     /**
      * @var string
      */
-    const CMD_FLAG = 'flag';
+    const CMD_FLAG                    = 'flag';
 
     /**
      * @var string
      */
-    const CMD_MASS_UNFLAG = 'mass_unflag';
+    const CMD_MASS_FLAG               = 'mass_flag';
+
+    /**
+     * @var string
+     */
+    const CMD_MASS_UNFLAG             = 'mass_unflag';
 
     /**
      * @deprecated 1.13.3  Use CMD_SCAN2 instead for now.
      * @var string
      */
-    const CMD_SCAN = 'scan';
+    const CMD_SCAN                    = 'scan';
 
     /**
      * @since 1.13.3
      * @var string
      */
-    const CMD_SCAN2 = 'scan2';
+    const CMD_SCAN2                   = 'scan2';
 
     /**
      * @var string
      */
-    const CMD_UNFLAG = 'unflag';
+    const CMD_UNFLAG                  = 'unflag';
 
     /**
      * @var string
@@ -84,12 +89,12 @@ class WPInstallStorage
     /**
      * @var int
      */
-    const ERR_NOT_EXIST = 1;
+    const ERR_NOT_EXIST    = 1;
 
     /**
      * @var int
      */
-    const ERR_CORRUPTED = 2;
+    const ERR_CORRUPTED    = 2;
 
     /**
      * @var int
@@ -99,7 +104,7 @@ class WPInstallStorage
     /**
      * @var int
      */
-    const ERR_VERSION_LOW = 4;
+    const ERR_VERSION_LOW  = 4;
 
     /**
      * @var string
@@ -129,7 +134,7 @@ class WPInstallStorage
     /**
      * @var WPInstall[]
      */
-    protected $workingQueue = array();
+    protected $workingQueue = [];
 
     /**
      *
@@ -156,15 +161,18 @@ class WPInstallStorage
         $dataExists = false;
 
         try {
+
             if ( file_exists($this->dataFile) ) {
-                $dataExists = true;
+                $dataExists       = true;
                 $this->wpInstalls = $this->getDataFileData($this->dataFile);
             }
 
-            if ( $this->customDataFile != ''
-                    && file_exists($this->customDataFile) ) {
-
-                $dataExists = true;
+            if (
+                    $this->customDataFile != ''
+                    &&
+                    file_exists($this->customDataFile)
+            ) {
+                $dataExists           = true;
                 $this->custWpInstalls =
                     $this->getDataFileData($this->customDataFile);
             }
@@ -210,7 +218,7 @@ class WPInstallStorage
         $content = static::getDataFileContents($dataFile);
 
         if ( ($data = json_decode($content, true)) === null ) {
-            /*
+            /**
              * Data file may be in old serialized format. Try unserializing.
              */
              $data = unserialize($content);
@@ -232,16 +240,16 @@ class WPInstallStorage
 
         unset($data['__VER__']);
 
-        $wpInstalls = array();
+        $wpInstalls = [];
 
         foreach ( $data as $utf8Path => $idata ) {
             $path = Utf8::decode($utf8Path);
-            $i = new WPInstall($path);
+            $i    = new WPInstall($path);
 
-            $idata[WPInstall::FLD_SITEURL] =
-                urldecode($idata[WPInstall::FLD_SITEURL]);
+            $idata[WPInstall::FLD_SITEURL]    =
+                urldecode((string)$idata[WPInstall::FLD_SITEURL]);
             $idata[WPInstall::FLD_SERVERNAME] =
-                urldecode($idata[WPInstall::FLD_SERVERNAME]);
+                urldecode((string)$idata[WPInstall::FLD_SERVERNAME]);
 
             $i->initData($idata);
             $wpInstalls[$path] = $i;
@@ -356,7 +364,7 @@ class WPInstallStorage
      */
     public function getPaths()
     {
-        $paths = array();
+        $paths = [];
 
         if ( $this->wpInstalls != null ) {
             $paths = array_keys($this->wpInstalls);
@@ -435,7 +443,7 @@ class WPInstallStorage
      */
     protected function saveDataFile( $dataFile, $wpInstalls )
     {
-        $data = array( '__VER__' => self::DATA_VERSION );
+        $data = [ '__VER__' => self::DATA_VERSION ];
 
         if ( !empty($wpInstalls) ) {
 
@@ -519,11 +527,13 @@ class WPInstallStorage
         /**
          * Currently no versions are upgradeable to 1.5
          */
-        $updatableVersions = array();
+        $updatableVersions = [];
 
-        if ( ! in_array($dataFileVer, $updatableVersions)
-                || ! Util::createBackup($dataFile) ) {
-
+        if (
+                !in_array($dataFileVer, $updatableVersions)
+                ||
+                ! Util::createBackup($dataFile)
+        ) {
             Logger::error(
                 "$dataFile - Data file could not be updated to version "
                     . self::DATA_VERSION
@@ -550,7 +560,7 @@ class WPInstallStorage
      */
     protected function prepareActionItems( $action )
     {
-        switch ($action) {
+        switch ( $action ) {
 
             case self::CMD_SCAN:
             case self::CMD_SCAN2:
@@ -619,9 +629,10 @@ class WPInstallStorage
             $this->addWPInstall($wpInstall);
         }
 
-        switch ($action) {
+        switch ( $action ) {
 
             case self::CMD_FLAG:
+            case self::CMD_MASS_FLAG:
 
                 if ( !$wpInstall->hasValidPath() ) {
                     return;
@@ -641,7 +652,6 @@ class WPInstallStorage
                 }
 
                 $this->workingQueue[$path] = $wpInstall;
-
                 return;
 
             case self::CMD_UNFLAG:
@@ -659,7 +669,6 @@ class WPInstallStorage
                 );
 
                 $this->workingQueue[$path] = $wpInstall;
-
                 return;
 
             case UserCommand::CMD_ENABLE:
@@ -679,7 +688,6 @@ class WPInstallStorage
                         );
 
                         $this->workingQueue[$path] = $wpInstall;
-
                         return;
                     }
                 }
@@ -687,15 +695,17 @@ class WPInstallStorage
                 break;
 
             case UserCommand::CMD_MASS_UPGRADE:
+                $lscwpVer     = $extraArgs[1];
                 $isAllowedVer = in_array(
-                    $extraArgs[1],
+                    $lscwpVer,
                     PluginVersion::getInstance()->getAllowedVersions()
                 );
 
                 if ( !$isAllowedVer ) {
                     throw new LSCMException(
                         'Selected LSCWP version ('
-                            . htmlspecialchars($extraArgs[1]) . ') is invalid.'
+                            . htmlspecialchars($lscwpVer)
+                            . ') is invalid.'
                     );
                 }
                 break;
@@ -705,22 +715,35 @@ class WPInstallStorage
 
         if ( UserCommand::issue($action, $wpInstall, $extraArgs) ) {
 
-            if ( $action == UserCommand::CMD_MASS_UPGRADE
-                    && ($wpInstall->getCmdStatus() & UserCommand::EXIT_FAIL)
-                    && preg_match('/Download failed. Not Found/', $wpInstall->getCmdMsg()) ) {
-
+            if (
+                    $action == UserCommand::CMD_MASS_UPGRADE
+                    &&
+                    ($wpInstall->getCmdStatus() & UserCommand::EXIT_FAIL)
+                    &&
+                    preg_match(
+                        '/Download failed. Not Found/',
+                        $wpInstall->getCmdMsg()
+                    )
+            ) {
                 $this->syncToDisk();
 
                 throw new LSCMException(
                     'Could not download version '
-                        . htmlspecialchars($extraArgs[1]) . '.'
+                        . htmlspecialchars($extraArgs[1])
+                        . '.'
                 );
             }
 
-            if ( $action == UserCommand::CMD_MASS_ENABLE
-                    && ($wpInstall->getCmdStatus() & UserCommand::EXIT_FAIL)
-                    && preg_match('/Source Package not available/', $wpInstall->getCmdMsg()) ) {
-
+            if (
+                    $action == UserCommand::CMD_MASS_ENABLE
+                    &&
+                    ($wpInstall->getCmdStatus() & UserCommand::EXIT_FAIL)
+                    &&
+                    preg_match(
+                        '/Source Package not available/',
+                        $wpInstall->getCmdMsg()
+                    )
+            ) {
                 $this->syncToDisk();
 
                 throw new LSCMException($wpInstall->getCmdMsg());
@@ -758,7 +781,7 @@ class WPInstallStorage
      *     call.
      * @throws LSCMException  Thrown indirectly by $this->syncToDisk() call.
      */
-    public function doAction( $action, $list, array $extraArgs = array() )
+    public function doAction( $action, $list, array $extraArgs = [] )
     {
         if ( $list === null ) {
             $list = $this->prepareActionItems($action);
@@ -766,8 +789,9 @@ class WPInstallStorage
 
         $count = count($list);
         $this->log("doAction $action for $count items", Logger::L_VERBOSE);
-        $endTime = $count > 1 ? Context::getActionTimeout() : 0;
-        $finishedList = array();
+
+        $endTime      = ($count > 1) ? Context::getActionTimeout() : 0;
+        $finishedList = [];
 
         switch ( $action ) {
 
@@ -806,9 +830,11 @@ class WPInstallStorage
 
             default:
 
-                if ( $action == UserCommand::CMD_ENABLE
-                        || $action == UserCommand::CMD_MASS_ENABLE ) {
-
+                if (
+                        $action == UserCommand::CMD_ENABLE
+                        ||
+                        $action == UserCommand::CMD_MASS_ENABLE
+                ) {
                     /**
                      * Ensure that the current version is locally downloaded.
                      */
@@ -860,7 +886,8 @@ class WPInstallStorage
     protected function scan( $docroot, $forceRefresh = false )
     {
         $directories = shell_exec(
-            "find -L $docroot -maxdepth " . Context::getScanDepth()
+            "find -L $docroot -maxdepth "
+                . Context::getScanDepth()
                 . ' -name wp-admin -print'
         );
 
@@ -895,15 +922,17 @@ class WPInstallStorage
 
             if ( !isset($this->wpInstalls[$wp_path]) ) {
                 $this->wpInstalls[$wp_path] = new WPInstall($wp_path);
-                $refresh = true;
+                $refresh                    = true;
                 $this->log(
                     "New installation found: $wp_path",
                     Logger::L_INFO
                 );
 
-                if ( $this->custWpInstalls != null &&
-                        isset($this->custWpInstalls[$wp_path]) ) {
-
+                if (
+                        $this->custWpInstalls != null
+                        &&
+                        isset($this->custWpInstalls[$wp_path])
+                ) {
                     unset($this->custWpInstalls[$wp_path]);
 
                     $this->log(
@@ -929,7 +958,7 @@ class WPInstallStorage
     /**
      *
      * @since 1.13.3
-     * @since 1.15  Changed function visibility from 'public' to
+     * @since 1.15    Changed function visibility from 'public' to
      *     'public static'.
      *
      * @param string $docroot
@@ -941,7 +970,8 @@ class WPInstallStorage
     public static function scan2( $docroot )
     {
         $directories = shell_exec(
-            "find -L $docroot -maxdepth " . Context::getScanDepth()
+            "find -L $docroot -maxdepth "
+                . Context::getScanDepth()
                 .' -name wp-admin -print'
         );
 
@@ -965,10 +995,10 @@ class WPInstallStorage
             /**
              *  Nothing found.
              */
-            return array();
+            return [];
         }
 
-        $wpPaths = array();
+        $wpPaths = [];
 
         /** @noinspection PhpUndefinedVariableInspection */
         foreach ( $matches[1] as $path ) {
@@ -1003,9 +1033,11 @@ class WPInstallStorage
             $this->wpInstalls[$wpPath] = new WPInstall($wpPath);
             $this->log("New installation found: $wpPath", Logger::L_INFO);
 
-            if ( $this->custWpInstalls != null
-                    && isset($this->custWpInstalls[$wpPath]) ) {
-
+            if (
+                    $this->custWpInstalls != null
+                    &&
+                    isset($this->custWpInstalls[$wpPath])
+            ) {
                 unset($this->custWpInstalls[$wpPath]);
 
                 $this->log(
@@ -1052,12 +1084,10 @@ class WPInstallStorage
         }
 
         if ( $this->custWpInstalls == null ) {
-            $this->custWpInstalls = array();
+            $this->custWpInstalls = [];
         }
 
-        $count = count($wpInstallsInfo);
-
-        for ( $i = 0; $i < $count; $i++ ) {
+        for ( $i = 0; $i < count($wpInstallsInfo); $i++ ) {
             $info = preg_split('/\s+/', trim($wpInstallsInfo[$i]));
 
             $line = $i + 1;
@@ -1125,30 +1155,36 @@ class WPInstallStorage
      */
     public function getAllCmdMsgs()
     {
-        $succ = $fail = $err = array();
+        $succ = $fail = $err = [];
 
-        foreach ( $this->workingQueue as $WPInstall ) {
-            $cmdStatus = $WPInstall->getCmdStatus();
+        foreach ( $this->workingQueue as $wpInstall ) {
 
-            if ( $cmdStatus & UserCommand::EXIT_SUCC ) {
-                $msgType = &$succ;
-            }
-            elseif ( $cmdStatus & UserCommand::EXIT_FAIL ) {
-                $msgType = &$fail;
-            }
-            elseif ( $cmdStatus & UserCommand::EXIT_ERROR ) {
-                $msgType = &$err;
-            }
-            else {
-                continue;
-            }
+            if ( ($msg = $wpInstall->getCmdMsg()) ) {
+                $cmdStatus = $wpInstall->getCmdStatus();
 
-            if ( ($msg = $WPInstall->getCmdMsg()) ) {
-                $msgType[] = "{$WPInstall->getPath()} - $msg";
+                switch( true ) {
+
+                    case $cmdStatus & UserCommand::EXIT_SUCC:
+                        $msgType = &$succ;
+                        break;
+
+                    case $cmdStatus & UserCommand::EXIT_FAIL:
+                        $msgType = &$fail;
+                        break;
+
+                    case $cmdStatus & UserCommand::EXIT_ERROR:
+                        $msgType = &$err;
+                        break;
+
+                    default:
+                        continue 2;
+                }
+
+                $msgType[] = "{$wpInstall->getPath()} - $msg";
             }
         }
 
-        return array( 'succ' => $succ, 'fail' => $fail, 'err' => $err );
+        return [ 'succ' => $succ, 'fail' => $fail, 'err' => $err ];
     }
 
     /**
@@ -1167,7 +1203,7 @@ class WPInstallStorage
     {
         $msg = "WPInstallStorage - $msg";
 
-        switch ($level) {
+        switch ( $level ) {
 
             case Logger::L_ERROR:
                 Logger::error($msg);
