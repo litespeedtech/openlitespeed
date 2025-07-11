@@ -690,6 +690,15 @@ int ProxyConn::processResp()
                     setState(PROCESSING);
 
                 setInProcess(0);
+
+                // RFC9110: HEAD requests MAY send Content-Length
+                // This allows Docker registries to work behind litespeed proxy
+                HttpResp *pResp = pHEC->getHttpSession()->getResp();
+                if (pReq->getMethod() == HttpMethod::HTTP_HEAD &&
+                    pReq->getStatusCode() == SC_200) {
+                    pResp->appendContentLenHeader();
+                }
+
                 pHEC->endResponse(0, 0);
                 return 0;
             }

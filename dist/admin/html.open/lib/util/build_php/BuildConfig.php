@@ -24,9 +24,10 @@ class BuildConfig
 
 			case self::PHP_VERSION:
 				return [
-					'8.3.6',
-					'8.2.18',
-					'8.1.28',
+                    '8.4.10',
+					'8.3.23',
+					'8.2.29',
+					'8.1.33',
 					'8.0.30',
 					'7.4.33',
 					'7.3.31',
@@ -35,7 +36,7 @@ class BuildConfig
 					'7.0.33',
 					'5.6.40'];
 
-			case self::LSAPI_VERSION: return '8.1';
+			case self::LSAPI_VERSION: return '8.2';
 
             case self::SUHOSIN_VERSION: return '0.9.38';
 
@@ -43,11 +44,11 @@ class BuildConfig
 
 			case self::MEMCACHE7_VERSION: return '4.0.5.2'; // for php7
 
-			case self::MEMCACHE8_VERSION: return '8.2'; // for php8
+			case self::MEMCACHE8_VERSION: return '8.2'; // for php8 https://pecl.php.net/package/memcache
 
 			case self::MEMCACHED_VERSION: return '2.2.0';
 
-            case self::MEMCACHED7_VERSION: return '3.2.0'; // for php7,php8.0, php8.1
+            case self::MEMCACHED7_VERSION: return '3.3.0'; // for php7,php8 https://pecl.php.net/package/memcached
 
             default: die("illegal field");
         }

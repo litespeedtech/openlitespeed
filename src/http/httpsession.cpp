@@ -171,7 +171,7 @@ HttpSession::HttpSession()
     , m_lockMtHolder(0)
     , m_pAiosfcb(NULL)
 #if defined(LS_AIO_USE_LINUX_AIO) || IOURING || defined(LS_AIO_USE_AIO)
-    , m_pLsAioReq(NULL)
+    , m_pAioReq(NULL)
 #endif
     , m_sn(1)
     , m_pReqParser(NULL)
@@ -198,8 +198,8 @@ HttpSession::~HttpSession()
     m_pAiosfcb = NULL;
 #endif
 #if defined(LS_AIO_USE_LINUX_AIO) || IOURING || defined(LS_AIO_USE_AIO)
-    if (m_pLsAioReq)
-        delete m_pLsAioReq;
+    if (m_pAioReq)
+        delete m_pAioReq;
 #endif
     m_sExtCmdResBuf.clear();
     unlockMtRace();
@@ -3232,6 +3232,26 @@ void HttpSession::releaseSsiRuntime()
 }
 
 
+int HttpSession::cancelReleaseAio()
+{
+    assert(m_pAioReq);
+    if (m_pAioReq->isPending())
+    {
+        if (m_pAioReq->cancel() == -1)
+        {
+            LS_DBG_L(this, "failed to cancel AIO request, release by itself after finish.");
+            assert(m_pAioReq->getAsyncState() == ASYNC_STATE_CANCELING);
+            //NOTE: it should delete itself after request complete.
+        }
+    }
+    clearFlag(HSF_AIO_READING);
+    if (m_pAioReq->getAsyncState() != ASYNC_STATE_CANCELING)
+        delete m_pAioReq;
+    m_pAioReq = NULL;
+    return 0;
+}
+
+
 void HttpSession::releaseResources()
 {
     if (m_pHandler)
@@ -3241,6 +3261,9 @@ void HttpSession::releaseResources()
         incReqProcessed();
     }
     m_iFlag &= ~HSF_URI_MAPPED;
+
+    if (m_pAioReq)
+        cancelReleaseAio();
 
     releaseReqParser();
 
@@ -3259,7 +3282,7 @@ void HttpSession::releaseResources()
     if (getFlag(HSF_BEHIND_PROXY) && m_pClientInfo)
     {
         m_pClientInfo->decConn();
-        LS_DBG_L("[%s] reduce connection count to %d.",
+        LS_DBG_L(this, "[%s] reduce connection count to %d.",
                     m_pClientInfo->getAddrString(), m_pClientInfo->getConns());
         assert(m_pClientInfo->getConns() >= 0);
         m_pClientInfo = NULL;
@@ -3300,20 +3323,9 @@ void HttpSession::closeSession()
             return;
         incReqProcessed();
     }
-#if defined(LS_AIO_USE_LINUX_AIO) || IOURING || defined(LS_AIO_USE_AIO)
-    if (getLsAioReq())
-    {
-        if (getLsAioReq()->ioPending())
-        {
-            LS_DBG_L(this, "closeSession IoPending");
-            getLsAioReq()->cancel();
-        }
-        else
-            LS_DBG_L(this, "closeSession NO IoPending");
-    }
-    else
-        LS_DBG_L(this, "NOT file async and thus NO IoPending");
-#endif
+
+    if (m_pAioReq)
+        cancelReleaseAio();
 
     ls_atomic_fetch_add(&m_sn, 1);
     // ls_atomic_setint(&m_sessSeq, ls_atomic_add_fetch(&s_m_sessSeq, 1)); // ok to overflow / wrap
@@ -3366,22 +3378,16 @@ void HttpSession::recycle()
     m_request.reset();
 
     resetBackRefPtr();
+    if (m_pAioReq)
+        cancelReleaseAio();
 
-    if (
-#if defined(LS_AIO_USE_LINUX_AIO) || IOURING || defined(LS_AIO_USE_AIO)
-        (m_pLsAioReq && m_pLsAioReq->ioPending()) ||
-#endif
-        getMtFlag(HSF_MT_HANDLER) || getFlag(HSF_AIO_READING))
+    if (getMtFlag(HSF_MT_HANDLER) || getFlag(HSF_AIO_READING))
     {
         if (getMtFlag(HSF_MT_HANDLER))
         {
             LS_DBG_M(getLogSession(), "session %p is still in use by MT_HANDLER, postone recycling.\n", this);
             setMtFlag(HSF_MT_RECYCLE);
         }
-#if defined(LS_AIO_USE_LINUX_AIO) || IOURING || defined(LS_AIO_USE_AIO)
-        if (m_pLsAioReq && m_pLsAioReq->ioPending())
-            m_pLsAioReq->cancel();
-#endif
         if (getFlag(HSF_AIO_READING) && m_pAiosfcb)
         {
             LS_DBG_M(getLogSession(), "Set AIO Cancel Flag!\n");
@@ -5288,12 +5294,11 @@ int HttpSession::writeRespBodyBlockFilterInternal(SendFileInfo *pData,
 int HttpSession::postAsyncRead(SendFileInfo *pData)
 {
     int remain = pData->getRemain();
-    LsAioReq *aioReq = getLsAioReq();
     int len = (remain < (int)HttpServerConfig::getInstance().getAioBlockSize()) ?
         remain : (int)HttpServerConfig::getInstance().getAioBlockSize();
-    struct iovec *iov = aioReq->getIovec();
+    struct iovec *iov = m_pAioReq->getIovec();
     iov->iov_len = len;
-    int ret = aioReq->postRead(iov, 1, pData->getCurPos());
+    int ret = m_pAioReq->postRead(iov, 1, pData->getCurPos());
     if (ret == -1)
         return ret;
     setFlag(HSF_AIO_READING);
@@ -5304,7 +5309,7 @@ int HttpSession::postAsyncRead(SendFileInfo *pData)
 //returns -1 on error, 1 on success, 0 for didn't do anything new (cached)
 int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
 {
-    if (!getLsAioReq())
+    if (!m_pAioReq)
     {
         int fd = (pData->getfd() != -1) ?
             pData->getfd() : pData->getFileData()->getFileData()->getfd();
@@ -5323,7 +5328,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                     getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
-            setLsAioReq(lsIouringReq);
+            m_pAioReq = lsIouringReq;
         }
         else
 #endif
@@ -5340,7 +5345,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                     getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
-            setLsAioReq(lsLinuxAioReq);
+            m_pAioReq = lsLinuxAioReq;
         }
         else
 #endif
@@ -5355,17 +5360,17 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                     getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
-            setLsAioReq(lsPosixAioReq);
+            m_pAioReq = lsPosixAioReq;
         }
-        if (getLsAioReq()->init(HttpServerConfig::getInstance().getAioBlockSize()))
+        if (m_pAioReq->init(HttpServerConfig::getInstance().getAioBlockSize()))
         {
-            delete getLsAioReq();
-            setLsAioReq(NULL);
+            delete m_pAioReq;
+            m_pAioReq = NULL;
             return LS_FAIL;
         }
         return postAsyncRead(pData);
     }
-    if (getLsAioReq()->rangeChange(pData->getCurPos()))
+    if (m_pAioReq->rangeChange(pData->getCurPos()))
     {
         LS_DBG(getLogSession(), "AIO sendStaticFile, range change, repost read");
         return postAsyncRead(pData);
@@ -5711,6 +5716,10 @@ int HttpSession::finalizeHeader(int ver, int code)
                 " QUIC is disabled (m_iFlag %" PRIu32 " Vhost %p).",
                 m_iFlag, m_request.getVHost());
     }
+    if (!m_request.getContextState(LSCACHE_FRONTEND))
+    {
+        getResp()->getRespHeaders().convertLscCookie();
+    }
 
     return ret;
 }
@@ -5860,13 +5869,13 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
 {
     char *pBuf;
     int read, ret;
-    ret = getLsAioReq()->getRead(&pBuf, pData->getCurPos(), &read);
+    ret = m_pAioReq->getRead(&pBuf, pData->getCurPos(), &read);
 
     LS_DBG(getLogSession(), "getRead(): ret: %d, read: %d, remain: %ld\n",
            ret, read, pData->getRemain());
     if (ret < 0)
         return -1;
-    if (getLsAioReq()->ioPending())
+    if (m_pAioReq->isPending())
         setFlag(HSF_AIO_READING);
     else
         clearFlag(HSF_AIO_READING);
@@ -5919,7 +5928,7 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
         //remain -= len;
         getStream()->flush();
         continueWrite();
-        if (m_pLsAioReq->ioPending())
+        if (m_pAioReq->isPending())
             setFlag(HSF_AIO_READING);
         else
             clearFlag(HSF_AIO_READING);
@@ -5931,7 +5940,7 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
     if (pData->getRemain() <= 0)
     {
         LS_DBG_M(getLogSession(), "File async: Done, final onWriteEx() 2\n");
-        if (m_pLsAioReq->ioPending())
+        if (m_pAioReq->isPending())
             setFlag(HSF_AIO_READING);
         else
             clearFlag(HSF_AIO_READING);
@@ -5939,7 +5948,7 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
     }
     if (bufferDone && (ret = postAsyncRead(&m_sendFileInfo)) == -1)
         return -1;
-    if (m_pLsAioReq->ioPending())
+    if (m_pAioReq->isPending())
         setFlag(HSF_AIO_READING);
     else
         clearFlag(HSF_AIO_READING);
@@ -5949,10 +5958,14 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
 
 int HttpSession::onAioReqEvent()
 {
-    if (!m_pLsAioReq)
+    if (!m_pAioReq)
     {
         LS_NOTICE(getLogSession(), "onAioReqEvent but NO session async pointer!\n");
         return LS_FAIL;
+    }
+    if (m_pAioReq->getCancel())
+    {
+        LS_NOTICE(getLogSession(), "onAioReqEvent canceled AIO request returned, can release HttpSession now\n");
     }
     LS_DBG(getLogSession(), "onAioReqEvent, remain: %ld\n", m_sendFileInfo.getRemain());
     return processAsyncData(&m_sendFileInfo);

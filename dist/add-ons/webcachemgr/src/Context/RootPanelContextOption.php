@@ -3,35 +3,41 @@
 /** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @author    Michael Alegre
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Context;
 
-use \Lsc\Wp\Logger;
+use Lsc\Wp\Logger;
 
 class RootPanelContextOption extends ContextOption
 {
 
     /**
      *
-     * @param string  $panelName
+     * @param string $panelName
      */
     public function __construct( $panelName )
     {
-        $invokerName = $panelName;
-        $invokerType = parent::FROM_CONTROL_PANEL;
-        $isRoot = parent::IS_ROOT;
-        $logFileLvl = Logger::L_INFO;
-        $logEchoLvl = Logger::L_NONE;
+        $logFileLvl    = Logger::L_INFO;
+        $logEchoLvl    = Logger::L_NONE;
         $bufferedWrite = true;
-        $bufferedEcho = true;
-        parent::__construct($invokerName, $invokerType, $isRoot, $logFileLvl,
-                $logEchoLvl, $bufferedWrite, $bufferedEcho);
-        $this->scanDepth = 2;
+        $bufferedEcho  = true;
+
+        parent::__construct(
+            $panelName,
+            parent::FROM_CONTROL_PANEL,
+            parent::IS_ROOT,
+            $logFileLvl,
+            $logEchoLvl,
+            $bufferedWrite,
+            $bufferedEcho
+        );
+
+        $this->scanDepth    = 2;
         $this->batchTimeout = 60;
-        $this->batchSize = 10;
+        $this->batchSize    = 10;
 
         $sharedTplDir = realpath(__DIR__ . '/../View/Tpl');
 

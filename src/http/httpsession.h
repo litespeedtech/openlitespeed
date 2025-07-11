@@ -249,7 +249,7 @@ class HttpSession
 
     AioReq                m_aioReq;
     Aiosfcb              *m_pAiosfcb;
-    LsAioReq             *m_pLsAioReq;
+    LsAioReq             *m_pAioReq;
 
     uint32_t              m_sn;
     ReqParser            *m_pReqParser;
@@ -294,6 +294,7 @@ class HttpSession
     void markComplete(bool nowait);
 
     void releaseResources();
+    int cancelReleaseAio();
     void releaseReqParser();
 
     int broadcastMtWaiters(int32_t flags);
@@ -892,10 +893,6 @@ public:
     int restartProcessing();
     void scheduleRestart();
 
-    LsAioReq *getLsAioReq()
-    {   return m_pLsAioReq;     }
-    void setLsAioReq(LsAioReq *sess)
-    {   m_pLsAioReq = sess;     }
 };
 
 #endif

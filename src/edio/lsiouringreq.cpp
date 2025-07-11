@@ -116,6 +116,7 @@ int LsIouringReq::doCancel()
     if (sqe == NULL)
     {
         LS_NOTICE(getLogSession(), "Iouring no sqe, for cancel: busy");
+        setAsyncState(ASYNC_STATE_CANCELING);
         errno = EBUSY;
         return -1;
     }
@@ -130,9 +131,13 @@ int LsIouringReq::doCancel()
         setRet(err);
         LS_DBG(getLogSession(), "Cancel at %ld failed %s", getPos(),
                strerror(-err));
+        setAsyncState(ASYNC_STATE_CANCELING);
+        errno = -err;
+        return -1;
     }
     else
         LS_DBG(getLogSession(), "Cancel should be successful (see the event)");
+    setAsyncState(ASYNC_STATE_CANCELED);
     return 0;
 }
 

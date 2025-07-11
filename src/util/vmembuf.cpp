@@ -803,7 +803,12 @@ int VMemBuf::grow()
                              MAP_SHARED | MAP_FILE, m_iFd, oldPos);
         if (pBuf == MAP_FAILED)
         {
-            perror("FS backed mmap() failed");
+            char buf[8192];
+            lsnprintf(buf, sizeof(buf),
+                      "VMemBuf::grow() FS backed mmap() failed. "
+                      "fd: %d, offset: %jd, path: %s",
+                        m_iFd, oldPos, m_fileName.c_str());
+            perror(buf);
             return LS_FAIL;
         }
         pBlock = new MmapBlockBuf(pBuf, s_iBlockSize);
@@ -1064,7 +1069,11 @@ char *VMemBuf::mapTmpBlock(int fd, BlockBuf &buf, off_t offset, int write)
                                MAP_SHARED | MAP_FILE, fd, blkBegin);
     if (pBuf == MAP_FAILED)
     {
-        perror("FS backed mmap() failed");
+        char buf[192];
+        lsnprintf(buf, sizeof(buf),
+                  "VMemBuf::mapTmpBlock() FS backed mmap() failed. fd: %d, offset: %jd",
+                  fd, blkBegin);
+        perror(buf);
         return NULL;
     }
     buf.setBlockBuf(pBuf, s_iBlockSize);

@@ -82,7 +82,7 @@ class CacheMgrRowViewModel
                 'statusData' => $this->getStatusDisplayData(),
                 'flagData'   => $this->getFlagDisplayData(),
                 'siteUrl'    => Util::tryIdnToUtf8(
-                    $this->wpInstall->getData(WPInstall::FLD_SITEURL)
+                    (string)$this->wpInstall->getData(WPInstall::FLD_SITEURL)
                 )
             ]
         ];

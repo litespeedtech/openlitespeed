@@ -84,8 +84,12 @@ if [ -e "lsphp-${PHP_VERSION}" ] ; then
 	mv lsphp-${PHP_VERSION} lsphp-${PHP_VERSION}.bak
 fi
 
-cp ${PHP_BUILD_DIR}/php-${PHP_VERSION}/sapi/litespeed/php lsphp-${PHP_VERSION}
-check_errs $? "fail to copy lsphp from ${PHP_BUILD_DIR}/php-${PHP_VERSION}/sapi/litespeed/php"
+if [ -e "${PHP_BUILD_DIR}/php-${PHP_VERSION}/sapi/litespeed/lsphp" ]; then
+    cp ${PHP_BUILD_DIR}/php-${PHP_VERSION}/sapi/litespeed/lsphp lsphp-${PHP_VERSION}
+else
+    cp ${PHP_BUILD_DIR}/php-${PHP_VERSION}/sapi/litespeed/php lsphp-${PHP_VERSION}
+fi
+check_errs $? "fail to copy lsphp from ${PHP_BUILD_DIR}/php-${PHP_VERSION}/sapi/litespeed/{lsphp|php}"
 
 chmod a+rx lsphp-${PHP_VERSION}
 

@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2025 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -23,7 +23,7 @@ class ManageViewModel
     /**
      * @var string
      */
-    const FLD_ICON_DIR = 'iconDir';
+    const FLD_ICON_DIR      = 'iconDir';
 
     /**
      * @var string
@@ -33,77 +33,77 @@ class ManageViewModel
     /**
      * @var string
      */
-    const FLD_BTN_STATE = 'btnState';
+    const FLD_BTN_STATE     = 'btnState';
 
     /**
      * @var string
      */
-    const FLD_ACTIVE_VER = 'activeVer';
+    const FLD_ACTIVE_VER    = 'activeVer';
 
     /**
      * @var string
      */
-    const FLD_SHOW_LIST = 'showList';
+    const FLD_SHOW_LIST     = 'showList';
 
     /**
      * @var string
      */
-    const FLD_LIST_DATA = 'listData';
+    const FLD_LIST_DATA     = 'listData';
 
     /**
      * @var string
      */
-    const FLD_COUNT_DATA = 'countData';
+    const FLD_COUNT_DATA    = 'countData';
 
     /**
      * @var string
      */
-    const FLD_INFO_MSGS = 'infoMsgs';
+    const FLD_INFO_MSGS     = 'infoMsgs';
 
     /**
      * @var string
      */
-    const FLD_SUCC_MSGS = 'succMsgs';
+    const FLD_SUCC_MSGS     = 'succMsgs';
 
     /**
      * @var string
      */
-    const FLD_ERR_MSGS = 'errMsgs';
+    const FLD_ERR_MSGS      = 'errMsgs';
 
     /**
      * @var string
      */
-    const FLD_WARN_MSGS = 'warnMsgs';
+    const FLD_WARN_MSGS     = 'warnMsgs';
 
     /**
      * @var string
      */
-    const COUNT_DATA_INSTALLS = 'installs';
+    const COUNT_DATA_INSTALLS  = 'installs';
 
     /**
      * @var string
      */
-    const COUNT_DATA_ENABLED = 'enabled';
+    const COUNT_DATA_ENABLED   = 'enabled';
 
     /**
      * @var string
      */
-    const COUNT_DATA_DISABLED = 'disabled';
+    const COUNT_DATA_DISABLED  = 'disabled';
 
     /**
      * @var string
      */
-    const COUNT_DATA_WARN = 'warn';
+    const COUNT_DATA_WARN      = 'warn';
 
     /**
      * @var string
      */
-    const COUNT_DATA_ERROR = 'err';
+    const COUNT_DATA_ERROR     = 'err';
 
     /**
      * @var string
      */
-    const COUNT_DATA_FLAGGED = 'flagged';
+    const COUNT_DATA_FLAGGED   = 'flagged';
 
     /**
      * @var string
@@ -118,7 +118,7 @@ class ManageViewModel
     /**
      * @var array
      */
-    protected $tplData = array();
+    protected $tplData = [];
 
     /**
      * @var string
@@ -129,8 +129,8 @@ class ManageViewModel
      * @since 1.13.3
      * @var string[][]
      */
-    protected $statusInfo = array(
-        'disabled'               => array(
+    protected $statusInfo = [
+        'disabled'               => [
             'sort'           => 'disabled',
             'state'          => '<span '
                 . 'class="glyphicon glyphicon-flash status-disabled" '
@@ -140,8 +140,8 @@ class ManageViewModel
             'onclick'        => 'onclick="javascript:lscwpEnableSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip',
             'btn_state'      => ''
-        ),
-        'enabled'                => array(
+        ],
+        'enabled'                => [
             'sort'           => 'enabled',
             'state'          => '<span '
                 . 'class="glyphicon glyphicon-flash status-enabled" '
@@ -152,8 +152,8 @@ class ManageViewModel
                 'onclick="javascript:lscwpDisableSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip',
             'btn_state'      => ''
-        ),
-        'adv_cache'              => array(
+        ],
+        'adv_cache'              => [
             'sort'           => 'warning',
             'state'          => '<span class="status-warning" data-uk-tooltip '
                 . 'title="LSCache is enabled but not caching. Please visit the '
@@ -164,8 +164,8 @@ class ManageViewModel
                 'onclick="javascript:lscwpDisableSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip',
             'btn_state'      => ''
-        ),
-        'disabled_no_active_ver' => array(
+        ],
+        'disabled_no_active_ver' => [
             'sort'           => 'disabled',
             'state'          => '<span '
                 . 'class="glyphicon glyphicon-flash status-disabled" '
@@ -178,8 +178,8 @@ class ManageViewModel
             'onclick'        => '',
             'btn_attributes' => '',
             'btn_state'      => 'disabled',
-        ),
-        'error'                  => array(
+        ],
+        'error'                  => [
             'sort'           => 'error',
             /**
              * 'state' added individually later.
@@ -189,15 +189,15 @@ class ManageViewModel
             'onclick'        => '',
             'btn_attributes' => '',
             'btn_state'      => 'disabled'
-        )
-    );
+        ]
+    ];
 
     /**
      * @since 1.13.3
      * @var string[][]
      */
-    protected $flagInfo = array(
-        'unflagged' => array(
+    protected $flagInfo = [
+        'unflagged' => [
             'sort'           => 'unflagged',
             'icon'           => '<span '
                 . 'class="glyphicon glyphicon-flag ls-flag ls-flag-unset">'
@@ -205,8 +205,8 @@ class ManageViewModel
             'btn_title'      => 'Click to set flag',
             'onclick'        => 'onclick="javascript:lscwpFlagSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip'
-        ),
-        'flagged'   => array(
+        ],
+        'flagged'   => [
             'sort'           => 'flagged',
             'icon'           => '<span '
                 . 'class="glyphicon glyphicon-flag ls-flag ls-flag-set">'
@@ -214,8 +214,8 @@ class ManageViewModel
             'btn_title'      => 'Click to unset flag',
             'onclick'        => 'onclick="javascript:lscwpUnflagSingle(this);"',
             'btn_attributes' => 'data-uk-tooltip'
-        ),
-    );
+        ],
+    ];
 
     /**
      *
@@ -275,7 +275,7 @@ class ManageViewModel
         }
         catch ( LSCMException $e )
         {
-            Logger::debug($e->getMessage() . ' Could not get icon directory.');
+            Logger::debug("{$e->getMessage()}. Could not get icon directory.");
         }
 
         $this->tplData[self::FLD_ICON_DIR] = $iconDir;
@@ -288,21 +288,22 @@ class ManageViewModel
     protected function setBtnDataAndListVisibility()
     {
         $scanBtnName = 'Re-scan';
-        $btnState = 'disabled';
+        $btnState    = 'disabled';
 
         if ( ($errStatus = $this->wpInstallStorage->getError()) !== 0 ) {
             $this->tplData[self::FLD_SHOW_LIST] = false;
 
             if ( $errStatus == WPInstallStorage::ERR_NOT_EXIST ) {
                 $scanBtnName = 'Scan';
-                $msg = 'Start by clicking Scan. This will discover all active '
-                    . 'WordPress installations and add them to a list below.';
+                $msg         = 'Start by clicking Scan. This will discover all '
+                    . 'active WordPress installations and add them to a list '
+                    . 'below.';
             }
             elseif ( $errStatus == WPInstallStorage::ERR_VERSION_LOW ) {
                 $scanBtnName = 'Scan';
-                $msg = 'To further improve Cache Management features in this '
-                    . 'version, current installations must be re-discovered. '
-                    . 'Please perform a Scan now.';
+                $msg         = 'To further improve Cache Management features '
+                    . 'in this version, current installations must be '
+                    . 're-discovered. Please perform a Scan now.';
             }
             else {
                 $msg = 'Scan data could not be read. Please perform a Re-scan.';
@@ -319,14 +320,14 @@ class ManageViewModel
         }
 
         $this->tplData[self::FLD_SCAN_BTN_NAME] = $scanBtnName;
-        $this->tplData[self::FLD_BTN_STATE] = $btnState;
+        $this->tplData[self::FLD_BTN_STATE]     = $btnState;
     }
 
     protected function setListAndCountData()
     {
-        $listData = array();
+        $listData = [];
 
-        $countData = array(
+        $countData = [
             self::COUNT_DATA_INSTALLS  => 0,
             self::COUNT_DATA_ENABLED   => 0,
             self::COUNT_DATA_DISABLED  => 0,
@@ -334,7 +335,7 @@ class ManageViewModel
             self::COUNT_DATA_ERROR     => 0,
             self::COUNT_DATA_FLAGGED   => 0,
             self::COUNT_DATA_UNFLAGGED => 0
-        );
+        ];
 
         $wpInstalls = $this->wpInstallStorage->getAllWPInstalls();
 
@@ -342,20 +343,20 @@ class ManageViewModel
             $countData[self::COUNT_DATA_INSTALLS] = count($wpInstalls);
 
             foreach ( $wpInstalls as $wpInstall ) {
-                $listData[$wpInstall->getPath()] = array(
+                $listData[$wpInstall->getPath()] = [
                     'statusData' =>
                         $this->getStatusDisplayData($wpInstall, $countData),
                     'flagData'   =>
                         $this->getFlagDisplayData($wpInstall, $countData),
                     'siteUrl'    => Util::tryIdnToUtf8(
-                        $wpInstall->getData(WPInstall::FLD_SITEURL)
+                        (string)$wpInstall->getData(WPInstall::FLD_SITEURL)
                     )
-                );
+                ];
 
             }
         }
 
-        $this->tplData[self::FLD_LIST_DATA] = $listData;
+        $this->tplData[self::FLD_LIST_DATA]  = $listData;
         $this->tplData[self::FLD_COUNT_DATA] = $countData;
     }
 
@@ -368,7 +369,8 @@ class ManageViewModel
      */
     protected function getStatusDisplayData(
         WPInstall $wpInstall,
-        array     &$countData )
+        array     &$countData
+    )
     {
         $wpStatus = $wpInstall->getStatus();
 
@@ -416,7 +418,8 @@ class ManageViewModel
      */
     protected function getFlagDisplayData(
         WPInstall $wpInstall,
-        array     &$countData )
+        array     &$countData
+    )
     {
         if ( ($wpInstall->getStatus() & WPInstall::ST_FLAGGED ) ) {
             $countData[self::COUNT_DATA_FLAGGED]++;
@@ -444,7 +447,7 @@ class ManageViewModel
         catch ( LSCMException $e )
         {
             Logger::debug(
-                $e->getMessage() . ' Could not get active LSCWP version.'
+                "{$e->getMessage()} Could not get active LSCWP version."
             );
 
             Logger::uiWarning(

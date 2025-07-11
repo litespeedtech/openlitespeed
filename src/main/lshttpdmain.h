@@ -126,6 +126,7 @@ class LshttpdMain
     int startCmdChannel();
     int processChildCmd();
 
+    void            initAio();
     int             startChild(ChildProc *pProc);
     void            onNewChildStart(ChildProc * pProc);
     int             childDead(int pid);

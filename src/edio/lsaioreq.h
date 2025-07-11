@@ -30,6 +30,7 @@ enum AsyncState
     ASYNC_STATE_IDLE = 0,
     ASYNC_STATE_POSTED,
     ASYNC_STATE_READ,
+    ASYNC_STATE_CANCELING,
     ASYNC_STATE_CANCELED,
 };
 
@@ -68,26 +69,27 @@ public:
     const char *str_op()            {   return str_op(m_read);      }
 
     int         getfd()             {   return m_fd;            }
-    AioReqEventHandler *getHandler(){   return m_pEvtHandler;}
+    AioReqEventHandler *getHandler(){   return m_pEvtHandler;   }
     void        setError();
-    bool        error()             {   return m_error; }
+    bool        error()             {   return m_error;     }
     int         init(int aioBlockSize);
     int getRead(char **buffer, off_t offset, int *read);
-    bool getCancel()                {   return m_cancel;}
+    bool getCancel()                {   return m_cancel;    }
     int cancel();
-    struct iovec *getIovec()        {   return &m_iovec;  }
-    void setPos(off_t pos)          {   m_pos = pos;    }
-    off_t getPos()                  {   return m_pos;   }
-    int getRet()                    {   return m_ret;   }
-    void setRet(int ret)            {   m_ret = ret;    }
-    AsyncState getAsyncState()      {   return m_asyncState;    }
-    void setAsyncState(AsyncState s){   m_asyncState = s;       }
+    struct iovec *getIovec()        {   return &m_iovec;    }
+    void setPos(off_t pos)          {   m_pos = pos;        }
+    off_t getPos()                  {   return m_pos;       }
+    int getRet()                    {   return m_ret;       }
+    void setRet(int ret)            {   m_ret = ret;        }
+    AsyncState getAsyncState()           {   return m_asyncState;     }
+    void setAsyncState(AsyncState s)     {   m_asyncState = s;        }
     bool rangeChange(off_t offset);
     LogSession *getLogSession();
 
     virtual int doCancel() = 0;
 
-    bool ioPending();
+    bool isPending() const      {   return m_asyncState == ASYNC_STATE_POSTED;   }
+    bool isCancelling() const   {   return m_asyncState > ASYNC_STATE_CANCELING; }
 
     virtual int postRead(struct iovec *iov, int iovcnt, off_t pos) = 0;
     virtual int getReadResult(struct iovec **iov) = 0;

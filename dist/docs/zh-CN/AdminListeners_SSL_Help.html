@@ -17,7 +17,7 @@
   <h2 class="ls-text-thin">
     OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
   </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 3</h3>
+  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 5</h3>
   <hr/>
   <div>
     <ul>
@@ -101,8 +101,8 @@
 are recommended for the Admin Server.</section>
 <h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header><a href="#sslCert">SSL私钥和证书</a></header><p>
 <a href="#keyFile">私钥文件</a> | <a href="#certFile">证书文件</a> | <a href="#certChain">证书链</a> | <a href="#CACertPath">CA证书路径</a> | <a href="#CACertFile">CA证书文件</a></p></section>
-<section class="toc-row"><header><a href="#sslProtocolSetting">SSL协议</a></header><p>
-<a href="#ciphers">密码套件</a> | <a href="#enableECDHE">启用ECDH密钥交换</a> | <a href="#enableDHE">启用DH密钥交换</a> | <a href="#DHParam">DH参数</a></p></section>
+<section class="toc-row"><header>SSL协议</header><p>
+<a href="#sslProtocol">Protocol Version</a> | <a href="#ciphers">密码套件</a> | <a href="#enableECDHE">启用ECDH密钥交换</a> | <a href="#enableDHE">启用DH密钥交换</a> | <a href="#DHParam">DH参数</a></p></section>
 <section class="toc-row"><header>Security & Features</header><p>
 <a href="#renegProtection">SSL密钥重新协商保护</a> | <a href="#sslSessionCache">启用SSL会话缓存</a> | <a href="#sslSessionTickets">启用会话记录单</a> | <a href="#enableSpdy">启用 SPDY/HTTP2/HTTP3</a> | <a href="#allowQuic">打开HTTP3/QUIC (UDP) 端口</a></p></section>
 <section class="toc-row"><header>Client Verification</header><p>
@@ -114,7 +114,7 @@ are recommended for the Admin Server.</section>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="certChain"><h3>证书链<span class="ls-permlink"><a href="#certChain"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定证书是否为证书链。 存储证书链的文件必须为PEM格式， 并且证书必须按照从最低级别（实际的客户端或服务器证书）到最高级别（Root）CA的链接顺序。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="CACertPath"><h3>CA证书路径<span class="ls-permlink"><a href="#CACertPath"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定证书颁发机构（CA）证书的目录。 这些证书用于客户端证书身份验证和构建服务器证书链，除了服务器证书之外，这些证书还将发送到浏览器。</p> <h4>Syntax</h4><p>path</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="CACertFile"><h3>CA证书文件<span class="ls-permlink"><a href="#CACertFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定包含证书颁发机构（CA）证书的证书链文件。 按照优先顺序，此文件只是PEM编码的证书文件的串联。 这可以用作替代或 除了<span class="tagl"><a href="#CACertPath">CA证书路径</a></span>。 这些证书用于客户端证书身份验证和构建服务器证书链，除了服务器证书之外，这些证书还将发送到浏览器。</p> <h4>Syntax</h4><p>文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="sslProtocolSetting"><h3>SSL协议<span class="ls-permlink"><a href="#sslProtocolSetting"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>自定义侦听器接受的SSL协议。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><div><header id="sslProtocol"><h3>Protocol Version<span class="ls-permlink"><a href="#sslProtocol"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>A selection of SSL protocols accepted by the listener.<br/><br/> Options include: <span class="val">SSL v3.0</span>, <span class="val">TLS v1.0</span>, <span class="val">TLS v1.1</span>, <span class="val">TLS v1.2</span>, <span class="val">TLS v1.3</span>.</p> <h4>Syntax</h4><p>从复选框中选择</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="ciphers"><h3>密码套件<span class="ls-permlink"><a href="#ciphers"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the cipher suite to be used when negotiating the SSL handshake. LSWS supports cipher suites implemented in SSL v3.0, TLS v1.0, TLS v1.2, and TLS v1.3.</p> <h4>Syntax</h4><p>Colon-separated string of cipher specifications.</p> <h4>例子</h4><div class="ls-example">ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH</div><h4>提示</h4><p><span title="Security" class="ls-icon-security"></span> We recommend leaving this field blank to use our default cipher which follows SSL cipher best practices.</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="enableECDHE"><h3>启用ECDH密钥交换<span class="ls-permlink"><a href="#enableECDHE"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>允许使用Diffie-Hellman密钥交换进行进一步的SSL加密。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p>[安全建议] ECDH密钥交换比仅使用RSA密钥更安全。 ECDH和DH密钥交换安全性相同。<br/><br/> [性能] 启用ECDH密钥交换会增加CPU负载，并且比仅使用RSA密钥要慢。</p> </article> </div>
 <div class="helpitem"><article class="ls-helpitem"><div><header id="enableDHE"><h3>启用DH密钥交换<span class="ls-permlink"><a href="#enableDHE"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>允许使用Diffie-Hellman密钥交换进行进一步的SSL加密。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p>[安全建议] DH密钥交换比仅使用RSA密钥更安全。 ECDH和DH密钥安全性相同。<br/><br/> [x性能] 启用DH密钥交换将增加CPU负载，并且比ECDH密钥交换和RSA都慢。 如果可用，则首选ECDH密钥交换。</p> </article> </div>

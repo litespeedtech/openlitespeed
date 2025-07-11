@@ -1,10 +1,10 @@
 <?php
 
-/* * ******************************************
+/** ******************************************
  * LiteSpeed Web Server Cache Manager
  *
- * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2019
+ * @author    Michael Alegre
+ * @copyright 2018-2025  LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Context;
@@ -13,15 +13,15 @@ class ContextOption
 {
 
     const FROM_CONTROL_PANEL = 'panel';
-    const FROM_CLI = 'cli';
+    const FROM_CLI           = 'cli';
     const LOG_FILE_NAME = 'webcachemgr.log';
-    const IS_NOT_ROOT = 0;
+    const IS_NOT_ROOT         = 0;
 
     /**
      * IS_ROOT_ESCALATABLE depends on panel implemented escalation.
      */
     const IS_ROOT_ESCALATABLE = 1;
-    const IS_ROOT = 2;
+    const IS_ROOT             = 2;
 
     /**
      * @var string
@@ -65,12 +65,12 @@ class ContextOption
     protected $logEchoLvl;
 
     /**
-     * @var boolean
+     * @var bool
      */
     protected $bufferedWrite;
 
     /**
-     * @var boolean
+     * @var bool
      */
     protected $bufferedEcho;
 
@@ -108,16 +108,23 @@ class ContextOption
 
     /**
      *
-     * @param string   $invokerName
-     * @param string   $invokerType
-     * @param int      $isRoot
-     * @param int      $logFileLvl
-     * @param int      $logEchoLvl
-     * @param boolean  $bufferedWrite
-     * @param boolean  $bufferedEcho
+     * @param string $invokerName
+     * @param string $invokerType
+     * @param int    $isRoot
+     * @param int    $logFileLvl
+     * @param int    $logEchoLvl
+     * @param bool   $bufferedWrite
+     * @param bool   $bufferedEcho
      */
-    protected function __construct( $invokerName, $invokerType, $isRoot,
-            $logFileLvl, $logEchoLvl, $bufferedWrite, $bufferedEcho )
+    protected function __construct(
+        $invokerName,
+        $invokerType,
+        $isRoot,
+        $logFileLvl,
+        $logEchoLvl,
+        $bufferedWrite,
+        $bufferedEcho
+    )
     {
         $this->invokerName = $invokerName;
         $this->invokerType = $invokerType;
@@ -195,7 +202,7 @@ class ContextOption
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public function isBufferedWrite()
     {
@@ -204,7 +211,7 @@ class ContextOption
 
     /**
      *
-     * @return boolean
+     * @return bool
      */
     public function isBufferedEcho()
     {
@@ -267,7 +274,8 @@ class ContextOption
 
     /**
      *
-     * @param int   $timeout
+     * @param int $timeout
+     *
      * @return int
      */
     public function setBatchTimeout( $timeout )

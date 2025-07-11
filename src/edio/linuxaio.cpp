@@ -123,6 +123,13 @@ int LinuxAio::check_pending()
                    "Canceled read fd: %d at %ld ret %d",
                    lsLinuxAioReq->getfd(), lsLinuxAioReq->getPos(),
                    lsLinuxAioReq->getRet());
+            if (lsLinuxAioReq->getAsyncState() == ASYNC_STATE_CANCELING)
+            {
+                LS_DBG(lsLinuxAioReq->getLogSession(),
+                   "canceling Linux AIO request, discard result, delete");
+                delete lsLinuxAioReq;
+                continue;
+            }
             lsLinuxAioReq->setAsyncState(ASYNC_STATE_IDLE);
         }
         else

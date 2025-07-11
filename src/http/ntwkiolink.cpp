@@ -1304,11 +1304,18 @@ int NtwkIOLink::onTimer()
             closeSSL(this);
         }
 
-        if (detectClose())
+        if (getState() == HIOS_SHUTDOWN)
+        {
+            LS_DBG_M(this, "Shutdown time out!");
+            closeSocket();
             return 1;
-        m_iInProcess = 1;
-        (*m_pFpList->m_onTimer_fp)(this);
-        m_iInProcess = 0;
+        }
+        else if (!detectClose())
+        {
+            m_iInProcess = 1;
+            (*m_pFpList->m_onTimer_fp)(this);
+            m_iInProcess = 0;
+        }
         if (getState() == HIOS_CLOSING)
         {
             if (flushSslWpending() != 0)
@@ -1589,12 +1596,8 @@ int NtwkIOLink::checkWriteRet(int len)
 int NtwkIOLink::detectClose()
 {
     if (getState() == HIOS_SHUTDOWN)
-    {
-        LS_DBG_M(this, "Shutdown time out!");
-        closeSocket();
         return 1;
-    }
-    else if (getState() == HIOS_CONNECTED)
+    if (getState() == HIOS_CONNECTED)
     {
         char ch;
         if ((getClientInfo()->getAccess() == AC_BLOCK) ||
@@ -1603,7 +1606,8 @@ int NtwkIOLink::detectClose()
         {
             LS_DBG_L(this, "Peer close connection detected!");
             //have the connection closed faster
-            onPeerClose();
+            setFlag(HIO_FLAG_PEER_SHUTDOWN, 1);
+            setState(HIOS_CLOSING);
             return 1;
         }
     }

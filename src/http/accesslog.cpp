@@ -447,22 +447,19 @@ void AccessLog::appendStrNoQuote(int escape, const char *pStr, int len)
 
 char *AccessLog::appendReqVar(HttpSession *pSession, int id)
 {
-    char *pBuf = m_buf.end();
+    char buf[65536];
+    char *pBuf = buf;
     int escape = 0;
-    int n = RequestVars::getReqVar(pSession, id, pBuf, m_buf.available());
+    int n = RequestVars::getReqVar(pSession, id, pBuf, sizeof(buf));
     if (n > 0)
     {
         if (id == REF_REQ_LINE)
         {
             n = fixHttpVer(pSession, pBuf, n);
-            escape = 1;
         }
-        if (id < REF_STRING)
+        if (id != REF_STRING)
             escape = 1;
-        if (pBuf != m_buf.end())
-            appendStrNoQuote(escape, pBuf, n);
-        else
-            m_buf.used(n);
+        appendStrNoQuote(escape, pBuf, n);
     }
     else
         m_buf.append('-');
