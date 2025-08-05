@@ -319,7 +319,10 @@ LsShm *LsShm::open(const char *mapName, LsShmXSize_t initsize,
 
     if (pBaseDir != NULL)
     {
-        snprintf(buf, sizeof(buf), "%s/%s.%s", pBaseDir, mapName,
+        int len = strlen(pBaseDir);
+        if (pBaseDir[len - 1] == '/')
+            --len;
+        snprintf(buf, sizeof(buf), "%.*s/%s.%s", len, pBaseDir, mapName,
                  LSSHM_SYSSHM_FILE_EXT);
         if ((pObj = getExisting(buf)) != NULL)
             return pObj;
@@ -328,7 +331,7 @@ LsShm *LsShm::open(const char *mapName, LsShmXSize_t initsize,
     {
         for (i = 0; i < getBaseDirCount(); ++i)
         {
-            snprintf(buf, sizeof(buf), "%s/%s.%s", s_pDirBase[i], mapName,
+            snprintf(buf, sizeof(buf), "%s%s.%s", s_pDirBase[i], mapName,
                      LSSHM_SYSSHM_FILE_EXT);
             if ((pObj = getExisting(buf)) != NULL)
                 return pObj;
@@ -498,21 +501,46 @@ LsShmStatus_t LsShm::expandFile(LsShmOffset_t from, LsShmXSize_t incrSize)
 }
 
 
+LsShmStatus_t LsShm::openShmFile()
+{
+    m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT | O_EXCL, 0640);
+    if (m_iFd >= 0)
+        return LSSHM_OK;
+    if (errno == EEXIST)
+    {
+        m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0640);
+        if (m_iFd >= 0)
+            return LSSHM_OK;
+    }
+    if (GPath::createMissingPath(m_pFileName, 0755) < 0)
+    {
+        setErrMsg(LSSHM_SYSERROR, "Unable to create directory path for [%s], %s.",
+                m_pFileName, strerror(errno));
+        return LSSHM_BADMAPFILE;
+    }
+    m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT | O_EXCL, 0640);
+    if (m_iFd >= 0)
+        return LSSHM_OK;
+    if (errno == EEXIST)
+    {
+        m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0640);
+        if (m_iFd >= 0)
+            return LSSHM_OK;
+    }
+    setErrMsg(LSSHM_SYSERROR, "Unable to open/create [%s], %s.",
+            m_pFileName, strerror(errno));
+    return LSSHM_BADMAPFILE;
+
+}
+
+
 LsShmStatus_t LsShm::openLockShmFile(int mode)
 {
     if (mode & LSSHM_OPEN_NEW)
         unlink(m_pFileName);
-    if ((m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0640)) < 0)
-    {
-        if ((GPath::createMissingPath(m_pFileName, 0755) < 0)
-            || ((m_iFd = ::open(m_pFileName, O_RDWR | O_CREAT, 0640)) < 0))
-        {
-            setErrMsg(LSSHM_SYSERROR, "Unable to open/create [%s], %s.",
-                      m_pFileName, strerror(errno));
-            return LSSHM_BADMAPFILE;
-        }
-    }
-
+    LsShmStatus_t ret = openShmFile();
+    if (ret != LSSHM_OK)
+        return ret;
     ::fcntl(m_iFd, F_SETFD, FD_CLOEXEC);
     lockFile(m_iFd);
     return LSSHM_OK;
@@ -558,7 +586,10 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
 
     if (pBaseDir != NULL)
     {
-        snprintf(buf, sizeof(buf), "%s/%s.%s", pBaseDir, mapName,
+        int len = strlen(pBaseDir);
+        if (pBaseDir[len - 1] == '/')
+            --len;
+        snprintf(buf, sizeof(buf), "%.*s/%s.%s", len, pBaseDir, mapName,
                  LSSHM_SYSSHM_FILE_EXT);
         m_pFileName = buf;
         if (openLockShmFile(mode) != LSSHM_OK)
@@ -571,7 +602,10 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
     {
         for (i = 0; i < getBaseDirCount(); ++i)
         {
-            snprintf(buf, sizeof(buf), "%s/%s.%s", s_pDirBase[i], mapName,
+            int len = strlen(s_pDirBase[i]);
+            if (s_pDirBase[i][len - 1] == '/')
+                --len;
+            snprintf(buf, sizeof(buf), "%.*s/%s.%s", len, s_pDirBase[i], mapName,
                      LSSHM_SYSSHM_FILE_EXT);
             m_pFileName = buf;
             if (openLockShmFile(mode) == LSSHM_OK)

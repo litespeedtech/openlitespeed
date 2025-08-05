@@ -90,7 +90,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  "built: Fri Jul 11 18:55:26 UTC 2025"
+#define BUILDTIME  "built: Tue Aug  5 13:09:20 UTC 2025"
 
 static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
         " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";

@@ -197,6 +197,7 @@ add_definitions(-DUSE_UDNS)
 
 add_subdirectory(src)
 add_subdirectory(support)
+add_subdirectory(lshostexec)
 
 if (BUILD_TEST)
 add_subdirectory(test)

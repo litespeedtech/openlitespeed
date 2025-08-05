@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "ns.h"
+#include "nsnosandbox.h"
 #include "nsopts.h"
 #include "nspersist.h"
 #include "nsutils.h"
@@ -35,7 +36,6 @@ void ls_stderr(const char * fmt, ...)
         __attribute__((format(printf, 1, 2)))
 #endif
 ;
-
 
 void nsopts_free_member(SetupOp *op)
 {
@@ -221,6 +221,7 @@ static int set_op(SetupOp *op, SetupOpType type, char *source, char *dest,
             op->source = source;
         else 
         {
+            DEBUG_MESSAGE("Dup source: %s\n", source);
             op->source = strdup(source);
             if (!op->source)
             {
@@ -236,6 +237,7 @@ static int set_op(SetupOp *op, SetupOpType type, char *source, char *dest,
             op->dest = dest;
         else
         {
+            DEBUG_MESSAGE("Dup dest: %s\n", dest);
             op->dest = strdup(dest);
             if (!op->dest)
             {
@@ -413,6 +415,108 @@ static int find_op(SetupOpType type, char *source, char *dest, int flags,
 
 static int add_op(SetupOpType type, char *source, char *dest, int flags,
                   int *count, int *found_op, int *allocated, SetupOp **setupOps, 
+                  size_t *setupOps_size);
+
+static int check_symlink(char *dest, int flags, int sym_count,
+                         int *count, int *found_op, int *allocated, SetupOp **setupOps, 
+                         size_t *setupOps_size)
+{
+    DEBUG_MESSAGE("check_symlinks, dest: %s , flags: 0x%x\n", dest, flags);
+    struct stat statbuf;
+    if (lstat(dest, &statbuf))
+    {
+        DEBUG_MESSAGE("%s error: %s, don't sweat it for now\n", dest, strerror(errno))
+        return 0;
+    }
+    if ((statbuf.st_mode & S_IFMT) == S_IFLNK)
+    {
+        char link[512];
+        size_t sz = readlink(dest, link, sizeof(link));
+        if ((int)sz == -1 || sz == sizeof(link))
+        {
+            int err = errno;
+            DEBUG_MESSAGE("Can't get readlink for %s: %s\n", dest, strerror(err));
+            ls_stderr("Can't get readlink for %s: %s\n", dest, strerror(err));
+            return -1;
+         }
+        link[sz] = 0;
+        DEBUG_MESSAGE("readlink: %s\n", link);
+        if (sym_count > 10)
+        {
+            DEBUG_MESSAGE("Unexpected nested symlink: %s\n", dest);
+            ls_stderr("Unexpected nested symlink: %s\n", dest);
+            return -1;
+        }
+        char dir[sizeof(link)];
+        strcpy(dir, link);
+        char *slash = strrchr(dir, '/');
+        if (slash && slash != dir)
+        {
+            *slash = 0;
+            DEBUG_MESSAGE("Use dir: %s\n", dir);
+            int rc = add_op(SETUP_BIND_MOUNT, dir, dir,
+                            flags | OP_FLAG_ALLOCATED_SOURCE | OP_FLAG_ALLOCATED_DEST, 
+                            count, found_op, allocated, setupOps, setupOps_size);
+            if (rc)
+                return rc;
+        }
+        int rc = check_symlink(link, flags, sym_count + 1, count, found_op, 
+                               allocated, setupOps, setupOps_size);
+        if (rc)
+            return rc;
+    }
+    else 
+    {
+        int rc = add_op(SETUP_BIND_MOUNT, s_nosandbox_pgm, dest, 
+                        flags | OP_FLAG_ALLOCATED_DEST, 
+                        count, found_op, allocated, setupOps, setupOps_size);
+        if (rc)
+            return rc;
+    }
+    return 0;
+}
+
+
+static int add_sandbox_ops(int *count, int *found_op, int *allocated, SetupOp **setupOps, 
+                           size_t *setupOps_size)
+{
+    DEBUG_MESSAGE("add_sandbox_ops\n");
+    int rc = 0;
+    if (!s_nosandbox_added && /*s_nosandbox_count && */
+        s_nosandbox_name)
+    {
+        s_nosandbox_added = 1;
+        int sflags = OP_FLAG_NO_SANDBOX | OP_FLAG_ALLOW_NOTEXIST;
+
+        DEBUG_MESSAGE("Adding nosandbox socket: %s\n", s_nosandbox_name);
+        for (int i = 0; i < s_nosandbox_count; i++)
+        {
+            DEBUG_MESSAGE("Adding nosandbox string: %s\n", s_nosandbox_arr[i]);
+            if (nsnosandbox_symlink())
+                rc = check_symlink(s_nosandbox_arr[i], sflags, 0, count, found_op, 
+                                   allocated, setupOps, setupOps_size);
+            else
+                rc = add_op(SETUP_BIND_MOUNT, s_nosandbox_pgm, s_nosandbox_arr[i], 
+                            sflags, count, found_op, allocated, setupOps, setupOps_size);
+        }
+        if (!rc)
+        {        
+            char dir[NOSANDBOX_MAX_FILE_LEN];
+            char lsws_dir[PERSIST_DIR_SIZE];
+            snprintf(dir, sizeof(dir), NOSANDBOX_TOP_FMT, ns_lsws_home(lsws_dir, sizeof(lsws_dir)));
+            rc = add_op(SETUP_BIND_MOUNT, dir, dir, 
+                        OP_FLAG_NO_SANDBOX | OP_FLAG_ALLOCATED_SOURCE | OP_FLAG_ALLOCATED_DEST, 
+                        count, found_op, allocated, setupOps, setupOps_size);
+        }
+    }
+    else
+        DEBUG_MESSAGE("s_nosandbox_name: %s\n", s_nosandbox_name)
+    return rc;
+}
+
+
+static int add_op(SetupOpType type, char *source, char *dest, int flags,
+                  int *count, int *found_op, int *allocated, SetupOp **setupOps, 
                   size_t *setupOps_size)
 {
     int op, rc = 0;
@@ -542,7 +646,7 @@ static int process_negate_path(char *line, int *count, int *found_op,
     int flags = 0;
     int rc = getarg(&arg_beg, &arg, &flags);
     if (!rc)
-        rc = add_op(SETUP_MOUNT_TMPFS, NULL, arg, flags | OP_FLAG_ALLOCATED_DEST, 
+        rc = add_op(SETUP_BIND_TMP, NULL, arg, flags | OP_FLAG_ALLOCATED_DEST, 
                     count, found_op, allocated, setupOps, setupOps_size);
     return rc;
 }
@@ -870,11 +974,14 @@ int nsopts_get(lscgid_t *pCGI, int *allocated, SetupOp **setupOps,
             if (i == 0)
                 rc = add_static_ops(s_SetupOp_default, s_setupOp_default_size,
                                     allocated, &count, setupOps, setupOps_size);
-            else
-                continue;
         }
         else
             rc = nsopts_parse(env, &count, allocated, setupOps, setupOps_size);
+        if (!rc && i == 1)
+        {
+            int found_op = 0;
+            rc = add_sandbox_ops(&count, &found_op, allocated, setupOps, setupOps_size);
+        }
         if (rc)
         {
             nsopts_free_all(allocated, setupOps, setupOps_size, nsconf, nsconf2);

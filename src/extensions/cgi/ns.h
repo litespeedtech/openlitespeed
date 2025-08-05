@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 Lite Speed Technologies Inc, All Rights Reserved.
+ * Copyright 2002-2025 Lite Speed Technologies Inc, All Rights Reserved.
  * LITE SPEED PROPRIETARY/CONFIDENTIAL.
  */
 #ifndef _NS_H
@@ -27,9 +27,6 @@ extern "C"
 #define LS_NS_VHOST       "LS_NS_VHOST" // "${VHOST} ${NAMESPACE_NAME_IN_VH} ...
 #define LS_NS_VHOST_LEN   11
 
-#define PERSIST_USER_FILE       "/.lsns_reload" // Relative to the user's home
-#define PERSIST_USER_FILE_LEN   13
-
 /**
  * @fn ns_supported
  * @brief Returns if the OS supports namespaces.
@@ -41,9 +38,10 @@ int ns_supported();
  * @fn ns_init_engine
  * @brief Verifies namespaces are supported and sets up for later use.
  * @param[in] ns_conf The LS_NS_CONF environment variable
+ * @param[in] nolisten Lets you use ns_init_engine for utilities.
  * @return 0 if namespaces are not supported, 1 if they are.
  **/
-int ns_init_engine(const char *ns_conf);
+int ns_init_engine(const char *ns_conf, int nolisten);
 
 /**
  * @fn ns_not_lscgid
@@ -73,10 +71,11 @@ char *ns_getenv(lscgid_t *pCGI, const char *title);
  * @fn ns_exec
  * @brief Run the program specified in a ns
  * @param[in] pCGI the global parameters
+ * @param[in] must_persist 1 if the namespace must be persisted.
  * @param[out] done whether it did the exec.
  * @return The return code of the exec or -1 if an error was logged.
  **/
-int ns_exec(lscgid_t *pCGI, int *done);
+int ns_exec(lscgid_t *pCGI, int must_persist, int *done);
 
 /**
  * @fn ns_exec_ols
@@ -111,8 +110,6 @@ void ns_setverbose_callback(verbose_callback_t callback);
 * @brief Call to complete the ns processing and free everything we can.
 * @note If ns_exec is done successfully, a namespace is persisted and will
 * last until the next reboot until, and unless, you specify unpersist here.
-* @param[in] unpersist 1 if you wish to dismount the persisted namespaces.  0
-* (the default) is to leave them running.
 * @warning Setting unpersist to 1 will get the write lock on the mounts and
 * do them all.  This is a somewhat expensive call and should only be used when
 * you're sure it's a good time.
@@ -120,7 +117,7 @@ void ns_setverbose_callback(verbose_callback_t callback);
 * @note This function only unpersists the last one just persisted (if any).
 * @return None.
 **/
-void ns_done(int unpersist);
+void ns_done();
 
 /**
 * @fn ns_unpersist_all
@@ -144,7 +141,7 @@ int ns_init_req(lscgid_t *pCGI);
 /**
  * @fn ns_init_debug
  * @brief Only used internally and by bubblewrap lets you to some advanced
- * debugging.
+ * debugging.  Actually defined in nsopts.
  * @return None.
  **/
 void ns_init_debug();

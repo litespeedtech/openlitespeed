@@ -758,6 +758,8 @@ int UnpackedHeaders::setMethod(const char *ptr, int len)
 
 int UnpackedHeaders::setMethod2(lsxpack_header *hdr)
 {
+    if (m_methodLen)
+        return LS_FAIL;
     if (m_buf->size() != HEADER_BUF_PAD)
     {
         int diff = hdr->val_len - 6;

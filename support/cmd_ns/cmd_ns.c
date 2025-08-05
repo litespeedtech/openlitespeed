@@ -3,6 +3,7 @@
  * LITE SPEED PROPRIETARY/CONFIDENTIAL.
  */
 
+#include <errno.h>
 #include <getopt.h>
 #include <pwd.h>
 #include <stdarg.h>
@@ -22,9 +23,8 @@
 
 static uid_t        s_uid;
 static pid_t        s_pid;
+char               *s_argv0 = NULL;
 
-void ls_stderr(const char * fmt, ...);
-/*
 void ls_stderr(const char * fmt, ...)
 {
     char buf[1024];
@@ -43,7 +43,7 @@ void ls_stderr(const char * fmt, ...)
     vfprintf(stderr, fmt, ap);
     va_end(ap);
 }
-*/
+
 
 int usage(const char *message)
 {
@@ -58,6 +58,7 @@ int usage(const char *message)
     printf("  -c                : Whether cgroups should be enforced.\n");
     printf("  -f <config file>  : The config file to be used (system defaults if not specified)\n");
     printf("  -2 <config file>  : Additional vhost config file\n");
+    printf("  -n                : If specified hostexec will NOT be enforced\n");
     printf("  -v                : Verbose output\n");
     printf("  -h                : Display this help message\n");
     return 1;
@@ -160,12 +161,13 @@ static int cgroup_v2(int uid, int pid)
 
 int main(int argc, char *argv[])
 {
-    char ch; 
-    int cgroup = 0, rc = 0;
+    int ch; 
+    int cgroup = 0, rc = 0, must_exist = 1;
     char *vhost = NULL, *cfgfile = NULL, *cfg2file = NULL, *cmd = "/bin/bash", *dir = NULL;
     char env[256];
     struct passwd *pw = NULL;
     
+    s_argv0 = argv[0];
     DEBUG_MESSAGE("Entering shell_ns program\n");
     if (getuid())
         return usage("Must be run as root");
@@ -173,7 +175,7 @@ int main(int argc, char *argv[])
     if (access(PERSIST_PREFIX, 0))
         return usage("Persistance directory: " PERSIST_PREFIX " not found");
     
-    while ((ch = getopt(argc, argv, "u:s:m:d:cf:2:v?h")) != -1)
+    while ((ch = getopt(argc, argv, "u:s:m:d:cf:2:v?hn")) != -1)
     {
         switch (ch)
         {
@@ -216,6 +218,10 @@ int main(int argc, char *argv[])
                 putenv(env);
                 break;
 
+            case 'n':
+                must_exist = 0;
+                break;
+
             case 'v':
                 printf("Verbose output specified\n");
                 ns_setverbose_callback(verbose_callback);
@@ -229,7 +235,14 @@ int main(int argc, char *argv[])
         }
     }
     if (!pw)
+    {
         pw = getpwnam("nobody");
+        if (!pw)
+        {
+            ls_stderr("Error getting details for the user nobody: %s\n", strerror(errno));
+            return 1;
+        }
+    }
     printf("Using UID: %d\n", pw->pw_uid);
     if (!dir)
         dir = pw->pw_dir;
@@ -241,7 +254,7 @@ int main(int argc, char *argv[])
     s_uid = pw->pw_uid;
     s_pid = getpid();
     ns_not_lscgid();
-    if (!ns_init_engine(cfgfile))
+    if (!ns_init_engine(cfgfile, 1))
     {
         ls_stderr("ns_init_engine disabled namespaces\n");
         return 1;
@@ -271,7 +284,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     int done = 0;
-    rc = ns_exec(&cgi, &done);
+    rc = ns_exec(&cgi, must_exist, &done);
     ns_done(0);
     if (rc)
     {

@@ -4,6 +4,7 @@ add_definitions(-DNOT_LSCGID)
 
 SET(cmd_ns_SRCS
     cmd_ns.c
+    nsnosandbox.c
     nsopts.c
     nspersist.c
     nsutils.c

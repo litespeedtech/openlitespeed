@@ -1018,7 +1018,7 @@ installation()
     
     util_ccpfile "$SDIR_OWN" $EXEC_MOD fcgi-bin/lsperld.fpl fcgi-bin/RackRunner.rb fcgi-bin/lsnode.js
     util_cpfile "$SDIR_OWN" $EXEC_MOD  fcgi-bin/RailsRunner.rb  fcgi-bin/RailsRunner.rb.2.3
-    util_cpfile "$SDIR_OWN" $EXEC_MOD lsns/bin/common.py lsns/bin/lscgctl lsns/bin/lscgstats lsns/bin/lspkgctl lsns/bin/lsnsctl lsns/bin/unmount_ns lsns/bin/cmd_ns lsns/bin/lssetup
+    util_cpfile "$SDIR_OWN" $EXEC_MOD lsns/bin/common.py lsns/bin/lshostexec lsns/bin/lscgctl lsns/bin/lscgstats lsns/bin/lspkgctl lsns/bin/lsnsctl lsns/bin/unmount_ns lsns/bin/cmd_ns lsns/bin/lssetup
 
     pkill _recaptcha
     util_cpfile "$SDIR_OWN" $EXEC_MOD  lsrecaptcha/_recaptcha lsrecaptcha/_recaptcha.shtml

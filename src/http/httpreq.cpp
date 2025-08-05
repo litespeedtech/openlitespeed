@@ -1044,6 +1044,12 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
             LS_INFO(getLogSession(), "Status 400: NUL byte in header value!");
             return SC_400;
         }
+        if (memchr(value, '\r', begin->val_len))
+        {
+            LS_INFO(getLogSession(), "Status 400: '\r' in header value!");
+            return SC_400;
+        }
+
         index = begin->app_index;
         if (index == UPK_HDR_UNKNOWN)
         {
@@ -1085,6 +1091,11 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
                 }
                 else
                 {
+                    if (index == HttpHeader::H_CONTENT_LENGTH)
+                    {
+                        LS_INFO(getLogSession(), "Status 400: duplicate content-length!");
+                        return SC_400;
+                    }
                     if (index == HttpHeader::H_HOST && begin->name_len == 4)
                         *((char *)name + 3) = '2';
                     index = HttpHeader::H_HEADER_END;

@@ -48,6 +48,33 @@
 
 static int HttpFetchCounter = 0;
 
+static const char *s_error_str[] =
+{
+    "DNS Failure",
+    "Connection Failure",
+    "Connection Timedout",
+    "Socket Error",
+    "SSL handshake failure",
+    "SSL certificate verification failure",
+    "SSL Domain mismatch",
+    "HTTP send request header failure",
+    "HTTP send request body failure",
+    "HTTP protocol error ",
+    "HTTP receive response failure",
+    "Fetch is cancelled",
+};
+
+
+const char *HttpFetch::getErrorStr(int error_code)
+{
+    if (error_code == 0)
+        return "Succeed";
+    if (error_code < ERROR_DNS_FAILURE || error_code > ERROR_CANCELED)
+        return "Unknown";
+    return s_error_str[error_code - ERROR_DNS_FAILURE];
+}
+
+
 HttpFetch::HttpFetch()
     : m_pBuf(NULL)
     , m_fdHttp(-1)
@@ -61,8 +88,12 @@ HttpFetch::HttpFetch()
     , m_iHostLen(0)
     , m_pollEvents(0)
     , m_reqState(STATE_NOT_INUSE)
-    , m_nonblocking(0)
+    , m_nonblocking(MODE_BLOCKING)
     , m_enableDriver(0)
+    , m_iEnableDebug(0)
+    , m_iSsl(0)
+    , m_iVerifyCert(0)
+    , m_family(PF_INET)
     , m_pReqBody(NULL)
     , m_reqBodyLen(0)
     , m_respBodyLen(-1)
@@ -76,9 +107,6 @@ HttpFetch::HttpFetch()
     , m_pHttpFetchDriver(NULL)
     , m_iTimeoutSec(-1)
     , m_iReqInited(0)
-    , m_iEnableDebug(0)
-    , m_iSsl(0)
-    , m_iVerifyCert(0)
 {
     m_tmStart.tv_sec = 0;
     m_tmStart.tv_usec = 0;
@@ -299,12 +327,12 @@ int HttpFetch::startDnsLookup(const char *addrServer)
     if (!m_nonblocking || m_nonblocking == MODE_NON_BLOCKING_SYNC_DNS)
     {
         flag |= DO_NSLOOKUP_DIRECT;
-        ret = m_pServerAddr->set(PF_INET, addrServer, flag);
+        ret = m_pServerAddr->set(m_family, addrServer, flag);
     }
     else
     {
         AdnsReq *req = NULL;
-        ret = m_pServerAddr->asyncSet(PF_INET, addrServer, flag,
+        ret = m_pServerAddr->asyncSet(m_family, addrServer, flag,
                                       asyncDnsLookupCb, this, &req);
         LS_DBG(m_pLogger, "[HttpFetch] [%d]: Async DNS lookup '%s' with flag:%d return %d",
                getLoggerId(), addrServer, flag, ret);
@@ -477,7 +505,7 @@ int HttpFetch::startReq(const char *pURL, int nonblock, int enableDriver,
 {
     if (initReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
         return -1;
-    m_nonblocking = nonblock;
+    m_nonblocking = (enum mode)nonblock;
     m_enableDriver = (enableDriver || nonblock);
 
     if (m_pServerAddr)
@@ -498,7 +526,7 @@ int HttpFetch::startReq(const char *pURL, int nonblock, int enableDriver,
 {
     if (initReq(pURL, pBody, bodyLen, pSaveFile, pContentType) != 0)
         return -1;
-    m_nonblocking = nonblock;
+    m_nonblocking = (enum mode)nonblock;
     m_enableDriver = (enableDriver || nonblock);
 
     if(m_pServerAddr != &sockAddr )
@@ -572,11 +600,17 @@ int HttpFetch::buildReq(const char *pMethod, const char *pURL,
         m_reqBufLen = len;
         m_pReqBuf = pReqBuf;
     }
+    int uri_len = strlen(pURI);
+    if (uri_len > 7 && strncasecmp(pURI + uri_len - 7, "#[IPv6]", 7) == 0)
+    {
+        m_family = PF_INET6;
+        uri_len -= 7;
+    }
     m_reqHeaderLen = lsnprintf(m_pReqBuf, len,
-                                   "%s %s HTTP/1.0\r\n"
+                                   "%s %.*s HTTP/1.0\r\n"
                                    "Host: %s\r\n"
                                    "Connection: Close\r\n",
-                                   pMethod, pURI, m_achHost
+                                   pMethod, uri_len, pURI, m_achHost
                                   );
     if (m_pExtraReqHdrs != NULL)
     {
@@ -677,7 +711,7 @@ int HttpFetch::startProcessReq(const GSockAddr &sockAddr)
     {
         updateConnectTime();
         m_reqState = STATE_CONNECTED; //connected, sending request header
-        if (m_nonblocking == 2)
+        if (m_nonblocking == MODE_TEST_CONNECT)
         {
             closeConnection();
             return -1;
@@ -732,7 +766,7 @@ int HttpFetch::sendReq()
         }
         updateConnectTime();
         m_reqState = STATE_CONNECTED;
-        if (m_nonblocking == 2)
+        if (m_nonblocking == MODE_TEST_CONNECT)
         {
             closeConnection();
             return -1;
@@ -817,6 +851,12 @@ int HttpFetch::sendReq()
         m_pollEvents = POLLIN;
         if (m_pHttpFetchDriver)
             m_pHttpFetchDriver->switchWriteToRead();
+        break;
+    default:
+        if (m_iEnableDebug)
+            m_pLogger->info("HttpFetch[%d]::sendReq() in unhandled state: %d",
+                            getLoggerId(), m_reqState);
+        break;
     }
     if ((ret == -1) && (errno != EAGAIN))
         return -1;

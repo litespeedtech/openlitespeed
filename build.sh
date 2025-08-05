@@ -669,6 +669,10 @@ if [ -e build/support/cmd_ns/cmd_ns ] ; then
     cp build/support/cmd_ns/cmd_ns  dist/lsns/bin/
 fi
 
+if [ -e build/lshostexec/lshostexec ] ; then
+    cp build/lshostexec/lshostexec  dist/lsns/bin/
+fi
+
 
 cpModuleSoFiles
 

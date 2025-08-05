@@ -26,6 +26,7 @@ void ls_stderr(const char * fmt, ...)
 #endif
 ;
 
+char *ns_lsws_home(char *path, size_t path_max);
 int nsutils_write_uid_gid_map(uid_t sandbox_uid,
                               uid_t parent_uid,
                               uid_t sandbox_gid,

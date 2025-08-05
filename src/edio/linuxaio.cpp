@@ -134,6 +134,13 @@ int LinuxAio::check_pending()
         }
         else
         {
+            if (lsLinuxAioReq->getRet() < 0 && -lsLinuxAioReq->getRet() == EAGAIN)
+            {
+                LS_DBG_M(lsLinuxAioReq->getLogSession(),
+                        "LinuxAio RC says %s still pending",
+                        lsLinuxAioReq->str_op());
+                continue;
+            }
             lsLinuxAioReq->setAsyncState(ASYNC_STATE_READ);
             ret = lsLinuxAioReq->io_complete(POLLIN);
             if (ret < 0 && !lsLinuxAioReq->getCancel())
@@ -143,22 +150,6 @@ int LinuxAio::check_pending()
                 lsLinuxAioReq->setError();
                 continue;
             }
-        }
-
-        if (lsLinuxAioReq->getRet() < 0 && -lsLinuxAioReq->getRet() == EAGAIN)
-        {
-            LS_DBG_M(lsLinuxAioReq->getLogSession(),
-                     "LinuxAio RC says %s still pending",
-                     lsLinuxAioReq->str_op());
-            continue;
-        }
-        ret = lsLinuxAioReq->io_complete(POLLIN);
-        if (ret < 0 && !lsLinuxAioReq->getCancel())
-        {
-            LS_DBG(lsLinuxAioReq->getLogSession(),
-                   "LinuxAio setError for process failure");
-            lsLinuxAioReq->setError();
-            continue;
         }
     }
     return 0;

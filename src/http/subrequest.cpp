@@ -664,16 +664,8 @@ void HttpReq::updateReqHeader(int index, const char *pNewValue,
     {
         const char *pName = HttpHeader::getHeaderName(index);
         int iNameLen = HttpHeader::getHeaderStringLen(index);
-        if (m_headerBuf.available() < newValueLen + iNameLen + 4)
-            m_headerBuf.grow(newValueLen + iNameLen + 4 - m_headerBuf.available());
-        m_headerBuf.append(pName, iNameLen);
-        m_headerBuf.append_unsafe(':');
-        m_headerBuf.append_unsafe(' ');
-        m_commonHeaderOffset[ index ] = m_headerBuf.size();
-        m_headerBuf.append(pNewValue, newValueLen);
-        m_headerBuf.append_unsafe('\r');
-        m_headerBuf.append_unsafe('\n');
-
+        appendReqHeader(pName, iNameLen, pNewValue, newValueLen);
+        m_commonHeaderOffset[ index ] = m_headerBuf.size() - 4 - newValueLen;
     }
     m_commonHeaderLen[index] = newValueLen;
 }

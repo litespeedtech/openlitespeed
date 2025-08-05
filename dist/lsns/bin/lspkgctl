@@ -171,9 +171,8 @@ def plesk_home_dict():
             home_dict[user.pw_dir] = user
     return home_dict
 
-def read_pleskplans():
+def read_pleskplans(plans):
     home_dict = plesk_home_dict()
-    plans = {}
     userplans = {}
     # Thanks to Stas Karpinsky of vangus.co.il for correcting the SQL!
     plan_lines = run_program(['plesk', 'db', \
@@ -214,10 +213,20 @@ def read_pleskplans():
         userplans[user.pw_name] = plan
     return plans, userplans
 
-def read_usersplans():
-    if common.get_plesk():
-        return read_pleskplans()
+def read_diskplans():
     plans = {}
+    logging.debug("read_diskplans")
+    if (os.path.exists(common.get_pkg_dir())):
+        for f in glob.glob(common.get_pkg_dir() + '/*.conf'):
+            finalfile = f[len(common.get_pkg_dir()) + 1:][:-5]
+            logging.debug("Found package file: %s, finalfile: %s" % (f, finalfile))
+            plans[finalfile] = []
+    return plans
+
+def read_usersplans():
+    plans = read_diskplans()
+    if common.get_plesk():
+        return read_pleskplans(plans)
     userplans = {}
     planfiles = glob.glob('/var/cpanel/packages/*')
     for planfile in planfiles:
@@ -288,6 +297,9 @@ def write_pkg(pkg, pkg_json):
         f = open(common.pkg_to_filename(pkg), 'w', encoding="utf-8")
     except Exception as err:
         common.fatal_error('Error opening %s for write: %s' % (common.pkg_to_filename(pkg), err))
+    if 'size' in pkg_json:
+        logging.debug("Remove size")
+        del pkg_json['size']
     for opt in common.get_options():
         if opt in pkg_json and arrInfinite(opt, pkg_json):
             del pkg_json[opt]
@@ -297,8 +309,17 @@ def write_pkg(pkg, pkg_json):
         common.fatal_error('Error writing %s: %s' % (common.pkg_to_filename(pkg), err))
     f.close()
     
-def revalidate_pkg(pkg, users, users_vals, org_pkg, pkg_json, force, args_dict):
-    logging.debug("revalidate_pkg")
+def revalidate_pkg(pkg, pkg_sizes, users, users_vals, org_pkg, pkg_json, force, args_dict):
+    logging.debug("revalidate_pkg %s %d users" % (pkg, len(users)))
+    if len(users) == 0:
+        logging.debug("Delete package entirely: %s" % pkg)
+        filename = common.pkg_to_filename(pkg)
+        if os.path.exists(filename):
+            os.remove(filename)
+        if pkg in pkg_sizes:
+            del pkg_sizes[pkg]
+            write_pkg_sizes(pkg_sizes)
+        return
     test_users = []
     if force:
         test_users = users
@@ -324,7 +345,7 @@ def revalidate_pkg(pkg, users, users_vals, org_pkg, pkg_json, force, args_dict):
 
 def validate_pkg(pkg, pkg_sizes, users_vals, users):
     pkg_json = read_pkg(pkg, pkg_sizes)
-    revalidate_pkg(pkg, users, users_vals, pkg_json, pkg_json, False, None)
+    revalidate_pkg(pkg, pkg_sizes, users, users_vals, pkg_json, pkg_json, False, None)
     
 def command_validate(args, users_vals, usersplans, pkg_sizes):
     if args.command == 'validate-all' or args.command == 'list-all':
@@ -406,7 +427,7 @@ def command_set(args, users_vals, usersplans, pkg_sizes):
                     pkg_sizes[pkg] = args.size
             if not set_json(args, pkg_json) and not all_users:
                 continue
-        revalidate_pkg(pkg, usersplans[pkg], users_vals, org_pkg, pkg_json, all_users, vars(args))
+        revalidate_pkg(pkg, pkg_sizes, usersplans[pkg], users_vals, org_pkg, pkg_json, all_users, vars(args))
     if write_sizes:
         write_pkg_sizes(pkg_sizes)
     return 0

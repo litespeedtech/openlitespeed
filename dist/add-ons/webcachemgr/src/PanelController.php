@@ -766,6 +766,8 @@ class PanelController
 
     /**
      *
+     * @deprecated release_ver_placeholder
+     *
      * @return bool|void  Function outputs ajax and exits without returning a
      *     value when $init is evaluated to be false.
      *
@@ -897,8 +899,26 @@ class PanelController
 
         $info = &$_SESSION["{$action}_info"];
 
+        $doOld = false;
+
+        if ( $action == WPInstallStorage::CMD_MASS_UNFLAG ) {
+            /**
+             * Set to maintain compatibility with old ViewModel + Tpl.
+             *
+             * @deprecated  release_ver_placeholder
+             */
+            $oldInfo = &$_SESSION['unflagInfo'];
+            $doOld   = true;
+        }
+
+
         if ( $init ) {
             $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
+
+            if ( $doOld ) {
+                $oldInfo = $info;
+            }
+
             return true;
         }
 
@@ -927,6 +947,13 @@ class PanelController
 
         if ( empty($info['installs']) ) {
             unset($_SESSION["{$action}_info"]);
+
+            if ( $doOld ) {
+                unset($_SESSION['unflagInfo']);
+            }
+        }
+        elseif ( $doOld ) {
+            $oldInfo = $info;
         }
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();

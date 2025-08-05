@@ -294,6 +294,7 @@ private:
     LsShmStatus_t   checkMagic(LsShmMap *mp, const char *mName) const;
     LsShmStatus_t   initShm(const char *mapName, LsShmXSize_t initialSize,
                             const char *pBaseDir, int mode);
+    LsShmStatus_t   openShmFile();
     LsShmStatus_t   openLockShmFile(int mode);
 
     LsShmStatus_t   expandFile(LsShmOffset_t from, LsShmXSize_t incrSize);
