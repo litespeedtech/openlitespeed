@@ -15,6 +15,7 @@ SET(cgi_STAT_SRCS
    cgroupconn.cpp
    cgroupuse.cpp
    ns.c
+   nsnosandbox.c
    nsopts.c
    nspersist.c
    nsutils.c

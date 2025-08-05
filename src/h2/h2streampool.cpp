@@ -26,6 +26,8 @@ void H2StreamPool::recycle(H2Stream *pStream)
 {
     pStream->reset();
     s_stream_pool.recycle(pStream);
+    if (s_stream_pool.getPoolSize() >= 1000)
+        s_stream_pool.shrinkTo(500);
 }
 
 
@@ -42,6 +44,8 @@ void H2StreamPool::recycle(H2Stream **pStream, int n)
     for(int i = 0; i < n; ++i)
         pStream[i]->reset();
     s_stream_pool.recycle((void **)pStream, n);
+    if (s_stream_pool.getPoolSize() >= 1000)
+        s_stream_pool.shrinkTo(500);
 }
 
 

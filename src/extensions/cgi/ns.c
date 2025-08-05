@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Lite Speed Technologies Inc, All Rights Reserved.
+ * Copyright 2020-2025 Lite Speed Technologies Inc, All Rights Reserved.
  * LITE SPEED PROPRIETARY/CONFIDENTIAL.
  */
 
@@ -32,8 +32,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#define NS_MAIN // To get in debugging
 #include "ns.h"
 #include "nsopts.h"
+#include "nsnosandbox.h"
 #include "nspersist.h"
 #include "nsipc.h"
 #include "nsutils.h"
@@ -58,6 +60,8 @@ int         s_ns_debug = 0;
 FILE       *s_ns_debug_file = NULL;
 int         s_ns_supported_checked = 0;
 int         s_ns_supported = 0;
+int         s_ns_osmajor;
+int         s_ns_osminor;
 uid_t      *s_disabled_uids = NULL;
 int         s_disabled_uids_count = 0;
 int         s_didinit = 0;
@@ -76,9 +80,13 @@ int         s_ns_did_init_engine = 0;
 SetupOp     s_setupOp_all[] =
 {
     { SETUP_BIND_TMP, BWRAP_VAR_HOMEDIR "/.lsns/tmp", "/tmp", OP_FLAG_BWRAP_SYMBOL, -1 },
+    { SETUP_RO_BIND_MOUNT, "/lsnsdebug", "/lsnsdebug", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
 int         s_setupOp_all_size = sizeof(s_setupOp_all);
+int         s_listenPid = 0;
+int         s_listenPidStatus = 0;
+
 
 SetupOp     s_SetupOp_default[] = 
 {
@@ -122,8 +130,10 @@ SetupOp     s_SetupOp_default[] =
     { SETUP_BIND_MOUNT, "/opt/cpanel", "/opt/cpanel", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/opt/psa", "/opt/psa", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/var/lib/php/sessions", "/var/lib/php/sessions", OP_FLAG_ALLOW_NOTEXIST, -1},
+    { SETUP_BIND_MOUNT, "/var/lib/php/session", "/var/lib/php/session", OP_FLAG_ALLOW_NOTEXIST, -1},
     { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
+
 int         s_setupOp_default_size = sizeof(s_SetupOp_default);
 SetupOp    *s_SetupOp = NULL;
 size_t      s_SetupOp_size = 0;
@@ -210,7 +220,7 @@ int ns_supported()
     
     s_ns_supported_checked = 1;
     struct utsname name;
-    int major, minor, count;
+    int count;
     if (uname(&name))
     {
         DEBUG_MESSAGE("ERROR: ns_supported can't get uname: %s\n", strerror(errno));
@@ -218,7 +228,7 @@ int ns_supported()
         //          strerror(err));
         return 0;
     }
-    if ((count = sscanf(name.release,"%u.%u", &major, &minor)) != 2)
+    if ((count = sscanf(name.release,"%u.%u", &s_ns_osmajor, &s_ns_osminor)) != 2)
     {
         int err = errno;
         if (err >= 0)
@@ -235,9 +245,9 @@ int ns_supported()
         return 0;
     }
     // See the unshare man page for the levels
-    if (major < 3)
+    if (s_ns_osmajor < 3)
     {
-        DEBUG_MESSAGE("NOT ns_supported for old OS: %d.%d\n", major, minor);
+        DEBUG_MESSAGE("NOT ns_supported for old OS: %d.%d\n", s_ns_osmajor, s_ns_osminor);
         s_ns_supported = 0;
         return 0;
     }
@@ -261,13 +271,9 @@ static int ns_read_disabled()
 {
     if (s_disabled_uids)
         return 0;
-    char pathname[256], filename[512];
-    readlink("/proc/self/exe", pathname, sizeof(pathname));
-    char *slash = strrchr(pathname, '/');
-    if (slash)
-        *(slash + 1) = 0;
-    snprintf(filename, sizeof(filename), "%s../lsns/conf/ns_disabled_uids.conf",
-             pathname);
+    char pathname[NOSANDBOX_MAX_FILE_LEN / 2], filename[NOSANDBOX_MAX_FILE_LEN];
+    snprintf(filename, sizeof(filename), "%s/lsns/conf/ns_disabled_uids.conf",
+             ns_lsws_home(pathname, sizeof(pathname)));
     FILE *fh = fopen(filename, "r");
     if (!fh)
     {
@@ -316,7 +322,7 @@ void ns_not_lscgid()
 }
 
 
-int ns_init_engine(const char *ns_conf)
+int ns_init_engine(const char *ns_conf, int nolisten)
 {
     ns_init_debug();
     if (!ns_supported())
@@ -333,7 +339,7 @@ int ns_init_engine(const char *ns_conf)
     {
         DEBUG_MESSAGE("ns_init_engine, no configuration override file\n");
     }
-    if (ns_read_disabled() == -1)
+    if (ns_read_disabled() == -1 || (!nolisten && nsnosandbox_init() == -1))
         return 0;
     return 1;
 }
@@ -439,7 +445,7 @@ static int drop_all_caps(int keep_requested_caps)
 }
 
 
-static int drop_privs (uid_t uid, int keep_requested_caps, 
+static int drop_privs (uid_t uid, gid_t gid, int keep_requested_caps, 
                        int already_changed_uid, int persisted)
 {
     int rc;
@@ -450,10 +456,11 @@ static int drop_privs (uid_t uid, int keep_requested_caps,
     /* Drop root uid */
     if (!already_changed_uid)
         DEBUG_MESSAGE("drop_privs, setuid from %d to %d\n", getuid(), uid);
-    if (!already_changed_uid && setuid (uid) < 0)
+    if (!already_changed_uid && (setgid(gid) < 0 || setuid(uid) < 0))
     {
         int err = errno;
-        ls_stderr("Namespace error switch to uid: %s\n", strerror(err));
+        DEBUG_MESSAGE("Namespace error switch to uid/gid: %s\n", strerror(err));
+        ls_stderr("Namespace error switch to uid/gid: %s\n", strerror(err));
         return nsopts_rc_from_errno(err);
     }
 
@@ -677,7 +684,7 @@ static int build_mount_namespace(lscgid_t *pCGI)
     }
     
     base_path = root;
-    if (mount(root, root, NULL, MS_SILENT | MS_MGC_VAL | MS_BIND | MS_REC, NULL))
+    if (mount(root, root, NULL, MS_SILENT | MS_MGC_VAL | MS_BIND | MS_PRIVATE | MS_REC, NULL))
     {
         int err = errno;
         ls_stderr("Namespace error mounting root: %s\n", strerror(err));
@@ -707,7 +714,7 @@ static int build_mount_namespace(lscgid_t *pCGI)
     }
 
     if (mount ("newroot", "newroot", NULL, 
-               MS_SILENT | MS_MGC_VAL | MS_BIND | MS_REC, NULL) < 0)
+               MS_SILENT | MS_MGC_VAL | MS_BIND | MS_PRIVATE | MS_REC, NULL) < 0)
     {
         int err = errno;
         ls_stderr("Namespace error mounting new root failed: %s\n", strerror(err));
@@ -1334,9 +1341,9 @@ static int presetup_bind_tmp(lscgid_t *pCGI, SetupOp *op, int index)
 
 static int source_create(char *path, lscgid_t *pCGI)
 {
-    char part_path[1025];
+    char part_path[1024];
     char *slash = part_path;
-    strncpy(part_path, path, 1024);
+    strncpy(part_path, path, sizeof(part_path) - 1);
     DEBUG_MESSAGE("source_create %s\n", path);
     while ((slash = strchr(slash + 1, '/'))) 
     {
@@ -1406,7 +1413,11 @@ static int op_as_user(lscgid_t *pCGI, SetupOp *setupOp)
                     rc = bwrap_symbol_in_path(pCGI, parm, &new_parm);
                     if (rc || (i == 0 && (op->flags & OP_FLAG_SOURCE_CREATE) && 
                                (rc = source_create(new_parm ? new_parm : parm, pCGI))))
+                    {
+                        if (new_parm)
+                            free(new_parm);
                         return rc;
+                    }
                     if (!new_parm)
                         continue;
                     if (parm == op->source)
@@ -1441,6 +1452,108 @@ static int op_as_user(lscgid_t *pCGI, SetupOp *setupOp)
     return 0;
 }
 
+/* Old machine defines */
+#ifndef __NR_open_tree 
+#define __NR_open_tree 428
+# define SYS_open_tree __NR_open_tree
+#endif
+
+#ifndef __NR_move_mount
+#define __NR_move_mount 429
+# define SYS_move_mount __NR_move_mount
+#endif
+
+#ifndef __NR_mount_setattr
+#define __NR_mount_setattr 442
+# define SYS_mount_setattr __NR_mount_setattr
+#endif
+
+#ifndef OPEN_TREE_CLONE
+/* open_tree flags.  */
+#define OPEN_TREE_CLONE    1         /* Clone the target tree and attach the clone */
+#define OPEN_TREE_CLOEXEC  O_CLOEXEC /* Close the file on execve() */
+
+struct mount_attr
+{
+  uint64_t attr_set;
+  uint64_t attr_clr;
+  uint64_t propagation;
+  uint64_t userns_fd;
+};
+#endif
+
+#ifndef MOVE_MOUNT_F_SYMLINKS
+/* move_mount flags.  */
+#define MOVE_MOUNT_F_SYMLINKS   0x00000001 /* Follow symlinks on from path */
+#define MOVE_MOUNT_F_AUTOMOUNTS 0x00000002 /* Follow automounts on from path */
+#define MOVE_MOUNT_F_EMPTY_PATH 0x00000004 /* Empty from path permitted */
+#define MOVE_MOUNT_T_SYMLINKS   0x00000010 /* Follow symlinks on to path */
+#define MOVE_MOUNT_T_AUTOMOUNTS 0x00000020 /* Follow automounts on to path */
+#define MOVE_MOUNT_T_EMPTY_PATH 0x00000040 /* Empty to path permitted */
+#define MOVE_MOUNT_SET_GROUP    0x00000100 /* Set sharing group instead */
+#define MOVE_MOUNT_BENEATH      0x00000200 /* Mount beneath top mount */
+#endif
+
+#ifndef AT_NO_AUTOMOUNT
+#define AT_FDCWD                -100    /* Special value used to indicate
+                                           openat should use the current
+                                           working directory. */
+#define AT_SYMLINK_NOFOLLOW     0x100   /* Do not follow symbolic links.  */
+#define AT_EACCESS              0x200   /* Test access permitted for
+                                           effective IDs, not real IDs.  */
+#define AT_REMOVEDIR            0x200   /* Remove directory instead of
+                                           unlinking file.  */
+#define AT_SYMLINK_FOLLOW       0x400   /* Follow symbolic links.  */
+#define AT_NO_AUTOMOUNT         0x800   /* Suppress terminal automount traversal */
+#define AT_EMPTY_PATH           0x1000  /* Allow empty relative pathname */
+#endif
+
+
+static inline int sys_open_tree(int dfd, const char *filename, unsigned int flags)
+{
+    return syscall(SYS_open_tree, dfd, filename, flags);
+}
+
+static inline int sys_move_mount(int from_dirfd, const char *from_pathname, int to_dirfd, const char *to_pathname,
+                                 unsigned int flags)
+{
+    return syscall(SYS_move_mount, from_dirfd, from_pathname, to_dirfd, to_pathname, flags);
+}
+
+static inline long sys_mount_setattr(int dfd, const char *path, unsigned int flags, struct mount_attr *uattr,
+                                     size_t usize)
+{
+    return syscall(SYS_mount_setattr, dfd, path, flags, uattr, usize);
+}
+
+static int try_symlink_trick(const char *src, const char *dest)
+{
+	int fd = -1;
+	struct mount_attr attr = {};
+    DEBUG_MESSAGE("try_symlink_trick\n");
+
+    DEBUG_MESSAGE("Do sys_open_tree\n");    
+	fd = sys_open_tree(AT_FDCWD, src, AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW | OPEN_TREE_CLONE);
+	if (fd == -1) {
+        DEBUG_MESSAGE("open_tree of source failed: %s\n", strerror(errno));
+        return -1;
+	}
+    attr.propagation = MS_PRIVATE;
+    DEBUG_MESSAGE("Do sys_mount_setattr\n");    
+	if (sys_mount_setattr(fd, "", AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT, &attr, sizeof(attr))) {
+        DEBUG_MESSAGE("sys_mount_setattr of source failed: %s\n", strerror(errno));
+        close(fd);
+        return -1;
+	}
+
+    DEBUG_MESSAGE("Do sys_move_mount\n");    
+	if (sys_move_mount(fd, "", AT_FDCWD, dest, MOVE_MOUNT_F_EMPTY_PATH)) {
+        DEBUG_MESSAGE("sys_move_mount of source failed: %s\n", strerror(errno));
+	}
+    close(fd);
+    DEBUG_MESSAGE("try_symlink_trick done ok\n");
+    return 0;
+}
 
 static int bind_mount(const char *src, const char *dest, bind_option_t options)
 {
@@ -1455,22 +1568,38 @@ static int bind_mount(const char *src, const char *dest, bind_option_t options)
     DEBUG_MESSAGE("bind_mount, src: %s, dest: %s READONLY: %s, DEVICES: %s, RECURSIVE: %s, uid: %d\n", 
                   src, dest, readonly ? "YES":"NO", devices ? "YES":"NO",
                   recursive ? "YES":"NO", getuid());
-    if (src)
+    if (src && dest)
     {
-        if (mount(src, dest, NULL, 
-                  MS_SILENT | MS_BIND | (recursive ? MS_REC : 0), NULL) != 0)
+        DEBUG_MESSAGE("src exists: %s\n", access(src, 0) == 0 ? "YES" : "NO");
+        DEBUG_MESSAGE("dest exists: %s\n", access(dest, 0) == 0 ? "YES" : "NO");
+        unsigned int mount_flags = MS_SILENT | MS_BIND | MS_PRIVATE | (recursive ? MS_REC : 0);
+        if (mount(src, dest, NULL, mount_flags, NULL) != 0)
         {
             int err = errno;
-            ls_stderr("Namespace mount of source/dest failed: %s\n", strerror(err));
-            return 1;
+            DEBUG_MESSAGE("Namespace mount of source/dest failed: %s, %d\n", strerror(err), err);
+            if (err == ENOENT /*&& !recursive */ && !devices)
+            {
+                struct stat statbuf;
+                if (!lstat(dest, &statbuf) &&
+                    ((statbuf.st_mode & S_IFMT) == S_IFLNK && 
+                     !nsnosandbox_symlink()) &&
+                    !try_symlink_trick(src, dest))
+                    return 0;
+            }
+            if (err)
+            {
+                ls_stderr("Namespace mount of source/dest failed: %s (%d)\n", strerror(err), err);
+                return 1;
+            }
         }
         DEBUG_MESSAGE("Did bind_mount of: %s on [%s]\n", src, dest);
     }
 
     /* The mount operation will resolve any symlinks in the destination
        path, so to find it in the mount table we need to do that too. */
-    DEBUG_MESSAGE("bind_mount, dest: %s\n", dest);
-    resolved_dest = realpath(dest, NULL);
+    if (dest)
+        resolved_dest = realpath(dest, NULL);
+    DEBUG_MESSAGE("bind_mount, dest: %s => %s\n", dest, resolved_dest);
     if (resolved_dest == NULL)
     {
         int err = errno;
@@ -1493,7 +1622,7 @@ static int bind_mount(const char *src, const char *dest, bind_option_t options)
                 (readonly ? MS_RDONLY : 0);
     if (new_flags != current_flags &&
         mount("none", resolved_dest,
-              NULL, MS_SILENT | MS_BIND | MS_REMOUNT | new_flags, NULL) != 0)
+              NULL, MS_SILENT | MS_BIND | MS_PRIVATE | MS_REMOUNT | new_flags, NULL) != 0)
     {
         int err = errno;
         ls_stderr("Namespace mount of none to %s failed: %s\n", resolved_dest, 
@@ -1519,7 +1648,7 @@ static int bind_mount(const char *src, const char *dest, bind_option_t options)
                         (readonly ? MS_RDONLY : 0);
             if (new_flags != current_flags &&
                 mount("none", mount_tab[i].mountpoint,
-                      NULL, MS_SILENT | MS_BIND | MS_REMOUNT | new_flags, NULL) != 0)
+                      NULL, MS_SILENT | MS_BIND | MS_PRIVATE | MS_REMOUNT | new_flags, NULL) != 0)
             {
                 /* If we can't read the mountpoint we can't remount it, but that should
                    be safe to ignore because its not something the user can access. */
@@ -1723,7 +1852,7 @@ static int privileged_op(int privileged_op_socket, uint32_t op,
         case PRIV_SEP_OP_BIND_MOUNT:
             /* We always bind directories recursively, otherwise this would let us
                access files that are otherwise covered on the host */
-            if (bind_mount (arg1, arg2, BIND_RECURSIVE | flags) != 0)
+            if (bind_mount (arg1, arg2, flags) != 0)
             {
                 ls_stderr("Namespace error in bind mount of %s to %s: %s\n", arg1, 
                           arg2, strerror(errno));
@@ -1823,18 +1952,31 @@ static int create_file_stat(lscgid_t *pCGI, const char *path, struct stat *st)
 {
     int fd;
 
-    fd = creat (path, st ? (st->st_mode & 0777) : 0644);
-    if (fd == -1)
+    if (access(path, 0) != 0)
     {
-        int err = errno;
-        if (err == EEXIST)
+        fd = creat (path, st ? (st->st_mode & 0777) : 0644);
+        if (fd == -1)
+        {
+            int err = errno;
+            if (err == EEXIST)
+                return 0;
+            DEBUG_MESSAGE("ERROR CREATING FILE: %s: %s, mode: %o\n", path, strerror(err),
+                          st ? (st->st_mode & 0777) : 0644);
             return 0;
-        DEBUG_MESSAGE("ERROR CREATING FILE: %s: %s, mode: %o\n", path, strerror(err),
-                      st ? (st->st_mode & 0777) : 0644);
-        return 0;
-        //ls_stderr("Namespace error creating file: %s: %s\n", path, strerror(err));
-        //return nsopts_rc_from_errno(err);
+        }
     }
+    else
+    {
+        fd = open(path, 0);
+        if (fd == -1)
+        {
+            int err = errno;
+            DEBUG_MESSAGE("Error opening path: %s: %s\n", path, strerror(err));
+            ls_stderr("Error opening path: %s: %s\n", path, strerror(err));
+            return -1;
+        }
+    }
+    DEBUG_MESSAGE("chown of path: %s\n", path)
     if ((!st || (st && fchown(fd, st->st_uid, st->st_gid))) && 
         fchown(fd, pCGI->m_data.m_uid, pCGI->m_data.m_gid))
     {
@@ -1877,13 +2019,20 @@ static int ensure_dir_stat (lscgid_t *pCGI, const char *path, struct stat *st)
         ls_stderr("Namespace missing path creating directory\n");
         return DEFAULT_ERR_RC;
     }
-    if (mkdir(path, 0777/*st ? (st->st_mode & 0777) : 0755*/) && errno != EEXIST)
+    if (mkdir(path, 0777/*st ? (st->st_mode & 0777) : 0755*/))
     {
-        int err = errno;
-        ls_stderr("Namespace can't create directory %s: %s\n", path, strerror(err));
-        return nsopts_rc_from_errno(err);
+        if (errno != EEXIST)
+        {
+            int err = errno;
+            ls_stderr("Namespace can't create directory %s: %s\n", path, strerror(err));
+            return nsopts_rc_from_errno(err);
+        }
+        else 
+        {
+            DEBUG_MESSAGE("mkdir %s failed errno: %d\n", path, errno);
+        }
     }
-    if (strchr(path + 1, '/') && // Don't do highest level
+    else if (strchr(path + 1, '/') && // Don't do highest level
         ((st && lchown(path, st->st_uid, st->st_gid)) ||
          lchown(path, pCGI->m_data.m_uid, pCGI->m_data.m_gid)))
     {
@@ -2098,6 +2247,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
         DEBUG_MESSAGE("source: %s, dest: %s\n", op->source, op->dest);
     
     DEBUG_MESSAGE("setup_newroot\n");
+    /* Do everything but the bind mounts for now.  Defer those so we can create the required dirs.  */
     for (op = setupOp; op->flags != OP_FLAG_LAST; ++op)
     {
         char *source = op->source;
@@ -2106,7 +2256,8 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
         int created_source = 0, created_dest = 0, skip = 0;
         struct stat stat_source, *pstat = NULL;
         
-        DEBUG_MESSAGE("setup_newroot loop: source: %s, dest: %s\n", source, dest);
+        DEBUG_MESSAGE("setup_newroot loop: source: %s, dest: %s, type: %d\n", 
+                      source, dest, op->type);
         if (!rc && !skip && source && op->type != SETUP_MAKE_SYMLINK)
         {
             source = get_oldroot_path(source);
@@ -2118,12 +2269,14 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 source_mode = get_file_mode (source, &stat_source);
                 if (source_mode < 0)
                 {
+                    int err = errno;
+                    DEBUG_MESSAGE("stat %s failed %s\n", source, strerror(err));
                     if ((op->flags & OP_FLAG_ALLOW_NOTEXIST) && errno == ENOENT)
                         skip = 1;
                     else
                     {
                         ls_stderr("Namespace error getting type of source: %s: %s\n", 
-                                  source,  strerror(errno));
+                                  source,  strerror(err));
                         rc = -1;
                     }
                 }
@@ -2167,11 +2320,14 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 else if (source_mode != S_IFDIR && ensure_file(pCGI, source, dest))
                     rc = -1;
                 if (!rc)
+                    op->flags |= OP_FLAG_DO_BIND;
+                /*
                     if (privileged_op(privileged_op_socket, PRIV_SEP_OP_BIND_MOUNT,
                                       (op->type == SETUP_RO_BIND_MOUNT ? BIND_READONLY : 0) |
                                           (op->type == SETUP_DEV_BIND_MOUNT ? BIND_DEVICES : 0),
                                       source, dest, &op->fd))
                         rc = -1;
+                */
                 break;
 
             case SETUP_REMOUNT_RO_NO_RECURSIVE:
@@ -2217,7 +2373,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                         }
                         if (!rc && privileged_op(privileged_op_socket, 
                                                  PRIV_SEP_OP_BIND_MOUNT, 
-                                                 BIND_READONLY, subdir, subdir, 
+                                                 BIND_READONLY | BIND_RECURSIVE, subdir, subdir, 
                                                  &op->fd))
                             rc = -1;
                         free(subdir);
@@ -2249,7 +2405,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                             rc = -1;
                         if (!rc && privileged_op(privileged_op_socket, 
                                                  PRIV_SEP_OP_BIND_MOUNT, 
-                                                 BIND_DEVICES, node_src, 
+                                                 BIND_DEVICES | BIND_RECURSIVE, node_src, 
                                                  node_dest, &op->fd))
                             rc = -1;
                         free(node_dest);
@@ -2414,9 +2570,8 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                     int dest_fd = -1;
                     char *filename = (op->type == SETUP_MAKE_GROUP) ? 
                                      "/newroot/etc/group" : "/newroot/etc/passwd";
-                    DEBUG_MESSAGE("Write to %s: %s (%p), len: %d, flags: 0x%x\n", 
-                                  filename, dest, dest, (int)strlen(dest), 
-                                  op->flags);
+                    DEBUG_MESSAGE("Write to %s: %s (%p), flags: 0x%x\n", 
+                                  filename, dest, dest, op->flags);
                     dest_fd = creat (filename, 0644);
                     if (dest_fd == -1)
                     {
@@ -2436,8 +2591,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 break;
                
             case SETUP_MAKE_SYMLINK:
-                assert (source != NULL);  
-                if (symlink (source, dest) != 0 && errno != EEXIST)
+                if (source && dest && symlink (source, dest) != 0 && errno != EEXIST)
                 {
                     ls_stderr("Namespace can't make symlink at %s: %s\n", dest, 
                               strerror(errno));
@@ -2454,8 +2608,8 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 break;
 
             case SETUP_COPY:
-                assert (dest != NULL);
-                if (privileged_op(privileged_op_socket,
+                if (source != NULL && dest != NULL &&
+                    privileged_op(privileged_op_socket,
                                   PRIV_SEP_OP_COPY, op->flags, source, dest, 
                                   &op->fd))
                     rc = -1;
@@ -2478,8 +2632,56 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
         if (rc)
             break;
     }
-    DEBUG_MESSAGE("setup_newroot, completed big loop, rc: %d\n", rc);
+    DEBUG_MESSAGE("setup_newroot, completed big loop1, rc: %d\n", rc);
     
+    if (rc)
+        return rc;
+
+    for (op = setupOp; op->flags != OP_FLAG_LAST; ++op)
+    {
+        char *source = op->source;
+        char *dest = op->dest;
+        int created_source = 0, created_dest = 0;
+        
+        if (!(op->flags & OP_FLAG_DO_BIND))
+            continue;
+        DEBUG_MESSAGE("setup_newroot loop: source: %s, dest: %s, type: %d\n", source, dest, op->type);
+        source = get_oldroot_path(source);
+        if (!source)
+            rc = -1;
+        else
+            created_source = 1;
+        if (!rc)
+        {
+            dest = get_newroot_path(dest);
+            if (!dest)
+                rc = -1;
+            else
+                created_dest = 1;
+        }
+
+        if (!rc) switch (op->type)
+        {
+            case SETUP_RO_BIND_MOUNT:
+            case SETUP_DEV_BIND_MOUNT:
+            case SETUP_BIND_MOUNT:
+                if (privileged_op(privileged_op_socket, PRIV_SEP_OP_BIND_MOUNT,
+                                  (op->type == SETUP_RO_BIND_MOUNT ? BIND_READONLY : 0) |
+                                  (op->type == SETUP_DEV_BIND_MOUNT ? BIND_DEVICES : 0) |
+                                  ((op->flags & OP_FLAG_NO_SANDBOX) ? 0 : BIND_RECURSIVE),
+                                  source, dest, &op->fd))
+                    rc = -1;
+                break;
+            default: break;
+        }
+        if (created_source)
+            free(source);
+        if (created_dest)
+            free(dest);
+        if (rc)
+            break;
+    }
+    DEBUG_MESSAGE("setup_newroot, completed big loop2, rc: %d\n", rc);
     if (!rc && privileged_op(privileged_op_socket,
                              PRIV_SEP_OP_DONE, 0, NULL, NULL, &op->fd))
     {
@@ -2528,6 +2730,8 @@ static int resolve_symlinks_in_ops (SetupOp *setupOp)
                     else
                     {
                         int err = errno;
+                        DEBUG_MESSAGE("Namespace error in resolving path: %s: %s, flags: 0x%x, errno: %d\n", 
+                                      old_source, strerror(errno), op->flags, err);
                         ls_stderr("Namespace error in resolving path: %s: %s, flags: 0x%x, errno: %d\n", 
                                   old_source, strerror(errno), op->flags, err);
                         return nsopts_rc_from_errno(err);
@@ -2618,7 +2822,7 @@ static int cleanup_oldroot(lscgid_t *pCGI, int persisted)
     }
 
     /* All privileged ops are done now, so drop caps we don't need */
-    rc = drop_privs(pCGI->m_data.m_uid, !IS_PRIVILEGED, 0, persisted);
+    rc = drop_privs(pCGI->m_data.m_uid, pCGI->m_data.m_gid, !IS_PRIVILEGED, 0, persisted);
     return rc;
 }
 
@@ -2763,6 +2967,7 @@ static int do_ns(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
 
     if (!rc && !persisted)
     {
+         persist_change_stderr_log(pCGI);
          persist_report_pid(parent_pid, rc);
          rc = final_exec(pCGI);
     }
@@ -2887,44 +3092,6 @@ static int notpersist_init(lscgid_t *pCGI)
 }
 
 
-void ns_init_debug()
-{
-    s_ns_debug = !access("/lsnsdebug", 0);
-    DEBUG_MESSAGE("Activating debugging on existence of /lsnsdebug\n");
-    if (s_ns_debug && !s_ns_debug_file)
-    {
-        FILE *files_name = fopen("/lsnsdebug", "r");
-        char filename[256];
-        if (files_name && fgets(filename, sizeof(filename), files_name))
-        {
-            char *nl = strchr(filename, '\n');
-            if (nl)
-                *nl = 0;
-            DEBUG_MESSAGE("Trying to use debug filename: %s\n", filename);
-            FILE *debug_file = fopen(filename, "a");
-            if (debug_file)
-            {
-                s_ns_debug_file = debug_file;
-                DEBUG_MESSAGE("Switched to debug file: %s\n", filename);
-                fcntl(fileno(s_ns_debug_file), F_SETFD, FD_CLOEXEC);
-            }
-            else
-            {
-                DEBUG_MESSAGE("Can't open debug file: leave alone: %s\n",
-                              strerror(errno));
-            }
-        }
-        else
-        {
-            DEBUG_MESSAGE("Can't open or get filename: %s, using stderr\n",
-                          strerror(errno));
-        }
-        if (files_name)
-            fclose(files_name);
-    }
-}
-
-
 static int ns_init(lscgid_t *pCGI)
 {
     if (getuid())
@@ -2955,9 +3122,9 @@ static int ns_init(lscgid_t *pCGI)
 }
 
 
-int ns_exec(lscgid_t *pCGI, int *done)
+int ns_exec(lscgid_t *pCGI, int must_persist, int *done)
 {
-    int rc, persisted;
+    int rc, persisted = 0;
 
     DEBUG_MESSAGE("Entering ns_exec\n");
     rc = init_req(pCGI);
@@ -2966,7 +3133,7 @@ int ns_exec(lscgid_t *pCGI, int *done)
 
     DEBUG_MESSAGE("After ns_init initial user: %d CGI user: %d\n", getuid(), pCGI->m_data.m_uid);
 
-    rc = is_persisted(pCGI, &persisted);
+    rc = is_persisted(pCGI, must_persist, &persisted);
     if (rc)
         return rc;
     if (persisted) 
@@ -2995,11 +3162,11 @@ int ns_exec_ols(lscgid_t *pCGI, int *done)
     if (!s_ns_did_init_engine)
     {
         s_ns_did_init_engine = 1;
-        int rc = ns_init_engine(ns_getenv(pCGI, LS_NS_CONF));
+        int rc = ns_init_engine(ns_getenv(pCGI, LS_NS_CONF), 0);
         if (rc != 1)
             return rc;
     }
-    return ns_exec(pCGI, done);
+    return ns_exec(pCGI, 0, done);
 }
 
 
@@ -3016,10 +3183,10 @@ void ns_setverbose_callback(verbose_callback_t callback)
 }
 
 
-void ns_done(int unpersist)
+void ns_done()
 {
     DEBUG_MESSAGE("ns_done\n");
-    nspersist_done(0, unpersist);
+    nspersist_done();
     if (s_proc_fd != -1)
     {
         close(s_proc_fd);
@@ -3028,7 +3195,7 @@ void ns_done(int unpersist)
     if (s_setupOp_allocated)
     {
         DEBUG_MESSAGE("ns_done free_setupOp (allocated)\n");
-        free_setupOp(s_SetupOp, unpersist);
+        free_setupOp(s_SetupOp, 0);
     }
     else 
     {
@@ -3042,6 +3209,11 @@ void ns_done(int unpersist)
     s_SetupOp = NULL;
     s_setupOp_allocated = 0;
     s_SetupOp_size = 0;
+    free(s_disabled_uids);
+    s_disabled_uids = NULL;
+    nsnosandbox_done();
+    int status;
+    while (waitpid(-1, &status, WNOHANG) > 0);
 }
 
 

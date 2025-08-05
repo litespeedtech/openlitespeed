@@ -367,6 +367,21 @@ int apply_rlimits_uid_chroot_stderr(lscgid_t *cgid)
     lscgid_req *req = &cgid->m_data;
     //ls_stderr("Proc: %ld, data: %ld\n", pCGI->m_nproc.rlim_cur,
     //                        pCGI->m_data.rlim_cur );
+
+#if defined(RLIMIT_NPROC)
+    if (req->m_nproc.rlim_cur)
+        setrlimit(RLIMIT_NPROC, &req->m_nproc);
+#endif
+
+    if ((!s_uid) && (req->m_uid || req->m_gid))
+    {
+        if (set_uid_chroot(req->m_uid, req->m_gid, cgid->m_pChroot) == -1)
+            return 403;
+    }
+
+    if (cgid->m_stderrPath)
+        changeStderrLog(cgid);
+
 #if defined(RLIMIT_AS) || defined(RLIMIT_DATA) || defined(RLIMIT_VMEM)
     if (req->m_data.rlim_cur)
     {
@@ -379,25 +394,6 @@ int apply_rlimits_uid_chroot_stderr(lscgid_t *cgid)
 #endif
     }
 #endif
-
-#if defined(RLIMIT_NPROC)
-    if (req->m_nproc.rlim_cur)
-        setrlimit(RLIMIT_NPROC, &req->m_nproc);
-#endif
-
-#if defined(RLIMIT_CPU)
-    //if (req->m_cpu.rlim_cur)
-    //    setrlimit(RLIMIT_CPU, &req->m_cpu);
-#endif
-
-    if ((!s_uid) && (req->m_uid || req->m_gid))
-    {
-        if (set_uid_chroot(req->m_uid, req->m_gid, cgid->m_pChroot) == -1)
-            return 403;
-    }
-
-    if (cgid->m_stderrPath)
-        changeStderrLog(cgid);
 
     return 0;
 }

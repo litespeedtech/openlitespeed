@@ -52,11 +52,9 @@ typedef struct mount_flags_data_s
 
 /**
  * @file persist
- * @brief Contains on separate lines:
- *    - The PID that the namespaces reflect
- *    - The VH that was used to create it.
+ * @brief The character number indicating the active persist directory.
  * A read lock is created by all readers and a write lock by the process
- * creating the persistant mounted namespaces.
+ * creating the persisted directory.  See the namespaces doc.
  **/
 
 #define PERSIST_FILE    "persist"
@@ -80,6 +78,7 @@ int nspersist_init();
  * @fn is_persisted
  * @brief Determines if there are persistant namespaces here.
  * @param[in] pCGI the global parameters
+ * @param[in] must_persist 1 if a non-persisted environment is unacceptable.
  * @param[out] persisted Non-zero if there is a persisted pid to attach to.
  * @note This function blocks until it can get a write lock (at least for
  * a short while) which it then converts to a read lock if we're using a
@@ -90,7 +89,7 @@ int nspersist_init();
  * the one to unlock it.
  * @return 0 if no error, or an error code.
  **/
-int is_persisted(lscgid_t *pCGI, int *persisted);
+int is_persisted(lscgid_t *pCGI, int must_persist, int *persisted);
 
 /**
  * @fn persisted_use
@@ -111,7 +110,7 @@ int persisted_use(lscgid_t *pCGI, int *done);
  * @fn lock_persist_vh_file
  * @brief Locks read or write a lock file created by is_persisted.
  * @param[in] report 1 if you wish to report errors to stderr; 0 to suppress
- * @param[in] write_lock.  One of the NSPERSIST_LOCK_ constants.
+ * @param[in] lock_type.  One of the NSPERSIST_LOCK_ constants.
  * @param[out] none
  * @return 0 if no error, or an error code.
  **/
@@ -173,12 +172,9 @@ void nspersist_setuser(uid_t uid);
 /**
  * @fn nspersist_done
  * @brief Should only be called by ns_done, finalizes persistence.
- * @param[in] report 1 if you wish to report errors to stderr; 0 to suppress
- * @param[in] unpersist 1 if you wish to unpersist; 0 for leaving the mounts
- * persisted
  * @return 0 if no error; -1 if an error.
  **/
-int nspersist_done(int report, int unpersist);
+int nspersist_done();
 
 /**
 * @fn unpersist_uid
@@ -186,11 +182,10 @@ int nspersist_done(int report, int unpersist);
 * @warning Again an expensive call, but useful.
 * @param[in] report 1 if you wish to report errors to stderr; 0 to suppress
 * @param[in] uid The uid to unpersist.
-* @param[in] all_vhosts 0 if you wish to unpersist only the set vhost; 
-* 1 for all.
+* @param[in] vhost The vhost you wish to unpersist or NULL for all
 * @return 0 if there were no errors.
 **/
-int unpersist_uid(int report, uid_t uid, int all_vhosts);
+int unpersist_uid(int report, uid_t uid, char *vhost);
 
 /**
 * @fn unpersist_all
@@ -226,6 +221,14 @@ void free_mount_tab(mount_tab_t *mount_tab);
  * @return A pointer to dirname.
  **/
 char *persist_namespace_dir_vh(uid_t uid, char *dirname, int dirname_len);
+
+/**
+ * @fn persist_change_stderr_log
+ * @brief  called after uid/gid/chroot change, sets stderr as specified.
+ * @param[in] pCGI parsed parameters
+ * @return 0 if no errors.
+**/
+int persist_change_stderr_log(lscgid_t *pCGI);
 
 /**
  * @fn persist_report_pid

@@ -4,6 +4,7 @@ add_definitions(-DNOT_LSCGID)
 
 SET(unmount_ns_SRCS
     unmount_ns.c
+    nsnosandbox.c
     nsopts.c
     nspersist.c
     nsutils.c

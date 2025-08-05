@@ -941,6 +941,11 @@ int HttpSession::readReqBody()
         m_pChunkIS = NULL;
         m_request.tranEncodeToContentLen();
     }
+    else if (m_request.isBodySizeUnknown())
+    {
+        m_request.addContentLenHeader(m_request.getContentFinished());
+    }
+
     //getStream()->setFlag( HIO_FLAG_WANT_READ, 0 );
     return reqBodyDone();
 }

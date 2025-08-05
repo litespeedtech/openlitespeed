@@ -4022,11 +4022,12 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
                     if (access(conf_file, 0))
                     {
                         LS_ERROR("Specified name space config file does not exist: %s\n", conf);
-                        break;
+                        conf = NULL;
                     }
-                    HttpServerConfig::getInstance().setNSConf(strdup(conf_file));
+                    else
+                        HttpServerConfig::getInstance().setNSConf(strdup(conf_file));
                 }
-                LS_DBG_L("nameSpace: %ld, file: '%s'", l, conf);
+                LS_INFO("nameSpace: %ld, file: '%s'", l, conf);
             }
         }
 

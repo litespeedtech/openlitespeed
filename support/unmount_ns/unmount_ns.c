@@ -13,12 +13,33 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "lscgid.h"
 #include "ns.h"
 #include "nsopts.h" // For DEBUG_MESSAGE
 #include "nspersist.h" // For PERSIST_PREFIX
 #include "lscgid.h"
 #include "use_bwrap.h"
+
+char               *s_argv0 = NULL;
+
+void ls_stderr(const char * fmt, ...)
+{
+    char buf[1024];
+    char *p = buf;
+    struct timeval  tv;
+    struct tm       tm;
+    gettimeofday(&tv, NULL);
+    localtime_r(&tv.tv_sec, &tm);
+    p += snprintf(p, 1024, "%04d-%02d-%02d %02d:%02d:%02d.%06d ",
+        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+        tm.tm_hour, tm.tm_min, tm.tm_sec, (int)tv.tv_usec);
+    fprintf(stderr, "%.*s", (int)(p - buf), buf);
+
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+}
+
 
 int usage(const char *message)
 {
@@ -59,19 +80,18 @@ int verbose_callback(const char *fmt, ...)
 
 int main(int argc, char *argv[])
 {
-    char ch, dir[512]; 
-    int is_all = 0, is_user = 0, rc = 0, user;
+    char dir[512]; 
+    int ch, is_all = 0, is_user = 0, rc = 0, user = 0;
     char *vhost = NULL;
-    lscgid_t CGI;
     
-    memset(&CGI, 0, sizeof(CGI));
-    
+    s_argv0 = argv[0];
     DEBUG_MESSAGE("Entering unmount_ns program\n");
     if (getuid())
         return usage("Must be run as root");
     
     if (access(PERSIST_PREFIX, 0))
-        return usage("Persistance directory: " PERSIST_PREFIX " not found");
+        //return usage("Persistance directory: " PERSIST_PREFIX " not found");
+        return 0;
     
     while ((ch = getopt(argc, argv, "u:as:v?h")) != -1)
     {
@@ -88,7 +108,10 @@ int main(int argc, char *argv[])
                 user = pw->pw_uid;
                 snprintf(dir, sizeof(dir), PERSIST_PREFIX"/%u", user);
                 if (access(dir, 0))
-                    return usage("Specified user directory not found");
+                {
+                    fprintf(stderr, "User is not mounted\n");
+                    exit(1);
+                }
             }
             break;
                 
@@ -104,7 +127,7 @@ int main(int argc, char *argv[])
             case 'a':
                 is_all = 1;
                 break;
-                
+
             case ':':
                 return usage("Missing parameter option value");
             
@@ -117,15 +140,13 @@ int main(int argc, char *argv[])
     if (vhost && !is_user)
         return usage("You can only specify a vhost for a single user");
     ns_init_debug();
-    if (vhost)
-        nspersist_setvhost(vhost);
     if (!is_all && is_user)
         ns_setuser(user);
     if (!is_all)
-        rc = unpersist_uid(1, user, !vhost);
+        rc = unpersist_uid(1, user, vhost);
     else
         rc = ns_unpersist_all();
-    ns_done(!is_all);
+    ns_done();
     if (rc)
         return 1;
     printf("Unmount done\n");

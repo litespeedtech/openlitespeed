@@ -34,6 +34,7 @@
 #include "nsutils.h"
 #include "lscgid.h"
 #include "use_bwrap.h"
+#include "nsnosandbox.h"
 #include "nspersist.h"
 
 #define PERSIST_DIR_SIZE        256
@@ -52,18 +53,230 @@ typedef struct mount_tab_line_s
     struct mount_tab_line_s *next_sibling;
 } mount_tab_line_t;
 
+int   s_persist_created_dir = 0;
+char  s_persist_num[12] = { 0 };
 uid_t s_persist_uid = -1;
+int   s_persist_fd = -1;
 int   s_persist_vh_fd = -1;
 int   s_persist_vh_locked_write = 0;
 extern int s_not_lscgid;
-static int is_persisted_fn(int uid, int *persisted);
+static int is_persisted_fn(int uid, int must_persist, int *persisted);
 static int open_persist_vh_file(int report, uid_t uid, int lock_type);
 static char *persist_vh_file_name(uid_t uid, char *filename, int filename_size);
-static int persist_vh_lock_type()   { return s_persist_vh_fd == -1 ? -1 : s_persist_vh_locked_write; }
 
-int is_persisted(lscgid_t *pCGI, int *persisted)
+static int lock_file(uid_t uid, int fd, char *desc, int report, int lock_type, int *locked_write)
 {
-    return is_persisted_fn(pCGI->m_data.m_uid, persisted);
+    DEBUG_MESSAGE("Lock the %s file %d %s\n", desc, fd, 
+                  (lock_type == NSPERSIST_LOCK_TRY_WRITE || lock_type == NSPERSIST_LOCK_WRITE_NB) ? 
+                  "TRY_WRITE" : 
+                  (lock_type ? "WRITE" : "READ"));
+    int op = (lock_type == NSPERSIST_LOCK_TRY_WRITE || lock_type == NSPERSIST_LOCK_WRITE_NB) ? (LOCK_EX | LOCK_NB) : 
+             (lock_type == NSPERSIST_LOCK_WRITE) ? LOCK_EX : LOCK_SH;
+    if (flock(fd, op))
+    {
+        int err = errno;
+        if (errno == EWOULDBLOCK)
+        {
+            if (lock_type == NSPERSIST_LOCK_WRITE_NB)
+            {
+                DEBUG_MESSAGE("Unable to get write lock %s for uid %d\n", desc, uid);
+                //if (report)
+                //    ls_stderr("Unable to get write lock %s for uid %d\n", desc, uid);
+                return nsopts_rc_from_errno(err);
+            }
+            DEBUG_MESSAGE("Converting an attempted write to a read lock!\n");
+            return lock_file(uid, fd, desc, report, NSPERSIST_LOCK_READ, locked_write);
+        }
+        DEBUG_MESSAGE("Unexpected error locking %s file: %s\n", desc, strerror(err));
+        if (report)
+            ls_stderr("Namespace error locking %s file: %s\n", desc, strerror(err));
+        return nsopts_rc_from_errno(err);
+    }
+    if (locked_write)
+        *locked_write = lock_type;
+    DEBUG_MESSAGE("Locked %s %s\n", desc, lock_type ? "WRITE" : "READ");
+    return 0;
+}
+
+
+static char *persist_persist_file_dir(char *persist_dir, int persist_dir_len)
+{
+    char persist_num[sizeof(s_persist_num)];
+    strncpy(persist_num, s_persist_num, sizeof(persist_num));
+    s_persist_num[0] = 0;
+    persist_namespace_dir_vh(s_persist_uid, persist_dir, persist_dir_len);
+    strncpy(s_persist_num, persist_num, sizeof(s_persist_num));
+    return persist_dir;
+}
+
+
+static char *persist_persist_file_name(char *persist_name, int persist_name_len)
+{
+    char dir[PERSIST_DIR_SIZE];
+    persist_persist_file_dir(dir, sizeof(dir));
+    snprintf(persist_name, persist_name_len, "%s/" PERSIST_FILE, dir);
+    DEBUG_MESSAGE("Use persist_file_name: %s\n", persist_name);
+    return persist_name;
+}
+
+
+static int new_persist(uid_t uid, int fd, int relock_read)
+{
+    if (relock_read &&
+        lock_file(uid, fd, "Persist File", 1, NSPERSIST_LOCK_WRITE, NULL))
+        return -1;
+    int persist_num = 0;
+    char persist_dir[PERSIST_FILE_SIZE], dir[PERSIST_DIR_SIZE];
+    persist_persist_file_dir(dir, sizeof(dir));
+    do
+        snprintf(persist_dir, sizeof(persist_dir), "%s/%d", dir, ++persist_num);
+    while (!access(persist_dir, 0));
+    snprintf(s_persist_num, sizeof(s_persist_num), "%d", persist_num);
+    DEBUG_MESSAGE("new_persist: uid: %d: %s\n", uid, s_persist_num);
+    lseek(fd, 0, SEEK_SET);
+    if (write(fd, s_persist_num, strlen(s_persist_num)) == -1)
+    {
+        int err = errno;
+        ls_stderr("Namespace error writing persist file %s: %s\n", 
+                  s_persist_num, strerror(err));
+        DEBUG_MESSAGE("Namespace error writing persist file %s: %s\n", 
+                      s_persist_num, strerror(err));
+        return -1;
+    }   
+    if (!mkdir(persist_dir, S_IRWXU))
+        s_persist_created_dir = 1;
+    if (relock_read && 
+        lock_file(uid, fd, "Relock read Persist File", 1, NSPERSIST_LOCK_READ, 
+                  NULL))
+        return -1;        
+    DEBUG_MESSAGE("Created %s: %s\n", persist_dir, s_persist_created_dir ? "YES" : "NO");
+    return 0;
+}
+
+
+static int mkdirs(char *dir)
+{
+    mkdir(PERSIST_PREFIX, S_IRWXU);
+    int pos = strlen(PERSIST_PREFIX + 1);
+    char *slash = dir + pos, *new_slash, do_mkdir[PERSIST_DIR_SIZE + 1];
+    do
+    {
+        new_slash = strchr(slash, '/');
+        int len;
+        if (new_slash)
+            len = new_slash - dir;
+        else
+            len = strlen(dir);
+        memcpy(do_mkdir, dir, len);
+        do_mkdir[len] = 0;
+        if (!mkdir(do_mkdir, S_IRWXU))
+            s_persist_created_dir = 1;
+        DEBUG_MESSAGE("Namespace directory create of %s, created: %d, errno: %s\n",
+                      do_mkdir, s_persist_created_dir, strerror(errno));
+        if (new_slash)
+            slash = new_slash + 1;
+    } while (new_slash);
+    return 0;
+}
+
+
+static void close_unlock_persist()
+{
+    if (s_persist_fd != -1)
+    {
+        DEBUG_MESSAGE("close_unlock_persist: %d\n", s_persist_fd);
+        flock(s_persist_fd, LOCK_UN);   
+        close(s_persist_fd);
+        s_persist_fd = -1;
+    }
+}
+
+
+static int get_persist_num(int unmount, uid_t uid, int lock_write, int close_unlock)
+{
+    char persist_name[PERSIST_FILE_SIZE];
+    persist_persist_file_name(persist_name, sizeof(persist_name));
+    s_persist_fd = open(persist_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if (s_persist_fd == -1 && errno == ENOENT) 
+    {
+        if (unmount)
+        {
+            DEBUG_MESSAGE("No persist file, unmount, use none!\n");
+            s_persist_num[0] = 0;
+            return 0;
+        }
+        char dir[PERSIST_DIR_SIZE];
+        persist_namespace_dir_vh(uid, dir, sizeof(dir));
+        mkdirs(dir);
+        s_persist_fd = open(persist_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    }
+    if (s_persist_fd == -1) 
+    {
+        int err = errno;
+        ls_stderr("Namespace error opening persist file %s: %s\n", 
+                  persist_name, strerror(err));
+        DEBUG_MESSAGE("Namespace error opening persist file %s: %s\n", 
+                      persist_name, strerror(err));
+        return -1;
+    }
+    if (lock_file(uid, s_persist_fd, "Persist File", 1, 
+                  lock_write ? NSPERSIST_LOCK_WRITE : NSPERSIST_LOCK_READ, NULL))
+    {
+        close(s_persist_fd);
+        s_persist_fd = -1;
+        return -1;
+    }
+    ssize_t bytes = read(s_persist_fd, s_persist_num, sizeof(s_persist_num) - 1);
+    if (bytes == -1) 
+    {
+        int err = errno;
+        ls_stderr("Namespace error reading persist file %s: %s\n", 
+                  persist_name, strerror(err));
+        DEBUG_MESSAGE("Namespace error reading persist file %s: %s\n", 
+                      persist_name, strerror(err));
+        close_unlock_persist();
+        return -1;
+    }
+    if (bytes > 0) 
+    {
+        s_persist_num[bytes] = 0;
+        char *nl = strchr(s_persist_num, '\n');
+        if (nl)
+        {
+            *nl = 0;
+            bytes = nl - s_persist_num;
+        }
+    }
+    if (bytes == 0 && !lock_write) 
+    {
+        DEBUG_MESSAGE("No persisted file/dir, we need to create one\n");
+        if (new_persist(uid, s_persist_fd, 0))
+        {
+            close_unlock_persist();
+            return -1;
+        }
+    }
+    if (close_unlock)
+        close_unlock_persist();
+    DEBUG_MESSAGE("Use persist_num: %s\n", s_persist_num);
+    return 0;
+}
+
+
+/* Note we may leave this function with persist file open locked. */
+int is_persisted(lscgid_t *pCGI, int must_persist, int *persisted)
+{
+    s_persist_uid = pCGI->m_data.m_uid;
+    if (get_persist_num(0, pCGI->m_data.m_uid, 0, 1))
+    {
+        if (must_persist)
+        {
+            DEBUG_MESSAGE("Persist number issue\n");
+            ls_stderr("Persist number issue\n");
+        }
+        return -1;
+    }
+    return is_persisted_fn(pCGI->m_data.m_uid, must_persist, persisted);
 }
 
 #ifndef __NR_setns
@@ -117,10 +330,23 @@ static char *read_big_proc_file(const char *filename)
 {
     ssize_t len, pos = 0, buf_size = 0;
     char *block = NULL;
+    if (s_proc_fd == -1)
+    {
+        s_proc_fd = open("/proc", O_PATH);
+        if (s_proc_fd == -1)
+        {
+            int err = errno;
+            DEBUG_MESSAGE("Error opening /proc: %s\n", strerror(err));
+            ls_stderr("Error opening /proc: %s\n", strerror(err));
+            return NULL;
+        }
+    }
+    fcntl(s_proc_fd, F_SETFD, FD_CLOEXEC);
     int fd = openat(s_proc_fd, filename, O_RDONLY);
     if (fd == -1)
     {
         int err = errno;
+        DEBUG_MESSAGE("Namespace error opening /proc/%s: %s\n", filename, strerror(err));
         ls_stderr("Namespace error opening /proc/%s: %s\n", filename, strerror(err));
         return NULL;
     }
@@ -143,8 +369,11 @@ static char *read_big_proc_file(const char *filename)
         len = read(fd, &block[pos], PROC_BLOCK_SIZE);
         if (len < 0)
         {
+            int err = errno;
+            DEBUG_MESSAGE("Namespace error reading /proc/%s: %s\n", filename, 
+                          strerror(err));
             ls_stderr("Namespace error reading /proc/%s: %s\n", filename, 
-                      strerror(errno));
+                      strerror(err));
             free(block);
             close(fd);
             return NULL;
@@ -152,6 +381,7 @@ static char *read_big_proc_file(const char *filename)
         pos += len;
         block[pos] = 0;
     } while (len);
+    DEBUG_MESSAGE("close /proc/%s fd: %d\n", filename, fd);
     close(fd);
     return block;
 }
@@ -371,6 +601,34 @@ static mount_tab_t *collect_mounts(mount_tab_t *info, mount_tab_line_t *line)
 }
 
 
+int persist_mounted(const char *persist_dir, int *persisted)
+{
+    char *mount_tab_data = NULL;
+    int dir_len = strlen(persist_dir);
+
+    DEBUG_MESSAGE("Enter parse_mounted, persist_dir: %s\n", persist_dir);
+    mount_tab_data = read_big_proc_file("self/mountinfo");
+    if (mount_tab_data == NULL)
+    {
+        int err = errno;
+        ls_stderr("read_big_proc_file failed: %s\n", strerror(err));
+        DEBUG_MESSAGE("read_big_proc_file failed: %s\n", strerror(err));
+        return -1;
+    }
+    char *pos = mount_tab_data;
+    while ((pos = strstr(pos, persist_dir)))
+    {
+        if(*(pos + dir_len) == ' ' && pos > mount_tab_data && *(pos - 1) == ' ')
+        {
+            *persisted = 1;
+            break;
+        }
+    }
+    free(mount_tab_data);
+    return 0;
+}
+
+
 mount_tab_t *parse_mount_tab(const char *root_mount)
 {
     char *mount_tab_data = NULL;
@@ -574,17 +832,25 @@ static char *persist_namespace_dir(uid_t uid, char *dirname, int dirname_len)
 
 char *persist_namespace_dir_vh(uid_t uid, char *dirname, int dirname_len)
 {
-    if (s_persisted_VH)
+    char dirname_only[PERSIST_DIR_SIZE];
+    persist_namespace_dir(uid, dirname_only, sizeof(dirname_only));
+    if (s_persist_num[0])
     {
-        char dirname_only[PERSIST_DIR_SIZE];
-        persist_namespace_dir(uid, dirname_only, sizeof(dirname_only));
-        if (s_persisted_VH && s_persisted_VH[0] == 0)
-            snprintf(dirname, dirname_len, "%s", dirname_only);
+        if (s_persisted_VH && s_persisted_VH[0] != 0)
+            snprintf(dirname, dirname_len, "%s/%s/%s", dirname_only, 
+                     s_persisted_VH, s_persist_num);
         else
-            snprintf(dirname, dirname_len, "%s/%s", dirname_only, s_persisted_VH);
+            snprintf(dirname, dirname_len, "%s/%s", dirname_only,  
+                     s_persist_num);
     }
-    else
-        persist_namespace_dir(uid, dirname, dirname_len);
+    else 
+    {
+        if (s_persisted_VH && s_persisted_VH[0] != 0)
+            snprintf(dirname, dirname_len, "%s/%s", dirname_only, 
+                     s_persisted_VH);
+        else
+            snprintf(dirname, dirname_len, "%s", dirname_only);
+    } 
     return dirname;
 }
 
@@ -599,49 +865,11 @@ static char *get_ns_filename(uid_t uid, char *filename, int filename_len)
 }
 
 
-static void user_unpersist(uid_t uid, int *have_unpersist)
-{
-    int rc = 0, user_unpersist = 0;
-    struct passwd *pwd = getpwuid(uid);
-    if (!pwd)
-    {
-        DEBUG_MESSAGE("Could not getpwuid for %d (deleted?): %s\n", uid,
-                      strerror(errno));
-        rc = DEFAULT_ERR_RC;
-    }
-    else
-    {
-        if (pwd->pw_dir && pwd->pw_dir[0])
-        {
-            char unpersist_file[strlen(pwd->pw_dir) + PERSIST_USER_FILE_LEN + 1];
-            snprintf(unpersist_file, sizeof(unpersist_file), "%s%s", pwd->pw_dir,
-                     PERSIST_USER_FILE);
-            if (!unlink(unpersist_file))
-            {
-                ls_stderr("User requested namespace unpersist, uid: %d, file: %s\n", 
-                          uid, unpersist_file);
-                DEBUG_MESSAGE("User requested namespace unpersist\n");
-                user_unpersist = 1;
-            }
-            else if (errno != ENOENT)
-            {
-                int err = errno;
-                ls_stderr("Unable to delete unpersist file %s: %s\n", 
-                          unpersist_file, strerror(err));
-                rc = nsopts_rc_from_errno(err);
-            }
-        }
-    }
-    if ((rc || user_unpersist) && have_unpersist)
-        *have_unpersist = 1;
-}
-
-
-static int unpersist_fn(int report, uid_t uid, int vh_only, int *NOW_PERSISTED)
+static int unpersist_fn(int report, uid_t uid)
 {
     char dest[PERSIST_FILE_SIZE];
     int rc = 0, write_lock = s_persist_vh_locked_write;
-    DEBUG_MESSAGE("unpersist_fn, uid: %d\n", uid);
+    DEBUG_MESSAGE("unpersist_fn, uid: %d, num: %s\n", uid, s_persist_num);
     if (s_persist_vh_fd == -1)
     {
         DEBUG_MESSAGE("Running unpersist_fn without being locked\n");
@@ -650,42 +878,31 @@ static int unpersist_fn(int report, uid_t uid, int vh_only, int *NOW_PERSISTED)
     }
     if (!write_lock && lock_persist_vh_file(report, NSPERSIST_LOCK_WRITE))
         return -1;
-    int user_unpersisted = 0;
-    user_unpersist(uid, &user_unpersisted);
-    if (!vh_only && NOW_PERSISTED && !write_lock && user_unpersisted &&
-        (rc = is_persisted_fn(uid, NOW_PERSISTED)))
-    {
-        if (rc)
-            return rc;
-        if (*NOW_PERSISTED)
-        {
-            DEBUG_MESSAGE("unpersist_fn, a prior unperist condition has been resolved by another task\n");
-            lock_persist_vh_file(report, NSPERSIST_LOCK_READ);
-            return 0;
-        }
-    }
     char filename[PERSIST_FILE_SIZE];
     persist_vh_file_name(uid, filename, sizeof(filename));
-    int unmounted;
     get_ns_filename(uid, dest, sizeof(dest));
-    do
+    if (!access(dest, 0))
     {
-        unmounted = 0;
+        int mounted = 1;
         DEBUG_MESSAGE("umount %s\n", dest);
-        if (umount(dest) != 0)
+        if (report && persist_mounted(dest, &mounted))
+            return -1; // Fatal
+        if (mounted)
         {
-            int err = errno;
-            if (report)
-                ls_stderr("Namespace umount of %s failed: %s\n", dest, strerror(err));
-            rc = -1;
-            DEBUG_MESSAGE("umount of %s failed: %s\n", dest, strerror(err));
+            if (umount(dest) != 0)
+            {
+                int err = errno;
+                if (report)
+                    ls_stderr("Namespace umount of %s failed: %s\n", dest, strerror(err));
+                rc = -1;
+                DEBUG_MESSAGE("umount of %s failed: %s\n", dest, strerror(err));
+            }
+            else
+            {
+                DEBUG_MESSAGE("Did umount of: %s\n", dest);
+            }
         }
-        else
-        {
-            DEBUG_MESSAGE("Did umount of: %s\n", dest);
-            unmounted = 1;
-        }
-    } while (unmounted && remove(dest));
+    }
     char dirname[PERSIST_DIR_SIZE];
     DIR *dir;
     struct dirent *ent;
@@ -712,23 +929,52 @@ static int unpersist_fn(int report, uid_t uid, int vh_only, int *NOW_PERSISTED)
         else
         {
             DEBUG_MESSAGE("remove: %s\n", fullname);
+            if (ent->d_type != DT_DIR)
+            {
+                if (umount(fullname))
+                {
+                    DEBUG_MESSAGE("Error umount: %s: %s\n", fullname, strerror(errno));
+                }
+                else
+                {
+                    DEBUG_MESSAGE("Did umount: %s\n", fullname);
+                }
+            }
             if (remove(fullname))
+            {
                 DEBUG_MESSAGE("Error deleting %s: %s\n", fullname,
                               strerror(errno));
+            }
         }
     }
     if (dir)
         closedir(dir);
+    unlock_close_persist_vh_file(dir != NULL);
+    if (dir)
+    {
+        DEBUG_MESSAGE("umount %s\n", dirname);
+        if (umount(dirname) != 0)
+        {
+            int err = errno;
+            DEBUG_MESSAGE("Error doing umount of %s: %s\n", dirname,
+                          strerror(err));
+        }
+    }
+    if (!rc)
+    {
+        int ret = rmdir(dirname);
+        DEBUG_MESSAGE("Remove of %s, rc: %d, %s\n", dirname, ret, strerror(errno));
+    }
     return rc;
 }
             
     
-static int mount_private(int created, char *dir)
+static int mount_private(char *dir)
 {
     mount_tab_t *mount_tab = NULL;
-    if (!created)
+    if (!s_persist_created_dir)
         mount_tab = parse_mount_tab(dir);
-    if (created || !mount_tab || !mount_tab[0].mountpoint)
+    if (s_persist_created_dir || !mount_tab || !mount_tab[0].mountpoint)
     {
         DEBUG_MESSAGE("%s not mounted - bind mount it\n", dir);
         if (mount(dir, dir, NULL, MS_SILENT | MS_BIND, NULL) != 0)
@@ -763,59 +1009,38 @@ static int mount_private(int created, char *dir)
  * the permanent namespace stuff that's local.  Yikes!  */
 static int persist_namespaces(lscgid_t *pCGI, int persisted, pid_t pid)
 {
-    char dir[PERSIST_DIR_SIZE], vhdir[PERSIST_FILE_SIZE], *dirp;
-    char source[PERSIST_FILE_SIZE], dest[PERSIST_FILE_SIZE];
-    int created, rc;
+    char dir[PERSIST_DIR_SIZE];
+    char source[PERSIST_FILE_SIZE], dest[PERSIST_FILE_SIZE + 5];
+    int rc;
     DEBUG_MESSAGE("persist_namespaces\n");
-    mkdir(PERSIST_PREFIX, S_IRWXU);
-    persist_namespace_dir(pCGI->m_data.m_uid, dir, sizeof(dir));
-    created = mkdir(dir, S_IRWXU) == 0;
-    DEBUG_MESSAGE("Namespace directory create of %s, created: %d, errno: %s\n",
-            dir, created, strerror(errno));
-
-    if (s_persisted_VH)
-        snprintf(vhdir, sizeof(vhdir), "%s/%s", dir, s_persisted_VH);
-    rc = mount_private(created, dir);
+    persist_namespace_dir_vh(pCGI->m_data.m_uid, dir, sizeof(dir));
+    rc = mount_private(dir);
     if (rc)
         return rc;
-    DEBUG_MESSAGE("persist_namespaces\n");
-    dirp = dir;
-    if (s_persisted_VH)
+    snprintf(dest, sizeof(dest), "%s/mnt", dir);
+    int fd = creat(dest, S_IRUSR | S_IWUSR);
+    if (fd != -1)
     {
-        dirp = vhdir;
-        if (mkdir(dirp, S_IRWXU) && errno != EEXIST)
-        {
-            int err = errno;
-            ls_stderr("Namespace directory create of %s failed: %s\n",
-                      dirp, strerror(err));
-            unpersist_fn(0, pCGI->m_data.m_uid, 0, NULL);
-            return -1;
-        }
-        snprintf(dest, sizeof(dest), "%s/mnt", dirp);
-        int fd = creat(dest, S_IRUSR | S_IWUSR);
-        if (fd != -1)
-        {
-            DEBUG_MESSAGE("Created %s\n", dest);
-            close(fd);
-        }
-        else
-            DEBUG_MESSAGE("Namespace directory create of %s failed: %s (may be ok)\n",
+        DEBUG_MESSAGE("Created %s\n", dest);
+        close(fd);
+    }
+    else
+        DEBUG_MESSAGE("Namespace directory create of %s failed: %s (may be ok)\n",
                       dest, strerror(errno));
 
-        snprintf(source, sizeof(source), "/proc/%u/ns/mnt", pid);
-        DEBUG_MESSAGE("mount %s on %s\n", source, dest);
-        if (mount(source, dest, NULL, MS_SILENT | MS_BIND, NULL) != 0)
-        {
-            int err = errno;
-            ls_stderr("Namespace mount of %s on %s failed: %s\n", source, 
-                      dest, strerror(err));
-            DEBUG_MESSAGE("Source exists: %s\n", access(source,0) ? "NO":"YES");
-            DEBUG_MESSAGE("Dest exists: %s\n", access(dest,0) ? "NO":"YES");
-            unpersist_fn(0, pCGI->m_data.m_uid, 0, NULL);
-            return -1;
-        }
-        DEBUG_MESSAGE("Did bind_mount of: %s on [%s]\n", source, dest);
+    snprintf(source, sizeof(source), "/proc/%u/ns/mnt", pid);
+    DEBUG_MESSAGE("mount %s on %s\n", source, dest);
+    if (mount(source, dest, NULL, MS_SILENT | MS_BIND | MS_PRIVATE, NULL) != 0)
+    {
+        int err = errno;
+        ls_stderr("Namespace mount of %s on %s failed: %s\n", source, 
+                  dest, strerror(err));
+        DEBUG_MESSAGE("Source exists: %s\n", access(source,0) ? "NO":"YES");
+        DEBUG_MESSAGE("Dest exists: %s\n", access(dest,0) ? "NO":"YES");
+        unpersist_fn(0, pCGI->m_data.m_uid);
+        return -1;
     }
+    DEBUG_MESSAGE("Did bind_mount of: %s on [%s]\n", source, dest);
     s_persisted = 1;
     return 0;
 }
@@ -889,7 +1114,7 @@ static void persist_child(lscgid_t *pCGI, int persisted,
     if (rc)
     {
         if (do_unpersist)
-            unpersist_fn(0, pCGI->m_data.m_uid, 0, NULL);
+            unpersist_fn(0, pCGI->m_data.m_uid);
     }
     close_pipes(persist_sibling_child, persist_sibling_rc);
     persist_exit_child("persist_child", rc);
@@ -916,6 +1141,7 @@ static int persist_parent(int persisted, int persist_sibling_child[],
                       "unshare: 0x%x: %s\n", s_clone_flags & ~SIGCHLD, 
                       strerror(err));
         close_pipes(persist_sibling_child, persist_sibling_rc);
+
         return nsopts_rc_from_errno(err);
     }
     *parent_pid = getpid();
@@ -936,35 +1162,120 @@ static int persist_parent(int persisted, int persist_sibling_child[],
 
 static char *persist_vh_file_name(uid_t uid, char *filename, int filename_size)
 {
-    char dirname[PERSIST_FILE_SIZE];
-    char dirname_only[PERSIST_DIR_SIZE];
-    persist_namespace_dir(uid, dirname_only, sizeof(dirname_only));
-    snprintf(dirname, sizeof(dirname), "%s/%s", dirname_only, 
-             s_persisted_VH ? s_persisted_VH : "");
+    char dirname[PERSIST_DIR_SIZE];
+    persist_namespace_dir_vh(uid, dirname, sizeof(dirname));
     snprintf(filename, filename_size, "%s/"PERSIST_NO_VH_PREFIX PERSIST_VH_FILE, 
              dirname);
     return filename;
 }
 
 
+static int try_delete_persist_fn()
+{
+    char persist_name[PERSIST_FILE_SIZE];
+    int opened = 0;
+    persist_persist_file_name(persist_name, sizeof(persist_name));
+    DEBUG_MESSAGE("try_delete_persist: %s\n", persist_name);
+    if (s_persist_fd == -1)
+    {
+        s_persist_fd = open(persist_name, O_RDONLY);
+        if (s_persist_fd == -1) 
+        {
+            DEBUG_MESSAGE("Error operning to delete persist file: %s\n", strerror(errno));
+            return -1;
+        }
+        opened = 1;
+    }
+    if (lock_file(s_persist_uid, s_persist_fd, "try_delete_persist", 0, 
+                  NSPERSIST_LOCK_WRITE, NULL))
+    {
+        if (opened)
+        {
+            close(s_persist_uid);
+            s_persist_uid = -1;
+        }
+        return -1;
+    }
+    char persist_dir[PERSIST_FILE_SIZE];
+    int unmount_delete_dir = 0;
+    persist_persist_file_dir(persist_dir, sizeof(persist_dir));
+    /* Make sure directory is empty except for persist file*/
+    DIR *dir = opendir(persist_dir);
+    if (!dir)
+    {
+        int err = errno;
+        DEBUG_MESSAGE("In unpersist of %s: %s\n", persist_dir, strerror(err));
+    }
+    else {
+        struct dirent *ent;
+        while ((ent = readdir(dir)))
+        {
+            if (ent->d_type == DT_DIR && 
+                strspn(ent->d_name, "0123456789") == strlen(ent->d_name))
+                DEBUG_MESSAGE("Existing dir %s\n", ent->d_name);
+                break;
+            if (ent->d_type == DT_DIR && ent->d_name[0] == '.')
+                continue;
+            if (!strcmp(ent->d_name, PERSIST_FILE))
+                continue;
+            DEBUG_MESSAGE("Unexpected: %s\n", ent->d_name);
+        }
+        if (ent == NULL)        
+            unmount_delete_dir = 1;
+    }
+    closedir(dir);
+    if (unmount_delete_dir)
+    {
+        DEBUG_MESSAGE("Delete %s and %s\n", persist_name, persist_dir);
+        if (remove(persist_name))
+        {
+            DEBUG_MESSAGE("Delete %s failed: %s\n", persist_name, strerror(errno));
+        }
+        close_unlock_persist();
+        if (remove(persist_dir))
+        {
+            DEBUG_MESSAGE("Delete %s failed: %s\n", persist_dir, strerror(errno));
+        }
+        else
+        {
+            DEBUG_MESSAGE("try_delete_persist worked!\n");
+        }
+    }
+    return 0;
+}
+
+
 int unlock_close_persist_vh_file(int delete)
 {
+    char dir[PERSIST_DIR_SIZE] = { 0 };
+    int try_delete_persist = 0;
+    DEBUG_MESSAGE("Close and unlock the persist vh file vh fd: %d\n", s_persist_vh_fd);
     if (s_persist_vh_fd == -1)
         return 0;
-    DEBUG_MESSAGE("Close and unlock the persist vh file\n");
+    if (delete)
+    {
+        lock_file(s_persist_uid, s_persist_vh_fd, "Delete VH file", 0, 
+                  NSPERSIST_LOCK_TRY_WRITE, &s_persist_vh_locked_write);
+        if (!s_persist_vh_locked_write)
+            delete = 0;
+        else
+        {
+            int rc = clean_dir(persist_namespace_dir_vh(s_persist_uid, dir, sizeof(dir)));
+            DEBUG_MESSAGE("Removed persistence vh dir: %s: %s (%s)\n", 
+                          dir, rc == 0 ? "YES" : "NO", strerror(errno));
+            if (rc)
+                delete = 0;
+            else
+                try_delete_persist = 1;
+        }
+    }
     flock(s_persist_vh_fd, LOCK_UN);
     close(s_persist_vh_fd);
     s_persist_vh_fd = -1;
-#ifdef PERSIST_CLEANLY
-    if (delete && s_persist_uid != -1)
+    if (delete && try_delete_persist)
     {
-        char filename[PERSIST_FILE_SIZE];
-        int rc;
-        rc = remove(persist_vh_file_name(s_persist_uid, filename, sizeof(filename)));
-        DEBUG_MESSAGE("Removed persistence vh file: %s: %s\n", filename, 
-                      rc == 0 ? "YES" : "NO");
+        try_delete_persist_fn(NULL);
     }
-#endif
     DEBUG_MESSAGE("unlock_close_persist_vh_file done\n");
     return 0;
 }
@@ -972,35 +1283,11 @@ int unlock_close_persist_vh_file(int delete)
 
 int lock_persist_vh_file(int report, int lock_type)
 {
-    DEBUG_MESSAGE("Lock the persist vh file %d %s\n", s_persist_vh_fd, 
-                  (lock_type == NSPERSIST_LOCK_TRY_WRITE || lock_type == NSPERSIST_LOCK_WRITE_NB) ? 
-                  "TRY_WRITE" : 
-                  (lock_type ? "WRITE" : "READ"));
-    if (flock(s_persist_vh_fd, 
-              (lock_type == NSPERSIST_LOCK_TRY_WRITE || lock_type == NSPERSIST_LOCK_WRITE_NB) ? (LOCK_EX | LOCK_NB) : 
-              (lock_type == NSPERSIST_LOCK_WRITE) ? LOCK_EX : LOCK_SH))
-    {
-        int err = errno;
-        if (errno == EWOULDBLOCK)
-        {
-            if (lock_type == NSPERSIST_LOCK_WRITE_NB)
-            {
-                DEBUG_MESSAGE("Unable to get write lock for uid %d\n", s_persist_uid);
-                if (report)
-                    ls_stderr("Unable to get write lock for uid %d\n", s_persist_uid);
-                return nsopts_rc_from_errno(err);
-            }
-            DEBUG_MESSAGE("Converting an attempted write to a read lock!\n");
-            return lock_persist_vh_file(report, NSPERSIST_LOCK_READ);
-        }
-        DEBUG_MESSAGE("Unexpected error locking VH persist file: %s\n", strerror(err));
-        if (report)
-            ls_stderr("Namespace error locking VH persist file: %s\n", strerror(err));
-        return nsopts_rc_from_errno(err);
-    }
-    s_persist_vh_locked_write = lock_type != NSPERSIST_LOCK_READ;
-    DEBUG_MESSAGE("Locked %s\n", s_persist_vh_locked_write ? "WRITE" : "READ");
-    return 0;
+    int ret = lock_file(s_persist_uid, s_persist_vh_fd, "VH persist", report, 
+                        lock_type, &s_persist_vh_locked_write);
+    //DEBUG_MESSAGE("Close persist file\n");
+    //close_unlock_persist();
+    return ret;
 }
 
 
@@ -1024,54 +1311,15 @@ static int open_persist_vh_file(int report, uid_t uid, int lock_type)
                   (lock_type == NSPERSIST_LOCK_WRITE ? "WRITE" : "READ"));
     s_persist_vh_fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     int err = errno;
-    if (s_persist_vh_fd == -1 && errno == ENOENT)
-    {
-        DEBUG_MESSAGE("Try creating directories above\n");
-        if (!mkdir(PERSIST_PREFIX, S_IRWXU) || errno == EEXIST)
-        {
-            char dir[PERSIST_DIR_SIZE];
-            persist_namespace_dir(uid, dir, sizeof(dir));
-            if (!mkdir(dir, S_IRWXU) || errno == EEXIST)
-            {
-                int try_open = 0;
-                if (s_persisted_VH)
-                {
-                    char dir_vh[PERSIST_FILE_SIZE];
-                    snprintf(dir_vh, sizeof(dir_vh), "%s/%s", dir, s_persisted_VH);
-                    if (!mkdir(dir_vh, S_IRWXU))
-                        try_open = 1;
-                    else
-                    {
-                        DEBUG_MESSAGE("Error creating directory: %s: %s\n", 
-                                      dir_vh, strerror(errno));
-                        try_open = 1;
-                    }
-                }
-                else
-                    try_open = 1;
-                if (try_open)
-                {
-                    s_persist_vh_fd = open(filename, O_RDWR | O_CREAT, 
-                                           S_IRUSR | S_IWUSR);
-                    err = errno;
-                }
-            }
-            else
-            {
-                DEBUG_MESSAGE("Error creating directory %s: %s\n", dir, 
-                              strerror(errno));
-            }
-        }
-        else
-        {
-            DEBUG_MESSAGE("Error creating directory: %s: %s\n", PERSIST_PREFIX,
-                          strerror(errno));
-        }
-    }
     if (s_persist_vh_fd == -1)
     {
-        ls_stderr("Namespace error opening lock file %s: %s\n",
-                  filename, strerror(err));
+        DEBUG_MESSAGE("Namespace error opening lock file %s: %s\n",
+                      filename, strerror(err));
+        if (err != ENOENT)
+            ls_stderr("Namespace error opening lock file %s: %s\n",
+                      filename, strerror(err));
+        else
+            return 0; // Missing component, just fine!
         return nsopts_rc_from_errno(err);
     }
     //fcntl(s_persist_vh_fd, F_SETFD, FD_CLOEXEC); MUST LEAVE THIS OPEN FOR PERSISTENCE!
@@ -1080,7 +1328,7 @@ static int open_persist_vh_file(int report, uid_t uid, int lock_type)
     s_persist_uid = uid;
     rc = lock_persist_vh_file(report, lock_type);
     if (rc)
-        unlock_close_persist_vh_file(1);
+        unlock_close_persist_vh_file(0);
     return rc;
 }
 
@@ -1259,65 +1507,32 @@ int persist_ns_done(lscgid_t *pCGI, int persisted, int rc,
 /* Note: For now we use all or none of persisted mounts.  There are still known
  * issues with attempting to use some (like you can't mount /proc without a PID 
  * space).  */
-int is_persisted_fn(int uid, int *persisted)
+int is_persisted_fn(int uid, int must_persist, int *persisted)
 {
-    int i, rc = 0;
+    int rc = 0, was_vh_fd = s_persist_vh_fd;
     char dir[PERSIST_DIR_SIZE];
-    persist_namespace_dir(uid, dir, sizeof(dir));
+    persist_namespace_dir_vh(uid, dir, sizeof(dir));
     DEBUG_MESSAGE("is_persisted uid: %d\n", uid);
-    int original_lock_type = persist_vh_lock_type();
-    if (original_lock_type == -1 && 
+    if (was_vh_fd == -1 && 
         open_persist_vh_file(1, uid, NSPERSIST_LOCK_TRY_WRITE))
         return DEFAULT_ERR_RC;
-    mount_tab_t *mount_tab = parse_mount_tab(dir);
-    if (!mount_tab)
-        return DEFAULT_ERR_RC;
     char ns_filename[PERSIST_FILE_SIZE];
-    int found = 0;
     get_ns_filename(uid, ns_filename, sizeof(ns_filename));
-    for (i = 0; mount_tab[i].mountpoint != NULL; i++)
+    if (persist_mounted(ns_filename, persisted))
+        return DEFAULT_ERR_RC;
+    if (!*persisted)
     {
-        if (!strcmp(ns_filename, mount_tab[i].mountpoint))
+        DEBUG_MESSAGE("NOT persisted user\n");
+        if (must_persist)
         {
-            found = 1;
-            break;
+            ls_stderr("User is not persisted\n");
+            return -1;
         }
-    }
-    free_mount_tab(mount_tab);
-    if (!found)
-    {
-        DEBUG_MESSAGE("NOT persisted ns: %s\n", ns_filename);
-        if (s_persisted_VH)
-        {
-            DEBUG_MESSAGE("   (VH NOT persisted)\n");
-        }
-        if (persisted)
-            *persisted = 0;
-        int now_persisted = 0;
-        unpersist_fn(0, uid, 0, original_lock_type == -1 ? &now_persisted : NULL);
-        if (now_persisted)
-            found = 1;
-        else
-        {
-            DEBUG_MESSAGE("NOT persisted user\n");
-            return 0;
-        }
-    }
-    if (persisted)
-        *persisted = 1;
-    if (original_lock_type == 1)        
         return 0;
-    int have_user_unpersist = 0;
-    user_unpersist(uid, &have_user_unpersist);
-    if (have_user_unpersist)
-    {
-        DEBUG_MESSAGE("have_user_unpersist\n");
-        rc = unpersist_fn(0, uid, 0, NULL);
-        if (persisted)
-            *persisted = 0;
-        return rc;
     }
-    if (original_lock_type == -1 && persist_vh_lock_type() == 1)
+    if (was_vh_fd != -1 && s_persist_vh_locked_write)        
+        return 0;
+    if (was_vh_fd == -1 && s_persist_vh_locked_write)
     {
         DEBUG_MESSAGE("Got write lock but don't need it\n")
         lock_persist_vh_file(1, NSPERSIST_LOCK_READ);
@@ -1330,15 +1545,20 @@ int is_persisted_fn(int uid, int *persisted)
 static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 {
     int rv;
-
+    struct passwd pwd, *pw;
+    char buffer[1024];
     //if ( !uid || !gid )  //do not allow root
     //{
     //    return -1;
     //}
-    struct passwd *pw = getpwuid(uid);
-    if (!pw)
-        DEBUG_MESSAGE("Can't get pwuid for %d: %s\n", uid, strerror(errno));
-    
+
+    if (getpwuid_r(uid, &pwd, buffer, sizeof(buffer), &pw) == -1)
+    {
+        int err = errno;
+        ls_stderr("Namespace error lscgid: getpwuid(%d): %s\n", uid, strerror(err));
+        return nsopts_rc_from_errno(err);
+    }
+    DEBUG_MESSAGE("Set gid for %d\n", gid);
     rv = setgid(gid);
     if (rv == -1)
     {
@@ -1348,6 +1568,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
     }
     if (pw && (pw->pw_gid == gid))
     {
+        DEBUG_MESSAGE("initgroups, name: %s\n", pw->pw_name);
         rv = initgroups(pw->pw_name, gid);
         if (rv == -1)
             DEBUG_MESSAGE("Can't initgroups(): %s\n", strerror(errno));
@@ -1359,6 +1580,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
             DEBUG_MESSAGE("Namespace error lscgid: setgroups(): %s\n", 
                           strerror(errno));
     }
+    DEBUG_MESSAGE("chroot: %s\n", pChroot);
     if (pChroot)
     {
         rv = chroot(pChroot);
@@ -1369,6 +1591,7 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
             return nsopts_rc_from_errno(err);
         }
     }
+    DEBUG_MESSAGE("Set uid for %d\n", uid);
     rv = setuid(uid);
     if (rv == -1)
     {
@@ -1380,9 +1603,11 @@ static int setUIDs(uid_t uid, gid_t gid, char *pChroot)
 }
 
 
-//called after uid/gid/chroot change
-static int changeStderrLog(lscgid_t *pCGI)
+int persist_change_stderr_log(lscgid_t *pCGI)
 {
+    if (!pCGI->m_stderrPath)
+        return 0;
+
     const char *path = pCGI->m_stderrPath;
     if (pCGI->m_pChroot)
     {
@@ -1394,12 +1619,27 @@ static int changeStderrLog(lscgid_t *pCGI)
                 --path;
         }
     }
+    DEBUG_MESSAGE("persist_change_stderr_log path: %s\n", path);
     int newfd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (newfd == -1)
     {
-        ls_stderr("Namespace lscgid (): failed to change stderr log to: %s: %s\n",
-                  path, strerror(errno));
-        return -1;
+        DEBUG_MESSAGE("Namespace error unable to open log: %s for write: %s\n",
+                      path, strerror(errno));
+        char altpath[PATH_MAX];
+        if (pCGI->m_cwdPath)
+            snprintf(altpath, sizeof(altpath), "%s/stderr.log", pCGI->m_cwdPath);
+        else
+            snprintf(altpath, sizeof(altpath), "/tmp/stderr.log");
+        DEBUG_MESSAGE("Try: %s\n", altpath);
+        newfd = open(altpath, O_WRONLY | O_CREAT | O_APPEND, 0644);
+        if (newfd == -1)
+        {
+            DEBUG_MESSAGE("Namespace error unable to open alt log: %s for write: %s\n",
+                          altpath, strerror(errno));
+            //ls_stderr("Namespace error unable to open alt log: %s for write: %s, pid: %d\n",
+            //          altpath, strerror(errno), getpid());
+            return -1;
+        }
     }
     if (newfd != 2)
     {
@@ -1524,9 +1764,7 @@ static int persist_use_child(lscgid_t *pCGI)
     }
     if (rc == 0)
     {
-        if (!rc && pCGI->m_stderrPath)
-            rc = changeStderrLog(pCGI);
-
+        persist_change_stderr_log(pCGI);
         persist_report_pid(getpid(), 0);
         DEBUG_MESSAGE("Doing execve: %s\n", pCGI->m_pCGIDir);
         if (execve(pCGI->m_pCGIDir, pCGI->m_argv, pCGI->m_env) == -1)
@@ -1564,80 +1802,10 @@ int persisted_use(lscgid_t *pCGI, int *done)
 }
 
 
-static int getvhost(FILE *mountfile, char *dir, int dirlen, int *did_novhost, 
-                    int *uid_found, char *vhost)
+static int unmount_vhost(int report, int uid, char *vhost)
 {
-    if (!mountfile)
-    {
-        mountfile = fopen("/proc/self/mountinfo", "r");
-        if (!mountfile)
-        {
-            ls_stderr("Unable to open /proc/self/mountinfo: %s\n", strerror(errno));
-            return -1;
-        }
-    }
-    char line[4096];
-    while (fgets(line, sizeof(line), mountfile)) 
-    {
-        int parm_no = 0;
-        char *parm = line, *next_parm = line;
-        while ((next_parm = strchr(parm + 1, ' ')) && parm_no < 4)
-        {
-            parm_no++;
-            parm = next_parm;
-        }
-        if (!next_parm) 
-        {
-            DEBUG_MESSAGE("Not a correctly formatted string: %s", line);
-            continue;
-        }
-        parm++; // Skip past space
-        int parmlen = next_parm - parm;
-        *next_parm = 0;
-        if (parmlen < dirlen || memcmp(parm, dir, dirlen))
-        {
-            DEBUG_MESSAGE("Skip mountpoint %s != %s (%d bytes, test: %d, memcmp: %d)\n", 
-                          parm, dir, parmlen, dirlen, memcmp(parm, dir, dirlen));
-            continue;
-        }
-        if (!parm[dirlen])
-        {
-            DEBUG_MESSAGE("Unmount uid\n");
-            *uid_found = 1;
-            continue;
-        }
-        if (parm[dirlen] != '/')
-        {
-            DEBUG_MESSAGE("Bad UID %s != %s\n", parm, dir);                
-            continue;
-        }
-        char *vhost_pos = &parm[dirlen+1], *endvhost;
-        if (!(endvhost = strchr(vhost_pos, '/')))
-        {
-            if (*did_novhost)
-            {
-                DEBUG_MESSAGE("Already released no_vh\n");
-                continue;
-            }
-            DEBUG_MESSAGE("vhost = no_vh\n");
-            vhost[0] = 0;
-            *did_novhost = 1;
-            return 1;
-        }
-        int vhost_len = endvhost - vhost_pos;
-        memcpy(vhost, vhost_pos, vhost_len);
-        vhost[vhost_len] = 0;
-        DEBUG_MESSAGE("vhost = %s\n", vhost);
-        return 1;
-    }
-    fclose(mountfile);
-    return 0;
-}
-
-
-static int unmount_vhost(int report, int uid, char *vhost, char *dir, int dirlen)
-{
-    DEBUG_MESSAGE("unmount_vhost, uid: %d, vhost: %s\n", uid, vhost);
+    int rc = 0;
+    DEBUG_MESSAGE("unmount_vhost, uid: %d, num: %s, vhost: %s\n", uid, s_persist_num, vhost);
     if (vhost && vhost != s_persisted_VH)
         nspersist_setvhost(vhost);
     if (open_persist_vh_file(report, uid, NSPERSIST_LOCK_WRITE_NB))
@@ -1645,55 +1813,109 @@ static int unmount_vhost(int report, int uid, char *vhost, char *dir, int dirlen
         DEBUG_MESSAGE("Can't lock\n");
         return -1;
     }
-    if (vhost)
+    if (s_persist_vh_fd != -1)
     {
-        unpersist_fn(report, uid, 1, NULL);
-        unlock_close_persist_vh_file(1);
-    } 
-    else
-    {
-        unlock_close_persist_vh_file(1);
-        int rc = umount(dir);
-        int err = errno;
-        DEBUG_MESSAGE("umount %s rc: %d, errno: %d\n", dir, rc, err);
-        if (rc)
-        {
-            if (report)
-                ls_stderr("Namespaces unable to unmount %s: %s\n", dir, 
-                          strerror(err));
-            return rc;
-        }
+        rc = unpersist_fn(report, uid);
+        unlock_close_persist_vh_file(rc == 0 ? 1 : 0);
     }
-    return 0;
+    return rc;
 }
 
 
-int unpersist_uid(int report, uid_t uid, int all_vhosts)
+int unpersist_uid(int report, uid_t uid, char *vhost)
 {
-    int rc = 0;
-    char dir[PERSIST_DIR_SIZE];
-    DEBUG_MESSAGE("unpersist_uid: %u\n", uid);
-    persist_namespace_dir(uid, dir, sizeof(dir));
-    int dirlen = strlen(dir), did_novhost = 0;
-    int uid_found = 0;
-    if (all_vhosts)
+    s_persist_uid = uid;
+    s_persist_num[0] = 0;
+    nspersist_setvhost(vhost);
+    int rc = get_persist_num(1, uid, 1, 0);
+    DEBUG_MESSAGE("unpersist_uid: %u, active vhost: %s, active persist: %s\n", uid, s_persisted_VH, s_persist_num);
+    char persist_dir[PERSIST_DIR_SIZE];
+    persist_persist_file_dir(persist_dir, sizeof(persist_dir));
+    DIR *dir_fd = opendir(persist_dir);
+    if (!dir_fd)
     {
-        char vhost[PERSIST_DIR_SIZE];
-        FILE *mountfile = NULL;
-        while ((rc = getvhost(mountfile, dir, dirlen, &did_novhost, 
-                              &uid_found, vhost)) > 0)
-            if ((rc = unmount_vhost(report, uid, vhost, dir, dirlen)))
-                break;
+        int err = errno;
+        DEBUG_MESSAGE("Unable to open: %s: %s\n", persist_dir, strerror(err));
+        return 0; // Not anything to worry about.
+    }
+    struct dirent *ent;
+    s_persist_num[0] = 0;
+    int need_newpersist = 0;
+    while ((ent = readdir(dir_fd)))
+    {
+        /* All that should be there are perist files, persist dirs and VH names */
+        if (ent->d_type == DT_DIR)
+        {
+            if (ent->d_name[0] == '.')
+                continue;
+            if (strspn(ent->d_name, "0123456789") == strlen(ent->d_name))
+            {
+                // Assume a persist number
+                strncpy(s_persist_num, ent->d_name, sizeof(s_persist_num));
+                if (unmount_vhost(report, uid, vhost))
+                    need_newpersist = 1;
+            }
+            else if (!strcmp(ent->d_name, "root"))
+            {
+                struct stat st;
+                char root[PERSIST_FILE_SIZE];
+                snprintf(root, sizeof(root), "%s/root", persist_dir);
+                if (!lstat(root, &st))
+                {
+                    if (st.st_mode & 0777)
+                    {
+                        DEBUG_MESSAGE("Remove old directory: %s\n", root);
+                        clean_dir(root);
+                        if (remove(root))
+                            DEBUG_MESSAGE("Error removing old root directory: %s: %s\n", root, strerror(errno));
+                        continue;
+                    }
+                    else
+                       DEBUG_MESSAGE("st_mode of root is: %o\n", st.st_mode);
+                }
+                else
+                    DEBUG_MESSAGE("Error in lstat of %s: %s\n", root, strerror(errno));
+            }
+            else {
+                // Assume a VH
+                if (!vhost)
+                {
+                    close_unlock_persist();
+                    unpersist_uid(report, uid, ent->d_name);
+                    nspersist_setvhost(vhost);
+                    get_persist_num(1, uid, 1, 0);
+                }
+            }
+        }
+        else
+        {
+            if (!strcmp(ent->d_name, PERSIST_FILE))
+                continue;
+            DEBUG_MESSAGE("Unexpected file: %s, delete it\n", ent->d_name);
+            char random_file[PERSIST_FILE_SIZE];
+            snprintf(random_file, sizeof(random_file), "%s/%s", persist_dir, ent->d_name);
+            remove(random_file);
+        }
+    }
+    if (need_newpersist)
+    {
+        DEBUG_MESSAGE("unpersist_uid failed, bump persist number, graceful unmount - do new_persist on first use\n");
+        rc = new_persist(uid, s_persist_fd, 0);
     }
     else
     {
-        uid_found = 1;
-        if (s_persisted_VH)
-            unmount_vhost(report, uid, s_persisted_VH, dir, dirlen);
+        char persist[PERSIST_FILE_SIZE];
+        persist_persist_file_name(persist, sizeof(persist));
+        int ret = remove(persist);
+        DEBUG_MESSAGE("Attempt to remove %s, %d, %s\n", persist, ret, strerror(errno));
+        char dirname_only[PERSIST_DIR_SIZE];
+        s_persist_num[0] = 0;
+        persist_namespace_dir_vh(uid, dirname_only, sizeof(dirname_only));
+        ret = remove(dirname_only);
+        DEBUG_MESSAGE("Attempt to remove dir %s, %d, %s\n", dirname_only, ret, strerror(errno));
     }
-    if (!rc && uid_found)
-        rc = unmount_vhost(report, uid, NULL, dir, dirlen);
-    s_persist_uid = (uid_t)-1;
+    closedir(dir_fd);
+    close_unlock_persist();
     return rc;
 }   
 
@@ -1713,10 +1935,8 @@ void persist_exit_child(char *desc, int rc)
 }
 
 
-int nspersist_done(int report, int unpersist)
+int nspersist_done()
 {
-    if (unpersist && s_persist_uid != (uid_t)-1)
-        return unpersist_uid(report, s_persist_uid, 0);
     return 0;
 }
 
@@ -1727,6 +1947,7 @@ int unpersist_all()
     struct dirent *ent;
     int rc = 0;
     
+    DEBUG_MESSAGE("unpersist_all\n");
     dir = opendir(PERSIST_PREFIX);
     if (!dir)
     {
@@ -1735,11 +1956,11 @@ int unpersist_all()
                   strerror(err));
         return -1;
     }
-    while (!rc && (ent = readdir(dir)))
+    while (/*!rc && */(ent = readdir(dir)))
     {
         if (ent->d_type == DT_DIR && 
             strspn(ent->d_name, "0123456789") == strlen(ent->d_name))
-            rc = unpersist_uid(0, atoi(ent->d_name), 1);
+            rc = unpersist_uid(0, atoi(ent->d_name), NULL);
     }
     closedir(dir);
     return rc;

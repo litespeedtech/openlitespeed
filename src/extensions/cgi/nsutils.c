@@ -37,27 +37,6 @@ void ls_stderr(const char * fmt, ...)
 #endif
 ;
 
-void ls_stderr(const char * fmt, ...)
-{
-    char buf[1024];
-    char *p = buf;
-    struct timeval  tv;
-    struct tm       tm;
-    extern char *s_persisted_VH;
-    gettimeofday(&tv, NULL);
-    localtime_r(&tv.tv_sec, &tm);
-    p += snprintf(p, 1024, "%04d-%02d-%02d %02d:%02d:%02d.%06d [%d:%d%s%s] NS Error: ",
-        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-        tm.tm_hour, tm.tm_min, tm.tm_sec, (int)tv.tv_usec, 
-        getpid(), getppid(), s_persisted_VH ? ":" : "", 
-        s_persisted_VH ? s_persisted_VH : "");
-    fprintf(stderr, "%.*s", (int)(p - buf), buf);
-
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-}
 //} /* C */
 
 

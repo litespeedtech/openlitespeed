@@ -54,7 +54,7 @@ public:
         ERROR_CANCELED,
     };
     
-    enum
+    enum state
     {
         STATE_NOT_INUSE,
         STATE_DNS,
@@ -71,7 +71,7 @@ public:
         STATE_FINISH = STATE_NOT_INUSE,
     };
     
-    enum
+    enum mode
     {
         MODE_BLOCKING,
         MODE_NON_BLOCKING,
@@ -138,6 +138,8 @@ public:
     int syncFetch(const char *pURL, char *pRespBuf, int respBufLen, int timeout,
                     const char *pReqBody = NULL, int reqBodyLen = 0,
                     const char *pContentType = NULL);
+    static const char *getErrorStr(int error_code);
+
 private:
     VMemBuf    *m_pBuf;
     int         m_fdHttp;
@@ -150,9 +152,13 @@ private:
     int         m_connTimeout;
     short       m_iHostLen;
     short       m_pollEvents;
-    short       m_reqState;
-    char        m_nonblocking;
+    enum state  m_reqState:8;
+    enum mode   m_nonblocking:8;
     char        m_enableDriver;
+    uint8_t     m_iEnableDebug;
+    uint8_t     m_iSsl;
+    uint8_t     m_iVerifyCert;
+    uint8_t     m_family;
     const char *m_pReqBody;
     int64_t     m_reqBodyLen;
 
@@ -181,9 +187,6 @@ private:
     int         m_iTimeoutSec;
     int         m_iReqInited;
     int         m_iLoggerId;
-    int         m_iEnableDebug;
-    short       m_iSsl;
-    short       m_iVerifyCert;
 
 
     int endReq(int res);
