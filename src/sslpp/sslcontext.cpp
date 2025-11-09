@@ -341,14 +341,21 @@ SslContext *SslContext::configOneCert(SslContext *pContext, const char * key_fil
         SSL_CTX_get0_chain_certs(pNewContext->get(), &sk);
         if (!sk)
         {
-            if (!bundle_file && pConfig->m_sCAFile.c_str())
-                bundle_file = pConfig->m_sCAFile.c_str();
+            if (!bundle_file)
+            {
+                if (pConfig->m_sCaChainFile.c_str())
+                    bundle_file = pConfig->m_sCaChainFile.c_str();
+                else if (pConfig->m_sCAFile.c_str())
+                    bundle_file = pConfig->m_sCAFile.c_str();
+            }
             if (bundle_file)
             {
                 if (strcmp(cert_file, bundle_file) == 0)
                     bundle_file = NULL;
                 else
                 {
+                    LS_DBG_L("[SSL:%p] Set CA Chain file: %s for cert: %s\n",
+                             pNewContext, bundle_file, cert_file);
                     if (pNewContext->setCertificateChainFile(bundle_file) <= 0)
                     {
                         LS_ERROR("[SSL] Vhost %s: failed to set Certificate Chain file: %s"

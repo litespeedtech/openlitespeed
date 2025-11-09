@@ -397,12 +397,6 @@ EOF
 
     DIR_OWN=$WS_USER:$WS_GROUP
     CONF_OWN=$WS_USER:$WS_GROUP
-
-    if [ $INST_USER = "root" ]; then
-        if [ $SUCC -eq "1" ]; then
-            chown -R "$DIR_OWN" "$LSWS_HOME"
-        fi
-    fi
 }
 
 stopLshttpd()
@@ -940,8 +934,8 @@ installation_lscpd()
 install_missing_packages()
 {
     if [ -f /etc/redhat-release ] ; then
-        output=$(cat /etc/redhat-release)
-        if echo $output | grep " 9."; then
+        output=$(rpm -E %{rhel})
+        if [ "$output" -ge "9" ] ; then
             yum -y install libxcrypt-compat libnsl
         fi
         if [ "${ARCH}" = "aarch64" ]; then

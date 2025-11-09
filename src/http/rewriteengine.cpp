@@ -1044,7 +1044,7 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
     char achBuf[REWRITE_BUF_SIZE];
     if (!pEnv)
         return 0;
-    while (pEnv)
+    for (; pEnv; pEnv = (RewriteSubstFormat *)pEnv->next())
     {
         len = REWRITE_BUF_SIZE - 1;
         buildString(pEnv, pSession, achBuf, len);
@@ -1207,7 +1207,6 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
                             "[REWRITE] add ENV: '%s:%s' ", pKey, pValue);
             }
         }
-        pEnv = (RewriteSubstFormat *)pEnv->next();
     }
 
     return 0;

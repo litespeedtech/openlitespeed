@@ -107,6 +107,21 @@ def get_min_uid():
     logging.debug('Using min uid: %d' % this.min_uid)
     return this.min_uid
 
+def getpwall():
+    uid_dict = {}
+    final_users = []
+    users = pwd.getpwall()
+    for user in users:
+        if user.pw_uid < get_min_uid():
+            continue
+        if user.pw_uid in uid_dict:
+            continue
+        if user.pw_name == 'nobody':
+            continue
+        uid_dict[user.pw_uid] = user
+        final_users.append(user)
+    return final_users
+
 def container_file():
     return server_root() + "/lsns/conf/lscntr.txt"
 

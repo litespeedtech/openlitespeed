@@ -217,7 +217,6 @@ int FileCacheDataEx::readyData(const char *pPath)
             else
                 release();
         }
-        return -1;
     }
 #if 0
     else if (((size_t)m_lSize < s_iMaxMMapCacheSize)

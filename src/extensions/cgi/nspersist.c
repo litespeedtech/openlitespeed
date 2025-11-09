@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syscall.h>
 #include <sys/file.h>
 #include <sys/fsuid.h>
 #include <sys/mount.h>
@@ -280,13 +281,18 @@ int is_persisted(lscgid_t *pCGI, int must_persist, int *persisted)
 }
 
 #ifndef __NR_setns
+#if defined(__aarch64__)
+#define __NR_setns 268
+#else
 #define __NR_setns 308
-int setns(int fd, int nstype)
+#endif
+#endif
+static int sys_setns(int fd, int nstype)
 {
     DEBUG_MESSAGE("setns, making syscall\n");
     return syscall(__NR_setns, fd, nstype);
 }
-#endif
+
 
 int nspersist_setvhost(char *vhenv)
 {
@@ -1699,7 +1705,7 @@ static int persist_use_child(lscgid_t *pCGI)
         ls_stderr("Namespace error opening namespace for %s: %s\n", 
                   ns_filename, strerror(errno));
     }
-    else if (setns(fd, 0))
+    else if (sys_setns(fd, 0))
     {
         rc = -1;
         ls_stderr("Namespace error setting namespace: %s\n", strerror(errno));

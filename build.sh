@@ -254,23 +254,12 @@ prepareLinux()
 {
     OSTYPE=unknownlinux
     if [ -f /etc/redhat-release ] ; then
-        OSTYPE=CENTOS
         ${FULL_APP_MGR_CMD} update -y
         ${FULL_APP_MGR_CMD} install -y epel-release 
-        output=$(cat /etc/redhat-release)
-        if echo $output | grep " 7."; then
-            OSTYPE=CENTOS7
-        elif echo $output | grep " 8."; then
-            OSTYPE=CENTOS8
-        elif echo $output | grep " release 8"; then
-            OSTYPE=CENTOS8
-        elif echo $output | grep " 9."; then
-            OSTYPE=CENTOS9
-        elif echo $output | grep " release 9"; then
-            OSTYPE=CENTOS9
-        fi
-        
-        if [ "${OSTYPE}" = "CENTOS7" ] ; then
+        output=$(rpm -E %{rhel})
+        OSTYPE="CENTOS$output"
+
+        if [ "${output}" -eq "7" ] ; then
             if [ ! -f ./installing ] ; then    
                 ${FULL_APP_MGR_CMD} -y install centos-release-scl
                 which yum-config-manager
@@ -285,11 +274,11 @@ prepareLinux()
                 exit 0
             fi
             
-        elif [ "${OSTYPE}" = "CENTOS8" ] || [ "${OSTYPE}" = "CENTOS9" ] ; then
+        elif [ "$output" -ge "8" ] ; then
             $DOSUDO dnf -y groupinstall "Development Tools"
 
         else
-            echo This script only works on 7/8/9 for centos family._Static_assert
+            echo This script only works on 7+ for centos family._Static_assert
             exit 1
         fi
         

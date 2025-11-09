@@ -165,10 +165,9 @@ def command_list(args, pkg_sizes, single_list=False):
 
 def plesk_home_dict():
     home_dict = {}
-    for user in pwd.getpwall():
-        if user.pw_uid >= common.get_min_uid():
-            logging.debug('home_dict key: ' + user.pw_dir)
-            home_dict[user.pw_dir] = user
+    for user in common.getpwall():
+        logging.debug('home_dict key: ' + user.pw_dir)
+        home_dict[user.pw_dir] = user
     return home_dict
 
 def read_pleskplans(plans):
@@ -203,7 +202,8 @@ def read_pleskplans(plans):
                 logging.debug(match)
             common.fatal_error("Expected 3 matches in %s and got %d" % (line, len(matches)))
         if not matches[1] in home_dict:
-            common.fatal_error("%s in user dictionary from %s" % (matches[1], line))
+            logging.debug("Missing expected home directory %s; verify it in /etc/passwd (from %s)" % (matches[1], line))
+            continue
         plan = matches[2]
         user = home_dict[matches[1]]
         logging.debug("   add to %s: %s (%d)" % (plan, user.pw_name, user.pw_uid))

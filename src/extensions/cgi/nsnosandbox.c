@@ -30,6 +30,9 @@
 #include "lscgid.h"
 #include "use_bwrap.h"
 
+/* Default nosandbox info if neither file exists.  Must be sorted here.  */
+char       *s_nosandbox_def[] = { "/usr/sbin/sendmail" };
+
 char       *s_nosandbox = NULL;
 char      **s_nosandbox_arr = NULL; /* At the end of no_sandbox and sorted. */
 int         s_nosandbox_count = 0;
@@ -826,12 +829,40 @@ static int read_hostexec_files(char *filename, FILE *fh, int *no_sandbox_len)
 }
 
 
+static int build_nosandboxpgm(char *pathname)
+{
+    char nosandbox_pgm[NOSANDBOX_MAX_FILE_LEN];
+    snprintf(nosandbox_pgm, sizeof(nosandbox_pgm), NOSANDBOX_PGM, pathname);
+    if (access(nosandbox_pgm, X_OK) != 0) 
+    {
+        ls_stderr("hostexec program (%s) is not an executable program: %s\n", 
+                  nosandbox_pgm, strerror(errno));
+        return -1;
+    }
+    if (!(s_nosandbox_pgm = strdup(nosandbox_pgm)))
+    {
+        ls_stderr("Insufficient memory to allocate program space\n");
+        return -1;
+    }
+    return 0;
+}
+
+static int nodef()
+{
+    int count = (int)(sizeof(s_nosandbox_def) / sizeof(char **));
+    for (int i = 0; i < count; i++)
+        if (!access(s_nosandbox_def[i], 0))
+            return 0;
+    DEBUG_MESSAGE("Default entries do not exist\n")
+    return 1;
+}
+
 int nsnosandbox_init()
 {
     if (s_nosandbox)
         return 0;
     char pathname[NOSANDBOX_MAX_FILE_LEN / 2], filename[NOSANDBOX_MAX_FILE_LEN], 
-         nosandbox_pgm[NOSANDBOX_MAX_FILE_LEN], nosandbox_force_symlink_file[NOSANDBOX_MAX_FILE_LEN];
+         nosandbox_force_symlink_file[NOSANDBOX_MAX_FILE_LEN];
     ns_lsws_home(pathname, sizeof(pathname));
     snprintf(nosandbox_force_symlink_file, sizeof(nosandbox_force_symlink_file),
              NOSANDBOX_FORCE_SYMLINK, pathname);
@@ -842,53 +873,67 @@ int nsnosandbox_init()
     }
     snprintf(filename, sizeof(filename), NOSANDBOX_CONF, pathname);
     FILE *fh = fopen(filename, "r");
+    int use_default = 0;
     if (!fh)
     {
+        int no_def1 = 0;
+        if (errno == ENOENT && !nodef())
+            no_def1 = 1;
         DEBUG_MESSAGE("Error reading hostexec file: %s: %s, ok to not be there\n", 
                       filename, strerror(errno));
         snprintf(filename, sizeof(filename), NOSANDBOX2_CONF, pathname);
         fh = fopen(filename, "r");
         if (!fh)
         {
-            DEBUG_MESSAGE("Error reading hostexec file: %s: %s, ok to not be there\n", 
-                          filename, strerror(errno));
-            return 0;
+            if (errno == ENOENT && no_def1)
+            {
+                DEBUG_MESSAGE("Use default hostexec!\n");
+                use_default = 1;
+                s_nosandbox = (char *)s_nosandbox_def;
+                s_nosandbox_arr = s_nosandbox_def;
+                s_nosandbox_count = sizeof(s_nosandbox_def) / sizeof(char **);
+                DEBUG_MESSAGE("There are %d hostexec files\n", s_nosandbox_count);
+                if (build_nosandboxpgm(pathname))
+                    return -1;
+            }
+            else
+            {
+                DEBUG_MESSAGE("Error reading hostexec file: %s: %s, ok to not be there\n", 
+                              filename, strerror(errno));
+                return 0;
+            }
         }
     }
-    int no_sandbox_len = 0;
-    if (read_hostexec_files(filename, fh, &no_sandbox_len))
-        return -1;
-    if (s_nosandbox_count) 
+    if (!use_default)
     {
-        snprintf(nosandbox_pgm, sizeof(nosandbox_pgm), NOSANDBOX_PGM, pathname);
-        if (access(nosandbox_pgm, X_OK) != 0) 
-        {
-            ls_stderr("hostexec program (%s) is not an executable program: %s\n", 
-                      nosandbox_pgm, strerror(errno));
+        int no_sandbox_len = 0;
+        if (read_hostexec_files(filename, fh, &no_sandbox_len))
             return -1;
-        }
-        if (!(s_nosandbox_pgm = strdup(nosandbox_pgm)))
+        if (s_nosandbox_count) 
         {
-            ls_stderr("Insufficient memory to allocate program space\n");
-            return -1;
+            if (build_nosandboxpgm(pathname))
+                return -1;
+            int last_len = no_sandbox_len;
+            no_sandbox_len += (s_nosandbox_count * sizeof(char *));
+            s_nosandbox = realloc(s_nosandbox, no_sandbox_len);
+            s_nosandbox_arr = (char **)&s_nosandbox[last_len];
+            int pos = 0;
+            for (int i = 0; i < s_nosandbox_count; i++)
+            {
+                s_nosandbox_arr[i] = &s_nosandbox[pos];
+                pos += (strlen(s_nosandbox_arr[i]) + 1);
+                DEBUG_MESSAGE("s_sandbox_arr[%d]: %s\n", i, s_nosandbox_arr[i]);
+            }
+            qsort(s_nosandbox_arr, s_nosandbox_count, sizeof(char *), compareStrings);
+            DEBUG_MESSAGE("After sort There are %d hostexec files\n", s_nosandbox_count);
+            for (int i = 0; i < s_nosandbox_count; i++)
+            {
+                DEBUG_MESSAGE("s_sandbox_arr[%d]: %s\n", i, s_nosandbox_arr[i]);
+            }
         }
-        int last_len = no_sandbox_len;
-        no_sandbox_len += (s_nosandbox_count * sizeof(char *));
-        s_nosandbox = realloc(s_nosandbox, no_sandbox_len);
-        s_nosandbox_arr = (char **)&s_nosandbox[last_len];
-        int pos = 0;
-        for (int i = 0; i < s_nosandbox_count; i++)
-        {
-            s_nosandbox_arr[i] = &s_nosandbox[pos];
-            pos += (strlen(s_nosandbox_arr[i]) + 1);
-            DEBUG_MESSAGE("s_sandbox_arr[%d]: %s\n", i, s_nosandbox_arr[i]);
-        }
-        qsort(s_nosandbox_arr, s_nosandbox_count, sizeof(char *), compareStrings);
-        DEBUG_MESSAGE("After sort There are %d hostexec files\n", s_nosandbox_count);
-        for (int i = 0; i < s_nosandbox_count; i++)
-        {
-            DEBUG_MESSAGE("s_sandbox_arr[%d]: %s\n", i, s_nosandbox_arr[i]);
-        }
+    }
+    if (s_nosandbox_count)
+    {
         if (save_links())
             return -1;
         if (open_nosandbox_socket())
@@ -896,12 +941,6 @@ int nsnosandbox_init()
     }
     //ls_stderr("There are %d sandbox files excluded from the sandbox\n", s_nosandbox_count);
     return 0;
-}
-
-
-void nsnosandbox_resort()
-{
-    qsort(s_nosandbox_arr, s_nosandbox_count, sizeof(char *), compareStrings);
 }
 
 
@@ -913,7 +952,8 @@ void nsnosandbox_done()
         close(s_nosandbox_socket);
         s_nosandbox_socket = -1;
     }
-    free(s_nosandbox);
+    if (s_nosandbox != (char *)s_nosandbox_def)
+        free(s_nosandbox);
     s_nosandbox = NULL;
     free(s_nosandbox_pgm);
     s_nosandbox_pgm = NULL;

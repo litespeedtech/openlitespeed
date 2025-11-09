@@ -408,10 +408,13 @@ int AccessLog::appendEscape(const char *pStr, int len)
 
         if (m_buf.available() < 10)
             flush();
-        if ((ch < 0x20) || (ch >= 127))
+        if (ch == '\t')
         {
-            m_buf.append('\\');
-            m_buf.append('x');
+            m_buf.append("\\t", 2);
+        }
+        else if ((ch < 0x20) || (ch >= 127))
+        {
+            m_buf.append("\\\\x", 3);
             m_buf.append(StringTool::getHex(ch >> 4));
             m_buf.append(StringTool::getHex(ch));
         }
