@@ -131,6 +131,7 @@ SetupOp     s_SetupOp_default[] =
     { SETUP_BIND_MOUNT, "/opt/psa", "/opt/psa", OP_FLAG_ALLOW_NOTEXIST, -1 },
     { SETUP_BIND_MOUNT, "/var/lib/php/sessions", "/var/lib/php/sessions", OP_FLAG_ALLOW_NOTEXIST, -1},
     { SETUP_BIND_MOUNT, "/var/lib/php/session", "/var/lib/php/session", OP_FLAG_ALLOW_NOTEXIST, -1},
+    { SETUP_BIND_MOUNT, "/var/cpanel/php/sessions", "/var/cpanel/php/sessions", OP_FLAG_ALLOW_NOTEXIST, -1},
     { SETUP_NOOP, NULL, NULL, OP_FLAG_LAST, -1 }
 };
 
@@ -1555,7 +1556,7 @@ static int try_symlink_trick(const char *src, const char *dest)
     return 0;
 }
 
-static int bind_mount(const char *src, const char *dest, bind_option_t options)
+static int bind_mount(int flags, const char *src, const char *dest, bind_option_t options)
 {
     int readonly = (options & BIND_READONLY) != 0;
     int devices = (options & BIND_DEVICES) != 0;
@@ -1585,6 +1586,11 @@ static int bind_mount(const char *src, const char *dest, bind_option_t options)
                      !nsnosandbox_symlink()) &&
                     !try_symlink_trick(src, dest))
                     return 0;
+                else if (flags & OP_FLAG_SUSPICIOUS_LINK)
+                {
+                    DEBUG_MESSAGE("Suspicious link bind failure ignored\n");
+                    return 0;
+                }
             }
             if (err)
             {
@@ -1756,13 +1762,13 @@ static int do_copy(uint32_t flags, const char *source, const char *dest, int *fd
         return -1;
     }
     DEBUG_MESSAGE("copy complete: %s -> %s\n", source, dest);
-    rc = bind_mount(temp_filename, dest, 0);
+    rc = bind_mount(flags, temp_filename, dest, 0);
     return 0;
 }
 
 
 static int privileged_op(int privileged_op_socket, uint32_t op, 
-                         uint32_t flags, const char *arg1, const char *arg2, int *fd)
+                         uint32_t flags, const char *arg1, const char *arg2, SetupOp *setupOp)
 {
     if (privileged_op_socket != -1)
     {
@@ -1841,7 +1847,7 @@ static int privileged_op(int privileged_op_socket, uint32_t op,
             break;
 
         case PRIV_SEP_OP_REMOUNT_RO_NO_RECURSIVE:
-            if (bind_mount(NULL, arg2, BIND_READONLY) != 0)
+            if (bind_mount(setupOp->flags, NULL, arg2, BIND_READONLY) != 0)
             {
                 ls_stderr("Namespace error in bind mount of %s: %s\n", arg2, 
                           strerror(errno));
@@ -1852,7 +1858,7 @@ static int privileged_op(int privileged_op_socket, uint32_t op,
         case PRIV_SEP_OP_BIND_MOUNT:
             /* We always bind directories recursively, otherwise this would let us
                access files that are otherwise covered on the host */
-            if (bind_mount (arg1, arg2, flags) != 0)
+            if (bind_mount (setupOp->flags, arg1, arg2, flags) != 0)
             {
                 ls_stderr("Namespace error in bind mount of %s to %s: %s\n", arg1, 
                           arg2, strerror(errno));
@@ -1938,7 +1944,7 @@ static int privileged_op(int privileged_op_socket, uint32_t op,
             break;
 
         case PRIV_SEP_OP_COPY:
-            return do_copy(flags, arg1, arg2, fd);
+            return do_copy(flags, arg1, arg2, &setupOp->fd);
             
         default:
             ls_stderr("Namespace unexpected privileged op #%d\n", op);
@@ -2325,7 +2331,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                     if (privileged_op(privileged_op_socket, PRIV_SEP_OP_BIND_MOUNT,
                                       (op->type == SETUP_RO_BIND_MOUNT ? BIND_READONLY : 0) |
                                           (op->type == SETUP_DEV_BIND_MOUNT ? BIND_DEVICES : 0),
-                                      source, dest, &op->fd))
+                                      source, dest, op))
                         rc = -1;
                 */
                 break;
@@ -2333,7 +2339,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
             case SETUP_REMOUNT_RO_NO_RECURSIVE:
                 if (privileged_op(privileged_op_socket, 
                                   PRIV_SEP_OP_REMOUNT_RO_NO_RECURSIVE, 0, NULL, 
-                                  dest, &op->fd))
+                                  dest, op))
                     rc = -1;
                 break;
 
@@ -2343,7 +2349,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
 
                 if (!rc && privileged_op(privileged_op_socket, 
                                          PRIV_SEP_OP_PROC_MOUNT, 0, dest, NULL, 
-                                         &op->fd))
+                                         op))
                     rc = -1;
 
                 /* There are a bunch of weird old subdirs of /proc that could 
@@ -2374,7 +2380,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                         if (!rc && privileged_op(privileged_op_socket, 
                                                  PRIV_SEP_OP_BIND_MOUNT, 
                                                  BIND_READONLY | BIND_RECURSIVE, subdir, subdir, 
-                                                 &op->fd))
+                                                 op))
                             rc = -1;
                         free(subdir);
                         if (rc)
@@ -2389,7 +2395,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
 
                 if (!rc && privileged_op(privileged_op_socket, 
                                          PRIV_SEP_OP_TMPFS_MOUNT, 
-                                         0, dest, NULL, &op->fd))
+                                         0, dest, NULL, op))
                     rc = -1;
                 
                 if (!rc)
@@ -2406,7 +2412,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                         if (!rc && privileged_op(privileged_op_socket, 
                                                  PRIV_SEP_OP_BIND_MOUNT, 
                                                  BIND_DEVICES | BIND_RECURSIVE, node_src, 
-                                                 node_dest, &op->fd))
+                                                 node_dest, op))
                             rc = -1;
                         free(node_dest);
                         free(node_src);
@@ -2491,7 +2497,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                     }
                     if (!rc && privileged_op(privileged_op_socket,
                                              PRIV_SEP_OP_DEVPTS_MOUNT, 0, pts, 
-                                             NULL, &op->fd))
+                                             NULL, op))
                         rc = -1;
                     if (!rc && symlink ("pts/ptmx", ptmx) != 0)
                     {
@@ -2524,7 +2530,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                     if (!rc && privileged_op(privileged_op_socket,
                                              PRIV_SEP_OP_BIND_MOUNT, 
                                              BIND_DEVICES, src_tty_dev, 
-                                             dest_console, &op->fd))
+                                             dest_console, op))
                         rc = -1;
                     free(src_tty_dev);
                     free(dest_console);
@@ -2538,7 +2544,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
 
                 if (!rc && privileged_op(privileged_op_socket,
                                          PRIV_SEP_OP_TMPFS_MOUNT, 0, dest, NULL, 
-                                         &op->fd))
+                                         op))
                     rc = -1;
                 break;
 
@@ -2548,7 +2554,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
 
                 if (!rc && privileged_op(privileged_op_socket,
                                          PRIV_SEP_OP_MQUEUE_MOUNT, 0, dest, 
-                                         NULL, &op->fd))
+                                         NULL, op))
                     rc = -1;
                 break;
 
@@ -2603,7 +2609,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 assert (dest != NULL);
                 if (privileged_op(privileged_op_socket,
                                   PRIV_SEP_OP_SET_HOSTNAME, 0, dest, NULL, 
-                                  &op->fd))
+                                  op))
                     rc = -1;
                 break;
 
@@ -2611,7 +2617,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                 if (source != NULL && dest != NULL &&
                     privileged_op(privileged_op_socket,
                                   PRIV_SEP_OP_COPY, op->flags, source, dest, 
-                                  &op->fd))
+                                  op))
                     rc = -1;
                 break;
               
@@ -2669,7 +2675,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
                                   (op->type == SETUP_RO_BIND_MOUNT ? BIND_READONLY : 0) |
                                   (op->type == SETUP_DEV_BIND_MOUNT ? BIND_DEVICES : 0) |
                                   ((op->flags & OP_FLAG_NO_SANDBOX) ? 0 : BIND_RECURSIVE),
-                                  source, dest, &op->fd))
+                                  source, dest, op))
                     rc = -1;
                 break;
             default: break;
@@ -2683,7 +2689,7 @@ static int setup_newroot(lscgid_t *pCGI, SetupOp *setupOp,
     }
     DEBUG_MESSAGE("setup_newroot, completed big loop2, rc: %d\n", rc);
     if (!rc && privileged_op(privileged_op_socket,
-                             PRIV_SEP_OP_DONE, 0, NULL, NULL, &op->fd))
+                             PRIV_SEP_OP_DONE, 0, NULL, NULL, op))
     {
         ls_stderr("Namespace error completing operations\n");
         rc = -1;
@@ -2741,6 +2747,20 @@ static int resolve_symlinks_in_ops (SetupOp *setupOp)
                 {
                     DEBUG_MESSAGE("Symlink resolved %s to %s\n", old_source, 
                                   op->source);
+                    if (strcmp(old_source, op->source))
+                    {
+                        char linked[NOSANDBOX_MAX_FILE_LEN];
+                        ssize_t sz = readlink(old_source, linked, sizeof(linked));
+                        if (sz > 0)
+                        {
+                            linked[sz] = 0;
+                            if (linked[0] == '.')
+                            {
+                                DEBUG_MESSAGE("Mark as suspicious link %s\n", linked);
+                                op->flags |= OP_FLAG_SUSPICIOUS_LINK;
+                            }
+                        }
+                    }
                     if (op->flags & OP_FLAG_ALLOCATED_SOURCE)
                         free(old_source);
                     op->flags |= OP_FLAG_ALLOCATED_SOURCE;

@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
                 
             case 's':
                 vhost = strdup(optarg);
-                snprintf(env, sizeof(env), "LS_NS_VHOST=%s", cfg2file);
+                snprintf(env, sizeof(env), "LS_NS_VHOST=%s", vhost);
                 putenv(env);
                 break;
             

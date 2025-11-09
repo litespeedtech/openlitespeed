@@ -96,7 +96,7 @@ if (CMAKE_C_COMPILER MATCHES "clang")
     unset(LIBSAN)
 endif()
 
-set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-unused-function")
+set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -DHAVE_BORINGSSL -Wall -Wextra -Wno-unused-parameter -Wno-unused-function")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Suppress gcc warnings about BoringSSL's openssl/stack.h

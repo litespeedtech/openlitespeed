@@ -50,7 +50,8 @@ typedef enum {
 #define OP_FLAG_SOURCE_CREATE       128
 #define OP_FLAG_NO_SANDBOX          256
 #define OP_FLAG_DO_BIND             512
-#define OP_FLAG_LAST                1024
+#define OP_FLAG_SUSPICIOUS_LINK     1024
+#define OP_FLAG_LAST                2048
 
 typedef struct _SetupOp SetupOp;
 

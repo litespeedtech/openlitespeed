@@ -155,11 +155,9 @@ def command_list(users):
         for user in users:
             list_user(user, dict)
     else:
-        users = pwd.getpwall()
-        min_uid = common.get_min_uid()
+        users = common.getpwall()
         for listuser in users:
-            if listuser.pw_uid >= min_uid and listuser.pw_name != 'nobody':
-                list_user(listuser, dict)
+            list_user(listuser, dict)
     print(json.dumps(dict, indent=4))
     return 0
 
@@ -215,20 +213,18 @@ def reset_user(args, user, reload):
     args.iops = '-1';
     args.mem = '-1'
     args.tasks = '-1'
-    return set_user(args, user, reload)
+    users = [user]
+    return set_user(args, users, reload)
 
 def command_reset(args, users):
     if args.command == 'reset' or args.command == 'reset-user':
         for user in users:
             reset_user(args, user, True)
     else:
-        users = pwd.getpwall()
-        min_uid = common.get_min_uid()
-        need_reload = False
+        users = common.getpwall()
+        need_reload = len(users) > 0
         for listuser in users:
-            if listuser.pw_uid >= min_uid:
-                need_reload = True
-                reset_user(args, listuser)
+            reset_user(args, listuser)
         if need_reload:
             systemctl_daemon_reload()
     if not args.quiet:
@@ -259,13 +255,10 @@ def command_set(args, users):
     if args.command == 'set' or args.command == 'set-user':
         set_user(args, users, True)
     else:
-        users = pwd.getpwall()
-        min_uid = common.get_min_uid()
-        need_reload = False
+        users = common.getpwall()
+        need_reload = len(users) > 0
         for listuser in users:
-            if listuser.pw_uid >= min_uid:
-                need_reload = True
-                set_user(args, listuser, False)
+            set_user(args, listuser, False)
         if need_reload:
             systemctl_daemon_reload()
     if not args.quiet:

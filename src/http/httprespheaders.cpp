@@ -152,7 +152,7 @@ void HttpRespHeaders::reset2()
 {
     if (m_KVPairindex[H_SET_COOKIE] == HRH_IDX_NONE)
     {
-        reset();
+        reset(m_flags & HRH_F_LC_NAME);
         return;
     }
     if (m_iHeaderUniqueCount == 1)
@@ -163,7 +163,7 @@ void HttpRespHeaders::reset2()
     max = getHeader(H_SET_COOKIE, iov, 100);
     AutoBuf tmp;
     tmp.swap(m_buf);
-    reset();
+    reset(m_flags & HRH_F_LC_NAME);
     pIovEnd = &iov[max];
     for (pIov = iov; pIov < pIovEnd; ++pIov)
         add(H_SET_COOKIE, "Set-Cookie", 10, (char *)pIov->iov_base,
@@ -171,9 +171,9 @@ void HttpRespHeaders::reset2()
 }
 
 
-void HttpRespHeaders::reset()
+void HttpRespHeaders::reset(int flag)
 {
-    m_flags = 0;
+    m_flags = flag;
     m_iHeaderUniqueCount = 0;
     m_buf.clear();
     memset(m_KVPairindex, 0xFF, sizeof(m_KVPairindex));

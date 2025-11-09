@@ -218,7 +218,9 @@ const struct sockaddr *HttpSession::getPeerAddr() const
 
 bool HttpSession::shouldIncludePeerAddr() const
 {
-    if (getStream()->isFromLocalAddr())
+    if (getStream()->isFromLocalAddr()
+        && (!m_request.isCfRealIpSet()
+            || m_request.isHeaderSet(HttpHeader::H_X_FORWARDED_FOR)))
         return false;
     if (HttpServerConfig::getInstance().getUseProxyHeader() != 3)
         return true;
@@ -2022,7 +2024,8 @@ bool HttpSession::shouldAvoidRecaptchaEx()
     const Recaptcha *pRecaptcha = m_request.getRecaptcha(),
             *pServerRecaptcha = HttpServerConfig::getInstance()
                .getGlobalVHost()->getRecaptcha();
-
+    if (pServerRecaptcha == NULL)
+        return true;
     // check bots
     if (m_request.isGoodBot()
         || pServerRecaptcha->isBotWhitelisted(pUserAgent, iUserAgentLen)
@@ -4380,7 +4383,7 @@ int HttpSession::endResponse(int success)
     {
         // header is not sent yet, no body sent yet.
         //content length = dynamic content + static send file
-        long size = m_sendFileInfo.getRemain();
+        off_t size = m_sendFileInfo.getRemain();
         if (getRespBodyBuf())
             size += getRespBodyBuf()->getCurWOffset();
 
@@ -5233,7 +5236,7 @@ void HttpSession::setSendFileBeginEnd(off_t start, off_t end)
 {
     m_sendFileInfo.setCurPos(start);
     m_sendFileInfo.setCurEnd(end);
-    LS_DBG_M(getLogSession(), "setSendFileBeginEnd %ld, %ld remain %ld",
+    LS_DBG_M(getLogSession(), "setSendFileBeginEnd %jd, %jd remain %jd",
              m_sendFileInfo.getCurPos(), m_sendFileInfo.getCurEnd(), m_sendFileInfo.getRemain());
     if ((end > start) && getFlag(HSF_RESP_WAIT_FULL_BODY))
     {
@@ -5298,8 +5301,8 @@ int HttpSession::writeRespBodyBlockFilterInternal(SendFileInfo *pData,
 
 int HttpSession::postAsyncRead(SendFileInfo *pData)
 {
-    int remain = pData->getRemain();
-    int len = (remain < (int)HttpServerConfig::getInstance().getAioBlockSize()) ?
+    off_t remain = pData->getRemain();
+    off_t len = (remain < (int)HttpServerConfig::getInstance().getAioBlockSize()) ?
         remain : (int)HttpServerConfig::getInstance().getAioBlockSize();
     struct iovec *iov = m_pAioReq->getIovec();
     iov->iov_len = len;
@@ -5386,8 +5389,8 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
 
 int HttpSession::aioRead(SendFileInfo *pData, void *pBuf)
 {
-    int remain = pData->getRemain();
-    int len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain :
+    off_t remain = pData->getRemain();
+    off_t len = (remain < STATIC_FILE_BLOCK_SIZE) ? remain :
               STATIC_FILE_BLOCK_SIZE;
     if (!pBuf)
         pBuf = ls_palloc(STATIC_FILE_BLOCK_SIZE);
@@ -5507,7 +5510,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
 
         len = writeRespBodySendFile(fd, pData->getCurPos(), remain,
                                     pData->getRemain() <= remain);
-        LS_DBG_M(getLogSession(), "writeRespBodySendFile() write %ld returned %zd.",
+        LS_DBG_M(getLogSession(), "writeRespBodySendFile() write %jd returned %zd.",
                  remain, len);
         if (len > 0)
         {
@@ -5539,7 +5542,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
     {
         char *block = buf;
         int written = 0;
-        LS_DBG_M(getLogSession(), "sendStaticFileEx getStaticFileBlock, remain: %ld\n", remain);
+        LS_DBG_M(getLogSession(), "sendStaticFileEx getStaticFileBlock, remain: %jd\n", remain);
         int ret = getStaticFileBlock(pData, remain, &block, &written);
         pBuf = block;
         if (ret)
@@ -5564,7 +5567,7 @@ int HttpSession::sendStaticFileEx(SendFileInfo *pData)
             return 1;
         }
     }
-    LS_DBG_M(getLogSession(), "sendStaticFileEx out of loop, remain: %ld\n", remain);
+    LS_DBG_M(getLogSession(), "sendStaticFileEx out of loop, remain: %jd\n", remain);
     return (pData->getRemain() > 0);
 }
 
@@ -5876,7 +5879,7 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
     int read, ret;
     ret = m_pAioReq->getRead(&pBuf, pData->getCurPos(), &read);
 
-    LS_DBG(getLogSession(), "getRead(): ret: %d, read: %d, remain: %ld\n",
+    LS_DBG(getLogSession(), "getRead(): ret: %d, read: %d, remain: %jd\n",
            ret, read, pData->getRemain());
     if (ret < 0)
         return -1;
@@ -5972,7 +5975,7 @@ int HttpSession::onAioReqEvent()
     {
         LS_NOTICE(getLogSession(), "onAioReqEvent canceled AIO request returned, can release HttpSession now\n");
     }
-    LS_DBG(getLogSession(), "onAioReqEvent, remain: %ld\n", m_sendFileInfo.getRemain());
+    LS_DBG(getLogSession(), "onAioReqEvent, remain: %jd\n", m_sendFileInfo.getRemain());
     return processAsyncData(&m_sendFileInfo);
 }
 

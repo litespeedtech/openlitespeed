@@ -833,28 +833,43 @@ LsShmOffset_t LsShmPool::allocFromDataBucket(LsShmSize_t size)
     if ((offset = *pBucket) != 0)
     {
         if (!m_pShm->isOffsetValid(offset))
-            m_pShm->remap();
-        np = (LsShmOffset_t *)offset2ptr(offset);
-        if (!m_pShm->isOffsetValid(*np))
         {
-            LS_ERROR("[SHM] [%d-%d:%p] pool free bucket [%d] corruption, at "
-                     "offset: %d, invalid value: %d, usage: alloc %d, free %d\n",
-                     s_pid, m_pShm->getfd(), this, num, offset, *np, 
-                     getDataMap()->x_stat.m_bckt[num].m_iBkAllocated,
-                     getDataMap()->x_stat.m_bckt[num].m_iBkReleased );
-            *pBucket = (LsShmOffset_t)0;
+            m_pShm->remap();
+            if (!m_pShm->isOffsetValid(offset))
+            {
+                LS_ERROR("[SHM] [%d-%d:%p] pool free bucket [%d] corruption, has "
+                            "invalide offset: %d, usage: alloc %d, free %d\n",
+                            s_pid, m_pShm->getfd(), this, num, offset,
+                            getDataMap()->x_stat.m_bckt[num].m_iBkAllocated,
+                            getDataMap()->x_stat.m_bckt[num].m_iBkReleased );
+                offset = *pBucket = (LsShmOffset_t)0;
+            }
         }
-        else
-            *pBucket = *np;
+        if (offset)
+        {
+            np = (LsShmOffset_t *)offset2ptr(offset);
+            if (!m_pShm->isOffsetValid(*np))
+            {
+                LS_ERROR("[SHM] [%d-%d:%p] pool free bucket [%d] corruption, at "
+                        "offset: %d, invalid value: %d, usage: alloc %d, free %d\n",
+                        s_pid, m_pShm->getfd(), this, num, offset, *np,
+                        getDataMap()->x_stat.m_bckt[num].m_iBkAllocated,
+                        getDataMap()->x_stat.m_bckt[num].m_iBkReleased );
+                *pBucket = (LsShmOffset_t)0;
+            }
+            else
+                *pBucket = *np;
+        }
     }
-    else 
+
+    if (offset == 0)
     {
         if (s_debug_free_bucket == num)
             LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] freebucket %d is empty for size: %d\n", 
                     s_pid, m_pShm->getfd(), this, num, size);
         if ((offset = fillDataBucket(num, size)) == 0)
             return 0;
-        }
+    }
     incrCheck(&getDataMap()->x_stat.m_bckt[num].m_iBkAllocated, 1);
     if (s_debug_free_bucket == num)
         LS_LOGRAW("[DEBUG] [SHM] [%d-%d:%p] allocate from freebucket, "

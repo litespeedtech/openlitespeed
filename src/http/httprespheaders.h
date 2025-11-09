@@ -116,7 +116,7 @@ public:
     HttpRespHeaders();
     ~HttpRespHeaders();
 
-    void reset();
+    void reset(int flag = 0);
     void reset2();
 
     const lsxpack_header *begin() const {   return m_lsxpack.begin();   }

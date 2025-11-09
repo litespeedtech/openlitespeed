@@ -28,12 +28,12 @@ def systemctl_daemon_reload():
     logging.debug("Do daemon-reload")
     run_program(['systemctl', 'daemon-reload'])
 
-def validate_environment():
-    if not os.path.exists('/sys/fs/cgroup/cgroup.controllers'):
+def validate_environment(args):
+    if not args.namespace_only and not args.disable and not os.path.exists('/sys/fs/cgroup/cgroup.controllers'):
         common.fatal_error("cgroups is not v2 on this machine")
     if os.getuid() != 0:
         common.fatal_error("this program must be run as root")
-    if not os.path.isfile('/etc/systemd/system.control/user.slice.d/50-IOAccounting.conf'):
+    if not args.namespace_only and not args.disable and not os.path.isfile('/etc/systemd/system.control/user.slice.d/50-IOAccounting.conf'):
         logging.debug('Activate accounting')
         run_program(['systemctl', 'set-property', 'user.slice', 'IOAccounting=yes', 'MemoryAccounting=yes', 'TasksAccounting=yes'])
         systemctl_daemon_reload()
@@ -45,14 +45,16 @@ def init_pgm():
     parser.add_argument('-l', '--log', type=int, help='set logging level, 10=Debug, 20=Info, 30=Warning, 40=Error.  Default is Info')
     parser.add_argument('-q', '--quiet', action='store_true', help='turns off all logging and only outputs what is requested.')
     parser.add_argument('-s', '--server_root', default=common.server_root(), help='the LiteSpeed SERVER_ROOT')
-    parser.add_argument('-c', '--cgroups', type=int, default=1, help='The minimum value for cgroups')
+    parser.add_argument('-c', '--cgroups', type=int, default=2, help='The minimum value for cgroups')
     parser.add_argument('-i', '--cgroups-init', type=int, default=2, help='The cgroups value if not set currently')
-    parser.add_argument('-n', '--namespace', type=int, default=1, help='The minimum value for namespace')
+    parser.add_argument('-n', '--namespace', type=int, default=2, help='The minimum value for namespace')
     parser.add_argument('-m', '--namespace-init', type=int, default=2, help='The namespace value if not set currently')
     parser.add_argument('-g', '--no-config', action='store_true', help='Skips checking of LiteSpeed Config')
     parser.add_argument('-t', '--no-subtree_control', action='store_true', help='Skips checking of system cgroup.subtree_control file')
     parser.add_argument('-u', '--no-upgrade', action='store_true', help='Does not check the version of LiteSpeed')
     parser.add_argument('-r', '--revert-config', action='store_true', help='Reverts modified LiteSpeed config file')
+    parser.add_argument('-o', '--namespace-only', action='store_true', help='No cgroups, namespaces only')
+    parser.add_argument('-d', '--disable', action='store_true', help='LiteSpeed Containers Disable')
     args = parser.parse_args()
     if not args.quiet or args.log != None:
         if args.log != None:
@@ -61,7 +63,7 @@ def init_pgm():
             logging.getLogger().setLevel(logging.INFO)
         logging.debug("Entering setup")
     common.set_server_root(args.server_root)
-    validate_environment()
+    validate_environment(args)
     return args
 
 def config_filename(lsws):
@@ -84,17 +86,26 @@ def copy_file_details(source, dest):
     shutil.copystat(source, dest)
     os.chown(dest, s.st_uid, s.st_gid)
 
-def set_cgroups(root, val, init):
+def set_cgroups(root, disable, val, init):
     valSet = False
     findLimit = root.find('./security/CGIRLimit')
     if findLimit == None:
         common.fatal_error('Unexpected missing element CGIRLimit in configuration file')
     cgroups = findLimit.find('cgroups')
-    if cgroups == None:
+    if disable:
+        if cgroups != None and int(cgroups.text) > 0:
+            logging.debug('cgroups needs disabling')
+            cgroups.text = str(0)
+            valset = True
+    elif cgroups == None:
         logging.debug('cgroups not in LSWS file')
         cgroups = ET.SubElement(findLimit, 'cgroups')
         cgroups.text = str(init)
         valSet = True
+    elif disable and int(cgroups.text) > 0:
+        logging.debug('cgroups needs disabling')
+        cgroups.text = str(0)
+        valset = True
     elif int(cgroups.text) < val:
         logging.debug('cgroups bad value in LSWS file')
         cgroups.text = str(val)
@@ -106,13 +117,18 @@ def set_cgroups(root, val, init):
         
     return valSet    
 
-def set_namespace(root, val, init):
+def set_namespace(root, disable, val, init):
     valSet = False
     findSecurity = root.find('./security')
     if findSecurity == None:
         common.fatal_error('Unexpected missing element Security in configuration file')
     namespace = findSecurity.find('namespace')
-    if namespace == None:
+    if disable:
+        if namespace != None and int(namespace.text) > 0:
+            logging.debug('namespace needs disabling')
+            namespace.text = str(0)
+            valSet = True
+    elif namespace == None:
         logging.debug('namespace not in LSWS file')
         namespace = ET.SubElement(findSecurity, 'namespace')
         namespace.text = str(init)
@@ -148,8 +164,9 @@ def lsws_config(args):
     revert = config_filename_revert(True)
     shutil.copy2(file, revert)
     copy_file_details(file, revert)
-    valSet = set_cgroups(tree.getroot(), args.cgroups, args.cgroups_init)
-    if set_namespace(tree.getroot(), args.namespace, args.namespace_init):
+    if not args.namespace_only:
+        valSet = set_cgroups(tree.getroot(), args.disable, args.cgroups, args.cgroups_init)
+    if set_namespace(tree.getroot(), args.disable, args.namespace, args.namespace_init):
         valSet = True
     if valSet:
         try:
@@ -163,6 +180,34 @@ def lsws_validate(args):
     lsws_config(args)
         
 def rewrite_ols_config(args, cgroupsAt, pastCGIRLimit, cgroupsVal, namespaceAt, lineNo, namespaceVal):
+    stop1 = 0
+    replace1 = False
+    if not args.namespace_only:
+        if cgroupsAt != 0:
+            if (args.disable and int(cgroupsVal) > 0) or (not args.disable and int(cgroupsVal) <= args.cgroups):
+                stop1 = cgroupsAt
+                replace1 = True
+                if args.disable:
+                    setCgroups = 0
+                else:
+                    setCgroups = args.cgroups
+        elif not args.disable:
+            stop1 = pastCGIRLimit
+            setCgroups = args.cgroups_init
+    stop2 = 0
+    replace2 = False
+    if namespaceAt != 0:
+        if (args.disable and int(namespaceVal) > 0) or (not args.disable and int(namespaceVal) <= args.namespace):
+            stop2 = namespaceAt
+            replace2 = True
+            if args.disable:
+                setNS = 0
+            else:
+                setNS = args.namespace
+    elif not args.disable:
+        stop2 = lineNo
+        setNS = args.namespace_init
+    lineNo = 0
     file = config_filename(False)
     try:
         f = open(file, 'r')
@@ -173,33 +218,11 @@ def rewrite_ols_config(args, cgroupsAt, pastCGIRLimit, cgroupsVal, namespaceAt, 
         w = open(fileout, 'w')
     except Exception as err:
         common.fatal_error('Error opening %s: %s' % (fileout, err))
-    # Optimize for the do nothing case
-    stop1 = 0
-    replace1 = False
-    if cgroupsAt != 0:
-        if int(cgroupsVal) <= args.cgroups:
-            stop1 = cgroupsAt
-            replace1 = True
-            setCgroups = args.cgroups
-    else:
-        stop1 = pastCGIRLimit
-        setCgroups = args.cgroups_init
-    stop2 = 0
-    replace2 = False
-    if namespaceAt != 0:
-        if int(namespaceVal) <= args.namespace:
-            stop2 = namespaceAt
-            replace2 = True
-            setNS = args.namespace
-    else:
-        stop2 = lineNo
-        setNS = args.namespace_init
-    lineNo = 0
     try:
         for line in f:
             replace = False
             if lineNo > 0:
-                if lineNo == stop1:
+                if stop1 != 0 and lineNo == stop1:
                     w.write('  cgroups %d\n' % setCgroups)
                     replace = replace1
                     logging.debug('writing cgroups %d' % setCgroups)
@@ -244,7 +267,7 @@ def ols_config(args):
                     inCGIRLimit = True
             elif line.find('}') != -1:
                 pastCGIRLimit = lineNo
-            elif line.startswith('  cgroups'):
+            elif not args.namespace_only and line.startswith('  cgroups'):
                 cgroupsLine = line
                 cgroupsAt = lineNo
         elif line.startswith('namespace'):
@@ -255,13 +278,17 @@ def ols_config(args):
             break
         lineNo += 1
     f.close()
-    if cgroupsLine != '':
+    if not args.namespace_only and cgroupsLine != '':
         cgroupsVal = re.search(r'[\d]+', cgroupsLine).group()
         logging.debug('OLS cgroups val: %d' % int(cgroupsVal))   
     if namespaceLine != '':
         namespaceVal = re.search(r'[\d]+', namespaceLine).group()
         logging.debug('OLS namespace val: %d' % int(namespaceVal))   
-    if cgroupsLine != '' and int(cgroupsVal) >= args.cgroups and namespaceLine != '' and int(namespaceVal) >= args.namespace:
+    if args.disable:
+        if (args.namespace_only or cgroupsLine == '' or int(cgroupsVal) == 0) and (namespaceLine == '' or int(namespaceVal) == 0):
+            logging.debug('OLS config file needs no mod')
+            return
+    elif (args.namespace_only or (cgroupsLine != '' and int(cgroupsVal) >= args.cgroups)) and namespaceLine != '' and int(namespaceVal) >= args.namespace:
         logging.debug('OLS config file needs no mod')   
         return
     logging.debug('OLS config file needs mod')   
@@ -377,7 +404,7 @@ def do_pgm(args):
             ols_validate(args)
     else:
         logging.debug('no-config specified')
-    if not args.no_subtree_control:
+    if not args.disable and not args.no_subtree_control and not args.namespace_only:
         subtree_control()
     else:
         logging.debug('no-subtree_control specified')

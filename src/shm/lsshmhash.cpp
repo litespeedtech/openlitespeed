@@ -1823,7 +1823,8 @@ void LsShmHash::lruMarkNewest(LsShmHElem *pElem, iteroffset offElem)
         set_linkPrev(next, prev);
         pLink->x_iLinkNext.m_iOffset = 0;
         pLink->x_iLinkPrev = pLru->linkNewest;
-        set_linkNext(pLru->linkNewest, offElem);
+        if (pLru->linkNewest.m_iOffset)
+            set_linkNext(pLru->linkNewest, offElem);
         pLru->linkNewest = offElem;
     }
     pLink->x_lasttime = time((time_t *)NULL);
