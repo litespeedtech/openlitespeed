@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manuel utilisateur OpenLiteSpeed - Hôte virtuel - SSL</title>
+  <meta name="description" content="Manuel utilisateur OpenLiteSpeed - Hôte virtuel - SSL." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manuel utilisateur OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manuel utilisateur OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Ouvrir le menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Rechercher pages et reglages" data-no-results="Aucun resultat trouve.">
+      <label class="sr-only" for="doc-search-input">Rechercher dans le manuel</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Rechercher pages et reglages" aria-controls="doc-search-results" />
+        <button type="submit">Rechercher</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Langue"><option value="../VHSSL_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHSSL_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VHSSL_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHSSL_Help.html" data-lang="fr-FR" selected>Français</option><option value="../zh-CN/VHSSL_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/VHSSL_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Changer de theme" data-theme-toggle data-theme-light-label="Mode clair" data-theme-dark-label="Mode sombre" title="Changer de theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+      <li><a href="license.html">Licence</a></li>
+      <li><a href="intro.html">Introduction</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Securite</a></li>
+      <li>
+        <a href="config.html">Configuration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Serveur general</a></li>
+          <li><a href="ServLog_Help.html">Journal serveur</a></li>
+          <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
+          <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
+          <li><a href="ExtApp_Help.html">Applications externes</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Moteur servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
+          <li><a href="App_Server_Help.html">Reglages App Server</a></li>
+          <li><a href="Module_Help.html">Configuration des modules</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL du listener</a></li>
+          <li><a href="Templates_Help.html">Modeles de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Enregistrement du VHost</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
+          <li><a class="current" href="VHSSL_Help.html">SSL du virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexte</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexte statique</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+            <li><a href="CGI_Context.html">Contexte CGI</a></li>
+            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexte handler de module</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Console web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
+          <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="VHSecurity_Help.html">Hôte virtuel - Sécurité</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Rewrite_Help.html">Rewrite</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Hôte virtuel - SSL</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Table des matières</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#sslCert">Cle privee SSL et certificat</a></h3><ul class="doc-toc__links"><li><a href="#keyFile">Fichier de cle privee</a></li><li><a href="#certFile">Fichier de certificat</a></li><li><a href="#certChain">Certificat chaine</a></li><li><a href="#CACertPath">Chemin des certificats CA</a></li><li><a href="#CACertFile">Fichier de certificats CA</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Paramètres du protocole SSL</h3><ul class="doc-toc__links"><li><a href="#ciphers">Chiffres</a></li><li><a href="#enableECDHE">Activer l’echange de cles ECDH</a></li><li><a href="#enableDHE">Activer l’echange de cles DH</a></li><li><a href="#DHParam">Parametre DH</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">AutoCert ACME</h3><ul class="doc-toc__links"><li><a href="#acme_vhenable">Activé</a></li><li><a href="#acme_dns_type">ACME API dns_type</a></li><li><a href="#acme_env">Environnement</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Fonctionnalités SSL</h3><ul class="doc-toc__links"><li><a href="#renegProtection">Protection contre la renegociation SSL</a></li><li><a href="#sslSessionCache">Activer le cache de session</a></li><li><a href="#sslSessionTickets">Activer les tickets de session</a></li><li><a href="#enableSpdy">ALPN</a></li><li><a href="#vhEnableQuic">Activer HTTP3/QUIC</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#sslOCSP">OCSP Stapling</a></h3><ul class="doc-toc__links"><li><a href="#enableStapling">Activer OCSP Stapling</a></li><li><a href="#ocspRespMaxAge">Age maximal de reponse OCSP (s)</a></li><li><a href="#ocspResponder">OCSP Responder</a></li><li><a href="#ocspCACerts">Certificats CA OCSP</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Vérification client</h3><ul class="doc-toc__links"><li><a href="#clientVerify">Verification client</a></li><li><a href="#verifyDepth">Profondeur de verification</a></li><li><a href="#crlPath">Chemin de revocation client</a></li><li><a href="#crlFile">Fichier de revocation client</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslCert"><h3>Cle privee SSL et certificat<span class="ls-permlink"><a href="#sslCert"></a></span></h3></header><h4>Description</h4><p>Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat.<br/><br/> Vous pouvez generer vous-meme des cles privees SSL avec un paquet logiciel SSL, comme OpenSSL. Les certificats SSL peuvent aussi etre achetes aupres d'une autorite de certification autorisee comme VeriSign ou Thawte. Vous pouvez aussi signer le certificat vous-meme. Les certificats autosignes ne seront pas approuves par les navigateurs web et ne doivent pas etre utilises sur des sites publics contenant des donnees critiques. Toutefois, un certificat autosigne suffit pour un usage interne, par exemple pour chiffrer le trafic vers la console WebAdmin de LiteSpeed Web Server.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="keyFile"><h3>Fichier de cle privee<span class="ls-permlink"><a href="#keyFile"></a></span></h3></header><h4>Description</h4><p>Nom de fichier de la cle privee SSL. Le fichier de cle ne doit pas etre chiffre.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Le fichier de cle privee doit etre place dans un repertoire securise qui autorise un acces en lecture seule a l’utilisateur sous lequel le serveur s’execute.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="certFile"><h3>Fichier de certificat<span class="ls-permlink"><a href="#certFile"></a></span></h3></header><h4>Description</h4><p>Nom de fichier du certificat SSL.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Le fichier de certificat doit etre place dans un repertoire securise qui autorise un acces en lecture seule a l’utilisateur sous lequel le serveur s’execute.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="certChain"><h3>Certificat chaine<span class="ls-permlink"><a href="#certChain"></a></span></h3></header><h4>Description</h4><p>Indique si le certificat est un certificat chaine ou non. Le fichier qui stocke une chaine de certificats doit etre au format PEM, et les certificats doivent etre dans l’ordre chaine, du niveau le plus bas (le certificat client ou serveur reel) au niveau le plus haut, la CA racine.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="CACertPath"><h3>Chemin des certificats CA<span class="ls-permlink"><a href="#CACertPath"></a></span></h3></header><h4>Description</h4><p>Indique le repertoire ou sont conserves les certificats des autorites de certification (CA). Ces certificats sont utilises pour l’authentification par certificat client et pour construire la chaine de certificats du serveur, qui sera envoyee aux navigateurs en plus du certificat serveur.</p> <h4>Syntaxe</h4><p>chemin</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="CACertFile"><h3>Fichier de certificats CA<span class="ls-permlink"><a href="#CACertFile"></a></span></h3></header><h4>Description</h4><p>Indique le fichier contenant tous les certificats des autorites de certification (CA) pour les certificats chaines. Ce fichier est simplement la concatenation de fichiers de certificat encodes en PEM, par ordre de preference. Il peut etre utilise comme alternative ou en complement de <span class="tagl"><a href="#CACertPath">Chemin des certificats CA</a></span>. Ces certificats sont utilises pour l’authentification par certificat client et pour construire la chaine de certificats du serveur, qui sera envoyee aux navigateurs en plus du certificat serveur.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ciphers"><h3>Chiffres<span class="ls-permlink"><a href="#ciphers"></a></span></h3></header><h4>Description</h4><p>Indique la suite de chiffrement a utiliser lors de la negociation du handshake SSL. LSWS prend en charge les suites de chiffrement implementees dans SSL v3.0, TLS v1.0, TLS v1.2 et TLS v1.3.</p> <h4>Syntaxe</h4><p>Chaine de specifications de chiffrement separees par des deux-points.</p> <h4>Exemple</h4><div class="ls-example">ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH</div><h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Nous recommandons de laisser ce champ vide afin d’utiliser notre chiffrement par defaut, qui suit les bonnes pratiques de chiffrement SSL.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableECDHE"><h3>Activer l’echange de cles ECDH<span class="ls-permlink"><a href="#enableECDHE"></a></span></h3></header><h4>Description</h4><p>Permet l’utilisation de l’echange de cles Elliptic Curve Diffie-Hellman pour un chiffrement SSL supplementaire.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> L’echange de cles ECDH est plus sur que l’utilisation d’une simple cle RSA. Les echanges de cles ECDH et DH sont aussi surs l’un que l’autre.<br/><br/> <span class="ls-badge ls-badge--performance">Performance</span> Activer l’echange de cles ECDH augmentera la charge CPU et sera plus lent que l’utilisation d’une simple cle RSA.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableDHE"><h3>Activer l’echange de cles DH<span class="ls-permlink"><a href="#enableDHE"></a></span></h3></header><h4>Description</h4><p>Permet l’utilisation de l’echange de cles Diffie-Hellman pour un chiffrement SSL supplementaire.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> L’echange de cles DH est plus sur que l’utilisation d’une simple cle RSA. Les echanges de cles ECDH et DH sont aussi surs l’un que l’autre.<br/><br/> <span class="ls-badge ls-badge--performance">Performance</span> Activer l’echange de cles DH augmentera la charge CPU et sera plus lent que l’echange de cles ECDH et RSA. L’echange de cles ECDH est prefere lorsqu’il est disponible.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="DHParam"><h3>Parametre DH<span class="ls-permlink"><a href="#DHParam"></a></span></h3></header><h4>Description</h4><p>Indique l’emplacement du fichier de parametres Diffie-Hellman necessaire a l’echange de cles DH.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="acme_vhenable"><h3>Activé<span class="ls-permlink"><a href="#acme_vhenable"></a></span></h3></header><h4>Description</h4><p>Génère et renouvelle automatiquement les certificats SSL à l’aide du protocole certificateur Automatic Certificate Management Environment (ACME), une fois configuré. Plus d’informations ici:<br/> <a href=" https://docs.openlitespeed.org/config/advanced/acme/ " target="_blank" rel="noopener noreferrer"> Certificats SSL automatiques (ACME) </a><br/><br/> Définir ce réglage sur <span class="val">Disabled</span> au niveau serveur désactivera ce réglage pour tout le serveur. Dans tous les autres cas, le réglage au niveau serveur peut être remplacé au niveau hôte virtuel.<br/><br/> Valeurs par défaut:<br/> <b>Niveau serveur:</b> Off<br/> <b>Niveau VH:</b> hériter du réglage de niveau serveur</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="acme_dns_type"><h3>ACME API dns_type<span class="ls-permlink"><a href="#acme_dns_type"></a></span></h3></header><h4>Description</h4><p>(Facultatif) Le type DNS utilisé lors des appels API de génération de certificats wildcard. Cette valeur dépend du fournisseur DNS utilisé et n’est pas requise lors de la génération de certificats non wildcard. Plus d’informations sur les valeurs API dns type disponibles sont ici:<br/> <a href=" https://github.com/acmesh-official/acme.sh/wiki/dnsapi " target="_blank" rel="noopener noreferrer"> acme.sh - Comment utiliser DNS API </a><br/><br/> Utilisé avec le réglage <span class="tagl"><a href="VHSSL_Help.html#acme_env">Environnement</a></span></p> <h4>Exemple</h4><div class="ls-example">Pour le fournisseur DNS CloudFlare, la valeur dns type serait <span class="val">dns_cf</span>.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="acme_env"><h3>Environnement<span class="ls-permlink"><a href="#acme_env"></a></span></h3></header><h4>Description</h4><p>(Facultatif) Valeurs d’environnement à inclure lors des appels API de génération de certificats wildcard. Les valeurs spécifiques nécessaires dépendront du fournisseur DNS utilisé et ne sont pas requises lors de la génération de certificats non wildcard. Plus d’informations sur les valeurs d’environnement API nécessaires sont ici:<br/> <a href=" https://github.com/acmesh-official/acme.sh/wiki/dnsapi " target="_blank" rel="noopener noreferrer"> acme.sh - Comment utiliser DNS API </a><br/><br/> Utilisé avec le réglage <span class="tagl"><a href="VHSSL_Help.html#acme_dns_type">ACME API dns_type</a></span></p> <h4>Syntaxe</h4><p>Une liste de paires <span class="val">Key="VALUE"</span>, une par ligne, chaque VALUE étant placée entre guillemets doubles.</p> <h4>Exemple</h4><div class="ls-example">Pour le fournisseur DNS CloudFlare, la seule valeur d’environnement requise serait <span class="val">CF_Token="YOUR_TOKEN"</span></div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="renegProtection"><h3>Protection contre la renegociation SSL<span class="ls-permlink"><a href="#renegProtection"></a></span></h3></header><h4>Description</h4><p>Indique s’il faut activer la protection contre la renegociation SSL pour se defendre contre les attaques basees sur le handshake SSL. La valeur par defaut est "Yes".</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Ce parametre peut etre active aux niveaux listener et hote virtuel.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslSessionCache"><h3>Activer le cache de session<span class="ls-permlink"><a href="#sslSessionCache"></a></span></h3></header><h4>Description</h4><p>Active la mise en cache des ID de session avec le réglage par défaut d’OpenSSL. Le réglage de niveau serveur doit être défini sur "Yes" pour que le réglage Virtual Host prenne effet.<br/><br/> Valeurs par défaut:<br/> <b>Niveau serveur:</b> Yes<br/> <b>Niveau VH:</b> Yes</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslSessionTickets"><h3>Activer les tickets de session<span class="ls-permlink"><a href="#sslSessionTickets"></a></span></h3></header><h4>Description</h4><p>Active les tickets de session avec le réglage par défaut des tickets de session d’OpenSSL. Le réglage de niveau serveur doit être défini sur "Yes" pour que le réglage Virtual Host prenne effet.<br/><br/> Valeurs par défaut:<br/> <b>Niveau serveur:</b> Yes<br/> <b>Niveau VH:</b> Yes</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableSpdy"><h3>ALPN<span class="ls-permlink"><a href="#enableSpdy"></a></span></h3></header><h4>Description</h4><p>Application-Layer Protocol Negotiation(ALPN) sert a activer selectivement les protocoles reseau HTTP/3 et HTTP/2.<br/><br/> Si vous souhaitez desactiver HTTP/2 et HTTP3, cochez <span class="val">None</span> et laissez toutes les autres cases decochees.<br/><br/> Valeur par defaut: tout active</p> <h4>Syntaxe</h4><p>Sélectionner avec des cases à cocher</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Cela peut etre defini aux niveaux listener et hote virtuel.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhEnableQuic"><h3>Activer HTTP3/QUIC<span class="ls-permlink"><a href="#vhEnableQuic"></a></span></h3></header><h4>Description</h4><p>Active le protocole réseau HTTP3/QUIC pour cet hôte virtuel. Pour que ce réglage prenne effet, <span class="tagl"><a href="ServTuning_Help.html#quicEnable">Activer HTTP3/QUIC</a></span> et <span class="tagl"><a href="Listeners_SSL_Help.html#allowQuic">Ouvrir le port HTTP3/QUIC (UDP)</a></span> doivent aussi être définis sur <span class="val">Yes</span> aux niveaux serveur et listener respectivement. La valeur par défaut est <span class="val">Yes</span>.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Lorsque ce réglage est défini sur <span class="val">No</span>, l’annonce HTTP3/QUIC ne sera plus envoyée. Si un navigateur contient encore des informations HTTP3/QUIC en cache et que HTTP3/QUIC est toujours activé aux niveaux serveur et listener, une connexion HTTP3/QUIC continuera d’être utilisée jusqu’à ce que ces informations ne soient plus en cache ou qu’une erreur de protocole HTTP3/QUIC soit rencontrée.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslOCSP"><h3>OCSP Stapling<span class="ls-permlink"><a href="#sslOCSP"></a></span></h3></header><h4>Description</h4><p>Online Certificate Status Protocol (OCSP) est une methode plus efficace pour verifier si un certificat numerique est valide. Il fonctionne en communiquant avec un autre serveur, l'OCSP responder, afin d'obtenir la verification que le certificat est valide au lieu de consulter les listes de revocation de certificats (CRL).<br/><br/> OCSP stapling est une amelioration supplementaire de ce protocole, permettant au serveur de verifier aupres de l'OCSP responder a intervalles reguliers au lieu de le faire chaque fois qu'un certificat est demande. Consultez la page Wikipedia <a href="http://en.wikipedia.org/wiki/OCSP_Stapling" target="_blank" rel="noopener noreferrer">OCSP</a> pour plus de details.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableStapling"><h3>Activer OCSP Stapling<span class="ls-permlink"><a href="#enableStapling"></a></span></h3></header><h4>Description</h4><p>Determine s’il faut activer OCSP stapling, une methode plus efficace de verification des certificats a cle publique.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ocspRespMaxAge"><h3>Age maximal de reponse OCSP (s)<span class="ls-permlink"><a href="#ocspRespMaxAge"></a></span></h3></header><h4>Description</h4><p>Cette option definit l’age maximal autorise pour une reponse OCSP. Si une reponse OCSP est plus ancienne que cet age maximal, le serveur contactera l’OCSP responder pour obtenir une nouvelle reponse. La valeur par defaut est <span class="val">86400</span>. L’age maximal peut etre desactive en definissant cette valeur sur <span class="val">-1</span>.</p> <h4>Syntaxe</h4><p>Entier de secondes</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ocspResponder"><h3>OCSP Responder<span class="ls-permlink"><a href="#ocspResponder"></a></span></h3></header><h4>Description</h4><p>Indique l’URL de l’OCSP responder a utiliser. Si elle n’est pas definie, le serveur tentera de contacter l’OCSP responder detaille dans le certificat emetteur de l’autorite de certification. Certains certificats emetteurs peuvent ne pas indiquer d’URL d’OCSP responder.</p> <h4>Syntaxe</h4><p>URL commencant par <span class="val">http://</span></p> <h4>Exemple</h4><div class="ls-example"><span class="val">http://rapidssl-ocsp.geotrust.com </span></div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ocspCACerts"><h3>Certificats CA OCSP<span class="ls-permlink"><a href="#ocspCACerts"></a></span></h3></header><h4>Description</h4><p>Indique l’emplacement du fichier ou sont stockes les certificats d’autorite de certification (CA) OCSP. Ces certificats servent a verifier les reponses de l’OCSP responder (et a s’assurer que ces reponses ne sont pas usurpees ou compromises autrement). Ce fichier doit contenir toute la chaine de certificats. Si ce fichier ne contient pas le certificat racine, LSWS devrait pouvoir trouver le certificat racine dans le repertoire systeme sans que vous l’ajoutiez au fichier; mais si cette validation echoue, vous devriez essayer d’ajouter votre certificat racine a ce fichier.<br/><br/> Ce parametre est facultatif. S’il n’est pas defini, le serveur verifiera automatiquement <span class="tagl"><a href="#CACertFile">Fichier de certificats CA</a></span>.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="clientVerify"><h3>Verification client<span class="ls-permlink"><a href="#clientVerify"></a></span></h3></header><h4>Description</h4><p> Indique le type d’authentification par certificat client. Les types disponibles sont: <ul> <li><b>None:</b> aucun certificat client n’est requis.</li> <li><b>Optional:</b> le certificat client est facultatif.</li> <li><b>Require:</b> le client doit avoir un certificat valide.</li> <li><b>Optional_no_ca:</b> identique a optional.</li> </ul> La valeur par defaut est "None".</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> "None" ou "Require" sont recommandes.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="verifyDepth"><h3>Profondeur de verification<span class="ls-permlink"><a href="#verifyDepth"></a></span></h3></header><h4>Description</h4><p> Indique jusqu’a quelle profondeur un certificat doit etre verifie avant de determiner que le client n’a pas de certificat valide. La valeur par defaut est "1".</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="crlPath"><h3>Chemin de revocation client<span class="ls-permlink"><a href="#crlPath"></a></span></h3></header><h4>Description</h4><p> Indique le repertoire contenant des fichiers CRL de CA encodes en PEM pour les certificats client revoques. Les fichiers de ce repertoire doivent etre encodes en PEM. Ces fichiers sont accessibles via des noms de fichier de hash, hash-value.rN. Consultez la documentation openSSL ou Apache mod_ssl pour la creation du nom de fichier de hash.</p> <h4>Syntaxe</h4><p>chemin</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="crlFile"><h3>Fichier de revocation client<span class="ls-permlink"><a href="#crlFile"></a></span></h3></header><h4>Description</h4><p> Indique le fichier contenant des fichiers CRL de CA encodes en PEM qui enumerent les certificats client revoques. Cela peut etre utilise comme alternative ou en complement de <span class="tagl"><a href="#crlPath">Chemin de revocation client</a></span>.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+</div>
+</body>
+</html>

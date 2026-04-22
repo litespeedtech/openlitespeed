@@ -18,6 +18,7 @@
 #include <shm/lsshmhash.h>
 
 #include <lsr/xxhash.h>
+#include <lsr/ls_stopwatch.h>
 #include <shm/lsshmpool.h>
 #include <shm/lsshmtidmgr.h>
 
@@ -272,14 +273,14 @@ inline uint8_t *LsShmHash::getBitMap(uint32_t idx) const
 
 void LsShmHash::lockChkRehash()
 {
-    if ((lock() < 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
+    if ((lock() == 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
         rehash();
 }
 
 
 void LsShmHash::autoLockChkRehash()
 {
-    if ((autoLock() < 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
+    if ((autoLock() == 0) && (getHTable()->x_iHIdx != getHTable()->x_iHIdxNew))
         rehash();
 }
 
@@ -603,6 +604,74 @@ LsShmHash *LsShmHash::open(
             break;
     }
     return pHash;
+}
+
+
+LsShmHash *LsShmHash::openWithVerMagic(const char *pShmName, int shmFlag,
+                                       const char *pHashName, uint32_t magic,
+                                       int init_size, int hashFlag)
+{
+    LsShm *pShm;
+    LsShmPool *pPool;
+    LsShmHash *pHash;
+    int created;
+try_again:
+    if ((pShm = LsShm::open(pShmName, 0, NULL, shmFlag)) == NULL
+        || ((pPool = pShm->getGlobalPool()) == NULL))
+    {
+        if (pShm && shmFlag != LSSHM_OPEN_NEW)
+            pShm->close();
+        if (shmFlag == LSSHM_OPEN_NEW
+            || (pShm = LsShm::open(pShmName, 0, NULL, LSSHM_OPEN_NEW)) == NULL
+            || (pPool = pShm->getGlobalPool()) == NULL)
+        {
+            if (pShm)
+                pShm->close();
+            return NULL;
+        }
+        shmFlag = LSSHM_OPEN_NEW;
+    }
+
+    created = 0;
+    if ((pHash = pPool->getNamedHash(pHashName, init_size,
+                                     LsShmHash::hashXXH32, memcmp, hashFlag,
+                                     &created, &magic)) == NULL)
+    {
+        pShm->close();
+        if (shmFlag != LSSHM_OPEN_NEW)
+        {
+            pPool = NULL;
+            shmFlag = LSSHM_OPEN_NEW;
+            goto try_again;
+        }
+        return NULL;
+    }
+    if (shmFlag == LSSHM_OPEN_NEW && !created)
+        pHash->setDataVerMagic(magic);
+    else if (!pHash->verifyDataVerMagic(magic))
+    {
+        pHash->close();
+        pShm->close();
+        pShm = NULL;
+        pPool = NULL;
+        shmFlag = LSSHM_OPEN_NEW;
+        goto try_again;
+    }
+    return pHash;
+}
+
+
+bool LsShmHash::verifyDataVerMagic(uint32_t magic)
+{
+    uint32_t *xMagic = (uint32_t *)getHTableReservedPtr();
+    return *xMagic == magic;
+}
+
+
+void LsShmHash::setDataVerMagic(uint32_t magic)
+{
+    uint32_t *xMagic = (uint32_t *)getHTableReservedPtr();
+    *xMagic = magic;
 }
 
 
@@ -1051,6 +1120,8 @@ LsShmHash::iteroffset LsShmHash::find2(LsShmHKey key,
     while (offset.m_iOffset != 0)
     {
         pElem = (LsShmHElem *)m_pPool->offset2ptr(offset.m_iOffset);
+        if (!pElem)
+            return end();
         if ((pElem->x_hkey == key)
             && (pElem->getKeyLen() == (int)ls_str_len(&pParms->key))
             && ((*m_vc)(ls_str_buf(&pParms->key), pElem->getKey(),
@@ -1696,7 +1767,7 @@ int LsShmHash::trimsize(int need, LsShmHash::TrimCb func, void *arg)
 }
 
 
-int LsShmHash::trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg)
+int LsShmHash::trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg, int timeout_ms)
 {
     if ((m_iFlags & LSSHM_FLAG_LRU) == 0)
         return LS_FAIL;
@@ -1707,6 +1778,11 @@ int LsShmHash::trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg)
     LsHashLruInfo *pLru = getLru();
     iteroffset offElem = pLru->linkOldest;
 
+    ls_stopwatch_t stop_watch;
+    if (timeout_ms > 0)
+    {
+        ls_stopwatch_start(&stop_watch);
+    }
     assert(m_pPool->getShm()->isLocked(m_pShmLock));
     
     while ((offElem.m_iOffset != 0) && (maxCnt > 0))
@@ -1731,6 +1807,8 @@ int LsShmHash::trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg)
         eraseIteratorHelper(offElem);
         ++del;
         offElem = next;
+        if (timeout_ms > 0 && ls_stopwatch_get_tm_since_start(&stop_watch) > timeout_ms)
+            break;
     }
     pLru->n_exp += del;
     autoUnlock();

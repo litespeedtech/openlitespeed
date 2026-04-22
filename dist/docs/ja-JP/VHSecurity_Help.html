@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<html lang="ja-JP">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
@@ -6,19 +7,62 @@
   <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - バーチャルホストのセキュリティ." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-      <figure>
-        <img src="../img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-      </figure>
-<h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
-<h5 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 3</h5>
-<hr/>
-<div>
-<ul>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Open LiteSpeed Web Serverユーザーズマニュアル">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Open LiteSpeed Web Serverユーザーズマニュアル</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="メニューを開く" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="ページや設定を検索" data-no-results="結果が見つかりません。">
+      <label class="sr-only" for="doc-search-input">マニュアルを検索</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="ページや設定を検索" aria-controls="doc-search-results" />
+        <button type="submit">検索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="言語"><option value="../VHSecurity_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHSecurity_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VHSecurity_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHSecurity_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VHSecurity_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/VHSecurity_Help.html" data-lang="ja-JP" selected>日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="テーマを切り替え" data-theme-toggle data-theme-light-label="ライトモード" data-theme-dark-label="ダークモード" title="テーマを切り替え">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">OpenLiteSpeed Web Server ユーザーズマニュアル</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
 <li><a href="license.html">ライセンス</a></li>
 <li><a href="intro.html">はじめに</a></li>
 <li><a href="install.html">インストール</a></li>
@@ -37,39 +81,43 @@
 	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
 	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
 	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
-                <ul class="level3">
-                <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
-                <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
-                <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
-                <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
-                <li><a href="External_WS.html">Webサーバー</a></li>
-                <li><a href="External_PL.html">パイプロガー</a></li>
-                <li><a href="External_LB.html">ロードバランサ</a></li>
-                </ul>
+	<ul class="level3">
+      <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+      <li><a href="External_WS.html">Webサーバー</a></li>
+      <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+      <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+      <li><a href="External_SCGI.html">Simple CGI App</a></li>
+      <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+      <li><a href="External_PL.html">パイプロガー</a></li>
+      <li><a href="External_LB.html">ロードバランサ</a></li>
+      <li><a href="External_UWSGI.html">uWSGI</a></li>
+	</ul>
 	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
 	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
 	<li><a href="Module_Help.html">モジュール設定</a></li>
 	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
         <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
 	<li><a href="Templates_Help.html">テンプレート</a></li>
-	<li><a href="VirtualHosts_Help.html">バーチャルホストの基本</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
 	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
-	<li><span class="current"><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></span></li>
+	<li><a class="current" href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
         <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
 	<li><a href="Rewrite_Help.html">Rewrite</a></li>
 	<li><a href="Context_Help.html">コンテキスト</a></li>
-               <ul class="level3">
-                <li><a href="Static_Context.html">静的コンテテキスト</a></li>
-                <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
-                <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
-                <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
-                <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
-                <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
-                <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
-                <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
-                <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
-                <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
-                </ul>
+	<ul class="level3">
+	  <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+	  <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+	  <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+	  <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+	  <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
+	  <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+	  <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+	  <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+	  <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+	  <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+	  <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
+	  <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+	</ul>
 	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
 	</ul>
 </li>
@@ -81,42 +129,35 @@
         <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
         </ul>
 </li>
-</ul>
+</ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="VHGeneral_Help.html">バーチャルホストの一般</a></div><div class="center"><a href="config.html">設定</a></div><div class="next"><a href="VHSSL_Help.html">バーチャルホストSSL</a> &#187;</div></div>
+<header class="doc-page-header"><h1>バーチャルホストのセキュリティ</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目次</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#VHlsrecaptcha">CAPTCHA保護</a></h3><ul class="doc-toc__links"><li><a href="#enableRecaptcha">CAPTCHAを有効にする</a></li><li><a href="#recaptchaSiteKey">サイトキー</a></li><li><a href="#recaptchaSecretKey">シークレットキー</a></li><li><a href="#recaptchaType">CAPTCHAの種類</a></li><li><a href="#recaptchaMaxTries">最大試行回数</a></li><li><a href="#recaptchaVhReqLimit">同時リクエスト制限</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">コンテナ</h3><ul class="doc-toc__links"><li><a href="#bubbleWrap">Bubblewrapコンテナ</a></li><li><a href="#namespace">Namespaceコンテナ</a></li><li><a href="#namespaceConfVhAdd">追加Namespaceテンプレートファイル</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#accessControl">アクセス制御</a></h3><ul class="doc-toc__links"><li><a href="#accessControl_allow">許可リスト</a></li><li><a href="#accessControl_deny">拒否リスト</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#realms">認可レルム</a></h3><ul class="doc-toc__links"><li><a href="#realmName">レルム名</a></li><li><a href="#userDBLocation">ユーザーDBの場所</a></li><li><a href="#userDBMaxCacheSize">ユーザーDB最大キャッシュサイズ</a></li><li><a href="#userDBCacheTimeout">ユーザーDBキャッシュタイムアウト（秒）</a></li><li><a href="#GroupDBLocation">グループDBの場所</a></li><li><a href="#groupDBMaxCacheSize">グループDB最大キャッシュサイズ</a></li><li><a href="#groupDBCacheTimeout">グループDBキャッシュタイムアウト（秒）</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="VHlsrecaptcha"><h3>CAPTCHA保護<span class="ls-permlink"><a href="#VHlsrecaptcha"></a></span></h3></header><h4>説明</h4><p>CAPTCHA保護は、高いサーバー負荷を軽減する方法として提供されるサービスです。以下のいずれかの状況に達すると、CAPTCHA保護が有効になります。有効になると、非信頼クライアント（設定による）からのすべてのリクエストはCAPTCHA検証ページにリダイレクトされます。検証後、クライアントは目的のページにリダイレクトされます。<br/><br/> CAPTCHA保護は次の状況で有効になります:<br/> 1. サーバーまたはバーチャルホストの同時リクエスト数が、設定された接続制限を超えた場合。<br/> 2. Anti-DDoSが有効で、クライアントが疑わしい方法でURLにアクセスしている場合。トリガーされると、クライアントは拒否される代わりに先にCAPTCHAへリダイレクトされます。<br/> 3. CAPTCHAをRewriteRules経由で有効化するための新しいRewriteルール環境が提供されています。'verifycaptcha'を設定すると、クライアントをCAPTCHAへリダイレクトできます。特別な値': deny'を設定すると、失敗回数が多すぎるクライアントを拒否できます。たとえば、[E=verifycaptcha]は検証されるまで常にCAPTCHAへリダイレクトします。[E=verifycaptcha: deny]はMax Triesに達するまでCAPTCHAへリダイレクトし、その後クライアントを拒否します。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableRecaptcha"><h3>CAPTCHAを有効にする<span class="ls-permlink"><a href="#enableRecaptcha"></a></span></h3></header><h4>説明</h4><p>現在のレベルでCAPTCHA保護機能を有効にします。この機能を使用するには、サーバーレベルでこの設定を<span class="val">Yes</span>に設定する必要があります。<br/><br/> デフォルト値：<br/> <b>サーバーレベル：</b><span class="val">Yes</span><br/> <b>VHレベル：</b>サーバーレベル設定を継承</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaSiteKey"><h3>サイトキー<span class="ls-permlink"><a href="#recaptchaSiteKey"></a></span></h3></header><h4>説明</h4><p>reCAPTCHAまたはhCaptchaサービスによって割り当てられる公開キーです。<br/><br/> reCAPTCHAを使用する場合、設定されていなければデフォルトのサイトキーが使用されます（非推奨）。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaSecretKey"><h3>シークレットキー<span class="ls-permlink"><a href="#recaptchaSecretKey"></a></span></h3></header><h4>説明</h4><p>reCAPTCHAまたはhCaptchaサービスによって割り当てられる秘密キーです。<br/><br/> reCAPTCHAを使用する場合、設定されていなければデフォルトのシークレットキーが使用されます（非推奨）。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaType"><h3>CAPTCHAの種類<span class="ls-permlink"><a href="#recaptchaType"></a></span></h3></header><h4>説明</h4><p>キーペアで使用するCAPTCHAの種類を指定します。<br/> キーペアが指定されておらず、この設定が<span class="val">Not Set</span>に設定されている場合、CAPTCHA種類<span class="val">reCAPTCHA Invisible</span>のデフォルトキーペアが使用されます。<br/><br/> <span class="val">reCAPTCHA Checkbox</span>は、訪問者が検証するためのチェックボックスCAPTCHAを表示します。 （<span class="tagl"><a href="#recaptchaSiteKey">サイトキー</a></span>、<span class="tagl"><a href="#recaptchaSecretKey">シークレットキー</a></span>が必要）<br/><br/> <span class="val">reCAPTCHA Invisible</span>はCAPTCHAを自動的に検証しようとし、成功した場合は目的のページにリダイレクトします。 （<span class="tagl"><a href="#recaptchaSiteKey">サイトキー</a></span>、<span class="tagl"><a href="#recaptchaSecretKey">シークレットキー</a></span>が必要）<br/><br/> <span class="val">hCaptcha</span>は、CAPTCHAプロバイダー <a href="https://www.hcaptcha.com" target="_blank" rel="noopener noreferrer">hCaptcha</a>をサポートするために使用できます。 （<span class="tagl"><a href="#recaptchaSiteKey">サイトキー</a></span>、<span class="tagl"><a href="#recaptchaSecretKey">シークレットキー</a></span>が必要）<br/><br/> デフォルト値は<span class="val">reCAPTCHA Invisible</span>です。</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaMaxTries"><h3>最大試行回数<span class="ls-permlink"><a href="#recaptchaMaxTries"></a></span></h3></header><h4>説明</h4><p>最大試行回数は、訪問者を拒否する前に許可されるCAPTCHA試行の最大回数を指定します。<br/><br/> デフォルト値は<span class="val">3</span>です。</p> <h4>構文</h4><p>整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaVhReqLimit"><h3>同時リクエスト制限<span class="ls-permlink"><a href="#recaptchaVhReqLimit"></a></span></h3></header><h4>説明</h4><p>CAPTCHAを有効化するために必要な同時リクエスト数です。同時リクエスト数がこの数値を下回るまで、CAPTCHAは引き続き使用されます。<br/><br/> デフォルト値は<span class="val">15000</span>です。</p> <h4>構文</h4><p>整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="bubbleWrap"><h3>Bubblewrapコンテナ<span class="ls-permlink"><a href="#bubbleWrap"></a></span></h3></header><h4>説明</h4><p>CGIプロセス（PHPプログラムを含む）をbubblewrapサンドボックス内で起動する場合は、<span class="val">Enabled</span>に設定します。bubblewrapの使用方法の詳細は次を参照してください。 <a href="   https://wiki.archlinux.org/title/Bubblewrap " target="_blank" rel="noopener noreferrer">   https://wiki.archlinux.org/title/Bubblewrap </a> この設定を使用する前に、システムにBubblewrapがインストールされている必要があります。<br/><br/> サーバーレベルで"Disabled"に設定されている場合、この設定をバーチャルホストレベルで有効にすることはできません。<br/><br/> デフォルト値：<br/> <b>サーバーレベル：</b>Disabled<br/> <b>VHレベル：</b>サーバーレベル設定を継承</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="namespace"><h3>Namespaceコンテナ<span class="ls-permlink"><a href="#namespace"></a></span></h3></header><h4>説明</h4><p>CGIプロセス（PHPプログラムを含む）をNamespaceコンテナサンドボックス内で起動する場合は、<span class="val">Enabled</span>に設定します。<span class="tagl"><a href="ServSecurity_Help.html#bubbleWrap">Bubblewrapコンテナ</a></span>が<span class="val">Disabled</span>に設定されている場合にのみ使用されます。<br/><br/> サーバーレベルで<span class="val">Disabled</span>以外に設定されている場合、この設定値はバーチャルホストレベルで上書きできます。<br/><br/> デフォルト値：<br/> <b>サーバーレベル：</b><span class="val">Disabled</span><br/> <b>バーチャルホストレベル：</b>サーバーレベル設定を継承</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="namespaceConfVhAdd"><h3>追加Namespaceテンプレートファイル<span class="ls-permlink"><a href="#namespaceConfVhAdd"></a></span></h3></header><h4>説明</h4><p>マウントするディレクトリのリストと、それらをマウントするために使用する方式を含む既存設定ファイルへのパスです。サーバーレベルで<span class="tagl"><a href="ServSecurity_Help.html#namespaceConf">Namespaceテンプレートファイル</a></span>も設定されている場合は、両方のファイルが使用されます。</p> <h4>構文</h4><p>絶対パスか$SERVER_ROOTからの相対パス又は$VH_ROOTからの相対パス。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl"><h3>アクセス制御<span class="ls-permlink"><a href="#accessControl"></a></span></h3></header><h4>説明</h4><p>どのサブネットワークおよび/またはIPアドレスがサーバーにアクセスできるかを指定します。 サーバレベルでは、この設定はすべてのバーチャルホストに影響します。 バーチャルホストレベルで各バーチャルホストに固有のアクセス制御を設定することもできます。 バーチャルホストレベルの設定はサーバーレベルの設定を上書きしません。<br/><br/> ブロック/ IPの許可は、許可リストと拒否リストの組み合わせによって決まります。 特定のIPまたはサブネットワークのみをブロックする場合は、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、ブロックされたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>。<br/> 特定のIPまたはサブネットワークのみを許可する場合は、<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、許可されたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>。<br/> IPに適合する最小スコープの設定は、アクセスを決定するために使用されます。<br/><br/> <b>サーバーレベル：</b>信頼できるIPまたはサブネットワークは、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に、末尾の "T"を追加することで指定する必要があります。 信頼できるIPまたはサブネットワークは、接続/スロットリング制限の影響を受けません。 信頼できるIP/サブネットワークは、サーバーレベルのアクセス制御でのみ設定できます。</p> <h4>ヒント</h4><p>[セキュリティ]すべてのバーチャルホストに適用される一般的な制限については、サーバーレベルでこれを使用してください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_allow"><h3>許可リスト<span class="ls-permlink"><a href="#accessControl_allow"></a></span></h3></header><h4>説明</h4><p>許可されるIPまたはサブネットワークのリストを指定します。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 末尾の「T」は、<span class="val">192.168.1.*T</span>などの信頼できるIPまたはサブネットワークを示すために使用できます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>ヒント</h4><p>[セキュリティ]サーバーレベルのアクセス制御で設定された信頼されたIPまたはサブネットワークは、接続/スロットリングの制限から除外されます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_deny"><h3>拒否リスト<span class="ls-permlink"><a href="#accessControl_deny"></a></span></h3></header><h4>説明</h4><p>許可されていないIPまたはサブネットワークのリストを指定します。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realms"><h3>認可レルム<span class="ls-permlink"><a href="#realms"></a></span></h3></header><h4>説明</h4><p>このバーチャルホストのすべての認可レルムをリストします。 認可レルムは、権限のないユーザーが保護されたWebページにアクセスするのをブロックするために使用されます。 レルムは、オプションのグループ分類を持つユーザー名とパスワードを含むユーザーディレクトリです。 認可は、コンテキスト・レベルで実行されます。 異なるコンテキストは同じレルム（ユーザデータベース）を共有できるため、レルムはそれらを使用するコンテキストとは別に定義されます。 コンテキスト設定では、これらの名前でレルムを参照できます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realmName"><h3>レルム名<span class="ls-permlink"><a href="#realmName"></a></span></h3></header><h4>説明</h4><p>認可レルムの一意の名前を指定します。</p> <h4>構文</h4><p>テキスト</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="userDBLocation"><h3>ユーザーDBの場所<span class="ls-permlink"><a href="#userDBLocation"></a></span></h3></header><h4>説明</h4><p>ユーザーデータベースの場所を指定します。データベースは$SERVER_ROOT/conf/vhosts/$VH_NAME/ディレクトリの下に保存することをお勧めします。<br/><br/> DBタイプが<span class="val">Password File</span>の場合、ユーザー/パスワード定義を含むフラットファイルへのパスです。ファイル名をクリックすると、WebAdminコンソールからこのファイルを編集できます。<br/><br/> ユーザーファイルの各行には、ユーザー名、コロン、crypt()で暗号化されたパスワードが続き、任意でコロンとユーザーが所属するグループ名が続きます。グループ名はカンマで区切ります。ユーザーデータベースにグループ情報が指定されている場合、グループデータベースはチェックされません。<br/><br/> 例:<blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote></p> <h4>構文</h4><p>ユーザーDBファイルへのパス。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#GroupDBLocation">グループDBの場所</a></span>, <span class="tagl"><a href="#userDB_attrPasswd">パスワード属性</a></span>, <span class="tagl"><a href="#userDB_attrMemberOf">Member-of属性</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="userDBMaxCacheSize"><h3>ユーザーDB最大キャッシュサイズ<span class="ls-permlink"><a href="#userDBMaxCacheSize"></a></span></h3></header><h4>説明</h4><p>ユーザーデータベースの最大キャッシュサイズを指定します。 最近アクセスされたユーザー認証データは、最大のパフォーマンスを提供するためにメモリにキャッシュされます。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]キャッシュが大きくなるとメモリが消費されるため、値が高くなるほどパフォーマンスが向上する場合があります。 ユーザーのデータベースサイズとサイトの使用状況に応じて適切なサイズに設定します。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="userDBCacheTimeout"><h3>ユーザーDBキャッシュタイムアウト（秒）<span class="ls-permlink"><a href="#userDBCacheTimeout"></a></span></h3></header><h4>説明</h4><p>バックエンドユーザーデータベースの変更の確認頻度を指定します。 キャッシュ内のすべてのエントリにタイムスタンプがあります。 キャッシュされたデータが指定されたタイムアウトよりも古い場合、バックエンドデータベースの変更がチェックされます。 変更がなければ、タイムスタンプは現在の時刻にリセットされ、そうでない場合は新しいデータがロードされます。 サーバーのリロードとgraceful restartにより、キャッシュは直ちにクリアされます。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]バックエンドデータベースが頻繁に変更されない場合は、パフォーマンスを向上させるために、より長いタイムアウトを設定します。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="GroupDBLocation"><h3>グループDBの場所<span class="ls-permlink"><a href="#GroupDBLocation"></a></span></h3></header><h4>説明</h4><p>グループデータベースの場所を指定します。データベースは$SERVER_ROOT/conf/vhosts/$VH_NAME/ディレクトリの下に保存することをお勧めします。<br/><br/> グループ情報は、ユーザーデータベースまたはこの独立したグループDBのどちらにも設定できます。ユーザー認証では、最初にユーザーDBがチェックされます。ユーザーDBにもグループ情報が含まれている場合、グループDBはチェックされません。<br/><br/> DBタイプが<span class="val">Password File</span>の場合、グループDBの場所はグループ定義を含むフラットファイルへのパスにする必要があります。ファイル名をクリックすると、WebAdminコンソールからこのファイルを編集できます。<br/><br/> グループファイルの各行には、グループ名、コロン、スペース区切りのユーザー名グループが含まれている必要があります。例:<br/> <blockquote><code>testgroup: user1 user2 user3</code></blockquote></p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOT、$VH_ROOTからの相対パス。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBLocation">ユーザーDBの場所</a></span>, Context <span class="tagl"><a href="Context_Help.html#required">必要（許可ユーザー/グループ）</a></span>, <span class="tagl"><a href="#groupDB_attrGroupMember">グループメンバ属性</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="groupDBMaxCacheSize"><h3>グループDB最大キャッシュサイズ<span class="ls-permlink"><a href="#groupDBMaxCacheSize"></a></span></h3></header><h4>説明</h4><p>グループデータベースの最大キャッシュサイズを指定します。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]キャッシュが大きくなるとメモリが消費されるため、値が高くなるほどパフォーマンスが向上する場合があります。 ユーザーのデータベースサイズとサイトの使用状況に応じて適切なサイズに設定します。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBMaxCacheSize">ユーザーDB最大キャッシュサイズ</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="groupDBCacheTimeout"><h3>グループDBキャッシュタイムアウト（秒）<span class="ls-permlink"><a href="#groupDBCacheTimeout"></a></span></h3></header><h4>説明</h4><p>バックエンドグループデータベースの変更の確認頻度を指定します。 詳細については、<span class="tagl"><a href="#userDBCacheTimeout">ユーザーDBキャッシュタイムアウト（秒）</a></span>を参照してください。</p> <h4>構文</h4><p>整数</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBCacheTimeout">ユーザーDBキャッシュタイムアウト（秒）</a></span></p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="トップへ戻る" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">トップへ戻る</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="VHGeneral_Help.html">バーチャルホストの一般</a></div><div class="center"><a href="config.html">設定</a></div><div class="next"><a href="VHSSL_Help.html">Virtual Host SSL</a> &#187;</div></div>
-<h1>バーチャルホストのセキュリティ</h1><h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header><a href="#VHlsrecaptcha">reCAPTCHA Protection</a></header><p>
-<a href="#enableRecaptcha">Enable reCAPTCHA</a> | <a href="#recaptchaSiteKey">Site Key</a> | <a href="#recaptchaSecretKey">Secret Key</a> | <a href="#recaptchaType">reCAPTCHA Type</a> | <a href="#recaptchaMaxTries">Max Tries</a> | <a href="#recaptchaVhReqLimit">Concurrent Request Limit</a></p></section>
-<section class="toc-row"><header>Containers</header><p>
-<a href="#bubbleWrap">Bubblewrap Container</a> | <a href="#namespace">Namespace Container</a> | <a href="#namespaceConfVhAdd">Additional Namespace Template File</a></p></section>
-<section class="toc-row"><header><a href="#accessControl">アクセス制御</a></header><p>
-<a href="#accessControl_allow">許可リスト</a> | <a href="#accessControl_deny">拒否リスト</a></p></section>
-<section class="toc-row"><header><a href="#realms">認可レルム</a></header><p>
-<a href="#realmName">レルム名</a> | <a href="#userDBLocation">ユーザーDBの場所</a> | <a href="#userDBMaxCacheSize">ユーザーDB最大キャッシュサイズ</a> | <a href="#userDBCacheTimeout">ユーザーDBキャッシュタイムアウト（秒）</a> | <a href="#GroupDBLocation">グループDBの場所</a> | <a href="#groupDBMaxCacheSize">グループDB最大キャッシュサイズ</a> | <a href="#groupDBCacheTimeout">グループDBキャッシュタイムアウト（秒）</a></p></section>
-</section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="VHlsrecaptcha"><h3>reCAPTCHA Protection<span class="ls-permlink"><a href="#VHlsrecaptcha"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>reCAPTCHA Protection is a service provided as a way to mitigate heavy server load. reCAPTCHA Protection will activate after one of the below situations is hit. Once active, all requests by NON TRUSTED(as configured) clients will be redirected to a reCAPTCHA validation page. After validation, the client will be redirected to their desired page.<br/><br/> The following situations will activate reCAPTCHA Protection:<br/> 1. The server or vhost concurrent requests count passes the configured connection limit.<br/> 2. Anti-DDoS is enabled and a client is hitting a url in a suspicious manner. The client will redirect to reCAPTCHA first instead of getting denied when triggered.<br/> 3. A new rewrite rule environment is provided to activate reCAPTCHA via RewriteRules. 'verifycaptcha' can be set to redirect clients to reCAPTCHA. A special value ': deny' can be set to deny the client if it failed too many times. For example, [E=verifycaptcha] will always redirect to reCAPTCHA until verified. [E=verifycaptcha: deny] will redirect to reCAPTCHA until Max Tries is hit, after which the client will be denied.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableRecaptcha"><h3>Enable reCAPTCHA<span class="ls-permlink"><a href="#enableRecaptcha"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Enable the reCAPTCHA Protection feature at the current level. This setting must be set to <span class="val">Yes</span> at the Server level before the reCAPTCHA Protection feature can be used.<br/><br/> Default values:<br/> <b>Server-level:</b> <span class="val">Yes</span><br/> <b>VH-Level:</b> Inherit Server level setting</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="recaptchaSiteKey"><h3>Site Key<span class="ls-permlink"><a href="#recaptchaSiteKey"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>The site key is the public key provided by Google via its reCAPTCHA service. A default Site Key will be used if not set.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="recaptchaSecretKey"><h3>Secret Key<span class="ls-permlink"><a href="#recaptchaSecretKey"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>The secret key is the private key provided by Google via its reCAPTCHA service. A default Secret Key will be used if not set.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="recaptchaType"><h3>reCAPTCHA Type<span class="ls-permlink"><a href="#recaptchaType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Specify the reCAPTCHA type to use with the key pairs.<br/> If a key pair has not been provided and this setting is set to <span class="val">Not Set</span>, a default key pair of type <span class="val">Invisible</span> will be used.<br/><br/> <span class="val">Checkbox</span> will display a checkbox reCAPTCHA for the visitor to validate.<br/><br/> <span class="val">Invisible</span> will attempt to validate the reCAPTCHA automatically and if successful, will redirect to the desired page.<br/><br/> <span class="val">hCaptcha</span> can be used to support reCAPTCHA provider <a href="https://www.hcaptcha.com" target="_blank" rel="noopener noreferrer">hCaptcha</a>.<br/><br/> Default value is <span class="val">Invisible</span>.</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="recaptchaMaxTries"><h3>Max Tries<span class="ls-permlink"><a href="#recaptchaMaxTries"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Max Tries specifies the maximum number of reCAPTCHA attempts permitted before denying the visitor.<br/><br/> Default value is <span class="val">3</span>.</p> <h4>構文</h4><p>整数</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="recaptchaVhReqLimit"><h3>Concurrent Request Limit<span class="ls-permlink"><a href="#recaptchaVhReqLimit"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>The number of concurrent requests needed to activate reCAPTCHA. reCAPTCHA will be used until concurrent requests drop below this number.<br/><br/> Default value is <span class="val">15000</span>.</p> <h4>構文</h4><p>整数</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="bubbleWrap"><h3>Bubblewrap Container<span class="ls-permlink"><a href="#bubbleWrap"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Set to <span class="val">Enabled</span> if you wish to start CGI processes (including PHP programs) in a bubblewrap sandbox. See <a href="   https://wiki.archlinux.org/title/Bubblewrap " target="_blank" rel="noopener noreferrer">   https://wiki.archlinux.org/title/Bubblewrap </a> for details on using bubblewrap. Bubblewrap must be installed on your system prior to using this setting.<br/><br/> This setting cannot be turned on at the Virtual Host level if set to "Disabled" at the Server level.<br/><br/> Default values:<br/> <b>Server level:</b> Disabled<br/> <b>VH level:</b> Inherit Server level setting</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="namespace"><h3>Namespace Container<span class="ls-permlink"><a href="#namespace"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Set to <span class="val">Enabled</span> if you wish to start CGI processes (including PHP programs) in a namespace container sandbox. Only used when <span class="tagl"><a href="ServSecurity_Help.html#bubbleWrap">Bubblewrap Container</a></span> is set to <span class="val">Disabled</span>.<br/><br/> When not <span class="val">Disabled</span> at the Server level, this settings value can be overridden at the Virtual Host level.<br/><br/> Default values:<br/> <b>Server level:</b> <span class="val">Disabled</span><br/> <b>Virtual Host Level:</b> Inherit Server level setting</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="namespaceConfVhAdd"><h3>Additional Namespace Template File<span class="ls-permlink"><a href="#namespaceConfVhAdd"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Path to an existing configuration file containing a list of directories to be mounted along with the methods used to mount them. If <span class="tagl"><a href="ServSecurity_Help.html#namespaceConf">Namespace Template File</a></span> is also set at the Server level, both files will be used.</p> <h4>構文</h4><p>絶対パスか$SERVER_ROOTからの相対パス又は$VH_ROOTからの相対パス。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl"><h3>アクセス制御<span class="ls-permlink"><a href="#accessControl"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>どのサブネットワークおよび/またはIPアドレスがサーバーにアクセスできるかを指定します。 サーバレベルでは、この設定はすべてのバーチャルホストに影響します。 バーチャルホストレベルで各バーチャルホストに固有のアクセス制御を設定することもできます。 バーチャルホストレベルの設定はサーバーレベルの設定を上書きしません。 <br/><br/> ブロック/ IPの許可は、許可リストと拒否リストの組み合わせによって決まります。 特定のIPまたはサブネットワークのみをブロックする場合は、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、ブロックされたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>。<br/> 特定のIPまたはサブネットワークのみを許可する場合は、<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、許可されたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>。<br/> IPに適合する最小スコープの設定は、アクセスを決定するために使用されます。<br/><br/> <b>サーバーレベル：</b>信頼できるIPまたはサブネットワークは、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に、末尾の "T"を追加することで指定する必要があります。 信頼できるIPまたはサブネットワークは、接続/スロットリング制限の影響を受けません。 信頼できるIP/サブネットワークは、サーバーレベルのアクセス制御でのみ設定できます。</p> <h4>ヒント</h4><p>[セキュリティ]すべてのバーチャルホストに適用される一般的な制限については、サーバーレベルでこれを使用してください。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_allow"><h3>許可リスト<span class="ls-permlink"><a href="#accessControl_allow"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>許可されるIPまたはサブネットワークのリストを指定します。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 末尾の「T」は、<span class="val">192.168.1.*T</span>などの信頼できるIPまたはサブネットワークを示すために使用できます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1] <br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or  [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>ヒント</h4><p>[セキュリティ]サーバーレベルのアクセス制御で設定された信頼されたIPまたはサブネットワークは、接続/スロットリングの制限から除外されます。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_deny"><h3>拒否リスト<span class="ls-permlink"><a href="#accessControl_deny"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>許可されていないIPまたはサブネットワークのリストを指定します。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1] <br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or  [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="realms"><h3>認可レルム<span class="ls-permlink"><a href="#realms"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>このバーチャルホストのすべての許可レルムをリストします。 認可レルムは、権限のないユーザーが保護されたWebページにアクセスするのをブロックするために使用されます。 レルムは、オプションのグループ分類を持つユーザー名とパスワードを含むユーザーディレクトリです。 認可は、コンテキスト・レベルで実行されます。 異なるコンテキストは同じレルム（ユーザデータベース）を共有できるため、レルムはそれらを使用するコンテキストとは別に定義されます。 コンテキスト設定では、これらの名前でレルムを参照できます。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="realmName"><h3>レルム名<span class="ls-permlink"><a href="#realmName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>認可レルムの一意の名前を指定します。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="userDBLocation"><h3>ユーザーDBの場所<span class="ls-permlink"><a href="#userDBLocation"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>ユーザーデータベースの場所を指定します。 DBタイプ<span class="val">パスワードファイル</span>の場合、ユーザ/パスワード定義を含むフラットファイルへのパスです。 ファイル名をクリックするとWebAdminコンソールからこのファイルを編集できます。<br/><br/> ユーザーファイルの各行には、ユーザー名の後にコロン、crypt()で暗号化されたパスワードが続き、オプションでコロンとユーザーが所属するグループ名が続きます。 グループ名はカンマで区切られます。 グループ情報がユーザーデータベースに指定されている場合、グループデータベースはチェックされません。<br/> 例：<blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote><br/><br/> DBタイプ<span class="val"> LDAP </span>の場合、ユーザー情報を照会するのはLDAP URLです。 有効なユーザーごとに、LDAPサーバーに格納されている認証データには、少なくともユーザーIDとユーザーパスワードが含まれている必要があります。 HTTP認証ヘッダーで受け取ったこのURLとユーザー名に基づいて、LDAP検索要求で1つだけのレコードを返す必要があります。 "$ k"はURLのフィルタ部分で指定する必要があり、ユーザー名で置き換えられます。 ユーザーのパスワード属性は、照会結果に戻されなければなりません。 ユーザーのパスワードの属性名は、<span class="tagl"><a href="#userDB_attrPasswd">パスワード属性</a></span>で指定します。 グループ情報は、<span class="tagl"><a href="#userDB_attrMemberOf">Member-of属性</a></span>で任意に指定できます。<br/><br/> 例: 少なくとも、オブジェクトクラス（uidObject、simpleSecurityObject、およびorganizationalRole）を使用してLDAPでユーザーを定義できます。 次のURLを使用できます: <br/><br/> <blockquote><code>ldap://localhost/ou=UserDB,dc=example,dc=com???(&(objectClass=*)(uid=$k))</code></blockquote></p> <h4>構文</h4><p>ユーザーDBファイルまたはLDAP URL（RFC 2255）へのパス。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#GroupDBLocation">グループDBの場所</a></span>, <span class="tagl"><a href="#userDB_attrPasswd">パスワード属性</a></span>, <span class="tagl"><a href="#userDB_attrMemberOf">Member-of属性</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="userDBMaxCacheSize"><h3>ユーザーDB最大キャッシュサイズ<span class="ls-permlink"><a href="#userDBMaxCacheSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>ユーザーデータベースの最大キャッシュサイズを指定します。 最近アクセスされたユーザー認証データは、最大のパフォーマンスを提供するためにメモリにキャッシュされます。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]キャッシュが大きくなるとメモリが消費されるため、値が高くなるほどパフォーマンスが向上する場合があります。 ユーザーのデータベースサイズとサイトの使用状況に応じて適切なサイズに設定します。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="userDBCacheTimeout"><h3>ユーザーDBキャッシュタイムアウト（秒）<span class="ls-permlink"><a href="#userDBCacheTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>バックエンドユーザーデータベースの変更の確認頻度を指定します。 キャッシュ内のすべてのエントリにタイムスタンプがあります。 キャッシュされたデータが指定されたタイムアウトよりも古い場合、バックエンドデータベースの変更がチェックされます。 変更がなければ、タイムスタンプは現在の時刻にリセットされ、そうでない場合は新しいデータがロードされます。 Sevrerのリロードと穏やかな再起動により、キャッシュは直ちにクリアされます。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]バックエンドデータベースが頻繁に変更されない場合は、パフォーマンスを向上させるために、より長いタイムアウトを設定します。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="GroupDBLocation"><h3>グループDBの場所<span class="ls-permlink"><a href="#GroupDBLocation"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>グループデータベースの場所を指定します。<br/> グループ情報は、ユーザデータベースまたはこのスタンドアロングループDBに設定することができます。ユーザ認証の場合、ユーザDBが最初にチェックされます。ユーザDBにグループ情報も含まれている場合、グループDBはチェックされません。 <br/><br/> DBタイプの<span class="val">パスワードファイル</span>の場合、グループDBロケーションは、グループ定義を含むフラットファイルへのパスでなければなりません。ファイル名をクリックするとWebAdminコンソールからこのファイルを編集できます。 <br/> グループファイルの各行には、コロンとそのあとにスペース区切りのユーザー名のグループが続くグループ名が含まれている必要があります。例：<br/> <blockquote><code>testgroup: user1 user2 user3</code></blockquote> <br/> DBタイプ<span class="val">LDAP</span>の場合、グループDBロケーションは、グループ情報を照会するLDAP URLでなければなりません。 有効なグループごとに、このURLと<span class="tagl"><a href="Redirect_Context.html#required">必要（許可ユーザー/グループ）</a></span>で指定されたグループ名に基づいて、LDAP検索リクエストで1つのレコードしか返されません。 "$k"はURLのフィルタ部分に指定する必要があり、グループ名に置き換えられます。 このグループのメンバーを指定する属性の名前は、<span class="tagl"><a href="#groupDB_attrGroupMember">グループメンバ属性</a></span>によって指定されます。<br/><br/> 例: objectClass posixGroupがグループ情報の格納に使用されている場合 次のURLを使用できます: <br/> <blockquote><code>ldap://localhost/ou=GroupDB,dc=example,dc=com???(&(objectClass=*)(cn=$k))</code></blockquote></p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOT、$VH_ROOTからの相対パス。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBLocation">ユーザーDBの場所</a></span>, Context <span class="tagl"><a href="Context_Help.html#required">必要（許可ユーザー/グループ）</a></span>, <span class="tagl"><a href="#groupDB_attrGroupMember">グループメンバ属性</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="groupDBMaxCacheSize"><h3>グループDB最大キャッシュサイズ<span class="ls-permlink"><a href="#groupDBMaxCacheSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>グループデータベースの最大キャッシュサイズを指定します。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]キャッシュが大きくなるとメモリが消費されるため、値が高くなるほどパフォーマンスが向上する場合があります。 ユーザーのデータベースサイズとサイトの使用状況に応じて適切なサイズに設定します。</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBMaxCacheSize">ユーザーDB最大キャッシュサイズ</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="groupDBCacheTimeout"><h3>グループDBキャッシュタイムアウト（秒）<span class="ls-permlink"><a href="#groupDBCacheTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>バックエンドグループデータベースの変更の確認頻度を指定します。 詳細については、<span class="tagl"><a href="#userDBCacheTimeout">ユーザーDBキャッシュタイムアウト（秒）</a></span>を参照してください。</p> <h4>構文</h4><p>整数</p> <h4>参照</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBCacheTimeout">ユーザーDBキャッシュタイムアウト（秒）</a></span></p> </article> </div>
-</section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-</div></div>
 </body>
 </html>

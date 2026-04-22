@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Listeners de administración - SSL</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Listeners de administración - SSL." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../AdminListeners_SSL_Help.html" data-lang="en-US">English</option><option value="../es-ES/AdminListeners_SSL_Help.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/AdminListeners_SSL_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/AdminListeners_SSL_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/AdminListeners_SSL_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/AdminListeners_SSL_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a class="current" href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="AdminListeners_General_Help.html">Listeners de administración - General</a></div><div class="center"><a href="webconsole.html">Consola web</a></div><div class="next">&nbsp;</div></div>
+<header class="doc-page-header"><h1>Listeners de administración - SSL</h1><div class="doc-page-intro">Los listeners de administración están dedicados al servidor de administración. Se recomiendan listeners seguros (SSL) para el servidor de administración.</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#sslCert">Clave privada y certificado SSL</a></h3><ul class="doc-toc__links"><li><a href="#keyFile">Archivo de clave privada</a></li><li><a href="#certFile">Archivo de certificado</a></li><li><a href="#certChain">Certificado encadenado</a></li><li><a href="#CACertPath">Ruta de certificados CA</a></li><li><a href="#CACertFile">Archivo de certificados CA</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Configuración de protocolo SSL</h3><ul class="doc-toc__links"><li><a href="#sslProtocol">Version de protocolo</a></li><li><a href="#ciphers">Cifrados</a></li><li><a href="#enableECDHE">Habilitar intercambio de claves ECDH</a></li><li><a href="#enableDHE">Habilitar intercambio de claves DH</a></li><li><a href="#DHParam">Parametro DH</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Seguridad y funciones</h3><ul class="doc-toc__links"><li><a href="#renegProtection">Proteccion contra renegociacion SSL</a></li><li><a href="#sslSessionCache">Habilitar caché de sesión</a></li><li><a href="#sslSessionTickets">Habilitar tickets de sesión</a></li><li><a href="#enableSpdy">ALPN</a></li><li><a href="#allowQuic">Abrir puerto HTTP3/QUIC (UDP)</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Verificación de cliente</h3><ul class="doc-toc__links"><li><a href="#clientVerify">Verificacion de cliente</a></li><li><a href="#verifyDepth">Profundidad de verificacion</a></li><li><a href="#crlPath">Ruta de revocacion de cliente</a></li><li><a href="#crlFile">Archivo de revocacion de cliente</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslCert"><h3>Clave privada y certificado SSL<span class="ls-permlink"><a href="#sslCert"></a></span></h3></header><h4>Descripción</h4><p>Cada listener SSL requiere una clave privada SSL y un certificado SSL emparejados. Varios listeners SSL pueden compartir la misma clave y certificado.<br/><br/> Puede generar claves privadas SSL usted mismo usando un paquete de software SSL, como OpenSSL. Los certificados SSL tambien pueden comprarse a una entidad emisora de certificados autorizada como VeriSign o Thawte. Tambien puede firmar el certificado usted mismo. Los certificados autofirmados no seran considerados confiables por los navegadores web y no deben usarse en sitios web publicos que contengan datos criticos. Sin embargo, un certificado autofirmado es suficiente para uso interno, por ejemplo para cifrar el trafico hacia la consola WebAdmin de LiteSpeed Web Server.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="keyFile"><h3>Archivo de clave privada<span class="ls-permlink"><a href="#keyFile"></a></span></h3></header><h4>Descripción</h4><p>El nombre de archivo de la clave privada SSL. El archivo de clave no debe estar cifrado.</p> <h4>Sintaxis</h4><p>Nombre de archivo que puede ser una ruta absoluta o una ruta relativa a $SERVER_ROOT.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> El archivo de clave privada debe colocarse en un directorio seguro que permita acceso de solo lectura al usuario con el que se ejecuta el servidor.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="certFile"><h3>Archivo de certificado<span class="ls-permlink"><a href="#certFile"></a></span></h3></header><h4>Descripción</h4><p>El nombre de archivo del certificado SSL.</p> <h4>Sintaxis</h4><p>Nombre de archivo que puede ser una ruta absoluta o una ruta relativa a $SERVER_ROOT.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> El archivo de certificado debe colocarse en un directorio seguro que permita acceso de solo lectura al usuario con el que se ejecuta el servidor.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="certChain"><h3>Certificado encadenado<span class="ls-permlink"><a href="#certChain"></a></span></h3></header><h4>Descripción</h4><p>Especifica si el certificado es o no un certificado encadenado. El archivo que almacena una cadena de certificados debe estar en formato PEM, y los certificados deben estar en orden encadenado, desde el nivel mas bajo (el certificado real del cliente o servidor) hasta la CA de nivel mas alto (raiz).</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="CACertPath"><h3>Ruta de certificados CA<span class="ls-permlink"><a href="#CACertPath"></a></span></h3></header><h4>Descripción</h4><p>Especifica el directorio donde se guardan los certificados de las autoridades de certificacion (CA). Estos certificados se usan para autenticacion de certificados de cliente y para construir la cadena de certificados del servidor, que se enviara a los navegadores ademas del certificado del servidor.</p> <h4>Sintaxis</h4><p>ruta</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="CACertFile"><h3>Archivo de certificados CA<span class="ls-permlink"><a href="#CACertFile"></a></span></h3></header><h4>Descripción</h4><p>Especifica el archivo que contiene todos los certificados de autoridades de certificacion (CA) para certificados encadenados. Este archivo es simplemente la concatenacion de archivos de certificado codificados en PEM, en orden de preferencia. Puede usarse como alternativa o ademas de <span class="tagl"><a href="#CACertPath">Ruta de certificados CA</a></span>. Estos certificados se usan para autenticacion de certificados de cliente y para construir la cadena de certificados del servidor, que se enviara a los navegadores ademas del certificado del servidor.</p> <h4>Sintaxis</h4><p>Nombre de archivo que puede ser una ruta absoluta o una ruta relativa a $SERVER_ROOT.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslProtocol"><h3>Version de protocolo<span class="ls-permlink"><a href="#sslProtocol"></a></span></h3></header><h4>Descripción</h4><p>Seleccion de protocolos SSL aceptados por el listener.<br/><br/> Las opciones incluyen: <span class="val">SSL v3.0</span>, <span class="val">TLS v1.0</span>, <span class="val">TLS v1.1</span>, <span class="val">TLS v1.2</span>, <span class="val">TLS v1.3</span>.</p> <h4>Sintaxis</h4><p>Seleccionar mediante casillas</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ciphers"><h3>Cifrados<span class="ls-permlink"><a href="#ciphers"></a></span></h3></header><h4>Descripción</h4><p>Especifica la suite de cifrados que se usara al negociar el handshake SSL. LSWS admite suites de cifrado implementadas en SSL v3.0, TLS v1.0, TLS v1.2 y TLS v1.3.</p> <h4>Sintaxis</h4><p>Cadena de especificaciones de cifrado separadas por dos puntos.</p> <h4>Ejemplo</h4><div class="ls-example">ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH</div><h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Recomendamos dejar este campo en blanco para usar nuestro cifrado predeterminado, que sigue las mejores practicas de cifrado SSL.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableECDHE"><h3>Habilitar intercambio de claves ECDH<span class="ls-permlink"><a href="#enableECDHE"></a></span></h3></header><h4>Descripción</h4><p>Permite usar intercambio de claves Elliptic Curve Diffie-Hellman para cifrado SSL adicional.</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> El intercambio de claves ECDH es mas seguro que usar solo una clave RSA. Los intercambios de claves ECDH y DH son igualmente seguros.<br/><br/> <span class="ls-badge ls-badge--performance">Performance</span> Habilitar el intercambio de claves ECDH aumentara la carga de CPU y es mas lento que usar solo una clave RSA.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableDHE"><h3>Habilitar intercambio de claves DH<span class="ls-permlink"><a href="#enableDHE"></a></span></h3></header><h4>Descripción</h4><p>Permite usar intercambio de claves Diffie-Hellman para cifrado SSL adicional.</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> El intercambio de claves DH es mas seguro que usar solo una clave RSA. Los intercambios de claves ECDH y DH son igualmente seguros.<br/><br/> <span class="ls-badge ls-badge--performance">Performance</span> Habilitar el intercambio de claves DH aumentara la carga de CPU y es mas lento que el intercambio ECDH y RSA. Se prefiere ECDH cuando esta disponible.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="DHParam"><h3>Parametro DH<span class="ls-permlink"><a href="#DHParam"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ubicacion del archivo de parametros Diffie-Hellman necesario para el intercambio de claves DH.</p> <h4>Sintaxis</h4><p>Nombre de archivo que puede ser una ruta absoluta o una ruta relativa a $SERVER_ROOT.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="renegProtection"><h3>Proteccion contra renegociacion SSL<span class="ls-permlink"><a href="#renegProtection"></a></span></h3></header><h4>Descripción</h4><p>Especifica si se debe habilitar la Proteccion contra renegociacion SSL para defenderse de ataques basados en handshake SSL. El valor predeterminado es "Yes".</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Esta opcion puede habilitarse en los niveles de listener y virtual host.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslSessionCache"><h3>Habilitar caché de sesión<span class="ls-permlink"><a href="#sslSessionCache"></a></span></h3></header><h4>Descripción</h4><p>Habilita la caché de ID de sesión usando el ajuste predeterminado de OpenSSL. El ajuste de nivel de servidor debe estar en "Yes" para que el ajuste de Virtual Host tenga efecto.<br/><br/> Valores predeterminados:<br/> <b>Nivel de servidor:</b> Yes<br/> <b>Nivel de VH:</b> Yes</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslSessionTickets"><h3>Habilitar tickets de sesión<span class="ls-permlink"><a href="#sslSessionTickets"></a></span></h3></header><h4>Descripción</h4><p>Habilita tickets de sesión usando el ajuste predeterminado de tickets de sesión de OpenSSL. El ajuste de nivel de servidor debe estar en "Yes" para que el ajuste de Virtual Host tenga efecto.<br/><br/> Valores predeterminados:<br/> <b>Nivel de servidor:</b> Yes<br/> <b>Nivel de VH:</b> Yes</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableSpdy"><h3>ALPN<span class="ls-permlink"><a href="#enableSpdy"></a></span></h3></header><h4>Descripción</h4><p>Application-Layer Protocol Negotiation(ALPN) se usa para habilitar selectivamente los protocolos de red HTTP/3 y HTTP/2.<br/><br/> Si desea deshabilitar HTTP/2 y HTTP3, marque <span class="val">None</span> y deje todas las demas casillas sin marcar.<br/><br/> Valor predeterminado: todos habilitados</p> <h4>Sintaxis</h4><p>Seleccionar mediante casillas</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Puede establecerse en los niveles de listener y virtual host.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="allowQuic"><h3>Abrir puerto HTTP3/QUIC (UDP)<span class="ls-permlink"><a href="#allowQuic"></a></span></h3></header><h4>Descripción</h4><p>Permite el uso del protocolo de red HTTP3/QUIC para los virtual hosts asignados a este listener. Para que esta opcion tenga efecto, <span class="tagl"><a href="ServTuning_Help.html#quicEnable">Habilitar HTTP3/QUIC</a></span> tambien debe establecerse en <span class="val">Yes</span> a nivel de servidor. El valor predeterminado es <span class="val">Yes</span>.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Cuando esta opcion se establece en <span class="val">Yes</span>, HTTP3/QUIC aun puede deshabilitarse en el nivel de virtual host mediante la opcion <span class="tagl"><a href="VHSSL_Help.html#vhEnableQuic">Habilitar HTTP3/QUIC</a></span>.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="clientVerify"><h3>Verificacion de cliente<span class="ls-permlink"><a href="#clientVerify"></a></span></h3></header><h4>Descripción</h4><p> Especifica el tipo de autenticacion de certificado de cliente. Los tipos disponibles son: <ul> <li><b>None:</b> no se requiere certificado de cliente.</li> <li><b>Optional:</b> el certificado de cliente es opcional.</li> <li><b>Require:</b> el cliente debe tener un certificado valido.</li> <li><b>Optional_no_ca:</b> igual que optional.</li> </ul> El valor predeterminado es "None".</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> "None" o "Require" son recomendados.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="verifyDepth"><h3>Profundidad de verificacion<span class="ls-permlink"><a href="#verifyDepth"></a></span></h3></header><h4>Descripción</h4><p> Especifica que tan profundamente debe verificarse un certificado antes de determinar que el cliente no tiene un certificado valido. El valor predeterminado es "1".</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="crlPath"><h3>Ruta de revocacion de cliente<span class="ls-permlink"><a href="#crlPath"></a></span></h3></header><h4>Descripción</h4><p> Especifica el directorio que contiene archivos CRL de CA codificados en PEM para certificados de cliente revocados. Los archivos de este directorio deben estar codificados en PEM. Se accede a estos archivos mediante nombres de archivo hash, hash-value.rN. Consulte la documentacion de openSSL o Apache mod_ssl sobre la creacion del nombre de archivo hash.</p> <h4>Sintaxis</h4><p>ruta</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="crlFile"><h3>Archivo de revocacion de cliente<span class="ls-permlink"><a href="#crlFile"></a></span></h3></header><h4>Descripción</h4><p> Especifica el archivo que contiene archivos CRL de CA codificados en PEM que enumeran certificados de cliente revocados. Puede usarse como alternativa o ademas de <span class="tagl"><a href="#crlPath">Ruta de revocacion de cliente</a></span>.</p> <h4>Sintaxis</h4><p>Nombre de archivo que puede ser una ruta absoluta o una ruta relativa a $SERVER_ROOT.</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

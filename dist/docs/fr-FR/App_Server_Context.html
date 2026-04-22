@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manuel utilisateur OpenLiteSpeed - Contexte de serveur d&#039;applications</title>
+  <meta name="description" content="Manuel utilisateur OpenLiteSpeed - Contexte de serveur d&#039;applications." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manuel utilisateur OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manuel utilisateur OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Ouvrir le menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Rechercher pages et reglages" data-no-results="Aucun resultat trouve.">
+      <label class="sr-only" for="doc-search-input">Rechercher dans le manuel</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Rechercher pages et reglages" aria-controls="doc-search-results" />
+        <button type="submit">Rechercher</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Langue"><option value="../App_Server_Context.html" data-lang="en-US">English</option><option value="../es-ES/App_Server_Context.html" data-lang="es-ES">Español</option><option value="../de-DE/App_Server_Context.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/App_Server_Context.html" data-lang="fr-FR" selected>Français</option><option value="../zh-CN/App_Server_Context.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/App_Server_Context.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Changer de theme" data-theme-toggle data-theme-light-label="Mode clair" data-theme-dark-label="Mode sombre" title="Changer de theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+      <li><a href="license.html">Licence</a></li>
+      <li><a href="intro.html">Introduction</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Securite</a></li>
+      <li>
+        <a href="config.html">Configuration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Serveur general</a></li>
+          <li><a href="ServLog_Help.html">Journal serveur</a></li>
+          <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
+          <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
+          <li><a href="ExtApp_Help.html">Applications externes</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Moteur servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
+          <li><a href="App_Server_Help.html">Reglages App Server</a></li>
+          <li><a href="Module_Help.html">Configuration des modules</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL du listener</a></li>
+          <li><a href="Templates_Help.html">Modeles de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Enregistrement du VHost</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexte</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexte statique</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+            <li><a href="CGI_Context.html">Contexte CGI</a></li>
+            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+            <li><a class="current" href="App_Server_Context.html">Contexte App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexte handler de module</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Console web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
+          <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Redirect_Context.html">Contexte de redirection</a></div><div class="center"><a href="Context_Help.html">Contexte</a></div><div class="next"><a href="UWSGI_Context.html">Contexte uWSGI</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Contexte de serveur d'applications</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Table des matières</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#appServerContext">Contexte de serveur d'applications</a></h3><ul class="doc-toc__links"><li><a href="#expuri">URI</a></li><li><a href="#as_location">Emplacement</a></li><li><a href="#binPath">Chemin binaire</a></li><li><a href="#appType">Type d’application</a></li><li><a href="#as_startupfile">Fichier de demarrage</a></li><li><a href="#appserverEnv">Mode d'exécution</a></li><li><a href="#maxConns">Connexions max.</a></li><li><a href="#env">Environnement</a></li><li><a href="#enableExpires">Activer Expires</a></li><li><a href="#expiresDefault">Expires par defaut</a></li><li><a href="#expiresByType">Expires par type</a></li><li><a href="#extraHeaders">Operations d’en-tete</a></li><li><a href="#indexFiles">Fichiers index</a></li><li><a href="#autoIndex">Index automatique</a></li><li><a href="#realm">Realm</a></li><li><a href="#authName">Nom d’authentification</a></li><li><a href="#required">Require (utilisateurs/groupes autorises)</a></li><li><a href="#accessAllowed">Acces autorise</a></li><li><a href="#accessDenied">Acces refuse</a></li><li><a href="#extAuthorizer">Authorizer</a></li><li><a href="#enableRewrite">Activer rewrite</a></li><li><a href="#rewriteInherit">Heriter rewrite</a></li><li><a href="#rewriteBase">Base rewrite</a></li><li><a href="#rewriteRules">Règles de réécriture</a></li><li><a href="#addDefaultCharset">Ajouter le charset par defaut</a></li><li><a href="#defaultCharsetCustomized">Charset par defaut personnalise</a></li><li><a href="#enableIpGeo">Activer la recherche GeoLocation</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="appServerContext"><h3>Contexte de serveur d'applications<span class="ls-permlink"><a href="#appServerContext"></a></span></h3></header><h4>Description</h4><p>Un contexte de serveur d'applications fournit un moyen simple de configurer une application Ruby Rack/Rails, WSGI ou Node.js. Pour ajouter une application via un contexte de serveur d'applications, il suffit de monter l'URL et d'indiquer le repertoire racine de l'application. Il n'est pas necessaire de definir une application externe, d'ajouter un gestionnaire 404, de configurer des regles de reecriture, etc.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span></h3></header><h4>Description</h4><p>Indique l’URI de ce contexte.</p> <h4>Syntaxe</h4><p>L’URI peut etre une URI simple (commencant par "/") ou une URI d’expression reguliere compatible Perl (commencant par "exp:"). Si une URI simple se termine par "/", ce contexte inclura toutes les sous-URI sous cette URI. Si le contexte est mappe vers un repertoire du systeme de fichiers, un "/" final doit etre ajoute.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#location">Emplacement</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="as_location"><h3>Emplacement<span class="ls-permlink"><a href="#as_location"></a></span></h3></header><h4>Description</h4><p>Indique l’emplacement correspondant de ce contexte dans le systeme de fichiers.<br/><br/> Valeur par defaut: $DOC_ROOT + <span class="tagl"><a href="#expuri">URI</a></span></p> <h4>Syntaxe</h4><p>Il peut s’agir d’un chemin absolu ou d’un chemin relatif a $SERVER_ROOT, $VH_ROOT ou $DOC_ROOT. $DOC_ROOT est le chemin relatif par defaut et peut etre omis.<br/><br/> Si <span class="tagl"><a href="#expuri">URI</a></span> est une expression reguliere, la sous-chaine correspondante peut etre utilisee pour former la chaine "Root". Elle peut etre referencee avec les valeurs "$1" - "$9". "$0" et "&" peuvent referencer toute la chaine correspondante. Une chaine de requete peut aussi etre definie en ajoutant "?" suivi de la chaine de requete. Attention: "&" doit etre echappe sous la forme "\&" dans la chaine de requete.</p> <h4>Exemple</h4><div class="ls-example">Une URI simple comme <span class="val">/examples/</span>, avec <span class="tagl"><a href="#location">Emplacement</a></span> defini sur <span class="val">/home/john/web_examples</span>, mappe la requete "/examples/foo/bar.html" vers le fichier "/home/john/web_examples/foo/bar.html".<br/> Pour simuler mod_userdir d’Apache, definissez URI sur <span class="val">exp: ^/~([A-Za-z0-9]+)(.*)</span>, definissez <span class="tagl"><a href="#location">Emplacement</a></span> sur <span class="val">/home/$1/public_html$2</span>. Avec ces parametres, une requete URI /~john/foo/bar.html sera mappee vers le fichier /home/john/public_html/foo/bar.html.</div><h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#expuri">URI</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="binPath"><h3>Chemin binaire<span class="ls-permlink"><a href="#binPath"></a></span></h3></header><h4>Description</h4><p>Emplacement du binaire de l’application App Server.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="appType"><h3>Type d’application<span class="ls-permlink"><a href="#appType"></a></span></h3></header><h4>Description</h4><p>Type d’application utilise pour ce contexte. Rack/Rails, WSGI ou Node.js sont pris en charge.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="as_startupfile"><h3>Fichier de demarrage<span class="ls-permlink"><a href="#as_startupfile"></a></span></h3></header><h4>Description</h4><p>Emplacement du fichier utilise pour demarrer l’application, relatif au repertoire racine de l’application.<br/><br/> Les noms de fichier de demarrage par defaut incluent 'config.ru' pour Rack/Rails, 'wsgi.py' et 'passenger_wsgi.py' pour WSGI, et 'app.js' pour NodeJS.</p> <h4>Syntaxe</h4><p>Chemin relatif au repertoire racine de l’application</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="appserverEnv"><h3>Mode d'exécution<span class="ls-permlink"><a href="#appserverEnv"></a></span></h3></header><h4>Description</h4><p>Indique le mode d'exécution de l'application: "Development", "Production" ou "Staging". La valeur par défaut est "Production".</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="maxConns"><h3>Connexions max.<span class="ls-permlink"><a href="#maxConns"></a></span></h3></header><h4>Description</h4><p>Indique le nombre maximal de connexions concurrentes pouvant etre etablies entre le serveur et une application externe. Ce reglage controle combien de requetes peuvent etre traitees simultanement par une application externe; toutefois, la limite reelle depend aussi de l'application externe elle-meme. Augmenter cette valeur n'aidera pas si l'application externe n'est pas assez rapide ou ne peut pas monter en charge avec un grand nombre de requetes concurrentes.</p> <h4>Syntaxe</h4><p>Nombre entier</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Definir une valeur elevee ne se traduit pas directement par de meilleures performances. Fixer la limite a une valeur qui ne surcharge pas l'application externe donnera les meilleures performances/le meilleur debit.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="env"><h3>Environnement<span class="ls-permlink"><a href="#env"></a></span></h3></header><h4>Description</h4><p>Indique des variables d'environnement supplementaires pour l'application externe.</p> <h4>Syntaxe</h4><p>Key=value. Plusieurs variables peuvent etre separees par "ENTER"</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableExpires"><h3>Activer Expires<span class="ls-permlink"><a href="#enableExpires"></a></span></h3></header><h4>Description</h4><p>Indique s’il faut generer un en-tete Expires pour les fichiers statiques. Si active, un en-tete Expires sera genere selon <span class="tagl"><a href="#expiresDefault">Expires par defaut</a></span> et <span class="tagl"><a href="#expiresByType">Expires par type</a></span>.<br/><br/> Cela peut etre defini aux niveaux serveur, hote virtuel et contexte. Les parametres de niveau inferieur remplaceront ceux de niveau superieur, c’est-a-dire que les parametres de contexte remplaceront ceux de l’hote virtuel et les parametres de l’hote virtuel remplaceront ceux du serveur.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expiresDefault"><h3>Expires par defaut<span class="ls-permlink"><a href="#expiresDefault"></a></span></h3></header><h4>Description</h4><p>Indique les parametres par defaut pour la generation de l’en-tete Expires. Ce parametre prend effet lorsque <span class="tagl"><a href="#enableExpires">Activer Expires</a></span> est defini sur "Yes". Il peut etre remplace par <span class="tagl"><a href="#expiresByType">Expires par type</a></span>. Ne definissez pas ce defaut au niveau serveur ou hote virtuel sauf si necessaire, car il generera des en-tetes Expires pour toutes les pages. La plupart du temps, cela doit etre defini au niveau contexte pour certains repertoires qui ne changent pas souvent. S’il n’y a pas de parametre par defaut, aucun en-tete Expires ne sera genere pour les types non indiques dans <span class="tagl"><a href="#expiresByType">Expires par type</a></span>.</p> <h4>Syntaxe</h4><p>A|Mseconds<br/> Le fichier expirera apres le temps de base (A|M) plus les secondes indiquees. Le temps de base "A" definit la valeur sur le temps d’acces du client et "M" sur le temps de derniere modification du fichier.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expiresByType"><h3>Expires par type<span class="ls-permlink"><a href="#expiresByType"></a></span></h3></header><h4>Description</h4><p>Indique les parametres d’en-tete Expires pour des types MIME individuels.</p> <h4>Syntaxe</h4><p>Liste separee par des virgules de "MIME-type=A|Mseconds". Le fichier expirera apres le temps de base (A|M) plus les secondes indiquees.<br/><br/> Le temps de base "A" definit la valeur sur le temps d’acces du client et "M" sur le temps de derniere modification du fichier. MIME-type accepte le caractere generique "*", comme image/*.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extraHeaders"><h3>Operations d’en-tete<span class="ls-permlink"><a href="#extraHeaders"></a></span></h3></header><h4>Description</h4><p>Indique les en-tetes de reponse/requete supplementaires a ajouter. Plusieurs directives d’en-tete peuvent etre ajoutees, une directive par ligne. "NONE" peut desactiver l’heritage des en-tetes parents. Si aucune directive n’est fournie, 'Header' est supposee.</p> <h4>Syntaxe</h4><p>[Header]|RequestHeader [condition] set|append|merge|add|unset header [value] [early|env=[!]variable]</p> <h4>Exemple</h4><div class="ls-example">set Cache-control no-cache<br/> append Cache-control no-store<br/> Header set My-header cust_header_val<br/> RequestHeader set My-req-header cust_req_header_val</div><h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> La syntaxe et l’utilisation sont similaires aux directives <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">mod_headers d’Apache</a> pour les operations prises en charge.<br/><br/> <span class="ls-badge ls-badge--info">Information</span> La directive 'Header' est facultative et peut etre exclue ou conservee lors de la copie de regles sans probleme.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="indexFiles"><h3>Fichiers index<span class="ls-permlink"><a href="#indexFiles"></a></span></h3></header><h4>Description</h4><p>Indique les noms des fichiers index qui seront recherches sequentiellement lorsqu’une URL est mappee vers un repertoire. Vous pouvez le personnaliser aux niveaux serveur, hote virtuel et contexte.</p> <h4>Syntaxe</h4><p>Liste de noms de fichiers index separes par des virgules.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Ne definissez que les fichiers index dont vous avez besoin.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="autoIndex"><h3>Index automatique<span class="ls-permlink"><a href="#autoIndex"></a></span></h3></header><h4>Description</h4><p>Indique s’il faut générer à la volée un index de répertoire lorsque les fichiers d’index listés dans <span class="tagl"><a href="#indexFiles">Fichiers index</a></span> ne sont pas disponibles dans un répertoire. Cette option est personnalisable au niveau hôte virtuel et contexte, et elle est héritée le long de l’arborescence de répertoires jusqu’à être explicitement remplacée. Vous pouvez personnaliser la page d’index générée. Consultez les How-tos du wiki en ligne.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Il est recommandé de désactiver Index automatique partout où c’est possible afin d’éviter de révéler des données confidentielles.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#indexFiles">Fichiers index</a></span>, <span class="tagl"><a href="#autoIndexURI">URI d'index automatique</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realm"><h3>Realm<span class="ls-permlink"><a href="#realm"></a></span></h3></header><h4>Description</h4><p>Indique le realm d’autorisation pour ce contexte. Lorsqu’il est indique, un nom d’utilisateur et un mot de passe valides doivent etre fournis pour acceder a ce contexte. <span class="tagl"><a href="VHSecurity_Help.html#realms">Realms d'autorisation</a></span> sont configures dans la section <span class="tagP"><a href="#VHSecurity_Help">Hôte virtuel - Sécurité</a></span>. Ce parametre utilise le <span class="tagl"><a href="VHSecurity_Help.html#realmName">Nom du realm</a></span> de chaque realm.</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="authName"><h3>Nom d’authentification<span class="ls-permlink"><a href="#authName"></a></span></h3></header><h4>Description</h4><p>Indique un nom alternatif pour le realm d’autorisation du contexte actuel. S’il n’est pas indique, le nom original du realm sera utilise. Le nom d’authentification est affiche dans la fenetre de login du navigateur.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="required"><h3>Require (utilisateurs/groupes autorises)<span class="ls-permlink"><a href="#required"></a></span></h3></header><h4>Description</h4><p>Indique quels utilisateurs/groupes peuvent acceder a ce contexte. Cela permet d’utiliser une base de donnees utilisateur/groupe (indiquee dans <span class="tagl"><a href="#realm">Realm</a></span>) sur plusieurs contextes, tout en n’autorisant que certains utilisateurs/groupes de cette base pour ce contexte.</p> <h4>Syntaxe</h4><p>La syntaxe est compatible avec la directive Require d’Apache. Par exemple: <ul> <li><span class="val">user username [username ...]</span><br/> Seuls les utilisateurs listes peuvent acceder a ce contexte.</li> <li> <span class="val">group groupid [groupid ...]</span><br/> Seuls les utilisateurs appartenant aux groupes listes peuvent acceder a ce contexte.</li> </ul> Si ce parametre n’est pas indique, tous les utilisateurs valides pourront acceder a cette ressource.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessAllowed"><h3>Acces autorise<span class="ls-permlink"><a href="#accessAllowed"></a></span></h3></header><h4>Description</h4><p>Indique quelles IPs ou sous-reseaux sont autorises a acceder aux ressources sous ce contexte. Avec <span class="tagl"><a href="#accessDenied">Acces refuse</a></span> et le controle d’acces de niveau serveur/hote virtuel, l’accessibilite est determinee par le plus petit perimetre dans lequel se trouve l’adresse IP du client.</p> <h4>Syntaxe</h4><p>Liste d’IPs/sous-reseaux separee par des virgules.</p> <h4>Exemple</h4><div class="ls-example">Les sous-reseaux peuvent etre ecrits sous la forme <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> ou <span class="val">192.168.1.*</span>.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessDenied"><h3>Acces refuse<span class="ls-permlink"><a href="#accessDenied"></a></span></h3></header><h4>Description</h4><p>Indique quelles IPs ou sous-reseaux ne sont PAS autorises a acceder aux ressources sous ce contexte. Avec <span class="tagl"><a href="#accessAllowed">Acces autorise</a></span> et le controle d’acces de niveau serveur/hote virtuel, l’accessibilite est determinee par le plus petit perimetre dans lequel se trouve l’adresse IP du client.</p> <h4>Syntaxe</h4><p>Liste d’IPs/sous-reseaux separee par des virgules.</p> <h4>Exemple</h4><div class="ls-example">Les sous-reseaux peuvent etre ecrits sous la forme <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> ou <span class="val">192.168.1.*</span>.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAuthorizer"><h3>Authorizer<span class="ls-permlink"><a href="#extAuthorizer"></a></span></h3></header><h4>Description</h4><p>Indique une application externe pouvant generer des decisions autorise/non autorise. Actuellement, seul FastCGI Authorizer est disponible. Pour plus de details sur le role FastCGI Authorizer, consultez <a href="   https://fastcgi-archives.github.io/ " target="_blank" rel="noopener noreferrer">   https://fastcgi-archives.github.io/ </a>.</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableRewrite"><h3>Activer rewrite<span class="ls-permlink"><a href="#enableRewrite"></a></span></h3></header><h4>Description</h4><p>Indique s’il faut activer le moteur de réécriture d’URL de LiteSpeed. Cette option peut être personnalisée au niveau hôte virtuel ou contexte, et elle est héritée le long de l’arborescence de répertoires jusqu’à être explicitement remplacée.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rewriteInherit"><h3>Heriter rewrite<span class="ls-permlink"><a href="#rewriteInherit"></a></span></h3></header><h4>Description</h4><p>Indique s’il faut heriter les regles rewrite des contextes parents. Si rewrite est active et non herite, la base rewrite et les regles rewrite definies dans ce contexte seront utilisees.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rewriteBase"><h3>Base rewrite<span class="ls-permlink"><a href="#rewriteBase"></a></span></h3></header><h4>Description</h4><p>Indique l’URL de base pour les regles rewrite.</p> <h4>Syntaxe</h4><p>URL</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rewriteRules"><h3>Règles de réécriture<span class="ls-permlink"><a href="#rewriteRules"></a></span></h3></header><h4>Description</h4><p>Indique une liste de règles de réécriture au niveau hôte virtuel.<br/><br/> N’ajoutez PAS ici de règles de réécriture au niveau racine des documents. Si vous avez des règles de réécriture au niveau racine des documents provenant de .htaccess, vous devez plutôt créer un contexte statique avec uri "/" et y ajouter les règles de réécriture.<br/><br/> Une règle de réécriture comprend une directive <span class="val">RewriteRule</span> et peut être précédée, facultativement, de plusieurs directives <span class="val">RewriteCond</span>. <ul>   <li>Chaque directive doit tenir sur une seule ligne.</li>   <li>     <span class="val">RewriteCond</span> et <span class="val">RewriteRule</span> suivent la syntaxe des directives rewrite d’Apache. Copiez-collez simplement les directives rewrite depuis vos fichiers de configuration Apache.   </li>   <li>     Il existe de légères différences entre les implémentations LiteSpeed et Apache mod_rewrite:     <ul>       <li>         <span class="val">%\{LA-U:variable\}</span> et <span class="val">%\{LA-F:variable\}</span> sont ignorées par le moteur de réécriture LiteSpeed       </li>       <li>         Deux nouvelles variables serveur sont ajoutées dans le moteur de réécriture LiteSpeed: <span class="val">%\{CURRENT_URI\}</span> représente l’URI actuelle traitée par le moteur de réécriture, et <span class="val">%\{SCRIPT_NAME\}</span> a la même signification que la variable d’environnement CGI correspondante.       </li>       <li>         Le moteur de réécriture LiteSpeed arrête de traiter les règles de réécriture après avoir rencontré un indicateur <span class="val">[L]</span> afin d’éviter les boucles, tandis qu’Apache mod_rewrite n’arrête le traitement des règles de réécriture que pour l’itération actuelle. Ce comportement est similaire à celui de l’indicateur <span class="val">[END]</span> dans Apache mod_rewrite.       </li>     </ul>   </li> </ul><br/> L’implémentation du moteur de réécriture LiteSpeed suit les spécifications du moteur de réécriture Apache. Pour plus de détails sur les règles de réécriture, consultez la <a href="https://httpd.apache.org/docs/current/mod/mod_rewrite.html" target="_blank" rel="noopener noreferrer">   documentation mod_rewrite d’Apache </a> et le <a href="https://httpd.apache.org/docs/current/rewrite/" target="_blank" rel="noopener noreferrer">   guide Apache de réécriture d’URL </a>.</p> <h4>Syntaxe</h4><p>chaîne</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="addDefaultCharset"><h3>Ajouter le charset par defaut<span class="ls-permlink"><a href="#addDefaultCharset"></a></span></h3></header><h4>Description</h4><p>Indique s’il faut ajouter une balise de jeu de caracteres a l’en-tete de reponse "Content-Type", lorsque le type de contenu est "text/html" ou "text/plain" sans parametres. Avec <span class="val">Off</span>, cette fonction est desactivee. Avec <span class="val">On</span>, le jeu de caracteres indique par <span class="tagl"><a href="#defaultCharsetCustomized">Charset par defaut personnalise</a></span> ou le defaut "iso-8859-1" sera ajoute.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="defaultCharsetCustomized"><h3>Charset par defaut personnalise<span class="ls-permlink"><a href="#defaultCharsetCustomized"></a></span></h3></header><h4>Description</h4><p>Indique un jeu de caracteres a utiliser lorsque <span class="tagl"><a href="#addDefaultCharset">Ajouter le charset par defaut</a></span> vaut <span class="val">On</span>. C’est facultatif. La valeur par defaut est <span class="val">iso-8859-1</span>. Cette entree n’a aucun effet lorsque <span class="tagl"><a href="#addDefaultCharset">Ajouter le charset par defaut</a></span> vaut <span class="val">Off</span>.</p> <h4>Syntaxe</h4><p>Nom d’un jeu de caracteres.</p> <h4>Exemple</h4><div class="ls-example">utf-8</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableIpGeo"><h3>Activer la recherche GeoLocation<span class="ls-permlink"><a href="#enableIpGeo"></a></span></h3></header><h4>Description</h4><p> Indique s’il faut activer/desactiver la recherche IP Geolocation. Peut etre defini aux niveaux serveur, hote virtuel ou contexte. IP Geolocation est desactivee par defaut lorsque la valeur "Not Set" est utilisee.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">Utiliser l’IP client dans l’en-tete</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">Chemin du fichier DB</a></span>,</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+</div>
+</body>
+</html>

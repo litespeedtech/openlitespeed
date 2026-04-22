@@ -19,12 +19,9 @@ enum stream_state
 enum stream_protocol
 {
     HIOS_PROTO_HTTP  = 0,
-    HIOS_PROTO_SPDY2 = 1,
-    HIOS_PROTO_SPDY3 = 2,
-    HIOS_PROTO_SPDY31 = 3,
-    HIOS_PROTO_HTTP2 = 4,
-    HIOS_PROTO_QUIC = 5,
-    HIOS_PROTO_HTTP3 = 6,
+    HIOS_PROTO_HTTP2 = 1,
+    HIOS_PROTO_QUIC  = 2,
+    HIOS_PROTO_HTTP3 = 3,
     HIOS_PROTO_MAX,
     SS_PROTO_L4,
     SS_PROTO_L4SSL,

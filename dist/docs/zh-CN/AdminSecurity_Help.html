@@ -1,113 +1,164 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - Admin Console Security</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - Admin Console Security." />
+  <title>OpenLiteSpeed用户手册 - 管理控制台安全</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 管理控制台安全." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../AdminSecurity_Help.html" data-lang="en-US">English</option><option value="../es-ES/AdminSecurity_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/AdminSecurity_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/AdminSecurity_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/AdminSecurity_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/AdminSecurity_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><span class="current"><a href="AdminSecurity_Help.html">Admin Console Security</a></span></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a class="current" href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="AdminGeneral_Help.html">管理控制台设置</a></div><div class="center"><a href="webconsole.html">Web Console</a></div><div class="next"><a href="AdminListeners_General_Help.html">Admin Listeners General</a> &#187;</div></div>
-<h1>Admin Console Security</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header><a href="#accessControl">登入限制</a></header><p>
-<a href="#accessControl_allow">允许列表</a> | <a href="#accessControl_deny">拒绝列表</a></p></section>
-<section class="toc-row"><header><a href="#adminUser">网络管理员用户</a></header><p>
-</p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="AdminGeneral_Help.html">管理控制台常规</a></div><div class="center"><a href="webconsole.html">Web控制台</a></div><div class="next"><a href="AdminListeners_General_Help.html">管理监听器常规</a> &#187;</div></div>
+<header class="doc-page-header"><h1>管理控制台安全</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#accessControl">登入限制</a></h3><ul class="doc-toc__links"><li><a href="#accessControl_allow">允许列表</a></li><li><a href="#accessControl_deny">拒绝列表</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#loginThrottle">登录限制</a></h3><ul class="doc-toc__links"><li><a href="#throttleEnabled">启用登录限制</a></li><li><a href="#throttleMaxFailures">最大登录失败次数</a></li><li><a href="#throttleBlockWindow">初始封锁时长（秒）</a></li><li><a href="#throttleMaxBackoff">最大封锁时长（秒）</a></li><li><a href="#loginHistoryRetention">登录历史保留天数</a></li><li><a href="#opsAuditRetainFiles">活动日志保留文件数</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#adminUser">网络管理员用户</a></h3><ul class="doc-toc__links"><li><a href="#adminUserName">用户名</a></li><li><a href="#adminOldPass">旧密码</a></li><li><a href="#adminNewPass">新密码</a></li><li><a href="#adminRetypePass">确认新密码</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl"><h3>登入限制<span class="ls-permlink"><a href="#accessControl"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定哪些子网络和/或IP地址可以访问该服务器。 这是影响所有的虚拟主机的服务器级别设置。您还可以为每个虚拟主机设置登入限制。虚拟主机的设置不会覆盖服务器设置。<br/><br/> 是否阻止/允许一个IP是由允许列表与阻止列表共同决定。 如果你想阻止某个特定IP或子网，请在<span class="tagl"><a href="#accessControl_allow">允许列表</a></span>中写入<span class="val">*</span> 或 <span class="val">ALL</span>，并在<span class="tagl"><a href="#accessControl_deny">拒绝列表</a></span>中写入需要阻止的IP或子网。 如果你想允许某个特定的IP或子网，请在<span class="tagl"><a href="#accessControl_deny">拒绝列表</a></span>中写入<span class="val">*</span> 或 <span class="val">ALL</span>，并在<span class="tagl"><a href="#accessControl_allow">允许列表</a></span>中写入需要允许的IP或子网。 单个IP地址是被允许访问还是禁止访问取决于该IP符合的最小限制范围。<br/><br/> 信任的IP或子网络可以在<span class="tagl"><a href="#accessControl_allow">允许列表</a></span>列表中添加后缀“T”来指定。受信任的IP或子网不受连接数/流量限制。 只有服务器级别的登入限制才可以设置受信任的IP或子网。</p> <h4>提示</h4><p>[安全建议] 用此项设置适用于所有虚拟主机的常规限制。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_allow"><h3>允许列表<span class="ls-permlink"><a href="#accessControl_allow"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定允许的IP地址或子网的列表。 可以使用{VAL}*</span>或{VAL}ALL</span>。</p> <h4>Syntax</h4><p>逗号分隔的IP地址或子网列表。 结尾加上“T”可以用来表示一个受信任的IP或子网，如{VAL}192.168.1.*T</span>。</p> <h4>例子</h4><div class="ls-example">子网: <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1.0/24</span>, <span class="val">192.168.1</span> 或 <span class="val">192.168.1.*</span>. <br/> IPv6 地址: <span class="val">::1</span> 或 <span class="val">[::1]</span> <br/> IPv6 子网: <span class="val">3ffe:302:11:2:20f:1fff:fe29:717c/64</span> 或  <span class="val">[3ffe:302:11:2:20f:1fff:fe29:717c]/64</span>.</div><h4>提示</h4><p>[安全建议] 在服务器级别设置的受信任的IP或子网不受连接/节流限制。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_deny"><h3>拒绝列表<span class="ls-permlink"><a href="#accessControl_deny"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定不允许的IP地址或子网的列表。</p> <h4>Syntax</h4><p>逗号分隔的IP地址或子网列表。 可以使用{VAL}*</span>或{VAL}ALL</span>。</p> <h4>例子</h4><div class="ls-example">子网: <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1.0/24</span>, <span class="val">192.168.1</span> 或 <span class="val">192.168.1.*</span>. <br/> IPv6 地址: <span class="val">::1</span> 或 <span class="val">[::1]</span> <br/> IPv6 子网: <span class="val">3ffe:302:11:2:20f:1fff:fe29:717c/64</span> 或  <span class="val">[3ffe:302:11:2:20f:1fff:fe29:717c]/64</span>.</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="adminUser"><h3>网络管理员用户<span class="ls-permlink"><a href="#adminUser"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Change the username and password for the WebAdmin Console.  The old password must be entered and verified in order to save changes.</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl"><h3>登入限制<span class="ls-permlink"><a href="#accessControl"></a></span></h3></header><h4>描述</h4><p>指定哪些子网络和/或IP地址可以访问该服务器。 这是影响所有的虚拟主机的服务器级别设置。您还可以为每个虚拟主机设置登入限制。虚拟主机的设置不会覆盖服务器设置。<br/> 是否阻止/允许一个IP是由允许列表与阻止列表共同决定。 如果你想阻止某个特定IP或子网，请在<span class="tagl"><a href="#accessControl_allow">允许列表</a></span>中写入<span class="val">*</span> 或 <span class="val">ALL</span>，并在<span class="tagl"><a href="#accessControl_deny">拒绝列表</a></span>中写入需要阻止的IP或子网。 如果你想允许某个特定的IP或子网，请在<span class="tagl"><a href="#accessControl_deny">拒绝列表</a></span>中写入<span class="val">*</span> 或 <span class="val">ALL</span>，并在<span class="tagl"><a href="#accessControl_allow">允许列表</a></span>中写入需要允许的IP或子网。 单个IP地址是被允许访问还是禁止访问取决于该IP符合的最小限制范围。<br/> 信任的IP或子网络可以在<span class="tagl"><a href="#accessControl_allow">允许列表</a></span>列表中添加后缀“T”来指定。受信任的IP或子网不受连接数/流量限制。 只有服务器级别的登入限制才可以设置受信任的IP或子网。</p> <h4>提示</h4><p>[安全建议] 用此项设置适用于所有虚拟主机的常规限制。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_allow"><h3>允许列表<span class="ls-permlink"><a href="#accessControl_allow"></a></span></h3></header><h4>描述</h4><p>指定允许的IP地址或子网的列表。 可以使用<span class="val">*</span>或<span class="val">ALL</span>。</p> <h4>语法</h4><p>逗号分隔的IP地址或子网列表。 结尾加上“T”可以用来表示一个受信任的IP或子网，如<span class="val">192.168.1.*T</span>。</p> <h4>示例</h4><div class="ls-example">子网: <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1.0/24</span>, <span class="val">192.168.1</span> 或 <span class="val">192.168.1.*</span>.<br/> IPv6 地址: <span class="val">::1</span> 或 <span class="val">[::1]</span><br/> IPv6 子网: <span class="val">3ffe:302:11:2:20f:1fff:fe29:717c/64</span> 或 <span class="val">[3ffe:302:11:2:20f:1fff:fe29:717c]/64</span>.</div><h4>提示</h4><p>[安全建议] 在服务器级别设置的受信任的IP或子网不受连接/节流限制。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_deny"><h3>拒绝列表<span class="ls-permlink"><a href="#accessControl_deny"></a></span></h3></header><h4>描述</h4><p>指定不允许的IP地址或子网的列表。</p> <h4>语法</h4><p>逗号分隔的IP地址或子网列表。 可以使用<span class="val">*</span>或<span class="val">ALL</span>。</p> <h4>示例</h4><div class="ls-example">子网: <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1.0/24</span>, <span class="val">192.168.1</span> 或 <span class="val">192.168.1.*</span>.<br/> IPv6 地址: <span class="val">::1</span> 或 <span class="val">[::1]</span><br/> IPv6 子网: <span class="val">3ffe:302:11:2:20f:1fff:fe29:717c/64</span> 或 <span class="val">[3ffe:302:11:2:20f:1fff:fe29:717c]/64</span>.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginThrottle"><h3>登录限制<span class="ls-permlink"><a href="#loginThrottle"></a></span></h3></header><h4>描述</h4><p>配置WebAdmin控制台登录限制，以及相关登录记录和审计记录的保留策略。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleEnabled"><h3>启用登录限制<span class="ls-permlink"><a href="#throttleEnabled"></a></span></h3></header><h4>描述</h4><p>为WebAdmin控制台启用登录限制。启用后，重复的失败登录尝试会被跟踪并临时屏蔽， 以减少暴力破解密码攻击。如果只启用此选项，而其他登录限制设置保持未设置，则会使用内置默认值。</p> <h4>语法</h4><p>从单选框中选择</p> <h4>提示</h4><p>[安全] 除非正在排查登录问题，否则请在生产环境中保持启用。 启用后如果未设置自定义值，默认值为失败5次、初始屏蔽900秒、最大屏蔽14400秒。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxFailures"><h3>最大登录失败次数<span class="ls-permlink"><a href="#throttleMaxFailures"></a></span></h3></header><h4>描述</h4><p>指定客户端在被屏蔽前允许连续登录失败的次数。未设置时默认值：5。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p>[安全] 较低的值会增强保护，但也可能更快屏蔽合法用户。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleBlockWindow"><h3>初始封锁时长（秒）<span class="ls-permlink"><a href="#throttleBlockWindow"></a></span></h3></header><h4>描述</h4><p>指定客户端达到允许的最大登录失败次数后，初次被屏蔽的时长（秒）。 未设置时默认值：900秒。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 请设置足够长的时长来阻止重复攻击，同时避免让合法用户被锁定过久。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxBackoff"><h3>最大封锁时长（秒）<span class="ls-permlink"><a href="#throttleMaxBackoff"></a></span></h3></header><h4>描述</h4><p>指定登录失败持续发生且限制退避时间增加时的最大屏蔽时长（秒）。 未设置时默认值：14400秒。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 请设置足够强的上限来减缓自动化攻击，同时仍允许在合理时间内恢复访问。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginHistoryRetention"><h3>登录历史保留天数<span class="ls-permlink"><a href="#loginHistoryRetention"></a></span></h3></header><h4>描述</h4><p>指定登录历史记录在被移除前保留的天数。未设置时默认值：90天。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 请保留足够的历史记录用于审计和故障排查，但避免保留超过实际需要的数据。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="opsAuditRetainFiles"><h3>活动日志保留文件数<span class="ls-permlink"><a href="#opsAuditRetainFiles"></a></span></h3></header><h4>描述</h4><p>指定WebAdmin控制台要保留的操作审计文件最大数量。未设置时默认值：30个文件。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 如果需要更长的审计轨迹，可以增大此值，但请注意更多文件会占用更多磁盘空间。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUser"><h3>网络管理员用户<span class="ls-permlink"><a href="#adminUser"></a></span></h3></header><h4>描述</h4><p>更改WebAdmin控制台的用户名和密码。 必须输入并验证旧密码后才能保存更改。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUserName"><h3>用户名<span class="ls-permlink"><a href="#adminUserName"></a></span></h3></header><h4>描述</h4><p>指定WebAdmin控制台登录名。请使用1到25个字符：英文字母、数字、点、下划线或连字符。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminOldPass"><h3>旧密码<span class="ls-permlink"><a href="#adminOldPass"></a></span></h3></header><h4>描述</h4><p>输入此WebAdmin用户的当前密码。保存用户名或密码更改前必须验证当前密码。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminNewPass"><h3>新密码<span class="ls-permlink"><a href="#adminNewPass"></a></span></h3></header><h4>描述</h4><p>输入此WebAdmin用户的新密码。密码可以包含任意字符；创建或更新WebAdmin用户时必须填写。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminRetypePass"><h3>确认新密码<span class="ls-permlink"><a href="#adminRetypePass"></a></span></h3></header><h4>描述</h4><p>再次输入新密码。它必须与新密码一致。</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

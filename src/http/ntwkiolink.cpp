@@ -2246,7 +2246,7 @@ void NtwkIOLink::resumeEventNotify()
 }
 
 
-static const char *s_pProtoString[] = { "", ":SPDY2", ":SPDY3", ":SPDY31", ":HTTP2" };
+static const char *s_pProtoString[] = { "", ":H2" };
 const char *NtwkIOLink::buildLogId()
 {
     m_logId.len = ls_snprintf(m_logId.ptr, MAX_LOGID_LEN, "%s:%u%s",

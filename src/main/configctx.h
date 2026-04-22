@@ -25,13 +25,14 @@
 typedef struct ssl_ctx_st SSL_CTX;
 
 //class HttpContext;
-//class HttpVHost;
+class HttpVHost;
 class XmlNode;
 class HttpHandler;
 class AccessControl;
 class SslContext;
 class SslContextConfig;
 class AutoBuf;
+class UseAcme;
 
 #define MAX_PATH_LEN                4096
 extern long long getLongValue(const char *pValue, int base = 10);
@@ -103,7 +104,9 @@ public:
 
 
     SslContext *newSSLContext(const XmlNode *pNode, const char *pName,
-                              SslContext *pOldContext);
+                              SslContext *pOldContext, HttpVHost *vhost);
+    SslContext *justSSLContext(const XmlNode *pNode, const char *pName, 
+                               SslContext *pOldContext, UseAcme *useAcme);
     void configCRL(const XmlNode *pNode, SslContext *pSSL);
     int initOcspCachePath(const char *pBase);
     int configStapling(const XmlNode *pNode, SslContextConfig *pConf);

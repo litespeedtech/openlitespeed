@@ -66,6 +66,7 @@ HttpListener::HttpListener(const char *pName, const char *pAddr)
     , m_isSSL(0)
     , m_iSendZconf(0)
     , m_flag(0)
+    , m_secure(0)
     , m_pAdcPortList(NULL)
 {
     if (m_pMapVHost)
@@ -83,6 +84,7 @@ HttpListener::HttpListener()
     , m_isSSL(0)
     , m_iSendZconf(0)
     , m_flag(0)
+    , m_secure(0)
     , m_pAdcPortList(NULL)
 {
 }

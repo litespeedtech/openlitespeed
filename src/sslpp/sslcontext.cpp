@@ -456,15 +456,15 @@ int SslContext::configOptions(SslContextConfig *pConfig)
     else
         disableSessionTickets();
 
-    if (pConfig->m_iEnableSpdy != 0)
+    if (pConfig->m_iEnableAlpn != 0)
     {
-        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", this, (int)pConfig->m_iEnableSpdy);
-        if (enableSpdy( pConfig->m_iEnableSpdy ) == LS_FAIL)
+        if (enableAlpn(pConfig->m_iEnableAlpn) == LS_FAIL)
         {
-            LS_ERROR("[SSL:%p] SPDY/HTTP2 cannot be enabled [tried to set to %d].",
-                     this, pConfig->m_iEnableSpdy);
+            LS_ERROR("[SSL:%p] HTTP2 cannot be enabled [tried to set to %d].",
+                     this, pConfig->m_iEnableAlpn);
             return LS_FAIL;
         }
+        LS_DBG_L("[SSL:%p] set ALPN: %d.\n", this, (int)m_iEnableAlpn);
     }
     LS_DBG_L("[SSL:%p] set Cipher: %s.\n", this,
              pConfig->m_sCiphers.c_str());
@@ -666,7 +666,7 @@ int SslContext::init(int iMethod)
         return -1;
     
     m_iMethod = iMethod;
-    m_iEnableSpdy = 0;
+    m_iEnableAlpn = 0;
     m_iEnableOcsp = 0;
     m_pCtx = SslUtil::newCtx();
     if (m_pCtx)
@@ -690,7 +690,7 @@ SslContext::SslContext(int iMethod)
     , m_pEccCtx(NULL)
     , m_iMethod(iMethod)
     , m_iRenegProtect(1)
-    , m_iEnableSpdy(0)
+    , m_iEnableAlpn(0)
     , m_iEnableOcsp(0)
     , m_iKeyLen(1024)
     , m_tmLastAccess(0)
@@ -1369,44 +1369,18 @@ int SslContext::getVerifyMode()
 /**
  * We support h2-16, but if set to this value, firefox will not choose h2-16, so we have to use h2-14.
  */
-static const char *NEXT_PROTO_STRING[16] =
+static const char *NEXT_PROTO_STRING[4] =
 {
     "\x08http/1.1",
-    "\x06spdy/2\x08http/1.1",
-    "\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
     "\x02h2\x08http/1.1",
-    "\x02h2\x06spdy/2\x08http/1.1",
-    "\x02h2\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    "\x02h2\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
     H3_ALPN "\x08http/1.1",
-    H3_ALPN "\x06spdy/2\x08http/1.1",
-    H3_ALPN "\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    H3_ALPN "\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
     H3_ALPN "\x02h2\x08http/1.1",
-    H3_ALPN "\x02h2\x06spdy/2\x08http/1.1",
-    H3_ALPN "\x02h2\x08spdy/3.1\x06spdy/3\x08http/1.1",
-    H3_ALPN "\x02h2\x08spdy/3.1\x06spdy/3\x06spdy/2\x08http/1.1",
 };
 
-static unsigned int NEXT_PROTO_STRING_LEN[16] =
+static unsigned int NEXT_PROTO_STRING_LEN[4] =
 {
-    9, 16, 25, 32, 12, 19, 28, 35,
-    9+H3_ALSZ, 16+H3_ALSZ, 25+H3_ALSZ, 32+H3_ALSZ, 12+H3_ALSZ, 19+H3_ALSZ, 28+H3_ALSZ, 35+H3_ALSZ,
+    9, 12, 9+H3_ALSZ, 12+H3_ALSZ,
 };
-
-//static const char NEXT_PROTO_STRING[] = "\x06spdy/2\x08http/1.1\x08http/1.0";
-#if 0
-static int SslConnection_ssl_npn_advertised_cb(SSL *pSSL,
-        const unsigned char **out,
-        unsigned int *outlen, void *arg)
-{
-    SslContext *pCtx = (SslContext *)arg;
-    *out = (const unsigned char *)NEXT_PROTO_STRING[ pCtx->getEnableSpdy()];
-    *outlen = NEXT_PROTO_STRING_LEN[ pCtx->getEnableSpdy() ];
-    return SSL_TLSEXT_ERR_OK;
-}
-#endif
 
 
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
@@ -1421,10 +1395,10 @@ static int SSLConntext_alpn_select_cb(SSL *pSSL, const unsigned char **out,
     {
         if (pConn->getFlag(SslConnection::F_DISABLE_HTTP2))
             return SSL_TLSEXT_ERR_NOACK;
-        alpn_idx = pCtx->getEnableSpdy() & ~8; // No HTTP/3 on TCP connection
+        alpn_idx = pCtx->getEnableAlpn() & ~SslContext::ALPN_HTTP3; // No HTTP/3 on TCP connection
     }
     else
-        alpn_idx = pCtx->getEnableSpdy();
+        alpn_idx = pCtx->getEnableAlpn();
     if (SSL_select_next_proto((unsigned char **) out, outlen,
                               (const unsigned char *)NEXT_PROTO_STRING[ alpn_idx ],
                               NEXT_PROTO_STRING_LEN[ alpn_idx ],
@@ -1444,10 +1418,12 @@ void SslContext::setAlpnCb(SSL_CTX *ctx, void *arg)
 }
 
 
-int SslContext::enableSpdy(int level)
+int SslContext::enableAlpn(int level)
 {
-    m_iEnableSpdy = (level & 15);
-    if (m_iEnableSpdy == 0)
+    if (level > 4)
+        level >>= 2;  // Drop old level related to SPDY
+    m_iEnableAlpn = (level & 3);
+    if (m_iEnableAlpn == 0)
         return 0;
 #ifdef TLSEXT_TYPE_application_layer_protocol_negotiation
     SSL_CTX_set_alpn_select_cb(m_pCtx, SSLConntext_alpn_select_cb, this);

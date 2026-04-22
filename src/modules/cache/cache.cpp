@@ -3283,7 +3283,8 @@ static void processPurge2(const lsi_session_t *session,
     {
         CacheConfig *pContextConfig = (CacheConfig *)g_api->get_config(
                                           session, &MNAME);
-        pStore = pContextConfig->getStore();
+        if (pContextConfig)
+            pStore = pContextConfig->getStore();
     }
     if (!pStore)
         return ;

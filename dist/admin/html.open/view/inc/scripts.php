@@ -1,7 +1,32 @@
+<?php
+
+use LSWebAdmin\I18n\DMsg;
+
+?>
 <script type="text/javascript">
+    function lstHandleServiceRequestError(xhr) {
+        var message = "";
+
+        if (xhr && xhr.responseText) {
+            message = String(xhr.responseText).replace(/\s+/g, " ").trim();
+        }
+
+        if (!message && xhr && xhr.statusText) {
+            message = String(xhr.statusText).trim();
+        }
+
+        lstNotifyToast({
+            title: "<?php DMsg::EchoUIStr('service_requestfailed') ?>",
+            content: "<i class='lst-icon' data-lucide='triangle-alert'></i> <span>" + lstEscapeHtml(message) + "</span>",
+            color: "#c0392b",
+            timeout: 5000
+        });
+    }
+
     function lst_restart() {
-        $.SmartMessageBox({
-            title: "<i class='fa fa-lg fa-repeat txt-color-green'></i> <span class='text-warning'><strong><?php DMsg::EchoUIStr('service_restartconfirm') ?></strong></span>",
+        lstNotifyConfirm({
+            title: "<i class='lst-icon lst-dialog-title-icon lst-dialog-title-icon--success' data-lucide='refresh-ccw-dot'></i> <span class='lst-dialog-title-text'><strong><?php DMsg::EchoUIStr('service_restartconfirm') ?></strong></span>",
+            content: "<?php DMsg::EchoUIStr('service_willrefresh') ?>",
             buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
         }, function (ButtonPressed) {
             if (ButtonPressed === "<?php DMsg::EchoUIStr('btn_go') ?>") {
@@ -10,16 +35,18 @@
                     url: "view/serviceMgr.php",
                     data: {"act": "restart"},
                     beforeSend: function () {
-                        $.smallBox({
+                        lstNotifyToast({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
-                            content: "<i class='fa fa-clock-o'></i> <i><?php DMsg::EchoUIStr('service_willrefresh') ?></i>",
+                            content: "<i class='lst-icon' data-lucide='clock'></i> <i><?php DMsg::EchoUIStr('service_willrefresh') ?></i>",
                             color: "#659265",
-                            iconSmall: "fa fa-check fa-2x fadeInRight animated",
                             timeout: 15000
                         });
                     },
                     success: function (data) {
                         location.reload(true);
+                    },
+                    error: function (xhr) {
+                        lstHandleServiceRequestError(xhr);
                     }
                 });
             }
@@ -27,8 +54,8 @@
     }
 
     function lst_toggledebug() {
-        $.SmartMessageBox({
-            title: "<i class='fa fa-lg fa-bug txt-color-red'></i> <span class='text-warning'><strong><?php DMsg::EchoUIStr('service_toggledebug') ?></strong></span>",
+        lstNotifyConfirm({
+            title: "<i class='lst-icon lst-dialog-title-icon lst-dialog-title-icon--danger' data-lucide='bug'></i> <span class='lst-dialog-title-text'><strong><?php DMsg::EchoUIStr('service_toggledebug') ?></strong></span>",
             content: "<?php DMsg::EchoUIStr('service_toggledebugmsg') ?>",
             buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']' ; ?>'
         }, function (ButtonPressed) {
@@ -38,16 +65,18 @@
                     url: "view/serviceMgr.php",
                     data: {"act": "toggledebug"},
                     beforeSend: function () {
-                        $.smallBox({
+                        lstNotifyToast({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
-                            content: "<i class='fa fa-clock-o'></i> <i><?php DMsg::EchoUIStr('service_willrefresh') ?></i>",
+                            content: "<i class='lst-icon' data-lucide='clock'></i> <i><?php DMsg::EchoUIStr('service_willrefresh') ?></i>",
                             color: "#659265",
-                            iconSmall: "fa fa-check fa-2x fadeInRight animated",
                             timeout: 2200
                         });
                     },
                     success: function (data) {
                         setTimeout(refreshLog, 2000);
+                    },
+                    error: function (xhr) {
+                        lstHandleServiceRequestError(xhr);
                     }
                 });
             }
@@ -55,24 +84,20 @@
     }
 </script>
 
-<!-- IMPORTANT: APP CONFIG -->
-<script src="/res/js/app.config.min.js"></script>
-
-<!-- BOOTSTRAP JS -->
-<script src="/res/js/bootstrap/bootstrap.min.js"></script>
-
-<!-- CUSTOM NOTIFICATION -->
-<script src="/res/js/notification/SmartNotification.min.js"></script>
-
-<!-- browser msie issue fix -->
-<script src="/res/js/plugin/msie-fix/jquery.mb.browser.min.js"></script>
-
-<!--[if IE 8]>
-    <h1>Your browser is out of date, please update your browser by going to www.microsoft.com/download</h1>
-<![endif]-->
-
-<!-- MAIN APP JS FILE -->
-<script src="/res/js/lst-app.min.js"></script>
+<script src="/res/js/lst-app.js"></script>
+<script src="/res/js/lucide.min.js"></script>
+<script>
+  if (typeof lucide !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+    // Also re-init on ajax load if applicable
+    $(document).ajaxComplete(function() {
+      if (typeof lstHideTooltip === 'function') { lstHideTooltip(); }
+      lucide.createIcons();
+    });
+  }
+</script>
 
 <script type="text/javascript">
     // DO NOT REMOVE : GLOBAL FUNCTIONS!

@@ -410,12 +410,22 @@ class UserCommand
             }
         }
 
-        $modifier = implode(' ', $extraArgs);
+        $escapedExtraArgs = array_map('escapeshellarg', $extraArgs);
+        $modifier = implode(' ', $escapedExtraArgs);
         $file = __FILE__;
 
-        return "$su -c \"cd $path/wp-admin && timeout $timeout $phpBin $file "
-            . "$action $path $docRoot $serverName $env"
-            . (($modifier !== '') ? " $modifier\"" : '"');
+        $innerCmd = 'cd ' . escapeshellarg("$path/wp-admin")
+            . ' && timeout ' . (int)$timeout
+            . ' ' . $phpBin  // Trusted internal value, may contain PHP options
+            . ' ' . escapeshellarg($file)
+            . ' ' . escapeshellarg($action)
+            . ' ' . escapeshellarg($path)
+            . ' ' . escapeshellarg($docRoot)
+            . ' ' . escapeshellarg($serverName)
+            . ' ' . escapeshellarg($env)
+            . ($modifier !== '' ? ' ' . $modifier : '');
+
+        return "$su -c " . escapeshellarg($innerCmd);
     }
 
     /**

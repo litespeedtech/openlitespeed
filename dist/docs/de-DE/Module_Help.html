@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de-DE">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>OpenLiteSpeed-Benutzerhandbuch - Modulkonfiguration</title>
+  <meta name="description" content="OpenLiteSpeed-Benutzerhandbuch - Modulkonfiguration." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed-Benutzerhandbuch">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed-Benutzerhandbuch</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Menü öffnen" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Seiten und Einstellungen suchen" data-no-results="Keine Ergebnisse gefunden.">
+      <label class="sr-only" for="doc-search-input">Handbuch durchsuchen</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Seiten und Einstellungen suchen" aria-controls="doc-search-results" />
+        <button type="submit">Suchen</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Sprache"><option value="../Module_Help.html" data-lang="en-US">English</option><option value="../es-ES/Module_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/Module_Help.html" data-lang="de-DE" selected>Deutsch</option><option value="../fr-FR/Module_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/Module_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/Module_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Design umschalten" data-theme-toggle data-theme-light-label="Heller Modus" data-theme-dark-label="Dunkler Modus" title="Design umschalten">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="de-DE" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Benutzerhandbuch</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Inhaltsverzeichnis"><ul class="sidetree__list">
+      <li><a href="license.html">Lizenz</a></li>
+      <li><a href="intro.html">Einleitung</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Sicherheit</a></li>
+      <li>
+        <a href="config.html">Konfiguration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Server allgemein</a></li>
+          <li><a href="ServLog_Help.html">Serverprotokoll</a></li>
+          <li><a href="ServTuning_Help.html">Server-Tuning</a></li>
+          <li><a href="ServSecurity_Help.html">Serversicherheit</a></li>
+          <li><a href="ExtApp_Help.html">Externe Anwendungen</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">LSAPI-Anwendung</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Fast-CGI-Anwendung</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast-CGI-Authorizer</a></li>
+            <li><a href="External_SCGI.html">Simple-CGI-Anwendung</a></li>
+            <li><a href="External_Servlet.html">Servlet-Engine</a></li>
+            <li><a href="External_PL.html">Piped Logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Skripthandler</a></li>
+          <li><a href="App_Server_Help.html">App-Server-Einstellungen</a></li>
+          <li><a class="current" href="Module_Help.html">Modulkonfiguration</a></li>
+          <li><a href="Listeners_General_Help.html">Listener allgemein</a></li>
+          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
+          <li><a href="Templates_Help.html">Virtual-Host-Vorlagen</a></li>
+          <li><a href="VirtualHosts_Help.html">Virtual-Host-Registrierung</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual Host allgemein</a></li>
+          <li><a href="VHSecurity_Help.html">Virtual Host Sicherheit</a></li>
+          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Kontext</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Statischer Kontext</a></li>
+            <li><a href="Java_Web_App_Context.html">Java-Web-App-Kontext</a></li>
+            <li><a href="Servlet_Context.html">Servlet-Kontext</a></li>
+            <li><a href="FCGI_Context.html">Fast-CGI-Kontext</a></li>
+            <li><a href="SCGI_Context.html">Simple-CGI-Kontext</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI-Kontext</a></li>
+            <li><a href="Proxy_Context.html">Proxy-Kontext</a></li>
+            <li><a href="CGI_Context.html">CGI-Kontext</a></li>
+            <li><a href="LB_Context.html">Load-Balancer-Kontext</a></li>
+            <li><a href="Redirect_Context.html">Redirect-Kontext</a></li>
+            <li><a href="App_Server_Context.html">App-Server-Kontext</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI-Kontext</a></li>
+            <li><a href="Module_Context.html">Modulhandler-Kontext</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">WebSocket-Proxy</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Webkonsole</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Admin-Konsole allgemein</a></li>
+          <li><a href="AdminSecurity_Help.html">Admin-Konsolensicherheit</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin-Listener allgemein
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin-Listener SSL</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="App_Server_Help.html">Anwendungsserver</a></div><div class="center"><a href="config.html">Konfiguration</a></div><div class="next"><a href="Listeners_General_Help.html">Listener - Allgemein</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Modulkonfiguration</h1><div class="doc-page-intro">Modulunterstuetzung ist in OpenLiteSpeed 1.3 und LSWS Enterprise 5.0 oder hoeher verfuegbar. Alle erforderlichen Module muessen auf der Registerkarte Server Modules Configuration registriert werden. Moduldateien muessen im Ordner server root/modules liegen, damit sie registriert werden koennen. Beim Start laedt der Server alle registrierten Module. Der Server muss nach dem Registrieren neuer Module neu gestartet werden.<br/><br/> Module koennen global auf der Registerkarte Server Module configuration konfiguriert werden. Die Konfigurationsdaten stehen dann den Listener- und Virtual-Host-Modulkonfigurationen zum Erben oder Aendern zur Verfuegung.</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Inhaltsverzeichnis</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#servModules">Servermodule</a></h3><ul class="doc-toc__links"><li><a href="#modulename">Modul</a></li><li><a href="#internalmodule">Internes Modul</a></li><li><a href="#modParams">Modulparameter</a></li><li><a href="#moduleEnabled">Modul aktivieren</a></li><li><a href="#L4_BEGINSESSION">Priorität Hook::L4_BEGINSESSION</a></li><li><a href="#L4_ENDSESSION">Priorität Hook::L4_ENDSESSION</a></li><li><a href="#L4_RECVING">Priorität Hook::L4_RECVING</a></li><li><a href="#L4_SENDING">Priorität Hook::L4_SENDING</a></li><li><a href="#HTTP_BEGIN">Priorität Hook::HTTP_BEGIN</a></li><li><a href="#RECV_REQ_HEADER">Priorität Hook::RECV_REQ_HEADER</a></li><li><a href="#URI_MAP">Priorität Hook::URI_MAP</a></li><li><a href="#HTTP_AUTH">Priorität Hook::HTTP_AUTH</a></li><li><a href="#RECV_REQ_BODY">Priorität Hook::RECV_REQ_BODY</a></li><li><a href="#RCVD_REQ_BODY">Priorität Hook::RCVD_REQ_BODY</a></li><li><a href="#RECV_RESP_HEADER">Priorität Hook::RECV_RESP_HEADER</a></li><li><a href="#RECV_RESP_BODY">Priorität Hook::RECV_RESP_BODY</a></li><li><a href="#RCVD_RESP_BODY">Priorität Hook::RCVD_RESP_BODY</a></li><li><a href="#HANDLER_RESTART">Priorität Hook::HANDLER_RESTART</a></li><li><a href="#SEND_RESP_HEADER">Priorität Hook::SEND_RESP_HEADER</a></li><li><a href="#SEND_RESP_BODY">Priorität Hook::SEND_RESP_BODY</a></li><li><a href="#HTTP_END">Priorität Hook::HTTP_END</a></li><li><a href="#MAIN_INITED">Priorität Hook::MAIN_INITED</a></li><li><a href="#MAIN_PREFORK">Priorität Hook::MAIN_PREFORK</a></li><li><a href="#MAIN_POSTFORK">Priorität Hook::MAIN_POSTFORK</a></li><li><a href="#WORKER_POSTFORK">Priorität Hook::WORKER_POSTFORK</a></li><li><a href="#WORKER_ATEXIT">Priorität Hook::WORKER_ATEXIT</a></li><li><a href="#MAIN_ATEXIT">Priorität Hook::MAIN_ATEXIT</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#listenerModules">Listener-Module</a></h3><ul class="doc-toc__links"><li><a href="#modulename">Modul</a></li><li><a href="#modParams">Modulparameter</a></li><li><a href="#moduleEnabled_lst">Modul aktivieren</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#vhModules">Module virtueller Hosts</a></h3><ul class="doc-toc__links"><li><a href="#modulename">Modul</a></li><li><a href="#modParams">Modulparameter</a></li><li><a href="#moduleEnabled_vh">Modul aktivieren</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#vhModuleUrlFilters">Modul-URL-Filter</a></h3><ul class="doc-toc__links"><li><a href="#expuri">URI</a></li><li><a href="#modParams">Modulparameter</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="servModules"><h3>Servermodule<span class="ls-permlink"><a href="#servModules"></a></span></h3></header><h4>Beschreibung</h4><p>Die Servermodul-Konfiguration definiert die Modulkonfigurationsdaten global. Nach der Definition haben Listener und virtuelle Hosts Zugriff auf die Module und deren Konfigurationen.<br/><br/> Alle zu verarbeitenden Module muessen in der Serverkonfiguration registriert werden. Die Serverkonfiguration definiert ausserdem die Standardwerte fuer Modulparameterdaten. Diese Werte koennen von der Listener- und Virtual-Host-Konfiguration geerbt oder dort ueberschrieben werden.<br/><br/> Die Modulprioritaet wird nur auf Serverebene definiert und von den Listener- und Virtual-Host-Konfigurationen geerbt.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="modulename"><h3>Modul<span class="ls-permlink"><a href="#modulename"></a></span></h3></header><h4>Beschreibung</h4><p>Name eines externen oder internen Moduls, das beim Serverstart geladen werden soll.<br/><br/> <b>Extern</b><br/> Der fuer externe Module verwendete Wert muss mit dem Namen der ".so"-Datei des Moduls unter $SERVER_ROOT/modules/modulename.so uebereinstimmen, damit die Serveranwendung es laden kann. Nach der Registrierung eines neuen Moduls muss der Server neu gestartet werden.<br/><br/> <b>Intern</b><br/> Der fuer interne Module verwendete Wert muss mit dem Modulnamen uebereinstimmen, der beim Erstellen des Moduls verwendet wurde. Fuer das interne Cache-Modul, das im Server enthalten ist, muss er beispielsweise auf "cache" gesetzt werden.</p> <h4>Syntax</h4><p>Zeichenkette</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="internalmodule"><h3>Internes Modul<span class="ls-permlink"><a href="#internalmodule"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob das Modul ein internes, statisch gelinktes Modul ist und keine externe .so-Bibliothek.</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="modParams"><h3>Modulparameter<span class="ls-permlink"><a href="#modParams"></a></span></h3></header><h4>Beschreibung</h4><p>Legen Sie Modulparameter fest. Die Modulparameter werden vom Modulentwickler definiert.<br/><br/> Der auf Serverebene gesetzte Wert wird global als Standardwert zugewiesen. Der Benutzer kann diese Einstellung auf Listener-, Virtual-Host- oder Kontextebene ueberschreiben. Wenn sie auf keiner dieser Ebenen gesetzt ist, wird der Wert von der naechsthoeheren Ebene geerbt.</p> <h4>Syntax</h4><p>Durch die Modulschnittstelle festgelegt.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="moduleEnabled"><h3>Modul aktivieren<span class="ls-permlink"><a href="#moduleEnabled"></a></span></h3></header><h4>Beschreibung</h4><p>Aktiviert Modul-Hooks global. Diese Einstellung kann auf Listener- und Virtual-Host-Ebene ueberschrieben werden.<br/><br/> Standardwert: <span class="val">Yes</span></p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_BEGINSESSION"><h3>Priorität Hook::L4_BEGINSESSION<span class="ls-permlink"><a href="#L4_BEGINSESSION"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks L4 Begin Session fest.<br/><br/> Der Hook L4 Begin Session wird ausgeloest, wenn die TCP/IP-Verbindung beginnt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_ENDSESSION"><h3>Priorität Hook::L4_ENDSESSION<span class="ls-permlink"><a href="#L4_ENDSESSION"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks L4 End Session fest.<br/><br/> Der Hook L4 End Session wird ausgeloest, wenn die TCP/IP-Verbindung endet.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_RECVING"><h3>Priorität Hook::L4_RECVING<span class="ls-permlink"><a href="#L4_RECVING"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks L4 Receiving fest.<br/><br/> Der Hook L4 Receiving wird ausgeloest, wenn die TCP/IP-Verbindung Daten empfaengt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_SENDING"><h3>Priorität Hook::L4_SENDING<span class="ls-permlink"><a href="#L4_SENDING"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks L4 Sending fest.<br/><br/> Der Hook L4 Sending wird ausgeloest, wenn die TCP/IP-Verbindung Daten sendet.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HTTP_BEGIN"><h3>Priorität Hook::HTTP_BEGIN<span class="ls-permlink"><a href="#HTTP_BEGIN"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Begin fest.<br/><br/> Der Hook HTTP Begin wird ausgeloest, wenn die TCP/IP-Verbindung eine HTTP-Sitzung beginnt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_REQ_HEADER"><h3>Priorität Hook::RECV_REQ_HEADER<span class="ls-permlink"><a href="#RECV_REQ_HEADER"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Receive Request Header fest.<br/><br/> Der Hook HTTP Receive Request Header wird ausgeloest, wenn der Webserver einen Anforderungsheader empfaengt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="URI_MAP"><h3>Priorität Hook::URI_MAP<span class="ls-permlink"><a href="#URI_MAP"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP URI Map fest.<br/><br/> Der Hook HTTP URI Map wird ausgeloest, wenn der Webserver eine URI-Anforderung einem Kontext zuordnet.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HTTP_AUTH"><h3>Priorität Hook::HTTP_AUTH<span class="ls-permlink"><a href="#HTTP_AUTH"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Authentication fest.<br/><br/> Der Hook HTTP Authentication wird nach der Ressourcenzuordnung und vor der Handler-Verarbeitung ausgeloest. Er erfolgt nach der integrierten HTTP-Authentifizierung und kann fuer zusaetzliche Authentifizierungspruefungen verwendet werden.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_REQ_BODY"><h3>Priorität Hook::RECV_REQ_BODY<span class="ls-permlink"><a href="#RECV_REQ_BODY"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Receive Request Body fest.<br/><br/> Der Hook HTTP Receive Request Body wird ausgeloest, wenn der Webserver Daten des Anforderungstextes empfaengt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RCVD_REQ_BODY"><h3>Priorität Hook::RCVD_REQ_BODY<span class="ls-permlink"><a href="#RCVD_REQ_BODY"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Received Request Body fest.<br/><br/> Der Hook HTTP Received Request Body wird ausgeloest, wenn der Webserver den Empfang der Daten des Anforderungstextes abgeschlossen hat.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_RESP_HEADER"><h3>Priorität Hook::RECV_RESP_HEADER<span class="ls-permlink"><a href="#RECV_RESP_HEADER"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Receive Response Header fest.<br/><br/> Der Hook HTTP Receive Response Header wird ausgeloest, wenn der Webserver den Antwortheader erstellt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_RESP_BODY"><h3>Priorität Hook::RECV_RESP_BODY<span class="ls-permlink"><a href="#RECV_RESP_BODY"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Receive Response Body fest.<br/><br/> Der Hook HTTP Receive Response Body wird ausgeloest, wenn das Backend des Webservers den Antworttext empfaengt.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RCVD_RESP_BODY"><h3>Priorität Hook::RCVD_RESP_BODY<span class="ls-permlink"><a href="#RCVD_RESP_BODY"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Received Response Body fest.<br/><br/> Der Hook HTTP Received Response Body wird ausgeloest, wenn das Backend des Webservers den Empfang des Antworttextes abgeschlossen hat.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HANDLER_RESTART"><h3>Priorität Hook::HANDLER_RESTART<span class="ls-permlink"><a href="#HANDLER_RESTART"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Handler Restart fest.<br/><br/> Der Hook HTTP Handler Restart wird ausgeloest, wenn der Webserver die aktuelle Antwort verwerfen und die Verarbeitung von vorn beginnen muss, zum Beispiel wenn eine interne Weiterleitung angefordert wurde.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="SEND_RESP_HEADER"><h3>Priorität Hook::SEND_RESP_HEADER<span class="ls-permlink"><a href="#SEND_RESP_HEADER"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Send Response Header fest.<br/><br/> Der Hook HTTP Send Response Header wird ausgeloest, wenn der Webserver bereit ist, den Antwortheader zu senden.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="SEND_RESP_BODY"><h3>Priorität Hook::SEND_RESP_BODY<span class="ls-permlink"><a href="#SEND_RESP_BODY"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Send Response Body fest.<br/><br/> Der Hook HTTP Send Response Body wird ausgeloest, wenn der Webserver den Antworttext senden wird.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HTTP_END"><h3>Priorität Hook::HTTP_END<span class="ls-permlink"><a href="#HTTP_END"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks HTTP Session End fest.<br/><br/> Der Hook HTTP Session End wird ausgeloest, wenn die HTTP-Verbindung beendet wurde.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_INITED"><h3>Priorität Hook::MAIN_INITED<span class="ls-permlink"><a href="#MAIN_INITED"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks Main Initialized fest.<br/><br/> Der Hook Main Initialized wird einmal beim Start ausgeloest, nachdem die Serverkonfiguration und Initialisierung durch den Hauptprozess (Controller) abgeschlossen ist und bevor Anforderungen bedient werden.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_PREFORK"><h3>Priorität Hook::MAIN_PREFORK<span class="ls-permlink"><a href="#MAIN_PREFORK"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks Main Prefork fest.<br/><br/> Der Hook Main Prefork wird vom Hauptprozess (Controller) unmittelbar vor dem Starten (Forken) eines neuen Worker-Prozesses ausgeloest. Er wird fuer jeden Worker aufgerufen und kann beim Systemstart oder nach einem Worker-Neustart auftreten.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_POSTFORK"><h3>Priorität Hook::MAIN_POSTFORK<span class="ls-permlink"><a href="#MAIN_POSTFORK"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks Main Postfork fest.<br/><br/> Der Hook Main Postfork wird vom Hauptprozess (Controller) unmittelbar nach dem Starten (Forken) eines neuen Worker-Prozesses ausgeloest. Er wird fuer jeden Worker aufgerufen und kann beim Systemstart oder nach einem Worker-Neustart auftreten.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="WORKER_POSTFORK"><h3>Priorität Hook::WORKER_POSTFORK<span class="ls-permlink"><a href="#WORKER_POSTFORK"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks Worker Postfork fest.<br/><br/> Der Hook Worker Postfork wird von einem Worker-Prozess ausgeloest, nachdem er vom Hauptprozess (Controller) erstellt wurde. Beachten Sie, dass ein entsprechender Main Postfork Hook vom Hauptprozess entweder vor oder nach diesem Callback aufgerufen werden kann.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="WORKER_ATEXIT"><h3>Priorität Hook::WORKER_ATEXIT<span class="ls-permlink"><a href="#WORKER_ATEXIT"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks Worker At Exit fest.<br/><br/> Der Hook Worker At Exit wird von einem Worker-Prozess unmittelbar vor dem Beenden ausgeloest. Er ist der letzte Hook-Punkt, der von einem Worker aufgerufen wird.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_ATEXIT"><h3>Priorität Hook::MAIN_ATEXIT<span class="ls-permlink"><a href="#MAIN_ATEXIT"></a></span></h3></header><h4>Beschreibung</h4><p>Legt die Priorität dieses Modul-Callbacks innerhalb des Hooks Main At Exit fest.<br/><br/> Der Hook Main At Exit wird vom Hauptprozess (Controller) unmittelbar vor dem Beenden ausgeloest. Er ist der letzte Hook-Punkt, der vom Hauptprozess aufgerufen wird.<br/><br/> Dies wird nur wirksam, wenn das Modul hier einen Hook-Punkt hat. Wenn nicht festgelegt, wird die im Modul definierte Standardpriorität verwendet.</p> <h4>Syntax</h4><p>Ganzzahliger Wert von -6000 bis 6000. Ein niedrigerer Wert bedeutet höhere Priorität.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerModules"><h3>Listener-Module<span class="ls-permlink"><a href="#listenerModules"></a></span></h3></header><h4>Beschreibung</h4><p>Listener-Modulkonfigurationsdaten werden standardmaessig von der Servermodul-Konfiguration geerbt. Listener-Module sind auf TCP/IP-Layer-4-Hooks beschraenkt.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="moduleEnabled_lst"><h3>Modul aktivieren<span class="ls-permlink"><a href="#moduleEnabled_lst"></a></span></h3></header><h4>Beschreibung</h4><p>Aktiviert Modul-Hooks auf Listener-Ebene. Diese Einstellung wird nur wirksam, wenn das Modul Hooks auf TCP/IP-Ebene besitzt (L4_BEGSESSION, L4_ENDSESSION, L4_RECVING, L4_SENDING).<br/><br/> Standardwert: Einstellung auf Serverebene erben</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhModules"><h3>Module virtueller Hosts<span class="ls-permlink"><a href="#vhModules"></a></span></h3></header><h4>Beschreibung</h4><p>Virtual-Host-Modulkonfigurationsdaten werden standardmaessig von der Servermodul-Konfiguration geerbt. Virtual-Host-Module sind auf Hooks auf HTTP-Ebene beschraenkt.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="moduleEnabled_vh"><h3>Modul aktivieren<span class="ls-permlink"><a href="#moduleEnabled_vh"></a></span></h3></header><h4>Beschreibung</h4><p>Aktiviert Modul-Hooks auf Virtual-Host-Ebene. Diese Einstellung wird nur wirksam, wenn das Modul Hooks auf HTTP-Ebene besitzt.<br/><br/> Standardwert: Einstellung auf Serverebene erben</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhModuleUrlFilters"><h3>Modul-URL-Filter<span class="ls-permlink"><a href="#vhModuleUrlFilters"></a></span></h3></header><h4>Beschreibung</h4><p>Dies ist eine zentrale Stelle, um Moduleinstellungen fuer Virtual-Host-Kontexte anzupassen. Einstellungen fuer eine Kontext-URI ueberschreiben die Einstellungen auf Virtual-Host- oder Serverebene.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die URI fuer diesen Kontext an.</p> <h4>Syntax</h4><p>Die URI kann eine einfache URI sein (beginnend mit "/") oder eine Perl-kompatible regulaere Ausdrucks-URI (beginnend mit "exp:"). Wenn eine einfache URI mit "/" endet, umfasst dieser Kontext alle Unter-URIs darunter. Wenn der Kontext einem Verzeichnis im Dateisystem zugeordnet ist, muss ein abschliessendes "/" hinzugefuegt werden.</p> <h4>Siehe auch</h4><p class="ls-text-small"><span class="tagl"><a href="#location">Speicherort</a></span></p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Nach oben" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Nach oben</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Alle Rechte vorbehalten.</footer>
+</div>
+</body>
+</html>

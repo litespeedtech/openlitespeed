@@ -402,12 +402,13 @@ int AccessLog::appendEscape(const char *pStr, int len)
 {
     const char *pStrEnd = pStr + len;
     char last = '\0';
+    m_buf.guarantee(len + (len >> 1));
     while (pStr < pStrEnd)
     {
         unsigned char ch = *(const uint8_t *)pStr;
 
         if (m_buf.available() < 10)
-            flush();
+            m_buf.guarantee(1024);
         if (ch == '\t')
         {
             m_buf.append("\\t", 2);
@@ -438,13 +439,7 @@ void AccessLog::appendStrNoQuote(int escape, const char *pStr, int len)
         appendEscape(pStr, len);
         return;
     }
-    if ((len > 4096) || (m_buf.available() <= len + 100))
-    {
-        flush();
-        m_pAppender->append(pStr, len);
-    }
-    else
-        m_buf.append_unsafe(pStr, len);
+    m_buf.append(pStr, len);
 }
 
 
@@ -550,7 +545,7 @@ void AccessLog::customLog(HttpSession *pSession, CustomFormat *pLogFmt, bool doF
 
     if(doFlush)
     {
-        if ((m_buf.available() < MAX_LOG_LINE_LEN)
+        if ((m_buf.size() > MAX_LOG_LINE_LEN)
             || !asyncAccessLog())
             flush();
     }
@@ -780,7 +775,7 @@ void AccessLog::log(HttpSession *pSession)
                   pReq->getHeaderLen(HttpHeader::H_HOST));
     }
     m_buf.append_unsafe('\n');
-    if ((m_buf.available() < MAX_LOG_LINE_LEN)
+    if ((m_buf.size() > MAX_LOG_LINE_LEN)
         || !asyncAccessLog())
         flush();
 }
@@ -789,7 +784,7 @@ void AccessLog::log(HttpSession *pSession)
 int AccessLog::appendStr(const char *pStr, int len)
 {
     if (m_buf.available() < len + 3)
-        flush();
+        m_buf.guarantee(len + 3);
     if (*pStr)
     {
         m_buf.append_unsafe('"');

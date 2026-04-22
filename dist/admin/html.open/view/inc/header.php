@@ -1,132 +1,240 @@
-<?php if (!$no_main_header) { ?>
+<?php
+
+use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\Product\Current\Product;
+use LSWebAdmin\Product\Current\UI;
+use LSWebAdmin\UI\UIBase;
+
+if (!$no_main_header) { ?>
 <!DOCTYPE html>
 <html lang="en-us">
 <?php } ?>
 	<head>
+<?php $productName = Product::GetInstance()->getProductName(); ?>
 		<meta charset="utf-8">
-		<!--<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">-->
-
-		<title>LiteSpeed WebAdmin Console</title>
-		<meta name="description" content="LiteSpeed WebAdmin Console">
+		<title><?php echo UIBase::Escape($productName); ?> WebAdmin Console</title>
+		<meta name="description" content="<?php echo UIBase::EscapeAttr($productName); ?> WebAdmin Console">
 		<meta name="author" content="LiteSpeed Technologies, Inc.">
 
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<!-- Basic Styles -->
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/bootstrap.min.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/font-awesome.min.css">
+		<script type="text/javascript">
+			(function () {
+				var theme = 'light';
+				var shellNavMode = 'expanded';
+				try {
+					if (window.localStorage) {
+						var storedTheme = window.localStorage.getItem('lst.theme');
+						if (storedTheme === 'light' || storedTheme === 'dark') {
+							theme = storedTheme;
+						}
+					}
+					if (window.sessionStorage) {
+						var storedShellNavMode = window.sessionStorage.getItem('lst.shell.nav');
+						if (storedShellNavMode === 'expanded' || storedShellNavMode === 'minified' || storedShellNavMode === 'hidden') {
+							shellNavMode = storedShellNavMode;
+						}
+					}
 
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/smartadmin-production.min.css">
+					if (theme === 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+						theme = 'dark';
+					}
+				} catch (err) {
+				}
 
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-webadmin.min.css">
+				document.documentElement.setAttribute('data-lst-theme', theme);
+				document.documentElement.style.colorScheme = theme;
+				window.__lstShellNavMode = shellNavMode;
+			})();
+		</script>
 
-		<!-- FAVICONS -->
 		<link rel="shortcut icon" href="/res/img/favicon/favicon.ico" type="image/x-icon">
 		<link rel="icon" href="/res/img/favicon/favicon.ico" type="image/x-icon">
-
-		<!-- GOOGLE FONT -->
+		
 		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/googlefonts.css">
-		<!-- link rel="stylesheet" href="//fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,300,400,700" -->
-
-		<!-- iOS web-app metas : hides Safari UI Components and Changes Status Bar Appearance -->
+		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-theme.css">
+		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-product-accent.css">
+		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-components.css">
+		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-shell.css">
+<?php if ($no_main_header) { ?>
+		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-page-login.css">
+<?php } else {
+		$lstPageStyles = [];
+		if (isset($view)) {
+			if ($view === 'dashboard') {
+				$lstPageStyles[] = '/res/css/lst-page-dashboard.css';
+				$lstPageStyles[] = '/res/css/lst-page-tools.css';
+			} elseif (UI::UsesToolPageStyle($view)) {
+				$lstPageStyles[] = '/res/css/lst-page-tools.css';
+			}
+		}
+		foreach ($lstPageStyles as $lstPageStyleHref) {
+?>
+		<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr($lstPageStyleHref); ?>">
+<?php
+		}
+} ?>
+		<meta name="mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="robots" content="noindex">
 
-		<script src="/res/js/libs/jquery-2.2.4.min.js"></script>
-		<script src="/res/js/libs/jquery-ui-1.12.1.min.js"></script>
+		<script src="/res/js/libs/jquery-4.0.0.min.js"></script>
+			<script type="text/javascript">
+			(function () {
+				var lstPasswordShowLabel = <?php echo json_encode(DMsg::ALbl('btn_showpassword')); ?>;
+				var lstPasswordHideLabel = <?php echo json_encode(DMsg::ALbl('btn_hidepassword')); ?>;
 
+				function lstSetPasswordToggleState(button, isVisible) {
+					var showLabel = button.getAttribute('data-lst-show-label') || lstPasswordShowLabel;
+					var hideLabel = button.getAttribute('data-lst-hide-label') || lstPasswordHideLabel;
+					var label = isVisible ? hideLabel : showLabel;
+					var showIcon = button.querySelector('[data-lst-password-show-icon]');
+					var hideIcon = button.querySelector('[data-lst-password-hide-icon]');
+
+					button.setAttribute('aria-pressed', isVisible ? 'true' : 'false');
+					button.setAttribute('aria-label', label);
+					button.setAttribute('data-original-title', label);
+
+					if (showIcon) {
+						showIcon.hidden = isVisible;
+					}
+					if (hideIcon) {
+						hideIcon.hidden = !isVisible;
+					}
+				}
+
+				document.addEventListener('click', function (event) {
+					var button = event.target.closest('[data-lst-password-toggle]');
+					var field;
+					var input;
+					var selectionStart;
+					var selectionEnd;
+					var shouldReveal;
+
+					if (!button) {
+						return;
+					}
+
+					field = button.closest('[data-lst-password-field]');
+					input = field ? field.querySelector('[data-lst-password-input]') : null;
+
+					if (!input || button.disabled || input.disabled) {
+						return;
+					}
+
+					event.preventDefault();
+
+					selectionStart = (typeof input.selectionStart === 'number') ? input.selectionStart : null;
+					selectionEnd = (typeof input.selectionEnd === 'number') ? input.selectionEnd : null;
+					shouldReveal = input.getAttribute('type') === 'password';
+
+					try {
+						input.setAttribute('type', shouldReveal ? 'text' : 'password');
+					} catch (err) {
+						return;
+					}
+
+					lstSetPasswordToggleState(button, shouldReveal);
+
+					if (typeof input.focus === 'function') {
+						input.focus();
+					}
+					if (selectionStart !== null && selectionEnd !== null && typeof input.setSelectionRange === 'function') {
+						input.setSelectionRange(selectionStart, selectionEnd);
+					}
+				});
+			})();
+		</script>
 	</head>
 <?php if ($no_main_header) return; ?>
-	<body>
+	<body class="lst-app-shell"
+	      data-back-to-top-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_top')); ?>">
+	<script type="text/javascript">
+		(function () {
+			var body = document.body;
+			var shellNavMode = window.__lstShellNavMode || 'expanded';
 
-		<!-- POSSIBLE CLASSES: minified, fixed-ribbon, fixed-header, fixed-width
-			 You can also add different skin classes such as "smart-skin-1", "smart-skin-2" etc...-->
+			if (!body) {
+				return;
+			}
 
-		<!-- HEADER -->
-		<header id="header">
-			<div id="logo-group">
-                            <span id="logo">
-                                <object type="image/svg+xml" data="/res/img/product_logo.svg"  height="35" width="200">
-Your browser doesn't support SVG
-                                </object>
-                            </span>
-			</div>
+			if (shellNavMode === 'minified') {
+				body.classList.add('minified');
+			}
+			else if (shellNavMode === 'hidden') {
+				body.classList.add('hidden-menu');
+			}
+		})();
+	</script>
 
-			<!-- projects dropdown -->
-			<div class="project-context hidden-xs"><span class="label">
+		<header id="header" class="lst-topbar">
+			<div class="lst-topbar-intro">
+				<div class="lst-header-control lst-mobile-menu-control">
+					<span><a href="#" class="lst-mobile-menu-trigger" data-action="toggleMenu" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('menu_dashboard')); ?> navigation" aria-controls="left-panel" aria-expanded="false"><i class="lst-icon" data-lucide="menu"></i></a></span>
+				</div>
+				<div id="logo-group" class="lst-brand">
+	                            <span id="logo" class="lst-brand-logo">
+	                                <img src="/res/img/product_logo.svg" alt="<?php echo UIBase::EscapeAttr($productName); ?>" width="200" height="50">
+	                            </span>
+				</div>
+
+
+				<div class="project-context lst-hide-phone lst-version-bar">
 
 			<?php
 			$prod = Product::GetInstance();
 			$version = $prod->getVersion();
-			$new_version = $prod->getNewVersion();
+			$host_name = php_uname('n');
 
-			$ver_notice = DMsg::UIStr('note_curver') . ':</span><span>'
-				. Product::PROD_NAME . ' ' . $version;
-			if ($new_version) {
-				$ver_notice .= ' &nbsp;&nbsp;<a href="https://openlitespeed.org/release-log/?utm_source=Open&utm_medium=WebAdmin" rel="noopener noreferrer" target="_blank"><i class="text-warning">'
-						. DMsg::UIStr('note_newver') . ': ' . $new_version . '</i></a>';
-			}
+			$ver_notice = UI::GetVersionNotice($version, '');
 			echo $ver_notice;
 
 			?>
-			</span></div>
-			<!-- end projects dropdown -->
+				</div>
 
-			<!-- pulled right: nav area -->
-			<div class="pull-right">
-<?php
+				<div class="lst-server-context">
+					<a href="#" id="show-shortcut" class="lst-server-context-trigger" data-action="toggleShortcut" aria-haspopup="true" aria-expanded="false">
+						<img class="lst-server-context-bolt" src="/res/img/server_bolt.svg" alt="">
+						<span class="lst-server-context-name"><?php echo UIBase::Escape($host_name); ?></span>
+						<i class="lst-icon" data-lucide="chevron-down"></i>
+					</a>
 
-	echo '<!-- collapse menu button -->
-		<div id="hide-menu" class="btn-header pull-right">
-			<span> <a href="javascript:void(0);" title="' . DMsg::UIStr('note_collapsemenu') . '" data-action="toggleMenu"><i class="fa fa-reorder"></i></a> </span>
-		</div>
-		<!-- end collapse menu -->
-
-		<!-- logout button -->
-		<div id="logout" class="btn-header transparent pull-right">
-			<span> <a href="/login.php?logoff=1" title="' . DMsg::UIStr('note_signout') . '" data-action="userLogout" data-logout-msg="' . DMsg::UIStr('note_logout') . '"><i class="fa fa-sign-out"></i></a> </span>
-		</div>
-		<!-- end logout button -->
-
-		<!-- fullscreen button -->
-		<div id="fullscreen" class="btn-header transparent pull-right">
-			<span> <a href="javascript:void(0);" title="' . DMsg::UIStr('note_fullscreen') . '" data-action="launchFullscreen"><i class="fa fa-arrows-alt"></i></a> </span>
-		</div>
-		<!-- end fullscreen button -->
-
-		<!-- multiple lang dropdown : find all flags in the flags page -->
-
-		<ul class="header-dropdown-list hidden-xs">
-			<li>
-	';
-	echo UIBase::Get_LangDropdown();
-?>
-			</li>
-		</ul>
-
-		<!-- end multiple lang -->
+					<div id="shortcut" tabindex="-1" aria-hidden="true" aria-label="Quick actions">
+						<ul class="lst-shortcut-grid">
+							<li>
+								<a href="#" class="lst-shortcut-tile lst-shortcut-tile--restart" data-lst-call="lst_restart"> <span class="iconbox"> <i class="lst-icon lst-icon--tile" data-lucide="refresh-ccw-dot"></i> <span><?php echo DMsg::UIStr('menu_restart')?> </span> </span> </a>
+							</li>
+							<li>
+								<a href="index.php?view=realtimestats" class="lst-shortcut-tile lst-shortcut-tile--stats"> <span class="iconbox"> <i class="lst-icon lst-icon--tile" data-lucide="activity"></i> <span><?php echo DMsg::UIStr('menu_rtstats')?></span> </span> </a>
+							</li>
+							<li>
+								<a href="index.php?view=logviewer" class="lst-shortcut-tile lst-shortcut-tile--logs"> <span class="iconbox"> <i class="lst-icon lst-icon--tile" data-lucide="list"></i> <span><?php echo DMsg::UIStr('menu_logviewer')?></span> </span> </a>
+							</li>
+							<li>
+							<a href="#" class="lst-shortcut-tile lst-shortcut-tile--debug" data-lst-call="lst_toggledebug"> <span class="iconbox"> <i class="lst-icon lst-icon--tile" data-lucide="bug"></i> <span><?php echo DMsg::UIStr('service_toggledebuglabel')?></span> </span> </a>
+							</li>
+						</ul>
+					</div>
+				</div>
 			</div>
-			<!-- end pulled right: nav area -->
+
+			<div class="lst-header-actions">
+				<div id="theme-switcher" class="transparent lst-header-control">
+					<span><a href="#" rel="tooltip" data-original-title="Toggle theme" aria-label="Toggle theme" data-action="toggleTheme" data-theme-light-label="Light mode" data-theme-dark-label="Dark mode"><i class="lst-icon" data-lucide="moon"></i></a></span>
+				</div>
+
+				<div id="fullscreen" class="transparent lst-header-control">
+					<span><a href="#" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_fullscreen')); ?>" data-action="launchFullscreen"><i class="lst-icon" data-lucide="maximize"></i></a></span>
+				</div>
+
+				<ul class="header-dropdown-list lst-hide-phone">
+					<li><?php echo UIBase::Get_LangDropdown(); ?></li>
+				</ul>
+
+				<div id="logout" class="transparent lst-header-control">
+					<span><a href="/login.php?logoff=1" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>" data-action="userLogout" data-logout-msg="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_logout')); ?>"><i class="lst-icon" data-lucide="log-out"></i></a></span>
+				</div>
+			</div>
 
 		</header>
-		<!-- END HEADER -->
-
-		<!-- SHORTCUT AREA : With large tiles (activated via clicking user name tag) -->
-		<div id="shortcut">
-			<ul>
-				<li>
-					<a href="javascript:lst_restart()" class="jarvismetro-tile big-cubes bg-color-greenLight"> <span class="iconbox"> <i class="fa fa-repeat fa-4x"></i> <span><?php echo DMsg::UIStr('menu_restart')?> </span> </span> </a>
-				</li>
-				<li>
-					<a href="#view/realtimestats.php" class="jarvismetro-tile big-cubes bg-color-blue"> <span class="iconbox"> <i class="fa fa-bar-chart-o fa-4x"></i> <span><?php echo DMsg::UIStr('menu_rtstats')?></span> </span> </a>
-				</li>
-				<li>
-					<a href="#view/logviewer.php" class="jarvismetro-tile big-cubes bg-color-orange"> <span class="iconbox"> <i class="fa fa-list fa-4x"></i> <span><?php echo DMsg::UIStr('menu_logviewer')?></span> </span> </a>
-				</li>
-				<li>
-					<a href="javascript:lst_toggledebug()" class="jarvismetro-tile big-cubes bg-color-purple"> <span class="iconbox"> <i class="fa fa-bug fa-4x"></i> <span><?php echo DMsg::UIStr('menu_toggledebug')?></span> </span> </a>
-				</li>
-			</ul>
-		</div>
-		<!-- END SHORTCUT AREA -->

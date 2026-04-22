@@ -80,6 +80,7 @@ enum RWCOND_OPS
 #define RULE_FLAG_BNP           (1<<19)
 #define RULE_FLAG_BCTLS         (1<<20)
 #define RULE_FLAG_BNE           (1<<21)
+#define RULE_FLAG_UNSAFE_ALLOW3F (1<<22)
 
 #define RULE_FLAGS_ESCAPE  (RULE_FLAG_BR_ESCAPE | RULE_FLAG_BNP \
                 | RULE_FLAG_BCTLS | RULE_FLAG_BNE)
@@ -121,6 +122,7 @@ public:
     {   return (MapRefItem *) getAny();   }
 
     int needUrlDecode() const;
+    int needsUnsafe3FEscape() const;
 };
 
 class RewriteSubstFormat : public TLinkList< RewriteSubstItem >,

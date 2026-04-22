@@ -54,6 +54,7 @@ public:
        , name(NULL)
        , arg(NULL)
        , start_time(0)
+       , name_len(0)
        , ref_count(1)
        , type(0)
        {}
@@ -79,6 +80,7 @@ private:
     char            *name;
     void            *arg;
     long             start_time;
+    unsigned         name_len;
     unsigned short   ref_count;
     unsigned short   type;//PF_INET, PF_INET6
 };
@@ -113,18 +115,21 @@ class Adns : public EventReactor, public evtcbhead_s, public TSingleton<Adns>
     friend class TSingleton<Adns>;
 
 public:
+    enum
+    {
+        DEFAULT_MAX_CACHE_TTL = 3600,
+        DEFAULT_MIN_CACHE_TTL = 1
+    };
 
     int  init();
     int  shutdown();
     int  initShm(int uid, int gid);
 
-
     static int  deleteCache();
     void        trimCache();
     
-    char *getCacheName(const char *pName, int type);
-    const char *getCacheValue(const char * pName, int nameLen, int &valLen,
-                               int max_ttl = 0);
+    char *getCacheName(const char *pName, int type, unsigned *name_len);
+    const char *getCacheValue(const char * pName, int nameLen, int &valLen);
 
     //Sync mode, return the ip
     const char *getHostByNameInCache(const char * pName, int &length,
@@ -143,6 +148,12 @@ public:
     int  handleEvents(short events);
     int  onTimer();
     void setTimeOut(int tmSec);
+    unsigned getMaxCacheTtl() const             {   return m_iMaxCacheTtl;   }
+    void setMaxCacheTtl(unsigned ttlSec)
+    {   m_iMaxCacheTtl = (ttlSec >= m_iMinCacheTtl) ? ttlSec : m_iMinCacheTtl;  }
+    unsigned getMinCacheTtl() const             {   return m_iMinCacheTtl;   }
+    void setMinCacheTtl(unsigned ttlSec)
+    {   m_iMinCacheTtl = (ttlSec <= m_iMaxCacheTtl) ? ttlSec : m_iMaxCacheTtl;  }
 
     static int getHostByNameSync(const char *pName, in_addr_t *addr);
     static int getHostByNameV6Sync(const char *pName, in6_addr *addr);
@@ -163,13 +174,17 @@ private:
     void checkDnsEvents();
     static int checkDnsEventsCb(evtcbhead_t *, const long , void *);
     void wantCheckDnsEvents();
-    LsShmHash  *getShmHash()    {   return m_pShmHash;  }
+    void addToShmHash(const char *name, unsigned name_len, const void *result,
+                      int len, unsigned ttl);
+    unsigned clampCacheTtl(unsigned ttl) const;
 
 
     struct dns_ctx     *m_pCtx;
     LsShmHash          *m_pShmHash;
     pthread_t           m_lockedBy;
     time_t              m_tmLastTrim;
+    unsigned            m_iMaxCacheTtl;
+    unsigned            m_iMinCacheTtl;
     ls_mutex_t          m_mutex;
     ls_mutex_t          m_udns_mutex;
     short               m_iCounter;
@@ -181,4 +196,3 @@ private:
 LS_SINGLETON_DECL(Adns);
 
 #endif
-

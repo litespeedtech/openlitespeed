@@ -2,9 +2,11 @@ import json, logging, os, pwd, subprocess, sys
 from stat import *
 from subprocess import PIPE
 
-VERSION='0.0.3' 
+VERSION='0.0.5'
 # 0.0.2: Updated for package commands
 # 0.0.3: Updated for limited CloudLinux support
+# 0.0.4: Updated for CageFS support
+# 0.0.5: Updated for better CageFS identification
 
 OPTION_CPU=0
 OPTION_IO=1
@@ -155,7 +157,7 @@ def ls_ok():
         fatal_error("You must configure LiteSpeed for LiteSpeed Containers")
 
 def ls_cl_ok():
-    if os.access('/etc/cloudlinux-release', os.F_OK):
+    if os.access('/etc/cagefs/cagefs.mp', os.F_OK):
         this.cl = True
         return
     ls_ok()

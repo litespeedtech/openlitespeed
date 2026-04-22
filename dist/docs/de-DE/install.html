@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="de-DE">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>OpenLiteSpeed-Benutzerhandbuch - Installation</title>
+  <meta name="description" content="OpenLiteSpeed-Benutzerhandbuch - Installation." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed-Benutzerhandbuch">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed-Benutzerhandbuch</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Menü öffnen" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Seiten und Einstellungen suchen" data-no-results="Keine Ergebnisse gefunden.">
+      <label class="sr-only" for="doc-search-input">Handbuch durchsuchen</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Seiten und Einstellungen suchen" aria-controls="doc-search-results" />
+        <button type="submit">Suchen</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Sprache"><option value="../install.html" data-lang="en-US">English</option><option value="../es-ES/install.html" data-lang="es-ES">Español</option><option value="../de-DE/install.html" data-lang="de-DE" selected>Deutsch</option><option value="../fr-FR/install.html" data-lang="fr-FR">Français</option><option value="../zh-CN/install.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/install.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Design umschalten" data-theme-toggle data-theme-light-label="Heller Modus" data-theme-dark-label="Dunkler Modus" title="Design umschalten">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="de-DE" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Benutzerhandbuch</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Inhaltsverzeichnis"><ul class="sidetree__list">
+      <li><a href="license.html">Lizenz</a></li>
+      <li><a href="intro.html">Einleitung</a></li>
+      <li><a class="current" href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Sicherheit</a></li>
+      <li>
+        <a href="config.html">Konfiguration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Server allgemein</a></li>
+          <li><a href="ServLog_Help.html">Serverprotokoll</a></li>
+          <li><a href="ServTuning_Help.html">Server-Tuning</a></li>
+          <li><a href="ServSecurity_Help.html">Serversicherheit</a></li>
+          <li><a href="ExtApp_Help.html">Externe Anwendungen</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">LSAPI-Anwendung</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Fast-CGI-Anwendung</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast-CGI-Authorizer</a></li>
+            <li><a href="External_SCGI.html">Simple-CGI-Anwendung</a></li>
+            <li><a href="External_Servlet.html">Servlet-Engine</a></li>
+            <li><a href="External_PL.html">Piped Logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Skripthandler</a></li>
+          <li><a href="App_Server_Help.html">App-Server-Einstellungen</a></li>
+          <li><a href="Module_Help.html">Modulkonfiguration</a></li>
+          <li><a href="Listeners_General_Help.html">Listener allgemein</a></li>
+          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
+          <li><a href="Templates_Help.html">Virtual-Host-Vorlagen</a></li>
+          <li><a href="VirtualHosts_Help.html">Virtual-Host-Registrierung</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual Host allgemein</a></li>
+          <li><a href="VHSecurity_Help.html">Virtual Host Sicherheit</a></li>
+          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Kontext</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Statischer Kontext</a></li>
+            <li><a href="Java_Web_App_Context.html">Java-Web-App-Kontext</a></li>
+            <li><a href="Servlet_Context.html">Servlet-Kontext</a></li>
+            <li><a href="FCGI_Context.html">Fast-CGI-Kontext</a></li>
+            <li><a href="SCGI_Context.html">Simple-CGI-Kontext</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI-Kontext</a></li>
+            <li><a href="Proxy_Context.html">Proxy-Kontext</a></li>
+            <li><a href="CGI_Context.html">CGI-Kontext</a></li>
+            <li><a href="LB_Context.html">Load-Balancer-Kontext</a></li>
+            <li><a href="Redirect_Context.html">Redirect-Kontext</a></li>
+            <li><a href="App_Server_Context.html">App-Server-Kontext</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI-Kontext</a></li>
+            <li><a href="Module_Context.html">Modulhandler-Kontext</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">WebSocket-Proxy</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Webkonsole</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Admin-Konsole allgemein</a></li>
+          <li><a href="AdminSecurity_Help.html">Admin-Konsolensicherheit</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin-Listener allgemein
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin-Listener SSL</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="intro.html">Einführung</a></div><div class="center"><a href="index.html">Startseite</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
+<h1>Installation/Deinstallation</h1><br/> <h2>Minimale Systemanforderungen</h2> <ul>   <li>     <strong>Betriebssystem:</strong>     <ul>       <li>Linux(i386): Kernel 2.4 und hoeher, glibc-2.2 und hoeher</li>       <li>CentOS: 5 und hoeher</li>       <li>Ubuntu: 8.04 und hoeher</li>       <li>Debian: 4 und hoeher</li>       <li>FreeBSD(i386): 4.5 und hoeher</li>       <li>MacOSX: 10.3 und hoeher</li>     </ul>   </li>   <li>     <strong>CPU:</strong>     <ul>       <li>Intel: 80486 und hoeher</li>       <li>PowerPC: PowerPC G4</li>     </ul>   </li>   <li><strong>Speicher:</strong> 32MB und mehr</li>   <li>     <strong>Festplatte:</strong>     <ul>       <li>Installation: 200MB</li>       <li>Laufzeit: 300MB und mehr; Swap-Speicher haengt von der Nutzung ab.</li>     </ul>   </li> </ul><br/> <h2>Installation</h2> <p>   Die Installation muss in einem Befehlszeilenterminal ausgefuehrt werden. Zu Testzwecken   kann LiteSpeed Web Server von einem nicht privilegierten Benutzer in ein Home-Verzeichnis   installiert werden. Fuer den Produktionseinsatz sollte er in ein Systemverzeichnis   installiert werden. </p><br/> <p>   Unter Mac OS X ist der root-Benutzer standardmaessig deaktiviert. Er kann ueber   eine Reihe von Schritten aktiviert werden, die auf der Apple-Website beschrieben sind. Sie koennen auch den Befehl sudo   verwenden, um LSWS in ein Systemverzeichnis zu installieren, ohne den root-   Benutzer zu aktivieren, aber Systemordner koennen weiterhin nur vom root-Benutzer bearbeitet werden.   Das bedeutet, dass Sie jedes Mal, wenn Sie LSWS ueber das Befehlszeilenterminal steuern moechten   (zum Beispiel beim Starten oder Stoppen von LSWS), den Befehl sudo verwenden muessen. </p><br/> <h3>Installationsschritte:</h3> <p>   Besuchen Sie die   <a href="https://openlitespeed.org/kb/" target="_blank" rel="noopener">     OpenLiteSpeed Knowledge Base   </a>   fuer eine Liste von Installationsmethoden. </p><br/> <h2>Erste Schritte</h2> <ol>   <li>     <p>       Ausfuehrliche Informationen zur Steuerung der Serverprozesse finden Sie       im Administrationshandbuch.     </p>     <p>       Um den Server zu starten, fuehren Sie einfach [Installationsverzeichnis]/bin/lswsctrl start aus.       (Zum Stoppen fuehren Sie [Installationsverzeichnis]/bin/lswsctrl stop aus.)     </p>   </li>   <li>     <p>Eine Beispielsite sollte auf dem Server laufen.</p>     <p>       Um auf Ihre Site zuzugreifen, oeffnen Sie im Browser http://[Adresse]:8088/,       wobei [Adresse] die IP-Adresse oder der Domainname Ihrer Webservermaschine ist.       Verwenden Sie &quot;localhost&quot;, wenn sich der Server auf der Maschine befindet, die Sie gerade verwenden.       "8088" ist der Standardport. Wenn Sie waehrend der Installation einen anderen Port fuer LiteSpeed       gewaehlt haben, verwenden Sie den von Ihnen angegebenen Port.     </p>     <p>       Eine Gratulationsseite mit Links zu weiteren Testseiten sollte im Browser geladen werden,       wenn Sie die oben genannte Adresse aufrufen. Falls nicht, testen Sie die       WebAdmin-Konsolenoberflaeche.     </p>   </li>   <li>     <p>Der Standardport fuer die WebAdmin-Konsole ist 7080.</p>     <p>       Geben Sie http://[Adresse]:7080/ in den Browser ein, um zur WebAdmin-       Oberflaeche zu gelangen. (Wenn Sie den Port fuer WebAdmin waehrend der Installation geaendert haben,       verwenden Sie stattdessen diesen Port.)     </p>     <p>       Denken Sie daran, dass Sie fuer [Adresse] &quot;localhost&quot; verwenden koennen, wenn Sie       gerade die Maschine verwenden, auf der der Server laeuft.     </p>     <p>       Die WebAdmin-Willkommensseite sollte geladen werden. Klicken Sie auf den Link &quot;Log on&quot;       und verwenden Sie den waehrend der Installation angegebenen Administrator-Benutzernamen und das Kennwort,       um sich anzumelden.     </p>     <p>       Ausfuehrliche Informationen zur Konfiguration finden Sie in unserem       Konfigurationshandbuch, oder klicken Sie oben auf jeder Seite auf den Link &quot;Help&quot;.     </p>   </li>   <li>     <p>       Wenn Ihr Server eine Firewall verwendet, stellen Sie sicher, dass localhost vertrauenswuerdig ist.     </p>     <p>       Beispielsweise sollte Linux mit IPTables eine Regel ALLOW INPUT von       LO enthalten.     </p>   </li>   <li>     <p>       Wenn Ihre Website und die WebAdmin-Konsole nicht erreichbar sind, sehen Sie sich bitte       das Fehlerprotokoll [Installationsverzeichnis]/logs/error.log an.     </p>     <p>       Wenn ein TCP-Portkonflikt mit anderen Serveranwendungen besteht, sollte der Webserver       mit einem verfuegbaren Port neu installiert werden. Mit dem folgenden       Befehl koennen Sie einen verfuegbaren Port finden:       <span class="cmd">netstat -an | grep XXXX </span>       XXXX ist eine Portnummer. Wenn der Port verfuegbar ist, erzeugt der Befehl       keine Ausgabe.     </p>     <p>       Wenn das Swap-Verzeichnis nicht beschreibbar ist, koennen Sie entweder dem Benutzer, unter dem der Webserver laeuft,       Schreibberechtigung fuer das Swap-Verzeichnis erteilen oder die Konfiguration des Swap-Verzeichnisses manuell aendern.       Das Swap-Verzeichnis wird in der XML-Konfigurationsdatei des Servers konfiguriert:       [Installationsverzeichnis]/conf/httpd_config.xml. Suchen Sie in der XML-Datei nach       swappingDir. Der Standardspeicherort fuer das Swap-Verzeichnis ist       /tmp/lshttpd/swap.     </p>     <p>       Wenn weiterhin Probleme mit der Installation auftreten, sehen Sie in unserem Wiki nach       oder posten Sie Ihr Problem in unserem Support-Forum.     </p>   </li> </ol><br/> <h2>Hinweise</h2> <ul>   <li>     OpenLiteSpeed unterstuetzt sowohl native LiteSpeed-XML-Konfigurationsdateien als auch     Klartext-Konfigurationsdateien (fuer Benutzer, die Apache     httpd.conf bearbeiten gewohnt sind). Fuehren Sie [Installationsverzeichnis]/conf/switch_config.sh aus, um zwischen     diesen Formaten zu wechseln.   </li>   <li>     Unter FreeBSD, Mac OS X, Ubuntu und Debian laeuft das mitgelieferte PHP (fuer CentOS)     nicht. Sie muessen PHP fuer OpenLiteSpeed neu bauen, um     PHP-Anwendungen mit OpenLiteSpeed auszufuehren.   </li> </ul><br/> <h2>Deinstallationsschritte</h2> <ol>   <li>     Stoppen Sie OpenLiteSpeed, falls es laeuft: [Installationsverzeichnis]/bin/lswsctrl stop   </li>   <li>Entfernen Sie das Installationsverzeichnis: rm -rf [Installationsverzeichnis]</li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="Nach oben" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Nach oben</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Alle Rechte vorbehalten.</footer>
+</div>
+</body>
+</html>

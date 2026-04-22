@@ -80,6 +80,7 @@
 #include <http/staticfilecachedata.h>
 #include <http/stderrlogger.h>
 #include <http/vhostmap.h>
+#include <http/useacme.h>
 #include <http/clientinfo.h>
 
 #include <log4cxx/appender.h>
@@ -352,6 +353,7 @@ private:
 
     void checkOLSUpdate();
     void onTimer();
+    void onTimerDaily();
     void onTimer60Secs();
     void onTimer30Secs();
     void onTimer10Secs();
@@ -1210,6 +1212,7 @@ void HttpServerImpl::endConfig(int error)
     m_oldListeners.saveInUseListnersTo(m_toBeReleasedListeners);
     m_orgVHosts.appendTo(m_toBeReleasedVHosts);
     m_listeners.endConfig();
+    AcmeCertMap::getInstance().beginCerts(true);
     ServerAddrRegistry::getInstance().init(&m_listeners);
 }
 
@@ -2130,7 +2133,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         if (secure)
         {
             ConfigCtx currentCtx("ssl");
-            pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(pNode, pAddr, NULL);
+            pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(pNode, pAddr, NULL, NULL);
             if (!pSSLCtx)
             {
                 delete pSSLCtx;
@@ -2166,6 +2169,7 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
             LS_ERROR(&currentCtx, "failed to start listener on address %s!", pAddr);
             break;
         }
+        pListener->setSecure(secure);
 
         if (!isAdmin)
         {
@@ -2191,15 +2195,6 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
         if (pSSLCtx)
         {
             pListener->getVHostMap()->setSslContext(pSSLCtx);
-            if (pSSLCtx->initSNI(pListener->getVHostMap()) == -1)
-            {
-                LS_WARN(&currentCtx,
-                        "TLS extension is not available in openssl library on this server, "
-                        "server name indication is disabled, you will not able to use use per vhost"
-                        " SSL certificates sharing one IP. Please upgrade your OpenSSL lib if you want to use this feature."
-                       );
-
-            }
 
             //Allow quic
             int iEnableQuic = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "enableQuic", 0, 1, 1);
@@ -2966,6 +2961,11 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
 
     initQuic(pNode);
 
+    val = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "acme", 0, 2, 
+            HttpServerConfig::ACME_OFF);
+    HttpServerConfig::getInstance().setAcme((HttpServerConfig::AcmeConfigValues)val);
+
+
     pValue = pNode->getChildValue("proxyProtocol");
     if (pValue && *pValue)
     {
@@ -3607,6 +3607,14 @@ void HttpServerImpl::configVHTemplateToListenerMap(
 
             for (iter = listeners.begin(); iter != listeners.end(); ++iter)
             {
+                LS_DBG("Overall acme: %d, listener %s, secure: %d vhost acme: %d\n", 
+                       HttpServerConfig::getInstance().getAcme(), (*iter)->getName(),
+                       (*iter)->getSecure(), pVHost->getAcme());
+                if ((*iter)->getSecure() && 
+                    (pVHost->getAcme() && 
+                     HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_DISABLED))
+                    UseAcme::acmeVhost(pVHost, pDomain, pAliases, 
+                                       (*iter)->getAddrStr());
                 mapListenerToVHost((*iter), pVHost, pDomain);
 
                 if (pAliases)
@@ -3616,6 +3624,7 @@ void HttpServerImpl::configVHTemplateToListenerMap(
 
         }
 
+        UseAcme::vhostActivate(pVHost);
     }
 }
 
@@ -3993,7 +4002,6 @@ int HttpServerImpl::configServerBasics(int reconfig, const XmlNode *pRoot)
         HttpServerConfig::getInstance().setCpuAffinity(
             ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "cpuAffinity", 0,
                                                        64, 0));
-
         val = ConfigCtx::getCurConfigCtx()->getLongValue(pRoot, "bubbleWrap",
                 0, 2, HttpServerConfig::BWRAP_DISABLED);
         HttpServerConfig::getInstance().setBwrap((HttpServerConfig::BwrapConfigValues)val);
@@ -4412,7 +4420,7 @@ int HttpServerImpl::configLsrecaptchaContexts()
         Recaptcha::setStaticUrl("/.lsrecap/_recaptcha_custom.shtml");
     }
 
-    char headers[] = "set cache-control no-cache,no-store\n"
+    char headers[] = "set cache-control no-cache,no-store,private\n"
                       "set x-frame-options SAMEORIGIN\n"  ;
     pStaticContext->setHeaderOps(ConfigCtx::getCurConfigCtx()->getLogId(),
                                  headers, sizeof(headers) - 1);

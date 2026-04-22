@@ -1,115 +1,155 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - Servlet Engine</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - Servlet Engine." />
+  <title>OpenLiteSpeed用户手册 - Servlet引擎</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - Servlet引擎." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../External_Servlet.html" data-lang="en-US">English</option><option value="../es-ES/External_Servlet.html" data-lang="es-ES">Español</option><option value="../de-DE/External_Servlet.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/External_Servlet.html" data-lang="fr-FR">Français</option><option value="../zh-CN/External_Servlet.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/External_Servlet.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><span class="current"><a href="External_Servlet.html">Servlet Engine</a></span></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a class="current" href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="External_LSAPI.html">LiteSpeed SAPI App</a></div><div class="center"><a href="ExtApp_Help.html">外部应用</a></div><div class="next"><a href="External_WS.html">Web Server</a> &#187;</div></div>
-<h1>Servlet Engine</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>Servlet Engine</header><p>
-<a href="#extAppName">名称</a> | <a href="#extAppAddress">地址</a> | <a href="#maxConns">最大连接数</a> | <a href="#pcKeepAliveTimeout">持久连接超时时间</a> | <a href="#env">环境</a> | <a href="#initTimeout">初次请求超时时间 (secs)</a> | <a href="#retryTimeout">重试超时时间 (secs)</a> | <a href="#respBuffer">响应缓冲</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="External_SCGI.html">Simple CGI应用</a></div><div class="center"><a href="ExtApp_Help.html">外部应用</a></div><div class="next"><a href="External_PL.html">管道日志器</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Servlet引擎</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Servlet引擎</h3><ul class="doc-toc__links"><li><a href="#extAppName">名称</a></li><li><a href="#extAppAddress">地址</a></li><li><a href="#maxConns">最大连接数</a></li><li><a href="#pcKeepAliveTimeout">持久连接超时时间</a></li><li><a href="#env">环境</a></li><li><a href="#initTimeout">初次请求超时时间 (secs)</a></li><li><a href="#retryTimeout">重试超时（秒）</a></li><li><a href="#respBuffer">响应缓冲</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppName"><h3>名称<span class="ls-permlink"><a href="#extAppName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>此外部应用程序的唯一名称。 在配置的其他部分中使用该名称时，将使用该名称进行引用。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="extAppAddress"><h3>地址<span class="ls-permlink"><a href="#extAppAddress"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>外部应用程序使用的唯一套接字地址。 支持IPv4/IPv6套接字和Unix域套接字（UDS）。 IPv4/IPv6套接字可用于网络通信。 只有当外部应用程序与服务器在同一台机器上时，才能使用UDS。</p> <h4>Syntax</h4><p>IPv4 或 IPV6 address:port 或者 UDS://path</p> <h4>例子</h4><div class="ls-example">127.0.0.1:5434<br/> UDS://tmp/lshttpd/php.sock.</div><h4>提示</h4><p>[安全建议] 如果外部应用程序在同一台机器上运行，则首选UDS。如果必须使用IPv4|IPV6, 将IP地址设置为<span class="val">localhost</span>或<span class="val">127.0.0.1</span>，这样外部应用就无法从其他机器上访问。 [性能建议] Unix域套接字一般比IPv4套接字拥有更高的性能。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="maxConns"><h3>最大连接数<span class="ls-permlink"><a href="#maxConns"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定服务器与外部应用之间可建立的最大并发连接数。该设置控制外部应用程序可同时处理多少个请求。 然而，真正的限制还取决于外部应用本身。如果外部的速度不够快，或者无法处理大量的并发请求，那么将这个值设置得更高也无济于事。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[性能建议] 设置一个高值并不能直接变成高性能。设置为一个不会使外部应用程序过载的值，将提供最佳的性能/吞吐量。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="pcKeepAliveTimeout"><h3>持久连接超时时间<span class="ls-permlink"><a href="#pcKeepAliveTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定保持持久连接的最大时间，以秒为单位。<br/><br/> 如果设置成"-1",连接将不会超时. 当设置成0或者更大, 连接将在这些秒数后被关闭。</p> <h4>Syntax</h4><p>int</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="env"><h3>环境<span class="ls-permlink"><a href="#env"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>为外部应用程序指定额外的环境变量。</p> <h4>Syntax</h4><p>Key=value. Multiple variables can be separated by "ENTER"</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="initTimeout"><h3>初次请求超时时间 (secs)<span class="ls-permlink"><a href="#initTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定服务器等待外部应用响应新建立的连接的第一个请求的最大时间  如果服务器在这个限制时间内没有收到外部应用的任何数据，它将把这个连接标记为坏(Bad)。这有助于识别与外部应用程序的通信问题。 这有助于尽快发现与外部应用的通信问题。如果某些请求的处理时间较长，则增加这个限制以避免503错误信息。</p> <h4>Syntax</h4><p>整数</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="retryTimeout"><h3>重试超时时间 (secs)<span class="ls-permlink"><a href="#retryTimeout"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定服务器在重试之前，等待出现通信问题的外部应用程序的时间。</p> <h4>Syntax</h4><p>整数</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="respBuffer"><h3>响应缓冲<span class="ls-permlink"><a href="#respBuffer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否要从外部应用程序缓冲收到的响应。 如果nph-(Non-Parsed-Header)脚本被检测到，则关闭具有完整HTTP头的缓冲响应。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppName"><h3>名称<span class="ls-permlink"><a href="#extAppName"></a></span></h3></header><h4>描述</h4><p>此外部应用程序的唯一名称。 在配置的其他部分中使用该名称时，将使用该名称进行引用。</p> <h4>语法</h4><p>文本</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppAddress"><h3>地址<span class="ls-permlink"><a href="#extAppAddress"></a></span></h3></header><h4>描述</h4><p>外部应用程序使用的唯一套接字地址。 支持IPv4/IPv6套接字和Unix域套接字（UDS）。 IPv4/IPv6套接字可用于网络通信。 只有当外部应用程序与服务器在同一台机器上时，才能使用UDS。</p> <h4>语法</h4><p>IPv4或IPv6地址:端口，或者UDS://path</p> <h4>示例</h4><div class="ls-example">127.0.0.1:5434<br/> UDS://tmp/lshttpd/php.sock.</div><h4>提示</h4><p>[安全] 如果外部应用程序在同一台机器上运行，则首选UDS。如果必须使用IPv4/IPv6， 将IP地址设置为<span class="val">localhost</span>或<span class="val">127.0.0.1</span>，这样外部应用就无法从其他机器上访问。 [性能建议] Unix域套接字一般比IPv4套接字拥有更高的性能。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="maxConns"><h3>最大连接数<span class="ls-permlink"><a href="#maxConns"></a></span></h3></header><h4>描述</h4><p>指定服务器与外部应用之间可建立的最大并发连接数。该设置控制外部应用程序可同时处理多少个请求。 然而，真正的限制还取决于外部应用本身。如果外部的速度不够快，或者无法处理大量的并发请求，那么将这个值设置得更高也无济于事。</p> <h4>语法</h4><p>非负整数</p> <h4>提示</h4><p>[性能建议] 设置一个高值并不能直接变成高性能。设置为一个不会使外部应用程序过载的值，将提供最佳的性能/吞吐量。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pcKeepAliveTimeout"><h3>持久连接超时时间<span class="ls-permlink"><a href="#pcKeepAliveTimeout"></a></span></h3></header><h4>描述</h4><p>指定空闲持久连接保持打开的最大时间（秒）。<br/><br/> 设置为<span class="val">-1</span>时，连接永不超时。设置为0或更大时，连接会在经过该秒数后关闭。</p> <h4>语法</h4><p>秒数整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="env"><h3>环境<span class="ls-permlink"><a href="#env"></a></span></h3></header><h4>描述</h4><p>为外部应用程序指定额外的环境变量。</p> <h4>语法</h4><p>Key=value。多个变量可以用回车换行分隔。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="initTimeout"><h3>初次请求超时时间 (secs)<span class="ls-permlink"><a href="#initTimeout"></a></span></h3></header><h4>描述</h4><p>指定服务器等待外部应用响应新建立连接上的第一个请求的最大时间（秒）。 如果服务器在这个限制时间内没有收到外部应用的任何数据，它将把这个连接标记为坏(Bad)。这有助于识别与外部应用程序的通信问题。 这有助于尽快发现与外部应用的通信问题。如果某些请求的处理时间较长，则增加这个限制以避免503错误信息。</p> <h4>语法</h4><p>秒数整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="retryTimeout"><h3>重试超时（秒）<span class="ls-permlink"><a href="#retryTimeout"></a></span></h3></header><h4>描述</h4><p>指定服务器在重试之前，等待出现通信问题的外部应用程序的时间。</p> <h4>语法</h4><p>秒数整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="respBuffer"><h3>响应缓冲<span class="ls-permlink"><a href="#respBuffer"></a></span></h3></header><h4>描述</h4><p>指定是否缓冲从外部应用程序收到的响应。 如果检测到“nph-”（Non-Parsed-Header）脚本，则会关闭带完整HTTP头响应的缓冲。</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

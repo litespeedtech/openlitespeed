@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manuel utilisateur OpenLiteSpeed - Configuration</title>
+  <meta name="description" content="Manuel utilisateur OpenLiteSpeed - Configuration." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manuel utilisateur OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manuel utilisateur OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Ouvrir le menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Rechercher pages et reglages" data-no-results="Aucun resultat trouve.">
+      <label class="sr-only" for="doc-search-input">Rechercher dans le manuel</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Rechercher pages et reglages" aria-controls="doc-search-results" />
+        <button type="submit">Rechercher</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Langue"><option value="../config.html" data-lang="en-US">English</option><option value="../es-ES/config.html" data-lang="es-ES">Español</option><option value="../de-DE/config.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/config.html" data-lang="fr-FR" selected>Français</option><option value="../zh-CN/config.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/config.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Changer de theme" data-theme-toggle data-theme-light-label="Mode clair" data-theme-dark-label="Mode sombre" title="Changer de theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+      <li><a href="license.html">Licence</a></li>
+      <li><a href="intro.html">Introduction</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Securite</a></li>
+      <li>
+        <a class="current" href="config.html">Configuration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Serveur general</a></li>
+          <li><a href="ServLog_Help.html">Journal serveur</a></li>
+          <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
+          <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
+          <li><a href="ExtApp_Help.html">Applications externes</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Moteur servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
+          <li><a href="App_Server_Help.html">Reglages App Server</a></li>
+          <li><a href="Module_Help.html">Configuration des modules</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL du listener</a></li>
+          <li><a href="Templates_Help.html">Modeles de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Enregistrement du VHost</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexte</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexte statique</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+            <li><a href="CGI_Context.html">Contexte CGI</a></li>
+            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexte handler de module</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Console web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
+          <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="security.html">Sécurité</a></div><div class="center"><a href="index.html">Accueil</a></div><div class="next"><a href="webconsole.html">Console web</a> &#187;</div></div>
+<h1>Configuration</h1><br/> <section> <a name="con"></a><h3><b>Concepts</b></h3><br/> <p>Voici quelques concepts de base a connaitre avant d'entrer dans le detail de la configuration.</p><br/> <a name="vh"></a><h3>Virtual hosts</h3><br/> <p>LiteSpeed Web Server peut heberger plusieurs sites web (virtual hosts) avec une seule instance serveur.</p><br/> <p>Traditionnellement, les virtual hosts sont classes en deux types: les virtual hosts bases sur IP et   les virtual hosts bases sur le nom.   Les virtual hosts bases sur IP sont des sites web qui possedent leurs propres adresses IP uniques. Les virtual hosts   bases sur le nom sont des sites web distingues par leur nom de domaine et   peuvent donc partager une adresse IP avec d'autres sites. Il n'y a pas de distinction claire   entre ces deux categories dans LiteSpeed   Web Server. Les virtual hosts bases sur IP sont consideres comme un type particulier de   virtual host base sur le nom. Les deux peuvent etre configures facilement, voire melanges   ensemble.</p> <p>Contrairement a d'autres serveurs web, LiteSpeed Web Server n'a pas de site web par defaut.   Chaque site web est configure comme un virtual host, meme si un seul site web est heberge.</p><br/> <a name="l"></a><h3>Listeners</h3><br/> <p>Dans LiteSpeed Web Server, un listener est un socket serveur qui ecoute sur une   adresse IP et un port TCP specifiques. Si vous imaginez le serveur web comme un batiment, les listeners sont   les portes (chacune avec sa propre adresse IP et son propre port).   Les clients (navigateurs) doivent passer par une porte (un listener) pour soumettre leurs requetes.</p><br/> <p>Pour chaque listener, une adresse IP et un numero de port doivent etre specifies.   L'adresse IP peut etre toute adresse IP locale valide, ou vous pouvez definir une IP generique   (*) qui fait reference a toutes les adresses IP disponibles sur cette machine.   Un port est un entier entre 0 et 65535.   Le port par defaut pour HTTP est 80 et celui pour HTTPS est 443.   D'autres ports peuvent etre utilises; toutefois, sur les machines UNIX, seul le superutilisateur &quot;root&quot;   a l'autorisation d'utiliser les ports inferieurs a 1024.</p><br/> <p>Un seul listener est autorise pour chaque combinaison IP et port.   Ainsi, si un listener est configure sur un port avec l'adresse IP generique,   vous ne pouvez pas configurer un autre listener sur le meme port, meme si vous specifiez   une IP particuliere. Par exemple, si plusieurs adresses IP existent sur la machine du serveur web   et que le trafic HTTP doit etre autorise sur le port 8080 pour toutes les   adresses IP, cela peut etre configure de deux facons: definir un   listener avec l'IP generique (*) et le port 8080, ou definir plusieurs   listeners, un pour chaque IP, tous ecoutant sur le port 8080. Ces deux methodes   ne peuvent pas etre melangees sur un meme port.</p><br/> <p>Il existe deux types de listeners dans LiteSpeed Web Server: simple et securise   (SSL). Chaque listener securise necessite une paire cle privee SSL et certificat SSL.   La cle privee peut etre generee avec un outil SSL comme   OpenSSL. Le certificat SSL peut etre autosigne ou obtenu aupres   d'une autorite de certification SSL comme VeriSign ou Thawte. Vous pouvez partager la meme paire cle privee   et certificat entre plusieurs listeners. </p><br/> <a name="map"></a><h3>Mappage d'un listener vers un virtual host</h3><br/> <p>Le mappage de listener vers virtual host de LiteSpeed offre une flexibilite supplementaire en vous permettant de:</p> <ul> <li>mapper un listener vers un virtual host.</li> <li>mapper un listener vers differents virtual hosts pour differents noms de domaine.</li> <li>mapper plusieurs listeners vers le meme virtual host.</li> <li>mapper plusieurs listeners vers plusieurs virtual hosts selon leurs noms de domaine.</li> </ul><br/> <p>Dans le mappage de listener vers virtual host, chaque listener possede une table de recherche de virtual hosts   avec des paires cle-valeur qui specifient un nom de domaine (cle) pour   un virtual host particulier (valeur).</p><br/> <p>Lorsqu'un navigateur tente de recuperer une page web depuis un serveur web, il utilise d'abord une recherche DNS pour trouver l'adresse IP associee a ce nom de domaine. Il envoie ensuite une requete pour etablir une connexion TCP avec le serveur web sur une IP et un port specifiques. Si un listener est assigne a cette IP et a ce port, une connexion est etablie. Le navigateur envoie ensuite une requete HTTP, qui inclut, dans l'en-tete, le nom de domaine du site web consulte. Le serveur web verifie la table de recherche associee a ce listener pour le nom de domaine dans la requete. Si une correspondance est trouvee, la requete est routee vers le virtual host pour traitement.</p><br/> <p>Pour rendre un virtual host accessible via un listener specifique, vous devez vous assurer que:</p> <ol> 	<li>DNS est correctement configure pour mapper le nom de domaine du site web vers l' IP utilisee par ce listener. La configuration de DNS depasse le cadre de ce document.</li>     <li>Un mappage vers le virtual host pour ce nom de domaine existe dans la       table de recherche du listener.</li> </ol><br/> <p>Un virtual host catchall peut etre specifie pour un listener avec le nom de domaine generique     "*". Lorsque le serveur ne trouve pas de virtual host correspondant, la requete est routee     vers le virtual host catchall. Si aucun virtual host catchall n'est configure,     le serveur web renverra le code d'erreur 404.</p><br/><br/> </section> </article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+</div>
+</body>
+</html>

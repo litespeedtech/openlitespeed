@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manuel utilisateur OpenLiteSpeed - Console WebAdmin - Gestionnaire de services</title>
+  <meta name="description" content="Manuel utilisateur OpenLiteSpeed - Console WebAdmin - Gestionnaire de services." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manuel utilisateur OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manuel utilisateur OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Ouvrir le menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Rechercher pages et reglages" data-no-results="Aucun resultat trouve.">
+      <label class="sr-only" for="doc-search-input">Rechercher dans le manuel</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Rechercher pages et reglages" aria-controls="doc-search-results" />
+        <button type="submit">Rechercher</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Langue"><option value="../ServerStat_Help.html" data-lang="en-US">English</option><option value="../es-ES/ServerStat_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/ServerStat_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/ServerStat_Help.html" data-lang="fr-FR" selected>Français</option><option value="../zh-CN/ServerStat_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/ServerStat_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Changer de theme" data-theme-toggle data-theme-light-label="Mode clair" data-theme-dark-label="Mode sombre" title="Changer de theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+      <li><a href="license.html">Licence</a></li>
+      <li><a href="intro.html">Introduction</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a class="current" href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Securite</a></li>
+      <li>
+        <a href="config.html">Configuration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Serveur general</a></li>
+          <li><a href="ServLog_Help.html">Journal serveur</a></li>
+          <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
+          <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
+          <li><a href="ExtApp_Help.html">Applications externes</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Moteur servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
+          <li><a href="App_Server_Help.html">Reglages App Server</a></li>
+          <li><a href="Module_Help.html">Configuration des modules</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL du listener</a></li>
+          <li><a href="Templates_Help.html">Modeles de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Enregistrement du VHost</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexte</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexte statique</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+            <li><a href="CGI_Context.html">Contexte CGI</a></li>
+            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexte handler de module</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Console web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
+          <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&nbsp;</div><div class="center"><a href="admin.html">Administration</a></div><div class="next"><a href="Real_Time_Stats_Help.html">Statistiques en temps réel</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Console WebAdmin - Gestionnaire de services</h1><div class="doc-page-intro">Le Gestionnaire de services sert de salle de contrôle pour surveiller le serveur et contrôler certaines fonctions de niveau supérieur. Il fournit les fonctions suivantes: (Le Gestionnaire de services est accessible depuis le menu Actions ou depuis la page d'accueil.) <ul> <li>Surveiller l'état actuel du serveur, des listeners et des hôtes virtuels.</li> <li>Appliquer les modifications de configuration avec un redémarrage graceful.</li> <li>Activer ou désactiver un hôte virtuel particulier.</li> <li>Afficher le journal du serveur avec le visualiseur de journaux.</li> <li>Surveiller les statistiques du serveur en temps réel.</li> </ul></div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Table des matières</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Serveur</h3><ul class="doc-toc__links"><li><a href="#sname">Nom - Serveur</a></li><li><a href="#pid">PID</a></li><li><a href="#servAction">Actions</a></li><li><a href="#restart">Appliquer les changements/Graceful Restart</a></li><li><a href="#viewlog">Visualiseur du journal du serveur</a></li><li><a href="#realtimerpt">Statistiques en temps réel</a></li><li><a href="#toggleDebugLog">Basculer la journalisation de débogage</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Listeners</h3><ul class="doc-toc__links"><li><a href="#lname">Nom - Listener</a></li><li><a href="#lstatus">État - Listener</a></li><li><a href="#lmap">Mappages des hôtes virtuels</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Hôtes virtuels</h3><ul class="doc-toc__links"><li><a href="#vname">Nom - Hôte virtuel</a></li><li><a href="#vstatus">État - Hôte virtuel</a></li><li><a href="#vaction">Actions - Hôte virtuel</a></li><li><a href="#venable">Activer</a></li><li><a href="#vdisable">Désactiver</a></li><li><a href="#vreload">Redémarrer - Hôte virtuel</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sname"><h3>Nom - Serveur<span class="ls-permlink"><a href="#sname"></a></span></h3></header><h4>Description</h4><p>Nom unique qui identifie ce serveur. Il s'agit du <span class="tagl"><a href="ServGeneral_Help.html#serverName">Nom du serveur</a></span> spécifié dans la configuration générale.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pid"><h3>PID<span class="ls-permlink"><a href="#pid"></a></span></h3></header><h4>Description</h4><p>PID (ID de processus) du processus serveur actuel.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Le PID change à chaque redémarrage du serveur.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="servAction"><h3>Actions<span class="ls-permlink"><a href="#servAction"></a></span></h3></header><h4>Description</h4><p>Cinq actions sont disponibles dans ce menu: <span class="val">Graceful Restart</span>, <span class="val">Toggle Debug Logging</span>, <span class="val">Server Log Viewer</span>, <span class="val">Real-Time Statistics</span> et <span class="val">Compile PHP</span>. <ul><li><span class="tagl"><a href="#restart">Appliquer les changements/Graceful Restart</a></span> redémarre le processus serveur de manière graceful sans interrompre les requêtes en cours.</li> 	<li><span class="tagl"><a href="#toggleDebugLog">Basculer la journalisation de débogage</a></span> active ou désactive la journalisation de débogage.</li> 	<li><span class="tagl"><a href="#viewlog">Visualiseur du journal du serveur</a></span> permet d'afficher le journal du serveur avec le visualiseur de journaux.</li> 	<li><span class="tagl"><a href="#realtimerpt">Statistiques en temps réel</a></span> permet d'afficher l'état du serveur en temps réel.</li> 	<li>Compile PHP permet de compiler PHP pour LiteSpeed Web Server.</li> </ul></p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> L'utilitaire shell <span class="cmd">$SERVER_ROOT/bin/lswsctrl</span> peut également être utilisé pour contrôler les processus du serveur, mais il nécessite un shell de connexion.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="restart"><h3>Appliquer les changements/Graceful Restart<span class="ls-permlink"><a href="#restart"></a></span></h3></header><h4>Description</h4><p>En cliquant sur <span class="val">Graceful Restart</span>, un nouveau processus serveur est lancé. Pour <span class="val">Graceful Restart</span>, l'ancien processus serveur ne se termine qu'après la fin de toutes les requêtes qui lui sont adressées (ou lorsque la limite <span class="tagl"><a href="#gracefulRestartTimeout">Timeout de redemarrage graceful (s)</a></span> est atteinte).<br/><br/> Les modifications de configuration sont appliquées au prochain redémarrage. <span class="val">Graceful Restart</span> applique ces modifications sans interruption du serveur.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Graceful restart prend moins de 2 secondes pour générer un nouveau processus serveur.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="viewlog"><h3>Visualiseur du journal du serveur<span class="ls-permlink"><a href="#viewlog"></a></span></h3></header><h4>Description</h4><p>Le visualiseur du journal du serveur est un outil pratique pour parcourir le journal actuel du serveur afin de rechercher des erreurs ou des problèmes. Le visualiseur de journaux parcourt le fichier journal du serveur par blocs selon le niveau de journalisation spécifié.<br/><br/> La taille de bloc par défaut est 20KB. Vous pouvez utiliser les boutons <span class="val">Begin</span>, <span class="val">End</span>, <span class="val">Next</span> et <span class="val">Prev</span> pour naviguer dans un grand fichier journal.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> La taille d'une page générée dynamiquement est limitée par <span class="tagl"><a href="ServTuning_Help.html#maxDynRespSize">Taille max. du corps de réponse dynamique (octets)</a></span>. Si le bloc est trop grand, la page peut être tronquée.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realtimerpt"><h3>Statistiques en temps réel<span class="ls-permlink"><a href="#realtimerpt"></a></span></h3></header><h4>Description</h4><p>Le lien Real-Time Statistics mène à une page contenant un rapport d'état du serveur en temps réel. C'est un outil pratique pour surveiller le système.<br/><br/> Le rapport affiche un instantané des statistiques de votre serveur. La fréquence d'actualisation de cet instantané est contrôlée par la liste déroulante Refresh Interval dans l'angle supérieur droit.<br/><br/> Le rapport contient les sections suivantes: <ul><li>Server Health affiche les statistiques de base du serveur, la durée de fonctionnement, la charge et les IP bloquées par Anti-DDoS.</li>   <li>Server liste les statistiques actuelles de débit du trafic, de connexions et de requêtes.</li>  <li>Virtual Host affiche les états de traitement des requêtes et les états des applications externes pour chaque hôte virtuel.</li>  <li>External Application liste les applications externes en cours d'exécution et leurs statistiques d'utilisation. Le processus démon CGI lscgid fonctionne toujours comme une application externe.</li> </ul><br/><br/> De nombreuses lignes de Real-Time Statistics comportent une icône de graphique. Cliquer sur cette icône ouvre un graphique des statistiques de cette ligne mis à jour en temps réel.<br/><br/> Dans la section Server, à côté de Requests, un lien intitulé (Details) apparaît. Ce lien mène à Requests Snapshot, où vous pouvez voir des informations détaillées sur les clients qui effectuent certains types de requêtes ou sur les aspects du site qui créent des goulots d'étranglement. Les champs de la zone bleue permettent de filtrer l'instantané afin d'isoler certaines parties du serveur ou de rechercher des clients effectuant certaines actions.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="toggleDebugLog"><h3>Basculer la journalisation de débogage<span class="ls-permlink"><a href="#toggleDebugLog"></a></span></h3></header><h4>Description</h4><p>Toggle Debug Logging bascule la valeur de <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">Niveau de débogage</a></span> entre <span class="val">NONE</span> et <span class="val">HIGH</span>. Comme la journalisation de débogage affecte les performances et peut remplir rapidement le disque dur, <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">Niveau de débogage</a></span> doit généralement être défini sur <span class="val">NONE</span> sur un serveur de production. Cette fonction peut être utilisée pour activer ou désactiver rapidement la journalisation de débogage afin de diagnostiquer un problème sur un serveur de production. La journalisation de débogage activée ou désactivée de cette manière ne modifie rien dans les configurations affichées du serveur.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> <span class="tagl"><a href="#toggleDebugLog">Basculer la journalisation de débogage</a></span> ne fonctionne que si <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">Niveau de journalisation</a></span> est défini sur <span class="val">DEBUG</span>.<br/> <span class="ls-badge ls-badge--performance">Performance</span> Important! La journalisation de débogage inclut des informations détaillées pour chaque requête et réponse. Une journalisation de débogage active dégrade fortement les performances du service et peut saturer l'espace disque en très peu de temps. Cette fonction ne doit être utilisée que pendant une courte période lors du diagnostic de problèmes serveur.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">Niveau de débogage</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">Niveau de journalisation</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lname"><h3>Nom - Listener<span class="ls-permlink"><a href="#lname"></a></span></h3></header><h4>Description</h4><p>Nom unique qui identifie ce listener. Il s'agit du <span class="tagl"><a href="Listeners_General_Help.html#listenerName">Nom du listener</a></span> que vous avez spécifié lors de la configuration du listener.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lstatus"><h3>État - Listener<span class="ls-permlink"><a href="#lstatus"></a></span></h3></header><h4>Description</h4><p>État actuel de ce listener. L'état est soit <span class="val">Running</span>, soit <span class="val">Error</span>.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Si le listener est dans l'état <span class="val">Error</span>, vous pouvez consulter le journal du serveur pour en connaître la raison.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lmap"><h3>Mappages des hôtes virtuels<span class="ls-permlink"><a href="#lmap"></a></span></h3></header><h4>Description</h4><p>Affiche les mappages actuellement établis depuis un listener particulier vers des hôtes virtuels. Le nom de l'hôte virtuel apparaît entre crochets et est suivi des noms de domaine correspondants pour ce listener.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Si un hôte virtuel n'a pas été chargé correctement (erreurs fatales dans la configuration de l'hôte virtuel), le mappage vers cet hôte virtuel ne sera pas affiché.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vname"><h3>Nom - Hôte virtuel<span class="ls-permlink"><a href="#vname"></a></span></h3></header><h4>Description</h4><p>Nom unique qui identifie cet hôte virtuel. Il s'agit du <span class="tagl"><a href="VirtualHosts_Help.html#vhName">Nom de l'hote virtuel</a></span> que vous avez spécifié lors de la configuration de cet hôte virtuel.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vstatus"><h3>État - Hôte virtuel<span class="ls-permlink"><a href="#vstatus"></a></span></h3></header><h4>Description</h4><p>État actuel d'un hôte virtuel. L'état peut être: <span class="val">Running</span>, <span class="val">Stopped</span>, <span class="val">Restart Required</span> ou <span class="val">Running - Removed from Configuration</span>.  <ul>     <li><span class="val">Running</span> signifie que l'hôte virtuel est chargé et en service.</li>     <li><span class="val">Stopped</span> signifie que l'hôte virtuel est chargé mais pas en service (désactivé).</li>     <li><span class="val"> Restart Required</span> signifie qu'il s'agit d'un hôte virtuel récemment ajouté et que le serveur n'a pas encore chargé sa configuration.</li>     <li><span class="val">Running - Removed from Configuration</span> signifie que l'hôte virtuel a été supprimé de la configuration du serveur, mais qu'il est toujours en service.</li> </ul></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vaction"><h3>Actions - Hôte virtuel<span class="ls-permlink"><a href="#vaction"></a></span></h3></header><h4>Description</h4><p>Ce champ affiche des boutons pour désactiver, activer ou redémarrer l'hôte virtuel. Les actions effectuées sur un hôte virtuel n'affectent pas le reste du serveur web.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> Il est conseillé de désactiver temporairement un hôte virtuel lors de la mise à jour de son contenu.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="venable"><h3>Activer<span class="ls-permlink"><a href="#venable"></a></span></h3></header><h4>Description</h4><p>L'action <span class="val">Enable</span> démarre un hôte virtuel arrêté. Cela permet d'accepter de nouvelles requêtes.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vdisable"><h3>Désactiver<span class="ls-permlink"><a href="#vdisable"></a></span></h3></header><h4>Description</h4><p>L'action <span class="val">Disable</span> arrête un hôte virtuel en cours d'exécution. Les nouvelles requêtes ne seront pas acceptées, mais les requêtes en cours seront terminées normalement.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vreload"><h3>Redémarrer - Hôte virtuel<span class="ls-permlink"><a href="#vreload"></a></span></h3></header><h4>Description</h4><p>L'action Restart demande au serveur web de charger la configuration la plus récente pour cet hôte virtuel. Les requêtes en cours se termineront avec l'ancienne configuration. La nouvelle configuration ne s'appliquera qu'aux nouvelles requêtes. Tous les changements d'un hôte virtuel peuvent être appliqués à chaud de cette manière.</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+</div>
+</body>
+</html>

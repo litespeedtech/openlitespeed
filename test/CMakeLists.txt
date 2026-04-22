@@ -61,10 +61,6 @@ SET(unittest_STAT_SRCS
    util/objarraytest.cpp
    util/objpooltest.cpp
    util/radixtreetest.cpp
-   spdy/pushtest.cpp
-   spdy/spdyzlibfiltertest.cpp
-   spdy/spdyconnectiontest.cpp
-   spdy/dummiostream.cpp
    lsiapi/moduledata.cpp
    lsiapi/moduletimertest.cpp
    lsiapi/lsiapihookstest.cpp
@@ -161,14 +157,14 @@ set ( libUnitTest UnitTest++ )
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( unittestlib
     modgzip cache lsiapi main http ssi http lsiapi
-    registry cgi fcgi jk extensions lsapi proxy
+    registry cgi fcgi scgi uwsgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns
     quic h2 lsquic bcrypt
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     edio udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
     ${LINUX_AIO_LIB} libz.a libpcre.a libexpat.a libxml2.a
     ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
-    spdy crypt libssl.a libcrypto.a
+    crypt libssl.a libcrypto.a
     -Wl,-Map=ols_unittest.map)
 
 target_link_libraries(ols_unittest ${unittestlib} )

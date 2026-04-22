@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Aplicación uWSGI externa</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Aplicación uWSGI externa." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../External_UWSGI.html" data-lang="en-US">English</option><option value="../es-ES/External_UWSGI.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/External_UWSGI.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/External_UWSGI.html" data-lang="fr-FR">Français</option><option value="../zh-CN/External_UWSGI.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/External_UWSGI.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a class="current" href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="External_LB.html">Aplicación de balanceo externa</a></div><div class="center"><a href="ExtApp_Help.html">Aplicaciones externas</a></div><div class="next">&nbsp;</div></div>
+<header class="doc-page-header"><h1>Aplicación uWSGI externa</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Aplicación uWSGI externa</h3><ul class="doc-toc__links"><li><a href="#extAppName">Nombre</a></li><li><a href="#extAppAddress">Direccion</a></li><li><a href="#maxConns">Maximo de conexiones</a></li><li><a href="#initTimeout">Tiempo de espera de solicitud inicial (s)</a></li><li><a href="#retryTimeout">Tiempo de reintento (s)</a></li><li><a href="#pcKeepAliveTimeout">Tiempo de keepalive de conexion</a></li><li><a href="#respBuffer">Buffering de respuesta</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppName"><h3>Nombre<span class="ls-permlink"><a href="#extAppName"></a></span></h3></header><h4>Descripción</h4><p>Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppAddress"><h3>Direccion<span class="ls-permlink"><a href="#extAppAddress"></a></span></h3></header><h4>Descripción</h4><p>Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la misma maquina que el servidor.</p> <h4>Sintaxis</h4><p>Direccion IPv4 o IPV6:puerto o UDS://ruta</p> <h4>Ejemplo</h4><div class="ls-example">127.0.0.1:5434<br/> UDS://tmp/lshttpd/php.sock.</div><h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Si la aplicacion externa se ejecuta en la misma maquina, se prefiere UDS. Si debe usar un socket IPv4|IPV6, establezca la direccion IP en <span class="val">localhost</span> o <span class="val">127.0.0.1</span>, para que la aplicacion externa no sea accesible desde otras maquinas.<br/> <span class="ls-badge ls-badge--performance">Performance</span> Unix Domain Sockets generalmente ofrecen mayor rendimiento que los sockets IPv4.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="maxConns"><h3>Maximo de conexiones<span class="ls-permlink"><a href="#maxConns"></a></span></h3></header><h4>Descripción</h4><p>Especifica el numero maximo de conexiones concurrentes que pueden establecerse entre el servidor y una aplicacion externa. Este ajuste controla cuantas solicitudes puede procesar simultaneamente una aplicacion externa; sin embargo, el limite real tambien depende de la propia aplicacion externa. Aumentar este valor no ayudara si la aplicacion externa no es lo bastante rapida o no puede escalar a un gran numero de solicitudes concurrentes.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Definir un valor alto no se traduce directamente en mayor rendimiento. Establecer el limite en un valor que no sobrecargue la aplicacion externa proporcionara el mejor rendimiento/throughput.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="initTimeout"><h3>Tiempo de espera de solicitud inicial (s)<span class="ls-permlink"><a href="#initTimeout"></a></span></h3></header><h4>Descripción</h4><p>Especifica el tiempo maximo en segundos que el servidor esperara a que la aplicacion externa responda a la primera solicitud en una conexion nueva establecida. Si el servidor no recibe datos de la aplicacion externa dentro de este limite, marcara esta conexion como incorrecta. Esto ayuda a identificar problemas de comunicacion con aplicaciones externas lo antes posible. Si algunas solicitudes tardan mas en procesarse, aumente este limite para evitar mensajes de error 503.</p> <h4>Sintaxis</h4><p>Número entero</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="retryTimeout"><h3>Tiempo de reintento (s)<span class="ls-permlink"><a href="#retryTimeout"></a></span></h3></header><h4>Descripción</h4><p>Especifica el periodo de tiempo que el servidor espera antes de volver a intentar usar una aplicacion externa que tuvo un problema de comunicacion previo.</p> <h4>Sintaxis</h4><p>Número entero</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pcKeepAliveTimeout"><h3>Tiempo de keepalive de conexion<span class="ls-permlink"><a href="#pcKeepAliveTimeout"></a></span></h3></header><h4>Descripción</h4><p>Especifica el tiempo maximo en segundos durante el que se mantiene abierta una conexion persistente inactiva.<br/><br/> Cuando se establece en "-1", la conexion nunca expirara. Cuando se establece en 0 o mas, la conexion se cerrara despues de que pase este tiempo en segundos.</p> <h4>Sintaxis</h4><p>Número entero</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="respBuffer"><h3>Buffering de respuesta<span class="ls-permlink"><a href="#respBuffer"></a></span></h3></header><h4>Descripción</h4><p>Especifica si se almacenan en buffer las respuestas recibidas de aplicaciones externas. Si se detecta un script "nph-" (Non-Parsed-Header), el buffering se desactiva para respuestas con cabeceras HTTP completas.</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

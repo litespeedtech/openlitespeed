@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manuel utilisateur OpenLiteSpeed - Sécurité</title>
+  <meta name="description" content="Manuel utilisateur OpenLiteSpeed - Sécurité." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manuel utilisateur OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manuel utilisateur OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Ouvrir le menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Rechercher pages et reglages" data-no-results="Aucun resultat trouve.">
+      <label class="sr-only" for="doc-search-input">Rechercher dans le manuel</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Rechercher pages et reglages" aria-controls="doc-search-results" />
+        <button type="submit">Rechercher</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Langue"><option value="../security.html" data-lang="en-US">English</option><option value="../es-ES/security.html" data-lang="es-ES">Español</option><option value="../de-DE/security.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/security.html" data-lang="fr-FR" selected>Français</option><option value="../zh-CN/security.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/security.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Changer de theme" data-theme-toggle data-theme-light-label="Mode clair" data-theme-dark-label="Mode sombre" title="Changer de theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+      <li><a href="license.html">Licence</a></li>
+      <li><a href="intro.html">Introduction</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a class="current" href="security.html">Securite</a></li>
+      <li>
+        <a href="config.html">Configuration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Serveur general</a></li>
+          <li><a href="ServLog_Help.html">Journal serveur</a></li>
+          <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
+          <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
+          <li><a href="ExtApp_Help.html">Applications externes</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Moteur servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
+          <li><a href="App_Server_Help.html">Reglages App Server</a></li>
+          <li><a href="Module_Help.html">Configuration des modules</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL du listener</a></li>
+          <li><a href="Templates_Help.html">Modeles de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Enregistrement du VHost</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexte</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexte statique</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+            <li><a href="CGI_Context.html">Contexte CGI</a></li>
+            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexte handler de module</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Console web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
+          <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="admin.html">Administration</a></div><div class="center"><a href="index.html">Accueil</a></div><div class="next"><a href="config.html">Configuration</a> &#187;</div></div>
+<h1>Securite</h1><br/> <p>LiteSpeed Web Server est concu avec la securite comme consideration principale. LSWS prend en charge SSL, dispose d'un controle d'acces aux niveaux serveur et virtual host, et d'une protection realm specifique au contexte. Outre ces fonctions standard, LSWS possede egalement les fonctions de securite speciales suivantes: </p><br/> <ol> 	<li><h3>Limites au niveau connexion:</h3> 	  <ul> 	    <li> La limitation au niveau IP limite la bande passante reseau vers et depuis une seule adresse IP 	      quel que soit le nombre de connexions. </li> 	    <li> La comptabilisation des connexions au niveau IP limite le nombre de connexions simultanees 	      depuis une seule adresse IP. Vous pouvez controler cela avec les reglages de limite souple de connexions, 	      limite dure de connexions, periode de grace et periode de bannissement dans la console WebAdmin. </li> 	  </ul> 	</li> 	<li><h3>Verification des requetes:</h3> 	  	<p> Chaque requete HTTP est verifiee par LiteSpeed Web Server. "/." n'est pas autorise dans 	    une URL decodee, ce qui interdit l'acces aux fichiers caches et aux repertoires parents.</p> 	    <p>La taille des requetes est limitee par les reglages de longueur maximale d'URL de requete, 	    longueur maximale d'en-tete de requete et longueur maximale de corps de requete de LiteSpeed Web Server. </p>     </li> 	<li><h3>Verification des fichiers statiques:</h3>   		<p>LiteSpeed Web Server ne servira un fichier statique que si les conditions suivantes sont satisfaites: </p> 	  <ul> 	    <li>Le fichier est lisible par tout le monde.</li> 	    <li>Le fichier n'est pas executable.</li> 	    <li>Le fichier n'est pas dans la liste des repertoires dont l'acces est refuse.</li> 	    <li>Le fichier ne contient pas de lien symbolique si les liens symboliques ne sont pas autorises. </li> 	    <li>Par defaut, LiteSpeed Web Server n'indexe pas un repertoire en listant ses 	        fichiers; cela doit etre active explicitement.</li> 	  </ul> 	</li> 	<li><h3>Firewall d'applications externes:</h3> 		<p>LiteSpeed Web Server transfere les requetes aux applications externes pour traiter/generer du contenu dynamique. Ces applications peuvent utiliser beaucoup de ressources systeme. Les performances de l'ensemble du systeme seront fortement degradees lorsque la consommation de ressources systeme atteindra un certain point, par exemple lorsque l'espace d'echange devra etre utilise. Une facon de mener une attaque DoS consiste a inonder le serveur web de requetes simultanees vers une application externe lourde.</p> <p>LiteSpeed Web Server peut pipeliner les requetes et controler le niveau de concurrence d'utilisation des applications externes afin d'eviter une surconsommation des ressources systeme. LSWS met en cache les requetes et ne transfere que les requetes completes a l'application externe. Cela signifie que l'application externe n'est pas tenue d'attendre pendant que le serveur recoit la requete. LSWS met egalement en cache la reponse de l'application externe afin que celle-ci puisse etre liberee des que la reponse est terminee et n'ait pas a attendre que le client recoive la reponse complete. Ainsi, le serveur peut utiliser moins d'instances d'applications externes pour servir plus de requetes simultanees et obtenir de meilleures performances et une meilleure scalabilite. LiteSpeed Web Server utilise egalement sa propre memoire virtuelle pour mettre en cache le corps des requetes et des reponses afin de minimiser l'utilisation de la memoire systeme sans sacrifier les performances. </p></li>   <li><h3>Limite de consommation des ressources CGI:</h3> <p>LiteSpeed Web Server limite la quantite de ressources systeme qui peuvent etre consommees par les applications CGI. Pour chaque requete vers un script CGI, le serveur web doit demarrer un processus CGI autonome pour la traiter. Sur un systeme Unix, le nombre de processus simultanes est limite. Avec la limite de consommation des ressources CGI, vous pouvez configurer le nombre maximal d'instances CGI simultanees que le serveur web peut lancer. Un nombre excessif de processus simultanes degradera les performances de l'ensemble du systeme. (Les processus CGI sont une arme courante pour les attaques DoS.) Une limite de processus systeme peut etre specifiee par utilisateur afin de controler le nombre de processus pouvant etre generes par une application CGI. Chaque processus est en outre limite par des limites CPU et memoire.</p> </li>   <li><h3>Securite CGI/FastCGI renforcee avec suEXEC:</h3> <p>Afin de reduire les risques de securite d'un script CGI ou Fast CGI, LiteSpeed Web Server peut limiter les ressources systeme auxquelles le script CGI peut acceder en l'executant en mode "suEXEC". "suEXEC" lance le script CGI ou Fast CGI avec un ID utilisateur different de celui du serveur web. Cela ameliore fortement la securite dans les environnements d'hebergement partage en empechant le script CGI d'un utilisateur d'acceder aux fichiers d'autres utilisateurs.</p> </li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+</div>
+</body>
+</html>

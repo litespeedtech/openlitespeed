@@ -74,7 +74,9 @@ public:
 #define EA_LSAPI    4
 #define EA_LOGGER   5
 #define EA_LOADBALANCER 6
-#define EA_NUM_APP  7
+#define EA_SCGI     7
+#define EA_UWSGI    8
+#define EA_NUM_APP  9
 
 class ExtAppRegistry
 {

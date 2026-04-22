@@ -142,20 +142,15 @@ echo PID_FILE=$PID_FILE
 
 
 OPENLSWS_HTTP2="?"
-AC_ARG_ENABLE([spdy],
-              [AS_HELP_STRING([--enable-spdy=@<:@yes/no@:>@],
-                              [Enable SPDY and http2 over HTTPS @<:@default=yes@:>@])],
-               [OPENLSWS_HTTP2="$enableval"], [])
 
 AC_ARG_ENABLE([http2],
               [AS_HELP_STRING([--enable-http2=@<:@yes/no@:>@],
-                              [Enable SPDY and http2 over HTTPS @<:@default=yes@:>@])],
+                              [Enable http2 over HTTPS @<:@default=yes@:>@])],
                [OPENLSWS_HTTP2="$enableval"], [])
 if test "$OPENLSWS_HTTP2" = "no" ; then 
-    echo "SPDY/http2 disabled!!!"
+    echo "http2 disabled!!!"
 else
-    AC_DEFINE([LS_ENABLE_SPDY], [1], [Define if need spdy/http2 feature]) 
-    echo "SPDY/http2 enabled!!!"
+    echo "http2 enabled!!!"
 fi
 
 
@@ -490,7 +485,6 @@ AC_CONFIG_FILES(Makefile
                 src/edio/Makefile
                 src/extensions/Makefile
                 src/http/Makefile
-                src/spdy/Makefile
                 src/h2/Makefile
                 src/log4cxx/Makefile
                 src/main/Makefile

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
 
+add_subdirectory(uwsgi)
+add_subdirectory(scgi)
 add_subdirectory(fcgi)
 add_subdirectory(cgi)
 add_subdirectory(jk)

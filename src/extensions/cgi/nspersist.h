@@ -72,7 +72,7 @@ typedef struct mount_flags_data_s
  * @brief Should only be called by nsinit, initializes persistence.
  * @return 0 if no error; -1 if an error.
  **/
-int nspersist_init();
+int nspersist_init(lscgid_t *pCGI);
 
 /**
  * @fn is_persisted

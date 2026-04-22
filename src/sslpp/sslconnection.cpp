@@ -547,19 +547,12 @@ const char *SslConnection::getVersion() const
 {   return SSL_get_version(m_ssl);        }
 
 
-#ifndef TEST_PGM
-#define LS_ENABLE_SPDY
-#endif
-#ifdef LS_ENABLE_SPDY
-static const char NPN_SPDY_PREFIX[] = { 's', 'p', 'd', 'y', '/' };
-#endif
-int SslConnection::getSpdyVersion()
+int SslConnection::getAlpnResult() const
 {
     int v = 0;
 
-    DEBUG_MESSAGE("[SSL: %p] getSpdyVersion\n", this);
+    DEBUG_MESSAGE("[SSL: %p] getAlpnResult\n", this);
     
-#ifdef LS_ENABLE_SPDY
     unsigned int             len = 0;
     const unsigned char     *data = NULL;
 
@@ -571,20 +564,10 @@ int SslConnection::getSpdyVersion()
     if (!data)
         SSL_get0_next_proto_negotiated(m_ssl, &data, &len);
 #endif
-    if (len > sizeof(NPN_SPDY_PREFIX) &&
-        strncasecmp((const char *)data, NPN_SPDY_PREFIX,
-                    sizeof(NPN_SPDY_PREFIX)) == 0)
-    {
-        v = data[ sizeof(NPN_SPDY_PREFIX) ] - '1';
-        if ((v == 2) && (len >= 8) && (data[6] == '.') && (data[7] == '1'))
-            v = 3;
-        return v;
-    }
 
-    //h2: http2 version is 4
+    //h2: http2 version is 1
     if (len >= 2 && data[0] == 'h' && data[1] == '2')
-        return 4;
-#endif
+        return 1;
     return v;
 }
 

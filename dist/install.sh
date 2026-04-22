@@ -398,14 +398,6 @@ if [ "x$IS_LSCPD" != "xyes" ] ; then
         echo "$ADMIN_USER:$ENCRYPT_PASS" > "$LSWS_HOME/admin/conf/htpasswd"
     fi
 
-    #compress_admin_file
-    if [ ! -f "$LSWS_HOME/admin/conf/jcryption_keypair" ]; then
-        $LSWS_HOME/admin/misc/create_admin_keypair.sh
-    fi
-
-    chown "$CONF_OWN" "$LSWS_HOME/admin/conf/jcryption_keypair"
-    chmod 0600 "$LSWS_HOME/admin/conf/jcryption_keypair"
-
     chown "$CONF_OWN" "$LSWS_HOME/admin/conf/htpasswd"
     chmod 0600 "$LSWS_HOME/admin/conf/htpasswd"
 

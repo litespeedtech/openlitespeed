@@ -159,6 +159,7 @@ ExtConn *ExtWorker::getConn()
 
 void ExtWorker::recycleConn(ExtConn *pConn)
 {
+    LS_DBG("recycleConn: %p, isToClose: %d\n", pConn, pConn->isToClose());
     if (pConn->isToClose())
     {
         m_iLingerConns--;

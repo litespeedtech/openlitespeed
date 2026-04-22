@@ -44,8 +44,7 @@ private:
     char     m_iAppend;
     char     m_iFlock;
     char     m_iCompress;
-    char     m_iRotate;
-    int      m_iLastDay;
+    char     m_iFlag;
     int      m_iKeepDays;
 
 protected:
@@ -56,12 +55,19 @@ protected:
         , m_iAppend(1)
         , m_iFlock(0)
         , m_iCompress(0)
-        , m_iRotate(1)
-        , m_iLastDay(0)
+        , m_iFlag(0)
         , m_iKeepDays(0)
     {}
 
 public:
+
+    enum flag
+    {
+        FLAG_PIPE = (1 << 0),
+        FLAG_NOCLOSE = (1 << 2),
+        FLAG_NOROTATE = (1 << 3),
+    };
+
     virtual ~Appender() {};
     static Appender *getAppender(const char *pName);
     static Appender *getAppender(const char *pName, const char *pType);
@@ -95,11 +101,27 @@ public:
     void setKeepDays(int days)      {   m_iKeepDays = days;     }
     int getKeepDays() const         {   return m_iKeepDays;     }
 
+    void setFlag(enum flag f, int val)
+    {
+        if (val)
+            m_iFlag |= f;
+        else
+            m_iFlag &= ~f;
+    }
+    void setFlag(enum flag f)       {   m_iFlag |= f;           }
+    int getFlag(enum flag f) const  {   return m_iFlag & f;     }
+
     virtual void setAsync(int v)    {}
 
 
     LS_NO_COPY_ASSIGN(Appender);
 };
+
+ls_always_inline enum Appender::flag operator|(enum Appender::flag a, enum Appender::flag b)
+{
+    return static_cast<enum Appender::flag>(static_cast<int>(a) | static_cast<int>(b));
+}
+
 
 END_LOG4CXX_NS
 

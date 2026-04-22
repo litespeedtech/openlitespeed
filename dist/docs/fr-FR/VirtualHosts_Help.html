@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manuel utilisateur OpenLiteSpeed - Enregistrement du VHost</title>
+  <meta name="description" content="Manuel utilisateur OpenLiteSpeed - Enregistrement du VHost." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manuel utilisateur OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manuel utilisateur OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Ouvrir le menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Rechercher pages et reglages" data-no-results="Aucun resultat trouve.">
+      <label class="sr-only" for="doc-search-input">Rechercher dans le manuel</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Rechercher pages et reglages" aria-controls="doc-search-results" />
+        <button type="submit">Rechercher</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Langue"><option value="../VirtualHosts_Help.html" data-lang="en-US">English</option><option value="../es-ES/VirtualHosts_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VirtualHosts_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VirtualHosts_Help.html" data-lang="fr-FR" selected>Français</option><option value="../zh-CN/VirtualHosts_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/VirtualHosts_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Changer de theme" data-theme-toggle data-theme-light-label="Mode clair" data-theme-dark-label="Mode sombre" title="Changer de theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+      <li><a href="license.html">Licence</a></li>
+      <li><a href="intro.html">Introduction</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Securite</a></li>
+      <li>
+        <a href="config.html">Configuration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Serveur general</a></li>
+          <li><a href="ServLog_Help.html">Journal serveur</a></li>
+          <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
+          <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
+          <li><a href="ExtApp_Help.html">Applications externes</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Moteur servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
+          <li><a href="App_Server_Help.html">Reglages App Server</a></li>
+          <li><a href="Module_Help.html">Configuration des modules</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL du listener</a></li>
+          <li><a href="Templates_Help.html">Modeles de virtual host</a></li>
+          <li><a class="current" href="VirtualHosts_Help.html">Enregistrement du VHost</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexte</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexte statique</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+            <li><a href="CGI_Context.html">Contexte CGI</a></li>
+            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexte handler de module</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Console web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
+          <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Templates_Help.html">Modeles de virtual hosts</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="VHGeneral_Help.html">Hôte virtuel - Général</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Enregistrement du VHost</h1><div class="doc-page-intro">Cette page liste tous les virtual hosts definis. Depuis cette page, vous pouvez ajouter/supprimer un virtual host ou modifier un virtual host existant. Avant d'ajouter un virtual host, assurez-vous que le repertoire racine du virtual host existe.</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Table des matières</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Enregistrement du VHost</h3><ul class="doc-toc__links"><li><a href="#vhName">Nom de l'hote virtuel</a></li><li><a href="#vhRoot">Racine de l'hote virtuel</a></li><li><a href="#configFile">Fichier de configuration</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Limitation des connexions</h3><ul class="doc-toc__links"><li><a href="#vhMaxKeepAliveReq">Requetes Keep-Alive maximales</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Sécurité</h3><ul class="doc-toc__links"><li><a href="#allowSymbolLink">Suivre les liens symboliques</a></li><li><a href="#enableScript">Activer les scripts/App. externes</a></li><li><a href="#restrained">Restreint</a></li><li><a href="#setUidMode">Mode Set UID de l’app externe</a></li><li><a href="#suexecUser">Utilisateur suEXEC</a></li><li><a href="#suexecGroup">Groupe suEXEC</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Limitation par client</h3><ul class="doc-toc__links"><li><a href="#staticReqPerSec">Requêtes statiques/seconde</a></li><li><a href="#dynReqPerSec">Requêtes dynamiques/seconde</a></li><li><a href="#outBandwidth">Bande passante sortante (octets/s)</a></li><li><a href="#inBandwidth">Bande passante entrante (octets/s)</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhName"><h3>Nom de l'hote virtuel<span class="ls-permlink"><a href="#vhName"></a></span></h3></header><h4>Description</h4><p>Nom unique d'un hote virtuel. Il est recommande d'utiliser le nom de domaine de l'hote virtuel comme nom d'hote virtuel. Le nom d'hote virtuel peut etre reference avec la variable $VH_NAME.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhRoot"><h3>Racine de l'hote virtuel<span class="ls-permlink"><a href="#vhRoot"></a></span></h3></header><h4>Description</h4><p>Indique le repertoire racine de l'hote virtuel. Remarque: ce n'est <b>PAS</b> la racine des documents. Il est recommande de placer tous les fichiers lies a l'hote virtuel (comme les fichiers journaux, les fichiers html, les scripts CGI, etc.) dans ce repertoire. La racine de l'hote virtuel peut etre referencee avec la variable $VH_ROOT.</p> <h4>Syntaxe</h4><p>Un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Placez les differents hotes virtuels sur des disques differents.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="configFile"><h3>Fichier de configuration<span class="ls-permlink"><a href="#configFile"></a></span></h3></header><h4>Description</h4><p>Nom de fichier et repertoire de configuration pour cet hote virtuel. Le fichier de configuration doit se trouver sous le repertoire $SERVER_ROOT/conf/vhosts/.</p> <h4>Syntaxe</h4><p>Nom de fichier pouvant être un chemin absolu ou un chemin relatif à $SERVER_ROOT.</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--info">Information</span> $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf est recommande</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhMaxKeepAliveReq"><h3>Requetes Keep-Alive maximales<span class="ls-permlink"><a href="#vhMaxKeepAliveReq"></a></span></h3></header><h4>Description</h4><p>Indique le nombre maximal de requetes pouvant etre servies via une connexion keep-alive (persistante). Les connexions seront fermees lorsque cette limite sera atteinte. Vous pouvez indiquer une limite differente pour chaque hote virtuel. Ce nombre ne peut pas depasser la limite de niveau serveur <span class="tagl"><a href="ServTuning_Help.html#maxKeepAliveReq">Requêtes Keep-Alive max.</a></span>.</p> <h4>Syntaxe</h4><p>Nombre entier</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Definissez une valeur raisonnablement elevee. Une valeur de "1" ou moins desactivera les connexions keep-alive.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#maxKeepAliveReq">Requêtes Keep-Alive max.</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="allowSymbolLink"><h3>Suivre les liens symboliques<span class="ls-permlink"><a href="#allowSymbolLink"></a></span></h3></header><h4>Description</h4><p>Indique s'il faut suivre les liens symboliques dans cet hote virtuel. L'option <span class="val">IF OWNER MATCH</span> suivra un lien symbolique uniquement s'il a le meme proprietaire. Ce parametre remplace le parametre par defaut de niveau serveur.</p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--performance">Performance</span><span class="ls-badge ls-badge--security">Security</span> Pour une meilleure securite, desactivez cette fonction. Pour de meilleures performances, activez-la.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableScript"><h3>Activer les scripts/App. externes<span class="ls-permlink"><a href="#enableScript"></a></span></h3></header><h4>Description</h4><p>Indique si les scripts (pages non statiques) sont autorises dans cet hote virtuel. Si cette option est desactivee, CGI, FastCGI, LSAPI, les moteurs Servlet et les autres langages de script ne seront pas autorises dans cet hote virtuel. Par consequent, si vous voulez utiliser un script handler, vous devez aussi l'activer ici.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="restrained"><h3>Restreint<span class="ls-permlink"><a href="#restrained"></a></span></h3></header><h4>Description</h4><p>Indique si les fichiers situes au-dela de la racine de cet hote virtuel ($VH_ROOT) peuvent etre accessibles via ce site web. Si la valeur est <span class="val">Yes</span>, seuls les fichiers sous $VH_ROOT seront accessibles et l'acces aux liens symboliques ou aux contextes pointant vers des fichiers ou repertoires situes au-dela de $VH_ROOT sera refuse. Cela ne limite toutefois pas l'accessibilite des scripts CGI. C'est utile dans les environnements d'hebergement partage. <span class="tagl"><a href="#allowSymbolLink">Suivre les liens symboliques</a></span> peut etre defini sur <span class="val">Yes</span> pour permettre aux utilisateurs d'utiliser des liens symboliques sous $VH_ROOT, mais rien au-dela de $VH_ROOT.</p> <h4>Syntaxe</h4><p>Sélectionner avec les boutons radio</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Activez-le dans l'environnement d'hebergement partage.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="setUidMode"><h3>Mode Set UID de l’app externe<span class="ls-permlink"><a href="#setUidMode"></a></span></h3></header><h4>Description</h4><p>Indique comment l'ID utilisateur est defini pour un processus d'application externe. Trois choix sont disponibles: <ul><li><span class="val">Server UID</span>: definit l'ID utilisateur/groupe des processus d'application externe sur le meme ID utilisateur/groupe que celui du serveur.</li>     <li><span class="val">CGI File UID</span>: definit l'ID utilisateur/groupe des processus CGI externes selon l'ID utilisateur/groupe de l'executable. Cette option s'applique uniquement a CGI, pas a FastCGI ni LSPHP.</li>     <li><span class="val">Doc Root UID</span>: definit l'ID utilisateur/groupe des processus d'application externe selon l'ID utilisateur/groupe de la racine des documents de l'hote virtuel actuel.</li> </ul><br/><br/> Valeur par defaut: <span class="val">Server UID</span></p> <h4>Syntaxe</h4><p>Sélectionner dans la liste déroulante</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Dans un environnement d'hebergement partage, il est recommande d'utiliser les modes <span class="val">CGI File UID</span> ou <span class="val">Doc Root UID</span> afin d'empecher les fichiers appartenant a un hote virtuel d'etre accessibles par les scripts d'application externe d'un autre hote virtuel.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="suexecUser"><h3>Utilisateur suEXEC<span class="ls-permlink"><a href="#suexecUser"></a></span></h3></header><h4>Description</h4><p>Au niveau du contexte actuel, executer avec cet utilisateur. Si elle est definie, cette valeur remplacera le parametre <b>ExtApp Set UID Mode</b> au niveau de l'hote virtuel.<br/><br/> Cette configuration peut etre remplacee au niveau de l'application externe avec le parametre <b>Run As User</b>.<br/><br/> Valeur par defaut: Non defini</p> <h4>Syntaxe</h4><p>Nom d'utilisateur ou uid valide.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="suexecGroup"><h3>Groupe suEXEC<span class="ls-permlink"><a href="#suexecGroup"></a></span></h3></header><h4>Description</h4><p>Au niveau du contexte actuel, executer avec ce groupe. <b>suEXEC User</b> au niveau de l'hote virtuel, ou <b>Run As User</b> au niveau de l'application externe, doit etre defini pour que <b>suEXEC Group</b> prenne effet.<br/><br/> Cette configuration peut etre remplacee au niveau de l'application externe avec le parametre <b>Run As Group</b>.<br/><br/> Valeur par defaut: valeur du parametre <b>suExec User</b></p> <h4>Syntaxe</h4><p>Nom de groupe ou uid valide</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="staticReqPerSec"><h3>Requêtes statiques/seconde<span class="ls-permlink"><a href="#staticReqPerSec"></a></span></h3></header><h4>Description</h4><p>Spécifie le nombre maximal de requêtes vers du contenu statique provenant d’une seule adresse IP qui peuvent être traitées en une seconde, quel que soit le nombre de connexions établies.<br/><br/> Lorsque cette limite est atteinte, toutes les requêtes suivantes sont retenues jusqu’à la seconde suivante. Les limites de requêtes pour le contenu généré dynamiquement sont indépendantes de cette limite. Les limites de requêtes par client peuvent être définies au niveau serveur ou virtual host. Les réglages de niveau virtual host remplacent les réglages de niveau serveur.</p> <h4>Syntaxe</h4><p>Nombre entier</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Les IP ou sous-réseaux de confiance ne sont pas affectés.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#dynReqPerSec">Requêtes dynamiques/seconde</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="dynReqPerSec"><h3>Requêtes dynamiques/seconde<span class="ls-permlink"><a href="#dynReqPerSec"></a></span></h3></header><h4>Description</h4><p>Spécifie le nombre maximal de requêtes vers du contenu généré dynamiquement provenant d’une seule adresse IP qui peuvent être traitées chaque seconde, quel que soit le nombre de connexions établies. Lorsque cette limite est atteinte, toutes les requêtes suivantes vers du contenu dynamique sont retenues jusqu’à la seconde suivante.<br/><br/> La limite de requêtes pour le contenu statique est indépendante de cette limite. Cette limite de requêtes par client peut être définie au niveau serveur ou virtual host. Les réglages de niveau virtual host remplacent les réglages de niveau serveur.</p> <h4>Syntaxe</h4><p>Nombre entier</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Les IP ou sous-réseaux de confiance ne sont pas limités par cette limite.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#staticReqPerSec">Requêtes statiques/seconde</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="outBandwidth"><h3>Bande passante sortante (octets/s)<span class="ls-permlink"><a href="#outBandwidth"></a></span></h3></header><h4>Description</h4><p>Le débit sortant maximal autorisé vers une seule adresse IP, quel que soit le nombre de connexions établies. La bande passante réelle peut être légèrement supérieure à ce réglage pour des raisons d’efficacité. La bande passante est allouée par unités de 4KB. Définissez <span class="val">0</span> pour désactiver le throttling. Les limites de bande passante par client (octets/s) peuvent être définies au niveau serveur ou virtual host, où les réglages de niveau virtual host remplacent les réglages de niveau serveur.</p> <h4>Syntaxe</h4><p>Nombre entier</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Définissez la bande passante par unités de 8KB pour de meilleures performances.<br/><br/> <span class="ls-badge ls-badge--security">Security</span> Les IP ou sous-réseaux de confiance ne sont pas affectés.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#inBandwidth">Bande passante entrante (octets/s)</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="inBandwidth"><h3>Bande passante entrante (octets/s)<span class="ls-permlink"><a href="#inBandwidth"></a></span></h3></header><h4>Description</h4><p>Le débit entrant maximal autorisé depuis une seule adresse IP, quel que soit le nombre de connexions établies. La bande passante réelle peut être légèrement supérieure à ce réglage pour des raisons d’efficacité. La bande passante est allouée par unités de 1KB. Définissez <span class="val">0</span> pour désactiver le throttling. Les limites de bande passante par client (octets/s) peuvent être définies au niveau serveur ou virtual host, où les réglages de niveau virtual host remplacent les réglages de niveau serveur.</p> <h4>Syntaxe</h4><p>Nombre entier</p> <h4>Conseils</h4><p><span class="ls-badge ls-badge--security">Security</span> Les IP ou sous-réseaux de confiance ne sont pas affectés.</p> <h4>Voir aussi</h4><p class="ls-text-small"><span class="tagl"><a href="#outBandwidth">Bande passante sortante (octets/s)</a></span></p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+</div>
+</body>
+</html>

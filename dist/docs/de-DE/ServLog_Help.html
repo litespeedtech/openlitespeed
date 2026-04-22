@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de-DE">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>OpenLiteSpeed-Benutzerhandbuch - Serverprotokoll</title>
+  <meta name="description" content="OpenLiteSpeed-Benutzerhandbuch - Serverprotokoll." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed-Benutzerhandbuch">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed-Benutzerhandbuch</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Menü öffnen" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Seiten und Einstellungen suchen" data-no-results="Keine Ergebnisse gefunden.">
+      <label class="sr-only" for="doc-search-input">Handbuch durchsuchen</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Seiten und Einstellungen suchen" aria-controls="doc-search-results" />
+        <button type="submit">Suchen</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Sprache"><option value="../ServLog_Help.html" data-lang="en-US">English</option><option value="../es-ES/ServLog_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/ServLog_Help.html" data-lang="de-DE" selected>Deutsch</option><option value="../fr-FR/ServLog_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/ServLog_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/ServLog_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Design umschalten" data-theme-toggle data-theme-light-label="Heller Modus" data-theme-dark-label="Dunkler Modus" title="Design umschalten">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="de-DE" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Benutzerhandbuch</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Inhaltsverzeichnis"><ul class="sidetree__list">
+      <li><a href="license.html">Lizenz</a></li>
+      <li><a href="intro.html">Einleitung</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Sicherheit</a></li>
+      <li>
+        <a href="config.html">Konfiguration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Server allgemein</a></li>
+          <li><a class="current" href="ServLog_Help.html">Serverprotokoll</a></li>
+          <li><a href="ServTuning_Help.html">Server-Tuning</a></li>
+          <li><a href="ServSecurity_Help.html">Serversicherheit</a></li>
+          <li><a href="ExtApp_Help.html">Externe Anwendungen</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">LSAPI-Anwendung</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Fast-CGI-Anwendung</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast-CGI-Authorizer</a></li>
+            <li><a href="External_SCGI.html">Simple-CGI-Anwendung</a></li>
+            <li><a href="External_Servlet.html">Servlet-Engine</a></li>
+            <li><a href="External_PL.html">Piped Logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Skripthandler</a></li>
+          <li><a href="App_Server_Help.html">App-Server-Einstellungen</a></li>
+          <li><a href="Module_Help.html">Modulkonfiguration</a></li>
+          <li><a href="Listeners_General_Help.html">Listener allgemein</a></li>
+          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
+          <li><a href="Templates_Help.html">Virtual-Host-Vorlagen</a></li>
+          <li><a href="VirtualHosts_Help.html">Virtual-Host-Registrierung</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual Host allgemein</a></li>
+          <li><a href="VHSecurity_Help.html">Virtual Host Sicherheit</a></li>
+          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Kontext</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Statischer Kontext</a></li>
+            <li><a href="Java_Web_App_Context.html">Java-Web-App-Kontext</a></li>
+            <li><a href="Servlet_Context.html">Servlet-Kontext</a></li>
+            <li><a href="FCGI_Context.html">Fast-CGI-Kontext</a></li>
+            <li><a href="SCGI_Context.html">Simple-CGI-Kontext</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI-Kontext</a></li>
+            <li><a href="Proxy_Context.html">Proxy-Kontext</a></li>
+            <li><a href="CGI_Context.html">CGI-Kontext</a></li>
+            <li><a href="LB_Context.html">Load-Balancer-Kontext</a></li>
+            <li><a href="Redirect_Context.html">Redirect-Kontext</a></li>
+            <li><a href="App_Server_Context.html">App-Server-Kontext</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI-Kontext</a></li>
+            <li><a href="Module_Context.html">Modulhandler-Kontext</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">WebSocket-Proxy</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Webkonsole</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Admin-Konsole allgemein</a></li>
+          <li><a href="AdminSecurity_Help.html">Admin-Konsolensicherheit</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin-Listener allgemein
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin-Listener SSL</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ServGeneral_Help.html">Server - Allgemein</a></div><div class="center"><a href="config.html">Konfiguration</a></div><div class="next"><a href="ServTuning_Help.html">Server - Tuning</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Serverprotokoll</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Inhaltsverzeichnis</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Serverprotokoll</h3><ul class="doc-toc__links"><li><a href="#log_fileName">Dateiname</a></li><li><a href="#log_logLevel">Protokollstufe</a></li><li><a href="#log_debugLevel">Debug-Stufe</a></li><li><a href="#log_rollingSize">Rotationsgröße (Byte)</a></li><li><a href="#log_keepDays">Aufbewahrungstage</a></li><li><a href="#log_compressArchive">Archiv komprimieren</a></li><li><a href="#log_enableStderrLog">stderr-Protokoll aktivieren</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Zugriffsprotokoll</h3><ul class="doc-toc__links"><li><a href="#accessLog_fileName">Dateiname</a></li><li><a href="#accessLog_pipedLogger">Piped Logger</a></li><li><a href="#accessLog_logFormat">Protokollformat</a></li><li><a href="#accessLog_logHeader">Protokoll-Header</a></li><li><a href="#log_rollingSize">Rotationsgröße (Byte)</a></li><li><a href="#log_keepDays">Aufbewahrungstage</a></li><li><a href="#log_compressArchive">Archiv komprimieren</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_fileName"><h3>Dateiname<span class="ls-permlink"><a href="#log_fileName"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt den Pfad für die Protokolldatei an.</p> <h4>Syntax</h4><p>Dateiname, der ein absoluter Pfad oder ein Pfad relativ zu $SERVER_ROOT sein kann.</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Legen Sie die Protokolldatei auf einem separaten Datenträger ab.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_logLevel"><h3>Protokollstufe<span class="ls-permlink"><a href="#log_logLevel"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die Protokollstufe an, die in die Protokolldatei aufgenommen wird. Verfügbare Stufen (von hoch bis niedrig) sind: <span class="val">ERROR</span>, <span class="val">WARNING</span>, <span class="val">NOTICE</span>, <span class="val">INFO</span> und <span class="val">DEBUG</span>. Nur Meldungen mit einer Stufe, die höher oder gleich der aktuellen Einstellung ist, werden protokolliert.</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Die Verwendung der Protokollstufe <span class="val">DEBUG</span> hat keine Leistungsauswirkung, sofern <span class="tagl"><a href="#log_debugLevel">Debug-Stufe</a></span> nicht auf eine andere Stufe als <span class="val">NONE</span> gesetzt ist. Es wird empfohlen, Log Level auf <span class="val">DEBUG</span> und Debug Level auf <span class="val">NONE</span> zu setzen. Diese Einstellungen verhindern, dass Debug-Protokolle die Festplatte füllen, erlauben aber weiterhin die Aktion <span class="tagl"><a href="ServerStat_Help.html#toggleDebugLog">Debug-Protokollierung umschalten</a></span> zur Steuerung der Debug-Ausgabe.</p> <h4>Siehe auch</h4><p class="ls-text-small"><span class="tagl"><a href="#log_debugLevel">Debug-Stufe</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_debugLevel"><h3>Debug-Stufe<span class="ls-permlink"><a href="#log_debugLevel"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die Stufe der Debug-Protokollierung an. <span class="tagl"><a href="#log_logLevel">Protokollstufe</a></span> muss auf <span class="val">DEBUG</span> gesetzt sein, um diese Funktion zu verwenden. Die Debug-Protokollierung ist deaktiviert, wenn "Debug Level" auf <span class="val">NONE</span> gesetzt ist, auch wenn <span class="tagl"><a href="#log_logLevel">Protokollstufe</a></span> auf <span class="val">DEBUG</span> gesetzt ist. <span class="tagl"><a href="ServerStat_Help.html#toggleDebugLog">Debug-Protokollierung umschalten</a></span> kann verwendet werden, um die Debug-Stufe auf einem laufenden Server ohne Neustart zu steuern.</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Wichtig! Setzen Sie dies immer auf <span class="val">NONE</span>, wenn Sie keine detaillierte Debug-Protokollierung benötigen. Aktive Debug-Protokollierung beeinträchtigt die Dienstleistung erheblich und kann den Speicherplatz in sehr kurzer Zeit füllen. Die Debug-Protokollierung enthält detaillierte Informationen zu jeder Anfrage und Antwort.<br/><br/> Es wird empfohlen, Log Level auf <span class="val">DEBUG</span> und Debug Level auf <span class="val">NONE</span> zu setzen. Diese Einstellungen verhindern, dass Debug-Protokolle die Festplatte füllen, erlauben aber weiterhin die Aktion <span class="tagl"><a href="ServerStat_Help.html#toggleDebugLog">Debug-Protokollierung umschalten</a></span> zur Steuerung der Debug-Ausgabe.</p> <h4>Siehe auch</h4><p class="ls-text-small"><span class="tagl"><a href="#log_logLevel">Protokollstufe</a></span>, <span class="tagl"><a href="ServerStat_Help.html#toggleDebugLog">Debug-Protokollierung umschalten</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_rollingSize"><h3>Rotationsgröße (Byte)<span class="ls-permlink"><a href="#log_rollingSize"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, wann die aktuelle Protokolldatei rotiert werden muss. Wenn die Dateigröße das Rotationslimit überschreitet, wird die aktive Protokolldatei im selben Verzeichnis in log_name.mm_dd_yyyy(.sequence) umbenannt und eine neue aktive Protokolldatei erstellt. Die tatsächliche Größe der rotierten Datei kann etwas größer als dieses Limit sein. Setzen Sie den Wert auf <span class="val">0</span>, um die Protokollrotation zu deaktivieren.</p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--info">Information</span> Hängen Sie "K", "M" oder "G" an die Zahl an, um Kilo-, Mega- und Gigabyte anzugeben.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_keepDays"><h3>Aufbewahrungstage<span class="ls-permlink"><a href="#log_keepDays"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, wie viele Tage die Zugriffsprotokolldatei auf der Festplatte aufbewahrt wird. Nur rotierte Protokolldateien, die älter als die angegebene Anzahl von Tagen sind, werden gelöscht. Die aktuelle Protokolldatei wird nicht verändert, unabhängig davon, wie viele Tage Daten sie enthält. Wenn veraltete und sehr alte Protokolldateien nicht automatisch gelöscht werden sollen, setzen Sie dies auf <span class="val">0</span>.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_compressArchive"><h3>Archiv komprimieren<span class="ls-permlink"><a href="#log_compressArchive"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob rotierte Protokolldateien komprimiert werden sollen, um Speicherplatz zu sparen.</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--info">Information</span> Protokolldateien lassen sich stark komprimieren; diese Option wird empfohlen, um den Speicherbedarf alter Protokolle zu reduzieren.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_enableStderrLog"><h3>stderr-Protokoll aktivieren<span class="ls-permlink"><a href="#log_enableStderrLog"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob beim Empfang von stderr-Ausgabe von durch den Server gestarteten Prozessen in das Protokoll geschrieben werden soll.<br/><br/> Wenn aktiviert, werden stderr-Meldungen im selben Verzeichnis wie das Serverprotokoll mit dem festen Namen "stderr.log" protokolliert. Wenn deaktiviert, wird die gesamte stderr-Ausgabe verworfen.<br/><br/> Funktionen wie PHPs error_log(), die nicht direkt nach stderr (Dateihandle 2) schreiben, sind von dieser Einstellung nicht betroffen und schreiben in die Datei, die in der PHP-ini-Direktive 'error_log' festgelegt ist, oder in die Datei "error.log" des Servers mit dem Tag '[STDERR]', wenn diese Direktive nicht gesetzt ist.</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--info">Information</span> Aktivieren Sie dies, wenn Sie konfigurierte externe Anwendungen debuggen müssen, z. B. PHP, Ruby, Java, Python oder Perl.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_fileName"><h3>Dateiname<span class="ls-permlink"><a href="#accessLog_fileName"></a></span></h3></header><h4>Beschreibung</h4><p>Der Dateiname des Zugriffsprotokolls.</p> <h4>Syntax</h4><p>Dateiname, der ein absoluter Pfad oder ein Pfad relativ zu $SERVER_ROOT sein kann.</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Legen Sie die Zugriffsprotokolldatei auf einem separaten Datenträger ab.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_pipedLogger"><h3>Piped Logger<span class="ls-permlink"><a href="#accessLog_pipedLogger"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die externe Anwendung an, die die von LiteSpeed über eine Pipe an ihren STDIN-Stream gesendeten Zugriffsprotokolldaten empfängt (Dateihandle ist 0). Wenn dieses Feld angegeben ist, wird das Zugriffsprotokoll nur an die Logger-Anwendung gesendet und nicht an die in der vorherigen Eingabe angegebene Zugriffsprotokolldatei.<br/><br/> Die Logger-Anwendung muss zuerst im Abschnitt <span class="tagP"><a href="#ExtApp_Help">Externe Anwendungen</a></span> definiert werden. Zugriffsprotokollierung auf Serverebene kann nur eine externe Logger-Anwendung verwenden, die auf Serverebene definiert ist. Zugriffsprotokollierung auf Ebene des virtuellen Hosts kann nur eine Logger-Anwendung verwenden, die auf Ebene des virtuellen Hosts definiert ist.<br/><br/> Der Logger-Prozess wird genauso gestartet wie andere externe Prozesse (CGI/FastCGI/LSAPI). Das bedeutet, dass er mit der Benutzer-ID ausgeführt wird, die in den <span class="tagl"><a href="VirtualHosts_Help.html#setUidMode">Set-UID-Modus externer Apps</a></span>-Einstellungen des virtuellen Hosts angegeben ist, und niemals im Namen eines privilegierten Benutzers ausgeführt wird.<br/><br/> LiteSpeed web server führt eine einfache Lastverteilung zwischen mehreren Logger-Anwendungen durch, wenn mehr als eine Instanz konfiguriert ist. Der LiteSpeed-Server versucht stets, die Anzahl der Logger-Anwendungen so niedrig wie möglich zu halten. Nur wenn eine Logger-Anwendung Zugriffsprotokolleinträge nicht rechtzeitig verarbeitet, versucht der Server, eine weitere Instanz zu starten.<br/><br/> Wenn ein Logger abstürzt, startet der Webserver eine weitere Instanz, aber die Protokolldaten im Stream-Puffer gehen verloren. Protokolldaten können verloren gehen, wenn externe Logger mit Geschwindigkeit und Umfang des Protokollstroms nicht Schritt halten können.</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_logFormat"><h3>Protokollformat<span class="ls-permlink"><a href="#accessLog_logFormat"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt das Format für das Zugriffsprotokoll an. Wenn das Protokollformat gesetzt ist, überschreibt es die Einstellung <span class="tagl"><a href="#accessLog_logHeader">Protokoll-Header</a></span>.</p> <h4>Syntax</h4><p>Zeichenfolge. Die Syntax des Protokollformats ist mit dem benutzerdefinierten <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">Protokollformat</a> von Apache 2.0 kompatibel.</p> <h4>Beispiel</h4><div class="ls-example"><b>Common Log Format (CLF)</b><br/>     "%h %l %u %t \"%r\" %>s %b"<br/><br/> <b>Common Log Format with Virtual Host</b><br/>     "%v %h %l %u %t \"%r\" %>s %b"<br/><br/> <b>NCSA extended/combined log format</b><br/>     "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"<br/><br/> <b>Log cookie value of Foobar</b><br/>     "%{Foobar}C"</div><h4>Siehe auch</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logHeader">Protokoll-Header</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_logHeader"><h3>Protokoll-Header<span class="ls-permlink"><a href="#accessLog_logHeader"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob HTTP-Anfrageheader protokolliert werden sollen: <span class="val">Referer</span>, <span class="val">UserAgent</span> und <span class="val">Host</span>.</p> <h4>Syntax</h4><p>Per Kontrollkästchen auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Deaktivieren Sie dies, wenn Sie diese Header im Zugriffsprotokoll nicht benötigen.</p> <h4>Siehe auch</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logFormat">Protokollformat</a></span></p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Nach oben" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Nach oben</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Alle Rechte vorbehalten.</footer>
+</div>
+</body>
+</html>

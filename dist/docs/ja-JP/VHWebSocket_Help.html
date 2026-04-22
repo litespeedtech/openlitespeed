@@ -1,24 +1,68 @@
 <!DOCTYPE html>
+<html lang="ja-JP">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Serverユーザーズマニュアル - Webソケットプロキシ</title>
-  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - Webソケットプロキシ." />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - WebSocketプロキシ</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - WebSocketプロキシ." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-      <figure>
-        <img src="../img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-      </figure>
-<h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
-<h5 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 3</h5>
-<hr/>
-<div>
-<ul>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Open LiteSpeed Web Serverユーザーズマニュアル">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Open LiteSpeed Web Serverユーザーズマニュアル</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="メニューを開く" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="ページや設定を検索" data-no-results="結果が見つかりません。">
+      <label class="sr-only" for="doc-search-input">マニュアルを検索</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="ページや設定を検索" aria-controls="doc-search-results" />
+        <button type="submit">検索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="言語"><option value="../VHWebSocket_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHWebSocket_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VHWebSocket_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHWebSocket_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VHWebSocket_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/VHWebSocket_Help.html" data-lang="ja-JP" selected>日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="テーマを切り替え" data-theme-toggle data-theme-light-label="ライトモード" data-theme-dark-label="ダークモード" title="テーマを切り替え">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">OpenLiteSpeed Web Server ユーザーズマニュアル</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
 <li><a href="license.html">ライセンス</a></li>
 <li><a href="intro.html">はじめに</a></li>
 <li><a href="install.html">インストール</a></li>
@@ -37,40 +81,44 @@
 	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
 	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
 	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
-                <ul class="level3">
-                <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
-                <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
-                <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
-                <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
-                <li><a href="External_WS.html">Webサーバー</a></li>
-                <li><a href="External_PL.html">パイプロガー</a></li>
-                <li><a href="External_LB.html">ロードバランサ</a></li>
-                </ul>
+	<ul class="level3">
+      <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+      <li><a href="External_WS.html">Webサーバー</a></li>
+      <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+      <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+      <li><a href="External_SCGI.html">Simple CGI App</a></li>
+      <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+      <li><a href="External_PL.html">パイプロガー</a></li>
+      <li><a href="External_LB.html">ロードバランサ</a></li>
+      <li><a href="External_UWSGI.html">uWSGI</a></li>
+	</ul>
 	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
 	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
 	<li><a href="Module_Help.html">モジュール設定</a></li>
 	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
         <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
 	<li><a href="Templates_Help.html">テンプレート</a></li>
-	<li><a href="VirtualHosts_Help.html">バーチャルホストの基本</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
 	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
 	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
         <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
 	<li><a href="Rewrite_Help.html">Rewrite</a></li>
 	<li><a href="Context_Help.html">コンテキスト</a></li>
-               <ul class="level3">
-                <li><a href="Static_Context.html">静的コンテテキスト</a></li>
-                <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
-                <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
-                <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
-                <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
-                <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
-                <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
-                <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
-                <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
-                <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
-                </ul>
-	<li><span class="current"><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></span></li>
+	<ul class="level3">
+	  <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+	  <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+	  <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+	  <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+	  <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
+	  <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+	  <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+	  <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+	  <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+	  <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+	  <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
+	  <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+	</ul>
+	<li><a class="current" href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
 	</ul>
 </li>
 <li><a href="webconsole.html">Webコンソール</a>
@@ -81,20 +129,14 @@
         <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
         </ul>
 </li>
-</ul>
+</ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Context_Help.html">コンテキスト</a></div><div class="center"><a href="config.html">設定</a></div><div class="next">&nbsp;</div></div>
+<header class="doc-page-header"><h1>WebSocketプロキシ</h1><div class="doc-page-intro"><a href="http://en.wikipedia.org/wiki/WebSocket">WebSocket</a>は、HTTPの代わりにインターネット上でリアルタイムの双方向通信を行うためのプロトコルです。 バージョン1.1.1以降、OpenLiteSpeedはWebSocketプロキシを使用してWebSocketバックエンドをサポートしています。 これらのプロキシは、WebSocket通信を<span class="tagl"><a href="#wsaddr">アドレス</a></span>フィールドで指定された適切なバックエンドに送信します。</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目次</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">WebSocketプロキシ</h3><ul class="doc-toc__links"><li><a href="#wsuri">URI</a></li><li><a href="#wsaddr">アドレス</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="wsuri"><h3>URI<span class="ls-permlink"><a href="#wsuri"></a></span></h3></header><h4>説明</h4><p>このWebSocketバックエンドを使用するURIを指定します。このURIへのトラフィックは、WebSocketアップグレードリクエストを含む場合にのみWebSocketバックエンドへ転送されます。<br/><br/> このアップグレードリクエストを含まないトラフィックは、このURIが属するコンテキストへ自動的に転送されます。このURIにコンテキストが存在しない場合、LSWSはこのトラフィックを<span class="val">$DOC_ROOT/URI</span>の場所にある静的コンテキストへアクセスしているものとして扱います。</p> <h4>構文</h4><p>プレーンURI("/"で始まる)。URIが"/"で終わる場合、このWebSocketバックエンドにはこのURI配下のすべてのサブURIが含まれます。</p> <h4>例</h4><div class="ls-example">WebSocketプロキシをコンテキストと組み合わせて使用すると、同じページ上で異なる種類のトラフィックを異なる方法で提供できるため、パフォーマンスを最適化できます。WebSocketトラフィックをWebSocketバックエンドへ送信しつつ、静的コンテキストを設定してLSWSにページの静的コンテンツを提供させたり、LSAPIコンテキストを設定してLSWSにPHPコンテンツを提供させたりできます(どちらもWebSocketバックエンドよりLSWSの方が効率的に処理できます)。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="wsaddr"><h3>アドレス<span class="ls-permlink"><a href="#wsaddr"></a></span></h3></header><h4>説明</h4><p>WebSocketバックエンドによって使用される一意のソケットアドレス。 IPv4ソケット、IPv6ソケット、Unixドメインソケット（UDS）がサポートされています。 IPv4およびIPv6ソケットは、ネットワークを介した通信に使用できます。 UDSは、WebSocketバックエンドがサーバーと同じマシンに存在する場合にのみ使用できます。</p> <h4>構文</h4><p>IPv4/IPv6アドレス:ポート、UDS://パス、またはunix:パス</p> <h4>例</h4><div class="ls-example">127.0.0.1:5434<br/> UDS://tmp/lshttpd/php.sock<br/> unix:/tmp/lshttpd/php.sock</div><h4>ヒント</h4><p><span class="ls-badge ls-badge--security">Security</span> WebSocketバックエンドが同じマシン上で実行される場合は、UDSの使用を推奨します。 IPv4またはIPv6ソケットを使用する必要がある場合は、IPアドレスをlocalhostまたは127.0.0.1に設定し、 他のマシンからWebSocketバックエンドへアクセスできないようにします。<br/> <span class="ls-badge ls-badge--performance">Performance</span> Unixドメインソケットは、一般にIPv4またはIPv6ソケットよりも高いパフォーマンスを提供します。</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="トップへ戻る" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">トップへ戻る</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="Context_Help.html">コンテキスト</a></div><div class="center"><a href="config.html">設定</a></div><div class="next">&nbsp;</div></div>
-<h1>Webソケットプロキシ</h1><section class="ls-spacer-small-bottom"><a href="http://en.wikipedia.org/wiki/WebSocket"> WebSocket </a>は、HTTPの代わりにインターネット上でリアルタイムの双方向通信を行うためのプロトコルです。
-バージョン1.1.1以降、OpenLiteSpeedはWebSocketプロキシを使用してWebSocketバックエンドをサポートしています。
-これらのプロキシは、WebSocket通信を{ITEM=wsaddr}フィールドで指定された適切なバックエンドに送信します。</section>
-<h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header>Webソケットプロキシ</header><p>
-<a href="#wsuri">URI</a> | <a href="#wsaddr">アドレス</a></p></section>
-</section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="wsuri"><h3>URI<span class="ls-permlink"><a href="#wsuri"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>このWebSocketバックエンドを使用するURIを指定します。 このURIへのトラフィックは、WebSocketのアップグレード要求が含まれている場合にのみWebSocketバックエンドに転送されます。<br/><br/> このアップグレード要求のないトラフィックは、このURIが属するコンテキストに自動的に転送されます。 このURIに対してContextが存在しない場合、LSWSはこのトラフィックを、<span class="val">$DOC_ROOT/URI</span>の場所で静的コンテキストにアクセスしているものとして扱います。</p> <h4>構文</h4><p>URIは、プレーンURI（ "/"で始まる）またはPerlと互換性のある正規表現URI（ "exp："で始まる）にすることができます。 プレーンURIが "/"で終わる場合、このWebSocketバックエンドはこのURIの下にすべてのサブURIを含みます。</p> <h4>例</h4><div class="ls-example">WebSocketプロキシをコンテキストとともに使用すると、同じページでさまざまな種類のトラフィックをさまざまな方法で処理できるため、パフォーマンスが最適化されます。 WebSocketトラフィックをWebSocketバックエンドに送信し、LSWSがページの静的コンテンツまたはLSAPIコンテキストを提供できるように静的コンテキストを設定し、LSWSがPHPコンテンツ（両方ともLSSがWebSocketバックエンドより効率的に機能する）を提供できるようにします。</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="wsaddr"><h3>アドレス<span class="ls-permlink"><a href="#wsaddr"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>WebSocketバックエンドによって使用される一意のソケットアドレス。 IPv4ソケット、IPv6ソケット、Unixドメインソケット（UDS）がサポートされています。 IPv4およびIPv6ソケットは、ネットワークを介した通信に使用できます。 UDSは、WebSocketバックエンドがサーバーと同じマシンに存在する場合にのみ使用できます。</p> <h4>構文</h4><p>IPv4またはIPV6アドレス：ポートまたはUDS：//パス</p> <h4>例</h4><div class="ls-example">127.0.0.1:5434 <br/> UDS://tmp/lshttpd/php.sock.</div><h4>ヒント</h4><p>[セキュリティ] WebSocketバックエンドが同じマシン上で実行される場合、UDSが優先されます。 IPv4またはIPv6ソケットを使用する必要がある場合は、IPアドレスをlocalhostまたは127.0.0.1に設定して、WebSocketバックエンド 他のマシンからはアクセスできません。<br/> [パフォーマンス] Unixドメインソケットは、一般にIPv4またはIPv6ソケットよりも高いパフォーマンスを提供します。</p> </article> </div>
-</section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-</div></div>
 </body>
 </html>

@@ -586,11 +586,16 @@ class Util
             return $domain;
         }
 
-        if ( $variant == null ) {
-            $variant = INTL_IDNA_VARIANT_UTS46;
+        if ( defined('INTL_IDNA_VARIANT_UTS46') ) {
+
+            if ( $variant == null ) {
+                $variant = INTL_IDNA_VARIANT_UTS46;
+            }
+
+            return idn_to_utf8($domain, $flags, $variant, $idna_info);
         }
 
-        return idn_to_utf8($domain, $flags, $variant, $idna_info);
+        return idn_to_utf8($domain, $flags);
     }
 
     /**
@@ -606,27 +611,32 @@ class Util
      *
      * @return false|string
      */
-   public static function tryIdnToAscii(
-       $domain,
-       $flags = null,
-       $variant = null,
-       &$idna_info = null
-   )
-   {
-       if ( empty($domain) || !function_exists('idn_to_ascii') ) {
-           return $domain;
-       }
+    public static function tryIdnToAscii(
+        $domain,
+        $flags = null,
+        $variant = null,
+        &$idna_info = null
+    )
+    {
+        if ( empty($domain) || !function_exists('idn_to_ascii') ) {
+            return $domain;
+        }
 
-       if ( $flags == null ) {
-           $flags = IDNA_DEFAULT;
-       }
+        if ( $flags == null ) {
+            $flags = IDNA_DEFAULT;
+        }
 
-       if ( $variant == null ) {
-           $variant = INTL_IDNA_VARIANT_UTS46;
-       }
+        if ( defined('INTL_IDNA_VARIANT_UTS46') ) {
 
-       return idn_to_ascii($domain, $flags, $variant, $idna_info);
-   }
+            if ( $variant == null ) {
+                $variant = INTL_IDNA_VARIANT_UTS46;
+            }
+
+            return idn_to_ascii($domain, $flags, $variant, $idna_info);
+        }
+
+        return idn_to_ascii($domain, $flags);
+    }
 
     /**
      * Version comparison function capable of properly comparing versions with

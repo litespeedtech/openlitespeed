@@ -55,6 +55,7 @@ class HttpListener : public EventReactor, public LogSession
     char                m_isSSL;
     char                m_iSendZconf;
     int                 m_flag;
+    int                 m_secure;
     AutoStr            *m_pAdcPortList;
 
     ModuleConfig        m_moduleConfig;
@@ -89,6 +90,9 @@ public:
     void endConfig();
 
     char isSSL() const                 {   return m_isSSL;     }
+
+    void setSecure(int secure)         {   m_secure = secure;          } 
+    int getSecure()                    {   return m_secure;            }
 
     const char *getName() const        {   return m_sName.c_str();     }
     void setName(const char *pName)  {   m_sName = pName;    }

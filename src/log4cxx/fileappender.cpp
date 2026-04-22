@@ -39,9 +39,15 @@ Duplicable *FileAppender::dup(const char *pName)
     if (m_stream.isAsync())
         pAppender->setAsync(1);
     if (strcasecmp(pName, "stdout") == 0)
+    {
         pAppender->m_stream.setfd(::dup(1));
+        pAppender->setFlag(Appender::FLAG_PIPE);
+    }
     else if (strcasecmp(pName, "stderr") == 0)
+    {
         pAppender->m_stream.setfd(::dup(2));
+        pAppender->setFlag(Appender::FLAG_PIPE);
+    }
     else
         return pAppender;
     fcntl(pAppender->getfd(), F_SETFD, FD_CLOEXEC);
@@ -51,8 +57,10 @@ Duplicable *FileAppender::dup(const char *pName)
 
 int FileAppender::reopenExist()
 {
-    const char *pName = getName();
     struct stat st;
+    if (getFlag(Appender::FLAG_PIPE))
+        return 0;
+    const char *pName = getName();
     if (stat(pName, &st) == -1)
         return 0;
     if (m_ino != st.st_ino)
@@ -68,6 +76,8 @@ int FileAppender::reopenExist()
 
 int FileAppender::reopenIfNeed()
 {
+    if (getFlag(Appender::FLAG_PIPE))
+        return 0;
     const char *pName = getName();
     struct stat st;
     if (stat(pName, &st) == -1 || m_ino != st.st_ino)
@@ -83,12 +93,16 @@ int FileAppender::reopenIfNeed()
 
 int FileAppender::open()
 {
+    if (getFlag(Appender::FLAG_PIPE))
+        return 0;
     MutexLocker lock(m_stream.get_mutex());
     return open2();
 }
 
 int FileAppender::open2()
 {
+    if (getFlag(Appender::FLAG_PIPE))
+        return 0;
     struct stat st;
     if (getfd() != -1)
         return 0;
@@ -126,6 +140,8 @@ int FileAppender::open2()
 
 int FileAppender::close()
 {
+    if (getFlag(Appender::FLAG_PIPE | Appender::FLAG_NOCLOSE))
+        return 0;
     MutexLocker lock(m_stream.get_mutex());
     if (getfd() != -1)
         return m_stream.close();

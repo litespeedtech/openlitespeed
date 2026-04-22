@@ -825,7 +825,6 @@ with_lsphp7
 with_tempdir
 with_pidfile
 with_lscpd
-enable_spdy
 enable_http2
 enable_debug
 enable_profiling
@@ -1503,8 +1502,7 @@ Optional Features:
   --enable-adminssl=[yes/no]
                           Enable HTTPS for admin console (modify adminssl.conf
                           before installation) [default=yes]
-  --enable-spdy=[yes/no]  Enable SPDY and http2 over HTTPS [default=yes]
-  --enable-http2=[yes/no] Enable SPDY and http2 over HTTPS [default=yes]
+  --enable-http2=[yes/no] Enable http2 over HTTPS [default=yes]
   --enable-debug          Enable debugging symbols (Debug is disabled by
                           default)
   --enable-profiling      Enable cpu profiling (profiling is disabled by
@@ -16588,11 +16586,6 @@ echo PID_FILE=$PID_FILE
 
 
 OPENLSWS_HTTP2="?"
-# Check whether --enable-spdy was given.
-if test "${enable_spdy+set}" = set; then :
-  enableval=$enable_spdy; OPENLSWS_HTTP2="$enableval"
-fi
-
 
 # Check whether --enable-http2 was given.
 if test "${enable_http2+set}" = set; then :
@@ -16600,12 +16593,10 @@ if test "${enable_http2+set}" = set; then :
 fi
 
 if test "$OPENLSWS_HTTP2" = "no" ; then
-    echo "SPDY/http2 disabled!!!"
+    echo "http2 disabled!!!"
 else
 
-$as_echo "#define LS_ENABLE_SPDY 1" >>confdefs.h
-
-    echo "SPDY/http2 enabled!!!"
+    echo "http2 enabled!!!"
 fi
 
 
@@ -19080,7 +19071,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-ac_config_files="$ac_config_files Makefile support/Makefile support/unmount_ns/Makefile src/Makefile src/edio/Makefile src/extensions/Makefile src/http/Makefile src/spdy/Makefile src/h2/Makefile src/log4cxx/Makefile src/main/Makefile src/socket/Makefile src/sslpp/Makefile src/ssi/Makefile src/lsiapi/Makefile src/modules/Makefile src/shm/Makefile src/adns/Makefile src/quic/Makefile src/liblsquic/Makefile src/modules/modinspector/Makefile src/modules/modreqparser/Makefile src/modules/uploadprogress/Makefile"
+ac_config_files="$ac_config_files Makefile support/Makefile support/unmount_ns/Makefile src/Makefile src/edio/Makefile src/extensions/Makefile src/http/Makefile src/h2/Makefile src/log4cxx/Makefile src/main/Makefile src/socket/Makefile src/sslpp/Makefile src/ssi/Makefile src/lsiapi/Makefile src/modules/Makefile src/shm/Makefile src/adns/Makefile src/quic/Makefile src/liblsquic/Makefile src/modules/modinspector/Makefile src/modules/modreqparser/Makefile src/modules/uploadprogress/Makefile"
 
 
 if test x$need_lua = xyes ; then
@@ -20224,7 +20215,6 @@ do
     "src/edio/Makefile") CONFIG_FILES="$CONFIG_FILES src/edio/Makefile" ;;
     "src/extensions/Makefile") CONFIG_FILES="$CONFIG_FILES src/extensions/Makefile" ;;
     "src/http/Makefile") CONFIG_FILES="$CONFIG_FILES src/http/Makefile" ;;
-    "src/spdy/Makefile") CONFIG_FILES="$CONFIG_FILES src/spdy/Makefile" ;;
     "src/h2/Makefile") CONFIG_FILES="$CONFIG_FILES src/h2/Makefile" ;;
     "src/log4cxx/Makefile") CONFIG_FILES="$CONFIG_FILES src/log4cxx/Makefile" ;;
     "src/main/Makefile") CONFIG_FILES="$CONFIG_FILES src/main/Makefile" ;;

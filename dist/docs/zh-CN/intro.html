@@ -1,194 +1,144 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - Introduction</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - Introduction." />
+  <title>OpenLiteSpeed用户手册 - 简介</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 简介." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><span class="current"><a href="intro.html">Introduction</a></span></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../intro.html" data-lang="en-US">English</option><option value="../es-ES/intro.html" data-lang="es-ES">Español</option><option value="../de-DE/intro.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/intro.html" data-lang="fr-FR">Français</option><option value="../zh-CN/intro.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/intro.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a class="current" href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="license.html">许可</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="install.html">Installation</a> &#187;</div></div>
-<h1>Introduction</h1>
-
-<h3>Overview</h3>
-<p>LiteSpeed Web Server is a high performance, secure, easy-to-use web server.
-It can handle thousands of concurrent connections with a small memory footprint. 
-Its security features also make it much less vulnerable to various attacks.
-</p>
-
-
-<h3>Basic Features</h3>
-
-<ul>
-  <li><p><strong>HTTP/1.1</strong></p>
-	  <ul>
-	    <li>Chunked transfer encoding</li>
-	    <li>Basic authentication (password file and LDAP backend)</li>
-	    <li>Entity tag</li>
-	    <li>Single and multiple ranges requests</li>
-	    <li>Static/dynamic response compression (gzip)</li>
-		<li>Apache-compatible URL rewrite</li>
-		<li>IPv6 support</li>
-	    <li>Apache mod_geoip compatible geotargeting support</li>
-	  </ul>
-  </li>
-  <li><p><strong>Dynamic Content Generation</strong></p>
-  <p>LiteSpeed Web Server supports the following dynamic content generation methods:</p>
-	  <ul>
-	    <li>CGI/1.1 with suEXEC</li>
-	    <li>Fast CGI with suEXEC</li>
-		<li>PHP with suEXEC through LiteSpeed PHP SAPI (top-of-the-line PHP performance with a mod_php equivalent feature set)
-	    <li>JSP/servlets (interface with AJP v1.3 compatible backend servlet engine)</li>
-		<li>Proxy (interface with any web server/application server that supports HTTP protocol)</li>
-		<li>Ruby on Rails with suEXEC through Ruby LSAPI module (best-in-class performance, easy deployment, supports dynamic spawning)
-	  </ul>
-  </li>
-  <li><p><strong>Virtual Hosting</strong></p>
-    <ul>
-		<li>Supports IP-based and name-based virtual hosting</li>
-		<li>Virtual host templates make virtual hosting configuration easy</li>
-	</ul>
-   </li>
-</ul>
-
-<h3>Security</h3>
-	<p>LiteSpeed Web Server provides the following security features:</p>
-	<ul>
-	  <li><strong>SSL</strong>
-	  <p>Supports SSLv3/TLSv1. <i>This product includes software developed by the OpenSSL Project
-	  for use in the OpenSSL Toolkit (http://www.openssl.org/)</i></p></li>
-	
-	  <li><strong>IP Level Throttling</strong>
-	  <p>Network bandwidth and request rate for a single IP address can be limited
-	  regardless of the number of connections. </p></li>
-	  
-	  <li><strong>Comprehensive Connection Accounting</strong>
-	  <p>Comprehensive control of concurrent connections allowed from a single IP address.</p></li>
-	  
-	  <li><strong>Access Control</strong>
-	  <p>Access control rules can be set at server, virtual host, and per-directory (context) 
-	  levels.</p> </li>
-	  
-	  <li><strong>External Application Shield</strong>
-	  <p>LiteSpeed Web Server shields CGI, Fast CGI and servlet engines from talking directly 
-	  to web clients to ensure maximum reliability and performance. </p></li>
-	  
-	  <li><strong>CGI Resources Consumption Limit</strong>
-	  <p>LiteSpeed Web Server prevents bad CGI scripts from overloading the server by 
-	  limiting the system resources CGI applications can consume.</p></li>
-	  
-	  <li><strong>DoS Attack Prevention</strong>
-	  <p>LiteSpeed Web Server is much less vulnerable to HTTP Denial of Service(DoS) 
-	  and Distributed Denial of Service (DDoS) attacks thanks to IP-level throttling, 
-	  connection accounting, and its outstanding performance and scalability. </p></li>
-	</ul>
-
-<h3>Reliability</h3>
-	<p>LiteSpeed Web Server recovers from crashes instantly. LiteSpeed Web Server also runs completely in user space.
-	Thus the server can easily switch between different versions without affecting the reliability of the operating system.
-	</p>
-	<p>CGI, Fast CGI and Servlet engine run in their standalone processes, the
-reliability of web server is not affected by the quality of third party software.</p>
-
-<h3>User Friendly</h3>
-	<ul>
-		<li>No need to build the executable yourself.</li>
-		<li>Easy to install.</li>
-		<li>Easy to control and configure through the WebAdmin interface.</li>
-		<li>Sets up PHP and PHP accelerators automatically.</li>
-		<li>Applies most changes without restarting the server.</li>
-	</ul>
-
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="license.html">许可协议</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="install.html">安装</a> &#187;</div></div>
+<h1>简介</h1><br/> <p>OpenLiteSpeed（OLS）是一款高性能、开源的Web服务器。它是LiteSpeed Web Server Enterprise的免费替代方案，并兼容Apache重写规则。</p><br/> <p>OLS采用事件驱动架构，并内置缓存引擎（LSCache）。</p><br/> <h3>概述</h3><br/> <p>OpenLiteSpeed支持包括HTTP/2和HTTP/3（QUIC）在内的现代协议。它适用于独立服务器、开发环境和生产环境，尤其适合单站点部署或偏好采用GPLv3许可证开源方案的环境。</p><br/> <h3>功能特性</h3><br/> <h4>协议与兼容性</h4><br/> <ul>   <li>HTTP/1.0、HTTP/1.1、HTTP/2和HTTP/3（QUIC）</li>   <li>GZIP和Brotli压缩</li>   <li>WebSocket代理</li>   <li>支持IPv4和IPv6</li>   <li>无限制的基于IP和基于名称的虚拟主机</li>   <li>支持带OCSP Stapling的HTTPS</li>   <li>通过LSAPI、CGI、FastCGI及其他接口支持PHP、Perl、Ruby、Python和其他脚本语言</li> </ul><br/> <h4>性能与可扩展性</h4><br/> <ul>   <li>事件驱动架构</li>   <li>低内存占用</li>   <li>高并发连接能力</li>   <li>Sendfile()和异步I/O</li>   <li>用于动态内容的LiteSpeed SAPI（LSAPI）</li>   <li>内置LSCache动态页面缓存</li>   <li>支持<code>.htaccess</code>重写规则（修改后需要重启才能生效）</li> </ul><br/> <h4>Apache兼容性</h4><br/> <ul>   <li>支持Apache mod_rewrite规则</li>   <li>兼容许多常见的Apache重写配置</li> </ul><br/> <h4>安全性</h4><br/> <ul>   <li>连接与带宽限制</li>   <li>兼容mod_security v3</li>   <li>防护常见SSL攻击</li>   <li>严格的HTTP请求校验与缓冲区溢出防护</li>   <li>支持suEXEC</li>   <li>支持Chroot</li> </ul><br/> <h4>管理</h4><br/> <ul>   <li>用于配置和实时监控的WebAdmin控制台</li>   <li>虚拟主机模板</li>   <li>支持多个PHP版本</li>   <li>实时统计</li>   <li>LiteSpeed Prometheus Exporter</li> </ul><br/> <h4>其他特性</h4><br/> <ul>   <li>MP4/FLV流媒体</li>   <li>Geo-IP查询</li>   <li>自定义日志</li> </ul> </article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

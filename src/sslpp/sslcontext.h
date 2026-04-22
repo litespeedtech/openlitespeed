@@ -61,6 +61,12 @@ public:
         SSL_TLS     = 30,
         SSL_ALL     = 31
     };
+    enum
+    {
+        ALPN_HTTP,
+        ALPN_HTTP2,
+        ALPN_HTTP3,
+    };
     explicit SslContext(int method = SSL_ALL);
     ~SslContext();
 
@@ -123,7 +129,8 @@ public:
     int addCRL(const char *pCRLFile, const char *pCRLPath);
     int getVerifyMode();
 
-    unsigned char getEnableSpdy() const      {   return m_iEnableSpdy;   }
+    unsigned char getEnableSpdy() const      {   return m_iEnableAlpn;   }
+    unsigned char getEnableAlpn() const      {   return m_iEnableAlpn;   }
     /**
      * Check if OCSP is configured for the current context and if so,
      * update the OCSP response if needed.
@@ -149,7 +156,7 @@ private:
     SslContext *m_pEccCtx;
     char        m_iMethod;
     char        m_iRenegProtect;
-    char        m_iEnableSpdy;
+    char        m_iEnableAlpn;
     char        m_iEnableOcsp;
     short       m_iKeyLen;
     short       m_iKeyType;
@@ -187,7 +194,8 @@ private:
     int isKeyFileChanged(const char *pKeyFile) const;
     int isCertFileChanged(const char *pCertFile) const;
 
-    int enableSpdy(int level);
+    int enableSpdy(int level)       {   return enableAlpn(level);   }
+    int enableAlpn(int level);
     SslOcspStapling *getStapling()  {   return m_pStapling;     }
     void setStapling(SslOcspStapling *pSslOcspStapling) {  m_pStapling = pSslOcspStapling;}
     int  initStapling();

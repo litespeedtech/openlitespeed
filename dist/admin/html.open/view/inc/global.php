@@ -3,7 +3,7 @@
 ob_start(); // just in case
 
 
-header("Expires: -1"); 
+header("Expires: -1");
 
 header("Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0");
 header("Pragma: no-cache");
@@ -12,12 +12,50 @@ header("Content-Security-Policy: frame-ancestors 'self'");
 header("Referrer-Policy: same-origin");
 header("X-Content-Type-Options: nosniff");
 
-define ('SERVER_ROOT', $_SERVER['LS_SERVER_ROOT']);
+if (!function_exists('lstResolveServerRoot')) {
+    function lstResolveServerRoot()
+    {
+        if (isset($_SERVER['LS_SERVER_ROOT']) && is_string($_SERVER['LS_SERVER_ROOT']) && $_SERVER['LS_SERVER_ROOT'] !== '') {
+            return rtrim($_SERVER['LS_SERVER_ROOT'], '/') . '/';
+        }
 
-ini_set('include_path',
-SERVER_ROOT . 'admin/html/lib/:' .
-SERVER_ROOT . 'admin/html/lib/ows/:' .
-SERVER_ROOT . 'admin/html/view/:.');
+        $envRoot = getenv('LS_SERVER_ROOT');
+        if (is_string($envRoot) && $envRoot !== '') {
+            return rtrim($envRoot, '/') . '/';
+        }
+
+        if (is_dir('/usr/local/lsws/admin')) {
+            return '/usr/local/lsws/';
+        }
+
+        $repoRoot = realpath(__DIR__ . '/../../');
+        if ($repoRoot !== false) {
+            return rtrim($repoRoot, '/') . '/';
+        }
+
+        return '';
+    }
+}
+
+if (!defined('SERVER_ROOT')) {
+    define('SERVER_ROOT', lstResolveServerRoot());
+}
+
+if (!defined('PRODUCT')) {
+	define('PRODUCT', 'ows');
+}
+
+$libRoot = realpath(__DIR__ . '/../../lib');
+$viewRoot = realpath(__DIR__ . '/..');
+$includePath = [];
+if ($libRoot !== false) {
+    $includePath[] = $libRoot;
+}
+if ($viewRoot !== false) {
+    $includePath[] = $viewRoot;
+}
+$includePath[] = '.';
+ini_set('include_path', implode(PATH_SEPARATOR, $includePath));
 
 // **PREVENTING SESSION HIJACKING**
 // Prevents javascript XSS attacks aimed to steal the session ID
@@ -32,8 +70,8 @@ if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on')) {
 	ini_set('session.cookie_secure', 1);
 }
 
-date_default_timezone_set('America/New_York');
+date_default_timezone_set('UTC');
 
-spl_autoload_register( function ($class) {
-	include $class . '.php';
-});
+require_once __DIR__ . '/../../lib/LSWebAdmin/Support/Bootstrap.php';
+
+\LSWebAdmin\Support\Bootstrap::registerDefaultAutoload();

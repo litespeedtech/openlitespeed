@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    LiteSpeed Technologies, Inc.
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Context;
@@ -90,10 +90,17 @@ class Context
      */
     protected function checkLocalPluginDirInCageFS()
     {
-        $mpFile    = '/etc/cagefs/cagefs.mp';
-        $mountFile = '/proc/mounts';
+        $mpFile        = '/etc/cagefs/cagefs.mp';
+        $mountFile     = '/proc/mounts';
+        $cagefsCtlFile = '/usr/sbin/cagefsctl';
 
-        if ( !file_exists($mpFile) ) {
+        if (
+                !file_exists($mpFile)
+                ||
+                !file_exists($cagefsCtlFile)
+                ||
+                !is_executable($cagefsCtlFile)
+        ) {
             return;
         }
 
@@ -105,14 +112,14 @@ class Context
         $result       = preg_grep($pattern, file($mountFile));
         $procMountSet = !empty($result);
 
-        if ( ! $procMountSet ) {
+        if ( !$procMountSet ) {
             Logger::debug("Data dir not set in $mountFile.");
 
             $pattern     = "=^.*$localPluginDir.*$=m";
             $result      = preg_grep($pattern, file($mpFile));
             $setInMpFile = !empty($result);
 
-            if ( ! $setInMpFile ) {
+            if ( !$setInMpFile ) {
                 file_put_contents(
                     $mpFile,
                     "\n$localPluginDir",
@@ -122,7 +129,7 @@ class Context
                 Logger::notice('Added data dir to cagefs.mp.');
             }
 
-            exec('/usr/sbin/cagefsctl --remount-all');
+            exec("$cagefsCtlFile --remount-all");
 
             Logger::notice('Remounted CageFS.');
         }
@@ -230,14 +237,33 @@ class Context
      * Checks if the current instance is lacking the expected level of
      * permissions.
      *
+     * @deprecated release_ver_placeholder
+     *
      * @return bool
+     *
+     * @noinspection SpellCheckingInspection
+     * @noinspection PhpUnused
      */
     protected function hasInsufficentPermissions()
     {
-        $expectedPermissions =
-            self::$instance->options->getExpectedPermissions();
+        return $this->hasInsufficientPermissions();
+    }
 
-        return (self::$instance->isRoot < $expectedPermissions);
+    /**
+     * Checks if the current instance is lacking the expected level of
+     * permissions.
+     *
+     * @since release_ver_placeholder
+     *
+     * @return bool
+     */
+    protected function hasInsufficientPermissions()
+    {
+        return (
+            self::$instance->isRoot
+                <
+                self::$instance->options->getExpectedPermissions()
+        );
     }
 
     /**
@@ -261,7 +287,7 @@ class Context
             );
         }
 
-        if ( $checkPerms && self::$instance->hasInsufficentPermissions() ) {
+        if ( $checkPerms && self::$instance->hasInsufficientPermissions() ) {
             throw new LSCMException(
                 'Access denied: Insufficient permissions.',
                 LSCMException::E_NON_FATAL

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Host virtual - Seguridad</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Host virtual - Seguridad." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../VHSecurity_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHSecurity_Help.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/VHSecurity_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHSecurity_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VHSecurity_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/VHSecurity_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a class="current" href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="VHGeneral_Help.html">Host virtual - General</a></div><div class="center"><a href="config.html">Configuración</a></div><div class="next"><a href="VHSSL_Help.html">Host virtual - SSL</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Host virtual - Seguridad</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#VHlsrecaptcha">Proteccion CAPTCHA</a></h3><ul class="doc-toc__links"><li><a href="#enableRecaptcha">Habilitar CAPTCHA</a></li><li><a href="#recaptchaSiteKey">Clave de sitio</a></li><li><a href="#recaptchaSecretKey">Clave secreta</a></li><li><a href="#recaptchaType">Tipo de CAPTCHA</a></li><li><a href="#recaptchaMaxTries">Máx. intentos</a></li><li><a href="#recaptchaVhReqLimit">Limite de solicitudes concurrentes</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Contenedores</h3><ul class="doc-toc__links"><li><a href="#bubbleWrap">Contenedor Bubblewrap</a></li><li><a href="#namespace">Contenedor Namespace</a></li><li><a href="#namespaceConfVhAdd">Archivo adicional de plantilla de namespace</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#accessControl">Control de acceso</a></h3><ul class="doc-toc__links"><li><a href="#accessControl_allow">Lista permitida</a></li><li><a href="#accessControl_deny">Lista denegada</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#realms">Realms de autorizacion</a></h3><ul class="doc-toc__links"><li><a href="#realmName">Nombre del realm</a></li><li><a href="#userDBLocation">Ubicacion de DB de usuarios</a></li><li><a href="#userDBMaxCacheSize">Tamano maximo de cache de DB de usuarios</a></li><li><a href="#userDBCacheTimeout">Tiempo de espera de cache de DB de usuarios (seg)</a></li><li><a href="#GroupDBLocation">Ubicacion de DB de grupos</a></li><li><a href="#groupDBMaxCacheSize">Tamano maximo de cache de DB de grupos</a></li><li><a href="#groupDBCacheTimeout">Tiempo de espera de cache de DB de grupos (seg)</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="VHlsrecaptcha"><h3>Proteccion CAPTCHA<span class="ls-permlink"><a href="#VHlsrecaptcha"></a></span></h3></header><h4>Descripción</h4><p>CAPTCHA Protection es un servicio proporcionado como forma de mitigar una carga pesada del servidor. CAPTCHA Protection se activara despues de que ocurra una de las siguientes situaciones. Una vez activo, todas las solicitudes de clientes NON TRUSTED(segun configuracion) seran redirigidas a una pagina de validacion CAPTCHA. Despues de la validacion, el cliente sera redirigido a la pagina deseada.<br/><br/> Las siguientes situaciones activaran CAPTCHA Protection:<br/> 1. El recuento de solicitudes concurrentes del servidor o vhost supera el limite de conexion configurado.<br/> 2. Anti-DDoS esta habilitado y un cliente accede a una url de forma sospechosa. El cliente se redirigira primero a CAPTCHA en lugar de ser denegado cuando se active.<br/> 3. Se proporciona un nuevo entorno de regla de rewrite para activar CAPTCHA mediante RewriteRules. 'verifycaptcha' puede establecerse para redirigir clientes a CAPTCHA. Un valor especial ': deny' puede establecerse para denegar al cliente si fallo demasiadas veces. Por ejemplo, [E=verifycaptcha] siempre redirigira a CAPTCHA hasta que se verifique. [E=verifycaptcha: deny] redirigira a CAPTCHA hasta que se alcance Max Tries, despues de lo cual el cliente sera denegado.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableRecaptcha"><h3>Habilitar CAPTCHA<span class="ls-permlink"><a href="#enableRecaptcha"></a></span></h3></header><h4>Descripción</h4><p>Habilita la función CAPTCHA Protection en el nivel actual. Este ajuste debe estar en <span class="val">Yes</span> a nivel de servidor antes de que se pueda usar CAPTCHA Protection.<br/><br/> Valores predeterminados:<br/> <b>Nivel de servidor:</b> <span class="val">Yes</span><br/> <b>Nivel de VH:</b> Heredar el ajuste de nivel de servidor</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaSiteKey"><h3>Clave de sitio<span class="ls-permlink"><a href="#recaptchaSiteKey"></a></span></h3></header><h4>Descripción</h4><p>La clave pública asignada por los servicios reCAPTCHA o hCaptcha.<br/><br/> Al usar reCAPTCHA, se usará una clave de sitio predeterminada si no se establece una (no recomendado).</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaSecretKey"><h3>Clave secreta<span class="ls-permlink"><a href="#recaptchaSecretKey"></a></span></h3></header><h4>Descripción</h4><p>La clave privada asignada por los servicios reCAPTCHA o hCaptcha.<br/><br/> Al usar reCAPTCHA, se usará una clave secreta predeterminada si no se establece una (no recomendado).</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaType"><h3>Tipo de CAPTCHA<span class="ls-permlink"><a href="#recaptchaType"></a></span></h3></header><h4>Descripción</h4><p>Especifique el tipo de CAPTCHA que se usará con los pares de claves.<br/> Si no se ha proporcionado un par de claves y este ajuste está en <span class="val">Not Set</span>, se usará un par de claves predeterminado de tipo CAPTCHA <span class="val">reCAPTCHA Invisible</span>.<br/><br/> <span class="val">reCAPTCHA Checkbox</span> mostrará un CAPTCHA con casilla de verificación para que el visitante valide. (requiere <span class="tagl"><a href="#recaptchaSiteKey">Clave de sitio</a></span>, <span class="tagl"><a href="#recaptchaSecretKey">Clave secreta</a></span>)<br/><br/> <span class="val">reCAPTCHA Invisible</span> intentará validar el CAPTCHA automáticamente y, si tiene éxito, redirigirá a la página deseada. (requiere <span class="tagl"><a href="#recaptchaSiteKey">Clave de sitio</a></span>, <span class="tagl"><a href="#recaptchaSecretKey">Clave secreta</a></span>)<br/><br/> <span class="val">hCaptcha</span> se puede usar para admitir el proveedor CAPTCHA <a href="https://www.hcaptcha.com" target="_blank" rel="noopener noreferrer">hCaptcha</a>. (requiere <span class="tagl"><a href="#recaptchaSiteKey">Clave de sitio</a></span>, <span class="tagl"><a href="#recaptchaSecretKey">Clave secreta</a></span>)<br/><br/> El valor predeterminado es <span class="val">reCAPTCHA Invisible</span>.</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaMaxTries"><h3>Máx. intentos<span class="ls-permlink"><a href="#recaptchaMaxTries"></a></span></h3></header><h4>Descripción</h4><p>Max Tries especifica el número máximo de intentos de CAPTCHA permitidos antes de denegar al visitante.<br/><br/> El valor predeterminado es <span class="val">3</span>.</p> <h4>Sintaxis</h4><p>Número entero</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="recaptchaVhReqLimit"><h3>Limite de solicitudes concurrentes<span class="ls-permlink"><a href="#recaptchaVhReqLimit"></a></span></h3></header><h4>Descripción</h4><p>El numero de solicitudes concurrentes necesario para activar CAPTCHA. CAPTCHA seguira usandose hasta que el recuento de solicitudes concurrentes caiga por debajo de este numero.<br/><br/> El valor predeterminado es <span class="val">15000</span>.</p> <h4>Sintaxis</h4><p>Número entero</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="bubbleWrap"><h3>Contenedor Bubblewrap<span class="ls-permlink"><a href="#bubbleWrap"></a></span></h3></header><h4>Descripción</h4><p>Establézcalo en <span class="val">Enabled</span> si desea iniciar procesos CGI (incluidos programas PHP) en un sandbox de bubblewrap. Consulte <a href="   https://wiki.archlinux.org/title/Bubblewrap " target="_blank" rel="noopener noreferrer">   https://wiki.archlinux.org/title/Bubblewrap </a> para obtener detalles sobre el uso de bubblewrap. Bubblewrap debe estar instalado en su sistema antes de usar este ajuste.<br/><br/> Este ajuste no se puede activar a nivel de virtual host si está establecido en "Disabled" a nivel de servidor.<br/><br/> Valores predeterminados:<br/> <b>Nivel de servidor:</b> Disabled<br/> <b>Nivel de VH:</b> Heredar el ajuste de nivel de servidor</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="namespace"><h3>Contenedor Namespace<span class="ls-permlink"><a href="#namespace"></a></span></h3></header><h4>Descripción</h4><p>Establézcalo en <span class="val">Enabled</span> si desea iniciar procesos CGI (incluidos programas PHP) en un sandbox de contenedor namespace. Solo se usa cuando <span class="tagl"><a href="ServSecurity_Help.html#bubbleWrap">Contenedor Bubblewrap</a></span> está establecido en <span class="val">Disabled</span>.<br/><br/> Cuando no está <span class="val">Disabled</span> a nivel de servidor, este valor de ajuste se puede sobrescribir a nivel de virtual host.<br/><br/> Valores predeterminados:<br/> <b>Nivel de servidor:</b> <span class="val">Disabled</span><br/> <b>Nivel de virtual host:</b> Heredar el ajuste de nivel de servidor</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="namespaceConfVhAdd"><h3>Archivo adicional de plantilla de namespace<span class="ls-permlink"><a href="#namespaceConfVhAdd"></a></span></h3></header><h4>Descripción</h4><p>Ruta a un archivo de configuracion existente que contiene una lista de directorios que se montaran junto con los metodos usados para montarlos. Si <span class="tagl"><a href="ServSecurity_Help.html#namespaceConf">Archivo de plantilla Namespace</a></span> tambien esta establecido en el nivel de Servidor, se usaran ambos archivos.</p> <h4>Sintaxis</h4><p>Una ruta que puede ser absoluta, relativa a $SERVER_ROOT o relativa a $VH_ROOT.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl"><h3>Control de acceso<span class="ls-permlink"><a href="#accessControl"></a></span></h3></header><h4>Descripción</h4><p>Especifica que subredes y/o direcciones IP pueden acceder al servidor. A nivel de servidor, este ajuste afectara a todos los virtual hosts. Tambien puede configurar control de acceso unico para cada virtual host a nivel de virtual host. Los ajustes de nivel de virtual host NO sobrescribiran los ajustes de nivel de servidor.<br/><br/> Bloquear/permitir una IP se determina por la combinacion de la lista permitida y la lista denegada. Si desea bloquear solo ciertas IP o subredes, ponga <span class="val">*</span> o <span class="val">ALL</span> en <span class="tagl"><a href="#accessControl_allow">Lista permitida</a></span> y liste las IP o subredes bloqueadas en <span class="tagl"><a href="#accessControl_deny">Lista denegada</a></span>. Si desea permitir solo ciertas IP o subredes, ponga <span class="val">*</span> o <span class="val">ALL</span> en <span class="tagl"><a href="#accessControl_deny">Lista denegada</a></span> y liste las IP o subredes permitidas en <span class="tagl"><a href="#accessControl_allow">Lista permitida</a></span>. Se usara el ajuste del ambito mas pequeno que coincida con una IP para determinar el acceso.<br/><br/> <b>Nivel de servidor:</b> Las IP o subredes confiables deben especificarse en <span class="tagl"><a href="#accessControl_allow">Lista permitida</a></span> agregando una "T" final. Las IP o subredes confiables no se ven afectadas por limites de conexion/throttling. Solo el control de acceso de nivel de servidor puede configurar IP/subredes confiables.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Use esto a nivel de servidor para restricciones generales que se apliquen a todos los virtual hosts.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_allow"><h3>Lista permitida<span class="ls-permlink"><a href="#accessControl_allow"></a></span></h3></header><h4>Descripción</h4><p>Especifica la lista de IP o subredes permitidas. Se aceptan <span class="val">*</span> o <span class="val">ALL</span>.</p> <h4>Sintaxis</h4><p>Lista delimitada por comas de direcciones IP o subredes. Se puede usar una "T" final para indicar una IP o subred de confianza, como <span class="val">192.168.1.*T</span>.</p> <h4>Ejemplo</h4><div class="ls-example"><b>Subredes:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, o 192.168.1.*<br/> <b>Direcciones IPv6:</b> ::1 o [::1]<br/> <b>Subredes IPv6:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 o [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Las IP o subredes de confianza establecidas en el control de acceso de nivel de servidor se excluirán de los límites de conexión/throttling.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_deny"><h3>Lista denegada<span class="ls-permlink"><a href="#accessControl_deny"></a></span></h3></header><h4>Descripción</h4><p>Especifica la lista de IP o subredes no permitidas.</p> <h4>Sintaxis</h4><p>Lista delimitada por comas de direcciones IP o subredes. Se aceptan <span class="val">*</span> o <span class="val">ALL</span>.</p> <h4>Ejemplo</h4><div class="ls-example"><b>Subredes:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, o 192.168.1.*<br/> <b>Direcciones IPv6:</b> ::1 o [::1]<br/> <b>Subredes IPv6:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 o [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realms"><h3>Realms de autorizacion<span class="ls-permlink"><a href="#realms"></a></span></h3></header><h4>Descripción</h4><p>Lista todos los realms de autorizacion para este virtual host. Los realms de autorizacion se usan para impedir que usuarios no autorizados accedan a paginas web protegidas. Un realm es un directorio de usuarios que contiene nombres de usuario y contrasenas con clasificaciones de grupo opcionales. La autorizacion se realiza a nivel de contexto. Como distintos contextos pueden compartir el mismo realm (base de datos de usuarios), los realms se definen por separado de los contextos que los usan. Puede hacer referencia a un realm por estos nombres en la configuracion de contexto.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realmName"><h3>Nombre del realm<span class="ls-permlink"><a href="#realmName"></a></span></h3></header><h4>Descripción</h4><p>Especifica un nombre unico para el realm de autorizacion.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="userDBLocation"><h3>Ubicacion de DB de usuarios<span class="ls-permlink"><a href="#userDBLocation"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ubicacion de la base de datos de usuarios. Se recomienda almacenar la base de datos bajo el directorio $SERVER_ROOT/conf/vhosts/$VH_NAME/.<br/><br/> Para el tipo de DB <span class="val">Password File</span>, es la ruta al archivo plano que contiene definiciones de usuario/contrasena. Puede editar este archivo mediante la consola WebAdmin haciendo clic en el nombre de archivo.<br/><br/> Cada linea del archivo de usuarios contiene un nombre de usuario seguido de dos puntos, seguido de una contrasena cifrada con crypt(), opcionalmente seguida de dos puntos y los nombres de grupo a los que pertenece el usuario. Los nombres de grupo se delimitan con comas. Si la informacion de grupo se especifica en la base de datos de usuarios, no se comprobara la base de datos de grupos.<br/><br/> Ejemplo:<blockquote><code>john:HZ.U8kgjnMOHo:admin,user</code></blockquote></p> <h4>Sintaxis</h4><p>Ruta al archivo de DB de usuarios.</p> <h4>Ver también</h4><p class="ls-text-small"><span class="tagl"><a href="#GroupDBLocation">Ubicacion de DB de grupos</a></span>, <span class="tagl"><a href="#userDB_attrPasswd">Atributo de contrasena</a></span>, <span class="tagl"><a href="#userDB_attrMemberOf">Atributo Member-of</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="userDBMaxCacheSize"><h3>Tamano maximo de cache de DB de usuarios<span class="ls-permlink"><a href="#userDBMaxCacheSize"></a></span></h3></header><h4>Descripción</h4><p>Especifica el tamano maximo de cache de la base de datos de usuarios. Los datos de autenticacion de usuarios accedidos recientemente se almacenaran en cache en memoria para proporcionar el maximo rendimiento.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Como una cache mas grande consumira mas memoria, un valor mayor puede o no proporcionar mejor rendimiento. Establezcalo en un tamano adecuado segun el tamano de su base de datos de usuarios y el uso del sitio.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="userDBCacheTimeout"><h3>Tiempo de espera de cache de DB de usuarios (seg)<span class="ls-permlink"><a href="#userDBCacheTimeout"></a></span></h3></header><h4>Descripción</h4><p>Especifica con que frecuencia se comprobara si la base de datos de usuarios backend tiene cambios. Cada entrada de la cache tiene una marca de tiempo. Cuando los datos en cache son mas antiguos que el timeout especificado, se comprobara si la base de datos backend tiene cambios. Si no hay cambios, la marca de tiempo se reiniciara a la hora actual; de lo contrario, se cargaran los datos nuevos. La recarga del servidor y el reinicio graceful limpiaran la cache inmediatamente.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Si la base de datos backend no cambia con mucha frecuencia, establezca un timeout mas largo para mejorar el rendimiento.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="GroupDBLocation"><h3>Ubicacion de DB de grupos<span class="ls-permlink"><a href="#GroupDBLocation"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ubicacion de la base de datos de grupos. Se recomienda almacenar la base de datos bajo el directorio $SERVER_ROOT/conf/vhosts/$VH_NAME/.<br/><br/> La informacion de grupo puede establecerse en la base de datos de usuarios o en esta DB de grupos independiente. Para la autenticacion de usuarios, se comprobara primero la DB de usuarios. Si la DB de usuarios tambien contiene informacion de grupo, no se comprobara la DB de grupos.<br/><br/> Para el tipo de DB <span class="val">Password File</span>, la ubicacion de la DB de grupos debe ser la ruta al archivo plano que contiene definiciones de grupo. Puede editar este archivo mediante la consola WebAdmin haciendo clic en el nombre de archivo.<br/><br/> Cada linea de un archivo de grupos debe contener un nombre de grupo seguido de dos puntos, seguido de un grupo de nombres de usuario delimitados por espacios. Ejemplo:<br/> <blockquote><code>testgroup: user1 user2 user3</code></blockquote></p> <h4>Sintaxis</h4><p>Nombre de archivo que puede ser una ruta absoluta o una ruta relativa a $SERVER_ROOT, $VH_ROOT.</p> <h4>Ver también</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBLocation">Ubicacion de DB de usuarios</a></span>, Context <span class="tagl"><a href="Context_Help.html#required">Require (usuarios/grupos autorizados)</a></span>, <span class="tagl"><a href="#groupDB_attrGroupMember">Atributo de miembro de grupo</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="groupDBMaxCacheSize"><h3>Tamano maximo de cache de DB de grupos<span class="ls-permlink"><a href="#groupDBMaxCacheSize"></a></span></h3></header><h4>Descripción</h4><p>Especifica el tamano maximo de cache de la base de datos de grupos.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Como una cache mas grande consumira mas memoria, un valor mayor puede o no proporcionar mejor rendimiento. Establezcalo en un tamano adecuado segun el tamano de su base de datos de usuarios y el uso del sitio.</p> <h4>Ver también</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBMaxCacheSize">Tamano maximo de cache de DB de usuarios</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="groupDBCacheTimeout"><h3>Tiempo de espera de cache de DB de grupos (seg)<span class="ls-permlink"><a href="#groupDBCacheTimeout"></a></span></h3></header><h4>Descripción</h4><p>Especifica con que frecuencia se comprobara si la base de datos de grupos backend tiene cambios. Para mas detalles, consulte <span class="tagl"><a href="#userDBCacheTimeout">Tiempo de espera de cache de DB de usuarios (seg)</a></span>.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Ver también</h4><p class="ls-text-small"><span class="tagl"><a href="#userDBCacheTimeout">Tiempo de espera de cache de DB de usuarios (seg)</a></span></p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

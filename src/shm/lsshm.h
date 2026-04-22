@@ -172,7 +172,7 @@ public:
     {
         if (offset < 32)    //sizeof(LsShmMap)
             return NULL;
-        if (offset > m_iMaxSizeO)
+        if (offset >= m_iMaxSizeO)
         {
             tryRecoverBadOffset(offset);
         }

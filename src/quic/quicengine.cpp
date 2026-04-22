@@ -732,6 +732,7 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 
     lsquic_logger_init(&logger_if, log4cxx::Logger::getDefault(),
                                                     LLTS_YYYYMMDD_HHMMSSUS);
+    lsquic_global_init(LSQUIC_GLOBAL_SERVER);
 //     if (LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
 //         lsquic_set_log_level("debug");
 //     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
@@ -741,7 +742,6 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
     setDebugLog(isQuicLogEnable);
 
     m_pMultiplexer = pMplx;
-
 #ifndef _NOT_USE_SHM_
     if (0 != QuicShm::getInstance().init(pShmDir))
     {

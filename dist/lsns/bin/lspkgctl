@@ -311,7 +311,7 @@ def write_pkg(pkg, pkg_json):
     
 def revalidate_pkg(pkg, pkg_sizes, users, users_vals, org_pkg, pkg_json, force, args_dict):
     logging.debug("revalidate_pkg %s %d users" % (pkg, len(users)))
-    if len(users) == 0:
+    if len(users) == 0 and args_dict != None and not 'size' in args_dict and int(args_dict['size']) < 0:
         logging.debug("Delete package entirely: %s" % pkg)
         filename = common.pkg_to_filename(pkg)
         if os.path.exists(filename):

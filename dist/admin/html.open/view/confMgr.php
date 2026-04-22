@@ -1,11 +1,20 @@
 <?php
 
-require_once("inc/auth.php");
+use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\Product\Current\DPageDef;
+use LSWebAdmin\Product\Current\Service;
+use LSWebAdmin\Product\Current\UI;
+use LSWebAdmin\UI\ConfPageResolver;
+use LSWebAdmin\UI\ConfUiContext;
+use LSWebAdmin\UI\UIBase;
+
+require_once __DIR__ . '/inc/auth.php';
 
 $disp = Service::ConfigDispData();
+$uiContext = ConfUiContext::fromDisplay($disp);
 
-$page = DPageDef::GetPage($disp);
-UI::PrintConfPage($disp, $page);
+$page = ConfPageResolver::resolve($uiContext, DPageDef::class);
+UI::PrintConfPage($uiContext, $page);
 
 ?>
 
@@ -18,24 +27,28 @@ var pagefunction = function() {
    	var rospan = $("#readonlynotice");
     <?php
     if (defined('_CONF_READONLY_')) {
-        $alert_str = '<i class=\"fa fa-bell\"></i> ' . DMsg::UIStr('note_readonly_mode');
+        $alert_str = '<i class=\"lst-icon\" data-lucide=\"bell\"></i> ' . DMsg::UIStr('note_readonly_mode');
     ?>
-        rospan.html("<?php echo $alert_str;?>");
-      	if (rospan.hasClass("hide"))
-            rospan.removeClass("hide");
+        rospan.html(<?php echo UIBase::EscapeJs($alert_str); ?>);
+        if (rospan.prop("hidden"))
+            rospan.prop("hidden", false);
 
     <?php } else { ?>
         rospan.html("");
-      	if (!rospan.hasClass("hide"))
-            rospan.addClass("hide");
+        if (!rospan.prop("hidden"))
+            rospan.prop("hidden", true);
 
-    <?php }
+<?php }
 
    if (Service::HasChanged()) { ?>
 	var span = $("#restartnotice");
-	if (span.hasClass("hide"))
-		span.removeClass("hide");
+	if (span.prop("hidden"))
+		span.prop("hidden", false);
 <?php } ?>
+
+    if (typeof syncRibbonState === 'function') {
+        syncRibbonState();
+    }
 };
 
 // end pagefunction

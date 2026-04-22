@@ -666,12 +666,15 @@ int HttpHeaderOps::parseOp(const char *pBegin, const char *pEnd, int is_req)
         pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);
     }
 
-
-
-    if (pNameEnd && (pNameEnd - pNameBegin == 6)
-        && (strncasecmp(pNameBegin, "always", 6) == 0))
+    if (pNameEnd
+        && ((pNameEnd - pNameBegin == 6
+                && strncasecmp(pNameBegin, "always", 6) == 0)
+            || (pNameEnd - pNameBegin == 9
+                && strncasecmp(pNameBegin, "onsuccess", 9) == 0)))
     {
         pNameBegin += 7;
+        if (tolower(*pNameBegin) == 'o')
+            pNameBegin += 3;
         while ((pNameBegin < pEnd) && (isspace(*pNameBegin)))
             ++pNameBegin;
         pNameEnd = StringTool::memNextArg(&pNameBegin, pEnd - pNameBegin);

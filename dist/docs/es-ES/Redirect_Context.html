@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Contexto de redirección</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Contexto de redirección." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../Redirect_Context.html" data-lang="en-US">English</option><option value="../es-ES/Redirect_Context.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/Redirect_Context.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/Redirect_Context.html" data-lang="fr-FR">Français</option><option value="../zh-CN/Redirect_Context.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/Redirect_Context.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a class="current" href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="LB_Context.html">Contexto de balanceo</a></div><div class="center"><a href="Context_Help.html">Contexto</a></div><div class="next"><a href="App_Server_Context.html">Contexto de servidor de aplicaciones</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Contexto de redirección</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#redirectContext">Contexto de redirección</a></h3><ul class="doc-toc__links"><li><a href="#expuri">URI</a></li><li><a href="#externalredirect">Redireccion externa</a></li><li><a href="#statuscode">Codigo de estado</a></li><li><a href="#destinationuri">URI de destino</a></li><li><a href="#extraHeaders">Operaciones de encabezado</a></li><li><a href="#realm">Realm</a></li><li><a href="#authName">Nombre de autenticacion</a></li><li><a href="#required">Require (usuarios/grupos autorizados)</a></li><li><a href="#accessAllowed">Acceso permitido</a></li><li><a href="#accessDenied">Acceso denegado</a></li><li><a href="#extAuthorizer">Autorizador</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="redirectContext"><h3>Contexto de redirección<span class="ls-permlink"><a href="#redirectContext"></a></span></h3></header><h4>Descripción</h4><p>Un contexto de redireccion puede usarse para reenviar una URI o un grupo de URIs a otra ubicacion. La URI de destino puede estar en el mismo sitio web (una redireccion interna) o ser una URI absoluta que apunte a otro sitio web (una redireccion externa).</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span></h3></header><h4>Descripción</h4><p>Especifica la URI para este contexto.</p> <h4>Sintaxis</h4><p>La URI puede ser una URI simple (que empieza con "/") o una URI de expresion regular compatible con Perl (que empieza con "exp:"). Si una URI simple termina con "/", este contexto incluira todas las sub-URI bajo esta URI. Si el contexto se mapea a un directorio del sistema de archivos, debe agregarse una "/" final.</p> <h4>Ver también</h4><p class="ls-text-small"><span class="tagl"><a href="#location">Ubicacion</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="externalredirect"><h3>Redireccion externa<span class="ls-permlink"><a href="#externalredirect"></a></span></h3></header><h4>Descripción</h4><p>Especifica si esta redireccion es externa. Para redireccion externa, puede especificarse <span class="tagl"><a href="#statuscode">Codigo de estado</a></span> y <span class="tagl"><a href="#destinationuri">URI de destino</a></span> puede empezar con "/" o con "http(s)://". Para redireccion interna, <span class="tagl"><a href="#destinationuri">URI de destino</a></span> debe empezar con "/".</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="statuscode"><h3>Codigo de estado<span class="ls-permlink"><a href="#statuscode"></a></span></h3></header><h4>Descripción</h4><p>Especifica el codigo de estado de respuesta de la redireccion externa. Si el codigo de estado esta entre 300 y 399, puede especificarse <span class="tagl"><a href="#destinationuri">URI de destino</a></span>.</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="destinationuri"><h3>URI de destino<span class="ls-permlink"><a href="#destinationuri"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ubicacion de destino de la redireccion. Si esta URI redirigida se mapea a una URI en otro contexto de redireccion, se redirigira de nuevo.</p> <h4>Sintaxis</h4><p>Esta URI puede ser una URI relativa del mismo sitio web que empieza con "/", o una URI absoluta que apunta a otro sitio web y empieza con "http(s)://". Si <span class="tagl"><a href="#expuri">URI</a></span> contiene expresiones regulares, el destino puede referenciar las variables coincidentes, como $1 o $2.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extraHeaders"><h3>Operaciones de encabezado<span class="ls-permlink"><a href="#extraHeaders"></a></span></h3></header><h4>Descripción</h4><p>Especifica encabezados de respuesta/solicitud adicionales que se agregaran. Se pueden agregar varias directivas de encabezado, una por linea. "NONE" puede usarse para deshabilitar la herencia de encabezados padre. Si no se proporciona una directiva, se asume 'Header'.</p> <h4>Sintaxis</h4><p>[Header]|RequestHeader [condition] set|append|merge|add|unset header [value] [early|env=[!]variable]</p> <h4>Ejemplo</h4><div class="ls-example">set Cache-control no-cache<br/> append Cache-control no-store<br/> Header set My-header cust_header_val<br/> RequestHeader set My-req-header cust_req_header_val</div><h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> La sintaxis y el uso son similares a las directivas <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">mod_headers de Apache</a> para las operaciones admitidas.<br/><br/> <span class="ls-badge ls-badge--info">Information</span> La directiva 'Header' es opcional y puede excluirse o conservarse al copiar reglas desde otro lugar sin problema.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realm"><h3>Realm<span class="ls-permlink"><a href="#realm"></a></span></h3></header><h4>Descripción</h4><p>Especifica el realm de autorizacion para este contexto. Cuando se especifica, deben proporcionarse un nombre de usuario y una contrasena validos para acceder a este contexto. <span class="tagl"><a href="VHSecurity_Help.html#realms">Realms de autorizacion</a></span> se configuran en la seccion <span class="tagP"><a href="#VHSecurity_Help">Host virtual - Seguridad</a></span>. Esta opcion usa el <span class="tagl"><a href="VHSecurity_Help.html#realmName">Nombre del realm</a></span> de cada realm.</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="authName"><h3>Nombre de autenticacion<span class="ls-permlink"><a href="#authName"></a></span></h3></header><h4>Descripción</h4><p>Especifica un nombre alternativo para el realm de autorizacion del contexto actual. Si no se especifica, se usara el nombre de realm original. El nombre de autenticacion se muestra en la ventana emergente de login del navegador.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="required"><h3>Require (usuarios/grupos autorizados)<span class="ls-permlink"><a href="#required"></a></span></h3></header><h4>Descripción</h4><p>Especifica que usuario/grupo puede acceder a este contexto. Esto permite usar una base de datos de usuarios/grupos (especificada en <span class="tagl"><a href="#realm">Realm</a></span>) en varios contextos, pero permitir que solo ciertos usuarios/grupos de esa base de datos accedan a este contexto.</p> <h4>Sintaxis</h4><p>La sintaxis es compatible con la directiva Require de Apache. Por ejemplo: <ul> <li><span class="val">user username [username ...]</span><br/> Solo los usuarios listados pueden acceder a este contexto.</li> <li> <span class="val">group groupid [groupid ...]</span><br/> Solo los usuarios pertenecientes a los grupos listados pueden acceder a este contexto.</li> </ul> Si esta opcion no se especifica, todos los usuarios validos podran acceder a este recurso.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessAllowed"><h3>Acceso permitido<span class="ls-permlink"><a href="#accessAllowed"></a></span></h3></header><h4>Descripción</h4><p>Especifica que IPs o subredes pueden acceder a recursos bajo este contexto. Junto con <span class="tagl"><a href="#accessDenied">Acceso denegado</a></span> y el control de acceso a nivel de servidor/virtual host, la accesibilidad se determina por el ambito mas pequeno en el que cae la direccion IP del cliente.</p> <h4>Sintaxis</h4><p>Lista de IPs/subredes separada por comas.</p> <h4>Ejemplo</h4><div class="ls-example">Las subredes pueden escribirse como <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> o <span class="val">192.168.1.*</span>.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessDenied"><h3>Acceso denegado<span class="ls-permlink"><a href="#accessDenied"></a></span></h3></header><h4>Descripción</h4><p>Especifica que IPs o subredes NO pueden acceder a recursos bajo este contexto. Junto con <span class="tagl"><a href="#accessAllowed">Acceso permitido</a></span> y el control de acceso a nivel de servidor/virtual host, la accesibilidad se determina por el ambito mas pequeno en el que cae la direccion IP del cliente.</p> <h4>Sintaxis</h4><p>Lista de IPs/subredes separada por comas.</p> <h4>Ejemplo</h4><div class="ls-example">Las subredes pueden escribirse como <span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> o <span class="val">192.168.1.*</span>.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAuthorizer"><h3>Autorizador<span class="ls-permlink"><a href="#extAuthorizer"></a></span></h3></header><h4>Descripción</h4><p>Especifica una aplicacion externa que puede usarse para generar decisiones de autorizado/no autorizado. Actualmente, solo esta disponible FastCGI Authorizer. Para mas detalles sobre el rol FastCGI Authorizer, visite <a href="   https://fastcgi-archives.github.io/ " target="_blank" rel="noopener noreferrer">   https://fastcgi-archives.github.io/ </a>.</p> <h4>Sintaxis</h4><p>Seleccionar de la lista desplegable</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

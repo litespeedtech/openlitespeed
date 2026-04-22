@@ -10,7 +10,6 @@ touch src/Makefile.in
 touch src/edio/Makefile.in
 touch src/extensions/Makefile.in
 touch src/http/Makefile.in
-touch src/spdy/Makefile.in
 touch src/log4cxx/Makefile.in
 touch src/main/Makefile.in
 touch src/socket/Makefile.in

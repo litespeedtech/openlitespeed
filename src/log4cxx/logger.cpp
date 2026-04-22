@@ -171,34 +171,41 @@ void Logger::vlog(int level, const char *pId, const char *format,
     int errno_save = errno;
     char achBuf[8192];
     int messageLen = 0;
-    if (pId != NULL)
-        messageLen = snprintf(achBuf, sizeof(achBuf) - 1, "[%s] ", pId);
-    messageLen += vsnprintf(&achBuf[messageLen],
-                            sizeof(achBuf) - 1 - messageLen,  format, args);
-    if (messageLen > (int)sizeof(achBuf) - 1)
-    {
-        messageLen = sizeof(achBuf) - 1;
-        achBuf[messageLen] = 0;
-    }
-    messageLen = logSanitize(achBuf, messageLen);
 
     if ((level > Level::DEBUG) && (level < Level::TRACE))
         level = Level::DEBUG;
 
     LoggingEvent event(level, getName(), achBuf, messageLen);
-
-    if (flag)
-        event.m_flag |= flag;
-
-    gettimeofday(&event.m_timestamp, NULL);
     Logger *pLogger = this;
     while (1)
     {
-        if (!event.m_pLayout)
-            event.m_pLayout = pLogger->m_pLayout;
         if (pLogger->m_pAppender
             && ((flag & LOGEVENT_FORCED) || pLogger->isEnabled(level)))
         {
+            //Now make event
+            if(!event.m_iMessageLen) {
+
+                if (pId != NULL)
+                    messageLen = snprintf(achBuf, sizeof(achBuf) - 1, "[%s] ", pId);
+                messageLen += vsnprintf(&achBuf[messageLen],
+                                        sizeof(achBuf) - 1 - messageLen,  format, args);
+                if (messageLen > (int)sizeof(achBuf) - 1)
+                {
+                    messageLen = sizeof(achBuf) - 1;
+                    achBuf[messageLen] = 0;
+                }
+                messageLen = logSanitize(achBuf, messageLen);
+                event.m_iMessageLen = messageLen;
+
+                if (flag)
+                    event.m_flag |= flag;
+
+                gettimeofday(&event.m_timestamp, NULL);
+
+                if (!event.m_pLayout)
+                        event.m_pLayout = pLogger->m_pLayout;
+            }
+
             //if (pLogger->m_pAppender->append(&event) == -1)
             //    break;
             pLogger->m_pAppender->append(&event);
@@ -208,6 +215,7 @@ void Logger::vlog(int level, const char *pId, const char *format,
         pLogger = m_pParent;
     }
     errno = errno_save;
+
 }
 
 

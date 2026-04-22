@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Plantillas de virtual hosts</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Plantillas de virtual hosts." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../Templates_Help.html" data-lang="en-US">English</option><option value="../es-ES/Templates_Help.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/Templates_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/Templates_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/Templates_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/Templates_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a class="current" href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Listeners_SSL_Help.html">Listeners - SSL</a></div><div class="center"><a href="config.html">Configuración</a></div><div class="next"><a href="VirtualHosts_Help.html">Registro de virtual host</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Plantillas de virtual hosts</h1><div class="doc-page-intro">Las plantillas de virtual hosts facilitan la creacion de muchos virtual hosts nuevos con configuraciones similares.<br/><br/> Cada plantilla contiene un archivo de configuracion de plantilla, una lista de listeners mapeados y una lista de virtual hosts miembros.<br/><br/> Para agregar un virtual host basado en plantilla, el administrador solo debe agregar un miembro con un nombre de virtual host unico y un nombre de dominio cualificado a la lista de miembros de la plantilla. El mapeo de listener a virtual host se agregara automaticamente para todos los listeners de la lista de listeners mapeados de la plantilla.<br/><br/> Mas adelante, si necesita personalizar la configuracion de un virtual host especifico, solo debe "instanciar" ese virtual host miembro y se creara automaticamente una configuracion de virtual host independiente. Incluso al configurar un virtual host personalizado, una plantilla puede seguir siendo un punto de partida conveniente.</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">General</h3><ul class="doc-toc__links"><li><a href="#templateName">Nombre de plantilla</a></li><li><a href="#templateFile">Archivo de plantilla</a></li><li><a href="#mappedListeners">Listeners mapeados</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Hosts virtuales miembros</h3><ul class="doc-toc__links"><li><a href="#templateVHName">Nombre del virtual host</a></li><li><a href="#templateVHDomain">Nombre de dominio</a></li><li><a href="#templateVHAliases">Alias de dominio</a></li><li><a href="#memberVHRoot">Raíz del virtual host miembro</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Configuración de plantilla</h3><ul class="doc-toc__links"><li><a href="#templateVHRoot">Raíz predeterminada del virtual host</a></li><li><a href="#templateVHConfigFile">Archivo de configuración de VHost instanciado</a></li><li><a href="#templateVHDocRoot">Raíz de documentos</a></li><li><a href="#tp_vhFileName">Nombre de archivo usado en la plantilla</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateName"><h3>Nombre de plantilla<span class="ls-permlink"><a href="#templateName"></a></span></h3></header><h4>Descripción</h4><p>Nombre único de la plantilla.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateFile"><h3>Archivo de plantilla<span class="ls-permlink"><a href="#templateFile"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ruta al archivo de configuración de esta plantilla. El archivo debe ubicarse dentro de $SERVER_ROOT/conf/templates/ con un nombre de archivo ".conf". Si el archivo indicado no existe, después de intentar guardar la plantilla aparecerá un error con el enlace "CLICK TO CREATE". Este enlace generará un archivo de plantilla nuevo y vacío. Al eliminar la plantilla, la entrada se quitará de sus configuraciones, pero el archivo real de configuración de la plantilla no se eliminará.</p> <h4>Sintaxis</h4><p>ruta</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="mappedListeners"><h3>Listeners mapeados<span class="ls-permlink"><a href="#mappedListeners"></a></span></h3></header><h4>Descripción</h4><p>Especifica los nombres de todos los listeners a los que se mapea esta plantilla. Se agregará a los listeners especificados en este campo un mapeo de listener a virtual host para los virtual hosts miembros de esta plantilla. Este mapeo asociará listeners con virtual hosts según los nombres de dominio y aliases definidos en las configuraciones individuales de los virtual hosts miembros.</p> <h4>Sintaxis</h4><p>lista separada por comas</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHName"><h3>Nombre del virtual host<span class="ls-permlink"><a href="#templateVHName"></a></span></h3></header><h4>Descripción</h4><p>Nombre único para este virtual host. Este nombre debe ser único entre todos los virtual hosts miembros de plantilla y los virtual hosts independientes. Dentro de una configuración de ruta de directorio, este nombre puede referenciarse con la variable <span class="val">$VH_NAME</span>.<br/><br/> Si también se configura un virtual host independiente con el mismo nombre, se ignorará la configuración del virtual host miembro.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHDomain"><h3>Nombre de dominio<span class="ls-permlink"><a href="#templateVHDomain"></a></span></h3></header><h4>Descripción</h4><p>Especifica el nombre de dominio principal de este virtual host miembro. Si se deja en blanco, se usará el nombre del virtual host. Debe ser un nombre de dominio completo, aunque también puede usar una dirección IP. Se recomienda agregar <span class="val">:<port></span> para sitios web que no estén en el puerto 80. En configuraciones que contienen nombres de dominio, este dominio puede referenciarse con la variable <span class="val">$VH_DOMAIN</span>.<br/><br/> Este nombre de dominio se usará en las siguientes situaciones: <ol>   <li>Para coincidir con el hostname del encabezado Host al procesar una solicitud.</li>   <li>Para rellenar configuraciones de nombres de dominio para complementos como FrontPage o AWstats.</li>  <li>Para configurar mapeos de listener a virtual host basados en la plantilla de virtual host.</li> </ol></p> <h4>Sintaxis</h4><p>nombre de dominio</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHAliases"><h3>Alias de dominio<span class="ls-permlink"><a href="#templateVHAliases"></a></span></h3></header><h4>Descripción</h4><p>Especifica nombres alternativos para el virtual host. Todos los hostnames y direcciones IP posibles deben agregarse a esta lista. Se permiten los caracteres comodín <span class="val">*</span> y <span class="val">?</span> en el nombre. Agregue <span class="val">:<port></span> para sitios web que no estén en el puerto 80.<br/><br/> Los aliases se usarán en las siguientes situaciones: <ol>   <li>Para coincidir con el hostname del encabezado Host al procesar una solicitud.</li>   <li>Para rellenar configuraciones de nombre de dominio/alias para complementos como FrontPage o AWstats.</li>   <li>Para configurar mapeos de listener a virtual host basados en la plantilla de virtual host.</li> </ol></p> <h4>Sintaxis</h4><p>Lista separada por comas de nombres de dominio.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="memberVHRoot"><h3>Raíz del virtual host miembro<span class="ls-permlink"><a href="#memberVHRoot"></a></span></h3></header><h4>Descripción</h4><p>Especifica el directorio raíz de este virtual host. Si se deja en blanco, se usará la raíz predeterminada de virtual host para esta plantilla.<br/><br/> Nota: Esto <b>NO</b> es la raíz de documentos. Se recomienda colocar todos los archivos relacionados con el virtual host (como configuración de virtual host, archivos de registro, archivos html, scripts CGI, etc.) bajo este directorio. La raíz de virtual host puede referenciarse como $VH_ROOT.</p> <h4>Sintaxis</h4><p>ruta</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHRoot"><h3>Raíz predeterminada del virtual host<span class="ls-permlink"><a href="#templateVHRoot"></a></span></h3></header><h4>Descripción</h4><p>Especifica el directorio raíz predeterminado para los virtual hosts miembros que usan esta plantilla. La variable <span class="val">$VH_NAME</span> debe aparecer en la ruta. Esto permite asignar automáticamente a cada miembro de la plantilla un directorio raíz separado basado en su nombre.</p> <h4>Sintaxis</h4><p>ruta</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHConfigFile"><h3>Archivo de configuración de VHost instanciado<span class="ls-permlink"><a href="#templateVHConfigFile"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ubicación del archivo de configuración generado al instanciar un virtual host miembro. La variable <span class="val">$VH_NAME</span> debe aparecer en la ruta para que cada virtual host tenga su propio archivo. Debe ubicarse bajo $SERVER_ROOT/conf/vhosts/. Este archivo de configuración solo se creará después de sacar un vhost miembro de la plantilla mediante instanciación.</p> <h4>Sintaxis</h4><p>Cadena con la variable $VH_NAME y sufijo .conf</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Se recomienda $VH_NAME/vhconf.conf para facilitar la administración.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHDocRoot"><h3>Raíz de documentos<span class="ls-permlink"><a href="#templateVHDocRoot"></a></span></h3></header><h4>Descripción</h4><p>Especifica la ruta única para la raíz de documentos de cada virtual host miembro. La variable <span class="val">$VH_NAME</span> o <span class="val">$VH_ROOT</span> debe aparecer en la ruta para que cada virtual host miembro tenga su propia raíz de documentos.</p> <h4>Sintaxis</h4><p>ruta con la variable $VH_NAME o $VH_ROOT</p> <h4>Ejemplo</h4><div class="ls-example">$VH_ROOT/public_html/ o $SERVER_ROOT/$VH_NAME/public_html.</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="tp_vhFileName"><h3>Nombre de archivo usado en la plantilla<span class="ls-permlink"><a href="#tp_vhFileName"></a></span></h3></header><h4>Descripción</h4><p>Especifica una ruta de archivo usada por ajustes de virtual host basados en plantilla. La variable <span class="val">$VH_NAME</span> o <span class="val">$VH_ROOT</span> debe aparecer en la ruta para que cada virtual host miembro resuelva a su propio archivo. Este ajuste es para archivos pertenecientes a la plantilla, como archivos de registro, no para el archivo de configuración de virtual host instanciado.</p> <h4>Sintaxis</h4><p>ruta con la variable $VH_NAME o $VH_ROOT</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

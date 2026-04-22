@@ -1,5 +1,7 @@
 <?php
 
+use LSWebAdmin\I18n\DMsg;
+
 //ribbon breadcrumbs config
 //["Display Name" => "URL"];
 $breadcrumbs = [
@@ -13,7 +15,7 @@ ex:
 	"title" => "Display Title",
 	"url" => "http://yoururl.com",
 	"url_target" => "_self",
-	"icon" => "fa-home",
+	"icon" => "home",
 	"label_htm" => "<span>Add your custom label/badge html here</span>",
 	"sub" => [] //contains array of sub items with the same format as the parent
 ]
@@ -23,85 +25,70 @@ ex:
 $page_nav = [
 		'dashboard' => [
 				'title' => DMsg::UIStr('menu_dashboard'),
-				'url' => '#view/dashboard.php',
-				'icon' => 'fa-home'],
+				'url' => 'index.php?view=dashboard',
+				'icon' => 'layout-dashboard'],
 		'serv' => [
 				'title' => DMsg::UIStr('menu_serv'),
-				'icon' => 'fa-globe',
-				'url' => '#view/confMgr.php?m=serv'],
+				'icon' => 'server-cog',
+				'url' => 'index.php?view=confMgr&m=serv'],
 		'sl' => [
 				'title' => DMsg::UIStr('menu_sl'),
-				'icon' => 'fa-chain',
-				'url' => '#view/confMgr.php?m=sl'],
+				'icon' => 'plug-zap',
+				'url' => 'index.php?view=confMgr&m=sl'],
 		'vh' => [
 				'title' => DMsg::UIStr('menu_vh'),
-				'icon' => 'fa-cubes',
-				'url' => '#view/confMgr.php?m=vh'],
+				'icon' => 'server',
+				'url' => 'index.php?view=confMgr&m=vh'],
 		'tp' => [
 				'title' => DMsg::UIStr('menu_tp'),
-				'url' => '#view/confMgr.php?m=tp',
-				'icon' => 'fa-files-o'],
-		'tools' => [
-				'title' => DMsg::UIStr('menu_tools'),
-				'icon' => 'fa-th',
+				'url' => 'index.php?view=confMgr&m=tp',
+				'icon' => 'copy'],
+		'livestats' => [
+				'title' => DMsg::UIStr('menu_livestats'),
+				'icon' => 'activity-square',
 				'sub' => [
-						'buildphp' => [
-								'title' => DMsg::UIStr('menu_compilephp'),
-								'url' => '#view/compilePHP.php'],
-						'logviewer' => [
-								'title' => DMsg::UIStr('menu_logviewer'),
-								'url' => '#view/logviewer.php'],
 						'stats' => [
 								'title' => DMsg::UIStr('menu_rtstats'),
-								'url' => '#view/realtimestats.php'],
+								'url' => 'index.php?view=realtimestats'],
+						'listenervhmap' => [
+								'title' => DMsg::UIStr('service_listenervhmap'),
+								'url' => 'index.php?view=listenervhmap'],
+						'blockedips' => [
+								'title' => DMsg::UIStr('service_blockedips'),
+								'url' => 'index.php?view=blockedips'],
+				]
+		],
+		'tools' => [
+				'title' => DMsg::UIStr('menu_tools'),
+				'icon' => 'wrench',
+				'sub' => [
+						'logviewer' => [
+								'title' => DMsg::UIStr('menu_logviewer'),
+								'url' => 'index.php?view=logviewer'],
+					'loginhistory' => [
+							'title' => DMsg::UIStr('menu_loginhistory'),
+							'url' => 'index.php?view=loginhistory'],
+					'opsauditlog' => [
+							'title' => DMsg::UIStr('menu_opsauditlog'),
+							'url' => 'index.php?view=opsauditlog'],
+					'buildphp' => [
+								'title' => DMsg::UIStr('menu_compilephp'),
+								'url' => 'index.php?view=compilePHP'],
 				]
 		],
 		'webadmin' => [
 				'title' => DMsg::UIStr('menu_webadmin'),
-				'icon' => 'fa-gear',
+				'icon' => 'settings',
 				'sub' => [
 						'lg' => [
 								'title' => DMsg::UIStr('menu_general'),
-								'url' => '#view/confMgr.php?m=admin'],
+								'url' => 'index.php?view=confMgr&m=admin'],
 						'al' => [
 								'title' => DMsg::UIStr('menu_sl'),
-								'url' => '#view/confMgr.php?m=al']
+								'url' => 'index.php?view=confMgr&m=al']
 				]
 		],
-		'help' => [
-				'title' => DMsg::UIStr('menu_help'),
-				'icon' => 'fa-book',
-				'sub' => [
-						'docs' => [
-								'title' => DMsg::UIStr('menu_docs'),
-								'url_target' => '_blank',
-								'url' => DMsg::DocsUrl()],
-						'guides' => [
-								'title' => DMsg::UIStr('menu_guides'),
-								'url' => 'https://openlitespeed.org/kb/?utm_source=Open&utm_medium=WebAdmin',
-								'url_target' => '_blank'],
-						'devgroup' => [
-								'title' => DMsg::UIStr('menu_devgroup'),
-								'url' => 'https://groups.google.com/forum/#!forum/openlitespeed-development',
-								'url_target' => '_blank'],
-						'releaselog' => [
-								'title' => DMsg::UIStr('menu_releaselog'),
-								'url' => 'https://openlitespeed.org/release-log/?utm_source=Open&utm_medium=WebAdmin',
-								'url_target' => '_blank'],
-						'forum' => [
-								'title' => DMsg::UIStr('menu_forum'),
-								'url' => 'https://forum.openlitespeed.org/?utm_source=Open&utm_medium=WebAdmin',
-								'url_target' => '_blank'],
-						'slack' => [
-								'title' => DMsg::UIStr('menu_slack'),
-								'url' => 'https://www.litespeedtech.com/slack',
-								'url_target' => '_blank'],
-						'cloudimage' => [
-								'title' => DMsg::UIStr('menu_cloudimage'),
-								'url' => 'https://docs.litespeedtech.com/cloud/images/?utm_source=Open&utm_medium=WebAdmin',
-								'url_target' => '_blank'],
-				]
-		]
+		'help' => \LSWebAdmin\Product\Current\UI::GetHelpMenu()
 
 ];
 

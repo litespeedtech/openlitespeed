@@ -1,26 +1,68 @@
 <!DOCTYPE html>
+<html lang="en-US">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - Admin Console Security</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - Admin Console Security." />
+  <title>OpenLiteSpeed Users&#039; Manual - Admin Console Security</title>
+  <meta name="description" content="OpenLiteSpeed Users&#039; Manual - Admin Console Security." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 12</h3>
-  <hr/>
-  <div>
-    <ul>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed Users&#039; Manual">
+    <img src="img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed Users&#039; Manual</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Open menu" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Search pages and settings" data-no-results="No results found.">
+      <label class="sr-only" for="doc-search-input">Search the manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Search pages and settings" aria-controls="doc-search-results" />
+        <button type="submit">Search</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Language"><option value="AdminSecurity_Help.html" data-lang="en-US" selected>English</option><option value="es-ES/AdminSecurity_Help.html" data-lang="es-ES">Español</option><option value="de-DE/AdminSecurity_Help.html" data-lang="de-DE">Deutsch</option><option value="fr-FR/AdminSecurity_Help.html" data-lang="fr-FR">Français</option><option value="zh-CN/AdminSecurity_Help.html" data-lang="zh-CN">简体中文</option><option value="ja-JP/AdminSecurity_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Toggle theme" data-theme-toggle data-theme-light-label="Light mode" data-theme-dark-label="Dark mode" title="Toggle theme">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="en-US" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Users&#039; Manual</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="Table of Contents"><ul class="sidetree__list">
       <li><a href="license.html">License</a></li>
       <li><a href="intro.html">Introduction</a></li>
       <li><a href="install.html">Installation</a></li>
@@ -41,13 +83,15 @@
           <li><a href="ServSecurity_Help.html">Server Security</a></li>
           <li><a href="ExtApp_Help.html">External Apps</a></li>
           <ul class="level3">
+            <li><a href="External_LSAPI.html">LSAPI App</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
             <li><a href="External_FCGI.html">Fast CGI App</a></li>
             <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
+            <li><a href="External_SCGI.html">Simple CGI App</a></li>
             <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
             <li><a href="External_PL.html">Piped logger</a></li>
             <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
           <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
           <li><a href="App_Server_Help.html">App Server Settings</a></li>
@@ -55,7 +99,7 @@
           <li><a href="Listeners_General_Help.html">Listener General</a></li>
           <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
           <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
+          <li><a href="VirtualHosts_Help.html">Virtual Host Registration</a></li>
           <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
           <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
           <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
@@ -63,17 +107,17 @@
           <li><a href="Context_Help.html">Context</a></li>
           <ul class="level3">
             <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
+            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
             <li><a href="Servlet_Context.html">Servlet Context</a></li>
             <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
             <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
             <li><a href="Proxy_Context.html">Proxy Context</a></li>
             <li><a href="CGI_Context.html">CGI Context</a></li>
             <li><a href="LB_Context.html">Load Balancer Context</a></li>
             <li><a href="Redirect_Context.html">Redirect Context</a></li>
             <li><a href="App_Server_Context.html">App Server Context</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
             <li><a href="Module_Context.html">Module Handler Context</a></li>
           </ul>
           <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
@@ -82,7 +126,7 @@
       <li><a href="webconsole.html">Web Console</a>
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><span class="current"><a href="AdminSecurity_Help.html">Admin Console Security</a></span></li>
+          <li><a class="current" href="AdminSecurity_Help.html">Admin Console Security</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
               Admin Listener General
@@ -93,21 +137,28 @@
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="AdminGeneral_Help.html">Admin Console General</a></div><div class="center"><a href="webconsole.html">Web Console</a></div><div class="next"><a href="AdminListeners_General_Help.html">Admin Listeners General</a> &#187;</div></div>
-<h1>Admin Console Security</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header><a href="#accessControl">Access Control</a></header><p>
-<a href="#accessControl_allow">Allowed List</a> | <a href="#accessControl_deny">Denied List</a></p></section>
-<section class="toc-row"><header><a href="#adminUser">WebAdmin User</a></header><p>
-</p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="AdminGeneral_Help.html">Admin Console General</a></div><div class="center"><a href="webconsole.html">Web Console</a></div><div class="next"><a href="AdminListeners_General_Help.html">Admin Listeners General</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Admin Console Security</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Table of Contents</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#accessControl">Access Control</a></h3><ul class="doc-toc__links"><li><a href="#accessControl_allow">Allowed List</a></li><li><a href="#accessControl_deny">Denied List</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#loginThrottle">Login Throttle</a></h3><ul class="doc-toc__links"><li><a href="#throttleEnabled">Enable Login Throttle</a></li><li><a href="#throttleMaxFailures">Max Login Failures</a></li><li><a href="#throttleBlockWindow">Initial Block Duration (secs)</a></li><li><a href="#throttleMaxBackoff">Maximum Block Duration (secs)</a></li><li><a href="#loginHistoryRetention">Login History Retention (days)</a></li><li><a href="#opsAuditRetainFiles">Activity Log Retained Files</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#adminUser">WebAdmin User</a></h3><ul class="doc-toc__links"><li><a href="#adminUserName">User Name</a></li><li><a href="#adminOldPass">Old Password</a></li><li><a href="#adminNewPass">New Password</a></li><li><a href="#adminRetypePass">Retype Password</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl"><h3>Access Control<span class="ls-permlink"><a href="#accessControl"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies what sub networks and/or IP addresses can access the server. At the server level, this setting will affect all virtual hosts. You can also set up access control unique to each virtual host at the virtual host level. Virtual host level settings will NOT override server level settings.<br/><br/> Blocking/Allowing an IP is determined by the combination of the allowed list and the denied list. If you want to block only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> and list the blocked IPs or sub-networks in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span>. If you want to allow only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span> and list the allowed IPs or sub-networks in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span>. The setting of the smallest scope that fits for an IP will be used to determine access.<br/><br/> <b>Server Level:</b> Trusted IPs or sub-networks must be specified in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> by adding a trailing "T". Trusted IPs or sub-networks are not affected by connection/throttling limits. Only server level access control can set up trusted IPs/sub-networks.</p> <h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Use this at the server level for general restrictions that apply to all virtual hosts.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_allow"><h3>Allowed List<span class="ls-permlink"><a href="#accessControl_allow"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the list of IPs or sub-networks allowed. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks. A trailing "T" can be used to indicate a trusted IP or sub-network, such as <span class="val">192.168.1.*T</span>.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>Tips</h4><p><span title="Security" class="ls-icon-security"></span> Trusted IPs or sub-networks set at the server level access control will be excluded from connection/throttling limits.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_deny"><h3>Denied List<span class="ls-permlink"><a href="#accessControl_deny"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the list of IPs or sub-networks disallowed.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="adminUser"><h3>WebAdmin User<span class="ls-permlink"><a href="#adminUser"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Change the username and password for the WebAdmin Console.  The old password must be entered and verified in order to save changes.</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl"><h3>Access Control<span class="ls-permlink"><a href="#accessControl"></a></span></h3></header><h4>Description</h4><p>Specifies what sub networks and/or IP addresses can access the server. At the server level, this setting will affect all virtual hosts. You can also set up access control unique to each virtual host at the virtual host level. Virtual host level settings will NOT override server level settings.<br/><br/> Blocking/Allowing an IP is determined by the combination of the allowed list and the denied list. If you want to block only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> and list the blocked IPs or sub-networks in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span>. If you want to allow only certain IPs or sub-networks, put <span class="val">*</span> or <span class="val">ALL</span> in the <span class="tagl"><a href="#accessControl_deny">Denied List</a></span> and list the allowed IPs or sub-networks in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span>. The setting of the smallest scope that fits for an IP will be used to determine access.<br/><br/> <b>Server Level:</b> Trusted IPs or sub-networks must be specified in the <span class="tagl"><a href="#accessControl_allow">Allowed List</a></span> by adding a trailing "T". Trusted IPs or sub-networks are not affected by connection/throttling limits. Only server level access control can set up trusted IPs/sub-networks.</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--security">Security</span> Use this at the server level for general restrictions that apply to all virtual hosts.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_allow"><h3>Allowed List<span class="ls-permlink"><a href="#accessControl_allow"></a></span></h3></header><h4>Description</h4><p>Specifies the list of IPs or sub-networks allowed. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks. A trailing "T" can be used to indicate a trusted IP or sub-network, such as <span class="val">192.168.1.*T</span>.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>Tips</h4><p><span class="ls-badge ls-badge--security">Security</span> Trusted IPs or sub-networks set at the server level access control will be excluded from connection/throttling limits.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_deny"><h3>Denied List<span class="ls-permlink"><a href="#accessControl_deny"></a></span></h3></header><h4>Description</h4><p>Specifies the list of IPs or sub-networks disallowed.</p> <h4>Syntax</h4><p>Comma delimited list of IP addresses or sub-networks. <span class="val">*</span> or <span class="val">ALL</span> are accepted.</p> <h4>Example</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginThrottle"><h3>Login Throttle<span class="ls-permlink"><a href="#loginThrottle"></a></span></h3></header><h4>Description</h4><p>Configure WebAdmin Console login throttling and retention for related login and audit records.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleEnabled"><h3>Enable Login Throttle<span class="ls-permlink"><a href="#throttleEnabled"></a></span></h3></header><h4>Description</h4><p>Enables login throttling for the WebAdmin Console. When enabled, repeated failed login attempts are tracked and temporarily blocked to reduce brute-force password attacks. If only this option is enabled and the other throttle settings are left unset, built-in defaults are used.</p> <h4>Syntax</h4><p>Select from radio box</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--security">Security</span> Keep this enabled in production unless you are troubleshooting login issues. When enabled without custom values, the defaults are 5 failures, 900 seconds initial block, and 14400 seconds maximum block.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxFailures"><h3>Max Login Failures<span class="ls-permlink"><a href="#throttleMaxFailures"></a></span></h3></header><h4>Description</h4><p>Specifies how many consecutive failed login attempts are allowed before the client is blocked. Default value when not set: 5.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--security">Security</span> Lower values increase protection but may block legitimate users more quickly.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleBlockWindow"><h3>Initial Block Duration (secs)<span class="ls-permlink"><a href="#throttleBlockWindow"></a></span></h3></header><h4>Description</h4><p>Specifies the initial amount of time, in seconds, that a client is blocked after reaching the maximum allowed login failures. Default value when not set: 900 seconds.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--info">Information</span> Use a duration long enough to discourage repeated attacks without causing excessive lockout time for valid users.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxBackoff"><h3>Maximum Block Duration (secs)<span class="ls-permlink"><a href="#throttleMaxBackoff"></a></span></h3></header><h4>Description</h4><p>Specifies the maximum block duration, in seconds, when repeated failed login attempts continue and the throttle backoff increases. Default value when not set: 14400 seconds.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--info">Information</span> Set an upper bound that is strong enough to slow down automated attacks while still allowing recovery within a reasonable time.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginHistoryRetention"><h3>Login History Retention (days)<span class="ls-permlink"><a href="#loginHistoryRetention"></a></span></h3></header><h4>Description</h4><p>Specifies how many days login history records are kept before old entries are removed. Default value when not set: 90 days.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--info">Information</span> Keep enough history for auditing and troubleshooting, but avoid retaining more data than you actually need.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="opsAuditRetainFiles"><h3>Activity Log Retained Files<span class="ls-permlink"><a href="#opsAuditRetainFiles"></a></span></h3></header><h4>Description</h4><p>Specifies the maximum number of operation audit files to retain for the WebAdmin Console. Default value when not set: 30 files.</p> <h4>Syntax</h4><p>Integer number</p> <h4>Tips</h4><p><span class="ls-badge ls-badge--info">Information</span> Increase this value if you need a longer audit trail, but remember that more files will use more disk space.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUser"><h3>WebAdmin User<span class="ls-permlink"><a href="#adminUser"></a></span></h3></header><h4>Description</h4><p>Change the username and password for the WebAdmin Console. The old password must be entered and verified in order to save changes.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUserName"><h3>User Name<span class="ls-permlink"><a href="#adminUserName"></a></span></h3></header><h4>Description</h4><p>Specifies the WebAdmin Console login name. Use 1 to 25 characters: letters, digits, dot, underscore, or hyphen.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminOldPass"><h3>Old Password<span class="ls-permlink"><a href="#adminOldPass"></a></span></h3></header><h4>Description</h4><p>Enter the current password for this WebAdmin user. It is required before changes to the username or password can be saved.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminNewPass"><h3>New Password<span class="ls-permlink"><a href="#adminNewPass"></a></span></h3></header><h4>Description</h4><p>Enter the new password for this WebAdmin user. The password may contain any characters and is required when creating or updating a WebAdmin user.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminRetypePass"><h3>Retype Password<span class="ls-permlink"><a href="#adminRetypePass"></a></span></h3></header><h4>Description</h4><p>Enter the new password again. It must match <span class="tagl"><a href="AdminSecurity_Help.html#adminNewPass">New Password</a></span>.</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Back to top" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Back to top</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div>
 </body>
 </html>

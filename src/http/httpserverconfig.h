@@ -32,6 +32,12 @@ class AccessControl;
 class HttpServerConfig : public TSingleton<HttpServerConfig>
 {
 public:
+    enum AcmeConfigValues 
+    {
+        ACME_DISABLED = 0,
+        ACME_OFF,
+        ACME_ON,
+    };
     enum BwrapConfigValues
     {
         BWRAP_DISABLED = 0,
@@ -103,6 +109,7 @@ private:
     HttpVHost      *m_pGlobalVHost;
     AccessControl  *m_pProxyProtocolList;
 
+    AcmeConfigValues       m_acme;
     BwrapConfigValues      m_bwrap;
     char *                 m_pBwrapCmdLine;
 
@@ -250,6 +257,9 @@ public:
     void setEnableMultiCerts(int v)  { m_iEnableMultiCerts = v; }
     int  getEnableMultiCerts() const { return m_iEnableMultiCerts; }
 
+    void setAcme(AcmeConfigValues a)        {   m_acme = a;                 }
+    AcmeConfigValues getAcme()              {   return m_acme;              }
+    
     void setBwrap(BwrapConfigValues c)      {   m_bwrap = c;                }
     BwrapConfigValues getBwrap() const      {   return m_bwrap;             }
 

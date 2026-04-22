@@ -240,10 +240,15 @@ int HttpExtConnector::flushResp()
     m_pSession->checkRespSize();
     if (m_pSession->shouldSuspendReadingResp())
     {
-        LS_DBG_M(getLogger(),
-                    "[%s] too much pending data, suspend reading response from extapp",
-                    getLogId());
-        m_pProcessor->suspendRead();
+        LS_DBG_M(getLogger(), "Exceeded resp size, try a flush\n");
+        m_pSession->flush();
+        if (m_pSession->shouldSuspendReadingResp())
+        {
+            LS_DBG_M(getLogger(),
+                        "[%s] too much pending data, suspend reading response from extapp",
+                        getLogId());
+            m_pProcessor->suspendRead();
+        }
     }
     int ret = m_pSession->flush();
     if ((ret == 0) && (!finished) && m_pProcessor)
@@ -268,10 +273,15 @@ int HttpExtConnector::processRespBodyData(const char *pBuf, int len)
         m_iRespBodyRcvd += len;
         if (m_pSession->shouldSuspendReadingResp())
         {
-            LS_DBG_M(m_pSession,
-                    "too much pending data, suspend reading response from extapp");
-            m_pProcessor->suspendRead();
-            ret = 0;
+            LS_DBG_M(m_pSession, "Exceeded resp size, try a flush 2\n");
+            m_pSession->flush();
+            if (m_pSession->shouldSuspendReadingResp())
+            {
+                LS_DBG_M(m_pSession,
+                        "too much pending data, suspend reading response from extapp");
+                m_pProcessor->suspendRead();
+                ret = 0;
+            }
         }
     }
     //        return checkRespSize();
@@ -623,6 +633,7 @@ int HttpExtConnector::sendReqBody()
 
 int HttpExtConnector::onRead(HttpSession *pSession)
 {
+    LS_DBG("HttpExtConnector::onRead()\n");
     if ((getState() & HEC_ERROR) || !getProcessor())
         return LS_FAIL;
     if ((getState() & (HEC_FWD_REQ_BODY | HEC_COMPLETE)) == HEC_FWD_REQ_BODY)

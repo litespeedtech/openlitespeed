@@ -21,7 +21,6 @@
 #include <http/httpresourcemanager.h>
 #include <http/httpsession.h>
 #include <h2/h2connection.h>
-#include <spdy/spdyconnection.h>
 
 HioHandler *HioHandlerFactory::getHandler(HiosProtocol proto)
 {
@@ -35,7 +34,7 @@ HioHandler *HioHandlerFactory::getHandler(HiosProtocol proto)
         pHioHandler = H2Connection::get();
         break;
     default:
-        pHioHandler = SpdyConnection::get(proto);
+        pHioHandler = NULL;
         break;
     }
 

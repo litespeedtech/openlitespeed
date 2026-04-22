@@ -1,39 +1,56 @@
 <?php
 
-require_once("view/inc/auth.php");
+use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\Product\Current\Service;
+use LSWebAdmin\UI\UIBase;
+
+require_once __DIR__ . '/view/inc/auth.php';
+
+$view = isset($_GET['view']) && is_scalar($_GET['view']) ? (string) $_GET['view'] : 'dashboard';
+$viewRoutes = [
+    'dashboard' => __DIR__ . '/view/dashboard.php',
+    'confMgr' => __DIR__ . '/view/confMgr.php',
+    'compilePHP' => __DIR__ . '/view/compilePHP.php',
+    'blockedips' => __DIR__ . '/view/blockedips.php',
+    'listenervhmap' => __DIR__ . '/view/listenervhmap.php',
+    'loginhistory' => __DIR__ . '/view/loginhistory.php',
+    'opsauditlog' => __DIR__ . '/view/opsauditlog.php',
+    'logviewer' => __DIR__ . '/view/logviewer.php',
+    'realtimestats' => __DIR__ . '/view/realtimestats.php',
+];
+
+if (!isset($viewRoutes[$view]) || !is_file($viewRoutes[$view])) {
+    $view = 'dashboard';
+}
+
+$currentViewFile = $viewRoutes[$view];
+
+if ($view === 'confMgr') {
+    Service::ConfigDispData();
+}
 
 //require UI configuration (nav, ribbon, etc.)
-require_once("view/inc/configui.php");
+require_once __DIR__ . '/view/inc/configui.php';
 
-include("view/inc/header.php");
-include("view/inc/nav.php");
+require_once __DIR__ . '/view/inc/header.php';
+require_once __DIR__ . '/view/inc/nav.php';
 
 ?>
-<!-- ==========================CONTENT STARTS HERE ========================== -->
-<!-- MAIN PANEL -->
 <div id="main" role="main">
 
-	<!-- RIBBON -->
 	<div id="ribbon">
-
-		<!-- breadcrumb auto generated-->
-		<ol class="breadcrumb">
-			<!-- This is auto generated -->
-		</ol>
-		<!-- end breadcrumb -->
-		<span id="restartnotice" class="hide pull-right well well-sm text-warning"><i class="fa fa-bell"></i> <?php DMsg::EchoUIStr('note_configmodified'); ?></span>
-        <span id="readonlynotice" class="hide pull-right well well-sm text-warning"></span>
+		<span id="restartnotice" class="lst-ribbon-notice lst-ribbon-notice--warning" hidden><i class="lst-icon" data-lucide="bell"></i> <span class="lst-ribbon-notice-text"><?php DMsg::EchoUIStr('note_configmodified'); ?></span> <a class="lst-ribbon-notice-action" href="#" data-lst-call="lst_restart"><?php echo UIBase::Escape(DMsg::UIStr('menu_restart')); ?></a></span>
+        <span id="readonlynotice" class="lst-ribbon-notice lst-ribbon-notice--warning" hidden></span>
 	</div>
-	<!-- END RIBBON -->
 
-	<!-- MAIN CONTENT -->
 	<div id="content">
-
+		<?php
+		require_once __DIR__ . '/view/inc/scripts.php';
+		require $currentViewFile;
+		?>
 	</div>
-	<!-- END MAIN CONTENT -->
 
 </div>
-<!-- END MAIN PANEL -->
 
 
 <!--
@@ -42,27 +59,16 @@ echo $footer_lic_info;
 ?>
 -->
 
-<!-- PAGE FOOTER -->
 <div class="page-footer">
-	<div class="row">
-		<div class="col-xs-12 col-sm-6">
-			<span class="txt-color-blueLight">OpenLiteSpeed WebAdmin Console © 2014-<?php echo date('Y') . ' '; DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
+	<div class="lst-footer-bar">
+		<div class="lst-footer-copywrap">
+			<span class="lst-text-muted lst-footer-copy">OpenLiteSpeed WebAdmin Console © <?php echo date('Y') . ' '; DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
 		</div>
-		<div class="col-xs-6 col-sm-6 text-right hidden-xs">
-			<i class="txt-color-blueLight hidden-mobile"> <i class="fa fa-clock-o"></i>
-			<i><?php DMsg::EchoUIStr('note_dataretrievedat'); ?> <span id="lst_UpdateStamp"></span> </i>
+		<div class="lst-footer-meta lst-hide-phone">
+			<span class="lst-text-muted lst-footer-stamp"><i class="lst-icon" data-lucide="clock"></i><?php DMsg::EchoUIStr('note_dataretrievedat'); ?> <span id="lst_UpdateStamp"></span></span>
 		</div>
 	</div>
 </div>
-
-
-<!-- END PAGE FOOTER -->
-
-<!-- ==========================CONTENT ENDS HERE ========================== -->
-
-<?php
-	include("view/inc/scripts.php");
-?>
 
 	</body>
 </html>

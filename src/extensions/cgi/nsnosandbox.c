@@ -667,7 +667,7 @@ static int open_nosandbox_socket()
         err = errno;
         DEBUG_MESSAGE("Can not initialize no sandbox socket: %s\n", strerror(err));
         ls_stderr("Can not initialize no sandbox socket: %s\n", strerror(err));
-        ns_done(0);
+        ns_done();
         return -1;
     }
     struct sockaddr_un loc;
@@ -692,7 +692,7 @@ static int open_nosandbox_socket()
         int err = errno;
         DEBUG_MESSAGE("Can not listen on %s: %s\n", loc.sun_path, strerror(err));
         ls_stderr("Can not listen on %s: %s\n", loc.sun_path, strerror(err));
-        ns_done(0);
+        ns_done();
         return -1;
     }
     int pid = fork();
@@ -700,7 +700,7 @@ static int open_nosandbox_socket()
     {
         //strcpy(s_argv0, "lscgid (ns)");
         nosandbox_main();
-        ns_done(0);
+        ns_done();
         exit(0);
     }
     close(s_nosandbox_socket);
@@ -710,7 +710,7 @@ static int open_nosandbox_socket()
         err = errno;
         DEBUG_MESSAGE("Can not start listening process for %s: %s\n", loc.sun_path, strerror(err));
         ls_stderr("Can not start listening process for %s: %s\n", loc.sun_path, strerror(err));
-        ns_done(0);
+        ns_done();
         return -1;
     }
     if (write_nosandbox_socket_file())
@@ -733,7 +733,7 @@ static int save_links()
         if (!s_nosandbox_arr_link)
         {
             ls_stderr("Insufficient memory for link array");
-            ns_done(0);
+            ns_done();
             return -1;
         }
         for (int i = 0; i < s_nosandbox_count; i++)
@@ -762,7 +762,7 @@ static int save_links()
                 if (!s_nosandbox_link)
                 {
                     ls_stderr("Insufficient memory for links");
-                    ns_done(0);
+                    ns_done();
                     return -1;
                 }
                 strcpy(&s_nosandbox_link[lastpos], f);
@@ -793,14 +793,14 @@ static int read_hostexec_files(char *filename, FILE *fh, int *no_sandbox_len)
         {
             ls_stderr("hostexec file (%s) contains invalid file: %s\n", filename, line);
             fclose(fh);
-            ns_done(0);
+            ns_done();
             return -1;
         }
         if (access(line, X_OK) != 0)
         {
             ls_stderr("hostexec file (%s) contains problem file: %s: %s\n", filename, line, strerror(errno));
             fclose(fh);
-            ns_done(0);
+            ns_done();
             return -1;
         }
         for (unsigned long i = 0; i < sizeof(s_bwrap_var) / sizeof(char *); i++)
@@ -808,7 +808,7 @@ static int read_hostexec_files(char *filename, FILE *fh, int *no_sandbox_len)
             if (strstr(line, s_bwrap_var[i])) {
                 ls_stderr("hostexec file (%s) contains a file with a bubblewrap symbol: %s\n", filename, line);
                 fclose(fh);
-                ns_done(0);
+                ns_done();
                 return -1;
             }
         }

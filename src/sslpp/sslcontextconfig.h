@@ -51,7 +51,11 @@ public:
     char        m_iEnableDHE;
     char        m_iEngine;
     char        m_iInsecReneg;
-    char        m_iEnableSpdy;
+    union
+    {
+        char    m_iEnableAlpn;
+        char    m_iEnableSpdy;
+    };
     char        m_iEnableCache;
     char        m_iEnableTicket;
     char        m_iEnableStapling;

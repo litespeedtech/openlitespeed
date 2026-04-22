@@ -48,6 +48,8 @@ public:
         HT_LSAPI,
         HT_LOGGER,
         HT_LOADBALANCER,
+        HT_SCGI,
+        HT_UWSGI,
         HT_END
     };
     enum

@@ -158,6 +158,7 @@ class LsShmTidMgr;
 struct LsShmTidTblBlk;
 class LsShmHash : public ls_shmhash_s
 {
+    friend class LsShmPool;
 public:
     typedef LsShmHElem *iterator;
     typedef const LsShmHElem *const_iterator;
@@ -195,6 +196,10 @@ public:
     static LsShmOffset_t allocHTable(LsShmPool * pPool, int init_size,
                                      int iMode, int iFlags,
                                      LsShmOffset_t lockOffset);
+
+    static LsShmHash *openWithVerMagic(const char *pShmName, int shmFlag,
+                                       const char *pHashName, uint32_t magic,
+                                       int init_size, int hashFlag);
 
     LsShmHash *dup(const char *name) const;
 
@@ -250,6 +255,9 @@ public:
     LsShmOffset_t getHTableStatOffset() const;
 
     LsShmOffset_t getHTableReservedOffset() const;
+
+    void *getHTableReservedPtr() const
+    {   return offset2ptr(getHTableReservedOffset());     }
 
     LsShmXSize_t getHashDataSize() const
     {
@@ -615,7 +623,7 @@ public:
 
     int trim(time_t tmCutoff, LsShmHash::TrimCb cb, void *arg);
     int trimsize(int need, LsShmHash::TrimCb cb, void *arg);
-    int trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg);
+    int trimByCb(int maxCnt, LsShmHash::TrimCb func, void *arg, int timeout_ms = 0);
     // Must have lock outside method.
     uint64_t trimTid();
     
@@ -672,6 +680,9 @@ protected:
 
     static inline uint32_t getIndex(uint32_t k, uint32_t n)
     {   return k % n ; }
+
+    bool verifyDataVerMagic(uint32_t magic);
+    void setDataVerMagic(uint32_t magic);
 
     ls_attr_inline LsShmHTable *getHTable() const
     {   assert( x_pTable == (LsShmHTable *)m_pPool->offset2ptr(m_iOffset)); 
@@ -906,4 +917,3 @@ private:
 };
 
 #endif // LSSHMHASH_H
-

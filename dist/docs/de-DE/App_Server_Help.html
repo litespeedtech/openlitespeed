@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="de-DE">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>OpenLiteSpeed-Benutzerhandbuch - Anwendungsserver</title>
+  <meta name="description" content="OpenLiteSpeed-Benutzerhandbuch - Anwendungsserver." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed-Benutzerhandbuch">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed-Benutzerhandbuch</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Menü öffnen" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Seiten und Einstellungen suchen" data-no-results="Keine Ergebnisse gefunden.">
+      <label class="sr-only" for="doc-search-input">Handbuch durchsuchen</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Seiten und Einstellungen suchen" aria-controls="doc-search-results" />
+        <button type="submit">Suchen</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Sprache"><option value="../App_Server_Help.html" data-lang="en-US">English</option><option value="../es-ES/App_Server_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/App_Server_Help.html" data-lang="de-DE" selected>Deutsch</option><option value="../fr-FR/App_Server_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/App_Server_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/App_Server_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Design umschalten" data-theme-toggle data-theme-light-label="Heller Modus" data-theme-dark-label="Dunkler Modus" title="Design umschalten">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="de-DE" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Benutzerhandbuch</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Inhaltsverzeichnis"><ul class="sidetree__list">
+      <li><a href="license.html">Lizenz</a></li>
+      <li><a href="intro.html">Einleitung</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Sicherheit</a></li>
+      <li>
+        <a href="config.html">Konfiguration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Server allgemein</a></li>
+          <li><a href="ServLog_Help.html">Serverprotokoll</a></li>
+          <li><a href="ServTuning_Help.html">Server-Tuning</a></li>
+          <li><a href="ServSecurity_Help.html">Serversicherheit</a></li>
+          <li><a href="ExtApp_Help.html">Externe Anwendungen</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">LSAPI-Anwendung</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Fast-CGI-Anwendung</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast-CGI-Authorizer</a></li>
+            <li><a href="External_SCGI.html">Simple-CGI-Anwendung</a></li>
+            <li><a href="External_Servlet.html">Servlet-Engine</a></li>
+            <li><a href="External_PL.html">Piped Logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Skripthandler</a></li>
+          <li><a class="current" href="App_Server_Help.html">App-Server-Einstellungen</a></li>
+          <li><a href="Module_Help.html">Modulkonfiguration</a></li>
+          <li><a href="Listeners_General_Help.html">Listener allgemein</a></li>
+          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
+          <li><a href="Templates_Help.html">Virtual-Host-Vorlagen</a></li>
+          <li><a href="VirtualHosts_Help.html">Virtual-Host-Registrierung</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual Host allgemein</a></li>
+          <li><a href="VHSecurity_Help.html">Virtual Host Sicherheit</a></li>
+          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Kontext</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Statischer Kontext</a></li>
+            <li><a href="Java_Web_App_Context.html">Java-Web-App-Kontext</a></li>
+            <li><a href="Servlet_Context.html">Servlet-Kontext</a></li>
+            <li><a href="FCGI_Context.html">Fast-CGI-Kontext</a></li>
+            <li><a href="SCGI_Context.html">Simple-CGI-Kontext</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI-Kontext</a></li>
+            <li><a href="Proxy_Context.html">Proxy-Kontext</a></li>
+            <li><a href="CGI_Context.html">CGI-Kontext</a></li>
+            <li><a href="LB_Context.html">Load-Balancer-Kontext</a></li>
+            <li><a href="Redirect_Context.html">Redirect-Kontext</a></li>
+            <li><a href="App_Server_Context.html">App-Server-Kontext</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI-Kontext</a></li>
+            <li><a href="Module_Context.html">Modulhandler-Kontext</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">WebSocket-Proxy</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Webkonsole</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Admin-Konsole allgemein</a></li>
+          <li><a href="AdminSecurity_Help.html">Admin-Konsolensicherheit</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin-Listener allgemein
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin-Listener SSL</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ScriptHandler_Help.html">Skript-Handler</a></div><div class="center"><a href="config.html">Konfiguration</a></div><div class="next"><a href="Module_Help.html">Modulkonfiguration</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Anwendungsserver</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Inhaltsverzeichnis</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#railsDefaults">Rack/Rails-Standardeinstellungen</a></h3><ul class="doc-toc__links"><li><a href="#rubyBin">Ruby-Pfad</a></li><li><a href="#appserverEnv">Laufzeitmodus</a></li><li><a href="#maxConns">Max. Verbindungen</a></li><li><a href="#env">Umgebung</a></li><li><a href="#initTimeout">Timeout fuer erste Anfrage (Sek.)</a></li><li><a href="#retryTimeout">Wiederholungs-Timeout (Sek.)</a></li><li><a href="#pcKeepAliveTimeout">Keepalive-Timeout der Verbindung</a></li><li><a href="#respBuffer">Antwortpufferung</a></li><li><a href="#extMaxIdleTime">Max. Leerlaufzeit</a></li><li><a href="#backlog">Backlog</a></li><li><a href="#runOnStartUp">Beim Start ausfuehren</a></li><li><a href="#extAppPriority">Prioritaet</a></li><li><a href="#memSoftLimit">Weiches Speicherlimit (Byte)</a></li><li><a href="#memHardLimit">Hartes Speicherlimit (Byte)</a></li><li><a href="#procSoftLimit">Weiches Prozesslimit</a></li><li><a href="#procHardLimit">Hartes Prozesslimit</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#wsgiDefaults">Standardeinstellungen fuer Python WSGI</a></h3><ul class="doc-toc__links"><li><a href="#wsgiBin">WSGI-Pfad</a></li><li><a href="#appserverEnv">Laufzeitmodus</a></li><li><a href="#maxConns">Max. Verbindungen</a></li><li><a href="#env">Umgebung</a></li><li><a href="#initTimeout">Timeout fuer erste Anfrage (Sek.)</a></li><li><a href="#retryTimeout">Wiederholungs-Timeout (Sek.)</a></li><li><a href="#pcKeepAliveTimeout">Keepalive-Timeout der Verbindung</a></li><li><a href="#respBuffer">Antwortpufferung</a></li><li><a href="#extMaxIdleTime">Max. Leerlaufzeit</a></li><li><a href="#backlog">Backlog</a></li><li><a href="#runOnStartUp">Beim Start ausfuehren</a></li><li><a href="#extAppPriority">Prioritaet</a></li><li><a href="#memSoftLimit">Weiches Speicherlimit (Byte)</a></li><li><a href="#memHardLimit">Hartes Speicherlimit (Byte)</a></li><li><a href="#procSoftLimit">Weiches Prozesslimit</a></li><li><a href="#procHardLimit">Hartes Prozesslimit</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#nodeDefaults">Standardeinstellungen fuer Node.js-Apps</a></h3><ul class="doc-toc__links"><li><a href="#nodeBin">Node-Pfad</a></li><li><a href="#appserverEnv">Laufzeitmodus</a></li><li><a href="#maxConns">Max. Verbindungen</a></li><li><a href="#env">Umgebung</a></li><li><a href="#initTimeout">Timeout fuer erste Anfrage (Sek.)</a></li><li><a href="#retryTimeout">Wiederholungs-Timeout (Sek.)</a></li><li><a href="#pcKeepAliveTimeout">Keepalive-Timeout der Verbindung</a></li><li><a href="#respBuffer">Antwortpufferung</a></li><li><a href="#extMaxIdleTime">Max. Leerlaufzeit</a></li><li><a href="#backlog">Backlog</a></li><li><a href="#runOnStartUp">Beim Start ausfuehren</a></li><li><a href="#extAppPriority">Prioritaet</a></li><li><a href="#memSoftLimit">Weiches Speicherlimit (Byte)</a></li><li><a href="#memHardLimit">Hartes Speicherlimit (Byte)</a></li><li><a href="#procSoftLimit">Weiches Prozesslimit</a></li><li><a href="#procHardLimit">Hartes Prozesslimit</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="railsDefaults"><h3>Rack/Rails-Standardeinstellungen<span class="ls-permlink"><a href="#railsDefaults"></a></span></h3></header><h4>Beschreibung</h4><p>Standardkonfigurationen fuer Rack/Rails-Anwendungen. Diese Einstellungen koennen auf Kontextebene ueberschrieben werden.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rubyBin"><h3>Ruby-Pfad<span class="ls-permlink"><a href="#rubyBin"></a></span></h3></header><h4>Beschreibung</h4><p>Pfad zur Ruby-Ausführungsdatei. In der Regel ist dies /usr/bin/ruby oder /usr/local/bin/ruby, je nachdem, wo Ruby installiert wurde.</p> <h4>Syntax</h4><p>Absoluter Pfad</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="appserverEnv"><h3>Laufzeitmodus<span class="ls-permlink"><a href="#appserverEnv"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, in welchem Modus die Anwendung ausgeführt wird: "Development", "Production" oder "Staging". Der Standardwert ist "Production".</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="maxConns"><h3>Max. Verbindungen<span class="ls-permlink"><a href="#maxConns"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die maximale Anzahl gleichzeitiger Verbindungen an, die zwischen dem Server und einer externen Anwendung hergestellt werden koennen. Diese Einstellung steuert, wie viele Anfragen eine externe Anwendung gleichzeitig verarbeiten kann; die tatsaechliche Grenze haengt jedoch auch von der externen Anwendung selbst ab. Ein hoeherer Wert hilft nicht, wenn die externe Anwendung nicht schnell genug ist oder nicht auf viele gleichzeitige Anfragen skalieren kann.</p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Ein hoher Wert bedeutet nicht automatisch hoehere Leistung. Den Grenzwert so zu setzen, dass die externe Anwendung nicht ueberlastet wird, bietet die beste Leistung/den besten Durchsatz.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="env"><h3>Umgebung<span class="ls-permlink"><a href="#env"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt zusaetzliche Umgebungsvariablen fuer die externe Anwendung an.</p> <h4>Syntax</h4><p>Key=value. Mehrere Variablen koennen mit "ENTER" getrennt werden</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="initTimeout"><h3>Timeout fuer erste Anfrage (Sek.)<span class="ls-permlink"><a href="#initTimeout"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die maximale Zeit in Sekunden an, die der Server wartet, bis die externe Anwendung auf die erste Anfrage ueber eine neu hergestellte Verbindung antwortet. Wenn der Server innerhalb dieses Timeout-Grenzwerts keine Daten von der externen Anwendung erhaelt, markiert er diese Verbindung als fehlerhaft. So lassen sich Kommunikationsprobleme mit externen Anwendungen moeglichst schnell erkennen. Wenn einige Anfragen laenger dauern, erhoehen Sie diesen Grenzwert, um 503-Fehlermeldungen zu vermeiden.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="retryTimeout"><h3>Wiederholungs-Timeout (Sek.)<span class="ls-permlink"><a href="#retryTimeout"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, wie lange der Server wartet, bevor er eine externe Anwendung erneut versucht, bei der zuvor ein Kommunikationsproblem aufgetreten ist.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pcKeepAliveTimeout"><h3>Keepalive-Timeout der Verbindung<span class="ls-permlink"><a href="#pcKeepAliveTimeout"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die maximale Zeit in Sekunden an, fuer die eine inaktive persistente Verbindung offen gehalten wird.<br/><br/> Bei "-1" laeuft die Verbindung nie ab. Bei 0 oder hoeher wird die Verbindung geschlossen, nachdem diese Zeit in Sekunden vergangen ist.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="respBuffer"><h3>Antwortpufferung<span class="ls-permlink"><a href="#respBuffer"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob Antworten externer Anwendungen gepuffert werden. Wenn ein "nph-"-Skript (Non-Parsed-Header) erkannt wird, wird die Pufferung fuer Antworten mit vollstaendigen HTTP-Headern deaktiviert.</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extMaxIdleTime"><h3>Max. Leerlaufzeit<span class="ls-permlink"><a href="#extMaxIdleTime"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die maximale Leerlaufzeit an, bevor eine externe Anwendung vom Server gestoppt wird und ungenutzte Ressourcen freigibt. Bei "-1" wird die externe Anwendung vom Server nicht gestoppt, ausser sie laeuft im ProcessGroup-Modus, in dem inaktive externe Anwendungen nach 30 Sekunden gestoppt werden.<br/><br/> Standardwert: <span class="val">-1</span></p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Diese Funktion ist besonders in Massenhosting-Umgebungen nuetzlich, in denen viele verschiedene Anwendungen gleichzeitig im SetUID-Modus laufen, um zu verhindern, dass externe Anwendungsskripte eines virtuellen Hosts auf Dateien eines anderen virtuellen Hosts zugreifen. Setzen Sie diesen Wert niedrig, damit diese externen Anwendungen nicht unnoetig im Leerlauf bleiben.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="backlog"><h3>Backlog<span class="ls-permlink"><a href="#backlog"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt den Backlog des lauschenden Sockets an. Erforderlich, wenn <span class="tagl"><a href="#autoStart">Vom Server starten</a></span> aktiviert ist.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="runOnStartUp"><h3>Beim Start ausfuehren<span class="ls-permlink"><a href="#runOnStartUp"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob die externe Anwendung beim Serverstart gestartet wird. Gilt nur fuer externe Anwendungen, die ihre eigenen Kindprozesse verwalten koennen und deren <span class="tagl"><a href="#instances">Instanzen</a></span>-Wert auf "1" gesetzt ist.<br/><br/> Wenn aktiviert, werden externe Prozesse beim Serverstart statt zur Laufzeit erstellt.<br/><br/> Bei Auswahl von "Yes (Detached mode)" koennen alle losgeloesten Prozesse auf Server- oder Virtual-Host-Ebene neu gestartet werden, indem die Datei '.lsphp_restart.txt' unter $SERVER_ROOT/admin/tmp/ bzw. im Verzeichnis $VH_ROOT/ beruehrt wird.<br/><br/> Standardwert: Yes (Detached mode)</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Wenn der konfigurierte externe Prozess erheblichen Startaufwand hat, z. B. eine Rails-App, sollte diese Option aktiviert werden, um die Antwortzeit der ersten Seite zu verringern.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppPriority"><h3>Prioritaet<span class="ls-permlink"><a href="#extAppPriority"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die Prioritaet des externen Anwendungsprozesses an. Werte reichen von <span class="val">-20</span> bis <span class="val">20</span>. Eine niedrigere Zahl bedeutet hoehere Prioritaet. Ein externer Anwendungsprozess kann keine hoehere Prioritaet als der Webserver haben. Wenn diese Prioritaet auf eine niedrigere Zahl als die des Servers gesetzt ist, wird die Prioritaet des Servers fuer diesen Wert verwendet.</p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Siehe auch</h4><p class="ls-text-small">Server <span class="tagl"><a href="ServGeneral_Help.html#serverPriority">Prioritaet</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="memSoftLimit"><h3>Weiches Speicherlimit (Byte)<span class="ls-permlink"><a href="#memSoftLimit"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt das Speicherverbrauchslimit in Byte für einen externen Anwendungsprozess oder eine vom Server gestartete externe Anwendung an.<br/><br/> Der Hauptzweck dieses Limits ist es, übermäßige Speichernutzung durch Softwarefehler oder absichtliche Angriffe zu verhindern, nicht normalen Gebrauch zu begrenzen. Lassen Sie genug Spielraum, andernfalls kann Ihre Anwendung fehlschlagen und ein 503-Fehler zurückgegeben werden. Es kann auf Serverebene oder auf Ebene einer einzelnen externen Anwendung gesetzt werden. Das Limit auf Serverebene wird verwendet, wenn es auf Anwendungsebene nicht gesetzt ist.<br/><br/> Die Standardeinstellung des Betriebssystems wird verwendet, wenn der Wert auf beiden Ebenen fehlt oder auf <span class="val">0</span> gesetzt ist.</p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--attention">Attention</span> Passen Sie dieses Limit nicht übermäßig an. Dies kann zu 503-Fehlern führen, wenn Ihre Anwendung mehr Speicher benötigt.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="memHardLimit"><h3>Hartes Speicherlimit (Byte)<span class="ls-permlink"><a href="#memHardLimit"></a></span></h3></header><h4>Beschreibung</h4><p>Ähnlich wie <span class="tagl"><a href="#memSoftLimit">Weiches Speicherlimit (Byte)</a></span>, außer dass das weiche Limit innerhalb eines Benutzerprozesses bis zum harten Limit angehoben werden kann. Das harte Limit kann auf Serverebene oder auf Ebene einer einzelnen externen Anwendung gesetzt werden. Das Limit auf Serverebene wird verwendet, wenn es auf Anwendungsebene nicht gesetzt ist.<br/><br/> Der Standardwert des Betriebssystems wird verwendet, wenn der Wert auf beiden Ebenen fehlt oder auf <span class="val">0</span> gesetzt ist.</p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--attention">Attention</span> Passen Sie dieses Limit nicht übermäßig an. Dies kann zu 503-Fehlern führen, wenn Ihre Anwendung mehr Speicher benötigt.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="procSoftLimit"><h3>Weiches Prozesslimit<span class="ls-permlink"><a href="#procSoftLimit"></a></span></h3></header><h4>Beschreibung</h4><p>Begrenzt die Gesamtzahl der Prozesse, die im Namen eines Benutzers erstellt werden koennen. Alle vorhandenen Prozesse werden gegen dieses Limit gezaehlt, nicht nur neu zu startende Prozesse.<br/><br/> Das Limit kann auf Serverebene oder auf Ebene einer einzelnen externen Anwendung gesetzt werden. Das Server-Level-Limit wird verwendet, wenn es auf Anwendungsebene nicht gesetzt ist. Der Standardwert des Betriebssystems wird verwendet, wenn dieser Wert auf beiden Ebenen 0 ist oder fehlt.</p> <h4>Syntax</h4><p>Ganzzahl</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--info">Information</span> PHP-Skripte koennen Prozesse forken. Der Hauptzweck dieses Limits ist eine letzte Verteidigungslinie gegen Fork-Bombs und andere Angriffe, bei denen PHP-Prozesse weitere Prozesse erstellen.<br/><br/> Ein zu niedriger Wert kann die Funktionalitaet stark beeintraechtigen. Daher wird die Einstellung unterhalb bestimmter Schwellen ignoriert.<br/><br/> Wenn <b>Run On Start Up</b> auf "Yes (Daemon mode)" gesetzt ist, liegt das tatsaechliche Prozesslimit hoeher als diese Einstellung, damit Elternprozesse nicht begrenzt werden.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="procHardLimit"><h3>Hartes Prozesslimit<span class="ls-permlink"><a href="#procHardLimit"></a></span></h3></header><h4>Beschreibung</h4><p>Ähnlich wie <span class="tagl"><a href="#procSoftLimit">Weiches Prozesslimit</a></span>, außer dass das weiche Limit innerhalb eines Benutzerprozesses bis zum harten Limit angehoben werden kann. Das harte Limit kann auf Serverebene oder auf Ebene einer einzelnen externen Anwendung gesetzt werden. Das Limit auf Serverebene wird verwendet, wenn es auf Anwendungsebene nicht gesetzt ist. Der Standardwert des Betriebssystems wird verwendet, wenn der Wert auf beiden Ebenen fehlt oder auf <span class="val">0</span> gesetzt ist.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="wsgiDefaults"><h3>Standardeinstellungen fuer Python WSGI<span class="ls-permlink"><a href="#wsgiDefaults"></a></span></h3></header><h4>Beschreibung</h4><p>Standardkonfigurationen fuer Python-WSGI-Anwendungen. Diese Einstellungen koennen auf Kontextebene ueberschrieben werden.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="wsgiBin"><h3>WSGI-Pfad<span class="ls-permlink"><a href="#wsgiBin"></a></span></h3></header><h4>Beschreibung</h4><p>Pfad zur ausführbaren Datei LiteSpeed Python Web Server Gateway Interface (lswsgi).<br/><br/> Diese ausführbare Datei wird erstellt, indem Python mit dem WSGI-LSAPI-Modul von LiteSpeed kompiliert wird.</p> <h4>Syntax</h4><p>Absoluter Pfad</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="nodeDefaults"><h3>Standardeinstellungen fuer Node.js-Apps<span class="ls-permlink"><a href="#nodeDefaults"></a></span></h3></header><h4>Beschreibung</h4><p>Standardkonfigurationen fuer Node.js-Anwendungen. Diese Einstellungen koennen auf Kontextebene ueberschrieben werden.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="nodeBin"><h3>Node-Pfad<span class="ls-permlink"><a href="#nodeBin"></a></span></h3></header><h4>Beschreibung</h4><p>Pfad zur Node.js-Ausführungsdatei.</p> <h4>Syntax</h4><p>Absoluter Pfad</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Nach oben" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Nach oben</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Alle Rechte vorbehalten.</footer>
+</div>
+</body>
+</html>

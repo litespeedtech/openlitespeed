@@ -1,161 +1,192 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - 虚拟主机一般设置</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - 虚拟主机一般设置." />
+  <title>OpenLiteSpeed用户手册 - 虚拟主机常规</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 虚拟主机常规." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../VHGeneral_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHGeneral_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VHGeneral_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHGeneral_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VHGeneral_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/VHGeneral_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><span class="current"><a href="VHGeneral_Help.html">Virtual Host General</a></span></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a class="current" href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="VirtualHosts_Help.html">虚拟主机设置</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="VHSecurity_Help.html">虚拟主机安全</a> &#187;</div></div>
-<h1>虚拟主机一般设置</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>一般</header><p>
-<a href="#docRoot">文档根目录</a> | <a href="#vhadminEmails">管理员邮箱</a> | <a href="#vhEnableGzip">启用 GZIP 压缩</a> | <a href="#vhEnableBr">Brotli 压缩</a> | <a href="#enableIpGeo">启用IP地理定位</a> | <a href="#cgroups">cgroups</a></p></section>
-<section class="toc-row"><header>虚拟主机日志</header><p>
-<a href="#logUseServer">使用服务器日志</a> | <a href="#vhlog_fileName">文件路径</a> | <a href="#vhlog_logLevel">日志级别</a> | <a href="#log_rollingSize">回滚大小 (bytes)</a> | <a href="#log_keepDays">保留天数</a> | <a href="#log_compressArchive">压缩存档</a></p></section>
-<section class="toc-row"><header>访问日志</header><p>
-<a href="#aclogUseServer">日志管理</a> | <a href="#vhaccessLog_fileName">文件名</a> | <a href="#accessLog_pipedLogger">管道日志记录</a> | <a href="#accessLog_logFormat">日志格式</a> | <a href="#accessLog_logHeader">记录头部</a> | <a href="#log_rollingSize">回滚大小 (bytes)</a> | <a href="#log_keepDays">保留天数</a> | <a href="#log_compressArchive">压缩存档</a> | <a href="#accessLog_bytesLog">字节记录</a></p></section>
-<section class="toc-row"><header>索引文件</header><p>
-<a href="#indexUseServer">使用服务器索引文件</a> | <a href="#indexFiles">索引文件</a> | <a href="#autoIndex">自动索引</a> | <a href="#autoIndexURI">自动索引URI</a></p></section>
-<section class="toc-row"><header><a href="#errPage">自定义错误页面</a></header><p>
-<a href="#errCode">错误代码</a> | <a href="#errURL">URL</a></p></section>
-<section class="toc-row"><header>Expires Settings</header><p>
-<a href="#enableExpires">启用过期</a> | <a href="#expiresDefault">默认过期</a> | <a href="#expiresByType">按类型过期</a></p></section>
-<section class="toc-row"><header><a href="#fileUpload">文件上传</a></header><p>
-<a href="#uploadTmpDir">临时文件路径</a> | <a href="#uploadTmpFilePermission">临时文件权限</a> | <a href="#uploadPassByPath">通过文件路径传递上传数据</a></p></section>
-<section class="toc-row"><header>脚本处理程序定义</header><p>
-<a href="#suffix">后缀</a> | <a href="#shType">类型</a> | <a href="#shHandlerName">处理器名称</a></p></section>
-<section class="toc-row"><header>Expire Settings</header><p>
-<a href="#enableExpires">启用过期</a> | <a href="#expiresDefault">默认过期</a> | <a href="#expiresByType">按类型过期</a></p></section>
-<section class="toc-row"><header>php.ini Override</header><p>
-<a href="#phpIniOverride">php.ini 重写</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="VirtualHosts_Help.html">虚拟主机注册</a></div><div class="center"><a href="config.html">配置</a></div><div class="next"><a href="VHSecurity_Help.html">虚拟主机安全</a> &#187;</div></div>
+<header class="doc-page-header"><h1>虚拟主机常规</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">核心设置</h3><ul class="doc-toc__links"><li><a href="#docRoot">文档根目录</a></li><li><a href="#vhadminEmails">管理员邮箱</a></li><li><a href="#vhEnableGzip">启用压缩</a></li><li><a href="#vhEnableBr">Brotli压缩</a></li><li><a href="#enableIpGeo">启用IP地理定位</a></li><li><a href="#cgroups">cgroups</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">虚拟主机日志</h3><ul class="doc-toc__links"><li><a href="#logUseServer">使用服务器日志</a></li><li><a href="#vhlog_fileName">文件路径</a></li><li><a href="#vhlog_logLevel">日志级别</a></li><li><a href="#log_rollingSize">轮转大小（字节）</a></li><li><a href="#log_keepDays">保留天数</a></li><li><a href="#log_compressArchive">压缩存档</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">访问日志</h3><ul class="doc-toc__links"><li><a href="#aclogUseServer">日志管理</a></li><li><a href="#vhaccessLog_fileName">文件名</a></li><li><a href="#accessLog_pipedLogger">管道日志记录</a></li><li><a href="#accessLog_logFormat">日志格式</a></li><li><a href="#accessLog_logHeader">日志头部</a></li><li><a href="#log_rollingSize">轮转大小（字节）</a></li><li><a href="#log_keepDays">保留天数</a></li><li><a href="#log_compressArchive">压缩存档</a></li><li><a href="#accessLog_bytesLog">字节记录</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">索引文件</h3><ul class="doc-toc__links"><li><a href="#indexUseServer">使用服务器索引文件</a></li><li><a href="#indexFiles">索引文件</a></li><li><a href="#autoIndex">自动索引</a></li><li><a href="#autoIndexURI">自动索引URI</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#errPage">自定义错误页面</a></h3><ul class="doc-toc__links"><li><a href="#errCode">错误代码</a></li><li><a href="#errURL">URL</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Expires设置</h3><ul class="doc-toc__links"><li><a href="#enableExpires">启用过期</a></li><li><a href="#expiresDefault">默认过期</a></li><li><a href="#expiresByType">按类型过期</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#fileUpload">文件上传</a></h3><ul class="doc-toc__links"><li><a href="#uploadTmpDir">临时文件路径</a></li><li><a href="#uploadTmpFilePermission">临时文件权限</a></li><li><a href="#uploadPassByPath">通过文件路径传递上传数据</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">脚本处理程序定义</h3><ul class="doc-toc__links"><li><a href="#suffix">后缀</a></li><li><a href="#shType">处理器类型</a></li><li><a href="#shHandlerName">处理器名称</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">过期设置</h3><ul class="doc-toc__links"><li><a href="#enableExpires">启用过期</a></li><li><a href="#expiresDefault">默认过期</a></li><li><a href="#expiresByType">按类型过期</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">php.ini覆盖</h3><ul class="doc-toc__links"><li><a href="#phpIniOverride">php.ini覆盖</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="docRoot"><h3>文档根目录<span class="ls-permlink"><a href="#docRoot"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定此虚拟主机的文档根目录。 推荐使用<span class="val">$VH_ROOT/html</span>。在context中，此目录可以用$DOC_ROOT来引用。</p> <h4>Syntax</h4><p>可以说绝对路径,也可以是相对于$SERVER_ROOT或$VH_ROOT的相对路径。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhadminEmails"><h3>管理员邮箱<span class="ls-permlink"><a href="#vhadminEmails"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定这个虚拟主机管理员的电子邮箱地址。</p> <h4>Syntax</h4><p>Comma separated list of email addresses</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhEnableGzip"><h3>启用 GZIP 压缩<span class="ls-permlink"><a href="#vhEnableGzip"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否为此虚拟主机启用GZIP压缩。 这个设置仅在服务器级<span class="tagl"><a href="#enableGzipCompress">启用GZIP压缩</a></span> 设置为 <span class="val">Yes</span>时有效.</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#enableGzipCompress">启用GZIP压缩</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhEnableBr"><h3>Brotli 压缩<span class="ls-permlink"><a href="#vhEnableBr"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否为此虚拟主机启用Brotli压缩。 这个设置仅在服务器级<span class="tagl"><a href="#brStaticCompressLevel">Brotli 压缩等级 (静态文件)</a></span>设置为一个非零值时有效.</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#brStaticCompressLevel">Brotli 压缩等级 (静态文件)</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableIpGeo"><h3>启用IP地理定位<span class="ls-permlink"><a href="#enableIpGeo"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否启用IP地理定位查找。 可以在服务器级别，虚拟主机级别，或context级别设置。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">使用报头中的客户端IP</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">数据库文件路径</a></span>,</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="cgroups"><h3>cgroups<span class="ls-permlink"><a href="#cgroups"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>如果当前操作系统支持(目前支持RedHat/Centos Linux v7.5+和Ubuntu 18.04+)，则将cgroup设置应用于此CGI进程。 。 当前执行的用户将用于确定要应用的cgroup配置。<br/> 在服务器级别将此设置为<span class="val">Disabled</span>将在服务器范围内禁用此设置。 在其他情况下，可以在虚拟主机级别覆盖服务器级别的设置。<br/><br/> 默认值:<br/> <b>服务器级别:</b> Off<br/> <b>虚拟主机级别:</b> 继承服务器级别设置</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="logUseServer"><h3>使用服务器日志<span class="ls-permlink"><a href="#logUseServer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否将虚拟主机的日志信息放置到服务器日志文件中，而不是创建独自的日志文件。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhlog_fileName"><h3>文件路径<span class="ls-permlink"><a href="#vhlog_fileName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定日志文件的路径。</p> <h4>Syntax</h4><p>文件名可以是绝对路径,也可以是相对于$SERVER_ROOT,$VH_ROOT的相对路径。</p> <h4>提示</h4><p>[性能建议] 将日志文件放在单独的磁盘上。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhlog_logLevel"><h3>日志级别<span class="ls-permlink"><a href="#vhlog_logLevel"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定日志记录级别。可用级别（从高到低）为<span class="val">ERROR</span>,  <span class="val">WARNING</span>, <span class="val">NOTICE</span>, <span class="val">INFO</span>, 和 <span class="val">DEBUG</span>。 只有当消息等级高于或与当前设置相同时才被记录。 如果您希望将此设置为<span class="val">DEBUG</span>，您也需要设置服务器日志级别为<span class="val">DEBUG</span>。 调试的级别只能在服务器级别通过<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>控制。</p> <h4>Syntax</h4><p>从列表中选择</p> <h4>提示</h4><p>[性能建议] 除非<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>设置为<span class="val">NONE</span>以外的日志级别, 否则<span class="val">DEBUG</span>级别不会对性能产生任何影响，推荐采用。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="log_rollingSize"><h3>回滚大小 (bytes)<span class="ls-permlink"><a href="#log_rollingSize"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定何时日志文件需要回滚，也称为日志循环。 当文件大小超过回滚限制后，在使用的日志文件将在同一目录中被重命名 为log_name.mm_dd_yyyy(.sequence)，一个新的日志文件将被创建。 回滚的日志文件的实际大小有时会比限制值稍微大一些。 将值设置为<span class="val">0</span>将禁用日志循环。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> 请用“K”，“M”，“G”代表千字节，兆字节和千兆字节。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="log_keepDays"><h3>保留天数<span class="ls-permlink"><a href="#log_keepDays"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定访问日志文件将被保存在磁盘上多少天。 只有超出指定天数的回滚日志文件会被删除。 当前的日志文件不会被删除，无论它包含了多少天的数据。 如果你不想自动删除过时的、很旧的日志文件， 将该值设置为<span class="val">0</span>。</p> <h4>Syntax</h4><p>整数</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="log_compressArchive"><h3>压缩存档<span class="ls-permlink"><a href="#log_compressArchive"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否压缩回滚日志以节省磁盘空间。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> 日志文件是高度可压缩的，建议采取压缩以减少旧日志的磁盘占用量。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="aclogUseServer"><h3>日志管理<span class="ls-permlink"><a href="#aclogUseServer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定写入访问日志的地点。这里有三个选项： <ol> <li>写入到服务器的访问日志；</li> <li>为虚拟主机创建一个访问日志；</li> <li>禁用访问日志记录</li> </ol></p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhaccessLog_fileName"><h3>文件名<span class="ls-permlink"><a href="#vhaccessLog_fileName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>访问日志的文件名</p> <h4>Syntax</h4><p>文件名可以是绝对路径,也可以是相对于$SERVER_ROOT,$VH_ROOT的相对路径。</p> <h4>提示</h4><p>[性能建议] 将访问日志文件放在单独的磁盘上。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_pipedLogger"><h3>管道日志记录<span class="ls-permlink"><a href="#accessLog_pipedLogger"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定外部应用程序，该应用程序将通过其STDIN流（文件句柄为0）上的pipe接收LiteSpeed发送的访问日志数据。 指定此字段后，访问日志将仅发送到记录器应用程序，而不发送到上一个条目中指定的访问日志文件。<br/><br/> 首先必须在<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>中定义记录器应用程序。 服务器级别的访问日志记录只能使用在服务器级别定义的外部记录器应用程序。 虚拟主机级别的访问日志记录只能使用在虚拟主机级别定义的记录器应用程序。<br/><br/> 记录器进程的启动方式与其他外部进程相同 (CGI/FastCGI/LSAPI)过程。这意味着它将作为 在虚拟主机的<span class="tagl"><a href="VirtualHosts_Help.html#setUidMode">外部应用程序设置UID模式</a></span>设置中指定的用户ID，并且永远不会以特权用户运行。<br/><br/> 如果配置了多个记录器的实例，LiteSpeed web server将在多个记录器之间执行简单的负载均衡。LiteSpeed服务器始终尝试将记录器应用程序的数量保持在尽可能低的水平。只有当一个记录器应用程序未能及时处理访问日志条目时，服务器才会尝试启动记录器的另一个实例。<br/><br/> 如果记录器崩溃，Web服务器将启动另一个实例，但是流缓冲区中的日志数据将丢失。 如果外部记录器无法跟上日志流的速度和数量，则可能会丢失日志数据。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_logFormat"><h3>日志格式<span class="ls-permlink"><a href="#accessLog_logFormat"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p> 指定访问日志的格式。 设置之后，它将覆盖<span class="tagl"><a href="#accessLog_logHeader">记录头部</a></span> 的设定。</p> <h4>Syntax</h4><p>字符串。日志格式的语法与Apache 2.0自定义 <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">log format</a>.</p> <h4>例子</h4><div class="ls-example"><b>一般日志格式（CLF）</b><br/>     "%h %l %u %t \"%r\" %>s %b"<br/><br/> <b>支持虚拟主机的一般日志格式</b><br/>     "%v %h %l %u %t \"%r\" %>s %b"<br/><br/> <b>NCSA扩展/组合日志格式</b><br/>     "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" <br/><br/> <b>记录Foobar的cookie值</b><br/>     "%{Foobar}C"</div><h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logHeader">记录头部</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_logHeader"><h3>记录头部<span class="ls-permlink"><a href="#accessLog_logHeader"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否记录HTTP请求头: <span class="val">Referer</span>、 <span class="val">UserAgent</span>和<span class="val">Host</span>。</p> <h4>Syntax</h4><p>从复选框中选择</p> <h4>提示</h4><p>[性能建议] 如果你不需要在访问日志中记录这些头部信息，关闭这个功能。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logFormat">日志格式</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessLog_bytesLog"><h3>字节记录<span class="ls-permlink"><a href="#accessLog_bytesLog"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定带宽字节日志文件的路径。设置后，将创建一份兼容cPanel面板的带宽日志。这将记录 一个请求传输的总字节数，包括请求内容和响应内容。</p> <h4>Syntax</h4><p>文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。</p> <h4>提示</h4><p>[性能建议] 将日志文件放置在一个单独的磁盘上。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="indexUseServer"><h3>使用服务器索引文件<span class="ls-permlink"><a href="#indexUseServer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否使用服务器的索引文件。 如果设置为<span class="val">Yes</span>，那么只有服务器的设置将被使用。 如果设置为<span class="val">No</span>，那么服务器的设置将不会被使用。 如果设置为<span class="val">Addition</span>，那么附加的索引文件可以被添加到此虚拟主机服务器的索引文件列表中。 如果想要禁用此虚拟主机的索引文件，您可以将该值设置为<span class="val">No</span>，并将索引文件栏留空。 field empty.</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="indexFiles"><h3>索引文件<span class="ls-permlink"><a href="#indexFiles"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定URL映射到目录时顺序查找的索引文件名称。 您可以在服务器、虚拟主机和Context级别对其进行自定义。</p> <h4>Syntax</h4><p>Comma-delimited list of index filenames.</p> <h4>提示</h4><p>[性能建议] 只设置你需要的索引文件。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="autoIndex"><h3>自动索引<span class="ls-permlink"><a href="#autoIndex"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>在目录中，当<span class="tagl"><a href="#indexFiles">索引文件</a></span>中所列的索引文件不可用时，指定运行时是否即时生成目录索引。<br/> 此选项可以在虚拟主机级别和context级别中设置，并可以顺着目录树继承，直到被覆盖。 您可以自定义生成的索引页面。请访问在线百科了解如何操作。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p>[安全建议] 建议关闭自动索引，从而尽可能防止泄露机密数据。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#indexFiles">索引文件</a></span>, <span class="tagl"><a href="#autoIndexURI">自动索引URI</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="autoIndexURI"><h3>自动索引URI<span class="ls-permlink"><a href="#autoIndexURI"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>在目录中，当<span class="tagl"><a href="#indexFiles">索引文件</a></span>中所列出的索引文件（index）不可用时，指定用来生成索引页面的URI。 LiteSpeed Web服务器使用一个外部脚本来生成索引页面，从而为定制提供最大的灵活性。 默认的脚本生成一个类似于Apache的索引页面。 定制生成的索引页，请访问在线百科。 被索引的目录通过一个环境变量 "LS_AI_PATH"来传递给脚本。</p> <h4>Syntax</h4><p>URI</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#indexFiles">索引文件</a></span>, <span class="tagl"><a href="#autoIndex">自动索引</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="errPage"><h3>自定义错误页面<span class="ls-permlink"><a href="#errPage"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>当服务器在处理请求时遇到问题， 服务器将向网络客户端返回错误代码和html页面作为错误消息。 错误代码在HTTP协议中定义（请参阅RFC 2616）。 LiteSpeed Web服务器为每个错误代码都有一个内置的默认错误页面，但是也可以为每个错误代码配置一个自定义页面。 甚至可以进一步自定义这些错误页面，以使其对于每个虚拟主机都是唯独特的。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="errCode"><h3>错误代码<span class="ls-permlink"><a href="#errCode"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定错误页面的HTTP状态码。 只有特定的HTTP状态码才可以自定义错误页面。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="errURL"><h3>URL<span class="ls-permlink"><a href="#errURL"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定自定义错误页的URL。 当返回相应HTTP状态时服务器会将请求转发到该URL。 如果此URL指向一个不存在的地址，自带的错误页面将被使用。 该URL可以是一个静态文件，动态生成的页面，或者其他网站的页面 （网址开头为"http(s): //"）。 当转发到在其他网站上的页面时，客户端会收到一个重定向状态码 来替代原本的状态码。</p> <h4>Syntax</h4><p>URL</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableExpires"><h3>启用过期<span class="ls-permlink"><a href="#enableExpires"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否为静态文件生成Expires头。如果启用，将根据 <span class="tagl"><a href="#expiresDefault">默认过期</a></span>和<span class="tagl"><a href="#expiresByType">按类型过期</a></span>生成Expires头。<br/><br/> 这可以在服务器，虚拟主机和Context级别设置。低级别的设置将 覆盖高级别的设置。例如，Context级别的设置将覆盖虚拟主机级别的设置， 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="expiresDefault"><h3>默认过期<span class="ls-permlink"><a href="#expiresDefault"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定生成Expires头的默认设置。该设置在<span class="tagl"><a href="#enableExpires">启用过期</a></span> 设为“启用”时有效。它可以被<span class="tagl"><a href="#expiresByType">按类型过期</a></span>覆盖。 除非必要，否则不要在服务器或虚拟主机级别设置该默认值。 因为它会为所有网页生成Expires头。大多数时候，应该是 为不常变动的某些目录在Context级别设置。如果没有默认设置，<span class="tagl"><a href="#expiresByType">按类型过期</a></span>中未指定的类型不会生成Expires头。</p> <h4>Syntax</h4><p>A|Mseconds<br/> 文件将在基准时间（A|M）加指定秒数的时间后失效。 “A”代表基准时间为客户端的访问时间，“M”代表文件的最后修改时间。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="expiresByType"><h3>按类型过期<span class="ls-permlink"><a href="#expiresByType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>为各个MIME类型分别指定Expires头设置。</p> <h4>Syntax</h4><p>逗号分隔的“MIME-类型=A|M秒数”的列表。 文件将在基准时间（A|M）加指定秒数的时间后失效。<br/><br/> “A”代表基准时间为客户端的访问时间，“M”代表文件的最后修改时间。 MIME-类型可使用通配符“*”，如image/*。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="fileUpload"><h3>文件上传<span class="ls-permlink"><a href="#fileUpload"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>通过使用请求正文解析器将文件解析到服务器本地目录中来上传文件时，提供了附加的安全功能。第三方模块可以轻松地在文件本地目录中扫描文件是否存在危害。 当启用<span class="tagl"><a href="#uploadPassByPath">通过文件路径传递上传数据</a></span>或模块在LSI_HKPT_HTTP_BEGIN级别调用LSIAPI的set_parse_req_body时，将使用请求正文解析器。 源代码包中提供的API示例。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#HTTP_BEGIN">Hook::HTTP_BEGIN Priority</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="uploadTmpDir"><h3>临时文件路径<span class="ls-permlink"><a href="#uploadTmpDir"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>在扫描请求正文工作时，上传到服务器的文件将存放在临时目录中  默认值为<span class="val">/tmp/lshttpd/</span>.</p> <h4>Syntax</h4><p>Absolute path or path starting with $SERVER_ROOT (for Server and VHost levels) or $VH_ROOT (for VHost levels).</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="uploadTmpFilePermission"><h3>临时文件权限<span class="ls-permlink"><a href="#uploadTmpFilePermission"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>设置<b>临时文件路径</b>目录中的文件权限。 服务器级别是全局设置，可以被虚拟主机级别的设置覆盖。</p> <h4>Syntax</h4><p>3 digits octet number. Default value is 666.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="uploadPassByPath"><h3>通过文件路径传递上传数据<span class="ls-permlink"><a href="#uploadPassByPath"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否按文件路径传递上传数据。 如果启用，则上传时文件路径以及其他一些信息将发送到后端处理程序，而不是文件本身。 这样可以节省CPU资源和文件传输时间，但需要一些更新才能实现。 如果禁用，则文件内容将传输到后端处理程序，请求主体仍解析为文件。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p>[性能] 如果向下兼容不是问题，启用此功能可加快文件上传处理速度。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="suffix"><h3>后缀<span class="ls-permlink"><a href="#suffix"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定将由此脚本处理程序处理的脚本文件后缀。 后缀必须是唯一的。</p> <h4>Syntax</h4><p>Comma delimited list with period "." character prohibited.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> 服务器将为列表中的第一个后缀自动添加特殊的MIME类型 ("application/x-httpd-[suffix]") 。 例如，将为后缀“ php53”添加MIME类型“ application/x-httpd-php53”。 首先需要在<span class="tagl"><a href="#mime">MIME设置</a></span>设置中设置后缀。<br/> 尽管我们在此字段中列出了后缀，但是脚本处理程序使用MIME类型而非后缀来确定要处理的脚本。<br/> [性能和安全建议] 仅指定您真正需要的后缀。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="shType"><h3>类型<span class="ls-permlink"><a href="#shType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定处理这些脚本文件的外部程序类型。 可用类型有：<span class="val">CGI</span>, <span class="val">FastCGI</span>, <span class="val">Web服务器</span>, <span class="val">LSAPI应用程序</span>, <span class="val">负载均衡器</span>, 或 <span class="val">Servlet引擎</span>。 对于FastCGI, Web服务器和Servlet引擎，需要指定<span class="tagl"><a href="#shHandlerName">处理器名称</a></span>。 这是在<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>部分预设定的外部程序名称。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="shHandlerName"><h3>处理器名称<span class="ls-permlink"><a href="#shHandlerName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>当处理器类型为FastCGI，Web服务器，LSAPI，负载均衡器或Servlet引擎时， 指定处理脚本文件的外部程序名称。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="phpIniOverride"><h3>php.ini 重写<span class="ls-permlink"><a href="#phpIniOverride"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>用于覆盖当前context（虚拟主机级别或context级别）中的php.ini设置。<br/><br/> 支持的指令是：<br/> php_value<br/> php_flag<br/> php_admin_value<br/> php_admin_flag<br/><br/> 所有其他行/指令将被忽略。</p> <h4>Syntax</h4><p>Override syntax is similar to Apache, a newline separated list of directives and their values with each directive being prepended by php_value, php_flag, php_admin_value, or php_admin_flag appropriately.</p> <h4>例子</h4><div class="ls-example">php_value include_path ".:/usr/local/lib/php"<br/> php_admin_flag engine on<br/> php_admin_value open_basedir "/home"</div></article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="docRoot"><h3>文档根目录<span class="ls-permlink"><a href="#docRoot"></a></span></h3></header><h4>描述</h4><p>指定此虚拟主机的文档根目录。 推荐使用<span class="val">$VH_ROOT/html</span>。在Context中，此目录可以用$DOC_ROOT来引用。</p> <h4>语法</h4><p>路径</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhadminEmails"><h3>管理员邮箱<span class="ls-permlink"><a href="#vhadminEmails"></a></span></h3></header><h4>描述</h4><p>指定这个虚拟主机管理员的电子邮箱地址。</p> <h4>语法</h4><p>以逗号分隔的电子邮箱地址列表</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhEnableGzip"><h3>启用压缩<span class="ls-permlink"><a href="#vhEnableGzip"></a></span></h3></header><h4>描述</h4><p>指定是否为此虚拟主机启用GZIP压缩。 这个设置仅在服务器级别的<span class="tagl"><a href="#enableGzipCompress">启用压缩</a></span>设置为<span class="val">Yes</span>时有效。</p> <h4>语法</h4><p>布尔值</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#enableGzipCompress">启用压缩</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhEnableBr"><h3>Brotli压缩<span class="ls-permlink"><a href="#vhEnableBr"></a></span></h3></header><h4>描述</h4><p>指定是否为此虚拟主机启用Brotli压缩。 这个设置仅在服务器级别的<span class="tagl"><a href="#brStaticCompressLevel">Brotli压缩等级（静态文件）</a></span>设置为一个非零值时有效。</p> <h4>语法</h4><p>布尔值</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#brStaticCompressLevel">Brotli压缩等级（静态文件）</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableIpGeo"><h3>启用IP地理定位<span class="ls-permlink"><a href="#enableIpGeo"></a></span></h3></header><h4>描述</h4><p> 指定是否启用IP地理定位查找。 可以在服务器、虚拟主机或上下文级别设置。使用“Not Set”值时，默认禁用IP地理定位。</p> <h4>语法</h4><p>布尔值</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">使用报头中的客户端IP</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">数据库文件路径</a></span>,</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="cgroups"><h3>cgroups<span class="ls-permlink"><a href="#cgroups"></a></span></h3></header><h4>描述</h4><p>如果当前操作系统支持(目前支持RedHat/Centos Linux v7.5+和Ubuntu 18.04+)，则将cgroup设置应用于此CGI进程。 。 当前执行的用户将用于确定要应用的cgroup配置。<br/> 在服务器级别将此设置为<span class="val">Disabled</span>将在服务器范围内禁用此设置。 在其他情况下，可以在虚拟主机级别覆盖服务器级别的设置。<br/> 默认值:<br/> <b>服务器级别:</b> Off<br/> <b>虚拟主机级别:</b> 继承服务器级别设置</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="logUseServer"><h3>使用服务器日志<span class="ls-permlink"><a href="#logUseServer"></a></span></h3></header><h4>描述</h4><p>指定是否将虚拟主机的日志信息放置到服务器日志文件中，而不是创建独自的日志文件。</p> <h4>语法</h4><p>从单选框中选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhlog_fileName"><h3>文件路径<span class="ls-permlink"><a href="#vhlog_fileName"></a></span></h3></header><h4>描述</h4><p>指定日志文件的路径。</p> <h4>语法</h4><p>文件名可以是绝对路径，也可以是相对于$SERVER_ROOT或$VH_ROOT的相对路径。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--performance">Performance</span> 将日志文件放在单独的磁盘上。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhlog_logLevel"><h3>日志级别<span class="ls-permlink"><a href="#vhlog_logLevel"></a></span></h3></header><h4>描述</h4><p>指定日志记录级别。可用级别（从高到低）为<span class="val">ERROR</span>、 <span class="val">WARNING</span>、<span class="val">NOTICE</span>、<span class="val">INFO</span>和<span class="val">DEBUG</span>。 只有当消息等级高于或与当前设置相同时才被记录。 如果您希望将此设置为<span class="val">DEBUG</span>，您也需要设置服务器日志级别为<span class="val">DEBUG</span>。 调试的级别只能在服务器级别通过<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>控制。</p> <h4>语法</h4><p>从列表中选择</p> <h4>提示</h4><p><span class="ls-badge ls-badge--performance">Performance</span> 除非<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>设置为<span class="val">NONE</span>以外的级别，否则<span class="val">DEBUG</span>日志级别不会影响性能，建议使用。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_rollingSize"><h3>轮转大小（字节）<span class="ls-permlink"><a href="#log_rollingSize"></a></span></h3></header><h4>描述</h4><p>指定当前日志文件何时需要轮转，也称为日志轮转。 当文件大小超过轮转限制后，活动日志文件会在同一目录中重命名 为log_name.mm_dd_yyyy(.sequence)，并创建新的活动日志文件。 轮转后的日志文件实际大小有时会略大于此限制。 设置为<span class="val">0</span>可禁用日志轮转。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 可在数字后附加"K"、"M"、"G"分别表示千字节、兆字节和千兆字节。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_keepDays"><h3>保留天数<span class="ls-permlink"><a href="#log_keepDays"></a></span></h3></header><h4>描述</h4><p>指定访问日志文件将被保存在磁盘上多少天。 只有早于指定天数的轮转日志文件会被删除。 当前的日志文件不会被删除，无论它包含了多少天的数据。 如果你不想自动删除过时的、很旧的日志文件， 将该值设置为<span class="val">0</span>。</p> <h4>语法</h4><p>整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="log_compressArchive"><h3>压缩存档<span class="ls-permlink"><a href="#log_compressArchive"></a></span></h3></header><h4>描述</h4><p>指定是否压缩轮转日志文件以节省磁盘空间。</p> <h4>语法</h4><p>布尔值</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 日志文件压缩率很高，建议启用此功能以减少旧日志的磁盘占用。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="aclogUseServer"><h3>日志管理<span class="ls-permlink"><a href="#aclogUseServer"></a></span></h3></header><h4>描述</h4><p>指定访问日志的写入位置。有三个选项： <ol> <li>写入服务器的访问日志</li> <li>为此虚拟主机创建访问日志</li> <li>禁用访问日志记录</li> </ol></p> <h4>语法</h4><p>从列表中选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhaccessLog_fileName"><h3>文件名<span class="ls-permlink"><a href="#vhaccessLog_fileName"></a></span></h3></header><h4>描述</h4><p>访问日志文件名。</p> <h4>语法</h4><p>文件名可以是绝对路径，也可以是相对于$SERVER_ROOT或$VH_ROOT的相对路径。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--performance">Performance</span> 将访问日志文件放在单独的磁盘上。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_pipedLogger"><h3>管道日志记录<span class="ls-permlink"><a href="#accessLog_pipedLogger"></a></span></h3></header><h4>描述</h4><p>指定一个外部应用程序，用来通过其STDIN流上的管道（文件句柄为0）接收LiteSpeed发送的访问日志数据。 指定此字段后，访问日志将仅发送到记录器应用程序，而不发送到上一个条目中指定的访问日志文件。<br/><br/> 必须先在<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>部分定义记录器应用程序。服务器级别的访问日志只能使用在服务器级别定义的外部记录器应用程序。虚拟主机级别的访问日志只能使用在虚拟主机级别定义的记录器应用程序。<br/><br/> 记录器进程的启动方式与其他外部（CGI/FastCGI/LSAPI）进程相同。 这意味着它会以虚拟主机<span class="tagl"><a href="VirtualHosts_Help.html#setUidMode">外部应用程序设置UID模式</a></span>设置中指定的用户ID运行， 绝不会代表特权用户运行。<br/><br/> 如果配置了记录器应用程序的多个实例，LiteSpeed Web服务器会在多个记录器应用程序之间执行简单的负载均衡。LiteSpeed服务器始终尽量将记录器应用程序数量保持在最低。只有当某个记录器应用程序无法及时处理访问日志条目时，服务器才会尝试启动该记录器应用程序的另一个实例。<br/><br/> 如果记录器崩溃，Web服务器会启动另一个实例，但流缓冲区中的日志数据将会丢失。如果外部记录器无法跟上日志流的速度和数量，也可能丢失日志数据。</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_logFormat"><h3>日志格式<span class="ls-permlink"><a href="#accessLog_logFormat"></a></span></h3></header><h4>描述</h4><p> 指定访问日志的格式。 设置之后，它将覆盖<span class="tagl"><a href="#accessLog_logHeader">日志头部</a></span> 的设定。</p> <h4>语法</h4><p>字符串。日志格式语法与Apache 2.0的自定义 <a href="http://httpd.apache.org/docs/current/mod/mod_log_config.html#formats" target="_blank" rel="noopener noreferrer">日志格式</a>兼容。</p> <h4>示例</h4><div class="ls-example"><b>一般日志格式（CLF）</b><br/>     "%h %l %u %t \"%r\" %>s %b"<br/><br/> <b>支持虚拟主机的一般日志格式</b><br/>     "%v %h %l %u %t \"%r\" %>s %b"<br/><br/> <b>NCSA扩展/组合日志格式</b><br/>     "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" <br/><br/> <b>记录Foobar的cookie值</b><br/>     "%{Foobar}C"</div><h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logHeader">日志头部</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_logHeader"><h3>日志头部<span class="ls-permlink"><a href="#accessLog_logHeader"></a></span></h3></header><h4>描述</h4><p>指定是否记录HTTP请求头：<span class="val">Referer</span>、 <span class="val">UserAgent</span>和<span class="val">Host</span>。</p> <h4>语法</h4><p>从复选框选择</p> <h4>提示</h4><p>[性能] 如果不需要在访问日志中记录这些头部信息，请关闭此功能。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#accessLog_logFormat">日志格式</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessLog_bytesLog"><h3>字节记录<span class="ls-permlink"><a href="#accessLog_bytesLog"></a></span></h3></header><h4>描述</h4><p>指定带宽字节日志文件的路径。设置后，将创建一份兼容cPanel面板的带宽日志。这将记录 一个请求传输的总字节数，包括请求内容和响应内容。</p> <h4>语法</h4><p>文件名可以是绝对路径，也可以是相对于$SERVER_ROOT的相对路径。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--performance">Performance</span> 将日志文件放在单独的磁盘上。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="indexUseServer"><h3>使用服务器索引文件<span class="ls-permlink"><a href="#indexUseServer"></a></span></h3></header><h4>描述</h4><p>指定是否使用服务器的索引文件。 如果设置为<span class="val">Yes</span>，那么只有服务器的设置将被使用。 如果设置为<span class="val">No</span>，那么服务器的设置将不会被使用。 如果设置为<span class="val">Addition</span>，那么附加的索引文件可以被添加到此虚拟主机服务器的索引文件列表中。 如果想要禁用此虚拟主机的索引文件，您可以将该值设置为<span class="val">No</span>，并将索引文件栏留空。</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="indexFiles"><h3>索引文件<span class="ls-permlink"><a href="#indexFiles"></a></span></h3></header><h4>描述</h4><p>指定URL映射到目录时按顺序查找的索引文件名称。 您可以在服务器、虚拟主机和上下文级别对其进行自定义。</p> <h4>语法</h4><p>以逗号分隔的索引文件名列表。</p> <h4>提示</h4><p>[性能建议] 只设置你需要的索引文件。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="autoIndex"><h3>自动索引<span class="ls-permlink"><a href="#autoIndex"></a></span></h3></header><h4>描述</h4><p>在目录中，当<span class="tagl"><a href="#indexFiles">索引文件</a></span>中所列的索引文件不可用时，指定运行时是否即时生成目录索引。<br/> 此选项可以在虚拟主机级别和Context级别中设置，并可以顺着目录树继承，直到被显式覆盖。 您可以自定义生成的索引页面。请查看在线Wiki操作指南。</p> <h4>语法</h4><p>布尔值</p> <h4>提示</h4><p>[安全] 建议尽可能关闭自动索引，以防止泄露机密数据。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#indexFiles">索引文件</a></span>, <span class="tagl"><a href="#autoIndexURI">自动索引URI</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="autoIndexURI"><h3>自动索引URI<span class="ls-permlink"><a href="#autoIndexURI"></a></span></h3></header><h4>描述</h4><p>在目录中，当<span class="tagl"><a href="#indexFiles">索引文件</a></span>中所列出的索引文件（index）不可用时，指定用来生成索引页面的URI。 LiteSpeed Web服务器使用一个外部脚本来生成索引页面，从而为定制提供最大的灵活性。 默认的脚本生成一个类似于Apache的索引页面。 如需自定义生成的索引页面，请查看在线Wiki操作指南。 待索引目录会通过环境变量"LS_AI_PATH"传递给脚本。</p> <h4>语法</h4><p>URI</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#indexFiles">索引文件</a></span>, <span class="tagl"><a href="#autoIndex">自动索引</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="errPage"><h3>自定义错误页面<span class="ls-permlink"><a href="#errPage"></a></span></h3></header><h4>描述</h4><p>当服务器在处理请求时遇到问题， 服务器将向网络客户端返回错误代码和html页面作为错误消息。 错误代码在HTTP协议中定义（请参阅RFC 2616）。 LiteSpeed Web服务器为每个错误代码都有一个内置的默认错误页面，但是也可以为每个错误代码配置一个自定义页面。 这些错误页面还可以进一步自定义，使其对每个虚拟主机都保持唯一。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="errCode"><h3>错误代码<span class="ls-permlink"><a href="#errCode"></a></span></h3></header><h4>描述</h4><p>指定错误页面的HTTP状态码。 只有特定的HTTP状态码才可以自定义错误页面。</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="errURL"><h3>URL<span class="ls-permlink"><a href="#errURL"></a></span></h3></header><h4>描述</h4><p>指定自定义错误页的URL。 当返回相应HTTP状态时服务器会将请求转发到该URL。 如果此URL指向不存在的资源，将使用内置错误页面。 该URL可以是静态文件、动态生成的页面，或其他网站的页面 （以"http(s)://"开头的URL）。 当引用其他网站上的页面时，客户端会收到重定向状态码， 而不是原始状态码。</p> <h4>语法</h4><p>URL</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableExpires"><h3>启用过期<span class="ls-permlink"><a href="#enableExpires"></a></span></h3></header><h4>描述</h4><p>指定是否为静态文件生成Expires头。如果启用，将根据 <span class="tagl"><a href="#expiresDefault">默认过期</a></span>和<span class="tagl"><a href="#expiresByType">按类型过期</a></span>生成Expires头。<br/><br/> 这可以在服务器、虚拟主机和上下文级别设置。低级别的设置将 覆盖高级别的设置。例如，上下文级别的设置将覆盖虚拟主机级别的设置， 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expiresDefault"><h3>默认过期<span class="ls-permlink"><a href="#expiresDefault"></a></span></h3></header><h4>描述</h4><p>指定生成Expires头的默认设置。该设置在<span class="tagl"><a href="#enableExpires">启用过期</a></span> 设为“启用”时有效。它可以被<span class="tagl"><a href="#expiresByType">按类型过期</a></span>覆盖。 除非必要，否则不要在服务器或虚拟主机级别设置该默认值。 因为它会为所有网页生成Expires头。大多数时候，应该是 为不常变动的某些目录在上下文级别设置。如果没有默认设置，<span class="tagl"><a href="#expiresByType">按类型过期</a></span>中未指定的类型不会生成Expires头。</p> <h4>语法</h4><p>A|Mseconds<br/> 文件将在基准时间（A|M）加指定秒数的时间后失效。 “A”代表基准时间为客户端的访问时间，“M”代表文件的最后修改时间。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expiresByType"><h3>按类型过期<span class="ls-permlink"><a href="#expiresByType"></a></span></h3></header><h4>描述</h4><p>为各个MIME类型分别指定Expires头设置。</p> <h4>语法</h4><p>逗号分隔的“MIME-类型=A|M秒数”的列表。 文件将在基准时间（A|M）加指定秒数的时间后失效。<br/><br/> “A”代表基准时间为客户端的访问时间，“M”代表文件的最后修改时间。 MIME-类型可使用通配符“*”，如image/*。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="fileUpload"><h3>文件上传<span class="ls-permlink"><a href="#fileUpload"></a></span></h3></header><h4>描述</h4><p>上传文件时，通过使用请求正文解析器将文件解析到服务器本地目录，可以提供附加的安全功能。第三方模块可以轻松扫描本地目录中的文件是否存在危害。当启用<span class="tagl"><a href="#uploadPassByPath">通过文件路径传递上传数据</a></span>，或模块在LSI_HKPT_HTTP_BEGIN级别调用LSIAPI的set_parse_req_body时，将使用请求正文解析器。 源代码包中提供的API示例。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#HTTP_BEGIN">Hook::HTTP_BEGIN 优先级</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="uploadTmpDir"><h3>临时文件路径<span class="ls-permlink"><a href="#uploadTmpDir"></a></span></h3></header><h4>描述</h4><p>请求正文解析器工作期间，上传到服务器的文件会存储在此临时目录中。 默认值为<span class="val">/tmp/lshttpd/</span>。</p> <h4>语法</h4><p>绝对路径，或以$SERVER_ROOT开头的路径（服务器和虚拟主机级别），或以$VH_ROOT开头的路径（虚拟主机级别）。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="uploadTmpFilePermission"><h3>临时文件权限<span class="ls-permlink"><a href="#uploadTmpFilePermission"></a></span></h3></header><h4>描述</h4><p>确定临时目录中所存文件使用的文件权限。 服务器级别设置为全局设置，可在虚拟主机级别覆盖。</p> <h4>语法</h4><p>3位八进制数。默认值为666。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="uploadPassByPath"><h3>通过文件路径传递上传数据<span class="ls-permlink"><a href="#uploadPassByPath"></a></span></h3></header><h4>描述</h4><p>指定是否按文件路径传递上传数据。 如果启用，则上传时文件路径以及其他一些信息将发送到后端处理程序，而不是文件本身。 这样可以节省CPU资源和文件传输时间，但需要一些更新才能实现。 如果禁用，则文件内容将传输到后端处理程序，请求主体仍解析为文件。</p> <h4>语法</h4><p>布尔值</p> <h4>提示</h4><p>[性能] 如果向下兼容不是问题，启用此功能可加快文件上传处理速度。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="suffix"><h3>后缀<span class="ls-permlink"><a href="#suffix"></a></span></h3></header><h4>描述</h4><p>指定将由此脚本处理程序处理的脚本文件后缀。后缀必须唯一。</p> <h4>语法</h4><p>逗号分隔列表，禁止使用句点“.”字符。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 服务器会自动为列表中的第一个后缀添加特殊MIME类型（“application/x-httpd-[suffix]”）。 例如，会为后缀“php53”添加MIME类型“application/x-httpd-php53”。第一个之后的后缀需要在<span class="tagl"><a href="#mime">MIME设置</a></span>设置中配置。<br/> 尽管我们在此字段中列出了后缀，但是脚本处理程序使用MIME类型而非后缀来确定要处理的脚本。<br/> <span class="ls-badge ls-badge--performance">Performance</span><span class="ls-badge ls-badge--security">Security</span> 仅指定确实需要的后缀。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="shType"><h3>处理器类型<span class="ls-permlink"><a href="#shType"></a></span></h3></header><h4>描述</h4><p>指定处理这些脚本文件的外部应用程序类型。可用类型包括： <span class="val">LSAPI app</span>、<span class="val">Web Server (Proxy)</span>、<span class="val">Fast CGI</span>、<span class="val">SCGI</span>、<span class="val">CGI</span>、<span class="val">Load balancer</span>、 <span class="val">Servlet Engine</span>、<span class="val">uWSGI</span>或<span class="val">Module Handler</span>。除<span class="val">CGI</span>和<span class="val">Module Handler</span> 处理器类型外，<span class="tagl"><a href="#shHandlerName">处理器名称</a></span>还必须设置为<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>部分中已预先定义的外部应用程序。</p> <h4>语法</h4><p>从列表中选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="shHandlerName"><h3>处理器名称<span class="ls-permlink"><a href="#shHandlerName"></a></span></h3></header><h4>描述</h4><p>当处理器类型为LSAPI app、Web Server (Proxy)、Fast CGI、SCGI、Load balancer、 Servlet Engine或uWSGI时，指定处理脚本文件的外部应用程序名称。</p> <h4>语法</h4><p>从列表中选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="phpIniOverride"><h3>php.ini覆盖<span class="ls-permlink"><a href="#phpIniOverride"></a></span></h3></header><h4>描述</h4><p>用于覆盖当前Context（虚拟主机级别或Context级别）中的php.ini设置。<br/><br/> 支持的指令是：<br/> php_value<br/> php_flag<br/> php_admin_value<br/> php_admin_flag<br/><br/> 所有其他行/指令将被忽略。</p> <h4>语法</h4><p>覆盖语法类似于Apache：每行一个指令及其值，每个指令前根据需要加上php_value、php_flag、php_admin_value或php_admin_flag。</p> <h4>示例</h4><div class="ls-example">php_value include_path ".:/usr/local/lib/php"<br/> php_admin_flag engine on<br/> php_admin_value open_basedir "/home"</div></article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

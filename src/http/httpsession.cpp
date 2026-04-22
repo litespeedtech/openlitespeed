@@ -177,6 +177,7 @@ HttpSession::HttpSession()
     , m_pReqParser(NULL)
     , m_sessSeq(ls_atomic_add_fetch(&s_m_sessSeq, 1)) // ok to overflow / wrap around
     //, m_sessSeq(0)
+    , m_inRunCallbacks(false)
 {
     ls_spinlock_setup(&m_lockMtRace);
     lockMtRace();
@@ -2697,6 +2698,8 @@ int HttpSession::assignHandler(const HttpHandler *pHandler)
     case HandlerType::HT_LSAPI:
     case HandlerType::HT_MODULE:
     case HandlerType::HT_LOADBALANCER:
+    case HandlerType::HT_SCGI:
+    case HandlerType::HT_UWSGI:
         {
             if (m_request.getStatus() != HttpReq::HEADER_OK)
                 return SC_400;  //cannot use dynamic request handler to handle invalid request
@@ -3178,6 +3181,7 @@ void HttpSession::setHandler(ReqHandler *pHandler)
 
 int HttpSession::cleanUpHandler(HSPState nextStateAfterMtEnd)
 {
+    LS_DBG(getLogSession(), "HttpSession::cleanUpHandler next state: %d", nextStateAfterMtEnd);
     if (getMtFlag(HSF_MT_HANDLER|HSF_MT_END) == HSF_MT_HANDLER)
     {
         if (nextStateAfterMtEnd != HSPS_END)
@@ -5338,8 +5342,8 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 LS_NOTICE(getLogSession(), "Unable to create session iouring\n");
                 return LS_FAIL;
             }
-            LS_INFO(getLogSession(), "Using io_uring for transfer of %s",
-                    getSendFileInfo()->getFileData() ?
+            LS_DBG(getLogSession(), "Using io_uring req: %p for transfer of %s",
+                    lsIouringReq, getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
             m_pAioReq = lsIouringReq;
@@ -5355,8 +5359,8 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 LS_NOTICE(getLogSession(), "Unable to create session LinuxAio\n");
                 return LS_FAIL;
             }
-            LS_INFO(getLogSession(), "Using Linux AIO for transfer of %s",
-                    getSendFileInfo()->getFileData() ?
+            LS_DBG(getLogSession(), "Using Linux AIO for transfer of %s",
+                   getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
             m_pAioReq = lsLinuxAioReq;
@@ -5370,7 +5374,7 @@ int HttpSession::sendStaticFileAsync(SendFileInfo *pData)
                 LS_NOTICE(getLogSession(), "Unable to create session PosixAio\n");
                 return LS_FAIL;
             }
-            LS_INFO(getLogSession(), "Using Posix AIO for transfer of %s",
+            LS_DBG(getLogSession(), "Using Posix AIO for transfer of %s",
                     getSendFileInfo()->getFileData() ?
                         getSendFileInfo()->getFileData()->getRealPath()->c_str() :
                         "file");
@@ -5884,23 +5888,29 @@ int HttpSession::processAsyncData(SendFileInfo *pData)
     char *pBuf;
     int read, ret;
     ret = m_pAioReq->getRead(&pBuf, pData->getCurPos(), &read);
+    off_t remain = pData->getRemain();
 
     LS_DBG(getLogSession(), "getRead(): ret: %d, read: %d, remain: %jd\n",
-           ret, read, pData->getRemain());
+           ret, read, remain);
     if (ret < 0)
         return -1;
     if (m_pAioReq->isPending())
-        setFlag(HSF_AIO_READING);
-    else
-        clearFlag(HSF_AIO_READING);
-    if (read == 0)
     {
+        setFlag(HSF_AIO_READING);
         suspendWrite();
         return LS_AGAIN;
     }
     else
+        clearFlag(HSF_AIO_READING);
+    if (read == 0)
+    {
+        if (remain > 0)
+            return postAsyncRead(&m_sendFileInfo);
+        else
+            return LS_DONE;
+    }
+    else
         continueWrite();
-    off_t remain = pData->getRemain();
 
     if (read > remain)
         read = remain;
@@ -6476,7 +6486,11 @@ void HttpSession::runAllEventNotifier()
 
 void HttpSession::runAllCallbacks()
 {
+    if (m_inRunCallbacks)
+        return;
+    m_inRunCallbacks = true;
     EvtcbQue::getInstance().run(this);
+    m_inRunCallbacks = false;
 }
 
 

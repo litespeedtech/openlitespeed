@@ -168,6 +168,8 @@ int LogRotate::roll(Appender *pAppender, uid_t uid, gid_t gid,
 int LogRotate::testRolling(Appender *pAppender, off_t rollingSize,
                            uid_t uid, gid_t gid)
 {
+    if (pAppender->getFlag(Appender::FLAG_PIPE | Appender::FLAG_NOROTATE))
+        return 0;
     const char *pName = pAppender->getName();
     struct stat st;
     int ret = lstat(pName, &st);

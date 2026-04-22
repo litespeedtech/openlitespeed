@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../lib/LSWebAdmin/I18n/DMsg.php';
+
 if ($argc == 1) {
 	echo "Usage: $argv[0] lang [mixed]
 		lang is the language file you want to sort. Current supported values
@@ -9,12 +11,9 @@ if ($argc == 1) {
 	return;
 }
 
-include(__DIR__ . '/../../lib/DMsg.php');
-
 $option = '';
 if (isset($argv[2])) {
     $option = $argv[2];
 }
 
-DMsg::Util_SortMsg($argv[1], $option);
-
+\LSWebAdmin\I18n\DMsg::Util_SortMsg($argv[1], $option);

@@ -37,4 +37,4 @@ if (MOD_SECURITY)
     message("Make mod_security")
     add_subdirectory(modsecurity-ls)
 endif()
-
+add_subdirectory(modacme)

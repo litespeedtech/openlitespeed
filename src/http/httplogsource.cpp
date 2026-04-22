@@ -296,6 +296,8 @@ int HttpLogSource::initErrorLog2(const XmlNode *pNode,
                 StdErrLogger::getInstance().getAppender()->
                 setRollingSize(rollSize);
             }
+            else
+                StdErrLogger::getInstance().setLogFileName(NULL);
         }
         else
             StdErrLogger::getInstance().setLogFileName(NULL);

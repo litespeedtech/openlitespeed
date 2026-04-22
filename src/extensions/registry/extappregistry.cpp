@@ -1,6 +1,6 @@
 /*****************************************************************************
 *    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
+*    Copyright (C) 2013 - 2025  LiteSpeed Technologies, Inc.                 *
 *                                                                            *
 *    This program is free software: you can redistribute it and/or modify    *
 *    it under the terms of the GNU General Public License as published by    *
@@ -43,6 +43,8 @@
 #include <extensions/lsapi/lsapiworker.h>
 #include <extensions/proxy/proxyconfig.h>
 #include <extensions/proxy/proxyworker.h>
+#include <extensions/scgi/scgiapp.h>
+#include <extensions/uwsgi/uwsgiapp.h>
 #include <unistd.h>
 #include "../pidlist.h"
 
@@ -224,6 +226,8 @@ static const char *s_pTypeName[] =
     "LSAPI",
     "Logger",
     "LB",
+    "SCGI",
+    "uWSGI",
 };
 
 int ExtAppSubRegistry::generateRTReport(int fd, int type)
@@ -303,6 +307,12 @@ static ExtWorker *newWorker(int type, const char *pName)
         break;
     case EA_LOADBALANCER:
         pWorker = new LoadBalancer(pName);
+        break;
+    case EA_SCGI:
+        pWorker = new ScgiApp(pName);
+        break;
+    case EA_UWSGI:
+        pWorker = new UwsgiApp(pName);
         break;
     default:
         return NULL;
@@ -504,6 +514,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
             return -1;
         }
 
+        LS_DBG(&currentCtx, "iType: %d", iType);
         iAutoStart = ConfigCtx::getCurConfigCtx()->
                                 getLongValue(pNode, "autoStart", 0, 2, 1);
 
@@ -801,10 +812,12 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
         return NULL;
     }
 
-    if ((iType == EA_FCGI) || (iType == EA_LOGGER) || (iType == EA_LSAPI))
+    if ((iType == EA_FCGI) || (iType == EA_LOGGER) || (iType == EA_LSAPI) || (iType == EA_SCGI) || (iType == EA_UWSGI))
     {
         if (iType == EA_LOGGER)
             iAutoStart = 1;
+        else if (iType == EA_SCGI || iType == EA_UWSGI)
+            iAutoStart = 0;
         else
             iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "autoStart",
                          0, 2, 1);

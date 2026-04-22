@@ -200,6 +200,11 @@ private:
     AutoStr2            m_sAutoIndexURI;
     AutoStr2            m_sChroot;
     AutoStr             m_sNSConf2;
+    int                 m_acme;
+    AutoStr2            m_acmeApi;
+    AutoStr2            m_acmeEnv;
+    int                 m_fileSsl;
+    int                 m_parentSsl;
 
     int                 m_iMappingRef;
     int                 m_PhpXmlNodeSSize;
@@ -437,6 +442,17 @@ public:
     void addRewriteMap(const char *pName, const char *pLocation);
     void addRewriteRule(char *pRules);
 
+    void setAcme(int a)                 {   m_acme = a;                 }
+    int getAcme()                       {   return m_acme;              }
+    const char *getAcmeApi()            {   return m_acmeApi.c_str();   }
+    void setAcmeApi(const char *p)      {   m_acmeApi = p;              }
+    const char *getAcmeEnv()            {   return m_acmeEnv.c_str();   }
+    void setAcmeEnv(const char *p)      {   m_acmeEnv = p;              }
+    int getFileSsl()                    {   return m_fileSsl;           }
+    void setFileSsl(int fileSsl)        {   m_fileSsl = fileSsl;        }
+    int getParentSsl()                  {   return m_parentSsl;         }
+    void setParentSsl(int p)            {   m_parentSsl = p;            }
+
     void updateUGid(const char *pLogId, const char *pPath, int is_uid_set);
 
     const AutoStr2 *getAutoIndexURI() const
@@ -496,6 +512,7 @@ public:
     int configRealmList(const XmlNode *pRoot);
     int configSecurity(const XmlNode *pVhConfNode);
     int configRewrite(const XmlNode *pNode);
+    int configAcme(const XmlNode *pNode);
     void configRewriteMap(const XmlNode *pNode);
     HttpContext *addContext(int match, const char *pUri,
                             int type, const char *pLocation, const char *pHandler, int allowBrowse);

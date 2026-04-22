@@ -753,13 +753,14 @@ void LocalWorker::checkAndStopWorker()
         {
             m_forceStop = 0;
             LS_INFO("[%s] force stop requested, stopping ...", getName());
+            s = 2;
         }
         else
             return;
     }
     if (getConfig().isDetached())
     {
-        if (s ==2 ||
+        if (s == 2 ||
             (m_pDetached && m_pDetached->pid_info.pid > 0
             && DateTime::s_curTime - m_pDetached->last_stop_time > 60))
         {
@@ -947,6 +948,10 @@ void LocalWorker::killOldDetachedInstance(DetachedPidInfo_t *detached_pid)
         return;
     PidRegistry::addMarkToStop(pid, KILL_TYPE_TERM,
                                 m_pDetached->pid_info.last_modify);
+    //NOTE: do not do this, let server detect pid change then react.
+    //      otherwise, when under resource limit cannot start again,
+    //      cause more downtime, and not able to recover.
+    //detached_pid->pid = -1;
 }
 
 

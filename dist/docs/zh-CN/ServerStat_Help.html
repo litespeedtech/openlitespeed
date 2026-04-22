@@ -1,137 +1,166 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - WebAdmin Console - Service Manager</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - WebAdmin Console - Service Manager." />
+  <title>OpenLiteSpeed用户手册 - WebAdmin控制台-服务管理器</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - WebAdmin控制台-服务管理器." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../ServerStat_Help.html" data-lang="en-US">English</option><option value="../es-ES/ServerStat_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/ServerStat_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/ServerStat_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/ServerStat_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/ServerStat_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><span class="current"><a href="ServerStat_Help.html">Service Manager</a></span></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a class="current" href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&nbsp;</div><div class="center"><a href="admin.html">Administration</a></div><div class="next"><a href="Real_Time_Stats_Help.html">Real-Time Statistics</a> &#187;</div></div>
-<h1>WebAdmin Console - Service Manager</h1><section class="ls-spacer-small-bottom">The Service Manager acts as a control room for monitoring the server and controlling certain 
-top-level functions. It provides the following features:
-(The Service Manager can be accessed by clicking on the Actions menu or from home page.)
-<ul>
-<li>Monitor the current status of the server, listeners, and virtual hosts.</li>
-<li>Apply configuration changes with a graceful restart.</li>
-<li>Enable or disable a particular virtual host.</li>
-<li>View the server log through the log viewer.</li>
-<li>Monitor real-time server statistics.</li>
-</ul></section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>Server</header><p>
-<a href="#sname">Name - Server</a> | <a href="#pid">PID</a> | <a href="#servAction">Actions</a> | <a href="#restart">Apply Changes/Graceful Restart</a> | <a href="#viewlog">Server Log Viewer</a> | <a href="#realtimerpt">Real-Time Statistics</a> | <a href="#toggleDebugLog">Toggle Debug Logging</a></p></section>
-<section class="toc-row"><header>Listeners</header><p>
-<a href="#lname">Name - Listener</a> | <a href="#lstatus">Status - Listener</a> | <a href="#lmap">Virtual Hosts Mappings</a></p></section>
-<section class="toc-row"><header>Virtual Hosts</header><p>
-<a href="#vname">Name - Virtual Host</a> | <a href="#vstatus">Status - Virtual Host</a> | <a href="#vaction">Actions - Virtual Host</a> | <a href="#venable">Enable</a> | <a href="#vdisable">Disable</a> | <a href="#vreload">Restart - Virtual Host</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&nbsp;</div><div class="center"><a href="admin.html">管理</a></div><div class="next"><a href="Real_Time_Stats_Help.html">实时统计</a> &#187;</div></div>
+<header class="doc-page-header"><h1>WebAdmin控制台-服务管理器</h1><div class="doc-page-intro">服务管理器用于集中监视服务器并控制部分顶层功能。它提供以下功能： （可从“操作”菜单或首页访问服务管理器。） <ul> <li>监视服务器、监听器和虚拟主机的当前状态。</li> <li>通过平滑重启应用配置更改。</li> <li>启用或禁用指定的虚拟主机。</li> <li>通过日志查看器查看服务器日志。</li> <li>监视实时服务器统计信息。</li> </ul></div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">服务器</h3><ul class="doc-toc__links"><li><a href="#sname">名称 - 服务器</a></li><li><a href="#pid">PID</a></li><li><a href="#servAction">操作</a></li><li><a href="#restart">应用更改/平滑重启</a></li><li><a href="#viewlog">服务器日志查看器</a></li><li><a href="#realtimerpt">实时统计</a></li><li><a href="#toggleDebugLog">切换调试日志</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">侦听器</h3><ul class="doc-toc__links"><li><a href="#lname">名称 - 侦听器</a></li><li><a href="#lstatus">状态 - 侦听器</a></li><li><a href="#lmap">虚拟主机映射</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">虚拟主机</h3><ul class="doc-toc__links"><li><a href="#vname">名称 - 虚拟主机</a></li><li><a href="#vstatus">状态 - 虚拟主机</a></li><li><a href="#vaction">操作 - 虚拟主机</a></li><li><a href="#venable">启用</a></li><li><a href="#vdisable">禁用</a></li><li><a href="#vreload">重启 - 虚拟主机</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="sname"><h3>Name - Server<span class="ls-permlink"><a href="#sname"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The unique name that identifies this server. This is the  <span class="tagl"><a href="ServGeneral_Help.html#serverName">服务器名称</a></span> specified in the general configuration.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="pid"><h3>PID<span class="ls-permlink"><a href="#pid"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>PID (Process ID) of the current server process.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> The PID will change each time the server is restarted.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="servAction"><h3>Actions<span class="ls-permlink"><a href="#servAction"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Six actions are available from this menu: <span class="val">Graceful Restart</span>, <span class="val">Toggle Debug Logging</span>, <span class="val">Server Log Viewer</span>, <span class="val">Real-Time Statistics</span>,  <span class="val">Version Manager</span>, and <span class="val">Compile PHP</span>.  <ul><li><span class="tagl"><a href="#restart">Apply Changes/Graceful Restart</a></span> restarts server process gracefully without interrupting requests in process.</li> 	<li><span class="tagl"><a href="#toggleDebugLog">Toggle Debug Logging</a></span> turns debug logging on or off.</li> 	<li><span class="tagl"><a href="#viewlog">Server Log Viewer</a></span> allows you to view the server log through the log viewer.</li> 	<li><span class="tagl"><a href="#realtimerpt">Real-Time Statistics</a></span> allows you to view real-time server status.</li> 	<li><span class="tagl"><a href="#vermgr">Version Management</a></span> allows you to download new versions of LSWS and switch between different versions. 	<li>Compile PHP allows you to compile PHP for LiteSpeed Web Server. </ul></p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> The shell utility <span class="cmd">$SERVER_ROOT/bin/lswsctrl</span> can be used to control the server processes as well,  but requires a login shell.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="restart"><h3>Apply Changes/Graceful Restart<span class="ls-permlink"><a href="#restart"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>By clicking <span class="val">Graceful Restart</span>, a new server process will be started.  For <span class="val">Graceful Restart</span>, the old server process will only exit after all requests  to it have been finished (or the <span class="tagl"><a href="#gracefulRestartTimeout">平滑重启超时时长(secs)</a></span> limit has been reached).   Configuration changes are applied at the next restart.  <span class="val">Graceful Restart</span> will apply these changes without any server downtime.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> Graceful restart takes less than 2 seconds to generate a new server process.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="viewlog"><h3>Server Log Viewer<span class="ls-permlink"><a href="#viewlog"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The Server Log Viewer is a convenient tool for browsing the  current server log to check for errors or problems.  The log viewer  searches the server log file in blocks for the specified log level.    The default block size is 20KB. You can use the <span class="val">Begin</span>, <span class="val">End</span>, <span class="val">Next</span>, and <span class="val">Prev</span> buttons to navigate a large log file.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> The size of a dynamically generated page is limited by <span class="tagl"><a href="ServTuning_Help.html#maxDynRespSize">动态回应主内容最大大小(bytes)</a></span>.   So if the block is too big, the page might be truncated.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="realtimerpt"><h3>Real-Time Statistics<span class="ls-permlink"><a href="#realtimerpt"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The Real-Time Statistics link leads to a page with a real-time server status report. This is a convenient tool to monitor the system.    The report shows a snapshot of your server statistics. The refresh rate for this snapshot  is controlled by the Refresh Interval drop-down list in the upper righthand corner.   The report contains the following sections: <ul><li>Server Health shows the basic server statistics, uptime, load, and anti-DDoS blocked IPs.</li>   <li>Server lists current traffic throughput, connections, and requests statistics.</li>  <li>Virtual Host shows request processing statuses and external application statuses for each virtual host.</li>  <li>External Application lists the external applications currently running and their usage statistics.   The CGI daemon process lscgid is always running as an external application.</li> </ul>   Many of the rows in the Real-Time Statistics feature a graph icon.  Clicking on this icon will open a graph of that row's statistics updated in real-time.   In the Server section, next to Requests, there is a link labeled (Details).  This link takes you to the Requests Snapshot, where you can view detailed information  on which clients are making certain kinds of requests or which aspects of your site  are bottlenecking. The fields in the blue area allow you to filter the snapshot to isolate  certain parts of your server or look for clients that are performing certain actions.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="toggleDebugLog"><h3>Toggle Debug Logging<span class="ls-permlink"><a href="#toggleDebugLog"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Toggle Debug Logging toggles the value of <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span> between <span class="val">NONE</span> and <span class="val">HIGH</span>.  As debug logging has an impact on performance and can fill up the hard drive quickly, so <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span> should usually be set to <span class="val">NONE</span> on a production server.  This feature can be used instead to turn debug logging on and off quickly  in order to debug a problem on a production server. Debug logging turned on or  off in this way will not change anything shown in your server configurations.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> <span class="tagl"><a href="#toggleDebugLog">Toggle Debug Logging</a></span> will only work if <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">日志级别</a></span>  is set to <span class="val">DEBUG</span>.  <span title="Performance" class="ls-icon-performance"></span> Important! Debug logging includes detailed information for each  request and response. Active debug logging will severely degrade service performance and potentially saturate disk space in a very short time. This feature should only be  used for a short period of time when trying to diagnose server issues.</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">日志级别</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="lname"><h3>Name - Listener<span class="ls-permlink"><a href="#lname"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The unique name that identifies this listener. This is the  <span class="tagl"><a href="Listeners_General_Help.html#listenerName">侦听器名称</a></span> you specified when setting up the listener.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="lstatus"><h3>Status - Listener<span class="ls-permlink"><a href="#lstatus"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The current status of this listener. The status is either <span class="val">Running</span> or <span class="val">Error</span>.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> If the listener is in the <span class="val">Error</span> state, you can view the server log to find out why.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="lmap"><h3>Virtual Hosts Mappings<span class="ls-permlink"><a href="#lmap"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Shows currently established mappings to virtual hosts from a particular listener.  The virtual host name appears in brackets and is followed by the matching domain name(s) for this listener.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> If a virtual host has not been loaded successfully (fatal errors in the  virtual host configuration), the mapping to that virtual host will not be displayed.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vname"><h3>Name - Virtual Host<span class="ls-permlink"><a href="#vname"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The unique name that identifies this virtual host. This is the <span class="tagl"><a href="VirtualHosts_Help.html#vhName">虚拟主机名</a></span>  you specified when setting up this virtual host.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vstatus"><h3>Status - Virtual Host<span class="ls-permlink"><a href="#vstatus"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The current status of a virtual host.   The status can be: <span class="val">Running</span>, <span class="val">Stopped</span>, <span class="val">Restart Required</span>,   or <span class="val">Running - Removed from Configuration</span>.  <ul>     <li><span class="val">Running</span> means the virtual host is loaded and in service.</li>     <li><span class="val">Stopped</span> means the virtual host is loaded but not in service (disabled). </li>     <li><span class="val"> Restart Required</span> means this is a newly added virtual host and          the server has not yet loaded its configuration. </li>     <li><span class="val">Running - Removed from Configuration</span> means the virtual host has been deleted      from the server's configuration but it is still in service. </li> </ul></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vaction"><h3>Actions - Virtual Host<span class="ls-permlink"><a href="#vaction"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>This field shows buttons to disable, enable, or restart the virtual host.   Actions taken on one virtual host do not affect the rest of the web server.</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> It is good idea to disable a virtual host temporarily when updating its content.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="venable"><h3>Enable<span class="ls-permlink"><a href="#venable"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The <span class="val">Enable</span> action starts up a stopped virtual host.   This allows new requests to be accepted.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vdisable"><h3>Disable<span class="ls-permlink"><a href="#vdisable"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The <span class="val">Disable</span> action stops a running virtual host. New requests will not be accepted, but requests being processed will finish as usual.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vreload"><h3>Restart - Virtual Host<span class="ls-permlink"><a href="#vreload"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The Restart action causes the web server to load the newest configuration  for this virtual host. Requests being processed will finish with the old configuration.  The new configuration will only apply for new requests. All changes to a virtual host  can be applied on the fly this way.</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sname"><h3>名称 - 服务器<span class="ls-permlink"><a href="#sname"></a></span></h3></header><h4>描述</h4><p>用于识别此服务器的唯一名称。 这是在常规配置中指定的<span class="tagl"><a href="ServGeneral_Help.html#serverName">服务器名称</a></span>。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pid"><h3>PID<span class="ls-permlink"><a href="#pid"></a></span></h3></header><h4>描述</h4><p>当前服务器进程的PID（进程ID）。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 每次重启服务器后，PID都会改变。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="servAction"><h3>操作<span class="ls-permlink"><a href="#servAction"></a></span></h3></header><h4>描述</h4><p>此菜单提供六个操作：<span class="val">Graceful Restart</span>、 <span class="val">Toggle Debug Logging</span>、<span class="val">Server Log Viewer</span>、<span class="val">Real-Time Statistics</span>、 <span class="val">Version Manager</span>和<span class="val">Compile PHP</span>。 <ul><li><span class="tagl"><a href="#restart">应用更改/平滑重启</a></span>会平滑重启服务器进程，不中断正在处理的请求。</li> 	<li><span class="tagl"><a href="#toggleDebugLog">切换调试日志</a></span>可开启或关闭调试日志。</li> 	<li><span class="tagl"><a href="#viewlog">服务器日志查看器</a></span>可通过日志查看器查看服务器日志。</li> 	<li><span class="tagl"><a href="#realtimerpt">实时统计</a></span>可查看实时服务器状态。</li> 	<li><span class="tagl"><a href="#vermgr">版本管理</a></span>可下载LSWS的新版本，并在不同版本之间切换。</li> 	<li>Compile PHP可为LiteSpeed Web Server编译PHP。</li> </ul></p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 也可以使用shell工具<span class="cmd">$SERVER_ROOT/bin/lswsctrl</span>控制服务器进程， 但这需要登录shell。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="restart"><h3>应用更改/平滑重启<span class="ls-permlink"><a href="#restart"></a></span></h3></header><h4>描述</h4><p>点击<span class="val">Graceful Restart</span>后，将启动新的服务器进程。 对于<span class="val">Graceful Restart</span>，旧服务器进程只会在所有请求处理完成后 （或达到<span class="tagl"><a href="#gracefulRestartTimeout">平滑重启超时时长(secs)</a></span>限制后）退出。   配置更改会在下一次重启时应用。 <span class="val">Graceful Restart</span>会在不中断服务器服务的情况下应用这些更改。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 平滑重启生成新服务器进程通常少于2秒。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="viewlog"><h3>服务器日志查看器<span class="ls-permlink"><a href="#viewlog"></a></span></h3></header><h4>描述</h4><p>服务器日志查看器是浏览当前服务器日志以检查错误或问题的便捷工具。 日志查看器会按块搜索指定日志级别的服务器日志文件。   默认块大小为20KB。可以使用<span class="val">Begin</span>、<span class="val">End</span>、 <span class="val">Next</span>和<span class="val">Prev</span>按钮浏览较大的日志文件。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 动态生成页面的大小受<span class="tagl"><a href="ServTuning_Help.html#maxDynRespSize">最大动态响应主体大小(bytes)</a></span>限制。 因此，如果块太大，页面可能会被截断。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realtimerpt"><h3>实时统计<span class="ls-permlink"><a href="#realtimerpt"></a></span></h3></header><h4>描述</h4><p>实时统计链接会打开实时服务器状态报告页面。 这是监控系统的便捷工具。   该报告显示服务器统计信息的快照。此快照的刷新速率由右上角的刷新间隔下拉列表控制。   报告包含以下部分： <ul><li>服务器健康状态显示基本服务器统计、运行时间、负载以及被anti-DDoS阻止的IP。</li>   <li>服务器列出当前流量吞吐量、连接和请求统计。</li>  <li>虚拟主机显示每个虚拟主机的请求处理状态和外部应用程序状态。</li>  <li>外部应用程序列出当前运行的外部应用程序及其使用统计。  CGI守护进程lscgid始终作为外部应用程序运行。</li> </ul>   实时统计中的许多行带有图表图标。 点击此图标会打开该行统计数据的实时更新图表。   在“服务器”部分的“请求”旁边，有一个标记为（详细信息）的链接。 该链接会进入请求快照页面，你可以查看哪些客户端正在发出特定类型的请求， 或站点的哪些方面成为瓶颈。蓝色区域中的字段可用于筛选快照， 以隔离服务器的特定部分，或查找正在执行特定操作的客户端。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="toggleDebugLog"><h3>切换调试日志<span class="ls-permlink"><a href="#toggleDebugLog"></a></span></h3></header><h4>描述</h4><p>切换调试日志会在<span class="val">NONE</span>和<span class="val">HIGH</span>之间切换 <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>的值。 由于调试日志会影响性能并可能快速填满硬盘， 生产服务器上的<span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>通常应设置为<span class="val">NONE</span>。 此功能可用于快速开启或关闭调试日志，以便在生产服务器上排查问题。 通过此方式开启或关闭调试日志不会改变服务器配置中显示的任何内容。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 只有当<span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">日志级别</a></span>设置为<span class="val">DEBUG</span>时， <span class="tagl"><a href="#toggleDebugLog">切换调试日志</a></span>才会生效。<br/> [性能] 重要！调试日志包含每个请求和响应的详细信息。启用调试日志会严重降低服务性能， 并可能在很短时间内耗尽磁盘空间。此功能只应在诊断服务器问题时短时间使用。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">调试级别</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">日志级别</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lname"><h3>名称 - 侦听器<span class="ls-permlink"><a href="#lname"></a></span></h3></header><h4>描述</h4><p>用于识别此侦听器的唯一名称。 这是设置侦听器时指定的<span class="tagl"><a href="Listeners_General_Help.html#listenerName">侦听器名称</a></span>。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lstatus"><h3>状态 - 侦听器<span class="ls-permlink"><a href="#lstatus"></a></span></h3></header><h4>描述</h4><p>此侦听器的当前状态。状态为<span class="val">Running</span>或<span class="val">Error</span>。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 如果侦听器处于<span class="val">Error</span>状态，可以查看服务器日志了解原因。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lmap"><h3>虚拟主机映射<span class="ls-permlink"><a href="#lmap"></a></span></h3></header><h4>描述</h4><p>显示特定侦听器当前建立到虚拟主机的映射。 虚拟主机名称显示在方括号中，后面是此侦听器匹配的域名。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 如果虚拟主机未成功加载（虚拟主机配置中存在致命错误）， 则不会显示到该虚拟主机的映射。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vname"><h3>名称 - 虚拟主机<span class="ls-permlink"><a href="#vname"></a></span></h3></header><h4>描述</h4><p>用于识别此虚拟主机的唯一名称。 这是设置此虚拟主机时指定的<span class="tagl"><a href="VirtualHosts_Help.html#vhName">虚拟主机名</a></span>。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vstatus"><h3>状态 - 虚拟主机<span class="ls-permlink"><a href="#vstatus"></a></span></h3></header><h4>描述</h4><p>虚拟主机的当前状态。 状态可以是：<span class="val">Running</span>、<span class="val">Stopped</span>、<span class="val">Restart Required</span> 或<span class="val">Running - Removed from Configuration</span>。  <ul>     <li><span class="val">Running</span>表示虚拟主机已加载并正在提供服务。</li>     <li><span class="val">Stopped</span>表示虚拟主机已加载但未提供服务（已禁用）。</li>     <li><span class="val">Restart Required</span>表示这是新添加的虚拟主机，服务器尚未加载其配置。</li>     <li><span class="val">Running - Removed from Configuration</span>表示虚拟主机已从服务器配置中删除，但仍在提供服务。</li> </ul></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vaction"><h3>操作 - 虚拟主机<span class="ls-permlink"><a href="#vaction"></a></span></h3></header><h4>描述</h4><p>此字段显示用于禁用、启用或重启虚拟主机的按钮。 对一个虚拟主机执行的操作不会影响Web服务器的其他部分。</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 更新虚拟主机内容时，临时禁用该虚拟主机是个好做法。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="venable"><h3>启用<span class="ls-permlink"><a href="#venable"></a></span></h3></header><h4>描述</h4><p><span class="val">Enable</span>操作会启动已停止的虚拟主机。 这将允许其接受新请求。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vdisable"><h3>禁用<span class="ls-permlink"><a href="#vdisable"></a></span></h3></header><h4>描述</h4><p><span class="val">Disable</span>操作会停止正在运行的虚拟主机。 新的请求将不再被接受，但正在处理的请求会照常完成。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vreload"><h3>重启 - 虚拟主机<span class="ls-permlink"><a href="#vreload"></a></span></h3></header><h4>描述</h4><p>Restart操作会使Web服务器加载此虚拟主机的最新配置。 正在处理的请求会使用旧配置完成。 新配置只会应用于新的请求。通过这种方式，可以即时应用虚拟主机的所有更改。</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

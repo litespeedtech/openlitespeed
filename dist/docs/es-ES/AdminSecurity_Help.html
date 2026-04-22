@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Consola WebAdmin - Seguridad</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Consola WebAdmin - Seguridad." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../AdminSecurity_Help.html" data-lang="en-US">English</option><option value="../es-ES/AdminSecurity_Help.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/AdminSecurity_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/AdminSecurity_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/AdminSecurity_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/AdminSecurity_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a class="current" href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="AdminGeneral_Help.html">Consola WebAdmin - General</a></div><div class="center"><a href="webconsole.html">Consola web</a></div><div class="next"><a href="AdminListeners_General_Help.html">Listeners de administración - General</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Consola WebAdmin - Seguridad</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#accessControl">Control de acceso</a></h3><ul class="doc-toc__links"><li><a href="#accessControl_allow">Lista permitida</a></li><li><a href="#accessControl_deny">Lista denegada</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#loginThrottle">Limitación de inicio de sesión</a></h3><ul class="doc-toc__links"><li><a href="#throttleEnabled">Habilitar limitacion de inicio de sesion</a></li><li><a href="#throttleMaxFailures">Maximo de fallos de inicio de sesion</a></li><li><a href="#throttleBlockWindow">Duracion inicial del bloqueo (s)</a></li><li><a href="#throttleMaxBackoff">Duracion maxima del bloqueo (s)</a></li><li><a href="#loginHistoryRetention">Retencion del historial de inicio de sesion (dias)</a></li><li><a href="#opsAuditRetainFiles">Archivos retenidos del registro de actividad</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#adminUser">Usuario administrador</a></h3><ul class="doc-toc__links"><li><a href="#adminUserName">Nombre de Usuario</a></li><li><a href="#adminOldPass">Contraseña Anterior</a></li><li><a href="#adminNewPass">Nueva Contraseña</a></li><li><a href="#adminRetypePass">Volver a escribir la contraseña</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl"><h3>Control de acceso<span class="ls-permlink"><a href="#accessControl"></a></span></h3></header><h4>Descripción</h4><p>Especifica que subredes y/o direcciones IP pueden acceder al servidor. A nivel de servidor, este ajuste afectara a todos los virtual hosts. Tambien puede configurar control de acceso unico para cada virtual host a nivel de virtual host. Los ajustes de nivel de virtual host NO sobrescribiran los ajustes de nivel de servidor.<br/><br/> Bloquear/permitir una IP se determina por la combinacion de la lista permitida y la lista denegada. Si desea bloquear solo ciertas IP o subredes, ponga <span class="val">*</span> o <span class="val">ALL</span> en <span class="tagl"><a href="#accessControl_allow">Lista permitida</a></span> y liste las IP o subredes bloqueadas en <span class="tagl"><a href="#accessControl_deny">Lista denegada</a></span>. Si desea permitir solo ciertas IP o subredes, ponga <span class="val">*</span> o <span class="val">ALL</span> en <span class="tagl"><a href="#accessControl_deny">Lista denegada</a></span> y liste las IP o subredes permitidas en <span class="tagl"><a href="#accessControl_allow">Lista permitida</a></span>. Se usara el ajuste del ambito mas pequeno que coincida con una IP para determinar el acceso.<br/><br/> <b>Nivel de servidor:</b> Las IP o subredes confiables deben especificarse en <span class="tagl"><a href="#accessControl_allow">Lista permitida</a></span> agregando una "T" final. Las IP o subredes confiables no se ven afectadas por limites de conexion/throttling. Solo el control de acceso de nivel de servidor puede configurar IP/subredes confiables.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Use esto a nivel de servidor para restricciones generales que se apliquen a todos los virtual hosts.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_allow"><h3>Lista permitida<span class="ls-permlink"><a href="#accessControl_allow"></a></span></h3></header><h4>Descripción</h4><p>Especifica la lista de IP o subredes permitidas. Se aceptan <span class="val">*</span> o <span class="val">ALL</span>.</p> <h4>Sintaxis</h4><p>Lista delimitada por comas de direcciones IP o subredes. Se puede usar una "T" final para indicar una IP o subred de confianza, como <span class="val">192.168.1.*T</span>.</p> <h4>Ejemplo</h4><div class="ls-example"><b>Subredes:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, o 192.168.1.*<br/> <b>Direcciones IPv6:</b> ::1 o [::1]<br/> <b>Subredes IPv6:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 o [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Las IP o subredes de confianza establecidas en el control de acceso de nivel de servidor se excluirán de los límites de conexión/throttling.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_deny"><h3>Lista denegada<span class="ls-permlink"><a href="#accessControl_deny"></a></span></h3></header><h4>Descripción</h4><p>Especifica la lista de IP o subredes no permitidas.</p> <h4>Sintaxis</h4><p>Lista delimitada por comas de direcciones IP o subredes. Se aceptan <span class="val">*</span> o <span class="val">ALL</span>.</p> <h4>Ejemplo</h4><div class="ls-example"><b>Subredes:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, o 192.168.1.*<br/> <b>Direcciones IPv6:</b> ::1 o [::1]<br/> <b>Subredes IPv6:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 o [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginThrottle"><h3>Limitación de inicio de sesión<span class="ls-permlink"><a href="#loginThrottle"></a></span></h3></header><h4>Descripción</h4><p>Configure la limitacion de inicios de sesion de la consola WebAdmin y la retencion de los registros relacionados con inicios de sesion y auditoria.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleEnabled"><h3>Habilitar limitacion de inicio de sesion<span class="ls-permlink"><a href="#throttleEnabled"></a></span></h3></header><h4>Descripción</h4><p>Habilita la limitacion de inicios de sesion para la consola WebAdmin. Cuando esta habilitada, los intentos fallidos repetidos se registran y se bloquean temporalmente para reducir los ataques de fuerza bruta contra contrasenas. Si solo esta opcion esta habilitada y los demas ajustes de limitacion quedan sin definir, se usan valores predeterminados integrados.</p> <h4>Sintaxis</h4><p>Seleccionar desde botones de opción</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Mantenga esta opcion habilitada en produccion salvo que este diagnosticando problemas de inicio de sesion. Cuando se habilita sin valores personalizados, los valores predeterminados son 5 fallos, 900 segundos de bloqueo inicial y 14400 segundos de bloqueo maximo.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxFailures"><h3>Maximo de fallos de inicio de sesion<span class="ls-permlink"><a href="#throttleMaxFailures"></a></span></h3></header><h4>Descripción</h4><p>Especifica cuantos intentos de inicio de sesion fallidos consecutivos se permiten antes de bloquear al cliente. Valor predeterminado si no se define: 5.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--security">Security</span> Los valores mas bajos aumentan la proteccion, pero pueden bloquear antes a usuarios legitimos.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleBlockWindow"><h3>Duracion inicial del bloqueo (s)<span class="ls-permlink"><a href="#throttleBlockWindow"></a></span></h3></header><h4>Descripción</h4><p>Especifica el tiempo inicial, en segundos, durante el que un cliente queda bloqueado despues de alcanzar el maximo de fallos de inicio de sesion permitidos. Valor predeterminado si no se define: 900 segundos.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Use una duracion lo bastante larga para desalentar ataques repetidos sin causar un tiempo de bloqueo excesivo para usuarios validos.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxBackoff"><h3>Duracion maxima del bloqueo (s)<span class="ls-permlink"><a href="#throttleMaxBackoff"></a></span></h3></header><h4>Descripción</h4><p>Especifica la duracion maxima del bloqueo, en segundos, cuando continuan los intentos fallidos de inicio de sesion y aumenta el retroceso de la limitacion. Valor predeterminado si no se define: 14400 segundos.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Defina un limite superior lo bastante fuerte para ralentizar ataques automatizados y que aun permita recuperarse en un tiempo razonable.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginHistoryRetention"><h3>Retencion del historial de inicio de sesion (dias)<span class="ls-permlink"><a href="#loginHistoryRetention"></a></span></h3></header><h4>Descripción</h4><p>Especifica cuantos dias se conservan los registros del historial de inicio de sesion antes de eliminar las entradas antiguas. Valor predeterminado si no se define: 90 dias.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Conserve historial suficiente para auditoria y diagnostico, pero evite retener mas datos de los que realmente necesita.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="opsAuditRetainFiles"><h3>Archivos retenidos del registro de actividad<span class="ls-permlink"><a href="#opsAuditRetainFiles"></a></span></h3></header><h4>Descripción</h4><p>Especifica el numero maximo de archivos de auditoria de operaciones que se conservaran para la consola WebAdmin. Valor predeterminado si no se define: 30 archivos.</p> <h4>Sintaxis</h4><p>Número entero</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Aumente este valor si necesita un rastro de auditoria mas largo, pero recuerde que mas archivos usaran mas espacio en disco.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUser"><h3>Usuario administrador<span class="ls-permlink"><a href="#adminUser"></a></span></h3></header><h4>Descripción</h4><p>Cambie el nombre de usuario y la contrasena de la consola WebAdmin. La contrasena anterior debe introducirse y verificarse para guardar los cambios.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUserName"><h3>Nombre de Usuario<span class="ls-permlink"><a href="#adminUserName"></a></span></h3></header><h4>Descripción</h4><p>Especifica el nombre de inicio de sesion de la consola WebAdmin. Use de 1 a 25 caracteres: letras, digitos, punto, guion bajo o guion.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminOldPass"><h3>Contraseña Anterior<span class="ls-permlink"><a href="#adminOldPass"></a></span></h3></header><h4>Descripción</h4><p>Introduzca la contraseña actual de este usuario de WebAdmin. Es obligatoria antes de guardar cambios en el nombre de usuario o la contraseña.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminNewPass"><h3>Nueva Contraseña<span class="ls-permlink"><a href="#adminNewPass"></a></span></h3></header><h4>Descripción</h4><p>Introduzca la nueva contraseña de este usuario de WebAdmin. La contraseña puede contener cualquier caracter y es obligatoria al crear o actualizar un usuario de WebAdmin.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminRetypePass"><h3>Volver a escribir la contraseña<span class="ls-permlink"><a href="#adminRetypePass"></a></span></h3></header><h4>Descripción</h4><p>Introduzca de nuevo la nueva contraseña. Debe coincidir con la nueva contraseña.</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

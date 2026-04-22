@@ -37,8 +37,9 @@ const char *HandlerType::s_sHandlerType[HT_END] =
     "jk",
     "lsapi",
     "logger",
-    "loadbalancer"
-
+    "loadbalancer",
+    "scgi",
+    "uwsgi",
 };
 
 
@@ -85,6 +86,10 @@ int HandlerType::getHandlerType(const char *pType, int &role)
             iType = HT_LOADBALANCER;
         else if (strcasecmp(pType, "module") == 0)
             iType = HT_MODULE;
+        else if (strcasecmp(pType, "scgi") == 0)
+            iType = HT_SCGI;
+        else if (strcasecmp(pType, "uwsgi") == 0)
+            iType = HT_UWSGI;
     }
     return iType;
 }

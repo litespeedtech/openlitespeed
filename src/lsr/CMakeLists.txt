@@ -31,6 +31,7 @@ SET(lsr_STAT_SRCS
    ls_sha1.c
    ls_shm.cpp
    ls_stack.c
+   ls_stopwatch.c
    ls_str.c
    ls_strlist.c
    ls_strtool.c

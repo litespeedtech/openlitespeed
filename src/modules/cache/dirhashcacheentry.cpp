@@ -132,7 +132,11 @@ int DirHashCacheEntry::allocate(int size)
     {
         if ((errno = posix_fallocate(fd, st.st_size,
                                      size - st.st_size)) != 0)
+        {
+            if (errno == EINVAL || errno == EOPNOTSUPP)
+                return ftruncate(fd, size);
             return LS_FAIL;
+        }
     }
     return 0;
 }

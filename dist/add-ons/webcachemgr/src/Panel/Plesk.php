@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2023
+ * @copyright (c) 2018-2026
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -400,27 +400,24 @@ class Plesk extends ControlPanel
      * version among them.
      *
      * @since 1.9.6
+     * @since 1.17.6  Added PHP versions 8.3 & 8.4.
      *
      * @return string
      */
     protected function getDefaultPhpBinary()
     {
-        $binaryList = array (
-            '/opt/plesk/php/8.2/bin/php',
-            '/opt/plesk/php/8.1/bin/php',
-            '/opt/plesk/php/8.0/bin/php',
-            '/opt/plesk/php/7.4/bin/php',
-            '/opt/plesk/php/7.3/bin/php',
-            '/opt/plesk/php/7.2/bin/php',
-            '/opt/plesk/php/7.1/bin/php',
-            '/opt/plesk/php/7.0/bin/php',
-            '/opt/plesk/php/5.6/bin/php',
-        );
+        foreach (
+                [
+                    '8.4', '8.3', '8.2', '8.1', '8.0',
+                    '7.4', '7.3', '7.2', '7.1', '7.0',
+                    '5.6'
+                ]
+                as
+                $phpVer
+        ) {
 
-        foreach ( $binaryList as $binary ) {
-
-            if ( file_exists($binary)) {
-                return $binary;
+            if ( file_exists(($bin = "/opt/plesk/php/$phpVer/bin/php")) ) {
+                return $bin;
             }
         }
 

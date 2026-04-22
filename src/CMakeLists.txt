@@ -16,7 +16,6 @@ add_subdirectory(modules)
 add_subdirectory(quic)
 add_subdirectory(shm)
 add_subdirectory(socket)
-add_subdirectory(spdy)
 add_subdirectory(sslpp)
 add_subdirectory(ssi)
 add_subdirectory(thread)
@@ -82,10 +81,6 @@ SET(unittest_STAT_SRCS
    ../test/util/objarraytest.cpp
    ../test/util/objpooltest.cpp
    ../test/util/radixtreetest.cpp
-   ../test/spdy/spdyzlibfiltertest.cpp
-   ../test/spdy/spdyconnectiontest.cpp
-   ../test/spdy/dummiostream.cpp
-   ../test/spdy/pushtest.cpp
    ../test/lsiapi/moduledata.cpp
    ../test/lsiapi/moduletimertest.cpp
    ../test/lsiapi/lsiapihookstest.cpp
@@ -154,8 +149,8 @@ endif()
 # So for example, if edio depends on your new directory, your directory
 # should be listed AFTER edio.  PLEASE TRY TO KEEP THIS NEAT!
 SET( litespeedlib
-    ${ASAN_LIB} cache modgzip lsiapi main http spdy ssi http
-    registry cgi fcgi jk extensions lsapi proxy
+    ${ASAN_LIB} cache modgzip lsiapi main http ssi http
+    registry cgi fcgi scgi uwsgi jk extensions lsapi proxy
     socket sslpp lsshm thread log4cxx adns 
     quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
@@ -167,9 +162,9 @@ SET( litespeedlib
 
 target_link_libraries(openlitespeed ${litespeedlib} )
 
-target_link_libraries(ls_shmstat lsshm log4cxx edio util lsr pthread rt )
+target_link_libraries(ls_shmstat lsshm log4cxx edio util lsr libcrypto.a pthread rt )
 
-target_link_libraries(ls_shmhashstat lsshm log4cxx edio util lsr pthread rt )
+target_link_libraries(ls_shmhashstat lsshm log4cxx edio util lsr libcrypto.a pthread rt )
 
 # target_link_libraries(ctbench ${litespeedlib} )
 

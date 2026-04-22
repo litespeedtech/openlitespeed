@@ -28,6 +28,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <assert.h>
+#include <stdint.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -37,20 +39,67 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define DNS_CACHE_TTL           3600
-#define DNS_CACHE_NOTFOUND_TTL  300
-
 static int s_inited = 0;
-
 
 LS_SINGLETON(Adns);
 
+enum
+{
+    DNS_CACHE_VERSION_MAGIC = 0x3f8a2d57,
+    DNS_CACHE_NOTFOUND_TTL = 300,
+    DNS_CACHE_EXPIRE_LEN = sizeof(uint32_t),
+    DNS_CACHE_PAYLOAD_MAX = 4096,
+    DNS_CACHE_VALUE_MAX = DNS_CACHE_EXPIRE_LEN + DNS_CACHE_PAYLOAD_MAX
+};
+
+
+static bool shouldCacheLookupMiss(struct dns_ctx *ctx)
+{
+    switch (dns_status(ctx))
+    {
+    case DNS_E_NXDOMAIN:
+    case DNS_E_NODATA:
+        return true;
+    default:
+        return false;
+    }
+}
+
+
+static bool getCacheExpireTime(const void *pValue, int valueLen,
+                               uint32_t *pExpireTime)
+{
+    if (valueLen < DNS_CACHE_EXPIRE_LEN
+        || valueLen > DNS_CACHE_VALUE_MAX)
+        return false;
+    assert(pExpireTime != NULL);
+    ::memcpy(pExpireTime, pValue, DNS_CACHE_EXPIRE_LEN);
+    return true;
+}
+
+
+static bool isCacheEntryExpired(uint32_t expireTime)
+{
+    return expireTime <= (uint32_t)DateTime::s_curTime;
+}
+
+
+static int trimExpiredCacheCb(LsShmHash::iterator iter, void *)
+{
+    uint32_t expireTime = 0;
+    if (!getCacheExpireTime(iter->getVal(), iter->getValLen(), &expireTime))
+        return 1;
+    return isCacheEntryExpired(expireTime);
+}
+
 
 Adns::Adns()
-    : m_pCtx( NULL )
+    : m_pCtx(NULL)
     , m_pShmHash(NULL)
     , m_lockedBy(0)
     , m_tmLastTrim(0)
+    , m_iMaxCacheTtl(DEFAULT_MAX_CACHE_TTL)
+    , m_iMinCacheTtl(DEFAULT_MIN_CACHE_TTL)
     , m_iCounter(0)
 {
     ls_mutex_setup(&m_mutex);
@@ -76,18 +125,19 @@ void Adns::trimCache()
         ls_mutex_lock(&m_mutex);
         m_tmLastTrim = DateTime::s_curTime;
         m_pShmHash->lock();
-        m_pShmHash->trim(DateTime::s_curTime - DNS_CACHE_TTL, NULL, 0);
+        m_pShmHash->trimByCb(1000, trimExpiredCacheCb, NULL, 1000);
         m_pShmHash->unlock();
         ls_mutex_unlock(&m_mutex);
     }
 }
 
 
-const char *Adns::getCacheValue(const char * pName, int nameLen,
-                                int &valLen, int max_ttl)
+const char *Adns::getCacheValue(const char *pName, int nameLen,
+                                int &valLen)
 {
     if (!m_pShmHash)
         return NULL;
+    valLen = 0;
     const char *ret = NULL;
     LsShmHash::iteroffset iterOff;
     ls_strpair_t parms;
@@ -98,26 +148,23 @@ const char *Adns::getCacheValue(const char * pName, int nameLen,
     if (iterOff.m_iOffset != 0)
     {
         LsShmHash::iterator iter = m_pShmHash->offset2iterator(iterOff);
-        if (max_ttl && iter->getLruLasttime() < DateTime::s_curTime - max_ttl)
+        const char *pValue = (const char *)iter->getVal();
+        int valueLen = iter->getValLen();
+        uint32_t expireTime = 0;
+        if (!getCacheExpireTime(pValue, valueLen, &expireTime) 
+            || isCacheEntryExpired(expireTime))
         {
+            m_pShmHash->eraseIterator(iterOff);
             ret = NULL;
             valLen = 0;
         }
         else
         {
-            valLen = iter->getValLen();
+            valLen = valueLen - DNS_CACHE_EXPIRE_LEN;
             if (valLen == 0)
-            {
                 ret = "";
-                if (iter->getLruLasttime() < DateTime::s_curTime
-                                                - DNS_CACHE_NOTFOUND_TTL)
-                {
-                    m_pShmHash->eraseIterator(iterOff);
-                    ret = NULL;
-                }
-            }
             else
-                ret = (char *)iter->getVal();
+                ret = pValue + DNS_CACHE_EXPIRE_LEN;
         }
     }
     m_pShmHash->unlock();
@@ -141,46 +188,49 @@ int Adns::init()
         s_inited = 1;
         dns_set_opt(NULL, DNS_OPT_NTRIES, 1);
     }
-    if ( m_pCtx )
+    if (m_pCtx)
         return 0;
-    m_pCtx = dns_new( NULL );
-    if ( !m_pCtx )
+    m_pCtx = dns_new(NULL);
+    if (!m_pCtx)
         return -1;
-    if ( dns_open( m_pCtx ) < 0 )
+    if (dns_open(m_pCtx) < 0)
         return -1;
-    setfd( dns_sock( m_pCtx ) );
+    setfd(dns_sock(m_pCtx));
 
     return 0;
 }
 
 
+#define ADNS_SHM_FILENAME "adns_cache"
+#define ADNS_SHMHASH_NAME "dns_cache"
+
 int Adns::initShm(int uid, int gid)
 {
-    if ( m_pShmHash )
+    if (m_pShmHash)
         return 0;
     ls_mutex_lock(&m_mutex);
-    if ((m_pShmHash = LsShmHash::open(
-        "adns_cache", "dns_cache", 1000, LSSHM_FLAG_LRU)) != NULL)
+    if ((m_pShmHash = LsShmHash::openWithVerMagic(
+             ADNS_SHM_FILENAME, LSSHM_OPEN_STD, ADNS_SHMHASH_NAME,
+             DNS_CACHE_VERSION_MAGIC, 1000, LSSHM_FLAG_LRU)) != NULL)
     {
         m_pShmHash->getPool()->getShm()->chperm(uid, gid, 0600);
         m_pShmHash->disableAutoLock();
     }
+    else
+        LS_ERROR("Failed to open SHM [%s]: %s", ADNS_SHM_FILENAME,
+                 LsShm::getErrMsg());
+
     ls_mutex_unlock(&m_mutex);
     return 0;
 }
 
+
 int Adns::shutdown()
 {
-    dns_close( m_pCtx );
+    dns_close(m_pCtx);
 
     if (evtcbhead_is_active(this))
         EvtcbQue::getInstance().removeSessionCb(this);
-
-//    if ( m_pCtx )
-//    {
-//        dns_free( m_pCtx );
-//        m_pCtx = NULL;
-//    }
     return 0;
 }
 
@@ -188,7 +238,7 @@ int Adns::shutdown()
 void Adns::printLookupError(struct dns_ctx *ctx, AdnsReq *pAdnsReq)
 {
     const char *pError;
-    switch(dns_status(ctx))
+    switch (dns_status(ctx))
     {
     case DNS_E_TEMPFAIL:
         pError = "DNS_E_TEMPFAIL";
@@ -213,7 +263,7 @@ void Adns::printLookupError(struct dns_ctx *ctx, AdnsReq *pAdnsReq)
         break;
     }
     LS_DBG_L("[DNSLOOKUP] (%s), "
-            "AdnsReq Dump: Type %d, Name %s, Arg %p, Start time %ld",
+             "AdnsReq Dump: Type %d, Name %s, Arg %p, Start time %ld",
              pError, pAdnsReq->type, pAdnsReq->name, pAdnsReq->arg,
              pAdnsReq->start_time);
 }
@@ -224,15 +274,12 @@ void Adns::release(AdnsReq *pReq)
     if (!pReq)
         return;
     if (--pReq->ref_count == 0)
-    {
-        //fprintf(stderr, "release AdnsReq %p\n", pReq); 
         delete pReq;
-    }
 }
 
 
 int Adns::setResult(const struct sockaddr *result,
-                     const void *ip, int len)
+                    const void *ip, int len)
 {
     if (!result || !ip)
         return -1;
@@ -256,39 +303,78 @@ int Adns::setResult(const struct sockaddr *result,
 }
 
 
+unsigned Adns::clampCacheTtl(unsigned ttl) const
+{
+    if (ttl < getMinCacheTtl())
+        ttl = getMinCacheTtl();
+    else if (ttl > getMaxCacheTtl())
+        ttl = getMaxCacheTtl();
+    return ttl;
+}
+
+
+void Adns::addToShmHash(const char *name, unsigned name_len, const void *result,
+                        int len, unsigned ttl)
+{
+    assert(len >= 0);
+    if ((len < 0) || (len > DNS_CACHE_PAYLOAD_MAX))
+        return;
+    ttl = clampCacheTtl(ttl);
+    if (ttl == 0)
+        return;
+    ls_mutex_lock(&m_mutex);
+    if (m_pShmHash)
+    {
+        char valueBuf[DNS_CACHE_VALUE_MAX];
+        ls_strpair_t parms;
+        uint32_t expireTime = (uint32_t)DateTime::s_curTime + ttl;
+        ::memcpy(valueBuf, &expireTime, DNS_CACHE_EXPIRE_LEN);
+        if ((len > 0) && (result != NULL))
+            ::memcpy(valueBuf + DNS_CACHE_EXPIRE_LEN, result, len);
+        m_pShmHash->lock();
+        m_pShmHash->setIterator(m_pShmHash->setParms(
+            &parms, name, name_len, valueBuf, len + DNS_CACHE_EXPIRE_LEN));
+        m_pShmHash->unlock();
+    }
+    ls_mutex_unlock(&m_mutex);
+}
+
+
 void Adns::getHostByNameCb(struct dns_ctx *ctx, void *rr_unknown, void *param)
 {
     AdnsReq *pAdnsReq = (AdnsReq *)param;
 
-    char *sIp= (char *)"";
+    char *sIp = (char *)"";
     int ipLen = 0;
+    unsigned ttl = 0;
     if (rr_unknown)
     {
         if (pAdnsReq->type != PF_INET6)
         {
-            struct dns_rr_a4 * rr = (struct dns_rr_a4 *)rr_unknown;
+            struct dns_rr_a4 *rr = (struct dns_rr_a4 *)rr_unknown;
             sIp = (char *)rr->dnsa4_addr;
             ipLen = sizeof(in_addr);
+            ttl = rr->dnsa4_ttl;
         }
         else
         {
-            struct dns_rr_a6 * rr = (struct dns_rr_a6 *)rr_unknown;
+            struct dns_rr_a6 *rr = (struct dns_rr_a6 *)rr_unknown;
             sIp = (char *)rr->dnsa6_addr;
             ipLen = sizeof(in6_addr);
+            ttl = rr->dnsa6_ttl;
         }
     }
     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
         printLookupError(ctx, pAdnsReq);
 
-    ls_mutex_lock(&Adns::getInstance().m_mutex);
-    LsShmHash *pCache = Adns::getInstance().getShmHash();
-    if (pCache)
-    {
-        pCache->lock();
-        pCache->insert(pAdnsReq->name, strlen(pAdnsReq->name), sIp, ipLen);
-        pCache->unlock();
-    }
-    ls_mutex_unlock(&Adns::getInstance().m_mutex);
+    if (ttl == 0 && shouldCacheLookupMiss(ctx))
+        ttl = DNS_CACHE_NOTFOUND_TTL;
+
+    if (ttl > 0)
+        Adns::getInstance().addToShmHash(pAdnsReq->name,
+                                         pAdnsReq->name_len,
+                                         (ipLen > 0) ? sIp : NULL, ipLen, ttl);
+
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, ipLen, sIp);
 
@@ -302,47 +388,48 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
 {
     AdnsReq *pAdnsReq = (AdnsReq *)param;
 
-    int nameLen;
+    unsigned nameLen;
     if (pAdnsReq->type != PF_INET6)
         nameLen = sizeof(in_addr);
     else
         nameLen = sizeof(in6_addr);
-
-    char achBuf[4096];
+    assert(pAdnsReq->name_len == nameLen);
+    char achBuf[DNS_CACHE_PAYLOAD_MAX];
     char *p = (char *)"";
     int n = 0;
+    unsigned ttl = 0;
     if (rr)
     {
-        if ( rr->dnsptr_nrr == 1 )
+        ttl = rr->dnsptr_ttl;
+        if (rr->dnsptr_nrr == 1)
         {
             p = rr->dnsptr_ptr[0];
             n = strlen(rr->dnsptr_ptr[0]);
         }
-        else
+        else if (rr->dnsptr_nrr > 1)
         {
             p = achBuf;
-            for(int i = 0; i < rr->dnsptr_nrr; ++i)
+            for (int i = 0; i < rr->dnsptr_nrr; ++i)
             {
                 n += lsnprintf(achBuf + n, 4096 - n, "%s,", rr->dnsptr_ptr[i]);
             }
-            achBuf[n -1] = 0;
+            achBuf[n - 1] = 0;
         }
     }
 
-    ls_mutex_lock(&Adns::getInstance().m_mutex);
-    LsShmHash *pCache = Adns::getInstance().getShmHash();
-    if (pCache)
-    {
-        pCache->lock();
-        pCache->insert(pAdnsReq->name, nameLen, p, n);
-        pCache->unlock();
-    }
-    ls_mutex_unlock(&Adns::getInstance().m_mutex);
+    if (ttl == 0 && shouldCacheLookupMiss(ctx))
+        ttl = DNS_CACHE_NOTFOUND_TTL;
+
+    if (ttl > 0)
+        Adns::getInstance().addToShmHash(pAdnsReq->name,
+                                         pAdnsReq->name_len,
+                                         (n > 0) ? p : NULL, n, ttl);
+
     if (pAdnsReq->cb && pAdnsReq->arg)
         pAdnsReq->cb(pAdnsReq->arg, n, p);
-    //else
-    //    fprintf(stderr, "AdnsReq %p for %s skip callback, cb: %p, arg: %p\n", 
-    //            pAdnsReq, pAdnsReq->name, pAdnsReq->cb, pAdnsReq->arg); 
+    // else
+    //     fprintf(stderr, "AdnsReq %p for %s skip callback, cb: %p, arg: %p\n",
+    //             pAdnsReq, pAdnsReq->name, pAdnsReq->cb, pAdnsReq->arg);
 
     if (rr)
         free(rr);
@@ -350,40 +437,41 @@ void Adns::getHostByAddrCb(struct dns_ctx *ctx, struct dns_rr_ptr *rr, void *par
 }
 
 
-char *Adns::getCacheName(const char *pName, int type)
+char *Adns::getCacheName(const char *pName, int type, unsigned *name_len)
 {
     int len = strlen(pName);
     char *nameWithVer = (char *)malloc(len + 4);
     memcpy(nameWithVer, pName, len);
     memcpy(nameWithVer + len, (type != PF_INET6 ? "_v4" : "_v6"), 3);
     nameWithVer[len + 3] = 0x00;
+    *name_len = len + 3;
     return nameWithVer;
 }
 
 
-const char *Adns::getHostByNameInCache(const char * pName, int &length,
+const char *Adns::getHostByNameInCache(const char *pName, int &length,
                                        int type, int max_ttl)
 {
-    char *nameWithVer = getCacheName(pName, type);
-    const char *ret = getCacheValue(nameWithVer, strlen(nameWithVer),
-                                    length, max_ttl);
+    unsigned name_len;
+    char *nameWithVer = getCacheName(pName, type, &name_len);
+    const char *ret = getCacheValue(nameWithVer, name_len, length);
     free(nameWithVer);
     return ret;
 }
 
 
-AdnsReq *Adns::getHostByName(const char * pName, int type, 
+AdnsReq *Adns::getHostByName(const char *pName, int type,
                              lookup_pf cb, void *arg)
 {
-    dns_query * pQuery;
+    dns_query *pQuery;
     init();
     AdnsReq *pAdnsReq = new AdnsReq;
     if (!pAdnsReq)
         return NULL;
-    //fprintf(stderr, "AdnsReq %p created for getHostByName %s\n", 
-    //        pAdnsReq, pName); 
+    // fprintf(stderr, "AdnsReq %p created for getHostByName %s\n",
+    //         pAdnsReq, pName);
     pAdnsReq->type = type;
-    pAdnsReq->name = getCacheName(pName, type);
+    pAdnsReq->name = getCacheName(pName, type, &pAdnsReq->name_len);
     pAdnsReq->cb = cb;
     pAdnsReq->arg = arg;
     pAdnsReq->start_time = DateTime::s_curTime;
@@ -392,9 +480,9 @@ AdnsReq *Adns::getHostByName(const char * pName, int type,
     if (need_lock)
         ls_mutex_lock(&m_udns_mutex);
     if (type != PF_INET6)
-        pQuery = dns_submit_a4( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV4)getHostByNameCb, pAdnsReq);
+        pQuery = dns_submit_a4(m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV4)getHostByNameCb, pAdnsReq);
     else
-        pQuery = dns_submit_a6( m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV6)getHostByNameCb, pAdnsReq);
+        pQuery = dns_submit_a6(m_pCtx, pName, DNS_NOSRCH, (addrLookupCbV6)getHostByNameCb, pAdnsReq);
     if (need_lock)
         ls_mutex_unlock(&m_udns_mutex);
     if (pQuery == NULL)
@@ -408,9 +496,9 @@ AdnsReq *Adns::getHostByName(const char * pName, int type,
 }
 
 
-static void *getInAddr(const struct sockaddr * pAddr, int& length)
+static void *getInAddr(const struct sockaddr *pAddr, unsigned &length)
 {
-    switch( pAddr->sa_family )
+    switch (pAddr->sa_family)
     {
     case AF_INET6:
         length = sizeof(in6_addr);
@@ -423,31 +511,30 @@ static void *getInAddr(const struct sockaddr * pAddr, int& length)
 }
 
 
-const char *Adns::getHostByAddrInCache(const struct sockaddr * pAddr,
-                                       int &length, int max_ttl )
+const char *Adns::getHostByAddrInCache(const struct sockaddr *pAddr,
+                                       int &length, int max_ttl)
 {
-    int keyLen;
+    unsigned keyLen;
     const char *key = (const char *)getInAddr(pAddr, keyLen);
-    const char *ret = getCacheValue(key, keyLen, length, max_ttl);
+    const char *ret = getCacheValue(key, keyLen, length);
     return ret;
 }
 
 
-AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_pf cb)
+AdnsReq *Adns::getHostByAddr(const struct sockaddr *pAddr, void *arg, lookup_pf cb)
 {
-    dns_query * pQuery;
+    dns_query *pQuery;
     init();
     AdnsReq *pAdnsReq = new AdnsReq;
     if (!pAdnsReq)
         return NULL;
 
-    //fprintf(stderr, "AdnsReq %p created for getHostByAddr\n", pAdnsReq); 
+    // fprintf(stderr, "AdnsReq %p created for getHostByAddr\n", pAdnsReq);
     int type = pAddr->sa_family;
     pAdnsReq->type = type;
-    int length;
-    char *pName= (char *)getInAddr(pAddr, length);
-    pAdnsReq->name = (char *)malloc(length); //No NULL terminate
-    memcpy(pAdnsReq->name, pName, length);
+    char *pName = (char *)getInAddr(pAddr, pAdnsReq->name_len);
+    pAdnsReq->name = (char *)malloc(pAdnsReq->name_len); // No NULL terminate
+    memcpy(pAdnsReq->name, pName, pAdnsReq->name_len);
     pAdnsReq->cb = cb;
     pAdnsReq->arg = arg;
     pAdnsReq->start_time = DateTime::s_curTime;
@@ -456,9 +543,9 @@ AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_p
     if (need_lock)
         ls_mutex_lock(&m_udns_mutex);
     if (type != PF_INET6)
-        pQuery = dns_submit_a4ptr( m_pCtx, (in_addr *)pName, getHostByAddrCb, pAdnsReq);
+        pQuery = dns_submit_a4ptr(m_pCtx, (in_addr *)pName, getHostByAddrCb, pAdnsReq);
     else
-        pQuery = dns_submit_a6ptr( m_pCtx, (in6_addr *)pName, getHostByAddrCb, pAdnsReq);
+        pQuery = dns_submit_a6ptr(m_pCtx, (in6_addr *)pName, getHostByAddrCb, pAdnsReq);
     if (need_lock)
         ls_mutex_unlock(&m_udns_mutex);
 
@@ -473,9 +560,9 @@ AdnsReq * Adns::getHostByAddr(const struct sockaddr * pAddr, void *arg, lookup_p
 }
 
 
-int Adns::handleEvents( short events )
+int Adns::handleEvents(short events)
 {
-    if ( events & POLLIN )
+    if (events & POLLIN)
     {
         ls_mutex_lock(&m_udns_mutex);
         m_lockedBy = pthread_self();
@@ -514,7 +601,7 @@ void Adns::checkDnsEvents()
 }
 
 
-int Adns::checkDnsEventsCb(evtcbhead_t *, const long , void *)
+int Adns::checkDnsEventsCb(evtcbhead_t *, const long, void *)
 {
     Adns::getInstance().checkDnsEvents();
     return 0;
@@ -537,7 +624,6 @@ int Adns::getHostByNameSync(const char *pName, in_addr_t *addr)
             return -1;
         s_inited = 1;
         dns_set_opt(NULL, DNS_OPT_NTRIES, 1);
-
     }
     rr = dns_resolve_a4(NULL, pName, DNS_NOSRCH);
     if (rr)
@@ -549,6 +635,7 @@ int Adns::getHostByNameSync(const char *pName, in_addr_t *addr)
     }
     return -1;
 }
+
 
 int Adns::getHostByNameV6Sync(const char *pName, in6_addr *addr)
 {
@@ -587,7 +674,7 @@ AdnsFetch::~AdnsFetch()
 int AdnsFetch::tryResolve(const char *name_port, char *name_only,
                           int family, int flag)
 {
-    int  gotAddr = m_resolvedAddr.set2(family, name_port, flag, name_only);
+    int gotAddr = m_resolvedAddr.set2(family, name_port, flag, name_only);
 
     if (gotAddr == -1)
         return LS_FAIL;
@@ -598,7 +685,7 @@ int AdnsFetch::tryResolve(const char *name_port, char *name_only,
     {
         int ipLen;
         const char *pIp = Adns::getInstance().getHostByNameInCache(name_only,
-                            ipLen, family);
+                                                                   ipLen, family);
         if (pIp)
         {
             return m_resolvedAddr.setIp(m_resolvedAddr.get(), pIp, ipLen);
@@ -620,11 +707,11 @@ int AdnsFetch::asyncLookup(int family, const char *name_only,
 
     if (req)
     {
-         if (m_pAdnsReq)
-             release();
-         m_pAdnsReq = req;
-         req->incRefCount();
-         return LS_TRUE;
+        if (m_pAdnsReq)
+            release();
+        m_pAdnsReq = req;
+        req->incRefCount();
+        return LS_TRUE;
     }
     return LS_FAIL;
 }

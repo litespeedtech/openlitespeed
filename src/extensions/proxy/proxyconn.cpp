@@ -390,7 +390,8 @@ int  ProxyConn::sendReqBody(const char *pBuf, int size)
         }
         LS_DBG_L(this, "send chunk encoded request body, size: %d.", size);
         ret = m_pChunkOS->write(pBuf, size);
-        m_pChunkOS->flush();
+        if (ret > 0)
+            m_pChunkOS->flush();
     }
     else if (m_iTotalPending > 0)
     {

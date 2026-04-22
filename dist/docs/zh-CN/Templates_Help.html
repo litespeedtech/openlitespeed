@@ -1,133 +1,161 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - 虚拟主机模板</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - 虚拟主机模板." />
+  <title>OpenLiteSpeed用户手册 - 虚拟主机模板</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 虚拟主机模板." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../Templates_Help.html" data-lang="en-US">English</option><option value="../es-ES/Templates_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/Templates_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/Templates_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/Templates_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/Templates_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><span class="current"><a href="Templates_Help.html">Virtual Host Templates</a></span></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a class="current" href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="Listeners_SSL_Help.html">侦听器SSL</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="VirtualHosts_Help.html">虚拟主机设置</a> &#187;</div></div>
-<h1>虚拟主机模板</h1><section class="ls-spacer-small-bottom">虚拟主机模板使创建具有相似配置的新虚拟主机变得容易。
-
-
-每个模板都包含一个模板配置文件，一个映射的侦听器列表以及一个成员虚拟主机列表。
-
-
-要添加基于模板的虚拟主机，管理员只需将具有唯一的虚拟主机名和域名添加到模板成员列表。 模板映射的侦听器列表中的所有侦听器将自动添加到虚拟主机的映射。
-
-
-稍后，如果您需要为特定虚拟主机自定义配置，只需“实例化”该成员虚拟主机，然后将自动创建一个独立的虚拟主机配置。
-即使在设置自定义虚拟主机时，仍然可以用模板快速建立。</section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>模板位置</header><p>
-<a href="#templateName">模板名称</a> | <a href="#templateFile">模板文件</a> | <a href="#mappedListeners">映射的侦听器</a></p></section>
-<section class="toc-row"><header>Member Virtual Hosts</header><p>
-<a href="#templateVHName">虚拟主机名</a> | <a href="#templateVHDomain">域名</a> | <a href="#templateVHAliases">别名</a> | <a href="#memberVHRoot">成员虚拟主机根目录</a></p></section>
-<section class="toc-row"><header>模板设置</header><p>
-<a href="#templateVHRoot">默认虚拟主机根</a> | <a href="#templateVHConfigFile">Instantiated VHost Config file</a> | <a href="#templateVHDocRoot">文件根目标</a> | <a href="#templateFileRef">模板中的文件名</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Listeners_SSL_Help.html">侦听器SSL</a></div><div class="center"><a href="config.html">配置</a></div><div class="next"><a href="VirtualHosts_Help.html">虚拟主机注册</a> &#187;</div></div>
+<header class="doc-page-header"><h1>虚拟主机模板</h1><div class="doc-page-intro">虚拟主机模板可以轻松创建许多配置相似的新虚拟主机。<br/><br/> 每个模板都包含一个模板配置文件、一个映射侦听器列表以及一个成员虚拟主机列表。<br/><br/> 要添加基于模板的虚拟主机，管理员只需向模板成员列表添加一个具有唯一虚拟主机名和合格域名的成员。 模板映射侦听器列表中的所有侦听器会自动添加侦听器到虚拟主机的映射。<br/><br/> 稍后，如果您需要为特定虚拟主机自定义配置，只需“实例化”该成员虚拟主机，然后将自动创建一个独立的虚拟主机配置。 即使在设置自定义虚拟主机时，模板仍然可以作为便捷的起点。</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">模板位置</h3><ul class="doc-toc__links"><li><a href="#templateName">模板名称</a></li><li><a href="#templateFile">模板文件</a></li><li><a href="#mappedListeners">映射的侦听器</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">成员虚拟主机</h3><ul class="doc-toc__links"><li><a href="#templateVHName">虚拟主机名</a></li><li><a href="#templateVHDomain">域名</a></li><li><a href="#templateVHAliases">域名别名</a></li><li><a href="#memberVHRoot">成员虚拟主机根目录</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">模板设置</h3><ul class="doc-toc__links"><li><a href="#templateVHRoot">默认虚拟主机根目录</a></li><li><a href="#templateVHConfigFile">实例化虚拟主机配置文件</a></li><li><a href="#templateVHDocRoot">文档根目录</a></li><li><a href="#tp_vhFileName">模板中使用的文件名</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="templateName"><h3>模板名称<span class="ls-permlink"><a href="#templateName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>模板的唯一名称。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateFile"><h3>模板文件<span class="ls-permlink"><a href="#templateFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定此模板配置文件的路径。 该文件必须位于$SERVER_ROOT/conf/templates/中，且文件名带有“ .conf”。 如果您指定的文件不存在，则在尝试保存模板后，将出现错误，为“CLICK TO CREATE”。  点击该链接将生成一个新的空模板文件。 当您删除模板时，该条目将从您的配置中删除，但实际的模板配置文件不会被删除。</p> <h4>Syntax</h4><p>path</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="mappedListeners"><h3>映射的侦听器<span class="ls-permlink"><a href="#mappedListeners"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the names of all listeners that this template maps to. A listener-to-virtual host mapping for this template's member virtual hosts will be added to the listeners specified in this field. This mapping will map listeners to virtual hosts based on the domain names and aliases set in the member virtual hosts' individual configurations.</p> <h4>Syntax</h4><p>comma-separated list</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateVHName"><h3>虚拟主机名<span class="ls-permlink"><a href="#templateVHName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>此虚拟主机的唯一名称。 该名称在所有的虚拟主机模板和虚拟主机中不得重复。 在目录路径配置中，此名称可以由变量<span class="val">$VH_NAME</span>引用。<br/><br/> 如果还配置了具有相同名称的虚拟主机，则虚拟主机的配置将被忽略。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateVHDomain"><h3>域名<span class="ls-permlink"><a href="#templateVHDomain"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定该成员虚拟主机的主域名。 如果留白，将使用成员虚拟主机名, 这应该是符合标准的域名,但是您也可以使用IP地址。 对于不在端口80上的网站，建议附加<span class="val">:<port></span> 对于包含域名的配置，可以使用变量<span class="val">$VH_DOMAIN</span>来引用此域。<br/><br/> 该域名将在以下情况下使用： <ol>   <li>在处理请求时匹配主机标头中的主机名。</li>   <li>作为诸如FrontPage或AWstats之类的域名配置.</li>  <li>基于虚拟主机模板配置侦听器到虚拟主机的映射。</li> </ol></p> <h4>Syntax</h4><p>domain name</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateVHAliases"><h3>别名<span class="ls-permlink"><a href="#templateVHAliases"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定虚拟主机的备用名称。 所有可能的主机名和IP地址都应添加到此列表中。 名称中允许使用通配符 <span class="val">*</span> 和 <span class="val">?</span>。 为不在端口80上的网站附加<span class="val">:<port></span>。<br/><br/> 别名将在以下情况下使用： <ol>   <li>在处理请求时匹配主机标头中的主机名。</li>   <li>作为诸如FrontPage或AWstats之类的域名配置.</li>  <li>基于虚拟主机模板配置侦听器到虚拟主机的映射。</li> </ol></p> <h4>Syntax</h4><p>Comma-separated list of domain names.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="memberVHRoot"><h3>成员虚拟主机根目录<span class="ls-permlink"><a href="#memberVHRoot"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定此虚拟主机的根目录。 如果留空，将使用此模板的默认虚拟主机根目录.<br/><br/> Note: 这<b>不是</b>文档根。 建议将与虚拟主机相关的所有文件（如虚拟主机配置，日志文件，html文件，CGI脚本等）放置在此目录下。 虚拟主机根目录可以以变量$VH_ROOT来引用。</p> <h4>Syntax</h4><p>path</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateVHRoot"><h3>默认虚拟主机根<span class="ls-permlink"><a href="#templateVHRoot"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定使用此模板的成员虚拟主机的默认根目录。.  Variable <span class="val">$VH_NAME</span> must appear in the path. This will allow each member template  to be automatically assigned a separate root directory based on its name.</p> <h4>Syntax</h4><p>path</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateVHConfigFile"><h3>Instantiated VHost Config file<span class="ls-permlink"><a href="#templateVHConfigFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the location of the config file generated when you instantiate a member virtual host.  Variable <span class="val">$VH_NAME</span> must appear in the path so each virtual host will have its own file. Must be located under  $SERVER_ROOT/conf/vhosts/. This config file will be created only after you move a member vhost out of the template  through instantiation.</p> <h4>Syntax</h4><p>String with $VH_NAME variable and .conf suffix</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> $VH_NAME/vhconf.conf is recommended for easy management.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateVHDocRoot"><h3>文件根目标<span class="ls-permlink"><a href="#templateVHDocRoot"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the unique path for each member virtual host's document root.   Variable <span class="val">$VH_NAME</span> or <span class="val">$VH_ROOT</span> must appear in the path so  each member virtual host will have its own document root.</p> <h4>Syntax</h4><p>path with $VH_NAME or $VH_ROOT variable</p> <h4>例子</h4><div class="ls-example">$VH_ROOT/public_html/ or $SERVER_ROOT/$VH_NAME/public_html.</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="templateFileRef"><h3>模板中的文件名<span class="ls-permlink"><a href="#templateFileRef"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies a path for the file to be used for member virtual hosts.   Variable <span class="val">$VH_NAME</span> or <span class="val">$VH_ROOT</span> must appear in the path so  each member virtual host will have its own file.</p> <h4>Syntax</h4><p>string</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateName"><h3>模板名称<span class="ls-permlink"><a href="#templateName"></a></span></h3></header><h4>描述</h4><p>模板的唯一名称。</p> <h4>语法</h4><p>文本</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateFile"><h3>模板文件<span class="ls-permlink"><a href="#templateFile"></a></span></h3></header><h4>描述</h4><p>指定此模板配置文件的路径。 该文件必须位于$SERVER_ROOT/conf/templates/下，且文件名扩展名为".conf"。 如果指定的文件不存在，尝试保存模板后会显示包含"点击创建"链接的错误。 点击该链接将生成一个新的空模板文件。删除模板时，该条目会从配置中移除，但实际的模板配置文件不会被删除。</p> <h4>语法</h4><p>路径</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="mappedListeners"><h3>映射的侦听器<span class="ls-permlink"><a href="#mappedListeners"></a></span></h3></header><h4>描述</h4><p>指定此模板映射到的所有侦听器名称。 此模板成员虚拟主机的侦听器到虚拟主机映射会添加到此字段指定的侦听器。 该映射会根据成员虚拟主机各自配置中的域名和别名，将侦听器映射到虚拟主机。</p> <h4>语法</h4><p>逗号分隔列表</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHName"><h3>虚拟主机名<span class="ls-permlink"><a href="#templateVHName"></a></span></h3></header><h4>描述</h4><p>此虚拟主机的唯一名称。该名称在所有模板成员虚拟主机和独立虚拟主机中不得重复。 在目录路径配置中，此名称可以由变量<span class="val">$VH_NAME</span>引用。<br/><br/> 如果还配置了同名的独立虚拟主机，则成员虚拟主机配置会被忽略。</p> <h4>语法</h4><p>文本</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHDomain"><h3>域名<span class="ls-permlink"><a href="#templateVHDomain"></a></span></h3></header><h4>描述</h4><p>指定该成员虚拟主机的主域名。 如果留空，将使用虚拟主机名。该值应为完全限定域名，也可以使用IP地址。 对于不在端口80上的网站，建议附加<span class="val">:<port></span>。 对于包含域名的配置，可以使用变量<span class="val">$VH_DOMAIN</span>来引用此域。<br/><br/> 该域名将在以下情况下使用： <ol>   <li>处理请求时匹配Host标头中的主机名。</li>   <li>填充FrontPage或AWstats等附加组件的域名配置。</li>  <li>基于虚拟主机模板配置侦听器到虚拟主机的映射。</li> </ol></p> <h4>语法</h4><p>域名</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHAliases"><h3>域名别名<span class="ls-permlink"><a href="#templateVHAliases"></a></span></h3></header><h4>描述</h4><p>指定虚拟主机的备用名称。所有可能的主机名和IP地址都应添加到此列表中。名称中允许使用通配符<span class="val">*</span>和<span class="val">?</span>。对于不在端口80上的网站，请附加<span class="val">:<port></span>。<br/><br/> 别名将在以下情况下使用： <ol>   <li>处理请求时匹配Host标头中的主机名。</li>   <li>填充FrontPage或AWstats等附加组件的域名和别名配置。</li>  <li>基于虚拟主机模板配置侦听器到虚拟主机的映射。</li> </ol></p> <h4>语法</h4><p>以逗号分隔的域名列表。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="memberVHRoot"><h3>成员虚拟主机根目录<span class="ls-permlink"><a href="#memberVHRoot"></a></span></h3></header><h4>描述</h4><p>指定此虚拟主机的根目录。如果留空，将使用此模板的默认虚拟主机根目录。<br/><br/> 注意：这<b>不是</b>文档根。建议将与虚拟主机相关的所有文件（如虚拟主机配置、日志文件、HTML文件、CGI脚本等）放置在此目录下。 虚拟主机根目录可以通过变量$VH_ROOT引用。</p> <h4>语法</h4><p>路径</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHRoot"><h3>默认虚拟主机根目录<span class="ls-permlink"><a href="#templateVHRoot"></a></span></h3></header><h4>描述</h4><p>指定使用此模板的成员虚拟主机的默认根目录。 路径中必须包含变量<span class="val">$VH_NAME</span>。这样每个成员模板都可以根据名称自动分配独立的根目录。</p> <h4>语法</h4><p>路径</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHConfigFile"><h3>实例化虚拟主机配置文件<span class="ls-permlink"><a href="#templateVHConfigFile"></a></span></h3></header><h4>描述</h4><p>指定实例化成员虚拟主机时生成的配置文件位置。 路径中必须包含变量<span class="val">$VH_NAME</span>，以便每个虚拟主机都有自己的文件。该文件必须位于 $SERVER_ROOT/conf/vhosts/下。只有在通过实例化将成员虚拟主机移出模板后，才会创建此配置文件。</p> <h4>语法</h4><p>包含$VH_NAME变量并以.conf为后缀的字符串</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 建议使用$VH_NAME/vhconf.conf，便于管理。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="templateVHDocRoot"><h3>文档根目录<span class="ls-permlink"><a href="#templateVHDocRoot"></a></span></h3></header><h4>描述</h4><p>指定每个成员虚拟主机的唯一文档根目录路径。 路径中必须包含变量<span class="val">$VH_NAME</span>或<span class="val">$VH_ROOT</span>，以便每个成员虚拟主机都有自己的文档根目录。</p> <h4>语法</h4><p>包含$VH_NAME或$VH_ROOT变量的路径</p> <h4>示例</h4><div class="ls-example">$VH_ROOT/public_html/或$SERVER_ROOT/$VH_NAME/public_html。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="tp_vhFileName"><h3>模板中使用的文件名<span class="ls-permlink"><a href="#tp_vhFileName"></a></span></h3></header><h4>描述</h4><p>指定基于模板的虚拟主机设置所使用的文件路径。 路径中必须包含变量<span class="val">$VH_NAME</span>或<span class="val">$VH_ROOT</span>，以便每个成员虚拟主机解析到自己的文件。 此设置用于日志文件等归模板所有的文件，而不是用于实例化虚拟主机配置文件。</p> <h4>语法</h4><p>带有$VH_NAME或$VH_ROOT变量的路径</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

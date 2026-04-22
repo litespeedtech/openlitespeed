@@ -368,6 +368,43 @@ static char *escape_uri(char *p, const char *pURI, int uriLen,
 }
 
 
+static int escape_unsafe_3f(char *pValue, int &valLen, char *pBufEnd)
+{
+    char *p = pValue;
+    char *pEnd = pValue + valLen;
+    int count = 0;
+
+    while ((p = (char *)memchr(p, '?', pEnd - p)) != NULL)
+    {
+        ++count;
+        ++p;
+    }
+
+    if (count == 0)
+        return 0;
+
+    if (pValue + valLen + count * 2 > pBufEnd)
+        return LS_FAIL;
+
+    p = pValue + valLen;
+    char *pNewEnd = p + count * 2;
+    while (pNewEnd > p)
+    {
+        --p;
+        if (*p == '?')
+        {
+            *--pNewEnd = 'F';
+            *--pNewEnd = '3';
+            *--pNewEnd = '%';
+        }
+        else
+            *--pNewEnd = *p;
+    }
+    valLen += count * 2;
+    return 0;
+}
+
+
 static int getSubstr(const char *pSource, const int *ovector, int matches,
                      int i,
                      char *&pValue, int escape_flags, const char *no_escape)
@@ -579,25 +616,33 @@ int RewriteEngine::appendSubst(const RewriteSubstItem *pItem,
     }
     if (esc_uri && (valLen > 0))
     {
-        int len = valLen;
-        char *pEnd;
-        pEnd = (char *)memchr(pBegin, '?', valLen);
-        if (pEnd)
+        if (!(m_flag & RULE_FLAG_UNSAFE_ALLOW3F)
+            && pItem->needsUnsafe3FEscape())
         {
-            esc_uri = 0;
-            len = pEnd - pBegin;
+            if (escape_unsafe_3f(pBegin, valLen, pBufEnd) == LS_FAIL)
+                return -1;
         }
-        if ((len > 0) && (pItem->needUrlDecode()))
+        else
         {
-            int c;
-            //int l1 = transform_urlDecode( pBegin, len, pBegin, len, &c );
-            int l1 = HttpUtil::unescape(pBegin, len, pBegin, len);
-            c = len - l1;
-            if (c > 0)
+            int len = valLen;
+            char *pEnd = (char *)memchr(pBegin, '?', valLen);
+            if (pEnd)
             {
-                if (len < valLen)
-                    memmove(pBegin + l1, pBegin + len, valLen - len);
-                valLen -= c;
+                esc_uri = 0;
+                len = pEnd - pBegin;
+            }
+            if ((len > 0) && (pItem->needUrlDecode()))
+            {
+                int c;
+                //int l1 = transform_urlDecode( pBegin, len, pBegin, len, &c );
+                int l1 = HttpUtil::unescape(pBegin, len, pBegin, len);
+                c = len - l1;
+                if (c > 0)
+                {
+                    if (len < valLen)
+                        memmove(pBegin + l1, pBegin + len, valLen - len);
+                    valLen -= c;
+                }
             }
         }
     }
@@ -1649,7 +1694,5 @@ NEXT_RULE:
     }
     return 0;
 }
-
-
 
 

@@ -259,6 +259,7 @@ class HttpSession
     long                  m_lExtCmdParam;
     void                 *m_pExtCmdParam;
     ls_atom_u32_t         m_sessSeq;
+    bool                  m_inRunCallbacks;
 
     static ls_atom_u32_t  s_m_sessSeq; // monotonically increasing sequence number across
                                       // all sessions (ok to wrap-around) for hashing into

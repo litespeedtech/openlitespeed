@@ -774,6 +774,19 @@ int VMemBuf::mapNextWBlock()
 }
 
 
+static int expand_file(int fd, off_t offset, size_t size)
+{
+    errno = posix_fallocate(fd, offset, size);
+    if (errno == 0)
+        return 0;
+    if (errno == EINVAL || errno == EOPNOTSUPP)
+    {
+        return ftruncate(fd, offset + size);
+    }
+    return -1;
+}
+
+
 int VMemBuf::grow()
 {
     char *pBuf;
@@ -794,7 +807,7 @@ int VMemBuf::grow()
         }
         break;
     case VMBUF_FILE_MAP:
-        if (posix_fallocate(m_iFd, m_iCurTotalSize, s_iBlockSize) == -1)
+        if (expand_file(m_iFd, m_iCurTotalSize, s_iBlockSize) == -1)
         {
             perror("Failed to increase temp file size with ftrancate()");
             return LS_FAIL;
@@ -1152,7 +1165,7 @@ int VMemBuf::copyToFile(off_t  startOff, off_t  len,
     //destSize -= destSize % s_iBlockSize;
     if (st.st_size < destSize)
     {
-        if (posix_fallocate(fd, st.st_size, destSize) == -1)
+        if (expand_file(fd, st.st_size, destSize) == -1)
             return LS_FAIL;
     }
     BlockBuf destBlock;

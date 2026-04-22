@@ -1,155 +1,185 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - Module Configuration</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - Module Configuration." />
+  <title>OpenLiteSpeed用户手册 - 模块配置</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 模块配置." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../Module_Help.html" data-lang="en-US">English</option><option value="../es-ES/Module_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/Module_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/Module_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/Module_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/Module_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><span class="current"><a href="Module_Help.html">Module Configuration</a></span></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a class="current" href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="App_Server_Help.html">App Server Settings</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="Listeners_General_Help.html">侦听器设置</a> &#187;</div></div>
-<h1>Module Configuration</h1><section class="ls-spacer-small-bottom">Module support is available in Openlitespeed 1.3 and LSWS Enterprise 5.0 and greater.
-All required modules must be registered under the Server Modules Configuration tab.  Module files must be 
-located in the server root/modules folder to be available for registering. On start up, the server
-loads all registered modules. The server must be restarted after new modules are registered.
-
-
-Modules can be configured globally under the Server Module configuration tab.  The configuration data is 
-then available to the Listener and Virtual Host Module Configurations to inherit or modify.</section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header><a href="#servModules">Server Modules</a></header><p>
-<a href="#modulename">模块</a> | <a href="#internalmodule">内部的</a> | <a href="#modParams">模块参数</a> | <a href="#moduleEnabled">Enable Module</a> | <a href="#L4_BEGINSESSION">Hook::L4_BEGINSESSION Priority</a> | <a href="#L4_ENDSESSION">Hook::L4_ENDSESSION Priority</a> | <a href="#L4_RECVING">Hook::L4_RECVING Priority</a> | <a href="#L4_SENDING">Hook::L4_SENDING Priority</a> | <a href="#HTTP_BEGIN">Hook::HTTP_BEGIN Priority</a> | <a href="#RECV_REQ_HEADER">Hook::RECV_REQ_HEADER Priority</a> | <a href="#URI_MAP">Hook::URI_MAP Priority</a> | <a href="#HTTP_AUTH">Hook::HTTP_AUTH Priority</a> | <a href="#RECV_REQ_BODY">Hook::RECV_REQ_BODY Priority</a> | <a href="#RCVD_REQ_BODY">Hook::RCVD_REQ_BODY Priority</a> | <a href="#RECV_RESP_HEADER">Hook::RECV_RESP_HEADER Priority</a> | <a href="#RECV_RESP_BODY">Hook::RECV_RESP_BODY Priority</a> | <a href="#RCVD_RESP_BODY">Hook::RCVD_RESP_BODY Priority</a> | <a href="#HANDLER_RESTART">Hook::HANDLER_RESTART Priority</a> | <a href="#SEND_RESP_HEADER">Hook::SEND_RESP_HEADER Priority</a> | <a href="#SEND_RESP_BODY">Hook::SEND_RESP_BODY Priority</a> | <a href="#HTTP_END">Hook::HTTP_END Priority</a> | <a href="#MAIN_INITED">Hook::MAIN_INITED Priority</a> | <a href="#MAIN_PREFORK">Hook::MAIN_PREFORK Priority</a> | <a href="#MAIN_POSTFORK">Hook::MAIN_POSTFORK Priority</a> | <a href="#WORKER_POSTFORK">Hook::WORKER_POSTFORK Priority</a> | <a href="#WORKER_ATEXIT">Hook::WORKER_ATEXIT Priority</a> | <a href="#MAIN_ATEXIT">Hook::MAIN_ATEXIT Priority</a></p></section>
-<section class="toc-row"><header><a href="#listenerModules">Listener Modules</a></header><p>
-<a href="#modulename">模块</a> | <a href="#modParams">模块参数</a> | <a href="#moduleEnabled_lst">Enable Module</a></p></section>
-<section class="toc-row"><header><a href="#vhModules">Virtual Host Modules</a></header><p>
-<a href="#modulename">模块</a> | <a href="#modParams">模块参数</a> | <a href="#moduleEnabled_vh">Enable Module</a></p></section>
-<section class="toc-row"><header><a href="#vhModuleUrlFilters">Virtual Host Module Context</a></header><p>
-<a href="#expuri">URI</a> | <a href="#modParams">模块参数</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="App_Server_Help.html">应用服务器设置</a></div><div class="center"><a href="config.html">配置</a></div><div class="next"><a href="Listeners_General_Help.html">侦听器常规</a> &#187;</div></div>
+<header class="doc-page-header"><h1>模块配置</h1><div class="doc-page-intro">OpenLiteSpeed 1.3及LSWS Enterprise 5.0或更高版本提供模块支持。 所有所需模块都必须在“服务器模块配置”标签下注册。模块文件必须位于服务器root/modules目录中，才能用于注册。启动时，服务器会加载所有已注册的模块。注册新模块后必须重新启动服务器。<br/><br/> 模块可在“服务器模块配置”标签下进行全局配置。随后，侦听器和虚拟主机模块配置可以继承或修改这些配置数据。</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#servModules">服务器模块</a></h3><ul class="doc-toc__links"><li><a href="#modulename">模块</a></li><li><a href="#internalmodule">内部模块</a></li><li><a href="#modParams">模块参数</a></li><li><a href="#moduleEnabled">启用模块</a></li><li><a href="#L4_BEGINSESSION">Hook::L4_BEGINSESSION 优先级</a></li><li><a href="#L4_ENDSESSION">Hook::L4_ENDSESSION 优先级</a></li><li><a href="#L4_RECVING">Hook::L4_RECVING 优先级</a></li><li><a href="#L4_SENDING">Hook::L4_SENDING 优先级</a></li><li><a href="#HTTP_BEGIN">Hook::HTTP_BEGIN 优先级</a></li><li><a href="#RECV_REQ_HEADER">Hook::RECV_REQ_HEADER 优先级</a></li><li><a href="#URI_MAP">Hook::URI_MAP 优先级</a></li><li><a href="#HTTP_AUTH">Hook::HTTP_AUTH 优先级</a></li><li><a href="#RECV_REQ_BODY">Hook::RECV_REQ_BODY 优先级</a></li><li><a href="#RCVD_REQ_BODY">Hook::RCVD_REQ_BODY 优先级</a></li><li><a href="#RECV_RESP_HEADER">Hook::RECV_RESP_HEADER 优先级</a></li><li><a href="#RECV_RESP_BODY">Hook::RECV_RESP_BODY 优先级</a></li><li><a href="#RCVD_RESP_BODY">Hook::RCVD_RESP_BODY 优先级</a></li><li><a href="#HANDLER_RESTART">Hook::HANDLER_RESTART 优先级</a></li><li><a href="#SEND_RESP_HEADER">Hook::SEND_RESP_HEADER 优先级</a></li><li><a href="#SEND_RESP_BODY">Hook::SEND_RESP_BODY 优先级</a></li><li><a href="#HTTP_END">Hook::HTTP_END 优先级</a></li><li><a href="#MAIN_INITED">Hook::MAIN_INITED 优先级</a></li><li><a href="#MAIN_PREFORK">Hook::MAIN_PREFORK 优先级</a></li><li><a href="#MAIN_POSTFORK">Hook::MAIN_POSTFORK 优先级</a></li><li><a href="#WORKER_POSTFORK">Hook::WORKER_POSTFORK 优先级</a></li><li><a href="#WORKER_ATEXIT">Hook::WORKER_ATEXIT 优先级</a></li><li><a href="#MAIN_ATEXIT">Hook::MAIN_ATEXIT 优先级</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#listenerModules">侦听器模块</a></h3><ul class="doc-toc__links"><li><a href="#modulename">模块</a></li><li><a href="#modParams">模块参数</a></li><li><a href="#moduleEnabled_lst">启用模块</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#vhModules">虚拟主机模块</a></h3><ul class="doc-toc__links"><li><a href="#modulename">模块</a></li><li><a href="#modParams">模块参数</a></li><li><a href="#moduleEnabled_vh">启用模块</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#vhModuleUrlFilters">虚拟主机模块上下文</a></h3><ul class="doc-toc__links"><li><a href="#expuri">URI</a></li><li><a href="#modParams">模块参数</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="servModules"><h3>Server Modules<span class="ls-permlink"><a href="#servModules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>The Server module configuration globally defines the module configuration data.  Once defined, the Listeners and Virtual Hosts have access to the modules and module configurations. <br/><br/> All modules that are to be processed must be registered in the Server configuration. The Server configuration also  defines the default values for module parameter data.  These values can be inherited  or overridden by the Listener and Virtual Host configuration data.<br/><br/> Module priority is only defined at server level and is inherited by the Listener and Virtual Host configurations.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="modulename"><h3>模块<span class="ls-permlink"><a href="#modulename"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>服务器启动时要加载的外部或内部模块的名称。<br/><br/> <b>外部模块</b><br/> 用于外部模块的值必须与 $SERVER_ROOT/modules/modulename.so 下的“.so”文件名匹配， 以便服务器应用程序加载该文件。 在注册新模块后需要重新启动服务器。<br/><br/> <b>内部模块</b><br/> 内部模块使用的值必须与构建模块时使用的名称匹配 例如，对于服务器附带的内部缓存模块，必须将其设置为“缓存”。</p> <h4>Syntax</h4><p>字符串</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="internalmodule"><h3>内部的<span class="ls-permlink"><a href="#internalmodule"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定模块是否为内部模块（静态链接），而不是动态链接库。</p> <h4>Syntax</h4><p>布尔值</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="modParams"><h3>模块参数<span class="ls-permlink"><a href="#modParams"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Set module parameters. The module parameters are defined by the module developer.<br/><br/> Set the value in the Server configuration to globally assign the default value.  The user can override this setting at the Listener, Virtual Host or Context levels. If the 'Not Set' radio button is selected, it will be inherited from the upper level.</p> <h4>Syntax</h4><p>Specified by the module interface.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="moduleEnabled"><h3>Enable Module<span class="ls-permlink"><a href="#moduleEnabled"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Enables module hooks globally. This setting can be overridden at the Listener and Virtual Host levels.<br/><br/> Default value: <span class="val">Yes</span></p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="L4_BEGINSESSION"><h3>Hook::L4_BEGINSESSION Priority<span class="ls-permlink"><a href="#L4_BEGINSESSION"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the L4 Begin Session Hook.<br/>   The L4 Begin Session Hook is triggered when the TCP/IP connection begins.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="L4_ENDSESSION"><h3>Hook::L4_ENDSESSION Priority<span class="ls-permlink"><a href="#L4_ENDSESSION"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the L4 End Session Hook.<br/>    The L4 End Session Hook is triggered when the TCP/IP connection ends.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="L4_RECVING"><h3>Hook::L4_RECVING Priority<span class="ls-permlink"><a href="#L4_RECVING"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the L4 Receiving Hook.<br/>    The L4 Receiving Hook is triggered when the TCP/IP connection receives data.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="L4_SENDING"><h3>Hook::L4_SENDING Priority<span class="ls-permlink"><a href="#L4_SENDING"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the L4 Sending Hook.<br/>   The L4 Sending Hook is triggered when the TCP/IP connection sends data.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="HTTP_BEGIN"><h3>Hook::HTTP_BEGIN Priority<span class="ls-permlink"><a href="#HTTP_BEGIN"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Begin Hook.<br/>    The HTTP Begin Hook is triggered when the TCP/IP connection begins an HTTP Session.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="RECV_REQ_HEADER"><h3>Hook::RECV_REQ_HEADER Priority<span class="ls-permlink"><a href="#RECV_REQ_HEADER"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Receive Request Header Hook.<br/>    The HTTP Receive Request Header Hook is triggered when the web server receives a request header.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="URI_MAP"><h3>Hook::URI_MAP Priority<span class="ls-permlink"><a href="#URI_MAP"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP URI Map Hook.<br/>   The HTTP URI Map Hook is triggered when the web server maps a URI request to a context.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="HTTP_AUTH"><h3>Hook::HTTP_AUTH Priority<span class="ls-permlink"><a href="#HTTP_AUTH"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Authentication Hook.<br/>   The HTTP Authentication Hook is triggered after resource mapping and before handler processing.  It occurs after HTTP built-in authentication, and can be used to perform additional authentication checking.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="RECV_REQ_BODY"><h3>Hook::RECV_REQ_BODY Priority<span class="ls-permlink"><a href="#RECV_REQ_BODY"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Receive Request Body Hook.  <br/><br/> The HTTP Receive Request Body Hook is triggered when the web server receives request body data.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="RCVD_REQ_BODY"><h3>Hook::RCVD_REQ_BODY Priority<span class="ls-permlink"><a href="#RCVD_REQ_BODY"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Received Request Body Hook.  <br/><br/> The HTTP Received Request Body Hook is triggered when the web server finishes receiving request body data.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="RECV_RESP_HEADER"><h3>Hook::RECV_RESP_HEADER Priority<span class="ls-permlink"><a href="#RECV_RESP_HEADER"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Receive Response Header Hook.  <br/><br/> The HTTP Receive Response Header Hook is triggered when the web server creates the response header.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="RECV_RESP_BODY"><h3>Hook::RECV_RESP_BODY Priority<span class="ls-permlink"><a href="#RECV_RESP_BODY"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Receive Response Body Hook.  <br/><br/> The HTTP Receive Response Body Hook is triggered when the web server backend receives the response body.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="RCVD_RESP_BODY"><h3>Hook::RCVD_RESP_BODY Priority<span class="ls-permlink"><a href="#RCVD_RESP_BODY"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Received Response Body Hook.  <br/><br/> The HTTP Received Response Body Hook is triggered when the web server backend finishes receiving the response body.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="HANDLER_RESTART"><h3>Hook::HANDLER_RESTART Priority<span class="ls-permlink"><a href="#HANDLER_RESTART"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Handler Restart Hook.<br/>    The HTTP Handler Restart Hook is triggered when the web server needs to discard the current response and start processing from beginning, for example, when an internal redirect has been requested.<br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="SEND_RESP_HEADER"><h3>Hook::SEND_RESP_HEADER Priority<span class="ls-permlink"><a href="#SEND_RESP_HEADER"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Send Response Header Hook. <br/><br/> The HTTP Send Response Header Hook is triggered when the web server is ready to send the response header.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="SEND_RESP_BODY"><h3>Hook::SEND_RESP_BODY Priority<span class="ls-permlink"><a href="#SEND_RESP_BODY"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Send Response Body Hook. <br/><br/> The HTTP Send Response Body Hook is triggered when the web server is going to send the response body.  <br/><br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="HTTP_END"><h3>Hook::HTTP_END Priority<span class="ls-permlink"><a href="#HTTP_END"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the HTTP Session End Hook. <br/><br/> The HTTP Session End Hook is triggered when the HTTP connection has ended.     <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="MAIN_INITED"><h3>Hook::MAIN_INITED Priority<span class="ls-permlink"><a href="#MAIN_INITED"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the Main Initialized Hook. <br/><br/> The Main Initialized Hook is triggered once upon startup, after the server configuration and  initialization is completed by the main (controller) process, and before any requests are serviced.   <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="MAIN_PREFORK"><h3>Hook::MAIN_PREFORK Priority<span class="ls-permlink"><a href="#MAIN_PREFORK"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the Main Prefork Hook. <br/><br/> The Main Prefork Hook is triggered by the main (controller) process immediately before  a new worker process is started (forked). This is called for each worker, and may happen during  system startup, or if a worker has been restarted.   <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="MAIN_POSTFORK"><h3>Hook::MAIN_POSTFORK Priority<span class="ls-permlink"><a href="#MAIN_POSTFORK"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the Main Postfork Hook. <br/><br/> The Main Postfork Hook is triggered by the main (controller) process immediately after  a new worker process has been started (forked). This is called for each worker, and may happen during  system startup, or if a worker has been restarted.   <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="WORKER_POSTFORK"><h3>Hook::WORKER_POSTFORK Priority<span class="ls-permlink"><a href="#WORKER_POSTFORK"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the Worker Postfork Hook. <br/><br/> The Worker Postfork Hook is triggered by a worker process after being created by the main (controller) process.  Note that a corresponding Main Postfork Hook may be called by the main process either before or after this callback.   <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="WORKER_ATEXIT"><h3>Hook::WORKER_ATEXIT Priority<span class="ls-permlink"><a href="#WORKER_ATEXIT"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the Worker At Exit Hook. <br/><br/> The Worker At Exit Hook is triggered by a worker process just prior to exiting. It is the last hook point to be called by a worker.   <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="MAIN_ATEXIT"><h3>Hook::MAIN_ATEXIT Priority<span class="ls-permlink"><a href="#MAIN_ATEXIT"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Sets the priority for this module callback within the Main At Exit Hook. <br/><br/> The Main At Exit Hook is triggered by the main (controller) process just prior to exiting. It is the last hook point to be called by the main process.   <br/> It will only take effect if the module has a hook point here. If it is not set, the priority will be the default value defined in the module.</p> <h4>Syntax</h4><p>Integer value from -6000 to 6000. Lower value means higher priority.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="listenerModules"><h3>Listener Modules<span class="ls-permlink"><a href="#listenerModules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Listener module configuration data is, by default inherited from the Server module configuration.   The Listener Modules are limited to the TCP/IP Layer 4 hooks.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="moduleEnabled_lst"><h3>Enable Module<span class="ls-permlink"><a href="#moduleEnabled_lst"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Enables module hooks at the Listener level. This setting will only take effect if the module has TCP/IP level hooks (L4_BEGSESSION, L4_ENDSESSION, L4_RECVING, L4_SENDING).<br/><br/> Default value: Inherit Server level setting</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhModules"><h3>Virtual Host Modules<span class="ls-permlink"><a href="#vhModules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Virtual Host module configuration data is, by default inherited from the Server module configuration.   The Virtual Host Modules are limited to the HTTP level hooks.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="moduleEnabled_vh"><h3>Enable Module<span class="ls-permlink"><a href="#moduleEnabled_vh"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Enables module hooks at the Virtual Host level. This setting will only take effect if the module has HTTP level hooks.<br/><br/> Default value: Inherit Server level setting</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhModuleUrlFilters"><h3>Virtual Host Module Context<span class="ls-permlink"><a href="#vhModuleUrlFilters"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>It's a centralized place to customize module settings for virtual host contexts. Settings for a context URI will override the virtual host or the server level settings.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the URI for this context.</p> <h4>Syntax</h4><p>指定此context下的URI。这个URI应该以"/"开始。 如果一个URI以"/"结束，那么该context将包含这个URI下的所有下级URI。如果context类型映射到系统目录上,则必须添加结尾的"/"</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#location">位置</a></span></p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="servModules"><h3>服务器模块<span class="ls-permlink"><a href="#servModules"></a></span></h3></header><h4>描述</h4><p>服务器模块配置会全局定义模块配置数据。 定义后，侦听器和虚拟主机即可访问这些模块及其配置。<br/><br/> 所有要处理的模块都必须在服务器配置中注册。服务器配置还定义模块参数数据的默认值。这些值可由侦听器和虚拟主机配置数据继承或覆盖。<br/><br/> 模块优先级只在服务器级别定义，并由侦听器和虚拟主机配置继承。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="modulename"><h3>模块<span class="ls-permlink"><a href="#modulename"></a></span></h3></header><h4>描述</h4><p>服务器启动时要加载的外部或内部模块的名称。<br/><br/> <b>外部模块</b><br/> 用于外部模块的值必须与 $SERVER_ROOT/modules/modulename.so 下的“.so”文件名匹配， 以便服务器应用程序加载该文件。 在注册新模块后需要重新启动服务器。<br/><br/> <b>内部模块</b><br/> 内部模块使用的值必须与构建模块时使用的名称匹配 例如，对于服务器附带的内部缓存模块，必须将其设置为“缓存”。</p> <h4>语法</h4><p>字符串</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="internalmodule"><h3>内部模块<span class="ls-permlink"><a href="#internalmodule"></a></span></h3></header><h4>描述</h4><p>指定模块是否为内部模块（静态链接），而不是动态链接库。</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="modParams"><h3>模块参数<span class="ls-permlink"><a href="#modParams"></a></span></h3></header><h4>描述</h4><p>设置模块参数。模块参数由模块开发者定义。<br/><br/> 服务器级别设置的值会全局分配为默认值。 用户可以在侦听器、虚拟主机或上下文级别覆盖此设置。如果在这些级别未设置该值，则会从上一级继承。</p> <h4>语法</h4><p>由模块接口指定。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="moduleEnabled"><h3>启用模块<span class="ls-permlink"><a href="#moduleEnabled"></a></span></h3></header><h4>描述</h4><p>全局启用模块Hook。此设置可在侦听器和虚拟主机级别覆盖。<br/><br/> 默认值：<span class="val">Yes</span></p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_BEGINSESSION"><h3>Hook::L4_BEGINSESSION 优先级<span class="ls-permlink"><a href="#L4_BEGINSESSION"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在L4 Begin Session Hook中的优先级。<br/><br/> TCP/IP连接开始时会触发L4 Begin Session Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_ENDSESSION"><h3>Hook::L4_ENDSESSION 优先级<span class="ls-permlink"><a href="#L4_ENDSESSION"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在L4 End Session Hook中的优先级。<br/><br/> TCP/IP连接结束时会触发L4 End Session Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_RECVING"><h3>Hook::L4_RECVING 优先级<span class="ls-permlink"><a href="#L4_RECVING"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在L4 Receiving Hook中的优先级。<br/><br/> TCP/IP连接接收数据时会触发L4 Receiving Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="L4_SENDING"><h3>Hook::L4_SENDING 优先级<span class="ls-permlink"><a href="#L4_SENDING"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在L4 Sending Hook中的优先级。<br/><br/> TCP/IP连接发送数据时会触发L4 Sending Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HTTP_BEGIN"><h3>Hook::HTTP_BEGIN 优先级<span class="ls-permlink"><a href="#HTTP_BEGIN"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Begin Hook中的优先级。<br/><br/> TCP/IP连接开始HTTP会话时会触发HTTP Begin Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_REQ_HEADER"><h3>Hook::RECV_REQ_HEADER 优先级<span class="ls-permlink"><a href="#RECV_REQ_HEADER"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Receive Request Header Hook中的优先级。<br/><br/> Web服务器收到请求头时会触发HTTP Receive Request Header Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="URI_MAP"><h3>Hook::URI_MAP 优先级<span class="ls-permlink"><a href="#URI_MAP"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP URI Map Hook中的优先级。<br/><br/> Web服务器将URI请求映射到上下文时会触发HTTP URI Map Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HTTP_AUTH"><h3>Hook::HTTP_AUTH 优先级<span class="ls-permlink"><a href="#HTTP_AUTH"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Authentication Hook中的优先级。<br/><br/> HTTP Authentication Hook会在资源映射之后、处理程序处理之前触发。它发生在HTTP内置身份验证之后，可用于执行额外的身份验证检查。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_REQ_BODY"><h3>Hook::RECV_REQ_BODY 优先级<span class="ls-permlink"><a href="#RECV_REQ_BODY"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Receive Request Body Hook中的优先级。<br/><br/> Web服务器接收请求正文数据时会触发HTTP Receive Request Body Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RCVD_REQ_BODY"><h3>Hook::RCVD_REQ_BODY 优先级<span class="ls-permlink"><a href="#RCVD_REQ_BODY"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Received Request Body Hook中的优先级。<br/><br/> Web服务器完成接收请求正文数据时会触发HTTP Received Request Body Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_RESP_HEADER"><h3>Hook::RECV_RESP_HEADER 优先级<span class="ls-permlink"><a href="#RECV_RESP_HEADER"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Receive Response Header Hook中的优先级。<br/><br/> Web服务器创建响应头时会触发HTTP Receive Response Header Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RECV_RESP_BODY"><h3>Hook::RECV_RESP_BODY 优先级<span class="ls-permlink"><a href="#RECV_RESP_BODY"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Receive Response Body Hook中的优先级。<br/><br/> Web服务器后端接收响应正文时会触发HTTP Receive Response Body Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="RCVD_RESP_BODY"><h3>Hook::RCVD_RESP_BODY 优先级<span class="ls-permlink"><a href="#RCVD_RESP_BODY"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Received Response Body Hook中的优先级。<br/><br/> Web服务器后端完成接收响应正文时会触发HTTP Received Response Body Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HANDLER_RESTART"><h3>Hook::HANDLER_RESTART 优先级<span class="ls-permlink"><a href="#HANDLER_RESTART"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Handler Restart Hook中的优先级。<br/><br/> 当Web服务器需要丢弃当前响应并从头开始处理时会触发HTTP Handler Restart Hook，例如请求了内部重定向时。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="SEND_RESP_HEADER"><h3>Hook::SEND_RESP_HEADER 优先级<span class="ls-permlink"><a href="#SEND_RESP_HEADER"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Send Response Header Hook中的优先级。<br/><br/> Web服务器准备发送响应头时会触发HTTP Send Response Header Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="SEND_RESP_BODY"><h3>Hook::SEND_RESP_BODY 优先级<span class="ls-permlink"><a href="#SEND_RESP_BODY"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Send Response Body Hook中的优先级。<br/><br/> Web服务器即将发送响应正文时会触发HTTP Send Response Body Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="HTTP_END"><h3>Hook::HTTP_END 优先级<span class="ls-permlink"><a href="#HTTP_END"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在HTTP Session End Hook中的优先级。<br/><br/> HTTP连接结束时会触发HTTP Session End Hook。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_INITED"><h3>Hook::MAIN_INITED 优先级<span class="ls-permlink"><a href="#MAIN_INITED"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在Main Initialized Hook中的优先级。<br/><br/> Main Initialized Hook会在启动时触发一次，时间是在主（控制器）进程完成服务器配置和初始化之后、处理任何请求之前。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_PREFORK"><h3>Hook::MAIN_PREFORK 优先级<span class="ls-permlink"><a href="#MAIN_PREFORK"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在Main Prefork Hook中的优先级。<br/><br/> Main Prefork Hook会在新的工作进程启动（fork）之前，由主（控制器）进程立即触发。每个工作进程都会调用此Hook，可能发生在系统启动期间或工作进程重启时。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_POSTFORK"><h3>Hook::MAIN_POSTFORK 优先级<span class="ls-permlink"><a href="#MAIN_POSTFORK"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在Main Postfork Hook中的优先级。<br/><br/> Main Postfork Hook会在新的工作进程启动（fork）之后，由主（控制器）进程立即触发。每个工作进程都会调用此Hook，可能发生在系统启动期间或工作进程重启时。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="WORKER_POSTFORK"><h3>Hook::WORKER_POSTFORK 优先级<span class="ls-permlink"><a href="#WORKER_POSTFORK"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在Worker Postfork Hook中的优先级。<br/><br/> Worker Postfork Hook会在工作进程由主（控制器）进程创建后，由工作进程触发。请注意，对应的Main Postfork Hook可能会在此回调之前或之后由主进程调用。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="WORKER_ATEXIT"><h3>Hook::WORKER_ATEXIT 优先级<span class="ls-permlink"><a href="#WORKER_ATEXIT"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在Worker At Exit Hook中的优先级。<br/><br/> Worker At Exit Hook会在工作进程即将退出前触发。这是工作进程调用的最后一个Hook点。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="MAIN_ATEXIT"><h3>Hook::MAIN_ATEXIT 优先级<span class="ls-permlink"><a href="#MAIN_ATEXIT"></a></span></h3></header><h4>描述</h4><p>设置此模块回调在Main At Exit Hook中的优先级。<br/><br/> Main At Exit Hook会在主（控制器）进程即将退出前触发。这是主进程调用的最后一个Hook点。<br/><br/> 只有模块在此处有挂钩点时，此设置才会生效。如果未设置，优先级将使用模块中定义的默认值。</p> <h4>语法</h4><p>-6000到6000之间的整数。值越小，优先级越高。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerModules"><h3>侦听器模块<span class="ls-permlink"><a href="#listenerModules"></a></span></h3></header><h4>描述</h4><p>侦听器模块配置数据默认从服务器模块配置继承。 侦听器模块仅限于TCP/IP第4层Hook。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="moduleEnabled_lst"><h3>启用模块<span class="ls-permlink"><a href="#moduleEnabled_lst"></a></span></h3></header><h4>描述</h4><p>在侦听器级别启用模块Hook。只有当模块具有TCP/IP级别Hook (L4_BEGSESSION, L4_ENDSESSION, L4_RECVING, L4_SENDING)时，此设置才会生效。<br/><br/> 默认值：继承服务器级别设置</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhModules"><h3>虚拟主机模块<span class="ls-permlink"><a href="#vhModules"></a></span></h3></header><h4>描述</h4><p>虚拟主机模块配置数据默认从服务器模块配置继承。 虚拟主机模块仅限于HTTP级别Hook。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="moduleEnabled_vh"><h3>启用模块<span class="ls-permlink"><a href="#moduleEnabled_vh"></a></span></h3></header><h4>描述</h4><p>在虚拟主机级别启用模块Hook。只有当模块具有HTTP级别Hook时，此设置才会生效。<br/><br/> 默认值：继承服务器级别设置</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhModuleUrlFilters"><h3>虚拟主机模块上下文<span class="ls-permlink"><a href="#vhModuleUrlFilters"></a></span></h3></header><h4>描述</h4><p>这是集中自定义虚拟主机上下文模块设置的位置。 上下文URI的设置会覆盖虚拟主机或服务器级别设置。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span></h3></header><h4>描述</h4><p>指定此上下文的URI。</p> <h4>语法</h4><p>URI可以是普通URI（以"/"开头），也可以是Perl兼容的正则表达式URI（以"exp:"开头）。 如果普通URI以"/"结尾，则此上下文将包含该URI下的所有子URI。 如果上下文映射到文件系统上的目录，则必须添加结尾的"/"。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#location">位置</a></span></p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

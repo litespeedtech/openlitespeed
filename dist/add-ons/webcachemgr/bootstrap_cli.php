@@ -8,6 +8,16 @@
  * *******************************************
  */
 
+if ( version_compare(PHP_VERSION, '5.6.0', '<') ) {
+    fwrite(
+        STDERR,
+        "ERROR: PHP 5.6.0 or later is required. Current version: "
+            . PHP_VERSION
+            . "\n"
+    );
+    exit(1);
+}
+
 use Lsc\Wp\Context\Context;
 use Lsc\Wp\Context\RootCLIContextOption;
 use Lsc\Wp\CliController;

@@ -1,24 +1,68 @@
 <!DOCTYPE html>
+<html lang="ja-JP">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Serverユーザーズマニュアル - 管理コンソールのセキュリティ</title>
-  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - 管理コンソールのセキュリティ." />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - 管理コンソールセキュリティ</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - 管理コンソールセキュリティ." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-      <figure>
-        <img src="../img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-      </figure>
-<h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
-<h5 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 3</h5>
-<hr/>
-<div>
-<ul>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Open LiteSpeed Web Serverユーザーズマニュアル">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Open LiteSpeed Web Serverユーザーズマニュアル</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="メニューを開く" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="ページや設定を検索" data-no-results="結果が見つかりません。">
+      <label class="sr-only" for="doc-search-input">マニュアルを検索</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="ページや設定を検索" aria-controls="doc-search-results" />
+        <button type="submit">検索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="言語"><option value="../AdminSecurity_Help.html" data-lang="en-US">English</option><option value="../es-ES/AdminSecurity_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/AdminSecurity_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/AdminSecurity_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/AdminSecurity_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/AdminSecurity_Help.html" data-lang="ja-JP" selected>日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="テーマを切り替え" data-theme-toggle data-theme-light-label="ライトモード" data-theme-dark-label="ダークモード" title="テーマを切り替え">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">OpenLiteSpeed Web Server ユーザーズマニュアル</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
 <li><a href="license.html">ライセンス</a></li>
 <li><a href="intro.html">はじめに</a></li>
 <li><a href="install.html">インストール</a></li>
@@ -37,65 +81,76 @@
 	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
 	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
 	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
-                <ul class="level3">
-                <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
-                <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
-                <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
-                <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
-                <li><a href="External_WS.html">Webサーバー</a></li>
-                <li><a href="External_PL.html">パイプロガー</a></li>
-                <li><a href="External_LB.html">ロードバランサ</a></li>
-                </ul>
+	<ul class="level3">
+      <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+      <li><a href="External_WS.html">Webサーバー</a></li>
+      <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+      <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+      <li><a href="External_SCGI.html">Simple CGI App</a></li>
+      <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+      <li><a href="External_PL.html">パイプロガー</a></li>
+      <li><a href="External_LB.html">ロードバランサ</a></li>
+      <li><a href="External_UWSGI.html">uWSGI</a></li>
+	</ul>
 	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
 	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
 	<li><a href="Module_Help.html">モジュール設定</a></li>
 	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
         <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
 	<li><a href="Templates_Help.html">テンプレート</a></li>
-	<li><a href="VirtualHosts_Help.html">バーチャルホストの基本</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
 	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
 	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
         <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
 	<li><a href="Rewrite_Help.html">Rewrite</a></li>
 	<li><a href="Context_Help.html">コンテキスト</a></li>
-               <ul class="level3">
-                <li><a href="Static_Context.html">静的コンテテキスト</a></li>
-                <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
-                <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
-                <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
-                <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
-                <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
-                <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
-                <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
-                <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
-                <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
-                </ul>
+	<ul class="level3">
+	  <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+	  <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+	  <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+	  <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+	  <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
+	  <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+	  <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+	  <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+	  <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+	  <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+	  <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
+	  <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+	</ul>
 	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
 	</ul>
 </li>
 <li><a href="webconsole.html">Webコンソール</a>
         <ul class="level2">
         <li><a href="AdminGeneral_Help.html">管理コンソール全般</a></li>
-        <li><span class="current"><a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></span></li>
+        <li><a class="current" href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></li>
 	<li><a href="AdminListeners_General_Help.html">管理リスナー全般</a></li>
         <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
         </ul>
 </li>
-</ul>
+</ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="AdminGeneral_Help.html">管理コンソール一般</a></div><div class="center"><a href="webconsole.html">Webコンソール</a></div><div class="next"><a href="AdminListeners_General_Help.html">管理リスナー全般</a> &#187;</div></div>
+<header class="doc-page-header"><h1>管理コンソールセキュリティ</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目次</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#accessControl">アクセス制御</a></h3><ul class="doc-toc__links"><li><a href="#accessControl_allow">許可リスト</a></li><li><a href="#accessControl_deny">拒否リスト</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#loginThrottle">ログインスロットル</a></h3><ul class="doc-toc__links"><li><a href="#throttleEnabled">ログインスロットルを有効にする</a></li><li><a href="#throttleMaxFailures">最大ログイン失敗回数</a></li><li><a href="#throttleBlockWindow">初期ブロック期間(秒)</a></li><li><a href="#throttleMaxBackoff">最大ブロック期間(秒)</a></li><li><a href="#loginHistoryRetention">ログイン履歴保持期間(日)</a></li><li><a href="#opsAuditRetainFiles">アクティビティログ保持ファイル数</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#adminUser">WebAdminユーザー</a></h3><ul class="doc-toc__links"><li><a href="#adminUserName">ユーザー名</a></li><li><a href="#adminOldPass">旧パスワード</a></li><li><a href="#adminNewPass">新しいパスワード</a></li><li><a href="#adminRetypePass">パスワードを再入力してください</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl"><h3>アクセス制御<span class="ls-permlink"><a href="#accessControl"></a></span></h3></header><h4>説明</h4><p>どのサブネットワークおよび/またはIPアドレスがサーバーにアクセスできるかを指定します。 サーバレベルでは、この設定はすべてのバーチャルホストに影響します。 バーチャルホストレベルで各バーチャルホストに固有のアクセス制御を設定することもできます。 バーチャルホストレベルの設定はサーバーレベルの設定を上書きしません。<br/><br/> ブロック/ IPの許可は、許可リストと拒否リストの組み合わせによって決まります。 特定のIPまたはサブネットワークのみをブロックする場合は、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、ブロックされたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>。<br/> 特定のIPまたはサブネットワークのみを許可する場合は、<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、許可されたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>。<br/> IPに適合する最小スコープの設定は、アクセスを決定するために使用されます。<br/><br/> <b>サーバーレベル：</b>信頼できるIPまたはサブネットワークは、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に、末尾の "T"を追加することで指定する必要があります。 信頼できるIPまたはサブネットワークは、接続/スロットリング制限の影響を受けません。 信頼できるIP/サブネットワークは、サーバーレベルのアクセス制御でのみ設定できます。</p> <h4>ヒント</h4><p>[セキュリティ]すべてのバーチャルホストに適用される一般的な制限については、サーバーレベルでこれを使用してください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_allow"><h3>許可リスト<span class="ls-permlink"><a href="#accessControl_allow"></a></span></h3></header><h4>説明</h4><p>許可されるIPまたはサブネットワークのリストを指定します。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 末尾の「T」は、<span class="val">192.168.1.*T</span>などの信頼できるIPまたはサブネットワークを示すために使用できます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>ヒント</h4><p>[セキュリティ]サーバーレベルのアクセス制御で設定された信頼されたIPまたはサブネットワークは、接続/スロットリングの制限から除外されます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessControl_deny"><h3>拒否リスト<span class="ls-permlink"><a href="#accessControl_deny"></a></span></h3></header><h4>説明</h4><p>許可されていないIPまたはサブネットワークのリストを指定します。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1]<br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginThrottle"><h3>ログインスロットル<span class="ls-permlink"><a href="#loginThrottle"></a></span></h3></header><h4>説明</h4><p>WebAdminコンソールのログインスロットルと、関連するログインおよび監査レコードの保持を設定します。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleEnabled"><h3>ログインスロットルを有効にする<span class="ls-permlink"><a href="#throttleEnabled"></a></span></h3></header><h4>説明</h4><p>WebAdminコンソールのログインスロットルを有効にします。有効にすると、失敗したログイン試行の繰り返しが追跡され、ブルートフォースパスワード攻撃を減らすために一時的にブロックされます。このオプションのみを有効にし、他のスロットル設定を未設定のままにした場合は、組み込みのデフォルト値が使用されます。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p>[セキュリティ] ログイン問題のトラブルシューティング中でない限り、本番環境では有効のままにしてください。カスタム値なしで有効にした場合、デフォルトは5回の失敗、900秒の初期ブロック、14400秒の最大ブロックです。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxFailures"><h3>最大ログイン失敗回数<span class="ls-permlink"><a href="#throttleMaxFailures"></a></span></h3></header><h4>説明</h4><p>クライアントがブロックされる前に許可される連続ログイン失敗回数を指定します。未設定時のデフォルト値:5。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[セキュリティ] 値を低くすると保護は強くなりますが、正当なユーザーがより早くブロックされる可能性があります。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleBlockWindow"><h3>初期ブロック期間(秒)<span class="ls-permlink"><a href="#throttleBlockWindow"></a></span></h3></header><h4>説明</h4><p>許可された最大ログイン失敗回数に達した後、クライアントをブロックする初期時間を秒単位で指定します。未設定時のデフォルト値:900秒。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> 正当なユーザーに過度なロックアウト時間を発生させずに、繰り返し攻撃を抑止できる十分な長さを使用してください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="throttleMaxBackoff"><h3>最大ブロック期間(秒)<span class="ls-permlink"><a href="#throttleMaxBackoff"></a></span></h3></header><h4>説明</h4><p>ログイン失敗の繰り返しが続き、スロットルのバックオフが増加した場合の最大ブロック期間を秒単位で指定します。未設定時のデフォルト値:14400秒。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> 自動化された攻撃を十分に遅らせつつ、妥当な時間内に復旧できる上限を設定してください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="loginHistoryRetention"><h3>ログイン履歴保持期間(日)<span class="ls-permlink"><a href="#loginHistoryRetention"></a></span></h3></header><h4>説明</h4><p>古いエントリが削除されるまでログイン履歴レコードを保持する日数を指定します。未設定時のデフォルト値:90日。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> 監査とトラブルシューティングに十分な履歴を保持しつつ、実際に必要な量を超えるデータ保持は避けてください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="opsAuditRetainFiles"><h3>アクティビティログ保持ファイル数<span class="ls-permlink"><a href="#opsAuditRetainFiles"></a></span></h3></header><h4>説明</h4><p>WebAdminコンソールで保持する操作監査ファイルの最大数を指定します。未設定時のデフォルト値:30ファイル。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> より長い監査証跡が必要な場合はこの値を増やしてください。ただし、ファイル数が増えるほどディスク容量を使用することに注意してください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUser"><h3>WebAdminユーザー<span class="ls-permlink"><a href="#adminUser"></a></span></h3></header><h4>説明</h4><p>WebAdminコンソールのユーザー名とパスワードを変更します。 変更を保存するには、古いパスワードを入力して確認する必要があります。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminUserName"><h3>ユーザー名<span class="ls-permlink"><a href="#adminUserName"></a></span></h3></header><h4>説明</h4><p>WebAdminコンソールのログイン名を指定します。1～25文字で、英字、数字、ピリオド、アンダースコア、ハイフンのみ使用できます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminOldPass"><h3>旧パスワード<span class="ls-permlink"><a href="#adminOldPass"></a></span></h3></header><h4>説明</h4><p>このWebAdminユーザーの現在のパスワードを入力します。ユーザー名またはパスワードの変更を保存する前に必要です。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminNewPass"><h3>新しいパスワード<span class="ls-permlink"><a href="#adminNewPass"></a></span></h3></header><h4>説明</h4><p>このWebAdminユーザーの新しいパスワードを入力します。パスワードには任意の文字を使用でき、WebAdminユーザーの作成または更新時に必要です。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="adminRetypePass"><h3>パスワードを再入力してください<span class="ls-permlink"><a href="#adminRetypePass"></a></span></h3></header><h4>説明</h4><p>新しいパスワードをもう一度入力します。新しいパスワードと一致する必要があります。</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="トップへ戻る" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">トップへ戻る</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="AdminGeneral_Help.html">管理コンソールの一般</a></div><div class="center"><a href="webconsole.html">Webコンソール</a></div><div class="next"><a href="AdminListeners_General_Help.html">リスナー管理者全般</a> &#187;</div></div>
-<h1>管理コンソールのセキュリティ</h1><h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header><a href="#accessControl">アクセス制御</a></header><p>
-<a href="#accessControl_allow">許可リスト</a> | <a href="#accessControl_deny">拒否リスト</a></p></section>
-<section class="toc-row"><header><a href="#adminUser">WebAdminユーザー</a></header><p>
-</p></section>
-</section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl"><h3>アクセス制御<span class="ls-permlink"><a href="#accessControl"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>どのサブネットワークおよび/またはIPアドレスがサーバーにアクセスできるかを指定します。 サーバレベルでは、この設定はすべてのバーチャルホストに影響します。 バーチャルホストレベルで各バーチャルホストに固有のアクセス制御を設定することもできます。 バーチャルホストレベルの設定はサーバーレベルの設定を上書きしません。 <br/><br/> ブロック/ IPの許可は、許可リストと拒否リストの組み合わせによって決まります。 特定のIPまたはサブネットワークのみをブロックする場合は、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、ブロックされたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>。<br/> 特定のIPまたはサブネットワークのみを許可する場合は、<span class="tagl"><a href="#accessControl_deny">拒否リスト</a></span>に<span class="val">*</span>または<span class="val">ALL</span>を入れ、許可されたIPまたはサブネットワークを<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>。<br/> IPに適合する最小スコープの設定は、アクセスを決定するために使用されます。<br/><br/> <b>サーバーレベル：</b>信頼できるIPまたはサブネットワークは、<span class="tagl"><a href="#accessControl_allow">許可リスト</a></span>に、末尾の "T"を追加することで指定する必要があります。 信頼できるIPまたはサブネットワークは、接続/スロットリング制限の影響を受けません。 信頼できるIP/サブネットワークは、サーバーレベルのアクセス制御でのみ設定できます。</p> <h4>ヒント</h4><p>[セキュリティ]すべてのバーチャルホストに適用される一般的な制限については、サーバーレベルでこれを使用してください。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_allow"><h3>許可リスト<span class="ls-permlink"><a href="#accessControl_allow"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>許可されるIPまたはサブネットワークのリストを指定します。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 末尾の「T」は、<span class="val">192.168.1.*T</span>などの信頼できるIPまたはサブネットワークを示すために使用できます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1] <br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or  [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div><h4>ヒント</h4><p>[セキュリティ]サーバーレベルのアクセス制御で設定された信頼されたIPまたはサブネットワークは、接続/スロットリングの制限から除外されます。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessControl_deny"><h3>拒否リスト<span class="ls-permlink"><a href="#accessControl_deny"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>許可されていないIPまたはサブネットワークのリストを指定します。</p> <h4>構文</h4><p>IPアドレスまたはサブネットワークのカンマ区切りリスト。 <span class="val">*</span>または<span class="val">ALL</span>が受け入れられます。</p> <h4>例</h4><div class="ls-example"><b>Sub-networks:</b> 192.168.1.0/255.255.255.0, 192.168.1.0/24, 192.168.1, or 192.168.1.*<br/> <b>IPv6 addresses:</b> ::1 or [::1] <br/> <b>IPv6 subnets:</b> 3ffe:302:11:2:20f:1fff:fe29:717c/64 or  [3ffe:302:11:2:20f:1fff:fe29:717c]/64</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="adminUser"><h3>WebAdminユーザー<span class="ls-permlink"><a href="#adminUser"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>WebAdmin Consoleのユーザー名とパスワードを変更します。 変更を保存するには、古いパスワードを入力して確認する必要があります。</p> </article> </div>
-</section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-</div></div>
 </body>
 </html>

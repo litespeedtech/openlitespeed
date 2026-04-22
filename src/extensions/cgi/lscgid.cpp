@@ -476,8 +476,6 @@ static int cgroup_v2(int uid, int pid)
                 if (fclose(fp) < 0)
                     ls_stderr("Cgroups Error closing %s: %s", user_slice,
                               strerror(errno));
-                ls_stderr("Cgroups returning success file: %s, pid: %d\n",
-                          user_slice, pid);
 
                 char systemd_start[128];
                 snprintf(systemd_start, sizeof(systemd_start), "/bin/systemctl start user-%d.slice", uid);

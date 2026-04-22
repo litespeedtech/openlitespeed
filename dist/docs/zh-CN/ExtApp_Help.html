@@ -1,190 +1,149 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - 外部应用</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - 外部应用." />
+  <title>OpenLiteSpeed用户手册 - 外部应用</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 外部应用." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../ExtApp_Help.html" data-lang="en-US">English</option><option value="../es-ES/ExtApp_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/ExtApp_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/ExtApp_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/ExtApp_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/ExtApp_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><span class="current"><a href="ExtApp_Help.html">External Apps</a></span></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a class="current" href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="ServSecurity_Help.html">服务器安全</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="ScriptHandler_Help.html">脚本处理程序</a> &#187;</div></div>
-<h1>外部应用</h1><section class="ls-spacer-small-bottom">LiteSpeed网络服务器可以转发外部应用程序的请求，以处理和生成动态内容。
-
-
-从2.0版本起, LiteSpeed Web Server已经支持了7种外部应用: CGI, FastCGI, web server, servlet
-engine, LiteSpeed SAPI application, load balancer, and piped logger.
-
-<ul>
-  <li>
-    CGI是Common Gateway Interface的缩写. 目前的标准是 CGI/1.1.
-    CGI应用程序在独立的进程中运行. 一个CGI进程将为每个请求启动,并且在完成请求后退出.
-  </li>
-  <li>
-    FastCGI 是一个快速,开源,安全的web服务器接口,它解决了CGI固有的性能问题,而没有引入专有API(应用编程接口),
-    对于更多的信息,请访问 <a href="https://fastcgi-archives.github.io/">https://fastcgi-archives.github.io/</a>.
-
-
-    在 LiteSpeed Web Server, FastCGI 应用可以发挥两种作用: 创造动态响应 (响应者角色) 或者
-    授权请求 (授权者的角色). LiteSpeed Web Server进一步定义了两种类型的FastCGI应用程序:本地FastCGI和远程FastCGI.
-    Web服务器可根据需要自动启动本地FastCGI应用程序.
-    Web服务器不会启动远程FastCGI应用程序。 (它们可以在远程计算机或同一计算机上运行)
-  </li>
-  <li>
-    Web服务器是指支持HTTP 1.0/1.1协议的服务器应用程序. LiteSpeed网络服务器可以作为一个透明的反向代理来加速和保护网络服务器和应用服务器.
-    在与后端网络服务器进行通信时，LiteSpeed将始终尝试利用持久连接，以实现最高性能。
-  </li>
-  <li>
-    像Apache Tomcat和Jetty,servlet引擎是实现了Java servlets和Java Server Pages的应用程序.
-    LiteSpeed可以通过AJPv1.3（Apache JServ协议1.3版）与servlet引擎进行通信.
-    Servlet引擎不能由Web服务器启动，可以设置在远程机器上运行.
-  </li>
-  <li>
-    A LiteSpeed SAPI (LiteSpeed Server Application Programming Interface) application is an application that communicates
-    with LiteSpeed Web Server through LSAPI, a fast, scalable server interface specifically designed for LiteSpeed Web
-    Server to achieve maximum efficiency.
-
-
-    LSAPI's mechanism of action are similar to FastCGI, but LSAPI applications can be up to 30% faster than comparable
-    FastCGI applications. LSAPI is highly recommended over FastCGI for supported applications. (LSAPI currently supports
-    applications written in PHP, Ruby, and Python.)
-
-
-    For more information about LSAPI, please visit
-    <a href="https://www.litespeedtech.com/open-source/litespeed-sapi">
-      https://www.litespeedtech.com/open-source/litespeed-sapi
-    </a>.
-  </li>
-  <li>
-    A load balancer is a virtual external application, which assigns requests to backend worker applications based on
-    workload. Worker applications can be CGI, FastCGI, web server, servlet engine, or LSAPI applications. Different types of
-    applications can be mixed together under one load balancer. Load balancers and piped loggers cannot be used as
-    worker applications.
-  </li>
-  <li>
-    A piped logger is an application that can process access logs in real-time, writing an access log into database or
-    performing real-time statistics calculations, for example.
-  </li>
-</ul>
-
-
-Unlike CGI applications, FastCGI applications, LSAPI applications, and servlet engine do not exit after processing a
-request. The application process will stay/persist and serve as many requests as it can. The socket connection can be
-reused for multiple requests as well.
-
-
-External applications can be set up in the {PAGE=ExtApp_Help} section. External applications cannot, however, function
-on their own. Additional settings must be configured so that the web server knows which requests to send to which
-application. There are two ways to to configure this in LiteSpeed Web Server:
-
-
-<ol>
-  <li> Set the external application as a handler for a specific context.</li>
-  <li> Set the external application as a handler of a script language via file suffix binding.</li>
-</ol>
-
-
-FastCGI applications, LSAPI applications, web servers, servlet engines, and load balancers have to be defined in the
-{PAGE=ExtApp_Help} section before you can configure them to handle a context or script suffix. It is not necessary to
-define CGI applications in the {PAGE=ExtApp_Help} section.
-
-
-External applications can be configured at the server level or at the virtual host level. When configured at the server level, the
-application can be used by all virtual hosts. When configured at the virtual host level, it can only be used by that virtual host.</section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>新外部应用</header><p>
-<a href="#extAppType">类型</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ServSecurity_Help.html">服务器安全</a></div><div class="center"><a href="config.html">配置</a></div><div class="next"><a href="ScriptHandler_Help.html">脚本处理程序</a> &#187;</div></div>
+<header class="doc-page-header"><h1>外部应用</h1><div class="doc-page-intro">LiteSpeed网络服务器可以转发外部应用程序的请求，以处理和生成动态内容。<br/><br/> 从2.0版本起, LiteSpeed Web Server已经支持了7种外部应用: CGI, FastCGI, web server, servlet engine, LiteSpeed SAPI application, load balancer, and piped logger.<br/> <ul>   <li>     CGI是Common Gateway Interface的缩写. 目前的标准是 CGI/1.1.     CGI应用程序在独立的进程中运行. 一个CGI进程将为每个请求启动,并且在完成请求后退出.   </li>   <li>     FastCGI 是一个快速,开源,安全的web服务器接口,它解决了CGI固有的性能问题,而没有引入专有API(应用编程接口),     对于更多的信息,请访问 <a href="https://fastcgi-archives.github.io/">https://fastcgi-archives.github.io/</a>.<br/><br/>     在LiteSpeed Web Server中，FastCGI应用可以发挥两种作用：生成动态响应（Responder角色）或     授权请求 (授权者的角色). LiteSpeed Web Server进一步定义了两种类型的FastCGI应用程序:本地FastCGI和远程FastCGI.     Web服务器可根据需要自动启动本地FastCGI应用程序.     Web服务器不会启动远程FastCGI应用程序。 (它们可以在远程计算机或同一计算机上运行)   </li>   <li>     Web服务器是指支持HTTP 1.0/1.1协议的服务器应用程序. LiteSpeed网络服务器可以作为一个透明的反向代理来加速和保护网络服务器和应用服务器.     在与后端网络服务器进行通信时，LiteSpeed将始终尝试利用持久连接，以实现最高性能。   </li>   <li>     像Apache Tomcat和Jetty,servlet引擎是实现了Java servlets和Java Server Pages的应用程序.     LiteSpeed可以通过AJPv1.3（Apache JServ协议1.3版）与servlet引擎进行通信.     Servlet引擎不能由Web服务器启动，可以设置在远程机器上运行.   </li>   <li>     LiteSpeed SAPI（LiteSpeed Server Application Programming Interface）应用程序通过LSAPI与LiteSpeed Web Server通信。LSAPI是一种快速、可扩展的服务器接口，专为LiteSpeed Web Server实现最高效率而设计。<br/><br/>     LSAPI的工作机制与FastCGI类似，但LSAPI应用程序可比同类FastCGI应用程序快最多30%。对于受支持的应用程序，强烈建议使用LSAPI而不是FastCGI。（LSAPI目前支持用PHP、Ruby和Python编写的应用程序。）<br/><br/>     有关LSAPI的更多信息，请访问     <a href="https://www.litespeedtech.com/open-source/litespeed-sapi">       https://www.litespeedtech.com/open-source/litespeed-sapi     </a>.   </li>   <li>     负载均衡器是一种虚拟外部应用，它会根据工作负载将请求分配给后端worker应用。worker应用可以是CGI、FastCGI、Web服务器、Servlet引擎或LSAPI应用。一个负载均衡器下可以混合不同类型的应用程序。负载均衡器和管道日志器不能作为worker应用使用。   </li>   <li>     管道日志器是一种可以实时处理访问日志的应用程序，例如将访问日志写入数据库或执行实时统计计算。   </li> </ul><br/><br/> 与CGI应用程序不同，FastCGI应用程序、LSAPI应用程序和Servlet引擎在处理完请求后不会退出。应用进程会保持运行，并尽可能处理更多请求。套接字连接也可以被多个请求复用。<br/><br/> 外部应用程序可以在<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>部分设置。但是，外部应用程序不能单独工作。还必须配置其他设置，使Web服务器知道应将哪些请求发送到哪个应用程序。在LiteSpeed Web Server中有两种配置方式：<br/><br/> <ol>   <li> 将外部应用程序设置为特定上下文的处理程序。</li>   <li> 通过文件后缀绑定，将外部应用程序设置为脚本语言的处理程序。</li> </ol><br/><br/> FastCGI应用程序、LSAPI应用程序、Web服务器、Servlet引擎和负载均衡器必须先在<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>部分定义，然后才能配置它们来处理上下文或脚本后缀。不需要在<span class="tagP"><a href="#ExtApp_Help">外部应用</a></span>部分定义CGI应用程序。<br/><br/> 外部应用程序可以在服务器级别或虚拟主机级别配置。在服务器级别配置时，应用程序可供所有虚拟主机使用。在虚拟主机级别配置时，只有该虚拟主机可以使用。</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">新外部应用</h3><ul class="doc-toc__links"><li><a href="#extAppType">类型</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="extAppType"><h3>类型<span class="ls-permlink"><a href="#extAppType"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定外部应用程序的类型。 应用程序类型根据它们提供的服务或与服务器通信所使用的协议而有所不同。 从中选择 <ul>   <li><span class="val">FastCGI</span>: a FastCGI application with a <span class="val">Responder</span> role.</li>   <li><span class="val">FastCGI Authorizer</span>: a FastCGI application with an <span class="val">Authorizer</span> role</li>   <li><span class="val">Servlet Engine</span>: a servlet engine with an AJPv13 connector, such as Tomcat.</li>   <li><span class="val">Web Server</span>: a web server or application server that supports HTTP protocol.</li>   <li><span class="val">LiteSpeed SAPI App</span>: an application that communicates with the web server using LSAPI protocol.</li>   <li><span class="val">Load Balancer</span>: a virtual application that can balance load among worker applications.</li>   <li><span class="val">Piped Logger</span>: an application that can process access log entries received on its STDIN stream.</li> </ul></p> <h4>Syntax</h4><p>从列表中选择</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> Most applications will use either LSAPI or FastCGI protocol. LSAPI supports PHP, Ruby, and Python. Perl can be used with FastCGI. (PHP, Ruby, and Python can also be set up to run using FastCGI, but they run faster using LSAPI.) Java uses servlet engines.</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppType"><h3>类型<span class="ls-permlink"><a href="#extAppType"></a></span></h3></header><h4>描述</h4><p>指定外部应用程序的类型。应用程序类型根据它们提供的服务或与服务器通信所使用的协议区分。可选类型包括： <ul>   <li><span class="val">LiteSpeed SAPI App</span>: 使用LSAPI协议与Web服务器通信的应用程序。</li>   <li><span class="val">Web Server (Proxy)</span>: 支持HTTP协议的Web服务器或应用服务器。</li>   <li><span class="val">FastCGI App</span>: 具有<span class="val">Responder</span>角色的FastCGI应用程序。</li>   <li><span class="val">FastCGI Authorizer</span>: 具有<span class="val">Authorizer</span>角色的FastCGI应用程序。</li>   <li><span class="val">SCGI App</span>: 使用SCGI协议与Web服务器通信的应用程序。</li>   <li><span class="val">Servlet Engine</span>: 带AJPv13连接器的Servlet引擎，例如Tomcat。</li>   <li><span class="val">Piped Logger</span>: 可处理从STDIN流接收的访问日志条目的应用程序。</li>   <li><span class="val">Load Balancer</span>: 可在worker应用程序之间进行负载均衡的虚拟应用程序。</li>   <li><span class="val">uWSGI</span>: 使用uWSGI协议与Web服务器通信的应用程序。</li> </ul></p> <h4>语法</h4><p>从下拉列表选择</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 大多数应用程序会使用LSAPI或FastCGI协议。LSAPI支持PHP、Ruby和Python。Perl可与FastCGI一起使用。（PHP、Ruby和Python也可以设置为使用FastCGI运行，但使用LSAPI运行更快。）Java使用Servlet引擎。</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

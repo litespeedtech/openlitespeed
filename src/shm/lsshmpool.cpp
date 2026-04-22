@@ -304,10 +304,15 @@ LsShmOffset_t LsShmPool::getReg(const char *name)
 
 LsShmHash *LsShmPool::getNamedHash(const char *name,
                                    LsShmSize_t init_size, LsShmHasher_fn hf,
-                                   LsShmValComp_fn vc, int iFlags)
+                                   LsShmValComp_fn vc, int iFlags,
+                                   int *pCreated, const uint32_t *pVerMagic)
 {
     LsShmHash *pObj = NULL;
     GHash::iterator itor;
+    int created = 0;
+
+    if (pCreated != NULL)
+        *pCreated = 0;
 
     if (name == NULL)
         name = LSSHM_SYSHASH;
@@ -348,16 +353,23 @@ LsShmHash *LsShmPool::getNamedHash(const char *name,
             {
                 pReg = (LsShmReg *)offset2ptr(offReg);
                 pReg->x_iValue = offset;
+                created = 1;
             }
         }
         if (pReg->x_iValue)
+        {
             pObj = newHashByOffset(pReg->x_iValue, name, hf, vc, iFlags);
+            if (created && pObj != NULL && pVerMagic != NULL)
+                pObj->setDataVerMagic(*pVerMagic);
+        }
     }
     if (isAutoLock)
     {
         unlock();
         m_iAutoLock = 1;
     }
+    if (pCreated != NULL)
+        *pCreated = created;
     return pObj;
 }
 

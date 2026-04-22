@@ -1,24 +1,68 @@
 <!DOCTYPE html>
+<html lang="ja-JP">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>Open LiteSpeed Web Serverユーザーズマニュアル - Virtual Host SSL</title>
-  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - Virtual Host SSL." />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - バーチャルホストSSL</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - バーチャルホストSSL." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-      <figure>
-        <img src="../img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-      </figure>
-<h3 class="ls-text-thin">OpenLiteSpeed Web Server <a href="index.html"> ユーザーズマニュアル</a></h3>
-<h5 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 3</h5>
-<hr/>
-<div>
-<ul>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Open LiteSpeed Web Serverユーザーズマニュアル">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Open LiteSpeed Web Serverユーザーズマニュアル</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="メニューを開く" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="ページや設定を検索" data-no-results="結果が見つかりません。">
+      <label class="sr-only" for="doc-search-input">マニュアルを検索</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="ページや設定を検索" aria-controls="doc-search-results" />
+        <button type="submit">検索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="言語"><option value="../VHSSL_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHSSL_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VHSSL_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHSSL_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VHSSL_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/VHSSL_Help.html" data-lang="ja-JP" selected>日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="テーマを切り替え" data-theme-toggle data-theme-light-label="ライトモード" data-theme-dark-label="ダークモード" title="テーマを切り替え">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">OpenLiteSpeed Web Server ユーザーズマニュアル</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
 <li><a href="license.html">ライセンス</a></li>
 <li><a href="intro.html">はじめに</a></li>
 <li><a href="install.html">インストール</a></li>
@@ -37,39 +81,43 @@
 	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
 	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
 	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
-                <ul class="level3">
-                <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
-                <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
-                <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
-                <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
-                <li><a href="External_WS.html">Webサーバー</a></li>
-                <li><a href="External_PL.html">パイプロガー</a></li>
-                <li><a href="External_LB.html">ロードバランサ</a></li>
-                </ul>
+	<ul class="level3">
+      <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+      <li><a href="External_WS.html">Webサーバー</a></li>
+      <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+      <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+      <li><a href="External_SCGI.html">Simple CGI App</a></li>
+      <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+      <li><a href="External_PL.html">パイプロガー</a></li>
+      <li><a href="External_LB.html">ロードバランサ</a></li>
+      <li><a href="External_UWSGI.html">uWSGI</a></li>
+	</ul>
 	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
 	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
 	<li><a href="Module_Help.html">モジュール設定</a></li>
 	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
         <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
 	<li><a href="Templates_Help.html">テンプレート</a></li>
-	<li><a href="VirtualHosts_Help.html">バーチャルホストの基本</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
 	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
 	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
-        <li><span class="current"><a href="VHSSL_Help.html">バーチャルホストのSSL</a></span></li>
+        <li><a class="current" href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
 	<li><a href="Rewrite_Help.html">Rewrite</a></li>
 	<li><a href="Context_Help.html">コンテキスト</a></li>
-               <ul class="level3">
-                <li><a href="Static_Context.html">静的コンテテキスト</a></li>
-                <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
-                <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
-                <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
-                <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
-                <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
-                <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
-                <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
-                <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
-                <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
-                </ul>
+	<ul class="level3">
+	  <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+	  <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+	  <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+	  <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+	  <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
+	  <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+	  <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+	  <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+	  <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+	  <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+	  <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
+	  <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+	</ul>
 	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
 	</ul>
 </li>
@@ -81,52 +129,43 @@
         <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
         </ul>
 </li>
-</ul>
+</ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></div><div class="center"><a href="config.html">設定</a></div><div class="next"><a href="Rewrite_Help.html">Rewrite</a> &#187;</div></div>
+<header class="doc-page-header"><h1>バーチャルホストSSL</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目次</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#sslCert">SSL秘密鍵と証明書</a></h3><ul class="doc-toc__links"><li><a href="#keyFile">秘密鍵ファイル</a></li><li><a href="#certFile">証明書ファイル</a></li><li><a href="#certChain">チェーン証明書</a></li><li><a href="#CACertPath">CA証明書パス</a></li><li><a href="#CACertFile">CA証明書ファイル</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">SSLプロトコル</h3><ul class="doc-toc__links"><li><a href="#ciphers">暗号</a></li><li><a href="#enableECDHE">ECDH鍵交換を有効にする</a></li><li><a href="#enableDHE">DHキー交換を有効にする</a></li><li><a href="#DHParam">DHパラメータ</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">ACMEによる自動証明書</h3><ul class="doc-toc__links"><li><a href="#acme_vhenable">有効</a></li><li><a href="#acme_dns_type">ACME API dns_type</a></li><li><a href="#acme_env">環境</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">セキュリティ</h3><ul class="doc-toc__links"><li><a href="#renegProtection">SSL再交渉保護</a></li><li><a href="#sslSessionCache">セッションキャッシュを有効にする</a></li><li><a href="#sslSessionTickets">セッションチケットを有効にする</a></li><li><a href="#enableSpdy">ALPN</a></li><li><a href="#vhEnableQuic">HTTP3/QUICを有効にする</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#sslOCSP">OCSPステープリング</a></h3><ul class="doc-toc__links"><li><a href="#enableStapling">OCSPステープルを有効にする</a></li><li><a href="#ocspRespMaxAge">OCSPの応答最大年齢（秒）</a></li><li><a href="#ocspResponder">OCSPレスポンダ</a></li><li><a href="#ocspCACerts">OCSP CA証明書</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">クライアントの検証</h3><ul class="doc-toc__links"><li><a href="#clientVerify">クライアントの検証</a></li><li><a href="#verifyDepth">検証の深さ</a></li><li><a href="#crlPath">クライアントの失効パス</a></li><li><a href="#crlFile">クライアント失効ファイル</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslCert"><h3>SSL秘密鍵と証明書<span class="ls-permlink"><a href="#sslCert"></a></span></h3></header><h4>説明</h4><p>すべてのSSLリスナーには、ペアのSSL秘密鍵とSSL証明書が必要です。 複数のSSLリスナーは、同じ鍵と証明書を共有できます。<br/> OpenSSLなどのSSLソフトウェアパッケージを使用して、SSL秘密鍵を自分で生成することができます。 SSL証明書は、VeriSignやThawteのような認証局から購入することもできます。 自分で証明書に署名することもできます。 自己署名証明書はWebブラウザから信頼されないため、重要なデータを含む公開Webサイトでは使用しないでください。 ただし、自己署名証明書は内部使用に十分適しており、 例えばLiteSpeed WebサーバーのWebAdminコンソールへのトラフィックの暗号化に使用できます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="keyFile"><h3>秘密鍵ファイル<span class="ls-permlink"><a href="#keyFile"></a></span></h3></header><h4>説明</h4><p>SSL秘密鍵ファイルのファイル名。キーファイルは暗号化しないでください。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> <h4>ヒント</h4><p>[セキュリティ]秘密鍵ファイルは、サーバーが実行されるユーザーへの読み取り専用アクセスを可能にするセキュリティ保護されたディレクトリに配置する必要があります。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="certFile"><h3>証明書ファイル<span class="ls-permlink"><a href="#certFile"></a></span></h3></header><h4>説明</h4><p>SSL証明書ファイルのファイル名。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> <h4>ヒント</h4><p>[セキュリティ]証明書ファイルは、サーバーが実行されるユーザーへの読み取り専用アクセスを可能にする安全なディレクトリに配置する必要があります。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="certChain"><h3>チェーン証明書<span class="ls-permlink"><a href="#certChain"></a></span></h3></header><h4>説明</h4><p>証明書がチェーン証明書であるかどうかを指定します。 チェーン証明を格納するファイルは、PEM形式でなければならず、証明書は最下位レベル（実際のクライアントまたはサーバー証明書）から最上位（ルート）CAまでの連鎖の順序でなければなりません。</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="CACertPath"><h3>CA証明書パス<span class="ls-permlink"><a href="#CACertPath"></a></span></h3></header><h4>説明</h4><p>証明機関（CA）の証明書が保存されるディレクトリを指定します。 これらの証明書は、クライアント証明書の認証およびサーバー証明書チェーンの構築に使用されます。サーバー証明書チェーンは、サーバー証明書に加えてブラウザーにも送信されます。</p> <h4>構文</h4><p>パス</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="CACertFile"><h3>CA証明書ファイル<span class="ls-permlink"><a href="#CACertFile"></a></span></h3></header><h4>説明</h4><p>チェーン証明書の証明機関（CA）のすべての証明書を含むファイルを指定します。 このファイルは、PEMでエンコードされた証明書ファイルを単に優先順に連結したものです。 これは、「CA証明書パス」の代替として、またはこれに加えて使用することができる。 これらの証明書は、クライアント証明書の認証およびサーバー証明書チェーンの構築に使用されます。サーバー証明書チェーンは、サーバー証明書に加えてブラウザーにも送信されます。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ciphers"><h3>暗号<span class="ls-permlink"><a href="#ciphers"></a></span></h3></header><h4>説明</h4><p>SSLハンドシェイクのネゴシエーション時に使用する暗号スイートを指定します。 LSWSは、SSL v3.0、TLS v1.0、TLS v1.2、およびTLS v1.3で実装された暗号スイートをサポートしています。</p> <h4>構文</h4><p>コロン区切りの暗号仕様文字列。</p> <h4>例</h4><div class="ls-example">ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH</div><h4>ヒント</h4><p>[セキュリティ] SSL暗号のベストプラクティスに従うデフォルト暗号を使用するため、このフィールドは空白のままにすることをお勧めします。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableECDHE"><h3>ECDH鍵交換を有効にする<span class="ls-permlink"><a href="#enableECDHE"></a></span></h3></header><h4>説明</h4><p>さらにSSL暗号化のために楕円曲線 Diffie-Hellman鍵交換を使用できます。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p>[セキュリティ] ECDH鍵交換は、RSA鍵だけを使用するより安全です。 ECDHとDHキーの交換は同等に安全です。<br/><br/> [パフォーマンス] ECDH鍵交換を有効にするとCPU負荷が増加し、RSA鍵だけを使用する場合よりも遅くなります。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableDHE"><h3>DHキー交換を有効にする<span class="ls-permlink"><a href="#enableDHE"></a></span></h3></header><h4>説明</h4><p>さらにSSL暗号化のためにDiffie-Hellman鍵交換を使用できます。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p>[セキュリティ] DHキーの交換は、RSAキーを使用するよりも安全です。 ECDHとDHキーの交換は同等に安全です。<br/><br/> [パフォーマンス] DHキー交換を有効にするとCPU負荷が増加し、ECDHキー交換とRSAよりも遅くなります。 ECDH鍵交換が利用可能な場合は、そちらを優先することをお勧めします。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="DHParam"><h3>DHパラメータ<span class="ls-permlink"><a href="#DHParam"></a></span></h3></header><h4>説明</h4><p>DHキー交換に必要なDiffie-Hellmanパラメータファイルの場所を指定します。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="acme_vhenable"><h3>有効<span class="ls-permlink"><a href="#acme_vhenable"></a></span></h3></header><h4>説明</h4><p>Automatic Certificate Management Environment (ACME)証明書プロトコルを使用して、SSL証明書を自動的に生成および更新します(設定済みの場合)。詳細はこちらを参照してください:<br/> <a href=" https://docs.openlitespeed.org/config/advanced/acme/ " target="_blank" rel="noopener noreferrer"> 自動SSL証明書（ACME） </a><br/><br/> サーバーレベルでこれを<span class="val">Disabled</span>に設定すると、この設定はサーバー全体で無効になります。それ以外の場合、サーバーレベルの設定はバーチャルホストレベルで上書きできます。<br/><br/> デフォルト値:<br/> <b>サーバーレベル:</b> Off<br/> <b>VHレベル:</b> サーバーレベル設定を継承</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="acme_dns_type"><h3>ACME API dns_type<span class="ls-permlink"><a href="#acme_dns_type"></a></span></h3></header><h4>説明</h4><p>(任意)ワイルドカード証明書生成API呼び出しを実行するときに使用するDNSタイプです。この値は使用するDNSプロバイダーによって異なり、ワイルドカード以外の証明書を生成する場合は不要です。使用可能なDNSタイプAPI値の詳細はこちらを参照してください:<br/> <a href=" https://github.com/acmesh-official/acme.sh/wiki/dnsapi " target="_blank" rel="noopener noreferrer"> acme.sh-DNS APIの使用方法 </a><br/><br/> 設定<span class="tagl"><a href="VHSSL_Help.html#acme_env">環境</a></span>と組み合わせて使用します。</p> <h4>例</h4><div class="ls-example">DNSプロバイダーがCloudFlareの場合、DNSタイプ値は<span class="val">dns_cf</span>になります。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="acme_env"><h3>環境<span class="ls-permlink"><a href="#acme_env"></a></span></h3></header><h4>説明</h4><p>(任意)ワイルドカード証明書生成API呼び出しを実行するときに含める環境値です。必要な具体的な値は使用するDNSプロバイダーによって異なり、ワイルドカード以外の証明書を生成する場合は不要です。必要な環境API値の詳細はこちらを参照してください:<br/> <a href=" https://github.com/acmesh-official/acme.sh/wiki/dnsapi " target="_blank" rel="noopener noreferrer"> acme.sh-DNS APIの使用方法 </a><br/><br/> 設定<span class="tagl"><a href="VHSSL_Help.html#acme_dns_type">ACME API dns_type</a></span>と組み合わせて使用します。</p> <h4>構文</h4><p><span class="val">Key="VALUE"</span>ペアのリスト。1行に1つずつ入力し、各VALUEは二重引用符で囲みます。</p> <h4>例</h4><div class="ls-example">DNSプロバイダーがCloudFlareの場合、必要な環境値は<span class="val">CF_Token="YOUR_TOKEN"</span>のみです。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="renegProtection"><h3>SSL再交渉保護<span class="ls-permlink"><a href="#renegProtection"></a></span></h3></header><h4>説明</h4><p>SSL再交渉保護を有効にするかどうかを指定します。 SSLハンドシェイクベースの攻撃に対して防御します。デフォルト値は"Yes"です。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> この設定は、リスナーレベルとバーチャルホストレベルで有効にできます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslSessionCache"><h3>セッションキャッシュを有効にする<span class="ls-permlink"><a href="#sslSessionCache"></a></span></h3></header><h4>説明</h4><p>OpenSSLのデフォルト設定を使用してセッションIDキャッシュを有効にします。バーチャルホスト設定を有効にするには、サーバーレベル設定を"Yes"に設定する必要があります。<br/> デフォルト値：<br/> <b>サーバーレベル：</b>Yes<br/> <b>VHレベル：</b>Yes</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslSessionTickets"><h3>セッションチケットを有効にする<span class="ls-permlink"><a href="#sslSessionTickets"></a></span></h3></header><h4>説明</h4><p>セッションチケットを有効にします。 「未設定」の場合、サーバーはopenSSLのデフォルトチケットを使用します。</p> <h4>構文</h4><p>ラジオボタンから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableSpdy"><h3>ALPN<span class="ls-permlink"><a href="#enableSpdy"></a></span></h3></header><h4>説明</h4><p>Application-Layer Protocol Negotiation(ALPN)は、HTTP/3とHTTP/2ネットワークプロトコルを選択的に有効にするために使用されます。<br/><br/> HTTP/2とHTTP3を無効にする場合は、<span class="val">None</span>を選択し、他のすべてのチェックボックスを未選択のままにしてください。<br/><br/> デフォルト値: すべて有効</p> <h4>構文</h4><p>チェックボックスから選択</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> これはリスナーレベルとバーチャルホストレベルで設定できます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhEnableQuic"><h3>HTTP3/QUICを有効にする<span class="ls-permlink"><a href="#vhEnableQuic"></a></span></h3></header><h4>説明</h4><p>このバーチャルホストでHTTP3/QUICネットワークプロトコルを有効にします。 この設定を有効にするには、サーバーレベルの<span class="tagl"><a href="ServTuning_Help.html#quicEnable">HTTP3/QUICを有効にする</a></span>とリスナーレベルの<span class="tagl"><a href="Listeners_SSL_Help.html#allowQuic">HTTP3/QUIC(UDP)ポートを開く</a></span>もそれぞれ<span class="val">Yes</span>に設定する必要があります。 デフォルト値は<span class="val">Yes</span>です。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> この設定を<span class="val">No</span>にすると、HTTP3/QUIC広告は送信されなくなります。ブラウザにキャッシュされたHTTP3/QUIC情報が残っており、サーバーレベルとリスナーレベルでHTTP3/QUICが引き続き有効な場合、その情報のキャッシュが消えるかHTTP3/QUICプロトコルエラーが発生するまで、HTTP3/QUIC接続は引き続き使用されます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sslOCSP"><h3>OCSPステープリング<span class="ls-permlink"><a href="#sslOCSP"></a></span></h3></header><h4>説明</h4><p>オンライン証明書ステータスプロトコル（OCSP）は、デジタル証明書が有効かどうかを確認するより効率的な方法です。 OCSP応答者である他のサーバーと通信して、証明書失効リスト（CRL）をチェックする代わりに証明書が有効であることを確認します。<br/> OCSPステープリングは、このプロトコルのさらなる改良であり、証明書が要求されるたびにではなく、定期的な間隔でサーバーがOCSPレスポンダを確認できるようにします。 詳細については、<a href="   http://en.wikipedia.org/wiki/OCSP_Stapling " target="_blank" rel="noopener noreferrer">   OCSP Wikipedia </a>のページをご覧ください。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableStapling"><h3>OCSPステープルを有効にする<span class="ls-permlink"><a href="#enableStapling"></a></span></h3></header><h4>説明</h4><p>OCSPステープルを有効にするかどうかを決定します。これは、公開鍵証明書を検証するより効率的な方法です。</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ocspRespMaxAge"><h3>OCSPの応答最大年齢（秒）<span class="ls-permlink"><a href="#ocspRespMaxAge"></a></span></h3></header><h4>説明</h4><p>このオプションは、OCSP応答の許容可能な最大経過時間を設定します。 OCSP応答がこの最大年齢より古い場合、サーバーはOCSP応答者に新しい応答を要求します。 デフォルト値は<span class="val">86400</span>です。 この値を<span class="val">-1</span>に設定すると、最大年齢を無効にすることができます。</p> <h4>構文</h4><p>秒数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ocspResponder"><h3>OCSPレスポンダ<span class="ls-permlink"><a href="#ocspResponder"></a></span></h3></header><h4>説明</h4><p>使用するOCSPレスポンダのURLを指定します。 設定されていない場合、サーバーは認証局の発行者証明書に記載されているOCSPレスポンダに接続を試みます。 一部の発行者証明書には、OCSPレスポンダURLが指定されていない場合があります。</p> <h4>構文</h4><p><span class="val">http://</span>で始まるURL</p> <h4>例</h4><div class="ls-example"><span class="val">http://rapidssl-ocsp.geotrust.com</span></div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="ocspCACerts"><h3>OCSP CA証明書<span class="ls-permlink"><a href="#ocspCACerts"></a></span></h3></header><h4>説明</h4><p>OCSP認証局（CA）証明書が格納されるファイルの場所を指定します。 これらの証明書は、OCSPレスポンダからのレスポンスを確認するために使用されます（また、そのレスポンスが偽装されていないか、または妥協されていないことを確認してください）。 このファイルには、証明書チェーン全体が含まれている必要があります。 このファイルにルート証明書が含まれていない場合、LSWSはファイルに追加することなくシステムディレクトリのルート証明書を見つけることができますが、この検証に失敗した場合はルート証明書をこのファイルに追加してください。<br/><br/> この設定はオプションです。 この設定が設定されていない場合、サーバーは自動的に<span class="tagl"><a href="#CACertFile">CA証明書ファイル</a></span>をチェックします。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="clientVerify"><h3>クライアントの検証<span class="ls-permlink"><a href="#clientVerify"></a></span></h3></header><h4>説明</h4><p> クライアント証明書認証のタイプを指定します。 使用できるタイプは次のとおりです： <ul> <li><b>None:</b> クライアント証明書は必要ありません。</li> <li><b>Optional:</b> クライアント証明書はオプションです。</li> <li><b>Require:</b> クライアントには有効な証明書が必要です。</li> <li><b>Optional_no_ca:</b> オプションと同じです。</li> </ul> デフォルトは "None"です。</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> <h4>ヒント</h4><p><span class="ls-badge ls-badge--info">Information</span> "None"または "Require"をお勧めします。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="verifyDepth"><h3>検証の深さ<span class="ls-permlink"><a href="#verifyDepth"></a></span></h3></header><h4>説明</h4><p> クライアントに有効な証明書がないと判断する前に、証明書の検証の深さを指定します。 デフォルトは "1"です。</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="crlPath"><h3>クライアントの失効パス<span class="ls-permlink"><a href="#crlPath"></a></span></h3></header><h4>説明</h4><p> 取り消されたクライアント証明書のPEMエンコードされたCA CRLファイルを含むディレクトリを指定します。 このディレクトリのファイルはPEMでエンコードする必要があります。 これらのファイルは、ハッシュファイル名、hash-value.rNによってアクセスされます。 ハッシュファイル名の作成については、openSSLまたはApache mod_sslのドキュメントを参照してください。</p> <h4>構文</h4><p>パス</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="crlFile"><h3>クライアント失効ファイル<span class="ls-permlink"><a href="#crlFile"></a></span></h3></header><h4>説明</h4><p> 取り消されたクライアント証明書を列挙するPEMエンコードCA CRLファイルを含むファイルを指定します。これは<span class="tagl"><a href="#crlPath">クライアントの失効パス</a></span>の代替として、または追加で使用できます。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="トップへ戻る" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">トップへ戻る</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
 </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></div><div class="center"><a href="config.html">設定</a></div><div class="next"><a href="Rewrite_Help.html">Rewrite</a> &#187;</div></div>
-<h1>Virtual Host SSL</h1><h2 id="top">目次</h2><section class="toc"><section class="toc-row"><header><a href="#sslCert">SSL秘密鍵と証明書</a></header><p>
-<a href="#keyFile">秘密鍵ファイル</a> | <a href="#certFile">証明書ファイル</a> | <a href="#certChain">チェーン証明書</a> | <a href="#CACertPath">CA証明書パス</a> | <a href="#CACertFile">CA証明書ファイル</a></p></section>
-<section class="toc-row"><header>SSL Protocol</header><p>
-<a href="#ciphers">暗号</a> | <a href="#enableECDHE">ECDH鍵交換を有効にする</a> | <a href="#enableDHE">DHキー交換を有効にする</a> | <a href="#DHParam">DHパラメータ</a></p></section>
-<section class="toc-row"><header>AutoCert with ACME</header><p>
-<a href="#acme_vhenable">Enabled</a> | <a href="#acme_dns_type">ACME API dns_type</a> | <a href="#acme_env">Environment</a></p></section>
-<section class="toc-row"><header>Security</header><p>
-<a href="#renegProtection">SSL再交渉保護</a> | <a href="#sslSessionCache">セッションキャッシュを有効にする</a> | <a href="#sslSessionTickets">セッションチケットを有効にする</a> | <a href="#enableSpdy">SPDY/HTTP2を有効にする</a> | <a href="#vhEnableQuic">Enable HTTP3/QUIC</a></p></section>
-<section class="toc-row"><header><a href="#sslOCSP">OCSPステープリング</a></header><p>
-<a href="#enableStapling">OCSPステープルを有効にする</a> | <a href="#ocspRespMaxAge">OCSPの応答最大年齢（秒）</a> | <a href="#ocspResponder">OCSPレスポンダ</a> | <a href="#ocspCACerts">OCSP CA証明書</a></p></section>
-<section class="toc-row"><header>クライアントの検証</header><p>
-<a href="#clientVerify">クライアントの検証</a> | <a href="#verifyDepth">検証の深さ</a> | <a href="#crlPath">クライアントの失効パス</a> | <a href="#crlFile">クライアント失効ファイル</a></p></section>
-</section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="sslCert"><h3>SSL秘密鍵と証明書<span class="ls-permlink"><a href="#sslCert"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>すべてのSSLリスナーには、ペアのSSL秘密鍵とSSL証明書が必要です。 複数のSSLリスナーは、同じ鍵と証明書を共有できます。<br/> OpenSSLなどのSSLソフトウェアパッケージを使用して、SSL秘密鍵を自分で生成することができます。 SSL証明書は、VeriSignやThawteのような認可された証明書の発行者から購入することもできます。 自分で証明書に署名することもできます。 自己署名証明書はWebブラウザから信頼されないため、重要なデータを含む公開Webサイトでは使用しないでください。 ただし、自己署名証明書は内部使用に十分適しており、 例えば LiteSpeed WebサーバーのWebAdminコンソールへのトラフィックを暗号化します。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="keyFile"><h3>秘密鍵ファイル<span class="ls-permlink"><a href="#keyFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>SSL秘密鍵ファイルのファイル名。キーファイルは暗号化しないでください。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> <h4>ヒント</h4><p>[セキュリティ]秘密鍵ファイルは、サーバーが実行されるユーザーへの読み取り専用アクセスを可能にするセキュリティ保護されたディレクトリに配置する必要があります。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="certFile"><h3>証明書ファイル<span class="ls-permlink"><a href="#certFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>SSL証明書ファイルのファイル名。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> <h4>ヒント</h4><p>[セキュリティ]証明書ファイルは、サーバーが実行されるユーザーへの読み取り専用アクセスを可能にする安全なディレクトリに配置する必要があります。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="certChain"><h3>チェーン証明書<span class="ls-permlink"><a href="#certChain"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>証明書がチェーン証明書であるかどうかを指定します。 チェーン証明を格納するファイルは、PEM形式でなければならず、証明書は最下位レベル（実際のクライアントまたはサーバー証明書）から最上位（ルート）CAまでの連鎖の順序でなければなりません。</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="CACertPath"><h3>CA証明書パス<span class="ls-permlink"><a href="#CACertPath"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>証明機関（CA）の証明書が保存されるディレクトリを指定します。 これらの証明書は、クライアント証明書の認証およびサーバー証明書チェーンの構築に使用されます。サーバー証明書チェーンは、サーバー証明書に加えてブラウザーにも送信されます。</p> <h4>構文</h4><p>path</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="CACertFile"><h3>CA証明書ファイル<span class="ls-permlink"><a href="#CACertFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>チェーン証明書の証明機関（CA）のすべての証明書を含むファイルを指定します。 このファイルは、PEMでエンコードされた証明書ファイルを単に優先順に連結したものです。 これは、「CA証明書パス」の代替として、またはこれに加えて使用することができる。 これらの証明書は、クライアント証明書の認証およびサーバー証明書チェーンの構築に使用されます。サーバー証明書チェーンは、サーバー証明書に加えてブラウザーにも送信されます。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="ciphers"><h3>暗号<span class="ls-permlink"><a href="#ciphers"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>SSLハンドシェイクのネゴシエーション時に使用する暗号スイートを指定します。 LSWSは、SSL v3.0、TLS v1.0、およびTLS v1.2で実装された暗号スイートをサポートしています。</p> <h4>構文</h4><p>コロンで区切られた暗号仕様の文字列。</p> <h4>例</h4><div class="ls-example">ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH</div><h4>ヒント</h4><p>[セキュリティ] SSL暗号のベストプラクティスに従ったデフォルトの暗号を使用する場合は、このフィールドを空白のままにすることをお勧めします。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableECDHE"><h3>ECDH鍵交換を有効にする<span class="ls-permlink"><a href="#enableECDHE"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>さらにSSL暗号化のために楕円曲線 Diffie-Hellman鍵交換を使用できます。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p>[セキュリティ] ECDH鍵交換は、RSA鍵だけを使用するより安全です。 ECDHとDHキーの交換は同等に安全です。<br/><br/> [パフォーマンス] ECDH鍵交換を有効にするとCPU負荷が増加し、RSA鍵だけを使用する場合よりも遅くなります。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableDHE"><h3>DHキー交換を有効にする<span class="ls-permlink"><a href="#enableDHE"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>さらにSSL暗号化のためにDiffie-Hellman鍵交換を使用できます。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p>[セキュリティ] DHキーの交換は、RSAキーを使用するよりも安全です。 ECDHとDHキーの交換は同等に安全です。<br/><br/> [パフォーマンス] DHキー交換を有効にするとCPU負荷が増加し、ECDHキー交換とRSAよりも遅くなります。 ECDH鍵交換が利用可能である場合に優先される。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="DHParam"><h3>DHパラメータ<span class="ls-permlink"><a href="#DHParam"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>DHキー交換に必要なDiffie-Hellmanパラメータファイルの場所を指定します。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="acme_vhenable"><h3>Enabled<span class="ls-permlink"><a href="#acme_vhenable"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Automatically generate and renew SSL certificates using the Automatic Certificate Management Environment (ACME) certifier protocol (once configured). See more here:<br/> <a href=" https://docs.openlitespeed.org/config/advanced/acme/ " target="_blank" rel="noopener noreferrer"> Automatic SSL Certificates (ACME) </a><br/><br/> Setting this to <span class="val">Disabled</span> at the Server level will disable this setting server-wide. In all other cases, the Server level setting can be overridden at the Virtual Host level.<br/><br/> Default values:<br/> <b>Server level:</b> Off<br/> <b>VH level:</b> Inherit Server level setting</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="acme_dns_type"><h3>ACME API dns_type<span class="ls-permlink"><a href="#acme_dns_type"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>(Optional) The dns type used when performing wildcard certificate generation API calls. This value will depend on the DNS provider used and is not required when generating non-wildcard certificates. More info on available dns type API values can be found here:<br/> <a href=" https://github.com/acmesh-official/acme.sh/wiki/dnsapi " target="_blank" rel="noopener noreferrer"> acme.sh - How to use DNS API </a><br/><br/> Used with together with setting <span class="tagl"><a href="VHSSL_Help.html#acme_env">Environment</a></span></p> <h4>例</h4><div class="ls-example">For DNS provider CloudFlare, the dns type value would be <span class="val">dns_cf</span>.</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="acme_env"><h3>Environment<span class="ls-permlink"><a href="#acme_env"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>(Optional) Environment values to be included when performing wildcard certificate generation API calls. The specific values needed will depend on the DNS provider used and are not required when generating non-wildcard certificates. More info on needed environment API values can be found here:<br/> <a href=" https://github.com/acmesh-official/acme.sh/wiki/dnsapi " target="_blank" rel="noopener noreferrer"> acme.sh - How to use DNS API </a><br/><br/> Used with together with setting <span class="tagl"><a href="VHSSL_Help.html#acme_dns_type">ACME API dns_type</a></span></p> <h4>構文</h4><p>A list of <span class="val">Key="VALUE"</span> pairs, one per line with each VALUE enclosed in double quotes.</p> <h4>例</h4><div class="ls-example">For DNS provider CloudFlare the only one required environment value would be <span class="val">CF_Token="YOUR_TOKEN"</span></div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="renegProtection"><h3>SSL再交渉保護<span class="ls-permlink"><a href="#renegProtection"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>SSL再交渉保護を有効にするかどうかを指定します。 SSLハンドシェイクベースの攻撃に対して防御します。 デフォルト値は "Yes"です。</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p><span title="Information" class="ls-icon-info"></span> This setting can be enabled at the listener and virtual host levels.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="sslSessionCache"><h3>セッションキャッシュを有効にする<span class="ls-permlink"><a href="#sslSessionCache"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>セッションIDキャッシングを有効にします。 「未設定」の場合、デフォルトは「いいえ」です。 （Opensslデフォルト）</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="sslSessionTickets"><h3>セッションチケットを有効にする<span class="ls-permlink"><a href="#sslSessionTickets"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>セッションチケットを有効にします。 「未設定」の場合、サーバーはopenSSLのデフォルトチケットを使用します。</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableSpdy"><h3>SPDY/HTTP2を有効にする<span class="ls-permlink"><a href="#enableSpdy"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>HTTP/2とSPDYは、ページロード時間を短縮する目的で、HTTPネットワークプロトコルの新バージョンです。 より多くの情報は<a href="   http://en.wikipedia.org/wiki/HTTP/2 " target="_blank" rel="noopener noreferrer">   http://en.wikipedia.org/wiki/HTTP/2 </a>で見つけることができます。</p> <h4>構文</h4><p>有効にするプロトコルを確認します。 すべてのボックスをチェックしないと、SPDYとHTTP/2のサポート（デフォルト）が有効になります。 SPDYとHTTP/2を無効にする場合は、「なし」のみをチェックし、その他のチェックボックスはすべてオフにします。</p> <h4>ヒント</h4><p><span title="Information" class="ls-icon-info"></span> This setting can be set at the listener and virtual host levels.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhEnableQuic"><h3>Enable HTTP3/QUIC<span class="ls-permlink"><a href="#vhEnableQuic"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>Enables the HTTP3/QUIC network protocol for this virtual host. For this setting to take effect, both <span class="tagl"><a href="ServTuning_Help.html#quicEnable">Enable HTTP3/QUIC</a></span> and <span class="tagl"><a href="Listeners_SSL_Help.html#allowQuic">Open HTTP3/QUIC (UDP) port</a></span> must also be set to <span class="val">Yes</span> at the server and listener levels respectively. Default value is <span class="val">Yes</span>.</p> <h4>構文</h4><p>ラジオボックスから選択</p> <h4>ヒント</h4><p><span title="Information" class="ls-icon-info"></span> When this setting is set to <span class="val">No</span>, the HTTP3/QUIC advertisement will no longer be sent. If a browser still contains cached HTTP3/QUIC information and HTTP3/QUIC is still enabled at the server and listener levels, an HTTP3/QUIC connection will continue to be used until this information is no longer cached or an HTTP3/QUIC protocol error is encountered.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="sslOCSP"><h3>OCSPステープリング<span class="ls-permlink"><a href="#sslOCSP"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>オンライン証明書ステータスプロトコル（OCSP）は、デジタル証明書が有効かどうかを確認するより効率的な方法です。 OCSP応答者である他のサーバーと通信して、証明書失効リスト（CRL）をチェックする代わりに証明書が有効であることを確認します。<br/> OCSPステープリングは、このプロトコルのさらなる改良であり、証明書が要求されるたびにではなく、定期的な間隔でサーバーがOCSPレスポンダを確認できるようにします。 詳細については、<a href="   http://en.wikipedia.org/wiki/OCSP_Stapling " target="_blank" rel="noopener noreferrer">   OCSP Wikipedia </a>のページをご覧ください。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableStapling"><h3>OCSPステープルを有効にする<span class="ls-permlink"><a href="#enableStapling"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>OCSPステープルを有効にするかどうかを決定します。これは、公開鍵証明書を検証するより効率的な方法です。</p> <h4>構文</h4><p>ラジオボックスから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="ocspRespMaxAge"><h3>OCSPの応答最大年齢（秒）<span class="ls-permlink"><a href="#ocspRespMaxAge"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>このオプションは、OCSP応答の許容可能な最大経過時間を設定します。 OCSP応答がこの最大年齢より古い場合、サーバーはOCSP応答者に新しい応答を要求します。 デフォルト値は<span class="val">86400</span>です。 この値を<span class="val">-1</span>に設定すると、最大年齢を無効にすることができます。</p> <h4>構文</h4><p>秒数</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="ocspResponder"><h3>OCSPレスポンダ<span class="ls-permlink"><a href="#ocspResponder"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>使用するOCSPレスポンダのURLを指定します。 設定されていない場合、サーバーは認証局の発行者証明書に記載されているOCSPレスポンダに接続を試みます。 一部の発行者証明書には、OCSPレスポンダURLが指定されていない場合があります。</p> <h4>構文</h4><p><span class="val">http：//</span>で始まるURL</p> <h4>例</h4><div class="ls-example"><span class="val">http://rapidssl-ocsp.geotrust.com </span></div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="ocspCACerts"><h3>OCSP CA証明書<span class="ls-permlink"><a href="#ocspCACerts"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>OCSP認証局（CA）証明書が格納されるファイルの場所を指定します。 これらの証明書は、OCSPレスポンダからのレスポンスを確認するために使用されます（また、そのレスポンスが偽装されていないか、または妥協されていないことを確認してください）。 このファイルには、証明書チェーン全体が含まれている必要があります。 このファイルにルート証明書が含まれていない場合、LSWSはファイルに追加することなくシステムディレクトリのルート証明書を見つけることができますが、この検証に失敗した場合はルート証明書をこのファイルに追加してください。<br/><br/> この設定はオプションです。 この設定が設定されていない場合、サーバーは自動的に<span class="tagl"><a href="#CACertFile">CA証明書ファイル</a></span>をチェックします。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="clientVerify"><h3>クライアントの検証<span class="ls-permlink"><a href="#clientVerify"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>クライアント証明書認証のタイプを指定します。 使用できるタイプは次のとおりです： <ul> <li><b>None:</b> クライアント証明書は必要ありません。</li> <li><b>Optional:</b> クライアント証明書はオプションです。</li> <li><b>Require:</b> クライアントには有効な証明書が必要です。</li> <li><b>Optional_no_ca:</b> オプションと同じです。</li> </ul> デフォルトは "None"です。</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> <h4>ヒント</h4><p><span title="Information" class="ls-icon-info"></span> "None"または "Require"をお勧めします。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="verifyDepth"><h3>検証の深さ<span class="ls-permlink"><a href="#verifyDepth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>クライアントに有効な証明書がないと判断する前に、証明書の検証の深さを指定します。 デフォルトは "1"です。</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="crlPath"><h3>クライアントの失効パス<span class="ls-permlink"><a href="#crlPath"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>取り消されたクライアント証明書のPEMエンコードされたCA CRLファイルを含むディレクトリを指定します。 このディレクトリのファイルはPEMでエンコードする必要があります。 これらのファイルは、ハッシュファイル名、hash-value.rNによってアクセスされます。 ハッシュファイル名の作成については、openSSLまたはApache mod_sslのドキュメントを参照してください。</p> <h4>構文</h4><p>パス</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="crlFile"><h3>クライアント失効ファイル<span class="ls-permlink"><a href="#crlFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>説明</h4><p>取り消されたクライアント証明書を列挙するPEMエンコードCA CRLファイルを含むファイルを指定します。 これは、代わりに、または<span class="tagl"><a href="#crlPath">クライアントの失効パス</a></span>に加えて使用することができます。</p> <h4>構文</h4><p>ファイル名への絶対パス又は$SERVER_ROOTからの相対パス</p> </article> </div>
-</section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
-</div></div>
 </body>
 </html>

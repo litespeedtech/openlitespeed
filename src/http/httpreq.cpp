@@ -3164,7 +3164,10 @@ const char *HttpReq::getCfRealIpHeader(char *name, int &len)
 
 char HttpReq::getRewriteLogLevel() const
 {
-    return m_pVHost->getRewriteLogLevel();
+    if (LS_LOG_ENABLED(log4cxx::Level::DBG_LOW))
+        return 9;
+    else
+        return m_pVHost->getRewriteLogLevel();
 }
 
 

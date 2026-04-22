@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Manual de usuario de OpenLiteSpeed - Consola WebAdmin - Administrador de servicios</title>
+  <meta name="description" content="Manual de usuario de OpenLiteSpeed - Consola WebAdmin - Administrador de servicios." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Manual de usuario de OpenLiteSpeed">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Manual de usuario de OpenLiteSpeed</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Abrir menú" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Buscar paginas y ajustes" data-no-results="No se encontraron resultados.">
+      <label class="sr-only" for="doc-search-input">Buscar en el manual</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Buscar paginas y ajustes" aria-controls="doc-search-results" />
+        <button type="submit">Buscar</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Idioma"><option value="../ServerStat_Help.html" data-lang="en-US">English</option><option value="../es-ES/ServerStat_Help.html" data-lang="es-ES" selected>Español</option><option value="../de-DE/ServerStat_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/ServerStat_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/ServerStat_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/ServerStat_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Cambiar tema" data-theme-toggle data-theme-light-label="Modo claro" data-theme-dark-label="Modo oscuro" title="Cambiar tema">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="es-ES" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manual de usuario</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Tabla de contenido"><ul class="sidetree__list">
+      <li><a href="license.html">Licencia</a></li>
+      <li><a href="intro.html">Introduccion</a></li>
+      <li><a href="install.html">Instalacion</a></li>
+      <li>
+        <a href="admin.html">Administracion</a>
+        <ul class="level2">
+          <li><a class="current" href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Seguridad</a></li>
+      <li>
+        <a href="config.html">Configuracion</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Servidor general</a></li>
+          <li><a href="ServLog_Help.html">Registro del servidor</a></li>
+          <li><a href="ServTuning_Help.html">Ajustes de rendimiento del servidor</a></li>
+          <li><a href="ServSecurity_Help.html">Seguridad del servidor</a></li>
+          <li><a href="ExtApp_Help.html">Aplicaciones externas</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">Aplicacion LSAPI</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Aplicacion Fast CGI</a></li>
+            <li><a href="External_FCGI_Auth.html">Autorizador Fast CGI</a></li>
+            <li><a href="External_SCGI.html">Aplicacion Simple CGI</a></li>
+            <li><a href="External_Servlet.html">Motor servlet</a></li>
+            <li><a href="External_PL.html">Piped logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Manejador de scripts</a></li>
+          <li><a href="App_Server_Help.html">Ajustes de App Server</a></li>
+          <li><a href="Module_Help.html">Configuracion de modulos</a></li>
+          <li><a href="Listeners_General_Help.html">Listener general</a></li>
+          <li><a href="Listeners_SSL_Help.html">SSL del listener</a></li>
+          <li><a href="Templates_Help.html">Plantillas de virtual host</a></li>
+          <li><a href="VirtualHosts_Help.html">Registro de virtual host</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual host general</a></li>
+          <li><a href="VHSecurity_Help.html">Seguridad del virtual host</a></li>
+          <li><a href="VHSSL_Help.html">SSL del virtual host</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Contexto</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Contexto estatico</a></li>
+            <li><a href="Java_Web_App_Context.html">Contexto de aplicacion web Java</a></li>
+            <li><a href="Servlet_Context.html">Contexto servlet</a></li>
+            <li><a href="FCGI_Context.html">Contexto Fast CGI</a></li>
+            <li><a href="SCGI_Context.html">Contexto Simple CGI</a></li>
+            <li><a href="LSAPI_Context.html">Contexto LSAPI</a></li>
+            <li><a href="Proxy_Context.html">Contexto proxy</a></li>
+            <li><a href="CGI_Context.html">Contexto CGI</a></li>
+            <li><a href="LB_Context.html">Contexto Load Balancer</a></li>
+            <li><a href="Redirect_Context.html">Contexto de redireccion</a></li>
+            <li><a href="App_Server_Context.html">Contexto App Server</a></li>
+            <li><a href="UWSGI_Context.html">Contexto uWSGI</a></li>
+            <li><a href="Module_Context.html">Contexto de manejador de modulo</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Consola web</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Consola Admin general</a></li>
+          <li><a href="AdminSecurity_Help.html">Seguridad de la consola Admin</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Listener Admin general
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">SSL del listener Admin</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&nbsp;</div><div class="center"><a href="admin.html">Administración</a></div><div class="next"><a href="Real_Time_Stats_Help.html">Estadísticas en tiempo real</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Consola WebAdmin - Administrador de servicios</h1><div class="doc-page-intro">El Administrador de servicios actúa como sala de control para supervisar el servidor y controlar ciertas funciones de nivel superior. Proporciona las siguientes funciones: (Se puede acceder al Administrador de servicios desde el menú Actions o desde la página de inicio.) <ul> <li>Supervisar el estado actual del servidor, los listeners y los hosts virtuales.</li> <li>Aplicar cambios de configuración con un reinicio graceful.</li> <li>Activar o desactivar un host virtual concreto.</li> <li>Ver el registro del servidor mediante el visor de registros.</li> <li>Supervisar estadísticas del servidor en tiempo real.</li> </ul></div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Tabla de contenido</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Servidor</h3><ul class="doc-toc__links"><li><a href="#sname">Nombre - Servidor</a></li><li><a href="#pid">PID</a></li><li><a href="#servAction">Acciones</a></li><li><a href="#restart">Aplicar cambios/Graceful Restart</a></li><li><a href="#viewlog">Visor de registros del servidor</a></li><li><a href="#realtimerpt">Estadísticas en tiempo real</a></li><li><a href="#toggleDebugLog">Alternar registro de depuración</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Listeners</h3><ul class="doc-toc__links"><li><a href="#lname">Nombre - Listener</a></li><li><a href="#lstatus">Estado - Listener</a></li><li><a href="#lmap">Mapeos de hosts virtuales</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">Hosts virtuales</h3><ul class="doc-toc__links"><li><a href="#vname">Nombre - Host virtual</a></li><li><a href="#vstatus">Estado - Host virtual</a></li><li><a href="#vaction">Acciones - Host virtual</a></li><li><a href="#venable">Activar</a></li><li><a href="#vdisable">Desactivar</a></li><li><a href="#vreload">Reiniciar - Host virtual</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="sname"><h3>Nombre - Servidor<span class="ls-permlink"><a href="#sname"></a></span></h3></header><h4>Descripción</h4><p>El nombre único que identifica este servidor. Es el <span class="tagl"><a href="ServGeneral_Help.html#serverName">Nombre del servidor</a></span> especificado en la configuración general.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pid"><h3>PID<span class="ls-permlink"><a href="#pid"></a></span></h3></header><h4>Descripción</h4><p>PID (ID de proceso) del proceso actual del servidor.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> El PID cambiará cada vez que se reinicie el servidor.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="servAction"><h3>Acciones<span class="ls-permlink"><a href="#servAction"></a></span></h3></header><h4>Descripción</h4><p>Desde este menú hay cinco acciones disponibles: <span class="val">Graceful Restart</span>, <span class="val">Toggle Debug Logging</span>, <span class="val">Server Log Viewer</span>, <span class="val">Real-Time Statistics</span> y <span class="val">Compile PHP</span>. <ul><li><span class="tagl"><a href="#restart">Aplicar cambios/Graceful Restart</a></span> reinicia el proceso del servidor de forma graceful sin interrumpir las solicitudes en curso.</li> 	<li><span class="tagl"><a href="#toggleDebugLog">Alternar registro de depuración</a></span> activa o desactiva el registro de depuración.</li> 	<li><span class="tagl"><a href="#viewlog">Visor de registros del servidor</a></span> permite ver el registro del servidor mediante el visor de registros.</li> 	<li><span class="tagl"><a href="#realtimerpt">Estadísticas en tiempo real</a></span> permite ver el estado del servidor en tiempo real.</li> 	<li>Compile PHP permite compilar PHP para LiteSpeed Web Server.</li> </ul></p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> La utilidad de shell <span class="cmd">$SERVER_ROOT/bin/lswsctrl</span> también puede usarse para controlar los procesos del servidor, pero requiere un shell de inicio de sesión.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="restart"><h3>Aplicar cambios/Graceful Restart<span class="ls-permlink"><a href="#restart"></a></span></h3></header><h4>Descripción</h4><p>Al hacer clic en <span class="val">Graceful Restart</span>, se iniciará un nuevo proceso del servidor. Para <span class="val">Graceful Restart</span>, el proceso anterior solo saldrá después de que terminen todas sus solicitudes (o se alcance el límite <span class="tagl"><a href="#gracefulRestartTimeout">Timeout de reinicio graceful (seg)</a></span>).<br/><br/> Los cambios de configuración se aplican en el siguiente reinicio. <span class="val">Graceful Restart</span> aplicará estos cambios sin tiempo de inactividad del servidor.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Graceful restart tarda menos de 2 segundos en generar un nuevo proceso del servidor.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="viewlog"><h3>Visor de registros del servidor<span class="ls-permlink"><a href="#viewlog"></a></span></h3></header><h4>Descripción</h4><p>El visor de registros del servidor es una herramienta cómoda para examinar el registro actual del servidor y buscar errores o problemas. El visor de registros busca en el archivo de registro del servidor por bloques según el nivel de registro especificado.<br/><br/> El tamaño de bloque predeterminado es 20KB. Puede usar los botones <span class="val">Begin</span>, <span class="val">End</span>, <span class="val">Next</span> y <span class="val">Prev</span> para navegar por un archivo de registro grande.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> El tamaño de una página generada dinámicamente está limitado por <span class="tagl"><a href="ServTuning_Help.html#maxDynRespSize">Tamaño máx. del cuerpo de respuesta dinámica (bytes)</a></span>. Si el bloque es demasiado grande, la página podría truncarse.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realtimerpt"><h3>Estadísticas en tiempo real<span class="ls-permlink"><a href="#realtimerpt"></a></span></h3></header><h4>Descripción</h4><p>El enlace Real-Time Statistics lleva a una página con un informe de estado del servidor en tiempo real. Es una herramienta cómoda para supervisar el sistema.<br/><br/> El informe muestra una instantánea de las estadísticas del servidor. La frecuencia de actualización de esta instantánea se controla mediante la lista desplegable Refresh Interval en la esquina superior derecha.<br/><br/> El informe contiene las siguientes secciones: <ul><li>Server Health muestra estadísticas básicas del servidor, tiempo activo, carga e IP bloqueadas por Anti-DDoS.</li>   <li>Server muestra estadísticas actuales de rendimiento de tráfico, conexiones y solicitudes.</li>  <li>Virtual Host muestra estados de procesamiento de solicitudes y estados de aplicaciones externas para cada host virtual.</li>  <li>External Application muestra las aplicaciones externas que se están ejecutando y sus estadísticas de uso. El proceso demonio CGI lscgid siempre se ejecuta como una aplicación externa.</li> </ul><br/><br/> Muchas filas de Real-Time Statistics incluyen un icono de gráfico. Al hacer clic en este icono se abre un gráfico de las estadísticas de esa fila actualizado en tiempo real.<br/><br/> En la sección Server, junto a Requests, hay un enlace llamado (Details). Este enlace lleva a Requests Snapshot, donde puede ver información detallada sobre qué clientes hacen ciertos tipos de solicitudes o qué aspectos del sitio generan cuellos de botella. Los campos del área azul permiten filtrar la instantánea para aislar partes concretas del servidor o buscar clientes que realizan ciertas acciones.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="toggleDebugLog"><h3>Alternar registro de depuración<span class="ls-permlink"><a href="#toggleDebugLog"></a></span></h3></header><h4>Descripción</h4><p>Toggle Debug Logging alterna el valor de <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">Nivel de depuración</a></span> entre <span class="val">NONE</span> y <span class="val">HIGH</span>. Como el registro de depuración afecta al rendimiento y puede llenar rápidamente el disco duro, <span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">Nivel de depuración</a></span> normalmente debe establecerse en <span class="val">NONE</span> en un servidor de producción. Esta función puede usarse para activar o desactivar rápidamente el registro de depuración al diagnosticar un problema en un servidor de producción. El registro de depuración activado o desactivado de esta forma no cambia nada en la configuración del servidor.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> <span class="tagl"><a href="#toggleDebugLog">Alternar registro de depuración</a></span> solo funcionará si <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">Nivel de registro</a></span> está configurado como <span class="val">DEBUG</span>.<br/> <span class="ls-badge ls-badge--performance">Performance</span> Importante: el registro de depuración incluye información detallada de cada solicitud y respuesta. El registro de depuración activo degradará gravemente el rendimiento del servicio y puede saturar el espacio en disco en muy poco tiempo. Esta función debe usarse solo durante un periodo breve al diagnosticar problemas del servidor.</p> <h4>Ver también</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#log_debugLevel">Nivel de depuración</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#log_logLevel">Nivel de registro</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lname"><h3>Nombre - Listener<span class="ls-permlink"><a href="#lname"></a></span></h3></header><h4>Descripción</h4><p>El nombre único que identifica este listener. Es el <span class="tagl"><a href="Listeners_General_Help.html#listenerName">Nombre del listener</a></span> especificado al configurar el listener.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lstatus"><h3>Estado - Listener<span class="ls-permlink"><a href="#lstatus"></a></span></h3></header><h4>Descripción</h4><p>El estado actual de este listener. El estado es <span class="val">Running</span> o <span class="val">Error</span>.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Si el listener está en estado <span class="val">Error</span>, puede ver el registro del servidor para saber por qué.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="lmap"><h3>Mapeos de hosts virtuales<span class="ls-permlink"><a href="#lmap"></a></span></h3></header><h4>Descripción</h4><p>Muestra los mapeos establecidos actualmente desde un listener concreto hacia hosts virtuales. El nombre del host virtual aparece entre corchetes y va seguido de los nombres de dominio coincidentes para este listener.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Si un host virtual no se cargó correctamente (errores fatales en la configuración del host virtual), no se mostrará el mapeo a ese host virtual.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vname"><h3>Nombre - Host virtual<span class="ls-permlink"><a href="#vname"></a></span></h3></header><h4>Descripción</h4><p>El nombre único que identifica este host virtual. Es el <span class="tagl"><a href="VirtualHosts_Help.html#vhName">Nombre del virtual host</a></span> especificado al configurar este host virtual.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vstatus"><h3>Estado - Host virtual<span class="ls-permlink"><a href="#vstatus"></a></span></h3></header><h4>Descripción</h4><p>El estado actual de un host virtual. El estado puede ser: <span class="val">Running</span>, <span class="val">Stopped</span>, <span class="val">Restart Required</span> o <span class="val">Running - Removed from Configuration</span>.  <ul>     <li><span class="val">Running</span> significa que el host virtual está cargado y en servicio.</li>     <li><span class="val">Stopped</span> significa que el host virtual está cargado pero no está en servicio (desactivado).</li>     <li><span class="val"> Restart Required</span> significa que es un host virtual recién agregado y que el servidor aún no ha cargado su configuración.</li>     <li><span class="val">Running - Removed from Configuration</span> significa que el host virtual se eliminó de la configuración del servidor, pero sigue en servicio.</li> </ul></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vaction"><h3>Acciones - Host virtual<span class="ls-permlink"><a href="#vaction"></a></span></h3></header><h4>Descripción</h4><p>Este campo muestra botones para desactivar, activar o reiniciar el host virtual. Las acciones realizadas en un host virtual no afectan al resto del servidor web.</p> <h4>Consejos</h4><p><span class="ls-badge ls-badge--info">Information</span> Es buena idea desactivar temporalmente un host virtual al actualizar su contenido.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="venable"><h3>Activar<span class="ls-permlink"><a href="#venable"></a></span></h3></header><h4>Descripción</h4><p>La acción <span class="val">Enable</span> inicia un host virtual detenido. Esto permite aceptar nuevas solicitudes.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vdisable"><h3>Desactivar<span class="ls-permlink"><a href="#vdisable"></a></span></h3></header><h4>Descripción</h4><p>La acción <span class="val">Disable</span> detiene un host virtual en ejecución. No se aceptarán nuevas solicitudes, pero las solicitudes en proceso terminarán normalmente.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vreload"><h3>Reiniciar - Host virtual<span class="ls-permlink"><a href="#vreload"></a></span></h3></header><h4>Descripción</h4><p>La acción Restart hace que el servidor web cargue la configuración más reciente de este host virtual. Las solicitudes en proceso terminarán con la configuración antigua. La nueva configuración solo se aplicará a nuevas solicitudes. Todos los cambios en un host virtual pueden aplicarse sobre la marcha de esta manera.</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Volver arriba" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Volver arriba</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Todos los derechos reservados.</footer>
+</div>
+</body>
+</html>

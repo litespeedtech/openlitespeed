@@ -34,6 +34,7 @@
 #include <http/rewriterule.h>
 #include <http/rewritemap.h>
 #include <http/serverprocessconfig.h>
+#include <http/useacme.h>
 #include <http/userdir.h>
 #include <http/staticfilecachedata.h>
 #include <log4cxx/appender.h>
@@ -250,6 +251,9 @@ HttpVHost::HttpVHost(const char *pHostName)
     , m_sName(pHostName)
     , m_sAdminEmails("")
     , m_sAutoIndexURI("/_autoindex/default.php")
+    , m_acme(0)
+    , m_fileSsl(0)
+    , m_parentSsl(0)
     , m_iMappingRef(0)
     , m_PhpXmlNodeSSize(0)
     , m_uidOwner(500)
@@ -276,6 +280,8 @@ HttpVHost::HttpVHost(const char *pHostName)
 
 HttpVHost::~HttpVHost()
 {
+    LS_DBG("~HttpVHost: %s, this: %p, m_pSSLCtl: %p, parentSsl: %d\n", 
+           getName(), this, m_pSSLCtx, m_parentSsl);
     if (m_pLogger)
         m_pLogger->getAppender()->close();
 
@@ -298,7 +304,7 @@ HttpVHost::~HttpVHost()
         delete m_pRewriteMaps;
     if (m_pAwstats)
         delete m_pAwstats;
-    if (m_pSSLCtx)
+    if (m_pSSLCtx && !m_parentSsl)
         delete m_pSSLCtx;
     m_pUrlStxFileHash->release_objects();
     delete m_pUrlStxFileHash;
@@ -1236,6 +1242,83 @@ int HttpVHost::configRewrite(const XmlNode *pNode)
         getRootContext().configRewriteRule(getRewriteMaps(), pRules, "");
 
 
+    return 0;
+}
+
+
+int HttpVHost::configAcme(const XmlNode *pNode)
+{
+    LS_DBG("configAcme: %s\n", getName());
+    long long enabled = 0;
+    const char *api = NULL;
+    const char *env = NULL;
+    if (pNode)
+    {
+        enabled = pNode->getLongValue("enabled", 0, 2, 0);
+        api = pNode->getChildValue("api");
+        env = pNode->getChildValue("env");
+    }
+    if ((enabled == 0 && HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_ON) ||
+        enabled == 1)
+    {
+        LS_DBG("ACME enabled = %d, server config %d\n", (int)enabled, HttpServerConfig::getInstance().getAcme());
+        return 0;
+    }
+    LS_DBG("configAcme, setAcme(1)\n");
+    setAcme(1);
+    //const char *domains = pNode->getChildValue("domains");
+    //if (domains)
+    //    UseAcme::vhostDomains(getName(), domains);
+    if ((api && !env) || (!api && env))
+        LS_NOTICE("You must specify an API and an environment spec if you do either one VHost: %s\n", getName());
+    else if (api && env)
+    {
+        AutoStr2 finalEnv;
+        if (strncmp(api, "dns_", 4) || strlen(api) <= 4)
+            LS_NOTICE("ACME DNS value invalid, it must have a 'dns_' prefix for %s\n", api);
+        else
+        {
+            XmlNodeList list;
+            int envOk = 0, first = 1;
+            pNode->getAllChildren(list);
+            {
+                XmlNodeList::const_iterator iter;
+                for (iter = list.begin(); iter != list.end(); ++iter)
+                {
+                    const XmlNode *pEnvNode = *iter;
+                    LS_DBG("list entry: %s=%s\n", pEnvNode->getName(), pEnvNode->getValue());
+                    const char *pEnv = pEnvNode->getValue();
+                    if (!strcmp(pEnvNode->getName(), "env") && pEnv)
+                    {
+                        envOk = 0;
+                        LS_DBG("Trying env value: %s\n", pEnv);
+                        const char *equals = strchr(pEnv, '=');
+                        if (!equals)
+                            break;
+                        if (*(equals + 1) != '"' || !(*equals + 2))
+                            break;
+                        const char *closeQuote = strchr(equals + 2, '"');
+                        if (!closeQuote)
+                            break;
+                        envOk = 1;
+                        if (!first)
+                            finalEnv.append(" ", 1);
+                        finalEnv.append(pEnv, pEnvNode->getValueLen());
+                        first = 0;
+                        LS_DBG("Using env: %s\n", finalEnv.c_str());
+                    }
+                }
+            }
+            if (!envOk)
+                LS_NOTICE("ACME environment value is not a space separated title=\"value\" set of variables for %s\n", getName());
+            else
+            {
+                LS_DBG("ACME for vhost: %s, set api: %s, env: %s\n", getName(), api, finalEnv.c_str());
+                setAcmeApi(api);
+                setAcmeEnv(finalEnv.c_str());
+            }
+        }
+    }
     return 0;
 }
 
@@ -3338,7 +3421,10 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
                                         p0, "enableQuic", 0, 1, 1);
 
         ConfigCtx currentCtx("ssl");
-        SslContext *pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(p0, getName(), NULL);
+        const XmlNode *acme = p0->getChild("acme");
+        if (acme)
+            configAcme(acme);
+        SslContext *pSSLCtx = ConfigCtx::getCurConfigCtx()->newSSLContext(p0, getName(), NULL, this);
         if (pSSLCtx)
             setSslContext(pSSLCtx);
     }
@@ -3367,6 +3453,8 @@ int HttpVHost::config(const XmlNode *pVhConfNode, int is_uid_set)
 
     if (p0)
         configRewrite(p0);
+
+    LS_DBG_L("[VHost: %s] config acme: %p\n", getName(), p0);
 
     configIndexFile(pVhConfNode,
                     (&HttpServer::getInstance())->getIndexFileList(),
@@ -3639,6 +3727,8 @@ HttpVHost *HttpVHost::configVHost(const XmlNode *pNode, const char *pName,
         if (pVhRoot == NULL)
             break;
 
+        LS_DBG("HttpVHost::configVHost: pName: %s. pVhRoot: %s, Domain: %s, Aliases: %s\n", 
+                pName, pVhRoot, pDomain, pAliases);
         if (ConfigCtx::getCurConfigCtx()->getValidChrootPath(pVhRoot,
                 "vhost root") != 0)
             break;
@@ -3770,6 +3860,7 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
 
         char achVhConf[MAX_PATH_LEN];
 
+        LS_DBG("HttpVHost::configVHost: %s (1 param) pName: %s\n", pVhRoot, pName);
         if (ConfigCtx::getCurConfigCtx()->getValidChrootPath(pVhRoot,
                 "vhost root") != 0)
             break;
@@ -3815,7 +3906,11 @@ HttpVHost *HttpVHost::configVHost(XmlNode *pNode)
          */
         const char *pListeners = pNode->getChildValue("listeners");
         if (pListeners && pVHost)
+        {
             pVHost->configListenerMappings(pListeners, pDomain, pAliases);
+        }
+        else if (pVHost)
+            UseAcme::vhostActivate(pVHost);
 
         break;
     }

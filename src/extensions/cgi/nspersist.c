@@ -734,7 +734,7 @@ mount_tab_t *parse_mount_tab(const char *root_mount)
     if (root == -1)
     {
         DEBUG_MESSAGE("No root\n");
-        mount_tab = calloc(sizeof(mount_tab_t), 1);
+        mount_tab = calloc(1, sizeof(mount_tab_t));
         if (!mount_tab)
             ls_stderr("Namespace error in calloc mount_tab: %s\n", strerror(errno));
         free(lines);
@@ -802,7 +802,7 @@ mount_tab_t *parse_mount_tab(const char *root_mount)
 
     n_mounts = count_mounts(&lines[root]);
     DEBUG_MESSAGE("Final n_mounts: %d\n", n_mounts);
-    mount_tab = calloc(sizeof(mount_tab_t), (n_mounts + 1));
+    mount_tab = calloc((n_mounts + 1), sizeof(mount_tab_t));
     if (!mount_tab)
         ls_stderr("Namespace error in final call of mount_tab: %s\n", strerror(errno));
     else
@@ -1280,7 +1280,7 @@ int unlock_close_persist_vh_file(int delete)
     s_persist_vh_fd = -1;
     if (delete && try_delete_persist)
     {
-        try_delete_persist_fn(NULL);
+        try_delete_persist_fn();
     }
     DEBUG_MESSAGE("unlock_close_persist_vh_file done\n");
     return 0;

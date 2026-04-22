@@ -1,129 +1,165 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - 虚拟主机设置</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - 虚拟主机设置." />
+  <title>OpenLiteSpeed用户手册 - 虚拟主机注册</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - 虚拟主机注册." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../VirtualHosts_Help.html" data-lang="en-US">English</option><option value="../es-ES/VirtualHosts_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VirtualHosts_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VirtualHosts_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VirtualHosts_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/VirtualHosts_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><span class="current"><a href="VirtualHosts_Help.html">Virtual Host Basic</a></span></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a class="current" href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="Templates_Help.html">虚拟主机模板</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next"><a href="VHGeneral_Help.html">虚拟主机一般设置</a> &#187;</div></div>
-<h1>虚拟主机设置</h1><section class="ls-spacer-small-bottom">This page lists all defined virtual hosts. From here you can add/delete a virtual host or make
-changes to an existing one. Before you add a virtual host, make sure the virtual host root directory exists.</section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>基础</header><p>
-<a href="#vhName">虚拟主机名</a> | <a href="#vhRoot">虚拟主机根</a> | <a href="#configFile">配置文件</a></p></section>
-<section class="toc-row"><header>连接</header><p>
-<a href="#vhMaxKeepAliveReq">最大Keep-Alive请求数</a></p></section>
-<section class="toc-row"><header>安全</header><p>
-<a href="#allowSymbolLink">跟随符号链接</a> | <a href="#enableScript">启用脚本</a> | <a href="#restrained">访问管制</a> | <a href="#setUidMode">外部应用程序设置UID模式</a> | <a href="#suexecUser">suEXEC 用户</a> | <a href="#suexecGroup">suEXEC组</a></p></section>
-<section class="toc-row"><header>虚拟主机</header><p>
-<a href="#staticReqPerSec">静态请求/秒</a> | <a href="#dynReqPerSec">动态请求/秒</a> | <a href="#outBandwidth">出口带宽 (bytes/sec)</a> | <a href="#inBandwidth">入口带宽 (bytes/sec)</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Templates_Help.html">虚拟主机模板</a></div><div class="center"><a href="config.html">配置</a></div><div class="next"><a href="VHGeneral_Help.html">虚拟主机常规</a> &#187;</div></div>
+<header class="doc-page-header"><h1>虚拟主机注册</h1><div class="doc-page-intro">此页面列出所有已定义的虚拟主机。你可以在这里添加/删除虚拟主机，或修改现有虚拟主机。 添加虚拟主机前，请确保虚拟主机根目录已经存在。</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">虚拟主机注册</h3><ul class="doc-toc__links"><li><a href="#vhName">虚拟主机名</a></li><li><a href="#vhRoot">虚拟主机根</a></li><li><a href="#configFile">配置文件</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">连接</h3><ul class="doc-toc__links"><li><a href="#vhMaxKeepAliveReq">最大Keep-Alive请求数</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">安全</h3><ul class="doc-toc__links"><li><a href="#allowSymbolLink">跟随符号链接</a></li><li><a href="#enableScript">启用脚本/外部应用程序</a></li><li><a href="#restrained">访问管制</a></li><li><a href="#setUidMode">外部应用程序设置UID模式</a></li><li><a href="#suexecUser">suEXEC 用户</a></li><li><a href="#suexecGroup">suEXEC组</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading">虚拟主机</h3><ul class="doc-toc__links"><li><a href="#staticReqPerSec">静态请求/秒</a></li><li><a href="#dynReqPerSec">动态请求/秒</a></li><li><a href="#outBandwidth">出口带宽 (bytes/sec)</a></li><li><a href="#inBandwidth">入口带宽 (bytes/sec)</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="vhName"><h3>虚拟主机名<span class="ls-permlink"><a href="#vhName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>为虚拟主机的唯一名称。建议使用虚拟主机的域名作为虚拟主机名。 虚拟主机名参数可以使用$VH_NAME变量来引用。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhRoot"><h3>虚拟主机根<span class="ls-permlink"><a href="#vhRoot"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定虚拟主机的根目录。 注：这<b>不是</b>目录根。 建议将所有与该虚拟主机相关的文件 (像日志文件，html文件，CGI脚本等)都放置在这个目录下。 虚拟主机根参数可以使用$VH_ROOT变量来引用。.</p> <h4>Syntax</h4><p>绝对路径或相对于$SERVER_ROOT的相对路径。</p> <h4>提示</h4><p>[性能建议] 将不同的虚拟主机放在不同的硬盘驱动器上。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="configFile"><h3>配置文件<span class="ls-permlink"><a href="#configFile"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定虚拟主机的配置文件名称。 配置文件必须位于$SERVER_ROOT/conf/vhosts/目录下。</p> <h4>Syntax</h4><p>文件名可以是绝对路径,也可以是相对于$SERVER_ROOT的相对路径。</p> <h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> 推荐使用<span class="val">$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf</span>。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="vhMaxKeepAliveReq"><h3>最大Keep-Alive请求数<span class="ls-permlink"><a href="#vhMaxKeepAliveReq"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定通过keep-alive(永久)连接服务的最大请求数量。当该限制值达到时连接将被断开。你可以为不同虚拟主机设置不同的数值。这个数值不能超过服务器级别的<span class="tagl"><a href="ServTuning_Help.html#maxKeepAliveReq">最大持续连接请求数</a></span>限制值。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[性能建议] 设置为一个合理的高数值。设置为1或比1更小的值将禁用keep-alive连接。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#maxKeepAliveReq">最大持续连接请求数</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="allowSymbolLink"><h3>跟随符号链接<span class="ls-permlink"><a href="#allowSymbolLink"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定在这个虚拟主机内是否要跟随符号链接。 <span class="val">If Owner Match</span>选项启用后，只有在链接和目标属主一致时才跟踪符号链接。 此设置将覆盖默认的服务器级设置。</p> <h4>Syntax</h4><p>从列表中选择</p> <h4>提示</h4><p>[性能和安全性建议] 为了更好的安全性，请禁用此功能。为了获得更好的性能，启用它。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableScript"><h3>启用脚本<span class="ls-permlink"><a href="#enableScript"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定在这个虚拟主机中是否允许运行脚本（非静态页面）。 如果禁用，CGI, FastCGI, LSAPI, Servlet引擎 和其他脚本语言都将在这个虚拟机中不被允许使用。 因此如果你希望使用一个脚本处理程序，你需要启用本项。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="restrained"><h3>访问管制<span class="ls-permlink"><a href="#restrained"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定虚拟机根($VH_ROOT)以外的文件是否可以通过这个网站访问。 如果设置是<span class="val">Yes</span>，只可以访问$VH_ROOT下的文件， 访问指向$VH_ROOT以外文件或目录的符号链接或context指向都将被阻止。 尽管如此，这里不会限制CGI脚本的访问。 这个选项在共享主机下非常有用。 <span class="tagl"><a href="#allowSymbolLink">跟随符号链接</a></span>可以设置成<span class="val">Yes</span>来允许用户使用在$VH_ROOT下的符号链接， $VH_ROOT以外的则不可以。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p>[安全建议] 在共享主机环境下打开该功能。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="setUidMode"><h3>外部应用程序设置UID模式<span class="ls-permlink"><a href="#setUidMode"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>定如何为外部程序进程设置用户ID。可以选择下面三种方式： <ul><li><span class="val">Server UID</span>: 为外部应用程序设置与服务器用户/组ID相同的用户/组ID。</li>     <li><span class="val">CGI File UID</span>: 为外部应用CGI程序设置基于可执行文件的用户/组ID。该选项仅适用于CGI，不适用于FastCGI或LSPHP。</li>     <li><span class="val">Doc Root UID</span>: 为外部应用程序设置基于当前虚拟机根目录的用户/组ID。</li> </ul><br/><br/> Default value: <span class="val">Server UID</span></p> <h4>Syntax</h4><p>从列表中选择</p> <h4>提示</h4><p>[安全建议] 在共享主机环境中，建议使用<span class="val">CGI File UID</span>  或 <span class="val">Doc Root UID</span>模式来防止一个虚拟主机下的文件被另一个虚拟主机的外部应用程序访问。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="suexecUser"><h3>suEXEC 用户<span class="ls-permlink"><a href="#suexecUser"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>在当前context 级别，以该用户身份运行。 如果设置了该项，则该值将覆盖虚拟主机级别<b>外部应用程序设置UID模式</b>的设置。<br/><br/> 此配置可被外部应用程序级别的<b>以用户身份运行</b>设置覆盖。<br/><br/> Default value: Not Set</p> <h4>Syntax</h4><p>Valid user name or uid.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="suexecGroup"><h3>suEXEC组<span class="ls-permlink"><a href="#suexecGroup"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>在当前context 级别，以该组身份运行。 必须将虚拟主机级别的<b>suEXEC用户</b>或外部应用程序级别的<b>用户运行身份</b>设置为<b>suEXEC Group</b>才能生效。<br/><br/> 可以使用<b>运行方式组</b>设置在外部应用程序级别覆盖此配置。<br/> Default value: <b>suExec User</b> setting value</p> <h4>Syntax</h4><p>Valid group name or uid</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="staticReqPerSec"><h3>静态请求/秒<span class="ls-permlink"><a href="#staticReqPerSec"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定每秒可处理的来自单个IP的静态内容请求数量（无论与该IP之间建立了多少个连接）。<br/><br/> 当达到此限制时，所有后来的请求将被延滞到下一秒。 对于动态内容请求的限制与本限制无关。 每个客户端的请求限制可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#dynReqPerSec">动态请求/秒</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="dynReqPerSec"><h3>动态请求/秒<span class="ls-permlink"><a href="#dynReqPerSec"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定每秒可处理的来自单个IP的动态请求的数量（无论与该IP之间建立了多少个连接） 当达到此限制时，所有后来的请求将被延滞到下一秒。<br/><br/> 静态内容的请求限制与此限制无关。 可以在服务器或虚拟主机级别设置每个客户端请求的限制。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#staticReqPerSec">静态请求/秒</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="outBandwidth"><h3>出口带宽 (bytes/sec)<span class="ls-permlink"><a href="#outBandwidth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定对单个IP地址允许的最大传出吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽按4KB为单位分配。设定值为<span class="val">0</span>可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[性能建议] 按8KB单位设置带宽可获得更好的性能。<br/> [安全建议] 受信任的IP或子网不受影响。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#inBandwidth">入口带宽 (bytes/sec)</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="inBandwidth"><h3>入口带宽 (bytes/sec)<span class="ls-permlink"><a href="#inBandwidth"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定对单个IP地址允许的最大传入吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽是按1KB单位分配。设定值为<span class="val">0</span>可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>Syntax</h4><p>整数</p> <h4>提示</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#outBandwidth">出口带宽 (bytes/sec)</a></span></p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhName"><h3>虚拟主机名<span class="ls-permlink"><a href="#vhName"></a></span></h3></header><h4>描述</h4><p>为虚拟主机的唯一名称。建议使用虚拟主机的域名作为虚拟主机名。 虚拟主机名参数可以使用$VH_NAME变量来引用。</p> <h4>语法</h4><p>文本</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhRoot"><h3>虚拟主机根<span class="ls-permlink"><a href="#vhRoot"></a></span></h3></header><h4>描述</h4><p>指定虚拟主机的根目录。 注：这<b>不是</b>目录根。 建议将所有与该虚拟主机相关的文件 (像日志文件，html文件，CGI脚本等)都放置在这个目录下。 虚拟主机根目录可以使用变量$VH_ROOT来引用。</p> <h4>语法</h4><p>路径</p> <h4>提示</h4><p>[性能建议] 将不同的虚拟主机放在不同的硬盘驱动器上。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="configFile"><h3>配置文件<span class="ls-permlink"><a href="#configFile"></a></span></h3></header><h4>描述</h4><p>指定虚拟主机的配置文件名称。 配置文件必须位于$SERVER_ROOT/conf/vhosts/目录下。</p> <h4>语法</h4><p>文件路径</p> <h4>提示</h4><p><span class="ls-badge ls-badge--info">Information</span> 推荐使用<span class="val">$SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf</span>。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="vhMaxKeepAliveReq"><h3>最大Keep-Alive请求数<span class="ls-permlink"><a href="#vhMaxKeepAliveReq"></a></span></h3></header><h4>描述</h4><p>指定通过keep-alive(永久)连接服务的最大请求数量。当该限制值达到时连接将被断开。你可以为不同虚拟主机设置不同的数值。这个数值不能超过服务器级别的<span class="tagl"><a href="ServTuning_Help.html#maxKeepAliveReq">最大持续连接请求数</a></span>限制值。</p> <h4>语法</h4><p>整数</p> <h4>提示</h4><p>[性能] 设置为一个合理的较高数值。设置为1或更小的值将禁用keep-alive连接。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServTuning_Help.html#maxKeepAliveReq">最大持续连接请求数</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="allowSymbolLink"><h3>跟随符号链接<span class="ls-permlink"><a href="#allowSymbolLink"></a></span></h3></header><h4>描述</h4><p>指定在这个虚拟主机内是否要跟随符号链接。 <span class="val">If Owner Match</span>选项启用后，只有在链接和目标属主一致时才跟踪符号链接。 此设置将覆盖默认的服务器级设置。</p> <h4>语法</h4><p>从下拉列表选择</p> <h4>提示</h4><p>[性能和安全性建议] 为了更好的安全性，请禁用此功能。为了获得更好的性能，启用它。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableScript"><h3>启用脚本/外部应用程序<span class="ls-permlink"><a href="#enableScript"></a></span></h3></header><h4>描述</h4><p>指定在这个虚拟主机中是否允许运行脚本（非静态页面）。 如果禁用，CGI, FastCGI, LSAPI, Servlet引擎 和其他脚本语言都不允许在此虚拟主机中使用。 因此如果你希望使用一个脚本处理程序，你需要启用本项。</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="restrained"><h3>访问管制<span class="ls-permlink"><a href="#restrained"></a></span></h3></header><h4>描述</h4><p>指定是否可以通过此网站访问虚拟主机根目录（$VH_ROOT）之外的文件。 如果设置是<span class="val">Yes</span>，只可以访问$VH_ROOT下的文件， 访问指向$VH_ROOT以外文件或目录的符号链接或Context都将被阻止。 尽管如此，这里不会限制CGI脚本的访问。 这个选项在共享主机下非常有用。 <span class="tagl"><a href="#allowSymbolLink">跟随符号链接</a></span>可以设置成<span class="val">Yes</span>来允许用户使用在$VH_ROOT下的符号链接， $VH_ROOT以外的则不可以。</p> <h4>语法</h4><p>布尔值</p> <h4>提示</h4><p>[安全建议] 在共享主机环境下打开该功能。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="setUidMode"><h3>外部应用程序设置UID模式<span class="ls-permlink"><a href="#setUidMode"></a></span></h3></header><h4>描述</h4><p>指定如何为外部应用程序进程设置用户ID。可以选择下面三种方式： <ul><li><span class="val">Server UID</span>: 为外部应用程序设置与服务器用户/组ID相同的用户/组ID。</li>     <li><span class="val">CGI File UID</span>: 为外部应用CGI程序设置基于可执行文件的用户/组ID。该选项仅适用于CGI，不适用于FastCGI或LSPHP。</li>     <li><span class="val">Doc Root UID</span>: 为外部应用程序设置基于当前虚拟主机文档根目录的用户/组ID。</li> </ul><br/><br/> 默认值：<span class="val">Server UID</span></p> <h4>语法</h4><p>从下拉列表选择</p> <h4>提示</h4><p>[安全] 在共享主机环境中，建议使用<span class="val">CGI File UID</span> 或 <span class="val">Doc Root UID</span>模式来防止一个虚拟主机下的文件被另一个虚拟主机的外部应用程序访问。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="suexecUser"><h3>suEXEC 用户<span class="ls-permlink"><a href="#suexecUser"></a></span></h3></header><h4>描述</h4><p>在当前Context级别，以该用户身份运行。 如果设置了该项，则该值将覆盖虚拟主机级别<b>外部应用程序设置UID模式</b>的设置。<br/><br/> 此配置可被外部应用程序级别的<b>以用户身份运行</b>设置覆盖。<br/><br/> 默认值：未设置</p> <h4>语法</h4><p>有效用户名或UID。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="suexecGroup"><h3>suEXEC组<span class="ls-permlink"><a href="#suexecGroup"></a></span></h3></header><h4>描述</h4><p>在当前Context级别，以该组身份运行。 必须设置虚拟主机级别的<b>suEXEC用户</b>或外部应用程序级别的<b>以用户身份运行</b>，<b>suEXEC组</b>才会生效。<br/><br/> 可以使用<b>运行方式组</b>设置在外部应用程序级别覆盖此配置。<br/> 默认值：<b>suEXEC用户</b>设置值</p> <h4>语法</h4><p>有效组名或GID</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="staticReqPerSec"><h3>静态请求/秒<span class="ls-permlink"><a href="#staticReqPerSec"></a></span></h3></header><h4>描述</h4><p>指定每秒可处理的来自单个IP的静态内容请求数量（无论与该IP之间建立了多少个连接）。<br/> 当达到此限制时，所有后来的请求将被延滞到下一秒。 对于动态内容请求的限制与本限制无关。 每个客户端的请求限制可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>语法</h4><p>非负整数</p> <h4>提示</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#dynReqPerSec">动态请求/秒</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="dynReqPerSec"><h3>动态请求/秒<span class="ls-permlink"><a href="#dynReqPerSec"></a></span></h3></header><h4>描述</h4><p>指定每秒可处理的来自单个IP的动态请求的数量（无论与该IP之间建立了多少个连接） 当达到此限制时，所有后来的请求将被延滞到下一秒。<br/> 静态内容的请求限制与此限制无关。 可以在服务器或虚拟主机级别设置每个客户端请求的限制。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>语法</h4><p>非负整数</p> <h4>提示</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#staticReqPerSec">静态请求/秒</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="outBandwidth"><h3>出口带宽 (bytes/sec)<span class="ls-permlink"><a href="#outBandwidth"></a></span></h3></header><h4>描述</h4><p>指定对单个IP地址允许的最大传出吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽按4KB为单位分配。设定值为<span class="val">0</span>可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>语法</h4><p>非负整数</p> <h4>提示</h4><p>[性能建议] 按8KB单位设置带宽可获得更好的性能。<br/> [安全建议] 受信任的IP或子网不受影响。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#inBandwidth">入口带宽 (bytes/sec)</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="inBandwidth"><h3>入口带宽 (bytes/sec)<span class="ls-permlink"><a href="#inBandwidth"></a></span></h3></header><h4>描述</h4><p>指定对单个IP地址允许的最大传入吞吐量（无论与该IP之间建立了多少个连接）。 为提高效率，真正的带宽可能最终会略高于设定值。 带宽是按1KB单位分配。设定值为<span class="val">0</span>可禁用限制。 每个客户端的带宽限制（字节/秒）可以在服务器或虚拟主机级别设置。 虚拟主机级别的设置将覆盖服务器级别的设置。</p> <h4>语法</h4><p>非负整数</p> <h4>提示</h4><p>[安全] 受信任的IP或子网不受影响。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#outBandwidth">出口带宽 (bytes/sec)</a></span></p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

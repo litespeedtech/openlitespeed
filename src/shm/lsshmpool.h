@@ -80,7 +80,9 @@ public:
 
 public:
     LsShmHash *getNamedHash(const char *name, LsShmSize_t init_size,
-                            LsShmHasher_fn hf, LsShmValComp_fn vc, int flags);
+                            LsShmHasher_fn hf, LsShmValComp_fn vc, int flags,
+                            int *pCreated = NULL,
+                            const uint32_t *pVerMagic = NULL);
     int init(LsShm *shm, const char *name, LsShmPool *gpool);
     void close();
     void destroy();

@@ -29,7 +29,10 @@ function startApplication() {
         }
     }
     if (!startupFile.startsWith('/')) {
-        startupFile = appRoot + '/' + startupFile;
+        if (!appRoot.endsWith('/')) {
+            appRoot = appRoot + '/';
+        }
+        startupFile = appRoot + startupFile;
     }
 
     process.title = 'lsnode:' + appRoot;
@@ -37,9 +40,9 @@ function startApplication() {
     var consoleLog = process.env.LSNODE_CONSOLE_LOG || '/dev/null';
     fs.closeSync(1);
     try {
-        fs.openSync(consoleLog, "w+");
+        fs.openSync(consoleLog, "a");
     } catch(e) {
-        fs.openSync('/dev/null', "w+");
+        fs.openSync('/dev/null', "a");
     }
     
     http.Server.prototype.realListen = http.Server.prototype.listen;

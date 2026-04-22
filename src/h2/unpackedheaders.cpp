@@ -765,16 +765,27 @@ int UnpackedHeaders::setMethod2(lsxpack_header *hdr)
     if (m_buf->size() != HEADER_BUF_PAD)
     {
         int diff = hdr->val_len - 6;
-        if (diff > 0)
+        if (diff != 0)
         {
-            char tmp_buf[hdr->val_len];
-            memmove(tmp_buf, m_buf->get_ptr(hdr->val_offset),
-                    hdr->val_len);
             m_buf->guarantee(m_buf->size() + hdr->val_len);
-            char *ptr = m_buf->get_ptr(HEADER_BUF_PAD + hdr->val_len);
-            memmove(ptr, m_buf->get_ptr(HEADER_BUF_PAD + 6),
-                    m_buf->size() - HEADER_BUF_PAD - 6);
-            memmove(m_buf->get_ptr(HEADER_BUF_PAD), tmp_buf, hdr->val_len);
+            if (diff > 0)
+            {
+                char tmp_buf[hdr->val_len];
+                memmove(tmp_buf, m_buf->get_ptr(hdr->val_offset),
+                        hdr->val_len);
+                char *ptr = m_buf->get_ptr(HEADER_BUF_PAD + hdr->val_len);
+                memmove(ptr, m_buf->get_ptr(HEADER_BUF_PAD + 6),
+                        m_buf->size() - HEADER_BUF_PAD - 6);
+                memmove(m_buf->get_ptr(HEADER_BUF_PAD), tmp_buf, hdr->val_len);
+            }
+            else
+            {
+                char *ptr = m_buf->get_ptr(HEADER_BUF_PAD + hdr->val_len + 1);
+                memmove(ptr, m_buf->get_ptr(HEADER_BUF_PAD + 7),
+                        m_buf->end() - ptr);
+                memmove(m_buf->get_ptr(HEADER_BUF_PAD), m_buf->get_ptr(hdr->val_offset),
+                    hdr->val_len);
+            }
             m_buf->used(diff);
             if (m_url_offset)
                 m_url_offset += diff;

@@ -1,125 +1,165 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - CGI Context</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - CGI Context." />
+  <title>OpenLiteSpeed用户手册 - CGI上下文</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - CGI上下文." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../CGI_Context.html" data-lang="en-US">English</option><option value="../es-ES/CGI_Context.html" data-lang="es-ES">Español</option><option value="../de-DE/CGI_Context.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/CGI_Context.html" data-lang="fr-FR">Français</option><option value="../zh-CN/CGI_Context.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/CGI_Context.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><span class="current"><a href="CGI_Context.html">CGI Context</a></span></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a class="current" href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
+          <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="Proxy_Context.html">Proxy Context</a></div><div class="center"><a href="Context_Help.html">Context</a></div><div class="next"><a href="LB_Context.html">Load Balancer Context</a> &#187;</div></div>
-<h1>CGI Context</h1><h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header><a href="#cgiContext">CGI Context</a></header><p>
-<a href="#expuri">URI</a> | <a href="#cgi_path">路径</a> | <a href="#extraHeaders">标头控制</a> | <a href="#allowSetUID">允许设置UID</a> | <a href="#realm">域</a> | <a href="#authName">认证名称</a> | <a href="#required">Require（授权的用户/组）</a> | <a href="#accessAllowed">允许访问列表</a> | <a href="#accessDenied">拒绝访问列表</a> | <a href="#extAuthorizer">Authorizer</a> | <a href="#addDefaultCharset">添加默认的字符集</a> | <a href="#defaultCharsetCustomized">自定义默认字符集</a> | <a href="#enableRewrite">启用重写</a> | <a href="#rewriteInherit">重写继承</a> | <a href="#rewriteBase">重写基准</a> | <a href="#rewriteRules">重写规则</a> | <a href="#enableIpGeo">启用IP地理定位</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Proxy_Context.html">代理上下文</a></div><div class="center"><a href="Context_Help.html">上下文</a></div><div class="next"><a href="LB_Context.html">负载均衡上下文</a> &#187;</div></div>
+<header class="doc-page-header"><h1>CGI上下文</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#cgiContext">CGI上下文</a></h3><ul class="doc-toc__links"><li><a href="#expuri">URI</a></li><li><a href="#cgi_path">路径</a></li><li><a href="#extraHeaders">标头控制</a></li><li><a href="#allowSetUID">允许设置UID</a></li><li><a href="#realm">域</a></li><li><a href="#authName">认证名称</a></li><li><a href="#required">Require（授权的用户/组）</a></li><li><a href="#accessAllowed">允许访问列表</a></li><li><a href="#accessDenied">拒绝访问列表</a></li><li><a href="#extAuthorizer">授权器</a></li><li><a href="#addDefaultCharset">添加默认的字符集</a></li><li><a href="#defaultCharsetCustomized">自定义默认字符集</a></li><li><a href="#enableRewrite">启用重写</a></li><li><a href="#rewriteInherit">重写继承</a></li><li><a href="#rewriteBase">重写基准</a></li><li><a href="#rewriteRules">重写规则</a></li><li><a href="#enableIpGeo">启用IP地理定位</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="cgiContext"><h3>CGI Context<span class="ls-permlink"><a href="#cgiContext"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>A CGI context defines scripts in a particular directory as CGI scripts. This directory can be inside or outside of the document root. When a file under this directory is requested, the server will always try to execute it as a CGI script, no matter if it's executable or not. In this way, file content under a CGI Context is always protected and cannot be read as static content. It is recommended that you put all your CGI scripts in a directory and set up a CGI Context to access them.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>Specifies the URI for this context.</p> <h4>Syntax</h4><p>指定此context下的URI。这个URI应该以"/"开始。 如果一个URI以"/"结束，那么该context将包含这个URI下的所有下级URI。如果context类型映射到系统目录上,则必须添加结尾的"/"</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="#location">位置</a></span></p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="cgi_path"><h3>路径<span class="ls-permlink"><a href="#cgi_path"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定CGI脚本的位置.</p> <h4>Syntax</h4><p>The path can be a directory that contains a group of CGI scripts, like <span class="val">$VH_ROOT/myapp/cgi-bin/</span>. In this case, the context <span class="tagl"><a href="#expuri">URI</a></span> must end with "/", like <span class="val">/app1/cgi/</span>. The Path can also specify only one CGI script, like <span class="val">$VH_ROOT/myapp/myscript.pl</span>. This script should have the corresponding <span class="tagl"><a href="#expuri">URI</a></span> <span class="val">/myapp/myscript.pl</span>.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="extraHeaders"><h3>标头控制<span class="ls-permlink"><a href="#extraHeaders"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定要添加的附加响应/请求头。可以添加每行一个来添加多个头指令。"NONE "可以用来禁止父头继承。如果没有提供，则假定为 "Header"。</p> <h4>Syntax</h4><p>[Header]|RequestHeader [condition] set|append|merge|add|unset header [value] [early|env=[!]variable]</p> <h4>例子</h4><div class="ls-example">set Cache-control no-cache<br/> append Cache-control no-store<br/> Header set My-header cust_header_val<br/> RequestHeader set My-req-header cust_req_header_val</div><h4>提示</h4><p><span title="Information" class="ls-icon-info"></span> 语法和用法类似于 <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">Apache's mod_headers directives</a><br/><br/> <span title="Information" class="ls-icon-info"></span> The 'Header' directive is is optional and can be excluded or left in when copying rules from elsewhere without issue.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="allowSetUID"><h3>允许设置UID<span class="ls-permlink"><a href="#allowSetUID"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定CGI脚本是否允许设置UID。如果允许，并且为CGI脚本启用了设置UID，那么无论CGI脚本是代表哪个用户启动的，CGI进程的用户ID都将切换为CGI脚本所有者的用户ID。<br/>默认值是 &quot;关&quot</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>提示</h4><p>[安全建议] 尽可能不要允许CGI脚本设置UID,因为这存在着安全风险</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="realm"><h3>域<span class="ls-permlink"><a href="#realm"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定这个context下的realm授权。 当指定时，必须提供有效的用户和用户名来访问这个context。 <span class="tagl"><a href="VHSecurity_Help.html#realms">Realms授权</a></span>需要在<span class="tagP"><a href="#VHSecurity_Help">虚拟主机安全</a></span>部分进行设置。 此设置使用每个realm的<span class="tagl"><a href="VHSecurity_Help.html#realmName">域名称</a></span>。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="authName"><h3>认证名称<span class="ls-permlink"><a href="#authName"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>为当前context下的realm认证指定一个替代的名称。 如果没有指定，原realm名称将被使用。 认证名称将显示在浏览器登陆弹出窗口。</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="required"><h3>Require（授权的用户/组）<span class="ls-permlink"><a href="#required"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定哪些用户/用户组可以访问此context。 这里允许你使用一个用户/组数据库(在 <span class="tagl"><a href="#realm">域</a></span>中指定)访问多个context， 但只允许该数据库下特定的用户/组访问这个context。</p> <h4>Syntax</h4><p>Syntax is compatible with Apache's Require directive. For example: <ul> <li><span class="val">user username [username ...]</span><br/> Only listed users can access this context.</li> <li> <span class="val">group groupid [groupid ...]</span><br/> Only users belonging to the listed groups can access this context.</li> </ul> If this setting is not specified, all valid users will be allowed to access this resource.</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessAllowed"><h3>允许访问列表<span class="ls-permlink"><a href="#accessAllowed"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定允许访问这个context下资源的IP地址或子网。综合 <span class="tagl"><a href="#accessDenied">拒绝访问列表</a></span>项的配置以及服务器/虚拟主机级别访问控制， 可访问性将以客户端IP所符合的最小范围来确定。</p> <h4>Syntax</h4><p>Comma-delimited list of IPs/sub-networks.</p> <h4>例子</h4><div class="ls-example">网络可以写成<span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> 或<span class="val">192.168.1.*</span>。</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="accessDenied"><h3>拒绝访问列表<span class="ls-permlink"><a href="#accessDenied"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定哪个IP地址或子网不被允许访问这个context下的资源。 综合<span class="tagl"><a href="#accessAllowed">允许访问列表</a></span>项的配置以及服务器/虚拟主机级别访问控制， 可访问性将以客户端IP所符合的最小范围来确定。</p> <h4>Syntax</h4><p>Comma-delimited list of IPs/sub-networks.</p> <h4>例子</h4><div class="ls-example">子网络可以写成<span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> 或<span class="val">192.168.1.*</span>。</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="extAuthorizer"><h3>Authorizer<span class="ls-permlink"><a href="#extAuthorizer"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定可用于生成授权/未授权 decisions的外部应用程序。 目前,仅FastCGI授权器可用。 有关FastCGI授权者角色的更多详细信息， 请访问<a href="https://fastcgi-archives.github.io/" target="_blank" rel="noopener noreferrer">https://fastcgi-archives.github.io/</a>。</p> <h4>Syntax</h4><p>从列表中选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="addDefaultCharset"><h3>添加默认的字符集<span class="ls-permlink"><a href="#addDefaultCharset"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>S指定当内容类型是"text/html"或"text/plain"且没有参数时，是否添加字符集标记到"Content-Type"响应报头中。当设置为<span class="val">Off</span>时，该功能禁用。当设置为<span class="val">On</span>时，将添加<span class="tagl"><a href="#defaultCharsetCustomized">自定义默认字符集</a></span>中指定的字符集，如果没有指定，将添加默认的"iso-8859-1"字符集。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="defaultCharsetCustomized"><h3>自定义默认字符集<span class="ls-permlink"><a href="#defaultCharsetCustomized"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定一个字符集当<span class="tagl"><a href="#addDefaultCharset">添加默认的字符集</a></span>是<span class="val">On</span>时使用。这是可选的。默认值是<span class="val">iso-8859-1</span>。当<span class="tagl"><a href="#addDefaultCharset">添加默认的字符集</a></span>是<span class="val">Off</span>时本设置将不生效。</p> <h4>Syntax</h4><p>Name of a character set.</p> <h4>例子</h4><div class="ls-example">utf-8</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableRewrite"><h3>启用重写<span class="ls-permlink"><a href="#enableRewrite"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否启用LiteSpeed的URL重写. 可以在虚拟主机或context级别上自定义此选项， 并且沿目录树继承该选项，直到被其他选项覆。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="rewriteInherit"><h3>重写继承<span class="ls-permlink"><a href="#rewriteInherit"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否从父级context继承重写规则。 如果启用重写但不继承，将启用本context的重写基准及重写规则。</p> <h4>Syntax</h4><p>从单选框选择</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="rewriteBase"><h3>重写基准<span class="ls-permlink"><a href="#rewriteBase"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定重写规则的基准URL。</p> <h4>Syntax</h4><p>URL</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="rewriteRules"><h3>重写规则<span class="ls-permlink"><a href="#rewriteRules"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定虚拟主机级别的重写规则。<br/><br/> 请勿在此处添加任何目录级重写规则。 如果您在.htaccess有任何目录级的重写规则，则应该使用uri"/"创建一个静态context， 并在那里添加重写规则。 <br/><br/> 重写规则由一个<span class="val">RewriteRule</span>组成，并可可以在多个<span class="val">RewriteCond</span>之后。 <ul>   <li>每行仅能有一条规则</li>   <li>     <span class="val">RewriteCond</span> 和 <span class="val">RewriteRule</span> 遵循Apache的rewrite语法。 只需从Apache配置文件中复制并粘贴重写规则即可。   </li>   <li>     LiteSpeed和Apache mod_rewrite之间有细微差别：     <ul>       <li>         <span class="val">%\{LA-U:variable\}</span> and <span class="val">%\{LA-F:variable\}</span> 在Litespeed 重写中将被忽略       </li>       <li>         Litespeed中加入了两个新变量:         <span class="val">%\{CURRENT_URI\}</span>表示正在处理的URL         <span class="val">%\{SCRIPT_NAME\}</span>表示为相应的CGI环境变量。       </li>       <li>         Litespeed在遇到<span class="val">[L]</span>后为了避免循环将停止处理此及此后的重写规则         而Apache mod_rewrite将仅停止处理该条重写规则。此行为类似于apachemod_rewrite中的<span class="val">[END]</span>标志。       </li>     </ul>   </li> </ul><br/> LiteSpeed的重写规则遵循Apache的重写规范。  有关重写规则的更多详细信息，请参阅 <a href="   http://httpd.apache.org/docs/current/mod/mod_rewrite.html " target="_blank" rel="noopener noreferrer">   Apache's mod_rewrite document(英文文档) </a> 和 <a href="   http://httpd.apache.org/docs/current/rewrite/ " target="_blank" rel="noopener noreferrer">   Apache's URL rewriting guide(英文文档) </a>.</p> <h4>Syntax</h4><p>string</p> </article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="enableIpGeo"><h3>启用IP地理定位<span class="ls-permlink"><a href="#enableIpGeo"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定是否启用IP地理定位查找。 可以在服务器级别，虚拟主机级别，或context级别设置。</p> <h4>Syntax</h4><p>从单选框选择</p> <h4>See Also</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">使用报头中的客户端IP</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">数据库文件路径</a></span>,</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="cgiContext"><h3>CGI上下文<span class="ls-permlink"><a href="#cgiContext"></a></span></h3></header><h4>描述</h4><p>CGI上下文会将特定目录中的脚本定义为CGI脚本。 该目录可以位于文档根目录内或外。 请求此目录下的文件时，无论文件是否可执行，服务器都会尝试将其作为CGI脚本执行。 这样，CGI上下文下的文件内容始终受到保护，不能作为静态内容读取。 建议将所有CGI脚本放在一个目录中，并设置CGI上下文来访问它们。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="expuri"><h3>URI<span class="ls-permlink"><a href="#expuri"></a></span></h3></header><h4>描述</h4><p>指定此上下文的URI。</p> <h4>语法</h4><p>URI可以是普通URI（以"/"开头），也可以是Perl兼容的正则表达式URI（以"exp:"开头）。 如果普通URI以"/"结尾，则此上下文将包含该URI下的所有子URI。 如果上下文映射到文件系统上的目录，则必须添加结尾的"/"。</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="#location">位置</a></span></p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="cgi_path"><h3>路径<span class="ls-permlink"><a href="#cgi_path"></a></span></h3></header><h4>描述</h4><p>指定CGI脚本的位置。</p> <h4>语法</h4><p>路径可以是包含一组CGI脚本的目录，例如<span class="val">$VH_ROOT/myapp/cgi-bin/</span>。 这种情况下，上下文<span class="tagl"><a href="#expuri">URI</a></span>必须以"/"结尾，例如<span class="val">/app1/cgi/</span>。 路径也可以只指定一个CGI脚本，例如<span class="val">$VH_ROOT/myapp/myscript.pl</span>。 该脚本应有对应的<span class="tagl"><a href="#expuri">URI</a></span> <span class="val">/myapp/myscript.pl</span>。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extraHeaders"><h3>标头控制<span class="ls-permlink"><a href="#extraHeaders"></a></span></h3></header><h4>描述</h4><p>指定要添加的附加响应/请求头。可添加多个头指令，每行一个。"NONE"可用于禁用父级头继承。如果未提供指令，则假定为"Header"。</p> <h4>语法</h4><p>[Header]|RequestHeader [condition] set|append|merge|add|unset header [value] [early|env=[!]variable]</p> <h4>示例</h4><div class="ls-example">set Cache-control no-cache<br/> append Cache-control no-store<br/> Header set My-header cust_header_val<br/> RequestHeader set My-req-header cust_req_header_val</div><h4>提示</h4><p>[信息] 语法和用法类似于 <a href="https://httpd.apache.org/docs/2.2/mod/mod_headers.html#header" target="_blank" rel="noopener noreferrer">Apache的mod_headers指令</a><br/><br/> [信息] 'Header'指令是可选的。从其他位置复制规则时，可以移除或保留它，不会影响使用。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="allowSetUID"><h3>允许设置UID<span class="ls-permlink"><a href="#allowSetUID"></a></span></h3></header><h4>描述</h4><p>指定CGI脚本是否允许set UID位。如果允许，并且CGI脚本启用了set UID位，那么无论CGI脚本代表哪个用户启动，CGI进程的用户ID都会切换为CGI脚本所有者的用户ID。<br/> 默认值为"Off"。</p> <h4>语法</h4><p>布尔值</p> <h4>提示</h4><p>[安全建议] 尽可能不要允许CGI脚本设置UID，因为这本身存在安全风险。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="realm"><h3>域<span class="ls-permlink"><a href="#realm"></a></span></h3></header><h4>描述</h4><p>指定此上下文的授权域。 指定后，必须提供有效的用户名和密码才能访问此上下文。 <span class="tagl"><a href="VHSecurity_Help.html#realms">授权Realm</a></span>需要在<span class="tagP"><a href="#VHSecurity_Help">虚拟主机安全</a></span>部分进行设置。 此设置使用每个授权域的<span class="tagl"><a href="VHSecurity_Help.html#realmName">Realm名称</a></span>。</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="authName"><h3>认证名称<span class="ls-permlink"><a href="#authName"></a></span></h3></header><h4>描述</h4><p>为当前上下文的授权域指定一个替代名称。 如果未指定，将使用原授权域名称。 认证名称会显示在浏览器登录弹窗中。</p> <h4>语法</h4><p>文本</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="required"><h3>Require（授权的用户/组）<span class="ls-permlink"><a href="#required"></a></span></h3></header><h4>描述</h4><p>指定哪些用户/用户组可以访问此上下文。 这允许你在多个上下文中使用同一个用户/组数据库（由<span class="tagl"><a href="#realm">域</a></span>指定）， 但只允许该数据库中的特定用户/组访问此上下文。</p> <h4>语法</h4><p>语法与Apache的Require指令兼容。例如： <ul> <li><span class="val">user username [username ...]</span><br/> 只有列出的用户可以访问此上下文。</li> <li> <span class="val">group groupid [groupid ...]</span><br/> 只有属于列出组的用户可以访问此上下文。</li> </ul> 如果未指定此设置，所有有效用户都可以访问此资源。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessAllowed"><h3>允许访问列表<span class="ls-permlink"><a href="#accessAllowed"></a></span></h3></header><h4>描述</h4><p>指定允许访问此上下文下资源的IP地址或子网。综合 <span class="tagl"><a href="#accessDenied">拒绝访问列表</a></span>项的配置以及服务器/虚拟主机级别访问控制， 可访问性将以客户端IP所符合的最小范围来确定。</p> <h4>语法</h4><p>逗号分隔的IP地址/子网列表。</p> <h4>示例</h4><div class="ls-example">网络可以写成<span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> 或<span class="val">192.168.1.*</span>。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="accessDenied"><h3>拒绝访问列表<span class="ls-permlink"><a href="#accessDenied"></a></span></h3></header><h4>描述</h4><p>指定哪些IP地址或子网不允许访问此上下文下的资源。 综合<span class="tagl"><a href="#accessAllowed">允许访问列表</a></span>项的配置以及服务器/虚拟主机级别访问控制， 可访问性将以客户端IP所符合的最小范围来确定。</p> <h4>语法</h4><p>逗号分隔的IP地址/子网列表。</p> <h4>示例</h4><div class="ls-example">子网络可以写成<span class="val">192.168.1.0/255.255.255.0</span>, <span class="val">192.168.1</span> 或<span class="val">192.168.1.*</span>。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAuthorizer"><h3>授权器<span class="ls-permlink"><a href="#extAuthorizer"></a></span></h3></header><h4>描述</h4><p>指定可用于生成授权/未授权决策的外部应用程序。目前仅FastCGI授权器可用。有关FastCGI授权器角色的更多详细信息， 请访问<a href="https://fastcgi-archives.github.io/" target="_blank" rel="noopener noreferrer">https://fastcgi-archives.github.io/</a>。</p> <h4>语法</h4><p>从下拉列表选择</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="addDefaultCharset"><h3>添加默认的字符集<span class="ls-permlink"><a href="#addDefaultCharset"></a></span></h3></header><h4>描述</h4><p>指定当内容类型为"text/html"或"text/plain"且没有参数时，是否向"Content-Type"响应报头添加字符集标记。设置为<span class="val">Off</span>时，该功能禁用。设置为<span class="val">On</span>时，将添加<span class="tagl"><a href="#defaultCharsetCustomized">自定义默认字符集</a></span>中指定的字符集；如果未指定，则添加默认的"iso-8859-1"字符集。</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="defaultCharsetCustomized"><h3>自定义默认字符集<span class="ls-permlink"><a href="#defaultCharsetCustomized"></a></span></h3></header><h4>描述</h4><p>指定当<span class="tagl"><a href="#addDefaultCharset">添加默认的字符集</a></span>为<span class="val">On</span>时使用的字符集。此项可选，默认值为<span class="val">iso-8859-1</span>。当<span class="tagl"><a href="#addDefaultCharset">添加默认的字符集</a></span>为<span class="val">Off</span>时，本设置不生效。</p> <h4>语法</h4><p>字符集名称。</p> <h4>示例</h4><div class="ls-example">utf-8</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableRewrite"><h3>启用重写<span class="ls-permlink"><a href="#enableRewrite"></a></span></h3></header><h4>描述</h4><p>指定是否启用LiteSpeed的URL重写引擎。 此选项可在虚拟主机或Context级别自定义， 并会沿目录树继承，直到被显式覆盖。</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rewriteInherit"><h3>重写继承<span class="ls-permlink"><a href="#rewriteInherit"></a></span></h3></header><h4>描述</h4><p>指定是否从父级上下文继承重写规则。 如果启用重写但不继承，将使用此上下文中定义的重写基准和重写规则。</p> <h4>语法</h4><p>布尔值</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rewriteBase"><h3>重写基准<span class="ls-permlink"><a href="#rewriteBase"></a></span></h3></header><h4>描述</h4><p>指定重写规则的基准URL。</p> <h4>语法</h4><p>URL</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="rewriteRules"><h3>重写规则<span class="ls-permlink"><a href="#rewriteRules"></a></span></h3></header><h4>描述</h4><p>指定虚拟主机级别的重写规则列表。<br/><br/> 请勿在此处添加任何文档根级别的重写规则。 如果有来自.htaccess的文档根级别重写规则，请改为创建URI为"/"的静态Context， 并在那里添加这些重写规则。<br/><br/> 重写规则由一个<span class="val">RewriteRule</span>指令组成，并且前面可以选择性地放置多个<span class="val">RewriteCond</span>指令。 <ul>   <li>每条指令应只占一行。</li>   <li>     <span class="val">RewriteCond</span>和<span class="val">RewriteRule</span>遵循Apache的重写指令语法。可以直接从Apache配置文件复制并粘贴重写指令。   </li>   <li>     LiteSpeed与Apache mod_rewrite的实现有细微差别：     <ul>       <li>         <span class="val">%\{LA-U:variable\}</span>和<span class="val">%\{LA-F:variable\}</span>会被LiteSpeed重写引擎忽略。       </li>       <li>         LiteSpeed重写引擎新增了两个服务器变量：         <span class="val">%\{CURRENT_URI\}</span>表示重写引擎正在处理的当前URI，         <span class="val">%\{SCRIPT_NAME\}</span>与对应CGI环境变量含义相同。       </li>       <li>         LiteSpeed重写引擎遇到<span class="val">[L]</span>标志后会停止处理重写规则以避免循环；         Apache mod_rewrite只会停止当前迭代中的重写规则处理。此行为类似于Apache mod_rewrite中的<span class="val">[END]</span>标志。       </li>     </ul>   </li> </ul><br/> LiteSpeed重写引擎实现遵循Apache重写引擎规范。 有关重写规则的更多详细信息，请参阅 <a href="   http://httpd.apache.org/docs/current/mod/mod_rewrite.html " target="_blank" rel="noopener noreferrer">   Apache mod_rewrite文档 </a> 和 <a href="   http://httpd.apache.org/docs/current/rewrite/ " target="_blank" rel="noopener noreferrer">   Apache URL重写指南 </a>.</p> <h4>语法</h4><p>字符串</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="enableIpGeo"><h3>启用IP地理定位<span class="ls-permlink"><a href="#enableIpGeo"></a></span></h3></header><h4>描述</h4><p> 指定是否启用IP地理定位查找。 可以在服务器、虚拟主机或上下文级别设置。使用“Not Set”值时，默认禁用IP地理定位。</p> <h4>语法</h4><p>布尔值</p> <h4>另请参阅</h4><p class="ls-text-small"><span class="tagl"><a href="ServGeneral_Help.html#useIpInProxyHeader">使用报头中的客户端IP</a></span>, <span class="tagl"><a href="ServGeneral_Help.html#geoipDBFile">数据库文件路径</a></span>,</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

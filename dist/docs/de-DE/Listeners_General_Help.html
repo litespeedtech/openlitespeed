@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de-DE">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>OpenLiteSpeed-Benutzerhandbuch - Listener - Allgemein</title>
+  <meta name="description" content="OpenLiteSpeed-Benutzerhandbuch - Listener - Allgemein." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed-Benutzerhandbuch">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed-Benutzerhandbuch</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="Menü öffnen" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="Seiten und Einstellungen suchen" data-no-results="Keine Ergebnisse gefunden.">
+      <label class="sr-only" for="doc-search-input">Handbuch durchsuchen</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="Seiten und Einstellungen suchen" aria-controls="doc-search-results" />
+        <button type="submit">Suchen</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="Sprache"><option value="../Listeners_General_Help.html" data-lang="en-US">English</option><option value="../es-ES/Listeners_General_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/Listeners_General_Help.html" data-lang="de-DE" selected>Deutsch</option><option value="../fr-FR/Listeners_General_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/Listeners_General_Help.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/Listeners_General_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="Design umschalten" data-theme-toggle data-theme-light-label="Heller Modus" data-theme-dark-label="Dunkler Modus" title="Design umschalten">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="de-DE" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Benutzerhandbuch</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Inhaltsverzeichnis"><ul class="sidetree__list">
+      <li><a href="license.html">Lizenz</a></li>
+      <li><a href="intro.html">Einleitung</a></li>
+      <li><a href="install.html">Installation</a></li>
+      <li>
+        <a href="admin.html">Administration</a>
+        <ul class="level2">
+          <li><a href="ServerStat_Help.html">Service Manager</a></li>
+          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+        </ul>
+      </li>
+      <li><a href="security.html">Sicherheit</a></li>
+      <li>
+        <a href="config.html">Konfiguration</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">Server allgemein</a></li>
+          <li><a href="ServLog_Help.html">Serverprotokoll</a></li>
+          <li><a href="ServTuning_Help.html">Server-Tuning</a></li>
+          <li><a href="ServSecurity_Help.html">Serversicherheit</a></li>
+          <li><a href="ExtApp_Help.html">Externe Anwendungen</a></li>
+          <ul class="level3">
+            <li><a href="External_LSAPI.html">LSAPI-Anwendung</a></li>
+            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+            <li><a href="External_FCGI.html">Fast-CGI-Anwendung</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast-CGI-Authorizer</a></li>
+            <li><a href="External_SCGI.html">Simple-CGI-Anwendung</a></li>
+            <li><a href="External_Servlet.html">Servlet-Engine</a></li>
+            <li><a href="External_PL.html">Piped Logger</a></li>
+            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
+          </ul>
+          <li><a href="ScriptHandler_Help.html">Skripthandler</a></li>
+          <li><a href="App_Server_Help.html">App-Server-Einstellungen</a></li>
+          <li><a href="Module_Help.html">Modulkonfiguration</a></li>
+          <li><a class="current" href="Listeners_General_Help.html">Listener allgemein</a></li>
+          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
+          <li><a href="Templates_Help.html">Virtual-Host-Vorlagen</a></li>
+          <li><a href="VirtualHosts_Help.html">Virtual-Host-Registrierung</a></li>
+          <li><a href="VHGeneral_Help.html">Virtual Host allgemein</a></li>
+          <li><a href="VHSecurity_Help.html">Virtual Host Sicherheit</a></li>
+          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li><a href="Context_Help.html">Kontext</a></li>
+          <ul class="level3">
+            <li><a href="Static_Context.html">Statischer Kontext</a></li>
+            <li><a href="Java_Web_App_Context.html">Java-Web-App-Kontext</a></li>
+            <li><a href="Servlet_Context.html">Servlet-Kontext</a></li>
+            <li><a href="FCGI_Context.html">Fast-CGI-Kontext</a></li>
+            <li><a href="SCGI_Context.html">Simple-CGI-Kontext</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI-Kontext</a></li>
+            <li><a href="Proxy_Context.html">Proxy-Kontext</a></li>
+            <li><a href="CGI_Context.html">CGI-Kontext</a></li>
+            <li><a href="LB_Context.html">Load-Balancer-Kontext</a></li>
+            <li><a href="Redirect_Context.html">Redirect-Kontext</a></li>
+            <li><a href="App_Server_Context.html">App-Server-Kontext</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI-Kontext</a></li>
+            <li><a href="Module_Context.html">Modulhandler-Kontext</a></li>
+          </ul>
+          <li><a href="VHWebSocket_Help.html">WebSocket-Proxy</a></li>
+        </ul>
+      </li>
+      <li><a href="webconsole.html">Webkonsole</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">Admin-Konsole allgemein</a></li>
+          <li><a href="AdminSecurity_Help.html">Admin-Konsolensicherheit</a></li>
+          <li>
+            <a href="AdminListeners_General_Help.html">
+              Admin-Listener allgemein
+            </a>
+          </li>
+          <li>
+            <a href="AdminListeners_SSL_Help.html">Admin-Listener SSL</a>
+          </li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Module_Help.html">Modulkonfiguration</a></div><div class="center"><a href="config.html">Konfiguration</a></div><div class="next"><a href="Listeners_SSL_Help.html">Listener - SSL</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Listener - Allgemein</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">Inhaltsverzeichnis</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">Allgemein</h3><ul class="doc-toc__links"><li><a href="#listenerName">Listener-Name</a></li><li><a href="#listenerIP">IP-Adresse</a></li><li><a href="#listenerPort">Port</a></li><li><a href="#listenerBinding">Bindung</a></li><li><a href="#reusePort">REUSEPORT aktivieren</a></li><li><a href="#listenerSecure">Sicher</a></li></ul></section>
+<section class="doc-toc__row"><h3 class="doc-toc__heading"><a href="#virtualHostMapping">Zuordnungen virtueller Hosts</a></h3><ul class="doc-toc__links"><li><a href="#virtualHostName">Virtueller Host</a></li><li><a href="#domainName">Domains</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerName"><h3>Listener-Name<span class="ls-permlink"><a href="#listenerName"></a></span></h3></header><h4>Beschreibung</h4><p>Ein eindeutiger Name fuer diesen Listener.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerIP"><h3>IP-Adresse<span class="ls-permlink"><a href="#listenerIP"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die IP-Adresse dieses Listeners an. Alle verfuegbaren IP-Adressen werden aufgefuehrt. IPv6-Adressen stehen in "[ ]".<br/><br/> Um auf allen IPv4-Adressen zu lauschen, waehlen Sie <span class="val">ANY</span>. Um auf allen IPv4- und IPv6-Adressen zu lauschen, waehlen Sie <span class="val">[ANY]</span>.<br/><br/> Um sowohl IPv4- als auch IPv6-Clients zu bedienen, sollte statt einer einfachen IPv4-Adresse eine IPv4-gemappte IPv6-Adresse verwendet werden. Eine IPv4-gemappte IPv6-Adresse wird als [::FFFF:x.x.x.x] geschrieben.</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--security">Security</span> Wenn Ihre Maschine mehrere IPs in verschiedenen Subnetzen hat, koennen Sie eine bestimmte IP auswaehlen, um nur Datenverkehr aus dem entsprechenden Subnetz zuzulassen.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerPort"><h3>Port<span class="ls-permlink"><a href="#listenerPort"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt den TCP-Port des Listeners an. Nur der Superuser ("root") kann Ports unter <span class="val">1024</span> verwenden. Port <span class="val">80</span> ist der Standard-HTTP-Port. Port <span class="val">443</span> ist der Standard-HTTPS-Port.</p> <h4>Syntax</h4><p>Ganzzahl</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerBinding"><h3>Bindung<span class="ls-permlink"><a href="#listenerBinding"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, welchem lshttpd-Kindprozess der Listener zugewiesen wird. Verschiedene Kindprozesse koennen verwendet werden, um Anfragen an verschiedene Listener zu verarbeiten, indem ein Listener manuell einem Prozess zugeordnet wird. Standardmaessig wird ein Listener allen Kindprozessen zugewiesen.</p> <h4>Syntax</h4><p>Per Kontrollkästchen auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="reusePort"><h3>REUSEPORT aktivieren<span class="ls-permlink"><a href="#reusePort"></a></span></h3></header><h4>Beschreibung</h4><p>Verwendet die Socket-Option SO_REUSEPORT, um eingehenden Datenverkehr auf mehrere Worker zu verteilen. Diese Einstellung ist nur fuer Lizenzen mit mehreren Workern wirksam. Wenn sie aktiviert ist, werden alle Worker automatisch an diesen Listener gebunden und die Konfiguration "Bindung" wird ignoriert.<br/><br/> Standardwert: Ein</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="listenerSecure"><h3>Sicher<span class="ls-permlink"><a href="#listenerSecure"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt an, ob dies ein sicherer (SSL-)Listener ist. Fuer sichere Listener muessen zusaetzliche SSL-Einstellungen richtig gesetzt werden.</p> <h4>Syntax</h4><p>Aus Optionsfeldern auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="virtualHostMapping"><h3>Zuordnungen virtueller Hosts<span class="ls-permlink"><a href="#virtualHostMapping"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die Beziehung zwischen dem Listener und virtuellen Hosts an. Listener und virtuelle Hosts werden ueber Domainnamen verknuepft. Eine HTTP-Anfrage wird an einen virtuellen Host mit passendem Domainnamen weitergeleitet. Ein Listener kann fuer verschiedene Domainnamen mehreren virtuellen Hosts zugeordnet werden. Ein virtueller Host kann auch von verschiedenen Listenern zugeordnet werden. Ein Listener kann einen Catchall-virtuellen Host mit dem Domainnamenwert "*" zulassen. Wenn in der Zuordnung des Listeners kein explizit passender Domainname vorhanden ist, leitet der Listener die Anfrage an diesen Catchall-virtuellen Host weiter.</p> <h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Fuegen Sie nur notwendige Zuordnungen hinzu. Wenn der Listener nur einem virtuellen Host zugeordnet ist, richten Sie nur eine Catchall-Zuordnung "*" ein.</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="virtualHostName"><h3>Virtueller Host<span class="ls-permlink"><a href="#virtualHostName"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt den Namen eines virtuellen Hosts an.</p> <h4>Syntax</h4><p>Aus Dropdown-Liste auswählen</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="domainName"><h3>Domains<span class="ls-permlink"><a href="#domainName"></a></span></h3></header><h4>Beschreibung</h4><p>Gibt die Domainnamen fuer die Zuordnung an. Bei Domainnamen wird nicht zwischen Gross- und Kleinschreibung unterschieden, und ein fuehrendes "www." wird entfernt. Die Platzhalterzeichen "*" und "?" sind erlaubt. "?" steht nur fuer ein einzelnes Zeichen. "*" steht fuer eine beliebige Anzahl von Zeichen. Doppelte Domainnamen sind nicht erlaubt.</p> <h4>Syntax</h4><p>Durch Kommas getrennte Liste.</p> <h4>Beispiel</h4><div class="ls-example">www?.example.com<br/> "*.mydomain.com" stimmt mit allen Subdomains von mydomain.com ueberein.<br/> "*" allein ist die Catchall-Domain und stimmt mit jedem nicht anderweitig zugeordneten Domainnamen ueberein.</div><h4>Tipps</h4><p><span class="ls-badge ls-badge--performance">Performance</span> Wenn ein Listener einem einzelnen virtuellen Host gewidmet ist, verwenden Sie immer <span class="val">*</span> als Domainnamen, um unnoetige Pruefungen zu vermeiden. Domainnamen mit Platzhalterzeichen (ausser der Catchall-Domain) sollten nach Moeglichkeit vermieden werden.</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="Nach oben" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Nach oben</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Alle Rechte vorbehalten.</footer>
+</div>
+</body>
+</html>

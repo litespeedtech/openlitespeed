@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp;
@@ -903,7 +903,7 @@ class PanelController
             /**
              * Set to maintain compatibility with old ViewModel + Tpl.
              *
-             * @deprecated  release_ver_placeholder
+             * @deprecated 1.17.4.2
              */
             $oldInfo = &$_SESSION['unflagInfo'];
             $doOld   = true;

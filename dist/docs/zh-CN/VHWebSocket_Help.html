@@ -1,111 +1,150 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <title>OpenLiteSpeed Users' Manual - 网络套接字代理</title>
-  <meta name="description" content="OpenLiteSpeed Users' Manual - 网络套接字代理." />
+  <title>OpenLiteSpeed用户手册 - WebSocket代理</title>
+  <meta name="description" content="OpenLiteSpeed用户手册 - WebSocket代理." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
   <link rel="shortcut icon" href="../img/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
 </head>
 <body>
-<div class="pagewrapper clearfix"><aside class="sidetree ls-col-1-5">
-  <figure>
-    <img src="img/ols_logo.svg" alt="openlitespeed logo" width="150px"/>
-  </figure>
-  <h2 class="ls-text-thin">
-    OpenLiteSpeed Web Server <a href="index.html"> Users' Manual</a>
-  </h2>
-  <h3 class="ls-text-muted">Version 1.8 &nbsp;&#8212;&nbsp;Rev. 6</h3>
-  <hr/>
-  <div>
-    <ul>
-      <li><a href="license.html">License</a></li>
-      <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="OpenLiteSpeed用户手册">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>OpenLiteSpeed用户手册</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="打开菜单" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="搜索页面和设置" data-no-results="未找到结果。">
+      <label class="sr-only" for="doc-search-input">搜索手册</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="搜索页面和设置" aria-controls="doc-search-results" />
+        <button type="submit">搜索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="语言"><option value="../VHWebSocket_Help.html" data-lang="en-US">English</option><option value="../es-ES/VHWebSocket_Help.html" data-lang="es-ES">Español</option><option value="../de-DE/VHWebSocket_Help.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/VHWebSocket_Help.html" data-lang="fr-FR">Français</option><option value="../zh-CN/VHWebSocket_Help.html" data-lang="zh-CN" selected>简体中文</option><option value="../ja-JP/VHWebSocket_Help.html" data-lang="ja-JP">日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="切换主题" data-theme-toggle data-theme-light-label="浅色模式" data-theme-dark-label="深色模式" title="切换主题">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
+      <li><a href="license.html">许可协议</a></li>
+      <li><a href="intro.html">简介</a></li>
+      <li><a href="install.html">安装</a></li>
       <li>
-        <a href="admin.html">Administration</a>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-          <li><a href="ServerStat_Help.html">Service Manager</a></li>
-          <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+          <li><a href="ServerStat_Help.html">服务管理器</a></li>
+          <li><a href="Real_Time_Stats_Help.html">实时统计</a></li>
         </ul>
       </li>
-      <li><a href="security.html">Security</a></li>
+      <li><a href="security.html">安全</a></li>
       <li>
-        <a href="config.html">Configuration</a>
+        <a href="config.html">配置</a>
         <ul class="level2">
-          <li><a href="ServGeneral_Help.html">Server General</a></li>
-          <li><a href="ServLog_Help.html">Server Log</a></li>
-          <li><a href="ServTuning_Help.html">Server Tuning</a></li>
-          <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
+          <li><a href="ServGeneral_Help.html">服务器常规</a></li>
+          <li><a href="ServLog_Help.html">服务器日志</a></li>
+          <li><a href="ServTuning_Help.html">服务器调优</a></li>
+          <li><a href="ServSecurity_Help.html">服务器安全</a></li>
+          <li><a href="ExtApp_Help.html">外部应用</a></li>
           <ul class="level3">
-            <li><a href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_WS.html">Web Server</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
+            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+            <li><a href="External_WS.html">Web服务器（代理）</a></li>
+            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+            <li><a href="External_Servlet.html">Servlet引擎</a></li>
+            <li><a href="External_PL.html">管道日志器</a></li>
+            <li><a href="External_LB.html">负载均衡器</a></li>
+            <li><a href="External_UWSGI.html">uWSGI</a></li>
           </ul>
-          <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
-          <li><a href="App_Server_Help.html">App Server Settings</a></li>
-          <li><a href="Module_Help.html">Module Configuration</a></li>
-          <li><a href="Listeners_General_Help.html">Listener General</a></li>
-          <li><a href="Listeners_SSL_Help.html">Listener SSL</a></li>
-          <li><a href="Templates_Help.html">Virtual Host Templates</a></li>
-          <li><a href="VirtualHosts_Help.html">Virtual Host Basic</a></li>
-          <li><a href="VHGeneral_Help.html">Virtual Host General</a></li>
-          <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
-          <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
-          <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
+          <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
+          <li><a href="App_Server_Help.html">应用服务器设置</a></li>
+          <li><a href="Module_Help.html">模块配置</a></li>
+          <li><a href="Listeners_General_Help.html">监听器常规</a></li>
+          <li><a href="Listeners_SSL_Help.html">监听器SSL</a></li>
+          <li><a href="Templates_Help.html">虚拟主机模板</a></li>
+          <li><a href="VirtualHosts_Help.html">虚拟主机注册</a></li>
+          <li><a href="VHGeneral_Help.html">虚拟主机常规</a></li>
+          <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
+          <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
+          <li><a href="Rewrite_Help.html">重写</a></li>
+          <li><a href="Context_Help.html">上下文</a></li>
           <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li>
-              <a href="Java_Web_App_Context.html">Java Web App Context</a>
-            </li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
+            <li><a href="Static_Context.html">静态上下文</a></li>
+            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+            <li><a href="Proxy_Context.html">代理上下文</a></li>
+            <li><a href="CGI_Context.html">CGI上下文</a></li>
+            <li><a href="LB_Context.html">负载均衡上下文</a></li>
+            <li><a href="Redirect_Context.html">重定向上下文</a></li>
+            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
           </ul>
-          <li><span class="current"><a href="VHWebSocket_Help.html">Web Socket Proxy</a></span></li>
+          <li><a class="current" href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web Console</a>
+      <li><a href="webconsole.html">Web控制台</a>
         <ul class="level2">
-          <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
-          <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
+          <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
+          <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
           <li>
             <a href="AdminListeners_General_Help.html">
-              Admin Listener General
+              管理监听器常规
             </a>
           </li>
           <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
+            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
           </li>
         </ul>
       </li>
-    </ul>
-  </div>
-</aside>
-<article class="contentwrapper ls-col-3-5 clearfix"><div class="nav-bar ls-spacer-micro-top"><div class="prev">&#171 <a href="Context_Help.html">Context</a></div><div class="center"><a href="config.html">Configuration</a></div><div class="next">&nbsp;</div></div>
-<h1>网络套接字代理</h1><section class="ls-spacer-small-bottom"><a href="http://en.wikipedia.org/wiki/WebSocket">WebSocket</a>是可以代替HTTP通过Internet进行用来提供实时，双向通信的协议
-。 从版本1.1.1开始，OpenLiteSpeed通过使用WebSocket代理支持WebSocket后端。 这些代理会将WebSocket通信发送到{ITEM=wsaddr}字段中设定的后端。</section>
-<h2 id="top">Table of Contents</h2><section class="toc"><section class="toc-row"><header>Web Socket</header><p>
-<a href="#wsuri">URI</a> | <a href="#wsaddr">地址</a></p></section>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="Context_Help.html">上下文</a></div><div class="center"><a href="config.html">配置</a></div><div class="next">&nbsp;</div></div>
+<header class="doc-page-header"><h1>WebSocket代理</h1><div class="doc-page-intro"><a href="http://en.wikipedia.org/wiki/WebSocket">WebSocket</a>是一种可替代HTTP、通过Internet提供实时双向通信的协议。 从1.1.1版本开始，OpenLiteSpeed通过WebSocket代理支持WebSocket后端。这些代理会将WebSocket通信发送到<span class="tagl"><a href="#wsaddr">地址</a></span>字段中指定的相应后端。</div>
+</header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目录</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">WebSocket代理</h3><ul class="doc-toc__links"><li><a href="#wsuri">URI</a></li><li><a href="#wsaddr">地址</a></li></ul></section>
 </section>
-<section><div class="helpitem"><article class="ls-helpitem"><div><header id="wsuri"><h3>URI<span class="ls-permlink"><a href="#wsuri"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>指定将使用此WebSocket后端的URI。 仅当该URI包含WebSocke协议升级请求时，才会将其流量转发到WebSocket后端。<br/><br/> 没有议升级请求的流量将自动转发到此URI所属的Context。 如果此URI不存在任何Context，则LSWS会将该流量视为访问位置为<span class="val">$DOC_ROOT/URI</span>的静态Context。</p> <h4>Syntax</h4><p>普通URI（以“/”开头）。 如果URI以“/”结尾，则此WebSocket后端将包括此URI下的所有子URI。</p> <h4>例子</h4><div class="ls-example">将WebSocket代理与Context结合使用，可以使您以不同的方式在同一页面上提供不同类型的流量，从而优化性能。 您可以将WebSocket流量发送到WebSocket后端，同时设置静态Context以使LSWS为页面的静态内容服务，或者可以设置LSAPI Context以使LSWS可以为PHP内容服务（这两个LSWS都比WebSocket后端更高效）。</div></article> </div>
-<div class="helpitem"><article class="ls-helpitem"><div><header id="wsaddr"><h3>地址<span class="ls-permlink"><a href="#wsaddr"></a></span><span class="top"><a href="#top">&#8657;</a></span></h3></header></div><h4>Description</h4><p>WebSocket 后端使用的唯一网络套接字地址。 支持 IPv4 套接字、IPv6 套接字和 Unix 域套接字 (UDS)。 IPv4 和 IPv6 套接字可用于网络上的通信。 只有当 WebSocket 后端与服务器在同一台机器上时，才能使用 UDS。</p> <h4>Syntax</h4><p>IPv4/IPv6 address:port, UDS://path, or unix:path</p> <h4>例子</h4><div class="ls-example">127.0.0.1:5434 <br/> UDS://tmp/lshttpd/php.sock<br/> unix:/tmp/lshttpd/php.sock</div><h4>提示</h4><p><span title="Security" class="ls-icon-security"></span> If the WebSocket backend runs on the same machine,  UDS is preferred. If you have to use an IPv4 or IPv6 socket,  set the IP address to localhost or 127.0.0.1, so the WebSocket backend  is inaccessible from other machines.<br/> <span title="Performance" class="ls-icon-performance"></span> Unix Domain Sockets generally provide higher performance than IPv4 or IPv6 sockets.</p> </article> </div>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="wsuri"><h3>URI<span class="ls-permlink"><a href="#wsuri"></a></span></h3></header><h4>描述</h4><p>指定将使用此WebSocket后端的URI。仅当发往此URI的流量包含WebSocket升级请求时，才会转发到WebSocket后端。<br/><br/> 不包含此升级请求的流量会自动转发到此URI所属的Context。如果此URI没有对应的Context，LSWS会将该流量视为访问位置为<span class="val">$DOC_ROOT/URI</span>的静态Context。</p> <h4>语法</h4><p>普通URI（以“/”开头）。如果URI以“/”结尾，则此WebSocket后端会包含该URI下的所有子URI。</p> <h4>示例</h4><div class="ls-example">将WebSocket代理与Context结合使用，可以在同一页面上以不同方式处理不同类型的流量，从而优化性能。您可以将WebSocket流量发送到WebSocket后端，同时设置静态Context让LSWS提供页面的静态内容，或设置LSAPI Context让LSWS提供PHP内容（这两种内容由LSWS处理都比由WebSocket后端处理更高效）。</div></article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="wsaddr"><h3>地址<span class="ls-permlink"><a href="#wsaddr"></a></span></h3></header><h4>描述</h4><p>WebSocket后端使用的唯一套接字地址。 支持IPv4套接字、IPv6套接字和Unix Domain Socket（UDS）。 IPv4和IPv6套接字可用于网络通信。 只有当WebSocket后端与服务器位于同一台机器上时，才能使用UDS。</p> <h4>语法</h4><p>IPv4/IPv6地址:端口、UDS://路径或unix:路径</p> <h4>示例</h4><div class="ls-example">127.0.0.1:5434 <br/> UDS://tmp/lshttpd/php.sock<br/> unix:/tmp/lshttpd/php.sock</div><h4>提示</h4><p><span class="ls-badge ls-badge--security">Security</span> 如果WebSocket后端在同一台机器上运行，建议优先使用UDS。如果必须使用IPv4或IPv6套接字， 请将IP地址设置为localhost或127.0.0.1，避免其他机器访问该WebSocket后端。<br/> <span class="ls-badge ls-badge--performance">Performance</span> Unix Domain Socket通常比IPv4或IPv6套接字提供更高性能。</p> </article> </div>
 </section>
-</article><div  class="ls-col-1-1"><footer class="copyright">Copyright &copy; 2013-2020. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有.</footer>
-</div></div>
+</article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+</div>
 </body>
 </html>

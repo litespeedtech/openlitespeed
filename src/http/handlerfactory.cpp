@@ -62,6 +62,8 @@ ReqHandler *HandlerFactory::getHandler(int type)
     case HandlerType::HT_PROXY:
     case HandlerType::HT_LSAPI:
     case HandlerType::HT_LOADBALANCER:
+    case HandlerType::HT_SCGI:
+    case HandlerType::HT_UWSGI:
         //Here are the only cases not set the type.
         pReqHandler = s_extConnectorPool.get();
         pReqHandler->setType(type);
@@ -106,6 +108,8 @@ const HttpHandler *HandlerFactory::getInstance(int type, const char *pName)
     case HandlerType::HT_SERVLET:
     case HandlerType::HT_LSAPI:
     case HandlerType::HT_LOADBALANCER:
+    case HandlerType::HT_SCGI:
+    case HandlerType::HT_UWSGI:
         if (!pName)
             return NULL;
         return ExtAppRegistry::getApp(type - HandlerType::HT_CGI, pName);

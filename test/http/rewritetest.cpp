@@ -105,9 +105,15 @@ void testParseRule()
     CHECK(rule3.getFlag() & RULE_FLAG_CHAIN);
     CHECK(rule3.getFlag() & RULE_FLAG_NOREWRITE);
 
-
-
-
+    char achTest4[] =
+        "RewriteRule ^app/(.+)$ /user/$1/profile.yml?action=view [L,UnsafeAllow3F]";
+    RewriteRule rule4;
+    pBegin = achTest4;
+    pEnd = achTest4 + strlen(achTest4);
+    CHECK(rule4.parse(pBegin, NULL) == 0);
+    CHECK(rule4.getFlag() & RULE_FLAG_LAST);
+    CHECK(rule4.getFlag() & RULE_FLAG_WITHQS);
+    CHECK(rule4.getFlag() & RULE_FLAG_UNSAFE_ALLOW3F);
 
 }
 
@@ -132,17 +138,20 @@ void testParseSubst()
     CHECK(pItem != NULL);
     CHECK(pItem->getType() == REF_RULE_SUBSTR);
     CHECK(pItem->getIndex() == 1);
+    CHECK(pItem->needsUnsafe3FEscape() == 1);
 
     pItem = (RewriteSubstItem *)pItem->next();
     CHECK(pItem != NULL);
     CHECK(pItem->getType() == REF_COND_SUBSTR);
     CHECK(pItem->getIndex() == 0);
+    CHECK(pItem->needsUnsafe3FEscape() == 1);
 
     pItem = (RewriteSubstItem *)pItem->next();
     CHECK(pItem != NULL);
     CHECK(pItem->getType() == REF_STRING);
     CHECK(pItem->getStr()->len() == 5);
     CHECK(strcmp(pItem->getStr()->c_str(), "\\$1%1") == 0);
+    CHECK(pItem->needsUnsafe3FEscape() == 0);
 
     pItem = (RewriteSubstItem *)pItem->next();
     CHECK(pItem != NULL);
@@ -195,4 +204,3 @@ TEST(RewriteTest_testParse)
     testParseRule();
 }
 #endif
-

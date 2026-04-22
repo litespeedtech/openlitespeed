@@ -78,6 +78,19 @@ int RewriteSubstItem::needUrlDecode() const
 }
 
 
+int RewriteSubstItem::needsUnsafe3FEscape() const
+{
+    switch (getType())
+    {
+    case REF_RULE_SUBSTR:
+    case REF_COND_SUBSTR:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+
 RewriteSubstItem::RewriteSubstItem(const RewriteSubstItem &rhs)
     : SubstItem()
 {
@@ -1117,6 +1130,19 @@ int RewriteRule::parseOneFlag(const char *&pRuleStr, const char *pEnd,
             return LS_FAIL;
         }
         break;
+    case 'U':
+    case 'u':
+        if (strncasecmp(pRuleStr, "UnsafeAllow3F", 13) == 0)
+        {
+            pRuleStr += 13;
+            m_flag |= RULE_FLAG_UNSAFE_ALLOW3F;
+        }
+        else
+        {
+            HttpLog::parse_error(s_pCurLine,  "Unknown rewrite rule flag");
+            return LS_FAIL;
+        }
+        break;
     default:
         HttpLog::parse_error(s_pCurLine,  "Unknown rewrite rule flag");
         return LS_FAIL;
@@ -1311,4 +1337,3 @@ int RewriteRule::parse(char *&pRule, const RewriteMapList *pMaps)
 
     return LS_FAIL;
 }
-

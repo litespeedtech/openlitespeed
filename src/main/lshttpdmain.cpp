@@ -28,6 +28,7 @@
 #include <http/httpsignals.h>
 #include <http/serverprocessconfig.h>
 #include <http/stderrlogger.h>
+#include <http/useacme.h>
 #include <log4cxx/logger.h>
 #include <log4cxx/logrotate.h>
 #include <lsiapi/lsiapihooks.h>
@@ -90,7 +91,7 @@
 /***
  * Do not change the below format, it will be set correctly while packing the code
  */
-#define BUILDTIME  "built: Thu Jan  8 15:41:40 UTC 2026"
+#define BUILDTIME  "built: Tue Apr 21 21:16:12 UTC 2026"
 
 static const char s_pVersionFull[] = "LiteSpeed/" PACKAGE_VERSION
         " Open (" LS_MODULE_VERSION_INFO_ONELINE ") BUILD (" BUILDTIME ")";
@@ -339,6 +340,7 @@ void LshttpdMain::onGuardTimer()
         gracefulRestart();
         return;
     }
+    UseAcmeMap::getInstance().renewCerts();
 
     CgidWorker::checkRestartCgid(MainServerConfigObj.getServerRoot(),
                                  MainServerConfigObj.getChroot(),

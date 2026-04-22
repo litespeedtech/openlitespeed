@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja-JP">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Open LiteSpeed Web Serverユーザーズマニュアル - Simple CGIアプリ</title>
+  <meta name="description" content="Open LiteSpeed Web Serverユーザーズマニュアル - Simple CGIアプリ." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex">
+  <script>
+    (function () {
+      var theme = 'light';
+      var resolved = false;
+      try {
+        if (window.localStorage) {
+          var storedTheme = window.localStorage.getItem('hdoc.theme');
+          if (storedTheme === 'light' || storedTheme === 'dark') {
+            theme = storedTheme;
+            resolved = true;
+          }
+        }
+      } catch (err) {
+      }
+
+      if (!resolved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+    }());
+  </script>
+  <link rel="shortcut icon" href="../img/favicon.ico" />
+  <link rel="stylesheet" type="text/css" href="../css/hdoc.css">
+  <link rel="stylesheet" type="text/css" href="../css/hdoc-product-accent.css">
+  <script src="hdoc-search-index.js" defer></script>
+  <script src="../js/hdoc-search.js" defer></script>
+</head>
+<body>
+<div class="doc-shell">
+<header class="doc-topbar">
+  <a class="doc-brand" href="index.html" aria-label="Open LiteSpeed Web Serverユーザーズマニュアル">
+    <img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" />
+    <strong>Open LiteSpeed Web Serverユーザーズマニュアル</strong>
+  </a>
+<div class="doc-actions">
+    <button class="doc-menu-toggle" type="button" aria-label="メニューを開く" data-menu-toggle aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <form class="doc-search" role="search" data-empty="ページや設定を検索" data-no-results="結果が見つかりません。">
+      <label class="sr-only" for="doc-search-input">マニュアルを検索</label>
+      <div class="doc-search__box">
+        <input id="doc-search-input" type="search" autocomplete="off" placeholder="ページや設定を検索" aria-controls="doc-search-results" />
+        <button type="submit">検索</button>
+      </div>
+      <div id="doc-search-results" class="doc-search__results" hidden></div>
+    </form>
+  </div>
+  <label class="doc-language"><select id="doc-language-switcher" name="doc_language" data-language-switcher aria-label="言語"><option value="../External_SCGI.html" data-lang="en-US">English</option><option value="../es-ES/External_SCGI.html" data-lang="es-ES">Español</option><option value="../de-DE/External_SCGI.html" data-lang="de-DE">Deutsch</option><option value="../fr-FR/External_SCGI.html" data-lang="fr-FR">Français</option><option value="../zh-CN/External_SCGI.html" data-lang="zh-CN">简体中文</option><option value="../ja-JP/External_SCGI.html" data-lang="ja-JP" selected>日本語</option></select></label>
+  <button class="doc-theme-toggle" type="button" aria-label="テーマを切り替え" data-theme-toggle data-theme-light-label="ライトモード" data-theme-dark-label="ダークモード" title="テーマを切り替え">
+    <span class="doc-theme-toggle__icon" aria-hidden="true"></span>
+  </button>
+</header>
+<div class="doc-menu-backdrop" data-menu-backdrop></div>
+<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">OpenLiteSpeed Web Server ユーザーズマニュアル</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
+<li><a href="license.html">ライセンス</a></li>
+<li><a href="intro.html">はじめに</a></li>
+<li><a href="install.html">インストール</a></li>
+<li>
+  <a href="admin.html">管理</a>
+  <ul class="level2">
+    <li><a href="ServerStat_Help.html">サービスマネージャ</a></li>
+    <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
+  </ul>
+</li>
+<li><a href="security.html">セキュリティ</a></li>
+<li><a href="config.html">設定</a>
+	<ul class="level2">
+	<li><a href="ServGeneral_Help.html">サーバー全般</a></li>
+        <li><a href="ServLog_Help.html">サーバーログ</a></li>
+	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
+	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
+	<li><a href="ExtApp_Help.html">外部アプリ</a></li>
+	<ul class="level3">
+      <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+      <li><a href="External_WS.html">Webサーバー</a></li>
+      <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+      <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+      <li><a class="current" href="External_SCGI.html">Simple CGI App</a></li>
+      <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+      <li><a href="External_PL.html">パイプロガー</a></li>
+      <li><a href="External_LB.html">ロードバランサ</a></li>
+      <li><a href="External_UWSGI.html">uWSGI</a></li>
+	</ul>
+	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
+	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
+	<li><a href="Module_Help.html">モジュール設定</a></li>
+	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
+        <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
+	<li><a href="Templates_Help.html">テンプレート</a></li>
+	<li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
+	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
+	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
+        <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
+	<li><a href="Rewrite_Help.html">Rewrite</a></li>
+	<li><a href="Context_Help.html">コンテキスト</a></li>
+	<ul class="level3">
+	  <li><a href="Static_Context.html">静的コンテテキスト</a></li>
+	  <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
+	  <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+	  <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+	  <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
+	  <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+	  <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+	  <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+	  <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+	  <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
+	  <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
+	  <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
+	</ul>
+	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
+	</ul>
+</li>
+<li><a href="webconsole.html">Webコンソール</a>
+        <ul class="level2">
+        <li><a href="AdminGeneral_Help.html">管理コンソール全般</a></li>
+        <li><a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></li>
+	<li><a href="AdminListeners_General_Help.html">管理リスナー全般</a></li>
+        <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
+        </ul>
+</li>
+</ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="External_FCGI_Auth.html">Fast CGI 認証</a></div><div class="center"><a href="ExtApp_Help.html">外部アプリケーション</a></div><div class="next"><a href="External_Servlet.html">サーブレットエンジン</a> &#187;</div></div>
+<header class="doc-page-header"><h1>Simple CGIアプリ</h1></header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目次</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">SCGIアプリ</h3><ul class="doc-toc__links"><li><a href="#extAppName">名前</a></li><li><a href="#extAppAddress">アドレス</a></li><li><a href="#maxConns">最大接続数</a></li><li><a href="#initTimeout">初期リクエストタイムアウト（秒）</a></li><li><a href="#retryTimeout">リトライタイムアウト（秒）</a></li><li><a href="#pcKeepAliveTimeout">接続キープアライブタイムアウト</a></li><li><a href="#respBuffer">レスポンスバッファリング</a></li></ul></section>
+</section>
+<section class="doc-content-flow"><div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppName"><h3>名前<span class="ls-permlink"><a href="#extAppName"></a></span></h3></header><h4>説明</h4><p>この外部アプリケーションの一意の名前。 設定の他の部分でこの名前を使用するときは、この名前で参照します。</p> <h4>構文</h4><p>テキスト</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="extAppAddress"><h3>アドレス<span class="ls-permlink"><a href="#extAppAddress"></a></span></h3></header><h4>説明</h4><p>外部アプリケーションによって使用される一意のソケットアドレス。 IPv4/IPv6ソケットとUnixドメインソケット（UDS）がサポートされています。 IPv4/IPv6ソケットは、ネットワークを介した通信に使用できます。 UDSは、外部アプリケーションがサーバーと同じマシンにある場合にのみ使用できます。</p> <h4>構文</h4><p>IPv4またはIPv6アドレス:ポート、またはUDS://path</p> <h4>例</h4><div class="ls-example">127.0.0.1:5434<br/> UDS://tmp/lshttpd/php.sock.</div><h4>ヒント</h4><p>[セキュリティ]外部アプリケーションが同じマシン上で実行される場合は、UDSが優先されます。 IPv4/IPv6ソケットを使用する必要がある場合は、IPアドレスを<span class="val">localhost</span>または<span class="val">127.0.0.1</span>に設定して、外部アプリケーションに他のマシンからアクセスできないようにします。<br/> [パフォーマンス] Unixドメインソケットは、通常、IPv4ソケットよりも高いパフォーマンスを提供します。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="maxConns"><h3>最大接続数<span class="ls-permlink"><a href="#maxConns"></a></span></h3></header><h4>説明</h4><p>サーバーと外部アプリケーションの間で確立できる同時接続の最大数を指定します。 この設定は、外部アプリケーションによって同時に処理できる要求の数を制御しますが、実際の制限は外部アプリケーション自体によっても異なります。 この値を高く設定すると、外部アプリケーションの速度が不十分であるか、多数の同時要求に対応できない場合に役立ちません。</p> <h4>構文</h4><p>整数</p> <h4>ヒント</h4><p>[パフォーマンス]高い値を設定しても、高いパフォーマンスに直接変換されるわけではありません。 制限を外部アプリケーションに負荷をかけない値に設定すると、最高のパフォーマンス/スループットが得られます。</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="initTimeout"><h3>初期リクエストタイムアウト（秒）<span class="ls-permlink"><a href="#initTimeout"></a></span></h3></header><h4>説明</h4><p>新しく確立された接続で、外部アプリケーションが最初のリクエストに応答するまでサーバーが待機する最大秒数を指定します。 このタイムアウト内に外部アプリケーションからデータを受信しない場合、サーバーはこの接続を不良としてマークします。 これにより、外部アプリケーションとの通信問題をできるだけ早く特定できます。 処理に時間がかかるリクエストがある場合は、503エラーメッセージを避けるためにこの制限を増やしてください。</p> <h4>構文</h4><p>整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="retryTimeout"><h3>リトライタイムアウト（秒）<span class="ls-permlink"><a href="#retryTimeout"></a></span></h3></header><h4>説明</h4><p>以前に通信問題が発生した外部アプリケーションを再試行する前に、サーバーが待機する時間を指定します。</p> <h4>構文</h4><p>整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="pcKeepAliveTimeout"><h3>接続キープアライブタイムアウト<span class="ls-permlink"><a href="#pcKeepAliveTimeout"></a></span></h3></header><h4>説明</h4><p>アイドル状態の永続接続を開いたままにする最大秒数を指定します。<br/><br/> "-1"に設定すると、接続はタイムアウトしません。0以上に設定すると、この秒数が経過した後に接続が閉じられます。</p> <h4>構文</h4><p>整数</p> </article> </div>
+<div class="helpitem"><article class="ls-helpitem"><header class="ls-helpitem__header" id="respBuffer"><h3>レスポンスバッファリング<span class="ls-permlink"><a href="#respBuffer"></a></span></h3></header><h4>説明</h4><p>外部アプリケーションから受信したレスポンスをバッファリングするかどうかを指定します。 "nph-"（Non-Parsed-Header）スクリプトが検出された場合、完全なHTTPヘッダーを持つレスポンスではバッファリングがオフになります。</p> <h4>構文</h4><p>ドロップダウンリストから選択</p> </article> </div>
+</section>
+</article></div><button class="doc-back-to-top" type="button" aria-label="トップへ戻る" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">トップへ戻る</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> All rights reserved.</footer>
+</div>
+</body>
+</html>
