@@ -65,7 +65,7 @@
 <div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
       <li><a href="license.html">许可协议</a></li>
       <li><a href="intro.html">简介</a></li>
-      <li><a href="install.html">安装</a></li>
+      <li><a href="install.html">安装/卸载</a></li>
       <li>
         <a href="admin.html">管理</a>
         <ul class="level2">
@@ -81,18 +81,20 @@
           <li><a href="ServLog_Help.html">服务器日志</a></li>
           <li><a href="ServTuning_Help.html">服务器调优</a></li>
           <li><a href="ServSecurity_Help.html">服务器安全</a></li>
-          <li><a href="ExtApp_Help.html">外部应用</a></li>
-          <ul class="level3">
-            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
-            <li><a href="External_WS.html">Web服务器（代理）</a></li>
-            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
-            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
-            <li><a href="External_Servlet.html">Servlet引擎</a></li>
-            <li><a href="External_PL.html">管道日志器</a></li>
-            <li><a href="External_LB.html">负载均衡器</a></li>
-            <li><a href="External_UWSGI.html">uWSGI</a></li>
-          </ul>
+          <li>
+            <a href="ExtApp_Help.html">外部应用</a>
+            <ul class="level3">
+              <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+              <li><a href="External_WS.html">Web服务器（代理）</a></li>
+              <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+              <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+              <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+              <li><a href="External_Servlet.html">Servlet引擎</a></li>
+              <li><a href="External_PL.html">管道日志器</a></li>
+              <li><a href="External_LB.html">负载均衡器</a></li>
+              <li><a href="External_UWSGI.html">uWSGI</a></li>
+            </ul>
+          </li>
           <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
           <li><a href="App_Server_Help.html">应用服务器设置</a></li>
           <li><a href="Module_Help.html">模块配置</a></li>
@@ -104,41 +106,38 @@
           <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
           <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
           <li><a href="Rewrite_Help.html">重写</a></li>
-          <li><a href="Context_Help.html">上下文</a></li>
-          <ul class="level3">
-            <li><a href="Static_Context.html">静态上下文</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
-            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
-            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
-            <li><a href="Proxy_Context.html">代理上下文</a></li>
-            <li><a href="CGI_Context.html">CGI上下文</a></li>
-            <li><a href="LB_Context.html">负载均衡上下文</a></li>
-            <li><a href="Redirect_Context.html">重定向上下文</a></li>
-            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
-            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
-            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
-          </ul>
+          <li>
+            <a href="Context_Help.html">上下文</a>
+            <ul class="level3">
+              <li><a href="Static_Context.html">静态上下文</a></li>
+              <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+              <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+              <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+              <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+              <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+              <li><a href="Proxy_Context.html">代理上下文</a></li>
+              <li><a href="CGI_Context.html">CGI上下文</a></li>
+              <li><a href="LB_Context.html">负载均衡上下文</a></li>
+              <li><a href="Redirect_Context.html">重定向上下文</a></li>
+              <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+              <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+              <li><a href="Module_Context.html">模块处理程序上下文</a></li>
+            </ul>
+          </li>
           <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web控制台</a>
+      <li>
+        <a href="webconsole.html">Web控制台</a>
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
           <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
-          <li>
-            <a href="AdminListeners_General_Help.html">
-              管理监听器常规
-            </a>
-          </li>
-          <li>
-            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
-          </li>
+          <li><a href="AdminListeners_General_Help.html">管理监听器常规</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">管理监听器SSL</a></li>
         </ul>
       </li>
     </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="admin.html">管理</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="config.html">配置</a> &#187;</div></div>
-<h1>安全</h1><br/> <p>LiteSpeed Web Server在设计安全性时是首要考虑因素。 LSWS支持SSL，具有服务器和虚拟主机级别的访问控制， 以及特定于context的领域保护。 除了这些标准功能， LSWS还具有以下特殊安全功能: </p><br/> <ol> 	<li><h3>连接级别限制:</h3> 	  <ul> 	    <li>IP级限制限制了与单个IP地址之间的网络带宽，而与连接数无关。</li> 	    <li> IP级别的连接限制了与单个IP地址的并发连接数。  	    	您可以通过WebAdmin控制台中的软连接限制，硬连接限制，宽限期和禁止期设置来控制。 </li> 	  </ul> 	</li> 	<li><h3> 请求检查:</h3> 	  	<p> LiteSpeed Web服务器将审核每个HTTP请求。 “ /” 不允许在URL编码中, 	  	 因此拒绝访问隐藏文件和其父目录。.</p> 	    <p>请求大小受LiteSpeed Web服务器的最大请求URL长度，最大请求标头长度和最大请求正文长度的限制。 </p>     </li> 	<li><h3>静态文件检查:</h3>   		<p>只有满足以下条件，LiteSpeed Web Server才会提供静态文件: </p> 	  <ul> 	    <li>每个人都可以读取该文件。</li> 	    <li>该文件不可执行.</li> 	    <li>该文件不在拒绝访问目录列表中.</li> 	    <li>如果不允许符号链接，那么文件不应包含符号链接。 </li> 	    <li>默认情况下，LiteSpeed Web Server不会通过列出目录文件来索引目录，除非明确的启用它.</li> 	  </ul> 	</li> 	<li><h3>外部应用防火墙:</h3> 		<p>LiteSpeed Web Server将请求转发到外部应用程序以处理/生成动态内容。 这些应用程序会占用大量系统资源. 当系统资源消耗达到一定程度时，整个系统的性能将严重降低-例如当必须使用交换空间时. 进行DoS攻击的一种方法是将大量并发请求发送给Web服务器， 使外部程序忙于处理对繁琐的请求。</p> <p>LiteSpeed Web Server可以限制请求并控制外部应用程序的并发数量，以防止系统资源过度使用. LSWSh会缓存请求，并仅将完成的请求转发到外部应用程序.  这意味着当服务器接收请求时，外部应用程序将不会等待. LSWS还缓存了外部应用程序的响应，以便可以在响应完成后立即释放外部应用程序，而不必等待客户端收到完整的响应。 这样服务器可以使用更少的外部应用程序进程来服务更多的请求并获得更高的性能和可扩展性。  LiteSpeed Web Server还使用虚拟内存来缓存请求和响应正文，以在不牺牲性能的情况下最大程度地减少系统内存的使用. </p></li>   <li><h3>CGI资源消耗限制:</h3> <p>LiteSpeed Web Server限制了CGI应用程序可以消耗的系统资源量。 对于每个对CGI脚本的请求，Web服务器都需要启动一个独立的CGI进程来处理它  在Unix系统上，并发进程数是有限的。 使用CGI资源消耗限制，可以配置Web服务器可以启动的并发CGI进程的最大数量。 过多的并发进程将降低整个系统的性能。 （CGI进程是DoS攻击的常用武器。）,可以为每个用户指定系统进程限制，以控制CGI应用程序最多可以产生的进程数,每个进程都受到CPU和内存限制的限制</p> </li>   <li><h3>suEXEC增强CGI/FastCGI的安全性:</h3> <p>为了降低CGI或Fast CGI脚本的安全风险，LiteSpeed Web Server可以通过以“suEXEC”模式运行,来限制CGI脚本可以使用的系统资源。 "suEXEC”会使用与Web服务器不同的用户ID启动CGI或Fast CGI脚本. 通过防止一个用户的CGI脚本访问其他用户的文件，这大大提高了共享托管环境中的安全性。</p> </li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+<h1>安全</h1><br/> <p>LiteSpeed Web Server在设计安全性时是首要考虑因素。 LSWS支持SSL，具有服务器和虚拟主机级别的访问控制， 以及特定于context的领域保护。 除了这些标准功能， LSWS还具有以下特殊安全功能: </p><br/> <ol> 	<li><h3>连接级别限制:</h3> 	  <ul> 	    <li>IP级限制限制了与单个IP地址之间的网络带宽，而与连接数无关。</li> 	    <li> IP级别的连接限制了与单个IP地址的并发连接数。 		您可以通过WebAdmin控制台中的软连接限制，硬连接限制，宽限期和禁止期设置来控制。 </li> 	  </ul> 	</li> 	<li><h3> 请求检查:</h3> 		<p> LiteSpeed Web服务器将审核每个HTTP请求。 “ /” 不允许在URL编码中, 		 因此拒绝访问隐藏文件和其父目录。.</p> 	    <p>请求大小受LiteSpeed Web服务器的最大请求URL长度，最大请求标头长度和最大请求正文长度的限制。 </p>     </li> 	<li><h3>静态文件检查:</h3> 		<p>只有满足以下条件，LiteSpeed Web Server才会提供静态文件: </p> 	  <ul> 	    <li>每个人都可以读取该文件。</li> 	    <li>该文件不可执行.</li> 	    <li>该文件不在拒绝访问目录列表中.</li> 	    <li>如果不允许符号链接，那么文件不应包含符号链接。 </li> 	    <li>默认情况下，LiteSpeed Web Server不会通过列出目录文件来索引目录，除非明确的启用它.</li> 	  </ul> 	</li> 	<li><h3>外部应用防火墙:</h3> 		<p>LiteSpeed Web Server将请求转发到外部应用程序以处理/生成动态内容。 这些应用程序会占用大量系统资源. 当系统资源消耗达到一定程度时，整个系统的性能将严重降低-例如当必须使用交换空间时. 进行DoS攻击的一种方法是将大量并发请求发送给Web服务器， 使外部程序忙于处理对繁琐的请求。</p> <p>LiteSpeed Web Server可以限制请求并控制外部应用程序的并发数量，以防止系统资源过度使用. LSWSh会缓存请求，并仅将完成的请求转发到外部应用程序. 这意味着当服务器接收请求时，外部应用程序将不会等待. LSWS还缓存了外部应用程序的响应，以便可以在响应完成后立即释放外部应用程序，而不必等待客户端收到完整的响应。 这样服务器可以使用更少的外部应用程序进程来服务更多的请求并获得更高的性能和可扩展性。 LiteSpeed Web Server还使用虚拟内存来缓存请求和响应正文，以在不牺牲性能的情况下最大程度地减少系统内存的使用. </p></li>   <li><h3>CGI资源消耗限制:</h3> <p>LiteSpeed Web Server限制了CGI应用程序可以消耗的系统资源量。 对于每个对CGI脚本的请求，Web服务器都需要启动一个独立的CGI进程来处理它  在Unix系统上，并发进程数是有限的。 使用CGI资源消耗限制，可以配置Web服务器可以启动的并发CGI进程的最大数量。 过多的并发进程将降低整个系统的性能。 （CGI进程是DoS攻击的常用武器。）,可以为每个用户指定系统进程限制，以控制CGI应用程序最多可以产生的进程数,每个进程都受到CPU和内存限制的限制</p> </li>   <li><h3>suEXEC增强CGI/FastCGI的安全性:</h3> <p>为了降低CGI或Fast CGI脚本的安全风险，LiteSpeed Web Server可以通过以“suEXEC”模式运行,来限制CGI脚本可以使用的系统资源。 "suEXEC”会使用与Web服务器不同的用户ID启动CGI或Fast CGI脚本. 通过防止一个用户的CGI脚本访问其他用户的文件，这大大提高了共享托管环境中的安全性。</p> </li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
 </div>
 </body>
 </html>

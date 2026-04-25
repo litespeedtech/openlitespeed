@@ -1,6 +1,7 @@
 <?php
 
 use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\Product\Current\Product;
 use LSWebAdmin\Product\Current\Service;
 use LSWebAdmin\UI\UIBase;
 
@@ -35,6 +36,7 @@ require_once __DIR__ . '/view/inc/configui.php';
 require_once __DIR__ . '/view/inc/header.php';
 require_once __DIR__ . '/view/inc/nav.php';
 
+$consoleName = Product::GetInstance()->getWebAdminConsoleName();
 ?>
 <div id="main" role="main">
 
@@ -62,7 +64,7 @@ echo $footer_lic_info;
 <div class="page-footer">
 	<div class="lst-footer-bar">
 		<div class="lst-footer-copywrap">
-			<span class="lst-text-muted lst-footer-copy">OpenLiteSpeed WebAdmin Console © <?php echo date('Y') . ' '; DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
+			<span class="lst-text-muted lst-footer-copy"><?php echo UIBase::Escape($consoleName); ?> © <?php echo date('Y') . ' '; DMsg::EchoUIStr('note_copyrightreserved'); ?></span>
 		</div>
 		<div class="lst-footer-meta lst-hide-phone">
 			<span class="lst-text-muted lst-footer-stamp"><i class="lst-icon" data-lucide="clock"></i><?php DMsg::EchoUIStr('note_dataretrievedat'); ?> <span id="lst_UpdateStamp"></span></span>

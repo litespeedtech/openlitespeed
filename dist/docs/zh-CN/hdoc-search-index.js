@@ -2,12 +2,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "主页",
         "url": "index.html",
-        "text": "主页 OpenLiteSpeed Web Server 1.9 用户手册 — Rev. 3 目录 许可协议 简介 安装/卸载 管理 安全 配置 有关更多信息，请访问我们的 OpenLiteSpeed知识库"
+        "text": "主页 OpenLiteSpeed Web Server 1.9 用户手册 — Rev. 3 目录 许可协议 简介 安装/卸载 管理 安全 配置 有关更多信息，请访问我们的 OpenLiteSpeed文档网站"
     },
     {
         "title": "许可协议",
         "url": "license.html",
-        "text": "许可协议 GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most software and other practical..."
+        "text": "许可协议 GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/> Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most software a..."
     },
     {
         "title": "简介",
@@ -17,12 +17,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "安装",
         "url": "install.html",
-        "text": "安装 安装/卸载 最低系统要求 操作系统: Linux(i386): kernel 2.4或更高, glibc-2.2 或更高 CentOS: 5 或更高 Ubuntu: 8.04 或更高 Debian: 4 或更高 FreeBSD(i386): 4.5 and up MacOSX: 10.3 and up CPU: Intel: 80486 或更高 PowerPC: PowerPC G4 内存: 32MB 或更高 硬盘: 安装时: 200MB 运行时: 300MB或更高, 交换空间取决于使用情况。 安装 安装必须在命令行终端中执..."
+        "text": "安装 安装/卸载 最低系统要求 支持的操作系统 OpenLiteSpeed支持以下当前仍受支持、且未到生命周期终止（non-EOL）的Linux发行版： CentOS* 8、9、10 Debian 11、12、13 Ubuntu 20（将于2025年5月31日EOL）、22、24 * 包括RedHat Enterprise Linux及其衍生版，如AlmaLinux、CloudLinux、Oracle Linux、RockyLinux、VzLinux等。 CPU Intel：x86-64 ARM：aarch64（仅限L..."
     },
     {
         "title": "管理",
         "url": "admin.html",
-        "text": "管理 管理 可以通过三种方式控制LiteSpeed Web服务器：通过WebAdmin控制台，从命令行或通过发送信号进行控制. 通过WebAdmin控制台: WebAdmin控制台是一个集中式控制面板，用于控制和配置所有LiteSpeed Web服务器设置. 登录到WebAdmin控制台 (默认: http://[您的服务器IP]:7080/). 选择“服务管理”,您将找到一个包含执行常见任务的控�..."
+        "text": "管理 管理 OpenLiteSpeed可以通过三种方式进行控制：通过WebAdmin控制台、通过命令行，或通过发送信号。 通过WebAdmin控制台 WebAdmin控制台是一个集中式控制面板，用于控制和配置OpenLiteSpeed的所有设置。 登录到WebAdmin控制台（默认：https://[your site's address]:7080/）。 在这里您将看到一个控制面板，其中包含执行常见任务的链..."
     },
     {
         "title": "安全",

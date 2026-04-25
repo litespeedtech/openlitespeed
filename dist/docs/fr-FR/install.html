@@ -62,10 +62,10 @@
   </button>
 </header>
 <div class="doc-menu-backdrop" data-menu-backdrop></div>
-<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
       <li><a href="license.html">Licence</a></li>
       <li><a href="intro.html">Introduction</a></li>
-      <li><a class="current" href="install.html">Installation</a></li>
+      <li><a class="current" href="install.html">Installation/desinstallation</a></li>
       <li>
         <a href="admin.html">Administration</a>
         <ul class="level2">
@@ -81,18 +81,20 @@
           <li><a href="ServLog_Help.html">Journal serveur</a></li>
           <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
           <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
-          <li><a href="ExtApp_Help.html">Applications externes</a></li>
-          <ul class="level3">
-            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
-            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
-            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
-            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
-            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
-            <li><a href="External_Servlet.html">Moteur servlet</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
-            <li><a href="External_UWSGI.html">uWSGI</a></li>
-          </ul>
+          <li>
+            <a href="ExtApp_Help.html">Applications externes</a>
+            <ul class="level3">
+              <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+              <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+              <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+              <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+              <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+              <li><a href="External_Servlet.html">Moteur servlet</a></li>
+              <li><a href="External_PL.html">Piped Logger</a></li>
+              <li><a href="External_LB.html">Load Balancer</a></li>
+              <li><a href="External_UWSGI.html">uWSGI</a></li>
+            </ul>
+          </li>
           <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
           <li><a href="App_Server_Help.html">Reglages App Server</a></li>
           <li><a href="Module_Help.html">Configuration des modules</a></li>
@@ -104,41 +106,38 @@
           <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
           <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
           <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Contexte</a></li>
-          <ul class="level3">
-            <li><a href="Static_Context.html">Contexte statique</a></li>
-            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
-            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
-            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
-            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
-            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
-            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
-            <li><a href="CGI_Context.html">Contexte CGI</a></li>
-            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
-            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
-            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
-            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
-            <li><a href="Module_Context.html">Contexte handler de module</a></li>
-          </ul>
+          <li>
+            <a href="Context_Help.html">Contexte</a>
+            <ul class="level3">
+              <li><a href="Static_Context.html">Contexte statique</a></li>
+              <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+              <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+              <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+              <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+              <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+              <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+              <li><a href="CGI_Context.html">Contexte CGI</a></li>
+              <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+              <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+              <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+              <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+              <li><a href="Module_Context.html">Contexte handler de module</a></li>
+            </ul>
+          </li>
           <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Console web</a>
+      <li>
+        <a href="webconsole.html">Console web</a>
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
           <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
-          <li>
-            <a href="AdminListeners_General_Help.html">
-              Listener Admin general
-            </a>
-          </li>
-          <li>
-            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
-          </li>
+          <li><a href="AdminListeners_General_Help.html">Listener Admin general</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a></li>
         </ul>
       </li>
     </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="intro.html">Introduction</a></div><div class="center"><a href="index.html">Accueil</a></div><div class="next"><a href="admin.html">Administration</a> &#187;</div></div>
-<h1>Installation/desinstallation</h1><br/> <h2>Exigences systeme minimales</h2> <ul>   <li>     <strong>Systeme d'exploitation:</strong>     <ul>       <li>Linux(i386): noyau 2.4 et plus, glibc-2.2 et plus</li>       <li>CentOS: 5 et plus</li>       <li>Ubuntu: 8.04 et plus</li>       <li>Debian: 4 et plus</li>       <li>FreeBSD(i386): 4.5 et plus</li>       <li>MacOSX: 10.3 et plus</li>     </ul>   </li>   <li>     <strong>CPU:</strong>     <ul>       <li>Intel: 80486 et plus</li>       <li>PowerPC: PowerPC G4</li>     </ul>   </li>   <li><strong>Memoire:</strong> 32MB et plus</li>   <li>     <strong>Disque:</strong>     <ul>       <li>Installation: 200MB</li>       <li>Execution: 300MB et plus; l'espace d'echange depend de l'utilisation.</li>     </ul>   </li> </ul><br/> <h2>Installation</h2> <p>   L'installation doit etre effectuee dans un terminal en ligne de commande. A des fins   de test, LiteSpeed Web Server peut etre installe dans un repertoire home par un   utilisateur non privilegie. Pour une utilisation en production, il doit etre installe dans un repertoire   systeme. </p><br/> <p>   Dans Mac OS X, l'utilisateur root est desactive par defaut. Il peut etre active au moyen   d'une serie d'actions detaillees sur le site web d'Apple. Vous pouvez egalement utiliser la commande sudo   pour installer LSWS dans un repertoire systeme sans activer l'utilisateur root,   mais les dossiers systeme resteront manipulables uniquement par l'utilisateur root.   Cela signifie que chaque fois que vous voulez controler LSWS depuis le terminal en ligne de commande   (par exemple lorsque vous voulez demarrer ou arreter LSWS), vous devrez utiliser la commande sudo. </p><br/> <h3>Etapes d'installation:</h3> <p>   Consultez la   <a href="https://openlitespeed.org/kb/" target="_blank" rel="noopener">     base de connaissances OpenLiteSpeed   </a>   pour une liste des methodes d'installation. </p><br/> <h2>Premiers pas</h2> <ol>   <li>     <p>       Pour des informations detaillees sur le controle des processus serveur, consultez       le guide d'administration.     </p>     <p>       Pour demarrer le serveur, executez simplement [repertoire_installation]/bin/lswsctrl start.       (Pour l'arreter, executez [repertoire_installation]/bin/lswsctrl stop.)     </p>   </li>   <li>     <p>Un site d'exemple devrait fonctionner sur le serveur.</p>     <p>       Pour acceder a votre site, pointez votre navigateur vers http://[adresse]:8088/,       [adresse] etant l'adresse IP ou le nom de domaine de la machine de votre serveur web.       Utilisez &quot;localhost&quot; si le serveur se trouve sur la machine que vous utilisez.       "8088" est le port par defaut. Si vous avez choisi un autre port pour LiteSpeed       pendant l'installation, utilisez le port que vous avez indique.     </p>     <p>       Une page de felicitations liee a d'autres pages de test devrait se charger dans le       navigateur lorsque vous pointez vers l'adresse ci-dessus. Sinon, essayez de tester       l'interface de la console WebAdmin.     </p>   </li>   <li>     <p>Le port par defaut de la console WebAdmin est 7080.</p>     <p>       Saisissez http://[adresse]:7080/ dans votre navigateur pour acceder a l'interface       WebAdmin. (Si vous avez modifie le port WebAdmin pendant l'installation,       utilisez ce port a la place.)     </p>     <p>       N'oubliez pas que pour [adresse] vous pouvez utiliser &quot;localhost&quot; si vous       utilisez actuellement la machine sur laquelle se trouve le serveur.     </p>     <p>       La page d'accueil WebAdmin devrait se charger. Cliquez sur le lien &quot;Log on&quot;       et utilisez le nom d'utilisateur et le mot de passe administrateur specifies pendant       l'installation pour vous connecter.     </p>     <p>       Pour des informations detaillees concernant la configuration, reportez-vous a notre       guide de configuration, ou cliquez sur le lien &quot;Help&quot; en haut de       chaque page.     </p>   </li>   <li>     <p>       Si votre serveur utilise un firewall, assurez-vous que localhost est fiable.     </p>     <p>       Par exemple, Linux avec IPTables devrait inclure une regle ALLOW INPUT depuis       LO.     </p>   </li>   <li>     <p>       Si votre site web et la console WebAdmin sont inaccessibles, consultez       le journal d'erreurs [repertoire_installation]/logs/error.log.     </p>     <p>       S'il existe un conflit de port TCP avec d'autres applications serveur, le serveur web       doit etre reinstalle avec un port disponible. La commande suivante       peut etre utilisee pour trouver un port disponible:       <span class="cmd">netstat -an | grep XXXX </span>       XXXX est un numero de port. Si le port est disponible, la commande ne produira       aucune sortie.     </p>     <p>       Si le repertoire d'echange n'est pas accessible en ecriture, vous pouvez soit accorder       l'autorisation d'ecriture sur ce repertoire a l'utilisateur sous lequel le serveur web s'execute,       soit modifier manuellement les configurations du repertoire d'echange.       Le repertoire d'echange est configure dans le fichier de configuration XML du serveur:       [repertoire_installation]/conf/httpd_config.xml. Recherchez swappingDir dans le fichier XML.       L'emplacement par defaut du repertoire d'echange est       /tmp/lshttpd/swap.     </p>     <p>       Si vous rencontrez encore des problemes d'installation, consultez notre wiki       ou publiez votre probleme sur notre forum de support.     </p>   </li> </ol><br/> <h2>Notes</h2> <ul>   <li>     OpenLiteSpeed prend en charge les fichiers de configuration XML natifs LiteSpeed et     les fichiers de configuration en texte brut (pour les personnes habituees a modifier     le httpd.conf d'Apache). Executez [repertoire_installation]/conf/switch_config.sh pour basculer entre     ces formats.   </li>   <li>     Sur FreeBSD, Mac OS X, Ubuntu et Debian, le PHP fourni (pour CentOS) ne     fonctionnera pas. Vous devrez compiler un nouveau PHP pour OpenLiteSpeed afin d'executer     des applications PHP avec OpenLiteSpeed.   </li> </ul><br/> <h2>Etapes de desinstallation</h2> <ol>   <li>     Arretez OpenLiteSpeed s'il est en cours d'execution: [repertoire_installation]/bin/lswsctrl stop   </li>   <li>Supprimez le repertoire d'installation: rm -rf [repertoire_installation]</li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+<h1>Installation/Desinstallation</h1><br/> <h2>Configuration systeme minimale</h2><br/> <h3>Systemes d'exploitation pris en charge</h3> <p>OpenLiteSpeed prend en charge les versions actuelles et non EOL des distributions Linux suivantes :</p> <ul>   <li>CentOS* 8, 9, 10</li>   <li>Debian 11, 12, 13</li>   <li>Ubuntu 20 (EOL le 31 mai 2025), 22, 24</li> </ul> <p>* Inclut RedHat Enterprise Linux et ses derives, AlmaLinux, CloudLinux, Oracle Linux, RockyLinux, VzLinux, etc.</p><br/> <h3>CPU</h3> <ul>   <li>Intel : x86-64</li>   <li>ARM : aarch64 (Linux uniquement)</li> </ul><br/> <h3>Memoire</h3> <p>512MB et plus</p><br/> <h3>Disque</h3> <ul>   <li>Installation : 200MB</li>   <li>Execution : 300MB et plus, l'espace d'echange depend de l'utilisation.</li> </ul><br/> <h2>Installation</h2> <p>   L'installation doit etre effectuee dans un terminal en ligne de commande. A des fins de test,   OpenLiteSpeed peut etre installe dans un repertoire personnel par un utilisateur non privilegie.   Pour une utilisation en production, il doit etre installe dans un repertoire systeme. </p><br/> <h3>Etapes d'installation</h3> <p>   Consultez la   <a href="https://docs.openlitespeed.org/" target="_blank" rel="noopener">     documentation OpenLiteSpeed   </a>   pour obtenir la liste des methodes d'installation. </p><br/> <h2>Premiers pas</h2> <ol>   <li>     <p>       Pour des informations detaillees sur le controle des processus serveur, veuillez consulter le       <a href="admin.html">Guide d'administration</a>.     </p>     <p>       Pour demarrer le serveur, executez simplement <span class="cmd">[your_install_dir]/bin/lswsctrl start</span>.       (Pour l'arreter, executez <span class="cmd">[your_install_dir]/bin/lswsctrl stop</span>.)     </p>   </li>   <li>     <p>Un site d'exemple doit etre en cours d'execution sur le serveur.</p>     <p>       Pour acceder a votre site, pointez votre navigateur vers       <span class="cmd">http://[address]:8088/</span>,       [address] etant l'adresse IP ou le nom de domaine de votre machine serveur Web.       Utilisez &quot;localhost&quot; si le serveur se trouve sur la machine que vous utilisez.       &quot;8088&quot; est le port par defaut. Si vous avez choisi un autre port pour OpenLiteSpeed       lors de l'installation, utilisez le port que vous avez defini.     </p>     <p>       Une page de felicitation avec des liens vers d'autres pages de test doit se charger dans le navigateur.       Sinon, essayez la console WebAdmin.     </p>   </li>   <li>     <p>Le port par defaut de la console WebAdmin est 7080.</p>     <p>       Saisissez <span class="cmd">https://[address]:7080/</span> dans votre navigateur pour       acceder a la console WebAdmin. (Si vous avez modifie le port WebAdmin pendant l'installation,       utilisez ce port.)     </p>     <p>       N'oubliez pas que vous pouvez utiliser &quot;localhost&quot; pour [address] si vous utilisez actuellement       la machine sur laquelle le serveur se trouve.     </p>     <p>       La page d'accueil de la console WebAdmin devrait maintenant se charger. Cliquez sur le lien       &quot;Log on&quot; et utilisez le nom d'utilisateur et le mot de passe administrateur specifies pendant       l'installation pour vous connecter.     </p>     <p>       Pour des informations detaillees sur la configuration, veuillez consulter notre       <a href="config.html">Guide de configuration</a>, ou cliquez sur le lien &quot;Help&quot;       en haut de n'importe quelle page.     </p>   </li>   <li>     <p>       Si votre serveur utilise un pare-feu, assurez-vous que localhost est approuve.     </p>     <p>       Par exemple, sous Linux avec IPTables, une regle       <span class="cmd">ALLOW INPUT from LO</span> doit etre presente.     </p>   </li>   <li>     <p>       Si votre site Web et la console WebAdmin sont inaccessibles, consultez le journal d'erreurs       <span class="cmd">[your_install_dir]/logs/error.log</span>.     </p>     <p>       En cas de conflit de port TCP avec d'autres applications serveur, le serveur Web doit etre reinstalle       avec un port disponible. La commande suivante peut etre utilisee pour trouver un port disponible :       <span class="cmd">netstat -an | grep XXXX</span>       XXXX est un numero de port. Si le port est disponible, la commande ne produira aucune sortie.     </p>     <p>       Si le repertoire d'echange n'est pas accessible en ecriture, vous pouvez soit accorder les droits d'ecriture       sur ce repertoire a l'utilisateur sous lequel le serveur Web s'execute, soit modifier manuellement       la configuration du repertoire d'echange. Le repertoire d'echange est configure dans le fichier XML du serveur :       <span class="cmd">[your_install_dir]/conf/httpd_config.xml</span>.       Recherchez <span class="cmd">swappingDir</span> dans le fichier XML. L'emplacement par defaut du repertoire d'echange est       <span class="cmd">/tmp/lshttpd/swap</span>.     </p>     <p>       Si vous rencontrez encore des problemes d'installation, consultez       <a href="https://docs.openlitespeed.org/">la documentation</a> ou publiez votre probleme sur notre       <a href="https://forum.openlitespeed.org/">forum d'assistance</a>.     </p>   </li> </ol><br/> <h2>Remarque</h2> <ul>   <li>     OpenLiteSpeed prend en charge a la fois les fichiers de configuration XML natifs de LiteSpeed     et les fichiers de configuration en texte brut (pour les personnes habituees a modifier le     httpd.conf d'Apache). Executez <span class="cmd">[your_install_dir]/conf/switch_config.sh</span>     pour basculer entre ces formats.   </li> </ul><br/> <h2>Etapes de desinstallation</h2> <ol>   <li>     Arretez OpenLiteSpeed s'il est en cours d'execution :     <span class="cmd">[your_install_dir]/bin/lswsctrl stop</span>   </li>   <li>     Supprimez le repertoire d'installation :     <span class="cmd">rm -rf [your_install_dir]</span>   </li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
 </div>
 </body>
 </html>

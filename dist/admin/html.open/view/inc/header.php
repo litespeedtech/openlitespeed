@@ -10,10 +10,14 @@ if (!$no_main_header) { ?>
 <html lang="en-us">
 <?php } ?>
 	<head>
-<?php $productName = Product::GetInstance()->getProductName(); ?>
+<?php
+$product = Product::GetInstance();
+$productName = $product->getProductName();
+$consoleName = $product->getWebAdminConsoleName();
+?>
 		<meta charset="utf-8">
-		<title><?php echo UIBase::Escape($productName); ?> WebAdmin Console</title>
-		<meta name="description" content="<?php echo UIBase::EscapeAttr($productName); ?> WebAdmin Console">
+		<title><?php echo UIBase::Escape($consoleName); ?></title>
+		<meta name="description" content="<?php echo UIBase::EscapeAttr($consoleName); ?>">
 		<meta name="author" content="LiteSpeed Technologies, Inc.">
 
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -84,6 +88,19 @@ if (!$no_main_header) { ?>
 			(function () {
 				var lstPasswordShowLabel = <?php echo json_encode(DMsg::ALbl('btn_showpassword')); ?>;
 				var lstPasswordHideLabel = <?php echo json_encode(DMsg::ALbl('btn_hidepassword')); ?>;
+
+				window.lstUiLabels = window.lstUiLabels || {};
+				window.lstUiLabels.cancel = <?php echo json_encode(DMsg::UIStr('btn_cancel')); ?>;
+				window.lstUiLabels.go = <?php echo json_encode(DMsg::UIStr('btn_go')); ?>;
+				window.lstUiLabels.signOut = <?php echo json_encode(DMsg::UIStr('note_signout')); ?>;
+				window.lstUiLabels.signOutOf = <?php echo json_encode(DMsg::UIStr('note_signoutof')); ?>;
+				window.lstUiLabels.rows = <?php echo json_encode(DMsg::UIStr('note_rows')); ?>;
+				window.lstUiLabels.editOrder = <?php echo json_encode(DMsg::UIStr('btn_edit') . ' ' . DMsg::ALbl('l_order')); ?>;
+				window.lstUiLabels.saveOrder = <?php echo json_encode(DMsg::UIStr('btn_save') . ' ' . DMsg::ALbl('l_order')); ?>;
+				window.lstUiLabels.dismissNotification = <?php echo json_encode(DMsg::UIStr('note_dismissnotification')); ?>;
+				window.lstUiLabels.dismissHelp = <?php echo json_encode(DMsg::UIStr('note_dismisshelp')); ?>;
+				window.lstUiLabels.moveItemUp = <?php echo json_encode(DMsg::UIStr('note_moveitemup')); ?>;
+				window.lstUiLabels.moveItemDown = <?php echo json_encode(DMsg::UIStr('note_moveitemdown')); ?>;
 
 				function lstSetPasswordToggleState(button, isVisible) {
 					var showLabel = button.getAttribute('data-lst-show-label') || lstPasswordShowLabel;
@@ -171,7 +188,7 @@ if (!$no_main_header) { ?>
 		<header id="header" class="lst-topbar">
 			<div class="lst-topbar-intro">
 				<div class="lst-header-control lst-mobile-menu-control">
-					<span><a href="#" class="lst-mobile-menu-trigger" data-action="toggleMenu" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('menu_dashboard')); ?> navigation" aria-controls="left-panel" aria-expanded="false"><i class="lst-icon" data-lucide="menu"></i></a></span>
+					<span><a href="#" class="lst-mobile-menu-trigger" data-action="toggleMenu" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_navigation')); ?>" aria-controls="left-panel" aria-expanded="false"><i class="lst-icon" data-lucide="menu"></i></a></span>
 				</div>
 				<div id="logo-group" class="lst-brand">
 	                            <span id="logo" class="lst-brand-logo">
@@ -200,7 +217,7 @@ if (!$no_main_header) { ?>
 						<i class="lst-icon" data-lucide="chevron-down"></i>
 					</a>
 
-					<div id="shortcut" tabindex="-1" aria-hidden="true" aria-label="Quick actions">
+					<div id="shortcut" tabindex="-1" aria-hidden="true" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_quickactions')); ?>">
 						<ul class="lst-shortcut-grid">
 							<li>
 								<a href="#" class="lst-shortcut-tile lst-shortcut-tile--restart" data-lst-call="lst_restart"> <span class="iconbox"> <i class="lst-icon lst-icon--tile" data-lucide="refresh-ccw-dot"></i> <span><?php echo DMsg::UIStr('menu_restart')?> </span> </span> </a>
@@ -221,11 +238,7 @@ if (!$no_main_header) { ?>
 
 			<div class="lst-header-actions">
 				<div id="theme-switcher" class="transparent lst-header-control">
-					<span><a href="#" rel="tooltip" data-original-title="Toggle theme" aria-label="Toggle theme" data-action="toggleTheme" data-theme-light-label="Light mode" data-theme-dark-label="Dark mode"><i class="lst-icon" data-lucide="moon"></i></a></span>
-				</div>
-
-				<div id="fullscreen" class="transparent lst-header-control">
-					<span><a href="#" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_fullscreen')); ?>" data-action="launchFullscreen"><i class="lst-icon" data-lucide="maximize"></i></a></span>
+					<span><a href="#" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_toggletheme')); ?>" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_toggletheme')); ?>" data-action="toggleTheme" data-theme-light-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_lightmode')); ?>" data-theme-dark-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_darkmode')); ?>"><i class="lst-icon" data-lucide="moon"></i></a></span>
 				</div>
 
 				<ul class="header-dropdown-list lst-hide-phone">
@@ -233,7 +246,7 @@ if (!$no_main_header) { ?>
 				</ul>
 
 				<div id="logout" class="transparent lst-header-control">
-					<span><a href="/login.php?logoff=1" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>" data-action="userLogout" data-logout-msg="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_logout')); ?>"><i class="lst-icon" data-lucide="log-out"></i></a></span>
+					<span><a href="/login.php?logoff=1" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>" data-action="userLogout" data-logout-msg="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_logout')); ?>" data-logout-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signoutof')); ?>" data-logout-cancel-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_cancel')); ?>" data-logout-confirm-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>"><i class="lst-icon" data-lucide="log-out"></i></a></span>
 				</div>
 			</div>
 

@@ -848,7 +848,6 @@ $_tipsdb['EDTP:expiresByType'] = array('按类型过期将覆盖默认设置。 
 $_tipsdb['EDTP:expiresDefault'] = array('过期语法，“A|Mseconds”表示在基准时间（A或M）加上指定的时间（以秒为单位）之后，文件将 到期。 “ A”表示客户端访问时间，“ M”表示文件修改时间。 您可以使用其他MIME类型覆盖此默认设置:A86400表示文件将根据客户端访问时间在1天后过期。','以下是一些常见的数字：1小时= 3600秒，1天= 86400秒，1周= 604800秒， 1个月= 2592000秒，1年= 31536000秒。');
 $_tipsdb['EDTP:extAppAddress'] = array('地址可以是IPv4套接字地址 &quot;IP:PORT&quot;, 像192.168.1.3:7777 和localhost:7777 或者 Unix域套接字 地址 &quot;UDS://path&quot; 例如 UDS://tmp/lshttpd/myfcgi.sock.','UDS是在chroot环境下进行的。','对于本地应用程序，由于安全性和更好的性能，Unix域套接字是首选。 如果你必须使用IPv4套接字，将IP部分设置为localhost或127.0.0.1， 这样其他机器就无法访问应用程序。');
 $_tipsdb['EDTP:extAppName'] = array('使用易记的名称，其他位置会通过此名称引用该应用。');
-$_tipsdb['EDTP:extAppType'] = array('可以设置外部Fast CGI应用程序和兼容AJPv13（Apache JServ Protocol v1.3）的Servlet引擎。');
 $_tipsdb['EDTP:extWorkers'] = array('必须先定义负载均衡worker。','可用的外部应用类型包括lsapi（LSAPI App）、proxy（Web Server (Proxy)）、fcgi（Fast CGI App）、scgi（SCGI App）、servlet（Servlet/JSP Engine）和uwsgi（uWSGI）。','一个负载均衡集群中可以混合不同类型的外部应用程序。');
 $_tipsdb['EDTP:externalredirect'] = array('在此处设置重定向URI。 如果是外部重定向，则可以指定状态代码。 内部重定向必须以&quot;/&quot;开头，外部重定向可以以&quot;/&quot;或&quot;http(s)://&quot;开头。');
 $_tipsdb['EDTP:extraHeaders'] = array('标头控制设置向后兼容旧的&#039;header_name: value1,value2,...&#039;语法，该语法等同于使用&#039;Header&#039;指令设置标头和值。');

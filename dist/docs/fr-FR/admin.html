@@ -62,10 +62,10 @@
   </button>
 </header>
 <div class="doc-menu-backdrop" data-menu-backdrop></div>
-<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 2</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
+<div class="pagewrapper" data-current-lang="fr-FR" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Manuel utilisateur</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="Table des matières"><ul class="sidetree__list">
       <li><a href="license.html">Licence</a></li>
       <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+      <li><a href="install.html">Installation/desinstallation</a></li>
       <li>
         <a class="current" href="admin.html">Administration</a>
         <ul class="level2">
@@ -81,18 +81,20 @@
           <li><a href="ServLog_Help.html">Journal serveur</a></li>
           <li><a href="ServTuning_Help.html">Reglage du serveur</a></li>
           <li><a href="ServSecurity_Help.html">Securite du serveur</a></li>
-          <li><a href="ExtApp_Help.html">Applications externes</a></li>
-          <ul class="level3">
-            <li><a href="External_LSAPI.html">Application LSAPI</a></li>
-            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
-            <li><a href="External_FCGI.html">Application Fast CGI</a></li>
-            <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
-            <li><a href="External_SCGI.html">Application Simple CGI</a></li>
-            <li><a href="External_Servlet.html">Moteur servlet</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
-            <li><a href="External_UWSGI.html">uWSGI</a></li>
-          </ul>
+          <li>
+            <a href="ExtApp_Help.html">Applications externes</a>
+            <ul class="level3">
+              <li><a href="External_LSAPI.html">Application LSAPI</a></li>
+              <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+              <li><a href="External_FCGI.html">Application Fast CGI</a></li>
+              <li><a href="External_FCGI_Auth.html">Autoriseur Fast CGI</a></li>
+              <li><a href="External_SCGI.html">Application Simple CGI</a></li>
+              <li><a href="External_Servlet.html">Moteur servlet</a></li>
+              <li><a href="External_PL.html">Piped Logger</a></li>
+              <li><a href="External_LB.html">Load Balancer</a></li>
+              <li><a href="External_UWSGI.html">uWSGI</a></li>
+            </ul>
+          </li>
           <li><a href="ScriptHandler_Help.html">Handler de scripts</a></li>
           <li><a href="App_Server_Help.html">Reglages App Server</a></li>
           <li><a href="Module_Help.html">Configuration des modules</a></li>
@@ -104,41 +106,38 @@
           <li><a href="VHSecurity_Help.html">Securite du virtual host</a></li>
           <li><a href="VHSSL_Help.html">SSL du virtual host</a></li>
           <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Contexte</a></li>
-          <ul class="level3">
-            <li><a href="Static_Context.html">Contexte statique</a></li>
-            <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
-            <li><a href="Servlet_Context.html">Contexte servlet</a></li>
-            <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
-            <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
-            <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
-            <li><a href="Proxy_Context.html">Contexte proxy</a></li>
-            <li><a href="CGI_Context.html">Contexte CGI</a></li>
-            <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
-            <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
-            <li><a href="App_Server_Context.html">Contexte App Server</a></li>
-            <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
-            <li><a href="Module_Context.html">Contexte handler de module</a></li>
-          </ul>
+          <li>
+            <a href="Context_Help.html">Contexte</a>
+            <ul class="level3">
+              <li><a href="Static_Context.html">Contexte statique</a></li>
+              <li><a href="Java_Web_App_Context.html">Contexte d'application web Java</a></li>
+              <li><a href="Servlet_Context.html">Contexte servlet</a></li>
+              <li><a href="FCGI_Context.html">Contexte Fast CGI</a></li>
+              <li><a href="SCGI_Context.html">Contexte Simple CGI</a></li>
+              <li><a href="LSAPI_Context.html">Contexte LSAPI</a></li>
+              <li><a href="Proxy_Context.html">Contexte proxy</a></li>
+              <li><a href="CGI_Context.html">Contexte CGI</a></li>
+              <li><a href="LB_Context.html">Contexte Load Balancer</a></li>
+              <li><a href="Redirect_Context.html">Contexte Redirect</a></li>
+              <li><a href="App_Server_Context.html">Contexte App Server</a></li>
+              <li><a href="UWSGI_Context.html">Contexte uWSGI</a></li>
+              <li><a href="Module_Context.html">Contexte handler de module</a></li>
+            </ul>
+          </li>
           <li><a href="VHWebSocket_Help.html">Proxy WebSocket</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Console web</a>
+      <li>
+        <a href="webconsole.html">Console web</a>
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Console Admin generale</a></li>
           <li><a href="AdminSecurity_Help.html">Securite de la console Admin</a></li>
-          <li>
-            <a href="AdminListeners_General_Help.html">
-              Listener Admin general
-            </a>
-          </li>
-          <li>
-            <a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a>
-          </li>
+          <li><a href="AdminListeners_General_Help.html">Listener Admin general</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">SSL du listener Admin</a></li>
         </ul>
       </li>
     </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="install.html">Installation</a></div><div class="center"><a href="index.html">Accueil</a></div><div class="next"><a href="security.html">Sécurité</a> &#187;</div></div>
-<h1>Administration</h1><br/> <p>LiteSpeed Web Server peut etre controle de trois facons: via la console WebAdmin, depuis la ligne de commande ou en envoyant des signaux.</p><br/> <ol> <li><h3>Via la console WebAdmin:</h3> <p>La console WebAdmin est un panneau de controle centralise pour controler et configurer tous les reglages de LiteSpeed Web Server.</p> <p>Connectez-vous a la console WebAdmin (par defaut http://[adresse de votre site]:7080/).   Selectionnez "Service Manager". Vous y trouverez un panneau de controle avec des liens permettant d'effectuer les taches courantes: redemarrage du serveur, rechargement de la configuration serveur, affichage des journaux, surveillance en temps reel, rechargement des virtual hosts et activation/desactivation des virtual hosts.</p> <p><strong>Plus de details sur le controle de LiteSpeed Web Server via la console WebAdmin: <a href="ServerStat_Help.html">Service Manager</a></strong></p> <p>Pour modifier le nom de connexion et le mot de passe de l'interface WebAdmin, executez la commande suivante depuis le shell:<br> 	<span class="cmd">[repertoire d'installation]/admin/misc/admpass.sh</span> </p> </li> <li><h3>Via l'interface en ligne de commande:</h3> 	<p>On suppose que le serveur web est installe dans /usr/local/lsws.</p> 	<p>Utilisez le script de controle <span class="tag">lswsctrl</span> dans le repertoire /usr/local/lsws/bin/.</p> 	<p>Pour demarrer le serveur web:<br> 		<span class="cmd">/usr/local/lsws/bin/lswsctrl start</span> 	</p> 	<p>Pour arreter le serveur web:<br> 		<span class="cmd">/usr/local/lsws/bin/lswsctrl stop</span> 	</p> 	<p>Pour redemarrer le serveur web:<br> 		<span class="cmd">/usr/local/lsws/bin/lswsctrl restart</span> 	</p> 	<p>Pour recharger la configuration:<br> 		<span class="cmd">/usr/local/lsws/bin/lswsctrl reload</span> 	</p> </li><br/> <li><h3>En envoyant des signaux:</h3> 	<p>Vous pouvez arreter les processus serveur et recharger les configurations en envoyant des signaux aux processus serveur.</p> 	<p>Vous devez d'abord connaitre l'ID de processus du serveur, soit depuis le fichier PID, soit en executant une commande &quot;ps&quot;.</p> 	<p>Pour lire le fichier PID:<br> 		<span class="cmd">cat /tmp/lshttpd/lshttpd.pid</span></p> 	<p>En executant une commande &quot;ps&quot;:<br> 		FreeBSD: <span class="cmd">ps -x | grep lshttpd</span><br> 		Autres: <span class="cmd">ps -ef | grep lshttpd</span><br> 		<br> 		Si plusieurs processus sont listes, utilisez le processus dont le PPID est egal a 1. 	</p> 	<p>Pour arreter le serveur web: 		<span class="cmd">kill XXXX</span> 		   (XXXX est le PID)<br> 		Si le serveur ne s'arrete pas, utilisez: 		<span class="cmd">kill -9 XXXX</span> 	</p> 	<p>Pour recharger les configurations, utilisez: 		<span class="cmd">kill -HUP XXXX</span> 	</p> </li> </ol> </article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
+<h1>Administration</h1><br/> <p>OpenLiteSpeed peut etre controle de trois manieres : via la console WebAdmin, via la ligne de commande ou en envoyant des signaux.</p><br/> <h2>Via la console WebAdmin</h2> <p>La console WebAdmin est un panneau de controle centralise permettant de controler et de configurer tous les parametres d'OpenLiteSpeed.</p> <p>Connectez-vous a la console WebAdmin (par defaut <span class="cmd">https://[adresse de votre site]:7080/</span>).   Vous y trouverez un panneau de controle avec des liens permettant d'effectuer les taches courantes :   redemarrage du serveur, rechargement de la configuration du serveur, consultation des journaux, surveillance en temps reel,   rechargement des hotes virtuels et activation/desactivation des hotes virtuels.</p> <p><strong>Plus de details sur la facon de controler OpenLiteSpeed via la console WebAdmin : <a href="ServerStat_Help.html">Service Manager</a></strong></p> <p>Pour modifier le nom de connexion et le mot de passe de la console WebAdmin, executez la commande suivante depuis le shell :<br>   <span class="cmd">[your install dir]/admin/misc/admpass.sh</span></p><br/> <h2>Via l'interface en ligne de commande</h2> <p>En supposant que le serveur Web soit installe dans <span class="cmd">/usr/local/lsws</span>.</p> <p>Utilisez le script de controle <span class="cmd">lswsctrl</span> dans le repertoire <span class="cmd">/usr/local/lsws/bin/</span>.</p> <p>Pour demarrer le serveur Web :<br>   <span class="cmd">/usr/local/lsws/bin/lswsctrl start</span> </p> <p>Pour arreter le serveur Web :<br>   <span class="cmd">/usr/local/lsws/bin/lswsctrl stop</span> </p> <p>Pour redemarrer le serveur Web :<br>   <span class="cmd">/usr/local/lsws/bin/lswsctrl restart</span> </p> <p>Pour recharger la configuration :<br>   <span class="cmd">/usr/local/lsws/bin/lswsctrl reload</span> </p><br/> <h2>En envoyant des signaux</h2> <p>Vous pouvez arreter les processus du serveur et recharger les configurations en envoyant des signaux aux processus du serveur.</p> <p>Vous devez d'abord connaitre l'ID de processus du serveur, soit a partir du fichier PID, soit en executant une commande <span class="cmd">ps</span>.</p> <p>Pour lire le fichier PID :<br>   <span class="cmd">cat /tmp/lshttpd/lshttpd.pid</span></p> <p>En executant une commande <span class="cmd">ps</span> :<br>   FreeBSD : <span class="cmd">ps -x | grep lshttpd</span><br>   Autres : <span class="cmd">ps -ef | grep lshttpd</span><br>   <br>   Si plusieurs processus sont listes, utilisez celui dont le PPID est egal a 1. </p> <p>Pour arreter le serveur Web :<br>   <span class="cmd">kill XXXX</span>   (XXXX est le PID)<br>   Si le serveur ne s'arrete pas, utilisez :<br>   <span class="cmd">kill -9 XXXX</span> </p> <p>Pour recharger les configurations, utilisez :<br>   <span class="cmd">kill -HUP XXXX</span> </p> </article></div><button class="doc-back-to-top" type="button" aria-label="Retour en haut" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">Retour en haut</span></button><footer class="copyright">Copyright &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> Tous droits réservés.</footer>
 </div>
 </body>
 </html>

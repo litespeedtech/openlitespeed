@@ -34,6 +34,11 @@ abstract class ProductBase
 
     abstract public function getProductName();
 
+    public function getWebAdminConsoleName()
+    {
+        return $this->getProductName() . ' WebAdmin Console';
+    }
+
     public function getBuildDisplay()
     {
         if ($this->buildDisplay === null) {

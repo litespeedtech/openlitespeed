@@ -2,12 +2,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "ホーム",
         "url": "index.html",
-        "text": "ホーム OpenLiteSpeed Web Server 1.9 ユーザーズマニュアル — Rev. 3 目次 ライセンス はじめに インストール/アンインストール 管理 セキュリティ 設定 詳細については、OpenLiteSpeed Wiki"
+        "text": "ホーム OpenLiteSpeed Web Server 1.9 ユーザーズマニュアル — Rev. 3 目次 ライセンス はじめに インストール/アンインストール 管理 セキュリティ 設定 詳細については、OpenLiteSpeedドキュメントサイトをご覧ください。"
     },
     {
         "title": "ライセンス",
         "url": "license.html",
-        "text": "ライセンス GNU一般公衆利用許諾契約書v3 GNU一般公衆利用許諾契約書 バージョン 3, 2007年6月29日 Copyright (C) 2007 フリーソフトウェア財団, Inc. 本ライセンス文書を、一字一句忠実に複製、頒布することは許可する。しか し変更は認めない はじめに GNU 一般公衆利用許諾書は、ソフトウェアやその他の種類の著作物の�..."
+        "text": "ライセンス GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/> Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most softwar..."
     },
     {
         "title": "はじめに",
@@ -17,12 +17,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "インストール",
         "url": "install.html",
-        "text": "インストール インストール/アンインストール 最小システム要件 オペレーティングシステム： Linux(i386): カーネル 2.4以上, glibc-2.2以上 CentOS: 5以上 Ubuntu: 8.04以上 Debian: 4以上 FreeBSD(i386): 4.5以上 MacOSX: 10.3以上 CPU: Intel: 80486以上 PowerPC: PowerPC G4 メモリ: 32MB以上 ディスク: インストール: 200MBランタイム：300MB以上、スワ�..."
+        "text": "インストール インストール/アンインストール 最小システム要件 サポート対象オペレーティングシステム OpenLiteSpeedは、現在サポート中でEOLではない以下のLinuxディストリビューションをサポートします。 CentOS* 8, 9, 10 Debian 11, 12, 13 Ubuntu 20 (EOL 2025年5月31日), 22, 24 * RedHat Enterprise Linuxおよび派生ディストリビューシ�..."
     },
     {
         "title": "管理",
         "url": "admin.html",
-        "text": "管理 管理 LiteSpeed Webサーバーは、WebAdminコンソール、コマンドライン、シグナル送信の3つの方法で制御できます。 WebAdminコンソールから： WebAdminコンソールは、すべてのLiteSpeed Web Server設定を制御および設定するための集中管理パネルです。 WebAdminコンソールにログオンします（デフォルトではhttp：// [サイトの�..."
+        "text": "管理 管理 OpenLiteSpeedは、WebAdminコンソール、コマンドライン、またはシグナル送信の3つの方法で制御できます。 WebAdminコンソール経由 WebAdminコンソールは、OpenLiteSpeedのすべての設定を制御および構成するための集中管理パネルです。 WebAdminコンソールにログインしてください（デフォルトではhttps://[your site's addre..."
     },
     {
         "title": "セキュリティ",

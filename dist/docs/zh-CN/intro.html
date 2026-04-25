@@ -65,7 +65,7 @@
 <div class="pagewrapper" data-current-lang="zh-CN" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">用户手册</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目录"><ul class="sidetree__list">
       <li><a href="license.html">许可协议</a></li>
       <li><a class="current" href="intro.html">简介</a></li>
-      <li><a href="install.html">安装</a></li>
+      <li><a href="install.html">安装/卸载</a></li>
       <li>
         <a href="admin.html">管理</a>
         <ul class="level2">
@@ -81,18 +81,20 @@
           <li><a href="ServLog_Help.html">服务器日志</a></li>
           <li><a href="ServTuning_Help.html">服务器调优</a></li>
           <li><a href="ServSecurity_Help.html">服务器安全</a></li>
-          <li><a href="ExtApp_Help.html">外部应用</a></li>
-          <ul class="level3">
-            <li><a href="External_LSAPI.html">LSAPI应用</a></li>
-            <li><a href="External_WS.html">Web服务器（代理）</a></li>
-            <li><a href="External_FCGI.html">Fast CGI应用</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
-            <li><a href="External_SCGI.html">Simple CGI应用</a></li>
-            <li><a href="External_Servlet.html">Servlet引擎</a></li>
-            <li><a href="External_PL.html">管道日志器</a></li>
-            <li><a href="External_LB.html">负载均衡器</a></li>
-            <li><a href="External_UWSGI.html">uWSGI</a></li>
-          </ul>
+          <li>
+            <a href="ExtApp_Help.html">外部应用</a>
+            <ul class="level3">
+              <li><a href="External_LSAPI.html">LSAPI应用</a></li>
+              <li><a href="External_WS.html">Web服务器（代理）</a></li>
+              <li><a href="External_FCGI.html">Fast CGI应用</a></li>
+              <li><a href="External_FCGI_Auth.html">Fast CGI授权器</a></li>
+              <li><a href="External_SCGI.html">Simple CGI应用</a></li>
+              <li><a href="External_Servlet.html">Servlet引擎</a></li>
+              <li><a href="External_PL.html">管道日志器</a></li>
+              <li><a href="External_LB.html">负载均衡器</a></li>
+              <li><a href="External_UWSGI.html">uWSGI</a></li>
+            </ul>
+          </li>
           <li><a href="ScriptHandler_Help.html">脚本处理程序</a></li>
           <li><a href="App_Server_Help.html">应用服务器设置</a></li>
           <li><a href="Module_Help.html">模块配置</a></li>
@@ -104,41 +106,38 @@
           <li><a href="VHSecurity_Help.html">虚拟主机安全</a></li>
           <li><a href="VHSSL_Help.html">虚拟主机SSL</a></li>
           <li><a href="Rewrite_Help.html">重写</a></li>
-          <li><a href="Context_Help.html">上下文</a></li>
-          <ul class="level3">
-            <li><a href="Static_Context.html">静态上下文</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
-            <li><a href="Servlet_Context.html">Servlet上下文</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
-            <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
-            <li><a href="Proxy_Context.html">代理上下文</a></li>
-            <li><a href="CGI_Context.html">CGI上下文</a></li>
-            <li><a href="LB_Context.html">负载均衡上下文</a></li>
-            <li><a href="Redirect_Context.html">重定向上下文</a></li>
-            <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
-            <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
-            <li><a href="Module_Context.html">模块处理程序上下文</a></li>
-          </ul>
+          <li>
+            <a href="Context_Help.html">上下文</a>
+            <ul class="level3">
+              <li><a href="Static_Context.html">静态上下文</a></li>
+              <li><a href="Java_Web_App_Context.html">Java Web应用上下文</a></li>
+              <li><a href="Servlet_Context.html">Servlet上下文</a></li>
+              <li><a href="FCGI_Context.html">Fast CGI上下文</a></li>
+              <li><a href="SCGI_Context.html">Simple CGI上下文</a></li>
+              <li><a href="LSAPI_Context.html">LSAPI上下文</a></li>
+              <li><a href="Proxy_Context.html">代理上下文</a></li>
+              <li><a href="CGI_Context.html">CGI上下文</a></li>
+              <li><a href="LB_Context.html">负载均衡上下文</a></li>
+              <li><a href="Redirect_Context.html">重定向上下文</a></li>
+              <li><a href="App_Server_Context.html">应用服务器上下文</a></li>
+              <li><a href="UWSGI_Context.html">uWSGI上下文</a></li>
+              <li><a href="Module_Context.html">模块处理程序上下文</a></li>
+            </ul>
+          </li>
           <li><a href="VHWebSocket_Help.html">WebSocket代理</a></li>
         </ul>
       </li>
-      <li><a href="webconsole.html">Web控制台</a>
+      <li>
+        <a href="webconsole.html">Web控制台</a>
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">管理控制台常规</a></li>
           <li><a href="AdminSecurity_Help.html">管理控制台安全</a></li>
-          <li>
-            <a href="AdminListeners_General_Help.html">
-              管理监听器常规
-            </a>
-          </li>
-          <li>
-            <a href="AdminListeners_SSL_Help.html">管理监听器SSL</a>
-          </li>
+          <li><a href="AdminListeners_General_Help.html">管理监听器常规</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">管理监听器SSL</a></li>
         </ul>
       </li>
     </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="license.html">许可协议</a></div><div class="center"><a href="index.html">主页</a></div><div class="next"><a href="install.html">安装</a> &#187;</div></div>
-<h1>简介</h1><br/> <p>OpenLiteSpeed（OLS）是一款高性能、开源的Web服务器。它是LiteSpeed Web Server Enterprise的免费替代方案，并兼容Apache重写规则。</p><br/> <p>OLS采用事件驱动架构，并内置缓存引擎（LSCache）。</p><br/> <h3>概述</h3><br/> <p>OpenLiteSpeed支持包括HTTP/2和HTTP/3（QUIC）在内的现代协议。它适用于独立服务器、开发环境和生产环境，尤其适合单站点部署或偏好采用GPLv3许可证开源方案的环境。</p><br/> <h3>功能特性</h3><br/> <h4>协议与兼容性</h4><br/> <ul>   <li>HTTP/1.0、HTTP/1.1、HTTP/2和HTTP/3（QUIC）</li>   <li>GZIP和Brotli压缩</li>   <li>WebSocket代理</li>   <li>支持IPv4和IPv6</li>   <li>无限制的基于IP和基于名称的虚拟主机</li>   <li>支持带OCSP Stapling的HTTPS</li>   <li>通过LSAPI、CGI、FastCGI及其他接口支持PHP、Perl、Ruby、Python和其他脚本语言</li> </ul><br/> <h4>性能与可扩展性</h4><br/> <ul>   <li>事件驱动架构</li>   <li>低内存占用</li>   <li>高并发连接能力</li>   <li>Sendfile()和异步I/O</li>   <li>用于动态内容的LiteSpeed SAPI（LSAPI）</li>   <li>内置LSCache动态页面缓存</li>   <li>支持<code>.htaccess</code>重写规则（修改后需要重启才能生效）</li> </ul><br/> <h4>Apache兼容性</h4><br/> <ul>   <li>支持Apache mod_rewrite规则</li>   <li>兼容许多常见的Apache重写配置</li> </ul><br/> <h4>安全性</h4><br/> <ul>   <li>连接与带宽限制</li>   <li>兼容mod_security v3</li>   <li>防护常见SSL攻击</li>   <li>严格的HTTP请求校验与缓冲区溢出防护</li>   <li>支持suEXEC</li>   <li>支持Chroot</li> </ul><br/> <h4>管理</h4><br/> <ul>   <li>用于配置和实时监控的WebAdmin控制台</li>   <li>虚拟主机模板</li>   <li>支持多个PHP版本</li>   <li>实时统计</li>   <li>LiteSpeed Prometheus Exporter</li> </ul><br/> <h4>其他特性</h4><br/> <ul>   <li>MP4/FLV流媒体</li>   <li>Geo-IP查询</li>   <li>自定义日志</li> </ul> </article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
+<h1>简介</h1><br/> <p>OpenLiteSpeed（OLS）是一款高性能、开源的Web服务器。它是LiteSpeed Web Server Enterprise的免费替代方案，并兼容Apache重写规则。</p><br/> <p>OLS采用事件驱动架构，并内置缓存引擎（LSCache）。</p><br/> <h2>概述</h2><br/> <p>OpenLiteSpeed支持包括HTTP/2和HTTP/3（QUIC）在内的现代协议。它适用于独立服务器、开发环境和生产环境，尤其适合单站点部署或偏好采用GPLv3许可证开源方案的环境。</p><br/> <h2>功能特性</h2><br/> <h3>协议与兼容性</h3><br/> <ul>   <li>HTTP/1.0、HTTP/1.1、HTTP/2和HTTP/3（QUIC）</li>   <li>GZIP和Brotli压缩</li>   <li>WebSocket代理</li>   <li>支持IPv4和IPv6</li>   <li>无限制的基于IP和基于名称的虚拟主机</li>   <li>支持带OCSP Stapling的HTTPS</li>   <li>通过LSAPI、CGI、FastCGI及其他接口支持PHP、Perl、Ruby、Python和其他脚本语言</li> </ul><br/> <h3>性能与可扩展性</h3><br/> <ul>   <li>事件驱动架构</li>   <li>低内存占用</li>   <li>高并发连接能力</li>   <li><code>sendfile()</code>和异步I/O</li>   <li>用于动态内容的LiteSpeed Server Application Programming Interface（LSAPI）</li>   <li>内置LSCache动态页面缓存</li>   <li>支持<code>.htaccess</code>重写规则（修改后需要重启才能生效）</li> </ul><br/> <h3>Apache兼容性</h3><br/> <ul>   <li>支持Apache mod_rewrite规则</li>   <li>兼容许多常见的Apache重写配置</li> </ul><br/> <h3>安全性</h3><br/> <ul>   <li>连接与带宽限制</li>   <li>兼容mod_security v3</li>   <li>防护常见SSL攻击</li>   <li>严格的HTTP请求校验与缓冲区溢出防护</li>   <li>支持suEXEC</li>   <li>支持Chroot</li> </ul><br/> <h3>管理</h3><br/> <ul>   <li>用于配置和实时监控的WebAdmin控制台</li>   <li>虚拟主机模板</li>   <li>支持多个PHP版本</li>   <li>实时统计</li>   <li>LiteSpeed Prometheus Exporter</li> </ul><br/> <h3>其他特性</h3><br/> <ul>   <li>MP4/FLV流媒体</li>   <li>Geo-IP查询</li>   <li>自定义日志</li> </ul> </article></div><button class="doc-back-to-top" type="button" aria-label="返回顶部" data-back-to-top><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></svg><span class="sr-only">返回顶部</span></button><footer class="copyright">版权 &copy; 2013-2026. <a href="https://www.litespeedtech.com">LiteSpeed Technologies Inc.</a> 版权所有。</footer>
 </div>
 </body>
 </html>

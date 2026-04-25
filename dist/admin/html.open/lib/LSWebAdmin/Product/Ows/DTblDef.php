@@ -46,6 +46,12 @@ class DTblDef extends DTblDefBase
 		$this->_options['scriptHandler'] = $this->getSharedScriptHandlerOptions([
 			'module' => DMsg::ALbl('l_modulehandler')
 		]);
+		$this->_options['captcha'] = [
+			'0' => DMsg::ALbl('o_notset'),
+			'1' => DMsg::ALbl('o_checkbox'),
+			'2' => DMsg::ALbl('o_invisible'),
+			'3' => DMsg::ALbl('o_hcaptcha')
+            ];		
 		$this->_options['ctxType'] = $this->getSharedContextTypeOptions([
 			'module' => DMsg::ALbl('l_modulehandler')
 		]);

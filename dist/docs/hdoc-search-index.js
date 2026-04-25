@@ -2,12 +2,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Home",
         "url": "index.html",
-        "text": "Home OpenLiteSpeed Web Server 1.9 Users' Manual — Rev. 3 Table of Contents License Introduction Installation/Uninstallation Administration Security Configurations For more information, visit our OpenLiteSpeed Knowledge Base"
+        "text": "Home OpenLiteSpeed Web Server 1.9 Users' Manual — Rev. 3 Table of contents License Introduction Installation/Uninstallation Administration Security Configuration For more information, visit our OpenLiteSpeed Knowledge Base"
     },
     {
         "title": "License",
         "url": "license.html",
-        "text": "License GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most software and other practical work..."
+        "text": "License GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/> Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most software and ot..."
     },
     {
         "title": "Introduction",
@@ -17,22 +17,22 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Installation",
         "url": "install.html",
-        "text": "Installation Installation/Uninstallation Minimum system requirements Operating System: Linux(i386): kernel 2.4 and up, glibc-2.2 and up CentOS: 5 and up Ubuntu: 8.04 and up Debian: 4 and up FreeBSD(i386): 4.5 and up MacOSX: 10.3 and up CPU: Intel: 80486 and up PowerPC: PowerPC G4 Memory: 32MB and up Disk: Installation: 200MB Runtime: 300MB and up, swapping space depends on usage. Installation Installation must be per..."
+        "text": "Installation Installation/Uninstallation Minimum system requirements Supported operating systems OpenLiteSpeed supports current and non-EOL versions of the following Linux distributions: CentOS* 8, 9, 10 Debian 11, 12, 13 Ubuntu 20 (EOL May 31, 2025), 22, 24 * Includes RedHat Enterprise Linux and derivatives, AlmaLinux, CloudLinux, Oracle Linux, RockyLinux, VzLinux, etc. CPU Intel: x86-64 ARM: aarch64 (Linux only) Me..."
     },
     {
         "title": "Administration",
         "url": "admin.html",
-        "text": "Administration Administration LiteSpeed Web Server can be controlled in three ways: through the WebAdmin console, from the command line, or by sending signals. Through the WebAdmin console: WebAdmin console is a centralized control panel to control and configure all LiteSpeed Web Server settings. Log on to the WebAdmin console (by default http://[your site's address]:7080/). Select \"Service Manager\". Here you will fi..."
+        "text": "Administration Administration OpenLiteSpeed can be controlled in three ways: through the WebAdmin Console, from the command line, or by sending signals. Through the WebAdmin Console WebAdmin Console is a centralized control panel to control and configure all OpenLiteSpeed settings. Log on to the WebAdmin Console (by default https://[your site's address]:7080/). Here you will find a control panel with links to perform..."
     },
     {
         "title": "Security",
         "url": "security.html",
-        "text": "Security Security LiteSpeed Web Server is designed with security as a top consideration. LSWS supports SSL, has access control at server and virtual host levels, and context-specific realm protection. Besides these standard features, LSWS also has the following special security features: Connection level limits: IP-level throttling limits network bandwidth to and from a single IP address regardless of the number of c..."
+        "text": "Security Security OpenLiteSpeed is designed with security as a top consideration. OLS supports SSL, has access control at server and virtual host levels, and context-specific realm protection. Besides these standard features, OLS also has the following special security features: Connection level limits IP-level throttling limits network bandwidth to and from a single IP address regardless of the number of connections..."
     },
     {
         "title": "Configuration",
         "url": "config.html",
-        "text": "Configuration Configuration Concepts Here are some basic concepts you should know before going into the detail of the configuration. Virtual Hosts LiteSpeed Web Server can host multiple web sites (virtual hosts) with one server instance. Traditionally, virtual hosts are classified into two types: IP-based virtual hosts and name-based virtual hosts. IP-based virtual hosts are web sites that have their own unique IP ad..."
+        "text": "Configuration Configuration Concepts Here are some basic concepts you should know before going into the detail of the configuration. Virtual hosts OpenLiteSpeed can host multiple web sites (virtual hosts) with one server instance. Traditionally, virtual hosts are classified into two types: IP-based virtual hosts and name-based virtual hosts. IP-based virtual hosts are web sites that have their own unique IP addresses..."
     },
     {
         "title": "Web Console",

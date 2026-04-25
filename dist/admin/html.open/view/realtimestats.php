@@ -536,10 +536,10 @@ $vhSortOptions = [
 		var escapeAttr = window.lstEscapeHtmlAttr || escapeHtml;
 
 		return '<div class="lst-monitor-popover">'
-				+ '<p class="lst-monitor-popover__text"><?php DMsg::EchoUIStr('service_confirmmonitor')?> <strong>' + escapeHtml(vhname) + '</strong>?</p>'
+				+ '<p class="lst-monitor-popover__text">' + <?php echo json_encode(DMsg::UIStr('service_confirmmonitor') . ' '); ?> + '<strong>' + escapeHtml(vhname) + '</strong>?</p>'
 				+ '<div class="lst-monitor-popover__actions">'
-				+ '<button type="button" class="lst-btn lst-btn--primary lst-btn--sm" data-lst-call="addMonitorTab" data-lst-call-arg="' + escapeAttr(vhname) + '"><?php DMsg::EchoUIStr('service_addtomonitor')?></button>'
-				+ '<button type="button" class="lst-btn lst-btn--secondary lst-btn--sm" data-lst-call="dismissMonitorConfirm"><?php DMsg::EchoUIStr('btn_cancel')?></button>'
+				+ '<button type="button" class="lst-btn lst-btn--primary lst-btn--sm" data-lst-call="addMonitorTab" data-lst-call-arg="' + escapeAttr(vhname) + '">' + <?php echo json_encode(DMsg::UIStr('service_addtomonitor')); ?> + '</button>'
+				+ '<button type="button" class="lst-btn lst-btn--secondary lst-btn--sm" data-lst-call="dismissMonitorConfirm">' + <?php echo json_encode(DMsg::UIStr('btn_cancel')); ?> + '</button>'
 				+ '</div>'
 				+ '</div>';
 	}
@@ -574,9 +574,9 @@ $vhSortOptions = [
 
 		if (getMonitorTabCount() >= allow_monitor_max) {
 		lstNotifyToast({
-			title : "<?php DMsg::EchoUIStr('service_monitormaxallowed')?> " + allow_monitor_max + " <?php DMsg::EchoUIStr('menu_vh')?>",
-				content : "",
-				color : "#A65858",
+			title : <?php echo json_encode(DMsg::UIStr('service_monitormaxallowed') . ' '); ?> + allow_monitor_max + " " + <?php echo json_encode(DMsg::UIStr('menu_vh')); ?>,
+			content : "",
+			color : "#A65858",
 				timeout : 5000
 			});
 			return false;
@@ -584,7 +584,7 @@ $vhSortOptions = [
 
 		livetabs.append('<li class="lst-live-tab" data-vn="' + escapeAttr(vhname) + '"><a data-lst-tab href="#' + vhid
 				+ '"><i class="lst-icon" data-lucide="server" rel="tooltip" data-placement="bottom" data-original-title="' + escapeAttr(vhname) + '"></i><span class="lst-hide-compact">'
-				+ tabname + '</span><span class="lst-live-tab-close" role="button" tabindex="0" aria-label="<?php DMsg::EchoUIStr('btn_close')?>"><i class="lst-icon" data-lucide="x"></i></span></a></li>');
+				+ tabname + '</span><span class="lst-live-tab-close" role="button" tabindex="0" aria-label="' + <?php echo json_encode(UIBase::EscapeAttr(DMsg::UIStr('btn_close'))); ?> + '"><i class="lst-icon" data-lucide="x"></i></span></a></li>');
 
 		var tabcontent = livetabs.closest(".lst-widget-body").find(".lst-tab-panel-group");
 		var newcontent = tabcontent.find("#vhhide").html().replace(/id=\"vh\"/, 'id="' + vhid + '"');
@@ -637,8 +637,8 @@ $vhSortOptions = [
 	function updateSnapshotMonitorButton(button, vhname, isMonitored)
 	{
 		var monitorLabel = isMonitored
-			? vhname + ' <?php DMsg::EchoUIStr('service_ismonitored')?>'
-			: '<?php DMsg::EchoUIStr('service_addtomonitor')?>';
+			? vhname + ' ' + <?php echo json_encode(DMsg::UIStr('service_ismonitored')); ?>
+			: <?php echo json_encode(DMsg::UIStr('service_addtomonitor')); ?>;
 		var iconName = isMonitored ? 'monitor-check' : 'monitor-dot';
 		var btn = $(button);
 
@@ -827,7 +827,7 @@ $vhSortOptions = [
 		}
 
 	var up = '<i class="lst-icon" data-lucide="chevron-up"></i> ';
-	var highest = '<?php DMsg::EchoUIStr('service_higheston')?> ';
+	var highest = <?php echo json_encode(DMsg::UIStr('service_higheston') . ' '); ?>;
 		var serv_tab = $("#serv");
 		initDataSet(serv_tab);
 		syncLiveTabStrip();
@@ -1327,10 +1327,10 @@ $vhSortOptions = [
 				act = $(this).data("lstact"),
 				atitle;
 			if (act == 'disable') {
-				atitle = "<?php DMsg::EchoUIStr('service_suspendvhconfirm') ?>";
+				atitle = <?php echo json_encode(DMsg::UIStr('service_suspendvhconfirm')); ?>;
 			}
 			else if (act == 'enable') {
-				atitle = "<?php DMsg::EchoUIStr('service_resumevhconfirm') ?>";
+				atitle = <?php echo json_encode(DMsg::UIStr('service_resumevhconfirm')); ?>;
 			}
 			vhcontrol(trigger, act, atitle, vn);
 			e.preventDefault();
@@ -1340,10 +1340,10 @@ $vhSortOptions = [
 			lstShowConfirmPopover(trigger, {
 				title: "<i class='lst-icon lst-dialog-title-icon lst-dialog-title-icon--accent' data-lucide='server'></i> <span class='lst-dialog-title-text'><strong>" + acttitle + "</strong></span>",
 				content: vn,
-				buttons: '<?php echo '[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']'; ?>',
+				buttons: <?php echo json_encode('[' . DMsg::UIStr('btn_cancel') . '][' . DMsg::UIStr('btn_go') . ']'); ?>,
 				placement: "left"
 			}, function (buttonPressed) {
-				if (buttonPressed !== "<?php DMsg::EchoUIStr('btn_go') ?>") {
+				if (buttonPressed !== <?php echo json_encode(DMsg::UIStr('btn_go')); ?>) {
 					return;
 				}
 
@@ -1353,10 +1353,10 @@ $vhSortOptions = [
 					data: {"act": act, "actId": vn},
 					beforeSend: function () {
 					lstNotifyToast({
-						title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
-							content: "<i class='lst-icon' data-lucide='clock'></i> <i><?php DMsg::EchoUIStr('service_willrefresh') ?></i>",
-							color: "#659265",
-							timeout: 2200
+						title: <?php echo json_encode(DMsg::UIStr('service_requesting')); ?>,
+						content: "<i class='lst-icon' data-lucide='clock'></i> <i>" + <?php echo json_encode(DMsg::UIStr('service_willrefresh')); ?> + "</i>",
+						color: "#659265",
+						timeout: 2200
 						});
 					},
 					success: function () {

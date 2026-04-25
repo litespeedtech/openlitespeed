@@ -393,7 +393,7 @@ class UIBase
         $langlist = DMsg::GetSupportedLang($curlang);
 
         $buf = '<div class="lst-sidebar-utility lst-sidebar-utility--lang lst-show-mobile">'
-                . '<div class="lst-sidebar-utility__label">Language</div>'
+                . '<div class="lst-sidebar-utility__label">' . self::Escape(DMsg::UIStr('note_language')) . '</div>'
                 . '<a href="#" class="lst-dropdown-toggle lst-lang-toggle lst-sidebar-utility__trigger" data-lst-dropdown="true" aria-haspopup="true" aria-expanded="false" aria-controls="lst-lang-sidebar"><span>'
                 . self::Escape($langlist[$curlang][0]) . '</span> <i class="lst-icon" data-lucide="chevron-down"></i> </a>
                 <ul id="lst-lang-sidebar" class="lst-dropdown-menu lst-lang-menu lst-sidebar-utility__menu" role="menu" aria-hidden="true">';

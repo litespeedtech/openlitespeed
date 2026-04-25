@@ -65,7 +65,7 @@
 <div class="pagewrapper" data-current-lang="en-US" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">Users&#039; Manual</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="Table of Contents"><ul class="sidetree__list">
       <li><a href="license.html">License</a></li>
       <li><a href="intro.html">Introduction</a></li>
-      <li><a href="install.html">Installation</a></li>
+      <li><a href="install.html">Installation/Uninstallation</a></li>
       <li>
         <a href="admin.html">Administration</a>
         <ul class="level2">
@@ -81,18 +81,20 @@
           <li><a href="ServLog_Help.html">Server Log</a></li>
           <li><a href="ServTuning_Help.html">Server Tuning</a></li>
           <li><a href="ServSecurity_Help.html">Server Security</a></li>
-          <li><a href="ExtApp_Help.html">External Apps</a></li>
-          <ul class="level3">
-            <li><a href="External_LSAPI.html">LSAPI App</a></li>
-            <li><a href="External_WS.html">Web Server (Proxy)</a></li>
-            <li><a class="current" href="External_FCGI.html">Fast CGI App</a></li>
-            <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
-            <li><a href="External_SCGI.html">Simple CGI App</a></li>
-            <li><a href="External_Servlet.html">Servlet Engine</a></li>
-            <li><a href="External_PL.html">Piped logger</a></li>
-            <li><a href="External_LB.html">Load Balancer</a></li>
-            <li><a href="External_UWSGI.html">uWSGI</a></li>
-          </ul>
+          <li>
+            <a href="ExtApp_Help.html">External Apps</a>
+            <ul class="level3">
+              <li><a href="External_LSAPI.html">LSAPI App</a></li>
+              <li><a href="External_WS.html">Web Server (Proxy)</a></li>
+              <li><a class="current" href="External_FCGI.html">Fast CGI App</a></li>
+              <li><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a></li>
+              <li><a href="External_SCGI.html">Simple CGI App</a></li>
+              <li><a href="External_Servlet.html">Servlet Engine</a></li>
+              <li><a href="External_PL.html">Piped Logger</a></li>
+              <li><a href="External_LB.html">Load Balancer</a></li>
+              <li><a href="External_UWSGI.html">uWSGI</a></li>
+            </ul>
+          </li>
           <li><a href="ScriptHandler_Help.html">Script Handler</a></li>
           <li><a href="App_Server_Help.html">App Server Settings</a></li>
           <li><a href="Module_Help.html">Module Configuration</a></li>
@@ -104,22 +106,24 @@
           <li><a href="VHSecurity_Help.html">Virtual Host Security</a></li>
           <li><a href="VHSSL_Help.html">Virtual Host SSL</a></li>
           <li><a href="Rewrite_Help.html">Rewrite</a></li>
-          <li><a href="Context_Help.html">Context</a></li>
-          <ul class="level3">
-            <li><a href="Static_Context.html">Static Context</a></li>
-            <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
-            <li><a href="Servlet_Context.html">Servlet Context</a></li>
-            <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
-            <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
-            <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
-            <li><a href="Proxy_Context.html">Proxy Context</a></li>
-            <li><a href="CGI_Context.html">CGI Context</a></li>
-            <li><a href="LB_Context.html">Load Balancer Context</a></li>
-            <li><a href="Redirect_Context.html">Redirect Context</a></li>
-            <li><a href="App_Server_Context.html">App Server Context</a></li>
-            <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
-            <li><a href="Module_Context.html">Module Handler Context</a></li>
-          </ul>
+          <li>
+            <a href="Context_Help.html">Context</a>
+            <ul class="level3">
+              <li><a href="Static_Context.html">Static Context</a></li>
+              <li><a href="Java_Web_App_Context.html">Java Web App Context</a></li>
+              <li><a href="Servlet_Context.html">Servlet Context</a></li>
+              <li><a href="FCGI_Context.html">Fast CGI Context</a></li>
+              <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
+              <li><a href="LSAPI_Context.html">LSAPI Context</a></li>
+              <li><a href="Proxy_Context.html">Proxy Context</a></li>
+              <li><a href="CGI_Context.html">CGI Context</a></li>
+              <li><a href="LB_Context.html">Load Balancer Context</a></li>
+              <li><a href="Redirect_Context.html">Redirect Context</a></li>
+              <li><a href="App_Server_Context.html">App Server Context</a></li>
+              <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
+              <li><a href="Module_Context.html">Module Handler Context</a></li>
+            </ul>
+          </li>
           <li><a href="VHWebSocket_Help.html">Web Socket Proxy</a></li>
         </ul>
       </li>
@@ -127,14 +131,8 @@
         <ul class="level2">
           <li><a href="AdminGeneral_Help.html">Admin Console General</a></li>
           <li><a href="AdminSecurity_Help.html">Admin Console Security</a></li>
-          <li>
-            <a href="AdminListeners_General_Help.html">
-              Admin Listener General
-            </a>
-          </li>
-          <li>
-            <a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a>
-          </li>
+          <li><a href="AdminListeners_General_Help.html">Admin Listener General</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">Admin Listener SSL</a></li>
         </ul>
       </li>
     </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="External_WS.html">Web Server (Proxy)</a></div><div class="center"><a href="ExtApp_Help.html">External Apps</a></div><div class="next"><a href="External_FCGI_Auth.html">Fast CGI Authorizer</a> &#187;</div></div>

@@ -2,12 +2,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Accueil",
         "url": "index.html",
-        "text": "Accueil OpenLiteSpeed Web Server 1.9 Manuel utilisateur — Rev. 2 Table des matieres Licence Introduction Installation/desinstallation Administration Securite Configurations Pour plus d'informations, consultez notre base de connaissances OpenLiteSpeed"
+        "text": "Accueil OpenLiteSpeed Web Server 1.9 Manuel utilisateur — Rev. 3 Table des matieres Licence Introduction Installation/desinstallation Administration Securite Configuration Pour plus d'informations, consultez notre site de documentation OpenLiteSpeed"
     },
     {
         "title": "Licence",
         "url": "license.html",
-        "text": "Licence GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most software and other practical work..."
+        "text": "Licence GNU GENERAL PUBLIC LICENSE v3 GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007 Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/> Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed. Preamble The GNU General Public License is a free, copyleft license for software and other kinds of works. The licenses for most software and ot..."
     },
     {
         "title": "Introduction",
@@ -17,12 +17,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Installation",
         "url": "install.html",
-        "text": "Installation Installation/desinstallation Exigences systeme minimales Systeme d'exploitation: Linux(i386): noyau 2.4 et plus, glibc-2.2 et plus CentOS: 5 et plus Ubuntu: 8.04 et plus Debian: 4 et plus FreeBSD(i386): 4.5 et plus MacOSX: 10.3 et plus CPU: Intel: 80486 et plus PowerPC: PowerPC G4 Memoire: 32MB et plus Disque: Installation: 200MB Execution: 300MB et plus; l'espace d'echange depend de l'utilisation. Insta..."
+        "text": "Installation Installation/Desinstallation Configuration systeme minimale Systemes d'exploitation pris en charge OpenLiteSpeed prend en charge les versions actuelles et non EOL des distributions Linux suivantes : CentOS* 8, 9, 10 Debian 11, 12, 13 Ubuntu 20 (EOL le 31 mai 2025), 22, 24 * Inclut RedHat Enterprise Linux et ses derives, AlmaLinux, CloudLinux, Oracle Linux, RockyLinux, VzLinux, etc. CPU Intel : x86-64 ARM..."
     },
     {
         "title": "Administration",
         "url": "admin.html",
-        "text": "Administration Administration LiteSpeed Web Server peut etre controle de trois facons: via la console WebAdmin, depuis la ligne de commande ou en envoyant des signaux. Via la console WebAdmin: La console WebAdmin est un panneau de controle centralise pour controler et configurer tous les reglages de LiteSpeed Web Server. Connectez-vous a la console WebAdmin (par defaut http://[adresse de votre site]:7080/). Selection..."
+        "text": "Administration Administration OpenLiteSpeed peut etre controle de trois manieres : via la console WebAdmin, via la ligne de commande ou en envoyant des signaux. Via la console WebAdmin La console WebAdmin est un panneau de controle centralise permettant de controler et de configurer tous les parametres d'OpenLiteSpeed. Connectez-vous a la console WebAdmin (par defaut https://[adresse de votre site]:7080/). Vous y tro..."
     },
     {
         "title": "Sécurité",

@@ -350,13 +350,6 @@ class DTblDefBase
 			'0' => DMsg::ALbl('o_disabled')
 		];
 
-		$this->_options['captcha'] = [
-			'0' => DMsg::ALbl('o_notset'),
-			'1' => DMsg::ALbl('o_checkbox'),
-			'2' => DMsg::ALbl('o_invisible'),
-			'3' => DMsg::ALbl('o_hcaptcha'),
-            ];
-
 		// for shared parse format
 		$this->_options['parseFormat'] = [
 			'filePermission4' => '/^0?[0-7]{3,4}$/',

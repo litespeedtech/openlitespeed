@@ -62,74 +62,81 @@
   </button>
 </header>
 <div class="doc-menu-backdrop" data-menu-backdrop></div>
-<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">OpenLiteSpeed Web Server ユーザーズマニュアル</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
-<li><a href="license.html">ライセンス</a></li>
-<li><a href="intro.html">はじめに</a></li>
-<li><a href="install.html">インストール</a></li>
-<li>
-  <a href="admin.html">管理</a>
-  <ul class="level2">
-    <li><a href="ServerStat_Help.html">サービスマネージャ</a></li>
-    <li><a href="Real_Time_Stats_Help.html">Real-Time Stats</a></li>
-  </ul>
-</li>
-<li><a href="security.html">セキュリティ</a></li>
-<li><a href="config.html">設定</a>
-	<ul class="level2">
-	<li><a href="ServGeneral_Help.html">サーバー全般</a></li>
-        <li><a href="ServLog_Help.html">サーバーログ</a></li>
-	<li><a href="ServTuning_Help.html">サーバーのチューニング</a></li>
-	<li><a href="ServSecurity_Help.html">サーバーのセキュリティ</a></li>
-	<li><a class="current" href="ExtApp_Help.html">外部アプリ</a></li>
-	<ul class="level3">
-      <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
-      <li><a href="External_WS.html">Webサーバー</a></li>
-      <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
-      <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
-      <li><a href="External_SCGI.html">Simple CGI App</a></li>
-      <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
-      <li><a href="External_PL.html">パイプロガー</a></li>
-      <li><a href="External_LB.html">ロードバランサ</a></li>
-      <li><a href="External_UWSGI.html">uWSGI</a></li>
-	</ul>
-	<li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
-	<li><a href="Rails_Help.html">Rack/Railsの設定</a></li>
-	<li><a href="Module_Help.html">モジュール設定</a></li>
-	<li><a href="Listeners_General_Help.html">リスナー全般</a></li>
-        <li><a href="Listeners_SSL_Help.html">リスナーのSSL</a></li>
-	<li><a href="Templates_Help.html">テンプレート</a></li>
-	<li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
-	<li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
-	<li><a href="VHSecurity_Help.html">バーチャルホストのセキュリティ</a></li>
-        <li><a href="VHSSL_Help.html">バーチャルホストのSSL</a></li>
-	<li><a href="Rewrite_Help.html">Rewrite</a></li>
-	<li><a href="Context_Help.html">コンテキスト</a></li>
-	<ul class="level3">
-	  <li><a href="Static_Context.html">静的コンテテキスト</a></li>
-	  <li><a href="Java_Web_App_Context.html">Java Webアプリのコンテキスト</a></li>
-	  <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
-	  <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
-	  <li><a href="SCGI_Context.html">Simple CGI Context</a></li>
-	  <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
-	  <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
-	  <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
-	  <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
-	  <li><a href="Redirect_Context.html">コンテキストのリダイレクト</a></li>
-	  <li><a href="UWSGI_Context.html">uWSGI Context</a></li>
-	  <li><a href="Module_Context.html">モジュールハンドラのコンテキスト</a></li>
-	</ul>
-	<li><a href="VHWebSocket_Help.html">Web Socketプロキシ</a></li>
-	</ul>
-</li>
-<li><a href="webconsole.html">Webコンソール</a>
+<div class="pagewrapper" data-current-lang="ja-JP" data-supported-langs="[&quot;en-US&quot;,&quot;es-ES&quot;,&quot;de-DE&quot;,&quot;fr-FR&quot;,&quot;zh-CN&quot;,&quot;ja-JP&quot;]"><aside class="sidetree"><div class="sidetree__masthead"><figure class="sidetree__figure"><img src="../img/ols_logo.svg" alt="OpenLiteSpeed logo" /></figure><div class="sidetree__identity"><a class="sidetree__manual-link" href="index.html">ユーザーズマニュアル</a><div class="sidetree__version">Version 1.9 — Rev. 3</div></div></div><nav class="sidetree__nav" aria-label="目次"><ul class="sidetree__list">
+      <li><a href="license.html">ライセンス</a></li>
+      <li><a href="intro.html">はじめに</a></li>
+      <li><a href="install.html">インストール/アンインストール</a></li>
+      <li>
+        <a href="admin.html">管理</a>
         <ul class="level2">
-        <li><a href="AdminGeneral_Help.html">管理コンソール全般</a></li>
-        <li><a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></li>
-	<li><a href="AdminListeners_General_Help.html">管理リスナー全般</a></li>
-        <li><a href="AdminListeners_SSL_Help.html">管理リスナーのSSL</a></li>
+          <li><a href="ServerStat_Help.html">サービスマネージャ</a></li>
+          <li><a href="Real_Time_Stats_Help.html">リアルタイム統計</a></li>
         </ul>
-</li>
-</ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ServSecurity_Help.html">サーバーセキュリティ</a></div><div class="center"><a href="config.html">設定</a></div><div class="next"><a href="ScriptHandler_Help.html">スクリプトハンドラ</a> &#187;</div></div>
+      </li>
+      <li><a href="security.html">セキュリティ</a></li>
+      <li>
+        <a href="config.html">設定</a>
+        <ul class="level2">
+          <li><a href="ServGeneral_Help.html">サーバー全般</a></li>
+          <li><a href="ServLog_Help.html">サーバーログ</a></li>
+          <li><a href="ServTuning_Help.html">サーバーチューニング</a></li>
+          <li><a href="ServSecurity_Help.html">サーバーセキュリティ</a></li>
+          <li>
+            <a class="current" href="ExtApp_Help.html">外部アプリ</a>
+            <ul class="level3">
+              <li><a href="External_LSAPI.html">LSAPIアプリ</a></li>
+              <li><a href="External_WS.html">Webサーバー（プロキシ）</a></li>
+              <li><a href="External_FCGI.html">Fast CGIアプリ</a></li>
+              <li><a href="External_FCGI_Auth.html">Fast CGIオーソライザー</a></li>
+              <li><a href="External_SCGI.html">Simple CGIアプリ</a></li>
+              <li><a href="External_Servlet.html">サーブレットエンジン</a></li>
+              <li><a href="External_PL.html">パイプロガー</a></li>
+              <li><a href="External_LB.html">ロードバランサ</a></li>
+              <li><a href="External_UWSGI.html">uWSGI</a></li>
+            </ul>
+          </li>
+          <li><a href="ScriptHandler_Help.html">スクリプトハンドラ</a></li>
+          <li><a href="App_Server_Help.html">アプリサーバー設定</a></li>
+          <li><a href="Module_Help.html">モジュール設定</a></li>
+          <li><a href="Listeners_General_Help.html">リスナー全般</a></li>
+          <li><a href="Listeners_SSL_Help.html">リスナーSSL</a></li>
+          <li><a href="Templates_Help.html">テンプレート</a></li>
+          <li><a href="VirtualHosts_Help.html">バーチャルホスト登録</a></li>
+          <li><a href="VHGeneral_Help.html">バーチャルホスト全般</a></li>
+          <li><a href="VHSecurity_Help.html">バーチャルホストセキュリティ</a></li>
+          <li><a href="VHSSL_Help.html">バーチャルホストSSL</a></li>
+          <li><a href="Rewrite_Help.html">Rewrite</a></li>
+          <li>
+            <a href="Context_Help.html">コンテキスト</a>
+            <ul class="level3">
+              <li><a href="Static_Context.html">静的コンテキスト</a></li>
+              <li><a href="Java_Web_App_Context.html">Java Webアプリコンテキスト</a></li>
+              <li><a href="Servlet_Context.html">サーブレットコンテキスト</a></li>
+              <li><a href="FCGI_Context.html">Fast CGIコンテキスト</a></li>
+              <li><a href="SCGI_Context.html">Simple CGIコンテキスト</a></li>
+              <li><a href="LSAPI_Context.html">LSAPIコンテキスト</a></li>
+              <li><a href="Proxy_Context.html">プロキシコンテキスト</a></li>
+              <li><a href="CGI_Context.html">CGIコンテキスト</a></li>
+              <li><a href="LB_Context.html">ロードバランサコンテキスト</a></li>
+              <li><a href="Redirect_Context.html">リダイレクトコンテキスト</a></li>
+              <li><a href="App_Server_Context.html">アプリサーバーコンテキスト</a></li>
+              <li><a href="UWSGI_Context.html">uWSGIコンテキスト</a></li>
+              <li><a href="Module_Context.html">モジュールハンドラコンテキスト</a></li>
+            </ul>
+          </li>
+          <li><a href="VHWebSocket_Help.html">WebSocketプロキシ</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="webconsole.html">Webコンソール</a>
+        <ul class="level2">
+          <li><a href="AdminGeneral_Help.html">管理コンソール全般</a></li>
+          <li><a href="AdminSecurity_Help.html">管理コンソールのセキュリティ</a></li>
+          <li><a href="AdminListeners_General_Help.html">管理リスナー全般</a></li>
+          <li><a href="AdminListeners_SSL_Help.html">管理リスナーSSL</a></li>
+        </ul>
+      </li>
+    </ul></nav></aside><article class="contentwrapper"><div class="nav-bar"><div class="prev">&#171 <a href="ServSecurity_Help.html">サーバーセキュリティ</a></div><div class="center"><a href="config.html">設定</a></div><div class="next"><a href="ScriptHandler_Help.html">スクリプトハンドラ</a> &#187;</div></div>
 <header class="doc-page-header"><h1>外部アプリケーション</h1><div class="doc-page-intro">LiteSpeed Webサーバーは、動的コンテンツを処理および生成するために外部アプリケーションに要求を転送できます。   LiteSpeed Web Serverは、2.0以降、CGI、FastCGI、Webサーバー、サーブレットエンジン、LiteSpeed SAPIアプリケーション、ロードバランサ、およびパイプロガーの7種類の外部アプリケーションをサポートしています。<br/> <ul> <li>CGIはCommon Gateway Interfaceの略です。 現在の標準はCGI / 1.1です。   CGIアプリケーションはスタンドアロンプロセスで動作します。 各要求に対してCGIプロセスが開始され、要求終了後に終了します。 </li> <li>FastCGIは、プロプライエタリなAPI（アプリケーションプログラミングインターフェイス）のオーバーヘッドと複雑さを導入することなく、CGIに内在するパフォーマンスの問題を解決する、高速でオープンで安全なWebサーバーインターフェイスです。 詳細については、<a href="   https://fastcgi-archives.github.io/ " target="_blank" rel="noopener noreferrer">   https://fastcgi-archives.github.io/ </a>をご覧ください。<br/> LiteSpeed Web Serverでは、FastCGIアプリケーションは動的応答の生成（応答者の役割）または要求の承認（承認者の役割）の2つの役割を果たすことができます。 LiteSpeed Web Serverは、ローカルFastCGIとリモートFastCGIの2種類のFastCGIアプリケーションをさらに定義します。 ローカルFastCGIアプリケーションは、オンデマンドでWebサーバーによって自動的に開始されます。 リモートFastCGIアプリケーションは、Webサーバーによって開始されません。    （これらはリモートマシン上または同じマシン上で実行できます。） </li> <li>WebサーバーはHTTP 1.0 / 1.1プロトコルをサポートするサーバーアプリケーションです。 LiteSpeed Webサーバーは、透過的な逆プロキシとして機能し、Webサーバーとアプリケーションサーバーを高速化および保護します。 バックエンドWebサーバーと通信する場合、LiteSpeedは常に最高のパフォーマンスを達成するために永続的な接続を利用しようとします。</li> <li>サーブレットエンジンは、JavaサーブレットとJava Server Pagesを実装するApache TomcatやJettyのようなアプリケーションです。 LiteSpeedはAJPv1.3（Apache JServプロトコルバージョン1.3）を介してサーブレットエンジンと通信できます。 サーブレットエンジンはWebサーバーから起動できず、リモートマシン上で実行するように設定できます。 </li> <li>LiteSpeed SAPI（LiteSpeed Server Application Programming Interface）アプリケーションは、LiteSpeed Web Serverと最大限の効率を達成するために特別に設計された高速でスケーラブルなサーバーインターフェイスであるLiteSpeed Web Serverと通信するアプリケーションです。<br/> LSAPIの動作メカニズムはFastCGIに似ていますが、LSAPIアプリケーションは同等のFastCGIアプリケーションより最大30％高速です。 LSAPIは、サポートされるアプリケーションに対してFastCGIよりも強く推奨されます。 （LSAPIは現在、PHP、Ruby、Pythonで書かれたアプリケーションをサポートしています）。<br/> LSAPIの詳細については、次のURLを参照してください。 <a href="http://www.litespeedtech.com/products/litespeed-sapi/overview/" target="_blank" rel="noopener noreferrer">http://www.litespeedtech.com/products/litespeed-sapi/overview/</a>. </li> <li>ロードバランサはバーチャル外部アプリケーションで、ワークロードに基づいてバックエンドワーカーアプリケーションに要求を割り当てます。 ワーカーアプリケーションは、CGI、FastCGI、Webサーバー、サーブレットエンジン、またはLSAPIアプリケーションです。 1つのロードバランサの下でさまざまな種類のアプリケーションを混在させることができます。 ロードバランサとパイプロガーはワーカーアプリケーションとして使用できません。</li> <li>パイプロガーは、アクセスログをリアルタイムで処理したり、アクセスログをデータベースに書き込んだり、リアルタイム統計計算を実行したりするアプリケーションです。</li> </ul><br/> CGIアプリケーションとは異なり、FastCGIアプリケーション、LSAPIアプリケーション、およびサーブレットエンジンは、要求の処理後に終了しません。 アプリケーションプロセスは維持され、持続し、できるだけ多くの要求を処理します。 ソケット接続は、複数のリクエストに対しても再利用できます。<br/> 外部アプリケーションは、<span class="tagP"><a href="#ExtApp_Help">外部アプリケーション</a></span>セクションで設定できます。 ただし、外部アプリケーションは単独では機能しません。 Webサーバーがどのアプリケーションにどの要求を送信するかを知るように、追加の設定を構成する必要があります。 LiteSpeed Web Serverでこれを設定するには、2つの方法があります: <ol>   <li> 外部アプリケーションを特定のコンテキストのハンドラとして設定します。</li>   <li> ファイルサフィックスバインディングを使用して、外部アプリケーションをスクリプト言語のハンドラとして設定します。</li> </ol><br/> FastCGIアプリケーション、LSAPIアプリケーション、Webサーバー、サーブレットエンジン、およびロードバランサは、コンテキストまたはスクリプトサフィックスを処理するように構成する前に、<span class="tagP"><a href="#ExtApp_Help">外部アプリケーション</a></span>セクションで定義する必要があります。<br/> <span class="tagP"><a href="#ExtApp_Help">外部アプリケーション</a></span>セクションでCGIアプリケーションを定義する必要はありません。<br/><br/> 外部アプリケーションは、サーバーレベルまたはバーチャルホストレベルで構成できます。 サーバーレベルで構成すると、アプリケーションはすべてのバーチャルホストで使用できます。 バーチャルホストレベルで設定すると、そのバーチャルホストだけが使用できます。</div>
 </header><section class="doc-toc" aria-labelledby="top"><header class="doc-toc__header"><h2 id="top">目次</h2></header><section class="doc-toc__row"><h3 class="doc-toc__heading">外部アプリケーション設定</h3><ul class="doc-toc__links"><li><a href="#extAppType">タイプ</a></li></ul></section>
 </section>
