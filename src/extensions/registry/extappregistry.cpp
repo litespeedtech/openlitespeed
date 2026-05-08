@@ -475,7 +475,7 @@ int ExtAppRegistry::configVhostOwnPhp(HttpVHost *pVHost)
     char appName[256];
     const char *pUri;
     char buf[MAX_PATH_LEN];
-    int iAutoStart = 0;
+    int iAutoStart = EXTAPP_AUTOSTART_OFF;
     const char *pPath = NULL;
     ExtWorker *pWorker = NULL;
     ExtWorkerConfig *pConfig = NULL;
@@ -714,7 +714,7 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     const char *pType;
     const char *pUri;
     char buf[MAX_PATH_LEN];
-    int iAutoStart = 0;
+    int iAutoStart = EXTAPP_AUTOSTART_OFF;
     const char *pPath = NULL;
     ExtWorker *pWorker = NULL;
     ExtWorkerConfig *pConfig = NULL;
@@ -815,9 +815,9 @@ ExtWorker *ExtAppRegistry::configExtApp(const XmlNode *pNode, const HttpVHost *p
     if ((iType == EA_FCGI) || (iType == EA_LOGGER) || (iType == EA_LSAPI) || (iType == EA_SCGI) || (iType == EA_UWSGI))
     {
         if (iType == EA_LOGGER)
-            iAutoStart = 1;
+            iAutoStart = EXTAPP_AUTOSTART_CGID;
         else if (iType == EA_SCGI || iType == EA_UWSGI)
-            iAutoStart = 0;
+            iAutoStart = EXTAPP_AUTOSTART_OFF;
         else
             iAutoStart = ConfigCtx::getCurConfigCtx()->getLongValue(pNode, "autoStart",
                          0, 2, 1);

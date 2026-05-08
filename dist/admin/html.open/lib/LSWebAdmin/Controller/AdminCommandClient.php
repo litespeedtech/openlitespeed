@@ -12,14 +12,15 @@ class AdminCommandClient
 
     private $_lastError = '';
 
-    public function sendCommand($cmd)
+    public function sendCommand($cmd, $timeout = self::COMMAND_IO_TIMEOUT_SEC)
     {
         $sock = $this->openAuthenticatedSocket($cmd);
         if (!$sock) {
             return false;
         }
 
-        if (!$this->setSocketTimeout($sock, SO_RCVTIMEO, self::COMMAND_IO_TIMEOUT_SEC, 'cmd ' . trim($cmd) . ' failed to set receive timeout on admin socket')) {
+        $readTimeout = ((int) $timeout > 0) ? (int) $timeout : self::COMMAND_IO_TIMEOUT_SEC;
+        if (!$this->setSocketTimeout($sock, SO_RCVTIMEO, $readTimeout, 'cmd ' . trim($cmd) . ' failed to set receive timeout on admin socket')) {
             socket_close($sock);
             return false;
         }

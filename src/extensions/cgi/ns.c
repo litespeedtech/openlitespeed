@@ -86,6 +86,7 @@ SetupOp     s_setupOp_all[] =
 int         s_setupOp_all_size = sizeof(s_setupOp_all);
 int         s_listenPid = 0;
 int         s_listenPidStatus = 0;
+pid_t       s_ns_watcher_pid = 0;
 
 
 SetupOp     s_SetupOp_default[] = 
@@ -2906,6 +2907,7 @@ static int do_ns(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
     pid_t parent_pid;
     mode_t old_umask = -1;
     char *old_cwd = NULL;
+    int host_root_fd = -1;
     
     DEBUG_MESSAGE("Entering do_ns, uid: %d, ppid: %d\n", getuid(), getppid());
     debug_ops(setupOp);
@@ -2938,6 +2940,14 @@ static int do_ns(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
     
     old_cwd = get_current_dir_name ();
 
+    /* Grab an O_PATH handle to the host root BEFORE the mount namespace is
+     * modified so we can still reach host files after pivot_root.  */
+    host_root_fd = open("/", O_PATH);
+    if (host_root_fd == -1)
+    {
+        DEBUG_MESSAGE("do_ns: open(/) for host_root_fd: %s\n", strerror(errno));
+    }
+
     if (!rc)
         rc = build_mount_namespace(pCGI);
 
@@ -2947,6 +2957,14 @@ static int do_ns(lscgid_t *pCGI, SetupOp *setupOp, int persisted)
     if (!rc)
         rc = cleanup_oldroot(pCGI, persisted);
     
+    /* After the namespace is fully built, check for stale socket bind mounts
+     * and re-establish any that were replaced on the host side.  */
+    if (!rc && host_root_fd != -1)
+        nspersist_remount_stale_sockets(host_root_fd);
+
+    if (host_root_fd != -1)
+        close(host_root_fd);
+
     //if (pCGI->m_oom_score_adjust != LS_OOM_NO_ADJ)
     //    apply_oom_score_adj(pCGI->m_oom_score_adjust);
 
@@ -3206,6 +3224,27 @@ void ns_setverbose_callback(verbose_callback_t callback)
 void ns_done()
 {
     DEBUG_MESSAGE("ns_done\n");
+    if (s_ns_watcher_pid > 0)
+    {
+        kill(s_ns_watcher_pid, SIGTERM);
+        /* Bound the wait: poll for up to ~2 s, then SIGKILL and reap. */
+        int waited_ms = 0;
+        while (waited_ms < 2000)
+        {
+            pid_t r = waitpid(s_ns_watcher_pid, NULL, WNOHANG);
+            if (r == s_ns_watcher_pid || r == -1)
+                break;
+            usleep(50000); /* 50 ms */
+            waited_ms += 50;
+        }
+        if (waitpid(s_ns_watcher_pid, NULL, WNOHANG) == 0)
+        {
+            kill(s_ns_watcher_pid, SIGKILL);
+            waitpid(s_ns_watcher_pid, NULL, 0);
+        }
+        s_ns_watcher_pid = 0;
+    }
+
     nspersist_done();
     if (s_proc_fd != -1)
     {

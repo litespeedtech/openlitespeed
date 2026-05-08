@@ -78,6 +78,18 @@ class ConfigActionContext
         }
     }
 
+    public function SetViewRoute($view, $viewName, $pid, $tid = null, $ref = null)
+    {
+        if ($this->_routeState != null && method_exists($this->_routeState, 'SetViewRoute')) {
+            $this->_routeState->SetViewRoute($view, $viewName, $pid, $tid, $ref);
+            return;
+        }
+
+        if (is_object($this->_mutationDisplay) && method_exists($this->_mutationDisplay, 'SetViewRoute')) {
+            $this->_mutationDisplay->SetViewRoute($view, $viewName, $pid, $tid, $ref);
+        }
+    }
+
     public function AddTopMsg($message)
     {
         if (is_object($this->_mutationDisplay) && method_exists($this->_mutationDisplay, 'AddTopMsg')) {

@@ -127,6 +127,16 @@ class ConfRouteState
         $this->_mid = substr($this->_mid, 0, $pos) . $suffix;
     }
 
+    public function SetViewRoute($view, $viewName, $pid, $tid = null, $ref = null)
+    {
+        $this->_view = $view;
+        $this->_viewName = $viewName;
+        $this->_mid = (is_string($view) && substr($view, -1) === '_') ? $view . $viewName : $view;
+        $this->_pid = $pid;
+        $this->_tid = $tid;
+        $this->_ref = $ref;
+    }
+
     public function IsViewAction()
     {
         if (!is_string($this->_act) || $this->_act === '') {
@@ -175,7 +185,7 @@ class ConfRouteState
 
         if ($this->_ref && ($pos = strrpos($this->_ref, '`')) !== false) {
             $this->_ref = substr($this->_ref, 0, $pos);
-        } elseif ($this->_view == 'sl_' || $this->_view == 'al_' || $this->_pid == 'base' || $this->_pid == 'mbr') {
+        } elseif ($this->_view == 'sl_' || $this->_view == 'sl4_' || $this->_view == 'al_' || $this->_view == 'lb_' || $this->_view == 'lb4_' || $this->_pid == 'base' || $this->_pid == 'mbr') {
             $this->_ref = $this->_viewName;
         } else {
             $this->_ref = null;

@@ -24,6 +24,7 @@ class CValidation
 
 	protected $_request;
 	protected $_go_flag;
+	protected $_messages = [];
 
 	public function __construct()
 	{
@@ -34,6 +35,7 @@ class CValidation
 	{
 		$this->_request = $request;
 		$this->_go_flag = 1;
+		$this->_messages = [];
 
 		$tbl = $request->GetTable();
 		$tid = $request->GetTid();
@@ -63,10 +65,7 @@ class CValidation
 				if ($needCheck) {
 					$this->validateAttr($attr, $dlayer);
 				}
-				if (($tid == 'V_TOPD' || $tid == 'V_BASE') && $attr->_type == 'vhname') {
-					$updatedViewName = ($dlayer == null) ? null : $dlayer->Get(CNode::FLD_VAL);
-					$hasUpdatedViewName = true;
-				}
+				$this->updateValidationRouteContext($tid, $attr, $dlayer, $updatedViewName, $hasUpdatedViewName);
 			}
 		}
 
@@ -75,12 +74,76 @@ class CValidation
 
 		// if 0 , make it always point to curr page
 
-		if ($this->_go_flag <= 0) {
+		if ($this->_go_flag < 0) {
 			$extracted->SetErr('Input error detected. Please resolve the error(s). ');
 		}
 
+		$status = $this->_go_flag;
+		$messages = $this->_messages;
 		$this->_request = null;
-		return new ConfigValidationResult($extracted, $updatedViewName, $hasUpdatedViewName);
+		$this->_messages = [];
+		return new ConfigValidationResult($extracted, $updatedViewName, $hasUpdatedViewName, $status, $messages);
+	}
+
+	protected function addValidationMessage($type, $text, $title = '')
+	{
+		$this->_messages[] = [
+			'type' => $type,
+			'title' => $title,
+			'text' => $text,
+		];
+	}
+
+	protected function updateValidationRouteContext($tid, $attr, $dlayer, &$updatedViewName, &$hasUpdatedViewName)
+	{
+		if ($dlayer == null || is_array($dlayer)) {
+			return;
+		}
+
+		if ($this->_request == null) {
+			return;
+		}
+
+		$value = $dlayer->Get(CNode::FLD_VAL);
+		if (($tid == 'V_TOPD' || $tid == 'V_BASE') && $attr->_type == 'vhname') {
+			$updatedViewName = $value;
+			$hasUpdatedViewName = true;
+			if (method_exists($this->_request, 'SetViewName')) {
+				$this->_request->SetViewName($value);
+			}
+			return;
+		}
+
+		if (in_array($tid, [
+					'T_TOPD',
+					'L_GENERAL',
+					'L_GENERAL_NEW',
+					'LT_GENERAL',
+					'LT_GENERAL_NEW',
+					'ADM_L_GENERAL',
+					'LB_GENERAL',
+					'LB_GENERAL_NEW',
+					'LB4_GENERAL',
+					'LB4_GENERAL_NEW',
+				], true)
+				&& $attr->GetKey() == 'name'
+				&& ($attr->_type == 'name' || $attr->_type == 'vhname')) {
+			$updatedViewName = $value;
+			$hasUpdatedViewName = true;
+			if (method_exists($this->_request, 'SetViewName')) {
+				$this->_request->SetViewName($value);
+			}
+			return;
+		}
+
+		if (($tid == 'V_TOPD' || $tid == 'V_BASE') && $attr->GetKey() == 'vhRoot' && $value !== null && $value !== ''
+				&& method_exists($this->_request, 'SetVHRoot')) {
+			$this->_request->SetVHRoot(PathTool::GetAbsFile(
+				$value,
+				'SR',
+				$this->_request->GetViewName()
+			));
+		}
 	}
 
 	protected function setValid($res)
@@ -388,7 +451,8 @@ class CValidation
 		if (($type == 'path' && !is_dir($absname)) || ($type == 'file' && !is_file($absname))) {
 			$err = $type . ' ' . htmlspecialchars($absname) . ' does not exist.';
 			if ($this->allow_create($attr, $absname)) {
-				$err .= ' <button type="submit" name="file_create" value="' . htmlspecialchars($attr->GetKey(), ENT_QUOTES) . '" class="lst-btn lst-btn--secondary lst-btn--xs">CLICK TO CREATE</button>';
+				$err .= ' <input type="hidden" name="a" value="s">';
+				$err .= ' <button type="submit" name="file_create" value="' . htmlspecialchars($attr->GetKey(), ENT_QUOTES) . '" class="lst-btn lst-btn--danger lst-btn--xs">CLICK TO CREATE</button>';
 			} else {
 				$err .= ' Please create manually.';
 			}
@@ -540,9 +604,15 @@ class CValidation
 
 		if ($res == -1 && isset($_POST['file_create']) && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
 			if (PathTool::createFile($path, $err, $attr->GetKey())) {
-				$err = "$path has been created successfully.";
+				$this->addValidationMessage(
+					'success',
+					htmlspecialchars($path, ENT_QUOTES) . ' has been created successfully. Click Save to apply this configuration.'
+				);
+				$err = null;
+				return 0;
 			}
-			$res = 0; // make it always point to curr page
+
+			$res = -1;
 		}
 
 		return $res;
@@ -638,6 +708,9 @@ class CValidation
 				if ($vhroot == null) {
 					$err = 'Fail to find $VH_ROOT';
 					return -1;
+				}
+				if (substr($vhroot, -1, 1) !== '/') {
+					$vhroot .= '/';
 				}
 				$path = $vhroot . substr($path, 9);
 			} elseif ($s == '$') {

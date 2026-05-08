@@ -2,8 +2,6 @@
 
 namespace LSWebAdmin\Product\Base;
 
-use LSWebAdmin\I18n\DMsg;
-
 abstract class ProductBase
 {
     protected static $instances = [];
@@ -79,35 +77,7 @@ abstract class ProductBase
 
     protected function detectAvailableVersion()
     {
-        $releasefile = $this->getServerRootPath('autoupdate/release');
-        if ($releasefile === '') {
-            return '';
-        }
-
-        $releasefilecb = $releasefile . 'cb';
-        $newver = '';
-        $rel0 = '';
-        $rel1 = '';
-
-        if (is_file($releasefilecb)) {
-            $rel = trim(file_get_contents($releasefilecb));
-            $rel0 = $this->extractReleaseVersion($rel);
-
-            if ($this->version != $rel0) {
-                $newver = $rel . ' (' . DMsg::UIStr('note_curbranch') . ') ';
-            }
-        }
-
-        if (is_file($releasefile)) {
-            $rel = trim(file_get_contents($releasefile));
-            $rel1 = $this->extractReleaseVersion($rel);
-
-            if ($this->version != $rel1 && $rel0 != $rel1) {
-                $newver .= $rel;
-            }
-        }
-
-        return $newver;
+        return '';
     }
 
     protected function extractReleaseVersion($release)
@@ -118,6 +88,22 @@ abstract class ProductBase
         }
 
         return $release;
+    }
+
+    protected function readReleaseFile($relativePath)
+    {
+        $releaseFile = $this->getServerRootPath($relativePath);
+        if ($releaseFile === '' || !is_file($releaseFile)) {
+            return '';
+        }
+
+        return trim((string) file_get_contents($releaseFile));
+    }
+
+    protected function isNewRelease($release)
+    {
+        $version = $this->extractReleaseVersion($release);
+        return ($release !== '' && $version !== '' && $this->version != $version);
     }
 
     public static function extractBuildDisplay($versionOutput)

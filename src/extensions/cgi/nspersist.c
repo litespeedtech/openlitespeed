@@ -22,10 +22,14 @@
 #include <syscall.h>
 #include <sys/file.h>
 #include <sys/fsuid.h>
+#include <sys/inotify.h>
 #include <sys/mount.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <poll.h>
 #include <time.h>
+#include <limits.h>
 #include <unistd.h>
 #include <wait.h>
 
@@ -293,6 +297,33 @@ static int sys_setns(int fd, int nstype)
     return syscall(__NR_setns, fd, nstype);
 }
 
+static pid_t find_pid_in_ns(int ns_mnt_fd);
+static int verify_pid_in_ns(pid_t pid, int ns_mnt_fd);
+
+static int enter_root_fd(int root_fd, const char *desc)
+{
+    if (root_fd == -1)
+        return 0;
+    if (fchdir(root_fd) != 0)
+    {
+        DEBUG_MESSAGE("%s: fchdir(root_fd) failed: %s\n", desc,
+                      strerror(errno));
+        return -1;
+    }
+    if (chroot(".") != 0)
+    {
+        DEBUG_MESSAGE("%s: chroot(target root) failed: %s\n", desc,
+                      strerror(errno));
+        return -1;
+    }
+    if (chdir("/") != 0)
+    {
+        DEBUG_MESSAGE("%s: chdir(/) after chroot failed: %s\n", desc,
+                      strerror(errno));
+        return -1;
+    }
+    return 0;
+}
 
 int nspersist_setvhost(char *vhenv)
 {
@@ -1036,7 +1067,7 @@ static int persist_namespaces(lscgid_t *pCGI, int persisted, pid_t pid)
 
     snprintf(source, sizeof(source), "/proc/%u/ns/mnt", pid);
     DEBUG_MESSAGE("mount %s on %s\n", source, dest);
-    if (mount(source, dest, NULL, MS_SILENT | MS_BIND | MS_PRIVATE, NULL) != 0)
+    if (mount(source, dest, NULL, MS_SILENT | MS_BIND, NULL) != 0)
     {
         int err = errno;
         ls_stderr("Namespace mount of %s on %s failed: %s\n", source, 
@@ -1045,6 +1076,13 @@ static int persist_namespaces(lscgid_t *pCGI, int persisted, pid_t pid)
         DEBUG_MESSAGE("Dest exists: %s\n", access(dest,0) ? "NO":"YES");
         unpersist_fn(0, pCGI->m_data.m_uid);
         return -1;
+    }
+    /* MS_PRIVATE must be a separate call — the kernel does not allow
+     * propagation flags combined with MS_BIND in a single mount().  */
+    if (mount(NULL, dest, NULL, MS_SILENT | MS_PRIVATE, NULL) != 0)
+    {
+        DEBUG_MESSAGE("persist_namespaces: mount(MS_PRIVATE, %s) failed: %s\n",
+                      dest, strerror(errno));
     }
     DEBUG_MESSAGE("Did bind_mount of: %s on [%s]\n", source, dest);
     s_persisted = 1;
@@ -1071,7 +1109,7 @@ static void close_pipes(int pipe1[], int pipe2[])
 }
 
 
-static void persist_child(lscgid_t *pCGI, int persisted, 
+static void persist_child(lscgid_t *pCGI, int persisted,
                           int persist_sibling_child[], int persist_sibling_rc[])
 {
     nsipc_child_started_t child_started;
@@ -1251,26 +1289,26 @@ static int try_delete_persist_fn()
 }
 
 
-int unlock_close_persist_vh_file(int delete)
+int unlock_close_persist_vh_file(int del)
 {
     char dir[PERSIST_DIR_SIZE] = { 0 };
     int try_delete_persist = 0;
     DEBUG_MESSAGE("Close and unlock the persist vh file vh fd: %d\n", s_persist_vh_fd);
     if (s_persist_vh_fd == -1)
         return 0;
-    if (delete)
+    if (del)
     {
         lock_file(s_persist_uid, s_persist_vh_fd, "Delete VH file", 0, 
                   NSPERSIST_LOCK_TRY_WRITE, &s_persist_vh_locked_write);
         if (!s_persist_vh_locked_write)
-            delete = 0;
+            del = 0;
         else
         {
             int rc = clean_dir(persist_namespace_dir_vh(s_persist_uid, dir, sizeof(dir)));
             DEBUG_MESSAGE("Removed persistence vh dir: %s: %s (%s)\n", 
                           dir, rc == 0 ? "YES" : "NO", strerror(errno));
             if (rc)
-                delete = 0;
+                del = 0;
             else
                 try_delete_persist = 1;
         }
@@ -1278,7 +1316,7 @@ int unlock_close_persist_vh_file(int delete)
     flock(s_persist_vh_fd, LOCK_UN);
     close(s_persist_vh_fd);
     s_persist_vh_fd = -1;
-    if (delete && try_delete_persist)
+    if (del && try_delete_persist)
     {
         try_delete_persist_fn();
     }
@@ -1682,9 +1720,146 @@ int persist_report_pid(pid_t pid, int rc)
     return 0;
 }
 
+/* Detect bind-mounted socket files that have become stale (the host-side
+ * socket was deleted and recreated, giving it a new inode) and re-establish
+ * them.  @host_root_fd is an O_PATH descriptor opened on "/" in the initial
+ * mount namespace BEFORE setns() was called, so that the host filesystem is
+ * still reachable via /proc/self/fd/<host_root_fd>/<path>.                  */
+void nspersist_remount_stale_sockets(int host_root_fd)
+{
+    char *mount_tab_data = NULL;
+    char *line;
+    char host_via_proc[PATH_MAX];
+
+    DEBUG_MESSAGE("remount_stale_sockets, host_root_fd: %d\n", host_root_fd);
+    mount_tab_data = read_big_proc_file("self/mountinfo");
+    if (!mount_tab_data)
+        return;
+
+    line = mount_tab_data;
+    while (*line)
+    {
+        char *next_line, *end, *mountpoint, *mountpoint_end, *rest;
+        int id, parent_id, consumed = 0;
+        unsigned int maj, min;
+
+        end = strchr(line, '\n');
+        if (end)
+        {
+            *end = 0;
+            next_line = end + 1;
+        }
+        else
+            next_line = line + strlen(line);
+
+        if (sscanf(line, "%d %d %u:%u %n", &id, &parent_id, &maj, &min,
+                   &consumed) != 4)
+        {
+            line = next_line;
+            continue;
+        }
+        rest = line + consumed;
+
+        rest = skip_token(rest, 1); /* skip mount root */
+        mountpoint = rest;
+        rest = skip_token(rest, 0); /* end of mountpoint */
+        mountpoint_end = rest;
+        *mountpoint_end = 0;
+        unescape_inline(mountpoint);
+
+        /* Only consider absolute paths that look like real filesystem entries
+         * (skip /proc, /sys, /dev, etc. that are never socket bind mounts). */
+        if (mountpoint[0] != '/' || !mountpoint[1])
+        {
+            line = next_line;
+            continue;
+        }
+
+        /* Check the host side via the pre-setns file descriptor. */
+        struct stat host_st;
+        const char *rel_path = mountpoint + 1; /* skip leading '/' */
+        if (fstatat(host_root_fd, rel_path, &host_st, 0) != 0)
+        {
+            /* Host path doesn't exist — nothing to reconnect. */
+            line = next_line;
+            continue;
+        }
+        if (!S_ISSOCK(host_st.st_mode))
+        {
+            /* Not a socket on the host — no action needed. */
+            line = next_line;
+            continue;
+        }
+
+        /* The host path is a socket.  Check the namespace side. */
+        struct stat ns_st;
+        int ns_ok = (stat(mountpoint, &ns_st) == 0);
+
+        if (ns_ok && ns_st.st_dev == host_st.st_dev &&
+            ns_st.st_ino == host_st.st_ino)
+        {
+            DEBUG_MESSAGE("remount_stale_sockets: %s up-to-date "
+                          "(dev %lu ino %lu)\n", mountpoint,
+                          (unsigned long)host_st.st_dev,
+                          (unsigned long)host_st.st_ino);
+            line = next_line;
+            continue;
+        }
+
+        /* Stale or missing — remount from the host. */
+        DEBUG_MESSAGE("remount_stale_sockets: %s STALE "
+                      "(host dev:ino %lu:%lu, ns %s dev:ino %lu:%lu) — remounting\n",
+                      mountpoint,
+                      (unsigned long)host_st.st_dev,
+                      (unsigned long)host_st.st_ino,
+                      ns_ok ? "exists" : "missing",
+                      ns_ok ? (unsigned long)ns_st.st_dev : 0UL,
+                      ns_ok ? (unsigned long)ns_st.st_ino : 0UL);
+
+        /* Unmount the stale mount (lazy so it doesn't block). */
+        if (umount2(mountpoint, MNT_DETACH) != 0 && errno != EINVAL &&
+            errno != ENOENT)
+        {
+            DEBUG_MESSAGE("remount_stale_sockets: umount2(%s) failed: %s\n",
+                          mountpoint, strerror(errno));
+        }
+
+        /* Build the host source path reachable through the pre-setns fd:
+         *   /proc/self/fd/<host_root_fd>/<relative_path>                  */
+        snprintf(host_via_proc, sizeof(host_via_proc),
+                 "/proc/self/fd/%d/%s", host_root_fd, rel_path);
+
+        if (mount(host_via_proc, mountpoint, NULL,
+                  MS_SILENT | MS_BIND, NULL) != 0)
+        {
+            DEBUG_MESSAGE("remount_stale_sockets: mount(%s, %s) failed: %s\n",
+                          host_via_proc, mountpoint, strerror(errno));
+        }
+        else
+        {
+            /* MS_PRIVATE must be a separate call — the kernel does not allow
+             * propagation flags combined with MS_BIND in a single mount().  */
+            if (mount(NULL, mountpoint, NULL,
+                      MS_SILENT | MS_PRIVATE, NULL) != 0)
+            {
+                DEBUG_MESSAGE("remount_stale_sockets: mount(MS_PRIVATE, %s) "
+                              "failed: %s\n", mountpoint, strerror(errno));
+            }
+            DEBUG_MESSAGE("remount_stale_sockets: %s remounted OK\n",
+                          mountpoint);
+        }
+
+        line = next_line;
+    }
+    free(mount_tab_data);
+}
+
+
 static int persist_use_child(lscgid_t *pCGI)
 {
     int fd = -1, rc = 0;
+    int host_root_fd = -1;
+    int target_root_fd = -1;
     
     DEBUG_MESSAGE("persist_use_child, pid: %d\n", getpid());
     if (setgroups(0, NULL))
@@ -1696,25 +1871,76 @@ static int persist_use_child(lscgid_t *pCGI)
         DEBUG_MESSAGE("setgroups worked first time\n");
     }
     
+    /* Open an O_PATH handle to the host root BEFORE setns() so we can reach
+     * the host filesystem afterwards via /proc/self/fd/<fd>.  */
+    host_root_fd = open("/", O_PATH);
+    if (host_root_fd == -1)
+        DEBUG_MESSAGE("persist_use_child: open(/) for host_root_fd: %s\n",
+                      strerror(errno));
+
     char ns_filename[PERSIST_FILE_SIZE];
     get_ns_filename(pCGI->m_data.m_uid, ns_filename, sizeof(ns_filename));
     fd = open(ns_filename, O_RDONLY);
     if (fd == -1)
     {
         rc = -1;
-        ls_stderr("Namespace error opening namespace for %s: %s\n", 
+        ls_stderr("Namespace error opening namespace for %s: %s\n",
                   ns_filename, strerror(errno));
     }
-    else if (sys_setns(fd, 0))
+    else
     {
-        rc = -1;
-        ls_stderr("Namespace error setting namespace: %s\n", strerror(errno));
+        pid_t target_pid = find_pid_in_ns(fd);
+        if (target_pid != 0)
+        {
+            char target_root_path[PATH_MAX];
+            snprintf(target_root_path, sizeof(target_root_path),
+                     "/proc/%d/root", (int)target_pid);
+            target_root_fd = open(target_root_path,
+                                  O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+            if (target_root_fd == -1)
+            {
+                DEBUG_MESSAGE("persist_use_child: open(%s) failed: %s\n",
+                              target_root_path, strerror(errno));
+            }
+            else if (!verify_pid_in_ns(target_pid, fd))
+            {
+                DEBUG_MESSAGE("persist_use_child: pid %d no longer in "
+                              "ns — closing root fd\n", (int)target_pid);
+                close(target_root_fd);
+                target_root_fd = -1;
+            }
+        }
+        else
+        {
+            DEBUG_MESSAGE("persist_use_child: no process found in namespace %s\n",
+                          ns_filename);
+        }
+        if (sys_setns(fd, 0))
+        {
+            rc = -1;
+            ls_stderr("Namespace error setting namespace: %s\n", strerror(errno));
+        }
+        else if (target_root_fd != -1 && enter_root_fd(target_root_fd,
+                                                       "persist_use_child"))
+        {
+            rc = -1;
+            ls_stderr("Namespace error entering persisted namespace root: %s\n",
+                      strerror(errno));
+        }
     }
     if (fd != -1)
     {
         /* Close the handles (we're set to use them, don't need the open handles anymore */
         close(fd);
     }
+    if (target_root_fd != -1)
+        close(target_root_fd);
+    /* After entering the namespace, check for stale socket bind mounts and
+     * re-establish any that were replaced on the host side. */
+    if (!rc && host_root_fd != -1)
+        nspersist_remount_stale_sockets(host_root_fd);
+    if (host_root_fd != -1)
+        close(host_root_fd);
     if (!rc && setgroups(0, NULL))
     {
         DEBUG_MESSAGE("setgroups failed second time: %s\n", strerror(errno));
@@ -1971,5 +2197,1020 @@ int unpersist_all()
     closedir(dir);
     return rc;
 }
+
+
+/* ---------- Modern mount API wrappers (open_tree / move_mount) ----------
+ * These syscalls were added in Linux 5.2 (June 2019).  We invoke them
+ * via syscall() so the code compiles on older systems whose glibc
+ * doesn't expose them, and we detect availability at runtime.  If the
+ * kernel returns ENOSYS we fall back to leaving stale mounts.
+ *
+ * Only x86 architectures are supported for the fallback syscall numbers;
+ * other architectures must rely on a glibc that already defines
+ * __NR_open_tree / __NR_move_mount.                                       */
+
+#ifndef __NR_open_tree
+# if defined(__x86_64__) || defined(__i386__)
+#  define __NR_open_tree    428
+# else
+#  error "__NR_open_tree not defined for this architecture"
+# endif
+#endif
+#ifndef __NR_move_mount
+# if defined(__x86_64__) || defined(__i386__)
+#  define __NR_move_mount   429
+# else
+#  error "__NR_move_mount not defined for this architecture"
+# endif
+#endif
+
+#ifndef OPEN_TREE_CLONE
+# define OPEN_TREE_CLONE    1
+#endif
+#ifndef OPEN_TREE_CLOEXEC
+# define OPEN_TREE_CLOEXEC  O_CLOEXEC
+#endif
+#ifndef MOVE_MOUNT_F_EMPTY_PATH
+# define MOVE_MOUNT_F_EMPTY_PATH 0x00000004
+#endif
+
+static int sys_open_tree(int dirfd, const char *pathname, unsigned int flags)
+{
+    return syscall(__NR_open_tree, dirfd, pathname, flags);
+}
+
+/* Cached result of the runtime open_tree() availability probe.
+ *   -1 = not yet probed
+ *    0 = kernel returned ENOSYS — open_tree() unsupported (kernel < 5.2)
+ *    1 = open_tree() is supported
+ *
+ * open_tree() availability is a property of the running kernel, not of
+ * any individual mount, so we probe it exactly once when the watcher
+ * starts.  The value is then inherited via fork() by every helper, so
+ * helpers don't re-probe (and the per-file ENOSYS check inside the
+ * helper's stale-mount loop becomes unnecessary).  */
+static int s_open_tree_supported = -1;
+
+static void probe_open_tree_support(void)
+{
+    if (s_open_tree_supported != -1)
+        return;
+    /* "/" is always present and is a mount point, so OPEN_TREE_CLONE
+     * succeeds on any kernel that implements the syscall.  We only
+     * care about distinguishing ENOSYS from everything else.  */
+    int fd = sys_open_tree(AT_FDCWD, "/",
+                           OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
+    if (fd == -1 && errno == ENOSYS)
+    {
+        s_open_tree_supported = 0;
+        DEBUG_MESSAGE("watcher: open_tree() unsupported (kernel < 5.2)\n");
+        return;
+    }
+    s_open_tree_supported = 1;
+    if (fd != -1)
+        close(fd);
+    DEBUG_MESSAGE("watcher: open_tree() supported\n");
+}
+
+static int sys_move_mount(int from_dfd, const char *from_pathname,
+                          int to_dfd, const char *to_pathname,
+                          unsigned int flags)
+{
+    return syscall(__NR_move_mount, from_dfd, from_pathname,
+                   to_dfd, to_pathname, flags);
+}
+
+
+/* ====================================================================
+ * Host-side socket watcher
+ *
+ * A single long-lived process forked from the lscgid daemon.  Lives in
+ * the host mount namespace (full visibility, full caps).  Uses inotify
+ * to monitor host-side socket directories.  When a socket is bounced,
+ * it forks a per-namespace helper that setns()'s into each persisted
+ * namespace and re-establishes the bind mount.
+ *
+ * The bind-mount source after setns() works by passing /proc/self/fd/N
+ * where N is a host-opened fd to the new socket file.  The kernel
+ * resolves this magic symlink to the open file's path object (which
+ * remains valid across setns).  This works on all kernels that support
+ * /proc/self/fd magic symlinks (every Linux kernel).
+ * ==================================================================== */
+
+/* After receiving an inotify event, sleep this long before rescanning so
+ * the freshly recreated socket file is fully visible (mode bits, owner,
+ * etc. may be set after the initial create event).  */
+#define SOCKET_BOUNCE_DEBOUNCE_US 200000  /* 200 ms */
+
+/* Set of well-known socket paths to watch on the host side.  Must match
+ * the socket bind mounts in src/ns.c's setupOp_default[].  */
+static const char * const s_watched_sockets[] = {
+    "/var/lib/mysql/mysql.sock",
+    "/home/mysql/mysql.sock",
+    "/tmp/mysql.sock",
+    "/run/mysqld/mysqld.sock",
+    "/var/run/mysqld/mysqld.sock",
+    NULL
+};
+
+/* For each watched socket, the parent dir + basename and current inode. */
+typedef struct watched_sock_s
+{
+    char        dir[PATH_MAX];   /* parent directory (absolute) */
+    char        name[256];       /* basename of socket file */
+    char        full[PATH_MAX];  /* full path */
+    int         wd;              /* inotify watch on parent dir */
+    ino_t       last_ino;        /* last seen inode */
+    dev_t       last_dev;        /* last seen device */
+} watched_sock_t;
+
+
+/* Per-namespace helper: collect stale bind-mounted socket paths and
+ * capture detached-mount fds for the current host source of each.
+ * Called BEFORE setns so the open_tree fds capture mounts from the host
+ * namespace.  Returns the number of stale entries found.  */
+#define MAX_STALE_SOCKETS 16
+
+typedef struct stale_sock_s {
+    char        path[PATH_MAX];  /* mountpoint path (absolute) */
+    int         tree_fd;         /* open_tree fd from host ns, or -1 */
+} stale_sock_t;
+
+/* Read mountinfo from the user's namespace via /proc/<pid>/mountinfo
+ * where <pid> is a process known to be in that namespace.  Uses
+ * setns-less inspection.  Returns malloc'd buffer or NULL.  */
+static char *read_mountinfo_of_pid(pid_t pid)
+{
+    char path[64];
+    snprintf(path, sizeof(path), "%d/mountinfo", (int)pid);
+    /* read_big_proc_file prepends "/proc/" and reads.  Temporarily
+     * change the prefix by opening manually.  */
+    char full[128];
+    snprintf(full, sizeof(full), "/proc/%d/mountinfo", (int)pid);
+    int fd = open(full, O_RDONLY);
+    if (fd < 0)
+        return NULL;
+    size_t cap = 8192, len = 0;
+    char *buf = malloc(cap);
+    if (!buf) { close(fd); return NULL; }
+    ssize_t r;
+    while ((r = read(fd, buf + len, cap - len - 1)) > 0)
+    {
+        len += r;
+        if (len + 1 >= cap)
+        {
+            cap *= 2;
+            char *nb = realloc(buf, cap);
+            if (!nb) { free(buf); close(fd); return NULL; }
+            buf = nb;
+        }
+    }
+    buf[len] = 0;
+    close(fd);
+    return buf;
+}
+
+/* Find a pid currently running in the given mount namespace.  Scans
+ * /proc for a process whose /proc/<pid>/ns/mnt points to the same
+ * inode as ns_mnt_fd.  Returns 0 if none found.  */
+static pid_t find_pid_in_ns(int ns_mnt_fd)
+{
+    struct stat ns_st;
+    if (fstat(ns_mnt_fd, &ns_st) != 0)
+        return 0;
+
+    DIR *d = opendir("/proc");
+    if (!d) return 0;
+    struct dirent *e;
+    pid_t result = 0;
+    while ((e = readdir(d)) != NULL)
+    {
+        if (e->d_type != DT_DIR) continue;
+        if (strspn(e->d_name, "0123456789") != strlen(e->d_name)) continue;
+        char path[300];
+        snprintf(path, sizeof(path), "/proc/%s/ns/mnt", e->d_name);
+        struct stat st;
+        if (stat(path, &st) == 0 &&
+            st.st_dev == ns_st.st_dev &&
+            st.st_ino == ns_st.st_ino)
+        {
+            result = atoi(e->d_name);
+            break;
+        }
+    }
+    closedir(d);
+    return result;
+}
+
+/* Verify @pid is still in the mount namespace identified by @ns_mnt_fd.
+ * Returns 1 if confirmed, 0 if pid is gone or in a different ns.  Used
+ * to close the pid-reuse race between find_pid_in_ns() and using
+ * /proc/<pid>/root as a stable reference.  */
+static int verify_pid_in_ns(pid_t pid, int ns_mnt_fd)
+{
+    struct stat want_st, got_st;
+    char path[300];
+    if (fstat(ns_mnt_fd, &want_st) != 0)
+        return 0;
+    snprintf(path, sizeof(path), "/proc/%d/ns/mnt", (int)pid);
+    if (stat(path, &got_st) != 0)
+        return 0;
+    return got_st.st_dev == want_st.st_dev &&
+           got_st.st_ino == want_st.st_ino;
+}
+
+/* Determine from a pid's mountinfo which socket bind mounts are stale
+ * (host inode != ns inode).  Fills stale[] with up to max entries.
+ * tree_fd is initialized to -1.  Returns count.  */
+static int find_stale_sockets(pid_t pid, int host_root_fd,
+                              stale_sock_t *stale, int max)
+{
+    char *data = read_mountinfo_of_pid(pid);
+    if (!data) return 0;
+
+    int n = 0;
+    char *line = data;
+    while (*line && n < max)
+    {
+        char *next, *end, *mp, *mp_end, *rest;
+        int id, parent_id, consumed = 0;
+        unsigned int maj, min;
+        end = strchr(line, '\n');
+        if (end) { *end = 0; next = end + 1; } else next = line + strlen(line);
+        if (sscanf(line, "%d %d %u:%u %n", &id, &parent_id, &maj, &min,
+                   &consumed) != 4) { line = next; continue; }
+        rest = line + consumed;
+        rest = skip_token(rest, 1);
+        mp = rest;
+        rest = skip_token(rest, 0);
+        mp_end = rest;
+        *mp_end = 0;
+        unescape_inline(mp);
+
+        if (mp[0] != '/' || !mp[1]) { line = next; continue; }
+
+        /* Restrict to the watched-socket allowlist so we never touch
+         * unrelated mounts that happen to be sockets.  */
+        int allowed = 0;
+        for (int j = 0; s_watched_sockets[j] != NULL; j++)
+        {
+            if (strcmp(mp, s_watched_sockets[j]) == 0) { allowed = 1; break; }
+        }
+        if (!allowed) { line = next; continue; }
+
+        struct stat host_st, ns_st;
+        const char *rel = mp + 1;
+        if (fstatat(host_root_fd, rel, &host_st, 0) != 0 ||
+            !S_ISSOCK(host_st.st_mode)) { line = next; continue; }
+
+        /* Stat the ns side via the pid's root. */
+        char ns_stat_path[PATH_MAX + 64];
+        snprintf(ns_stat_path, sizeof(ns_stat_path),
+                 "/proc/%d/root%s", (int)pid, mp);
+        if (stat(ns_stat_path, &ns_st) != 0) { line = next; continue; }
+
+        if (ns_st.st_dev == host_st.st_dev &&
+            ns_st.st_ino == host_st.st_ino) { line = next; continue; }
+
+        DEBUG_MESSAGE("helper: %s STALE (host %lu:%lu, ns %lu:%lu)\n",
+                      mp,
+                      (unsigned long)host_st.st_dev,
+                      (unsigned long)host_st.st_ino,
+                      (unsigned long)ns_st.st_dev,
+                      (unsigned long)ns_st.st_ino);
+
+        strncpy(stale[n].path, mp, sizeof(stale[n].path) - 1);
+        stale[n].path[sizeof(stale[n].path) - 1] = 0;
+        stale[n].tree_fd = -1;
+        n++;
+        line = next;
+    }
+    free(data);
+    return n;
+}
+
+
+/* Apply already-prepared open_tree fds onto their target mountpoints.
+ * Caller must already be in the target mount namespace.  Each entry
+ * with tree_fd != -1 is umount2(MNT_DETACH)'d and then move_mount'd
+ * into place; tree_fd is closed regardless.  Returns 1 if any failed
+ * or had no usable tree_fd, 0 on full success.  */
+static int apply_remounts(stale_sock_t *stale, int n_stale)
+{
+    int any_failed = 0;
+    for (int i = 0; i < n_stale; i++)
+    {
+        if (stale[i].tree_fd == -1) { any_failed = 1; continue; }
+
+        if (umount2(stale[i].path, MNT_DETACH) != 0 &&
+            errno != EINVAL && errno != ENOENT)
+        {
+            DEBUG_MESSAGE("helper: umount2(%s) failed: %s\n",
+                          stale[i].path, strerror(errno));
+        }
+
+        if (sys_move_mount(stale[i].tree_fd, "",
+                           AT_FDCWD, stale[i].path,
+                           MOVE_MOUNT_F_EMPTY_PATH) != 0)
+        {
+            DEBUG_MESSAGE("helper: move_mount(%s) failed: %s\n",
+                          stale[i].path, strerror(errno));
+            any_failed = 1;
+        }
+        else
+        {
+            DEBUG_MESSAGE("helper: %s remounted OK via move_mount\n",
+                          stale[i].path);
+        }
+        close(stale[i].tree_fd);
+        stale[i].tree_fd = -1;
+    }
+    return any_failed;
+}
+
+
+/* Empty-namespace recovery path: no process exists in the target ns,
+ * so we cannot read /proc/<pid>/mountinfo or /proc/<pid>/root.  Walk
+ * the watched-socket allowlist instead: open_tree() each host socket
+ * (still in host ns), setns() into the target, then for every watched
+ * path that is bind-mounted in the target ns with a different inode
+ * than the host, umount2 + move_mount it.
+ *
+ * Caller still holds host_root_fd and ns_fd; this function consumes
+ * neither.  Returns 0 on success (including "nothing to do"), -1 on
+ * setns failure.  */
+static int repair_empty_ns(int ns_fd, int host_root_fd)
+{
+    stale_sock_t stale[MAX_STALE_SOCKETS];
+    int n_candidates = 0;
+
+    /* Step 1 (host ns): open_tree every watched socket that exists on
+     * the host as a real socket.  Mounts that aren't actually present
+     * in the target ns will be filtered out after setns.  */
+    for (int i = 0; s_watched_sockets[i] != NULL &&
+                    n_candidates < MAX_STALE_SOCKETS; i++)
+    {
+        const char *p = s_watched_sockets[i];
+        struct stat host_st;
+        if (fstatat(host_root_fd, p + 1, &host_st, 0) != 0 ||
+            !S_ISSOCK(host_st.st_mode))
+            continue;
+
+        int tfd = sys_open_tree(AT_FDCWD, p,
+                                OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC);
+        if (tfd == -1)
+        {
+            DEBUG_MESSAGE("helper(empty): open_tree(%s) failed: %s\n",
+                          p, strerror(errno));
+            continue;
+        }
+        DEBUG_MESSAGE("helper(empty): open_tree(%s) -> fd %d "
+                      "(host dev:ino %lu:%lu)\n",
+                      p, tfd,
+                      (unsigned long)host_st.st_dev,
+                      (unsigned long)host_st.st_ino);
+        strncpy(stale[n_candidates].path, p,
+                sizeof(stale[n_candidates].path) - 1);
+        stale[n_candidates].path[sizeof(stale[n_candidates].path) - 1] = 0;
+        stale[n_candidates].tree_fd = tfd;
+        /* Stash host inode in path[]'s tail? No — we'll re-stat via
+         * host_root_fd after setns since that fd remains valid.  */
+        n_candidates++;
+    }
+
+    if (n_candidates == 0)
+    {
+        DEBUG_MESSAGE("helper(empty): no host sockets to consider\n");
+        return 0;
+    }
+
+    /* Step 2: enter the target mount namespace.  No chroot — we rely
+     * on the watched paths being absolute and meaningful in both
+     * namespaces (they are: the bind mounts were originally created
+     * at these absolute paths).  */
+    if (sys_setns(ns_fd, 0) != 0)
+    {
+        DEBUG_MESSAGE("helper(empty): setns failed: %s\n", strerror(errno));
+        for (int i = 0; i < n_candidates; i++)
+            if (stale[i].tree_fd != -1) close(stale[i].tree_fd);
+        return -1;
+    }
+
+    /* Step 3: for each candidate, decide whether to act in the target
+     * ns.  We do NOT consult mountinfo: a previously failed mount()
+     * may have detached the bind mount entirely, leaving no entry to
+     * find but the original mountpoint file (the underlying dentry of
+     * the directory the bind sat on) still in place.  The correct
+     * gate is whether the destination *path* exists in the ns.  If it
+     * does, the operator originally provisioned this socket here and
+     * we should ensure it's bound to the live host socket.  If the
+     * path is absent we leave the ns alone — that's a ns the operator
+     * never configured for this socket.  */
+    int kept = 0;
+    for (int i = 0; i < n_candidates; i++)
+    {
+        const char *p = stale[i].path;
+        struct stat host_st, ns_st;
+
+        /* Refresh host inode via host_root_fd, which still resolves
+         * to the host root because /proc/self/fd/N magic symlinks
+         * survive setns().  */
+        if (fstatat(host_root_fd, p + 1, &host_st, 0) != 0 ||
+            !S_ISSOCK(host_st.st_mode))
+        {
+            close(stale[i].tree_fd);
+            stale[i].tree_fd = -1;
+            continue;
+        }
+
+        /* Does the destination path exist in this ns?  lstat() to
+         * avoid following any leftover symlinks; we want to know if
+         * the dentry is there, regardless of whether the bind is
+         * currently attached.  */
+        if (lstat(p, &ns_st) != 0)
+        {
+            DEBUG_MESSAGE("helper(empty): %s absent in ns "
+                          "(%s) — not configured here, skipping\n",
+                          p, strerror(errno));
+            close(stale[i].tree_fd);
+            stale[i].tree_fd = -1;
+            continue;
+        }
+
+        /* Already pointing at the live host socket?  Nothing to do. */
+        if (ns_st.st_dev == host_st.st_dev &&
+            ns_st.st_ino == host_st.st_ino)
+        {
+            DEBUG_MESSAGE("helper(empty): %s up-to-date "
+                          "(dev %lu ino %lu)\n", p,
+                          (unsigned long)host_st.st_dev,
+                          (unsigned long)host_st.st_ino);
+            close(stale[i].tree_fd);
+            stale[i].tree_fd = -1;
+            continue;
+        }
+
+        DEBUG_MESSAGE("helper(empty): %s needs (re)mount "
+                      "(host %lu:%lu, ns %lu:%lu) — will move_mount\n",
+                      p,
+                      (unsigned long)host_st.st_dev,
+                      (unsigned long)host_st.st_ino,
+                      (unsigned long)ns_st.st_dev,
+                      (unsigned long)ns_st.st_ino);
+        if (kept != i)
+            stale[kept] = stale[i];
+        kept++;
+    }
+
+    if (kept == 0)
+    {
+        DEBUG_MESSAGE("helper(empty): nothing stale in this ns\n");
+        return 0;
+    }
+
+    (void)apply_remounts(stale, kept);
+    return 0;
+}
+
+
+/* Helper: enter the target namespace via setns and remount stale
+ * socket bind mounts using the modern mount API (open_tree/move_mount).
+ * Falls back to killing processes if the kernel doesn't support the
+ * syscalls and LS_NS_NO_KILL is not set.  Runs as a freshly forked
+ * child of the watcher.  */
+static void run_helper_for_ns(const char *ns_mnt_path)
+{
+    int host_root_fd;
+    int ns_fd;
+    int target_root_fd = -1;
+    stale_sock_t stale[MAX_STALE_SOCKETS];
+    int n_stale = 0;
+
+    /* Open the host root with O_PATH so we can still reach host files
+     * from inside the target namespace via fstatat/openat.  */
+    host_root_fd = open("/", O_PATH);
+    if (host_root_fd == -1)
+    {
+        DEBUG_MESSAGE("helper: open(/) failed: %s\n", strerror(errno));
+        _exit(1);
+    }
+
+    ns_fd = open(ns_mnt_path, O_RDONLY);
+    if (ns_fd == -1)
+    {
+        DEBUG_MESSAGE("helper: open(%s) failed: %s\n", ns_mnt_path,
+                      strerror(errno));
+        close(host_root_fd);
+        _exit(1);
+    }
+
+    /* Step 1: (still in host ns) find a process in the target ns and
+     * examine its mountinfo to identify stale socket bind mounts.
+     * If the namespace is persisted-but-idle (no live tasks inside),
+     * fall back to a pid-less repair that uses the watched-socket
+     * allowlist.  We must repair empty namespaces too: the next
+     * consumer entering this ns will not be a LiteSpeed program
+     * (it will be PHP, mysql client, etc.) so it cannot be relied on
+     * to fix the mount itself.  */
+    pid_t target_pid = find_pid_in_ns(ns_fd);
+    if (target_pid == 0)
+    {
+        DEBUG_MESSAGE("helper: no processes found in ns %s — "
+                      "running empty-ns repair\n", ns_mnt_path);
+        (void)repair_empty_ns(ns_fd, host_root_fd);
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(0);
+    }
+    DEBUG_MESSAGE("helper: target ns has pid %d\n", (int)target_pid);
+
+    char target_root_path[PATH_MAX];
+    snprintf(target_root_path, sizeof(target_root_path), "/proc/%d/root",
+             (int)target_pid);
+    target_root_fd = open(target_root_path,
+                          O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (target_root_fd == -1)
+    {
+        DEBUG_MESSAGE("helper: open(%s) failed: %s\n", target_root_path,
+                      strerror(errno));
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(1);
+    }
+
+    /* Re-verify the pid is still in the target ns to close the race
+     * between find_pid_in_ns() above and the open() we just did.  If the
+     * pid exited and was reused, target_root_fd would point at the wrong
+     * namespace and we'd act on the wrong filesystem.  */
+    if (!verify_pid_in_ns(target_pid, ns_fd))
+    {
+        DEBUG_MESSAGE("helper: pid %d no longer in ns %s — skipping\n",
+                      (int)target_pid, ns_mnt_path);
+        close(target_root_fd);
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(0);
+    }
+
+    n_stale = find_stale_sockets(target_pid, host_root_fd, stale,
+                                 MAX_STALE_SOCKETS);
+    if (n_stale == 0)
+    {
+        DEBUG_MESSAGE("helper: no stale sockets in %s\n", ns_mnt_path);
+        close(target_root_fd);
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(0);
+    }
+
+    /* Step 2: (still in host ns) use open_tree() to clone each stale
+     * socket's current host mount.  This captures the live mount
+     * source which we can later move into the target namespace.
+     *
+     * open_tree() availability was already confirmed by the watcher's
+     * one-time probe in nspersist_start_socket_watcher() (we are a
+     * fork descendant of that process), so we don't need to check
+     * for ENOSYS on every file here — any per-file failure is a
+     * real per-mount issue, not a kernel-capability issue.  */
+    int any_tree_ok = 0;
+    for (int i = 0; i < n_stale; i++)
+    {
+        /* Use the mount point path itself as the open_tree source,
+         * since /var/run/mysqld/mysqld.sock already exists as a bind
+         * mount in the host too, and the host-side view is
+         * authoritative.  */
+        stale[i].tree_fd = sys_open_tree(AT_FDCWD, stale[i].path,
+                                         OPEN_TREE_CLONE |
+                                         OPEN_TREE_CLOEXEC);
+        if (stale[i].tree_fd == -1)
+        {
+            DEBUG_MESSAGE("helper: open_tree(%s) failed: %s\n",
+                          stale[i].path, strerror(errno));
+        }
+        else
+        {
+            DEBUG_MESSAGE("helper: open_tree(%s) -> fd %d\n",
+                          stale[i].path, stale[i].tree_fd);
+            any_tree_ok = 1;
+        }
+    }
+
+    /* Step 3: if every per-file open_tree failed, there's nothing to
+     * move — bail out before entering the target namespace.  */
+    if (!any_tree_ok)
+    {
+        DEBUG_MESSAGE("helper: no usable open_tree fds — "
+                      "leaving stale mounts\n");
+        close(target_root_fd);
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(0);
+    }
+
+    /* Step 4: enter the target namespace and switch root to that namespace's
+     * root.  The open_tree fds survive both setns() and chroot(). */
+    if (sys_setns(ns_fd, 0) != 0)
+    {
+        DEBUG_MESSAGE("helper: setns(%s) failed: %s\n", ns_mnt_path,
+                      strerror(errno));
+        for (int i = 0; i < n_stale; i++)
+            if (stale[i].tree_fd != -1) close(stale[i].tree_fd);
+        close(target_root_fd);
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(1);
+    }
+    if (enter_root_fd(target_root_fd, "helper") != 0)
+    {
+        for (int i = 0; i < n_stale; i++)
+            if (stale[i].tree_fd != -1) close(stale[i].tree_fd);
+        close(target_root_fd);
+        close(ns_fd);
+        close(host_root_fd);
+        _exit(1);
+    }
+    close(target_root_fd);
+    close(ns_fd);
+
+    /* Step 5: for each stale mount, umount the old bind mount and
+     * move_mount the detached tree fd onto the mount point.  */
+    int any_failed = apply_remounts(stale, n_stale);
+
+    /* Step 6: if move_mount failed (e.g. ENOSYS on a kernel with
+     * partial support), fall back to killing the namespace's
+     * processes.  We're still in the target ns, but /proc is the
+     * host's /proc (nothing changed it).  To enumerate the ns's
+     * processes we'd need the ns_mnt_fd again — but we closed it.
+     * For this edge case just skip; the kernel is so inconsistent
+     * that recovery isn't worth it.  */
+    if (any_failed)
+    {
+        DEBUG_MESSAGE("helper: some remounts failed — stale mounts "
+                      "remain for this namespace\n");
+    }
+
+    close(host_root_fd);
+    _exit(0);
+}
+
+
+static int is_numeric_name(const char *name)
+{
+    return name[0] != 0 && strspn(name, "0123456789") == strlen(name);
+}
+
+static int is_dir_path(const char *path)
+{
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static void remount_namespace_at(const char *ns_mnt)
+{
+    /* Skip if not a mounted ns file. */
+    struct stat st;
+    if (stat(ns_mnt, &st) != 0 || st.st_size != 0)
+        return;
+
+    DEBUG_MESSAGE("watcher: forking helper for %s\n", ns_mnt);
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        DEBUG_MESSAGE("watcher: fork failed: %s\n", strerror(errno));
+        return;
+    }
+    if (pid == 0)
+    {
+        run_helper_for_ns(ns_mnt);
+        /* Not reached. */
+    }
+    /* Parent: reap helper without blocking the loop too long. */
+    int status;
+    waitpid(pid, &status, 0);
+}
+
+static void scan_numeric_namespace_dirs(const char *base_path)
+{
+    DIR *dir = opendir(base_path);
+    if (!dir)
+        return;
+
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL)
+    {
+        if (!is_numeric_name(ent->d_name))
+            continue;
+
+        char ns_mnt[PATH_MAX + 512];
+        snprintf(ns_mnt, sizeof(ns_mnt), "%s/%s/mnt", base_path,
+                 ent->d_name);
+        remount_namespace_at(ns_mnt);
+    }
+    closedir(dir);
+}
+
+/* Iterate over all persisted namespaces under /var/lsns and fork a
+ * helper for each.  Handles both /var/lsns/uid/N/mnt and
+ * /var/lsns/uid/vhost/N/mnt layouts. */
+static void scan_and_remount_all_namespaces(void)
+{
+    DIR *uid_dir;
+    struct dirent *uid_ent;
+
+    DEBUG_MESSAGE("watcher: scanning persisted namespaces\n");
+
+    uid_dir = opendir(PERSIST_PREFIX);
+    if (!uid_dir)
+        return;
+
+    while ((uid_ent = readdir(uid_dir)) != NULL)
+    {
+        if (!is_numeric_name(uid_ent->d_name))
+            continue;
+
+        char uid_path[PATH_MAX];
+        int n = snprintf(uid_path, sizeof(uid_path), "%s/%s",
+                         PERSIST_PREFIX, uid_ent->d_name);
+        if (n < 0 || n >= (int)sizeof(uid_path) || !is_dir_path(uid_path))
+            continue;
+
+        scan_numeric_namespace_dirs(uid_path);
+
+        DIR *vh_dir = opendir(uid_path);
+        if (!vh_dir)
+            continue;
+
+        struct dirent *vh_ent;
+        while ((vh_ent = readdir(vh_dir)) != NULL)
+        {
+            if (vh_ent->d_name[0] == '.' || is_numeric_name(vh_ent->d_name) ||
+                !strcmp(vh_ent->d_name, "root"))
+                continue;
+
+            char vh_path[PATH_MAX];
+            n = snprintf(vh_path, sizeof(vh_path), "%s/%s", uid_path,
+                         vh_ent->d_name);
+            if (n < 0 || n >= (int)sizeof(vh_path) || !is_dir_path(vh_path))
+                continue;
+
+            scan_numeric_namespace_dirs(vh_path);
+        }
+        closedir(vh_dir);
+    }
+    closedir(uid_dir);
+}
+
+
+/* Build inotify watches on the parent directories of the watched
+ * sockets.  Returns the number of watches added.  */
+static int watcher_setup_inotify(int ifd, watched_sock_t *socks, int nsocks)
+{
+    int n = 0;
+    for (int i = 0; i < nsocks; i++)
+    {
+        struct stat st;
+        /* Stat current socket to record initial inode.  Fine if missing.  */
+        if (stat(socks[i].full, &st) == 0)
+        {
+            socks[i].last_ino = st.st_ino;
+            socks[i].last_dev = st.st_dev;
+        }
+        else
+        {
+            socks[i].last_ino = 0;
+            socks[i].last_dev = 0;
+        }
+
+        /* Watch the parent directory for create/delete/move events on
+         * the socket basename.  Use IN_CREATE + IN_DELETE since sockets
+         * are usually unlink+bind on restart.  */
+        socks[i].wd = inotify_add_watch(ifd, socks[i].dir,
+                                        IN_CREATE | IN_DELETE |
+                                        IN_MOVED_TO | IN_MOVED_FROM);
+        if (socks[i].wd == -1)
+        {
+            DEBUG_MESSAGE("watcher: inotify_add_watch(%s): %s\n",
+                          socks[i].dir, strerror(errno));
+            continue;
+        }
+        DEBUG_MESSAGE("watcher: watching %s (wd %d, init ino %lu)\n",
+                      socks[i].dir, socks[i].wd,
+                      (unsigned long)socks[i].last_ino);
+        n++;
+    }
+    return n;
+}
+
+
+/* The watcher main loop.  Runs in a dedicated process forked from the
+ * lscgid daemon.  Lives in the host mount namespace.  */
+static void watcher_main(void)
+{
+    int ifd;
+    watched_sock_t socks[16];
+    int nsocks = 0;
+
+    DEBUG_MESSAGE("socket_watcher: started, pid %d\n", getpid());
+
+    /* Die when the lscgid daemon (our parent) dies, so we don't leak
+     * a watcher process after lscgid is terminated.  */
+    if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0)
+        DEBUG_MESSAGE("socket_watcher: prctl(PR_SET_PDEATHSIG) failed: "
+                      "%s\n", strerror(errno));
+    /* Handle the parent-death signal (and any other termination
+     * signal) by exiting.  */
+    struct sigaction sa = { 0 };
+    sa.sa_handler = SIG_DFL; /* default SIGTERM action terminates */
+    sigaction(SIGTERM, &sa, NULL);
+    /* If our parent already died before we set pdeathsig, exit now.  */
+    if (getppid() == 1)
+        _exit(0);
+
+    /* Fill in the watched_sock_t array from the static list.  */
+    for (int i = 0; s_watched_sockets[i] != NULL && nsocks <
+         (int)(sizeof(socks)/sizeof(socks[0])); i++)
+    {
+        const char *p = s_watched_sockets[i];
+        const char *slash = strrchr(p, '/');
+        if (!slash || slash == p)
+            continue;
+        size_t dirlen = (size_t)(slash - p);
+        if (dirlen >= sizeof(socks[nsocks].dir))
+            continue;
+        memcpy(socks[nsocks].dir, p, dirlen);
+        socks[nsocks].dir[dirlen] = 0;
+        strncpy(socks[nsocks].name, slash + 1,
+                sizeof(socks[nsocks].name) - 1);
+        socks[nsocks].name[sizeof(socks[nsocks].name) - 1] = 0;
+        strncpy(socks[nsocks].full, p, sizeof(socks[nsocks].full) - 1);
+        socks[nsocks].full[sizeof(socks[nsocks].full) - 1] = 0;
+        socks[nsocks].wd = -1;
+        nsocks++;
+    }
+
+    ifd = inotify_init1(IN_CLOEXEC | IN_NONBLOCK);
+    if (ifd == -1)
+    {
+        DEBUG_MESSAGE("socket_watcher: inotify_init1 failed: %s\n",
+                      strerror(errno));
+        return;
+    }
+
+    int n_watches = watcher_setup_inotify(ifd, socks, nsocks);
+    DEBUG_MESSAGE("socket_watcher: %d/%d watches active\n", n_watches,
+                  nsocks);
+
+    /* Install default SIGCHLD handler so waitpid() works for helpers. */
+    signal(SIGCHLD, SIG_DFL);
+
+    /* Initial scan: handle the case where sockets were bounced while
+     * lscgid was stopped (so no inotify event fired for them).  This
+     * refreshes stale bind mounts in existing persisted namespaces.  */
+    DEBUG_MESSAGE("socket_watcher: initial scan of persisted namespaces\n");
+    scan_and_remount_all_namespaces();
+
+    char buf[8192]
+        __attribute__((aligned(__alignof__(struct inotify_event))));
+
+    for (;;)
+    {
+        struct pollfd pfd = { .fd = ifd, .events = POLLIN };
+        int ret = poll(&pfd, 1, -1);
+        if (ret < 0)
+        {
+            if (errno == EINTR)
+                continue;
+            DEBUG_MESSAGE("socket_watcher: poll error: %s\n",
+                          strerror(errno));
+            break;
+        }
+
+        int relevant = 0;
+        for (;;)
+        {
+            ssize_t len = read(ifd, buf, sizeof(buf));
+            if (len <= 0)
+                break;
+            char *ptr = buf;
+            while (ptr < buf + len)
+            {
+                struct inotify_event *ev = (struct inotify_event *)ptr;
+                if (ev->len > 0)
+                {
+                    /* Check whether the event is for one of our
+                     * watched socket basenames.  */
+                    for (int i = 0; i < nsocks; i++)
+                    {
+                        if (ev->wd == socks[i].wd &&
+                            strcmp(ev->name, socks[i].name) == 0)
+                        {
+                            DEBUG_MESSAGE("socket_watcher: event for %s "
+                                          "(mask 0x%x)\n", socks[i].full,
+                                          ev->mask);
+                            relevant = 1;
+                            break;
+                        }
+                    }
+                }
+                ptr += sizeof(struct inotify_event) + ev->len;
+            }
+        }
+
+        if (relevant)
+        {
+            /* Brief delay so the new socket is fully visible. */
+            usleep(SOCKET_BOUNCE_DEBOUNCE_US);
+            scan_and_remount_all_namespaces();
+        }
+    }
+
+    close(ifd);
+}
+
+
+pid_t nspersist_start_socket_watcher(void)
+{
+    pid_t pid;
+    extern pid_t s_ns_watcher_pid;
+    ns_init_debug();
+    if (s_ns_watcher_pid > 0)
+    {
+        DEBUG_MESSAGE("nspersist_start_socket_watcher: watcher already "
+                      "started as pid %d\n", (int)s_ns_watcher_pid);
+        return s_ns_watcher_pid;
+    }
+
+    /* The watcher exists solely to refresh stale socket bind mounts in
+     * persisted namespaces using the modern mount API (open_tree /
+     * move_mount, kernel 5.2+).  If the kernel doesn't support
+     * open_tree() there is nothing the watcher can do, so probe once
+     * here and skip starting the watcher entirely on older kernels.  */
+    probe_open_tree_support();
+    if (!s_open_tree_supported)
+    {
+        DEBUG_MESSAGE("nspersist_start_socket_watcher: open_tree() "
+                      "unsupported (kernel < 5.2) — not starting watcher\n");
+        return 0;
+    }
+
+    pid = fork();
+    if (pid == -1)
+    {
+        DEBUG_MESSAGE("nspersist_start_socket_watcher: fork failed: %s\n",
+                      strerror(errno));
+        return -1;
+    }
+
+    if (pid == 0)
+    {
+        s_ns_watcher_pid = 0;
+        /* Child — run the watcher main loop forever.  */
+        watcher_main();
+        _exit(0);
+    }
+
+    DEBUG_MESSAGE("nspersist_start_socket_watcher: started watcher pid "
+                  "%d\n", (int)pid);
+    s_ns_watcher_pid = pid;
+    return pid;
+}
+
+
+void nspersist_socket_watcher_forked_child(void)
+{
+    extern pid_t s_ns_watcher_pid;
+
+    s_ns_watcher_pid = 0;
+}
+
+
+int nspersist_socket_watcher_reaped(pid_t pid)
+{
+    extern pid_t s_ns_watcher_pid;
+
+    if (pid <= 0 || pid != s_ns_watcher_pid)
+    {
+        return 0;
+    }
+
+    DEBUG_MESSAGE("nspersist_socket_watcher_reaped: watcher pid %d exited\n",
+                  (int)pid);
+    s_ns_watcher_pid = 0;
+    return 1;
+}
+
+
+/* Currently a no-op — the watcher uses the static list of well-known
+ * socket paths.  Kept for future per-mount registration if needed.  */
+void nspersist_register_socket_mount(uid_t uid, int persist_num,
+                                     const char *host_path,
+                                     const char *ns_path)
+{
+    (void)uid;
+    (void)persist_num;
+    (void)host_path;
+    (void)ns_path;
+}
+
 
 #endif // Linux only

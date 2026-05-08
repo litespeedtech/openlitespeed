@@ -1,6 +1,7 @@
 <?php
 
 use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\UI\UIBase;
 
 ?>
 <script type="text/javascript">
@@ -84,8 +85,8 @@ use LSWebAdmin\I18n\DMsg;
     }
 </script>
 
-<script src="/res/js/lst-app.js"></script>
-<script src="/res/js/lucide.min.js"></script>
+	<script src="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/js/lst-app.js')); ?>"></script>
+	<script src="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/js/lucide.min.js')); ?>"></script>
 <script>
   if (typeof lucide !== 'undefined') {
     document.addEventListener('DOMContentLoaded', function() {

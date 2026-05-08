@@ -153,15 +153,9 @@ class CAuthorizer
         }
 
         if (isset($parts['scheme'])) {
-            $expectedScheme = $this->isHttpsRequest() ? 'https' : 'http';
-            if (strtolower($parts['scheme']) !== $expectedScheme) {
+            if (strtolower($parts['scheme']) !== 'https') {
                 return false;
             }
-        }
-
-        $requestPort = $this->getRequestPort();
-        if ($requestPort !== null && isset($parts['port']) && (int) $parts['port'] !== $requestPort) {
-            return false;
         }
 
         return true;

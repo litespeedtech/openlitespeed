@@ -23,11 +23,21 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
         <article>
             <div class="lst-dashboard-statusbar" id="dashboard_statusbar">
                 <div class="lst-dashboard-statusbar__group lst-dashboard-statusbar__group--version">
+<?php if (UI::SupportsVersionManager()) { ?>
+                    <span id="dash_version_value" class="lst-dashboard-statusbar__value lst-dashboard-statusbar__version">
+                        <span class="lst-dashboard-statusbar__version-product">&mdash;</span>
+                        <a class="lst-dashboard-statusbar__version-link" href="index.php?view=versionmanager"></a>
+                    </span>
+<?php } else { ?>
                     <span id="dash_version_value" class="lst-dashboard-statusbar__value">&mdash;</span>
-<?php if ($dashboardNewVersion !== '' && $dashboardNewVersionUrl !== '') { ?>
-                    <a class="lst-dashboard-statusbar__link" href="<?php echo UIBase::EscapeAttr($dashboardNewVersionUrl); ?>"<?php echo $dashboardNewVersionExternal ? ' rel="noopener noreferrer" target="_blank"' : ''; ?>><?php echo UIBase::Escape(DMsg::UIStr('note_newver') . ': ' . $dashboardNewVersion); ?></a>
 <?php } ?>
                     <span class="lst-dashboard-statusbar__meta"><?php echo ($dashboardBuildDisplay !== '') ? UIBase::Escape($dashboardBuildDisplay) : ''; ?></span>
+<?php if ($dashboardNewVersion !== '' && $dashboardNewVersionUrl !== '') { ?>
+                    <a class="lst-dashboard-statusbar__link" href="<?php echo UIBase::EscapeAttr($dashboardNewVersionUrl); ?>"<?php echo $dashboardNewVersionExternal ? ' rel="noopener noreferrer" target="_blank"' : ''; ?>>
+                        <span class="lst-dashboard-statusbar__link-label"><?php echo UIBase::Escape(DMsg::UIStr('note_newver')); ?></span>
+                        <span class="lst-dashboard-statusbar__link-value"><?php echo UIBase::Escape($dashboardNewVersion); ?></span>
+                    </a>
+<?php } ?>
                 </div>
                 <div class="lst-dashboard-statusbar__group lst-dashboard-statusbar__group--pid">
                     <span id="dash_pid_dot" class="lst-dashboard-statusdot is-off" aria-hidden="true"></span>
@@ -555,7 +565,10 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
         var pidValue,
             running,
             uptime,
-            loadValue;
+            loadValue,
+            versionValue,
+            versionProduct,
+            versionLink;
 
         if (!data) {
             return;
@@ -574,7 +587,16 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
         $("#dash_load_value").text(loadValue);
 
         if (data.version_display || data.product_name) {
-            $("#dash_version_value").text(data.version_display || data.product_name || "—");
+            versionValue = $("#dash_version_value");
+            versionProduct = versionValue.find(".lst-dashboard-statusbar__version-product");
+            versionLink = versionValue.find(".lst-dashboard-statusbar__version-link");
+
+            if (versionProduct.length && versionLink.length) {
+                versionProduct.text(data.product_name || "—");
+                versionLink.text(data.version || "").attr("hidden", data.version ? null : "hidden");
+            } else {
+                versionValue.text(data.version_display || data.product_name || "—");
+            }
         }
     }
 

@@ -111,6 +111,11 @@ class ConfigValidationRequest
         return $this->_viewName;
     }
 
+    public function SetViewName($viewName)
+    {
+        $this->_viewName = $viewName;
+    }
+
     public function GetCurrentRef()
     {
         return $this->_currentRef;
@@ -129,6 +134,11 @@ class ConfigValidationRequest
     public function GetVHRoot()
     {
         return $this->_vhRoot;
+    }
+
+    public function SetVHRoot($vhRoot)
+    {
+        $this->_vhRoot = $vhRoot;
     }
 
     public function GetTableLocation()

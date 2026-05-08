@@ -37,7 +37,7 @@ class ConfRouteParser
         if (($pos = strpos($mid, '_')) > 0) {
             $view = substr($mid, 0, $pos + 1);
             $viewName = substr($mid, $pos + 1);
-            if ($pid == '' || $view == 'sl' || $view == 'sl_' || $view == 'al' || $view == 'al_' || $view == 'lb' || $view == 'lb_' || $view == 'lb4_' || $pid == 'base' || $pid == 'mbr') {
+            if ($pid == '' || $view == 'sl' || $view == 'sl_' || $view == 'sl4_' || $view == 'al' || $view == 'al_' || $view == 'lb' || $view == 'lb_' || $view == 'lb4_' || $pid == 'base' || $pid == 'mbr') {
                 $ref = $viewName;
             }
         } else {
@@ -125,7 +125,7 @@ class ConfRouteParser
             return substr($ref, 0, $pos);
         }
 
-        if ($view == 'sl_' || $view == 'al_' || $view == 'lb_' || $view == 'lb4_' || $pid == 'base' || $pid == 'mbr') {
+        if ($view == 'sl_' || $view == 'sl4_' || $view == 'al_' || $view == 'lb_' || $view == 'lb4_' || $pid == 'base' || $pid == 'mbr') {
             return $viewName;
         }
 

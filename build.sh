@@ -100,7 +100,7 @@ usage()
     echo "        This should always be done for a first time build,"
     echo "        but requires manually entering the root password"
     echo "   -d : Debug build"
-    echo "   -p ON|OFF : Whether you want pagespeed compiled or not.  Defaults ON only for x64 Linux"
+    echo "   -p ON|OFF : Whether you want pagespeed compiled or not.  Defaults to OFF "
     echo "   -o ON|OFF : Whether you want mod_security compiled or not.  Defaults ON for everywhere but Mac"
     echo "   -l ON|OFF : Whether you want lua compiled or not.  Defaults ON only for x64 Linux"
     exit 1
@@ -123,7 +123,6 @@ getOptions()
     MOD_LUA="OFF"
     if [ "${ISLINUX}" = "yes" ] && [ "${ARCH}" = "x86_64" ]; then
         if [ ! "${OSTYPE}" = "ALPINE" ] ; then
-            MOD_PAGESPEED="ON"
             MOD_LUA="ON"
             ALPINE="ON"
         fi

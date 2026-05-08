@@ -43,6 +43,10 @@ class DTblDef extends DTblDefBase
 	protected function loadCommonOptions()
 	{
 		parent::loadCommonOptions();
+		$this->_options['extAutoStart'] = [
+			'2' => DMsg::ALbl('o_thrucgidaemon'),
+			'0' => DMsg::ALbl('o_no')
+		];
 		$this->_options['scriptHandler'] = $this->getSharedScriptHandlerOptions([
 			'module' => DMsg::ALbl('l_modulehandler')
 		]);
@@ -64,10 +68,23 @@ class DTblDef extends DTblDefBase
 	protected function loadCommonAttrs()
 	{
 		parent::loadCommonAttrs();
+		$this->_attrs['ext_autoStart'] = self::NewSelAttr('autoStart', DMsg::ALbl('l_autostart'), $this->_options['extAutoStart'], false);
 		$param = self::NewTextAreaAttr('param', DMsg::ALbl('l_moduleparams'), 'cust', true, 4, 'modParams', 1, 1);
 		$param->SetFlag(DAttr::BM_RAWDATA);
 		$this->_attrs['mod_params'] = $param;
 		$this->_attrs['mod_enabled'] = self::NewBoolAttr('ls_enabled', DMsg::ALbl('l_enablehooks'), true, 'moduleEnabled');
+	}
+
+	protected function get_ctx_attrs($type)
+	{
+		if ($type == 'charset') {
+			return [
+				self::NewTextAttr('addDefaultCharset', DMsg::ALbl('l_adddefaultcharset'), 'charset'),
+				$this->_attrs['enableIpGeo']
+			];
+		}
+
+		return parent::get_ctx_attrs($type);
 	}
 
 	protected function add_S_PROCESS($id) //keep

@@ -2448,7 +2448,7 @@ LocalWorker *HttpServerImpl::createAdminPhpApp(const char *pChroot,
     pFcgiApp->getConfig().setAppPath(&pchPHPBin[iChrootLen]);
     pFcgiApp->getConfig().setBackLog(100);
     pFcgiApp->getConfig().setSelfManaged(0);
-    pFcgiApp->getConfig().setStartByServer(1);
+    pFcgiApp->getConfig().setStartByServer(EXTAPP_AUTOSTART_CGID);
     pFcgiApp->setMaxConns(4);
     pFcgiApp->getConfig().setKeepAliveTimeout(30);
     pFcgiApp->getConfig().setInstances(4);
@@ -4282,7 +4282,7 @@ int HttpServerImpl::configIpToLoc(const XmlNode *pNode)
 int HttpServerImpl::configLsrecaptchaWorker(const XmlNode *pNode)
 {
     const char *pName = "lsrecaptcha";
-    int iAutoStart = 1;
+    int iAutoStart = EXTAPP_AUTOSTART_CGID;
     int backlog = 10;
     int instances = 1;
     int iMaxConns = 35;

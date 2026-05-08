@@ -484,7 +484,7 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         //Since we already in the chroot jail, do not use the global jail path
         //If start external app with lscgid, apply global chroot path,
         //  as lscgid is not inside chroot
-        if (config.getStartByServer() == 2)
+        if (config.getStartByServer() == EXTAPP_AUTOSTART_CGID)
         {
             if (!pChroot)
                 pChroot = procConfig.getChroot();

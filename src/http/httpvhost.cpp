@@ -1604,7 +1604,7 @@ void HttpVHost::setDefaultConfig(LocalWorkerConfig &config,
     config.setAppPath(pBinPath);
     config.setBackLog(pDefault->getBackLog());
     config.setSelfManaged(1);
-    config.setStartByServer(EXTAPP_AUTOSTART_ASYNC_CGID);
+    config.setStartByServer(EXTAPP_AUTOSTART_CGID);
     config.setMaxConns(maxConns);
 
     if (config.isDetached())

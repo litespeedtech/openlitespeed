@@ -26,10 +26,16 @@ class ConfigActionService
                 $validationResult = self::validatePost($request);
                 $displayData = $validationResult->GetExtracted();
                 $hasDisplayData = true;
+                self::appendValidationMessages($request, $validationResult);
 
                 if ($validationResult->HasErr()) {
                     self::setAct($request, 'S');
                     self::appendTopMessage($request, $displayData->Get(CNode::FLD_ERR));
+                    break;
+                }
+
+                if ($validationResult->ShouldStopSave()) {
+                    self::setAct($request, 'S');
                     break;
                 }
 
@@ -39,7 +45,11 @@ class ConfigActionService
                 $forceReLogin = self::shouldForceReLoginAfterSave($request, $displayData);
                 $confdata->SavePost($displayData, $request->GetMutationDisplay());
                 $hasDisplayData = false;
-                $trimRoute = true;
+                if ($isNewEntry && self::routeToSavedEntryConfig($request, $displayData)) {
+                    $reloadConfig = true;
+                } else {
+                    $trimRoute = true;
+                }
                 if ($isNewEntry) {
                     OpsAuditLogger::configAdd(
                         self::resolveAuditTarget($request),
@@ -121,6 +131,17 @@ class ConfigActionService
         }
 
         return new ConfigActionResult($displayData, $hasDisplayData, $reloadConfig, $markChanged, $forceReLogin);
+    }
+
+    private static function appendValidationMessages($request, $validationResult)
+    {
+        if ($validationResult == null || !method_exists($validationResult, 'GetMessages')) {
+            return;
+        }
+
+        foreach ($validationResult->GetMessages() as $message) {
+            self::appendTopMessage($request, $message);
+        }
     }
 
     private static function validatePost($request)
@@ -384,6 +405,91 @@ class ConfigActionService
         }
 
         return $rs->GetLastRef() === '~';
+    }
+
+    private static function routeToSavedEntryConfig($request, $extractData)
+    {
+        if (!($extractData instanceof CNode)) {
+            return false;
+        }
+
+        $entryName = self::resolveSavedEntryName($extractData);
+        if ($entryName === '') {
+            return false;
+        }
+
+        $target = self::resolveSavedEntryRoute($request, self::resolveMutationTableId($request));
+        if ($target === null) {
+            return false;
+        }
+
+        $request->SetViewRoute($target['view'], $entryName, $target['pid'], null, $entryName);
+        return true;
+    }
+
+    private static function resolveSavedEntryName($extractData)
+    {
+        $entryName = trim((string) $extractData->GetChildVal('name'));
+        if ($entryName !== '') {
+            return $entryName;
+        }
+
+        $holderValue = trim((string) $extractData->Get(CNode::FLD_VAL));
+        return $holderValue;
+    }
+
+    private static function resolveSavedEntryRoute($request, $tid)
+    {
+        switch ($tid) {
+            case 'V_TOPD':
+            case 'V_BASE':
+                return ['view' => 'vh_', 'pid' => 'base'];
+
+            case 'T_TOPD':
+                return ['view' => 'tp_', 'pid' => 'mbr'];
+
+            case 'ADM_L_GENERAL':
+                return ['view' => 'al_', 'pid' => 'lg'];
+
+            case 'L_GENERAL':
+            case 'L_GENERAL_NEW':
+                return [
+                    'view' => (self::resolveMutationView($request) === 'al') ? 'al_' : 'sl_',
+                    'pid' => 'lg',
+                ];
+
+            case 'LT_GENERAL_NEW':
+                return ['view' => 'sl4_', 'pid' => 'ltg'];
+
+            case 'LB_GENERAL_NEW':
+                return ['view' => 'lb_', 'pid' => 'lbgeneral'];
+
+            case 'LB4_GENERAL_NEW':
+                return ['view' => 'lb4_', 'pid' => 'lb4general'];
+        }
+
+        return null;
+    }
+
+    private static function resolveMutationView($request)
+    {
+        $disp = $request->GetMutationDisplay();
+        if ($disp === null || !is_object($disp)) {
+            return '';
+        }
+
+        if (method_exists($disp, 'GetRouteState')) {
+            $rs = $disp->GetRouteState();
+            if ($rs !== null && method_exists($rs, 'GetView')) {
+                return (string) $rs->GetView();
+            }
+        }
+
+        if (method_exists($disp, 'GetView')) {
+            return (string) $disp->GetView();
+        }
+
+        return '';
     }
 
     private static function shouldMarkChangedAfterSave($request, $extractData)

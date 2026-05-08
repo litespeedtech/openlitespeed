@@ -119,11 +119,11 @@ int lock_persist_vh_file(int report, int lock_type);
 /**
  * @fn unlock_close_persist_vh_file
  * @brief Unlocks and closes a lock file created by is_persisted.
- * @param[in] delete.  Whether to delete the file (closed by the last)
+ * @param[in] del.  Whether to delete the file (closed by the last)
  * @param[out] none
  * @return 0 if no error, or an error code.
  **/
-int unlock_close_persist_vh_file(int delete);
+int unlock_close_persist_vh_file(int del);
 
 /**
  * @fn persist_do_ns
@@ -251,6 +251,66 @@ void persist_exit_child(char *desc, int rc);
 
 int nspersist_setvhost(char *vhenv);
 
+/**
+ * @fn nspersist_remount_stale_sockets
+ * @brief Check for bind-mounted socket files that have become stale (the
+ * host-side socket was deleted and recreated) and re-establish them.
+ * @param[in] host_root_fd An O_PATH descriptor opened on "/" in the initial
+ * mount namespace BEFORE setns()/unshare() was called.
+ * @return None.
+ **/
+void nspersist_remount_stale_sockets(int host_root_fd);
+
+/**
+ * @fn nspersist_start_socket_watcher
+ * @brief Start the host-side socket watcher daemon that monitors all
+ * persisted namespaces' bind-mounted sockets and remounts stale ones
+ * when host-side sockets are bounced (e.g. MySQL restart).
+ *
+ * Called once from the lscgid main daemon during startup.  Forks a
+ * dedicated watcher process that lives in the host mount namespace
+ * (full visibility of the host filesystem) and uses inotify to detect
+ * socket changes.  When changes occur, it forks a helper that
+ * setns()'s into each persisted namespace to perform the remount.
+ *
+ * @return The pid of the watcher process on success, -1 on error.
+ * The caller should kill(pid, SIGTERM) during shutdown to stop it.
+ **/
+pid_t nspersist_start_socket_watcher(void);
+
+/**
+ * @fn nspersist_socket_watcher_forked_child
+ * @brief Clear inherited watcher state in forked request children.  The
+ * watcher belongs to the lscgid daemon process, so request children must not
+ * signal or reap it from ns_done().
+ * @return None.
+ **/
+void nspersist_socket_watcher_forked_child(void);
+
+/**
+ * @fn nspersist_socket_watcher_reaped
+ * @brief Clear watcher state when the lscgid parent reaps the watcher child.
+ *
+ * @param[in] pid The child pid returned by waitpid().
+ * @return 1 if pid was the active watcher and was cleared, 0 otherwise.
+ **/
+int nspersist_socket_watcher_reaped(pid_t pid);
+
+/**
+ * @fn nspersist_register_socket_mount
+ * @brief Called by ns.c when a socket bind mount is created during
+ * namespace setup, so the host-side watcher knows what to monitor.
+ *
+ * @param[in] uid The user id (used to identify the persisted namespace).
+ * @param[in] persist_num The persist number (matches /var/lsns/uid/N).
+ * @param[in] host_path The host-side path of the socket (source).
+ * @param[in] ns_path The namespace-side bind mount target.
+ * @return None.
+ **/
+void nspersist_register_socket_mount(uid_t uid, int persist_num,
+                                     const char *host_path,
+                                     const char *ns_path);
+
 extern mount_flags_data_t s_mount_flags_data[];
 
 #ifdef __cplusplus
@@ -259,4 +319,3 @@ extern mount_flags_data_t s_mount_flags_data[];
 
 #endif // Linux
 #endif // _NS_OPTS_H
-

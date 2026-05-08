@@ -426,7 +426,6 @@ class DTblDefBase
 			'ext_retryTimeout' => self::NewIntAttr('retryTimeout', DMsg::ALbl('l_retrytimeout'), false, 0),
 			'ext_respBuffer' => self::NewSelAttr('respBuffer', DMsg::ALbl('l_respbuffer'), ['0' => DMsg::ALbl('o_no'), '1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_nofornph')], false),
 			'ext_persistConn' => self::NewBoolAttr('persistConn', DMsg::ALbl('l_persistconn')),
-			'ext_autoStart' => self::NewSelAttr('autoStart', DMsg::ALbl('l_autostart'), ['2' => DMsg::ALbl('o_thrucgidaemon'), '0' => DMsg::ALbl('o_no')], false),
 			'ext_path' => self::NewPathAttr('path', DMsg::ALbl('l_command'), 'file1', 3, 'x', true, 'extAppPath'),
 			'ext_backlog' => self::NewIntAttr('backlog', DMsg::ALbl('l_backlog'), true, 1, 100),
 			'ext_instances' => self::NewIntAttr('instances', DMsg::ALbl('l_instances'), true, 0, 1000),
@@ -1872,12 +1871,6 @@ class DTblDefBase
 				self::NewBoolAttr('rewrite:inherit', DMsg::ALbl('l_rewriteinherit'), true, 'rewriteInherit'),
 				self::NewTextAttr('rewrite:base', DMsg::ALbl('l_rewritebase'), 'uri', true, 'rewriteBase'),
 				$rules,
-			];
-		}
-		if ($type == 'charset') {
-			return [
-				self::NewTextAttr('addDefaultCharset', DMsg::ALbl('l_adddefaultcharset'), 'charset'),
-				$this->_attrs['enableIpGeo']
 			];
 		}
 		if ($type == 'uri') {

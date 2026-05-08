@@ -414,6 +414,37 @@ int SslContext::configOptions(SslContextConfig *pConfig)
                  pConfig->m_iProtocol);
         setProtocol(pConfig->m_iProtocol);
     }
+#ifdef OPENSSL_IS_BORINGSSL
+    static const uint16_t s_signAlgsNoSha1[] =
+    {
+        SSL_SIGN_ED25519,
+        SSL_SIGN_RSA_PSS_RSAE_SHA256,
+        SSL_SIGN_RSA_PSS_RSAE_SHA384,
+        SSL_SIGN_RSA_PSS_RSAE_SHA512,
+        SSL_SIGN_ECDSA_SECP256R1_SHA256,
+        SSL_SIGN_ECDSA_SECP384R1_SHA384,
+        SSL_SIGN_ECDSA_SECP521R1_SHA512,
+        SSL_SIGN_RSA_PKCS1_SHA256,
+        SSL_SIGN_RSA_PKCS1_SHA384,
+        SSL_SIGN_RSA_PKCS1_SHA512,
+    };
+    LS_DBG_L("[SSL:%p] Disable SHA1 for handshake signing/verifying algorithms.\n", this);
+    if (!SSL_CTX_set_signing_algorithm_prefs(m_pCtx, s_signAlgsNoSha1,
+        sizeof(s_signAlgsNoSha1) / sizeof(s_signAlgsNoSha1[0])))
+    {
+        LS_ERROR("[SSL:%p] Failed to set handshake signing algorithms: %s",
+                 this, SslError().what());
+        return LS_FAIL;
+    }
+
+    if (!SSL_CTX_set_verify_algorithm_prefs(m_pCtx, s_signAlgsNoSha1,
+        sizeof(s_signAlgsNoSha1) / sizeof(s_signAlgsNoSha1[0])))
+    {
+        LS_ERROR("[SSL:%p] Failed to set handshake verifying algorithms: %s",
+                 this, SslError().what());
+        return LS_FAIL;
+    }
+#endif
     if (pConfig->m_iEnableECDHE)
     {
         LS_DBG_L("[SSL:%p] Enable ECDHE\n", this);

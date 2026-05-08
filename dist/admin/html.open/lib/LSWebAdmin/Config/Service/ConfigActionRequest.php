@@ -70,6 +70,11 @@ class ConfigActionRequest
         $this->_context->SetViewName($viewName);
     }
 
+    public function SetViewRoute($view, $viewName, $pid, $tid = null, $ref = null)
+    {
+        $this->_context->SetViewRoute($view, $viewName, $pid, $tid, $ref);
+    }
+
     public function AddTopMsg($message)
     {
         $this->_context->AddTopMsg($message);

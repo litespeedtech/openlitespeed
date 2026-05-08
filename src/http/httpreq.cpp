@@ -542,7 +542,7 @@ int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
         return result;
 
     m_ver = HTTP_1_1;
-    if (m_method == HttpMethod::HTTP_POST)
+    if (m_method == HttpMethod::HTTP_POST || m_method == HttpMethod::HTTP_PATCH)
         m_lEntityLength = LSI_BODY_SIZE_UNKNOWN;
     keepAlive(0);
 
@@ -3164,7 +3164,7 @@ const char *HttpReq::getCfRealIpHeader(char *name, int &len)
 
 char HttpReq::getRewriteLogLevel() const
 {
-    if (LS_LOG_ENABLED(log4cxx::Level::DBG_LOW))
+    if (LS_LOG_ENABLED(log4cxx::Level::DBG_HIGH))
         return 9;
     else
         return m_pVHost->getRewriteLogLevel();

@@ -5,6 +5,31 @@ use LSWebAdmin\Product\Current\Product;
 use LSWebAdmin\Product\Current\UI;
 use LSWebAdmin\UI\UIBase;
 
+if (!function_exists('lstAssetHref')) {
+	function lstAssetHref($href)
+	{
+		if ($href === '' || $href[0] !== '/') {
+			return $href;
+		}
+
+		$paths = [];
+		if (defined('SERVER_ROOT') && SERVER_ROOT !== '') {
+			$paths[] = rtrim(SERVER_ROOT, '/') . '/admin/html' . $href;
+		}
+
+		$paths[] = dirname(__DIR__, 2) . $href;
+		$paths[] = dirname(__DIR__, 4) . $href;
+
+		foreach ($paths as $path) {
+			if (is_file($path)) {
+				return $href . '?v=' . filemtime($path);
+			}
+		}
+
+		return $href;
+	}
+}
+
 if (!$no_main_header) { ?>
 <!DOCTYPE html>
 <html lang="en-us">
@@ -55,13 +80,13 @@ $consoleName = $product->getWebAdminConsoleName();
 		<link rel="shortcut icon" href="/res/img/favicon/favicon.ico" type="image/x-icon">
 		<link rel="icon" href="/res/img/favicon/favicon.ico" type="image/x-icon">
 		
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/googlefonts.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-theme.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-product-accent.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-components.css">
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-shell.css">
-<?php if ($no_main_header) { ?>
-		<link rel="stylesheet" type="text/css" media="screen" href="/res/css/lst-page-login.css">
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/css/googlefonts.css')); ?>">
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/css/lst-theme.css')); ?>">
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/css/lst-product-accent.css')); ?>">
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/css/lst-components.css')); ?>">
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/css/lst-shell.css')); ?>">
+	<?php if ($no_main_header) { ?>
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/css/lst-page-login.css')); ?>">
 <?php } else {
 		$lstPageStyles = [];
 		if (isset($view)) {
@@ -74,7 +99,7 @@ $consoleName = $product->getWebAdminConsoleName();
 		}
 		foreach ($lstPageStyles as $lstPageStyleHref) {
 ?>
-		<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr($lstPageStyleHref); ?>">
+			<link rel="stylesheet" type="text/css" media="screen" href="<?php echo UIBase::EscapeAttr(lstAssetHref($lstPageStyleHref)); ?>">
 <?php
 		}
 } ?>
@@ -83,7 +108,7 @@ $consoleName = $product->getWebAdminConsoleName();
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="robots" content="noindex">
 
-		<script src="/res/js/libs/jquery-4.0.0.min.js"></script>
+			<script src="<?php echo UIBase::EscapeAttr(lstAssetHref('/res/js/libs/jquery-4.0.0.min.js')); ?>"></script>
 			<script type="text/javascript">
 			(function () {
 				var lstPasswordShowLabel = <?php echo json_encode(DMsg::ALbl('btn_showpassword')); ?>;
