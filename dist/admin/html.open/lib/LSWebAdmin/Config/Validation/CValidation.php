@@ -602,20 +602,37 @@ class CValidation
             $res = $productFilePolicyRes;
         }
 
-		if ($res == -1 && isset($_POST['file_create']) && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
+		$fileCreateTarget = $this->getFileCreateTarget();
+		if ($res == -1 && $fileCreateTarget == $attr->GetKey() && $this->allow_create($attr, $path)) {
 			if (PathTool::createFile($path, $err, $attr->GetKey())) {
+				$message = htmlspecialchars($path, ENT_QUOTES) . ' has been created successfully.';
+				if ($attr->_type != 'filevh') {
+					$message .= ' Click Save to apply this configuration.';
+				}
 				$this->addValidationMessage(
 					'success',
-					htmlspecialchars($path, ENT_QUOTES) . ' has been created successfully. Click Save to apply this configuration.'
+					$message
 				);
 				$err = null;
-				return 0;
+				return ($attr->_type == 'filevh') ? 1 : 0;
 			}
 
 			$res = -1;
 		}
 
 		return $res;
+	}
+
+	protected function getFileCreateTarget()
+	{
+		if ($this->_request != null) {
+			$inputSource = $this->_request->GetInputSource();
+			if ($inputSource != null && $inputSource->HasInput('POST', 'file_create')) {
+				return $inputSource->GrabInput('POST', 'file_create');
+			}
+		}
+
+		return isset($_POST['file_create']) ? trim((string) $_POST['file_create']) : '';
 	}
 
     protected function validateManagedConfigFilePolicy($attr, $path, &$err)
