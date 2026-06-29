@@ -55,6 +55,29 @@
 #include <stdlib.h>
 #include <config.h>
 
+#include <limits>
+
+static int parseRespContentLength(const char *pValue, int valLen,
+                                  off_t &contentLen)
+{
+    if (valLen <= 0)
+        return LS_FAIL;
+
+    off_t value = 0;
+    const char *pEnd = pValue + valLen;
+    while (pValue < pEnd)
+    {
+        if (!isdigit((unsigned char)*pValue))
+            return LS_FAIL;
+        int digit = *pValue++ - '0';
+        if (value > (std::numeric_limits<off_t>::max() - digit) / 10)
+            return LS_FAIL;
+        value = value * 10 + digit;
+    }
+    contentLen = value;
+    return LS_OK;
+}
+
 
 int HttpCgiTool::processContentType(HttpSession *pSession,
                                     const char *pValue, int valLen)
@@ -71,9 +94,11 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
         pCharset = pReq->getDefaultCharset();
         if (pCharset && (p = (char *)memchr(pValue, ';', valLen)) != NULL)
         {
-            while (isspace(*(++p)))
-                ;
-            if (strncmp(p, "charset=", 8) == 0)
+            const char *pEnd = pValue + valLen;
+            ++p;
+            while (p < pEnd && isspace(*p))
+                ++p;
+            if (pEnd - p >= 8 && strncmp(p, "charset=", 8) == 0)
             {
                 pCharset = NULL;
             }
@@ -89,9 +114,8 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
 {
     HttpRespHeaders::INDEX index;
 
-    index = HttpRespHeaders::getIndex(pName);
-    if ((index < HttpRespHeaders::H_HEADER_END) &&
-        (nameLen == HttpRespHeaders::getNameLen(index)))
+    index = HttpRespHeaders::getIndex(pName, nameLen);
+    if (index < HttpRespHeaders::H_HEADER_END)
     {
         return processHeaderLine(pExtConn, index, pName, nameLen, pValue,
                                  valLen);
@@ -117,61 +141,42 @@ int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
     int &status = pExtConn->getRespState();
     int nameLen = 0;
 
-    index = HttpRespHeaders::getIndex(pValue);
-    if (index < HttpRespHeaders::H_HEADER_END)
+    pKeyEnd = (char *)memchr(pLineBegin, ':', pLineEnd - pLineBegin);
+    if (pKeyEnd != NULL)
     {
-        pValue += HttpRespHeaders::getNameLen(index);
-
+        pValue = pKeyEnd + 1;
         while ((pValue < pLineEnd) && isspace(*pValue))
             ++pValue;
-        if (*pValue != ':')
-            index = HttpRespHeaders::H_HEADER_END;
-        else
-        {
-            nameLen = HttpRespHeaders::getNameLen(index);
-            do { ++pValue; }
-            while ((pValue < pLineEnd) && isspace(*pValue));
-        }
-    }
-    if (index == HttpRespHeaders::H_HEADER_END)
-    {
-        pKeyEnd = (char *)memchr(pValue, ':', pLineEnd - pValue);
-        if (pKeyEnd != NULL)
-        {
-            pValue = pKeyEnd + 1;
-            while ((pValue < pLineEnd) && isspace(*pValue))
-                ++pValue;
-            while (isspace(pKeyEnd[-1]))
-                --pKeyEnd;
-            nameLen = pKeyEnd - pLineBegin;
-            //ignore empty response header
-            //if ( pValue == pLineEnd )
-            //    return 0;
-            if (pKeyEnd - pLineBegin <= 0)
-                return 0;
-        }
-        else
-        {
-            if (!isspace(*pLineBegin))
-                return 0;
-        }
-        if (status & HEC_RESP_AUTHORIZED)
-        {
-            if (strncasecmp(pLineBegin, "Variable-", 9) == 0)
-            {
-                if (pKeyEnd > pLineBegin + 9)
-                    pExtConn->getHttpSession()->getReq()->addEnv(
-                        pLineBegin + 9, pKeyEnd - pLineBegin - 9,
-                        pValue, pLineEnd - pValue);
-            }
+        while ((pKeyEnd > pLineBegin) && isspace(pKeyEnd[-1]))
+            --pKeyEnd;
+        nameLen = pKeyEnd - pLineBegin;
+        if (nameLen <= 0)
             return 0;
+        index = HttpRespHeaders::getIndex(pLineBegin, nameLen);
+    }
+    else
+    {
+        index = HttpRespHeaders::H_HEADER_END;
+        if (!isspace(*pLineBegin))
+            return 0;
+    }
+    if (index == HttpRespHeaders::H_HEADER_END
+        && (status & HEC_RESP_AUTHORIZED))
+    {
+        if (pKeyEnd != NULL && pKeyEnd > pLineBegin + 9
+            && strncasecmp(pLineBegin, "Variable-", 9) == 0)
+        {
+            pExtConn->getHttpSession()->getReq()->addEnv(
+                pLineBegin + 9, pKeyEnd - pLineBegin - 9,
+                pValue, pLineEnd - pValue);
         }
+        return 0;
     }
     HttpReq *pReq = pExtConn->getHttpSession()->getReq();
     if (pExtConn->getHttpSession()->getState() == HSS_REDIRECT
         && pReq->getRedirHdrs() )
     {
-        pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin + 2);
+        pReq->appendRedirHdr(pLineBegin, pLineEnd - pLineBegin);
         return 0;
     }
     return processHeaderLine(pExtConn, index, pLineBegin, nameLen, pValue,
@@ -197,11 +202,11 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
         return processContentType(pExtConn->getHttpSession(), pValue, valLen);
     case HttpRespHeaders::H_CONTENT_ENCODING:
         if (pReq->getStatusCode() == SC_304
-            || strncasecmp(pValue, "none", 4) == 0)
+            || (valLen >= 4 && strncasecmp(pValue, "none", 4) == 0))
             return 0;
-        if (strncasecmp(pValue, "gzip", 4) == 0)
+        if (valLen >= 4 && strncasecmp(pValue, "gzip", 4) == 0)
             pReq->orGzip(UPSTREAM_GZIP);
-        else if (strncasecmp(pValue, "deflate", 7) == 0)
+        else if (valLen >= 7 && strncasecmp(pValue, "deflate", 7) == 0)
             pReq->orGzip(UPSTREAM_DEFLATE);
 //             if ( !(pReq->gzipAcceptable() & REQ_GZIP_ACCEPT) )
 //                 return 0;
@@ -212,14 +217,14 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
 //         }
         break;
     case HttpRespHeaders::H_CONTENT_DISPOSITION:
-        pReq->appendRedirHdr(pName, pValue + valLen - pName + 2);
+        pReq->appendRedirHdr(pName, pValue + valLen - pName);
         break;
     case HttpRespHeaders::H_LOCATION:
         if ((status & HEC_RESP_PROXY) || (pReq->getStatusCode() != SC_200))
             break;
         //fall through
     case HttpRespHeaders::H_LITESPEED_LOCATION:
-        if (*pValue != '/')
+        if (valLen <= 0 || *pValue != '/')
         {
             //set status code to 307
             pReq->setStatusCode(SC_302);
@@ -244,7 +249,9 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
         }
         break;
     case HttpRespHeaders::H_CGI_STATUS:
-        tmpIndex = HttpStatusCode::getInstance().codeToIndex(pValue);
+        tmpIndex = (valLen >= 3)
+                   ? HttpStatusCode::getInstance().codeToIndex(pValue)
+                   : -1;
         if (tmpIndex != -1)
         {
             pReq->updateNoRespBodyByStatus(tmpIndex);
@@ -261,14 +268,22 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
                 status |= HEC_RESP_AUTHORIZED;
             if (tmpIndex == SC_444)
             {
-                pExtConn->getHttpSession()->process444(pValue + 4);
+                pExtConn->getHttpSession()->process444(
+                    (valLen > 4) ? pValue + 4 : "", (valLen > 4) ? valLen - 4 : 0);
                 return -1;
             }
         }
         return 0;
     case HttpRespHeaders::H_TRANSFER_ENCODING:
-        pResp->setContentLen(LSI_BODY_SIZE_CHUNK);
-        pExtConn->setRespContentLen(LSI_BODY_SIZE_CHUNK);
+        if (valLen == 7 && strncmp(pValue, "chunked", 7) == 0)
+        {
+            pResp->setContentLen(LSI_BODY_SIZE_CHUNK);
+            pExtConn->setRespContentLen(LSI_BODY_SIZE_CHUNK);
+        }
+        else
+            LS_DBG_H(pExtConn->getHttpSession()->getLogSession(),
+                    "bad encoding value, `%.*s: %.*s`", nameLen, pName,
+                    valLen, pValue);
         return 0;
     case HttpRespHeaders::H_LINK:
         //pExtConn->getHttpSession()->processLinkHeader(pValue, pLineEnd - pValue);
@@ -281,14 +296,16 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
 
     case HttpRespHeaders::H_PROXY_CONNECTION:
     case HttpRespHeaders::H_CONNECTION:
-        if (strncasecmp(pValue, "close", 5) == 0)
+        if (valLen >= 5 && strncasecmp(pValue, "close", 5) == 0)
             status |= HEC_RESP_CONN_CLOSE;
         return 0;
     case HttpRespHeaders::H_CONTENT_LENGTH:
         if (pResp->getContentLen() == LSI_BODY_SIZE_UNKNOWN)
         {
-            off_t lContentLen = strtoll(pValue, NULL, 10);
-            if ((lContentLen >= 0) && (lContentLen != LLONG_MAX))
+            off_t lContentLen;
+            if (parseRespContentLength(pValue, valLen, lContentLen) == LS_FAIL)
+                return LS_FAIL;
+            if (lContentLen >= 0)
             {
                 if (lContentLen > HttpServerConfig::getInstance().getMaxDynRespLen())
                 {
@@ -381,7 +398,8 @@ int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
         if (pValue == pLineEnd)
             continue;
         int index;
-        if ((*(pValue + 4) == '/') && memcmp(pValue, "HTTP/1.", 7) == 0)
+        if (pLineEnd - pValue >= 12
+            && (*(pValue + 4) == '/') && memcmp(pValue, "HTTP/1.", 7) == 0)
         {
             pValue += 9;
             index = HttpStatusCode::getInstance().codeToIndex(pValue);
@@ -393,7 +411,10 @@ int HttpCgiTool::parseRespHeader(HttpExtConnector *pExtConn,
                     status |= HEC_RESP_AUTHORIZED;
                 if (index == SC_444)
                 {
-                    pExtConn->getHttpSession()->process444(pValue + 4);
+                    int optionLen = pLineEnd - pValue;
+                    pExtConn->getHttpSession()->process444(
+                        (optionLen > 4) ? pValue + 4 : "",
+                        (optionLen > 4) ? optionLen - 4 : 0);
                     return -1;
                 }
 
@@ -889,12 +910,13 @@ int HttpCgiTool::addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq)
         if (pKey)
         {
             char *p;
-            const char *pKeyEnd = pKey + keyLen;
+            const char *pKeyEnd;
             char achHeaderName[256];
             memcpy(achHeaderName, "HTTP_", 5);
             p = &achHeaderName[5];
             if (keyLen > 250)
                 keyLen = 250;
+            pKeyEnd = pKey + keyLen;
             while (pKey < pKeyEnd)
             {
                 char ch = *pKey++;
@@ -930,5 +952,3 @@ int HttpCgiTool::processExpires(HttpReq *pReq, HttpResp *pResp, const char *pVal
 
     return 0;
 }
-
-

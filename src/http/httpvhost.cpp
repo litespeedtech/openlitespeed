@@ -70,6 +70,18 @@
 
 #define MAX_URI_LEN  1024
 
+static int checkAuthRealmNameLen(const char *pName, const char *pTag)
+{
+    if (pName && strlen(pName) > HTAuth::MAX_REALM_NAME_LEN)
+    {
+        LS_ERROR(ConfigCtx::getCurConfigCtx(),
+                 "<%s> is too long, maximum length is %d bytes.",
+                 pTag, HTAuth::MAX_REALM_NAME_LEN);
+        return LS_FAIL;
+    }
+    return LS_OK;
+}
+
 RealmMap::RealmMap(int initSize)
     : _shmap(initSize)
 {}
@@ -796,6 +808,12 @@ HTAuth *HttpVHost::configAuthRealm(HttpContext *pContext,
 
     if ((pRealmName != NULL) && (*pRealmName))
     {
+        if (checkAuthRealmNameLen(pRealmName, "realm") != LS_OK)
+        {
+            pContext->allowBrowse(false);
+            return NULL;
+        }
+
         UserDir *pUserDB = getRealm(pRealmName);
 
         if (!pUserDB)
@@ -852,7 +870,11 @@ int HttpVHost::configContextAuth(HttpContext *pContext,
         pData = pAuthNode->getChildValue("authName");
 
         if (pData)
+        {
+            if (checkAuthRealmNameLen(pData, "authName") != LS_OK)
+                return LS_FAIL;
             pAuth->setName(pData);
+        }
     }
 
     return 0;
@@ -1100,6 +1122,8 @@ int HttpVHost::configRealm(const XmlNode *pRealmNode)
                         "name", 1);
     if (pName == NULL)
         return LS_FAIL;
+    if (checkAuthRealmNameLen(pName, "name") != LS_OK)
+        return LS_FAIL;
     ConfigCtx currentCtx("realm", pName);
 
 
@@ -1258,8 +1282,17 @@ int HttpVHost::configAcme(const XmlNode *pNode)
         api = pNode->getChildValue("api");
         env = pNode->getChildValue("env");
     }
-    if ((enabled == 0 && HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_ON) ||
-        enabled == 1)
+    // enabled: 0 = inherit global, 1 = explicit off, 2 = explicit on.
+    // Record an explicit off as m_acme==2 (distinct from the unset 0) so the
+    // opt-out survives even when global AutoCert is ON; otherwise an explicitly
+    // disabled vhost would still get a certificate generated for it.
+    if (enabled == 1)
+    {
+        LS_DBG("ACME explicitly disabled for VHost, server config %d\n", HttpServerConfig::getInstance().getAcme());
+        setAcme(2);
+        return 0;
+    }
+    if (enabled == 0 && HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_ON)
     {
         LS_DBG("ACME enabled = %d, server config %d\n", (int)enabled, HttpServerConfig::getInstance().getAcme());
         return 0;

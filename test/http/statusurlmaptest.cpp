@@ -23,6 +23,13 @@
 #include <util/autostr.h>
 #include "unittest-cpp/UnitTest++.h"
 
+static const AutoStr2 *getMappedUrl(const StatusUrlMap &map, int code)
+{
+    int index = HttpStatusCode::getInstance().codeToIndex(code);
+    if (index <= 0)
+        return NULL;
+    return map.getUrl(index);
+}
 
 TEST(StatusUrlMapTest_test)
 {
@@ -34,20 +41,20 @@ TEST(StatusUrlMapTest_test)
         CHECK(map1.setStatusUrlMap(i, "/url3xx") == 0);
     for (i = 400; i <= 451; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url4xx") == 0);
-    for (i = 500; i <= 513; ++i)
+    for (i = 500; i <= 510; ++i)
         CHECK(map1.setStatusUrlMap(i, "/url5xx") == 0);
 
-    for (i = SC_300; i < SC_400; ++i)
-        CHECK(strcmp(map1.getUrl(i)->c_str(), "/url3xx") == 0);
-    for (i = SC_400; i < SC_500; ++i)
-        CHECK(strcmp(map1.getUrl(i)->c_str(), "/url4xx") == 0);
-    for (i = SC_500; i < SC_END; ++i)
-        CHECK(strcmp(map1.getUrl(i)->c_str(), "/url5xx") == 0);
+    for (i = 300; i <= 308; ++i)
+        CHECK(strcmp(getMappedUrl(map1, i)->c_str(), "/url3xx") == 0);
+    for (i = 400; i <= 451; ++i)
+        CHECK(strcmp(getMappedUrl(map1, i)->c_str(), "/url4xx") == 0);
+    for (i = 500; i <= 510; ++i)
+        CHECK(strcmp(getMappedUrl(map1, i)->c_str(), "/url5xx") == 0);
     CHECK(map1.setStatusUrlMap(100, "/url100") == 0);
     CHECK(map1.setStatusUrlMap(299, "/url299") == -1);
     CHECK(map1.setStatusUrlMap(309, "/url309") == -1);
     CHECK(map1.setStatusUrlMap(399, "/url308") == -1);
-    CHECK(map1.setStatusUrlMap(425, "/url418") == -1);
+    CHECK(map1.setStatusUrlMap(425, "/url425") == 0);
     CHECK(map1.setStatusUrlMap(499, "/url499") == -1);
     CHECK(map1.setStatusUrlMap(511, "/url506") == -1);
 

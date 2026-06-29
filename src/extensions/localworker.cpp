@@ -496,7 +496,13 @@ int LocalWorker::workerExec(LocalWorkerConfig &config, int fd)
         }
     }
     char achBuf[4096];
-    memccpy(achBuf, config.getCommand(), 0, 4096);
+    const char *pCommand = config.getCommand();
+    if (!pCommand || memccpy(achBuf, pCommand, 0, sizeof(achBuf)) == NULL)
+    {
+        LS_ERROR("[LocalWorker::workerExec] Config[%s]: command is missing "
+                 "or too long.", config.getName());
+        return LS_FAIL;
+    }
     char *argv[256];
     char *pDir ;
     SUExec::buildArgv(achBuf, &pDir, argv, 256);
@@ -1197,4 +1203,3 @@ bool RestartMarker::checkRestart(time_t now)
     m_lastCheck = now;
     return ret;
 }
-

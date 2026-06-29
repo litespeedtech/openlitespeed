@@ -176,6 +176,22 @@ class DInfo
         return $this->_confData;
     }
 
+    /**
+     * Whether the config currently being rendered is read-only. Decided per
+     * config root: a root loaded from an include-bearing file (DirectAdmin
+     * server/vhost) is read-only, while an include-free admin config stays
+     * editable in the same request. Falls back to the legacy process-global for
+     * any caller that has not populated conf data.
+     */
+    public function IsConfReadOnly()
+    {
+        if (is_object($this->_confData) && method_exists($this->_confData, 'IsReadOnly')) {
+            return $this->_confData->IsReadOnly();
+        }
+
+        return defined('_CONF_READONLY_');
+    }
+
     public function GetToken()
     {
         return $this->_routeState->GetToken();

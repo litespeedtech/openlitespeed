@@ -87,7 +87,6 @@ typedef ls_mutex_t              ls_shmlock_t;
 #define ls_shmlock_locked       ls_mutex_ipc_locked
 #endif
 
-
 // shared memory types
 typedef uint32_t                LsShmOffset_t;
 typedef LsShmOffset_t           LsShmXSize_t;
@@ -109,8 +108,8 @@ typedef v2_comp                 LsShmValComp_fn;
 #define LSSHM_VER_TYPE          \
     (((sizeof(LsShmOffset_t)<<4) | sizeof(LsShmXSize_t)) & (0xff)) // 8 bits
 
-#define LSSHM_PAGESIZE          0x2000  // min pagesize 8k
-#define LSSHM_PAGEMASK          0xFFFFE000
+#define LSSHM_PAGESIZE          0x4000  // min pagesize 16k (for 16K-page kernels)
+#define LSSHM_PAGEMASK          0xFFFFC000
 #define LSSHM_MAXNAMELEN        12      // only 11 characters.
 
 #define LSSHM_SYSSHM            "LsShm"     // default SHM name
@@ -196,4 +195,3 @@ typedef struct ls_shmhiteroff_s
 
 
 #endif
-

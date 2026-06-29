@@ -2,7 +2,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Accueil",
         "url": "index.html",
-        "text": "Accueil OpenLiteSpeed Web Server 1.9 Manuel utilisateur — Rev. 3 Table des matieres Licence Introduction Installation/desinstallation Administration Securite Configuration Pour plus d'informations, consultez notre site de documentation OpenLiteSpeed"
+        "text": "Accueil OpenLiteSpeed Web Server 1.9 Manuel utilisateur — Rev. 4 Table des matieres Licence Introduction Installation/desinstallation Administration Securite Configuration Pour plus d'informations, consultez notre site de documentation OpenLiteSpeed"
     },
     {
         "title": "Licence",
@@ -52,7 +52,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Journal du serveur",
         "url": "ServLog_Help.html",
-        "text": "Journal du serveur Nom du fichier Spécifie le chemin du fichier journal. Placez le fichier journal sur un disque séparé. Niveau de journalisation Spécifie le niveau de journalisation à inclure dans le fichier journal. Les niveaux disponibles (du plus élevé au plus bas) sont: ERROR{/}, WARNING{/}, NOTICE{/}, INFO{/} et DEBUG{/}. Seuls les messages dont le niveau est supérieur ou égal au paramètre actuel sero..."
+        "text": "Journal du serveur Nom de fichier Spécifie le chemin du fichier journal. Placez le fichier journal sur un disque séparé. Niveau de journalisation Spécifie le niveau de journalisation à inclure dans le fichier journal. Les niveaux disponibles (du plus élevé au plus bas) sont: ERROR{/}, WARNING{/}, NOTICE{/}, INFO{/} et DEBUG{/}. Seuls les messages dont le niveau est supérieur ou égal au paramètre actuel sero..."
     },
     {
         "title": "Serveur - Réglages",
@@ -62,7 +62,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Serveur - Sécurité",
         "url": "ServSecurity_Help.html",
-        "text": "Serveur - Sécurité Suivre les liens symboliques Spécifie le réglage par défaut au niveau serveur pour suivre les liens symboliques lors du service de fichiers statiques. Les choix sont Yes{/}, If Owner Match{/} et No{/}. Yes{/} configure le serveur pour toujours suivre les liens symboliques. If Owner Match{/} configure le serveur pour suivre un lien symbolique uniquement si le propriétaire du lien et celui de l..."
+        "text": "Serveur - Sécurité Suivre les liens symboliques Spécifie le réglage par défaut au niveau serveur pour suivre les liens symboliques lors du service de fichiers statiques. Les choix sont Oui{/}, Si le propriétaire correspond{/} et Non{/}. Oui{/} configure le serveur pour toujours suivre les liens symboliques. Si le propriétaire correspond{/} configure le serveur pour suivre un lien symbolique uniquement si le pr..."
     },
     {
         "title": "Applications externes",
@@ -92,7 +92,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners - SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "Listeners - SSL Cle privee SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles privees SSL avec un paquet logiciel SSL, comme OpenSSL. Les certificats SSL peuvent aussi etre achetes aupres d'une autorite de certification autorisee comme VeriSign ou Thawte. Vou..."
+        "text": "Listeners - SSL Clé privée SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles privees SSL avec un paquet logiciel SSL, comme OpenSSL. Les certificats SSL peuvent aussi etre achetes aupres d'une autorite de certification autorisee comme VeriSign ou Thawte. V..."
     },
     {
         "title": "Modeles de virtual hosts",
@@ -102,7 +102,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Enregistrement du VHost",
         "url": "VirtualHosts_Help.html",
-        "text": "Enregistrement du VHost Cette page liste tous les virtual hosts definis. Depuis cette page, vous pouvez ajouter/supprimer un virtual host ou modifier un virtual host existant. Avant d'ajouter un virtual host, assurez-vous que le repertoire racine du virtual host existe. Nom de l'hote virtuel Nom unique d'un hote virtuel. Il est recommande d'utiliser le nom de domaine de l'hote virtuel comme nom d'hote virtuel. Le nom..."
+        "text": "Enregistrement du VHost Cette page liste tous les virtual hosts definis. Depuis cette page, vous pouvez ajouter/supprimer un virtual host ou modifier un virtual host existant. Avant d'ajouter un virtual host, assurez-vous que le repertoire racine du virtual host existe. Nom de l'hôte virtuel Nom unique d'un hote virtuel. Il est recommande d'utiliser le nom de domaine de l'hote virtuel comme nom d'hote virtuel. Le no..."
     },
     {
         "title": "Hôte virtuel - Général",
@@ -117,12 +117,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Hôte virtuel - SSL",
         "url": "VHSSL_Help.html",
-        "text": "Hôte virtuel - SSL Cle privee SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles privees SSL avec un paquet logiciel SSL, comme OpenSSL. Les certificats SSL peuvent aussi etre achetes aupres d'une autorite de certification autorisee comme VeriSign ou Thawte...."
+        "text": "Hôte virtuel - SSL Clé privée SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles privees SSL avec un paquet logiciel SSL, comme OpenSSL. Les certificats SSL peuvent aussi etre achetes aupres d'une autorite de certification autorisee comme VeriSign ou Thawt..."
     },
     {
         "title": "Rewrite",
         "url": "Rewrite_Help.html",
-        "text": "Rewrite Activer rewrite Indique s’il faut activer le moteur de réécriture d’URL de LiteSpeed. Cette option peut être personnalisée au niveau hôte virtuel ou contexte, et elle est héritée le long de l’arborescence de répertoires jusqu’à être explicitement remplacée. Chargement automatique depuis .htaccess Charge automatiquement les regles rewrite contenues dans le fichier .htaccess d’un repertoire..."
+        "text": "Rewrite Activer la réécriture Indique s’il faut activer le moteur de réécriture d’URL de LiteSpeed. Cette option peut être personnalisée au niveau hôte virtuel ou contexte, et elle est héritée le long de l’arborescence de répertoires jusqu’à être explicitement remplacée. Chargement automatique depuis .htaccess Charge automatiquement les regles rewrite contenues dans le fichier .htaccess d’un re..."
     },
     {
         "title": "Contexte",
@@ -192,7 +192,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Contexte statique",
         "url": "Static_Context.html",
-        "text": "Contexte statique Contexte général Les parametres de contexte servent a definir des parametres speciaux pour les fichiers situes a un emplacement donne. Ils peuvent integrer des fichiers en dehors de la racine des documents (comme les directives Alias ou AliasMatch d'Apache), proteger un repertoire au moyen de realms d'autorisation, ou bloquer ou restreindre l'acces a un repertoire dans la racine des documents. URI..."
+        "text": "Contexte statique Contexte statique Les parametres de contexte servent a definir des parametres speciaux pour les fichiers situes a un emplacement donne. Ils peuvent integrer des fichiers en dehors de la racine des documents (comme les directives Alias ou AliasMatch d'Apache), proteger un repertoire au moyen de realms d'autorisation, ou bloquer ou restreindre l'acces a un repertoire dans la racine des documents. URI ..."
     },
     {
         "title": "Contexte d'application web Java",
@@ -250,19 +250,19 @@ window.HDOC_SEARCH_INDEX = [
         "text": "Contexte uWSGI Contexte uWSGI Les applications uWSGI ne peuvent pas etre utilisees directement. Une application uWSGI doit etre configuree comme gestionnaire de scripts ou associee a une URL au moyen d'un contexte uWSGI. Un contexte uWSGI associe une URI a une application uWSGI. URI Indique l’URI de ce contexte. Application uWSGI Indique le nom de l’application uWSGI. Cette application doit etre definie dans la s..."
     },
     {
-        "title": "Contexte de module",
+        "title": "Contexte de gestionnaire de module",
         "url": "Module_Context.html",
-        "text": "Contexte de module Contexte de module Un contexte de gestionnaire de module associe une URI a un module enregistre. Les modules doivent etre enregistres dans l'onglet de configuration des modules du serveur. URI Indique l’URI de ce contexte. Module Nom du module. Le module doit etre enregistre sous l’onglet Server Module Configuration. Une fois enregistre, le nom du module sera disponible dans la liste deroulante..."
+        "text": "Contexte de gestionnaire de module Contexte de gestionnaire de module Un contexte de gestionnaire de module associe une URI a un module enregistre. Les modules doivent etre enregistres dans l'onglet de configuration des modules du serveur. URI Indique l’URI de ce contexte. Module Nom du module. Le module doit etre enregistre sous l’onglet Server Module Configuration. Une fois enregistre, le nom du module sera dis..."
     },
     {
         "title": "Console WebAdmin - Général",
         "url": "AdminGeneral_Help.html",
-        "text": "Console WebAdmin - Général Admin Server est un virtual host special dedie a la console WebAdmin. Il est tres important de s'assurer qu'Admin Server est protege de maniere sure, soit en autorisant l'acces uniquement depuis les machines des administrateurs, soit en utilisant une connexion SSL chiffree. Activer le core dump Indique s'il faut activer le core dump lorsque le serveur est demarre par l'utilisateur \"root\"...."
+        "text": "Console WebAdmin - Général Admin Server est un virtual host special dedie a la console WebAdmin. Il est tres important de s'assurer qu'Admin Server est protege de maniere sure, soit en autorisant l'acces uniquement depuis les machines des administrateurs, soit en utilisant une connexion SSL chiffree. Activer le vidage mémoire (Core Dump) Indique s'il faut activer le core dump lorsque le serveur est demarre par l'u..."
     },
     {
         "title": "Console WebAdmin - Sécurité",
         "url": "AdminSecurity_Help.html",
-        "text": "Console WebAdmin - Sécurité Controle d'acces Indique quels sous-reseaux et/ou adresses IP peuvent acceder au serveur. Au niveau serveur, ce reglage affectera tous les virtual hosts. Vous pouvez aussi configurer un controle d'acces propre a chaque virtual host au niveau virtual host. Les reglages de niveau virtual host NE remplaceront PAS les reglages de niveau serveur. Le blocage/l'autorisation d'une IP est determi..."
+        "text": "Console WebAdmin - Sécurité Contrôle d'accès Indique quels sous-reseaux et/ou adresses IP peuvent acceder au serveur. Au niveau serveur, ce reglage affectera tous les virtual hosts. Vous pouvez aussi configurer un controle d'acces propre a chaque virtual host au niveau virtual host. Les reglages de niveau virtual host NE remplaceront PAS les reglages de niveau serveur. Le blocage/l'autorisation d'une IP est deter..."
     },
     {
         "title": "Listeners d'administration - Général",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners d'administration - SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "Listeners d'administration - SSL Les listeners d'administration sont dédiés au serveur d'administration. Les listeners sécurisés (SSL) sont recommandés pour le serveur d'administration. Cle privee SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles privee..."
+        "text": "Listeners d'administration - SSL Les listeners d'administration sont dédiés au serveur d'administration. Les listeners sécurisés (SSL) sont recommandés pour le serveur d'administration. Clé privée SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles priv..."
     }
 ];

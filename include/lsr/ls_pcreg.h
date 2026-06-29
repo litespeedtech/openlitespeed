@@ -20,7 +20,38 @@
 
 
 #include <lsr/ls_types.h>
-#include <pcre.h>
+
+/* This wrapper uses the 8-bit PCRE2 library exclusively.  Define the code unit
+ * width only if a consumer has not already selected one; error out rather than
+ * silently re-pointing the generic pcre2_* names at a different width. */
+#ifndef PCRE2_CODE_UNIT_WIDTH
+#define PCRE2_CODE_UNIT_WIDTH 8
+#elif PCRE2_CODE_UNIT_WIDTH != 8
+#error "ls_pcreg.h requires PCRE2_CODE_UNIT_WIDTH == 8"
+#endif
+#include <pcre2.h>
+
+/* LSRE_* is this wrapper's own option/error namespace.  Each value is a thin
+ * alias of the matching PCRE2 flag, so options pass straight through to
+ * pcre2_compile()/pcre2_match() with no runtime translation.  The wrapper
+ * deliberately does NOT expose POSIX REG_* or PCRE_* names: those would
+ * collide with <regex.h> / <pcre.h> if a caller included them first, silently
+ * changing option bits (e.g. glibc REG_ICASE == 2 == PCRE2 multiline). */
+#define LSRE_DEFAULT            0
+#define LSRE_CASELESS           PCRE2_CASELESS
+#define LSRE_MULTILINE          PCRE2_MULTILINE
+#define LSRE_DOTALL             PCRE2_DOTALL
+#define LSRE_EXTENDED           PCRE2_EXTENDED
+#define LSRE_ANCHORED           PCRE2_ANCHORED
+#define LSRE_UTF8               PCRE2_UTF
+#define LSRE_NO_UTF8_CHECK      PCRE2_NO_UTF_CHECK
+#define LSRE_DUPNAMES           PCRE2_DUPNAMES
+/* PCRE1's single PCRE_JAVASCRIPT_COMPAT was split across three PCRE2 options:
+ * JS \u/\x escapes (ALT_BSUX), unset backreferences match empty
+ * (MATCH_UNSET_BACKREF), and empty classes allowed (ALLOW_EMPTY_CLASS). */
+#define LSRE_JAVASCRIPT_COMPAT  (PCRE2_ALT_BSUX | PCRE2_MATCH_UNSET_BACKREF \
+                                 | PCRE2_ALLOW_EMPTY_CLASS)
+#define LSRE_ERROR_NOMATCH      PCRE2_ERROR_NOMATCH
 
 #define LSR_PCRE_WORKSPACE_LEN 50
 
@@ -48,10 +79,10 @@ typedef struct ls_pcresubent_s ls_pcresubent_t;
  */
 struct ls_pcre_s
 {
-    pcre       *regex;
-    pcre_extra *extra;
-    int         substr;
-    char       *pattern;
+    pcre2_code          *regex;
+    pcre2_match_context *context;
+    int                  substr;
+    char                *pattern;
 };
 
 /**
@@ -304,7 +335,7 @@ int ls_pcreres_getsubstr(const ls_pcreres_t *pThis, int i, char **pValue);
 #ifdef _USE_PCRE_JIT_
 #if !defined(__sparc__) && !defined(__sparc64__)
 void ls_pcre_init_jit_stack();
-pcre_jit_stack *ls_pcre_get_jit_stack();
+pcre2_jit_stack *ls_pcre_get_jit_stack();
 void ls_pcre_release_jit_stack(void *pValue);
 #endif
 #endif
@@ -367,19 +398,8 @@ int ls_pcre_compile(ls_pcre_t *pThis, const char *regex,
  * @param[in] ovecsize - The number of elements in the vector (multiple of 3).
  * @return The number of successful matches.
  */
-ls_inline int   ls_pcre_exec(ls_pcre_t *pThis, const char *subject,
-                             int length,
-                             int startoffset, int options, int *ovector, int ovecsize)
-{
-#ifdef _USE_PCRE_JIT_
-#if !defined(__sparc__) && !defined(__sparc64__)
-    pcre_jit_stack *stack = ls_pcre_get_jit_stack();
-    pcre_assign_jit_stack(pThis->m_extra, NULL, stack);
-#endif
-#endif
-    return pcre_exec(pThis->regex, pThis->extra, subject, length, startoffset,
-                     options, ovector, ovecsize);
-}
+int ls_pcre_exec(ls_pcre_t *pThis, const char *subject, int length,
+                 int startoffset, int options, int *ovector, int ovecsize);
 
 /** @ls_pcre_execresult
  * @brief Executes the regex matching, storing the result in a pcre result object.
@@ -392,14 +412,8 @@ ls_inline int   ls_pcre_exec(ls_pcre_t *pThis, const char *subject,
  * @param[out] pRes - A pointer to an initialized output result object.
  * @return The number of successful matches.
  */
-ls_inline int  ls_pcre_execresult(ls_pcre_t *pThis, const char *subject,
-                                  int length,
-                                  int startoffset, int options, ls_pcreres_t *pRes)
-{
-    ls_pcreres_setmatches(pRes, pcre_exec(pThis->regex, pThis->extra, subject,
-                                          length, startoffset, options, ls_pcreres_getvector(pRes), 30));
-    return ls_pcres_getmatches(pRes);
-}
+int ls_pcre_execresult(ls_pcre_t *pThis, const char *subject, int length,
+                       int startoffset, int options, ls_pcreres_t *pRes);
 
 /** @ls_pcre_dfaexec
  * @brief Executes the regex matching.
@@ -414,19 +428,8 @@ ls_inline int  ls_pcre_execresult(ls_pcre_t *pThis, const char *subject,
  * @param[in] ovecsize - The number of elements in the vector (multiple of 3).
  * @return The number of successful matches.
  */
-ls_inline int  ls_pcre_dfaexec(ls_pcre_t *pThis, const char *subject,
-                               int length,
-                               int startoffset, int options, int *ovector, int ovecsize)
-{
-#if PCRE_MAJOR >= 6
-    int aWorkspace[LSR_PCRE_WORKSPACE_LEN];
-    return pcre_dfa_exec(pThis->regex, pThis->extra, subject, length,
-                         startoffset,
-                         options, ovector, ovecsize, aWorkspace, LSR_PCRE_WORKSPACE_LEN);
-#else
-    return LS_FAIL;
-#endif
-}
+int ls_pcre_dfaexec(ls_pcre_t *pThis, const char *subject, int length,
+                    int startoffset, int options, int *ovector, int ovecsize);
 
 /** @ls_pcre_dfaexecresult
  * @brief Executes the regex matching, storing the result in a pcre result object.
@@ -440,21 +443,8 @@ ls_inline int  ls_pcre_dfaexec(ls_pcre_t *pThis, const char *subject,
  * @param[out] pRes - A pointer to an initialized output result object.
  * @return The number of successful matches.
  */
-ls_inline int  ls_pcre_dfaexecresult(ls_pcre_t *pThis, const char *subject,
-                                     int length, int startoffset, int options,
-                                     ls_pcreres_t *pRes)
-{
-#if PCRE_MAJOR >= 6
-    int aWorkspace[LSR_PCRE_WORKSPACE_LEN];
-    ls_pcreres_setmatches(pRes, pcre_dfa_exec(pThis->regex, pThis->extra,
-                          subject, length, startoffset, options,
-                          ls_pcreres_getvector(pRes), 30,
-                          aWorkspace, LSR_PCRE_WORKSPACE_LEN));
-    return ls_pcres_getmatches(pRes);
-#else
-    return LS_FAIL;
-#endif
-}
+int ls_pcre_dfaexecresult(ls_pcre_t *pThis, const char *subject, int length,
+                          int startoffset, int options, ls_pcreres_t *pRes);
 
 /** @ls_pcre_release
  * @brief Releases anything that was initialized by the pcre compile/exec calls.

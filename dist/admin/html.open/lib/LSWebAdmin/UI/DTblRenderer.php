@@ -50,9 +50,9 @@ class DTblRenderer
         return false;
     }
 
-    private function supportsContextOrderEnhancement()
+    private function supportsContextOrderEnhancement($disp)
     {
-        return ($this->_table->isTop() && $this->hasContextOrderColumn() && !defined('_CONF_READONLY_'));
+        return ($this->_table->isTop() && $this->hasContextOrderColumn() && !$disp->IsConfReadOnly());
     }
 
     private function hasVisibleTypeColumn()
@@ -225,7 +225,7 @@ class DTblRenderer
         return $buf;
     }
 
-    private function getPrintHeader($disp, $actString, $isEdit = false, $hasSort = false)
+    private function getPrintHeader($disp, $actString, $isEdit = false)
     {
         $buf = '<header role="heading" class="lst-widget-header">';
         $tableHelp = ' ';
@@ -270,7 +270,7 @@ class DTblRenderer
                 break;
             }
         }
-        if ($actString && ($all_blocked || defined('_CONF_READONLY_'))) {
+        if ($actString && ($all_blocked || $disp->IsConfReadOnly())) {
             $actString = (strpos($actString, 'B') !== false) ? 'B' : null;
         }
 
@@ -283,7 +283,7 @@ class DTblRenderer
             $actdata = $disp->GetActionData($actString, $this->_table->getId(), '', $this->_table->getAddTbl());
             $buf .= UI::GetActionButtons($actdata, 'toolbar');
         }
-        if (!$isEdit && $this->supportsContextOrderEnhancement()) {
+        if (!$isEdit && $this->supportsContextOrderEnhancement($disp)) {
             $buf .= $this->getContextOrderControlsHtml();
         }
         $buf .= '<div class="lst-widget-heading"><h2>' . $title . '</h2>';
@@ -292,66 +292,84 @@ class DTblRenderer
         }
         $buf .= '</div></header>';
 
-        if ($this->_table->isTop()) {
-            $buf .= '<thead><tr>';
-            $url = $disp->GetCtrlUrl();
-            if ($disp->GetTid()) {
-                $url .= '&t=' . urlencode($disp->GetTid());
-            }
-            if ($disp->GetRef()) {
-                $url .= '&r=' . urlencode($disp->GetRef());
-            }
+        return $buf;
+    }
 
-            $align = $this->_table->getAlign();
-            foreach ($keys as $i) {
-                $attr = $attrs[$i];
-                if ($attr->IsFlagOn(DAttr::BM_HIDE)) {
-                    continue;
-                }
-
-                $buf .= '<th';
-                $thClasses = [];
-                if (isset($align[$i]) && $align[$i] != 'left') {
-                    $thClasses[] = 'text-' . $align[$i];
-                }
-                if ($attr->_type == 'action') {
-                    $thClasses[] = 'lst-action-col';
-                    if (!in_array('lst-text-right', $thClasses, true)) {
-                        $thClasses[] = 'lst-text-right';
-                    }
-                }
-
-                $sortState = null;
-                if ($hasSort && $attr->_type != 'action') {
-                    $sortState = 'none';
-                }
-
-                if (!empty($thClasses)) {
-                    $buf .= ' class="' . implode(' ', $thClasses) . '"';
-                }
-                if ($sortState != null) {
-                    $buf .= ' data-lst-sort-state="' . $sortState . '" aria-sort="none" tabindex="0"';
-                }
-
-                $buf .= '>';
-                $buf .= $attr->_label;
-                if ($attr->_type == 'ctxseq') {
-                    $attr->_hrefLink = $url . $attr->_href;
-                }
-                $buf .= '</th>';
-            }
-            $buf .= "</tr></thead>\n";
+    private function getPrintTableHead($disp, $hasSort = false)
+    {
+        if (!$this->_table->isTop()) {
+            return '';
         }
+
+        $buf = '<thead><tr>';
+        $url = $disp->GetCtrlUrl();
+        if ($disp->GetTid()) {
+            $url .= '&t=' . urlencode($disp->GetTid());
+        }
+        if ($disp->GetRef()) {
+            $url .= '&r=' . urlencode($disp->GetRef());
+        }
+
+        $attrs = $this->_table->getAttrs();
+        $keys = array_keys($attrs);
+        $align = $this->_table->getAlign();
+        foreach ($keys as $i) {
+            $attr = $attrs[$i];
+            if ($attr->IsFlagOn(DAttr::BM_HIDE)) {
+                continue;
+            }
+
+            $buf .= '<th';
+            $thClasses = [];
+            if (isset($align[$i]) && $align[$i] != 'left') {
+                $thClasses[] = 'text-' . $align[$i];
+            }
+            if ($attr->_type == 'action') {
+                $thClasses[] = 'lst-action-col';
+                if (!in_array('lst-text-right', $thClasses, true)) {
+                    $thClasses[] = 'lst-text-right';
+                }
+            }
+
+            $sortState = null;
+            if ($hasSort && $attr->_type != 'action') {
+                $sortState = 'none';
+            }
+
+            if (!empty($thClasses)) {
+                $buf .= ' class="' . implode(' ', $thClasses) . '"';
+            }
+            if ($sortState != null) {
+                $buf .= ' data-lst-sort-state="' . $sortState . '" aria-sort="none" tabindex="0"';
+            }
+
+            $buf .= '>';
+            $buf .= $attr->_label;
+            if ($attr->_type == 'ctxseq') {
+                $attr->_hrefLink = $url . $attr->_href;
+            }
+            $buf .= '</th>';
+        }
+        $buf .= "</tr></thead>\n";
 
         return $buf;
     }
 
     private function renderView($dlayer, $disp)
     {
-        $supportsContextOrder = $this->supportsContextOrderEnhancement();
-        $hasClientFilter = $this->shouldRenderClientFilter($dlayer);
-        $hasTableControls = $this->shouldRenderTableControls($dlayer);
+        $supportsContextOrder = $this->supportsContextOrderEnhancement($disp);
+        // Enabled-only checks keep the table wired to the header filter input,
+        // which getPrintHeader renders whenever the feature is enabled.
+        $hasClientFilter = $this->shouldRenderClientFilter();
+        $hasTableControls = $this->shouldRenderTableControls();
+        // The threshold-aware check gates the pagination footer.
+        $tableControlsActive = $this->shouldRenderTableControls($dlayer);
         $totalRows = (is_array($dlayer)) ? count($dlayer) : 0;
+        $ref = $disp->GetLastRef();
+        $disptid = $disp->GetTid();
+        $hasB = ($disptid != '');
+        $attrs = $this->_table->getAttrs();
+        $hasSort = false;
         $buf = '<div class="lst-widget lst-config-view-widget';
         if ($supportsContextOrder) {
             $buf .= ' lst-context-order-widget';
@@ -369,24 +387,6 @@ class DTblRenderer
             $buf .= '<input type="hidden" value="" data-lst-context-order-payload data-lst-context-order-field="ctxorder">';
         }
 
-        $tableClass = 'table lst-table-bordered lst-sortable-table';
-        if ($this->_table->isTop()) {
-            $tableClass .= ' lst-config-list-table';
-        }
-
-        $buf .= '<table class="' . $tableClass . '"';
-        if ($hasClientFilter) {
-            $buf .= ' data-lst-filter-table="' . UIBase::EscapeAttr($this->_table->getId()) . '"';
-        }
-        if ($hasTableControls) {
-            $buf .= ' data-lst-tctrl-table="' . UIBase::EscapeAttr($this->_table->getId()) . '"';
-        }
-        $buf .= '>' . "\n";
-        $ref = $disp->GetLastRef();
-        $disptid = $disp->GetTid();
-        $hasB = ($disptid != '');
-        $attrs = $this->_table->getAttrs();
-
         if ($this->_table->isTop()) {
             if ($this->_table->getAddTbl() == null) {
                 $actString = 'E';
@@ -401,7 +401,35 @@ class DTblRenderer
             }
 
             $hasSort = ($dlayer != null && is_array($dlayer));
-            $buf .= $this->getPrintHeader($disp, $actString, false, $hasSort && !$hasClientFilter && !$hasTableControls);
+            $buf .= $this->getPrintHeader($disp, $actString);
+        } else {
+            $actString = 'E';
+            if ($hasB) {
+                $actString .= 'B';
+            }
+            if ($ref != null && is_array($dlayer)) {
+                $dlayer = $dlayer[$ref];
+            }
+
+            $buf .= $this->getPrintHeader($disp, $actString);
+        }
+
+        $tableClass = 'table lst-table-bordered lst-sortable-table';
+        if ($this->_table->isTop()) {
+            $tableClass .= ' lst-config-list-table';
+        }
+
+        $buf .= '<table class="' . $tableClass . '"';
+        if ($hasClientFilter) {
+            $buf .= ' data-lst-filter-table="' . UIBase::EscapeAttr($this->_table->getId()) . '"';
+        }
+        if ($hasTableControls) {
+            $buf .= ' data-lst-tctrl-table="' . UIBase::EscapeAttr($this->_table->getId()) . '"';
+        }
+        $buf .= '>' . "\n";
+
+        if ($this->_table->isTop()) {
+            $buf .= $this->getPrintTableHead($disp, $hasSort);
             $buf .= '<tbody>';
 
             if ($dlayer != null) {
@@ -432,15 +460,6 @@ class DTblRenderer
                 }
             }
         } else {
-            $actString = 'E';
-            if ($hasB) {
-                $actString .= 'B';
-            }
-            if ($ref != null && is_array($dlayer)) {
-                $dlayer = $dlayer[$ref];
-            }
-
-            $buf .= $this->getPrintHeader($disp, $actString);
             $buf .= '<tbody>';
 
             foreach ($attrs as $attr) {
@@ -449,7 +468,7 @@ class DTblRenderer
         }
 
         $buf .= '</tbody></table>';
-        if ($hasTableControls) {
+        if ($tableControlsActive) {
             $buf .= $this->getTableControlsFooterHtml($totalRows);
         }
         $buf .= '</div>';
@@ -584,7 +603,7 @@ class DTblRenderer
     private function getPrintLineMulti($data, $key0, $htmlid, $disp, $action_attr)
     {
         $buf = '<tr';
-        if ($this->supportsContextOrderEnhancement() && $this->_table->getHolderIndex() != null) {
+        if ($this->supportsContextOrderEnhancement($disp) && $this->_table->getHolderIndex() != null) {
             $orderId = $data->GetChildVal($this->_table->getHolderIndex());
             $orderPosition = $data->GetChildVal('order');
             if ($orderId != null && $orderId !== '') {
@@ -612,7 +631,7 @@ class DTblRenderer
                 $ti = $action_attr->_minVal;
             }
             $actString = $action_attr->_maxVal;
-            if ($actString && defined('_CONF_READONLY_')) {
+            if ($actString && $disp->IsConfReadOnly()) {
                 $actString = (strpos($actString, 'X') !== false) ? 'X' : 'v';
             }
 

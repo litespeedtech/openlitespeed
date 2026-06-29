@@ -275,6 +275,14 @@ class CliController
                 );
             }
 
+            if ( !Util::isSafeAbsPath($this->svrCacheRootParam) ) {
+                throw new LSCMException(
+                    'Invalid Command, server cache root must be an absolute path '
+                        . 'containing only [A-Za-z0-9_./-] characters and no '
+                        . '\'..\' segments.'
+                );
+            }
+
             $currSvrCacheRoot = $controlPanel->getServerCacheRoot();
 
             if ( $this->svrCacheRootParam != $currSvrCacheRoot ) {
@@ -312,9 +320,25 @@ class CliController
                 );
             }
 
+            if ( $this->vhCacheRootParam[0] === '/' ) {
+                if ( !Util::isSafeAbsPath($this->vhCacheRootParam) ) {
+                    throw new LSCMException(
+                        'Invalid Command, absolute virtual host cache root must '
+                            . 'contain only [A-Za-z0-9_./-] characters and no '
+                            . '\'..\' segments.'
+                    );
+                }
+            }
+            elseif ( !preg_match('#^[A-Za-z0-9_\-]+$#', $this->vhCacheRootParam) ) {
+                throw new LSCMException(
+                    'Invalid Command, non-absolute virtual host cache root must '
+                        . 'contain only [A-Za-z0-9_-] characters.'
+                );
+            }
+
             $currVHCacheRoot = $controlPanel->getVHCacheRoot();
 
-            if ( $this->vhCacheRootParam[0] == '/' ) {
+            if ( $this->vhCacheRootParam[0] === '/' ) {
                 $updatedVhCacheRoot =
                     rtrim($this->vhCacheRootParam, '/') . '/$vh_user';
 
@@ -1003,8 +1027,9 @@ EOF;
                         break;
 
                     case 'new':
-                        echo 'LiteSpeed cPanel plugin installed, auto install '
-                            . "turned on.\n\n";
+                        echo 'LiteSpeed cPanel plugin installed. Auto install '
+                            . "policy unchanged (use 'cpanelplugin -autoinstall"
+                            . " {0|1}' to manage).\n\n";
                         break;
 
                     //no default
@@ -1024,8 +1049,12 @@ EOF;
 
                 echo "Auto install is currently $state for the LiteSpeed "
                     . "cPanel plugin.\n";
+                echo 'Note: if the plugin is already installed, it will '
+                    . "continue to be refreshed on WHM plugin upgrades\n"
+                    . 'regardless of this setting. Use \'cpanelplugin '
+                    . "--uninstall' to stop updates entirely.\n";
                 echo 'Use command \'cpanelplugin -autoinstall {0 | 1}\' to '
-                    . "turn auto install off/on respectively.\n\n";
+                    . "enable/disable fresh installation respectively.\n\n";
                 break;
 
             case self::SPECIAL_CMD_CPANEL_PLUGIN_AUTOINSTALL_ON:
@@ -1035,7 +1064,7 @@ EOF;
                         . "\n\n";
                 }
                 else {
-                    echo 'Failed to turn off auto install for LiteSpeed cPanel '
+                    echo 'Failed to turn on auto install for LiteSpeed cPanel '
                         . "plugin.\n\n";
                 }
 
@@ -1045,10 +1074,13 @@ EOF;
 
                 if ( CPanel::turnOffCpanelPluginAutoInstall() ) {
                     echo 'Auto install is now Off for LiteSpeed cPanel plugin.'
-                        . "\n\n";
+                        . ' (Already-installed plugin files will still be'
+                        . " refreshed on WHM plugin upgrades;\n"
+                        . "use 'cpanelplugin --uninstall' to stop updates"
+                        . " entirely.)\n\n";
                 }
                 else {
-                    echo 'Failed to turn on auto install for LiteSpeed cPanel '
+                    echo 'Failed to turn off auto install for LiteSpeed cPanel '
                         . "plugin.\n\n";
                 }
 

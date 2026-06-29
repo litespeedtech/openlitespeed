@@ -237,6 +237,16 @@ class BuildCheck
             return true;
         }
 
+        // ExtraPathEnv is substituted into EXTRA_PATH_ENV="..." inside an
+        // auto-executed build prepare script, so reject shell metacharacters
+        // (and newlines, which preg_split('/:/') does not separate) the same
+        // way installPath / CompilerFlags / ConfigParam do. is_dir() alone is
+        // not sufficient: a directory name may itself carry metacharacters.
+        if (preg_match('/([;&"|#$?`]|[\r\n])/', $extra_path_env)) {
+            $this->pass_val['err']['path_env'] = DMsg::Err('err_illegalcharfound');
+            return false;
+        }
+
         $envp = preg_split('/:/', $extra_path_env);
         foreach ($envp as $p) {
             if (!is_dir($p)) {

@@ -525,12 +525,40 @@ int RequestVars::parseHttpHeader(const char *pName, int len,
 }
 
 
+static int copyReqVarValue(char *pValue, int bufLen, const char *pSrc,
+                           int srcLen)
+{
+    if (bufLen > 0)
+    {
+        int copyLen = (srcLen < bufLen) ? srcLen : bufLen;
+        if (copyLen > 0)
+            memmove(pValue, pSrc, copyLen);
+        if (copyLen < bufLen)
+            pValue[copyLen] = 0;
+    }
+    return srcLen;
+}
+
+
+static int appendReqVarValue(char *&pValue, int &bufLen, const char *pSrc,
+                             int srcLen)
+{
+    if (bufLen > 0 && srcLen > 0)
+    {
+        int copyLen = (srcLen < bufLen) ? srcLen : bufLen;
+        memmove(pValue, pSrc, copyLen);
+        pValue += copyLen;
+        bufLen -= copyLen;
+    }
+    return srcLen;
+}
+
+
 int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
                            int bufLen)
 {
     HttpReq *pReq = pSession->getReq();
     int i;
-    char *p;
     if (type < REF_STRING)
     {
         pValue = (char *)pReq->getHeader(type);
@@ -558,15 +586,14 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         return 0;
     case REF_REQ_METHOD:
         i = pReq->getMethod();
-        strcpy(pValue, HttpMethod::get(i));
-        return HttpMethod::getLen(i);
+        return copyReqVarValue(pValue, bufLen, HttpMethod::get(i),
+                               HttpMethod::getLen(i));
     case REF_QUERY_STRING:
         pValue = (char *)pReq->getQueryString();
         return pReq->getQueryStringLen();
     case REF_AUTH_TYPE:
         //TODO: hard code for now
-        lstrncpy(pValue, "Basic", bufLen);
-        return 5;
+        return copyReqVarValue(pValue, bufLen, "Basic", 5);
     case REF_REQUEST_FN:
     case REF_SCRIPTFILENAME:
     case REF_SCRIPT_BASENAME:
@@ -677,30 +704,33 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         pValue = (char *)pReq->getURI();
         return pReq->getScriptNameLen();
     case REF_SCRIPT_URI:
-        p = pValue;
-        if (pSession->isHttps())
         {
-            strcpy(p, "https://");
-            p += 8;
-        }
-        else
-        {
-            strcpy(p, "http://");
-            p += 7;
-        }
-        i = pReq->getHeaderLen(HttpHeader::H_HOST);
-        if (i > pValue + bufLen - p)
-            i = pValue + bufLen - p;
-        memmove(p, pReq->getHeader(HttpHeader::H_HOST),
-                i);
-        p += i;
+            char *pBegin = pValue;
+            int left = bufLen;
+            const char *scheme;
+            int schemeLen;
+            if (pSession->isHttps())
+            {
+                scheme = "https://";
+                schemeLen = 8;
+            }
+            else
+            {
+                scheme = "http://";
+                schemeLen = 7;
+            }
+            int total = appendReqVarValue(pValue, left, scheme, schemeLen);
+            i = pReq->getHeaderLen(HttpHeader::H_HOST);
+            total += appendReqVarValue(pValue, left,
+                                       pReq->getHeader(HttpHeader::H_HOST), i);
 
-        i = pReq->getOrgURILen();
-        if (i > pValue + bufLen - p)
-            i = pValue + bufLen - p;
-        memmove(p, pReq->getOrgURI(), i);
-        p += i;
-        return p - pValue;
+            i = pReq->getOrgURILen();
+            total += appendReqVarValue(pValue, left, pReq->getOrgURI(), i);
+            if (left > 0)
+                *pValue = 0;
+            pValue = pBegin;
+            return total;
+        }
 
     case REF_ORG_REQ_URI:
         pValue = (char *)pReq->getOrgReqURL();
@@ -755,8 +785,7 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         pValue = (char *)pReq->getOrgReqLine();
         return pReq->getOrgReqLineLen();
     case REF_IS_SUBREQ:
-        strcpy(pValue, "false");
-        return 5;
+        return copyReqVarValue(pValue, bufLen, "false", 5);
 
     case REF_RESP_BYTES:
         i = StringTool::offsetToStr(pValue, bufLen,
@@ -787,11 +816,9 @@ int RequestVars::getReqVar(HttpSession *pSession, int type, char *&pValue,
         i = snprintf(pValue, bufLen, "%d", getpid());
         return i;
     case REF_STATUS_CODE:
-        memmove(pValue, HttpStatusCode::getInstance().getCodeString(
-                    pReq->getStatusCode()),
-                3);
-        pValue[3] = 0;
-        return 3;
+        return copyReqVarValue(pValue, bufLen,
+                               HttpStatusCode::getInstance().getCodeString(
+                                   pReq->getStatusCode()), 3);
 
     case REF_CUR_URI:
         pValue = (char *)pReq->getURI();
@@ -1284,6 +1311,11 @@ char *RequestVars::buildString(const SubstFormat *pFormat,
                                char *pBuf, int &len, int noDupSlash,
                                const RegexResult *pRegRes, const char *pTmFmt)
 {
+    if (len <= 0)
+    {
+        len = 0;
+        return NULL;
+    }
     char *pBegin = pBuf;
     char *pBufEnd = pBuf + len - 1;
     const SubstItem *pItem = pFormat->begin();
@@ -1388,5 +1420,4 @@ int RequestVars::setEnv(HttpSession *pSession, const char *pName,
     LS_DBG_M(pSession->getLogSession(), "Add ENV: '%s:%.*s' ", pName, valLen, pValue);
     return 0;
 }
-
 

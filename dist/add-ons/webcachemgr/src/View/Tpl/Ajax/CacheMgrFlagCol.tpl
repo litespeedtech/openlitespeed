@@ -8,13 +8,14 @@ $classes = 'icon-btn';
 
 foreach ( $listData as $path => $info ):
     $flagData = $info['flagData'];
+    $safePath = htmlspecialchars($path);
 
 ?>
 
 <td align="center"
     data-search="<?php echo ($flagData['sort'] == 'flagged') ? 'f' : 'u'; ?>"
     data-sort="<?php echo $flagData['sort']; ?>">
-  <button type="button" value="<?php echo $path; ?>"
+  <button type="button" value="<?php echo $safePath; ?>"
           class="<?php echo $classes; ?>"
           title="<?php echo $flagData['btn_title']; ?>"
           <?php echo $flagData['onclick']?>

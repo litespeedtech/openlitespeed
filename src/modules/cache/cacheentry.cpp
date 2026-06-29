@@ -23,6 +23,9 @@
 #include <util/dlinkqueue.h>
 #include <ls.h>
 
+#define CACHE_ENTRY_MAX_U16_LEN 0xffff
+#define CACHE_ENTRY_MAX_I16_LEN 0x7fff
+
 CacheEntry::CacheEntry()
     : m_lastAccess(0)
     , m_lastPurgrCheck(0)
@@ -95,24 +98,28 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
         return -1;
 
     m_hashKey.copy(hash);
-    int len = pKey->m_iUriLen + ((pKey->m_iQsLen > 0) ? pKey->m_iQsLen + 1 :
-                                 0);
+    long long len = pKey->m_iUriLen + ((pKey->m_iQsLen > 0)
+                                       ? pKey->m_iQsLen + 1 : 0);
     int l;
-    m_header.m_iPrivLen = 0;
+    int privLen = 0;
     if (pKey->m_ipLen > 0)
     {
         len += pKey->m_ipLen + 1;
-        m_header.m_iPrivLen = pKey->m_ipLen + 1;
+        privLen = pKey->m_ipLen + 1;
         if (pKey->m_iCookiePrivate > 0)
         {
             len += pKey->m_iCookiePrivate + 1;
-            m_header.m_iPrivLen += pKey->m_iCookiePrivate + 1;
+            privLen += pKey->m_iCookiePrivate + 1;
         }
     }
     if (pKey->m_iCookieVary > 0)
         len += pKey->m_iCookieVary + 1;
 
-    char *pBuf = m_sKey.prealloc(len + 1);
+    if (len > CACHE_ENTRY_MAX_U16_LEN || privLen > CACHE_ENTRY_MAX_I16_LEN)
+        return -1;
+
+    int keyLen = (int)len;
+    char *pBuf = m_sKey.prealloc(keyLen + 1);
     if (!pBuf)
         return -1;
 
@@ -146,7 +153,8 @@ int CacheEntry::setKey(const CacheHash &hash, CacheKey *pKey)
         memmove(pBuf + l, pKey->m_pIP, pKey->m_ipLen);
         l += pKey->m_ipLen;
     }
-    m_header.m_keyLen = len;
+    m_header.m_iPrivLen = privLen;
+    m_header.m_keyLen = keyLen;
     return 0;
 }
 
@@ -217,7 +225,10 @@ int CacheEntry::verifyKey(CacheKey *pKey) const
 
 void CacheEntry::setTag(const char *pTag, int len)
 {
+    if (len < 0)
+        len = 0;
+    if (len > CACHE_ENTRY_MAX_U16_LEN)
+        len = CACHE_ENTRY_MAX_U16_LEN;
     m_sTag.setStr(pTag, len);
     m_header.m_tagLen = len;
 }
-

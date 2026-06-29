@@ -17,6 +17,7 @@ abstract class CData
     protected $_path;
     protected $_xmlpath;
     protected $_conferr;
+    protected $_hasOwnInclude = false;
 
     public function GetRootNode()
     {
@@ -46,6 +47,18 @@ abstract class CData
     public function GetConfErr()
     {
         return $this->_conferr;
+    }
+
+    /**
+     * A config root is read-only when its own file pulls in other files with an
+     * `include` directive (LiteSpeed only round-trips a single flat file). This
+     * is decided per root: a DirectAdmin server/vhost config is include-driven
+     * and stays read-only, while an admin config with no include of its own
+     * remains editable even in the same request.
+     */
+    public function IsReadOnly()
+    {
+        return $this->_hasOwnInclude;
     }
 
     public function GetChildrenValues($location, $ref = '')
@@ -162,6 +175,10 @@ abstract class CData
     {
         if ($this->_type == DInfo::CT_EX) {
             return $this->save_special();
+        }
+
+        if ($this->IsReadOnly()) {
+            return;
         }
 
         ConfigWriteService::execute($this->GetWritePlan());

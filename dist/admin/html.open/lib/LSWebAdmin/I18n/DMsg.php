@@ -235,7 +235,19 @@ class DMsg
             }
         }
 
-        return isset(self::$_supported[self::DEFAULT_LANG]) ? self::DEFAULT_LANG : array_key_first(self::$_supported);
+        return self::fallbackLang();
+    }
+
+    private static function fallbackLang()
+    {
+        if (isset(self::$_supported[self::DEFAULT_LANG])) {
+            return self::DEFAULT_LANG;
+        }
+
+        // Shipped runtime PHP is 5.6: no array_key_first().
+        reset(self::$_supported);
+        $first = key(self::$_supported);
+        return ($first === null) ? self::DEFAULT_LANG : $first;
     }
 
     private static function getCookieDomain()
@@ -255,7 +267,7 @@ class DMsg
     private static function init()
     {
         self::initSupported();
-        $lang = isset(self::$_supported[self::DEFAULT_LANG]) ? self::DEFAULT_LANG : array_key_first(self::$_supported);
+        $lang = self::fallbackLang();
 
         if (isset($_SESSION[self::_COOKIE_LANG_]) && ($sessionLang = self::normalizeLang($_SESSION[self::_COOKIE_LANG_])) !== null) {
             $lang = $sessionLang;
@@ -328,8 +340,13 @@ class DMsg
     {
         self::initSupported();
 
+        // Command-line runs have no web request to persist the language on.
+        // Converter tools run via admin_php (lsphp), whose SAPI is not "cli",
+        // so a missing REQUEST_METHOD is the reliable command-line signal.
+        $isWebRequest = (PHP_SAPI !== 'cli' && isset($_SERVER['REQUEST_METHOD']));
+
         $normalized = self::normalizeLang($lang);
-        if (PHP_SAPI !== 'cli' && $normalized !== null) {
+        if ($isWebRequest && $normalized !== null) {
             $_SESSION[self::_COOKIE_LANG_] = $normalized;
             self::$_curlang = '';
             self::$_curtips = '';
@@ -337,8 +354,10 @@ class DMsg
             $secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
             $httponly = true;
 
-            setcookie(self::_COOKIE_LANG_, $normalized, strtotime('+10 days'), '/',
-                $domain, $secure, $httponly);
+            if (!headers_sent()) {
+                setcookie(self::_COOKIE_LANG_, $normalized, strtotime('+10 days'), '/',
+                    $domain, $secure, $httponly);
+            }
         }
     }
 

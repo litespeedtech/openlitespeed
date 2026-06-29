@@ -484,7 +484,14 @@ static int lsiapi_read_raw_header( lsi_session_t *session,
         int iLength;
         int len;
         mod_data->m_ReadRawHeader = 1;
-        iLength = g_api->get_req_raw_headers(session, chHeaders, sizeof(chHeaders));
+        iLength = g_api->get_req_raw_headers(session, chHeaders,
+                                             sizeof(chHeaders) - 1);
+        if (iLength < 0) {
+            LSM_ERR((&MNAME), session,
+                    "Failed to read raw request headers, result: %d\n",
+                    iLength);
+            return(iLength);
+        }
         chHeaders[iLength] = 0;
         len = iLength;
         while (len) {
@@ -1273,10 +1280,16 @@ static char *lsiapi_get_header_auth( lsi_session_t *session,
     pchAuthorization = (char *)g_api->get_req_header_by_id(session,
                                                            LSI_HDR_AUTHORIZATION,
                                                            &iLength);
-    if (!iLength) {
+    if (iLength <= 0 || !pchAuthorization) {
         LSM_DBG((&MNAME), session, "Get Header Authorization - 0 length\n");
         chAuthorization[0] = 0;
         return(pchAuthorization);
+    }
+    if (iLength >= SAPI_LSAPI_MAX_HEADER_LENGTH) {
+        LSM_ERR((&MNAME), session,
+                "Authorization header too long, length: %d\n", iLength);
+        chAuthorization[0] = 0;
+        return NULL;
     }
     memcpy(chAuthorization, pchAuthorization, iLength);
     chAuthorization[iLength] = 0;
@@ -1948,5 +1961,4 @@ static int mod_lsphp_termination(lsi_param_t *param) {
 #endif
     return(0);
 }
-
 

@@ -80,6 +80,16 @@ void LsLuaLogRawbuf(const char *pStr, int len)
 }
 
 
+static int LsLuaClampSnprintfLen(int len, int bufLen)
+{
+    if (len < 0 || bufLen <= 0)
+        return 0;
+    if (len >= bufLen)
+        return bufLen - 1;
+    return len;
+}
+
+
 static int LsLuaPrintToLog(lua_State *L)
 {
     LsLuaLogEx(L, LSI_LOG_INFO);
@@ -354,7 +364,7 @@ void LsLuaApi::dumpStack(lua_State *L, const char *pTag, int iDumpCount)
 #ifdef LSLUAAPI_DEBUGPRINT
             printf("%s\n", buf);
 #endif
-            LsLuaLog(L, LSI_LOG_INFO, 0, buf);
+            LsLuaLog(L, LSI_LOG_INFO, 0, "%s", buf);
         }
     }
 }
@@ -404,7 +414,7 @@ int LsLuaApi::dumpIdx2Buf(lua_State *L, int idx, char *buf, int bufLen)
         nb = snprintf(buf, bufLen, "STACK <%d> TUNKNOWN %d", idx, iType);
         break;
     }
-    return nb;
+    return LsLuaClampSnprintfLen(nb, bufLen);
 }
 
 
@@ -422,7 +432,10 @@ void LsLuaApi::dumpStack2Http(lsi_session_t *session, lua_State *L,
 
     if ((nb = snprintf(buf, 0x1000, "[%p] %s STACK[%d]\r\n",
                        L, tag, nArg)) != 0)
+    {
+        nb = LsLuaClampSnprintfLen(nb, 0x1000);
         g_api->append_resp_body(session, buf, nb);
+    }
     for (i = nArg - iDumpCount + 1; i <= nArg; i++)
     {
         if ((nb = dumpIdx2Buf(L, i, buf, 0x1000)) != 0)
@@ -740,6 +753,5 @@ pf_yieldk               LsLuaApi::yieldk = NULL;
 pf_getinfo              LsLuaApi::getinfo = NULL;
 pf_sethook              LsLuaApi::sethook = NULL;
 pf_setupvalue           LsLuaApi::setupvalue = NULL;
-
 
 

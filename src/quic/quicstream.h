@@ -37,7 +37,7 @@ class QuicStream : private lsquic_stream_ctx_t
 {
 public:
     QuicStream()
-        {}
+    {   lsquic_stream_ctx_t::m_pStream = NULL;     }
     ~QuicStream();
     int init(lsquic_stream_t *s);
     void setQuicStream(lsquic_stream_t *s)  {   m_pStream = s;  }

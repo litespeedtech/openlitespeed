@@ -22,6 +22,9 @@ class ConfigRootLifecycle
             // Canonicalize legacy split charset fields into the single AddDefaultCharset directive.
             ConfigTreeNormalizer::normalizeContextCharsets($root, $loc);
             ConfigTreeNormalizer::stripDefaultContextType($root, $loc);
+
+            $realmLoc = ($type == DInfo::CT_VH) ? 'realm' : 'virtualHostConfig:realm';
+            ConfigTreeNormalizer::stripDefaultFileRealmType($root, $realmLoc);
         }
 
         if ($type == DInfo::CT_TP) {
@@ -32,6 +35,7 @@ class ConfigRootLifecycle
     public static function beforeWriteXml($type, $root)
     {
         if ($type == DInfo::CT_SERV) {
+            ConfigTreeNormalizer::ensureXmlServerName($root);
             ConfigTreeNormalizer::convertListenerMapsToVhMaps($root);
             self::rewriteChildrenSuffix($root, 'virtualhost', 'configFile', '.conf', '.xml');
             self::rewriteChildrenSuffix($root, 'vhTemplate', 'templateFile', '.conf', '.xml');
@@ -43,7 +47,11 @@ class ConfigRootLifecycle
         if ($type == DInfo::CT_VH || $type == DInfo::CT_TP) {
             $loc = ($type == DInfo::CT_VH) ? 'context' : 'virtualHostConfig:context';
             ConfigTreeNormalizer::normalizeContextCharsets($root, $loc);
-            ConfigTreeNormalizer::stripDefaultContextType($root, $loc);
+            // <type> is required in LSWS XML contexts; never strip it here.
+            ConfigTreeNormalizer::ensureXmlContextType($root, $loc);
+
+            $realmLoc = ($type == DInfo::CT_VH) ? 'realm' : 'virtualHostConfig:realm';
+            ConfigTreeNormalizer::ensureXmlFileRealmType($root, $realmLoc);
         }
 
         if ($type == DInfo::CT_TP) {

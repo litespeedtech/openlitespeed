@@ -769,7 +769,7 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
                 $.ajax({
                     type: "POST",
                     url: "view/serviceMgr.php",
-                    data: {"act": "toggledebug"},
+                    data: {"act": "toggledebug", "tk": window.lstRequestToken || ""},
                     beforeSend: function () {
                         lstNotifyToast({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
@@ -780,6 +780,9 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
                     },
                     success: function () {
                         window.setTimeout(refreshDashboardLog, 1600);
+                    },
+                    error: function (xhr) {
+                        lstHandleServiceRequestError(xhr);
                     }
                 });
             });

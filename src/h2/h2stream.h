@@ -20,7 +20,6 @@
 
 #include <lsdef.h>
 #include <http/hiostream.h>
-#include <h2/unpackedheaders.h>
 #include <h2/h2protocol.h>
 #include <h2/h2streambase.h>
 #include <util/linkedobj.h>
@@ -44,8 +43,6 @@ public:
     void switchWriteToRead() {};
 
     int sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag flag);
-
-    int push(UnpackedHeaders *hdrs);
 
     int onInitConnected();
     int onTimer();

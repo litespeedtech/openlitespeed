@@ -8,12 +8,13 @@ $classes = 'icon-btn';
 
 foreach ( $listData as $path => $info ):
     $statusData = $info['statusData'];
+    $safePath   = htmlspecialchars($path);
 
 ?>
 
 <td align="center">
   <span class="action-btns">
-    <button type="button" value="<?php echo $path; ?>"
+    <button type="button" value="<?php echo $safePath; ?>"
             class="<?php echo $classes; ?>"
             title="<?php echo $statusData['btn_title']; ?>"
             <?php echo ($statusData['onclick']) ? $statusData['onclick'] : ''; ?>
@@ -25,7 +26,7 @@ foreach ( $listData as $path => $info ):
 
     <?php if ( $statusData['sort'] == 'removed' ) : ?>
 
-    <button type="button" value="<?php echo $path; ?>"
+    <button type="button" value="<?php echo $safePath; ?>"
             class="<?php echo $classes; ?>"
     >
       <span class="inactive-refresh-btn"></span>
@@ -33,7 +34,7 @@ foreach ( $listData as $path => $info ):
 
     <?php else: ?>
 
-    <button type="button" value="<?php echo $path; ?>"
+    <button type="button" value="<?php echo $safePath; ?>"
             class="<?php echo $classes; ?>"
             title="Click to refresh status"
             onclick="javascript:lscwpRefreshSingle(this);"

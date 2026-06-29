@@ -46,7 +46,8 @@ public:
     {
         AUTH_BASIC = 1,
         AUTH_DIGEST = 2,
-        AUTH_DEFAULT = AUTH_BASIC
+        AUTH_DEFAULT = AUTH_BASIC,
+        MAX_REALM_NAME_LEN = 200
     };
 
     HTAuth();
@@ -78,4 +79,3 @@ public:
 };
 
 #endif
-

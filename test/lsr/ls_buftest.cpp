@@ -51,8 +51,12 @@ TEST(ls_buftest_test)
     CHECK((int)strlen(pStr) == ls_buf_append2(&buf, pStr, strlen(pStr)));
     CHECK(ls_buf_size(&buf) == (int)strlen(pStr));
     CHECK(0 == strncmp(pStr, ls_buf_begin(&buf), strlen(pStr)));
+    CHECK(len == ls_buf_append2(&buf, ls_buf_begin(&buf), len));
+    CHECK(ls_buf_size(&buf) == len * 2);
+    CHECK(0 == strncmp(pStr, ls_buf_begin(&buf), len));
+    CHECK(0 == strncmp(pStr, ls_buf_begin(&buf) + len, len));
     char pBuf[128];
-    CHECK(len == ls_buf_popfrontto(&buf, pBuf, 100 + len));
+    CHECK(len * 2 == ls_buf_popfrontto(&buf, pBuf, 100 + len));
     CHECK(ls_buf_empty(&buf));
 
     for (int i = 0 ; i < 129 ; i ++)
@@ -130,8 +134,12 @@ TEST(ls_bufXtest_test)
             pool));
     CHECK(ls_buf_size(&buf) == (int)strlen(pStr));
     CHECK(0 == strncmp(pStr, ls_buf_begin(&buf), strlen(pStr)));
+    CHECK(len == ls_buf_xappend2(&buf, ls_buf_begin(&buf), len, pool));
+    CHECK(ls_buf_size(&buf) == len * 2);
+    CHECK(0 == strncmp(pStr, ls_buf_begin(&buf), len));
+    CHECK(0 == strncmp(pStr, ls_buf_begin(&buf) + len, len));
     char pBuf[128];
-    CHECK(len == ls_buf_popfrontto(&buf, pBuf, 100 + len));
+    CHECK(len * 2 == ls_buf_popfrontto(&buf, pBuf, 100 + len));
     CHECK(ls_buf_empty(&buf));
 
     for (int i = 0 ; i < 129 ; i ++)
@@ -211,8 +219,12 @@ TEST(ls_xbuftest_test)
     CHECK((int)strlen(pStr) == ls_xbuf_append2(&buf, pStr, strlen(pStr)));
     CHECK(ls_xbuf_size(&buf) == (int)strlen(pStr));
     CHECK(0 == strncmp(pStr, ls_xbuf_begin(&buf), strlen(pStr)));
+    CHECK(len == ls_xbuf_append2(&buf, ls_xbuf_begin(&buf), len));
+    CHECK(ls_xbuf_size(&buf) == len * 2);
+    CHECK(0 == strncmp(pStr, ls_xbuf_begin(&buf), len));
+    CHECK(0 == strncmp(pStr, ls_xbuf_begin(&buf) + len, len));
     char pBuf[128];
-    CHECK(len == ls_xbuf_popfrontto(&buf, pBuf, 100 + len));
+    CHECK(len * 2 == ls_xbuf_popfrontto(&buf, pBuf, 100 + len));
     CHECK(ls_xbuf_empty(&buf));
 
     for (int i = 0 ; i < 129 ; i ++)

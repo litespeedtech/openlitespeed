@@ -66,6 +66,7 @@
 #include <util/accessdef.h>
 #include <unistd.h>
 #include <openssl/x509.h>
+#include <limits.h>
 
 static long schedule_mt_notify_event(const lsi_session_t *session);
 static long schedule_mt_notify_event_params(const lsi_session_t *session,
@@ -318,6 +319,8 @@ static  void vlog(const lsi_session_t *session, int level, const char *fmt,
 
 static  void lograw(const lsi_session_t *session, const char *buf, int len)
 {
+    if (!buf || len <= 0)
+        return;
     HttpSession *pSess = (HttpSession *)((LsiSession *)session);
     LOG4CXX_NS::Logger *pLogger = NULL;
     if (pSess)
@@ -578,6 +581,8 @@ static int get_uri_file_path(const lsi_session_t *session, const char *uri,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (uri == NULL || path == NULL || uri_len <= 0 || max_len <= 0)
+        return LS_FAIL;
     HttpReq *pReq = pSession->getReq();
 
     if (uri[0] != '/')
@@ -592,12 +597,14 @@ static int get_uri_file_path(const lsi_session_t *session, const char *uri,
     else
         rootStr = pReq->getDocRoot();
 
-    if (max_len <= rootStr->len() + uri_len)
+    int rootLen = rootStr->len();
+    if (rootLen < 0 || rootLen >= max_len
+        || uri_len > max_len - rootLen - 1)
         return -2; //Not enough space
 
-    memcpy(path, rootStr->c_str(), rootStr->len());
-    memcpy(path + rootStr->len(), uri, uri_len);
-    path[rootStr->len() + uri_len] = 0x00;
+    memcpy(path, rootStr->c_str(), rootLen);
+    memcpy(path + rootLen, uri, uri_len);
+    path[rootLen + uri_len] = 0x00;
     return LS_OK;
 }
 
@@ -755,13 +762,13 @@ static int get_resp_headers_count(const lsi_session_t *session)
 
 
 static unsigned int get_resp_header_id(const lsi_session_t *session,
-                                       const char *name)
+                                       const char *name, int name_len)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
     HttpRespHeaders &respHeaders = pSession->getResp()->getRespHeaders();
-    return respHeaders.getIndex(name);
+    return respHeaders.getIndex(name, name_len);
 }
 
 
@@ -826,6 +833,8 @@ static int get_req_raw_headers(const lsi_session_t *session, char *buf,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (buf == NULL || maxlen <= 0)
+        return 0;
     HttpReq *pReq = pSession->getReq();
     const char *p = pReq->getHeaderBuf().begin();
     int size = pReq->getHttpHeaderLen();
@@ -1302,7 +1311,7 @@ static int get_req_var_by_id(const lsi_session_t *session, int type, char *val,
                              int maxValLen)
 {
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
-    if (pSession == NULL)
+    if (pSession == NULL || val == NULL || maxValLen <= 0)
         return LS_FAIL;
     int ret = -1;
     char *p = val;
@@ -1317,11 +1326,16 @@ static int get_req_var_by_id(const lsi_session_t *session, int type, char *val,
     else
         return LS_FAIL;
 
+    if (ret < 0)
+        return ret;
+
+    if (ret >= maxValLen)
+        ret = maxValLen - 1;
+
     if (p != val && ret > 0)
         memcpy(val, p, ret);
 
-    if (ret < maxValLen && ret >= 0)
-        val[ret] = 0;
+    val[ret] = 0;
 
     return ret;
 }
@@ -1333,6 +1347,8 @@ static int  get_req_env(const lsi_session_t *session, const char *name,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (val == NULL || maxValLen <= 0)
+        return LS_FAIL;
     const char *p;
     int valLen = 0;
     int type = getVarNameStr(name, nameLen);
@@ -1341,7 +1357,7 @@ static int  get_req_env(const lsi_session_t *session, const char *name,
     else
     {
         p = RequestVars::getEnv(pSession, name, nameLen, valLen);
-        if (!p || strlen(p) == 0)
+        if (!p || valLen == 0)
         {
             p = getenv(name);
             if (p)
@@ -1350,10 +1366,12 @@ static int  get_req_env(const lsi_session_t *session, const char *name,
 
         if (p)
         {
-            if (valLen > maxValLen)
-                valLen = maxValLen;
-            memcpy(val, p, valLen);
+            if (valLen >= maxValLen)
+                valLen = maxValLen - 1;
+            if (valLen > 0)
+                memcpy(val, p, valLen);
         }
+        val[valLen] = 0;
         return valLen;
     }
 }
@@ -1386,6 +1404,10 @@ static int read_req_body(const lsi_session_t *session, char *buf, int bufLen)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (buf == NULL || bufLen < 0)
+        return LS_FAIL;
+    if (bufLen == 0)
+        return 0;
     HttpReq *pReq = pSession->getReq();
     size_t size;
     char *p;
@@ -1464,7 +1486,7 @@ static int get_post_args_count(const lsi_session_t *session)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
         return 0;
-    return pSession->getReqParser()->getArgCount();
+    return pSession->getReqParser()->getPostArgCount();
 }
 
 
@@ -1474,7 +1496,7 @@ static int get_post_arg_by_idx(const lsi_session_t *session, int index,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
         return LS_FAIL;
-    return pSession->getReqParser()->getArgByIndex(index, pArg, filePath);
+    return pSession->getReqParser()->getPostArgByIndex(index, pArg, filePath);
 }
 
 
@@ -1483,7 +1505,7 @@ static int is_post_file_upload(const lsi_session_t *session, int index)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (!pSession || pSession->getReqParser() == NULL)
         return LS_FAIL;
-    return pSession->getReqParser()->isFile(index);
+    return pSession->getReqParser()->isPostFile(index);
 }
 
 
@@ -1575,6 +1597,8 @@ static int append_resp_body(const lsi_session_t *session, const char *buf,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (!buf || len < 0)
+        return LS_FAIL;
 
     if (pSession->isEndResponse())
         return LS_FAIL;
@@ -1590,6 +1614,8 @@ static int append_resp_bodyv(const lsi_session_t *session,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (!vector || count < 0)
+        return LS_FAIL;
 
     if (pSession->isEndResponse())
         return LS_FAIL;
@@ -1601,8 +1627,14 @@ static int append_resp_bodyv(const lsi_session_t *session,
     bool error = 0;
     for (int i = 0; i < count; ++i)
     {
+        if ((*vector).iov_len > INT_MAX
+            || (!(*vector).iov_base && (*vector).iov_len > 0))
+        {
+            error = 1;
+            break;
+        }
         if (pSession->appendDynBody((char *)((*vector).iov_base),
-                                    (*vector).iov_len) <= 0)
+                                    (int)(*vector).iov_len) <= 0)
         {
             error = 1;
             break;
@@ -3115,6 +3147,8 @@ static int append_resp_body_ts(const lsi_session_t *session, const char *buf,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (!buf || len < 0)
+        return LS_FAIL;
     assert(pSession->getMtFlag(HSF_MT_HANDLER));
     if (pSession->isEndResponse() || pSession->isMtHandlerCancelled())
         return LS_FAIL;
@@ -3134,6 +3168,8 @@ static int append_resp_bodyv_ts(const lsi_session_t *session,
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (!vector || count < 0)
+        return LS_FAIL;
 
     //FIXME: determine what handling is needed for filter hooks - if
     // filters try to lock mutex_writer, this will hang!
@@ -3147,7 +3183,9 @@ static int append_resp_bodyv_ts(const lsi_session_t *session,
             break;
         }
 
-        if (append_resp_body_ts_ex(pSession, (char *)((*vector).iov_base),
+        if ((*vector).iov_len > INT_MAX
+            || (!(*vector).iov_base && (*vector).iov_len > 0)
+            || append_resp_body_ts_ex(pSession, (char *)((*vector).iov_base),
                     (int)(*vector).iov_len) <= 0)
         {
             error = 1;
@@ -3173,6 +3211,10 @@ static int read_req_body_ts(const lsi_session_t *session, char *buf, int bufLen)
     HttpSession *pSession = (HttpSession *)((LsiSession *)session);
     if (pSession == NULL)
         return LS_FAIL;
+    if (buf == NULL || bufLen < 0)
+        return LS_FAIL;
+    if (bufLen == 0)
+        return 0;
 
     if (NULL == (pReqBuf = pSession->getReq()->getBodyBuf()))
         return LS_FAIL;

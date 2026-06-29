@@ -327,8 +327,12 @@ int CgidConn::buildSSIExecHeader(int checkContext)
             ret = 0;
         }
     }
-    char achBuf[4096];
-    memccpy(achBuf, pReal, 0, 4096);
+    char achBuf[40960];
+    if (memccpy(achBuf, pReal, 0, sizeof(achBuf) - 1) == NULL)
+    {
+        LS_ERROR(this, "[CGI] SSI exec path is too long.");
+        return LS_FAIL;
+    }
     char *argv[256];
     char **p;
     char *pDir ;
@@ -481,4 +485,3 @@ int  CgidConn::flush()
     }
     return 0;
 }
-

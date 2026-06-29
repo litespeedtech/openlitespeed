@@ -26,6 +26,7 @@
 #include <socket/gsockaddr.h>
 
 #include <fcntl.h>
+#include <limits.h>
 
 
 #define EDLUA_READ_LINE   0
@@ -691,8 +692,10 @@ static int LsLuaSockSend(lua_State *L)
     if (((cp = LsLuaApi::tolstring(L, 2, &size)) == NULL)
         || (size == 0))
         return LsLuaApi::userError(L, "sock_send", "Invalid data");
+    if (size > INT_MAX)
+        return LsLuaApi::userError(L, "sock_send", "Data too large");
 
-    return p_sock->send(L, cp, size);
+    return p_sock->send(L, cp, (int32_t)size);
 }
 
 
@@ -822,4 +825,3 @@ void LsLuaCreateTcpsockmeta(lua_State *L)
     lsLuaLoadMetaFile(L, LS_LUA ".socket", sockSub,
                       LSLUA_TCPSOCKDATA, sockMetaSub);
 }
-

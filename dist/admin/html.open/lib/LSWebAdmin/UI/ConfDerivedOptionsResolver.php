@@ -15,13 +15,15 @@ class ConfDerivedOptionsResolver
         }
 
         $names = [];
-        $resolvedLoc = $loc;
-        if ($loc == 'cluster') {
-            $resolvedLoc = 'loadbalancer';
+        if ($loc == 'cluster_l7') {
+            return self::resolveLoadBalancersByType($servData, 'layer7');
         }
-        if (in_array($resolvedLoc, ['virtualhost', 'listener', 'module', 'loadbalancer'])) {
+        if ($loc == 'cluster_l4') {
+            return self::resolveLoadBalancersByType($servData, 'layer4');
+        }
+        if (in_array($loc, ['virtualhost', 'listener', 'module', 'loadbalancer'])) {
             if ($servData != null) {
-                $names = $servData->GetChildrenValues($resolvedLoc);
+                $names = $servData->GetChildrenValues($loc);
             }
         } elseif ($loc == 'realm') {
             if ($routeState->GetView() == DInfo::CT_TP) {
@@ -42,6 +44,32 @@ class ConfDerivedOptionsResolver
             $options[$name] = $name;
         }
 
+        return $options;
+    }
+
+    private static function resolveLoadBalancersByType($servData, $type)
+    {
+        $options = [];
+        if ($servData == null || $servData->GetRootNode() == null) {
+            return $options;
+        }
+
+        $loadBalancers = $servData->GetRootNode()->GetChildren('loadbalancer');
+        if ($loadBalancers == null) {
+            return $options;
+        }
+
+        if (!is_array($loadBalancers)) {
+            $loadBalancers = [$loadBalancers->Get(CNode::FLD_VAL) => $loadBalancers];
+        }
+
+        foreach ($loadBalancers as $name => $loadBalancer) {
+            if ($loadBalancer instanceof CNode && $loadBalancer->GetChildVal('type') == $type) {
+                $options[$name] = $name;
+            }
+        }
+
+        ksort($options);
         return $options;
     }
 

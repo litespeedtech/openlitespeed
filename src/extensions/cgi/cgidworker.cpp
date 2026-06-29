@@ -34,6 +34,7 @@
 #include <log4cxx/logger.h>
 #include <extensions/localworker.h>
 #include <extensions/registry/extappregistry.h>
+#include <lsdef.h>
 
 #include <fcntl.h>
 #include <signal.h>
@@ -110,7 +111,15 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
     }
     m_fdCgid = fd;
 
-    n = snprintf(p, 255, "uds:/%s", getConfig().getServerAddrUnixSock());
+    n = lsnprintf(p, sizeof(achSocket), "uds:/%s",
+                  getConfig().getServerAddrUnixSock());
+    if (n >= (int)sizeof(achSocket) - 1)
+    {
+        LS_ERROR("CGI daemon socket path is too long.");
+        close(fd);
+        m_fdCgid = -1;
+        return LS_FAIL;
+    }
     if (getuid() == 0)
     {
         chown(p + 5, 0, gid);
@@ -122,6 +131,13 @@ int CgidWorker::start(const char *pServerRoot, const char *pChroot,
     if (pChroot)
     {
         i = strlen(pChroot);
+        if (n < 5 + i || strncmp(p + 5, pChroot, i) != 0)
+        {
+            LS_ERROR("CGI daemon socket path is outside the chroot.");
+            close(fd);
+            m_fdCgid = -1;
+            return LS_FAIL;
+        }
         memmove(p + 5, p + 5 + i, n - 5 - i + 1);
     }
     setURL(p);
@@ -396,5 +412,4 @@ void CgidWorker::closeFdCgid()
 {
     close(m_fdCgid);
 }
-
 

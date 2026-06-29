@@ -85,8 +85,12 @@ class ConfRouteParser
 
         $token = $sessionToken;
         $tokenInput = $inputSource->GrabGoodInput('REQUEST', 'tk');
-        if (self::requiresMutationToken($act) && $token != $tokenInput) {
-            throw new \RuntimeException('Illegal entry point!');
+        if (self::requiresMutationToken($act)) {
+            if (!is_string($token) || $token === ''
+                || !is_string($tokenInput) || $tokenInput === ''
+                || !hash_equals($token, $tokenInput)) {
+                throw new \RuntimeException('Illegal entry point!');
+            }
         }
 
         if ($act == 'B') {

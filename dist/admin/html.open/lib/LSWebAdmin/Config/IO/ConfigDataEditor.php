@@ -34,7 +34,7 @@ class ConfigDataEditor
     {
         $tid = $disp->GetLastTid();
         $ref = self::resolveRef($type, $disp);
-        $location = self::resolveLocation($disp, $tid, $pageDefClass);
+        $location = self::resolveLocation($disp, $tid, $ref, $pageDefClass);
 
         return new ConfigMutationTarget($tid, $location, $ref);
     }
@@ -66,10 +66,19 @@ class ConfigDataEditor
         return $disp->GetRef();
     }
 
-    private static function resolveLocation($disp, $tid, $pageDefClass)
+    private static function resolveLocation($disp, $tid, $ref, $pageDefClass)
     {
         $page = call_user_func([$pageDefClass, 'GetPage'], $disp);
         $tblmap = $page->GetTblMap();
+        if (is_object($disp) && method_exists($disp, 'GetPageData')) {
+            $root = $disp->GetPageData();
+            if ($root instanceof CNode) {
+                $location = $tblmap->FindTblLocForNode($tid, $root, $ref);
+                if ($location != null) {
+                    return $location;
+                }
+            }
+        }
         return $tblmap->FindTblLoc($tid);
     }
 }

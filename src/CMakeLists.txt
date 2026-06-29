@@ -32,9 +32,11 @@ SET(openlitespeed_SRCS
 
 
 SET(unittest_STAT_SRCS
+   ../test/unittest_helpers.cpp
    ../test/edio/bufferedostest.cpp
    ../test/edio/multiplexertest.cpp
    ../test/extensions/fcgistartertest.cpp
+   ../test/h2/unpackedheaderstest.cpp
    ../test/http/expirestest.cpp
    ../test/http/rewritetest.cpp
    ../test/http/httprequestlinetest.cpp
@@ -154,7 +156,7 @@ SET( litespeedlib
     socket sslpp lsshm thread log4cxx adns 
     quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
-    libz.a libpcre.a libexpat.a libxml2.a
+    libz.a libpcre2-8.a libexpat.a libxml2.a
     ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns ${LINUX_AIO_LIB} 
     -nodefaultlibs pthread rt ${LIBSAN} ${LIBATOMIC} 
     ${CMAKE_DL_LIBS} ${STDCXX} crypt bcrypt m gcc_eh c c_nonshared gcc
@@ -175,4 +177,3 @@ target_link_libraries(ls_shmhashstat lsshm log4cxx edio util lsr libcrypto.a pth
 
 
 install(TARGETS openlitespeed DESTINATION bin)
-

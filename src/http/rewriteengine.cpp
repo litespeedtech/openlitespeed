@@ -302,6 +302,7 @@ int RewriteEngine::parseRules(char *&pRules, RewriteRuleList *pRuleList,
 }
 
 
+
 int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
                                       char *pBegin, char *pEnd)
 {
@@ -340,12 +341,16 @@ int RewriteEngine::appendUnparsedRule(AutoStr2 &sDirective,
 static const char s_hex[17] = "0123456789ABCDEF";
 
 
-static char *escape_uri(char *p, const char *pURI, int uriLen,
+static char *escape_uri(char *p, const char *pURI, int uriLen, int bufLen,
                         int escape_flags, const char *no_escape)
 {
+    if (bufLen <= 1)
+        return p;
+
     const char *pURIEnd = pURI + uriLen;
+    char *pEnd = p + bufLen - 1;
     char ch;
-    while (pURI < pURIEnd)
+    while (pURI < pURIEnd && p < pEnd)
     {
         ch = *pURI++;
         if (isalnum(ch) || (ch == '_') || (no_escape && strchr(no_escape, ch)))
@@ -356,6 +361,8 @@ static char *escape_uri(char *p, const char *pURI, int uriLen,
         {
             if (!(escape_flags & RULE_FLAG_BCTLS) || iscntrl(ch))
             {
+                if (pEnd - p < 3)
+                    break;
                 *p++ = '%';
                 *p++ = s_hex[((unsigned char)ch) >> 4 ];
                 *p++ = s_hex[ ch & 0xf ];
@@ -407,7 +414,8 @@ static int escape_unsafe_3f(char *pValue, int &valLen, char *pBufEnd)
 
 static int getSubstr(const char *pSource, const int *ovector, int matches,
                      int i,
-                     char *&pValue, int escape_flags, const char *no_escape)
+                     char *&pValue, int bufLen, int escape_flags,
+                     const char *no_escape)
 {
     if (i < matches)
     {
@@ -421,7 +429,8 @@ static int getSubstr(const char *pSource, const int *ovector, int matches,
         {
             char *pEnd = pValue;
             pEnd = escape_uri(pEnd, (char *)pSource + *pParam,
-                              *(pParam + 1) - *pParam, escape_flags, no_escape);
+                              *(pParam + 1) - *pParam, bufLen, escape_flags,
+                              no_escape);
             return pEnd - pValue;
         }
     }
@@ -514,10 +523,10 @@ int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
         break;
     case REF_RULE_SUBSTR:
         return getSubstr(m_pSourceURL, m_ruleVec, m_ruleMatches, pItem->getIndex(),
-                         pValue, m_flag & RULE_FLAGS_ESCAPE, m_pNoEscape);
+                         pValue, bufLen, m_flag & RULE_FLAGS_ESCAPE, m_pNoEscape);
     case REF_COND_SUBSTR:
         return getSubstr(m_pCondBuf, m_condVec, m_condMatches, pItem->getIndex(),
-                         pValue, m_flag & RULE_FLAGS_ESCAPE, m_pNoEscape);
+                         pValue, bufLen, m_flag & RULE_FLAGS_ESCAPE, m_pNoEscape);
     case REF_ENV:
         pValue = (char *)RequestVars::getEnv(pSession, pItem->getStr()->c_str(),
                                              pItem->getStr()->len(), i);
@@ -568,9 +577,26 @@ int RewriteEngine::getSubstValue(const RewriteSubstItem *pItem,
         }
         if (m_pStrip)
         {
-            memmove(pValue, m_pStrip->c_str(), m_pStrip->len());
-            memmove(pValue + m_pStrip->len(), m_pSourceURL, m_sourceURLLen);
-            return m_pStrip->len() + m_sourceURLLen;
+            int totalLen = m_pStrip->len() + m_sourceURLLen;
+            if (bufLen > 0)
+            {
+                int stripLen = m_pStrip->len();
+                int copyLen = (stripLen < bufLen) ? stripLen : bufLen;
+                if (copyLen > 0)
+                    memmove(pValue, m_pStrip->c_str(), copyLen);
+                if (copyLen < bufLen)
+                {
+                    int urlLen = m_sourceURLLen;
+                    if (urlLen > bufLen - copyLen)
+                        urlLen = bufLen - copyLen;
+                    if (urlLen > 0)
+                        memmove(pValue + copyLen, m_pSourceURL, urlLen);
+                    copyLen += urlLen;
+                }
+                if (copyLen < bufLen)
+                    pValue[copyLen] = 0;
+            }
+            return totalLen;
         }
     //fall through
     case REF_CUR_REWRITE_URI:
@@ -636,6 +662,8 @@ int RewriteEngine::appendSubst(const RewriteSubstItem *pItem,
                 int c;
                 //int l1 = transform_urlDecode( pBegin, len, pBegin, len, &c );
                 int l1 = HttpUtil::unescape(pBegin, len, pBegin, len);
+                if (l1 < 0)
+                    return -1;
                 c = len - l1;
                 if (c > 0)
                 {
@@ -655,6 +683,11 @@ char *RewriteEngine::buildString(const RewriteSubstFormat *pFormat,
                                  HttpSession *pSession,
                                  char *pBuf, int &len, int esc_uri, int noDupSlash)
 {
+    if (len <= 0)
+    {
+        len = 0;
+        return NULL;
+    }
     char *pBegin = pBuf;
     char *pBufEnd = pBuf + len - 1;
     const RewriteSubstItem *pItem = pFormat->begin();
@@ -1097,7 +1130,6 @@ int RewriteEngine::expandEnv(const RewriteRule *pRule,
         {
             //TODO: enable it later
             setCookie(achBuf, len, pSession);
-            pEnv = (RewriteSubstFormat *)pEnv->next();
             continue;
         }
         pKeyEnd = strchr(achBuf, ':');
@@ -1694,5 +1726,3 @@ NEXT_RULE:
     }
     return 0;
 }
-
-

@@ -25,6 +25,7 @@
 #include <lsr/ls_xpool.h>
 
 #include <ctype.h>
+#include <limits.h>
 
 
 typedef struct ls_luaregex_s
@@ -49,6 +50,19 @@ typedef struct ls_luaregex_s
 static int LsLuaRegexMatchHelper(lua_State *L, char iFind);
 static int LsLuaRegexSubHelper(lua_State *L, char iGlobal);
 static int LsLuaRegexGmatch(lua_State *L);
+
+
+static int LsLuaRegexLoadInput(lua_State *L, ls_luaregex_t *r,
+                               const char *pSrc)
+{
+    size_t inputLen;
+
+    r->input = LsLuaApi::tolstring(L, 1, &inputLen);
+    if (inputLen > INT_MAX)
+        return LsLuaApi::userError(L, pSrc, "Input is too large.");
+    r->inputlen = (int)inputLen;
+    return 0;
+}
 
 
 static int LsLuaRegexMatch(lua_State *L)
@@ -119,11 +133,7 @@ static int LsLuaRegexFillTable(lua_State *L, ls_luaregex_t *r,
 {
     const char *pName, *pVal;
     int i, iNameLen, iValLen, iType, iTableLen, iDup;
-#if PCRE_MAJOR > 8 || ( PCRE_MAJOR == 8 && PCRE_MINOR >= 12 )
-    iDup = r->flags & PCRE_DUPNAMES;
-#else
-    iDup = 0;
-#endif
+    iDup = r->flags & LSRE_DUPNAMES;
 
     for (i = 0; i < iNumMatches; ++i)
     {
@@ -251,7 +261,7 @@ static int LsLuaRegexParseRet(lua_State *L, ls_luaregex_t *r, int iRet)
 {
     int *pVec;
 
-    if (iRet == PCRE_ERROR_NOMATCH)
+    if (iRet == LSRE_ERROR_NOMATCH)
         return 0;
     else if (iRet < 0)
     {
@@ -388,8 +398,8 @@ static int LsLuaRegexMatchLoad(lua_State *L, ls_luaregex_t *r)
     if ((iRet = LsLuaApi::checkArgType(L, 2, LUA_TSTRING, "Regex Match")) != 0)
         return iRet;
 
-    r->input = LsLuaApi::tolstring(L, 1,
-                                   (size_t *)&r->inputlen);
+    if ((iRet = LsLuaRegexLoadInput(L, r, "Regex Match")) != 0)
+        return iRet;
     r->pattern = LsLuaApi::tolstring(L, 2, NULL);
     switch (r->argcount)
     {
@@ -500,7 +510,7 @@ static int LsLuaRegexSubstitute(lua_State *L, LsLuaSession *pSession,
     do
     {
         iRet = LsLuaRegexDoPcre(L, pSession, r);
-        if (iRet == PCRE_ERROR_NOMATCH)
+        if (iRet == LSRE_ERROR_NOMATCH)
             break;
         else if (iRet < 0)
         {
@@ -542,8 +552,23 @@ static int LsLuaRegexSubstitute(lua_State *L, LsLuaSession *pSession,
         else
         {
             iBufLen = ls_pcresub_getlen(&sub, r->input, pVec, iRet);
+            if (iBufLen <= 0)
+            {
+                ls_pcresub_release(&sub);
+                LsLuaRegexFreePcre(r);
+                return LsLuaApi::serverError(L, "Regex Sub",
+                                             "Substitution result too large.");
+            }
             pBuf = (char *)ls_xpool_realloc(pool, pBuf, iBufLen);
-            ls_pcresub_exec(&sub, r->input, pVec, iRet, pBuf, &iBufLen);
+            if (!pBuf
+                || ls_pcresub_exec(&sub, r->input, pVec, iRet,
+                                   pBuf, &iBufLen) != LS_OK)
+            {
+                ls_pcresub_release(&sub);
+                LsLuaRegexFreePcre(r);
+                return LsLuaApi::serverError(L, "Regex Sub",
+                                             "Substitution failed.");
+            }
             LsLuaApi::addlstring(&buf, pBuf, iBufLen);
         }
         iCount++;
@@ -566,7 +591,7 @@ static int LsLuaRegexSubHelper(lua_State *L, char iGlobal)
 {
     ls_luaregex_t r;
     int iRet, iFunc = 0;
-    size_t iOptLen;
+    size_t iOptLen, iSubRuleLen = 0;
     const char *pOpts, *pSubRule;
     LsLuaSession *pSession = LsLuaSession::getSelf(L);
 
@@ -588,10 +613,18 @@ static int LsLuaRegexSubHelper(lua_State *L, char iGlobal)
     else
         return LsLuaApi::userError(L, "Regex Sub", "Invalid arg type (arg 3).");
 
-    r.input = LsLuaApi::tolstring(L, 1,
-                                  (size_t *)&r.inputlen);
+    if ((iRet = LsLuaRegexLoadInput(L, &r, "Regex Sub")) != 0)
+        return iRet;
     r.pattern = LsLuaApi::tolstring(L, 2, NULL);
-    pSubRule = LsLuaApi::tolstring(L, 3, NULL);
+    if (iFunc)
+        pSubRule = NULL;
+    else
+    {
+        pSubRule = LsLuaApi::tolstring(L, 3, &iSubRuleLen);
+        if (iSubRuleLen > INT_MAX - 8)
+            return LsLuaApi::userError(L, "Regex Sub",
+                                       "Substitution rule is too large.");
+    }
     if (r.argcount == 4)
     {
         if ((iRet = LsLuaApi::checkArgType(L, 4, LUA_TSTRING, "Regex Sub")) != 0)
@@ -688,7 +721,8 @@ int LsLuaRegexRegex(lua_State *L)
         return iRet;
 
     r.pcre = &pcre;
-    r.input = LsLuaApi::tolstring(L, 1, (size_t *)&r.inputlen);
+    if ((iRet = LsLuaRegexLoadInput(L, &r, "Regex")) != 0)
+        return iRet;
     r.pattern = LsLuaApi::tolstring(L, 2, NULL);
     if (r.argcount == 3)
     {
@@ -706,6 +740,3 @@ int LsLuaRegexRegex(lua_State *L)
     LsLuaRegexFreePcre(&r);
     return iRet;
 }
-
-
-

@@ -173,125 +173,124 @@ static void normalizeHeader(const char *pSrc, char *pDest)
 */
 
 
-size_t HttpHeader::getIndex(const char *pHeader)
+size_t HttpHeader::getIndex(const char *pHeader, int len)
 {
-    //char achHdr[0x100];
-    size_t idx = H_HEADER_END;
-    //normalizeHeader(pHeader, achHdr);
-    //pHeader = achHdr;
+    if (pHeader == NULL || len <= 0)
+        return H_HEADER_END;
+
     switch (*pHeader++ | 0x20)
     {
     case 'a':
-        if (strncasecmp(pHeader, "ccept", 5) == 0)
+        switch (len)
         {
-            pHeader += 5;
-            if (*pHeader++ == '-')
-            {
-                if (strncasecmp(pHeader, "charset", 7) == 0)
-                    idx = H_ACC_CHARSET;
-                else if (strncasecmp(pHeader, "encoding", 8) == 0)
-                    idx = H_ACC_ENCODING;
-                else if (strncasecmp(pHeader, "language", 8) == 0)
-                    idx = H_ACC_LANG;
-            }
-            else
-                idx = H_ACCEPT;
+        case 6:
+            if (strncasecmp(pHeader, "ccept", 5) == 0)
+                return H_ACCEPT;
+            break;
+        case 13:
+            if (strncasecmp(pHeader, "uthorization", 12) == 0)
+                return H_AUTHORIZATION;
+            break;
+        case 14:
+            if (strncasecmp(pHeader, "ccept-charset", 13) == 0)
+                return H_ACC_CHARSET;
+            break;
+        case 15:
+            if (strncasecmp(pHeader, "ccept-encoding", 14) == 0)
+                return H_ACC_ENCODING;
+            if (strncasecmp(pHeader, "ccept-language", 14) == 0)
+                return H_ACC_LANG;
+            break;
         }
-        else if (strncasecmp(pHeader, "uthorization", 12) == 0)
-            idx = H_AUTHORIZATION;
         break;
     case 'c':
-        if (strncasecmp(pHeader, "onnection", 9) == 0)
-            idx = H_CONNECTION;
-        else if (strncasecmp(pHeader, "ontent-type", 11) == 0)
-            idx = H_CONTENT_TYPE;
-        else if (strncasecmp(pHeader, "ontent-length", 13) == 0)
-            idx = H_CONTENT_LENGTH;
-        else if (strncasecmp(pHeader, "ookie", 5) == 0)
+        switch (len)
         {
-            if (*(pHeader + 5) == '2')
-                idx = H_COOKIE2;
-            else
-                idx = H_COOKIE;
+        case 6:
+            if (strncasecmp(pHeader, "ookie", 5) == 0)
+                return H_COOKIE;
+            break;
+        case 7:
+            if (strncasecmp(pHeader, "ookie2", 6) == 0)
+                return H_COOKIE2;
+            break;
+        case 10:
+            if (strncasecmp(pHeader, "onnection", 9) == 0)
+                return H_CONNECTION;
+            break;
+        case 12:
+            if (strncasecmp(pHeader, "ontent-type", 11) == 0)
+                return H_CONTENT_TYPE;
+            break;
+        case 13:
+            if (strncasecmp(pHeader, "ache-control", 12) == 0)
+                return H_CACHE_CTRL;
+            break;
+        case 14:
+            if (strncasecmp(pHeader, "ontent-length", 13) == 0)
+                return H_CONTENT_LENGTH;
+            break;
         }
-        else if (strncasecmp(pHeader, "ache-control", 12) == 0)
-            idx = H_CACHE_CTRL;
         break;
     case 'h':
-        if (strncasecmp(pHeader, "ost", 3) == 0)
-            idx = H_HOST;
+        if (len == 4 && strncasecmp(pHeader, "ost", 3) == 0)
+            return H_HOST;
         break;
     case 'i':
-        if (((*pHeader | 0x20) == 'f') &&
-            (*(pHeader + 1) == '-'))
+        switch (len)
         {
-            pHeader += 2;
-            if (strncasecmp(pHeader, "match", 5) == 0)
-                idx = H_IF_MATCH;
-            else if (strncasecmp(pHeader, "modified-since", 14) == 0)
-                idx = H_IF_MODIFIED_SINCE;
-            else if (strncasecmp(pHeader, "none-match", 8) == 0)     //If-None-Match
-                idx = H_IF_NO_MATCH;
-            else if (strncasecmp(pHeader, "range", 5) == 0)
-                idx = H_IF_RANGE;
-            else if (strncasecmp(pHeader, "unmodified-since", 16) == 0)
-                idx = H_IF_UNMOD_SINCE;
+        case 8:
+            if (strncasecmp(pHeader, "f-match", 7) == 0)
+                return H_IF_MATCH;
+            if (strncasecmp(pHeader, "f-range", 7) == 0)
+                return H_IF_RANGE;
+            break;
+        case 13:
+            if (strncasecmp(pHeader, "f-none-match", 12) == 0)
+                return H_IF_NO_MATCH;
+            break;
+        case 17:
+            if (strncasecmp(pHeader, "f-modified-since", 16) == 0)
+                return H_IF_MODIFIED_SINCE;
+            break;
+        case 19:
+            if (strncasecmp(pHeader, "f-unmodified-since", 18) == 0)
+                return H_IF_UNMOD_SINCE;
+            break;
         }
         break;
     case 'k':
-        if (strncasecmp(pHeader, "eep-alive", 9) == 0)
-            idx = H_KEEP_ALIVE;
+        if (len == 10 && strncasecmp(pHeader, "eep-alive", 9) == 0)
+            return H_KEEP_ALIVE;
         break;
     case 'p':
-        if (strncasecmp(pHeader, "ragma", 5) == 0)
-            idx = H_PRAGMA;
+        if (len == 6 && strncasecmp(pHeader, "ragma", 5) == 0)
+            return H_PRAGMA;
         break;
     case 'r':
-        if (strncasecmp(pHeader, "eferer", 6) == 0)
-            idx = H_REFERER;
-        else if (strncasecmp(pHeader, "ange", 4) == 0)
-            idx = H_RANGE;
+        if (len == 5 && strncasecmp(pHeader, "ange", 4) == 0)
+            return H_RANGE;
+        if (len == 7 && strncasecmp(pHeader, "eferer", 6) == 0)
+            return H_REFERER;
         break;
     case 't':
-        if (strncasecmp(pHeader, "ransfer-encoding", 16) == 0)
-            idx = H_TRANSFER_ENCODING;
+        if (len == 17 && strncasecmp(pHeader, "ransfer-encoding", 16) == 0)
+            return H_TRANSFER_ENCODING;
         break;
     case 'u':
-        if (strncasecmp(pHeader, "ser-agent", 9) == 0)
-            idx = H_USERAGENT;
+        if (len == 10 && strncasecmp(pHeader, "ser-agent", 9) == 0)
+            return H_USERAGENT;
         break;
     case 'v':
-        if (strncasecmp(pHeader, "ia", 2) == 0)
-            idx = H_VIA;
+        if (len == 3 && strncasecmp(pHeader, "ia", 2) == 0)
+            return H_VIA;
         break;
     case 'x':
-        if (strncasecmp(pHeader, "-forwarded-for", 14) == 0)
-            idx = H_X_FORWARDED_FOR;
+        if (len == 15 && strncasecmp(pHeader, "-forwarded-for", 14) == 0)
+            return H_X_FORWARDED_FOR;
         break;
     }
 
-    return idx;
-}
-
-
-size_t HttpHeader::getIndex2(const char *pHeader)
-{
-    size_t idx = getIndex(pHeader);
-    if (idx < H_HEADER_END)
-    {
-        char ch = *(pHeader + getHeaderStringLen(idx));
-        if (!ch || ch == ' ' || ch == '\t' || ch == ':')
-            return idx;
-    }
-    return H_HEADER_END;
-}
-
-
-size_t HttpHeader::getIndex(const char *pHeader, int len)
-{
-    size_t idx = getIndex(pHeader);
-    if (idx < H_HEADER_END && getHeaderStringLen(idx) == len)
-        return idx;
     return H_HEADER_END;
 }
 
@@ -365,8 +364,6 @@ public:
         CGI_STATUS,
         H_HEADER_END
     };
-    static size_t getIndex( const char * pHeader );
-    static size_t getIndex2( const char * pHeader );
     static size_t getRespHeaderIndex( const char * pHeader );
 
 private:
@@ -610,13 +607,17 @@ HeaderOp *HttpHeaderOps::append(int16_t index, const char *pName,
     int flag = HeaderOp::FLAG_RELEASE_NAME;
 
     char *pBuf = (char *)malloc(nameLen + valLen + 5);
+    if (!pBuf)
+        return NULL;
     memcpy(pBuf, pName, nameLen);
     pName = pBuf;
     if (pVal && (valLen > 0))
     {
+        const char *pValEnd = pVal + valLen;
         char *pVar = (char *)memchr(pVal, '%', valLen);
-        if (pVar && (*(pVar + 1) == '%' || *(pVar + 1) == '{' ||
-                     *(pVar + 1) == 't' || *(pVar + 1) == 'D'))
+        if (pVar && pVar + 1 < pValEnd
+            && (*(pVar + 1) == '%' || *(pVar + 1) == '{' ||
+                *(pVar + 1) == 't' || *(pVar + 1) == 'D'))
             flag |= HeaderOp::FLAG_COMPLEX_VALUE;
         pBuf += nameLen;
         *pBuf++ = ':';
@@ -768,11 +769,13 @@ int HttpHeaderOps::parseOp(const char *pBegin, const char *pEnd, int is_req)
     if (is_req)
         index = HttpHeader::getIndex(pNameBegin, pNameEnd - pNameBegin);
     else
-        index = HttpRespHeaders::getIndex(pNameBegin);//, pNameEnd - pNameBegin);
+        index = HttpRespHeaders::getIndex(pNameBegin, pNameEnd - pNameBegin);
 
     HeaderOp *pHeader = append(index, pNameBegin, pNameEnd - pNameBegin,
                                  pValue, pValEnd - pValue,
                                  op, is_req);
+    if (!pHeader)
+        return LS_FAIL;
     if (pEnv)
         pHeader->setEnv(pEnv, pEnvEnd - pEnv);
     return 0;

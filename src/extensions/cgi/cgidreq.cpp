@@ -45,7 +45,7 @@ int CgidReq::add(const char *name, size_t nameLen,
     int len = nameLen + valLen + 4;
     if (len > 65530 )
         return LS_FAIL;
-    if (value && strncmp(value, "() {", 4) == 0)
+    if (value && valLen >= 4 && memcmp(value, "() {", 4) == 0)
         return LS_FAIL;
     if (bufLen < len)
     {
@@ -164,13 +164,17 @@ int CgidReq::buildReqHeader(int uid, int gid, int priority, int umaskVal,
     if (pChroot)
     {
         pHeader->m_chrootPathLen = chrootLen + 1;
-        add(pChroot, pHeader->m_chrootPathLen);
+        if (add(pChroot, pHeader->m_chrootPathLen) == LS_FAIL)
+            return LS_FAIL;
+        pHeader = getCgidReq();
     }
     else
         pHeader->m_chrootPathLen = 0;
     pHeader->m_priority = priority;
     pHeader->m_umask = umaskVal;
-    add(pReal, pathLen + 1);
+    if (add(pReal, pathLen + 1) == LS_FAIL)
+        return LS_FAIL;
+    pHeader = getCgidReq();
     pEnd = pReal + pathLen;
     const char *p = pEnd;
     while (*(p - 1) != '/')
@@ -210,6 +214,4 @@ int CgidReq::finalize(int req_id, const char *pSecret, int type)
                        pHeader->m_md5);
     return 0;
 }
-
-
 

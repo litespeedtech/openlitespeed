@@ -19,10 +19,12 @@
 //  Author: dxu@litespeedtech.com (David Shue)
 
 #include <ls.h>
+#include <http/httpmethod.h>
 #include <lsr/ls_confparser.h>
 #include <modsecurity/modsecurity.h>
 #include <modsecurity/transaction.h>
 #include <modsecurity/rules_set.h>
+#include <limits.h>
 class session;
 
 #define MNAME                       mod_security
@@ -55,6 +57,49 @@ typedef struct ModData_t
     int8_t                  chkReqBody;
     int8_t                  chkRespBody;
 } ModData;
+
+
+static int parseContentLength(const struct iovec *iov, long *len)
+{
+    if (iov == NULL || len == NULL || iov->iov_base == NULL)
+        return LS_FAIL;
+
+    const char *p = (const char *)iov->iov_base;
+    size_t pos = 0;
+    long value = 0;
+    int overflow = 0;
+
+    while (pos < iov->iov_len && (p[pos] == ' ' || p[pos] == '\t'))
+        ++pos;
+
+    if (pos == iov->iov_len || p[pos] < '0' || p[pos] > '9')
+        return LS_FAIL;
+
+    while (pos < iov->iov_len && p[pos] >= '0' && p[pos] <= '9')
+    {
+        int digit = p[pos] - '0';
+        if (!overflow)
+        {
+            if (value > (LONG_MAX - digit) / 10)
+            {
+                value = LONG_MAX;
+                overflow = 1;
+            }
+            else
+                value = value * 10 + digit;
+        }
+        ++pos;
+    }
+
+    while (pos < iov->iov_len && (p[pos] == ' ' || p[pos] == '\t'))
+        ++pos;
+
+    if (pos != iov->iov_len)
+        return LS_FAIL;
+
+    *len = value;
+    return LS_OK;
+}
 
 
 lsi_config_key_t paramArray[] =
@@ -465,8 +510,9 @@ static int UriMapHook(lsi_param_t *rec)
         *(uri + uriLen) = '?';
         lstrncpy(uri + uriLen + 1, qs, qs_len + 1);
     }
-    char httpMethod[10] = {0};
-    g_api->get_req_var_by_id(session, LSI_VAR_REQ_METHOD, httpMethod, 10);
+    char httpMethod[HttpMethod::MAX_METHOD_LEN + 1] = {0};
+    g_api->get_req_var_by_id(session, LSI_VAR_REQ_METHOD, httpMethod,
+                             sizeof(httpMethod));
 
     char *http_version = (char *)"1.1";
     char val[12] = {0};
@@ -694,9 +740,10 @@ static int respHeaderHook(lsi_param_t *rec)
         int iovCount = g_api->get_resp_header(session,
                                               LSI_RSPHDR_CONTENT_LENGTH,
                                               NULL, 0, iov, 1);
-        if (iovCount == 1 && iov[0].iov_len > 0)
+        long len;
+        if (iovCount == 1 && iov[0].iov_len > 0
+            && parseContentLength(&iov[0], &len) == LS_OK)
         {
-            long len = atol((char *)iov[0].iov_base);
             if (len > rules->m_responseBodyLimit.m_value)
             {
                 int disableHkpt = LSI_HKPT_RCVD_RESP_BODY;
@@ -779,4 +826,3 @@ static int init(lsi_module_t *pModule)
 lsi_confparser_t configSt = { ParseConfig, FreeConfig, paramArray };
 LSMODULE_EXPORT lsi_module_t MNAME = { LSI_MODULE_SIGNATURE, init, NULL, &configSt,
                         MODULE_VERSION_INFO, serverHooks, {0} };
-

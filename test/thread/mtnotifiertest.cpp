@@ -21,65 +21,54 @@
 #include <thread/mtnotifier.h>
 
 #include <pthread.h>
-#include <stdio.h>
 #include "unittest-cpp/UnitTest++.h"
 
 
 bool didWait = false;
 bool didSignal = false;
 
-int waitFunction(void *arg) {
-    return(0);
-}
-
-int signalFunction(void *arg) {
-    return(0);
-}
-
-static void *waitThread(void *arg) {
+static void *waitThread(void *arg)
+{
     MtNotifier *pmtNotifier = (MtNotifier *)arg;
-    int waiters;
-    printf("Entered wait thread\n");
-    waiters = pmtNotifier->fullwait();
-    printf("Called wait, set something and broadcast\n");
+    pmtNotifier->fullwait();
     didWait = true;
-    if (waiters > 0)
-        pmtNotifier->notify();
-    printf("Wait thread done\n");
-    return(NULL);
-}
-
-static void *signalThread(void *arg) {
-    MtNotifier *pmtNotifier = (MtNotifier *)arg;
-
-    printf("Entered signal thread\n");
-    pmtNotifier->notify();
-    printf("Called signal, set something and broadcast\n");
-    didSignal = true;
-    printf("Signal thread done\n");
     return(NULL);
 }
 
 TEST(MTNOTIFIER_BLOCK_RELEASE_TEST)
 {
-    printf("Start first mtnotifier test\n");
+    didWait = false;
+    didSignal = false;
     MtNotifier mtNotifier;
     pthread_t waitThreadID;
-    pthread_t signalThreadID;
-    pthread_attr_t pthread_attrWait, pthread_attrSignal;
+    pthread_attr_t pthread_attrWait;
 
     pthread_attr_init(&pthread_attrWait);
-    pthread_attr_init(&pthread_attrSignal);
 
-    pthread_create(&waitThreadID, &pthread_attrWait, waitThread, &mtNotifier);
-    pthread_create(&signalThreadID, &pthread_attrSignal, signalThread, &mtNotifier);
+    int ret = pthread_create(&waitThreadID, &pthread_attrWait, waitThread,
+                             &mtNotifier);
+    pthread_attr_destroy(&pthread_attrWait);
+    CHECK(ret == 0);
+    if (ret != 0)
+        return;
 
-    sleep(1); // Give it a second to finish.
+    for (int i = 0; i < 2000 && mtNotifier.getWaiters() == 0; ++i)
+        usleep(1000);
+
+    CHECK(mtNotifier.getWaiters() > 0);
+    if (mtNotifier.getWaiters() == 0)
+    {
+        pthread_cancel(waitThreadID);
+        pthread_join(waitThreadID, NULL);
+        return;
+    }
+
+    didSignal = (mtNotifier.notify() > 0);
+    pthread_join(waitThreadID, NULL);
     CHECK(didWait);
     CHECK(didSignal);
+    CHECK(mtNotifier.getWaiters() == 0);
 }
 
 #endif
-
-
 

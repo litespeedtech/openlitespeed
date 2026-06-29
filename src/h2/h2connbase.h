@@ -43,13 +43,13 @@ enum h2flag
     H2_CONN_FLAG_FLOW_CTRL      = (1<<5),
     H2_CONN_HEADERS_START       = (1<<6),
     H2_CONN_FLAG_WAIT_PROCESS   = (1<<7),
-    H2_CONN_FLAG_NO_PUSH        = (1<<8),
-    H2_CONN_FLAG_WANT_FLUSH     = (1<<9),
-    H2_CONN_FLAG_IN_EVENT       = (1<<10),
-    H2_CONN_FLAG_PAUSE_READ     = (1<<11),
-    H2_CONN_FLAG_DIRECT_BUF     = (1<<12),
-    H2_CONN_FLAG_AUTO_RECYCLE   = (1<<13),
-    H2_CONN_FLAG_PENDING_STREAM = (1<<14),
+    H2_CONN_FLAG_WANT_FLUSH     = (1<<8),
+    H2_CONN_FLAG_IN_EVENT       = (1<<9),
+    H2_CONN_FLAG_PAUSE_READ     = (1<<10),
+    H2_CONN_FLAG_DIRECT_BUF     = (1<<11),
+    H2_CONN_FLAG_AUTO_RECYCLE   = (1<<12),
+    H2_CONN_FLAG_PENDING_STREAM = (1<<13),
+    H2_CONN_FLAG_DROP           = (1<<14),
 };
 
 inline enum h2flag operator|(enum h2flag a, enum h2flag b)
@@ -112,6 +112,8 @@ public:
     virtual bool isPauseWrite()  const = 0;
     virtual int assignStreamHandler(H2StreamBase *stream) = 0;
     virtual int verifyStreamId(uint32_t id)  {   return LS_OK;   }
+
+    void drop(const char *reason);
 
     char *getDirectOutBuf(uint32_t stream_id, size_t &size);
     void directOutBufUsed(uint32_t stream_id, size_t len);
@@ -184,6 +186,7 @@ public:
     uint32_t getStreamInInitWindowSize() const
     {   return m_iStreamInInitWindowSize;    }
     int setStreamInInitWindowsSize(uint32_t size);
+    void addWindowInToUpdate(int bytes);
 
     int32_t getStreamOutInitWindowSize() const
     {   return m_iStreamOutInitWindowSize;    }
@@ -245,9 +248,7 @@ public:
     virtual ssize_t directBuffer(const char *data, size_t size)
     {   return -1;  }
 
-    int sendReqHeaders(uint32_t id, uint32_t promise_streamId,
-                       int flag, UnpackedHeaders *req_hdrs);
-
+    int sendReqHeaders(uint32_t id, int flag, UnpackedHeaders *req_hdrs);
 
 protected:
     typedef Thash<H2StreamBase, uint32_t, uint32_t, H2StreamHasher> StreamMap;
@@ -291,19 +292,19 @@ protected:
     int  sendFrame0Bytes(H2FrameType type, uint8_t  flags,
                          uint32_t uiStreamId);
 
-    int sendSettingsFrame(bool disable_push);
+    int sendSettingsFrame();
 
     void skipRemainData();
 
     int timerRoutine();
-    void consumedWindowIn(int bytes);
     void updateWindow();
+    int consumeWindowIn(int bytes);
 
     int verifyClientPreface();
     int parseFrame();
     int processInput();
-    int encodeReqHeaders(unsigned char* buf, unsigned char* buf_end, const UnpackedHeaders* hdrs);
-
+    int encodeReqHeaders(unsigned char *buf, unsigned char *buf_end,
+                         const UnpackedHeaders *hdrs);
     int processQueue();
     int processPendingStreams();
 
@@ -331,12 +332,11 @@ protected:
     int32_t         m_iCurrentFrameRemain;
     int32_t         m_iCurDataOutWindow;
     int32_t         m_iDataInWindow;
+    int32_t         m_iCurDataInWindow;
     uint32_t        m_iStreamInInitWindowSize;
     int32_t         m_iServerMaxStreams;
     int32_t         m_iStreamOutInitWindowSize;
-    int32_t         m_iMaxPushStreams;
     int32_t         m_iPeerMaxFrameSize;
-    uint32_t        m_uiPushStreamId;
 
     uint32_t        m_uiLastStreamId;
     uint32_t        m_uiStreams;
@@ -347,7 +347,6 @@ protected:
 
     uint32_t        m_uiShutdownStreams;
     uint32_t        m_uiGoAwayId;
-    int32_t         m_iCurPushStreams;
     uint32_t        m_tmLastFrameIn;
     uint32_t        m_tmLastTimer;
     int32_t         m_iInBytesToUpdate;

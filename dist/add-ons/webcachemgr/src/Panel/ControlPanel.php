@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.17.7';
+    const PANEL_API_VERSION = '1.17.10.1';
 
     /**
      * @since 1.9
@@ -419,6 +419,22 @@ abstract class ControlPanel
     {
         $this->log('Attempting to set VH cache root...', Logger::L_VERBOSE);
 
+        if ( $vhCacheRoot !== '' && $vhCacheRoot[0] === '/' ) {
+            $basePath = preg_replace('#/\$vh_user$#', '', $vhCacheRoot);
+
+            if ( !Util::isSafeAbsPath($basePath) ) {
+                throw new LSCMException(
+                    'Refusing to write unsafe absolute VH cache root path.'
+                );
+            }
+        }
+        elseif ( !preg_match('#^[A-Za-z0-9_\-]+$#', $vhCacheRoot) ) {
+            throw new LSCMException(
+                'Refusing to write unsafe VH cache root: non-absolute values '
+                    . 'must contain only [A-Za-z0-9_-] characters.'
+            );
+        }
+
         if ( !file_exists($this->apacheVHConf) ) {
             $this->createVHConfAndSetCacheRoot(
                 $this->apacheVHConf,
@@ -463,7 +479,20 @@ abstract class ControlPanel
     {
         $statusFile = '/tmp/lshttpd/.status';
 
-        if ( !file_exists($statusFile) ) {
+        /**
+         * V7 (CWE-59 symlink-following / CWE-367 TOCTOU) — /tmp/lshttpd/.status
+         * is a fixed path in a sticky, world-writable directory and is read
+         * here in an elevated context. Refuse to follow a symlink and require
+         * the opened descriptor to be a regular file owned by a trusted system
+         * account whose dev/inode matches the pre-open lstat (so a symlink
+         * swapped in during the open window is detected rather than followed).
+         *
+         * LiteSpeed writes this file as its admin user (lsadm), not root, so
+         * accept root OR lsadm as the owner. The containing directory
+         * (/tmp/lshttpd) is not tenant-writable, so an unprivileged user cannot
+         * pre-create or symlink the file regardless.
+         */
+        if ( is_link($statusFile) || !file_exists($statusFile) ) {
             throw new LSCMException(
                 'Cannot determine LSCache availability. Please start/switch to '
                     . 'LiteSpeed Web Server before trying again.',
@@ -471,7 +500,31 @@ abstract class ControlPanel
             );
         }
 
-        if ( ($f = fopen($statusFile, 'r')) === false ) {
+        $pre = @lstat($statusFile);
+
+        if ( $pre === false || ($f = @fopen($statusFile, 'rb')) === false ) {
+            throw new LSCMException(
+                'Cannot determine LSCache availability.',
+                LSCMException::E_PERMISSION
+            );
+        }
+
+        $st = fstat($f);
+
+        $allowedUids = [ 0 ];
+        if ( function_exists('posix_getpwnam')
+                && ($pw = @posix_getpwnam('lsadm')) !== false
+                && isset($pw['uid']) ) {
+            $allowedUids[] = (int)$pw['uid'];
+        }
+
+        if ( $st === false
+                || ($st['mode'] & 0170000) !== 0100000
+                || !in_array($st['uid'], $allowedUids, true)
+                || $st['ino'] !== $pre['ino']
+                || $st['dev'] !== $pre['dev'] ) {
+
+            fclose($f);
             throw new LSCMException(
                 'Cannot determine LSCache availability.',
                 LSCMException::E_PERMISSION
@@ -586,6 +639,34 @@ abstract class ControlPanel
     abstract protected function prepareDocrootMap();
 
     /**
+     * Returns the PHP binary split into a path token and an options string.
+     *
+     * Override this in panel subclasses instead of getPhpBinary(). The
+     * default implementation wraps the legacy getPhpBinary() string for
+     * backward compatibility with older CustomPanel implementations that
+     * only override that method.
+     *
+     * @since 1.17.10
+     *
+     * @param WPInstall $wpInstall
+     *
+     * @return PhpBinaryParts
+     *
+     * @throws LSCMException  Thrown indirectly by $this->getPhpBinary().
+     */
+    public function getPhpBinaryParts( WPInstall $wpInstall )
+    {
+        $legacy = trim($this->getPhpBinary($wpInstall));
+        $parts  = preg_split('/\s+/', $legacy, 2);
+
+        return new PhpBinaryParts(
+            $parts[0],
+            isset($parts[1]) ? $parts[1] : ''
+        );
+    }
+
+    /**
+     * @deprecated since 1.17.10  Override getPhpBinaryParts() instead.
      *
      * @param WPInstall $wpInstall
      *
@@ -787,6 +868,12 @@ abstract class ControlPanel
             $cacheroot = $this->defaultSvrCacheRoot;
         }
 
+        if ( !Util::isSafeAbsPath($cacheroot) ) {
+            throw new LSCMException(
+                'Refusing to write unsafe server cache root path.'
+            );
+        }
+
         $cacheRootLine =
             "<IfModule LiteSpeed>\nCacheRoot $cacheroot\n</IfModule>\n\n";
 
@@ -844,7 +931,7 @@ abstract class ControlPanel
         $this->log("Server level cache root set to $cacheroot", Logger::L_INFO);
 
         if ( file_exists($cacheroot) ) {
-            exec("/bin/rm -rf $cacheroot");
+            exec('/bin/rm -rf ' . escapeshellarg($cacheroot));
 
             $this->log(
                 'Server level cache root directory removed for proper '
@@ -1047,6 +1134,10 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.17.10.1',
+            '1.17.10',
+            '1.17.9',
+            '1.17.8',
             '1.17.7',
             '1.17.6',
             '1.17.5',

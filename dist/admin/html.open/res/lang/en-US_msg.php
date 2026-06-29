@@ -35,7 +35,6 @@ $_gmsg['menu_sl_'] = 'Listener';
 $_gmsg['menu_slack'] = 'Slack';
 $_gmsg['menu_toggledebug'] = 'Toggle Debug';
 $_gmsg['service_toggledebuglabel'] = 'Toggle Debug Logging';
-$_gmsg['menu_usermanual'] = 'User Manual';
 $_gmsg['menu_tools'] = 'Tools';
 $_gmsg['menu_livestats'] = 'Live Stats';
 $_gmsg['menu_tp'] = 'VHost Templates';
@@ -43,8 +42,6 @@ $_gmsg['menu_tp_'] = 'VHost Template';
 $_gmsg['menu_vh'] = 'Virtual Hosts';
 $_gmsg['menu_vh_'] = 'Virtual Host';
 $_gmsg['menu_webadmin'] = 'WebAdmin Settings';
-
-
 $_gmsg['tab_base'] = 'Basic';
 $_gmsg['tab_registration'] = 'Registration';
 $_gmsg['tab_browse'] = 'Browse';
@@ -52,7 +49,6 @@ $_gmsg['tab_ctx'] = 'Context';
 $_gmsg['tab_ext'] = 'External App';
 $_gmsg['tab_g'] = 'General';
 $_gmsg['tab_log'] = 'Log';
-$_gmsg['tab_mod'] = 'Modules';
 $_gmsg['tab_rails'] = 'App Server';
 $_gmsg['tab_rewrite'] = 'Rewrite';
 $_gmsg['tab_search'] = 'Search';
@@ -64,8 +60,6 @@ $_gmsg['tab_tp'] = 'Template';
 $_gmsg['tab_tuning'] = 'Tuning';
 $_gmsg['tab_user'] = 'Users';
 $_gmsg['tab_wsp'] = 'Web Socket Proxy';
-
-
 $_gmsg['btn_add'] = 'Add';
 $_gmsg['btn_back'] = 'Back';
 $_gmsg['btn_cancel'] = 'Cancel';
@@ -98,12 +92,11 @@ $_gmsg['btn_view'] = 'View';
 $_gmsg['btn_seedetails'] = 'See details';
 $_gmsg['btn_viewconfig'] = 'View Configuration';
 $_gmsg['btn_viewfulldetails'] = 'View Full Details';
-
-
 $_gmsg['note_collapsemenu'] = 'Collapse Menu';
 $_gmsg['note_configmodified'] = 'Configuration modified. Restart required to apply changes.';
 $_gmsg['note_confirm_delete'] = 'Are you sure you want to delete this entry? This will be permanently removed from the configuration file.';
 $_gmsg['note_confirm_instantiate'] = 'Are you sure you want to instantiate this virtual host? This will create a dedicated configuration file for this virtual host.';
+$_gmsg['note_delete_ref_context_field'] = '%%owner%% context %%name%% %%field%%';
 $_gmsg['note_copyrightreserved'] = 'All Rights Reserved.';
 $_gmsg['note_curbranch'] = 'Current branch';
 $_gmsg['note_version'] = 'Version';
@@ -121,6 +114,8 @@ $_gmsg['note_readonly_mode'] = 'Include file detected in configuration file. Ent
 $_gmsg['note_select_option'] = 'Please select';
 $_gmsg['note_serv_level'] = 'Server Level';
 $_gmsg['note_showing'] = 'Showing';
+$_gmsg['note_vhmap_searchprompt'] = 'Enter a virtual host name or domain name above to search the active mappings.';
+$_gmsg['note_vhmap_searchcount'] = 'There are %d active virtual host(s) available to search.';
 $_gmsg['note_signout'] = 'Sign Out';
 $_gmsg['note_signoutof'] = 'Sign out of %s?';
 $_gmsg['note_toggletheme'] = 'Toggle theme';
@@ -140,8 +135,6 @@ $_gmsg['note_unavailable'] = 'Unavailable';
 $_gmsg['note_syntax'] = 'Syntax';
 $_gmsg['note_tips'] = 'Tip(s)';
 $_gmsg['note_vh_level'] = 'VHost Level';
-
-
 $_gmsg['err_blockfailed'] = 'Suspicious activity detected and logged. Please try again later.';
 $_gmsg['err_faildetectdlmethod'] = 'Unable to detect download method (install curl, fetch, or wget)';
 $_gmsg['err_failreadfile'] = 'Failed to read file';
@@ -151,13 +144,13 @@ $_gmsg['err_invalidvalat'] = 'Invalid value at';
 $_gmsg['err_loggedoff'] = 'You have been signed out.';
 $_gmsg['err_login'] = 'Invalid credentials.';
 $_gmsg['err_reloginrequired'] = 'Your account was updated. Please sign in again.';
+$_gmsg['l_crossorigin_blocked'] = 'Cross-Site Request Blocked';
+$_gmsg['note_crossorigin_blocked'] = 'This request was blocked because it came from another website. Your session is still active. Return to the WebAdmin Console to continue.';
 $_gmsg['err_parentdirnotexist'] = 'Parent directory does not exist';
 $_gmsg['err_requireabspath'] = 'Require absolute path';
 $_gmsg['err_sessiontimeout'] = 'Your session has timed out.';
 $_gmsg['err_throttled'] = 'Too many failed login attempts. Please try again in %%minutes%% minute(s).';
 $_gmsg['err_valcannotempty'] = 'Value cannot be empty';
-
-
 $_gmsg['l_accessallow'] = 'Allowed List';
 $_gmsg['l_accessallowed'] = 'Access Allowed';
 $_gmsg['l_accesscontrol'] = 'Access Control';
@@ -241,7 +234,6 @@ $_gmsg['l_ctxf'] = 'FastCGI Context';
 $_gmsg['l_ctxg'] = 'Static Context';
 $_gmsg['l_ctxj'] = 'Java Web App Context';
 $_gmsg['l_ctxl'] = 'LiteSpeed SAPI Context';
-$_gmsg['l_ctxmd'] = 'Module Handler Context';
 $_gmsg['l_ctxp'] = 'Proxy Context';
 $_gmsg['l_ctxr'] = 'Redirect Context';
 $_gmsg['l_ctxs'] = 'Servlet Context';
@@ -258,7 +250,6 @@ $_gmsg['l_disableinitlogrotation'] = 'Disable Initial Log Rotation';
 $_gmsg['l_docroot'] = 'Document Root';
 $_gmsg['l_domain'] = 'Domain Name';
 $_gmsg['l_domains'] = 'Domains';
-$_gmsg['l_dynreqpersec'] = 'Dynamic Requests/second';
 $_gmsg['l_enableaiolog'] = 'Enable AIO Logging';
 $_gmsg['l_enablecompress'] = 'Enable Compression';
 $_gmsg['l_enablecoredump'] = 'Enable Core Dump';
@@ -270,7 +261,6 @@ $_gmsg['l_enableexpires'] = 'Enable Expires';
 $_gmsg['l_enablegzip'] = 'Enable GZIP Compression';
 $_gmsg['l_enablebrotli'] = 'Enable Brotli Compression';
 $_gmsg['l_enableh2c'] = 'Enable HTTP/2 Over Cleartext TCP';
-$_gmsg['l_enablehooks'] = 'Enable Module';
 $_gmsg['l_enableipgeo'] = 'Enable GeoLocation Lookup';
 $_gmsg['l_enablelve'] = 'CloudLinux';
 $_gmsg['l_enablequic'] = 'Enable HTTP3/QUIC';
@@ -354,15 +344,11 @@ $_gmsg['l_logheaders'] = 'Log Headers';
 $_gmsg['l_loglevel'] = 'Log Level';
 $_gmsg['l_lsapiapp'] = 'LiteSpeed SAPI App';
 $_gmsg['l_lsrecaptcha'] = 'CAPTCHA Protection';
-$_gmsg['l_listenermodule'] = 'Listener Module';
-$_gmsg['l_listenermodules'] = 'Listener Modules';
 $_gmsg['l_mappedlisteners'] = 'Mapped Listeners';
 $_gmsg['l_maxCGIInstances'] = 'Max CGI Instances';
 $_gmsg['l_maxTries'] = 'Max Tries';
 $_gmsg['l_maxcachedfilesize'] = 'Max Cached Small File Size (bytes)';
 $_gmsg['l_maxconns'] = 'Max Connections';
-$_gmsg['l_maxdynrespheadersize'] = 'Max Dynamic Response Header Size (bytes)';
-$_gmsg['l_maxdynrespsize'] = 'Max Dynamic Response Body Size (bytes)';
 $_gmsg['l_maxidletime'] = 'Max Idle Time';
 $_gmsg['l_maxkeepalivereq'] = 'Max Keep-Alive Requests';
 $_gmsg['l_maxmmapfilesize'] = 'Max MMAP File Size (bytes)';
@@ -381,10 +367,6 @@ $_gmsg['l_mimetypedef'] = 'MIME Type Definition';
 $_gmsg['l_mimetypeentry'] = 'MIME Type Entry';
 $_gmsg['l_mingid'] = 'Minimum GID';
 $_gmsg['l_minuid'] = 'Minimum UID';
-$_gmsg['l_module'] = 'Module';
-$_gmsg['l_moduleconf'] = 'Module Configuration';
-$_gmsg['l_modulehandler'] = 'Module Handler';
-$_gmsg['l_moduleparams'] = 'Module Parameters';
 $_gmsg['l_name'] = 'Name';
 $_gmsg['l_namespace'] = 'Namespace Container';
 $_gmsg['l_namespaceConf'] = 'Namespace Template File';
@@ -468,8 +450,6 @@ $_gmsg['l_secretKey'] = 'Secret Key';
 $_gmsg['l_secure'] = 'Secure';
 $_gmsg['l_securityandfeatures'] = 'Security & Features';
 $_gmsg['l_serverlog'] = 'Server Log';
-$_gmsg['l_servermoduledef'] = 'Server Module';
-$_gmsg['l_servermodulesdef'] = 'Server Modules';
 $_gmsg['l_servername'] = 'Server Name';
 $_gmsg['l_serverprocess'] = 'Server Process';
 $_gmsg['l_serversig'] = 'Server Signature';
@@ -516,6 +496,7 @@ $_gmsg['l_throttlemaxbackoff'] = 'Maximum Block Duration (secs)';
 $_gmsg['l_throttlemaxfailures'] = 'Max Login Failures';
 $_gmsg['l_loginhistoryretention'] = 'Login History Retention (days)';
 $_gmsg['l_opsauditretainfiles'] = 'Activity Log Retained Files';
+$_gmsg['l_configbackupretention'] = 'Config Backup Retention (days)';
 $_gmsg['l_loginthrottle'] = 'Login Throttle';
 $_gmsg['l_totalinmemcachesize'] = 'Total Small File Cache Size (bytes)';
 $_gmsg['l_totalmmapcachesize'] = 'Total MMAP Cache Size (bytes)';
@@ -532,7 +513,6 @@ $_gmsg['l_uploadtmpdir'] = 'Temporary File Path';
 $_gmsg['l_uploadtmpfilepermission'] = 'Temporary File Permission';
 $_gmsg['l_uri'] = 'URI';
 $_gmsg['l_url'] = 'URL';
-$_gmsg['l_urlfilter'] = 'Context';
 $_gmsg['l_useServer'] = 'Use Server\'s Log';
 $_gmsg['l_useaio'] = 'Use Asynchronous I/O (AIO)';
 $_gmsg['l_useipinproxyheader'] = 'Use Client IP in Header';
@@ -551,8 +531,6 @@ $_gmsg['l_vhlog'] = 'Virtual Host Log';
 $_gmsg['l_vhmappedvhosts'] = 'Mapped VHosts';
 $_gmsg['l_vhmappedcount'] = 'VH Count';
 $_gmsg['l_vhmappings'] = 'Virtual Host Mappings';
-$_gmsg['l_vhmodule'] = 'Virtual Host Module';
-$_gmsg['l_vhmodules'] = 'Virtual Host Modules';
 $_gmsg['l_vhname'] = 'Virtual Host Name';
 $_gmsg['l_vhost'] = 'Virtual Host';
 $_gmsg['l_vhostlist'] = 'Virtual Host List';
@@ -566,7 +544,6 @@ $_gmsg['l_websocketsetup'] = 'Web Socket Proxy Setup';
 $_gmsg['l_workers'] = 'Workers';
 $_gmsg['l_wsgibin'] = 'WSGI Path';
 $_gmsg['l_wsgisettings'] = 'Python WSGI Default Settings';
-
 $_gmsg['o_cagefswithoutsuexec'] = 'CageFS without suEXEC';
 $_gmsg['o_checkbox'] = 'Checkbox';
 $_gmsg['o_disabled'] = 'Disabled';
@@ -601,8 +578,6 @@ $_gmsg['o_use_last_ip_for elb'] = 'Use Last IP (for AWS ELB)';
 $_gmsg['o_yes'] = 'Yes';
 $_gmsg['o_yesdaemonmode'] = 'Yes (Daemon Mode)';
 $_gmsg['o_yesdetachmode'] = 'Yes (Detached Mode)';
-
-
 $_gmsg['parse_compressibletypes'] = '(!)MIME types, like */*, text/*, text/html, text/*, !text/css';
 $_gmsg['parse_defaultmimetype'] = 'MIME_type like text/html';
 $_gmsg['parse_env'] = 'PROPERTY=VALUE';
@@ -622,8 +597,6 @@ $_gmsg['parse_tpname'] = 'requiring variable $VH_NAME';
 $_gmsg['parse_tpvhconffile'] = 'Requiring variable $VH_NAME and end with .conf. Suggested location is $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf';
 $_gmsg['parse_umask'] = '[000-777]';
 $_gmsg['parse_uploadtmpfilepermission'] = '3 digits octet number, Default value is 666';
-
-
 $_gmsg['service_active'] = 'Active';
 $_gmsg['service_addtomonitor'] = 'Add to monitoring';
 $_gmsg['service_availconn'] = 'Free Conn';
@@ -689,7 +662,6 @@ $_gmsg['service_opsauditlog_target'] = 'Target';
 $_gmsg['service_opsauditlog_detail'] = 'Detail';
 $_gmsg['service_opsauditlog_source'] = 'Source';
 $_gmsg['l_user'] = 'User';
-
 $_gmsg['service_opsauditlog_download'] = 'Download';
 $_gmsg['service_opsauditlog_action_config_save'] = 'Config Save';
 $_gmsg['service_opsauditlog_action_config_delete'] = 'Config Delete';
@@ -781,11 +753,8 @@ $_gmsg['service_toggledebug'] = 'Are you sure you want to toggle debug logging?'
 $_gmsg['service_toggledebugmsg'] = 'With debug logging turned on, you may fill up disk space. Only turn on for debug purpose and for short period of time.';
 $_gmsg['btn_toggle'] = 'Toggle';
 $_gmsg['service_totalreq'] = 'Total Requests';
-$_gmsg['service_uptime'] = 'OLS Uptime';
 $_gmsg['service_waitq'] = 'WaitQ';
 $_gmsg['service_willrefresh'] = 'Current page will be refreshed after a few seconds...';
-
-
 $_gmsg['buildphp_addonmodules'] = 'Add-on Modules';
 $_gmsg['buildphp_binarylocnote'] = 'If the build process is successful, the LSPHP binary will be created under %%server_root%%fcgi-bin/ with
 		name %%binname%%, and a symbolic link of lsphp%%phpver%% will be created or updated to the newly built binary.
@@ -848,7 +817,6 @@ $_gmsg['buildphp_stopduetoerr'] = 'Stopped due to Error. Please check the log an
 $_gmsg['buildphp_suhosin'] = '(General Hardening) only supports PHP 5';
 $_gmsg['buildphp_updatever'] = 'If you want to use a version not listed here, you can manually update the settings in ';
 $_gmsg['buildphp_useprevconf'] = 'Use Configuration from Previous Build';
-
 $_gmsg['mail_howto_secure'] = '
 Please follow these recommended security measures immediately:
 
@@ -859,7 +827,6 @@ Please follow these recommended security measures immediately:
 
 These steps greatly reduce the risk of unauthorized access.
 ';
-
 $_gmsg['mail_failedlogin'] = '[Security Notice] LiteSpeed WebAdmin - Failed Login Attempt';
 $_gmsg['mail_failedlogin_c'] = 'A recent login attempt to LiteSpeed web admin console failed.
 
@@ -873,8 +840,16 @@ Details:
 
 If the user IP address is unfamiliar, secure your admin console right away.
 
-' . $_gmsg['mail_howto_secure'];
 
+Please follow these recommended security measures immediately:
+
+    1. Restrict access to trusted IPs via WebAdmin Settings -> General -> Access Control.
+    2. Change the default port (7080) to a non-standard one.
+    3. Use a strong, complex password (at least 16 characters recommended).
+    4. Enable HTTPS for the admin console with a valid TLS certificate.
+
+These steps greatly reduce the risk of unauthorized access.
+';
 $_gmsg['mail_blockcmd'] = '[Security Notice] LiteSpeed WebAdmin - Blocked Suspicious Command Attempt';
 $_gmsg['mail_blockcmd_c'] = 'A suspicious command input attempt was detected and blocked in the LiteSpeed WebAdmin console.
 
@@ -893,4 +868,35 @@ The attempt was automatically rejected — no changes were made to your server c
 
 If this was not you or an authorized user, treat this as a possible unauthorized access attempt and secure your WebAdmin console right away.
 
-' . $_gmsg['mail_howto_secure'];
+
+Please follow these recommended security measures immediately:
+
+    1. Restrict access to trusted IPs via WebAdmin Settings -> General -> Access Control.
+    2. Change the default port (7080) to a non-standard one.
+    3. Use a strong, complex password (at least 16 characters recommended).
+    4. Enable HTTPS for the admin console with a valid TLS certificate.
+
+These steps greatly reduce the risk of unauthorized access.
+';
+$_gmsg['note_delete_ref_extapp'] = 'Cannot delete external app %%name%% because it is currently referenced by:';
+$_gmsg['note_delete_ref_extapp_vhost_unscanned'] = 'No server-level references were found. Virtual host configs are not scanned by this check; if a virtual host references this external app, deleting it may cause that virtual host to stop working properly.';
+$_gmsg['note_delete_ref_script_handler_field'] = '%%owner%% script handler %%name%% %%field%%';
+$_gmsg['l_dynreqpersec'] = 'Dynamic Requests/second';
+$_gmsg['l_maxdynrespheadersize'] = 'Max Dynamic Response Header Size (bytes)';
+$_gmsg['l_maxdynrespsize'] = 'Max Dynamic Response Body Size (bytes)';
+$_gmsg['menu_usermanual'] = 'User Manual';
+$_gmsg['tab_mod'] = 'Modules';
+$_gmsg['l_ctxmd'] = 'Module Handler Context';
+$_gmsg['l_enablehooks'] = 'Enable Module';
+$_gmsg['l_listenermodule'] = 'Listener Module';
+$_gmsg['l_listenermodules'] = 'Listener Modules';
+$_gmsg['l_module'] = 'Module';
+$_gmsg['l_moduleconf'] = 'Module Configuration';
+$_gmsg['l_modulehandler'] = 'Module Handler';
+$_gmsg['l_moduleparams'] = 'Module Parameters';
+$_gmsg['l_servermoduledef'] = 'Server Module';
+$_gmsg['l_servermodulesdef'] = 'Server Modules';
+$_gmsg['l_urlfilter'] = 'Context';
+$_gmsg['l_vhmodule'] = 'Virtual Host Module';
+$_gmsg['l_vhmodules'] = 'Virtual Host Modules';
+$_gmsg['service_uptime'] = 'OLS Uptime';

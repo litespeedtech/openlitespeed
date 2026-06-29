@@ -15,7 +15,13 @@ class AtomicFileWriter
             }
         }
 
+        // Restrict umask so the fresh .new file is created with 0600
+        // permissions, avoiding a brief window where a world-readable
+        // .new file could expose freshly-written secrets (htpasswd
+        // hashes, config values) before copyPermission() runs.
+        $previousUmask = umask(0077);
         $fd = fopen("{$filepath}.new", 'w');
+        umask($previousUmask);
         if (!$fd) {
             error_log("failed to open in write mode for {$filepath}.new");
             return false;
@@ -28,13 +34,16 @@ class AtomicFileWriter
         }
         fclose($fd);
 
-        if ($permissionSource !== null && file_exists($permissionSource)) {
-            self::copyPermission($permissionSource, "{$filepath}.new");
+        $permissionSourcePath = $permissionSource;
+        if ($permissionSourcePath === null && file_exists($filepath)) {
+            $permissionSourcePath = $filepath;
         }
 
-        @unlink("{$filepath}.bak");
-        if (file_exists($filepath) && !rename($filepath, "{$filepath}.bak")) {
-            error_log("failed to rename {$filepath} to {$filepath}.bak");
+        if ($permissionSourcePath !== null && file_exists($permissionSourcePath)) {
+            self::copyPermission($permissionSourcePath, "{$filepath}.new");
+        }
+
+        if (file_exists($filepath) && !ConfigAutoBackupService::backupExistingConfig($filepath)) {
             return false;
         }
 
@@ -42,6 +51,8 @@ class AtomicFileWriter
             error_log("failed to rename {$filepath}.new to {$filepath}");
             return false;
         }
+
+        ConfigAutoBackupService::pruneExpiredBackups();
 
         return true;
     }

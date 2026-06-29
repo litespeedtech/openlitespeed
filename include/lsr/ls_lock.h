@@ -133,11 +133,13 @@ typedef ls_spinlock_t      ls_lock_t;
 #define ls_mutex_ipc_lock          ls_futex_safe_lock
 #define ls_mutex_ipc_trylock       ls_futex_safe_trylock
 #define ls_mutex_ipc_unlock        ls_futex_safe_unlock
+#define ls_mutex_ipc_locked        ls_futex_locked
 #else
 #define ls_mutex_ipc_setup         ls_pthread_mutex_setup
 #define ls_mutex_ipc_lock          pthread_mutex_lock
 #define ls_mutex_ipc_trylock       pthread_mutex_trylock
 #define ls_mutex_ipc_unlock        pthread_mutex_unlock
+#define ls_mutex_ipc_locked        ls_pthread_mutex_locked
 #endif
 
 

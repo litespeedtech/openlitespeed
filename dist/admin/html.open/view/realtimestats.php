@@ -577,8 +577,8 @@ $vhSortOptions = [
 			title : <?php echo json_encode(DMsg::UIStr('service_monitormaxallowed') . ' '); ?> + allow_monitor_max + " " + <?php echo json_encode(DMsg::UIStr('menu_vh')); ?>,
 			content : "",
 			color : "#A65858",
-				timeout : 5000
-			});
+			timeout : 5000
+		});
 			return false;
 		}
 
@@ -1100,7 +1100,7 @@ $vhSortOptions = [
 		}
 
 		syncStatusWidgetControls(widgetSelector, tableSelector, slots);
-	};
+	}
 
 	function isNearViewport(target, threshold)
 	{
@@ -1350,29 +1350,31 @@ $vhSortOptions = [
 				$.ajax({
 					type: "POST",
 					url: "view/serviceMgr.php",
-					data: {"act": act, "actId": vn},
+					data: {"act": act, "actId": vn, "tk": window.lstRequestToken || ""},
 					beforeSend: function () {
 					lstNotifyToast({
 						title: <?php echo json_encode(DMsg::UIStr('service_requesting')); ?>,
 						content: "<i class='lst-icon' data-lucide='clock'></i> <i>" + <?php echo json_encode(DMsg::UIStr('service_willrefresh')); ?> + "</i>",
 						color: "#659265",
 						timeout: 2200
-						});
+					});
 					},
 					success: function () {
-					setTimeout(refreshStatusTables, 2000);
-				}
+						setTimeout(refreshStatusTables, 2000);
+					},
+					error: function (xhr) {
+						lstHandleServiceRequestError(xhr);
+					}
+				});
 			});
-		});
-	}
-}
+		}
+	};
 
+	// end pagefunction
 
-// end pagefunction
+	// load related plugins
 
-// load related plugins
-
-lstLoadStatsPageAssets(pagefunction);
+	lstLoadStatsPageAssets(pagefunction);
 
 
 </script>

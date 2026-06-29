@@ -35,7 +35,7 @@ class ConfActionDataBuilder
                 list($submitName, $submitValue) = self::buildSubmitTransport($routeState, $currentTid, $act, $editTid, $editRef, $addTid);
                 $href = 'index.php?view=confMgr';
             } elseif ($act == 'X') {
-                $href = self::getControlBaseUrl($ctrlUrl) . 'm=' . urlencode($routeState->GetView() . '_' . $editRef);
+                $href = self::resolveViewActionUrl($routeState, $ctrlUrl, self::resolveActionEditTid($editTid, $act), $editRef);
                 $act = 'v';
             } else {
                 list($t, $r) = self::resolveActionRoute($routeState, $currentTid, $act, $editTid, $editRef, $addTid);
@@ -99,7 +99,7 @@ class ConfActionDataBuilder
             $resolvedEditTid = $addTid;
             $resolvedEditRef = '~';
         } else {
-            $resolvedEditTid = $editTid;
+            $resolvedEditTid = self::resolveActionEditTid($editTid, $act);
             $resolvedEditRef = $editRef;
         }
 
@@ -127,6 +127,37 @@ class ConfActionDataBuilder
         }
 
         return [$t, $r];
+    }
+
+    private static function resolveActionEditTid($editTid, $act)
+    {
+        if (!is_array($editTid)) {
+            return $editTid;
+        }
+
+        if (isset($editTid[$act])) {
+            return $editTid[$act];
+        }
+
+        $lowerAct = strtolower($act);
+        if (isset($editTid[$lowerAct])) {
+            return $editTid[$lowerAct];
+        }
+
+        return isset($editTid[1]) ? $editTid[1] : '';
+    }
+
+    private static function resolveViewActionUrl($routeState, $ctrlUrl, $editTid, $editRef)
+    {
+        $pageDefClass = \LSWebAdmin\Product\Current\DPageDef::class;
+        if (defined('PRODUCT') && method_exists($pageDefClass, 'ResolveViewActionUrl')) {
+            $url = call_user_func([$pageDefClass, 'ResolveViewActionUrl'], $routeState, $editTid, $editRef);
+            if ($url != null) {
+                return $url;
+            }
+        }
+
+        return self::getControlBaseUrl($ctrlUrl) . 'm=' . urlencode($routeState->GetView() . '_' . $editRef);
     }
 
     private static function buildDirectRouteUrl($routeState, $t, $r, $act)

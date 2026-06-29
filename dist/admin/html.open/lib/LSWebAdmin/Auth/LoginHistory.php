@@ -70,25 +70,25 @@ class LoginHistory
      */
     public function recordSuccess($ip, $user)
     {
-        $data = $this->loadRaw();
-
         $entry = [
             'ip'   => $ip,
             'user' => $user,
             'time' => time(),
         ];
 
-        $data['last_successful'][] = $entry;
+        return $this->mutate(function (array $data) use ($entry) {
+            $data['last_successful'][] = $entry;
 
-        // Trim to max entries (keep most recent).
-        if (count($data['last_successful']) > self::MAX_SUCCESSFUL) {
-            $data['last_successful'] = array_slice(
-                $data['last_successful'],
-                -self::MAX_SUCCESSFUL
-            );
-        }
+            // Trim to max entries (keep most recent).
+            if (count($data['last_successful']) > LoginHistory::MAX_SUCCESSFUL) {
+                $data['last_successful'] = array_slice(
+                    $data['last_successful'],
+                    -LoginHistory::MAX_SUCCESSFUL
+                );
+            }
 
-        return $this->saveRaw($data);
+            return $data;
+        });
     }
 
     /**
@@ -101,8 +101,6 @@ class LoginHistory
      */
     public function recordFailure($ip, $user, $reason = 'invalid_credentials')
     {
-        $data = $this->loadRaw();
-
         $entry = [
             'ip'     => $ip,
             'user'   => $user,
@@ -110,17 +108,19 @@ class LoginHistory
             'reason' => $reason,
         ];
 
-        $data['last_failed'][] = $entry;
+        return $this->mutate(function (array $data) use ($entry) {
+            $data['last_failed'][] = $entry;
 
-        // Trim to max entries (keep most recent).
-        if (count($data['last_failed']) > self::MAX_FAILED) {
-            $data['last_failed'] = array_slice(
-                $data['last_failed'],
-                -self::MAX_FAILED
-            );
-        }
+            // Trim to max entries (keep most recent).
+            if (count($data['last_failed']) > LoginHistory::MAX_FAILED) {
+                $data['last_failed'] = array_slice(
+                    $data['last_failed'],
+                    -LoginHistory::MAX_FAILED
+                );
+            }
 
-        return $this->saveRaw($data);
+            return $data;
+        });
     }
 
     /**
@@ -331,6 +331,63 @@ class LoginHistory
         }
 
         return true;
+    }
+
+    /**
+     * Atomically apply a mutation to the history file.
+     *
+     * Holds an exclusive flock on a dedicated lockfile across the entire
+     * read-modify-write window. This serializes concurrent recordSuccess
+     * and recordFailure calls so neither can clobber the other's append.
+     * Without this, two near-simultaneous failed-login attempts can each
+     * read the same baseline, append their entry, and write — the second
+     * write replaces the first, silently dropping an audit entry.
+     *
+     * The lock is on a separate `.lock` sibling rather than the history
+     * file itself, so the existing atomic-rename write path stays intact.
+     *
+     * @param callable $modify Function that receives the current data array
+     *                         and returns the mutated array to persist.
+     * @return bool True on success.
+     */
+    private function mutate(callable $modify)
+    {
+        $dir = dirname($this->filePath);
+        if (!is_dir($dir)) {
+            if (!@mkdir($dir, 0700, true)) {
+                error_log('[WebAdmin Console] Failed to create login history directory: ' . $dir);
+                return false;
+            }
+        }
+
+        $lockPath = $this->filePath . '.lock';
+        $lockFp = @fopen($lockPath, 'c');
+        if ($lockFp === false) {
+            error_log('[WebAdmin Console] Failed to open login history lock file: ' . $lockPath);
+            // Fall back to unlocked path so we never lose an audit entry to
+            // a transient fs issue; race is reintroduced but availability wins.
+            $data = $this->loadRaw();
+            $data = call_user_func($modify, $data);
+            return $this->saveRaw($data);
+        }
+        @chmod($lockPath, 0600);
+
+        if (!@flock($lockFp, LOCK_EX)) {
+            fclose($lockFp);
+            error_log('[WebAdmin Console] Failed to acquire login history lock: ' . $lockPath);
+            $data = $this->loadRaw();
+            $data = call_user_func($modify, $data);
+            return $this->saveRaw($data);
+        }
+
+        $data = $this->loadRaw();
+        $data = call_user_func($modify, $data);
+        $ok = $this->saveRaw($data);
+
+        @flock($lockFp, LOCK_UN);
+        fclose($lockFp);
+
+        return $ok;
     }
 
     private function formatLastPhpError()

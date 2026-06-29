@@ -1431,17 +1431,20 @@ void plainconf::loadConfFile(const char *path)
             char *pLineEnd = (char *)memchr(pBufStart, '\n', pBufEnd - pBufStart);
             if (!pLineEnd)
                 pLineEnd = pBufEnd;
+            size_t lineLen = pLineEnd - pBufStart;
+            if (pLineEnd < pBufEnd)
+                ++lineLen;
 
-            if (pLineEnd - pBufStart >= MAX_LINE_LENGTH - 1)
+            if (lineLen >= MAX_LINE_LENGTH)
             {
                 logToMem(LOG_LEVEL_ERR, "Config file %s #%d line is too long!!", path, lineNumber);
                 return ;
             }
 
-            memcpy(sLine, pBufStart, pLineEnd - pBufStart + 1);
-            sLine[pLineEnd - pBufStart + 1] = 0;  //Add a NULL terminate
+            memcpy(sLine, pBufStart, lineLen);
+            sLine[lineLen] = 0;  //Add a NULL terminate
             p = sLine;
-            pBufStart = pLineEnd + 1;
+            pBufStart = pLineEnd < pBufEnd ? pLineEnd + 1 : pLineEnd;
 
             if (nMultiLineModeSignLen)
             {

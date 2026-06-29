@@ -139,6 +139,16 @@ class ConfigActionRequest
         return $this->_context->GetTableDefClass();
     }
 
+    public function GetPageDefClass()
+    {
+        return $this->_context->GetPageDefClass();
+    }
+
+    public function GetValidationClass()
+    {
+        return $this->_context->GetValidationClass();
+    }
+
     public function ValidatePost()
     {
         if (!is_callable($this->_validatePostHandler)) {

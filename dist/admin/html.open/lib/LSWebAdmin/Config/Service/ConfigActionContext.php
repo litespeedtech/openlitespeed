@@ -3,6 +3,8 @@
 namespace LSWebAdmin\Config\Service;
 
 use LSWebAdmin\Product\Current\DTblDef;
+use LSWebAdmin\Product\Current\DPageDef;
+use LSWebAdmin\Product\Current\ConfValidation;
 use LSWebAdmin\UI\ConfUiContext;
 
 class ConfigActionContext
@@ -11,13 +13,17 @@ class ConfigActionContext
     private $_mutationDisplay;
     private $_uiContext;
     private $_tableDefClass;
+    private $_pageDefClass;
+    private $_validationClass;
 
-    public function __construct($routeState = null, $mutationDisplay = null, $uiContext = null, $tableDefClass = null)
+    public function __construct($routeState = null, $mutationDisplay = null, $uiContext = null, $tableDefClass = null, $pageDefClass = null, $validationClass = null)
     {
         $this->_routeState = $routeState;
         $this->_mutationDisplay = $mutationDisplay;
         $this->_uiContext = $uiContext;
         $this->_tableDefClass = ($tableDefClass != null) ? $tableDefClass : DTblDef::class;
+        $this->_pageDefClass = ($pageDefClass != null) ? $pageDefClass : DPageDef::class;
+        $this->_validationClass = ($validationClass != null) ? $validationClass : ConfValidation::class;
     }
 
     public static function fromDisplay($display, $tableDefClass = null)
@@ -145,5 +151,15 @@ class ConfigActionContext
     public function GetTableDefClass()
     {
         return $this->_tableDefClass;
+    }
+
+    public function GetPageDefClass()
+    {
+        return $this->_pageDefClass;
+    }
+
+    public function GetValidationClass()
+    {
+        return $this->_validationClass;
     }
 }

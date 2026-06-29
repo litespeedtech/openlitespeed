@@ -115,8 +115,59 @@ class ConfigTreeNormalizer
     {
         $contexts = self::normalizeChildren($root->GetChildren($location));
         foreach ($contexts as $context) {
-            if ($context->GetChildVal('type') === 'null') {
+            // Plain conf omits the default static type; LSWS XML spells it
+            // "NULL" while OLS uses "null" internally, so match either case.
+            $type = $context->GetChildVal('type');
+            if ($type !== null && strcasecmp($type, 'null') === 0) {
                 $context->RemoveChild('type');
+            }
+        }
+    }
+
+    public static function ensureXmlContextType($root, $location)
+    {
+        $contexts = self::normalizeChildren($root->GetChildren($location));
+        foreach ($contexts as $context) {
+            // <type> is a required field in LSWS XML context entries, with the
+            // default static type spelled "NULL".
+            $type = $context->GetChildVal('type');
+            if ($type === null || $type === '') {
+                $context->RemoveChild('type');
+                $context->AddChild(new CNode('type', 'NULL'));
+            } elseif ($type === 'null') {
+                $context->SetChildVal('type', 'NULL');
+            }
+        }
+    }
+
+    public static function ensureXmlServerName($root)
+    {
+        $serverName = $root->GetChildVal('serverName');
+        if ($serverName === null || $serverName === '') {
+            if (!$root->SetChildVal('serverName', '$HOSTNAME')) {
+                $root->AddChild(new CNode('serverName', '$HOSTNAME'));
+            }
+        }
+    }
+
+    public static function ensureXmlFileRealmType($root, $location)
+    {
+        $realms = self::normalizeChildren($root->GetChildren($location));
+        foreach ($realms as $realm) {
+            $type = $realm->GetChildVal('type');
+            if ($type === null || $type === '') {
+                $realm->RemoveChild('type');
+                $realm->AddChild(new CNode('type', 'file'));
+            }
+        }
+    }
+
+    public static function stripDefaultFileRealmType($root, $location)
+    {
+        $realms = self::normalizeChildren($root->GetChildren($location));
+        foreach ($realms as $realm) {
+            if ($realm->GetChildVal('type') === 'file') {
+                $realm->RemoveChild('type');
             }
         }
     }

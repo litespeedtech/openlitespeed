@@ -26,7 +26,6 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <pcreposix.h>
 #include <string.h>
 
 static const char *s_pCurLine          = NULL;
@@ -303,8 +302,14 @@ int MapRefItem::parse(const char *&pFormatStr, const char *pEnd,
     else
     {
         char achName[1024];
-        memmove(achName, pMapName, pColon - pMapName);
-        achName[pColon - pMapName] = 0;
+        size_t nameLen = pColon - pMapName;
+        if (nameLen >= sizeof(achName))
+        {
+            HttpLog::parse_error(s_pCurLine, "rewrite map name is too long");
+            return LS_FAIL;
+        }
+        memmove(achName, pMapName, nameLen);
+        achName[nameLen] = 0;
         RewriteMapList::iterator iter = pMaps->find(achName);
         if (iter == pMaps->end())
         {
@@ -619,9 +624,9 @@ int RewriteCond::parseExpr()
 
 int RewriteCond::compilePattern()
 {
-    int flag = REG_EXTENDED;
+    int flag = LSRE_DEFAULT;
     if (m_flag & COND_FLAG_NOCASE)
-        flag = REG_EXTENDED | REG_ICASE;
+        flag = LSRE_DEFAULT | LSRE_CASELESS;
     return m_regex.compile(m_pattern.c_str(), flag);
 }
 
@@ -1195,9 +1200,9 @@ int RewriteRule::parseRuleFlag(const char *&pRuleStr, const char *pEnd,
 
 int RewriteRule::compilePattern()
 {
-    int flag = REG_EXTENDED;
+    int flag = LSRE_DEFAULT;
     if (m_flag & RULE_FLAG_NOCASE)
-        flag = REG_EXTENDED | REG_ICASE;
+        flag = LSRE_DEFAULT | LSRE_CASELESS;
     return m_regex.compile(m_pattern.c_str(), flag);
 }
 
@@ -1237,9 +1242,9 @@ int RewriteRule::parseRule(char *pRule, const char *pEnd,
     if (parseRuleFlag(pRuleStr, pEnd, pMaps))
         return LS_FAIL;
     *((char *)argEnd) = '\0';
-    int flag = REG_EXTENDED;
+    int flag = LSRE_DEFAULT;
     if (m_flag & RULE_FLAG_NOCASE)
-        flag = REG_EXTENDED | REG_ICASE;
+        flag = LSRE_DEFAULT | LSRE_CASELESS;
     ret = m_regex.compile(m_pattern.c_str(), flag);
     if (ret)
     {

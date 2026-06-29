@@ -44,82 +44,39 @@ TEST(IpToGeo2Test_Empty)
 int getdb(const char *db, char *finaldb, int *created)
 {
     char fulldb[300];
-    char compressed[300];
-    char command[350];
-    char line[350];
-    char tar[350];
-    char file_so_far[350] = { 0 };
+    const char *testDir = getenv("OLS_GEOIP_TEST_DIR");
 
     if (created)
         *created = 0;
+
+    if (testDir && *testDir)
+    {
+        snprintf(fulldb, sizeof(fulldb), "%s/%s.mmdb", testDir, db);
+        if (access(fulldb, 0) == 0)
+        {
+            if (finaldb)
+                strcpy(finaldb, fulldb);
+            return 1;
+        }
+    }
+
     snprintf(fulldb, sizeof(fulldb), "%s.mmdb", db);
-    if (finaldb)
-        strcpy(finaldb, fulldb);
     if (access(fulldb,0) == 0)
+    {
+        if (finaldb)
+            strcpy(finaldb, fulldb);
         return 1;
-    snprintf(compressed, sizeof(compressed), "%s.tar.gz", db);
-    snprintf(command, sizeof(command), "wget https://geolite.maxmind.com/download/geoip/database/%s", compressed);
-    printf("File not found; downloading: %s\n", fulldb);
-    FILE *out;
-    if (!(out = popen(command, "r")))
-    {
-        printf("Error in popen of %s: %s\n", command, strerror(errno));
-        return 0;
     }
-    while (fgets(line, sizeof(line), out))
-        printf("   -> %s", line);
-    int status;
-    status = pclose(out);
-    if (status != 0)
-    {
-        printf("Error getting file: %s, %d\n", command, status);
-        return 0;
-    }
-    strcpy(file_so_far, compressed);
-    snprintf(command, sizeof(command), "gunzip ./%s", compressed);
-    printf("   %s\n", command);
-    if (!(out = popen(command, "r")))
-    {
-        printf("Error in popen of %s: %s\n", command, strerror(errno));
-        unlink(file_so_far);
-        return 0;
-    }
-    while (fgets(line, sizeof(line), out))
-        printf("   -> %s", line);
-    status = pclose(out);
-    if (status != 0)
-    {
-        printf("Error decompressing file: %s, %d\n", command, status);
-        unlink(file_so_far);
-        return 0;
-    }
-    snprintf(file_so_far, sizeof(file_so_far), "%s.tar", db);
-    strcpy(tar, file_so_far);
-    snprintf(command, sizeof(command), "tar xvf %s --wildcards '*/%s' --strip-components=1",
-             file_so_far, fulldb);
-    printf("   %s\n", command);
-    if (!(out = popen(command, "r")))
-    {
-        printf("Error in popen of %s: %s\n", command, strerror(errno));
-        unlink(file_so_far);
-        return 0;
-    }
-    while (fgets(line, sizeof(line), out))
-        printf("   -> %s", line);
-    status = pclose(out);
-    unlink(file_so_far);
-    if (status != 0)
-    {
-        printf("Error extracting file: %s, %d\n", command, status);
-        return 0;
-    }
-    strcpy(file_so_far, fulldb);
-    if (finaldb)
-        strcpy(finaldb, fulldb);
-    if (created)
-        *created = 1;
-    return 1;
+
+    fprintf(stderr, "Skipping GeoIP fixture %s.mmdb; set OLS_GEOIP_TEST_DIR to run this case.\n", db);
+    return 0;
 }
+
+#define REQUIRE_DB(db, finaldb, created) \
+    do { \
+        if (getdb((db), (finaldb), (created)) == 0) \
+            return; \
+    } while (0)
 
 
 TEST(IpToGeo2Test_LoadOnly)
@@ -141,7 +98,7 @@ TEST(IpToGeo2Test_GetOnly)
     int      created = 0;
 
     fprintf(stderr,"IpToGeo2Test_GetOnly begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldb, &created);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     //if (created)
     //    unlink(finaldb);
@@ -157,7 +114,7 @@ TEST(IpToGeo2Test_GetAndLookup)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_GetAndLookup begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldb, &created);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
@@ -189,11 +146,11 @@ TEST(IpToGeo2Test_3DBs)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_3DBs begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldbCountry, &createdCountry);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
-    CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
+    REQUIRE_DB("GeoLite2-City", finaldbCity, &createdCity);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
-    CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
+    REQUIRE_DB("GeoLite2-ASN", finaldbASN, &createdASN);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
@@ -239,11 +196,11 @@ TEST(IpToGeo2Test_2LookUps)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_2LookUps begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldbCountry, &createdCountry);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
-    CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
+    REQUIRE_DB("GeoLite2-City", finaldbCity, &createdCity);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
-    CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
+    REQUIRE_DB("GeoLite2-ASN", finaldbASN, &createdASN);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
     CHECK(geoInfo2 != NULL);
@@ -313,7 +270,7 @@ TEST(IpToGeo2Test_SetEnvBadDB)
     int      created = 0;
 
     fprintf(stderr,"IpToGeo2Test_SetEnvBadDB begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldb, &created);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("REGION CITY_DB/subdivisions/iso_code") == -1);
@@ -330,7 +287,7 @@ TEST(IpToGeo2Test_SetEnvLookupOne)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_SetEnvBadDB begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldb, &created);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     geoInfo2 = ipToGeo2.lookUp((const char *)"88.252.206.167");
@@ -358,13 +315,13 @@ TEST(IpToGeo2Test_SetEnv3DBs)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_SetEnv3DBs begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldbCountry, &createdCountry);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME COUNTRY_DB/country/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_CONTINENT_CODE COUNTRY_DB/continent/code") == 0);
 
-    CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
+    REQUIRE_DB("GeoLite2-City", finaldbCity, &createdCity);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME CITY_DB/country/names/en") == 0);
@@ -372,7 +329,7 @@ TEST(IpToGeo2Test_SetEnv3DBs)
     CHECK(ipToGeo2.configSetEnv("MM_LONGITUDE CITY_DB/location/longitude") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LATITUDE CITY_DB/location/latitude") == 0);
 
-    CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
+    REQUIRE_DB("GeoLite2-ASN", finaldbASN, &createdASN);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASN ASN_DB/autonomous_system_number") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASORG ASN_DB/autonomous_system_organization") == 0);
@@ -419,18 +376,18 @@ TEST(IpToGeo2Test_SetEnv2LookUps)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_SetEnv2LookUps begins\n");
-    CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
+    REQUIRE_DB("GeoLite2-ASN", finaldbASN, &createdASN);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASN ASN_DB/autonomous_system_number") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASORG ASN_DB/autonomous_system_organization") == 0);
 
-    CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldbCountry, &createdCountry);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME COUNTRY_DB/country/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_CONTINENT_CODE COUNTRY_DB/continent/code") == 0);
 
-    CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
+    REQUIRE_DB("GeoLite2-City", finaldbCity, &createdCity);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME CITY_DB/country/names/en") == 0);
@@ -497,7 +454,7 @@ TEST(IpToGeo2Test_SetEnvLookUpV6)
     const char *res;
 
     fprintf(stderr,"IpToGeo2Test_SetEnvLookUpV6 begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldb, &created);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     geoInfo2 = ipToGeo2.lookUpV6("2607:f0d0:3:8::4");
@@ -521,7 +478,7 @@ TEST(IpToGeo2Test_SetEnvLookupFailed)
     int      created = 0;
 
     fprintf(stderr,"IpToGeo2Test_SetEnvLookupFailed begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldb, &created) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldb, &created);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldb, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     geoInfo2 = ipToGeo2.lookUp("127.0.0.1");
@@ -547,13 +504,13 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
     int      ret;
 
     fprintf(stderr,"IpToGeo2Test_3DBsAddGeoEnv begins\n");
-    CHECK(getdb("GeoLite2-Country", finaldbCountry, &createdCountry) != 0);
+    REQUIRE_DB("GeoLite2-Country", finaldbCountry, &createdCountry);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCountry, "COUNTRY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE COUNTRY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME COUNTRY_DB/country/names/en") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_CONTINENT_CODE COUNTRY_DB/continent/code") == 0);
 
-    CHECK(getdb("GeoLite2-City", finaldbCity, &createdCity) != 0);
+    REQUIRE_DB("GeoLite2-City", finaldbCity, &createdCity);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbCity, "CITY_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_CODE CITY_DB/country/iso_code") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_COUNTRY_NAME CITY_DB/country/names/en") == 0);
@@ -561,7 +518,7 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
     CHECK(ipToGeo2.configSetEnv("MM_LONGITUDE CITY_DB/location/longitude") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_LATITUDE CITY_DB/location/latitude") == 0);
 
-    CHECK(getdb("GeoLite2-ASN", finaldbASN, &createdASN) != 0);
+    REQUIRE_DB("GeoLite2-ASN", finaldbASN, &createdASN);
     CHECK(ipToGeo2.setGeoIpDbFile(finaldbASN, "ASN_DB") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASN ASN_DB/autonomous_system_number") == 0);
     CHECK(ipToGeo2.configSetEnv("MM_ASORG ASN_DB/autonomous_system_organization") == 0);
@@ -601,4 +558,3 @@ TEST(IpToGeo2Test_3DBsAddGeoEnv)
 #endif
 
 #endif
-

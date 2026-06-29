@@ -3269,7 +3269,7 @@ struct lsi_api_s
      * not found.
      */
     unsigned int (*get_resp_header_id)(const lsi_session_t *pSession,
-                                       const char *name);
+                                       const char *name, int name_len);
 
     /**
      * @brief get_resp_headers is used to get the whole response headers and

@@ -26,38 +26,7 @@
 #include "unittest-cpp/UnitTest++.h"
 #include <string.h>
 
-extern const char *argv0;
-
-const char *get_server_root(char *achServerRoot, ssize_t sz)
-{
-    if (*argv0 != '/')
-    {
-        if (getcwd(achServerRoot, sz))
-            lstrncat(achServerRoot, "/", sz);
-    }
-    else
-        achServerRoot[0] = 0;
-    lstrncat(achServerRoot, argv0, sz);
-    const char *pEnd = strrchr(achServerRoot, '/');
-    if (pEnd)
-    {
-        --pEnd;
-        while (pEnd > achServerRoot && *pEnd != '/')
-            --pEnd;
-        --pEnd;
-        while (pEnd > achServerRoot && *pEnd != '/')
-            --pEnd;
-        ++pEnd;
-
-        lstrncpy(&achServerRoot[pEnd - achServerRoot], "test/serverroot",
-                 sz - (pEnd - achServerRoot));
-    }
-    else
-        lstrncpy(achServerRoot, "/", sz);
-    return achServerRoot;
-}
-
-
+extern const char *get_server_root(char *achServerRoot, ssize_t sz);
 
 TEST(HttpMimeTest_runTest)
 {

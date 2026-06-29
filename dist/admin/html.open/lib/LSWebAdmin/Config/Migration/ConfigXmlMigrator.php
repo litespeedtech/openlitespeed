@@ -88,6 +88,23 @@ class ConfigXmlMigrator
         }
     }
 
+    /**
+     * OLS-only context handler types have no LSWS XML equivalent; the
+     * converted entry is written as-is but will not work after migration.
+     */
+    private static function warnUnsupportedXmlContextTypes($root, $location, $confPath)
+    {
+        $contexts = self::normalizeChildren($root->GetChildren($location));
+        foreach ($contexts as $context) {
+            if ($context->GetChildVal('type') === 'module') {
+                error_log('  WARNING: context "' . $context->Get(CNode::FLD_VAL)
+                    . '" in ' . $confPath
+                    . ' uses type "module", which LiteSpeed Enterprise XML does not'
+                    . ' support; review this context after migration.' . "\n");
+            }
+        }
+    }
+
     private static function saveLinkedVhostsToXml($root)
     {
         $vhosts = self::normalizeChildren($root->GetChildren('virtualhost'));
@@ -98,6 +115,7 @@ class ConfigXmlMigrator
             $vhconf = $vh->GetChildVal('configFile');
             $conffile = PathTool::GetAbsFile($vhconf, 'VR', $vhname, $vhroot);
             $vhdata = new ConfigData(DInfo::CT_VH, $conffile);
+            self::warnUnsupportedXmlContextTypes($vhdata->GetRootNode(), 'context', $vhdata->GetPath());
             ConfigDataWriter::saveXmlRoot(
                 DInfo::CT_VH,
                 $vhdata->GetRootNode(),
@@ -118,6 +136,7 @@ class ConfigXmlMigrator
             $tpconf = $template->GetChildVal('templateFile');
             $conffile = PathTool::GetAbsFile($tpconf, 'SR');
             $tpdata = new ConfigData(DInfo::CT_TP, $conffile);
+            self::warnUnsupportedXmlContextTypes($tpdata->GetRootNode(), 'virtualHostConfig:context', $tpdata->GetPath());
             ConfigDataWriter::saveXmlRoot(
                 DInfo::CT_TP,
                 $tpdata->GetRootNode(),

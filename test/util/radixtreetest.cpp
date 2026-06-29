@@ -394,8 +394,13 @@ void setupTest(char **pDynamicInputs, int count)
 #ifdef RT_DOREGTEST
     for (i = 0; i < iNumFlags; ++i)
     {
-        pContTree = new RadixTree(RTMODE_CONTIGUOUS);
-        pPtrTree = new RadixTree(RTMODE_POINTER);
+        // NULL pool -> tree uses (and frees) the global pool; otherwise the
+        // caller owns the xpool and must delete it after the tree.
+        int useGlobal = (i & RTTEST_GLOBALPOOL) != 0;
+        ls_xpool_t *pContPool = useGlobal ? NULL : ls_xpool_new();
+        ls_xpool_t *pPtrPool = useGlobal ? NULL : ls_xpool_new();
+        pContTree = new RadixTree(pContPool, RTMODE_CONTIGUOUS);
+        pPtrTree = new RadixTree(pPtrPool, RTMODE_POINTER);
         if ((i & RTTEST_NOCONTEXT) != 0)
         {
             pContTree->setNoContext();
@@ -406,34 +411,36 @@ void setupTest(char **pDynamicInputs, int count)
             pContTree->setRootLabel("/", 1);
             pPtrTree->setRootLabel("/", 1);
         }
-        if ((i & RTTEST_GLOBALPOOL) != 0)
-        {
-            pContTree->setUseGlobalPool();
-            pPtrTree->setUseGlobalPool();
-        }
 
         printf("CONTIGUOUS TEST: NoContext: %d, GlobalPool: %d\n",
-               pContTree->getNoContext() != 0,
-               pContTree->getUseGlobalPool() != 0);
+               pContTree->getNoContext() != 0, useGlobal);
         doTest(pContTree, pDynamicInputs, count);
         printf("END CONTIGUOUS TEST\n");
 
         printf("POINTER TEST: NoContext: %d, GlobalPool: %d\n",
-               pPtrTree->getNoContext() != 0,
-               pPtrTree->getUseGlobalPool() != 0);
+               pPtrTree->getNoContext() != 0, useGlobal);
         doTest(pPtrTree, pDynamicInputs, count);
         printf("END POINTER TEST\n");
 
         delete pContTree;
         delete pPtrTree;
+        if (pContPool != NULL)
+            ls_xpool_delete(pContPool);
+        if (pPtrPool != NULL)
+            ls_xpool_delete(pPtrPool);
     }
 #endif
 #ifdef RT_DOWCTEST
     iNumFlags = 1 << 3;
     for (i = 0; i < iNumFlags; ++i)
     {
-        pContTree = new RadixTree(RTMODE_CONTIGUOUS);
-        pPtrTree = new RadixTree(RTMODE_POINTER);
+        // NULL pool -> tree uses (and frees) the global pool; otherwise the
+        // caller owns the xpool and must delete it after the tree.
+        int useGlobal = (i & RTTEST_GLOBALPOOL) != 0;
+        ls_xpool_t *pContPool = useGlobal ? NULL : ls_xpool_new();
+        ls_xpool_t *pPtrPool = useGlobal ? NULL : ls_xpool_new();
+        pContTree = new RadixTree(pContPool, RTMODE_CONTIGUOUS);
+        pPtrTree = new RadixTree(pPtrPool, RTMODE_POINTER);
         pContTree->setUseWildCard();
         pPtrTree->setUseWildCard();
         if ((i & RTTEST_NOCONTEXT) != 0)
@@ -446,11 +453,6 @@ void setupTest(char **pDynamicInputs, int count)
             pContTree->setRootLabel("/", 1);
             pPtrTree->setRootLabel("/", 1);
         }
-        if ((i & RTTEST_GLOBALPOOL) != 0)
-        {
-            pContTree->setUseGlobalPool();
-            pPtrTree->setUseGlobalPool();
-        }
         if ((i & RTTEST_MERGE) != 0)
         {
             pContTree->setUseMerge();
@@ -458,20 +460,22 @@ void setupTest(char **pDynamicInputs, int count)
         }
 
         printf("CONTIGUOUS TEST: NoContext: %d, GlobalPool: %d, Merge: %d\n",
-               pContTree->getNoContext() != 0,
-               pContTree->getUseGlobalPool() != 0,
+               pContTree->getNoContext() != 0, useGlobal,
                pContTree->getUseMerge());
         doWCTest(pContTree);
         printf("END CONTIGUOUS TEST\n");
 
         printf("POINTER TEST: NoContext: %d, GlobalPool: %d, Merge: %d\n",
-               pPtrTree->getNoContext() != 0,
-               pPtrTree->getUseGlobalPool() != 0,
+               pPtrTree->getNoContext() != 0, useGlobal,
                pPtrTree->getUseMerge());
         doWCTest(pPtrTree);
         printf("END POINTER TEST\n");
         delete pContTree;
         delete pPtrTree;
+        if (pContPool != NULL)
+            ls_xpool_delete(pContPool);
+        if (pPtrPool != NULL)
+            ls_xpool_delete(pPtrPool);
     }
 #endif
 }

@@ -23,6 +23,30 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
+static inline int fcgiLenBytes(size_t len)
+{
+    return (len < 128) ? 1 : 4;
+}
+
+static inline void appendFcgiLen(char *&pBuf, size_t len)
+{
+    if (len < 128)
+        *pBuf++ = len;
+    else
+    {
+        uint32_t n = (uint32_t)len | 0x80000000u;
+#if defined( sparc )
+        *pBuf++ = (n >> 24) & 0xff;
+        *pBuf++ = (n >> 16) & 0xff;
+        *pBuf++ = (n >> 8) & 0xff;
+        *pBuf++ = n & 0xff;
+#else
+        *((uint32_t *)pBuf) = htonl(n);
+        pBuf += 4;
+#endif
+    }
+}
+
 int FcgiEnv::add(const char *name, size_t nameLen,
                  const char *value, size_t valLen)
 {
@@ -33,35 +57,21 @@ int FcgiEnv::add(const char *name, size_t nameLen,
     //assert( valLen == strlen( value ) );
     if ((nameLen > 1024) || (valLen > 65535))
         return 0;
+    int overhead = fcgiLenBytes(nameLen) + fcgiLenBytes(valLen);
     int bufLen = m_buf.available();
-    if (bufLen < (int)(nameLen + valLen + 5))
+    if (bufLen < (int)(nameLen + valLen + overhead))
     {
-        int grow = ((nameLen + valLen + 5 - bufLen + 1023) >> 10) << 10;
+        int grow = ((nameLen + valLen + overhead - bufLen + 1023) >> 10) << 10;
         int ret = m_buf.grow(grow);
         if (ret == -1)
             return ret;
     }
     char *pBuf = m_buf.end();
-    *pBuf++ = nameLen;
-    if (valLen < 128)
-        *pBuf++ = valLen ;
-    else
-    {
-#if defined( sparc )
-        *pBuf++ = (valLen >> 24) | 0x80;
-        *pBuf++ = (valLen >> 16) & 0xff;
-        *pBuf++ = (valLen >> 8) & 0xff;
-        *pBuf++ = (valLen & 0xff);
-#else
-        *((uint32_t *)pBuf) = htonl(valLen | 0x80000000);
-        pBuf += 4;
-#endif
-    }
+    appendFcgiLen(pBuf, nameLen);
+    appendFcgiLen(pBuf, valLen);
     memcpy(pBuf, name, nameLen);
     pBuf += nameLen;
     memcpy(pBuf, value, valLen);
     m_buf.used(pBuf - m_buf.end() + valLen);
     return 0;
 }
-
-

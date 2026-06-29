@@ -127,7 +127,8 @@ int FcgiNameValuePair::decode(char *pBuf, int size,
         valLen = ch;
         --size;
     }
-    if (size < nameLen + valLen)
+    if (nameLen < 0 || valLen < 0 || nameLen > size
+        || valLen > size - nameLen)
         return LS_FAIL;
     pName = (char *) p;
     p += nameLen;
@@ -135,4 +136,3 @@ int FcgiNameValuePair::decode(char *pBuf, int size,
     p += valLen;
     return (char *)p - pBuf;
 }
-

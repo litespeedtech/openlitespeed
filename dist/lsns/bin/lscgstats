@@ -34,7 +34,8 @@ def read_stat(file, pos):
     try:
         f = open(file, 'r')
     except Exception as err:
-        common.fatal_error('Error opening %s: %s' % (file, err))
+        logging.debug('Error opening %s: %s' % (file, err))
+        return None
     line = f.readline()
     pieces = line.split(' ')
     f.close()
@@ -44,7 +45,8 @@ def read_val(file):
     try:
         f = open(file, 'r')
     except Exception as err:
-        common.fatal_error('Error opening %s: %s' % (file, err))
+        logging.debug('Error opening %s: %s' % (file, err))
+        return None
     line = f.readline()
     f.close()
     return line.rstrip()
@@ -53,14 +55,16 @@ def read_param_val(file, param):
     try:
         f = open(file, 'r')
     except Exception as err:
-        common.fatal_error('Error opening %s: %s' % (file, err))
+        logging.debug('Error opening %s: %s' % (file, err))
+        return None
     for line in f:
         pieces = line.split(' ')
         if pieces[0] == param:
             f.close()
             return pieces[1].rstrip()
     f.close()
-    common.fatal_error('Error %s not found in %s' % (param, file))
+    logging.debug('%s not found in %s' % (param, file))
+    return None
 
 def user_to_file(user):
     return 'user-%s.slice' % user.pw_uid
@@ -134,6 +138,11 @@ def list_user(user, dict, block_devices):
     subdict['io'], subdict['iops'] = scrape_io(user, block_devices)
     subdict['mem'] = scrape_mem(user)
     subdict['tasks'] = scrape_tasks(user)
+    if (subdict['cpu'] is None or subdict['mem'] is None
+            or subdict['tasks'] is None):
+        label = '.' if user == None else str(user.pw_uid)
+        logging.debug('Skip uid[%s]: incomplete cgroup files' % label)
+        return
     if user == None:
         logging.debug("uid[.]: " + str(subdict))
         dict['.'] = subdict

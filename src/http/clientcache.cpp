@@ -165,6 +165,8 @@ void ClientCache::clean(Cache *pCache)
         else
         {
             if ((pInfo->getConns() == 0)
+                && (pInfo->getH2Streams() == 0)
+                && (pInfo->getQuicStreams() == 0)
                 && (!pInfo->getOverLimitTime())
                 && (DateTime::s_curTime - pInfo->getLastConnTime() > 300))
             {
@@ -183,7 +185,9 @@ void ClientCache::clean(Cache *pCache)
     for (ClientList::iterator it = m_toBeRemoved.begin();
          it != m_toBeRemoved.end();)
     {
-        if ((*it)->getConns() == 0)
+        if ((*it)->getConns() == 0
+            && (*it)->getH2Streams() == 0
+            && (*it)->getQuicStreams() == 0)
         {
             s_pool()->recycle(*it);
             it = m_toBeRemoved.erase(it);
@@ -516,5 +520,4 @@ ClientInfo *ClientCache::getClientInfo(const struct sockaddr *pPeer)
     pInfo->hit(DateTime::s_curTime);
     return pInfo;
 }
-
 

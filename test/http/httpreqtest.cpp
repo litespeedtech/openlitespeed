@@ -19,6 +19,7 @@
 
 #include "httpreqtest.h"
 
+#include <http/httpdefs.h>
 #include <http/httpreq.h>
 #include <http/httpmethod.h>
 #include <log4cxx/logsession.h>
@@ -90,36 +91,29 @@ SUITE(HttpReqTest)
             "connection", "keep-alive",
             "range", "bytes=10-20"
         };
-        const char *pGarbage =
-            " \t   \r\n"
-            "\r\n"
-            "\t\r\n";
-
         const char *pURI = "/path/path1/path3 path4";
         const char *pArg = "a=b%20c";
         const char *pInput =
-            "GET \t http://WWW.eXample.cOm:2080///path//./path1/path2//..////path3%20path4?a=b%20c \tHTTP/1.0\t \r\n"
-            "Host: \n"
-            "\twww.example.com:3080\r\n"
+            "GET http://WWW.eXample.cOm:2080///path//./path1/path2//..////path3%20path4?a=b%20c HTTP/1.0\r\n"
+            "Host: www.example.com:3080\r\n"
             "User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:0.9.2.1) Gecko/20010901\r\n"
-            "Accept : text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/png, image/jpeg, image/gif;q=0.2, text/plain;q=0.8, text/css\r\n"
+            "Accept: text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/png, image/jpeg, image/gif;q=0.2, text/plain;q=0.8, text/css\r\n"
             "Accept-Language: en-us\r\n"
             "Accept-Encoding: deflate,gzip,compress,identity\r\n"
             "Accept-Charset: ISO-8859-1, utf-8;q=0.66, *;q=0.66\r\n"
             "Content-Type: text/html\t \r\n"
-            "Keep-alive\t: 300 \r\n"
+            "Keep-Alive: 300 \r\n"
             "Connection: keep-alive\r\n"
-            "Range: bytes=10-20\r\r\n"
+            "Range: bytes=10-20\r\n"
             "Non-Standard-Header: header1\r\n"
-            "  line2\r\n"
-            "\t \tline3\r\n"
+            "Non-Standard-Header2: line2\r\n"
+            "Non-Standard-Header3: line3\r\n"
             "\r\n";
         HttpReqTst req;
         req.appendLogId("testParseHeader");
         req.reset(0);
         req.setVHost((HttpVHost *)
                      1);    //just skip vhost look while parsing header
-        CHECK(1 == req.append(pGarbage, strlen(pGarbage)));
 
         int len = strlen(pInput);
         int i;
@@ -159,7 +153,7 @@ SUITE(HttpReqTest)
         CHECK(req.gzipAcceptable());
         CHECK(req.isKeepAlive());
         const char *pNSHKey = "non-standard-header";
-        const char *pNSHValue = "header1    line2  \t \tline3";
+        const char *pNSHValue = "header1";
         const char *pParsed = req.getHeader(pNSHKey, 19, len);
         CHECK(NULL != pParsed);
         CHECK(0 ==
@@ -187,19 +181,17 @@ SUITE(HttpReqTest)
 
         //const char * pURI = "/path/path1/path3 path4";
         const char *pInput =
-            "POST \t ///path//path1////path3%20path4/../../../ \tHTTP/1.1\t \r\n"
-            "Host: \n"
-            " www.example.com:3080\r\n"
+            "POST ///path//path1////path3%20path4/../../../ HTTP/1.1\r\n"
+            "Host: www.example.com:3080\r\n"
             "User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:0.9.2.1) Gecko/20010901\r\n"
-            "Accept : text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/png, image/jpeg, image/gif;q=0.2, text/plain;q=0.8, text/css\r\n"
+            "Accept: text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/png, image/jpeg, image/gif;q=0.2, text/plain;q=0.8, text/css\r\n"
             "Accept-Language: en-us\r\n"
             "Accept-Encoding: deflate,compress,identity\r\n"
             "Accept-Charset: ISO-8859-1, utf-8;q=0.66, *;q=0.66\r\n"
             "Content-Type: text/html\t \r\n"
             "Content-length: 1234 \r\n"
-            "Keep-alive\t: 300 \r\n"
-            "Connection: \t\n"
-            "\t close\r\n"
+            "Keep-Alive: 300 \r\n"
+            "Connection: close\r\n"
             "\r\n";
         HttpReqTst req;
         req.appendLogId("testParseHeader1");
@@ -265,8 +257,7 @@ SUITE(HttpReqTest)
             "Host: www.epochtimes.com\r\n"
             "User-Agent: productfinderbot\r\n"
             "From: \r\nReferer: \r\nAccept-Encoding: \r\n"
-            "Customize : \r\n"
-            "   Customized\r\n"
+            "Customize: Customized\r\n"
             "Connection: close\r\n\r\n"
         };
         HttpReqTst req;
@@ -319,6 +310,63 @@ SUITE(HttpReqTest)
 
     }
 
+    TEST(HttpReqTest_rejectWhitespaceBeforeHeaderColon)
+    {
+        const char pInput[] =
+        {
+            "GET / HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "X-Bad : value\r\n"
+            "\r\n"
+        };
+        HttpReqTst req;
+        req.appendLogId("rejectWhitespaceBeforeHeaderColon");
+        req.reset(0);
+        req.setVHost((HttpVHost *)1);
+
+        int len = strlen(pInput);
+        int ret = 1;
+        for (int i = 0; i < len; ++i)
+        {
+            ret = req.append(pInput + i, 1);
+            if (ret == SC_400)
+                break;
+        }
+        CHECK(ret == SC_400);
+    }
+
+    TEST(HttpReqTest_testParseWhitespaceCookie)
+    {
+        const char pInput[] =
+        {
+            "GET / HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "Cookie: empty=   ; good=value\r\n"
+            "Connection: close\r\n\r\n"
+        };
+        HttpReqTst req;
+        req.appendLogId("testParseWhitespaceCookie");
+        req.reset(0);
+        req.setVHost((HttpVHost *)1);
+
+        CHECK(0 == req.append(pInput, strlen(pInput)));
+        CHECK(HttpReq::HEADER_OK == req.getStatus());
+
+        cookieval_t *pCookie = req.getCookie("empty", 5);
+        CHECK(pCookie != NULL);
+        if (pCookie)
+            CHECK(pCookie->valLen == 0);
+
+        pCookie = req.getCookie("good", 4);
+        CHECK(pCookie != NULL);
+        if (pCookie)
+        {
+            CHECK(pCookie->valLen == 5);
+            CHECK(strncmp(req.getHeaderBuf().getp(pCookie->valOff),
+                          "value", 5) == 0);
+        }
+    }
+
     TEST(HttpReqTest_testParseHeader3)
     {
         const char pInput[] =
@@ -351,6 +399,42 @@ SUITE(HttpReqTest)
         }
         CHECK(ret == SC_400);
 
+    }
+
+    TEST(HttpReqTest_setRewriteURITruncatesLongNoEscape)
+    {
+        const int longLen = MAX_URL_LEN + 64;
+        char *pURI = new char[longLen + 1];
+        memset(pURI, 'a', longLen);
+        pURI[0] = '/';
+        pURI[longLen] = 0;
+
+        HttpReqTst req;
+        req.reset(0);
+        CHECK(0 == req.setRewriteURI(pURI, longLen, 1));
+        CHECK(MAX_URL_LEN == req.getURILen());
+        CHECK('/' == req.getURI()[0]);
+        CHECK(0 == req.getURI()[MAX_URL_LEN]);
+
+        delete []pURI;
+    }
+
+    TEST(HttpReqTest_setRewriteLocationTruncatesLongNoEscape)
+    {
+        const int longLen = MAX_URL_LEN + 64;
+        char *pURI = new char[longLen + 1];
+        memset(pURI, 'a', longLen);
+        pURI[0] = '/';
+        pURI[longLen] = 0;
+
+        HttpReqTst req;
+        req.reset(0);
+        CHECK(0 == req.setRewriteLocation(pURI, longLen, "a=b", 3, 0));
+        CHECK(req.getLocationLen() <= MAX_URL_LEN + 2);
+        CHECK('/' == req.getLocation()[0]);
+        CHECK(0 == req.getLocation()[req.getLocationLen()]);
+
+        delete []pURI;
     }
 }
 

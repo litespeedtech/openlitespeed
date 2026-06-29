@@ -103,9 +103,9 @@ int JConn::processPacketHeader(unsigned char *&p)
     }
     p += 2;
     m_curPacketSize = getInt(p);
-    if (m_curPacketSize > AJP_MAX_PKT_BODY_SIZE)
+    if (m_curPacketSize <= 0 || m_curPacketSize > AJP_MAX_PKT_BODY_SIZE)
     {
-        LS_ERROR(this, "Packet size is too large - %d", m_curPacketSize);
+        LS_ERROR(this, "Invalid packet size - %d", m_curPacketSize);
         return LS_FAIL;
     }
     m_packetType = *p++;
@@ -119,6 +119,11 @@ int JConn::processPacketHeader(unsigned char *&p)
         m_iPacketState = STATUS_CODE;
         break;
     case AJP13_END_RESP:
+        if (m_packetLeft < 1)
+        {
+            LS_ERROR(this, "Invalid END_RESP packet size - %d", m_curPacketSize);
+            return LS_FAIL;
+        }
         if (*p != 1)
         {
             LS_DBG_L(this, "Close connection required by servlet engine %s ",

@@ -62,7 +62,9 @@ union ls_shmlock_elem_s
 };
 
 
-static LsShmSize_t s_iPageSize = LSSHM_PAGESIZE;
+// Lock files are always mapped from offset 0. Keep their historical 8K
+// sizing separate from the data SHM page alignment.
+static LsShmSize_t s_iPageSize = 0x2000;
 static LsShmSize_t s_iHdrSize  = ((sizeof(LsShmLockMap) + 0xf) &
                                       ~0xf); // align 16
 
@@ -216,6 +218,8 @@ LsShmStatus_t LsShmLock::init(const char *pFileName, int fd,
             return LSSHM_BADVERSION;
         }
 
+        LsShmXSize_t mapSize = m_pShmLockMap->x_iMaxSize;
+
         // expand the file if needed... won't shrink
         if (size > m_pShmLockMap->x_iMaxSize)
         {
@@ -223,10 +227,13 @@ LsShmStatus_t LsShmLock::init(const char *pFileName, int fd,
                            (LsShmXSize_t)(size - m_pShmLockMap->x_iMaxSize)) != LSSHM_OK)
                 return LSSHM_ERROR;
             m_pShmLockMap->x_iMaxSize = size;
+            mapSize = size;
             needsetup = true;
         }
+        if (mapSize < (LsShmXSize_t)mystat.st_size)
+            mapSize = (LsShmXSize_t)mystat.st_size;
         unmap();
-        if (map(size) != LSSHM_OK)
+        if (map(mapSize) != LSSHM_OK)
             return LSSHM_ERROR;
     }
     if (needsetup)
@@ -330,4 +337,3 @@ void LsShmLock::setupFreeList(LsShmOffset_t to)
     m_pShmLockMap->x_iFreeOffset = lastNum;
     m_pShmLockMap->x_iMaxElem = x_lastNum;
 }
-

@@ -37,6 +37,7 @@ enum BOT_REASON
     BOT_REWRITE_RULE,
     BOT_TOO_MANY_BAD_STATUS,
     BOT_BRUTE_FORCE,
+    BOT_HTTP2_ABUSER,
     BOT_REASON_COUNT,
 };
 
@@ -87,6 +88,8 @@ class ClientInfo
 
     uint32_t    m_iFlags;
     int32_t     m_iConns;
+    int32_t     m_iH2Streams;
+    int32_t     m_iQuicStreams;
     GeoInfo    *m_pGeoInfo;
     SslContext *m_sslContext;
 
@@ -108,7 +111,9 @@ class ClientInfo
     static int          s_iHardLimitPC;
     static int          s_iOverLimitGracePeriod;
     static int          s_iBanPeriod;
+    static int          s_iMaxStreamsPerClient;
     static uint16_t     s_iMaxAllowedBotHits;
+
     //time_t
     //int       m_iBadReqs;
     //int       m_iGoodReqs;
@@ -170,6 +175,12 @@ public:
     int32_t incConn()                   {   return ++m_iConns;          }
     int32_t decConn()                   {   return --m_iConns;          }
     int32_t getConns() const            {   return m_iConns;            }
+    int32_t incH2Streams()              {   return ++m_iH2Streams;      }
+    int32_t decH2Streams()              {   return --m_iH2Streams;      }
+    int32_t getH2Streams() const        {   return m_iH2Streams;        }
+    int32_t incQuicStreams()            {   return ++m_iQuicStreams;    }
+    int32_t decQuicStreams()            {   return --m_iQuicStreams;    }
+    int32_t getQuicStreams() const      {   return m_iQuicStreams;      }
 
     void incCaptchaTries()              {   ++m_iCaptchaTries;          }
     uint16_t getCaptchaTries() const    {   return m_iCaptchaTries;     }
@@ -195,6 +206,7 @@ public:
     int getAccess() const               {   return m_iAccess;           }
 
     int checkAccess();
+    int checkStreamLimit();
 
     ThrottleControl &getThrottleCtrl()  {   return m_ctlThrottle;       }
 
@@ -250,6 +262,13 @@ public:
     {   s_iMaxAllowedBotHits = h;       }
     static uint16_t getMaxAllowedBotHits()
     {   return s_iMaxAllowedBotHits;    }
+
+    static void adjustStreamLimitBasedOnHardLimit();
+
+    static void setMaxStreamsPerClient(int val)
+    {   s_iMaxStreamsPerClient = val;       }
+    static int getMaxStreamsPerClient()
+    {   return s_iMaxStreamsPerClient;      }
 
 #if 0
     TShmClient *getShmClientInfo()

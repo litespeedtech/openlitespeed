@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-Project(openlitespeed VERSION 1.9.0)
+Project(openlitespeed VERSION 1.9.1)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
 
@@ -97,6 +97,12 @@ if (CMAKE_C_COMPILER MATCHES "clang")
 endif()
 
 set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -DHAVE_BORINGSSL -Wall -Wextra -Wno-unused-parameter -Wno-unused-function")
+
+# Place each function/variable in its own section so the linker can drop
+# everything a given binary does not actually reference (-Wl,--gc-sections).
+# This keeps the per-source unit-test binaries from each statically linking
+# the whole server (http/lsquic/h2/modules) pulled in by the shared sources.
+set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -ffunction-sections -fdata-sections")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Suppress gcc warnings about BoringSSL's openssl/stack.h
@@ -200,5 +206,6 @@ add_subdirectory(support)
 add_subdirectory(lshostexec)
 
 if (BUILD_TEST)
+enable_testing()
 add_subdirectory(test)
 endif()

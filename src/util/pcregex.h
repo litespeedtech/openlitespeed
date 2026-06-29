@@ -21,8 +21,6 @@
 
 #include <lsdef.h>
 #include <lsr/ls_pcreg.h>
-#include <pcre.h>
-#include <pcreposix.h>
 
 //#define _USE_PCRE_JIT_
 
@@ -63,7 +61,7 @@ public:
 #ifdef _USE_PCRE_JIT_
 #if !defined(__sparc__) && !defined(__sparc64__)
     static void initJitStack();
-    static pcre_jit_stack *getJitStack();
+    static pcre2_jit_stack *getJitStack();
     static void releaseJitStack(void *pValue);
 #endif
 #endif
@@ -76,21 +74,15 @@ public:
     int  exec(const char *subject, int length, int startoffset,
               int options, int *ovector, int ovecsize) const
     {
-#ifdef _USE_PCRE_JIT_
-#if !defined(__sparc__) && !defined(__sparc64__)
-        pcre_jit_stack *stack = getJitStack();
-        pcre_assign_jit_stack(m_extra, NULL, stack);
-#endif
-#endif
-        return pcre_exec(regex, extra, subject, length, startoffset,
-                         options, ovector, ovecsize);
+        return ls_pcre_exec(const_cast<Pcregex *>(this), subject, length,
+                            startoffset, options, ovector, ovecsize);
     }
 
     int  exec(const char *subject, int length, int startoffset,
               int options, RegexResult *pRes) const
     {
-        pRes->setMatches(pcre_exec(regex, extra, subject, length, startoffset,
-                                   options, pRes->getVector(), 30));
+        pRes->setMatches(ls_pcre_exec(const_cast<Pcregex *>(this), subject,
+                         length, startoffset, options, pRes->getVector(), 30));
         return pRes->getMatches();
     }
 

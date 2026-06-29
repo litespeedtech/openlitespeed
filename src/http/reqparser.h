@@ -104,14 +104,21 @@ public:
     {
         if (index < 0 || index >= m_postArgs)
             return -1;
-        return getArgByIndex(index + m_postArgs, pArg, filePath);
+        return getArgByIndex(index + m_postBegin, pArg, filePath);
     }
 
     bool isFile(int index)
     {
-        if (index < 0 || index > m_args)
+        if (index < 0 || index >= m_args)
             return false;
         return (m_pArgs[index].filePath != NULL);
+    }
+
+    bool isPostFile(int index)
+    {
+        if (index < 0 || index >= m_postArgs)
+            return false;
+        return isFile(index + m_postBegin);
     }
 
 

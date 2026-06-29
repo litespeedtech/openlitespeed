@@ -717,7 +717,17 @@ UseAcme *UseAcme::addDomain(char *configDir, const char *domain, const char *vho
     useAcme->setDomain(domain);
     useAcme->m_certPath = domainDir;
     useAcme->m_key = acmeKey;
-    useAcme->m_cert = acmeCert;
+    // Prefer the full chain (leaf + intermediates) when acme.sh has written
+    // one, since the ACME path does not load a separate CA chain file.
+    // Serving the bare leaf "<domain>.cer" otherwise makes clients fail with
+    // "unable to get local issuer certificate".  Fall back to the leaf when no
+    // fullchain.cer is present so existing setups keep working.
+    char fullchain[MAX_PATH_LEN * 2];
+    snprintf(fullchain, sizeof(fullchain), "%s/fullchain.cer", domainDir);
+    if (access(fullchain, 0) == 0)
+        useAcme->m_cert = fullchain;
+    else
+        useAcme->m_cert = acmeCert;
     useAcme->m_vhost = vhostName;
     useAcme->m_addr = pAddr;
     useAcme->m_vhostOk = vhostOk;
@@ -969,12 +979,20 @@ UseAcme *UseAcme::acmeFound(const XmlNode *pNode, const char *pAddr)
 
 UseAcme *UseAcme::vhostActivate(HttpVHost *vhost)
 {
+    // m_acme: 0 = unset, 1 = on, 2 = explicit off. An explicit off must win
+    // even when global AutoCert is ON, so never activate when getAcme()==2.
     bool activate = HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_DISABLED &&
+                    vhost && vhost->getAcme() != 2 &&
                     (HttpServerConfig::getInstance().getAcme() == HttpServerConfig::ACME_ON ||
-                     (vhost && vhost->getAcme()));
+                     vhost->getAcme() == 1);
     if (activate && vhost && vhost->getFileSsl())
     {
         LS_DBG("[ACME] vhost using file Ssl!\n");
+        activate = false;
+    }
+    else if (activate && !vhost->isEnabled())
+    {
+        LS_INFO("[ACME] %s not enabled; don't activate", vhost->getName());
         activate = false;
     }
     LS_DBG("[ACME] UseAcme::vhostActivate: %s %s activate\n", vhost->getName(), 
@@ -984,9 +1002,9 @@ UseAcme *UseAcme::vhostActivate(HttpVHost *vhost)
     if (it == AcmeVHostMap::getInstance().end())
     {
         if (activate)
-            LS_ERROR("[ACME] VHostActivate: VHost: %s not found!\n", vhost->getName());
+            LS_INFO("[ACME] VHost: %s will not have a certificate created for it.  Make sure it has no cert files defined for it and VHost ACME enabled", vhost->getName());
         else
-            LS_DBG("[ACME] Don't activate VHost %s not found\n", vhost->getName());
+            LS_DBG("[ACME] Don't activate VHost %s not enabled\n", vhost->getName());
         return NULL;
     }
     AcmeLists *acmeLists = it.second();

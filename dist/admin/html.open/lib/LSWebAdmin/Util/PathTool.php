@@ -40,25 +40,42 @@ class PathTool
     {
         $path = (string) $path;
 
-        do {
-            $newS1 = $path;
-            $newS = str_replace('//', '/', $path);
-            $path = $newS;
-        } while ($newS != $newS1);
+        if ($path === '') {
+            return '';
+        }
 
-        do {
-            $newS1 = $path;
-            $newS = str_replace('/./', '/', $path);
-            $path = $newS;
-        } while ($newS != $newS1);
+        $isAbsolute = (substr($path, 0, 1) == '/');
+        $hasTrailingSlash = (strlen($path) > 1 && substr($path, -1) == '/');
+        $parts = preg_split('#/+#', $path);
+        $cleanParts = [];
 
-        do {
-            $newS1 = $path;
-            $newS = preg_replace('/\/[^\/^\.]+\/\.\.\//', '/', $path);
-            $path = $newS;
-        } while ($newS != $newS1);
+        foreach ($parts as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
 
-        return $path;
+            if ($part === '..') {
+                if (!empty($cleanParts) && end($cleanParts) !== '..') {
+                    array_pop($cleanParts);
+                } elseif (!$isAbsolute) {
+                    $cleanParts[] = '..';
+                }
+                continue;
+            }
+
+            $cleanParts[] = $part;
+        }
+
+        $cleanPath = ($isAbsolute ? '/' : '') . implode('/', $cleanParts);
+        if ($cleanPath === '') {
+            $cleanPath = $isAbsolute ? '/' : '.';
+        }
+
+        if ($hasTrailingSlash && $cleanPath !== '/' && substr($cleanPath, -1) != '/') {
+            $cleanPath .= '/';
+        }
+
+        return $cleanPath;
     }
 
     public static function createFile($path, &$err, $attrName = '')

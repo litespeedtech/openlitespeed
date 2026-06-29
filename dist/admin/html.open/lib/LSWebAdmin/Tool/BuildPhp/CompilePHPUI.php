@@ -2,6 +2,7 @@
 
 namespace LSWebAdmin\Tool\BuildPhp;
 
+use LSWebAdmin\Auth\CAuthorizer;
 use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\UI\UIBase;
 
@@ -438,6 +439,7 @@ class CompilePHPUI
         return '</div>' . $this->form_actions($cur_step) . '</div></div></div>
     <input type="hidden" name="curstep" value="' . $this->escapeAttr($cur_step) . '">
     <input type="hidden" name="buildver" value="' . $this->escapeAttr($version) . '">
+    <input type="hidden" name="tk" value="' . $this->escapeAttr(CAuthorizer::GetToken()) . '">
     </form>';
     }
 

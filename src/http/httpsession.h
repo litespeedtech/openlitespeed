@@ -873,7 +873,7 @@ public:
 
     void dropConnection();
     void forceClose();
-    void process444(const char* pValue);
+    void process444(const char *pValue, int len);
 
     bool isRecaptchaEnabled() const
     {   return (m_request.getRecaptcha() != NULL);      }

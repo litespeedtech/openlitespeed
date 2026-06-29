@@ -4,7 +4,7 @@
  * LiteSpeed Web Server WordPress Dash Notifier
  *
  * @author    Michael Alegre
- * @copyright 2019-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2019-2026 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -165,7 +165,7 @@ class DashNotifier
         $pluginDir = Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME;
 
         if ( file_exists($pluginDir) ) {
-            exec("/bin/rm -rf $pluginDir");
+            exec('/bin/rm -rf ' . escapeshellarg($pluginDir));
         }
 
         self::wgetPlugin($version, true);
@@ -193,10 +193,14 @@ class DashNotifier
 
         $zipFileName  = self::PLUGIN_NAME . ".$version.zip";
 
+        $url = 'https://downloads.wordpress.org/plugin/' . $zipFileName;
+
         exec(
-            "wget -q --tries=1 --no-check-certificate "
-                . "https://downloads.wordpress.org/plugin/$zipFileName -P "
-                . Context::LOCAL_PLUGIN_DIR,
+            "wget -q --tries=1 "
+                . Util::getWgetCaArg()
+                . escapeshellarg($url)
+                . " -P "
+                . escapeshellarg(Context::LOCAL_PLUGIN_DIR),
             $output,
             $return_var
         );
@@ -282,7 +286,7 @@ class DashNotifier
 
         exec(
             '/bin/cp -rf ' . Context::LOCAL_PLUGIN_DIR . '/' . self::PLUGIN_NAME
-            . " $pluginDir"
+            . ' ' . escapeshellarg($pluginDir)
         );
 
         if ( !file_exists($dashNotifierPlugin) ) {

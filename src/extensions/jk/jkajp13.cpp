@@ -168,7 +168,7 @@ int JkAjp13::buildReq(HttpSession *pSession, char *&p, char *pEnd)
 {
     HttpReq *pReq = pSession->getReq();
     //assert( size == AJP_MAX_PKT_BODY_SIZE );
-    char *pEnd2 = pEnd - 6;
+    char *pEnd2 = pEnd - 7;
     int n;
     *p++ = AJP13_FORWARD_REQUEST;
     *p++ = pReq->getMethod();       //method
@@ -346,7 +346,7 @@ int JkAjp13::buildWorkerHeader(JWorker *pWorker, char *&p, char *pEnd)
     //}
 
     //add shared secret between servlet engine and web server
-    char *pEnd2 = pEnd - 6;
+    char *pEnd2 = pEnd - 7;
     int n;
     const char *pSecret = pWorker->getConfig().getSecret();
     n = pWorker->getConfig().getSecretLen();
@@ -370,15 +370,16 @@ int JkAjp13::buildWorkerHeader(JWorker *pWorker, char *&p, char *pEnd)
         if (pVal == NULL)
             continue;
         n = strlen(pEnvs[i]);
-        if (pEnd2 - p < n)
+        if (pEnd2 - p < n + 1)
             return LS_FAIL;
         *p++ = AJP_A_REQ_ATTRIBUTE;
         appendString(p, pEnvs[i], pVal - pEnvs[i]);
         appendString(p, pVal, pEnvs[i] + n - pVal);
     }
+    if (p >= pEnd)
+        return LS_FAIL;
     *p++ = AJP_A_END;
     return 0;
 }
-
 
 

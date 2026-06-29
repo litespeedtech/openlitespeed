@@ -400,11 +400,79 @@ class CValidation
 			return false;
 		}
 
-		if ($attr->_minVal >= 2 && ( strpos($absname, SERVER_ROOT) === 0 )) {
+		if ($attr->_minVal >= 2 && $this->isPathInsideDirectory($absname, SERVER_ROOT)) {
 			return true;
 		}
 		//other places need to manually create
 		return false;
+	}
+
+	protected function isPathInsideDirectory($path, $directory)
+	{
+		$path = PathTool::clean($path);
+		$directory = PathTool::clean($directory);
+
+		if ($path === '' || $directory === ''
+				|| substr($path, 0, 1) != '/' || substr($directory, 0, 1) != '/') {
+			return false;
+		}
+
+		$canonicalPath = $this->canonicalizePathThroughExistingAncestor($path);
+		$canonicalDirectory = $this->canonicalizePathThroughExistingAncestor($directory);
+		if ($canonicalPath === false || $canonicalDirectory === false) {
+			return false;
+		}
+
+		return $this->isSameOrDescendantPath($canonicalPath, $canonicalDirectory);
+	}
+
+	protected function canonicalizePathThroughExistingAncestor($path)
+	{
+		$ancestor = $path;
+
+		while ($ancestor !== '' && !file_exists($ancestor)) {
+			$parent = dirname($ancestor);
+			if ($parent === $ancestor) {
+				break;
+			}
+			$ancestor = $parent;
+		}
+
+		if ($ancestor === '' || !file_exists($ancestor)) {
+			return false;
+		}
+
+		$realAncestor = realpath($ancestor);
+		if ($realAncestor === false) {
+			return false;
+		}
+
+		$tail = substr($path, strlen($ancestor));
+		if ($tail !== '' && substr($tail, 0, 1) != '/') {
+			return false;
+		}
+
+		return PathTool::clean($realAncestor . $tail);
+	}
+
+	protected function isSameOrDescendantPath($path, $directory)
+	{
+		if ($path !== '/') {
+			$path = rtrim($path, '/');
+		}
+		if ($directory !== '/') {
+			$directory = rtrim($directory, '/');
+		}
+
+		if ($path === $directory) {
+			return true;
+		}
+		if ($directory === '/') {
+			return (substr($path, 0, 1) == '/');
+		}
+
+		$prefix = $directory . '/';
+		return (strncmp($path, $prefix, strlen($prefix)) == 0);
 	}
 
 	protected function get_cleaned_abs_path($attr_minVal, &$path, &$err)
@@ -786,7 +854,17 @@ class CValidation
 
 	protected function chkAttr_email_val($attr, $val, &$err)
 	{
-		if (preg_match("/^[[:alnum:]._-]+@.+/", $val)) {
+		// Tight regex: local-part and domain are both [alnum._-] only,
+		// anchored at start AND end. The old pattern allowed '.+' for
+		// the domain, which matched CR (\r) because PCRE's '.' only
+		// excludes \n by default. A stored email like
+		//   "admin@example.com\rBcc: leak@evil.test"
+		// would pass validation, persist into the adminEmails config,
+		// and on the next mail() call PHP would pass the CR straight
+		// into the 'to' parameter — letting an MTA interpret the
+		// trailing "Bcc:" as an injected header. Reject any character
+		// outside the explicit allowed set here at write time.
+		if (preg_match('/^[[:alnum:]._-]+@[[:alnum:]._-]+$/', (string) $val)) {
 			return 1;
 		}
 

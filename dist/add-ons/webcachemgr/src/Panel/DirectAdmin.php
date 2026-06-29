@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2019-2024 LiteSpeed Technologies, Inc.
+ * @copyright 2019-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -487,6 +487,34 @@ class DirectAdmin extends ControlPanel
 
     /**
      *
+     * @since 1.17.10
+     *
+     * @param WPInstall $wpInstall
+     *
+     * @return PhpBinaryParts
+     *
+     * @throws LSCMException  Thrown indirectly by
+     *     $this->getCustomPhpHandlerVer() call.
+     */
+    public function getPhpBinaryParts( WPInstall $wpInstall )
+    {
+        $binPath = '/usr/local/bin/php';
+
+        if ( ($ver = $this->getCustomPhpHandlerVer($wpInstall)) != '' ) {
+
+            $customBin = "/usr/local/php$ver/bin/php";
+
+            if ( file_exists($customBin) && is_executable($customBin) ) {
+                $binPath = $customBin;
+            }
+        }
+
+        return new PhpBinaryParts($binPath, $this->phpOptions);
+    }
+
+    /**
+     * @deprecated since 1.17.10  Override getPhpBinaryParts() instead.
+     *
      * @param WPInstall $wpInstall
      *
      * @return string
@@ -496,18 +524,12 @@ class DirectAdmin extends ControlPanel
      */
     public function getPhpBinary( WPInstall $wpInstall )
     {
-        $phpBin = '/usr/local/bin/php';
+        $parts   = $this->getPhpBinaryParts($wpInstall);
+        $options = $parts->getOptionsString();
 
-        if ( ($ver = $this->getCustomPhpHandlerVer($wpInstall)) != '' ) {
-
-            $customBin = "/usr/local/php$ver/bin/php";
-
-            if ( file_exists($customBin) && is_executable($customBin) ) {
-                $phpBin = $customBin;
-            }
-        }
-
-        return "$phpBin $this->phpOptions";
+        return $options === ''
+            ? $parts->getBinPath()
+            : $parts->getBinPath() . ' ' . $options;
     }
 
 }

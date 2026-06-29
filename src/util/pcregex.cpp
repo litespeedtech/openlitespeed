@@ -40,20 +40,20 @@ void Pcregex::initJitStack()
 
 void Pcregex::releaseJitStack(void *pValue)
 {
-    pcre_jit_stack_free((pcre_jit_stack *) pValue);
+    pcre2_jit_stack_free((pcre2_jit_stack *) pValue);
 }
 
 
-pcre_jit_stack *Pcregex::getJitStack()
+pcre2_jit_stack *Pcregex::getJitStack()
 {
-    pcre_jit_stack *jit_stack;
+    pcre2_jit_stack *jit_stack;
 
     if (!s_jit_key_inited)
         initJitStack();
-    jit_stack = (pcre_jit_stack *)pthread_getspecific(s_jit_stack_key);
+    jit_stack = (pcre2_jit_stack *)pthread_getspecific(s_jit_stack_key);
     if (!jit_stack)
     {
-        jit_stack = (pcre_jit_stack *)pcre_jit_stack_alloc(32 * 1024, 512 * 1024);
+        jit_stack = pcre2_jit_stack_create(32 * 1024, 512 * 1024, NULL);
         pthread_setspecific(s_jit_stack_key, jit_stack);
     }
     return jit_stack;

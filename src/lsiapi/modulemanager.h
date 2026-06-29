@@ -199,7 +199,7 @@ public:
 
     static int ls_get_escconfval(const char **pParseBegin,
                                     const char *pParseEnd,
-                                    char *val);
+                                    char *val, int valLen);
 
     static int preParseModuleParam(const char *param, int paramLen,
                                    int level, lsi_config_key_t *keys,

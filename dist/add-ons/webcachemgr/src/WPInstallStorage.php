@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2026 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -219,9 +219,14 @@ class WPInstallStorage
 
         if ( ($data = json_decode($content, true)) === null ) {
             /**
-             * Data file may be in old serialized format. Try unserializing.
+             * Data file may be in the legacy serialized format (pre-v1.15).
+             *
+             * I-7: every cPanel-supported runtime is PHP 7+, so the previous
+             * PHP_VERSION < 7.0 LSCMException branch was dead code. Calling
+             * unserialize() with `'allowed_classes' => false` blocks object
+             * instantiation, which is the only gadget path of concern here.
              */
-             $data = unserialize($content);
+            $data = unserialize($content, ['allowed_classes' => false]);
         }
 
         if ( $data === false || !is_array($data) || !isset($data['__VER__']) ) {
@@ -246,10 +251,12 @@ class WPInstallStorage
             $path = Utf8::decode($utf8Path);
             $i    = new WPInstall($path);
 
-            $idata[WPInstall::FLD_SITEURL]    =
-                urldecode((string)$idata[WPInstall::FLD_SITEURL]);
+            $siteUrl = isset($idata[WPInstall::FLD_SITEURL]) ? $idata[WPInstall::FLD_SITEURL] : null;
+            $idata[WPInstall::FLD_SITEURL] =
+                ($siteUrl !== null) ? urldecode($siteUrl) : null;
+            $serverName = isset($idata[WPInstall::FLD_SERVERNAME]) ? $idata[WPInstall::FLD_SERVERNAME] : null;
             $idata[WPInstall::FLD_SERVERNAME] =
-                urldecode((string)$idata[WPInstall::FLD_SERVERNAME]);
+                ($serverName !== null) ? urldecode($serverName) : null;
 
             $i->initData($idata);
             $wpInstalls[$path] = $i;
@@ -385,6 +392,24 @@ class WPInstallStorage
      */
     public function getWPInstall( $path )
     {
+        /**
+         * V9.5 — match the literal path against the canonical keyset first.
+         * Stored keys are already canonical (WPInstall::init() canonicalises
+         * and addWPInstall() keys by getPath()), so a caller passing a
+         * canonical path (the flag-action case) resolves to its bound install
+         * even if an intermediate component was swapped after the path was
+         * enqueued. Resolving via realpath() first would follow such a swap to
+         * a victim tree and miss the binding, yielding an unbound WPInstall
+         * downstream whose null expectedOwnerUid would skip Layer 2 of
+         * addUserFlagFile().
+         */
+        if ( isset($this->wpInstalls[$path]) ) {
+            return $this->wpInstalls[$path];
+        }
+        elseif ( isset($this->custWpInstalls[$path]) ) {
+            return $this->custWpInstalls[$path];
+        }
+
         if ( ($realPath = realpath($path)) === false ) {
             $index = $path;
         }
@@ -625,6 +650,64 @@ class WPInstallStorage
     protected function doWPInstallAction( $action, $path, array $extraArgs )
     {
         if ( ($wpInstall = $this->getWPInstall($path)) == null ) {
+            /**
+             * V9.5 — for flag actions the path always originates from the
+             * existing keyset (getPaths() canonical keys, or the single-flag
+             * pre-validation in doSingleAction()). A miss here means the path
+             * drifted between the time the list was built and this lookup —
+             * indicative of a cross-tenant TOCTOU intermediate-component swap.
+             * Constructing an unbound WPInstall would carry null
+             * expectedOwnerUid, silently disabling Layer 2 of
+             * addUserFlagFile() and allowing the privileged write to proceed
+             * against an unverified (possibly swapped) path. Fail closed
+             * instead.
+             *
+             * V9.6 — extend the fail-closed guard to every action that can
+             * reach a root-context addUserFlagFile(false) on the
+             * dispatcher-resolved object:
+             *   - CMD_ENABLE/CMD_DISABLE/CMD_DASH_NOTIFY/CMD_DASH_DISABLE can
+             *     call addUserFlagFile(false) directly when refreshStatus()
+             *     still shows a fatal error.
+             *   - All actions fed through UserCommand::issue() can call
+             *     addUserFlagFile(false) in root context via its error handler.
+             * These paths have the same unbound-object exposure as the explicit
+             * flag actions (§13/§14 of the fix plan). The fallback bare
+             * construct is kept for discovery/custom install actions whose
+             * paths do not originate from the existing keyset.
+             *
+             * V9.7 — the V9.6 explicit OR-list was incomplete: CMD_STATUS
+             * (and all other issue-able commands) share the same
+             * addUserFlagFile(false) exposure via UserCommand::issue()'s error
+             * handler, and CMD_STATUS is reachable via the single-action UI
+             * path (refresh_status_single). Centralise: guard every command
+             * accepted by UserCommand::isSupportedIssueCmd() plus the explicit
+             * flag commands so any future addition to the issue() command set
+             * is protected automatically.
+             *
+             * V9.8 — CMD_UNFLAG/CMD_MASS_UNFLAG added to the guard.  These
+             * are not in isSupportedIssueCmd() (unflag is handled inline below,
+             * not via UserCommand::issue()), so they must be listed explicitly.
+             * An unbound WPInstall for an unflag miss would carry null
+             * expectedOwnerUid, silently disabling the Layer 2 owner check in
+             * the hardened removeFlagFile(false) path added in V9.8.
+             */
+            if (
+                    $action === self::CMD_FLAG
+                    || $action === self::CMD_MASS_FLAG
+                    || $action === self::CMD_UNFLAG
+                    || $action === self::CMD_MASS_UNFLAG
+                    || UserCommand::isSupportedIssueCmd($action)
+            ) {
+                $this->log(
+                    "Skipping $action: install path $path is not a known "
+                        . 'install (possible cross-tenant TOCTOU — '
+                        . 'intermediate component swapped after the action '
+                        . 'list was built).',
+                    Logger::L_INFO
+                );
+                return;
+            }
+
             $wpInstall = new WPInstall($path);
             $this->addWPInstall($wpInstall);
         }
@@ -661,12 +744,18 @@ class WPInstallStorage
                     return;
                 }
 
-                $wpInstall->removeFlagFile();
-
-                $wpInstall->setCmdStatusAndMsg(
-                    UserCommand::EXIT_SUCC,
-                    'Flag file unset'
-                );
+                if ( $wpInstall->removeFlagFile(false) ) {
+                    $wpInstall->setCmdStatusAndMsg(
+                        UserCommand::EXIT_SUCC,
+                        'Flag file unset'
+                    );
+                }
+                else {
+                    $wpInstall->setCmdStatusAndMsg(
+                        UserCommand::EXIT_FAIL,
+                        'Could not remove flag file'
+                    );
+                }
 
                 $this->workingQueue[$path] = $wpInstall;
                 return;
@@ -871,6 +960,8 @@ class WPInstallStorage
      *
      * @deprecated 1.13.3  Use $this->scan2() instead.
      *
+     * @since 1.17.10  Added 'find -- ' end-of-options guard.
+     *
      * @param string $docroot
      * @param bool   $forceRefresh
      *
@@ -885,9 +976,18 @@ class WPInstallStorage
      */
     protected function scan( $docroot, $forceRefresh = false )
     {
+        /**
+         * V6 (CWE-59 SSRF/symlink traversal) — use 'find -P' (the default; NOT
+         * '-L') so find does not descend into symlinked directories. As root,
+         * scanning a tenant-owned docroot with '-L' let a planted symlink (e.g.
+         * public_html/x -> /root) surface a wp-admin that resolves outside the
+         * tenant tree, steering subsequent root operations off-tree.
+         * The '--' prevents a docroot starting with '-' from being misread as a
+         * find option (escapeshellarg protects the shell, not find's own parser).
+         */
         $directories = shell_exec(
-            "find -L $docroot -maxdepth "
-                . Context::getScanDepth()
+            'find -P -- ' . escapeshellarg($docroot) . ' -maxdepth '
+                . (int) Context::getScanDepth()
                 . ' -name wp-admin -print'
         );
 
@@ -902,7 +1002,7 @@ class WPInstallStorage
              * /home/user/public_html/wp/wp-admin
              */
             $hasMatches = preg_match_all(
-                "|$docroot(.*)(?=/wp-admin)|",
+                '|' . preg_quote($docroot, '|') . '(.*)(?=/wp-admin)|',
                 $directories,
                 $matches
             );
@@ -915,14 +1015,55 @@ class WPInstallStorage
             return;
         }
 
+        $realDocroot = realpath($docroot);
+
+        /**
+         * V9/V9.2 (CWE-59/CWE-367 cross-tenant TOCTOU) — capture the
+         * panel-assigned docroot owner once before the loop.  The docroot is
+         * invariant across iterations; reading it here avoids repeated lstat()
+         * calls and makes the binding available to both new and existing
+         * installs (V9.2 fix: previously only new installs were rebound,
+         * leaving upgraded existing installs with null Layer 2 bindings).
+         */
+        $rootStat = @lstat($realDocroot);
+
         /** @noinspection PhpUndefinedVariableInspection */
         foreach ( $matches[1] as $path ) {
             $wp_path = realpath($docroot . $path);
+
+            /**
+             * V6 — defence-in-depth: drop any match that does not canonically
+             * resolve to a location contained under the docroot, so a symlinked
+             * leaf component cannot redirect a root operation off-tree.
+             *
+             * Note: this realpath() is a snapshot, not a lock. A path component
+             * could be swapped for a symlink after this check. That residual
+             * race is intentionally handled at the consumer, not here:
+             *   - per-install enable/disable/upgrade/status run privilege-
+             *     dropped as the install owner (UserCommand::runAsUser), where
+             *     following an owner-planted symlink crosses no trust boundary;
+             *   - the one root-context write into the untrusted tree,
+             *     WPInstall::addUserFlagFile(), drops to install-owner
+             *     credentials (V8) before the unlink and fopen so an
+             *     intermediate-directory swap redirecting the path off-tree
+             *     fails with EACCES (CWE-59/CWE-367 closed at the consumer).
+             */
+            if ( $wp_path === false || $realDocroot === false
+                    || strpos($wp_path . '/', $realDocroot . '/') !== 0 ) {
+                $this->log(
+                    "Scan match not contained under docroot $docroot. Skipping.",
+                    Logger::L_INFO
+                );
+
+                continue;
+            }
+
             $refresh = $forceRefresh;
 
             if ( !isset($this->wpInstalls[$wp_path]) ) {
                 $this->wpInstalls[$wp_path] = new WPInstall($wp_path);
-                $refresh                    = true;
+
+                $refresh = true;
                 $this->log(
                     "New installation found: $wp_path",
                     Logger::L_INFO
@@ -948,6 +1089,21 @@ class WPInstallStorage
                 );
             }
 
+            /**
+             * V9/V9.2 — bind expected owner unconditionally on every scan
+             * match, not only newly discovered installs.  Existing installs
+             * (loaded from the data file) must be rebound on each scan so
+             * that Layer 2 (expected-owner equality check in addUserFlagFile)
+             * fires for the root-context flag path after an upgrade or after
+             * the first scan that discovered the install.
+             */
+            if ( $rootStat !== false ) {
+                $this->wpInstalls[$wp_path]->setExpectedOwner(
+                    $rootStat['uid'],
+                    $rootStat['gid']
+                );
+            }
+
             if ( $refresh ) {
                 $this->wpInstalls[$wp_path]->refreshStatus();
                 $this->workingQueue[$wp_path] = $this->wpInstalls[$wp_path];
@@ -960,6 +1116,7 @@ class WPInstallStorage
      * @since 1.13.3
      * @since 1.15    Changed function visibility from 'public' to
      *     'public static'.
+     * @since 1.17.10  Added 'find -- ' end-of-options guard.
      *
      * @param string $docroot
      *
@@ -969,10 +1126,19 @@ class WPInstallStorage
      */
     public static function scan2( $docroot )
     {
+        /**
+         * V6 (CWE-59 SSRF/symlink traversal) — use 'find -P' (the default; NOT
+         * '-L') so find does not descend into symlinked directories. As root,
+         * scanning a tenant-owned docroot with '-L' let a planted symlink (e.g.
+         * public_html/x -> /root) surface a wp-admin that resolves outside the
+         * tenant tree, steering subsequent root operations off-tree.
+         * The '--' prevents a docroot starting with '-' from being misread as a
+         * find option (escapeshellarg protects the shell, not find's own parser).
+         */
         $directories = shell_exec(
-            "find -L $docroot -maxdepth "
-                . Context::getScanDepth()
-                .' -name wp-admin -print'
+            'find -P -- ' . escapeshellarg($docroot) . ' -maxdepth '
+                . (int) Context::getScanDepth()
+                . ' -name wp-admin -print'
         );
 
         $hasMatches = false;
@@ -985,7 +1151,7 @@ class WPInstallStorage
              * /home/user/public_html/wp/wp-admin
              */
             $hasMatches = preg_match_all(
-                "|$docroot(.*)(?=/wp-admin)|",
+                '|' . preg_quote($docroot, '|') . '(.*)(?=/wp-admin)|',
                 $directories,
                 $matches
             );
@@ -998,11 +1164,36 @@ class WPInstallStorage
             return [];
         }
 
-        $wpPaths = [];
+        $wpPaths     = [];
+        $realDocroot = realpath($docroot);
 
         /** @noinspection PhpUndefinedVariableInspection */
         foreach ( $matches[1] as $path ) {
-            $wpPaths[] = realpath($docroot . $path);
+            $wpPath = realpath($docroot . $path);
+
+            /**
+             * V6 — defence-in-depth: only return matches that canonically
+             * resolve to a location contained under the docroot, so a symlinked
+             * leaf component cannot redirect a root operation off-tree.
+             *
+             * Note: this realpath() is a snapshot, not a lock. A path component
+             * could be swapped for a symlink after this check. That residual
+             * race is intentionally handled at the consumer, not here:
+             *   - per-install enable/disable/upgrade/status run privilege-
+             *     dropped as the install owner (UserCommand::runAsUser), where
+             *     following an owner-planted symlink crosses no trust boundary;
+             *   - the one root-context write into the untrusted tree,
+             *     WPInstall::addUserFlagFile(), drops to install-owner
+             *     credentials (V8) before the unlink and fopen so an
+             *     intermediate-directory swap redirecting the path off-tree
+             *     fails with EACCES (CWE-59/CWE-367 closed at the consumer).
+             */
+            if ( $wpPath === false || $realDocroot === false
+                    || strpos($wpPath . '/', $realDocroot . '/') !== 0 ) {
+                continue;
+            }
+
+            $wpPaths[] = $wpPath;
         }
 
         return $wpPaths;
@@ -1025,8 +1216,36 @@ class WPInstallStorage
      */
     protected function addNewWPInstall( $wpPath )
     {
-        if ( ($realPath = realpath($wpPath)) !== false ) {
-            $wpPath = $realPath;
+        /**
+         * V9.4 (CWE-59/CWE-367 cross-tenant TOCTOU) — drift-rejection guard.
+         *
+         * scan2() returns canonical, docroot-contained paths (produced via
+         * realpath() + containment check).  If realpath() here no longer
+         * resolves to the same value, an intermediate directory component was
+         * swapped (symlinked) between scan2's containment validation and this
+         * invocation — the TOCTOU window that spans the WHM UI's multi-request
+         * handoff (scan request stores paths in $_SESSION; discovery request
+         * re-resolves them here).
+         *
+         * Fail closed: skip the add entirely so the swapped-in (victim) path
+         * is never registered, never bound an owner from, and never flagged.
+         * This prevents a compromised realpath() result from poisoning the V9
+         * Layer 2 owner binding captured two lines below.
+         *
+         * A legitimate scan2 path is already canonical, so realpath() is
+         * idempotent and the equality holds with no false positives.
+         */
+        $realPath = realpath($wpPath);
+
+        if ( $realPath === false || $realPath !== $wpPath ) {
+            $this->log(
+                "Skipping add: install path $wpPath no longer canonicalises to "
+                    . 'itself (possible cross-tenant TOCTOU — intermediate '
+                    . 'component swapped between scan2 and addNewWPInstall).',
+                Logger::L_INFO
+            );
+
+            return;
         }
 
         if ( !isset($this->wpInstalls[$wpPath]) ) {
@@ -1050,6 +1269,36 @@ class WPInstallStorage
             $this->log(
                 "Installation already found: $wpPath",
                 Logger::L_DEBUG
+            );
+        }
+
+        /**
+         * V9.3 (CWE-59/CWE-367 cross-tenant TOCTOU) — bind the install
+         * directory's owner observed in root context at this scan-time
+         * snapshot.  scan2() already canonicalised $wpPath via realpath() and
+         * validated containment under the panel-assigned docroot before
+         * returning it.  Persisting the lstat() uid/gid here lets the later
+         * root-context flag write (addUserFlagFile(false), in a separate
+         * process / request) compare against a known-good snapshot rather
+         * than a same-instant read of the very directory it is about to
+         * modify — closing the race that Layers 1/3 leave open.
+         *
+         * Applied unconditionally to both newly-discovered and already-known
+         * installs so that pre-V9.3 records hydrated with a null binding are
+         * rebound on the next scan, mirroring §9 (V9.2)'s treatment in
+         * scan().  lstat() is used (not stat()) so a symlinked leaf reports
+         * the link's own inode owner rather than its target's, preventing
+         * a same-instant final-component symlink swap from binding a
+         * cross-tenant uid.  If lstat() fails (path vanished between scan2
+         * and here), binding is skipped silently; the later flag write will
+         * itself refuse on its own lstat($this->path) failure.
+         */
+        $installStat = @lstat($wpPath);
+
+        if ( $installStat !== false ) {
+            $this->wpInstalls[$wpPath]->setExpectedOwner(
+                $installStat['uid'],
+                $installStat['gid']
             );
         }
 
@@ -1104,6 +1353,15 @@ class WPInstallStorage
 
             $wpPath = $info[0];
 
+            if ( !Util::isSafeAbsPath($wpPath) ) {
+                $this->log(
+                    "Unsafe wpPath value on line $line. Skipping.",
+                    Logger::L_INFO
+                );
+
+                continue;
+            }
+
             if ( !file_exists("$wpPath/wp-admin") ) {
                 $this->log(
                     "No 'wp-admin' directory found for $wpPath on line "
@@ -1116,10 +1374,23 @@ class WPInstallStorage
 
             $docroot = $info[1];
 
-            if ( !(substr($wpPath, 0, strlen($docroot)) === $docroot) ) {
+            if ( !Util::isSafeAbsPath($docroot) ) {
                 $this->log(
-                    "docroot not contained in $wpPath on line $line. "
-                        . 'Skipping.',
+                    "Unsafe docroot value on line $line. Skipping.",
+                    Logger::L_INFO
+                );
+
+                continue;
+            }
+
+            $realWpPath  = realpath($wpPath);
+            $realDocroot = realpath($docroot);
+
+            if ( $realWpPath === false || $realDocroot === false
+                    || strpos($realWpPath . '/', $realDocroot . '/') !== 0 ) {
+                $this->log(
+                    "wpPath $wpPath not contained under docroot $docroot on "
+                        . "line $line. Skipping.",
                     Logger::L_INFO
                 );
 

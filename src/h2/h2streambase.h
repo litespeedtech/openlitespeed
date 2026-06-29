@@ -96,6 +96,7 @@ public:
     int32_t getWindowOut() const    {   return m_iWindowOut;    }
 //    void setWindowOut(int32_t v)    {   m_iWindowOut = v;    }
     int adjWindowOut(int32_t n);
+    int consumeWindowIn(int32_t n);
 
     void clearBufIn()               {   m_bufRcvd.clear();        }
     LoopBuf *getBufIn()             {   return &m_bufRcvd;        }
@@ -104,7 +105,8 @@ public:
 
     void apply_priority(Priority_st *priority);
 
-    void adjWindowToUpdate(int32_t n)   {   m_iWindowToUpdate += n;     }
+    void adjWindowToUpdate(int32_t n);
+
     uint32_t getWindowToUpdate() const  {   return m_iWindowToUpdate;   }
     void windowUpdate();
 
@@ -128,6 +130,7 @@ protected:
     H2ConnBase     *m_pH2Conn;
     uint32_t        m_iWindowToUpdate;
     int32_t         m_iWindowOut;
+    int32_t         m_iWindowIn;
 
     LS_NO_COPY_ASSIGN(H2StreamBase);
 };

@@ -33,7 +33,7 @@ class ConfigLoadPlanner
 
         $realmDataId = $request->GetRealmDataId();
         if ($realmDataId != null) {
-            return self::resolveRealmDataTarget($request, $currentData, $realmDataId);
+            return self::resolveRealmDataTarget($request, $serverData, $currentData, $realmDataId);
         }
 
         return null;
@@ -53,13 +53,16 @@ class ConfigLoadPlanner
         return ConfigLoadTarget::specialData(PathTool::GetAbsFile($mime[0], 'SR'), 'MIME');
     }
 
-    private static function resolveRealmDataTarget($request, $currentData, $realmDataId)
+    private static function resolveRealmDataTarget($request, $serverData, $currentData, $realmDataId)
     {
-        if ($currentData == null) {
-            return null;
+        if ($currentData != null) {
+            // Detached vhost config file: realms are flattened to top-level `realm`.
+            $realm = $currentData->GetChildNodeById('realm', $request->GetFirstRef());
+        } else {
+            // Embedded DirectAdmin vhost: the node lives inside the server config
+            // tree, so realms keep their nested `security:realmList:realm` shape.
+            $realm = self::resolveEmbeddedRealmNode($request, $serverData);
         }
-
-        $realm = $currentData->GetChildNodeById('realm', $request->GetFirstRef());
         if ($realm == null) {
             return null;
         }
@@ -77,5 +80,35 @@ class ConfigLoadPlanner
         }
 
         return ConfigLoadTarget::specialData(PathTool::GetAbsFile($file, 'VR', $vhName, $vhRoot), $realmDataId);
+    }
+
+    private static function resolveEmbeddedRealmNode($request, $serverData)
+    {
+        $vhnode = self::resolveEmbeddedVirtualHostTarget($request, $serverData);
+        if ($vhnode == null || !method_exists($vhnode, 'GetChildNode')) {
+            return null;
+        }
+
+        $location = 'security:realmList:*realm';
+        $ref = $request->GetFirstRef();
+        if (!is_string($ref) || $ref === '') {
+            return null;
+        }
+
+        return $vhnode->GetChildNode($location, $ref);
+    }
+
+    private static function resolveEmbeddedVirtualHostTarget($request, $serverData)
+    {
+        if ($serverData == null || !method_exists($serverData, 'GetChildNodeById')) {
+            return null;
+        }
+
+        $vhName = $request->GetViewName();
+        if (!is_string($vhName) || $vhName === '') {
+            return null;
+        }
+
+        return $serverData->GetChildNodeById('virtualhost', $vhName);
     }
 }

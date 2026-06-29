@@ -39,6 +39,10 @@ TEST(httpfetchTest_Test)
     printf("THIS TEST CAN ONLY TEST BY DEBUG with breakpoints\n");
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
+    // Required before any anonymous-mapped VMemBuf is built (requests with a
+    // NULL save file); the light-tier main() does not initialize it.
+    VMemBuf::initAnonPool();
+
     MultiplexerFactory::initDefault();
     Multiplexer *mult = MultiplexerFactory::getMultiplexer();
     HttpFetch *pHttpFetch = new HttpFetch;
@@ -222,7 +226,8 @@ TEST(httpfetchTest_Test)
     char achEncoded[512], achAuthHdr[512];
     int iEncodedLen, iAuthHdrLen;
 
-    iEncodedLen = ls_base64_encode("ron:ron", 7, achEncoded);
+    iEncodedLen = ls_base64_encode("ron:ron", 7, achEncoded,
+                                   sizeof(achEncoded));
 
 
     // For HttpFetch, cannot use url based auth. Add authorization header instead.

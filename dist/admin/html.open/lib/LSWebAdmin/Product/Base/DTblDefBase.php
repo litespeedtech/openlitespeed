@@ -28,53 +28,6 @@ class DTblDefBase
 		return $this->_tblDef[$tblId];
 	}
 
-	protected function loadSpecials()
-	{
-		// define special block contains raw data
-		$this->addSpecial('rewrite', ['enable', 'logLevel', 'map', 'inherit', 'base'], 'rules');
-		$this->addSpecial('virtualHostConfig:rewrite', ['enable', 'logLevel', 'map', 'inherit', 'base'], 'rules'); // for template
-		$this->addSpecial('botWhiteList', [], 'list');
-	}
-
-	protected function loadModuleSpecials()
-	{
-		$tags = array_merge(['ls_enabled', 'note', 'internal', 'urlFilter'], $this->getModuleTags());
-		$this->addSpecial('module', $tags, 'param');
-		$this->addSpecial('urlFilter', ['ls_enabled'], 'param');
-	}
-
-	protected function addSpecial($key, $attrList, $catchAllTag)
-	{
-		$key = strtolower($key);
-		$this->_specials[$key] = []; // allow later ones override previous one
-		foreach ($attrList as $attr) {
-			$this->_specials[$key][] = strtolower($attr);
-		}
-		$this->_specials[$key]['*'] = $catchAllTag;
-	}
-
-	public function MarkSpecialBlock($node)
-	{
-		$key = strtolower($node->Get(CNode::FLD_KEY));
-		if (isset($this->_specials[$key])) {
-			$tag = $this->_specials[$key]['*']; // cache all key
-			$node->AddRawTag($tag);
-			return true;
-		}
-		return false;
-	}
-
-	public function IsSpecialBlockRawContent($node, $testKey)
-	{
-		$key = strtolower($node->Get(CNode::FLD_KEY));
-		if (isset($this->_specials[$key])) {
-			if (!in_array(strtolower($testKey), $this->_specials[$key])) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 	protected function DupTblDef($tblId, $newId, $newTitle = null)
 	{
 		$tbl = $this->GetTblDef($tblId);
@@ -203,71 +156,6 @@ class DTblDefBase
 		return self::NewCheckBoxAttr('allowOverride', DMsg::ALbl('l_allowoverride'), $this->_options['allowOverride'], true);
 	}
 
-	protected function getSharedAppServerEnvOptions()
-	{
-		return [
-			'' => '',
-			'0' => 'Development',
-			'1' => 'Production',
-			'2' => 'Staging'
-		];
-	}
-
-	protected function getSharedScriptHandlerOptions($extra = [])
-	{
-		$options = [
-			'lsapi' => 'LiteSpeed SAPI',
-			'proxy' => 'Web Server (Proxy)',
-			'fcgi' => 'Fast CGI',
-			'scgi' => 'SCGI',
-			'cgi' => 'CGI',
-			'loadbalancer' => 'Load Balancer',
-			'servlet' => 'Servlet Engine',
-			'uwsgi' => 'uWSGI',
-		];
-		return $options + $extra;
-	}
-
-	protected function getSharedContextTypeOptions($extra = [], $staticKey = 'null')
-	{
-		$options = [
-			$staticKey => 'Static',
-			'lsapi' => 'LiteSpeed SAPI',
-			'proxy' => 'Proxy',
-			'fcgi' => 'Fast CGI',
-			'scgi' => 'SCGI',
-			'cgi' => 'CGI',
-			'redirect' => 'Redirect',
-			'loadbalancer' => 'Load Balancer',
-			'webapp' => 'Java Web App',
-			'servlet' => 'Servlet',
-			'appserver' => 'App Server',
-			'uwsgi' => 'uWSGI',
-		];
-		return $options + $extra;
-	}
-
-	protected function getSharedContextTableOptions($prefix, $extra = [], $staticKey = 'null')
-	{
-		$options = [
-			0 => 'type',
-			1 => $prefix . 'G',
-			$staticKey => $prefix . 'G',
-			'lsapi' => $prefix . 'L',
-			'proxy' => $prefix . 'P',
-			'fcgi' => $prefix . 'F',
-			'scgi' => $prefix . 'SC',
-			'cgi' => $prefix . 'C',
-			'redirect' => $prefix . 'R',
-			'loadbalancer' => $prefix . 'B',
-			'webapp' => $prefix . 'J',
-			'servlet' => $prefix . 'S',
-			'appserver' => $prefix . 'AS',
-			'uwsgi' => $prefix . 'UW',
-		];
-		return $options + $extra;
-	}
-
 	protected function getSharedRealmTypeOptions($extra = [])
 	{
 		$options = ['file' => 'Password File'];
@@ -292,49 +180,6 @@ class DTblDefBase
 		$this->_options['disable_off_enable'] = ['0' => DMsg::ALbl('o_disabled'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('l_enabled')];
 		$this->_options['notset_off_on'] = ['' => DMsg::ALbl('o_notset'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('o_on')];
 		$this->_options['notset_off_enable'] = ['' => DMsg::ALbl('o_notset'), '1' => DMsg::ALbl('o_off'), '2' => DMsg::ALbl('l_enabled')];
-		$this->_options['appserverEnv'] = $this->getSharedAppServerEnvOptions();
-		$this->_options['scriptHandler'] = $this->getSharedScriptHandlerOptions();
-
-		$this->_options['extType'] = [
-			'lsapi' => DMsg::ALbl('l_extlsapi'),
-			'proxy' => DMsg::ALbl('l_extproxy'),
-			'fcgi' => DMsg::ALbl('l_fcgiapp'),
-			'fcgiauth' => DMsg::ALbl('l_extfcgiauth'),
-            'scgi' => DMsg::ALbl('l_extscgi'),
-			'servlet' => DMsg::ALbl('l_extservlet'),
-			'logger' => DMsg::ALbl('l_extlogger'),
-			'loadbalancer' => DMsg::ALbl('l_extlb'),
-            'uwsgi' => Dmsg::ALbl('l_extuwsgi'),
-                ];
-
-		$this->_options['extTbl'] = [
-			0 => 'type',
-			1 => 'A_EXT_LSAPI',
-			'lsapi' => 'A_EXT_LSAPI',
-			'proxy' => 'A_EXT_PROXY',
-			'fcgi' => 'A_EXT_FCGI',
-			'fcgiauth' => 'A_EXT_FCGIAUTH',
-            'scgi' => 'A_EXT_SCGI',
-			'servlet' => 'A_EXT_SERVLET',
-			'logger' => 'A_EXT_LOGGER',
-			'loadbalancer' => 'A_EXT_LOADBALANCER',
-            'uwsgi' => 'A_EXT_UWSGI',
-            ];
-
-		$this->_options['tp_extTbl'] = [
-			0 => 'type',
-			1 => 'T_EXT_LSAPI',
-			'lsapi' => 'T_EXT_LSAPI',
-			'proxy' => 'T_EXT_PROXY',
-			'fcgi' => 'T_EXT_FCGI',
-			'fcgiauth' => 'T_EXT_FCGIAUTH',
-            'scgi' => 'T_EXT_SCGI',
-			'servlet' => 'T_EXT_SERVLET',
-			'logger' => 'T_EXT_LOGGER',
-			'loadbalancer' => 'T_EXT_LOADBALANCER',
-            'uwsgi' => 'T_EXT_UWSGI',
-            ];
-
 		$this->_options['logLevel'] = ['ERROR' => 'ERROR', 'WARN' => 'WARNING',
 			'NOTICE' => 'NOTICE', 'INFO' => 'INFO', 'DEBUG' => 'DEBUG'];
 
@@ -395,10 +240,6 @@ class DTblDefBase
 		$ctxOrder = self::NewViewAttr('order', DMsg::ALbl('l_order'));
 		$ctxOrder->SetFlag(DAttr::BM_NOFILE | DAttr::BM_HIDE | DAttr::BM_NOEDIT);
 
-		$forbidden_ext_groups = ['root', 'sudo', 'wheel', 'shadow', 'lsadm'];
-		$forbidden_ext_users = ['root', 'lsadm'];
-
-
 		$attrs = [
 			'priority' => self::NewIntAttr('priority', DMsg::ALbl('l_priority'), true, -20, 20),
 			'indexFiles' => self::NewTextAreaAttr('indexFiles', DMsg::ALbl('l_indexfiles'), 'fname', true, 2, null, 0, 0, 1),
@@ -413,25 +254,8 @@ class DTblDefBase
 			'logHeaders' => self::NewCheckBoxAttr('logHeaders', DMsg::ALbl('l_logheaders'), ['1' => 'Referrer', '2' => 'UserAgent', '4' => 'Host', '0' => DMsg::ALbl('o_none')], true, 'accessLog_logHeader'),
 			'compressArchive' => self::NewBoolAttr('compressArchive', DMsg::ALbl('l_compressarchive'), true, 'log_compressArchive'),
 			'extraHeaders' => self::NewTextAreaAttr('extraHeaders', DMsg::ALbl('l_extraHeaders'), 'cust', true, 5, null, 1, 1),
-			'scriptHandler_type' => self::NewSelAttr('type', DMsg::ALbl('l_handlertype'), $this->_options['scriptHandler'], false, 'shType', 'data-lst-change-call="lst_conf" data-lst-change-arg="c"'),
-			'scriptHandler' => self::NewSelAttr('handler', DMsg::ALbl('l_handlername'), 'extprocessor:$$type', false, 'shHandlerName'),
-			'ext_type' => self::NewSelAttr('type', DMsg::ALbl('l_type'), $this->_options['extType'], false, 'extAppType'),
 			'name' => self::NewTextAttr('name', DMsg::ALbl('l_name'), 'name', false),
-			'ext_name' => self::NewTextAttr('name', DMsg::ALbl('l_name'), 'name', false, 'extAppName'),
-			'ext_address' => self::NewTextAttr('address', DMsg::ALbl('l_address'), 'addr', false, 'extAppAddress'),
-			'ext_maxConns' => self::NewIntAttr('maxConns', DMsg::ALbl('l_maxconns'), false, 1, 2000),
 			'pcKeepAliveTimeout' => self::NewIntAttr('pcKeepAliveTimeout', DMsg::ALbl('l_pckeepalivetimeout'), true, -1, 10000),
-			'ext_env' => self::NewParseTextAreaAttr('env', DMsg::ALbl('l_env'), '/\S+=\S+/', DMsg::ALbl('parse_env'), true, 5, null, 0, 1, 2),
-			'ext_initTimeout' => self::NewIntAttr('initTimeout', DMsg::ALbl('l_inittimeout'), false, 1),
-			'ext_retryTimeout' => self::NewIntAttr('retryTimeout', DMsg::ALbl('l_retrytimeout'), false, 0),
-			'ext_respBuffer' => self::NewSelAttr('respBuffer', DMsg::ALbl('l_respbuffer'), ['0' => DMsg::ALbl('o_no'), '1' => DMsg::ALbl('o_yes'), '2' => DMsg::ALbl('o_nofornph')], false),
-			'ext_persistConn' => self::NewBoolAttr('persistConn', DMsg::ALbl('l_persistconn')),
-			'ext_path' => self::NewPathAttr('path', DMsg::ALbl('l_command'), 'file1', 3, 'x', true, 'extAppPath'),
-			'ext_backlog' => self::NewIntAttr('backlog', DMsg::ALbl('l_backlog'), true, 1, 100),
-			'ext_instances' => self::NewIntAttr('instances', DMsg::ALbl('l_instances'), true, 0, 1000),
-			'ext_runOnStartUp' => self::NewSelAttr('runOnStartUp', DMsg::ALbl('l_runonstartup'), ['' => '', '1' => DMsg::ALbl('o_yes'), '3' => DMsg::ALbl('o_yesdetachmode'), '2' => DMsg::ALbl('o_yesdaemonmode'), '0' => DMsg::ALbl('o_no')]),
-			'ext_user' => self::NewParseTextAttr('extUser', DMsg::ALbl('l_suexecuser'), '/^(?!(?:' . implode('|', $forbidden_ext_users) . ")\\b)/", null),
-			'ext_group' => self::NewParseTextAttr('extGroup', DMsg::ALbl('l_suexecgrp'), '/^(?!(?:' . implode('|', $forbidden_ext_groups) . ")\\b)/", null),
 			'cgiUmask' => self::NewParseTextAttr('umask', DMsg::ALbl('l_umask'), $this->_options['parseFormat']['filePermission3'], DMsg::ALbl('parse_umask')),
 			'memSoftLimit' => self::NewIntAttr('memSoftLimit', DMsg::ALbl('l_memsoftlimit'), true, 0),
 			'memHardLimit' => self::NewIntAttr('memHardLimit', DMsg::ALbl('l_memhardlimit'), true, 0),
@@ -452,8 +276,6 @@ class DTblDefBase
 			'tp_name' => self::NewParseTextAttr('name', DMsg::ALbl('l_name'), $this->_options['tp_vname'][0], $this->_options['tp_vname'][1], false, 'extAppName'),
 			'vh_maxKeepAliveReq' => self::NewIntAttr('maxKeepAliveReq', DMsg::ALbl('l_maxkeepalivereq'), true, 0, 32767, 'vhMaxKeepAliveReq'),
 			'vh_cgroups' => self::NewSelAttr('cgroups', DMsg::ALbl('l_cgroups'), $this->_options['notset_off_on']),
-			'vh_enableGzip' => self::NewBoolAttr('enableGzip', DMsg::ALbl('l_enablecompress'), true, 'vhEnableGzip'),
-			'vh_enableBr' => self::NewBoolAttr('enableBr', DMsg::ALbl('l_enablebrotli'), true, 'vhEnableBr'),
 			'vh_allowSymbolLink' => self::NewSelAttr('allowSymbolLink', DMsg::ALbl('l_allowsymbollink'), $this->_options['symbolLink']),
 			'vh_enableScript' => self::NewBoolAttr('enableScript', DMsg::ALbl('l_enablescript'), false),
 			'vh_restrained' => self::NewBoolAttr('restrained', DMsg::ALbl('l_restrained'), false),
@@ -469,7 +291,6 @@ class DTblDefBase
 			'ctx_uri' => self::NewTextAttr('uri', DMsg::ALbl('l_uri'), 'expuri', false, 'expuri'),
 			'ctx_location' => self::NewTextAttr('location', DMsg::ALbl('l_location'), 'cust'),
 			'ctx_shandler' => self::NewSelAttr('handler', DMsg::ALbl('l_servletengine'), 'extprocessor:servlet', false, 'servletEngine'),
-			'appserverEnv' => self::NewSelAttr('appserverEnv', DMsg::ALbl('l_runtimemode'), $this->_options['appserverEnv']),
 			'geoipDBFile' => self::NewPathAttr('geoipDBFile', DMsg::ALbl('l_geoipdbfile'), 'filep', 2, 'r', false),
 			'enableIpGeo' => self::NewBoolAttr('enableIpGeo', DMsg::ALbl('l_enableipgeo')),
 			'enable_pagespeed' => self::NewBoolAttr('enabled', DMsg::ALbl('l_enablepagespeed'), true, 'pagespeedEnabled'),
@@ -480,14 +301,6 @@ class DTblDefBase
 		self::applyLegacyFde($attrs['pagespeed_setting'], 'YNN');
 		$this->_attrs = $attrs;
 		$this->applyCommonAttrConfig();
-	}
-
-	protected function loadModuleCommonAttrs()
-	{
-		$param = self::NewTextAreaAttr('param', DMsg::ALbl('l_moduleparams'), 'cust', true, 4, 'modParams', 1, 1);
-		$param->SetFlag(DAttr::BM_RAWDATA);
-		$this->_attrs['mod_params'] = $param;
-		$this->_attrs['mod_enabled'] = self::NewBoolAttr('ls_enabled', DMsg::ALbl('l_enablehooks'), true, 'moduleEnabled');
 	}
 
 	protected function applyCommonAttrConfig()
@@ -560,7 +373,7 @@ class DTblDefBase
 		return $attrs;
 	}
 
-	protected static function getSslProtocolAttrs($includeProtocol = true)
+	protected static function getSslProtocolAttrs($includeProtocol)
 	{
 		$attrs = [];
 
@@ -609,75 +422,15 @@ class DTblDefBase
 		];
 	}
 
-	protected function getExtNetworkAppAttrs($addressAttr, $includeEnv = true)
-	{
-		$attrs = [
-			$this->_attrs['ext_name'],
-			$addressAttr,
-			$this->_attrs['note'],
-			$this->_attrs['ext_maxConns'],
-		];
-
-		if ($includeEnv) {
-			$attrs[] = $this->_attrs['ext_env'];
-		}
-
-		$attrs[] = $this->_attrs['ext_initTimeout'];
-		$attrs[] = $this->_attrs['ext_retryTimeout'];
-		$attrs[] = $this->_attrs['pcKeepAliveTimeout'];
-		$attrs[] = $this->_attrs['ext_respBuffer'];
-
-		return $attrs;
-	}
-
-	protected function setDerivedExtAppTbl($sourceTblId, $id, $title, $type)
-	{
-		$this->_tblDef[$id] = $this->DupTblDef($sourceTblId, $id, $title);
-		$this->_tblDef[$id]->Set(DTbl::FLD_DEFAULTEXTRACT, ['type' => $type]);
-	}
-
-	protected function setTemplateExtTblDef($sourceTblId, $id)
-	{
-		$this->_tblDef[$id] = $this->DupTblDef($sourceTblId, $id);
-		$this->_tblDef[$id]->ResetAttrEntry(0, $this->_attrs['tp_name']);
-	}
-
 	protected function setTemplateFileNameTblDef($sourceTblId, $id)
 	{
 		$this->_tblDef[$id] = $this->DupTblDef($sourceTblId, $id);
 		$this->_tblDef[$id]->ResetAttrEntry(1, $this->_attrs['tp_vrFile']);
 	}
 
-	protected function setExtAppSelTbl($id, $subTbls)
-	{
-		$attrs = [$this->_attrs['ext_type']];
-		$this->_tblDef[$id] = DTbl::NewSel($id, DMsg::ALbl('l_newextapp'), $attrs, $subTbls);
-	}
-
-	protected function getExtAppTopAttrs($actionTbls)
-	{
-		return [
-			$this->_attrs['ext_type'],
-			self::NewViewAttr('name', DMsg::ALbl('l_name')),
-			self::NewViewAttr('address', DMsg::ALbl('l_address')),
-			self::NewActionAttr($actionTbls, 'vEd')
-		];
-	}
-
 	protected function newAccessLogControlAttr()
 	{
 		return self::NewSelAttr('useServer', DMsg::ALbl('l_logcontrol'), $this->_options['aclogctrl'], false, 'aclogUseServer');
-	}
-
-	protected function getAccessLogTopAttrs($fileAttr, $actionTbl)
-	{
-		return [
-			$this->newAccessLogControlAttr(),
-			$fileAttr,
-			$this->_attrs['logFormat'],
-			$this->_attrs['rollingSize'],
-			self::NewActionAttr($actionTbl, 'Ed'),
-		];
 	}
 
 	protected function getAccessLogAttrs($fileAttr)
@@ -692,25 +445,6 @@ class DTblDefBase
 			$this->_attrs['keepDays'],
 			$this->_attrs['compressArchive'],
 			self::NewPathAttr('bytesLog', DMsg::ALbl('l_byteslog'), 'file0', 3, 'r', true, 'accessLog_bytesLog'),
-		];
-	}
-
-	protected function getContextTypeIcons()
-	{
-		return [
-			'null' => 'file-text',
-			'lsapi' => 'rocket',
-			'proxy' => 'arrow-right-left',
-			'fcgi' => 'gauge',
-			'scgi' => 'gauge',
-			'cgi' => 'square-terminal',
-			'redirect' => 'arrow-up-right',
-			'loadbalancer' => 'scale',
-			'webapp' => 'app-window',
-			'servlet' => 'package',
-			'appserver' => 'server-cog',
-			'uwsgi' => 'circuit-board',
-			'module' => 'puzzle'
 		];
 	}
 
@@ -748,17 +482,6 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_serverlog'), $attrs, 'fileName');
 	}
 
-	protected function add_S_ACLOG_TOP($id)
-	{
-		$attrs = [
-			$this->_attrs['fileName2']->dup(null, null, 'accessLog_fileName'),
-			$this->_attrs['logFormat'],
-			$this->_attrs['rollingSize'],
-			self::NewActionAttr('S_ACLOG', 'Ed'),
-		];
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG');
-	}
-
 	protected function add_S_ACLOG($id)
 	{
 		$attrs = [
@@ -773,7 +496,7 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName');
 	}
 
-	protected function add_A_EXPIRES($id)
+	protected function add_SVT_EXPIRES($id)
 	{
 		$attrs = $this->get_expires_attrs();
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_expires'), $attrs);
@@ -842,30 +565,6 @@ class DTblDefBase
 			self::NewIntAttr('maxDynRespSize', DMsg::ALbl('l_maxdynrespsize'), false, '1M', null)
 		];
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_reqresp'), $attrs);
-	}
-
-	protected function add_S_TUNING_GZIP($id)
-	{
-		$parseFormat = '/^(\!)?(\*\/\*)|([A-z0-9_\-\.\+]+\/\*)|([A-z0-9_\-\.\+]+\/[A-z0-9_\-\.\+]+)|default$/';
-
-		$attrs = [
-			// general
-			self::NewBoolAttr('enableGzipCompress', DMsg::ALbl('l_enablecompress'), false),
-			self::NewParseTextAreaAttr('compressibleTypes', DMsg::ALbl('l_compressibletypes'), $parseFormat, DMsg::ALbl('parse_compressibletypes'), true, 5, null, 0, 0, 1),
-			// dyn
-			self::NewBoolAttr('enableDynGzipCompress', DMsg::ALbl('l_enabledyngzipcompress'), false),
-			self::NewIntAttr('gzipCompressLevel', DMsg::ALbl('l_gzipcompresslevel'), true, 1, 9),
-			// self::NewIntAttr('enableBrCompress', DMsg::ALbl('l_brcompresslevel'), true, 0, 6), // OLS does not support dynamic brotli
-			// static
-			self::NewBoolAttr('gzipAutoUpdateStatic', DMsg::ALbl('l_gzipautoupdatestatic')),
-			self::NewIntAttr('gzipStaticCompressLevel', DMsg::ALbl('l_gzipstaticcompresslevel'), true, 1, 9),
-			self::NewIntAttr('brStaticCompressLevel', DMsg::ALbl('l_brstaticcompresslevel'), true, 0, 11), // 0 will disable
-			self::NewTextAttr('gzipCacheDir', DMsg::ALbl('l_gzipcachedir'), 'cust'),
-			self::NewIntAttr('gzipMaxFileSize', DMsg::ALbl('l_gzipmaxfilesize'), true, '1K'),
-			self::NewIntAttr('gzipMinFileSize', DMsg::ALbl('l_gzipminfilesize'), true, 200)
-		];
-
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_gzipbr'), $attrs);
 	}
 
 	protected function add_S_TUNING_QUIC($id)
@@ -999,7 +698,7 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_accessdenydir'), $attrs, 'accessDenyDir', 1);
 	}
 
-	protected function add_A_SEC_AC($id)
+	protected function add_SVT_SEC_AC($id)
 	{
 		$attrs = [
 			self::NewTextAreaAttr('allow', DMsg::ALbl('l_accessallow'), 'subnet', true, 5, 'accessControl_allow', 0, 0, 1),
@@ -1009,7 +708,12 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_accesscontrol'), $attrs, 'accessControl', 1);
 	}
 
-	protected function add_A_HTACCESS($id)
+	protected function add_ADM_SEC_AC($id)
+	{
+		$this->add_SVT_SEC_AC($id);
+	}
+
+	protected function add_SVT_HTACCESS($id)
 	{
 		$attrs = [
 			$this->newAllowOverrideAttr(),
@@ -1019,188 +723,18 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_htaccess'), $attrs, 'htaccess');
 	}
 
-	protected function add_A_EXT_SEL($id)
-	{
-		$this->setExtAppSelTbl($id, $this->_options['extTbl']);
-	}
-
-	protected function add_T_EXT_SEL($id)
-	{
-		$this->setExtAppSelTbl($id, $this->_options['tp_extTbl']);
-	}
-
-	protected function add_A_EXT_TOP($id)
-	{
-		$align = ['left', 'left', 'left', 'center'];
-		$attrs = $this->getExtAppTopAttrs($this->_options['extTbl']);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_extapps'), $attrs, 'name', 'A_EXT_SEL', $align, null, 'package', true);
-	}
-
-	protected function add_A_EXT_FCGI($id)
-	{
-		$attrs = [
-			$this->_attrs['ext_name'],
-			$this->_attrs['ext_address'],
-			$this->_attrs['note'],
-			$this->_attrs['ext_maxConns'],
-			$this->_attrs['ext_env'],
-			$this->_attrs['ext_initTimeout'],
-			$this->_attrs['ext_retryTimeout'],
-			$this->_attrs['ext_persistConn'],
-			$this->_attrs['pcKeepAliveTimeout'],
-			$this->_attrs['ext_respBuffer'],
-			$this->_attrs['ext_autoStart'],
-			$this->_attrs['ext_path'],
-			$this->_attrs['ext_backlog'],
-			$this->_attrs['ext_instances'],
-			$this->_attrs['ext_user'],
-			$this->_attrs['ext_group'],
-			$this->_attrs['cgiUmask'],
-			$this->_attrs['ext_runOnStartUp'],
-			self::NewIntAttr('extMaxIdleTime', DMsg::ALbl('l_maxidletime'), true, -1),
-			$this->_attrs['priority']->dup(null, null, 'extAppPriority'),
-			$this->_attrs['memSoftLimit'],
-			$this->_attrs['memHardLimit'],
-			$this->_attrs['procSoftLimit'],
-			$this->_attrs['procHardLimit']
-		];
-		$defaultExtract = ['type' => 'fcgi'];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_fcgiapp'), $attrs, 'name', null, $defaultExtract);
-	}
-
-	protected function add_A_EXT_FCGIAUTH($id)
-	{
-		$this->setDerivedExtAppTbl('A_EXT_FCGI', $id, DMsg::ALbl('l_extfcgiauth'), 'fcgiauth');
-	}
-
-	protected function add_A_EXT_LSAPI($id)
-	{
-		$this->setDerivedExtAppTbl('A_EXT_FCGI', $id, DMsg::ALbl('l_extlsapi'), 'lsapi');
-	}
-
-	protected function add_A_EXT_LOADBALANCER($id)
-	{
-		$parseFormat = '/^(lsapi|proxy|fcgi|fcgiauth|scgi||servlet|uwsgi)::.+$/';
-		$parseHelp = 'ExtAppType::ExtAppName, allowed types are lsapi, proxy, fcgi, fcgiauth, scgi, servlet and uwsgi. e.g. fcgi::myphp, servlet::tomcat';
-
-		$attrs = [$this->_attrs['ext_name'],
-			self::NewParseTextAreaAttr('workers', DMsg::ALbl('l_workers'), $parseFormat, $parseHelp, true, 3, 'extWorkers', 0, 0, 1),
-			$this->_attrs['note'],
-		];
-		$defaultExtract = ['type' => 'loadbalancer'];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_extlb'), $attrs, 'name', null, $defaultExtract);
-	}
-
-	protected function add_A_EXT_LOGGER($id)
-	{
-		$attrs = [$this->_attrs['ext_name'],
-			self::NewTextAttr('address', DMsg::ALbl('l_loggeraddress'), 'addr', true, 'loggerAddress'), //optional
-			$this->_attrs['note'],
-			$this->_attrs['ext_maxConns'],
-			$this->_attrs['ext_env'],
-			$this->_attrs['ext_path'],
-			$this->_attrs['ext_instances'],
-			$this->_attrs['ext_user'],
-			$this->_attrs['ext_group'],
-			$this->_attrs['cgiUmask'],
-			$this->_attrs['priority']->dup(null, null, 'extAppPriority')
-		];
-		$defaultExtract = ['type' => 'logger'];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_extlogger'), $attrs, 'name', null, $defaultExtract);
-	}
-
-	protected function add_A_EXT_SERVLET($id)
-	{
-		$attrs = $this->getExtNetworkAppAttrs($this->_attrs['ext_address']);
-		$defaultExtract = ['type' => 'servlet'];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_extservlet'), $attrs, 'name', null, $defaultExtract);
-	}
-
-	protected function add_A_EXT_SCGI($id)
-	{
-		$attrs = $this->getExtNetworkAppAttrs($this->_attrs['ext_address'], false);
-		$defaultExtract = ['type' => 'scgi'];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_extscgi'), $attrs, 'name', null, $defaultExtract);
-	}
-
-	protected function add_A_EXT_UWSGI($id)
-	{
-		$this->setDerivedExtAppTbl('A_EXT_SCGI', $id, DMsg::ALbl('l_extuwsgi'), 'uwsgi');
-	}
-
-	protected function add_A_EXT_PROXY($id)
-	{
-		$attrs = $this->getExtNetworkAppAttrs(
-			self::NewTextAttr('address', DMsg::ALbl('l_address'), 'wsaddr', false, 'expWSAddress')
-		);
-		$defaultExtract = ['type' => 'proxy'];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_extproxy'), $attrs, 'name', null, $defaultExtract);
-	}
-
-	protected function add_T_EXT_TOP($id)
-	{
-		$align = ['center', 'center', 'left', 'center'];
-		$attrs = $this->getExtAppTopAttrs($this->_options['tp_extTbl']);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_extapps'), $attrs, 'name', 'T_EXT_SEL', $align, null, 'package', true);
-	}
-
-	protected function add_T_EXT_FCGI($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_FCGI', $id);
-	}
-
-	protected function add_T_EXT_FCGIAUTH($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_FCGIAUTH', $id);
-	}
-
-	protected function add_T_EXT_LSAPI($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_LSAPI', $id);
-	}
-
-	protected function add_T_EXT_PROXY($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_PROXY', $id);
-	}
-
-	protected function add_T_EXT_SCGI($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_SCGI', $id);
-	}
-
-	protected function add_T_EXT_LOADBALANCER($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_LOADBALANCER', $id);
-	}
-
-	protected function add_T_EXT_LOGGER($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_LOGGER', $id);
-	}
-
-	protected function add_T_EXT_SERVLET($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_SERVLET', $id);
-	}
-
-	protected function add_T_EXT_UWSGI($id)
-	{
-		$this->setTemplateExtTblDef('A_EXT_UWSGI', $id);
-	}
-
-	protected function add_A_SCRIPT($id)
+	protected function add_SVT_SCRIPT($id)
 	{
 		$attrs = $this->getScriptHandlerAttrs();
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_shdef'), $attrs, 'suffix');
 	}
 
-	protected function add_A_SCRIPT_TOP($id)
+	protected function add_SVT_SCRIPT_TOP($id)
 	{
 		$align = ['center', 'center', 'center', 'center'];
 		$attrs = $this->getScriptHandlerAttrs();
-		$attrs[] = self::NewActionAttr('A_SCRIPT', 'Ed');
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_shdef'), $attrs, 'suffix', 'A_SCRIPT', $align, null, 'code');
+		$attrs[] = self::NewActionAttr('SVT_SCRIPT', 'Ed');
+		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_shdef'), $attrs, 'suffix', 'SVT_SCRIPT', $align, null, 'code');
 	}
 
 	protected function add_S_RAILS($id)
@@ -1248,7 +782,7 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_cachepolicy'), $attrs, 'cache');
 	}
 
-	protected function add_A_CACHE_NCURL($id)
+	protected function add_SVT_CACHE_NCURL($id)
 	{
 		$noCacheUrl = self::NewTextAreaAttr('noCacheUrl', null, 'cust', true, 10, 'noCacheUrl', 1, 1);
 		$noCacheUrl->_feature = 1;
@@ -1278,121 +812,13 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_pagespeedsettings'), $attrs, 'modpagespeed');
 	}
 
-	protected function add_V_PAGESPEED($id)
+	protected function add_VT_PAGESPEED($id)
 	{
 		$attrs = [
 			$this->_attrs['enable_pagespeed'],
 			$this->_attrs['pagespeed_setting']
 		];
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_pagespeedsettings'), $attrs, 'modpagespeed');
-	}
-
-	protected function getModuleTags()
-	{
-		return ['L4_BEGINSESSION', 'L4_ENDSESSION', 'L4_RECVING', 'L4_SENDING',
-			'HTTP_BEGIN', 'RECV_REQ_HEADER', 'URI_MAP', 'HTTP_AUTH',
-			'RECV_REQ_BODY', 'RCVD_REQ_BODY', 'RECV_RESP_HEADER', 'RECV_RESP_BODY', 'RCVD_RESP_BODY',
-			'HANDLER_RESTART', 'SEND_RESP_HEADER', 'SEND_RESP_BODY', 'HTTP_END',
-			'MAIN_INITED', 'MAIN_PREFORK', 'MAIN_POSTFORK', 'WORKER_POSTFORK', 'WORKER_ATEXIT', 'MAIN_ATEXIT'];
-	}
-
-	protected function add_S_MOD_TOP($id)
-	{
-		$align = ['center', 'center', 'center', 'center'];
-
-		$attrs = [self::NewViewAttr('name', DMsg::ALbl('l_module')),
-			self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
-			$this->_attrs['mod_params'],
-			$this->_attrs['mod_enabled'],
-			self::NewActionAttr('S_MOD', 'vEd')
-		];
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_servermodulesdef'), $attrs, 'name', 'S_MOD', $align, null, 'puzzle', true);
-	}
-
-	protected function add_S_MOD($id)
-	{
-		$attrs = [self::NewTextAttr('name', DMsg::ALbl('l_module'), 'modulename', false, 'modulename'),
-			$this->_attrs['note'],
-			self::NewBoolAttr('internal', DMsg::ALbl('l_internal'), true, 'internalmodule'),
-			$this->_attrs['mod_params'],
-			$this->_attrs['mod_enabled']
-		];
-
-		$hook = DMsg::ALbl('l_hook');
-		$priority = DMsg::ALbl('l_priority');
-		foreach ($this->getModuleTags() as $tag) {
-			$attrs[] = self::NewIntAttr($tag, "{$hook}::{$tag} {$priority}", true, -6000, 6000);
-		}
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_servermoduledef'), $attrs, 'name', 'servModules');
-	}
-
-	protected function add_VT_MOD_TOP($id)
-	{
-		$align = ['center', 'center', 'center', 'center'];
-
-		$attrs = [self::NewViewAttr('name', DMsg::ALbl('l_module')),
-			$this->_attrs['mod_params'],
-			$this->_attrs['mod_enabled']->dup(null, null, 'moduleEnabled_vh'),
-			self::NewActionAttr('VT_MOD', 'vEd')
-		];
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_vhmodules'), $attrs, 'name', 'VT_MOD', $align, 'vhModules', 'puzzle', true);
-	}
-
-	protected function add_VT_MOD($id)
-	{
-		$attrs = [self::NewSelAttr('name', DMsg::ALbl('l_module'), 'module', false, 'moduleNameSel'),
-			$this->_attrs['note'],
-			$this->_attrs['mod_params'],
-			$this->_attrs['mod_enabled']->dup(null, null, 'moduleEnabled_vh')
-		];
-
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhmodule'), $attrs, 'name', 'vhModules');
-		$this->_tblDef[$id]->Set(DTbl::FLD_LINKEDTBL, ['VT_MOD_FILTERTOP']);
-	}
-
-	protected function add_VT_MOD_FILTERTOP($id)
-	{
-		$align = ['center', 'center', 'center', 'center'];
-
-		$attrs = [self::NewViewAttr('uri', DMsg::ALbl('l_uri')),
-			$this->_attrs['mod_params'],
-			self::NewActionAttr('VT_MOD_FILTER', 'vEd')
-		];
-
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'VT_MOD_FILTER', $align, 'vhModuleUrlFilters', 'filter', false);
-		$this->_tblDef[$id]->Set(DTbl::FLD_SHOWPARENTREF, true);
-	}
-
-	protected function add_VT_MOD_FILTER($id)
-	{
-		$attrs = [$this->_attrs['ctx_uri'],
-			$this->_attrs['mod_params'],
-		];
-
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_urlfilter'), $attrs, 'uri', 'vhModuleUrlFilters');
-		$this->_tblDef[$id]->Set(DTbl::FLD_SHOWPARENTREF, true);
-	}
-
-	protected function add_L_MOD_TOP($id)
-	{
-		$align = ['center', 'center', 'center', 'center'];
-
-		$attrs = [self::NewViewAttr('name', DMsg::ALbl('l_module')),
-			$this->_attrs['mod_params'],
-			$this->_attrs['mod_enabled']->dup(null, null, 'moduleEnabled_lst'),
-			self::NewActionAttr('L_MOD', 'vEd')
-		];
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_listenermodules'), $attrs, 'name', 'L_MOD', $align, 'listenerModules', 'puzzle', true);
-	}
-
-	protected function add_L_MOD($id)
-	{
-		$attrs = [self::NewSelAttr('name', DMsg::ALbl('l_module'), 'module', false, 'moduleNameSel'),
-			$this->_attrs['note'],
-			$this->_attrs['mod_params'],
-			$this->_attrs['mod_enabled']->dup(null, null, 'moduleEnabled_lst')
-		];
-		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_listenermodule'), $attrs, 'name', 'listenerModules');
 	}
 
 	protected function add_V_TOP($id)
@@ -1527,7 +953,7 @@ class DTblDefBase
 			->enableTableControls(20);
 	}
 
-	protected function add_LVT_SSL_CERT($id)
+	protected function add_ALVT_SSL_CERT($id)
 	{
 		$attrs = [
 			self::NewTextAttr('keyFile', DMsg::ALbl('l_keyfile'), 'cust'),
@@ -1539,9 +965,9 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ssl'), $attrs, 'sslCert');
 	}
 
-	protected function add_L_SSL($id)
+	protected function add_AL_SSL($id)
 	{
-		$attrs = self::getSslProtocolAttrs();
+		$attrs = self::getSslProtocolAttrs(true);
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs);
 	}
 
@@ -1551,7 +977,7 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs);
 	}
 
-	protected function add_L_SSL_FEATURE($id)
+	protected function add_AL_SSL_FEATURE($id)
 	{
 		$attrs = $this->getSslFeatureAttrs(DMsg::ALbl('l_openudpport'), 'allowQuic');
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_securityandfeatures'), $attrs);
@@ -1560,7 +986,7 @@ class DTblDefBase
 	protected function add_VT_SSL_FEATURE($id)
 	{
 		$attrs = $this->getSslFeatureAttrs(DMsg::ALbl('l_enablequic'), 'vhEnableQuic');
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_sec'), $attrs);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_securityandfeatures'), $attrs);
 	}
 
 	protected function add_LVT_SSL_OCSP($id)
@@ -1574,7 +1000,7 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_ocspstapling'), $attrs, 'sslOCSP');
 	}
 
-	protected function add_LVT_SSL_CLVERIFY($id)
+	protected function add_ALVT_SSL_CLVERIFY($id)
 	{
 		$attrs = [
 			self::NewSelAttr('clientVerify', DMsg::ALbl('l_clientverify'), [
@@ -1651,15 +1077,6 @@ class DTblDefBase
 			$this->_attrs['compressArchive'],
 		];
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_vhlog'), $attrs, 'fileName');
-	}
-
-	protected function add_V_ACLOG_TOP($id)
-	{
-		$attrs = $this->getAccessLogTopAttrs(
-			$this->_attrs['fileName3']->dup(null, null, 'accessLog_fileName'),
-			'V_ACLOG'
-		);
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'V_ACLOG');
 	}
 
 	protected function add_V_ACLOG($id)
@@ -1763,8 +1180,10 @@ class DTblDefBase
 		$gdbLoc->_href = '&t1=V_GDB_TOP&r1=$R';
 
 		$realm_attr = $this->get_realm_attrs();
+		$type = self::NewCustFlagAttr('type', null, DAttr::BM_HIDE | DAttr::BM_NOEDIT);
 		$attrs = [
 			$realm_attr['realm_name'],
+			$type,
 			$this->_attrs['note'],
 			$udbLoc,
 			$realm_attr['realm_udb_maxCacheSize'],
@@ -1780,8 +1199,10 @@ class DTblDefBase
 	protected function add_T_REALM_FILE($id)
 	{
 		$realm_attr = $this->get_realm_attrs();
+		$type = self::NewCustFlagAttr('type', null, DAttr::BM_HIDE | DAttr::BM_NOEDIT);
 		$attrs = [
 			$realm_attr['realm_name'],
+			$type,
 			$this->_attrs['note'],
 			self::NewTextAttr('userDB:location', DMsg::ALbl('l_userdblocation'), 'cust', false, 'userDBLocation'),
 			$realm_attr['realm_udb_maxCacheSize'],
@@ -1903,16 +1324,6 @@ class DTblDefBase
 		$this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_websocketdef'), $attrs, 'uri');
 	}
 
-	protected function add_T_GENERAL1($id)
-	{
-		$attrs = [
-			$this->_attrs['tp_vhRoot'],
-			self::NewParseTextAttr('configFile', DMsg::ALbl('l_instantiatedvhconfigfile'), '/\$VH_NAME.*\.conf$/', DMsg::ALbl('parse_tpvhconffile'), false, 'templateVHConfigFile'),
-			$this->_attrs['vh_maxKeepAliveReq'],
-		];
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_templatemembersettings'), $attrs, 'templateMemberSettings');
-	}
-
 	protected function add_T_SEC_FILE($id)
 	{
 		$attrs = [
@@ -1944,12 +1355,6 @@ class DTblDefBase
 		$this->setTemplateFileNameTblDef('V_LOG', $id);
 	}
 
-	protected function add_T_ACLOG_TOP($id)
-	{
-		$attrs = $this->getAccessLogTopAttrs($this->_attrs['tp_vrFile'], 'T_ACLOG');
-		$this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'T_ACLOG');
-	}
-
 	protected function add_T_ACLOG($id)
 	{
 		$this->setTemplateFileNameTblDef('V_ACLOG', $id);
@@ -1959,7 +1364,8 @@ class DTblDefBase
 	{
 		$attrs = [
 			self::NewBoolAttr('enableCoreDump', DMsg::ALbl('l_enablecoredump'), false),
-			self::NewIntAttr('sessionTimeout', DMsg::ALbl('l_sessiontimeout'), true, 60, null, 'consoleSessionTimeout')
+			self::NewIntAttr('sessionTimeout', DMsg::ALbl('l_sessiontimeout'), true, 60, null, 'consoleSessionTimeout'),
+			self::NewIntAttr('configAutoBackupRetention', DMsg::ALbl('l_configbackupretention'), true, 3, 3650)
 		];
 		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_g'), $attrs);
 	}

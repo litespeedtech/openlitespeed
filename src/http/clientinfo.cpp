@@ -39,6 +39,7 @@ int ClientInfo::s_iSoftLimitPC = INT_MAX;
 int ClientInfo::s_iHardLimitPC = 100;
 int ClientInfo::s_iOverLimitGracePeriod = 10;
 int ClientInfo::s_iBanPeriod = 60;
+int ClientInfo::s_iMaxStreamsPerClient = 10000;
 uint16_t ClientInfo::s_iMaxAllowedBotHits = 3;
 
 #if 0
@@ -75,6 +76,8 @@ int ClientInfo::shmData_remove(lsShm_hCacheData_t *p, void *pUParam)
 ClientInfo::ClientInfo()
     : m_iFlags( 0 )
     , m_iConns( 0 )
+    , m_iH2Streams( 0 )
+    , m_iQuicStreams( 0 )
     , m_pGeoInfo(NULL)
     , m_sslContext(NULL)
 #ifdef USE_IP2LOCATION
@@ -246,6 +249,37 @@ int ClientInfo::checkAccess()
 }
 
 
+void ClientInfo::adjustStreamLimitBasedOnHardLimit()
+{
+    int limit = s_iHardLimitPC;
+    if (limit <= 1000)
+    {
+        limit = limit * 10;
+        if (limit < 1000)
+            limit = 1000;
+    }
+    if (limit > 10000)
+        limit = 10000;
+    s_iMaxStreamsPerClient = limit;
+}
+
+
+int ClientInfo::checkStreamLimit()
+{
+    if (m_iH2Streams + m_iQuicStreams > ClientInfo::getMaxStreamsPerClient())
+    {
+        if (getAccess() == AC_TRUST)
+            //&& (m_iH2Streams + m_iQuicStreams < (limit << 3)))
+            return 0;
+        LS_NOTICE( "[%s] stream count is too high, H2: %d,  H3: %d, possible attack, close connection!",
+                getAddrString(), m_iH2Streams, m_iQuicStreams);
+        markAsBot( "N/A", BOT_HTTP2_ABUSER);
+        return -1;
+    }
+    return 0;
+}
+
+
 static const char * s_reason[BOT_REASON_COUNT] =
 {
     "Unknown",
@@ -256,7 +290,8 @@ static const char * s_reason[BOT_REASON_COUNT] =
     "HTTP_flood",
     "DetectByRewriteRule",
     "TooManyNon2xxStatus",
-    "WordPressBruteForce"
+    "WordPressBruteForce",
+    "HTTP2/3_Abuser",
 };
 
 

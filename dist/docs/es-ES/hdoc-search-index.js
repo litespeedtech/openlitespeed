@@ -2,7 +2,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Inicio",
         "url": "index.html",
-        "text": "Inicio OpenLiteSpeed Web Server 1.9 Manual de usuario — Rev. 3 Indice Licencia Introduccion Instalacion/desinstalacion Administracion Seguridad Configuracion Para obtener mas informacion, visite nuestra sitio de documentacion de OpenLiteSpeed"
+        "text": "Inicio OpenLiteSpeed Web Server 1.9 Manual de usuario — Rev. 4 Indice Licencia Introduccion Instalacion/desinstalacion Administracion Seguridad Configuracion Para obtener mas informacion, visite nuestra sitio de documentacion de OpenLiteSpeed"
     },
     {
         "title": "Licencia",
@@ -62,7 +62,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Servidor - Seguridad",
         "url": "ServSecurity_Help.html",
-        "text": "Servidor - Seguridad Seguir enlaces simbólicos Especifica el ajuste predeterminado a nivel de servidor para seguir enlaces simbólicos al servir archivos estáticos. Las opciones son Yes{/}, If Owner Match{/} y No{/}. Yes{/} hace que el servidor siempre siga los enlaces simbólicos. If Owner Match{/} hace que el servidor siga un enlace simbólico solo si el propietario del enlace y el del destino son el mismo. No{/}..."
+        "text": "Servidor - Seguridad Seguir enlaces simbólicos Especifica el ajuste predeterminado a nivel de servidor para seguir enlaces simbólicos al servir archivos estáticos. Las opciones son Sí{/}, Si el Propietario Coincide{/} y No{/}. Sí{/} hace que el servidor siempre siga los enlaces simbólicos. Si el Propietario Coincide{/} hace que el servidor siga un enlace simbólico solo si el propietario del enlace y el del des..."
     },
     {
         "title": "Aplicaciones externas",
@@ -87,7 +87,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners - General",
         "url": "Listeners_General_Help.html",
-        "text": "Listeners - General Nombre del listener Un nombre unico para este listener. Direccion IP Especifica la IP de este listener. Se muestran todas las direcciones IP disponibles. Las direcciones IPv6 se encierran entre \"[ ]\". Para escuchar en todas las direcciones IPv4, seleccione ANY{/}. Para escuchar en todas las direcciones IPv4 e IPv6, seleccione [ANY]{/}. Para atender clientes IPv4 e IPv6, debe usarse una direccion I..."
+        "text": "Listeners - General Nombre del listener Un nombre unico para este listener. Dirección IP Especifica la IP de este listener. Se muestran todas las direcciones IP disponibles. Las direcciones IPv6 se encierran entre \"[ ]\". Para escuchar en todas las direcciones IPv4, seleccione ANY{/}. Para escuchar en todas las direcciones IPv4 e IPv6, seleccione [ANY]{/}. Para atender clientes IPv4 e IPv6, debe usarse una direccion ..."
     },
     {
         "title": "Listeners - SSL",
@@ -107,12 +107,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Host virtual - General",
         "url": "VHGeneral_Help.html",
-        "text": "Host virtual - General Raíz de documentos Especifica la raíz de documentos de este virtual host. Se recomienda $VH_ROOT/html{/}. En los contextos, este directorio se referencia como $DOC_ROOT. Correo del administrador Especifica las direcciones de correo de los administradores de este virtual host. Habilitar compresión Especifica si se habilita la compresión GZIP para este virtual host. Este ajuste solo es efecti..."
+        "text": "Host virtual - General Raíz de documentos Especifica la raíz de documentos de este virtual host. Se recomienda $VH_ROOT/html{/}. En los contextos, este directorio se referencia como $DOC_ROOT. Correo electrónico del administrador Especifica las direcciones de correo de los administradores de este virtual host. Habilitar compresión Especifica si se habilita la compresión GZIP para este virtual host. Este ajuste s..."
     },
     {
         "title": "Host virtual - Seguridad",
         "url": "VHSecurity_Help.html",
-        "text": "Host virtual - Seguridad Proteccion CAPTCHA CAPTCHA Protection es un servicio proporcionado como forma de mitigar una carga pesada del servidor. CAPTCHA Protection se activara despues de que ocurra una de las siguientes situaciones. Una vez activo, todas las solicitudes de clientes NON TRUSTED(segun configuracion) seran redirigidas a una pagina de validacion CAPTCHA. Despues de la validacion, el cliente sera redirigi..."
+        "text": "Host virtual - Seguridad Protección CAPTCHA CAPTCHA Protection es un servicio proporcionado como forma de mitigar una carga pesada del servidor. CAPTCHA Protection se activara despues de que ocurra una de las siguientes situaciones. Una vez activo, todas las solicitudes de clientes NON TRUSTED(segun configuracion) seran redirigidas a una pagina de validacion CAPTCHA. Despues de la validacion, el cliente sera redirig..."
     },
     {
         "title": "Host virtual - SSL",
@@ -122,7 +122,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Rewrite",
         "url": "Rewrite_Help.html",
-        "text": "Rewrite Habilitar rewrite Especifica si se habilita el motor de reescritura de URL de LiteSpeed. Esta opción puede personalizarse a nivel de virtual host o contexto, y se hereda a lo largo del árbol de directorios hasta que se sobrescribe explícitamente. Carga automatica desde .htaccess Carga automaticamente reglas rewrite contenidas en el archivo .htaccess de un directorio al acceder por primera vez a ese directo..."
+        "text": "Rewrite Habilitar reescritura Especifica si se habilita el motor de reescritura de URL de LiteSpeed. Esta opción puede personalizarse a nivel de virtual host o contexto, y se hereda a lo largo del árbol de directorios hasta que se sobrescribe explícitamente. Carga automática desde .htaccess Carga automaticamente reglas rewrite contenidas en el archivo .htaccess de un directorio al acceder por primera vez a ese di..."
     },
     {
         "title": "Contexto",
@@ -147,37 +147,37 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Aplicación LSAPI externa",
         "url": "External_LSAPI.html",
-        "text": "Aplicación LSAPI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la ..."
+        "text": "Aplicación LSAPI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la..."
     },
     {
         "title": "Servidor web externo",
         "url": "External_WS.html",
-        "text": "Servidor web externo Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion HTTP, HTTPS o Unix Domain Sockets (UDS) usada por el servidor web externo. Si hace proxy a otro servidor web que se ejecuta en la misma maquina mediante una direccion IPv4/IPv6, establezca la direccion IP en localhost{/} o 127.0.0.1{/}, pa..."
+        "text": "Servidor web externo Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion HTTP, HTTPS o Unix Domain Sockets (UDS) usada por el servidor web externo. Si hace proxy a otro servidor web que se ejecuta en la misma maquina mediante una direccion IPv4/IPv6, establezca la direccion IP en localhost{/} o 127.0.0.1{/}, p..."
     },
     {
         "title": "Aplicación FastCGI externa",
         "url": "External_FCGI.html",
-        "text": "Aplicación FastCGI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en l..."
+        "text": "Aplicación FastCGI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en ..."
     },
     {
         "title": "Autenticador FastCGI externo",
         "url": "External_FCGI_Auth.html",
-        "text": "Autenticador FastCGI externo Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en ..."
+        "text": "Autenticador FastCGI externo Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en..."
     },
     {
         "title": "Aplicación SCGI externa",
         "url": "External_SCGI.html",
-        "text": "Aplicación SCGI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la m..."
+        "text": "Aplicación SCGI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la ..."
     },
     {
         "title": "Aplicación Servlet externa",
         "url": "External_Servlet.html",
-        "text": "Aplicación Servlet externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en l..."
+        "text": "Aplicación Servlet externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en ..."
     },
     {
         "title": "Aplicación proxy externa",
         "url": "External_PL.html",
-        "text": "Aplicación proxy externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion del registrador remoto (Opcional) Especifica la direccion de socket opcional para este registrador canalizado. Configure este valor cuando el registrador se alcance mediante un socket de red o Unix Domain Socket. Dejelo vacio para un registrado..."
+        "text": "Aplicación proxy externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección del registrador remoto (Opcional) Especifica la direccion de socket opcional para este registrador canalizado. Configure este valor cuando el registrador se alcance mediante un socket de red o Unix Domain Socket. Dejelo vacio para un registrad..."
     },
     {
         "title": "Aplicación de balanceo externa",
@@ -187,12 +187,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Aplicación uWSGI externa",
         "url": "External_UWSGI.html",
-        "text": "Aplicación uWSGI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Direccion Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la ..."
+        "text": "Aplicación uWSGI externa Nombre Un nombre unico para esta aplicacion externa. Se usara este nombre para hacer referencia a ella en otras partes de la configuracion. Dirección Direccion de socket unica usada por la aplicacion externa. Se admiten sockets IPv4/IPv6 y Unix Domain Sockets (UDS). Los sockets IPv4/IPv6 pueden usarse para comunicacion por red. UDS solo puede usarse cuando la aplicacion externa reside en la..."
     },
     {
         "title": "Contexto estático",
         "url": "Static_Context.html",
-        "text": "Contexto estático Contexto general La configuracion de contexto se usa para definir ajustes especiales para archivos en una ubicacion determinada. Estos ajustes pueden incorporar archivos fuera de la raiz de documentos (como las directivas Alias o AliasMatch de Apache), proteger un directorio mediante realms de autorizacion, o bloquear o restringir el acceso a un directorio dentro de la raiz de documentos. URI Espec..."
+        "text": "Contexto estático Contexto estático La configuracion de contexto se usa para definir ajustes especiales para archivos en una ubicacion determinada. Estos ajustes pueden incorporar archivos fuera de la raiz de documentos (como las directivas Alias o AliasMatch de Apache), proteger un directorio mediante realms de autorizacion, o bloquear o restringir el acceso a un directorio dentro de la raiz de documentos. URI Esp..."
     },
     {
         "title": "Contexto de aplicación web Java",
@@ -207,12 +207,12 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Contexto FastCGI",
         "url": "FCGI_Context.html",
-        "text": "Contexto FastCGI Contexto FastCGI Las aplicaciones FastCGI no pueden usarse directamente. Una aplicacion FastCGI debe configurarse como manejador de scripts o asignarse a una URL mediante un contexto FastCGI. Un contexto FastCGI asocia una URI con una aplicacion FastCGI. URI Especifica la URI para este contexto. Aplicacion FastCGI Especifica el nombre de la aplicacion FastCGI. Esta aplicacion debe definirse en la sec..."
+        "text": "Contexto FastCGI Contexto FastCGI Las aplicaciones FastCGI no pueden usarse directamente. Una aplicacion FastCGI debe configurarse como manejador de scripts o asignarse a una URL mediante un contexto FastCGI. Un contexto FastCGI asocia una URI con una aplicacion FastCGI. URI Especifica la URI para este contexto. Aplicación FastCGI Especifica el nombre de la aplicacion FastCGI. Esta aplicacion debe definirse en la se..."
     },
     {
         "title": "Contexto SCGI",
         "url": "SCGI_Context.html",
-        "text": "Contexto SCGI Contexto SCGI Las aplicaciones SCGI no pueden usarse directamente. Una aplicacion SCGI debe configurarse como manejador de scripts o asignarse a una URL mediante un contexto SCGI. Un contexto SCGI asocia una URI con una aplicacion SCGI. URI Especifica la URI para este contexto. Aplicacion SCGI Especifica el nombre de la aplicacion SCGI. Esta aplicacion debe definirse en la seccion a nivel de servidor o ..."
+        "text": "Contexto SCGI Contexto SCGI Las aplicaciones SCGI no pueden usarse directamente. Una aplicacion SCGI debe configurarse como manejador de scripts o asignarse a una URL mediante un contexto SCGI. Un contexto SCGI asocia una URI con una aplicacion SCGI. URI Especifica la URI para este contexto. Aplicación SCGI Especifica el nombre de la aplicacion SCGI. Esta aplicacion debe definirse en la seccion a nivel de servidor o..."
     },
     {
         "title": "Contexto LSAPI",
@@ -237,7 +237,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Contexto de redirección",
         "url": "Redirect_Context.html",
-        "text": "Contexto de redirección Contexto de redirección Un contexto de redireccion puede usarse para reenviar una URI o un grupo de URIs a otra ubicacion. La URI de destino puede estar en el mismo sitio web (una redireccion interna) o ser una URI absoluta que apunte a otro sitio web (una redireccion externa). URI Especifica la URI para este contexto. Redireccion externa Especifica si esta redireccion es externa. Para redir..."
+        "text": "Contexto de redirección Contexto de redirección Un contexto de redireccion puede usarse para reenviar una URI o un grupo de URIs a otra ubicacion. La URI de destino puede estar en el mismo sitio web (una redireccion interna) o ser una URI absoluta que apunte a otro sitio web (una redireccion externa). URI Especifica la URI para este contexto. Redirección externa Especifica si esta redireccion es externa. Para redi..."
     },
     {
         "title": "Contexto de servidor de aplicaciones",
@@ -247,17 +247,17 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Contexto uWSGI",
         "url": "UWSGI_Context.html",
-        "text": "Contexto uWSGI Contexto uWSGI Las aplicaciones uWSGI no pueden usarse directamente. Una aplicacion uWSGI debe configurarse como manejador de scripts o asignarse a una URL mediante un contexto uWSGI. Un contexto uWSGI asocia una URI con una aplicacion uWSGI. URI Especifica la URI para este contexto. Aplicacion uWSGI Especifica el nombre de la aplicacion uWSGI. Esta aplicacion debe definirse en la seccion a nivel de se..."
+        "text": "Contexto uWSGI Contexto uWSGI Las aplicaciones uWSGI no pueden usarse directamente. Una aplicacion uWSGI debe configurarse como manejador de scripts o asignarse a una URL mediante un contexto uWSGI. Un contexto uWSGI asocia una URI con una aplicacion uWSGI. URI Especifica la URI para este contexto. Aplicación uWSGI Especifica el nombre de la aplicacion uWSGI. Esta aplicacion debe definirse en la seccion a nivel de s..."
     },
     {
-        "title": "Contexto de módulo",
+        "title": "Contexto de manejador de módulo",
         "url": "Module_Context.html",
-        "text": "Contexto de módulo Contexto de módulo Un contexto de manejador de modulo asocia una URI con un modulo registrado. Los modulos deben registrarse en la pestana Configuracion de modulos del servidor. URI Especifica la URI para este contexto. Modulo Nombre del modulo. El modulo debe registrarse bajo la pestana Server Module Configuration. Una vez registrado, el nombre del modulo estara disponible en el menu desplegable..."
+        "text": "Contexto de manejador de módulo Contexto de manejador de módulo Un contexto de manejador de modulo asocia una URI con un modulo registrado. Los modulos deben registrarse en la pestana Configuracion de modulos del servidor. URI Especifica la URI para este contexto. Módulo Nombre del modulo. El modulo debe registrarse bajo la pestana Server Module Configuration. Una vez registrado, el nombre del modulo estara dispon..."
     },
     {
         "title": "Consola WebAdmin - General",
         "url": "AdminGeneral_Help.html",
-        "text": "Consola WebAdmin - General Admin Server es un virtual host especial dedicado a la consola WebAdmin. Es muy importante asegurarse de que Admin Server este protegido de forma segura, ya sea permitiendo acceso solo desde los equipos de los administradores o usando una conexion SSL cifrada. Habilitar volcado core Especifica si se habilita el volcado core cuando el servidor se inicia con el usuario \"root\". En la mayoria d..."
+        "text": "Consola WebAdmin - General Admin Server es un virtual host especial dedicado a la consola WebAdmin. Es muy importante asegurarse de que Admin Server este protegido de forma segura, ya sea permitiendo acceso solo desde los equipos de los administradores o usando una conexion SSL cifrada. Habilitar volcado de núcleo (Core Dump) Especifica si se habilita el volcado core cuando el servidor se inicia con el usuario \"root..."
     },
     {
         "title": "Consola WebAdmin - Seguridad",
@@ -267,7 +267,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners de administración - General",
         "url": "AdminListeners_General_Help.html",
-        "text": "Listeners de administración - General Los listeners de administración están dedicados al servidor de administración. Se recomiendan listeners seguros (SSL) para el servidor de administración. Nombre del listener Un nombre unico para este listener. Direccion IP Especifica la IP de este listener. Se muestran todas las direcciones IP disponibles. Las direcciones IPv6 se encierran entre \"[ ]\". Para escuchar en todas..."
+        "text": "Listeners de administración - General Los listeners de administración están dedicados al servidor de administración. Se recomiendan listeners seguros (SSL) para el servidor de administración. Nombre del listener Un nombre unico para este listener. Dirección IP Especifica la IP de este listener. Se muestran todas las direcciones IP disponibles. Las direcciones IPv6 se encierran entre \"[ ]\". Para escuchar en toda..."
     },
     {
         "title": "Listeners de administración - SSL",

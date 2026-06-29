@@ -57,12 +57,15 @@ class ConfigDataWriter
 
     public static function writeConfRoot($type, $root, $filepath, $permissionSource)
     {
+        // Read-only enforcement lives at the single write entry point
+        // (CData::SaveFile / DaData::SaveFile), which refuses to write a config
+        // root loaded from an include-bearing file. That is per-root, so an
+        // include-free admin config can still be saved in a request that also
+        // loaded an include-driven server config.
         $confbuf = '';
         ConfigRootLifecycle::beforeWriteConf($type, $root);
         $root->PrintBuf($confbuf);
-        if (!defined('_CONF_READONLY_')) {
-            AtomicFileWriter::write($filepath, $confbuf, $permissionSource);
-        }
+        AtomicFileWriter::write($filepath, $confbuf, $permissionSource);
 
         return $root;
     }

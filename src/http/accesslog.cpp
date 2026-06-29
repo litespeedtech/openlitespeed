@@ -225,10 +225,8 @@ int CustomFormat::parseFormat(const char *psFormat)
                 if (!pBegin)
                     break;
                 *pItemEnd = 0;
-                itemId = HttpRespHeaders::getIndex(pBegin);
-                if ((pItemEnd - pBegin != HttpRespHeaders::getNameLen(
-                                          (HttpRespHeaders::INDEX)itemId))
-                    || (itemId >= HttpRespHeaders::H_HEADER_END))
+                itemId = HttpRespHeaders::getIndex(pBegin, pItemEnd - pBegin);
+                if (itemId >= HttpRespHeaders::H_HEADER_END)
                     itemId = REF_RESP_HEADER;
                 else
                 {

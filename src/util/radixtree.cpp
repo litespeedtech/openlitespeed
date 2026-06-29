@@ -111,10 +111,11 @@ static const char *rnGetLengths(int iFlags, const char *pLabel,
 }
 
 
+// A NULL pool means "use the global pool"; a non-NULL pool (owned by the
+// caller) is used directly.
 static void *rnDoAlloc(int iFlags, ls_xpool_t *pool, int iSize)
 {
-    if (((iFlags & RTFLAG_GLOBALPOOL) == 0)
-        && (pool != NULL))
+    if (pool != NULL)
         return ls_xpool_alloc(pool, iSize);
     return ls_palloc(iSize);
 }
@@ -123,7 +124,7 @@ static void *rnDoAlloc(int iFlags, ls_xpool_t *pool, int iSize)
 static void *rnDoRealloc(int iFlags, ls_xpool_t *pool, void *pOld,
                          int iSize)
 {
-    if ((iFlags & RTFLAG_GLOBALPOOL) == 0)
+    if (pool != NULL)
         return ls_xpool_realloc(pool, pOld, iSize);
     return ls_prealloc(pOld, iSize);
 }
@@ -131,7 +132,7 @@ static void *rnDoRealloc(int iFlags, ls_xpool_t *pool, void *pOld,
 
 static void rnDoFree(int iFlags, ls_xpool_t *pool, void *ptr)
 {
-    if ((iFlags & RTFLAG_GLOBALPOOL) == 0)
+    if (pool != NULL)
         ls_xpool_free(pool, ptr);
     else
         ls_pfree(ptr);
@@ -213,7 +214,7 @@ int RadixTree::checkPrefix(const char *pLabel, int iLabelLen) const
 RadixNode *RadixTree::insert(const char *pLabel, int iLabelLen,
                              void *pObj)
 {
-    ls_xpool_t *pool = NULL;
+    ls_xpool_t *pool = m_pool;
     RadixNode *pDest = NULL;
     const char *pChild = pLabel;
     int iChildLen = iLabelLen;
@@ -226,9 +227,6 @@ RadixNode *RadixTree::insert(const char *pLabel, int iLabelLen,
         pChild += m_pRoot->len;
         iChildLen -= m_pRoot->len;
     }
-
-    if ((m_iFlags & RTFLAG_GLOBALPOOL) == 0)
-        pool = m_pool;
 
     if (iChildLen == 0)
     {
@@ -309,6 +307,121 @@ int RadixTree::for_each2(rn_foreach2 fun, void *pUData)
         return m_pRoot->body->for_each2(fun, pUData, m_pRoot->label,
                                         m_pRoot->len);
     return 0;
+}
+
+
+// Free a child header's RadixNode subtree from the global pool. The header
+// storage itself is freed by the caller, since it differs per child-storage
+// mode (a single header, a contiguous block, a pointer array, or a hash).
+static void rnFreeHeaderBody(rnheader_t *pHeader)
+{
+    RadixNode *pBody = pHeader->body;
+    if (pBody != NULL)
+    {
+        pBody->releaseGlobal();
+        pBody->~RadixNode();
+        ls_pfree(pBody);
+    }
+}
+
+
+// Mirrors for_each_child2(): walk every exact and wildcard child, free each
+// child subtree, then free this node's child-storage. Labels are not freed
+// separately: they live inline in their rnheader_t (ls_str_set is non-owning).
+void RadixNode::releaseGlobal()
+{
+    rnheader_t *pHeader;
+    int i, iNum = getNumExact();
+    switch (getState())
+    {
+    case RNSTATE_CNODE:
+    case RNSTATE_PNODE:
+        rnFreeHeaderBody(m_pCHeaders);
+        ls_pfree(m_pCHeaders);
+        break;
+    case RNSTATE_CARRAY:
+        pHeader = m_pCHeaders;
+        for (i = 0; i < iNum; ++i)
+        {
+            rnFreeHeaderBody(pHeader);
+            pHeader = (rnheader_t *)(&pHeader->label[0]
+                                     + rnh_roundup(pHeader->len));
+        }
+        ls_pfree(m_pCHeaders);
+        break;
+    case RNSTATE_PARRAY:
+        for (i = 0; i < iNum; ++i)
+        {
+            rnFreeHeaderBody(m_pPHeaders[i]);
+            ls_pfree(m_pPHeaders[i]);
+        }
+        ls_pfree(m_pPHeaders);
+        break;
+    case RNSTATE_HASH:
+        {
+            GHash::iterator iter = m_pHash->begin();
+            while (iter != m_pHash->end())
+            {
+                pHeader = (rnheader_t *)iter->second();
+                rnFreeHeaderBody(pHeader);
+                ls_pfree(pHeader);
+                iter = m_pHash->next(iter);
+            }
+            m_pHash->~GHash();
+            ls_pfree(m_pHash);
+        }
+        break;
+    default:
+        break;
+    }
+    if (m_pWC == NULL)
+        return;
+    iNum = getNumWild();
+    switch (getWCState())
+    {
+    case RNSTATE_CNODE:
+    case RNSTATE_PNODE:
+        rnFreeHeaderBody(m_pWC->m_pC);
+        ls_pfree(m_pWC->m_pC);
+        break;
+    case RNSTATE_CARRAY:
+        pHeader = m_pWC->m_pC;
+        for (i = 0; i < iNum; ++i)
+        {
+            rnFreeHeaderBody(pHeader);
+            pHeader = (rnheader_t *)(&pHeader->label[0]
+                                     + rnh_roundup(pHeader->len));
+        }
+        ls_pfree(m_pWC->m_pC);
+        break;
+    case RNSTATE_PARRAY:
+        for (i = 0; i < iNum; ++i)
+        {
+            rnFreeHeaderBody(m_pWC->m_pP[i]);
+            ls_pfree(m_pWC->m_pP[i]);
+        }
+        ls_pfree(m_pWC->m_pP);
+        break;
+    default:
+        break;
+    }
+    ls_pfree(m_pWC);
+}
+
+
+// Global-pool tree teardown: free the whole tree (root header, root node and
+// every descendant). Only called when the tree has no caller-supplied xpool.
+void RadixTree::releaseGlobalPool()
+{
+    if (m_pRoot == NULL)
+        return;
+    if (m_pRoot->body != NULL)
+    {
+        m_pRoot->body->releaseGlobal();
+        m_pRoot->body->~RadixNode();
+        ls_pfree(m_pRoot->body);
+    }
+    ls_pfree(m_pRoot);
 }
 
 
@@ -915,11 +1028,32 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
                                    pool);
         else
             pHash = new(ptr) GHash(RN_HASHSZ, ls_str_xxh32, ls_str_cmp, pool);
-        pTmp = (rnheader_t *)m_pCHeaders;
+        {
+        rnheader_t *pBlock = m_pCHeaders;
+        pTmp = pBlock;
         for (i = 0; i < iExact; ++i)
         {
-            pTmp->body->setLabel(pTmp->label, pTmp->len);
-            if (pHash->insert(pTmp->body->getLabel(), pTmp) == NULL)
+            rnheader_t *pEntry = pTmp;
+            if (pool == NULL)
+            {
+                // Global pool: once m_pHash overwrites the union the contiguous
+                // block start is lost, so relocate each embedded header to its
+                // own allocation that the tree can free entry-by-entry later.
+                pEntry = (rnheader_t *)rnDoAlloc(iFlags, pool,
+                                                 rnh_size(pTmp->len + 1));
+                if (pEntry == NULL)
+                {
+                    pHash->~GHash();
+                    rnDoFree(iFlags, pool, pHash);
+                    rnDoFree(iFlags, pool, pHeader);
+                    return LS_FAIL;
+                }
+                pEntry->body = pTmp->body;
+                pEntry->len = pTmp->len;
+                memcpy(pEntry->label, pTmp->label, pTmp->len);
+            }
+            pEntry->body->setLabel(pEntry->label, pEntry->len);
+            if (pHash->insert(pEntry->body->getLabel(), pEntry) == NULL)
             {
                 pHash->~GHash();
                 rnDoFree(iFlags, pool, pHash);
@@ -928,6 +1062,8 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
             }
             pTmp = (rnheader_t *)(&pTmp->label[0] + rnh_roundup(pTmp->len));
         }
+        if (pool == NULL)
+            rnDoFree(iFlags, pool, pBlock);
         pHeader->body->setLabel(pHeader->label, pHeader->len);
         if (pHash->insert(pHeader->body->getLabel(), pHeader) == NULL)
         {
@@ -938,6 +1074,7 @@ int RadixNode::setHeader(int iFlags, int iMode, ls_xpool_t *pool,
         }
         m_pHash = pHash;
         setState(RNSTATE_HASH);
+        }
         break;
     case RNSTATE_PARRAY:
         if (iExact < RN_USEHASHCNT)

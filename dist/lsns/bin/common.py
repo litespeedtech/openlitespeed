@@ -1,4 +1,4 @@
-import json, logging, os, pwd, subprocess, sys
+import json, logging, os, pwd, re, subprocess, sys
 from stat import *
 from subprocess import PIPE
 
@@ -39,7 +39,48 @@ def get_bin_file(fileonly):
 def fatal_error(msg):
     logging.error(msg)
     sys.exit(1)
-    
+
+# --- security validation helpers ---
+_PKG_NAME_RE = re.compile(r'\A[A-Za-z0-9 _.\-]{1,64}\Z')
+_NUMERIC_VAL_RE = re.compile(r'\A-?\d+[KMGT]?\Z', re.IGNORECASE)
+
+def validate_pkg_name(pkg):
+    """Allowlist package names to prevent path traversal in pkg_to_filename().
+    cPanel/Plesk allow spaces in plan/package names (e.g. 'Default Domain').
+    Reject anything with path separators, control chars, or other oddities."""
+    if not isinstance(pkg, str) or not _PKG_NAME_RE.match(pkg):
+        fatal_error('Invalid package name: %r' % pkg)
+    # Belt-and-suspenders: explicitly reject path-traversal building blocks
+    # even though the regex above already excludes `/` and null bytes.
+    if '..' in pkg or pkg.strip() in ('', '.'):
+        fatal_error('Invalid package name: %r' % pkg)
+    return pkg
+
+def validate_uid(uid):
+    """Coerce uid to int; reject strings starting with '-' that would be parsed as flags."""
+    try:
+        n = int(uid)
+    except (TypeError, ValueError):
+        fatal_error('Invalid UID: %r' % uid)
+    if n < 0:
+        fatal_error('Invalid UID (negative): %r' % uid)
+    return n
+
+def validate_numeric_value(val):
+    """Allow only numeric cgroup values (optionally suffixed K/M/G/T) before passing to subprocess."""
+    s = str(val)
+    if not _NUMERIC_VAL_RE.match(s):
+        fatal_error('Invalid numeric value: %r' % val)
+    return s
+
+def validate_path_under(path, root):
+    """Ensure realpath(path) is contained under realpath(root). Returns the realpath."""
+    rp = os.path.realpath(path)
+    rr = os.path.realpath(root)
+    if rp != rr and not rp.startswith(rr + os.sep):
+        fatal_error('Path escapes expected root: %r not under %r' % (path, root))
+    return rp
+
 def get_options():
     return ['cpu', 'io', 'iops', 'mem', 'tasks']
 
@@ -105,7 +146,10 @@ def get_min_uid():
             this.logged = True
         uidstr = str(get_def_min_uid())
     f.close()
-    this.min_uid = int(uidstr)
+    try:
+        this.min_uid = int(uidstr.strip())
+    except (AttributeError, ValueError):
+        fatal_error('Invalid min uid in %s: %r' % (fullfile, uidstr))
     logging.debug('Using min uid: %d' % this.min_uid)
     return this.min_uid
 
@@ -136,13 +180,16 @@ def lsws_conf_file():
 def get_disabled_uid_file():
     return server_root() + '/lsns/conf/ns_disabled_uids.conf'
 
-def get_disabled_uid_file():
-    return server_root() + '/lsns/conf/ns_disabled_uids.conf'
-
 def get_pkg_dir():
     return server_root() + '/lsns/conf/packages'
 
 def pkg_to_filename(pkg):
+    # Path-traversal defence: reject any package name with path separators or
+    # other unexpected characters before building a filesystem path from it.
+    # Panel-supplied names (cPanel/Plesk) flow through here as root.
+    # `*` is allowed only because lspkgctl uses it as a glob wildcard.
+    if pkg != '*':
+        validate_pkg_name(pkg)
     if not os.path.isdir(get_pkg_dir()):
         if not os.path.isdir(server_root()):
             fatal_error("Missing LiteSpeed high level installation directory")
@@ -166,10 +213,20 @@ def is_cl():
     return this.cl
 
 def touch_restart_external(file, desc):
+    """Create or update mtime of `file` WITHOUT following symlinks.
+    Defends against unprivileged users planting a symlink at file (e.g. in $HOME)
+    that would let root touch an arbitrary path."""
     logging.debug("restart_external %s by touch: %s" % (desc, file))
-    result = subprocess.run(['touch', file], stdout=PIPE, stderr=PIPE)
-    if result.returncode != 0:
-        fatal_error('Error in running: touch, errors: ' + result.stdout.decode('utf-8') + ' ' + result.stderr.decode('utf-8'))
+    try:
+        # O_NOFOLLOW: refuse if final component is a symlink
+        # O_CREAT: create if missing, with explicit 0o644 perms
+        fd = os.open(file, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o644)
+    except OSError as err:
+        fatal_error('Error touching %s: %s' % (file, err))
+    try:
+        os.utime(fd, None)
+    finally:
+        os.close(fd)
 
 def restart_external(users, all):
     users_used = {}
@@ -185,7 +242,7 @@ def restart_external(users, all):
                         users_used[user.pw_name] = user
                         break
                 if not os.path.exists(dironly):
-                    os.mkdir(dironly)
+                    os.mkdir(dironly, mode=0o755)
                 touch_restart_external(file, "in lscntr.txt")
         if all:
             touch_restart_external('/usr/local/lsws/admin/tmp/.lsphp_restart.txt', "for all")

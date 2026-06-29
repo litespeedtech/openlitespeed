@@ -14,6 +14,7 @@ class ConfIconTitleResolver
             case 'sl':
                 return ['plug-zap', DMsg::UIStr('menu_sl')];
             case 'sl_':
+            case 'sl4_':
                 return ['plug-zap', DMsg::UIStr('menu_sl_') . ' ' . $viewName];
             case 'vh':
                 return ['server', DMsg::UIStr('menu_vh')];

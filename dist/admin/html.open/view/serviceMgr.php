@@ -1,5 +1,6 @@
 <?php
 
+use LSWebAdmin\Auth\CAuthorizer;
 use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\Product\Current\Service;
 use LSWebAdmin\Runtime\SInfo;
@@ -31,6 +32,8 @@ if ($requestMethod !== 'POST') {
     header('Allow: POST');
     exit;
 }
+
+CAuthorizer::RequireCsrfToken('post');
 
 $act = UIBase::GrabGoodInput("post",'act');
 $actId = UIBase::GrabGoodInput("post",'actId');

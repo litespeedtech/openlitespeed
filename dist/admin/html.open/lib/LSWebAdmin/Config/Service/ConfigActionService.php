@@ -6,8 +6,11 @@ use LSWebAdmin\Auth\CAuthorizer;
 use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\Config\CNode;
 use LSWebAdmin\Config\IO\ConfigDataEditor;
+use LSWebAdmin\Config\Validation\ConfigDeleteValidationRequest;
+use LSWebAdmin\Config\Validation\ConfigDeleteValidationResult;
 use LSWebAdmin\Log\OpsAuditLogger;
 use LSWebAdmin\UI\DTbl;
+use LSWebAdmin\UI\UIBase;
 
 class ConfigActionService
 {
@@ -79,6 +82,14 @@ class ConfigActionService
                 break;
 
             case 'D':
+                $deleteValidation = self::validateDelete($request);
+                if ($deleteValidation != null && !$deleteValidation->IsAllowed()) {
+                    $displayData = $request->GetCurrentData();
+                    $hasDisplayData = ($displayData != null);
+                    self::appendDeleteValidationMessages($request, $deleteValidation, false);
+                    break;
+                }
+
                 $auditTarget = self::resolveAuditTarget($request);
                 $auditDetail = self::resolveAuditDetail('delete', $request);
                 $confdata->DeleteEntry($request->GetMutationDisplay());
@@ -98,6 +109,16 @@ class ConfigActionService
             case 'i':
                 $displayData = $request->GetCurrentData();
                 $hasDisplayData = ($displayData != null);
+                if ($request->GetAct() == 'd') {
+                    $deleteValidation = self::validateDelete($request);
+                    if ($deleteValidation != null && !$deleteValidation->IsAllowed()) {
+                        self::appendDeleteValidationMessages($request, $deleteValidation, true);
+                        break;
+                    }
+                    if ($deleteValidation != null && $deleteValidation->HasWarnings()) {
+                        self::appendDeleteValidationWarnings($request, $deleteValidation);
+                    }
+                }
                 self::setConfirmationMessage($request);
                 break;
 
@@ -142,6 +163,88 @@ class ConfigActionService
         foreach ($validationResult->GetMessages() as $message) {
             self::appendTopMessage($request, $message);
         }
+    }
+
+    private static function validateDelete($request)
+    {
+        $validationClass = $request->GetValidationClass();
+        if ($validationClass == null || !class_exists($validationClass)) {
+            return ConfigDeleteValidationResult::allow();
+        }
+
+        $validator = new $validationClass();
+        if (!method_exists($validator, 'ValidateDelete')) {
+            return ConfigDeleteValidationResult::allow();
+        }
+
+        $pageDefClass = $request->GetPageDefClass();
+        if ($pageDefClass == null || !class_exists($pageDefClass)) {
+            return ConfigDeleteValidationResult::allow();
+        }
+
+        $confData = $request->GetConfData();
+        if ($confData == null || !method_exists($confData, 'GetRootNode') || !method_exists($confData, 'GetType')) {
+            return ConfigDeleteValidationResult::allow();
+        }
+
+        $root = $confData->GetRootNode();
+        if (!($root instanceof CNode)) {
+            return ConfigDeleteValidationResult::allow();
+        }
+
+        $target = ConfigDataEditor::resolveTarget($confData->GetType(), $request->GetMutationDisplay(), $pageDefClass);
+        $result = $validator->ValidateDelete(new ConfigDeleteValidationRequest($request, $target, $root));
+
+        if ($result instanceof ConfigDeleteValidationResult) {
+            return $result;
+        }
+
+        return ConfigDeleteValidationResult::allow();
+    }
+
+    private static function appendDeleteValidationMessages($request, $validationResult, $includeCancel)
+    {
+        $html = self::buildDeleteValidationHtml($validationResult->GetMessages());
+
+        if ($includeCancel) {
+            $uiClass = $request->GetUiClass();
+            if ($uiClass != null && method_exists($uiClass, 'GetActionButtons')) {
+                if ($html !== '') {
+                    $html .= '<br>';
+                }
+                $html .= $uiClass::GetActionButtons($request->GetActionData('C'), 'text');
+            }
+        }
+
+        if ($html !== '') {
+            self::appendTopMessage($request, $html);
+        }
+    }
+
+    private static function appendDeleteValidationWarnings($request, $validationResult)
+    {
+        $html = self::buildDeleteValidationHtml($validationResult->GetWarnings());
+        if ($html !== '') {
+            self::appendTopMessage($request, $html);
+        }
+    }
+
+    private static function buildDeleteValidationHtml($lines)
+    {
+        $html = '';
+        foreach ((array) $lines as $line) {
+            $line = (string) $line;
+            if ($line === '') {
+                continue;
+            }
+
+            if ($html !== '') {
+                $html .= '<br>';
+            }
+            $html .= UIBase::Escape($line);
+        }
+
+        return $html;
     }
 
     private static function validatePost($request)

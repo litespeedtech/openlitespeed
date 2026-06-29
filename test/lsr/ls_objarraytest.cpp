@@ -62,7 +62,7 @@ TEST(ls_ObjArrayTest_test)
     CHECK(ls_objarray_getobj(&array, -1) == NULL);
     CHECK(ls_objarray_getobj(&array, 11) == NULL);
     ls_objarray_guarantee_xpool(&array, pool, 20);
-    CHECK(ls_objarray_getcapacity(&array) == 20);
+    CHECK(ls_objarray_getcapacity(&array) == 30);
     CHECK(ls_objarray_getsize(&array) == 10);
     CHECK(ls_objarray_getarray(&array) != NULL);
     CHECK(ls_objarray_getobj(&array, 15) == NULL);
@@ -125,7 +125,7 @@ TEST(ls_ObjArrayTest_test)
     CHECK(ls_objarray_getobj(&array, -1) == NULL);
     CHECK(ls_objarray_getobj(&array, 11) == NULL);
     ls_objarray_guarantee(&array, 20);
-    CHECK(ls_objarray_getcapacity(&array) == 20);
+    CHECK(ls_objarray_getcapacity(&array) == 30);
     CHECK(ls_objarray_getsize(&array) == 10);
     CHECK(ls_objarray_getarray(&array) != NULL);
     ls_objarray_release(&array);

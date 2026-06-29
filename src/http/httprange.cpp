@@ -31,6 +31,16 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+static void appendRangeDigit(off_t &value, int digit)
+{
+    if (value > (INT64_MAX - digit) / 10)
+    {
+        value = INT64_MAX;
+        return;
+    }
+    value = value * 10 + digit;
+}
+
 class ByteRange
 {
     off_t m_lBegin;
@@ -217,7 +227,7 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
                 break;
             case 1:
             case 3:
-                lValue = (lValue << 3) + (lValue << 1) + (ch - '0');
+                appendRangeDigit(lValue, ch - '0');
                 break;
             case 4:
             case 5:
@@ -257,18 +267,25 @@ int HttpRange::parse(const char *pRange, ls_xpool_t *pool)
                 //fall through
             case 2:
             case 5:
+            {
+                int count = m_array.getSize();
                 if (checkAndInsert(range, pool) == -1)
                 {
                     state = 6;
                     break;
                 }
-                total += range.getLen();
-                if (total > m_lEntityLen)
-                    return SC_200;
+                if (m_lEntityLen >= 0 && m_array.getSize() > count)
+                {
+                    off_t rangeLen = range.getLen();
+                    if (rangeLen < 0 || total > m_lEntityLen - rangeLen)
+                        return SC_200;
+                    total += rangeLen;
+                }
                 range.setBegin(-1);
                 range.setEnd(-1);
                 state = 0;
                 break;
+            }
             case 1:
             case 4:
                 state = 6;
@@ -402,6 +419,8 @@ int HttpRange::getPartHeader(int n, const char *pMimeType, char *buf,
         int ret1 = getContentRangeString(n, buf, size - ret);
         if (ret1 == -1)
             return LS_FAIL;
+        if (ret1 > size - ret - 2)
+            return LS_FAIL;
         buf += ret1 ;
         *buf++ = '\r';
         *buf++ = '\n';
@@ -458,6 +477,3 @@ int HttpRange::getContentOffset(off_t &begin, off_t &end) const
 {
     return getContentOffset(m_iCurRange, begin, end);
 }
-
-
-

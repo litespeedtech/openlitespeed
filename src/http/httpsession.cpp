@@ -3212,7 +3212,7 @@ void HttpSession::forceClose()
 {
     if (getStream())
     {
-        getStream()->setAbortedFlag();
+        getStream()->setFlag(SS_FLAG_ABORT|SS_FLAG_DROP, 1);
         getStream()->setState( HIOS_CLOSING );
         getStream()->wantWrite(1);
     }
@@ -3221,9 +3221,9 @@ void HttpSession::forceClose()
 }
 
 
-void HttpSession::process444(const char *pHeaderVal)
+void HttpSession::process444(const char *pHeaderVal, int len)
 {
-    if (strncasecmp(pHeaderVal, "BLOCK", 5) == 0)
+    if (len >= 5 && strncasecmp(pHeaderVal, "BLOCK", 5) == 0)
         dropConnection();
     else
         forceClose();
@@ -4783,7 +4783,7 @@ int HttpSession::pushToClient(const char *pUri, int uriLen, AutoStr2 &cookie)
         p++;
     }
     char referer[16484];
-    p->val.len = snprintf(referer, sizeof(referer), "https://%.*s%.*s",
+    p->val.len = lsnprintf(referer, sizeof(referer), "https://%.*s%.*s",
                           (int)host.len, host.ptr, m_request.getOrgReqURLLen(),
                           m_request.getOrgReqURL());
     p->val.ptr = referer;
@@ -5837,7 +5837,9 @@ int HttpSession::contentEncodingFixup()
             requireChunk = 1;
         }
     }
-    else if (!pContentEncoding && updateContentCompressible())
+    else if (!pContentEncoding
+             && m_request.gzipAcceptable() == GZIP_REQUIRED
+             && updateContentCompressible())
     {
         if (m_response.getContentLen() > 200)// && getReq()->getStatusCode() < SC_400)
         {
@@ -6940,8 +6942,10 @@ int HttpSession::setUriQueryString(int action, const char *uri,
     char *pStart = tmpBuf;
     char *pQs = NULL;
     int final_qs_len = 0;
+    int append_qs_len = 0;
     int len = 0;
     int urlLen;
+    const int maxTmpBufLen = sizeof(tmpBuf) - 1;
 
     int code;
     int uri_act;
@@ -6949,6 +6953,8 @@ int HttpSession::setUriQueryString(int action, const char *uri,
 
     if (!action)
         return LS_OK;
+    if (uri_len < 0 || qs_len < 0)
+        return LS_FAIL;
     uri_act = action & URI_OP_MASK;
     if ((uri_act == LSI_URL_REDIRECT_INTERNAL) &&
         (getState() <= HSS_READING_BODY))
@@ -6959,8 +6965,8 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         uri_len = getReq()->getURILen();
         action &= ~LSI_URL_ENCODED;
     }
-    if ((size_t)uri_len > sizeof(tmpBuf) - 4) // leave room for extra
-        uri_len = sizeof(tmpBuf) - 4;
+    if (uri_len > maxTmpBufLen - 3) // leave room for extra
+        uri_len = maxTmpBufLen - 3;
 
     switch (uri_act)
     {
@@ -6980,7 +6986,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
     default:
         if (action & LSI_URL_ENCODED)
         {
-            len = HttpUtil::unescape(uri, tmpBuf, uri_len);
+            len = HttpUtil::unescape(uri, uri_len, tmpBuf, uri_len);
             if (len == -1)
                 len = 0; // To avoid a bad index below
         }
@@ -7007,6 +7013,27 @@ int HttpSession::setUriQueryString(int action, const char *uri,
     }
     else
     {
+        int needLen = 1;
+        int remaining = maxTmpBufLen - len;
+        if (remaining < needLen)
+            return LS_FAIL;
+        if (qs_act == LSI_URL_QS_APPEND)
+        {
+            append_qs_len = getReq()->getQueryStringLen();
+            if (append_qs_len > 0)
+            {
+                if (append_qs_len >= remaining - needLen)
+                    return LS_FAIL;
+                needLen += append_qs_len + 1;
+            }
+        }
+        if (qs_act != LSI_URL_QS_DELETE)
+        {
+            if (qs_len > remaining - needLen)
+                return LS_FAIL;
+            needLen += qs_len;
+        }
+
         *pStart++ = '?';
         pQs = pStart;
         if (qs_act == LSI_URL_QS_DELETE)
@@ -7021,7 +7048,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         }
         else if (qs_act == LSI_URL_QS_APPEND)
         {
-            final_qs_len = getReq()->getQueryStringLen();
+            final_qs_len = append_qs_len;
             if (final_qs_len > 0)
             {
                 memcpy(pStart, getReq()->getQueryString(),
@@ -7040,6 +7067,7 @@ int HttpSession::setUriQueryString(int action, const char *uri,
         }
     }
     len = pStart - tmpBuf;
+    tmpBuf[len] = 0;
 
     switch (uri_act)
     {

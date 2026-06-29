@@ -61,12 +61,11 @@ H2ConnBase::H2ConnBase()
     , m_iCurrentFrameRemain(-H2_FRAME_HEADER_SIZE)
     , m_iCurDataOutWindow(H2_FCW_INIT_SIZE)
     , m_iDataInWindow(H2_FCW_INIT_SIZE)
+    , m_iCurDataInWindow(H2_FCW_INIT_SIZE)
     , m_iStreamInInitWindowSize(H2_FCW_64K * 4)
     , m_iServerMaxStreams(100)
     , m_iStreamOutInitWindowSize(H2_FCW_INIT_SIZE)
-    , m_iMaxPushStreams(100)
     , m_iPeerMaxFrameSize(H2_DEFAULT_DATAFRAME_SIZE)
-    , m_uiPushStreamId(2)
 {
     LS_ZERO_FILL(m_uiLastStreamId, m_curH2Header);
     lshpack_dec_init(&m_hpack_dec);
@@ -90,11 +89,11 @@ int H2ConnBase::init()
     m_uiLastStreamId = 0;
     m_current = NULL;
     m_iStreamOutInitWindowSize = H2_FCW_INIT_SIZE;
+    m_iDataInWindow = H2_FCW_INIT_SIZE;
+    m_iCurDataInWindow = H2_FCW_INIT_SIZE;
     m_iServerMaxStreams = 100;
-    m_iMaxPushStreams = 100;
     m_tmIdleBegin = 0;
     m_uiShutdownStreams = 0;
-    m_iCurPushStreams = 0;
     m_iCurrentFrameRemain = -H2_FRAME_HEADER_SIZE;
     return 0;
 }
@@ -178,7 +177,6 @@ int H2ConnBase::parseFrame()
                 && m_bufInput.size() < 1)
                 break;
             assert((int)m_curH2Header.getLength() == m_iCurrentFrameRemain);
-            consumedWindowIn(m_iCurrentFrameRemain);
             if ((ret = processDataFrame(&m_curH2Header)) != LS_OK)
                 return ret;
             if (m_iCurrentFrameRemain == 0)
@@ -192,11 +190,13 @@ int H2ConnBase::parseFrame()
 }
 
 
-void H2ConnBase::consumedWindowIn(int bytes)
+void H2ConnBase::addWindowInToUpdate(int bytes)
 {
+    if (bytes <= 0)
+        return;
     m_iInBytesToUpdate += bytes;
-    LS_DBG_L(getLogSession(), "WINDOW_IN consumed: %d/%d.",
-             m_iInBytesToUpdate, m_iDataInWindow);
+    LS_DBG_L(getLogSession(), "connection WINDOW_IN add %d totalToUpdate: %d, current: %d/%d.",
+             bytes, m_iInBytesToUpdate, m_iCurDataInWindow, m_iDataInWindow);
     if (m_iDataInWindow / 2 < m_iInBytesToUpdate)
         updateWindow();
 }
@@ -204,18 +204,31 @@ void H2ConnBase::consumedWindowIn(int bytes)
 
 void H2ConnBase::updateWindow()
 {
-    if (m_iInBytesToUpdate >= m_iDataInWindow)
-    {
-        LS_DBG_L(getLogSession(), "Connection RECV window used up, increase window size by %d to %d.",
-                m_iDataInWindow / 2, m_iDataInWindow / 2 + m_iDataInWindow);
-        m_iInBytesToUpdate += m_iDataInWindow / 2;
-        m_iDataInWindow += m_iDataInWindow / 2;
-    }
-    else
-        LS_DBG_L(getLogSession(), "Send connection WINDOW_UPDATE, used: %d/%d.",
-                m_iInBytesToUpdate, m_iDataInWindow);
+    if (m_iInBytesToUpdate <= 0)
+        return;
+    LS_DBG_L(getLogSession(), "Send connection WINDOW_UPDATE %d bytes, current: %d/%d.",
+            m_iInBytesToUpdate, m_iCurDataInWindow, m_iDataInWindow);
+    m_iCurDataInWindow += m_iInBytesToUpdate;
     sendFrame4Bytes(H2_FRAME_WINDOW_UPDATE, 0, m_iInBytesToUpdate, true);
     m_iInBytesToUpdate = 0;
+}
+
+
+int H2ConnBase::consumeWindowIn(int bytes)
+{
+    if (bytes <= 0)
+        return LS_OK;
+    if (bytes > m_iCurDataInWindow)
+    {
+        LS_DBG_L(getLogSession(), "connection WINDOW_IN overflow: frame: %d, "
+                 "available: %d.",
+                 bytes, m_iCurDataInWindow);
+        return LS_FAIL;
+    }
+    m_iCurDataInWindow -= bytes;
+    LS_DBG_L(getLogSession(), "connection WINDOW_IN used: %d, available: %d.",
+             bytes, m_iCurDataInWindow);
+    return LS_OK;
 }
 
 
@@ -347,8 +360,7 @@ int H2ConnBase::processFrame(H2FrameHeader *pHeader)
     case H2_FRAME_PUSH_PROMISE:
         return processPushPromiseFrame(pHeader);
     case H2_FRAME_GOAWAY:
-        processGoAwayFrame(pHeader);
-        break;
+        return processGoAwayFrame(pHeader);
     case H2_FRAME_WINDOW_UPDATE:
         return processWindowUpdateFrame(pHeader);
     case H2_FRAME_CONTINUATION:
@@ -376,7 +388,8 @@ void H2ConnBase::printLogMsg(H2FrameHeader *pHeader)
     {
         const char *message = "";
         int messageLen = 0;
-        if (pHeader->getType() == H2_FRAME_GOAWAY)
+        if (pHeader->getType() == H2_FRAME_GOAWAY
+            && pHeader->getLength() > 8)
         {
             message = (const char *)m_bufInput.begin() + 8;
             messageLen = pHeader->getLength() - 8;
@@ -527,20 +540,14 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
             m_iStreamOutInitWindowSize = iEntryValue ;
             break;
         case H2_SETTINGS_MAX_CONCURRENT_STREAMS:
-            m_iMaxPushStreams = iEntryValue ;
-            if (m_iMaxPushStreams == 0)
-                set_h2flag(H2_CONN_FLAG_NO_PUSH);
+            // This only limits peer-allowed server-initiated streams.
             break;
         case H2_SETTINGS_MAX_HEADER_LIST_SIZE:
             break;
         case H2_SETTINGS_ENABLE_PUSH:
             if (iEntryValue > 1)
                 return LS_FAIL;
-            if (!iEntryValue)
-            {
-                m_iMaxPushStreams = 0;
-                set_h2flag(H2_CONN_FLAG_NO_PUSH);
-            }
+            // Accept the deprecated setting for compatibility; push is disabled.
             break;
         default:
             break;
@@ -554,7 +561,7 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
         LS_INFO(getLogSession(), "SETTINGS frame abuse detected, close connection.");
         return LS_FAIL;
     }
-    sendSettingsFrame(false);
+    sendSettingsFrame();
     sendFrame0Bytes(H2_FRAME_SETTINGS, H2_FLAG_ACK, 0);
 
     if (windowsSizeDiff != 0)
@@ -571,7 +578,7 @@ int H2ConnBase::processSettingFrame(H2FrameHeader *pHeader)
 }
 
 
-int H2ConnBase::sendSettingsFrame(bool disable_push)
+int H2ConnBase::sendSettingsFrame()
 {
     if (m_h2flag & H2_CONN_FLAG_SETTING_SENT)
         return 0;
@@ -582,13 +589,10 @@ int H2ConnBase::sendSettingsFrame(bool disable_push)
         {0x00, H2_SETTINGS_MAX_CONCURRENT_STREAMS,  0x00, 0x00, 0x00, 0x64 },
         {0x00, H2_SETTINGS_INITIAL_WINDOW_SIZE,     0x00, 0x80, 0x00, 0x00 },
         {0x00, H2_SETTINGS_MAX_FRAME_SIZE,          0x00, 0x00, 0x40, 0x00 },
-        {0x00, H2_SETTINGS_ENABLE_PUSH,             0x00, 0x00, 0x00, 0x00 },
         //{0x00, H2_SETTINGS_MAX_HEADER_LIST_SIZE,  0x00, 0x00, 0x40, 0x00 },
     };
-    char buf[27 + 13 + 6];
+    char buf[27 + 13];
     int settings_payload_size = 18;
-    if (disable_push)
-        settings_payload_size += 6;
     new (buf) H2FrameHeader(settings_payload_size, H2_FRAME_SETTINGS, 0, 0);
     memcpy(&buf[9], s_settings, settings_payload_size);
 
@@ -602,8 +606,10 @@ int H2ConnBase::sendSettingsFrame(bool disable_push)
 
     H2FrameHeader wu_header(4, H2_FRAME_WINDOW_UPDATE, 0, 0);
     memcpy(&buf[settings_payload_size + 9], &wu_header, 9);
-    appendNbo4Bytes(&buf[settings_payload_size + 18], H2_FCW_64K * 16 * 16);
-    m_iDataInWindow += H2_FCW_64K * 16 * 16;
+    int window_delta = H2_FCW_64K * 16 * 16;
+    appendNbo4Bytes(&buf[settings_payload_size + 18], window_delta);
+    m_iDataInWindow += window_delta;
+    m_iCurDataInWindow += window_delta;
     guaranteeOutput(buf, settings_payload_size + 22);
     return 0;
 }
@@ -711,10 +717,7 @@ int H2ConnBase::processWindowUpdateFrame(H2FrameHeader *pHeader)
                     return LS_FAIL;
             }
             else
-            {
-                if (id > m_uiPushStreamId)
-                    return LS_FAIL;
-            }
+                return LS_FAIL;
         }
 
         //flush();
@@ -736,10 +739,7 @@ int H2ConnBase::processRstFrame(H2FrameHeader *pHeader)
             return LS_FAIL;
     }
     else
-    {
-        if (streamID >= m_uiPushStreamId)
-            return LS_FAIL;
-    }
+        return LS_FAIL;
 
     H2StreamBase *stream = findStream(streamID);
     if (stream == NULL)
@@ -781,10 +781,23 @@ void H2ConnBase::skipRemainData()
 int H2ConnBase::processDataFrame(H2FrameHeader *pHeader)
 {
     uint32_t streamID = pHeader->getStreamId();
+    int framePayloadLen = m_iCurrentFrameRemain;
 
     printLogMsg(pHeader);
     if (streamID == 0 || streamID > m_uiLastStreamId)
         return LS_FAIL;
+
+    if (pHeader->getFlags() & H2_FLAG_PADDED)
+    {
+        m_padLen = (uint8_t)(*(m_bufInput.begin()));
+        if (m_iCurrentFrameRemain <= m_padLen)
+            return LS_FAIL;
+    }
+    else
+        m_padLen = 0;
+
+    if (consumeWindowIn(framePayloadLen) == LS_FAIL)
+        return H2_ERROR_FLOW_CONTROL_ERROR;
 
     H2StreamBase *stream = findStream(streamID);
     m_current = stream;
@@ -798,19 +811,19 @@ int H2ConnBase::processDataFrame(H2FrameHeader *pHeader)
         //doGoAway(H2_ERROR_STREAM_CLOSED);
         //return LS_FAIL;
     }
+    if (stream->consumeWindowIn(framePayloadLen) == LS_FAIL)
+    {
+        skipRemainData();
+        resetStream(streamID, stream, H2_ERROR_FLOW_CONTROL_ERROR);
+        return 0;
+    }
     if (pHeader->getFlags() & H2_FLAG_PADDED)
     {
-        m_padLen = (uint8_t)(*(m_bufInput.begin()));
-        if (m_iCurrentFrameRemain <= 1 + m_padLen)
-            return LS_FAIL;
-
         m_bufInput.pop_front(1);
         //Do not pop_back right now since buf may have more data then this frame
         --m_iCurrentFrameRemain;
         stream->adjWindowToUpdate(1 + m_padLen);
     }
-    else
-        m_padLen = 0;
 
     if (m_iCurrentFrameRemain == m_padLen
         && !(pHeader->getFlags() & H2_CTRL_FLAG_FIN))
@@ -897,10 +910,29 @@ int H2ConnBase::tryReadFrameHeader()
         if (m_curH2Header.getType() == H2_FRAME_DATA
             && (m_curH2Header.getFlags() & H2_FLAG_PADDED) == 0)
         {
+            uint32_t streamId = m_curH2Header.getStreamId();
+            if (streamId == 0 || streamId > m_uiLastStreamId)
+            {
+                doGoAway(H2_ERROR_PROTOCOL_ERROR);
+                return LS_FAIL;
+            }
+            if (consumeWindowIn(m_iCurrentFrameRemain) == LS_FAIL)
+            {
+                doGoAway(H2_ERROR_FLOW_CONTROL_ERROR);
+                return LS_FAIL;
+            }
             if (!m_current || m_current->getStreamID() != m_curH2Header.getStreamId())
                 m_current = findStream(m_curH2Header.getStreamId());
-            if (m_current)
+            if (m_current && !m_current->isPeerShutdown())
             {
+                if (m_current->consumeWindowIn(m_iCurrentFrameRemain) == LS_FAIL)
+                {
+                    resetStream(streamId, m_current,
+                                H2_ERROR_FLOW_CONTROL_ERROR);
+                    m_current = NULL;
+                    m_inputState = ST_SKIP_REMAIN;
+                    return H2_FRAME_HEADER_SIZE;
+                }
                 if (m_iCurrentFrameRemain == 0
                     && (m_curH2Header.getFlags() & H2_CTRL_FLAG_FIN))
                 {
@@ -913,7 +945,13 @@ int H2ConnBase::tryReadFrameHeader()
                     return 0;
                 }
             }
-            consumedWindowIn(m_iCurrentFrameRemain);
+            else
+            {
+                resetStream(streamId, m_current, H2_ERROR_STREAM_CLOSED);
+                m_current = NULL;
+                m_inputState = ST_SKIP_REMAIN;
+                return H2_FRAME_HEADER_SIZE;
+            }
             m_inputState = ST_DATA_PAYLOAD;
             return H2_FRAME_HEADER_SIZE;
         }
@@ -1161,6 +1199,12 @@ int H2ConnBase::processHeadersFrame(H2FrameHeader *pHeader)
 
     if (iHeaderFlag & H2_FLAG_PRIORITY)
     {
+        if (m_iCurrentFrameRemain < 5 + m_padLen)
+        {
+            LS_DBG_L(getLogSession(), "bad HEADERS frame, PRIORITY fields "
+                     "exceed frame payload.");
+            return H2_ERROR_FRAME_SIZE_ERROR;
+        }
         if (processPriority(id))
             return H2_ERROR_PROTOCOL_ERROR;
     }
@@ -1370,6 +1414,8 @@ H2StreamBase *H2ConnBase::findStream(uint32_t uiStreamID)
 
 int H2ConnBase::processGoAwayFrame(H2FrameHeader *pHeader)
 {
+    if (pHeader->getLength() < 8)
+        return H2_ERROR_FRAME_SIZE_ERROR;
     if (!(m_h2flag & H2_CONN_FLAG_GOAWAY))
     {
         doGoAway((pHeader->getStreamId() != 0)?
@@ -1440,25 +1486,18 @@ int H2ConnBase::sendHeaderContFrame(uint32_t uiStreamID, uint8_t flag,
 }
 
 
-int H2ConnBase::sendReqHeaders(uint32_t id, uint32_t promise_streamId,
-                               int flag, UnpackedHeaders *req_hdrs)
+int H2ConnBase::sendReqHeaders(uint32_t id, int flag,
+                               UnpackedHeaders *req_hdrs)
 {
     unsigned char hdr_buf[H2_TMP_HDR_BUFF_SIZE + 16];
     unsigned char *cur = &hdr_buf[16];
     unsigned char *buf_end = cur + H2_TMP_HDR_BUFF_SIZE;
 
-    if (promise_streamId)
-    {
-        uint32_t sid = htonl(promise_streamId);
-        memcpy(cur, &sid, 4);
-        cur += 4;
-    }
     req_hdrs->prepareSendHpack();
     cur += encodeReqHeaders(cur, buf_end, req_hdrs);
 
     int total = cur - hdr_buf - 16;
-    return sendHeaderContFrame(id, flag, (promise_streamId)
-                                ? H2_FRAME_PUSH_PROMISE : H2_FRAME_HEADERS,
+    return sendHeaderContFrame(id, flag, H2_FRAME_HEADERS,
                                (const char *)&hdr_buf[16], total);
 }
 
@@ -1521,6 +1560,7 @@ UnpackedHeaders *H2ConnBase::createUnpackedHdr(const char *method,
     }
     return hdrs;
 }
+
 
 void H2ConnBase::removePriQue(H2StreamBase *stream)
 {
@@ -1745,6 +1785,8 @@ int H2ConnBase::processPendingStreams()
                 ++wantWrite;
                 break;
             }
+            if (m_h2flag & H2_CONN_FLAG_DROP)
+                return 0;
         }
         if (wantWrite > 0)
             break;
@@ -1802,6 +1844,8 @@ int H2ConnBase::processQueue()
 
             if (stream->getState() != HIOS_CONNECTED)
                 recycleStream(stream);
+            if (m_h2flag & H2_CONN_FLAG_DROP)
+                return 0;
             if (isOutBufFull())
             {
                 ++wantWrite;
@@ -1843,6 +1887,7 @@ char *H2ConnBase::getDirectOutBuf(uint32_t stream_id, size_t &size)
             max_size = m_iPeerMaxFrameSize;
         if (buf->guarantee(max_size) == LS_FAIL)
             return NULL;
+        m_pendingStreamId = stream_id;
         m_pendingOutSize = max_size - H2_FRAME_HEADER_SIZE;
         m_pendingUsed = 0;
         LS_DBG_L(getLogSession(), "Start new pending DATA frame buffer: %d.",
@@ -1891,4 +1936,11 @@ void H2ConnBase::closePendingOut2()
     m_pendingOutSize = 0;
 }
 
+
+void H2ConnBase::drop(const char *reason)
+{
+    LS_INFO(getLogSession(), "Mark connection drop, reason: %s, streams: %d",
+             reason, m_mapStream.size());
+    set_h2flag(H2_CONN_FLAG_DROP);
+}
 

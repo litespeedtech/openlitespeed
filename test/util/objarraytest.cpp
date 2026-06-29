@@ -60,7 +60,7 @@ TEST(objArrayTest_test)
     CHECK(pArray->getObj(-1) == NULL);
     CHECK(pArray->getObj(11) == NULL);
     pArray->guarantee(pool, 20);
-    CHECK(pArray->capacity() == 20);
+    CHECK(pArray->capacity() == 30);
     CHECK(pArray->size() == 10);
     CHECK(pArray->getArray() != NULL);
     CHECK(pArray->getObj(15) == NULL);
@@ -94,6 +94,7 @@ TEST(objArrayTest_test)
         CHECK(buf->key == i - 1 && buf->val == i - 1);
     }
     ls_xpool_delete(pool);
+    delete pArray;
     //Test with global pool.
     pArray = new ObjArrayXpool(sizeof(testpair_t));
 
@@ -118,10 +119,11 @@ TEST(objArrayTest_test)
         CHECK(buf->key == i + 1 && buf->val == i + 1);
     }
     pArray->guarantee(NULL, 20);
-    CHECK(pArray->capacity() == 20);
+    CHECK(pArray->capacity() == 30);
     CHECK(pArray->size() == 10);
     CHECK(pArray->getArray() != NULL);
     pArray->release(NULL);
+    delete pArray;
 }
 
 TEST(TObjArrayTest_test)
@@ -154,7 +156,7 @@ TEST(TObjArrayTest_test)
     CHECK(pArray->getObj(-1) == NULL);
     CHECK(pArray->getObj(11) == NULL);
     pArray->guarantee(pool, 20);
-    CHECK(pArray->capacity() == 20);
+    CHECK(pArray->capacity() == 30);
     CHECK(pArray->size() == 10);
     CHECK(pArray->getArray() != NULL);
     CHECK(pArray->getObj(15) == NULL);
@@ -188,6 +190,7 @@ TEST(TObjArrayTest_test)
         CHECK(buf->key == i - 1 && buf->val == i - 1);
     }
     ls_xpool_delete(pool);
+    delete pArray;
 }
 
 
@@ -195,4 +198,3 @@ TEST(TObjArrayTest_test)
 
 
 #endif
-

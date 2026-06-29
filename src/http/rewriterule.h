@@ -243,7 +243,7 @@ public:
     const char    *getNoEscape() const
     {   return (const char *)&m_noEscape;    }
     short          getAction() const    {   return m_action;                }
-    short          getFlag() const      {   return m_flag;                  }
+    int            getFlag() const      {   return m_flag;                  }
     int     getStatusCode() const       {   return m_statusCode;            }
     int     getSkip() const             {   return m_skipRules;             }
     const TLinkList<RewriteSubstFormat> *getEnv() const

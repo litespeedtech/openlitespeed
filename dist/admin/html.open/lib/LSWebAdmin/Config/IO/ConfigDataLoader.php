@@ -8,7 +8,7 @@ use LSWebAdmin\Config\CNode;
 
 class ConfigDataLoader
 {
-    public static function loadPlainRoot(PlainConfParser $parser, $path, &$conferr)
+    public static function loadPlainRoot(PlainConfParser $parser, $path, &$conferr, &$hasInclude = false)
     {
         $root = $parser->Parse($path);
         if ($root->HasFatalErr()) {
@@ -17,7 +17,13 @@ class ConfigDataLoader
             return false;
         }
 
-        if ($parser->HasInclude() && !defined('_CONF_READONLY_')) {
+        $hasInclude = $parser->HasInclude();
+
+        // Legacy process-global signal: kept for backward compatibility. Whether a
+        // given config page is read-only is decided per config root (see
+        // CData::IsReadOnly), because one request can load both an include-driven
+        // server config and an include-free admin config.
+        if ($hasInclude && !defined('_CONF_READONLY_')) {
             define('_CONF_READONLY_', true);
         }
 

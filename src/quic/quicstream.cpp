@@ -537,4 +537,3 @@ int QuicStream::getEnv(HioCrypto::ENV id, char *&val, int maxValLen)
         return 0;
     }
 }
-

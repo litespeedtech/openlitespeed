@@ -30,7 +30,7 @@
 H2StreamBase::H2StreamBase()
     : m_bufRcvd(0)
 {
-    LS_ZERO_FILL(m_pH2Conn, m_iWindowOut);
+    LS_ZERO_FILL(m_pH2Conn, m_iWindowIn);
 }
 
 
@@ -43,7 +43,7 @@ H2StreamBase::~H2StreamBase()
 void H2StreamBase::reset()
 {
     m_bufRcvd.clear();
-    LS_ZERO_FILL(m_pH2Conn, m_iWindowOut);
+    LS_ZERO_FILL(m_pH2Conn, m_iWindowIn);
 }
 
 
@@ -57,6 +57,7 @@ int H2StreamBase::init(H2ConnBase *pH2Conn, Priority_st *pPriority)
     m_bufRcvd.clear();
     m_pH2Conn = pH2Conn;
     m_iWindowOut = pH2Conn->getStreamOutInitWindowSize();
+    m_iWindowIn = pH2Conn->getStreamInInitWindowSize();
 
     apply_priority(pPriority);
 
@@ -111,7 +112,7 @@ int H2StreamBase::read(char *buf, int len)
     {
         setActiveTime(DateTime::s_curTime);
         adjWindowToUpdate(read_out);
-        LS_DBG_H(this, "WINDOW_IN consumed: %d, to_update: %d.",
+        LS_DBG_H(this, "stream WINDOW_IN add toUpdate: %d, to_update: %d.",
                  read_out, getWindowToUpdate());
         windowUpdate();
     }
@@ -130,8 +131,33 @@ void H2StreamBase::windowUpdate()
     if (m_iWindowToUpdate >= m_pH2Conn->getStreamInInitWindowSize() / 2)
     {
         m_pH2Conn->sendStreamWindowUpdateFrame(getStreamID(), m_iWindowToUpdate);
+        m_iWindowIn += m_iWindowToUpdate;
         m_iWindowToUpdate = 0;
     }
+}
+
+
+void H2StreamBase::adjWindowToUpdate(int32_t n)
+{
+    m_iWindowToUpdate += n;
+    m_pH2Conn->addWindowInToUpdate(n);
+}
+
+
+int H2StreamBase::consumeWindowIn(int32_t n)
+{
+    if (n <= 0)
+        return LS_OK;
+    if (n > m_iWindowIn)
+    {
+        LS_DBG_L(this, "stream WINDOW_IN overflow: frame: %d, available: %d.",
+                 n, m_iWindowIn);
+        return LS_FAIL;
+    }
+    m_iWindowIn -= n;
+    LS_DBG_L(this, "stream WINDOW_IN used: %d, available: %d.",
+             n, m_iWindowIn);
+    return LS_OK;
 }
 
 
@@ -595,4 +621,3 @@ int H2StreamBase::sendfile(int fdSrc, off_t off, size_t size, int flag)
     }
     return (cur - off > 0)? cur - off : ret;
 }
-

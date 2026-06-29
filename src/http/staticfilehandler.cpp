@@ -735,8 +735,10 @@ static int sendMultipart(HttpSession *pSession, HttpRange &range)
             if (range.more())
             {
                 range.next();
-                range.buildPartHeader(
-                    pData->getFileData()->getMimeType()->getMIME()->c_str());
+                if (range.buildPartHeader(
+                        pData->getFileData()->getMimeType()->getMIME()->c_str())
+                    < 0)
+                    return LS_FAIL;
                 headerLen = range.getPartHeaderLen();
             }
         }
@@ -830,4 +832,3 @@ static int processRange(HttpSession *pSession, HttpReq *pReq,
     }
     return ret;
 }
-

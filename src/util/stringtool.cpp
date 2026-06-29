@@ -75,14 +75,13 @@ StringList *StringTool::parseMatchPattern(const char *pPattern)
 void *StringTool::memmem(const char *haystack, size_t haystacklen,
                          const char *needle, size_t needleLength)
 {
-    const char *p = haystack + haystacklen;
-
     if (haystacklen < needleLength)
         return NULL;
 
     if (needleLength == 0)
         return (void *)haystack;
 
+    const char *p = haystack + haystacklen - needleLength + 1;
     while (haystack < p
            && ((haystack = (const char *)memchr(haystack, *needle,
                            p - haystack)) != NULL))
@@ -108,6 +107,8 @@ const char *StringTool::memNextArg(const char **s, int len,
                                    const char *pDelim, int iDelimLen)
 {
     const char *p = *s;
+    if (len <= 0)
+        return NULL;
     if (!pDelim)
     {
         pDelim = " \t\r\n";

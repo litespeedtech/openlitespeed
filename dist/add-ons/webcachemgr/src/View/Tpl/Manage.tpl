@@ -412,7 +412,7 @@ $succMsgs    = $this->viewModel->getTplData(ViewModel::FLD_SUCC_MSGS);
             <input
                 type="checkbox"
                 name="installations[]"
-                value="<?php echo $path; ?>"
+                value="<?php echo $safePath; ?>"
                 onclick="lscwpManageCheckboxSelect(this);"
             />
           </td>
@@ -425,7 +425,7 @@ $succMsgs    = $this->viewModel->getTplData(ViewModel::FLD_SUCC_MSGS);
             <span class="action-btns">
               <button
                   type="button"
-                  value="<?php echo $path; ?>"
+                  value="<?php echo $safePath; ?>"
                   class="<?php echo $classes; ?>"
                   title="<?php echo $statusData['btn_title']; ?>"
                   <?php echo ($statusData['onclick']) ?: ''; ?>
@@ -436,7 +436,7 @@ $succMsgs    = $this->viewModel->getTplData(ViewModel::FLD_SUCC_MSGS);
               </button>
               <button
                   type="button"
-                  value="<?php echo $path; ?>"
+                  value="<?php echo $safePath; ?>"
                   class="<?php echo $classes; ?>"
                   title="Click to refresh status"
                   onclick="lscwpRefreshSingle(this);"
@@ -467,7 +467,7 @@ $succMsgs    = $this->viewModel->getTplData(ViewModel::FLD_SUCC_MSGS);
           >
             <button
                 type="button"
-                value="<?php echo $path; ?>"
+                value="<?php echo $safePath; ?>"
                 class="<?php echo $classes; ?>"
                 title="<?php echo $flagData['btn_title']; ?>"
                 <?php echo $flagData['onclick']?>

@@ -43,6 +43,7 @@
 #include <extensions/lsapi/lsapiworker.h>
 #include <extensions/proxy/proxyconfig.h>
 #include <extensions/proxy/proxyworker.h>
+#include <lsdef.h>
 #include <extensions/scgi/scgiapp.h>
 #include <extensions/uwsgi/uwsgiapp.h>
 #include <unistd.h>
@@ -611,24 +612,45 @@ int ExtAppRegistry::hasUri(const char *uri)
 void ExtAppRegistry::getUniAppUri(const char *app_uri, char *dst,
                                   int dst_len, int uid, uint loop)
 {
-    int len = strlen(app_uri);
+    if (dst_len <= 0)
+        return;
 
+    char *pNul;
     if (app_uri != dst)
     {
-        memcpy(dst, app_uri, (len > dst_len) ? dst_len : len);
+        pNul = (char *)memccpy(dst, app_uri, 0, dst_len);
+        if (!pNul)
+        {
+            dst[dst_len - 1] = 0;
+            LS_ERROR("getUniAppUri error: dst_len %d smaller than uri.",
+                     dst_len);
+            return;
+        }
+        --pNul;
     }
-
-    if (len >= dst_len)
-    {
-        LS_ERROR("getUniAppUri error: dst_len %d smaller than uri len %d.",
-                 dst_len, len);
-        return ;
-    }
-
-    if (loop == 0)
-        snprintf(dst + len, dst_len - len, ".%d%u", uid, loop);
     else
-        snprintf(dst + len, dst_len - len, ".%d.%u", uid, loop);
+        pNul = (char *)memchr(dst, 0, dst_len);
+
+    if (!pNul)
+    {
+        dst[dst_len - 1] = 0;
+        LS_ERROR("getUniAppUri error: dst_len %d smaller than uri.",
+                 dst_len);
+        return;
+    }
+
+    int len = pNul - dst;
+    int n;
+    if (loop == 0)
+        n = lsnprintf(dst + len, dst_len - len, ".%d%u", uid, loop);
+    else
+        n = lsnprintf(dst + len, dst_len - len, ".%d.%u", uid, loop);
+    if (n >= dst_len - len - 1)
+    {
+        dst[len] = 0;
+        LS_ERROR("getUniAppUri error: dst_len %d too small for generated uri.",
+                 dst_len);
+    }
 }
 
 
@@ -1225,5 +1247,3 @@ void PidRegistry::addMarkToStop(pid_t pid, int kill_type, long lastmod)
         sendKillCmdToWatchdog(pid, kill_type, lastmod);
     }
 }
-
-

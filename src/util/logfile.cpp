@@ -112,18 +112,18 @@ int LogFile::setFileName(const char *pName)
 
     if (pName && m_pFileName && (strcmp(pName , m_pFileName) == 0))
         return 0;
+    char *pNewFileName = NULL;
+    if (pName)
+    {
+        pNewFileName = strdup(pName);
+        if (!pNewFileName)
+            return ENOMEM;
+    }
     if (m_iFd != -1)
         close();
     if (m_pFileName)
         free(m_pFileName);
-    if (pName)
-    {
-        m_pFileName = strdup(pName);
-        if (!m_pFileName)
-            return ENOMEM;
-    }
-    else
-        m_pFileName = NULL;
+    m_pFileName = pNewFileName;
     return 0;
 }
 
@@ -212,6 +212,5 @@ int LogFile::removeOldFiles()
     time_t tm = time(NULL) - 3600L * 24 * m_iKeepDays;
     return removeSimiliarFiles(m_pFileName, tm);
 }
-
 
 

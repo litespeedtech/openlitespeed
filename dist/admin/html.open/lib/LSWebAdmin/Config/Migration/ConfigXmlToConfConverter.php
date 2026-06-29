@@ -7,7 +7,7 @@ use LSWebAdmin\Config\Parser\LsXmlParser;
 use LSWebAdmin\Product\Current\DPageDef;
 use LSWebAdmin\UI\DInfo;
 
-class ConfigLegacyFormatConverter
+class ConfigXmlToConfConverter
 {
     public static function migrateXmlToConf($type, $xmlPath, $confPath, &$conferr)
     {

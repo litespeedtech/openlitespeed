@@ -59,11 +59,29 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <limits>
 #include <new>
 
 
 
 #define URL_INDEX_PAD 32
+
+static int parseContentLength(const char *pCur, const char *pEnd,
+                              off_t &contentLen)
+{
+    off_t value = 0;
+    while (pCur < pEnd)
+    {
+        if (!isdigit((unsigned char)*pCur))
+            return SC_400;
+        int digit = *pCur++ - '0';
+        if (value > (std::numeric_limits<off_t>::max() - digit) / 10)
+            return SC_413;
+        value = value * 10 + digit;
+    }
+    contentLen = value;
+    return 0;
+}
 
 struct envAlias_t
 {
@@ -693,6 +711,8 @@ int HttpReq::processRequestLine()
 
 int HttpReq::parseProtocol(const char *&pCur, const char *pBEnd)
 {
+    if (pBEnd - pCur < 8)
+        return SC_400;
     if (strncasecmp(pCur, "http/1.", 7) != 0)
         return SC_400;
     pCur += 7;
@@ -885,7 +905,7 @@ int HttpReq::processHeaderLines()
 
             pTemp1 = pLineEnd;
             skipSpaceBothSide(pTemp, pTemp1);
-            if (strncmp(pTemp, "() {", 4) == 0)
+            if (pTemp1 - pTemp >= 4 && memcmp(pTemp, "() {", 4) == 0)
             {
                 LS_INFO(getLogSession(), "Status 400: CVE-2014-6271, "
                         "CVE-2014-7169 signature detected in request header!");
@@ -953,8 +973,8 @@ int HttpReq::processHeaderLines()
         }
         else
         {
-            if ((*(pLineEnd - 1) == '\n')
-                || (*(pLineEnd - 1) == '\r' && *(pLineEnd - 2) == '\n'))
+            int lineLen = pLineEnd - pLineBegin;
+            if (lineLen == 0 || (lineLen == 1 && *pLineBegin == '\r'))
             {
                 pLineBegin = pLineEnd + 1;
                 headerfinished = true;
@@ -1033,7 +1053,7 @@ int HttpReq::processUnpackedHeaderLines(UnpackedHeaders *headers)
     {
         name = m_headerBuf.begin() + begin->name_offset;
         value = m_headerBuf.begin() + begin->val_offset;
-        if (strncmp(value, "() {", 4) == 0)
+        if (begin->val_len >= 4 && memcmp(value, "() {", 4) == 0)
         {
             LS_INFO(getLogSession(), "Status 400: CVE-2014-6271, "
                     "CVE-2014-7169 signature detected in request header!");
@@ -1148,7 +1168,7 @@ int HttpReq::processHeader(int index)
     const char *pCur = m_headerBuf.begin() + m_commonHeaderOffset[index];
     int len = m_commonHeaderLen[index];
     const char *pBEnd = pCur + len;
-    char *p;
+    int ret;
     switch (index)
     {
     case HttpHeader::H_HOST:
@@ -1165,12 +1185,12 @@ int HttpReq::processHeader(int index)
             return SC_400;
         if (m_lEntityLength == LSI_BODY_SIZE_CHUNK)
             return SC_400;
-        m_lEntityLength = strtoull(pCur, &p, 10);
-        if (p != pBEnd)
-            return SC_400;
+        ret = parseContentLength(pCur, pBEnd, m_lEntityLength);
+        if (ret)
+            return ret;
         break;
     case HttpHeader::H_CONTENT_TYPE:
-        updateBodyType(pCur);
+        updateBodyType(pCur, len);
         break;
     case HttpHeader::H_TRANSFER_ENCODING:
         if (*pCur == ',')
@@ -1206,9 +1226,9 @@ int HttpReq::processHeader(int index)
         break;
     case HttpHeader::H_CONNECTION:
         if (m_ver == HTTP_1_1)
-            keepAlive(strncasecmp(pCur, "clos", 4) != 0);
+            keepAlive(!(len >= 4 && strncasecmp(pCur, "clos", 4) == 0));
         else
-            keepAlive(strncasecmp(pCur, "keep", 4) == 0);
+            keepAlive(len >= 4 && strncasecmp(pCur, "keep", 4) == 0);
         break;
     case HttpHeader::H_COOKIE:
         if (len > 15 && memmem(pCur, len, "litespeed_role=", 15) != NULL)
@@ -1273,7 +1293,7 @@ int HttpReq::processUnknownHeader(key_value_pair *pCurHeader,
     else if (pCurHeader->keyLen == 6
                 && strncasecmp(name, "EXPECT", 6) == 0)
         {
-            if (strncmp(value, "100", 3) == 0)
+            if (pCurHeader->valLen >= 3 && strncmp(value, "100", 3) == 0)
             {
                 LS_DBG_L(getLogSession(), "client expect 100 continue, drop request header.");
                 orContextState(EXPECT_100);
@@ -1561,7 +1581,7 @@ int HttpReq::translate(const char *pURI, int uriLen,
     }
     if (uriLen > 0)
     {
-        if (uriLen > len)
+        if (uriLen >= len)
             return LS_FAIL;
         ::memmove(pReal, pURI, uriLen);
         pReal += uriLen;
@@ -1589,13 +1609,17 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
         ls_str_set(&m_location, NULL, 0);
     }
     else
+    {
         pURI = (char *)ls_xpool_alloc(m_pPool, len + URL_INDEX_PAD);
+        if (!pURI)
+            return SC_500;
+    }
     //decode URI
     int n = HttpUtil::unescapeInPlace(pURI, iURILen, pArgs);
     if (n == -1)
     {
-        LS_DBG_L(getLogSession(), "Unable to decode request URI: %s.",
-                 pURI);
+        LS_DBG_L(getLogSession(), "Unable to decode request URI: %.*s.",
+                 len, pURL);
         return SC_400;    //invalid url format
     }
     uSetURI(pURI, iURILen);
@@ -1611,7 +1635,13 @@ int HttpReq::setCurrentURL(const char *pURL, int len, int alloc)
 
 int HttpReq::setRewriteURI(const char *pURL, int len, int no_escape)
 {
-    int totalLen = len + ((!no_escape) ? len * 2 : 0);
+    if (len < 0)
+        return LS_FAIL;
+    int totalLen;
+    if (!no_escape && len > MAX_URL_LEN / 3)
+        totalLen = MAX_URL_LEN;
+    else
+        totalLen = len + ((!no_escape) ? len * 2 : 0);
     if (totalLen > MAX_URL_LEN)
         totalLen = MAX_URL_LEN;
     char *p = (char *)ls_xpool_alloc(m_pPool, totalLen + URL_INDEX_PAD);
@@ -1621,6 +1651,8 @@ int HttpReq::setRewriteURI(const char *pURL, int len, int no_escape)
         p = escape_uri(p, pEnd, pURL, len);
     else
     {
+        if (len > totalLen)
+            len = totalLen;
         memcpy(p, pURL, len);
         p += len;
     }
@@ -1662,22 +1694,27 @@ static void sanitizeHeaderValue(char *pHeaderVal, int len)
 int HttpReq::setRewriteLocation(char *pURI, int uriLen,
                                 const char *pQS, int qsLen, int escape)
 {
-    int totalLen = uriLen + qsLen + 12 + ((escape) ? uriLen : 0);
-    if (totalLen > MAX_URL_LEN)
-        totalLen = MAX_URL_LEN + 10;
+    if (uriLen < 0 || qsLen < 0)
+        return LS_FAIL;
+    long long needLen = (long long)uriLen + qsLen + 12
+                        + ((escape) ? uriLen : 0);
+    int totalLen = (needLen > MAX_URL_LEN) ? MAX_URL_LEN + 10
+                                           : (int)needLen;
 
     char *p = (char *)ls_xpool_alloc(m_pPool, totalLen + URL_INDEX_PAD);
     char *pEnd = p + totalLen - 8;
     ls_str_set(&m_location, p, totalLen);
     if (escape)
-        p += HttpUtil::escape(pURI, p, pEnd - p - 4);
+        p += HttpUtil::escape(pURI, uriLen, p, pEnd - p + 1);
     else
     {
+        if (uriLen > pEnd - p)
+            uriLen = pEnd - p;
         memcpy(p, pURI, uriLen);
         sanitizeHeaderValue(p, uriLen);
         p += uriLen;
     }
-    if (qsLen != 0)
+    if (qsLen != 0 && p < pEnd)
     {
         *p++ = '?';
         if (qsLen > pEnd - p)
@@ -1712,7 +1749,14 @@ int HttpReq::internalRedirect(const char *pURL, int len, int alloc)
     int ret = saveCurURL();
     if (ret)
         return ret;
-    setCurrentURL(pURL, len, alloc);
+    ret = setCurrentURL(pURL, len, alloc);
+    if (ret)
+    {
+        --m_iRedirects;
+        m_curUrl.key = m_pUrls[m_iRedirects].key;
+        m_curUrl.val = m_pUrls[m_iRedirects].val;
+        return ret;
+    }
     ls_str_setlen(&m_pathInfo, 0);
     return detectLoopRedirect();
 }
@@ -1864,19 +1908,26 @@ int HttpReq::contextRedirect(const HttpContext *pContext, int destLen)
     if ((code >= SC_400) || ((code != -1) && (code < SC_300)))
         return code;
     char *pDestURI = HttpResourceManager::getGlobalBuf();
+    const int maxRedirectLen = GLOBAL_BUF_SIZE - 1;
     if (!destLen)
     {
         int contextURILen = pContext->getURILen();
         int uriLen = getURILen();
         destLen = pContext->getLocationLen();
+        int appendLen = (contextURILen < uriLen) ? uriLen - contextURILen : 0;
+        if (destLen < 0 || appendLen > maxRedirectLen - destLen)
+            return SC_414;
         memmove(pDestURI, pContext->getLocation(), destLen);
-        if (contextURILen < uriLen)
+        if (appendLen > 0)
         {
             memmove(pDestURI + destLen, getURI() + contextURILen,
-                    uriLen - contextURILen + 1);
-            destLen += uriLen - contextURILen;
+                    appendLen);
+            destLen += appendLen;
         }
+        pDestURI[destLen] = 0;
     }
+    else if (destLen > maxRedirectLen)
+        return SC_414;
 
     if ((code != -1) || (*pDestURI != '/'))
     {
@@ -1885,9 +1936,15 @@ int HttpReq::contextRedirect(const HttpContext *pContext, int destLen)
         if (memchr(pDestURI, '?', destLen) == NULL)
         {
             int qslen = getQueryStringLen();
-            memmove(pDestURI + destLen + 1, getQueryString(), qslen);
-            *(pDestURI + destLen++) = '?';
-            destLen += qslen;
+            if (qslen > 0)
+            {
+                if (qslen >= maxRedirectLen - destLen)
+                    return SC_414;
+                memmove(pDestURI + destLen + 1, getQueryString(), qslen);
+                *(pDestURI + destLen++) = '?';
+                destLen += qslen;
+                pDestURI[destLen] = 0;
+            }
         }
         setLocation(pDestURI, destLen);
         return code;
@@ -1936,7 +1993,10 @@ int HttpReq::processMatchList(const HttpContext *pContext,
                 *p = 0;
                 int newLen = p - HttpResourceManager::getGlobalBuf();
                 ++p;
-                setQS(p, m_iMatchedLen - newLen);
+                int qsLen = m_iMatchedLen - newLen - 1;
+                if (qsLen < 0)
+                    qsLen = 0;
+                setQS(p, qsLen);
                 m_iMatchedLen = newLen;
             }
         }
@@ -2064,8 +2124,12 @@ int HttpReq::locationToUrl(const char *pLocation, int len)
     pNewCtx = m_pVHost->matchLocation(pLocation, len);
     if (pNewCtx)
     {
-        int n = snprintf(achURI, 8192, "%s%s", pNewCtx->getURI(),
-                         pLocation + pNewCtx->getLocationLen());
+        int suffixLen = len - pNewCtx->getLocationLen();
+        if (suffixLen < 0)
+            suffixLen = 0;
+        int n = lsnprintf(achURI, sizeof(achURI), "%s%.*s",
+                          pNewCtx->getURI(), suffixLen,
+                          pLocation + pNewCtx->getLocationLen());
         pLocation = achURI;
         len = n;
         LS_DBG_H(getLogSession(), "File [%s] has been mapped to URI: [%s],"
@@ -2544,6 +2608,9 @@ int HttpReq::filesMatch(const char *pEnd)
 int HttpReq::checkSymLink(const char *pPath, int pathLen,
                           const char *pBegin)
 {
+    if (pathLen < 0 || pathLen >= MAX_BUF_SIZE)
+        return SC_500;
+
     int follow = m_pVHost->followSymLink();
     int restrained = m_pVHost->restrained();
     int hasLink = 0;
@@ -2721,20 +2788,20 @@ int HttpReq::setLocation(const char *pLoc, int len)
 
 int  HttpReq::appendRedirHdr(const char *pDisp, int len)
 {
+    if (len < 0)
+        return LS_FAIL;
     ls_str_xappend(&m_redirHdrs, pDisp, len, m_pPool);
-    char *p = ls_str_buf(&m_redirHdrs) + ls_str_len(&m_redirHdrs) - 2;
-    *p++ = '\r';
-    *p = '\n';
-    return len;
+    ls_str_xappend(&m_redirHdrs, "\r\n", 2, m_pPool);
+    return len + 2;
 }
 
 
-void HttpReq::updateBodyType(const char *pHeader)
+void HttpReq::updateBodyType(const char *pHeader, int len)
 {
-    if (strncasecmp(pHeader,
+    if (len >= 33 && strncasecmp(pHeader,
                     "application/x-www-form-urlencoded", 33) == 0)
         m_iBodyType = REQ_BODY_FORM;
-    else if (strncasecmp(pHeader, "multipart/form-data", 19) == 0)
+    else if (len >= 19 && strncasecmp(pHeader, "multipart/form-data", 19) == 0)
         m_iBodyType = REQ_BODY_MULTIPART;
 }
 
@@ -2810,25 +2877,39 @@ void HttpReq::tranEncodeToContentLen()
     if (!off)
         return;
     dropReqHeader(HttpHeader::H_CONTENT_LENGTH);
-    int len = 8;
+    int oldLen = 8;
     char *pBegin = m_headerBuf.begin() + off - 1;
     while (*pBegin != ':')
     {
-        ++len;
+        ++oldLen;
         --pBegin;
     }
     if ((pBegin[-1] | 0x20) != 'g')
         return;
     pBegin -= 17;
-    len += 17;
-    int n = ls_snprintf(pBegin, len, "Content-length: %lld",
-                        (long long)m_lEntityFinished);
-    memset(pBegin + n, ' ', len - n);
-    m_commonHeaderOffset[HttpHeader::H_CONTENT_LENGTH] =
-        pBegin + 16 - m_headerBuf.begin();
-    m_commonHeaderLen[ HttpHeader::H_CONTENT_LENGTH] = n - 16;
+    oldLen += 17;
+
+    char achLength[64];
+    int n = snprintf(achLength, sizeof(achLength), "Content-length: %lld",
+                     (long long)m_lEntityFinished);
+    if (n < 0)
+        return;
+
     m_lEntityLength = m_lEntityFinished;
-    m_commonHeaderOffset[HttpHeader::H_TRANSFER_ENCODING] = 0;
+    if (n <= oldLen)
+    {
+        memmove(pBegin, achLength, n);
+        memset(pBegin + n, ' ', oldLen - n);
+        m_commonHeaderOffset[HttpHeader::H_CONTENT_LENGTH] =
+            pBegin + 16 - m_headerBuf.begin();
+        m_commonHeaderLen[ HttpHeader::H_CONTENT_LENGTH] = n - 16;
+        m_commonHeaderOffset[HttpHeader::H_TRANSFER_ENCODING] = 0;
+    }
+    else
+    {
+        dropReqHeader(HttpHeader::H_TRANSFER_ENCODING);
+        addContentLenHeader((size_t)m_lEntityFinished);
+    }
 }
 
 
@@ -3557,7 +3638,7 @@ int HttpReq::processSetCookieHeader(const char *pValue, int valLen)
     pValue = pCookieValue = (const char *)memchr(pValue, '=', pEnd - pValue);
     if (!pCookieValue)
         return -1;
-    while (isspace(pValue[-1]))
+    while (pValue > pCookieName && isspace(pValue[-1]))
         --pValue;
     cookieNameLen = pValue - pCookieName;
     if (cookieNameLen <= 0)
@@ -3646,7 +3727,7 @@ int HttpReq::parseOneCookie(const char *cookie, const char *val_end)
         ++pVal;
     int nameOff = cookie - m_headerBuf.begin();
     int valOff = pVal - m_headerBuf.begin();
-    while (isspace(val_end[-1]))
+    while (val_end > pVal && isspace(val_end[-1]))
         --val_end;
 
     cookieval_t *pCookieEntry = m_cookies.insertCookieIndex(m_pPool,
@@ -3909,7 +3990,8 @@ int HttpReq::createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
             break;
         case '{':
             pEnvNameEnd = (char *)memchr(pFmt + 1, '}', pEnd - pFmt - 1);
-            if (pEnvNameEnd && (*(pEnvNameEnd + 1) == 'e'
+            if (pEnvNameEnd && pEnvNameEnd + 1 < pEnd
+                && (*(pEnvNameEnd + 1) == 'e'
                                 || *(pEnvNameEnd + 1) == 's'))
             {
                 const char *env_name = pFmt + 1;
@@ -3918,13 +4000,17 @@ int HttpReq::createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                 if (ret != -1)
                 {
                     char *p = pDest;
+                    int avail = pDestEnd - pDest;
                     int val_len = RequestVars::getReqVar(pSession, ret, p,
-                                                         pDestEnd - pDest);
-                    if (p!= pDest && val_len > 0)
+                                                         avail);
+                    if (val_len > avail)
+                        val_len = avail;
+                    if (p != pDest && val_len > 0)
                     {
                         memmove(pDest, p, val_len);
                     }
-                    pDest += val_len;
+                    if (val_len > 0)
+                        pDest += val_len;
                 }
                 else
                 {

@@ -60,6 +60,5 @@ int main(int argc, char *argv[])
     HttpLog::init();
     LsiApiHooks::initGlobalHooks();
 
-    UnitTest::RunAllTests();
-    return 0;
+    return UnitTest::RunAllTests();
 }

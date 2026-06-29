@@ -67,10 +67,15 @@ HTAuth::~HTAuth()
 
 void HTAuth::setName(const char *pName)
 {
+    if (!pName)
+        return;
+    char *pNewName = (char *)Pool::dupstr(pName);
+    if (!pNewName)
+        return;
     if (m_pName)
         Pool::deallocate2(m_pName);
-    m_pName = (char *)Pool::dupstr(pName);
-    buildWWWAuthHeader(pName);
+    m_pName = pNewName;
+    buildWWWAuthHeader(m_pName);
 }
 
 
@@ -122,7 +127,7 @@ int HTAuth::basicAuth(HttpSession *pSession, const char *pAuthorization,
 
     char buf[MAX_BASIC_AUTH_LEN];
     char *pUser = buf;
-    int ret = ls_base64_decode(pAuthorization, size, pUser);
+    int ret = ls_base64_decode(pAuthorization, size, pUser, sizeof(buf));
     if (ret == -1)
         return SC_401;
     while (isspace(*pUser))
@@ -188,60 +193,64 @@ int HTAuth::digestAuth(HttpSession *pSession, const char *pAuthorization,
     const char *pValueEnd;
     while (p < pEnd)
     {
-        pNameEnd = strchr(p, '=');
+        pNameEnd = (const char *)memchr(p, '=', pEnd - p);
         if (!pNameEnd)
             break;
         pNameBegin = p;
         p = pNameEnd + 1;
-        while (isspace(pNameEnd[-1]))
+        while (pNameEnd > pNameBegin && isspace(pNameEnd[-1]))
             --pNameEnd;
 
-        while (isspace(*p))
+        while (p < pEnd && isspace(*p))
             ++p;
+        if (p >= pEnd)
+            break;
         pValueBegin = p;
         if (*p == '"')
         {
             ++pValueBegin;
-            pValueEnd = strchr(p, '"');
+            pValueEnd = (const char *)memchr(pValueBegin, '"',
+                                             pEnd - pValueBegin);
             if (!pValueEnd)
                 break;
             p = pValueEnd + 1;
-            while (isspace(*p) || (*p == ','))
+            while (p < pEnd && (isspace(*p) || (*p == ',')))
                 ++p;
         }
         else
         {
-            pValueEnd = strchr(p, ',');
+            pValueEnd = (const char *)memchr(p, ',', pEnd - p);
             if (pValueEnd)
             {
                 p = pValueEnd + 1;
-                while (isspace(*p))
+                while (p < pEnd && isspace(*p))
                     ++p;
             }
             else
                 p = pValueEnd = pEnd;
         }
-        if (strncasecmp(pNameBegin, "username", 8) == 0)
+        int nameLen = pNameEnd - pNameBegin;
+        if (nameLen == 8 && strncasecmp(pNameBegin, "username", 8) == 0)
         {
             username = pValueBegin;
             username_len = pValueEnd - pValueBegin;
         }
-        else if (strncasecmp(pNameBegin, "realm", 5) == 0)
+        else if (nameLen == 5 && strncasecmp(pNameBegin, "realm", 5) == 0)
             realm = pValueBegin;
-        else if (strncasecmp(pNameBegin, "nonce", 5) == 0)
+        else if (nameLen == 5 && strncasecmp(pNameBegin, "nonce", 5) == 0)
             nonce = pValueBegin;
-        else if (strncasecmp(pNameBegin, "uri", 3) == 0)
+        else if (nameLen == 3 && strncasecmp(pNameBegin, "uri", 3) == 0)
             requri = pValueBegin;
-        else if (strncasecmp(pNameBegin, "response", 8) == 0)
+        else if (nameLen == 8 && strncasecmp(pNameBegin, "response", 8) == 0)
             resp_digest = pValueBegin;
-        else if (strncasecmp(pNameBegin, "nc", 2) == 0)
+        else if (nameLen == 2 && strncasecmp(pNameBegin, "nc", 2) == 0)
         {
 
         }
     }
-    if ((username) && (username_len < bufLen))
+    if ((username) && (username_len >= 0) && (username_len < bufLen))
     {
-        memccpy(pAuthUser, username, 0, username_len);
+        memcpy(pAuthUser, username, username_len);
         *(pAuthUser + username_len) = 0;
 
     }
@@ -299,5 +308,3 @@ int HTAuth::authenticate(HttpSession *pSession, const char *pAuthHeader,
     return SC_401;
 
 }
-
-

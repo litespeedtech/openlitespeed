@@ -90,7 +90,7 @@ void AuthUser::updatePasswdEncMethod()
     {
         char buf[128];
         const char *p = pass + 5;
-        int len = ls_base64_decode(p, strlen(p), buf);
+        int len = ls_base64_decode(p, strlen(p), buf, sizeof(buf));
         if (len == 20)
         {
             setPasswd(buf, len);
@@ -113,4 +113,3 @@ int AuthGroup::add(const char *pUser)
     }
     return LS_FAIL;
 }
-

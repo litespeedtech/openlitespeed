@@ -26,7 +26,7 @@ var pagefunction = function() {
 	// clears memory even if nothing is in the function
    	var rospan = $("#readonlynotice");
     <?php
-    if (defined('_CONF_READONLY_')) {
+    if ($uiContext->IsConfReadOnly()) {
         $alert_str = '<i class=\"lst-icon\" data-lucide=\"bell\"></i> ' . DMsg::UIStr('note_readonly_mode');
     ?>
         rospan.html(<?php echo UIBase::EscapeJs($alert_str); ?>);

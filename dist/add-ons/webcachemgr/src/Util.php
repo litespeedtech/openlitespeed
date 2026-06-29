@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2026 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -260,7 +260,7 @@ class Util
             $cmd .= ' -I';
         }
 
-        exec("$cmd $url", $output, $ret);
+        exec("$cmd " . escapeshellarg($url), $output, $ret);
 
         if ( $ret === 0 ) {
             return implode("\n", $output);
@@ -442,6 +442,64 @@ class Util
             $zipArchive = new ZipArchive();
 
             if ( $zipArchive->open($zipFile) === true ) {
+                $realDest = realpath($dest);
+
+                if ( $realDest === false ) {
+                    $zipArchive->close();
+                    Logger::debug(
+                        "Could not unzip $zipFile: destination directory does not exist."
+                    );
+                    return false;
+                }
+
+                $realDest = rtrim($realDest, '/') . '/';
+                $slipDetected = false;
+
+                for ( $i = 0; $i < $zipArchive->numFiles; $i++ ) {
+                    $entryName = $zipArchive->getNameIndex($i);
+
+                    if ( $entryName === false ) {
+                        continue;
+                    }
+
+                    /**
+                     * Resolve the entry path without relying on realpath()
+                     * (extracted file does not exist yet). Walk each segment,
+                     * collapsing '.' and '..', then check the result is
+                     * confined to $realDest.
+                     */
+                    $parts = [];
+
+                    foreach ( explode('/', $realDest . $entryName) as $part ) {
+
+                        if ( $part === '' || $part === '.' ) {
+                            continue;
+                        }
+
+                        if ( $part === '..' ) {
+                            array_pop($parts);
+                        }
+                        else {
+                            $parts[] = $part;
+                        }
+                    }
+
+                    $resolvedPath = '/' . implode('/', $parts);
+
+                    if ( strncmp($realDest, $resolvedPath . '/', strlen($realDest)) !== 0 ) {
+                        $slipDetected = true;
+                        break;
+                    }
+                }
+
+                if ( $slipDetected ) {
+                    $zipArchive->close();
+                    Logger::debug(
+                        "Zip-slip attempt detected in $zipFile - extraction aborted."
+                    );
+                    return false;
+                }
+
                 $extracted = $zipArchive->extractTo($dest);
                 $zipArchive->close();
 
@@ -452,23 +510,54 @@ class Util
 
             Logger::debug("Could not unzip $zipFile using ZipArchive.");
         }
-
-        $output = array();
-
-        exec(
-            "unzip $zipFile -d $dest > /dev/null 2>&1",
-            $output,
-            $return_var
-        );
-
-        if ( $return_var == 0 ) {
-            return true;
-        }
         else {
-            Logger::debug("Could not unzip $zipFile from cli.");
+            Logger::debug(
+                "Could not unzip $zipFile: ZipArchive extension unavailable."
+            );
         }
 
         return false;
+    }
+
+    /**
+     * Returns true if $path is a non-empty absolute filesystem path
+     * containing only characters safe for use in shell commands and Apache
+     * configuration (alphanumerics, underscore, hyphen, period, forward
+     * slash) and no '..' traversal segments.
+     *
+     * Use this to gate values before interpolating them into shell commands
+     * or writing them into configuration files.
+     *
+     * @since 1.17.10
+     *
+     * @param string $path
+     *
+     * @return bool
+     */
+    public static function isSafeAbsPath( $path )
+    {
+        if ( !is_string($path) || $path === '' || $path[0] !== '/' ) {
+            return false;
+        }
+
+        if ( !preg_match('#^/[A-Za-z0-9_./\-]*$#', $path) ) {
+            return false;
+        }
+
+        $normalizedPath = rtrim($path, '/');
+
+        if ( $normalizedPath === '' ) {
+            return false;
+        }
+
+        foreach ( array_slice(explode('/', $normalizedPath), 1) as $segment ) {
+
+            if ( $segment === '' || $segment === '.' || $segment === '..' ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -536,7 +625,25 @@ class Util
      */
     public static function rrmdir( $dir, $keepParent = false )
     {
-        if ( $dir != '' && is_dir($dir) ) {
+        if ( !is_string($dir)
+                || $dir === ''
+                || $dir === '/'
+                || $dir === '.'
+                || $dir === '..' ) {
+            return false;
+        }
+
+        /**
+         * V14 (CWE-59): if the top-level path itself is a symlink, never descend
+         * through it. is_dir() follows symlinks, so recursing here would
+         * enumerate and delete the link target's contents. Remove only the
+         * link node instead.
+         */
+        if ( is_link($dir) ) {
+            return $keepParent ? false : unlink($dir);
+        }
+
+        if ( is_dir($dir) ) {
 
             if ( ($matches = glob("$dir/*")) === false ) {
                 return false;
@@ -544,7 +651,16 @@ class Util
 
             foreach ( $matches as $file ) {
 
-                if ( is_dir($file) ) {
+                /**
+                 * V14 (CWE-59): never descend into symlinked directories. A symlink
+                 * whose target is a directory makes is_dir() true, which would
+                 * cause recursion to delete files outside the intended tree.
+                 * Remove the link node itself instead.
+                 */
+                if ( is_link($file) ) {
+                    unlink($file);
+                }
+                elseif ( is_dir($file) ) {
                     self::rrmdir($file);
                 }
                 else {
@@ -741,4 +857,83 @@ class Util
                 . "whm-litespeed-plugin/troubleshooting/$anchor"
         );
     }
+
+    /**
+     * Locate a usable CA-certificate bundle in a panel-agnostic way.
+     *
+     * Probes well-known locations on the major Linux distributions and
+     * supported control panels in priority order (OS-level bundles are
+     * preferred over panel-managed ones). Returns the first readable path,
+     * or '' when nothing is found (callers should then rely on the tool's
+     * built-in default trust store).
+     *
+     * @return string  Absolute path to a CA bundle, or '' if none found.
+     */
+    public static function getSystemCaBundle()
+    {
+        static $resolved = null;
+
+        if ( $resolved !== null ) {
+            return $resolved;
+        }
+
+        $candidates = array(
+            // OS-level bundles — preferred; kept current by the distro.
+            '/etc/ssl/certs/ca-certificates.crt',               // Debian/Ubuntu/Alpine
+            '/etc/pki/tls/certs/ca-bundle.crt',                 // RHEL/CentOS/AlmaLinux/Rocky
+            '/etc/ssl/cert.pem',                                 // FreeBSD/OpenBSD/macOS
+            '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem',// RHEL update-ca-trust
+            '/etc/ssl/ca-bundle.pem',                            // SUSE/openSUSE
+            // Panel-managed bundles — fallback when OS bundle is absent.
+            '/usr/local/cpanel/3rdparty/share/ca-bundle/curl-ca-bundle.crt',
+            '/opt/psa/var/certificates/ca-bundle.crt',           // Plesk
+            '/usr/local/directadmin/conf/carootcert.pem',        // DirectAdmin
+        );
+
+        foreach ( $candidates as $path ) {
+            if ( is_file($path) && is_readable($path) ) {
+                return $resolved = $path;
+            }
+        }
+
+        return $resolved = '';
+    }
+
+    /**
+     * Build the wget '--ca-certificate=...' argument string.
+     *
+     * Returns the shell-quoted flag with a trailing space when a bundle is
+     * found, or '' when nothing was found (callers should omit the flag and
+     * rely on the system default trust store — never pass
+     * --no-check-certificate).
+     *
+     * @return string
+     */
+    public static function getWgetCaArg()
+    {
+        $bundle = self::getSystemCaBundle();
+
+        return $bundle === ''
+            ? ''
+            : '--ca-certificate=' . escapeshellarg($bundle) . ' ';
+    }
+
+    /**
+     * Build the curl '--cacert ...' argument string.
+     *
+     * Returns the shell-quoted flag with a trailing space when a bundle is
+     * found, or '' when nothing was found (callers should omit the flag and
+     * rely on the system default trust store — never pass --insecure).
+     *
+     * @return string
+     */
+    public static function getCurlCaArg()
+    {
+        $bundle = self::getSystemCaBundle();
+
+        return $bundle === ''
+            ? ''
+            : '--cacert ' . escapeshellarg($bundle) . ' ';
+    }
+
 }

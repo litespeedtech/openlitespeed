@@ -86,8 +86,6 @@ public:
 
     static HioHandler *get();
 
-    int pushPromise(uint32_t streamId, UnpackedHeaders *hdrs);
-
 protected:
     virtual void disableHttp2ByIp();
 
@@ -108,9 +106,6 @@ private:
                          const unsigned char *bufEnd, UpkdHdrBuilder *builder);
     int encodeRespHeaders(H2Stream *stream, HttpRespHeaders *pRespHeaders,
                           unsigned char *buf, int maxSize);
-
-    H2StreamBase* createPushStream(uint32_t pushStreamId,
-                                   UnpackedHeaders *headers);
 
 private:
 

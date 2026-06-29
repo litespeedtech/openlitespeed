@@ -112,57 +112,61 @@ class IpThrottle
         }
 
         $now = time();
-        $state = $this->store->load($ip, $bucket);
+        $maxFailures = $this->maxFailures;
+        $blockWindow = $this->blockWindow;
+        $maxBackoff = $this->maxBackoff;
 
-        if ($state === null) {
-            $state = [
-                'failures'      => 0,
-                'first_failure' => $now,
-                'last_failure'  => $now,
-                'blocked_until' => 0,
-                'block_count'   => 0,
-                'created'       => $now,
-            ];
-        }
-
-        $state['failures'] = (isset($state['failures']) ? (int) $state['failures'] : 0) + 1;
-        $state['last_failure'] = $now;
-
-        if (!isset($state['first_failure'])) {
-            $state['first_failure'] = $now;
-        }
-
-        if (!isset($state['block_count'])) {
-            $state['block_count'] = 0;
-        }
-
-        // Check if we should apply a block.
-        $failures = (int) $state['failures'];
-        if ($failures >= $this->maxFailures) {
-            // All failures should be within the sliding window.
-            $windowStart = $now - $this->blockWindow;
-            $firstFailure = (int) $state['first_failure'];
-
-            if ($firstFailure >= $windowStart || $failures >= $this->maxFailures) {
-                // Apply exponential backoff: blockWindow * 2^blockCount, capped at maxBackoff.
-                $blockCount = (int) $state['block_count'];
-                $duration = $this->blockWindow * pow(2, $blockCount);
-                if ($duration > $this->maxBackoff) {
-                    $duration = $this->maxBackoff;
-                }
-
-                $state['blocked_until'] = $now + $duration;
-                $state['block_count'] = $blockCount + 1;
-
-                error_log(
-                    '[SECURITY] Login throttle: IP ' . $ip . ' blocked after '
-                    . $failures . ' failures (bucket: ' . $bucket
-                    . ', duration: ' . $duration . 's)'
-                );
+        $this->store->mutate($ip, $bucket, function ($state) use ($ip, $bucket, $now, $maxFailures, $blockWindow, $maxBackoff) {
+            if ($state === null) {
+                $state = [
+                    'failures'      => 0,
+                    'first_failure' => $now,
+                    'last_failure'  => $now,
+                    'blocked_until' => 0,
+                    'block_count'   => 0,
+                    'created'       => $now,
+                ];
             }
-        }
 
-        $this->store->save($ip, $bucket, $state);
+            $state['failures'] = (isset($state['failures']) ? (int) $state['failures'] : 0) + 1;
+            $state['last_failure'] = $now;
+
+            if (!isset($state['first_failure'])) {
+                $state['first_failure'] = $now;
+            }
+
+            if (!isset($state['block_count'])) {
+                $state['block_count'] = 0;
+            }
+
+            // Check if we should apply a block.
+            $failures = (int) $state['failures'];
+            if ($failures >= $maxFailures) {
+                // All failures should be within the sliding window.
+                $windowStart = $now - $blockWindow;
+                $firstFailure = (int) $state['first_failure'];
+
+                if ($firstFailure >= $windowStart || $failures >= $maxFailures) {
+                    // Apply exponential backoff: blockWindow * 2^blockCount, capped at maxBackoff.
+                    $blockCount = (int) $state['block_count'];
+                    $duration = $blockWindow * pow(2, $blockCount);
+                    if ($duration > $maxBackoff) {
+                        $duration = $maxBackoff;
+                    }
+
+                    $state['blocked_until'] = $now + $duration;
+                    $state['block_count'] = $blockCount + 1;
+
+                    error_log(
+                        '[SECURITY] Login throttle: IP ' . $ip . ' blocked after '
+                        . $failures . ' failures (bucket: ' . $bucket
+                        . ', duration: ' . $duration . 's)'
+                    );
+                }
+            }
+
+            return $state;
+        });
     }
 
     /**
@@ -231,36 +235,38 @@ class IpThrottle
         }
 
         $now = time();
-        $state = $this->store->load($ip, $bucket);
+        $maxBackoff = $this->maxBackoff;
 
-        if ($state === null) {
-            $state = [
-                'failures'      => 1,
-                'first_failure' => $now,
-                'last_failure'  => $now,
-                'block_count'   => 0,
-                'created'       => $now,
-            ];
-        }
+        $this->store->mutate($ip, $bucket, function ($state) use ($ip, $bucket, $now, $duration, $maxBackoff) {
+            if ($state === null) {
+                $state = [
+                    'failures'      => 1,
+                    'first_failure' => $now,
+                    'last_failure'  => $now,
+                    'block_count'   => 0,
+                    'created'       => $now,
+                ];
+            }
 
-        $blockCount = isset($state['block_count']) ? (int) $state['block_count'] : 0;
+            $blockCount = isset($state['block_count']) ? (int) $state['block_count'] : 0;
 
-        // Escalate: on repeat offenses, use exponential backoff from the base duration.
-        $effectiveDuration = $duration * pow(2, $blockCount);
-        if ($effectiveDuration > $this->maxBackoff) {
-            $effectiveDuration = $this->maxBackoff;
-        }
+            // Escalate: on repeat offenses, use exponential backoff from the base duration.
+            $effectiveDuration = $duration * pow(2, $blockCount);
+            if ($effectiveDuration > $maxBackoff) {
+                $effectiveDuration = $maxBackoff;
+            }
 
-        $state['blocked_until'] = $now + $effectiveDuration;
-        $state['block_count'] = $blockCount + 1;
-        $state['last_failure'] = $now;
+            $state['blocked_until'] = $now + $effectiveDuration;
+            $state['block_count'] = $blockCount + 1;
+            $state['last_failure'] = $now;
 
-        error_log(
-            '[SECURITY] Abuse detected: IP ' . $ip . ' blocked (bucket: '
-            . $bucket . ', duration: ' . $effectiveDuration . 's)'
-        );
+            error_log(
+                '[SECURITY] Abuse detected: IP ' . $ip . ' blocked (bucket: '
+                . $bucket . ', duration: ' . $effectiveDuration . 's)'
+            );
 
-        $this->store->save($ip, $bucket, $state);
+            return $state;
+        });
     }
 
     /**

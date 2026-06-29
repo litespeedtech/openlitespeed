@@ -27,12 +27,11 @@
 #include <util/stringtool.h>
 #include <util/vmembuf.h>
 
-#include <pcreposix.h>
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 
@@ -160,7 +159,7 @@ static int s_SSI_Attrs_len[] =
 int SsiScript::getAttr(const char *&pBegin, const char *pEnd,
                        char *pAttrName, const char *&pValue, int &valLen)
 {
-    while ((pBegin < pEnd) && isspace(*pBegin))
+    while ((pBegin < pEnd) && isspace((unsigned char)*pBegin))
         ++pBegin;
     if (pBegin >= pEnd)
         return -2;
@@ -170,20 +169,25 @@ int SsiScript::getAttr(const char *&pBegin, const char *pEnd,
     if (!pAttrEnd)
         return LS_FAIL;
     pValue = pAttrEnd + 1;
-    while (isspace(pAttrEnd[ -1 ]))
+    while (pAttrEnd > pBegin && isspace((unsigned char)pAttrEnd[-1]))
         --pAttrEnd;
-    if (pAttrEnd - pBegin > 80)
+    if (pAttrEnd <= pBegin || pAttrEnd - pBegin > 80)
         return LS_FAIL;
     memmove(pAttrName, pBegin, pAttrEnd - pBegin);
     pAttrName[pAttrEnd - pBegin] = 0;
 
-    while (isspace(*pValue))
+    while (pValue < pEnd && isspace((unsigned char)*pValue))
         ++pValue;
-    pAttrEnd = StringTool::strNextArg(pValue, NULL);
-    if (!pAttrEnd)
+    if (pValue < pEnd)
+    {
+        pAttrEnd = StringTool::strNextArg(pValue, NULL);
+        if (!pAttrEnd || pAttrEnd > pEnd)
+            pAttrEnd = pEnd;
+    }
+    else
         pAttrEnd = pEnd;
     valLen = pAttrEnd - pValue;
-    pBegin = pAttrEnd + 1;
+    pBegin = (pAttrEnd < pEnd) ? pAttrEnd + 1 : pEnd;
     return 0;
 
 }
@@ -361,7 +365,7 @@ int SsiScript::parseIf(int cmd, const char *pBegin, const char *pEnd)
 
     if (cmd != SsiComponent::SSI_Else)
     {
-        while (isspace(*pBegin))
+        while (pBegin < pEnd && isspace((unsigned char)*pBegin))
             ++pBegin;
         parseAttrs(cmd, pBegin, pEnd);
     }
@@ -429,15 +433,17 @@ int SsiScript::parseIf(int cmd, const char *pBegin, const char *pEnd)
 
 int SsiScript::parseSsiDirective(const char *pBegin, const char *pEnd)
 {
-    while (isspace(*pBegin))
+    while (pBegin < pEnd && isspace((unsigned char)*pBegin))
         ++pBegin;
     if (pBegin >= pEnd)
         return 0;
+    int remain = pEnd - pBegin;
     int cmd = 1;
     for (; cmd < (int)(sizeof(s_SSI_Cmd) / sizeof(const char *)); cmd++)
     {
-        if (strncasecmp(s_SSI_Cmd[cmd], pBegin,
-                        s_SSI_Cmd_len[cmd]) == 0)
+        if (remain > s_SSI_Cmd_len[cmd]
+            && strncasecmp(s_SSI_Cmd[cmd], pBegin,
+                           s_SSI_Cmd_len[cmd]) == 0)
         {
             if (isspace(*(pBegin + s_SSI_Cmd_len[cmd])))
                 break;
@@ -449,7 +455,7 @@ int SsiScript::parseSsiDirective(const char *pBegin, const char *pEnd)
         return LS_FAIL;
     }
     pBegin += s_SSI_Cmd_len[cmd] + 1;
-    while (isspace(*pBegin))
+    while (pBegin < pEnd && isspace((unsigned char)*pBegin))
         ++pBegin;
     if ((cmd == SsiComponent::SSI_If) ||
         (cmd == SsiComponent::SSI_Elif) ||
@@ -485,14 +491,16 @@ int SsiScript::parse(SsiTagConfig *pConfig, const char *pBegin,
     if (!pattern[1] || !pattern[1]->c_str())
         pattern[1] = &sEnd;
 
-    while (p < pEnd + 1 - pattern[m_iParserState]->len())
+    while (pattern[m_iParserState]->len() > 0
+           && (size_t)(pEnd - p) >= (size_t)pattern[m_iParserState]->len())
     {
+        int patternLen = pattern[m_iParserState]->len();
         pTag = (char *)memchr(p, *(pattern[m_iParserState]->c_str()),
-                              pEnd + 1 - pattern[m_iParserState]->len() - p);
+                              pEnd - p - patternLen + 1);
         if (pTag)
         {
             if (memcmp(pTag, pattern[m_iParserState]->c_str(),
-                       pattern[m_iParserState]->len()) == 0)
+                       patternLen) == 0)
             {
                 if (m_iParserState)
                     parseSsiDirective(pContentBegin, pTag);
@@ -502,7 +510,7 @@ int SsiScript::parse(SsiTagConfig *pConfig, const char *pBegin,
                         appendHtmlContent(pContentBegin - pBegin + curOffset,
                                           pTag - pContentBegin);
                 }
-                p = pTag + pattern[m_iParserState]->len();
+                p = pTag + patternLen;
                 pContentBegin = p;
                 m_iParserState = !m_iParserState;
             }
@@ -525,8 +533,9 @@ int SsiScript::parse(SsiTagConfig *pConfig, const char *pBegin,
             p = pEnd;
         else
         {
-            if (pEnd - p > pattern[m_iParserState]->len() - 1)
-                p = pEnd + 1 - pattern[m_iParserState]->len();
+            int patternLen = pattern[m_iParserState]->len();
+            if (patternLen > 0 && (size_t)(pEnd - p) >= (size_t)patternLen)
+                p = pEnd - patternLen + 1;
         }
         if (p > pContentBegin)
             appendHtmlContent(pContentBegin - pBegin + curOffset,
@@ -552,13 +561,20 @@ int SsiScript::processSsiFile(SsiTagConfig *pConfig, int fd,
     m_pCurComponent = NULL;
     m_pCurBlock = &m_main;
 
-    pBegin = (char *)mmap(NULL, pStat->st_size, PROT_READ,
-                          MAP_SHARED | MAP_FILE, fd, 0);
-
     m_pContent = new VMemBuf();
     if (!m_pContent)
     {
         LS_ERROR("Insufficient memory allocating VMemBuf in processSsiFile()");
+        return -1;
+    }
+    if (pStat->st_size == 0)
+        return 0;
+
+    pBegin = (char *)mmap(NULL, pStat->st_size, PROT_READ,
+                          MAP_SHARED | MAP_FILE, fd, 0);
+    if (pBegin == MAP_FAILED)
+    {
+        LS_ERROR("Failed to mmap SSI script: %s", strerror(errno));
         return -1;
     }
     m_pContent->set(VMBUF_FILE_MAP, new MmapBlockBuf(pBegin, pStat->st_size));
@@ -665,4 +681,3 @@ void SsiScript::setCurrentBlock(SsiBlock *pBlock)
     m_pCurBlock = pBlock;
     m_pCurComponent = pComponent;
 }
-

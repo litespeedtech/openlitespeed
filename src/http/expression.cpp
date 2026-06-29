@@ -375,7 +375,8 @@ const Pcregex *Expression::parseRegex(const char *pBegin, const char *pEnd)
     const Pcregex *regex = NULL;
     char ch;
     ch = *pBegin;
-    if (!(ch == '/' || (ch == 'm' && *(pBegin + 1) == '#')))
+    if (!(ch == '/' || (ch == 'm' && pBegin + 1 < pEnd
+                        && *(pBegin + 1) == '#')))
     {
         s_last_parse_error = "Not valid regular expression /.../ or m#...#";
         return NULL;
@@ -397,7 +398,8 @@ const Pcregex *Expression::parseRegex(const char *pBegin, const char *pEnd)
         if (pArgEnd + 1 == pEnd || isspace(*(pArgEnd + 1)))
         {
             *((char *)pBegin + 1 + reg_len) = 0;
-            regex = Pcregex::get(pBegin + 1, REG_EXTENDED | case_ins);
+            regex = Pcregex::get(pBegin + 1,
+                                 case_ins ? LSRE_CASELESS : LSRE_DEFAULT);
             if (!regex)
                 LS_WARN("Bad regular expression: %s", pBegin + 1);
         }
@@ -1069,7 +1071,8 @@ int Expression::parseApacheExpr(const char *expr_str, const char *expr_end)
         if (last_token == ExprToken::EXP_REGEX
              || last_token == ExprToken::EXP_REGEX_NOMATCH)
         {
-            if (!(ch == '/' || (ch == 'm' && *(pBegin + 1) == '#')))
+            if (!(ch == '/' || (ch == 'm' && pBegin + 1 < pEnd
+                                && *(pBegin + 1) == '#')))
             {
                 s_last_parse_error = "Not valid regular expression /.../ or m#...#";
                 return -1;
@@ -1190,6 +1193,7 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
 {
     char achBuf[ 10240];
     char *p = achBuf;
+    char *pBufEnd = achBuf + sizeof(achBuf) - 1;
     char quote = 0;
     char space = 1;
     char ch;
@@ -1206,9 +1210,19 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
                 *p = 0;
                 if (quote == '/')
                 {
-                    *p++ = '/';
-                    if (*pBegin == 'i')
+                    if (p >= pBufEnd)
                     {
+                        s_last_parse_error = "Expression token is too long";
+                        return -1;
+                    }
+                    *p++ = '/';
+                    if (pBegin < pEnd && *pBegin == 'i')
+                    {
+                        if (p >= pBufEnd)
+                        {
+                            s_last_parse_error = "Expression token is too long";
+                            return -1;
+                        }
                         *p++ = 'i';
                         ++pBegin;
                     }
@@ -1228,6 +1242,11 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
                         break;
                     ch = *pBegin++;
                 }
+                if (p >= pBufEnd)
+                {
+                    s_last_parse_error = "Expression token is too long";
+                    return -1;
+                }
                 *p++ = ch;
             }
             continue;
@@ -1235,12 +1254,12 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
         switch (ch)
         {
         case '=':
-            if (*pBegin == '=' || *pBegin == '~')
+            if (pBegin < pEnd && (*pBegin == '=' || *pBegin == '~'))
                 ++pBegin;
             token = ExprToken::EXP_EQ;
             break;
         case '!':
-            if (*pBegin == '=' || *pBegin == '~')
+            if (pBegin < pEnd && (*pBegin == '=' || *pBegin == '~'))
             {
                 ++pBegin;
                 token = ExprToken::EXP_NE;
@@ -1251,7 +1270,7 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
             }
             break;
         case '<':
-            if (*pBegin == '=')
+            if (pBegin < pEnd && *pBegin == '=')
             {
                 ++pBegin;
                 token = ExprToken::EXP_LE;
@@ -1260,7 +1279,7 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
                 token = ExprToken::EXP_LESS;
             break;
         case '>':
-            if (*pBegin == '=')
+            if (pBegin < pEnd && *pBegin == '=')
             {
                 ++pBegin;
                 token = ExprToken::EXP_GE;
@@ -1275,12 +1294,12 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
             token = ExprToken::EXP_CLOSEP;
             break;
         case '&':
-            if (*pBegin == '&')
+            if (pBegin < pEnd && *pBegin == '&')
                 ++pBegin;
             token = ExprToken::EXP_AND;
             break;
         case '|':
-            if (*pBegin == '|')
+            if (pBegin < pEnd && *pBegin == '|')
                 ++pBegin;
             token = ExprToken::EXP_OR;
             break;
@@ -1302,9 +1321,19 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
         default:
             if (space)
             {
+                if (p >= pBufEnd)
+                {
+                    s_last_parse_error = "Expression token is too long";
+                    return -1;
+                }
                 if (p != achBuf)
                     *p++ = ' ';
                 space = 0;
+            }
+            if (p >= pBufEnd)
+            {
+                s_last_parse_error = "Expression token is too long";
+                return -1;
             }
             *p++ = ch;
             continue;
@@ -1321,12 +1350,17 @@ int Expression::parse(int type, const char *pBegin, const char *pEnd)
             if ((token == ExprToken::EXP_EQ) ||
                 (token == ExprToken::EXP_NE))
             {
-                while (isspace(*pBegin))
+                while (pBegin < pEnd && isspace(*pBegin))
                     ++pBegin;
-                if (*pBegin == '/')
+                if (pBegin < pEnd && *pBegin == '/')
                 {
                     ++pBegin;
                     quote = '/';
+                    if (p >= pBufEnd)
+                    {
+                        s_last_parse_error = "Expression token is too long";
+                        return -1;
+                    }
                     *p++ = '/';
                     if (token == ExprToken::EXP_EQ)
                         token = ExprToken::EXP_REGEX;
@@ -1423,7 +1457,5 @@ int Expression::buildPrefix()
 
     return 0;
 }
-
-
 
 

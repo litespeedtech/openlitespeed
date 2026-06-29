@@ -120,7 +120,6 @@ public:
         H_UNKNOWN = H_HEADER_END
     };
 
-    static size_t getIndex2(const char *pHeader);
     static size_t getIndex(const char *pHeader, int len);
 
 
@@ -136,8 +135,6 @@ private:
     void operator=(const HttpHeader &rhs);
     HttpHeader();
     ~HttpHeader();
-    static size_t getIndex(const char *pHeader);
-
 public:
     static int getHeaderStringLen(int iIndex)
     {   return s_iHeaderLen[iIndex];    }

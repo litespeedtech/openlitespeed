@@ -39,7 +39,7 @@ SUITE(YourSuitqqqqeName)
 
         range = new(ls_xpool_alloc(pool, sizeof(HttpRange))) HttpRange(el);
 
-        const char *psRange = "bytes= 0 -\t0\t ,1234-23456,-10,10-,1999-1999";
+        const char *psRange = "bytes= 0 -\t0\t ,1234-23456,-10,10-20,1999-1999";
         int res = range->parse(psRange, pool);
         CHECK(res == 0);
         CHECK(range->count() == 5);
@@ -56,7 +56,7 @@ SUITE(YourSuitqqqqeName)
         CHECK(e == el);
         CHECK(range->getContentOffset(3, b, e) == 0);
         CHECK(b == 10);
-        CHECK(e == el);
+        CHECK(e == 21);
         CHECK(range->getContentOffset(4, b, e) == 0);
         CHECK(b == 1999);
         CHECK(e == el);
@@ -78,7 +78,7 @@ SUITE(YourSuitqqqqeName)
         CHECK(range->getContentRangeString(2, crs, 99) > 0);
         CHECK(strcmp(crs, "Content-Range: bytes 1990-1999/2000\r\n") == 0);
         CHECK(range->getContentRangeString(3, crs, 99) > 0);
-        CHECK(strcmp(crs, "Content-Range: bytes 10-1999/2000\r\n") == 0);
+        CHECK(strcmp(crs, "Content-Range: bytes 10-20/2000\r\n") == 0);
         CHECK(range->getContentRangeString(4, crs, 38) > 0);
         CHECK(strcmp(crs, "Content-Range: bytes 1999-1999/2000\r\n") == 0);
         CHECK(range->getContentRangeString(5, crs, 30) > 0);
@@ -95,7 +95,7 @@ SUITE(YourSuitqqqqeName)
         CHECK(range->getContentRangeString(2, crs, 99) > 0);
         CHECK(strcmp(crs, "Content-Range: bytes 1990-1999/*\r\n") == 0);
         CHECK(range->getContentRangeString(3, crs, 99) > 0);
-        CHECK(strcmp(crs, "Content-Range: bytes 10-1999/*\r\n") == 0);
+        CHECK(strcmp(crs, "Content-Range: bytes 10-20/*\r\n") == 0);
         CHECK(range->getContentRangeString(4, crs, 38) > 0);
         CHECK(strcmp(crs, "Content-Range: bytes 1999-1999/*\r\n") == 0);
 

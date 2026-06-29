@@ -1,20 +1,20 @@
 /*****************************************************************************
-*    Open LiteSpeed is an open source HTTP server.                           *
-*    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
-*                                                                            *
-*    This program is free software: you can redistribute it and/or modify    *
-*    it under the terms of the GNU General Public License as published by    *
-*    the Free Software Foundation, either version 3 of the License, or       *
-*    (at your option) any later version.                                     *
-*                                                                            *
-*    This program is distributed in the hope that it will be useful,         *
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
-*    GNU General Public License for more details.                            *
-*                                                                            *
-*    You should have received a copy of the GNU General Public License       *
-*    along with this program. If not, see http://www.gnu.org/licenses/.      *
-*****************************************************************************/
+ *    Open LiteSpeed is an open source HTTP server.                           *
+ *    Copyright (C) 2013 - 2022  LiteSpeed Technologies, Inc.                 *
+ *                                                                            *
+ *    This program is free software: you can redistribute it and/or modify    *
+ *    it under the terms of the GNU General Public License as published by    *
+ *    the Free Software Foundation, either version 3 of the License, or       *
+ *    (at your option) any later version.                                     *
+ *                                                                            *
+ *    This program is distributed in the hope that it will be useful,         *
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of          *
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the            *
+ *    GNU General Public License for more details.                            *
+ *                                                                            *
+ *    You should have received a copy of the GNU General Public License       *
+ *    along with this program. If not, see http://www.gnu.org/licenses/.      *
+ *****************************************************************************/
 
 #include "quicengine.h"
 #include <edio/eventreactor.h>
@@ -54,7 +54,6 @@
 TDLinkQueue<QuicStream> QuicEngine::s_streamQueues[N_STREAM_Qs];
 
 unsigned QuicEngine::s_active_conns = 0;
-
 
 static int s_quic_tight_loop_count = 0;
 static int s_quic_previous_debug_level = 0;
@@ -100,12 +99,10 @@ void QuicEngine::detectBusyLoop(int to)
     }
 }
 
-
 UdpListenerList::~UdpListenerList()
 {
     release_objects();
 }
-
 
 int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
 {
@@ -132,10 +129,10 @@ int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
         for (alpn = alpn - 1; alpn >= begin_alpn; --alpn)
         {
             n = snprintf(alt_svc + off, sz - off,
-                    "%s%s=\":%hu\"; ma=2592000", off ? ", " : "", *alpn, port);
-            if (n < 0 || (size_t) n >= sz - off)
+                         "%s%s=\":%hu\"; ma=2592000", off ? ", " : "", *alpn, port);
+            if (n < 0 || (size_t)n >= sz - off)
                 goto end;
-            off += (unsigned) n;
+            off += (unsigned)n;
         }
     }
 
@@ -143,14 +140,14 @@ int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
     if (gquic_versions && gquic_versions[0])
     {
         n = snprintf(alt_svc + off, sz - off,
-                "%squic=\":%hu\"; ma=2592000; v=\"%s\"", off ? ", " : "",
-                                                        port, gquic_versions);
-        if (n < 0 || (size_t) n >= sz - off)
+                     "%squic=\":%hu\"; ma=2592000; v=\"%s\"", off ? ", " : "",
+                     port, gquic_versions);
+        if (n < 0 || (size_t)n >= sz - off)
             goto end;
-        off += (unsigned) n;
+        off += (unsigned)n;
     }
 
-  end:
+end:
     alt_svc[off] = '\0';
     if (off > 0)
         return 0;
@@ -158,27 +155,22 @@ int QuicEngine::getAltSvcVerStr(unsigned short port, char *alt_svc, size_t sz)
         return -1;
 }
 
-
 pid_t QuicEngine::s_pid = -1;
 
-void  QuicEngine::setpid( pid_t pid)
+void QuicEngine::setpid(pid_t pid)
 {
     s_pid = pid;
     QuicShm::setPid(pid);
 }
 
-
-static int logger_log_buf (void *ctx, const char *buf, size_t len)
+static int logger_log_buf(void *ctx, const char *buf, size_t len)
 {
     log4cxx::Logger::s_logbuf(NULL, buf, len);
 
     return 0;
 }
 
-
-static const struct lsquic_logger_if logger_if = { logger_log_buf };
-
-
+static const struct lsquic_logger_if logger_if = {logger_log_buf};
 
 // void QuicEngine::cancel_events(void *event_ctx)
 // {
@@ -191,7 +183,7 @@ static const struct lsquic_logger_if logger_if = { logger_log_buf };
 // }
 
 lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
-                                             lsquic_conn_t *c)
+                                         lsquic_conn_t *c)
 {
     const sockaddr *pPeer, *pLocal;
     ClientInfo *pClientInfo;
@@ -201,7 +193,7 @@ lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
     if (0 != lsquic_conn_get_sockaddr(c, &pLocal, &pPeer))
     {
         LS_WARN("[QuicEngine::onNewConn] could not get socket addresses for "
-                                                        "the new connection");
+                "the new connection");
         lsquic_conn_abort(c);
         return NULL;
     }
@@ -219,19 +211,28 @@ lsquic_conn_ctx_t *QuicEngine::onNewConn(void *stream_if_ctx,
         pClientInfo = ClientCache::getInstance().getClientInfo((sockaddr *)pPeer);
 
     if (!pClientInfo ||
-        (int) pClientInfo->getConns() >= pClientInfo->getPerClientHardLimit())
+        (int)pClientInfo->getConns() >= pClientInfo->getPerClientHardLimit())
     {
         lsquic_conn_abort(c);
         return NULL;
     }
+
+    if (pClientInfo->checkStreamLimit() == -1)
+    {
+        LS_INFO("[%s] [QuicEngine::onNewConn] Abort connection, HTTP3 stream abuse detected.",
+                pClientInfo->getAddrString());
+        lsquic_conn_abort(c);
+        return NULL;
+    }
+
     pClientInfo->incConn();
     ++s_active_conns;
     LS_DBG_H("[%s] [CLC] QUIC engine increase connection count 1, current: %u.",
              pClientInfo->getAddrString(), s_active_conns);
-//     HttpGlobals::incCurConns();
-//     LS_DBG_H("[%s] [CLC] QUIC engine increase connection count 1, total available: %d.",
-//              pClientInfo->getAddrString(),
-//              HttpGlobals::getConnLimitCtrl()->getAvailConn());
+    //     HttpGlobals::incCurConns();
+    //     LS_DBG_H("[%s] [CLC] QUIC engine increase connection count 1, total available: %d.",
+    //              pClientInfo->getAddrString(),
+    //              HttpGlobals::getConnLimitCtrl()->getAvailConn());
     return (lsquic_conn_ctx_t *)pClientInfo;
 }
 
@@ -239,57 +240,51 @@ void QuicEngine::onConnEstablished(lsquic_conn_t *c)
 {
 }
 
-
 static int s_isDestruct = 0;
 
 #ifndef _NOT_USE_SHM_
 const struct lsquic_shared_hash_if s_quic_shi_if =
-{
-    QuicShm::insertItem,
-    QuicShm::deleteItem,
-    QuicShm::lookupItem,
+    {
+        QuicShm::insertItem,
+        QuicShm::deleteItem,
+        QuicShm::lookupItem,
 };
 
-
 void QuicEngine::touchSCIDs(void *ctx, void **peer_ctx,
-                                    const lsquic_cid_t *cids, unsigned count)
+                            const lsquic_cid_t *cids, unsigned count)
 {
     LS_DBG_H("QuicEngine::touchSCIDs\n");
     QuicShm::getInstance().touchCidItems(cids, count);
 }
 
-
 void QuicEngine::removeOldSCIDs(void *ctx, void **peer_ctx,
-                                    const lsquic_cid_t *cids, unsigned count)
+                                const lsquic_cid_t *cids, unsigned count)
 {
     LS_DBG_H("QuicEngine::removeOldSCIDs\n");
     QuicShm::getInstance().markBadCidItems(cids, count, -1);
     const lsquic_cid_t *const end = cids + count;
-    for( ; cids < end; ++cids)
+    for (; cids < end; ++cids)
         UdpListener::deleteCidListenerEntry(cids);
-
 }
 
-
 void QuicEngine::addNewSCIDs(void *ctx, void **peer_ctx,
-                                    const lsquic_cid_t *cids, unsigned count)
+                             const lsquic_cid_t *cids, unsigned count)
 {
     UdpListener *pUdpListener;
     unsigned n;
     ShmCidPidInfo pids[count];
 
     LS_DBG_H("QuicEngine::addNewSCIDs\n");
-    memset(pids, 0, sizeof(pids));  /* Set .pid to 0 to signify unknown pids */
+    memset(pids, 0, sizeof(pids)); /* Set .pid to 0 to signify unknown pids */
     QuicShm::getInstance().lookupCidPids(cids, pids, count);
 
-    for(n = 0; n < count; ++n)
+    for (n = 0; n < count; ++n)
         if (pids[n].pid > 0)
         {
-            pUdpListener = (UdpListener *) peer_ctx[n];
+            pUdpListener = (UdpListener *)peer_ctx[n];
             pUdpListener->updateCidListenerMap(&cids[n], &pids[n]);
         }
 }
-
 
 void QuicEngine::onConnClosed(lsquic_conn_t *c)
 {
@@ -305,17 +300,16 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c)
     s_active_conns--;
     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, current: %u.",
              pClientInfo ? pClientInfo->getAddrString() : "N/A", s_active_conns);
-//     HttpGlobals::decCurConns();
-//     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, total available: %d.",
-//              pClientInfo->getAddrString(),
-//              HttpGlobals::getConnLimitCtrl()->getAvailConn());
+    //     HttpGlobals::decCurConns();
+    //     LS_DBG_H("[%s] [CLC] QUIC engine decrease connection count 1, total available: %d.",
+    //              pClientInfo->getAddrString(),
+    //              HttpGlobals::getConnLimitCtrl()->getAvailConn());
     if (s_isDestruct)
         return;
     cid = lsquic_conn_id(c);
     QuicShm::getInstance().markClosedCidItem(cid);
     UdpListener::deleteCidListenerEntry(cid);
 }
-
 
 #else
 
@@ -349,14 +343,13 @@ void QuicEngine::onConnClosed(lsquic_conn_t *c, lsquic_conn_ctx_t *h)
 //     return pInfo->checkAccess();
 // }
 
-static void * createUnpackedHeaders(void *hsi_ctx, lsquic_stream_t *stream,
-                                    int is_push_promise)
+static void *createUnpackedHeaders(void *hsi_ctx, lsquic_stream_t *stream,
+                                   int is_push_promise)
 {
     bool is_qpack = (stream != NULL);
     UnpackedHeaders *hdrs = new UnpackedHeaders();
     return new UpkdHdrBuilder(hdrs, is_qpack);
 }
-
 
 static int processUnpackedHeader(void *hdr_set, lsxpack_header_t *hdr)
 {
@@ -364,7 +357,6 @@ static int processUnpackedHeader(void *hdr_set, lsxpack_header_t *hdr)
     assert(hdr == qhdrs->getWorking());
     return qhdrs->process(hdr);
 }
-
 
 static void releaseUnpackedHeaders(void *hdr_set)
 {
@@ -374,7 +366,6 @@ static void releaseUnpackedHeaders(void *hdr_set)
         delete (UpkdHdrBuilder *)hdr_set;
 }
 
-
 static struct lsxpack_header *
 prepareDecodeUnpackedHeader(void *hdr_set, struct lsxpack_header *hdr,
                             size_t minimum_size)
@@ -383,20 +374,17 @@ prepareDecodeUnpackedHeader(void *hdr_set, struct lsxpack_header *hdr,
     return qhdrs->prepareDecode(hdr, minimum_size);
 }
 
-
 static struct lsquic_hset_if s_quic_hpack_hdr_callback =
-{
-    createUnpackedHeaders,
-    prepareDecodeUnpackedHeader,
-    processUnpackedHeader,
-    releaseUnpackedHeaders,
-    (lsquic_hsi_flag)(LSQUIC_HSI_HTTP1X | LSQUIC_HSI_HASH_NAME
-                                        | LSQUIC_HSI_HASH_NAMEVAL),
+    {
+        createUnpackedHeaders,
+        prepareDecodeUnpackedHeader,
+        processUnpackedHeader,
+        releaseUnpackedHeaders,
+        (lsquic_hsi_flag)(LSQUIC_HSI_HTTP1X | LSQUIC_HSI_HASH_NAME | LSQUIC_HSI_HASH_NAMEVAL),
 };
 
-
 lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
-                                                    lsquic_stream_t *s)
+                                             lsquic_stream_t *s)
 {
     const sockaddr *pPeer, *pLocal;
     ClientInfo *pClientInfo;
@@ -411,9 +399,9 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
         return NULL;
 
     QuicStream *pStream = new QuicStream();
-    ConnInfo * pConnInfo = (ConnInfo *)pStream->getConnInfo();
-    UdpListener * pUdpListener = (UdpListener *)lsquic_conn_get_peer_ctx(c,
-                                    pConnInfo->m_pServerAddrInfo->getAddr());
+    ConnInfo *pConnInfo = (ConnInfo *)pStream->getConnInfo();
+    UdpListener *pUdpListener = (UdpListener *)lsquic_conn_get_peer_ctx(c,
+                                                                        pConnInfo->m_pServerAddrInfo->getAddr());
     pConnInfo->m_pCrypto = pStream;
     pConnInfo->m_pClientInfo = pClientInfo;
     if ((AF_INET6 == pLocal->sa_family) &&
@@ -428,9 +416,9 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
     }
     else
         pConnInfo->m_pServerAddrInfo = ServerAddrRegistry::getInstance().get(
-             pLocal, pUdpListener->getTcpPeer());
+            pLocal, pUdpListener->getTcpPeer());
     pConnInfo->m_remotePort = GSockAddr::getPort(pPeer);
-    //pStream->setConnInfo(getStream()->getConnInfo());
+    // pStream->setConnInfo(getStream()->getConnInfo());
     pStream->init(s);
     if (lsquic_stream_is_pushed(s))
         pStream->continueRead();
@@ -449,12 +437,12 @@ lsquic_stream_ctx_t *QuicEngine::onNewStream(void *stream_if_ctx,
             pStream->continueRead();
     }
 
+    pClientInfo->incQuicStreams();
     token = NtwkIOLink::getToken();
     assert(token < N_STREAM_Qs);
     s_streamQueues[token].append(pStream);
     return pStream->toHandler();
 }
-
 
 void QuicEngine::onStreamRead(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 {
@@ -462,13 +450,11 @@ void QuicEngine::onStreamRead(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
     pStream->onRead();
 }
 
-
 void QuicEngine::onStreamWrite(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 {
     QuicStream *pStream = (QuicStream *)h;
     pStream->onWrite();
 }
-
 
 void QuicEngine::onStreamClose(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
 {
@@ -483,70 +469,74 @@ void QuicEngine::onStreamClose(lsquic_stream_t *s, lsquic_stream_ctx_t *h)
     }
 }
 
-
 TPointerList<QuicStream> QuicEngine::s_streamsTobeRecycled;
 
 void QuicEngine::recycleStreams()
 {
     QuicStream *pStream;
-    while(!s_streamsTobeRecycled.empty())
+    while (!s_streamsTobeRecycled.empty())
     {
         pStream = s_streamsTobeRecycled.pop_back();
         if (pStream->getHandler())
             pStream->getHandler()->recycle();
+        ClientInfo *pClientInfo = pStream->getClientInfo();
+        assert(pClientInfo);
+        if (pClientInfo)
+        {
+            int32_t streams = pClientInfo->decQuicStreams();
+            assert(streams >= 0);
+        }
         delete pStream;
     }
 }
 
-
 static struct lsquic_stream_if s_quic_if =
-{
-    QuicEngine::onNewConn,
-    QuicEngine::onConnEstablished,
-    QuicEngine::onConnClosed,
+    {
+        QuicEngine::onNewConn,
+        QuicEngine::onConnEstablished,
+        QuicEngine::onConnClosed,
 
-    /* If you need to initiate a connection, call lsquic_conn_make_new_stream().
-     * This will cause `on_new_stream' callback to be called when appropriate
-     * (this operation is delayed when maximum number of outgoing streams is
-     * reached).
-     *
-     * After `on_close' is called, the stream is no longer accessible.
-     */
-    QuicEngine::onNewStream,
-    QuicEngine::onStreamRead,
-    QuicEngine::onStreamWrite,
-    QuicEngine::onStreamClose,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
+        /* If you need to initiate a connection, call lsquic_conn_make_new_stream().
+         * This will cause `on_new_stream' callback to be called when appropriate
+         * (this operation is delayed when maximum number of outgoing streams is
+         * reached).
+         *
+         * After `on_close' is called, the stream is no longer accessible.
+         */
+        QuicEngine::onNewStream,
+        QuicEngine::onStreamRead,
+        QuicEngine::onStreamWrite,
+        QuicEngine::onStreamClose,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
 };
 
-
-struct ssl_ctx_st * QuicEngine::getSslCtxCb(void *peer_ctx,
-                                                const struct sockaddr *local)
+struct ssl_ctx_st *QuicEngine::getSslCtxCb(void *peer_ctx,
+                                           const struct sockaddr *local)
 {
-    UdpListener *pUdpListener = (UdpListener *) peer_ctx;
+    UdpListener *pUdpListener = (UdpListener *)peer_ctx;
     return pUdpListener->getSslContext();
 }
 
-
-struct ssl_ctx_st * QuicEngine::sniCb(void *pCtx, const sockaddr *pLocal,
-                                      const char *sni)
+struct ssl_ctx_st *QuicEngine::sniCb(void *pCtx, const sockaddr *pLocal,
+                                     const char *sni)
 {
     LS_DBG_H("QuicEngine::sniCb (%p)\n", sni);
 
     if (!sni)
         return NULL;
     SslContext *pSslCtx;
-    //QuicEngine *pEngine = (QuicEngine *)pCtx;
+    // QuicEngine *pEngine = (QuicEngine *)pCtx;
     const VHostMap *pMap = NULL;
     if (pLocal)
     {
-        const ServerAddrInfo * pAddrInfo = ServerAddrRegistry::getInstance().get(pLocal, NULL);
+        const ServerAddrInfo *pAddrInfo = ServerAddrRegistry::getInstance().get(pLocal, NULL);
         if (pAddrInfo)
             pMap = pAddrInfo->getVHostMap();
     }
@@ -561,7 +551,6 @@ struct ssl_ctx_st * QuicEngine::sniCb(void *pCtx, const sockaddr *pLocal,
     return NULL;
 }
 
-
 int QuicEngine::registerUdpListener(UdpListener *pListener)
 {
     LS_DBG_H("QuicEngine::registerUdpListener (%p)\n", pListener);
@@ -573,14 +562,12 @@ int QuicEngine::registerUdpListener(UdpListener *pListener)
     return index;
 }
 
-
 UdpListener *QuicEngine::getListener(int index) const
 {
     if (index < 0 || index >= m_udpListeners.size())
         return NULL;
     return m_udpListeners[index];
 }
-
 
 static size_t
 spec_size(const struct lsquic_out_spec *packet)
@@ -599,8 +586,6 @@ spec_size(const struct lsquic_out_spec *packet)
     return size;
 }
 
-
-
 int QuicEngine::sendPackets(
     void *pCtx, const struct lsquic_out_spec *specs, unsigned count)
 {
@@ -609,10 +594,10 @@ int QuicEngine::sendPackets(
 
     for (spec = specs, end = specs + count; spec < end; ++spec)
     {
-        UdpListener *pListener = (UdpListener *) spec->peer_ctx;
+        UdpListener *pListener = (UdpListener *)spec->peer_ctx;
         LS_DBG_H("QuicEngine::sendPackets %zu bytes", spec_size(spec));
         sent = pListener->send(spec->iov, spec->iovlen, spec->local_sa,
-                                            spec->dest_sa, spec->ecn);
+                               spec->dest_sa, spec->ecn);
         if (sent < 0)
         {
             if (spec == specs)
@@ -625,9 +610,8 @@ int QuicEngine::sendPackets(
     return spec - specs;
 }
 
-
 int QuicEngine::sendPacketsMmsg(
-    void *pCtx, const struct lsquic_out_spec  *packets, unsigned count)
+    void *pCtx, const struct lsquic_out_spec *packets, unsigned count)
 {
     UdpListener *pListener;
     if (count)
@@ -641,7 +625,6 @@ int QuicEngine::sendPacketsMmsg(
         return 0;
 }
 
-
 void QuicEngine::onTimer()
 {
     int token;
@@ -651,8 +634,6 @@ void QuicEngine::onTimer()
     if (!token)
         QuicShm::getInstance().cleanExpiredCidItem();
 }
-
-
 
 void QuicEngine::onStreamTimer()
 {
@@ -664,7 +645,7 @@ void QuicEngine::onStreamTimer()
         return;
     QuicStream *pStream = pQue->begin();
     QuicStream *pNext;
-    while(pStream && pStream != pQue->end())
+    while (pStream && pStream != pQue->end())
     {
         pNext = (QuicStream *)pStream->next();
         pStream->onTimer();
@@ -672,15 +653,11 @@ void QuicEngine::onStreamTimer()
     }
 }
 
-
-
 QuicEngine::QuicEngine()
-    : m_pEngine(NULL)
-    , m_pMultiplexer(NULL)
+    : m_pEngine(NULL), m_pMultiplexer(NULL)
 {
     memset(&m_config, 0, sizeof(m_config));
 }
-
 
 QuicEngine::~QuicEngine()
 {
@@ -691,10 +668,9 @@ QuicEngine::~QuicEngine()
         QuicShm::getInstance().cleanupPidShm(s_pid);
 }
 
-
-int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
-                             const struct lsquic_engine_settings *settings,
-                             const char *quicLogLevel)
+int QuicEngine::init(Multiplexer *pMplx, const char *pShmDir,
+                     const struct lsquic_engine_settings *settings,
+                     const char *quicLogLevel)
 {
     LS_INFO("QuicEngine::init(), pid: %d, log level [%s].",
             getpid(), quicLogLevel);
@@ -711,8 +687,9 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
             if (0 != val)
             {
                 LS_ERROR("cannot initialize QUIC engine, as it relies on "
-                    "realtime signals.  Set %s to zero.  See kill(2) for "
-                    "more information.", name);
+                         "realtime signals.  Set %s to zero.  See kill(2) for "
+                         "more information.",
+                         name);
                 return LS_FAIL;
             }
             LS_DBG_L("%s is set to %d, OK", name, val);
@@ -731,13 +708,13 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
     m_config.es_send_prst = 1;
 
     lsquic_logger_init(&logger_if, log4cxx::Logger::getDefault(),
-                                                    LLTS_YYYYMMDD_HHMMSSUS);
+                       LLTS_YYYYMMDD_HHMMSSUS);
     lsquic_global_init(LSQUIC_GLOBAL_SERVER);
-//     if (LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
-//         lsquic_set_log_level("debug");
-//     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
-//         lsquic_logger_lopt("event=debug,engine=debug");
-//     lsquic_logger_lopt("pacer=info");
+    //     if (LS_LOG_ENABLED(log4cxx::Level::DBG_MEDIUM))
+    //         lsquic_set_log_level("debug");
+    //     else if (LS_LOG_ENABLED(log4cxx::Level::DBG_LESS))
+    //         lsquic_logger_lopt("event=debug,engine=debug");
+    //     lsquic_logger_lopt("pacer=info");
     bool isQuicLogEnable = (LS_LOG_ENABLED(log4cxx::Level::DBG_HIGH));
     setDebugLog(isQuicLogEnable);
 
@@ -754,22 +731,22 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
 
     struct lsquic_engine_api api;
     memset(&api, 0, sizeof(api));
-    api.ea_settings         = &m_config;
-    api.ea_stream_if        = &s_quic_if;
-    api.ea_stream_if_ctx    = this;
-    api.ea_packets_out      = QuicEngine::sendPackets;
-    api.ea_packets_out_ctx  = this;
-    api.ea_get_ssl_ctx      = QuicEngine::getSslCtxCb;
-    api.ea_lookup_cert      = QuicEngine::sniCb;
-    api.ea_cert_lu_ctx      = this;
+    api.ea_settings = &m_config;
+    api.ea_stream_if = &s_quic_if;
+    api.ea_stream_if_ctx = this;
+    api.ea_packets_out = QuicEngine::sendPackets;
+    api.ea_packets_out_ctx = this;
+    api.ea_get_ssl_ctx = QuicEngine::getSslCtxCb;
+    api.ea_lookup_cert = QuicEngine::sniCb;
+    api.ea_cert_lu_ctx = this;
 #ifndef _NOT_USE_SHM_
-    api.ea_shi              = &s_quic_shi_if;
-    api.ea_shi_ctx          = QuicShm::getInstance().getHashCtx();
+    api.ea_shi = &s_quic_shi_if;
+    api.ea_shi_ctx = QuicShm::getInstance().getHashCtx();
 #endif
-    api.ea_new_scids        = QuicEngine::addNewSCIDs;
-    api.ea_live_scids       = QuicEngine::touchSCIDs;
-    api.ea_old_scids        = QuicEngine::removeOldSCIDs;
-    api.ea_hsi_if           = &s_quic_hpack_hdr_callback;
+    api.ea_new_scids = QuicEngine::addNewSCIDs;
+    api.ea_live_scids = QuicEngine::touchSCIDs;
+    api.ea_old_scids = QuicEngine::removeOldSCIDs;
+    api.ea_hsi_if = &s_quic_hpack_hdr_callback;
 
     if (is_sendmmsg_available())
     {
@@ -777,20 +754,17 @@ int QuicEngine::init(Multiplexer * pMplx, const char *pShmDir,
         api.ea_packets_out = QuicEngine::sendPacketsMmsg;
     }
 
-
     m_pEngine = lsquic_engine_new(LSENG_HTTP_SERVER, &api);
     if (!m_pEngine)
         return LS_FAIL;
     return LS_OK;
 }
 
-
 void QuicEngine::startCooldown()
 {
     if (m_pEngine)
         lsquic_engine_cooldown(m_pEngine);
 }
-
 
 void QuicEngine::setDebugLog(int is_enable)
 {
@@ -803,7 +777,6 @@ void QuicEngine::setDebugLog(int is_enable)
         lsquic_set_log_level("warn");
 }
 
-
 void QuicEngine::maybeProcessConns()
 {
     int diff;
@@ -811,12 +784,10 @@ void QuicEngine::maybeProcessConns()
         lsquic_engine_process_conns(m_pEngine);
 }
 
-
 void QuicEngine::sendUnsentPackets()
 {
     lsquic_engine_send_unsent_packets(m_pEngine);
 }
-
 
 int QuicEngine::nextEventTime()
 {

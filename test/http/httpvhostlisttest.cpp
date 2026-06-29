@@ -36,13 +36,16 @@ TEST(HttpVHostListTest_test)
     CHECK(p1 == pHost1);
     CHECK(list.get("host2") == pHost2);
     CHECK(list.get("host3") == NULL);
-    // add again will fail
-    CHECK(list.add(pHost1) != 0);
+    // adding the same host pointer is idempotent.
+    CHECK(list.add(pHost1) == 0);
+    CHECK(list.get("host1") == pHost1);
 
     CHECK(list.remove(p1) == 0);
     CHECK(list.get("host1") == NULL);
     //CHECK( list.remove( p1 ) == 0 );
+    // remove() only unlinks from the map; pHost2 is freed by the map dtor, but
+    // the removed pHost1 is now unowned and must be deleted here.
+    delete pHost1;
 }
 
 #endif
-

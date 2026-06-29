@@ -28,7 +28,8 @@ if ( !empty($errMsgs) ) {
 }
 
 $d = array(
-    'title' => '<b>Set Active Version</b>'
+    'title' => 'Set Active Version',
+    'bold' => true
 );
 $this->loadTplBlock('SectionTitle.tpl', $d);
 
@@ -106,7 +107,8 @@ $this->loadTplBlock('SectionTitle.tpl', $d);
 <?php
 
 $d = array(
-    'title' => '<b>Force Version Change For All Existing Installations</b>'
+    'title' => 'Force Version Change For All Existing Installations',
+    'bold' => true
 );
 $this->loadTplBlock('SectionTitle.tpl', $d);
 

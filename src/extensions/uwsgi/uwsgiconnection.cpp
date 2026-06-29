@@ -80,6 +80,12 @@ int UwsgiConnection::sendNetString(const char *data, off_t len)
         LS_DBG(this, "UwsgiConnection, sendNetString no data, send nothing\n");
         return 1;
     }
+    if (len > 0xffff)
+    {
+        LS_ERROR(this, "UwsgiConnection, environment is too large: %ld bytes",
+                 (long)len);
+        return LS_FAIL;
+    }
     m_header[0] = 0;
     m_header[1] = (uint8_t)(len & 0xff);
     m_header[2] = (uint8_t)((len >> 8) & 0xff);
@@ -315,7 +321,8 @@ int  UwsgiConnection::sendReqHeader()
     {
         LS_DBG(this, "UwsgiConnection::sendReqHeader(), send header\n");
         AutoBuf *uwsgiEnvBuf = m_uwsgiEnv.get();
-        sendNetString(uwsgiEnvBuf->begin(), uwsgiEnvBuf->size());
+        if (sendNetString(uwsgiEnvBuf->begin(), uwsgiEnvBuf->size()) == LS_FAIL)
+            return LS_FAIL;
         m_sentHeader = true;
         setInProcess(1);
     }

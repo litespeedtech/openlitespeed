@@ -253,23 +253,26 @@ TEST(THREAD_WORKCREW_TEST_MULTI)
         };
     }
 
+    // All jobs have been submitted (maker threads joined); drain and free every
+    // finished job before stopping the crew, since stopProcessing() discards
+    // anything still pending and would leak those jobs.
+    int total = 50 + 50 * numThreads;
+    for (i = 0; i < total; ++i)
+    {
+        ls_lfnodei_t *pNode = NULL;
+        while ((pNode = ls_lfqueue_get(pFinishedQueue)) == NULL)
+        {
+        }
+        workcrewtest_t *wct = (workcrewtest_t *)((char *)pNode
+                              - offsetof(workcrewtest_t, m_node));
+        ls_pfree(wct);
+    }
+    CHECK(i == total);
+
     wc->stopProcessing();
     CHECK(0 == wc->size());
     delete wc;
 
-//     for (i = 0; i < (50 + 50 * numThreads); ++i)
-//     {
-//         ls_lfnodei_t *pNode = NULL;
-//         workcrewtest_t *wct = NULL;
-//         while ((pNode = ls_lfqueue_get(pFinishedQueue)) == NULL)
-//         {
-//         }
-//         wct = (workcrewtest_t *)((char *)pNode - offsetof(workcrewtest_t, m_node));
-//         CHECK(wct->m_oval == wct->m_val-3);
-//         ls_pfree(wct);
-//     }
-//     CHECK(i == (50 + 50 * numThreads));
-//
     ls_lfqueue_delete(pFinishedQueue);
     printf("End work crew test multi\n");
 }

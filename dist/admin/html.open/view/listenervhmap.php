@@ -121,6 +121,8 @@ echo UI::content_header('plug-zap', $pageTitle);
         regexHint: <?php echo json_encode(DMsg::UIStr('service_regexhint')); ?>,
         regexNoMatch: "No active mapped listeners matched the current vhost/domain expression.",
         regexInvalid: "Invalid regular expression.",
+        searchPrompt: <?php echo json_encode(DMsg::UIStr('note_vhmap_searchprompt')); ?>,
+        searchPromptCount: <?php echo json_encode(DMsg::UIStr('note_vhmap_searchcount')); ?>,
         vhostsLabel: "vhosts",
         listenerRowsLabel: "listener rows"
     };
@@ -424,6 +426,18 @@ echo UI::content_header('plug-zap', $pageTitle);
         };
     }
 
+    function getVhostSearchPrompt() {
+        var vhosts = listenerVhMapState.data ? listenerVhMapState.data.vhosts : [],
+            count = vhosts ? vhosts.length : 0,
+            prompt = listenerVhMapText.searchPrompt;
+
+        if (count > 0) {
+            prompt += " " + listenerVhMapText.searchPromptCount.replace("%d", listenerVhMapFormatCount(count));
+        }
+
+        return prompt;
+    }
+
     function renderVhostTab() {
         var result = buildVhostRegexResult($("#listenervhmap_vhost_input").val()),
             html = "",
@@ -433,7 +447,14 @@ echo UI::content_header('plug-zap', $pageTitle);
         if (result.invalid) {
             summaryText = listenerVhMapText.regexInvalid;
         } else if (result.empty) {
+            // The vhost tab is search-driven: nothing is shown until the user
+            // enters an expression. Surface a prompt instead of a blank table so
+            // it does not read as "no data".
             summaryText = "";
+            $("#listenervhmap_vhost_summary").text(summaryText);
+            $("#listenervhmap_vhost_body").html('<tr><td colspan="3" class="lst-vhmap-searchprompt">'
+                + listenerVhMapEscape(getVhostSearchPrompt()) + '</td></tr>');
+            return;
         } else if (!result.rows.length) {
             summaryText = listenerVhMapText.regexNoMatch;
         } else {

@@ -35,6 +35,8 @@
 
 
 static uint64_t bytes_read(unsigned char *buf, int count);
+static int buffer_has_bytes(const unsigned char *pos,
+                            const unsigned char *boundry, uint64_t len);
 static int boxheader_read(unsigned char *buf, boxheader_t *header,
                           unsigned char *boundry);
 static int boxheader_read_file(int fd, off_t pos, box_in_file_t *box);
@@ -375,6 +377,13 @@ static uint64_t bytes_read(unsigned char *buf, int count)
 }
 
 
+static int buffer_has_bytes(const unsigned char *pos,
+                            const unsigned char *boundry, uint64_t len)
+{
+    return pos <= boundry && len <= (uint64_t)(boundry - pos);
+}
+
+
 //0:exceed boundry;
 //1:successful
 static int boxheader_read(unsigned char *buf, boxheader_t *header,
@@ -512,10 +521,10 @@ static int moov_read(unsigned char *buf, void *box)
         }
         sub_buf += dummy.ExtendedSize;
     }
-    if (trak_index == -1)
+    if (trak_index == -1 || moov_box->mvhd.header.ExtendedSize == 0)
     {
 #ifdef UNIT_TEST
-        printf("Error: no trak in moov\n");
+        printf("Error: moov missing required boxes\n");
 #endif
         return (0);
     }
@@ -652,15 +661,22 @@ static int trak_read(unsigned char *buf, void *box)
         }
         sub_buf += dummy.ExtendedSize;
     }
-    if (sub_buf == boundry)
-        return (1);
-    else
+    if (sub_buf != boundry)
     {
 #ifdef UNIT_TEST
         printf("sub boxes size of trak not match exactly\n");
 #endif
         return (0);
     }
+    if (trak_box->tkhd.header.ExtendedSize == 0
+        || trak_box->mdia.header.ExtendedSize == 0)
+    {
+#ifdef UNIT_TEST
+        printf("Error: trak missing required boxes\n");
+#endif
+        return (0);
+    }
+    return (1);
 }
 
 
@@ -778,15 +794,22 @@ static int mdia_read(unsigned char *buf, void *box)
         }
         sub_buf += dummy.ExtendedSize;
     }
-    if (sub_buf == boundry)
-        return (1);
-    else
+    if (sub_buf != boundry)
     {
 #ifdef UNIT_TEST
         printf("sub boxes size of mdia not match exactly\n");
 #endif
         return (0);
     }
+    if (mdia_box->mdhd.header.ExtendedSize == 0
+        || mdia_box->minf.header.ExtendedSize == 0)
+    {
+#ifdef UNIT_TEST
+        printf("Error: mdia missing required boxes\n");
+#endif
+        return (0);
+    }
+    return (1);
 }
 
 
@@ -841,6 +864,13 @@ static int mdhd_read(unsigned char *buf, void *box)
 #endif
         return (0);
     }
+    if (mdhd_box->TimeScale == 0)
+    {
+#ifdef UNIT_TEST
+        printf("Error: mdhd timescale is zero\n");
+#endif
+        return (0);
+    }
 
     return (1);
 }
@@ -887,15 +917,21 @@ static int minf_read(unsigned char *buf, void *box)
         }
         sub_buf += dummy.ExtendedSize;
     }
-    if (sub_buf == boundry)
-        return (1);
-    else
+    if (sub_buf != boundry)
     {
 #ifdef UNIT_TEST
         printf("sub boxes size of minf not match exactly\n");
 #endif
         return (0);
     }
+    if (minf_box->stbl.header.ExtendedSize == 0)
+    {
+#ifdef UNIT_TEST
+        printf("Error: minf missing required stbl box\n");
+#endif
+        return (0);
+    }
+    return (1);
 }
 
 
@@ -1007,15 +1043,38 @@ static int stbl_read(unsigned char *buf, void *box)
         }
         sub_buf += dummy.ExtendedSize;
     }
-    if (sub_buf == boundry)
-        return (1);
-    else
+    if (sub_buf != boundry)
     {
 #ifdef UNIT_TEST
         printf("sub boxes size of stbl not match exactly\n");
 #endif
         return (0);
     }
+    if (stbl_box->stsd.header.ExtendedSize == 0
+        || stbl_box->stsc.header.ExtendedSize == 0
+        || stbl_box->stts.header.ExtendedSize == 0
+        || stbl_box->stsz.header.ExtendedSize == 0
+        || stbl_box->stco_co64.header.ExtendedSize == 0)
+    {
+#ifdef UNIT_TEST
+        printf("Error: stbl missing required sample boxes\n");
+#endif
+        return (0);
+    }
+
+    unsigned char *entry = (unsigned char *)stbl_box->stsc.Entries;
+    unsigned char *end = entry + (uint64_t)stbl_box->stsc.Count * 3 * 4;
+    for (; entry < end; entry += 3 * 4)
+    {
+        if (bytes_read(entry, 4) > stbl_box->stco_co64.OffsetCount)
+        {
+#ifdef UNIT_TEST
+            printf("Error: stsc entry exceeds chunk offset table\n");
+#endif
+            return (0);
+        }
+    }
+    return (1);
 }
 
 
@@ -1026,7 +1085,7 @@ static int stsc_read(unsigned char *buf, void *box)
     unsigned char *sub_buf = buf + stsc_box->header.length;
     uint32_t v;
 
-    if (sub_buf + 1 + 3 + 4 >= boundry)
+    if (!buffer_has_bytes(sub_buf, boundry, 1 + 3 + 4))
     {
 #ifdef UNIT_TEST
         printf("Error: stsc box too small and wrong\n");
@@ -1036,14 +1095,33 @@ static int stsc_read(unsigned char *buf, void *box)
     v = bytes_read(sub_buf + 1 + 3, 4);
     stsc_box->Count = v;
     sub_buf += 1 + 3 + 4;
-    if (sub_buf + 3 * 4 * v > boundry)
+    uint64_t tableBytes = (uint64_t)v * 3 * 4;
+    if (!buffer_has_bytes(sub_buf, boundry, tableBytes))
     {
 #ifdef UNIT_TEST
         printf("Error: stsc exceed boundry\n");
 #endif
         return (0);
     }
-    else if (sub_buf + 3 * 4 * v != boundry)
+    uint32_t prevFirstChunk = 0;
+    for (unsigned char *entry = sub_buf, *end = sub_buf + tableBytes;
+         entry < end; entry += 3 * 4)
+    {
+        uint32_t firstChunk = bytes_read(entry, 4);
+        uint32_t samplesPerChunk = bytes_read(entry + 4, 4);
+        uint32_t sampleDescIndex = bytes_read(entry + 8, 4);
+        if (firstChunk == 0 || samplesPerChunk == 0
+            || sampleDescIndex == 0
+            || (prevFirstChunk != 0 && firstChunk <= prevFirstChunk))
+        {
+#ifdef UNIT_TEST
+            printf("Error: invalid stsc entry\n");
+#endif
+            return (0);
+        }
+        prevFirstChunk = firstChunk;
+    }
+    if (tableBytes != (uint64_t)(boundry - sub_buf))
     {
 #ifdef UNIT_TEST
         printf("Warn: stsc size not exactly match\n");
@@ -1061,7 +1139,7 @@ static int stts_read(unsigned char *buf, void *box)
     unsigned char *sub_buf = buf + stts_box->header.length;
     uint32_t v;
 
-    if (sub_buf + 1 + 3 + 4 >= boundry)
+    if (!buffer_has_bytes(sub_buf, boundry, 1 + 3 + 4))
     {
 #ifdef UNIT_TEST
         printf("Error: stts box too small and wrong\n");
@@ -1071,15 +1149,28 @@ static int stts_read(unsigned char *buf, void *box)
     v = bytes_read(sub_buf + 1 + 3, 4);
     stts_box->Count = v;
     sub_buf += 1 + 3 + 4;
-    if (sub_buf + 2 * 4 * v > boundry)
+    uint64_t tableBytes = (uint64_t)v * 2 * 4;
+    if (!buffer_has_bytes(sub_buf, boundry, tableBytes))
     {
 #ifdef UNIT_TEST
         printf("Error: stts exceed boundry\n");
 #endif
         return (0);
     }
+    for (unsigned char *entry = sub_buf, *end = sub_buf + tableBytes;
+         entry < end; entry += 2 * 4)
+    {
+        if (bytes_read(entry, 4) == 0
+            || bytes_read(entry + 4, 4) == 0)
+        {
 #ifdef UNIT_TEST
-    else if (sub_buf + 2 * 4 * v != boundry)
+            printf("Error: invalid stts entry\n");
+#endif
+            return (0);
+        }
+    }
+#ifdef UNIT_TEST
+    if (tableBytes != (uint64_t)(boundry - sub_buf))
         printf("Warn: stts size not exactly match\n");
 #endif
 
@@ -1093,9 +1184,10 @@ static int stsz_read(unsigned char *buf, void *box)
     stsz_t *stsz_box = (stsz_t *)box;
     unsigned char *boundry = buf + stsz_box->header.ExtendedSize;
     unsigned char *sub_buf = buf + stsz_box->header.length;
+    uint64_t tableBytes = 0;
     uint32_t v;
 
-    if (sub_buf + 1 + 3 + 4 * 2 >= boundry)
+    if (!buffer_has_bytes(sub_buf, boundry, 1 + 3 + 4 * 2))
     {
 #ifdef UNIT_TEST
         printf("Error: stsz box too small and wrong\n");
@@ -1112,7 +1204,8 @@ static int stsz_read(unsigned char *buf, void *box)
     if (v == 0)
     {
         v = stsz_box->SizeCount;
-        if (sub_buf + v * 4 > boundry)
+        tableBytes = (uint64_t)v * 4;
+        if (!buffer_has_bytes(sub_buf, boundry, tableBytes))
         {
 #ifdef UNIT_TEST
             printf("Error: stsz exceed boundry\n");
@@ -1122,9 +1215,7 @@ static int stsz_read(unsigned char *buf, void *box)
         stsz_box->SizeTable = (UI32 *)sub_buf;
     }
 #ifdef UNIT_TEST
-    else
-        v = 0;
-    if (sub_buf + v * 4 != boundry)
+    if (tableBytes != (uint64_t)(boundry - sub_buf))
         printf("Warn: stsz size not exactly match\n");
 #endif
 
@@ -1137,9 +1228,10 @@ static int stco_co64_read(unsigned char *buf, void *box)
     stco_co64_t *stco_co64_box = (stco_co64_t *)box;
     unsigned char *boundry = buf + stco_co64_box->header.ExtendedSize;
     unsigned char *sub_buf = buf + stco_co64_box->header.length;
+    uint64_t tableBytes;
     uint32_t v, t = 0;
 
-    if (sub_buf + 1 + 3 + 4 >= boundry)
+    if (!buffer_has_bytes(sub_buf, boundry, 1 + 3 + 4))
     {
 #ifdef UNIT_TEST
         printf("Error: stco_co64 box too small and wrong\n");
@@ -1159,7 +1251,8 @@ static int stco_co64_read(unsigned char *buf, void *box)
         t = 8;
         break;
     }
-    if (sub_buf + t * v > boundry)
+    tableBytes = (uint64_t)t * v;
+    if (!buffer_has_bytes(sub_buf, boundry, tableBytes))
     {
 #ifdef UNIT_TEST
         printf("Error: stsz exceed boundry\n");
@@ -1168,7 +1261,7 @@ static int stco_co64_read(unsigned char *buf, void *box)
     }
     stco_co64_box->Offsets = sub_buf;
 #ifdef UNIT_TEST
-    if (sub_buf + t * v != boundry)
+    if (tableBytes != (uint64_t)(boundry - sub_buf))
         printf("Warn: stco_co64 size not exactly match\n");
 #endif
 
@@ -1181,9 +1274,10 @@ static int stss_read(unsigned char *buf, void *box)
     stss_t *stss_box = (stss_t *)box;
     unsigned char *boundry = buf + stss_box->header.ExtendedSize;
     unsigned char *sub_buf = buf + stss_box->header.length;
+    uint64_t tableBytes;
     uint32_t v;
 
-    if (sub_buf + 1 + 3 + 4 >= boundry)
+    if (!buffer_has_bytes(sub_buf, boundry, 1 + 3 + 4))
     {
 #ifdef UNIT_TEST
         printf("Error: stss box too small and wrong\n");
@@ -1194,7 +1288,8 @@ static int stss_read(unsigned char *buf, void *box)
     v = bytes_read(sub_buf, 4);
     stss_box->SyncCount = v;
     sub_buf += 4;
-    if (sub_buf + 4 * v > boundry)
+    tableBytes = (uint64_t)v * 4;
+    if (!buffer_has_bytes(sub_buf, boundry, tableBytes))
     {
 #ifdef UNIT_TEST
         printf("Error: stss exceed boundry\n");
@@ -1202,7 +1297,7 @@ static int stss_read(unsigned char *buf, void *box)
         return (0);
     }
 #ifdef UNIT_TEST
-    else if (sub_buf + 4 * v != boundry)
+    if (tableBytes != (uint64_t)(boundry - sub_buf))
         printf("Warn: stss not size exactly match\n");
 #endif
     stss_box->SyncTable = (void *)sub_buf;
@@ -1215,9 +1310,10 @@ static int ctts_read(unsigned char *buf, void *box)
     ctts_t *ctts_box = (ctts_t *)box;
     unsigned char *boundry = buf + ctts_box->header.ExtendedSize;
     unsigned char *sub_buf = buf + ctts_box->header.length;
+    uint64_t tableBytes;
     uint32_t v;
 
-    if (sub_buf + 4 >= boundry)
+    if (!buffer_has_bytes(sub_buf, boundry, 4))
     {
 #ifdef UNIT_TEST
         printf("Error: ctts box too small and wrong\n");
@@ -1227,7 +1323,8 @@ static int ctts_read(unsigned char *buf, void *box)
     v = bytes_read(sub_buf, 4);
     ctts_box->Count = v;
     sub_buf += 4;
-    if (sub_buf + 8 * v > boundry)
+    tableBytes = (uint64_t)v * 8;
+    if (!buffer_has_bytes(sub_buf, boundry, tableBytes))
     {
 #ifdef UNIT_TEST
         printf("Error: ctts exceed boundry\n");
@@ -1235,7 +1332,7 @@ static int ctts_read(unsigned char *buf, void *box)
         return (0);
     }
 #ifdef UNIT_TEST
-    else if (sub_buf + 8 * v != boundry)
+    if (tableBytes != (uint64_t)(boundry - sub_buf))
         printf("Warn: ctts not size exactly match.Count=%u,ExtendedSize=%u\n", v,
                (uint32_t)ctts_box->header.ExtendedSize);
 #endif
@@ -1514,6 +1611,8 @@ static int calc_new_moov_diff(moov_t *moov_box, float start_time,
     deltaSize = 0;
     mdat_end_offset = 0;
     max_duration = 0;
+    uint64_t orig_mdat_start_offset = moov_box->mdat_start_offset;
+    uint64_t orig_mdat_end_offset = moov_box->mdat_end_offset;
 
     for (i = 0; i < (unsigned int)moov_box->track_num; i++)
     {
@@ -1579,6 +1678,10 @@ static int calc_new_moov_diff(moov_t *moov_box, float start_time,
         if (t < mdat_start_offset)
             mdat_start_offset = t;
     }
+    if (mdat_start_offset < orig_mdat_start_offset
+        || mdat_end_offset > orig_mdat_end_offset
+        || mdat_end_offset <= mdat_start_offset)
+        return (0);
     moov_box->mdat_start_offset = mdat_start_offset;
     moov_box->mdat_end_offset = mdat_end_offset;
 
@@ -1892,10 +1995,7 @@ static int mini_moov_calc_size(moov_t *moov_box)
         trak = & moov_box->trak[i];
         stbl = & trak->mdia.minf.stbl;
 
-        if (stbl->stsz.ConstantSize != 0)
-            t = stbl->stsz.header.ExtendedSize;
-        else
-            t = stbl->stsz.header.length + 1 + 3 + 4 * 2 + 8 + 4;
+        t = stbl->stsz.header.length + 1 + 3 + 4 * 2 + 8 + 4;
         t += stbl->stsc.header.ExtendedSize + stbl->stts.header.ExtendedSize +
              stbl->stss.header.ExtendedSize + stbl->stsd.header.ExtendedSize +
              stbl->stco_co64.header.ExtendedSize;
@@ -2022,6 +2122,8 @@ static int mini_moov_read(unsigned char *buf, moov_t *moov_box)
             break;
         case FourCC('t', 'r', 'a', 'k'):
             trak_index++;
+            if (trak_index == MAX_TRACKS)
+                return (0);
             moov_box->trak[trak_index].header = dummy;
             sub_buf += dummy.length;
             break;
@@ -2361,4 +2463,3 @@ uint64_t get_new_moov_total_size(void *moov_ctrl)
     r += moov->mdat_end_offset - moov->mdat_start_offset;
     return (r);
 }
-

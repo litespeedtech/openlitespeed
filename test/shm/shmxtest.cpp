@@ -187,6 +187,12 @@ TEST(shmPerProcess_test)
 
     CHECK(pGPool->alloc2(SZ_TESTLIST, remap)/* == off3*/); // Good enough if it works
 
+    // Release the refcounted hash wrappers before their pools are torn down;
+    // closing a pool orphans (leaks) any LsShmHash object still cached in it.
+    // (pTHash is left to the still-open global pool, which stays reachable.)
+    pHash1->close();
+    pHash2->close();
+
     CHECK(pShm->findReg(g_pPool1Name) != NULL);
     CHECK((off1 = pPool1->alloc2(SZ_TESTBCKT, remap)) != 0);
     CHECK(pShm->recoverOrphanShm() == 0);

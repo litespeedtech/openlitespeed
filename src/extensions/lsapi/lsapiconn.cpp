@@ -354,6 +354,9 @@ const char *s_packetName[] =
 
 inline int verifyPacketHeader(struct lsapi_packet_header *pHeader)
 {
+    int packetLen;
+    int bodyLen;
+
     if ((LSAPI_VERSION_B0 != pHeader->m_versionB0) ||
         (LSAPI_VERSION_B1 != pHeader->m_versionB1) ||
         (LSAPI_RESP_HEADER > pHeader->m_type) ||
@@ -369,7 +372,33 @@ inline int verifyPacketHeader(struct lsapi_packet_header *pHeader)
         pHeader->m_packetLen.m_bytes[1] = pHeader->m_packetLen.m_bytes[2];
         pHeader->m_packetLen.m_bytes[2] = b;
     }
-    return pHeader->m_packetLen.m_iLen;
+
+    packetLen = pHeader->m_packetLen.m_iLen;
+    if (packetLen < LSAPI_PACKET_HEADER_LEN)
+        return LS_FAIL;
+
+    bodyLen = packetLen - LSAPI_PACKET_HEADER_LEN;
+    switch (pHeader->m_type)
+    {
+    case LSAPI_RESP_HEADER:
+        if (bodyLen < (int)sizeof(lsapi_resp_info)
+            || bodyLen > LSAPI_MAX_HEADER_LEN)
+            return LS_FAIL;
+        break;
+    case LSAPI_RESP_STREAM:
+    case LSAPI_STDERR_STREAM:
+    case LSAPI_REQ_RECEIVED:
+    case LSAPI_INTERNAL_ERROR:
+        if (bodyLen > LSAPI_MAX_DATA_PACKET_LEN)
+            return LS_FAIL;
+        break;
+    case LSAPI_RESP_END:
+    case LSAPI_CONN_CLOSE:
+        if (bodyLen != 0)
+            return LS_FAIL;
+        break;
+    }
+    return packetLen;
 }
 
 
@@ -700,6 +729,14 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                 swapIntEndian(&m_respInfo.m_cntHeaders);
                 swapIntEndian(&m_respInfo.m_status);
             }
+            if (m_respInfo.m_cntHeaders < 0
+                || m_respInfo.m_cntHeaders >= (int)(sizeof(m_respBuf) / sizeof(short)))
+            {
+                LS_WARN(this, "Invalid LSAPI response header count: %d",
+                        m_respInfo.m_cntHeaders);
+                errno = EIO;
+                return -1;
+            }
             if (m_respInfo.m_status && m_respInfo.m_status != 200)
             {
                 int code;
@@ -745,12 +782,21 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                 int len = *p;
                 if (len > 0)
                 {
+                    int headerLeft = pEnd - m_pRespHeaderProcess;
                     int partialHeaderLen = getConnector()->getPartialHeaderLen();
                     if (partialHeaderLen > 0)
                     {
-                        if (m_pRespHeaderProcess + len - partialHeaderLen <= pEnd)
+                        int remainLen = len - partialHeaderLen;
+                        if (remainLen <= 0)
                         {
-                            char *pHeaderEnd = m_pRespHeaderProcess + len - partialHeaderLen - 1;
+                            LS_WARN(this, "Invalid LSAPI partial response header "
+                                    "length: %d/%d", partialHeaderLen, len);
+                            errno = EIO;
+                            return -1;
+                        }
+                        if (headerLeft >= remainLen)
+                        {
+                            char *pHeaderEnd = m_pRespHeaderProcess + remainLen - 1;
                             *pHeaderEnd++ = 0;
                             getConnector()->appendPartialHeader(
                                 m_pRespHeaderProcess, pHeaderEnd - m_pRespHeaderProcess);
@@ -768,7 +814,7 @@ int LsapiConn::processRespHeader(char *pEnd, int &status)
                     }
                     else
                     {
-                        if (m_pRespHeaderProcess + len <= pEnd)
+                        if (headerLeft >= len)
                         {
                             char *pHeaderEnd = m_pRespHeaderProcess + len - 1;
                             *pHeaderEnd = 0;
@@ -1022,7 +1068,7 @@ int LsapiConn::readStderrStream()
     while (m_iPacketLeft > 0)
     {
         char *pBuf = achBuf;
-        bufLen = sizeof(achBuf);
+        bufLen = sizeof(achBuf) - 1;
         int toRead = m_iPacketLeft + sizeof(m_respHeader);
         if (toRead > (int)bufLen)
             toRead = bufLen ;
@@ -1231,5 +1277,3 @@ void LsapiConn::dump()
                     (m_lReqSentTime)?time(NULL) - m_lReqSentTime : 0,
                     time(NULL) - m_lReqBeginTime ));*/
 }
-
-

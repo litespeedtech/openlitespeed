@@ -146,7 +146,7 @@ void Recaptcha::setBotWhitelist(const StringList *pList)
     }
 
     pRegex = new Pcregex();
-    if (pRegex->compile(pPattern, REG_EXTENDED) != 0)
+    if (pRegex->compile(pPattern, LSRE_DEFAULT) != 0)
     {
         LS_ERROR("Failed to compile recaptcha regex %s", buf.begin());
         delete pRegex;

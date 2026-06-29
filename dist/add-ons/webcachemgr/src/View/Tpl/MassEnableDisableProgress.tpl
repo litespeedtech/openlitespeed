@@ -65,6 +65,12 @@ $msgs = array(
 $d = array(
     'msgs' => $msgs,
     'class' => 'msg-info',
+    /* These msgs are template-authored HTML — the span IDs let the
+     * progress-poll JS find bypassedCount / succCount / failCount and
+     * update them in place. $action is clamped to 'enable'/'disable' by
+     * MassEnableDisableProgressViewModel::__construct(), so no user data
+     * is interpolated. */
+    'rawHtml' => true,
 );
 $this->loadTplBlock('DivMsgBox.tpl', $d);
 

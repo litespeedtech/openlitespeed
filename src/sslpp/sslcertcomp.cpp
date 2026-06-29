@@ -66,7 +66,6 @@
 static bool s_activate_comp = false;
 static bool s_activate_decomp = false;
 static int  s_iBrCompressLevel = 6;
-static int  s_iZstdCompressLevel = 3;
 static int  s_iSSL_CTX_index = -1;
 
 static void freeCtxData(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, 
@@ -365,14 +364,9 @@ void SslCertComp::setBrCompressLevel(int level)
     s_iBrCompressLevel = level; 
 }
 
-void SslCertComp::setZstdCompressLevel(int level)
-{
-    s_iZstdCompressLevel = level;
-}
 
 void SslCertComp::disableCertCompDecomp(SSL_CTX *ctx)
 {
-
 }
 
 

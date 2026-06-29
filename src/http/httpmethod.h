@@ -24,6 +24,8 @@ typedef int http_method_t;
 class HttpMethod
 {
 public:
+    static const int MAX_METHOD_LEN = 16;
+
     enum
     {
         HTTP_UNKNOWN = 0,

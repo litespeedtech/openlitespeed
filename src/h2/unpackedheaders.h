@@ -107,6 +107,8 @@ public:
     const char *getHeader(int name_off) const
     {   return m_buf->begin() + name_off;    }
 
+    int getHeaderCount() const  {   return m_lsxpack.size();    }
+
     int set(ls_str_t *method, ls_str_t* url,
             ls_str_t* host, ls_strpair_t* headers);
 
@@ -235,6 +237,8 @@ public:
     lsxpack_err_code processHpack(lsxpack_header_t *hdr);
     lsxpack_err_code end();
 
+    static void setMaxHeaderCount(int cnt);
+
 private:
     int guarantee(int size);
 
@@ -252,7 +256,7 @@ private:
     bool                regular_header;
     bool                scheme;
     bool                is_qpack;
-    char                fixed_buf[4000];
+    char                fixed_buf[2048];
     LS_NO_COPY_ASSIGN(UpkdHdrBuilder);
 };
 

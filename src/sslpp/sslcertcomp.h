@@ -49,7 +49,6 @@ public:
     static void enableCertDecomp(SSL_CTX *ctx);
     static void disableCertCompDecomp(SSL_CTX *ctx);
     static void setBrCompressLevel(int level);
-    static void setZstdCompressLevel(int level);
 
     LS_NO_COPY_ASSIGN(SslCertComp);
 };

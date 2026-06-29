@@ -457,13 +457,22 @@ CacheEntry *DirHashCacheStore::createCacheEntry(
     const CacheHash &hash, CacheKey *pKey)
 {
     bool is_private = pKey->isPrivate();
+    CacheEntry *pEntry = new DirHashCacheEntry();
+    if (pEntry->setKey(hash, pKey) != 0)
+    {
+        delete pEntry;
+        setLastError(EINVAL);
+        return NULL;
+    }
+
     int fd = createCacheFile(&hash, is_private);
     if (fd == -1)
+    {
+        delete pEntry;
         return NULL;
+    }
 
-    CacheEntry *pEntry = new DirHashCacheEntry();
     pEntry->setFdStore(fd);
-    pEntry->setKey(hash, pKey);
     return initCacheEntry(pEntry, is_private);
 }
 

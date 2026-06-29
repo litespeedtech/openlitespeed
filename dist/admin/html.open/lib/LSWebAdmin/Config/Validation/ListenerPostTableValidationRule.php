@@ -14,7 +14,7 @@ class ListenerPostTableValidationRule implements PostTableValidationRuleInterfac
             return true;
         }
 
-        return (($request->GetView() == 'sl' || $request->GetView() == 'al') && $tid == 'LVT_SSL_CERT');
+        return ($tid == 'ALVT_SSL_CERT' && in_array($request->GetView(), ['sl', 'al'], true));
     }
 
     public function Validate($request, $extracted)

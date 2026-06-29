@@ -25,7 +25,7 @@
 
 #include <new>
 
-#define MAX_PART_HEADER_LEN 256
+#define MAX_PART_HEADER_LEN 384
 
 class AutoStr2;
 class ByteRange;
@@ -87,6 +87,12 @@ public:
     int buildPartHeader(const char *pMimeType)
     {
         int len = getPartHeader(pMimeType, m_partHeaderBuf, MAX_PART_HEADER_LEN);
+        if (len < 0)
+        {
+            m_pPartHeaderEnd = m_partHeaderBuf;
+            m_pCurHeaderPos = m_partHeaderBuf;
+            return LS_FAIL;
+        }
         m_pPartHeaderEnd = (char *)m_partHeaderBuf + len;
         m_pCurHeaderPos = m_partHeaderBuf;
         return len;

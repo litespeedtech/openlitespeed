@@ -53,7 +53,15 @@ int usage(const char *message)
     printf("Usage:\n");
     printf("  -u <user or ID>   : A specific user's name or ID to be used (nobody by default)\n");
     printf("  -s <vhost>        : Lets you specify a specific vhost for the specific user\n");
-    printf("  -m <cmd>          : The command to run. /bin/bash by default\n");
+    printf("  -m <cmd>          : The command to run. /bin/bash by default.\n");
+    printf("                      No arguments are forwarded to the command\n");
+    printf("                      (legacy behavior). Use -o instead if you need\n");
+    printf("                      to pass arguments.\n");
+    printf("  -o <cmd> [args...]: The command to run, followed by its arguments.\n");
+    printf("                      -o must be the LAST option specified: every\n");
+    printf("                      argument after <cmd> (including ones starting\n");
+    printf("                      with '-') is forwarded to the command. Example:\n");
+    printf("                        cmd_ns -u foo -o /bin/ls -al /home\n");
     printf("  -d <dir>          : Default directory.  Defaults to home of UID\n");
     printf("  -c                : Whether cgroups should be enforced.\n");
     printf("  -f <config file>  : The config file to be used (system defaults if not specified)\n");
@@ -163,7 +171,7 @@ int main(int argc, char *argv[])
 {
     int ch; 
     int cgroup = 0, rc = 0, must_exist = 1;
-    char *vhost = NULL, *cfgfile = NULL, *cfg2file = NULL, *cmd = "/bin/bash", *dir = NULL;
+    char *vhost = NULL, *cfgfile = NULL, *cfg2file = NULL, *cmd = NULL, *dir = NULL;
     char env[256];
     struct passwd *pw = NULL;
     
@@ -175,7 +183,8 @@ int main(int argc, char *argv[])
     if (access(PERSIST_PREFIX, 0))
         return usage("Persistance directory: " PERSIST_PREFIX " not found");
     
-    while ((ch = getopt(argc, argv, "u:s:m:d:cf:2:v?hn")) != -1)
+    int forward_args = 0;
+    while ((ch = getopt(argc, argv, "+u:s:m:o:d:cf:2:v?hn")) != -1)
     {
         switch (ch)
         {
@@ -195,8 +204,15 @@ int main(int argc, char *argv[])
                 break;
             
             case 'm':
+                /* Legacy: command only, no forwarded args. */
                 cmd = strdup(optarg);
                 break;
+
+            case 'o':
+                /* New form: command plus any remaining argv as its args. */
+                cmd = optarg;
+                forward_args = 1;
+                goto done_opts;
 
             case 'd':
                 dir = strdup(optarg);
@@ -234,6 +250,7 @@ int main(int argc, char *argv[])
                 return usage(NULL);
         }
     }
+done_opts:
     if (!pw)
     {
         pw = getpwnam("nobody");
@@ -267,9 +284,30 @@ int main(int argc, char *argv[])
     snprintf(systemd_start, sizeof(systemd_start), "/bin/systemctl start user-%d.slice", s_uid);
     system(systemd_start);
 
-    char *a[2];
+    /* With -o, every argv element after the command is forwarded as an arg.
+     * With -m (legacy) or no command flag, no trailing args are accepted. */
+    int trail_start = optind;
+    int trail_count = argc - trail_start;
+    if (!forward_args && trail_count > 0)
+    {
+        char msg[256];
+        snprintf(msg, sizeof(msg),
+                 "Unexpected argument: %s (use -o instead of -m to pass "
+                 "arguments to the command)", argv[trail_start]);
+        return usage(msg);
+    }
+    if (!cmd)
+        cmd = "/bin/bash";
+    char **a = malloc(sizeof(char *) * (trail_count + 2));
+    if (!a)
+    {
+        ls_stderr("Out of memory building command argv\n");
+        return 1;
+    }
     a[0] = cmd;
-    a[1] = NULL;
+    for (int i = 0; i < trail_count; i++)
+        a[i + 1] = argv[trail_start + i];
+    a[trail_count + 1] = NULL;
     cgi.m_argv = a;
     cgi.m_cwdPath = dir;
     cgi.m_pCGIDir = a[0];
@@ -281,11 +319,13 @@ int main(int argc, char *argv[])
     if (cgi.m_cgroup && cgroup_v2(s_uid, s_pid))
     {
         ls_stderr("CGroup test failed\n");
+        free(a);
         return 1;
     }
     int done = 0;
     rc = ns_exec(&cgi, must_exist, &done);
     ns_done(0);
+    free(a);
     if (rc)
     {
         ls_stderr("NS error\n");

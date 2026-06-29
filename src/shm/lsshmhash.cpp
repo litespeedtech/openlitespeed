@@ -827,6 +827,12 @@ int LsShmHash::rehash()
     {
         uint32_t new_idx;
         iter = offset2iterator(iterOff);
+        if (!iter)
+        {
+            fprintf(stderr, "LsShmHash::rehash() have corrupted iterator, remove corrupted file.");
+            getPool()->getShm()->tryRecoverCorruption();
+            abort();
+        }
         opIdx = getHidx(getIndex(iter->x_hkey, oldSize));
         iterNextOff = next(iterOff);
         new_idx = getIndex(iter->x_hkey, newSize);

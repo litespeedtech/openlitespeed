@@ -27,6 +27,7 @@
 #include <h2/h2streampool.h>
 #include <h2/unpackedheaders.h>
 #include <log4cxx/logger.h>
+#include <util/accessdef.h>
 #include <util/iovec.h>
 #include <util/datetime.h>
 #include <lsdef.h>
@@ -100,9 +101,16 @@ int H2Connection::onReadEx()
     ret = onReadEx2();
     if (isPauseWrite() && (m_h2flag & H2_CONN_FLAG_PENDING_STREAM))
         processPendingStreams();
-    if ((m_h2flag & H2_CONN_FLAG_WAIT_PROCESS) != 0)
+    if ((m_h2flag & (H2_CONN_FLAG_WAIT_PROCESS | H2_CONN_FLAG_DROP))
+                == H2_CONN_FLAG_WAIT_PROCESS)
         onWriteEx2();
     clr_h2flag(H2_CONN_FLAG_IN_EVENT);
+    if (m_h2flag & H2_CONN_FLAG_DROP)
+    {
+        LS_DBG_H(log_s(),
+                 "onReadEx() connection abort, GOAWAY");
+        doGoAway(H2_ERROR_ENHANCE_YOUR_CALM);
+    }
     //if (getBuf()->size() > 0)
     if (m_h2flag & H2_CONN_FLAG_WANT_FLUSH)
         flush();
@@ -200,13 +208,11 @@ H2StreamBase *H2Connection::getNewStream(uint8_t ubH2_Flags)
 {
     H2Stream *pStream;
     LS_DBG_H(log_s()->getLogger(),
-             "[%s-%u] getNewStream(), stream map size: %u, push stream: %d, shutdown streams: %d, flag: %d",
+             "[%s-%u] getNewStream(), stream map size: %u, shutdown streams: %d, flag: %d",
              log_s()->getLogId(), m_uiLastStreamId, m_mapStream.size(),
-             m_iCurPushStreams,
              m_uiShutdownStreams, (int)ubH2_Flags);
 
-    if ((int)m_mapStream.size() - (int)m_uiShutdownStreams - m_iCurPushStreams
-        >= m_iServerMaxStreams)
+    if ((int)m_mapStream.size() - (int)m_uiShutdownStreams >= m_iServerMaxStreams)
         return NULL;
 
 
@@ -219,13 +225,15 @@ H2StreamBase *H2Connection::getNewStream(uint8_t ubH2_Flags)
         m_tmIdleBegin = 0;
     enum stream_flag flag = (enum stream_flag)(ubH2_Flags & H2_CTRL_FLAG_FIN)
             | HIO_FLAG_FLOWCTRL | HIO_FLAG_SENDFILE | HIO_FLAG_WRITE_BUFFER;
-    if (!(m_h2flag & H2_CONN_FLAG_NO_PUSH))
-        flag = flag | HIO_FLAG_PUSH_CAPABLE;
     if (getStream()->getFlag(HIO_FLAG_ALTSVC_SENT))
         flag = flag | HIO_FLAG_ALTSVC_SENT;
     pStream->setFlag(flag, 1);
     pStream->init(this, &m_priority);
     pStream->setConnInfo(getStream()->getConnInfo());
+    ClientInfo *pClientInfo = pStream->getClientInfo();
+    assert(pClientInfo);
+    if (pClientInfo)
+        pClientInfo->incH2Streams();
     return pStream;
 }
 
@@ -248,15 +256,18 @@ int H2Connection::h2cUpgrade(HioHandler *pSession, const char * pBuf, int size)
         pStream->set_key(1); //Through upgrade h2c, it is 1.
         m_mapStream.insert(pStream);
         enum stream_flag flag = HIO_FLAG_FLOWCTRL | HIO_FLAG_WRITE_BUFFER;
-        if (!(m_h2flag & H2_CONN_FLAG_NO_PUSH))
-            flag = flag | HIO_FLAG_PUSH_CAPABLE;
         flag = flag | (enum stream_flag)(getStream()->getFlag()
                         & (HIO_FLAG_ALTSVC_SENT | HIO_FLAG_FROM_LOCAL));
         pStream->setFlag(flag, 1);
         pStream->init(this, NULL);
+        pStream->setConnInfo(getStream()->getConnInfo());
+        ClientInfo *pClientInfo = pStream->getClientInfo();
+        assert(pClientInfo);
+        if (pClientInfo)
+            pClientInfo->incH2Streams();
         onInitConnected();
         guaranteeOutput(s_h2sUpgradeResponse, sizeof(s_h2sUpgradeResponse) - 1);
-        sendSettingsFrame(false);
+        sendSettingsFrame();
         pStream->setFlag(HIO_FLAG_INIT_SESS, 0);
         pSession->attachStream(pStream);
         return pStream->onInitConnected();
@@ -266,9 +277,6 @@ int H2Connection::h2cUpgrade(HioHandler *pSession, const char * pBuf, int size)
 
 void H2Connection::recycleStream(H2StreamBase *stream)
 {
-    if ((stream->getStreamID() & 1) == 0)
-        --m_iCurPushStreams;
-
     if (m_current == stream)
         m_current = NULL;
 
@@ -277,6 +285,19 @@ void H2Connection::recycleStream(H2StreamBase *stream)
     m_priQue[stream->getPriority()].remove(stream);
     if (((H2Stream *)stream)->getHandler())
         ((H2Stream *)stream)->getHandler()->recycle();
+    ClientInfo *pClientInfo = ((H2Stream *)stream)->getClientInfo();
+    assert(pClientInfo);
+    if (pClientInfo)
+    {
+        int32_t streams = pClientInfo->decH2Streams();
+        assert(streams >= 0);
+    }
+
+    if (stream->getFlag(SS_FLAG_DROP))
+    {
+        LS_INFO(stream, "recycleStream(), stream marked drop connection");
+        drop("drop connection requested by a stream.");
+    }
 
     LS_DBG_H(stream, "recycleStream(), stream map size: %u "
              , m_mapStream.size());
@@ -305,7 +326,8 @@ int H2Connection::onCloseEx()
     if (getStream()->isReadyToRelease())
         return 0;
     LS_DBG_L(log_s(), "H2Connection::onCloseEx() ");
-
+    if (getStream()->getFlag(SS_FLAG_DROP))
+        set_h2flag(H2_CONN_FLAG_DROP);
     getStream()->tobeClosed();
     releaseAllStream();
     getStream()->handlerReadyToRelease();
@@ -399,58 +421,6 @@ int H2Connection::sendRespHeaders(H2Stream *stream, HttpRespHeaders *hdrs,
 
 
 
-H2StreamBase* H2Connection::createPushStream(uint32_t pushStreamId,
-                                             UnpackedHeaders *hdrs)
-{
-    H2Stream *pStream;
-    //pStream = new H2Stream();
-    pStream = H2StreamPool::getH2Stream();
-    if (!pStream)
-        return NULL;
-    pStream->set_key(pushStreamId);
-    m_mapStream.insert(pStream);
-    if (m_tmIdleBegin)
-        m_tmIdleBegin = 0;
-    enum stream_flag flag = HIO_FLAG_PEER_SHUTDOWN | HIO_FLAG_FLOWCTRL
-                    | HIO_FLAG_INIT_SESS | HIO_FLAG_IS_PUSH
-                    | HIO_FLAG_WRITE_BUFFER
-                    | HIO_FLAG_WANT_WRITE | HIO_FLAG_ALTSVC_SENT;
-
-    pStream->setFlag(flag, 1);
-    pStream->init(this, NULL);
-    pStream->setConnInfo(getStream()->getConnInfo());
-    pStream->setPriority(HIO_PRIORITY_PUSH);
-    pStream->setReqHeaders(hdrs);
-    add2PriorityQue(pStream);
-    ++m_iCurPushStreams;
-    return pStream;
-}
-
-
-
-int H2Connection::pushPromise(uint32_t streamId, UnpackedHeaders *hdrs)
-{
-    if (m_iCurPushStreams >= m_iMaxPushStreams)
-    {
-        LS_DBG_L(log_s(),
-                 "reached max concurrent Server PUSH streams limit, skip push.");
-        return -1;
-    }
-    uint32_t pushStreamId = m_uiPushStreamId;
-    m_uiPushStreamId += 2;
-    int ret = sendReqHeaders(streamId, pushStreamId, H2_CTRL_FLAG_FIN, hdrs);
-    if (ret == 0)
-    {
-        if (createPushStream(pushStreamId, hdrs) == NULL)
-        {
-            (void) sendRstFrame(pushStreamId, H2_ERROR_INTERNAL_ERROR);
-            ret = -1;
-        }
-    }
-    return ret;
-}
-
-
 int H2Connection::assignStreamHandler(H2StreamBase *s)
 {
     H2Stream *stream = (H2Stream *)s;
@@ -503,6 +473,13 @@ int H2Connection::onWriteEx()
     set_h2flag(H2_CONN_FLAG_IN_EVENT);
     int wantWrite = onWriteEx2();
     clr_h2flag(H2_CONN_FLAG_IN_EVENT);
+
+    if (m_h2flag & H2_CONN_FLAG_DROP)
+    {
+        LS_DBG_H(log_s(),
+                 "onWriteEx() connection abort, GOAWAY");
+        doGoAway(H2_ERROR_ENHANCE_YOUR_CALM);
+    }
 
     if ((wantWrite == 0 || m_iCurDataOutWindow <= 0) && isEmpty())
     {
@@ -623,4 +600,3 @@ int H2Connection::verifyStreamId(uint32_t id)
     m_uiLastStreamId = id;
     return LS_OK;
 }
-

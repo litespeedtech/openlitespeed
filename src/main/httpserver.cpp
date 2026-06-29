@@ -1586,10 +1586,11 @@ void HttpServerImpl::onTimer()
 void HttpServerImpl::offsetChroot()
 {
 
-    char achTemp[512];
     AutoStr2 *pChroot = ServerProcessConfig::getInstance().getChroot();
-    lstrncpy(achTemp, StdErrLogger::getInstance().getLogFileName(), sizeof(achTemp));
-    StdErrLogger::getInstance().setLogFileName(achTemp + pChroot->len());
+    const char *pLogName = StdErrLogger::getInstance().getLogFileName();
+    if (pLogName
+        && strncmp(pChroot->c_str(), pLogName, pChroot->len()) == 0)
+        StdErrLogger::getInstance().setLogFileName(pLogName + pChroot->len());
     HttpLog::offsetChroot(pChroot->c_str(), pChroot->len());
     ServerInfo::getServerInfo()->m_pChroot =
         ServerInfo::getServerInfo()->dupStr(pChroot->c_str(), pChroot->len());
@@ -1682,9 +1683,11 @@ int removeMatchFile(const char *pDir, const char *prefix)
     int i = 0;
     int prefixLen = strlen(prefix);
     char achTemp[512];
-    memccpy(achTemp, pDir, 0, 510);
-    achTemp[511] = 0;
+    if (memccpy(achTemp, pDir, 0, sizeof(achTemp)) == NULL)
+        return LS_FAIL;
     int dirLen = strlen(achTemp);
+    if (dirLen <= 0 || dirLen >= (int)sizeof(achTemp) - 1)
+        return LS_FAIL;
     if (achTemp[dirLen - 1] != '/')
     {
         achTemp[dirLen++] = '/';
@@ -1698,7 +1701,9 @@ int removeMatchFile(const char *pDir, const char *prefix)
     {
         if (!prefixLen || strncmp(entry->d_name, prefix, prefixLen) == 0)
         {
-            memccpy(&achTemp[dirLen], entry->d_name, 0, 510 - dirLen);
+            if (memccpy(&achTemp[dirLen], entry->d_name, 0,
+                        sizeof(achTemp) - dirLen) == NULL)
+                continue;
             unlink(achTemp);
             ++i;
         }
@@ -1834,8 +1839,12 @@ int HttpServerImpl::reinitMultiplexer()
 int HttpServerImpl::setupSwap()
 {
     char achDir[512];
-    lstrncpy(achDir, getSwapDir(), sizeof(achDir));
-    if (*(strlen(achDir) - 1 + achDir) != '/')
+    const char *pSwapDir = getSwapDir();
+    if (pSwapDir == NULL || *pSwapDir == '\0')
+        pSwapDir = DEFAULT_SWAP_DIR;
+    lstrncpy(achDir, pSwapDir, sizeof(achDir));
+    int len = strlen(achDir);
+    if (len > 0 && achDir[len - 1] != '/')
         lstrncat(achDir, "/", sizeof(achDir));
     if (!GPath::isValid(achDir))
     {
@@ -1853,7 +1862,8 @@ int HttpServerImpl::setupSwap()
         LS_WARN("Specified swapping directory is not writable:%s,"
                 " use default!", achDir);
         lstrncpy(achDir, DEFAULT_SWAP_DIR, sizeof(achDir));
-        if (*(strlen(achDir) - 1 + achDir) != '/')
+        len = strlen(achDir);
+        if (len > 0 && achDir[len - 1] != '/')
             lstrncat(achDir, "/", sizeof(achDir));
         mkdir(achDir, 0700);
     }
@@ -1865,8 +1875,15 @@ int HttpServerImpl::setupSwap()
     }
     if (HttpServerConfig::getInstance().getProcNo() != 1)
     {
-        ls_snprintf(achDir + strlen(achDir), 256 - strlen(achDir),
-                    "s%d/", HttpServerConfig::getInstance().getProcNo());
+        len = strlen(achDir);
+        int remain = sizeof(achDir) - len;
+        int n = ls_snprintf(achDir + len, remain, "s%d/",
+                            HttpServerConfig::getInstance().getProcNo());
+        if (n < 0 || n >= remain)
+        {
+            LS_ERROR("Swapping directory is too long:%s", achDir);
+            return LS_FAIL;
+        }
         mkdir(achDir, 0700);
     }
     if ((strncmp(achDir, DEFAULT_SWAP_DIR,
@@ -2138,7 +2155,13 @@ HttpListener *HttpServerImpl::configListener(const XmlNode *pNode,
             {
                 delete pSSLCtx;
                 pSSLCtx = NULL;
-                break;
+                // A secure listener with no statically-configured certificate is
+                // valid when ACME is enabled: it serves vhost (e.g. template
+                // member) certificates obtained via ACME through SNI later on.
+                // Only treat a missing certificate as fatal when ACME is off.
+                if (HttpServerConfig::getInstance().getAcme() ==
+                    HttpServerConfig::ACME_DISABLED)
+                    break;
             }
         }
 
@@ -2877,6 +2900,12 @@ int HttpServerImpl::configTuning(const XmlNode *pRoot)
         }
     }
 
+    const size_t gzipCachePathReserve = 5 /* /x/x/ */ + 30 /* MD5 tail */ + 1;
+    if (strlen(pValue) + gzipCachePathReserve > MAX_PATH_LEN)
+    {
+        LS_ERROR(&currentCtx, "path of gzip cache is too long, use default.");
+        pValue = getSwapDir();
+    }
     StaticFileCacheData::setCompressCachePath(pValue);
 
 
@@ -3237,6 +3266,7 @@ int HttpServerImpl::configSecurity(const XmlNode *pRoot)
             ClientInfo::setPerClientHardLimit(currentCtx.getLongValue(pNode1,
                                               "hardLimit", 1, INT_MAX,
                                               INT_MAX));
+            ClientInfo::adjustStreamLimitBasedOnHardLimit();
             ClientInfo::setOverLimitGracePeriod(currentCtx.getLongValue(pNode1,
                                                 "gracePeriod", 1, 3600,
                                                 10));
@@ -3610,11 +3640,32 @@ void HttpServerImpl::configVHTemplateToListenerMap(
                 LS_DBG("Overall acme: %d, listener %s, secure: %d vhost acme: %d\n", 
                        HttpServerConfig::getInstance().getAcme(), (*iter)->getName(),
                        (*iter)->getSecure(), pVHost->getAcme());
-                if ((*iter)->getSecure() && 
-                    (pVHost->getAcme() && 
+                // getAcme()==1 means this member explicitly enabled ACME; ==2
+                // means it explicitly opted out and must not get a cert even
+                // under global AutoCert. Pure global-ON members (==0) are
+                // handled by UseAcme::vhostActivate() below, not here.
+                if ((*iter)->getSecure() &&
+                    (pVHost->getAcme() == 1 &&
                      HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_DISABLED))
-                    UseAcme::acmeVhost(pVHost, pDomain, pAliases, 
-                                       (*iter)->getAddrStr());
+                {
+                    UseAcme *useAcme = UseAcme::acmeVhost(pVHost, pDomain, pAliases,
+                                                          (*iter)->getAddrStr());
+                    // A listener dedicated to template members has no inline
+                    // map entries, so it never obtained a base SSL context at
+                    // listener-config time. Without one the listener cannot
+                    // start a TLS handshake or dispatch SNI to the per-vhost
+                    // ACME certificate. Give it its own base context (owned
+                    // solely by this listener's VHostMap) built from the
+                    // member's ACME certificate.
+                    if (useAcme && !(*iter)->getVHostMap()->getSslContext())
+                    {
+                        SslContext *pSSLCtx =
+                            ConfigCtx::getCurConfigCtx()->justSSLContext(
+                                NULL, (*iter)->getName(), NULL, useAcme);
+                        if (pSSLCtx)
+                            (*iter)->getVHostMap()->setSslContext(pSSLCtx);
+                    }
+                }
                 mapListenerToVHost((*iter), pVHost, pDomain);
 
                 if (pAliases)
@@ -4571,6 +4622,9 @@ int HttpServerImpl::initQuic(const XmlNode *pNode)
     pShmDir = pNode->getChildValue("quicShmDir");
 
     lsquic_engine_init_settings(&settings, LSENG_SERVER);
+
+    settings.es_versions = (1 << LSQVER_I002) | (1 << LSQVER_I001)
+                            | (1 << LSQVER_ID29);
 
     pVersions = pNode->getChildValue("quicVersions");
     if (pVersions)

@@ -26,7 +26,6 @@
 #define RTMODE_POINTER    1
 
 #define RTFLAG_NOCONTEXT  (1 << 1)
-#define RTFLAG_GLOBALPOOL (1 << 2)
 #define RTFLAG_BESTMATCH  (1 << 3)
 #define RTFLAG_UPDATE     (1 << 4)
 #define RTFLAG_CICMP      (1 << 5)
@@ -137,6 +136,11 @@ public:
 
     void printChildren(rnprint_t *pHelper);
 
+    // Recursively free this node's children and their storage from the global
+    // pool. Only used when a RadixTree is backed by the global pool (no xpool);
+    // with an xpool the caller frees everything by deleting the pool.
+    void releaseGlobal();
+
 private:
 
     RadixNode(RadixNode *pParent, void *pObj = NULL);
@@ -194,21 +198,27 @@ class RadixTree
 {
 public:
 
-    RadixTree(int iMode = RTMODE_CONTIGUOUS)
-        : m_iMode(iMode)
+    // pool is supplied and owned by the caller; it is NOT freed by RadixTree.
+    // Pass NULL to allocate from the global pool, in which case the tree frees
+    // all of its own nodes on destruction. The pool choice is fixed for the
+    // lifetime of the tree and cannot be changed afterwards.
+    RadixTree(ls_xpool_t *pool = NULL, int iMode = RTMODE_CONTIGUOUS)
+        : m_pool(pool)
+        , m_iMode(iMode)
         , m_iFlags(0)
         , m_pRoot(NULL)
-    {   m_pool = ls_xpool_new();             }
+    {}
 
     ~RadixTree()
-    {   ls_xpool_delete(m_pool);          }
+    {
+        if (m_pool == NULL)
+            releaseGlobalPool();
+    }
 
     // NOTICE: If any of these are to be used, they should be set immediately.
     int setRootLabel(const char *pLabel, int iLabelLen);
     int getNoContext()              {   return m_iFlags & RTFLAG_NOCONTEXT; }
     void setNoContext();
-    int getUseGlobalPool()          {   return m_iFlags & RTFLAG_GLOBALPOOL;}
-    void setUseGlobalPool()         {   m_iFlags |= RTFLAG_GLOBALPOOL;      }
     int getCiCmp()                  {   return m_iFlags & RTFLAG_CICMP;     }
     void setCiCmp()                 {   m_iFlags |= RTFLAG_CICMP;           }
     int getUseWildCard()            {   return m_iFlags & RTFLAG_WILDCARD;  }
@@ -231,6 +241,7 @@ private:
     RadixTree(const RadixTree &rhs);
     void *operator=(const RadixTree &rhs);
     int checkPrefix(const char *pLabel, int iLabelLen) const;
+    void releaseGlobalPool();
 
 
     ls_xpool_t *m_pool;

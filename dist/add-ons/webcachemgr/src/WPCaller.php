@@ -709,7 +709,8 @@ class WPCaller
             . 'litespeed-cache.latest-stable.zip';
 
         exec(
-            "wget -q --tries=1 --no-check-certificate "
+            "wget -q --tries=1 "
+                . Util::getWgetCaArg()
                 . escapeshellarg($url)
                 . " -P "
                 . escapeshellarg($pluginDir),
@@ -727,7 +728,8 @@ class WPCaller
         exec(
             "cd "
                 . escapeshellarg($pluginDir)
-                . " && curl -O -s --retry 1 --insecure "
+                . " && curl -O -s --retry 1 "
+                . Util::getCurlCaArg()
                 . escapeshellarg($url),
             $output2,
             $return_var2

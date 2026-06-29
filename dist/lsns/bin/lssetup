@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-import argparse, json, logging, os, re, shutil, signal, subprocess
+import argparse, json, logging, os, re, shutil, signal, subprocess, tempfile
 import xml.etree.ElementTree as ET
 from stat import *
 from subprocess import PIPE
@@ -86,6 +86,48 @@ def copy_file_details(source, dest):
     shutil.copystat(source, dest)
     os.chown(dest, s.st_uid, s.st_gid)
 
+def _append_subelement(parent, tag, text):
+    """ET.SubElement-like append that preserves the parent's existing
+    indentation so the new element sits on its own line rather than being
+    jammed against the parent's closing tag.
+
+    In ElementTree, the whitespace that appears in the serialized XML between
+    elements lives in `.text` (before the first child) and `.tail` (after each
+    child). When we append a new child we have to redistribute these so:
+      - the element that used to be the last child keeps a sibling-indent in
+        its tail (so the new child sits one level in), and
+      - the new child gets the closing-tag-indent (so the parent's close stays
+        where it was)."""
+    if len(parent) == 0:
+        # No existing children: synthesize a reasonable indent.
+        sibling_indent = (parent.text or '\n') + '  '
+        closing_indent = parent.text or '\n'
+        parent.text = sibling_indent
+        new = ET.SubElement(parent, tag)
+        new.text = text
+        new.tail = closing_indent
+        return new
+
+    # The previous-last child's tail currently sits between it and the parent's
+    # closing tag — that's the closing-tag indent. We need to repurpose it as
+    # the new child's tail (so the parent's close stays put) and give the
+    # previous-last child a true sibling-indent.
+    closing_indent = parent[-1].tail or '\n'
+    if len(parent) >= 2:
+        # The element BEFORE the previous-last child has the canonical
+        # sibling-indent in its tail.
+        sibling_indent = parent[-2].tail or closing_indent
+    else:
+        # Only one prior child — use parent.text (which is the indent before
+        # the first child, also a sibling-indent).
+        sibling_indent = parent.text or closing_indent
+
+    parent[-1].tail = sibling_indent
+    new = ET.SubElement(parent, tag)
+    new.text = text
+    new.tail = closing_indent
+    return new
+
 def set_cgroups(root, disable, val, init):
     valSet = False
     findLimit = root.find('./security/CGIRLimit')
@@ -96,16 +138,15 @@ def set_cgroups(root, disable, val, init):
         if cgroups != None and int(cgroups.text) > 0:
             logging.debug('cgroups needs disabling')
             cgroups.text = str(0)
-            valset = True
+            valSet = True
     elif cgroups == None:
         logging.debug('cgroups not in LSWS file')
-        cgroups = ET.SubElement(findLimit, 'cgroups')
-        cgroups.text = str(init)
+        cgroups = _append_subelement(findLimit, 'cgroups', str(init))
         valSet = True
     elif disable and int(cgroups.text) > 0:
         logging.debug('cgroups needs disabling')
         cgroups.text = str(0)
-        valset = True
+        valSet = True
     elif int(cgroups.text) < val:
         logging.debug('cgroups bad value in LSWS file')
         cgroups.text = str(val)
@@ -130,8 +171,7 @@ def set_namespace(root, disable, val, init):
             valSet = True
     elif namespace == None:
         logging.debug('namespace not in LSWS file')
-        namespace = ET.SubElement(findSecurity, 'namespace')
-        namespace.text = str(init)
+        namespace = _append_subelement(findSecurity, 'namespace', str(init))
         valSet = True
     elif int(namespace.text) < val:
         logging.debug('namespace bad value in LSWS file')
@@ -145,12 +185,37 @@ def set_namespace(root, disable, val, init):
     return valSet    
 
 def lsws_restart():
-    pid = run_shell_program("ps -ef|grep '[l]shttpd - main' | awk -F ' ' '{print $2}'")
-    if pid == '':
+    # Canonical LiteSpeed PID file. If it's missing, LiteSpeed isn't running.
+    pidfile = '/tmp/lshttpd/lshttpd.pid'
+    if not os.path.isfile(pidfile):
         logging.debug("LiteSpeed not running")
         return
     try:
-        os.kill(int(pid), signal.SIGUSR1)
+        with open(pidfile, 'r') as pf:
+            pid_str = pf.readline().strip()
+    except OSError as err:
+        common.fatal_error("Cannot read LiteSpeed pid file %s: %s" % (pidfile, err))
+    if not pid_str:
+        logging.debug("LiteSpeed not running")
+        return
+    try:
+        pid = int(pid_str)
+    except ValueError:
+        common.fatal_error("Bad LiteSpeed pid value: %r" % pid_str)
+    # Sanity-check: the pid we're about to SIGUSR1 must actually be lshttpd,
+    # owned by root. Prevents racing into a recycled pid that belongs to a
+    # non-LiteSpeed process (e.g. an unprivileged user's process).
+    try:
+        exe = os.readlink('/proc/%d/exe' % pid)
+        st = os.stat('/proc/%d' % pid)
+    except OSError as err:
+        common.fatal_error("Cannot verify LiteSpeed pid %d: %s" % (pid, err))
+    if st.st_uid != 0 or 'lshttpd' not in os.path.basename(exe):
+        common.fatal_error(
+            "Refusing to signal pid %d: exe=%r uid=%d (not a root-owned lshttpd)"
+            % (pid, exe, st.st_uid))
+    try:
+        os.kill(pid, signal.SIGUSR1)
     except OSError as err:
         common.fatal_error("Error sending graceful restart to ListSpeed: %s" % err)
     logging.debug("LiteSpeed restarted")
@@ -171,7 +236,22 @@ def lsws_config(args):
     if valSet:
         try:
             #ET.indent(tree, space='  ')
-            tree.write(file, encoding="UTF-8", xml_declaration=True, short_empty_elements=False)
+            # Atomic, symlink-safe write: write to a randomized temp file in the
+            # same directory, then rename. Defeats a planted symlink at `file`.
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                prefix='.httpd_config.', suffix='.xml',
+                dir=os.path.dirname(file))
+            try:
+                with os.fdopen(tmp_fd, 'wb') as tmp_w:
+                    tree.write(tmp_w, encoding="UTF-8", xml_declaration=True, short_empty_elements=False)
+                copy_file_details(file, tmp_path)
+                os.replace(tmp_path, file)
+            except Exception:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
         except Exception as err:
             common.fatal_error('Error updating configuration: %s' % err)
         lsws_restart()
@@ -213,11 +293,16 @@ def rewrite_ols_config(args, cgroupsAt, pastCGIRLimit, cgroupsVal, namespaceAt, 
         f = open(file, 'r')
     except Exception as err:
         common.fatal_error('Error opening %s: %s' % (file, err))
-    fileout = common.server_root() + "/conf/httpd_config.out"
+    # Atomic, symlink-safe rewrite: mkstemp in same dir, write, fsync-replace.
+    # Previous predictable `httpd_config.out` path was vulnerable to a planted
+    # symlink redirecting the write to an arbitrary file.
     try:
-        w = open(fileout, 'w')
+        fileout_fd, fileout = tempfile.mkstemp(
+            prefix='.httpd_config.', suffix='.out',
+            dir=os.path.dirname(file))
+        w = os.fdopen(fileout_fd, 'w')
     except Exception as err:
-        common.fatal_error('Error opening %s: %s' % (fileout, err))
+        common.fatal_error('Error opening temp file in %s: %s' % (os.path.dirname(file), err))
     try:
         for line in f:
             replace = False
@@ -238,6 +323,10 @@ def rewrite_ols_config(args, cgroupsAt, pastCGIRLimit, cgroupsVal, namespaceAt, 
         copy_file_details(file, fileout)
         os.replace(fileout, file)
     except Exception as err:
+        try:
+            os.unlink(fileout)
+        except OSError:
+            pass
         common.fatal_error('Error writing OLS config file: %s' % err)
 
 def ols_config(args):
@@ -317,18 +406,52 @@ def read_subtree_control():
 def build_delegate(controllers):
     dirname = '/etc/systemd/system/user@.service.d'
     filename = dirname + '/delegate.conf'
+    desired = "[Service]\nDelegate=%s\n" % ' '.join(controllers)
+
+    # Idempotent: if the file already exists with the exact contents we'd
+    # write, this is a re-run of a successful Setup — return silently and
+    # don't bother systemd with a daemon-reload. If it exists with
+    # different contents, overwrite (the controller set may have changed,
+    # or a prior run left a partial/stale file). Only the create path
+    # needs the mkdir attempt.
     if os.path.exists(filename):
-        common.fatal_error("%s already exists - problem in controller management" % filename)
+        try:
+            with open(filename, 'r') as r:
+                existing = r.read()
+        except Exception as err:
+            common.fatal_error('Error reading %s: %s' % (filename, err))
+        if existing == desired:
+            logging.debug(
+                '%s already matches desired controller set; nothing to do'
+                % filename
+            )
+            return
+        logging.debug(
+            '%s exists with stale contents; overwriting' % filename
+        )
+    else:
+        try:
+            os.mkdir(dirname)
+        except Exception as err:
+            logging.debug("Error creating service directory: %s" % err)
+
+    # Atomic, symlink-safe write of delegate.conf in systemd drop-in dir.
     try:
-        os.mkdir(dirname)
-    except Exception as err:
-        logging.debug("Error creating service directory: %s" % err)
-    try:
-        w = open(filename, 'w')
+        tmp_fd, tmp_path = tempfile.mkstemp(
+            prefix='.delegate.', suffix='.conf', dir=dirname)
+        try:
+            with os.fdopen(tmp_fd, 'w') as w:
+                w.write(desired)
+            os.chmod(tmp_path, 0o644)
+            os.replace(tmp_path, filename)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
     except Exception as err:
         common.fatal_error('Error opening %s: %s' % (filename, err))
-    w.write("[Service]\nDelegate=%s\n" % ' '.join(controllers))
-    w.close()
     systemctl_daemon_reload()
 
 def subtree_control():
@@ -377,9 +500,9 @@ def upgrade():
     upgrade_pgm = common.server_root() + '/admin/misc/lsup.sh'
     logging.info('Doing LiteSpeed upgrade')
     if not compare_versions(autostr, get_minver()):
-        run_shell_program(upgrade_pgm + ' -f')
+        run_program([upgrade_pgm, '-f'])
     else:
-        run_shell_program(upgrade_pgm + ' -d -f -v ' + get_minver())
+        run_program([upgrade_pgm, '-d', '-f', '-v', get_minver()])
         
 def revert_config():
     lsws = is_lsws()

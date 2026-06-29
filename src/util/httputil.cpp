@@ -24,6 +24,8 @@
 
 int HttpUtil::escape(const char *pSrc, char *pDest, int iDestlen)
 {
+    if (iDestlen <= 0)
+        return 0;
     char ch;
     char *p = pDest;
     while (--iDestlen && ((ch = *pSrc++) != 0))
@@ -58,6 +60,8 @@ int HttpUtil::escape(const char *pSrc, char *pDest, int iDestlen)
 int HttpUtil::escape(const char *pSrc, int iSrcLen, char *pDest,
                      int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char ch;
     char *p = pDest;
     const char *pEnd = pSrc + iSrcLen;
@@ -93,6 +97,8 @@ int HttpUtil::escape(const char *pSrc, int iSrcLen, char *pDest,
 
 int HttpUtil::escapeRFC3986(const char *pSrc, char *pDest, int iDestlen)
 {
+    if (iDestlen <= 0)
+        return 0;
     char ch;
     char *p = pDest;
     while (--iDestlen && ((ch = *pSrc++) != 0))
@@ -131,6 +137,8 @@ int HttpUtil::escapeRFC3986(const char *pSrc, char *pDest, int iDestlen)
 int HttpUtil::escapeRFC3986(const char *pSrc, int iSrcLen, char *pDest,
                             int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char ch;
     char *p = pDest;
     const char *pEnd = pSrc + iSrcLen;
@@ -170,6 +178,8 @@ int HttpUtil::escapeRFC3986(const char *pSrc, int iSrcLen, char *pDest,
 
 int HttpUtil::escapeQs(const char *pSrc, char *pDest, int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char ch;
     char *p = pDest;
     while (--iDestLen && ((ch = *pSrc++) != 0))
@@ -221,6 +231,8 @@ int HttpUtil::escapeQs(const char *pSrc, char *pDest, int iDestLen)
 int HttpUtil::escapeQs(const char *pSrc, int iSrcLen, char *pDest,
                        int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char ch;
     char *p = pDest;
     const char *pEnd = pSrc + iSrcLen;
@@ -275,6 +287,8 @@ int HttpUtil::escapeHtml(const char *pSrc, const char *pSrcEnd,
                          char *pDest,
                          int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char *pBegin = pDest;
     char *pEnd = pDest + iDestLen - 6;
     char ch;
@@ -324,8 +338,16 @@ int HttpUtil::unescape(char *pDest, int &iUriLen,
         {
         case '%':
             {
+                if (pSrc >= pEnd)
+                    break;
                 x1 = *pSrc++;
                 if (!isxdigit(x1))
+                {
+                    *p++ = '%';
+                    c = x1;
+                    break;
+                }
+                if (pSrc >= pEnd)
                 {
                     *p++ = '%';
                     c = x1;
@@ -370,10 +392,13 @@ int HttpUtil::unescape(char *pDest, int &iUriLen,
 
 int HttpUtil::unescape(const char *pSrc, char *pDest, int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char c;
     char *p = pDest;
+    char *pDestEnd = pDest + iDestLen - 1;
 
-    while (iDestLen-- && ((c = *pSrc++) != 0))
+    while (p < pDestEnd && ((c = *pSrc++) != 0))
     {
         switch (c)
         {
@@ -387,7 +412,6 @@ int HttpUtil::unescape(const char *pSrc, char *pDest, int iDestLen)
                 if (!isxdigit(x2))
                     return LS_FAIL;
                 *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
-                iDestLen -= 2;
                 break;
             }
         case '/':
@@ -408,14 +432,18 @@ int HttpUtil::unescape(const char *pSrc, char *pDest, int iDestLen)
 int HttpUtil::unescape(const char *pSrc, int iSrcLen, char *pDest,
                        int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char c;
     char *p = pDest;
+    char *pDestEnd = pDest + iDestLen;
+    const char *pSrcBegin = pSrc;
     const char *pSrcEnd = pSrc + iSrcLen;
 
-    while (iDestLen-- && (pSrc < pSrcEnd))
+    while (p < pDestEnd && (pSrc < pSrcEnd))
     {
         c = *pSrc++;
-        if (c == '%' && pSrc + 2 < pSrcEnd)
+        if (c == '%' && pSrc + 1 < pSrcEnd)
         {
             char x1, x2;
             x1 = *pSrc++;
@@ -425,12 +453,11 @@ int HttpUtil::unescape(const char *pSrc, int iSrcLen, char *pDest,
             if (!isxdigit(x2))
                 return LS_FAIL;
             *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
-            iDestLen -= 2;
         }
         else if (c == '/' && pSrc < pSrcEnd && *pSrc == '/')
         {
             //handle "://" case, keep them
-            if (iDestLen + 2 <= iSrcLen && pSrc[-2] == ':')
+            if (pSrc - 2 >= pSrcBegin && pSrc[-2] == ':')
                 *p++ = c;
             //else
             //; //Do nothing so that get rid of duplicate '/'s.
@@ -458,8 +485,16 @@ int HttpUtil::unescapeQs(char *pDest, int &uriLen,
         case '%':
             {
                 char x1, x2;
+                if (pSrc >= pEnd)
+                    break;
                 x1 = *pSrc++;
                 if (!isxdigit(x1))
+                {
+                    *p++ = '%';
+                    c = x1;
+                    break;
+                }
+                if (pSrc >= pEnd)
                 {
                     *p++ = '%';
                     c = x1;
@@ -491,10 +526,13 @@ int HttpUtil::unescapeQs(char *pDest, int &uriLen,
 
 int HttpUtil::unescapeQs(const char *pSrc, char *pDest, int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char c;
     char *p = pDest;
+    char *pDestEnd = pDest + iDestLen - 1;
 
-    while (iDestLen-- && ((c = *pSrc++) != 0))
+    while (p < pDestEnd && ((c = *pSrc++) != 0))
     {
         switch (c)
         {
@@ -508,7 +546,6 @@ int HttpUtil::unescapeQs(const char *pSrc, char *pDest, int iDestLen)
                 if (!isxdigit(x2))
                     return LS_FAIL;
                 *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
-                iDestLen -= 2;
                 break;
             }
         case '+':
@@ -526,14 +563,17 @@ int HttpUtil::unescapeQs(const char *pSrc, char *pDest, int iDestLen)
 int HttpUtil::unescapeQs(const char *pSrc, int iSrcLen, char *pDest,
                          int iDestLen)
 {
+    if (iDestLen <= 0)
+        return 0;
     char c;
     char *p = pDest;
+    char *pDestEnd = pDest + iDestLen - 1;
     const char *pSrcEnd = pSrc + iSrcLen;
 
-    while (iDestLen-- && (pSrc < pSrcEnd))
+    while (p < pDestEnd && (pSrc < pSrcEnd))
     {
         c = *pSrc++;
-        if (c == '%' && pSrc + 2 < pSrcEnd)
+        if (c == '%' && pSrc + 1 < pSrcEnd)
         {
             char x1, x2;
             x1 = *pSrc++;
@@ -543,7 +583,6 @@ int HttpUtil::unescapeQs(const char *pSrc, int iSrcLen, char *pDest,
             if (!isxdigit(x2))
                 return LS_FAIL;
             *p++ = (hexdigit(x1) << 4) + hexdigit(x2);
-            iDestLen -= 2;
         }
         else if (c == '+')
             *p++ = ' ';
@@ -571,6 +610,8 @@ int HttpUtil::unescapeInPlace(char *pDest, int &iUriLen,
         case '%':
             {
                 char x1, x2;
+                if (pEnd - pSrc < 2)
+                    return -1;
                 x1 = *pSrc++;
                 if (!isxdigit(x1))
                     return -1;
@@ -601,13 +642,13 @@ int HttpUtil::unescapeInPlace(char *pDest, int &iUriLen,
         switch (c)
         {
         case '.':
-            if (*(p - 1) == '/')
+            if (p > pDest && *(p - 1) == '/')
                 check = 1;
             *p++ = c;
             break;
         case '/':
             //get rid of duplicate '/'s.
-            if (*pSrc == '/')
+            if (pSrc < pEnd && *pSrc == '/')
                 break;
         //fall through
         default:
@@ -654,6 +695,8 @@ int HttpUtil::unescapeInPlaceQs(char *pDest, int &uriLen,
         case '%':
             {
                 char x1, x2;
+                if (pEnd - pSrc < 2)
+                    return LS_FAIL;
                 x1 = *pSrc++;
                 if (!isxdigit(x1))
                     return LS_FAIL;
@@ -674,8 +717,3 @@ int HttpUtil::unescapeInPlaceQs(char *pDest, int &uriLen,
     *p++ = 0;
     return p - pDest;
 }
-
-
-
-
-

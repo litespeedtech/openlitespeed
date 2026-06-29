@@ -124,6 +124,20 @@ class ConfUiContext
         return $this->_confData;
     }
 
+    /**
+     * Whether the config being rendered is read-only. Decided per config root
+     * (include-bearing DirectAdmin server/vhost config is read-only; include-free
+     * admin config stays editable), falling back to the legacy process-global.
+     */
+    public function IsConfReadOnly()
+    {
+        if (is_object($this->_confData) && method_exists($this->_confData, 'IsReadOnly')) {
+            return $this->_confData->IsReadOnly();
+        }
+
+        return defined('_CONF_READONLY_');
+    }
+
     public function GetServData()
     {
         return $this->_servData;

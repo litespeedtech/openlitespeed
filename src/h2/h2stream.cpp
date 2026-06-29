@@ -18,7 +18,6 @@
 #include "h2stream.h"
 
 #include "h2connection.h"
-#include "unpackedheaders.h"
 
 #include <http/hiohandlerfactory.h>
 
@@ -160,12 +159,4 @@ int H2Stream::sendRespHeaders(HttpRespHeaders *pHeaders, send_hdr_flag hdr_flag)
     setFlag(HIO_FLAG_RESP_HEADER_SENT, 1);
     return ret;
 }
-
-
-int H2Stream::push(UnpackedHeaders *hdrs)
-{
-    return ((H2Connection *)m_pH2Conn)->pushPromise(getStreamID(), hdrs);
-}
-
-
 

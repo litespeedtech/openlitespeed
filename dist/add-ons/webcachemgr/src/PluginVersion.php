@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2026 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -636,7 +636,7 @@ class PluginVersion
                 . Context::LOCAL_PLUGIN_DIR
                 . "/$version/"
                 . self::PLUGIN_NAME
-                . " $pluginDir"
+                . ' ' . escapeshellarg($pluginDir)
         );
 
         if ( !file_exists($lscwp_plugin) ) {
@@ -691,13 +691,21 @@ class PluginVersion
      */
     protected function wgetPlugin( $version, $dir, $saveMD5 = false )
     {
+        if ( !self::isValidPluginVersion($version) ) {
+            throw new LSCMException(
+                "Invalid LSCWP version $version.",
+                LSCMException::E_NON_FATAL
+            );
+        }
+
         Logger::info("Downloading LSCache for WordPress v$version...");
 
         $zipFile = self::PLUGIN_NAME . ".$version.zip";
+        $url = "https://downloads.wordpress.org/plugin/$zipFile";
 
         exec(
-            'wget -q --tries=1 --no-check-certificate '
-                . "https://downloads.wordpress.org/plugin/$zipFile -P $dir",
+            'wget -q --tries=1 '
+                . escapeshellarg($url) . ' -P ' . escapeshellarg($dir),
             $output,
             $return_var
         );
@@ -748,6 +756,13 @@ class PluginVersion
      */
     protected function downloadVersion( $version )
     {
+        if ( !self::isValidPluginVersion($version) ) {
+            throw new LSCMException(
+                "Invalid LSCWP version $version.",
+                LSCMException::E_NON_FATAL
+            );
+        }
+
         $dir = Context::LOCAL_PLUGIN_DIR . "/$version";
 
         if ( !file_exists($dir) ) {
@@ -760,7 +775,7 @@ class PluginVersion
             }
         }
         else {
-            exec("/bin/rm -rf $dir/*");
+            exec('/bin/rm -rf ' . escapeshellarg($dir) . '/*');
         }
 
         $this->wgetPlugin($version, $dir, true);
@@ -778,6 +793,14 @@ class PluginVersion
      */
     public static function retrieveTranslation( $locale, $pluginVer )
     {
+        if (
+            !self::isValidLocale($locale)
+                ||
+                !self::isValidPluginVersion($pluginVer)
+        ) {
+            return false;
+        }
+
         Logger::info(
             "Downloading LSCache for WordPress $locale translation..."
         );
@@ -799,10 +822,13 @@ class PluginVersion
          * checked through user failure to unzip through WP func unzip_file()
          * as we do not assume that root has the ability to unzip.
          */
+        $url =
+            'https://downloads.wordpress.org/translation/plugin/'
+                . "litespeed-cache/$pluginVer/$locale.zip";
+
         exec(
-            'wget -q --tries=1 --no-check-certificate '
-                . 'https://downloads.wordpress.org/translation/plugin/'
-                . "litespeed-cache/$pluginVer/$locale.zip -P $translationDir",
+            'wget -q --tries=1 '
+                . escapeshellarg($url) . ' -P ' . escapeshellarg($translationDir),
             $output,
             $return_var
         );
@@ -828,6 +854,14 @@ class PluginVersion
      */
     public static function removeTranslationZip( $locale, $pluginVer )
     {
+        if (
+            !self::isValidLocale($locale)
+                ||
+                !self::isValidPluginVersion($pluginVer)
+        ) {
+            return;
+        }
+
         Logger::info("Removing LSCache for WordPress $locale translation...");
 
         $zipFile = realpath(
@@ -841,6 +875,25 @@ class PluginVersion
         ) {
             unlink($zipFile);
         }
+    }
+
+    /**
+     * @param string $locale
+     * @return bool
+     */
+    private static function isValidLocale( $locale )
+    {
+        return is_string($locale) && preg_match('/\A[A-Za-z0-9_]{1,32}\z/', $locale);
+    }
+
+    /**
+     * @param string $version
+     * @return bool
+     */
+    private static function isValidPluginVersion( $version )
+    {
+        return is_string($version)
+            && preg_match('/\A[0-9]+(?:\.[0-9]+){0,5}\z/', $version);
     }
 
 }

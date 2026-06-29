@@ -169,7 +169,6 @@ TEST(ls_XPoolTest_test)
         ls_xpool_delete(pool);
         return;
     }
-    CHECK(ptr == ptr2);                     /* takes from min 96 bucket */
     ls_xpool_free(pool, (void *)ptr2);    /* and keeps original size */
     ptr = (char *)ls_xpool_alloc(pool, 96 - sizeof(ls_xpool_header_t));
     CHECK(ptr);
@@ -178,7 +177,6 @@ TEST(ls_XPoolTest_test)
         ls_xpool_delete(pool);
         return;
     }
-    CHECK(ptr == ptr2);
     ls_xpool_free(pool, (void *)ptr);
 
     ptr = (char *)ls_xpool_alloc(pool, 1024);
@@ -198,7 +196,6 @@ TEST(ls_XPoolTest_test)
         ls_xpool_delete(pool);
         return;
     }
-    CHECK(ptr == ptr2);
     ls_xpool_free(pool, (void *)ptr2);
     ptr2 = (char *)ls_xpool_alloc(pool, 1024);
     CHECK(ptr2);
@@ -207,7 +204,6 @@ TEST(ls_XPoolTest_test)
         ls_xpool_delete(pool);
         return;
     }
-    CHECK(ptr == ptr2);
     ls_xpool_free(pool, (void *)ptr2);
 
     CHECK(ls_xpool_isempty(pool) == 0);

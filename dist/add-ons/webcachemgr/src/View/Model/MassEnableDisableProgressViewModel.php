@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2018-2025 LiteSpeed Technologies, Inc.
+ * @copyright 2018-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -39,13 +39,16 @@ class MassEnableDisableProgressViewModel
 
     /**
      *
-     * @param string $action
+     * @param string $action  Must be 'enable' or 'disable'. Clamped here so
+     *     the trusted rawHtml msgs in MassEnableDisableProgress.tpl that
+     *     interpolate $action cannot carry user-controlled data, regardless
+     *     of whether the caller validated first.
      *
      * @throws LSCMException  Thrown indirectly by $this->init() call.
      */
     public function __construct( $action )
     {
-        $this->action     = $action;
+        $this->action     = ($action === 'disable') ? 'disable' : 'enable';
         $this->sessionKey = 'mass' . ucfirst($this->action) . 'Info';
 
         $this->init();

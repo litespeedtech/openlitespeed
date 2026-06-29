@@ -927,15 +927,19 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode, const char *pName,
     hasFile = pNode->getChild("certFile");
     if (hasFile)
         pSslFile = justSSLContext(pNode, pName, pOldContext, NULL);
-    if (!pSslFile && HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_DISABLED)
+    // Discover ACME-managed domains when there is no file certificate (the
+    // normal ACME path), and also when AutoCert is globally ON even though a
+    // file certificate is present.  The latter lets vhosts that specify no
+    // certificate files of their own still get automatically generated certs:
+    // acmeFound() populates the per-vhost ACME maps consumed later by
+    // UseAcme::vhostActivate().  The manually specified certificate is left in
+    // place and is never overridden.
+    if (HttpServerConfig::getInstance().getAcme() != HttpServerConfig::ACME_DISABLED &&
+        (!pSslFile ||
+         HttpServerConfig::getInstance().getAcme() == HttpServerConfig::ACME_ON))
         useAcme = UseAcme::acmeFound(pNode, pName);
     if (useAcme)
-    {
         pSslAcme = justSSLContext(pNode, pName, pOldContext, useAcme);
-        if (pSslAcme && pSslFile && 
-            HttpServerConfig::getInstance().getAcme() == HttpServerConfig::ACME_OFF)
-            return pSslFile;
-    }
     if (!pSslFile && !pSslAcme)
     {
         LS_NOTICE( "[%s] No SSL certificate configured for [%s]",
@@ -944,11 +948,17 @@ SslContext *ConfigCtx::newSSLContext(const XmlNode *pNode, const char *pName,
         if (!pMap)
             return NULL;
     }
-    if (pSslAcme)
-        return pSslAcme;
-    if (vhost && pSslFile)
-        vhost->setFileSsl(1);
-    return pSslFile;
+    // A manually specified certificate is never overridden by an ACME one.
+    // When both exist, the file cert is used as this node's context while the
+    // ACME context generated above stays attached to its vhost via the ACME
+    // maps (so per-vhost auto certs still apply through SNI).
+    if (pSslFile)
+    {
+        if (vhost)
+            vhost->setFileSsl(1);
+        return pSslFile;
+    }
+    return pSslAcme;
 }
 
 

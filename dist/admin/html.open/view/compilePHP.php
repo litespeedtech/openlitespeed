@@ -1,10 +1,15 @@
 <?php
 
+use LSWebAdmin\Auth\CAuthorizer;
 use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\Product\Current\UI;
 use LSWebAdmin\Tool\BuildPhp\CompilePHPUI;
 
 require_once __DIR__ . '/inc/auth.php';
+
+if (isset($_SERVER['REQUEST_METHOD']) && strtoupper((string) $_SERVER['REQUEST_METHOD']) === 'POST') {
+    CAuthorizer::RequireCsrfToken('post');
+}
 
 echo UI::content_header('list', DMsg::ALbl('menu_tools'), DMsg::ALbl('menu_compilephp'));
 

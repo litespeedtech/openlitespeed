@@ -2,7 +2,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Startseite",
         "url": "index.html",
-        "text": "Startseite OpenLiteSpeed Web Server 1.9 Benutzerhandbuch — Rev. 3 Inhaltsverzeichnis Lizenz Einleitung Installation/Deinstallation Administration Sicherheit Konfiguration Weitere Informationen finden Sie in unserer OpenLiteSpeed-Dokumentation"
+        "text": "Startseite OpenLiteSpeed Web Server 1.9 Benutzerhandbuch — Rev. 4 Inhaltsverzeichnis Lizenz Einleitung Installation/Deinstallation Administration Sicherheit Konfiguration Weitere Informationen finden Sie in unserer OpenLiteSpeed-Dokumentation"
     },
     {
         "title": "Lizenz",
@@ -62,7 +62,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Server - Sicherheit",
         "url": "ServSecurity_Help.html",
-        "text": "Server - Sicherheit Symbolischen Links folgen Gibt die Standardeinstellung auf Serverebene für das Folgen symbolischer Links beim Bereitstellen statischer Dateien an. Die Auswahlmöglichkeiten sind Yes{/}, If Owner Match{/} und No{/}. Yes{/} lässt den Server symbolischen Links immer folgen. If Owner Match{/} lässt den Server einem symbolischen Link nur folgen, wenn der Eigentümer des Links und des Ziels identisch..."
+        "text": "Server - Sicherheit Symbolischen Links folgen Gibt die Standardeinstellung auf Serverebene für das Folgen symbolischer Links beim Bereitstellen statischer Dateien an. Die Auswahlmöglichkeiten sind Ja{/}, Wenn der Besitzer übereinstimmt{/} und NEIN{/}. Ja{/} lässt den Server symbolischen Links immer folgen. Wenn der Besitzer übereinstimmt{/} lässt den Server einem symbolischen Link nur folgen, wenn der Eigentüm..."
     },
     {
         "title": "Externe Anwendungen",
@@ -92,7 +92,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listener - SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "Listener - SSL Privater SSL-Schluessel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwarepaket wie OpenSSL erzeugen. SSL-Zertifikate koennen auch bei einer autorisierten Zertifizierungsstelle wie VeriSig..."
+        "text": "Listener - SSL Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwarepaket wie OpenSSL erzeugen. SSL-Zertifikate koennen auch bei einer autorisierten Zertifizierungsstelle wie VeriSig..."
     },
     {
         "title": "Vorlagen fuer virtuelle Hosts",
@@ -117,7 +117,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Virtueller Host - SSL",
         "url": "VHSSL_Help.html",
-        "text": "Virtueller Host - SSL Privater SSL-Schluessel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwarepaket wie OpenSSL erzeugen. SSL-Zertifikate koennen auch bei einer autorisierten Zertifizierungsstelle wie ..."
+        "text": "Virtueller Host - SSL Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwarepaket wie OpenSSL erzeugen. SSL-Zertifikate koennen auch bei einer autorisierten Zertifizierungsstelle wie ..."
     },
     {
         "title": "Rewrite",
@@ -192,7 +192,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Statischer Kontext",
         "url": "Static_Context.html",
-        "text": "Statischer Kontext Allgemeiner Kontext Kontexteinstellungen werden verwendet, um besondere Einstellungen fuer Dateien an einem bestimmten Speicherort festzulegen. Diese Einstellungen koennen Dateien ausserhalb des Dokumentstammverzeichnisses einbinden (wie die Apache-Direktiven Alias oder AliasMatch), ein bestimmtes Verzeichnis mit Autorisierungs-Realms schuetzen oder den Zugriff auf ein bestimmtes Verzeichnis innerh..."
+        "text": "Statischer Kontext Statischer Kontext Kontexteinstellungen werden verwendet, um besondere Einstellungen fuer Dateien an einem bestimmten Speicherort festzulegen. Diese Einstellungen koennen Dateien ausserhalb des Dokumentstammverzeichnisses einbinden (wie die Apache-Direktiven Alias oder AliasMatch), ein bestimmtes Verzeichnis mit Autorisierungs-Realms schuetzen oder den Zugriff auf ein bestimmtes Verzeichnis innerha..."
     },
     {
         "title": "Java-Web-App-Kontext",
@@ -250,9 +250,9 @@ window.HDOC_SEARCH_INDEX = [
         "text": "uWSGI-Kontext uWSGI-Kontext uWSGI-Anwendungen koennen nicht direkt verwendet werden. Eine uWSGI-Anwendung muss entweder als Skript-Handler konfiguriert oder ueber einen uWSGI-Kontext einer URL zugeordnet werden. Ein uWSGI-Kontext verknuepft eine URI mit einer uWSGI-Anwendung. URI Gibt die URI fuer diesen Kontext an. uWSGI-App Gibt den Namen der uWSGI-Anwendung an. Diese Anwendung muss im Abschnitt auf Server- oder Vi..."
     },
     {
-        "title": "Modul-Kontext",
+        "title": "Modul-Handler-Kontext",
         "url": "Module_Context.html",
-        "text": "Modul-Kontext Modul-Kontext Ein Modul-Handler-Kontext verknuepft eine URI mit einem registrierten Modul. Module muessen auf der Registerkarte Servermodul-Konfiguration registriert werden. URI Gibt die URI fuer diesen Kontext an. Modul Name des Moduls. Das Modul muss im Tab Server Module Configuration registriert sein. Nach der Registrierung ist der Modulname in der Dropdown-Liste fuer Listener- und Virtual-Host-Konfi..."
+        "text": "Modul-Handler-Kontext Modul-Handler-Kontext Ein Modul-Handler-Kontext verknuepft eine URI mit einem registrierten Modul. Module muessen auf der Registerkarte Servermodul-Konfiguration registriert werden. URI Gibt die URI fuer diesen Kontext an. Modul Name des Moduls. Das Modul muss im Tab Server Module Configuration registriert sein. Nach der Registrierung ist der Modulname in der Dropdown-Liste fuer Listener- und Vi..."
     },
     {
         "title": "WebAdmin-Konsole - Allgemein",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Admin-Listener SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "Admin-Listener SSL Admin-Listener sind dem Admin Server zugeordnet. Sichere (SSL-)Listener werden für den Admin Server empfohlen. Privater SSL-Schluessel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwa..."
+        "text": "Admin-Listener SSL Admin-Listener sind dem Admin Server zugeordnet. Sichere (SSL-)Listener werden für den Admin Server empfohlen. Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwa..."
     }
 ];

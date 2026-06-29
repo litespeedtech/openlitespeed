@@ -31,7 +31,7 @@ class ConfigIntegrityUpdater
 
         if ($tid == 'L_GENERAL') {
             self::updateTemplateListenerRefs($root, $ref, $newref);
-        } elseif (strncmp($tid, 'A_EXT_', 6) == 0) {
+        } elseif (preg_match('/^(SV|T)_EXT_/', $tid) === 1) {
             self::updateExternalAppRefs($root, $dispView, $ref, $newref);
         } elseif (strpos($tid, '_REALM_') !== false) {
             self::updateRealmRefs($root, $dispView, $ref, $newref);

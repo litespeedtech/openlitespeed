@@ -40,6 +40,12 @@ TEST(ls_strtest_test)
     CHECK(memcmp(ls_str_cstr(pFive), "apple", 5) == 0);
     ls_str_append(pFive, "grape", 5);
     CHECK(memcmp(ls_str_cstr(pFive), "applegrape", 10) == 0);
+    ls_str_append(pFive, ls_str_cstr(pFive), ls_str_len(pFive));
+    CHECK(ls_str_len(pFive) == 20);
+    CHECK(memcmp(ls_str_cstr(pFive), "applegrapeapplegrape", 20) == 0);
+    CHECK(ls_str_dup(pFive, ls_str_cstr(pFive) + 5, 5) == 5);
+    CHECK(memcmp(ls_str_cstr(pFive), "grape", 5) == 0);
+    CHECK(ls_str_dup(pFive, "applegrape", 10) == 10);
     ls_str_setlen(pFive, 7);
     CHECK(ls_str_len(pFive) == 7);
     CHECK(memcmp(ls_str_cstr(pFive), "applegr", 7) == 0);
@@ -72,6 +78,12 @@ TEST(ls_strtest_pooltest)
     CHECK(memcmp(ls_str_cstr(pFive), "apple", 5) == 0);
     ls_str_xappend(pFive, "grape", 5, pool);
     CHECK(memcmp(ls_str_cstr(pFive), "applegrape", 10) == 0);
+    ls_str_xappend(pFive, ls_str_cstr(pFive), ls_str_len(pFive), pool);
+    CHECK(ls_str_len(pFive) == 20);
+    CHECK(memcmp(ls_str_cstr(pFive), "applegrapeapplegrape", 20) == 0);
+    CHECK(ls_str_xsetstr(pFive, ls_str_cstr(pFive) + 5, 5, pool) == 5);
+    CHECK(memcmp(ls_str_cstr(pFive), "grape", 5) == 0);
+    CHECK(ls_str_xsetstr(pFive, "applegrape", 10, pool) == 10);
     ls_str_setlen(pFive, 7);
     CHECK(ls_str_len(pFive) == 7);
     CHECK(memcmp(ls_str_cstr(pFive), "applegr", 7) == 0);

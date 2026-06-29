@@ -223,13 +223,9 @@ int ProxyConn::addForwardedFor(const char *pBegin)
         memmove(&pExtraHeader[headerLen], pForward, len);
         headerLen += len;
         pExtraHeader[headerLen++] = ',';
-        psAddr = pReq->getEnv("PROXY_REMOTE_ADDR", 17, psAddrLen);
     }
-    if (!psAddr)
-    {
-        psAddr = pSession->getPeerAddrString();
-        psAddrLen = pSession->getPeerAddrStrLen();
-    }
+    psAddr = pSession->getPeerAddrString();
+    psAddrLen = pSession->getPeerAddrStrLen();
     //add "X-Forwarded-For" header
     memmove(&pExtraHeader[headerLen], psAddr, psAddrLen);
     headerLen += psAddrLen;
@@ -1065,4 +1061,3 @@ void ProxyConn::continueRead()
             doRead();
     }
 }
-

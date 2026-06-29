@@ -616,7 +616,8 @@ int NtwkIOLink::tryProtocolProxy()
     if (ret >= 16 && memcmp(&hdr.v2, v2sig, 12) == 0
         && (hdr.v2.ver_cmd & 0xF0) == 0x20)
     {
-        size = 16 + ntohs(hdr.v2.len);
+        int dataLen = ntohs(hdr.v2.len);
+        size = 16 + dataLen;
         if (ret < size)
             return -1; /* truncated or too large header */
 
@@ -626,6 +627,8 @@ int NtwkIOLink::tryProtocolProxy()
             switch (hdr.v2.fam)
             {
             case 0x11:  /* TCPv4 */
+                if (dataLen < 12)
+                    return -1;
                 ((struct sockaddr_in *)&from)->sin_family = AF_INET;
                 ((struct sockaddr_in *)&from)->sin_addr.s_addr =
                     hdr.v2.addr.ip4.src_addr;
@@ -648,6 +651,8 @@ int NtwkIOLink::tryProtocolProxy()
                 }
                 goto done;
             case 0x21:  /* TCPv6 */
+                if (dataLen < 36)
+                    return -1;
                 ((struct sockaddr_in6 *)&from)->sin6_family = AF_INET6;
                 memcpy(&((struct sockaddr_in6 *)&from)->sin6_addr,
                     hdr.v2.addr.ip6.src_addr, 16);
@@ -1604,10 +1609,18 @@ int NtwkIOLink::detectClose()
         return 1;
     if (getState() == HIOS_CONNECTED)
     {
+        if (getClientInfo()->getAccess() == AC_BLOCK)
+        {
+            LS_DBG_L(this, "IP being blocked, drop existing connection!\n");
+            //have the connection closed faster
+            setFlag(HIO_FLAG_PEER_SHUTDOWN | SS_FLAG_DROP, 1);
+            setState(HIOS_CLOSING);
+            return 1;
+        }
+
         char ch;
-        if ((getClientInfo()->getAccess() == AC_BLOCK) ||
-            ((DateTime::s_curTime - getActiveTime() > 10) &&
-             (::recv(getfd(), &ch, 1, MSG_PEEK) == 0)))
+        if ((DateTime::s_curTime - getActiveTime() > 10) &&
+             (::recv(getfd(), &ch, 1, MSG_PEEK) == 0))
         {
             LS_DBG_L(this, "Peer close connection detected!");
             //have the connection closed faster
@@ -2035,13 +2048,20 @@ int NtwkIOLink::sslSetupHandler()
     unsigned int spdyVer = m_ssl.getSpdyVersion();
     if (spdyVer >= HIOS_PROTO_MAX)
     {
-        LS_ERROR(this, "Bad SPDY version: %d, will use HTTP", spdyVer);
+        LS_ERROR(this, "Bad ALPN version: %d, will use HTTP", spdyVer);
         spdyVer = HIOS_PROTO_HTTP;
     }
     else
     {
         LS_DBG_L(this, "ALPN result: %s",
                  getProtocolName((HiosProtocol)spdyVer)->ptr);
+        if (spdyVer == HIOS_PROTO_HTTP2
+            && getClientInfo()->checkStreamLimit() == -1)
+        {
+            LS_DBG_L(this, "HTTP2 resource abuse detected, close");
+            tobeClosed();
+            return -1;
+        }
     }
     int ret = setupHandler((HiosProtocol)spdyVer);
     if (!m_iInProcess && isWantRead() && m_ssl.hasPendingIn())

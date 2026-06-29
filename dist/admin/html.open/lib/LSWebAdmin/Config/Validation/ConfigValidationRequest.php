@@ -2,6 +2,7 @@
 
 namespace LSWebAdmin\Config\Validation;
 
+use LSWebAdmin\Config\CNode;
 use LSWebAdmin\Product\Current\DPageDef;
 use LSWebAdmin\Product\Current\DTblDef;
 use LSWebAdmin\UI\ConfPageResolver;
@@ -68,7 +69,25 @@ class ConfigValidationRequest
         $tid = $routeState->GetLastTid();
         $table = call_user_func([$tableDefClass, 'GetInstance'])->GetTblDef($tid);
         $page = ConfPageResolver::resolve($routeState, $pageDefClass);
-        $tableLocation = $page->GetTblMap()->FindTblLoc($tid);
+        $tblmap = $page->GetTblMap();
+        $tableLocation = $tblmap->FindTblLoc($tid);
+        if ($confData != null && method_exists($confData, 'GetRootNode')) {
+            $root = $confData->GetRootNode();
+            if ($root instanceof CNode) {
+                $ref = $routeState->GetParentRef();
+                if ($ref === '') {
+                    $ref = $routeState->GetLastRef();
+                }
+                if (is_string($ref) && ($pos = strpos($ref, '`')) > 0) {
+                    $ref = substr($ref, 0, $pos);
+                }
+
+                $nodeLocation = $tblmap->FindTblLocForNode($tid, $root, $ref);
+                if ($nodeLocation != null) {
+                    $tableLocation = $nodeLocation;
+                }
+            }
+        }
 
         return new self(
             $tid,

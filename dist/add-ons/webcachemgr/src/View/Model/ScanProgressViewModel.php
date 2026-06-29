@@ -111,9 +111,15 @@ class ScanProgressViewModel
 
     protected function grabSessionData()
     {
-        $info = $_SESSION['scanInfo'];
+        $info = isset($_SESSION['scanInfo']) && is_array($_SESSION['scanInfo'])
+            ? $_SESSION['scanInfo']
+            : [];
 
-        $this->tplData[self::FLD_HOME_DIR_COUNT] = count($info['homeDirs']);
+        $homeDirs = (!empty($info['homeDirs']) && is_array($info['homeDirs']))
+            ? $info['homeDirs']
+            : [];
+
+        $this->tplData[self::FLD_HOME_DIR_COUNT] = count($homeDirs);
     }
 
     /**

@@ -2,14 +2,14 @@
 
 /**
  * WebAdmin Language File
- * French(fr-FR)
- *
- * Please Note: These language files will be overwritten during software updates.
- *
- * @author     LiteSpeed Technoglogies
- * @copyright  Copyright (c) LiteSpeed 2014-2026
- * @link       https://www.litespeedtech.com/
- */
+* French(fr-FR)
+*
+* Please Note: These language files will be overwritten during software updates.
+*
+* @author     LiteSpeed Technoglogies
+* @copyright  Copyright (c) LiteSpeed 2014-2026
+* @link       https://www.litespeedtech.com/
+*/
 
 global $_gmsg;
 
@@ -30,12 +30,11 @@ $_gmsg['menu_releaselog'] = 'Notes de mise à jour';
 $_gmsg['menu_restart'] = 'Redémarrage en douceur';
 $_gmsg['menu_rtstats'] = 'Statistiques en temps réel';
 $_gmsg['menu_serv'] = 'Configuration du serveur';
-$_gmsg['menu_sl'] = 'Écouteurs';
-$_gmsg['menu_sl_'] = 'Écouteur';
+$_gmsg['menu_sl'] = 'Listeners';
+$_gmsg['menu_sl_'] = 'Listener';
 $_gmsg['menu_slack'] = 'Slack';
 $_gmsg['menu_toggledebug'] = 'Basculer le débogage';
 $_gmsg['service_toggledebuglabel'] = 'Basculer la journalisation de débogage';
-$_gmsg['menu_usermanual'] = 'Manuel d\'utilisation';
 $_gmsg['menu_tools'] = 'Outils';
 $_gmsg['menu_livestats'] = 'Statistiques en direct';
 $_gmsg['menu_tp'] = 'Modèles d\'Hôtes Virtuels';
@@ -43,8 +42,6 @@ $_gmsg['menu_tp_'] = 'Modèle d\'Hôte Virtuel';
 $_gmsg['menu_vh'] = 'Hôtes Virtuels';
 $_gmsg['menu_vh_'] = 'Hôte Virtuel';
 $_gmsg['menu_webadmin'] = 'Paramètres WebAdmin';
-
-
 $_gmsg['tab_base'] = 'Basique';
 $_gmsg['tab_registration'] = 'Enregistrement';
 $_gmsg['tab_browse'] = 'Parcourir';
@@ -52,7 +49,6 @@ $_gmsg['tab_ctx'] = 'Contexte';
 $_gmsg['tab_ext'] = 'Application Externe';
 $_gmsg['tab_g'] = 'Général';
 $_gmsg['tab_log'] = 'Journal';
-$_gmsg['tab_mod'] = 'Modules';
 $_gmsg['tab_rails'] = 'Serveur d\'applications';
 $_gmsg['tab_rewrite'] = 'Réécriture';
 $_gmsg['tab_search'] = 'Recherche';
@@ -63,9 +59,7 @@ $_gmsg['tab_top'] = 'Résumé';
 $_gmsg['tab_tp'] = 'Modèle';
 $_gmsg['tab_tuning'] = 'Optimisation';
 $_gmsg['tab_user'] = 'Utilisateurs';
-$_gmsg['tab_wsp'] = 'Proxy Web Socket';
-
-
+$_gmsg['tab_wsp'] = 'Proxy WebSocket';
 $_gmsg['btn_add'] = 'Ajouter';
 $_gmsg['btn_back'] = 'Retour';
 $_gmsg['btn_cancel'] = 'Annuler';
@@ -98,12 +92,11 @@ $_gmsg['btn_view'] = 'Voir';
 $_gmsg['btn_seedetails'] = 'Voir les détails';
 $_gmsg['btn_viewconfig'] = 'Voir la configuration';
 $_gmsg['btn_viewfulldetails'] = 'Voir tous les détails';
-
-
 $_gmsg['note_collapsemenu'] = 'Réduire le menu';
 $_gmsg['note_configmodified'] = 'Configuration modifiée. Un redémarrage est requis pour appliquer les changements.';
 $_gmsg['note_confirm_delete'] = 'Êtes-vous sûr de vouloir supprimer cette entrée ? Elle sera définitivement retirée du fichier de configuration.';
 $_gmsg['note_confirm_instantiate'] = 'Êtes-vous sûr de vouloir instancier cet Hôte Virtuel ? Cela créera un fichier de configuration dédié pour cet Hôte Virtuel.';
+$_gmsg['note_delete_ref_context_field'] = '%%owner%% contexte %%name%% %%field%%';
 $_gmsg['note_copyrightreserved'] = 'Tous droits réservés.';
 $_gmsg['note_curbranch'] = 'Branche actuelle';
 $_gmsg['note_version'] = 'Version';
@@ -121,6 +114,8 @@ $_gmsg['note_readonly_mode'] = 'Fichier d\'inclusion détecté dans le fichier d
 $_gmsg['note_select_option'] = 'Veuillez sélectionner';
 $_gmsg['note_serv_level'] = 'Niveau du Serveur';
 $_gmsg['note_showing'] = 'Affichage de';
+$_gmsg['note_vhmap_searchprompt'] = 'Saisissez ci-dessus un nom d\'hôte virtuel ou un nom de domaine pour rechercher dans les mappages actifs.';
+$_gmsg['note_vhmap_searchcount'] = 'Il y a %d hôte(s) virtuel(s) actif(s) disponible(s) pour la recherche.';
 $_gmsg['note_signout'] = 'Déconnexion';
 $_gmsg['note_signoutof'] = 'Se déconnecter de %s ?';
 $_gmsg['note_toggletheme'] = 'Changer de thème';
@@ -140,8 +135,6 @@ $_gmsg['note_unavailable'] = 'Indisponible';
 $_gmsg['note_syntax'] = 'Syntaxe';
 $_gmsg['note_tips'] = 'Astuce(s)';
 $_gmsg['note_vh_level'] = 'Niveau de l\'Hôte Virtuel';
-
-
 $_gmsg['err_blockfailed'] = 'Activité suspecte détectée et journalisée. Veuillez réessayer plus tard.';
 $_gmsg['err_faildetectdlmethod'] = 'Impossible de détecter la méthode de téléchargement (installez curl, fetch ou wget)';
 $_gmsg['err_failreadfile'] = 'Échec de la lecture du fichier';
@@ -151,13 +144,13 @@ $_gmsg['err_invalidvalat'] = 'Valeur invalide à';
 $_gmsg['err_loggedoff'] = 'Vous avez été déconnecté.';
 $_gmsg['err_login'] = 'Identifiants invalides.';
 $_gmsg['err_reloginrequired'] = 'Votre compte a été mis à jour. Veuillez vous reconnecter.';
+$_gmsg['l_crossorigin_blocked'] = 'Requête intersite bloquée';
+$_gmsg['note_crossorigin_blocked'] = 'Cette requête a été bloquée car elle provient d\'un autre site web. Votre session est toujours active. Revenez à la console WebAdmin pour continuer.';
 $_gmsg['err_parentdirnotexist'] = 'Le répertoire parent n\'existe pas';
 $_gmsg['err_requireabspath'] = 'Chemin absolu requis';
 $_gmsg['err_sessiontimeout'] = 'Votre session a expiré.';
 $_gmsg['err_throttled'] = 'Trop de tentatives de connexion échouées. Veuillez réessayer dans %%minutes%% minute(s).';
 $_gmsg['err_valcannotempty'] = 'La valeur ne peut pas être vide';
-
-
 $_gmsg['l_accessallow'] = 'Liste autorisée';
 $_gmsg['l_accessallowed'] = 'Accès autorisé';
 $_gmsg['l_accesscontrol'] = 'Contrôle d\'accès';
@@ -173,36 +166,36 @@ $_gmsg['l_adddefaultcharset'] = 'Ajouter le jeu de caractères par défaut';
 $_gmsg['l_address'] = 'Adresse';
 $_gmsg['l_addresssettings'] = 'Paramètres d\'adresse';
 $_gmsg['l_adminemails'] = 'E-mail de l\'administrateur';
-$_gmsg['l_adminlistenersettings'] = 'Paramètres d\'adresse de l\'Écouteur Admin';
+$_gmsg['l_adminlistenersettings'] = 'Paramètres d\'adresse du listener admin';
 $_gmsg['l_adminuser'] = 'Utilisateur de la console WebAdmin';
 $_gmsg['l_adminusers'] = 'Utilisateurs de la console WebAdmin';
 $_gmsg['l_aioblocksize'] = 'Taille de bloc AIO';
-$_gmsg['l_allowoverride'] = 'Autoriser la substitution (Allow Override)';
+$_gmsg['l_allowoverride'] = 'Autoriser Override';
 $_gmsg['l_allowbrowse'] = 'Accessible';
-$_gmsg['l_allowedRobotHits'] = 'Requêtes de robots autorisées';
+$_gmsg['l_allowedRobotHits'] = 'Hits de robots autorisés';
 $_gmsg['l_allowsetuid'] = 'Autoriser Set UID';
 $_gmsg['l_allowsymbollink'] = 'Suivre le lien symbolique';
 $_gmsg['l_alpn'] = 'ALPN';
 $_gmsg['l_apptype'] = 'Type d\'application';
 $_gmsg['l_authname'] = 'Nom d\'authentification';
-$_gmsg['l_authorizer'] = 'Autorisateur';
+$_gmsg['l_authorizer'] = 'Authorizer';
 $_gmsg['l_autoLoadRewriteHtaccess'] = 'Chargement automatique depuis .htaccess';
 $_gmsg['l_htaccess'] = '.htaccess';
 $_gmsg['l_autofix503'] = 'Correction automatique de l\'erreur 503';
 $_gmsg['l_autoindex'] = 'Index automatique';
 $_gmsg['l_autoindexuri'] = 'URI d\'index automatique';
-$_gmsg['l_autostart'] = 'Démarré par le serveur';
-$_gmsg['l_backlog'] = 'File d\'attente (Backlog)';
-$_gmsg['l_banperiod'] = 'Période de bannissement (sec)';
+$_gmsg['l_autostart'] = 'Démarrer par le serveur';
+$_gmsg['l_backlog'] = 'Backlog';
+$_gmsg['l_banperiod'] = 'Période de blocage (secs)';
 $_gmsg['l_base'] = 'Base';
 $_gmsg['l_base2'] = 'Base2';
 $_gmsg['l_binding'] = 'Liaison';
-$_gmsg['l_binpath'] = 'Chemin de l\'exécutable';
+$_gmsg['l_binpath'] = 'Chemin binaire';
 $_gmsg['l_blockbadreq'] = 'Bloquer les mauvaises requêtes';
-$_gmsg['l_botWhiteList'] = 'Liste blanche de robots';
+$_gmsg['l_botWhiteList'] = 'Liste blanche de bots';
 $_gmsg['l_brcompress'] = 'Compression Brotli';
-$_gmsg['l_brcompresslevel'] = 'Niveau de compression Brotli (Contenu dynamique)';
-$_gmsg['l_brstaticcompresslevel'] = 'Niveau de compression Brotli (Fichier statique)';
+$_gmsg['l_brcompresslevel'] = 'Niveau de compression Brotli (contenu dynamique)';
+$_gmsg['l_brstaticcompresslevel'] = 'Niveau de compression Brotli (fichier statique)';
 $_gmsg['l_bubblewrap'] = 'Conteneur Bubblewrap';
 $_gmsg['l_bubblewrapcmd'] = 'Commande Bubblewrap';
 $_gmsg['l_byteslog'] = 'Journal des octets';
@@ -238,45 +231,42 @@ $_gmsg['l_ctxas'] = 'Contexte de serveur d\'applications';
 $_gmsg['l_ctxb'] = 'Contexte d\'équilibrage';
 $_gmsg['l_ctxc'] = 'Contexte CGI';
 $_gmsg['l_ctxf'] = 'Contexte FastCGI';
-$_gmsg['l_ctxg'] = 'Contexte général';
+$_gmsg['l_ctxg'] = 'Contexte statique';
 $_gmsg['l_ctxj'] = 'Contexte d\'application web Java';
 $_gmsg['l_ctxl'] = 'Contexte LSAPI';
-$_gmsg['l_ctxmd'] = 'Contexte de module';
 $_gmsg['l_ctxp'] = 'Contexte proxy';
 $_gmsg['l_ctxr'] = 'Contexte de redirection';
 $_gmsg['l_ctxs'] = 'Contexte Servlet';
 $_gmsg['l_ctxsc'] = 'Contexte SCGI';
 $_gmsg['l_ctxuw'] = 'Contexte uWSGI';
 $_gmsg['l_custerrpages'] = 'Pages d\'erreur personnalisées';
-$_gmsg['l_dbname'] = 'Nom de la base de données';
+$_gmsg['l_dbname'] = 'Nom de la BD';
 $_gmsg['l_debuglevel'] = 'Niveau de débogage';
 $_gmsg['l_defaultmimetype'] = 'Type MIME par défaut';
-$_gmsg['l_defaultvhroot'] = 'Racine de l\'Hôte Virtuel par défaut';
+$_gmsg['l_defaultvhroot'] = 'Racine d\'hôte virtuel par défaut';
 $_gmsg['l_desturi'] = 'URI de destination';
 $_gmsg['l_dhparam'] = 'Paramètre DH';
 $_gmsg['l_disableinitlogrotation'] = 'Désactiver la rotation initiale des journaux';
-$_gmsg['l_docroot'] = 'Racine des documents (Document Root)';
+$_gmsg['l_docroot'] = 'Racine des documents';
 $_gmsg['l_domain'] = 'Nom de domaine';
 $_gmsg['l_domains'] = 'Domaines';
-$_gmsg['l_dynreqpersec'] = 'Requêtes dynamiques/seconde';
 $_gmsg['l_enableaiolog'] = 'Activer la journalisation AIO';
 $_gmsg['l_enablecompress'] = 'Activer la compression';
-$_gmsg['l_enablecoredump'] = 'Activer le vidage de mémoire (Core Dump)';
+$_gmsg['l_enablecoredump'] = 'Activer le vidage mémoire (Core Dump)';
 $_gmsg['l_enabled'] = 'Activé';
 $_gmsg['l_enabledhe'] = 'Activer l\'échange de clés DH';
-$_gmsg['l_enabledyngzipcompress'] = 'Activer la compression dynamique GZIP';
+$_gmsg['l_enabledyngzipcompress'] = 'Activer la compression GZIP dynamique';
 $_gmsg['l_enableecdhe'] = 'Activer l\'échange de clés ECDH';
 $_gmsg['l_enableexpires'] = 'Activer les expirations';
 $_gmsg['l_enablegzip'] = 'Activer la compression GZIP';
 $_gmsg['l_enablebrotli'] = 'Activer la compression Brotli';
 $_gmsg['l_enableh2c'] = 'Activer HTTP/2 sur TCP en clair';
-$_gmsg['l_enablehooks'] = 'Activer le module';
 $_gmsg['l_enableipgeo'] = 'Activer la recherche de géolocalisation';
 $_gmsg['l_enablelve'] = 'CloudLinux';
 $_gmsg['l_enablequic'] = 'Activer HTTP3/QUIC';
 $_gmsg['l_enablerewrite'] = 'Activer la réécriture';
 $_gmsg['l_enablescript'] = 'Activer les scripts/App. externes';
-$_gmsg['l_enablestapling'] = 'Activer l\'agrafage OCSP (OCSP Stapling)';
+$_gmsg['l_enablestapling'] = 'Activer OCSP Stapling';
 $_gmsg['l_enablestderrlog'] = 'Activer le journal stderr';
 $_gmsg['l_env'] = 'Environnement';
 $_gmsg['l_envvariable'] = 'Variables d\'environnement';
@@ -304,74 +294,70 @@ $_gmsg['l_filename'] = 'Nom de fichier';
 $_gmsg['l_followsymbollink'] = 'Suivre le lien symbolique';
 $_gmsg['l_forcegid'] = 'Forcer le GID';
 $_gmsg['l_forcemimetype'] = 'Forcer le type MIME';
-$_gmsg['l_forcestrictownership'] = 'Forcer la vérification stricte de la propriété';
+$_gmsg['l_forcestrictownership'] = 'Forcer la vérification stricte de propriété';
 $_gmsg['l_generalsettings'] = 'Paramètres généraux';
-$_gmsg['l_geoipdb'] = 'Base de données MaxMind GeoIP';
-$_gmsg['l_geoipdbfile'] = 'Chemin du fichier de base de données';
+$_gmsg['l_geoipdb'] = 'BD GeoIP MaxMind';
+$_gmsg['l_geoipdbfile'] = 'Chemin du fichier de BD';
 $_gmsg['l_gracefulrestarttimeout'] = 'Délai d\'expiration du redémarrage en douceur (secs)';
 $_gmsg['l_graceperiod'] = 'Période de grâce (secs)';
 $_gmsg['l_groupdbcachetimeout'] = 'Délai d\'expiration du cache de la base de données de groupes (secs)';
 $_gmsg['l_groupdbentries'] = 'Entrées de la base de données de groupes';
 $_gmsg['l_groupdbentry'] = 'Entrée de la base de données de groupes';
-$_gmsg['l_groupdblocation'] = 'Emplacement de la base de données de groupes';
-$_gmsg['l_groupdbmaxcachesize'] = 'Taille maximale du cache de la base de données de groupes';
+$_gmsg['l_groupdblocation'] = 'Emplacement de la BD de groupes';
+$_gmsg['l_groupdbmaxcachesize'] = 'Taille max. du cache de BD de groupes';
 $_gmsg['l_groupname'] = 'Nom du groupe';
 $_gmsg['l_groups'] = 'Groupes';
 $_gmsg['l_gzipautoupdatestatic'] = 'Mise à jour automatique du fichier statique';
 $_gmsg['l_gzipbr'] = 'Compression GZIP/Brotli';
 $_gmsg['l_gzipcachedir'] = 'Répertoire de cache statique';
-$_gmsg['l_gzipcompresslevel'] = 'Niveau de compression GZIP (Contenu dynamique)';
-$_gmsg['l_gzipmaxfilesize'] = 'Taille maximale du fichier statique (octets)';
-$_gmsg['l_gzipminfilesize'] = 'Taille minimale du fichier statique (octets)';
-$_gmsg['l_gzipstaticcompresslevel'] = 'Niveau de compression GZIP (Fichier statique)';
+$_gmsg['l_gzipcompresslevel'] = 'Niveau de compression GZIP (contenu dynamique)';
+$_gmsg['l_gzipmaxfilesize'] = 'Taille max. de fichier statique (octets)';
+$_gmsg['l_gzipminfilesize'] = 'Taille min. de fichier statique (octets)';
+$_gmsg['l_gzipstaticcompresslevel'] = 'Niveau de compression GZIP (fichier statique)';
 $_gmsg['l_handlername'] = 'Nom du gestionnaire';
 $_gmsg['l_handlertype'] = 'Type de gestionnaire';
-$_gmsg['l_hardlimit'] = 'Limite stricte de connexion';
+$_gmsg['l_hardlimit'] = 'Limite stricte de connexions';
 $_gmsg['l_hook'] = 'Crochet (Hook)';
 $_gmsg['l_inbandwidth'] = 'Bande passante entrante (octets/sec)';
 $_gmsg['l_indexfiles'] = 'Fichiers d\'index';
 $_gmsg['l_inittimeout'] = 'Délai d\'expiration de la requête initiale (secs)';
 $_gmsg['l_inmembufsize'] = 'Taille du tampon d\'E/S en mémoire';
 $_gmsg['l_instances'] = 'Instances';
-$_gmsg['l_internal'] = 'Est interne';
+$_gmsg['l_internal'] = 'Module interne';
 $_gmsg['l_ip'] = 'Adresse IP';
 $_gmsg['l_ip0'] = 'IP';
 $_gmsg['l_ip2locDB'] = 'Base de données IP2Location';
-$_gmsg['l_ip2locDBCache'] = 'Type de cache de la base de données';
-$_gmsg['l_ip2locDBFile'] = 'Chemin du fichier de la base de données IP2Location';
-$_gmsg['l_jsonreports'] = 'Sortir des rapports JSON';
+$_gmsg['l_ip2locDBCache'] = 'Type de cache de BD';
+$_gmsg['l_ip2locDBFile'] = 'Chemin du fichier de BD IP2Location';
+$_gmsg['l_jsonreports'] = 'Produire des rapports JSON';
 $_gmsg['l_keepalivetimeout'] = 'Délai d\'expiration Keep-Alive (secs)';
 $_gmsg['l_keepdays'] = 'Jours de conservation';
 $_gmsg['l_keyfile'] = 'Fichier de clé privée';
-$_gmsg['l_listenerlist'] = 'Liste d\'Écouteurs';
-$_gmsg['l_listenername'] = 'Nom de l\'Écouteur';
+$_gmsg['l_listenerlist'] = 'Liste des listeners';
+$_gmsg['l_listenername'] = 'Nom du listener';
 $_gmsg['l_loadbalancer'] = 'Répartiteur de charge';
 $_gmsg['l_location'] = 'Emplacement';
-$_gmsg['l_logcontrol'] = 'Contrôle des journaux';
+$_gmsg['l_logcontrol'] = 'Contrôle du journal';
 $_gmsg['l_logformat'] = 'Format du journal';
 $_gmsg['l_loggeraddress'] = 'Adresse du journaliseur distant (optionnel)';
-$_gmsg['l_logheaders'] = 'En-têtes du journal';
+$_gmsg['l_logheaders'] = 'En-têtes de journal';
 $_gmsg['l_loglevel'] = 'Niveau de journalisation';
 $_gmsg['l_lsapiapp'] = 'Application LiteSpeed SAPI';
 $_gmsg['l_lsrecaptcha'] = 'Protection CAPTCHA';
-$_gmsg['l_listenermodule'] = 'Module d\'écouteur';
-$_gmsg['l_listenermodules'] = 'Modules d\'écouteur';
-$_gmsg['l_mappedlisteners'] = 'Écouteurs mappés';
-$_gmsg['l_maxCGIInstances'] = 'Instances CGI maximales';
-$_gmsg['l_maxTries'] = 'Tentatives maximales';
-$_gmsg['l_maxcachedfilesize'] = 'Taille maximale du petit fichier mis en cache (octets)';
-$_gmsg['l_maxconns'] = 'Connexions maximales';
-$_gmsg['l_maxdynrespheadersize'] = 'Taille maximale de l\'en-tête de réponse dynamique (octets)';
-$_gmsg['l_maxdynrespsize'] = 'Taille maximale du corps de réponse dynamique (octets)';
-$_gmsg['l_maxidletime'] = 'Temps d\'inactivité maximum';
-$_gmsg['l_maxkeepalivereq'] = 'Requêtes Keep-Alive maximales';
-$_gmsg['l_maxmmapfilesize'] = 'Taille maximale de fichier MMAP (octets)';
-$_gmsg['l_maxreqbodysize'] = 'Taille maximale du corps de la requête (octets)';
-$_gmsg['l_maxreqheadersize'] = 'Taille maximale de l\'en-tête de la requête (octets)';
-$_gmsg['l_maxrequrllen'] = 'Longueur maximale de l\'URL de la requête (octets)';
-$_gmsg['l_maxsslconns'] = 'Connexions SSL maximales';
+$_gmsg['l_mappedlisteners'] = 'Listeners mappés';
+$_gmsg['l_maxCGIInstances'] = 'Max. instances CGI';
+$_gmsg['l_maxTries'] = 'Nombre max. d\'essais';
+$_gmsg['l_maxcachedfilesize'] = 'Taille max. de petit fichier en cache (octets)';
+$_gmsg['l_maxconns'] = 'Connexions max.';
+$_gmsg['l_maxidletime'] = 'Temps d\'inactivité max.';
+$_gmsg['l_maxkeepalivereq'] = 'Requêtes Keep-Alive max.';
+$_gmsg['l_maxmmapfilesize'] = 'Taille max. de fichier MMAP (octets)';
+$_gmsg['l_maxreqbodysize'] = 'Taille max. du corps de requête (octets)';
+$_gmsg['l_maxreqheadersize'] = 'Taille max. d\'en-tête de requête (octets)';
+$_gmsg['l_maxrequrllen'] = 'Longueur max. d\'URL de requête (octets)';
+$_gmsg['l_maxsslconns'] = 'Connexions SSL max.';
 $_gmsg['l_membervhosts'] = 'Hôtes Virtuels membres';
-$_gmsg['l_membervhroot'] = 'Racine de l\'Hôte Virtuel membre';
+$_gmsg['l_membervhroot'] = 'Racine de l\'hôte virtuel membre';
 $_gmsg['l_membervhroot_note'] = 'Optionnel : Vous pouvez configurer un VH_ROOT différent de celui par défaut';
 $_gmsg['l_memhardlimit'] = 'Limite stricte de mémoire (octets)';
 $_gmsg['l_memsoftlimit'] = 'Limite souple de mémoire (octets)';
@@ -381,14 +367,10 @@ $_gmsg['l_mimetypedef'] = 'Définition de Type MIME';
 $_gmsg['l_mimetypeentry'] = 'Entrée de Type MIME';
 $_gmsg['l_mingid'] = 'GID minimum';
 $_gmsg['l_minuid'] = 'UID minimum';
-$_gmsg['l_module'] = 'Module';
-$_gmsg['l_moduleconf'] = 'Configuration du module';
-$_gmsg['l_modulehandler'] = 'Gestionnaire de module';
-$_gmsg['l_moduleparams'] = 'Paramètres du module';
 $_gmsg['l_name'] = 'Nom';
-$_gmsg['l_namespace'] = 'Conteneur d\'espace de noms';
-$_gmsg['l_namespaceConf'] = 'Fichier de modèle d\'espace de noms';
-$_gmsg['l_namespaceConfVhAdd'] = 'Fichier de modèle d\'espace de noms supplémentaire';
+$_gmsg['l_namespace'] = 'Conteneur Namespace';
+$_gmsg['l_namespaceConf'] = 'Fichier de modèle Namespace';
+$_gmsg['l_namespaceConfVhAdd'] = 'Fichier de modèle Namespace supplémentaire';
 $_gmsg['l_newadminuser'] = 'Nouvel utilisateur de la console WebAdmin';
 $_gmsg['l_newcontext'] = 'Nouveau contexte';
 $_gmsg['l_newextapp'] = 'Nouvelle application externe';
@@ -396,12 +378,12 @@ $_gmsg['l_newpass'] = 'Nouveau mot de passe';
 $_gmsg['l_nodebin'] = 'Chemin Node';
 $_gmsg['l_nodesettings'] = 'Paramètres par défaut de l\'application Node.js';
 $_gmsg['l_notes'] = 'Notes';
-$_gmsg['l_numworkers'] = 'Nombre de travailleurs (Workers)';
+$_gmsg['l_numworkers'] = 'Nombre de workers';
 $_gmsg['l_ocspcacerts'] = 'Certificats CA OCSP';
 $_gmsg['l_ocspproxy'] = 'Proxy OCSP';
-$_gmsg['l_ocsprespmaxage'] = 'Âge maximal de la réponse OCSP (secs)';
-$_gmsg['l_ocspresponder'] = 'Répondeur OCSP';
-$_gmsg['l_ocspstapling'] = 'Agrafage OCSP (OCSP Stapling)';
+$_gmsg['l_ocsprespmaxage'] = 'Âge max. de réponse OCSP (secs)';
+$_gmsg['l_ocspresponder'] = 'OCSP Responder';
+$_gmsg['l_ocspstapling'] = 'OCSP Stapling';
 $_gmsg['l_oldpass'] = 'Ancien mot de passe';
 $_gmsg['l_openudpport'] = 'Ouvrir le port HTTP3/QUIC (UDP)';
 $_gmsg['l_order'] = 'Ordre';
@@ -412,7 +394,7 @@ $_gmsg['l_path'] = 'Chemin';
 $_gmsg['l_pckeepalivetimeout'] = 'Délai d\'expiration Keep-Alive de connexion';
 $_gmsg['l_perclientthrottle'] = 'Limitation par client';
 $_gmsg['l_persistconn'] = 'Connexion persistante';
-$_gmsg['l_phpinioverride'] = 'Substitution php.ini';
+$_gmsg['l_phpinioverride'] = 'Remplacement de php.ini';
 $_gmsg['l_pipedlogger'] = 'Journaliseur par tube (Piped Logger)';
 $_gmsg['l_port'] = 'Port';
 $_gmsg['l_priority'] = 'Priorité';
@@ -426,63 +408,61 @@ $_gmsg['l_quiccfcw'] = 'Fenêtre de contrôle de flux de connexion';
 $_gmsg['l_quicenabledplpmtud'] = 'Activer DPLPMTUD';
 $_gmsg['l_quichandshaketimeout'] = 'Délai d\'expiration de la poignée de main (secs)';
 $_gmsg['l_quicidletimeout'] = 'Délai d\'expiration d\'inactivité (secs)';
-$_gmsg['l_quicmaxcfcw'] = 'Fenêtre maximale de contrôle de flux de connexion';
-$_gmsg['l_quicmaxplpmtu'] = 'Valeur maximale PLPMTU';
-$_gmsg['l_quicmaxsfcw'] = 'Fenêtre maximale de contrôle de flux de flux (Stream)';
-$_gmsg['l_quicmaxstreams'] = 'Flux simultanés maximum par connexion';
-$_gmsg['l_quicsfcw'] = 'Fenêtre de contrôle de flux de flux (Stream)';
+$_gmsg['l_quicmaxcfcw'] = 'Fenêtre max. de contrôle de flux de connexion';
+$_gmsg['l_quicmaxplpmtu'] = 'Valeur max. PLPMTU';
+$_gmsg['l_quicmaxsfcw'] = 'Fenêtre max. de contrôle de flux de stream';
+$_gmsg['l_quicmaxstreams'] = 'Streams simultanés max. par connexion';
+$_gmsg['l_quicsfcw'] = 'Fenêtre de contrôle de flux de stream';
 $_gmsg['l_quicshmdir'] = 'Répertoire SHM QUIC';
 $_gmsg['l_quicversions'] = 'Versions HTTP3/QUIC';
 $_gmsg['l_railssettings'] = 'Paramètres par défaut Rack/Rails';
 $_gmsg['l_rcvbufsize'] = 'Taille du tampon de réception (octets)';
-$_gmsg['l_realm'] = 'Domaine (Realm)';
+$_gmsg['l_realm'] = 'Realm';
 $_gmsg['l_realmlist'] = 'Realms d\'autorisation';
-$_gmsg['l_realmname'] = 'Nom du domaine';
+$_gmsg['l_realmname'] = 'Nom du Realm';
 $_gmsg['l_realmtype'] = 'Type de BD';
 $_gmsg['l_recapenabled'] = 'Activer CAPTCHA';
 $_gmsg['l_recaptype'] = 'Type de CAPTCHA';
-$_gmsg['l_regConnLimit'] = 'Limite de connexion';
+$_gmsg['l_regConnLimit'] = 'Limite de connexions';
 $_gmsg['l_renegprotection'] = 'Protection contre la renégociation SSL';
 $_gmsg['l_reqresp'] = 'Requête/Réponse';
-$_gmsg['l_requiredauthuser'] = 'Requiert (Utilisateurs/Groupes autorisés)';
-$_gmsg['l_requiredpermissionmask'] = 'Masque de permission requis';
-$_gmsg['l_respbuffer'] = 'Mise en mémoire tampon des réponses';
+$_gmsg['l_requiredauthuser'] = 'Require (utilisateurs/groupes autorisés)';
+$_gmsg['l_requiredpermissionmask'] = 'Masque de permissions requis';
+$_gmsg['l_respbuffer'] = 'Mise en tampon des réponses';
 $_gmsg['l_restrained'] = 'Restreint';
 $_gmsg['l_restricteddirpermissionmask'] = 'Masque de permissions restreint pour répertoires de scripts';
-$_gmsg['l_restrictedpermissionmask'] = 'Masque de permission restreint';
-$_gmsg['l_restrictedscriptpermissionmask'] = 'Masque de permission de script restreint';
+$_gmsg['l_restrictedpermissionmask'] = 'Masque de permissions restreint';
+$_gmsg['l_restrictedscriptpermissionmask'] = 'Masque de permissions restreint pour scripts';
 $_gmsg['l_retrytimeout'] = 'Délai de nouvelle tentative (secs)';
-$_gmsg['l_retypepass'] = 'Retapez le mot de passe';
+$_gmsg['l_retypepass'] = 'Retaper le mot de passe';
 $_gmsg['l_reuseport'] = 'Activer REUSEPORT';
-$_gmsg['l_rewritebase'] = 'Base de réécriture (Rewrite Base)';
+$_gmsg['l_rewritebase'] = 'Base de réécriture';
 $_gmsg['l_rewritecontrol'] = 'Contrôle de réécriture';
-$_gmsg['l_rewriteinherit'] = 'Héritage de réécriture';
+$_gmsg['l_rewriteinherit'] = 'Hériter la réécriture';
 $_gmsg['l_rewritemap'] = 'Carte de réécriture (Rewrite Map)';
 $_gmsg['l_rewriterules'] = 'Règles de réécriture';
-$_gmsg['l_rollingsize'] = 'Taille de roulement (octets)';
+$_gmsg['l_rollingsize'] = 'Taille de rotation (octets)';
 $_gmsg['l_rubybin'] = 'Chemin Ruby';
-$_gmsg['l_runningas'] = 'S\'exécutant en tant que';
+$_gmsg['l_runningas'] = 'Exécuter en tant que';
 $_gmsg['l_runonstartup'] = 'Exécuter au démarrage';
 $_gmsg['l_runtimemode'] = 'Mode d\'exécution';
 $_gmsg['l_secretKey'] = 'Clé secrète';
 $_gmsg['l_secure'] = 'Sécurisé';
 $_gmsg['l_securityandfeatures'] = 'Sécurité et Fonctionnalités';
 $_gmsg['l_serverlog'] = 'Journal du serveur';
-$_gmsg['l_servermoduledef'] = 'Module serveur';
-$_gmsg['l_servermodulesdef'] = 'Modules serveur';
 $_gmsg['l_servername'] = 'Nom du serveur';
 $_gmsg['l_serverprocess'] = 'Processus du serveur';
 $_gmsg['l_serversig'] = 'Signature du serveur';
 $_gmsg['l_servletengine'] = 'Moteur de servlet';
 $_gmsg['l_sessiontimeout'] = 'Délai d\'expiration de session (secs)';
-$_gmsg['l_setuidmode'] = 'Mode Set UID d\'application externe';
+$_gmsg['l_setuidmode'] = 'Mode Set UID de l\'app externe';
 $_gmsg['l_shdef'] = 'Définition du gestionnaire de script';
 $_gmsg['l_shmDefaultDir'] = 'Répertoire SHM par défaut';
-$_gmsg['l_sitekey'] = 'Clé du site';
+$_gmsg['l_sitekey'] = 'Clé de site';
 $_gmsg['l_sndbufsize'] = 'Taille du tampon d\'envoi (octets)';
-$_gmsg['l_softlimit'] = 'Limite souple de connexion';
-$_gmsg['l_ssl'] = 'Clé privée et Certificat SSL';
-$_gmsg['l_sslConnLimit'] = 'Limite de connexion SSL';
+$_gmsg['l_softlimit'] = 'Limite souple de connexions';
+$_gmsg['l_ssl'] = 'Clé privée SSL et certificat';
+$_gmsg['l_sslConnLimit'] = 'Limite de connexions SSL';
 $_gmsg['l_sslDefaultCiphers'] = 'Suite de chiffrement par défaut';
 $_gmsg['l_sslEnableMultiCerts'] = 'Activer plusieurs certificats SSL';
 $_gmsg['l_sslSessionCache'] = 'Activer le cache de session';
@@ -506,18 +486,19 @@ $_gmsg['l_suexecuser'] = 'Exécuter en tant qu\'utilisateur';
 $_gmsg['l_suexecuser1'] = 'Utilisateur suEXEC';
 $_gmsg['l_suffix'] = 'Suffixes';
 $_gmsg['l_suspendvh'] = 'Suspendre les Hôtes Virtuels';
-$_gmsg['l_swappingdir'] = 'Répertoire d\'échange (Swapping)';
-$_gmsg['l_templatefile'] = 'Fichier modèle';
+$_gmsg['l_swappingdir'] = 'Répertoire de swapping';
+$_gmsg['l_templatefile'] = 'Fichier de modèle';
 $_gmsg['l_templatemembersettings'] = 'Paramètres des membres du modèle';
 $_gmsg['l_vhostconfigdefaults'] = 'Valeurs par défaut de configuration VHost';
 $_gmsg['l_throttleblockwindow'] = 'Durée initiale de blocage (secs)';
-$_gmsg['l_throttleenabled'] = 'Activer la limitation de connexion (Login Throttle)';
+$_gmsg['l_throttleenabled'] = 'Activer la limitation de connexion';
 $_gmsg['l_throttlemaxbackoff'] = 'Durée maximale de blocage (secs)';
-$_gmsg['l_throttlemaxfailures'] = 'Échecs de connexion maximum';
-$_gmsg['l_loginhistoryretention'] = 'Rétention de l\'historique des connexions (jours)';
+$_gmsg['l_throttlemaxfailures'] = 'Échecs de connexion max.';
+$_gmsg['l_loginhistoryretention'] = 'Rétention de l\'historique de connexion (jours)';
 $_gmsg['l_opsauditretainfiles'] = 'Fichiers conservés du journal d\'activité';
+$_gmsg['l_configbackupretention'] = 'Rétention des sauvegardes de configuration (jours)';
 $_gmsg['l_loginthrottle'] = 'Limitation de connexion';
-$_gmsg['l_totalinmemcachesize'] = 'Taille totale du cache des petits fichiers (octets)';
+$_gmsg['l_totalinmemcachesize'] = 'Taille totale du cache de petits fichiers (octets)';
 $_gmsg['l_totalmmapcachesize'] = 'Taille totale du cache MMAP (octets)';
 $_gmsg['l_tplist'] = 'Liste de modèles d\'Hôtes Virtuels';
 $_gmsg['l_tpname'] = 'Nom du modèle';
@@ -526,13 +507,12 @@ $_gmsg['l_tuningsslsettings'] = 'Paramètres globaux SSL';
 $_gmsg['l_tuningstatic'] = 'Optimisation de la livraison de fichiers statiques';
 $_gmsg['l_type'] = 'Type';
 $_gmsg['l_umask'] = 'umask';
-$_gmsg['l_uploadfile'] = 'Téléversement de fichier';
+$_gmsg['l_uploadfile'] = 'Téléversement de fichiers';
 $_gmsg['l_uploadpassbypath'] = 'Passer les données de téléversement par chemin de fichier';
-$_gmsg['l_uploadtmpdir'] = 'Chemin de fichier temporaire';
+$_gmsg['l_uploadtmpdir'] = 'Chemin des fichiers temporaires';
 $_gmsg['l_uploadtmpfilepermission'] = 'Permission de fichier temporaire';
 $_gmsg['l_uri'] = 'URI';
 $_gmsg['l_url'] = 'URL';
-$_gmsg['l_urlfilter'] = 'Contexte';
 $_gmsg['l_useServer'] = 'Utiliser le journal du serveur';
 $_gmsg['l_useaio'] = 'Utiliser l\'I/O asynchrone (AIO)';
 $_gmsg['l_useipinproxyheader'] = 'Utiliser l\'IP client dans l\'en-tête';
@@ -540,7 +520,7 @@ $_gmsg['l_userdbcachetimeout'] = 'Délai d\'expiration du cache de la BD d\'util
 $_gmsg['l_userdbentries'] = 'Entrées de la BD d\'utilisateurs';
 $_gmsg['l_userdbentry'] = 'Entrée de la BD d\'utilisateurs';
 $_gmsg['l_userdblocation'] = 'Emplacement de la BD d\'utilisateurs';
-$_gmsg['l_userdbmaxcachesize'] = 'Taille maximale du cache de la BD d\'utilisateurs';
+$_gmsg['l_userdbmaxcachesize'] = 'Taille max. du cache de BD d\'utilisateurs';
 $_gmsg['l_username'] = 'Nom d\'utilisateur';
 $_gmsg['l_users'] = 'Utilisateurs';
 $_gmsg['l_usesendfile'] = 'Utiliser sendfile()';
@@ -550,23 +530,20 @@ $_gmsg['l_vhaliases'] = 'Alias de domaine';
 $_gmsg['l_vhlog'] = 'Journal de l\'Hôte Virtuel';
 $_gmsg['l_vhmappedvhosts'] = 'Hôtes Virtuels mappés';
 $_gmsg['l_vhmappedcount'] = 'Nombre d\'Hôtes Virtuels';
-$_gmsg['l_vhmappings'] = 'Mappages d\'Hôtes Virtuels';
-$_gmsg['l_vhmodule'] = 'Module VHost';
-$_gmsg['l_vhmodules'] = 'Modules VHost';
-$_gmsg['l_vhname'] = 'Nom de l\'Hôte Virtuel';
+$_gmsg['l_vhmappings'] = 'Mappages des hôtes virtuels';
+$_gmsg['l_vhname'] = 'Nom de l\'hôte virtuel';
 $_gmsg['l_vhost'] = 'Hôte Virtuel';
 $_gmsg['l_vhostlist'] = 'Liste d\'Hôtes Virtuels';
 $_gmsg['l_vhostregistration'] = 'Enregistrement du VHost';
 $_gmsg['l_coresettings'] = 'Paramètres principaux';
-$_gmsg['l_vhroot'] = 'Racine de l\'Hôte Virtuel';
+$_gmsg['l_vhroot'] = 'Racine de l\'Hôte virtuel';
 $_gmsg['l_vhtemplate'] = 'Modèle d\'Hôte Virtuel';
-$_gmsg['l_webserver'] = 'Serveur Web';
-$_gmsg['l_websocketdef'] = 'Définition de Web Socket';
-$_gmsg['l_websocketsetup'] = 'Configuration du Proxy Web Socket';
-$_gmsg['l_workers'] = 'Travailleurs (Workers)';
+$_gmsg['l_webserver'] = 'Serveur web';
+$_gmsg['l_websocketdef'] = 'Définition WebSocket';
+$_gmsg['l_websocketsetup'] = 'Configuration du proxy WebSocket';
+$_gmsg['l_workers'] = 'Workers';
 $_gmsg['l_wsgibin'] = 'Chemin WSGI';
 $_gmsg['l_wsgisettings'] = 'Paramètres par défaut Python WSGI';
-
 $_gmsg['o_cagefswithoutsuexec'] = 'CageFS sans suEXEC';
 $_gmsg['o_checkbox'] = 'Case à cocher';
 $_gmsg['o_disabled'] = 'Désactivé';
@@ -601,8 +578,6 @@ $_gmsg['o_use_last_ip_for elb'] = 'Utiliser la dernière IP (pour AWS ELB)';
 $_gmsg['o_yes'] = 'Oui';
 $_gmsg['o_yesdaemonmode'] = 'Oui (Mode Démon)';
 $_gmsg['o_yesdetachmode'] = 'Oui (Mode Détaché)';
-
-
 $_gmsg['parse_compressibletypes'] = '(!)Types MIME, comme */*, text/*, text/html, text/*, !text/css';
 $_gmsg['parse_defaultmimetype'] = 'MIME_type comme text/html';
 $_gmsg['parse_env'] = 'PROPRIÉTÉ=VALEUR';
@@ -622,8 +597,6 @@ $_gmsg['parse_tpname'] = 'requiert la variable $VH_NAME';
 $_gmsg['parse_tpvhconffile'] = 'Requiert la variable $VH_NAME et se termine par .conf. L\'emplacement suggéré est $SERVER_ROOT/conf/vhosts/$VH_NAME/vhconf.conf';
 $_gmsg['parse_umask'] = '[000-777]';
 $_gmsg['parse_uploadtmpfilepermission'] = 'nombre octal à 3 chiffres, la valeur par défaut est 666';
-
-
 $_gmsg['service_active'] = 'Actif';
 $_gmsg['service_addtomonitor'] = 'Ajouter à la surveillance';
 $_gmsg['service_availconn'] = 'Conn libres';
@@ -689,7 +662,6 @@ $_gmsg['service_opsauditlog_target'] = 'Cible';
 $_gmsg['service_opsauditlog_detail'] = 'Détail';
 $_gmsg['service_opsauditlog_source'] = 'Source';
 $_gmsg['l_user'] = 'Utilisateur';
-
 $_gmsg['service_opsauditlog_download'] = 'Télécharger';
 $_gmsg['service_opsauditlog_action_config_save'] = 'Sauvegarde de la configuration';
 $_gmsg['service_opsauditlog_action_config_delete'] = 'Suppression de la configuration';
@@ -726,8 +698,8 @@ $_gmsg['service_nameallowexp'] = 'Le nom prend en charge les expressions réguli
 $_gmsg['service_noblockedips'] = 'Aucune IP bloquée actuellement';
 $_gmsg['service_norecenterrors'] = 'Aucune erreur récente';
 $_gmsg['service_notrunning'] = 'Ne s\'exécute pas';
-$_gmsg['service_listenervhmap'] = 'Mappage Écouteur VHost';
-$_gmsg['service_listenervhmap_title'] = 'Mappages VHost Actifs pour l\'Écouteur';
+$_gmsg['service_listenervhmap'] = 'Mappage Listener-VHost';
+$_gmsg['service_listenervhmap_title'] = 'Mappages VHost actifs pour le listener';
 $_gmsg['service_plainconn'] = 'Http Utilisé';
 $_gmsg['service_pid'] = 'PID';
 $_gmsg['service_pool'] = 'Piscine (Pool)';
@@ -781,11 +753,8 @@ $_gmsg['service_toggledebug'] = 'Êtes-vous sûr de vouloir basculer la journali
 $_gmsg['service_toggledebugmsg'] = 'Avec la journalisation de débogage activée, vous risquez de remplir l\'espace disque. Ne l\'activez qu\'à des fins de débogage et pour une courte période de temps.';
 $_gmsg['btn_toggle'] = 'Basculer';
 $_gmsg['service_totalreq'] = 'Requêtes totales';
-$_gmsg['service_uptime'] = 'Temps de disponibilité OLS (Uptime)';
 $_gmsg['service_waitq'] = 'File d\'attente (WaitQ)';
 $_gmsg['service_willrefresh'] = 'La page actuelle sera rafraîchie après quelques secondes...';
-
-
 $_gmsg['buildphp_addonmodules'] = 'Modules complémentaires';
 $_gmsg['buildphp_binarylocnote'] = 'Si le processus de compilation réussit, l\'exécutable LSPHP sera créé sous %%server_root%%fcgi-bin/ avec
 		le nom %%binname%%, et un lien symbolique de lsphp%%phpver%% sera créé ou mis à jour vers le nouvel exécutable compilé.
@@ -848,7 +817,6 @@ $_gmsg['buildphp_stopduetoerr'] = 'Arrêté en raison d\'une erreur. Veuillez v�
 $_gmsg['buildphp_suhosin'] = '(Renforcement général) ne prend en charge que PHP 5';
 $_gmsg['buildphp_updatever'] = 'Si vous souhaitez utiliser une version qui n\'est pas listée ici, vous pouvez mettre à jour manuellement les paramètres dans ';
 $_gmsg['buildphp_useprevconf'] = 'Utiliser la configuration de la compilation précédente';
-
 $_gmsg['mail_howto_secure'] = '
 Veuillez suivre ces mesures de sécurité recommandées immédiatement :
 
@@ -859,7 +827,6 @@ Veuillez suivre ces mesures de sécurité recommandées immédiatement :
 
 Ces étapes réduisent considérablement le risque d\'accès non autorisé.
 ';
-
 $_gmsg['mail_failedlogin'] = '[Avis de sécurité] LiteSpeed WebAdmin - Tentative de connexion échouée';
 $_gmsg['mail_failedlogin_c'] = 'Une récente tentative de connexion à la console d\'administration web LiteSpeed a échoué.
 
@@ -873,8 +840,16 @@ Détails :
 
 Si l\'adresse IP de l\'utilisateur n\'est pas familière, sécurisez votre console d\'administration immédiatement.
 
-' . $_gmsg['mail_howto_secure'];
 
+Veuillez suivre ces mesures de sécurité recommandées immédiatement :
+
+    1. Restreignez l\'accès aux IP de confiance via Paramètres WebAdmin -> Général -> Contrôle d\'accès.
+    2. Changez le port par défaut (7080) par un port non standard.
+    3. Utilisez un mot de passe fort et complexe (au moins 16 caractères recommandés).
+    4. Activez HTTPS pour la console d\'administration avec un certificat TLS valide.
+
+Ces étapes réduisent considérablement le risque d\'accès non autorisé.
+';
 $_gmsg['mail_blockcmd'] = '[Avis de sécurité] LiteSpeed WebAdmin - Tentative de commande suspecte bloquée';
 $_gmsg['mail_blockcmd_c'] = 'Une tentative de saisie de commande suspecte a été détectée et bloquée dans la console LiteSpeed WebAdmin.
 
@@ -893,4 +868,35 @@ La tentative a été automatiquement rejetée — aucune modification n\'a été
 
 Si ce n\'était pas vous ou un utilisateur autorisé, considérez ceci comme une possible tentative d\'accès non autorisé et sécurisez votre console WebAdmin immédiatement.
 
-' . $_gmsg['mail_howto_secure'];
+
+Veuillez suivre ces mesures de sécurité recommandées immédiatement :
+
+    1. Restreignez l\'accès aux IP de confiance via Paramètres WebAdmin -> Général -> Contrôle d\'accès.
+    2. Changez le port par défaut (7080) par un port non standard.
+    3. Utilisez un mot de passe fort et complexe (au moins 16 caractères recommandés).
+    4. Activez HTTPS pour la console d\'administration avec un certificat TLS valide.
+
+Ces étapes réduisent considérablement le risque d\'accès non autorisé.
+';
+$_gmsg['note_delete_ref_extapp'] = 'Impossible de supprimer l\'application externe %%name%% car elle est actuellement référencée par :';
+$_gmsg['note_delete_ref_extapp_vhost_unscanned'] = 'Aucune référence au niveau serveur n\'a été trouvée. Cette vérification n\'analyse pas les configurations des hôtes virtuels ; si un hôte virtuel référence cette application externe, sa suppression peut empêcher cet hôte virtuel de fonctionner correctement.';
+$_gmsg['note_delete_ref_script_handler_field'] = '%%owner%% script handler %%name%% %%field%%';
+$_gmsg['l_dynreqpersec'] = 'Requêtes dynamiques/seconde';
+$_gmsg['l_maxdynrespheadersize'] = 'Taille maximale de l\'en-tête de réponse dynamique (octets)';
+$_gmsg['l_maxdynrespsize'] = 'Taille maximale du corps de réponse dynamique (octets)';
+$_gmsg['menu_usermanual'] = 'Manuel d\'utilisation';
+$_gmsg['tab_mod'] = 'Modules';
+$_gmsg['l_ctxmd'] = 'Contexte de gestionnaire de module';
+$_gmsg['l_enablehooks'] = 'Activer le module';
+$_gmsg['l_listenermodule'] = 'Module de listener';
+$_gmsg['l_listenermodules'] = 'Modules de listener';
+$_gmsg['l_module'] = 'Module';
+$_gmsg['l_moduleconf'] = 'Configuration du module';
+$_gmsg['l_modulehandler'] = 'Gestionnaire de module';
+$_gmsg['l_moduleparams'] = 'Paramètres du module';
+$_gmsg['l_servermoduledef'] = 'Module serveur';
+$_gmsg['l_servermodulesdef'] = 'Modules serveur';
+$_gmsg['l_urlfilter'] = 'Contexte';
+$_gmsg['l_vhmodule'] = 'Module VHost';
+$_gmsg['l_vhmodules'] = 'Modules d\'hôte virtuel';
+$_gmsg['service_uptime'] = 'Temps de disponibilité OLS (Uptime)';

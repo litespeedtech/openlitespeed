@@ -786,9 +786,16 @@ const char *ModuleConfig::ls_getconfkey(const char **pParseBegin,
     ls_strtrim2(pParseBegin, &pParseEnd);
     const char *pKeyBegin = *pParseBegin;
 
+    if (*pParseBegin >= pParseEnd)
+    {
+        *pKeyEnd = *pParseBegin;
+        return NULL;
+    }
+
     if (*pParseBegin < pParseEnd)
     {
-        while(!isspace(**pParseBegin))
+        while(*pParseBegin < pParseEnd
+              && !isspace((unsigned char)**pParseBegin))
             ++ *pParseBegin;
     }
 
@@ -804,11 +811,21 @@ const char *ModuleConfig::ls_getconfkey(const char **pParseBegin,
  */
 int ModuleConfig::ls_get_escconfval(const char **pParseBegin,
                                     const char *pParseEnd,
-                                    char *val)
+                                    char *val, int valLen)
 {
     char escapedChar = 0x00;
     int count =0;
     const char *pValStr = *pParseBegin;
+    const char *pConfEnd = pParseEnd;
+
+#define APPEND_CONF_VAL(ch) do { \
+        if (count >= valLen) \
+        { \
+            *pParseBegin = pParseEnd; \
+            return LS_FAIL; \
+        } \
+        val[count++] = (ch); \
+    } while (0)
 
     while(pValStr < pParseEnd)
     {
@@ -822,22 +839,22 @@ int ModuleConfig::ls_get_escconfval(const char **pParseBegin,
             else if (escapedChar == *pValStr)
                 escapedChar = 0x00;
             else
-                val[count++] = *pValStr;
+                APPEND_CONF_VAL(*pValStr);
             break;
 
         case '\\':
             //If Last char(does not have the next char) copy it
             if (pValStr == pParseEnd -1 || escapedChar == 0x00)
-                val[count++] = '\\';
+                APPEND_CONF_VAL('\\');
             else
             {
                 if (*(pValStr + 1) == escapedChar)
                 {
                     ++pValStr;
-                    val[count++] = escapedChar;
+                    APPEND_CONF_VAL(escapedChar);
                 }
                 else
-                    val[count++] = '\\';
+                    APPEND_CONF_VAL('\\');
             }
             break;
 
@@ -846,17 +863,19 @@ int ModuleConfig::ls_get_escconfval(const char **pParseBegin,
             if (escapedChar == 0x00)
                 pParseEnd = pValStr;
             else
-                val[count++] = *pValStr;
+                APPEND_CONF_VAL(*pValStr);
             break;
 
         default:
-            val[count++] = *pValStr;
+            APPEND_CONF_VAL(*pValStr);
             break;
         }
         ++pValStr;
     }
 
-    *pParseBegin = pParseEnd + 1;
+#undef APPEND_CONF_VAL
+
+    *pParseBegin = (pParseEnd < pConfEnd) ? pParseEnd + 1 : pConfEnd;
     return count;
 }
 
@@ -904,10 +923,17 @@ int ModuleConfig::preParseModuleParam(const char *param, int paramLen,
         {
             LS_DBG_H("Key:[%.*s]\n", (int)(pKeyEnd - pKey), pKey );
 
-            while(*pConf == ' ' || *pConf == '\t')
+            while(pConf < pConfEnd && (*pConf == ' ' || *pConf == '\t'))
                 ++ pConf;
 
-            int valLen = ls_get_escconfval(&pConf, pConfEnd, pVal);
+            int valLen = ls_get_escconfval(&pConf, pConfEnd, pVal,
+                                           sizeof(pVal));
+            if (valLen < 0)
+            {
+                LS_ERROR("Error: module parameter value for key [%.*s] is too large.",
+                         (int)(pKeyEnd - pKey), pKey);
+                return LS_FAIL;
+            }
             LS_DBG_H("Val:[%.*s]\n", valLen, pVal );
 
             int key_index = getKeyIndex(keys, pKey, pKeyEnd - pKey);

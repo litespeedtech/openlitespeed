@@ -1,6 +1,7 @@
 <?php
 
 use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\Auth\CAuthorizer;
 use LSWebAdmin\Product\Current\Product;
 use LSWebAdmin\Product\Current\UI;
 use LSWebAdmin\UI\UIBase;
@@ -17,8 +18,8 @@ if (!function_exists('lstAssetHref')) {
 			$paths[] = rtrim(SERVER_ROOT, '/') . '/admin/html' . $href;
 		}
 
-		$paths[] = dirname(__DIR__, 2) . $href;
-		$paths[] = dirname(__DIR__, 4) . $href;
+		$paths[] = dirname(dirname(__DIR__)) . $href;
+		$paths[] = dirname(dirname(dirname(dirname(__DIR__)))) . $href;
 
 		foreach ($paths as $path) {
 			if (is_file($path)) {
@@ -114,6 +115,7 @@ $consoleName = $product->getWebAdminConsoleName();
 				var lstPasswordShowLabel = <?php echo json_encode(DMsg::ALbl('btn_showpassword')); ?>;
 				var lstPasswordHideLabel = <?php echo json_encode(DMsg::ALbl('btn_hidepassword')); ?>;
 
+				window.lstRequestToken = <?php echo json_encode(CAuthorizer::GetToken()); ?>;
 				window.lstUiLabels = window.lstUiLabels || {};
 				window.lstUiLabels.cancel = <?php echo json_encode(DMsg::UIStr('btn_cancel')); ?>;
 				window.lstUiLabels.go = <?php echo json_encode(DMsg::UIStr('btn_go')); ?>;
@@ -271,7 +273,7 @@ $consoleName = $product->getWebAdminConsoleName();
 				</ul>
 
 				<div id="logout" class="transparent lst-header-control">
-					<span><a href="/login.php?logoff=1" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>" data-action="userLogout" data-logout-msg="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_logout')); ?>" data-logout-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signoutof')); ?>" data-logout-cancel-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_cancel')); ?>" data-logout-confirm-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>"><i class="lst-icon" data-lucide="log-out"></i></a></span>
+					<span><a href="/login.php?logoff=1&amp;tk=<?php echo UIBase::EscapeAttr(CAuthorizer::GetToken()); ?>" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>" data-action="userLogout" data-logout-msg="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_logout')); ?>" data-logout-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signoutof')); ?>" data-logout-cancel-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_cancel')); ?>" data-logout-confirm-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('note_signout')); ?>"><i class="lst-icon" data-lucide="log-out"></i></a></span>
 				</div>
 			</div>
 

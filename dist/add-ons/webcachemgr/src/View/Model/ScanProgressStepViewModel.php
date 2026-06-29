@@ -157,13 +157,18 @@ class ScanProgressStepViewModel
      */
     protected function grabSessionData()
     {
-        $info = $_SESSION['scanInfo'];
+        $info = isset($_SESSION['scanInfo']) && is_array($_SESSION['scanInfo'])
+            ? $_SESSION['scanInfo']
+            : [];
 
-        if ( !empty($info['homeDirs']) ) {
+        if ( !empty($info['homeDirs']) && is_array($info['homeDirs']) ) {
             $total = count($info['homeDirs']);
         }
-        else {
+        elseif ( !empty($info['installs']) && is_array($info['installs']) ) {
             $total = count($info['installs']);
+        }
+        else {
+            $total = 0;
         }
 
         $this->tplData[self::FLD_TOTAL_COUNT] = $total;
@@ -178,16 +183,17 @@ class ScanProgressStepViewModel
      */
     public function getTpl()
     {
-        $info = $_SESSION['scanInfo'];
+        $info = isset($_SESSION['scanInfo']) && is_array($_SESSION['scanInfo'])
+            ? $_SESSION['scanInfo']
+            : [];
 
         if ( !empty($info['homeDirs']) ) {
             return Context::getOption()->getSharedTplDir()
                 . '/ScanProgressStep1.tpl';
         }
-        else {
-            return Context::getOption()->getSharedTplDir()
-                . '/ScanProgressStep2.tpl';
-        }
+
+        return Context::getOption()->getSharedTplDir()
+            . '/ScanProgressStep2.tpl';
     }
 
 }

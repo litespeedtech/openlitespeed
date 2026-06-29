@@ -651,7 +651,13 @@ function PMA_blowfish_decrypt($encdata, $secret)
 	for ($i = 0; $i < strlen($data); $i += 8) {
 		$decrypt .= $pma_cipher->decryptBlock(substr($data, $i, 8), $secret);
 	}
-	return trim($decrypt);
+	// rtrim only the NUL bytes used by the encrypt path's padding;
+	// the original trim() also stripped spaces, tabs, CR, LF, and
+	// vertical tabs from BOTH ends, which would silently corrupt
+	// any legitimate plaintext that happened to begin or end with
+	// those characters. Only the trailing 0x00 padding should be
+	// removed here.
+	return rtrim($decrypt, "\0");
 }
 
 ?>

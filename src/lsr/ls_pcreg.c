@@ -24,6 +24,7 @@
 #include <lsr/ls_str.h>
 #include <assert.h>
 #include <ctype.h>
+#include <limits.h>
 #include <string.h>
 #include <pthread.h>
 
@@ -49,7 +50,7 @@ ls_pcre_t *ls_pcre(ls_pcre_t *pThis)
     if (pThis == NULL)
         return NULL;
     pThis->regex = NULL;
-    pThis->extra = NULL;
+    pThis->context = NULL;
     pThis->substr = 0;
     pThis->pattern = NULL;
     return pThis;
@@ -242,26 +243,175 @@ void ls_pcre_init_jit_stack()
 
 void ls_pcre_release_jit_stack(void *pValue)
 {
-    pcre_jit_stack_free((pcre_jit_stack *) pValue);
+    pcre2_jit_stack_free((pcre2_jit_stack *) pValue);
 }
 
 
-pcre_jit_stack *ls_pcre_get_jit_stack()
+pcre2_jit_stack *ls_pcre_get_jit_stack()
 {
-    pcre_jit_stack *jit_stack;
+    pcre2_jit_stack *jit_stack;
 
     if (s_jit_key_inited == 0)
         ls_pcre_init_jit_stack();
-    jit_stack = (pcre_jit_stack *)pthread_getspecific(s_jit_stack_key);
+    jit_stack = (pcre2_jit_stack *)pthread_getspecific(s_jit_stack_key);
     if (jit_stack == NULL)
     {
-        jit_stack = (pcre_jit_stack *)pcre_jit_stack_alloc(32 * 1024, 512 * 1024);
+        jit_stack = pcre2_jit_stack_create(32 * 1024, 512 * 1024, NULL);
         pthread_setspecific(s_jit_stack_key, jit_stack);
     }
     return jit_stack;
 }
 #endif
 #endif
+
+
+/* Per-thread match data reused across exec() calls so the hot path stays
+ * allocation-free (PCRE2 needs a heap pcre2_match_data, unlike PCRE1's caller
+ * supplied stack ovector).  Grown on demand. */
+static pthread_once_t s_md_key_once = PTHREAD_ONCE_INIT;
+static pthread_key_t s_md_key;
+static int s_md_key_create_failed = 0;
+
+static void ls_pcre_release_match_data(void *pValue)
+{
+    if (pValue != NULL)
+        pcre2_match_data_free((pcre2_match_data *) pValue);
+}
+
+
+static void ls_pcre_init_match_data_key()
+{
+    if (pthread_key_create(&s_md_key, ls_pcre_release_match_data) != 0)
+        s_md_key_create_failed = 1;
+}
+
+
+static pcre2_match_data *ls_pcre_get_match_data(uint32_t pairs)
+{
+    pcre2_match_data *md;
+    if (pairs < 1)
+        pairs = 1;
+    if (pthread_once(&s_md_key_once, ls_pcre_init_match_data_key) != 0
+        || s_md_key_create_failed)
+        return NULL;
+    md = (pcre2_match_data *)pthread_getspecific(s_md_key);
+    if (md != NULL && pcre2_get_ovector_count(md) >= pairs)
+        return md;
+    if (md != NULL)
+        pcre2_match_data_free(md);
+    md = pcre2_match_data_create(pairs, NULL);
+    pthread_setspecific(s_md_key, md);
+    return md;
+}
+
+
+/* PCRE2 reuses low option bits between compile time and match time, so a
+ * compile flag accidentally passed to exec() could be misread as a match flag
+ * or rejected with PCRE2_ERROR_BADOPTION.  Restrict exec()/dfaexec() options to
+ * each function's match-time set. */
+#define LS_PCRE2_MATCH_OPTS  (PCRE2_ANCHORED | PCRE2_ENDANCHORED | \
+    PCRE2_NOTBOL | PCRE2_NOTEOL | PCRE2_NOTEMPTY | PCRE2_NOTEMPTY_ATSTART | \
+    PCRE2_NO_UTF_CHECK | PCRE2_NO_JIT | PCRE2_PARTIAL_HARD | \
+    PCRE2_PARTIAL_SOFT | PCRE2_COPY_MATCHED_SUBJECT | \
+    PCRE2_DISABLE_RECURSELOOP_CHECK)
+#define LS_PCRE2_DFA_OPTS    (PCRE2_ANCHORED | PCRE2_ENDANCHORED | \
+    PCRE2_NOTBOL | PCRE2_NOTEOL | PCRE2_NOTEMPTY | PCRE2_NOTEMPTY_ATSTART | \
+    PCRE2_NO_UTF_CHECK | PCRE2_PARTIAL_HARD | PCRE2_PARTIAL_SOFT | \
+    PCRE2_COPY_MATCHED_SUBJECT | PCRE2_DFA_RESTART | PCRE2_DFA_SHORTEST)
+
+
+/* Copy up to 'avail' PCRE2 result/capture pairs into the caller's int vector
+ * (unset -> -1) and return the match count clamped to that capacity.  Because
+ * the per-thread match data is shared and grown across calls, pcre2 may return
+ * more pairs than the caller's vector holds; like pcre1/pcre2 with a vector of
+ * exactly 'avail' pairs, that case (and pcre2's "0 == vector too small") is
+ * reported as 0 so callers never read pairs that were not copied.  'avail' is
+ * already capped to ovecsize/2 (DFA) or ovecsize/3 (captures), but the
+ * ovecsize >= 2 guard makes the bound explicit: never touch a vector that
+ * cannot hold a single offset pair.  'avail' = pairs the caller's vector holds:
+ *     - captures (pcre2_match): ovecsize/3  (pcre1 kept a third as workspace)
+ *     - DFA results (pcre2_dfa_match): ovecsize/2  (DFA workspace is separate,
+ *       so the capture-workspace third does not apply). */
+static int ls_pcre_store_result(pcre2_match_data *md, int rc,
+                                int *ovector, int ovecsize, uint32_t avail)
+{
+    if (ovector != NULL && ovecsize >= 2 && avail >= 1)
+    {
+        PCRE2_SIZE *ov = pcre2_get_ovector_pointer(md);
+        uint32_t pairs = (rc == 0 || (uint32_t)rc > avail) ? avail : (uint32_t)rc;
+        uint32_t i;
+        for (i = 0; i < pairs; ++i)
+        {
+            ovector[2 * i]     = (ov[2 * i] == PCRE2_UNSET) ? -1 : (int)ov[2 * i];
+            ovector[2 * i + 1] = (ov[2 * i + 1] == PCRE2_UNSET)
+                                 ? -1 : (int)ov[2 * i + 1];
+        }
+    }
+    if (rc == 0 || (uint32_t)rc > avail)
+        return 0;
+    return rc;
+}
+
+
+int ls_pcre_exec(ls_pcre_t *pThis, const char *subject, int length,
+                 int startoffset, int options, int *ovector, int ovecsize)
+{
+    uint32_t avail = (ovecsize >= 3) ? (uint32_t)(ovecsize / 3) : 0;
+    pcre2_match_data *md = ls_pcre_get_match_data(avail);
+    int rc;
+    if (md == NULL)
+        return PCRE2_ERROR_NOMATCH;
+#ifdef _USE_PCRE_JIT_
+#if !defined(__sparc__) && !defined(__sparc64__)
+    if (pThis->context != NULL)
+        pcre2_jit_stack_assign(pThis->context, NULL, ls_pcre_get_jit_stack());
+#endif
+#endif
+    rc = pcre2_match(pThis->regex, (PCRE2_SPTR)subject, length, startoffset,
+                     (uint32_t)options & LS_PCRE2_MATCH_OPTS, md, pThis->context);
+    if (rc < 0)
+        return rc;
+    return ls_pcre_store_result(md, rc, ovector, ovecsize, avail);
+}
+
+
+int ls_pcre_execresult(ls_pcre_t *pThis, const char *subject, int length,
+                       int startoffset, int options, ls_pcreres_t *pRes)
+{
+    ls_pcreres_setmatches(pRes, ls_pcre_exec(pThis, subject, length,
+                          startoffset, options, ls_pcreres_getvector(pRes), 30));
+    return ls_pcres_getmatches(pRes);
+}
+
+
+int ls_pcre_dfaexec(ls_pcre_t *pThis, const char *subject, int length,
+                    int startoffset, int options, int *ovector, int ovecsize)
+{
+    int aWorkspace[LSR_PCRE_WORKSPACE_LEN];
+    /* DFA returns offset pairs for multiple matches at the same start, and its
+     * working store is aWorkspace[] (a separate argument), so the result vector
+     * holds ovecsize/2 pairs -- not the ovecsize/3 used for captures. */
+    uint32_t avail = (ovecsize >= 2) ? (uint32_t)(ovecsize / 2) : 0;
+    pcre2_match_data *md = ls_pcre_get_match_data(avail);
+    int rc;
+    if (md == NULL)
+        return PCRE2_ERROR_NOMATCH;
+    rc = pcre2_dfa_match(pThis->regex, (PCRE2_SPTR)subject, length, startoffset,
+                         (uint32_t)options & LS_PCRE2_DFA_OPTS, md,
+                         pThis->context, aWorkspace, LSR_PCRE_WORKSPACE_LEN);
+    if (rc < 0)
+        return rc;
+    return ls_pcre_store_result(md, rc, ovector, ovecsize, avail);
+}
+
+
+int ls_pcre_dfaexecresult(ls_pcre_t *pThis, const char *subject, int length,
+                          int startoffset, int options, ls_pcreres_t *pRes)
+{
+    ls_pcreres_setmatches(pRes, ls_pcre_dfaexec(pThis, subject, length,
+                          startoffset, options, ls_pcreres_getvector(pRes), 30));
+    return ls_pcres_getmatches(pRes);
+}
 
 
 int ls_pcre_parseoptions(const char *pOptions, size_t iOptLen,
@@ -280,42 +430,40 @@ int ls_pcre_parseoptions(const char *pOptions, size_t iOptLen,
         switch (*p)
         {
         case 'a':
-            *pFlags |= PCRE_ANCHORED;
+            *pFlags |= LSRE_ANCHORED;
             break;
         case 'd':
             iOptimizeFlags |= LSR_PCRE_DFA_MODE;
             break;
         case 'i':
-            *pFlags |= PCRE_CASELESS;
+            *pFlags |= LSRE_CASELESS;
             break;
         case 'j': //Jit mode automatically used when available.
             break;
         case 'm':
-            *pFlags |= PCRE_MULTILINE;
+            *pFlags |= LSRE_MULTILINE;
             break;
         case 'o':
             iOptimizeFlags |= LSR_PCRE_CACHE_COMPILED;
             break;
         case 's':
-            *pFlags |= PCRE_DOTALL;
+            *pFlags |= LSRE_DOTALL;
             break;
         case 'u':
-            *pFlags |= PCRE_UTF8;
+            *pFlags |= LSRE_UTF8;
             break;
         case 'U':
-            *pFlags |= (PCRE_UTF8 | PCRE_NO_UTF8_CHECK) ;
+            *pFlags |= (LSRE_UTF8 | LSRE_NO_UTF8_CHECK) ;
             break;
         case 'x':
-            *pFlags |= PCRE_EXTENDED;
+            *pFlags |= LSRE_EXTENDED;
             break;
-#if PCRE_MAJOR > 8 || ( PCRE_MAJOR == 8 && PCRE_MINOR >= 12 )
         case 'D':
-            *pFlags |= PCRE_DUPNAMES;
+            *pFlags |= LSRE_DUPNAMES;
             break;
         case 'J':
-            *pFlags |= PCRE_JAVASCRIPT_COMPAT;
+            *pFlags |= LSRE_JAVASCRIPT_COMPAT;
             break;
-#endif
         default:
             return LS_FAIL;
         }
@@ -328,34 +476,35 @@ int ls_pcre_parseoptions(const char *pOptions, size_t iOptLen,
 int ls_pcre_compile(ls_pcre_t *pThis, const char *regex, int options,
                     int matchLimit, int recursionLimit)
 {
-    const char *error;
-    int          erroffset;
+    int        errcode;
+    PCRE2_SIZE erroffset;
+    uint32_t   captureCount = 0;
+    int        wantContext = (matchLimit > 0 || recursionLimit > 0);
     if (pThis->regex != NULL)
         ls_pcre_release(pThis);
-    pThis->regex = pcre_compile(regex, options, &error, &erroffset, NULL);
+    pThis->regex = pcre2_compile((PCRE2_SPTR)regex, PCRE2_ZERO_TERMINATED,
+                                 (uint32_t)options,
+                                 &errcode, &erroffset, NULL);
     if (pThis->regex == NULL)
         return LS_FAIL;
     pThis->pattern = ls_pdupstr(regex);
-    pThis->extra = pcre_study(pThis->regex,
-#if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__) && defined( PCRE_CONFIG_JIT )
-                              PCRE_STUDY_JIT_COMPILE,
-#else
-                              0,
+#if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__)
+    pcre2_jit_compile(pThis->regex, PCRE2_JIT_COMPLETE);
+    wantContext = 1;
 #endif
-                              & error);
-    if (matchLimit > 0)
+    if (wantContext)
     {
-        pThis->extra->match_limit = matchLimit;
-        pThis->extra->flags |= PCRE_EXTRA_MATCH_LIMIT;
+        pThis->context = pcre2_match_context_create(NULL);
+        if (pThis->context != NULL)
+        {
+            if (matchLimit > 0)
+                pcre2_set_match_limit(pThis->context, matchLimit);
+            if (recursionLimit > 0)
+                pcre2_set_depth_limit(pThis->context, recursionLimit);
+        }
     }
-    if (recursionLimit > 0)
-    {
-        pThis->extra->match_limit_recursion = recursionLimit;
-        pThis->extra->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
-    }
-    pcre_fullinfo(pThis->regex, pThis->extra,
-                  PCRE_INFO_CAPTURECOUNT, &(pThis->substr));
-    ++(pThis->substr);
+    pcre2_pattern_info(pThis->regex, PCRE2_INFO_CAPTURECOUNT, &captureCount);
+    pThis->substr = (int)captureCount + 1;
     return LS_OK;
 }
 
@@ -364,16 +513,12 @@ void ls_pcre_release(ls_pcre_t *pThis)
 {
     if (pThis->regex != NULL)
     {
-        if (pThis->extra != NULL)
+        if (pThis->context != NULL)
         {
-#if defined( _USE_PCRE_JIT_)&&!defined(__sparc__) && !defined(__sparc64__) && defined( PCRE_CONFIG_JIT )
-            pcre_free_study(pThis->m_extra);
-#else
-            pcre_free(pThis->extra);
-#endif
-            pThis->extra = NULL;
+            pcre2_match_context_free(pThis->context);
+            pThis->context = NULL;
         }
-        pcre_free(pThis->regex);
+        pcre2_code_free(pThis->regex);
         pThis->regex = NULL;
     }
 }
@@ -381,10 +526,10 @@ void ls_pcre_release(ls_pcre_t *pThis)
 
 int ls_pcre_getnamedsubcnt(ls_pcre_t *pThis)
 {
-    int iCount;
-    if (pcre_fullinfo(pThis->regex, NULL, PCRE_INFO_NAMECOUNT, &iCount) != 0)
+    uint32_t iCount;
+    if (pcre2_pattern_info(pThis->regex, PCRE2_INFO_NAMECOUNT, &iCount) != 0)
         return LS_FAIL;
-    return iCount;
+    return (int)iCount;
 }
 
 
@@ -401,20 +546,21 @@ static int ls_pcre_map_name(unsigned char *pEntry, char **pName)
 int ls_pcre_getnamedsubs(const ls_pcre_t *pThis, const ls_pcreres_t *pRes,
                          ls_strpair_t *pSubPats, int iCount)
 {
-    int i, iEntryLen, iSubLen;
-    unsigned char *pNames;
+    int i, iSubLen;
+    uint32_t iEntryLen;
+    PCRE2_SPTR pNames;
     char *pName, *pSubStr = NULL;
 
-    if (pcre_fullinfo(
-            pThis->regex, NULL, PCRE_INFO_NAMEENTRYSIZE, &iEntryLen) != 0)
+    if (pcre2_pattern_info(
+            pThis->regex, PCRE2_INFO_NAMEENTRYSIZE, &iEntryLen) != 0)
         return LS_FAIL;
-    if (pcre_fullinfo(
-            pThis->regex, NULL, PCRE_INFO_NAMETABLE, &pNames) != 0)
+    if (pcre2_pattern_info(
+            pThis->regex, PCRE2_INFO_NAMETABLE, &pNames) != 0)
         return LS_FAIL;
 
     for (i = 0; i < iCount; ++i)
     {
-        unsigned char *pCurEntry = pNames + (i * iEntryLen);
+        unsigned char *pCurEntry = (unsigned char *)pNames + (i * iEntryLen);
         iSubLen = ls_pcreres_getsubstr(pRes,
                                        ls_pcre_map_name(pCurEntry, &pName),
                                        &pSubStr);
@@ -543,16 +689,26 @@ int ls_pcresub_getlen(ls_pcresub_t *pThis, const char *input,
     while (pEntry < pThis->plistend)
     {
         if (pEntry->strlen > 0)
+        {
+            if (pEntry->strlen > INT_MAX - iLen)
+                return LS_FAIL;
             iLen += pEntry->strlen;
+        }
         if ((pEntry->param >= 0) && (pEntry->param < ovec_num))
         {
             const int *pParam = ovector + (pEntry->param << 1);
             int len = *(pParam + 1) - *pParam;
             if (len > 0)
+            {
+                if (len > INT_MAX - iLen)
+                    return LS_FAIL;
                 iLen += len;
+            }
         }
         ++pEntry;
     }
+    if (iLen == INT_MAX)
+        return LS_FAIL;
     ++iLen;
     return iLen;
 }

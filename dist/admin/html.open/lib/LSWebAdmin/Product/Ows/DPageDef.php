@@ -3,54 +3,13 @@
 namespace LSWebAdmin\Product\Ows;
 
 use LSWebAdmin\I18n\DMsg;
+use LSWebAdmin\Product\Base\DPageDefBase as ProductDPageDefBase;
 use LSWebAdmin\Product\Base\DTblMap;
-use LSWebAdmin\UI\ConfPageResolver;
 use LSWebAdmin\UI\DPage;
 
-class DPageDef
+class DPageDef extends ProductDPageDefBase
 {
-    private static $instance = null;
-
-	protected $_pageDef = [];
-	protected $_fileDef = [];
-
-	protected function __construct()
-	{
-		$this->defineAll();
-	}
-
-	public static function GetInstance()
-	{
-        if (self::$instance == null) {
-			self::$instance = new self();
-        }
-		return self::$instance;
-	}
-
-	public static function GetPage($dinfo)
-	{
-		return ConfPageResolver::resolve($dinfo, get_called_class());
-	}
-
-    public function ResolvePage($view, $pid)
-    {
-        return $this->_pageDef[$view][$pid];
-    }
-
-	public function GetFileMap($type)
-	{
-		if ( !isset($this->_fileDef[$type]) )
-		{
-			$funcname = 'add_FileMap_' . $type;
-			if (!method_exists($this, $funcname)) {
-				trigger_error("invalid func name $funcname", E_USER_ERROR);
-			}
-			$this->$funcname();
-		}
-		return $this->_fileDef[$type];
-	}
-
-	private function add_FileMap_serv()
+	protected function add_FileMap_serv()
 	{
 		$map = new DTblMap(['httpServerConfig', '' ],
 				['S_PROCESS',
@@ -58,7 +17,7 @@ class DPageDef
 			new DTblMap(['logging:log', 'errorlog$fileName' ], 'S_LOG'),
 			new DTblMap(['logging:*accessLog', '*accesslog$fileName' ], 'S_ACLOG'),
 			'S_INDEX',
-			new DTblMap('expires', 'A_EXPIRES'),
+			new DTblMap('expires', 'SVT_EXPIRES'),
             'S_AUTOLOADHTA', 'S_FILEUPLOAD',
 			new DTblMap(['ipToGeo:*geoipDB', '*geoipdb$geoipDBFile' ], 'S_GEOIP'),
             new DTblMap('ip2locDB', 'S_IP2LOCATION'),
@@ -68,10 +27,10 @@ class DPageDef
 			new DTblMap(['security:CGIRLimit', 'CGIRLimit' ], 'S_SEC_CGI'),
             new DTblMap(['security', ''], 'S_SEC_BUBBLEWRAP'),
 			new DTblMap(['security:accessDenyDir', 'accessDenyDir' ], 'S_SEC_DENY'),
-			new DTblMap(['security:accessControl', 'accessControl' ], 'A_SEC_AC'),
+			new DTblMap(['security:accessControl', 'accessControl' ], 'SVT_SEC_AC'),
             new DTblMap('lsrecaptcha', 'S_SEC_RECAP'),
-			new DTblMap(['extProcessorList:*extProcessor', '*extprocessor$name' ], 'A_EXT_SEL'),
-			new DTblMap(['scriptHandlerList', 'scripthandler' ], new DTblMap(['*scriptHandler', '*addsuffix$suffix' ], 'A_SCRIPT')),
+			new DTblMap(['extProcessorList:*extProcessor', '*extprocessor$name' ], 'SV_EXT_SEL'),
+			new DTblMap(['scriptHandlerList', 'scripthandler' ], new DTblMap(['*scriptHandler', '*addsuffix$suffix' ], 'SVT_SCRIPT')),
 			new DTblMap(['modpagespeed', 'modpagespeed'], 'S_PAGESPEED'),
 			new DTblMap('railsDefaults', 'S_RAILS'),
             new DTblMap('wsgiDefaults', 'S_WSGI'),
@@ -80,7 +39,7 @@ class DPageDef
 			new DTblMap(['virtualHostList:*virtualHost', '*virtualhost$name' ], 'V_TOPD'),
 			new DTblMap(['listenerList:*listener', '*listener$name' ], ['L_GENERAL',
 				new DTblMap(['vhostMapList:*vhostMap', '*vhmap$vhost' ], 'L_VHMAP'),
-				'LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY',
+				'ALVT_SSL_CERT', 'AL_SSL', 'AL_SSL_FEATURE', 'LVT_SSL_OCSP', 'ALVT_SSL_CLVERIFY',
 				new DTblMap(['moduleList:*module', '*module$name' ], 'L_MOD') ]),
 			new DTblMap(['vhTemplateList:*vhTemplate', '*vhTemplate$name' ], ['T_TOPD', new DTblMap(['*member', '*member$vhName' ], 'T_MEMBER') ]),
 			'SERVICE_SUSPENDVH' ]) ;
@@ -88,7 +47,7 @@ class DPageDef
 		$this->_fileDef['serv'] = $map;
 	}
 
-	private function add_FileMap_vh_()
+	protected function add_FileMap_vh_()
 	{
 		$map = new DTblMap(['virtualHostConfig', ''],
 				[
@@ -98,26 +57,26 @@ class DPageDef
                     new DTblMap('index', 'VT_INDXF'),
                     new DTblMap(['customErrorPages:*errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
                     new DTblMap(['scriptHandlerList','scripthandler'],
-                            new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
-                    new DTblMap('expires', 'A_EXPIRES'),
+                            new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'SVT_SCRIPT')),
+                    new DTblMap('expires', 'SVT_EXPIRES'),
                     'VT_FILEUPLOAD',
                     new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-                    new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
+                    new DTblMap(['security:accessControl','accessControl'], 'SVT_SEC_AC'),
                     new DTblMap(['security:realmList:*realm','*realm$name'], 'V_REALM_FILE'),
                     new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
                     new DTblMap(['security',''], 'VT_SEC_BUBBLEWRAP'),
-                    new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'A_EXT_SEL'),
+                    new DTblMap(['extProcessorList:*extProcessor','*extprocessor$name'], 'SV_EXT_SEL'),
                     new DTblMap(['contextList:*context', '*context$uri'], 'VT_CTX_SEL'),
                     new DTblMap('rewrite',
                             ['VT_REWRITE_CTRL',
                                 new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
                                 'VT_REWRITE_RULE']),
                     new DTblMap('vhssl',
-                            ['LVT_SSL_CERT', 'VT_SSL',
+                            ['ALVT_SSL_CERT', 'VT_SSL',
                                 new DTblMap('acme', 'VT_SSL_ACME'),
-                                'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
+                                'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'ALVT_SSL_CLVERIFY']),
                     new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
-                    new DTblMap(['modpagespeed', 'modpagespeed'], 'V_PAGESPEED'),
+                    new DTblMap(['modpagespeed', 'modpagespeed'], 'VT_PAGESPEED'),
                     new DTblMap(['moduleList:*module','*module$name'],
                             ['VT_MOD',
                                     new DTblMap(['urlFilterList:*urlFilter', '*urlFilter$uri'], 'VT_MOD_FILTER')])
@@ -126,7 +85,7 @@ class DPageDef
 		$this->_fileDef['vh_'] = $map;
 	}
 
-	private function add_FileMap_tp_()
+	protected function add_FileMap_tp_()
 	{
 		$map = new DTblMap(['virtualHostTemplate', ''],
 				[
@@ -142,11 +101,11 @@ class DPageDef
                                 new DTblMap('index', 'VT_INDXF'),
                                 new DTblMap(['customErrorPages:*errorPage', '*errorpage$errCode'], 'VT_ERRPG'),
                                 new DTblMap(['scriptHandlerList','scripthandler'],
-                                        new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
+                                        new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'SVT_SCRIPT')),
                                 'VT_FILEUPLOAD',
                                 new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
-                                new DTblMap('expires', 'A_EXPIRES'),
-                                new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
+                                new DTblMap('expires', 'SVT_EXPIRES'),
+                                new DTblMap(['security:accessControl','accessControl'], 'SVT_SEC_AC'),
                                 new DTblMap(['security:realmList:*realm','*realm$name'], 'T_REALM_FILE'),
                                 new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
                                 new DTblMap(['security', ''], 'VT_SEC_BUBBLEWRAP'),
@@ -157,11 +116,11 @@ class DPageDef
                                             new DTblMap(['*map', '*map$name'], 'VT_REWRITE_MAP'),
                                             'VT_REWRITE_RULE']),
                                 new DTblMap('vhssl',
-                                        ['LVT_SSL_CERT', 'VT_SSL',
+                                        ['ALVT_SSL_CERT', 'VT_SSL',
                                             new DTblMap('acme', 'VT_SSL_ACME'),
-                                            'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']),
+                                            'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'ALVT_SSL_CLVERIFY']),
                                 new DTblMap(['websocketList:*websocket', '*websocket$uri'], 'VT_WBSOCK'),
-                                new DTblMap(['modpagespeed', 'modpagespeed'], 'V_PAGESPEED'),
+                                new DTblMap(['modpagespeed', 'modpagespeed'], 'VT_PAGESPEED'),
                                 new DTblMap(['moduleList:*module','*module$name'],
                                         ['VT_MOD',
                                                 new DTblMap(['urlFilterList:*urlFilter', '*urlFilter$uri'], 'VT_MOD_FILTER')])
@@ -172,39 +131,13 @@ class DPageDef
 		$this->_fileDef['tp_'] = $map;
 	}
 
-	private function add_FileMap_admin()
-	{
-		$map = new DTblMap(['adminConfig', ''],
-				['ADM_PHP', 'ADM_THROTTLE',
-						new DTblMap(['logging:log','errorlog$fileName'], 'V_LOG'),
-						new DTblMap(['logging:accessLog','accesslog$fileName'], 'ADM_ACLOG'),
-						new DTblMap(['security:accessControl','accessControl'], 'A_SEC_AC'),
-						new DTblMap(['listenerList:*listener','*listener$name'],
-								['ADM_L_GENERAL', 'LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY'])
-				]);
-
-		$this->_fileDef['admin'] = $map;
-	}
-
-	public function GetTabDef($view)
-	{
-		if(!isset($this->_pageDef[$view]))
-			trigger_error("Invalid tabs $view", E_USER_ERROR);
-
-		$tabs = [];
-		foreach ($this->_pageDef[$view] as $p) {
-			$tabs[$p->GetID()] = $p->GetLabel();
-		}
-		return $tabs;
-	}
-
 	protected function defineAll()
 	{
 		$id = 'g';
 		$page = new DPage($id, DMsg::UIStr('tab_g'),
                 new DTblMap('',
                         ['S_PROCESS', 'S_GENERAL', 'S_INDEX',
-                        new DTblMap('expires', 'A_EXPIRES'),
+                        new DTblMap('expires', 'SVT_EXPIRES'),
                         'S_AUTOLOADHTA','S_FILEUPLOAD',
                         new DTblMap('*geoipdb$geoipDBFile', 'S_GEOIP_TOP', 'S_GEOIP'),
                         new DTblMap('ip2locDB', 'S_IP2LOCATION'),
@@ -235,18 +168,18 @@ class DPageDef
                         new DTblMap('lsrecaptcha', 'S_SEC_RECAP'),
                         'S_SEC_BUBBLEWRAP',
 						new DTblMap('accessDenyDir', 'S_SEC_DENY'),
-						new DTblMap('accessControl', 'A_SEC_AC')]));
+						new DTblMap('accessControl', 'SVT_SEC_AC')]));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'ext';
 		$page = new DPage($id, DMsg::UIStr('tab_ext'),
-				new DTblMap('*extprocessor$name', 'A_EXT_TOP',
-						['A_EXT_SEL', 'A_EXT_LSAPI', 'A_EXT_PROXY', 'A_EXT_FCGI', 'A_EXT_FCGIAUTH', 'A_EXT_SCGI',
-                            'A_EXT_SERVLET', 'A_EXT_LOGGER', 'A_EXT_LOADBALANCER', 'A_EXT_UWSGI']));
+				new DTblMap('*extprocessor$name', 'SV_EXT_TOP',
+						['SV_EXT_SEL', 'SV_EXT_LSAPI', 'SV_EXT_PROXY', 'SV_EXT_FCGI', 'SV_EXT_FCGIAUTH', 'SV_EXT_SCGI',
+                            'SV_EXT_SERVLET', 'SV_EXT_LOGGER', 'SV_EXT_LOADBALANCER', 'SV_EXT_UWSGI']));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'sh';
-		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
+		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('scripthandler:*addsuffix$suffix', 'SVT_SCRIPT_TOP', 'SVT_SCRIPT'));
 		$this->_pageDef['serv'][$id] = $page;
 
 		$id = 'appserver';
@@ -271,7 +204,7 @@ class DPageDef
 
 		$id = 'lsec';
 		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('*listener$name',
-				['LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
+				['ALVT_SSL_CERT', 'AL_SSL', 'AL_SSL_FEATURE', 'LVT_SSL_OCSP', 'ALVT_SSL_CLVERIFY']));
 		$this->_pageDef['sl_'][$id] = $page;
 
 		$id = 'lmod';
@@ -302,7 +235,7 @@ class DPageDef
                     'V_GENERAL',
                     new DTblMap('index', 'VT_INDXF'),
                     new DTblMap('*errorpage$errCode', 'VT_ERRPG_TOP', 'VT_ERRPG'),
-                    new DTblMap('expires', 'A_EXPIRES'),
+                    new DTblMap('expires', 'SVT_EXPIRES'),
                     'VT_FILEUPLOAD',
                     new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
                 ]));
@@ -315,8 +248,8 @@ class DPageDef
                             'T_GENERAL2',
                             new DTblMap('index', 'VT_INDXF'),
                             new DTblMap('*errorpage$errCode',  'VT_ERRPG_TOP', 'VT_ERRPG'),
-                            new DTblMap('scripthandler', new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'A_SCRIPT')),
-                            new DTblMap('expires', 'A_EXPIRES'),
+                            new DTblMap('scripthandler', new DTblMap(['*scriptHandler','*addsuffix$suffix'], 'SVT_SCRIPT')),
+                            new DTblMap('expires', 'SVT_EXPIRES'),
                             'VT_FILEUPLOAD',
                             new DTblMap('phpIniOverride','VT_PHPINIOVERRIDE'),
                        ])]));
@@ -341,7 +274,7 @@ class DPageDef
 		$page = new DPage($id, DMsg::UIStr('tab_sec'), new DTblMap('',
 				[ new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
                   'VT_SEC_BUBBLEWRAP',
-                  new DTblMap('accessControl', 'A_SEC_AC'),
+                  new DTblMap('accessControl', 'SVT_SEC_AC'),
 				  new DTblMap('*realm$name', 'V_REALM_TOP', 'V_REALM_FILE')],
 				new DTblMap('*index', ['V_UDB_TOP', 'V_UDB', 'V_GDB_TOP','V_GDB'])));
 		$this->_pageDef['vh_'][$id] = $page;
@@ -351,15 +284,15 @@ class DPageDef
 						new DTblMap('virtualHostConfig',
 								[new DTblMap('lsrecaptcha', 'VT_SEC_RECAP'),
                                     'VT_SEC_BUBBLEWRAP',
-                                    new DTblMap('accessControl', 'A_SEC_AC'),
+                                    new DTblMap('accessControl', 'SVT_SEC_AC'),
 										new DTblMap('*realm$name', 'T_REALM_TOP', 'T_REALM_FILE')])]));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'ext';
 		$page = new DPage($id, DMsg::UIStr('tab_ext'),
-				new DTblMap('*extprocessor$name', 'A_EXT_TOP',
-						['A_EXT_SEL', 'A_EXT_LSAPI', 'A_EXT_PROXY', 'A_EXT_FCGI', 'A_EXT_FCGIAUTH', 'A_EXT_SCGI',
-                            'A_EXT_SERVLET', 'A_EXT_LOGGER', 'A_EXT_LOADBALANCER', 'A_EXT_UWSGI']));
+				new DTblMap('*extprocessor$name', 'SV_EXT_TOP',
+						['SV_EXT_SEL', 'SV_EXT_LSAPI', 'SV_EXT_PROXY', 'SV_EXT_FCGI', 'SV_EXT_FCGIAUTH', 'SV_EXT_SCGI',
+                            'SV_EXT_SERVLET', 'SV_EXT_LOGGER', 'SV_EXT_LOADBALANCER', 'SV_EXT_UWSGI']));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_ext'),
@@ -369,10 +302,10 @@ class DPageDef
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'sh';
-		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
+		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('scripthandler:*addsuffix$suffix', 'SVT_SCRIPT_TOP', 'SVT_SCRIPT'));
 		$this->_pageDef['vh_'][$id] = $page;
 
-		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('virtualHostConfig:scripthandler:*addsuffix$suffix', 'A_SCRIPT_TOP', 'A_SCRIPT'));
+		$page = new DPage($id, DMsg::UIStr('tab_sh'), new DTblMap('virtualHostConfig:scripthandler:*addsuffix$suffix', 'SVT_SCRIPT_TOP', 'SVT_SCRIPT'));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'rw' ;
@@ -403,13 +336,13 @@ class DPageDef
 
 		$id = 'vhssl';
 		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('vhssl',
-				['LVT_SSL_CERT', 'VT_SSL', new DTblMap('acme', 'VT_SSL_ACME'),
-                    'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
+				['ALVT_SSL_CERT', 'VT_SSL', new DTblMap('acme', 'VT_SSL_ACME'),
+                    'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'ALVT_SSL_CLVERIFY']));
 		$this->_pageDef['vh_'][$id] = $page;
 
 		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('virtualHostConfig:vhssl',
-				['LVT_SSL_CERT', 'VT_SSL', new DTblMap('acme', 'VT_SSL_ACME'),
-                    'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'LVT_SSL_CLVERIFY']));
+				['ALVT_SSL_CERT', 'VT_SSL', new DTblMap('acme', 'VT_SSL_ACME'),
+                    'VT_SSL_FEATURE', 'LVT_SSL_OCSP', 'ALVT_SSL_CLVERIFY']));
 		$this->_pageDef['tp_'][$id] = $page;
 
 		$id = 'wsp';
@@ -437,7 +370,7 @@ class DPageDef
 
 		$id = 'sec' ;
 		$page = new DPage($id, DMsg::UIStr('tab_sec'), new DTblMap('', ['ADM_THROTTLE',
-			new DTblMap('accessControl', 'A_SEC_AC') ])) ;
+			new DTblMap('accessControl', 'ADM_SEC_AC') ])) ;
 		$this->_pageDef['admin'][$id] = $page ;
 
 		$id = 'usr' ;
@@ -453,7 +386,7 @@ class DPageDef
 		$this->_pageDef['al_'][$id] = $page ;
 
 		$id = 'lsec' ;
-		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('*listener$name', ['LVT_SSL_CERT', 'L_SSL', 'L_SSL_FEATURE', 'LVT_SSL_CLVERIFY' ])) ;
+		$page = new DPage($id, DMsg::UIStr('tab_ssl'), new DTblMap('*listener$name', ['ALVT_SSL_CERT', 'AL_SSL', 'AL_SSL_FEATURE', 'ALVT_SSL_CLVERIFY' ])) ;
 		$this->_pageDef['al_'][$id] = $page ;
 	}
 

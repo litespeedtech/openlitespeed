@@ -30,6 +30,7 @@
 #include <util/httputil.h>
 
 #include <ctype.h>
+#include <limits.h>
 #include <time.h>
 #include <stdint.h>
 
@@ -912,6 +913,71 @@ static int  LsLuaSessEof(lua_State *L)
 }
 
 
+static size_t LsLuaEscapedQsLen(const char *pSrc, size_t srcLen)
+{
+    size_t len = 0;
+    const char *pEnd = pSrc + srcLen;
+    while (pSrc < pEnd)
+    {
+        size_t chLen = 1;
+        switch (*pSrc)
+        {
+        case ':':
+        case '/':
+        case '?':
+        case '#':
+        case '[':
+        case ']':
+        case '@':
+        case '!':
+        case '$':
+        case '&':
+        case '(':
+        case ')':
+        case '*':
+        case '+':
+        case ',':
+        case ';':
+        case '=':
+        case '%':
+        case '\'':
+            chLen = 3;
+            break;
+        default:
+            break;
+        }
+        if (len > (size_t)LSLUA_SESS_MAXQSLEN - chLen)
+            return (size_t)LSLUA_SESS_MAXQSLEN + 1;
+        len += chLen;
+        ++pSrc;
+    }
+    return len;
+}
+
+
+static int LsLuaAppendEscapedQs(lua_State *L, const char *pSrc, size_t srcLen,
+                                char *pQs, size_t &iQsLen)
+{
+    if (iQsLen >= (size_t)LSLUA_SESS_MAXQSLEN)
+        return LsLuaApi::userError(L, "Parse QS", "Query string too large.");
+    size_t escapedLen = LsLuaEscapedQsLen(pSrc, srcLen);
+    if (escapedLen >= (size_t)LSLUA_SESS_MAXQSLEN - iQsLen)
+        return LsLuaApi::userError(L, "Parse QS", "Query string too large.");
+    iQsLen += HttpUtil::escapeQs(pSrc, srcLen, pQs + iQsLen,
+                                 LSLUA_SESS_MAXQSLEN - iQsLen);
+    return 0;
+}
+
+
+static int LsLuaAppendQsChar(lua_State *L, char ch, char *pQs, size_t &iQsLen)
+{
+    if (iQsLen >= (size_t)LSLUA_SESS_MAXQSLEN)
+        return LsLuaApi::userError(L, "Parse QS", "Query string too large.");
+    pQs[iQsLen++] = ch;
+    return 0;
+}
+
+
 // Table index must be positive.
 static int LsLuaParseQsTable(lua_State *L, int iTableIdx,
                              char *pQs, size_t &iQsLen)
@@ -936,19 +1002,11 @@ static int LsLuaParseQsTable(lua_State *L, int iTableIdx,
         case LUA_TNUMBER:
         case LUA_TSTRING:
             pVal = LsLuaApi::tolstring(L, iValOff, &iValLen);
-            if (iQsLen + iKeyLen + iValLen + 1 >= LSLUA_SESS_MAXQSLEN)
-            {
-                --iQsLen;
-                return 0;
-            }
-            iQsLen += HttpUtil::escapeQs(pKey, iKeyLen,
-                                         pQs + iQsLen,
-                                         LSLUA_SESS_MAXQSLEN - iQsLen);
-            pQs[iQsLen++] = '=';
-            iQsLen += HttpUtil::escapeQs(pVal, iValLen,
-                                         pQs + iQsLen,
-                                         LSLUA_SESS_MAXQSLEN - iQsLen);
-            pQs[iQsLen++] = '&';
+            if (LsLuaAppendEscapedQs(L, pKey, iKeyLen, pQs, iQsLen)
+                || LsLuaAppendQsChar(L, '=', pQs, iQsLen)
+                || LsLuaAppendEscapedQs(L, pVal, iValLen, pQs, iQsLen)
+                || LsLuaAppendQsChar(L, '&', pQs, iQsLen))
+                return LS_FAIL;
             break;
         case LUA_TBOOLEAN:
             if (!(LsLuaApi::toboolean(L, iValOff)))
@@ -956,15 +1014,9 @@ static int LsLuaParseQsTable(lua_State *L, int iTableIdx,
                 LsLuaApi::pop(L, 1);
                 continue;
             }
-            if (iQsLen + iKeyLen >= LSLUA_SESS_MAXQSLEN)
-            {
-                --iQsLen;
-                return 0;
-            }
-            iQsLen += HttpUtil::escapeQs(pKey, iKeyLen,
-                                         pQs + iQsLen,
-                                         LSLUA_SESS_MAXQSLEN - iQsLen);
-            pQs[iQsLen++] = '&';
+            if (LsLuaAppendEscapedQs(L, pKey, iKeyLen, pQs, iQsLen)
+                || LsLuaAppendQsChar(L, '&', pQs, iQsLen))
+                return LS_FAIL;
             break;
         case LUA_TTABLE:
             LsLuaApi::pushnil(L);
@@ -978,32 +1030,18 @@ static int LsLuaParseQsTable(lua_State *L, int iTableIdx,
                         LsLuaApi::pop(L, 1);
                         continue;
                     }
-                    if (iQsLen + iKeyLen >= LSLUA_SESS_MAXQSLEN)
-                    {
-                        --iQsLen;
-                        return 0;
-                    }
-                    iQsLen += HttpUtil::escapeQs(pKey, iKeyLen,
-                                                 pQs + iQsLen,
-                                                 LSLUA_SESS_MAXQSLEN - iQsLen);
-                    pQs[iQsLen++] = '&';
+                    if (LsLuaAppendEscapedQs(L, pKey, iKeyLen, pQs, iQsLen)
+                        || LsLuaAppendQsChar(L, '&', pQs, iQsLen))
+                        return LS_FAIL;
                     break;
                 case LUA_TNUMBER:
                 case LUA_TSTRING:
                     pVal = LsLuaApi::tolstring(L, iValOff, &iValLen);
-                    if (iQsLen + iKeyLen + iValLen + 1 >= LSLUA_SESS_MAXQSLEN)
-                    {
-                        --iQsLen;
-                        return 0;
-                    }
-                    iQsLen += HttpUtil::escapeQs(pKey, iKeyLen,
-                                                 pQs + iQsLen,
-                                                 LSLUA_SESS_MAXQSLEN - iQsLen);
-                    pQs[iQsLen++] = '=';
-                    iQsLen += HttpUtil::escapeQs(pVal, iValLen,
-                                                 pQs + iQsLen,
-                                                 LSLUA_SESS_MAXQSLEN - iQsLen);
-                    pQs[iQsLen++] = '&';
+                    if (LsLuaAppendEscapedQs(L, pKey, iKeyLen, pQs, iQsLen)
+                        || LsLuaAppendQsChar(L, '=', pQs, iQsLen)
+                        || LsLuaAppendEscapedQs(L, pVal, iValLen, pQs, iQsLen)
+                        || LsLuaAppendQsChar(L, '&', pQs, iQsLen))
+                        return LS_FAIL;
                     break;
                 default:
                     return LsLuaApi::userError(L, "Parse QS", "QS Value Table's value "
@@ -1031,6 +1069,8 @@ static int LsLuaGetQs(lua_State *L, int iQsOff, char *pQs, size_t &iQsLen)
     case LUA_TNUMBER:
     case LUA_TSTRING:
         ptr = LsLuaApi::tolstring(L, iQsOff, &iQsLen);
+        if (iQsLen > (size_t)LSLUA_SESS_MAXQSLEN)
+            return LsLuaApi::userError(L, "get_qs", "Query string too large.");
         memmove(pQs, ptr, iQsLen);
         break;
     case LUA_TTABLE:
@@ -1284,17 +1324,20 @@ static int LsLuaReqSetUri(lua_State *L)
                                        "req_set_uri")) != 0)
         return iRet;
     pUri = LsLuaApi::tolstring(L, 1, &iUriLen);
+    if (iUriLen > INT_MAX)
+        return LsLuaApi::userError(L, "req_set_uri", "Uri too large.");
     if (iArgs == 2 && LsLuaApi::toboolean(L, 2))
     {
         //internal redirect
         pQs = g_api->get_req_query_string(session, &iQsLen);
         if (g_api->set_uri_qs(session, LSI_URL_REDIRECT_INTERNAL,
-                              pUri, iUriLen, pQs, iQsLen))
+                              pUri, (int)iUriLen, pQs, iQsLen))
             return LsLuaApi::serverError(L, "req_set_uri", "Setting uri failed");
         pSession->setFlag(LLF_URLREDIRECTED);
         return LsLuaApi::yield(L, 0);
     }
-    if (g_api->set_uri_qs(session, LSI_URL_REWRITE, pUri, iUriLen, NULL, 0))
+    if (g_api->set_uri_qs(session, LSI_URL_REWRITE, pUri, (int)iUriLen,
+                          NULL, 0))
         return LsLuaApi::serverError(L, "req_set_uri", "Setting uri failed");
 
     return 0;
@@ -1305,15 +1348,17 @@ static int LsLuaReqSetUriArgs(lua_State *L)
 {
     char pQs[LSLUA_SESS_MAXQSLEN];
     size_t iQsLen = 0;
+    int iRet;
     LsLuaSession *pSession = LsLuaGetSession(L);
     if (LsLuaApi::gettop(L) != 1)
         return LsLuaApi::invalidNArgError(L, "req_set_uri_args");
 
-    LsLuaGetQs(L, 1, pQs, iQsLen);
+    if ((iRet = LsLuaGetQs(L, 1, pQs, iQsLen)) != 0)
+        return iRet;
     if (g_api->set_uri_qs(pSession->getHttpSession()
                           , LSI_URL_NOCHANGE | LSI_URL_QS_SET
                           , NULL, 0
-                          , pQs, iQsLen
+                          , pQs, (int)iQsLen
                          ) < 0
        )
         return LsLuaApi::serverError(L, "req_set_uri_args", "Set qs failed.");
@@ -1342,7 +1387,10 @@ static int LsLuaFillTable(lua_State *L, ls_xpool_t *pool,
             {
                 iKeyLen = pEquals - pBegin;
                 iValLen = pValEnd - ++pEquals;
-                pDVal = (char *)ls_xpool_realloc(pool, pDVal, iValLen);
+                pDVal = (char *)ls_xpool_realloc(pool, pDVal, iValLen + 1);
+                if (!pDVal)
+                    return LsLuaApi::serverError(L, "fillTable",
+                                                 "Allocating QS val failed.");
                 if (HttpUtil::unescapeQs(pDVal, iValLen, pEquals) < 0)
                     return LsLuaApi::serverError(L, "fillTable",
                                                  "Escape for QS val failed.");
@@ -1352,7 +1400,10 @@ static int LsLuaFillTable(lua_State *L, ls_xpool_t *pool,
                 iKeyLen = pValEnd - pBegin;
                 iValLen = -1;
             }
-            pDKey = (char *)ls_xpool_realloc(pool, pDKey, iKeyLen);
+            pDKey = (char *)ls_xpool_realloc(pool, pDKey, iKeyLen + 1);
+            if (!pDKey)
+                return LsLuaApi::serverError(L, "fillTable",
+                                             "Allocating QS key failed.");
             if (HttpUtil::unescapeQs(pDKey, iKeyLen, pBegin) < 0)
                 return LsLuaApi::serverError(L, "fillTable",
                                              "Escape for QS key failed.");
@@ -1396,6 +1447,7 @@ static int LsLuaReqGetPostArgs(lua_State *L)
 {
     char *pBody;
     int iRet, iMax, iBodySize, iBodyLen = 0;
+    int64_t bodySize;
     const lsi_session_t *session;
     ls_xpool_t *pool;
     LsLuaSession *pSession = LsLuaSession::getSelf(L);
@@ -1410,12 +1462,27 @@ static int LsLuaReqGetPostArgs(lua_State *L)
 
     session = pSession->getHttpSession();
     pool = g_api->get_session_pool(session);
-    iBodySize = g_api->get_req_content_length(session);
+    bodySize = g_api->get_req_content_length(session);
+    if (bodySize <= 0)
+        return 0;
+    if (bodySize > INT_MAX)
+        return LsLuaApi::serverError(L, "get_post_args",
+                                     "Request body is too large.");
+    iBodySize = (int)bodySize;
     pBody = (char *)ls_xpool_alloc(pool, iBodySize);
+    if (!pBody)
+        return LsLuaApi::serverError(L, "get_post_args",
+                                     "Failed to allocate request body buffer.");
     while (iBodyLen < iBodySize)
     {
         iRet = g_api->read_req_body(session,
-                                    pBody + iBodyLen, iBodySize);
+                                    pBody + iBodyLen, iBodySize - iBodyLen);
+        if (iRet <= 0)
+        {
+            ls_xpool_free(pool, pBody);
+            return LsLuaApi::serverError(L, "get_post_args",
+                                         "Failed to read request body.");
+        }
         iBodyLen += iRet;
     }
     if (iBodyLen == 0)
@@ -1539,8 +1606,13 @@ static int LsLuaReqSetBodyData(lua_State *L)
         return iRet;
 
     pData = LsLuaApi::tolstring(L, -1, &iDataLen);
+    if (iDataLen > INT_MAX)
+        return LsLuaApi::userError(L, "set_body_data", "Body data too large.");
     pBuf = g_api->get_new_body_buf(iDataLen);
-    if (g_api->append_body_buf(pBuf, pData, iDataLen) != (int)iDataLen)
+    if (!pBuf)
+        return LsLuaApi::serverError(L, "set_body_data",
+                                     "Creating body buffer failed");
+    if (g_api->append_body_buf(pBuf, pData, (int)iDataLen) != (int)iDataLen)
         return LsLuaApi::serverError(L, "set_body_data",
                                      "Appending to body failed");
     g_api->set_req_body_buf(pSession->getHttpSession(), pBuf);
@@ -1565,7 +1637,7 @@ static int LsLuaReqSetBodyFile(lua_State *L)
 
 static int LsLuaReqInitBody(lua_State *L)
 {
-    int iInitialSize = 0;
+    int64_t iInitialSize = 0;
     void *pBuf;
     LsLuaSession *pSession = LsLuaGetSession(L);
 
@@ -1585,6 +1657,9 @@ static int LsLuaReqInitBody(lua_State *L)
         break;
     case 1:
         iInitialSize = LsLuaApi::tointeger(L, 1);
+        if (iInitialSize < 0)
+            return LsLuaApi::userError(L, "req_init_body",
+                                       "Initial size is invalid.");
         break;
     default:
         return LsLuaApi::invalidNArgError(L, "req_init_body");
@@ -1621,8 +1696,11 @@ static int LsLuaReqAppendBody(lua_State *L)
         return LsLuaApi::userError(L, "req_append_body", "Body not initialized.");
 
     pAppend = LsLuaApi::tolstring(L, 1, &iAppendLen);
+    if (iAppendLen > INT_MAX)
+        return LsLuaApi::userError(L, "req_append_body",
+                                   "Body data too large.");
 
-    if (g_api->append_body_buf(pBuf, pAppend, iAppendLen) != (int)iAppendLen)
+    if (g_api->append_body_buf(pBuf, pAppend, (int)iAppendLen) != (int)iAppendLen)
         return LsLuaApi::serverError(L, "req_append_body",
                                      "Append body buf failed.");
     return 0;
@@ -1749,7 +1827,11 @@ static int  LsLuaSessExec(lua_State *L)
     ptr = LsLuaApi::tolstring(L, 1, &iLen);
     if (iLen == 0)
         return LsLuaApi::userError(L, "Exec", "Uri Len 0.");
+    if (iLen > INT_MAX)
+        return LsLuaApi::userError(L, "Exec", "Uri too large.");
     pUri = ls_str_xnew(ptr, iLen, pool);
+    if (!pUri)
+        return LsLuaApi::serverError(L, "Exec", "Uri allocation failed.");
     iLen = 0;
     if (iNumArgs == 2)
     {
@@ -1758,6 +1840,11 @@ static int  LsLuaSessExec(lua_State *L)
         case LUA_TNUMBER:
         case LUA_TSTRING:
             ptr = LsLuaApi::tolstring(L, 2, &iLen);
+            if (iLen > (size_t)LSLUA_SESS_MAXQSLEN)
+            {
+                ls_str_xdelete(pUri, pool);
+                return LsLuaApi::userError(L, "Exec", "Query string too large.");
+            }
             memmove(pQs, ptr, iLen);
             break;
         case LUA_TTABLE:
@@ -1775,9 +1862,9 @@ static int  LsLuaSessExec(lua_State *L)
     if (g_api->set_uri_qs(pSession->getHttpSession()
                           , LSI_URL_REDIRECT_INTERNAL
                           , ls_str_cstr(pUri)
-                          , ls_str_len(pUri)
+                          , (int)ls_str_len(pUri)
                           , pQs
-                          , iLen
+                          , (int)iLen
                          )
        )
     {
@@ -1815,6 +1902,9 @@ static int  LsLuaSessRedirect(lua_State *L)
     else
         status = 1 * LsLuaApi::tonumber(L, 2);
 
+    if (cp == NULL || len > INT_MAX)
+        return LsLuaApi::userError(L, "sess_redirect", "Invalid Uri.");
+
     switch (status)
     {
     case LSI_URL_NOCHANGE:          // 0
@@ -1838,7 +1928,8 @@ static int  LsLuaSessRedirect(lua_State *L)
         status = LSI_URL_REWRITE;
         break;
     }
-    if (g_api->set_uri_qs(pSession->getHttpSession(), status, cp, len, "", 0))
+    if (g_api->set_uri_qs(pSession->getHttpSession(), status, cp, (int)len,
+                          "", 0))
         return LsLuaApi::serverError(L, "sess_redirect",
                                      "Failed to set the new Uri.");
 
@@ -2258,7 +2349,8 @@ static int LsLuaSessEscapeHtml(lua_State *L)
 {
     const char *pSrc;
     char pDest[LSLUA_SESS_MAXURILEN];
-    size_t iSrcLen, iDestLen;
+    size_t iSrcLen;
+    int iDestLen;
     int iRet;
     LsLuaSession::getSelf(L);
     if (LsLuaApi::gettop(L) != 1)
@@ -2285,7 +2377,8 @@ static int LsLuaSessEscapeUri(lua_State *L)
 {
     const char *pSrc;
     char pDest[LSLUA_SESS_MAXURILEN];
-    size_t iSrcLen, iDestLen;
+    size_t iSrcLen;
+    int iDestLen;
     int iRet;
     LsLuaSession::getSelf(L);
     if (LsLuaApi::gettop(L) != 1)
@@ -2296,8 +2389,10 @@ static int LsLuaSessEscapeUri(lua_State *L)
     pSrc = LsLuaApi::tolstring(L, 1, &iSrcLen);
     if (iSrcLen <= 0)
         return LsLuaApi::userError(L, "escape_uri", "Invalid arg.");
+    if (iSrcLen > INT_MAX)
+        return LsLuaApi::userError(L, "escape_uri", "Input too large.");
 
-    iDestLen = HttpUtil::escapeRFC3986(pSrc, iSrcLen, pDest,
+    iDestLen = HttpUtil::escapeRFC3986(pSrc, (int)iSrcLen, pDest,
                                        LSLUA_SESS_MAXURILEN);
     if (iDestLen <= 0)
         return LsLuaApi::serverError(L, "escape_uri", "Error escaping.");
@@ -2311,7 +2406,8 @@ static int LsLuaSessUnescapeUri(lua_State *L)
 {
     const char *pSrc;
     char pDest[LSLUA_SESS_MAXURILEN];
-    size_t iSrcLen, iDestLen;
+    size_t iSrcLen;
+    int iDestLen;
     int iRet;
     LsLuaSession::getSelf(L);
     if (LsLuaApi::gettop(L) != 1)
@@ -2323,7 +2419,9 @@ static int LsLuaSessUnescapeUri(lua_State *L)
     pSrc = LsLuaApi::tolstring(L, 1, &iSrcLen);
     if (iSrcLen <= 0)
         return LsLuaApi::userError(L, "unescape_uri", "Invalid arg.");
-    iDestLen = HttpUtil::unescape(pSrc, iSrcLen, pDest,
+    if (iSrcLen > INT_MAX)
+        return LsLuaApi::userError(L, "unescape_uri", "Input too large.");
+    iDestLen = HttpUtil::unescape(pSrc, (int)iSrcLen, pDest,
                                   LSLUA_SESS_MAXURILEN);
     if (iDestLen <= 0)
         return LsLuaApi::serverError(L, "unescape_uri", "Error unescaping.");
@@ -2337,7 +2435,8 @@ static int LsLuaSessEscape(lua_State *L)
 {
     const char *pSrc;
     char pDest[LSLUA_SESS_MAXURILEN];
-    size_t iSrcLen, iDestLen;
+    size_t iSrcLen;
+    int iDestLen;
     int iRet;
     LsLuaSession::getSelf(L);
     if (LsLuaApi::gettop(L) != 1)
@@ -2348,7 +2447,9 @@ static int LsLuaSessEscape(lua_State *L)
     pSrc = LsLuaApi::tolstring(L, 1, &iSrcLen);
     if (iSrcLen <= 0)
         return LsLuaApi::userError(L, "escape", "Invalid arg.");
-    iDestLen = HttpUtil::escapeQs(pSrc, iSrcLen, pDest,
+    if (iSrcLen > INT_MAX)
+        return LsLuaApi::userError(L, "escape", "Input too large.");
+    iDestLen = HttpUtil::escapeQs(pSrc, (int)iSrcLen, pDest,
                                   LSLUA_SESS_MAXURILEN);
     if (iDestLen <= 0)
         return LsLuaApi::serverError(L, "escape", "Error escaping.");
@@ -2362,7 +2463,8 @@ static int LsLuaSessUnescape(lua_State *L)
 {
     const char *pSrc;
     char pDest[LSLUA_SESS_MAXURILEN];
-    size_t iSrcLen, iDestLen;
+    size_t iSrcLen;
+    int iDestLen;
     int iRet;
     LsLuaSession::getSelf(L);
     if (LsLuaApi::gettop(L) != 1)
@@ -2373,7 +2475,9 @@ static int LsLuaSessUnescape(lua_State *L)
     pSrc = LsLuaApi::tolstring(L, 1, &iSrcLen);
     if (iSrcLen <= 0)
         return LsLuaApi::userError(L, "unescape", "Invalid arg.");
-    iDestLen = HttpUtil::unescapeQs(pSrc, iSrcLen, pDest,
+    if (iSrcLen > INT_MAX)
+        return LsLuaApi::userError(L, "unescape", "Input too large.");
+    iDestLen = HttpUtil::unescapeQs(pSrc, (int)iSrcLen, pDest,
                                     LSLUA_SESS_MAXURILEN);
     if (iDestLen <= 0)
         return LsLuaApi::serverError(L, "unescape", "Error unescaping.");
@@ -2542,11 +2646,19 @@ static int LsLuaSessEncodeBase64(lua_State *L)
     pBuf = LsLuaApi::tolstring(L, 1, &iLen);
     if (iLen <= 0)
         return LsLuaApi::userError(L, "encode_base64", "Invalid arg.");
+    if (iLen > (size_t)(INT_MAX / 4) * 3)
+        return LsLuaApi::userError(L, "encode_base64", "Input is too large.");
 
-    iNewLen = ls_base64_encodelen(iLen);
+    iNewLen = ls_base64_encodelen((int)iLen);
     pEncodedBuf = (char *)ls_xpool_alloc(g_api->get_session_pool(pSession)
                                          , iNewLen);
-    iNewLen = ls_base64_encode(pBuf, iLen, pEncodedBuf);
+    if (!pEncodedBuf)
+        return LsLuaApi::serverError(L, "encode_base64",
+                                     "Failed to allocate output buffer.");
+    iNewLen = ls_base64_encode(pBuf, (int)iLen, pEncodedBuf, iNewLen);
+    if (iNewLen < 0)
+        return LsLuaApi::serverError(L, "encode_base64",
+                                     "Failed to encode input.");
     LsLuaApi::pushlstring(L, pEncodedBuf, iNewLen);
     return 1;
 }
@@ -2568,11 +2680,18 @@ static int LsLuaSessDecodeBase64(lua_State *L)
     pBuf = LsLuaApi::tolstring(L, 1, &iLen);
     if (iLen <= 0)
         return LsLuaApi::userError(L, "decode_base64", "Invalid arg.");
+    if (iLen > INT_MAX)
+        return LsLuaApi::userError(L, "decode_base64", "Input is too large.");
 
     pDecodedBuf = (char *)ls_xpool_alloc(g_api->get_session_pool(pSession)
                                          , iLen);
-    iLen = ls_base64_decode(pBuf, iLen, pDecodedBuf);
-    LsLuaApi::pushlstring(L, pDecodedBuf, iLen);
+    if (!pDecodedBuf)
+        return LsLuaApi::serverError(L, "decode_base64",
+                                     "Failed to allocate output buffer.");
+    int decodedLen = ls_base64_decode(pBuf, (int)iLen, pDecodedBuf, (int)iLen);
+    if (decodedLen < 0)
+        return LsLuaApi::userError(L, "decode_base64", "Invalid base64 input.");
+    LsLuaApi::pushlstring(L, pDecodedBuf, decodedLen);
     return 1;
 }
 
@@ -2860,24 +2979,32 @@ static int LsLuaRespGetHeaders(lua_State *L)
     LsLuaSession *pSession = LsLuaGetSession(L);
     struct iovec iov_key[MAX_RESP_HEADERS_NUMBER];
     struct iovec iov_val[MAX_RESP_HEADERS_NUMBER];
-    char bigout[0x1000];
-    int size = 0;
+    char bigout[0x10000];
+    size_t size = 0;
     char *cp = bigout;
 
     int count = g_api->get_resp_headers(pSession->getHttpSession(),
                                         iov_key, iov_val, MAX_RESP_HEADERS_NUMBER);
     for (int i = 0; i < count; ++i)
     {
-        memcpy(cp, iov_key[i].iov_base, iov_key[i].iov_len);
-        cp += iov_key[i].iov_len;
+        size_t keyLen = iov_key[i].iov_len;
+        size_t valLen = iov_val[i].iov_len;
+        size_t avail = bigout + sizeof(bigout) - cp;
+        if (keyLen > avail || valLen > avail - keyLen
+            || 5 > avail - keyLen - valLen)
+            return LsLuaApi::serverError(L, "resp_get_headers",
+                                         "Response headers too large.");
+
+        memcpy(cp, iov_key[i].iov_base, keyLen);
+        cp += keyLen;
         memcpy(cp, ": ", 2);
         cp += 2;
-        memcpy(cp, iov_val[i].iov_base, iov_val[i].iov_len);
-        cp += iov_val[i].iov_len;
+        memcpy(cp, iov_val[i].iov_base, valLen);
+        cp += valLen;
         memcpy(cp, "\r\n", 2);
         cp += 2;
         *cp++ = '+';
-        size += iov_key[i].iov_len + iov_val[i].iov_len + 5;
+        size += keyLen + valLen + 5;
     }
     // *cp = 0;
     if (size)
@@ -3046,10 +3173,3 @@ void LsLuaCreateArgTable(lua_State *L)
     LsLuaApi::setmetatable(L, -2);
     LsLuaApi::setfield(L, -2, "arg");
 }
-
-
-
-
-
-
-

@@ -197,6 +197,10 @@ abstract class RequestProbeBase
             return true;
         }
 
+        if (strlen($pattern) > 200) {
+            return false;
+        }
+
         $regex = '~' . str_replace('~', '\~', (string) $pattern) . '~' . ($caseInsensitive ? 'i' : '');
         return (@preg_match($regex, (string) $subject) === 1);
     }

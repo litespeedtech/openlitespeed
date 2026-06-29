@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2017-2023 LiteSpeed Technologies, Inc.
+ * @copyright 2017-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\Panel;
@@ -53,12 +53,6 @@ class CPanel extends ControlPanel
      * @var string
      */
     const USER_PLUGIN_RELATIVE_UNINSTALL_SCRIPT = 'uninstall.sh';
-
-    /**
-     * @since 1.13.2
-     * @var string
-     */
-    const USER_PLUGIN_BACKUP_DIR = '/tmp/lscp-plugin-tmp';
 
     /**
      * @since 1.13.11
@@ -126,25 +120,6 @@ class CPanel extends ControlPanel
      */
     protected $cpanelPluginCustTransDir;
 
-    /**
-     * @deprecated 1.13.11  Never used.
-     * @since 1.13.2
-     * @var string
-     */
-    protected $tmpCpanelPluginDataDir;
-
-    /**
-     * @since 1.13.2
-     * @var string
-     */
-    protected $tmpCpanelPluginTplDir;
-
-    /**
-     * @since 1.13.2
-     * @var string
-     */
-    protected $tmpCpanelPluginCustTransDir;
-
     protected function __construct()
     {
         /** @noinspection PhpUnhandledExceptionInspection */
@@ -157,12 +132,8 @@ class CPanel extends ControlPanel
      */
     protected function init2()
     {
-        $this->panelName                   = 'cPanel/WHM';
-        $this->defaultSvrCacheRoot         = '/home/lscache/';
-        $this->tmpCpanelPluginTplDir       =
-            self::USER_PLUGIN_BACKUP_DIR . '/landing';
-        $this->tmpCpanelPluginCustTransDir =
-            self::USER_PLUGIN_BACKUP_DIR . '/cust';
+        $this->panelName           = 'cPanel/WHM';
+        $this->defaultSvrCacheRoot = '/home/lscache/';
 
         /** @noinspection PhpUnhandledExceptionInspection */
         parent::init2();
@@ -405,19 +376,44 @@ class CPanel extends ControlPanel
 
     /**
      *
+     * @since 1.17.10
+     *
+     * @param WPInstall $wpInstall
+     *
+     * @return PhpBinaryParts
+     */
+    public function getPhpBinaryParts( WPInstall $wpInstall )
+    {
+        /**
+         * cPanel php wrapper accurately detects the correct EA4 binary when
+         * --ea-reference-dir is provided. The argument is shell-escaped here
+         * so the resulting options string is safe to interpolate raw.
+         */
+        $options = '--ea-reference-dir='
+            . escapeshellarg($wpInstall->getPath() . '/wp-admin');
+
+        if ( $this->phpOptions !== '' ) {
+            $options .= ' ' . $this->phpOptions;
+        }
+
+        return new PhpBinaryParts('/usr/local/bin/php', $options);
+    }
+
+    /**
+     * @deprecated since 1.17.10  Override getPhpBinaryParts() instead.
+     *
      * @param WPInstall $wpInstall
      *
      * @return string
      */
     public function getPhpBinary( WPInstall $wpInstall )
     {
-        /**
-         * cPanel php wrapper should accurately detect the correct binary in
-         * EA4 when EA4 only directive '--ea-reference-dir' is provided.
-         */
-        return '/usr/local/bin/php '
-            . "--ea-reference-dir={$wpInstall->getPath()}/wp-admin "
-            . $this->phpOptions;
+        $parts   = $this->getPhpBinaryParts($wpInstall);
+        $options = $parts->getOptionsString();
+
+        return $options === ''
+            ? $parts->getBinPath()
+            : $parts->getBinPath() . ' ' . $options;
     }
 
     /**
@@ -484,7 +480,9 @@ class CPanel extends ControlPanel
 
         if ( $existingInstall ) {
 
-            if ( !self::backupCpanelPluginDataFiles() ) {
+            $backupDir = self::backupCpanelPluginDataFiles();
+
+            if ( $backupDir === false ) {
                 throw new LSCMException(
                     'Failed to backup cPanel user-end plugin data files. '
                         . 'Aborting install/update operation.'
@@ -493,15 +491,15 @@ class CPanel extends ControlPanel
 
             exec(self::USER_PLUGIN_INSTALL_SCRIPT);
 
-            if ( !self::restoreCpanelPluginDataFiles() ) {
+            if ( !self::restoreCpanelPluginDataFiles($backupDir) ) {
                 Logger::error(
                     'Failed to restore cPanel user-end plugin data files.'
                 );
+                exec('/bin/rm -rf ' . escapeshellarg($backupDir));
             }
         }
         else {
             exec(self::USER_PLUGIN_INSTALL_SCRIPT);
-            self::turnOnCpanelPluginAutoInstall();
         }
 
         $this->updateCoreCpanelPluginConfSettings();
@@ -510,12 +508,71 @@ class CPanel extends ControlPanel
     }
 
     /**
+     * Create a per-run, unpredictable, restrictive-permission temporary
+     * directory for cPanel plugin data backup (V15, CWE-377/CWE-367).
+     *
+     * Uses random_bytes() on PHP 7+ and falls back to
+     * openssl_random_pseudo_bytes() on PHP 5.6 when the OpenSSL extension is
+     * available. When neither is available, a non-cryptographic suffix is
+     * used; a local attacker who guesses the name can pre-create the path and
+     * cause mkdir() to fail (DoS on install/update), but cannot exploit it for
+     * traversal — mkdir() rejects an already-existing path outright.
+     *
+     * @since 1.17.10
+      * @since 1.17.10.1  Added non-crypto suffix fallback for
+     *     environments where both random_bytes() and
+     *     openssl_random_pseudo_bytes() are unavailable.
+     *
+     * @return string  The path of the newly created directory.
+     *
+     * @throws LSCMException  Thrown when failing to create the directory.
+     */
+    protected static function createPluginBackupDir()
+    {
+        $base = sys_get_temp_dir();
+
+        if ( function_exists('random_bytes') ) {
+            $suffix = bin2hex(random_bytes(8));
+        }
+        elseif ( function_exists('openssl_random_pseudo_bytes') ) {
+            $strong = false;
+            $raw    = openssl_random_pseudo_bytes(8, $strong);
+
+            if ( $raw === false || !$strong ) {
+                throw new LSCMException(
+                    'Failed to generate cryptographically strong random bytes '
+                        . 'for temporary directory name'
+                );
+            }
+
+            $suffix = bin2hex($raw);
+        }
+        else {
+            $suffix = bin2hex(pack('NN', time() ^ mt_rand(), getmypid()));
+        }
+
+        $path = "$base/lscp-plugin-$suffix";
+
+        if ( !mkdir($path, 0700) ) {
+            throw new LSCMException(
+                "Failed to create temporary directory $path"
+            );
+        }
+
+        return $path;
+    }
+
+    /**
      *
      * @since 1.13.2
      * @since 1.13.2.2  Made function static.
      * @since 1.13.5.2  Removed optional param $oldLogic.
+     * @since 1.17.10  Returns per-run backup dir path (string) on success,
+     *     false on early return; no longer uses a fixed /tmp constant
+     *     (V15, CWE-377).
      *
-     * @return bool
+     * @return string|false  Per-run backup directory path on success, false
+     *     on early-return (no plugin install found or no conf file).
      *
      * @throws LSCMException  Thrown when failing to create a temporary backup
      *     directory.
@@ -532,16 +589,7 @@ class CPanel extends ControlPanel
             return false;
         }
 
-        if ( file_exists(self::USER_PLUGIN_BACKUP_DIR) ) {
-            Util::rrmdir(self::USER_PLUGIN_BACKUP_DIR);
-        }
-
-        if ( !mkdir(self::USER_PLUGIN_BACKUP_DIR, 0755) ) {
-            throw new LSCMException(
-                'Failed to make temporary directory '
-                    . self::USER_PLUGIN_BACKUP_DIR
-            );
-        }
+        $backupDir = self::createPluginBackupDir();
 
         /**
          * Move existing conf file (if needed), templates, and custom
@@ -553,29 +601,33 @@ class CPanel extends ControlPanel
             self::getInstalledCpanelPluginActiveConfFileLocation($pluginDir);
 
         if ( $activeConfFile == '' || !file_exists($activeConfFile) ) {
+            Util::rrmdir($backupDir);
             return false;
         }
 
         $backupCmds = '';
 
         if ( $activeConfFile != self::USER_PLUGIN_CONF ) {
-            $backupCmds .= "/bin/mv $activeConfFile "
-                . self::USER_PLUGIN_BACKUP_DIR . '/;';
+            $backupCmds .= '/bin/mv ' . escapeshellarg($activeConfFile)
+                . ' ' . escapeshellarg($backupDir) . '/;';
         }
 
-        $tmpCpanelPluginCustTransDir = self::USER_PLUGIN_BACKUP_DIR . '/cust';
+        $custTransDir = $backupDir . '/cust';
 
-        $backupCmds .= '/bin/mv '
-            . "$pluginDir/landing " . self::USER_PLUGIN_BACKUP_DIR . '/;'
-            . "/bin/rm -rf "
-            . self::USER_PLUGIN_BACKUP_DIR . '/landing/default;'
-            . '/bin/mv '
-            . "$pluginDir/lang/cust $tmpCpanelPluginCustTransDir;"
-            . "/bin/rm -rf $tmpCpanelPluginCustTransDir/README";
+        $escPluginDir       = escapeshellarg($pluginDir);
+        $escBackupDir       = escapeshellarg($backupDir);
+        $escTmpCustTransDir = escapeshellarg($custTransDir);
+        $escBackupLanding   = escapeshellarg($backupDir . '/landing/default');
+        $escTmpReadme       = escapeshellarg($custTransDir . '/README');
+
+        $backupCmds .= "/bin/mv $escPluginDir/landing $escBackupDir/;"
+            . "/bin/rm -rf $escBackupLanding;"
+            . "/bin/mv $escPluginDir/lang/cust $escTmpCustTransDir;"
+            . "/bin/rm -rf $escTmpReadme";
 
         exec($backupCmds);
 
-        return true;
+        return $backupDir;
     }
 
     /**
@@ -583,10 +635,14 @@ class CPanel extends ControlPanel
      * @since 1.13.2
      * @since 1.13.2.2  Made function static.
      * @since 1.13.5.2  Removed optional param $oldLogic.
+     * @since 1.17.10  Accepts per-run $backupDir path (V15, CWE-377).
+     *
+     * @param string $backupDir  Per-run backup directory created by
+     *     backupCpanelPluginDataFiles().
      *
      * @return bool
      */
-    protected static function restoreCpanelPluginDataFiles()
+    protected static function restoreCpanelPluginDataFiles( $backupDir )
     {
         $pluginInstalls = array();
 
@@ -599,13 +655,11 @@ class CPanel extends ControlPanel
         }
 
 
-        if ( !file_exists(self::USER_PLUGIN_BACKUP_DIR)
-                || empty($pluginInstalls) ) {
-
+        if ( !file_exists($backupDir) || empty($pluginInstalls) ) {
             return false;
         }
 
-        $tmpCpanelPluginConfFile = self::USER_PLUGIN_BACKUP_DIR . '/lswcm.conf';
+        $tmpCpanelPluginConfFile = $backupDir . '/lswcm.conf';
 
         foreach ( $pluginInstalls as $pluginInstall ) {
 
@@ -631,16 +685,17 @@ class CPanel extends ControlPanel
             /**
              * Replace cPanel plugin templates, custom translations.
              */
+            $escBackupDir     = escapeshellarg($backupDir);
+            $escPluginInstall = escapeshellarg($pluginInstall);
+            $escLangDir       = escapeshellarg($cpanelPluginLangDir);
+
             exec(
-                '/bin/cp -prf '
-                    . self::USER_PLUGIN_BACKUP_DIR . "/landing $pluginInstall/;"
-                    . '/bin/cp -prf '
-                    . self::USER_PLUGIN_BACKUP_DIR
-                    . "/cust $cpanelPluginLangDir/"
+                "/bin/cp -prf $escBackupDir/landing $escPluginInstall/;"
+                    . "/bin/cp -prf $escBackupDir/cust $escLangDir/"
             );
         }
 
-        exec('/bin/rm -rf ' . self::USER_PLUGIN_BACKUP_DIR);
+        exec('/bin/rm -rf ' . escapeshellarg($backupDir));
 
         return true;
     }
@@ -672,7 +727,7 @@ class CPanel extends ControlPanel
             );
         }
 
-        exec($uninstallFile);
+        exec(escapeshellarg($uninstallFile));
 
         self::turnOffCpanelPluginAutoInstall();
     }

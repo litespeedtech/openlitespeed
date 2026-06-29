@@ -237,7 +237,7 @@ class Context
      * Checks if the current instance is lacking the expected level of
      * permissions.
      *
-     * @deprecated release_ver_placeholder
+     * @deprecated 1.17.8
      *
      * @return bool
      *
@@ -253,7 +253,7 @@ class Context
      * Checks if the current instance is lacking the expected level of
      * permissions.
      *
-     * @since release_ver_placeholder
+     * @since 1.17.8
      *
      * @return bool
      */

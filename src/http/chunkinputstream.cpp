@@ -146,14 +146,12 @@ int ChunkInputStream::parseChunkLen(char *pLineEnd)
     m_iBufUsed = (pLineEnd - (char *)m_achChunkLenBuf) + 1;
     if (m_iBufUsed >= m_iBufLen)
         m_iBufUsed = m_iBufLen = 0;
-    if (pLineEnd[-1] == '\r')
+    if (pLineEnd > m_achChunkLenBuf && pLineEnd[-1] == '\r')
         --pLineEnd;
     char *p = m_achChunkLenBuf;
     StringTool::strTrim((const char *&)p, (const char *&)pLineEnd);
     *pLineEnd = 0;
     char *p1;
-    if (pLineEnd > p + 1 && !isxdigit(*(p + 1)))
-        return -1;
     long lLen = strtol(p, &p1, 16);
     if (((!*p1) || (*p1 == ' ') || (*p1 == ';')) && (p1 != p))
     {
@@ -360,5 +358,4 @@ int ChunkInputStream::readv(struct iovec *vector, int count)
     assert("ChunkInputStream::readv() is not impelemented" == NULL);
     return LS_FAIL;
 }
-
 

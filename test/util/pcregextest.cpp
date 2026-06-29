@@ -41,7 +41,7 @@ SUITE(PcregexTest)
         CHECK(vector[2] == 1);
         CHECK(vector[3] == sizeof(achSub1) - 5);
         find = reg.exec(achSub2, sizeof(achSub2) - 1, 0, 0, vector, 30);
-        CHECK(find == PCRE_ERROR_NOMATCH);
+        CHECK(find == LSRE_ERROR_NOMATCH);
     }
 
     TEST(testRegSub)

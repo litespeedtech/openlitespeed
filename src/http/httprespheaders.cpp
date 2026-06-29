@@ -29,6 +29,7 @@
 #include <lsqpack.h>
 
 #include <ctype.h>
+#include <limits.h>
 #include <util/stringlist.h>
 
 //FIXME: need to update the comments
@@ -278,6 +279,25 @@ inline void appendLowerCase(char *dest, const char *src, int n)
 }
 
 
+static int getAppendHeaderLen(const lsxpack_header *pKv, unsigned int nameLen,
+                              unsigned int valLen, int method, int *pNeed)
+{
+    size_t need = (size_t)nameLen + valLen + 4;
+    if (need > HRH_MAX_LEN)
+        return LS_FAIL;
+
+    if (method != LSI_HEADER_SET && method != LSI_HEADER_ADD && pKv->val_len > 0)
+    {
+        need += (size_t)pKv->val_len + 1;
+        if (need > HRH_MAX_LEN)
+            return LS_FAIL;
+    }
+
+    *pNeed = (int)need;
+    return LS_OK;
+}
+
+
 void HttpRespHeaders::appendKvPairIdx(lsxpack_header *exist, int kv_idx)
 {
     while ((exist->chain_next_idx & BYPASS_HIGHEST_BIT_MASK) > 0)
@@ -349,12 +369,16 @@ int HttpRespHeaders::appendHeader(lsxpack_header *pKv, int hdr_idx, const char *
                                   unsigned int nameLen,
                                   const char *pVal, unsigned int valLen, int method)
 {
+    int need;
+    if (getAppendHeaderLen(pKv, nameLen, valLen, method, &need) != LS_OK)
+        return -1;
+
     if (method == LSI_HEADER_SET)
         memset(pKv, 0, sizeof(lsxpack_header));
 
-    if (m_buf.available() < (int)(pKv->val_len + nameLen * 2 + valLen + 9))
+    if (m_buf.available() < need)
     {
-        if (m_buf.grow(pKv->val_len + nameLen * 2 + valLen + 9))
+        if (m_buf.grow(need - m_buf.available()))
             return -1;
     }
 
@@ -411,7 +435,7 @@ void HttpRespHeaders::verifyHeaderLength(INDEX headerIndex,
         const char *pName, unsigned int nameLen)
 {
 #ifndef NDEBUG
-    assert(headerIndex == getIndex(pName));
+    assert(headerIndex == getIndex(pName, nameLen));
     assert((int)nameLen == getNameLen(headerIndex));
 #endif
 }
@@ -613,6 +637,9 @@ int HttpRespHeaders::appendLastVal(const char *pVal, int valLen)
         return -1;
 
     if (pKv->name_len == 0)
+        return -1;
+
+    if ((size_t)valLen > (size_t)HRH_MAX_LEN - pKv->val_len)
         return -1;
 
     if (m_buf.available() < valLen)
@@ -878,185 +905,173 @@ int HttpRespHeaders::getHeader(const char *pName, int nameLen, const char **val,
 }
 
 
-HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader)
+HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader, int len)
 {
-    INDEX idx = H_HEADER_END;
+    if (pHeader == NULL || len <= 0)
+        return H_HEADER_END;
 
     switch (*pHeader++ | 0x20)
     {
     case 'a':
-        if (strncasecmp(pHeader, "ccept-ranges", 12) == 0)
-            idx = H_ACCEPT_RANGES;
-        else if (strncasecmp(pHeader, "lt-svc", 6) == 0)
-            idx = H_ALT_SVC;
+        if (len == 13 && strncasecmp(pHeader, "ccept-ranges", 12) == 0)
+            return H_ACCEPT_RANGES;
+        if (len == 7 && strncasecmp(pHeader, "lt-svc", 6) == 0)
+            return H_ALT_SVC;
         break;
     case 'c':
-        switch(*(pHeader+7) | 0x20)
+        switch (len)
         {
-        case 'o':
+        case 10:
             if (strncasecmp(pHeader, "onnection", 9) == 0)
-                idx = H_CONNECTION;
+                return H_CONNECTION;
             break;
-        case 't':
+        case 12:
             if (strncasecmp(pHeader, "ontent-type", 11) == 0)
-                idx = H_CONTENT_TYPE;
+                return H_CONTENT_TYPE;
             break;
-        case 'l':
-            if (strncasecmp(pHeader, "ontent-length", 13) == 0)
-                idx = H_CONTENT_LENGTH;
-            break;
-        case 'e':
-            if (strncasecmp(pHeader, "ontent-encoding", 15) == 0)
-                idx = H_CONTENT_ENCODING;
-            break;
-        case 'r':
+        case 13:
             if (strncasecmp(pHeader, "ontent-range", 12) == 0)
-                idx = H_CONTENT_RANGE;
-            break;
-        case 'd':
-            if (strncasecmp(pHeader, "ontent-disposition", 18) == 0)
-                idx = H_CONTENT_DISPOSITION;
-            break;
-        case 'n':
+                return H_CONTENT_RANGE;
             if (strncasecmp(pHeader, "ache-control", 12) == 0)
-                idx = H_CACHE_CTRL;
+                return H_CACHE_CTRL;
+            break;
+        case 14:
+            if (strncasecmp(pHeader, "ontent-length", 13) == 0)
+                return H_CONTENT_LENGTH;
+            break;
+        case 16:
+            if (strncasecmp(pHeader, "ontent-encoding", 15) == 0)
+                return H_CONTENT_ENCODING;
+            break;
+        case 19:
+            if (strncasecmp(pHeader, "ontent-disposition", 18) == 0)
+                return H_CONTENT_DISPOSITION;
             break;
         }
         break;
     case 'd':
-        if (strncasecmp(pHeader, "ate", 3) == 0)
-            idx = H_DATE;
+        if (len == 4 && strncasecmp(pHeader, "ate", 3) == 0)
+            return H_DATE;
         break;
     case 'e':
-        if (strncasecmp(pHeader, "tag", 3) == 0)
-            idx = H_ETAG;
-        else if (strncasecmp(pHeader, "xpires", 6) == 0)
-            idx = H_EXPIRES;
+        if (len == 4 && strncasecmp(pHeader, "tag", 3) == 0)
+            return H_ETAG;
+        if (len == 7 && strncasecmp(pHeader, "xpires", 6) == 0)
+            return H_EXPIRES;
         break;
     case 'k':
-        if (strncasecmp(pHeader, "eep-alive", 9) == 0)
-            idx = H_KEEP_ALIVE;
+        if (len == 10 && strncasecmp(pHeader, "eep-alive", 9) == 0)
+            return H_KEEP_ALIVE;
         break;
     case 'l':
-        switch(*pHeader | 0x20)
+        switch (len)
         {
-        case 'a':
-            if (strncasecmp(pHeader, "ast-modified", 12) == 0)
-                idx = H_LAST_MODIFIED;
-            break;
-        case 'o':
-            if (strncasecmp(pHeader, "ocation", 7) == 0)
-                idx = H_LOCATION;
-            break;
-        case 's':
-            if (strncasecmp(pHeader, "sc-cookie", 9) == 0)
-                idx = H_LSC_COOKIE;
-            break;
-        case 'i':
+        case 4:
             if (strncasecmp(pHeader, "ink", 3) == 0)
-                idx = H_LINK;
+                return H_LINK;
+            break;
+        case 8:
+            if (strncasecmp(pHeader, "ocation", 7) == 0)
+                return H_LOCATION;
+            break;
+        case 10:
+            if (strncasecmp(pHeader, "sc-cookie", 9) == 0)
+                return H_LSC_COOKIE;
+            break;
+        case 13:
+            if (strncasecmp(pHeader, "ast-modified", 12) == 0)
+                return H_LAST_MODIFIED;
             break;
         }
         break;
     case 'p':
-        if (strncasecmp(pHeader, "ragma", 5) == 0)
-            idx = H_PRAGMA;
-        else if (strncasecmp(pHeader, "roxy-connection", 15) == 0)
-            idx = H_PROXY_CONNECTION;
+        if (len == 6 && strncasecmp(pHeader, "ragma", 5) == 0)
+            return H_PRAGMA;
+        if (len == 16 && strncasecmp(pHeader, "roxy-connection", 15) == 0)
+            return H_PROXY_CONNECTION;
         break;
     case 's':
-        if (strncasecmp(pHeader, "erver", 5) == 0)
-            idx = H_SERVER;
-        else if (strncasecmp(pHeader, "et-cookie", 9) == 0)
-            idx = H_SET_COOKIE;
-        else if (strncasecmp(pHeader, "tatus", 5) == 0)
-            idx = H_CGI_STATUS;
-        break;
-    case 't':
-        if (strncasecmp(pHeader, "ransfer-encoding", 16) == 0)
-            idx = H_TRANSFER_ENCODING;
-        break;
-    case 'v':
-        if (strncasecmp(pHeader, "ary", 3) == 0)
-            idx = H_VARY;
-        else if (strncasecmp(pHeader, "ersion", 6) == 0)
-            idx = H_HTTP_VERSION;
-        break;
-    case 'w':
-        if (strncasecmp(pHeader, "ww-authenticate", 15) == 0)
-            idx = H_WWW_AUTHENTICATE;
-        break;
-    case 'x':
-        if (strncasecmp(pHeader, "-powered-by", 11) == 0)
-            idx = H_X_POWERED_BY;
-        else if (strncasecmp(pHeader, "-lsadc-backend", 14) == 0)
-            idx = H_LSADC_BACKEND;
-        else if (strncasecmp(pHeader, "-litespeed-", 11) == 0)
+        switch (len)
         {
-            pHeader += 11;
-            switch(*pHeader | 0x20)
-            {
-            case 'l':
-                if (strncasecmp(pHeader, "location", 8) == 0)
-                    idx = H_LITESPEED_LOCATION;
-                break;
-            case 'c':
-                if (strncasecmp(pHeader, "cache-control", 13) == 0)
-                    idx = H_LITESPEED_CACHE_CONTROL;
-                else if (strncasecmp(pHeader, "cache", 5) == 0)
-                    idx = H_X_LITESPEED_CACHE;
-                break;
-            case 't':
-                if (strncasecmp(pHeader, "tag", 3) == 0)
-                    idx = H_X_LITESPEED_TAG;
-                break;
-            case 'p':
-                if (strncasecmp(pHeader, "purge", 5) == 0)
-                {
-                    if (*(pHeader + 5) == '2')
-                        idx = H_X_LITESPEED_PURGE2;
-                    else
-                        idx = H_X_LITESPEED_PURGE;
-                }
-                break;
-            case 'v':
-                if (strncasecmp(pHeader, "vary", 4) == 0)
-                    idx = H_X_LITESPEED_VARY;
-                break;
-            case 'a':
-                if (strncasecmp(pHeader, "alt-svc", 7) == 0)
-                    idx = H_X_LITESPEED_ALT_SVC;
-                break;
-            }
+        case 6:
+            if (strncasecmp(pHeader, "erver", 5) == 0)
+                return H_SERVER;
+            if (strncasecmp(pHeader, "tatus", 5) == 0)
+                return H_CGI_STATUS;
+            break;
+        case 10:
+            if (strncasecmp(pHeader, "et-cookie", 9) == 0)
+                return H_SET_COOKIE;
+            break;
         }
         break;
+    case 't':
+        if (len == 17 && strncasecmp(pHeader, "ransfer-encoding", 16) == 0)
+            return H_TRANSFER_ENCODING;
+        break;
     case 'u':
-        if (strncasecmp(pHeader, "pgrade", 6) == 0)
-            idx = H_UPGRADE;
+        if (len == 7 && strncasecmp(pHeader, "pgrade", 6) == 0)
+            return H_UPGRADE;
+        break;
+    case 'v':
+        if (len == 4 && strncasecmp(pHeader, "ary", 3) == 0)
+            return H_VARY;
+        if (len == 7 && strncasecmp(pHeader, "ersion", 6) == 0)
+            return H_HTTP_VERSION;
+        break;
+    case 'w':
+        if (len == 16 && strncasecmp(pHeader, "ww-authenticate", 15) == 0)
+            return H_WWW_AUTHENTICATE;
+        break;
+    case 'x':
+        switch (len)
+        {
+        case 12:
+            if (strncasecmp(pHeader, "-powered-by", 11) == 0)
+                return H_X_POWERED_BY;
+            break;
+        case 15:
+            if (strncasecmp(pHeader, "-lsadc-backend", 14) == 0)
+                return H_LSADC_BACKEND;
+            if (strncasecmp(pHeader, "-litespeed-tag", 14) == 0)
+                return H_X_LITESPEED_TAG;
+            break;
+        case 16:
+            if (strncasecmp(pHeader, "-litespeed-vary", 15) == 0)
+                return H_X_LITESPEED_VARY;
+            break;
+        case 17:
+            if (strncasecmp(pHeader, "-litespeed-cache", 16) == 0)
+                return H_X_LITESPEED_CACHE;
+            if (strncasecmp(pHeader, "-litespeed-purge", 16) == 0)
+                return H_X_LITESPEED_PURGE;
+            break;
+        case 18:
+            if (strncasecmp(pHeader, "-litespeed-purge2", 17) == 0)
+                return H_X_LITESPEED_PURGE2;
+            break;
+        case 19:
+            if (strncasecmp(pHeader, "-litespeed-alt-svc", 18) == 0)
+                return H_X_LITESPEED_ALT_SVC;
+            break;
+        case 20:
+            if (strncasecmp(pHeader, "-litespeed-location", 19) == 0)
+                return H_LITESPEED_LOCATION;
+            break;
+        case 25:
+            if (strncasecmp(pHeader, "-litespeed-cache-control", 24) == 0)
+                return H_LITESPEED_CACHE_CONTROL;
+            break;
+        }
         break;
     case ':': //only SPDY 3
-        if (strncasecmp(pHeader, "status", 6) == 0)
-            idx = H_CGI_STATUS;
-        else if (strncasecmp(pHeader, "version", 7) == 0)
-            idx = H_HTTP_VERSION;
-        break;
-
-    default:
+        if (len == 7 && strncasecmp(pHeader, "status", 6) == 0)
+            return H_CGI_STATUS;
+        if (len == 8 && strncasecmp(pHeader, "version", 7) == 0)
+            return H_HTTP_VERSION;
         break;
     }
-    return idx;
-}
-
-
-HttpRespHeaders::INDEX HttpRespHeaders::getIndex(const char *pHeader, int len)
-{
-    INDEX idx = getIndex(pHeader);
-    if (idx != H_HEADER_END)
-    {
-        if (getNameLen(idx) != len)
-            idx = H_HEADER_END;
-    }
-    return idx;
+    return H_HEADER_END;
 }
 
 
@@ -1996,7 +2011,7 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
                     code = SC_500;
                     break;
                 default:
-                    if (strncmp(val, "200", 3) != 0)
+                    if (hdr->val_len >= 3 && strncmp(val, "200", 3) != 0)
                     {
                         code = HttpStatusCode::getInstance().codeToIndex(val);
                         if (code == -1)
@@ -2052,9 +2067,12 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
                     break;
                 case LSQPACK_TNV_STATUS_103:
                 default:
-                    code = HttpStatusCode::getInstance().codeToIndex(val);
-                    if (code == -1)
-                        code = SC_200;
+                    if (hdr->val_len >= 3)
+                    {
+                        code = HttpStatusCode::getInstance().codeToIndex(val);
+                        if (code == -1)
+                            code = SC_200;
+                    }
                     break;
                 }
             }
@@ -2089,7 +2107,8 @@ lsxpack_err_code UpkdRespHdrBuilder::process(lsxpack_header *hdr)
                     headers->m_working = NULL;
                     return LSXPACK_ERR_UPPERCASE_HEADER;
                 }
-            if (idx == HttpRespHeaders::H_CONNECTION)
+            if (idx == HttpRespHeaders::H_CONNECTION
+                || idx == HttpRespHeaders::H_TRANSFER_ENCODING)
             {
                 headers->m_working = NULL;
                 // Ignore it silently is better way to handle it.
@@ -2188,5 +2207,3 @@ lsxpack_header_t *UpkdRespHdrBuilder::prepareDecode(lsxpack_header_t *hdr,
     assert(hdr->buf + hdr->name_offset + hdr->val_len <= headers->m_buf.buf_end());
     return hdr;
 }
-
-

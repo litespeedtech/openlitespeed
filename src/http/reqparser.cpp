@@ -186,7 +186,7 @@ int ReqParser::appendArg(int beginIndex, int endIndex, int isValue)
 int ReqParser::normalisePath(int begin, int len)
 {
     int n;
-    m_decodeBuf.append_unsafe('\0');
+    m_decodeBuf.append("", 1);
     n = GPath::clean(m_decodeBuf.getp(begin), len);
     if (n < len)
         m_decodeBuf.pop_end(len - n + 1);
@@ -321,16 +321,18 @@ int ReqParser::initMutlipart(const char *pContentType, int len)
     m_last_char = 0;
     m_multipartBuf.clear();
     const char *p = (const char *)memmem(pContentType, len, "boundary=", 9);
-    if (p && *(p + 9))
+    const char *pEnd = pContentType + len;
+    const char *pBoundary = p ? p + 9 : NULL;
+    if (pBoundary && pBoundary < pEnd)
     {
-        len = len - ((p + 9) - pContentType);
+        len = pEnd - pBoundary;
         if (len > MAX_BOUNDARY_LEN)
         {
             m_pErrStr = "Boundary string is too long";
             m_multipartState = MPS_ERROR;
             return -1;
         }
-        m_part_boundary.setStr(p + 9, len);
+        m_part_boundary.setStr(pBoundary, len);
     }
     else
     {
@@ -357,11 +359,18 @@ int ReqParser::parseKeyValue(char *&pBegin, char *pLineEnd,
     pKey = pBegin;
     keyLen = pValue - pKey;
     ++pValue;
+    if (pValue >= pLineEnd)
+    {
+        pValueEnd = pLineEnd;
+        valLen = 0;
+        pBegin = pLineEnd;
+        return 0;
+    }
 
     if (*pValue == '"')
     {
         ++pValue;
-        pValueEnd = (char *)memchr(pValue, '"', pLineEnd - pBegin);
+        pValueEnd = (char *)memchr(pValue, '"', pLineEnd - pValue);
         if (!pValueEnd)
         {
             m_pErrStr = "missing ending '\"' in Content-Disposition value";
@@ -371,13 +380,15 @@ int ReqParser::parseKeyValue(char *&pBegin, char *pLineEnd,
     }
     else
     {
-        pValueEnd = strpbrk(pValue, " \t;\r\n");
-        if (!pValueEnd)
-            pValueEnd = pLineEnd;
+        pValueEnd = pValue;
+        while (pValueEnd < pLineEnd && *pValueEnd != ' '
+               && *pValueEnd != '\t' && *pValueEnd != ';'
+               && *pValueEnd != '\r' && *pValueEnd != '\n')
+            ++pValueEnd;
     }
 
     valLen = pValueEnd - pValue;
-    pBegin = pValueEnd + 1;
+    pBegin = (pValueEnd < pLineEnd) ? pValueEnd + 1 : pLineEnd;
     return 0;
 }
 
@@ -393,25 +404,39 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
     int     ret = 0;
     while (pBegin < pLineEnd)
     {
-        if (strncasecmp("content-disposition:", pBegin, 20) == 0)
+        char *pCurLineEnd = (char *)memchr(pBegin, '\n', pLineEnd - pBegin);
+        char *pNextLine;
+        if (pCurLineEnd)
+            pNextLine = pCurLineEnd + 1;
+        else
+        {
+            pCurLineEnd = pLineEnd;
+            pNextLine = pLineEnd;
+        }
+        if (pCurLineEnd > pBegin && pCurLineEnd[-1] == '\r')
+            --pCurLineEnd;
+
+        if (pCurLineEnd - pBegin >= 20
+            && strncasecmp("content-disposition:", pBegin, 20) == 0)
         {
             pBegin += 20;
-            while (isspace(*pBegin))
+            while (pBegin < pCurLineEnd && isspace(*pBegin))
                 ++pBegin;
-            if (strncasecmp("form-data;", pBegin, 10) != 0)
+            if (pCurLineEnd - pBegin < 10
+                || strncasecmp("form-data;", pBegin, 10) != 0)
             {
                 m_pErrStr = "missing 'form-data;' string in Content-Disposition value";
                 m_multipartState = MPS_ERROR;
                 return -1;
             }
             pBegin += 10;
-            while (isspace(*pBegin))
+            while (pBegin < pCurLineEnd && isspace(*pBegin))
                 ++pBegin;
-            while ((*pBegin) && (*pBegin != '\n') && (*pBegin != '\r'))
+            while (pBegin < pCurLineEnd)
             {
                 char *pKey, *pValue;
                 int keyLen, valLen;
-                if (parseKeyValue(pBegin, pLineEnd, pKey, keyLen, pValue, valLen) == -1)
+                if (parseKeyValue(pBegin, pCurLineEnd, pKey, keyLen, pValue, valLen) == -1)
                     break;
                 if (keyLen == 4 && strncasecmp("name", pKey, 4) == 0)
                 {
@@ -482,37 +507,35 @@ int ReqParser::multipartParseHeader(char *pBegin, char *pLineEnd)
                         }
                     }
                 }
-                while ((*pBegin == ' ') || (*pBegin == '\t') || (*pBegin == ';'))
+                while (pBegin < pCurLineEnd
+                       && ((*pBegin == ' ') || (*pBegin == '\t') || (*pBegin == ';')))
                     ++pBegin;
 
             }
         }
-        else if (strncasecmp("content-type:", pBegin, 13) == 0)
+        else if (pCurLineEnd - pBegin >= 13
+                 && strncasecmp("content-type:", pBegin, 13) == 0)
         {
             pBegin += 13;
-            while (isspace(*pBegin))
+            while (pBegin < pCurLineEnd && isspace(*pBegin))
                 ++pBegin;
-            if (strncasecmp("multipart/mixed", pBegin, 15) == 0)
+            if (pCurLineEnd - pBegin >= 15
+                && strncasecmp("multipart/mixed", pBegin, 15) == 0)
                 m_ignore_part = 1;
-            else
+            else if (pBegin < pCurLineEnd)
             {
                 fileStrType = 2;
                 fileStr = pBegin;
             }
         }
 
-        pBegin = (char *)memchr(pBegin, '\n', pLineEnd - pBegin);
-        if (!pBegin)
-            pBegin = pLineEnd;
-        else
-            ++pBegin;
+        pBegin = pNextLine;
 
         if (fileStrType == 2)
         {
-            fileStrLen = pBegin - fileStr;
-            if (*(pBegin - 1) == '\r')
-                --fileStrLen;
+            fileStrLen = pCurLineEnd - fileStr;
             appendFileKeyValue("_content-type", 13, fileStr, fileStrLen);
+            fileStrType = 0;
         }
 
     }
@@ -569,6 +592,8 @@ int ReqParser::checkBoundary(char *&pBegin, char *&pCur)
                 else
                     m_decodeBuf.pop_end(1);
             }
+            if (m_decodeBuf.available() < 1 && m_decodeBuf.grow(1) == -1)
+                return -1;
             *(m_decodeBuf.end()) = 0;
             if (m_args > 0)
             {
@@ -651,6 +676,7 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
     //use pBuf directly, if have left part, then write to it for next time using
     int    ret;
     int count = 0;
+    int lineEmpty;
     char *pLineEnd = NULL, *p;
     char *pBegin, *pEnd, *pCur;
     char *pOldCur = NULL;
@@ -684,10 +710,15 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
             ++count;
             if (count > 20)
             {
-                if (pCur + 100 < pEnd)
-                    *(pCur + 100) = 0;
-                LS_ERROR("Parsing Error! resume: %d, last: %d, state: %d, pBegin: %p:%s, pCur: %p:%s, pEnd: %p",
-                         resume, last, m_multipartState, pBegin, pBegin, pCur, pCur, pEnd);
+                int beginLen = pEnd - pBegin;
+                int curLen = pEnd - pCur;
+                if (beginLen > 100)
+                    beginLen = 100;
+                if (curLen > 100)
+                    curLen = 100;
+                LS_ERROR("Parsing Error! resume: %d, last: %d, state: %d, pBegin: %p:%.*s, pCur: %p:%.*s, pEnd: %p",
+                         resume, last, m_multipartState, pBegin, beginLen,
+                         pBegin, pCur, curLen, pCur, pEnd);
                 //*((char *)(0x0)) = 0;
             }
         }
@@ -727,12 +758,23 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
                     return -1;
                 }
             }
-            p = pLineEnd - 1;
-            if (*p == '\r')
+            p = pLineEnd;
+            if (p > pCur && p[-1] == '\r')
                 --p;
-            if (*p == '\n')    //found end of part header
+            lineEmpty = (p == pCur);
+            if (lineEmpty && pLineEnd == pCur && pCur > pBegin + 1
+                && pCur[-1] == '\r' && pCur[-2] != '\n')
+                lineEmpty = 0;
+            if (lineEmpty)    //found end of part header
             {
-                multipartParseHeader(pBegin, p);
+                if (p > pBegin && p[-1] == '\n')
+                {
+                    --p;
+                    if (p > pBegin && p[-1] == '\r')
+                        --p;
+                }
+                if (multipartParseHeader(pBegin, p) == -1)
+                    return -1;
                 if (m_sLastFileKey.len() == 0)
                     appendBodyBuf(pBegin, pLineEnd + 1 - pBegin);
                 pBegin = pCur = pLineEnd + 1;
@@ -769,10 +811,20 @@ int ReqParser::parseMultipart(const char *pBuf, size_t size,
                 else
                     ++pCur;
 
-                if (pEnd - pCur - 2 < m_part_boundary.len()
-                    || memcmp(pCur + 2, m_part_boundary.c_str(),
-                              m_part_boundary.len()) == 0)
+                if (pCur >= pEnd)
                     break;
+                if (*pCur == '-')
+                {
+                    if (pEnd - pCur < 2)
+                        break;
+                    if (pCur[1] == '-')
+                    {
+                        if (pEnd - pCur - 2 < m_part_boundary.len()
+                            || memcmp(pCur + 2, m_part_boundary.c_str(),
+                                      m_part_boundary.len()) == 0)
+                            break;
+                    }
+                }
             }
 
             if (!m_ignore_part)
@@ -1143,7 +1195,7 @@ int ReqParser::testArgs( int location, HttpSession* pSession, SecRule * pRule, A
         if ( m_postArgs == 0 )
             return 0;
         i = m_postBegin;
-        n = m_postArgs;
+        n = m_postBegin + m_postArgs;
         break;
     default:
         return 0;
@@ -1398,5 +1450,3 @@ void ReqParser::testAll()
     testQueryString();
     testMultipart();
 }
-
-

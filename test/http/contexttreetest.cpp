@@ -176,6 +176,9 @@ SUITE(ContextTreeTest)
         char l1[] = "/xingwww/html/support/kayako_mod/submit.php";
         CHECK(pRoot1 == tree.matchLocation(l1, strlen(l1)));
 
+        // The root context is not owned by the tree (added contexts are), so it
+        // must be freed here, as ContextTreeTest_runTest does.
+        delete pRoot;
     }
 }
 

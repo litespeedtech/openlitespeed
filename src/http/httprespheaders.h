@@ -45,6 +45,7 @@ struct http_header_t;
 #define HRH_F_LC_NAME   4
 
 #define HRH_IDX_NONE    0xFFFF
+#define HRH_MAX_LEN     16384
 
 class HttpRespHeaders
 {
@@ -195,7 +196,6 @@ public:
     int appendToIov(IOVec *iovec, int &addCrlf);
     int appendToIovExclude(IOVec *iovec, const char *pName, int nameLen) const;
 
-    static INDEX getIndex(const char *pHeader);
     static INDEX getIndex(const char *pHeader, int len);
     static const char **getNameList();
     static int getNameLen(INDEX index)  {    return s_iHeaderLen[(int)index];  }

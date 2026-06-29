@@ -107,9 +107,16 @@ class BuildOptions
         $this->validated = true;
     }
 
+    // Saved-options file extension. Bump when the on-disk format changes
+    // so older files written by previous code are silently ignored instead
+    // of being fed to a parser that no longer matches their layout.
+    //   .options2 = PHP serialize() format (legacy, vulnerable to object injection)
+    //   .options3 = json_encode() format (current)
+    const SAVED_OPTIONS_EXT = '.options3';
+
     public function getSavedOptions()
     {
-        $filename = BuildConfig::Get(BuildConfig::LAST_CONF) . $this->base_ver . '.options2';
+        $filename = BuildConfig::Get(BuildConfig::LAST_CONF) . $this->base_ver . self::SAVED_OPTIONS_EXT;
         if (!file_exists($filename)) {
             return null;
         }
@@ -119,8 +126,8 @@ class BuildOptions
             return null;
         }
 
-        $vals = unserialize($str);
-        if (!is_array($vals) || !isset($vals['PHPVersion'])) {
+        $vals = json_decode($str, true);
+        if (!is_array($vals) || !isset($vals['PHPVersion']) || !is_string($vals['PHPVersion'])) {
             return null;
         }
 
@@ -141,9 +148,13 @@ class BuildOptions
             preg_replace("/ ?'--(prefix=)[^ ]*' */", ' ', $saved_val['ConfigParam'])
         );
 
-        $serialized_str = serialize($saved_val);
-        $filename = BuildConfig::Get(BuildConfig::LAST_CONF) . $this->base_ver . '.options2';
-        return file_put_contents($filename, $serialized_str);
+        $encoded = json_encode($saved_val);
+        if ($encoded === false) {
+            return false;
+        }
+
+        $filename = BuildConfig::Get(BuildConfig::LAST_CONF) . $this->base_ver . self::SAVED_OPTIONS_EXT;
+        return file_put_contents($filename, $encoded);
     }
 
     public function gen_loadconf_onclick($method)

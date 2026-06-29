@@ -39,6 +39,26 @@ class DTblMap
         return $maps;
     }
 
+    public function GetMapsForNode($extended, $node)
+    {
+        return $this->ResolveMaps($this->GetMaps($extended), $node);
+    }
+
+    public static function ResolveMaps($maps, $node)
+    {
+        $resolved = [];
+
+        foreach ($maps as $m) {
+            if ($m instanceof DTblSelectorMap) {
+                $resolved = array_merge($resolved, $m->Resolve($node));
+            } else {
+                $resolved[] = $m;
+            }
+        }
+
+        return $resolved;
+    }
+
     public function FindTblLoc($tid)
     {
         $location = $this->_layer; // page data, layer is not array
@@ -50,11 +70,81 @@ class DTblMap
                 if ($nextloc != null) {
                     return ($location == '') ? $nextloc : "{$location}:$nextloc";
                 }
+            } elseif ($m instanceof DTblSelectorMap) {
+                $nextloc = $this->FindTblLocInMaps($tid, $m->GetStaticMaps());
+                if ($this->IsSelfLoc($nextloc)) {
+                    return $location;
+                }
+                if ($nextloc != null) {
+                    return ($location == '') ? $nextloc : "{$location}:$nextloc";
+                }
             } elseif ($tid == $m) {
                 return $location;
             }
         }
         return null;
+    }
+
+    private function FindTblLocInMaps($tid, $maps)
+    {
+        foreach ($maps as $m) {
+            if ($m instanceof self) {
+                $nextloc = $m->FindTblLoc($tid);
+                if ($nextloc != null) {
+                    return $nextloc;
+                }
+            } elseif ($m instanceof DTblSelectorMap) {
+                $nextloc = $this->FindTblLocInMaps($tid, $m->GetStaticMaps());
+                if ($nextloc != null) {
+                    return $nextloc;
+                }
+            } elseif ($tid == $m) {
+                return '__self__';
+            }
+        }
+
+        return null;
+    }
+
+    private function IsSelfLoc($location)
+    {
+        return $location === '__self__' || $location === '';
+    }
+
+    public function FindTblLocForNode($tid, $node, $ref = '')
+    {
+        $location = $this->_layer; // page data, layer is not array
+        $layer = ($node == null) ? null : $node->LocateLayer($location);
+        list($layer, $nextref) = $this->SelectLayerByRef($layer, $ref);
+        $maps = $this->GetMapsForNode(true, $layer);
+
+        foreach ($maps as $m) {
+            if ($m instanceof self) {
+                $nextloc = $m->FindTblLocForNode($tid, $layer, $nextref);
+                if ($nextloc != null) {
+                    return ($location == '') ? $nextloc : "{$location}:$nextloc";
+                }
+            } elseif ($tid == $m) {
+                return $location;
+            }
+        }
+        return null;
+    }
+
+    private function SelectLayerByRef($layer, $ref)
+    {
+        if (!is_array($layer)) {
+            return [$layer, $ref];
+        }
+
+        if (($first = strpos($ref, '`')) > 0) {
+            $nextref = substr($ref, $first + 1);
+            $ref = substr($ref, 0, $first);
+        } else {
+            $nextref = '';
+        }
+
+        return [isset($layer[$ref]) ? $layer[$ref] : null, $nextref];
     }
 
     public function Convert($srcloc_index, $srcnode, $dstloc_index, $dstnode)
@@ -107,12 +197,30 @@ class DTblMap
         foreach ($map as $m) {
             if ($m instanceof self)
                 $m->Convert($srcloc_index, $srcnode, $dstloc_index, $dstnode);
+            elseif ($m instanceof DTblSelectorMap)
+                $this->convert_selector_map($m, $srcloc_index, $srcnode, $dstloc_index, $dstnode);
             else
                 $this->convert_tbl($m, $srcnode, $dstnode);
         }
     }
 
-    private function convert_tbl($tid, $srcnode, $dstnode)
+    private function convert_selector_map($map, $srcloc_index, $srcnode, $dstloc_index, $dstnode)
+    {
+        if ($map->ShouldIncludeSelector()) {
+            $this->convert_tbl($map->GetTid(), $srcnode, $dstnode, false);
+        }
+
+        foreach ($map->GetSelectedMaps($dstnode) as $m) {
+            if ($m instanceof self)
+                $m->Convert($srcloc_index, $srcnode, $dstloc_index, $dstnode);
+            elseif ($m instanceof DTblSelectorMap)
+                $this->convert_selector_map($m, $srcloc_index, $srcnode, $dstloc_index, $dstnode);
+            else
+                $this->convert_tbl($m, $srcnode, $dstnode);
+        }
+    }
+
+    private function convert_tbl($tid, $srcnode, $dstnode, $followSubTid = true)
     {
         $tbl = DTblDef::GetInstance()->GetTblDef($tid);
         $attrs = $tbl->Get(DTbl::FLD_DATTRS);
@@ -166,7 +274,7 @@ class DTblMap
             }
         }
 
-        if (($subtid = $tbl->GetSubTid($dstnode)) != null) {
+        if ($followSubTid && ($subtid = $tbl->GetSubTid($dstnode)) != null) {
             if (is_array($subtid)) {
                 foreach ($subtid as $stid) {
                     $this->convert_tbl($stid, $srcnode, $dstnode);

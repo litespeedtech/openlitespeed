@@ -22,6 +22,7 @@
 #include <lsr/ls_xpool.h>
 
 #include <ctype.h>
+#include <limits.h>
 
 static int LsLuaHeaderDummy(lua_State *L)
 {
@@ -67,13 +68,14 @@ static const char *LsLuaHeaderTransformKey(const lsi_session_t *session,
         size_t len)
 {
     char *pTmp;
-    int i;
     ls_xpool_t *pool = g_api->get_session_pool(session);
 
     if (memchr(pInput, '_', len) == NULL)
         return pInput;
     pTmp = (char *)ls_xpool_alloc(pool, len);
-    for (i = 0; i < (int)len; ++i)
+    if (!pTmp)
+        return NULL;
+    for (size_t i = 0; i < len; ++i)
     {
         if (pInput[i] == '_')
             pTmp[i] = '-';
@@ -98,13 +100,16 @@ int LsLuaHeaderGet(lua_State *L)
 
     pInput = LsLuaApi::tolstring(L, 2, &len);
 
-    if (pInput == NULL || len == 0)
+    if (pInput == NULL || len == 0 || len > INT_MAX)
         return LsLuaApi::userError(L, "header_get", "Header Key not valid.");
 
     pKey = LsLuaHeaderTransformKey(session, pInput, len);
+    if (!pKey)
+        return LsLuaApi::serverError(L, "header_get",
+                                     "Header key transform failed.");
 
     iHeaderCount = g_api->get_resp_header(session, LSI_RSPHDR_UNKNOWN,
-                                          pKey, len, iov, iMaxHeaders);
+                                          pKey, (int)len, iov, iMaxHeaders);
     if (iHeaderCount <= 0)
         LsLuaApi::pushnil(L);
     else if (iHeaderCount == 1)
@@ -140,12 +145,15 @@ int LsLuaHeaderSet(lua_State *L)
 
     pInput = LsLuaApi::tolstring(L, 2, &iKeyLen);
 
-    if (pInput == NULL || iKeyLen == 0)
+    if (pInput == NULL || iKeyLen == 0 || iKeyLen > INT_MAX)
         return LsLuaApi::userError(L, "header_set", "Header Key not valid.");
 
     pKey = LsLuaHeaderTransformKey(session, pInput, iKeyLen);
+    if (!pKey)
+        return LsLuaApi::serverError(L, "header_set",
+                                     "Header key transform failed.");
 
-    iHeaderId = g_api->get_resp_header_id(session, pKey);
+    iHeaderId = g_api->get_resp_header_id(session, pKey, (int)iKeyLen);
     switch (iHeaderId)
     {
     case LSI_RSPHDR_SET_COOKIE:
@@ -164,13 +172,16 @@ int LsLuaHeaderSet(lua_State *L)
     //fall through
     case LUA_TNIL:
         g_api->remove_resp_header(session, LSI_RSPHDR_UNKNOWN,
-                                  pKey, iKeyLen);
+                                  pKey, (int)iKeyLen);
         return 0;
     case LUA_TSTRING:
     case LUA_TNUMBER:
         pVal = LsLuaApi::tolstring(L, 3, &iValLen);
-        g_api->set_resp_header(session, iHeaderId, pKey, iKeyLen,
-                               pVal, iValLen, iAddOp);
+        if (iValLen > INT_MAX)
+            return LsLuaApi::userError(L, "header_set",
+                                       "Header value too large.");
+        g_api->set_resp_header(session, iHeaderId, pKey, (int)iKeyLen,
+                               pVal, (int)iValLen, iAddOp);
         return 0;
     default:
         return LsLuaApi::userError(L, "header_set", "Value argument not valid.");
@@ -184,8 +195,11 @@ int LsLuaHeaderSet(lua_State *L)
         case LUA_TSTRING:
         case LUA_TNUMBER:
             pVal = LsLuaApi::tolstring(L, -1, &iValLen);
-            g_api->set_resp_header(session, iHeaderId, pKey, iKeyLen,
-                                   pVal, iValLen, iAddOp);
+            if (iValLen > INT_MAX)
+                return LsLuaApi::userError(L, "header_set",
+                                           "Header value too large.");
+            g_api->set_resp_header(session, iHeaderId, pKey, (int)iKeyLen,
+                                   pVal, (int)iValLen, iAddOp);
             break;
         default:
             return LsLuaApi::userError(L, "header_set", "Value argument not valid.");
@@ -207,4 +221,3 @@ void LsLuaCreateHeader(lua_State *L)
     LsLuaApi::setmetatable(L, -2);
     LsLuaApi::setfield(L, -2, "header");
 }
-

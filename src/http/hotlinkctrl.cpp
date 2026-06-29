@@ -21,7 +21,6 @@
 #include <log4cxx/logger.h>
 #include <util/pcregex.h>
 #include <util/xmlnode.h>
-#include <pcreposix.h>
 #include <string.h>
 
 
@@ -84,7 +83,7 @@ int  HotlinkCtrl::setRegex(const char *pRegex)
         if (!m_pRegex)
             return LS_FAIL;
     }
-    int ret = m_pRegex->compile(pRegex, REG_EXTENDED | REG_ICASE);
+    int ret = m_pRegex->compile(pRegex, LSRE_DEFAULT | LSRE_CASELESS);
     if (ret == -1)
     {
         delete m_pRegex;

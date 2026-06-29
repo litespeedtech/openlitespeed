@@ -172,12 +172,25 @@ static int luaHandler(const lsi_session_t *session)
     }
     pData->m_pSession = NULL;
     pUser = (LsLuaUserParam *)g_api->get_config(session, &MNAME);
-    int uri_len;
+    int uri_len = 0;
     uri = (char *)g_api->get_req_uri(session, &uri_len);
+    if (uri == NULL || uri_len < 0 || uri_len >= MAXFILENAMELEN)
+    {
+        g_api->log(session, LSI_LOG_ERROR,
+                   "LUA handler invalid URI length %d\n", uri_len);
+        return 500;
+    }
     n = g_api->get_req_var_by_id(session, LSI_VAR_DOC_ROOT, luafile,
-                                 MAXFILENAMELEN - uri_len - 1);
+                                 MAXFILENAMELEN - uri_len);
+    if (n < 0 || n + uri_len >= MAXFILENAMELEN)
+    {
+        g_api->log(session, LSI_LOG_ERROR,
+                   "LUA handler failed to compose script path\n");
+        return 500;
+    }
     memmove(luafile + n, uri, uri_len);
     n += uri_len;
+    luafile[n] = 0;
 
     g_api->set_handler_write_state(session, 0);
     int debLevel = 0;

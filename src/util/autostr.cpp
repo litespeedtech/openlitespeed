@@ -59,10 +59,16 @@ int AutoStr::setStr(const char *pStr)
 
 int AutoStr::setStr(const char *pStr, int len)
 {
+    if (!pStr)
+        return 0;
+    char *pNew = (char *)Pool::allocate2(len + 1);
+    if (!pNew)
+        return 0;
+    memmove(pNew, pStr, len);
+    *(pNew + len) = 0;
     if (m_pStr)
         Pool::deallocate2(m_pStr);
-    m_pStr = Pool::dupstr(pStr, len + 1);
-    *(m_pStr + len) = 0;
+    m_pStr = pNew;
     return len;
 }
 

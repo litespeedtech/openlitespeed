@@ -135,6 +135,78 @@ class FileThrottleStore
     }
 
     /**
+     * Atomically apply a mutation to the per-(ip, bucket) state file.
+     *
+     * Holds an exclusive flock on a dedicated lockfile across the entire
+     * read-modify-write window. This serializes concurrent failure-record
+     * updates so a burst of failed login attempts from the same IP can't
+     * lose a failure increment to a clobbering write.
+     *
+     * The lock is on a separate `.lock` sibling rather than the state
+     * file itself, so the existing atomic-rename write path stays intact.
+     *
+     * Without the lock, two concurrent recordFailure calls can each load
+     * the same baseline counter, increment to N+1, and both write — the
+     * effective counter advances by 1 instead of 2, giving an attacker
+     * extra free attempts before the threshold-based block kicks in.
+     *
+     * @param string   $ip     Raw IP address.
+     * @param string   $bucket Action bucket name.
+     * @param callable $modify Function that receives the current state
+     *                         (array or null if none) and returns the
+     *                         state to persist (array) or null to skip.
+     * @return bool True if the modified state was saved.
+     */
+    public function mutate($ip, $bucket, callable $modify)
+    {
+        if (!$this->ensureDir()) {
+            return false;
+        }
+
+        $lockPath = $this->filePath($ip, $bucket) . '.lock';
+        $lockFp = @fopen($lockPath, 'c');
+        if ($lockFp === false) {
+            error_log('[WebAdmin Console] Failed to open throttle lock file: ' . $lockPath);
+            // Availability fallback: do the unlocked read-modify-write so
+            // a transient fs error never silently skips a security update.
+            $state = $this->load($ip, $bucket);
+            $next = call_user_func($modify, $state);
+            if ($next === null) {
+                return true;
+            }
+            return $this->save($ip, $bucket, $next);
+        }
+        @chmod($lockPath, 0600);
+
+        if (!@flock($lockFp, LOCK_EX)) {
+            fclose($lockFp);
+            error_log('[WebAdmin Console] Failed to acquire throttle lock: ' . $lockPath);
+            $state = $this->load($ip, $bucket);
+            $next = call_user_func($modify, $state);
+            if ($next === null) {
+                return true;
+            }
+            return $this->save($ip, $bucket, $next);
+        }
+
+        $state = $this->load($ip, $bucket);
+        $next = call_user_func($modify, $state);
+
+        if ($next === null) {
+            @flock($lockFp, LOCK_UN);
+            fclose($lockFp);
+            return true;
+        }
+
+        $ok = $this->save($ip, $bucket, $next);
+
+        @flock($lockFp, LOCK_UN);
+        fclose($lockFp);
+
+        return $ok;
+    }
+
+    /**
      * Delete throttle state for an IP + bucket.
      *
      * @param string $ip     Raw IP address.
@@ -144,6 +216,10 @@ class FileThrottleStore
     public function delete($ip, $bucket)
     {
         $file = $this->filePath($ip, $bucket);
+        $lock = $file . '.lock';
+        if (file_exists($lock)) {
+            @unlink($lock);
+        }
         if (file_exists($file)) {
             return @unlink($file);
         }
@@ -178,8 +254,10 @@ class FileThrottleStore
                 continue;
             }
 
-            // Only process .json throttle files.
-            if (substr($entry, -5) !== '.json') {
+            // Process .json throttle files and their .lock siblings.
+            $isJson = (substr($entry, -5) === '.json');
+            $isLock = (substr($entry, -5) === '.lock');
+            if (!$isJson && !$isLock) {
                 continue;
             }
 
@@ -191,7 +269,9 @@ class FileThrottleStore
             $mtime = @filemtime($path);
             if ($mtime !== false && ($now - $mtime) > $maxAge) {
                 if (@unlink($path)) {
-                    $cleaned++;
+                    if ($isJson) {
+                        $cleaned++;
+                    }
                 }
             }
         }

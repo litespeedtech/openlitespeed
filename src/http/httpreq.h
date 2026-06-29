@@ -619,7 +619,7 @@ public:
 
     int prepareReqBodyBuf();
     void replaceBodyBuf(VMemBuf *pBuf);
-    void updateBodyType(const char *buf);
+    void updateBodyType(const char *buf, int len);
 
 
     char gzipAcceptable() const             {   return ls_atomic_fetch_or((volatile char*)&m_iAcceptGzip, 0);       }

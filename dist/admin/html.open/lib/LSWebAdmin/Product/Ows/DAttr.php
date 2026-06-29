@@ -2,8 +2,8 @@
 
 namespace LSWebAdmin\Product\Ows;
 
-use LSWebAdmin\Product\Base\ProductDAttr;
+use LSWebAdmin\Product\WebServer\Ols\DAttrBase;
 
-class DAttr extends ProductDAttr
+class DAttr extends DAttrBase
 {
 }

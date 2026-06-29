@@ -83,6 +83,24 @@ class PanelController
     protected $dashStep = self::DASH_STEP_NONE;
 
     /**
+     * SECURITY CONTRACT — caller responsibilities
+     *
+     * This library contains no HTTP entry point of its own.  Every production
+     * panel integration (WHM, cPanel, Plesk, DirectAdmin) enforces both
+     * authentication AND anti-CSRF/anti-forgery token validation *before*
+     * constructing this controller.
+     *
+     * Third-party / custom panel integrators MUST satisfy the same two
+     * preconditions in their own glue code before constructing or calling any
+     * manage*Operations*() method:
+     *
+     *   1. Authentication  — the HTTP session belongs to an authorised admin.
+     *   2. CSRF protection — a per-session or per-request token has been
+     *      verified so that cross-origin requests cannot trigger state changes.
+     *
+     * Failure to enforce these preconditions exposes destructive operations
+     * (mass cache enable/disable, plugin file removal, cache-root deletion) to
+     * unauthenticated or cross-site-request-forgery attacks.
      *
      * @param ControlPanel     $panelEnv
      * @param WPInstallStorage $wpInstallStorage
@@ -161,6 +179,8 @@ class PanelController
     }
 
     /**
+     * SECURITY: Caller must have verified authentication and CSRF token before
+     * invoking.  See constructor docblock for full contract.
      *
      * @deprecated 1.13.3  Use $this->manageCacheOperations2() instead.
      *
@@ -203,6 +223,8 @@ class PanelController
     }
 
     /**
+     * SECURITY: Caller must have verified authentication and CSRF token before
+     * invoking.  See constructor docblock for full contract.
      *
      * @since 1.13.3
      *
@@ -269,6 +291,8 @@ class PanelController
     }
 
     /**
+     * SECURITY: Caller must have verified authentication and CSRF token before
+     * invoking.  See constructor docblock for full contract.
      *
      * @param int        $dashStep
      * @param WPDashMsgs $wpDashMsgs
@@ -551,8 +575,37 @@ class PanelController
             session_start();
         }
 
-        if ( Util::get_request_var('go_to_next') == 1 ){
-            return true;
+        if ( Util::get_request_var('go_to_next') == 1 ) {
+
+            if (
+                isset($_SESSION['scanInfo'])
+                && is_array($_SESSION['scanInfo'])
+                && array_key_exists('homeDirs', $_SESSION['scanInfo'])
+                && array_key_exists('installs', $_SESSION['scanInfo'])
+                && (
+                    is_array($_SESSION['scanInfo']['homeDirs'])
+                    || $_SESSION['scanInfo']['homeDirs'] === null
+                )
+                && (
+                    is_array($_SESSION['scanInfo']['installs'])
+                    || $_SESSION['scanInfo']['installs'] === null
+                )
+                && !(
+                    $_SESSION['scanInfo']['homeDirs'] === null
+                    && $_SESSION['scanInfo']['installs'] === null
+                )
+            ) {
+                return true;
+            }
+
+            /*
+             * Stale `go_to_next=1` request (e.g., browser Back / page Back
+             * button replaying the URL after the scan-progress flow already
+             * cleared $_SESSION['scanInfo']). Drop back to the regular
+             * Manage view instead of constructing a scan-progress view with
+             * no session data.
+             */
+            return false;
         }
 
         $info = &$_SESSION['scanInfo'];
@@ -659,10 +712,10 @@ class PanelController
                     $info['installs'] = null;
                 }
             }
-        }
 
-        if ( $info['homeDirs'] === null && $info['installs'] === null ) {
-            unset($_SESSION['scanInfo']);
+            if ( $info['homeDirs'] === null && $info['installs'] === null ) {
+                unset($_SESSION['scanInfo']);
+            }
         }
 
         AjaxResponse::setAjaxContent(

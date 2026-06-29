@@ -37,6 +37,10 @@ $msgs = array(
 $d = array(
     'msgs' => $msgs,
     'class' => 'msg-info',
+    /* Template-authored HTML — the span IDs let the progress-poll JS find
+     * bypassedCount / succCount / failCount and update them in place. No
+     * user data is interpolated. */
+    'rawHtml' => true,
 );
 $this->loadTplBlock('DivMsgBox.tpl', $d);
 

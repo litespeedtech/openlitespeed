@@ -183,9 +183,9 @@ class DAttrBase
 			if (strpos($link, '$V') !== false) {
 				$link = str_replace('$V', urlencode($value), $link);
 			}
-			$o .= '<span class="field_url"><a href="' . $link . '">';
+			$o .= '<span class="field_url"><a href="' . UIBase::EscapeAttr($link) . '">';
 		} elseif ($refUrl != null) {
-			$o .= '<span class="field_refUrl"><a href="' . $refUrl . '">';
+			$o .= '<span class="field_refUrl"><a href="' . UIBase::EscapeAttr($refUrl) . '">';
 		}
 
 		if ($this->_type === 'bool') {
@@ -348,10 +348,23 @@ class DAttrBase
 			$labelFor = null;
 		}
 
-		$buf = '<div class="lst-form-row lst-config-edit-row' . ($err ? ' lst-form-row--error">' : '">');
+		$rowClass = 'lst-form-row lst-config-edit-row';
+		if ($is_blocked) {
+			$rowClass .= ' lst-config-edit-row--disabled';
+		}
+		if ($err) {
+			$rowClass .= ' lst-form-row--error';
+		}
+
+		$buf = '<div class="' . $rowClass . '">';
 		if ($this->_label) {
 
-			$buf .= '<label class="lst-form-label lst-config-edit-label"';
+			$labelClass = 'lst-form-label lst-config-edit-label';
+			if ($is_blocked) {
+				$labelClass .= ' lst-config-edit-label--disabled';
+			}
+
+			$buf .= '<label class="' . $labelClass . '"';
 			if ($labelFor !== null) {
 				$buf .= ' for="' . UIBase::EscapeAttr($labelFor) . '"';
 			}
@@ -380,6 +393,9 @@ class DAttrBase
 
 		$inputGroupClass = 'lst-input-group lst-config-input-group';
 		$inputGroupAttr = '';
+		if ($isDisabled) {
+			$inputGroupClass .= ' lst-config-input-group--disabled';
+		}
 		if ($this->_inputType == 'password') {
 			$inputGroupClass .= ' lst-password-field';
 			$inputGroupAttr = ' data-lst-password-field="1"';

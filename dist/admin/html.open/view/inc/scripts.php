@@ -34,7 +34,7 @@ use LSWebAdmin\UI\UIBase;
                 $.ajax({
                     type: "POST",
                     url: "view/serviceMgr.php",
-                    data: {"act": "restart"},
+                    data: {"act": "restart", "tk": window.lstRequestToken || ""},
                     beforeSend: function () {
                         lstNotifyToast({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",
@@ -64,7 +64,7 @@ use LSWebAdmin\UI\UIBase;
                 $.ajax({
                     type: "POST",
                     url: "view/serviceMgr.php",
-                    data: {"act": "toggledebug"},
+                    data: {"act": "toggledebug", "tk": window.lstRequestToken || ""},
                     beforeSend: function () {
                         lstNotifyToast({
                             title: "<?php DMsg::EchoUIStr('service_requesting') ?>",

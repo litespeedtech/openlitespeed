@@ -90,14 +90,11 @@ class UIBase
         return self::$inputSource;
     }
 
-    protected function confform_start()
+    protected function confform_start($extraClass = '')
     {
         $formaction = $this->uiproperty->Get(UIProperty::FLD_FORM_ACTION);
-        $buf = '
-        <!-- ========================== confform STARTS HERE ========================== -->
-        <form name="confform" id="confform" method="post" action="' . $formaction . '">
-        ';
-        return $buf;
+        $classAttr = ($extraClass !== '') ? ' class="' . $extraClass . '"' : '';
+        return '<form name="confform" id="confform"' . $classAttr . ' method="post" action="' . $formaction . '">';
     }
 
     protected function confform_end()
@@ -105,11 +102,9 @@ class UIBase
         $buf = '';
         $hiddenvars = $this->uiproperty->Get(UIProperty::FLD_FORM_HIDDENVARS);
         foreach ($hiddenvars as $n => $v) {
-            $buf .= '<input type="hidden" name="' . $n . '" value="' . $v . '">';
+            $buf .= '<input type="hidden" name="' . self::EscapeAttr($n) . '" value="' . self::EscapeAttr($v) . '">';
         }
-        $buf .= '</form>
-<!-- ========================== confform ENDS HERE ========================== -->
-        ';
+        $buf .= '</form>';
         return $buf;
     }
 
@@ -123,7 +118,8 @@ class UIBase
         $icontitle = $uiContext->GetIconTitle();
         $collapseSingleTopTab = $this->shouldCollapseSingleTopTab($page->GetLabel());
         echo $this->content_header($icontitle[0], $icontitle[1], $collapseSingleTopTab ? '' : $page->GetLabel());
-        echo $this->confform_start();
+        $confformClass = $page->hasWideLabels() ? 'lst-confform--wide-label' : '';
+        echo $this->confform_start($confformClass);
         if (!$collapseSingleTopTab) {
             echo $this->main_tabs();
         }

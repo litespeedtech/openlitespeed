@@ -9,7 +9,7 @@ use LSWebAdmin\Config\IO\ConfigDataWriter;
 use LSWebAdmin\Config\IO\ConfigFormatPathPair;
 use LSWebAdmin\Config\IO\ConfigWritePlan;
 use LSWebAdmin\Config\IO\ConfigWriteTask;
-use LSWebAdmin\Config\Migration\ConfigLegacyFormatConverter;
+use LSWebAdmin\Config\Migration\ConfigXmlToConfConverter;
 use LSWebAdmin\Config\Parser\PlainConfParser;
 use LSWebAdmin\UI\DInfo;
 use LSWebAdmin\Util\PathTool;
@@ -91,7 +91,7 @@ class ConfigData extends CData
         }
 
         $parser = new PlainConfParser();
-        $this->_root = ConfigDataLoader::loadPlainRoot($parser, $this->_path, $this->_conferr);
+        $this->_root = ConfigDataLoader::loadPlainRoot($parser, $this->_path, $this->_conferr, $this->_hasOwnInclude);
         if ($this->_root === false) {
             return false;
         }
@@ -102,7 +102,7 @@ class ConfigData extends CData
 
     protected function migrate_xml2conf()
     {
-        return ConfigLegacyFormatConverter::migrateXmlToConf(
+        return ConfigXmlToConfConverter::migrateXmlToConf(
             $this->_type,
             $this->_xmlpath,
             $this->_path,
@@ -112,7 +112,7 @@ class ConfigData extends CData
 
     protected function migrate_allxml2conf()
     {
-        return ConfigLegacyFormatConverter::migrateServerXmlTreeToConf(
+        return ConfigXmlToConfConverter::migrateServerXmlTreeToConf(
             $this->_xmlpath,
             $this->_path,
             $this->_conferr

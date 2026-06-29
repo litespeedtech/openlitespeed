@@ -27,6 +27,7 @@
 #include <http/httpserverconfig.h>
 #include <http/httpvhost.h>
 #include <log4cxx/logger.h>
+#include <lsdef.h>
 #include <lsr/ls_fileio.h>
 #include <socket/coresocket.h>
 #include "socket/gsockaddr.h"
@@ -230,7 +231,12 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
     char *pEnv[3];
     char achExec[2048];
     char sockAddr[256];
-    int len = snprintf(achExec, 2048, "%sbin/httpd", pServerRoot);
+    int len = lsnprintf(achExec, sizeof(achExec), "%sbin/httpd", pServerRoot);
+    if (len >= (int)sizeof(achExec) - 1)
+    {
+        LS_ERROR("[suEXEC] Server root is too long.");
+        return LS_FAIL;
+    }
     if (checkLScgid(achExec))
         return LS_FAIL;
     while (1)
@@ -267,7 +273,14 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
         LS_ERROR("[suEXEC] socketpair() failed!");
         return LS_FAIL;
     }
-    snprintf(&achExec[len], 2048 - len, " -n %d", fds[1]);
+    int n = lsnprintf(&achExec[len], sizeof(achExec) - len, " -n %d", fds[1]);
+    if (n >= (int)(sizeof(achExec) - len) - 1)
+    {
+        LS_ERROR("[suEXEC] Command line is too long.");
+        close(fds[0]);
+        close(fds[1]);
+        return LS_FAIL;
+    }
     ::fcntl(fds[0], F_SETFD, FD_CLOEXEC);
 
     int fdsData[2];
@@ -276,8 +289,17 @@ int SUExec::suEXEC(const char *pServerRoot, int *pfd, int listenFd,
         LS_ERROR("[suEXEC] socketpair() failed!");
         return LS_FAIL;
     }
-    len = snprintf(sockAddr, 250, "uds:/%s",
+    len = lsnprintf(sockAddr, sizeof(sockAddr), "uds:/%s",
                    CgidWorker::getCgidWorker()->getConfig().getServerAddrUnixSock());
+    if (len >= (int)sizeof(sockAddr) - 1)
+    {
+        LS_ERROR("[suEXEC] lscgid socket path is too long.");
+        close(fds[0]);
+        close(fds[1]);
+        close(fdsData[0]);
+        close(fdsData[1]);
+        return LS_FAIL;
+    }
     write(fdsData[0], sockAddr, len + 1);
     close(fdsData[0]);
 

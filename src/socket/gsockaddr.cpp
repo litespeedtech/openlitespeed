@@ -270,7 +270,11 @@ int GSockAddr::set2(int family, const char *pURL, int tag, char *pDest)
         return -1;
     if (family == AF_UNIX)
     {
-        memccpy(m_un->sun_path, pURL, 0, sizeof(m_un->sun_path));
+        if (memccpy(m_un->sun_path, pURL, 0, sizeof(m_un->sun_path)) == NULL)
+        {
+            m_un->sun_path[sizeof(m_un->sun_path) - 1] = '\0';
+            return -1;
+        }
         return 1;
     }
 
@@ -640,4 +644,3 @@ int GSockAddr::setIp(struct sockaddr *result, const void *ip, int len)
     }
     return -1;
 }
-

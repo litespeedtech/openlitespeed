@@ -55,6 +55,7 @@ TEST(THREAD_THREAD_TEST)
     CHECK(thread->start(arg) == 0);
     CHECK(thread->join(&ret) == 0);
     CHECK(arg == ret);
+    delete thread;
 }
 
 #endif

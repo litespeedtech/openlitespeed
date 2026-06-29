@@ -86,6 +86,28 @@ TEST(objpooltest)
     CHECK(op.getPoolSize() == 0);
     CHECK(op.begin() == op.end());
 
+#ifdef DISABLE_OBJ_POOL
+    for (i = 0; i < chunk; ++i)
+    {
+        pObjs[i] = op.get();
+        CHECK(pObjs[i] != NULL);
+        CHECK(op.size() == 0);
+        CHECK(op.getPoolCapacity() == 0);
+        CHECK(op.getPoolSize() == 0);
+    }
+    op.recycle((void **)pObjs, chunk);
+
+    ObjPoolTest *pDisabledObjs2[chunk] = { NULL };
+    CHECK(op.get(pDisabledObjs2, chunk) == chunk);
+    for (i = 0; i < chunk; ++i)
+        CHECK(pDisabledObjs2[i] != NULL);
+    op.recycle((void **)pDisabledObjs2, chunk);
+    CHECK(op.size() == 0);
+    CHECK(op.getPoolCapacity() == 0);
+    CHECK(op.getPoolSize() == 0);
+    return;
+#endif
+
     for (i = 0; i < chunk; ++i)
     {
         pObjs[i] = op.get();

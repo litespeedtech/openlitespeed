@@ -1,5 +1,6 @@
 #include "unpackedheaders.h"
 #include <http/httpheader.h>
+#include <http/httpmethod.h>
 #include <http/httprespheaders.h>
 #include <log4cxx/logger.h>
 #include <lsr/ls_pool.h>
@@ -762,15 +763,18 @@ int UnpackedHeaders::setMethod2(lsxpack_header *hdr)
 {
     if (m_methodLen)
         return LS_FAIL;
+    if (hdr->val_len == 0 || hdr->val_len > HttpMethod::MAX_METHOD_LEN)
+        return LS_FAIL;
     if (m_buf->size() != HEADER_BUF_PAD)
     {
         int diff = hdr->val_len - 6;
         if (diff != 0)
         {
-            m_buf->guarantee(m_buf->size() + hdr->val_len);
             if (diff > 0)
             {
-                char tmp_buf[hdr->val_len];
+                if (m_buf->guarantee(diff) == LS_FAIL)
+                    return LS_FAIL;
+                char tmp_buf[HttpMethod::MAX_METHOD_LEN];
                 memmove(tmp_buf, m_buf->get_ptr(hdr->val_offset),
                         hdr->val_len);
                 char *ptr = m_buf->get_ptr(HEADER_BUF_PAD + hdr->val_len);
@@ -780,9 +784,9 @@ int UnpackedHeaders::setMethod2(lsxpack_header *hdr)
             }
             else
             {
+                char *src = m_buf->get_ptr(HEADER_BUF_PAD + 7);
                 char *ptr = m_buf->get_ptr(HEADER_BUF_PAD + hdr->val_len + 1);
-                memmove(ptr, m_buf->get_ptr(HEADER_BUF_PAD + 7),
-                        m_buf->end() - ptr);
+                memmove(ptr, src, m_buf->end() - src);
                 memmove(m_buf->get_ptr(HEADER_BUF_PAD), m_buf->get_ptr(hdr->val_offset),
                     hdr->val_len);
             }
@@ -1334,10 +1338,56 @@ int UpkdHdrBuilder::guarantee(int size)
 }
 
 
+#define EOK  LSXPACK_OK
+#define EBD  LSXPACK_ERR_BAD_REQ_HEADER
+#define EUP  LSXPACK_ERR_UPPERCASE_HEADER
+#define HE(name_err, val_err) ((unsigned char)((name_err) | ((val_err) << 4)))
+
+/* Low nibble is field-name error, high nibble is field-value error. */
+static const unsigned char s_reqHeaderCharErr[256] =
+{
+    /* 0x00 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EOK), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
+    /* 0x10 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
+    /* 0x20 */ HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK),
+    /* 0x30 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0x40 */ HE(EBD, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK),
+    /* 0x50 */ HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK),
+    /* 0x60 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK),
+    /* 0x70 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EBD),
+    /* 0x80 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0x90 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0xA0 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0xB0 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0xC0 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0xD0 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0xE0 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+    /* 0xF0 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
+};
+
+#undef EOK
+#undef EBD
+#undef EUP
+#undef HE
+
+
+static int s_max_header_count = 500;
+void UpkdHdrBuilder::setMaxHeaderCount(int cnt)
+{
+    if (cnt < 32)
+        cnt = 32;
+    if (cnt > 2000)
+        cnt = 2000;
+    s_max_header_count = cnt;
+}
+
+
 lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
 {
     if (hdr == NULL || hdr->buf == NULL)
         return end();
+
+    if (headers->getHeaderCount() > s_max_header_count)
+        return LSXPACK_ERR_BAD_REQ_HEADER;
 
     int idx = UPK_HDR_UNKNOWN;
     if (!is_qpack)
@@ -1346,10 +1396,16 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         idx = UnpackedHeaders::qpack2ReqIdx(hdr->qpack_index);
     const char *name = lsxpack_header_get_name(hdr);
     char *val = hdr->buf + hdr->val_offset;
-    char *p = val;
-    while (p < val + hdr->val_len
-        && (p = (char *)memchr(p, '\n', val + hdr->val_len - p)))
-        *p++ = ' ';
+
+    lsxpack_err_code err;
+    unsigned char *p = (unsigned char *)val;
+    const unsigned char *pEnd = p + hdr->val_len;
+    for (; p < pEnd; ++p)
+    {
+        err = (lsxpack_err_code)(s_reqHeaderCharErr[*p] >> 4);
+        if (err)
+            return err;
+    }
 
     if ((idx >= UPK_HDR_METHOD && idx <= UPK_HDR_STATUS)
         || (hdr->name_len > 2 && name[0] == ':'))
@@ -1391,6 +1447,8 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
             return LSXPACK_OK;
         case UPK_HDR_METHOD:  //":method"
             //If second time have the :method, ERROR
+            if (hdr->val_len > HttpMethod::MAX_METHOD_LEN)
+                return LSXPACK_ERR_BAD_REQ_HEADER;
             if (hdr->val_len > 7 && memchr(val, ' ', hdr->val_len) != NULL)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
             if (headers->setMethod2(hdr) == LS_FAIL)
@@ -1426,22 +1484,22 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         }
         if (idx == UPK_HDR_UNKNOWN)
         {
-            for(const char *p = name; p < name + hdr->name_len; ++p)
-                if (isupper(*p))
-                    return LSXPACK_ERR_UPPERCASE_HEADER;
+            if (hdr->name_len == 0)
+                return LSXPACK_ERR_BAD_REQ_HEADER;
+            p = (unsigned char *)name;
+            pEnd = p + hdr->name_len;
+            for (; p < pEnd; ++p)
+            {
+                err = (lsxpack_err_code)(s_reqHeaderCharErr[*p] & 0x0F);
+                if (err)
+                    return err;
+            }
             if (hdr->name_len == 10 && memcmp(name, "connection", 10) == 0)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
             else if (hdr->name_len == 6 && memcmp(name, "cookie", 6) == 0)
                 idx = HttpHeader::H_COOKIE;
             else if (hdr->name_len == 17 && memcmp(name, "transfer-encoding", 17) == 0)
                 idx = HttpHeader::H_TRANSFER_ENCODING;
-            else if (hdr->name_len == 0)
-            {
-                //NOTE: skip blank header
-                headers->m_lsxpack.pop();
-                working = NULL;
-                return LSXPACK_OK;
-            }
         }
         if (idx == HttpHeader::H_COOKIE)
         {
@@ -1592,4 +1650,3 @@ void UnpackedHeaders::dump(LogSession *ls, const lsxpack_header *hdr,
              lsxpack_header_get_name(hdr),
              hdr->val_len, hdr->buf + hdr->val_offset);
 }
-

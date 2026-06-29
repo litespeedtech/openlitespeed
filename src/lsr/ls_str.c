@@ -22,6 +22,7 @@
 #include <lsr/xxhash.h>
 
 #include <ctype.h>
+#include <stdint.h>
 
 static ls_str_t *ls_iStr_new(const char *pStr, size_t len, ls_xpool_t *pool);
 static ls_str_t *ls_iStr(ls_str_t *pThis, const char *pStr, size_t len,
@@ -31,6 +32,23 @@ static size_t ls_str_iSetStr(ls_str_t *pThis, const char *pStr, size_t len,
                           ls_xpool_t *pool);
 static void ls_str_iAppend(ls_str_t *pThis, const char *pStr,
                            size_t len, ls_xpool_t *pool);
+
+
+static int ls_str_get_self_offset(const ls_str_t *pThis, const char *pStr,
+                                  size_t *offset)
+{
+    if (!pThis->ptr || !pStr)
+        return 0;
+    uintptr_t begin = (uintptr_t)pThis->ptr;
+    uintptr_t end = begin + pThis->len + 1;
+    uintptr_t ptr = (uintptr_t)pStr;
+    if (ptr >= begin && ptr < end)
+    {
+        *offset = ptr - begin;
+        return 1;
+    }
+    return 0;
+}
 
 
 ls_inline void *ls_str_do_alloc(ls_xpool_t *pool, size_t size)
@@ -297,6 +315,25 @@ size_t ls_str_iSetStr(ls_str_t *pThis, const char *pStr, size_t len,
                    ls_xpool_t *pool)
 {
     assert(pThis);
+    size_t offset;
+    if (ls_str_get_self_offset(pThis, pStr, &offset))
+    {
+        if (offset + len <= pThis->len)
+        {
+            memmove(pThis->ptr, pThis->ptr + offset, len);
+            pThis->ptr[len] = 0;
+        }
+        else
+        {
+            char *p = ls_str_do_dupstr(pThis->ptr + offset, len, pool);
+            if (!p)
+                return 0;
+            ls_str_do_free(pool, pThis->ptr);
+            pThis->ptr = p;
+        }
+        pThis->len = len;
+        return pThis->len;
+    }
     ls_str_do_free(pool, pThis->ptr);
     return ((ls_iStr(pThis, pStr, len, pool) == NULL) ? 0 : pThis->len);
 }
@@ -307,16 +344,19 @@ void ls_str_iAppend(ls_str_t *pThis, const char *pStr, size_t len,
 {
     assert(pThis && pStr);
     char *p;
+    size_t offset;
+    int self_ref = ls_str_get_self_offset(pThis, pStr, &offset);
     if (pool != NULL)
         p = (char *)ls_xpool_realloc(pool, pThis->ptr, pThis->len + len + 1);
     else
         p = (char *)ls_prealloc(pThis->ptr, pThis->len + len + 1);
     if (p != NULL)
     {
+        if (self_ref)
+            pStr = p + offset;
         memmove(p + pThis->len, pStr, len);
         pThis->len += len;
         *(p + pThis->len) = 0;
         pThis->ptr = p;
     }
 }
-

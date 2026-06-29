@@ -948,6 +948,13 @@ static int create_strnums(lscgid_t *pCGI, SetupOp *op, char *work_str,
                 return DEFAULT_ERR_RC;
         }
     }
+    if (!*strnums || !**strnums)
+    {
+        ls_stderr("Namespace missing string numbers in %s\n", work_str);
+        free(*strnums);
+        *strnums = NULL;
+        return DEFAULT_ERR_RC;
+    }
     pos = *strnums;
     while (*pos)
     {
@@ -1345,7 +1352,11 @@ static int source_create(char *path, lscgid_t *pCGI)
 {
     char part_path[1024];
     char *slash = part_path;
-    strncpy(part_path, path, sizeof(part_path) - 1);
+    if (memccpy(part_path, path, '\0', sizeof(part_path)) == NULL)
+    {
+        ls_stderr("Namespace temp dir path is too long: %s\n", path);
+        return DEFAULT_ERR_RC;
+    }
     DEBUG_MESSAGE("source_create %s\n", path);
     while ((slash = strchr(slash + 1, '/'))) 
     {
@@ -1918,10 +1929,13 @@ static int privileged_op(int privileged_op_socket, uint32_t op,
             {
                 char name[256];
                 char *slash = strrchr(arg1, '/');
-                if (slash)
-                    strncpy(name, slash + 1, sizeof(name) - 1);
-                else
-                    strncpy(name, arg1, sizeof(name) - 1);
+                const char *hostname = slash ? slash + 1 : arg1;
+                if (memccpy(name, hostname, '\0', sizeof(name)) == NULL)
+                {
+                    ls_stderr("Namespace hostname is too long: %s\n",
+                              hostname);
+                    return DEFAULT_ERR_RC;
+                }
                     
                 if (sethostname(name, strlen(name)) != 0)
                 {
@@ -2751,7 +2765,7 @@ static int resolve_symlinks_in_ops (SetupOp *setupOp)
                     if (strcmp(old_source, op->source))
                     {
                         char linked[NOSANDBOX_MAX_FILE_LEN];
-                        ssize_t sz = readlink(old_source, linked, sizeof(linked));
+                        ssize_t sz = readlink(old_source, linked, sizeof(linked) - 1);
                         if (sz > 0)
                         {
                             linked[sz] = 0;

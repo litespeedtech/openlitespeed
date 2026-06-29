@@ -49,6 +49,11 @@ class PlainConfParser
         }
         $fullpath = $rawfiles->GetFullFileName($fid);
 
+        if (self::isGlobPattern($fullpath)) {
+            $this->parse_glob_include($rawfiles, $root, $fid, $fullpath);
+            return;
+        }
+
         $rawlines = file($fullpath);
 
         if ($rawlines === false) {
@@ -201,6 +206,39 @@ class PlainConfParser
 
             $prev_node = $cur_node;
             $cur_node = array_pop($stack);
+        }
+    }
+
+    private static function isGlobPattern($path)
+    {
+        return (strpbrk($path, '*?[') !== false);
+    }
+
+    private function parse_glob_include($rawfiles, $root, $fid, $fullpath)
+    {
+        // A wildcard include (e.g. "include conf.d/*.conf") matches zero or more
+        // files. Expand it and fold every matched file's top-level entries into
+        // the include node, just like a single include would. A pattern that
+        // matches nothing is valid (DirectAdmin ships empty conf.d), so it is
+        // never an error.
+        $matches = glob($fullpath, GLOB_NOSORT);
+        if ($matches === false || empty($matches)) {
+            $root->SetRawMap($fid, 1, 0, '');
+            return;
+        }
+
+        sort($matches);
+        $root->SetRawMap($fid, 1, count($matches), '');
+
+        foreach ($matches as $match) {
+            if (!is_file($match)) {
+                continue;
+            }
+
+            $child = new CNode('include', $match, CNode::T_INC);
+            $this->parse_raw($rawfiles, $child);
+            $root->AddIncludeChildren($child);
+            $this->_hasInclude = true;
         }
     }
 }

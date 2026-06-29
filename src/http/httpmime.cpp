@@ -306,7 +306,7 @@ MIMESubMap::iterator MIMESubMap::findMimeIgnoreCharset(char *pMIME)
     char ch;
     if (p1)
     {
-        while (isspace(*(p1 - 1)))
+        while (p1 > pMIME && isspace(*(p1 - 1)))
             --p1;
         ch = *p1;
         *p1 = '\0';
@@ -1115,16 +1115,19 @@ void HttpMime::setHandler(MimeSetting *pSetting, void *pValue)
 
 bool HttpMime::needCharset(const char *pMimeType, int len)
 {
+    if (pMimeType == NULL || len <= 0)
+        return false;
+
     char ch = *pMimeType;
     if (ch != 't' && ch != 'a')
         return false;
-    if (strncmp(pMimeType, "text/", 5) == 0)
+    if (len >= 5 && strncmp(pMimeType, "text/", 5) == 0)
         return true;
     if (len >= 16 && strncmp(pMimeType, "application/", 12) == 0)
     {
-        if (strncasecmp(pMimeType + 12, "x-javascript", 12) == 0)
+        if (len >= 24 && strncasecmp(pMimeType + 12, "x-javascript", 12) == 0)
             return true;
-        if (strncasecmp(pMimeType + 12, "javascript", 10) == 0)
+        if (len >= 22 && strncasecmp(pMimeType + 12, "javascript", 10) == 0)
             return true;
         if (strncasecmp(pMimeType + 12, "json", 4) == 0)
             return true;
@@ -1152,6 +1155,12 @@ int HttpMime::addMimeHandler(const char *pSuffix, char *pMime,
     const char *reason;
     char achBuf[256];
     char achSuffix[512];
+    if (strlen(pSuffix) > 128)
+    {
+        LS_WARN("[%s] failed to add mime type: suffix is too long: %s",
+                pLogId, pSuffix);
+        return LS_FAIL;
+    }
     if (!pMime)
     {
         lstrncpy(achBuf, "application/x-httpd-", sizeof(achBuf));
@@ -1215,7 +1224,14 @@ int HttpMime::_configScriptHandler(ConfigCtx& currentCtx, const char *value,
         psType->setStr(value, type - value);
 
         char handler[256] = {0};
-        memcpy(handler, type + 1, suffix - type - 2);
+        int handlerLen = suffix - type - 2;
+        if (handlerLen <= 0 || handlerLen >= (int)sizeof(handler))
+        {
+            currentCtx.logErrorInvalTag("handler", value);
+            return -1;
+        }
+        memcpy(handler, type + 1, handlerLen);
+        handler[handlerLen] = 0;
 
         /**
          * trim tail space
@@ -1542,5 +1558,3 @@ void HttpMime::addMimeHandler(const HttpHandler *pHdlr, char *pMime,
     pHttpMime->addMimeHandler(pSuffix, pMime, pHdlr, pParent,
                               TmpLogId::getLogId());
 }
-
-

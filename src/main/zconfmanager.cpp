@@ -110,8 +110,10 @@ int ZConfManager::init(const char *pAuth, const char *pAdcList,
     m_pAuth = new AutoStr2("Authorization: Basic ");
     iAuthLen = strlen(pAuth);
     iPrefixLen = m_pAuth->len();
-    m_pAuth->prealloc(iPrefixLen + ls_base64_encodelen(iAuthLen));
-    iAuthLen = ls_base64_encode(pAuth, iAuthLen, m_pAuth->buf() + iPrefixLen);
+    int iAuthEncodedLen = ls_base64_encodelen(iAuthLen);
+    m_pAuth->prealloc(iPrefixLen + iAuthEncodedLen);
+    iAuthLen = ls_base64_encode(pAuth, iAuthLen, m_pAuth->buf() + iPrefixLen,
+                                iAuthEncodedLen);
     m_pAuth->setLen(iPrefixLen + iAuthLen);
 
     m_pAdcList = new AutoStr2(pAdcList);

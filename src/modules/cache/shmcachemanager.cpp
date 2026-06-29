@@ -623,19 +623,24 @@ int ShmCacheManager::processPurgeCmdEx(
     const char *pEnd = pValue + iValLen;
     while (pValue < pEnd)
     {
-        if (isspace(*pValue))
-        {
+        while (pValue < pEnd && isspace(*pValue))
             ++pValue;
-            continue;
-        }
+        if (pValue >= pEnd)
+            break;
+
         pValueEnd = (const char *)memchr(pValue, ',', pEnd - pValue);
         if (!pValueEnd)
             pValueEnd = pNext = pEnd;
         else
             pNext = pValueEnd + 1;
 
-        while (isspace(pValueEnd[-1]))
+        while (pValueEnd > pValue && isspace(pValueEnd[-1]))
             --pValueEnd;
+        if (pValueEnd <= pValue)
+        {
+            pValue = pNext;
+            continue;
+        }
 
         flag = PDF_PURGE;
 
@@ -657,10 +662,15 @@ int ShmCacheManager::processPurgeCmdEx(
             flag |= PDF_STALE;
         }
 
-        if (strncmp(pValue, "tag=", 4) == 0)
+        if (pValueEnd - pValue >= 4 && strncmp(pValue, "tag=", 4) == 0)
         {
             pValue += 4;
             flag |= PDF_TAG;
+            if (pValue >= pValueEnd)
+            {
+                pValue = pNext;
+                continue;
+            }
         }
         if (*pValue == '*')
         {
@@ -737,11 +747,11 @@ int ShmCacheManager::shouldPurge(const char *pKey, int keyLen,
         //         "Lookup tag: '%.*s', create timestamp: %d.%d",
         //          keyLen, pKey, sec, (int)msec );
 
-        while (isblank(*p))
+        while (p < pTagEnd && isblank(*p))
             ++p;
 
         const char *pTagEndBak = pTagEnd;
-        while (isblank(*(pTagEndBak - 1)))
+        while (pTagEndBak > p && isblank(pTagEndBak[-1]))
             --pTagEndBak;
 
         if (pTagEndBak > p &&
@@ -790,7 +800,7 @@ int ShmCacheManager::isPurgedByTag(
         isPrivate = (pKey->m_ipLen > 0);
         //assert(isCheckPrivate == isPrivate);
         
-        if (strncasecmp(p, "public:", 7) == 0)
+        if (pComma - p >= 7 && strncasecmp(p, "public:", 7) == 0)
         {
             p += 7;
             isPrivate = 0;
@@ -800,8 +810,13 @@ int ShmCacheManager::isPurgedByTag(
         if (p < pComma)
         {
             pTagEnd = pComma;
-            while(isspace(pTagEnd[-1]))
+            while(pTagEnd > p && isspace(pTagEnd[-1]))
                 --pTagEnd;
+            if (pTagEnd <= p)
+            {
+                p = pComma + 1;
+                continue;
+            }
             if (isPrivate)
             { 
                 if (foundPrivate == -1)
@@ -1282,5 +1297,4 @@ int ShmCacheManager::isInTracker(const unsigned char* pKey, int keyLen,
     LsShmHash::iteroffset iterOff = pTracker->findIterator(&parms);
     return (int)iterOff.m_iOffset;
 }
-
 

@@ -308,6 +308,13 @@ int SsiEngine::processFileAttr(HttpSession *pSession,
             p1 = pURI + pReq->getDocRoot()->len();
         }
         int prefix_len = p1 - pURI;
+        if (prefix_len < 0 || prefix_len >= (int)sizeof(achBuf)
+            || p - achBuf >= (int)sizeof(achBuf) - prefix_len)
+        {
+            pSession->appendDynBody(pRuntime->getConfig()->getErrMsg()->c_str(),
+                                    pRuntime->getConfig()->getErrMsg()->len());
+            return 0;
+        }
         memmove(&achBuf[prefix_len], achBuf, p - achBuf);
         memmove(achBuf, pURI, prefix_len);
         p += prefix_len;
@@ -343,31 +350,35 @@ int SsiEngine::toLocalAbsUrl(HttpSession *pSession, const char *pOrgUrl,
     HttpReq *pReq = pSession->getReq();
     const char *pURI = pReq->getURI();
     const char *p1 = pOrgUrl;
-    if ((strncasecmp(p1, "http", 4) == 0) &&
-        ((*(p1 + 4) == ':') ||
-         (((*(p1 + 4) | 0x20) == 's') && (*(p1 + 5) == ':'))))
+    const char *pOrgEnd = pOrgUrl + urlLen;
+    if (urlLen >= 7 && strncasecmp(p1, "http", 4) == 0
+        && ((p1[4] == ':' && p1[5] == '/' && p1[6] == '/')
+            || (urlLen >= 8 && ((p1[4] | 0x20) == 's') && p1[5] == ':'
+                && p1[6] == '/' && p1[7] == '/')))
     {
-        p1 += 5;
-        if (*p1 == ':')
-            ++p1;
-        p1 += 2;
-        if (strncasecmp(p1, pSession->getReq()->getHeader(HttpHeader::H_HOST),
-                        pSession->getReq()->getHeaderLen(HttpHeader::H_HOST)) == 0)
+        p1 += (p1[4] == ':') ? 7 : 8;
+        int hostLen = pSession->getReq()->getHeaderLen(HttpHeader::H_HOST);
+        if (pOrgEnd - p1 >= hostLen
+            && strncasecmp(p1, pSession->getReq()->getHeader(HttpHeader::H_HOST),
+                           hostLen) == 0)
         {
-            p1 += pSession->getReq()->getHeaderLen(HttpHeader::H_HOST);
-            if (*p1 == ':')
+            p1 += hostLen;
+            if (p1 < pOrgEnd && *p1 == ':')
             {
                 const char *p = p1 + 1;
-                while (isdigit(*p))
+                while (p < pOrgEnd && isdigit((unsigned char)*p))
                     ++p;
-                if (*p == '/')
+                if (p < pOrgEnd && *p == '/')
                     p1 = p;
             }
         }
         else
             return urlLen;
-        memmove(pAbsUrl, p1, pOrgUrl + urlLen - p1 + 1);
-        return pOrgUrl + urlLen - p1;
+        if (pOrgEnd - p1 >= absLen)
+            return -1;
+        memmove(pAbsUrl, p1, pOrgEnd - p1);
+        pAbsUrl[pOrgEnd - p1] = 0;
+        return pOrgEnd - p1;
     }
     p1 = pURI + pReq->getURILen() - pReq->getPathInfoLen();
     while ((p1 > pURI) && p1[-1] != '/')
@@ -402,10 +413,25 @@ int SsiEngine::processSubReq(HttpSession *pSession, SubstItem *pItem)
     case SSI_ATTR_INC_FILE:
         {
             HttpReq *pReq = pSession->getReq();
-            memmove(p, pReq->getURI(), pReq->getURILen());
-            p = p + pReq->getURILen() - pReq->getPathInfoLen();
-            while (p[-1] != '/')
+            int uriLen = pReq->getURILen();
+            int pathInfoLen = pReq->getPathInfoLen();
+            if (uriLen < 0 || pathInfoLen < 0 || pathInfoLen > uriLen
+                || uriLen >= (int)sizeof(achBuf))
+            {
+                pSession->appendDynBody(pRuntime->getConfig()->getErrMsg()->c_str(),
+                                        pRuntime->getConfig()->getErrMsg()->len());
+                return 0;
+            }
+            memmove(p, pReq->getURI(), uriLen);
+            p = p + uriLen - pathInfoLen;
+            while (p > achBuf && p[-1] != '/')
                 --p;
+            if (p == achBuf)
+            {
+                pSession->appendDynBody(pRuntime->getConfig()->getErrMsg()->c_str(),
+                                        pRuntime->getConfig()->getErrMsg()->len());
+                return 0;
+            }
             *p = 0;
             len -= p - achBuf;
             break;
@@ -416,20 +442,35 @@ int SsiEngine::processSubReq(HttpSession *pSession, SubstItem *pItem)
         pStack->requireCGI();
         break;
     case SSI_ATTR_EXEC_CMD:
-        pStack->requireCmd();
-        p += snprintf(achBuf, 40960, "%s",
-                      pStack->getScript()->getPath()->c_str());
-        while (p[-1] != '/')
-            --p;
-        *p++ = '&';
-        *p++ = ' ';
-        *p++ = '-';
-        *p++ = 'c';
-        *p++ = ' ';
-        len -= p - achBuf;
-        // make the command looks like "/script/path/& command"
-        // '&' tell cgid to execute it as shell command
-        break;
+        {
+            pStack->requireCmd();
+            int scriptLen = snprintf(achBuf, sizeof(achBuf), "%s",
+                                     pStack->getScript()->getPath()->c_str());
+            if (scriptLen < 0 || scriptLen >= (int)sizeof(achBuf) - 5)
+            {
+                pSession->appendDynBody(pRuntime->getConfig()->getErrMsg()->c_str(),
+                                        pRuntime->getConfig()->getErrMsg()->len());
+                return 0;
+            }
+            p += scriptLen;
+            while (p > achBuf && p[-1] != '/')
+                --p;
+            if (p == achBuf)
+            {
+                pSession->appendDynBody(pRuntime->getConfig()->getErrMsg()->c_str(),
+                                        pRuntime->getConfig()->getErrMsg()->len());
+                return 0;
+            }
+            *p++ = '&';
+            *p++ = ' ';
+            *p++ = '-';
+            *p++ = 'c';
+            *p++ = ' ';
+            len = (int)sizeof(achBuf) - (p - achBuf);
+            // make the command looks like "/script/path/& command"
+            // '&' tell cgid to execute it as shell command
+            break;
+        }
     }
     RequestVars::appendSubst(pItem, pSession, p, len,
                              0, pRuntime->getRegexResult());
@@ -513,7 +554,6 @@ int SsiEngine::startSubSession(HttpSession *pSession,
         return -1;
     }
 
-    pSubSession->getStream()->setFlag(HIO_FLAG_PASS_SETCOOKIE, 1);
     pSubSession->setSsiRuntime(pSession->getSsiRuntime());
     pSubSession->setFlag(HSF_NO_ERROR_PAGE);
     int ret = pSubSession->execSubSession();
@@ -563,14 +603,26 @@ int SsiEnv::add(const char *name, size_t nameLen,
 {
     char achBuf[40960];
     char *p = achBuf;
+    char *pEnd = &achBuf[sizeof(achBuf)];
     if (!name)
         return 0;
-    int len = HttpUtil::escapeHtml(name, name + nameLen, p, 40960);
+    if (!value)
+    {
+        value = "";
+        valLen = 0;
+    }
+    int len = HttpUtil::escapeHtml(name, name + nameLen, p, pEnd - p - 2);
     p += len;
+    if (p >= pEnd - 1)
+    {
+        m_pSession->appendDynBody(achBuf, p - achBuf);
+        return 0;
+    }
     *p++ = '=';
-    len = HttpUtil::escapeHtml(value, value + valLen, p, &achBuf[40960] - p);
+    len = HttpUtil::escapeHtml(value, value + valLen, p, pEnd - p - 1);
     p += len;
-    *p++ = '\n';
+    if (p < pEnd)
+        *p++ = '\n';
     m_pSession->appendDynBody(achBuf, p - achBuf);
     return 0;
 }

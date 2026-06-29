@@ -22,6 +22,9 @@
 #include <socket/gsockaddr.h>
 #include "unittest-cpp/UnitTest++.h"
 
+#include <string.h>
+#include <sys/un.h>
+
 
 class Tester : public CoreSocket
 {
@@ -52,6 +55,22 @@ TEST(CoreSocketTest_testConstructors)
     CHECK(sock2.close() == -1);
     CHECK(errno == EBADF);
 }
+
+
+TEST(GSockAddrTest_testUnixPathLimit)
+{
+    char url[sizeof(((sockaddr_un *)0)->sun_path) + 16];
+    memset(url, 'a', sizeof(url));
+    memcpy(url, "uds://", 6);
+    url[5 + sizeof(((sockaddr_un *)0)->sun_path) - 1] = 0;
+
+    GSockAddr addr;
+    CHECK(addr.set(url, NO_ANY) == 0);
+
+    url[5 + sizeof(((sockaddr_un *)0)->sun_path) - 1] = 'a';
+    url[5 + sizeof(((sockaddr_un *)0)->sun_path)] = 0;
+    CHECK(addr.set(url, NO_ANY) == -1);
+}
 // void CoreSocketTest::testBind()
 // {
 //     Tester sock1( PF_INET, SOCK_STREAM, 0 );
@@ -66,4 +85,3 @@ TEST(CoreSocketTest_testConstructors)
 // }
 
 #endif
-

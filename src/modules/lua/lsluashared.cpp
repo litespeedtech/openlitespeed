@@ -22,6 +22,7 @@
 #include <shm/lsshmpool.h>
 
 #include <fcntl.h>
+#include <limits.h>
 #include <time.h>
 #include <sys/time.h>
 
@@ -127,7 +128,7 @@ static ls_luashm_t *LsLuaShmSetval(LsShmHash *pHash,
         pHash->remove(name, len);
         return NULL;
     }
-    if (size == 0)
+    if (size <= 0)
         return NULL;
 
     if ((key = pHash->find(name, len, &retsize)) == 0)
@@ -497,8 +498,15 @@ static int LsLuaShmSetHelper(lua_State *L, LsShmHash *pShared,
 
     case LUA_TSTRING:
         p_string = LsLuaApi::tolstring(L, 3, &len);
+        if (len > INT_MAX)
+        {
+            LsLuaApi::pushboolean(L, 0);
+            LsLuaApi::pushstring(L, "value too large");
+            LsLuaApi::pushboolean(L, 0);
+            return 3;
+        }
         p_Val = LsLuaShmSetval(pShared, keyName, ls_luashm_string,
-                               p_string, len);
+                               p_string, (int)len);
         break;
 
     case LUA_TNONE:
@@ -850,5 +858,4 @@ void LsLuaCreateShared(lua_State *L)
     LsLuaApi::setmetatable(L, -2);
     LsLuaApi::setfield(L, -2, "shared");
 }
-
 

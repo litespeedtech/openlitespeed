@@ -426,12 +426,15 @@ class Plesk extends ControlPanel
 
     /**
      *
+     * @since 1.17.10
+     *
      * @param WPInstall $wpInstall
      *
-     * @return string
+     * @return PhpBinaryParts
      */
-    public function getPhpBinary( WPInstall $wpInstall )
+    public function getPhpBinaryParts( WPInstall $wpInstall )
     {
+        $binPath    = '';
         $serverName = $wpInstall->getData(WPInstall::FLD_SERVERNAME);
 
         if ( $serverName != null ) {
@@ -445,22 +448,49 @@ class Plesk extends ControlPanel
                     . '| sed -n \'s:.*<clipath>\(.*\)</clipath>.*:\1:p\''
             );
 
-            if ( $output ) {
-                $binPath = trim($output);
+            if ( $output !== null ) {
+                $candidate = trim($output);
+
+                if ( $candidate !== ''
+                        && preg_match('#^/[A-Za-z0-9_./\-]+$#', $candidate)
+                        && is_file($candidate)
+                        && is_executable($candidate) ) {
+
+                    $binPath = $candidate;
+                }
+                elseif ( $candidate !== '' ) {
+                    Logger::debug(
+                        'Plesk handler <clipath> rejected as unsafe or '
+                            . "non-executable: $candidate. Falling back "
+                            . 'to default PHP binary.'
+                    );
+                }
             }
         }
 
-        if ( !empty($binPath) ) {
-            $phpBin = $binPath;
-        }
-        elseif ( ($defaultBinary = $this->getDefaultPHPBinary()) != '' ) {
-            $phpBin = $defaultBinary;
-        }
-        else {
-            $phpBin = 'php';
+        if ( $binPath === '' ) {
+            $defaultBinary = $this->getDefaultPhpBinary();
+            $binPath       = $defaultBinary !== '' ? $defaultBinary : 'php';
         }
 
-        return "$phpBin $this->phpOptions";
+        return new PhpBinaryParts($binPath, $this->phpOptions);
+    }
+
+    /**
+     * @deprecated since 1.17.10  Override getPhpBinaryParts() instead.
+     *
+     * @param WPInstall $wpInstall
+     *
+     * @return string
+     */
+    public function getPhpBinary( WPInstall $wpInstall )
+    {
+        $parts   = $this->getPhpBinaryParts($wpInstall);
+        $options = $parts->getOptionsString();
+
+        return $options === ''
+            ? $parts->getBinPath()
+            : $parts->getBinPath() . ' ' . $options;
     }
 
 }

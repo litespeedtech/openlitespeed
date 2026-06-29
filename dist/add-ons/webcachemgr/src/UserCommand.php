@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author Michael Alegre
- * @copyright (c) 2018-2023 LiteSpeed Technologies, Inc.
+ * @copyright (c) 2018-2026 LiteSpeed Technologies, Inc.
  * *******************************************
  */
 
@@ -346,7 +346,7 @@ class UserCommand
             elseif ( $m[1] == 'FAIL' ) {
                 $cmdStatus |= UserCommand::EXIT_INCR_FAIL;
             }
-            elseif( $m[1] = 'BYPASS' ) {
+            elseif ( $m[1] === 'BYPASS' ) {
                 $cmdStatus |= UserCommand::EXIT_INCR_BYPASS;
             }
         }
@@ -394,20 +394,21 @@ class UserCommand
     {
         $su = $wpInstall->getSuCmd();
         $timeout = ControlPanel::PHP_TIMEOUT;
-        $phpBin = $wpInstall->getPhpBinary();
+        $parts = $wpInstall->getPhpBinaryParts();
+        $phpBinPath = $parts->getBinPath();
+        $phpOptions = $parts->getOptionsString();
         $path = $wpInstall->getPath();
         $serverName = $wpInstall->getData(WPInstall::FLD_SERVERNAME);
         $env = Context::getOption()->getInvokerName();
 
-        if ( $serverName === null ) {
-            $serverName = $docRoot = 'x';
-        }
-        else {
-            $docRoot = $wpInstall->getData(WPInstall::FLD_DOCROOT);
+        $docRoot = $wpInstall->getData(WPInstall::FLD_DOCROOT);
 
-            if ( $docRoot === null ) {
-                $docRoot = 'x';
-            }
+        if ( $docRoot === null || trim((string)$docRoot) === '' ) {
+            $docRoot = 'x';
+        }
+
+        if ( $serverName === null || trim((string)$serverName) === '' ) {
+            $serverName = 'x';
         }
 
         $escapedExtraArgs = array_map('escapeshellarg', $extraArgs);
@@ -416,7 +417,8 @@ class UserCommand
 
         $innerCmd = 'cd ' . escapeshellarg("$path/wp-admin")
             . ' && timeout ' . (int)$timeout
-            . ' ' . $phpBin  // Trusted internal value, may contain PHP options
+            . ' ' . escapeshellarg($phpBinPath)
+            . ($phpOptions !== '' ? ' ' . $phpOptions : '')
             . ' ' . escapeshellarg($file)
             . ' ' . escapeshellarg($action)
             . ' ' . escapeshellarg($path)
@@ -737,15 +739,24 @@ class UserCommand
      */
     public static function newFromCmdArgs( array &$args )
     {
-        if ( !($wpPath = array_shift($args))
-                || !($docRoot = array_shift($args))
-                || !($serverName = array_shift($args)) ) {
+        if ( count($args) < 3 ) {
+            return null;
+        }
 
+        $wpPath     = array_shift($args);
+        $docRoot    = array_shift($args);
+        $serverName = array_shift($args);
+
+        if ( $wpPath === null || $wpPath === '' ) {
             return null;
         }
 
         if ( !is_dir($wpPath) ) {
             return null;
+        }
+
+        if ( ($serverName === null || $serverName === '') && !empty($args) ) {
+            $serverName = 'x';
         }
 
         /**
@@ -755,11 +766,11 @@ class UserCommand
 
         $install = new WPInstall($wpPath);
 
-        if ( $docRoot != 'x' ) {
+        if ( $docRoot !== null && $docRoot !== '' && $docRoot !== 'x' ) {
             $install->setDocRoot($docRoot);
         }
 
-        if ( $serverName != 'x' ) {
+        if ( $serverName !== null && $serverName !== '' && $serverName !== 'x' ) {
             $install->setServerName($serverName);
         }
 
@@ -976,11 +987,15 @@ class UserCommand
 
     /**
      *
+     * @since 1.17.10  Changed function visibility from 'private'
+     *     to 'public static' so WPInstallStorage::doWPInstallAction() can call
+     *     it as part of the fail-closed dispatcher guard.
+     *
      * @param string $action
      *
      * @return bool
      */
-    private static function isSupportedIssueCmd( $action )
+    public static function isSupportedIssueCmd( $action )
     {
         $supported = array(
             self::CMD_STATUS,

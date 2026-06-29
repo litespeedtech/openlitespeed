@@ -171,6 +171,27 @@ enforceMinAPIVer()
     fi
 }
 
+find_ca_bundle()
+{
+    # Panel-agnostic: prefer OS-level bundle, fall back to panel-managed ones.
+    for _path in \
+        /etc/ssl/certs/ca-certificates.crt \
+        /etc/pki/tls/certs/ca-bundle.crt \
+        /etc/ssl/cert.pem \
+        /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem \
+        /etc/ssl/ca-bundle.pem \
+        /usr/local/cpanel/3rdparty/share/ca-bundle/curl-ca-bundle.crt \
+        /opt/psa/var/certificates/ca-bundle.crt \
+        /usr/local/directadmin/conf/carootcert.pem
+    do
+        if [ -f "${_path}" ] && [ -r "${_path}" ]; then
+            echo "${_path}"
+            return 0
+        fi
+    done
+    return 1
+}
+
 runUpdate()
 {
 
@@ -184,8 +205,13 @@ runUpdate()
     LOCAL_TAR_FILE="${ADDONS_DIR}/shared_latest.tar.gz"
     URL="https://shared.litespeed.sh/latest"
 
+    WGET_CA_ARG=""
+    if _CA_BUNDLE=$(find_ca_bundle); then
+        WGET_CA_ARG="--ca-certificate=${_CA_BUNDLE}"
+    fi
+
     echo "Downloading latest shared code tar file..."
-    wget -q --tries=1 --no-check-certificate "${URL}" -O "${LOCAL_TAR_FILE}"
+    wget -q --tries=1 ${WGET_CA_ARG} "${URL}" -O "${LOCAL_TAR_FILE}"
 
     RET=$?
 
@@ -202,7 +228,7 @@ runUpdate()
         fi
     fi
 
-    MD5_VALUE=$(wget -q https://shared.litespeed.sh/latest/md5 -O -)
+    MD5_VALUE=$(wget -q ${WGET_CA_ARG} https://shared.litespeed.sh/latest/md5 -O -)
 
     if [ "${MD5_VALUE}" = "" ] ; then
         /bin/rm -f "${LOCAL_TAR_FILE}"

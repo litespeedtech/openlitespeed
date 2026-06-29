@@ -7,6 +7,7 @@ use LSWebAdmin\Config\Service\ConfigActionContext;
 use LSWebAdmin\Config\Service\ConfigActionRequest;
 use LSWebAdmin\Config\Service\ConfigActionResult;
 use LSWebAdmin\Config\Service\ConfigActionService;
+use LSWebAdmin\Config\IO\ConfigAutoBackupService;
 use LSWebAdmin\Config\IO\ConfigPathResolutionResult;
 use LSWebAdmin\Config\IO\ConfigPathResolver;
 use LSWebAdmin\Config\Service\ConfigBootstrapRequest;
@@ -419,6 +420,12 @@ class ControllerBase
 			$opsAuditRetainFiles = (int) $opsAuditRetainFiles;
 			OpsAuditLogger::setMaxRotatedFiles($opsAuditRetainFiles);
 			$_SESSION['opsAuditRetainFiles'] = $opsAuditRetainFiles;
+		}
+
+		// Apply config autobackup retention from admin settings.
+		$configAutoBackupRetention = $adminData->GetChildVal('configAutoBackupRetention');
+		if ($configAutoBackupRetention !== null) {
+			ConfigAutoBackupService::setRetentionDays((int) $configAutoBackupRetention);
 		}
 	}
 

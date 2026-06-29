@@ -68,6 +68,8 @@
 #define VALMAXSIZE          4096
 #define MAX_HEADER_LEN      16384
 #define Z_BUF_SIZE          16384
+#define CACHE_STORE_PATH_RESERVE (5 /* priv/ */ + 6 /* x/x/x/ */ \
+                                  + 2 * HASH_KEY_LEN + 4 /* .tmp */ + 1)
 
 /////////////////////////////////////////////////////////////////////////////
 extern lsi_module_t MNAME;
@@ -313,7 +315,8 @@ static int parseStoragePath(CacheConfig *pConfig, const char *pValStr,
          *
          */
         const size_t iCachePathLen = strlen(cachePath);
-        if (iCachePathLen + (size_t) valLen + 1 /* slash */ >= max_file_len)
+        const size_t storeRootLen = iCachePathLen + (size_t)valLen + 1;
+        if (storeRootLen + CACHE_STORE_PATH_RESERVE > max_file_len)
         {
             g_api->log(NULL, LSI_LOG_ERROR,
                            "[%s]parseConfig failed to set the storagepath "
@@ -697,14 +700,20 @@ static void FreeConfig(void *_config)
  * needQS should be 0 when the purge is from header, the uri already have the QS
  * and it should be 1 when it is from a PURGE / REFRESH request
  */
-static void uriToTag(const lsi_session_t *session,
-                     const char *uri, int uriLen,
-                     int needQS, char *tag)
+static int uriToTag(const lsi_session_t *session,
+                    const char *uri, int uriLen,
+                    int needQS, char *tag)
 {
     const int maxUrlLength = 16384;
     char url[maxUrlLength] = { 0 };
     int urlLen = 0;
     char httpstr[4] = {0};
+
+    if (uriLen < 0)
+    {
+        g_api->log(session, LSI_LOG_ERROR, "uriToTag() uri length error.");
+        return LS_FAIL;
+    }
 
     int len = g_api->get_req_var_by_id(session, LSI_VAR_HTTPS,
                                         httpstr, 4);
@@ -721,6 +730,11 @@ static void uriToTag(const lsi_session_t *session,
 
     len = g_api->get_req_var_by_id(session, LSI_VAR_SERVER_NAME,
                                     url + urlLen, maxUrlLength - urlLen);
+    if (len < 0 || len >= maxUrlLength - urlLen)
+    {
+        g_api->log(session, LSI_LOG_ERROR, "uriToTag() server name length error.");
+        return LS_FAIL;
+    }
     urlLen += len;
 
     memcpy(url + urlLen, ":", 1);
@@ -728,6 +742,11 @@ static void uriToTag(const lsi_session_t *session,
 
     len = g_api->get_req_var_by_id(session, LSI_VAR_SERVER_PORT,
                                     url + urlLen, maxUrlLength - urlLen);
+    if (len < 0 || len >= maxUrlLength - urlLen)
+    {
+        g_api->log(session, LSI_LOG_ERROR, "uriToTag() server port length error.");
+        return LS_FAIL;
+    }
     urlLen += len;
 
     if (maxUrlLength - urlLen > uriLen)
@@ -741,14 +760,26 @@ static void uriToTag(const lsi_session_t *session,
     else
     {
         g_api->log(session, LSI_LOG_ERROR, "uriToTag() uri length error.");
-        return ;
+        return LS_FAIL;
     }
 
     if (needQS)
     {
         const char *pQs = g_api->get_req_query_string(session, &len);
+        if (len < 0)
+        {
+            g_api->log(session, LSI_LOG_ERROR,
+                       "uriToTag() query string length error.");
+            return LS_FAIL;
+        }
         if (len > 0)
         {
+            if (maxUrlLength - urlLen <= len)
+            {
+                g_api->log(session, LSI_LOG_ERROR,
+                           "uriToTag() query string length error.");
+                return LS_FAIL;
+            }
             *(url + urlLen) = '?';
             ++urlLen;
             memcpy(url + urlLen, pQs, len);
@@ -765,6 +796,7 @@ static void uriToTag(const lsi_session_t *session,
     g_api->log(session, LSI_LOG_DEBUG, "[CACHE] URI: %.*s to TAG: %s\n",
                urlLen, url, tag);
 
+    return LS_OK;
 }
 
 
@@ -2275,8 +2307,12 @@ int cacheHeader(lsi_param_t *rec, MyMData *myData)
         offset = keyLen + 1;
     }
 
-    uriToTag(rec->session, myData->pOrgUri + myData->hostPortLen,
-             myData->orgUriLen, 1, tag + offset);
+    if (uriToTag(rec->session, myData->pOrgUri + myData->hostPortLen,
+                 myData->orgUriLen, 1, tag + offset) != LS_OK)
+    {
+        delete []tag;
+        return LS_FAIL;
+    }
     g_api->log(rec->session, LSI_LOG_DEBUG,
                "[%s] cacheHeader() set cache TAG to %.*s\n",
                ModuleNameStr, offset + 16, tag);
@@ -3292,7 +3328,7 @@ static void processPurge2(const lsi_session_t *session,
     const char *pValueEnd = pValue + valLen;
     CacheKey key;
     bool isPriv = false;
-    if (strncmp(pValue, "private,", 8) == 0)
+    if (valLen >= 8 && strncmp(pValue, "private,", 8) == 0)
     {
         int ipLen;
         char pCookieBuf[MAX_HEADER_LEN+8] = {0};
@@ -3313,30 +3349,35 @@ static void processPurge2(const lsi_session_t *session,
     }
     else
     {
-        if (strncmp(pValue, "public,", 7) == 0)
+        if (valLen >= 7 && strncmp(pValue, "public,", 7) == 0)
             pValue += 7;
     }
 
 
-    while (isspace(*pValue))
+    while (pValue < pValueEnd && isspace(*pValue))
         ++pValue;
+    if (pValue >= pValueEnd)
+        return;
 
     int stale = 0;
-    if (strncasecmp(pValue, "stale,", 6 ) == 0)
+    if (pValueEnd - pValue >= 6 && strncasecmp(pValue, "stale,", 6 ) == 0)
     {
         stale = 1;
         pValue += 6;
     }
 
-    while (isspace(*pValue))
+    while (pValue < pValueEnd && isspace(*pValue))
         ++pValue;
+    if (pValue >= pValueEnd)
+        return;
 
     valLen = pValueEnd - pValue;
 
     char tag[17] = {0};
     if (*pValue == '/')
     {
-        uriToTag(session, pValue, valLen, 0, tag);
+        if (uriToTag(session, pValue, valLen, 0, tag) != LS_OK)
+            return;
         pValue = tag;
         valLen = 16;
     }
@@ -3377,7 +3418,7 @@ static void processPurge(const lsi_session_t *session, const char *pValue,
         {
             processPurge2(session, pBegin, p - pBegin);
         }
-        pBegin = p+1;
+        pBegin = (p < pEnd) ? p + 1 : pEnd;
     }
     g_api->log(session, LSI_LOG_DEBUG, "[%s] processPurge: %.*s\n",
                ModuleNameStr, valLen, pValue);
@@ -3632,8 +3673,12 @@ static int handlerProcess(const lsi_session_t *session)
              */
 
             char tag[17] = {0};
-            uriToTag(session, myData->pOrgUri + myData->hostPortLen,
-                     myData->orgUriLen, 1, tag);
+            if (uriToTag(session, myData->pOrgUri + myData->hostPortLen,
+                         myData->orgUriLen, 1, tag) != LS_OK)
+            {
+                g_api->free_module_data(session, &MNAME, LSI_DATA_HTTP, releaseMData);
+                return 500;
+            }
             purgeAllByTag(session, myData, tag, 16, stale);
 
             g_api->set_resp_content_length(session, myData->orgUriLen + 24);
@@ -3874,4 +3919,3 @@ lsi_confparser_t cacheDealConfig = { ParseConfig, FreeConfig, paramArray };
 lsi_module_t cache = { LSI_MODULE_SIGNATURE, init, &cache_handler,
                        &cacheDealConfig, MODULE_VERSION_INFO, serverHooks, {0}
                      };
-

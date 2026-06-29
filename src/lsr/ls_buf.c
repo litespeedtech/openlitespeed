@@ -20,6 +20,7 @@
 #include <lsr/ls_xpool.h>
 #include <lsdef.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <lsdef.h>
 
@@ -194,6 +195,12 @@ void ls_xbuf_swap(ls_xbuf_t *pThis, ls_xbuf_t *pRhs)
 int ls_buf_xappend2(
     ls_buf_t *pThis, const char *pBuf, int size, ls_xpool_t *pool)
 {
+    uintptr_t begin;
+    uintptr_t end;
+    uintptr_t ptr;
+    int self_ref = 0;
+    int offset = 0;
+
     if ((pBuf == NULL) || (size < 0))
     {
         errno = EINVAL;
@@ -201,11 +208,24 @@ int ls_buf_xappend2(
     }
     if (size == 0)
         return 0;
+    if (pThis->pbuf)
+    {
+        begin = (uintptr_t)pThis->pbuf;
+        end = (uintptr_t)pThis->pbufend;
+        ptr = (uintptr_t)pBuf;
+        if (ptr >= begin && ptr < end)
+        {
+            self_ref = 1;
+            offset = ptr - begin;
+        }
+    }
     if (size > ls_buf_available(pThis))
     {
         if (ls_buf_xgrow(pThis, size - ls_buf_available(pThis), pool) == -1)
             return LS_FAIL;
     }
+    if (self_ref)
+        pBuf = pThis->pbuf + offset;
     memmove(ls_buf_end(pThis), pBuf, size);
     ls_buf_used(pThis, size);
     return size;
@@ -217,4 +237,3 @@ int ls_buf_xgrow(ls_buf_t *pThis, int size, ls_xpool_t *pool)
     size = ((size + 511) >> 9) << 9;
     return ls_buf_xreserve(pThis, ls_buf_capacity(pThis) + size, pool);
 }
-

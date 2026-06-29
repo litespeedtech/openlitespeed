@@ -17,6 +17,9 @@
 *****************************************************************************/
 #include <lsr/ls_base64.h>
 
+#include <errno.h>
+#include <limits.h>
+
 static const unsigned char s_ls_decodeTable[128] =
 {
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, /* 00-0F */
@@ -33,19 +36,51 @@ static const unsigned char s_ls_encodeTable[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 
-int ls_base64_decode(const char *encoded, int size, char *decoded)
+static int ls_base64_decodedlen(int size)
 {
+    return (size / 4) * 3 + ((size % 4) * 3) / 4;
+}
+
+
+int ls_base64_decode(const char *encoded, int size, char *decoded,
+                     int decodedLen)
+{
+    if ((size < 0) || (decodedLen < 0) || ((size > 0) && !encoded)
+        || ((decodedLen > 0) && !decoded))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (size == 0)
+    {
+        if (decodedLen > 0)
+            *decoded = 0;
+        return 0;
+    }
+    int needLen = ls_base64_decodedlen(size);
+    if (decodedLen < needLen)
+    {
+        errno = ENOSPC;
+        return -1;
+    }
+    if (needLen == 0)
+    {
+        if (decodedLen > 0)
+            *decoded = 0;
+        return 0;
+    }
     const char    *pEncoded = encoded;
     unsigned char  e1,
              prev_e = 0;
     char           phase = 0;
     unsigned char *pDecoded = (unsigned char *)decoded;
+    unsigned char *pDecodedEnd = pDecoded + decodedLen;
     const char    *pEnd = encoded + size;
 
     while (pEncoded < pEnd)
     {
-        int ch = *pEncoded++;
-        if (ch < 0)
+        unsigned char ch = *pEncoded++;
+        if (ch >= sizeof(s_ls_decodeTable))
             continue;
         e1 = s_ls_decodeTable[ch];
         if (e1 != 255)
@@ -55,12 +90,28 @@ int ls_base64_decode(const char *encoded, int size, char *decoded)
             case 0:
                 break;
             case 1:
+                if (pDecoded >= pDecodedEnd)
+                {
+                    errno = ENOSPC;
+                    return -1;
+                }
                 *pDecoded++ = ((prev_e << 2) | ((e1 & 0x30) >> 4));
                 break;
             case 2:
-                *pDecoded++ = (((prev_e & 0xf) << 4) | ((e1 & 0x3c) >> 2));
+                if (pDecoded >= pDecodedEnd)
+                {
+                    errno = ENOSPC;
+                    return -1;
+                }
+                *pDecoded++ =
+                    (((prev_e & 0xf) << 4) | ((e1 & 0x3c) >> 2));
                 break;
             case 3:
+                if (pDecoded >= pDecodedEnd)
+                {
+                    errno = ENOSPC;
+                    return -1;
+                }
                 *pDecoded++ = (((prev_e & 0x03) << 6) | e1);
                 phase = -1;
                 break;
@@ -69,13 +120,33 @@ int ls_base64_decode(const char *encoded, int size, char *decoded)
             prev_e = e1;
         }
     }
-    *pDecoded = 0;
+    if (pDecoded < pDecodedEnd)
+        *pDecoded = 0;
     return pDecoded - (unsigned char *)decoded;
 }
 
 
-int ls_base64_encode(const char *decoded, int size, char *encoded)
+int ls_base64_encode(const char *decoded, int size, char *encoded,
+                     int encodedLen)
 {
+    if ((size < 0) || (encodedLen < 0)
+        || ((size > 0) && !decoded) || ((encodedLen > 0) && !encoded))
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (size > (INT_MAX / 4) * 3 - 2)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (encodedLen < ls_base64_encodelen(size))
+    {
+        errno = ENOSPC;
+        return -1;
+    }
+    if (size == 0)
+        return 0;
     const unsigned char *pDecoded = (const unsigned char *)decoded;
     const unsigned char *pEnd = (const unsigned char *)decoded + size;
     char                *pEncoded = encoded;
@@ -113,4 +184,3 @@ int ls_base64_encode(const char *decoded, int size, char *encoded)
 
     return pEncoded - encoded;
 }
-

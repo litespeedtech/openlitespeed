@@ -31,22 +31,24 @@ extern "C" {
  *
  * @param[in] encoded - The encoded buffer to decode.
  * @param[in] encodeLen - The length of the encoded buffer.
- * @param[out] decoded - The buffer to put the decoded buffer into.  Must have
- *  allocated enough space.
+ * @param[out] decoded - The buffer to put the decoded buffer into.
+ * @param[in] decodedLen - The size of the decoded buffer.
  * @return The length of the decoded buffer.
  */
-int ls_base64_decode(const char *encoded, int encodeLen, char *decoded);
+int ls_base64_decode(const char *encoded, int encodeLen, char *decoded,
+                     int decodedLen);
 
 /** @ls_base64_encode
  * @brief Encodes a given buffer.
  *
  * @param[in] decoded - The buffer to encode.
  * @param[in] decodedLen - The length of the buffer to encode.
- * @param[out] encoded - The buffer to put the encoded buffer into.  Must have
- *  allocated enough space.
+ * @param[out] encoded - The buffer to put the encoded buffer into.
+ * @param[in] encodedLen - The size of the encoded buffer.
  * @return The length of the encoded buffer.
  */
-int ls_base64_encode(const char *decoded, int decodedLen, char *encoded);
+int ls_base64_encode(const char *decoded, int decodedLen, char *encoded,
+                     int encodedLen);
 
 /** @ls_base64_encodelen
  * @brief Given a length, gets the expected length of an encoded buffer.

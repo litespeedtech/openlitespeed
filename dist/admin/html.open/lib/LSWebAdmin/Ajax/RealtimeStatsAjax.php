@@ -14,16 +14,14 @@ class RealtimeStatsAjax
         $serverData = $stat->GetServerData();
         $vhostData = $stat->GetVHData();
 
-        $response = '{"serv":' . json_encode($serverData);
+        $response = ['serv' => $serverData];
 
         foreach ($vhostData as $vn => $vh) {
             unset($vh['ea']);
-            $response .= ', "' . $vn . '":' . json_encode($vh);
+            $response[$vn] = $vh;
         }
 
-        $response .= '}';
-
-        echo $response;
+        echo json_encode($response);
     }
 
     public static function vhStat()

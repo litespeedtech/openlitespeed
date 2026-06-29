@@ -113,6 +113,66 @@ static int compareStrings(const void *a, const void *b)
     return strcmp(str1, str2);
 }
 
+
+/* Environment variable name prefixes/exact names that must be stripped before
+ * exec()ing a hostexec program.  These influence the dynamic linker or shell
+ * startup and could be abused for privilege escalation if a client can choose
+ * the UID we run as.  Even with peer-credential authentication we strip these
+ * defensively so that a compromised tenant cannot tamper with another tenant's
+ * runtime via LD_PRELOAD/LD_AUDIT/etc. when a misconfiguration allows it. */
+static int env_is_dangerous(const char *e)
+{
+    /* Anything starting with LD_ is a dynamic-linker control variable. */
+    if (strncmp(e, "LD_", 3) == 0)
+        return 1;
+    /* GLIBC tunables can disable security checks. */
+    if (strncmp(e, "GLIBC_TUNABLES=", 15) == 0)
+        return 1;
+    /* Shell startup hooks. */
+    if (strncmp(e, "BASH_ENV=", 9) == 0 ||
+        strncmp(e, "ENV=", 4) == 0 ||
+        strncmp(e, "IFS=", 4) == 0 ||
+        strncmp(e, "PS4=", 4) == 0 ||
+        strncmp(e, "SHELLOPTS=", 10) == 0 ||
+        strncmp(e, "BASHOPTS=", 9) == 0)
+        return 1;
+    /* Language runtime startup hooks. */
+    if (strncmp(e, "PERL5OPT=", 9) == 0 ||
+        strncmp(e, "PERL5LIB=", 9) == 0 ||
+        strncmp(e, "PERLLIB=", 8) == 0 ||
+        strncmp(e, "PYTHONPATH=", 11) == 0 ||
+        strncmp(e, "PYTHONSTARTUP=", 14) == 0 ||
+        strncmp(e, "PYTHONHOME=", 11) == 0 ||
+        strncmp(e, "PYTHONINSPECT=", 14) == 0 ||
+        strncmp(e, "NODE_OPTIONS=", 13) == 0 ||
+        strncmp(e, "NODE_PATH=", 10) == 0 ||
+        strncmp(e, "RUBYOPT=", 8) == 0 ||
+        strncmp(e, "RUBYLIB=", 8) == 0)
+        return 1;
+    return 0;
+}
+
+
+/* Remove dangerous entries from a NULL-terminated env array in place. */
+static void sanitize_env(char **env)
+{
+    int r = 0, w = 0;
+    while (env[r])
+    {
+        if (env_is_dangerous(env[r]))
+        {
+            DEBUG_MESSAGE("Stripping dangerous env entry: %s\n", env[r]);
+            r++;
+            continue;
+        }
+        if (w != r)
+            env[w] = env[r];
+        r++;
+        w++;
+    }
+    env[w] = NULL;
+}
+
 static int validate(sandbox_init_req_t *req, char *argv, char ***argva, char *env, char ***enva)
 {
     int pos = 0;
@@ -194,6 +254,7 @@ static int validate(sandbox_init_req_t *req, char *argv, char ***argva, char *en
         pos += (len + 1);
     }
     (*enva)[req->m_nenv] = NULL;
+    sanitize_env(*enva);
     DEBUG_MESSAGE("validate ok\n")
     return 0;
 }
@@ -493,13 +554,24 @@ static int run_sandbox_pgm(int fd, sandbox_init_req_t *req, char *argv[], char *
 }
 
 
-static int sandbox_req(int fd)
+static int sandbox_req(int fd, uid_t peer_uid, gid_t peer_gid)
 {
     DEBUG_MESSAGE("sandbox_req\n");
     sandbox_init_req_t req;
     int rc = 0;
     if (readall(fd, (char *)&req, sizeof(req), 0) < 0)
         return -1;
+    /* Override the client-supplied uid/gid with the kernel-verified peer
+     * credentials.  The wire-supplied values are NOT trusted: a hostile client
+     * inside any sandbox namespace can connect to the world-writable socket
+     * and request any uid (including 0) otherwise. */
+    if (req.m_uid != peer_uid || req.m_gid != peer_gid)
+    {
+        DEBUG_MESSAGE("Overriding wire uid/gid %d/%d with peer uid/gid %d/%d\n",
+                      req.m_uid, req.m_gid, peer_uid, peer_gid);
+    }
+    req.m_uid = peer_uid;
+    req.m_gid = peer_gid;
     char *argv = malloc(req.m_argv_len + 1);
     char *env = malloc(req.m_env_len + 1);
     char **argva = NULL;
@@ -525,23 +597,52 @@ static int sandbox_req(int fd)
 }
 
 
-static int sandbox_conn(int socket_in)
+static int sandbox_conn(int socket_in, uid_t peer_uid, gid_t peer_gid)
 {
     /* Normally close most things here, but I'm going to use much of them.*/
     ns_init_debug();
-    DEBUG_MESSAGE("sandbox_conn: pid: %d\n", getpid());
+    DEBUG_MESSAGE("sandbox_conn: pid: %d, peer uid: %d, peer gid: %d\n",
+                  getpid(), peer_uid, peer_gid);
     close(s_nosandbox_socket);
     s_nosandbox_socket = -1;
-    return sandbox_req(socket_in);
+    return sandbox_req(socket_in, peer_uid, peer_gid);
 }
 
 static int new_sandbox_conn(int socket_in)
 {
     pid_t pid;
+    struct ucred cr;
+    socklen_t crlen = sizeof(cr);
+
+    /* Authenticate the connecting process.  The listener runs as root and
+     * later calls setuid()/setgid() to the per-request identity, so a missing
+     * or spoofable identity here is a direct local-root path. */
+    if (getsockopt(socket_in, SOL_SOCKET, SO_PEERCRED, &cr, &crlen) != 0
+        || crlen != sizeof(cr))
+    {
+        int err = errno;
+        DEBUG_MESSAGE("SO_PEERCRED failed: %s\n", strerror(err));
+        ls_stderr("hostexec: cannot verify peer credentials: %s\n",
+                  strerror(err));
+        close(socket_in);
+        return -1;
+    }
+    DEBUG_MESSAGE("Peer creds pid: %d uid: %d gid: %d\n", cr.pid, cr.uid, cr.gid);
+    /* Refuse root and any uid/gid that would otherwise be privileged.
+     * Hostexec is for unprivileged sandboxed users only. */
+    if (cr.uid == 0 || cr.gid == 0)
+    {
+        DEBUG_MESSAGE("Refusing hostexec from privileged peer uid=%d gid=%d\n",
+                      cr.uid, cr.gid);
+        ls_stderr("hostexec: refusing connection from privileged peer "
+                  "(pid=%d uid=%d gid=%d)\n", cr.pid, cr.uid, cr.gid);
+        close(socket_in);
+        return -1;
+    }
 
     pid = fork();
     if (!pid)
-        exit(sandbox_conn(socket_in));
+        exit(sandbox_conn(socket_in, cr.uid, cr.gid));
     if (pid == -1)
     {
         ls_stderr("Error starting sandbox task: %s\n", strerror(errno));

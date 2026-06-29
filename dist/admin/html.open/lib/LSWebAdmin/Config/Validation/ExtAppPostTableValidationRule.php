@@ -8,9 +8,12 @@ use LSWebAdmin\UI\DTbl;
 class ExtAppPostTableValidationRule implements PostTableValidationRuleInterface
 {
     private static $supportedTables = [
-        'A_EXT_FCGI' => true,
-        'A_EXT_FCGIAUTH' => true,
-        'A_EXT_LSAPI' => true,
+        'SV_EXT_FCGI' => true,
+        'SV_EXT_FCGIAUTH' => true,
+        'SV_EXT_LSAPI' => true,
+        'T_EXT_FCGI' => true,
+        'T_EXT_FCGIAUTH' => true,
+        'T_EXT_LSAPI' => true,
     ];
 
     public function Supports($request, $table)

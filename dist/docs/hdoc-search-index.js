@@ -2,7 +2,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Home",
         "url": "index.html",
-        "text": "Home OpenLiteSpeed Web Server 1.9 Users' Manual — Rev. 3 Table of contents License Introduction Installation/Uninstallation Administration Security Configuration For more information, visit our OpenLiteSpeed Knowledge Base"
+        "text": "Home OpenLiteSpeed Web Server 1.9 Users' Manual — Rev. 4 Table of contents License Introduction Installation/Uninstallation Administration Security Configuration For more information, visit our OpenLiteSpeed Knowledge Base"
     },
     {
         "title": "License",
