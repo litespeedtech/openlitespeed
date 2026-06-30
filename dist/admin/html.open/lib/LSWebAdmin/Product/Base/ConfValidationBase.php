@@ -7,6 +7,7 @@ use LSWebAdmin\Config\Validation\CValidation;
 use LSWebAdmin\Config\Validation\ConfigDeleteValidationResult;
 use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\UI\DTbl;
+use LSWebAdmin\Util\PathTool;
 
 class ConfValidationBase extends CValidation
 {
@@ -27,7 +28,7 @@ class ConfValidationBase extends CValidation
         $locationMessage = isset($policy['location_message']) ? $policy['location_message'] : '';
         $suffixMessage = isset($policy['suffix_message']) ? $policy['suffix_message'] : '';
 
-        if ($directory !== '' && !$this->isPathInsideDirectory($path, SERVER_ROOT . $directory)) {
+        if ($directory !== '' && !$this->isManagedConfigFilePathInsideDirectory($path, $directory)) {
             $err = $locationMessage;
             return -1;
         }
@@ -43,6 +44,37 @@ class ConfValidationBase extends CValidation
     protected function getManagedConfigFilePolicy($attr)
     {
         return null;
+    }
+
+    protected function isManagedConfigFilePathInsideDirectory($path, $directory)
+    {
+        $path = PathTool::clean($path);
+        $base = PathTool::clean(rtrim(SERVER_ROOT, '/') . '/' . ltrim($directory, '/'));
+        if ($this->isSameOrDescendantPath($path, $base)) {
+            return true;
+        }
+
+        if (!isset($_SERVER['LS_CHROOT'])) {
+            return false;
+        }
+
+        return $this->isSameOrDescendantPath($path, $this->stripChrootPrefix($base));
+    }
+
+    protected function stripChrootPrefix($path)
+    {
+        $path = PathTool::clean($path);
+        $root = $_SERVER['LS_CHROOT'];
+        $len = strlen($root);
+        if ($len == 0) {
+            return $path;
+        }
+
+        if (strncmp($path, $root, $len) == 0) {
+            return substr($path, $len);
+        }
+
+        return $path;
     }
 
     protected function validateExternalAppDelete($request)
