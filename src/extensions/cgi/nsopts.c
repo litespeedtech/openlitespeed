@@ -114,6 +114,7 @@ void nsopts_free_all(int *allocated, SetupOp **setupOps, size_t *setupOps_size,
                      char **nsconf, char **nsconf2)
 {
     nsopts_free(setupOps);
+    nsopts_free_conf(nsconf);
     nsopts_free_conf(nsconf2);
     *allocated = 0;
     *setupOps_size = 0;
@@ -215,11 +216,15 @@ static int set_op(SetupOp *op, SetupOpType type, char *source, char *dest,
                   int flags)
 {
     op->type = type;
+    /* Record the flags up front; if a strdup fails partway, flip just the
+     * ALLOCATED bit for the side that failed so nsopts_free_member frees
+     * the side that did succeed. */
+    op->flags = flags;
     if (source)
     {
         if (!(flags & OP_FLAG_ALLOCATED_SOURCE))
             op->source = source;
-        else 
+        else
         {
             DEBUG_MESSAGE("Dup source: %s\n", source);
             op->source = strdup(source);
@@ -227,6 +232,7 @@ static int set_op(SetupOp *op, SetupOpType type, char *source, char *dest,
             {
                 int err = errno;
                 ls_stderr("Namespace error allocating op source: %s\n", strerror(err));
+                op->flags &= ~OP_FLAG_ALLOCATED_SOURCE;
                 return nsopts_rc_from_errno(err);
             }
         }
@@ -243,11 +249,11 @@ static int set_op(SetupOp *op, SetupOpType type, char *source, char *dest,
             {
                 int err = errno;
                 ls_stderr("Namespace error allocating op dest: %s\n", strerror(err));
+                op->flags &= ~OP_FLAG_ALLOCATED_DEST;
                 return nsopts_rc_from_errno(err);
             }
         }
     }
-    op->flags = flags;
     DEBUG_MESSAGE("Added op, type: %d, source: %s, dest: %s, flags: %d\n",
                   op->type, op->source, op->dest, op->flags);
     return 0;
@@ -270,13 +276,17 @@ static int read_opts(const char *nsopts, char **opts_raw)
     do
     {
         DEBUG_MESSAGE("read_opts: realloc: %p, %d bytes\n", data, BLOCK_SIZE * (count + 1));
-        data = realloc(data, BLOCK_SIZE * (count + 1));
-        if (!data)
         {
-            int err = errno;
-            ls_stderr("Namespace error reallocating file memory\n");
-            close(fd);
-            return nsopts_rc_from_errno(err);
+            char *new_data = realloc(data, BLOCK_SIZE * (count + 1));
+            if (!new_data)
+            {
+                int err = errno;
+                ls_stderr("Namespace error reallocating file memory\n");
+                free(data);
+                close(fd);
+                return nsopts_rc_from_errno(err);
+            }
+            data = new_data;
         }
         rc = read(fd, data + BLOCK_SIZE * count, BLOCK_SIZE);
         if (rc < 0)
@@ -359,18 +369,22 @@ static int reallocate_opts(int count, int *allocated, SetupOp **setupOps,
                            size_t *setupOps_size)
 {
     SetupOp *setupOps_l = *setupOps;
+    SetupOp *new_setupOps;
     *setupOps_size = sizeof(SetupOp) * (count + 2);
-    DEBUG_MESSAGE("%d options, total size: %d bytes %p-%p, each: %d\n", count, 
-                  (int)*setupOps_size, setupOps_l, 
+    DEBUG_MESSAGE("%d options, total size: %d bytes %p-%p, each: %d\n", count,
+                  (int)*setupOps_size, setupOps_l,
                   (char *)setupOps_l + *setupOps_size, (int)sizeof(SetupOp));
-    setupOps_l = realloc(setupOps_l, *setupOps_size);
-    *setupOps = setupOps_l;
-    if (!setupOps_l)
+    new_setupOps = realloc(setupOps_l, *setupOps_size);
+    if (!new_setupOps)
     {
         int err = errno;
         ls_stderr("Namespace unable to allocate ops: %s\n", strerror(err));
+        /* Leave *setupOps pointing at the still-live old buffer so the
+         * caller can free it through the normal cleanup path. */
         return nsopts_rc_from_errno(err);
     }
+    setupOps_l = new_setupOps;
+    *setupOps = setupOps_l;
     memset(&setupOps_l[count], 0, sizeof(SetupOp) * 2); // Just the last two;
     setupOps_l[count + 1].flags = OP_FLAG_LAST;
     *allocated = 1;
@@ -431,14 +445,14 @@ static int check_symlink(char *dest, int flags, int sym_count,
     if ((statbuf.st_mode & S_IFMT) == S_IFLNK)
     {
         char link[512];
-        size_t sz = readlink(dest, link, sizeof(link));
-        if ((int)sz == -1 || sz == sizeof(link))
+        ssize_t sz = readlink(dest, link, sizeof(link));
+        if (sz == -1 || sz == (ssize_t)sizeof(link))
         {
             int err = errno;
             DEBUG_MESSAGE("Can't get readlink for %s: %s\n", dest, strerror(err));
             ls_stderr("Can't get readlink for %s: %s\n", dest, strerror(err));
             return -1;
-         }
+        }
         link[sz] = 0;
         DEBUG_MESSAGE("readlink: %s\n", link);
         if (sym_count > 10)
@@ -448,7 +462,7 @@ static int check_symlink(char *dest, int flags, int sym_count,
             return -1;
         }
         char dir[sizeof(link)];
-        strcpy(dir, link);
+        memcpy(dir, link, (size_t)sz + 1);
         char *slash = strrchr(dir, '/');
         if (slash && slash != dir)
         {
@@ -613,15 +627,18 @@ static int process_command_symbol(char *line, int *count, int *found_op,
         snprintf(id_str, sizeof(id_str), " %u", id);
         id_len = strlen(id_str);
         values_len += id_len;
-        values = realloc(values, values_len + 1);
-        if (!values)
         {
-            DEBUG_MESSAGE("Namespace can't allocate values for %s\n", 
+            char *new_values = realloc(values, values_len + 1);
+            if (!new_values)
+            {
+                DEBUG_MESSAGE("Namespace can't allocate values for %s\n",
+                              passwd ? BWRAP_VAR_PASSWD : BWRAP_VAR_GROUP);
+                ls_stderr("Namespace can't allocate values for %s\n",
                           passwd ? BWRAP_VAR_PASSWD : BWRAP_VAR_GROUP);
-            ls_stderr("Namespace can't allocate values for %s\n", 
-                      passwd ? BWRAP_VAR_PASSWD : BWRAP_VAR_GROUP);
-            rc = DEFAULT_ERR_RC;
-            break;
+                rc = DEFAULT_ERR_RC;
+                break;
+            }
+            values = new_values;
         }
         memcpy(values + last_values_len, id_str, id_len + 1);
     }

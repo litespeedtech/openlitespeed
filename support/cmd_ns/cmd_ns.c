@@ -169,7 +169,7 @@ static int cgroup_v2(int uid, int pid)
 
 int main(int argc, char *argv[])
 {
-    int ch; 
+    int ch;
     int cgroup = 0, rc = 0, must_exist = 1;
     char *vhost = NULL, *cfgfile = NULL, *cfg2file = NULL, *cmd = NULL, *dir = NULL;
     char env[256];
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
             
             case 'm':
                 /* Legacy: command only, no forwarded args. */
-                cmd = strdup(optarg);
+                cmd = optarg;
                 break;
 
             case 'o':

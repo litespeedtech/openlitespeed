@@ -127,33 +127,72 @@ static char *persist_persist_file_name(char *persist_name, int persist_name_len)
 
 static int new_persist(uid_t uid, int fd, int relock_read)
 {
+    if (fd < 0)
+    {
+        ls_stderr("Namespace internal error: new_persist called with invalid "
+                  "fd for uid %u\n", uid);
+        DEBUG_MESSAGE("new_persist: invalid fd %d for uid %u\n", fd, uid);
+        return -1;
+    }
     if (relock_read &&
         lock_file(uid, fd, "Persist File", 1, NSPERSIST_LOCK_WRITE, NULL))
         return -1;
     int persist_num = 0;
     char persist_dir[PERSIST_FILE_SIZE], dir[PERSIST_DIR_SIZE];
     persist_persist_file_dir(dir, sizeof(dir));
-    do
+    /* Create the new instance dir BEFORE committing the number to the
+     * persist file.  If mkdir loses to another process (EEXIST), advance
+     * the counter and retry; any other error is fatal so we don't leave
+     * the persist file pointing at a directory that doesn't exist.       */
+    for (;;)
+    {
         snprintf(persist_dir, sizeof(persist_dir), "%s/%d", dir, ++persist_num);
-    while (!access(persist_dir, 0));
+        if (!mkdir(persist_dir, S_IRWXU))
+        {
+            s_persist_created_dir = 1;
+            break;
+        }
+        if (errno == EEXIST)
+            continue;
+        int err = errno;
+        ls_stderr("Namespace error creating persist dir %s: %s\n",
+                  persist_dir, strerror(err));
+        DEBUG_MESSAGE("new_persist: mkdir(%s) failed: %s\n",
+                      persist_dir, strerror(err));
+        return -1;
+    }
     snprintf(s_persist_num, sizeof(s_persist_num), "%d", persist_num);
     DEBUG_MESSAGE("new_persist: uid: %d: %s\n", uid, s_persist_num);
+    /* Truncate before writing so a shorter number can't smear over a
+     * longer one already on disk (e.g. "42" -> "1" must yield "1", not
+     * "12").                                                              */
+    if (ftruncate(fd, 0) == -1)
+    {
+        int err = errno;
+        ls_stderr("Namespace error truncating persist file for uid %u: %s\n",
+                  uid, strerror(err));
+        DEBUG_MESSAGE("Namespace error truncating persist file uid %u: %s\n",
+                      uid, strerror(err));
+        rmdir(persist_dir);
+        s_persist_created_dir = 0;
+        return -1;
+    }
     lseek(fd, 0, SEEK_SET);
     if (write(fd, s_persist_num, strlen(s_persist_num)) == -1)
     {
         int err = errno;
-        ls_stderr("Namespace error writing persist file %s: %s\n", 
+        ls_stderr("Namespace error writing persist file %s: %s\n",
                   s_persist_num, strerror(err));
-        DEBUG_MESSAGE("Namespace error writing persist file %s: %s\n", 
+        DEBUG_MESSAGE("Namespace error writing persist file %s: %s\n",
                       s_persist_num, strerror(err));
+        rmdir(persist_dir);
+        s_persist_created_dir = 0;
         return -1;
-    }   
-    if (!mkdir(persist_dir, S_IRWXU))
-        s_persist_created_dir = 1;
-    if (relock_read && 
-        lock_file(uid, fd, "Relock read Persist File", 1, NSPERSIST_LOCK_READ, 
+    }
+    if (relock_read &&
+        lock_file(uid, fd, "Relock read Persist File", 1, NSPERSIST_LOCK_READ,
                   NULL))
-        return -1;        
+        return -1;
     DEBUG_MESSAGE("Created %s: %s\n", persist_dir, s_persist_created_dir ? "YES" : "NO");
     return 0;
 }
@@ -162,7 +201,7 @@ static int new_persist(uid_t uid, int fd, int relock_read)
 static int mkdirs(char *dir)
 {
     mkdir(PERSIST_PREFIX, S_IRWXU);
-    int pos = strlen(PERSIST_PREFIX + 1);
+    int pos = strlen(PERSIST_PREFIX);
     char *slash = dir + pos, *new_slash, do_mkdir[PERSIST_DIR_SIZE + 1];
     do
     {
@@ -332,21 +371,18 @@ int nspersist_setvhost(char *vhenv)
         vhenv = "";
         DEBUG_MESSAGE("Namespace requires a virtual host - use %s\n", vhenv);
     }
-    if (s_persisted_VH)
-        if (strcmp(s_persisted_VH, vhenv))
-        {
-            free(s_persisted_VH);
-            s_persisted_VH = NULL;
-        }
-    if (!s_persisted_VH)
+    if (!s_persisted_VH || strcmp(s_persisted_VH, vhenv))
     {
-        s_persisted_VH = (char *)strdup(vhenv);
-        if (!s_persisted_VH)
+        char *new_vh = strdup(vhenv);
+        if (!new_vh)
         {
             int err = errno;
             ls_stderr("Namespace VH insufficient memory for name: %s\n", strerror(err));
             return nsopts_rc_from_errno(err);
         }
+        if (s_persisted_VH)
+            free(s_persisted_VH);
+        s_persisted_VH = new_vh;
     }
     DEBUG_MESSAGE("VH specified as %s\n", s_persisted_VH);
     return 0;
@@ -391,17 +427,20 @@ static char *read_big_proc_file(const char *filename)
     {
         if (buf_size - pos < PROC_BLOCK_SIZE)
         {
+            char *new_block;
             buf_size += PROC_BLOCK_SIZE;
             DEBUG_MESSAGE("doing realloc, block: %p, size: %d\n", block, (int)(buf_size + 2));
-            block = realloc(block, buf_size + 2);
-            DEBUG_MESSAGE("did realloc, block: %p, size: %d\n", block, (int)(buf_size + 2));
-        }
-        if (!block)
-        {
-            ls_stderr("Namespace error reallocating /proc/%s at %ld: %s\n", filename,
-                      pos, strerror(errno));
-            close(fd);
-            return NULL;
+            new_block = realloc(block, buf_size + 2);
+            DEBUG_MESSAGE("did realloc, block: %p, size: %d\n", new_block, (int)(buf_size + 2));
+            if (!new_block)
+            {
+                ls_stderr("Namespace error reallocating /proc/%s at %ld: %s\n", filename,
+                          pos, strerror(errno));
+                free(block);
+                close(fd);
+                return NULL;
+            }
+            block = new_block;
         }
         len = read(fd, &block[pos], PROC_BLOCK_SIZE);
         if (len < 0)
@@ -465,7 +504,7 @@ static int count_mounts (mount_tab_line_t *line)
 
 static char *skip_token (char *line, int eat_whitespace)
 {
-    while (*line != ' ' && *line != '\n')
+    while (*line && *line != ' ' && *line != '\n')
         line++;
 
     if (eat_whitespace && *line == ' ')
@@ -486,9 +525,12 @@ static char *unescape_inline (char *escaped)
     unescaped = escaped;
     while (escaped < end)
     {
-        if (*escaped == '\\')
+        if (*escaped == '\\' && end - escaped >= 4 &&
+            escaped[1] >= '0' && escaped[1] <= '7' &&
+            escaped[2] >= '0' && escaped[2] <= '7' &&
+            escaped[3] >= '0' && escaped[3] <= '7')
         {
-            *unescaped++ = ((escaped[1] - '0') << 6) | 
+            *unescaped++ = ((escaped[1] - '0') << 6) |
                            ((escaped[2] - '0') << 3) |
                            ((escaped[3] - '0') << 0);
             escaped += 4;
@@ -632,6 +674,8 @@ static mount_tab_t *collect_mounts(mount_tab_t *info, mount_tab_line_t *line)
     while (child != NULL)
     {
         info = collect_mounts (info, child);
+        if (info == NULL)
+            return NULL;
         child = child->next_sibling;
     }
     return info;
@@ -839,7 +883,13 @@ mount_tab_t *parse_mount_tab(const char *root_mount)
     else
     {
         end_tab = collect_mounts (&mount_tab[0], &lines[root]);
-        if (end_tab != &mount_tab[n_mounts])
+        if (end_tab == NULL)
+        {
+            ls_stderr("Namespace collect_mounts failed (out of memory)\n");
+            free_mount_tab(mount_tab);
+            mount_tab = NULL;
+        }
+        else if (end_tab != &mount_tab[n_mounts])
             ls_stderr("Namespace expected end_tab to be equal to last mount\n");
     }
     free(by_id);
@@ -923,7 +973,11 @@ static int unpersist_fn(int report, uid_t uid)
         int mounted = 1;
         DEBUG_MESSAGE("umount %s\n", dest);
         if (report && persist_mounted(dest, &mounted))
+        {
+            /* Release the lock+fd we acquired above before bailing. */
+            unlock_close_persist_vh_file(0);
             return -1; // Fatal
+        }
         if (mounted)
         {
             if (umount(dest) != 0)
@@ -1235,8 +1289,8 @@ static int try_delete_persist_fn()
     {
         if (opened)
         {
-            close(s_persist_uid);
-            s_persist_uid = -1;
+            close(s_persist_fd);
+            s_persist_fd = -1;
         }
         return -1;
     }
@@ -1254,20 +1308,22 @@ static int try_delete_persist_fn()
         struct dirent *ent;
         while ((ent = readdir(dir)))
         {
-            if (ent->d_type == DT_DIR && 
+            if (ent->d_type == DT_DIR &&
                 strspn(ent->d_name, "0123456789") == strlen(ent->d_name))
+            {
                 DEBUG_MESSAGE("Existing dir %s\n", ent->d_name);
                 break;
+            }
             if (ent->d_type == DT_DIR && ent->d_name[0] == '.')
                 continue;
             if (!strcmp(ent->d_name, PERSIST_FILE))
                 continue;
             DEBUG_MESSAGE("Unexpected: %s\n", ent->d_name);
         }
-        if (ent == NULL)        
+        if (ent == NULL)
             unmount_delete_dir = 1;
+        closedir(dir);
     }
-    closedir(dir);
     if (unmount_delete_dir)
     {
         DEBUG_MESSAGE("Delete %s and %s\n", persist_name, persist_dir);
@@ -1973,10 +2029,10 @@ static int persist_use_child(lscgid_t *pCGI)
                 *last_slash = 0;
             dir = alloc_dir;
         }
-        if (chdir(dir) == -1)
+        if (!rc && chdir(dir) == -1)
         {
             int err = errno;
-            ls_stderr("Namespace change directory error %s: %s\n", dir, 
+            ls_stderr("Namespace change directory error %s: %s\n", dir,
                       strerror(err));
             if (err == ENOENT)
                 rc = 404;
@@ -2083,7 +2139,14 @@ int unpersist_uid(int report, uid_t uid, char *vhost)
             if (strspn(ent->d_name, "0123456789") == strlen(ent->d_name))
             {
                 // Assume a persist number
-                strncpy(s_persist_num, ent->d_name, sizeof(s_persist_num));
+                if (strlen(ent->d_name) >= sizeof(s_persist_num))
+                {
+                    DEBUG_MESSAGE("Skip oversized persist dir name: %s\n",
+                                  ent->d_name);
+                    continue;
+                }
+                strncpy(s_persist_num, ent->d_name, sizeof(s_persist_num) - 1);
+                s_persist_num[sizeof(s_persist_num) - 1] = 0;
                 if (unmount_vhost(report, uid, vhost))
                     need_newpersist = 1;
             }
@@ -2359,6 +2422,11 @@ static char *read_mountinfo_of_pid(pid_t pid)
         len += r;
         if (len + 1 >= cap)
         {
+            if (cap > SIZE_MAX / 2)
+            {
+                ls_stderr("mountinfo of pid %d too large\n", (int)pid);
+                free(buf); close(fd); return NULL;
+            }
             cap *= 2;
             char *nb = realloc(buf, cap);
             if (!nb) { free(buf); close(fd); return NULL; }

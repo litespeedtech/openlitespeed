@@ -123,12 +123,14 @@ extern FILE *s_ns_debug_file;
 
 char *ns_lsws_home(char *path, size_t path_max)
 {
+    if (path_max == 0)
+        return path;
     char validate[path_max];
-    ssize_t len = readlink("/proc/self/exe", path, path_max);
+    ssize_t len = readlink("/proc/self/exe", path, path_max - 1);
     if (len < 0)
     {
         DEBUG_MESSAGE("Unexpected error getting link: %s\n", strerror(errno));
-        strncpy(path, "/usr/local/lsws/", path_max);
+        snprintf(path, path_max, "%s", "/usr/local/lsws/");
         return path;
     }
     path[len] = 0;
@@ -144,7 +146,7 @@ char *ns_lsws_home(char *path, size_t path_max)
     if (access(validate, 0))
     {
         DEBUG_MESSAGE("Use default directory instead of resolved path (%s) for LSWS_HOME\n", path);
-        strncpy(path, "/usr/local/lsws/", path_max);
+        snprintf(path, path_max, "%s", "/usr/local/lsws/");
     }
     return path;
 }
@@ -290,4 +292,3 @@ void debug_message (const char *fmt, ...)
 
 #endif // Linux
 #endif // _NS_OPTS_H
-

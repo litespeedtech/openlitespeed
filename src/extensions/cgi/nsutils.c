@@ -110,7 +110,6 @@ int nsutils_write_uid_gid_map(uid_t sandbox_uid,
     if (dir_fd < 0)
     {
         int err = errno;
-        close(dir_fd);
         ls_stderr("Namespace error opening %s: %s\n", dir, strerror(err));
         return nsopts_rc_from_errno(err);
     }
@@ -203,7 +202,6 @@ int clean_dir(char *dir)
         {
             ls_stderr("Namespace can't allocate memory to cleanup dir %s\n",
                       dir);
-            free(file);
             closedir(dp);
             return DEFAULT_ERR_RC;
         }

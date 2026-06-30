@@ -60,7 +60,7 @@ extern char      **s_nosandbox_arr;
 extern int         s_nosandbox_count;
 extern char       *s_nosandbox_pgm;
 extern char       *s_nosandbox_link;
-extern char      **s_nosandbox_link_arr;
+extern char      **s_nosandbox_arr_link;
 extern char       *s_nosandbox_name;
 extern int         s_nosandbox_added;
 
