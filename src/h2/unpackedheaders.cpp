@@ -1343,15 +1343,27 @@ int UpkdHdrBuilder::guarantee(int size)
 #define EUP  LSXPACK_ERR_UPPERCASE_HEADER
 #define HE(name_err, val_err) ((unsigned char)((name_err) | ((val_err) << 4)))
 
-/* Low nibble is field-name error, high nibble is field-value error. */
+/* Extra flags in the otherwise-unused low bits 0x01/0x02.  They mark bytes
+ * that are legal in a general header field but must be rejected when the value
+ * is copied verbatim into the "<method> <path> HTTP/1.1" request line: SP and
+ * HTAB (both), and '\' for the target.  The value scan ORs the relevant flag
+ * into its mask so ':path'/':method' are validated in the same single pass;
+ * the field-name scan masks with 0x0C so these bits never affect it. */
+#define UPK_VAL_BAD 0x40   /* high-nibble value-error bit (EBD << 4) */
+#define UPK_TGT_BAD 0x01   /* invalid in ':path' request-target */
+#define UPK_MTH_BAD 0x02   /* invalid in ':method' token */
+#define HX(name_err, val_err, extra) ((unsigned char)(HE(name_err, val_err) | (extra)))
+
+/* Low nibble is field-name error, high nibble is field-value error;
+ * bits 0x01/0x02 flag request-line-unsafe bytes (see above). */
 static const unsigned char s_reqHeaderCharErr[256] =
 {
-    /* 0x00 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EOK), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
+    /* 0x00 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HX(EBD, EOK, UPK_TGT_BAD | UPK_MTH_BAD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
     /* 0x10 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
-    /* 0x20 */ HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK),
+    /* 0x20 */ HX(EBD, EOK, UPK_TGT_BAD | UPK_MTH_BAD), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK),
     /* 0x30 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
     /* 0x40 */ HE(EBD, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK),
-    /* 0x50 */ HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK),
+    /* 0x50 */ HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EBD, EOK), HX(EBD, EOK, UPK_TGT_BAD), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK),
     /* 0x60 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK),
     /* 0x70 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EBD),
     /* 0x80 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
@@ -1368,6 +1380,7 @@ static const unsigned char s_reqHeaderCharErr[256] =
 #undef EBD
 #undef EUP
 #undef HE
+#undef HX
 
 
 static int s_max_header_count = 500;
@@ -1378,6 +1391,21 @@ void UpkdHdrBuilder::setMaxHeaderCount(int cnt)
     if (cnt > 2000)
         cnt = 2000;
     s_max_header_count = cnt;
+}
+
+
+//Validate a field value against the shared character table in a single pass.
+//mask is UPK_VAL_BAD, plus for a value copied verbatim into the request line
+//(':path'/':method') the request-line flag(s) UPK_TGT_BAD / UPK_MTH_BAD.
+static lsxpack_err_code validateReqValue(const char *val, int len,
+                                         unsigned char mask)
+{
+    const unsigned char *p = (const unsigned char *)val;
+    const unsigned char *pEnd = p + len;
+    for (; p < pEnd; ++p)
+        if (s_reqHeaderCharErr[*p] & mask)
+            return LSXPACK_ERR_BAD_REQ_HEADER;
+    return LSXPACK_OK;
 }
 
 
@@ -1396,17 +1424,11 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         idx = UnpackedHeaders::qpack2ReqIdx(hdr->qpack_index);
     const char *name = lsxpack_header_get_name(hdr);
     char *val = hdr->buf + hdr->val_offset;
-
     lsxpack_err_code err;
-    unsigned char *p = (unsigned char *)val;
-    const unsigned char *pEnd = p + hdr->val_len;
-    for (; p < pEnd; ++p)
-    {
-        err = (lsxpack_err_code)(s_reqHeaderCharErr[*p] >> 4);
-        if (err)
-            return err;
-    }
 
+    //Value character validation is done per header type below, so ':path' and
+    //':method' -- which are copied verbatim into the request line -- can pass
+    //the extra request-line mask in one scan without a separate pre-pass.
     if ((idx >= UPK_HDR_METHOD && idx <= UPK_HDR_STATUS)
         || (hdr->name_len > 2 && name[0] == ':'))
     {
@@ -1441,6 +1463,8 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         switch(idx)
         {
         case HttpHeader::H_HOST:         //":authority",
+            if ((err = validateReqValue(val, hdr->val_len, UPK_VAL_BAD)))
+                return err;
             if (headers->setHost2(hdr) == LS_FAIL)
                 return LSXPACK_ERR_DUPLICATE_PSDO_HDR;
             working = NULL;
@@ -1449,12 +1473,19 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
             //If second time have the :method, ERROR
             if (hdr->val_len > HttpMethod::MAX_METHOD_LEN)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
-            if (hdr->val_len > 7 && memchr(val, ' ', hdr->val_len) != NULL)
-                return LSXPACK_ERR_BAD_REQ_HEADER;
+            //also reject SP/HTAB so the method cannot inject request-line tokens
+            if ((err = validateReqValue(val, hdr->val_len,
+                                        UPK_VAL_BAD | UPK_MTH_BAD)))
+                return err;
             if (headers->setMethod2(hdr) == LS_FAIL)
                 return LSXPACK_ERR_DUPLICATE_PSDO_HDR;
             break;
         case UPK_HDR_PATH:  //":path"
+            //also reject SP/HTAB/'\' so the target cannot inject a second token
+            //or a forged HTTP version into the upstream request line
+            if ((err = validateReqValue(val, hdr->val_len,
+                                        UPK_VAL_BAD | UPK_TGT_BAD)))
+                return err;
             //If second time have the :path, ERROR
             if (headers->setUrl2(hdr) == LS_FAIL)
                 return LSXPACK_ERR_DUPLICATE_PSDO_HDR;
@@ -1462,6 +1493,8 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         case UPK_HDR_SCHEME:  //":scheme"
             if (scheme)
                 return LSXPACK_ERR_DUPLICATE_PSDO_HDR;
+            if ((err = validateReqValue(val, hdr->val_len, UPK_VAL_BAD)))
+                return err;
             scheme = true;
             //Do nothing
             //We set to (char *)"HTTP/1.1"
@@ -1486,11 +1519,13 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
         {
             if (hdr->name_len == 0)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
-            p = (unsigned char *)name;
-            pEnd = p + hdr->name_len;
+            const unsigned char *p = (const unsigned char *)name;
+            const unsigned char *pEnd = p + hdr->name_len;
             for (; p < pEnd; ++p)
             {
-                err = (lsxpack_err_code)(s_reqHeaderCharErr[*p] & 0x0F);
+                //0x0C masks the field-name error nibble (EBD/EUP), ignoring the
+                //0x01/0x02 request-line flags that only matter to value scans
+                err = (lsxpack_err_code)(s_reqHeaderCharErr[*p] & 0x0C);
                 if (err)
                     return err;
             }
@@ -1501,6 +1536,8 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
             else if (hdr->name_len == 17 && memcmp(name, "transfer-encoding", 17) == 0)
                 idx = HttpHeader::H_TRANSFER_ENCODING;
         }
+        if ((err = validateReqValue(val, hdr->val_len, UPK_VAL_BAD)))
+            return err;
         if (idx == HttpHeader::H_COOKIE)
         {
             if (guarantee(hdr->val_len + 2) == LS_FAIL)
