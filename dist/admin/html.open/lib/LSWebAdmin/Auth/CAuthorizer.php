@@ -178,6 +178,14 @@ class CAuthorizer
 
     private function getRequestPort()
     {
+        $host = UIBase::GrabInput('server', 'HTTP_HOST');
+        if ($host !== '' && ($pos = strpos($host, ':')) !== false) {
+            $port = substr($host, $pos + 1);
+            if (ctype_digit($port) && (int) $port > 0 && (int) $port <= 65535) {
+                return (int) $port;
+            }
+        }
+
         $port = UIBase::GrabInput('server', 'SERVER_PORT', 'int');
         return ($port > 0) ? $port : null;
     }
