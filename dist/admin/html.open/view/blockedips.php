@@ -22,7 +22,7 @@ echo UI::content_header('shield-alert', DMsg::UIStr('service_blockedips'));
                         <div class="lst-blockedips-totalcard__metricrow">
                             <div id="blockedips_total" class="lst-blockedips-totalcard__value">0</div>
                             <div class="lst-blockedips-totalcard__actions" role="menu">
-                                <button type="button" id="blockedips_refresh_btn" class="lst-blockedips-refreshbtn" disabled rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>">
+                                <button type="button" id="blockedips_refresh_btn" class="lst-btn lst-btn--primary lst-btn--sm lst-blockedips-refreshbtn" disabled rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>">
                                     <i class="lst-icon" data-lucide="refresh-cw" aria-hidden="true"></i>
                                     <span><?php DMsg::EchoUIStr('btn_refresh'); ?></span>
                                 </button>

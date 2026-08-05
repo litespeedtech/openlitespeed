@@ -223,10 +223,12 @@ H2StreamBase *H2Connection::getNewStream(uint8_t ubH2_Flags)
     m_mapStream.insert(pStream);
     if (m_tmIdleBegin)
         m_tmIdleBegin = 0;
-    enum stream_flag flag = (enum stream_flag)(ubH2_Flags & H2_CTRL_FLAG_FIN)
-            | HIO_FLAG_FLOWCTRL | HIO_FLAG_SENDFILE | HIO_FLAG_WRITE_BUFFER;
+    enum stream_flag flag = (enum stream_flag)
+            HIO_FLAG_FLOWCTRL | HIO_FLAG_SENDFILE | HIO_FLAG_WRITE_BUFFER;
     if (getStream()->getFlag(HIO_FLAG_ALTSVC_SENT))
         flag = flag | HIO_FLAG_ALTSVC_SENT;
+    if (ubH2_Flags & H2_CTRL_FLAG_FIN)
+        flag = flag | (enum stream_flag)(HIO_FLAG_PEER_SHUTDOWN | SS_FLAG_READ_EOS);
     pStream->setFlag(flag, 1);
     pStream->init(this, &m_priority);
     pStream->setConnInfo(getStream()->getConnInfo());

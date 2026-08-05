@@ -34,6 +34,7 @@ extern "C" {
 
 typedef struct ls_fdbio_data {
     ls_logger_t *m_logger;
+    int          m_fd;
     uint8_t     *m_rbuf;
     uint16_t     m_rbuf_max_block;
     uint16_t     m_rbuf_used;

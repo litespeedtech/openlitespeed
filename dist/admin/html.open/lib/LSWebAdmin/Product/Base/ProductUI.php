@@ -22,6 +22,11 @@ class ProductUI extends UIBase
         return true;
     }
 
+    public static function SupportsLiveStatsConfigLinks()
+    {
+        return false;
+    }
+
     public static function UsesToolPageStyle($view)
     {
         return in_array($view, array('compilePHP', 'logviewer', 'loginhistory', 'opsauditlog', 'realtimestats', 'blockedips', 'listenervhmap'), true);

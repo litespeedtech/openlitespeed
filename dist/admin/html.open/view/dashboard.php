@@ -62,7 +62,7 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
                     <span class="lst-widget-icon"><i class="lst-icon" data-lucide="activity"></i></span>
                     <h2><?php DMsg::EchoUIStr('menu_rtstats'); ?></h2>
                     <div class="lst-widget-toolbar" role="menu">
-                        <button type="button" id="dash_summary_refresh_btn" class="lst-card-link lst-dashboard-refreshbtn" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>">
+                        <button type="button" id="dash_summary_refresh_btn" class="lst-card-link lst-dashboard-refreshbtn">
                             <i class="lst-icon" data-lucide="refresh-cw" aria-hidden="true"></i>
                             <span><?php DMsg::EchoUIStr('btn_refresh'); ?></span>
                         </button>
@@ -160,7 +160,7 @@ echo UI::content_header('layout-dashboard', DMsg::UIStr('menu_dashboard'), '', f
                     </button>
                 </div>
                 <div class="lst-widget-toolbar" role="menu">
-                    <button type="button" id="dash_log_refresh_btn" class="lst-card-link lst-dashboard-refreshbtn" rel="tooltip" data-original-title="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>" aria-label="<?php echo UIBase::EscapeAttr(DMsg::UIStr('btn_refresh')); ?>">
+                    <button type="button" id="dash_log_refresh_btn" class="lst-card-link lst-dashboard-refreshbtn">
                         <i class="lst-icon" data-lucide="refresh-cw" aria-hidden="true"></i>
                         <span><?php DMsg::EchoUIStr('btn_refresh'); ?></span>
                     </button>

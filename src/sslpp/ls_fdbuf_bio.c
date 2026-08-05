@@ -584,33 +584,82 @@ static int setup_writes(ls_fdbio_data *fdbio)
 }
 
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+/*
+ * Control handler for our BIO_METHOD. Earlier revisions avoided writing one by
+ * either memcpy'ing BIO_s_fd()'s BIO_METHOD or borrowing its ctrl via
+ * BIO_meth_get_ctrl(). Newer BoringSSL breaks both: BIO_METHOD is opaque (no
+ * sizeof/memcpy) and BIO_meth_get_ctrl() aborts unless the method is
+ * BIO_s_socket(), and is documented as not future-proof. So we implement the
+ * handful of controls this BIO actually needs, mirroring BoringSSL's built-in
+ * fd_ctrl. The fd is kept in ls_fdbio_data (the BIO is opaque, so we can't use
+ * its internal num slot), which keeps BIO_set_fd()/BIO_get_fd() -- and hence
+ * SSL_get_fd() -- working.
+ */
+static long bio_fd_ctrl(BIO *b, int cmd, long num, void *ptr)
+{
+    ls_fdbio_data *fdbio = LS_FDBUF_FROM_BIO(b);
+    long ret = 1;
+    switch (cmd)
+    {
+    case BIO_C_SET_FD:
+        if (fdbio)
+            fdbio->m_fd = *(int *)ptr;
+        BIO_set_shutdown(b, (int)num);
+        BIO_set_init(b, 1);
+        break;
+    case BIO_C_GET_FD:
+        if (BIO_get_init(b) && fdbio)
+        {
+            if (ptr)
+                *(int *)ptr = fdbio->m_fd;
+            ret = fdbio->m_fd;
+        }
+        else
+            ret = -1;
+        break;
+    case BIO_CTRL_GET_CLOSE:
+        ret = BIO_get_shutdown(b);
+        break;
+    case BIO_CTRL_SET_CLOSE:
+        BIO_set_shutdown(b, (int)num);
+        break;
+    case BIO_CTRL_FLUSH:
+        /* Write buffering is flushed explicitly via ls_fdbio_flush(); nothing
+         * to do here. Matches the no-op FLUSH of the fd BIO we used to borrow. */
+        ret = 1;
+        break;
+    default:
+        ret = 0;
+        break;
+    }
+    return ret;
+}
+#endif
+
+
 BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
 {
     if (!s_biom)
     {
         DEBUG_MESSAGE(fdbio, "[BIO] ls_fdbio_create METHOD\n");
-    
-        s_biom_fd_builtin = BIO_s_fd();
+
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
         if (!(s_biom = BIO_meth_new(
-            BIO_TYPE_FD | BIO_TYPE_SOURCE_SINK | BIO_TYPE_DESCRIPTOR, 
+            BIO_TYPE_FD | BIO_TYPE_SOURCE_SINK | BIO_TYPE_DESCRIPTOR,
             "Litespeed BIO Method")))
         {
             DEBUG_MESSAGE(fdbio, "[BIO] ERROR creating BIO_METHOD\n");
             return NULL;
         }
-#ifdef OPENSSL_IS_BORINGSSL
-        memcpy(s_biom, s_biom_fd_builtin, sizeof(BIO_METHOD));
-#else
-        BIO_meth_set_ctrl(s_biom, BIO_meth_get_ctrl(s_biom_fd_builtin));
-        BIO_meth_set_create(s_biom, BIO_meth_get_create(s_biom_fd_builtin));
-#endif
+        BIO_meth_set_ctrl(s_biom, bio_fd_ctrl);
         BIO_meth_set_write(s_biom, bio_fd_write);
         BIO_meth_set_read(s_biom, bio_fd_read);
         BIO_meth_set_puts(s_biom, bio_fd_puts);
         BIO_meth_set_gets(s_biom, bio_fd_gets);
         BIO_meth_set_destroy(s_biom, bio_fd_free);
 #else
+        s_biom_fd_builtin = BIO_s_fd();
         memcpy(&s_biom_s, s_biom_fd_builtin, sizeof(BIO_METHOD));
         s_biom = &s_biom_s;
         s_biom->bwrite = bio_fd_write;
@@ -618,7 +667,7 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
         s_biom->bputs = bio_fd_puts;
         s_biom->bgets = bio_fd_gets;
         s_biom->destroy = bio_fd_free;
-#endif        
+#endif
     }
     fdbio->m_rbuf_used = 0;
     fdbio->m_rbuf_read = 0;
@@ -631,15 +680,16 @@ BIO *ls_fdbio_create(int fd, ls_fdbio_data *fdbio)
         // everything freed in the destructor
         return NULL;
     }
-    BIO_set_fd(bio, fd, 0);
+    /* Attach fdbio before BIO_set_fd(): our ctrl stores the fd into fdbio. */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
     BIO_set_data(bio, fdbio);
 #else
     BIO_set_app_data(bio, fdbio);
-#endif    
+#endif
+    BIO_set_fd(bio, fd, 0);
     DEBUG_MESSAGE(fdbio, "[BIO] ls_fdbio_create bio: %p\n",
                    bio);
-    
+
     setup_writes(fdbio);
     return bio;
 }

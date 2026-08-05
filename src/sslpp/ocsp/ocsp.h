@@ -149,7 +149,7 @@ typedef struct ocsp_one_request_st {
     STACK_OF(X509_EXTENSION) *singleRequestExtensions;
 } OCSP_ONEREQ;
 
-DECLARE_STACK_OF(OCSP_ONEREQ)
+DEFINE_STACK_OF(OCSP_ONEREQ)
 
 /*-  TBSRequest      ::=     SEQUENCE {
  *       version             [0] EXPLICIT Version DEFAULT v1,
@@ -159,7 +159,16 @@ DECLARE_STACK_OF(OCSP_ONEREQ)
  */
 typedef struct ocsp_req_info_st {
     ASN1_INTEGER *version;
-    GENERAL_NAME *requestorName;
+    /*
+     * requestorName ([1] EXPLICIT GeneralName OPTIONAL) is intentionally
+     * omitted from both this struct and the OCSP_REQINFO ASN1 template in
+     * ocsp.c. It is only meaningful for signed OCSP requests, which this code
+     * never produces, so it is always absent from the DER encoding either way.
+     * Keeping it would force the ASN1 template to reference GENERAL_NAME's
+     * ASN1_ITEM (GENERAL_NAME_it), which newer BoringSSL no longer exports with
+     * C linkage -- it now lives in the C++ bssl:: namespace -- so a C
+     * translation unit can no longer link against it.
+     */
     STACK_OF(OCSP_ONEREQ) *requestList;
     STACK_OF(X509_EXTENSION) *requestExtensions;
 } OCSP_REQINFO;
@@ -282,7 +291,7 @@ typedef struct ocsp_single_response_st {
     STACK_OF(X509_EXTENSION) *singleExtensions;
 } OCSP_SINGLERESP;
 
-DECLARE_STACK_OF(OCSP_SINGLERESP)
+DEFINE_STACK_OF(OCSP_SINGLERESP)
 
 /*-  ResponseData ::= SEQUENCE {
  *      version              [0] EXPLICIT Version DEFAULT v1,

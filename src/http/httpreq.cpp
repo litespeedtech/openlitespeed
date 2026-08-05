@@ -560,8 +560,6 @@ int HttpReq::processUnpackedHeaders(UnpackedHeaders *header)
         return result;
 
     m_ver = HTTP_1_1;
-    if (m_method == HttpMethod::HTTP_POST || m_method == HttpMethod::HTTP_PATCH)
-        m_lEntityLength = LSI_BODY_SIZE_UNKNOWN;
     keepAlive(0);
 
     result = processUnpackedHeaderLines(header);

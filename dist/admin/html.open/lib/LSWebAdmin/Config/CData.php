@@ -6,6 +6,7 @@ use LSWebAdmin\Config\IO\ConfigDataLoader;
 use LSWebAdmin\Config\IO\ConfigWriteService;
 use LSWebAdmin\Config\Service\ConfigMutationService;
 use LSWebAdmin\Config\Migration\ConfigRootLifecycle;
+use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\Product\Current\DPageDef;
 use LSWebAdmin\UI\DInfo;
 
@@ -195,6 +196,8 @@ abstract class CData
     {
         $root = ConfigDataLoader::loadSpecialRoot($this->_path, $this->_id);
         if ($root === false) {
+            // Set an error rather than leave _root null, which renders blank.
+            $this->_conferr = DMsg::UIStr('err_conffilenotfound', ['%%path%%' => $this->_path]);
             return false;
         }
 

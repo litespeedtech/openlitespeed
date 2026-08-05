@@ -157,22 +157,22 @@ class CompilePHPUI
 
         $input = $this->input_text('path_env', $options->GetValue('ExtraPathEnv'));
         $err = isset($pass_val['err']['path_env']) ? $pass_val['err']['path_env'] : '';
-        $tip = DMsg::GetAttrTip('extrapathenv')->Render();
+        $tip = $this->renderAttrTip('extrapathenv');
         $buf .= $this->form_group(DMsg::ALbl('buildphp_extrapathenv'), false, $input, 'path_env', $tip, '', $err);
 
         $input = $this->input_text('installPath', $options->GetValue('InstallPath'));
         $err = isset($pass_val['err']['installPath']) ? $pass_val['err']['installPath'] : '';
-        $tip = DMsg::GetAttrTip('installpathprefix')->Render();
+        $tip = $this->renderAttrTip('installpathprefix');
         $buf .= $this->form_group(DMsg::ALbl('buildphp_installpathprefix'), true, $input, 'installPath', $tip, '', $err);
 
         $input = $this->input_text('compilerFlags', $options->GetValue('CompilerFlags'));
         $err = isset($pass_val['err']['compilerFlags']) ? $pass_val['err']['compilerFlags'] : '';
-        $tip = DMsg::GetAttrTip('compilerflags')->Render();
+        $tip = $this->renderAttrTip('compilerflags');
         $buf .= $this->form_group(DMsg::ALbl('buildphp_compilerflags'), false, $input, 'compilerFlags', $tip, '', $err);
 
         $input = $this->input_textarea('configureParams', $options->GetValue('ConfigParam'), 6, 'soft');
         $err = isset($pass_val['err']['configureParams']) ? $pass_val['err']['configureParams'] : '';
-        $tip = DMsg::GetAttrTip('configureparams')->Render();
+        $tip = $this->renderAttrTip('configureparams');
         $buf .= $this->form_group(DMsg::ALbl('buildphp_confparam'), true, $input, 'configureParams', $tip, '', $err);
 
         $input = '';
@@ -232,6 +232,12 @@ class CompilePHPUI
 
         $buf .= $this->form_end();
         echo $buf;
+    }
+
+    private function renderAttrTip($helpKey)
+    {
+        $tip = DMsg::GetAttrTip($helpKey);
+        return ($tip == null) ? '' : $tip->Render();
     }
 
     public function print_step_3()

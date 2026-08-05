@@ -14,12 +14,12 @@ $distinctActions = OpsAuditLogger::getDistinctActions($entries);
 $refreshLabel = UIBase::EscapeAttr(DMsg::UIStr('btn_refreshnow'));
 $downloadLabel = UIBase::EscapeAttr(DMsg::UIStr('service_opsauditlog_download'));
 
-$titleActions = '<button type="button" id="opsauditlog_refresh_btn" class="lst-btn lst-btn--sm lst-hero-btn lst-opsauditlog-titlebtn lst-opsauditlog-titlebtn--refresh" onclick="location.reload()" rel="tooltip" data-placement="bottom" data-original-title="' . $refreshLabel . '" aria-label="' . $refreshLabel . '">'
+$titleActions = '<button type="button" id="opsauditlog_refresh_btn" class="lst-btn lst-btn--icon lst-opsauditlog-titlebtn lst-opsauditlog-titlebtn--refresh" onclick="location.reload()" rel="tooltip" data-placement="bottom" data-original-title="' . $refreshLabel . '" aria-label="' . $refreshLabel . '">'
     . '<i class="lst-icon" data-lucide="refresh-cw" aria-hidden="true"></i>'
     . '</button>';
 
 if (file_exists($logPath)) {
-    $titleActions .= '<a href="#" id="opsauditlog_download" class="lst-btn lst-btn--sm lst-hero-btn lst-opsauditlog-titlebtn lst-opsauditlog-titlebtn--download" rel="tooltip" data-placement="bottom" data-original-title="' . $downloadLabel . '" aria-label="' . $downloadLabel . '">'
+    $titleActions .= '<a href="#" id="opsauditlog_download" class="lst-btn lst-btn--icon lst-opsauditlog-titlebtn lst-opsauditlog-titlebtn--download" rel="tooltip" data-placement="bottom" data-original-title="' . $downloadLabel . '" aria-label="' . $downloadLabel . '">'
         . '<i class="lst-icon" data-lucide="download" aria-hidden="true"></i>'
         . '</a>';
 }

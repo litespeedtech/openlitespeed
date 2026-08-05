@@ -386,6 +386,8 @@ inline int verifyPacketHeader(struct lsapi_packet_header *pHeader)
             return LS_FAIL;
         break;
     case LSAPI_RESP_STREAM:
+        // LSAPI_sendfile_r() allow up to 4GB - 9 size, no limit here.
+        break;
     case LSAPI_STDERR_STREAM:
     case LSAPI_REQ_RECEIVED:
     case LSAPI_INTERNAL_ERROR:
@@ -622,9 +624,9 @@ int LsapiConn::processResp()
                                     LSAPI_PACKET_HEADER_LEN;
                     if (m_iPacketLeft < 0)
                     {
-                        const char *p = (const char *)&m_respHeader;
+                        const unsigned char *p = (const unsigned char *)&m_respHeader;
                         LS_WARN("[%s] LSAPI Packet header is invalid,"
-                                "('%c','%c','%c','%c','%c','%c','%c','%c')",
+                                "('%c','%c', %x, %x, %x, %x, %x, %x)",
                                 getLogId(), *p, *(p + 1), *(p + 2), *(p + 3),
                                 *(p + 4), *(p + 5), *(p + 6), *(p + 7));
                         break;

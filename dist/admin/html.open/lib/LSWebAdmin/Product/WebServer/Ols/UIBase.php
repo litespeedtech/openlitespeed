@@ -7,6 +7,11 @@ use LSWebAdmin\Product\Base\ProductUI;
 
 class UIBase extends ProductUI
 {
+    public static function SupportsLiveStatsConfigLinks()
+    {
+        return true;
+    }
+
     public static function GetPidLabel()
     {
         return 'OLS PID';

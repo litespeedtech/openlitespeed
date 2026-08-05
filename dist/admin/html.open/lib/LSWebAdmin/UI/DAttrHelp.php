@@ -87,20 +87,26 @@ class DAttrHelp
 				data-original-title="<span class=\'lst-popover-title-badge\'>i</span> <strong>' . $this->name
                 . '</strong>" data-html="true" data-content=\'<div>';
 
+        $blockedNotice = '';
         if ($this->shouldRenderBlockedReason($blocked_reason)) {
-            $buf .= ' <i>' . $blocked_reason . '</i>';
+            $blockedNotice = $blocked_reason;
         } else {
             switch ($blocked_version) {
                 case 0:
                     break;
                 case 1:
-                    $buf .= ' <i>' . DMsg::UIStr('note_entfeature') . '</i>';
+                    $blockedNotice = DMsg::UIStr('note_entfeature');
                     break;
                 case 2:
                 case 3:
-                    $buf .= ' <i>' . DMsg::UIStr('note_multicpufeature') . '</i>';
+                    $blockedNotice = DMsg::UIStr('note_multicpufeature');
                     break;
             }
+        }
+
+        if ($blockedNotice !== '') {
+            $buf .= '<div class="lst-popover-notice lst-popover-notice--info">'
+                . $blockedNotice . '</div>';
         }
         $buf .= $this->desc . '<br><br>';
         if ($this->syntax) {

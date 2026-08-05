@@ -11,6 +11,7 @@ use LSWebAdmin\Config\IO\ConfigWritePlan;
 use LSWebAdmin\Config\IO\ConfigWriteTask;
 use LSWebAdmin\Config\Migration\ConfigXmlToConfConverter;
 use LSWebAdmin\Config\Parser\PlainConfParser;
+use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\UI\DInfo;
 use LSWebAdmin\Util\PathTool;
 
@@ -63,7 +64,7 @@ class ConfigData extends CData
     {
         if ($isnew) {
             if (!file_exists($this->_path) && !PathTool::createFile($this->_path, $err)) {
-                $this->_conferr = 'Failed to create config file at ' . $this->_path;
+                $this->_conferr = DMsg::UIStr('err_conffilecreatefailed', ['%%path%%' => $this->_path]);
                 return false;
             }
 
@@ -76,7 +77,7 @@ class ConfigData extends CData
                 if (file_exists($this->_xmlpath) && !$this->migrate_allxml2conf()) {
                     return false;
                 }
-                $this->_conferr = 'Failed to find config file at ' . $this->_path;
+                $this->_conferr = DMsg::UIStr('err_conffilenotfound', ['%%path%%' => $this->_path]);
                 return false;
             }
 

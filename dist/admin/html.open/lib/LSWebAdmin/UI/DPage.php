@@ -3,6 +3,7 @@
 namespace LSWebAdmin\UI;
 
 use LSWebAdmin\Config\CNode;
+use LSWebAdmin\I18n\DMsg;
 use LSWebAdmin\Product\Base\DTblMap;
 use LSWebAdmin\Product\Base\DTblSelectorMap;
 use LSWebAdmin\Product\Current\DTblDef;
@@ -81,8 +82,10 @@ class DPage
         }
 
         $root = $uiContext->GetPageData();
-        if ($root == null)
+        if ($root == null) {
+            echo $this->renderRealmDbBackLink($uiContext);
             return;
+        }
 
 
         if ($root->Get(CNode::FLD_KEY) == CNode::K_EXTRACTED) {
@@ -176,6 +179,44 @@ class DPage
             else
                 $this->_linked_tbls = array_merge($this->_linked_tbls, $linked);
         }
+    }
+
+    // Link back to the realm view by dropping the trailing V_UDB_TOP/V_GDB_TOP
+    // tid+ref segment. Returns '' for any non-realm-DB page.
+    private function renderRealmDbBackLink($uiContext)
+    {
+        $tid = $uiContext->GetTid();
+        if (!is_string($tid) || (strpos($tid, 'V_UDB') === false && strpos($tid, 'V_GDB') === false)) {
+            return '';
+        }
+
+        $backTid = self::trimLastSegment($tid);
+        if ($backTid === '') {
+            return '';
+        }
+        $backRef = self::trimLastSegment((string) $uiContext->GetRef());
+
+        $params = ['view' => 'confMgr', 'm' => $uiContext->GetMid(), 'p' => $uiContext->GetPid()];
+        if ($backTid !== '') {
+            $params['t'] = $backTid;
+        }
+        if ($backRef !== '') {
+            $params['r'] = $backRef;
+        }
+
+        $url = 'index.php?' . http_build_query($params);
+        return '<div class="lst-form-actions"><a class="lst-btn" href="'
+            . UIBase::EscapeAttr($url) . '">' . UIBase::Escape(DMsg::UIStr('btn_back')) . '</a></div>';
+    }
+
+    private static function trimLastSegment($id)
+    {
+        if (!is_string($id) || $id === '') {
+            return '';
+        }
+
+        $pos = strrpos($id, '`');
+        return ($pos === false) ? '' : substr($id, 0, $pos);
     }
 
     private static function renderTopMessage($message)

@@ -5,6 +5,7 @@ namespace LSWebAdmin\Config\Validation;
 use LSWebAdmin\Auth\CAuthorizer;
 use LSWebAdmin\Auth\FileThrottleStore;
 use LSWebAdmin\Auth\IpThrottle;
+use LSWebAdmin\Config\Validation\CaptchaPostTableValidationRule;
 use LSWebAdmin\Config\Validation\ExtAppPostTableValidationRule;
 use LSWebAdmin\Config\Validation\ListenerPostTableValidationRule;
 use LSWebAdmin\Config\Validation\PasswordPostTableValidationRule;
@@ -21,10 +22,12 @@ use LSWebAdmin\Config\CNode;
 class CValidation
 {
     const BLOCK_CMD_SESSION_KEY = 'BLOCK_CMD';
+    const FILE_FAILURE_MISSING = 'missing';
 
 	protected $_request;
 	protected $_go_flag;
 	protected $_messages = [];
+	protected $_pendingFileCreates = [];
 
 	public function __construct()
 	{
@@ -36,6 +39,7 @@ class CValidation
 		$this->_request = $request;
 		$this->_go_flag = 1;
 		$this->_messages = [];
+		$this->_pendingFileCreates = [];
 
 		$tbl = $request->GetTable();
 		$tid = $request->GetTid();
@@ -71,6 +75,11 @@ class CValidation
 
 		$res = $this->validatePostTbl($tbl, $extracted);
 		$this->setValid($res);
+		if ($this->_go_flag >= 0) {
+			$this->finalizePendingFileCreates($extracted);
+		} else {
+			$this->_pendingFileCreates = [];
+		}
 
 		// if 0 , make it always point to curr page
 
@@ -82,6 +91,7 @@ class CValidation
 		$messages = $this->_messages;
 		$this->_request = null;
 		$this->_messages = [];
+		$this->_pendingFileCreates = [];
 		return new ConfigValidationResult($extracted, $updatedViewName, $hasUpdatedViewName, $status, $messages);
 	}
 
@@ -207,6 +217,7 @@ class CValidation
 		static $rules = null;
 		if ($rules == null) {
 			$rules = [
+				new CaptchaPostTableValidationRule(),
 				new ListenerPostTableValidationRule(),
 				new PasswordPostTableValidationRule(),
 				new ExtAppPostTableValidationRule(),
@@ -457,8 +468,9 @@ class CValidation
 		return $absname;
 	}
 
-	protected function test_file(&$absname, &$err, $attr)
+	protected function test_file(&$absname, &$err, $attr, &$failureReason = null)
 	{
+		$failureReason = null;
 		if ($attr->_maxVal == null) {
 			return 1; // no permission test
 		}
@@ -477,6 +489,7 @@ class CValidation
 		}
 
 		if (($type == 'path' && !is_dir($absname)) || ($type == 'file' && !is_file($absname))) {
+			$failureReason = self::FILE_FAILURE_MISSING;
 			$err = $type . ' ' . htmlspecialchars($absname) . ' does not exist.';
 			if ($this->allow_create($attr, $absname)) {
 				$err .= ' <input type="hidden" name="a" value="s">';
@@ -624,26 +637,150 @@ class CValidation
 			}
 		}
 
-		$res = $this->chk_file1($attr, $path, $err);
-        $productFilePolicyRes = $this->validateManagedConfigFilePolicy($attr, $path, $err);
-        if ($productFilePolicyRes != 1) {
-            $res = $productFilePolicyRes;
-        }
-
-		if ($res == -1 && isset($_POST['file_create']) && $_POST['file_create'] == $attr->GetKey() && $this->allow_create($attr, $path)) {
-			if (PathTool::createFile($path, $err, $attr->GetKey())) {
-				$this->addValidationMessage(
-					'success',
-					htmlspecialchars($path, ENT_QUOTES) . ' has been created successfully. Click Save to apply this configuration.'
-				);
-				$err = null;
-				return 0;
-			}
-
-			$res = -1;
+		$fileFailureReason = null;
+		$fileRes = $this->chk_file1($attr, $path, $err, $fileFailureReason);
+		$fileErr = $err;
+		$productErr = null;
+		$productFilePolicyRes = $this->validateManagedConfigFilePolicy($attr, $path, $productErr);
+		if ($productFilePolicyRes != 1) {
+			$err = $productErr;
+			return $productFilePolicyRes;
 		}
 
-		return $res;
+		$err = $fileErr;
+		$fileCreateTarget = $this->getFileCreateTarget();
+		$attrKey = (string) $attr->GetKey();
+		if ($fileRes == -1
+				&& $fileFailureReason === self::FILE_FAILURE_MISSING
+				&& $fileCreateTarget !== ''
+				&& $attrKey !== ''
+				&& $fileCreateTarget === $attrKey
+				&& $this->allow_create($attr, $path)) {
+			$continueSave = $this->shouldContinueSaveAfterFileCreate($attr);
+			$this->queuePendingFileCreate($attr, $path, $continueSave);
+			$err = null;
+			return $continueSave ? 1 : 0;
+		}
+
+		return $fileRes;
+	}
+
+	protected function getFileCreateTarget()
+	{
+		if ($this->_request == null || !method_exists($this->_request, 'GetInputSource')) {
+			return '';
+		}
+
+		$inputSource = $this->_request->GetInputSource();
+		if ($inputSource == null || !$inputSource->HasInput('POST', 'file_create')) {
+			return '';
+		}
+
+		return $inputSource->GrabInput('POST', 'file_create');
+	}
+
+	protected function shouldContinueSaveAfterFileCreate($attr)
+	{
+		if ($this->_request == null
+				|| $attr->_type !== 'filevh'
+				|| $attr->GetKey() !== 'configFile'
+				|| $this->_request->GetAct() !== 's'
+				|| $this->_request->GetCurrentRef() !== '~') {
+			return false;
+		}
+
+		$tid = $this->_request->GetTid();
+		return ($tid === 'V_TOPD' || $tid === 'V_BASE');
+	}
+
+	protected function queuePendingFileCreate($attr, $path, $continueSave)
+	{
+		$this->_pendingFileCreates[] = [
+			'attr' => $attr,
+			'key' => (string) $attr->GetKey(),
+			'path' => $path,
+			'continue_save' => (bool) $continueSave,
+		];
+	}
+
+	/**
+	 * Perform the queued creates now that the whole request has validated.
+	 *
+	 * In practice at most one intent is ever queued: only the single attribute
+	 * whose key matches the submitted file_create value is eligible, and keys
+	 * are unique within a table. The loop therefore bails on the first failure
+	 * rather than trying to reconcile a partially created set — if that
+	 * assumption is ever broken (a multi-value creatable path attribute, which
+	 * no DTblDef declares today), earlier intents would already have created
+	 * their files while the request reports an error.
+	 */
+	protected function finalizePendingFileCreates($extracted)
+	{
+		$pending = $this->_pendingFileCreates;
+		$this->_pendingFileCreates = [];
+		$messages = [];
+
+		foreach ($pending as $intent) {
+			$attr = $intent['attr'];
+			$path = $intent['path'];
+			$err = null;
+
+			if (!$this->allow_create($attr, $path)) {
+				$this->failPendingFileCreate($extracted, $intent, DMsg::UIStr('err_invalidpath'));
+				return;
+			}
+
+			$productErr = null;
+			$productRes = $this->validateManagedConfigFilePolicy($attr, $path, $productErr);
+			if ($productRes != 1) {
+				$this->failPendingFileCreate($extracted, $intent, $productErr);
+				return;
+			}
+
+			if (!PathTool::createFile($path, $err, $attr->GetKey())) {
+				$this->failPendingFileCreate($extracted, $intent, $err);
+				return;
+			}
+
+			clearstatcache(true, $path);
+			$postCreatePath = $path;
+			$postCreateErr = null;
+			$postCreateFailureReason = null;
+			$postCreateRes = $this->chk_file1(
+				$attr,
+				$postCreatePath,
+				$postCreateErr,
+				$postCreateFailureReason
+			);
+			$productErr = null;
+			$productRes = $this->validateManagedConfigFilePolicy($attr, $postCreatePath, $productErr);
+			if ($postCreateRes != 1 || $productRes != 1) {
+				$err = ($productRes != 1) ? $productErr : $postCreateErr;
+				$this->failPendingFileCreate($extracted, $intent, $err);
+				return;
+			}
+
+			$messageKey = $intent['continue_save'] ? 'note_filecreated' : 'note_filecreated_save';
+			$messages[] = DMsg::UIStr($messageKey, [
+				'%%path%%' => htmlspecialchars($path, ENT_QUOTES),
+			]);
+		}
+
+		foreach ($messages as $message) {
+			$this->addValidationMessage('success', $message);
+		}
+	}
+
+	protected function failPendingFileCreate($extracted, $intent, $err)
+	{
+		if ($err == null || $err === '') {
+			$err = DMsg::UIStr('err_conffilecreatefailed', [
+				'%%path%%' => htmlspecialchars($intent['path'], ENT_QUOTES),
+			]);
+		}
+
+		$extracted->SetChildErr($intent['key'], $err);
+		$this->setValid(-1);
 	}
 
     protected function validateManagedConfigFilePolicy($attr, $path, &$err)
@@ -752,11 +889,12 @@ class CValidation
 		return 1;
 	}
 
-	protected function chk_file1($attr, &$path, &$err)
+	protected function chk_file1($attr, &$path, &$err, &$failureReason = null)
 	{
+		$failureReason = null;
 		$res = $this->get_abs_path($attr->_minVal, $path, $err);
 		if ($res == 1) {
-			return $this->test_file($path, $err, $attr);
+			return $this->test_file($path, $err, $attr, $failureReason);
 		}
 		return $res;
 	}

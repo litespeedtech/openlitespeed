@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-Project(openlitespeed VERSION 1.9.1)
+Project(openlitespeed VERSION 1.9.2)
 INCLUDE( ${PROJECT_SOURCE_DIR}/CMakeModules/common.cmake)
 INCLUDE(GNUInstallDirs)
 
@@ -117,7 +117,7 @@ set(MY_CMAKE_FLAGS  "${MY_CMAKE_FLAGS} -march=corei7 -maes -mpclmul -mpopcnt")
 endif(OPT_SSE4)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MY_CMAKE_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MY_CMAKE_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17 ${MY_CMAKE_FLAGS}")
 
 
 add_definitions(-DDISABLE_OBJ_POOL)

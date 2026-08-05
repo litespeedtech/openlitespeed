@@ -53,6 +53,44 @@ class DTblDefBase extends ProductDTblDefBase
         $this->_options['realmType'] = $this->getSharedRealmTypeOptions();
     }
 
+    protected function getRecaptchaCommonAttrs($parseFormat, $parseHelp)
+    {
+        return [
+            self::NewBoolAttr('enabled', DMsg::ALbl('l_recapenabled'), true, 'enableRecaptcha'),
+            self::NewParseTextAttr('siteKey', DMsg::ALbl('l_sitekey'), $parseFormat, $parseHelp, true, 'recaptchaSiteKey'),
+            self::NewParseTextAttr('secretKey', DMsg::ALbl('l_secretKey'), $parseFormat, $parseHelp, true, 'recaptchaSecretKey'),
+            self::NewSelAttr('type', DMsg::ALbl('l_recaptype'), $this->_options['captcha'], true, 'recaptchaType'),
+            self::NewIntAttr('maxTries', DMsg::ALbl('l_maxTries'), true, 0, 65535, 'recaptchaMaxTries'),
+        ];
+    }
+
+    protected function add_S_SEC_RECAP($id)
+    {
+        $parseFormat = '/^[A-z0-9\-_]{20,100}$/';
+        $parseHelp = DMsg::ALbl('parse_recaptchakey');
+        $botlist = self::NewTextAreaAttr('botWhiteList:list', DMsg::ALbl('l_botWhiteList'), 'cust', true, 5, 'recaptchaBotWhiteList', 0, 1);
+        $botlist->SetFlag(UiDAttrBase::BM_RAWDATA);
+
+        $attrs = array_merge($this->getRecaptchaCommonAttrs($parseFormat, $parseHelp), [
+            self::NewIntAttr('allowedRobotHits', DMsg::ALbl('l_allowedRobotHits'), true, 0, 65535, 'recaptchaAllowedRobotHits'),
+            $botlist,
+            self::NewIntAttr('regConnLimit', DMsg::ALbl('l_regConnLimit'), true, 0, null, 'recaptchaRegConnLimit'),
+            self::NewIntAttr('sslConnLimit', DMsg::ALbl('l_sslConnLimit'), true, 0, null, 'recaptchaSslConnLimit'),
+        ]);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
+    }
+
+    protected function add_VT_SEC_RECAP($id)
+    {
+        $parseFormat = '/^[A-z0-9\-_]{20,100}$/';
+        $parseHelp = DMsg::ALbl('parse_recaptchakey');
+
+        $attrs = array_merge($this->getRecaptchaCommonAttrs($parseFormat, $parseHelp), [
+            self::NewIntAttr('regConnLimit', DMsg::ALbl('l_concurrentReqLimit'), true, 0, null, 'recaptchaVhReqLimit'),
+        ]);
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_lsrecaptcha'), $attrs, 'lsrecaptcha');
+    }
+
     protected function addSpecial($key, $attrList, $catchAllTag)
     {
         $key = strtolower($key);
@@ -144,6 +182,18 @@ class DTblDefBase extends ProductDTblDefBase
             self::NewActionAttr('S_ACLOG', 'Ed'),
         ];
         $this->_tblDef[$id] = DTbl::NewTop($id, DMsg::ALbl('l_accesslog'), $attrs, 'fileName', 'S_ACLOG');
+    }
+
+    protected function add_S_LOG($id)
+    {
+        $attrs = $this->getSharedServerLogAttrs();
+        $this->_tblDef[$id] = DTbl::NewIndexed($id, DMsg::ALbl('l_serverlog'), $attrs, 'fileName');
+    }
+
+    protected function add_ADM_PHP($id)
+    {
+        $attrs = $this->getSharedAdminPhpAttrs();
+        $this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::UIStr('tab_g'), $attrs);
     }
 
     protected function add_V_ACLOG_TOP($id)

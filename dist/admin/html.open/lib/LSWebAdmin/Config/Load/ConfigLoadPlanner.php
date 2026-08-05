@@ -74,12 +74,40 @@ class ConfigLoadPlanner
         }
 
         $vhName = $request->GetViewName();
-        $vhRoot = $request->GetVHRoot();
-        if (!is_string($vhName) || $vhName === '' || !is_string($vhRoot) || $vhRoot === '') {
+        if (!is_string($vhName) || $vhName === '') {
+            return null;
+        }
+
+        $vhRoot = self::resolveVHRoot($request, $serverData);
+        if (self::locationNeedsVHRoot($file) && (!is_string($vhRoot) || $vhRoot === '')) {
             return null;
         }
 
         return ConfigLoadTarget::specialData(PathTool::GetAbsFile($file, 'VR', $vhName, $vhRoot), $realmDataId);
+    }
+
+    private static function locationNeedsVHRoot($file)
+    {
+        return strncasecmp('$VH_ROOT', (string) $file, 8) == 0;
+    }
+
+    // Request vhRoot is null on the initial GET, so derive it from the loaded
+    // server config; falls back to the request value.
+    private static function resolveVHRoot($request, $serverData)
+    {
+        $vhName = $request->GetViewName();
+        if (is_string($vhName) && $vhName !== ''
+            && $serverData != null && method_exists($serverData, 'GetChildNodeById')) {
+            $vh = $serverData->GetChildNodeById('virtualhost', $vhName);
+            if ($vh != null) {
+                $raw = $vh->GetChildVal('vhRoot');
+                if (is_string($raw) && $raw !== '') {
+                    return PathTool::GetAbsFile($raw, 'SR', $vhName);
+                }
+            }
+        }
+
+        return $request->GetVHRoot();
     }
 
     private static function resolveEmbeddedRealmNode($request, $serverData)

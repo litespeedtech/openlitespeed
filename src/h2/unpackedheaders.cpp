@@ -1345,25 +1345,30 @@ int UpkdHdrBuilder::guarantee(int size)
 
 /* Extra flags in the otherwise-unused low bits 0x01/0x02.  They mark bytes
  * that are legal in a general header field but must be rejected when the value
- * is copied verbatim into the "<method> <path> HTTP/1.1" request line: SP and
- * HTAB (both), and '\' for the target.  The value scan ORs the relevant flag
- * into its mask so ':path'/':method' are validated in the same single pass;
- * the field-name scan masks with 0x0C so these bits never affect it. */
-#define UPK_VAL_BAD 0x40   /* high-nibble value-error bit (EBD << 4) */
-#define UPK_TGT_BAD 0x01   /* invalid in ':path' request-target */
-#define UPK_MTH_BAD 0x02   /* invalid in ':method' token */
+ * is copied verbatim into the "<method> <path> HTTP/1.1" request line.  The
+ * value scans OR the relevant flag into their mask so ':path'/':method' are
+ * validated in a single pass; the field-name scan masks with 0x0C so these
+ * bits never affect it.
+ *   UPK_DELIM_BAD:  SP and HTAB -- request-line field delimiters; rejected in
+ *                   the method and everywhere in the target (path and query).
+ *   UPK_BSLASH_BAD: '\' -- rejected in the path segment only (backend path
+ *                   normalization may fold it to '/'); allowed in the query
+ *                   string, where it has no path meaning and some apps use it. */
+#define UPK_VAL_BAD    0x40   /* high-nibble value-error bit (EBD << 4) */
+#define UPK_DELIM_BAD  0x01   /* SP/HTAB: request-line delimiters */
+#define UPK_BSLASH_BAD 0x02   /* '\': unsafe in the path segment */
 #define HX(name_err, val_err, extra) ((unsigned char)(HE(name_err, val_err) | (extra)))
 
 /* Low nibble is field-name error, high nibble is field-value error;
  * bits 0x01/0x02 flag request-line-unsafe bytes (see above). */
 static const unsigned char s_reqHeaderCharErr[256] =
 {
-    /* 0x00 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HX(EBD, EOK, UPK_TGT_BAD | UPK_MTH_BAD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
+    /* 0x00 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HX(EBD, EOK, UPK_DELIM_BAD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
     /* 0x10 */ HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD), HE(EBD, EBD),
-    /* 0x20 */ HX(EBD, EOK, UPK_TGT_BAD | UPK_MTH_BAD), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK),
+    /* 0x20 */ HX(EBD, EOK, UPK_DELIM_BAD), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK),
     /* 0x30 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
     /* 0x40 */ HE(EBD, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK),
-    /* 0x50 */ HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EBD, EOK), HX(EBD, EOK, UPK_TGT_BAD), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK),
+    /* 0x50 */ HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EUP, EOK), HE(EBD, EOK), HX(EBD, EOK, UPK_BSLASH_BAD), HE(EBD, EOK), HE(EOK, EOK), HE(EOK, EOK),
     /* 0x60 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK),
     /* 0x70 */ HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EOK), HE(EOK, EOK), HE(EBD, EBD),
     /* 0x80 */ HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK), HE(EBD, EOK),
@@ -1396,7 +1401,7 @@ void UpkdHdrBuilder::setMaxHeaderCount(int cnt)
 
 //Validate a field value against the shared character table in a single pass.
 //mask is UPK_VAL_BAD, plus for a value copied verbatim into the request line
-//(':path'/':method') the request-line flag(s) UPK_TGT_BAD / UPK_MTH_BAD.
+//the request-line delimiter flag UPK_DELIM_BAD (used by ':method').
 static lsxpack_err_code validateReqValue(const char *val, int len,
                                          unsigned char mask)
 {
@@ -1405,6 +1410,26 @@ static lsxpack_err_code validateReqValue(const char *val, int len,
     for (; p < pEnd; ++p)
         if (s_reqHeaderCharErr[*p] & mask)
             return LSXPACK_ERR_BAD_REQ_HEADER;
+    return LSXPACK_OK;
+}
+
+
+//Validate a ':path' value in a single pass.  SP/HTAB and control bytes are
+//rejected throughout; '\' is rejected only in the path segment (backend path
+//normalization may fold it to '/') and allowed in the query string after '?',
+//where it carries no path meaning and is used by some applications.
+static lsxpack_err_code validateReqPath(const char *val, int len)
+{
+    unsigned char mask = UPK_VAL_BAD | UPK_DELIM_BAD | UPK_BSLASH_BAD;
+    const unsigned char *p = (const unsigned char *)val;
+    const unsigned char *pEnd = p + len;
+    for (; p < pEnd; ++p)
+    {
+        if (s_reqHeaderCharErr[*p] & mask)
+            return LSXPACK_ERR_BAD_REQ_HEADER;
+        if (*p == '?')
+            mask = UPK_VAL_BAD | UPK_DELIM_BAD;   //query string: allow '\'
+    }
     return LSXPACK_OK;
 }
 
@@ -1475,16 +1500,15 @@ lsxpack_err_code UpkdHdrBuilder::process(lsxpack_header *hdr)
                 return LSXPACK_ERR_BAD_REQ_HEADER;
             //also reject SP/HTAB so the method cannot inject request-line tokens
             if ((err = validateReqValue(val, hdr->val_len,
-                                        UPK_VAL_BAD | UPK_MTH_BAD)))
+                                        UPK_VAL_BAD | UPK_DELIM_BAD)))
                 return err;
             if (headers->setMethod2(hdr) == LS_FAIL)
                 return LSXPACK_ERR_DUPLICATE_PSDO_HDR;
             break;
         case UPK_HDR_PATH:  //":path"
-            //also reject SP/HTAB/'\' so the target cannot inject a second token
-            //or a forged HTTP version into the upstream request line
-            if ((err = validateReqValue(val, hdr->val_len,
-                                        UPK_VAL_BAD | UPK_TGT_BAD)))
+            //reject SP/HTAB (and '\' in the path segment) so the target cannot
+            //inject a second token or a forged HTTP version into the request line
+            if ((err = validateReqPath(val, hdr->val_len)))
                 return err;
             //If second time have the :path, ERROR
             if (headers->setUrl2(hdr) == LS_FAIL)

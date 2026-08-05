@@ -395,6 +395,11 @@ class DMsg
                 $tips = array_merge($tips, $_tipsdb[$label]);
             }
         }
+
+        $tips = array_values(array_filter($tips, function ($tip) {
+            return trim((string) $tip) !== '';
+        }));
+
         if (empty($tips)) {
             return null;
         }

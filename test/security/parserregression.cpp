@@ -250,6 +250,89 @@ TEST(SecurityRegression_H2PseudoHeaderRewriteCorpus)
     }
 }
 
+static lsxpack_err_code processH2PathByte(unsigned char ch)
+{
+    char path[2] = { '/', (char)ch };
+    UnpackedHeaders *headers = new UnpackedHeaders();
+    UpkdHdrBuilder builder(headers, false);
+    CHECK_EQUAL(LSXPACK_OK,
+                processH2Header(builder, ":scheme", 7, "https", 5));
+    CHECK_EQUAL(LSXPACK_OK,
+                processH2Header(builder, ":authority", 10, "example.com", 11));
+    CHECK_EQUAL(LSXPACK_OK, processH2Header(builder, ":method", 7, "GET", 3));
+    return processH2Header(builder, ":path", 5, path, sizeof(path));
+}
+
+static lsxpack_err_code processH2MethodByte(unsigned char ch)
+{
+    char method[1] = { (char)ch };
+    UnpackedHeaders *headers = new UnpackedHeaders();
+    UpkdHdrBuilder builder(headers, false);
+    CHECK_EQUAL(LSXPACK_OK, processH2Header(builder, ":path", 5, "/", 1));
+    CHECK_EQUAL(LSXPACK_OK,
+                processH2Header(builder, ":scheme", 7, "https", 5));
+    CHECK_EQUAL(LSXPACK_OK,
+                processH2Header(builder, ":authority", 10, "example.com", 11));
+    return processH2Header(builder, ":method", 7, method, sizeof(method));
+}
+
+static lsxpack_err_code processH2Path(const char *path, int len)
+{
+    UnpackedHeaders *headers = new UnpackedHeaders();
+    UpkdHdrBuilder builder(headers, false);
+    CHECK_EQUAL(LSXPACK_OK,
+                processH2Header(builder, ":scheme", 7, "https", 5));
+    CHECK_EQUAL(LSXPACK_OK,
+                processH2Header(builder, ":authority", 10, "example.com", 11));
+    CHECK_EQUAL(LSXPACK_OK, processH2Header(builder, ":method", 7, "GET", 3));
+    return processH2Header(builder, ":path", 5, path, len);
+}
+
+// Every byte that could break the "<method> <path> HTTP/1.1" framing when an
+// HTTP/2/3 request is serialized to HTTP/1.1 must be rejected on this path,
+// matching what the HTTP/1.1 ingress parser enforces.  Covers SP/HTAB/'\' and
+// version-confusion that earlier builds forwarded verbatim into the upstream
+// request line.
+TEST(SecurityRegression_H2RequestLineInjectionCorpus)
+{
+    for (int i = 0; i < 256; ++i)
+    {
+        // In the path segment ':path' forbids CTL (incl. CR/LF/HTAB), SP, DEL
+        // and backslash; high bytes stay allowed to match HTTP/1.1 ingress.
+        bool pathBad = (i <= 0x20 || i == '\\' || i == 0x7f);
+        CHECK_EQUAL(pathBad ? LSXPACK_ERR_BAD_REQ_HEADER : LSXPACK_OK,
+                    processH2PathByte((unsigned char)i));
+
+        // ':method' forbids CTL, SP, HTAB and DEL regardless of length so it
+        // cannot inject a second request-line token.
+        bool methodBad = (i <= 0x20 || i == 0x7f);
+        CHECK_EQUAL(methodBad ? LSXPACK_ERR_BAD_REQ_HEADER : LSXPACK_OK,
+                    processH2MethodByte((unsigned char)i));
+    }
+
+    // The version-confusion vector from the report: a space inside ':path' that
+    // would forge "GET /x HTTP/1.0" on the upstream request line.
+    CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER,
+                processH2Path("/x HTTP/1.0", 11));
+
+    // Backslash is allowed in the query string (no path-normalization meaning,
+    // used by some apps) but still rejected in the path segment.
+    CHECK_EQUAL(LSXPACK_OK,          processH2Path("/a?x=a\\b", 8));
+    CHECK_EQUAL(LSXPACK_OK,          processH2Path("/a?b=\\&c=\\", 10));
+    CHECK_EQUAL(LSXPACK_OK,          processH2Path("/dir/p?q=1", 10));
+    CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER, processH2Path("/a\\b?q=1", 8));
+    CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER, processH2Path("/a\\b", 4));
+
+    // SP/HTAB stay rejected everywhere, including in the query string, so the
+    // request line cannot be split after the '?'.
+    CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER, processH2Path("/a?x=y z", 8));
+    {
+        static const char qsTab[] = { '/', 'a', '?', 'x', '=', '\t', 'y' };
+        CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER,
+                    processH2Path(qsTab, sizeof(qsTab)));
+    }
+}
+
 TEST(SecurityRegression_ChunkInputCorpus)
 {
     char out[64];

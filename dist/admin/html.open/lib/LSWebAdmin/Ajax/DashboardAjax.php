@@ -7,6 +7,7 @@ use LSWebAdmin\Log\LogFilter;
 use LSWebAdmin\Product\Current\Product;
 use LSWebAdmin\Product\Current\RealTimeStats;
 use LSWebAdmin\Product\Current\Service;
+use LSWebAdmin\Product\Current\UI as ProductUI;
 use LSWebAdmin\Runtime\SInfo;
 use LSWebAdmin\UI\UIBase;
 
@@ -166,19 +167,18 @@ class DashboardAjax
         $listeners = $sinfo->Get(SInfo::FLD_Listener);
         $noteListenerRunning = DMsg::ALbl('service_running');
         $noteListenerNotRunning = DMsg::ALbl('service_notrunning');
-        $viewConfigLabel = DMsg::UIStr('btn_viewconfig');
+        $showConfigLinks = ProductUI::SupportsLiveStatsConfigLinks();
+        $viewConfigLabel = $showConfigLinks ? DMsg::UIStr('btn_viewconfig') : '';
         $maxVhDisplay = 5;
 
         $listenerBody = '';
         $running = 0;
         $broken = 0;
         foreach ($listeners as $lname => $listener) {
-            $safeName = UIBase::Escape($lname);
-            $listenerConfigUrl = 'index.php?view=confMgr&m=' . rawurlencode('sl_' . $lname);
-            $listenerNameCell = '<span class="lst-status-namecell"><span class="lst-status-name">' . $safeName . '</span>'
-                . '<a class="lst-status-config-link" href="' . UIBase::EscapeAttr($listenerConfigUrl)
-                . '" rel="tooltip" data-placement="top" data-original-title="' . UIBase::EscapeAttr($viewConfigLabel)
-                . '" aria-label="' . UIBase::EscapeAttr($viewConfigLabel) . '"><i class="lst-icon" data-lucide="arrow-up-right"></i></a></span>';
+            $listenerConfigUrl = $showConfigLinks
+                ? 'index.php?view=confMgr&m=' . rawurlencode('sl_' . $lname)
+                : '';
+            $listenerNameCell = self::buildStatusNameCell($lname, $listenerConfigUrl, $viewConfigLabel);
             $listenerRow = '<tr><td class="lst-listener-name">' . $listenerNameCell . '</td><td>';
             if (isset($listener['addr'])) {
                 $running++;
@@ -240,16 +240,15 @@ class DashboardAjax
         $noteDisabled = DMsg::ALbl('service_disabled');
 
         foreach ($vhosts as $vn => $vh) {
-            $safeVn = UIBase::Escape($vn);
-            $vhostConfigUrl = 'index.php?view=confMgr&m=' . rawurlencode('vh_' . $vn);
-            $vhostNameCell = '<span class="lst-status-namecell"><span class="lst-status-name">' . $safeVn . '</span>'
-                . '<a class="lst-status-config-link" href="' . UIBase::EscapeAttr($vhostConfigUrl)
-                . '" rel="tooltip" data-placement="top" data-original-title="' . UIBase::EscapeAttr($viewConfigLabel)
-                . '" aria-label="' . UIBase::EscapeAttr($viewConfigLabel) . '"><i class="lst-icon" data-lucide="arrow-up-right"></i></a></span>';
+            $templateName = isset($vh['templ']) ? (string) $vh['templ'] : '';
+            $vhostConfigUrl = $showConfigLinks
+                ? self::buildVhostConfigUrl($vn, $templateName)
+                : '';
+            $vhostNameCell = self::buildStatusNameCell($vn, $vhostConfigUrl, $viewConfigLabel);
             $vhostRow = '<tr data-vn="' . UIBase::EscapeAttr($vn) . '"><td class="lst-vh-name">' . $vhostNameCell . '</td><td class="lst-vh-template">';
 
-            if (isset($vh['templ']) && $vh['templ'] !== '') {
-                $vhostRow .= UIBase::Escape($vh['templ']);
+            if ($templateName !== '') {
+                $vhostRow .= UIBase::Escape($templateName);
             } else {
                 $vhostRow .= '<span class="lst-cell-empty">&mdash;</span>';
             }
@@ -310,5 +309,35 @@ class DashboardAjax
         }
 
         return $res;
+    }
+
+    private static function buildStatusNameCell($name, $configUrl, $viewConfigLabel)
+    {
+        $cell = '<span class="lst-status-namecell"><span class="lst-status-name">'
+            . UIBase::Escape($name) . '</span>';
+
+        if ($configUrl !== '') {
+            $cell .= '<a class="lst-status-config-link" href="' . UIBase::EscapeAttr($configUrl)
+                . '" rel="tooltip" data-placement="top" data-original-title="' . UIBase::EscapeAttr($viewConfigLabel)
+                . '" aria-label="' . UIBase::EscapeAttr($viewConfigLabel)
+                . '"><i class="lst-icon" data-lucide="arrow-up-right"></i></a>';
+        }
+
+        return $cell . '</span>';
+    }
+
+    private static function buildVhostConfigUrl($vhostName, $templateName)
+    {
+        if ($templateName === '') {
+            return 'index.php?view=confMgr&m=' . rawurlencode('vh_' . $vhostName);
+        }
+
+        return 'index.php?' . http_build_query([
+            'view' => 'confMgr',
+            'm' => 'tp_' . $templateName,
+            'p' => 'mbr',
+            't' => 'T_MEMBER',
+            'r' => $templateName . '`' . $vhostName,
+        ]);
     }
 }

@@ -189,7 +189,7 @@ $vhSortOptions = [
 				Snapshot
 				<span class="lst-rtstats-header-meta">
 					<small class="lst-refresh-stamp lst-rtstats-refresh-stamp" id="refresh_stamp"></small>
-					<button type="button" id="snapshot_refresh_btn" class="lst-btn lst-btn--secondary lst-btn--sm lst-rtstats-refreshbtn" data-lst-call="refreshVh" rel="tooltip" data-original-title="<?php DMsg::EchoUIStr('btn_refreshnow')?>">
+					<button type="button" id="snapshot_refresh_btn" class="lst-btn lst-btn--secondary lst-btn--icon lst-rtstats-refreshbtn" data-lst-call="refreshVh" rel="tooltip" data-original-title="<?php DMsg::EchoUIStr('btn_refreshnow')?>">
 						<i class="lst-icon" data-lucide="refresh-cw"></i>
 					</button>
 				</span>
@@ -278,7 +278,7 @@ $vhSortOptions = [
 				<h2><?php DMsg::EchoUIStr('menu_sl')?>
 					<span class="lst-rtstats-header-meta">
 						<small class="lst-refresh-stamp lst-rtstats-refresh-stamp" id="listener_status_stamp"></small>
-						<button type="button" id="listener_status_refresh_btn" class="lst-btn lst-btn--secondary lst-btn--sm lst-rtstats-refreshbtn" data-lst-call="refreshStatusTables" rel="tooltip" data-original-title="<?php DMsg::EchoUIStr('btn_refreshnow')?>">
+						<button type="button" id="listener_status_refresh_btn" class="lst-btn lst-btn--secondary lst-btn--icon lst-rtstats-refreshbtn" data-lst-call="refreshStatusTables" rel="tooltip" data-original-title="<?php DMsg::EchoUIStr('btn_refreshnow')?>">
 							<i class="lst-icon" data-lucide="refresh-cw"></i>
 						</button>
 					</span>
@@ -325,7 +325,7 @@ $vhSortOptions = [
 				<h2><?php DMsg::EchoUIStr('menu_vh')?>
 					<span class="lst-rtstats-header-meta">
 						<small class="lst-refresh-stamp lst-rtstats-refresh-stamp" id="vhost_status_stamp"></small>
-						<button type="button" id="vhost_status_refresh_btn" class="lst-btn lst-btn--secondary lst-btn--sm lst-rtstats-refreshbtn" data-lst-call="refreshStatusTables" rel="tooltip" data-original-title="<?php DMsg::EchoUIStr('btn_refreshnow')?>">
+						<button type="button" id="vhost_status_refresh_btn" class="lst-btn lst-btn--secondary lst-btn--icon lst-rtstats-refreshbtn" data-lst-call="refreshStatusTables" rel="tooltip" data-original-title="<?php DMsg::EchoUIStr('btn_refreshnow')?>">
 							<i class="lst-icon" data-lucide="refresh-cw"></i>
 						</button>
 					</span>

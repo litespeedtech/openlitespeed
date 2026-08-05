@@ -52,6 +52,7 @@ const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
     "MKACTIVITY",
     "BIND",
     "SEARCH",
+    "MKCALENDAR",
     "PURGE",
     "REFRESH"
 
@@ -59,7 +60,7 @@ const char *HttpMethod::s_psMethod[HttpMethod::HTTP_METHOD_END] =
 int HttpMethod::s_iMethodLen[HttpMethod::HTTP_METHOD_END] =
 {
     7, 7, 3, 4, 4, 3, 6, 5, 7, 4, 5,
-    8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 6, 11, 5, 5, 16, 10, 4, 6, 5, 7
+    8, 9, 5, 4, 4, 6, 15, 6, 7, 8, 10, 6, 11, 5, 5, 16, 10, 4, 6, 10, 5, 7
 };
 
 http_method_t HttpMethod::parse2(const char *pMethod)
@@ -138,7 +139,10 @@ http_method_t HttpMethod::parse2(const char *pMethod)
             method = HTTP_MOVE;
             break;
         case 'C':
-            method = DAV_MKCOL;
+            if ((*(pMethod + 3) & ~0x20) == 'A')
+                method = HTTP_MKCALENDAR;
+            else
+                method = DAV_MKCOL;
             break;
         case 'W':
             method = DAV_MKWORKSPACE;

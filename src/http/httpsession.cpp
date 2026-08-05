@@ -946,6 +946,7 @@ int HttpSession::readReqBody()
     }
     else if (m_request.isBodySizeUnknown())
     {
+        m_request.setContentLength(m_request.getContentFinished());
         m_request.addContentLenHeader(m_request.getContentFinished());
     }
 
@@ -1042,13 +1043,35 @@ int HttpSession::processUnpackedHeaders()
     LS_DBG_L(getLogSession(),
                 "processHeader() returned %d, header state: %d.",
                 ret, m_request.getStatus());
+    int method = m_request.getMethod();
+    if (method == HttpMethod::HTTP_HEAD)
+        m_request.setNoRespBody();
     if (ret == 0)
     {
+        getStream()->setReqHeaders(NULL);
+        if (getStream()->getFlag(HIO_FLAG_PEER_SHUTDOWN))
+        {
+            if (m_request.getContentLength() > 0)
+            {
+                LS_DBG_L(getLogSession(),
+                        "Status 400: EOS marked, conflict with request content length: %jd",
+                        m_request.getContentLength());
+                ret = SC_400;
+                goto err;
+            }
+        }
+        else
+        {
+            if ((m_request.getContentLength() == 0)
+                && (method == HttpMethod::HTTP_POST || method == HttpMethod::HTTP_PATCH))
+                m_request.setContentLength(LSI_BODY_SIZE_UNKNOWN);
+        }
         m_iFlag &= ~HSF_URI_PROCESSED;
         m_processState = HSPS_NEW_REQ;
         smProcessReq();
         return 0;
     }
+err:
     m_processState = HSPS_HTTP_ERROR;
     if (getStream()->getState() < HIOS_SHUTDOWN)
         httpError(ret);
@@ -1722,8 +1745,7 @@ int HttpSession::processNewReqBody()
                 setProcessState(HSPS_READ_REQ_BODY);
             else if (m_processState != HSPS_HKPT_RCVD_REQ_BODY)
                 setProcessState(HSPS_PROCESS_NEW_URI);
-            if (!getFlag(HSF_REQ_BODY_DONE)
-                && getStream()->isSpdy() >= HIOS_PROTO_QUIC)
+            if (!getFlag(HSF_REQ_BODY_DONE) && getStream()->isSpdy())
                 getStream()->wantRead(1);
         }
     }

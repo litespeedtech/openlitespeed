@@ -8,7 +8,8 @@ class SpecialFileCodec
 {
     public static function load($path, $id)
     {
-        $lines = file($path);
+        // Missing file is expected (caller surfaces the error); suppress warning.
+        $lines = @file($path);
         if ($lines === false) {
             return false;
         }
