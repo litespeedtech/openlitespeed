@@ -142,6 +142,7 @@ $_gmsg['err_conffilecreatefailed'] = '无法在 %%path%% 创建配置文件';
 $_gmsg['err_conffilenotfound'] = '无法在 %%path%% 找到配置文件';
 $_gmsg['err_faildetectdlmethod'] = '无法检测下载方式（请安装curl、fetch或wget）';
 $_gmsg['err_failreadfile'] = '读取文件失败';
+$_gmsg['err_invalidcipherlist'] = '请输入一行由冒号分隔的非空密码套件规范。';
 $_gmsg['err_illegalcharfound'] = '值中包含非法字符';
 $_gmsg['err_invalidpath'] = '无效路径';
 $_gmsg['err_invalidvalat'] = '以下值是无效的';

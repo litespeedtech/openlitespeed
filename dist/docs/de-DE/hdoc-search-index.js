@@ -92,7 +92,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listener - SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "Listener - SSL Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwarepaket wie OpenSSL erzeugen. SSL-Zertifikate koennen auch bei einer autorisierten Zertifizierungsstelle wie VeriSig..."
+        "text": "Listener - SSL Direkte IP-Verbindungen und Verbindungen ohne passenden SNI-Virtual-Host verwenden die Zertifikat- und Cipher-Einstellungen des Listeners. Für einen passenden SNI-Virtual-Host kann die eigene Zertifikat- und Cipher-Einstellungen bereitstellen, während der Listener weiterhin die verfügbaren Protokolle bestimmt. Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privat..."
     },
     {
         "title": "Vorlagen fuer virtuelle Hosts",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Admin-Listener SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "Admin-Listener SSL Admin-Listener sind dem Admin Server zugeordnet. Sichere (SSL-)Listener werden für den Admin Server empfohlen. Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehrere SSL-Listener koennen denselben Schluessel und dasselbe Zertifikat gemeinsam verwenden. Sie koennen private SSL-Schluessel selbst mit einem SSL-Softwa..."
+        "text": "Admin-Listener SSL Admin-Listener sind dem Admin Server zugeordnet. Sichere (SSL-)Listener werden für den Admin Server empfohlen. Diese TLS-Einstellungen gelten nur für den Listener der WebAdmin-Konsole; sie werden nicht von öffentlichen Listenern oder Virtual Hosts übernommen. Privater SSL-Schlüssel und Zertifikat Jeder SSL-Listener benoetigt einen passenden privaten SSL-Schluessel und ein SSL-Zertifikat. Mehre..."
     }
 ];

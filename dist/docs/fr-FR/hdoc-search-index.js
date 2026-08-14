@@ -92,7 +92,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners - SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "Listeners - SSL Clé privée SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles privees SSL avec un paquet logiciel SSL, comme OpenSSL. Les certificats SSL peuvent aussi etre achetes aupres d'une autorite de certification autorisee comme VeriSign ou Thawte. V..."
+        "text": "Listeners - SSL Les connexions directes par adresse IP et celles sans hôte virtuel SNI correspondant utilisent les paramètres de certificat et de chiffrement du listener. Pour un hôte virtuel SNI correspondant, les peuvent fournir leurs propres paramètres de certificat et de chiffrement, tandis que le listener continue de déterminer la disponibilité des protocoles. Clé privée SSL et certificat Chaque listener..."
     },
     {
         "title": "Modeles de virtual hosts",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners d'administration - SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "Listeners d'administration - SSL Les listeners d'administration sont dédiés au serveur d'administration. Les listeners sécurisés (SSL) sont recommandés pour le serveur d'administration. Clé privée SSL et certificat Chaque listener SSL requiert une cle privee SSL et un certificat SSL associes. Plusieurs listeners SSL peuvent partager la meme cle et le meme certificat. Vous pouvez generer vous-meme des cles priv..."
+        "text": "Listeners d'administration - SSL Les listeners d'administration sont dédiés au serveur d'administration. Les listeners sécurisés (SSL) sont recommandés pour le serveur d'administration. Ces paramètres TLS s'appliquent uniquement au listener de la console WebAdmin; ils ne sont pas hérités par les listeners publics ni par les hôtes virtuels. Clé privée SSL et certificat Chaque listener SSL requiert une cle p..."
     }
 ];

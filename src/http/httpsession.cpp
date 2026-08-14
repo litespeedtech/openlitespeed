@@ -1535,7 +1535,7 @@ int HttpSession::processNewReqInit()
         return SC_404;
     }
 
-    if (pVHost->isSslClientAuth())
+    if (pVHost->isSslClientAuth() && getCrypto())
     {
         if (getCrypto()->verifyContext(pVHost->getSslContext()) == false)
         {

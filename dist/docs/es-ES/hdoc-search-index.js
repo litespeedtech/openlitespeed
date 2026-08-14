@@ -92,7 +92,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners - SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "Listeners - SSL Clave privada y certificado SSL Cada listener SSL requiere una clave privada SSL y un certificado SSL emparejados. Varios listeners SSL pueden compartir la misma clave y certificado. Puede generar claves privadas SSL usted mismo usando un paquete de software SSL, como OpenSSL. Los certificados SSL tambien pueden comprarse a una entidad emisora de certificados autorizada como VeriSign o Thawte. Tambien..."
+        "text": "Listeners - SSL Las conexiones directas por IP y las conexiones sin un virtual host SNI coincidente usan la configuración de certificado y cifrado del listener. Para un virtual host SNI coincidente, la puede proporcionar su propia configuración de certificado y cifrado, mientras que el listener sigue determinando la disponibilidad de los protocolos. Clave privada y certificado SSL Cada listener SSL requiere una cla..."
     },
     {
         "title": "Plantillas de virtual hosts",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners de administración - SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "Listeners de administración - SSL Los listeners de administración están dedicados al servidor de administración. Se recomiendan listeners seguros (SSL) para el servidor de administración. Clave privada y certificado SSL Cada listener SSL requiere una clave privada SSL y un certificado SSL emparejados. Varios listeners SSL pueden compartir la misma clave y certificado. Puede generar claves privadas SSL usted mism..."
+        "text": "Listeners de administración - SSL Los listeners de administración están dedicados al servidor de administración. Se recomiendan listeners seguros (SSL) para el servidor de administración. Esta configuración TLS se aplica únicamente al listener de la consola WebAdmin; no se hereda en los listeners públicos ni en los virtual hosts. Clave privada y certificado SSL Cada listener SSL requiere una clave privada SSL..."
     }
 ];

@@ -106,6 +106,12 @@ class DTblDefBase
 		return static::createDAttr($key, $type, $label, $inputtype, $allowNull, null, null, $inputAttr, $multiInd, $helpKey);
 	}
 
+	protected static function NewCipherListAttr($key, $label, $allowNull = true, $helpKey = null)
+	{
+		$inputAttr = 'rows="4" wrap="soft" spellcheck="false" autocapitalize="off"';
+		return static::createDAttr($key, 'cipherlist', $label, 'textarea1', $allowNull, null, null, $inputAttr, 0, $helpKey);
+	}
+
 	protected static function NewPathAttr($key, $label, $type, $reflevel, $rwc = '', $allowNull = true, $helpKey = null, $multiInd = 0)
 	{
 		return static::createDAttr($key, $type, $label, 'text', $allowNull, $reflevel, $rwc, null, $multiInd, $helpKey);
@@ -296,10 +302,10 @@ class DTblDefBase
 		$attrs = [];
 
 		if ($includeProtocol) {
-			$attrs[] = self::NewCheckBoxAttr('sslProtocol', DMsg::ALbl('l_protocolver'), ['1' => 'SSL v3.0', '2' => 'TLS v1.0', '4' => 'TLS v1.1', '8' => 'TLS v1.2', '16' => 'TLS v1.3']);
+			$attrs[] = self::NewCheckBoxAttr('sslProtocol', DMsg::ALbl('l_protocolver'), ['2' => 'TLS v1.0', '4' => 'TLS v1.1', '8' => 'TLS v1.2', '16' => 'TLS v1.3']);
 		}
 
-		$attrs[] = self::NewTextAttr('ciphers', DMsg::ALbl('l_ciphers'), 'cust');
+		$attrs[] = self::NewCipherListAttr('ciphers', DMsg::ALbl('l_ciphers'));
 		$attrs[] = self::NewBoolAttr('enableECDHE', DMsg::ALbl('l_enableecdhe'));
 		$attrs[] = self::NewBoolAttr('enableDHE', DMsg::ALbl('l_enabledhe'));
 		$attrs[] = self::NewTextAttr('DHParam', DMsg::ALbl('l_dhparam'), 'cust');
@@ -563,13 +569,13 @@ class DTblDefBase
 	protected function add_AL_SSL($id)
 	{
 		$attrs = self::getSslProtocolAttrs(true);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs, 'sslProtocolSetting');
 	}
 
 	protected function add_VT_SSL($id)
 	{
 		$attrs = self::getSslProtocolAttrs(false);
-		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs);
+		$this->_tblDef[$id] = DTbl::NewRegular($id, DMsg::ALbl('l_sslprotocol'), $attrs, 'vhSslProtocolSetting');
 	}
 
 	protected function add_AL_SSL_FEATURE($id)

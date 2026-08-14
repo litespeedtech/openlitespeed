@@ -92,7 +92,7 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Listeners SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "Listeners SSL SSL Private Key & Certificate Every SSL listener requires a paired SSL private key and SSL certificate. Multiple SSL listeners can share the same key and certificate. You can generate SSL private keys yourself using an SSL software package, such as OpenSSL. SSL certificates can also be purchased from an authorized certificate issuer like VeriSign or Thawte. You can also sign the certificate yourself. Se..."
+        "text": "Listeners SSL Direct-IP connections and connections without a matching SNI virtual host use the listener-level certificate and cipher settings. For a matching SNI virtual host, the can provide its own certificate and cipher settings, while the listener still determines protocol availability. SSL Private Key & Certificate Every SSL listener requires a paired SSL private key and SSL certificate. Multiple SSL listeners ..."
     },
     {
         "title": "Virtual Host Templates",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "Admin Listeners SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "Admin Listeners SSL Admin Listeners are dedicated to the Admin Server. Secure (SSL) listeners are recommended for the Admin Server. SSL Private Key & Certificate Every SSL listener requires a paired SSL private key and SSL certificate. Multiple SSL listeners can share the same key and certificate. You can generate SSL private keys yourself using an SSL software package, such as OpenSSL. SSL certificates can also be p..."
+        "text": "Admin Listeners SSL Admin Listeners are dedicated to the Admin Server. Secure (SSL) listeners are recommended for the Admin Server. These TLS settings apply only to the Admin Console listener; they are not inherited by public listeners or virtual hosts. SSL Private Key & Certificate Every SSL listener requires a paired SSL private key and SSL certificate. Multiple SSL listeners can share the same key and certificate...."
     }
 ];

@@ -261,9 +261,10 @@ class CValidation
 			return 1;
 		}
 
-			$chktype = ['uint', 'name', 'vhname', 'dbname', 'admname', 'sel', 'sel1', 'sel2',
-				'bool', 'file', 'filep', 'file0', 'file1', 'filetp', 'filevh', 'path', 'note',
-				'uri', 'expuri', 'url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse', 'charset'];
+		$chktype = ['uint', 'name', 'vhname', 'dbname', 'admname', 'sel', 'sel1', 'sel2',
+			'bool', 'file', 'filep', 'file0', 'file1', 'filetp', 'filevh', 'path', 'note',
+			'uri', 'expuri', 'url', 'httpurl', 'email', 'dir', 'addr', 'wsaddr', 'parse', 'charset',
+			'cipherlist'];
 
 		if (!in_array($attr->_type, $chktype)) {
 			return 1;
@@ -1050,6 +1051,18 @@ class CValidation
 			$node->SetErr($err);
 		}
 		return $res;
+	}
+
+	protected function chkAttr_cipherlist($attr, $node)
+	{
+		$value = $node->Get(CNode::FLD_VAL);
+		$spec = '[A-Za-z0-9_!+@=.\[\]|*?-]+';
+		if (preg_match('/\A' . $spec . '(?::' . $spec . ')*\z/', $value) === 1) {
+			return 1;
+		}
+
+		$node->SetErr(DMsg::UIStr('err_invalidcipherlist'));
+		return -1;
 	}
 
 	protected function chkAttr_parse_val($attr, $val, &$err)

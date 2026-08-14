@@ -142,6 +142,7 @@ $_gmsg['err_conffilecreatefailed'] = 'Échec de la création du fichier de confi
 $_gmsg['err_conffilenotfound'] = 'Fichier de configuration introuvable à %%path%%';
 $_gmsg['err_faildetectdlmethod'] = 'Impossible de détecter la méthode de téléchargement (installez curl, fetch ou wget)';
 $_gmsg['err_failreadfile'] = 'Échec de la lecture du fichier';
+$_gmsg['err_invalidcipherlist'] = 'Saisissez une seule ligne de spécifications de chiffrement non vides séparées par des deux-points.';
 $_gmsg['err_illegalcharfound'] = 'Caractères illégaux trouvés dans la valeur.';
 $_gmsg['err_invalidpath'] = 'Chemin invalide';
 $_gmsg['err_invalidvalat'] = 'Valeur invalide à';

@@ -142,6 +142,7 @@ $_gmsg['err_conffilecreatefailed'] = 'Konfigurationsdatei konnte nicht erstellt 
 $_gmsg['err_conffilenotfound'] = 'Konfigurationsdatei nicht gefunden unter %%path%%';
 $_gmsg['err_faildetectdlmethod'] = 'Die Download-Methode konnte nicht erkannt werden (installieren Sie Curl, Fetch oder Wget).';
 $_gmsg['err_failreadfile'] = 'Datei konnte nicht gelesen werden';
+$_gmsg['err_invalidcipherlist'] = 'Geben Sie eine einzelne Zeile mit nicht leeren, durch Doppelpunkte getrennten Cipher-Spezifikationen ein.';
 $_gmsg['err_illegalcharfound'] = 'Unzulässige Zeichen im Wert gefunden.';
 $_gmsg['err_invalidpath'] = 'Ungültiger Pfad';
 $_gmsg['err_invalidvalat'] = 'Ungültiger Wert bei';

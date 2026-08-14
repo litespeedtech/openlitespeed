@@ -232,19 +232,33 @@ class DTblRenderer
         $helpKey = $this->_table->getHelpKey();
         $attrs = $this->_table->getAttrs();
 
-        if ($helpKey != null && ($dhelp_item = DMsg::GetAttrTip($helpKey)) != null) {
-            $tableHelp = $dhelp_item->Render();
-        } elseif (count($attrs) == 1 && $this->_table->getCols() == 1) {
-            $av = array_values($attrs);
-            $a0 = $av[0];
-            if ($a0->_label == null || $a0->_label == $this->_table->getTitle()) {
-                if (($dhelp_item = DMsg::GetAttrTip($a0->_helpKey)) != null) {
-                    $is_blocked = $a0->blockedVersion();
-                    $version = $is_blocked ? $a0->_version : 0;
-                    $reason = $is_blocked ? $a0->blockedReason() : '';
-                    $tableHelp = $dhelp_item->Render($version, $reason);
+        $singleAttr = null;
+        if (count($attrs) == 1) {
+            $attrValues = array_values($attrs);
+            $singleAttr = $attrValues[0];
+        }
+
+        $helpItem = ($helpKey != null) ? DMsg::GetAttrTip($helpKey) : null;
+        $helpUsesSingleFieldTip = ($helpItem != null
+            && $singleAttr != null
+            && $helpKey === $singleAttr->_helpKey);
+        $helpVersion = 0;
+        $helpReason = '';
+
+        if ($helpItem == null && $singleAttr != null && $this->_table->getCols() == 1) {
+            if ($singleAttr->_label == null || $singleAttr->_label == $this->_table->getTitle()) {
+                $helpItem = DMsg::GetAttrTip($singleAttr->_helpKey);
+                if ($helpItem != null) {
+                    $isBlocked = $singleAttr->blockedVersion();
+                    $helpVersion = $isBlocked ? $singleAttr->_version : 0;
+                    $helpReason = $isBlocked ? $singleAttr->blockedReason() : '';
+                    $helpUsesSingleFieldTip = true;
                 }
             }
+        }
+
+        if ($helpItem != null && !($isEdit && $helpUsesSingleFieldTip)) {
+            $tableHelp = $helpItem->Render($helpVersion, $helpReason);
         }
 
         $title = $this->_table->getTitle();
@@ -417,6 +431,8 @@ class DTblRenderer
         $tableClass = 'table lst-table-bordered lst-sortable-table';
         if ($this->_table->isTop()) {
             $tableClass .= ' lst-config-list-table';
+        } else {
+            $tableClass .= ' lst-config-detail-table';
         }
 
         $buf .= '<table class="' . $tableClass . '"';

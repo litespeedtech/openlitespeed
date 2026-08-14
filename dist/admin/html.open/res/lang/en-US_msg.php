@@ -142,6 +142,7 @@ $_gmsg['err_conffilecreatefailed'] = 'Failed to create config file at %%path%%';
 $_gmsg['err_conffilenotfound'] = 'Failed to find config file at %%path%%';
 $_gmsg['err_faildetectdlmethod'] = 'Unable to detect download method (install curl, fetch, or wget)';
 $_gmsg['err_failreadfile'] = 'Failed to read file';
+$_gmsg['err_invalidcipherlist'] = 'Enter one line of nonempty cipher specifications separated by colons.';
 $_gmsg['err_illegalcharfound'] = 'Illegal characters found in value.';
 $_gmsg['err_invalidpath'] = 'Invalid path';
 $_gmsg['err_invalidvalat'] = 'Invalid value at';

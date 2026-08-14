@@ -142,6 +142,7 @@ $_gmsg['err_conffilecreatefailed'] = '%%path%% に構成ファイルを作成で
 $_gmsg['err_conffilenotfound'] = '%%path%% に構成ファイルが見つかりませんでした';
 $_gmsg['err_faildetectdlmethod'] = 'ダウンロード方法を検出できません（インストールcurl、fetch、またはwget）';
 $_gmsg['err_failreadfile'] = 'ファイルを読み込めませんでした';
+$_gmsg['err_invalidcipherlist'] = '空でない暗号スイート指定をコロンで区切って、1 行で入力してください。';
 $_gmsg['err_illegalcharfound'] = '値に不正な文字があります。';
 $_gmsg['err_invalidpath'] = '無効なパスです';
 $_gmsg['err_invalidvalat'] = '無効な値です';

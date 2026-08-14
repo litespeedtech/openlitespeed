@@ -186,7 +186,7 @@ $_tipsdb['cgroups'] = new DAttrHelp("cgroups", '如果当前操作系统支持(�
 
 $_tipsdb['checkSymbolLink'] = new DAttrHelp("检查符号链接", '指定在启用了&quot;跟随符号链接&quot;时，是否检查符号链接在不在&quot;拒绝访问的目录&quot;中。 如果启用检查，将检查网址对应的真正的资源路径是否在配置的禁止访问目录中。 如果在禁止访问目录中，访问将被禁止。', ' 要获得最佳的安全性，启用该选项。要获得最佳性能，禁用该选项。', '布尔值', '');
 
-$_tipsdb['ciphers'] = new DAttrHelp("加密套件", '指定SSL握手时要使用的密码套件。 LSWS支持在SSL v3.0，TLS v1.0，TLS v1.2和TLS v1.3中实现的密码套件。', ' 建议将此字段留空，以使用遵循SSL密码最佳实践的默认密码套件。', '以冒号分隔的密码套件规范字符串。', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
+$_tipsdb['ciphers'] = new DAttrHelp("加密套件", '指定协商<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>及更早版本连接时使用的有序加密套件规则 列表。 此设置不会配置<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>加密套件；这些套件由BoringSSL在内部选择， 无法在此更改。', ' 将此字段留空可使用服务器维护的 &quot;默认加密套件&quot;。仅在有明确记录的兼容性或合规性 要求时进行自定义，并在更改后测试所需的客户端类型。', '单个以冒号分隔的加密套件规则字符串。在规则前添加<span class=&quot;lst-inline-token lst-inline-token--value&quot;>!</span>可永久 排除匹配的加密套件。', 'ALL:!RSA:!SHA1:!3DES');
 
 $_tipsdb['clientVerify'] = new DAttrHelp("客户端验证", ' 指定客户端证书身份验证的类型。 可用类型包括： <ul> <li><b>None:</b> 不需要客户端证书。</li> <li><b>Optional:</b> 客户端证书可选。</li> <li><b>Require:</b> 客户端必须提供有效证书。</li> <li><b>Optional_no_ca:</b> 与Optional相同。</li> </ul> 默认值为<span class=&quot;lst-inline-token lst-inline-token--value&quot;>无</span>。', '建议使用<span class=&quot;lst-inline-token lst-inline-token--value&quot;>无</span>或<span class=&quot;lst-inline-token lst-inline-token--value&quot;>Require</span>。', '从下拉列表选择', '');
 
@@ -668,7 +668,7 @@ $_tipsdb['softLimit'] = new DAttrHelp("连接软限制", '指定来自单个IP�
 
 $_tipsdb['sslCert'] = new DAttrHelp("SSL私钥和证书", '每个SSL侦听器都需要成对的SSL私钥和SSL证书。 多个SSL侦听器可以共享相同的密钥和证书。<br/>您可以使用SSL软件包自行生成SSL私钥， 例如OpenSSL。SSL证书也可以从授权证书颁发机构（如VeriSign或Thawte）购买。您也可以自己签署证书。 自签名证书将不受Web浏览器信任，并且不应在公共网站上使用。但是，自签名证书足以供内部使用，例如用于加密到LiteSpeed Web服务器WebAdmin控制台的流量。', '', '', '');
 
-$_tipsdb['sslDefaultCiphers'] = new DAttrHelp("默认加密套件", 'SSL证书使用的默认密码套件。<br/>默认值：服务器内部默认值（基于当前最佳实践）', '', '以冒号分隔的密码套件规格字符串。', '');
+$_tipsdb['sslDefaultCiphers'] = new DAttrHelp("默认加密套件", '指定使用SSL证书的<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>及更早版本连接所采用的默认有序 加密套件规则列表。<br/>此设置不会配置<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>加密套件；这些套件由BoringSSL在内部选择， 无法在此更改。<br/>默认值：服务器内部默认值（基于当前最佳实践）', ' 将此字段留空可使用服务器维护的默认值。仅在有明确记录的兼容性 或合规性要求时进行自定义，并在更改后测试所需的客户端类型。', '单个以冒号分隔的加密套件规则字符串。在规则前添加<span class=&quot;lst-inline-token lst-inline-token--value&quot;>!</span>可永久 排除匹配的加密套件。', '');
 
 $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("启用多个SSL证书", '允许侦听器/虚拟主机设置多个SSL证书。 如果启用了多个证书，则证书/密钥应遵循命名方案。 如果证书名为server.crt，则其他可能的证书名称为server.crt.rsa， server.crt.dsa，server.crt.ecc。 如果为“未设置”，则默认为“否”。', '', '布尔值', '');
 
@@ -676,7 +676,9 @@ $_tipsdb['sslOCSP'] = new DAttrHelp("OCSP Stapling", '在线证书状态协议�
 
 $_tipsdb['sslOcspProxy'] = new DAttrHelp("OCSP代理", '用作OCSP验证代理服务器地址的套接字地址。不使用代理时请保持未设置。<br/>默认值：<span class=&quot;lst-inline-token lst-inline-token--value&quot;>未设置</span>', '', '套接字地址', '');
 
-$_tipsdb['sslProtocol'] = new DAttrHelp("协议版本", '侦听器接受的SSL协议选择。<br/><br/>选项包括：<span class=&quot;lst-inline-token lst-inline-token--value&quot;>SSL v3.0</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.0</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.1</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>。', '', '从复选框中选择', '');
+$_tipsdb['sslProtocol'] = new DAttrHelp("协议版本", '选择监听器接受的TLS协议版本。<br/><br/>建议使用<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>，通常也会启用<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>以兼容客户端。 <span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.0</span>和<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.1</span>是已弃用的旧协议，仅应在旧客户端 确实需要时启用。', ' 除非存在明确记录的兼容性要求，否则请保持<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.0</span>和 <span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.1</span>处于禁用状态。PCI DSS将早期TLS视为不安全协议；任何必要的 使用都必须按照适用的合规流程进行记录和批准。', '从复选框中选择', '');
+
+$_tipsdb['sslProtocolSetting'] = new DAttrHelp("SSL协议", '控制此监听器的TLS协议版本、加密套件策略和密钥交换设置。 <span class=&quot;lst-inline-token lst-inline-token--value&quot;>协议版本</span>选项决定监听器接受哪些TLS版本。', '', '', '');
 
 $_tipsdb['sslSessionCache'] = new DAttrHelp("启用SSL会话缓存", '使用OpenSSL的默认设置启用会话ID缓存。 服务器级别设置必须设置为“是”才能使虚拟主机设置生效。<br/>默认值:<br/><b>服务器级别:</b> Yes<br/><b>虚拟主机级别:</b> Yes', '', '布尔值', '');
 
@@ -789,6 +791,8 @@ $_tipsdb['vhModules'] = new DAttrHelp("虚拟主机模块", '虚拟主机模块�
 $_tipsdb['vhName'] = new DAttrHelp("虚拟主机名", '为虚拟主机的唯一名称。建议使用虚拟主机的域名作为虚拟主机名。 虚拟主机名参数可以使用$VH_NAME变量来引用。', '', '文本', '');
 
 $_tipsdb['vhRoot'] = new DAttrHelp("虚拟主机根目录", '指定虚拟主机的根目录。 注：这<b>不是</b>目录根。 建议将所有与该虚拟主机相关的文件 (像日志文件，html文件，CGI脚本等)都放置在这个目录下。 虚拟主机根目录可以使用变量$VH_ROOT来引用。', ' 将不同的虚拟主机放在不同的硬盘驱动器上。', '路径', '');
+
+$_tipsdb['vhSslProtocolSetting'] = new DAttrHelp("SSL协议", '控制SNI名称与此虚拟主机匹配的TLS连接所使用的加密套件和密钥交换 设置。监听器的&quot;协议版本&quot;设置决定可用的协议版本。 将<span class=&quot;lst-inline-token lst-inline-token--value&quot;>加密套件</span>留空可使用服务器维护的 &quot;默认加密套件&quot;。没有匹配SNI虚拟主机的连接使用 监听器级TLS设置。', '', '', '');
 
 $_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("文件名", '访问日志文件名。', ' 将访问日志文件放在单独的磁盘上。', '文件名可以是绝对路径，也可以是相对于$SERVER_ROOT或$VH_ROOT的相对路径。', '');
 

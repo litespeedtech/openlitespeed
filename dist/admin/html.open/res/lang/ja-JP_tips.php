@@ -186,7 +186,7 @@ $_tipsdb['cgroups'] = new DAttrHelp("cgroups", 'プロセス群のリソース�
 
 $_tipsdb['checkSymbolLink'] = new DAttrHelp("シンボリックリンクを確認する", '&quot;シンボリックリンクに従う&quot;がオンになっているときに、&quot;アクセス拒否ディレクトリ&quot;に対するシンボリックリンクをチェックするかどうかを指定します。 有効にすると、URLで参照されるリソースのカノニカル実パスが、設定可能なアクセス拒否ディレクトリと照合されます。 アクセスが拒否されたディレクトリ内にある場合、アクセスは拒否されます。', '最高のセキュリティを実現するには、このオプションを有効にします。 最高のパフォーマンスを得るには、無効にしてください。', 'ラジオボタンから選択', '');
 
-$_tipsdb['ciphers'] = new DAttrHelp("暗号スイート", 'SSLハンドシェイクのネゴシエーション時に使用する暗号スイートを指定します。 LSWSは、SSL v3.0、TLS v1.0、TLS v1.2、およびTLS v1.3で実装された暗号スイートをサポートしています。', ' SSL暗号のベストプラクティスに従うデフォルト暗号を使用するため、このフィールドは空白のままにすることをお勧めします。', 'コロン区切りの暗号仕様文字列。', 'ECDHE-RSA-AES128-SHA256:RC4:HIGH:!MD5:!aNULL:!EDH');
+$_tipsdb['ciphers'] = new DAttrHelp("暗号スイート", '<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>以前の接続をネゴシエートするときに使用する、 順序付きの暗号ルールリストを指定します。 この設定では<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>暗号スイートは構成されません。これらはBoringSSLによって内部で選択され、ここでは変更できません。', ' サーバーが管理する &quot;デフォルト暗号スイート&quot;を使用するには、このフィールドを 空白のままにします。文書化された互換性またはコンプライアンス要件がある 場合にのみカスタマイズし、変更後に必要なクライアントタイプをテストして ください。', 'コロンで区切られた単一の暗号ルール文字列。ルールの先頭に <span class=&quot;lst-inline-token lst-inline-token--value&quot;>!</span>を付けると、一致する暗号を完全に除外します。', 'ALL:!RSA:!SHA1:!3DES');
 
 $_tipsdb['clientVerify'] = new DAttrHelp("クライアント検証", ' クライアント証明書認証のタイプを指定します。 使用できるタイプは次のとおりです： <ul> <li><b>None:</b> クライアント証明書は必要ありません。</li> <li><b>Optional:</b> クライアント証明書はオプションです。</li> <li><b>Require:</b> クライアントには有効な証明書が必要です。</li> <li><b>Optional_no_ca:</b> オプションと同じです。</li> </ul> デフォルトは &quot;None&quot;です。', '&quot;None&quot;または &quot;Require&quot;をお勧めします。', 'ドロップダウンリストから選択', '');
 
@@ -668,7 +668,7 @@ $_tipsdb['softLimit'] = new DAttrHelp("接続ソフトリミット", '1つのIP�
 
 $_tipsdb['sslCert'] = new DAttrHelp("SSL秘密鍵 & 証明書", 'すべてのSSLリスナーには、ペアのSSL秘密鍵とSSL証明書が必要です。 複数のSSLリスナーは、同じ鍵と証明書を共有できます。<br/>OpenSSLなどのSSLソフトウェアパッケージを使用して、SSL秘密鍵を自分で生成することができます。 SSL証明書は、VeriSignやThawteのような認証局から購入することもできます。 自分で証明書に署名することもできます。 自己署名証明書はWebブラウザから信頼されないため、重要なデータを含む公開Webサイトでは使用しないでください。 ただし、自己署名証明書は内部使用に十分適しており、 例えばLiteSpeed WebサーバーのWebAdminコンソールへのトラフィックの暗号化に使用できます。', '', '', '');
 
-$_tipsdb['sslDefaultCiphers'] = new DAttrHelp("デフォルト暗号スイート", 'SSL証明書用のデフォルト暗号スイートです。<br/>デフォルト値：サーバー内部デフォルト（現在のベストプラクティスに基づく）', '', 'コロン区切りの暗号指定文字列。', '');
+$_tipsdb['sslDefaultCiphers'] = new DAttrHelp("デフォルト暗号スイート", 'SSL証明書を使用する<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>以前の接続に対する、デフォルト の順序付き暗号ルールリストを指定します。<br/>この設定では<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>暗号スイートは構成されません。これらはBoringSSLによって内部で選択され、ここでは変更できません。<br/>デフォルト値：サーバー内部デフォルト（現在のベストプラクティスに基づく）', ' サーバーが管理するデフォルト値を使用するには、このフィールドを 空白のままにします。文書化された互換性またはコンプライアンス要件がある 場合にのみカスタマイズし、変更後に必要なクライアントタイプをテストして ください。', 'コロンで区切られた単一の暗号ルール文字列。ルールの先頭に <span class=&quot;lst-inline-token lst-inline-token--value&quot;>!</span>を付けると、一致する暗号を完全に除外します。', '');
 
 $_tipsdb['sslEnableMultiCerts'] = new DAttrHelp("複数のSSL証明書を有効にする", 'リスナー/バーチャルホストが複数のSSL証明書を設定できるようにします。 複数の証明書が有効な場合、証明書/キーは命名規則に従うことが想定されます。 証明書の名前がserver.crtの場合、その他の可能な証明書名はserver.crt.rsa、server.crt.dsa、server.crt.eccです。 「未設定」の場合、デフォルトは「いいえ」です。', '', 'ラジオボタンから選択', '');
 
@@ -676,7 +676,9 @@ $_tipsdb['sslOCSP'] = new DAttrHelp("OCSPステープリング", 'オンライ�
 
 $_tipsdb['sslOcspProxy'] = new DAttrHelp("OCSPプロキシ", 'OCSP検証用のプロキシサーバーアドレスとして使用されるソケットアドレスです。プロキシを使用しない場合は、この設定を未設定のままにしてください。<br/>デフォルト値：<span class=&quot;lst-inline-token lst-inline-token--value&quot;>未設定</span>', '', 'ソケットアドレス', '');
 
-$_tipsdb['sslProtocol'] = new DAttrHelp("プロトコルバージョン", 'リスナーが受け入れるSSLプロトコルを選択します。<br/><br/>選択肢には、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>SSL v3.0</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.0</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.1</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>があります。', '', 'チェックボックスから選択', '');
+$_tipsdb['sslProtocol'] = new DAttrHelp("プロトコルバージョン", 'リスナーが受け入れるTLSプロトコルバージョンを選択します。<br/><br/><span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.3</span>を推奨し、クライアント互換性のために通常は <span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.2</span>も有効にします。<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.0</span>と<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.1</span>は 非推奨のレガシープロトコルであり、古いクライアントが必要とする場合に のみ有効にしてください。', ' 文書化された互換性要件がない限り、<span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.0</span>と <span class=&quot;lst-inline-token lst-inline-token--value&quot;>TLS v1.1</span>は無効のままにしてください。PCI DSSでは初期TLSを安全で ないものとして扱うため、必要な使用は該当するコンプライアンスプロセスに 従って文書化し、承認を得る必要があります。', 'チェックボックスから選択', '');
+
+$_tipsdb['sslProtocolSetting'] = new DAttrHelp("SSL プロトコル", 'このリスナーのTLSプロトコルバージョン、暗号ポリシー、および 鍵交換設定を制御します。<span class=&quot;lst-inline-token lst-inline-token--value&quot;>プロトコルバージョン</span>の選択によって、 リスナーが受け入れるTLSバージョンが決まります。', '', '', '');
 
 $_tipsdb['sslSessionCache'] = new DAttrHelp("セッションキャッシュを有効にする", 'OpenSSLのデフォルト設定を使用してセッションIDキャッシュを有効にします。バーチャルホスト設定を有効にするには、サーバーレベル設定を&quot;Yes&quot;に設定する必要があります。<br/>デフォルト値：<br/><b>サーバーレベル：</b>Yes<br/><b>VHレベル：</b>Yes', '', 'ラジオボックスから選択', '');
 
@@ -789,6 +791,8 @@ $_tipsdb['vhModules'] = new DAttrHelp("バーチャルホストモジュール",
 $_tipsdb['vhName'] = new DAttrHelp("バーチャルホスト名", 'バーチャルホストの一意の名前。 バーチャルホストのドメイン名をバーチャルホスト名として使用することをお勧めします。 バーチャルホスト名は、変数$VH_NAMEを使用して参照できます。', '', 'テキスト', '');
 
 $_tipsdb['vhRoot'] = new DAttrHelp("バーチャルホストルート", 'バーチャルホストのルートディレクトリを指定します。 注：これはドキュメントルートでは<b>ありません</b>。このディレクトリの下に、バーチャルホストに関連するすべてのファイル（ログファイル、HTMLファイル、CGIスクリプトなど）を置くことをお勧めします。 バーチャルホストルートは、変数$VH_ROOTを使用して参照できます。', ' 異なるバーチャルホストは別々のハードドライブに配置してください。', '絶対パス又は$SERVER_ROOTからの相対パス。', '');
+
+$_tipsdb['vhSslProtocolSetting'] = new DAttrHelp("SSL プロトコル", 'SNI名がこのバーチャルホストと一致するTLS接続の暗号および鍵交換 設定を制御します。リスナーの&quot;プロトコルバージョン&quot;設定に よって、使用可能なプロトコルバージョンが決まります。 <span class=&quot;lst-inline-token lst-inline-token--value&quot;>暗号スイート</span>を空白のままにすると、サーバーが管理する &quot;デフォルト暗号スイート&quot;が使用されます。一致する SNIバーチャルホストがない接続では、リスナーレベルのTLS設定が使用されます。', '', '', '');
 
 $_tipsdb['vhaccessLog_fileName'] = new DAttrHelp("ファイル名", 'アクセスログファイル名。', ' アクセスログファイルを別のディスクに配置します。', 'ファイル名への絶対パス、または$SERVER_ROOT、$VH_ROOTからの相対パス。', '');
 

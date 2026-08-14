@@ -1971,10 +1971,10 @@ static int createEntry(lsi_param_t *rec)
             processPurge(rec->session, pVal, valLen);
     }
 
-    count = g_api->get_resp_header(rec->session,
+    int count2 = g_api->get_resp_header(rec->session,
                                    LSI_RSPHDR_LITESPEED_PURGE2,
                                    NULL, 0, iov, sizeof(iov)/sizeof(iov[0]));
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count2; ++i)
     {
         int valLen = iov[i].iov_len;
         const char *pVal = (const char *)iov[i].iov_base;
@@ -1996,6 +1996,9 @@ static int createEntry(lsi_param_t *rec)
 
     if (count > 0 && myData->hasCacheFrontend == 0)
         g_api->remove_resp_header(rec->session, LSI_RSPHDR_LITESPEED_PURGE,
+                                  NULL, 0);
+    if (count2 > 0 && myData->hasCacheFrontend == 0)
+        g_api->remove_resp_header(rec->session, LSI_RSPHDR_LITESPEED_PURGE2,
                                   NULL, 0);
 
 
@@ -3817,7 +3820,7 @@ static int handlerProcess(const lsi_session_t *session)
                                       NULL, 0);
             g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_PURGE,
                                       NULL, 0);
-            g_api->remove_resp_header(session, -1, "X-LiteSpeed-Purge2", 18);
+            g_api->remove_resp_header(session, LSI_RSPHDR_LITESPEED_PURGE2, NULL, 0);
 
         }
     }

@@ -68,6 +68,15 @@ class DAttrBase
 		$this->_bitFlag |= $flag;
 	}
 
+	public function SetAllowNull($allowNull)
+	{
+		if ($allowNull) {
+			$this->_bitFlag &= ~self::BM_NOTNULL;
+		} else {
+			$this->_bitFlag |= self::BM_NOTNULL;
+		}
+	}
+
 	public function IsFlagOn($flag)
 	{
 		return (($this->_bitFlag & $flag) == $flag );

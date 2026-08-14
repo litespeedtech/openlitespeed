@@ -178,6 +178,8 @@ HttpReq::HttpReq()
 
 HttpReq::~HttpReq()
 {
+    if (m_pUpkdHeaders)
+        delete m_pUpkdHeaders;
     if (m_fdReqFile != -1)
         ::close(m_fdReqFile);
     m_unknHeaders.release(m_pPool);
@@ -210,6 +212,8 @@ void HttpReq::reset(int discard)
         else
             HttpResourceManager::getInstance().recycle(m_pReqBodyBuf);
     }
+    if (m_pUpkdHeaders)
+        delete m_pUpkdHeaders;
     ::memset(m_commonHeaderLen, 0,
              (char *)(&m_code + 1) - (char *)m_commonHeaderLen);
 

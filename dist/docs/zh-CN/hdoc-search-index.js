@@ -90,9 +90,9 @@ window.HDOC_SEARCH_INDEX = [
         "text": "侦听器常规 监听器名称 此侦听器的唯一名称。 IP地址 指定此侦听器的IP地址。所有可用IP地址都会列出。IPv6地址会包含在\"[ ]\"中。 要侦听所有IPv4地址，请选择 ANY{/}。要侦听所有IPv4和IPv6地址，请选择 [ANY]{/}. 为了同时为IPv4和IPv6客户端提供服务，应使用IPv4映射的IPv6地址代替纯IPv4地址。 IPv4映射的IPv6地址应写为[::FFFF:..."
     },
     {
-        "title": "侦听器SSL",
+        "title": "监听器SSL",
         "url": "Listeners_SSL_Help.html",
-        "text": "侦听器SSL SSL私钥和证书 每个SSL侦听器都需要成对的SSL私钥和SSL证书。 多个SSL侦听器可以共享相同的密钥和证书。 您可以使用SSL软件包自行生成SSL私钥， 例如OpenSSL。SSL证书也可以从授权证书颁发机构（如VeriSign或Thawte）购买。您也可以自己签署证书。 自签名证书将不受Web浏览器信任，并且不应在公共网站上使用。但..."
+        "text": "监听器SSL 直接IP连接和没有匹配SNI虚拟主机的连接使用监听器级证书和加密套件 设置。对于匹配的SNI虚拟主机， 可以提供 自己的证书和加密套件设置，而协议可用性仍由监听器决定。 SSL私钥和证书 每个SSL侦听器都需要成对的SSL私钥和SSL证书。 多个SSL侦听器可以共享相同的密钥和证书。 您可以使用SSL软件包自行生�..."
     },
     {
         "title": "虚拟主机模板",
@@ -272,6 +272,6 @@ window.HDOC_SEARCH_INDEX = [
     {
         "title": "管理监听器SSL",
         "url": "AdminListeners_SSL_Help.html",
-        "text": "管理监听器SSL 管理监听器专用于管理服务器。建议管理服务器使用安全（SSL）监听器。 SSL私钥和证书 每个SSL侦听器都需要成对的SSL私钥和SSL证书。 多个SSL侦听器可以共享相同的密钥和证书。 您可以使用SSL软件包自行生成SSL私钥， 例如OpenSSL。SSL证书也可以从授权证书颁发机构（如VeriSign或Thawte）购买。您也可以自己..."
+        "text": "管理监听器SSL 管理监听器专用于管理服务器。建议管理服务器使用安全（SSL）监听器。 这些TLS设置仅适用于WebAdmin控制台监听器；公共监听器和虚拟主机不会继承 这些设置。 SSL私钥和证书 每个SSL侦听器都需要成对的SSL私钥和SSL证书。 多个SSL侦听器可以共享相同的密钥和证书。 您可以使用SSL软件包自行生成SSL私钥，..."
     }
 ];
