@@ -253,6 +253,7 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
         {
             const char *pName = NULL;
             int nameLen = -1;
+            int isRootVar = 0;
 
             if (strncasecmp(pBegin + 1, VH_NAME, 7) == 0)
             {
@@ -270,16 +271,19 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
             {
                 pBegin += 8;
                 pName = s_aVhRoot;
+                isRootVar = 1;
             }
             else if (allVariable && strncasecmp(pBegin + 1, DOC_ROOT, 8) == 0)
             {
                 pBegin += 9;
                 pName = s_aDocRoot;
+                isRootVar = 1;
             }
             else if (allVariable && strncasecmp(pBegin + 1, SERVER_ROOT, 11) == 0)
             {
                 pBegin += 12;
                 pName = MainServerConfig::getInstance().getServerRoot();
+                isRootVar = 1;
             }
             else
             {
@@ -302,6 +306,9 @@ int ConfigCtx::expandVariable(const char *pValue, char *pBuf,
                 memmove(pCur, pName, nameLen);
                 pCur += nameLen;
             }
+
+            if (isRootVar && *pBegin == '/')
+                ++pBegin;
         }
     }
 
