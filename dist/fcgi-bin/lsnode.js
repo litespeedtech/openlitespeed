@@ -397,6 +397,7 @@ function lsnode_address() {
 
 
 function customListen(port) {
+    var lsBindMask;
     function onListenError(error) {
         restoreBindMask();
         server.emit('error', error);
