@@ -397,20 +397,8 @@ function lsnode_address() {
 
 
 function customListen(port) {
-    var lsBindMask;
     function onListenError(error) {
-        restoreBindMask();
         server.emit('error', error);
-    }
-    function restoreBindMask() {
-        // Idempotent, listen() may fail synchronously, asynchronously, or not
-        // at all; the mask must go back exactly once in every case, an
-        // application that handles the error keeps running with it otherwise.
-        if (lsBindMask !== undefined) {
-            var mask = lsBindMask;
-            lsBindMask = undefined;
-            process.umask(mask);
-        }
     }
     // The replacement for the listen call!
     var server = this;
@@ -450,11 +438,5 @@ function customListen(port) {
         }
         server.emit('listening');
     });
-
-    // Binding a unix socket finishes inside listen(), so the mask has done its
-    // job by the time it returns.  Restore it here rather than from the
-    // callback above: node emits 'listening' to the application's own handlers
-    // first, and those must not run under our mask.
-    restoreBindMask();
     return server;
 }
