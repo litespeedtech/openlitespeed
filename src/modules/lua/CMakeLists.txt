@@ -25,9 +25,16 @@ SET(lua_STAT_SRCS
 )
 
 
+# FreeBSD's C++ runtime is libc++; libstdc++ does not exist there.
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "FreeBSD")
+  set(STDCXX libc++.a)
+else()
+  set(STDCXX libstdc++.a)
+endif()
+
 add_library(mod_lua MODULE ${lua_STAT_SRCS} ${LUAJITHEADERS})
 target_link_libraries(mod_lua libluajit.a
-    -nodefaultlibs libstdc++.a
+    -nodefaultlibs ${STDCXX}
     pthread rt
     ${LIBSAN} crypt m gcc_eh c c_nonshared gcc)
 set_target_properties(mod_lua PROPERTIES PREFIX "")

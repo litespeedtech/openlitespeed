@@ -54,6 +54,24 @@
 #include "use_bwrap.h"
 #include <sys/prctl.h>
 #include <linux/capability.h>
+#else
+/* ns.h, nsopts.h and the body of nspersist.h are all Linux-only, but the
+ * namespace call sites below are not individually guarded. Off Linux
+ * s_ns_enabled is never set, so those paths are inert; supply the handful of
+ * names they reference so the file still compiles. The two stubs that are
+ * reached unconditionally must keep the non-namespace behavior: forking a
+ * child does nothing extra, and no reaped pid is ever the socket watcher. */
+#define LS_NS_LEN         5
+#define DEBUG_MESSAGE(...)
+
+static inline void nspersist_socket_watcher_forked_child(void)
+{   }
+
+static inline pid_t nspersist_start_socket_watcher(void)
+{   return -1;   }
+
+static inline int nspersist_socket_watcher_reaped(pid_t pid)
+{   (void)pid;  return 0;   }
 #endif
 
 void ls_stderr(const char * fmt, ...)
