@@ -3,6 +3,8 @@
  * LITE SPEED PROPRIETARY/CONFIDENTIAL.
  */
 
+#if defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
 #define _GNU_SOURCE
 #include <ctype.h>
 #include <dirent.h>
@@ -1193,3 +1195,5 @@ int nsnosandbox_symlink()
 {
     return s_nosandbox_force_symlink || (s_ns_osmajor < 5 || (s_ns_osmajor == 5 && s_ns_osminor < 12));
 }
+
+#endif // Linux

@@ -486,7 +486,12 @@ int AcmeCertMap::acmeRequest(char *acmeFile, char *desc, char * const *argv,
         snprintf(serverEnv, sizeof(serverEnv), "ACME_DIRECTORY=%s", UseAcme::getServer());
         char *p = env ? strdup(env) : NULL;
         int count = envCount(p);
-        const char *envp[4 + count] = { configEnv, acmeEnv, serverEnv };
+        /* Initializing a variable-length array is a g++ extension that clang
+         * rejects; the loop below fills everything past the third slot. */
+        const char *envp[4 + count];
+        envp[0] = configEnv;
+        envp[1] = acmeEnv;
+        envp[2] = serverEnv;
         int index = 3;
         for (int i = 0; i < count; i++)
         {

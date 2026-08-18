@@ -28,8 +28,15 @@ add_library(mod_security SHARED
 )
 
 
+# FreeBSD's C++ runtime is libc++; libstdc++ does not exist there.
+if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "FreeBSD")
+  set(STDCXX libc++.a)
+else()
+  set(STDCXX libstdc++.a)
+endif()
+
 target_link_libraries(mod_security libmodsecurity.a
-    -nodefaultlibs libstdc++.a
+    -nodefaultlibs ${STDCXX}
     pthread rt -llmdb -lxml2 -lcurl -lssl -lcrypto -lz -lpcre -lyajl
     ${LIBSAN} crypt m gcc_eh c c_nonshared gcc)
 
