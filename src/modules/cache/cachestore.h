@@ -47,11 +47,13 @@ public:
     virtual int clearStrage() = 0;
 
     virtual CacheEntry *getCacheEntry(CacheHash &hash,
-                                      CacheKey *pKey, int maxStale,
+                                      CacheKey *pKey, bool is_private,
+                                      int maxStale,
                                       int32_t lastCacheFlush) = 0;
 
     virtual CacheEntry *createCacheEntry(const CacheHash &hash,
-                                         CacheKey *pKey) = 0;
+                                         CacheKey *pKey,
+                                         bool is_private) = 0;
 
 //    virtual CacheEntry * getCacheEntry( const char * pKey, int keyLen ) = 0;
 
@@ -134,4 +136,3 @@ private:
 };
 
 #endif
-
