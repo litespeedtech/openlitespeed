@@ -55,7 +55,7 @@ struct CacheKey
 
     int getPrivateId(char *pBuf, char *pBufEnd);
     int isPrivate() const
-    {   return m_pIP != NULL;   }
+    {   return m_pIP != NULL && m_ipLen > 0;   }
 };
 
 

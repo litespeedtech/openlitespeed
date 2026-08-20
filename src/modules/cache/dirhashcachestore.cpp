@@ -141,7 +141,8 @@ int DirHashCacheStore::processStale(CacheEntry *pEntry, char *pBuf,
 
 
 CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
-        CacheKey *pKey, int maxStale, int32_t lastCacheFlush)
+        CacheKey *pKey, bool is_private, int maxStale,
+        int32_t lastCacheFlush)
 {
     char achBuf[4096] = "";
     int fd;
@@ -189,7 +190,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     else
     {
         if (!getManager()->isInTracker(hash.getKey(), HASH_KEY_LEN,
-                                       pKey->m_pIP != NULL))
+                                       is_private))
             return NULL;
     }
 
@@ -197,7 +198,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
     {
         if (!pathLen)
             pathLen = buildCacheLocation(achBuf, 4096, hash.getKey(),
-                                         pKey->m_pIP != NULL);
+                                         is_private);
 
         fd = ::open(achBuf, O_RDONLY);
         if (fd == -1)
@@ -216,7 +217,7 @@ CacheEntry *DirHashCacheStore::getCacheEntry(CacheHash &hash,
                 if (pEntry)
                     CacheStore::dispose(iter, 1);
 
-                getManager()->incStats(pKey->m_pIP != NULL, offsetof(cachestats_t,
+                getManager()->incStats(is_private, offsetof(cachestats_t,
                                        misses));
 
                 return NULL;
@@ -454,9 +455,8 @@ int DirHashCacheStore::createCacheFile(const CacheHash *pHash, bool is_private)
 
 
 CacheEntry *DirHashCacheStore::createCacheEntry(
-    const CacheHash &hash, CacheKey *pKey)
+    const CacheHash &hash, CacheKey *pKey, bool is_private)
 {
-    bool is_private = pKey->isPrivate();
     CacheEntry *pEntry = new DirHashCacheEntry();
     if (pEntry->setKey(hash, pKey) != 0)
     {
