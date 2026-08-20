@@ -1585,7 +1585,8 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
                           LSI_DATA_IP);
 
     pEntry = pDirHashCacheStore->getCacheEntry(*cePrivateHash,
-              &myData->cacheKey, pConfig->getMaxStale(), lastCacheFlush);
+              &myData->cacheKey, true, pConfig->getMaxStale(),
+              lastCacheFlush);
     setCacheEntry(myData, pEntry);
     if (pEntry && (!pEntry->isStale() || pEntry->isUpdating())
         && !pEntry->isUnderConstruct())
@@ -1598,7 +1599,7 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
         int savedIpLen = myData->cacheKey.m_ipLen;
         myData->cacheKey.m_ipLen = 0 - savedIpLen;
         pEntry = pDirHashCacheStore->getCacheEntry(*cePublicHash,
-                  &myData->cacheKey, pConfig->getMaxStale(), -1);
+                  &myData->cacheKey, false, pConfig->getMaxStale(), -1);
         setCacheEntry(myData, pEntry);
         myData->cacheKey.m_ipLen = savedIpLen;
         if (pEntry)
@@ -1607,7 +1608,7 @@ short lookUpCache(lsi_param_t *rec, MyMData *myData, int no_vary,
             {
                 CacheEntry *pNewEntry = myData->pConfig->getStore()->
                                         createCacheEntry(myData->cePublicHash,
-                                        &myData->cacheKey);
+                                        &myData->cacheKey, false);
                 if (pNewEntry)
                 {
                     setCacheEntry(myData, pNewEntry);
@@ -2165,8 +2166,12 @@ static int createEntry(lsi_param_t *rec)
     }
 
     CacheHash *hash = NULL;
+    bool is_private = false;
     if (myData->cacheCtrl.isPrivateCacheable())
+    {
         hash = &myData->cePrivateHash;
+        is_private = true;
+    }
     else if (myData->cacheCtrl.isPublicCacheable())
     {
         if (myData->iCacheState != CE_STATE_UPDATE_STALE)
@@ -2176,7 +2181,7 @@ static int createEntry(lsi_param_t *rec)
     if (hash)
     {
         setCacheEntry(myData, myData->pConfig->getStore()->createCacheEntry(
-                                 *hash, &myData->cacheKey));
+                                 *hash, &myData->cacheKey, is_private));
         if (myData->pEntry == NULL)
         {
             int error = myData->pConfig->getStore()->getLastError();

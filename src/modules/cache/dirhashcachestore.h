@@ -65,9 +65,11 @@ public:
 
 
     virtual CacheEntry *getCacheEntry(CacheHash &hash, CacheKey *pKey,
-                                      int maxStale, int32_t lastCacheFlush);
+                                      bool is_private, int maxStale,
+                                      int32_t lastCacheFlush);
 
-    virtual CacheEntry *createCacheEntry(const CacheHash &hash, CacheKey *pKey);
+    virtual CacheEntry *createCacheEntry(const CacheHash &hash,
+                                         CacheKey *pKey, bool is_private);
 
     virtual void cancelEntry(CacheEntry *pEntry, int remove);
     void cancelEntryInMem(CacheEntry* pEntry);
