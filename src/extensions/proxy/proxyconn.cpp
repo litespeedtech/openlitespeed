@@ -269,23 +269,17 @@ int ProxyConn::sendReqHeader()
             pReq->dropReqHeader(HttpHeader::H_TRANSFER_ENCODING);
     }
 
-#if 1       //always set "Accept-Encoding" header to "gzip"
+    //Forward the client's own "Accept-Encoding" header to the backend
+    //as-is, so encodings other than gzip (e.g. "br") aren't clobbered.
+    //If the client sent none, add "gzip" so the backend<->OLS leg can
+    //still be compressed; OLS decompresses it before replying to a
+    //client that didn't ask for gzip (see HttpSession::setupGzipFilter).
     char *pAE = (char *)pReq->getHeader(HttpHeader::H_ACC_ENCODING);
-    if (*pAE)
-    {
-        int len = pReq->getHeaderLen(HttpHeader::H_ACC_ENCODING);
-        if (len >= 4)
-        {
-            memmove(pAE, "gzip", 4);
-            memset(pAE + 4, ' ', len - 4);
-        }
-    }
-    else // If accept encoding header does not exist, use predefined.
+    if (!*pAE)
     {
         pExtraHeader = m_extraHeader;
         headerLen += 23;
     }
-#endif
 
     //reconstruct request line if URL has been rewritten
     if (pReq->getRedirects() > 0)
