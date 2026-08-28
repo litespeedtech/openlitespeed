@@ -65,6 +65,7 @@ SET(unittest_STAT_SRCS
    ../test/util/dlinkqueuetest.cpp
    ../test/util/gzipbuftest.cpp
    ../test/util/brotlibuftest.cpp
+   ../test/util/zstdbuftest.cpp
    ../test/util/vmembuftest.cpp
    ../test/util/gpathtest.cpp
    ../test/util/poolalloctest.cpp
@@ -157,7 +158,7 @@ SET( litespeedlib
     quic h2 lsquic -Wl,--whole-archive util lsr -Wl,--no-whole-archive ${MMDB_LIB}
     edio libssl.a libcrypto.a ${BSSL_ADD_LIB} ${libUnitTest}
     libz.a libpcre2-8.a libexpat.a libxml2.a
-    ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} udns ${LINUX_AIO_LIB} 
+    ${IP2LOC_ADD_LIB} ${BROTLI_ADD_LIB} ${ZSTD_ADD_LIB} udns ${LINUX_AIO_LIB} 
     -nodefaultlibs pthread rt ${LIBSAN} ${LIBATOMIC} 
     ${CMAKE_DL_LIBS} ${STDCXX} crypt bcrypt m gcc_eh c c_nonshared gcc
 )

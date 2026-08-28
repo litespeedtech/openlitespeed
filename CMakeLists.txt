@@ -180,6 +180,33 @@ set(BSSL_ADD_LIB  libdecrepit.a)
 set(BROTLI_ADD_LIB  libbrotlidec-static.a libbrotlienc-static.a libbrotlicommon-static.a)
 add_definitions(-DUSE_BROTLI)
 ##########################################################################################
+# Accept-Encoding: zstd support.
+# Unlike the static-lib toggles above, libzstd is auto-detected on the
+# build machine: WITH_ZSTD defaults to AUTO, so the build silently
+# enables zstd support when a suitable libzstd (>= 1.4.0, for the
+# streaming API) and its headers are found, and silently disables it
+# otherwise. Pass -DWITH_ZSTD=ON to force a hard failure when zstd is
+# missing, or -DWITH_ZSTD=OFF to disable zstd support even if present.
+set(WITH_ZSTD "AUTO" CACHE STRING "Enable Accept-Encoding: zstd support (ON/OFF/AUTO)")
+set(ZSTD_ADD_LIB "")
+if (NOT WITH_ZSTD STREQUAL "OFF")
+    if (WITH_ZSTD STREQUAL "ON")
+        find_package(Zstd REQUIRED)
+    else()
+        find_package(Zstd QUIET)
+    endif()
+    if (ZSTD_FOUND)
+        message(STATUS "Found zstd ${ZSTD_VERSION} (${ZSTD_LIBRARIES}); "
+                        "enabling Accept-Encoding: zstd support")
+        include_directories(BEFORE ${ZSTD_INCLUDE_DIR})
+        add_definitions(-DUSE_ZSTD)
+        set(ZSTD_ADD_LIB ${ZSTD_LIBRARIES})
+    else()
+        message(STATUS "libzstd (>= 1.4.0) not found; building without "
+                        "Accept-Encoding: zstd support")
+    endif()
+endif()
+##########################################################################################
 #If you want to use IP2Location, just un-comment out the following commands
 set(IP2LOC_ADD_LIB  libIP2Location.a)
 add_definitions(-DUSE_IP2LOCATION)

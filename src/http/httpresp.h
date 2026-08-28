@@ -111,6 +111,11 @@ public:
         m_respHeaders.addBrEncodingHeader();
     }
 
+    void addZstdEncodingHeader()
+    {
+        m_respHeaders.addZstdEncodingHeader();
+    }
+
     void appendChunked()
     {
         m_respHeaders.appendChunked();
