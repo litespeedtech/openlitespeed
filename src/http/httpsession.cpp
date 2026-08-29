@@ -32,6 +32,7 @@
 #include <http/handlertype.h>
 #include <http/hiochainstream.h>
 #include <http/htauth.h>
+#include <http/httpcgitool.h>
 #include <http/httphandler.h>
 #include <http/httplog.h>
 #include <http/httpmethod.h>
@@ -3963,6 +3964,23 @@ int HttpSession::setupGzipFilter()
     int  hkptNogzip = (m_sessionHooks.getFlag(LSI_HKPT_RECV_RESP_BODY)
                        | m_sessionHooks.getFlag(LSI_HKPT_SEND_RESP_BODY))
                       & LSI_FLAG_DECOMPRESS_REQUIRED;
+
+    if (m_request.brAcceptable() & UPSTREAM_BR)
+    {
+        //The body is already brotli encoded. Gzipping it again would emit
+        //"Content-Encoding: br,gzip" and a body no client can decode, and
+        //there is no brotli decoder on the response filter path to undo it
+        //with, so leave the body and its Content-Encoding alone.
+        //Recording it as a brotli buffer also keeps the cache module from
+        //re-compressing it and storing the entry as gzip.
+        setFlag(HSF_RESP_BODY_BRCOMPRESSED);
+        clearFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
+        if (!(m_request.brAcceptable() & REQ_BR_ACCEPT))
+            LS_DBG_L(getLogSession(), "Upstream returned a brotli encoded "
+                     "body that the client did not ask for, passing through.");
+        return 0;
+    }
+
     if (gz & (UPSTREAM_GZIP | UPSTREAM_DEFLATE))
     {
         setFlag(HSF_RESP_BODY_GZIPCOMPRESSED);
@@ -5843,14 +5861,19 @@ int HttpSession::updateContentCompressible()
 
 int HttpSession::contentEncodingFixup()
 {
-    int len;
+    int len = 0;
     int requireChunk = 0;
     const char *pContentEncoding = m_response.getRespHeaders().getHeader(
                                        HttpRespHeaders::H_CONTENT_ENCODING, &len);
     if ((!(m_request.gzipAcceptable() & REQ_GZIP_ACCEPT))
         && (!(m_request.brAcceptable() & REQ_BR_ACCEPT)))
     {
-        if (pContentEncoding)
+        //modgzip's decompress filter is zlib only, so it can only undo gzip
+        //and deflate. Running it over brotli (or any other encoding the
+        //backend picked) would corrupt the body instead of decoding it.
+        int encoding = HttpCgiTool::parseContentEncoding(pContentEncoding, len);
+        if (encoding == UPSTREAM_ENCODING_GZIP
+            || encoding == UPSTREAM_ENCODING_DEFLATE)
         {
             if (addModgzipFilter(1, 0) == -1)
                 return LS_FAIL;
