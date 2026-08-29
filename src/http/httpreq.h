@@ -921,6 +921,7 @@ public:
     int createHeaderValue(HttpSession *pSession, const char *pFmt, int len,
                           char *pBuf, int maxLen);
     void eraseHeader(key_value_pair * pHeader);
+    void dropUnknownReqHeader(const char *pName, int nameLen);
 
     void appendReqHeader( const char *pName, int iNameLen,
                           const char *pValue, int iValLen);

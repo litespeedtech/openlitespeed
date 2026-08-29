@@ -4060,6 +4060,29 @@ int HttpReq::dropReqHeader(int index)
 }
 
 
+void HttpReq::dropUnknownReqHeader(const char *pName, int nameLen)
+{
+    key_value_pair *pHeader;
+    while ((pHeader = getUnknHeaderByKey(m_headerBuf, pName, nameLen)) != NULL)
+    {
+        if (m_pUpkdHeaders)
+            m_pUpkdHeaders->dropHeader(HttpHeader::H_UNKNOWN, pHeader->valOff);
+        eraseHeader(pHeader);
+        int idx = pHeader - m_unknHeaders.begin();
+        int last = m_unknHeaders.size() - 1;
+        if (idx < last)
+            memmove(pHeader, pHeader + 1,
+                    (last - idx) * sizeof(key_value_pair));
+        m_unknHeaders.pop();
+        //m_iCfRealIpHeader is an one based index into m_unknHeaders
+        if (m_iCfRealIpHeader == idx + 1)
+            m_iCfRealIpHeader = 0;
+        else if (m_iCfRealIpHeader > idx + 1)
+            --m_iCfRealIpHeader;
+    }
+}
+
+
 int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
 {
     if (pOp->getOperator() == LSI_HEADER_UNSET)
@@ -4068,6 +4091,8 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
         {
             dropReqHeader(pOp->getIndex());
         }
+        else if (pOp->getIndex() == HttpHeader::H_HEADER_END)
+            dropUnknownReqHeader(pOp->getName(), pOp->getNameLen());
         return 0;
     }
     const char *pValue = pOp->getValue();
@@ -4087,6 +4112,8 @@ int HttpReq::applyOp(HttpSession *pSession, const HeaderOp *pOp)
             updateReqHeader(pOp->getIndex(), pOp->getValue(), pOp->getValueLen());
             break;
         }
+        //not an indexed header, remove the existing one before adding it back
+        dropUnknownReqHeader(pOp->getName(), pOp->getNameLen());
         //fall through
     case LSI_HEADER_ADD:    //add a new line
     case LSI_HEADER_APPEND: //Add with a comma to seperate
@@ -4225,11 +4252,22 @@ void HttpReq::appendReqHeader( const char *pName, int iNameLen,
     if (m_headerBuf.available() < iValLen + iNameLen + 4)
         m_headerBuf.grow(iValLen + iNameLen + 4 - m_headerBuf.available());
 
+    int nameOff = m_headerBuf.size();
     m_headerBuf.append(pName, iNameLen);
     m_headerBuf.append(": ", 2);
+    int valOff = m_headerBuf.size();
     m_headerBuf.append(pValue, iValLen);
     m_headerBuf.append("\r\n\r\n", 4);
     m_iReqHeaderBufFinished = m_iHttpHeaderEnd = m_headerBuf.size();
+
+    if (HttpHeader::getIndex(pName, iNameLen) == HttpHeader::H_HEADER_END)
+    {
+        key_value_pair *pIdx = newUnknownHeader();
+        pIdx->keyOff = nameOff;
+        pIdx->keyLen = iNameLen;
+        pIdx->valOff = valOff;
+        pIdx->valLen = iValLen;
+    }
 }
 
 
