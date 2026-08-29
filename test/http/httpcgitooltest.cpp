@@ -17,6 +17,49 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
+#include "httpcgitooltest.h"
+
+#include <http/httpcgitool.h>
+#include "unittest-cpp/UnitTest++.h"
+#include <string.h>
+
+SUITE(HttpCgiToolTest)
+{
+    TEST(HttpCgiToolTest_parseContentEncoding)
+    {
+        CHECK(UPSTREAM_ENCODING_GZIP
+              == HttpCgiTool::parseContentEncoding("gzip", 4));
+        CHECK(UPSTREAM_ENCODING_GZIP
+              == HttpCgiTool::parseContentEncoding("GZip", 4));
+        CHECK(UPSTREAM_ENCODING_DEFLATE
+              == HttpCgiTool::parseContentEncoding("deflate", 7));
+        CHECK(UPSTREAM_ENCODING_NONE
+              == HttpCgiTool::parseContentEncoding("none", 4));
+
+        CHECK(UPSTREAM_ENCODING_BR
+              == HttpCgiTool::parseContentEncoding("br", 2));
+        CHECK(UPSTREAM_ENCODING_BR
+              == HttpCgiTool::parseContentEncoding("BR", 2));
+
+        //anything the response filters cannot decode must not be mistaken
+        //for gzip or deflate
+        CHECK(UPSTREAM_ENCODING_OTHER
+              == HttpCgiTool::parseContentEncoding("zstd", 4));
+        CHECK(UPSTREAM_ENCODING_OTHER
+              == HttpCgiTool::parseContentEncoding("identity", 8));
+        CHECK(UPSTREAM_ENCODING_OTHER
+              == HttpCgiTool::parseContentEncoding("", 0));
+        CHECK(UPSTREAM_ENCODING_OTHER
+              == HttpCgiTool::parseContentEncoding(NULL, 4));
+
+        //a truncated value must not match a longer token
+        CHECK(UPSTREAM_ENCODING_OTHER
+              == HttpCgiTool::parseContentEncoding("gzi", 3));
+        CHECK(UPSTREAM_ENCODING_OTHER
+              == HttpCgiTool::parseContentEncoding("b", 1));
+    }
+}
+
 // #include "httpcgitooltest.h"
 // #include <http/httpsession.h>
 // #include <http/httpextconnector.h>
