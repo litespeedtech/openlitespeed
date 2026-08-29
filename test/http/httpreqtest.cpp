@@ -436,6 +436,60 @@ SUITE(HttpReqTest)
 
         delete []pURI;
     }
+
+    static int countHeaderName(HttpReq &req, const char *pName, int nameLen)
+    {
+        const char *p = req.getOrgReqLine();
+        const char *pEnd = p + req.getHttpHeaderLen();
+        int count = 0;
+        while ((p = (const char *)memchr(p, '\n', pEnd - p)) != NULL)
+        {
+            ++p;
+            if (pEnd - p > nameLen && *(p + nameLen) == ':'
+                && strncasecmp(p, pName, nameLen) == 0)
+                ++count;
+        }
+        return count;
+    }
+
+    TEST(HttpReqTest_setUnsetUnknownReqHeader)
+    {
+        const char *pInput =
+            "GET /api/ HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "Origin: https://client.example\r\n"
+            "Connection: close\r\n"
+            "\r\n";
+        HttpReqTst req;
+        req.appendLogId("setUnsetUnknownReqHeader");
+        req.reset(0);
+        req.setVHost((HttpVHost *)1);
+        CHECK(0 == req.append(pInput, strlen(pInput)));
+        CHECK(1 == countHeaderName(req, "Origin", 6));
+
+        HttpHeaderOps ops;
+        const char *pVal = "https://proxy.example";
+        HeaderOp *pSet = ops.append(HttpHeader::getIndex("Origin", 6),
+                                    "Origin", 6, pVal, strlen(pVal),
+                                    LSI_HEADER_SET, 1);
+        req.applyOp(NULL, pSet);
+        //"set" must replace the client's header, not add a second one
+        CHECK(1 == countHeaderName(req, "Origin", 6));
+        req.applyOp(NULL, pSet);
+        CHECK(1 == countHeaderName(req, "Origin", 6));
+        int valLen = 0;
+        const char *pParsed = req.getHeader("origin", 6, valLen);
+        CHECK(NULL != pParsed);
+        CHECK(valLen == (int)strlen(pVal));
+        CHECK(0 == strncmp(pParsed, pVal, valLen));
+
+        HeaderOp *pUnset = ops.append(HttpHeader::getIndex("Origin", 6),
+                                      "Origin", 6, "", 0,
+                                      LSI_HEADER_UNSET, 1);
+        req.applyOp(NULL, pUnset);
+        CHECK(0 == countHeaderName(req, "Origin", 6));
+        CHECK(NULL == req.getHeader("origin", 6, valLen));
+    }
 }
 
 
