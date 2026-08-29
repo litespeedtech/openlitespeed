@@ -27,6 +27,15 @@ class FcgiEnv;
 class Env;
 class IEnv;
 
+enum
+{
+    UPSTREAM_ENCODING_OTHER = 0,
+    UPSTREAM_ENCODING_NONE,
+    UPSTREAM_ENCODING_GZIP,
+    UPSTREAM_ENCODING_DEFLATE,
+    UPSTREAM_ENCODING_BR,
+};
+
 class HttpCgiTool
 {
     HttpCgiTool()   {};
@@ -37,6 +46,7 @@ public:
     static int processContentType(HttpSession *pSession,
                                   const char *pValue, int valLen);
     static int processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue);
+    static int parseContentEncoding(const char *pValue, int valLen);
 
     static int processHeaderLine(HttpExtConnector *pExtConn,
                                  const char *pName, int nameLen,

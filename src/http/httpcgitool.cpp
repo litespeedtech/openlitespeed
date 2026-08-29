@@ -108,6 +108,22 @@ int HttpCgiTool::processContentType(HttpSession *pSession,
 }
 
 
+int HttpCgiTool::parseContentEncoding(const char *pValue, int valLen)
+{
+    if (!pValue || valLen <= 0)
+        return UPSTREAM_ENCODING_OTHER;
+    if (valLen >= 4 && strncasecmp(pValue, "none", 4) == 0)
+        return UPSTREAM_ENCODING_NONE;
+    if (valLen >= 4 && strncasecmp(pValue, "gzip", 4) == 0)
+        return UPSTREAM_ENCODING_GZIP;
+    if (valLen >= 7 && strncasecmp(pValue, "deflate", 7) == 0)
+        return UPSTREAM_ENCODING_DEFLATE;
+    if (valLen >= 2 && strncasecmp(pValue, "br", 2) == 0)
+        return UPSTREAM_ENCODING_BR;
+    return UPSTREAM_ENCODING_OTHER;
+}
+
+
 int HttpCgiTool::processHeaderLine(HttpExtConnector *pExtConn,
                                    const char *pName, int nameLen,
                                    const char *pValue, int valLen)
@@ -201,20 +217,24 @@ int HttpCgiTool::processHeaderLine2(HttpExtConnector *pExtConn,
         //HttpCgiTool::processExpires(pReq, pResp, pValue);
         return processContentType(pExtConn->getHttpSession(), pValue, valLen);
     case HttpRespHeaders::H_CONTENT_ENCODING:
-        if (pReq->getStatusCode() == SC_304
-            || (valLen >= 4 && strncasecmp(pValue, "none", 4) == 0))
+        if (pReq->getStatusCode() == SC_304)
             return 0;
-        if (valLen >= 4 && strncasecmp(pValue, "gzip", 4) == 0)
+        switch (parseContentEncoding(pValue, valLen))
+        {
+        case UPSTREAM_ENCODING_NONE:
+            return 0;
+        case UPSTREAM_ENCODING_GZIP:
             pReq->orGzip(UPSTREAM_GZIP);
-        else if (valLen >= 7 && strncasecmp(pValue, "deflate", 7) == 0)
+            break;
+        case UPSTREAM_ENCODING_DEFLATE:
             pReq->orGzip(UPSTREAM_DEFLATE);
-//             if ( !(pReq->gzipAcceptable() & REQ_GZIP_ACCEPT) )
-//                 return 0;
-//         }
-//         else //if ( strncasecmp( pValue, "deflate", 7 ) == 0 )
-//         {
-//             pReq->andGzip( ~GZIP_ENABLED );
-//         }
+            break;
+        case UPSTREAM_ENCODING_BR:
+            pReq->orBr(UPSTREAM_BR);
+            break;
+        default:
+            break;
+        }
         break;
     case HttpRespHeaders::H_CONTENT_DISPOSITION:
         pReq->appendRedirHdr(pName, pValue + valLen - pName);
