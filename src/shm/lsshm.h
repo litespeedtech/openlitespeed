@@ -273,7 +273,8 @@ private:
     // only use by physical mapping
     LsShmXSize_t roundToPageSize(LsShmXSize_t size) const
     {
-        return ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
+        LsShmSize_t pagesize = ls_shm_pagesize();
+        return ((size + pagesize - 1) / pagesize) * pagesize;
     }
 
     LsShmSize_t roundUnitSize(LsShmSize_t pagesize) const
@@ -310,7 +311,6 @@ private:
 
     LsShmLock               m_locks;
     uint32_t                m_iMagic;
-    static LsShmSize_t      s_iPageSize;
     static LsShmSize_t      s_iShmHdrSize;
     static const char      *s_pDirBase[5];
     static int              s_iNumBaseDir;
