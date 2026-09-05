@@ -335,6 +335,52 @@ SUITE(HttpReqTest)
         CHECK(ret == SC_400);
     }
 
+    TEST(HttpReqTest_rejectNulByteInURI)
+    {
+        const char pInput[] =
+        {
+            "GET /a\0b HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "\r\n"
+        };
+        HttpReqTst req;
+        req.appendLogId("rejectNulByteInURI");
+        req.reset(0);
+        req.setVHost((HttpVHost *)1);
+
+        int len = sizeof(pInput) - 1;
+        int ret = 1;
+        for (int i = 0; i < len; ++i)
+        {
+            ret = req.append(pInput + i, 1);
+            if (ret == SC_400)
+                break;
+        }
+        CHECK(ret == SC_400);
+    }
+
+    TEST(HttpReqTest_rejectPercentEncodedNulByteInURI)
+    {
+        const char *pInput =
+            "GET /a%00b HTTP/1.1\r\n"
+            "Host: www.example.com\r\n"
+            "\r\n";
+        HttpReqTst req;
+        req.appendLogId("rejectPercentEncodedNulByteInURI");
+        req.reset(0);
+        req.setVHost((HttpVHost *)1);
+
+        int len = strlen(pInput);
+        int ret = 1;
+        for (int i = 0; i < len; ++i)
+        {
+            ret = req.append(pInput + i, 1);
+            if (ret == SC_400)
+                break;
+        }
+        CHECK(ret == SC_400);
+    }
+
     TEST(HttpReqTest_testParseWhitespaceCookie)
     {
         const char pInput[] =
