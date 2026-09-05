@@ -772,6 +772,11 @@ int HttpReq::parseURI(const char *pCur, const char *pBEnd)
     char *p = (char *)ls_xpool_alloc(m_pPool, len + URL_INDEX_PAD);
     int n = HttpUtil::unescape(p, len, pCur);
     --n;
+    if (memchr(p, 0, n))
+    {
+        LS_INFO(getLogSession(), "Status 400: NUL byte in request URI!");
+        return SC_400;
+    }
     n = GPath::clean(p, n);
     if (n <= 0)
         return SC_400;
