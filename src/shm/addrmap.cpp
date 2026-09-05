@@ -189,7 +189,7 @@ int AddrMap::remap(int fd, size_t start_offset, size_t new_size)
 {
     if (mapAddrSpace(new_size) == LS_FAIL)
         return LS_FAIL;
-    start_offset = start_offset & ~(LSSHM_PAGESIZE -1);
+    start_offset = start_offset & ~((size_t)ls_shm_pagesize() - 1);
     while(start_offset < new_size)
     {
         size_t block_end = (start_offset + LARGE_PAGE_SIZE) & ~LARGE_PAGE_MASK;

@@ -34,6 +34,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 
 extern "C" {
@@ -76,6 +77,20 @@ int ls_expandfile(int fd, LsShmOffset_t fromsize, LsShmXSize_t incrsize)
     return 0;
 }
 
+
+LsShmSize_t ls_shm_pagesize(void)
+{
+    static LsShmSize_t s_iSysPageSize = 0;
+    if (s_iSysPageSize == 0)
+    {
+        long size = sysconf(_SC_PAGESIZE);
+        if (size < LSSHM_PAGESIZE)
+            size = LSSHM_PAGESIZE;
+        s_iSysPageSize = (LsShmSize_t)size;
+    }
+    return s_iSysPageSize;
+}
+
 };
 
 
@@ -108,7 +123,6 @@ LsShmVersion s_version =
 {
     { LSSHM_VER_MAJOR, LSSHM_VER_MINOR, LSSHM_VER_REL, LSSHM_VER_TYPE }
 };
-LsShmSize_t LsShm::s_iPageSize = LSSHM_PAGESIZE;
 LsShmSize_t LsShm::s_iShmHdrSize = ((sizeof(LsShmMap) + 0xf) &
                                     ~0xf); // align 16
 const char *LsShm::s_pDirBase[] = {NULL, NULL, NULL, NULL, NULL};
@@ -551,8 +565,8 @@ LsShmStatus_t LsShm::openLockShmFile(int mode)
 
 LsShmStatus_t LsShm::newShmMap(LsShmSize_t size, uint64_t id)
 {
-    if (size < s_iPageSize)
-        size = s_iPageSize;
+    if (size < ls_shm_pagesize())
+        size = ls_shm_pagesize();
     if ((expandFile(0, roundToPageSize(size)) != LSSHM_OK)
         || (mapAddrMap(size) != LSSHM_OK))
         return LSSHM_ERROR;
@@ -626,7 +640,7 @@ LsShmStatus_t LsShm::initShm(const char *mapName, LsShmXSize_t size,
         return m_status;
     }
 
-    size = ((size + s_iPageSize - 1) / s_iPageSize) * s_iPageSize;
+    size = roundToPageSize(size);
 
     if (fstat(m_iFd, &mystat) < 0)
     {
