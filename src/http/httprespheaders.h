@@ -33,6 +33,7 @@ enum ETAG_ENCODING
     ETAG_NO_ENCODE,
     ETAG_BROTLI,
     ETAG_GZIP,
+    ETAG_ZSTD,
 };
 
 
@@ -206,6 +207,7 @@ public:
 
     void addGzipEncodingHeader();
     void addBrEncodingHeader();
+    void addZstdEncodingHeader();
     void updateEtag(ETAG_ENCODING type);
     void appendChunked();
     void addCommonHeaders();

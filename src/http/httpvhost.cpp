@@ -928,6 +928,10 @@ int HttpVHost::configBasics(const XmlNode *pVhConfNode, int iChrootLen)
     enableBr((HttpServerConfig::getInstance().getBrCompress()) ?
                ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableBr", 0, 1,
                        1) : 0);
+
+    enableZstd((HttpServerConfig::getInstance().getZstdCompress()) ?
+               ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableZstd", 0, 1,
+                       1) : 0);
     int val = ConfigCtx::getCurConfigCtx()->getLongValue(pVhConfNode, "enableIpGeo", -1, 1, -1);
     if (val == -1)
         val = HttpServer::getInstance().getServerContext().isGeoIpOn();

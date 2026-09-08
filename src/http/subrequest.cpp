@@ -539,6 +539,7 @@ int HttpReq::clone(HttpReq *pProto, lsi_subreq_t *pSubSessInfo)
     keepAlive(pProto->isKeepAlive());
     m_iAcceptGzip = 0; //pProto->m_iAcceptGzip &
     m_iAcceptBr = 0;
+    m_iAcceptZstd = 0;
     m_iRedirects = 0;
     m_iHostOff = pProto->m_iHostOff;
     m_iHostLen = pProto->m_iHostLen;

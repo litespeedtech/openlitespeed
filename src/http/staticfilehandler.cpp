@@ -522,12 +522,15 @@ int StaticFileHandler::process(HttpSession *pSession,
 
     char mode = 0;
     if ((pReq->gzipAcceptable() == GZIP_REQUIRED
-         || pReq->brAcceptable() == BR_REQUIRED)
+         || pReq->brAcceptable() == BR_REQUIRED
+         || pReq->zstdAcceptable() == ZSTD_REQUIRED)
         && ((pSession->getSessionHooks()->getFlag(LSI_HKPT_RECV_RESP_BODY)
              | pSession->getSessionHooks()->getFlag(LSI_HKPT_SEND_RESP_BODY))
             & LSI_FLAG_DECOMPRESS_REQUIRED) == 0)
     {
-        mode = (pReq->brAcceptable() == BR_REQUIRED ? SFCD_MODE_BROTLI : 0);
+        mode = (pReq->zstdAcceptable() == ZSTD_REQUIRED ? SFCD_MODE_ZSTD : 0);
+        if (pReq->brAcceptable() == BR_REQUIRED)
+            mode |= SFCD_MODE_BROTLI;
         if (pReq->gzipAcceptable() == GZIP_REQUIRED)
             mode |= SFCD_MODE_GZIP;
     }
@@ -567,6 +570,11 @@ int StaticFileHandler::process(HttpSession *pSession,
             default:
 
                 buildStaticFileHeaders(pResp, pReq, pInfo);
+                if (pECache == pCache->getZstd())
+                {
+                    pResp->addZstdEncodingHeader();
+                    pReq->orZstd(UPSTREAM_ZSTD);
+                }
                 if (pECache == pCache->getBrotli())
                 {
                     pResp->addBrotliEncodingHeader();
