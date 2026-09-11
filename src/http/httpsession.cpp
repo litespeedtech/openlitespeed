@@ -240,6 +240,9 @@ int HttpSession::onInitConnected()
     const ConnInfo *pInfo = getStream()->getConnInfo();
     m_lReqTime = DateTime::s_curTime;
     m_iReqTimeUs = DateTime::s_curTimeUs;
+    m_iFlag = 0;
+    m_iFlag2 = 0;
+    ls_atomic_setint(&m_iMtFlag, 0);
 
     if (pInfo->m_pCrypto)
     {
@@ -260,9 +263,6 @@ int HttpSession::onInitConnected()
     //assert(pInfo->m_pClientInfo);
     setClientInfo(pInfo->m_pClientInfo);
     m_iRemotePort = pInfo->m_remotePort;
-    m_iFlag = 0;
-    m_iFlag2 = 0;
-    ls_atomic_setint(&m_iMtFlag, 0);
 
     m_curHookLevel = 0;
     setLogger(getStream()->getLogger());
