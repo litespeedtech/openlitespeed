@@ -57,6 +57,8 @@ static char s_sGzipEncodingHeader[48] =
     "content-encoding: gzip\r\nvary: Accept-Encoding\r\n";
 static char s_sBrEncodingHeader[46] =
     "content-encoding: br\r\nvary: Accept-Encoding\r\n";
+static char s_sZstdEncodingHeader[48] =
+    "content-encoding: zstd\r\nvary: Accept-Encoding\r\n";
 static char s_sCommonHeaders[66] =
     "date: Tue, 09 Jul 2013 13:43:01 GMT\r\nserver";
 static char s_sTurboCharged[66] =
@@ -66,6 +68,7 @@ static int             s_commonHeadersCount = 2;
 static http_header_t   s_commonHeaders[2];
 static http_header_t   s_gzipHeaders[2];
 static http_header_t   s_brHeaders[2];
+static http_header_t   s_zstdHeaders[2];
 static http_header_t   s_keepaliveHeader[2];
 static http_header_t   s_chunkedHeader;
 static http_header_t   s_concloseHeader;
@@ -209,6 +212,13 @@ void HttpRespHeaders::addBrEncodingHeader()
 }
 
 
+void HttpRespHeaders::addZstdEncodingHeader()
+{
+    add(s_zstdHeaders, 2, LSI_HEADER_MERGE);
+    updateEtag(ETAG_ZSTD);
+}
+
+
 void HttpRespHeaders::updateEtag(ETAG_ENCODING type)
 {
     int etagLen;
@@ -235,6 +245,10 @@ void HttpRespHeaders::updateEtag(ETAG_ENCODING type)
         case ETAG_BROTLI:
             *pUpdate++ = 'b';
             *pUpdate++ = 'r';
+            break;
+        case ETAG_ZSTD:
+            *pUpdate++ = 'z';
+            *pUpdate++ = 's';
             break;
         }
     }
@@ -1317,6 +1331,18 @@ void HttpRespHeaders::buildCommonHeaders()
     s_brHeaders[1].nameLen  = 4;
     s_brHeaders[1].val      = s_sBrEncodingHeader + 28;
     s_brHeaders[1].valLen   = 15;
+
+    s_zstdHeaders[0].index    = HttpRespHeaders::H_CONTENT_ENCODING;
+    s_zstdHeaders[0].name     = s_sZstdEncodingHeader;
+    s_zstdHeaders[0].nameLen  = 16;
+    s_zstdHeaders[0].val      = s_sZstdEncodingHeader + 18;
+    s_zstdHeaders[0].valLen   = 4;
+
+    s_zstdHeaders[1].index    = HttpRespHeaders::H_VARY;
+    s_zstdHeaders[1].name     = s_sZstdEncodingHeader + 24;
+    s_zstdHeaders[1].nameLen  = 4;
+    s_zstdHeaders[1].val      = s_sZstdEncodingHeader + 30;
+    s_zstdHeaders[1].valLen   = 15;
 
     s_keepaliveHeader[0].index    = HttpRespHeaders::H_CONNECTION;
     s_keepaliveHeader[0].name     = s_sConnKeepAliveHeader;

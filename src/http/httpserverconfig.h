@@ -77,6 +77,8 @@ private:
     int8_t          m_iDynGzipCompress;
     int8_t          m_iCompressLevel;
     int8_t          m_iBrCompress;
+    int8_t          m_iZstdCompress;
+    int8_t          m_iZstdCompressLevel;
     int8_t          m_iEnableLve;
     int8_t          m_iUsePagespeed;
     int8_t          m_cooldown;
@@ -176,6 +178,18 @@ public:
     void setBrCompress(int32_t compress)
     {   m_iBrCompress = compress;     }
     int8_t  getBrCompress() const           {   return m_iBrCompress;       }
+
+    void setZstdCompress(int32_t compress)
+    {   m_iZstdCompress = compress;     }
+    int8_t  getZstdCompress() const           {   return m_iZstdCompress;       }
+
+    void setZstdCompressLevel(int32_t level)
+    {
+        if (level < 1)      level = 1;
+        if (level > 22)     level = 22;
+        m_iZstdCompressLevel = level;
+    }
+    int8_t  getZstdCompressLevel() const    {   return m_iZstdCompressLevel;    }
 
     void setDebugLevel(int32_t level);
 

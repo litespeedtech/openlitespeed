@@ -48,6 +48,7 @@ set(OLS_UNITTEST_LIGHT_SRCS
    util/dlinkqueuetest.cpp
    util/gzipbuftest.cpp
    util/brotlibuftest.cpp
+   util/zstdbuftest.cpp
    util/vmembuftest.cpp
    util/filtermatchtest.cpp
    util/gpathtest.cpp
@@ -189,7 +190,7 @@ SET( unittestlib
     -Wl,--whole-archive util lsr -Wl,--no-whole-archive
     edio udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
     ${LINUX_AIO_LIB} libz.a libpcre2-8.a libexpat.a libxml2.a
-    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
+    ${BROTLI_ADD_LIB} ${ZSTD_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
     crypt libssl.a libcrypto.a)
 
 # Library set for the LIGHT tier. util/lsr are listed again after the libs that
@@ -200,7 +201,7 @@ SET( unittestlib_light
     util lsr socket sslpp adns lsshm thread log4cxx edio util lsr
     udns pthread rt ${CMAKE_DL_LIBS} ${libUnitTest} ${BSSL_ADD_LIB}
     ${LINUX_AIO_LIB} bcrypt libz.a libpcre2-8.a libexpat.a libxml2.a
-    ${BROTLI_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
+    ${BROTLI_ADD_LIB} ${ZSTD_ADD_LIB} ${IP2LOC_ADD_LIB} ${MMDB_LIB} atomic
     crypt libssl.a libcrypto.a)
 
 # By default build a single combined runner: it is much smaller on disk and

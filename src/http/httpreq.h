@@ -114,6 +114,11 @@ enum
 #define BR_REQUIRED             (BR_ENABLED | REQ_BR_ACCEPT)
 #define UPSTREAM_BR             4
 
+#define ZSTD_ENABLED            1
+#define REQ_ZSTD_ACCEPT         2
+#define ZSTD_REQUIRED           (ZSTD_ENABLED | REQ_ZSTD_ACCEPT)
+#define UPSTREAM_ZSTD           4
+
 
 #define SUB_REQ_DETACHED        1
 #define SUB_REQ_NOABORT         2
@@ -263,6 +268,7 @@ private:
     uint16_t            m_iReqFlag;
     char                m_iAcceptGzip;
     char                m_iAcceptBr;
+    char                m_iAcceptZstd;
 
     off_t               m_lEntityLength;
     off_t               m_lEntityFinished;
@@ -629,6 +635,10 @@ public:
     char brAcceptable() const               {   return m_iAcceptBr;       }
     void andBr(char b)                      {   m_iAcceptBr &= b;         }
     void orBr(char b)                       {   m_iAcceptBr |= b;         }
+
+    char zstdAcceptable() const             {   return m_iAcceptZstd;       }
+    void andZstd(char b)                    {   m_iAcceptZstd &= b;         }
+    void orZstd(char b)                     {   m_iAcceptZstd |= b;         }
 
     int  noRespBody() const            {   return m_iContextState & NO_RESP_BODY;   }
     void setNoRespBody()               {   m_iContextState |= NO_RESP_BODY;      }

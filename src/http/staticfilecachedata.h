@@ -115,12 +115,25 @@ public:
 
 #define SFCD_MODE_GZIP      (1<<0)
 #define SFCD_MODE_BROTLI    (1<<1)
+#define SFCD_MODE_ZSTD      (1<<2)
+
+//Compression algorithm identifiers used by tryCreateCompressed()/
+//compressFile()/compressHelper() to pick which encoder & path to use.
+//(Kept distinct from the SFCD_MODE_* bitmask above, which tracks which
+//encodings are *acceptable* for a request/response at once.)
+enum
+{
+    SFCD_ALGO_GZIP = 0,
+    SFCD_ALGO_BROTLI = 1,
+    SFCD_ALGO_ZSTD = 2,
+};
 
 class StaticFileCacheData : public CacheElement
 {
     AutoStr2        m_real;
     AutoStr2        m_gzippedPath;
     AutoStr2        m_bredPath;
+    AutoStr2        m_zstdPath;
     AutoStr2        m_sHeaders;
 
     const MimeSetting *m_pMimeType;
@@ -142,6 +155,7 @@ class StaticFileCacheData : public CacheElement
     time_t          m_tmLastCheck;
     FileCacheDataEx *m_pGzip;
     FileCacheDataEx *m_pBrotli;
+    FileCacheDataEx *m_pZstd;
     FileCacheDataEx m_fileData;
 
     StaticFileCacheData(const StaticFileCacheData &rhs);
@@ -149,14 +163,14 @@ class StaticFileCacheData : public CacheElement
 
     int buildFixedHeaders(int etag);
     int buildCompressedCache(FileCacheDataEx *&pData, const struct stat &st);
-    int tryCreateCompressed(char useBrotli);
+    int tryCreateCompressed(char algo);
 
     int buildCompressedPaths();
     int detectTrancate();
 
     int setReadiedCompressData(char compressMode);
     int compressHelper(AutoStr2 &path, FileCacheDataEx *&pData,
-        struct stat &st, int exists, char isBrotli);
+        struct stat &st, int exists, char algo);
 public:
 
     int readyCompressed(char compressMode);
@@ -181,6 +195,7 @@ public:
 
     FileCacheDataEx *getGzip() const    {   return m_pGzip;             }
     FileCacheDataEx *getBrotli() const  {   return m_pBrotli;           }
+    FileCacheDataEx *getZstd() const    {   return m_pZstd;             }
     const FileCacheDataEx *getFileData() const {   return &m_fileData;  }
     FileCacheDataEx *getFileData()      {   return &m_fileData;         }
 
@@ -210,7 +225,7 @@ public:
         return (pMIME != m_pMimeType) || (pCharset != m_pCharset)
                || (m_iFileETag != etag);
     }
-    int compressFile(char useBrotli);
+    int compressFile(char algo);
 
     int buildHeaders(const MimeSetting *pMIME,
                      const AutoStr2 *pCharset, short etag);
@@ -225,6 +240,7 @@ public:
     static void setCompressCachePath(const char *pPath);
 
     static void setStaticBrOptions(int level);
+    static void setStaticZstdOptions(int enable, int level);
 };
 
 #endif

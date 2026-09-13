@@ -1228,6 +1228,9 @@ int HttpReq::processHeader(int index)
             if (strcasestr(pCur, "br") != NULL)
                 m_iAcceptBr = REQ_BR_ACCEPT |
                 (HttpServerConfig::getInstance().getBrCompress() ? BR_ENABLED : 0);
+            if (len >= 4 && strcasestr(pCur, "zstd") != NULL)
+                m_iAcceptZstd = REQ_ZSTD_ACCEPT |
+                (HttpServerConfig::getInstance().getZstdCompress() ? ZSTD_ENABLED : 0);
             *((char *)pBEnd) = ch;
         }
         break;
@@ -1455,6 +1458,9 @@ int HttpReq::processNewReqData(const struct sockaddr *pAddr)
 
     if (!m_pVHost->enableBr())
         andBr(~BR_ENABLED);
+
+    if (!m_pVHost->enableZstd())
+        andZstd(~ZSTD_ENABLED);
     AccessCache *pAccessCache = m_pVHost->getAccessCache();
     if (pAccessCache)
     {

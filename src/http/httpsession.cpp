@@ -5774,7 +5774,7 @@ void HttpSession::testContentType()
     if (!pValue)
         return;
     const MimeSetting *pMIME = NULL;
-    int canCompress = pReq->gzipAcceptable() | pReq->brAcceptable();
+    int canCompress = pReq->gzipAcceptable() | pReq->brAcceptable() | pReq->zstdAcceptable();
     HttpContext *pContext = &(pReq->getVHost()->getRootContext());
     const ExpiresCtrl *pExpireDefault = pReq->shouldAddExpires();
     int enbale = pContext->getExpires().isEnabled();
@@ -5800,6 +5800,7 @@ void HttpSession::testContentType()
     {
         pReq->andGzip(~GZIP_ENABLED);
         pReq->andBr(~BR_ENABLED);
+        pReq->andZstd(~ZSTD_ENABLED);
     }
 
     if (enbale)
@@ -5819,7 +5820,8 @@ int HttpSession::updateContentCompressible()
 {
     int compressible = 0;
     if ((m_request.gzipAcceptable() == GZIP_REQUIRED)
-        || (m_request.brAcceptable() == BR_REQUIRED))
+        || (m_request.brAcceptable() == BR_REQUIRED)
+        || (m_request.zstdAcceptable() == ZSTD_REQUIRED))
     {
         int len;
         char *pContentType = (char *)m_response.getRespHeaders().getHeader(
@@ -5835,6 +5837,7 @@ int HttpSession::updateContentCompressible()
         {
             m_request.andGzip(~GZIP_ENABLED);
             m_request.andBr(~BR_ENABLED);
+            m_request.andZstd(~ZSTD_ENABLED);
         }
     }
     return compressible;
@@ -5848,7 +5851,8 @@ int HttpSession::contentEncodingFixup()
     const char *pContentEncoding = m_response.getRespHeaders().getHeader(
                                        HttpRespHeaders::H_CONTENT_ENCODING, &len);
     if ((!(m_request.gzipAcceptable() & REQ_GZIP_ACCEPT))
-        && (!(m_request.brAcceptable() & REQ_BR_ACCEPT)))
+        && (!(m_request.brAcceptable() & REQ_BR_ACCEPT))
+        && (!(m_request.zstdAcceptable() & REQ_ZSTD_ACCEPT)))
     {
         if (pContentEncoding)
         {

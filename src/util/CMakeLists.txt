@@ -31,6 +31,7 @@ SET(util_STAT_SRCS
    compressor.cpp
    gzipbuf.cpp
    brotlibuf.cpp
+   zstdbuf.cpp
    vmembuf.cpp
    blockbuf.cpp
    stringlist.cpp
