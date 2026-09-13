@@ -860,7 +860,7 @@ class DTblDefBase extends ProductDTblDefBase
 	{
 		$attrs = [
 			self::NewTextAttr('name', DMsg::ALbl('l_vhname'), 'vhname', false, 'vhName'),
-			self::NewTextAttr('vhRoot', DMsg::ALbl('l_vhroot'), 'cust', false), //no validation, maybe suexec owner
+			self::NewPathAttr('vhRoot', DMsg::ALbl('l_vhroot'), 'path', 2, 'x', false),
 			self::NewPathAttr('configFile', DMsg::ALbl('l_configfile'), 'filevh', 3, 'rwc', false),
 			$this->_attrs['note'],
 			$this->_attrs['vh_allowSymbolLink'],
