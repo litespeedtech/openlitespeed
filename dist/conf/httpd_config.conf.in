@@ -37,7 +37,7 @@ accessLog logs/access.log {
     
 expires {
     enableExpires           1
-    expiresByType           image/*=A604800,text/css=A604800,application/x-javascript=A604800,application/javascript=A604800,font/*=A604800,application/x-font-ttf=A604800
+    expiresByType           image/*=A604800,text/css=A604800,text/javascript=A604800,application/json=A604800,font/*=A604800,font/ttf=A604800
 }
 
 tuning{
