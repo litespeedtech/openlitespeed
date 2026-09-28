@@ -524,6 +524,47 @@ SUITE(HttpHeaderTest)
         CHECK(memcmp(pVal, "one,two", 7) == 0);
     }
 
+
+    // A single header line is capped at HRH_MAX_LEN bytes (name, ": ", value
+    // and CRLF). A value that does not fit is rejected with -1 and the headers
+    // added before are still returned; the largest fitting value goes in.
+    TEST(respHeaderLineLimit)
+    {
+        HttpRespHeaders h;
+        const char *pVal = NULL;
+        int valLen = 0;
+        const char name[] = "X-LiteSpeed-Purge";
+        const int nameLen = sizeof(name) - 1;
+        const int maxValLen = HRH_MAX_LEN - nameLen - 4;
+
+        char *pBig = (char *)malloc(HRH_MAX_LEN + 1);
+        memset(pBig, 'a', HRH_MAX_LEN + 1);
+
+        h.reset();
+        CHECK(h.add(HttpRespHeaders::H_SERVER, "UnitServer", 10) == 0);
+
+        CHECK(h.add(name, nameLen, pBig, maxValLen + 1) == -1);
+        CHECK(h.getHeader(name, nameLen, &pVal, valLen) == -1);
+        CHECK(h.getHeader("server", 6, &pVal, valLen) == 0);
+        CHECK(valLen == 10);
+        CHECK(memcmp(pVal, "UnitServer", 10) == 0);
+
+        CHECK(h.add(name, nameLen, pBig, maxValLen) == 0);
+        CHECK(h.getHeader(name, nameLen, &pVal, valLen) == 0);
+        CHECK(valLen == maxValLen);
+
+        // add() takes the LSI_HEADER_* enum (httpheader.h), not the
+        // LSI_HEADEROP_* one from ls.h; the two number the operations
+        // differently. A merge counts the combined length; an add (what
+        // HttpResp::appendHeader uses) starts a new line, limited on its own.
+        CHECK(h.add(name, nameLen, "b", 1, LSI_HEADER_MERGE) == -1);
+        CHECK(h.getHeader(name, nameLen, &pVal, valLen) == 0);
+        CHECK(valLen == maxValLen);
+        CHECK(h.add(name, nameLen, "b", 1, LSI_HEADER_ADD) == 0);
+
+        free(pBig);
+    }
+
 #if 0
     // Legacy assertions below encode obsolete header serialization details.
     // Keep respHeadersCurrentBehavior above as the active contract test.
