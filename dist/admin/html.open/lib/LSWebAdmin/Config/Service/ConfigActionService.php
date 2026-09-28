@@ -72,13 +72,24 @@ class ConfigActionService
                 break;
 
             case 'c':
+                $validationResult = self::validatePost($request);
+                $displayData = $validationResult->GetExtracted();
+                $hasDisplayData = true;
+                break;
+
             case 'n':
                 $validationResult = self::validatePost($request);
                 $displayData = $validationResult->GetExtracted();
                 $hasDisplayData = true;
-                if ($request->GetAct() == 'n') {
-                    $request->SwitchToSubTid($displayData);
+                self::appendValidationMessages($request, $validationResult);
+
+                if ($validationResult->HasErr()) {
+                    self::setAct($request, 'S');
+                    self::appendTopMessage($request, $displayData->Get(CNode::FLD_ERR));
+                    break;
                 }
+
+                $request->SwitchToSubTid($displayData);
                 break;
 
             case 'D':

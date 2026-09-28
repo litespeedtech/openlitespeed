@@ -190,12 +190,12 @@ private:
     static int onReadSSL(NtwkIOLink *pThis);
     static int onReadSSL_T(NtwkIOLink *pThis);
     static int onReadT(NtwkIOLink *pThis);
-    static int onRead(NtwkIOLink *pThis);
+    static int onRead_(NtwkIOLink *pThis);
 
     static int onWriteSSL(NtwkIOLink *pThis);
     static int onWriteSSL_T(NtwkIOLink *pThis);
     static int onWriteT(NtwkIOLink *pThis);
-    static int onWrite(NtwkIOLink *pThis);
+    static int onWrite_(NtwkIOLink *pThis);
 
     static int close_(NtwkIOLink *pThis);
     static int closeSSL(NtwkIOLink *pThis);
@@ -339,6 +339,9 @@ public:
     //{   m_baseIO.getThrottleCtrl().setLimit( limit );    }
 
     int onTimer();
+#ifdef RUN_TEST
+    void testTryProxyProtocol();
+#endif
 
     void enableSocketKeepAlive();
 

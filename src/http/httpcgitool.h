@@ -34,6 +34,8 @@ class HttpCgiTool
     static int addHttpHeaderEnv(IEnv *pEnv, HttpReq *pReq);
     static int addSpecialEnv(IEnv *pEnv, HttpReq *pReq);
 public:
+    static const int RESP_HEADER_ERR_SET = -3;
+
     static int processContentType(HttpSession *pSession,
                                   const char *pValue, int valLen);
     static int processExpires(HttpReq *pReq, HttpResp *pResp, const char *pValue);

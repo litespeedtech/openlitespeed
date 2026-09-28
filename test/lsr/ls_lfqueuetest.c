@@ -120,7 +120,7 @@ static void mpsc_delete()
 }
 
 static void *(*func_new)() = mpmc_new;
-static int (*func_put)() = mpmc_put;
+static int (*func_put)(job_t *, long) = mpmc_put;
 static long (*func_get)() = mpmc_get;
 static void (*func_delete)() = mpmc_delete;
 

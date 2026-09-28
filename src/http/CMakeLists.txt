@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
+
 
 if(${COMPILE_IO_URING})
     include_directories(BEFORE SYSTEM liburing ../edio/liburing/include)

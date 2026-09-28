@@ -17,6 +17,106 @@
 *****************************************************************************/
 #ifdef RUN_TEST
 
+#include <http/httpextconnector.h>
+#include <http/httpcgitool.h>
+#include <http/httpdefs.h>
+#include <http/handlertype.h>
+#include <http/httprespheaders.h>
+#include <http/httpsession.h>
+#include <http/httpvhost.h>
+#include "unittest-cpp/UnitTest++.h"
+
+#include <string.h>
+
+
+TEST(HttpCgiToolTest_doNotHonorProxyInternalLocation)
+{
+    HttpVHost vhost("proxy-internal-location-test");
+    CHECK(vhost.addContext("/private/", HandlerType::HT_NULL,
+                           "/htdocs_private/", NULL, 1) != NULL);
+    HttpSession session;
+    session.getReq()->setVHost(&vhost);
+    session.getReq()->setStatusCode(SC_200);
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+    connector.setRespState(HEC_RESP_PROXY);
+    const char location[] = "/htdocs_private/secret";
+
+    CHECK_EQUAL(0, HttpCgiTool::processHeaderLine(
+                    &connector, HttpRespHeaders::H_LITESPEED_LOCATION,
+                    "X-LiteSpeed-Location", 20, location,
+                    sizeof(location) - 1));
+    CHECK(session.getReq()->getLocation() == NULL);
+    const char *value;
+    int valueLen;
+    CHECK_EQUAL(-1, session.getResp()->getRespHeaders().getHeader(
+                    "X-LiteSpeed-Location", 20, &value, valueLen));
+}
+
+TEST(HttpCgiToolTest_doNotHonorProxyStatusControls)
+{
+    HttpSession session;
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+    connector.setRespState(HEC_RESP_PROXY);
+    const char response[] =
+        "HTTP/1.1 200 OK\r\n"
+        "Status: 444 BLOCK\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n";
+
+    CHECK_EQUAL((int)strlen(response), HttpCgiTool::parseRespHeader(
+                    &connector, response, strlen(response)));
+    CHECK_EQUAL(SC_200, session.getReq()->getStatusCode());
+
+    HttpSession statusSession;
+    HttpExtConnector statusConnector;
+    statusConnector.setHttpSession(&statusSession);
+    statusConnector.setRespState(HEC_RESP_PROXY);
+    const char statusResponse[] = "HTTP/1.1 444 BLOCK\r\n\r\n";
+    CHECK_EQUAL(LS_FAIL, HttpCgiTool::parseRespHeader(
+                    &statusConnector, statusResponse,
+                    strlen(statusResponse)));
+}
+
+TEST(HttpCgiToolTest_doNotHonorProxyRecaptchaControl)
+{
+    HttpSession session;
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+    connector.setRespState(HEC_RESP_PROXY);
+    const char response[] =
+        "HTTP/1.1 200 OK\r\n"
+        "Lsrecaptcha: 1\r\n"
+        "Content-Length: 0\r\n"
+        "\r\n";
+
+    CHECK_EQUAL((int)strlen(response), HttpCgiTool::parseRespHeader(
+                    &connector, response, strlen(response)));
+    const char *value;
+    int valueLen;
+    CHECK_EQUAL(-1, session.getResp()->getRespHeaders().getHeader(
+                    "Lsrecaptcha", 11, &value, valueLen));
+}
+
+TEST(HttpCgiToolTest_rejectUnsafeInternalLocation)
+{
+    HttpVHost vhost("internal-location-test");
+    CHECK(vhost.addContext("/errors/", HandlerType::HT_NULL,
+                           "/htdocs_error/", NULL, 1) != NULL);
+    HttpSession session;
+    session.getReq()->setVHost(&vhost);
+    HttpExtConnector connector;
+    connector.setHttpSession(&session);
+    const char location[] =
+        "/htdocs_error/../../../../../home/phpmyadmin/public_html/../../hacking/url";
+
+    CHECK_EQUAL(LS_FAIL, HttpCgiTool::processHeaderLine2(
+                    &connector, HttpRespHeaders::H_LITESPEED_LOCATION,
+                    "X-LiteSpeed-Location", 20, location,
+                    sizeof(location) - 1));
+}
+
 // #include "httpcgitooltest.h"
 // #include <http/httpsession.h>
 // #include <http/httpextconnector.h>

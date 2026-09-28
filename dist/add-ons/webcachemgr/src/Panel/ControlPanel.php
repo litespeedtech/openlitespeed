@@ -36,7 +36,7 @@ abstract class ControlPanel
     /**
      * @var string
      */
-    const PANEL_API_VERSION = '1.17.10.1';
+    const PANEL_API_VERSION = '1.17.12.0';
 
     /**
      * @since 1.9
@@ -428,7 +428,17 @@ abstract class ControlPanel
                 );
             }
         }
-        elseif ( !preg_match('#^[A-Za-z0-9_\-]+$#', $vhCacheRoot) ) {
+        /**
+         * Anchored with '\z', not '$'. '$' also matches immediately before a
+         * trailing newline, so "lscache\n" satisfied this allowlist despite
+         * the message promising only [A-Za-z0-9_-]. $vhCacheRoot -- not the
+         * $basePath validated above -- is what writeVHCacheRoot() and
+         * createVHConfAndSetCacheRoot() interpolate into a "CacheRoot
+         * $vhCacheRoot" Apache directive, which the newline terminates
+         * early. The absolute branch above is already covered by
+         * Util::isSafeAbsPath()'s own '\z' anchor.
+         */
+        elseif ( !preg_match('#^[A-Za-z0-9_\-]+\z#', $vhCacheRoot) ) {
             throw new LSCMException(
                 'Refusing to write unsafe VH cache root: non-absolute values '
                     . 'must contain only [A-Za-z0-9_-] characters.'
@@ -1134,6 +1144,8 @@ abstract class ControlPanel
     public static function checkPanelAPICompatibility( $panelAPIVer )
     {
         $supportedAPIVers = array(
+            '1.17.12.0',
+            '1.17.11',
             '1.17.10.1',
             '1.17.10',
             '1.17.9',

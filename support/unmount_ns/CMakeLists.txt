@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
+
 
 add_definitions(-DNOT_LSCGID)
 
@@ -9,6 +10,7 @@ SET(unmount_ns_SRCS
     nspersist.c
     nsutils.c
     ns.c
+    ../../src/extensions/cgi/rootcheck.c
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src/extensions/cgi)
@@ -17,6 +19,5 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../src/extensions/cgi)
 add_executable(unmount_ns ${unmount_ns_SRCS} )
 
 target_link_libraries(unmount_ns rt)
-
 
 

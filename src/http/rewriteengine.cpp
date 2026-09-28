@@ -1469,12 +1469,12 @@ int RewriteEngine::processRuleSet(const RewriteRuleList *pRuleList,
         {
             if (pSession->getReq()->isMatched())
             {
-                const char *pURL;
-                int len;
+                const char *pURL = m_pSourceURL;
+                int len = m_sourceURLLen;
                 pSession->getReq()->stripRewriteBase(m_pContext,
                                                      pURL, len);
-                if ((len < m_sourceURLLen) && (strncmp(
-                                                   m_pSourceURL + m_sourceURLLen - len, pURL, len) == 0))
+                if ((len < m_sourceURLLen)
+                    && (strncmp(m_pSourceURL + m_sourceURLLen - len, pURL, len) == 0))
                 {
                     sStrip.setStr(m_pSourceURL, m_sourceURLLen - len);
                     m_pStrip = &sStrip;

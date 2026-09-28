@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author    Michael Alegre
- * @copyright 2025 LiteSpeed Technologies, Inc.
+ * @copyright 2025-2026 LiteSpeed Technologies, Inc.
  * ******************************************* */
 
 namespace Lsc\Wp\View\Model;
@@ -12,6 +12,7 @@ namespace Lsc\Wp\View\Model;
 use Lsc\Wp\Context\Context;
 use Lsc\Wp\Logger;
 use Lsc\Wp\LSCMException;
+use Lsc\Wp\Util;
 
 class FlagUnflagAllProgressViewModel
 {
@@ -109,8 +110,10 @@ class FlagUnflagAllProgressViewModel
 
     protected function grabSessionData()
     {
+        $key = Util::sessionKey("mass_{$this->action}_info");
+
         $this->tplData[self::FLD_INSTALLS_COUNT] =
-            count($_SESSION['mass_' . $this->action . '_info']['installs']);
+            count($_SESSION[$key]['installs']);
     }
 
     /**

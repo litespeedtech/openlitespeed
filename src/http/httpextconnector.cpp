@@ -156,7 +156,8 @@ int HttpExtConnector::parseHeader(const char *&pBuf, int &len, int proxy)
     }
     else if (ret < 0)
     {
-        errResponse(SC_500, NULL);
+        if (ret != HttpCgiTool::RESP_HEADER_ERR_SET)
+            errResponse(SC_500, NULL);
         return LS_FAIL;
     }
     if (!(m_iRespState & 0xff))

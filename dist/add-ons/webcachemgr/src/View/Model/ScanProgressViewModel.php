@@ -4,7 +4,7 @@
  * LiteSpeed Web Server Cache Manager
  *
  * @author LiteSpeed Technologies, Inc. (https://www.litespeedtech.com)
- * @copyright (c) 2018-2020
+ * @copyright (c) 2018-2026 LiteSpeed Technologies, Inc.
  * @deprecated 1.13.3  This file will be removed in a future release.
  * ******************************************* */
 
@@ -13,6 +13,7 @@ namespace Lsc\Wp\View\Model;
 use \Lsc\Wp\Context\Context;
 use \Lsc\Wp\LSCMException;
 use \Lsc\Wp\Logger;
+use \Lsc\Wp\Util;
 
 /**
  *
@@ -111,8 +112,9 @@ class ScanProgressViewModel
 
     protected function grabSessionData()
     {
-        $info = isset($_SESSION['scanInfo']) && is_array($_SESSION['scanInfo'])
-            ? $_SESSION['scanInfo']
+        $key  = Util::sessionKey('scanInfo');
+        $info = isset($_SESSION[$key]) && is_array($_SESSION[$key])
+            ? $_SESSION[$key]
             : [];
 
         $homeDirs = (!empty($info['homeDirs']) && is_array($info['homeDirs']))

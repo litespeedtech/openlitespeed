@@ -486,7 +486,8 @@ class DAttrBase
 			if (is_array($options) && $this->IsFlagOn(self::BM_NOTNULL) && !array_key_exists('forcesel', $options)) {
 				$options = ['forcesel' => '-- ' . DMsg::UIStr('note_select_option') . ' --'] + $options;
 			}
-			$input .= '<select id="' . UIBase::EscapeAttr($fieldId) . '" class="lst-choice-control" name="' . $name . '" ' . $inputAttr . '>';
+			$requiredAttr = $this->IsFlagOn(self::BM_NOTNULL) ? ' required="required"' : '';
+			$input .= '<select id="' . UIBase::EscapeAttr($fieldId) . '" class="lst-choice-control" name="' . $name . '"' . $requiredAttr . ' ' . $inputAttr . '>';
 			$input .= UIBase::genOptions($options, $value);
 			$input .= '</select>';
 		}

@@ -89,7 +89,7 @@ static void xq_delete()
 }
 
 static void *(*func_new)() = mq_new;
-static int (*func_put)() = mq_put;
+static int (*func_put)(void *) = mq_put;
 static long (*func_get)() = mq_get;
 static void (*func_delete)() = mq_delete;
 

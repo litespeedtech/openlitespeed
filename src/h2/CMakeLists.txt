@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0...3.23)
+
 
 add_definitions(-DXXH_HEADER_NAME="lsr/xxhash.h")
 

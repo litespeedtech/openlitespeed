@@ -450,7 +450,8 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION['scanInfo'];
+        $info = &$_SESSION[Util::sessionKey('scanInfo')];
+        Util::bindLegacyAlias('scanInfo');
 
         if ( $init ) {
             $info = [ 'homeDirs' => $this->panelEnv->getDocroots() ];
@@ -484,7 +485,7 @@ class PanelController
         }
 
         if ( empty($info['homeDirs']) ) {
-            unset($_SESSION['scanInfo']);
+            Util::unsetSessionKey('scanInfo');
         }
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();
@@ -575,24 +576,26 @@ class PanelController
             session_start();
         }
 
+        $scanInfoKey = Util::sessionKey('scanInfo');
+
         if ( Util::get_request_var('go_to_next') == 1 ) {
 
             if (
-                isset($_SESSION['scanInfo'])
-                && is_array($_SESSION['scanInfo'])
-                && array_key_exists('homeDirs', $_SESSION['scanInfo'])
-                && array_key_exists('installs', $_SESSION['scanInfo'])
+                isset($_SESSION[$scanInfoKey])
+                && is_array($_SESSION[$scanInfoKey])
+                && array_key_exists('homeDirs', $_SESSION[$scanInfoKey])
+                && array_key_exists('installs', $_SESSION[$scanInfoKey])
                 && (
-                    is_array($_SESSION['scanInfo']['homeDirs'])
-                    || $_SESSION['scanInfo']['homeDirs'] === null
+                    is_array($_SESSION[$scanInfoKey]['homeDirs'])
+                    || $_SESSION[$scanInfoKey]['homeDirs'] === null
                 )
                 && (
-                    is_array($_SESSION['scanInfo']['installs'])
-                    || $_SESSION['scanInfo']['installs'] === null
+                    is_array($_SESSION[$scanInfoKey]['installs'])
+                    || $_SESSION[$scanInfoKey]['installs'] === null
                 )
                 && !(
-                    $_SESSION['scanInfo']['homeDirs'] === null
-                    && $_SESSION['scanInfo']['installs'] === null
+                    $_SESSION[$scanInfoKey]['homeDirs'] === null
+                    && $_SESSION[$scanInfoKey]['installs'] === null
                 )
             ) {
                 return true;
@@ -601,14 +604,23 @@ class PanelController
             /*
              * Stale `go_to_next=1` request (e.g., browser Back / page Back
              * button replaying the URL after the scan-progress flow already
-             * cleared $_SESSION['scanInfo']). Drop back to the regular
-             * Manage view instead of constructing a scan-progress view with
-             * no session data.
+             * cleared the scan info). Drop back to the regular Manage view
+             * instead of constructing a scan-progress view with no session
+             * data.
+             *
+             * This also catches the session started under a pre-namespacing
+             * library: its bare "scanInfo" entry is not read here, so an
+             * in-flight scan that straddles a library update restarts from
+             * the Manage view rather than resuming against stale data.  The
+             * reverse direction — an older plugin reading a session this
+             * library wrote — is covered by the alias instead; see
+             * Util::bindLegacyAlias().
              */
             return false;
         }
 
-        $info = &$_SESSION['scanInfo'];
+        $info = &$_SESSION[$scanInfoKey];
+        Util::bindLegacyAlias('scanInfo');
 
         if ( $init ) {
             $info = [
@@ -714,7 +726,7 @@ class PanelController
             }
 
             if ( $info['homeDirs'] === null && $info['installs'] === null ) {
-                unset($_SESSION['scanInfo']);
+                Util::unsetSessionKey('scanInfo');
             }
         }
 
@@ -763,7 +775,7 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION['refreshInfo'];
+        $info = &$_SESSION[Util::sessionKey('refreshInfo')];
 
         if ( $init ) {
             $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
@@ -797,7 +809,7 @@ class PanelController
         }
 
         if ( empty($info['installs']) ) {
-            unset($_SESSION['refreshInfo']);
+            Util::unsetSessionKey('refreshInfo');
         }
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();
@@ -848,7 +860,7 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION['unflagInfo'];
+        $info = &$_SESSION[Util::sessionKey('unflagInfo')];
 
         if ( $init ) {
             $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
@@ -882,7 +894,7 @@ class PanelController
         }
 
         if ( empty($info['installs']) ) {
-            unset($_SESSION['unflagInfo']);
+            Util::unsetSessionKey('unflagInfo');
         }
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();
@@ -948,7 +960,7 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION["{$action}_info"];
+        $info = &$_SESSION[Util::sessionKey("{$action}_info")];
 
         $doOld = false;
 
@@ -958,7 +970,7 @@ class PanelController
              *
              * @deprecated 1.17.4.2
              */
-            $oldInfo = &$_SESSION['unflagInfo'];
+            $oldInfo = &$_SESSION[Util::sessionKey('unflagInfo')];
             $doOld   = true;
         }
 
@@ -997,10 +1009,10 @@ class PanelController
         }
 
         if ( empty($info['installs']) ) {
-            unset($_SESSION["{$action}_info"]);
+            Util::unsetSessionKey("{$action}_info");
 
             if ( $doOld ) {
-                unset($_SESSION['unflagInfo']);
+                Util::unsetSessionKey('unflagInfo');
             }
         }
         elseif ( $doOld ) {
@@ -1391,7 +1403,7 @@ class PanelController
         }
 
         $actionUpper = ucfirst($action);
-        $info        = &$_SESSION["mass{$actionUpper}Info"];
+        $info        = &$_SESSION[Util::sessionKey("mass{$actionUpper}Info")];
 
         switch ( $step ) {
 
@@ -1467,7 +1479,7 @@ class PanelController
                 }
 
                 if ( empty($info['installs']) ) {
-                    unset($_SESSION["mass{$actionUpper}Info"]);
+                    Util::unsetSessionKey("mass{$actionUpper}Info");
                 }
 
                 $msgs = $this->wpInstallStorage->getAllCmdMsgs();
@@ -1521,7 +1533,7 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION['verInfo'];
+        $info = &$_SESSION[Util::sessionKey('verInfo')];
 
         switch ( $step ) {
 
@@ -1595,7 +1607,7 @@ class PanelController
                 }
 
                 if ( empty($info['installs']) || $completedCount == -1 ) {
-                    unset($_SESSION['verInfo']);
+                    Util::unsetSessionKey('verInfo');
                 }
 
                 $msgs = $this->wpInstallStorage->getAllCmdMsgs();
@@ -1647,7 +1659,7 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION['massDashNotifyInfo'];
+        $info = &$_SESSION[Util::sessionKey('massDashNotifyInfo')];
 
         if ( $init ) {
             $info = [
@@ -1720,7 +1732,7 @@ class PanelController
         }
 
         if ( empty($info['installs']) ) {
-            unset($_SESSION['massDashNotifyInfo']);
+            Util::unsetSessionKey('massDashNotifyInfo');
         }
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();
@@ -1777,7 +1789,7 @@ class PanelController
             session_start();
         }
 
-        $info = &$_SESSION['massDashDisableInfo'];
+        $info = &$_SESSION[Util::sessionKey('massDashDisableInfo')];
 
         if ( $init ) {
             $info = [ 'installs' => $this->wpInstallStorage->getPaths() ];
@@ -1845,7 +1857,7 @@ class PanelController
         }
 
         if ( empty($info['installs']) ) {
-            unset($_SESSION['massDashDisableInfo']);
+            Util::unsetSessionKey('massDashDisableInfo');
         }
 
         $msgs = $this->wpInstallStorage->getAllCmdMsgs();

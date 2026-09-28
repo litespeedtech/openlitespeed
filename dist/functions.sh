@@ -39,8 +39,7 @@ init()
     CONF_MOD=600
     DOC_MOD=644
 
-    INST_USER=`id`
-    INST_USER=`expr "$INST_USER" : 'uid=.*(\(.*\)) gid=.*'`
+    INST_USER=`id -nu`
 
     ARCH=`arch`
     SYS_NAME=`uname -s`

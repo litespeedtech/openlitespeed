@@ -288,6 +288,16 @@ static lsxpack_err_code processH2Path(const char *path, int len)
     return processH2Header(builder, ":path", 5, path, len);
 }
 
+
+TEST(SecurityRegression_H2RequiresOriginFormPath)
+{
+    CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER,
+                processH2Path("relative/path", 13));
+    CHECK_EQUAL(LSXPACK_ERR_BAD_REQ_HEADER,
+                processH2Path("http://example.com/path", 23));
+    CHECK_EQUAL(LSXPACK_OK, processH2Path("/origin/path", 12));
+}
+
 // Every byte that could break the "<method> <path> HTTP/1.1" framing when an
 // HTTP/2/3 request is serialized to HTTP/1.1 must be rejected on this path,
 // matching what the HTTP/1.1 ingress parser enforces.  Covers SP/HTAB/'\' and
@@ -299,7 +309,7 @@ TEST(SecurityRegression_H2RequestLineInjectionCorpus)
     {
         // In the path segment ':path' forbids CTL (incl. CR/LF/HTAB), SP, DEL
         // and backslash; high bytes stay allowed to match HTTP/1.1 ingress.
-        bool pathBad = (i <= 0x20 || i == '\\' || i == 0x7f);
+        bool pathBad = (i <= 0x20 || i == '#' || i == '\\' || i == 0x7f);
         CHECK_EQUAL(pathBad ? LSXPACK_ERR_BAD_REQ_HEADER : LSXPACK_OK,
                     processH2PathByte((unsigned char)i));
 
